@@ -106,6 +106,27 @@ func WithWhisperModel(model string) WhisperOption {
 	}
 }
 
+// IsSelfHostedASRBaseURL is the ONE self-hosted judgment (sub-5-1 CR M1):
+// given the configured ASR_BASE_URL (empty = the hosted default), does the
+// deployment pay the hosted per-minute rate? Both the metering side (the
+// client's isSelfHosted below) and the estimate side (main.go's candidate
+// service wiring) MUST derive their answer from this predicate — two
+// independent detectors ("config non-empty" vs "endpoint differs") disagreed
+// exactly when ASR_BASE_URL was explicitly set to the official endpoint,
+// producing a $0 quote billed at the hosted rate.
+func IsSelfHostedASRBaseURL(baseURL string) bool {
+	return baseURL != "" && baseURL != WhisperAPIURL
+}
+
+// isSelfHosted reports whether this client is pointed at something other than
+// the paid hosted API (sub-5-1 AC #1). Reads the ENDPOINT the client actually
+// calls; equivalent to IsSelfHostedASRBaseURL over the configured override
+// because NewWhisperClient defaults baseURL to WhisperAPIURL — asserted by
+// TestSelfHostedJudgment_SingleSource.
+func (c *WhisperClient) isSelfHosted() bool {
+	return c.baseURL != WhisperAPIURL
+}
+
 // NewWhisperClient creates a new Whisper API client.
 func NewWhisperClient(apiKey string, opts ...WhisperOption) *WhisperClient {
 	c := &WhisperClient{
@@ -240,9 +261,11 @@ func (c *WhisperClient) TranscribeWithLanguage(ctx context.Context, audioPath, l
 	}
 
 	// 9R-11: meter ASR cost by audio minutes against the per-run budget.
+	// sub-5-1 AC #1: at the SAME rate the estimator quotes for this endpoint —
+	// a self-hosted server records $0 instead of a fabricated hosted-rate bill.
 	if b := BudgetFromContext(ctx); b != nil {
 		if dur, _, derr := parseWAVInfo(audioPath); derr == nil {
-			b.RecordASR(dur)
+			b.RecordASRWithRate(dur, EstimatedASRPerMinuteUSD(c.isSelfHosted()))
 		}
 	}
 

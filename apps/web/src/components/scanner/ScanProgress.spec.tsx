@@ -16,6 +16,13 @@ vi.mock('../../hooks/useScanner', () => ({
   useCancelScan: () => mockUseCancelScan(),
 }));
 
+const mockPreview = vi.fn();
+vi.mock('../../services/subtitleService', () => ({
+  subtitleService: {
+    previewGenerationBatch: () => mockPreview(),
+  },
+}));
+
 function renderWithProviders() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -106,5 +113,36 @@ describe('ScanProgress', () => {
 
     // Restore
     Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true });
+  });
+
+  // sub-5-1 AC #7: the F17 toast count includes episodes — its number must
+  // match the consent list the toast links to, which lists episodes too.
+  it('completion toast reads totalItemsIncludingEpisodes over the movies-only count', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true });
+    mockPreview.mockResolvedValue({ totalItems: 38, totalItemsIncludingEpisodes: 142 });
+    mockUseScanProgress.mockReturnValue({
+      ...scanningState,
+      isScanning: false,
+      isComplete: true,
+      percentDone: 100,
+    });
+
+    renderWithProviders();
+    expect(await screen.findByText('142')).toBeInTheDocument();
+    expect(screen.queryByText('38')).not.toBeInTheDocument();
+  });
+
+  it('completion toast falls back to totalItems on a pre-sub-5-1 server', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true });
+    mockPreview.mockResolvedValue({ totalItems: 38 });
+    mockUseScanProgress.mockReturnValue({
+      ...scanningState,
+      isScanning: false,
+      isComplete: true,
+      percentDone: 100,
+    });
+
+    renderWithProviders();
+    expect(await screen.findByText('38')).toBeInTheDocument();
   });
 });

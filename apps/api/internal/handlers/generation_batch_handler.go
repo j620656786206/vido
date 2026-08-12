@@ -21,7 +21,7 @@ type GenerationBatchProcessorInterface interface {
 	Start(ctx context.Context, scope string, mediaIDs []string, budgetUSD float64) (string, []services.GenerationBatchItem, error)
 	GetProgress() *services.GenerationBatchProgress
 	Cancel()
-	PreviewMissing(ctx context.Context) (int, error)
+	PreviewMissing(ctx context.Context) (movies, includingEpisodes int, err error)
 }
 
 // GenerationBatchHandler handles the generation-batch API (Story 9R-16;
@@ -207,11 +207,11 @@ func (h *GenerationBatchHandler) CancelGenerationBatch(c *gin.Context) {
 
 // PreviewGenerationBatch handles GET /api/v1/subtitles/generation-batch/preview.
 // @Summary Preview the missing-scope generation batch size
-// @Description Returns how many movies scope=missing would enumerate (the F8 idle-dialog count) without starting anything. Only scope=missing is supported — a selected scope needs no preview.
+// @Description Returns how many movies scope=missing would enumerate (total_items — the F8 idle-dialog count) without starting anything, plus total_items_including_episodes: the library-wide missing count with episodes, for consumers (the F17 scan toast) whose next screen — the consent list — includes episodes. Only scope=missing is supported — a selected scope needs no preview.
 // @Tags subtitles
 // @Produce json
 // @Param scope query string true "must be 'missing'"
-// @Success 200 {object} APIResponse "{total_items}"
+// @Success 200 {object} APIResponse "{total_items, total_items_including_episodes}"
 // @Failure 400 {object} APIResponse "scope missing or unsupported"
 // @Failure 500 {object} APIResponse "DB_QUERY_FAILED"
 // @Router /api/v1/subtitles/generation-batch/preview [get]
@@ -222,7 +222,7 @@ func (h *GenerationBatchHandler) PreviewGenerationBatch(c *gin.Context) {
 		return
 	}
 
-	count, err := h.processor.PreviewMissing(c.Request.Context())
+	movies, includingEpisodes, err := h.processor.PreviewMissing(c.Request.Context())
 	if err != nil {
 		ErrorResponse(c, http.StatusInternalServerError, "DB_QUERY_FAILED",
 			"無法取得缺字幕項目數量："+err.Error(),
@@ -231,6 +231,15 @@ func (h *GenerationBatchHandler) PreviewGenerationBatch(c *gin.Context) {
 	}
 
 	SuccessResponse(c, map[string]interface{}{
-		"total_items": count,
+		// total_items semantics FROZEN (sub-4-2 AC #3): what scope=missing
+		// would actually run — movies only. Existing F8 consumers unchanged.
+		"total_items": movies,
+		// sub-5-1 AC #7 additive key (this endpoint's existing-keys-unchanged
+		// precedent, no bump): the library-wide missing count INCLUDING
+		// episodes — an UPPER BOUND on the consent list the F17 toast links
+		// to (the list additionally filters skipped/unprobeable items and
+		// items with no media file). Each number is honest for its own
+		// consumer; do not merge them.
+		"total_items_including_episodes": includingEpisodes,
 	})
 }

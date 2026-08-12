@@ -17,6 +17,10 @@ type FactoryConfig struct {
 	// ClaudeModel optionally overrides the Claude model id (9R-1).
 	// Empty uses DefaultClaudeModel.
 	ClaudeModel string
+	// Governor is the shared AI throttle (sub-5-1 AC #2). Nil = unthrottled —
+	// today's parse-path behavior; wiring it lets the factory-built providers
+	// share the process-wide concurrency/QPS pool.
+	Governor *Governor
 }
 
 // NewProvider creates an AI provider based on the configuration.
@@ -40,7 +44,7 @@ func NewProvider(cfg FactoryConfig) (Provider, error) {
 			return nil, fmt.Errorf("%w: GEMINI_API_KEY not configured", ErrAINotConfigured)
 		}
 		slog.Info("Creating Gemini AI provider")
-		return NewGeminiProvider(cfg.GeminiAPIKey), nil
+		return NewGeminiProvider(cfg.GeminiAPIKey, WithGeminiGovernor(cfg.Governor)), nil
 
 	case ProviderClaude:
 		if cfg.ClaudeAPIKey == "" {
@@ -49,9 +53,9 @@ func NewProvider(cfg FactoryConfig) (Provider, error) {
 		}
 		slog.Info("Creating Claude AI provider", "model_override", cfg.ClaudeModel)
 		if cfg.ClaudeModel != "" {
-			return NewClaudeProvider(cfg.ClaudeAPIKey, WithClaudeModel(cfg.ClaudeModel)), nil
+			return NewClaudeProvider(cfg.ClaudeAPIKey, WithClaudeModel(cfg.ClaudeModel), WithClaudeGovernor(cfg.Governor)), nil
 		}
-		return NewClaudeProvider(cfg.ClaudeAPIKey), nil
+		return NewClaudeProvider(cfg.ClaudeAPIKey, WithClaudeGovernor(cfg.Governor)), nil
 
 	default:
 		return nil, fmt.Errorf("%w: unknown provider '%s'", ErrAINotConfigured, providerName)

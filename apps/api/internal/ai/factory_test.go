@@ -176,3 +176,26 @@ func TestMustNewProvider_Panic(t *testing.T) {
 		MustNewProvider(cfg)
 	})
 }
+
+// CR H2 (sub-5-1): the Governor must PROPAGATE from FactoryConfig to the
+// built provider — a wired branch with a never-populated field was inert in
+// production. Both provider branches are covered.
+func TestNewProvider_PropagatesTheGovernor(t *testing.T) {
+	g := NewGovernor(2, 0, 0)
+
+	gp, err := NewProvider(FactoryConfig{ProviderName: "gemini", GeminiAPIKey: "k", Governor: g})
+	if err != nil {
+		t.Fatalf("gemini provider: %v", err)
+	}
+	if gp.(*GeminiProvider).governor != g {
+		t.Fatal("Gemini provider must carry the FactoryConfig Governor")
+	}
+
+	cp, err := NewProvider(FactoryConfig{ProviderName: "claude", ClaudeAPIKey: "k", Governor: g})
+	if err != nil {
+		t.Fatalf("claude provider: %v", err)
+	}
+	if cp.(*ClaudeProvider).Governor() != g {
+		t.Fatal("Claude provider must carry the FactoryConfig Governor")
+	}
+}

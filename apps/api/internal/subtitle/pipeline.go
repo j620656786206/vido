@@ -220,6 +220,11 @@ type Pipeline struct {
 	// discovered at call time.
 	modelID string
 
+	// runBudgetUSD is the per-item AI cost ceiling (sub-5-1 AC #3;
+	// AI_RUN_BUDGET_USD, 0 = unlimited) applied when ProcessItem's ctx carries
+	// no Budget already. Wiring-supplied like modelID.
+	runBudgetUSD float64
+
 	// progress is the nil-safe stage hook. sub-1-6 connects it to the SSE hub;
 	// it stays nil here and in every test that does not assert on it, which is
 	// what keeps this story free of SSE (AC #8).
@@ -280,6 +285,14 @@ func WithSpeechTranscriber(asr SpeechTranscriber) PipelineOption {
 // would serve the previous model's translations back unnoticed.
 func WithModelID(modelID string) PipelineOption {
 	return func(p *Pipeline) { p.modelID = modelID }
+}
+
+// WithRunBudgetUSD sets the per-item AI cost ceiling ProcessItem attaches when
+// its ctx carries no Budget (sub-5-1 AC #3, the WithModelID wiring precedent).
+// Without it the FR12/pool path's LLM translation spend was never metered and
+// never capped — "AI 花費上限" only held on the consent batch.
+func WithRunBudgetUSD(usd float64) PipelineOption {
+	return func(p *Pipeline) { p.runBudgetUSD = usd }
 }
 
 // WithProgress installs the stage hook sub-1-6 bridges to the SSE hub.

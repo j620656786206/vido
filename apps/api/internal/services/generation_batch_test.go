@@ -109,6 +109,16 @@ func (f *fakeCandidateFinder) FindByID(_ context.Context, id string) (*models.Mo
 type fakeEpisodeFinder struct {
 	byID    map[string]*models.Episode
 	byIDErr error // non-nil = simulate a REAL lookup failure (not not-found)
+	// count is the episode half of the preview (sub-5-1 AC #7).
+	count    int
+	countErr error
+}
+
+func (f *fakeEpisodeFinder) CountMissingZhHantSubtitle(_ context.Context) (int, error) {
+	if f.countErr != nil {
+		return 0, f.countErr
+	}
+	return f.count, nil
 }
 
 func (f *fakeEpisodeFinder) FindByID(_ context.Context, id string) (*models.Episode, error) {
@@ -495,15 +505,56 @@ func TestGenerationBatch_SelectedScope_InvalidIDRejected(t *testing.T) {
 	assert.False(t, p.IsRunning())
 }
 
-// AC 3: preview returns the count without starting anything.
+// AC 3: preview returns the count without starting anything. sub-5-1 AC #7:
+// a nil episode finder degrades the including-episodes count to movies-only.
 func TestGenerationBatch_PreviewMissing(t *testing.T) {
 	finder := &fakeCandidateFinder{count: 38}
 	p, _ := newTestGenerationProcessor(t, &fakeGenerationRunner{available: true}, finder, 5)
 
-	n, err := p.PreviewMissing(context.Background())
+	movies, includingEpisodes, err := p.PreviewMissing(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, 38, n)
+	assert.Equal(t, 38, movies)
+	assert.Equal(t, 38, includingEpisodes, "nil episode finder → movies-only degrade")
 	assert.False(t, p.IsRunning())
+}
+
+// sub-5-1 AC #7: the preview returns BOTH numbers — total_items stays
+// movies-only (frozen: it is what scope=missing runs), the additive count
+// adds the episode twin for the F17 toast.
+func TestGenerationBatch_PreviewMissing_IncludesEpisodes(t *testing.T) {
+	finder := &fakeCandidateFinder{count: 38}
+	episodes := &fakeEpisodeFinder{count: 104}
+	p, _ := newTestGenerationProcessorWithEpisodes(t, &fakeGenerationRunner{available: true}, finder, episodes, 5)
+
+	movies, includingEpisodes, err := p.PreviewMissing(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, 38, movies, "total_items semantics frozen — movies only")
+	assert.Equal(t, 142, includingEpisodes)
+}
+
+// CR M2: an episode-count failure DEGRADES to the movies-only count instead
+// of 500ing the whole preview — total_items is a frozen pre-existing key and
+// its availability must not start depending on the episodes table. The
+// degraded number equals the pre-sub-5-1 toast behavior (undercount,
+// direction-safe).
+func TestGenerationBatch_PreviewMissing_EpisodeCountErrorDegradesToMovies(t *testing.T) {
+	finder := &fakeCandidateFinder{count: 38}
+	episodes := &fakeEpisodeFinder{countErr: errors.New("db locked")}
+	p, _ := newTestGenerationProcessorWithEpisodes(t, &fakeGenerationRunner{available: true}, finder, episodes, 5)
+
+	movies, includingEpisodes, err := p.PreviewMissing(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, 38, movies)
+	assert.Equal(t, 38, includingEpisodes)
+}
+
+// The movie half failing still fails the preview — it IS total_items.
+func TestGenerationBatch_PreviewMissing_MovieCountErrorStillFails(t *testing.T) {
+	finder := &fakeCandidateFinder{findErr: errors.New("db locked")}
+	p, _ := newTestGenerationProcessor(t, &fakeGenerationRunner{available: true}, finder, 5)
+
+	_, _, err := p.PreviewMissing(context.Background())
+	require.Error(t, err)
 }
 
 // Enumeration failure surfaces as a start error (500 at the handler).

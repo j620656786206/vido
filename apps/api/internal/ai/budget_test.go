@@ -56,3 +56,33 @@ func TestBudget_ContextPlumbing(t *testing.T) {
 	ctx := WithBudget(context.Background(), b)
 	assert.Same(t, b, BudgetFromContext(ctx))
 }
+
+// --- sub-5-1 AC #1: rate-aware ASR metering (費率同源) ---
+
+func TestBudget_RecordASRWithRate_SelfHostedRateIsZeroSpend(t *testing.T) {
+	b := NewBudget(0)
+	b.RecordASRWithRate(600, EstimatedASRPerMinuteUSD(true)) // self-hosted → $0/min
+	snap := b.Snapshot()
+	assert.Zero(t, snap.SpentUSD,
+		"a self-hosted ASR run must record $0 — the hosted rate here would be a fabricated bill")
+	// Observability still accrues: the run happened, it just cost nothing.
+	assert.InDelta(t, 600, snap.ASRSeconds, 1e-9)
+	assert.Equal(t, 1, snap.ASRCalls)
+	assert.False(t, b.Exceeded())
+}
+
+func TestBudget_RecordASRWithRate_HostedRateMatchesRecordASR(t *testing.T) {
+	// 同源斷言: RecordASR (the legacy delegate) and RecordASRWithRate fed the
+	// estimator's hosted rate must record the identical spend.
+	legacy, rated := NewBudget(0), NewBudget(0)
+	legacy.RecordASR(120)
+	rated.RecordASRWithRate(120, EstimatedASRPerMinuteUSD(false))
+	assert.InDelta(t, legacy.SpentUSD(), rated.SpentUSD(), 1e-9)
+	assert.InDelta(t, 0.012, rated.SpentUSD(), 1e-9) // 2 min * $0.006
+}
+
+func TestBudget_RecordASRWithRate_NilSafe(t *testing.T) {
+	var b *Budget
+	b.RecordASRWithRate(60, 0.006) // no panic
+	assert.Zero(t, b.SpentUSD())
+}

@@ -1,3 +1,13 @@
+// Package-level metering ruling (sub-5-1 AC #4): the parse paths in this file
+// — ParseFilename, ParseFansubFilename, GenerateKeywords — run WITHOUT a
+// Budget on their ctx, for BOTH providers, so ai.RecordLLM is a deliberate
+// no-op here. This is unmetered-by-DESIGN, not an oversight: these are
+// background metadata calls fired by scans (no user-consent boundary, no
+// single "run" to attach a ceiling to), unlike subtitle generation where every
+// path carries a Budget. Documented in docs/deployment.md; a future
+// observability counter (non-capping) is tracked as
+// backlog-parse-path-ai-metering. Do NOT quietly attach a Budget here — a
+// capped scan would strand a library half-parsed with no screen to say why.
 package services
 
 import (
@@ -63,7 +73,12 @@ var _ AIServiceInterface = (*AIService)(nil)
 
 // NewAIService creates a new AI service with the configured provider and cache.
 // Returns nil if no AI provider is configured.
-func NewAIService(cfg *config.Config, db *sql.DB) (*AIService, error) {
+//
+// governor is the process-wide AI throttle (9R-11; nil = unthrottled). It is a
+// parameter — not read from cfg — because config carries values, not live
+// resources; main.go owns the single Governor instance (sub-5-1 CR H2: a
+// Governor field left unset made the factory wiring inert in production).
+func NewAIService(cfg *config.Config, db *sql.DB, governor *ai.Governor) (*AIService, error) {
 	if !cfg.HasAIProvider() {
 		slog.Info("AI service not configured - no API keys set")
 		return nil, nil
@@ -75,6 +90,7 @@ func NewAIService(cfg *config.Config, db *sql.DB) (*AIService, error) {
 		GeminiAPIKey: cfg.GetGeminiAPIKey(),
 		ClaudeAPIKey: cfg.GetClaudeAPIKey(),
 		ClaudeModel:  cfg.GetClaudeModel(),
+		Governor:     governor,
 	}
 
 	provider, err := ai.NewProvider(factoryCfg)

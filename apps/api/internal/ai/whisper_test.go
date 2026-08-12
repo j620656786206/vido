@@ -628,3 +628,81 @@ func TestWhisperClient_DefaultModelIsWhisper1(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, WhisperModel, gotModel, "default model stays whisper-1")
 }
+
+// --- sub-5-1 AC #1: metering follows the endpoint the client actually calls ---
+
+// transcribeWithParseableWAV runs one transcription of a REAL parseable WAV
+// (parseWAVInfo must succeed for RecordASR* to fire) against a mock server.
+func transcribeWithParseableWAV(t *testing.T, b *Budget, opts ...WhisperOption) {
+	t.Helper()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("1\n00:00:00,000 --> 00:00:01,000\nhello\n"))
+	}))
+	defer server.Close()
+
+	f, err := os.CreateTemp(t.TempDir(), "metered-*.wav")
+	require.NoError(t, err)
+	byteRate := uint32(32000)
+	writeWAVWithChunks(t, f, byteRate, byteRate*60, false) // exactly 60s of audio
+
+	c := NewWhisperClient("test-key", append([]WhisperOption{WithWhisperBaseURL(server.URL)}, opts...)...)
+	_, err = c.Transcribe(WithBudget(context.Background(), b), f.Name())
+	require.NoError(t, err)
+}
+
+func TestWhisperClient_SelfHostedEndpointRecordsZeroSpend(t *testing.T) {
+	// The base URL override IS the self-hosted signal (c.baseURL != WhisperAPIURL)
+	// — the httptest server plays the role of a local faster-whisper/Speaches.
+	b := NewBudget(0)
+	transcribeWithParseableWAV(t, b)
+	snap := b.Snapshot()
+	assert.Zero(t, snap.SpentUSD, "self-hosted ASR must not bill the hosted per-minute rate")
+	assert.InDelta(t, 60, snap.ASRSeconds, 1.0, "the audio minutes are still metered")
+	assert.Equal(t, 1, snap.ASRCalls)
+}
+
+func TestWhisperClient_IsSelfHosted_ReadsTheActualEndpoint(t *testing.T) {
+	assert.False(t, NewWhisperClient("k").isSelfHosted(),
+		"default base URL = the paid hosted API")
+	assert.True(t, NewWhisperClient("k", WithWhisperBaseURL("http://nas.local:8000/v1/audio/transcriptions")).isSelfHosted())
+}
+
+func TestWhisperClient_MeterRateIsSameSourceAsEstimator(t *testing.T) {
+	// 同源斷言 (hosted side): a client at the DEFAULT endpoint meters exactly
+	// EstimatedASRPerMinuteUSD(false) per minute. The call site passes
+	// EstimatedASRPerMinuteUSD(c.isSelfHosted()) — this pins the hosted branch
+	// without hitting the real API by computing what one minute would record.
+	b := NewBudget(0)
+	b.RecordASRWithRate(60, EstimatedASRPerMinuteUSD(NewWhisperClient("k").isSelfHosted()))
+	assert.InDelta(t, HostedASRPerMinuteUSD(), b.SpentUSD(), 1e-9)
+}
+
+// CR M1 (sub-5-1): quote and invoice derive their self-hosted answer from ONE
+// predicate. For every configured ASR_BASE_URL value, the estimate side's
+// IsSelfHostedASRBaseURL must agree with the metering side's client-derived
+// judgment — including the trap value: the official endpoint set explicitly.
+func TestSelfHostedJudgment_SingleSource(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		configured string // ASR_BASE_URL as the operator set it ("" = unset)
+		selfHosted bool
+	}{
+		{"unset → hosted", "", false},
+		{"official endpoint set explicitly → still hosted", WhisperAPIURL, false},
+		{"custom endpoint → self-hosted", "http://nas.local:8000/v1/audio/transcriptions", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// The estimate side (main.go → NewGenerationCandidateService).
+			assert.Equal(t, tc.selfHosted, IsSelfHostedASRBaseURL(tc.configured))
+
+			// The metering side: build the client exactly as main.go does —
+			// override only when the config value is non-empty.
+			opts := []WhisperOption{}
+			if tc.configured != "" {
+				opts = append(opts, WithWhisperBaseURL(tc.configured))
+			}
+			assert.Equal(t, tc.selfHosted, NewWhisperClient("k", opts...).isSelfHosted(),
+				"estimate and metering disagreeing is a quote the invoice contradicts")
+		})
+	}
+}

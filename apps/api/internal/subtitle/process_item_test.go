@@ -839,3 +839,102 @@ func TestProcessItem_IntegrationWritesAllSixteenRunColumns(t *testing.T) {
 	assert.Nil(t, second.Run)
 	assert.Equal(t, before, router.calls, "a re-scan of a completed item must cost nothing")
 }
+
+// ─── sub-5-1 AC #3: per-item budget on the FR12/pool path ──────────────────
+
+// ctxBudgetSpy wraps the harness translator, capturing the Budget each chunk's
+// ctx carries — the exact seam the real ai client reads via governed(). onChunk
+// runs BEFORE the inner translator, emulating governed()'s budget pre-check.
+type ctxBudgetSpy struct {
+	inner   ChunkTranslator
+	budgets []*ai.Budget
+	onChunk func(b *ai.Budget) error
+}
+
+func (s *ctxBudgetSpy) TranslateChunk(ctx context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+	b := ai.BudgetFromContext(ctx)
+	s.budgets = append(s.budgets, b)
+	if s.onChunk != nil {
+		if err := s.onChunk(b); err != nil {
+			return nil, ai.CompletionUsage{}, err
+		}
+	}
+	return s.inner.TranslateChunk(ctx, sys, contextBlocks, blocks)
+}
+
+func TestProcessItem_AttachesPerItemBudgetWithTheConfiguredCeiling(t *testing.T) {
+	h := newItemHarness(t, translateDecision("Good morning."), WithRunBudgetUSD(5))
+	spy := &ctxBudgetSpy{
+		inner: h.trans,
+		onChunk: func(b *ai.Budget) error {
+			// The real claude client records usage against exactly this budget.
+			b.RecordLLM("claude-haiku-4-5", 100_000, 10_000)
+			return nil
+		},
+	}
+	h.pipeline.translator = spy
+
+	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+	require.NoError(t, err)
+
+	require.NotEmpty(t, spy.budgets)
+	b := spy.budgets[0]
+	require.NotNil(t, b,
+		"the FR12/pool path must carry a Budget — an absent one made 'AI 花費上限' a fiction for translation spend")
+	snap := b.Snapshot()
+	assert.InDelta(t, 5.0, snap.BudgetUSD, 1e-9, "ceiling = the wired AI_RUN_BUDGET_USD value")
+	assert.Positive(t, snap.SpentUSD, "the translate leg's LLM spend is now recorded")
+	assert.Equal(t, 1, snap.LLMCalls)
+}
+
+func TestProcessItem_NeverOverridesACtxBudget_ConsentCeilingRedLine(t *testing.T) {
+	// sub-4-2 red line: the consent batch attaches ONE shared Budget for the
+	// whole batch. The per-item envelope must NOT replace it — that would
+	// silently void the ceiling the user confirmed on F16.
+	h := newItemHarness(t, translateDecision("Good morning."), WithRunBudgetUSD(5))
+	spy := &ctxBudgetSpy{inner: h.trans}
+	h.pipeline.translator = spy
+
+	shared := ai.NewBudget(3)
+	ctx := ai.WithBudget(context.Background(), shared)
+	_, err := h.pipeline.ProcessItem(ctx, h.ref, ProcessItemOptions{})
+	require.NoError(t, err)
+
+	require.NotEmpty(t, spy.budgets)
+	assert.Same(t, shared, spy.budgets[0],
+		"a ctx that already carries a Budget keeps it — batch shared ceiling MUST NOT be overridden")
+	assert.InDelta(t, 3.0, shared.Snapshot().BudgetUSD, 1e-9)
+}
+
+func TestProcessItem_TranslateLegBudgetCeilingFailsTheItem(t *testing.T) {
+	// 11 cues → 2 chunks (batch size 10). Chunk 1 records spend over the tiny
+	// ceiling; chunk 2's pre-check (the governed() emulation) short-circuits
+	// with ai.ErrBudgetExceeded — the translate leg's ceiling hit is a FAIL
+	// (retryable, audited), not the ASR leg's pause.
+	texts := make([]string, 11)
+	for i := range texts {
+		texts[i] = fmt.Sprintf("Line %d.", i+1)
+	}
+	h := newItemHarness(t, translateDecision(texts...), WithRunBudgetUSD(0.001))
+	spy := &ctxBudgetSpy{
+		inner: h.trans,
+		onChunk: func(b *ai.Budget) error {
+			if b.Exceeded() {
+				return ai.ErrBudgetExceeded
+			}
+			b.RecordLLM("claude-haiku-4-5", 1_000_000, 0) // $0.10 → over $0.001
+			return nil
+		},
+	}
+	h.pipeline.translator = spy
+
+	outcome, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+	require.Error(t, err)
+	assert.Nil(t, outcome)
+	assert.ErrorIs(t, err, ai.ErrBudgetExceeded, "the sentinel must survive the wrapping for caller classification")
+
+	final := h.runs.lastUpdate(t)
+	assert.Equal(t, models.SubtitleRunFailed, final.Status)
+	last := h.media.writes[len(h.media.writes)-1]
+	assert.Equal(t, models.SubtitleStatusNotSearched, last.status, "budget-failed items stay retryable")
+}

@@ -146,3 +146,41 @@ func TestEpisodeRepository_FindMissingZhHantSubtitle_EmptyLibrary(t *testing.T) 
 	require.NoError(t, err)
 	assert.Empty(t, got, "an empty library is not an error")
 }
+
+// TestEpisodeRepository_CountMissingZhHantSubtitle — the count twin (sub-5-1
+// AC #7) must agree with the enumeration by construction: same shared
+// predicate, so the three-段 assertion (mixed set → writeback → shrink)
+// mirrors the movie repo's pattern.
+func TestEpisodeRepository_CountMissingZhHantSubtitle(t *testing.T) {
+	db := newMigratedEpisodeDB(t)
+	repo := NewEpisodeRepository(db)
+	seedGenerationSeries(t, db, "s1")
+
+	seedGenerationEpisode(t, db, "needs-generation", "s1", 1, "/media/s1e1.mkv", "")
+	seedGenerationEpisode(t, db, "has-english", "s1", 2, "/media/s1e2.mkv", "en")
+	seedGenerationEpisode(t, db, "already-done", "s1", 3, "/media/s1e3.mkv", "zh-Hant")
+	seedGenerationEpisode(t, db, "no-media-file", "s1", 4, "", "")
+
+	count, err := repo.CountMissingZhHantSubtitle(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, 2, count)
+
+	// Count and enumeration share one predicate — they can never disagree.
+	found, err := repo.FindMissingZhHantSubtitle(context.Background())
+	require.NoError(t, err)
+	assert.Len(t, found, count)
+
+	// The generation-success writeback self-excludes the episode.
+	require.NoError(t, repo.UpdateEpisodeSubtitleStatus(context.Background(),
+		"needs-generation", models.SubtitleStatusFound, "/media/s1e1.zh-Hant.srt", "zh-Hant"))
+	count, err = repo.CountMissingZhHantSubtitle(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
+}
+
+func TestEpisodeRepository_CountMissingZhHantSubtitle_EmptyLibrary(t *testing.T) {
+	repo := NewEpisodeRepository(newMigratedEpisodeDB(t))
+	count, err := repo.CountMissingZhHantSubtitle(context.Background())
+	require.NoError(t, err)
+	assert.Zero(t, count)
+}

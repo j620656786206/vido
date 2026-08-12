@@ -16,8 +16,10 @@
  *
  * budget_usd is WYSIWYG consent: the number on screen is ALWAYS sent — the
  * server-side env default is a fallback for the legacy dialog, never a hidden
- * data source for this flow. Prefill matches the AI_RUN_BUDGET_USD factory
- * default ($5.00; drift tracked as backlog-budget-default-config-endpoint).
+ * data source for this flow. Prefill reads the snapshot's default_budget_usd
+ * (sub-5-1 AC #6 — the operator's real AI_RUN_BUDGET_USD follows through);
+ * DEFAULT_BUDGET_TEXT stays as the fallback for the error phase and
+ * pre-sub-5-1 servers.
  *
  * Rule 23: zero wall-clock reads (`analyzed_at` is deliberately not rendered).
  */
@@ -38,7 +40,9 @@ import {
   type ConsentRouteFilter,
 } from './consentSelection';
 
-/** Matches the backend AI_RUN_BUDGET_USD factory default. */
+/** Fallback prefill when the snapshot carries no default_budget_usd (error
+ * phase, or a pre-sub-5-1 server). Matches the AI_RUN_BUDGET_USD factory
+ * default. */
 const DEFAULT_BUDGET_TEXT = '5.00';
 
 type ConsentPhase = 'loading' | 'analyzing' | 'list' | 'empty' | 'error';
@@ -114,6 +118,13 @@ export function GenerationConsentView({
       try {
         const snap = await subtitleService.getGenerationCandidates();
         if (isCancelled()) return;
+        // sub-5-1 AC #6: prefill from the operator's configured default —
+        // BEFORE the phase branches so the ready / analyzing / kick-analyze
+        // exits all get it. A non-positive or absent value keeps the
+        // DEFAULT_BUDGET_TEXT fallback (pre-sub-5-1 server / unlimited=0).
+        if (typeof snap.defaultBudgetUsd === 'number' && snap.defaultBudgetUsd > 0) {
+          setBudgetText(snap.defaultBudgetUsd.toFixed(2));
+        }
         if (!forceAnalyze && snap.status === 'ready' && snap.result) {
           seedList(snap.result.candidates);
           return;

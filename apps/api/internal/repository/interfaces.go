@@ -246,6 +246,11 @@ type EpisodeRepositoryInterface interface {
 	// the movie half only; this is the Rule 24 lane ① expansion.
 	FindMissingZhHantSubtitle(ctx context.Context) ([]models.Episode, error)
 
+	// CountMissingZhHantSubtitle counts episodes FindMissingZhHantSubtitle
+	// would return — the episode half of the generation-batch preview count.
+	// Needed by: sub-5-1 AC #7 (F17 toast including episodes).
+	CountMissingZhHantSubtitle(ctx context.Context) (int, error)
+
 	// Update modifies an existing episode in the database
 	Update(ctx context.Context, episode *models.Episode) error
 

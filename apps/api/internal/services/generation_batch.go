@@ -110,11 +110,13 @@ type generationCandidateFinder interface {
 }
 
 // generationEpisodeFinder is the narrow episode-repo surface for scope=selected
-// id resolution (sub-4-2 D1 ruling: mixed movie+episode batches).
+// id resolution (sub-4-2 D1 ruling: mixed movie+episode batches) and the
+// episode half of the preview count (sub-5-1 AC #7).
 // *repository.EpisodeRepository satisfies it. A nil finder degrades to the
 // pre-sub-4-2 movies-only behavior.
 type generationEpisodeFinder interface {
 	FindByID(ctx context.Context, id string) (*models.Episode, error)
+	CountMissingZhHantSubtitle(ctx context.Context) (int, error)
 }
 
 // GenerationBatchProcessor runs the Route C generation pipeline sequentially
@@ -212,9 +214,34 @@ func (p *GenerationBatchProcessor) Cancel() {
 }
 
 // PreviewMissing returns how many movies a scope=missing batch would enumerate
-// (AC 3 — the F8 idle-dialog count) without starting anything.
-func (p *GenerationBatchProcessor) PreviewMissing(ctx context.Context) (int, error) {
-	return p.finder.CountMissingZhHantSubtitle(ctx)
+// (AC 3 — the F8 idle-dialog count; semantics FROZEN per sub-4-2 AC #3: the
+// batch itself stays movies-only) AND a library-wide missing count including
+// episodes (sub-5-1 AC #7 — an upper bound on the consent list, which
+// additionally filters skipped/unprobeable items). Two numbers, each honest
+// for its own consumer.
+//
+// The episode leg DEGRADES rather than fails (sub-5-1 CR M2): total_items is
+// a frozen pre-existing key whose availability must not start depending on
+// the episodes table — an `episodes` lock (a recurring condition on the NAS
+// target) would otherwise 500 a response whose movie half was already
+// computed. Degraded includingEpisodes == movies is the pre-sub-5-1 toast
+// behavior: an undercount, direction-safe. Same degrade for a nil finder.
+func (p *GenerationBatchProcessor) PreviewMissing(ctx context.Context) (movies, includingEpisodes int, err error) {
+	movies, err = p.finder.CountMissingZhHantSubtitle(ctx)
+	if err != nil {
+		return 0, 0, err
+	}
+	includingEpisodes = movies
+	if p.episodes != nil {
+		episodes, err := p.episodes.CountMissingZhHantSubtitle(ctx)
+		if err != nil {
+			p.logger.Warn("episode preview count failed — degrading to the movies-only count",
+				"error", err)
+			return movies, movies, nil
+		}
+		includingEpisodes += episodes
+	}
+	return movies, includingEpisodes, nil
 }
 
 // Start enumerates the queue and begins background processing. Returns the

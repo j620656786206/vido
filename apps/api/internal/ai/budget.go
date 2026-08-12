@@ -21,6 +21,16 @@ var defaultLLMPricing = map[string]ModelPricing{
 	"claude-sonnet-5":   {InputPer1M: 3.0, OutputPer1M: 15.0},
 	"claude-opus-4-8":   {InputPer1M: 5.0, OutputPer1M: 25.0},
 	"claude-sonnet-4-6": {InputPer1M: 3.0, OutputPer1M: 15.0},
+	// Gemini rows (sub-5-1 AC #2): a Gemini call must never silently fall into
+	// the Haiku-tier fallback and record a fabricated number. Verified
+	// 2026-08-12 at https://ai.google.dev/gemini-api/docs/pricing.
+	// NOTE: gemini-2.0-flash (the current DefaultGeminiModel) was SHUT DOWN by
+	// Google on 2026-06-01 — row kept at its final published rate so any
+	// still-configured deployment meters honestly while the default-model bump
+	// is handled separately (bugfix-gemini-default-model-retired).
+	"gemini-2.0-flash":      {InputPer1M: 0.10, OutputPer1M: 0.40},
+	"gemini-2.5-flash":      {InputPer1M: 0.30, OutputPer1M: 2.50},
+	"gemini-2.5-flash-lite": {InputPer1M: 0.10, OutputPer1M: 0.40},
 }
 
 // fallbackLLMPricing is used when the model id isn't in the table.
@@ -60,11 +70,10 @@ func HostedASRPerMinuteUSD() float64 { return whisperPerMinuteUSD }
 // than the paid API?" — config lives above this package, so the decision is
 // passed in rather than read here.
 //
-// Known asymmetry (tracked as backlog-selfhosted-asr-actual-cost): RecordASR
-// still meters self-hosted runs at the hosted rate, so a self-hosted
-// deployment's ESTIMATE is now honest while its retrospective spend figure
-// still over-reports. Fixing the metering side needs the same rate resolution
-// threaded into RecordASR and is out of scope here.
+// This is ALSO the metering side's rate resolver (sub-5-1 AC #1): the Whisper
+// client passes EstimatedASRPerMinuteUSD(isSelfHosted) to RecordASRWithRate, so
+// the estimate and the retrospective spend figure are the same number by
+// construction.
 func EstimatedASRPerMinuteUSD(selfHosted bool) float64 {
 	if selfHosted {
 		return 0
@@ -124,12 +133,23 @@ func (b *Budget) RecordLLM(model string, inputTokens, outputTokens int64) {
 	)
 }
 
-// RecordASR adds one ASR (Whisper) call's audio-minute cost.
+// RecordASR adds one ASR (Whisper) call's audio-minute cost at the HOSTED API
+// rate. Kept as a thin delegate so pre-sub-5-1 callers and tests keep their
+// exact semantics; rate-aware callers use RecordASRWithRate.
 func (b *Budget) RecordASR(audioSeconds float64) {
+	b.RecordASRWithRate(audioSeconds, whisperPerMinuteUSD)
+}
+
+// RecordASRWithRate adds one ASR call's audio-minute cost at an explicit
+// per-minute rate (sub-5-1 AC #1). The rate comes from
+// EstimatedASRPerMinuteUSD so estimate and metering can never disagree — a
+// self-hosted endpoint records $0 while still accruing asrSeconds/asrCalls for
+// observability.
+func (b *Budget) RecordASRWithRate(audioSeconds, perMinuteUSD float64) {
 	if b == nil {
 		return
 	}
-	cost := audioSeconds / 60.0 * whisperPerMinuteUSD
+	cost := audioSeconds / 60.0 * perMinuteUSD
 	b.mu.Lock()
 	b.asrSeconds += audioSeconds
 	b.spentUSD += cost

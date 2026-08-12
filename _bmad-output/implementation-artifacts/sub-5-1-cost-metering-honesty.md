@@ -1,6 +1,6 @@
 # Story 5.1: 成本記帳誠實 —— 費率同源、全路徑計帳、預設值與計數曝露（後端為主）
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -42,29 +42,29 @@ M3 第一波第一棒（epic seed 2026-08-12）。M2.5 讓「事前估價」誠�
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — ASR 費率同源（AC: #1）**
-  - [ ] `RecordASRWithRate` ＋ `RecordASR` 委派；`whisper.go` 呼叫點改造＋`isSelfHosted()`
-  - [ ] 測試：自架 $0／hosted 守衛／同源斷言；清除 `budget.go:63-67` 掛帳註解
+- [x] **Task 1 — ASR 費率同源（AC: #1）**
+  - [x] `RecordASRWithRate` ＋ `RecordASR` 委派；`whisper.go` 呼叫點改造＋`isSelfHosted()`
+  - [x] 測試：自架 $0／hosted 守衛／同源斷言；清除 `budget.go:63-67` 掛帳註解
 
-- [ ] **Task 2 — Gemini 同級化（AC: #2）**
-  - [ ] usageMetadata 解析結構＋pricing 列（來源註明）＋`RecordLLM`
-  - [ ] `governed()`＋`retryTransient` 包裹＋Governor option＋factory 接線
-  - [ ] gemini_test 補 budget/governed/retry 案例（httptest fakes 帶 Content-Type）
+- [x] **Task 2 — Gemini 同級化（AC: #2）**
+  - [x] usageMetadata 解析結構＋pricing 列（來源註明）＋`RecordLLM`
+  - [x] `governed()`＋`retryTransient` 包裹＋Governor option＋factory 接線
+  - [x] gemini_test 補 budget/governed/retry 案例（httptest fakes 帶 Content-Type）
 
-- [ ] **Task 3 — pipeline per-item budget（AC: #3）**
-  - [ ] `ProcessItem` ctx budget（已有沿用／無則造）＋pipeline option＋main.go 接線
-  - [ ] 測試：FR12 翻譯計帳、觸頂 fail、批次共享 budget 不覆蓋
+- [x] **Task 3 — pipeline per-item budget（AC: #3）**
+  - [x] `ProcessItem` ctx budget（已有沿用／無則造）＋pipeline option＋main.go 接線
+  - [x] 測試：FR12 翻譯計帳、觸頂 fail、批次共享 budget 不覆蓋
 
-- [ ] **Task 4 — 解析路徑裁定記錄（AC: #4）**
-  - [ ] `ai_service.go` 檔頭＋`docs/deployment.md` 記錄；`backlog-parse-path-ai-metering` 立案（雙向）
+- [x] **Task 4 — 解析路徑裁定記錄（AC: #4）**
+  - [x] `ai_service.go` 檔頭＋`docs/deployment.md` 記錄；`backlog-parse-path-ai-metering` 立案（雙向）
 
-- [ ] **Task 5 — 預設值與計數曝露（AC: #5, #7 BE 半）**
-  - [ ] `AnalysisSnapshot.DefaultBudgetUSD`＋service 參數＋inline stamp 註解補齊
-  - [ ] episode Count twin＋窄介面＋`PreviewMissing` 雙數字＋additive key＋Swagger／註解
+- [x] **Task 5 — 預設值與計數曝露（AC: #5, #7 BE 半）**
+  - [x] `AnalysisSnapshot.DefaultBudgetUSD`＋service 參數＋inline stamp 註解補齊
+  - [x] episode Count twin＋窄介面＋`PreviewMissing` 雙數字＋additive key＋Swagger／註解
 
-- [ ] **Task 6 — FE 消費與回歸（AC: #6, #7 FE 半, #8）**
-  - [ ] prefill 改讀 snapshot（fallback 保留）；toast 讀 `totalItemsIncludingEpisodes`
-  - [ ] 契約清點（sub-4-1 AC #7 additive ack、9R-16 preview additive 先例引用）＋全回歸
+- [x] **Task 6 — FE 消費與回歸（AC: #6, #7 FE 半, #8）**
+  - [x] prefill 改讀 snapshot（fallback 保留）；toast 讀 `totalItemsIncludingEpisodes`
+  - [x] 契約清點（sub-4-1 AC #7 additive ack、9R-16 preview additive 先例引用）＋全回歸
 
 （後端 task 5 個、前端 1 個 —— 未觸發跨端拆分門檻。）
 
@@ -136,11 +136,30 @@ M3 第一波第一棒（epic seed 2026-08-12）。M2.5 讓「事前估價」誠�
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Fable 5 (claude-fable-5)
 
 ### Debug Log References
 
+- Full API suite: `go test ./...` green (all packages, -count=1).
+- Full web suite: `pnpm nx test web` — 233 files / 2619 tests green.
+- `pnpm run lint:all` — 0 errors, 119 pre-existing warnings (retro-11-AI1b batch; 0 on files this story touched); prettier clean.
+- Gemini pricing verified 2026-08-12 against https://ai.google.dev/gemini-api/docs/pricing (source cited in `budget.go`).
+
 ### Completion Notes List
+
+- **🔗 AC Drift: FOUND — sanctioned.** sub-4-3 documented the F17 toast count as "凍結的 preview 端點（movies-only）… 已記 backlog"（sub-4-3 story, 已知限制 section）. This story's AC #7 changes that observable behavior: the toast now reads the additive `total_items_including_episodes` (backlog-consent-toast-count-episodes was PROMOTED into this AC at authoring). Grep sweep: `total_items|preview|toast|RecordASR|hosted rate` across `_bmad-output/implementation-artifacts/*.md` AND `tests/e2e/**`+`tests/visual/**` (retro-m25-AI1 scope) — all other hits are REUSE. E2E stubs (`batch-subtitle.spec.ts:213` `{total_items: 2}`) omit the new key, and the FE `?? totalItems` fallback keeps behavior byte-identical under them — no E2E edits required, verified by reading every hit.
+- **📎 Contract Stamps: FOUND (0 bumps produced; 2 acks recorded)** — confirmed against `[@contract-v1]` (Story sub-4-1 AC #7): additive `default_budget_usd` on the candidates state envelope, existing keys unchanged, no bump; inline stamp comment added to `generation_candidates_handler.go` (the `generation_batch_handler.go` precedent). · confirmed against `[@contract-v2]` (Story 9R-16 AC #3): additive `total_items_including_episodes` on the preview response. **Authoring correction:** the story's 契約姿態 called this surface "未 stamp"; it IS stamped `[@contract-v2]` (9R-16 AC #3). Pure-widening rule applied (retro-19-P3 precedent — "widening-not-narrowing needs no Rule 20 bump", 19-5 AC #1): existing `total_items` key semantics FROZEN, additive key only → no bump, ack recorded here. No bumps produced → no downstream stale-mark obligation.
+- **🎭 A11y Pre-Flight: PASS** (2 components checked — GenerationConsentView, ScanProgress; 0 jsx-a11y warnings on touched files, 0 introduced by this story). Changes are data-source-only: no new interactive surface, no modal/image/live-region changes.
+- **🎨 UX Verification: PASS** — zero visual delta by construction: F15's budget input renders the same $5.00 under the factory default (the design-stated value; the prefill only diverges when an operator changes `AI_RUN_BUDGET_USD`), and F17's toast layout/copy are untouched (only the number's data source changed, per the authoring ruling 文案不改). No `.pen` change, no gallery-fixture change, no baseline regen.
+- **AC #1** — `RecordASRWithRate` added; `RecordASR` is now a thin delegate at the hosted rate (signature & existing tests untouched). `whisper.go` meters at `EstimatedASRPerMinuteUSD(c.isSelfHosted())` where `isSelfHosted()` reads the ACTUAL endpoint (`c.baseURL != WhisperAPIURL`), not config. The `budget.go:63-67` "Known asymmetry" 掛帳註解 replaced with the same-source statement. Tests: self-hosted $0 (unit + through-the-client with a real parseable WAV), hosted delegate parity, 同源斷言 both directions.
+- **AC #2** — `gemini.go` Parse now runs `governed()` → `retryTransient` → per-attempt timeout (the claude.go D8 nesting; malformed-200 permanent per classifyErr rationale), parses `usageMetadata{promptTokenCount,candidatesTokenCount}` and `RecordLLM`s into a ctx Budget. `WithGeminiGovernor` option + `FactoryConfig.Governor` wired at the factory's Gemini branch. Pricing rows added with source+date: `gemini-2.0-flash` $0.10/$0.40 (final published rate), `gemini-2.5-flash` $0.30/$2.50, `gemini-2.5-flash-lite` $0.10/$0.40 — the default model can no longer fall into the Haiku fallback. Tests: metering into ctx budget at the Gemini row, no-budget no-op, budget pre-call short-circuit (0 wire hits), 503-then-success retry, malformed-200 NOT retried, governor wiring, pricing-row guard.
+- **AC #3** — `Pipeline.WithRunBudgetUSD` option (WithModelID precedent) + `ProcessItem` attaches a per-item Budget ONLY when the ctx carries none (resolveBudget semantics mirrored); `main.go` wires `cfg.AIRunBudgetUSD`. 紅線釘住: `assert.Same` proves a ctx-carried (consent-batch) Budget is never replaced. Translate-leg ceiling hit = item FAIL (`ErrBudgetExceeded` survives the wrap chain, run row failed, media reverted to retryable) — the ASR leg keeps its existing pause classification untouched.
+- **AC #4** — parse paths ruled unmetered-by-design: package-header ruling in `ai_service.go`, operator-facing note in `docs/deployment.md` ("What AI_RUN_BUDGET_USD covers"), `backlog-parse-path-ai-metering` already filed at authoring (雙向 link verified). NOTE: `docs/deployment.md` has no zh-TW twin (pre-existing state; sub-4-2 edited it the same way) — Rule 17 not newly violated by this story.
+- **AC #5** — `AnalysisSnapshot.DefaultBudgetUSD` (`json:"default_budget_usd"`) + `defaultBudgetUSD` constructor param (selfHostedASR precedent) + `main.go` passes `cfg.AIRunBudgetUSD`. Present on EVERY snapshot state (idle included — the prefill must not wait for an analysis). Wire-shape test pins the snake_case key.
+- **AC #6** — FE `CandidateAnalysisSnapshot.defaultBudgetUsd?: number`; `GenerationConsentView.bootstrap` prefills BEFORE the phase branches (ready/analyzing/kick 三出口都吃到, proven by the SSE-ready-survival test), guarded by the existing `isCancelled` token; non-positive/absent → `DEFAULT_BUDGET_TEXT` fallback kept (0=unlimited must not prefill 0.00). WYSIWYG untouched — test proves the prefilled value is exactly what confirm sends.
+- **AC #7** — `EpisodeRepository.CountMissingZhHantSubtitle` twin over the SAME shared predicate (count-agrees-with-enumeration asserted; writeback-shrink asserted; real-sqlite migrated schema per the episode_generation_test pattern) + `EpisodeRepositoryInterface` sync + `generationEpisodeFinder` widened (nil → movies-only degrade, episode-count error surfaces loudly) + `PreviewMissing` returns both numbers + handler emits the additive key with the semantics-frozen comment. FE: `GenerationBatchPreviewResult.totalItemsIncludingEpisodes?` and the toast reads `?? totalItems`. 文案不改 per authoring ruling. Test fakes updated: `fakeEpisodeFinder` (services), `mockGenerationProcessor` (handlers), `mockPQEpisodeRepo` + `stubEpisodeRepo` (interface conformance stubs).
+- **AC #8** — 26 new/updated tests: budget_test ×3, whisper_test ×4, gemini_test ×7, process_item_test ×3, episode_generation_test ×2, generation_batch_test ×3 (preview trio), generation_candidates_test ×2, handler preview test widened, GenerationConsentView.spec ×5, ScanProgress.spec ×2. Full regression gates green (see Debug Log).
+- **Pre-existing fix: NONE needed** — no pre-existing failures encountered; the `gofmt -l` hit on `gemini.go` is a pre-existing one-space struct-tag misalignment in an untouched line (left alone to avoid noise; repo-wide gofmt drift is not CI-gated).
 
 ### Discovery Triage
 
@@ -148,5 +167,80 @@ M3 第一波第一棒（epic seed 2026-08-12）。M2.5 讓「事前估價」誠�
   - **YES** — filed at authoring time：
     - **① expand-scope-in-place** — FR12／worker-pool 管線 LLM 翻譯未計帳、不受上限（authoring 盤點發現，先前零掛帳）→ 吸收為 **AC #3**（本 story 的核心任務即為此類缺口）。
     - **③ backlog-with-carry-forward-link** — `backlog-parse-path-ai-metering`：檔名解析／fansub／keyword 路徑（兩個 provider 皆然）無 Budget ctx，計帳為 no-op。本 story 明文裁定不計帳並記錄（AC #4）；未來選項＝process 級 observability 計數器（非 capping）。非阻塞。
+  - **YES** — filed at implementation time (2026-08-12)：
+    - **③ backlog-with-carry-forward-link** — `bugfix-gemini-default-model-retired`：AC #2 查證官方定價時發現 `DefaultGeminiModel="gemini-2.0-flash"` 已於 **2026-06-01 被 Google 關閉**（官方定價頁明示 shut down）。`AI_PROVIDER` 預設即 `gemini` 且無 `GEMINI_MODEL` env 覆寫 → 預設部署的檔名解析自 6/1 起必 404（9R-1 Claude 模型退役同類事故）。本 story 只保住計帳誠實（保留 2.0-flash 最終費率列＋補現役 2.5 系列列）；模型 bump＋env 覆寫需獨立裁定，已立案（雙向）。非阻塞（Claude provider 部署不受影響）。
 
 ### File List
+
+**Backend**
+- apps/api/internal/ai/budget.go — RecordASRWithRate + RecordASR delegate; Gemini pricing rows (source+date cited); asymmetry 掛帳註解 cleared
+- apps/api/internal/ai/budget_test.go — rate-aware ASR metering tests (self-hosted $0 / hosted parity / nil-safe)
+- apps/api/internal/ai/whisper.go — isSelfHosted() (reads actual endpoint) + RecordASRWithRate call site
+- apps/api/internal/ai/whisper_test.go — self-hosted zero-spend through the client; endpoint-based detection; 同源斷言
+- apps/api/internal/ai/gemini.go — governed()+retryTransient+per-attempt timeout; usageMetadata parse; RecordLLM; WithGeminiGovernor
+- apps/api/internal/ai/gemini_test.go — 7 parity tests (metering / short-circuit / retry / permanent-garbage / governor / pricing row)
+- apps/api/internal/ai/factory.go — FactoryConfig.Governor + wiring on BOTH provider branches (CR H2)
+- apps/api/internal/ai/factory_test.go — Governor propagation test (CR H2)
+- apps/api/internal/subtitle/pipeline.go — runBudgetUSD field + WithRunBudgetUSD option
+- apps/api/internal/subtitle/process_item.go — per-item Budget attach (ctx-budget reuse red line)
+- apps/api/internal/subtitle/process_item_test.go — ctxBudgetSpy + 3 AC #3 tests (ceiling wired / assert.Same red line / translate-leg fail)
+- apps/api/internal/services/ai_service.go — package-header unmetered-by-design ruling (AC #4); NewAIService gains the governor param (CR H2)
+- apps/api/internal/services/generation_candidates.go — AnalysisSnapshot.DefaultBudgetUSD + constructor param
+- apps/api/internal/services/generation_candidates_test.go — call sites + default-budget snapshot/wire-shape tests
+- apps/api/internal/services/generation_batch.go — generationEpisodeFinder widened; PreviewMissing dual counts
+- apps/api/internal/services/generation_batch_test.go — fakeEpisodeFinder count support + preview trio tests
+- apps/api/internal/repository/episode_repository.go — CountMissingZhHantSubtitle twin
+- apps/api/internal/repository/episode_generation_test.go — count-twin real-sqlite tests (agree-with-enumeration + writeback shrink)
+- apps/api/internal/repository/interfaces.go — EpisodeRepositoryInterface + CountMissingZhHantSubtitle (Rule 15 sync)
+- apps/api/internal/handlers/generation_batch_handler.go — PreviewMissing interface + additive total_items_including_episodes (semantics-frozen comments, Swagger synced)
+- apps/api/internal/handlers/generation_batch_handler_test.go — mock + dual-count preview assertion
+- apps/api/internal/handlers/generation_candidates_handler.go — sub-4-1 AC #7 [@contract-v1] inline stamp comment (deferred-stamp fulfillment)
+- apps/api/internal/services/parse_queue_service_test.go — interface-conformance stub (CountMissingZhHantSubtitle)
+- apps/api/internal/services/series_season_test.go — interface-conformance stub (CountMissingZhHantSubtitle)
+- apps/api/cmd/api/main.go — WithRunBudgetUSD wiring + candidate-service defaultBudget wiring
+
+**Frontend**
+- apps/web/src/services/subtitleService.ts — CandidateAnalysisSnapshot.defaultBudgetUsd? + GenerationBatchPreviewResult.totalItemsIncludingEpisodes?
+- apps/web/src/components/subtitle/consent/GenerationConsentView.tsx — prefill from snapshot before phase branches; fallback kept; header doc updated
+- apps/web/src/components/subtitle/consent/GenerationConsentView.spec.tsx — 5 prefill tests (snapshot / fallback / non-positive / kick-exit survival / WYSIWYG)
+- apps/web/src/components/scanner/ScanProgress.tsx — toast count reads totalItemsIncludingEpisodes ?? totalItems
+- apps/web/src/components/scanner/ScanProgress.spec.tsx — 2 toast-count tests (episodes-inclusive + old-server fallback)
+
+**Docs / tracking**
+- docs/deployment.md — "What AI_RUN_BUDGET_USD covers" note (AC #4)
+- _bmad-output/implementation-artifacts/sprint-status.yaml — sub-5-1 in-progress→review; bugfix-gemini-default-model-retired filed
+- _bmad-output/implementation-artifacts/sub-4-3-cost-consent-frontend.md — (AC drift reference — see Completion Notes; file NOT modified)
+
+## Change Log
+
+| Date | Change |
+| --- | --- |
+| 2026-08-12 | Task 1 (AC #1): RecordASRWithRate + whisper endpoint-based self-hosted detection — self-hosted ASR retrospective spend now $0, rate single-sourced from EstimatedASRPerMinuteUSD. |
+| 2026-08-12 | Task 2 (AC #2): Gemini brought to Claude parity — governed+retryTransient+usageMetadata metering+Governor option+factory wiring; pricing rows added (verified 2026-08-12, ai.google.dev). Discovery: gemini-2.0-flash shut down 2026-06-01 → bugfix-gemini-default-model-retired filed (lane ③). |
+| 2026-08-12 | Task 3 (AC #3): per-item Budget on Pipeline.ProcessItem (WithRunBudgetUSD + main.go wiring); consent-batch shared ceiling never overridden (assert.Same red-line test); translate-leg ceiling hit fails the item. |
+| 2026-08-12 | Task 4 (AC #4): parse paths ruled unmetered-by-design — ai_service.go package header + deployment.md note; backlog-parse-path-ai-metering carry-forward verified. |
+| 2026-08-12 | Task 5 (AC #5, #7 BE): default_budget_usd rides the candidates envelope (additive on sub-4-1 AC #7 [@contract-v1], no bump, ack + inline stamp comment); episode Count twin + PreviewMissing dual counts + additive total_items_including_episodes (widening-no-bump on 9R-16 AC #3 [@contract-v2], total_items frozen). |
+| 2026-08-12 | Task 6 (AC #6, #7 FE, #8): F15 prefill reads the snapshot default (fallback kept); F17 toast reads the episodes-inclusive count (old-server fallback); full regression green (api all packages, web 233/2619, lint 0 errors, prettier clean). |
+| 2026-08-12 | Senior Developer Review (Opus adversarial, 換模型慣例) — 2H/4M/2L, all adjudicated in-session: H2 governor threading fixed (main.go→NewAIService→factory both branches + propagation test); M1 single-source self-hosted predicate (ai.IsSelfHostedASRBaseURL + agreement test); M2 episode-count failure degrades to movies-only (frozen-key availability preserved); M3 429-amplification pinned at retryMaxAttempts (claude-parity ruling documented); M4 zero-usage Gemini success warns loudly (+log-capture test); L1 upper-bound comments corrected; L2 exact pricing pins + governor serialization test. H1 (translate-leg ceiling discards partial work on explicit retry) adjudicated as documented limitation — no auto-loop exists post-sub-4-1 — tracked as backlog-translate-budget-partial-progress (lane ③). Status review → done. |
+
+## Senior Developer Review (AI)
+
+**Reviewer model:** Claude Opus 5 subagent（換模型 adversarial CR 慣例 — implementation by Fable 5）· **Date:** 2026-08-12 · **Outcome:** Changes Requested → all findings adjudicated and resolved in-session → **Approve (done)**
+
+**Mandatory checks:** 🔒 Rule 7 Wire Format: N/A (0 new error-code constants in 24 changed Go files) · 🔒 Rule 20 Contract Bump: PASS (0 bumps; both widening acks verified against upstream stamps — reviewer confirmed the story's 契約姿態 self-correction on 9R-16 AC #3 being [@contract-v2]) · 🔒 Rule 25 Mega-line: N/A (project-context.md untouched) · Git vs File List: 0 discrepancies.
+
+### Findings & resolutions（2H / 4M / 2L）
+
+- [x] **[H1] Translate-leg budget ceiling discards partial work → repeat spend on retry.** Adjudicated: the reviewer's "scan re-enqueues → unbounded loop" premise is outdated — since sub-4-1, scanning never enqueues generation (repo-guarded by cost_consent_test), so every retry is an explicit user action under a visible ceiling. The residual waste (an item whose translation costs > ceiling re-spends from cue 1 per explicit retry, because the segment cache writes only after full-track success) is REAL and is now: (1) documented at the budget-attach site in process_item.go, (2) tracked as `backlog-translate-budget-partial-progress`（Rule 24 lane ③, 雙向）— the fix touches the stamped TranslateTrack [@contract-v1] surface and deserves its own story. Fail semantics itself was an explicit authoring ruling (AC #3) and stands.
+- [x] **[H2] `FactoryConfig.Governor` never populated — wiring inert in production.** CONFIRMED and fixed: `aiGovernor` creation moved before the parse-path AI service in main.go; `NewAIService(cfg, db, governor)` threads it; factory now passes the Governor on BOTH branches (Claude too — parse-path Claude was equally ungoverned). New `TestNewProvider_PropagatesTheGovernor` pins propagation for both providers.
+- [x] **[M1] Two independent self-hosted detectors can disagree**（config-non-empty vs endpoint-differs; trap value = official URL set explicitly → $0 quote billed at hosted rate）. Fixed: `ai.IsSelfHostedASRBaseURL` is now the ONE predicate; main.go's candidate-service flag uses it; `TestSelfHostedJudgment_SingleSource` proves estimate-side and metering-side agreement for all three value classes including the trap.
+- [x] **[M2] Episode-count failure 500ed the whole preview** — the frozen `total_items` key's availability began depending on the episodes table. Fixed: episode leg degrades to movies-only with a Warn log (= pre-sub-5-1 toast behavior, undercount direction-safe); movie-half failure still 500s. Tests updated (degrade + movie-fail-still-fails).
+- [x] **[M3] Gemini lost its overall deadline + 429 now retried ×3.** Adjudicated as deliberate claude-parity（同級化 IS the AC — Claude's parse path has identical 429/timeout retry and no outer deadline）; the misleading NFR-I12 comment corrected to state the real bound (3×timeout + backoff), and the 1→3 request amplification pinned by `TestGeminiProvider_Parse_QuotaExceededRetriesExactlyMaxAttempts`.
+- [x] **[M4] usageMetadata-less 200 metered $0 silently** — disables the ceiling while real money is spent. Fixed: loud `slog.Warn` on zero-usage success (LLMCalls still recorded); `TestGeminiProvider_Parse_MissingUsageMetadataWarnsAndMetersZero` captures the log and pins the $0+1-call behavior.
+- [x] **[L1] "Matches the consent list" rationale false**（the list filters skipped/unprobeable items）. Fixed: handler + ScanProgress + PreviewMissing comments reworded to "upper bound on the consent list".
+- [x] **[L2] Wiring-not-behavior assertions.** Fixed: pricing test pins the EXACT published rates; governor test replaced with a 1-slot serialization test over two concurrent Parses (proves acquire AND release).
+
+### Reviewer verifications that held (not re-checked by orchestrator)
+
+snakeToCamel generic mapping for both new FE keys · consent shared-Budget genuinely never overridden (assert.Same) · no double-metering (1 ASR call site, 2 LLM call sites) · Rule 19 clean · Rule 21 headers present · Rule 23 N/A · Gemini pricing values match published rates · gofmt hit on gemini.go pre-existing · api build/vet/tests green.
+

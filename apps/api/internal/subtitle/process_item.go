@@ -57,6 +57,30 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 	scope := &processScope{ref: ref, showKey: item.ShowKey}
 	ctx = withProcessScope(ctx, scope)
 
+	// sub-5-1 AC #3: every paid call under this item runs against a Budget —
+	// the translate leg's LLM spend was previously unmetered and uncapped on
+	// the FR12/pool path. Mirrors TranscriptionService.resolveBudget: a ctx
+	// that ALREADY carries a Budget keeps it (a consent batch's shared ceiling
+	// — sub-4-2 — must NEVER be overridden by a per-item envelope); only a
+	// budget-less ctx gets the per-item one. A ceiling hit surfaces as
+	// ai.ErrBudgetExceeded out of governed() and fails the item (translate leg)
+	// or pauses it (ASR leg, the existing transcribeFallback classification).
+	//
+	// KNOWN LIMITATION (sub-5-1 CR H1, tracked as
+	// backlog-translate-budget-partial-progress): a translate-leg ceiling hit
+	// discards the chunks already translated (the segment cache is written
+	// only after the full track succeeds), so an item whose translation costs
+	// more than the ceiling cannot complete via this path and each EXPLICIT
+	// retry re-spends up to the ceiling from cue 1. Bounded by consent: since
+	// sub-4-1 nothing auto-enqueues generation (scan is metadata-only,
+	// repo-guarded), so every retry is a user-triggered FR12/consent action
+	// under a visible ceiling — but the waste is real and the fix (partial
+	// segment-cache write on budget failure) touches the stamped
+	// TranslateTrack contract, hence a story of its own.
+	if ai.BudgetFromContext(ctx) == nil {
+		ctx = ai.WithBudget(ctx, ai.NewBudget(p.runBudgetUSD))
+	}
+
 	// ── Step 2: run row + media status ──────────────────────────────────────
 	run := &models.SubtitleRun{
 		MediaID:         ref.ID,
