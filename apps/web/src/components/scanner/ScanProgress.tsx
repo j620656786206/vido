@@ -46,12 +46,14 @@ export function ScanProgress() {
   const { startTracking } = scanProgress;
   useEffect(() => subscribeScanTracking(startTracking), [startTracking]);
 
-  // sub-4-3 F17: the 缺繁中字幕 count for the completion toast. The scan
-  // payload carries no such count — fetched from the frozen preview endpoint
-  // (movies-only; the episode undercount is tracked as
-  // backlog-consent-toast-count-episodes). Hook runs unconditionally (before
-  // the visibility early-return — rules-of-hooks) but only FETCHES once the
-  // toast is actually showing; the card stays prop-driven for fixtures.
+  // sub-4-3 F17: the 缺繁中字幕 count for the completion toast, from the
+  // preview endpoint. sub-5-1 AC #7: reads the additive
+  // totalItemsIncludingEpisodes — an upper bound on the consent list it links
+  // to (episodes counted; the list additionally drops skipped/unprobeable
+  // items); totalItems stays the movies-only fallback for pre-sub-5-1
+  // servers. Hook runs unconditionally (before the
+  // visibility early-return — rules-of-hooks) but only FETCHES once the toast
+  // is actually showing; the card stays prop-driven for fixtures.
   const missingQuery = useQuery({
     queryKey: generationBatchPreviewKey,
     queryFn: () => subtitleService.previewGenerationBatch(),
@@ -62,7 +64,9 @@ export function ScanProgress() {
     // toast appearing.
     staleTime: 0,
   });
-  const missingSubtitleCount = scanProgress.isComplete ? missingQuery.data?.totalItems : undefined;
+  const missingSubtitleCount = scanProgress.isComplete
+    ? (missingQuery.data?.totalItemsIncludingEpisodes ?? missingQuery.data?.totalItems)
+    : undefined;
 
   if (!scanProgress.isVisible) return null;
 

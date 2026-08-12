@@ -430,6 +430,10 @@ func (m *mockPQEpisodeRepo) FindBySeasonNumber(_ context.Context, _ string, _ in
 	return nil, nil
 }
 
+func (m *mockPQEpisodeRepo) CountMissingZhHantSubtitle(context.Context) (int, error) {
+	return 0, nil
+}
+
 func (m *mockPQEpisodeRepo) FindMissingZhHantSubtitle(context.Context) ([]models.Episode, error) {
 	return nil, nil
 }

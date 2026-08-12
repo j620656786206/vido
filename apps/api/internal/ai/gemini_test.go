@@ -1,10 +1,13 @@
 package ai
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -364,4 +367,209 @@ func TestParseJSONResponse(t *testing.T) {
 			}
 		})
 	}
+}
+
+// --- sub-5-1 AC #2: Gemini rides the same governed+retry+metering stack as Claude ---
+
+// geminiOKBody is a minimal valid generateContent response WITH the API's own
+// token accounting, as the real endpoint returns it.
+func geminiOKBody(promptTokens, candidateTokens int64) []byte {
+	body, _ := json.Marshal(map[string]interface{}{
+		"candidates": []map[string]interface{}{
+			{"content": map[string]interface{}{"parts": []map[string]interface{}{
+				{"text": `{"title": "Test Movie", "media_type": "movie", "confidence": 0.9}`},
+			}}},
+		},
+		"usageMetadata": map[string]interface{}{
+			"promptTokenCount":     promptTokens,
+			"candidatesTokenCount": candidateTokens,
+			"totalTokenCount":      promptTokens + candidateTokens,
+		},
+	})
+	return body
+}
+
+func TestGeminiProvider_Parse_MetersUsageIntoCtxBudget(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(geminiOKBody(1_000_000, 2_000_000))
+	}))
+	defer server.Close()
+
+	p := NewGeminiProvider("test-api-key", WithGeminiBaseURL(server.URL))
+	b := NewBudget(0)
+	_, err := p.Parse(WithBudget(context.Background(), b), &ParseRequest{Filename: "test.mkv"})
+	require.NoError(t, err)
+
+	snap := b.Snapshot()
+	assert.Equal(t, int64(1_000_000), snap.InputTokens, "promptTokenCount → input tokens")
+	assert.Equal(t, int64(2_000_000), snap.OutputTokens, "candidatesTokenCount → output tokens")
+	assert.Equal(t, 1, snap.LLMCalls)
+	// Priced at the gemini-2.0-flash row ($0.10 in / $0.40 out per 1M) — NOT
+	// the Haiku fallback, which would fabricate $1 + $10 here.
+	assert.InDelta(t, 0.10+0.80, snap.SpentUSD, 1e-9)
+}
+
+func TestGeminiProvider_Parse_NoCtxBudgetIsNoOp(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(geminiOKBody(100, 50))
+	}))
+	defer server.Close()
+
+	p := NewGeminiProvider("test-api-key", WithGeminiBaseURL(server.URL))
+	_, err := p.Parse(context.Background(), &ParseRequest{Filename: "test.mkv"})
+	require.NoError(t, err, "the unmetered parse path (AC #4 ruling) must keep working without a Budget")
+}
+
+func TestGeminiProvider_Parse_BudgetCutoffShortCircuits(t *testing.T) {
+	var hits int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hits, 1)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(geminiOKBody(100, 50))
+	}))
+	defer server.Close()
+
+	p := NewGeminiProvider("test-api-key", WithGeminiBaseURL(server.URL))
+	b := NewBudget(0.001)
+	b.RecordLLM("gemini-2.0-flash", 1_000_000, 0) // $0.10 → over the ceiling
+	_, err := p.Parse(WithBudget(context.Background(), b), &ParseRequest{Filename: "test.mkv"})
+	require.ErrorIs(t, err, ErrBudgetExceeded)
+	assert.Equal(t, int32(0), atomic.LoadInt32(&hits), "an exhausted budget must stop the call BEFORE the wire")
+}
+
+func TestGeminiProvider_Parse_RetriesTransient5xxThenSucceeds(t *testing.T) {
+	var hits int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if atomic.AddInt32(&hits, 1) == 1 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(geminiOKBody(100, 50))
+	}))
+	defer server.Close()
+
+	p := NewGeminiProvider("test-api-key", WithGeminiBaseURL(server.URL))
+	result, err := p.Parse(context.Background(), &ParseRequest{Filename: "test.mkv"})
+	require.NoError(t, err)
+	assert.Equal(t, "Test Movie", result.Title)
+	assert.Equal(t, int32(2), atomic.LoadInt32(&hits), "one transient 503 → exactly one retry")
+}
+
+func TestGeminiProvider_Parse_MalformedBodyIsPermanent(t *testing.T) {
+	var hits int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hits, 1)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte("{not json"))
+	}))
+	defer server.Close()
+
+	p := NewGeminiProvider("test-api-key", WithGeminiBaseURL(server.URL))
+	_, err := p.Parse(context.Background(), &ParseRequest{Filename: "test.mkv"})
+	require.ErrorIs(t, err, ErrAIInvalidResponse)
+	assert.Equal(t, int32(1), atomic.LoadInt32(&hits),
+		"a garbage 200 body must NOT be retried — one broken response must not become three real requests")
+}
+
+// CR L2: observable governance, not field identity — with a 1-slot Governor,
+// two concurrent Parses must serialize on the wire, which also proves the
+// slot is RELEASED (a leaked slot would deadlock the second call).
+func TestGeminiProvider_GovernorSerializesConcurrentCalls(t *testing.T) {
+	var inFlight, maxInFlight int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cur := atomic.AddInt32(&inFlight, 1)
+		for {
+			prev := atomic.LoadInt32(&maxInFlight)
+			if cur <= prev || atomic.CompareAndSwapInt32(&maxInFlight, prev, cur) {
+				break
+			}
+		}
+		time.Sleep(30 * time.Millisecond)
+		atomic.AddInt32(&inFlight, -1)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(geminiOKBody(100, 50))
+	}))
+	defer server.Close()
+
+	g := NewGovernor(1, 0, 0)
+	p := NewGeminiProvider("test-api-key", WithGeminiBaseURL(server.URL), WithGeminiGovernor(g))
+
+	done := make(chan error, 2)
+	for i := 0; i < 2; i++ {
+		go func() {
+			_, err := p.Parse(context.Background(), &ParseRequest{Filename: "test.mkv"})
+			done <- err
+		}()
+	}
+	for i := 0; i < 2; i++ {
+		require.NoError(t, <-done)
+	}
+	assert.Equal(t, int32(1), atomic.LoadInt32(&maxInFlight),
+		"a 1-slot governor must never allow 2 in-flight Gemini calls")
+}
+
+// CR M3 pin: 429 is transient (claude.go parity), so a quota-exhausted key
+// costs exactly retryMaxAttempts wire hits per logical call — never more,
+// and the sentinel still surfaces for callers.
+func TestGeminiProvider_Parse_QuotaExceededRetriesExactlyMaxAttempts(t *testing.T) {
+	var hits int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hits, 1)
+		w.WriteHeader(http.StatusTooManyRequests)
+	}))
+	defer server.Close()
+
+	p := NewGeminiProvider("test-api-key", WithGeminiBaseURL(server.URL))
+	_, err := p.Parse(context.Background(), &ParseRequest{Filename: "test.mkv"})
+	require.ErrorIs(t, err, ErrAIQuotaExceeded)
+	assert.Equal(t, int32(retryMaxAttempts), atomic.LoadInt32(&hits),
+		"the 1→3 request amplification is a deliberate claude-parity tradeoff and must stay bounded at retryMaxAttempts")
+}
+
+// CR M4: a 200 without usageMetadata meters $0 — that must be LOUD, because a
+// silent zero disables the budget ceiling while real money is spent.
+func TestGeminiProvider_Parse_MissingUsageMetadataWarnsAndMetersZero(t *testing.T) {
+	body, _ := json.Marshal(map[string]interface{}{
+		"candidates": []map[string]interface{}{
+			{"content": map[string]interface{}{"parts": []map[string]interface{}{
+				{"text": `{"title": "Test Movie", "media_type": "movie", "confidence": 0.9}`},
+			}}},
+		},
+		// no usageMetadata block at all
+	})
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(body)
+	}))
+	defer server.Close()
+
+	var logs bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+
+	p := NewGeminiProvider("test-api-key", WithGeminiBaseURL(server.URL))
+	b := NewBudget(0)
+	_, err := p.Parse(WithBudget(context.Background(), b), &ParseRequest{Filename: "test.mkv"})
+	require.NoError(t, err)
+
+	snap := b.Snapshot()
+	assert.Zero(t, snap.SpentUSD)
+	assert.Equal(t, 1, snap.LLMCalls, "the call itself is still recorded so LLMCalls stays honest")
+	assert.Contains(t, logs.String(), "no usageMetadata",
+		"the zero-usage condition must be observable in logs, not silent")
+}
+
+// CR L2: pin the EXACT published rates (source: ai.google.dev/gemini-api/docs/
+// pricing, verified 2026-08-12) — a NotEqual-to-fallback assertion would let a
+// typo'd rate sail through.
+func TestGeminiPricing_RowsMatchThePublishedRates(t *testing.T) {
+	require.Contains(t, defaultLLMPricing, DefaultGeminiModel,
+		"DefaultGeminiModel must carry its own pricing row — falling into the Haiku-tier fallback fabricates numbers")
+	assert.Equal(t, ModelPricing{InputPer1M: 0.10, OutputPer1M: 0.40}, defaultLLMPricing["gemini-2.0-flash"])
+	assert.Equal(t, ModelPricing{InputPer1M: 0.30, OutputPer1M: 2.50}, defaultLLMPricing["gemini-2.5-flash"])
+	assert.Equal(t, ModelPricing{InputPer1M: 0.10, OutputPer1M: 0.40}, defaultLLMPricing["gemini-2.5-flash-lite"])
 }

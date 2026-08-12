@@ -26,6 +26,10 @@ type stubEpisodeRepo struct {
 func (s *stubEpisodeRepo) FindBySeasonNumber(_ context.Context, _ string, _ int) ([]models.Episode, error) {
 	return s.episodes, s.err
 }
+func (s *stubEpisodeRepo) CountMissingZhHantSubtitle(context.Context) (int, error) {
+	return 0, nil
+}
+
 func (s *stubEpisodeRepo) FindMissingZhHantSubtitle(context.Context) ([]models.Episode, error) {
 	return nil, nil
 }

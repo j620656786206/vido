@@ -299,3 +299,69 @@ describe('GenerationConsentView (sub-4-3 container)', () => {
     expect(screen.getByTestId('consent-start-error')).toHaveTextContent('批次生成啟動失敗');
   });
 });
+
+describe('GenerationConsentView budget prefill (sub-5-1 AC #6)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h.analysisState.status = 'idle';
+    h.analysisState.analyzed = 0;
+    h.analysisState.total = 0;
+    h.analysisState.error = null;
+  });
+
+  it('[P0] prefills the budget input from the snapshot default_budget_usd', async () => {
+    mocked.getGenerationCandidates.mockResolvedValue({ ...READY, defaultBudgetUsd: 12 });
+
+    render(<GenerationConsentView open onStartBatch={vi.fn()} onClose={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+    expect(screen.getByTestId('consent-budget-input')).toHaveValue(12);
+  });
+
+  it('[P0] keeps the $5.00 fallback when the snapshot carries no default (pre-sub-5-1 server)', async () => {
+    mocked.getGenerationCandidates.mockResolvedValue(READY);
+
+    render(<GenerationConsentView open onStartBatch={vi.fn()} onClose={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+    expect(screen.getByTestId('consent-budget-input')).toHaveValue(5);
+  });
+
+  it('keeps the fallback for a non-positive default (0 = unlimited must not prefill 0.00)', async () => {
+    mocked.getGenerationCandidates.mockResolvedValue({ ...READY, defaultBudgetUsd: 0 });
+
+    render(<GenerationConsentView open onStartBatch={vi.fn()} onClose={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+    expect(screen.getByTestId('consent-budget-input')).toHaveValue(5);
+  });
+
+  it('the kick-analyze exit gets the prefill too — it survives to the list shown after SSE ready', async () => {
+    mocked.getGenerationCandidates
+      .mockResolvedValueOnce({ status: 'idle', analyzed: 0, total: 0, defaultBudgetUsd: 8 })
+      .mockResolvedValueOnce(READY); // SSE-ready refetch carries no field; prefill must persist
+    mocked.startCandidateAnalysis.mockResolvedValue({ started: true });
+
+    const view = render(<GenerationConsentView open onStartBatch={vi.fn()} onClose={vi.fn()} />);
+    await waitFor(() => expect(h.startTracking).toHaveBeenCalled());
+
+    h.analysisState.status = 'ready';
+    view.rerender(<GenerationConsentView open onStartBatch={vi.fn()} onClose={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+    expect(screen.getByTestId('consent-budget-input')).toHaveValue(8);
+  });
+
+  it('WYSIWYG is untouched: the prefilled value is exactly what a confirm sends', async () => {
+    mocked.getGenerationCandidates.mockResolvedValue({ ...READY, defaultBudgetUsd: 3.75 });
+    const onStartBatch = vi.fn();
+
+    render(<GenerationConsentView open onStartBatch={onStartBatch} onClose={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('consent-start-btn'));
+    fireEvent.click(screen.getByTestId('consent-confirm-start'));
+
+    expect(onStartBatch).toHaveBeenCalledWith([A], 3.75);
+  });
+});

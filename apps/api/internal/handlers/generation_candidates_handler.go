@@ -16,9 +16,12 @@ type GenerationCandidateAnalyzerInterface interface {
 	Snapshot() services.AnalysisSnapshot
 }
 
-// GenerationCandidatesHandler serves the cost-preview list (story sub-4-1):
-// which items would need PAID speech recognition, and roughly what the whole
-// selection would cost — answered WITHOUT spending anything.
+// GenerationCandidatesHandler serves the cost-preview list (story sub-4-1;
+// AC #7 [@contract-v1] — the GET state envelope {status, analyzed, total,
+// result?, analyzed_at?, error?}; additive default_budget_usd since sub-5-1,
+// no bump — FE consumer sub-4-3 consent flow): which items would need PAID
+// speech recognition, and roughly what the whole selection would cost —
+// answered WITHOUT spending anything.
 //
 // It is a sibling of, not a replacement for, the existing
 // `/subtitles/generation-batch/preview` endpoint, which still returns a bare

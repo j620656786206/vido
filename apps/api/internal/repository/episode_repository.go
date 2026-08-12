@@ -172,6 +172,20 @@ func (r *EpisodeRepository) FindMissingZhHantSubtitle(ctx context.Context) ([]mo
 	return scanEpisodeRows(rows)
 }
 
+// CountMissingZhHantSubtitle returns the number of episodes
+// FindMissingZhHantSubtitle would enumerate — the episode half of the
+// generation-batch preview count (sub-5-1 AC #7), mirroring
+// MovieRepository.CountMissingZhHantSubtitle over the same shared predicate.
+func (r *EpisodeRepository) CountMissingZhHantSubtitle(ctx context.Context) (int, error) {
+	query := `SELECT COUNT(*) FROM episodes WHERE ` + missingZhHantSubtitleEpisodeWhere
+
+	var count int
+	if err := r.db.QueryRowContext(ctx, query).Scan(&count); err != nil {
+		return 0, fmt.Errorf("failed to count episodes missing zh-Hant subtitle: %w", err)
+	}
+	return count, nil
+}
+
 // FindBySeasonNumber retrieves all episodes for a specific season of a series
 func (r *EpisodeRepository) FindBySeasonNumber(ctx context.Context, seriesID string, seasonNumber int) ([]models.Episode, error) {
 	query := `SELECT ` + episodeSelectColumns + `

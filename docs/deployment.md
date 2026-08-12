@@ -108,6 +108,17 @@ Notes:
 - Manual generation (per item, or an explicitly confirmed batch) runs at low
   concurrency so the NAS stays responsive. Progress arrives on the existing
   SSE streams.
+- **What `AI_RUN_BUDGET_USD` covers (sub-5-1).** Every subtitle-generation
+  path is metered and capped: the consent batch (one shared ceiling per batch,
+  or the user-approved `budget_usd`), the manual per-item trigger and the
+  automatic pipeline (one ceiling per item). Self-hosted speech recognition
+  (`ASR_BASE_URL` set) records `$0` per audio minute — the estimate and the
+  after-the-fact spend figure use the same rate by construction. **Deliberately
+  NOT covered:** filename parsing, fansub parsing and keyword generation (both
+  Gemini and Claude). These are background metadata calls with no user-consent
+  boundary and no "run" to attach a ceiling to; they are unmetered by design
+  (tracked as `backlog-parse-path-ai-metering` should observability counters
+  ever be wanted).
 - There is no settings-page toggle yet; these are environment variables and a
   restart is required to change them.
 

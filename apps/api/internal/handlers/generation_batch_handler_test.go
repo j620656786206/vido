@@ -30,14 +30,15 @@ const (
 var errBoom = errors.New("boom")
 
 type mockGenerationProcessor struct {
-	available bool
-	running   bool
-	batchID   string
-	items     []services.GenerationBatchItem
-	startErr  error
-	progress  *services.GenerationBatchProgress
-	preview   int
-	prevErr   error
+	available     bool
+	running       bool
+	batchID       string
+	items         []services.GenerationBatchItem
+	startErr      error
+	progress      *services.GenerationBatchProgress
+	preview       int
+	previewInclEp int
+	prevErr       error
 
 	startedScope  string
 	startedIDs    []string
@@ -58,8 +59,15 @@ func (m *mockGenerationProcessor) Start(_ context.Context, scope string, mediaID
 }
 func (m *mockGenerationProcessor) GetProgress() *services.GenerationBatchProgress { return m.progress }
 func (m *mockGenerationProcessor) Cancel()                                        { m.cancelCalled = true }
-func (m *mockGenerationProcessor) PreviewMissing(_ context.Context) (int, error) {
-	return m.preview, m.prevErr
+func (m *mockGenerationProcessor) PreviewMissing(_ context.Context) (int, int, error) {
+	if m.prevErr != nil {
+		return 0, 0, m.prevErr
+	}
+	incl := m.previewInclEp
+	if incl == 0 {
+		incl = m.preview
+	}
+	return m.preview, incl, m.prevErr
 }
 
 func setupGenerationBatchRouter(p GenerationBatchProcessorInterface) *gin.Engine {
@@ -278,12 +286,15 @@ func TestCancelGenerationBatch_Running(t *testing.T) {
 // ─── GET /preview ───────────────────────────────────────────────────────────
 
 func TestPreviewGenerationBatch_Missing200(t *testing.T) {
-	p := &mockGenerationProcessor{available: true, preview: 38}
+	p := &mockGenerationProcessor{available: true, preview: 38, previewInclEp: 142}
 	r := setupGenerationBatchRouter(p)
 	w, resp := doGenBatchJSON(t, r, "GET", "/api/v1/subtitles/generation-batch/preview?scope=missing", "")
 	assert.Equal(t, http.StatusOK, w.Code)
 	data := resp["data"].(map[string]interface{})
+	// total_items semantics FROZEN — movies-only (sub-4-2 AC #3); the episode
+	// half rides the sub-5-1 AC #7 additive key.
 	assert.Equal(t, float64(38), data["total_items"])
+	assert.Equal(t, float64(142), data["total_items_including_episodes"])
 }
 
 func TestPreviewGenerationBatch_WrongScope400(t *testing.T) {

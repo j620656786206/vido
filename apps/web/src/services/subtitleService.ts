@@ -210,6 +210,13 @@ export interface CandidateAnalysisSnapshot {
   result?: GenerationCandidateResult;
   analyzedAt?: string;
   error?: string;
+  /**
+   * Operator-configured AI_RUN_BUDGET_USD (sub-5-1 AC #5/#6) — the F15
+   * budget-input PREFILL source, present on every snapshot state. Optional:
+   * a pre-sub-5-1 server omits it and the FE falls back to its constant.
+   * WYSIWYG consent is unchanged — the value SENT is always the on-screen one.
+   */
+  defaultBudgetUsd?: number;
 }
 
 /**
@@ -270,7 +277,14 @@ export interface GenerationBatchCancelResult {
 
 /** GET /subtitles/generation-batch/preview?scope=missing — the F8 缺字幕 count. */
 export interface GenerationBatchPreviewResult {
+  /** Movies-only — semantics FROZEN (what scope=missing actually runs). */
   totalItems: number;
+  /**
+   * Library-wide missing count INCLUDING episodes (sub-5-1 AC #7 additive
+   * key) — what the consent list will actually show, so the F17 toast reads
+   * this. Optional: absent on a pre-sub-5-1 server (fall back to totalItems).
+   */
+  totalItemsIncludingEpisodes?: number;
 }
 
 /**

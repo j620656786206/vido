@@ -144,6 +144,13 @@ type AnalysisSnapshot struct {
 	// changes underneath them.
 	AnalyzedAt *time.Time `json:"analyzed_at,omitempty"`
 	Error      string     `json:"error,omitempty"`
+	// DefaultBudgetUSD is the operator-configured AI_RUN_BUDGET_USD value
+	// (sub-5-1 AC #5) — the F15 budget-input PREFILL source, so an operator's
+	// env change follows through to the consent screen. Additive on the
+	// sub-4-1 AC #7 [@contract-v1] envelope (no bump — existing keys
+	// unchanged); WYSIWYG consent semantics untouched: the value SENT is
+	// always the value on screen.
+	DefaultBudgetUSD float64 `json:"default_budget_usd"`
 }
 
 // GenerationCandidateService answers "what would generating subtitles cost?"
@@ -170,6 +177,10 @@ type GenerationCandidateService struct {
 	// API". Wired from config; see ai.EstimatedASRPerMinuteUSD.
 	selfHostedASR bool
 
+	// defaultBudgetUSD is the configured AI_RUN_BUDGET_USD, exposed on every
+	// snapshot (sub-5-1 AC #5). Pure config pass-through — never mutated.
+	defaultBudgetUSD float64
+
 	mu         sync.Mutex
 	status     string
 	analyzed   int
@@ -192,19 +203,21 @@ func NewGenerationCandidateService(
 	episodes CandidateEpisodeFinder,
 	predictor RoutePredictor,
 	selfHostedASR bool,
+	defaultBudgetUSD float64,
 	logger *slog.Logger,
 ) *GenerationCandidateService {
 	if logger == nil {
 		logger = slog.Default()
 	}
 	return &GenerationCandidateService{
-		movies:        movies,
-		episodes:      episodes,
-		predictor:     predictor,
-		logger:        logger.With("service", "generation_candidates"),
-		selfHostedASR: selfHostedASR,
-		now:           time.Now,
-		status:        AnalysisIdle,
+		movies:           movies,
+		episodes:         episodes,
+		predictor:        predictor,
+		logger:           logger.With("service", "generation_candidates"),
+		selfHostedASR:    selfHostedASR,
+		defaultBudgetUSD: defaultBudgetUSD,
+		now:              time.Now,
+		status:           AnalysisIdle,
 	}
 }
 
@@ -269,12 +282,13 @@ func (s *GenerationCandidateService) Snapshot() AnalysisSnapshot {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return AnalysisSnapshot{
-		Status:     s.status,
-		Analyzed:   s.analyzed,
-		Total:      s.total,
-		Result:     s.result,
-		AnalyzedAt: s.analyzedAt,
-		Error:      s.lastErr,
+		Status:           s.status,
+		Analyzed:         s.analyzed,
+		Total:            s.total,
+		Result:           s.result,
+		AnalyzedAt:       s.analyzedAt,
+		Error:            s.lastErr,
+		DefaultBudgetUSD: s.defaultBudgetUSD,
 	}
 }
 

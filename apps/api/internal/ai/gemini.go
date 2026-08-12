@@ -27,6 +27,7 @@ type GeminiProvider struct {
 	model      string
 	httpClient *http.Client
 	timeout    time.Duration
+	governor   *Governor // sub-5-1: shared throttle (nil = unthrottled)
 }
 
 // Compile-time interface verification.
@@ -63,6 +64,16 @@ func WithGeminiTimeout(timeout time.Duration) GeminiProviderOption {
 	}
 }
 
+// WithGeminiGovernor injects the shared AI throttle (sub-5-1 AC #2, mirroring
+// WithWhisperGovernor/WithClaudeGovernor) so Gemini calls draw from the same
+// concurrency/QPS pool — and hit the same budget pre-check — as every other
+// provider.
+func WithGeminiGovernor(g *Governor) GeminiProviderOption {
+	return func(p *GeminiProvider) {
+		p.governor = g
+	}
+}
+
 // NewGeminiProvider creates a new Gemini AI provider.
 func NewGeminiProvider(apiKey string, opts ...GeminiProviderOption) *GeminiProvider {
 	p := &GeminiProvider{
@@ -91,14 +102,16 @@ func (p *GeminiProvider) Name() ProviderName {
 }
 
 // Parse sends a filename to Gemini for parsing.
+//
+// sub-5-1 AC #2: the call runs under the SAME resilience/metering stack as
+// claude.go's send — governed() (budget pre-check + rate token + concurrency
+// slot, ONCE) wrapping retryTransient (3 attempts, exponential backoff), with
+// token usage metered against a ctx-attached Budget afterward. The nesting
+// order is load-bearing (D8): retries must sit INSIDE the budget gate.
 func (p *GeminiProvider) Parse(ctx context.Context, req *ParseRequest) (*ParseResponse, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-
-	// Create context with timeout per NFR-I12
-	ctx, cancel := context.WithTimeout(ctx, p.timeout)
-	defer cancel()
 
 	// Build prompt
 	prompt := req.Prompt
@@ -128,62 +141,94 @@ func (p *GeminiProvider) Parse(ctx context.Context, req *ParseRequest) (*ParseRe
 	// Build URL
 	url := fmt.Sprintf("%s/models/%s:generateContent?key=%s", p.baseURL, p.model, p.apiKey)
 
-	// Create HTTP request
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-	httpReq.Header.Set("Content-Type", "application/json")
-
 	slog.Debug("Gemini API request",
 		"model", p.model,
 		"filename", req.Filename,
 	)
 
-	// Execute request
-	resp, err := p.httpClient.Do(httpReq)
+	geminiResp, err := governed(ctx, p.governor, "gemini.generate", func() (*geminiResponse, error) {
+		return retryTransient(ctx, "gemini.generate", func() (*geminiResponse, bool, error) {
+			// Per-attempt timeout (the whisper.go shape) — a timeout on attempt
+			// 1 must not consume the deadline of attempts 2 and 3. NOTE (CR
+			// M3): the NFR-I12 bound is therefore per-ATTEMPT; the worst-case
+			// logical call is 3×timeout + backoff, matching claude.go — which
+			// also retries 429/timeout/5xx with no outer deadline. That parity
+			// IS the AC (同級化); pinned by the 429-attempt-count test.
+			attemptCtx, cancel := context.WithTimeout(ctx, p.timeout)
+			defer cancel()
+
+			httpReq, err := http.NewRequestWithContext(attemptCtx, http.MethodPost, url, bytes.NewReader(body))
+			if err != nil {
+				return nil, false, fmt.Errorf("failed to create request: %w", err)
+			}
+			httpReq.Header.Set("Content-Type", "application/json")
+
+			resp, err := p.httpClient.Do(httpReq)
+			if err != nil {
+				if attemptCtx.Err() == context.DeadlineExceeded {
+					slog.Warn("Gemini API timeout",
+						"filename", req.Filename,
+						"timeout_seconds", p.timeout.Seconds(),
+					)
+					return nil, true, ErrAITimeout
+				}
+				slog.Error("Gemini API request failed",
+					"error", err,
+					"filename", req.Filename,
+				)
+				return nil, true, fmt.Errorf("%w: %v", ErrAIProviderError, err)
+			}
+			defer resp.Body.Close()
+
+			respBody, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, true, fmt.Errorf("failed to read response: %w", err)
+			}
+
+			if resp.StatusCode != http.StatusOK {
+				slog.Warn("Gemini API error response",
+					"status_code", resp.StatusCode,
+					"body", string(respBody),
+				)
+				if resp.StatusCode == http.StatusTooManyRequests {
+					return nil, true, ErrAIQuotaExceeded
+				}
+				return nil, isTransientStatus(resp.StatusCode), fmt.Errorf("%w: status %d", ErrAIProviderError, resp.StatusCode)
+			}
+
+			// A malformed 200 body is PERMANENT (the claude.go classifyErr
+			// rationale): retrying garbage would turn one broken response into
+			// three real requests.
+			var parsed geminiResponse
+			if err := json.Unmarshal(respBody, &parsed); err != nil {
+				slog.Error("Failed to parse Gemini response",
+					"error", err,
+					"body", string(respBody),
+				)
+				return nil, false, fmt.Errorf("%w: %v", ErrAIInvalidResponse, err)
+			}
+			return &parsed, false, nil
+		})
+	})
 	if err != nil {
-		if ctx.Err() == context.DeadlineExceeded {
-			slog.Warn("Gemini API timeout",
-				"filename", req.Filename,
-				"timeout_seconds", p.timeout.Seconds(),
-			)
-			return nil, ErrAITimeout
+		return nil, err
+	}
+
+	// sub-5-1 AC #2: meter token usage against the per-run budget (claude.go
+	// send precedent). Without a ctx Budget this is a no-op — the parse paths
+	// are ruled unmetered-by-design (AC #4, backlog-parse-path-ai-metering).
+	if b := BudgetFromContext(ctx); b != nil {
+		usage := geminiResp.UsageMetadata
+		// CR M4: a success with zero-value usage means the upstream omitted
+		// usageMetadata (proxy, API-shape drift). Metering $0 silently would
+		// disable the budget ceiling while real money is spent — the
+		// under-count twin of the fabricated-fallback-number AC #2 bans. Warn
+		// loudly; the call is still recorded so LLMCalls stays honest.
+		if usage.PromptTokenCount == 0 && usage.CandidatesTokenCount == 0 {
+			slog.Warn("Gemini response carried no usageMetadata — metering $0 for this call; the budget ceiling cannot see its real cost",
+				"model", p.model, "filename", req.Filename)
 		}
-		slog.Error("Gemini API request failed",
-			"error", err,
-			"filename", req.Filename,
-		)
-		return nil, fmt.Errorf("%w: %v", ErrAIProviderError, err)
-	}
-	defer resp.Body.Close()
-
-	// Read response body
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
-	// Check for HTTP errors
-	if resp.StatusCode != http.StatusOK {
-		slog.Warn("Gemini API error response",
-			"status_code", resp.StatusCode,
-			"body", string(respBody),
-		)
-		if resp.StatusCode == http.StatusTooManyRequests {
-			return nil, ErrAIQuotaExceeded
-		}
-		return nil, fmt.Errorf("%w: status %d", ErrAIProviderError, resp.StatusCode)
-	}
-
-	// Parse Gemini response
-	var geminiResp geminiResponse
-	if err := json.Unmarshal(respBody, &geminiResp); err != nil {
-		slog.Error("Failed to parse Gemini response",
-			"error", err,
-			"body", string(respBody),
-		)
-		return nil, fmt.Errorf("%w: %v", ErrAIInvalidResponse, err)
+		b.RecordLLM(p.model, usage.PromptTokenCount, usage.CandidatesTokenCount)
 	}
 
 	// Extract text from response
@@ -238,6 +283,16 @@ type geminiGenerationConfig struct {
 
 type geminiResponse struct {
 	Candidates []geminiCandidate `json:"candidates"`
+	// UsageMetadata carries the API's own token accounting (sub-5-1 AC #2) —
+	// what RecordLLM meters. Absent on older mocks it zero-values, recording a
+	// $0 call rather than failing the parse.
+	UsageMetadata geminiUsageMetadata `json:"usageMetadata"`
+}
+
+// geminiUsageMetadata mirrors the generateContent usageMetadata block.
+type geminiUsageMetadata struct {
+	PromptTokenCount     int64 `json:"promptTokenCount"`
+	CandidatesTokenCount int64 `json:"candidatesTokenCount"`
 }
 
 type geminiCandidate struct {

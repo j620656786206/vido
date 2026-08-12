@@ -233,8 +233,16 @@ func main() {
 	requestService.SetFulfilmentService(fulfilmentService)
 	dvrSettingsService := services.NewDVRSettingsService(pluginManager, repos.Settings, secretsService)
 
+	// Shared AI throttle (Story 9R-11): one Governor caps concurrency + QPS
+	// across ASR (Whisper), LLM (Claude) AND the parse-path providers below
+	// (sub-5-1 CR H2) so a library-wide scan or batch can't fan out unbounded
+	// requests. Created here — before the parse-path AI service — and injected
+	// into every client construction that follows.
+	aiGovernor := ai.NewGovernor(cfg.AIMaxConcurrent, cfg.AIRatePerSec, cfg.AIMaxConcurrent)
+	slog.Info("AI governor initialized", "max_concurrent", cfg.AIMaxConcurrent, "rate_per_sec", cfg.AIRatePerSec, "run_budget_usd", cfg.AIRunBudgetUSD)
+
 	// Initialize AI service for AI-powered filename parsing (Story 3.1)
-	aiService, err := services.NewAIService(cfg, db.Conn())
+	aiService, err := services.NewAIService(cfg, db.Conn(), aiGovernor)
 	if err != nil {
 		slog.Error("Failed to initialize AI service", "error", err)
 		os.Exit(1)
@@ -490,11 +498,8 @@ func main() {
 		subtitleProviders, subtitleScorer, subtitleConverter, subtitlePlacer,
 		sseHub, repos.Movies, repos.Series,
 	)
-	// Shared AI throttle (Story 9R-11): one Governor caps concurrency + QPS
-	// across BOTH ASR (Whisper) and LLM (Claude) so a library-wide batch can't
-	// fan out unbounded requests. Injected into both clients below.
-	aiGovernor := ai.NewGovernor(cfg.AIMaxConcurrent, cfg.AIRatePerSec, cfg.AIMaxConcurrent)
-	slog.Info("AI governor initialized", "max_concurrent", cfg.AIMaxConcurrent, "rate_per_sec", cfg.AIRatePerSec, "run_budget_usd", cfg.AIRunBudgetUSD)
+	// aiGovernor was created before the parse-path AI service (sub-5-1 CR H2)
+	// — the same instance throttles the Whisper + Claude clients below.
 
 	// Initialize audio extractor service (Story 9.2a)
 	audioExtractorService := services.NewAudioExtractorService(1, 5*time.Minute, slog.Default())
@@ -612,6 +617,10 @@ func main() {
 			subtitle.WithRunStore(repos.SubtitleRuns),
 			subtitle.WithSegmentCache(subtitle.NewSegmentCacheRepository(repos.Cache)),
 			subtitle.WithModelID(modelID),
+			// sub-5-1 AC #3: per-item AI cost ceiling for the FR12/pool path —
+			// a ctx already carrying a Budget (the sub-4-2 consent batch) keeps
+			// its shared ceiling; only budget-less entries get this envelope.
+			subtitle.WithRunBudgetUSD(cfg.AIRunBudgetUSD),
 			subtitle.WithSpeechTranscriber(pipelineASR),
 			// AC #6: FR33/P8 progress. Same event type and payload shape the
 			// search path already broadcasts — sse/hub.go stays untouched.
@@ -782,14 +791,17 @@ func main() {
 	// the pipeline-mode block above: NewRouter is stateless and cheap, and
 	// PredictRoute never touches the extractor, so sharing scope would buy
 	// nothing and couple this endpoint to the feature flag.
-	// The self-hosted flag comes from ASR_BASE_URL — a self-hosted endpoint has
-	// no per-minute price, and quoting the hosted rate for it would invent a
-	// bill the user never receives.
+	// The self-hosted flag comes from ASR_BASE_URL via the SAME predicate the
+	// Whisper client's metering uses (sub-5-1 CR M1) — a self-hosted endpoint
+	// has no per-minute price, and quote vs invoice must come from one answer.
 	generationCandidateService := services.NewGenerationCandidateService(
 		repos.Movies, repos.Episodes,
 		routePredictorAdapter{router: subtitle.NewRouter(
 			ffprobeService, subtitle.NewExtractor(0, slog.Default()), slog.Default())},
-		cfg.ASRBaseURL != "",
+		ai.IsSelfHostedASRBaseURL(cfg.ASRBaseURL),
+		// sub-5-1 AC #5: the F15 prefill source — the envelope carries the
+		// operator's real default instead of a frontend constant.
+		cfg.AIRunBudgetUSD,
 		slog.Default(),
 	)
 	generationCandidateService.SetSSEHub(sseHub)
