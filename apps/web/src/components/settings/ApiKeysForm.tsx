@@ -65,7 +65,13 @@ const KEY_ROWS: KeyRowSpec[] = [
     name: 'openai',
     label: '雲端 ASR（選配）',
     placeholder: 'sk-…',
-    hint: '選配：雲端語音辨識。未設定時仍可使用內建的字幕來源。',
+    // sub-5-2: the ASR client resolves its key per call (ASRProviderHolder), so
+    // this row joins Claude in taking effect on save. The self-hosted
+    // no-key-needed fact deliberately lives in docs/deployment.md, NOT here
+    // (sub-5-2 CR M1): a first-draft clause bolted it onto the fallback
+    // sentence and read as "self-hosted ⇒ ASR unavailable, use built-in
+    // sources" — the opposite of the truth. This is the AC #5 ratified string.
+    hint: '選配：雲端語音辨識。儲存後立即生效，無需重啟伺服器。未設定時仍可使用內建的字幕來源。',
     testable: false,
   },
 ];

@@ -78,15 +78,15 @@ type GenerationBatchStartRequest struct {
 func (h *GenerationBatchHandler) StartGenerationBatch(c *gin.Context) {
 	if !h.processor.IsAvailable() {
 		// sub-2-2d AC #3 settings-page-first framing, made MODE-NEUTRAL by
-		// sub-4-2 CR M3: in pipeline mode availability is the TRANSLATION
-		// (Claude) key via the hot-reloading resolver (no restart needed);
-		// in legacy mode it is the boot-time ASR key (restart needed). The
-		// old copy unconditionally named the ASR key — a pipeline-mode user
-		// with an ASR key but no Claude key was told to save the key they
-		// already had. FFmpeg stays a deployment fact (bundled in the image).
+		// sub-4-2 CR M3: pipeline mode reads the TRANSLATION (Claude) key,
+		// legacy mode the ASR key — so the copy names both rather than
+		// telling a pipeline-mode user to save a key they already have.
+		// sub-5-2 AC #4 retired the restart escape hatch: BOTH keys now
+		// resolve per call through their holders, so saving is sufficient in
+		// either mode. FFmpeg stays a deployment fact (bundled in the image).
 		ErrorResponse(c, http.StatusServiceUnavailable, "TRANSCRIPTION_DISABLED",
 			"字幕生成功能未啟用",
-			"請至金鑰設定（/settings/keys）確認所需的 AI 金鑰已儲存（翻譯需 Claude 金鑰、語音辨識需雲端 ASR 金鑰）；若儲存後仍無法使用，請重啟伺服器。FFmpeg 已內建於 Docker 映像檔。")
+			"請至金鑰設定（/settings/keys）確認所需的 AI 金鑰已儲存（翻譯需 Claude 金鑰、語音辨識需雲端 ASR 金鑰），儲存後立即生效。FFmpeg 已內建於 Docker 映像檔。")
 		return
 	}
 

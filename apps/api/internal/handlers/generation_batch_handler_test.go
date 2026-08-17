@@ -108,11 +108,13 @@ func TestStartGenerationBatch_Disabled503(t *testing.T) {
 	w, resp := doGenBatchJSON(t, r, "POST", "/api/v1/subtitles/generation-batch", `{"scope":"missing"}`)
 	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
 	assert.Equal(t, "TRANSCRIPTION_DISABLED", errCode(t, resp))
-	// sub-2-2d AC #3: settings-page-first framing + restart truth (was a bare
-	// env-var instruction).
+	// sub-2-2d AC #3: settings-page-first framing (was a bare env-var
+	// instruction). sub-5-2 AC #4: both keys hot-reload now, so the restart
+	// escape hatch is gone — negative guard plus its replacement claim.
 	body := w.Body.String()
 	assert.Contains(t, body, "金鑰設定")
-	assert.Contains(t, body, "重啟伺服器")
+	assert.Contains(t, body, "儲存後立即生效")
+	assert.NotContains(t, body, "重啟", "keys hot-reload since sub-5-2 — telling the user to restart the NAS is a lie")
 	assert.NotContains(t, body, "OPENAI_API_KEY", "the bare env-var instruction is superseded by the settings-page framing")
 }
 

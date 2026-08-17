@@ -119,8 +119,21 @@ Notes:
   boundary and no "run" to attach a ceiling to; they are unmetered by design
   (tracked as `backlog-parse-path-ai-metering` should observability counters
   ever be wanted).
-- There is no settings-page toggle yet; these are environment variables and a
-  restart is required to change them.
+- **API keys hot-reload (sub-5-2).** `CLAUDE_API_KEY` and `OPENAI_API_KEY` can
+  be set — or replaced — from Settings → API Keys while the server is running:
+  they are resolved per call (an encrypted stored key wins over the environment
+  variable), so saving one takes effect immediately and no restart is needed.
+  `TMDB_API_KEY` is the exception: it can be stored from that page, but the
+  running metadata clients keep their boot-time value until a restart.
+- **Self-hosted speech recognition needs no key (sub-5-2).** With `ASR_BASE_URL`
+  pointed at an OpenAI-compatible engine (Speaches, WhisperLive, Subgen), leave
+  `OPENAI_API_KEY` unset — the request carries no `Authorization` header at all,
+  and spend is recorded as `$0`. Set the key only if your engine sits behind an
+  authenticating proxy. `OPENAI_API_KEY` is required only for the paid hosted API.
+- Everything else in this section — including `ASR_BASE_URL`, `ASR_MODEL`,
+  `AI_RUN_BUDGET_USD` and `VIDO_SUBTITLE_PIPELINE_MODE` — has no settings-page
+  toggle yet; those are environment variables and a restart is required to
+  change them.
 
 ### Media Library Setup
 

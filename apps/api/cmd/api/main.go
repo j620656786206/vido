@@ -505,32 +505,50 @@ func main() {
 	audioExtractorService := services.NewAudioExtractorService(1, 5*time.Minute, slog.Default())
 	slog.Info("Audio extractor service initialized", "available", audioExtractorService.IsAvailable())
 
-	// Initialize Whisper client and transcription service (Story 9.2a)
-	var transcriptionService *services.TranscriptionService
-	if cfg.HasOpenAIKey() && audioExtractorService.IsAvailable() {
-		whisperOpts := []ai.WhisperOption{ai.WithWhisperGovernor(aiGovernor)}
-		if cfg.ASRBaseURL != "" {
-			whisperOpts = append(whisperOpts, ai.WithWhisperBaseURL(cfg.ASRBaseURL))
-		}
-		if cfg.ASRModel != "" {
-			whisperOpts = append(whisperOpts, ai.WithWhisperModel(cfg.ASRModel))
-		}
-		whisperClient := ai.NewWhisperClient(cfg.GetOpenAIAPIKey(), whisperOpts...)
-		slog.Info("ASR provider (OpenAI-compatible)", "base_url_override", cfg.ASRBaseURL != "", "model_override", cfg.ASRModel)
-		transcriptionService = services.NewTranscriptionService(audioExtractorService, whisperClient, sseHub, slog.Default())
-		transcriptionService.SetRunBudgetUSD(cfg.AIRunBudgetUSD)
-		// 9R-10: wire the per-show glossary + OpenCC safety net + atomic placer
-		// into the Route C generation pipeline.
-		transcriptionService.SetGlossaryRepository(repos.Glossary)
-		if subtitleConverter != nil {
-			transcriptionService.SetOpenCCConverter(subtitleConverter)
-		}
-		transcriptionService.SetPlacer(subtitlePlacerAdapter{subtitlePlacer})
-		slog.Info("Transcription service initialized (Whisper API enabled)")
-	} else {
-		transcriptionService = services.NewTranscriptionService(audioExtractorService, nil, sseHub, slog.Default())
-		slog.Info("Transcription service initialized (disabled — missing OPENAI_API_KEY or FFmpeg)")
+	// ── Provider keys: resolver + hot-reloadable holders (sub-2-1a AC #1/#2,
+	//    extended to ASR by sub-5-2 AC #1/#2) ──────────────────────────────────
+	//
+	// The key is resolved secret-first so a key typed into the settings page
+	// actually reaches the pipeline; it used to be env-only, which made the page
+	// a silent no-op (Break 1). The holders rebuild their client when the resolved
+	// key changes, so a runtime edit takes effect without a restart (Break 2).
+	//
+	// Declared HERE (moved up by sub-5-2) because the transcription service below
+	// now takes the ASR holder instead of a boot-built client.
+	keyResolver := services.NewKeyResolver(secretsService, services.EnvKeys{
+		Claude: cfg.GetClaudeAPIKey(),
+		TMDb:   cfg.GetTMDbAPIKey(),
+		OpenAI: cfg.GetOpenAIAPIKey(),
+	}, slog.Default())
+	claudeHolder := services.NewClaudeProviderHolder(
+		keyResolver, cfg.GetClaudeModel(), slog.Default(), ai.WithClaudeGovernor(aiGovernor))
+
+	// Initialize ASR provider holder and transcription service (Story 9.2a;
+	// hot-reload by sub-5-2). Constructed UNCONDITIONALLY: the old
+	// `if cfg.HasOpenAIKey()` guard froze the boot-time key into EXISTENCE, so a
+	// key saved later in /settings/keys reached a client that was never built —
+	// and the else-branch skipped the four pipeline setters below, which meant a
+	// keyless boot would have produced a silently DEGRADED transcription run
+	// (no budget ceiling, no per-show glossary, no OpenCC safety net, no atomic
+	// placer) even after the key arrived. Availability is now a per-call question
+	// the service asks the holder (TranscriptionService.IsAvailable).
+	asrHolder := services.NewASRProviderHolder(
+		keyResolver, cfg.ASRBaseURL, cfg.ASRModel, slog.Default(), ai.WithWhisperGovernor(aiGovernor))
+	transcriptionService := services.NewTranscriptionService(audioExtractorService, asrHolder, sseHub, slog.Default())
+	transcriptionService.SetRunBudgetUSD(cfg.AIRunBudgetUSD)
+	// 9R-10: wire the per-show glossary + OpenCC safety net + atomic placer
+	// into the Route C generation pipeline.
+	transcriptionService.SetGlossaryRepository(repos.Glossary)
+	if subtitleConverter != nil {
+		transcriptionService.SetOpenCCConverter(subtitleConverter)
 	}
+	transcriptionService.SetPlacer(subtitlePlacerAdapter{subtitlePlacer})
+	slog.Info("Transcription service initialized",
+		"ffmpeg_available", audioExtractorService.IsAvailable(),
+		"asr_configured", asrHolder.IsConfigured(ctx),
+		"base_url_override", cfg.ASRBaseURL != "",
+		"model_override", cfg.ASRModel != "",
+		"available", transcriptionService.IsAvailable())
 	// 9R-16 AC 12: persist generation success (subtitle_status/path/language)
 	// so the missing-scope batch enumeration shrinks and poster badges flip.
 	transcriptionService.SetSubtitleStatusWriter(repos.Movies)
@@ -541,20 +559,6 @@ func main() {
 	// the pipeline's ASR fallback leg serves episodes through the same run.
 	transcriptionService.SetEpisodeSubtitleStatusWriter(repos.Episodes)
 	transcriptionService.SetEpisodeSubtitleStateReader(repos.Episodes)
-
-	// ── Provider keys: resolver + hot-reloadable holder (sub-2-1a AC #1/#2) ──
-	//
-	// The key is resolved secret-first so a key typed into the settings page
-	// actually reaches the pipeline; it used to be env-only, which made the page
-	// a silent no-op (Break 1). The holder rebuilds the client when the resolved
-	// key changes, so a runtime edit takes effect without a restart (Break 2).
-	keyResolver := services.NewKeyResolver(secretsService, services.EnvKeys{
-		Claude: cfg.GetClaudeAPIKey(),
-		TMDb:   cfg.GetTMDbAPIKey(),
-		OpenAI: cfg.GetOpenAIAPIKey(),
-	}, slog.Default())
-	claudeHolder := services.NewClaudeProviderHolder(
-		keyResolver, cfg.GetClaudeModel(), slog.Default(), ai.WithClaudeGovernor(aiGovernor))
 
 	// Initialize AI terminology correction (Story 9.1) + subtitle translation (Story 9.2b).
 	// Constructed UNCONDITIONALLY (sub-2-1a AC #2): they take the holder, which

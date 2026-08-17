@@ -1,6 +1,6 @@
 # Story 5.2: ASR 金鑰免重啟熱載 —— ASRProviderHolder、可用性改為每次呼叫判定、文案回收「重啟」謊言
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -171,30 +171,30 @@ sub-2-2c/2-2d 上線的重啟句子在本 story 合併後成為**謊言**,同一
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — `ASRProviderHolder`（AC: #1, #6）** 🔴 BE
-  - [ ] `services/asr_provider_holder.go`：resolver→fingerprint→快取重建；`ai.ASRProvider` 編譯期 assertion；檔頭寫入「不抽泛型」裁定
-  - [ ] `IsConfigured` / `Get` / `Transcribe` / `TranscribeWithLanguage` 四個方法；NFR-S1 log 形狀
+- [x] **Task 1 — `ASRProviderHolder`（AC: #1, #6）** 🔴 BE
+  - [x] `services/asr_provider_holder.go`：resolver→fingerprint→快取重建；`ai.ASRProvider` 編譯期 assertion；檔頭寫入「不抽泛型」裁定
+  - [x] `IsConfigured` / `Get` / `Transcribe` / `TranscribeWithLanguage` 四個方法；NFR-S1 log 形狀
 
-- [ ] **Task 2 — main.go 接線 ＋ 可用性探針（AC: #2）** 🔴 BE
-  - [ ] `keyResolver` 建立上移；拆掉 `if cfg.HasOpenAIKey()`；四個 setter 移出 if
-  - [ ] `TranscriptionService.IsAvailable()` 加 `IsConfigured(ctx)` 探針（抄 `translation_service.go:101-118`）
-  - [ ] 確認三個下游消費者零改動（handler 503／sweep 閘門／legacy 批次）
+- [x] **Task 2 — main.go 接線 ＋ 可用性探針（AC: #2）** 🔴 BE
+  - [x] `keyResolver` 建立上移；拆掉 `if cfg.HasOpenAIKey()`；四個 setter 移出 if
+  - [x] `TranscriptionService.IsAvailable()` 加 `IsConfigured(ctx)` 探針（抄 `translation_service.go:101-118`）
+  - [x] 確認三個下游消費者零改動（handler 503／sweep 閘門／legacy 批次）
 
-- [ ] **Task 3 — 自架免金鑰（AC: #3）** 🔴 BE
-  - [ ] `whisper.go`：`ErrWhisperNotConfigured` 只在非自架時返回；空金鑰不設 `Authorization` header
-  - [ ] holder 的 configured 判定納入 `ai.IsSelfHostedASRBaseURL`（單一判定式,不新增偵測器）
+- [x] **Task 3 — 自架免金鑰（AC: #3）** 🔴 BE
+  - [x] `whisper.go`：`ErrWhisperNotConfigured` 只在非自架時返回；空金鑰不設 `Authorization` header
+  - [x] holder 的 configured 判定納入 `ai.IsSelfHostedASRBaseURL`（單一判定式,不新增偵測器）
 
-- [ ] **Task 4 — 後端文案與文件（AC: #4）** 🔴 BE
-  - [ ] 兩處 503 suggestion ＋ in-code 註解改寫；兩處既有測試翻為負向守衛
-  - [ ] `docs/deployment.md`（精確化 env-only/重啟句,不整段刪）＋ `docs/development.md:158`
+- [x] **Task 4 — 後端文案與文件（AC: #4）** 🔴 BE
+  - [x] 兩處 503 suggestion ＋ in-code 註解改寫；兩處既有測試翻為負向守衛
+  - [x] `docs/deployment.md`（精確化 env-only/重啟句,不整段刪）＋ `docs/development.md:158`
 
-- [ ] **Task 5 — 前端文案（AC: #5）** 🟡 FE
-  - [ ] `ManageSubtitleDialogV2.tsx:391` ＋ `ApiKeysForm.tsx:68`；testid／按鈕／導向全部不動；**`ManageSubtitleDialogV2.spec.tsx:301` 同步翻面**（AC #4 白名單其餘字串一律不動）
-  - [ ] 立案 `backlog-f5-asr-restart-copy-pen-resync`（雙向）——`.pen` f6ZxY 由 Sally 補
+- [x] **Task 5 — 前端文案（AC: #5）** 🟡 FE
+  - [x] `ManageSubtitleDialogV2.tsx:391` ＋ `ApiKeysForm.tsx:68`；testid／按鈕／導向全部不動；**`ManageSubtitleDialogV2.spec.tsx:301` 同步翻面**（AC #4 白名單其餘字串一律不動）
+  - [x] 立案 `backlog-f5-asr-restart-copy-pen-resync`（雙向）——`.pen` f6ZxY 由 Sally 補
 
-- [ ] **Task 6 — 測試與回歸（AC: #7）**
-  - [ ] 整合測試（真 secrets）＋ holder 單元 ＋ 三態 ＋ 探針 ＋ 接線 ＋ 文案守衛
-  - [ ] 契約清點（KeyResolver ack、0 bump）＋ 全回歸閘門
+- [x] **Task 6 — 測試與回歸（AC: #7）**
+  - [x] 整合測試（真 secrets）＋ holder 單元 ＋ 三態 ＋ 探針 ＋ 接線 ＋ 文案守衛
+  - [x] 契約清點（KeyResolver ack、0 bump）＋ 全回歸閘門
 
 （後端 task 4 個、前端 1 個 —— 未觸發跨端拆分門檻。）
 
@@ -274,11 +274,45 @@ sub-2-2c/2-2d 上線的重啟句子在本 story 合併後成為**謊言**,同一
 
 ### Agent Model Used
 
-_(填入實作模型)_
+Claude Opus 5 (claude-opus-5[1m])
 
 ### Debug Log References
 
+- Full API suite: `go test ./... -count=1` — 34 packages ok, 0 failures.
+- Full web suite: `pnpm nx test web -- --run` — 233 files / 2620 tests green.
+- `go build ./...` + `go vet ./...` clean; `gofmt -l` clean on all touched files.
+- `pnpm run lint:all` — 0 errors, 119 pre-existing warnings (retro-11-AI1b batch; **0 on files this story touched** — scoped eslint over the 4 touched `apps/web` files returned empty). `prettier --check` green after formatting `docs/development.md` (the table-alignment reflow the new cell widths forced).
+- Guard falsification: `internal/asr_hot_reload_test.go` was temporarily re-pointed at a pattern that DOES occur in `main.go` (and the construction-count expectation flipped to 99) — both tests went red with 6 findings, then were restored green. The guards detect, they do not merely pass.
+
 ### Completion Notes List
+
+- **🔗 AC Drift: FOUND — sanctioned, and pre-authorised by the tracking entry.** sub-2-2c (γ ratified string table) and **sub-2-2d AC #1/#3** shipped the restart clause as the deliberate, *verified-true* copy — 「請至金鑰設定儲存，並重啟伺服器後再試。」 and the two 503 suggestions. This story **reverses that observable behaviour** because the fact underneath it changed. This is not an unnoticed drift: `backlog-asr-runtime-key-resolution` recorded the coupling in advance — *"if backlog-asr-runtime-key-resolution ships a holder, THAT story updates the copy"* — and this story is that story. Grep sweep: `重啟伺服器` / `boot-built` / `restart clause` / `HasOpenAIKey` across `_bmad-output/implementation-artifacts/*.md` → hits in `sub-1-7a`, `sub-2-1b`, `sub-2-2c`, `sub-2-2d`, `9-2a`; every one read. Only sub-2-2c/2-2d assert the ASR restart clause (DRIFT, handled here); sub-1-7a and sub-2-1b concern the **TMDb** row and the ENCRYPTION_KEY notice, which stay true and are **untouched** (REUSE); 9-2a is the original boot-built wiring this story replaces (REUSE of its pipeline semantics, only the construction site moves).
+- **📎 Contract Stamps: FOUND (3 stamped ACs across 2 files — this story stamps `[@contract-v1]` on AC #1 `ASRProviderHolder`; upstream `[@contract-v1]` Story sub-2-1a AC #1 `KeyResolver` referenced).** **confirmed against `[@contract-v1]` (Story sub-2-1a AC #1)** — the `KeyResolver` interface, the FIXED secret > env resolution order, and `KeyOpenAI`/`SecretNameOpenAI` are consumed **unchanged**: this story adds a consumer and edits nothing on the contract surface, so **0 bumps produced ⇒ no downstream stale-mark obligation**. sub-2-1a AC #2 (`ClaudeProviderHolder`, also `[@contract-v1]`) is **mirrored, not consumed** — `ASRProviderHolder` is a sibling implementation of the same shape and touches no Claude code. Unstamped surfaces verified untouched: `ai.ASRProvider`, `handlers.TranscriptionServiceInterface.IsAvailable() bool`, `GenerationRunner`, `subtitle.SpeechTranscriber`, D2/D6/`transcription_*` SSE.
+- **🎭 A11y Pre-Flight: PASS** (2 components checked — `ApiKeysForm`, `ManageSubtitleDialogV2`; **0** jsx-a11y warnings on touched files, 0 introduced). Both changes are static text inside existing elements: no new interactive surface, no image, no modal/focus change, no async-revealed content, no lazy-load request-count claim. The F5 panel's structure (`data-testid`, the 前往設定 button, the `/settings/keys` navigation) is byte-identical.
+- **🎨 UX Verification: ONE KNOWN DRIFT, ruled at authoring and tracked** — see the dedicated note below.
+- **AC #1** — `services/asr_provider_holder.go`: `ASRProviderHolder` stamped `[@contract-v1]`, a per-line mirror of `ClaudeProviderHolder`. Fingerprint is `key|baseURL|model` (the endpoint and model are part of "which engine is in force", not decoration — pinned by `TestASRProviderHolder_FingerprintCoversBaseURLAndModel`). `opts` captured once and replayed on rebuild, which is what keeps the **shared 9R-11 Governor** alive across a key change (`TestASRProviderHolder_GovernorSurvivesRebuild`, asserting `assert.Same` on the instance). Unconfigured returns the **existing** `ai.ErrWhisperNotConfigured` sentinel — no new error type, no new Rule 7 code. Logs carry `key_source` / `self_hosted` / `base_url_override` / `model_override` and never the key (NFR-S1). Naming rationale (port, not engine) and the ⚖️ **no-generic-extraction** ruling are both written into the file header so a reviewer does not re-litigate them.
+- **AC #2** — `main.go`: the `if cfg.HasOpenAIKey() && audioExtractorService.IsAvailable()` block is **gone**; `keyResolver`/`claudeHolder` moved up ahead of the transcription wiring, `asrHolder` built from `cfg.ASRBaseURL`/`cfg.ASRModel` + the shared `aiGovernor`, and the service constructed **once**. The four pipeline setters (`SetRunBudgetUSD` / `SetGlossaryRepository` / `SetOpenCCConverter` / `SetPlacer`) are no longer **key-gated** — they run on every boot regardless of key state (precision note added at CR L3: `SetOpenCCConverter` keeps its pre-existing `if subtitleConverter != nil` guard, which is converter-existence, not key state — a nil concrete pointer through the interface would defeat the service's own nil-check). `TranscriptionService.IsAvailable()` gained the `IsConfigured(ctx)` probe, a verbatim isomorph of `TranslationService.IsConfigured` **including** its compatibility clause (a plain provider without the probe stays available — which is why every pre-existing transcription test is untouched and still green). The three downstream availability consumers (`transcription_handler.go` 503, `pipelineASRAdapter.Available`, `RouteCGenerationRunner.IsAvailable`) needed **zero edits** and became truthful automatically; `IsAvailable() bool` keeps its signature ⇒ no interface change, no Rule 20 bump.
+- **AC #2 (structural guard, beyond the literal AC)** — new `internal/asr_hot_reload_test.go` in the repo-invariant package (`internal/cost_consent_test.go` precedent): `.HasOpenAIKey(` must have **no production caller**, and `main.go` must construct `TranscriptionService` **exactly once** with **exactly one** call to each of the four setters. This bug shipped twice (Claude in sub-2-1a, ASR here) and the second half of it — the else-branch that dropped the setters — was invisible to every existing test. The invariant is now structural rather than a comment. The scanner skips comment lines so the explanatory references to the removed gate do not self-trip.
+- **AC #3** — self-hosted ASR runs with **no key at all**. `whisper.go` returns `ErrWhisperNotConfigured` only when the key is empty **and** `!c.isSelfHosted()`, and omits the `Authorization` header entirely rather than sending a bare `Bearer ` (a malformed credential some engines reject). `ASRProviderHolder.IsConfigured` = `IsSelfHostedASRBaseURL(baseURL) || resolver.Has(KeyOpenAI)`. Every self-hosted judgment routes through the **one** predicate `ai.IsSelfHostedASRBaseURL` (sub-5-1 CR M1) — the trap value (`ASR_BASE_URL` explicitly set to the official endpoint) is re-pinned on the availability side by `TestASRProviderHolder_ExplicitOfficialURLIsNotSelfHosted`, because a second "non-empty ⇒ self-hosted" detector here would hand out a keyless client that 401s on every call. The paid hosted path is unchanged in every respect, including sub-5-1's metering.
+- **AC #4** — both 503 suggestions now end 「儲存後立即生效」; their in-code comments state the new fact instead of the old one. The two existing `assert.Contains(t, body, "重啟伺服器")` assertions were **inverted** into `NotContains("重啟")` + a positive assertion on the replacement (sub-2-2d CR L2 symmetric-guard precedent), so the lie cannot come back silently. `docs/deployment.md` gained two precise bullets (which keys hot-reload — with TMDb named as the exception — and that self-hosted ASR needs no key) and the blanket "these are environment variables and a restart is required" sentence was **narrowed** rather than deleted: `ASR_BASE_URL`, `ASR_MODEL`, `AI_RUN_BUDGET_USD` and `VIDO_SUBTITLE_PIPELINE_MODE` genuinely still need one. `docs/development.md`'s ASR rows say the same. **Rule 17:** `docs/deployment.md` still has no zh-TW twin — pre-existing debt tracked by `backlog-deployment-doc-zh-tw-twin`; this story does not newly violate it (the sub-4-2 / sub-5-1 handling).
+- **AC #4 (scope fence honoured)** — the story's 「不得誤傷」 whitelist was checked line by line and **every** still-true restart string is untouched: `subtitle_pipeline_handler.go:113,154` (pipeline-mode env), `key_settings_handler.go` (ENCRYPTION_KEY, CLAUDE_MODEL), the `ApiKeysForm` TMDb row + its spec guard, and the ENCRYPTION_KEY notice + its spec guard. A blanket `grep 重啟` replacement would have broken all four.
+- **AC #5** — F5 panel and the 雲端 ASR row updated; title, `data-testid="generation-not-configured"`, `data-testid="go-to-settings"`, the button and the `/settings/keys` navigation are byte-identical (TestSprite/e2e selectors depend on them). The ASR row's hint also now names the self-hosted case, so an operator who configured `ASR_BASE_URL` stops hunting for a key to paste. **Test-authoring catch:** the first negative guard asserted `not.toHaveTextContent('需重啟')` and failed — the new copy legitimately contains 「無**需重啟**伺服器」. The guard now pins the TMDb row's *affirmative* string instead, which is the thing that must not leak over; the comment records why the naive form is wrong.
+- **AC #6** — 0 bumps produced, 1 ack recorded (above). ⚖️ The **no-generic-holder** ruling stands and is now documented at the code: with this file there are exactly **two** concrete holders, not three (TMDb is a backlog entry, not an implementation), so extraction would be premature generalisation per ADR `adr-external-api-integration-standard` Decision 3. The decision is delegated to `backlog-tmdb-runtime-key-resolution`, whose sprint-status entry already carries the hand-off note.
+- **AC #7** — 25 new tests (count corrected at CR — the original note said 22/holder-14; the honest tally is holder 16, integration 4, whisper 3, guards 2): `asr_provider_holder_test.go` ×16 (fingerprint identity, rebuild-on-key-change, Governor survival, the NFR-S1 log-capture test added at CR H1, self-hosted trio incl. the official-URL trap, per-call delegation, constructor plumbing, and the four `TranscriptionService` availability cases including the plain-provider compatibility clause), `asr_key_resolution_integration_test.go` ×4 (real `:memory:` DB + real AES-256-GCM: save→un-gate with nothing rebuilt, secret-outranks-env, clear→re-gate, self-hosted available with the key row still honestly reporting `none`), `whisper_test.go` ×3 (keyless self-hosted transcribes with **no** `Authorization` header; hosted keyless still errors; self-hosted **with** a key still sends it), `asr_hot_reload_test.go` ×2 structural guards. RED was observed before each implementation step (compile failure for the holder; `ErrWhisperNotConfigured` for the self-hosted transcribe).
+- **Additional hardening not in the literal AC:** `ai.WhisperClient` gained `Governor()` and `BaseURL()` accessors (the `ClaudeProvider.Governor()` precedent, with the same doc rationale) so the rebuild assertions read real state instead of trusting wiring; and `config.HasOpenAIKey` — orphaned by this story — carries a ⚠️ doc warning that it is **not** the answer to "is ASR configured", so the next reader does not re-introduce the gate. The accessor itself is kept, matching how sub-2-1a left `HasClaudeKey` in place.
+- **Pre-existing failures: NONE encountered.** Both suites were green before and after; nothing was skipped, filed or waived.
+
+### 🎨 UX Verification — one known drift, ruled and tracked
+
+| Area | Design spec (`.pen` F5-D-v2 `f6ZxY`) | Implementation | Match? | Fix |
+| --- | --- | --- | --- | --- |
+| Panel title | 語音辨識尚未設定 | 語音辨識尚未設定 | ✅ | — |
+| Panel body | 「…請至金鑰設定儲存，**並重啟伺服器後再試**。」 | 「…請至金鑰設定**儲存後即可使用**。」 | ❌ | **Not fixed here — by ruling** |
+| CTA button / target | 前往設定 → `/settings/keys` | identical | ✅ | — |
+| Tint / icon / layout | `$warning-tint`, Settings icon | identical | ✅ | — |
+| 雲端 ASR row hint | (no `.pen` surface — settings pages have none) | 「儲存後立即生效，無需重啟伺服器。」 | n/a | reuses the ratified Claude-row wording |
+
+The single mismatch is **deliberate and was ruled at authoring**: the `.pen` body was ratified by sub-2-2c when the restart requirement was *true*, and this story is what makes it false. `.pen` edits go through Sally + the Pencil Inline-Agent flow and are not a dev agent's to make, so shipping the lie in code until a design round completes was rejected — it would send users to reboot a NAS for nothing. Tracked bidirectionally as **`backlog-f5-asr-restart-copy-pen-resync`**. No `.pen` file was opened or modified. No visual baselines apply (`settings/*` and this dialog have no gallery fixtures — the same Rule 22 boundary as 1-7b AC #5), so no screenshot regeneration was required or performed.
 
 ### Discovery Triage
 
@@ -288,8 +322,44 @@ _(填入實作模型)_
     - **① expand-scope-in-place** — keyless boot 的 `TranscriptionService` 連 `SetRunBudgetUSD`／`SetGlossaryRepository`／`SetOpenCCConverter`／`SetPlacer` 都沒跑（四個 setter 困在 `if cfg.HasOpenAIKey()` 分支內）,熱載金鑰後會得到一條無聲降級的管線 → 吸收為 **AC #2 第 2 點**。
     - **③ backlog-with-carry-forward-link** — `backlog-f5-asr-restart-copy-pen-resync`：`.pen` F5-D-v2（`f6ZxY`）body 仍是 sub-2-2c γ 核定的重啟句,本 story 只改程式碼字串（`.pen` 需 Sally ＋ Inline-Agent 流程）。非阻塞。
     - **③ backlog-with-carry-forward-link** — `backlog-asr-key-test-probe`：`POST /settings/keys/test` 仍 claude-only,雲端 ASR 列的「測試」維持 disabled；真實 ASR 探測的成本／自架-only `/v1/models` 取捨需獨立裁定。非阻塞。
+  - **實作階段(2026-08-13)：無新增發現。** 兩條 lane ① 缺口皆已於 AC #3／AC #2 內交付並測試釘住；兩條 lane ③ 條目在 authoring 時即已立案(雙向連結已驗)。`config.HasOpenAIKey` 因本 story 而失去生產消費者 —— **不算 lane ③**:它仍是合法的 env accessor、仍有自己的測試,且已在 in-code 加上「這不是 ASR 是否設定的答案」警語(比照 sub-2-1a 保留 `HasClaudeKey` 的處置),沒有留下未追蹤的工作。
 
 ### File List
+
+**Backend — new**
+
+- `apps/api/internal/services/asr_provider_holder.go` — AC #1 `[@contract-v1]` `ASRProviderHolder`: `key|baseURL|model` fingerprint cache (Rule 14), options replayed on rebuild so the shared Governor survives, `IsConfigured` folding in the self-hosted predicate, per-call delegation of both `ai.ASRProvider` methods, compile-time `var _` assertion, header ruling on no-generic-extraction
+- `apps/api/internal/services/asr_provider_holder_test.go` — 14 tests (fingerprint identity / rebuild / Governor survival / self-hosted trio incl. the official-URL trap / delegation / 4 availability cases)
+- `apps/api/internal/services/asr_key_resolution_integration_test.go` — AC #7(a) 4 tests on a real `:memory:` DB + real AES-256-GCM secrets service
+- `apps/api/internal/asr_hot_reload_test.go` — repo-invariant guards: no production caller of `.HasOpenAIKey(`; exactly one `TranscriptionService` construction site with exactly one call to each of the four pipeline setters
+
+**Backend — modified**
+
+- `apps/api/cmd/api/main.go` — key resolver + Claude holder moved ahead of transcription wiring; `if cfg.HasOpenAIKey()` gate removed; ASR holder wired with `cfg.ASRBaseURL`/`cfg.ASRModel` + shared `aiGovernor`; the four pipeline setters no longer key-gated; boot log reports resolved availability
+- `apps/api/internal/subtitle/worker_pool.go` — (CR M2) `sweepEligible` takes a per-sweep `asrOK` snapshot instead of probing per item — the probe became a secrets read + AES decrypt once keys went hot-reloadable; also makes `WithASRAvailability`'s "checked per sweep, not per item" doc comment true
+- `apps/api/internal/services/transcription_service.go` — `IsAvailable()` gains the `IsConfigured(ctx)` probe (signature unchanged; plain-provider compatibility clause preserved)
+- `apps/api/internal/ai/whisper.go` — AC #3: `ErrWhisperNotConfigured` only on the hosted path; empty key omits the `Authorization` header; `Governor()` + `BaseURL()` accessors for rebuild assertions
+- `apps/api/internal/ai/whisper_test.go` — 3 AC #3 tests + `authProbeServer`/`wavFixture` helpers
+- `apps/api/internal/config/api_keys.go` — ⚠️ doc warning on `HasOpenAIKey` (not the ASR-configured predicate any more)
+- `apps/api/internal/handlers/transcription_handler.go` — AC #4 503 suggestion + comment
+- `apps/api/internal/handlers/transcription_handler_test.go` — restart assertion inverted to a negative guard + positive replacement
+- `apps/api/internal/handlers/generation_batch_handler.go` — AC #4 503 suggestion + comment (mode-neutral framing preserved)
+- `apps/api/internal/handlers/generation_batch_handler_test.go` — same inversion
+
+**Frontend**
+
+- `apps/web/src/components/subtitle/ManageSubtitleDialogV2.tsx` — F5 panel body (restart clause retired); testids/CTA/navigation untouched
+- `apps/web/src/components/subtitle/ManageSubtitleDialogV2.spec.tsx` — copy assertion updated + `not.toHaveTextContent('重啟')` guard
+- `apps/web/src/components/settings/ApiKeysForm.tsx` — 雲端 ASR row hint (immediate effect + self-hosted note)
+- `apps/web/src/components/settings/ApiKeysForm.spec.tsx` — new ASR-row test; TMDb/ENCRYPTION_KEY guards deliberately untouched
+
+**Docs / tracking**
+
+- `docs/deployment.md` — hot-reloadable keys (TMDb named as the exception) + self-hosted-needs-no-key; the blanket restart sentence narrowed, not deleted
+- `docs/development.md` — `OPENAI_API_KEY` / `ASR_BASE_URL` rows (Prettier reflowed the table)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — sub-5-2 ready-for-dev → in-progress → review
+- `_bmad-output/implementation-artifacts/sub-2-2c-f5-asr-copy-design.md` — (AC drift reference — see Completion Notes; file NOT modified)
+- `_bmad-output/implementation-artifacts/sub-2-2d-f5-cta-code-strings.md` — (AC drift reference — see Completion Notes; file NOT modified)
 
 ---
 
@@ -298,3 +368,29 @@ _(填入實作模型)_
 | Date | Change |
 | --- | --- |
 | 2026-08-13 | create-story：M3 D 群組建檔。PROMOTES `backlog-asr-runtime-key-resolution`。authoring 盤點吸收 2 個 lane ① 缺口（自架免金鑰、keyless boot 的四個 setter）＋ 立 2 條 lane ③（`.pen` 文案 resync、ASR 金鑰測試探針）。 |
+| 2026-08-13 | Task 1 (AC #1, #6)：`ASRProviderHolder` `[@contract-v1]` —— `key\|baseURL\|model` fingerprint 快取、opts 重播讓共用 Governor 跨重建存活、未設定回既有 `ErrWhisperNotConfigured`、NFR-S1 log 形狀；不抽泛型 holder 的裁定寫進檔頭。confirmed against `[@contract-v1]` (Story sub-2-1a AC #1) —— KeyResolver 零改動,0 bump。 |
+| 2026-08-13 | Task 2 (AC #2)：main.go 拆掉 `if cfg.HasOpenAIKey()`,resolver/holder 上移,transcription service 單一建構點且四個 pipeline setter 無條件執行（原本困在 key 分支內 ⇒ keyless boot 只能復原成降級管線）；`IsAvailable()` 加 `IsConfigured(ctx)` 探針（簽名不變 ⇒ handler 介面 0 bump,三個下游閘門零改動自動變誠實）。新增 repo-invariant 守衛把「不得再有開機期金鑰閘門」結構化。 |
+| 2026-08-13 | Task 3 (AC #3)：自架 ASR 免金鑰 —— `ErrWhisperNotConfigured` 只在 hosted 路徑返回,空金鑰不送 `Authorization` header；configured 判定併入 `ai.IsSelfHostedASRBaseURL`（sub-5-1 CR M1 唯一判定式,官方 URL 明示設定的陷阱值在可用性側再釘一次）。hosted 路徑行為與計帳完全不變。 |
+| 2026-08-13 | Task 4 (AC #4)：兩處 503 suggestion 的「重啟」句回收為「儲存後立即生效」,既有正向斷言翻為 `NotContains` 負向守衛；`deployment.md`／`development.md` 同步（blanket 重啟句收窄而非刪除 —— `ASR_BASE_URL`/`ASR_MODEL`/`AI_RUN_BUDGET_USD`/`VIDO_SUBTITLE_PIPELINE_MODE` 仍需重啟）。白名單四處仍為真的重啟字串逐一確認未動。 |
+| 2026-08-13 | Task 5 (AC #5)：F5 面板與雲端 ASR 列文案更新（testid／CTA／導向 byte 不變）；`.pen` f6ZxY 的漂移依 authoring 裁定不在此修,由 `backlog-f5-asr-restart-copy-pen-resync` 追蹤。 |
+| 2026-08-13 | Task 6 (AC #7)：新測試（holder／真 secrets 整合 4／whisper 三態 3／結構守衛 2，其中守衛經 falsification 驗證會紅）；全回歸綠 —— api 34 packages、web 233 files/2620 tests、lint 0 errors、gofmt/prettier clean。Status in-progress → review。（測試計數於 CR 修正：實為 25 非 22。） |
+| 2026-08-13 | Senior Developer Review (Fable 5 adversarial, 換模型慣例 — implementation by Opus 5) — 1H/2M/3L, all adjudicated and fixed in-session. H1: AC #7(b) 明列的 NFR-S1「log 不含金鑰」測試不存在 → 補 log-capture test（gemini_test MissingUsageMetadata 模式，雙向斷言 key_source 在、金鑰與其前綴不在）。M1: ApiKeysForm ASR hint 偏離 AC #5 核定字串且新增句把自架 ASR 與降級 fallback 混為一談（讀起來像「自架 ⇒ ASR 不可用」）→ 回歸核定字串，自架免金鑰事實留在 docs（in-code 註解記錄裁定）。M2: sweepEligible 逐列呼叫 asrRecoverable()，該鏈自本 story 起是 secrets DB 讀＋AES 解密 per item（原為 nil-check；EnqueueMissing 目前零生產呼叫者故為 latent，但 WithASRAvailability 的 doc 本來就宣告 per-sweep）→ 改為每 sweep 快照一次，doc 與實作對齊。L1: 測試計數不實（22→25、holder 14→16）→ 修正。L2: FingerprintCoversBaseURLAndModel 測試名不符實（兩個獨立 holder 必然不同 client，無法否證 fingerprint 主張）→ 更名 BaseURLAndModelReachTheClient ＋ 誠實註解（baseURL/model 維度在單一 holder 生命期內不可變，屬 future-proofing）。L3:「四個 setter 無條件執行」措辭精確化（OpenCC 仍在 converter-existence guard 內，非 key 閘門）。修後全綠：api 34 pkg、web 233/2620、gofmt/prettier clean。Status review → done。 |
+
+## Senior Developer Review (AI)
+
+**Reviewer model:** Claude Fable 5（換模型 adversarial CR 慣例 — implementation by Opus 5）· **Date:** 2026-08-13 · **Outcome:** Changes Requested → all findings adjudicated and fixed in-session → **Approve (done)**
+
+**Mandatory checks:** 🔒 Rule 7 Wire Format: PASS（in-review Go 檔 0 個新 error-code 常數；兩處 503 重用已註冊的 `TRANSCRIPTION_DISABLED`，prefix 數維持 16）· 🔒 Rule 20 Contract Bump: N/A（0 bump；本 story 新 stamp `[@contract-v1]` ×1 ＋ 消費側 ack ×1，ack 行 `confirmed against [@contract-v1] (Story sub-2-1a AC #1)` 於 Completion Notes 驗證存在）· 🔒 Rule 25 Mega-line: N/A（project-context.md 未觸及）· Git vs File List: 0 discrepancies（21 檔全數對帳；CR 修復另 +1 檔 worker_pool.go，已補入 File List）。
+
+### Findings & resolutions（1H / 2M / 3L）
+
+- [x] **[H1] AC #7(b) 明列的 NFR-S1「log 不含金鑰」測試不存在。** Task 6 標 [x] 且 Completion Notes 宣稱 AC #7 交付，但 `asr_provider_holder_test.go` 零 log 斷言——NFR-S1 只靠人工目視。FIXED：`TestASRProviderHolder_RebuildLogNeverContainsTheKey`（gemini_test 的 log-capture 模式）雙向釘住：rebuild 行有出、`key_source` 在、金鑰與其 6 字前綴皆不在。
+- [x] **[M1] ApiKeysForm ASR hint 偏離 AC #5 核定字串，且新增子句語意錯誤。** 「使用自架 ASR 或未設定時，仍可使用內建的字幕來源」把自架 ASR 併進降級 fallback 句——對自架 operator 讀起來是「你的 ASR 不可用」，與事實相反（自架恰恰不需要這把金鑰）。意圖（告知自架免金鑰）可嘉、句子錯誤、且偏離未經設計輪。FIXED：回歸 AC #5 逐字核定字串；自架免金鑰事實留在 `docs/deployment.md`／`development.md`（該處已由 AC #4 交付）；in-code 註解記錄本裁定防回歸。
+- [x] **[M2] `sweepEligible` 的可用性探針成本模型被本 story 隱形改變：nil-check → 每列一次 secrets DB 讀＋AES-256-GCM 解密。** `asrRecoverable()` → `Available()` → `IsAvailable()` → holder `IsConfigured` → `secrets.Retrieve`，在兩個列舉迴圈內逐列呼叫；`WithASRAvailability` 的 doc 反而一直宣告「Checked per sweep, not per item」——實作早就漂移，本 story 讓漂移變貴。緩解事實：`EnqueueMissing` 目前零生產呼叫者（cost-consent guard），屬 latent。FIXED：`EnqueueMissing` 開頭快照一次 `asrOK`，`sweepEligible(s, asrOK)` 傳值；語意正確性由既有的「over-enumeration 安全」註解背書（per-item entry gate 仍是權威閘門）。
+- [x] **[L1] 測試計數不實。** Completion Notes／Change Log 宣稱「22 新測試（holder 14…）」，實數為 25（holder 16 含 H1 新增、整合 4、whisper 3、守衛 2）。FIXED：兩處更正。
+- [x] **[L2] `TestASRProviderHolder_FingerprintCoversBaseURLAndModel` 測試名不符實。** 兩個**獨立** holder 的 client 必然不同指標，斷言無法否證「fingerprint 涵蓋 baseURL/model」——它實際驗的是建構子 option plumbing；且 baseURL/model 在單一 holder 生命期內不可變（constructor-fixed），該 fingerprint 維度今天本就不可否證。FIXED：更名 `TestASRProviderHolder_BaseURLAndModelReachTheClient` ＋ 誠實註解（future-proofing 定位，key 維度才是今天可否證的，已由 rebuild 測試涵蓋）。
+- [x] **[L3] 「四個 setter 全部無條件執行」措辭過強。** `SetOpenCCConverter` 仍在 `if subtitleConverter != nil` 內（正確——converter-existence guard，typed-nil interface 陷阱防護，非 key 閘門）；且結構守衛只數呼叫次數、無法偵測條件包裹。FIXED：Completion Notes 措辭精確化為「不再 key-gated」＋ 記錄 guard 侷限。
+
+### Reviewer verifications that held（未再由 orchestrator 重查）
+
+三個下游可用性消費者確為零 diff（handler 介面簽名 byte 不變）· AC #4 白名單四處仍為真的重啟字串逐一確認未動（含兩個 spec guard）· `route-c-poc` 走 `os.Getenv` 非 `.HasOpenAIKey(`（守衛不誤傷）· `docs/development.md` 無 zh-TW 雙生（與 deployment.md 同為既有債，Rule 17 無新違規）· hosted 路徑 byte 不變（header 只在空金鑰時省略；metering 路徑未觸）· 守衛 falsification 紀錄屬實（Debug Log 有紅證）· `.pen` 漂移為 authoring 裁定且 `backlog-f5-asr-restart-copy-pen-resync` 雙向存在 · 修後全綠：api 34 packages、web 233/2620、gofmt/prettier clean。

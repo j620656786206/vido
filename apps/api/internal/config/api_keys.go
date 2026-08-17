@@ -15,7 +15,16 @@ func (c *Config) HasClaudeKey() bool {
 	return c.ClaudeAPIKey != ""
 }
 
-// HasOpenAIKey returns true if an OpenAI API key is configured
+// HasOpenAIKey returns true if an OpenAI API key is configured in the
+// ENVIRONMENT.
+//
+// ⚠️ Since sub-5-2 this is NOT the answer to "is speech recognition
+// configured": a key stored at runtime through /settings/keys resolves through
+// services.KeyResolver and never appears here, and a self-hosted ASR endpoint is
+// configured with no key at all. Ask services.ASRProviderHolder.IsConfigured (or
+// TranscriptionService.IsAvailable) instead — gating anything on this predicate
+// re-introduces the boot-frozen bug sub-5-2 removed. Kept as a plain env
+// accessor (the HasClaudeKey precedent after sub-2-1a).
 func (c *Config) HasOpenAIKey() bool {
 	return c.OpenAIAPIKey != ""
 }

@@ -147,17 +147,17 @@ There is no swaggo/OpenAPI generation in `apps/api`; the `api/openapi.json` at t
 
 All environment variables are documented in [`.env.example`](../.env.example) at the repo root. The ones you are most likely to need locally:
 
-| Variable                                            | Default      | Purpose                                             |
-| --------------------------------------------------- | ------------ | --------------------------------------------------- |
-| `VIDO_PORT`                                         | `8080`       | API port                                            |
-| `VIDO_MEDIA_DIRS`                                   | `/media`     | Comma-separated media library paths                 |
-| `VIDO_DATA_DIR`                                     | `/vido-data` | Database and cache location                         |
-| `TMDB_API_KEY`                                      | —            | Metadata lookups                                    |
-| `AI_PROVIDER` + `GEMINI_API_KEY` / `CLAUDE_API_KEY` | `gemini`     | Filename parsing, subtitle translation              |
-| `OPENAI_API_KEY`                                    | —            | Whisper transcription                               |
-| `ASR_BASE_URL` / `ASR_MODEL`                        | —            | Point at a self-hosted OpenAI-compatible ASR engine |
-| `AI_RUN_BUDGET_USD`                                 | `5`          | Spend ceiling per run                               |
-| `ENABLE_DOUBAN` / `ENABLE_WIKIPEDIA`                | `false`      | Metadata fallback providers (opt-in)                |
+| Variable                                            | Default      | Purpose                                                                          |
+| --------------------------------------------------- | ------------ | -------------------------------------------------------------------------------- |
+| `VIDO_PORT`                                         | `8080`       | API port                                                                         |
+| `VIDO_MEDIA_DIRS`                                   | `/media`     | Comma-separated media library paths                                              |
+| `VIDO_DATA_DIR`                                     | `/vido-data` | Database and cache location                                                      |
+| `TMDB_API_KEY`                                      | —            | Metadata lookups                                                                 |
+| `AI_PROVIDER` + `GEMINI_API_KEY` / `CLAUDE_API_KEY` | `gemini`     | Filename parsing, subtitle translation                                           |
+| `OPENAI_API_KEY`                                    | —            | Whisper transcription (hosted API only; hot-reloadable from Settings → API Keys) |
+| `ASR_BASE_URL` / `ASR_MODEL`                        | —            | Point at a self-hosted OpenAI-compatible ASR engine — no API key needed          |
+| `AI_RUN_BUDGET_USD`                                 | `5`          | Spend ceiling per run                                                            |
+| `ENABLE_DOUBAN` / `ENABLE_WIKIPEDIA`                | `false`      | Metadata fallback providers (opt-in)                                             |
 
 AI features degrade gracefully: without keys the rest of the app works and the AI paths report as disabled.
 

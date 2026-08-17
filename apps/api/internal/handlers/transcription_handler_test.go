@@ -179,7 +179,11 @@ func TestTranscribeMovie_ServiceUnavailable(t *testing.T) {
 	assert.Contains(t, body, "生成字幕需要雲端語音辨識（ASR）金鑰")
 	// CR L1: the settings-page path is the ratified framing's core — pin it.
 	assert.Contains(t, body, "/settings/keys")
-	assert.Contains(t, body, "重啟伺服器")
+	// sub-5-2 AC #4: the restart clause became a FALSE instruction once the ASR
+	// key started resolving per call. Pinned as a negative guard so nobody
+	// re-introduces it, plus the positive claim that replaced it.
+	assert.Contains(t, body, "儲存後立即生效")
+	assert.NotContains(t, body, "重啟", "keys hot-reload since sub-5-2 — telling the user to restart the NAS is a lie")
 	// CR L2: symmetric English-remnant guard (the batch test pins the env-var
 	// absence; this pins the old English suggestion's absence).
 	assert.NotContains(t, body, "FFmpeg is installed")

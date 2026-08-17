@@ -67,11 +67,13 @@ func (h *TranscriptionHandler) TranscribeMovie(c *gin.Context) {
 	if !h.transcriptionService.IsAvailable() &&
 		!h.transcriptionService.CanResumeTranslateOnly(c.Request.Context(), id) {
 		// sub-2-2d AC #3: the γ-ratified zh-TW envelope (this body was English —
-		// a Rule 3 gap). The restart clause is the truth: the WhisperClient is
-		// boot-built (cmd/api/main.go), so a UI-saved ASR key needs a restart.
+		// a Rule 3 gap). sub-5-2 AC #4 retired the restart clause: the ASR client
+		// is no longer boot-built — ASRProviderHolder resolves the key per call,
+		// so a key saved on the settings page takes effect immediately. Telling
+		// the user to restart their NAS is now a false instruction.
 		ErrorResponse(c, http.StatusServiceUnavailable, "TRANSCRIPTION_DISABLED",
 			"語音辨識尚未設定",
-			"生成字幕需要雲端語音辨識（ASR）金鑰。請至金鑰設定（/settings/keys）儲存雲端 ASR 金鑰，並重啟伺服器。")
+			"生成字幕需要雲端語音辨識（ASR）金鑰。請至金鑰設定（/settings/keys）儲存雲端 ASR 金鑰，儲存後立即生效。")
 		return
 	}
 
