@@ -296,11 +296,12 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
     // sub-2-2d AC #1 — γ's ratified copy: the panel names ASR, not a vague
     // "generation" and never the translation key (the 503's real trigger).
     expect(screen.getByText('語音辨識尚未設定')).toBeInTheDocument();
+    // sub-5-2 AC #5: the restart clause was retired when the ASR key started
+    // resolving per call — saving is now sufficient.
     expect(
-      screen.getByText(
-        '生成字幕需要雲端語音辨識（ASR）金鑰。請至金鑰設定儲存，並重啟伺服器後再試。'
-      )
+      screen.getByText('生成字幕需要雲端語音辨識（ASR）金鑰。請至金鑰設定儲存後即可使用。')
     ).toBeInTheDocument();
+    expect(screen.getByTestId('generation-not-configured')).not.toHaveTextContent('重啟');
     expect(screen.getByTestId('go-to-settings')).toHaveTextContent('前往設定');
     // The rest of the dialog survives (fail-soft): tracks + glossary still visible.
     expect(screen.getByTestId('subtitle-tracks-section')).toBeInTheDocument();

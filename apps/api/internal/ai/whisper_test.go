@@ -706,3 +706,69 @@ func TestSelfHostedJudgment_SingleSource(t *testing.T) {
 		})
 	}
 }
+
+// --- sub-5-2 AC #3: a self-hosted engine authenticates nothing --------------
+
+// authProbeServer records whether an Authorization header reached the engine.
+func authProbeServer(t *testing.T, seen *string, present *bool) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		*seen = r.Header.Get("Authorization")
+		_, *present = r.Header["Authorization"]
+		w.Write([]byte("1\n00:00:00,000 --> 00:00:01,000\nhello\n"))
+	}))
+}
+
+func wavFixture(t *testing.T) string {
+	t.Helper()
+	f, err := os.CreateTemp(t.TempDir(), "asr-*.wav")
+	require.NoError(t, err)
+	byteRate := uint32(32000)
+	writeWAVWithChunks(t, f, byteRate, byteRate*2, false)
+	return f.Name()
+}
+
+// Before sub-5-2 a keyless client short-circuited on ErrWhisperNotConfigured, so
+// a self-hosted deployment (which needs no key) had to invent a dummy
+// OPENAI_API_KEY to get any ASR at all — while sub-5-1 already metered it at $0
+// and the docs advertised it as supported.
+func TestWhisperClient_SelfHostedTranscribesWithoutAKey(t *testing.T) {
+	var seen string
+	var present bool
+	server := authProbeServer(t, &seen, &present)
+	defer server.Close()
+
+	c := NewWhisperClient("", WithWhisperBaseURL(server.URL))
+	srt, err := c.Transcribe(context.Background(), wavFixture(t))
+
+	require.NoError(t, err)
+	assert.Contains(t, srt, "hello")
+	assert.False(t, present,
+		"an empty key must omit the header entirely — `Bearer ` with no value is a malformed credential some engines reject")
+}
+
+// The paid hosted API still costs money and still needs a key: the AC #3
+// relaxation must not leak into that path.
+func TestWhisperClient_HostedStillRequiresAKey(t *testing.T) {
+	c := NewWhisperClient("")
+
+	_, err := c.Transcribe(context.Background(), wavFixture(t))
+
+	require.ErrorIs(t, err, ErrWhisperNotConfigured)
+}
+
+// A self-hosted engine MAY still be key-protected (a reverse proxy, a shared
+// LAN). When a key resolves, it is sent exactly as before.
+func TestWhisperClient_SelfHostedWithAKeyStillSendsIt(t *testing.T) {
+	var seen string
+	var present bool
+	server := authProbeServer(t, &seen, &present)
+	defer server.Close()
+
+	c := NewWhisperClient("sk-lan", WithWhisperBaseURL(server.URL))
+	_, err := c.Transcribe(context.Background(), wavFixture(t))
+
+	require.NoError(t, err)
+	require.True(t, present)
+	assert.Equal(t, "Bearer sk-lan", seen)
+}

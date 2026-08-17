@@ -135,6 +135,19 @@ describe('ApiKeysForm — the three source states (AC #1)', () => {
     renderForm();
     expect(screen.getByTestId('key-row-tmdb')).toHaveTextContent('儲存後需重啟伺服器才會生效');
   });
+
+  // sub-5-2 AC #5: the cloud-ASR key hot-reloads now, exactly like Claude. The
+  // TMDb row above is the deliberate contrast — it is the ONLY row that still
+  // needs a restart, so these two tests together pin that the copy distinguishes
+  // them instead of blanket-claiming either behaviour.
+  it('the cloud-ASR row promises immediate effect, not a restart', () => {
+    renderForm();
+    const row = screen.getByTestId('key-row-openai');
+    expect(row).toHaveTextContent('儲存後立即生效');
+    // Guard against the TMDb row's affirmative wording leaking over. Matching a
+    // bare 「需重啟」 would be wrong: this row legitimately says 「無需重啟伺服器」.
+    expect(row).not.toHaveTextContent('儲存後需重啟伺服器才會生效');
+  });
 });
 
 describe('ApiKeysForm — saving (AC #1)', () => {

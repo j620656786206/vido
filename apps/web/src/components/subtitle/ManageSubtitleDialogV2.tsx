@@ -381,14 +381,18 @@ export function ManageSubtitleDialogV2({
                   <Settings className="h-5 w-5 shrink-0 text-[var(--warning)]" aria-hidden="true" />
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     {/* sub-2-2d AC #1 — γ's ratified ASR copy: the 503 gate is
-                        FFmpeg+ASR (transcription_service.go:177), so the panel
-                        names 語音辨識; the WhisperClient is boot-built
-                        (main.go:505) so the restart clause is the truth. */}
+                        FFmpeg+ASR (transcription_service.go), so the panel names
+                        語音辨識. sub-5-2 AC #5 retired the restart clause — the
+                        ASR client is no longer boot-built (ASRProviderHolder
+                        resolves the key per call), so saving is now sufficient
+                        and 「重啟伺服器」 would send the user to reboot their NAS
+                        for nothing. The replacement phrasing reuses the already
+                        ratified Claude-row wording in ApiKeysForm. */}
                     <p className="text-sm font-semibold text-[var(--text-primary)]">
                       語音辨識尚未設定
                     </p>
                     <p className="text-xs text-[var(--text-secondary)]">
-                      生成字幕需要雲端語音辨識（ASR）金鑰。請至金鑰設定儲存，並重啟伺服器後再試。
+                      生成字幕需要雲端語音辨識（ASR）金鑰。請至金鑰設定儲存後即可使用。
                     </p>
                   </div>
                   <button

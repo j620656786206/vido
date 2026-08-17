@@ -127,6 +127,19 @@ func (c *WhisperClient) isSelfHosted() bool {
 	return c.baseURL != WhisperAPIURL
 }
 
+// Governor returns the shared AI throttle this client was built with (nil when
+// unthrottled). Exposed so a caller that REBUILDS the client — the sub-5-2 ASR
+// key-hot-reload holder — can assert the same Governor instance carried over: a
+// new client must never mean a new budget pool, or editing a key would silently
+// reset the 9R-11 run-budget ceiling. Mirrors ClaudeProvider.Governor().
+func (c *WhisperClient) Governor() *Governor { return c.governor }
+
+// BaseURL returns the endpoint this client actually calls. Exposed for the same
+// rebuild-assertion reason as Governor: the holder's fingerprint covers the
+// endpoint, and a test needs to prove a base-URL change produced a different
+// client rather than a silently reused one.
+func (c *WhisperClient) BaseURL() string { return c.baseURL }
+
 // NewWhisperClient creates a new Whisper API client.
 func NewWhisperClient(apiKey string, opts ...WhisperOption) *WhisperClient {
 	c := &WhisperClient{
@@ -161,7 +174,12 @@ func (c *WhisperClient) Transcribe(ctx context.Context, audioPath string) (strin
 // An empty lang means Whisper auto-detects (only correct when the track language
 // is unknown/und — auto-detection mis-fires on mixed/background audio).
 func (c *WhisperClient) TranscribeWithLanguage(ctx context.Context, audioPath, lang string) (string, error) {
-	if c.apiKey == "" {
+	// sub-5-2 AC #3: only the PAID hosted API needs a key. A self-hosted
+	// OpenAI-compatible engine (Speaches / WhisperLive / Subgen) authenticates
+	// nothing, and requiring a key here forced those deployments to invent a
+	// dummy OPENAI_API_KEY — while sub-5-1 was already metering them at $0 and
+	// the docs advertised them as supported. Same single predicate as metering.
+	if c.apiKey == "" && !c.isSelfHosted() {
 		return "", ErrWhisperNotConfigured
 	}
 
@@ -228,7 +246,12 @@ func (c *WhisperClient) TranscribeWithLanguage(ctx context.Context, audioPath, l
 			if err != nil {
 				return "", false, fmt.Errorf("whisper: create request: %w", err)
 			}
-			req.Header.Set("Authorization", "Bearer "+c.apiKey)
+			// Omit the header entirely rather than sending a bare `Bearer `
+			// (sub-5-2 AC #3): an empty credential is malformed and some
+			// self-hosted engines reject it outright.
+			if c.apiKey != "" {
+				req.Header.Set("Authorization", "Bearer "+c.apiKey)
+			}
 			req.Header.Set("Content-Type", contentType)
 
 			resp, err := c.httpClient.Do(req)

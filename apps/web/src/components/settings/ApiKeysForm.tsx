@@ -65,7 +65,11 @@ const KEY_ROWS: KeyRowSpec[] = [
     name: 'openai',
     label: '雲端 ASR（選配）',
     placeholder: 'sk-…',
-    hint: '選配：雲端語音辨識。未設定時仍可使用內建的字幕來源。',
+    // sub-5-2: the ASR client resolves its key per call (ASRProviderHolder), so
+    // this row joins Claude in taking effect on save. Self-hosted engines
+    // (ASR_BASE_URL) need no key at all — worth saying, or an operator who
+    // configured one keeps looking for a key to paste here.
+    hint: '選配：雲端語音辨識。儲存後立即生效，無需重啟伺服器。使用自架 ASR 或未設定時，仍可使用內建的字幕來源。',
     testable: false,
   },
 ];

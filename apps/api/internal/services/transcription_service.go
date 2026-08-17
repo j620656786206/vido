@@ -231,9 +231,26 @@ func (s *TranscriptionService) loadGlossary(ctx context.Context, mediaID string)
 	return pairs
 }
 
-// IsAvailable returns true if both FFmpeg and Whisper API are configured.
+// IsAvailable returns true if both FFmpeg and speech recognition are configured.
+//
+// sub-5-2 AC #2: the ASR provider may be a LAZY holder whose key is resolved per
+// call. Since sub-5-2 this service is constructed UNCONDITIONALLY, so "the
+// provider object exists" no longer implies "ASR is configured" — without this
+// probe a keyless install would report available, and the three gates that read
+// it (the FR12 503, the worker-pool sweep, the legacy batch 503) would all lie.
+// A plain provider (a directly-constructed WhisperClient, or a test fake) has no
+// probe and stays available, exactly as before. Verbatim isomorph of
+// TranslationService.IsConfigured — including that compatibility clause.
 func (s *TranscriptionService) IsAvailable() bool {
-	return s.audioExtractor != nil && s.audioExtractor.IsAvailable() && s.asr != nil
+	if s.audioExtractor == nil || !s.audioExtractor.IsAvailable() || s.asr == nil {
+		return false
+	}
+	if probe, ok := s.asr.(interface {
+		IsConfigured(ctx context.Context) bool
+	}); ok {
+		return probe.IsConfigured(context.Background())
+	}
+	return true
 }
 
 // IsInProgress returns true if a transcription is already running for the given media ID.
