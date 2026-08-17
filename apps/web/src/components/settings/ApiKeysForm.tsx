@@ -66,10 +66,12 @@ const KEY_ROWS: KeyRowSpec[] = [
     label: '雲端 ASR（選配）',
     placeholder: 'sk-…',
     // sub-5-2: the ASR client resolves its key per call (ASRProviderHolder), so
-    // this row joins Claude in taking effect on save. Self-hosted engines
-    // (ASR_BASE_URL) need no key at all — worth saying, or an operator who
-    // configured one keeps looking for a key to paste here.
-    hint: '選配：雲端語音辨識。儲存後立即生效，無需重啟伺服器。使用自架 ASR 或未設定時，仍可使用內建的字幕來源。',
+    // this row joins Claude in taking effect on save. The self-hosted
+    // no-key-needed fact deliberately lives in docs/deployment.md, NOT here
+    // (sub-5-2 CR M1): a first-draft clause bolted it onto the fallback
+    // sentence and read as "self-hosted ⇒ ASR unavailable, use built-in
+    // sources" — the opposite of the truth. This is the AC #5 ratified string.
+    hint: '選配：雲端語音辨識。儲存後立即生效，無需重啟伺服器。未設定時仍可使用內建的字幕來源。',
     testable: false,
   },
 ];

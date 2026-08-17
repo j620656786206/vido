@@ -341,11 +341,19 @@ func (p *WorkerPool) asrRecoverable() bool {
 // (sub-3-2 — extracted so the movie and episode conditions cannot drift):
 // permanent verdicts never re-enter; `no_text_source` re-enters only while the
 // ASR leg can actually recover it.
-func (p *WorkerPool) sweepEligible(s models.SubtitleStatus) bool {
+//
+// asrOK is the availability verdict snapshotted ONCE per sweep (sub-5-2 CR M2):
+// since keys hot-reload, the probe behind asrRecoverable is no longer a
+// nil-check — it resolves the key through the secrets store, i.e. a DB read +
+// AES decrypt per call. Probing per ITEM would turn a library sweep into N
+// secrets reads for zero benefit; one decision per sweep is semantically right
+// because over-enumeration is already documented safe (the per-item entry gate
+// re-checks) and under-enumeration self-heals on the next sweep.
+func (p *WorkerPool) sweepEligible(s models.SubtitleStatus, asrOK bool) bool {
 	if terminalPipelineVerdict(s) {
 		return false
 	}
-	if s == models.SubtitleStatusNoTextSource && !p.asrRecoverable() {
+	if s == models.SubtitleStatusNoTextSource && !asrOK {
 		return false
 	}
 	return true
@@ -373,13 +381,17 @@ func (p *WorkerPool) EnqueueMissing(ctx context.Context) (int, error) {
 		errs   []error
 	)
 
+	// One availability decision per sweep — see sweepEligible's doc (sub-5-2
+	// CR M2: the probe costs a secrets read since keys went hot-reloadable).
+	asrOK := p.asrRecoverable()
+
 	if p.movies != nil {
 		movies, err := p.movies.FindMissingZhHantSubtitle(ctx)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("enumerate movies missing zh-Hant subtitle: %w", err))
 		}
 		for _, m := range movies {
-			if !p.sweepEligible(m.SubtitleStatus) {
+			if !p.sweepEligible(m.SubtitleStatus, asrOK) {
 				continue
 			}
 			if p.Enqueue(MediaRef{ID: m.ID, MediaType: models.SubtitleRunMediaMovie}) {
@@ -396,7 +408,7 @@ func (p *WorkerPool) EnqueueMissing(ctx context.Context) (int, error) {
 			errs = append(errs, fmt.Errorf("enumerate episodes missing zh-Hant subtitle: %w", err))
 		}
 		for _, e := range episodes {
-			if !p.sweepEligible(e.SubtitleStatus) {
+			if !p.sweepEligible(e.SubtitleStatus, asrOK) {
 				continue
 			}
 			if p.Enqueue(MediaRef{ID: e.ID, MediaType: models.SubtitleRunMediaEpisode}) {

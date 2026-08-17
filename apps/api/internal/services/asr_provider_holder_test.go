@@ -1,7 +1,9 @@
 package services
 
 import (
+	"bytes"
 	"context"
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -103,9 +105,35 @@ func TestASRProviderHolder_GovernorSurvivesRebuild(t *testing.T) {
 	assert.Same(t, beforeWhisper.Governor(), afterWhisper.Governor())
 }
 
-// A base-URL or model change must also rebuild — they are part of the identity
-// of "which engine is in force", not decoration.
-func TestASRProviderHolder_FingerprintCoversBaseURLAndModel(t *testing.T) {
+// NFR-S1 (sub-5-2 AC #7(b), added at CR): the rebuild log line must never carry
+// the key or any prefix of it. Hand-inspection said so; this pins it — the
+// gemini_test.go MissingUsageMetadata log-capture pattern.
+func TestASRProviderHolder_RebuildLogNeverContainsTheKey(t *testing.T) {
+	const secret = "sk-THISMUSTNEVERBELOGGED-0123456789"
+
+	var logs bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+	h := NewASRProviderHolder(
+		NewKeyResolver(&fakeSecrets{}, EnvKeys{OpenAI: secret}, nil), "", "", logger)
+
+	_, err := h.Get(context.Background())
+	require.NoError(t, err)
+
+	out := logs.String()
+	assert.Contains(t, out, "asr provider (re)built", "precondition: the rebuild line was emitted")
+	assert.Contains(t, out, "key_source", "the SOURCE is loggable — that is the NFR-S1-safe shape")
+	assert.NotContains(t, out, secret, "the key itself must never be logged")
+	assert.NotContains(t, out, secret[:6], "…nor any prefix of it (NFR-S1)")
+}
+
+// baseURL and model reach the built client via the constructor params (option
+// plumbing). NOTE deliberately NOT named a fingerprint test: baseURL/model are
+// constructor-fixed per holder, so their fingerprint components can never
+// change within one holder's lifetime — they are future-proofing for when the
+// endpoint becomes settings-configurable, and only the KEY dimension of the
+// fingerprint is falsifiable today (covered by the rebuild tests above).
+func TestASRProviderHolder_BaseURLAndModelReachTheClient(t *testing.T) {
 	resolver := NewKeyResolver(&fakeSecrets{}, EnvKeys{OpenAI: "sk"}, nil)
 
 	hosted := NewASRProviderHolder(resolver, "", "", nil)
