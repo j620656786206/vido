@@ -31,8 +31,12 @@ const (
 // granularity is the chunk. If the service batched internally the pipeline
 // could not resend only the failed cues without re-sending the clean ones —
 // which is the quality gate's whole point.
+// The harvested-terms return (sub-5-5) is the chunk's optional trailer yield —
+// the proper-noun renderings the model reported for this chunk; nil when none.
+// This port is unstamped, so the widening syncs implementations and fakes in
+// the same change with no Rule 20 bump.
 type ChunkTranslator interface {
-	TranslateChunk(ctx context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error)
+	TranslateChunk(ctx context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, map[string]string, ai.CompletionUsage, error)
 }
 
 // VariantConverter is the narrow port over *Converter. Injected once and reused
@@ -60,11 +64,16 @@ type TranslateContext struct {
 
 // TranslateResult is the translate stage's output.
 //
-// [@contract-v1] — see TranslateContext.
+// [@contract-v1] — see TranslateContext. HarvestedTerms is ADDITIVE on v1
+// (sub-5-5 AC #3, the `default_budget_usd` precedent — no bump): the
+// proper-noun renderings harvested from the chunks' trailers, merged across
+// chunks with the FIRST occurrence winning (later hindsight does not overturn
+// an established rendering). nil when nothing was harvested.
 type TranslateResult struct {
-	Blocks       []SubtitleBlock    // translated + gated + OpenCC'd; Index/Start/End byte-equal source
-	Usage        ai.CompletionUsage // aggregated across all chunks + retries
-	StubbornCues int                // cues delivered with English fallback (see policy)
+	Blocks         []SubtitleBlock    // translated + gated + OpenCC'd; Index/Start/End byte-equal source
+	Usage          ai.CompletionUsage // aggregated across all chunks + retries
+	StubbornCues   int                // cues delivered with English fallback (see policy)
+	HarvestedTerms map[string]string  // trailer yield, first-wins across chunks (sub-5-5)
 }
 
 // MediaRef identifies one media row for the item flow. MediaType uses the
@@ -215,6 +224,12 @@ type Pipeline struct {
 	// Deliberately NOT validated by requireItemPorts (see the note there).
 	asr SpeechTranscriber
 
+	// glossary is the OPTIONAL sub-5-5 feed/harvest port — nil is a legal,
+	// supported state (translate-only construction, or a deployment wired
+	// before this story) and means exactly today's behavior: empty glossary
+	// fed, nothing harvested. Deliberately NOT in requireItemPorts.
+	glossary GlossaryStore
+
 	// modelID is the model that produces the translations — a RunVersion field,
 	// so it is wiring-supplied (sub-1-6 reads it from config) rather than
 	// discovered at call time.
@@ -278,6 +293,13 @@ func WithMediaStore(media MediaStore) PipelineOption {
 // is the documented ASR-less degradation (AC #4).
 func WithSpeechTranscriber(asr SpeechTranscriber) PipelineOption {
 	return func(p *Pipeline) { p.asr = asr }
+}
+
+// WithGlossaryStore injects the OPTIONAL per-show glossary feed/harvest port
+// (sub-5-5). Nil-safe: unwired = empty glossary fed, nothing harvested —
+// byte-identical to the pre-sub-5-5 item flow.
+func WithGlossaryStore(store GlossaryStore) PipelineOption {
+	return func(p *Pipeline) { p.glossary = store }
 }
 
 // WithModelID records which model produces the translations. It is part of the
@@ -386,6 +408,10 @@ type processScope struct {
 	// metadata it would serve that English line to every other episode of the
 	// show. The fail-soft is meant to be transient.
 	stubbornIndexes map[int]struct{}
+
+	// harvestedTerms counts the glossary terms this item's harvest actually
+	// INSERTED (deduped conflicts excluded) — the AC #6 completion-log figure.
+	harvestedTerms int
 }
 
 type processScopeKey struct{}
@@ -596,6 +622,7 @@ func (p *Pipeline) TranslateTrack(ctx context.Context, track *ExtractedTrack, tc
 	// leaves gaps in the numbering (P1/P7, sub-1-4 AC #1).
 	final := make(map[int]string, len(source))
 	var usage ai.CompletionUsage
+	var harvested map[string]string
 
 	stubborn := 0
 
@@ -639,7 +666,7 @@ func (p *Pipeline) TranslateTrack(ctx context.Context, track *ExtractedTrack, tc
 					ErrSubtitleTranslateFailed, err)
 			}
 
-			got, chunkUsage, err := p.translator.TranslateChunk(ctx, sys, contextBlocks, promptBlocksOf(pending))
+			got, chunkTerms, chunkUsage, err := p.translator.TranslateChunk(ctx, sys, contextBlocks, promptBlocksOf(pending))
 			// The gate is released as WARM only when the request actually
 			// returned. A failed first request never wrote the provider-side
 			// prefix, so marking the show warm would open the whole 50-minute
@@ -669,6 +696,18 @@ func (p *Pipeline) TranslateTrack(ctx context.Context, track *ExtractedTrack, tc
 				if !verdict.Failed(b.Index) {
 					final[b.Index] = got[b.Index]
 				}
+			}
+
+			// Trailer yield merges FIRST-wins across chunks AND retries (sub-5-5
+			// AC #3): the model's later hindsight does not overturn a rendering
+			// an earlier chunk already established. Gated on the verdict (CR
+			// sub-5-5 M1): an attempt the gate rejected WHOLESALE contributes
+			// nothing — its renderings are exactly what the retry exists to
+			// replace, and first-wins would otherwise let them squat over the
+			// corrected ones. A partially-accepted attempt still harvests: its
+			// accepted cues ship, so their renderings are established.
+			if len(verdict.FailedIndexes) < len(pending) {
+				harvested = mergeChunkTerms(harvested, chunkTerms)
 			}
 
 			if verdict.Passed() || attempt == maxQualityRetries {
@@ -710,7 +749,25 @@ func (p *Pipeline) TranslateTrack(ctx context.Context, track *ExtractedTrack, tc
 		return nil, err
 	}
 
-	return &TranslateResult{Blocks: blocks, Usage: usage, StubbornCues: stubborn}, nil
+	return &TranslateResult{Blocks: blocks, Usage: usage, StubbornCues: stubborn, HarvestedTerms: harvested}, nil
+}
+
+// mergeChunkTerms folds one chunk's trailer terms into the accumulated map,
+// FIRST occurrence winning. Returns acc unchanged (possibly nil) when the
+// chunk harvested nothing.
+func mergeChunkTerms(acc, chunk map[string]string) map[string]string {
+	if len(chunk) == 0 {
+		return acc
+	}
+	if acc == nil {
+		acc = make(map[string]string, len(chunk))
+	}
+	for src, zh := range chunk {
+		if _, seen := acc[src]; !seen {
+			acc[src] = zh
+		}
+	}
+	return acc
 }
 
 // subsetByIndex narrows a chunk to the cues the gate rejected, preserving

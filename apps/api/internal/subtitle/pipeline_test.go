@@ -42,14 +42,22 @@ type fakeTranslator struct {
 	fn    func(call int, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error)
 	calls []translatorCall
 	order *[]string
+	// terms (optional) is the harvest trailer yield returned for the given
+	// 1-based call number (sub-5-5); nil fn = no chunk ever harvests.
+	terms func(call int) map[string]string
 }
 
-func (f *fakeTranslator) TranslateChunk(_ context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+func (f *fakeTranslator) TranslateChunk(_ context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, map[string]string, ai.CompletionUsage, error) {
 	f.calls = append(f.calls, translatorCall{sys: sys, contextBlocks: contextBlocks, blocks: blocks})
 	if f.order != nil {
 		*f.order = append(*f.order, "translate")
 	}
-	return f.fn(len(f.calls), blocks)
+	got, usage, err := f.fn(len(f.calls), blocks)
+	var terms map[string]string
+	if f.terms != nil {
+		terms = f.terms(len(f.calls))
+	}
+	return got, terms, usage, err
 }
 
 // s2twpFake is a char-level stand-in for OpenCC s2twp: enough of a real
@@ -260,6 +268,89 @@ func TestTranslateTrack_ChunksAtBatchSizeWithTranslatedContextWindow(t *testing.
 		{Index: 9, Text: "第9句"},
 		{Index: 10, Text: "第10句"},
 	}, tr.calls[1].contextBlocks, "context is the previous %d TRANSLATED cues", prompts.SubtitleTranslatorContextWindow)
+}
+
+// ─── sub-5-5 AC #3: harvested terms merge first-wins across chunks ─────────
+
+func TestTranslateTrack_HarvestedTermsMergeFirstWinsAcrossChunks(t *testing.T) {
+	texts := make([]string, 0, 12)
+	for i := 1; i <= 12; i++ {
+		texts = append(texts, fmt.Sprintf("Line %d.", i))
+	}
+	source := cues(texts...)
+
+	tr := &fakeTranslator{
+		fn: func(_ int, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+			out := make(map[int]string, len(blocks))
+			for _, b := range blocks {
+				out[b.Index] = fmt.Sprintf("第%d句", b.Index)
+			}
+			return out, ai.CompletionUsage{}, nil
+		},
+		terms: func(call int) map[string]string {
+			if call == 1 {
+				return map[string]string{"Vecna": "維克那", "Demogorgon": "魔王獸"}
+			}
+			// The second chunk re-decides Vecna differently AND finds a new term:
+			// the earlier rendering must survive, the new term must land.
+			return map[string]string{"Vecna": "威克納", "Eleven": "十一"}
+		},
+	}
+
+	res, err := NewPipeline(tr, &recordingConverter{}, nil).
+		TranslateTrack(context.Background(), trackOf(source), TranslateContext{})
+	require.NoError(t, err)
+	require.Len(t, tr.calls, 2, "12 cues at batch size %d", prompts.SubtitleTranslatorBatchSize)
+
+	assert.Equal(t, map[string]string{
+		"Vecna":      "維克那", // first occurrence wins — chunk 2's hindsight does not overturn it
+		"Demogorgon": "魔王獸",
+		"Eleven":     "十一",
+	}, res.HarvestedTerms)
+}
+
+// CR sub-5-5 M1: an attempt the quality gate rejected WHOLESALE contributes no
+// trailer terms — otherwise first-wins would let the rejected attempt's
+// renderings squat over the corrected retry's.
+func TestTranslateTrack_WhollyRejectedAttemptHarvestsNothing(t *testing.T) {
+	source := cues("The software is great.")
+	tr := &fakeTranslator{
+		fn: func(call int, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+			if call == 1 {
+				// Simplified leak — the gate rejects the whole 1-cue chunk.
+				return answer(blocks, map[int]string{1: "这个软件很棒"}), ai.CompletionUsage{}, nil
+			}
+			return answer(blocks, map[int]string{1: "這個軟體很棒"}), ai.CompletionUsage{}, nil
+		},
+		terms: func(call int) map[string]string {
+			if call == 1 {
+				return map[string]string{"software": "软件"} // rides the rejected attempt
+			}
+			return map[string]string{"software": "軟體"}
+		},
+	}
+
+	res, err := NewPipeline(tr, &recordingConverter{}, nil).
+		TranslateTrack(context.Background(), trackOf(source), TranslateContext{})
+	require.NoError(t, err)
+	require.Len(t, tr.calls, 2, "the rejected cue is retried")
+
+	assert.Equal(t, map[string]string{"software": "軟體"}, res.HarvestedTerms,
+		"only the accepted attempt's trailer survives — the rejected rendering must not win by first-wins")
+}
+
+func TestTranslateTrack_NoTrailersMeansNilHarvestedTerms(t *testing.T) {
+	source := cues("Good morning.")
+	tr := &fakeTranslator{
+		fn: func(_ int, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+			return answer(blocks, map[int]string{1: "早安"}), ai.CompletionUsage{}, nil
+		},
+	}
+
+	res, err := NewPipeline(tr, &recordingConverter{}, nil).
+		TranslateTrack(context.Background(), trackOf(source), TranslateContext{})
+	require.NoError(t, err)
+	assert.Nil(t, res.HarvestedTerms, "harvest is opportunistic — no trailer, no map")
 }
 
 // ─── Stubborn-cue policy (AC #2) ───────────────────────────────────────────

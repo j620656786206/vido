@@ -271,6 +271,91 @@ func TestTranslationService_ParseTranslationResponse(t *testing.T) {
 	}
 }
 
+// --- sub-5-5: harvest trailer (AC #2 red line 1) ---
+
+// TestParseTranslationResponse_TrailerRedLines pins the AC #2 red line: the
+// continuation rule appends un-prefixed lines to the most recent cue, so
+// without trailer stripping the `===TERMS===` sentinel and every term line
+// would be stitched into the LAST subtitle cue.
+func TestParseTranslationResponse_TrailerRedLines(t *testing.T) {
+	t.Run("last cue is byte-identical with and without a trailer", func(t *testing.T) {
+		clean := "[1] 你好\n[2] 第一行\n第二行"
+		withTrailer := clean + "\n===TERMS===\nDemogorgon=>魔王獸\nVecna=>維克那"
+
+		want := parseTranslationResponse(clean, []int{1, 2})
+		got := parseTranslationResponse(withTrailer, []int{1, 2})
+		assert.Equal(t, want, got, "the trailer must be cut BEFORE cue parsing — red line 1")
+		assert.Equal(t, "第一行\n第二行", got[2])
+	})
+
+	t.Run("no trailer — behavior byte-identical to today", func(t *testing.T) {
+		got := parseTranslationResponse("[1] 你好\n[2] 世界", []int{1, 2})
+		assert.Equal(t, map[int]string{1: "你好", 2: "世界"}, got)
+	})
+
+	t.Run("mid-response sentinel truncates — no cue line after it is parsed", func(t *testing.T) {
+		got := parseTranslationResponse("[1] 你好\n===TERMS===\nA=>甲\n[2] 世界", []int{1, 2})
+		assert.Equal(t, map[int]string{1: "你好"}, got,
+			"everything from the sentinel line onward is trailer, even a [N] line")
+	})
+}
+
+func TestSplitHarvestTrailer(t *testing.T) {
+	t.Run("terms parsed, malformed lines skipped fail-soft", func(t *testing.T) {
+		body, terms := splitHarvestTrailer(
+			"[1] 你好\n===TERMS===\nDemogorgon=>魔王獸\nno separator here\n=>空來源\nEmpty target=>\nVecna=>維克那")
+		assert.Equal(t, "[1] 你好", body)
+		assert.Equal(t, map[string]string{"Demogorgon": "魔王獸", "Vecna": "維克那"}, terms)
+	})
+
+	t.Run("no trailer — body untouched, nil terms", func(t *testing.T) {
+		body, terms := splitHarvestTrailer("[1] 你好\n[2] 世界")
+		assert.Equal(t, "[1] 你好\n[2] 世界", body)
+		assert.Nil(t, terms)
+	})
+
+	t.Run("sentinel with no term lines — nil terms", func(t *testing.T) {
+		body, terms := splitHarvestTrailer("[1] 你好\n===TERMS===\n")
+		assert.Equal(t, "[1] 你好", body)
+		assert.Nil(t, terms)
+	})
+
+	t.Run("duplicate source — first occurrence wins", func(t *testing.T) {
+		_, terms := splitHarvestTrailer("[1] 你好\n===TERMS===\nVecna=>維克那\nVecna=>威克納")
+		assert.Equal(t, map[string]string{"Vecna": "維克那"}, terms)
+	})
+
+	t.Run("identity mapping is ignored — no rendering decision was made", func(t *testing.T) {
+		// CR sub-5-5 M2: the prompt forbids listing terms kept in their
+		// original form, but a disobedient model still emits them.
+		_, terms := splitHarvestTrailer("[1] 你好\n===TERMS===\nVecna=>Vecna\nDemogorgon=>魔王獸")
+		assert.Equal(t, map[string]string{"Demogorgon": "魔王獸"}, terms)
+	})
+}
+
+func TestTranslationService_TranslateWithGlossaryHarvest_ReturnsTrailerTerms(t *testing.T) {
+	mock := &mockTranslationCompleter{
+		response: "[1] 魔王獸來了\n===TERMS===\nDemogorgon=>魔王獸",
+	}
+	svc := NewTranslationService(mock, nil)
+	blocks := []TranslationBlock{
+		{Index: 1, Start: "00:00:01,000", End: "00:00:04,000", Text: "The Demogorgon is coming"},
+	}
+
+	translated, terms, err := svc.TranslateWithGlossaryHarvest(context.Background(), blocks, nil, nil)
+	require.NoError(t, err)
+
+	require.Len(t, translated, 1)
+	assert.Equal(t, "魔王獸來了", translated[0].Text,
+		"the trailer must never leak into cue text (red line 1)")
+	assert.Equal(t, map[string]string{"Demogorgon": "魔王獸"}, terms)
+
+	// Back-compat delegate: same blocks, terms dropped, signature unchanged.
+	viaOld, err := svc.TranslateWithGlossary(context.Background(), blocks, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, translated, viaOld)
+}
+
 func TestTranslationService_Translate_ProgressCallback(t *testing.T) {
 	mock := &mockTranslationCompleter{
 		response: "[1] 翻譯",
@@ -436,7 +521,7 @@ func TestTranslationService_TranslateChunk_HappyPath(t *testing.T) {
 	}}
 	svc := NewTranslationService(mock, nil)
 
-	got, usage, err := svc.TranslateChunk(context.Background(), chunkSystemBlocks(),
+	got, terms, usage, err := svc.TranslateChunk(context.Background(), chunkSystemBlocks(),
 		[]prompts.SubtitleTranslatorBlock{{Index: 1, Text: "早安"}},
 		[]prompts.SubtitleTranslatorBlock{{Index: 4, Text: "Good morning."}, {Index: 9, Text: "See you later."}},
 	)
@@ -444,6 +529,7 @@ func TestTranslationService_TranslateChunk_HappyPath(t *testing.T) {
 
 	assert.Equal(t, map[int]string{4: "早安", 9: "待會見"}, got,
 		"only the requested indexes survive parseTranslationResponse")
+	assert.Nil(t, terms, "no trailer in the response — nothing harvested")
 	assert.Equal(t, ai.CompletionUsage{
 		InputTokens: 1200, OutputTokens: 80,
 		CacheCreationInputTokens: 900, CacheReadInputTokens: 300,
@@ -465,11 +551,12 @@ func TestTranslationService_TranslateChunk_NonCachingProviderDegrades(t *testing
 	mock := &mockTranslationCompleter{response: "[1] 早安"}
 	svc := NewTranslationService(mock, nil)
 
-	got, usage, err := svc.TranslateChunk(context.Background(), chunkSystemBlocks(), nil,
+	got, terms, usage, err := svc.TranslateChunk(context.Background(), chunkSystemBlocks(), nil,
 		[]prompts.SubtitleTranslatorBlock{{Index: 1, Text: "Good morning."}})
 	require.NoError(t, err, "a non-caching provider degrades, it does not fail")
 
 	assert.Equal(t, map[int]string{1: "早安"}, got)
+	assert.Nil(t, terms)
 	assert.Equal(t, ai.CompletionUsage{}, usage, "usage is unavailable, not invented")
 
 	require.Len(t, mock.calls, 1)
@@ -483,12 +570,13 @@ func TestTranslationService_TranslateChunk_PropagatesProviderError(t *testing.T)
 	sentinel := errors.New("upstream exploded")
 	svc := NewTranslationService(&cachingTranslationMock{err: sentinel}, nil)
 
-	got, usage, err := svc.TranslateChunk(context.Background(), chunkSystemBlocks(), nil,
+	got, terms, usage, err := svc.TranslateChunk(context.Background(), chunkSystemBlocks(), nil,
 		[]prompts.SubtitleTranslatorBlock{{Index: 1, Text: "Good morning."}})
 
 	require.Error(t, err)
 	assert.ErrorIs(t, err, sentinel, "the cause is chained, not flattened (Rule 13)")
 	assert.Nil(t, got)
+	assert.Nil(t, terms)
 	assert.Equal(t, ai.CompletionUsage{}, usage)
 }
 
@@ -496,10 +584,11 @@ func TestTranslationService_TranslateChunk_EmptyBlocksIsANoOp(t *testing.T) {
 	mock := &cachingTranslationMock{}
 	svc := NewTranslationService(mock, nil)
 
-	got, usage, err := svc.TranslateChunk(context.Background(), chunkSystemBlocks(), nil, nil)
+	got, terms, usage, err := svc.TranslateChunk(context.Background(), chunkSystemBlocks(), nil, nil)
 
 	require.NoError(t, err)
 	assert.Empty(t, got)
+	assert.Nil(t, terms)
 	assert.Equal(t, ai.CompletionUsage{}, usage)
 	assert.Empty(t, mock.reqs, "no cues means no request")
 }

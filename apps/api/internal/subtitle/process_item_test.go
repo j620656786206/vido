@@ -182,6 +182,153 @@ func translateDecision(texts ...string) RouteDecision {
 	}
 }
 
+// ─── sub-5-5: glossary feed (AC #5) + harvest write-back (AC #4) ───────────
+
+// fakeGlossaryStore records the feed/harvest traffic the item flow generates.
+type fakeGlossaryStore struct {
+	terms       map[string]string
+	lookupErr   error
+	lookupKeys  []string
+	insertKey   string
+	inserted    map[string]string
+	insertErr   error
+	insertCalls int
+}
+
+func (f *fakeGlossaryStore) Lookup(_ context.Context, mediaID string) (map[string]string, error) {
+	f.lookupKeys = append(f.lookupKeys, mediaID)
+	if f.lookupErr != nil {
+		return nil, f.lookupErr
+	}
+	return f.terms, nil
+}
+
+func (f *fakeGlossaryStore) InsertNew(_ context.Context, mediaID string, terms map[string]string) (int, error) {
+	f.insertCalls++
+	f.insertKey = mediaID
+	f.inserted = terms
+	if f.insertErr != nil {
+		return 0, f.insertErr
+	}
+	return len(terms), nil
+}
+
+func TestProcessItem_FeedsGlossaryIntoPromptAndRunVersion(t *testing.T) {
+	store := &fakeGlossaryStore{terms: map[string]string{"Vecna": "維克那", "Demogorgon": "魔王獸"}}
+	h := newItemHarness(t, translateDecision("The Demogorgon is coming"), WithGlossaryStore(store))
+
+	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+	require.NoError(t, err)
+
+	// The key is the SERIES id (ShowKey), never the episode's own id — that is
+	// what makes harvest order-independent across a season.
+	assert.Equal(t, []string{"series-42"}, store.lookupKeys)
+
+	// The fed pairs reached the prompt's per-show system block, sorted by
+	// Source so the rendered prompt is deterministic.
+	require.NotEmpty(t, h.trans.calls)
+	var perShow string
+	for _, b := range h.trans.calls[0].sys {
+		perShow += b.Text
+	}
+	assert.Contains(t, perShow, "Demogorgon → 魔王獸")
+	assert.Contains(t, perShow, "Vecna → 維克那")
+	assert.Less(t, strings.Index(perShow, "Demogorgon"), strings.Index(perShow, "Vecna"),
+		"entries render in Source order")
+
+	// GlossaryVersion on the run row is the hash of exactly what was fed.
+	wantVersion := GlossaryVersionHash([]prompts.GlossaryEntry{
+		{Source: "Demogorgon", Target: "魔王獸"}, {Source: "Vecna", Target: "維克那"},
+	})
+	require.NotEmpty(t, wantVersion)
+	require.NotEmpty(t, h.runs.created)
+	assert.Equal(t, wantVersion, h.runs.created[0].GlossaryVersion)
+}
+
+func TestProcessItem_MovieGlossaryKeysOnItself(t *testing.T) {
+	store := &fakeGlossaryStore{}
+	h := newItemHarness(t, translateDecision("Good morning."), WithGlossaryStore(store))
+	h.ref = MediaRef{ID: "movie-7", MediaType: models.SubtitleRunMediaMovie}
+	h.media.item.ShowKey = "" // movies carry no ShowKey
+
+	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"movie-7"}, store.lookupKeys,
+		"a movie accumulates intra-film consistency under its own id")
+}
+
+func TestProcessItem_HarvestWritesBackAfterTranslateSuccess(t *testing.T) {
+	store := &fakeGlossaryStore{}
+	h := newItemHarness(t, translateDecision("The Demogorgon is coming"), WithGlossaryStore(store))
+	h.trans.terms = func(int) map[string]string {
+		return map[string]string{"Demogorgon": "魔王獸"}
+	}
+
+	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+	require.NoError(t, err)
+
+	assert.Equal(t, 1, store.insertCalls)
+	assert.Equal(t, "series-42", store.insertKey, "harvest accumulates under the show key")
+	assert.Equal(t, map[string]string{"Demogorgon": "魔王獸"}, store.inserted)
+}
+
+// CR sub-5-5 H2: a harvested rendering is s2twp'd before the glossary write —
+// the harness converter maps 软→軟, so a Simplified trailer rendering must
+// never reach the store raw.
+func TestProcessItem_HarvestedTermsGetOpenCC(t *testing.T) {
+	store := &fakeGlossaryStore{}
+	h := newItemHarness(t, translateDecision("The Software is live"), WithGlossaryStore(store))
+	h.trans.terms = func(int) map[string]string {
+		return map[string]string{"The Software": "软件"}
+	}
+
+	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+	require.NoError(t, err)
+	assert.Equal(t, map[string]string{"The Software": "軟件"}, store.inserted,
+		"the rendering is converted before it becomes a MANDATORY glossary feed")
+}
+
+func TestProcessItem_FailedTranslateHarvestsNothing(t *testing.T) {
+	store := &fakeGlossaryStore{}
+	h := newItemHarness(t, translateDecision("Good morning."), WithGlossaryStore(store))
+	h.trans.fn = func(int, []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+		return nil, ai.CompletionUsage{}, errors.New("provider down")
+	}
+	h.trans.terms = func(int) map[string]string {
+		return map[string]string{"Demogorgon": "魔王獸"}
+	}
+
+	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+	require.Error(t, err)
+	assert.Zero(t, store.insertCalls,
+		"a failed run ships no subtitle — feeding its terms back would only pollute (AC #4)")
+}
+
+func TestProcessItem_GlossaryLookupFailureFailsSoft(t *testing.T) {
+	store := &fakeGlossaryStore{lookupErr: errors.New("db locked")}
+	h := newItemHarness(t, translateDecision("Good morning."), WithGlossaryStore(store))
+
+	outcome, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+	require.NoError(t, err, "a glossary miss costs consistency, never the episode (Rule 13 case 3)")
+	require.NotNil(t, outcome.Run)
+	assert.Equal(t, models.SubtitleRunCompleted, outcome.Run.Status)
+	assert.Equal(t, "", h.runs.created[0].GlossaryVersion,
+		"empty feed hashes to \"\" — cache key and prompt content agree by construction")
+}
+
+func TestProcessItem_HarvestWriteFailureFailsSoft(t *testing.T) {
+	store := &fakeGlossaryStore{insertErr: errors.New("disk full")}
+	h := newItemHarness(t, translateDecision("Good morning."), WithGlossaryStore(store))
+	h.trans.terms = func(int) map[string]string {
+		return map[string]string{"Demogorgon": "魔王獸"}
+	}
+
+	outcome, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+	require.NoError(t, err, "the translation already succeeded — a lost harvest is re-collected later, never a failed item")
+	require.NotNil(t, outcome.Run)
+	assert.Equal(t, models.SubtitleRunCompleted, outcome.Run.Status)
+}
+
 // ─── AC #1: verdict branches ───────────────────────────────────────────────
 
 func TestProcessItem_VerdictBranches(t *testing.T) {
@@ -851,12 +998,12 @@ type ctxBudgetSpy struct {
 	onChunk func(b *ai.Budget) error
 }
 
-func (s *ctxBudgetSpy) TranslateChunk(ctx context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+func (s *ctxBudgetSpy) TranslateChunk(ctx context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, map[string]string, ai.CompletionUsage, error) {
 	b := ai.BudgetFromContext(ctx)
 	s.budgets = append(s.budgets, b)
 	if s.onChunk != nil {
 		if err := s.onChunk(b); err != nil {
-			return nil, ai.CompletionUsage{}, err
+			return nil, nil, ai.CompletionUsage{}, err
 		}
 	}
 	return s.inner.TranslateChunk(ctx, sys, contextBlocks, blocks)

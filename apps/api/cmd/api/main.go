@@ -620,6 +620,10 @@ func main() {
 			subtitle.WithMediaStore(subtitlePipelineMedia),
 			subtitle.WithRunStore(repos.SubtitleRuns),
 			subtitle.WithSegmentCache(subtitle.NewSegmentCacheRepository(repos.Cache)),
+			// sub-5-5: per-show glossary feed (去程) + auto-harvest write-back
+			// (回程) over the SAME show_glossary table the legacy path and the
+			// 9R-15 review REST already use.
+			subtitle.WithGlossaryStore(subtitle.NewGlossaryStoreRepository(repos.Glossary)),
 			subtitle.WithModelID(modelID),
 			// sub-5-1 AC #3: per-item AI cost ceiling for the FR12/pool path —
 			// a ctx already carrying a Budget (the sub-4-2 consent batch) keeps

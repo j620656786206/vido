@@ -131,9 +131,23 @@ func (s *TranslationService) Translate(ctx context.Context, blocks []Translation
 // fixed renderings are injected into every batch prompt so proper nouns stay
 // consistent across the whole subtitle and across runs. A nil glossary makes
 // this byte-identical to the pre-9R-7 behavior.
+//
+// Signature deliberately unchanged (sub-5-5 AC #3): it delegates to
+// TranslateWithGlossaryHarvest and drops the harvested terms — the
+// Translate → TranslateWithGlossary precedent (9R-7).
 func (s *TranslationService) TranslateWithGlossary(ctx context.Context, blocks []TranslationBlock, glossary []GlossaryPair, progressFn func(float64)) ([]TranslationBlock, error) {
+	translated, _, err := s.TranslateWithGlossaryHarvest(ctx, blocks, glossary, progressFn)
+	return translated, err
+}
+
+// TranslateWithGlossaryHarvest is TranslateWithGlossary plus the sub-5-5 AC #3
+// harvest return: the proper-noun renderings the model reported in each batch's
+// trailer, merged across batches with the FIRST occurrence winning (the model's
+// later hindsight does not overturn an established rendering — the glossary's
+// fixed-rendering spirit). nil terms = nothing harvested.
+func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, blocks []TranslationBlock, glossary []GlossaryPair, progressFn func(float64)) ([]TranslationBlock, map[string]string, error) {
 	if len(blocks) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 	promptGlossary := toPromptGlossary(glossary)
 
@@ -147,11 +161,12 @@ func (s *TranslationService) TranslateWithGlossary(ctx context.Context, blocks [
 	totalBlocks := len(blocks)
 	processedBlocks := 0
 	hasPartialFailure := false
+	var harvested map[string]string
 
 	for batchStart := 0; batchStart < totalBlocks; batchStart += batchSize {
 		// Check context cancellation
 		if err := ctx.Err(); err != nil {
-			return nil, fmt.Errorf("translation cancelled: %w", err)
+			return nil, nil, fmt.Errorf("translation cancelled: %w", err)
 		}
 
 		batchEnd := batchStart + batchSize
@@ -202,7 +217,7 @@ func (s *TranslationService) TranslateWithGlossary(ctx context.Context, blocks [
 			// keep-English tolerance — remaining batches would all fail the
 			// same way, and the caller needs the sentinel to pause the batch.
 			if errors.Is(err, ai.ErrBudgetExceeded) {
-				return nil, fmt.Errorf("translation stopped at block %d: %w", batchStart, err)
+				return nil, nil, fmt.Errorf("translation stopped at block %d: %w", batchStart, err)
 			}
 
 			// AC #5: on error, keep English text for failed blocks
@@ -214,7 +229,7 @@ func (s *TranslationService) TranslateWithGlossary(ctx context.Context, blocks [
 
 			// Check if this is a context cancellation (propagate it)
 			if ctx.Err() != nil {
-				return nil, fmt.Errorf("translation cancelled: %w", ctx.Err())
+				return nil, nil, fmt.Errorf("translation cancelled: %w", ctx.Err())
 			}
 
 			hasPartialFailure = true
@@ -231,7 +246,8 @@ func (s *TranslationService) TranslateWithGlossary(ctx context.Context, blocks [
 			indices[i] = b.Index
 		}
 
-		translations := parseTranslationResponse(translated, indices)
+		translations, batchTerms := parseTranslationResponseWithTerms(translated, indices)
+		harvested = mergeHarvestedTerms(harvested, batchTerms)
 
 		for i, b := range batch {
 			resultIdx := batchStart + i
@@ -259,7 +275,25 @@ func (s *TranslationService) TranslateWithGlossary(ctx context.Context, blocks [
 		)
 	}
 
-	return result, nil
+	return result, harvested, nil
+}
+
+// mergeHarvestedTerms folds one batch's trailer terms into the accumulated map,
+// FIRST occurrence winning across batches. Returns acc unchanged (possibly nil)
+// when the batch harvested nothing.
+func mergeHarvestedTerms(acc, batch map[string]string) map[string]string {
+	if len(batch) == 0 {
+		return acc
+	}
+	if acc == nil {
+		acc = make(map[string]string, len(batch))
+	}
+	for src, zh := range batch {
+		if _, seen := acc[src]; !seen {
+			acc[src] = zh
+		}
+	}
+	return acc
 }
 
 // TranslateRequest translates a set of arbitrary keyed fields in a single
@@ -317,9 +351,14 @@ func (s *TranslationService) TranslateRequest(ctx context.Context, req Translati
 // The prompt carries numbered text only: Start/End never cross this boundary
 // (P2/FR11). Prompt building and response parsing reuse the Route C machinery
 // verbatim — no second prompt or parser path exists.
-func (s *TranslationService) TranslateChunk(ctx context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+//
+// The second return is the chunk's harvested term map (sub-5-5 AC #3) — the
+// proper-noun renderings the model reported in its optional trailer; nil when
+// the response carried none. Widening the ChunkTranslator port (unstamped) in
+// the same change; fakes sync alongside.
+func (s *TranslationService) TranslateChunk(ctx context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, map[string]string, ai.CompletionUsage, error) {
 	if len(blocks) == 0 {
-		return nil, ai.CompletionUsage{}, nil
+		return nil, nil, ai.CompletionUsage{}, nil
 	}
 
 	indices := make([]int, len(blocks))
@@ -342,9 +381,10 @@ func (s *TranslationService) TranslateChunk(ctx context.Context, sys []ai.System
 			MaxTokens:  TranslationMaxTokens,
 		})
 		if err != nil {
-			return nil, ai.CompletionUsage{}, fmt.Errorf("translate chunk [%d-%d]: %w", indices[0], indices[len(indices)-1], err)
+			return nil, nil, ai.CompletionUsage{}, fmt.Errorf("translate chunk [%d-%d]: %w", indices[0], indices[len(indices)-1], err)
 		}
-		return parseTranslationResponse(res.Text, indices), res.Usage, nil
+		translations, terms := parseTranslationResponseWithTerms(res.Text, indices)
+		return translations, terms, res.Usage, nil
 	}
 
 	slog.Info("AI provider does not implement ai.CachingCompleter — translating without prompt caching or token usage",
@@ -352,9 +392,10 @@ func (s *TranslationService) TranslateChunk(ctx context.Context, sys []ai.System
 	)
 	text, err := s.provider.CompleteText(chunkCtx, flattenSystemBlocks(sys), userPrompt, TranslationMaxTokens)
 	if err != nil {
-		return nil, ai.CompletionUsage{}, fmt.Errorf("translate chunk [%d-%d]: %w", indices[0], indices[len(indices)-1], err)
+		return nil, nil, ai.CompletionUsage{}, fmt.Errorf("translate chunk [%d-%d]: %w", indices[0], indices[len(indices)-1], err)
 	}
-	return parseTranslationResponse(text, indices), ai.CompletionUsage{}, nil
+	translations, terms := parseTranslationResponseWithTerms(text, indices)
+	return translations, terms, ai.CompletionUsage{}, nil
 }
 
 // flattenSystemBlocks collapses ordered system blocks into the single string
@@ -370,14 +411,88 @@ func flattenSystemBlocks(sys []ai.SystemBlock) string {
 	return strings.Join(parts, "\n\n")
 }
 
+// Harvest-trailer wire format — [@contract-v1] (sub-5-5 AC #1): the parser side
+// of the cross-layer contract whose instruction side lives in
+// prompts.SubtitleTranslatorSystemPrompt ("Term harvest" section). The sentinel
+// line and the `=>` separator MUST change together with that prompt text.
+const (
+	harvestTrailerSentinel = "===TERMS==="
+	harvestTermSeparator   = "=>"
+)
+
+// splitHarvestTrailer cuts the optional harvest trailer off a translation
+// response BEFORE cue parsing (sub-5-5 AC #2, red line 1): the cue parser's
+// continuation rule appends un-prefixed lines to the most recent cue, so an
+// unstripped trailer would be stitched into the LAST subtitle cue.
+//
+// Everything from the first sentinel line onward is trailer — even a [N] line
+// after a mid-response sentinel is deliberately NOT parsed as a cue. Malformed
+// term lines (no separator, empty source, empty rendering) are skipped per
+// line with a Debug log: harvest is an opportunistic yield, never a
+// correctness obligation (fail-soft). A duplicate source keeps its first
+// occurrence, matching the glossary's fixed-rendering spirit.
+func splitHarvestTrailer(response string) (string, map[string]string) {
+	lines := strings.Split(response, "\n")
+	sentinelAt := -1
+	for i, line := range lines {
+		if strings.TrimSpace(line) == harvestTrailerSentinel {
+			sentinelAt = i
+			break
+		}
+	}
+	if sentinelAt < 0 {
+		return response, nil
+	}
+
+	var terms map[string]string
+	for _, raw := range lines[sentinelAt+1:] {
+		line := strings.TrimSpace(raw)
+		if line == "" {
+			continue
+		}
+		src, zh, found := strings.Cut(line, harvestTermSeparator)
+		src, zh = strings.TrimSpace(src), strings.TrimSpace(zh)
+		if !found || src == "" || zh == "" {
+			slog.Debug("harvest trailer line ignored — malformed term entry", "line", line)
+			continue
+		}
+		if src == zh {
+			// The prompt forbids listing terms kept in their original form, but
+			// a disobedient model still emits `Vecna=>Vecna` — an identity
+			// mapping carries no rendering decision and would only be junk the
+			// F6 review has to clean up (CR sub-5-5 M2).
+			slog.Debug("harvest trailer line ignored — identity mapping", "line", line)
+			continue
+		}
+		if terms == nil {
+			terms = make(map[string]string)
+		}
+		if _, dup := terms[src]; !dup {
+			terms[src] = zh
+		}
+	}
+	return strings.Join(lines[:sentinelAt], "\n"), terms
+}
+
 // responseLinePattern matches "[N] text" format from Claude's response.
 var responseLinePattern = regexp.MustCompile(`^\[(\d+)\]\s*(.+)$`)
 
 // parseTranslationResponse extracts translated text from Claude's response.
 // Response format: "[1] 翻譯文字\n[2] 翻譯文字"
 // Handles multi-line blocks: continuation lines (no [N] prefix) are appended
-// to the most recent indexed block.
+// to the most recent indexed block. The optional harvest trailer is stripped
+// (and discarded) first — callers that want the terms use
+// parseTranslationResponseWithTerms.
 func parseTranslationResponse(response string, indices []int) map[int]string {
+	result, _ := parseTranslationResponseWithTerms(response, indices)
+	return result
+}
+
+// parseTranslationResponseWithTerms strips the harvest trailer BEFORE cue
+// parsing (sub-5-5 AC #2/#3) and returns both the per-index translations and
+// the harvested term map (nil when the response carried no trailer).
+func parseTranslationResponseWithTerms(response string, indices []int) (map[int]string, map[string]string) {
+	response, terms := splitHarvestTrailer(response)
 	result := make(map[int]string)
 
 	// Build index lookup for validation
@@ -413,5 +528,5 @@ func parseTranslationResponse(response string, indices []int) map[int]string {
 		}
 	}
 
-	return result
+	return result, terms
 }

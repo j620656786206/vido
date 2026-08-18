@@ -33,6 +33,9 @@ func sampleMovie(t *testing.T, dir string) models.Movie {
 type glossaryReturningStub struct{ terms map[string]string }
 
 func (g *glossaryReturningStub) Upsert(ctx context.Context, t *models.GlossaryTerm) error { return nil }
+func (g *glossaryReturningStub) InsertIfAbsent(ctx context.Context, t *models.GlossaryTerm) (bool, error) {
+	return false, nil
+}
 func (g *glossaryReturningStub) ListByMedia(ctx context.Context, mediaID string) ([]models.GlossaryTerm, error) {
 	return nil, nil
 }

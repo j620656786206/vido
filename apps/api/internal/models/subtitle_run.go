@@ -72,8 +72,10 @@ type RunVersion struct {
 	// MetadataHash is the snapshot hash of the TMDb metadata injected as
 	// translation context (FR26). Computed by sub-1-5, not here.
 	MetadataHash string
-	// GlossaryVersion is always "" in M1 — the glossary is P2 — but the field
-	// is versioned NOW per D4's cross-component note.
+	// GlossaryVersion is the deterministic hash of the glossary pairs actually
+	// fed into the translation prompt (sub-5-5; "" = no glossary — including
+	// every pre-sub-5-5 run, which fed none). Computed by
+	// subtitle.GlossaryVersionHash per D4's cross-component note.
 	GlossaryVersion string
 	// PromptVersion is the P11 constant's value at run time. Defined by
 	// sub-1-5a, which owns the prompt text it lives beside.

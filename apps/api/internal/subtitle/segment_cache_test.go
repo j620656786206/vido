@@ -90,6 +90,39 @@ func richContext() TranslateContext {
 // TestMetadataHash_IsCanonical is the story's named silent-failure guard:
 // non-determinism here splits the segment cache in half and invalidates the M1
 // pilot's A/B comparison, with nothing surfacing an error.
+// --- sub-5-5 AC #5: GlossaryVersion is a deterministic hash of the FED pairs ---
+
+func TestGlossaryVersionHash_Deterministic(t *testing.T) {
+	a := []prompts.GlossaryEntry{{Source: "Vecna", Target: "維克那"}, {Source: "Demogorgon", Target: "魔王獸"}}
+	b := []prompts.GlossaryEntry{{Source: "Demogorgon", Target: "魔王獸"}, {Source: "Vecna", Target: "維克那"}}
+
+	t.Run("same pairs in any order hash identically", func(t *testing.T) {
+		assert.Equal(t, GlossaryVersionHash(a), GlossaryVersionHash(b),
+			"pair ORDER must not split the segment cache")
+	})
+
+	t.Run("different pairs hash differently", func(t *testing.T) {
+		c := []prompts.GlossaryEntry{{Source: "Vecna", Target: "威克納"}, {Source: "Demogorgon", Target: "魔王獸"}}
+		assert.NotEqual(t, GlossaryVersionHash(a), GlossaryVersionHash(c),
+			"a changed rendering is a genuinely different prompt — the cache must miss")
+		d := []prompts.GlossaryEntry{{Source: "Vecna", Target: "維克那"}}
+		assert.NotEqual(t, GlossaryVersionHash(a), GlossaryVersionHash(d))
+	})
+
+	t.Run("empty glossary hashes to the empty string", func(t *testing.T) {
+		// Backward compatibility: existing M1 cache entries were written with
+		// GlossaryVersion "" — a show with no glossary must keep hitting them.
+		assert.Equal(t, "", GlossaryVersionHash(nil))
+		assert.Equal(t, "", GlossaryVersionHash([]prompts.GlossaryEntry{}))
+	})
+
+	t.Run("field boundaries cannot be forged", func(t *testing.T) {
+		x := []prompts.GlossaryEntry{{Source: "AB", Target: ""}}
+		y := []prompts.GlossaryEntry{{Source: "A", Target: "B"}}
+		assert.NotEqual(t, GlossaryVersionHash(x), GlossaryVersionHash(y))
+	})
+}
+
 func TestMetadataHash_IsCanonical(t *testing.T) {
 	base := MetadataHash(richContext())
 
@@ -197,7 +230,7 @@ func TestSegmentKey_ContentHashedAndFullyVersioned(t *testing.T) {
 		mutations := map[string]func(*models.RunVersion){
 			"metadata hash":    func(v *models.RunVersion) { v.MetadataHash = "other-hash" },
 			"glossary version": func(v *models.RunVersion) { v.GlossaryVersion = "g2" },
-			"prompt version":   func(v *models.RunVersion) { v.PromptVersion = "m1-v2" },
+			"prompt version":   func(v *models.RunVersion) { v.PromptVersion = "m1-v99" },
 			"model id":         func(v *models.RunVersion) { v.ModelID = "claude-sonnet-5" },
 		}
 		for name, mutate := range mutations {

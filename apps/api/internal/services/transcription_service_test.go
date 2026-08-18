@@ -159,10 +159,28 @@ func (f *fakePlacer) PlaceSubtitle(mediaFilePath string, data []byte, language, 
 }
 
 // stubGlossaryRepo implements repository.GlossaryRepositoryInterface with only
-// LookupByMedia meaningful.
-type stubGlossaryRepo struct{ terms map[string]string }
+// LookupByMedia and InsertIfAbsent meaningful.
+type stubGlossaryRepo struct {
+	terms         map[string]string
+	inserted      map[string]string
+	insertedTerms []models.GlossaryTerm
+}
 
 func (s *stubGlossaryRepo) Upsert(ctx context.Context, t *models.GlossaryTerm) error { return nil }
+func (s *stubGlossaryRepo) InsertIfAbsent(ctx context.Context, t *models.GlossaryTerm) (bool, error) {
+	if s.inserted == nil {
+		s.inserted = make(map[string]string)
+	}
+	if _, exists := s.terms[t.TermSrc]; exists {
+		return false, nil
+	}
+	if _, exists := s.inserted[t.TermSrc]; exists {
+		return false, nil
+	}
+	s.inserted[t.TermSrc] = t.TermZh
+	s.insertedTerms = append(s.insertedTerms, *t)
+	return true, nil
+}
 func (s *stubGlossaryRepo) ListByMedia(ctx context.Context, mediaID string) ([]models.GlossaryTerm, error) {
 	return nil, nil
 }
@@ -180,6 +198,95 @@ func (s *stubGlossaryRepo) ConfirmAll(ctx context.Context, mediaID string) (int6
 }
 func (s *stubGlossaryRepo) Delete(ctx context.Context, id string) error { return nil }
 
+// TestTranscriptionService_TranslateSRT_EpisodeGlossaryKeysOnSeries (CR
+// sub-5-5 H1): an EPISODE run must feed from and harvest into the PARENT
+// SERIES glossary — the key the F6 panel and the pipeline path use. Keying on
+// the episode id would strand harvested terms in rows no review UI shows and
+// no other episode ever benefits from.
+func TestTranscriptionService_TranslateSRT_EpisodeGlossaryKeysOnSeries(t *testing.T) {
+	completer := &mockTranslationCompleter{
+		response: "[1] 魔王獸來了\n===TERMS===\nDemogorgon=>魔王獸",
+	}
+	repo := &stubGlossaryRepo{}
+	episode := &models.Episode{ID: uuidB, SeriesID: uuidC}
+
+	svc := NewTranscriptionService(nil, nil, nil, nil)
+	svc.SetTranslationService(NewTranslationService(completer, nil))
+	svc.SetPlacer(&fakePlacer{})
+	svc.SetGlossaryRepository(repo)
+	svc.SetEpisodeSubtitleStateReader(&fakeEpisodeStateReader{episode: episode})
+
+	srt := "1\n00:00:01,000 --> 00:00:03,000\nThe Demogorgon is coming\n"
+	_, err := svc.translateSRT(context.Background(), "job1", models.SubtitleRunMediaEpisode, uuidB, srt, "/media/Show.S01E01.mkv", "/media")
+	require.NoError(t, err)
+
+	require.Len(t, repo.insertedTerms, 1)
+	assert.Equal(t, uuidC, repo.insertedTerms[0].MediaID,
+		"harvest must land under the SERIES id, not the episode's own id")
+}
+
+// TestTranscriptionService_TranslateSRT_HarvestedTermGetsOpenCC (CR sub-5-5
+// H2): a Simplified rendering in the trailer must be s2twp'd BEFORE it becomes
+// a glossary row — raw, it would be fed back as a MANDATORY rendering and
+// poison every future prompt for the show.
+func TestTranscriptionService_TranslateSRT_HarvestedTermGetsOpenCC(t *testing.T) {
+	completer := &mockTranslationCompleter{
+		response: "[1] 軟體上線了\n===TERMS===\nThe Software=>软體",
+	}
+	repo := &stubGlossaryRepo{}
+
+	svc := NewTranscriptionService(nil, nil, nil, nil)
+	svc.SetTranslationService(NewTranslationService(completer, nil))
+	svc.SetPlacer(&fakePlacer{})
+	svc.SetGlossaryRepository(repo)
+	svc.SetOpenCCConverter(&fakeOpenCC{})
+
+	srt := "1\n00:00:01,000 --> 00:00:03,000\nThe Software is live\n"
+	_, err := svc.translateSRT(context.Background(), "job1", models.SubtitleRunMediaMovie, uuidB, srt, "/media/Show.mkv", "/media")
+	require.NoError(t, err)
+
+	require.Len(t, repo.insertedTerms, 1)
+	assert.Equal(t, "軟體", repo.insertedTerms[0].TermZh,
+		"the rendering is converted (软→軟) before it enters the glossary")
+}
+
+// TestTranscriptionService_TranslateSRT_HarvestsTrailerTerms (sub-5-5): the
+// legacy path's 回程 — trailer terms land insert-if-absent as unconfirmed
+// subtitle-sourced entries, existing terms are never re-written, and the
+// trailer never leaks into the placed SRT.
+func TestTranscriptionService_TranslateSRT_HarvestsTrailerTerms(t *testing.T) {
+	completer := &mockTranslationCompleter{
+		response: "[1] 魔王獸與維克那來了\n===TERMS===\nDemogorgon=>魔王獸\nVecna=>維克那",
+	}
+	translation := NewTranslationService(completer, nil)
+	placer := &fakePlacer{}
+	// Vecna already exists in the glossary — the harvest must skip it.
+	repo := &stubGlossaryRepo{terms: map[string]string{"Vecna": "維克那"}}
+
+	svc := NewTranscriptionService(nil, nil, nil, nil)
+	svc.SetTranslationService(translation)
+	svc.SetPlacer(placer)
+	svc.SetGlossaryRepository(repo)
+
+	srt := "1\n00:00:01,000 --> 00:00:03,000\nThe Demogorgon and Vecna are coming\n"
+	_, err := svc.translateSRT(context.Background(), "job1", models.SubtitleRunMediaMovie, uuidB, srt, "/media/Show.mkv", "/media")
+	require.NoError(t, err)
+
+	// Only the NEW term was inserted, with the harvest value chain intact.
+	require.Len(t, repo.insertedTerms, 1)
+	inserted := repo.insertedTerms[0]
+	assert.Equal(t, "Demogorgon", inserted.TermSrc)
+	assert.Equal(t, "魔王獸", inserted.TermZh)
+	assert.Equal(t, uuidB, inserted.MediaID)
+	assert.Equal(t, models.GlossarySourceSubtitle, inserted.Source)
+	assert.False(t, inserted.Confirmed, "harvested terms enter the F6 review flow unconfirmed")
+
+	// Red line 1 on the legacy path: no trailer text in the placed subtitle.
+	assert.NotContains(t, string(placer.data), "===TERMS===")
+	assert.NotContains(t, string(placer.data), "=>")
+	assert.Contains(t, string(placer.data), "魔王獸與維克那來了")
+}
+
 func TestTranscriptionService_TranslateSRT_GlossaryOpenCCPlace(t *testing.T) {
 	// Mock LLM returns an index-prefixed translation carrying a Simplified char
 	// (软) so we can prove the OpenCC safety net ran.
@@ -196,7 +303,7 @@ func TestTranscriptionService_TranslateSRT_GlossaryOpenCCPlace(t *testing.T) {
 	svc.SetGlossaryRepository(&stubGlossaryRepo{terms: map[string]string{"Demogorgon": "魔王獸"}})
 
 	srt := "1\n00:00:01,000 --> 00:00:03,000\nThe Demogorgon is coming\n"
-	path, err := svc.translateSRT(context.Background(), "job1", uuidB, srt, "/media/Show.mkv", "/media")
+	path, err := svc.translateSRT(context.Background(), "job1", models.SubtitleRunMediaMovie, uuidB, srt, "/media/Show.mkv", "/media")
 	require.NoError(t, err)
 
 	// Glossary-aware: the fixed rendering reached the LLM prompt.
@@ -223,7 +330,7 @@ func TestTranscriptionService_TranslateSRT_FailSoftNoDeps(t *testing.T) {
 
 	dir := t.TempDir()
 	srt := "1\n00:00:01,000 --> 00:00:02,000\nHi\n"
-	path, err := svc.translateSRT(context.Background(), "job1", uuidA, srt, dir+"/Movie.mkv", dir)
+	path, err := svc.translateSRT(context.Background(), "job1", models.SubtitleRunMediaMovie, uuidA, srt, dir+"/Movie.mkv", dir)
 	require.NoError(t, err)
 	assert.FileExists(t, path)
 	// No glossary → prompt has no Glossary section (unchanged behavior).
