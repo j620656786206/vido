@@ -205,6 +205,15 @@ type GenerationCandidateService struct {
 	// snapshot (sub-5-1 AC #5). Pure config pass-through — never mutated.
 	defaultBudgetUSD float64
 
+	// routeCache remembers probe verdicts across sweeps (sub-5-4). nil is a
+	// supported state: the sweep then behaves exactly as it did before, probing
+	// every un-persisted row.
+	routeCache RouteCache
+	// fileIdentity supplies the size+mtime the cache key is built from. Always
+	// osFileIdentity in production; tests replace it so invalidation can be
+	// asserted without a real file.
+	fileIdentity fileIdentityFunc
+
 	mu         sync.Mutex
 	status     string
 	analyzed   int
@@ -243,6 +252,7 @@ func NewGenerationCandidateService(
 		selfHostedASR:    selfHostedASR,
 		defaultBudgetUSD: defaultBudgetUSD,
 		now:              time.Now,
+		fileIdentity:     osFileIdentity,
 		status:           AnalysisIdle,
 	}
 }
@@ -250,6 +260,12 @@ func NewGenerationCandidateService(
 // SetSSEHub wires live progress. Nil-safe: without a hub the sweep still runs
 // and the snapshot still updates, callers just have to poll for it.
 func (s *GenerationCandidateService) SetSSEHub(hub *sse.Hub) { s.sseHub = hub }
+
+// SetRouteCache wires the sub-5-4 route cache. A setter rather than a
+// constructor parameter for the same reason SetSSEHub is one: the cache is
+// optional infrastructure, and without it every existing caller keeps the
+// behaviour it already has.
+func (s *GenerationCandidateService) SetRouteCache(cache RouteCache) { s.routeCache = cache }
 
 // StartAnalysis kicks off the sweep and returns immediately.
 //
@@ -422,12 +438,38 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 		Summary:    GenerationCandidateSummary{SelfHostedASR: s.selfHostedASR},
 	}
 
+	// sub-5-4: one batched read for the whole sweep, decided BEFORE the loop.
+	plans := s.planRouteCache(ctx, rows)
+	cached := s.readRouteCache(ctx, plans)
+	var cacheHits, probes int
+
 	for i, row := range rows {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
 
-		route, ok := s.classify(ctx, row)
+		plan := plans[i]
+		var route RoutePrediction
+		var ok bool
+		if plan.key != "" {
+			if hit, found := cached[plan.key]; found {
+				route, ok = hit, true
+				cacheHits++
+			}
+		}
+		if !ok {
+			route, ok = s.classify(ctx, row)
+			if plan.probeBound {
+				probes++
+			}
+			if ok {
+				// AC #3 red line: only a trustworthy verdict is stored. A probe
+				// failure returns ok == false and must stay OUT of the cache —
+				// freezing one transient I/O error would drop that file from the
+				// candidate list for the whole TTL, silently.
+				s.storeRoute(ctx, plan.key, route)
+			}
+		}
 		if progress != nil {
 			progress(i+1, len(rows))
 		}
@@ -473,8 +515,134 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 		"skipped", result.Summary.SkippedCount,
 		"estimated_total_usd", result.Summary.EstimatedTotalUSD,
 		"self_hosted_asr", s.selfHostedASR,
+		// sub-5-4 AC #4: without these two numbers, "is the incremental path
+		// working?" can only be answered with a stopwatch — and they are the
+		// only evidence a future routeVersion or TTL change has to reason from.
+		"route_cache_hits", cacheHits,
+		"route_probes", probes,
 	)
 	return result, nil
+}
+
+// ─── Route cache (sub-5-4) ─────────────────────────────────────────────────
+
+// routeCachePlan is the per-row decision taken once, before the classification
+// loop runs.
+type routeCachePlan struct {
+	// probeBound is true when classify() has no persisted tracks to read and
+	// will therefore reach for predictor.Probe. Those rows are the only ones
+	// the cache is worth anything for — and the only ones route_probes counts.
+	probeBound bool
+	// key is "" when this row does not participate in the cache: it is served
+	// by persisted tracks, no cache is wired, or its file could not be stat'ed.
+	key string
+}
+
+// planRouteCache decides, per row, whether the route cache applies.
+//
+// It runs before the loop so the whole batch can be read in ONE query: reading
+// per row would reintroduce the N+1 the segment cache was corrected for
+// (sub-1-5b CR M3), which on a 1,200-episode library means 1,200 round trips
+// before the first list can render.
+func (s *GenerationCandidateService) planRouteCache(ctx context.Context, rows []candidateRow) []routeCachePlan {
+	plans := make([]routeCachePlan, len(rows))
+	for i, row := range rows {
+		// Honour cancellation mid-plan (CR sub-5-4 L1): os.Stat takes no ctx, so
+		// without this check a cancel pressed during the stat pass would wait
+		// out the whole library. Rows left unplanned are harmless — the Analyze
+		// loop re-checks ctx before touching its first row.
+		if ctx.Err() != nil {
+			return plans
+		}
+		// The persisted-tracks fast path touches no disk at all, so it outranks
+		// the cache and those rows never reach it (AC #2). Re-parsing here is a
+		// JSON unmarshal of a handful of bytes — cheaper than threading the
+		// parsed result through classify's signature.
+		//
+		// PARITY CONTRACT (CR sub-5-4 L3): "does this row probe?" is answered
+		// HERE and inside classify, by the same parsePersistedTracks call. If
+		// classify ever gains another probe-free source (e.g. episode tech-info
+		// parity — `backlog-episode-tech-info-parity`), this predicate must
+		// learn it too, or probeBound (and the route_probes log field) silently
+		// drifts. classify carries the mirror of this note.
+		if _, ok := parsePersistedTracks(row.tracksJSON); ok {
+			continue
+		}
+		plans[i].probeBound = true
+
+		if s.routeCache == nil || s.fileIdentity == nil {
+			continue
+		}
+		size, mtime, err := s.fileIdentity(row.filePath)
+		if err != nil {
+			// Rule 13 case 3: a file we cannot stat is one the probe is about to
+			// fail on anyway. Degrade to the uncached path and let classify
+			// report the real error — building a key from a zero-valued stat
+			// would make every unreadable file share ONE cache entry.
+			s.logger.Debug("route cache skipped — file identity unavailable",
+				"media_id", row.id, "file", row.filePath, "error", err)
+			continue
+		}
+		plans[i].key = routeCacheKey(routeVersion, row.id, size, mtime)
+	}
+	return plans
+}
+
+// readRouteCache fetches every planned key in one round trip.
+//
+// A read failure is logged and swallowed (Rule 13 case 3): the sweep simply
+// probes everything, which is exactly what it did before this cache existed.
+// Failing the analysis over a cache miss-to-be would turn a transient SQLite
+// hiccup into "no price for your library".
+func (s *GenerationCandidateService) readRouteCache(ctx context.Context, plans []routeCachePlan) map[string]RoutePrediction {
+	if s.routeCache == nil {
+		return nil
+	}
+	keys := make([]string, 0, len(plans))
+	for _, p := range plans {
+		if p.key != "" {
+			keys = append(keys, p.key)
+		}
+	}
+	if len(keys) == 0 {
+		return nil
+	}
+
+	values, err := s.routeCache.GetMany(ctx, keys)
+	if err != nil {
+		s.logger.Warn("route cache read failed — every row falls back to a probe",
+			"keys", len(keys), "error", err)
+		return nil
+	}
+
+	out := make(map[string]RoutePrediction, len(values))
+	for key, value := range values {
+		route := RoutePrediction(value)
+		if !isKnownRoute(route) {
+			// Not a verdict this build understands; probing is always safe.
+			s.logger.Debug("route cache entry ignored — unrecognised verdict",
+				"key", key, "value", value)
+			continue
+		}
+		out[key] = route
+	}
+	return out
+}
+
+// storeRoute writes one trustworthy verdict back.
+//
+// A write failure is logged at Debug and swallowed (Rule 13 case 3, AC #3): the
+// classification already succeeded, and the only consequence of a lost write is
+// that the next sweep probes this file again — strictly better than failing the
+// item over it.
+func (s *GenerationCandidateService) storeRoute(ctx context.Context, key string, route RoutePrediction) {
+	if s.routeCache == nil || key == "" {
+		return
+	}
+	if err := s.routeCache.Set(ctx, key, string(route), routeCacheTTL); err != nil {
+		s.logger.Debug("route cache write failed — the next analysis probes this file again",
+			"key", key, "error", err)
+	}
 }
 
 // estimateUSD prices one item.
@@ -619,6 +787,11 @@ func episodeTitle(e models.Episode) string {
 }
 
 // classify resolves one row's route, preferring persisted tracks over a probe.
+//
+// PARITY CONTRACT (CR sub-5-4 L3): planRouteCache predicts this function's
+// probe-vs-not decision by running the same parsePersistedTracks check. If a
+// new probe-free source is added here, update planRouteCache in the same
+// change — see the mirror note there.
 func (s *GenerationCandidateService) classify(ctx context.Context, row candidateRow) (RoutePrediction, bool) {
 	if s.predictor == nil {
 		return "", false

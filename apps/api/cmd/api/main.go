@@ -812,6 +812,11 @@ func main() {
 		slog.Default(),
 	)
 	generationCandidateService.SetSSEHub(sseHub)
+	// sub-5-4: remember route verdicts against file identity (size + mtime), so
+	// a repeat sweep only ffprobes what is new or actually changed. Rides the
+	// existing cache_entries table — no migration, and the shared expiry sweep
+	// above already covers the new `subtitle_route` family.
+	generationCandidateService.SetRouteCache(services.NewRouteCacheRepository(repos.Cache))
 	generationCandidatesHandler := handlers.NewGenerationCandidatesHandler(generationCandidateService)
 	// FR12 manual trigger (sub-1-6 AC #4). The route is registered in EVERY
 	// mode so the API surface does not change shape with an env var; a nil
