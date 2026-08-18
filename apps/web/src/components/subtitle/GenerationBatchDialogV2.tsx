@@ -30,7 +30,7 @@
  * Rule 23: zero wall-clock reads — progress/cost/counts are all SSE-supplied.
  * Media ids are UUID STRINGS end-to-end (9R-18; movie OR episode row ids).
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Check, CircleAlert, CirclePause, Radio } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '../ui/Dialog';
@@ -92,6 +92,37 @@ export function deriveRowStates(
     if (i === idxOfCurrent) return failedIds.has(it.mediaId) ? 'failed' : 'active';
     return 'queued';
   });
+}
+
+/**
+ * Ids whose RENDERED terminal state is 失敗 (sub-5-3 AC #3). Derived from
+ * deriveRowStates — NOT from failedIds directly — so the retry preselection
+ * matches exactly the rows the user sees marked failed (a budget_ceiling
+ * interrupted item renders 已暫停 and belongs to remainingIds instead).
+ */
+export function failedRowIds(
+  items: GenerationBatchItem[],
+  progress: GenerationBatchProgressState,
+  failedIds: ReadonlySet<string>
+): string[] {
+  const states = deriveRowStates(items, progress, failedIds);
+  return items.filter((_, i) => states[i] === 'failed').map((it) => it.mediaId);
+}
+
+/**
+ * Ids the batch did NOT finish (sub-5-3 AC #4) — 已暫停/停止/失敗 rows. The
+ * 下次繼續 preselection: the user's consented picks must survive the ceiling
+ * instead of silently falling back to the extract-only default.
+ */
+export function remainingIds(
+  items: GenerationBatchItem[],
+  progress: GenerationBatchProgressState,
+  failedIds: ReadonlySet<string>
+): string[] {
+  const states = deriveRowStates(items, progress, failedIds);
+  return items
+    .filter((_, i) => states[i] === 'paused' || states[i] === 'stopped' || states[i] === 'failed')
+    .map((it) => it.mediaId);
 }
 
 // ---------------------------------------------------------------------------
@@ -199,6 +230,13 @@ export interface GenerationBatchPanelV2Props {
   onConfirmCancelAll: () => void;
   /** 下次繼續 — back to the consent list to re-select/confirm (sub-4-3). */
   onResume: () => void;
+  /**
+   * 重試失敗項目 (sub-5-3 AC #3) — back to the consent list with the failed
+   * rows preselected. undefined = no failed rows known (attach mode included):
+   * the button is NOT rendered. Re-consent is structural: the only start path
+   * remains the F16 confirm.
+   */
+  onRetryFailed?: () => void;
   onClose: () => void;
 }
 
@@ -213,6 +251,7 @@ export function GenerationBatchPanelV2({
   activeItemProgress = null,
   onConfirmCancelAll,
   onResume,
+  onRetryFailed,
   onClose,
 }: GenerationBatchPanelV2Props) {
   const [confirmingCancel, setConfirmingCancel] = useState(false);
@@ -484,6 +523,21 @@ export function GenerationBatchPanelV2({
             </button>
           )}
 
+          {/* CR M1: NOT at budget_ceiling. There 下次繼續 already carries the
+              failed rows PLUS the paused ones, so a narrower 重試失敗項目 next
+              to it would silently drop selections the user already consented
+              to — the very loss AC #4 exists to stop. */}
+          {isTerminal && onRetryFailed && (
+            <button
+              type="button"
+              onClick={onRetryFailed}
+              data-testid="gen-batch-retry-failed-btn"
+              className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--error-tint)] px-5 text-sm font-medium text-[var(--error)] transition-colors hover:opacity-80"
+            >
+              重試失敗項目
+            </button>
+          )}
+
           {isBudgetCeiling && (
             <button
               type="button"
@@ -532,6 +586,14 @@ export function GenerationBatchDialogV2({
 
   const [items, setItems] = useState<GenerationBatchItem[]>([]);
   const [failedIds, setFailedIds] = useState<Set<string>>(new Set());
+  /**
+   * Consent preselection carried across a terminal→consent transition
+   * (sub-5-3 AC #3/#4): the failed rows (重試失敗項目) or the unfinished rows
+   * (下次繼續). State — not a derived value — because the preselectedIds prop
+   * demands a render-stable array, and because it must survive the resets
+   * that clear items/failedIds on the way back to the consent phase.
+   */
+  const [retryIds, setRetryIds] = useState<string[] | undefined>(undefined);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
   // CR M4: the consent flow must not bootstrap (and possibly kick a full
@@ -626,6 +688,7 @@ export function GenerationBatchDialogV2({
           mediaIds,
           budgetUsd,
         });
+        setRetryIds(undefined); // consumed — the next consent render starts clean
         if (outcome.conflict) {
           // A batch was already running (409) — attach to it. We did NOT
           // enumerate its items[], so clear any stale cache from a prior batch
@@ -656,12 +719,33 @@ export function GenerationBatchDialogV2({
 
   // 下次繼續 (budget_ceiling) — back to the consent list: the paused items are
   // still candidates, and a resume is a NEW consent (re-select, re-price,
-  // re-confirm), never an un-consented auto-restart.
+  // re-confirm), never an un-consented auto-restart. sub-5-3 AC #4: the
+  // unfinished rows are PRESELECTED — the user's consented picks must not
+  // silently fall back to the extract-only default.
   const handleResume = useCallback(() => {
+    const remaining = remainingIds(items, batch.progress, failedIds);
+    setRetryIds(remaining.length > 0 ? remaining : undefined);
     resetBatch();
     setItems([]);
     setFailedIds(new Set());
-  }, [resetBatch]);
+  }, [items, batch.progress, failedIds, resetBatch]);
+
+  // 重試失敗項目 (sub-5-3 AC #3) — same mechanism, failed rows only. Consent
+  // is structural: this NEVER calls startGenerationBatch — the only start
+  // path stays the F16 confirm inside GenerationConsentView.
+  // CR L1: memoized — a fresh array every render defeated handleRetryFailed's
+  // own useCallback (the bugfix-19-4b-1 unstable-callback-prop class) and
+  // re-walked every row on each SSE tick.
+  const failedRows = useMemo(
+    () => failedRowIds(items, batch.progress, failedIds),
+    [items, batch.progress, failedIds]
+  );
+  const handleRetryFailed = useCallback(() => {
+    setRetryIds(failedRows);
+    resetBatch();
+    setItems([]);
+    setFailedIds(new Set());
+  }, [failedRows, resetBatch]);
 
   const handleConfirmCancelAll = useCallback(async () => {
     try {
@@ -678,6 +762,7 @@ export function GenerationBatchDialogV2({
     resetItem();
     setItems([]);
     setFailedIds(new Set());
+    setRetryIds(undefined);
     setStarting(false);
     setStartError(null);
     setPostTerminal(false);
@@ -694,7 +779,7 @@ export function GenerationBatchDialogV2({
     return (
       <GenerationConsentView
         open={open}
-        preselectedIds={selectedMediaIds}
+        preselectedIds={retryIds ?? selectedMediaIds}
         forceAnalyze={forceAnalyze || postTerminal}
         starting={starting}
         startError={startError}
@@ -714,6 +799,7 @@ export function GenerationBatchDialogV2({
       activeItemProgress={perItem.progress}
       onConfirmCancelAll={() => void handleConfirmCancelAll()}
       onResume={handleResume}
+      onRetryFailed={failedRows.length > 0 ? handleRetryFailed : undefined}
       onClose={handleClose}
     />
   );

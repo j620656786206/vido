@@ -65,6 +65,14 @@ type CandidateEpisodeFinder interface {
 	FindMissingZhHantSubtitle(ctx context.Context) ([]models.Episode, error)
 }
 
+// CandidateSeriesTitleResolver supplies the series title the F15 group headers
+// render (sub-5-3 AC #1). Narrow on purpose (Rule 11);
+// *repository.SeriesRepository satisfies it via FindByID; main.go injects it.
+// nil degrades to empty titles — grouping still works on series_id.
+type CandidateSeriesTitleResolver interface {
+	FindByID(ctx context.Context, id string) (*models.Series, error)
+}
+
 // ─── Cost model ────────────────────────────────────────────────────────────
 
 // unknownRuntimeMinutes is what an item with no measurable duration is priced
@@ -92,6 +100,21 @@ type GenerationCandidate struct {
 	RuntimeMinutes float64 `json:"runtime_minutes"`
 	RuntimeKnown   bool    `json:"runtime_known"`
 	EstimatedUSD   float64 `json:"estimated_usd"`
+
+	// Series identity (sub-5-3 AC #1) — episodes only; movies leave all four
+	// at their zero value. Additive on the sub-4-1 AC #7 [@contract-v1]
+	// envelope (existing keys unchanged — no bump, the default_budget_usd
+	// precedent). The FE groups by series_id != "", NEVER by season_number:
+	// S00 specials are a legal season ZERO, which is why season_number is
+	// deliberately NOT omitempty while the two strings are.
+	SeriesID     string `json:"series_id,omitempty"`
+	SeriesTitle  string `json:"series_title,omitempty"`
+	SeasonNumber int    `json:"season_number"`
+	// EpisodeNumber gives the FE a deterministic within-season display order —
+	// the candidate list's global sort is (title, id), which shuffles episodes
+	// whose titles differ. Parsing the SxxEyy substring back out of the title
+	// would be the fragile alternative.
+	EpisodeNumber int `json:"episode_number"`
 }
 
 // GenerationCandidateSummary is the aggregate the footer renders.
@@ -168,6 +191,7 @@ type AnalysisSnapshot struct {
 type GenerationCandidateService struct {
 	movies    CandidateMovieFinder
 	episodes  CandidateEpisodeFinder
+	series    CandidateSeriesTitleResolver
 	predictor RoutePredictor
 	sseHub    *sse.Hub
 	logger    *slog.Logger
@@ -201,6 +225,7 @@ type GenerationCandidateService struct {
 func NewGenerationCandidateService(
 	movies CandidateMovieFinder,
 	episodes CandidateEpisodeFinder,
+	series CandidateSeriesTitleResolver,
 	predictor RoutePredictor,
 	selfHostedASR bool,
 	defaultBudgetUSD float64,
@@ -212,6 +237,7 @@ func NewGenerationCandidateService(
 	return &GenerationCandidateService{
 		movies:           movies,
 		episodes:         episodes,
+		series:           series,
 		predictor:        predictor,
 		logger:           logger.With("service", "generation_candidates"),
 		selfHostedASR:    selfHostedASR,
@@ -428,6 +454,10 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 			RuntimeMinutes: minutes,
 			RuntimeKnown:   known,
 			EstimatedUSD:   estimateUSD(route, minutes, asrRate),
+			SeriesID:       row.seriesID,
+			SeriesTitle:    row.seriesTitle,
+			SeasonNumber:   row.seasonNumber,
+			EpisodeNumber:  row.episodeNumber,
 		}
 		result.Candidates = append(result.Candidates, c)
 		result.Summary.EstimatedTotalUSD += c.EstimatedUSD
@@ -477,6 +507,14 @@ type candidateRow struct {
 	// tracksJSON is the persisted scan-time probe result. Empty for episodes,
 	// which have no such column.
 	tracksJSON string
+	// Series identity (sub-5-3) — zero-valued for movies. seriesTitle is
+	// resolved once per series per sweep (memo in enumerate) and degrades to
+	// "" on a lookup failure (Rule 13 case 3 — one missing series row must not
+	// deny the whole library its quote; grouping still works on the id).
+	seriesID      string
+	seriesTitle   string
+	seasonNumber  int
+	episodeNumber int
 }
 
 // runtimeMinutes returns the metadata runtime and whether it was known.
@@ -485,6 +523,23 @@ func (r candidateRow) runtimeMinutes() (float64, bool) {
 		return float64(r.runtime.Int64), true
 	}
 	return unknownRuntimeMinutes, false
+}
+
+// resolveSeriesTitle answers the group-header label for one series. Rule 13
+// case 3 — deliberately degraded after logging: a nil resolver or a failed
+// lookup yields "" (the FE renders 未知影集 and still groups on the id), never
+// a failed sweep.
+func (s *GenerationCandidateService) resolveSeriesTitle(ctx context.Context, seriesID string) string {
+	if s.series == nil || seriesID == "" {
+		return ""
+	}
+	series, err := s.series.FindByID(ctx, seriesID)
+	if err != nil || series == nil {
+		s.logger.Debug("series title lookup failed — group header degrades to the id",
+			"series_id", seriesID, "error", err)
+		return ""
+	}
+	return series.Title
 }
 
 func (s *GenerationCandidateService) enumerate(ctx context.Context) ([]candidateRow, error) {
@@ -515,16 +570,29 @@ func (s *GenerationCandidateService) enumerate(ctx context.Context) ([]candidate
 		if err != nil {
 			return nil, fmt.Errorf("enumerate episodes missing zh-Hant subtitle: %w", err)
 		}
+		// One title lookup per DISTINCT series per sweep (sub-5-3 AC #1) — a
+		// 20-season show must cost one read, not one per episode. The memo also
+		// caches failures ("" entry) so a broken series row is logged once.
+		seriesTitles := make(map[string]string)
 		for _, e := range episodes {
 			if !e.FilePath.Valid || e.FilePath.String == "" {
 				continue
 			}
+			title, seen := seriesTitles[e.SeriesID]
+			if !seen {
+				title = s.resolveSeriesTitle(ctx, e.SeriesID)
+				seriesTitles[e.SeriesID] = title
+			}
 			rows = append(rows, candidateRow{
-				id:        e.ID,
-				mediaType: models.SubtitleRunMediaEpisode,
-				title:     episodeTitle(e),
-				filePath:  e.FilePath.String,
-				runtime:   e.Runtime,
+				id:            e.ID,
+				mediaType:     models.SubtitleRunMediaEpisode,
+				title:         episodeTitle(e),
+				filePath:      e.FilePath.String,
+				runtime:       e.Runtime,
+				seriesID:      e.SeriesID,
+				seriesTitle:   title,
+				seasonNumber:  e.SeasonNumber,
+				episodeNumber: e.EpisodeNumber,
 			})
 		}
 	}

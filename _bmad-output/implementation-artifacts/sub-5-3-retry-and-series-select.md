@@ -1,6 +1,6 @@
 # Story 5.3: 失敗重試＋整季/整劇便捷選取 —— F8 失敗列一鍵回同意清單、F15 series 群組勾選
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -99,25 +99,25 @@ F15 群組 header 與 F8 重試按鈕是核定設計（2026-08-10 定稿）沒�
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — BE additive series 欄位（AC: #1）** 🔴 BE
-  - [ ] `GenerationCandidate` 三欄＋`CandidateSeriesTitleResolver` 窄介面＋建構子參數＋main.go 注入
-  - [ ] sweep 內 memo＋fail-soft＋測試（填值／memo 計數／degrade／wire shape）＋Rule 20 ack
+- [x] **Task 1 — BE additive series 欄位（AC: #1）** 🔴 BE
+  - [x] `GenerationCandidate` 三欄＋`CandidateSeriesTitleResolver` 窄介面＋建構子參數＋main.go 注入
+  - [x] sweep 內 memo＋fail-soft＋測試（填值／memo 計數／degrade／wire shape）＋Rule 20 ack
 
-- [ ] **Task 2 — 群組選擇器與三序同源（AC: #2）** 🟡 FE
-  - [ ] `consentSelection.ts`:`groupCandidates`／`groupOrder`／`remainingIds` 純函式＋spec
-  - [ ] `seedList` 以 `groupOrder` 重排 candidates state（三序同源斷言）
+- [x] **Task 2 — 群組選擇器與三序同源（AC: #2）** 🟡 FE
+  - [x] `consentSelection.ts`:`groupCandidates`／`groupOrder`／`remainingIds` 純函式＋spec
+  - [x] `seedList` 以 `groupOrder` 重排 candidates state（三序同源斷言）
 
-- [ ] **Task 3 — CandidateListPanel 群組渲染（AC: #2）** 🟡 FE
-  - [ ] series／season header 列（小計＋徽章計數＋三態 checkbox＋a11y）;電影列零改動
-  - [ ] 群組 toggle 接 `GenerationConsentView`（對全群組操作,chips 無關）
+- [x] **Task 3 — CandidateListPanel 群組渲染（AC: #2）** 🟡 FE
+  - [x] series／season header 列（小計＋徽章計數＋三態 checkbox＋a11y）;電影列零改動
+  - [x] 群組 toggle 接 `GenerationConsentView`（對全群組操作,chips 無關）
 
-- [ ] **Task 4 — F8 重試與 下次繼續 預選（AC: #3, #4, #5）** 🟡 FE
-  - [ ] 終局 footer 重試按鈕（條件渲染）＋`retryIds` state＋consent 預選接線
-  - [ ] `handleResume` 改預選 `remainingIds`;attach 降級確認（不渲染）＋同意紅線守衛測試
+- [x] **Task 4 — F8 重試與 下次繼續 預選（AC: #3, #4, #5）** 🟡 FE
+  - [x] 終局 footer 重試按鈕（條件渲染）＋`retryIds` state＋consent 預選接線
+  - [x] `handleResume` 改預選 `remainingIds`;attach 降級確認（不渲染）＋同意紅線守衛測試
 
-- [ ] **Task 5 — 測試、基準線與收尾（AC: #6, #7）**
-  - [ ] 視覺基準線:受影響 consent fixtures 重產 `-darwin`（`-linux` 走 CI bootstrap PR）
-  - [ ] 立案 `backlog-f15-f8-group-retry-pen-annotation`（雙向）＋契約清點（1 ack、0 bump）＋全回歸
+- [x] **Task 5 — 測試、基準線與收尾（AC: #6, #7）**
+  - [x] 視覺基準線:受影響 consent fixtures 重產 `-darwin`（`-linux` 走 CI bootstrap PR）
+  - [x] 立案 `backlog-f15-f8-group-retry-pen-annotation`（雙向）＋契約清點（1 ack、0 bump）＋全回歸
 
 （後端 task 1 個、前端 4 個 —— 未觸發跨端拆分門檻。）
 
@@ -196,11 +196,30 @@ F15 群組 header 與 F8 重試按鈕是核定設計（2026-08-10 定稿）沒�
 
 ### Agent Model Used
 
-_(填入實作模型)_
+Claude Fable 5 (claude-fable-5)
 
 ### Debug Log References
 
+- Full API suite: `go test ./... -count=1` — 34 packages ok, 0 failures; `go vet` + `gofmt -l` clean.
+- Full web suite: `pnpm nx test web -- --run` — 233 files / **2648** tests green (+28 by this story).
+- `pnpm run lint:all` — 0 errors; prettier clean（3 檔first-pass 格式修正後全綠）。
+- Visual: `playwright test --project=visual --update-snapshots` — 1 passed；**只有新 fixture 的基準線被寫入**（`git status` 證明既有 F15/F18 baselines byte-identical ⇒ 舊列型零視覺回歸）。
+- Falsification: 重試預選接線（`retryIds ?? selectedMediaIds`）被刻意破壞後 2 個 spec 轉紅,復原後全綠 —— 測試真的在守。
+- 本機 webServer 需 `GEMINI_API_KEY=visual-dummy`（見 Discovery Triage lane ③）。
+
 ### Completion Notes List
+
+- **🔗 AC Drift: NONE**（grep `preselectedIds|下次繼續|feasibleCount|重試` 過 `_bmad-output/implementation-artifacts/*.md` → hits 在 sub-4-2/sub-4-3/ux3-ai-2,逐一讀過皆 REUSE:preselectedIds 交集語意、forceAnalyze、consent-必經路徑全部沿用不改;下次繼續 的行為變更（零預選→預選未完成項）是本 story AC #4 的明文交付,且 sub-4-3 的 AC 只規定「回到 consent、重新確認」——預選內容不在其契約面）。
+- **📎 Contract Stamps: FOUND（1 upstream ack;0 bumps）** — **confirmed against `[@contract-v1]` (Story sub-4-1 AC #7)**:候選信封 additive 四欄（見 AC #1 note）,既有 key 不動,不 bump（sub-5-1 `default_budget_usd` 先例);inline stamp 註解已在 handler（sub-5-1 補),無需再補。本 story 產生 0 個新 stamp ⇒ 無下游 stale-mark 義務。
+- **🎭 A11y Pre-Flight: PASS**（6 個 FE 檔 scoped eslint 0 warnings、0 introduced）。手動四類:無新圖片/無 modal 結構變更/無 async-reveal 變更;新自訂 widget = 三態 checkbox —— 原生 `<input type="checkbox">`（鍵盤免費）+ `aria-label`（選取整部/選取第 n 季）+ `aria-checked="mixed"` + `el.indeterminate`（`consent-select-all` 既有 idiom）。
+- **🎨 UX Verification: 依 AC #6 function-first 裁定** — F15 群組 header 與 F8 重試按鈕重用核定語彙（checkbox 列型/終局 footer 按鈕型/`--error-tint` 徽章色 = 失敗列既有色);`.pen` 註記由 `backlog-f15-f8-group-retry-pen-annotation` 追蹤（雙向已立）。新 gallery fixture 的 header 帶 design-coverage-gap 註解（Rule 21 第 4 形式）。
+- **AC #1** — `GenerationCandidate` + `series_id`/`series_title`(omitempty) + `season_number`/`episode_number`(**非** omitempty,S00/E00 為合法零值)。**Authoring 修正（in-flight,記錄於此）**:AC 原列三欄,實作加了第四欄 `episode_number` —— 季內顯示序的唯一可靠來源（BE 全域排序是 (title,id),集名互異時會打亂集序;解析 title 的 SxxEyy 子字串是脆弱替代)。`CandidateSeriesTitleResolver` 窄介面 + 建構子參數 + main.go 注入 `repos.Series`;sweep 內 memo（每 series 一次,含失敗 memo）;fail-soft（nil resolver／查詢失敗 → title 空、id 照填、sweep 照常）。7 個 BE 測試含 memo 計數與 wire-shape。
+- **AC #2** — `groupCandidates`/`groupOrder` 純函式:電影扁平段先、series 首見序、季內 season→episode 升冪、單季不出 season 層、S00=特別篇。**三序同源**以 `seedList` 重排 state 實現（一處改,`computeTotals`/`handleConfirm` 零改動繼承);view-seam 測試釘住送出序 = 群組序 ≠ 後端 title 序。Panel:series/season header 列（已選 n/N ・ 選中小計,金額 verbatim from `estimated_usd`）、三態 checkbox、群組 toggle 對全群組（chips 純檢視濾鏡,spec 釘住）。無 seriesId 的列（舊伺服器/電影）維持出貨版扁平渲染,spec 證明零 header。
+- **AC #3** — 終局 footer「重試失敗項目」按鈕（`--error-tint`,`gen-batch-retry-failed-btn`）:僅當 `failedRowIds` 非空才由 container 傳入 `onRetryFailed` ⇒ attach 模式（items=[]）永不渲染。`failedRowIds` 從 `deriveRowStates` 推導 —— 預選集合 = 使用者「看到」標紅的列（budget_ceiling 被中斷的 in-flight 項 renders 已暫停 ⇒ 歸 remainingIds,spec 釘住 9R-16 caveat 的一致性）。點擊 → `retryIds` state → consent `preselectedIds`,`postTerminal` 既有機制供給 forceAnalyze。**同意紅線測試**:整條重試流程 `startGenerationBatch` 呼叫數不變,直到 F16 confirm。
+- **AC #4** — `handleResume` 預選 `remainingIds`（paused+stopped+failed）;consumed-on-start:`handleStartConsented` 開頭清 `retryIds`,spec 證明後續 clean ceiling 的 下次繼續 零殘留。workspace 側 `onResume→onLaunch` 不動。
+- **AC #5** — attach 降級由「無 items ⇒ failedRowIds 空 ⇒ onRetryFailed undefined ⇒ 按鈕不渲染」的鏈自然成立,panel spec 直接釘 absent-prop 不渲染。
+- **AC #7(e)** — 新 gallery fixture `generation-consent/grouped`（1 電影 + 雙季影集含 S00）;`-darwin` 基準線已產,**`-linux` 由 CI Visual Regression workflow 的 bootstrap PR 補**（CLAUDE.md 慣例）。既有 consent fixtures 補 `onToggleGroup: noop`（新必要 prop）,渲染 byte 不變（update-snapshots 全跑後 git 只見新檔）。
+- **Pre-existing fix**: error-phase 重試按鈕以零參數呼叫 `bootstrap()`（CR sub-4-3 M3 加了必要的 `isCancelled` 守衛參數後未同步此呼叫點）→ runtime TypeError,重試永遠只會再顯示錯誤。修為 `bootstrap(() => false)` + 新 spec 證明重試真的重新載入到 list phase。tsc 噪音中的其餘錯誤為 repo 既有（stash 驗證 506 行 baseline）,不屬本 story。
 
 ### Discovery Triage
 
@@ -209,8 +228,37 @@ _(填入實作模型)_
     - **① expand-scope-in-place** — budget_ceiling 的 下次繼續 回 consent 後零預選,使用者已同意的付費選擇被靜默丟棄（fallback 到僅 extract 的預設選擇）→ 吸收為 **AC #4**（與 F8 重試同一條「終局→consent 帶預選」機制）。
     - **③ backlog-with-carry-forward-link** — `backlog-f15-f8-group-retry-pen-annotation`：F15 群組 header 與 F8 重試按鈕的 `.pen` 設計註記（Sally ＋ Inline-Agent 流程;function-first 裁定見 AC #6,明示可推翻）。非阻塞。
   - 既有條目確認不重複立案:attach 模式名單缺口已由 `disc-2026-07-generation-batch-status-items` 追蹤（AC #5 引用,不另立）。
+  - **YES** — filed at implementation time（2026-08-18）：
+    - **③ backlog-with-carry-forward-link** — `backlog-visual-webserver-needs-ai-key`：本機 `pnpm run test:visual` 的 playwright webServer 直接 `go run ./cmd/api`,而 `AI_PROVIDER` 預設 gemini 且無金鑰時 `NewAIService` 失敗 → `os.Exit(1)` → **無金鑰的開發機跑不了視覺測試**（本次以 `GEMINI_API_KEY=visual-dummy` 繞過）。sub-5-2 才剛確立「keyless boot 不得癱瘓服務」的方向,parse-path AI service 卻仍是 boot-fatal。非阻塞（CI 自帶 env）。
 
 ### File List
+
+**Backend**
+
+- `apps/api/internal/services/generation_candidates.go` — AC #1: 四個 additive 欄位、`CandidateSeriesTitleResolver`、`resolveSeriesTitle` fail-soft、sweep 內 memo、candidateRow series 身分
+- `apps/api/internal/services/generation_candidates_test.go` — 7 個 sub-5-3 測試（填值/S00/memo 計數/fail-soft/nil resolver/wire shape ×2）+ 建構子 call sites 機械遷移
+- `apps/api/cmd/api/main.go` — `repos.Series` 注入候選服務
+
+**Frontend**
+
+- `apps/web/src/services/subtitleService.ts` — `GenerationCandidate` 四個 optional 欄位
+- `apps/web/src/components/subtitle/consent/consentSelection.ts` — `groupCandidates`/`groupOrder` + `CandidateGroup`/`CandidateSeasonSection` 型別
+- `apps/web/src/components/subtitle/consent/consentSelection.spec.ts` — 9 個群組/三序同源測試
+- `apps/web/src/components/subtitle/consent/CandidateListPanel.tsx` — `GroupHeaderRow`（三態 checkbox + 已選小計）、`seasonLabel`、群組渲染、`onToggleGroup` prop
+- `apps/web/src/components/subtitle/consent/CandidateListPanel.spec.tsx` — 9 個群組渲染/語意測試 + harness 補 prop
+- `apps/web/src/components/subtitle/consent/GenerationConsentView.tsx` — `seedList` 以 `groupOrder` 重排 state、`handleToggleGroup`、pre-existing bootstrap 重試修復
+- `apps/web/src/components/subtitle/consent/GenerationConsentView.spec.tsx` — 3 個 view-seam 測試（送出序/群組 header/重試修復）
+- `apps/web/src/components/subtitle/GenerationBatchDialogV2.tsx` — `failedRowIds`/`remainingIds` 純函式、panel `onRetryFailed` + 重試按鈕、container `retryIds` state 與接線
+- `apps/web/src/components/subtitle/GenerationBatchDialogV2.spec.tsx` — 9 個測試（selector ×3、panel ×3、container 重試/預選/清除 ×3,含同意紅線守衛）
+- `apps/web/src/routes/test/-gallery.fixtures.tsx` — 新 `generation-consent/grouped` fixture + 既有兩個 consent fixtures 補 `onToggleGroup: noop`
+
+**Visual**
+
+- `tests/visual/components.visual.spec.ts-snapshots/components/generation-consent/grouped/default-visual-darwin.png` — 新基準線（`-linux` 走 CI bootstrap PR）
+
+**Docs / tracking**
+
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — sub-5-3 ready-for-dev → in-progress → review
 
 ---
 
@@ -219,4 +267,35 @@ _(填入實作模型)_
 | Date | Change |
 | --- | --- |
 | 2026-08-18 | create-story：M3 A 群組建檔。F8 失敗重試（結構性必經同意）＋ F15 series/season 群組勾選（BE additive 三欄,無 bump）。lane ①×1（下次繼續 預選未完成項）＋ lane ③×1（`.pen` 註記）。function-first 裁定明示可推翻（AC #6）。 |
+| 2026-08-18 | Task 1 (AC #1)：BE additive 四欄（authoring 三欄 + in-flight 補 `episode_number` 供季內確定性排序）+ 窄介面 + memo + fail-soft + main.go 注入;7 測試。 |
+| 2026-08-18 | Task 2-3 (AC #2)：`groupCandidates`/`groupOrder` + seedList 重排 state（三序同源一處改）+ Panel 群組渲染（三態 checkbox/已選小計/特別篇）;18 FE 測試;舊伺服器扁平渲染零回歸（baselines byte-identical）。 |
+| 2026-08-18 | Task 4 (AC #3/#4/#5)：`failedRowIds`/`remainingIds`（自 deriveRowStates 推導,與使用者所見一致）+ 終局重試按鈕 + `retryIds` 預選接線 + 下次繼續 預選未完成項 + consumed-on-start 清除;同意紅線守衛測試（startGenerationBatch 零直呼);attach 降級 absent-prop 不渲染。Pre-existing fix:error-phase bootstrap 重試 TypeError。 |
+| 2026-08-18 | Senior Developer Review (Opus 5 adversarial, 換模型慣例 — implementation by Fable 5) — 1H/2M/5L, all adjudicated and fixed in-session. **H1**: AC #2 明文要求群組 header「route 徽章計數（重用 computeTotals,不長第二套加總）」—— 徽章根本沒做,小計還是自己 `reduce` 的第二套加總(Completion Notes 反而聲稱 "no second totals engine")→ header 改走 `computeTotals(items, selectedIds, null)`,同時補上選中 route 徽章。**M1**: 重試失敗項目 在 budget_ceiling 與 下次繼續 並排,而 failed ⊂ remaining ⇒ 點窄的那顆會靜默丟掉使用者已同意的暫停項 —— 正是 AC #4 要防的損失 → 該按鈕限 complete/cancelled/error。**M2**: series 區段用「首見序」,而首見序來自後端 per-EPISODE 的 (title,id) 排序 ⇒ 影集順序在字母排序的電影列旁看起來隨機,且新增一集早排序的集名會讓整部劇跳到最前 → 改依 series title 排序,未知影集沉底。**L1** failedRows 每 render 新陣列使自己的 useCallback 失效(bugfix-19-4b-1 同類)→ useMemo。**L2** groupCandidates+Set 每 render 重算(預算輸入每個按鍵都重排 1,200 項)→ useMemo。**L3** 原生 checkbox 上多餘的 aria-checked,與出貨的 consent-select-all idiom 不一致 → 移除,只用 native indeterminate。**L4** 兩個 `TestAnalyze_*` 從不呼叫 Analyze(實為 struct wire-shape 測試)+ struct 註解 "all three" 已成四欄 → 更名/更正。**L5** 群組列全被 chips 過濾掉時不畫 header 的分支無測試 → 補。+5 測試;grouped 視覺基準線因 header 改版重產。修後全綠:api 34 pkg、web 233/2653、lint 0 errors、visual 1 passed。Status review → done。 |
+| 2026-08-18 | Task 5 (AC #6/#7)：新 grouped gallery fixture + `-darwin` 基準線（唯一新檔,既有 byte-identical);lane ③ 已於 authoring 立案;全回歸綠（api 34 pkg、web 233/2648、lint 0 errors、visual 1 passed）。Status in-progress → review。 |
 
+---
+
+## Senior Developer Review (AI)
+
+**Reviewer model:** Claude Opus 5（換模型 adversarial CR 慣例 — implementation by Fable 5）· **Date:** 2026-08-18 · **Outcome:** Changes Requested → all findings adjudicated and fixed in-session → **Approve (done)**
+
+**Mandatory checks:** 🔒 Rule 7 Wire Format: PASS（in-review Go 檔 0 個新 error-code 常數;prefix 數維持 16）· 🔒 Rule 20 Contract Bump: N/A（0 bumps;消費側 ack 行 `confirmed against [@contract-v1] (Story sub-4-1 AC #7)` 已驗證存在,additive 四欄不 bump 成立）· 🔒 Rule 25 Mega-line: N/A（project-context.md 未觸及）· **Git vs File List: 0 discrepancies**（14 modified + 新快照目錄,逐一對帳）。
+
+### Findings & resolutions（1H / 2M / 5L）
+
+- [x] **[H1] AC #2 的群組 header 有一半沒做,而 Completion Notes 聲稱做了。** AC #2 明文:「群組 header 顯示該群組的 小計金額＋**route 徽章計數**（**重用 `computeTotals` 的分類邏輯,不長第二套加總**）」。實作只有小計、沒有徽章,且小計是 `selected.reduce((s, i) => s + i.estimatedUsd, 0)` —— 一套自己長出來的加總,正是 AC 禁止的東西;Completion Notes 卻寫 "amounts come verbatim… no second totals engine"。FIXED:`GroupHeaderRow` 改用 `computeTotals(items, selectedIds, null)`（ceiling 給 null —— 預算裁決是 footer 的全域職責）,一次拿到 `selectedCount`/`selectedExtractCount`/`selectedAsrCount`/`selectedTotalUsd`;補上選中 route 徽章（抽取 n / 語音辨識 m,計數為 0 時不畫）。+2 測試。
+- [x] **[M1] `重試失敗項目` 在 budget_ceiling 與 `下次繼續` 並排,而前者是後者的真子集。** `deriveRowStates` 在 budget_ceiling 下把尾端 `pausedCount` 列標 paused、之前的失敗列標 failed ⇒ 兩顆按鈕同時出現,點窄的那顆只預選 failed,**靜默丟棄使用者已同意的 paused 項**。這與本 story AC #4 的立案理由（「已同意的付費選擇不再被靜默丟棄」）自相矛盾。FIXED:重試按鈕限 `complete`/`cancelled`/`error`;budget_ceiling 交給語意完整的 `下次繼續`。+1 測試釘住兩顆按鈕的分工。
+- [x] **[M2] series 區段的「首見序」實際上是隨機序。** 首見序由後端 **per-EPISODE** 的 `(title, id)` 排序決定 —— 影集區段的順序因此與影集本身無關:在字母排序的電影列旁看起來隨機,且**新增一集排序靠前的集名就能讓整部劇跳到清單最前**。FIXED:series 區段改依 series title 排序,未知影集（BE 查詢降級的空 title）沉底,id 作決定性 tie-break;`groupOrder` 是同一個函式 ⇒ 顯示/送出/feasible 三序仍同源。+1 測試,原「首見序」測試改寫。
+- [x] **[L1] `failedRows` 每 render 產生新陣列,使 `handleRetryFailed` 的 `useCallback` 完全失效**（deps 含該陣列）—— repo 有 bisect regression gate 專門守這個 unstable-callback-prop 類別（bugfix-19-4b-1）。今天無功能影響（panel 未 memo）,但屬純儀式 + 每次 SSE tick 重走全部列。FIXED:`useMemo`。
+- [x] **[L2] `groupCandidates(candidates)` 與 `visibleIds` Set 每 render 重算。** 分組會對每個 series 桶排序,而本 panel 在**預算輸入每個按鍵**都重繪 ⇒ 1,200 項的媒體庫每打一個字就重排一次（改版前只有一次 O(n) filter）。FIXED:兩者都 `useMemo`。
+- [x] **[L3] 原生 checkbox 上多餘的 `aria-checked`。** native `indeterminate` 已經對 AT 曝露 mixed;額外的 `aria-checked` 是冗餘 ARIA、有與原生狀態脫鉤的風險,且**與出貨的 `consent-select-all` idiom 不一致**（那顆只用 ref+indeterminate)。原測試還把這個寫法釘住了。FIXED:移除 attribute,測試改斷言 native `indeterminate`/`checked` 且 `not.toHaveAttribute('aria-checked')`。
+- [x] **[L4] 測試名不符實 + 註解漂移。** `TestAnalyze_SeriesFieldsSerializeAsSnakeCase` / `TestAnalyze_MovieWireShapeOmitsSeriesKeys` **都沒有呼叫 `Analyze`**（是 struct tag 的 wire-shape 測試）—— 與 sub-5-2 CR L2 同一類;另 struct 註解寫 "movies leave all **three**",in-flight 補了 `EpisodeNumber` 後已是四欄。FIXED:更名 `TestGenerationCandidate_*`、註解更正。
+- [x] **[L5] 分支無測試:群組的列被 chips 全數過濾時 header 應完全不畫**（否則會出現一顆管不到任何可見列的 checkbox）。實作是對的,但零覆蓋。FIXED:補測試（100% asr 的影集 + `filter='extract'`）。
+
+### Reviewer verifications that held（未再由 orchestrator 重查）
+
+wire→FE 映射走 `snakeToCamel` 泛型轉換 ⇒ 四個新欄位真的到得了前端（非只在單元測試的手構物件裡成立）· `startTracking` 的 `START` reducer 同步設 `status:'running'`,因此 `setRetryIds(undefined)` 不會在 consent 仍掛載時改變 `preselectedIds` 而觸發整輪 re-bootstrap（本來是我最擔心的 HIGH,查證後不成立）· start 失敗時 `retryIds` 保留（`setRetryIds` 在 await 之後、catch 之外）· `remainingIds`/`failedRowIds` 走 `deriveRowStates` ⇒ 與使用者所見一致,9R-16 的 paused-勝過-failed 裁定被沿用 · bisect/visual gate 皆無硬編 fixture 數（`toBeGreaterThan(0)`）⇒ 新 fixture 不破閘 · E2E consent stubs 全是電影、無 `series_id` ⇒ 群組化對 e2e 惰性 · `usd()` 走 `toFixed(2)` ⇒ 浮點求和無顯示漂移 · Map 迭代序對 UUID 字串鍵為插入序（M2 修正後已不依賴它）· 既有 F15/F18 baselines byte-identical。
+
+### ⚠️ 合併前須知（非 findings）
+
+本 story 新增了一個 gallery fixture,`-linux` 基準線只能由 CI 產生 ⇒ **PR 的 `Visual Regression / PR` check 會紅**,直到 `Visual Regression / Main` 自動開出的 `chore(visual): bootstrap N missing -linux baselines` PR 合併為止（CLAUDE.md 明文流程;**不可**本機產 `-linux`）。
