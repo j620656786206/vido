@@ -395,6 +395,55 @@ const CONSENT_FIXTURE_CANDIDATES: GenerationCandidate[] = [
   },
 ];
 
+// sub-5-3: grouped F15 — one movie + a two-season series (incl. S00 特別篇).
+const CONSENT_GROUPED_SERIES_ID = 'b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e';
+const CONSENT_GROUPED_CANDIDATES: GenerationCandidate[] = [
+  CONSENT_FIXTURE_CANDIDATES[0],
+  {
+    mediaId: '9a0bfe08-1acd-4f9e-9fed-a7c8d9e0f301',
+    mediaType: 'episode',
+    title: '荷莉的假期 S00E01',
+    route: 'asr',
+    runtimeMinutes: 48,
+    runtimeKnown: true,
+    estimatedUsd: 0.29,
+    seriesId: CONSENT_GROUPED_SERIES_ID,
+    seriesTitle: '怪奇物語',
+    seasonNumber: 0,
+    episodeNumber: 1,
+  },
+  {
+    mediaId: '9a0bfe08-1acd-4f9e-9fed-a7c8d9e0f302',
+    mediaType: 'episode',
+    title: '消失的威爾 S01E01',
+    route: 'asr',
+    runtimeMinutes: 49,
+    runtimeKnown: true,
+    estimatedUsd: 0.29,
+    seriesId: CONSENT_GROUPED_SERIES_ID,
+    seriesTitle: '怪奇物語',
+    seasonNumber: 1,
+    episodeNumber: 1,
+  },
+  {
+    mediaId: '9a0bfe08-1acd-4f9e-9fed-a7c8d9e0f303',
+    mediaType: 'episode',
+    title: '瘋狂麥克絲 S01E02',
+    route: 'asr',
+    runtimeMinutes: 51,
+    runtimeKnown: true,
+    estimatedUsd: 0.31,
+    seriesId: CONSENT_GROUPED_SERIES_ID,
+    seriesTitle: '怪奇物語',
+    seasonNumber: 1,
+    episodeNumber: 2,
+  },
+];
+const CONSENT_GROUPED_SELECTED = new Set([
+  '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51',
+  '9a0bfe08-1acd-4f9e-9fed-a7c8d9e0f302',
+]);
+
 export const GALLERY_FIXTURES: GalleryFixture[] = [
   // ----- ui/ -----
   {
@@ -3723,6 +3772,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       budgetText: '5.00',
       budgetUsd: 5,
       onToggle: noop,
+      onToggleGroup: noop,
       onToggleAll: noop,
       onSelectAllExtract: noop,
       onClearSelection: noop,
@@ -3732,6 +3782,33 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     },
     width: 900,
     penNode: 'screen-section', // Screen F15-D-v2 (pwMzT) · F15-M-v2 (fdu4y)
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-consent/grouped',
+    label: 'subtitle/consent/CandidateListPanel (F15 series/season 群組 — sub-5-3)',
+    component: CandidateListPanel as ComponentType<Record<string, unknown>>,
+    props: {
+      candidates: CONSENT_GROUPED_CANDIDATES,
+      selectedIds: CONSENT_GROUPED_SELECTED,
+      filter: 'all',
+      totals: computeTotals(CONSENT_GROUPED_CANDIDATES, CONSENT_GROUPED_SELECTED, 5),
+      budgetText: '5.00',
+      budgetUsd: 5,
+      onToggle: noop,
+      onToggleGroup: noop,
+      onToggleAll: noop,
+      onSelectAllExtract: noop,
+      onClearSelection: noop,
+      onFilterChange: noop,
+      onBudgetTextChange: noop,
+      onStartClick: noop,
+    },
+    width: 900,
+    // Design ref: ux-design.pen — no current screen frame; the series/season
+    // group headers postdate the 2026-08-10 F15 ratification (sub-5-3
+    // function-first ruling; backlog-f15-f8-group-retry-pen-annotation).
+    penNode: 'screen-section',
     statesOnly: ['default'],
   },
   {
@@ -3750,6 +3827,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       budgetText: '0.30',
       budgetUsd: 0.3,
       onToggle: noop,
+      onToggleGroup: noop,
       onToggleAll: noop,
       onSelectAllExtract: noop,
       onClearSelection: noop,

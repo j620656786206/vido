@@ -187,6 +187,16 @@ export interface GenerationCandidate {
   /** false → the estimate used the 45-minute fallback; UI prefixes ≈. */
   runtimeKnown: boolean;
   estimatedUsd: number;
+  /**
+   * Series identity (sub-5-3, additive on the sub-4-1 [@contract-v1] envelope)
+   * — episodes only; absent/empty on movies and on pre-sub-5-3 servers.
+   * Group by `seriesId`, NEVER by season: S00 specials are a legal season 0.
+   * seriesTitle degrades to '' when the backend lookup failed (未知影集).
+   */
+  seriesId?: string;
+  seriesTitle?: string;
+  seasonNumber?: number;
+  episodeNumber?: number;
 }
 
 export interface GenerationCandidateSummary {

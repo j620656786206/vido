@@ -109,3 +109,106 @@ export function parseBudgetInput(text: string): number | null {
   if (!Number.isFinite(v) || v <= 0) return null;
   return v;
 }
+
+// ─── sub-5-3 AC #2: series/season grouping ──────────────────────────────────
+
+/** One season's rows inside a series section. */
+export interface CandidateSeasonSection {
+  seasonNumber: number;
+  items: GenerationCandidate[];
+}
+
+/**
+ * One rendered section of the F15 list. `movies` renders as flat rows (the
+ * pre-sub-5-3 shipped form — no header); `series` gets a header row with the
+ * 整劇 checkbox, and season sub-headers only when the show spans ≥2 seasons
+ * (single-season shows would just repeat the series header's meaning).
+ */
+export interface CandidateGroup {
+  kind: 'movies' | 'series';
+  /** series sections only. seriesTitle '' = backend lookup degraded (未知影集). */
+  seriesId?: string;
+  seriesTitle?: string;
+  showSeasonHeaders?: boolean;
+  seasons?: CandidateSeasonSection[];
+  /** All of the section's items in display order (= submission order). */
+  items: GenerationCandidate[];
+}
+
+/**
+ * Group candidates for display: one flat movies section first (input order),
+ * then one section per series ordered BY SERIES TITLE; within a series, season
+ * asc then episode asc (the backend's global (title,id) sort shuffles episodes
+ * — episode_number exists on the wire precisely for this).
+ *
+ * CR M2: series sections were originally emitted in first-APPEARANCE order,
+ * which is a function of the backend's per-EPISODE (title, id) sort — so the
+ * show order looked random next to the alphabetical movie rows, and adding one
+ * early-sorting episode title could jump a whole series to the top. Sorting by
+ * the series' own title makes the section order mean something and stay put.
+ * Degraded (empty) titles sort LAST — an unlabelled 未知影集 block belongs at
+ * the bottom, not ahead of every named show.
+ */
+export function groupCandidates(candidates: GenerationCandidate[]): CandidateGroup[] {
+  const movies: GenerationCandidate[] = [];
+  const bySeries = new Map<string, GenerationCandidate[]>();
+
+  for (const c of candidates) {
+    if (c.seriesId) {
+      const bucket = bySeries.get(c.seriesId);
+      if (bucket) bucket.push(c);
+      else bySeries.set(c.seriesId, [c]);
+    } else {
+      movies.push(c);
+    }
+  }
+
+  const groups: CandidateGroup[] = [];
+  if (movies.length > 0) groups.push({ kind: 'movies', items: movies });
+
+  const seriesSections: CandidateGroup[] = [];
+  for (const [seriesId, items] of bySeries) {
+    const sorted = [...items].sort(
+      (a, b) =>
+        (a.seasonNumber ?? 0) - (b.seasonNumber ?? 0) ||
+        (a.episodeNumber ?? 0) - (b.episodeNumber ?? 0)
+    );
+    const seasons: CandidateSeasonSection[] = [];
+    for (const item of sorted) {
+      const season = item.seasonNumber ?? 0;
+      const last = seasons[seasons.length - 1];
+      if (last && last.seasonNumber === season) last.items.push(item);
+      else seasons.push({ seasonNumber: season, items: [item] });
+    }
+    seriesSections.push({
+      kind: 'series',
+      seriesId,
+      seriesTitle: sorted[0].seriesTitle ?? '',
+      showSeasonHeaders: seasons.length >= 2,
+      seasons,
+      items: sorted,
+    });
+  }
+
+  seriesSections.sort((a, b) => {
+    const at = a.seriesTitle ?? '';
+    const bt = b.seriesTitle ?? '';
+    // Untitled (backend lookup degraded) sinks below every named show; the id
+    // is the deterministic tie-break so the order never depends on Map order.
+    if (at === '' || bt === '') return at === bt ? 0 : at === '' ? 1 : -1;
+    if (at !== bt) return at < bt ? -1 : 1;
+    return (a.seriesId ?? '') < (b.seriesId ?? '') ? -1 : 1;
+  });
+
+  return [...groups, ...seriesSections];
+}
+
+/**
+ * 三序同源紅線: the flattened grouped order. `seedList` re-orders the
+ * candidates STATE with this, so the display order, the submitted id order and
+ * the F18 feasibleCount cumulative walk are one and the same array — three
+ * independently-maintained orders are the drift this function exists to ban.
+ */
+export function groupOrder(candidates: GenerationCandidate[]): GenerationCandidate[] {
+  return groupCandidates(candidates).flatMap((g) => g.items);
+}

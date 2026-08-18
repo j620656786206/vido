@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -83,7 +84,8 @@ func TestAnalyze_EnumeratesMoviesAndEpisodes(t *testing.T) {
 	episodes := &stubEpisodeFinder{episodes: []models.Episode{episodeRow("e1", 4, 7, "/tv/s04e07.mkv", 45)}}
 	pred := &stubPredictor{probeRoute: RouteASR}
 
-	svc := NewGenerationCandidateService(movies, episodes, pred, false, 0, nil)
+	svc := NewGenerationCandidateService(
+		movies, episodes, nil, pred, false, 0, nil)
 	res, err := svc.Analyze(context.Background(), nil)
 	require.NoError(t, err)
 
@@ -98,7 +100,8 @@ func TestAnalyze_EnumeratesMoviesAndEpisodes(t *testing.T) {
 
 func TestAnalyze_SkipsItemsWithNoMediaFile(t *testing.T) {
 	movies := &stubMovieFinder{movies: []models.Movie{{ID: "m-nofile", Title: "Ghost"}}}
-	svc := NewGenerationCandidateService(movies, nil, &stubPredictor{probeRoute: RouteASR}, false, 0, nil)
+	svc := NewGenerationCandidateService(
+		movies, nil, nil, &stubPredictor{probeRoute: RouteASR}, false, 0, nil)
 
 	res, err := svc.Analyze(context.Background(), nil)
 	require.NoError(t, err)
@@ -114,7 +117,8 @@ func TestAnalyze_PersistedTracksAvoidProbing(t *testing.T) {
 	}}
 	pred := &stubPredictor{fromTracks: RouteExtract, probeRoute: RouteASR}
 
-	svc := NewGenerationCandidateService(movies, nil, pred, false, 0, nil)
+	svc := NewGenerationCandidateService(
+		movies, nil, nil, pred, false, 0, nil)
 	res, err := svc.Analyze(context.Background(), nil)
 	require.NoError(t, err)
 
@@ -137,7 +141,8 @@ func TestAnalyze_UnusableTracksJSONFallsBackToProbing(t *testing.T) {
 			movies := &stubMovieFinder{movies: []models.Movie{movieRow("m1", "T", "/m/a.mkv", 100, raw)}}
 			pred := &stubPredictor{fromTracks: RouteExtract, probeRoute: RouteASR}
 
-			svc := NewGenerationCandidateService(movies, nil, pred, false, 0, nil)
+			svc := NewGenerationCandidateService(
+				movies, nil, nil, pred, false, 0, nil)
 			_, err := svc.Analyze(context.Background(), nil)
 			require.NoError(t, err)
 			assert.Equal(t, []string{"/m/a.mkv"}, pred.probed)
@@ -151,7 +156,8 @@ func TestAnalyze_UnknownRuntimeIsFlaggedAndPricedAtTheStatedDefault(t *testing.T
 	movies := &stubMovieFinder{movies: []models.Movie{movieRow("m1", "No Runtime", "/m/a.mkv", 0, "")}}
 	pred := &stubPredictor{probeRoute: RouteASR}
 
-	svc := NewGenerationCandidateService(movies, nil, pred, false, 0, nil)
+	svc := NewGenerationCandidateService(
+		movies, nil, nil, pred, false, 0, nil)
 	res, err := svc.Analyze(context.Background(), nil)
 	require.NoError(t, err)
 
@@ -179,8 +185,10 @@ func TestAnalyze_ASRCostsMoreThanExtractForTheSameRuntime(t *testing.T) {
 func TestAnalyze_SelfHostedASRIsNotBilledAtTheHostedRate(t *testing.T) {
 	movies := &stubMovieFinder{movies: []models.Movie{movieRow("m1", "T", "/m/a.mkv", 100, "")}}
 
-	hosted := NewGenerationCandidateService(movies, nil, &stubPredictor{probeRoute: RouteASR}, false, 0, nil)
-	selfHosted := NewGenerationCandidateService(movies, nil, &stubPredictor{probeRoute: RouteASR}, true, 0, nil)
+	hosted := NewGenerationCandidateService(
+		movies, nil, nil, &stubPredictor{probeRoute: RouteASR}, false, 0, nil)
+	selfHosted := NewGenerationCandidateService(
+		movies, nil, nil, &stubPredictor{probeRoute: RouteASR}, true, 0, nil)
 
 	h, err := hosted.Analyze(context.Background(), nil)
 	require.NoError(t, err)
@@ -199,7 +207,8 @@ func TestAnalyze_SummaryTotalEqualsTheSumOfItsRows(t *testing.T) {
 	}}
 	pred := &stubPredictor{probeRoute: RouteASR}
 
-	svc := NewGenerationCandidateService(movies, nil, pred, false, 0, nil)
+	svc := NewGenerationCandidateService(
+		movies, nil, nil, pred, false, 0, nil)
 	res, err := svc.Analyze(context.Background(), nil)
 	require.NoError(t, err)
 
@@ -217,7 +226,8 @@ func TestAnalyze_SkippedItemsAreCountedNotQuoted(t *testing.T) {
 	movies := &stubMovieFinder{movies: []models.Movie{movieRow("m1", "Und Tagged", "/m/a.mkv", 120, "")}}
 	pred := &stubPredictor{probeRoute: RouteSkipped}
 
-	svc := NewGenerationCandidateService(movies, nil, pred, false, 0, nil)
+	svc := NewGenerationCandidateService(
+		movies, nil, nil, pred, false, 0, nil)
 	res, err := svc.Analyze(context.Background(), nil)
 	require.NoError(t, err)
 
@@ -232,7 +242,8 @@ func TestAnalyze_OneUnreadableFileDoesNotDenyTheRestAQuote(t *testing.T) {
 	movies := &stubMovieFinder{movies: []models.Movie{movieRow("m1", "Broken", "/m/broken.mkv", 120, "")}}
 	pred := &stubPredictor{probeErr: errors.New("ffprobe exploded")}
 
-	svc := NewGenerationCandidateService(movies, nil, pred, false, 0, nil)
+	svc := NewGenerationCandidateService(
+		movies, nil, nil, pred, false, 0, nil)
 	res, err := svc.Analyze(context.Background(), nil)
 	require.NoError(t, err, "a per-file failure must not fail the whole sweep")
 	assert.Empty(t, res.Candidates, "…but an unreadable file must not be priced either")
@@ -240,7 +251,8 @@ func TestAnalyze_OneUnreadableFileDoesNotDenyTheRestAQuote(t *testing.T) {
 
 func TestAnalyze_EnumerationFailurePropagates(t *testing.T) {
 	movies := &stubMovieFinder{err: errors.New("no such column")}
-	svc := NewGenerationCandidateService(movies, nil, &stubPredictor{}, false, 0, nil)
+	svc := NewGenerationCandidateService(
+		movies, nil, nil, &stubPredictor{}, false, 0, nil)
 
 	_, err := svc.Analyze(context.Background(), nil)
 	require.Error(t, err, "a broken enumeration means the list is incomplete — showing a short list as if it were the library is worse than an error")
@@ -254,7 +266,8 @@ func TestAnalyze_ReportsProgressForEveryItem(t *testing.T) {
 	pred := &stubPredictor{probeRoute: RouteASR}
 
 	var seen [][2]int
-	svc := NewGenerationCandidateService(movies, nil, pred, false, 0, nil)
+	svc := NewGenerationCandidateService(
+		movies, nil, nil, pred, false, 0, nil)
 	_, err := svc.Analyze(context.Background(), func(done, total int) {
 		seen = append(seen, [2]int{done, total})
 	})
@@ -272,7 +285,8 @@ func TestAnalyze_CancellationStopsTheSweep(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	svc := NewGenerationCandidateService(movies, nil, &stubPredictor{probeRoute: RouteASR}, false, 0, nil)
+	svc := NewGenerationCandidateService(
+		movies, nil, nil, &stubPredictor{probeRoute: RouteASR}, false, 0, nil)
 	_, err := svc.Analyze(ctx, nil)
 	require.ErrorIs(t, err, context.Canceled)
 }
@@ -308,7 +322,8 @@ func analysisService(t *testing.T, pred RoutePredictor, n int) *GenerationCandid
 		id := string(rune('a' + i))
 		movies = append(movies, movieRow(id, "T"+id, "/m/"+id+".mkv", 100, ""))
 	}
-	return NewGenerationCandidateService(&stubMovieFinder{movies: movies}, nil, pred, false, 0, nil)
+	return NewGenerationCandidateService(
+		&stubMovieFinder{movies: movies}, nil, nil, pred, false, 0, nil)
 }
 
 func TestStartAnalysis_IsSingleFlight(t *testing.T) {
@@ -360,7 +375,7 @@ func TestCancelAnalysis_DiscardsThePartialResult(t *testing.T) {
 
 func TestStartAnalysis_EnumerationFailureIsReportedNotSilentlyEmpty(t *testing.T) {
 	svc := NewGenerationCandidateService(
-		&stubMovieFinder{err: errors.New("no such column")}, nil, &stubPredictor{}, false, 0, nil)
+		&stubMovieFinder{err: errors.New("no such column")}, nil, nil, &stubPredictor{}, false, 0, nil)
 	require.NoError(t, svc.StartAnalysis())
 
 	require.Eventually(t, func() bool { return svc.Snapshot().Status == AnalysisFailed },
@@ -458,7 +473,7 @@ func TestCancelThenRestart_TheNewRunIsStillCancellable(t *testing.T) {
 // consent flow already makes, so no new endpoint exists for one float.
 func TestSnapshot_CarriesTheConfiguredDefaultBudget(t *testing.T) {
 	svc := NewGenerationCandidateService(
-		&stubMovieFinder{}, nil, &stubPredictor{}, false, 7.5, nil)
+		&stubMovieFinder{}, nil, nil, &stubPredictor{}, false, 7.5, nil)
 
 	snap := svc.Snapshot()
 	assert.Equal(t, AnalysisIdle, snap.Status)
@@ -468,9 +483,144 @@ func TestSnapshot_CarriesTheConfiguredDefaultBudget(t *testing.T) {
 
 func TestSnapshot_DefaultBudgetSerializesAsSnakeCase(t *testing.T) {
 	svc := NewGenerationCandidateService(
-		&stubMovieFinder{}, nil, &stubPredictor{}, false, 5, nil)
+		&stubMovieFinder{}, nil, nil, &stubPredictor{}, false, 5, nil)
 	raw, err := json.Marshal(svc.Snapshot())
 	require.NoError(t, err)
 	assert.Contains(t, string(raw), `"default_budget_usd":5`,
 		"Rule 6 wire shape — the FE reads default_budget_usd")
+}
+
+// ─── sub-5-3 AC #1: candidates carry series identity (additive, no bump) ────
+
+// stubSeriesResolver counts lookups so the per-sweep memo is falsifiable.
+type stubSeriesResolver struct {
+	titles map[string]string
+	err    error
+	calls  int
+}
+
+func (f *stubSeriesResolver) FindByID(_ context.Context, id string) (*models.Series, error) {
+	f.calls++
+	if f.err != nil {
+		return nil, f.err
+	}
+	title, ok := f.titles[id]
+	if !ok {
+		return nil, errors.New("series not found")
+	}
+	return &models.Series{ID: id, Title: title}, nil
+}
+
+func seriesEpisodeRow(id, seriesID string, season, ep int, path string) models.Episode {
+	e := episodeRow(id, season, ep, path, 45)
+	e.SeriesID = seriesID
+	e.EpisodeNumber = ep
+	return e
+}
+
+func TestAnalyze_EpisodeCandidatesCarrySeriesIdentity(t *testing.T) {
+	episodes := &stubEpisodeFinder{episodes: []models.Episode{
+		seriesEpisodeRow("e1", "srs-1", 1, 1, "/tv/a/s01e01.mkv"),
+		// S00 specials: season number ZERO is a legal value and must survive
+		// the wire (the field is deliberately NOT omitempty).
+		seriesEpisodeRow("e2", "srs-1", 0, 1, "/tv/a/s00e01.mkv"),
+	}}
+	series := &stubSeriesResolver{titles: map[string]string{"srs-1": "怪奇物語"}}
+	svc := NewGenerationCandidateService(
+		nil, episodes, series, &stubPredictor{probeRoute: RouteASR}, false, 0, nil)
+
+	result, err := svc.Analyze(context.Background(), nil)
+	require.NoError(t, err)
+	require.Len(t, result.Candidates, 2)
+
+	for _, c := range result.Candidates {
+		assert.Equal(t, "srs-1", c.SeriesID)
+		assert.Equal(t, "怪奇物語", c.SeriesTitle)
+	}
+	seasons := []int{result.Candidates[0].SeasonNumber, result.Candidates[1].SeasonNumber}
+	assert.ElementsMatch(t, []int{1, 0}, seasons, "S00 must arrive as 0, not be dropped")
+}
+
+func TestAnalyze_MovieCandidatesCarryNoSeriesIdentity(t *testing.T) {
+	movies := &stubMovieFinder{movies: []models.Movie{movieRow("m1", "電影甲", "/movies/a.mkv", 100, "")}}
+	series := &stubSeriesResolver{}
+	svc := NewGenerationCandidateService(
+		movies, nil, series, &stubPredictor{probeRoute: RouteExtract}, false, 0, nil)
+
+	result, err := svc.Analyze(context.Background(), nil)
+	require.NoError(t, err)
+	require.Len(t, result.Candidates, 1)
+	assert.Empty(t, result.Candidates[0].SeriesID)
+	assert.Empty(t, result.Candidates[0].SeriesTitle)
+	assert.Zero(t, series.calls, "movies must not trigger series lookups")
+}
+
+func TestAnalyze_SeriesTitleLookupIsMemoizedPerSweep(t *testing.T) {
+	// 24 episodes across TWO series — the title lookup must run once per
+	// series, not once per episode (a 20-season show must not mean 500 reads).
+	var eps []models.Episode
+	for i := 1; i <= 12; i++ {
+		eps = append(eps, seriesEpisodeRow(fmt.Sprintf("a%d", i), "srs-a", 1, i, fmt.Sprintf("/tv/a/e%d.mkv", i)))
+		eps = append(eps, seriesEpisodeRow(fmt.Sprintf("b%d", i), "srs-b", 1, i, fmt.Sprintf("/tv/b/e%d.mkv", i)))
+	}
+	series := &stubSeriesResolver{titles: map[string]string{"srs-a": "劇甲", "srs-b": "劇乙"}}
+	svc := NewGenerationCandidateService(
+		nil, &stubEpisodeFinder{episodes: eps}, series, &stubPredictor{probeRoute: RouteASR}, false, 0, nil)
+
+	_, err := svc.Analyze(context.Background(), nil)
+	require.NoError(t, err)
+	assert.Equal(t, 2, series.calls, "one lookup per distinct series per sweep")
+}
+
+// Rule 13 case 3: a missing/failed series row degrades THAT ROW's title to
+// empty — it must never fail the sweep or damage other rows.
+func TestAnalyze_SeriesTitleFailureDegradesRowNotSweep(t *testing.T) {
+	episodes := &stubEpisodeFinder{episodes: []models.Episode{
+		seriesEpisodeRow("e1", "srs-gone", 1, 1, "/tv/x/e1.mkv"),
+	}}
+	series := &stubSeriesResolver{err: errors.New("db closed")}
+	svc := NewGenerationCandidateService(
+		nil, episodes, series, &stubPredictor{probeRoute: RouteASR}, false, 0, nil)
+
+	result, err := svc.Analyze(context.Background(), nil)
+	require.NoError(t, err, "a title lookup failure must not fail the sweep")
+	require.Len(t, result.Candidates, 1)
+	assert.Equal(t, "srs-gone", result.Candidates[0].SeriesID, "the GROUPING key survives — only the label degrades")
+	assert.Empty(t, result.Candidates[0].SeriesTitle)
+}
+
+// A nil resolver (legacy wiring, or a test that does not care) degrades to
+// empty identity — never panics.
+func TestAnalyze_NilSeriesResolverDegradesToFlat(t *testing.T) {
+	episodes := &stubEpisodeFinder{episodes: []models.Episode{
+		seriesEpisodeRow("e1", "srs-1", 1, 1, "/tv/a/e1.mkv"),
+	}}
+	svc := NewGenerationCandidateService(
+		nil, episodes, nil, &stubPredictor{probeRoute: RouteASR}, false, 0, nil)
+
+	result, err := svc.Analyze(context.Background(), nil)
+	require.NoError(t, err)
+	require.Len(t, result.Candidates, 1)
+	assert.Equal(t, "srs-1", result.Candidates[0].SeriesID)
+	assert.Empty(t, result.Candidates[0].SeriesTitle)
+}
+
+func TestGenerationCandidate_SeriesFieldsSerializeAsSnakeCase(t *testing.T) {
+	c := GenerationCandidate{MediaID: "e1", SeriesID: "srs-1", SeriesTitle: "劇甲", SeasonNumber: 0}
+	raw, err := json.Marshal(c)
+	require.NoError(t, err)
+	s := string(raw)
+	assert.Contains(t, s, `"series_id":"srs-1"`)
+	assert.Contains(t, s, `"series_title":"劇甲"`)
+	assert.Contains(t, s, `"season_number":0`, "S00 must serialize — season_number is NOT omitempty")
+	assert.Contains(t, s, `"episode_number":0`, "episode_number ships unconditionally too — same zero-value rationale")
+}
+
+func TestGenerationCandidate_MovieWireShapeOmitsSeriesKeys(t *testing.T) {
+	c := GenerationCandidate{MediaID: "m1", MediaType: models.SubtitleRunMediaMovie}
+	raw, err := json.Marshal(c)
+	require.NoError(t, err)
+	s := string(raw)
+	assert.NotContains(t, s, "series_id", "movie rows keep the pre-sub-5-3 shape minus nothing — series keys are omitempty")
+	assert.NotContains(t, s, "series_title")
 }

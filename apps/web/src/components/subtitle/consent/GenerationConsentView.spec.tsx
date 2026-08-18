@@ -365,3 +365,116 @@ describe('GenerationConsentView budget prefill (sub-5-1 AC #6)', () => {
     expect(onStartBatch).toHaveBeenCalledWith([A], 3.75);
   });
 });
+
+// ---------------------------------------------------------------------------
+// sub-5-3 — 三序同源 at the view seam + the error-phase retry pre-existing fix
+// ---------------------------------------------------------------------------
+
+describe('GenerationConsentView — grouped order (sub-5-3 AC #2)', () => {
+  const SRS = 'b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e';
+  const EP1 = '9a0bfe08-1acd-4f9e-9fed-a7c8d9e0f201';
+  const EP2 = '9a0bfe08-1acd-4f9e-9fed-a7c8d9e0f202';
+
+  const GROUPED_READY: CandidateAnalysisSnapshot = {
+    status: 'ready',
+    analyzed: 3,
+    total: 3,
+    result: {
+      candidates: [
+        // Backend (title,id) order interleaves the episode BEFORE the movie —
+        // grouped order must put the movie first, then the series run.
+        {
+          mediaId: EP2,
+          mediaType: 'episode',
+          title: 'Ep Beta S01E02',
+          route: 'asr',
+          runtimeMinutes: 50,
+          runtimeKnown: true,
+          estimatedUsd: 0.3,
+          seriesId: SRS,
+          seriesTitle: '怪奇物語',
+          seasonNumber: 1,
+          episodeNumber: 2,
+        },
+        {
+          mediaId: A,
+          mediaType: 'movie',
+          title: '沙丘：第二部',
+          route: 'extract',
+          runtimeMinutes: 166,
+          runtimeKnown: true,
+          estimatedUsd: 0.05,
+        },
+        {
+          mediaId: EP1,
+          mediaType: 'episode',
+          title: 'Ep Alpha S01E01',
+          route: 'asr',
+          runtimeMinutes: 50,
+          runtimeKnown: true,
+          estimatedUsd: 0.3,
+          seriesId: SRS,
+          seriesTitle: '怪奇物語',
+          seasonNumber: 1,
+          episodeNumber: 1,
+        },
+      ],
+      summary: {
+        extractCount: 1,
+        asrCount: 2,
+        skippedCount: 0,
+        estimatedTotalUsd: 0.65,
+        selfHostedAsr: false,
+      },
+    },
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h.analysisState.status = 'idle';
+  });
+
+  it('submits ids in GROUPED order — display, submission and the feasible walk share one order', async () => {
+    mocked.getGenerationCandidates.mockResolvedValue(GROUPED_READY);
+    const onStartBatch = vi.fn();
+    renderView({ onStartBatch });
+
+    // Select everything, then start → confirm.
+    const selectAll = await screen.findByTestId('consent-select-all');
+    fireEvent.click(selectAll);
+    fireEvent.click(screen.getByTestId('consent-start-btn'));
+    fireEvent.click(await screen.findByTestId('consent-confirm-start'));
+
+    expect(onStartBatch).toHaveBeenCalledTimes(1);
+    const [ids] = onStartBatch.mock.calls[0];
+    // movie first (flat section), then the series episodes in E01→E02 order —
+    // NOT the backend's title order (which began with EP2).
+    expect(ids).toEqual([A, EP1, EP2]);
+  });
+
+  it('renders the series header row from the grouped snapshot', async () => {
+    mocked.getGenerationCandidates.mockResolvedValue(GROUPED_READY);
+    renderView();
+    expect(await screen.findByTestId(`consent-group-${SRS}`)).toHaveTextContent('怪奇物語');
+  });
+});
+
+describe('GenerationConsentView — error-phase 重試 (pre-existing fix, sub-5-3)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h.analysisState.status = 'idle';
+  });
+
+  it('重試 actually re-bootstraps instead of throwing on the missing guard param', async () => {
+    // First load fails → error phase.
+    mocked.getGenerationCandidates.mockRejectedValueOnce(new Error('網路爆炸'));
+    renderView();
+    expect(await screen.findByTestId('consent-load-error')).toHaveTextContent('網路爆炸');
+
+    // Retry succeeds: bootstrap must run to the list phase, not TypeError.
+    mocked.getGenerationCandidates.mockResolvedValue(READY);
+    fireEvent.click(screen.getByRole('button', { name: '重試' }));
+
+    expect(await screen.findByTestId('consent-candidate-list')).toBeInTheDocument();
+  });
+});

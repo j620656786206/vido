@@ -110,6 +110,8 @@ import {
   GenerationBatchDialogV2,
   GenerationBatchPanelV2,
   deriveRowStates,
+  failedRowIds,
+  remainingIds,
   type GenerationBatchPanelV2Props,
 } from './GenerationBatchDialogV2';
 import { subtitleService, type GenerationBatchItem } from '../../services/subtitleService';
@@ -595,5 +597,195 @@ describe('GenerationBatchDialogV2 (container)', () => {
     rerender();
     const stub = await screen.findByTestId('consent-view-stub');
     expect(stub).toHaveAttribute('data-force-analyze', 'true');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// sub-5-3 — failed-retry + resume preselection
+// ---------------------------------------------------------------------------
+
+describe('failedRowIds / remainingIds (sub-5-3 AC #3/#4)', () => {
+  it('failedRowIds = rows RENDERED failed at complete (matches what the user sees)', () => {
+    const progress = progressOf({ status: 'complete', successCount: 3, failCount: 2 });
+    expect(failedRowIds(ITEMS, progress, new Set([M2, M4]))).toEqual([M2, M4]);
+  });
+
+  it('budget_ceiling: an interrupted in-flight item renders 已暫停, so it is REMAINING, not failed', () => {
+    // pausedCount=3 → the last 3 rows are paused; M3 (the interrupted item)
+    // sits in that tail even though its per-item stream reported failed.
+    const progress = progressOf({ status: 'budget_ceiling', pausedCount: 3 });
+    expect(failedRowIds(ITEMS, progress, new Set([M3]))).toEqual([]);
+    expect(remainingIds(ITEMS, progress, new Set([M3]))).toEqual([M3, M4, M5]);
+  });
+
+  it('remainingIds includes failed + paused + stopped rows, never the done ones', () => {
+    const ceiling = progressOf({ status: 'budget_ceiling', pausedCount: 2 });
+    expect(remainingIds(ITEMS, ceiling, new Set([M1]))).toEqual([M1, M4, M5]);
+
+    const errored = progressOf({ status: 'error', currentMediaId: M3 });
+    expect(remainingIds(ITEMS, errored, new Set([M2]))).toEqual([M2, M3, M4, M5]);
+  });
+});
+
+describe('GenerationBatchPanelV2 — 重試失敗項目 (sub-5-3 AC #3)', () => {
+  it('renders the retry button at a terminal when onRetryFailed is provided', () => {
+    const onRetryFailed = vi.fn();
+    renderPanel({
+      status: 'complete',
+      progress: progressOf({ status: 'complete', successCount: 4, failCount: 1 }),
+      items: ITEMS,
+      failedIds: new Set([M2]),
+      onRetryFailed,
+    });
+
+    fireEvent.click(screen.getByTestId('gen-batch-retry-failed-btn'));
+    expect(onRetryFailed).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT render the button when onRetryFailed is absent (attach mode / zero failures)', () => {
+    renderPanel({
+      status: 'complete',
+      progress: progressOf({ status: 'complete', successCount: 5 }),
+      items: ITEMS,
+    });
+    expect(screen.queryByTestId('gen-batch-retry-failed-btn')).toBeNull();
+  });
+
+  it('[CR M1] never renders at budget_ceiling — 下次繼續 owns recovery there (failed ⊂ remaining)', () => {
+    renderPanel({
+      status: 'budget_ceiling',
+      progress: progressOf({ status: 'budget_ceiling', pausedCount: 2 }),
+      items: ITEMS,
+      failedIds: new Set([M1]),
+      onRetryFailed: vi.fn(),
+    });
+    expect(screen.queryByTestId('gen-batch-retry-failed-btn')).toBeNull();
+    expect(screen.getByTestId('gen-batch-resume-btn')).toBeInTheDocument();
+  });
+
+  it('never renders the button while running — a retry only exists at a terminal', () => {
+    renderPanel({
+      status: 'running',
+      progress: progressOf({ status: 'running' }),
+      items: ITEMS,
+      failedIds: new Set([M1]),
+      onRetryFailed: vi.fn(),
+    });
+    expect(screen.queryByTestId('gen-batch-retry-failed-btn')).toBeNull();
+  });
+});
+
+describe('GenerationBatchDialogV2 — retry/resume preselection (sub-5-3 AC #3/#4)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h.batchState.status = 'idle';
+    h.batchState.currentMediaId = null;
+    h.batchState.pausedCount = 0;
+    h.batchState.totalItems = 0;
+    h.itemState.phase = 'idle';
+    mocked.getGenerationBatchStatus.mockResolvedValue({ running: false, progress: null });
+  });
+
+  function renderRetryDialog() {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const makeUi = () => (
+      <QueryClientProvider client={queryClient}>
+        <GenerationBatchDialogV2 open onOpenChange={vi.fn()} />
+      </QueryClientProvider>
+    );
+    const view = render(makeUi());
+    return { rerender: () => view.rerender(makeUi()) };
+  }
+
+  /** Drive a real consented start so the container owns items[]. */
+  async function startOwnedBatch(rerender: () => void) {
+    mocked.startGenerationBatch.mockResolvedValue({
+      conflict: false,
+      result: { batchId: 'gb-53', totalItems: 5, items: ITEMS },
+    });
+    fireEvent.click(await screen.findByTestId('consent-stub-start'));
+    await waitFor(() => expect(h.batchStartTracking).toHaveBeenCalled());
+    h.batchState.status = 'running';
+    h.batchState.totalItems = 5;
+    h.batchState.currentMediaId = M2;
+    rerender();
+  }
+
+  it('重試失敗項目 returns to consent with the failed rows preselected + forceAnalyze — and NEVER starts a batch itself (同意紅線)', async () => {
+    const { rerender } = renderRetryDialog();
+    await startOwnedBatch(rerender);
+
+    // M2 fails while running, then the batch completes.
+    h.itemState.phase = 'failed';
+    rerender();
+    h.batchState.status = 'complete';
+    h.batchState.currentMediaId = null;
+    h.batchState.successCount = 4;
+    h.batchState.failCount = 1;
+    rerender();
+
+    const callsBefore = mocked.startGenerationBatch.mock.calls.length;
+    fireEvent.click(await screen.findByTestId('gen-batch-retry-failed-btn'));
+    h.batchState.status = 'idle';
+    rerender();
+
+    const stub = await screen.findByTestId('consent-view-stub');
+    expect(stub.getAttribute('data-preselected')).toBe(M2);
+    expect(stub.getAttribute('data-force-analyze')).toBe('true');
+    // 同意紅線: the retry itself started NOTHING — only F16 confirm can.
+    expect(mocked.startGenerationBatch.mock.calls.length).toBe(callsBefore);
+  });
+
+  it('下次繼續 preselects the unfinished rows instead of dropping the consented picks', async () => {
+    const { rerender } = renderRetryDialog();
+    await startOwnedBatch(rerender);
+
+    h.batchState.status = 'budget_ceiling';
+    h.batchState.pausedCount = 2;
+    rerender();
+
+    fireEvent.click(await screen.findByTestId('gen-batch-resume-btn'));
+    h.batchState.status = 'idle';
+    rerender();
+
+    const stub = await screen.findByTestId('consent-view-stub');
+    expect(stub.getAttribute('data-preselected')).toBe([M4, M5].join(','));
+    expect(stub.getAttribute('data-force-analyze')).toBe('true');
+  });
+
+  it('a consented start after a resume clears the carried preselection', async () => {
+    const { rerender } = renderRetryDialog();
+    await startOwnedBatch(rerender);
+
+    h.batchState.status = 'budget_ceiling';
+    h.batchState.pausedCount = 1;
+    rerender();
+    fireEvent.click(await screen.findByTestId('gen-batch-resume-btn'));
+    h.batchState.status = 'idle';
+    rerender();
+
+    // Consent starts again — retryIds are consumed by the start.
+    mocked.startGenerationBatch.mockResolvedValue({
+      conflict: false,
+      result: { batchId: 'gb-54', totalItems: 1, items: [ITEMS[4]] },
+    });
+    fireEvent.click(await screen.findByTestId('consent-stub-start'));
+    await waitFor(() => expect(mocked.startGenerationBatch).toHaveBeenCalledTimes(2));
+    h.batchState.status = 'running';
+    h.batchState.currentMediaId = M5;
+    rerender();
+
+    // A clean ceiling (nothing unfinished) resumes with NO stale carryover.
+    h.batchState.status = 'budget_ceiling';
+    h.batchState.pausedCount = 0;
+    h.batchState.totalItems = 1;
+    rerender();
+    fireEvent.click(await screen.findByTestId('gen-batch-resume-btn'));
+    h.batchState.status = 'idle';
+    rerender();
+    const stub = await screen.findByTestId('consent-view-stub');
+    expect(stub.getAttribute('data-preselected')).toBe('');
   });
 });

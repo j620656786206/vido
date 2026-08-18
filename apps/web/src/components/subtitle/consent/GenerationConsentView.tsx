@@ -35,6 +35,7 @@ import { ConfirmGenerationDialog } from './ConfirmGenerationDialog';
 import {
   computeTotals,
   defaultSelection,
+  groupOrder,
   listableCandidates,
   parseBudgetInput,
   type ConsentRouteFilter,
@@ -93,7 +94,11 @@ export function GenerationConsentView({
 
   const seedList = useCallback(
     (all: GenerationCandidate[]) => {
-      const listable = listableCandidates(all);
+      // 三序同源 (sub-5-3 AC #2): re-order the STATE itself into grouped
+      // order, so display, submission (handleConfirm's filter walk) and the
+      // F18 feasibleCount cumulative walk inherit ONE order with zero further
+      // changes — a render-layer mapping would leave three orders to drift.
+      const listable = groupOrder(listableCandidates(all));
       setCandidates(listable);
       if (listable.length === 0) {
         setPhase('empty');
@@ -226,6 +231,18 @@ export function GenerationConsentView({
     });
   }, []);
 
+  /** 整劇/整季 toggle (sub-5-3): set the group's ids to one target state. */
+  const handleToggleGroup = useCallback((mediaIds: string[], next: boolean) => {
+    setSelectedIds((prev) => {
+      const nextSet = new Set(prev);
+      for (const id of mediaIds) {
+        if (next) nextSet.add(id);
+        else nextSet.delete(id);
+      }
+      return nextSet;
+    });
+  }, []);
+
   const handleToggleAll = useCallback(() => {
     setSelectedIds((prev) =>
       prev.size === candidates.length ? new Set() : new Set(candidates.map((c) => c.mediaId))
@@ -325,6 +342,7 @@ export function GenerationConsentView({
               starting={starting}
               startError={startError}
               onToggle={handleToggle}
+              onToggleGroup={handleToggleGroup}
               onToggleAll={handleToggleAll}
               onSelectAllExtract={handleSelectAllExtract}
               onClearSelection={handleClearSelection}
@@ -357,7 +375,10 @@ export function GenerationConsentView({
               </p>
               <button
                 type="button"
-                onClick={() => void bootstrap()}
+                // Pre-existing fix (sub-5-3): bootstrap REQUIRES the isCancelled
+                // guard param (CR sub-4-3 M3 added it) — calling it bare threw
+                // TypeError inside the try, so 重試 just re-rendered the error.
+                onClick={() => void bootstrap(() => false)}
                 className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)]"
               >
                 重試

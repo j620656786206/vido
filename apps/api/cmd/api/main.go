@@ -800,6 +800,9 @@ func main() {
 	// has no per-minute price, and quote vs invoice must come from one answer.
 	generationCandidateService := services.NewGenerationCandidateService(
 		repos.Movies, repos.Episodes,
+		// sub-5-3 AC #1: the F15 group headers' series titles — one memoized
+		// lookup per series per sweep, nil-safe fail-soft inside the service.
+		repos.Series,
 		routePredictorAdapter{router: subtitle.NewRouter(
 			ffprobeService, subtitle.NewExtractor(0, slog.Default()), slog.Default())},
 		ai.IsSelfHostedASRBaseURL(cfg.ASRBaseURL),

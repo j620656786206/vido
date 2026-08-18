@@ -14,11 +14,18 @@
  * list-order prefix-sum estimate (consentSelection.feasibleCount) and the copy
  * never promises the ceiling cannot be exceeded.
  */
+import { useMemo } from 'react';
 import { CircleAlert, Loader2 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { usd } from '../../../lib/currency';
 import type { GenerationCandidate } from '../../../services/subtitleService';
-import { applyRouteFilter, type ConsentRouteFilter, type ConsentTotals } from './consentSelection';
+import {
+  applyRouteFilter,
+  computeTotals,
+  groupCandidates,
+  type ConsentRouteFilter,
+  type ConsentTotals,
+} from './consentSelection';
 
 export interface CandidateListPanelProps {
   /** Listable candidates (extract+asr, backend order = submission order). */
@@ -34,6 +41,12 @@ export interface CandidateListPanelProps {
   starting?: boolean;
   startError?: string | null;
   onToggle: (mediaId: string) => void;
+  /**
+   * 整劇/整季 group toggle (sub-5-3 AC #2) — operates on the group's ALL
+   * listable items, NOT the filtered-visible subset: the route chips are a
+   * view filter only, same semantics as 全選. `next` is the target state.
+   */
+  onToggleGroup: (mediaIds: string[], next: boolean) => void;
   onToggleAll: () => void;
   onSelectAllExtract: () => void;
   onClearSelection: () => void;
@@ -107,6 +120,100 @@ function CandidateRow({
   );
 }
 
+/**
+ * Series / season header row (sub-5-3 AC #2). Selection state and the 已選
+ * subtotal are computed over the group's ALL items (chips are a view filter);
+ * amounts come verbatim from estimated_usd — no second totals engine.
+ */
+function GroupHeaderRow({
+  testid,
+  label,
+  items,
+  selectedIds,
+  onToggleGroup,
+  season = false,
+}: {
+  testid: string;
+  label: string;
+  items: GenerationCandidate[];
+  selectedIds: ReadonlySet<string>;
+  onToggleGroup: (mediaIds: string[], next: boolean) => void;
+  season?: boolean;
+}) {
+  // CR H1: the ONE totals engine (三處金額同源, extended to group scope) —
+  // route counts AND the subtotal both come from computeTotals over this
+  // group's items, never from a second hand-rolled sum. `null` ceiling: the
+  // budget verdict is a whole-list concern the footer owns.
+  const groupTotals = computeTotals(items, selectedIds, null);
+  const all = items.length > 0 && groupTotals.selectedCount === items.length;
+  const some = groupTotals.selectedCount > 0 && !all;
+  const ids = items.map((i) => i.mediaId);
+  return (
+    <li
+      data-testid={testid}
+      className={cn(
+        'flex items-center gap-3 rounded-[var(--radius-lg)] px-3.5',
+        season
+          ? 'ml-6 min-h-[40px] bg-[var(--bg-tertiary)]/60'
+          : 'min-h-[44px] bg-[var(--bg-tertiary)]'
+      )}
+    >
+      {/* Tri-state via the NATIVE checked + indeterminate pair — the shipped
+          consent-select-all idiom. CR L3: an extra aria-checked on a native
+          checkbox is redundant ARIA (the browser already exposes mixed from
+          `indeterminate`) and risks desyncing from the real state. */}
+      <input
+        type="checkbox"
+        aria-label={season ? `選取${label}` : `選取整部 ${label}`}
+        checked={all}
+        ref={(el) => {
+          if (el) el.indeterminate = some;
+        }}
+        onChange={() => onToggleGroup(ids, !all)}
+        className="h-4 w-4 shrink-0 accent-[var(--accent-primary)]"
+      />
+      <span
+        className={cn(
+          'min-w-0 flex-1 truncate',
+          season
+            ? 'text-[13px] text-[var(--text-secondary)]'
+            : 'text-sm font-semibold text-[var(--text-primary)]'
+        )}
+      >
+        {label}
+      </span>
+      {/* Route composition of what is SELECTED here — the "will ticking this
+          cost me money?" signal, in the row vocabulary (抽取 / 語音辨識). */}
+      <span
+        data-testid={`${testid}-routes`}
+        className="flex shrink-0 items-center gap-1.5 text-[11px]"
+      >
+        {groupTotals.selectedExtractCount > 0 && (
+          <span className="rounded-[var(--radius-sm)] bg-[var(--success-tint)] px-1.5 py-0.5 text-[var(--success)]">
+            抽取 {groupTotals.selectedExtractCount}
+          </span>
+        )}
+        {groupTotals.selectedAsrCount > 0 && (
+          <span className="rounded-[var(--radius-sm)] bg-[var(--warning-tint)] px-1.5 py-0.5 text-[var(--warning)]">
+            語音辨識 {groupTotals.selectedAsrCount}
+          </span>
+        )}
+      </span>
+      <span
+        data-testid={`${testid}-selected`}
+        className="shrink-0 font-mono text-xs tabular-nums text-[var(--text-muted)]"
+      >
+        已選 {groupTotals.selectedCount}/{items.length} · {usd(groupTotals.selectedTotalUsd)}
+      </span>
+    </li>
+  );
+}
+
+/** S00 is the conventional specials season. */
+function seasonLabel(n: number): string {
+  return n === 0 ? '特別篇' : `第 ${n} 季`;
+}
+
 export function CandidateListPanel({
   candidates,
   selectedIds,
@@ -117,6 +224,7 @@ export function CandidateListPanel({
   starting = false,
   startError = null,
   onToggle,
+  onToggleGroup,
   onToggleAll,
   onSelectAllExtract,
   onClearSelection,
@@ -125,6 +233,11 @@ export function CandidateListPanel({
   onStartClick,
 }: CandidateListPanelProps) {
   const visible = applyRouteFilter(candidates, filter);
+  // CR L2: grouping sorts every series bucket, and this panel re-renders on
+  // each budget-input keystroke — without the memo a 1,200-item library would
+  // regroup + rebuild the visibility set per character typed.
+  const visibleIds = useMemo(() => new Set(visible.map((c) => c.mediaId)), [visible]);
+  const groups = useMemo(() => groupCandidates(candidates), [candidates]);
   const extractTotal = candidates.filter((c) => c.route === 'extract').length;
   const asrTotal = candidates.length - extractTotal;
   const allSelected = totals.selectedCount === candidates.length && candidates.length > 0;
@@ -231,16 +344,58 @@ export function CandidateListPanel({
           </button>
         </div>
 
-        {/* Candidate list */}
+        {/* Candidate list — grouped sections (sub-5-3 AC #2). Display order is
+            the groupOrder the container already re-sorted the candidates STATE
+            into, so rows here render in submission (= feasible-walk) order;
+            the chips only decide row VISIBILITY, never group membership. */}
         <ul className="flex flex-col gap-2" data-testid="consent-candidate-list">
-          {visible.map((c) => (
-            <CandidateRow
-              key={c.mediaId}
-              candidate={c}
-              checked={selectedIds.has(c.mediaId)}
-              onToggle={onToggle}
-            />
-          ))}
+          {groups.flatMap((group) => {
+            const rowsOf = (items: GenerationCandidate[]) =>
+              items
+                .filter((c) => visibleIds.has(c.mediaId))
+                .map((c) => (
+                  <CandidateRow
+                    key={c.mediaId}
+                    candidate={c}
+                    checked={selectedIds.has(c.mediaId)}
+                    onToggle={onToggle}
+                  />
+                ));
+
+            if (group.kind === 'movies') return rowsOf(group.items);
+            if (!group.items.some((c) => visibleIds.has(c.mediaId))) return [];
+
+            const nodes = [
+              <GroupHeaderRow
+                key={`series-${group.seriesId}`}
+                testid={`consent-group-${group.seriesId}`}
+                label={group.seriesTitle || '未知影集'}
+                items={group.items}
+                selectedIds={selectedIds}
+                onToggleGroup={onToggleGroup}
+              />,
+            ];
+            if (group.showSeasonHeaders && group.seasons) {
+              for (const season of group.seasons) {
+                if (!season.items.some((c) => visibleIds.has(c.mediaId))) continue;
+                nodes.push(
+                  <GroupHeaderRow
+                    key={`season-${group.seriesId}-${season.seasonNumber}`}
+                    testid={`consent-season-${group.seriesId}-${season.seasonNumber}`}
+                    label={seasonLabel(season.seasonNumber)}
+                    items={season.items}
+                    selectedIds={selectedIds}
+                    onToggleGroup={onToggleGroup}
+                    season
+                  />,
+                  ...rowsOf(season.items)
+                );
+              }
+            } else {
+              nodes.push(...rowsOf(group.items));
+            }
+            return nodes;
+          })}
         </ul>
 
         <p className="text-xs text-[var(--text-muted)]">金額為預估值，實際費用依內容長度而定。</p>

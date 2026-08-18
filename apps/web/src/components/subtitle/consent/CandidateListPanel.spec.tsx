@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { CandidateListPanel, type CandidateListPanelProps } from './CandidateListPanel';
 import { computeTotals } from './consentSelection';
 import type { GenerationCandidate } from '../../../services/subtitleService';
@@ -60,6 +60,7 @@ function renderPanel(overrides?: Partial<CandidateListPanelProps>) {
     budgetText,
     budgetUsd,
     onToggle: vi.fn(),
+    onToggleGroup: vi.fn(),
     onToggleAll: vi.fn(),
     onSelectAllExtract: vi.fn(),
     onClearSelection: vi.fn(),
@@ -158,5 +159,193 @@ describe('CandidateListPanel F18 footer hint (third design round)', () => {
   it('normal state keeps the hint', () => {
     renderPanel();
     expect(screen.getByText('達到上限會自動暫停，可稍後續跑')).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// sub-5-3 AC #2 — series/season group headers
+// ---------------------------------------------------------------------------
+
+const S1E1 = '9a0bfe08-1acd-4f9e-9fed-a7c8d9e0f107';
+const S1E2 = '9a0bfe08-1acd-4f9e-9fed-a7c8d9e0f108';
+const S2E1 = '9a0bfe08-1acd-4f9e-9fed-a7c8d9e0f109';
+const SRS = 'b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e';
+
+function seriesEp(
+  mediaId: string,
+  season: number,
+  episode: number,
+  overrides: Partial<GenerationCandidate> = {}
+): GenerationCandidate {
+  return {
+    mediaId,
+    mediaType: 'episode',
+    title: `怪奇物語 S0${season}E0${episode}`,
+    route: 'asr',
+    runtimeMinutes: 50,
+    runtimeKnown: true,
+    estimatedUsd: 0.3,
+    seriesId: SRS,
+    seriesTitle: '怪奇物語',
+    seasonNumber: season,
+    episodeNumber: episode,
+    ...overrides,
+  };
+}
+
+const GROUPED = [CANDIDATES[0], seriesEp(S1E1, 1, 1), seriesEp(S1E2, 1, 2), seriesEp(S2E1, 2, 1)];
+
+describe('CandidateListPanel — series/season grouping (sub-5-3 AC #2)', () => {
+  it('renders a series header with title, 已選 n/N and the SELECTED subtotal', () => {
+    renderPanel({
+      candidates: GROUPED,
+      selectedIds: new Set([S1E1, S1E2]),
+      totals: computeTotals(GROUPED, new Set([S1E1, S1E2]), 5),
+    });
+
+    const header = screen.getByTestId(`consent-group-${SRS}`);
+    expect(header).toHaveTextContent('怪奇物語');
+    expect(screen.getByTestId(`consent-group-${SRS}-selected`)).toHaveTextContent(
+      '已選 2/3 · $0.60'
+    );
+  });
+
+  it('[CR H1] the header reports the SELECTED route composition from computeTotals', () => {
+    const mixed = [
+      seriesEp(S1E1, 1, 1),
+      seriesEp(S1E2, 1, 2, { route: 'extract', estimatedUsd: 0.04 }),
+      seriesEp(S2E1, 2, 1),
+    ];
+    renderPanel({
+      candidates: mixed,
+      selectedIds: new Set([S1E1, S1E2]),
+      totals: computeTotals(mixed, new Set([S1E1, S1E2]), 5),
+    });
+
+    const routes = screen.getByTestId(`consent-group-${SRS}-routes`);
+    expect(routes).toHaveTextContent('抽取 1');
+    expect(routes).toHaveTextContent('語音辨識 1');
+    expect(screen.getByTestId(`consent-group-${SRS}-selected`)).toHaveTextContent(
+      '已選 2/3 · $0.34'
+    );
+  });
+
+  it('[CR H1] a route badge is omitted when that route has nothing selected', () => {
+    renderPanel({ candidates: GROUPED, selectedIds: new Set() });
+    const routes = screen.getByTestId(`consent-group-${SRS}-routes`);
+    expect(routes).not.toHaveTextContent('抽取');
+    expect(routes).not.toHaveTextContent('語音辨識');
+  });
+
+  it('[CR L5] a group whose every row is filtered out renders no header at all', () => {
+    // Series is 100% asr; the extract chip hides every row → the header would
+    // be a checkbox governing nothing.
+    renderPanel({
+      candidates: [CANDIDATES[0], seriesEp(S1E1, 1, 1), seriesEp(S1E2, 1, 2)],
+      selectedIds: new Set(),
+      filter: 'extract',
+    });
+    expect(screen.queryByTestId(`consent-group-${SRS}`)).toBeNull();
+    expect(screen.getByTestId(`consent-row-${A}`)).toBeInTheDocument();
+  });
+
+  it('season headers appear only for a multi-season show, labelled 第 n 季', () => {
+    renderPanel({ candidates: GROUPED, selectedIds: new Set() });
+    expect(screen.getByTestId(`consent-season-${SRS}-1`)).toHaveTextContent('第 1 季');
+    expect(screen.getByTestId(`consent-season-${SRS}-2`)).toHaveTextContent('第 2 季');
+
+    cleanup();
+    // Single-season show → series header only, no season row.
+    renderPanel({
+      candidates: [seriesEp(S1E1, 1, 1), seriesEp(S1E2, 1, 2)],
+      selectedIds: new Set(),
+    });
+    expect(screen.getByTestId(`consent-group-${SRS}`)).toBeInTheDocument();
+    expect(screen.queryByTestId(`consent-season-${SRS}-1`)).toBeNull();
+  });
+
+  it('S00 renders as 特別篇', () => {
+    renderPanel({
+      candidates: [seriesEp(S1E1, 0, 1), seriesEp(S2E1, 1, 1)],
+      selectedIds: new Set(),
+    });
+    expect(screen.getByTestId(`consent-season-${SRS}-0`)).toHaveTextContent('特別篇');
+  });
+
+  it('the series checkbox toggles the WHOLE group and reports mixed state honestly', () => {
+    const onToggleGroup = vi.fn();
+    renderPanel({
+      candidates: GROUPED,
+      selectedIds: new Set([S1E1]),
+      onToggleGroup,
+    });
+
+    const box = screen.getByLabelText('選取整部 怪奇物語') as HTMLInputElement;
+    // CR L3: mixed state rides the NATIVE indeterminate property (the shipped
+    // consent-select-all idiom) — no redundant aria-checked on a native input.
+    expect(box.indeterminate).toBe(true);
+    expect(box.checked).toBe(false);
+    expect(box).not.toHaveAttribute('aria-checked');
+
+    fireEvent.click(box);
+    expect(onToggleGroup).toHaveBeenCalledWith([S1E1, S1E2, S2E1], true);
+  });
+
+  it('a fully-selected group unchecks on toggle (next=false)', () => {
+    const onToggleGroup = vi.fn();
+    renderPanel({
+      candidates: GROUPED,
+      selectedIds: new Set([S1E1, S1E2, S2E1]),
+      onToggleGroup,
+    });
+
+    fireEvent.click(screen.getByLabelText('選取整部 怪奇物語'));
+    expect(onToggleGroup).toHaveBeenCalledWith([S1E1, S1E2, S2E1], false);
+  });
+
+  it('the season checkbox toggles only that season', () => {
+    const onToggleGroup = vi.fn();
+    renderPanel({ candidates: GROUPED, selectedIds: new Set(), onToggleGroup });
+
+    fireEvent.click(screen.getByLabelText('選取第 1 季'));
+    expect(onToggleGroup).toHaveBeenCalledWith([S1E1, S1E2], true);
+  });
+
+  it('group toggle semantics ignore the route filter — chips are a VIEW filter only', () => {
+    const onToggleGroup = vi.fn();
+    const mixed = [
+      seriesEp(S1E1, 1, 1),
+      seriesEp(S1E2, 1, 2, { route: 'extract' }),
+      seriesEp(S2E1, 2, 1),
+    ];
+    renderPanel({
+      candidates: mixed,
+      selectedIds: new Set(),
+      filter: 'asr',
+      onToggleGroup,
+    });
+
+    // Only asr rows are VISIBLE, but the header operates on ALL group items —
+    // the same semantics 全選 already ships.
+    expect(screen.queryByTestId(`consent-row-${S1E2}`)).toBeNull();
+    fireEvent.click(screen.getByLabelText('選取整部 怪奇物語'));
+    expect(onToggleGroup).toHaveBeenCalledWith([S1E1, S1E2, S2E1], true);
+  });
+
+  it('a degraded (empty) series title renders 未知影集 and still groups', () => {
+    renderPanel({
+      candidates: [
+        seriesEp(S1E1, 1, 1, { seriesTitle: '' }),
+        seriesEp(S1E2, 1, 2, { seriesTitle: '' }),
+      ],
+      selectedIds: new Set(),
+    });
+    expect(screen.getByTestId(`consent-group-${SRS}`)).toHaveTextContent('未知影集');
+  });
+
+  it('pre-sub-5-3 rows (no seriesId) keep the flat shipped rendering — zero headers', () => {
+    renderPanel({ candidates: CANDIDATES, selectedIds: new Set() });
+    expect(screen.queryByText('未知影集')).toBeNull();
+    expect(document.querySelector('[data-testid^="consent-group-"]')).toBeNull();
   });
 });
