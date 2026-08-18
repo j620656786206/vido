@@ -162,8 +162,13 @@ func waitUntilIdle(t *testing.T, p *GenerationBatchProcessor) {
 }
 
 // drainEvents collects all generation_batch_progress payloads currently queued.
+// Every caller expects at least one event, so it WAITS (bounded) for the first
+// one before the non-blocking drain — the Hub's fan-out goroutine races the
+// test's fixed post-cancel sleep, and under load a bare drain came up empty
+// (pre-existing flake, fixed in-place during sub-5-5 per Epic 9c retro AI-2).
 func drainEvents(client *sse.Client) []map[string]interface{} {
 	var out []map[string]interface{}
+	deadline := time.After(2 * time.Second)
 	for {
 		select {
 		case ev := <-client.Events:
@@ -173,7 +178,24 @@ func drainEvents(client *sse.Client) []map[string]interface{} {
 			if data, ok := ev.Data.(map[string]interface{}); ok {
 				out = append(out, data)
 			}
+		case <-deadline:
+			return out
 		default:
+			if len(out) == 0 {
+				// Nothing yet — block briefly instead of returning empty.
+				select {
+				case ev := <-client.Events:
+					if ev.Type != sse.EventGenerationBatchProgress {
+						continue
+					}
+					if data, ok := ev.Data.(map[string]interface{}); ok {
+						out = append(out, data)
+					}
+					continue
+				case <-deadline:
+					return out
+				}
+			}
 			return out
 		}
 	}

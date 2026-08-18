@@ -638,7 +638,7 @@ func (s *TranscriptionService) translateAndPersist(ctx context.Context, jobID st
 			"message":    "Translating subtitles to Traditional Chinese",
 		})
 
-		zhPath, err := s.translateSRT(ctx, jobID, mediaID, srtContent, filePath, mediaDir)
+		zhPath, err := s.translateSRT(ctx, jobID, mediaType, mediaID, srtContent, filePath, mediaDir)
 		if err != nil {
 			// 9R-16 AC 6c: the budget sentinel MUST propagate — a mid-translate
 			// ceiling hit must pause the batch, not count the item as success
@@ -798,9 +798,29 @@ func (s *TranscriptionService) transcribeAudio(ctx context.Context, audioPath, l
 	return ai.MergeSRTChunks(srtChunks, chunkSeconds), nil
 }
 
+// glossaryMediaKey resolves which glossary a run feeds from and harvests into
+// (CR sub-5-5 H1). The glossary is per-SHOW: an episode run must use its
+// PARENT SERIES id — the key the F6 review panel and the pipeline path already
+// use — or its harvest lands in invisible episode-id rows no other episode
+// ever benefits from. Movies (and series rows) key on themselves. Fail-soft:
+// an unwired reader or a failed lookup falls back to mediaID (the pre-fix
+// behavior — degraded consistency, never a failed run).
+func (s *TranscriptionService) glossaryMediaKey(ctx context.Context, mediaType, mediaID string) string {
+	if mediaType != models.SubtitleRunMediaEpisode || s.episodeReader == nil {
+		return mediaID
+	}
+	episode, err := s.episodeReader.FindByID(ctx, mediaID)
+	if err != nil || episode == nil || episode.SeriesID == "" {
+		s.logger.Warn("glossary key resolve failed — falling back to the episode's own id",
+			"media_id", mediaID, "error", err)
+		return mediaID
+	}
+	return episode.SeriesID
+}
+
 // translateSRT translates English SRT content to Traditional Chinese and saves as .zh-Hant.srt.
 // Returns the path to the translated SRT file.
-func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, mediaID string, srtContent string, filePath string, mediaDir string) (string, error) {
+func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, mediaType string, mediaID string, srtContent string, filePath string, mediaDir string) (string, error) {
 	// Parse SRT into translation blocks (inline to avoid circular import with subtitle pkg)
 	blocks, err := ParseSRTToTranslationBlocks(srtContent)
 	if err != nil {
@@ -830,11 +850,17 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 
 	// 9R-10: glossary-aware translation — proper nouns render consistently
 	// across the whole subtitle and across runs (keystone payoff).
-	glossary := s.loadGlossary(ctx, mediaID)
+	// CR sub-5-5 H1: feed AND harvest key on the SHOW-level glossary — for an
+	// episode that is the parent series id, not the episode's own id.
+	glossaryKey := s.glossaryMediaKey(ctx, mediaType, mediaID)
+	glossary := s.loadGlossary(ctx, glossaryKey)
 	if len(glossary) > 0 {
-		s.logger.Info("translating with per-show glossary", "media_id", mediaID, "term_count", len(glossary))
+		s.logger.Info("translating with per-show glossary",
+			"media_id", mediaID, "glossary_key", glossaryKey, "term_count", len(glossary))
 	}
-	translated, err := s.translationService.TranslateWithGlossary(ctx, blocks, glossary, progressFn)
+	// sub-5-5: the harvest variant also returns the trailer's term yield —
+	// written back below AFTER the translation has succeeded and placed.
+	translated, harvestedTerms, err := s.translationService.TranslateWithGlossaryHarvest(ctx, blocks, glossary, progressFn)
 	if err != nil {
 		return "", fmt.Errorf("translate: %w", err)
 	}
@@ -871,15 +897,59 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 		}
 	}
 
+	// sub-5-5 AC #4 回程: the translate stage succeeded and the subtitle is on
+	// disk — feed the harvested renderings back, insert-if-absent only (an
+	// existing term, whatever its source or confirmed state, is never touched).
+	// Fail-soft (Rule 13 case 3): a lost harvest is re-collected next run.
+	harvestedNew := s.harvestGlossaryTerms(ctx, glossaryKey, harvestedTerms)
+
 	s.logger.Info("subtitle translation complete",
 		"job_id", jobID,
 		"media_id", mediaID,
 		"zh_srt_path", zhSRTPath,
 		"block_count", len(translated),
 		"glossary_terms", len(glossary),
+		// sub-5-5 AC #6: NEW terms written back this run (dedupes excluded).
+		"harvested_terms", harvestedNew,
 	)
 
 	return zhSRTPath, nil
+}
+
+// harvestGlossaryTerms writes the trailer yield insert-if-absent (sub-5-5,
+// legacy path). Returns how many terms were actually inserted. Nil-safe: no
+// glossary repo wired = nothing written, exactly the 9R-10 feed posture.
+func (s *TranscriptionService) harvestGlossaryTerms(ctx context.Context, mediaID string, terms map[string]string) int {
+	if s.glossaryRepo == nil || len(terms) == 0 {
+		return 0
+	}
+	inserted := 0
+	for src, zh := range terms {
+		// CR sub-5-5 H2: s2twp the rendering before it becomes a MANDATORY
+		// glossary feed — a raw Simplified rendering would poison every future
+		// prompt for the show. Fail-soft: keep the raw value on converter error.
+		if s.opencc != nil && s.opencc.IsAvailable() {
+			if converted, cerr := s.opencc.ConvertS2TWP([]byte(zh)); cerr == nil {
+				zh = string(converted)
+			}
+		}
+		ok, err := s.glossaryRepo.InsertIfAbsent(ctx, &models.GlossaryTerm{
+			MediaID: mediaID,
+			TermSrc: src,
+			TermZh:  zh,
+			Source:  models.GlossarySourceSubtitle,
+			// Confirmed stays false — harvested terms enter the F6 review flow.
+		})
+		if err != nil {
+			s.logger.Warn("glossary harvest write failed — the term will be re-collected by a future run",
+				"media_id", mediaID, "term_src", src, "error", err)
+			continue
+		}
+		if ok {
+			inserted++
+		}
+	}
+	return inserted
 }
 
 // srtTimestampPattern matches SRT timestamp lines: 00:00:01,000 --> 00:00:04,000

@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/vido/api/internal/ai"
+	"github.com/vido/api/internal/ai/prompts"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/services"
 )
@@ -39,6 +41,13 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 	if item == nil || item.FilePath == "" {
 		return nil, fmt.Errorf("subtitle pipeline: %s %s has no media file path", ref.MediaType, ref.ID)
 	}
+
+	// sub-5-5 AC #5: feed the per-show glossary BEFORE the version is computed
+	// — GlossaryVersion hashes exactly what the prompt will carry, so cache key
+	// and prompt content agree by construction. A lookup failure feeds empty
+	// (Rule 13 case 3, the 9R-10 loadGlossary posture): a glossary miss costs
+	// consistency, never the episode.
+	p.feedGlossary(ctx, ref, item)
 
 	version := p.runVersion(item.Context)
 
@@ -211,6 +220,10 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 		"cue_count", cueCount,
 		"cache_enabled", run.CacheEnabled,
 		"requests_sent", scope.requestsSent,
+		// sub-5-5 AC #6: glossary_fed = pairs injected into the prompt;
+		// harvested_terms = NEW terms this run wrote back (dedupes excluded).
+		"glossary_fed", len(item.Context.Glossary),
+		"harvested_terms", scope.harvestedTerms,
 		"output_path", placed.SubtitlePath,
 	)
 
@@ -288,6 +301,7 @@ func (p *Pipeline) translateWithCache(
 	}
 
 	var translated []SubtitleBlock
+	var harvest map[string]string
 	if len(misses) > 0 {
 		// A REDUCED copy of the routed track. The stamped TranslateTrack
 		// contract takes a track and translates every cue in it, so handing it
@@ -302,6 +316,7 @@ func (p *Pipeline) translateWithCache(
 			return nil, err
 		}
 		translated = res.Blocks
+		harvest = res.HarvestedTerms
 
 		final := make(map[int]string, len(res.Blocks))
 		for _, b := range res.Blocks {
@@ -339,6 +354,13 @@ func (p *Pipeline) translateWithCache(
 	// partial-cache run is exactly where a merge bug would desync timestamps.
 	if err := checkTimestampInvariant(source, merged); err != nil {
 		return nil, err
+	}
+
+	// sub-5-5 AC #4 回程: the translate stage has fully succeeded — feed the
+	// trailer yield back. Cache-hit cues sent no LLM request and yield nothing;
+	// that is the DEFINITION of opportunistic harvest, not a gap to fill.
+	if harvest != nil {
+		p.harvestTerms(ctx, ref, scope, harvest)
 	}
 	return merged, nil
 }
@@ -621,6 +643,88 @@ func sourceLanguageOf(decision RouteDecision) string {
 		return decision.DetectedVariant
 	}
 	return decision.Track.Language
+}
+
+// glossaryKeyFor is the per-show glossary key (sub-5-5 AC #4): episodes and
+// series accumulate under the SERIES id (ShowKey — any episode harvests, every
+// episode benefits, in whatever order they are translated); movies carry no
+// ShowKey and key on themselves (the spec's intra-film consistency, shared
+// with re-translation and the 9R-13 NFO localizer).
+func glossaryKeyFor(ref MediaRef, showKey string) string {
+	if showKey != "" {
+		return showKey
+	}
+	return ref.ID
+}
+
+// feedGlossary fills item.Context.Glossary from the per-show glossary (sub-5-5
+// AC #5 去程). Entries are sorted by Source so the rendered prompt — and
+// therefore the provider-side prompt cache — is deterministic for a given
+// glossary state. Nil-safe and fail-soft: no port or a failed lookup feeds
+// empty, which hashes to GlossaryVersion "" and keeps today's behavior.
+func (p *Pipeline) feedGlossary(ctx context.Context, ref MediaRef, item *MediaItem) {
+	if p.glossary == nil {
+		return
+	}
+	key := glossaryKeyFor(ref, item.ShowKey)
+	terms, err := p.glossary.Lookup(ctx, key)
+	if err != nil {
+		p.logger.Warn("glossary lookup failed — translating without glossary",
+			"media_id", ref.ID, "media_type", ref.MediaType, "glossary_key", key, "error", err)
+		return
+	}
+	if len(terms) == 0 {
+		return
+	}
+	entries := make([]prompts.GlossaryEntry, 0, len(terms))
+	for src, zh := range terms {
+		entries = append(entries, prompts.GlossaryEntry{Source: src, Target: zh})
+	}
+	sort.Slice(entries, func(i, j int) bool { return entries[i].Source < entries[j].Source })
+	item.Context.Glossary = entries
+}
+
+// harvestTerms writes the translate stage's trailer yield back to the glossary
+// (sub-5-5 AC #4 回程), insert-if-absent only. Runs strictly AFTER the
+// translate stage succeeded — a failed or cancelled run harvests nothing,
+// because terms that never shipped with a subtitle would only pollute.
+// Fail-soft (Rule 13 case 3): the translation already succeeded; a lost
+// harvest is re-collected by some future run, never a failed item.
+func (p *Pipeline) harvestTerms(ctx context.Context, ref MediaRef, scope *processScope, terms map[string]string) {
+	if p.glossary == nil || len(terms) == 0 {
+		return
+	}
+	showKey := ""
+	if scope != nil {
+		showKey = scope.showKey
+	}
+	key := glossaryKeyFor(ref, showKey)
+
+	// CR sub-5-5 H2: run the s2twp safety net over each rendering BEFORE it
+	// becomes a glossary row. The subtitle itself gets this pass, but a raw
+	// harvested rendering does not — and a Simplified one would be fed back as
+	// a MANDATORY fixed rendering, which the quality gate then rejects on every
+	// future cue containing it: a self-reinforcing poisoning loop that only a
+	// manual F6 correction could break. Fail-soft per value: on converter error
+	// keep the raw rendering (F6 review still covers it).
+	converted := make(map[string]string, len(terms))
+	for src, zh := range terms {
+		if out, err := p.converter.ConvertS2TWP([]byte(zh)); err == nil {
+			converted[src] = string(out)
+		} else {
+			converted[src] = zh
+		}
+	}
+
+	inserted, err := p.glossary.InsertNew(ctx, key, converted)
+	if err != nil {
+		p.logger.Warn("glossary harvest write failed — these terms will be re-collected by a future run",
+			"media_id", ref.ID, "media_type", ref.MediaType, "glossary_key", key,
+			"harvested", len(terms), "inserted", inserted, "error", err)
+	}
+	if scope != nil {
+		scope.harvestedTerms = inserted
+	}
 }
 
 // requireItemPorts fails fast and by NAME when sub-1-6's wiring is incomplete.

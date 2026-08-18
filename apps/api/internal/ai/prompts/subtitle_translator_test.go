@@ -253,7 +253,7 @@ func TestSubtitleTranslatorPromptVersion_PinsPromptText(t *testing.T) {
 	))
 	digest := fmt.Sprintf("%x", sha256.Sum256([]byte(sb.String())))
 
-	assert.Equal(t, "m1-v1", SubtitleTranslatorPromptVersion)
-	assert.Equal(t, "4ca01f9266ee94b058437fdef34b363d36100f9fa0e568a6702d30ecdc7e51e1", digest,
+	assert.Equal(t, "m1-v2", SubtitleTranslatorPromptVersion)
+	assert.Equal(t, "dd8e754fa4bf2abaea2cf148df69ce0c52c21b8b451adb309a098c682b70c7b8", digest,
 		"prompt text changed — bump SubtitleTranslatorPromptVersion and update this digest in the SAME edit (P11)")
 }

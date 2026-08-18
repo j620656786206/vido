@@ -63,6 +63,58 @@ func TestGlossaryRepository_UpsertConflictUpdatesInPlace(t *testing.T) {
 	assert.True(t, terms[0].Confirmed)
 }
 
+// --- sub-5-5 AC #4 (red line 2): harvest must NEVER overwrite an existing term ---
+
+func TestGlossaryRepository_InsertIfAbsent_NeverTouchesExistingTerm(t *testing.T) {
+	repo := NewGlossaryRepository(setupGlossaryDB(t))
+	ctx := context.Background()
+
+	// A user-corrected, CONFIRMED manual term — the exact row Upsert's DO UPDATE
+	// would clobber back to the machine rendering and un-confirm.
+	existing := &models.GlossaryTerm{MediaID: "m1", TermSrc: "Vecna", TermZh: "維克那",
+		Source: models.GlossarySourceManual, Confirmed: true}
+	require.NoError(t, repo.Upsert(ctx, existing))
+	before, err := repo.ListByMedia(ctx, "m1")
+	require.NoError(t, err)
+	require.Len(t, before, 1)
+
+	// Harvest re-mines the same term with a DIFFERENT machine rendering.
+	inserted, err := repo.InsertIfAbsent(ctx, &models.GlossaryTerm{
+		MediaID: "m1", TermSrc: "Vecna", TermZh: "威克納", Source: models.GlossarySourceSubtitle})
+	require.NoError(t, err)
+	assert.False(t, inserted, "conflicting harvest must be a DO NOTHING, not an update")
+
+	after, err := repo.ListByMedia(ctx, "m1")
+	require.NoError(t, err)
+	require.Len(t, after, 1)
+	assert.Equal(t, before[0], after[0],
+		"red line 2: not a single field of the existing term may change — id, rendering, source, confirmed, timestamps")
+}
+
+func TestGlossaryRepository_InsertIfAbsent_NewTermLandsUnconfirmed(t *testing.T) {
+	repo := NewGlossaryRepository(setupGlossaryDB(t))
+	ctx := context.Background()
+
+	inserted, err := repo.InsertIfAbsent(ctx, &models.GlossaryTerm{
+		MediaID: "m1", TermSrc: "Demogorgon", TermZh: "魔王獸", Source: models.GlossarySourceSubtitle})
+	require.NoError(t, err)
+	assert.True(t, inserted)
+
+	terms, err := repo.ListByMedia(ctx, "m1")
+	require.NoError(t, err)
+	require.Len(t, terms, 1)
+	assert.Equal(t, "魔王獸", terms[0].TermZh)
+	assert.Equal(t, models.GlossarySourceSubtitle, terms[0].Source)
+	assert.False(t, terms[0].Confirmed, "harvested terms enter the existing F6 review flow unconfirmed")
+	assert.Equal(t, models.GlossaryDefaultLanguage, terms[0].Language)
+}
+
+func TestGlossaryRepository_InsertIfAbsent_ValidatesLikeUpsert(t *testing.T) {
+	repo := NewGlossaryRepository(setupGlossaryDB(t))
+	_, err := repo.InsertIfAbsent(context.Background(), &models.GlossaryTerm{MediaID: "m1", TermSrc: "", TermZh: "x"})
+	require.Error(t, err)
+}
+
 func TestGlossaryRepository_LookupByMedia(t *testing.T) {
 	repo := NewGlossaryRepository(setupGlossaryDB(t))
 	ctx := context.Background()

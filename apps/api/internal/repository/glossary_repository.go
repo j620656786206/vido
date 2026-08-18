@@ -21,6 +21,12 @@ type GlossaryRepositoryInterface interface {
 	// conflict, updates the existing rendering/source/confirmed flag. Used both
 	// by the generation pipeline (auto-mined terms) and manual edits.
 	Upsert(ctx context.Context, term *models.GlossaryTerm) error
+	// InsertIfAbsent inserts a term ONLY when no (media_id, term_src, language)
+	// row exists — ON CONFLICT DO NOTHING (sub-5-5 AC #4, red line 2). The
+	// auto-harvest write path MUST use this, never Upsert: Upsert's DO UPDATE
+	// would clobber a user-corrected/confirmed rendering back to the machine
+	// version and un-confirm it. Returns whether a row was actually inserted.
+	InsertIfAbsent(ctx context.Context, term *models.GlossaryTerm) (bool, error)
 	// ListByMedia returns all terms for a media id, term_src ascending.
 	ListByMedia(ctx context.Context, mediaID string) ([]models.GlossaryTerm, error)
 	// LookupByMedia returns a term_src→term_zh map for a media id — the shape
@@ -101,6 +107,47 @@ func (r *GlossaryRepository) Upsert(ctx context.Context, term *models.GlossaryTe
 		return fmt.Errorf("failed to upsert glossary term: %w", err)
 	}
 	return nil
+}
+
+// InsertIfAbsent is the auto-harvest write path (sub-5-5 AC #4): insert-only,
+// existing rows stay byte-identical. Two concurrent harvests of the same new
+// term are naturally safe — the second INSERT hits the UNIQUE conflict and
+// does nothing.
+func (r *GlossaryRepository) InsertIfAbsent(ctx context.Context, term *models.GlossaryTerm) (bool, error) {
+	if term == nil {
+		return false, fmt.Errorf("glossary term cannot be nil")
+	}
+	if err := term.Validate(); err != nil {
+		return false, err
+	}
+	if term.ID == "" {
+		term.ID = uuid.New().String()
+	}
+	if term.Language == "" {
+		term.Language = models.GlossaryDefaultLanguage
+	}
+	if term.Source == "" {
+		term.Source = models.GlossarySourceManual
+	}
+	now := time.Now()
+	term.CreatedAt = now
+	term.UpdatedAt = now
+
+	query := `INSERT INTO show_glossary (` + glossaryColumns + `)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(media_id, term_src, language) DO NOTHING`
+	res, err := r.db.ExecContext(ctx, query,
+		term.ID, term.MediaID, term.TermSrc, term.TermZh, term.Language,
+		term.Source, term.Confirmed, term.CreatedAt, term.UpdatedAt,
+	)
+	if err != nil {
+		return false, fmt.Errorf("failed to insert glossary term: %w", err)
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("failed to read glossary insert result: %w", err)
+	}
+	return affected > 0, nil
 }
 
 func (r *GlossaryRepository) ListByMedia(ctx context.Context, mediaID string) ([]models.GlossaryTerm, error) {

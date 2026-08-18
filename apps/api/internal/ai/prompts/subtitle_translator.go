@@ -15,7 +15,10 @@ import (
 //
 // TestSubtitleTranslatorPromptVersion_PinsPromptText enforces this: it hashes
 // every prompt surface in this file, so an edit that forgets the bump fails.
-const SubtitleTranslatorPromptVersion = "m1-v1"
+// m1-v1 → m1-v2 (sub-5-5 AC #1): the system prompt gained the harvest-trailer
+// instruction section. The prompt's semantics changed, so the segment cache
+// re-keys the whole library by design — RunVersion exists for exactly this.
+const SubtitleTranslatorPromptVersion = "m1-v2"
 
 // SubtitleTranslatorContextWindow is the number of previous blocks sent as
 // read-only context for each translation batch to maintain consistency (AC #2).
@@ -27,6 +30,11 @@ const SubtitleTranslatorBatchSize = 10
 
 // SubtitleTranslatorSystemPrompt instructs Claude to translate English subtitle
 // dialogue into natural Traditional Chinese (Taiwan usage).
+//
+// The "Term harvest" section speaks the `===TERMS===` / `=>` trailer wire
+// format — [@contract-v1] (sub-5-5 AC #1): the instruction side here and the
+// parser side (services.splitHarvestTrailer, translation_service.go) are one
+// cross-layer contract and MUST change together.
 const SubtitleTranslatorSystemPrompt = `You are a professional subtitle translator specializing in English to Traditional Chinese (Taiwan usage).
 
 ## Your task:
@@ -52,7 +60,15 @@ For multi-line blocks (e.g., two speakers), preserve the line breaks — only th
 [3] 你先走吧。
 我隨後就到。
 
-Do NOT include any explanation, notes, or annotations. ONLY translated lines with indices.`
+Do NOT include any explanation, notes, or annotations. ONLY translated lines with indices.
+
+## Term harvest (optional trailer):
+After ALL translated [N] lines, IF this batch contained proper nouns (person names, place names, or domain-specific terms) for which you decided on a Traditional Chinese rendering, append this trailer:
+===TERMS===
+<source term>=><your chosen rendering>
+One term per line, using the EXACT rendering you used in the translations above.
+List ONLY terms that actually appear in this batch and for which you made a rendering decision — do NOT list terms you kept in their original English form, and do NOT repeat glossary entries given to you.
+If there are no such terms, omit the trailer entirely — do NOT output the ===TERMS=== line.`
 
 // SubtitleTranslatorBlock represents a subtitle block for translation.
 type SubtitleTranslatorBlock struct {
