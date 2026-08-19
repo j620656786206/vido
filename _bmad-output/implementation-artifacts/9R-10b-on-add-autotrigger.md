@@ -3,7 +3,7 @@
 Status: ready-for-dev
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story.
-     ⚠️ AC #1（常設同意政策）需 Alexyu 裁定後 dev-story 才可動工 —— 其餘 AC 不受影響可先讀。 -->
+     ⚖️ AC #1 已裁定 2026-08-19（Alexyu）：「花錢須同意」—— 付費動作不得自動執行。story 可直接 dev。 -->
 
 **Epic:** 9R 尾款（Rule-24 ③ from 9R-10, 2026-07-05）· **Risk: 🔴 HIGH —— 花費同意紅線**（2026-08-07 裁定 + `cost_consent_test.go` repo guard）
 **Source:** sprint-status `9R-10b-on-add-autotrigger`（backlog, needs product call）；2026-08-19 What'Sub 對抗重審列為無悔四項之 N4 —— 同時是 P（每日體驗）、O（最小可愛 demo）、C（購買觸發點）三情境的共同核心。
@@ -25,27 +25,28 @@ so that by morning the library is subtitled and truthfully badged —— without
 
 本 story 就是那個 consent surface。自動觸發**不是**繞過同意 —— 是把「每次同意」升級為「**常設同意**（standing consent）」：使用者一次性設定政策＋預算上限，此後系統只在政策範圍內花錢，且每一筆都可追溯到那次明示設定。
 
-## AC #1 —— 🔴 常設同意政策（需 Alexyu 裁定；以下為 authoring 提案）
+## AC #1 —— ⚖️ 花錢須同意（Alexyu 裁定 2026-08-19，取代原 authoring 提案）
 
-| 政策項 | 提案值 | 理由 |
-|---|---|---|
-| 預設狀態 | **OFF**（現行行為 byte-unchanged） | opt-in 是紅線的直接推論 |
-| 開關粒度 | 每 library 一個開關（設定頁） | 動漫庫要、家庭錄影庫不要 |
-| 免費層 | extract-only 自動觸發可獨立開啟（零 ASR 花費；LLM 翻譯仍計費故**不屬**免費層） | 「免費」的定義必須誠實：只有純抽取＋既有繁中軌 passthrough 是零花費 |
-| 付費層 | 需再設 **常設預算上限**（每月 USD，沿用 sub-4-1 估價機制與 `ai.Governor` 預算池）方可開啟 | 數字先行，同 2026-08-07 裁定精神 |
-| 觸頂行為 | 當月剩餘預算不足以跑該項估價 → 跳過並記 `pending-budget`，Activity 顯示「等待下月預算」；**絕不**部分執行 | 與 F14 budget_ceiling 語意一致 |
-| 每次觸發上限 | 單次 scan 自動 enqueue 上限 N 項（提案 N=20，防首掃海嘯；超出項留待下次或手動批次） | 1,026 項事故的直接防呆 |
-| 事後可見性 | 每次自動觸發在 Activity 產生一列（觸發源=auto、項數、估價、實際花費） | 無人值守 ≠ 不可稽核 |
+裁定原文：「**9R-10b 花錢須同意**」。落地語意（本檔記錄的解讀 —— 若 Alexyu 意指「常設月預算＝一次性同意」的較寬模式，修此節即可，架構不變）：
+
+| 動作類別 | 自動觸發行為 |
+|---|---|
+| **零花費**：繁中內嵌軌 passthrough、簡中軌 OpenCC s2twp、軌道探測/語言路由、候選分析＋估價 | ✅ **可全自動執行**（per-library 開關，預設 OFF） |
+| **付費**：LLM 翻譯、ASR 轉錄 | 🔴 **自動只到「入待同意清單」為止** —— scan-complete 自動分析＋估價＋掛入既有同意流程（F14–F20）的候選清單，經 Activity/badge 通知；**執行永遠等使用者在估價畫面按下確認**。零自動扣款 |
+| 常設預算上限（standing budget）模式 | ❌ 本次不做 —— 若未來想要「設一次月上限、之後全自動」，另立 story 重新裁定 |
+
+淨效果：**「免費的自動做完，要花錢的排好隊等你一鍵同意」** —— 早上起來：繁中/簡中軌的項目已完工、需要翻譯/ASR 的項目帶著金額在同意清單裡等一次點擊。
 
 ## Acceptance Criteria（AC #2 起為實作，前提 = AC #1 裁定通過）
 
 ### AC #2 — 觸發線
 - scan-complete 掛點以**組合**方式接入：包裹既有 `postScanEnrichment`（`main.go:431-449` —— setter 只有一個 slot，sub-1-6 AC #2 明文「must WRAP this body, never call the setter a second time」），enrichment 先行、自動觸發後行（metadata/語言路由依賴 enrichment 結果）。
-- 觸發集合 = 本次 scan 新增/變更且 `subtitle_status ∈ {not_searched, not_found, untranslated}` 的項目 ∩ 開啟自動化的 library，經 AC #1 政策過濾（免費層/付費層/單次上限）。
+- 觸發集合 = 本次 scan 新增/變更且 `subtitle_status ∈ {not_searched, not_found, untranslated}` 的項目 ∩ 開啟自動化的 library。零花費項目直接執行；付費項目**只做分析＋估價＋入待同意清單**（AC #1 裁定）。單次自動處理上限 N=20 防首掃海嘯（超出留待下次或手動批次）。
 - 排程掃描（`scan_scheduler.go`）與手動掃描走同一條線 —— 政策在 callback 內判定，不在觸發源判定。
 
-### AC #3 — repo guard 交接（不是刪除，是升級）
-- 依 guard 檔頭指示刪除 `TestScanMustNotAutoEnqueueSubtitleGeneration`，**同一 commit** 內以新 guard 取代：`TestAutoEnqueueRequiresStandingConsent` —— 斷言自動 enqueue 呼叫點被常設同意檢查包裹（無政策/OFF/無預算 → 零 enqueue），並在測試註解保留 2026-08-07 事故全文與本 story 的裁定鏈。PR 描述需引用裁定（guard 檔頭的第三個要求）。
+### AC #3 — repo guard **保留並加固**（裁定後不再需要交接）
+- 「花錢須同意」裁定下付費 sweep 依然零自動呼叫 → `TestScanMustNotAutoEnqueueSubtitleGeneration` **原樣保留**（其守護的不變量未變）。
+- 新增互補 guard：自動觸發路徑僅允許零花費操作＋分析/估價＋入待同意清單 —— 以測試斷言 auto 路徑沒有任何 `TranslateWithGlossaryHarvest`/ASR/`TranslateTrack` 直呼點；測試註解引用本裁定（2026-08-19「花錢須同意」）與 2026-08-07 事故鏈。
 
 ### AC #4 — 誠實狀態
 - 自動觸發的項目走既有 SSE/狀態機（`subtitle_status` 生命週期、Activity 生成列）；徽章語意零新增。
