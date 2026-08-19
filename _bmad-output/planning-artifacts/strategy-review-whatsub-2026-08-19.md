@@ -66,12 +66,16 @@
 - 四份 story 立案＋sprint-status 六處更新（commit 380dcf9）
 - package.json license → UNLICENSED（commit 23df656）
 
-## 待 Alexyu 裁定
+## 裁定紀錄（2026-08-19 更新）
 
-1. **身分**：P 個人工具／O 公開 OSS／C 商業 —— 決定下一 sprint 的分岔內容。
-2. **9R-10b AC #1** 常設同意政策表（story 檔內有 authoring 提案）。
-3. **LICENSE 正式選擇**（gated on GPL dep 替換）＋ `_bmad-output/` 去留（綁定 v0 發布決定）。
-4. （可選）90 天付費意願測試要不要跑。
+1. **身分：✅ 已裁定 —— OSS-bound（公開 OSS，分兩階段）**。現階段照個人工具開發（無悔四項＋品質欠帳不變），掛「90 天內發 v0 公開版」目標；「v0 發布打包」（LICENSE＋v0 tag＋Docker image＋中文安裝文件）於無悔四項之後排為 epic。理由：盈利已判死 → 真選項只剩自用 vs OSS；兩路前四步完全重疊 → 決策近零成本；OSS 多拿真空卡位＋聲譽＋90 天測試選擇權，代價僅約兩週打包。
+2. **9R-10b：✅ 已裁定 ——「花錢須同意」**。零花費操作可全自動（per-library opt-in）；LLM 翻譯/ASR 自動只到「入待同意清單」，執行必經估價確認；常設月預算模式不做（要做另立 story 重裁）。詳見 story 檔 AC #1。
+3. **9R-10a：design-first 已裁定並進入開發**（另一 session）。
+
+## 仍待裁定
+
+1. **LICENSE 正式選擇**（gated on cedar-go GPL dep 替換；想保留商業選擇權則 v0 時選 FSL/PolyForm，否則 MIT/AGPL —— 紅線：沒 CLA 前不收外部 PR）＋ `_bmad-output/` 去留（v0 發布前一次決定）。
+2. （可選）90 天付費意願測試要不要跑 —— v0 發布後的自由選項。
 
 ## 主要證據
 
