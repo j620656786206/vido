@@ -32,13 +32,17 @@ func (m *mockTranscriptionMovieGetter) GetByID(_ context.Context, _ string) (*mo
 }
 
 type mockTranscriptionService struct {
-	available       bool
-	canResume       bool
-	inProgress      bool
-	jobID           string
-	startErr        error
-	receivedOpts    []services.TranscriptionOption
-	receivedMediaID string
+	available bool
+	canResume bool
+	// canResumeEpisode is the EPISODE-scoped resume answer (story 9R-10a).
+	// Deliberately a SEPARATE flag from canResume so a test can set them to
+	// opposite values and prove the episode route consults the right one.
+	canResumeEpisode bool
+	inProgress       bool
+	jobID            string
+	startErr         error
+	receivedOpts     []services.TranscriptionOption
+	receivedMediaID  string
 }
 
 func (m *mockTranscriptionService) IsAvailable() bool {
@@ -47,6 +51,10 @@ func (m *mockTranscriptionService) IsAvailable() bool {
 
 func (m *mockTranscriptionService) CanResumeTranslateOnly(_ context.Context, _ string) bool {
 	return m.canResume
+}
+
+func (m *mockTranscriptionService) CanResumeEpisodeTranslateOnly(_ context.Context, _ string) bool {
+	return m.canResumeEpisode
 }
 
 func (m *mockTranscriptionService) IsInProgress(_ string) bool {
@@ -90,6 +98,7 @@ func TestTranscribeMovie_Success(t *testing.T) {
 	mockSvc := &mockTranscriptionService{available: true, jobID: "job-123"}
 	h := NewTranscriptionHandler(
 		&mockTranscriptionMovieGetter{movie: movie},
+		nil, // episode getter — movie route only (story 9R-10a)
 		mockSvc,
 	)
 
@@ -123,6 +132,7 @@ func TestTranscribeMovie_WithTranslateParam(t *testing.T) {
 	mockSvc := &mockTranscriptionService{available: true, jobID: "job-456"}
 	h := NewTranscriptionHandler(
 		&mockTranscriptionMovieGetter{movie: movie},
+		nil, // episode getter — movie route only (story 9R-10a)
 		mockSvc,
 	)
 
@@ -147,6 +157,7 @@ func TestTranscribeMovie_WithoutTranslateParam(t *testing.T) {
 	mockSvc := &mockTranscriptionService{available: true, jobID: "job-789"}
 	h := NewTranscriptionHandler(
 		&mockTranscriptionMovieGetter{movie: movie},
+		nil, // episode getter — movie route only (story 9R-10a)
 		mockSvc,
 	)
 
@@ -163,6 +174,7 @@ func TestTranscribeMovie_WithoutTranslateParam(t *testing.T) {
 func TestTranscribeMovie_ServiceUnavailable(t *testing.T) {
 	h := NewTranscriptionHandler(
 		&mockTranscriptionMovieGetter{},
+		nil, // episode getter — movie route only (story 9R-10a)
 		&mockTranscriptionService{available: false},
 	)
 
@@ -196,6 +208,7 @@ func TestTranscribeMovie_ServiceUnavailable(t *testing.T) {
 func TestTranscribeMovie_EmptyID(t *testing.T) {
 	h := NewTranscriptionHandler(
 		&mockTranscriptionMovieGetter{},
+		nil, // episode getter — movie route only (story 9R-10a)
 		&mockTranscriptionService{available: true},
 	)
 
@@ -212,6 +225,7 @@ func TestTranscribeMovie_EmptyID(t *testing.T) {
 func TestTranscribeMovie_MovieNotFound(t *testing.T) {
 	h := NewTranscriptionHandler(
 		&mockTranscriptionMovieGetter{err: errors.New("not found")},
+		nil, // episode getter — movie route only (story 9R-10a)
 		&mockTranscriptionService{available: true},
 	)
 
@@ -231,6 +245,7 @@ func TestTranscribeMovie_NoFilePath(t *testing.T) {
 
 	h := NewTranscriptionHandler(
 		&mockTranscriptionMovieGetter{movie: movie},
+		nil, // episode getter — movie route only (story 9R-10a)
 		&mockTranscriptionService{available: true},
 	)
 
@@ -250,6 +265,7 @@ func TestTranscribeMovie_FileNotAccessible(t *testing.T) {
 
 	h := NewTranscriptionHandler(
 		&mockTranscriptionMovieGetter{movie: movie},
+		nil, // episode getter — movie route only (story 9R-10a)
 		&mockTranscriptionService{available: true},
 	)
 
@@ -270,6 +286,7 @@ func TestTranscribeMovie_AlreadyInProgress(t *testing.T) {
 
 	h := NewTranscriptionHandler(
 		&mockTranscriptionMovieGetter{movie: movie},
+		nil, // episode getter — movie route only (story 9R-10a)
 		&mockTranscriptionService{available: true, inProgress: true},
 	)
 
@@ -290,6 +307,7 @@ func TestTranscribeMovie_StartError(t *testing.T) {
 
 	h := NewTranscriptionHandler(
 		&mockTranscriptionMovieGetter{movie: movie},
+		nil, // episode getter — movie route only (story 9R-10a)
 		&mockTranscriptionService{
 			available: true,
 			startErr:  services.ErrTranscriptionInProgress,
@@ -313,6 +331,7 @@ func TestTranscribeMovie_InternalError(t *testing.T) {
 
 	h := NewTranscriptionHandler(
 		&mockTranscriptionMovieGetter{movie: movie},
+		nil, // episode getter — movie route only (story 9R-10a)
 		&mockTranscriptionService{
 			available: true,
 			startErr:  errors.New("unexpected error"),

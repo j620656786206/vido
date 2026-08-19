@@ -38,7 +38,13 @@ type MergedEpisode struct {
 	VoteAverage   float64 `json:"vote_average"`
 
 	// Local enrichment — only meaningful when HasLocalFile is true (AC #5/#6).
-	HasLocalFile     bool   `json:"has_local_file"`
+	HasLocalFile bool `json:"has_local_file"`
+	// EpisodeID is the local episode ROW id (UUID string, 9R-18) — the address
+	// the per-episode transcribe route takes (story 9R-10a AC #1
+	// [@contract-v1]). Filled ONLY alongside HasLocalFile: a TMDb episode with
+	// no local file is not addressable, so consumers gate on has_local_file and
+	// never on a non-empty id alone.
+	EpisodeID        string `json:"episode_id,omitempty"`
 	SubtitleStatus   string `json:"subtitle_status,omitempty"`
 	SubtitleLanguage string `json:"subtitle_language,omitempty"`
 	FilePath         string `json:"file_path,omitempty"`
@@ -152,6 +158,7 @@ func (s *SeriesService) GetSeasonEpisodes(ctx context.Context, seriesID string, 
 
 		if local, ok := localByNumber[te.EpisodeNumber]; ok && local.FilePath.Valid && local.FilePath.String != "" {
 			merged.HasLocalFile = true
+			merged.EpisodeID = local.ID
 			merged.FilePath = local.FilePath.String
 			merged.SubtitleStatus = string(local.SubtitleStatus)
 			if local.SubtitleLanguage.Valid {
