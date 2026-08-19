@@ -205,7 +205,8 @@ func main() {
 
 	// Initialize request service (Story 13-1a — Epic 13 one-click 想要 requests).
 	// Intent-only: fulfilment lands in 13-4, status transitions/SSE in 13-3a.
-	requestService := services.NewRequestService(repos.Requests, tmdbService, repos.Movies, repos.Series)
+	// 13-2a: the episode repo backs the episode-level owned guard + coverage.
+	requestService := services.NewRequestService(repos.Requests, tmdbService, repos.Movies, repos.Series, repos.Episodes)
 
 	// Story 13-4a — *arr DVR plugin infrastructure (§7). The manager owns
 	// per-plugin config (settings + secrets), fingerprint-cached clients, and
@@ -482,6 +483,10 @@ func main() {
 		repos.Requests, availabilityService, pluginManager, downloadService,
 		scannerService, fulfilmentService, sseHub,
 	)
+	// 13-2a (CR H1): a partial request lives on a show that is ALREADY local,
+	// so the poller's title-level completion rule needs the episode-level
+	// refinement the request service already computes.
+	requestStatusPoller.SetSelectionOwnershipChecker(requestService)
 	slog.Info("Request status poller initialized")
 
 	// Initialize subtitle engine components (Story 8.1-8.8)

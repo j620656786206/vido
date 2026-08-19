@@ -21,11 +21,29 @@ import (
 
 // mockRequestService is a hand-written mock of RequestServiceInterface.
 type mockRequestService struct {
-	createResp *models.Request
-	createErr  error
-	listResp   []models.Request
-	listErr    error
-	lastCreate services.CreateMediaRequestRequest
+	createResp   *models.Request
+	createErr    error
+	listResp     []models.Request
+	listErr      error
+	lastCreate   services.CreateMediaRequestRequest
+	coverageResp *services.RequestCoverage
+	coverageErr  error
+	lastCoverage int64
+}
+
+func (m *mockRequestService) TVCoverage(ctx context.Context, tmdbID int64) (*services.RequestCoverage, error) {
+	m.lastCoverage = tmdbID
+	if m.coverageErr != nil {
+		return nil, m.coverageErr
+	}
+	if m.coverageResp != nil {
+		return m.coverageResp, nil
+	}
+	return &services.RequestCoverage{
+		Owned:             map[string][]int{},
+		RequestedSeasons:  []int{},
+		RequestedEpisodes: map[string][]int{},
+	}, nil
 }
 
 var _ services.RequestServiceInterface = (*mockRequestService)(nil)
@@ -165,6 +183,77 @@ func TestRequestHandler_CreateRequest(t *testing.T) {
 		svc := &mockRequestService{createErr: errors.New("db exploded")}
 		r := setupRequestRouter(svc)
 		w := post(r, `{"tmdb_id": 550, "media_type": "movie"}`)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+	})
+}
+
+// --- 13-2a: selection wire + coverage endpoint ---
+
+func TestRequestHandler_CreateRequest_SelectionPassthrough(t *testing.T) {
+	// The optional seasons/episodes body fields reach the service DTO intact
+	// ([@contract-v1] 13-2a AC #1).
+	svc := &mockRequestService{createResp: &models.Request{ID: "r1"}}
+	r := setupRequestRouter(svc)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/requests",
+		bytes.NewBufferString(`{"tmdb_id": 1399, "media_type": "tv", "seasons": [1], "episodes": {"2": [5, 6]}}`))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusCreated, w.Code)
+	assert.Equal(t, []int{1}, svc.lastCreate.Seasons)
+	assert.Equal(t, map[string][]int{"2": {5, 6}}, svc.lastCreate.Episodes)
+}
+
+func TestRequestHandler_CreateRequest_InvalidSelectionMapsTo400(t *testing.T) {
+	svc := &mockRequestService{createErr: &services.InvalidSelectionError{Reason: "此影集沒有第 9 季"}}
+	r := setupRequestRouter(svc)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/requests",
+		bytes.NewBufferString(`{"tmdb_id": 1399, "media_type": "tv", "seasons": [9]}`))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), `"REQUEST_INVALID_SELECTION"`)
+	assert.Contains(t, w.Body.String(), "此影集沒有第 9 季",
+		"the zh-TW reason renders WITHOUT the English sentinel text (Rule 3)")
+	assert.NotContains(t, w.Body.String(), "invalid season/episode selection")
+}
+
+func TestRequestHandler_TVCoverage(t *testing.T) {
+	t.Run("200 with the coverage shape ([@contract-v1] AC #5)", func(t *testing.T) {
+		svc := &mockRequestService{coverageResp: &services.RequestCoverage{
+			Owned:             map[string][]int{"1": {1, 2}},
+			RequestedSeasons:  []int{3},
+			RequestedEpisodes: map[string][]int{},
+			ActiveRequest:     true,
+		}}
+		r := setupRequestRouter(svc)
+
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/requests/tv/1399/coverage", nil))
+
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, int64(1399), svc.lastCoverage)
+		assert.Contains(t, w.Body.String(), `"owned":{"1":[1,2]}`)
+		assert.Contains(t, w.Body.String(), `"requested_seasons":[3]`)
+		assert.Contains(t, w.Body.String(), `"active_request":true`)
+	})
+
+	t.Run("non-numeric tmdb_id → 400", func(t *testing.T) {
+		r := setupRequestRouter(&mockRequestService{})
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/requests/tv/abc/coverage", nil))
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("service error → 500", func(t *testing.T) {
+		r := setupRequestRouter(&mockRequestService{coverageErr: errors.New("boom")})
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/requests/tv/1399/coverage", nil))
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 	})
 }

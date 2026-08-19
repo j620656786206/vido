@@ -707,3 +707,90 @@ func TestPoller_WindowPrunedWhenRowLeavesActiveSet(t *testing.T) {
 	env.poller.tick(context.Background())
 	assert.False(t, env.poller.inImportWindow["r1"], "stale window entry pruned")
 }
+
+// --- CR 13-2a H1: partial requests must not complete on title-level ownership ---
+
+// stubSelectionOwnership answers the partial-completion refinement.
+type stubSelectionOwnership struct {
+	full  bool
+	err   error
+	calls int
+}
+
+func (s *stubSelectionOwnership) SelectionFullyOwned(_ context.Context, _ int64, _, _ models.NullString) (bool, error) {
+	s.calls++
+	return s.full, s.err
+}
+
+func partialRow(id string, tmdbID int64, status string) models.Request {
+	row := activeRow(id, tmdbID, models.RequestMediaTypeTV, status, "77")
+	row.Seasons = models.NewNullString("[2]")
+	return row
+}
+
+func TestPoller_Rule1_PartialRequestDoesNotCompleteOnTitleOwnership(t *testing.T) {
+	// The canonical 13-2a scenario: the user owns season 1, requests season 2.
+	// The show IS local, so the title-level rule alone would complete the row
+	// on the first tick — with season 2 never downloaded.
+	env := newPollerTestEnv(t)
+	env.repo.rows = []models.Request{partialRow("r1", 1399, models.RequestStatusSearching)}
+	env.owned.set(models.RequestMediaTypeTV, 1399)
+	checker := &stubSelectionOwnership{full: false}
+	env.poller.SetSelectionOwnershipChecker(checker)
+
+	var hookCalls int
+	env.poller.OnRequestCompleted = func(context.Context, models.Request) { hookCalls++ }
+
+	env.poller.tick(context.Background())
+
+	assert.Equal(t, 1, checker.calls, "rule 1 must consult the selection for a partial row")
+	for _, u := range env.repo.updates() {
+		assert.NotEqual(t, models.RequestStatusCompleted, u.status,
+			"a partial request whose selection has not landed must never complete")
+	}
+	assert.Zero(t, hookCalls, "the 13-5 auto-subtitle seam must not fire for undelivered episodes")
+}
+
+func TestPoller_Rule1_PartialRequestCompletesWhenSelectionLands(t *testing.T) {
+	env := newPollerTestEnv(t)
+	env.repo.rows = []models.Request{partialRow("r1", 1399, models.RequestStatusDownloading)}
+	env.owned.set(models.RequestMediaTypeTV, 1399)
+	env.poller.SetSelectionOwnershipChecker(&stubSelectionOwnership{full: true})
+
+	env.poller.tick(context.Background())
+
+	updates := env.repo.updates()
+	require.Len(t, updates, 1)
+	assert.Equal(t, models.RequestStatusCompleted, updates[0].status)
+}
+
+func TestPoller_Rule1_SelectionCheckFailureHoldsRatherThanCompletes(t *testing.T) {
+	// Fail-soft direction: holding one more tick is recoverable, a wrong
+	// `completed` is terminal (leaves ListActive + fires the 13-5 seam).
+	env := newPollerTestEnv(t)
+	env.repo.rows = []models.Request{partialRow("r1", 1399, models.RequestStatusSearching)}
+	env.owned.set(models.RequestMediaTypeTV, 1399)
+	env.poller.SetSelectionOwnershipChecker(&stubSelectionOwnership{err: errors.New("db down")})
+
+	env.poller.tick(context.Background())
+
+	for _, u := range env.repo.updates() {
+		assert.NotEqual(t, models.RequestStatusCompleted, u.status)
+	}
+}
+
+func TestPoller_Rule1_WholeTitleRowSkipsTheSelectionCheck(t *testing.T) {
+	// Whole-title rows keep the pre-13-2a behavior byte-identically.
+	env := newPollerTestEnv(t)
+	env.repo.rows = []models.Request{activeRow("r1", 550, models.RequestMediaTypeMovie, models.RequestStatusDownloading, "42")}
+	env.owned.set(models.RequestMediaTypeMovie, 550)
+	checker := &stubSelectionOwnership{full: false}
+	env.poller.SetSelectionOwnershipChecker(checker)
+
+	env.poller.tick(context.Background())
+
+	assert.Zero(t, checker.calls, "a row with no stored selection never consults the checker")
+	updates := env.repo.updates()
+	require.Len(t, updates, 1)
+	assert.Equal(t, models.RequestStatusCompleted, updates[0].status)
+}

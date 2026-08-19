@@ -27,10 +27,23 @@ type QueueItem struct {
 }
 
 // AddOptions carries the per-add parameters resolved from plugin config.
+//
+// Seasons/Episodes are the OPTIONAL 13-2a partial selection — ADDITIVE on the
+// 13-4a AC #1 [@contract-v1] shape (zero values = the pre-13-2a whole-title
+// behavior, byte-identical; the `HarvestedTerms`/`default_budget_usd`
+// precedent). Seasons lists fully-selected season numbers; Episodes maps a
+// partially-selected season to its episode numbers. Movie adds ignore both.
 type AddOptions struct {
 	QualityProfileID int64
 	RootFolderPath   string
 	SearchNow        bool
+	Seasons          []int
+	Episodes         map[int][]int
+}
+
+// Partial reports whether the options carry a season/episode selection.
+func (o AddOptions) Partial() bool {
+	return len(o.Seasons) > 0 || len(o.Episodes) > 0
 }
 
 // DVRPlugin is the §7 interface for *arr-style DVR integrations. A movie-only

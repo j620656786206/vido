@@ -116,6 +116,15 @@ type RequestStatusPoller struct {
 	interval     time.Duration
 	now          func() time.Time // injectable clock for the debounce tests
 
+	// selectionOwnership refines rule 1 for PARTIAL requests (CR 13-2a H1).
+	// The title-level ownership rule below answers "does this show exist
+	// locally at all", which is exactly the state a partial request is
+	// created in ("I own season 1, send me season 2") — without this the very
+	// first tick would complete it and fire the 13-5 seam for episodes that
+	// were never downloaded. Nil-safe: unwired = the pre-13-2a title-level
+	// behavior for every row.
+	selectionOwnership SelectionOwnershipChecker
+
 	// OnRequestCompleted is the 13-5 seam: invoked exactly once per request
 	// transition INTO completed (idempotence lives on the transition edge —
 	// a completed row leaves ListActive, so re-ticks cannot re-fire). Nil-safe;
@@ -259,6 +268,41 @@ func (o ownedSets) has(mediaType string, tmdbID int64) bool {
 	return o.movie[tmdbID]
 }
 
+// SelectionOwnershipChecker refines the title-level completion rule for
+// partial requests (13-2a). *RequestService implements it over the same
+// ownership + TMDB predicate the create-time guard uses, so "fully owned"
+// cannot mean two different things in two places.
+type SelectionOwnershipChecker interface {
+	SelectionFullyOwned(ctx context.Context, tmdbID int64, seasons, episodes models.NullString) (bool, error)
+}
+
+// SetSelectionOwnershipChecker wires the optional partial-request refinement
+// (main.go). Kept a setter so the 13-3a constructor signature is untouched.
+func (p *RequestStatusPoller) SetSelectionOwnershipChecker(checker SelectionOwnershipChecker) {
+	p.selectionOwnership = checker
+}
+
+// selectionSatisfied answers rule 1's follow-up question for a partial row:
+// are the SELECTED seasons/episodes all present locally? Whole-title rows and
+// an unwired checker answer true (the pre-13-2a behavior).
+//
+// Fail-soft direction matters: a lookup failure returns FALSE (do not
+// complete). Holding a row one more tick is recoverable; a wrong `completed`
+// is terminal — it leaves ListActive, stops being reconciled, and fires the
+// 13-5 auto-subtitle seam for episodes that never landed.
+func (p *RequestStatusPoller) selectionSatisfied(ctx context.Context, row *models.Request) bool {
+	if p.selectionOwnership == nil || (!row.Seasons.Valid && !row.Episodes.Valid) {
+		return true
+	}
+	full, err := p.selectionOwnership.SelectionFullyOwned(ctx, row.TMDbID, row.Seasons, row.Episodes)
+	if err != nil {
+		p.logSourceErr("selection_owned", "Request status poll failed partial-selection ownership check", err)
+		return false
+	}
+	p.clearSourceErr("selection_owned")
+	return full
+}
+
 // reconcile applies the AC #2 derivation table to one row IN ORDER and
 // returns its snapshot item (with the row mutated to its post-tick state).
 func (p *RequestStatusPoller) reconcile(
@@ -269,8 +313,11 @@ func (p *RequestStatusPoller) reconcile(
 	queues map[string]queueEvidence,
 	torrents map[string]qbittorrent.Torrent,
 ) requestProgressItem {
-	// Rule 1 — Vido's own library is the truth for 已入庫 (terminal).
-	if ownedOK && ownedSet.has(row.MediaType, row.TMDbID) {
+	// Rule 1 — Vido's own library is the truth for 已入庫 (terminal). For a
+	// PARTIAL request the title-level answer is not enough (CR 13-2a H1): the
+	// show is already local by construction, so completion must be judged
+	// against the SELECTED seasons/episodes.
+	if ownedOK && ownedSet.has(row.MediaType, row.TMDbID) && p.selectionSatisfied(ctx, row) {
 		p.completeRequest(ctx, row)
 		return requestProgressItem{Request: *row}
 	}
