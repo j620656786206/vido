@@ -318,3 +318,169 @@ func TestClient_ImplementsInterfaces(t *testing.T) {
 	var _ plugins.DVRPlugin = (*Client)(nil)
 	var _ plugins.ProfileLister = (*Client)(nil)
 }
+
+// --- 13-2a: selection-aware AddSeries ([@contract-v2]) ---
+
+// partialHarness serves lookup + series-create + episode list + monitor +
+// command endpoints and records the selection-side traffic.
+type partialHarness struct {
+	seriesBody   map[string]any
+	monitorBody  map[string]any
+	monitorCalls int
+	commands     []map[string]any
+	episodesByQ  map[string]string // "season" query → JSON body
+}
+
+func newPartialServer(t *testing.T, h *partialHarness) *httptest.Server {
+	t.Helper()
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v3/series/lookup", requireAPIKey(t, func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `[{
+			"title": "Game of Thrones", "tvdbId": 121361,
+			"seasons": [
+				{"seasonNumber": 0, "monitored": false},
+				{"seasonNumber": 1, "monitored": false},
+				{"seasonNumber": 2, "monitored": false},
+				{"seasonNumber": 3, "monitored": false}
+			]
+		}]`)
+	}))
+	mux.HandleFunc("/api/v3/series", requireAPIKey(t, func(w http.ResponseWriter, r *http.Request) {
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&h.seriesBody))
+		w.WriteHeader(http.StatusCreated)
+		fmt.Fprint(w, `{"id": 7}`)
+	}))
+	mux.HandleFunc("/api/v3/episode", requireAPIKey(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "7", r.URL.Query().Get("seriesId"))
+		body, ok := h.episodesByQ[r.URL.Query().Get("seasonNumber")]
+		require.True(t, ok, "unexpected episode-list season %s", r.URL.Query().Get("seasonNumber"))
+		fmt.Fprint(w, body)
+	}))
+	mux.HandleFunc("/api/v3/episode/monitor", requireAPIKey(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPut, r.Method)
+		h.monitorCalls++
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&h.monitorBody))
+		fmt.Fprint(w, `[]`)
+	}))
+	mux.HandleFunc("/api/v3/command", requireAPIKey(t, func(w http.ResponseWriter, r *http.Request) {
+		var cmd map[string]any
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&cmd))
+		h.commands = append(h.commands, cmd)
+		w.WriteHeader(http.StatusCreated)
+		fmt.Fprint(w, `{"id": 1}`)
+	}))
+	return httptest.NewServer(mux)
+}
+
+func TestClient_AddSeries_PartialSelection(t *testing.T) {
+	h := &partialHarness{episodesByQ: map[string]string{
+		"1": `[{"id": 101, "seasonNumber": 1, "episodeNumber": 1}, {"id": 102, "seasonNumber": 1, "episodeNumber": 2}]`,
+		"2": `[{"id": 201, "seasonNumber": 2, "episodeNumber": 1}, {"id": 202, "seasonNumber": 2, "episodeNumber": 2}, {"id": 203, "seasonNumber": 2, "episodeNumber": 3}]`,
+	}}
+	server := newPartialServer(t, h)
+	defer server.Close()
+
+	client := NewClient(testConfig(server.URL), staticResolver(121361, nil))
+	externalID, err := client.AddSeries(context.Background(), 1399, plugins.AddOptions{
+		QualityProfileID: 4, RootFolderPath: "/tv", SearchNow: true,
+		Seasons:  []int{1},
+		Episodes: map[int][]int{2: {2, 3}},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int64(7), externalID)
+
+	// POST /series: only selected seasons stay monitored; the whole-series
+	// levers are OFF (monitor none, no searchForMissingEpisodes).
+	seasons := h.seriesBody["seasons"].([]any)
+	monitoredByNumber := map[int]bool{}
+	for _, s := range seasons {
+		season := s.(map[string]any)
+		monitoredByNumber[int(season["seasonNumber"].(float64))] = season["monitored"].(bool)
+	}
+	assert.Equal(t, map[int]bool{0: false, 1: true, 2: true, 3: false}, monitoredByNumber,
+		"selected seasons (whole=1, episode-listed=2) monitored; the rest not")
+	addOpts := h.seriesBody["addOptions"].(map[string]any)
+	assert.Equal(t, "none", addOpts["monitor"])
+	assert.Equal(t, false, addOpts["searchForMissingEpisodes"])
+
+	// PUT /episode/monitor: ONE call promoting every selected episode id.
+	require.Equal(t, 1, h.monitorCalls)
+	assert.Equal(t, true, h.monitorBody["monitored"])
+	ids := h.monitorBody["episodeIds"].([]any)
+	got := make([]int, 0, len(ids))
+	for _, id := range ids {
+		got = append(got, int(id.(float64)))
+	}
+	assert.ElementsMatch(t, []int{101, 102, 202, 203}, got,
+		"whole season 1's episodes plus season 2's selected episodes")
+
+	// Commands: SeasonSearch for the whole season, one EpisodeSearch for the
+	// listed episodes.
+	require.Len(t, h.commands, 2)
+	assert.Equal(t, "SeasonSearch", h.commands[0]["name"])
+	assert.Equal(t, float64(7), h.commands[0]["seriesId"])
+	assert.Equal(t, float64(1), h.commands[0]["seasonNumber"])
+	assert.Equal(t, "EpisodeSearch", h.commands[1]["name"])
+	epIDs := h.commands[1]["episodeIds"].([]any)
+	assert.Len(t, epIDs, 2)
+}
+
+func TestClient_AddSeries_PartialWithoutSearchNowSkipsCommands(t *testing.T) {
+	h := &partialHarness{episodesByQ: map[string]string{
+		"1": `[{"id": 101, "seasonNumber": 1, "episodeNumber": 1}]`,
+	}}
+	server := newPartialServer(t, h)
+	defer server.Close()
+
+	client := NewClient(testConfig(server.URL), staticResolver(121361, nil))
+	_, err := client.AddSeries(context.Background(), 1399, plugins.AddOptions{
+		QualityProfileID: 4, RootFolderPath: "/tv", SearchNow: false,
+		Seasons: []int{1},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 1, h.monitorCalls, "monitoring still applies without SearchNow")
+	assert.Empty(t, h.commands, "no search commands when SearchNow is off")
+}
+
+func TestClient_AddSeries_PartialNumberingMismatchFailsLoudly(t *testing.T) {
+	// The selection was validated against TMDB numbering; Sonarr speaks TVDB.
+	// A season whose selected episodes resolve to NOTHING must fail rather
+	// than silently monitoring nothing.
+	h := &partialHarness{episodesByQ: map[string]string{
+		"2": `[{"id": 201, "seasonNumber": 2, "episodeNumber": 1}]`,
+	}}
+	server := newPartialServer(t, h)
+	defer server.Close()
+
+	client := NewClient(testConfig(server.URL), staticResolver(121361, nil))
+	_, err := client.AddSeries(context.Background(), 1399, plugins.AddOptions{
+		QualityProfileID: 4, RootFolderPath: "/tv", SearchNow: true,
+		Episodes: map[int][]int{2: {8, 9}},
+	})
+
+	var pluginErr *plugins.PluginError
+	require.ErrorAs(t, err, &pluginErr)
+	assert.Equal(t, plugins.ErrCodeAddFailed, pluginErr.Code)
+}
+
+// CR 13-2a H2: a whole-season pick whose season Sonarr knows nothing about
+// must fail loudly — symmetric with the listed-episodes branch. Silently
+// monitoring nothing and firing a no-op SeasonSearch left the request stuck
+// on 搜尋中 forever.
+func TestClient_AddSeries_PartialWholeSeasonEmptyInSonarrFailsLoudly(t *testing.T) {
+	h := &partialHarness{episodesByQ: map[string]string{"1": `[]`}}
+	server := newPartialServer(t, h)
+	defer server.Close()
+
+	client := NewClient(testConfig(server.URL), staticResolver(121361, nil))
+	_, err := client.AddSeries(context.Background(), 1399, plugins.AddOptions{
+		QualityProfileID: 4, RootFolderPath: "/tv", SearchNow: true,
+		Seasons: []int{1},
+	})
+
+	var pluginErr *plugins.PluginError
+	require.ErrorAs(t, err, &pluginErr)
+	assert.Equal(t, plugins.ErrCodeAddFailed, pluginErr.Code)
+	assert.Empty(t, h.commands, "no no-op search may fire for an unresolvable season")
+	assert.Zero(t, h.monitorCalls)
+}

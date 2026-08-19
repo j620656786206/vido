@@ -146,10 +146,16 @@ type addSeriesResponse struct {
 	ID int64 `json:"id"`
 }
 
-// AddSeries adds a whole series by TMDB id ([@contract-v1] whole-series
-// semantics — season/episode granularity is 13-2a's bump):
-// resolve TMDB→TVDB → lookup `tvdb:{id}` → POST the lookup-shaped object
-// enriched with config fields. Returns Sonarr's own series id.
+// AddSeries adds a series by TMDB id — [@contract-v2] (13-2a bump of the
+// 13-4b whole-series [@contract-v1]): with an empty selection the flow is
+// byte-identical to v1 (whole series, `monitor:"all"`, searchForMissing);
+// with opts.Seasons/Episodes it becomes selection-aware — only selected
+// seasons monitored, `monitor:"none"` at add time, explicit episode
+// monitoring + SeasonSearch/EpisodeSearch commands afterwards.
+//
+// Resolution flow is unchanged: resolve TMDB→TVDB → lookup `tvdb:{id}` →
+// POST the lookup-shaped object enriched with config fields. Returns Sonarr's
+// own series id.
 func (c *Client) AddSeries(ctx context.Context, tmdbID int64, opts plugins.AddOptions) (int64, error) {
 	tvdbID, err := c.resolver.ResolveTVDBID(ctx, tmdbID)
 	if err != nil {
@@ -171,6 +177,9 @@ func (c *Client) AddSeries(ctx context.Context, tmdbID int64, opts plugins.AddOp
 		return 0, err
 	}
 
+	partial := opts.Partial()
+	selectedSeasons := selectedSeasonSet(opts)
+
 	// Enrich the lookup object in place — POSTing a hand-built minimal body
 	// is the classic source of Sonarr 400s (Dev Notes idiom).
 	series["qualityProfileId"] = opts.QualityProfileID
@@ -179,13 +188,32 @@ func (c *Client) AddSeries(ctx context.Context, tmdbID int64, opts plugins.AddOp
 	if seasons, ok := series["seasons"].([]any); ok {
 		for _, s := range seasons {
 			if season, ok := s.(map[string]any); ok {
-				season["monitored"] = true
+				monitored := true
+				if partial {
+					// Sonarr season numbers arrive as JSON float64.
+					number, _ := season["seasonNumber"].(float64)
+					_, monitored = selectedSeasons[int(number)]
+				}
+				season["monitored"] = monitored
 			}
 		}
 	}
-	series["addOptions"] = map[string]any{
-		"monitor":                  "all",
-		"searchForMissingEpisodes": opts.SearchNow,
+	if partial {
+		// Episode monitoring is set EXPLICITLY below rather than trusted to a
+		// monitor strategy: `none` guarantees a clean slate, then the selected
+		// episodes are promoted — deterministic regardless of how Sonarr's
+		// monitor options interact with season flags. Search fires via
+		// explicit commands, never searchForMissingEpisodes (which is a
+		// whole-series lever and would over-search).
+		series["addOptions"] = map[string]any{
+			"monitor":                  "none",
+			"searchForMissingEpisodes": false,
+		}
+	} else {
+		series["addOptions"] = map[string]any{
+			"monitor":                  "all",
+			"searchForMissingEpisodes": opts.SearchNow,
+		}
 	}
 
 	payload, err := json.Marshal(series)
@@ -206,7 +234,159 @@ func (c *Client) AddSeries(ctx context.Context, tmdbID int64, opts plugins.AddOp
 			Cause:   err,
 		}
 	}
+
+	if partial {
+		if err := c.applySelection(ctx, created.ID, opts); err != nil {
+			// The series row exists in Sonarr but the selection did not fully
+			// land — an honest DVR_ADD_FAILED (request stays pending for the
+			// 13-3a reconcile). A subsequent retry re-hits POST /series and
+			// gets already-exists: the KNOWN class tracked as
+			// disc-2026-07-arr-already-exists-loop (extended by 13-2a's ⚖️ A
+			// ruling to own the existing-series update path).
+			return 0, err
+		}
+	}
 	return created.ID, nil
+}
+
+// selectedSeasonSet unions fully-selected seasons with the seasons that carry
+// individual episode selections — the set whose season flags stay monitored.
+func selectedSeasonSet(opts plugins.AddOptions) map[int]struct{} {
+	set := make(map[int]struct{}, len(opts.Seasons)+len(opts.Episodes))
+	for _, n := range opts.Seasons {
+		set[n] = struct{}{}
+	}
+	for n := range opts.Episodes {
+		set[n] = struct{}{}
+	}
+	return set
+}
+
+// sonarrEpisode is the subset of GET /api/v3/episode we consume.
+type sonarrEpisode struct {
+	ID            int64 `json:"id"`
+	SeasonNumber  int   `json:"seasonNumber"`
+	EpisodeNumber int   `json:"episodeNumber"`
+}
+
+// applySelection promotes the selected episodes to monitored and triggers the
+// per-selection searches (13-2a AC #4): one GET /episode per selected season,
+// one PUT /episode/monitor for ALL selected episode ids, then SeasonSearch
+// per fully-selected season and a single EpisodeSearch for listed episodes
+// (only when SearchNow).
+//
+// NUMBERING CAVEAT (recorded, not solved here): the request was validated
+// against TMDB numbering while Sonarr speaks TVDB numbering; for the rare
+// show where they diverge, a selected number missing from Sonarr's list is
+// skipped with a warning — an entirely-unresolvable season fails loudly.
+func (c *Client) applySelection(ctx context.Context, seriesID int64, opts plugins.AddOptions) error {
+	var monitorIDs []int64 // every selected episode id (whole seasons + listed)
+	var episodeIDs []int64 // listed-episode ids only (EpisodeSearch payload)
+
+	fetch := func(season int) ([]sonarrEpisode, error) {
+		body, err := c.doRequest(ctx, http.MethodGet,
+			c.buildURL(fmt.Sprintf("/episode?seriesId=%d&seasonNumber=%d", seriesID, season)),
+			c.config.APIKey, nil)
+		if err != nil {
+			return nil, err
+		}
+		var episodes []sonarrEpisode
+		if err := json.Unmarshal(body, &episodes); err != nil {
+			return nil, &plugins.PluginError{
+				Code:    plugins.ErrCodeAddFailed,
+				Message: fmt.Sprintf("sonarr episode list for season %d is not parseable", season),
+				Cause:   err,
+			}
+		}
+		return episodes, nil
+	}
+
+	for _, season := range opts.Seasons {
+		episodes, err := fetch(season)
+		if err != nil {
+			return err
+		}
+		if len(episodes) == 0 {
+			// CR 13-2a H2: symmetry with the listed-episodes branch below. A
+			// season Sonarr knows nothing about (numbering mismatch, or the
+			// season not yet populated) would otherwise monitor nothing and
+			// fire a no-op SeasonSearch while the request happily reports
+			// 搜尋中 forever.
+			return &plugins.PluginError{
+				Code:    plugins.ErrCodeAddFailed,
+				Message: fmt.Sprintf("sonarr lists no episodes for season %d (numbering mismatch?)", season),
+			}
+		}
+		for _, ep := range episodes {
+			monitorIDs = append(monitorIDs, ep.ID)
+		}
+	}
+	for season, numbers := range opts.Episodes {
+		episodes, err := fetch(season)
+		if err != nil {
+			return err
+		}
+		byNumber := make(map[int]int64, len(episodes))
+		for _, ep := range episodes {
+			byNumber[ep.EpisodeNumber] = ep.ID
+		}
+		resolved := 0
+		for _, n := range numbers {
+			if id, ok := byNumber[n]; ok {
+				monitorIDs = append(monitorIDs, id)
+				episodeIDs = append(episodeIDs, id)
+				resolved++
+			} else {
+				slog.Warn("Sonarr has no matching episode for the selected number — skipping",
+					"series_id", seriesID, "season", season, "episode", n)
+			}
+		}
+		if resolved == 0 {
+			return &plugins.PluginError{
+				Code:    plugins.ErrCodeAddFailed,
+				Message: fmt.Sprintf("none of the selected episodes of season %d exist in sonarr (numbering mismatch?)", season),
+			}
+		}
+	}
+
+	if len(monitorIDs) > 0 {
+		payload, err := json.Marshal(map[string]any{"episodeIds": monitorIDs, "monitored": true})
+		if err != nil {
+			return &plugins.PluginError{Code: plugins.ErrCodeAddFailed, Message: "encode episode-monitor request", Cause: err}
+		}
+		if _, err := c.doRequest(ctx, http.MethodPut, c.buildURL("/episode/monitor"), c.config.APIKey, payload); err != nil {
+			return err
+		}
+	}
+
+	if !opts.SearchNow {
+		return nil
+	}
+	for _, season := range opts.Seasons {
+		if err := c.postCommand(ctx, map[string]any{
+			"name": "SeasonSearch", "seriesId": seriesID, "seasonNumber": season,
+		}); err != nil {
+			return err
+		}
+	}
+	if len(episodeIDs) > 0 {
+		if err := c.postCommand(ctx, map[string]any{
+			"name": "EpisodeSearch", "episodeIds": episodeIDs,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// postCommand POSTs one Sonarr command payload.
+func (c *Client) postCommand(ctx context.Context, command map[string]any) error {
+	payload, err := json.Marshal(command)
+	if err != nil {
+		return &plugins.PluginError{Code: plugins.ErrCodeAddFailed, Message: "encode sonarr command", Cause: err}
+	}
+	_, err = c.doRequest(ctx, http.MethodPost, c.buildURL("/command"), c.config.APIKey, payload)
+	return err
 }
 
 // lookupSeries fetches the full lookup-shaped series object for a TVDB id.

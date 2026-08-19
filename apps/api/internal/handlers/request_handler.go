@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vido/api/internal/models"
@@ -17,6 +18,10 @@ import (
 const (
 	errCodeRequestDuplicate        = "REQUEST_DUPLICATE"
 	errCodeRequestAlreadyInLibrary = "REQUEST_ALREADY_IN_LIBRARY"
+	// 13-2a AC #2: a malformed / unknown-to-TMDB / owned-overlapping partial
+	// selection (code-list extension under the existing REQUEST_ prefix —
+	// prefix count stays 16, no CR-workflow sync needed).
+	errCodeRequestInvalidSelection = "REQUEST_INVALID_SELECTION"
 )
 
 // RequestHandler handles HTTP requests for the media request system.
@@ -36,7 +41,34 @@ func (h *RequestHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	{
 		requests.GET("", h.ListRequests)
 		requests.POST("", h.CreateRequest)
+		requests.GET("/tv/:tmdb_id/coverage", h.TVCoverage)
 	}
+}
+
+// TVCoverage handles GET /api/v1/requests/tv/:tmdb_id/coverage (13-2a AC #5
+// [@contract-v1] — the 13-2b tree's owned/requested reflection).
+// @Summary Owned/requested coverage for a TV show's season-episode tree
+// @Tags requests
+// @Produce json
+// @Param tmdb_id path int true "TMDB TV id"
+// @Success 200 {object} APIResponse{data=services.RequestCoverage}
+// @Failure 400 {object} APIResponse "VALIDATION_INVALID_FORMAT"
+// @Failure 500 {object} APIResponse "INTERNAL_ERROR"
+// @Router /api/v1/requests/tv/{tmdb_id}/coverage [get]
+func (h *RequestHandler) TVCoverage(c *gin.Context) {
+	tmdbID, err := strconv.ParseInt(c.Param("tmdb_id"), 10, 64)
+	if err != nil || tmdbID <= 0 {
+		ErrorResponse(c, http.StatusBadRequest, "VALIDATION_INVALID_FORMAT",
+			"tmdb_id 必須是正整數", "請確認網址中的 tmdb_id。")
+		return
+	}
+	coverage, err := h.service.TVCoverage(c.Request.Context(), tmdbID)
+	if err != nil {
+		slog.Error("Failed to load request coverage", "tmdb_id", tmdbID, "error", err)
+		InternalServerError(c, "無法載入請求範圍資訊")
+		return
+	}
+	SuccessResponse(c, coverage)
 }
 
 // ListRequests handles GET /api/v1/requests
@@ -104,6 +136,16 @@ func handleRequestError(c *gin.Context, err error) {
 		ErrorResponse(c, http.StatusConflict, errCodeRequestAlreadyInLibrary,
 			"此片已在媒體庫中",
 			"請直接在媒體庫中觀看。")
+		return
+	}
+	var selectionErr *services.InvalidSelectionError
+	if errors.As(err, &selectionErr) {
+		slog.Debug("Request rejected: invalid selection", "error", err)
+		// Reason is the clean zh-TW half — the English sentinel diagnostic
+		// stays out of the Rule 3 envelope.
+		ErrorResponse(c, http.StatusBadRequest, errCodeRequestInvalidSelection,
+			selectionErr.Reason,
+			"請重新勾選要請求的季或集後再試一次。")
 		return
 	}
 	// TMDb resolve failures pass through typed (TMDB_NOT_FOUND on a bad

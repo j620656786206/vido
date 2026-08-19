@@ -19,6 +19,9 @@ type TMDbServiceInterface interface {
 	SearchTVShows(ctx context.Context, query string, page int) (*tmdb.SearchResultTVShows, error)
 	GetMovieDetails(ctx context.Context, movieID int) (*tmdb.MovieDetails, error)
 	GetTVShowDetails(ctx context.Context, tvID int) (*tmdb.TVShowDetails, error)
+	// GetSeasonDetails backs GET /tmdb/tv/:id/season/:season_number (13-2a
+	// AC #5 — the client/cache methods predate the route; Rule 15 sync).
+	GetSeasonDetails(ctx context.Context, tvID int, seasonNumber int) (*tmdb.SeasonDetails, error)
 	GetTrendingMovies(ctx context.Context, timeWindow string, page int) (*tmdb.SearchResultMovies, error)
 	GetTrendingTVShows(ctx context.Context, timeWindow string, page int) (*tmdb.SearchResultTVShows, error)
 	DiscoverMovies(ctx context.Context, params tmdb.DiscoverParams) (*tmdb.SearchResultMovies, error)
@@ -437,6 +440,45 @@ func (h *TMDbHandler) GetMovieVideos(c *gin.Context) {
 	SuccessResponse(c, result)
 }
 
+// GetSeasonDetails handles GET /api/v1/tmdb/tv/:id/season/:season_number
+// (13-2a AC #5 — lazy episode expansion for the 13-2b season/episode tree).
+// @Summary Get a TV season's episode list from TMDb
+// @Description Get season details (episode list) for a TV show, cached 24h
+// @Tags tmdb
+// @Accept json
+// @Produce json
+// @Param id path int true "TMDb TV Show ID"
+// @Param season_number path int true "Season number (0 = specials)"
+// @Success 200 {object} APIResponse{data=tmdb.SeasonDetails}
+// @Failure 400 {object} APIResponse{error=APIError}
+// @Failure 404 {object} APIResponse{error=APIError}
+// @Failure 500 {object} APIResponse{error=APIError}
+// @Router /api/v1/tmdb/tv/{id}/season/{season_number} [get]
+func (h *TMDbHandler) GetSeasonDetails(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil || id <= 0 {
+		ErrorResponse(c, http.StatusBadRequest, tmdb.ErrCodeBadRequest,
+			"Invalid TV show ID",
+			"TV show ID must be a positive integer")
+		return
+	}
+	seasonNumber, err := strconv.Atoi(c.Param("season_number"))
+	if err != nil || seasonNumber < 0 {
+		ErrorResponse(c, http.StatusBadRequest, tmdb.ErrCodeBadRequest,
+			"Invalid season number",
+			"Season number must be a non-negative integer")
+		return
+	}
+
+	result, err := h.service.GetSeasonDetails(c.Request.Context(), id, seasonNumber)
+	if err != nil {
+		handleTMDbError(c, err, "get season details",
+			slog.Int("tv_id", id), slog.Int("season_number", seasonNumber))
+		return
+	}
+	SuccessResponse(c, result)
+}
+
 // GetTVShowVideos handles GET /api/v1/tmdb/tv/:id/videos.
 // @Summary Get TV show videos from TMDb
 // @Description Retrieve trailers, teasers, and clips for a TV show via TMDb videos endpoint
@@ -714,6 +756,9 @@ func (h *TMDbHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		// Details endpoints
 		tmdbGroup.GET("/movies/:id", h.GetMovieDetails)
 		tmdbGroup.GET("/tv/:id", h.GetTVShowDetails)
+		// 13-2a AC #5 — season episode list (client/cache existed; route was
+		// the missing half, the Rule 15 10-2 lesson).
+		tmdbGroup.GET("/tv/:id/season/:season_number", h.GetSeasonDetails)
 
 		// Videos endpoints (Story 10-2 AC #6)
 		tmdbGroup.GET("/movies/:id/videos", h.GetMovieVideos)

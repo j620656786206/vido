@@ -45,6 +45,8 @@ so that the 想要清單 rows drawn in the design (取消 on pending, 重試 on 
 
 ## Dev Notes
 
+> ⚠️ **STALE [@contract-v1→v2]**: upstream 13-4b AC #2 bumped 2026-08-19 by 13-2a — `AddSeries` is now selection-aware (`AddOptions.Seasons/Episodes` additive; empty selection = v1 行為 byte-identical). Re-confirm against v2 before dev — 預期結論：cancel 僅作用於 pending（external_id NULL、無 *arr un-add），selection 分支不影響本 story 的取消/重試語意，但需在實作時明文 ack v2。See 13-4b Change Log.
+
 ### Code anchors (all MERGED on main — verified 2026-07-05)
 
 - Routes: `apps/api/internal/handlers/request_handler.go:34-40` (`GET ""` + `POST ""` only today; error consts :17-20 `REQUEST_DUPLICATE`/`REQUEST_ALREADY_IN_LIBRARY`).
