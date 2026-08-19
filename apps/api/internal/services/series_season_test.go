@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -215,4 +216,61 @@ func TestSeriesService_GetSeasons_RepoNotConfigured(t *testing.T) {
 	svc := NewSeriesService(seriesRepoReturning(newSeasonSeries(t, 1396)))
 	_, err := svc.GetSeasons(context.Background(), "series-1")
 	assert.ErrorIs(t, err, ErrSeasonDepsNotConfigured)
+}
+
+// ─── Story 9R-10a AC #1 [@contract-v1] ────────────────────────────────────
+
+// TestSeriesService_GetSeasonEpisodes_EpisodeIDWireShape pins the episode ROW
+// id that the per-episode transcribe route takes as its address. The id is
+// filled ONLY on the has_local_file branch: a TMDb episode with no local file
+// is not addressable and must not carry one (a consumer that gated on a
+// non-empty id alone would otherwise offer generation for a file the NAS does
+// not have).
+func TestSeriesService_GetSeasonEpisodes_EpisodeIDWireShape(t *testing.T) {
+	series := newSeasonSeries(t, 1396)
+	details := &tmdb.SeasonDetails{
+		ID: 1, Name: "第 1 季", SeasonNumber: 1,
+		Episodes: []tmdb.EpisodeInfo{
+			{EpisodeNumber: 1, Name: "第一集"},
+			{EpisodeNumber: 2, Name: "第二集"},
+			{EpisodeNumber: 3, Name: "第三集"},
+		},
+	}
+	local := []models.Episode{
+		{ID: "e1", SeriesID: "series-1", SeasonNumber: 1, EpisodeNumber: 1,
+			FilePath: models.NewNullString("/m/S01E01.mkv"), SubtitleStatus: models.SubtitleStatusFound},
+		// Local row exists but carries no file — not addressable.
+		{ID: "e2", SeriesID: "series-1", SeasonNumber: 1, EpisodeNumber: 2,
+			SubtitleStatus: models.SubtitleStatusNotSearched},
+	}
+
+	svc := newSeasonServiceUnderTest(series, local, nil, details, nil)
+	resp, err := svc.GetSeasonEpisodes(context.Background(), "series-1", 1)
+	require.NoError(t, err)
+	require.Len(t, resp.Episodes, 3)
+
+	// Has a local file → addressable.
+	assert.True(t, resp.Episodes[0].HasLocalFile)
+	assert.Equal(t, "e1", resp.Episodes[0].EpisodeID)
+
+	// Local row, no file → NOT addressable.
+	assert.False(t, resp.Episodes[1].HasLocalFile)
+	assert.Empty(t, resp.Episodes[1].EpisodeID)
+
+	// No local row at all → NOT addressable.
+	assert.False(t, resp.Episodes[2].HasLocalFile)
+	assert.Empty(t, resp.Episodes[2].EpisodeID)
+}
+
+// TestMergedEpisode_EpisodeIDOmitEmpty pins the JSON wire shape: `episode_id`
+// appears for an addressable episode and is ABSENT (not `""`) otherwise, so a
+// consumer can treat presence as addressability.
+func TestMergedEpisode_EpisodeIDOmitEmpty(t *testing.T) {
+	withID, err := json.Marshal(MergedEpisode{EpisodeNumber: 1, HasLocalFile: true, EpisodeID: "e1"})
+	require.NoError(t, err)
+	assert.Contains(t, string(withID), `"episode_id":"e1"`)
+
+	withoutID, err := json.Marshal(MergedEpisode{EpisodeNumber: 2})
+	require.NoError(t, err)
+	assert.NotContains(t, string(withoutID), "episode_id")
 }

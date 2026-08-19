@@ -123,7 +123,7 @@ func TestRouteC_UUIDMovie_FlowsThroughWholeChain(t *testing.T) {
 	transcriptionSvc := services.NewTranscriptionService(
 		services.NewAudioExtractorService(1, time.Minute, nil),
 		ai.NewWhisperClient("test-key"), nil, nil)
-	NewTranscriptionHandler(services.NewMovieService(movieRepo), transcriptionSvc).RegisterRoutes(api)
+	NewTranscriptionHandler(services.NewMovieService(movieRepo), nil, transcriptionSvc).RegisterRoutes(api)
 
 	// Batch legs: real processor + real repo finders (movie + episode,
 	// sub-4-2); deterministic stub runner.

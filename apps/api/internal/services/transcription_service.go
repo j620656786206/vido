@@ -384,6 +384,18 @@ func WithMediaType(mediaType string) TranscriptionOption {
 	}
 }
 
+// TranscriptionOptionsFor resolves an option slice to the effect it would have
+// on a run: (translate, mediaType). Exported for CALLER TESTS in other
+// packages — TranscriptionOption is an opaque func over an unexported config,
+// so a handler test cannot otherwise tell WithMediaType(episode) apart from a
+// no-op. Story 9R-10a AC #5: a handler that forgets WithMediaType writes an
+// episode's status into the movies table with no error at all, so "the option
+// was actually sent" needs a real assertion, not a length check.
+func TranscriptionOptionsFor(opts []TranscriptionOption) (translate bool, mediaType string) {
+	cfg := newTranscriptionConfig(opts)
+	return cfg.translate, cfg.mediaType
+}
+
 // runPipeline executes the full transcription pipeline:
 // Extract audio → (optional chunk) → Whisper API → Merge SRT → Save → (optional) Translate
 // It reports failures via failJob SSE AND returns the error so the synchronous
@@ -577,6 +589,18 @@ func (s *TranscriptionService) loadSubtitleRowState(ctx context.Context, mediaTy
 // movie-only — internal callers use the media-type-aware variant.
 func (s *TranscriptionService) CanResumeTranslateOnly(ctx context.Context, mediaID string) bool {
 	return s.canResumeTranslateOnly(ctx, models.SubtitleRunMediaMovie, mediaID)
+}
+
+// CanResumeEpisodeTranslateOnly reports whether an EPISODE run for episodeID
+// would resume translate-only (story 9R-10a AC #3). A SIBLING of
+// CanResumeTranslateOnly, deliberately not a widening of it (Rule 11) — the
+// same shape the EpisodeSubtitleStatusWriter/Reader pair took in sub-3-2.
+//
+// The movie variant hard-codes SubtitleRunMediaMovie, so calling it with an
+// episode id queries the movies table, returns false forever, and 503s an
+// episode that needs no ASR at all (the episode twin of CR sub-2-2a M2).
+func (s *TranscriptionService) CanResumeEpisodeTranslateOnly(ctx context.Context, episodeID string) bool {
+	return s.canResumeTranslateOnly(ctx, models.SubtitleRunMediaEpisode, episodeID)
 }
 
 // canResumeTranslateOnly is the media-type-aware resume check behind the

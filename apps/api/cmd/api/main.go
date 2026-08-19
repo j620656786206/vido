@@ -751,7 +751,9 @@ func main() {
 	scannerHandler := handlers.NewScannerHandler(scannerService)
 	scannerHandler.SetScheduler(scanScheduler)
 	scannerHandler.SetEnrichmentService(enrichmentService)
-	transcriptionHandler := handlers.NewTranscriptionHandler(movieService, transcriptionService)
+	// 9R-10a: repos.Episodes wires the per-episode transcribe route
+	// (POST /episodes/:id/transcribe). Passing it is what mounts that route.
+	transcriptionHandler := handlers.NewTranscriptionHandler(movieService, repos.Episodes, transcriptionService)
 
 	// 9R-13: .nfo metadata localizer (movies) — additive zh-TW .nfo via the
 	// shared translation + glossary infra. nil when no translation provider.
