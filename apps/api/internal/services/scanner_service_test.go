@@ -118,6 +118,12 @@ func TestScannerService_StartScan_InvalidPath(t *testing.T) {
 }
 
 func TestScannerService_StartScan_PermissionDenied(t *testing.T) {
+	if os.Geteuid() == 0 {
+		// root ignores permission bits, so the 0000 dir below reads fine and
+		// ErrorCount stays 0 — the standard root-skip guard (containers run
+		// as root; CI and dev machines exercise the real assertion).
+		t.Skip("running as root — permission bits are not enforced")
+	}
 	dir := t.TempDir()
 	restrictedDir := filepath.Join(dir, "restricted")
 	err := os.Mkdir(restrictedDir, 0000)

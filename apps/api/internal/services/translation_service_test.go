@@ -342,7 +342,7 @@ func TestTranslationService_TranslateWithGlossaryHarvest_ReturnsTrailerTerms(t *
 		{Index: 1, Start: "00:00:01,000", End: "00:00:04,000", Text: "The Demogorgon is coming"},
 	}
 
-	translated, terms, err := svc.TranslateWithGlossaryHarvest(context.Background(), blocks, nil, nil)
+	translated, terms, _, err := svc.TranslateWithGlossaryHarvest(context.Background(), blocks, nil, nil)
 	require.NoError(t, err)
 
 	require.Len(t, translated, 1)
@@ -351,7 +351,7 @@ func TestTranslationService_TranslateWithGlossaryHarvest_ReturnsTrailerTerms(t *
 	assert.Equal(t, map[string]string{"Demogorgon": "魔王獸"}, terms)
 
 	// Back-compat delegate: same blocks, terms dropped, signature unchanged.
-	viaOld, err := svc.TranslateWithGlossary(context.Background(), blocks, nil, nil)
+	viaOld, _, err := svc.TranslateWithGlossary(context.Background(), blocks, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, translated, viaOld)
 }
@@ -413,7 +413,7 @@ func TestTranslationService_TranslateWithGlossary_InjectsGlossary(t *testing.T) 
 		{Source: "Demogorgon", Target: "魔王獸"},
 		{Source: "", Target: "skip-me"}, // blank source must be filtered
 	}
-	out, err := svc.TranslateWithGlossary(
+	out, _, err := svc.TranslateWithGlossary(
 		context.Background(),
 		[]TranslationBlock{{Index: 1, Text: "The Demogorgon is coming"}},
 		glossary, nil,
@@ -591,4 +591,76 @@ func TestTranslationService_TranslateChunk_EmptyBlocksIsANoOp(t *testing.T) {
 	assert.Nil(t, terms)
 	assert.Equal(t, ai.CompletionUsage{}, usage)
 	assert.Empty(t, mock.reqs, "no cues means no request")
+}
+
+// ─── bugfix-j: TranslationOutcome — partial results must not vanish ─────────
+
+// bugfix-j AC #1/AC #4(a): a failed batch keeps English wholesale (AC #5 of
+// 9-2b) — the outcome must count those cues instead of dropping a bool into a
+// slog.Warn, because the verdict layer demotes found → untranslated on it.
+func TestTranslationService_Harvest_PartialOutcome_BatchFailure(t *testing.T) {
+	failingMock := &translationFailOnSecondMock{
+		firstResponse: "[1] 第一行\n[2] 第二行\n[3] 第三行\n[4] 第四行\n[5] 第五行\n[6] 第六行\n[7] 第七行\n[8] 第八行\n[9] 第九行\n[10] 第十行",
+	}
+	var blocks []TranslationBlock
+	for i := 1; i <= 15; i++ {
+		blocks = append(blocks, TranslationBlock{
+			Index: i,
+			Start: fmt.Sprintf("00:00:%02d,000", i),
+			End:   fmt.Sprintf("00:00:%02d,000", i+1),
+			Text:  fmt.Sprintf("English line %d", i),
+		})
+	}
+
+	svc := NewTranslationService(failingMock, nil)
+	translated, _, outcome, err := svc.TranslateWithGlossaryHarvest(context.Background(), blocks, nil, nil)
+	require.NoError(t, err, "partial failure stays non-fatal (AC #5 of 9-2b)")
+	require.Len(t, translated, 15)
+
+	assert.True(t, outcome.Partial(), "a failed batch is a partial outcome")
+	assert.Equal(t, 5, outcome.EnglishKeptBlocks, "blocks 11-15 kept English")
+	assert.Equal(t, 15, outcome.TotalBlocks)
+	assert.Equal(t, "第一行", translated[0].Text)
+	assert.Equal(t, "English line 11", translated[10].Text)
+}
+
+// bugfix-j AC #1/AC #4(b): a response missing a single block is ALSO partial —
+// the silent per-cue keep-English path (:252-258 pre-fix) must count too.
+func TestTranslationService_Harvest_PartialOutcome_PerCueMiss(t *testing.T) {
+	// Two blocks in, response covers only block 1.
+	mock := &translationIntegrationMock{response: "[1] 你好"}
+	blocks := []TranslationBlock{
+		{Index: 1, Start: "00:00:01,000", End: "00:00:02,000", Text: "Hello"},
+		{Index: 2, Start: "00:00:03,000", End: "00:00:04,000", Text: "Still English"},
+	}
+
+	svc := NewTranslationService(mock, nil)
+	translated, _, outcome, err := svc.TranslateWithGlossaryHarvest(context.Background(), blocks, nil, nil)
+	require.NoError(t, err)
+	require.Len(t, translated, 2)
+
+	assert.True(t, outcome.Partial(), "a per-cue miss is a partial outcome")
+	assert.Equal(t, 1, outcome.EnglishKeptBlocks)
+	assert.Equal(t, 2, outcome.TotalBlocks)
+	assert.Equal(t, "你好", translated[0].Text)
+	assert.Equal(t, "Still English", translated[1].Text, "the missed cue keeps English (unchanged behavior)")
+}
+
+// bugfix-j AC #4(c) regression pin: a fully-translated run is NOT partial —
+// the found verdict path stays byte-identical for full successes.
+func TestTranslationService_Harvest_FullSuccessNotPartial(t *testing.T) {
+	mock := &translationIntegrationMock{response: "[1] 你好\n[2] 世界"}
+	blocks := []TranslationBlock{
+		{Index: 1, Start: "00:00:01,000", End: "00:00:02,000", Text: "Hello"},
+		{Index: 2, Start: "00:00:03,000", End: "00:00:04,000", Text: "World"},
+	}
+
+	svc := NewTranslationService(mock, nil)
+	translated, _, outcome, err := svc.TranslateWithGlossaryHarvest(context.Background(), blocks, nil, nil)
+	require.NoError(t, err)
+	require.Len(t, translated, 2)
+
+	assert.False(t, outcome.Partial())
+	assert.Equal(t, 0, outcome.EnglishKeptBlocks)
+	assert.Equal(t, 2, outcome.TotalBlocks)
 }
