@@ -329,6 +329,7 @@ def main():
         # Export screenshots via execute+Export in chunks (get_screenshot is gone
         # since Pen 1.2.5). Export writes <nodeId>.png per node into tmpdir.
         tmpdir = tempfile.mkdtemp(prefix="pen-export-")
+        failed_chunks = 0
         node_ids = list(SCREENS.keys())
         chunk_size = 20
         for ci in range(0, len(node_ids), chunk_size):
@@ -339,6 +340,7 @@ def main():
                 "arguments": {"filePath": PEN_FILE, "input": js},
             })
             if not resp or resp.get("error"):
+                failed_chunks += 1
                 print(f"  FAIL: export chunk {ci // chunk_size + 1} - {resp.get('error') if resp else 'no response'}")
 
         saved = 0
@@ -349,12 +351,25 @@ def main():
                 continue
             dst = os.path.join(OUT_DIR, flow_dir, f"{filename}.png")
             shutil.move(src, dst)
-            subprocess.run(["sips", "-Z", "400", dst], capture_output=True)
+            # A silent downscale failure would leave a full-size PNG behind and
+            # still look like success, so the return code is checked.
+            sips = subprocess.run(["sips", "-Z", "400", dst], capture_output=True)
+            if sips.returncode != 0:
+                print(f"  WARN: {flow_dir}/{filename}.png - sips downscale failed, PNG left at full size")
             print(f"  OK: {flow_dir}/{filename}.png ({os.path.getsize(dst) // 1024} KB)")
             saved += 1
         shutil.rmtree(tmpdir, ignore_errors=True)
 
         print(f"\nDone! Saved {saved}/{len(SCREENS)} screenshots to {OUT_DIR}")
+
+        # A PARTIAL export must NOT look like success. The whole point of this
+        # script is that the committed PNGs match the .pen; exiting 0 after
+        # writing 136/156 is precisely how a stale screenshot survives review
+        # (it did, 2026-08-20 — b4p-d shipped one revision behind the design).
+        if failed_chunks or saved != len(SCREENS):
+            print(f"ERROR: incomplete export ({saved}/{len(SCREENS)}, "
+                  f"{failed_chunks} failed chunk(s)) - do NOT commit these screenshots")
+            sys.exit(1)
 
     finally:
         proc.terminate()
