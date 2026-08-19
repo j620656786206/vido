@@ -69,6 +69,19 @@ type mockTMDbForRequests struct {
 	movieErr     error
 	tvDetails    *tmdb.TVShowDetails
 	tvErr        error
+	// seasonDetails backs the 13-2a episode validation (keyed by season).
+	seasonDetails map[int]*tmdb.SeasonDetails
+	seasonErr     error
+}
+
+func (m *mockTMDbForRequests) GetSeasonDetails(ctx context.Context, tvID int, seasonNumber int) (*tmdb.SeasonDetails, error) {
+	if m.seasonErr != nil {
+		return nil, m.seasonErr
+	}
+	if d, ok := m.seasonDetails[seasonNumber]; ok {
+		return d, nil
+	}
+	return &tmdb.SeasonDetails{SeasonNumber: seasonNumber}, nil
 }
 
 func (m *mockTMDbForRequests) GetMovieDetails(ctx context.Context, id int) (*tmdb.MovieDetails, error) {
@@ -85,14 +98,40 @@ func (m *mockTMDbForRequests) GetTVShowDetails(ctx context.Context, id int) (*tm
 	return m.tvDetails, nil
 }
 
+// stubEpisodeOwnership is the narrow EpisodeOwnershipReader fake — episodes
+// returned for any series id (13-2a episode-level guard + coverage).
+type stubEpisodeOwnership struct {
+	episodes []models.Episode
+	err      error
+}
+
+func (s *stubEpisodeOwnership) FindBySeriesID(ctx context.Context, seriesID string) ([]models.Episode, error) {
+	return s.episodes, s.err
+}
+
+// ownedEpisode builds an episode row fixture with just the fields the
+// ownership map reads.
+func ownedEpisode(season, episode int) models.Episode {
+	e := models.Episode{SeriesID: "series-1"}
+	e.SeasonNumber = season
+	e.EpisodeNumber = episode
+	return e
+}
+
 func newRequestServiceForTest(repo *mockRequestRepo, tmdbMock *mockTMDbForRequests, ownedMovies, ownedSeries []int64) *RequestService {
+	return newRequestServiceWithEpisodes(repo, tmdbMock, ownedMovies, ownedSeries, nil)
+}
+
+func newRequestServiceWithEpisodes(repo *mockRequestRepo, tmdbMock *mockTMDbForRequests, ownedMovies, ownedSeries []int64, episodes []models.Episode) *RequestService {
 	movieRepo := new(testutil.MockMovieRepository)
 	seriesRepo := new(testutil.MockSeriesRepository)
 	movieRepo.On("FindOwnedTMDbIDs", context.Background(), []int64{550}).Return(ownedMovies, nil).Maybe()
 	movieRepo.On("FindOwnedTMDbIDs", context.Background(), []int64{1399}).Return(ownedMovies, nil).Maybe()
 	seriesRepo.On("FindOwnedTMDbIDs", context.Background(), []int64{550}).Return(ownedSeries, nil).Maybe()
 	seriesRepo.On("FindOwnedTMDbIDs", context.Background(), []int64{1399}).Return(ownedSeries, nil).Maybe()
-	return NewRequestService(repo, tmdbMock, movieRepo, seriesRepo)
+	seriesRepo.On("FindByTMDbID", context.Background(), int64(1399)).
+		Return(&models.Series{ID: "series-1"}, nil).Maybe()
+	return NewRequestService(repo, tmdbMock, movieRepo, seriesRepo, &stubEpisodeOwnership{episodes: episodes})
 }
 
 // stubFulfilment records the FulfilRequest call and simulates the 13-4a

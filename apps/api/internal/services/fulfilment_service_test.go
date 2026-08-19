@@ -309,3 +309,37 @@ func TestFulfilmentService_LazyHealthInitOnFirstCreate(t *testing.T) {
 	assert.Equal(t, models.RequestStatusSearching, req.Status)
 	assert.Equal(t, 1, env.plugin.testedCount, "exactly one lazy health check")
 }
+
+// --- 13-2a: the stored selection rides into AddOptions ---
+
+func TestFulfilmentService_TVPartialSelectionReachesAddOptions(t *testing.T) {
+	env := newFulfilmentTestEnv(t)
+	req := tvRequest()
+	req.Seasons = models.NewNullString("[1]")
+	req.Episodes = models.NewNullString(`{"2":[5,6]}`)
+
+	env.service.FulfilRequest(context.Background(), req)
+
+	assert.Equal(t, plugins.AddOptions{
+		QualityProfileID: 6, RootFolderPath: "/tv", SearchNow: true,
+		Seasons:  []int{1},
+		Episodes: map[int][]int{2: {5, 6}},
+	}, env.sonarrPlugin.lastAddOpts,
+		"the stored canonical selection must reach Sonarr — otherwise a partial request silently downloads the whole show")
+	assert.Equal(t, models.RequestStatusSearching, req.Status)
+}
+
+func TestFulfilmentService_TVMalformedSelectionStaysPendingHonestly(t *testing.T) {
+	// A malformed stored selection is a data fault: acting on half of it
+	// could fetch the wrong episodes, so the row stays pending with a reason
+	// instead of guessing.
+	env := newFulfilmentTestEnv(t)
+	req := tvRequest()
+	req.Seasons = models.NewNullString("not-json")
+
+	env.service.FulfilRequest(context.Background(), req)
+
+	assert.Equal(t, models.RequestStatusPending, req.Status)
+	assert.Equal(t, "請求的選取資料無法解析", req.ErrorMessage.String)
+	assert.Equal(t, int64(0), env.sonarrPlugin.lastAddTMDb, "sonarr must never be called on a malformed selection")
+}

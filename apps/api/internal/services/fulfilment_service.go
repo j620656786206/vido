@@ -68,11 +68,20 @@ func (s *FulfilmentService) FulfilRequest(ctx context.Context, request *models.R
 	}
 
 	if request.MediaType == models.RequestMediaTypeTV {
-		// 13-4b AC #4 — whole-series adds via Sonarr.
-		s.fulfil(ctx, request, dvrSeriesPlugin, "Sonarr", plugins.DVRPlugin.AddSeries)
+		// 13-4b AC #4 — Sonarr adds; 13-2a — the stored selection (if any)
+		// rides into AddOptions so partial requests only monitor/search what
+		// was asked for. A malformed stored selection is a data fault, not a
+		// fulfilment degradation: acting on half a selection could fetch the
+		// wrong episodes, so the row stays pending with an honest reason.
+		sel, err := parseSelectionColumns(request.Seasons, request.Episodes)
+		if err != nil {
+			s.stayPending(ctx, request, "請求的選取資料無法解析", err)
+			return
+		}
+		s.fulfil(ctx, request, dvrSeriesPlugin, "Sonarr", sel, plugins.DVRPlugin.AddSeries)
 		return
 	}
-	s.fulfil(ctx, request, dvrMoviePlugin, "Radarr", plugins.DVRPlugin.AddMovie)
+	s.fulfil(ctx, request, dvrMoviePlugin, "Radarr", nil, plugins.DVRPlugin.AddMovie)
 }
 
 // fulfil runs the shared gate → add → transition flow (13-4a AC #6 /
@@ -84,6 +93,7 @@ func (s *FulfilmentService) fulfil(
 	request *models.Request,
 	pluginName string,
 	displayName string,
+	sel *RequestSelection,
 	add func(plugins.DVRPlugin, context.Context, int64, plugins.AddOptions) (int64, error),
 ) {
 	if !s.manager.IsConfigured(ctx, pluginName) {
@@ -116,11 +126,18 @@ func (s *FulfilmentService) fulfil(
 		return
 	}
 
-	externalID, err := add(client, ctx, request.TMDbID, plugins.AddOptions{
+	opts := plugins.AddOptions{
 		QualityProfileID: int64(profileID),
 		RootFolderPath:   rootFolder,
 		SearchNow:        true,
-	})
+	}
+	if sel != nil {
+		// 13-2a: partial selection — additive AddOptions fields, zero values
+		// keep every other caller byte-identical.
+		opts.Seasons = sel.Seasons
+		opts.Episodes = sel.Episodes
+	}
+	externalID, err := add(client, ctx, request.TMDbID, opts)
 	if err != nil {
 		var pluginErr *plugins.PluginError
 		if errors.As(err, &pluginErr) && pluginErr.Code == plugins.ErrCodeTVDBNotFound {
@@ -156,7 +173,8 @@ func (s *FulfilmentService) fulfil(
 
 	slog.Info("Request routed to DVR plugin",
 		"request_id", request.ID, "tmdb_id", request.TMDbID,
-		"media_type", request.MediaType, "plugin", pluginName, "external_id", externalID)
+		"media_type", request.MediaType, "plugin", pluginName, "external_id", externalID,
+		"selection", selectionLogValue(sel))
 }
 
 // failTerminally writes the terminal failed transition (13-4b AC #1.2 —

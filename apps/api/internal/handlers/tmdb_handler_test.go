@@ -1454,3 +1454,34 @@ func TestTMDbHandler_DiscoverFacetCounts_ErrorPropagates(t *testing.T) {
 	assert.False(t, body.Success)
 	assert.NotNil(t, body.Error)
 }
+
+// --- 13-2a AC #5: season-details route (client/cache predate the route) ---
+
+func TestTMDbHandler_GetSeasonDetails(t *testing.T) {
+	handler := NewTMDbHandler(&MockTMDbService{})
+	router := setupTMDbRouter(handler)
+
+	t.Run("happy path 200", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/tv/1399/season/2", nil))
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("season 0 (specials) is valid", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/tv/1399/season/0", nil))
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("non-numeric season → 400", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/tv/1399/season/abc", nil))
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("invalid tv id → 400", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/tv/0/season/1", nil))
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+}

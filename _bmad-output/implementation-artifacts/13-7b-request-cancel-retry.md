@@ -39,6 +39,8 @@ so that I can act on my requests without leaving the list, and a failed request 
 
 ## Dev Notes
 
+> ⚠️ **STALE [@contract-v1→v2]**: upstream 13-4b AC #2 bumped 2026-08-19 by 13-2a — `AddSeries` is now selection-aware (`AddOptions.Seasons/Episodes` additive; empty selection = v1 行為 byte-identical). Re-confirm against v2 before dev — 預期結論：cancel 僅作用於 pending（external_id NULL、無 *arr un-add），selection 分支不影響本 story 的取消/重試語意，但需在實作時明文 ack v2。See 13-4b Change Log.
+
 ### Backend contract (13-7a [@contract-v1] — re-verify at dev time if 13-7a changed in review)
 
 - `DELETE /api/v1/requests/{id}`: 204 no body; 404 `DB_NOT_FOUND`; 409 `REQUEST_NOT_CANCELLABLE` (row not pending anymore).
