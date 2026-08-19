@@ -77873,7 +77873,7 @@
       "name": "B4p-D",
       "clip": true,
       "width": 1440,
-      "height": 1000,
+      "height": 900,
       "fill": "$bg-primary",
       "children": [
         {
@@ -79105,67 +79105,6 @@
                               "fontWeight": "600"
                             }
                           ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "p7kBBH",
-                      "name": "note-subtitle-entry",
-                      "width": "fill_container",
-                      "fill": "$bg-tertiary",
-                      "cornerRadius": 8,
-                      "layout": "vertical",
-                      "gap": 6,
-                      "padding": 12,
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "hZh0T",
-                          "name": "note-title",
-                          "fill": "$text-primary",
-                          "textGrowth": "fixed-width",
-                          "width": "fill_container",
-                          "content": "⚙ 分集字幕入口規格（9R-UX 定稿）",
-                          "fontFamily": "Noto Sans TC",
-                          "fontSize": 12,
-                          "fontWeight": "600"
-                        },
-                        {
-                          "type": "text",
-                          "id": "d7sTmZ",
-                          "name": "note-line-1",
-                          "fill": "$text-secondary",
-                          "textGrowth": "fixed-width",
-                          "width": "fill_container",
-                          "content": "管理字幕：僅在該集有本地檔案時出現；十種 subtitle_status 一律相同樣態，狀態差異全部留在對話框內。",
-                          "fontFamily": "Noto Sans TC",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "m2ZTUG",
-                          "name": "note-line-2",
-                          "fill": "$text-secondary",
-                          "textGrowth": "fixed-width",
-                          "width": "fill_container",
-                          "content": "可及性名稱必須含集號，例如「管理 S01E03 的字幕」——同頁十餘列文案相同，沒有集號無法區辨。",
-                          "fontFamily": "Noto Sans TC",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "UBK2A",
-                          "name": "note-line-3",
-                          "fill": "$text-secondary",
-                          "textGrowth": "fixed-width",
-                          "width": "fill_container",
-                          "content": "行動版（<sm）：整列改為上下堆疊（沿用 12-2 的堆疊規則），管理字幕移到第二行、靠左、維持 44px 觸控高度；不另出 TV 行動版畫面。",
-                          "fontFamily": "Noto Sans TC",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -162344,6 +162283,30 @@
               "textGrowth": "fixed-width",
               "width": "fill_container",
               "content": "唯一的閘門是 has_local_file：沒有本地檔案的集不出現任何動作（TMDb 有、NAS 沒有的集不可誤導使用者）。",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "lvKiR",
+              "name": "ruling-line-4",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "可及性名稱必須含集號，例如「管理 S01E03 的字幕」——同頁十餘列文案相同，沒有集號無法區辨。",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "R91yo",
+              "name": "ruling-line-5",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "行動版（<sm）：整列改為上下堆疊（沿用 12-2 的堆疊規則），管理字幕移到第二行、靠左、維持 44px 觸控高度；不另出 TV 行動版畫面。",
               "fontFamily": "Noto Sans TC",
               "fontSize": 13,
               "fontWeight": "normal"
