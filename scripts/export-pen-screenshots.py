@@ -9,9 +9,12 @@ Requires the Pencil app to be running — installed as `Pen.app` since 1.2.2, an
 MCP server in stdio mode (1.1.61 removed the old `--http` transport), captures each
 design screen, and saves PNGs to _bmad-output/screenshots/.
 
-Note: `get_screenshot` caps output at 400px on the long edge, so every PNG here is a
-thumbnail. Fine for mockups; a text-dense spec screen (flow-j-specs) is unreadable at
-that size — see backlog-pen-spec-screen-readable-export.
+Note: Pen 1.2.5 removed the `get_screenshot` MCP tool (surface is now browser /
+execute / get_app_state / get_guidelines). Screens are exported via `execute` +
+`Export(...)` at scale 1 into a temp dir, then renamed into flow folders and
+downscaled with `sips -Z 400` to keep the historical 400px-long-edge thumbnail
+convention. A text-dense spec screen (flow-j-specs) is unreadable at that size —
+see backlog-pen-spec-screen-readable-export.
 
 Layout convention (2026-06-05 A–J merged-block rework):
   Screens are named with flow codes `{Flow}{seq}-{D|M}` (desktop/mobile) on the
@@ -20,10 +23,11 @@ Layout convention (2026-06-05 A–J merged-block rework):
 """
 
 import json
-import base64
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PEN_FILE = os.path.join(PROJECT_ROOT, "ux-design.pen")
@@ -134,6 +138,9 @@ SCREENS = {
     # Subtitle-status badge spec (story sub-1-7a) — the 5 new subtitle_status values'
     # badge/icon treatment, the transient-vs-terminal ruling, and the copy resolutions.
     "ZpQaw": ("flow-j-specs", "j2-d"),
+    # Episode-row subtitle entry spec (9R-UX) — action/status decoupling ruling,
+    # has_local_file gate, 10-status dialog behavior table.
+    "Z54xAd": ("flow-j-specs", "j3-d"),
     # Design system reference docs (top of canvas, no flow code)
     "8SSzc": ("design-system", "design-system-reference"),
     "sJzat": ("design-system", "component-library"),
@@ -319,31 +326,50 @@ def main():
         for flow_dir, _ in SCREENS.values():
             os.makedirs(os.path.join(OUT_DIR, flow_dir), exist_ok=True)
 
-        # Export screenshots
-        saved = 0
-        for i, (node_id, (flow_dir, filename)) in enumerate(SCREENS.items()):
-            resp = mcp_call(proc, i + 10, "tools/call", {
-                "name": "get_screenshot",
-                "arguments": {"filePath": PEN_FILE, "nodeId": node_id},
+        # Export screenshots via execute+Export in chunks (get_screenshot is gone
+        # since Pen 1.2.5). Export writes <nodeId>.png per node into tmpdir.
+        tmpdir = tempfile.mkdtemp(prefix="pen-export-")
+        failed_chunks = 0
+        node_ids = list(SCREENS.keys())
+        chunk_size = 20
+        for ci in range(0, len(node_ids), chunk_size):
+            chunk = node_ids[ci:ci + chunk_size]
+            js = f'Export({json.dumps(chunk)}, "png", {json.dumps(tmpdir)}, {{scale: 1}})'
+            resp = mcp_call(proc, ci + 10, "tools/call", {
+                "name": "execute",
+                "arguments": {"filePath": PEN_FILE, "input": js},
             })
-            if not resp:
-                print(f"  FAIL: {filename} - no response")
-                continue
+            if not resp or resp.get("error"):
+                failed_chunks += 1
+                print(f"  FAIL: export chunk {ci // chunk_size + 1} - {resp.get('error') if resp else 'no response'}")
 
-            contents = resp.get("result", {}).get("content", [])
-            for item in contents:
-                if item.get("type") == "image":
-                    img_data = base64.b64decode(item["data"])
-                    path = os.path.join(OUT_DIR, flow_dir, f"{filename}.png")
-                    with open(path, "wb") as f:
-                        f.write(img_data)
-                    print(f"  OK: {flow_dir}/{filename}.png ({len(img_data) // 1024} KB)")
-                    saved += 1
-                    break
-            else:
-                print(f"  SKIP: {filename} - no image data")
+        saved = 0
+        for node_id, (flow_dir, filename) in SCREENS.items():
+            src = os.path.join(tmpdir, f"{node_id}.png")
+            if not os.path.exists(src):
+                print(f"  SKIP: {filename} - not exported")
+                continue
+            dst = os.path.join(OUT_DIR, flow_dir, f"{filename}.png")
+            shutil.move(src, dst)
+            # A silent downscale failure would leave a full-size PNG behind and
+            # still look like success, so the return code is checked.
+            sips = subprocess.run(["sips", "-Z", "400", dst], capture_output=True)
+            if sips.returncode != 0:
+                print(f"  WARN: {flow_dir}/{filename}.png - sips downscale failed, PNG left at full size")
+            print(f"  OK: {flow_dir}/{filename}.png ({os.path.getsize(dst) // 1024} KB)")
+            saved += 1
+        shutil.rmtree(tmpdir, ignore_errors=True)
 
         print(f"\nDone! Saved {saved}/{len(SCREENS)} screenshots to {OUT_DIR}")
+
+        # A PARTIAL export must NOT look like success. The whole point of this
+        # script is that the committed PNGs match the .pen; exiting 0 after
+        # writing 136/156 is precisely how a stale screenshot survives review
+        # (it did, 2026-08-20 — b4p-d shipped one revision behind the design).
+        if failed_chunks or saved != len(SCREENS):
+            print(f"ERROR: incomplete export ({saved}/{len(SCREENS)}, "
+                  f"{failed_chunks} failed chunk(s)) - do NOT commit these screenshots")
+            sys.exit(1)
 
     finally:
         proc.terminate()
