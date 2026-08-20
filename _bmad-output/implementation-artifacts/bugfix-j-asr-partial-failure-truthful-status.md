@@ -105,6 +105,24 @@ so that a file that still contains whole batches of raw English is never present
 - _bmad-output/implementation-artifacts/sprint-status.yaml（status 流轉＋2 筆 pre-existing 立案）
 - _bmad-output/implementation-artifacts/9R-16-batch-generation-endpoint.md（AC drift reference — see Completion Notes）
 
+## Senior Developer Review (AI) —— 2026-08-19（Opus 對抗審查，實作者 Fable 5）
+
+**Outcome: Changes Requested → 修復中**（3 HIGH / 4 MEDIUM / 2 LOW）
+**機械檢查**：🔒 Rule 7 Wire Format: PASS（觸及 8 個 Go 檔零 error-code 常數）· 🔒 Rule 20 Contract Bump: PASS（1 bump，下游 v2 ackers 全 done→frozen）· 🔒 Rule 25 Mega-line: N/A（未觸及 project-context.md）· Git vs File List: 一致
+
+### Action Items
+
+- [x] **M3 [HIGH-impact]** parser：bare-index 行（`[N]` 無譯文）汙染**前一句**字幕內文 —— 實測 probe 證實 cue1 變成 `"你好\n[2]"` 並寫進成品檔。修法：regex `(.+)`→`(.*)`、空譯文不存入（視為缺譯，計入 englishKept）、continuation 改附掛到當前 cue。+2 測試。
+- [x] **M2 [MEDIUM]** AC #3 零測試，且 Completion Note 宣稱「無既有 SSE hub fake」為**事實錯誤**（`generation_batch_test.go` 有 `sse.NewHub()`+`drainEvents`）。修法：抽出純函式 `buildCompleteData()`，+3 測試（partial 訊息/計數、full success 兩個 additive key 皆缺席、resumed+partial）。Completion Note 已更正。
+- [x] **H2 [HIGH]** partial 終局仍送 `zh_srt_path` → `ManageSubtitleDialogV2` 的三元式仍顯示「字幕已生成完成」，謊言從徽章搬到終局畫面。修法：SSE 增 `partial` boolean → hook state（`partial`/`englishKeptBlocks`）→ dialog 改三態（完成／部分翻譯失敗 N 句／尚未翻譯）。+2 FE spec。
+- [x] **L1 [LOW]** 完成訊息中英混雜（`"Transcription complete（部分翻譯失敗…）"`）。修法：全句 zh-TW（轉錄完成／翻譯完成（自既有英文字幕續跑）），符合 9R-10a copy 裁定。確認無測試/前端釘死舊英文字串。
+- [x] **L2 [LOW]** partial verdict 無 episode 路徑覆蓋（9R-10a 紅線 ①）＋批次大小常數隱性耦合。修法：+`TestTranslateAndPersist_PartialTranslation_EpisodeWritesEpisodeWriter`（斷言 movie writer 零呼叫）、批次測試加 `require.Equal(10, prompts.SubtitleTranslatorBatchSize)` 守衛。
+- [ ] **H3 [HIGH] ⚖️ 待 Alexyu 裁定 —— 降級門檻**：`Partial()` 目前零容忍（1 句保英即降級），該項目永久留在 `missingZhHantSubtitleWhere` 清單、每次批次重付。⚠️ **審查者的嚴重度評估需修正**：resume 走 **translate-only**（英文 SRT 沿用，extract+ASR **跳過**），故重付的是翻譯費**不含 ASR**；且每次批次必經估價同意畫面（2026-08-07 裁定），無無感扣款。選項 A 零容忍／B 門檻制（整批失敗才降級）／C A+批次三態分類 已呈報，`TotalBlocks` 已就緒可直接支援 B。
+- [ ] **M1 [MEDIUM] 待裁定連動**：pipeline(D2) 模式的 `asr_adapter` seam 只回 `error`，`transcribeFallback` 因而仍把 partial 記為 `SubtitleRunCompleted`＋zh 輸出路徑（run 表與 D6 stage 仍謊報）。屬 AC #5 未涵蓋的範圍缺口 —— 隨 H3 裁定一併決定：擴寬 seam 或明列 backlog。
+- [ ] **M4 [MEDIUM] 待裁定連動**：`untranslated` 語意過載（原定義為「翻譯步驟未執行」，現用於「執行了但部分失敗」），且 `subtitle_path` 指向英文檔而非實際交付的混合 zh 檔；FE 文案「已生成英文字幕，尚未翻譯」蓋在 ~99% 中文的檔案上。H3 選 B 可大幅縮小此問題的發生面。
+
+**已修驗證**：Go 34 packages（`internal/services` 的 SSE-drain flake 屬既有立案，見下）· web 233 檔 / 2655 測試全過 · 新增測試累計 13（outcome 3、verdict 4、parser 2、buildCompleteData 3、FE 2 ＋ 常數守衛 1）
+
 ## Change Log
 
 | Date | Change |
@@ -112,3 +130,4 @@ so that a file that still contains whole batches of raw English is never present
 | 2026-08-19 | Task 1-4 實作：TranslationOutcome 貫穿（批次失敗＋逐 cue 缺漏計數）、verdict 三態（partial→untranslated+EN）、SSE partial 訊息＋english_kept_blocks additive key、單元/整合測試 ×6 |
 | 2026-08-19 | [@contract-v2→v3] 9R-16 AC 12: what changed —— `found` 收窄為「完整翻譯成功」，partial 結果降級為 `untranslated`+EN 路徑（混合檔仍 place）；what breaks downstream —— 消費 verdict 的徽章/批次列舉會看到更多 `untranslated`（不再有謊報的 `found`），resume-eligible 集合擴大；9R-10a（in-dev）的 resume gate 相容（僅新增輸入案例），其餘 v2 ackers 全 done/frozen 無 stale-mark |
 | 2026-08-19 | Pre-existing: scanner PermissionDenied root-skip fix；FILED generation-batch cancel SSE flake ＋ web vitest 容器非零退出 |
+| 2026-08-20 | CR 修復（Opus 審查 3H/4M/2L）：M3 parser bare-index 汙染前句修復、M2 buildCompleteData 抽純函式+3 測試、H2 SSE partial 旗標貫穿到 FE 三態文案、L1 訊息全 zh-TW、L2 episode 路徑測試+批次常數守衛。H3/M1/M4 待門檻裁定。 |

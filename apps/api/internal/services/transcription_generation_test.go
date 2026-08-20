@@ -582,3 +582,65 @@ func TestTranslateAndPersist_FullSuccessOutcomeNotPartial(t *testing.T) {
 	require.Len(t, writer.calls, 1)
 	assert.Equal(t, models.SubtitleStatusFound, writer.calls[0].Status)
 }
+
+// bugfix-j CR M2: the complete-payload contract is unit-tested via the
+// extracted pure builder — partial terminals carry the zh-TW message + the
+// additive partial/english_kept_blocks keys; full successes carry NEITHER.
+func TestBuildCompleteData_PartialTerminal(t *testing.T) {
+	data := buildCompleteData("job-1", uuidB, "/m/a.en.srt", "/m/a.zh-Hant.srt", "3s", false,
+		TranslationOutcome{EnglishKeptBlocks: 5, TotalBlocks: 100})
+
+	msg, _ := data["message"].(string)
+	assert.Contains(t, msg, "部分翻譯失敗", "AC #3: the terminal message says so")
+	assert.Contains(t, msg, "5 句保留英文")
+	assert.NotContains(t, msg, "complete", "CR L1: no mixed-script message")
+	assert.Equal(t, true, data["partial"], "CR H2: FE verdict line keys off this, not zh_srt_path")
+	assert.Equal(t, 5, data["english_kept_blocks"])
+	assert.Equal(t, "/m/a.zh-Hant.srt", data["zh_srt_path"], "the mixed file is still announced — it exists")
+}
+
+func TestBuildCompleteData_FullSuccessOmitsPartialKeys(t *testing.T) {
+	data := buildCompleteData("job-1", uuidB, "/m/a.en.srt", "/m/a.zh-Hant.srt", "3s", false,
+		TranslationOutcome{EnglishKeptBlocks: 0, TotalBlocks: 100})
+
+	_, hasPartial := data["partial"]
+	_, hasKept := data["english_kept_blocks"]
+	assert.False(t, hasPartial, "absent = full success (consumers must not read absence as 0-vs-missing)")
+	assert.False(t, hasKept)
+	msg, _ := data["message"].(string)
+	assert.Equal(t, "轉錄完成", msg)
+}
+
+func TestBuildCompleteData_ResumedPartial(t *testing.T) {
+	data := buildCompleteData("job-1", uuidB, "/m/a.en.srt", "/m/a.zh-Hant.srt", "3s", true,
+		TranslationOutcome{EnglishKeptBlocks: 2, TotalBlocks: 40})
+	msg, _ := data["message"].(string)
+	assert.Contains(t, msg, "翻譯完成（自既有英文字幕續跑）", "CR sub-2-2a L1 held on the resumed path")
+	assert.Contains(t, msg, "部分翻譯失敗，2 句保留英文")
+}
+
+// bugfix-j CR L2: the partial verdict arm must hit the EPISODE writeback
+// dispatch too — writing an episode verdict into the movies table is the
+// silent-corruption class 9R-10a red line ① exists for.
+func TestTranslateAndPersist_PartialTranslation_EpisodeWritesEpisodeWriter(t *testing.T) {
+	movieWriter := &fakeSubtitleWriter{}
+	episodeWriter := &fakeEpisodeWriter{}
+	svc := newWriterWiredService(t, &translationIntegrationMock{response: "[1] 你好世界"}, movieWriter)
+	svc.SetEpisodeSubtitleStatusWriter(episodeWriter)
+
+	tmpDir := t.TempDir()
+	enPath := filepath.Join(tmpDir, "e.en.srt")
+	zhPath, outcome, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaEpisode, uuidC, twoCueSRT,
+		enPath, filepath.Join(tmpDir, "e.mkv"), tmpDir, true)
+	require.NoError(t, err)
+	require.NotEmpty(t, zhPath)
+	require.True(t, outcome.Partial())
+
+	assert.Empty(t, movieWriter.calls, "episode verdict must NOT touch the movie writer (9R-10a red line ①)")
+	require.Len(t, episodeWriter.calls, 1)
+	call := episodeWriter.calls[0]
+	assert.Equal(t, uuidC, call.ID)
+	assert.Equal(t, models.SubtitleStatusUntranslated, call.Status)
+	assert.Equal(t, enPath, call.Path)
+	assert.Equal(t, "en", call.Language)
+}

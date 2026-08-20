@@ -318,8 +318,16 @@ export function ManageSubtitleDialogV2({
                   {/* sub-2-2b AC #3: an en-only completion (no zh path — key
                       unconfigured or translate failed non-fatally) must not
                       claim 完成. The row is `untranslated`; setting the key and
-                      re-running resumes translate-only (sub-2-2a). */}
-                  {generation.progress.zhSrtPath ? '字幕已生成完成' : '已生成英文字幕；尚未翻譯'}
+                      re-running resumes translate-only (sub-2-2a).
+                      bugfix-j CR H2: a PARTIAL completion places a mixed zh
+                      file, so zhSrtPath alone must not claim 完成 either —
+                      the row is `untranslated` and re-running resumes
+                      translate-only from the EN source. */}
+                  {generation.progress.partial
+                    ? `字幕已生成（部分翻譯失敗，${generation.progress.englishKeptBlocks ?? '若干'} 句保留英文；重新生成可補譯）`
+                    : generation.progress.zhSrtPath
+                      ? '字幕已生成完成'
+                      : '已生成英文字幕；尚未翻譯'}
                 </p>
               )}
             </>

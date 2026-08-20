@@ -62,6 +62,9 @@ interface GenerationEventPayload {
   srtPath?: string;
   zhSrtPath?: string;
   duration?: number;
+  /** bugfix-j: present ONLY on partial terminals (absent = full success). */
+  partial?: boolean;
+  englishKeptBlocks?: number;
 }
 
 export interface GenerationProgressState {
@@ -77,6 +80,11 @@ export interface GenerationProgressState {
   srtPath: string | null;
   /** Present on complete only when the pipeline translated (translate=true). */
   zhSrtPath: string | null;
+  /** bugfix-j CR H2: true when the placed zh file still carries English cues —
+   *  the completion verdict line must NOT key off zhSrtPath alone. */
+  partial: boolean;
+  /** Cue count kept in English; null when not partial (absent ≠ 0). */
+  englishKeptBlocks: number | null;
 }
 
 const initialState: GenerationProgressState = {
@@ -88,6 +96,8 @@ const initialState: GenerationProgressState = {
   error: null,
   srtPath: null,
   zhSrtPath: null,
+  partial: false,
+  englishKeptBlocks: null,
 };
 
 type ActivePhase = 'extracting' | 'transcribing' | 'translating';
@@ -130,6 +140,8 @@ function reducer(state: GenerationProgressState, action: Action): GenerationProg
         jobId: action.payload.jobId ?? state.jobId,
         srtPath: action.payload.srtPath ?? null,
         zhSrtPath: action.payload.zhSrtPath ?? null,
+        partial: action.payload.partial ?? false,
+        englishKeptBlocks: action.payload.englishKeptBlocks ?? null,
       };
     case 'FAILED':
       return {

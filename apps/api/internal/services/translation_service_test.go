@@ -599,6 +599,11 @@ func TestTranslationService_TranslateChunk_EmptyBlocksIsANoOp(t *testing.T) {
 // 9-2b) — the outcome must count those cues instead of dropping a bool into a
 // slog.Warn, because the verdict layer demotes found → untranslated on it.
 func TestTranslationService_Harvest_PartialOutcome_BatchFailure(t *testing.T) {
+	// bugfix-j CR L2: the fixture below (10-line first response, 15 blocks,
+	// expected kept=5) assumes the batch size — pin it so a constant change
+	// fails HERE with a clear message, not as an opaque count mismatch.
+	require.Equal(t, 10, prompts.SubtitleTranslatorBatchSize,
+		"fixture assumes batch size 10 — rebuild the response/counts if this changes")
 	failingMock := &translationFailOnSecondMock{
 		firstResponse: "[1] 第一行\n[2] 第二行\n[3] 第三行\n[4] 第四行\n[5] 第五行\n[6] 第六行\n[7] 第七行\n[8] 第八行\n[9] 第九行\n[10] 第十行",
 	}
@@ -663,4 +668,44 @@ func TestTranslationService_Harvest_FullSuccessNotPartial(t *testing.T) {
 	assert.False(t, outcome.Partial())
 	assert.Equal(t, 0, outcome.EnglishKeptBlocks)
 	assert.Equal(t, 2, outcome.TotalBlocks)
+}
+
+// bugfix-j CR M3: a bare "[N]" line (model emitted the index with no
+// translation) must (a) NOT pollute the PREVIOUS cue with the literal "[N]"
+// text, (b) count as a per-cue miss (English kept), and (c) still accept a
+// continuation line as that cue's first text.
+func TestParseTranslationResponse_BareIndexLine(t *testing.T) {
+	// (a)+(b): bare [2] between two translated cues.
+	res, _ := parseTranslationResponseWithTerms("[1] 你好\n[2]\n[3] 世界", []int{1, 2, 3})
+	assert.Equal(t, "你好", res[1], "previous cue must not absorb the literal \"[2]\" line")
+	_, ok := res[2]
+	assert.False(t, ok, "an empty translation is a MISSING translation")
+	assert.Equal(t, "世界", res[3])
+
+	// trailing-whitespace variant of the same shape.
+	res2, _ := parseTranslationResponseWithTerms("[1] 你好\n[2]   ", []int{1, 2})
+	assert.Equal(t, "你好", res2[1])
+	_, ok2 := res2[2]
+	assert.False(t, ok2)
+
+	// (c): continuation after a bare index belongs to THAT cue.
+	res3, _ := parseTranslationResponseWithTerms("[1]\n第一行接續", []int{1})
+	assert.Equal(t, "第一行接續", res3[1], "continuation is the cue's first text, no leading newline")
+}
+
+// bugfix-j CR M3 (outcome side): the bare-index miss flows into the partial
+// outcome — the cue keeps English and EnglishKeptBlocks counts it.
+func TestTranslationService_Harvest_BareIndexCountsAsKept(t *testing.T) {
+	mock := &translationIntegrationMock{response: "[1] 你好\n[2]"}
+	blocks := []TranslationBlock{
+		{Index: 1, Start: "00:00:01,000", End: "00:00:02,000", Text: "Hello"},
+		{Index: 2, Start: "00:00:03,000", End: "00:00:04,000", Text: "Still English"},
+	}
+	svc := NewTranslationService(mock, nil)
+	translated, _, outcome, err := svc.TranslateWithGlossaryHarvest(context.Background(), blocks, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "你好", translated[0].Text, "cue 1 unpolluted")
+	assert.Equal(t, "Still English", translated[1].Text)
+	assert.Equal(t, 1, outcome.EnglishKeptBlocks)
+	assert.True(t, outcome.Partial())
 }

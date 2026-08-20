@@ -501,7 +501,12 @@ func splitHarvestTrailer(response string) (string, map[string]string) {
 }
 
 // responseLinePattern matches "[N] text" format from Claude's response.
-var responseLinePattern = regexp.MustCompile(`^\[(\d+)\]\s*(.+)$`)
+// The text group is `(.*)` (may be empty): a bare "[N]" line — the model
+// emitting an index with no translation — must be recognized as that cue's
+// (empty) slot, NOT fall through to the continuation branch where the literal
+// "[N]" gets appended into the PREVIOUS cue's subtitle text (bugfix-j CR M3:
+// probe showed cue1 ending as "你好\n[2]" in the placed file).
+var responseLinePattern = regexp.MustCompile(`^\[(\d+)\]\s*(.*)$`)
 
 // parseTranslationResponse extracts translated text from Claude's response.
 // Response format: "[1] 翻譯文字\n[2] 翻譯文字"
@@ -544,13 +549,24 @@ func parseTranslationResponseWithTerms(response string, indices []int) (map[int]
 				continue
 			}
 			if validIndices[idx] {
-				result[idx] = strings.TrimSpace(matches[2])
+				// bugfix-j CR M3: an empty translation is a MISSING one — do
+				// not store "" (it would blank the cue and count as success).
+				// Still advance lastIdx so any continuation lines attach to
+				// THIS cue instead of polluting the previous one.
+				if text := strings.TrimSpace(matches[2]); text != "" {
+					result[idx] = text
+				}
 				lastIdx = idx
 				hasLast = true
 			}
 		} else if hasLast && validIndices[lastIdx] {
-			// Continuation line for multi-line subtitle block
-			result[lastIdx] += "\n" + line
+			// Continuation line for multi-line subtitle block. If the indexed
+			// line itself was empty, the continuation IS the cue's first text.
+			if existing, ok := result[lastIdx]; ok {
+				result[lastIdx] = existing + "\n" + line
+			} else {
+				result[lastIdx] = line
+			}
 		}
 	}
 

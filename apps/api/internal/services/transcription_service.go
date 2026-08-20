@@ -516,11 +516,24 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 		"duration", duration,
 	)
 
-	// Phase 4: Complete. CR sub-2-2a L1: a resumed run transcribed nothing —
-	// its completion message must not claim it did.
-	completeMsg := "Transcription complete"
+	// Phase 4: Complete.
+	completeData := buildCompleteData(jobID, mediaID, srtPath, zhSRTPath, duration, resumed, outcome)
+	s.broadcastEvent(EventTranscriptionComplete, completeData)
+	return nil
+}
+
+// buildCompleteData assembles the transcription_complete SSE payload.
+// Extracted pure (bugfix-j CR M2) so the partial-terminal contract is
+// unit-testable. Additive keys `partial` + `english_kept_blocks` are present
+// ONLY on partial terminals — absent = full success; consumers must not read
+// absence as 0-vs-missing. Messages are zh-TW per the 9R-10a copy ruling
+// (bugfix-j CR L1: no mixed-script strings in user-visible SSE text).
+func buildCompleteData(jobID, mediaID, srtPath, zhSRTPath, duration string, resumed bool, outcome TranslationOutcome) map[string]interface{} {
+	// CR sub-2-2a L1: a resumed run transcribed nothing — its completion
+	// message must not claim it did.
+	completeMsg := "轉錄完成"
 	if resumed {
-		completeMsg = "Translation complete (resumed from existing English subtitle)"
+		completeMsg = "翻譯完成（自既有英文字幕續跑）"
 	}
 	// bugfix-j AC #3: a partial terminal must say so — the verdict already
 	// recorded `untranslated`, and the completion message carries the same
@@ -528,7 +541,7 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 	if outcome.Partial() {
 		completeMsg += fmt.Sprintf("（部分翻譯失敗，%d 句保留英文）", outcome.EnglishKeptBlocks)
 	}
-	completeData := map[string]interface{}{
+	data := map[string]interface{}{
 		"job_id":   jobID,
 		"media_id": mediaID,
 		"phase":    "complete",
@@ -537,15 +550,15 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 		"message":  completeMsg,
 	}
 	if zhSRTPath != "" {
-		completeData["zh_srt_path"] = zhSRTPath
+		data["zh_srt_path"] = zhSRTPath
 	}
-	// bugfix-j: additive key, present ONLY on partial terminals (absent =
-	// full success — consumers must not read absence as 0-vs-missing).
 	if outcome.Partial() {
-		completeData["english_kept_blocks"] = outcome.EnglishKeptBlocks
+		// bugfix-j CR H2: `partial` lets the FE terminal verdict line stop
+		// trusting zh_srt_path alone — the mixed file exists, but 完成 it is not.
+		data["partial"] = true
+		data["english_kept_blocks"] = outcome.EnglishKeptBlocks
 	}
-	s.broadcastEvent(EventTranscriptionComplete, completeData)
-	return nil
+	return data
 }
 
 // resumeSource returns the recorded English SRT path when the row is
