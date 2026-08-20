@@ -171,7 +171,15 @@ test.describe('Download Filtering API @api @downloads @filtering', () => {
     const json = await response.json();
 
     if (response.ok()) {
-      const countFields = ['all', 'downloading', 'paused', 'queued', 'completed', 'seeding', 'error'];
+      const countFields = [
+        'all',
+        'downloading',
+        'paused',
+        'queued',
+        'completed',
+        'seeding',
+        'error',
+      ];
       for (const field of countFields) {
         expect(Number.isInteger(json.data[field])).toBe(true);
       }
