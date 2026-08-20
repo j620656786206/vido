@@ -2,6 +2,7 @@
 import { Link } from '@tanstack/react-router';
 import { ArrowUp, ArrowDown, Check } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { getImageUrl } from '../../lib/image';
 import { HighlightText } from '../ui/HighlightText';
 import type { LibraryItem, SortField, SortOrder } from '../../types/library';
 
@@ -177,7 +178,10 @@ export function LibraryTable({
                   <Link to="/media/$type/$id" params={{ type: data.type, id: String(data.id) }}>
                     {data.posterPath ? (
                       <img
-                        src={`https://image.tmdb.org/t/p/w92${data.posterPath}`}
+                        // bugfix-d CR L1: was an inline template literal, which
+                        // bypassed getImageUrl and so re-prefixed an absolutely
+                        // stored posterPath into ".../w92https://…".
+                        src={getImageUrl(data.posterPath, 'w92') ?? undefined}
                         alt=""
                         className="h-[72px] w-12 rounded object-cover"
                         loading="lazy"

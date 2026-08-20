@@ -180,8 +180,8 @@ func (c *LanguageFallbackClient) SearchTVShowsWithFallback(ctx context.Context, 
 // GetMovieDetailsWithFallback gets movie details, trying each language in the fallback chain
 // Returns the details, the language used, and any error
 func (c *LanguageFallbackClient) GetMovieDetailsWithFallback(ctx context.Context, movieID int) (*MovieDetails, string, error) {
-	var lastResult *MovieDetails
-	var lastLang string
+	var merged *MovieDetails
+	var baseLang string
 	var lastErr error
 
 	for _, lang := range c.languages {
@@ -195,38 +195,97 @@ func (c *LanguageFallbackClient) GetMovieDetailsWithFallback(ctx context.Context
 			lastErr = err
 			continue
 		}
-
-		lastResult = result
-		lastLang = lang
 		lastErr = nil
 
-		// Check if we have localized content (non-empty title and overview)
-		if hasLocalizedMovieDetails(result) {
-			slog.Debug("Language fallback: found localized movie details",
-				"language", lang,
-				"movie_id", movieID,
-			)
-			return result, lang, nil
+		if merged == nil {
+			// The FIRST language that answers is the base: its values win every
+			// field it actually has (bugfix-d — the chain leads with zh-TW).
+			// CR M1: copy rather than alias — the merge writes into `merged`, and
+			// mutating the client's response would make this function impure with
+			// respect to its inputs (harmless against the live client, which
+			// decodes a fresh struct per call, but it silently corrupts any
+			// caller that hands back a shared value, e.g. a test fixture).
+			base := *result
+			merged = &base
+			baseLang = lang
+		} else {
+			fillEmptyMovieFields(merged, result)
 		}
 
-		slog.Debug("Language fallback: no localized movie details",
+		if hasLocalizedMovieDetails(merged) {
+			slog.Debug("Language fallback: localized movie details complete",
+				"base_language", baseLang,
+				"completed_at_language", lang,
+				"movie_id", movieID,
+			)
+			return merged, baseLang, nil
+		}
+
+		slog.Debug("Language fallback: movie details still incomplete",
 			"language", lang,
 			"movie_id", movieID,
 		)
 	}
 
-	if lastErr != nil {
+	// CR M2: surface the error ONLY when nothing was collected. A later language
+	// failing must not discard an earlier one's usable payload — throwing away a
+	// good zh-TW answer because `en` timed out is the very waste this story
+	// exists to stop.
+	if merged == nil && lastErr != nil {
 		return nil, "", lastErr
 	}
 
-	return lastResult, lastLang, nil
+	return merged, baseLang, nil
 }
+
+// fillEmptyMovieFields copies localized fields from src into dst ONLY where dst
+// is empty (bugfix-d D1/D4).
+//
+// Before bugfix-d the fallback was all-or-nothing: hasLocalizedMovieDetails
+// requires BOTH title and overview, so a movie with a perfectly good zh-TW title
+// but an empty zh-TW overview — common for niche titles — failed the check and
+// the WHOLE zh-CN (or en) payload was returned instead. That is why the library
+// showed 简体 genres (动作/冒险) and romanized titles ("Mag Mag" over 禍禍女):
+// one missing field dragged every other field down the chain with it.
+//
+// Merging per field keeps zh-TW for everything zh-TW actually has, and borrows
+// only the genuinely missing pieces. Genres come back populated in every
+// language, so zh-TW genre names now always win.
+func fillEmptyMovieFields(dst, src *MovieDetails) {
+	if dst == nil || src == nil {
+		return
+	}
+	if dst.Title == "" {
+		dst.Title = src.Title
+	}
+	if dst.Overview == "" {
+		dst.Overview = src.Overview
+	}
+	if dst.Tagline == "" {
+		dst.Tagline = src.Tagline
+	}
+	if len(dst.Genres) == 0 {
+		dst.Genres = src.Genres
+	}
+	// TMDb serves per-language artwork; a locale with no poster of its own
+	// should still show the movie rather than a blank card.
+	if isBlankPath(dst.PosterPath) {
+		dst.PosterPath = src.PosterPath
+	}
+	if isBlankPath(dst.BackdropPath) {
+		dst.BackdropPath = src.BackdropPath
+	}
+}
+
+// isBlankPath treats a nil pointer and a pointer to "" as the same absent value —
+// TMDb uses both for "no image in this locale".
+func isBlankPath(p *string) bool { return p == nil || *p == "" }
 
 // GetTVShowDetailsWithFallback gets TV show details, trying each language in the fallback chain
 // Returns the details, the language used, and any error
 func (c *LanguageFallbackClient) GetTVShowDetailsWithFallback(ctx context.Context, tvID int) (*TVShowDetails, string, error) {
-	var lastResult *TVShowDetails
-	var lastLang string
+	var merged *TVShowDetails
+	var baseLang string
 	var lastErr error
 
 	for _, lang := range c.languages {
@@ -240,39 +299,73 @@ func (c *LanguageFallbackClient) GetTVShowDetailsWithFallback(ctx context.Contex
 			lastErr = err
 			continue
 		}
-
-		lastResult = result
-		lastLang = lang
 		lastErr = nil
 
-		// Check if we have localized content
-		if hasLocalizedTVShowDetails(result) {
-			slog.Debug("Language fallback: found localized TV show details",
-				"language", lang,
-				"tv_id", tvID,
-			)
-			return result, lang, nil
+		if merged == nil {
+			// CR M1 — copy, don't alias. See GetMovieDetailsWithFallback.
+			base := *result
+			merged = &base
+			baseLang = lang
+		} else {
+			fillEmptyTVShowFields(merged, result)
 		}
 
-		slog.Debug("Language fallback: no localized TV show details",
+		if hasLocalizedTVShowDetails(merged) {
+			slog.Debug("Language fallback: localized TV show details complete",
+				"base_language", baseLang,
+				"completed_at_language", lang,
+				"tv_id", tvID,
+			)
+			return merged, baseLang, nil
+		}
+
+		slog.Debug("Language fallback: TV show details still incomplete",
 			"language", lang,
 			"tv_id", tvID,
 		)
 	}
 
-	if lastErr != nil {
+	// CR M2 — see GetMovieDetailsWithFallback.
+	if merged == nil && lastErr != nil {
 		return nil, "", lastErr
 	}
 
-	return lastResult, lastLang, nil
+	return merged, baseLang, nil
+}
+
+// fillEmptyTVShowFields is fillEmptyMovieFields for series — same bugfix-d
+// rationale: a series with a zh-TW name but no zh-TW overview must not have its
+// genres and name dragged to 简体 along with the borrowed overview.
+func fillEmptyTVShowFields(dst, src *TVShowDetails) {
+	if dst == nil || src == nil {
+		return
+	}
+	if dst.Name == "" {
+		dst.Name = src.Name
+	}
+	if dst.Overview == "" {
+		dst.Overview = src.Overview
+	}
+	if dst.Tagline == "" {
+		dst.Tagline = src.Tagline
+	}
+	if len(dst.Genres) == 0 {
+		dst.Genres = src.Genres
+	}
+	if isBlankPath(dst.PosterPath) {
+		dst.PosterPath = src.PosterPath
+	}
+	if isBlankPath(dst.BackdropPath) {
+		dst.BackdropPath = src.BackdropPath
+	}
 }
 
 // GetSeasonDetailsWithFallback gets season details, trying each language in the fallback chain.
 // A season is considered localized when at least one episode has a non-empty name, mirroring
 // the title/overview localization checks used for TV-show details.
 func (c *LanguageFallbackClient) GetSeasonDetailsWithFallback(ctx context.Context, tvID int, seasonNumber int) (*SeasonDetails, string, error) {
-	var lastResult *SeasonDetails
-	var lastLang string
+	var merged *SeasonDetails
+	var baseLang string
 	var lastErr error
 
 	for _, lang := range c.languages {
@@ -287,32 +380,93 @@ func (c *LanguageFallbackClient) GetSeasonDetailsWithFallback(ctx context.Contex
 			lastErr = err
 			continue
 		}
-
-		lastResult = result
-		lastLang = lang
 		lastErr = nil
 
-		if hasLocalizedSeasonDetails(result) {
-			slog.Debug("Language fallback: found localized season details",
-				"language", lang,
+		if merged == nil {
+			// CR M3 — seasons ride the same all-or-nothing defect: a season whose
+			// zh-TW response names NO episode used to hand the whole season to
+			// zh-CN, taking the season name, overview and artwork down with it.
+			// Merging keeps whatever zh-TW did supply and borrows only the rest.
+			//
+			// SCOPE LIMIT (filed, not fixed here): hasLocalizedSeasonDetails is
+			// satisfied by a SINGLE named episode, so a season where zh-TW names
+			// some episodes but not others still returns early and the unnamed
+			// ones stay blank. Tightening that check to "every episode named"
+			// would walk the whole chain for any season TMDb has not fully
+			// localized in ANY language — a per-season call increase this story
+			// is not authorized to make (AC #5 red-lines the rate-limit layer).
+			//
+			// Copy the base (CR M1); the episode slice needs its own copy too,
+			// since the per-episode merge writes through it.
+			base := *result
+			base.Episodes = append([]EpisodeInfo(nil), result.Episodes...)
+			merged = &base
+			baseLang = lang
+		} else {
+			fillEmptySeasonFields(merged, result)
+		}
+
+		if hasLocalizedSeasonDetails(merged) {
+			slog.Debug("Language fallback: localized season details complete",
+				"base_language", baseLang,
+				"completed_at_language", lang,
 				"tv_id", tvID,
 				"season_number", seasonNumber,
 			)
-			return result, lang, nil
+			return merged, baseLang, nil
 		}
 
-		slog.Debug("Language fallback: no localized season details",
+		slog.Debug("Language fallback: season details still incomplete",
 			"language", lang,
 			"tv_id", tvID,
 			"season_number", seasonNumber,
 		)
 	}
 
-	if lastErr != nil {
+	// CR M2 — see GetMovieDetailsWithFallback.
+	if merged == nil && lastErr != nil {
 		return nil, "", lastErr
 	}
 
-	return lastResult, lastLang, nil
+	return merged, baseLang, nil
+}
+
+// fillEmptySeasonFields fills the season's own empty fields and then each
+// episode's, matching episodes by EpisodeNumber (stable across locales — the
+// slice order and the episode ID are not guaranteed to be). bugfix-d CR M3.
+func fillEmptySeasonFields(dst, src *SeasonDetails) {
+	if dst == nil || src == nil {
+		return
+	}
+	if dst.Name == "" {
+		dst.Name = src.Name
+	}
+	if dst.Overview == "" {
+		dst.Overview = src.Overview
+	}
+	if isBlankPath(dst.PosterPath) {
+		dst.PosterPath = src.PosterPath
+	}
+
+	byNumber := make(map[int]EpisodeInfo, len(src.Episodes))
+	for _, ep := range src.Episodes {
+		byNumber[ep.EpisodeNumber] = ep
+	}
+	for i := range dst.Episodes {
+		fallback, ok := byNumber[dst.Episodes[i].EpisodeNumber]
+		if !ok {
+			continue
+		}
+		if dst.Episodes[i].Name == "" {
+			dst.Episodes[i].Name = fallback.Name
+		}
+		if dst.Episodes[i].Overview == "" {
+			dst.Episodes[i].Overview = fallback.Overview
+		}
+		if isBlankPath(dst.Episodes[i].StillPath) {
+			dst.Episodes[i].StillPath = fallback.StillPath
+		}
+	}
 }
 
 // hasLocalizedSeasonDetails reports whether a season-details response carries

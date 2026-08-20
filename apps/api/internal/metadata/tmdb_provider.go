@@ -172,11 +172,15 @@ func (p *TMDbProvider) convertMovieResults(tmdbResult *tmdb.SearchResultMovies) 
 			Overview:      movie.Overview,
 			PosterURL:     buildImageURL(p.config.ImageBaseURL, movie.PosterPath),
 			BackdropURL:   buildImageURL(p.config.ImageBaseURL, movie.BackdropPath),
-			MediaType:     MediaTypeMovie,
-			Rating:        movie.VoteAverage,
-			VoteCount:     movie.VoteCount,
-			Popularity:    movie.Popularity,
-			RawData:       movie,
+			// bugfix-d D2: also carry the RELATIVE paths — the absolute *URL
+			// fields bake in a size + host that must not reach the database.
+			PosterPath:   derefPath(movie.PosterPath),
+			BackdropPath: derefPath(movie.BackdropPath),
+			MediaType:    MediaTypeMovie,
+			Rating:       movie.VoteAverage,
+			VoteCount:    movie.VoteCount,
+			Popularity:   movie.Popularity,
+			RawData:      movie,
 		}
 
 		items = append(items, item)
@@ -205,11 +209,14 @@ func (p *TMDbProvider) convertTVShowResults(tmdbResult *tmdb.SearchResultTVShows
 			Overview:      show.Overview,
 			PosterURL:     buildImageURL(p.config.ImageBaseURL, show.PosterPath),
 			BackdropURL:   buildImageURL(p.config.ImageBaseURL, show.BackdropPath),
-			MediaType:     MediaTypeTV,
-			Rating:        show.VoteAverage,
-			VoteCount:     show.VoteCount,
-			Popularity:    show.Popularity,
-			RawData:       show,
+			// bugfix-d D2 — see the movie converter.
+			PosterPath:   derefPath(show.PosterPath),
+			BackdropPath: derefPath(show.BackdropPath),
+			MediaType:    MediaTypeTV,
+			Rating:       show.VoteAverage,
+			VoteCount:    show.VoteCount,
+			Popularity:   show.Popularity,
+			RawData:      show,
 		}
 
 		items = append(items, item)
@@ -243,6 +250,15 @@ func extractYear(date string) int {
 }
 
 // buildImageURL builds a full image URL from the base URL and path
+// derefPath returns the TMDb-relative path a *string carries, or "" for the
+// nil / empty-string forms TMDb uses interchangeably for "no artwork".
+func derefPath(path *string) string {
+	if path == nil {
+		return ""
+	}
+	return *path
+}
+
 func buildImageURL(baseURL string, path *string) string {
 	if baseURL == "" || path == nil || *path == "" {
 		return ""

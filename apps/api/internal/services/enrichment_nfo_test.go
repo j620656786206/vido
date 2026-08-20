@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/vido/api/internal/metadata"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/tmdb"
@@ -597,4 +598,100 @@ func TestEnrichMovie_NFO_PartialStreamDetails(t *testing.T) {
 	assert.False(t, mockRepo.updatedMovie.VideoResolution.Valid) // No width/height → no resolution
 	assert.False(t, mockRepo.updatedMovie.AudioCodec.Valid)      // No audio element
 	assert.False(t, mockRepo.updatedMovie.AudioChannels.Valid)   // No audio channels
+}
+
+// ─── bugfix-d D2: poster_path storage format ─────────────────────────────────
+
+// A sampled 222 library rows held THREE formats in one column: 103 absolute TMDb
+// URLs, 1 relative path, 118 empty. The absolute ones came from this write path,
+// which stored `item.PosterURL` (already prefixed with the image base) while the
+// other write path stored the relative `details.PosterPath`. The frontend
+// prefixes unconditionally, so the absolute rows rendered ".../w342https://…"
+// and the poster broke. Canonical form = the TMDb-relative path.
+func TestApplyMetadataToMovie_StoresRelativeTMDbPath(t *testing.T) {
+	svc := &EnrichmentService{}
+	movie := &models.Movie{}
+
+	svc.applyMetadataToMovie(movie, metadata.MetadataItem{
+		Title:        "測試片",
+		PosterURL:    "https://image.tmdb.org/t/p/w500/abc123.jpg",
+		BackdropURL:  "https://image.tmdb.org/t/p/w780/back456.jpg",
+		PosterPath:   "/abc123.jpg",
+		BackdropPath: "/back456.jpg",
+	}, models.MetadataSourceTMDb)
+
+	require.True(t, movie.PosterPath.Valid)
+	assert.Equal(t, "/abc123.jpg", movie.PosterPath.String,
+		"the relative path is canonical — the size segment and host are render-time concerns")
+	require.True(t, movie.BackdropPath.Valid)
+	assert.Equal(t, "/back456.jpg", movie.BackdropPath.String)
+}
+
+// Douban / Wikipedia artwork lives on its own host and has NO relative path, so
+// the absolute URL is stored as-is and the frontend passes it through untouched.
+func TestApplyMetadataToMovie_KeepsAbsoluteURLWhenNoRelativePath(t *testing.T) {
+	svc := &EnrichmentService{}
+	movie := &models.Movie{}
+
+	svc.applyMetadataToMovie(movie, metadata.MetadataItem{
+		Title:     "豆瓣來源片",
+		PosterURL: "https://img1.doubanio.com/view/photo/l/public/p2622599107.jpg",
+	}, models.MetadataSourceDouban)
+
+	require.True(t, movie.PosterPath.Valid)
+	assert.Equal(t, "https://img1.doubanio.com/view/photo/l/public/p2622599107.jpg", movie.PosterPath.String,
+		"a provider with no relative path keeps its absolute URL — the FE renders it as-is")
+}
+
+// bugfix-d D4: the zh-TW title branch. TMDb items reach this with Title already
+// zh-TW (fixed at the fallback layer); Douban/Wikipedia items carry TitleZhTW.
+func TestApplyMetadataToMovie_PrefersZhTWTitle(t *testing.T) {
+	svc := &EnrichmentService{}
+	movie := &models.Movie{}
+
+	svc.applyMetadataToMovie(movie, metadata.MetadataItem{
+		Title:         "Mag Mag",
+		TitleZhTW:     "禍禍女",
+		OriginalTitle: "禍禍女",
+	}, models.MetadataSourceDouban)
+
+	assert.Equal(t, "禍禍女", movie.Title, "the zh-TW title is the display title")
+	require.True(t, movie.OriginalTitle.Valid)
+	assert.Equal(t, "禍禍女", movie.OriginalTitle.String)
+}
+
+// bugfix-d CR H1/M4: the D2 convergence and the zh-TW title rule originally
+// covered movies only — series kept writing the absolute URL and ignored
+// TitleZhTW entirely. Same field, same provider, two different rules.
+func TestApplyMetadataToSeries_RelativePathAndZhTWTitle(t *testing.T) {
+	svc := &EnrichmentService{}
+	series := &models.Series{}
+
+	svc.applyMetadataToSeries(series, metadata.MetadataItem{
+		Title:        "Mag Mag The Series",
+		TitleZhTW:    "禍禍女影集",
+		PosterURL:    "https://image.tmdb.org/t/p/w500/series.jpg",
+		BackdropURL:  "https://image.tmdb.org/t/p/w780/sback.jpg",
+		PosterPath:   "/series.jpg",
+		BackdropPath: "/sback.jpg",
+	}, models.MetadataSourceTMDb)
+
+	assert.Equal(t, "禍禍女影集", series.Title, "CR M4: the zh-TW title wins for series too")
+	require.True(t, series.PosterPath.Valid)
+	assert.Equal(t, "/series.jpg", series.PosterPath.String, "CR H1: relative path is canonical for series too")
+	require.True(t, series.BackdropPath.Valid)
+	assert.Equal(t, "/sback.jpg", series.BackdropPath.String)
+}
+
+func TestApplyMetadataToSeries_KeepsAbsoluteURLWhenNoRelativePath(t *testing.T) {
+	svc := &EnrichmentService{}
+	series := &models.Series{}
+
+	svc.applyMetadataToSeries(series, metadata.MetadataItem{
+		Title:     "豆瓣影集",
+		PosterURL: "https://img1.doubanio.com/view/photo/l/public/p999.jpg",
+	}, models.MetadataSourceDouban)
+
+	require.True(t, series.PosterPath.Valid)
+	assert.Equal(t, "https://img1.doubanio.com/view/photo/l/public/p999.jpg", series.PosterPath.String)
 }

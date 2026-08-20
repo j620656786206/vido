@@ -12,9 +12,10 @@ import { snakeToCamel } from '../utils/caseTransform';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
-const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
-
-export type ImageSize = 'w92' | 'w154' | 'w185' | 'w342' | 'w500' | 'w780' | 'original';
+// bugfix-d CR L2: the image base and the ImageSize union used to be duplicated
+// here alongside a second getImageUrl. Both now come from the single
+// implementation in lib/image.ts so they cannot drift apart again.
+export type { ImageSize } from '../lib/image';
 
 /**
  * Contextual per-facet result counts (Story ux3-discover-facet-aggregation-fe,
@@ -36,10 +37,13 @@ export interface FacetCounts {
   partial: boolean;
 }
 
-export function getImageUrl(path: string | null, size: ImageSize = 'w342'): string | null {
-  if (!path) return null;
-  return `${TMDB_IMAGE_BASE}/${size}${path}`;
-}
+/**
+ * bugfix-d CR L2: this was a second, silently-diverging copy of `lib/image.ts`'s
+ * helper — it lacked the absolute-URL passthrough and would have re-prefixed any
+ * stored absolute poster. Re-exported from the one implementation so the two can
+ * never drift again.
+ */
+export { getImageUrl } from '../lib/image';
 
 async function fetchApi<T>(endpoint: string): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`);

@@ -135,6 +135,14 @@ type MetadataItem struct {
 	PosterURL string
 	// BackdropURL is the URL to the backdrop image
 	BackdropURL string
+	// PosterPath / BackdropPath are the TMDb-RELATIVE artwork paths ("/abc.jpg"),
+	// set only by the TMDb provider (bugfix-d D2). They are the canonical storage
+	// form: the size segment is a render-time decision and the image host can
+	// change, so neither belongs in the database. Providers whose artwork lives on
+	// their own host (Douban, Wikipedia) leave these empty and supply the absolute
+	// *URL fields instead — consumers fall back to those.
+	PosterPath   string
+	BackdropPath string
 	// MediaType indicates if this is a movie or TV show
 	MediaType MediaType
 	// Genres is a list of genre names

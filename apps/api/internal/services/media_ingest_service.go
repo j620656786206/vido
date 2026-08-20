@@ -169,13 +169,20 @@ func (s *MediaIngestService) UpsertSeries(ctx context.Context, in SeriesInput) (
 
 // applyMetadataItemToSeries copies a resolved provider match onto a new series row.
 func applyMetadataItemToSeries(series *models.Series, item *metadata.MetadataItem, source models.MetadataSource) {
-	if item.Title != "" {
+	// bugfix-d CR M4 — zh-TW title preference, same rule as the movie path.
+	if item.TitleZhTW != "" {
+		series.Title = item.TitleZhTW
+	} else if item.Title != "" {
 		series.Title = item.Title
 	}
 	if item.OriginalTitle != "" {
 		series.OriginalTitle = models.NewNullString(item.OriginalTitle)
 	}
-	if item.PosterURL != "" {
+	// bugfix-d CR H1 — the TMDb relative path is the canonical storage form;
+	// providers without one keep their absolute URL (rendered as-is by the FE).
+	if item.PosterPath != "" {
+		series.PosterPath = models.NewNullString(item.PosterPath)
+	} else if item.PosterURL != "" {
 		series.PosterPath = models.NewNullString(item.PosterURL)
 	}
 	if item.Overview != "" {
