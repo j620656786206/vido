@@ -281,14 +281,14 @@ func (s *EnrichmentService) enrichSeries(ctx context.Context, series *models.Ser
 	if err != nil {
 		series.ParseStatus = models.ParseStatusFailed
 		series.UpdatedAt = time.Now()
-		_ = s.seriesRepo.Update(ctx, series)
+		_ = s.seriesRepo.UpdateEnrichedMetadata(ctx, series)
 		return fmt.Errorf("metadata search failed: %w", err)
 	}
 
 	if searchResult == nil || !searchResult.HasResults() {
 		series.ParseStatus = models.ParseStatusFailed
 		series.UpdatedAt = time.Now()
-		if updateErr := s.seriesRepo.Update(ctx, series); updateErr != nil {
+		if updateErr := s.seriesRepo.UpdateEnrichedMetadata(ctx, series); updateErr != nil {
 			return fmt.Errorf("update series after no match: %w", updateErr)
 		}
 		return nil
@@ -298,7 +298,7 @@ func (s *EnrichmentService) enrichSeries(ctx context.Context, series *models.Ser
 	series.ParseStatus = models.ParseStatusSuccess
 	series.UpdatedAt = time.Now()
 
-	if err := s.seriesRepo.Update(ctx, series); err != nil {
+	if err := s.seriesRepo.UpdateEnrichedMetadata(ctx, series); err != nil {
 		return fmt.Errorf("update series: %w", err)
 	}
 	return nil
@@ -389,7 +389,7 @@ func (s *EnrichmentService) enrichMovie(ctx context.Context, movie *models.Movie
 	if parseResult == nil || parseResult.Status == parser.ParseStatusFailed {
 		movie.ParseStatus = models.ParseStatusFailed
 		movie.UpdatedAt = time.Now()
-		return s.movieRepo.Update(ctx, movie)
+		return s.movieRepo.UpdateEnrichedMetadata(ctx, movie)
 	}
 
 	// If the parser couldn't extract a meaningful title, mark as failed
@@ -400,7 +400,7 @@ func (s *EnrichmentService) enrichMovie(ctx context.Context, movie *models.Movie
 	if cleanedTitle == "" {
 		movie.ParseStatus = models.ParseStatusFailed
 		movie.UpdatedAt = time.Now()
-		return s.movieRepo.Update(ctx, movie)
+		return s.movieRepo.UpdateEnrichedMetadata(ctx, movie)
 	}
 
 	// Step 2: Determine media type
@@ -420,14 +420,14 @@ func (s *EnrichmentService) enrichMovie(ctx context.Context, movie *models.Movie
 	if err != nil {
 		movie.ParseStatus = models.ParseStatusFailed
 		movie.UpdatedAt = time.Now()
-		_ = s.movieRepo.Update(ctx, movie)
+		_ = s.movieRepo.UpdateEnrichedMetadata(ctx, movie)
 		return fmt.Errorf("metadata search: %w", err)
 	}
 
 	if searchResult == nil || !searchResult.HasResults() {
 		movie.ParseStatus = models.ParseStatusFailed
 		movie.UpdatedAt = time.Now()
-		_ = s.movieRepo.Update(ctx, movie)
+		_ = s.movieRepo.UpdateEnrichedMetadata(ctx, movie)
 		return fmt.Errorf("no metadata found for: %s", cleanedTitle)
 	}
 
@@ -441,7 +441,7 @@ func (s *EnrichmentService) enrichMovie(ctx context.Context, movie *models.Movie
 
 	// Step 6: Update DB (single write with metadata + tech info)
 	movie.UpdatedAt = time.Now()
-	if err := s.movieRepo.Update(ctx, movie); err != nil {
+	if err := s.movieRepo.UpdateEnrichedMetadata(ctx, movie); err != nil {
 		return fmt.Errorf("update movie: %w", err)
 	}
 
@@ -565,7 +565,7 @@ func (s *EnrichmentService) tryNFOEnrichment(ctx context.Context, movie *models.
 	movie.ParseStatus = models.ParseStatusSuccess
 	movie.UpdatedAt = time.Now()
 
-	if err := s.movieRepo.Update(ctx, movie); err != nil {
+	if err := s.movieRepo.UpdateEnrichedMetadata(ctx, movie); err != nil {
 		return false, fmt.Errorf("update movie after NFO: %w", err)
 	}
 

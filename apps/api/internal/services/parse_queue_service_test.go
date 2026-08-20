@@ -193,7 +193,10 @@ func (m *mockPQMovieRepo) FindByFilePath(_ context.Context, _ string) (*models.M
 	return nil, nil
 }
 func (m *mockPQMovieRepo) Update(_ context.Context, _ *models.Movie) error { return nil }
-func (m *mockPQMovieRepo) Delete(_ context.Context, _ string) error        { return nil }
+func (m *mockPQMovieRepo) UpdateEnrichedMetadata(_ context.Context, _ *models.Movie) error {
+	return nil
+}
+func (m *mockPQMovieRepo) Delete(_ context.Context, _ string) error { return nil }
 func (m *mockPQMovieRepo) List(_ context.Context, _ repository.ListParams) ([]models.Movie, *repository.PaginationResult, error) {
 	return nil, nil, nil
 }
@@ -292,7 +295,10 @@ func (m *mockPQSeriesRepo) FindByFilePath(_ context.Context, filePath string) (*
 	return nil, nil // (nil, nil) on miss, matching the real repository
 }
 func (m *mockPQSeriesRepo) Update(_ context.Context, _ *models.Series) error { return nil }
-func (m *mockPQSeriesRepo) Delete(_ context.Context, _ string) error         { return nil }
+func (m *mockPQSeriesRepo) UpdateEnrichedMetadata(_ context.Context, _ *models.Series) error {
+	return nil
+}
+func (m *mockPQSeriesRepo) Delete(_ context.Context, _ string) error { return nil }
 func (m *mockPQSeriesRepo) List(_ context.Context, _ repository.ListParams) ([]models.Series, *repository.PaginationResult, error) {
 	return nil, nil, nil
 }

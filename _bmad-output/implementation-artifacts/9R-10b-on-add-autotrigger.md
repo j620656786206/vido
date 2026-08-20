@@ -578,3 +578,66 @@ git 有但 story 未列：`-gallery.fixtures.tsx` ＋ 6 張 visual 基準。已�
 `tsc --noEmit` **147**（＝main 基準，零新增）。
 Visual 基準**不受影響**：本次 FE 變更只有 create 分支的 payload 一行，**零 DOM 變動**。
 
+---
+
+## 🤖 Adversarial Re-Review (multi-agent, fresh context) — 2026-08-20/21
+
+**為什麼再審一次**：CR-249 是**自審**（實作者＝審查者）。本輪改用 6 個獨立視角平行找 →
+每個發現由 3 個不同角度的驗證者嘗試推翻（CORRECTNESS／REACHABILITY／PRE-EXISTING，
+兩票推翻即淘汰，且驗證者被要求「不確定就判推翻」）→ 完整性評審抓漏。
+規模：80 agents／6.0M tokens／24 個發現 → **11 存活（3H/8M）**、11 被推翻。
+（最後的綜合 agent 撞到月額度上限未完成；以下由 Amelia 逐條**親自複查程式碼**後撰寫，
+未複查者不轉述。）
+
+### ✅ 已修
+
+**🔴 A —— 煞車抹掉 `subtitle_path`，使用者為同一段語音付兩次錢**（commit `052987de`）
+`deferPaidItem` 原本傳 `""`，而共用寫入器 `repository/subtitle_generation_status.go:44-45` 是
+無條件 `sql.NullString{Valid: path != ""}` ⇒ **空字串＝寫成 NULL**。
+bugfix-j 留在 `untranslated` 的項目，其 `subtitle_path` 是「ASR 已付費、產出英文 SRT」的收據；
+自動輪會挑中它（`untranslated` 在 eligible 集合、語言 `en` 通得過 missing 述詞）→ 路由在媒體檔
+找不到內嵌文字軌 → 煞車 → **收據銷毀** → 下次同意執行重跑整段 ASR。
+修：`MediaItem` 增 `SubtitlePath`/`SubtitleLanguage` 載入快照，原值寫回。
+反證：改回空字串 → 6 例轉紅。
+
+**🔴 B —— enrichment 與自動輪並行，整列 UPDATE 覆寫管線寫入**（本次）
+`ComposeScanCallback(postScanEnrichment, autoGenerator.ScanCallback())` 兩邊**各自 `go`，是並行**。
+`MovieRepository.Update` 寫全部 38 欄（含 5 個 subtitle 交付欄），而 `EnrichmentService` 握著
+過期副本數秒至數十秒（NFO 讀取 → 檔名解析可能含 LLM → TMDB 查詢）才寫回。
+**碰撞不是罕見是主線**：enrichment 撈 `parse_status` pending/空＝新掃入的檔；自動輪撈缺繁中＝
+也是新掃入的檔。症狀最惡劣 —— **`.srt` 寫進磁碟了，資料庫卻說它不存在**。
+稽核（逐一比對每個賦值）：enrichment **從不指派**那 5 個欄位，也不碰 `file_path`/`file_size`/
+`library_id`/`is_removed`/`rating` 等 10 欄。
+修：新增窄寫入器 `MovieRepository.UpdateEnrichedMetadata`（22 欄）與 series 版（12 欄），
+**只寫 enrichment 真的算出來的東西**；`Update` 本身零改動（它有 12 個生產呼叫點）。
+反證：enrichment 改回寬寫入器 → 3 例轉紅。
+測試：`TestWideUpdate_LosesConcurrentSubtitleWrite`（**特徵測試**，證明寬寫入器確實會覆寫）
+＋ `TestUpdateEnrichedMetadata_PreservesConcurrentSubtitleWrite`（回歸釘）。
+
+**🔴 C —— 延後標記的 writer↔reader 契約零測試覆蓋**（commit `052987de`）
+`DeferredPaidRunPrefix` 由 `deferPaidItem` 寫、由 `deferredMediaIDs` 讀，中間沒有任何測試相連 ⇒
+writer 一旦不用該常數，排除集合靜默變空、H1 餓死問題無聲復發。
+補 `TestDeferredMarker_WriterAndReaderAgree`（唯一同時跑真 writer 與真 reader）。
+反證：writer 改成不用常數 → 4 例轉紅。（改常數本身不會紅 —— 兩側共用同一常數，
+格式漂移結構上不可能發生，這是設計正確不是測試無效。）
+
+### 🔧 順帶更正的兩個**我自己寫錯的宣稱**
+
+1. `main.go` 註解稱「自動觸發的語言路由讀 enrichment 寫的 metadata」—— **錯兩層**：
+   `SelectAndRoute` 探測的是**檔案**；免費兩條路線（`process_item.go:260-266`）**完全沒碰
+   `item.Context`**，metadata 只在 `RouteTranslate`（`:279`）與 `runVersion` 雜湊時用到。
+   ⇒ 排序沒有語意價值，B 的修復純粹是為了消除覆寫，不是為了滿足依賴。
+2. CR-249 曾稱「Visual 基準不受影響」—— 對，但當時漏了「既有 fixture 需 rebless」的一般情形。
+
+### ⏭️ 未修，已立案
+
+- `bugfix-wide-update-stale-copy-other-callers` —— 寬 `Update` 還有 **11 個其他呼叫點跨 5 個服務**
+  帶同款 stale-copy 風險。**刻意不在 CR 修復裡一起掃**：每個呼叫點合法擁有的欄位不同、需各自稽核，
+  一次掃完卻沒有對應測試會給人「已經修好了」的錯覺。
+- `preexisting-fail-generation-batch-cancel-mid-item-flake` —— `time.Sleep(50ms)` 造成的負載敏感 flake，
+  已證非本次造成（隔離 5/5、整包 3/3、乾淨樹全綠、第二次 `nx test api` 全綠）。
+- `bugfix-autogenerator-no-timeout-or-shutdown`（CR-249 L1）。
+- 其餘 8 個 Medium 級發現（排除集合永不過期、只涵蓋 `skipped` 不涵蓋 `failed`、
+  single-flight 是丟棄而非延後、UI 開關無條件顯示但 generator 只在 pipeline 模式存在 等）
+  尚未逐條複查，**不在此宣稱其真偽**。
+
