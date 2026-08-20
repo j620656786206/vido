@@ -1,6 +1,6 @@
 # Story: Bugfix E — qBT 錯誤/暫停種子被計成「排隊中」（Activity 誠實分桶）
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
