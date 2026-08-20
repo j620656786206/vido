@@ -104,6 +104,9 @@ SCREENS = {
     "ZjoEI": ("flow-e-scanner", "e3-m"),
     "QTqcC": ("flow-e-scanner", "e4-d"),
     "n7jVF": ("flow-e-scanner", "e4-m"),
+    # Media library edit modal (9R-10b) — auto-generation toggle, free-only copy
+    "hUVYm": ("flow-e-scanner", "e5-d"),
+    "P0P82x": ("flow-e-scanner", "e5-m"),
     # Flow F — 字幕搜尋 / 批次 (subtitle search dialog / preview-download / batch progress)
     "cOrOR": ("flow-f-subtitle", "f1-d"),
     "GZ294": ("flow-f-subtitle", "f1-m"),
@@ -141,6 +144,9 @@ SCREENS = {
     # Episode-row subtitle entry spec (9R-UX) — action/status decoupling ruling,
     # has_local_file gate, 10-status dialog behavior table.
     "Z54xAd": ("flow-j-specs", "j3-d"),
+    # On-add auto-generation free/paid boundary spec (9R-10b) — 2026-08-07/08-19 rulings,
+    # two-tier table, control states, LibraryCard footer, copy rationale.
+    "sPzZT": ("flow-j-specs", "j4-d"),
     # Design system reference docs (top of canvas, no flow code)
     "8SSzc": ("design-system", "design-system-reference"),
     "sJzat": ("design-system", "component-library"),
