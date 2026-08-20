@@ -20,6 +20,8 @@ const h = vi.hoisted(() => ({
     error: null as string | null,
     srtPath: null as string | null,
     zhSrtPath: null as string | null,
+    partial: false as boolean,
+    englishKeptBlocks: null as number | null,
   },
   startTracking: vi.fn(),
   reset: vi.fn(),
@@ -158,6 +160,8 @@ beforeEach(() => {
     error: null,
     srtPath: null,
     zhSrtPath: null,
+    partial: false,
+    englishKeptBlocks: null,
   };
   h.glossaryTerms = [{ id: 't1' }, { id: 't2' }, { id: 't3' }];
   h.fetchHook.results = [];
@@ -463,6 +467,24 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
 
     const note = await screen.findByTestId('generation-complete-note');
     expect(note).toHaveTextContent('已生成英文字幕；尚未翻譯');
+    expect(note).not.toHaveTextContent('字幕已生成完成');
+  });
+
+  // bugfix-j CR H2: a PARTIAL completion has a zh path (the mixed file was
+  // deliberately placed) but must NOT claim 完成 — the row is `untranslated`.
+  it('complete PARTIAL (zh path present but English cues kept) → 部分翻譯失敗, not 完成', async () => {
+    mockedTrigger.mockResolvedValue({ status: 'started', result: { jobId: 'j', message: 'ok' } });
+    h.genState.phase = 'complete';
+    h.genState.zhSrtPath = '/media/m.zh-Hant.srt';
+    h.genState.partial = true;
+    h.genState.englishKeptBlocks = 5;
+    renderDialog();
+
+    fireEvent.click(await screen.findByTestId('action-generate-subtitle'));
+
+    const note = await screen.findByTestId('generation-complete-note');
+    expect(note).toHaveTextContent('部分翻譯失敗');
+    expect(note).toHaveTextContent('5 句保留英文');
     expect(note).not.toHaveTextContent('字幕已生成完成');
   });
 

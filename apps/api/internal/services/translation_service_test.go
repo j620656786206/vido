@@ -342,7 +342,7 @@ func TestTranslationService_TranslateWithGlossaryHarvest_ReturnsTrailerTerms(t *
 		{Index: 1, Start: "00:00:01,000", End: "00:00:04,000", Text: "The Demogorgon is coming"},
 	}
 
-	translated, terms, err := svc.TranslateWithGlossaryHarvest(context.Background(), blocks, nil, nil)
+	translated, terms, _, err := svc.TranslateWithGlossaryHarvest(context.Background(), blocks, nil, nil)
 	require.NoError(t, err)
 
 	require.Len(t, translated, 1)
@@ -351,7 +351,7 @@ func TestTranslationService_TranslateWithGlossaryHarvest_ReturnsTrailerTerms(t *
 	assert.Equal(t, map[string]string{"Demogorgon": "魔王獸"}, terms)
 
 	// Back-compat delegate: same blocks, terms dropped, signature unchanged.
-	viaOld, err := svc.TranslateWithGlossary(context.Background(), blocks, nil, nil)
+	viaOld, _, err := svc.TranslateWithGlossary(context.Background(), blocks, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, translated, viaOld)
 }
@@ -413,7 +413,7 @@ func TestTranslationService_TranslateWithGlossary_InjectsGlossary(t *testing.T) 
 		{Source: "Demogorgon", Target: "魔王獸"},
 		{Source: "", Target: "skip-me"}, // blank source must be filtered
 	}
-	out, err := svc.TranslateWithGlossary(
+	out, _, err := svc.TranslateWithGlossary(
 		context.Background(),
 		[]TranslationBlock{{Index: 1, Text: "The Demogorgon is coming"}},
 		glossary, nil,
@@ -591,4 +591,156 @@ func TestTranslationService_TranslateChunk_EmptyBlocksIsANoOp(t *testing.T) {
 	assert.Nil(t, terms)
 	assert.Equal(t, ai.CompletionUsage{}, usage)
 	assert.Empty(t, mock.reqs, "no cues means no request")
+}
+
+// ─── bugfix-j: TranslationOutcome — partial results must not vanish ─────────
+
+// bugfix-j AC #1/AC #4(a): a failed batch keeps English wholesale (AC #5 of
+// 9-2b) — the outcome must count those cues instead of dropping a bool into a
+// slog.Warn, because the verdict layer demotes found → untranslated on it.
+func TestTranslationService_Harvest_PartialOutcome_BatchFailure(t *testing.T) {
+	// bugfix-j CR L2: the fixture below (10-line first response, 15 blocks,
+	// expected kept=5) assumes the batch size — pin it so a constant change
+	// fails HERE with a clear message, not as an opaque count mismatch.
+	require.Equal(t, 10, prompts.SubtitleTranslatorBatchSize,
+		"fixture assumes batch size 10 — rebuild the response/counts if this changes")
+	failingMock := &translationFailOnSecondMock{
+		firstResponse: "[1] 第一行\n[2] 第二行\n[3] 第三行\n[4] 第四行\n[5] 第五行\n[6] 第六行\n[7] 第七行\n[8] 第八行\n[9] 第九行\n[10] 第十行",
+	}
+	var blocks []TranslationBlock
+	for i := 1; i <= 15; i++ {
+		blocks = append(blocks, TranslationBlock{
+			Index: i,
+			Start: fmt.Sprintf("00:00:%02d,000", i),
+			End:   fmt.Sprintf("00:00:%02d,000", i+1),
+			Text:  fmt.Sprintf("English line %d", i),
+		})
+	}
+
+	svc := NewTranslationService(failingMock, nil)
+	translated, _, outcome, err := svc.TranslateWithGlossaryHarvest(context.Background(), blocks, nil, nil)
+	require.NoError(t, err, "partial failure stays non-fatal (AC #5 of 9-2b)")
+	require.Len(t, translated, 15)
+
+	assert.True(t, outcome.Partial(), "a failed batch is a partial outcome")
+	assert.Equal(t, 5, outcome.EnglishKeptBlocks, "blocks 11-15 kept English")
+	assert.Equal(t, 15, outcome.TotalBlocks)
+	assert.Equal(t, "第一行", translated[0].Text)
+	assert.Equal(t, "English line 11", translated[10].Text)
+}
+
+// bugfix-j AC #1/AC #4(b): a response missing a single block is ALSO partial —
+// the silent per-cue keep-English path (:252-258 pre-fix) must count too.
+func TestTranslationService_Harvest_PartialOutcome_PerCueMiss(t *testing.T) {
+	// Two blocks in, response covers only block 1.
+	mock := &translationIntegrationMock{response: "[1] 你好"}
+	blocks := []TranslationBlock{
+		{Index: 1, Start: "00:00:01,000", End: "00:00:02,000", Text: "Hello"},
+		{Index: 2, Start: "00:00:03,000", End: "00:00:04,000", Text: "Still English"},
+	}
+
+	svc := NewTranslationService(mock, nil)
+	translated, _, outcome, err := svc.TranslateWithGlossaryHarvest(context.Background(), blocks, nil, nil)
+	require.NoError(t, err)
+	require.Len(t, translated, 2)
+
+	assert.True(t, outcome.Partial(), "a per-cue miss is a partial outcome")
+	assert.Equal(t, 1, outcome.EnglishKeptBlocks)
+	assert.Equal(t, 2, outcome.TotalBlocks)
+	assert.Equal(t, "你好", translated[0].Text)
+	assert.Equal(t, "Still English", translated[1].Text, "the missed cue keeps English (unchanged behavior)")
+}
+
+// bugfix-j AC #4(c) regression pin: a fully-translated run is NOT partial —
+// the found verdict path stays byte-identical for full successes.
+func TestTranslationService_Harvest_FullSuccessNotPartial(t *testing.T) {
+	mock := &translationIntegrationMock{response: "[1] 你好\n[2] 世界"}
+	blocks := []TranslationBlock{
+		{Index: 1, Start: "00:00:01,000", End: "00:00:02,000", Text: "Hello"},
+		{Index: 2, Start: "00:00:03,000", End: "00:00:04,000", Text: "World"},
+	}
+
+	svc := NewTranslationService(mock, nil)
+	translated, _, outcome, err := svc.TranslateWithGlossaryHarvest(context.Background(), blocks, nil, nil)
+	require.NoError(t, err)
+	require.Len(t, translated, 2)
+
+	assert.False(t, outcome.Partial())
+	assert.Equal(t, 0, outcome.EnglishKeptBlocks)
+	assert.Equal(t, 2, outcome.TotalBlocks)
+}
+
+// bugfix-j CR M3: a bare "[N]" line (model emitted the index with no
+// translation) must (a) NOT pollute the PREVIOUS cue with the literal "[N]"
+// text, (b) count as a per-cue miss (English kept), and (c) still accept a
+// continuation line as that cue's first text.
+func TestParseTranslationResponse_BareIndexLine(t *testing.T) {
+	// (a)+(b): bare [2] between two translated cues.
+	res, _ := parseTranslationResponseWithTerms("[1] 你好\n[2]\n[3] 世界", []int{1, 2, 3})
+	assert.Equal(t, "你好", res[1], "previous cue must not absorb the literal \"[2]\" line")
+	_, ok := res[2]
+	assert.False(t, ok, "an empty translation is a MISSING translation")
+	assert.Equal(t, "世界", res[3])
+
+	// trailing-whitespace variant of the same shape.
+	res2, _ := parseTranslationResponseWithTerms("[1] 你好\n[2]   ", []int{1, 2})
+	assert.Equal(t, "你好", res2[1])
+	_, ok2 := res2[2]
+	assert.False(t, ok2)
+
+	// (c): continuation after a bare index belongs to THAT cue.
+	res3, _ := parseTranslationResponseWithTerms("[1]\n第一行接續", []int{1})
+	assert.Equal(t, "第一行接續", res3[1], "continuation is the cue's first text, no leading newline")
+}
+
+// bugfix-j CR M3 (outcome side): the bare-index miss flows into the partial
+// outcome — the cue keeps English and EnglishKeptBlocks counts it.
+func TestTranslationService_Harvest_BareIndexCountsAsKept(t *testing.T) {
+	mock := &translationIntegrationMock{response: "[1] 你好\n[2]"}
+	blocks := []TranslationBlock{
+		{Index: 1, Start: "00:00:01,000", End: "00:00:02,000", Text: "Hello"},
+		{Index: 2, Start: "00:00:03,000", End: "00:00:04,000", Text: "Still English"},
+	}
+	svc := NewTranslationService(mock, nil)
+	translated, _, outcome, err := svc.TranslateWithGlossaryHarvest(context.Background(), blocks, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "你好", translated[0].Text, "cue 1 unpolluted")
+	assert.Equal(t, "Still English", translated[1].Text)
+	assert.Equal(t, 1, outcome.EnglishKeptBlocks)
+	assert.True(t, outcome.Partial())
+}
+
+// bugfix-j H3 ruling (option B「門檻制」): demotion fires only on MATERIAL
+// English residue — ≥1 batch's worth of cues (an English RUN) or ≥5% of the
+// item's OWN cue count (per-movie/per-episode denominator, per the ruling).
+// Disclosure (Partial) stays unconditional either way.
+func TestTranslationOutcome_DemotesVerdict(t *testing.T) {
+	// The absolute bar IS the batch size — a failed batch always demotes. If
+	// the batch size changes, the boundary cases below must be re-derived.
+	require.Equal(t, 10, prompts.SubtitleTranslatorBatchSize,
+		"demoteAbsoluteKeptBlocks tracks the batch size — update the cases below")
+
+	cases := []struct {
+		name    string
+		kept    int
+		total   int
+		demotes bool
+	}{
+		{"full success never demotes", 0, 100, false},
+		{"exactly 5% demotes (1/20)", 1, 20, true},
+		{"just under 5% stays found (1/21)", 1, 21, false},
+		{"scattered misses under both bars (9/300 = 3%)", 9, 300, false},
+		{"a whole batch demotes regardless of percent (10/300 ≈ 3.3%)", 10, 300, true},
+		{"above absolute bar (25/1000 = 2.5%)", 25, 1000, true},
+		{"small file: 1/2 = 50% demotes", 1, 2, true},
+		{"tiny file below batch, at percent bar (1/10 = 10%)", 1, 10, true},
+		{"everything kept demotes", 40, 40, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			o := TranslationOutcome{EnglishKeptBlocks: tc.kept, TotalBlocks: tc.total}
+			assert.Equal(t, tc.demotes, o.DemotesVerdict())
+			assert.Equal(t, tc.kept > 0, o.Partial(), "disclosure is unconditional — independent of the threshold")
+		})
+	}
 }

@@ -3,8 +3,10 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -13,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/vido/api/internal/ai"
+	"github.com/vido/api/internal/ai/prompts"
 	"github.com/vido/api/internal/models"
 )
 
@@ -164,7 +167,7 @@ func TestTranslateAndPersist_SuccessWritesBack(t *testing.T) {
 	tmpDir := t.TempDir()
 	filePath := filepath.Join(tmpDir, "Movie.2024.mkv")
 
-	zhPath, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidB, genTestSRT,
+	zhPath, _, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidB, genTestSRT,
 		filepath.Join(tmpDir, "Movie.2024.en.srt"), filePath, tmpDir, true)
 	require.NoError(t, err)
 	require.NotEmpty(t, zhPath)
@@ -183,7 +186,7 @@ func TestTranslateAndPersist_EnOnlyNoWrite(t *testing.T) {
 	writer := &fakeSubtitleWriter{}
 	svc := newWriterWiredService(t, &translationIntegrationMock{response: "[1] 你好"}, writer)
 
-	zhPath, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidB, genTestSRT,
+	zhPath, _, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidB, genTestSRT,
 		filepath.Join(t.TempDir(), "m.en.srt"),
 		filepath.Join(t.TempDir(), "m.mkv"), t.TempDir(), false /* en-only */)
 	require.NoError(t, err)
@@ -202,7 +205,7 @@ func TestTranslateAndPersist_TranslateFailureWritesUntranslated(t *testing.T) {
 	svc := newWriterWiredService(t, &translationIntegrationMock{response: "[1] 你好"}, writer)
 
 	enPath := filepath.Join(t.TempDir(), "m.en.srt")
-	zhPath, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidB, "", enPath,
+	zhPath, _, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidB, "", enPath,
 		filepath.Join(t.TempDir(), "m.mkv"), t.TempDir(), true)
 	require.NoError(t, err, "ordinary translate failures stay non-fatal (AC 6c)")
 	assert.Empty(t, zhPath)
@@ -219,7 +222,7 @@ func TestTranslateAndPersist_BudgetExceededPropagates(t *testing.T) {
 	svc := newWriterWiredService(t, &budgetExceededCompleter{}, writer)
 
 	enPath := filepath.Join(t.TempDir(), "m.en.srt")
-	_, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidB, genTestSRT, enPath,
+	_, _, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidB, genTestSRT, enPath,
 		filepath.Join(t.TempDir(), "m.mkv"), t.TempDir(), true)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ai.ErrBudgetExceeded,
@@ -239,7 +242,7 @@ func TestTranslateAndPersist_WritebackFailurePropagates(t *testing.T) {
 	writer := &fakeSubtitleWriter{err: errors.New("db locked")}
 	svc := newWriterWiredService(t, &translationIntegrationMock{response: "[1] 你好"}, writer)
 
-	_, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidB, genTestSRT,
+	_, _, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidB, genTestSRT,
 		filepath.Join(t.TempDir(), "m.en.srt"),
 		filepath.Join(t.TempDir(), "m.mkv"), t.TempDir(), true)
 	require.Error(t, err)
@@ -250,7 +253,7 @@ func TestTranslateAndPersist_WritebackFailurePropagates(t *testing.T) {
 func TestTranslateAndPersist_NilWriterIsNoop(t *testing.T) {
 	svc := newWriterWiredService(t, &translationIntegrationMock{response: "[1] 你好"}, nil)
 
-	zhPath, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidB, genTestSRT,
+	zhPath, _, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidB, genTestSRT,
 		filepath.Join(t.TempDir(), "m.en.srt"),
 		filepath.Join(t.TempDir(), "m.mkv"), t.TempDir(), true)
 	require.NoError(t, err)
@@ -277,7 +280,7 @@ func TestTranslateAndPersist_KeyUnconfiguredWritesUntranslated(t *testing.T) {
 	svc := newWriterWiredService(t, nil /* no translation service — key unconfigured */, writer)
 
 	enPath := filepath.Join(t.TempDir(), "m.en.srt")
-	zhPath, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidB, genTestSRT, enPath,
+	zhPath, _, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidB, genTestSRT, enPath,
 		filepath.Join(t.TempDir(), "m.mkv"), t.TempDir(), true)
 	require.NoError(t, err)
 	assert.Empty(t, zhPath)
@@ -296,7 +299,7 @@ func TestTranslateAndPersist_UntranslatedWritebackFailurePropagates(t *testing.T
 	writer := &fakeSubtitleWriter{err: errors.New("db locked")}
 	svc := newWriterWiredService(t, nil, writer)
 
-	_, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidB, genTestSRT,
+	_, _, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidB, genTestSRT,
 		filepath.Join(t.TempDir(), "m.en.srt"),
 		filepath.Join(t.TempDir(), "m.mkv"), t.TempDir(), true)
 	require.Error(t, err)
@@ -513,7 +516,204 @@ func TestTranslateWithGlossary_BudgetSentinelEscapesTolerance(t *testing.T) {
 	ts := NewTranslationService(&budgetExceededCompleter{}, nil)
 	blocks := []TranslationBlock{{Index: 1, Start: "00:00:01,000", End: "00:00:02,000", Text: "Hi"}}
 
-	_, err := ts.TranslateWithGlossary(context.Background(), blocks, nil, nil)
+	_, _, err := ts.TranslateWithGlossary(context.Background(), blocks, nil, nil)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ai.ErrBudgetExceeded)
+}
+
+// ─── bugfix-j: partial translation must not persist `found` ─────────────────
+
+// twoCueSRT pairs with a mock whose response covers only cue 1 — cue 2 keeps
+// English, making the run PARTIAL (bugfix-j).
+const twoCueSRT = "1\n00:00:01,000 --> 00:00:04,000\nHello world\n\n2\n00:00:05,000 --> 00:00:08,000\nStill English\n"
+
+// bugfix-j AC #2 (9R-16 AC 12 [@contract-v2→v3]): a MATERIALLY partial
+// translation (here 1/2 = 50%, over the H3 ruling's 5% bar) still places the
+// mixed file (tonight-value) but the verdict demotes to untranslated + the EN
+// path — the badge must never claim 繁中已就緒 over a file carrying English
+// runs, and resume stays translate-only from the EN SRT.
+func TestTranslateAndPersist_PartialTranslationWritesUntranslated(t *testing.T) {
+	writer := &fakeSubtitleWriter{}
+	svc := newWriterWiredService(t, &translationIntegrationMock{response: "[1] 你好世界"}, writer)
+
+	tmpDir := t.TempDir()
+	enPath := filepath.Join(tmpDir, "m.en.srt")
+	zhPath, outcome, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidB, twoCueSRT,
+		enPath, filepath.Join(tmpDir, "m.mkv"), tmpDir, true)
+	require.NoError(t, err)
+
+	assert.NotEmpty(t, zhPath, "the mixed file is still placed — partial value is not discarded")
+	assert.True(t, outcome.Partial())
+	assert.Equal(t, 1, outcome.EnglishKeptBlocks)
+
+	require.Len(t, writer.calls, 1)
+	call := writer.calls[0]
+	assert.Equal(t, models.SubtitleStatusUntranslated, call.Status,
+		"partial demotes the verdict — found would be a lying badge")
+	assert.Equal(t, enPath, call.Path, "the row records the EN SRT so resume can re-translate from source")
+	assert.Equal(t, "en", call.Language)
+}
+
+// bugfix-j / Rule 13: the partial-branch verdict write is a contract write,
+// not a best-effort optimization — its failure propagates exactly like the
+// found/untranslated branches.
+func TestTranslateAndPersist_PartialWritebackFailurePropagates(t *testing.T) {
+	writer := &fakeSubtitleWriter{err: errors.New("db locked")}
+	svc := newWriterWiredService(t, &translationIntegrationMock{response: "[1] 你好世界"}, writer)
+
+	tmpDir := t.TempDir()
+	_, _, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidB, twoCueSRT,
+		filepath.Join(tmpDir, "m.en.srt"), filepath.Join(tmpDir, "m.mkv"), tmpDir, true)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "update subtitle status")
+}
+
+// bugfix-j regression pin: a FULL success still records found/zh-Hant — the
+// v3 bump narrows `found` to full translations without touching its shape
+// (TestTranslateAndPersist_SuccessWritesBack pins the write itself; this pins
+// the outcome signal that guards it).
+func TestTranslateAndPersist_FullSuccessOutcomeNotPartial(t *testing.T) {
+	writer := &fakeSubtitleWriter{}
+	svc := newWriterWiredService(t, &translationIntegrationMock{response: "[1] 你好世界"}, writer)
+
+	tmpDir := t.TempDir()
+	zhPath, outcome, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidB, genTestSRT,
+		filepath.Join(tmpDir, "m.en.srt"), filepath.Join(tmpDir, "m.mkv"), tmpDir, true)
+	require.NoError(t, err)
+	require.NotEmpty(t, zhPath)
+
+	assert.False(t, outcome.Partial())
+	require.Len(t, writer.calls, 1)
+	assert.Equal(t, models.SubtitleStatusFound, writer.calls[0].Status)
+}
+
+// bugfix-j CR M2: the complete-payload contract is unit-tested via the
+// extracted pure builder — partial terminals carry the zh-TW message + the
+// additive partial/english_kept_blocks keys; full successes carry NEITHER.
+func TestBuildCompleteData_PartialTerminal(t *testing.T) {
+	data := buildCompleteData("job-1", uuidB, "/m/a.en.srt", "/m/a.zh-Hant.srt", "3s", false,
+		TranslationOutcome{EnglishKeptBlocks: 5, TotalBlocks: 100})
+
+	msg, _ := data["message"].(string)
+	assert.Contains(t, msg, "部分翻譯失敗", "AC #3: the terminal message says so")
+	assert.Contains(t, msg, "5 句保留英文")
+	assert.NotContains(t, msg, "complete", "CR L1: no mixed-script message")
+	assert.Equal(t, true, data["partial"], "CR H2: FE verdict line keys off this, not zh_srt_path")
+	assert.Equal(t, 5, data["english_kept_blocks"])
+	assert.Equal(t, "/m/a.zh-Hant.srt", data["zh_srt_path"], "the mixed file is still announced — it exists")
+}
+
+func TestBuildCompleteData_FullSuccessOmitsPartialKeys(t *testing.T) {
+	data := buildCompleteData("job-1", uuidB, "/m/a.en.srt", "/m/a.zh-Hant.srt", "3s", false,
+		TranslationOutcome{EnglishKeptBlocks: 0, TotalBlocks: 100})
+
+	_, hasPartial := data["partial"]
+	_, hasKept := data["english_kept_blocks"]
+	assert.False(t, hasPartial, "absent = full success (consumers must not read absence as 0-vs-missing)")
+	assert.False(t, hasKept)
+	msg, _ := data["message"].(string)
+	assert.Equal(t, "轉錄完成", msg)
+}
+
+func TestBuildCompleteData_ResumedPartial(t *testing.T) {
+	data := buildCompleteData("job-1", uuidB, "/m/a.en.srt", "/m/a.zh-Hant.srt", "3s", true,
+		TranslationOutcome{EnglishKeptBlocks: 2, TotalBlocks: 40})
+	msg, _ := data["message"].(string)
+	assert.Contains(t, msg, "翻譯完成（自既有英文字幕續跑）", "CR sub-2-2a L1 held on the resumed path")
+	assert.Contains(t, msg, "部分翻譯失敗，2 句保留英文")
+}
+
+// bugfix-j CR L2: the partial verdict arm must hit the EPISODE writeback
+// dispatch too — writing an episode verdict into the movies table is the
+// silent-corruption class 9R-10a red line ① exists for.
+func TestTranslateAndPersist_PartialTranslation_EpisodeWritesEpisodeWriter(t *testing.T) {
+	movieWriter := &fakeSubtitleWriter{}
+	episodeWriter := &fakeEpisodeWriter{}
+	svc := newWriterWiredService(t, &translationIntegrationMock{response: "[1] 你好世界"}, movieWriter)
+	svc.SetEpisodeSubtitleStatusWriter(episodeWriter)
+
+	tmpDir := t.TempDir()
+	enPath := filepath.Join(tmpDir, "e.en.srt")
+	zhPath, outcome, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaEpisode, uuidC, twoCueSRT,
+		enPath, filepath.Join(tmpDir, "e.mkv"), tmpDir, true)
+	require.NoError(t, err)
+	require.NotEmpty(t, zhPath)
+	require.True(t, outcome.Partial())
+
+	assert.Empty(t, movieWriter.calls, "episode verdict must NOT touch the movie writer (9R-10a red line ①)")
+	require.Len(t, episodeWriter.calls, 1)
+	call := episodeWriter.calls[0]
+	assert.Equal(t, uuidC, call.ID)
+	assert.Equal(t, models.SubtitleStatusUntranslated, call.Status)
+	assert.Equal(t, enPath, call.Path)
+	assert.Equal(t, "en", call.Language)
+}
+
+// translationQueueMock returns a DIFFERENT response per CompleteText call —
+// multi-batch partial cases need per-batch responses, which the single-shot
+// translationIntegrationMock cannot express. Calls beyond the queue fail loud.
+type translationQueueMock struct {
+	responses []string
+	callCount int
+}
+
+func (m *translationQueueMock) CompleteText(ctx context.Context, systemPrompt, userPrompt string, maxTokens int) (string, error) {
+	m.callCount++
+	if m.callCount > len(m.responses) {
+		return "", fmt.Errorf("translationQueueMock: unexpected call %d (queued %d)", m.callCount, len(m.responses))
+	}
+	return m.responses[m.callCount-1], nil
+}
+
+// bugfix-j H3 ruling (option B「門檻制」): an IMMATERIAL residue — under one
+// batch's worth AND under 5% of this item's own cue count — keeps the verdict
+// `found` (zh path, zh-Hant) so a 1-cue miss doesn't force a full re-run. The
+// residue is still disclosed: outcome.Partial() stays true and rides the SSE
+// complete payload. 25 cues / 1 miss = 4% < 5%, 1 < batch size 10.
+func TestTranslateAndPersist_BelowThresholdPartialStaysFound(t *testing.T) {
+	require.Equal(t, 10, prompts.SubtitleTranslatorBatchSize,
+		"the 3-batch layout below assumes batch size 10")
+
+	// 25-cue SRT → batches [1-10], [11-20], [21-25].
+	var srt strings.Builder
+	for i := 1; i <= 25; i++ {
+		fmt.Fprintf(&srt, "%d\n00:00:%02d,000 --> 00:00:%02d,500\nEnglish line %d\n\n", i, i, i, i)
+	}
+	batchResp := func(from, to, skip int) string {
+		var b strings.Builder
+		for i := from; i <= to; i++ {
+			if i == skip {
+				continue
+			}
+			fmt.Fprintf(&b, "[%d] 中文第%d句\n", i, i)
+		}
+		return b.String()
+	}
+	mock := &translationQueueMock{responses: []string{
+		batchResp(1, 10, 0),
+		batchResp(11, 20, 0),
+		batchResp(21, 25, 23), // cue 23 missing → the only English residue
+	}}
+
+	writer := &fakeSubtitleWriter{}
+	svc := newWriterWiredService(t, mock, writer)
+
+	tmpDir := t.TempDir()
+	zhPath, outcome, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidB, srt.String(),
+		filepath.Join(tmpDir, "m.en.srt"), filepath.Join(tmpDir, "m.mkv"), tmpDir, true)
+	require.NoError(t, err)
+	require.NotEmpty(t, zhPath)
+	assert.Equal(t, 3, mock.callCount, "25 cues at batch size 10 = 3 batches")
+
+	assert.True(t, outcome.Partial(), "disclosure is unconditional — the 1-cue miss is still reported")
+	assert.Equal(t, 1, outcome.EnglishKeptBlocks)
+	assert.Equal(t, 25, outcome.TotalBlocks)
+	assert.False(t, outcome.DemotesVerdict(), "1/25 = 4% < 5% and 1 < 10 — immaterial")
+
+	require.Len(t, writer.calls, 1)
+	call := writer.calls[0]
+	assert.Equal(t, models.SubtitleStatusFound, call.Status,
+		"below-threshold residue keeps found — a full re-run for 1 cue is worse than the miss")
+	assert.Equal(t, zhPath, call.Path)
+	assert.Equal(t, "zh-Hant", call.Language)
 }

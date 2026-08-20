@@ -217,7 +217,7 @@ func TestTranscriptionService_TranslateSRT_EpisodeGlossaryKeysOnSeries(t *testin
 	svc.SetEpisodeSubtitleStateReader(&fakeEpisodeStateReader{episode: episode})
 
 	srt := "1\n00:00:01,000 --> 00:00:03,000\nThe Demogorgon is coming\n"
-	_, err := svc.translateSRT(context.Background(), "job1", models.SubtitleRunMediaEpisode, uuidB, srt, "/media/Show.S01E01.mkv", "/media")
+	_, _, err := svc.translateSRT(context.Background(), "job1", models.SubtitleRunMediaEpisode, uuidB, srt, "/media/Show.S01E01.mkv", "/media")
 	require.NoError(t, err)
 
 	require.Len(t, repo.insertedTerms, 1)
@@ -242,7 +242,7 @@ func TestTranscriptionService_TranslateSRT_HarvestedTermGetsOpenCC(t *testing.T)
 	svc.SetOpenCCConverter(&fakeOpenCC{})
 
 	srt := "1\n00:00:01,000 --> 00:00:03,000\nThe Software is live\n"
-	_, err := svc.translateSRT(context.Background(), "job1", models.SubtitleRunMediaMovie, uuidB, srt, "/media/Show.mkv", "/media")
+	_, _, err := svc.translateSRT(context.Background(), "job1", models.SubtitleRunMediaMovie, uuidB, srt, "/media/Show.mkv", "/media")
 	require.NoError(t, err)
 
 	require.Len(t, repo.insertedTerms, 1)
@@ -269,7 +269,7 @@ func TestTranscriptionService_TranslateSRT_HarvestsTrailerTerms(t *testing.T) {
 	svc.SetGlossaryRepository(repo)
 
 	srt := "1\n00:00:01,000 --> 00:00:03,000\nThe Demogorgon and Vecna are coming\n"
-	_, err := svc.translateSRT(context.Background(), "job1", models.SubtitleRunMediaMovie, uuidB, srt, "/media/Show.mkv", "/media")
+	_, _, err := svc.translateSRT(context.Background(), "job1", models.SubtitleRunMediaMovie, uuidB, srt, "/media/Show.mkv", "/media")
 	require.NoError(t, err)
 
 	// Only the NEW term was inserted, with the harvest value chain intact.
@@ -303,7 +303,7 @@ func TestTranscriptionService_TranslateSRT_GlossaryOpenCCPlace(t *testing.T) {
 	svc.SetGlossaryRepository(&stubGlossaryRepo{terms: map[string]string{"Demogorgon": "魔王獸"}})
 
 	srt := "1\n00:00:01,000 --> 00:00:03,000\nThe Demogorgon is coming\n"
-	path, err := svc.translateSRT(context.Background(), "job1", models.SubtitleRunMediaMovie, uuidB, srt, "/media/Show.mkv", "/media")
+	path, _, err := svc.translateSRT(context.Background(), "job1", models.SubtitleRunMediaMovie, uuidB, srt, "/media/Show.mkv", "/media")
 	require.NoError(t, err)
 
 	// Glossary-aware: the fixed rendering reached the LLM prompt.
@@ -330,7 +330,7 @@ func TestTranscriptionService_TranslateSRT_FailSoftNoDeps(t *testing.T) {
 
 	dir := t.TempDir()
 	srt := "1\n00:00:01,000 --> 00:00:02,000\nHi\n"
-	path, err := svc.translateSRT(context.Background(), "job1", models.SubtitleRunMediaMovie, uuidA, srt, dir+"/Movie.mkv", dir)
+	path, _, err := svc.translateSRT(context.Background(), "job1", models.SubtitleRunMediaMovie, uuidA, srt, dir+"/Movie.mkv", dir)
 	require.NoError(t, err)
 	assert.FileExists(t, path)
 	// No glossary → prompt has no Glossary section (unchanged behavior).

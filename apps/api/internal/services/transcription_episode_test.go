@@ -69,7 +69,7 @@ func TestTranslateAndPersist_EpisodeSuccessWritesThroughEpisodeWriter(t *testing
 	svc.SetEpisodeSubtitleStatusWriter(episodeWriter)
 
 	tmpDir := t.TempDir()
-	zhPath, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaEpisode, uuidB,
+	zhPath, _, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaEpisode, uuidB,
 		genTestSRT, filepath.Join(tmpDir, "e.en.srt"), filepath.Join(tmpDir, "e.mkv"), tmpDir, true)
 	require.NoError(t, err)
 	require.NotEmpty(t, zhPath)
@@ -90,7 +90,7 @@ func TestTranslateAndPersist_EpisodeKeyUnconfiguredWritesUntranslated(t *testing
 	svc.SetEpisodeSubtitleStatusWriter(episodeWriter)
 
 	enPath := filepath.Join(t.TempDir(), "e.en.srt")
-	zhPath, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaEpisode, uuidB,
+	zhPath, _, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaEpisode, uuidB,
 		genTestSRT, enPath, filepath.Join(t.TempDir(), "e.mkv"), t.TempDir(), true)
 	require.NoError(t, err)
 	assert.Empty(t, zhPath)
@@ -109,7 +109,7 @@ func TestTranslateAndPersist_EpisodeNilWriterFailsPrecisely(t *testing.T) {
 	svc := newWriterWiredService(t, &translationIntegrationMock{response: "[1] 你好"}, &fakeSubtitleWriter{})
 	// deliberately NO episode writer wired
 
-	_, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaEpisode, uuidB,
+	_, _, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaEpisode, uuidB,
 		genTestSRT, filepath.Join(t.TempDir(), "e.en.srt"), filepath.Join(t.TempDir(), "e.mkv"), t.TempDir(), true)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "episode subtitle writer not wired",
@@ -127,7 +127,7 @@ func TestTranslateAndPersist_DefaultMediaTypeHitsMovieWriter(t *testing.T) {
 	tmpDir := t.TempDir()
 	// The movie media type is what every legacy call site resolves to when
 	// WithMediaType is omitted (pinned end-to-end below via RunTranscription).
-	zhPath, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidB,
+	zhPath, _, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidB,
 		genTestSRT, filepath.Join(tmpDir, "m.en.srt"), filepath.Join(tmpDir, "m.mkv"), tmpDir, true)
 	require.NoError(t, err)
 	require.NotEmpty(t, zhPath)

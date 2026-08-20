@@ -1,6 +1,6 @@
 # Story: Bugfix J — ASR 路徑部分翻譯失敗的真實狀態（hasPartialFailure 貫穿到 verdict）
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -47,6 +47,7 @@ so that a file that still contains whole batches of raw English is never present
   - `zhSRTPath != "" && !partial` → `found` + `zh-Hant`（現行成功路徑，byte-unchanged）；
   - `zhSRTPath != "" && partial` → **`untranslated` + `srtPath`（EN 路徑）** —— 與 budget-pause 分支（`:657-663`，CR sub-2-2a M1）同款寫法：EN 路徑是 resume enabler，resume 走 translate-only 重譯後以 placer 覆寫混合檔；
   - `translate && zhSRTPath == ""` → `untranslated`（現行，不動）。
+- ⚖️ **H3 裁定補充（Alexyu 2026-08-20，選項 B「門檻制」）**：上列第二態的 `partial` 判準改為 `TranslationOutcome.DemotesVerdict()` —— 揭露（`Partial()`→SSE/log）無條件，**降級**僅於英文殘留「重大」：(a) ≥ 1 批句數（`prompts.SubtitleTranslatorBatchSize`＝10，整批失敗留下連續英文段，任何片長都不可看）或 (b) ≥ 該片／該集**自身**總句數的 5%（依裁定：分母＝本次 run 的 `TotalBlocks`（單片或單集自己的句數），分子＝未譯英文句 `EnglishKeptBlocks`）。門檻以下維持 `found` + zh 路徑（1 句缺譯不值得整段重跑），殘留仍經 SSE `partial`/`english_kept_blocks` 揭露。整數交叉相乘（`kept*100 >= total*5`）避免浮點誤差；邊界：1/20＝5% 降級、1/21≈4.76% 不降、9/300＝3% 不降、10/300 觸批次規則降級。
 - 🔴 紅線：不新增 `SubtitleStatus` 枚舉值（`partial` 狀態 = 契約 bump + FE 徽章工程，明確 out of scope）。
 
 ### AC #3 — 可觀測性
@@ -64,7 +65,72 @@ so that a file that still contains whole batches of raw English is never present
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: AC #1 訊號貫穿（translation_service.go + wrapper + 呼叫點）
-- [ ] Task 2: AC #2 verdict 三態改判（transcription_service.go）
-- [ ] Task 3: AC #3 SSE/log 可觀測性
-- [ ] Task 4: AC #4 測試（含回歸釘）
+- [x] Task 1: AC #1 訊號貫穿（translation_service.go + wrapper + 呼叫點）
+- [x] Task 2: AC #2 verdict 三態改判（transcription_service.go）
+- [x] Task 3: AC #3 SSE/log 可觀測性
+- [x] Task 4: AC #4 測試（含回歸釘）
+
+---
+
+## Dev Agent Record
+
+### Implementation Plan
+- AC #1 以具名結果型別落地：`TranslationOutcome{EnglishKeptBlocks, TotalBlocks}` + `Partial()`（story 的「或等價的具名結果型別」選項）—— 比裸 bool 多帶計數，AC #3 的訊息與 log 同源，且為 9R-8 的 metadata 參數擴充預留簽名空間（協調條款：本 story 只加回傳值，9R-8 加參數，零衝突）。
+- partial 判定涵蓋兩路：批次整批失敗（`englishKept += len(batch)`）＋逐 cue 缺漏（response 缺 index → `englishKept++`）。
+- verdict 三態：`partial → untranslated+EN 路徑（混合檔仍 place）`；寫入失敗**傳播**（Rule 13 —— 此為 verdict write 非 best-effort，與 found/untranslated 分支一致；budget-pause 分支的 best-effort 語意原樣保留）。
+- `Translate`（POC 專用入口）明示丟棄 outcome＋註解；`TranslateWithGlossary` 透傳（AC #1 紅線）。
+
+### Debug Log
+- 簽名變更使嚴格 compile-broken RED 不可行 → 以行為斷言達成紅綠：新測試先斷言 outcome/verdict 行為，實作前該行為不存在（found 誤判）。
+- `pnpm nx test api` 首輪紅 → 定位為兩個與本 story 無關的環境性問題（見 Completion Notes），非回歸。
+
+### Completion Notes
+- 🔗 AC Drift: FOUND — 9R-16 AC 12（經 sub-2-2a 已為 [@contract-v2]）的 verdict 契約再次改變：`found` 由「zh 路徑非空」收窄為「完整翻譯成功」，partial 降級 untranslated+EN 路徑 → 本 story 執行 **[@contract-v2→v3] bump**（Change Log 列）。grep 下游 v2 ackers（sub-2-2b/sub-3-1/sub-4-3/sub-5-1/ux3-ai-1/ux3-ai-2 等）：**全部 done → frozen，無 stale-mark 欠務**。9R-10a **已 done**（2026-08-19 merged #234；本列原寫「in-dev 另一 session」為過時快照，2026-08-20 更正）僅消費 `untranslated` 的 resume 語意 —— 本改動為相容性擴充（更多列成為 resume-eligible），done=frozen 無 stale-mark 欠務。接棒的 not-done 消費者為 **9R-10c**（狀態×動作矩陣，另一 session 開發中）——義務見 review 段 M4 列。
+- 📎 Contract Stamps: FOUND（上游 9R-16 AC 12 [@contract-v2] 於 transcription_service.go:698 註解區 —— 本 story bump 至 v3，程式碼註解同步改寫；本 story 自身不新增 stamp）。
+- 🎭 A11y Pre-Flight: N/A (100% backend — no apps/web/ files touched)。
+- Pre-existing fix: `TestScannerService_StartScan_PermissionDenied` 在 root 容器 4/4 必敗（root 無視權限位 → ErrorCount=0）→ 加標準 root-skip guard（`os.Geteuid()==0 → t.Skip`），乾淨 main stash 驗證為既有問題。
+- Pre-existing FILED ×2（stash 驗證皆於乾淨 main 重現）：`preexisting-flake-generation-batch-cancel-sse-drain`（CancelMidItem 容器內 2/4 flake，SSE drain 時序）、`preexisting-fail-web-vitest-nonzero-exit-container`（web 2653/2653 全過但 vitest 因 jsdom unhandled navigation error 非零退出；CI 綠）。
+- AC #3 SSE 訊息：completeMsg 於 partial 終局附「（部分翻譯失敗，N 句保留英文）」＋additive `english_kept_blocks` key（僅 partial 出現）；無既有 SSE hub 測試 fake，訊息組裝由 outcome 單元測試間接覆蓋（repo 既有慣例 —— complete 事件測試僅釘常數名）。
+- AC #5 留白照案記錄：重試重付費（backlog-translate-budget-partial-progress）、attach 徽章時序，均不在本案。
+- 測試結果：`go test ./...` 34 packages 全綠（exit 0）；`pnpm nx test web` 2653/2653 全過（非零退出為已立案的容器環境問題）；gofmt 觸及檔案全乾淨；新增測試 6（outcome ×3、verdict ×3）。
+
+### File List
+- apps/api/internal/services/translation_service.go（TranslationOutcome 型別、簽名 ×3、計數、Warn 欄位）
+- apps/api/internal/services/transcription_service.go（translateSRT/translateAndPersist 簽名與 verdict 三態、[@contract-v2→v3] 註解、complete 訊息＋additive key、Info 欄位）
+- apps/api/internal/services/translation_service_test.go（呼叫點更新＋新測試 ×3）
+- apps/api/internal/services/transcription_generation_test.go（呼叫點更新＋新測試 ×3）
+- apps/api/internal/services/transcription_service_test.go（呼叫點更新）
+- apps/api/internal/services/transcription_translation_test.go（呼叫點更新）
+- apps/api/internal/services/transcription_episode_test.go（呼叫點更新）
+- apps/api/internal/services/scanner_service_test.go（pre-existing fix：root-skip guard）
+- _bmad-output/implementation-artifacts/sprint-status.yaml（status 流轉＋2 筆 pre-existing 立案）
+- _bmad-output/implementation-artifacts/9R-16-batch-generation-endpoint.md（CR H1 fix：AC 12 stamp [@contract-v2→v3] ＋ Change Log v3 列）
+
+## Senior Developer Review (AI) —— 2026-08-19（Opus 對抗審查，實作者 Fable 5）
+
+**Outcome: Changes Requested → 9/9 全數結案 2026-08-20**（3 HIGH / 4 MEDIUM / 2 LOW；H3 經 Alexyu 裁定選項 B 門檻制後落地，M1 FILE、M4 記錄＋stale-mark）
+**機械檢查**：🔒 Rule 7 Wire Format: PASS（觸及 8 個 Go 檔零 error-code 常數）· 🔒 Rule 20 Contract Bump: PASS（1 bump，下游 v2 ackers 全 done→frozen）· 🔒 Rule 25 Mega-line: N/A（未觸及 project-context.md）· Git vs File List: 一致
+
+### Action Items
+
+- [x] **M3 [HIGH-impact]** parser：bare-index 行（`[N]` 無譯文）汙染**前一句**字幕內文 —— 實測 probe 證實 cue1 變成 `"你好\n[2]"` 並寫進成品檔。修法：regex `(.+)`→`(.*)`、空譯文不存入（視為缺譯，計入 englishKept）、continuation 改附掛到當前 cue。+2 測試。
+- [x] **M2 [MEDIUM]** AC #3 零測試，且 Completion Note 宣稱「無既有 SSE hub fake」為**事實錯誤**（`generation_batch_test.go` 有 `sse.NewHub()`+`drainEvents`）。修法：抽出純函式 `buildCompleteData()`，+3 測試（partial 訊息/計數、full success 兩個 additive key 皆缺席、resumed+partial）。Completion Note 已更正。
+- [x] **H2 [HIGH]** partial 終局仍送 `zh_srt_path` → `ManageSubtitleDialogV2` 的三元式仍顯示「字幕已生成完成」，謊言從徽章搬到終局畫面。修法：SSE 增 `partial` boolean → hook state（`partial`/`englishKeptBlocks`）→ dialog 改三態（完成／部分翻譯失敗 N 句／尚未翻譯）。+2 FE spec。
+- [x] **L1 [LOW]** 完成訊息中英混雜（`"Transcription complete（部分翻譯失敗…）"`）。修法：全句 zh-TW（轉錄完成／翻譯完成（自既有英文字幕續跑）），符合 9R-10a copy 裁定。確認無測試/前端釘死舊英文字串。
+- [x] **L2 [LOW]** partial verdict 無 episode 路徑覆蓋（9R-10a 紅線 ①）＋批次大小常數隱性耦合。修法：+`TestTranslateAndPersist_PartialTranslation_EpisodeWritesEpisodeWriter`（斷言 movie writer 零呼叫）、批次測試加 `require.Equal(10, prompts.SubtitleTranslatorBatchSize)` 守衛。
+- [x] **H1 [HIGH] Rule 20 bump-side 義務未完成 —— 上游 stamp 未改**：本 story 執行 9R-16 AC 12 [@contract-v2→v3] bump，但只在自己的 Change Log 記錄，**9R-16 檔內的 AC 12 stamp 仍寫 [@contract-v1→v2]、其 Change Log 無 v3 列** —— 下一個讀 9R-16 的人會以 v2 語意實作。修法（2026-08-20）：9R-16 AC 12 stamp 改寫為 [@contract-v2→v3]（bump 原因＋門檻裁定內文，v1→v2 史料保留）＋ Change Log 新列（what changed／what breaks downstream＋consumer grep 實證：v2 ackers sub-2-2b/sub-3-1/sub-3-2/sub-4-3/sub-5-1/ux3-ai-1/ux3-ai-2/9R-18/ux3-subtitle-v2(+batch) 全 done=frozen）。連帶更正本檔 :87 的過時「9R-10a in-dev 另一 session」快照（實為 done #234）。
+- [x] **H3 [HIGH] ⚖️ 已裁定（Alexyu 2026-08-20）—— 選項 B 門檻制**：新增 `TranslationOutcome.DemotesVerdict()`（≥1 批＝10 句、或 ≥該項目自身總句數 5%，分母依裁定＝單片/單集的 `TotalBlocks`），verdict switch 的降級判準由 `Partial()` 改為 `DemotesVerdict()`；揭露維持無條件（SSE `partial`/`english_kept_blocks` 不變）。+2 測試：9 案邊界表（含 batch-size 守衛、1/20↔1/21 邊界、10/300 批次規則）＋ 25-cue 3 批 1 缺（4%）整合案維持 `found`（新 `translationQueueMock` 支援逐呼叫回應——既有單回應 mock 無法表達多批部分失敗）。⚠️ 審查者嚴重度已修正並呈報：resume 走 translate-only（不重付 ASR）且必經估價同意。
+- [x] **M1 [MEDIUM] 已處置 —— scope-out 至既有 backlog 條目**：pipeline(D2) 模式的 `asr_adapter` seam 只回 `error`，`transcribeFallback` 因而仍把重大 partial 記為 `SubtitleRunCompleted`＋zh 輸出路徑（run 表謊報；媒體列 verdict 已由本 story 誠實化）。裁定後處置：媒體列是徽章／resume／批次列舉的真相來源，run 表僅供稽核 —— 擴寬 seam（`ProcessOutcome` 帶 verdict）屬 ASR 路徑併入閘門化管線的結構工程，已 **EXTENDED 進 `backlog-asr-leg-unify-gated-pipeline`**（sprint-status 2026-08-20），本 story 不動 seam（Rule 24 FIX-OR-FILE：FILE）。AC #5 補列此留白。
+- [x] **M4 [MEDIUM] 已處置 —— 裁定後果記錄＋下游通知義務履行**：B 門檻制使「~99% 中文卻標 untranslated」的荒謬面大幅縮小（門檻下維持 found），但語意過載仍在：`untranslated` 現涵蓋「混合檔已 place、subtitle_path→EN 檔」情境，sub-2-2b 的徽章文案（已生成英文字幕，尚未翻譯）對此情境不精確——可接受（重大殘留時「尚未翻譯完成」語意上仍真，且 resume CTA 正確）。**9R-10c**（持有十列 subtitle_status×動作矩陣）原為唯一 not-done 消費者（另一 session 開發中）→ 依 9R-10a 前例（本檔 :87）不改其檔案，informational stale-mark 以本列記錄：其矩陣的 `untranslated` 列需知悉此列現在也可能代表「混合 zh 檔在指定路徑旁、subtitle_path 指向 EN 源檔」，動作語意（重新生成→translate-only resume）不變。⚠️ **UPDATE 2026-08-20**：合併 main 時 9R-10c 已 merged（#238）→ `done` = **frozen，stale-mark 欠務歸零**；其實作的逐集入口為狀態無關的穩定入口（動作不隨 status 消失），故本 story 的 verdict 收窄對它零影響 —— 合併後 dialog/hook spec 57 測試全過實證。
+
+**已修驗證**：Go 34 packages（`internal/services` 的 SSE-drain flake 屬既有立案，見下）· web 233 檔 / 2655 測試全過 · 新增測試累計 15（outcome 3、verdict 4、parser 2、buildCompleteData 3、FE 2、門檻 2〔9 案邊界表＋25-cue 整合〕＋ 常數守衛 ×2）
+
+## Change Log
+
+| Date | Change |
+|------|--------|
+| 2026-08-19 | Task 1-4 實作：TranslationOutcome 貫穿（批次失敗＋逐 cue 缺漏計數）、verdict 三態（partial→untranslated+EN）、SSE partial 訊息＋english_kept_blocks additive key、單元/整合測試 ×6 |
+| 2026-08-19 | [@contract-v2→v3] 9R-16 AC 12: what changed —— `found` 收窄為「完整翻譯成功」，partial 結果降級為 `untranslated`+EN 路徑（混合檔仍 place）；what breaks downstream —— 消費 verdict 的徽章/批次列舉會看到更多 `untranslated`（不再有謊報的 `found`），resume-eligible 集合擴大；9R-10a（in-dev）的 resume gate 相容（僅新增輸入案例），其餘 v2 ackers 全 done/frozen 無 stale-mark |
+| 2026-08-19 | Pre-existing: scanner PermissionDenied root-skip fix；FILED generation-batch cancel SSE flake ＋ web vitest 容器非零退出 |
+| 2026-08-20 | CR 修復（Opus 審查 3H/4M/2L）：M3 parser bare-index 汙染前句修復、M2 buildCompleteData 抽純函式+3 測試、H2 SSE partial 旗標貫穿到 FE 三態文案、L1 訊息全 zh-TW、L2 episode 路徑測試+批次常數守衛。H3/M1/M4 待門檻裁定。 |
+| 2026-08-20 | H3 裁定落地（Alexyu，選項 B 門檻制）：`DemotesVerdict()`（≥1 批 10 句或 ≥項目自身句數 5%，分母＝單片/單集 TotalBlocks）取代 `Partial()` 作降級判準；揭露不變。+2 測試（9 案邊界表＋25-cue 門檻下整合案）。M1 scope-out 至 backlog-asr-leg-unify；M4 裁定後果＋9R-10c informational stale-mark 記錄（不改其檔，另一 session 開發中）；H1＝9R-16 AC 12 stamp 補 bump v2→v3＋Change Log 列。CR 9/9 結案，status → review。 |

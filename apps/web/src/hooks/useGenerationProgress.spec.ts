@@ -182,6 +182,48 @@ describe('useGenerationProgress (lazy SSE, double-nested envelope)', () => {
     expect(es.readyState).toBe(2); // terminal close
   });
 
+  // bugfix-j CR H2: the additive partial keys reach state; absence = full
+  // success (partial=false, englishKeptBlocks=null — never 0-by-default).
+  it('transcription_complete carries partial + english_kept_blocks into state; absent keys mean full success', () => {
+    const { result } = renderHook(() => useGenerationProgress());
+    act(() => result.current.startTracking(MOVIE_UUID));
+    const es = MockEventSource.instances[0];
+
+    act(() =>
+      es.emit(
+        'transcription_complete',
+        wireEvent('transcription_complete', {
+          phase: 'complete',
+          srt_path: '/media/a.en.srt',
+          zh_srt_path: '/media/a.zh-Hant.srt',
+          message: '轉錄完成（部分翻譯失敗，5 句保留英文）',
+          partial: true,
+          english_kept_blocks: 5,
+        })
+      )
+    );
+    expect(result.current.progress.partial).toBe(true);
+    expect(result.current.progress.englishKeptBlocks).toBe(5);
+
+    // Fresh hook, full-success payload (keys absent).
+    const second = renderHook(() => useGenerationProgress());
+    act(() => second.result.current.startTracking(MOVIE_UUID));
+    const es2 = MockEventSource.instances[1];
+    act(() =>
+      es2.emit(
+        'transcription_complete',
+        wireEvent('transcription_complete', {
+          phase: 'complete',
+          srt_path: '/media/b.en.srt',
+          zh_srt_path: '/media/b.zh-Hant.srt',
+          message: '轉錄完成',
+        })
+      )
+    );
+    expect(second.result.current.progress.partial).toBe(false);
+    expect(second.result.current.progress.englishKeptBlocks).toBeNull();
+  });
+
   it('[P0] transcription_failed records the failed-at stage from the last live phase', () => {
     const { result } = renderHook(() => useGenerationProgress());
     act(() => result.current.startTracking(MOVIE_UUID));

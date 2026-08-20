@@ -500,7 +500,7 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 
 	// Phase 3.5: Translate to Traditional Chinese (Story 9-2b) + persist the
 	// generation verdict (9R-16 AC 12; en-only → untranslated per sub-2-2a).
-	zhSRTPath, err := s.translateAndPersist(ctx, jobID, mediaType, mediaID, srtContent, srtPath, filePath, mediaDir, translate)
+	zhSRTPath, outcome, err := s.translateAndPersist(ctx, jobID, mediaType, mediaID, srtContent, srtPath, filePath, mediaDir, translate)
 	if err != nil {
 		s.failJob(jobID, mediaID, err.Error())
 		return err
@@ -516,13 +516,32 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 		"duration", duration,
 	)
 
-	// Phase 4: Complete. CR sub-2-2a L1: a resumed run transcribed nothing —
-	// its completion message must not claim it did.
-	completeMsg := "Transcription complete"
+	// Phase 4: Complete.
+	completeData := buildCompleteData(jobID, mediaID, srtPath, zhSRTPath, duration, resumed, outcome)
+	s.broadcastEvent(EventTranscriptionComplete, completeData)
+	return nil
+}
+
+// buildCompleteData assembles the transcription_complete SSE payload.
+// Extracted pure (bugfix-j CR M2) so the partial-terminal contract is
+// unit-testable. Additive keys `partial` + `english_kept_blocks` are present
+// ONLY on partial terminals — absent = full success; consumers must not read
+// absence as 0-vs-missing. Messages are zh-TW per the 9R-10a copy ruling
+// (bugfix-j CR L1: no mixed-script strings in user-visible SSE text).
+func buildCompleteData(jobID, mediaID, srtPath, zhSRTPath, duration string, resumed bool, outcome TranslationOutcome) map[string]interface{} {
+	// CR sub-2-2a L1: a resumed run transcribed nothing — its completion
+	// message must not claim it did.
+	completeMsg := "轉錄完成"
 	if resumed {
-		completeMsg = "Translation complete (resumed from existing English subtitle)"
+		completeMsg = "翻譯完成（自既有英文字幕續跑）"
 	}
-	completeData := map[string]interface{}{
+	// bugfix-j AC #3: a partial terminal must say so — the verdict already
+	// recorded `untranslated`, and the completion message carries the same
+	// truth plus the English-kept cue count.
+	if outcome.Partial() {
+		completeMsg += fmt.Sprintf("（部分翻譯失敗，%d 句保留英文）", outcome.EnglishKeptBlocks)
+	}
+	data := map[string]interface{}{
 		"job_id":   jobID,
 		"media_id": mediaID,
 		"phase":    "complete",
@@ -531,10 +550,15 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 		"message":  completeMsg,
 	}
 	if zhSRTPath != "" {
-		completeData["zh_srt_path"] = zhSRTPath
+		data["zh_srt_path"] = zhSRTPath
 	}
-	s.broadcastEvent(EventTranscriptionComplete, completeData)
-	return nil
+	if outcome.Partial() {
+		// bugfix-j CR H2: `partial` lets the FE terminal verdict line stop
+		// trusting zh_srt_path alone — the mixed file exists, but 完成 it is not.
+		data["partial"] = true
+		data["english_kept_blocks"] = outcome.EnglishKeptBlocks
+	}
+	return data
 }
 
 // resumeSource returns the recorded English SRT path when the row is
@@ -642,17 +666,24 @@ func (s *TranscriptionService) tryTranslateOnlyResume(ctx context.Context, jobID
 //     deliberate swallow — logged, zh path stays empty);
 //   - ai.ErrBudgetExceeded MUST propagate so a batch can pause mid-item
 //     (BEFORE any writeback — a paused item is not terminal);
-//   - zh-Hant success writes found/zh-path/"zh-Hant";
+//   - zh-Hant FULL success writes found/zh-path/"zh-Hant";
+//   - zh-Hant PARTIAL success (whole batches or single cues kept English —
+//     bugfix-j) still places the mixed file (tonight-value) but writes
+//     untranslated/en-path/"en": the badge must not claim 繁中已就緒 over a
+//     file carrying English runs, and the EN path keeps resume translate-only;
 //   - translate EXPECTED but zh empty (key unconfigured, or a non-fatal
 //     translate failure) writes untranslated/en-path/"en" — 9R-16 AC 12
-//     [@contract-v2]: without this the badge lies 缺字幕 over a paid-for SRT
-//     and a re-click re-runs the whole ASR (sub-2-2a's headline bug);
+//     [@contract-v3] (v2→v3 by bugfix-j: `found` now requires FULL
+//     translation; partial results demote to untranslated): without this the
+//     badge lies 缺字幕 over a paid-for SRT and a re-click re-runs the whole
+//     ASR (sub-2-2a's headline bug);
 //   - translate NOT requested writes nothing (no translation was expected,
 //     so `untranslated` would be a lie);
 //   - a writeback failure propagates (Rule 13) — reporting success while the
 //     library row still lies would break the batch-enumeration guarantee.
-func (s *TranscriptionService) translateAndPersist(ctx context.Context, jobID string, mediaType string, mediaID string, srtContent, srtPath, filePath, mediaDir string, translate bool) (string, error) {
+func (s *TranscriptionService) translateAndPersist(ctx context.Context, jobID string, mediaType string, mediaID string, srtContent, srtPath, filePath, mediaDir string, translate bool) (string, TranslationOutcome, error) {
 	var zhSRTPath string
+	var outcome TranslationOutcome
 	if translate && s.translationService != nil && s.translationService.IsConfigured() {
 		s.broadcastEvent(EventTranscriptionTranslating, map[string]interface{}{
 			"job_id":     jobID,
@@ -662,7 +693,7 @@ func (s *TranscriptionService) translateAndPersist(ctx context.Context, jobID st
 			"message":    "Translating subtitles to Traditional Chinese",
 		})
 
-		zhPath, err := s.translateSRT(ctx, jobID, mediaType, mediaID, srtContent, filePath, mediaDir)
+		zhPath, tOutcome, err := s.translateSRT(ctx, jobID, mediaType, mediaID, srtContent, filePath, mediaDir)
 		if err != nil {
 			// 9R-16 AC 6c: the budget sentinel MUST propagate — a mid-translate
 			// ceiling hit must pause the batch, not count the item as success
@@ -681,7 +712,7 @@ func (s *TranscriptionService) translateAndPersist(ctx context.Context, jobID st
 					s.logger.Warn("untranslated writeback before budget pause failed",
 						"job_id", jobID, "media_id", mediaID, "media_type", mediaType, "error", werr)
 				}
-				return "", fmt.Errorf("translate: %w", err)
+				return "", TranslationOutcome{}, fmt.Errorf("translate: %w", err)
 			}
 			// AC #5 (9-2b): other translation failures are non-fatal — English
 			// SRT is still saved. Deliberate swallow, ruled in 9R-16 AC 6c.
@@ -692,27 +723,43 @@ func (s *TranscriptionService) translateAndPersist(ctx context.Context, jobID st
 			)
 		} else {
 			zhSRTPath = zhPath
+			outcome = tOutcome
 		}
 	}
 
-	// 9R-16 AC 12 [@contract-v2] (sub-2-2a): persist the generation VERDICT —
-	// the resume enabler + badge truth. zh-Hant success → found; translation
-	// expected but absent → untranslated + the EN path (so resume can find it).
-	// A translate=false run writes nothing: no translation was expected.
+	// 9R-16 AC 12 [@contract-v3] (sub-2-2a; v2→v3 by bugfix-j): persist the
+	// generation VERDICT — the resume enabler + badge truth. zh-Hant success
+	// with MATERIAL English residue (H3 ruling: ≥1 batch's worth of cues or
+	// ≥5% of this item's own cue count — see TranslationOutcome.DemotesVerdict)
+	// → untranslated + the EN path (mixed file stays placed; resume
+	// re-translates from the EN source and the placer overwrites it);
+	// zh-Hant success below that bar → found (residue still disclosed via
+	// the SSE partial flag); translation expected but absent → untranslated +
+	// the EN path. A translate=false run writes nothing: no translation was
+	// expected.
 	switch {
+	case zhSRTPath != "" && outcome.DemotesVerdict():
+		// bugfix-j AC #2: same writeback shape as the budget-pause branch
+		// (CR sub-2-2a M1) — EN path is the resume enabler. Rule 13: this
+		// branch is a VERDICT write, not a best-effort optimization, so a
+		// failure propagates exactly like the found/untranslated branches.
+		if werr := s.writeSubtitleStatus(ctx, mediaType, mediaID,
+			models.SubtitleStatusUntranslated, srtPath, "en"); werr != nil {
+			return "", outcome, fmt.Errorf("update subtitle status: %w", werr)
+		}
 	case zhSRTPath != "":
 		if werr := s.writeSubtitleStatus(ctx, mediaType, mediaID,
 			models.SubtitleStatusFound, zhSRTPath, "zh-Hant"); werr != nil {
-			return "", fmt.Errorf("update subtitle status: %w", werr)
+			return "", outcome, fmt.Errorf("update subtitle status: %w", werr)
 		}
 	case translate:
 		if werr := s.writeSubtitleStatus(ctx, mediaType, mediaID,
 			models.SubtitleStatusUntranslated, srtPath, "en"); werr != nil {
-			return "", fmt.Errorf("update subtitle status: %w", werr)
+			return "", outcome, fmt.Errorf("update subtitle status: %w", werr)
 		}
 	}
 
-	return zhSRTPath, nil
+	return zhSRTPath, outcome, nil
 }
 
 // writeSubtitleStatus is the sub-3-2 writeback dispatch. The movie branch
@@ -843,16 +890,18 @@ func (s *TranscriptionService) glossaryMediaKey(ctx context.Context, mediaType, 
 }
 
 // translateSRT translates English SRT content to Traditional Chinese and saves as .zh-Hant.srt.
-// Returns the path to the translated SRT file.
-func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, mediaType string, mediaID string, srtContent string, filePath string, mediaDir string) (string, error) {
+// Returns the path to the translated SRT file plus the fidelity outcome
+// (bugfix-j): a partial outcome means the placed file still carries English
+// cues and the verdict must say `untranslated`, never `found`.
+func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, mediaType string, mediaID string, srtContent string, filePath string, mediaDir string) (string, TranslationOutcome, error) {
 	// Parse SRT into translation blocks (inline to avoid circular import with subtitle pkg)
 	blocks, err := ParseSRTToTranslationBlocks(srtContent)
 	if err != nil {
-		return "", fmt.Errorf("parse SRT for translation: %w", err)
+		return "", TranslationOutcome{}, fmt.Errorf("parse SRT for translation: %w", err)
 	}
 
 	if len(blocks) == 0 {
-		return "", fmt.Errorf("no subtitle blocks to translate")
+		return "", TranslationOutcome{}, fmt.Errorf("no subtitle blocks to translate")
 	}
 
 	s.logger.Info("starting subtitle translation",
@@ -884,9 +933,9 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 	}
 	// sub-5-5: the harvest variant also returns the trailer's term yield —
 	// written back below AFTER the translation has succeeded and placed.
-	translated, harvestedTerms, err := s.translationService.TranslateWithGlossaryHarvest(ctx, blocks, glossary, progressFn)
+	translated, harvestedTerms, outcome, err := s.translationService.TranslateWithGlossaryHarvest(ctx, blocks, glossary, progressFn)
 	if err != nil {
-		return "", fmt.Errorf("translate: %w", err)
+		return "", TranslationOutcome{}, fmt.Errorf("translate: %w", err)
 	}
 
 	// Serialize back to SRT format.
@@ -911,13 +960,13 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 	if s.placer != nil {
 		zhSRTPath, err = s.placer.PlaceSubtitle(filePath, []byte(zhSRT), "zh-Hant", "srt")
 		if err != nil {
-			return "", fmt.Errorf("place zh-Hant SRT: %w", err)
+			return "", TranslationOutcome{}, fmt.Errorf("place zh-Hant SRT: %w", err)
 		}
 	} else {
 		baseName := strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
 		zhSRTPath = filepath.Join(mediaDir, baseName+".zh-Hant.srt")
 		if err := os.WriteFile(zhSRTPath, []byte(zhSRT), 0644); err != nil {
-			return "", fmt.Errorf("save zh-Hant SRT: %w", err)
+			return "", TranslationOutcome{}, fmt.Errorf("save zh-Hant SRT: %w", err)
 		}
 	}
 
@@ -935,9 +984,11 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 		"glossary_terms", len(glossary),
 		// sub-5-5 AC #6: NEW terms written back this run (dedupes excluded).
 		"harvested_terms", harvestedNew,
+		// bugfix-j: cues still carrying English after the translate stage.
+		"english_kept_blocks", outcome.EnglishKeptBlocks,
 	)
 
-	return zhSRTPath, nil
+	return zhSRTPath, outcome, nil
 }
 
 // harvestGlossaryTerms writes the trailer yield insert-if-absent (sub-5-5,

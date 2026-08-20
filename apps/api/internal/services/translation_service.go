@@ -124,7 +124,56 @@ func (s *TranslationService) IsConfigured() bool {
 // Translate translates English subtitle blocks to Traditional Chinese with no
 // glossary (back-compat entry point; existing callers unchanged).
 func (s *TranslationService) Translate(ctx context.Context, blocks []TranslationBlock, progressFn func(float64)) ([]TranslationBlock, error) {
-	return s.TranslateWithGlossary(ctx, blocks, nil, progressFn)
+	// Outcome deliberately dropped HERE ONLY (bugfix-j): the sole production
+	// caller is the route-c POC cmd, which never persists a verdict. Verdict
+	// paths MUST consume TranslateWithGlossaryHarvest's TranslationOutcome.
+	translated, _, err := s.TranslateWithGlossary(ctx, blocks, nil, progressFn)
+	return translated, err
+}
+
+// TranslationOutcome reports translation-fidelity facts the caller must not
+// silently drop (bugfix-j): a batch that errors keeps English text wholesale
+// (AC #5 of 9-2b) and a response missing a block keeps English silently — both
+// used to vanish into a slog.Warn while the verdict recorded found/zh-Hant.
+// EnglishKeptBlocks counts every cue that still carries the English source.
+type TranslationOutcome struct {
+	EnglishKeptBlocks int
+	TotalBlocks       int
+}
+
+// Partial reports whether any cue kept its English text — the DISCLOSURE
+// signal (bugfix-j): it drives the SSE partial flag and the english_kept
+// log field unconditionally. Whether the verdict demotes is a separate,
+// thresholded question — see DemotesVerdict.
+func (o TranslationOutcome) Partial() bool { return o.EnglishKeptBlocks > 0 }
+
+// bugfix-j H3 ruling (Alexyu 2026-08-20, option B「門檻制」): disclosure is
+// unconditional, but DEMOTION to `untranslated` fires only when the English
+// residue is material:
+//   - ≥ a whole batch's worth of cues (a batch failure leaves a contiguous
+//     English RUN — unwatchable regardless of file size), or
+//   - ≥5% of the ITEM'S OWN cue count. Per the ruling, the percentage
+//     denominator is this movie's/episode's total cue count (TotalBlocks of
+//     this run), the numerator its untranslated English cues.
+//
+// Below both bars the verdict stays `found` (zh file placed, scattered EN
+// cues disclosed via Partial) so a 1-cue miss doesn't force a full re-run.
+const (
+	demoteAbsoluteKeptBlocks = prompts.SubtitleTranslatorBatchSize
+	demoteKeptPercent        = 5
+)
+
+// DemotesVerdict reports whether the English residue is material enough to
+// persist `untranslated` instead of `found` (bugfix-j H3 ruling, option B).
+func (o TranslationOutcome) DemotesVerdict() bool {
+	if o.EnglishKeptBlocks == 0 {
+		return false
+	}
+	if o.EnglishKeptBlocks >= demoteAbsoluteKeptBlocks {
+		return true
+	}
+	// Integer cross-multiplication: kept/total ≥ 5% without float drift.
+	return o.EnglishKeptBlocks*100 >= o.TotalBlocks*demoteKeptPercent
 }
 
 // TranslateWithGlossary is Translate plus a per-show glossary (Story 9R-7): the
@@ -132,12 +181,13 @@ func (s *TranslationService) Translate(ctx context.Context, blocks []Translation
 // consistent across the whole subtitle and across runs. A nil glossary makes
 // this byte-identical to the pre-9R-7 behavior.
 //
-// Signature deliberately unchanged (sub-5-5 AC #3): it delegates to
-// TranslateWithGlossaryHarvest and drops the harvested terms — the
-// Translate → TranslateWithGlossary precedent (9R-7).
-func (s *TranslationService) TranslateWithGlossary(ctx context.Context, blocks []TranslationBlock, glossary []GlossaryPair, progressFn func(float64)) ([]TranslationBlock, error) {
-	translated, _, err := s.TranslateWithGlossaryHarvest(ctx, blocks, glossary, progressFn)
-	return translated, err
+// It delegates to TranslateWithGlossaryHarvest and drops the harvested terms —
+// the Translate → TranslateWithGlossary precedent (9R-7). The partial-failure
+// outcome is NOT dropped (bugfix-j AC #1 red line): it passes through so no
+// wrapper caller can record a lying verdict.
+func (s *TranslationService) TranslateWithGlossary(ctx context.Context, blocks []TranslationBlock, glossary []GlossaryPair, progressFn func(float64)) ([]TranslationBlock, TranslationOutcome, error) {
+	translated, _, outcome, err := s.TranslateWithGlossaryHarvest(ctx, blocks, glossary, progressFn)
+	return translated, outcome, err
 }
 
 // TranslateWithGlossaryHarvest is TranslateWithGlossary plus the sub-5-5 AC #3
@@ -145,9 +195,9 @@ func (s *TranslationService) TranslateWithGlossary(ctx context.Context, blocks [
 // trailer, merged across batches with the FIRST occurrence winning (the model's
 // later hindsight does not overturn an established rendering — the glossary's
 // fixed-rendering spirit). nil terms = nothing harvested.
-func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, blocks []TranslationBlock, glossary []GlossaryPair, progressFn func(float64)) ([]TranslationBlock, map[string]string, error) {
+func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, blocks []TranslationBlock, glossary []GlossaryPair, progressFn func(float64)) ([]TranslationBlock, map[string]string, TranslationOutcome, error) {
 	if len(blocks) == 0 {
-		return nil, nil, nil
+		return nil, nil, TranslationOutcome{}, nil
 	}
 	promptGlossary := toPromptGlossary(glossary)
 
@@ -160,13 +210,15 @@ func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, b
 
 	totalBlocks := len(blocks)
 	processedBlocks := 0
-	hasPartialFailure := false
+	// bugfix-j: count every cue that keeps English (failed batches + per-cue
+	// misses) instead of a dropped bool — the caller persists the verdict.
+	englishKept := 0
 	var harvested map[string]string
 
 	for batchStart := 0; batchStart < totalBlocks; batchStart += batchSize {
 		// Check context cancellation
 		if err := ctx.Err(); err != nil {
-			return nil, nil, fmt.Errorf("translation cancelled: %w", err)
+			return nil, nil, TranslationOutcome{}, fmt.Errorf("translation cancelled: %w", err)
 		}
 
 		batchEnd := batchStart + batchSize
@@ -217,7 +269,7 @@ func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, b
 			// keep-English tolerance — remaining batches would all fail the
 			// same way, and the caller needs the sentinel to pause the batch.
 			if errors.Is(err, ai.ErrBudgetExceeded) {
-				return nil, nil, fmt.Errorf("translation stopped at block %d: %w", batchStart, err)
+				return nil, nil, TranslationOutcome{}, fmt.Errorf("translation stopped at block %d: %w", batchStart, err)
 			}
 
 			// AC #5: on error, keep English text for failed blocks
@@ -229,10 +281,10 @@ func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, b
 
 			// Check if this is a context cancellation (propagate it)
 			if ctx.Err() != nil {
-				return nil, nil, fmt.Errorf("translation cancelled: %w", ctx.Err())
+				return nil, nil, TranslationOutcome{}, fmt.Errorf("translation cancelled: %w", ctx.Err())
 			}
 
-			hasPartialFailure = true
+			englishKept += len(batch)
 			processedBlocks += len(batch)
 			if progressFn != nil {
 				progressFn(float64(processedBlocks) / float64(totalBlocks) * 100)
@@ -253,8 +305,11 @@ func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, b
 			resultIdx := batchStart + i
 			if text, ok := translations[b.Index]; ok {
 				result[resultIdx].Text = text
+			} else {
+				// bugfix-j: a response missing this block keeps English — that
+				// is a partial outcome, not a silent nothing.
+				englishKept++
 			}
-			// If translation not found for this block, original English text is kept
 		}
 
 		processedBlocks += len(batch)
@@ -269,13 +324,15 @@ func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, b
 		)
 	}
 
-	if hasPartialFailure {
+	outcome := TranslationOutcome{EnglishKeptBlocks: englishKept, TotalBlocks: totalBlocks}
+	if outcome.Partial() {
 		slog.Warn("Translation completed with partial failures — some blocks retain English text",
 			"total_blocks", totalBlocks,
+			"english_kept_blocks", englishKept,
 		)
 	}
 
-	return result, harvested, nil
+	return result, harvested, outcome, nil
 }
 
 // mergeHarvestedTerms folds one batch's trailer terms into the accumulated map,
@@ -475,7 +532,12 @@ func splitHarvestTrailer(response string) (string, map[string]string) {
 }
 
 // responseLinePattern matches "[N] text" format from Claude's response.
-var responseLinePattern = regexp.MustCompile(`^\[(\d+)\]\s*(.+)$`)
+// The text group is `(.*)` (may be empty): a bare "[N]" line — the model
+// emitting an index with no translation — must be recognized as that cue's
+// (empty) slot, NOT fall through to the continuation branch where the literal
+// "[N]" gets appended into the PREVIOUS cue's subtitle text (bugfix-j CR M3:
+// probe showed cue1 ending as "你好\n[2]" in the placed file).
+var responseLinePattern = regexp.MustCompile(`^\[(\d+)\]\s*(.*)$`)
 
 // parseTranslationResponse extracts translated text from Claude's response.
 // Response format: "[1] 翻譯文字\n[2] 翻譯文字"
@@ -518,13 +580,24 @@ func parseTranslationResponseWithTerms(response string, indices []int) (map[int]
 				continue
 			}
 			if validIndices[idx] {
-				result[idx] = strings.TrimSpace(matches[2])
+				// bugfix-j CR M3: an empty translation is a MISSING one — do
+				// not store "" (it would blank the cue and count as success).
+				// Still advance lastIdx so any continuation lines attach to
+				// THIS cue instead of polluting the previous one.
+				if text := strings.TrimSpace(matches[2]); text != "" {
+					result[idx] = text
+				}
 				lastIdx = idx
 				hasLast = true
 			}
 		} else if hasLast && validIndices[lastIdx] {
-			// Continuation line for multi-line subtitle block
-			result[lastIdx] += "\n" + line
+			// Continuation line for multi-line subtitle block. If the indexed
+			// line itself was empty, the continuation IS the cue's first text.
+			if existing, ok := result[lastIdx]; ok {
+				result[lastIdx] = existing + "\n" + line
+			} else {
+				result[lastIdx] = line
+			}
 		}
 	}
 
