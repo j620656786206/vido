@@ -39,6 +39,7 @@ import {
 import { Skeleton } from '../../components/ui/Skeleton';
 import { Pagination } from '../../components/ui/Pagination';
 import { PosterCard } from '../../components/media/PosterCard';
+import { EpisodeList } from '../../components/media/EpisodeList';
 import { RequestButton } from '../../components/requests/RequestButton';
 import { RequestRow } from '../../components/requests/RequestRow';
 import { PosterCardSkeleton } from '../../components/media/PosterCardSkeleton';
@@ -3600,6 +3601,52 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   // `?fixture=<id>` isolation page. `seedQueries` (19-4b Task 3) pre-loads the
   // glossary list cache so `useGlossaryTerms` paints data with no loading flash
   // and no network attempt.
+  // 9R-10c: the per-episode 管理字幕 entry (design J3-D `Z54xAd`). The fixture
+  // deliberately mixes a local episode, a local episode with a DIFFERENT
+  // subtitle status, and a TMDb-only episode — the last one must show no action
+  // at all, which is the single gate the design rules on (has_local_file).
+  // It also pins the hover treatment, which the design does NOT draw for row
+  // actions anywhere and which this story therefore authored (pending Sally).
+  {
+    id: 'media-episode-list-subtitle-entry',
+    label: 'media/EpisodeList (9R-10c · 管理字幕 entry)',
+    component: EpisodeList as ComponentType<Record<string, unknown>>,
+    props: {
+      seasonNumber: 1,
+      onManageSubtitle: noop,
+      episodes: [
+        {
+          episodeNumber: 1,
+          name: '致兩千年後的你 ―進攻之日―',
+          airDate: '2013-04-07',
+          runtime: 24,
+          hasLocalFile: true,
+          episodeId: 'ep-1',
+          subtitleStatus: 'found',
+          subtitleLanguage: 'zh-Hant',
+          filePath: '/m/S01E01.mkv',
+        },
+        {
+          episodeNumber: 2,
+          name: '那一天 ―人類的殞落―',
+          airDate: '2013-04-14',
+          runtime: 24,
+          hasLocalFile: true,
+          episodeId: 'ep-2',
+          subtitleStatus: 'untranslated',
+          subtitleLanguage: 'en',
+          filePath: '/m/S01E02.mkv',
+        },
+        {
+          episodeNumber: 3,
+          name: '解散後的黎明 ―人類的再起―',
+          airDate: '2013-04-21',
+          runtime: 24,
+          hasLocalFile: false,
+        },
+      ],
+    },
+  },
   {
     id: 'subtitle-manage-subtitle-dialog-v2',
     label: 'subtitle/ManageSubtitleDialogV2 (idle · with tracks)',

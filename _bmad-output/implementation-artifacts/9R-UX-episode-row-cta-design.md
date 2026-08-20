@@ -1,6 +1,6 @@
 # Story 9R-UX: 分集列的逐集字幕入口（design）
 
-Status: ready-for-dev
+Status: done
 
 **Epic:** epic-9R-subtitle-route-c · **Risk: 🟢 UX/DESIGN-ONLY（Sally ux-designer，NOT dev）· 零程式碼**
 **Created:** 2026-08-19（SM Bob, create-story）
@@ -118,27 +118,27 @@ so that 我不必離開分集清單、也不必猜「管理字幕」按鈕到底
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — 現況勘查（AC: #1, #2）**
-  - [ ] Pencil MCP `get_app_state`（含 schema ＋ canvas design）
-  - [ ] 檢視 `N2fmG6`／`r1EY9`／`j2-d` 現況，確認 Findings 1–5 與畫布一致
-  - [ ] 盤點可重用的按鈕型與 token
+- [x] **Task 1 — 現況勘查（AC: #1, #2）**
+  - [x] Pencil MCP `get_app_state`（含 schema ＋ canvas design）
+  - [x] 檢視 `N2fmG6`／`r1EY9`／`j2-d` 現況，確認 Findings 1–5 與畫布一致
+  - [x] 盤點可重用的按鈕型與 token
 
-- [ ] **Task 2 — 狀態×動作矩陣裁定（AC: #2）**
-  - [ ] 十個 `subtitle_status` 逐一裁定，產出 Completion Notes 表格
-  - [ ] 與 J2-D icon grammar 的相容性檢查（不得產生「已定局圖示 + 大聲的動作」的矛盾）
+- [x] **Task 2 — 狀態×動作矩陣裁定（AC: #2）**
+  - [x] 十個 `subtitle_status` 逐一裁定，產出 Completion Notes 表格
+  - [x] 與 J2-D icon grammar 的相容性檢查（不得產生「已定局圖示 + 大聲的動作」的矛盾）
 
-- [ ] **Task 3 — 出提示詞交 Alexyu（AC: #1, #3, #4）**
-  - [ ] 撰寫 Inline AI Agent 提示詞（`9R-UX-episode-row-cta-design-prompt.md`）
-  - [ ] 涵蓋 `N2fmG6` 逐集 affordance、`r1EY9` 文案與 episode 標題規則、行動版裁定
+- [x] **Task 3 — 出提示詞交 Alexyu（AC: #1, #3, #4）**
+  - [x] 撰寫 Inline AI Agent 提示詞（`9R-UX-episode-row-cta-design-prompt.md`）
+  - [x] 涵蓋 `N2fmG6` 逐集 affordance、`r1EY9` 文案與 episode 標題規則、行動版裁定
 
-- [ ] **Task 4 — MCP review（AC: #1–#4）**
-  - [ ] Alexyu 跑完 agent 後，Sally 以 MCP 逐條對照 AC #1–#4
-  - [ ] 標籤重疊檢查、spec 畫面 standalone 檢查
+- [x] **Task 4 — MCP review（AC: #1–#4）**
+  - [x] Alexyu 跑完 agent 後，Sally 以 MCP 逐條對照 AC #1–#4
+  - [x] 標籤重疊檢查、spec 畫面 standalone 檢查
 
-- [ ] **Task 5 — 截圖與交付（AC: #5）**
-  - [ ] 確認 `.pen` 已存檔 → `python3 scripts/export-pen-screenshots.py`
-  - [ ] 新畫面更新 `SCREENS` dict；只 stage 真正改動的 PNG
-  - [ ] Completion Notes 寫齊：狀態×動作矩陣、node ids、文案字串表（`9R-10c` 逐字實作的來源）
+- [x] **Task 5 — 截圖與交付（AC: #5）**
+  - [x] 確認 `.pen` 已存檔 → `python3 scripts/export-pen-screenshots.py`
+  - [x] 新畫面更新 `SCREENS` dict；只 stage 真正改動的 PNG
+  - [x] Completion Notes 寫齊：狀態×動作矩陣、node ids、文案字串表（`9R-10c` 逐字實作的來源）
 
 ---
 
@@ -175,22 +175,154 @@ spec 畫面的 PNG 匯出解析度偏低（`backlog-pen-spec-screen-readable-exp
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+claude-opus-5[1m] (Sally, ux-designer)
 
 ### Debug Log References
 
 ### Completion Notes List
 
-<!-- 必填：狀態×動作矩陣表、node ids、文案字串表、行動版裁定與理由 -->
+> ⚠️ **回填說明（Amelia, 2026-08-20）**：本區塊在設計輪當下未寫回檔案 —— 產出當時記在
+> chat、`sprint-status.yaml` 條目與 PR #236，但 story 檔的 Completion Notes 留空。
+> 9R-10c 的 STOP GATE 指名這裡為規格來源，因此開工前依規回填。
+> **內容全部從已合併的 `.pen`（Pencil MCP 逐節點讀出）取得，非憑記憶重述**；
+> `sprint-status` 條目與 PR #236 內文為交叉佐證。
+
+#### ⚖️ 核心裁定 —— 動作與狀態解耦
+
+> 分集列的動作是「**開啟管理字幕對話框**」，不是直接生成。
+> **十種 `subtitle_status` 一律呈現相同動作，不做任何分歧。**
+
+理由（J3-D `ruling-line-2` 逐字）：J2-D 已定「字形＝是否定局、顏色＝急迫度」，狀態由同列指示器
+承載。動作再隨狀態改變＝同一事實編碼兩次，且 25 集清單會出現按鈕忽隱忽現的雜訊。
+
+唯一的閘門是 `has_local_file`：沒有本地檔案的集不出現任何動作（TMDb 有、NAS 沒有的集不可誤導使用者）。
+
+#### 📐 node ids（9R-10c 實作依據）
+
+| 用途 | node id | 位置 |
+|---|---|---|
+| 獨立規格頁 **J3-D** | `Z54xAd` | 截圖 `flow-j-specs/j3-d.png`；`SCREENS` dict 已登記 |
+| 列內動作按鈕 | `Uj2bq` / `A5Sm6G` / `JIvv3` | `N2fmG6` > `VNeL9` > `aNNxp` > 各 `ep` 列 |
+| 按鈕文字 | `CFSFm` / `zLvLX` / `umnnf` | 各 `btn-subtitle` 之下 |
+| 對話框標題（劇名） | `Aodey` | `r1EY9` header |
+| 對話框標題（集號 chip） | `tO72N` | `r1EY9` header |
+| 新增條件文案三行 | `jjKhO` / `oTTwd` / `Nqfd9` | `r1EY9` > `x1OAW` |
+
+#### 🎨 按鈕規格（逐欄位，直接照抄）
+
+```json
+{
+  "type": "frame", "name": "btn-subtitle", "height": 44,
+  "cornerRadius": "$radius-md", "padding": [0, 14],
+  "justifyContent": "center", "alignItems": "center",
+  "children": [{
+    "type": "text", "name": "subtitle-label", "fill": "$text-secondary",
+    "content": "管理字幕", "fontFamily": "Noto Sans TC",
+    "fontSize": 13, "fontWeight": "normal"
+  }]
+}
+```
+
+零新 token、零新元件類 —— 等同 `RequestRow` 已核定的純文字按鈕 `yTntT`。
+插入位置：`ep` 列的 `th → inf → **btn-subtitle** → st`（`ep` 是 horizontal flex，`inf` 為
+`fill_container`，插入後自動重排）。
+
+#### 📊 狀態 × 動作矩陣（J3-D 表格逐列）
+
+| `subtitle_status` | 列上出現動作？ | 對話框開啟後的樣態 |
+|---|---|---|
+| `found` | 是 | 完成態；重新生成會覆蓋既有繁中字幕 |
+| `not_found` | 是 | 缺字幕態，可生成 |
+| `not_searched` | 是 | 缺字幕態，可生成 |
+| `searching` | 是 | 進度態（線上搜尋中） |
+| `probing` | 是 | 進度態（偵測字幕軌中） |
+| `extracting` | 是 | 進度態（抽取內嵌字幕中） |
+| `translating` | 是 | 進度態（翻譯字幕中） |
+| `no_text_source` | 是 | 缺字幕態；僅語音辨識可解 |
+| `skipped` | 是 | 缺字幕態；軌道語言不符已略過 |
+| `untranslated` | 是 | 缺字幕態＋助語「僅需翻譯，不再重跑語音辨識」 |
+
+**十列皆「是」不是偷懶** —— 是刻意讓入口穩定：使用者不必先讀懂狀態才知道能不能點。
+可行性判斷在對話框內做，那裡有空間解釋。
+
+#### 📝 文案字串表（逐字採用）
+
+| 位置 | 字串 |
+|---|---|
+| 列內動作標籤 | `管理字幕` |
+| a11y 名稱格式 | `管理 S01E03 的字幕`（**必須含集號**） |
+| 助語・`untranslated` | `僅需翻譯，不再重跑語音辨識——這次很快也很便宜` |
+| 助語・生成進行中 | `本集正在生成字幕——開啟即接續顯示進度，不會重複啟動` |
+| 影集層級助語 | `請於下方分集清單逐集生成`（CTA **維持不可按**） |
+
+#### 📱 行動版裁定（AC #4）
+
+**補註記，不畫新畫面。** `flow-b-detail-v2` 沒有 TV 行動版（`SzNRb` 是電影行動版），
+而補一張需連 hero／meta 整組重做，超出本 story。行為本身可推導，故以 J3-D `ruling-line-5`
+明文規範：
+
+> 行動版（<sm）：整列改為上下堆疊（沿用 12-2 的堆疊規則），管理字幕移到第二行、靠左、
+> 維持 44px 觸控高度；不另出 TV 行動版畫面。
+
+#### 🏷️ 對話框標題規則（AC #3）—— 不需重畫，畫布上已存在
+
+`Aodey`「管理字幕 — 怪奇物語」＋ `tO72N`「S04E07」。
+設計從一開始就假設**逐集**操作，只是後端一直沒有路由（9R-10a 已於 #234 補上）。
+⇒ 規則：**劇名為標題、`SxxExx` 為獨立 code chip**。
+
+#### ⚠️ 設計未涵蓋（9R-10c 需自行處理並回頭追認）
+
+**hover 態全檔的列內動作皆未繪**（不只本輪）。9R-10c 實作時需自訂一個合理的 hover，
+並在 UX 驗證時交 Sally 追認。
+
+#### 🚦 Sally MCP Gate
+
+**PASS-WITH-MUST-FIX** — 1 MUST-FIX（已修並複驗）、2 NOTE、1 lane ③ 立案。
+
+- **MUST-FIX（MEDIUM）**：第一輪的 in-frame 規格註記把 `N2fmG6` 從 900 撐到 1000，
+  但全檔桌面畫面皆 900（含四個同族兄弟 `uRGu2`/`Z42zy`/`Tqy3E`/`UH0sk`；更高的首頁 1714／
+  下載 1560／活動 1360 是刻意的整頁捲動例外）。**根因是提示詞要錯了**（設計決策說明應獨立成頁），
+  已把內容移入 J3-D `ruling-line-4/5`、刪除註記、高度復原 900。複驗：0 clipping、最深內容剛好 900、
+  B 系列五個畫面高度全部 900。
+- **ACCEPT（不改）**：對話框 `gD99f` y 110→36 是正確置中（(900−827)÷2＝36.5；827 高擠不進
+  兄弟的 140）。
+- **NOTE（LOW）**：新增三行的節點命名為 `note-*`，打斷原區塊 `dn-head`＋`dn-line-1..5` 的序號；
+  順序正確，非阻斷。
+- **NOTE（LOW）**：「管理字幕」為 `$text-secondary` 純文字，視覺上比同列的 `繁中` 藥丸安靜 ——
+  符合「安靜、恆在」的裁定與 `yTntT` 先例，**不改**；但這正是 hover 態缺口需要補上的原因。
+
+#### 📎 其他
+
+- **Contract Stamps: NONE**（design-only；不定義也不消費 wire contract）
+- **Rule 7 / Rule 23**：N/A（零程式碼）
+- 匯出：只 commit 真的變了的三張（`b4p-d` 400×277→400×250 對應 1000→900、
+  `j3-d` 新增、`f1-d-v2`），其餘 153 張重繪雜訊已還原
+- 出貨：PR #236（`6c75a432`）；狀態流轉 PR #237（`b91dbccf`）
 
 ### Discovery Triage
 
-<!-- 設計期間若發現超出範圍的事項，照 lane ①/②/③ 分流並在發現當下寫進 sprint-status.yaml -->
+- **YES — 1 筆，lane ③（已於發現當下立案，雙向）：**
+  - `backlog-episodelist-status-pill-vs-icon-drift` —— `.pen` 的分集列狀態畫的是**文字藥丸**
+    「繁中」（`$success-tint` 底／`$success` 字／11px 600），但出貨的 `EpisodeList.tsx` 渲染的是
+    J2-D icon grammar 的**純圖示**。同一個元素，設計與程式碼自 12-2 起分頭演進未曾對齊。
+    **非本輪範圍**（提示詞明文保護 `st` 節點，避免一輪混兩件事）。條目附三個處理選項與 SM 預判傾向。
 
 ### File List
+
+- `ux-design.pen` — `N2fmG6` 三列 `btn-subtitle`；新增 `Z54xAd`（J3-D）；`r1EY9` 條件文案 +3 行；
+  MUST-FIX：刪除 in-frame 註記、高度復原 900、J3-D `ruling-line-4/5`
+- `_bmad-output/screenshots/flow-b-detail-v2/b4p-d.png`
+- `_bmad-output/screenshots/flow-j-specs/j3-d.png`（新增）
+- `_bmad-output/screenshots/flow-f-subtitle-v2/f1-d-v2.png`
+- `scripts/export-pen-screenshots.py` — `SCREENS` 登記 `Z54xAd`；Pen 1.2.5 改走 `execute`+`Export`；
+  自審修正：匯出不完整時非零離開 + 檢查 `sips` 回傳碼
+- `_bmad-output/implementation-artifacts/9R-UX-episode-row-cta-design-prompt.md`（新增）
+- `_bmad-output/implementation-artifacts/9R-UX-episode-row-cta-fix-prompt.md`（新增）
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 
 | Date | Change |
 |---|---|
 | 2026-08-19 | Story 建檔（SM Bob, create-story）。⚖️ Alexyu 裁定 9R-10a 的 FE 半邊改走 design-first，本 story 由 lane ③ backlog 條目升格為 lane ② blocking 設計 story。5 AC／5 task，UX/DESIGN-ONLY。硬阻斷 `9R-10c-episode-row-subtitle-cta-frontend`。 |
+| 2026-08-20 | **Completion Notes 回填（Amelia，9R-10c Task 0 STOP GATE）。** 設計輪產出當下只寫進 chat／sprint-status／PR #236，story 檔的 Dev Agent Record 留空；而 9R-10c 的 STOP GATE 指名此處為規格來源，缺漏就必須停工。依規回填：核心裁定、6 組 node ids、按鈕逐欄位規格、十列狀態×動作矩陣、5 條文案字串、行動版裁定、標題規則、hover 缺口、Sally gate 結論、lane ③ discovery、File List。**全部由 Pencil MCP 從已合併的 `.pen` 逐節點讀出**，非憑記憶重述。Status → done、17 個 checkbox 補齊（工作早已完成並 merged，只是未回寫檔案）。 |

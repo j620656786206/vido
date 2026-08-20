@@ -114,3 +114,96 @@ describe('transcriptionService.startTranscription', () => {
     );
   });
 });
+
+// ── 9R-10c AC #2 / AC #6 — the per-EPISODE sibling ────────────────────────
+
+const EPISODE_UUID = '9c3b7e21-4d5a-4b8c-9f01-2e3d4c5b6a7f';
+
+describe('transcriptionService.startEpisodeTranscription', () => {
+  it('POSTs /episodes/{id}/transcribe with NO translate param (the route forces it)', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 202,
+      json: () =>
+        Promise.resolve({
+          success: true,
+          data: { job_id: 'job-ep-1', message: 'Transcription started.' },
+        }),
+    });
+
+    const outcome = await transcriptionService.startEpisodeTranscription(EPISODE_UUID);
+
+    expect(outcome).toEqual({
+      status: 'started',
+      result: { jobId: 'job-ep-1', message: 'Transcription started.' },
+    });
+    const [url, options] = mockFetch.mock.calls[0];
+    expect(url).toContain(`/episodes/${EPISODE_UUID}/transcribe`);
+    expect(url).not.toContain('translate=');
+    expect(url).not.toContain('/movies/');
+    expect(options).toEqual({ method: 'POST' });
+  });
+
+  it('maps 503 TRANSCRIPTION_DISABLED to {status: disabled}', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: () =>
+        Promise.resolve({
+          success: false,
+          error: { code: 'TRANSCRIPTION_DISABLED', message: '語音辨識尚未設定' },
+        }),
+    });
+
+    await expect(transcriptionService.startEpisodeTranscription(EPISODE_UUID)).resolves.toEqual({
+      status: 'disabled',
+    });
+  });
+
+  it('maps 409 TRANSCRIPTION_IN_PROGRESS to {status: inProgress} (SSE attach path)', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 409,
+      json: () =>
+        Promise.resolve({
+          success: false,
+          error: { code: 'TRANSCRIPTION_IN_PROGRESS', message: '這一集的字幕生成已在執行中' },
+        }),
+    });
+
+    await expect(transcriptionService.startEpisodeTranscription(EPISODE_UUID)).resolves.toEqual({
+      status: 'inProgress',
+    });
+  });
+
+  // The shared-parser regression nail: a reverse-proxy 503 carries no wire code,
+  // so it must fail-soft to 重試 rather than render the 尚未設定 settings CTA.
+  // This is the subtlety AC #2 refuses to let exist in two copies.
+  it('a bare 503 WITHOUT the wire code (reverse-proxy outage) throws instead of showing 尚未設定', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: () => Promise.reject(new Error('not json')),
+    });
+
+    await expect(transcriptionService.startEpisodeTranscription(EPISODE_UUID)).rejects.toThrow(
+      'API request failed: 503'
+    );
+  });
+
+  it('throws the envelope message for other errors (404 → fail-soft + 重試)', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: () =>
+        Promise.resolve({
+          success: false,
+          error: { code: 'DB_NOT_FOUND', message: '找不到這一集' },
+        }),
+    });
+
+    await expect(transcriptionService.startEpisodeTranscription(UNKNOWN_UUID)).rejects.toThrow(
+      '找不到這一集'
+    );
+  });
+});

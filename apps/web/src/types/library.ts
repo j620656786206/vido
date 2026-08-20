@@ -170,6 +170,12 @@ export interface MergedEpisode {
   stillPath?: string;
   voteAverage?: number;
   hasLocalFile: boolean;
+  /** Local episode ROW id (UUID string) — the address the per-episode
+   *  transcribe route takes. Present only alongside hasLocalFile: a TMDb
+   *  episode with no local file is not addressable, so consumers gate on
+   *  hasLocalFile, never on a non-empty id alone.
+   *  Backend: services.MergedEpisode.episode_id (9R-10a AC #1). */
+  episodeId?: string;
   subtitleStatus?: string;
   subtitleLanguage?: string;
   filePath?: string;

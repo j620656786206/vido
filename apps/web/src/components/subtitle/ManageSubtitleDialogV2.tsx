@@ -10,8 +10,12 @@
  * - 生成字幕 is the ONLY primary action; movies call
  *   POST /movies/{id}/transcribe?translate=true (UUID-string id passed through
  *   as-is, 9R-18 — the old `Number(uuid)` produced NaN);
- *   series render the CTA DISABLED with 影集字幕生成即將推出 (9R-10a pending —
- *   Rule 24 capability honor: never draw a dead control as live).
+ *   EPISODES call POST /episodes/{id}/transcribe (9R-10c, consuming 9R-10a
+ *   [@contract-v1]); series keep the CTA DISABLED and point at the episode list
+ *   (there is no series-level generate — J3-D ruling: generation is per episode).
+ * - EPISODE mode takes a SEPARATE glossaryMediaId (the SERIES id). The glossary
+ *   is per-show and /media/:id/glossary uses the route id verbatim, so passing
+ *   the episode id would strand terms in rows no other episode can see.
  * - 503 TRANSCRIPTION_DISABLED → 語音辨識尚未設定 warning panel + 前往設定
  *   (γ-ratified ASR copy, sub-2-2d — the 503 gate is FFmpeg+ASR, never the
  *   translation key; dialog never hard-fails); 409 → attach to the running
@@ -123,8 +127,15 @@ type GenView = 'idle' | 'progress' | 'notConfigured' | 'triggerError';
 export interface ManageSubtitleDialogV2Props {
   /** STRING local media id (glossary + fetch contract; transcribe converts to int64). */
   mediaId: string;
-  mediaType: 'movie' | 'series';
+  mediaType: 'movie' | 'series' | 'episode';
+  /** Glossary owner id. The glossary is per-SHOW, so an episode passes its
+   *  SERIES id here while `mediaId` stays the episode row id (9R-10c red line 1).
+   *  Omitted → falls back to mediaId (movie/series unchanged, zero regression). */
+  glossaryMediaId?: string;
   mediaTitle: string;
+  /** Optional code chip beside the title, e.g. `S04E07` (design node tO72N).
+   *  Episode mode passes it so the dialog says WHICH episode it is acting on. */
+  mediaCode?: string;
   mediaFilePath: string;
   mediaResolution?: string;
   /** LibraryMovie.subtitleTracks JSON string (embedded tracks). */
@@ -146,7 +157,9 @@ export interface ManageSubtitleDialogV2Props {
 export function ManageSubtitleDialogV2({
   mediaId,
   mediaType,
+  glossaryMediaId,
   mediaTitle,
+  mediaCode,
   mediaFilePath,
   mediaResolution,
   subtitleTracks,
@@ -161,6 +174,10 @@ export function ManageSubtitleDialogV2({
 }: ManageSubtitleDialogV2Props) {
   const navigate = useNavigate();
   const isMovie = mediaType === 'movie';
+  const isEpisode = mediaType === 'episode';
+  // Positive intent, not a pile of negations (sub-2-2b CR L1 fixed the same
+  // smell): a SERIES is the only mediaType with no generate route of its own.
+  const canGenerate = isMovie || isEpisode;
   const isCNContent = productionCountry?.includes('CN') ?? false;
 
   const [genView, setGenView] = useState<GenView>('idle');
@@ -172,7 +189,7 @@ export function ManageSubtitleDialogV2({
     onComplete: () => onGenerationComplete?.(),
   });
 
-  const glossary = useGlossaryTerms(mediaId, open);
+  const glossary = useGlossaryTerms(glossaryMediaId ?? mediaId, open);
   const glossaryCount = glossary.data?.length ?? 0;
 
   // sub-2-2d AC #2 — the degraded-CTA pre-flight (β Task 4's deferral, γ's
@@ -189,7 +206,10 @@ export function ManageSubtitleDialogV2({
   const onlineSearch = useSubtitleSearch();
 
   const trigger = useMutation({
-    mutationFn: () => transcriptionService.startTranscription(mediaId),
+    mutationFn: () =>
+      isEpisode
+        ? transcriptionService.startEpisodeTranscription(mediaId)
+        : transcriptionService.startTranscription(mediaId),
     onSuccess: (outcome) => {
       if (outcome.status === 'disabled') {
         setGenView('notConfigured');
@@ -230,11 +250,18 @@ export function ManageSubtitleDialogV2({
   const dialogTitle = inProgressView ? `生成字幕 — ${mediaTitle}` : `管理字幕 — ${mediaTitle}`;
 
   const handleFetchSearch = useCallback(() => {
+    // CR H1 — red line 2 enforced by the TYPE SYSTEM, not just by hiding the
+    // control: the search endpoints bind `oneof=movie series`, so an episode
+    // would 400. This early return also narrows `mediaType` for the call below.
+    if (mediaType === 'episode') return;
     onlineSearch.search({ mediaId, mediaType, query: mediaTitle });
   }, [onlineSearch, mediaId, mediaType, mediaTitle]);
 
   const handleFetchDownload = useCallback(
     (result: SubtitleSearchResult) => {
+      // CR H1 — same narrowing as handleFetchSearch: unreachable for an
+      // episode (the control is hidden), and now un-typeable too.
+      if (mediaType === 'episode') return;
       onlineSearch.download(
         {
           mediaId,
@@ -274,7 +301,17 @@ export function ManageSubtitleDialogV2({
       >
         {/* Header */}
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--border-subtle)] pl-6 pr-12">
-          <DialogTitle className="truncate text-base font-semibold">{dialogTitle}</DialogTitle>
+          <div className="flex min-w-0 items-center gap-2">
+            <DialogTitle className="truncate text-base font-semibold">{dialogTitle}</DialogTitle>
+            {mediaCode && (
+              <span
+                data-testid="dialog-title-code"
+                className="shrink-0 rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-2 py-0.5 font-mono text-xs text-[var(--text-secondary)]"
+              >
+                {mediaCode}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-6">
@@ -448,7 +485,7 @@ export function ManageSubtitleDialogV2({
                   <button
                     type="button"
                     onClick={startGeneration}
-                    disabled={!isMovie || trigger.isPending}
+                    disabled={!canGenerate || trigger.isPending}
                     data-testid="action-generate-subtitle"
                     className="flex min-h-[44px] items-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-6 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)] disabled:cursor-not-allowed disabled:opacity-50"
                   >
@@ -461,8 +498,16 @@ export function ManageSubtitleDialogV2({
                     生成字幕
                   </button>
                   <p data-testid="generation-helper" className="text-xs text-[var(--text-muted)]">
-                    {!isMovie ? (
-                      '影集字幕生成即將推出'
+                    {!canGenerate ? (
+                      /* J3-D ruling: there is no series-level generate — a
+                         series is a container. The old 影集字幕生成即將推出
+                         became a lie once sub-4-2/sub-5-3 shipped episode
+                         batching, so the copy points at the real entry. */
+                      '請於下方分集清單逐集生成'
+                    ) : isEpisode && subtitleStatus === 'untranslated' ? (
+                      /* Design string (F1 note-untranslated): this run resumes
+                         translate-only, so it skips the expensive ASR leg. */
+                      '僅需翻譯，不再重跑語音辨識——這次很快也很便宜'
                     ) : translationDegraded ? (
                       /* Degraded ≠ blocked: the truth up front, the CTA stays
                          live — an English subtitle beats no subtitle, and the
@@ -587,7 +632,9 @@ export function ManageSubtitleDialogV2({
 
         {/* Footer */}
         <div className="flex shrink-0 items-center justify-between border-t border-[var(--border-subtle)] px-6 py-3">
-          {!inProgressView && !isLoading ? (
+          {/* Red line 2: the search endpoints bind `oneof=movie series`, so an
+              episode would 400. Capability honor — don't draw a dead control. */}
+          {!inProgressView && !isLoading && !isEpisode ? (
             <button
               type="button"
               onClick={() => setFetchOpen((v) => !v)}

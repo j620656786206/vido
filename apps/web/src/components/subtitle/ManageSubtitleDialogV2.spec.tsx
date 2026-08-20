@@ -27,6 +27,10 @@ const h = vi.hoisted(() => ({
   reset: vi.fn(),
   genOptions: undefined as { onComplete?: (p: unknown) => void } | undefined,
   glossaryTerms: [{ id: 't1' }, { id: 't2' }, { id: 't3' }] as unknown[],
+  // 9R-10c red line 1: the glossary is per-SHOW, so episode mode must query it
+  // with the SERIES id while the transcribe target stays the episode id.
+  // Captured so the two ids are assertable as DIFFERENT at the dialog seam.
+  glossaryQueriedId: undefined as string | undefined,
   keySettings: {
     data: undefined as
       | { keys: { name: string; configured: boolean }[]; writable: boolean }
@@ -65,7 +69,10 @@ vi.mock('../../hooks/useGenerationProgress', () => ({
 }));
 
 vi.mock('../../hooks/useGlossary', () => ({
-  useGlossaryTerms: () => ({ data: h.glossaryTerms }),
+  useGlossaryTerms: (mediaId: string) => {
+    h.glossaryQueriedId = mediaId;
+    return { data: h.glossaryTerms };
+  },
 }));
 
 vi.mock('../../hooks/useSubtitleSearch', () => ({
@@ -73,7 +80,7 @@ vi.mock('../../hooks/useSubtitleSearch', () => ({
 }));
 
 vi.mock('../../services/transcriptionService', () => ({
-  transcriptionService: { startTranscription: vi.fn() },
+  transcriptionService: { startTranscription: vi.fn(), startEpisodeTranscription: vi.fn() },
 }));
 
 vi.mock('../../hooks/useKeySettings', () => ({
@@ -94,6 +101,7 @@ import { ManageSubtitleDialogV2 } from './ManageSubtitleDialogV2';
 import { transcriptionService } from '../../services/transcriptionService';
 
 const mockedTrigger = vi.mocked(transcriptionService.startTranscription);
+const mockedEpisodeTrigger = vi.mocked(transcriptionService.startEpisodeTranscription);
 
 type DialogProps = Partial<React.ComponentProps<typeof ManageSubtitleDialogV2>>;
 
@@ -263,12 +271,16 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/settings/keys'));
   });
 
-  it('series: 生成字幕 renders DISABLED with hint 影集字幕生成即將推出 (capability honor)', async () => {
+  it('series: 生成字幕 renders DISABLED and points at the episode list (9R-10c AC #5)', async () => {
     renderDialog({ mediaType: 'series' });
 
     const cta = await screen.findByTestId('action-generate-subtitle');
     expect(cta).toBeDisabled();
-    expect(screen.getByText('影集字幕生成即將推出')).toBeInTheDocument();
+    // 9R-10c AC #5: the old 影集字幕生成即將推出 became a lie once sub-4-2 /
+    // sub-5-3 shipped episode batching — a series CAN be generated, just not
+    // at series level. J3-D rules the copy points at the real entry instead.
+    expect(screen.getByText('請於下方分集清單逐集生成')).toBeInTheDocument();
+    expect(screen.queryByText('影集字幕生成即將推出')).not.toBeInTheDocument();
 
     fireEvent.click(cta);
     expect(mockedTrigger).not.toHaveBeenCalled();
@@ -494,5 +506,95 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
 
     fireEvent.click(screen.getByTestId('dialog-close'));
     expect(screen.queryByTestId('glossary-panel-stub')).not.toBeInTheDocument();
+  });
+});
+
+// ── 9R-10c — episode mode ─────────────────────────────────────────────────
+
+const SERIES_UUID = '11111111-2222-4333-8444-555555555555';
+const EPISODE_UUID = '9c3b7e21-4d5a-4b8c-9f01-2e3d4c5b6a7f';
+
+function renderEpisodeDialog(props: DialogProps = {}) {
+  return renderDialog({
+    mediaId: EPISODE_UUID,
+    mediaType: 'episode',
+    glossaryMediaId: SERIES_UUID,
+    mediaTitle: '第七集',
+    mediaCode: 'S04E07',
+    subtitleTracks: undefined,
+    ...props,
+  });
+}
+
+describe('ManageSubtitleDialogV2 — episode mode (9R-10c)', () => {
+  beforeEach(() => {
+    h.glossaryQueriedId = undefined;
+    mockedEpisodeTrigger.mockReset();
+    mockedTrigger.mockReset();
+  });
+
+  // RED LINE 1. /media/:id/glossary takes the route id VERBATIM — it will not
+  // resolve an episode id to its series. Sending the episode id would strand
+  // terms in rows no other episode can ever see (the frontend twin of the bug
+  // CR sub-5-5 H1 fixed in the pipeline). The two ids MUST differ here.
+  it('queries the glossary with the SERIES id while triggering with the EPISODE id', async () => {
+    mockedEpisodeTrigger.mockResolvedValue({
+      status: 'started',
+      result: { jobId: 'j1', message: '' },
+    });
+    renderEpisodeDialog();
+
+    fireEvent.click(await screen.findByTestId('action-generate-subtitle'));
+    await waitFor(() => expect(mockedEpisodeTrigger).toHaveBeenCalledWith(EPISODE_UUID));
+
+    expect(h.glossaryQueriedId).toBe(SERIES_UUID);
+    // The whole point: these are two different ids, not one reused.
+    expect(h.glossaryQueriedId).not.toBe(EPISODE_UUID);
+    expect(mockedEpisodeTrigger).not.toHaveBeenCalledWith(SERIES_UUID);
+    // …and the MOVIE route is never touched for an episode.
+    expect(mockedTrigger).not.toHaveBeenCalled();
+  });
+
+  it('falls back to mediaId for the glossary when glossaryMediaId is omitted (movie/series unchanged)', async () => {
+    renderDialog({ mediaType: 'movie' });
+    await screen.findByTestId('manage-subtitle-dialog-v2');
+    expect(h.glossaryQueriedId).toBe(MOVIE_UUID);
+  });
+
+  // RED LINE 2. The search endpoints bind `oneof=movie series`; an episode
+  // would 400. Capability honor: don't draw a control that cannot work.
+  it('hides the dormant online-search secondary', async () => {
+    renderEpisodeDialog();
+    await screen.findByTestId('manage-subtitle-dialog-v2');
+    expect(screen.queryByTestId('toggle-fetch')).not.toBeInTheDocument();
+  });
+
+  it('keeps the online-search secondary for movies', async () => {
+    renderDialog({ mediaType: 'movie' });
+    expect(await screen.findByTestId('toggle-fetch')).toBeInTheDocument();
+  });
+
+  it('renders the SxxExx code chip so the dialog says WHICH episode it acts on', async () => {
+    renderEpisodeDialog();
+    expect(await screen.findByTestId('dialog-title-code')).toHaveTextContent('S04E07');
+  });
+
+  it('enables the CTA (an episode has a generate route, unlike a series)', async () => {
+    renderEpisodeDialog();
+    expect(await screen.findByTestId('action-generate-subtitle')).not.toBeDisabled();
+  });
+
+  // Design string (F1 note-untranslated): a resume skips the expensive ASR leg,
+  // so the user is told this run is cheap rather than being left to guess.
+  it('shows the cheap-resume helper when the episode is untranslated', async () => {
+    renderEpisodeDialog({ subtitleStatus: 'untranslated' });
+    expect(await screen.findByTestId('generation-helper')).toHaveTextContent(
+      '僅需翻譯，不再重跑語音辨識'
+    );
+  });
+
+  it('shows the default helper for other episode statuses', async () => {
+    renderEpisodeDialog({ subtitleStatus: 'not_found' });
+    expect(await screen.findByTestId('generation-helper')).toHaveTextContent('語音辨識＋AI 翻譯');
   });
 });
