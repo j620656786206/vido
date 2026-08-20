@@ -335,6 +335,18 @@ modal 多一個欄位必然讓它的三個基準不匹配。AC #8 的閘門清�
 `-darwin` 本機重產（`CI=true` ＋只起 Vite dev server，比照 workflow 的 PR job）、`-linux` **刪除**交 CI incremental bootstrap；
 基準獨立成 commit（`363ed45a`），不與邏輯混。全量重產只 4 張變動，第 4 張是既有本機漂移（已 restore）。
 
+**⚠️ 交付狀態：`Visual Regression / PR` 這一支會維持紅色，直到本 PR merge —— 這是工作流的設計，不是未修完。**
+`.github/workflows/visual-regression.yml` 有兩個 job：`pr`（`if: event_name == 'pull_request'`，**只驗證**）與
+`main`（`if: event_name == 'push' || 'workflow_dispatch'`，**bootstrap 在這裡**）。
+`-linux` 基準只能由 ubuntu runner 產生，而產生它的 job **不在 PR 事件上跑**。
+⇒ 依既有流程：**merge 本 PR → main-push 觸發 incremental bootstrap → 自動開出
+`chore(visual): bootstrap 3 missing -linux baselines (incremental)` PR（帶 `requires-manual-review` 交 Sally）→ merge 它**。
+先例完全相同：`6bbd3fb4`(sub-4-3 #218) merge 後才有 `d876f0d2`(#240)。
+
+**查證失敗性質為「純缺基準」**（決定它會走 incremental 而非 steady-state 失敗）：
+第二輪 CI 的 4 筆失敗全是 `A snapshot doesn't exist ... settings-library-edit-modal/{default,hover,focus}-visual-linux.png`，
+**零 pixel-diff、零 other**。其餘 13 支 check 全綠（Docker、E2E ×4、Unit、Build、Serve Smoke、Lint & Format…）。
+
 **🧯 順帶抓到的型別破口**：`MediaLibrary.autoSubtitle` 設必填後，三個 gallery fixture 的 `satisfies` 缺欄位 ⇒
 `tsc --noEmit` 從 main 的 147 錯變成 151。**本專案不以 tsc 為 CI 閘門**（Vite build 不做型別檢查，
 CI 的 Build 也因此綠燈），所以這是我主動比對 main 才發現的。已補齊，回到 147（零新增）。
