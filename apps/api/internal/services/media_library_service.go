@@ -35,6 +35,11 @@ type UpdateLibraryRequest struct {
 	Name        *string `json:"name,omitempty"`
 	ContentType *string `json:"content_type,omitempty"`
 	SortOrder   *int    `json:"sort_order,omitempty"`
+	// AutoSubtitle opts this library in to free subtitle auto-generation
+	// (Story 9R-10b AC #2). A POINTER like its siblings: absent means "leave
+	// as-is", so a form that does not know about the setting cannot silently
+	// switch it off — or, worse, on.
+	AutoSubtitle *bool `json:"auto_subtitle,omitempty"`
 }
 
 // MediaLibraryService implements MediaLibraryServiceInterface.
@@ -112,6 +117,9 @@ func (s *MediaLibraryService) UpdateLibrary(ctx context.Context, id string, req 
 	}
 	if req.SortOrder != nil {
 		lib.SortOrder = *req.SortOrder
+	}
+	if req.AutoSubtitle != nil {
+		lib.AutoSubtitle = *req.AutoSubtitle
 	}
 
 	if err := lib.Validate(); err != nil {

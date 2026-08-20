@@ -93,13 +93,30 @@ type MediaRef struct{ ID, MediaType string }
 // name instead. sub-1-6 acks `[@contract-v1] sub-1-5b AC #1` — the shape is
 // unchanged, only the identifier.
 //
-// [@contract-v1] — see MediaRef.
+// [@contract-v1] — see MediaRef. FreeOnly is ADDITIVE on v1 (9R-10b AC #3,
+// the `HarvestedTerms` / `default_budget_usd` precedent — no bump): its zero
+// value is the shipped behaviour, so every existing caller keeps its contract
+// byte-for-byte.
 type ProcessItemOptions struct {
 	// Force is the M1 pilot's re-run switch: it bypasses the P5 pre-flight AND
 	// segment-cache READS (writes still happen, so a forced run refreshes the
 	// cache rather than orphaning it). It rides ai.Governor like every other
 	// call, so repeated re-runs stay inside the budget ceiling.
 	Force bool
+
+	// FreeOnly restricts the run to the work that costs nothing: an embedded
+	// Traditional-Chinese track delivered as-is, or a Simplified one converted
+	// by local OpenCC. The two PAID routes — `translate` (the LLM) and
+	// `no_text_source` (speech recognition) — are not attempted; the item is
+	// recorded as deferred and left exactly as it was found, so it reappears
+	// in the consent list with an estimate instead of quietly vanishing.
+	//
+	// This is the automation lane opened by the 2026-08-19 ruling
+	// 「9R-10b 花錢須同意」, and it sits UNDERNEATH the 2026-08-07 ruling
+	// (scanning updates metadata and nothing else) rather than replacing it:
+	// nothing on this path can produce a charge. `internal/cost_consent_test.go`
+	// still guards the library-wide paid sweep, which remains uncalled.
+	FreeOnly bool
 }
 
 // ProcessOutcome is what one item flow produced.
@@ -143,6 +160,15 @@ type MediaItem struct {
 	// Context is the FR26 show metadata injected into the translation prompt
 	// and hashed into the run version.
 	Context TranslateContext
+	// SubtitleStatus is the row's status AS LOADED, before this run touches it.
+	//
+	// 9R-10b AC #3: the FreeOnly brake has to put the media row back exactly
+	// where it found it. It cannot blanket-write `not_searched`, because that
+	// would erase bugfix-j's `untranslated` verdict — an item that already has
+	// an English sidecar and only needs translating would start claiming
+	// nothing had ever been searched. The zero value ("") means "the store did
+	// not report one"; the brake falls back to `not_searched` for that case.
+	SubtitleStatus models.SubtitleStatus
 }
 
 // MediaStore is the narrow port over the three media tables, dispatched on

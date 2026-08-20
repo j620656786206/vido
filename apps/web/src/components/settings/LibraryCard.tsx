@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen 10 Settings Desktop (6UCtX)
+// Design ref: ux-design.pen Screen 10 Settings Desktop (6UCtX) · J4-D (sPzZT)
 /**
  * Library Card component for displaying a media library in Settings (Story 7b-4)
  */
@@ -105,9 +105,16 @@ export function LibraryCard({ library, onEdit }: LibraryCardProps) {
         })}
       </div>
 
-      {/* Footer */}
-      <div className="text-xs text-[var(--text-muted)]">
+      {/* Footer — Story 9R-10b. The opt-in state rides the EXISTING dot-separated
+          grammar instead of getting a new badge: the path rows above already own a
+          coloured-dot status vocabulary, and a second one would compete with it for
+          the same glance. Success green is borrowed from the consent flow, where it
+          means exactly this: costs nothing. Absent entirely when the library is off. */}
+      <div className="text-xs text-[var(--text-muted)]" data-testid="library-card-footer">
         {(library.paths || []).length} 個資料夾 · {library.mediaCount} 個項目
+        {library.autoSubtitle && (
+          <span className="font-medium text-[var(--success)]"> · 自動處理免費字幕</span>
+        )}
       </div>
 
       {/* Delete Confirmation */}

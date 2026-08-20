@@ -657,14 +657,35 @@ func main() {
 		// process-wide queue has no batch identity, no removal for cancel, and
 		// no per-batch budget ctx); see pipelineGenerationRunner.
 		// `internal/cost_consent_test.go` fails if a sweep caller reappears.
-		scannerService.SetOnScanComplete(postScanEnrichment)
+		//
+		// 9R-10b: the scan-complete slot is COMPOSED, never re-registered.
+		// `postScanEnrichment` above is passed through byte-for-byte and runs
+		// FIRST — the auto-trigger's language routing reads the metadata that
+		// enrichment writes. What follows it is the FREE lane only: every item
+		// is processed with ProcessItemOptions.FreeOnly, so an embedded Chinese
+		// track is finished locally while anything that would bill stops at the
+		// threshold and waits for the estimate screen. The paid sweep this slot
+		// once held stays gone.
+		autoGenerator := subtitle.NewAutoGenerator(
+			subtitlePipeline,
+			autoSubtitlePolicyAdapter{libraries: repos.MediaLibraries},
+			slog.Default(),
+			subtitle.WithAutoCandidateFinders(repos.Movies, repos.Episodes),
+			subtitle.WithAutoSeriesResolver(repos.Series),
+		)
+		scannerService.SetOnScanComplete(
+			subtitle.ComposeScanCallback(postScanEnrichment, autoGenerator.ScanCallback()),
+		)
 		slog.Info("Subtitle generation pipeline enabled",
 			"mode", cfg.SubtitlePipelineMode, "workers", subtitle.PipelineConcurrencyM1, "model", modelID,
 			// May be false on a keyless boot: the pool exists and idles behind the
 			// gate, and starts accepting work the moment a key is saved (sub-2-1a).
 			"translation_configured", subtitleCapabilityGate(),
 			// Loud on purpose: the behaviour change is the whole point of sub-4-1.
-			"scan_auto_enqueue", false)
+			"scan_auto_enqueue", false,
+			// 9R-10b: free lane only, per-library opt-in, default OFF.
+			"scan_auto_free_generation", true,
+			"auto_max_per_run", subtitle.AutoGenerationMaxPerRun)
 	} else {
 		// ONE line, at wiring time — not one per scanned item (AC #5).
 		slog.Info("Subtitle generation pipeline disabled — staying on the legacy search path",

@@ -60,12 +60,12 @@ func (r *MediaLibraryRepository) Create(ctx context.Context, library *models.Med
 	library.UpdatedAt = now
 
 	query := `
-		INSERT INTO media_libraries (id, name, content_type, auto_detect, sort_order, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO media_libraries (id, name, content_type, auto_detect, auto_subtitle, sort_order, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	`
 	_, err := r.db.ExecContext(ctx, query,
 		library.ID, library.Name, library.ContentType,
-		library.AutoDetect, library.SortOrder,
+		library.AutoDetect, library.AutoSubtitle, library.SortOrder,
 		library.CreatedAt, library.UpdatedAt,
 	)
 	if err != nil {
@@ -76,13 +76,13 @@ func (r *MediaLibraryRepository) Create(ctx context.Context, library *models.Med
 
 func (r *MediaLibraryRepository) GetByID(ctx context.Context, id string) (*models.MediaLibrary, error) {
 	query := `
-		SELECT id, name, content_type, auto_detect, sort_order, created_at, updated_at
+		SELECT id, name, content_type, auto_detect, auto_subtitle, sort_order, created_at, updated_at
 		FROM media_libraries WHERE id = ?
 	`
 	lib := &models.MediaLibrary{}
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&lib.ID, &lib.Name, &lib.ContentType,
-		&lib.AutoDetect, &lib.SortOrder,
+		&lib.AutoDetect, &lib.AutoSubtitle, &lib.SortOrder,
 		&lib.CreatedAt, &lib.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
@@ -96,7 +96,7 @@ func (r *MediaLibraryRepository) GetByID(ctx context.Context, id string) (*model
 
 func (r *MediaLibraryRepository) GetAll(ctx context.Context) ([]models.MediaLibrary, error) {
 	query := `
-		SELECT id, name, content_type, auto_detect, sort_order, created_at, updated_at
+		SELECT id, name, content_type, auto_detect, auto_subtitle, sort_order, created_at, updated_at
 		FROM media_libraries ORDER BY sort_order, created_at
 	`
 	rows, err := r.db.QueryContext(ctx, query)
@@ -110,7 +110,7 @@ func (r *MediaLibraryRepository) GetAll(ctx context.Context) ([]models.MediaLibr
 		var lib models.MediaLibrary
 		if err := rows.Scan(
 			&lib.ID, &lib.Name, &lib.ContentType,
-			&lib.AutoDetect, &lib.SortOrder,
+			&lib.AutoDetect, &lib.AutoSubtitle, &lib.SortOrder,
 			&lib.CreatedAt, &lib.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan library: %w", err)
@@ -176,11 +176,11 @@ func (r *MediaLibraryRepository) Update(ctx context.Context, library *models.Med
 
 	query := `
 		UPDATE media_libraries
-		SET name = ?, content_type = ?, auto_detect = ?, sort_order = ?, updated_at = ?
+		SET name = ?, content_type = ?, auto_detect = ?, auto_subtitle = ?, sort_order = ?, updated_at = ?
 		WHERE id = ?
 	`
 	result, err := r.db.ExecContext(ctx, query,
-		library.Name, library.ContentType, library.AutoDetect,
+		library.Name, library.ContentType, library.AutoDetect, library.AutoSubtitle,
 		library.SortOrder, library.UpdatedAt, library.ID,
 	)
 	if err != nil {
