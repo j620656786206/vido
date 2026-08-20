@@ -306,7 +306,12 @@ func (s *EnrichmentService) enrichSeries(ctx context.Context, series *models.Ser
 
 // applyMetadataToSeries copies a metadata match onto the series row.
 func (s *EnrichmentService) applyMetadataToSeries(series *models.Series, item metadata.MetadataItem, source models.MetadataSource) {
-	if item.Title != "" {
+	// bugfix-d CR M4: prefer the zh-TW title, mirroring applyMetadataToMovie.
+	// Without this the Douban/Wikipedia providers' 繁中 titles were discarded for
+	// series while movies honored them — the same field, two different rules.
+	if item.TitleZhTW != "" {
+		series.Title = item.TitleZhTW
+	} else if item.Title != "" {
 		series.Title = item.Title
 	}
 	if item.OriginalTitle != "" {
@@ -315,10 +320,18 @@ func (s *EnrichmentService) applyMetadataToSeries(series *models.Series, item me
 	if id := parseProviderID(item.ID); id > 0 {
 		series.TMDbID = models.NewNullInt64(id)
 	}
-	if item.PosterURL != "" {
+	// bugfix-d CR H1: the D2 format convergence covered movies only — series
+	// kept writing the absolute URL. Same rule as applyMetadataToMovie: the TMDb
+	// relative path is canonical; providers with no relative path (Douban,
+	// Wikipedia) keep their absolute URL and the frontend renders it as-is.
+	if item.PosterPath != "" {
+		series.PosterPath = models.NewNullString(item.PosterPath)
+	} else if item.PosterURL != "" {
 		series.PosterPath = models.NewNullString(item.PosterURL)
 	}
-	if item.BackdropURL != "" {
+	if item.BackdropPath != "" {
+		series.BackdropPath = models.NewNullString(item.BackdropPath)
+	} else if item.BackdropURL != "" {
 		series.BackdropPath = models.NewNullString(item.BackdropURL)
 	}
 	if item.Overview != "" {

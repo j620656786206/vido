@@ -111,6 +111,22 @@ _（風險分層：本 bundle 為 lean AC —— 每缺陷一條可驗收行為�
 - **TMDb 呼叫次數未增加**：fallback 鏈本來就會逐語言發請求直到判定成功，改動只是**改用**先前被丟棄的回應，而非多發請求
 - `MapQBState` 式的對映層未動；快取層（`cache.go` 以 `tmdb:movie/%d` 為 key、語言無關）語意不變
 
+### File List
+
+- apps/api/internal/tmdb/fallback.go（D1/D4 逐欄合併；CR M1 複製、M2 錯誤語意、M3 季度逐集合併）
+- apps/api/internal/tmdb/fallback_test.go（+8 測試；1 個釘住舊行為的既有測試改寫；mock 補季度 language-keyed 回應）
+- apps/api/internal/metadata/provider.go（`MetadataItem.PosterPath`/`BackdropPath`）
+- apps/api/internal/metadata/tmdb_provider.go（電影＋影集轉換補相對路徑；`derefPath`）
+- apps/api/internal/services/enrichment_service.go（D2 電影寫入收斂；CR H1/M4 影集寫入收斂＋zh-TW 標題偏好）
+- apps/api/internal/services/media_ingest_service.go（CR H1/M4 影集 ingest 寫入點）
+- apps/api/internal/services/enrichment_nfo_test.go（+5 測試：電影 3、影集 2）
+- apps/web/src/lib/image.ts（`isAbsoluteUrl` 容錯分流）
+- apps/web/src/lib/image.spec.ts（+6 測試）
+- apps/web/src/components/library/LibraryTable.tsx（CR L1 改用 `getImageUrl`）
+- apps/web/src/services/tmdb.ts（CR L2 消除重複實作）
+- _bmad-output/implementation-artifacts/bugfix-d-ui-visible-data-defects.md
+- _bmad-output/implementation-artifacts/sprint-status.yaml
+
 ### 驗證
 
 - Go 34 packages 全綠 · gofmt / go vet / staticcheck 2026.1（tmdb／metadata／services）乾淨
@@ -121,4 +137,24 @@ _（風險分層：本 bundle 為 lean AC —— 每缺陷一條可驗收行為�
 
 | 日期 | 變更 |
 | --- | --- |
+| 2026-08-20 | CR 修復 7 項（1H/4M/2L）：H1 D2 收斂補上**影集**兩條寫入路徑（原僅修電影卻聲稱全部收斂）、M1 合併改為複製不改寫來源、M2 晚期語言失敗不再丟棄早期可用結果、M3 季度比照逐欄＋逐集合併（以 EpisodeNumber 配對；並誠實記錄「部分集數已命名」仍提早 return 的範圍限制與其呼叫數代價）、M4 影集補 zh-TW 標題偏好、L1 LibraryTable 改用 getImageUrl、L2 消除重複的 getImageUrl/常數。+6 測試（fallback 4、影集寫入 2）＋mock 補季度 language-keyed 回應。 |
 | 2026-08-20 | 開工前根因查核推翻 story 的 D1 假設（語言參數本來就有，真因是 fallback 全有全無判定）並確認 D1＋D4 同源；Alexyu 裁定「逐欄合併，維基另案」。實作 `fillEmptyMovieFields`／`fillEmptyTVShowFields`（電影＋影集），D2 以 `MetadataItem.PosterPath` 收斂寫入格式＋FE `isAbsoluteUrl` 容錯，D4 由同一個合併修復解決。D3 前提無法重現（全庫無 `year` 欄位、FE 端算）且無法連入 NAS 查證 → **DEFERRED**。+7 測試，1 個釘住舊行為的既有測試改寫。Status → review。 |
+
+## Senior Developer Review (AI) —— 2026-08-20（對抗審查）
+
+**Outcome: Changes Requested → 7/7 全數修復**（1 HIGH / 4 MEDIUM / 2 LOW）
+**機械檢查**：🔒 Rule 7 PASS（14 個 `METADATA_*` 皆既有、前綴一致，本次零新增）· 🔒 Rule 20 N/A（無 bump 箭頭）· 🔒 Rule 25 N/A（未觸及 project-context.md）· Git vs File List: ⚠️ **本檔原本沒有 File List**（bugfix-e 有，這份漏寫）—— 無從比對，該項聲稱本身不成立；已於此輪補上（見下方），比對後一致（13 檔）
+
+⚠️ **審查者＝實作者（同 session 同模型）**，非跨模型對抗。每項 finding 皆附實測證據，仍建議在 PR 上另跑一次跨模型審查。
+
+### Action Items
+
+- [x] **H1 [HIGH] D2 只修了電影，影集兩條寫入路徑仍寫絕對 URL** —— AC #2 與本檔都聲稱「寫入路徑**全部**收斂」，但 `enrichment_service.go:318-322`（`applyMetadataToSeries`）與 `media_ingest_service.go:178`（`applyMetadataItemToSeries`）都還在寫 `item.PosterURL`。影集海報今天靠 FE `isAbsoluteUrl` 容錯才沒壞，但**儲存格式並未收斂**而我聲稱它收斂了 —— 與 bugfix-e H1 同屬「宣稱未查證」類。修法：兩處比照電影版改為相對路徑優先、絕對 URL 退路，+2 測試。
+- [x] **M1 [MEDIUM] 合併就地改寫第一個語言的回應** —— `merged = result` 取別名後 `fillEmpty*Fields` 直接寫 `dst.*`。prod 端已查證安全（`movies.go:67` 每次 `var result MovieDetails`＝新結構），但**測試 mock 回傳共享 fixture 指標**，同一 mock 第二次呼叫即讀到被汙染的值；函式對輸入不純粹。修法：`base := *result; merged = &base`（季度另需複製 `Episodes` slice），+1 測試直接斷言 client 的值未被改動。
+- [x] **M2 [MEDIUM] 有可用資料卻整包丟掉** —— zh-TW 有回應但不完整、後續語言錯誤時，`lastErr != nil` 使函式回 `nil, "", err`，把手上可用的 zh-TW 資料丟了。既有缺陷（原版同結構），但就在本案重寫的函式裡，且**與本 story 的主張正面矛盾**。修法：改為 `if merged == nil && lastErr != nil` —— 只有什麼都沒收到才報錯，+2 測試（晚期錯誤保留早期結果／全語言失敗才報錯）。
+- [x] **M3 [MEDIUM] 同族缺陷漏修且未立案：季度** —— `GetSeasonDetailsWithFallback` 仍是全有全無。修法：比照改為逐欄＋**逐集**合併（以 `EpisodeNumber` 配對，非 slice 順序），mock 補 language-keyed 季度回應，+1 測試（含刻意打亂順序的 fixture）。⚠️ **實作時發現並誠實記錄的範圍限制**：`hasLocalizedSeasonDetails` 只要**任一集**有名字就算完成，所以「zh-TW 命名了部分集數」的情境仍會提早 return、其餘集名維持空白。收緊為「每集皆有名」會讓任何 TMDb 未完整在地化的季度走完整條鏈＝**每季呼叫數增加**，AC #5 紅線不授權 → 已在程式碼註解中明列為 filed scope limit，不假裝修好。
+- [x] **M4 [MEDIUM] 影集的 zh-TW 標題偏好完全缺席** —— `applyMetadataToSeries:309` 直接 `series.Title = item.Title`，沒有電影版（`:690`）的 `TitleZhTW` 優先分支 → 豆瓣／維基來源影集的繁中標題被無視。同一個欄位、同一批 provider、兩套規則。修法：兩處影集寫入點都補上偏好分支。
+- [x] **L1 [LOW] `LibraryTable.tsx:180` 內聯組 URL 繞過 `getImageUrl`** —— 絕對值會被再前綴成 `.../w92https://…`。查證：該元件**目前只被 test gallery 引用、未掛在任何路由**，故今天使用者看不到，屬未爆彈。修法：改用 `getImageUrl`。
+- [x] **L2 [LOW] `services/tmdb.ts:39` 有第二份 `getImageUrl`** —— 缺絕對 URL 容錯的重複實作（查證：元件都從 `lib/image` 匯入，故目前無害）。修法：改為 re-export 單一實作，連同重複的 `TMDB_IMAGE_BASE`／`ImageSize` 一併消除。（修完 lint 抓到孤兒常數 1 error，已一併清除。）
+
+**修後驗證**：Go 34 packages（唯一失敗為既有已立案 SSE-drain flake，隔離 2/3 過且與本案路徑無交集）· staticcheck 2026.1 乾淨 · gofmt 乾淨 · web 49 檔 575 測試全過 · `pnpm run lint:all` **0 errors** · `pnpm run format:check` 全 repo 綠 · `nx typecheck web` 147＝147（與 main 同數，未新增型別錯誤）

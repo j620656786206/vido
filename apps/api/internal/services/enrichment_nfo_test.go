@@ -659,3 +659,39 @@ func TestApplyMetadataToMovie_PrefersZhTWTitle(t *testing.T) {
 	require.True(t, movie.OriginalTitle.Valid)
 	assert.Equal(t, "禍禍女", movie.OriginalTitle.String)
 }
+
+// bugfix-d CR H1/M4: the D2 convergence and the zh-TW title rule originally
+// covered movies only — series kept writing the absolute URL and ignored
+// TitleZhTW entirely. Same field, same provider, two different rules.
+func TestApplyMetadataToSeries_RelativePathAndZhTWTitle(t *testing.T) {
+	svc := &EnrichmentService{}
+	series := &models.Series{}
+
+	svc.applyMetadataToSeries(series, metadata.MetadataItem{
+		Title:        "Mag Mag The Series",
+		TitleZhTW:    "禍禍女影集",
+		PosterURL:    "https://image.tmdb.org/t/p/w500/series.jpg",
+		BackdropURL:  "https://image.tmdb.org/t/p/w780/sback.jpg",
+		PosterPath:   "/series.jpg",
+		BackdropPath: "/sback.jpg",
+	}, models.MetadataSourceTMDb)
+
+	assert.Equal(t, "禍禍女影集", series.Title, "CR M4: the zh-TW title wins for series too")
+	require.True(t, series.PosterPath.Valid)
+	assert.Equal(t, "/series.jpg", series.PosterPath.String, "CR H1: relative path is canonical for series too")
+	require.True(t, series.BackdropPath.Valid)
+	assert.Equal(t, "/sback.jpg", series.BackdropPath.String)
+}
+
+func TestApplyMetadataToSeries_KeepsAbsoluteURLWhenNoRelativePath(t *testing.T) {
+	svc := &EnrichmentService{}
+	series := &models.Series{}
+
+	svc.applyMetadataToSeries(series, metadata.MetadataItem{
+		Title:     "豆瓣影集",
+		PosterURL: "https://img1.doubanio.com/view/photo/l/public/p999.jpg",
+	}, models.MetadataSourceDouban)
+
+	require.True(t, series.PosterPath.Valid)
+	assert.Equal(t, "https://img1.doubanio.com/view/photo/l/public/p999.jpg", series.PosterPath.String)
+}
