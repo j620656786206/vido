@@ -111,10 +111,20 @@ func (m *mockTMDbServiceForNFO) GetWatchProviders(ctx context.Context, mediaType
 
 type mockMovieRepoForNFO struct {
 	mock.Mock
-	updatedMovie *models.Movie
+	updatedMovie     *models.Movie
+	wideUpdatedMovie *models.Movie
 }
 
+// Update records SEPARATELY from UpdateEnrichedMetadata. Enrichment must not use
+// the wide writer any more (9R-10b CR-249 B) — it clobbers the subtitle-delivery
+// columns from a stale in-memory copy — so a fake that aliased the two would let
+// that regress invisibly.
 func (m *mockMovieRepoForNFO) Update(ctx context.Context, movie *models.Movie) error {
+	m.wideUpdatedMovie = movie
+	return nil
+}
+
+func (m *mockMovieRepoForNFO) UpdateEnrichedMetadata(ctx context.Context, movie *models.Movie) error {
 	m.updatedMovie = movie
 	return nil
 }
@@ -245,6 +255,14 @@ func TestEnrichMovie_NFO_TMDbDirectLookup(t *testing.T) {
 
 	// Verify tech info from streamdetails (AC #5)
 	assert.Equal(t, "h265", mockRepo.updatedMovie.VideoCodec.String)
+
+	// 9R-10b CR-249 B: enrichment must reach the database through the NARROW
+	// writer. The wide Update persists the five subtitle-delivery columns from
+	// a stale in-memory copy, which silently reverts a subtitle the free lane
+	// delivered concurrently off the same scan-complete callback — the .srt on
+	// disk, the database denying it exists.
+	assert.Nil(t, mockRepo.wideUpdatedMovie,
+		"enrichment called the wide Update — it will clobber concurrent subtitle writes")
 	assert.Equal(t, "4K", mockRepo.updatedMovie.VideoResolution.String)
 	assert.Equal(t, "dts", mockRepo.updatedMovie.AudioCodec.String)
 	assert.Equal(t, int64(6), mockRepo.updatedMovie.AudioChannels.Int64)

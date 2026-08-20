@@ -58,6 +58,14 @@ func (m *MockMovieRepository) Update(ctx context.Context, movie *models.Movie) e
 	return m.Called(ctx, movie).Error(0)
 }
 
+// UpdateEnrichedMetadata is a DISTINCT expectation from Update on purpose: the
+// whole point of the narrow writer (9R-10b CR-249 B) is that enrichment stops
+// using the wide one, and a mock that aliased the two would let that regress
+// without a single test noticing.
+func (m *MockMovieRepository) UpdateEnrichedMetadata(ctx context.Context, movie *models.Movie) error {
+	return m.Called(ctx, movie).Error(0)
+}
+
 func (m *MockMovieRepository) Delete(ctx context.Context, id string) error {
 	return m.Called(ctx, id).Error(0)
 }
@@ -241,6 +249,12 @@ func (m *MockSeriesRepository) FindByFilePath(ctx context.Context, filePath stri
 }
 
 func (m *MockSeriesRepository) Update(ctx context.Context, series *models.Series) error {
+	return m.Called(ctx, series).Error(0)
+}
+
+// UpdateEnrichedMetadata — see the movie counterpart; kept as its own
+// expectation so an accidental return to the wide writer fails loudly.
+func (m *MockSeriesRepository) UpdateEnrichedMetadata(ctx context.Context, series *models.Series) error {
 	return m.Called(ctx, series).Error(0)
 }
 

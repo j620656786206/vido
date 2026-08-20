@@ -25,6 +25,9 @@ type MovieRepositoryInterface interface {
 
 	// Update modifies an existing movie in the database
 	Update(ctx context.Context, movie *models.Movie) error
+	// UpdateEnrichedMetadata writes ONLY the columns EnrichmentService computes,
+	// leaving the subtitle-delivery columns untouched (enriched_metadata_update.go).
+	UpdateEnrichedMetadata(ctx context.Context, movie *models.Movie) error
 
 	// Delete removes a movie from the database by ID
 	Delete(ctx context.Context, id string) error
@@ -128,6 +131,8 @@ type SeriesRepositoryInterface interface {
 
 	// Update modifies an existing series in the database
 	Update(ctx context.Context, series *models.Series) error
+	// UpdateEnrichedMetadata writes ONLY the columns EnrichmentService computes.
+	UpdateEnrichedMetadata(ctx context.Context, series *models.Series) error
 
 	// Delete removes a series from the database by ID
 	Delete(ctx context.Context, id string) error
