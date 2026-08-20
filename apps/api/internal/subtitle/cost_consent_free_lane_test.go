@@ -131,3 +131,37 @@ func TestFreeLane_DeferredItemStaysOnTheConsentList(t *testing.T) {
 		})
 	}
 }
+
+// ─── CR-249: the deferral marker's writer and reader must agree ───────────
+
+// TestDeferredMarker_WriterAndReaderAgree closes a silent-failure gap.
+//
+// DeferredPaidRunPrefix is written by Pipeline.deferPaidItem and read back by
+// AutoGenerator.deferredMediaIDs. Nothing else connects them: if the writer's
+// message format drifts, the reader simply stops matching, the exclusion set
+// goes empty, and the H1 starvation bug returns — silently, with every existing
+// test still green, because every other test stubs one side or the other.
+//
+// This is the one test that exercises the REAL writer and the REAL reader
+// against each other.
+func TestDeferredMarker_WriterAndReaderAgree(t *testing.T) {
+	h := autoOverPipeline(t, translateDecision("Good morning"), nil)
+
+	require.NotEmpty(t, h.runs.updated, "the deferral must record a run row")
+	written := h.runs.updated[len(h.runs.updated)-1]
+	require.Equal(t, models.SubtitleRunSkipped, written.Status)
+
+	// Feed exactly what the writer produced into the reader's own predicate.
+	gen := NewAutoGenerator(&autoFakeItemProcessor{}, &autoFakeLibraryPolicy{enabled: autoEnabledSet("lib-a")}, nil,
+		WithAutoDeferredRuns(&autoFakeRunLister{runs: []models.SubtitleRun{{
+			MediaID:      h.ref.ID,
+			Status:       written.Status,
+			ErrorMessage: written.ErrorMessage,
+		}}}),
+	)
+	got, err := gen.deferredMediaIDs(context.Background())
+	require.NoError(t, err)
+
+	assert.Contains(t, got, h.ref.ID,
+		"the reader failed to recognise a marker the writer just produced — the exclusion set would go empty and paid items would re-occupy the budget every scan")
+}
