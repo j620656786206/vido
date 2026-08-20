@@ -327,6 +327,18 @@ grep 依據：`SetOnScanComplete|scan-complete|EnqueueMissing` across `_bmad-out
 Task 2 的其餘三項（`ComposeScanCallback`、`AutoGenerator`、政策過濾器測試）皆按序先行，且全部以窄介面（Rule 11）撰寫，
 未依賴 Task 3 的具體型別。
 
+**🖼️ Visual regression（第一次推送後 CI 抓到，story 的第三處事實錯誤）**：
+story 的「Time-dependent visual coverage」節寫「**無 visual fixture 新增**（checkbox 走既有 modal spec，非 gallery fixture）」——
+**「無新增」為真，但漏了「既有 fixture 會需要 rebless」**：`settings-library-edit-modal` 是**既有的** gallery fixture，
+modal 多一個欄位必然讓它的三個基準不匹配。AC #8 的閘門清單也沒有 `test:visual`，所以本機沒跑到，CI 才紅。
+處置依 `tests/visual/README.md` 的 Baseline-update discipline ＋ `6bbd3fb4`(sub-4-3) 先例：
+`-darwin` 本機重產（`CI=true` ＋只起 Vite dev server，比照 workflow 的 PR job）、`-linux` **刪除**交 CI incremental bootstrap；
+基準獨立成 commit（`363ed45a`），不與邏輯混。全量重產只 4 張變動，第 4 張是既有本機漂移（已 restore）。
+
+**🧯 順帶抓到的型別破口**：`MediaLibrary.autoSubtitle` 設必填後，三個 gallery fixture 的 `satisfies` 缺欄位 ⇒
+`tsc --noEmit` 從 main 的 147 錯變成 151。**本專案不以 tsc 為 CI 閘門**（Vite build 不做型別檢查，
+CI 的 Build 也因此綠燈），所以這是我主動比對 main 才發現的。已補齊，回到 147（零新增）。
+
 **🧪 一個被我自己推翻的 staticcheck 疑慮**：中途以非釘版 staticcheck 跑出兩筆 U1000
 （`config.go:282`、`images/processor.go:206`），一度準備立案為 pre-existing。
 改用專案**釘版** `staticcheck-2026.1`（`apps/api/project.json:33`，即 CI 用的那支）後 **全綠** ——
@@ -409,6 +421,9 @@ authoring 的 AC #2 只列了 modal 內的 checkbox，**漏了 Sally 裁定 3 �
     `name`/`contentType` 早已如此，本 story 的 `autoSubtitle` 只是繼承同一模式、未擴大。非阻塞，已立案。
   - **③ `drift-e5d-save-button-label`** —— 設計 E5-D 畫「儲存」，已出貨為「儲存變更」/「建立」。
     成因是提示詞未查證既有標籤；依 AC #9 不改既有文案，交 Sally 修設計稿。非阻塞，已立案。
+  - **③ `9R-UX-library-edit-modal-hover-focus-states`** —— `settings-library-edit-modal` 的
+    default/hover/focus 三張 `-darwin` 基準 **md5 完全相同，且變更前也相同**（既有狀況）。
+    依 `feedback_identical_rendering_is_sally_decision` **交 Sally 裁決**，dev 不自選方案。
   - **已關閉**：`bugfix-libraryeditmodal-wrong-design-ref` → `done`（Task 5 修正檔頭）。
 
 ### File List
