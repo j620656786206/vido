@@ -1,6 +1,6 @@
 # Story 9R-10b: 入庫自動觸發 —— 常設同意下的「早上起來字幕就好了」
 
-Status: review
+Status: done
 
 **Unblocked 2026-08-20** —— `9R-UX-auto-generation-toggle-design` done（Sally MCP review PASS），PR #246 已 merge，
 `flow-e-scanner/e5-d.png`・`e5-m.png`・`flow-j-specs/j4-d.png` 皆在 main 上。
@@ -477,6 +477,9 @@ authoring 的 AC #2 只列了 modal 內的 checkbox，**漏了 Sally 裁定 3 �
 | `apps/web/src/components/settings/LibraryEditModal.spec.tsx` | modified — mock 身分穩定化；新增 5 例（共 7） |
 | `apps/web/src/components/settings/LibraryCard.tsx` | modified — footer 開關狀態（Rule 24 ①） |
 | `apps/web/src/components/settings/LibraryCard.spec.tsx` | **new** — 3 例 |
+| `apps/web/src/routes/test/-gallery.fixtures.tsx` | modified — 4 個 library fixture 補 `autoSubtitle`（CR M3 補列） |
+| `tests/visual/.../settings-library-edit-modal/{default,hover,focus}-visual-darwin.png` | modified — rebless（CR M3 補列） |
+| `tests/visual/.../settings-library-edit-modal/{default,hover,focus}-visual-linux.png` | **deleted** — 交 CI bootstrap（CR M3 補列，已由 #248 補回） |
 
 **未改動（刻意）**：`apps/api/internal/cost_consent_test.go`（`git diff` 0 行）、`WorkerPool`、
 `GenerationBatchProcessor`、F14–F20 同意流程、`scanner_service.go`、`SetOnScanComplete` 簽章。
@@ -494,3 +497,84 @@ authoring 的 AC #2 只列了 modal 內的 checkbox，**漏了 Sally 裁定 3 �
 | 2026-08-20 | **Task 4（AC #6/#7）** —— `cost_consent_free_lane_test.go` 走真 Pipeline 斷言付費埠呼叫計數 0，並以 fault injection 反證（閘門停用 → 6 例轉紅）。`cost_consent_test.go` 一字未改。`AutoGenerator` 起訖各一行 `slog.Info` ＋四個計數。 |
 | 2026-08-20 | **Task 5（AC #2 FE）** —— `LibraryEditModal` 第四欄位 checkbox＋三句定稿文案（逐字照 E5-D），Rule 21 檔頭更正為 `E5-D (hUVYm) · E5-M (P0P82x) · J4-D (sPzZT)`。**Rule 24 ① 吸收**：`LibraryCard` footer 顯示開關狀態。FE 共 10 例。 |
 | 2026-08-20 | **Task 6（AC #8）** —— `nx test api` 全綠、`nx test web` 2698 例全綠、`nx lint api`（釘版 staticcheck-2026.1）綠、`nx lint web` 綠、`format:check` 綠。 |
+
+---
+
+## Senior Developer Review (AI)
+
+**日期：** 2026-08-20 ｜ **審查者：** Amelia（⚠️ **自審** —— 實作者與審查者同一 context，結構上弱於換模型審查）
+**結果：** **APPROVED-WITH-FIXES** —— 2 High / 3 Medium / 2 Low，**High 與 Medium 全數修復並以 fault injection 反證**
+**修復 PR：** `fix/9R-10b-cr-findings`（story 主體已於 #247 merge）
+
+### 強制檢查
+
+| 檢查 | 結果 |
+|---|---|
+| 🔒 Rule 7 Wire Format | **PASS**（本 story 的 Go 檔零 error-code 字串常數） |
+| 🔒 Rule 20 Contract Bump | **N/A**（零 bump；`FreeOnly` 為 additive-on-v1） |
+| 🔒 Rule 25 Mega-line | **N/A**（`project-context.md` 未觸及） |
+| Git vs Story File List | **1 筆落差** → M3 |
+
+### Findings
+
+**🔴 H1 —— 付費項目永久佔住配額，把免費項目餓死** · ✅ FIXED
+`preflightSkip`（`pipeline.go:581`）**只看 sidecar 是否存在**；被 `deferPaidItem` 煞車的項目永遠沒有 sidecar ⇒
+永遠不會被 pre-flight 跳過。而 `FindMissingZhHantSubtitle` 是 `ORDER BY title COLLATE NOCASE ASC, id ASC` ⇒
+**每次都是同樣的前 20 筆**。若字母序前 20 筆恰好都是英文軌，則每次掃描都白燒 20 次 ffprobe+ffmpeg 抽取，
+而排在後面、真的有內建繁中軌的項目**永遠輪不到** —— 功能看起來完全沒作用。
+**修復**：新增匯出常數 `DeferredPaidRunPrefix`（`process_item.go:549`）作為 run `error_message` 前綴，
+新增窄介面 `AutoDeferredRunLister`（沿用既有 `ListByStatus`，**零 schema 變更、零新 repo 方法**），
+`collect()` 每輪**一次**查詢建立排除集合。port 為選填：未接線時仍正確，只是會重探。
+**反證**：拿掉排除 → 4 例轉紅。
+
+**🔴 H2 —— 一個孤兒分集中止整輪，而且原測試的 fake 契約錯誤** · ✅ FIXED
+`SeriesRepository.FindByID`（`series_repository.go:108-110`）查無資料時回傳**包 `sql.ErrNoRows` 的 error**，
+**不是** `(nil, nil)`。原 `collect()` 對任何 error 都 `return nil, err` ⇒ **一集孤兒分集就讓整輪歸零**，
+連前面收好的電影一起丟，且每次掃描重複發生。
+**更嚴重的是**：原測試 `TestAutoGenerator_SelectionPolicy` 有一例「episode with an unresolvable series is skipped」**是綠的** ——
+因為 fake 對查不到的 id 回 `(nil, nil)`，**比它替身的真物件更寬容**，在斷言一個生產程式碼沒有的行為。
+這正是 9R-10a CR M1 的鏡像版，而本 story 的 Dev Notes 還抄了那條教訓。
+**修復**：`isSeriesNotFound()` 以 `errors.Is(err, sql.ErrNoRows)` 分流 —— 孤兒跳過、真故障（DB 鎖死）仍中止；
+**fake 改為回傳真 repo 的 error 形狀**，並補 `TestAutoGenerator_GenuineSeriesLookupFailureStillAborts` 釘住分界。
+**反證**：還原成 error 一律致命 → 4 例轉紅。
+
+**🟡 M1 —— 沒有 single-flight 護欄** · ✅ FIXED
+兄弟元件全有（`GenerationCandidateService` 的 `ErrAnalysisRunning`、`GenerationBatchProcessor` 的 `IsRunning`），
+`AutoGenerator` 沒有 ⇒ 手動掃描與排程掃描前後腳完成、或掃描撞上手動批次時，兩輪跑同一份清單，
+兩個 `ProcessItem` 競寫同一個 sidecar 路徑。
+**修復**：`sync.Mutex` + `running` 旗標，第二輪直接 no-op。**反證**：拿掉 → 2 例轉紅。
+
+**🟡 M2 —— 建立模式靜默丟棄勾選** · ✅ FIXED
+`handleSave` 只在 edit 分支傳 `autoSubtitle`；FE 與 Go 的 `CreateLibraryRequest` **都沒有這個欄位**。
+使用者新建媒體庫時勾選 → 按「建立」→ 設定消失，**零錯誤、零回饋**。原 spec 只測 edit 模式故未捕捉。
+**修復**：兩側 `CreateLibraryRequest` 補欄位（create 用**純 bool**，缺席即 false＝正確預設；
+與 update 的**指標**選填語義刻意不同）＋ FE modal create 分支傳值 ＋ 4 例新測試（Go 2、FE 2）。
+**反證**：拿掉 create 分支的欄位 → 2 例轉紅。
+
+**🟡 M3 —— File List 漏 7 個檔** · ✅ FIXED
+git 有但 story 未列：`-gallery.fixtures.tsx` ＋ 6 張 visual 基準。已補入 File List。
+
+**🟢 L2 —— `deferred_paid` 計數方式脆弱** · ✅ FIXED
+原以 `outcome.Kind == RouteTranslate/RouteNoTextSource` 判斷，只因 FreeOnly 恆真才正確
+（`FreeOnly=false` 時**成功**的翻譯 run 也是同一個 Kind）。改為 `isDeferredOutcome()` 讀 run 的 marker。
+
+**🟢 L1 —— `context.Background()` 無逾時、無關機掛鉤** · ⏭️ **未修，已立案**
+卡住的 ffmpeg 會把 goroutine 釘到 process 結束；WorkerPool 有 `Stop()`，這裡沒有對應機制。
+修它需要 `main.go` 的 lifecycle 決定（要不要納入 graceful-shutdown、逾時取多久），
+超出 CR 的就地修復範圍 ⇒ Rule 24 ③ `bugfix-autogenerator-no-timeout-or-shutdown`。
+
+### 看過、決定保留
+
+- **`AutoGenerationMaxPerRun` 維持套件常數**（非設定）—— 與 `PipelineConcurrencyM1` 同慣例；story AC #2 明文。
+- **`ListByStatus(skipped, 0)` 不設上限** —— 排除集合只取 media id，NAS 規模的 skipped 列數在可接受範圍；
+  設上限反而會讓排除不完整、H1 部分復發。
+- **`deferPaidItem` 仍寫 `skipped` run 而非新 run 狀態** —— `SubtitleRunStatus` 是已出貨 enum，
+  延後**確實是一種 skip**，差別在理由，而理由正是 `error_message` 承載的東西。
+
+### 修後閘門（全綠）
+
+`pnpm nx test api` EXIT=0、零 FAIL ｜ `pnpm nx test web` **2704 例 / 234 檔全綠** ｜
+`pnpm nx lint api`（釘版 staticcheck-2026.1）綠 ｜ `pnpm nx lint web` 綠 ｜ `pnpm format:check` 綠 ｜
+`tsc --noEmit` **147**（＝main 基準，零新增）。
+Visual 基準**不受影響**：本次 FE 變更只有 create 分支的 payload 一行，**零 DOM 變動**。
+

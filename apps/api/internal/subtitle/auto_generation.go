@@ -2,7 +2,11 @@ package subtitle
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"log/slog"
+	"strings"
+	"sync"
 
 	"github.com/vido/api/internal/models"
 )
@@ -40,6 +44,22 @@ type AutoLibraryPolicy interface {
 	AutoSubtitleLibraryIDs(ctx context.Context) (map[string]struct{}, error)
 }
 
+// AutoDeferredRunLister reads back the runs that stopped at the threshold of
+// paid work, so the trigger can stop re-probing them.
+//
+// WHY THIS PORT EXISTS (CR H1). The pipeline's pre-flight gate is "does an
+// acceptable sidecar already exist" — and a deferred item never gets one. Left
+// alone, a library whose alphabetically-first items all need paid work would
+// spend its ENTIRE per-run budget re-extracting those same items on every
+// scan, forever, while the free items further down the list were never
+// reached: the feature would burn CPU and appear to do nothing. Excluding
+// already-deferred items is what makes the budget move down the list.
+//
+// *repository.SubtitleRunRepository satisfies it.
+type AutoDeferredRunLister interface {
+	ListByStatus(ctx context.Context, status models.SubtitleRunStatus, limit int) ([]models.SubtitleRun, error)
+}
+
 // AutoSeriesLibraryResolver resolves an episode's owning library.
 //
 // It exists because `episodes` has NO library_id column — only `movies` and
@@ -66,8 +86,18 @@ type AutoGenerator struct {
 	movies    MovieGenerationFinder
 	episodes  EpisodeGenerationFinder
 	series    AutoSeriesLibraryResolver
+	runs      AutoDeferredRunLister
 	logger    *slog.Logger
 	maxPerRun int
+
+	// running is the single-flight guard (CR M1). Every sibling in this
+	// codebase has one — GenerationCandidateService returns ErrAnalysisRunning,
+	// GenerationBatchProcessor exposes IsRunning — and this one needs it for the
+	// same reason: a manual scan finishing next to a scheduled one would put two
+	// rounds over the same item list, racing two ProcessItem calls onto one
+	// sidecar path.
+	mu      sync.Mutex
+	running bool
 }
 
 // AutoGeneratorOption injects one optional port.
@@ -83,6 +113,12 @@ func WithAutoCandidateFinders(movies MovieGenerationFinder, episodes EpisodeGene
 // episodes are skipped entirely (their opt-in cannot be established).
 func WithAutoSeriesResolver(series AutoSeriesLibraryResolver) AutoGeneratorOption {
 	return func(g *AutoGenerator) { g.series = series }
+}
+
+// WithAutoDeferredRuns supplies the deferred-run reader (CR H1). Without it the
+// trigger still works, but re-probes previously deferred items on every scan.
+func WithAutoDeferredRuns(runs AutoDeferredRunLister) AutoGeneratorOption {
+	return func(g *AutoGenerator) { g.runs = runs }
 }
 
 // WithAutoMaxPerRun overrides the per-round cap. Tests use it; production does
@@ -126,6 +162,23 @@ func (g *AutoGenerator) Run(ctx context.Context) {
 		return
 	}
 
+	// CR M1: one round at a time. A second scan completing mid-round is a
+	// no-op, not a second pass over the same items — the next scan picks up
+	// whatever this one did not reach.
+	g.mu.Lock()
+	if g.running {
+		g.mu.Unlock()
+		g.logger.Debug("subtitle auto-generation: a round is already in flight — skipping")
+		return
+	}
+	g.running = true
+	g.mu.Unlock()
+	defer func() {
+		g.mu.Lock()
+		g.running = false
+		g.mu.Unlock()
+	}()
+
 	// 9R-10a CR M1: a failed read is NOT an empty answer. On the NAS this is a
 	// locked SQLite file, and treating that as "nobody opted in" would make the
 	// feature silently stop working with nothing in the log to show for it.
@@ -164,7 +217,10 @@ func (g *AutoGenerator) Run(ctx context.Context) {
 			failed++
 			g.logger.Warn("subtitle auto-generation: item failed",
 				"media_id", ref.ID, "media_type", ref.MediaType, "error", err)
-		case outcome != nil && (outcome.Kind == RouteTranslate || outcome.Kind == RouteNoTextSource):
+		case isDeferredOutcome(outcome):
+			// CR L2: keyed on the run row's deferral marker, not on RouteKind.
+			// Kind alone is only unambiguous because FreeOnly is always true
+			// here — a SUCCESSFUL translate run carries RouteTranslate too.
 			deferredPaid++
 		default:
 			processed++
@@ -182,6 +238,11 @@ func (g *AutoGenerator) Run(ctx context.Context) {
 func (g *AutoGenerator) collect(ctx context.Context, enabled map[string]struct{}) ([]MediaRef, error) {
 	refs := make([]MediaRef, 0, g.maxPerRun)
 
+	deferred, err := g.deferredMediaIDs(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	if g.movies != nil {
 		movies, err := g.movies.FindMissingZhHantSubtitle(ctx)
 		if err != nil {
@@ -190,6 +251,9 @@ func (g *AutoGenerator) collect(ctx context.Context, enabled map[string]struct{}
 		for _, m := range movies {
 			if len(refs) >= g.maxPerRun {
 				return refs, nil
+			}
+			if _, skip := deferred[m.ID]; skip {
+				continue
 			}
 			if !autoEligible(m.SubtitleStatus) || !inEnabledLibrary(m.LibraryID, enabled) {
 				continue
@@ -210,16 +274,28 @@ func (g *AutoGenerator) collect(ctx context.Context, enabled map[string]struct{}
 			if len(refs) >= g.maxPerRun {
 				return refs, nil
 			}
+			if _, skip := deferred[e.ID]; skip {
+				continue
+			}
 			if !autoEligible(e.SubtitleStatus) {
 				continue
 			}
 			libraryID, ok := libraryOf[e.SeriesID]
 			if !ok {
 				series, err := g.series.FindByID(ctx, e.SeriesID)
-				if err != nil {
+				switch {
+				case isSeriesNotFound(err):
+					// CR H2: an ORPHAN episode is skipped, not fatal. The real
+					// SeriesRepository.FindByID returns an ERROR wrapping
+					// sql.ErrNoRows for a missing row — it does not return
+					// (nil, nil) — so treating every error as fatal meant one
+					// episode whose parent row is gone aborted the whole round,
+					// discarding the movies already collected, on every scan.
+					// A genuine failure (locked DB) still aborts, below.
+					libraryID = models.NullString{}
+				case err != nil:
 					return nil, err
-				}
-				if series != nil {
+				case series != nil:
 					libraryID = series.LibraryID
 				}
 				libraryOf[e.SeriesID] = libraryID
@@ -247,4 +323,48 @@ func inEnabledLibrary(libraryID models.NullString, enabled map[string]struct{}) 
 	}
 	_, ok := enabled[libraryID.String]
 	return ok
+}
+
+// deferredMediaIDs returns the media ids whose latest recorded run stopped at
+// the threshold of paid work (CR H1).
+//
+// ONE query per round, not one per item. The port is optional: without it the
+// trigger still runs correctly, it just re-probes deferred items — so a boot
+// that does not wire it degrades in cost, never in correctness.
+func (g *AutoGenerator) deferredMediaIDs(ctx context.Context) (map[string]struct{}, error) {
+	if g.runs == nil {
+		return map[string]struct{}{}, nil
+	}
+	runs, err := g.runs.ListByStatus(ctx, models.SubtitleRunSkipped, 0)
+	if err != nil {
+		return nil, err
+	}
+	// ListByStatus is newest-first, so the FIRST row seen for a media id is its
+	// latest skipped run — which is the one that decides whether the item is
+	// currently parked awaiting consent.
+	out := make(map[string]struct{}, len(runs))
+	for _, r := range runs {
+		if _, seen := out[r.MediaID]; seen {
+			continue
+		}
+		if strings.HasPrefix(r.ErrorMessage, DeferredPaidRunPrefix) {
+			out[r.MediaID] = struct{}{}
+		}
+	}
+	return out, nil
+}
+
+// isDeferredOutcome reports whether one ProcessItem call ended at the paid
+// threshold, read from the run row's marker rather than inferred from the route.
+func isDeferredOutcome(outcome *ProcessOutcome) bool {
+	return outcome != nil && outcome.Run != nil &&
+		strings.HasPrefix(outcome.Run.ErrorMessage, DeferredPaidRunPrefix)
+}
+
+// isSeriesNotFound recognises the "parent series row is gone" case across both
+// shapes the repositories use: SeriesRepository wraps sql.ErrNoRows, while the
+// episode repository (9R-10a CR M1) uses a typed sentinel. Matching both keeps
+// this correct if the series repo later grows a sentinel of its own.
+func isSeriesNotFound(err error) bool {
+	return err != nil && errors.Is(err, sql.ErrNoRows)
 }

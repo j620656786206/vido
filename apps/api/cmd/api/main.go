@@ -672,6 +672,10 @@ func main() {
 			slog.Default(),
 			subtitle.WithAutoCandidateFinders(repos.Movies, repos.Episodes),
 			subtitle.WithAutoSeriesResolver(repos.Series),
+			// CR H1: lets the trigger skip items it has already parked awaiting
+			// consent, so the per-run budget moves down the list instead of
+			// re-extracting the same paid items on every scan.
+			subtitle.WithAutoDeferredRuns(repos.SubtitleRuns),
 		)
 		scannerService.SetOnScanComplete(
 			subtitle.ComposeScanCallback(postScanEnrichment, autoGenerator.ScanCallback()),

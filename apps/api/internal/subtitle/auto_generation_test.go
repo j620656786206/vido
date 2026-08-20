@@ -9,7 +9,10 @@ package subtitle
 
 import (
 	"context"
+	"database/sql"
 	"errors"
+	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -39,6 +42,13 @@ func (f *autoFakeEpisodeFinder) FindMissingZhHantSubtitle(context.Context) ([]mo
 	return f.episodes, f.err
 }
 
+// autoFakeSeriesResolver mirrors the REAL SeriesRepository.FindByID contract.
+//
+// CR H2: it previously returned (nil, nil) for a missing id, which is NOT what
+// the repository does — series_repository.go:108 returns an ERROR wrapping
+// sql.ErrNoRows. The old fake made a test pass while asserting a behaviour the
+// production code did not have. Any fake that is more forgiving than the thing
+// it stands in for is worse than no fake at all.
 type autoFakeSeriesResolver struct {
 	byID map[string]*models.Series
 	err  error
@@ -48,7 +58,40 @@ func (f *autoFakeSeriesResolver) FindByID(_ context.Context, id string) (*models
 	if f.err != nil {
 		return nil, f.err
 	}
-	return f.byID[id], nil
+	series, ok := f.byID[id]
+	if !ok {
+		return nil, fmt.Errorf("series with id %s not found: %w", id, sql.ErrNoRows)
+	}
+	return series, nil
+}
+
+// autoFakeRunLister stands in for the subtitle_runs reader behind CR H1.
+type autoFakeRunLister struct {
+	runs  []models.SubtitleRun
+	err   error
+	calls int
+}
+
+func (f *autoFakeRunLister) ListByStatus(_ context.Context, status models.SubtitleRunStatus, _ int) ([]models.SubtitleRun, error) {
+	f.calls++
+	if f.err != nil {
+		return nil, f.err
+	}
+	var out []models.SubtitleRun
+	for _, r := range f.runs {
+		if r.Status == status {
+			out = append(out, r)
+		}
+	}
+	return out, nil
+}
+
+func deferredRun(mediaID string) models.SubtitleRun {
+	return models.SubtitleRun{
+		MediaID:      mediaID,
+		Status:       models.SubtitleRunSkipped,
+		ErrorMessage: DeferredPaidRunPrefix + "translate requires paid work",
+	}
 }
 
 type autoFakeLibraryPolicy struct {
@@ -125,6 +168,7 @@ type autoHarness struct {
 	series   *autoFakeSeriesResolver
 	policy   *autoFakeLibraryPolicy
 	item     *autoFakeItemProcessor
+	runs     *autoFakeRunLister
 }
 
 func newAutoHarness(t *testing.T, opts ...AutoGeneratorOption) *autoHarness {
@@ -135,11 +179,13 @@ func newAutoHarness(t *testing.T, opts ...AutoGeneratorOption) *autoHarness {
 		series:   &autoFakeSeriesResolver{byID: map[string]*models.Series{}},
 		policy:   &autoFakeLibraryPolicy{enabled: autoEnabledSet()},
 		item:     &autoFakeItemProcessor{},
+		runs:     &autoFakeRunLister{},
 	}
 	h.gen = NewAutoGenerator(h.item, h.policy, nil,
 		append([]AutoGeneratorOption{
 			WithAutoCandidateFinders(h.movies, h.episodes),
 			WithAutoSeriesResolver(h.series),
+			WithAutoDeferredRuns(h.runs),
 		}, opts...)...)
 	return h
 }
@@ -372,4 +418,139 @@ func TestAutoGenerator_NilPortsAreSafe(t *testing.T) {
 	gen := NewAutoGenerator(&autoFakeItemProcessor{}, &autoFakeLibraryPolicy{enabled: autoEnabledSet("lib-a")}, nil)
 	assert.NotPanics(t, func() { gen.Run(context.Background()) },
 		"a boot without finders wired must idle, not crash the scan-complete callback")
+}
+
+// ─── CR H1: a deferred item must not re-occupy the budget every scan ──────
+
+// TestAutoGenerator_ExcludesPreviouslyDeferredItems pins the fix for the
+// starvation bug. The pipeline's pre-flight gate is "does an acceptable sidecar
+// exist", and a deferred item never gets one — so without this exclusion the
+// alphabetically-first items (which is what the enumeration order guarantees)
+// would be re-extracted on every scan forever while the free items behind them
+// were never reached.
+func TestAutoGenerator_ExcludesPreviouslyDeferredItems(t *testing.T) {
+	eligible := models.SubtitleStatusNotSearched
+	h := newAutoHarness(t, WithAutoMaxPerRun(2))
+	h.policy.enabled = autoEnabledSet("lib-a")
+	h.movies.movies = []models.Movie{
+		autoMovieIn("m-paid-1", "lib-a", eligible),
+		autoMovieIn("m-paid-2", "lib-a", eligible),
+		autoMovieIn("m-free-1", "lib-a", eligible),
+		autoMovieIn("m-free-2", "lib-a", eligible),
+	}
+	h.runs.runs = []models.SubtitleRun{deferredRun("m-paid-1"), deferredRun("m-paid-2")}
+
+	h.gen.Run(context.Background())
+
+	assert.Equal(t, []string{"m-free-1", "m-free-2"}, h.item.refIDs(),
+		"the budget must move PAST items already known to need paid work — otherwise the free items are never reached")
+	assert.Equal(t, 1, h.runs.calls, "one deferred-run query per round, not one per item")
+}
+
+func TestAutoGenerator_DeferredExclusionIgnoresOtherSkippedRuns(t *testing.T) {
+	h := newAutoHarness(t)
+	h.policy.enabled = autoEnabledSet("lib-a")
+	h.movies.movies = []models.Movie{autoMovieIn("m1", "lib-a", models.SubtitleStatusNotSearched)}
+	// A RouteSkip run is also `skipped`, but it is a DECLINE, not a deferral —
+	// only the marker distinguishes them.
+	h.runs.runs = []models.SubtitleRun{{
+		MediaID:      "m1",
+		Status:       models.SubtitleRunSkipped,
+		ErrorMessage: "stream 2 tagged und: detector returned unrecognized variant — failing closed (P0)",
+	}}
+
+	h.gen.Run(context.Background())
+
+	assert.Equal(t, []string{"m1"}, h.item.refIDs(),
+		"only runs carrying DeferredPaidRunPrefix may exclude an item")
+}
+
+func TestAutoGenerator_DeferredRunLookupFailureAborts(t *testing.T) {
+	h := newAutoHarness(t)
+	h.policy.enabled = autoEnabledSet("lib-a")
+	h.movies.movies = []models.Movie{autoMovieIn("m1", "lib-a", models.SubtitleStatusNotSearched)}
+	h.runs.err = errors.New("database is locked")
+
+	h.gen.Run(context.Background())
+
+	assert.Empty(t, h.item.calls,
+		"an unreadable run table must abort the round — proceeding would re-burn every deferred item")
+}
+
+func TestAutoGenerator_WithoutDeferredRunPortStillWorks(t *testing.T) {
+	gen := NewAutoGenerator(&autoFakeItemProcessor{}, &autoFakeLibraryPolicy{enabled: autoEnabledSet("lib-a")}, nil,
+		WithAutoCandidateFinders(&autoFakeMovieFinder{movies: []models.Movie{
+			autoMovieIn("m1", "lib-a", models.SubtitleStatusNotSearched),
+		}}, nil))
+	assert.NotPanics(t, func() { gen.Run(context.Background()) },
+		"the deferred-run port is optional — without it the trigger degrades in cost, never in correctness")
+}
+
+// ─── CR H2: an orphan episode is skipped, the round survives ──────────────
+
+// TestAutoGenerator_OrphanEpisodeDoesNotAbortTheRound is the regression pin for
+// the fake-vs-reality gap. SeriesRepository.FindByID returns an ERROR wrapping
+// sql.ErrNoRows when the parent row is gone; treating that as fatal meant ONE
+// orphan episode discarded every movie already collected, on every scan.
+func TestAutoGenerator_OrphanEpisodeDoesNotAbortTheRound(t *testing.T) {
+	eligible := models.SubtitleStatusNotSearched
+	h := newAutoHarness(t)
+	h.policy.enabled = autoEnabledSet("lib-a")
+	h.movies.movies = []models.Movie{autoMovieIn("m1", "lib-a", eligible)}
+	h.episodes.episodes = []models.Episode{
+		autoEpisodeIn("e-orphan", "series-gone", eligible),
+		autoEpisodeIn("e-ok", "s1", eligible),
+	}
+	h.series.byID = map[string]*models.Series{"s1": autoSeriesIn("s1", "lib-a")}
+
+	h.gen.Run(context.Background())
+
+	assert.Equal(t, []string{"m1", "e-ok"}, h.item.refIDs(),
+		"the orphan is skipped; everything else in the round still runs")
+}
+
+func TestAutoGenerator_GenuineSeriesLookupFailureStillAborts(t *testing.T) {
+	h := newAutoHarness(t)
+	h.policy.enabled = autoEnabledSet("lib-a")
+	h.episodes.episodes = []models.Episode{autoEpisodeIn("e1", "s1", models.SubtitleStatusNotSearched)}
+	h.series.err = errors.New("database is locked")
+
+	h.gen.Run(context.Background())
+
+	assert.Empty(t, h.item.calls,
+		"a locked DB is NOT an orphan — it must abort rather than silently skip every episode (9R-10a CR M1)")
+}
+
+// ─── CR M1: one round at a time ───────────────────────────────────────────
+
+func TestAutoGenerator_SecondRoundIsSkippedWhileOneIsInFlight(t *testing.T) {
+	h := newAutoHarness(t)
+	h.policy.enabled = autoEnabledSet("lib-a")
+	h.movies.movies = []models.Movie{
+		autoMovieIn("m1", "lib-a", models.SubtitleStatusNotSearched),
+		autoMovieIn("m2", "lib-a", models.SubtitleStatusNotSearched),
+	}
+
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	var once sync.Once
+	h.item.outcome = func(MediaRef) (*ProcessOutcome, error) {
+		once.Do(func() {
+			close(entered)
+			<-release
+		})
+		return &ProcessOutcome{Kind: RouteDeliverDirect}, nil
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() { defer wg.Done(); h.gen.Run(context.Background()) }()
+
+	<-entered
+	h.gen.Run(context.Background()) // second scan lands mid-round
+	close(release)
+	wg.Wait()
+
+	assert.Equal(t, []string{"m1", "m2"}, h.item.refIDs(),
+		"the overlapping round must be a no-op — two rounds over one item list race two ProcessItem calls onto one sidecar path")
 }

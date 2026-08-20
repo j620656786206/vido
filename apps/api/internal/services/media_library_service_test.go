@@ -25,6 +25,7 @@ import (
 type stubLibraryRepo struct {
 	lib     *models.MediaLibrary
 	updated *models.MediaLibrary
+	created *models.MediaLibrary
 }
 
 func (s *stubLibraryRepo) GetByID(_ context.Context, id string) (*models.MediaLibrary, error) {
@@ -44,8 +45,11 @@ func (s *stubLibraryRepo) Update(_ context.Context, library *models.MediaLibrary
 
 var errStubNotImplemented = errors.New("stubLibraryRepo: method not used by these tests")
 
-func (s *stubLibraryRepo) Create(context.Context, *models.MediaLibrary) error {
-	return errStubNotImplemented
+func (s *stubLibraryRepo) Create(_ context.Context, library *models.MediaLibrary) error {
+	clone := *library
+	s.created = &clone
+	s.lib = &clone
+	return nil
 }
 func (s *stubLibraryRepo) GetAll(context.Context) ([]models.MediaLibrary, error) {
 	return nil, errStubNotImplemented
@@ -115,4 +119,39 @@ func TestUpdateLibrary_AutoSubtitleSetsFalse(t *testing.T) {
 	assert.False(t, got.AutoSubtitle, "withdrawing the opt-in must be possible and must stick")
 	require.NotNil(t, repo.updated)
 	assert.False(t, repo.updated.AutoSubtitle)
+}
+
+// ─── CR M2: the opt-in must survive CREATE, not only UPDATE ───────────────
+
+// TestCreateLibrary_CarriesAutoSubtitle pins the fix for a control that
+// rendered, toggled, and then silently discarded its value: the modal's create
+// branch dropped autoSubtitle, and neither CreateLibraryRequest carried it, so a
+// user could tick the box, press 建立, and get a library that was off — with no
+// error and nothing on screen to say so.
+func TestCreateLibrary_CarriesAutoSubtitle(t *testing.T) {
+	for _, want := range []bool{true, false} {
+		repo := &stubLibraryRepo{}
+		svc := NewMediaLibraryService(repo)
+
+		got, err := svc.CreateLibrary(context.Background(), CreateLibraryRequest{
+			Name:         "我的電影",
+			ContentType:  "movie",
+			AutoSubtitle: want,
+		})
+		require.NoError(t, err)
+
+		assert.Equal(t, want, got.AutoSubtitle)
+		require.NotNil(t, repo.created)
+		assert.Equal(t, want, repo.created.AutoSubtitle, "and the persisted row must agree")
+	}
+}
+
+func TestCreateLibrary_DefaultsOffWhenUnspecified(t *testing.T) {
+	repo := &stubLibraryRepo{}
+	svc := NewMediaLibraryService(repo)
+
+	got, err := svc.CreateLibrary(context.Background(), CreateLibraryRequest{Name: "我的影集", ContentType: "series"})
+	require.NoError(t, err)
+
+	assert.False(t, got.AutoSubtitle, "a request that never mentions the opt-in must produce an OFF library")
 }

@@ -40,6 +40,8 @@ export interface CreateLibraryRequest {
   name: string;
   contentType: 'movie' | 'series';
   paths?: string[];
+  /** Free auto-generation opt-in; absent means off, the correct default. */
+  autoSubtitle?: boolean;
 }
 
 export interface UpdateLibraryRequest {

@@ -537,6 +537,17 @@ func sidecarCueCount(path string) (int, bool) {
 	return len(blocks), true
 }
 
+// DeferredPaidRunPrefix marks a run row that stopped at the threshold of paid
+// work. It is a PREFIX on error_message rather than a new run status because
+// SubtitleRunStatus is a shipped enum and a deferral genuinely is a skip — what
+// differs is the reason, which is exactly what error_message carries.
+//
+// It exists to be READ, not just written: AutoGenerator excludes items whose
+// latest run carries it, so a library whose alphabetically-first items all need
+// paid work does not spend its whole per-run budget re-probing them on every
+// single scan while the free items further down the list are never reached.
+const DeferredPaidRunPrefix = "deferred-paid: "
+
 // deferPaidItem is the FreeOnly brake (9R-10b AC #3): the run stops at the
 // threshold of a paid call, having spent nothing.
 //
@@ -572,7 +583,7 @@ func (p *Pipeline) deferPaidItem(
 
 	completedAt := p.now().UTC()
 	run.Status = models.SubtitleRunSkipped
-	run.ErrorMessage = "deferred: " + string(decision.Kind) + " requires paid work — awaiting cost consent (9R-10b AC #3)"
+	run.ErrorMessage = DeferredPaidRunPrefix + string(decision.Kind) + " requires paid work — awaiting cost consent (9R-10b AC #3)"
 	run.CompletedAt = &completedAt
 
 	if err := p.runs.Update(ctx, run); err != nil {
