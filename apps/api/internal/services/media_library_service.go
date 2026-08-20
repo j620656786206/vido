@@ -28,6 +28,12 @@ type CreateLibraryRequest struct {
 	Name        string   `json:"name"`
 	ContentType string   `json:"content_type"`
 	Paths       []string `json:"paths"`
+	// AutoSubtitle carries the free-auto-generation opt-in through CREATE too
+	// (CR M2). A plain bool, unlike the update request's pointer: absent means
+	// false, which is the correct default for a brand-new library. Without this
+	// the modal rendered a checkbox whose value was silently discarded on
+	// create — the user ticked it, pressed 建立, and nothing said otherwise.
+	AutoSubtitle bool `json:"auto_subtitle"`
 }
 
 // UpdateLibraryRequest is the input for updating a library.
@@ -79,8 +85,9 @@ func (s *MediaLibraryService) GetLibrary(ctx context.Context, id string) (*model
 
 func (s *MediaLibraryService) CreateLibrary(ctx context.Context, req CreateLibraryRequest) (*models.MediaLibrary, error) {
 	lib := &models.MediaLibrary{
-		Name:        req.Name,
-		ContentType: models.MediaLibraryContentType(req.ContentType),
+		Name:         req.Name,
+		ContentType:  models.MediaLibraryContentType(req.ContentType),
+		AutoSubtitle: req.AutoSubtitle,
 	}
 
 	if err := lib.Validate(); err != nil {

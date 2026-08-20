@@ -51,6 +51,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
         await createLibrary.mutateAsync({
           name,
           contentType,
+          autoSubtitle,
           paths: newPath.trim() ? [newPath.trim()] : undefined,
         });
       }

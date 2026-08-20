@@ -121,4 +121,34 @@ describe('LibraryEditModal', () => {
       expect.objectContaining({ id: 'lib-1', autoSubtitle: true })
     );
   });
+
+  // ─── CR M2: create mode must carry the opt-in too ──────────────────────
+
+  it('sends autoSubtitle when CREATING a library, not only when editing', async () => {
+    // Regression pin: the create branch used to drop the field entirely, so a
+    // user could tick the box, press 建立, and silently get a library that was
+    // off — no error, nothing on screen to say the choice had been discarded.
+    render(<LibraryEditModal onClose={vi.fn()} />);
+
+    fireEvent.change(screen.getByTestId('library-name-input'), { target: { value: '新媒體庫' } });
+    fireEvent.click(screen.getByTestId('library-auto-subtitle-checkbox'));
+    fireEvent.click(screen.getByTestId('library-save-button'));
+
+    await vi.waitFor(() => expect(mutation.mutateAsync).toHaveBeenCalled());
+    expect(mutation.mutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ name: '新媒體庫', autoSubtitle: true })
+    );
+  });
+
+  it('leaves the opt-in off on create when the box is untouched', async () => {
+    render(<LibraryEditModal onClose={vi.fn()} />);
+
+    fireEvent.change(screen.getByTestId('library-name-input'), { target: { value: '新媒體庫' } });
+    fireEvent.click(screen.getByTestId('library-save-button'));
+
+    await vi.waitFor(() => expect(mutation.mutateAsync).toHaveBeenCalled());
+    expect(mutation.mutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ autoSubtitle: false })
+    );
+  });
 });
