@@ -1,6 +1,6 @@
 # Story: Bugfix J — ASR 路徑部分翻譯失敗的真實狀態（hasPartialFailure 貫穿到 verdict）
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
