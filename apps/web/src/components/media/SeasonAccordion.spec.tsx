@@ -42,17 +42,23 @@ describe('SeasonAccordion', () => {
   });
 
   it('renders nothing when tmdbId <= 0 (AC #1)', () => {
-    const { container } = render(<SeasonAccordion seasons={seasons} seriesId="s1" tmdbId={0} />);
+    const { container } = render(
+      <SeasonAccordion seasons={seasons} seriesTitle="進擊的巨人" seriesId="s1" tmdbId={0} />
+    );
     expect(container.firstChild).toBeNull();
   });
 
   it('renders nothing when there are no seasons', () => {
-    const { container } = render(<SeasonAccordion seasons={[]} seriesId="s1" tmdbId={123} />);
+    const { container } = render(
+      <SeasonAccordion seasons={[]} seriesTitle="進擊的巨人" seriesId="s1" tmdbId={123} />
+    );
     expect(container.firstChild).toBeNull();
   });
 
   it('renders one collapsed header per season with name, episode count and air date (AC #2)', () => {
-    render(<SeasonAccordion seasons={seasons} seriesId="s1" tmdbId={123} />);
+    render(
+      <SeasonAccordion seasons={seasons} seriesTitle="進擊的巨人" seriesId="s1" tmdbId={123} />
+    );
 
     expect(screen.getByTestId('season-header-1')).toBeInTheDocument();
     expect(screen.getByTestId('season-header-2')).toBeInTheDocument();
@@ -62,7 +68,9 @@ describe('SeasonAccordion', () => {
   });
 
   it('keeps the episode query disabled until a season is expanded (AC #3 lazy-load)', () => {
-    render(<SeasonAccordion seasons={seasons} seriesId="s1" tmdbId={123} />);
+    render(
+      <SeasonAccordion seasons={seasons} seriesTitle="進擊的巨人" seriesId="s1" tmdbId={123} />
+    );
 
     // Both seasons collapsed → both queries enabled=false.
     expect(useSeasonEpisodesMock).toHaveBeenCalledWith('s1', 1, false);
@@ -86,7 +94,9 @@ describe('SeasonAccordion', () => {
       })
     );
 
-    render(<SeasonAccordion seasons={seasons} seriesId="s1" tmdbId={123} />);
+    render(
+      <SeasonAccordion seasons={seasons} seriesTitle="進擊的巨人" seriesId="s1" tmdbId={123} />
+    );
     fireEvent.click(screen.getByTestId('season-header-1'));
 
     expect(screen.getByText('第一集')).toBeInTheDocument();
@@ -94,14 +104,25 @@ describe('SeasonAccordion', () => {
   });
 
   it('shows a skeleton while the season list is loading (M2)', () => {
-    render(<SeasonAccordion seasons={[]} seriesId="s1" tmdbId={123} isLoading />);
+    render(
+      <SeasonAccordion seasons={[]} seriesTitle="進擊的巨人" seriesId="s1" tmdbId={123} isLoading />
+    );
     expect(screen.getByTestId('season-accordion-skeleton')).toBeInTheDocument();
     expect(screen.queryByTestId('season-header-1')).not.toBeInTheDocument();
   });
 
   it('shows a retry-able error when the season list fails (M2)', () => {
     const onRetry = vi.fn();
-    render(<SeasonAccordion seasons={[]} seriesId="s1" tmdbId={123} isError onRetry={onRetry} />);
+    render(
+      <SeasonAccordion
+        seasons={[]}
+        seriesTitle="進擊的巨人"
+        seriesId="s1"
+        tmdbId={123}
+        isError
+        onRetry={onRetry}
+      />
+    );
 
     expect(screen.getByTestId('season-accordion-error')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
@@ -111,13 +132,15 @@ describe('SeasonAccordion', () => {
 
   it('still renders nothing when tmdbId <= 0 even while loading (AC #1 gate wins)', () => {
     const { container } = render(
-      <SeasonAccordion seasons={[]} seriesId="s1" tmdbId={0} isLoading />
+      <SeasonAccordion seasons={[]} seriesTitle="進擊的巨人" seriesId="s1" tmdbId={0} isLoading />
     );
     expect(container.firstChild).toBeNull();
   });
 
   it('toggles aria-expanded on the season header', () => {
-    render(<SeasonAccordion seasons={seasons} seriesId="s1" tmdbId={123} />);
+    render(
+      <SeasonAccordion seasons={seasons} seriesTitle="進擊的巨人" seriesId="s1" tmdbId={123} />
+    );
     const header = screen.getByTestId('season-header-1');
 
     expect(header).toHaveAttribute('aria-expanded', 'false');

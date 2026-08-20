@@ -226,6 +226,7 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
           <SeasonAccordion
             seasons={seasons.data ?? []}
             seriesId={id}
+            seriesTitle={data.title}
             tmdbId={tmdbId}
             isLoading={seasons.isLoading}
             isError={seasons.isError}

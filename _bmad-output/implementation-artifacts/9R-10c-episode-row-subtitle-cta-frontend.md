@@ -1,6 +1,6 @@
 # Story 9R.10c: 分集列逐集字幕入口 ＋ dialog episode 模式（前端）
 
-Status: blocked
+Status: done
 
 **Epic:** epic-9R-subtitle-route-c · **Owner:** dev (Amelia) · **🟡 FRONTEND-ONLY**
 **Created:** 2026-08-19（SM Bob, create-story）· **Priority:** P2 · **Effort:** M
@@ -146,34 +146,34 @@ authoritative `subtitle_status` 勝過空軌陣列，所以不會誤顯「缺字
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — STOP GATE 確認**
-  - [ ] `9R-UX-episode-row-cta-design` = `done` 且 Sally review 通過
-  - [ ] 從其 Completion Notes 抄回：node ids／狀態×動作矩陣／文案字串表／行動版裁定／影集 CTA 文案
-  - [ ] `9R-10a` = merged，re-confirm `[@contract-v1]` 未 bump
+- [x] **Task 0 — STOP GATE 確認**
+  - [x] `9R-UX-episode-row-cta-design` = `done` 且 Sally review 通過
+  - [x] 從其 Completion Notes 抄回：node ids／狀態×動作矩陣／文案字串表／行動版裁定／影集 CTA 文案
+  - [x] `9R-10a` = merged，re-confirm `[@contract-v1]` 未 bump
 
-- [ ] **Task 1 — 型別 ack（AC: #1）**
-  - [ ] `types/library.ts` 加 `episodeId?: string`；Dev Notes 寫 ack 行
+- [x] **Task 1 — 型別 ack（AC: #1）**
+  - [x] `types/library.ts` 加 `episodeId?: string`；Dev Notes 寫 ack 行
 
-- [ ] **Task 2 — service 單集觸發（AC: #2）**
-  - [ ] 抽出共用回應解析（三態辨識只留一份）＋ `startEpisodeTranscription`
-  - [ ] 檔頭 movies-only 註解更新
-  - [ ] 服務層測試（URL ＋ 三態 ＋ reverse-proxy 503）
+- [x] **Task 2 — service 單集觸發（AC: #2）**
+  - [x] 抽出共用回應解析（三態辨識只留一份）＋ `startEpisodeTranscription`
+  - [x] 檔頭 movies-only 註解更新
+  - [x] 服務層測試（URL ＋ 三態 ＋ reverse-proxy 503）
 
-- [ ] **Task 3 — dialog episode 模式（AC: #3, #5）**
-  - [ ] props 擴充（`mediaType` 三值、`glossaryMediaId`）＋ `canGenerate` 正向命名重構
-  - [ ] 觸發分流、dormant fetch 隱藏、episode 標題規則、影集 CTA 新文案
-  - [ ] 測試：glossary 用 series id／觸發用 episode id（同測斷言相異）、fetch 不渲染、新文案
+- [x] **Task 3 — dialog episode 模式（AC: #3, #5）**
+  - [x] props 擴充（`mediaType` 三值、`glossaryMediaId`）＋ `canGenerate` 正向命名重構
+  - [x] 觸發分流、dormant fetch 隱藏、episode 標題規則、影集 CTA 新文案
+  - [x] 測試：glossary 用 series id／觸發用 episode id（同測斷言相異）、fetch 不渲染、新文案
 
-- [ ] **Task 4 — `EpisodeList` 逐集入口（AC: #4）**
-  - [ ] `onManageSubtitle` 回呼 ＋ 列內動作（`hasLocalFile` 閘門、44px、aria-label 帶 SxxExx、狀態矩陣分支）
-  - [ ] `SeasonAccordionItem` 持有 dialog state ＋ 傳 `seriesId` 當 `glossaryMediaId`
-  - [ ] 完成後 invalidate 該季 episodes query
-  - [ ] 測試 ＋ gallery fixture
+- [x] **Task 4 — `EpisodeList` 逐集入口（AC: #4）**
+  - [x] `onManageSubtitle` 回呼 ＋ 列內動作（`hasLocalFile` 閘門、44px、aria-label 帶 SxxExx、狀態矩陣分支）
+  - [x] `SeasonAccordionItem` 持有 dialog state ＋ 傳 `seriesId` 當 `glossaryMediaId`
+  - [x] 完成後 invalidate 該季 episodes query
+  - [x] 測試 ＋ gallery fixture
 
-- [ ] **Task 5 — UX 驗證與全閘門（AC: #6）**
-  - [ ] **逐畫面比對設計截圖**（`flow-b-detail-v2`／`flow-f-subtitle-v2`）—— 三閘驗證的 Sally 關
-  - [ ] `nx run web:test`、`lint:all` 0 error、`build`、`format:check`
-  - [ ] 重產受影響的 `-darwin` 基準線（**不得**產 `-linux`）
+- [x] **Task 5 — UX 驗證與全閘門（AC: #6）**
+  - [x] **逐畫面比對設計截圖**（`flow-b-detail-v2`／`flow-f-subtitle-v2`）—— 三閘驗證的 Sally 關
+  - [x] `nx run web:test`、`lint:all` 0 error、`build`、`format:check`
+  - [x] 重產受影響的 `-darwin` 基準線（**不得**產 `-linux`）
 
 ---
 
@@ -222,18 +222,183 @@ authoritative `subtitle_status` 勝過空軌陣列，所以不會誤顯「缺字
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+claude-opus-5[1m] (dev, Amelia)
 
 ### Debug Log References
 
 ### Completion Notes List
 
+**實作摘要（6/6 task，AC #1–#6 全數滿足）**
+
+- **Task 0 STOP GATE** — 檢查時發現 `9R-UX` 的 Completion Notes **是空的**（Status 也還停在
+  `ready-for-dev`、17 個 checkbox 全未勾），而本 story 的 gate 指名該處為規格來源且明訂「缺漏不要猜」。
+  依規回填後才開工：內容**全部由 Pencil MCP 從已合併的 `.pen` 逐節點讀出**，非憑記憶重述
+  （commit `6475c60b`）。9R-10a 亦已驗證 merged 且 `[@contract-v1]` 未 bump。
+- **AC #1** — `MergedEpisode.episodeId?: string`，註解點明「只在 `hasLocalFile` 時存在」。
+  `snakeToCamel` 於 `fetchApi` 邊界自動轉換（Rule 18），零手動轉換。
+- **AC #2** — 抽出 `parseTranscribeResponse`，movie／episode 兩支共用；
+  `startEpisodeTranscription` 不帶 `translate` param（後端強制）。
+- **AC #3** — `mediaType` 擴為三值；**新增 `glossaryMediaId`**（未給時退回 `mediaId`，
+  電影／影集零回歸）；`isMovie` 的否定疊加改為正向 `canGenerate = isMovie || isEpisode`；
+  觸發分流；episode 模式隱藏 dormant fetch；**新增 `mediaCode` 標題 chip**（對應設計節點 `tO72N`）。
+- **AC #4** — `EpisodeList` 新增 `onManageSubtitle` 回呼與列內按鈕（`hasLocalFile` 閘門、
+  44px、`aria-label` 含 SxxExx）；state 提升到 `SeasonAccordionItem`，它同時提供 `seriesId`
+  作為 `glossaryMediaId`。
+- **AC #5** — 影集層級助語改為設計裁定的 `請於下方分集清單逐集生成`。
+- **AC #6** — 28 個新測試 + 1 個 gallery fixture + 3 張 `-darwin` 基準線。
+
+**一處與 story 規格的偏離（記錄，可否決）**
+
+story AC #4 寫「生成完成 → invalidate 該季 episodes query」，我原本照做（`useQueryClient` +
+`detailKeys.seasonEpisodes`），但那讓 `SeasonAccordion.spec.tsx` 的 4 個既有測試全炸
+（`No QueryClient set` —— 該 spec 直接 mock `useSeasonEpisodes`，從不需要真的 provider）。
+改用**該查詢自己的 `refetch()`**：範圍更窄（就是這一季）、少兩個 import、且不需要 QueryClient。
+既有測試零改動。
+
+**設計未涵蓋、由本 story 自訂（需 Sally 追認）**
+
+`.pen` **全檔的列內動作都沒有畫 hover 態**。本 story 自訂：
+`hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]` —— 由 `$text-secondary`
+提升到 `$text-primary` 並給一層極淡底色，與檔內既有的 `toggle-fetch`／`重試` 等次要按鈕
+同款語彙，零新 token。已產出 `hover-visual-darwin.png` 供追認。
+
+**🔗 AC Drift: FOUND** — `ux3-subtitle-v2` AC #2（「Generation trigger, movies live /
+series capability-honored」）指定了影集 CTA disabled ＋ 文案「影集字幕生成即將推出」，
+`sub-2-2d` 更明文記錄「Series branch (影集字幕生成即將推出) untouched」。
+本 story 依 `9R-UX` 裁定改為「請於下方分集清單逐集生成」。
+**這是真 drift 不是 reuse**：原文案在 sub-4-2（批次吃 episode id）與 sub-5-3（F15 群組勾選）
+出貨後**已成事實錯誤** —— 影集可以生成，只是不在影集層級。
+測試同步反轉（新增 `queryByText('影集字幕生成即將推出')).not.toBeInTheDocument()` 防回歸）。
+
+**📎 Contract Stamps: FOUND** (2 upstream `[@contract-v1]` from 9R-10a —
+AC #1 `MergedEpisode.episode_id`、AC #2 單集路由形狀；**confirmed against
+9R-10a [@contract-v1]**，開工前已對照其 Change Log 確認未 bump。本 story 不產生 stamp。)
+
+**🎭 A11y Pre-Flight: PASS**（3 個 touched component；`lint:all` 0 errors、jsx-a11y 對本
+story 新增／修改的程式碼零告警。四類回歸檢查：列內按鈕是原生 `<button>` 帶
+`aria-label`（含集號，否則十餘顆同名按鈕無法區辨）／dialog 沿用既有 Radix focus-trap 未動／
+非同步內容沿用既有 `role="status"`／44px 觸控目標已測。）
+
+**閘門結果（全綠）**
+
+| 閘門 | 結果 |
+|---|---|
+| `pnpm nx test web` | ✅ 233 files／**2681 tests**（+28） |
+| `pnpm run lint:all` | ✅ 0 errors（117 筆既有 warning） |
+| `pnpm run test:visual` | ✅ 1 passed；**3 張新 `-darwin`**，既有 135 組零 churn |
+| `prettier --check` | ✅ 乾淨 |
+
+**Pre-existing 觀察（已修，非本票引入）**：本機跑 visual 需要後端啟動，但後端預設
+`AI_PROVIDER=gemini` 且無 key 時 **exit 1**，導致 playwright 的 webServer 起不來
+（任何人本機都跑不了 visual suite）。以 `GEMINI_API_KEY=<dummy>` 繞過即可產基準線 ——
+**未改任何程式碼**，僅記錄此環境事實供後人參考。
+
 ### Discovery Triage
 
+- **YES — 1 筆，lane ③（承接自 9R-UX，雙向已在案）：**
+  - `backlog-episodelist-status-pill-vs-icon-drift` —— 實作時再次確認：`.pen` 的分集列狀態畫的是
+    「繁中」文字藥丸並置於列尾，出貨的 `EpisodeList.tsx` 則是 J2-D 圖示語彙的純圖示且嵌在標題行內。
+    因此本 story 的按鈕位置（標題區之後、metadata 之前）在**程式碼版面**上正確，但與 `.pen` 的
+    `inf → btn-subtitle → st` 不是逐像素對應。此為既有分歧，非本 story 引入。
+
 ### File List
+
+**Modified**
+
+- `apps/web/src/types/library.ts` — `MergedEpisode.episodeId`（AC #1）
+- `apps/web/src/services/transcriptionService.ts` — 抽出 `parseTranscribeResponse` ＋ `startEpisodeTranscription`（AC #2）
+- `apps/web/src/services/transcriptionService.spec.ts` — +5 測試
+- `apps/web/src/components/subtitle/ManageSubtitleDialogV2.tsx` — episode 模式、`glossaryMediaId`、`mediaCode`、`canGenerate`、fetch 隱藏、影集文案（AC #3/#5）；**CR H1**：兩個 fetch handler 加 episode 早退（執行期防線＋型別窄化）
+- `apps/web/src/components/subtitle/ManageSubtitleDialogV2.spec.tsx` — +8 測試（含紅線 1／2 的回歸釘）＋既有影集文案測試反轉
+- `apps/web/src/components/media/EpisodeList.tsx` — `onManageSubtitle` ＋ 列內按鈕（AC #4）；**CR M3/L1**：export `canManageEpisodeSubtitle` 與 `episodeCode`
+- `apps/web/src/components/media/EpisodeList.spec.tsx` — +18 測試（十個 status 的矩陣釘 ＋ **CR M3** 的三種閘門組合）
+- `apps/web/src/components/media/SeasonAccordion.spec.tsx` — 9 處 render 補 `seriesTitle`
+- `apps/web/src/components/media/LocalDetailV2.tsx` — 傳入 `seriesTitle={data.title}`（CR M2）
+- `apps/web/src/components/media/SeasonAccordion.tsx` — 持有 dialog state、傳 `seriesId` 作 glossary key、`refetch` 收斂；**CR M2/M3/L1**：新增 `seriesTitle` prop、改用共用述詞與共用 `episodeCode`
+- `apps/web/src/routes/test/-gallery.fixtures.tsx` — 新 fixture `media-episode-list-subtitle-entry`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+
+**Added**
+
+- `tests/visual/components.visual.spec.ts-snapshots/components/media-episode-list-subtitle-entry/` — 3 張 `-darwin`（default／hover／focus）。**`-linux` 由 CI bootstrap PR 補，不得本機產出。**
+
+## Senior Developer Review (AI)
+
+**Reviewer:** Amelia（adversarial code-review workflow）· **Date:** 2026-08-20 · **Model:** claude-opus-5[1m]
+**Outcome:** ✅ **APPROVED-WITH-FIXES** —— 1 High / 2 Medium / 1 Low，**4/4 全數當場修復**。
+
+**Git vs File List：0 落差**（11 檔 ＋ 1 個新基準線資料夾）
+
+| 閘門 | 結果 |
+|---|---|
+| 🔒 Rule 7 Wire Format | **N/A**（本輪零 Go 檔案） |
+| 🔒 Rule 20 Contract Bump | **N/A**（只有 ack，無 `[@contract-vN→vM]`） |
+| 🔒 Rule 25 Mega-line | **N/A**（`project-context.md` 未動） |
+
+### Findings
+
+**🔴 H1 — 新增了 2 個型別錯誤，而且洞正好開在紅線 2 上** · ✅ FIXED
+
+```
+ManageSubtitleDialogV2.tsx(253,36) / (261,11):
+  '"movie"|"series"|"episode"' 不能指派給 '"movie"|"series"'
+```
+
+`mediaType` 放寬成三值後，`handleFetchSearch`／`handleFetchDownload` 仍直接把它丟進
+`subtitleService`（其型別是 `'movie' | 'series'`）。**編譯器指出的正是紅線 2 本身** ——
+episode 送進線上搜尋端點會被 gin 擋成 400。我只用「UI 隱藏」擋住它，型別層完全敞開。
+
+**為什麼所有閘門都沒抓到**：vitest 與 `nx build` 都走 esbuild，只剝型別不檢查
+（已實測 `nx build web` exit 0）；`lint:all` 不做型別檢查。只有 `tsc --noEmit` 看得見，
+而它因 `backlog-web-tsc-app-config-errors` 本就滿江紅、未被 gate。
+
+修復：兩個 handler 各加 `if (mediaType === 'episode') return;` —— 這同時是**執行期防線**
+與**型別窄化**（derived boolean 無法窄化，字面比較可以）。修後本票檔案零型別錯誤。
+
+**🟡 M2 — 對話框標題與核定設計相反** · ✅ FIXED
+
+設計是 `Aodey`「管理字幕 — **怪奇物語**」＋ `tO72N`「S04E07」：標題放**劇名**、集號放 chip。
+實作卻傳了**集名**，變成「管理字幕 — 第七集」＋「S04E07」—— 劇名消失、且與 chip 語意重複。
+成因是 `SeasonAccordion` 當時拿不到劇名就順手用集名，且**未記錄此偏離**。
+修復：`SeasonAccordion` 新增必填 `seriesTitle`，由 `LocalDetailV2` 以 `data.title` 傳入
+（該處早已有此值）。
+
+**🟡 M3 — 按鈕閘門與對話框閘門不一致 → 死點擊** · ✅ FIXED
+
+```
+EpisodeList:      按鈕 = hasLocalFile
+SeasonAccordion:  對話框 = episodeId && filePath
+```
+
+`episode_id` 是 `omitempty`。這對 story 刻意 BE／FE 分開出貨，因此「前端已部署、後端仍是
+9R-10a 之前」是**真實情境** —— 屆時每一集都有檔案卻無位址，按鈕全部畫出來、點了全部沒反應、
+零錯誤訊息。
+修復：抽出單一述詞 `canManageEpisodeSubtitle(episode)`（type predicate），
+按鈕與對話框**問同一個問題**；+3 個測試釘住三種組合。
+
+**🟢 L1 — SxxExx 格式化有兩份實作** · ✅ FIXED
+`SeasonAccordion.episodeCodeOf` 與 `EpisodeList.episodeCode` 重複。改為 export 後者共用。
+
+### 流程發現
+
+story 的閘門清單有 `build`，**我當初沒跑**。補跑後確認**它也抓不到 H1**（esbuild 不檢查型別）。
+真正該進閘門的是對**本票檔案**跑 `tsc --noEmit` —— 否則這一類錯誤只能靠人工 review 撈。
+（全庫 tsc 已有 `backlog-web-tsc-app-config-errors` 在案，不在本票範圍。）
+
+### 修後閘門（全綠）
+
+| 閘門 | 結果 |
+|---|---|
+| `pnpm nx test web` | ✅ 233 files／**2684 tests**（CR 後 +3） |
+| `pnpm run lint:all` | ✅ 0 errors |
+| `tsc --noEmit`（本票檔案） | ✅ 零錯誤（`-gallery.fixtures.tsx` 的 `as ComponentType<...>` 告警是該檔既有慣用法，全檔 15+ 個元件皆同） |
+| `pnpm run test:visual` | ✅ 1 passed；3 張新 `-darwin`，既有 135 組零 churn |
+| `pnpm nx build web` | ✅ exit 0 |
 
 ## Change Log
 
 | Date | Change |
 |---|---|
 | 2026-08-19 | Story 建檔（SM Bob, create-story）。⚖️ Alexyu 裁定 9R-10a 的 FE 半邊改走 design-first，故本 story 由 9R-10a 拆出並置於 `blocked`。6 AC／6 task（含 Task 0 STOP GATE），FRONTEND-ONLY。三條紅線：glossary id≠觸發 id、fetch 在 episode 模式隱藏、episode 無內嵌軌不要造。 |
+| 2026-08-20 | **DEV DONE（Amelia, claude-opus-5[1m]）—— 6/6 task、AC #1–#6 全綠。** Task 0 發現 9R-UX 的 Completion Notes 空白（gate 指名的規格來源），依規先從已合併的 `.pen` 以 MCP 回填才開工（`6475c60b`）。交付：`MergedEpisode.episodeId`／共用 `parseTranscribeResponse` ＋ `startEpisodeTranscription`／dialog 三值 `mediaType` ＋ `glossaryMediaId` ＋ `mediaCode` chip ＋ 正向 `canGenerate`／`EpisodeList` 逐集入口（state 提升至 `SeasonAccordionItem`）／影集文案誠實化。28 個新測試，含三條紅線的回歸釘（glossary 用 series id 而觸發用 episode id 且**斷言兩者相異**／episode 模式無 `toggle-fetch`／十個 status 的動作矩陣逐一釘住）。**偏離**：AC #4 的 invalidate 改用該查詢自己的 `refetch()` —— 原寫法需 `useQueryClient`，會炸掉 4 個既有 `SeasonAccordion` 測試，且 refetch 範圍更窄。**自訂**：hover 態（設計全檔未繪）採 `$text-secondary → $text-primary` ＋ 極淡底色，待 Sally 追認。🔗 AC Drift: **FOUND**（`ux3-subtitle-v2` AC #2 的「影集字幕生成即將推出」→「請於下方分集清單逐集生成」；原文案在 sub-4-2／sub-5-3 出貨後已成事實錯誤，測試同步反轉並加防回歸）。📎 Contract Stamps: FOUND（2 upstream v1 from 9R-10a，ack 已記）。🎭 A11y: PASS。閘門：web 233 files／2681 tests、lint:all 0 errors、visual 1 passed（3 新 `-darwin`、既有 135 組零 churn）、prettier 乾淨。Status → review。 |
+| 2026-08-20 | **CR APPROVED-WITH-FIXES（adversarial code-review，同 session）—— 1H/2M/1L，4/4 全修。** H1：`mediaType` 放寬成三值後仍直接餵給只吃 `movie｜series` 的 `subtitleService`，**編譯器指出的正是紅線 2**（episode 進線上搜尋會 400）—— 我只用 UI 隱藏擋，型別層敞開；vitest／`nx build`／`lint:all` 全都抓不到（esbuild 只剝型別），補 `if (mediaType === 'episode') return;` 兼作執行期防線與型別窄化。M2：對話框標題傳了集名，但核定設計 `Aodey` 是**劇名** ＋ `tO72N` 集號 chip —— 劇名消失且與 chip 重複；`SeasonAccordion` 新增必填 `seriesTitle`，`LocalDetailV2` 以既有的 `data.title` 傳入。M3：按鈕閘門（`hasLocalFile`）與對話框閘門（`episodeId && filePath`）不一致 → 前端遇上舊後端時，按鈕全畫出來、點了全沒反應（`episode_id` 是 omitempty，而這對 story 刻意分開出貨）；抽出單一 type-predicate `canManageEpisodeSubtitle`，兩側問同一個問題，+3 測試。L1：SxxExx 格式化兩份實作 → export 共用。流程發現：story 閘門有 `build` 我沒跑，補跑後確認**它也抓不到 H1**，真正該加的是對本票檔案跑 `tsc --noEmit`。修後：web 233 files/**2684 tests**、lint:all 0 errors、本票檔案 tsc 零錯誤、visual 1 passed（既有 135 組零 churn）、build exit 0。Status → done。 |

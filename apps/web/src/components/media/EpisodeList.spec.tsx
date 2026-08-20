@@ -10,6 +10,7 @@ const episodes: MergedEpisode[] = [
     airDate: '2024-01-05',
     runtime: 24,
     hasLocalFile: true,
+    episodeId: 'ep-uuid-1',
     subtitleStatus: 'found',
     subtitleLanguage: 'zh-Hant',
     filePath: '/m/S01E01.mkv',
@@ -20,6 +21,8 @@ const episodes: MergedEpisode[] = [
     airDate: '2024-01-12',
     runtime: 24,
     hasLocalFile: true,
+    episodeId: 'ep-uuid-2',
+    filePath: '/m/S01E02.mkv',
     subtitleStatus: 'not_found',
   },
   {
@@ -205,5 +208,141 @@ describe('EpisodeList — icon grammar: settled verdicts vs not-yet (J2-D)', () 
       expect(screen.getByRole('status')).toHaveClass('text-[var(--text-muted)]');
       unmount();
     }
+  });
+});
+
+// ── 9R-10c — the per-episode subtitle entry (design J3-D `Z54xAd`) ────────
+
+/** Every subtitle_status the ladder can produce (sub-1-2 [@contract-v2]). */
+const ALL_STATUSES = [
+  'found',
+  'not_found',
+  'not_searched',
+  'searching',
+  'probing',
+  'extracting',
+  'translating',
+  'no_text_source',
+  'skipped',
+  'untranslated',
+] as const;
+
+describe('EpisodeList — 管理字幕 entry (9R-10c)', () => {
+  it('renders no action at all when the caller passes no handler (existing callers unchanged)', () => {
+    render(<EpisodeList episodes={episodes} seasonNumber={1} />);
+    expect(screen.queryByTestId('episode-manage-subtitle')).not.toBeInTheDocument();
+  });
+
+  it('renders the action only for rows WITH a local file', () => {
+    render(<EpisodeList episodes={episodes} seasonNumber={1} onManageSubtitle={vi.fn()} />);
+
+    // episodes[0] and [1] have a local file; [2] does not.
+    expect(screen.getAllByTestId('episode-manage-subtitle')).toHaveLength(2);
+    // The TMDb-only episode must not offer an action it cannot fulfil.
+    expect(screen.queryByLabelText('管理 S01E03 的字幕')).not.toBeInTheDocument();
+  });
+
+  it('gives each action an accessible name containing its SxxExx code', () => {
+    render(<EpisodeList episodes={episodes} seasonNumber={1} onManageSubtitle={vi.fn()} />);
+
+    // Without the code every one of these buttons would read "管理字幕" and be
+    // indistinguishable to a screen-reader user (design ruling-line-4).
+    expect(screen.getByLabelText('管理 S01E01 的字幕')).toBeInTheDocument();
+    expect(screen.getByLabelText('管理 S01E02 的字幕')).toBeInTheDocument();
+  });
+
+  it('raises onManageSubtitle with the episode that was clicked', () => {
+    const onManageSubtitle = vi.fn();
+    render(
+      <EpisodeList episodes={episodes} seasonNumber={1} onManageSubtitle={onManageSubtitle} />
+    );
+
+    fireEvent.click(screen.getByLabelText('管理 S01E02 的字幕'));
+    expect(onManageSubtitle).toHaveBeenCalledTimes(1);
+    expect(onManageSubtitle).toHaveBeenCalledWith(episodes[1]);
+  });
+
+  it('meets the 44px touch target', () => {
+    render(<EpisodeList episodes={episodes} seasonNumber={1} onManageSubtitle={vi.fn()} />);
+    expect(screen.getAllByTestId('episode-manage-subtitle')[0].className).toContain('min-h-[44px]');
+  });
+
+  // J3-D's ruling is that the action is IDENTICAL across all ten statuses.
+  // A status-dependent action would encode state twice (the indicator already
+  // does it) and make buttons flicker down a 25-episode list. This pins the
+  // ruling so a future "helpful" refinement has to argue with a test.
+  it.each(ALL_STATUSES)('renders the action for subtitle_status=%s (uniform by ruling)', (s) => {
+    const { unmount } = render(
+      <EpisodeList
+        episodes={[
+          {
+            episodeNumber: 7,
+            name: 'ep',
+            hasLocalFile: true,
+            episodeId: 'ep-uuid-7',
+            filePath: '/m/S02E07.mkv',
+            subtitleStatus: s,
+          },
+        ]}
+        seasonNumber={2}
+        onManageSubtitle={vi.fn()}
+      />
+    );
+
+    expect(screen.getByLabelText('管理 S02E07 的字幕')).toBeInTheDocument();
+    unmount();
+  });
+});
+
+// ── CR M3 — the gate must be ONE predicate, not two that can disagree ─────
+
+describe('EpisodeList — canManageEpisodeSubtitle gate (CR M3)', () => {
+  // The realistic failure: this pair of stories ships BE and FE separately, so a
+  // frontend can meet a backend older than 9R-10a. `episode_id` is omitempty, so
+  // every row would have a file but no address. Gating the BUTTON on
+  // hasLocalFile while the DIALOG needed episodeId rendered buttons that
+  // clicked and silently did nothing.
+  it('renders no action when the row has a file but NO episodeId (backend predates 9R-10a)', () => {
+    render(
+      <EpisodeList
+        episodes={[{ episodeNumber: 1, name: 'ep', hasLocalFile: true, filePath: '/m/e1.mkv' }]}
+        seasonNumber={1}
+        onManageSubtitle={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByTestId('episode-manage-subtitle')).not.toBeInTheDocument();
+  });
+
+  it('renders no action when the row has an episodeId but no filePath', () => {
+    render(
+      <EpisodeList
+        episodes={[{ episodeNumber: 1, name: 'ep', hasLocalFile: true, episodeId: 'e1' }]}
+        seasonNumber={1}
+        onManageSubtitle={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByTestId('episode-manage-subtitle')).not.toBeInTheDocument();
+  });
+
+  it('renders the action once all three are present', () => {
+    render(
+      <EpisodeList
+        episodes={[
+          {
+            episodeNumber: 1,
+            name: 'ep',
+            hasLocalFile: true,
+            episodeId: 'e1',
+            filePath: '/m/e1.mkv',
+          },
+        ]}
+        seasonNumber={1}
+        onManageSubtitle={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId('episode-manage-subtitle')).toBeInTheDocument();
   });
 });
