@@ -139,6 +139,21 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 		return p.failItem(ctx, ref, run, "route", err)
 	}
 
+	// 9R-10b AC #3: the FreeOnly brake. It sits HERE, after routing, because
+	// routing is the only place that can tell the free routes apart from the
+	// paid ones — the cheap estimator collapses all three embedded-track routes
+	// into one `extract` class (services/generation_candidates.go:31-35 says so
+	// in as many words). Routing costs an ffprobe and a local ffmpeg extract;
+	// neither bills anything, so paying that to learn the answer is free.
+	if opts.FreeOnly {
+		switch decision.Kind {
+		case RouteTranslate:
+			return p.deferPaidItem(ctx, ref, run, decision, item)
+		case RouteNoTextSource:
+			return p.deferPaidItem(ctx, ref, run, decision, item)
+		}
+	}
+
 	switch decision.Kind {
 	case RouteNoTextSource:
 		// sub-3-1: no longer an unconditional recordSkip — the ASR fallback
@@ -520,6 +535,66 @@ func sidecarCueCount(path string) (int, bool) {
 		return 0, false
 	}
 	return len(blocks), true
+}
+
+// deferPaidItem is the FreeOnly brake (9R-10b AC #3): the run stops at the
+// threshold of a paid call, having spent nothing.
+//
+// It is deliberately NOT recordSkip. recordSkip writes a TERMINAL media status
+// — the pipeline looked at this item and declined it for good. A deferral is
+// the opposite claim: the item is still wanted, it just needs the user to
+// approve the spend first. Writing `skipped` or `no_text_source` here would
+// take the item out of the consent list and out of the badge's honest
+// vocabulary, which is a worse outcome than never automating at all.
+//
+// So the media row goes back EXACTLY where it was found (item.SubtitleStatus,
+// captured at load), and the only durable trace is a `skipped` RUN row whose
+// error_message says why. The run row matters: for a cost-consent feature, "we
+// considered this item and chose not to spend" is an audit trail worth keeping.
+//
+// The two rulings this implements: 2026-08-07 (scanning updates metadata and
+// nothing else) and 2026-08-19 (「9R-10b 花錢須同意」 — paid work is never
+// automatic). See internal/cost_consent_test.go for the incident.
+func (p *Pipeline) deferPaidItem(
+	ctx context.Context,
+	ref MediaRef,
+	run *models.SubtitleRun,
+	decision RouteDecision,
+	item *MediaItem,
+) (*ProcessOutcome, error) {
+	restore := item.SubtitleStatus
+	if !restore.IsValid() {
+		// The store did not report a status (or reported one this build does
+		// not know). `not_searched` is the honest floor: it keeps the item
+		// enumerable and claims nothing that was not done.
+		restore = models.SubtitleStatusNotSearched
+	}
+
+	completedAt := p.now().UTC()
+	run.Status = models.SubtitleRunSkipped
+	run.ErrorMessage = "deferred: " + string(decision.Kind) + " requires paid work — awaiting cost consent (9R-10b AC #3)"
+	run.CompletedAt = &completedAt
+
+	if err := p.runs.Update(ctx, run); err != nil {
+		return p.failItem(ctx, ref, run, "record deferral", err)
+	}
+	// Empty path and language on purpose: stamping either would mark the item
+	// as subtitled and drop it out of missingZhHantSubtitleWhere, which keys on
+	// subtitle_language (movie_repository.go:898).
+	if err := p.setMediaStatus(ctx, ref, restore, "", ""); err != nil {
+		return p.failItem(ctx, ref, run, "restore media status after deferral", err)
+	}
+
+	// StageSkipped rather than a new stage value: PipelineStage is sub-1-3's
+	// `[@contract-v1]` enum and extending it would be a Rule 20 bump on a
+	// shipped SSE contract for a message the free lane never surfaces to a
+	// user anyway. The message carries the distinction.
+	p.emitProgress(ref, StageSkipped, "需要付費處理，已保留待你確認金額")
+	p.logger.Info("subtitle pipeline deferred paid item",
+		"media_id", ref.ID, "media_type", ref.MediaType,
+		"route", string(decision.Kind), "restored_status", string(restore))
+
+	return &ProcessOutcome{Run: run, Kind: decision.Kind}, nil
 }
 
 // recordSkip writes the two terminal rows for a routed-out item: the run is

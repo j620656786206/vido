@@ -27,9 +27,17 @@ type MediaLibrary struct {
 	Name        string                  `db:"name" json:"name"`
 	ContentType MediaLibraryContentType `db:"content_type" json:"content_type"`
 	AutoDetect  bool                    `db:"auto_detect" json:"auto_detect"`
-	SortOrder   int                     `db:"sort_order" json:"sort_order"`
-	CreatedAt   time.Time               `db:"created_at" json:"created_at"`
-	UpdatedAt   time.Time               `db:"updated_at" json:"updated_at"`
+	// AutoSubtitle opts this library in to FREE subtitle auto-generation after
+	// a scan (Story 9R-10b). Default false for every library, existing and new:
+	// the 2026-08-07 cost incident came from automation nobody switched on.
+	// Only zero-cost work runs under it — an embedded Traditional track
+	// delivered as-is, or a Simplified one converted locally. Anything that
+	// would bill (LLM translation, speech recognition) still waits for explicit
+	// consent on the estimate screen.
+	AutoSubtitle bool      `db:"auto_subtitle" json:"auto_subtitle"`
+	SortOrder    int       `db:"sort_order" json:"sort_order"`
+	CreatedAt    time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt    time.Time `db:"updated_at" json:"updated_at"`
 }
 
 // MediaLibraryPath represents a filesystem path belonging to a library.

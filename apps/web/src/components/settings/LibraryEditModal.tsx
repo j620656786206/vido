@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen 10 Settings Desktop (6UCtX)
+// Design ref: ux-design.pen Screen E5-D (hUVYm) · E5-M (P0P82x) · J4-D (sPzZT)
 /**
  * Library Edit/Create Modal for Settings page (Story 7b-4)
  */
@@ -30,6 +30,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
 
   const [name, setName] = useState('');
   const [contentType, setContentType] = useState<'movie' | 'series'>('movie');
+  const [autoSubtitle, setAutoSubtitle] = useState(false);
   const [newPath, setNewPath] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -37,6 +38,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
     if (existingLibrary) {
       setName(existingLibrary.name);
       setContentType(existingLibrary.contentType);
+      setAutoSubtitle(existingLibrary.autoSubtitle ?? false);
     }
   }, [existingLibrary]);
 
@@ -44,7 +46,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
     setError(null);
     try {
       if (isEditMode && libraryId) {
-        await updateLibrary.mutateAsync({ id: libraryId, name, contentType });
+        await updateLibrary.mutateAsync({ id: libraryId, name, contentType, autoSubtitle });
       } else {
         await createLibrary.mutateAsync({
           name,
@@ -197,6 +199,47 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
                   <Plus className="h-4 w-4" />
                 </button>
               )}
+            </div>
+          </div>
+
+          {/* Story 9R-10b AC #2 — free auto-generation opt-in.
+              Last field and behind a divider on purpose: the three above describe
+              what the library IS, this one describes what Vido DOES with it.
+              The copy is frozen by the 2026-08-19 ruling 「花錢須同意」 and must
+              keep saying both halves — free work happens, paid work waits — and
+              must never imply that scanning itself produces subtitles. */}
+          <div
+            className="border-t border-[var(--border-subtle)]/50 pt-4"
+            data-testid="library-auto-subtitle-field"
+          >
+            {/* The label WRAPS the input so the whole row is the hit area, and
+                still carries htmlFor like every other field in this modal. The
+                row is min-h-[44px] because this is the one control here that a
+                phone user has to hit deliberately. */}
+            <label
+              htmlFor="library-auto-subtitle-checkbox"
+              className="flex min-h-[44px] cursor-pointer items-start gap-2.5 py-1.5"
+            >
+              <input
+                id="library-auto-subtitle-checkbox"
+                type="checkbox"
+                checked={autoSubtitle}
+                onChange={(e) => setAutoSubtitle(e.target.checked)}
+                className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded accent-[var(--accent-primary)]"
+                data-testid="library-auto-subtitle-checkbox"
+              />
+              <span className="text-sm font-medium leading-relaxed text-[var(--text-primary)]">
+                新檔入庫後，自動完成免費的字幕處理
+              </span>
+            </label>
+            <div className="space-y-1.5 pl-[30px]">
+              <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+                影片內建繁體中文字幕會直接沿用，簡體字幕自動轉成繁體。這些都在本機執行，不會產生費用。
+              </p>
+              <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+                需要 AI
+                翻譯或語音辨識的影片不會自動處理，它們會留在「產生字幕」清單裡，標好預估金額等你確認。
+              </p>
             </div>
           </div>
         </div>

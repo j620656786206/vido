@@ -11,6 +11,12 @@ export interface MediaLibrary {
   name: string;
   contentType: 'movie' | 'series';
   autoDetect: boolean;
+  /**
+   * Opts this library in to FREE subtitle auto-generation after a scan
+   * (Story 9R-10b). Only zero-cost work runs under it; anything that would
+   * bill still waits for explicit consent on the estimate screen.
+   */
+  autoSubtitle: boolean;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
@@ -40,6 +46,8 @@ export interface UpdateLibraryRequest {
   name?: string;
   contentType?: 'movie' | 'series';
   sortOrder?: number;
+  /** Optional on purpose: omitting it leaves the existing opt-in untouched. */
+  autoSubtitle?: boolean;
 }
 
 interface ApiResponse<T> {

@@ -28,6 +28,7 @@ func setupLibraryTestDB(t *testing.T) *sql.DB {
 			name TEXT NOT NULL,
 			content_type TEXT NOT NULL CHECK(content_type IN ('movie', 'series')),
 			auto_detect INTEGER NOT NULL DEFAULT 0,
+			auto_subtitle INTEGER NOT NULL DEFAULT 0,
 			sort_order INTEGER NOT NULL DEFAULT 0,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -363,4 +364,61 @@ func TestMediaLibraryRepository_GetAllPaths(t *testing.T) {
 	paths, err := repo.GetAllPaths(ctx)
 	require.NoError(t, err)
 	assert.Len(t, paths, 2)
+}
+
+// ─── Story 9R-10b AC #2: auto_subtitle round-trips through all four CRUD sites ─
+
+// TestMediaLibraryRepository_AutoSubtitleRoundTrip exists because the column
+// has to be threaded through FOUR places (INSERT, two SELECTs, UPDATE) and
+// missing any one of them fails SILENTLY in a specific way: a missing SELECT
+// reads every library as opted-out, and a missing UPDATE makes the toggle
+// appear to save and then revert on reload.
+func TestMediaLibraryRepository_AutoSubtitleRoundTrip(t *testing.T) {
+	db := setupLibraryTestDB(t)
+	defer db.Close()
+	repo := NewMediaLibraryRepository(db)
+	ctx := context.Background()
+
+	lib := &models.MediaLibrary{ID: "lib-auto", Name: "我的電影", ContentType: models.ContentTypeMovie}
+	require.NoError(t, repo.Create(ctx, lib))
+
+	t.Run("defaults off on create", func(t *testing.T) {
+		got, err := repo.GetByID(ctx, "lib-auto")
+		require.NoError(t, err)
+		assert.False(t, got.AutoSubtitle, "a new library must never start opted in")
+	})
+
+	t.Run("update persists true and GetByID reads it back", func(t *testing.T) {
+		lib.AutoSubtitle = true
+		require.NoError(t, repo.Update(ctx, lib))
+
+		got, err := repo.GetByID(ctx, "lib-auto")
+		require.NoError(t, err)
+		assert.True(t, got.AutoSubtitle, "a missing SELECT column reads every library as opted-out")
+	})
+
+	t.Run("GetAll reads it back too", func(t *testing.T) {
+		all, err := repo.GetAll(ctx)
+		require.NoError(t, err)
+		require.Len(t, all, 1)
+		assert.True(t, all[0].AutoSubtitle, "GetAll is the second SELECT and is easy to forget")
+	})
+
+	t.Run("update persists false again", func(t *testing.T) {
+		lib.AutoSubtitle = false
+		require.NoError(t, repo.Update(ctx, lib))
+
+		got, err := repo.GetByID(ctx, "lib-auto")
+		require.NoError(t, err)
+		assert.False(t, got.AutoSubtitle, "turning the feature OFF must stick — this is the user withdrawing consent")
+	})
+
+	t.Run("create honours an explicitly opted-in library", func(t *testing.T) {
+		on := &models.MediaLibrary{ID: "lib-on", Name: "我的影集", ContentType: models.ContentTypeSeries, AutoSubtitle: true}
+		require.NoError(t, repo.Create(ctx, on))
+
+		got, err := repo.GetByID(ctx, "lib-on")
+		require.NoError(t, err)
+		assert.True(t, got.AutoSubtitle, "a missing INSERT column silently drops the value")
+	})
 }
