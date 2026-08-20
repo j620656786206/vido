@@ -703,12 +703,25 @@ func (s *EnrichmentService) applyMetadataToMovie(movie *models.Movie, item metad
 		movie.TMDbID = models.NullInt64{NullInt64: sql.NullInt64{Int64: tmdbID, Valid: true}}
 	}
 
-	// Poster path (TMDB returns full URL like "/poster.jpg")
-	if item.PosterURL != "" {
+	// bugfix-d D2: store the TMDb-RELATIVE path, matching the other write path
+	// (applyTMDbMovieDetails) and what the frontend assumes — `getImageUrl`
+	// prefixes `https://image.tmdb.org/t/p/{size}` unconditionally, so an
+	// absolute URL stored here rendered as ".../w342https://image.tmdb.org/..."
+	// and the poster broke. (The old comment here claimed TMDb "returns full URL
+	// like '/poster.jpg'", which contradicted itself and was the bug's alibi.)
+	//
+	// Providers whose artwork lives on their own host — Douban, Wikipedia — have
+	// no relative path to give; their absolute URL is stored as-is and the
+	// frontend passes any absolute value straight through.
+	if item.PosterPath != "" {
+		movie.PosterPath = models.NewNullString(item.PosterPath)
+	} else if item.PosterURL != "" {
 		movie.PosterPath = models.NewNullString(item.PosterURL)
 	}
 
-	if item.BackdropURL != "" {
+	if item.BackdropPath != "" {
+		movie.BackdropPath = models.NewNullString(item.BackdropPath)
+	} else if item.BackdropURL != "" {
 		movie.BackdropPath = models.NewNullString(item.BackdropURL)
 	}
 

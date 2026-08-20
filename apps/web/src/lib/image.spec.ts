@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getImageUrl, getImageSrcSet, getImageSizes } from './image';
+import { getImageUrl, getImageSrcSet, getImageSizes, getBackdropSrcSet } from './image';
 
 describe('image utilities', () => {
   describe('getImageUrl', () => {
@@ -71,5 +71,45 @@ describe('image utilities', () => {
       const result = getImageSizes();
       expect(result).toContain('200px');
     });
+  });
+});
+
+// ─── bugfix-d D2: absolute values must pass through, never get prefixed ───────
+
+describe('absolute-URL passthrough (bugfix-d D2)', () => {
+  // Rows written before the D2 fix stored the absolute TMDb URL; prefixing it
+  // produced ".../w342https://image.tmdb.org/..." and a broken poster.
+  it('returns a stored absolute TMDb URL unchanged', () => {
+    const stored = 'https://image.tmdb.org/t/p/w500/abc123.jpg';
+    expect(getImageUrl(stored)).toBe(stored);
+    expect(getImageUrl(stored, 'w185')).toBe(stored);
+  });
+
+  // Douban / Wikipedia artwork lives on its own host and has no relative path.
+  it('returns a non-TMDb absolute URL unchanged', () => {
+    const stored = 'https://img1.doubanio.com/view/photo/l/public/p2622599107.jpg';
+    expect(getImageUrl(stored)).toBe(stored);
+  });
+
+  it('accepts protocol-relative URLs as absolute', () => {
+    expect(getImageUrl('//img.example.com/p.jpg')).toBe('//img.example.com/p.jpg');
+  });
+
+  it('still prefixes the canonical relative path', () => {
+    expect(getImageUrl('/abc123.jpg', 'w500')).toBe('https://image.tmdb.org/t/p/w500/abc123.jpg');
+  });
+
+  it('offers no srcset for an absolute URL (one fixed rendition, no size ladder)', () => {
+    expect(getImageSrcSet('https://image.tmdb.org/t/p/w500/abc123.jpg')).toBeNull();
+    expect(getBackdropSrcSet('https://img1.doubanio.com/view/photo/l/public/p1.jpg')).toBeNull();
+  });
+
+  it('still builds the srcset ladder for a relative path', () => {
+    expect(getImageSrcSet('/abc123.jpg')).toContain(
+      'https://image.tmdb.org/t/p/w342/abc123.jpg 342w'
+    );
+    expect(getBackdropSrcSet('/abc123.jpg')).toContain(
+      'https://image.tmdb.org/t/p/w1280/abc123.jpg 1280w'
+    );
   });
 });

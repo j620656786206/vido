@@ -447,12 +447,13 @@ func TestLanguageFallbackClient_SearchTVShowsWithFallback(t *testing.T) {
 
 func TestLanguageFallbackClient_GetMovieDetailsWithFallback(t *testing.T) {
 	tests := []struct {
-		name      string
-		responses map[string]*MovieDetails
-		errors    map[string]error
-		wantLang  string
-		wantTitle string
-		wantErr   bool
+		name         string
+		responses    map[string]*MovieDetails
+		errors       map[string]error
+		wantLang     string
+		wantTitle    string
+		wantOverview string
+		wantErr      bool
 	}{
 		{
 			name: "finds details in first language",
@@ -469,7 +470,13 @@ func TestLanguageFallbackClient_GetMovieDetailsWithFallback(t *testing.T) {
 			wantTitle: "鬥陣俱樂部",
 		},
 		{
-			name: "falls back when no overview",
+			// bugfix-d D1/D4: this case used to expect the ENTIRE `en` payload
+			// (lang "en", title "Fight Club") whenever zh-TW lacked an overview —
+			// which is precisely the defect: one missing field dragged the title
+			// and the genres down the chain, giving the library 简体 genres and
+			// romanized titles. The fallback now merges PER FIELD, so the zh-TW
+			// title survives and only the missing overview is borrowed.
+			name: "borrows only the missing overview, keeps the zh-TW title",
 			responses: map[string]*MovieDetails{
 				"zh-TW": {
 					Movie: Movie{
@@ -491,8 +498,11 @@ func TestLanguageFallbackClient_GetMovieDetailsWithFallback(t *testing.T) {
 					},
 				},
 			},
-			wantLang:  "en",
-			wantTitle: "Fight Club",
+			wantLang:  "zh-TW",
+			wantTitle: "Title",
+			// Neither zh-TW nor zh-CN has an overview here, so it comes from the
+			// end of the chain — while the title still stays zh-TW's.
+			wantOverview: "Content",
 		},
 	}
 
@@ -514,6 +524,9 @@ func TestLanguageFallbackClient_GetMovieDetailsWithFallback(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantLang, lang)
 			assert.Equal(t, tt.wantTitle, result.Title)
+			if tt.wantOverview != "" {
+				assert.Equal(t, tt.wantOverview, result.Overview)
+			}
 		})
 	}
 }
@@ -886,4 +899,117 @@ func TestFallback_Discover_CallerLanguageEmpty_DoesNotRetryChain(t *testing.T) {
 			tc.run(t, fb, m)
 		})
 	}
+}
+
+// ─── bugfix-d D1/D4: per-field merge, not all-or-nothing ─────────────────────
+
+func strPtr(s string) *string { return &s }
+
+// The exact live-NAS shape: TMDb has a zh-TW title but NO zh-TW overview (common
+// for niche titles). Before bugfix-d the all-or-nothing check failed on zh-TW and
+// returned the WHOLE zh-CN payload — 简体 genres in the library, and one step
+// further down the chain, a romanized English title over the Chinese one.
+func TestGetMovieDetailsWithFallback_KeepsZhTWFieldsWhenOverviewMissing(t *testing.T) {
+	mock := &MockClient{
+		GetMovieDetailsResponses: map[string]*MovieDetails{
+			"zh-TW": {
+				Movie:  Movie{ID: 1, Title: "禍禍女", Overview: "", PosterPath: strPtr("/zhtw.jpg")},
+				Genres: []Genre{{ID: 28, Name: "動作"}, {ID: 12, Name: "冒險"}},
+			},
+			"zh-CN": {
+				Movie:  Movie{ID: 1, Title: "祸祸女", Overview: "一个简体简介。", PosterPath: strPtr("/zhcn.jpg")},
+				Genres: []Genre{{ID: 28, Name: "动作"}, {ID: 12, Name: "冒险"}},
+			},
+			"en": {
+				Movie:  Movie{ID: 1, Title: "Mag Mag", Overview: "An English synopsis.", PosterPath: strPtr("/en.jpg")},
+				Genres: []Genre{{ID: 28, Name: "Action"}, {ID: 12, Name: "Adventure"}},
+			},
+		},
+	}
+	client := NewLanguageFallbackClient(mock, DefaultFallbackLanguages)
+
+	result, lang, err := client.GetMovieDetailsWithFallback(context.Background(), 1)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+
+	assert.Equal(t, "zh-TW", lang, "the base language is what zh-TW supplied, not where the overview came from")
+	assert.Equal(t, "禍禍女", result.Title, "D4: a present zh-TW title must never be replaced")
+	require.Len(t, result.Genres, 2)
+	assert.Equal(t, "動作", result.Genres[0].Name, "D1: genres stay 繁體 — they are present in every locale")
+	assert.Equal(t, "冒險", result.Genres[1].Name)
+	require.NotNil(t, result.PosterPath)
+	assert.Equal(t, "/zhtw.jpg", *result.PosterPath, "zh-TW artwork wins when it exists")
+
+	// Only the genuinely missing field is borrowed.
+	assert.Equal(t, "一个简体简介。", result.Overview, "the empty field is filled from the next language in the chain")
+}
+
+// A complete zh-TW payload must short-circuit — no borrowing, byte-identical to
+// the pre-bugfix-d behavior.
+func TestGetMovieDetailsWithFallback_CompleteZhTWUnchanged(t *testing.T) {
+	mock := &MockClient{
+		GetMovieDetailsResponses: map[string]*MovieDetails{
+			"zh-TW": {
+				Movie:  Movie{ID: 2, Title: "繁中片名", Overview: "繁中簡介。"},
+				Genres: []Genre{{ID: 18, Name: "劇情"}},
+			},
+			"zh-CN": {
+				Movie:  Movie{ID: 2, Title: "简中片名", Overview: "简中简介。"},
+				Genres: []Genre{{ID: 18, Name: "剧情"}},
+			},
+		},
+	}
+	client := NewLanguageFallbackClient(mock, DefaultFallbackLanguages)
+
+	result, lang, err := client.GetMovieDetailsWithFallback(context.Background(), 2)
+	require.NoError(t, err)
+	assert.Equal(t, "zh-TW", lang)
+	assert.Equal(t, "繁中片名", result.Title)
+	assert.Equal(t, "繁中簡介。", result.Overview)
+	assert.Equal(t, "劇情", result.Genres[0].Name)
+}
+
+// zh-TW absent entirely → the merge must not invent anything; the next language
+// supplies every field, exactly as before.
+func TestGetMovieDetailsWithFallback_NoZhTWFallsThroughCleanly(t *testing.T) {
+	mock := &MockClient{
+		GetMovieDetailsResponses: map[string]*MovieDetails{
+			"zh-TW": {Movie: Movie{ID: 3}},
+			"zh-CN": {
+				Movie:  Movie{ID: 3, Title: "简中片名", Overview: "简中简介。"},
+				Genres: []Genre{{ID: 18, Name: "剧情"}},
+			},
+		},
+	}
+	client := NewLanguageFallbackClient(mock, DefaultFallbackLanguages)
+
+	result, _, err := client.GetMovieDetailsWithFallback(context.Background(), 3)
+	require.NoError(t, err)
+	assert.Equal(t, "简中片名", result.Title)
+	assert.Equal(t, "简中简介。", result.Overview)
+	require.Len(t, result.Genres, 1)
+}
+
+// Series ride the same defect and the same fix.
+func TestGetTVShowDetailsWithFallback_KeepsZhTWFieldsWhenOverviewMissing(t *testing.T) {
+	mock := &MockClient{
+		GetTVShowDetailsResponses: map[string]*TVShowDetails{
+			"zh-TW": {
+				TVShow: TVShow{ID: 9, Name: "繁中劇名", Overview: ""},
+				Genres: []Genre{{ID: 10759, Name: "動作冒險"}},
+			},
+			"zh-CN": {
+				TVShow: TVShow{ID: 9, Name: "简中剧名", Overview: "简中简介。"},
+				Genres: []Genre{{ID: 10759, Name: "动作冒险"}},
+			},
+		},
+	}
+	client := NewLanguageFallbackClient(mock, DefaultFallbackLanguages)
+
+	result, lang, err := client.GetTVShowDetailsWithFallback(context.Background(), 9)
+	require.NoError(t, err)
+	assert.Equal(t, "zh-TW", lang)
+	assert.Equal(t, "繁中劇名", result.Name, "D4 for series")
+	assert.Equal(t, "動作冒險", result.Genres[0].Name, "D1 for series")
+	assert.Equal(t, "简中简介。", result.Overview)
 }

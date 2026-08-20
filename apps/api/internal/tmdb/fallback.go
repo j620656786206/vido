@@ -180,8 +180,8 @@ func (c *LanguageFallbackClient) SearchTVShowsWithFallback(ctx context.Context, 
 // GetMovieDetailsWithFallback gets movie details, trying each language in the fallback chain
 // Returns the details, the language used, and any error
 func (c *LanguageFallbackClient) GetMovieDetailsWithFallback(ctx context.Context, movieID int) (*MovieDetails, string, error) {
-	var lastResult *MovieDetails
-	var lastLang string
+	var merged *MovieDetails
+	var baseLang string
 	var lastErr error
 
 	for _, lang := range c.languages {
@@ -195,21 +195,27 @@ func (c *LanguageFallbackClient) GetMovieDetailsWithFallback(ctx context.Context
 			lastErr = err
 			continue
 		}
-
-		lastResult = result
-		lastLang = lang
 		lastErr = nil
 
-		// Check if we have localized content (non-empty title and overview)
-		if hasLocalizedMovieDetails(result) {
-			slog.Debug("Language fallback: found localized movie details",
-				"language", lang,
-				"movie_id", movieID,
-			)
-			return result, lang, nil
+		if merged == nil {
+			// The FIRST language that answers is the base: its values win every
+			// field it actually has (bugfix-d — the chain leads with zh-TW).
+			merged = result
+			baseLang = lang
+		} else {
+			fillEmptyMovieFields(merged, result)
 		}
 
-		slog.Debug("Language fallback: no localized movie details",
+		if hasLocalizedMovieDetails(merged) {
+			slog.Debug("Language fallback: localized movie details complete",
+				"base_language", baseLang,
+				"completed_at_language", lang,
+				"movie_id", movieID,
+			)
+			return merged, baseLang, nil
+		}
+
+		slog.Debug("Language fallback: movie details still incomplete",
 			"language", lang,
 			"movie_id", movieID,
 		)
@@ -219,14 +225,57 @@ func (c *LanguageFallbackClient) GetMovieDetailsWithFallback(ctx context.Context
 		return nil, "", lastErr
 	}
 
-	return lastResult, lastLang, nil
+	return merged, baseLang, nil
 }
+
+// fillEmptyMovieFields copies localized fields from src into dst ONLY where dst
+// is empty (bugfix-d D1/D4).
+//
+// Before bugfix-d the fallback was all-or-nothing: hasLocalizedMovieDetails
+// requires BOTH title and overview, so a movie with a perfectly good zh-TW title
+// but an empty zh-TW overview — common for niche titles — failed the check and
+// the WHOLE zh-CN (or en) payload was returned instead. That is why the library
+// showed 简体 genres (动作/冒险) and romanized titles ("Mag Mag" over 禍禍女):
+// one missing field dragged every other field down the chain with it.
+//
+// Merging per field keeps zh-TW for everything zh-TW actually has, and borrows
+// only the genuinely missing pieces. Genres come back populated in every
+// language, so zh-TW genre names now always win.
+func fillEmptyMovieFields(dst, src *MovieDetails) {
+	if dst == nil || src == nil {
+		return
+	}
+	if dst.Title == "" {
+		dst.Title = src.Title
+	}
+	if dst.Overview == "" {
+		dst.Overview = src.Overview
+	}
+	if dst.Tagline == "" {
+		dst.Tagline = src.Tagline
+	}
+	if len(dst.Genres) == 0 {
+		dst.Genres = src.Genres
+	}
+	// TMDb serves per-language artwork; a locale with no poster of its own
+	// should still show the movie rather than a blank card.
+	if isBlankPath(dst.PosterPath) {
+		dst.PosterPath = src.PosterPath
+	}
+	if isBlankPath(dst.BackdropPath) {
+		dst.BackdropPath = src.BackdropPath
+	}
+}
+
+// isBlankPath treats a nil pointer and a pointer to "" as the same absent value —
+// TMDb uses both for "no image in this locale".
+func isBlankPath(p *string) bool { return p == nil || *p == "" }
 
 // GetTVShowDetailsWithFallback gets TV show details, trying each language in the fallback chain
 // Returns the details, the language used, and any error
 func (c *LanguageFallbackClient) GetTVShowDetailsWithFallback(ctx context.Context, tvID int) (*TVShowDetails, string, error) {
-	var lastResult *TVShowDetails
-	var lastLang string
+	var merged *TVShowDetails
+	var baseLang string
 	var lastErr error
 
 	for _, lang := range c.languages {
@@ -240,21 +289,25 @@ func (c *LanguageFallbackClient) GetTVShowDetailsWithFallback(ctx context.Contex
 			lastErr = err
 			continue
 		}
-
-		lastResult = result
-		lastLang = lang
 		lastErr = nil
 
-		// Check if we have localized content
-		if hasLocalizedTVShowDetails(result) {
-			slog.Debug("Language fallback: found localized TV show details",
-				"language", lang,
-				"tv_id", tvID,
-			)
-			return result, lang, nil
+		if merged == nil {
+			merged = result
+			baseLang = lang
+		} else {
+			fillEmptyTVShowFields(merged, result)
 		}
 
-		slog.Debug("Language fallback: no localized TV show details",
+		if hasLocalizedTVShowDetails(merged) {
+			slog.Debug("Language fallback: localized TV show details complete",
+				"base_language", baseLang,
+				"completed_at_language", lang,
+				"tv_id", tvID,
+			)
+			return merged, baseLang, nil
+		}
+
+		slog.Debug("Language fallback: TV show details still incomplete",
 			"language", lang,
 			"tv_id", tvID,
 		)
@@ -264,7 +317,34 @@ func (c *LanguageFallbackClient) GetTVShowDetailsWithFallback(ctx context.Contex
 		return nil, "", lastErr
 	}
 
-	return lastResult, lastLang, nil
+	return merged, baseLang, nil
+}
+
+// fillEmptyTVShowFields is fillEmptyMovieFields for series — same bugfix-d
+// rationale: a series with a zh-TW name but no zh-TW overview must not have its
+// genres and name dragged to 简体 along with the borrowed overview.
+func fillEmptyTVShowFields(dst, src *TVShowDetails) {
+	if dst == nil || src == nil {
+		return
+	}
+	if dst.Name == "" {
+		dst.Name = src.Name
+	}
+	if dst.Overview == "" {
+		dst.Overview = src.Overview
+	}
+	if dst.Tagline == "" {
+		dst.Tagline = src.Tagline
+	}
+	if len(dst.Genres) == 0 {
+		dst.Genres = src.Genres
+	}
+	if isBlankPath(dst.PosterPath) {
+		dst.PosterPath = src.PosterPath
+	}
+	if isBlankPath(dst.BackdropPath) {
+		dst.BackdropPath = src.BackdropPath
+	}
 }
 
 // GetSeasonDetailsWithFallback gets season details, trying each language in the fallback chain.
