@@ -160,6 +160,18 @@ type MediaItem struct {
 	// Context is the FR26 show metadata injected into the translation prompt
 	// and hashed into the run version.
 	Context TranslateContext
+	// SubtitlePath / SubtitleLanguage are the row's values AS LOADED.
+	//
+	// CR-249 H1: the FreeOnly brake used to hand setMediaStatus empty strings
+	// for these, and the shared writer maps "" to NULL unconditionally
+	// (repository/subtitle_generation_status.go:44-45) — so "do not stamp a
+	// path" silently became "ERASE the path". For an item bugfix-j had left at
+	// `untranslated` that path is the ENGLISH SRT a paid ASR run already
+	// produced, and it is the only thing that lets the next consented run
+	// translate instead of transcribing again. Blanking it makes the user pay
+	// for the same speech recognition twice.
+	SubtitlePath     string
+	SubtitleLanguage string
 	// SubtitleStatus is the row's status AS LOADED, before this run touches it.
 	//
 	// 9R-10b AC #3: the FreeOnly brake has to put the media row back exactly

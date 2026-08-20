@@ -249,3 +249,66 @@ func TestProcessItem_FreeOnlyLeavesSkipUntouched(t *testing.T) {
 			"RouteSkip keeps its terminal `skipped` status regardless of FreeOnly — the pipeline DECLINED this item, it did not defer it")
 	}
 }
+
+// ─── CR-249 H1: the brake must not erase a paid ASR's resume marker ───────
+
+// TestProcessItem_FreeOnlyBrakePreservesResumeMarker is a COST regression pin,
+// not a tidiness one.
+//
+// bugfix-j leaves an item at `untranslated` when speech recognition already ran
+// and produced an English sidecar but the translate leg could not finish. That
+// row's subtitle_path is the receipt for money already spent: it is what lets
+// the next consented run translate instead of transcribing again.
+//
+// The shared writer maps an empty string to NULL unconditionally
+// (repository/subtitle_generation_status.go:44-45), so handing setMediaStatus
+// "" does not mean "leave this column alone" — it means ERASE it. The brake did
+// exactly that, which would have made this feature charge the user a second
+// time for the same audio.
+func TestProcessItem_FreeOnlyBrakePreservesResumeMarker(t *testing.T) {
+	const enSidecar = "/media/Show.S01E01.en.srt"
+
+	for name, tc := range map[string]struct {
+		decision RouteDecision
+		asr      bool
+	}{
+		"translate":      {decision: translateDecision("Good morning")},
+		"no_text_source": {decision: noTextDecision(), asr: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var h *itemHarness
+			if tc.asr {
+				h = asrHarness(t, tc.decision, &fakeSpeechTranscriber{available: true})
+			} else {
+				h = newItemHarness(t, tc.decision)
+			}
+			h.media.item.SubtitleStatus = models.SubtitleStatusUntranslated
+			h.media.item.SubtitlePath = enSidecar
+			h.media.item.SubtitleLanguage = "en"
+
+			_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{FreeOnly: true})
+			require.NoError(t, err)
+
+			last := h.media.writes[len(h.media.writes)-1]
+			assert.Equal(t, models.SubtitleStatusUntranslated, last.status)
+			assert.Equal(t, enSidecar, last.path,
+				"blanking subtitle_path destroys the receipt for an ASR run the user already paid for")
+			assert.Equal(t, "en", last.language,
+				"blanking subtitle_language loses the translate-only resume signal")
+		})
+	}
+}
+
+// TestProcessItem_FreeOnlyBrakeLeavesAnEmptyRowEmpty pins the other half: an
+// item that genuinely has no sidecar must not gain a phantom one.
+func TestProcessItem_FreeOnlyBrakeLeavesAnEmptyRowEmpty(t *testing.T) {
+	h := newItemHarness(t, translateDecision("Good morning"))
+	h.media.item.SubtitleStatus = models.SubtitleStatusNotSearched
+
+	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{FreeOnly: true})
+	require.NoError(t, err)
+
+	last := h.media.writes[len(h.media.writes)-1]
+	assert.Empty(t, last.path)
+	assert.Empty(t, last.language)
+}

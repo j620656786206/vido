@@ -94,7 +94,9 @@ func (s *repoMediaStore) loadMovie(ctx context.Context, id string) (*MediaItem, 
 		TMDbID:   nullInt64Ptr(movie.TMDbID),
 		// 9R-10b AC #3: captured so the FreeOnly brake can put the row back
 		// exactly where it found it instead of flattening it to not_searched.
-		SubtitleStatus: movie.SubtitleStatus,
+		SubtitleStatus:   movie.SubtitleStatus,
+		SubtitlePath:     movie.SubtitlePath.String,
+		SubtitleLanguage: movie.SubtitleLanguage.String,
 		// Movies carry no ShowKey: nothing shares their prompt prefix, so the
 		// D10 gate bypasses them entirely (sub-1-5b AC #5.1).
 		ShowKey: "",
@@ -115,9 +117,11 @@ func (s *repoMediaStore) loadSeries(ctx context.Context, id string) (*MediaItem,
 		return nil, err
 	}
 	return &MediaItem{
-		FilePath:       series.FilePath.String,
-		TMDbID:         nullInt64Ptr(series.TMDbID),
-		SubtitleStatus: series.SubtitleStatus,
+		FilePath:         series.FilePath.String,
+		TMDbID:           nullInt64Ptr(series.TMDbID),
+		SubtitleStatus:   series.SubtitleStatus,
+		SubtitlePath:     series.SubtitlePath.String,
+		SubtitleLanguage: series.SubtitleLanguage.String,
 		// A series row IS its own show, so it keys the gate on itself.
 		ShowKey: series.ID,
 		Context: seriesContext(series),
@@ -141,9 +145,11 @@ func (s *repoMediaStore) loadEpisode(ctx context.Context, id string) (*MediaItem
 	}
 
 	item := &MediaItem{
-		FilePath:       episode.FilePath.String,
-		TMDbID:         nullInt64Ptr(episode.TMDbID),
-		SubtitleStatus: episode.SubtitleStatus,
+		FilePath:         episode.FilePath.String,
+		TMDbID:           nullInt64Ptr(episode.TMDbID),
+		SubtitleStatus:   episode.SubtitleStatus,
+		SubtitlePath:     episode.SubtitlePath.String,
+		SubtitleLanguage: episode.SubtitleLanguage.String,
 		// The D10 gate keys on the SERIES id, never the episode id — an
 		// episode-keyed gate would serialize nothing while defeating the exact
 		// season-batch case D10 exists for (sub-1-5b AC #5.1).

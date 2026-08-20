@@ -589,10 +589,18 @@ func (p *Pipeline) deferPaidItem(
 	if err := p.runs.Update(ctx, run); err != nil {
 		return p.failItem(ctx, ref, run, "record deferral", err)
 	}
-	// Empty path and language on purpose: stamping either would mark the item
-	// as subtitled and drop it out of missingZhHantSubtitleWhere, which keys on
-	// subtitle_language (movie_repository.go:898).
-	if err := p.setMediaStatus(ctx, ref, restore, "", ""); err != nil {
+	// The row's EXISTING path and language are written back unchanged — not
+	// empty strings (CR-249 H1). The shared writer maps "" to NULL without
+	// asking (repository/subtitle_generation_status.go:44-45), so passing ""
+	// does not mean "leave alone", it means "erase". Erasing here would destroy
+	// the English sidecar pointer that a paid ASR run already earned for an
+	// `untranslated` item, and the next consented run would re-transcribe from
+	// scratch — this feature charging the user twice for the same audio.
+	//
+	// Writing them back is safe for the consent list: an item whose language
+	// were already zh-Hant could not have been enumerated by
+	// missingZhHantSubtitleWhere (movie_repository.go:898) in the first place.
+	if err := p.setMediaStatus(ctx, ref, restore, item.SubtitlePath, item.SubtitleLanguage); err != nil {
 		return p.failItem(ctx, ref, run, "restore media status after deferral", err)
 	}
 
