@@ -16,12 +16,17 @@ import { ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { getImageUrl } from '../../lib/image';
 import { useSeasonEpisodes } from '../../hooks/useMediaDetails';
-import type { SeasonSummary } from '../../types/library';
-import { EpisodeList } from './EpisodeList';
+import type { MergedEpisode, SeasonSummary } from '../../types/library';
+import { ManageSubtitleDialogV2 } from '../subtitle/ManageSubtitleDialogV2';
+import { EpisodeList, canManageEpisodeSubtitle, episodeCode } from './EpisodeList';
 
 interface SeasonAccordionProps {
   seasons: SeasonSummary[];
   seriesId: string;
+  /** Show name. The per-episode subtitle dialog titles itself with the SHOW and
+   *  puts SxxExx in a separate code chip (design nodes Aodey + tO72N) — titling
+   *  it with the episode name instead loses the show and duplicates the chip. */
+  seriesTitle: string;
   tmdbId: number;
   /** Season-list fetch state (Story 12-2 M2) — when the season summaries are
    *  still loading or failed, the accordion shows a skeleton / retry instead of
@@ -34,10 +39,15 @@ interface SeasonAccordionProps {
 interface SeasonAccordionItemProps {
   season: SeasonSummary;
   seriesId: string;
+  seriesTitle: string;
 }
 
-function SeasonAccordionItem({ season, seriesId }: SeasonAccordionItemProps) {
+function SeasonAccordionItem({ season, seriesId, seriesTitle }: SeasonAccordionItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  // 9R-10c: EpisodeList is presentational, so the per-episode dialog state
+  // lives here — this is also the level that already knows the seriesId, which
+  // is the GLOSSARY key (the dialog's mediaId stays the episode row id).
+  const [subtitleEpisode, setSubtitleEpisode] = useState<MergedEpisode | null>(null);
 
   // Lazy fetch: query stays disabled until the season is expanded (AC #3).
   const { data, isLoading, isError, refetch } = useSeasonEpisodes(
@@ -104,8 +114,32 @@ function SeasonAccordionItem({ season, seriesId }: SeasonAccordionItemProps) {
             isLoading={isLoading}
             isError={isError}
             onRetry={() => refetch()}
+            onManageSubtitle={setSubtitleEpisode}
           />
         </div>
+      )}
+
+      {/* 9R-10c: mediaId is the EPISODE row id (the transcribe target);
+          glossaryMediaId is the SERIES id (the glossary is per-show).
+          subtitleTracks is deliberately NOT passed — episodes carry no embedded
+          track data and probing each one would turn a season expand into a disk
+          storm (red line 3); the authoritative subtitleStatus wins anyway.
+          onGenerationComplete uses THIS query's own refetch — narrower than
+          invalidating by key, and it needs no QueryClient of its own. */}
+      {subtitleEpisode && canManageEpisodeSubtitle(subtitleEpisode) && (
+        <ManageSubtitleDialogV2
+          mediaId={subtitleEpisode.episodeId}
+          mediaType="episode"
+          glossaryMediaId={seriesId}
+          mediaTitle={seriesTitle}
+          mediaCode={episodeCode(season.seasonNumber, subtitleEpisode.episodeNumber)}
+          mediaFilePath={subtitleEpisode.filePath}
+          subtitleStatus={subtitleEpisode.subtitleStatus}
+          subtitleLanguage={subtitleEpisode.subtitleLanguage}
+          open={true}
+          onOpenChange={(next) => !next && setSubtitleEpisode(null)}
+          onGenerationComplete={() => refetch()}
+        />
       )}
     </div>
   );
@@ -114,6 +148,7 @@ function SeasonAccordionItem({ season, seriesId }: SeasonAccordionItemProps) {
 export function SeasonAccordion({
   seasons,
   seriesId,
+  seriesTitle,
   tmdbId,
   isLoading,
   isError,
@@ -173,7 +208,12 @@ export function SeasonAccordion({
     <section aria-label="季與劇集" className="flex flex-col gap-3" data-testid="season-accordion">
       <h2 className="text-lg font-semibold text-[var(--text-primary)]">季與劇集</h2>
       {seasons.map((season) => (
-        <SeasonAccordionItem key={season.seasonNumber} season={season} seriesId={seriesId} />
+        <SeasonAccordionItem
+          key={season.seasonNumber}
+          season={season}
+          seriesId={seriesId}
+          seriesTitle={seriesTitle}
+        />
       ))}
     </section>
   );

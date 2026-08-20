@@ -9,11 +9,36 @@
  * Each episode row shows: SxxExx code, title, air date, runtime, and — only when
  * the episode has a local file — a subtitle status indicator (AC #4/#5/#6).
  * On mobile, rows stack (title/date line, metadata below) for readability (AC #8).
+ *
+ * 9R-10c: rows with a local file also carry a 管理字幕 action (design J3-D
+ * `Z54xAd`, node `btn-subtitle`). J3-D's ruling is that the action is IDENTICAL
+ * for all ten subtitle_status values — the status indicator already encodes
+ * state, and a status-dependent action would encode the same fact twice and
+ * make buttons flicker in and out down a 25-episode list. The only gate is
+ * hasLocalFile. Feasibility is explained inside the dialog, which has room.
+ *
+ * Presentational by contract: the dialog state lives in SeasonAccordionItem;
+ * this component only raises onManageSubtitle.
  */
 
 import { CheckCircle2, XCircle, Loader2, Minus, CircleSlash, CircleDashed } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { MergedEpisode } from '../../types/library';
+
+/**
+ * The single gate for the per-episode subtitle entry (CR M3).
+ *
+ * `hasLocalFile` alone is NOT enough: `episode_id` is `omitempty` on the wire,
+ * so a frontend deployed against a backend older than 9R-10a gets rows that
+ * have a file but no address. Gating the BUTTON on one predicate and the DIALOG
+ * on another produced buttons that rendered, clicked, and silently did nothing.
+ * Both sides now ask this one question.
+ */
+export function canManageEpisodeSubtitle(
+  episode: MergedEpisode
+): episode is MergedEpisode & { episodeId: string; filePath: string } {
+  return Boolean(episode.hasLocalFile && episode.episodeId && episode.filePath);
+}
 
 interface EpisodeListProps {
   episodes: MergedEpisode[];
@@ -21,10 +46,14 @@ interface EpisodeListProps {
   isLoading?: boolean;
   isError?: boolean;
   onRetry?: () => void;
+  /** Raised when a row's 管理字幕 is activated (9R-10c). Omitted → no action
+   *  is rendered at all, keeping every existing caller byte-identical. */
+  onManageSubtitle?: (episode: MergedEpisode) => void;
 }
 
-/** Formats a season/episode pair as SxxExx (e.g. S01E05). */
-function episodeCode(seasonNumber: number, episodeNumber: number): string {
+/** Formats a season/episode pair as SxxExx (e.g. S01E05). Exported so callers
+ *  hosting the subtitle dialog label it identically (CR L1 — it was duplicated). */
+export function episodeCode(seasonNumber: number, episodeNumber: number): string {
   const s = String(seasonNumber).padStart(2, '0');
   const e = String(episodeNumber).padStart(2, '0');
   return `S${s}E${e}`;
@@ -178,6 +207,7 @@ export function EpisodeList({
   isLoading,
   isError,
   onRetry,
+  onManageSubtitle,
 }: EpisodeListProps) {
   if (isLoading) return <EpisodeListSkeleton />;
   if (isError) return <EpisodeListError onRetry={onRetry} />;
@@ -210,6 +240,24 @@ export function EpisodeList({
               </span>
               <SubtitleStatusIcon episode={ep} />
             </div>
+
+            {/* 9R-10c: the per-episode subtitle entry. Rendered for EVERY
+                subtitle_status (J3-D ruling) but ONLY when the episode has a
+                local file — a TMDb episode the NAS does not hold is not
+                addressable and must not offer an action.
+                Hover treatment is this story's own: the design draws no hover
+                for row actions anywhere, so it is flagged for Sally to ratify. */}
+            {onManageSubtitle && canManageEpisodeSubtitle(ep) && (
+              <button
+                type="button"
+                onClick={() => onManageSubtitle(ep)}
+                data-testid="episode-manage-subtitle"
+                aria-label={`管理 ${episodeCode(seasonNumber, ep.episodeNumber)} 的字幕`}
+                className="flex min-h-[44px] shrink-0 items-center self-start rounded-[var(--radius-md)] px-3 text-[13px] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] sm:self-auto"
+              >
+                管理字幕
+              </button>
+            )}
 
             {/* Metadata: air date + runtime (below on mobile, inline on desktop) */}
             <div className="flex shrink-0 items-center gap-3 text-xs text-[var(--text-secondary)]">
