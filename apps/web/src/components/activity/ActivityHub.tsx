@@ -195,7 +195,24 @@ function DownloadsSectionView({
       <ActivityRow
         icon={Download}
         title="下載中"
-        detail={`${section.downloading} 個進行中 · ${section.queued} 個排隊`}
+        detail={
+          /* bugfix-e AC #2: errored/paused torrents used to be swept into 個排隊, so a
+             library of 3,068 broken torrents read as a healthy queue. Both counts are
+             appended only when non-zero — a healthy system's line is byte-unchanged. */
+          <>
+            {`${section.downloading} 個進行中 · ${section.queued} 個排隊`}
+            {section.errored > 0 && (
+              <span className="text-[var(--error-text)]" data-testid="activity-downloads-errored">
+                {` · ${section.errored} 個錯誤`}
+              </span>
+            )}
+            {section.paused > 0 && (
+              <span className="text-[var(--text-muted)]" data-testid="activity-downloads-paused">
+                {` · ${section.paused} 個暫停`}
+              </span>
+            )}
+          </>
+        }
         testId="activity-downloads-row"
         right={
           <Link

@@ -500,6 +500,12 @@ export function GenerationWorkspaceV2({
                       error: null,
                       srtPath: null,
                       zhSrtPath: null,
+                      // bugfix-j added these to GenerationProgressState; this literal
+                      // is a single-job projection that carries no terminal outcome,
+                      // so both take the not-partial defaults (Rule 24 ①, found while
+                      // typechecking bugfix-e).
+                      partial: false,
+                      englishKeptBlocks: null,
                     }}
                   />
                 ))}

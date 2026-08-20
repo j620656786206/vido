@@ -36,6 +36,9 @@ export interface DownloadsSection {
   status: SectionStatus;
   downloading: number;
   queued: number;
+  /** Count of errored torrents (bugfix-e). Distinct from `error`, the section failure MESSAGE. */
+  errored: number;
+  paused: number;
   total: number;
   error?: string;
 }

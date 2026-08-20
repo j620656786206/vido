@@ -90,10 +90,16 @@ type PendingSection struct {
 	Error      string `json:"error,omitempty"`
 }
 
+// DownloadsSection is the activity hub's downloads bucket split. `Error` is the
+// section-level FAILURE MESSAGE (string); `Errored` is the count of errored
+// torrents — deliberately distinct names so the additive count never collides
+// with the pre-existing key (bugfix-e AC #1).
 type DownloadsSection struct {
 	Status      string `json:"status"`
 	Downloading int    `json:"downloading"`
 	Queued      int    `json:"queued"`
+	Errored     int    `json:"errored"`
+	Paused      int    `json:"paused"`
 	Total       int    `json:"total"`
 	Error       string `json:"error,omitempty"`
 }
@@ -185,13 +191,21 @@ func (s *ActivityService) downloadsSection(ctx context.Context) DownloadsSection
 		}
 		return DownloadsSection{Status: sectionUnavailable, Error: msg}
 	}
-	// Queued = anything tracked but not actively downloading and not finished
-	// (paused / stalled / queued / errored). Clamped at zero.
-	queued := c.All - c.Downloading - c.Completed - c.Seeding
-	if queued < 0 {
-		queued = 0
+	// bugfix-e: each bucket is reported from its OWN count instead of being
+	// derived by subtraction. The old `All - Downloading - Completed - Seeding`
+	// swept errored AND paused torrents into 排隊中 — a live NAS showed
+	// queued=3102 (3068 errored + 34 paused/queued) while /downloads/counts
+	// simultaneously reported error=3068, i.e. two endpoints contradicting each
+	// other about the same torrents. Counts are disjoint and total (see
+	// DownloadCounts), so no clamp is needed: every value is already ≥ 0.
+	return DownloadsSection{
+		Status:      sectionOK,
+		Downloading: c.Downloading,
+		Queued:      c.Queued,
+		Errored:     c.Error,
+		Paused:      c.Paused,
+		Total:       c.All,
 	}
-	return DownloadsSection{Status: sectionOK, Downloading: c.Downloading, Queued: queued, Total: c.All}
 }
 
 func (s *ActivityService) recentSection(ctx context.Context) RecentSection {
