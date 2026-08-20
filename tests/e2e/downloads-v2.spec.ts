@@ -59,7 +59,9 @@ async function stubCounts(page: import('@playwright/test').Page, all: number): P
       contentType: 'application/json',
       body: JSON.stringify({
         success: true,
-        data: { all, downloading: 1, paused: 1, completed: 1, seeding: 1, error: 0 },
+        // bugfix-e [@contract-v1]: `queued` is part of the shape — keep the stub in
+        // step with the real endpoint so a future 佇列中 tab can't regress silently.
+        data: { all, downloading: 1, paused: 1, queued: 0, completed: 1, seeding: 1, error: 0 },
       }),
     })
   );

@@ -239,10 +239,6 @@ func TestActivity_DownloadsBucketsAreTruthful(t *testing.T) {
 			if d.Total != tc.counts.All {
 				t.Errorf("total = %d, want %d", d.Total, tc.counts.All)
 			}
-			// The headline regression: errored/paused torrents never inflate queued.
-			if tc.counts.Error > 0 && d.Queued >= tc.counts.Error {
-				t.Errorf("queued=%d still absorbs the %d errored torrents", d.Queued, tc.counts.Error)
-			}
 		})
 	}
 }

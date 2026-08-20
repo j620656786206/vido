@@ -249,6 +249,14 @@ describe('ActivityHub (v2 Activity hub — four states + fail-soft)', () => {
     expect(screen.getByTestId('activity-downloads-paused')).toHaveTextContent('34 個暫停');
     // The queue count is the real queue — never the errored pile.
     expect(row).not.toHaveTextContent('3102 個排隊');
+    // CR M3: the row is `truncate`d, so 錯誤 must LEAD the detail line — a narrow
+    // viewport ellipses the tail, and the errored count is the whole point of this
+    // story. Compare positions inside the detail text (the row also carries the
+    // 下載中 title and the CTA, so a startsWith() on the row would be wrong).
+    const detail = row.textContent ?? '';
+    expect(detail.indexOf('3068 個錯誤')).toBeGreaterThanOrEqual(0);
+    expect(detail.indexOf('3068 個錯誤')).toBeLessThan(detail.indexOf('500 個進行中'));
+    expect(detail.indexOf('500 個進行中')).toBeLessThan(detail.indexOf('34 個暫停'));
   });
 
   it('[bugfix-e] each segment is independent — errors without pauses shows only 錯誤', async () => {
