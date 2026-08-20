@@ -141,9 +141,40 @@ type TranslationOutcome struct {
 	TotalBlocks       int
 }
 
-// Partial reports whether any cue kept its English text — the verdict signal:
-// a partial result must persist as `untranslated`, never `found` (bugfix-j).
+// Partial reports whether any cue kept its English text — the DISCLOSURE
+// signal (bugfix-j): it drives the SSE partial flag and the english_kept
+// log field unconditionally. Whether the verdict demotes is a separate,
+// thresholded question — see DemotesVerdict.
 func (o TranslationOutcome) Partial() bool { return o.EnglishKeptBlocks > 0 }
+
+// bugfix-j H3 ruling (Alexyu 2026-08-20, option B「門檻制」): disclosure is
+// unconditional, but DEMOTION to `untranslated` fires only when the English
+// residue is material:
+//   - ≥ a whole batch's worth of cues (a batch failure leaves a contiguous
+//     English RUN — unwatchable regardless of file size), or
+//   - ≥5% of the ITEM'S OWN cue count. Per the ruling, the percentage
+//     denominator is this movie's/episode's total cue count (TotalBlocks of
+//     this run), the numerator its untranslated English cues.
+//
+// Below both bars the verdict stays `found` (zh file placed, scattered EN
+// cues disclosed via Partial) so a 1-cue miss doesn't force a full re-run.
+const (
+	demoteAbsoluteKeptBlocks = prompts.SubtitleTranslatorBatchSize
+	demoteKeptPercent        = 5
+)
+
+// DemotesVerdict reports whether the English residue is material enough to
+// persist `untranslated` instead of `found` (bugfix-j H3 ruling, option B).
+func (o TranslationOutcome) DemotesVerdict() bool {
+	if o.EnglishKeptBlocks == 0 {
+		return false
+	}
+	if o.EnglishKeptBlocks >= demoteAbsoluteKeptBlocks {
+		return true
+	}
+	// Integer cross-multiplication: kept/total ≥ 5% without float drift.
+	return o.EnglishKeptBlocks*100 >= o.TotalBlocks*demoteKeptPercent
+}
 
 // TranslateWithGlossary is Translate plus a per-show glossary (Story 9R-7): the
 // fixed renderings are injected into every batch prompt so proper nouns stay

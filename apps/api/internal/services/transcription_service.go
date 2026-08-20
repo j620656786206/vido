@@ -728,14 +728,17 @@ func (s *TranscriptionService) translateAndPersist(ctx context.Context, jobID st
 	}
 
 	// 9R-16 AC 12 [@contract-v3] (sub-2-2a; v2→v3 by bugfix-j): persist the
-	// generation VERDICT — the resume enabler + badge truth. zh-Hant FULL
-	// success → found; PARTIAL success → untranslated + the EN path (mixed
-	// file stays placed; resume re-translates from the EN source and the
-	// placer overwrites it); translation expected but absent → untranslated +
+	// generation VERDICT — the resume enabler + badge truth. zh-Hant success
+	// with MATERIAL English residue (H3 ruling: ≥1 batch's worth of cues or
+	// ≥5% of this item's own cue count — see TranslationOutcome.DemotesVerdict)
+	// → untranslated + the EN path (mixed file stays placed; resume
+	// re-translates from the EN source and the placer overwrites it);
+	// zh-Hant success below that bar → found (residue still disclosed via
+	// the SSE partial flag); translation expected but absent → untranslated +
 	// the EN path. A translate=false run writes nothing: no translation was
 	// expected.
 	switch {
-	case zhSRTPath != "" && outcome.Partial():
+	case zhSRTPath != "" && outcome.DemotesVerdict():
 		// bugfix-j AC #2: same writeback shape as the budget-pause branch
 		// (CR sub-2-2a M1) — EN path is the resume enabler. Rule 13: this
 		// branch is a VERDICT write, not a best-effort optimization, so a

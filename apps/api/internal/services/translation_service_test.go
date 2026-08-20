@@ -709,3 +709,38 @@ func TestTranslationService_Harvest_BareIndexCountsAsKept(t *testing.T) {
 	assert.Equal(t, 1, outcome.EnglishKeptBlocks)
 	assert.True(t, outcome.Partial())
 }
+
+// bugfix-j H3 ruling (option B「門檻制」): demotion fires only on MATERIAL
+// English residue — ≥1 batch's worth of cues (an English RUN) or ≥5% of the
+// item's OWN cue count (per-movie/per-episode denominator, per the ruling).
+// Disclosure (Partial) stays unconditional either way.
+func TestTranslationOutcome_DemotesVerdict(t *testing.T) {
+	// The absolute bar IS the batch size — a failed batch always demotes. If
+	// the batch size changes, the boundary cases below must be re-derived.
+	require.Equal(t, 10, prompts.SubtitleTranslatorBatchSize,
+		"demoteAbsoluteKeptBlocks tracks the batch size — update the cases below")
+
+	cases := []struct {
+		name    string
+		kept    int
+		total   int
+		demotes bool
+	}{
+		{"full success never demotes", 0, 100, false},
+		{"exactly 5% demotes (1/20)", 1, 20, true},
+		{"just under 5% stays found (1/21)", 1, 21, false},
+		{"scattered misses under both bars (9/300 = 3%)", 9, 300, false},
+		{"a whole batch demotes regardless of percent (10/300 ≈ 3.3%)", 10, 300, true},
+		{"above absolute bar (25/1000 = 2.5%)", 25, 1000, true},
+		{"small file: 1/2 = 50% demotes", 1, 2, true},
+		{"tiny file below batch, at percent bar (1/10 = 10%)", 1, 10, true},
+		{"everything kept demotes", 40, 40, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			o := TranslationOutcome{EnglishKeptBlocks: tc.kept, TotalBlocks: tc.total}
+			assert.Equal(t, tc.demotes, o.DemotesVerdict())
+			assert.Equal(t, tc.kept > 0, o.Partial(), "disclosure is unconditional — independent of the threshold")
+		})
+	}
+}
