@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -48,7 +49,10 @@ func TestActivity_AllOK(t *testing.T) {
 		fakeScan{active: true, progress: ScanProgress{PercentDone: 62, CurrentFile: "movie.mkv", FilesFound: 1234}},
 		fakeBatch{active: true, percentDone: 40, current: 12, total: 30, item: "ep.mkv"},
 		fakeBatch{active: true, percentDone: 25, current: 3, total: 12, item: "gen.mkv"},
-		fakeDownloads{counts: &qbittorrent.DownloadCounts{All: 8, Downloading: 3}},
+		// bugfix-e: buckets are disjoint and total (All == the sum), so the
+		// fixture states every bucket instead of leaving a phantom remainder
+		// for the old subtraction to sweep into 排隊中.
+		fakeDownloads{counts: &qbittorrent.DownloadCounts{All: 8, Downloading: 3, Queued: 5}},
 		fakeParse{
 			pending: []*models.ParseJob{pj(models.ParseJobPending, "a"), pj(models.ParseJobPending, "b")},
 			all:     []*models.ParseJob{pj(models.ParseJobCompleted, "done.mkv"), pj(models.ParseJobFailed, "bad.mkv"), pj(models.ParseJobProcessing, "wip.mkv")},
@@ -74,7 +78,7 @@ func TestActivity_AllOK(t *testing.T) {
 	if a.Pending.Status != sectionOK || a.Pending.ParseCount != 2 {
 		t.Errorf("pending = %+v, want ok/2", a.Pending)
 	}
-	// Queued = All(8) - Downloading(3) - Completed(0) - Seeding(0) = 5.
+	// bugfix-e: Queued is reported from its OWN bucket, not derived by subtraction.
 	if a.Downloads.Status != sectionOK || a.Downloads.Downloading != 3 || a.Downloads.Total != 8 || a.Downloads.Queued != 5 {
 		t.Errorf("downloads = %+v, want ok/3/queued5/total8", a.Downloads)
 	}
@@ -174,5 +178,121 @@ func TestActivity_NilSourcesDegradeGracefully(t *testing.T) {
 	// state, not an error.
 	if a.ActiveJobs.Status != sectionOK || len(a.ActiveJobs.Jobs) != 0 {
 		t.Errorf("active = %+v, want ok-empty", a.ActiveJobs)
+	}
+}
+
+// ─── bugfix-e: errored/paused torrents must not be swept into 排隊中 ──────────
+
+// The live-NAS shape that motivated the story: 3,068 errored + 34 paused/queued
+// torrents were ALL reported as queued, while /downloads/counts simultaneously
+// reported error=3068 — two endpoints contradicting each other about the same
+// library. Table-driven over the buckets that used to vanish.
+func TestActivity_DownloadsBucketsAreTruthful(t *testing.T) {
+	cases := []struct {
+		name                                                 string
+		counts                                               qbittorrent.DownloadCounts
+		wantDownloading, wantQueued, wantErrored, wantPaused int
+	}{
+		{
+			name:   "live NAS shape — errors dominate and must not read as queued",
+			counts: qbittorrent.DownloadCounts{All: 3641, Downloading: 500, Queued: 39, Paused: 34, Error: 3068},
+			// Before bugfix-e this reported queued=3141 (error+paused+queued).
+			wantDownloading: 500, wantQueued: 39, wantErrored: 3068, wantPaused: 34,
+		},
+		{
+			name:            "errored only",
+			counts:          qbittorrent.DownloadCounts{All: 5, Error: 5},
+			wantDownloading: 0, wantQueued: 0, wantErrored: 5, wantPaused: 0,
+		},
+		{
+			name:            "paused only — paused is its own bucket, not queued",
+			counts:          qbittorrent.DownloadCounts{All: 4, Paused: 4},
+			wantDownloading: 0, wantQueued: 0, wantErrored: 0, wantPaused: 4,
+		},
+		{
+			name:            "mixed healthy library",
+			counts:          qbittorrent.DownloadCounts{All: 10, Downloading: 2, Queued: 3, Paused: 1, Completed: 3, Seeding: 1},
+			wantDownloading: 2, wantQueued: 3, wantErrored: 0, wantPaused: 1,
+		},
+		{
+			name:            "all zero",
+			counts:          qbittorrent.DownloadCounts{},
+			wantDownloading: 0, wantQueued: 0, wantErrored: 0, wantPaused: 0,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			counts := tc.counts
+			svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeBatch{}, fakeDownloads{counts: &counts}, fakeParse{})
+			d := svc.GetActivity(context.Background()).Downloads
+
+			if d.Status != sectionOK {
+				t.Fatalf("status = %q, want ok", d.Status)
+			}
+			if d.Downloading != tc.wantDownloading || d.Queued != tc.wantQueued ||
+				d.Errored != tc.wantErrored || d.Paused != tc.wantPaused {
+				t.Errorf("buckets = downloading:%d queued:%d errored:%d paused:%d, want %d/%d/%d/%d",
+					d.Downloading, d.Queued, d.Errored, d.Paused,
+					tc.wantDownloading, tc.wantQueued, tc.wantErrored, tc.wantPaused)
+			}
+			if d.Total != tc.counts.All {
+				t.Errorf("total = %d, want %d", d.Total, tc.counts.All)
+			}
+		})
+	}
+}
+
+// AC #1 wire shape: the additive count keys are snake_case and, critically,
+// `errored` (the count) never collides with `error` (the section failure
+// message, which stays omitempty and absent on a healthy section).
+func TestActivity_DownloadsSectionWireKeys(t *testing.T) {
+	counts := qbittorrent.DownloadCounts{All: 9, Downloading: 1, Queued: 2, Paused: 3, Error: 3}
+	svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeBatch{}, fakeDownloads{counts: &counts}, fakeParse{})
+
+	blob, err := json.Marshal(svc.GetActivity(context.Background()).Downloads)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(blob, &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	for key, want := range map[string]float64{
+		"downloading": 1, "queued": 2, "paused": 3, "errored": 3, "total": 9,
+	} {
+		v, ok := got[key]
+		if !ok {
+			t.Errorf("key %q missing from the wire shape", key)
+			continue
+		}
+		if v != want {
+			t.Errorf("%q = %v, want %v", key, v, want)
+		}
+	}
+	if _, ok := got["error"]; ok {
+		t.Errorf("`error` is the section failure MESSAGE and must stay absent on a healthy section; got %v", got["error"])
+	}
+}
+
+// A section-level failure still carries the string `error` message — the additive
+// count keys must not have displaced it.
+func TestActivity_DownloadsUnavailableKeepsErrorMessage(t *testing.T) {
+	svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeBatch{}, fakeDownloads{err: errors.New("qbt down")}, fakeParse{})
+
+	blob, err := json.Marshal(svc.GetActivity(context.Background()).Downloads)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(blob, &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if got["status"] != sectionUnavailable {
+		t.Errorf("status = %v, want %q", got["status"], sectionUnavailable)
+	}
+	if got["error"] != "qbt down" {
+		t.Errorf("error message = %v, want the qBT failure string", got["error"])
 	}
 }

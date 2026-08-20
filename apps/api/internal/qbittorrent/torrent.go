@@ -30,11 +30,11 @@ func MapQBState(state string) TorrentStatus {
 	case "downloading", "forcedDL", "metaDL", "allocating":
 		return StatusDownloading
 	// Paused: download not complete, user stopped the torrent
-	case "pausedDL",  // qBT 4.x
+	case "pausedDL", // qBT 4.x
 		"stoppedDL": // qBT 5.0+
 		return StatusPaused
 	// Completed: download finished, no longer actively seeding
-	case "pausedUP",  // qBT 4.x — paused after completing download
+	case "pausedUP", // qBT 4.x — paused after completing download
 		"stoppedUP", // qBT 5.0+ — stopped after completing download
 		"stalledUP": // seeding but no peer connections → effectively complete
 		return StatusCompleted
@@ -126,11 +126,20 @@ type TorrentDetails struct {
 	AvgUpSpeed   int64     `json:"avg_up_speed"`
 }
 
-// DownloadCounts holds the count of torrents grouped by status.
+// DownloadCounts holds the count of torrents grouped by status. The buckets are
+// DISJOINT and total: every torrent lands in exactly one (MapQBState is total over
+// qBT state strings, and GetDownloadCounts switches over every TorrentStatus), so
+// All == the sum of the buckets. Callers may rely on that — the counts test pins it.
+//
+// [@contract-v1] (bugfix-e) wire shape of GET /api/v1/downloads/counts. `queued` is
+// its own bucket: before bugfix-e, queuedDL/queuedUP were counted into `paused`,
+// which both inflated 已暫停 and made that tab's COUNT disagree with its LIST (the
+// qBT `paused` filter never returned queued torrents).
 type DownloadCounts struct {
 	All         int `json:"all"`
 	Downloading int `json:"downloading"`
 	Paused      int `json:"paused"`
+	Queued      int `json:"queued"`
 	Completed   int `json:"completed"`
 	Seeding     int `json:"seeding"`
 	Error       int `json:"error"`

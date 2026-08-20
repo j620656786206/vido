@@ -195,7 +195,33 @@ function DownloadsSectionView({
       <ActivityRow
         icon={Download}
         title="下載中"
-        detail={`${section.downloading} 個進行中 · ${section.queued} 個排隊`}
+        detail={
+          /* bugfix-e AC #2: errored/paused torrents used to be swept into 個排隊, so a
+             library of 3,068 broken torrents read as a healthy queue. Both counts are
+             appended only when non-zero — a healthy system's line is byte-unchanged.
+
+             CR M3: 錯誤 leads the line. ActivityRow renders `detail` inside a
+             `truncate` <p>, so on a narrow viewport the tail is ellipsed away —
+             and the errored count IS the signal this story exists to surface.
+             Alarm first, ambient counts after.
+
+             CR L1: AC #2 names the `--error` token, but text uses the AA-safe
+             `--error-text` variant per the DL-v2 §2.5 / TC-2 convention that
+             `downloadStatus.ts` already follows. Deliberate deviation. */
+          <>
+            {section.errored > 0 && (
+              <span className="text-[var(--error-text)]" data-testid="activity-downloads-errored">
+                {`${section.errored} 個錯誤 · `}
+              </span>
+            )}
+            {`${section.downloading} 個進行中 · ${section.queued} 個排隊`}
+            {section.paused > 0 && (
+              <span className="text-[var(--text-muted)]" data-testid="activity-downloads-paused">
+                {` · ${section.paused} 個暫停`}
+              </span>
+            )}
+          </>
+        }
         testId="activity-downloads-row"
         right={
           <Link

@@ -65,6 +65,13 @@ export interface DownloadCounts {
   all: number;
   downloading: number;
   paused: number;
+  /**
+   * Queued torrents (bugfix-e [@contract-v1]). Previously folded into `paused`,
+   * which inflated the 已暫停 tab and made its count disagree with its list — the
+   * qBT `paused` filter never returns queued torrents. No filter tab consumes this
+   * yet (qBT has no server-side `queued` filter); they remain visible under 全部.
+   */
+  queued: number;
   completed: number;
   seeding: number;
   error: number;

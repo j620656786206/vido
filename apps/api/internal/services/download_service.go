@@ -191,7 +191,7 @@ func (s *DownloadService) GetDownloadCounts(ctx context.Context) (*qbittorrent.D
 		case qbittorrent.StatusStalled:
 			counts.Downloading++
 		case qbittorrent.StatusQueued:
-			counts.Paused++
+			counts.Queued++
 		case qbittorrent.StatusChecking:
 			counts.Downloading++
 		}

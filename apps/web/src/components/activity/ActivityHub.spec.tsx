@@ -40,7 +40,7 @@ function summary(over: Partial<ActivitySummary> = {}): ActivitySummary {
   return {
     activeJobs: { status: 'ok', jobs: [] },
     pending: { status: 'ok', parseCount: 0 },
-    downloads: { status: 'ok', downloading: 0, queued: 0, total: 0 },
+    downloads: { status: 'ok', downloading: 0, queued: 0, errored: 0, paused: 0, total: 0 },
     recent: { status: 'ok', events: [] },
     ...over,
   };
@@ -114,7 +114,7 @@ describe('ActivityHub (v2 Activity hub — four states + fail-soft)', () => {
             ],
           },
           pending: { status: 'ok', parseCount: 8 },
-          downloads: { status: 'ok', downloading: 3, queued: 5, total: 8 },
+          downloads: { status: 'ok', downloading: 3, queued: 5, errored: 0, paused: 0, total: 8 },
           recent: {
             status: 'ok',
             events: [
@@ -139,6 +139,10 @@ describe('ActivityHub (v2 Activity hub — four states + fail-soft)', () => {
     expect(screen.getByTestId('activity-pending-row')).toHaveTextContent('8 個項目待處理');
     expect(screen.getByTestId('activity-pending-cta')).toBeInTheDocument();
     expect(screen.getByTestId('activity-downloads-row')).toHaveTextContent('3 個進行中 · 5 個排隊');
+    // bugfix-e regression pin: a healthy library's line is byte-unchanged — the
+    // errored/paused segments appear ONLY when their counts are non-zero.
+    expect(screen.queryByTestId('activity-downloads-errored')).toBeNull();
+    expect(screen.queryByTestId('activity-downloads-paused')).toBeNull();
     // Recent: completed → 解析完成, failed → 解析失敗.
     const recent = screen.getAllByTestId('activity-recent-row');
     expect(recent).toHaveLength(2);
@@ -216,6 +220,57 @@ describe('ActivityHub (v2 Activity hub — four states + fail-soft)', () => {
     expect(await screen.findByTestId('activity-recent-row')).toBeInTheDocument();
     expect(screen.queryByTestId('activity-pending-row')).toBeNull();
     expect(screen.queryByTestId('activity-downloads-row')).toBeNull();
+  });
+
+  // ─── bugfix-e: broken torrents must not read as a healthy queue ─────────────
+
+  it('[bugfix-e] errored + paused counts surface alongside 排隊 instead of inflating it', async () => {
+    mockUseActivity.mockReturnValue(
+      result({
+        data: summary({
+          // The live-NAS shape: before bugfix-e the row said「3102 個排隊」and the
+          // 3,068 broken torrents were invisible.
+          downloads: {
+            status: 'ok',
+            downloading: 500,
+            queued: 39,
+            errored: 3068,
+            paused: 34,
+            total: 3641,
+          },
+        }),
+      })
+    );
+    renderHub();
+
+    const row = await screen.findByTestId('activity-downloads-row');
+    expect(row).toHaveTextContent('500 個進行中 · 39 個排隊');
+    expect(screen.getByTestId('activity-downloads-errored')).toHaveTextContent('3068 個錯誤');
+    expect(screen.getByTestId('activity-downloads-paused')).toHaveTextContent('34 個暫停');
+    // The queue count is the real queue — never the errored pile.
+    expect(row).not.toHaveTextContent('3102 個排隊');
+    // CR M3: the row is `truncate`d, so 錯誤 must LEAD the detail line — a narrow
+    // viewport ellipses the tail, and the errored count is the whole point of this
+    // story. Compare positions inside the detail text (the row also carries the
+    // 下載中 title and the CTA, so a startsWith() on the row would be wrong).
+    const detail = row.textContent ?? '';
+    expect(detail.indexOf('3068 個錯誤')).toBeGreaterThanOrEqual(0);
+    expect(detail.indexOf('3068 個錯誤')).toBeLessThan(detail.indexOf('500 個進行中'));
+    expect(detail.indexOf('500 個進行中')).toBeLessThan(detail.indexOf('34 個暫停'));
+  });
+
+  it('[bugfix-e] each segment is independent — errors without pauses shows only 錯誤', async () => {
+    mockUseActivity.mockReturnValue(
+      result({
+        data: summary({
+          downloads: { status: 'ok', downloading: 1, queued: 0, errored: 7, paused: 0, total: 8 },
+        }),
+      })
+    );
+    renderHub();
+
+    expect(await screen.findByTestId('activity-downloads-errored')).toHaveTextContent('7 個錯誤');
+    expect(screen.queryByTestId('activity-downloads-paused')).toBeNull();
   });
 
   it('[ux3-ai-2] ?view=generation hosts the workspace (active) in place of the hub body', async () => {

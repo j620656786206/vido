@@ -23,7 +23,11 @@ interface ActivityRowProps {
   icon: LucideIcon;
   iconTone?: RowTone;
   title: string;
-  detail?: string;
+  /**
+   * Why-detail line. A plain string for most rows; a node when segments need their
+   * own token color (bugfix-e: the downloads row tints its 錯誤/暫停 counts).
+   */
+  detail?: ReactNode;
   /** Right slot — percent/count text, a timestamp, or a CTA link. */
   right?: ReactNode;
   /** 0–100; renders the progress bar when provided. */

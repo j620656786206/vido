@@ -7,6 +7,10 @@ const mockCounts: DownloadCounts = {
   all: 10,
   downloading: 3,
   paused: 2,
+  // bugfix-e: `queued` is its own bucket now. No tab consumes it (qBT has no
+  // server-side queued filter), so queued torrents stay visible under 全部 —
+  // the tab counts below are unchanged by its arrival.
+  queued: 0,
   completed: 4,
   seeding: 1,
   error: 0,

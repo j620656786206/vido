@@ -89,6 +89,10 @@ test.describe('Download Filtering API @api @downloads @filtering', () => {
       expect(json.data).toHaveProperty('all');
       expect(json.data).toHaveProperty('downloading');
       expect(json.data).toHaveProperty('paused');
+      // bugfix-e [@contract-v1]: `queued` is its own bucket. It used to be folded
+      // into `paused`, which inflated 已暫停 and made that tab's count disagree
+      // with its list (the qBT `paused` filter never returns queued torrents).
+      expect(json.data).toHaveProperty('queued');
       expect(json.data).toHaveProperty('completed');
       expect(json.data).toHaveProperty('seeding');
       expect(json.data).toHaveProperty('error');
@@ -97,19 +101,23 @@ test.describe('Download Filtering API @api @downloads @filtering', () => {
       expect(json.data.all).toBeGreaterThanOrEqual(0);
       expect(json.data.downloading).toBeGreaterThanOrEqual(0);
       expect(json.data.paused).toBeGreaterThanOrEqual(0);
+      expect(json.data.queued).toBeGreaterThanOrEqual(0);
       expect(json.data.completed).toBeGreaterThanOrEqual(0);
       expect(json.data.seeding).toBeGreaterThanOrEqual(0);
       expect(json.data.error).toBeGreaterThanOrEqual(0);
 
-      // Sum of individual counts should equal all
+      // bugfix-e: the buckets are DISJOINT and TOTAL — every torrent lands in
+      // exactly one, so the sum is EXACTLY `all`. (The old comment here claimed
+      // "stalled/queued/checking are not counted", which was already wrong: they
+      // were folded into downloading/paused. Hence `<=` instead of `===`.)
       const sum =
         json.data.downloading +
         json.data.paused +
+        json.data.queued +
         json.data.completed +
         json.data.seeding +
         json.data.error;
-      // Note: sum may be <= all because stalled/queued/checking statuses are not counted
-      expect(sum).toBeLessThanOrEqual(json.data.all);
+      expect(sum).toBe(json.data.all);
     } else {
       expect(json.error.code).toMatch(/^QBITTORRENT_/);
     }
@@ -163,7 +171,15 @@ test.describe('Download Filtering API @api @downloads @filtering', () => {
     const json = await response.json();
 
     if (response.ok()) {
-      const countFields = ['all', 'downloading', 'paused', 'completed', 'seeding', 'error'];
+      const countFields = [
+        'all',
+        'downloading',
+        'paused',
+        'queued',
+        'completed',
+        'seeding',
+        'error',
+      ];
       for (const field of countFields) {
         expect(Number.isInteger(json.data[field])).toBe(true);
       }

@@ -269,12 +269,17 @@ func TestDownloadService_GetDownloadCounts_UnmappedStatusesNotCounted(t *testing
 	require.NoError(t, err)
 	assert.Equal(t, 4, counts.All)
 	assert.Equal(t, 3, counts.Downloading) // downloading + stalledDL + checkingDL
-	assert.Equal(t, 1, counts.Paused)      // queuedDL → paused
+	// bugfix-e: queuedDL gets its OWN bucket. It used to be counted as `paused`,
+	// which inflated 已暫停 and made that tab's count disagree with its list
+	// (the qBT `paused` filter never returns queued torrents).
+	assert.Equal(t, 0, counts.Paused)
+	assert.Equal(t, 1, counts.Queued)
 	assert.Equal(t, 0, counts.Completed)
 	assert.Equal(t, 0, counts.Seeding)
 	assert.Equal(t, 0, counts.Error)
-	// Sum of individual == All (all statuses are now counted)
-	sum := counts.Downloading + counts.Paused + counts.Completed + counts.Seeding + counts.Error
+	// Sum of individual == All — the buckets are disjoint and total, which is
+	// exactly what lets the activity hub read each bucket directly.
+	sum := counts.Downloading + counts.Paused + counts.Queued + counts.Completed + counts.Seeding + counts.Error
 	assert.Equal(t, sum, counts.All)
 	mockQB.AssertExpectations(t)
 }
