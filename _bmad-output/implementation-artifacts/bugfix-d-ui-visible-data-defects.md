@@ -1,6 +1,6 @@
 # Story: Bugfix D — UI 可見資料缺陷四連發（簡體 genre／poster_path 三格式／year 全空／title 對調）
 
-Status: review
+Status: done（D1/D2/D4 已交付；**D3 已切出為獨立條目 `bugfix-d3-year-premise-unverified`**，見 sprint-status）
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
