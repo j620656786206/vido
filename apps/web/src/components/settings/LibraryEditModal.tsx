@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen E5-D (hUVYm) · E5-M (P0P82x) · J4-D (sPzZT)
+// Design ref: ux-design.pen Screen E5-D (hUVYm) · E5-M (P0P82x) · J4-D (sPzZT) · J5-D (alrIw)
 /**
  * Library Edit/Create Modal for Settings page (Story 7b-4)
  */
@@ -227,42 +227,104 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
               The copy is frozen by the 2026-08-19 ruling 「花錢須同意」 and must
               keep saying both halves — free work happens, paid work waits — and
               must never imply that scanning itself produces subtitles. */}
-          {autoSubtitleSupported && (
-            <div
-              className="border-t border-[var(--border-subtle)]/50 pt-4"
-              data-testid="library-auto-subtitle-field"
-            >
-              {/* The label WRAPS the input so the whole row is the hit area, and
+          <div
+            className="border-t border-[var(--border-subtle)]/50 pt-4"
+            data-testid="library-auto-subtitle-field"
+          >
+            {/* The label WRAPS the input so the whole row is the hit area, and
                 still carries htmlFor like every other field in this modal. The
                 row is min-h-[44px] because this is the one control here that a
                 phone user has to hit deliberately. */}
-              <label
-                htmlFor="library-auto-subtitle-checkbox"
-                className="flex min-h-[44px] cursor-pointer items-start gap-2.5 py-1.5"
+            <label
+              htmlFor="library-auto-subtitle-checkbox"
+              className={`flex min-h-[44px] items-start gap-2.5 py-1.5 ${
+                autoSubtitleSupported ? 'cursor-pointer' : 'cursor-not-allowed'
+              }`}
+            >
+              <input
+                id="library-auto-subtitle-checkbox"
+                type="checkbox"
+                checked={autoSubtitle}
+                disabled={!autoSubtitleSupported}
+                // A11y pre-flight (9R-10b-M4): a DISABLED input is skipped by
+                // the tab order entirely, so the notice explaining WHY it is
+                // disabled would never reach a keyboard/screen-reader user
+                // without being programmatically tied to the control. Browse
+                // mode still reads the control, and now reads its reason too.
+                aria-describedby={
+                  autoSubtitleSupported ? undefined : 'library-auto-subtitle-unsupported-notice'
+                }
+                onChange={(e) => setAutoSubtitle(e.target.checked)}
+                className={`mt-0.5 h-5 w-5 shrink-0 rounded accent-[var(--accent-primary)] ${
+                  autoSubtitleSupported ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'
+                }`}
+                data-testid="library-auto-subtitle-checkbox"
+              />
+              <span
+                className={`text-sm font-medium leading-relaxed ${
+                  autoSubtitleSupported
+                    ? 'text-[var(--text-primary)]'
+                    : 'text-[var(--text-disabled)]'
+                }`}
               >
-                <input
-                  id="library-auto-subtitle-checkbox"
-                  type="checkbox"
-                  checked={autoSubtitle}
-                  onChange={(e) => setAutoSubtitle(e.target.checked)}
-                  className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded accent-[var(--accent-primary)]"
-                  data-testid="library-auto-subtitle-checkbox"
-                />
-                <span className="text-sm font-medium leading-relaxed text-[var(--text-primary)]">
-                  新檔入庫後，自動完成免費的字幕處理
-                </span>
-              </label>
-              <div className="space-y-1.5 pl-[30px]">
-                <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
-                  影片內建繁體中文字幕會直接沿用，簡體字幕自動轉成繁體。這些都在本機執行，不會產生費用。
+                新檔入庫後，自動完成免費的字幕處理
+              </span>
+            </label>
+
+            {/* 9R-10b-M4 (design J5-D block D) — the unsupported notice sits
+                between the checkbox and the description on purpose: the eye
+                lands on a greyed control and asks "why", so the answer comes
+                first; the description below then answers "what would it do",
+                which is what makes the user decide whether to go and change
+                the variable at all.
+                Both sentences are frozen. The SECOND one is verbatim from the
+                API's own 409 suggestion (subtitle_pipeline_handler.go:113) —
+                same action, same words, so a user who hit that error over the
+                API recognises the sentence here. */}
+            {!autoSubtitleSupported && (
+              <div
+                id="library-auto-subtitle-unsupported-notice"
+                className="my-2 rounded-[var(--radius-sm)] border-l-4 border-[var(--info)] bg-[var(--info)]/10 p-3"
+                data-testid="library-auto-subtitle-unsupported-notice"
+              >
+                <p className="text-[13px] font-medium leading-relaxed text-[var(--text-primary)]">
+                  字幕生成管線尚未啟用，這個選項無法變更。
                 </p>
-                <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
-                  需要 AI
-                  翻譯或語音辨識的影片不會自動處理，它們會留在「產生字幕」清單裡，標好預估金額等你確認。
+                <p className="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">
+                  請將{' '}
+                  <span
+                    className="rounded bg-[var(--bg-tertiary)] px-1 py-0.5 font-mono text-[var(--text-primary)]"
+                    data-testid="library-auto-subtitle-env-var"
+                  >
+                    VIDO_SUBTITLE_PIPELINE_MODE
+                  </span>{' '}
+                  設為 pipeline 後重啟伺服器。
                 </p>
               </div>
+            )}
+
+            <div className="space-y-1.5 pl-[30px]">
+              <p
+                className={`text-xs leading-relaxed ${
+                  autoSubtitleSupported
+                    ? 'text-[var(--text-secondary)]'
+                    : 'text-[var(--text-disabled)]'
+                }`}
+              >
+                影片內建繁體中文字幕會直接沿用，簡體字幕自動轉成繁體。這些都在本機執行，不會產生費用。
+              </p>
+              <p
+                className={`text-xs leading-relaxed ${
+                  autoSubtitleSupported
+                    ? 'text-[var(--text-secondary)]'
+                    : 'text-[var(--text-disabled)]'
+                }`}
+              >
+                需要 AI
+                翻譯或語音辨識的影片不會自動處理，它們會留在「產生字幕」清單裡，標好預估金額等你確認。
+              </p>
             </div>
-          )}
+          </div>
         </div>
 
         <div className="flex gap-3">
