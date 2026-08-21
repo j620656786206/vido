@@ -209,6 +209,32 @@ describe('LibraryEditModal', () => {
     );
   });
 
+  it('puts the notice between the control and the description, in that order', () => {
+    // AC #2 ordering, and it has a reason: the eye lands on a greyed control
+    // and asks "why", so the answer comes first; the description below then
+    // answers "what would it even do", which is what makes the user decide
+    // whether to go and change the variable at all. Reversed, the user reads a
+    // pitch for a feature before learning they cannot switch it on.
+    vi.mocked(useMediaLibraries).mockReturnValue(
+      unsupportedQuery as ReturnType<typeof useMediaLibraries>
+    );
+
+    render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
+
+    const checkbox = screen.getByTestId('library-auto-subtitle-checkbox');
+    const notice = screen.getByTestId('library-auto-subtitle-unsupported-notice');
+    const description = screen.getByText(
+      '影片內建繁體中文字幕會直接沿用，簡體字幕自動轉成繁體。這些都在本機執行，不會產生費用。'
+    );
+
+    expect(checkbox.compareDocumentPosition(notice) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    );
+    expect(notice.compareDocumentPosition(description) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    );
+  });
+
   it('renders the env var as a copyable monospace token, not prose', () => {
     // It is a string the user must type EXACTLY. Prose styling invites typos.
     vi.mocked(useMediaLibraries).mockReturnValue(
@@ -234,8 +260,11 @@ describe('LibraryEditModal', () => {
 
     const checkbox = screen.getByTestId('library-auto-subtitle-checkbox');
     const notice = screen.getByTestId('library-auto-subtitle-unsupported-notice');
-    expect(checkbox).toHaveAttribute('aria-describedby', notice.id);
-    expect(notice.id).toBeTruthy();
+    expect(notice).toHaveAttribute('id', 'library-auto-subtitle-unsupported-notice');
+    expect(checkbox).toHaveAttribute(
+      'aria-describedby',
+      'library-auto-subtitle-unsupported-notice'
+    );
   });
 
   it('dims the label and the frozen description in the disabled state', () => {

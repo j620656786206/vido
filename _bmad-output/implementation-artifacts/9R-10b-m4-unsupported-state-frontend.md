@@ -349,4 +349,85 @@ sub-4-3 AC #6 的約束範圍是 opt-in 文案，既有測試釘的也正是 foo
 | 2026-08-21 | **Task 2（AC #4/#5）** —— `LibraryCardProps` 新增 `autoSubtitleSupported`，footer 改三態（`$success`／`$warning`／不出現）；`MediaLibraryManager` 以既有 `data` 傳遞，零新 hook、零新請求。 |
 | 2026-08-21 | **Task 3（AC #7）** —— 改寫 `hides the opt-in...` 為斷言停用態；modal 新增 6 例、card 新增 4 例、**新建** `MediaLibraryManager.spec.tsx` 3 例。**10 項 fault injection 全數轉紅**。過程中發現並修正一次**假紅**（測試檔不存在時 vitest 回非零）。 |
 | 2026-08-21 | **Task 4（AC #8）** —— `nx test web` 全綠／`nx test api` 全綠／`nx lint web` 綠／`format:check` 綠／`tsc --noEmit` **147＝main 基準**。A11y pre-flight 補 `aria-describedby`（disabled input 不進 tab order）。UX 比對以 MCP 直讀 `J5-D` 文字節點程式化比對 12/12。 |
+| 2026-08-21 | **CR 自審（Amelia）** —— 0H/4M/3L ＋ 1 項交回設計。M1 改用 `--info-tint`（設計系統既有 token，勿手工兌色）／M2 gallery fixture 補必填 prop（cast 使 tsc 抓不到，PR #250 CR M3 同類）／M3 補 AC #2 順序測試／M4 修正自己違反的 Rule 16 `toBeTruthy`／L3 提出重複 class。L1（className 斷言證明不了樣式）與 L2（`text-[13px]`）記錄為已知取捨。`--text-disabled` 的 sub-AA 對比問題**交回 Sally**（J5-D 明訂，非 dev 缺陷）。 |
 | 2026-08-21 | CREATED（create-story, Bob）—— 來源：9R-10b 補審 M4 → Sally 設計裁定（PR #252, `J5-D`）。跨端拆分檢查 FE 4 / BE 0 ⇒ 不拆。Discovery Triage 發現 1 筆 lane ③（`6UCtX` 全域錯誤引用，已立案 sweep）。 |
+
+---
+
+## Senior Developer Review (AI)
+
+**日期：** 2026-08-21 ｜ **審查者：** Amelia（⚠️ **自審** —— 實作者與審查者同一 context，結構上弱於換模型／換 context 審查）
+**結果：** **APPROVED-WITH-FIXES** —— 0 High / 4 Medium / 3 Low ＋ 1 項交回設計裁定
+**修復：** M1–M4 ＋ L3 全數修復並以 fault injection 反證；L1／L2 記錄為已知取捨
+
+### 強制檢查
+
+| 檢查 | 結果 |
+|---|---|
+| 🔒 Rule 7 Wire Format | **N/A**（範圍內無 Go error-code 檔） |
+| 🔒 Rule 20 Contract Bump | **N/A**（無戳記 bump） |
+| 🔒 Rule 25 Mega-line | **N/A**（未觸及 `project-context.md`） |
+| Git vs Story File List | **相符，零落差** |
+| AC 實作查核 | **8/8 IMPLEMENTED** |
+| Task `[x]` 稽核 | **4/4 真的做完** |
+
+### Findings
+
+**🟡 M1 —— 手工兌了一個設計系統已經有的顏色** · ✅ FIXED
+實作寫 `bg-[var(--info)]/10`，但 `styles.css:45` 已定義 `--info-tint: #06b6d41f`，
+設計稿寫的也正是 `$info-tint`。最接近的鄰居 `ApiKeysForm.tsx`（同為設定頁提示橫幅）
+用 `bg-[var(--warning-tint)]` / `bg-[var(--info-tint)]`。
+等於自行調了個近似值（10% vs 12.2%）並偏離同類元件慣例。
+**修復**：改用 `bg-[var(--info-tint)]`。
+
+**🟡 M2 —— gallery fixture 沒補上新的必填 prop** · ✅ FIXED
+`autoSubtitleSupported` 在 `-gallery.fixtures.tsx` 出現 **0 次**，
+但它已是 `LibraryCard` 的**必填** prop。該檔把元件 cast 成
+`ComponentType<Record<string, unknown>>`，**tsc 因此抓不到缺漏**。
+今天沒事純屬運氣 —— fixture 是 `autoSubtitle: false`，狀態段根本不渲染；
+一旦有人改成 `true`，gallery 會靜靜畫出琥珀色「未啟用」態，視覺基準跟著漂移。
+**前科**：PR #250 CR M3 是同一個檔案、同一類問題。
+**修復**：補 `autoSubtitleSupported: true` ＋ 檔內註記說明為何要手動同步。
+
+**🟡 M3 —— AC #2 的「順序」有理由卻沒有測試** · ✅ FIXED
+Story 明寫通知列要在 checkbox 與兩句說明**之間**，並寫了理由；但零測試釘住。
+同一個 spec 檔裡就有現成寫法（`places the opt-in LAST` 用 `compareDocumentPosition`）。
+**修復**：新增 `puts the notice between the control and the description, in that order`。
+**反證**：通知列改為不渲染 → 轉紅。
+
+**🟡 M4 —— 實作者自己違反 Rule 16** · ✅ FIXED
+`expect(notice.id).toBeTruthy()` —— Rule 16 白紙黑字把 `toBeTruthy` 列為 WRONG。
+**修復**：改為斷言確切 id 字串兩端（notice 的 `id` 與 checkbox 的 `aria-describedby`）。
+**反證**：改掉 notice 的 id → 轉紅（原寫法**不會**紅，因為任何非空 id 都 truthy）。
+
+**🟢 L3 —— 三元式兩邊重複 `font-medium`** · ✅ FIXED（提出到樣板字串外層）
+
+**🟢 L1 —— className 斷言證明不了樣式真的算出來** · ⏭️ 記錄為已知取捨
+`className.toContain('font-mono')` / `toContain('text-[var(--text-disabled)]')`
+測的是 class **字串**，Tailwind 沒生出規則它照樣綠
+（`feedback_css_verify_before_iterate` 那條的變形）。
+jsdom 下沒有更好的觀察點；真正的守衛是 visual regression 基準。不修，記錄。
+
+**🟢 L2 —— `text-[13px]` 是檔內唯一的任意字級** · ⏭️ 記錄為已知取捨
+其餘皆 `text-xs`/`text-sm`。設計稿明訂 13px，故保留而非四捨五入到既有級距。
+
+### ⚖️ 交回設計裁定（不由 dev 自行處理）
+
+**`--text-disabled` 用在兩句凍結說明上，可能讓「該去開這個功能的理由」讀不清。**
+
+`styles.css:47` 對該 token 的註解是 **「intentionally sub-AA (TC-1)」** ——
+設計系統自己標記它對比度不足。而 J5-D 明訂停用態要把兩句說明降到這個色。
+
+問題在於：**那兩句正是說服使用者去改 env var 的理由**。
+WCAG 對「停用元件」的對比豁免給的是**控制項本身**，不涵蓋旁邊的說明散文。
+換句話說，我們把「你為什麼該去開這個功能」用一個已知讀不清的顏色印出來。
+
+這是 Sally 的裁定（J5-D 區塊 D 明文），**不是 dev 缺陷** ⇒ 不自行修改。
+→ 立案 `9R-UX-disabled-state-description-contrast`（Rule 24 ②，等 Sally 裁定）。
+
+### 修後閘門（全綠）
+
+`pnpm nx test web` ✅ ｜ `pnpm nx lint web` ✅ ｜ `pnpm format:check` ✅ ｜
+`tsc --noEmit` **147 ＝ main 基準，零新增**。
+修復後 fault injection **3/3 轉紅**（通知列不渲染／拿掉 `aria-describedby`／notice id 改名）。
+

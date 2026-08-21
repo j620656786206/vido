@@ -134,11 +134,9 @@ export function LibraryCard({ library, autoSubtitleSupported, onEdit }: LibraryC
         {(library.paths || []).length} 個資料夾 · {library.mediaCount} 個項目
         {library.autoSubtitle && (
           <span
-            className={
-              autoSubtitleSupported
-                ? 'font-medium text-[var(--success)]'
-                : 'font-medium text-[var(--warning)]'
-            }
+            className={`font-medium ${
+              autoSubtitleSupported ? 'text-[var(--success)]' : 'text-[var(--warning)]'
+            }`}
             data-testid="library-card-auto-subtitle-status"
           >
             {autoSubtitleSupported ? ' · 自動處理免費字幕' : ' · 自動處理免費字幕（伺服器未啟用）'}
