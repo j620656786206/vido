@@ -15,6 +15,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/vido/api/internal/ai"
+	"github.com/vido/api/internal/ai/prompts"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/sse"
@@ -51,6 +52,20 @@ type EpisodeSubtitleStatusWriter interface {
 // *repository.EpisodeRepository satisfies it; main.go injects it.
 type EpisodeSubtitleStateReader interface {
 	FindByID(ctx context.Context, id string) (*models.Episode, error)
+}
+
+// SeriesMetadataReader loads the parent SERIES row behind the FR26 media
+// context an episode run feeds into its translation prompt (Story 9R-8).
+// Narrow on purpose (Rule 11) — *repository.SeriesRepository satisfies it;
+// main.go injects it.
+//
+// A separate interface rather than a widening of SubtitleStateReader /
+// EpisodeSubtitleStateReader: those return *models.Movie / *models.Episode, and
+// Go has no way to express "same method, different row type" in one interface.
+// The movie half of the metadata read needs NO new port — SubtitleStateReader
+// already hands back the complete *models.Movie.
+type SeriesMetadataReader interface {
+	FindByID(ctx context.Context, id string) (*models.Series, error)
 }
 
 // OpenCCConverter is the Simplified→Traditional safety net applied after LLM
@@ -130,6 +145,11 @@ type TranscriptionService struct {
 	episodeWriter EpisodeSubtitleStatusWriter
 	episodeReader EpisodeSubtitleStateReader
 
+	// 9R-8: the parent-series row behind an episode's FR26 prompt context.
+	// Optional / nil-safe — unwired means an episode translates with no media
+	// context, which is exactly the pre-9R-8 behaviour.
+	seriesReader SeriesMetadataReader
+
 	mu         sync.Mutex
 	inProgress map[string]string // mediaID (UUID string, 9R-18) → jobID
 }
@@ -205,6 +225,13 @@ func (s *TranscriptionService) SetEpisodeSubtitleStatusWriter(w EpisodeSubtitleS
 // is always a full run.
 func (s *TranscriptionService) SetEpisodeSubtitleStateReader(r EpisodeSubtitleStateReader) {
 	s.episodeReader = r
+}
+
+// SetSeriesMetadataReader wires the parent-series read behind an episode's FR26
+// prompt context (Story 9R-8). Nil-safe: when unset, an episode run translates
+// with no media context.
+func (s *TranscriptionService) SetSeriesMetadataReader(r SeriesMetadataReader) {
+	s.seriesReader = r
 }
 
 // loadGlossary returns the per-show glossary as translation pairs, or nil when
@@ -889,6 +916,128 @@ func (s *TranscriptionService) glossaryMediaKey(ctx context.Context, mediaType, 
 	return episode.SeriesID
 }
 
+// mediaMetadataFor resolves the FR26 media context this run translates with
+// (Story 9R-8) — the same show-level facts the EXTRACT leg has fed into its
+// system blocks since sub-1-5a (subtitle/media_store.go loadMovie /
+// seriesContext → pipeline.go metadataOf).
+//
+// glossaryKey is the value glossaryMediaKey ALREADY resolved for this run: for
+// an episode it IS the parent series id, so the episode row is never read a
+// second time here.
+//
+// Episodes deliberately carry their PARENT SERIES' context, not their own
+// title/overview — the extract leg made that call because per-episode fields
+// split the segment cache's MetadataHash across every episode of one show
+// (media_store.go loadEpisode). This leg has no cache to split, but diverging
+// would mean the same show translates against two different contexts depending
+// on which leg ran, so it mirrors the extract leg.
+//
+// Fail-soft throughout (Rule 13 case 3): a missing reader, a missing row or a
+// database error yields the ZERO MediaMetadata, which BuildMetadataSection
+// renders as "" — the prompt is then byte-identical to the pre-9R-8 one and the
+// translation proceeds. Refusing to translate because a metadata row is absent
+// would be strictly worse than translating with less context.
+func (s *TranscriptionService) mediaMetadataFor(ctx context.Context, mediaType, mediaID, glossaryKey string) prompts.MediaMetadata {
+	switch mediaType {
+	case models.SubtitleRunMediaMovie:
+		if s.stateReader == nil {
+			// CR M1: NEVER a silent degrade. An unwired reader means every
+			// movie on this leg translates context-blind — the exact class of
+			// quiet downgrade main.go's sub-2-1a comment was written about.
+			s.logger.Warn("no movie reader wired — translating without show context",
+				"media_id", mediaID, "media_type", mediaType)
+			return prompts.MediaMetadata{}
+		}
+		movie, err := s.stateReader.FindByID(ctx, mediaID)
+		// NOTE the repository contract: a missing row comes back as an ERROR
+		// wrapping sql.ErrNoRows, not (nil, nil) (movie_repository.go). Both
+		// arms are guarded so neither shape can panic here.
+		if err != nil || movie == nil {
+			s.logger.Warn("media metadata lookup failed — translating without show context",
+				"media_id", mediaID, "media_type", mediaType, "error", err)
+			return prompts.MediaMetadata{}
+		}
+		return prompts.MediaMetadata{
+			Title:         movie.Title,
+			OriginalTitle: movie.OriginalTitle.String,
+			Year:          releaseYear(movie.ReleaseDate),
+			Genres:        movie.Genres,
+			Overview:      movie.Overview.String,
+			Countries:     productionCountryCodes(movie.ProductionCountries),
+		}
+
+	case models.SubtitleRunMediaEpisode, models.SubtitleRunMediaSeries:
+		if s.seriesReader == nil {
+			s.logger.Warn("no series reader wired — translating without show context",
+				"media_id", mediaID, "media_type", mediaType)
+			return prompts.MediaMetadata{}
+		}
+		// CR M4: glossaryMediaKey FAILS SOFT to the episode's own id when the
+		// parent lookup misses. Querying the series table with an episode id
+		// would then log `series_id=<an episode id>` and send an operator
+		// hunting for a series row that never existed — the 9R-10a CR M1 class
+		// (a real fault dressed up as a normal one). Report what actually
+		// happened instead.
+		if mediaType == models.SubtitleRunMediaEpisode && glossaryKey == mediaID {
+			s.logger.Warn("parent series unresolved for this episode — translating without show context",
+				"media_id", mediaID, "media_type", mediaType)
+			return prompts.MediaMetadata{}
+		}
+		// For an episode glossaryKey is the parent series id; for a series run
+		// it is the row's own id. Either way it is the SHOW.
+		series, err := s.seriesReader.FindByID(ctx, glossaryKey)
+		if err != nil || series == nil {
+			s.logger.Warn("series metadata lookup failed — translating without show context",
+				"media_id", mediaID, "media_type", mediaType, "series_id", glossaryKey, "error", err)
+			return prompts.MediaMetadata{}
+		}
+		// Countries stay empty: the series table carries no production_countries
+		// column, exactly as seriesContext leaves it on the extract leg.
+		return prompts.MediaMetadata{
+			Title:         series.Title,
+			OriginalTitle: series.OriginalTitle.String,
+			Year:          releaseYear(series.FirstAirDate),
+			Genres:        series.Genres,
+			Overview:      series.Overview.String,
+		}
+
+	default:
+		return prompts.MediaMetadata{}
+	}
+}
+
+// releaseYear extracts the year from an ISO date. An empty or unparseable date
+// yields 0, which BuildMetadataSection omits rather than rendering a bogus
+// year. Mirrors subtitle/media_store.go yearOf — duplicated rather than shared
+// because services must not import subtitle (Rule 19), the same reason
+// OpenCCConverter is redeclared in this file.
+func releaseYear(date string) int {
+	if len(date) < 4 {
+		return 0
+	}
+	year, err := strconv.Atoi(date[:4])
+	if err != nil {
+		return 0
+	}
+	return year
+}
+
+// productionCountryCodes projects TMDb's country objects onto the ISO codes the
+// prompt renders. Mirrors subtitle/media_store.go countryCodes (Rule 19 — see
+// releaseYear).
+func productionCountryCodes(countries []models.ProductionCountry) []string {
+	if len(countries) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(countries))
+	for _, c := range countries {
+		if code := strings.TrimSpace(c.ISO3166_1); code != "" {
+			out = append(out, code)
+		}
+	}
+	return out
+}
+
 // translateSRT translates English SRT content to Traditional Chinese and saves as .zh-Hant.srt.
 // Returns the path to the translated SRT file plus the fidelity outcome
 // (bugfix-j): a partial outcome means the placed file still carries English
@@ -931,9 +1080,29 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 		s.logger.Info("translating with per-show glossary",
 			"media_id", mediaID, "glossary_key", glossaryKey, "term_count", len(glossary))
 	}
+	// 9R-8: the FR26 show context the extract leg has always had. Reuses the
+	// glossaryKey resolved just above, so an episode costs no extra row read.
+	metadata := s.mediaMetadataFor(ctx, mediaType, mediaID, glossaryKey)
+	// CR M2: this leg has NO prompt caching — TranslateChunk (extract leg) can
+	// type-assert ai.CachingCompleter, TranslateWithGlossaryHarvest calls plain
+	// CompleteText — so the media-context section is re-sent, and re-billed, on
+	// EVERY batch. At batch size 10 a feature-length subtitle is ~120-180
+	// batches, so a ~200-token section costs roughly 25-35k extra input tokens
+	// per item and brings the 9R-11 run budget ceiling forward accordingly.
+	// Rendered once here purely so an operator can tie a budget trip (or a
+	// proper-noun drift complaint) to whether context was actually applied.
+	metadataChars := len(prompts.BuildMetadataSection(metadata))
+	s.logger.Info("translating with media context",
+		"media_id", mediaID,
+		"media_type", mediaType,
+		"metadata_applied", metadataChars > 0,
+		"metadata_chars", metadataChars,
+		"resent_per_batch", true,
+	)
 	// sub-5-5: the harvest variant also returns the trailer's term yield —
 	// written back below AFTER the translation has succeeded and placed.
-	translated, harvestedTerms, outcome, err := s.translationService.TranslateWithGlossaryHarvest(ctx, blocks, glossary, progressFn)
+	translated, harvestedTerms, outcome, err := s.translationService.TranslateWithGlossaryHarvest(
+		ctx, blocks, glossary, progressFn, WithMediaMetadata(metadata))
 	if err != nil {
 		return "", TranslationOutcome{}, fmt.Errorf("translate: %w", err)
 	}

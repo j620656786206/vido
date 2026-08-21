@@ -564,6 +564,10 @@ func main() {
 	// the pipeline's ASR fallback leg serves episodes through the same run.
 	transcriptionService.SetEpisodeSubtitleStatusWriter(repos.Episodes)
 	transcriptionService.SetEpisodeSubtitleStateReader(repos.Episodes)
+	// 9R-8: the parent-series row behind an episode's FR26 prompt context. The
+	// MOVIE half needs no wiring — SetSubtitleStateReader above already hands
+	// the service the complete movie row.
+	transcriptionService.SetSeriesMetadataReader(repos.Series)
 
 	// Initialize AI terminology correction (Story 9.1) + subtitle translation (Story 9.2b).
 	// Constructed UNCONDITIONALLY (sub-2-1a AC #2): they take the holder, which

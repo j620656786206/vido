@@ -43,6 +43,68 @@ type GlossaryPair struct {
 	Target string
 }
 
+// TranslateOption configures optional translation behavior (Story 9R-8).
+//
+// VARIADIC on purpose, mirroring TranscriptionOption in this same package: a
+// positional parameter would rewrite every existing TranslateWithGlossary /
+// TranslateWithGlossaryHarvest call site and their tests for a feature only one
+// caller uses, while a fourth TranslateWithGlossaryXxx method would extend an
+// already three-deep naming chain. Zero options = the pre-9R-8 behavior.
+type TranslateOption func(*translateConfig)
+
+type translateConfig struct {
+	metadata prompts.MediaMetadata
+}
+
+// WithMediaMetadata attaches the FR26 show context (title, year, genres,
+// overview, countries) to a translation, so the model renders character names,
+// register and setting consistently across the whole subtitle. The zero value
+// renders nothing — see composeSystemPrompt.
+func WithMediaMetadata(md prompts.MediaMetadata) TranslateOption {
+	return func(cfg *translateConfig) { cfg.metadata = md }
+}
+
+func newTranslateConfig(opts []TranslateOption) *translateConfig {
+	cfg := &translateConfig{}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+	return cfg
+}
+
+// composeSystemPrompt puts the FR26 media-context section behind the invariant
+// translator prompt — the same stable-first order the extract leg's
+// buildSystemBlocks uses (subtitle/pipeline.go: block[0] invariant, block[1]
+// per-show), so a future prompt-caching breakpoint lands on the same prefix.
+//
+// P11 — DELIBERATELY NO PromptVersion BUMP (Story 9R-8). The bump rule exists so
+// a changed prompt cannot silently serve a cached translation of the OLD prompt.
+// Neither half of that risk applies here:
+//   - this composes the already-shipped BuildMetadataSection at the call site
+//     and edits NO text in prompts/subtitle_translator.go, so the P11 pin digest
+//     is unchanged;
+//   - this (ASR) leg has no segment cache at all — splitCachedCues is
+//     pipeline-only — while a bump WOULD re-key the extract leg's whole library
+//     (RunVersion embeds the prompt version) to re-translate for zero gain.
+//
+// TestSubtitleTranslatorPromptVersion_NotBumpedBy9R8 pins the decision.
+//
+// KNOWN DIVERGENCE (CR L1): on the extract leg the metadata AND the glossary
+// share one system block; here the metadata rides the system prompt while the
+// glossary stays where 9R-7 put it — inside the per-batch USER prompt. Both
+// reach the model, so this is a structural difference rather than a behavioural
+// one, but the two legs should converge when the ASR path is folded into the
+// gated TranslateTrack (sprint-status `backlog-asr-leg-unify-gated-pipeline`).
+func composeSystemPrompt(md prompts.MediaMetadata) string {
+	section := prompts.BuildMetadataSection(md)
+	if section == "" {
+		// Byte-identical to every pre-9R-8 call — the BuildMetadataSection
+		// zero-value contract (sub-1-5a) is what makes this safe.
+		return prompts.SubtitleTranslatorSystemPrompt
+	}
+	return prompts.SubtitleTranslatorSystemPrompt + "\n\n" + section
+}
+
 // TranslationField is one arbitrary keyed piece of text to translate. Key is a
 // stable identifier the caller uses to match the result back (a subtitle block
 // index as a string, or a metadata field name like "plot"/"title"). This is the
@@ -185,8 +247,8 @@ func (o TranslationOutcome) DemotesVerdict() bool {
 // the Translate → TranslateWithGlossary precedent (9R-7). The partial-failure
 // outcome is NOT dropped (bugfix-j AC #1 red line): it passes through so no
 // wrapper caller can record a lying verdict.
-func (s *TranslationService) TranslateWithGlossary(ctx context.Context, blocks []TranslationBlock, glossary []GlossaryPair, progressFn func(float64)) ([]TranslationBlock, TranslationOutcome, error) {
-	translated, _, outcome, err := s.TranslateWithGlossaryHarvest(ctx, blocks, glossary, progressFn)
+func (s *TranslationService) TranslateWithGlossary(ctx context.Context, blocks []TranslationBlock, glossary []GlossaryPair, progressFn func(float64), opts ...TranslateOption) ([]TranslationBlock, TranslationOutcome, error) {
+	translated, _, outcome, err := s.TranslateWithGlossaryHarvest(ctx, blocks, glossary, progressFn, opts...)
 	return translated, outcome, err
 }
 
@@ -195,11 +257,13 @@ func (s *TranslationService) TranslateWithGlossary(ctx context.Context, blocks [
 // trailer, merged across batches with the FIRST occurrence winning (the model's
 // later hindsight does not overturn an established rendering — the glossary's
 // fixed-rendering spirit). nil terms = nothing harvested.
-func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, blocks []TranslationBlock, glossary []GlossaryPair, progressFn func(float64)) ([]TranslationBlock, map[string]string, TranslationOutcome, error) {
+func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, blocks []TranslationBlock, glossary []GlossaryPair, progressFn func(float64), opts ...TranslateOption) ([]TranslationBlock, map[string]string, TranslationOutcome, error) {
 	if len(blocks) == 0 {
 		return nil, nil, TranslationOutcome{}, nil
 	}
 	promptGlossary := toPromptGlossary(glossary)
+	// 9R-8: composed ONCE — the media context is per-run, not per-batch.
+	systemPrompt := composeSystemPrompt(newTranslateConfig(opts).metadata)
 
 	batchSize := prompts.SubtitleTranslatorBatchSize
 	contextWindow := prompts.SubtitleTranslatorContextWindow
@@ -258,7 +322,7 @@ func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, b
 		batchCtx, batchCancel := context.WithTimeout(ctx, TranslationTimeout)
 		translated, err := s.provider.CompleteText(
 			batchCtx,
-			prompts.SubtitleTranslatorSystemPrompt,
+			systemPrompt,
 			userPrompt,
 			TranslationMaxTokens,
 		)

@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vido/api/internal/ai/prompts"
 	"github.com/vido/api/internal/models"
 )
 
@@ -305,10 +307,14 @@ func TestTranscriptionTranslatingEventType(t *testing.T) {
 type translationIntegrationMock struct {
 	response  string
 	callCount int
+	// 9R-8: the system prompt of the LAST batch, so a test can assert what the
+	// FR26 media-context section actually put in front of the model.
+	lastSystemPrompt string
 }
 
 func (m *translationIntegrationMock) CompleteText(ctx context.Context, systemPrompt, userPrompt string, maxTokens int) (string, error) {
 	m.callCount++
+	m.lastSystemPrompt = systemPrompt
 	return m.response, nil
 }
 
@@ -323,4 +329,277 @@ func (m *translationFailOnSecondIntegrationMock) CompleteText(ctx context.Contex
 		return m.firstResponse, nil
 	}
 	return "", context.DeadlineExceeded
+}
+
+// ─── 9R-8: FR26 media-context on the ASR leg ────────────────────────────────
+//
+// The extract leg has fed BuildMetadataSection into its system blocks since
+// sub-1-5a (subtitle/pipeline.go buildSystemBlocks). The ASR leg — the majority
+// path at 68.3% of the sampled library — translated with no idea which work the
+// cues belong to. These tests pin the wiring and, just as importantly, pin the
+// no-metadata path as BYTE-IDENTICAL to the pre-9R-8 prompt.
+
+// metadataMovieReader is a SubtitleStateReader that serves one movie row (or an
+// error). callCount proves the metadata path does not re-read what it already has.
+type metadataMovieReader struct {
+	movie     *models.Movie
+	err       error
+	callCount int
+}
+
+func (r *metadataMovieReader) FindByID(ctx context.Context, id string) (*models.Movie, error) {
+	r.callCount++
+	if r.err != nil {
+		return nil, r.err
+	}
+	return r.movie, nil
+}
+
+// metadataEpisodeReader is an EpisodeSubtitleStateReader for the episode leg.
+type metadataEpisodeReader struct {
+	episode   *models.Episode
+	err       error
+	callCount int
+}
+
+func (r *metadataEpisodeReader) FindByID(ctx context.Context, id string) (*models.Episode, error) {
+	r.callCount++
+	if r.err != nil {
+		return nil, r.err
+	}
+	return r.episode, nil
+}
+
+func fixtureMovie() *models.Movie {
+	return &models.Movie{
+		ID:            uuidA,
+		Title:         "The Invisible Agent",
+		OriginalTitle: models.NewNullString("Der Unsichtbare Agent"),
+		ReleaseDate:   "1998-07-14",
+		Genres:        []string{"Science Fiction", "Thriller"},
+		Overview:      models.NewNullString("A field operative discovers\na way to vanish."),
+		ProductionCountries: []models.ProductionCountry{
+			{ISO3166_1: "DE", Name: "Germany"},
+		},
+	}
+}
+
+func TestTranslateSRT_MovieMetadataReachesTheSystemPrompt(t *testing.T) {
+	mockProvider := &translationIntegrationMock{response: "[1] 你好世界"}
+	svc := NewTranscriptionService(nil, nil, nil, nil)
+	svc.SetTranslationService(NewTranslationService(mockProvider, nil))
+	svc.SetSubtitleStateReader(&metadataMovieReader{movie: fixtureMovie()})
+
+	tmpDir := t.TempDir()
+	_, _, err := svc.translateSRT(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidA,
+		"1\n00:00:01,000 --> 00:00:04,000\nHello world\n", filepath.Join(tmpDir, "movie.mkv"), tmpDir)
+	require.NoError(t, err)
+
+	sys := mockProvider.lastSystemPrompt
+	assert.Contains(t, sys, "## Media context — background only, do NOT translate or output this section:")
+	assert.Contains(t, sys, "- Title: The Invisible Agent")
+	assert.Contains(t, sys, "- Original title: Der Unsichtbare Agent")
+	assert.Contains(t, sys, "- Year: 1998")
+	assert.Contains(t, sys, "- Genres: Science Fiction, Thriller")
+	assert.Contains(t, sys, "- Production countries: DE")
+	// collapseLines folds the multi-line overview onto one line.
+	assert.Contains(t, sys, "- Overview: A field operative discovers a way to vanish.")
+	// The invariant translator prompt stays FIRST — same stable-prefix order as
+	// the extract leg's buildSystemBlocks (block[0] invariant, block[1] per-show).
+	assert.True(t, strings.HasPrefix(sys, prompts.SubtitleTranslatorSystemPrompt),
+		"the invariant system prompt must stay the stable prefix")
+}
+
+func TestTranslateSRT_MetadataLookupFailureKeepsThePromptByteIdentical(t *testing.T) {
+	mockProvider := &translationIntegrationMock{response: "[1] 你好世界"}
+	svc := NewTranscriptionService(nil, nil, nil, nil)
+	svc.SetTranslationService(NewTranslationService(mockProvider, nil))
+	// Rule 13 fail-soft. NOTE the repo contract: a missing row comes back as an
+	// error WRAPPING sql.ErrNoRows, never (nil, nil) — movie_repository.go:106.
+	svc.SetSubtitleStateReader(&metadataMovieReader{
+		err: fmt.Errorf("movie with id %s not found: %w", uuidA, sql.ErrNoRows),
+	})
+
+	tmpDir := t.TempDir()
+	zhPath, _, err := svc.translateSRT(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidA,
+		"1\n00:00:01,000 --> 00:00:04,000\nHello world\n", filepath.Join(tmpDir, "movie.mkv"), tmpDir)
+	require.NoError(t, err, "a metadata miss must never fail the translation")
+	assert.FileExists(t, zhPath)
+
+	assert.Equal(t, prompts.SubtitleTranslatorSystemPrompt, mockProvider.lastSystemPrompt,
+		"no metadata must yield the pre-9R-8 prompt byte-for-byte")
+}
+
+func TestTranslateSRT_NoReaderWiredKeepsThePromptByteIdentical(t *testing.T) {
+	mockProvider := &translationIntegrationMock{response: "[1] 你好世界"}
+	svc := NewTranscriptionService(nil, nil, nil, nil)
+	svc.SetTranslationService(NewTranslationService(mockProvider, nil))
+	// No readers wired at all — the pre-9R-8 deployment shape.
+
+	tmpDir := t.TempDir()
+	_, _, err := svc.translateSRT(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidA,
+		"1\n00:00:01,000 --> 00:00:04,000\nHello world\n", filepath.Join(tmpDir, "movie.mkv"), tmpDir)
+	require.NoError(t, err)
+
+	assert.Equal(t, prompts.SubtitleTranslatorSystemPrompt, mockProvider.lastSystemPrompt)
+}
+
+// TestSubtitleTranslatorPromptVersion_NotBumpedBy9R8 pins the deliberate
+// non-bump. 9R-8 adds NO text to any prompt surface in subtitle_translator.go —
+// it composes the already-shipped BuildMetadataSection at the ASR call site.
+// Bumping would re-key the EXTRACT leg's whole segment cache (RunVersion embeds
+// the prompt version) to re-translate a library that gained nothing, while the
+// ASR leg — which has no segment cache at all — would gain nothing either.
+func TestSubtitleTranslatorPromptVersion_NotBumpedBy9R8(t *testing.T) {
+	assert.Equal(t, "m1-v2", prompts.SubtitleTranslatorPromptVersion)
+}
+
+// metadataSeriesReader is a SeriesMetadataReader serving one series row.
+type metadataSeriesReader struct {
+	series    *models.Series
+	err       error
+	callCount int
+	lastID    string
+}
+
+func (r *metadataSeriesReader) FindByID(ctx context.Context, id string) (*models.Series, error) {
+	r.callCount++
+	r.lastID = id
+	if r.err != nil {
+		return nil, r.err
+	}
+	return r.series, nil
+}
+
+// TestTranslateSRT_EpisodeUsesParentSeriesMetadata pins BOTH halves of AC #1:
+// an episode translates against its SHOW's context (mirroring the extract leg's
+// loadEpisode decision), and the episode row is read exactly ONCE — the
+// metadata path reuses the series id glossaryMediaKey already resolved.
+func TestTranslateSRT_EpisodeUsesParentSeriesMetadata(t *testing.T) {
+	mockProvider := &translationIntegrationMock{response: "[1] 你好世界"}
+	svc := NewTranscriptionService(nil, nil, nil, nil)
+	svc.SetTranslationService(NewTranslationService(mockProvider, nil))
+
+	episodes := &metadataEpisodeReader{episode: &models.Episode{
+		ID:       uuidB,
+		SeriesID: uuidC,
+		// An episode-level title that must NOT reach the prompt.
+		Title: models.NewNullString("The Body"),
+	}}
+	series := &metadataSeriesReader{series: &models.Series{
+		ID:            uuidC,
+		Title:         "Buffy the Vampire Slayer",
+		OriginalTitle: models.NewNullString("Buffy the Vampire Slayer"),
+		FirstAirDate:  "1997-03-10",
+		Genres:        []string{"Drama", "Fantasy"},
+		Overview:      models.NewNullString("A teenager battles the forces of darkness."),
+	}}
+	svc.SetEpisodeSubtitleStateReader(episodes)
+	svc.SetSeriesMetadataReader(series)
+
+	tmpDir := t.TempDir()
+	_, _, err := svc.translateSRT(context.Background(), "job-1", models.SubtitleRunMediaEpisode, uuidB,
+		"1\n00:00:01,000 --> 00:00:04,000\nHello world\n", filepath.Join(tmpDir, "s05e16.mkv"), tmpDir)
+	require.NoError(t, err)
+
+	sys := mockProvider.lastSystemPrompt
+	assert.Contains(t, sys, "- Title: Buffy the Vampire Slayer")
+	assert.Contains(t, sys, "- Year: 1997")
+	assert.Contains(t, sys, "- Genres: Drama, Fantasy")
+	// The episode's OWN title must not leak in. Paired with the positive Title
+	// assertion above so this cannot pass by the section being absent entirely
+	// (CR L2 — a lone NotContains proves nothing).
+	assert.NotContains(t, sys, "The Body",
+		"episodes carry SHOW-level context — a per-episode title would diverge from the extract leg")
+
+	assert.Equal(t, uuidC, series.lastID, "the series read must key on the PARENT series id")
+	assert.Equal(t, 1, series.callCount)
+	assert.Equal(t, 1, episodes.callCount,
+		"glossaryMediaKey already resolved the series id — the metadata path must not re-read the episode")
+}
+
+func TestTranslateSRT_EpisodeWithoutSeriesReaderStaysByteIdentical(t *testing.T) {
+	mockProvider := &translationIntegrationMock{response: "[1] 你好世界"}
+	svc := NewTranscriptionService(nil, nil, nil, nil)
+	svc.SetTranslationService(NewTranslationService(mockProvider, nil))
+	svc.SetEpisodeSubtitleStateReader(&metadataEpisodeReader{
+		episode: &models.Episode{ID: uuidB, SeriesID: uuidC},
+	})
+	// No series reader wired — the pre-9R-8 deployment shape.
+
+	tmpDir := t.TempDir()
+	_, _, err := svc.translateSRT(context.Background(), "job-1", models.SubtitleRunMediaEpisode, uuidB,
+		"1\n00:00:01,000 --> 00:00:04,000\nHello world\n", filepath.Join(tmpDir, "s05e16.mkv"), tmpDir)
+	require.NoError(t, err)
+
+	assert.Equal(t, prompts.SubtitleTranslatorSystemPrompt, mockProvider.lastSystemPrompt)
+}
+
+// TestTranslateSRT_UnresolvedParentSeriesSkipsTheSeriesLookup covers CR M4:
+// glossaryMediaKey fails soft to the EPISODE's own id when the parent lookup
+// misses. Querying the series table with that id would log a series_id that is
+// really an episode id and send an operator hunting a row that never existed
+// (the 9R-10a CR M1 class), so the metadata path must not make the call at all.
+func TestTranslateSRT_UnresolvedParentSeriesSkipsTheSeriesLookup(t *testing.T) {
+	mockProvider := &translationIntegrationMock{response: "[1] 你好世界"}
+	svc := NewTranscriptionService(nil, nil, nil, nil)
+	svc.SetTranslationService(NewTranslationService(mockProvider, nil))
+
+	episodes := &metadataEpisodeReader{err: fmt.Errorf("episode lookup: %w", sql.ErrNoRows)}
+	series := &metadataSeriesReader{series: &models.Series{ID: uuidC, Title: "Buffy the Vampire Slayer"}}
+	svc.SetEpisodeSubtitleStateReader(episodes)
+	svc.SetSeriesMetadataReader(series)
+
+	tmpDir := t.TempDir()
+	_, _, err := svc.translateSRT(context.Background(), "job-1", models.SubtitleRunMediaEpisode, uuidB,
+		"1\n00:00:01,000 --> 00:00:04,000\nHello world\n", filepath.Join(tmpDir, "s05e16.mkv"), tmpDir)
+	require.NoError(t, err)
+
+	assert.Equal(t, 0, series.callCount,
+		"an unresolved parent must not be looked up under the episode's own id")
+	assert.Equal(t, prompts.SubtitleTranslatorSystemPrompt, mockProvider.lastSystemPrompt)
+}
+
+// ─── 9R-8: the Rule 19 duplicates of subtitle/media_store.go helpers ─────────
+//
+// releaseYear and productionCountryCodes exist ONLY because services must not
+// import subtitle. Duplicated logic drifts, so both are pinned directly rather
+// than left to a single happy-path integration assertion (CR M3).
+
+func TestReleaseYear(t *testing.T) {
+	cases := []struct {
+		name string
+		date string
+		want int
+	}{
+		{"full ISO date", "1998-07-14", 1998},
+		{"year only", "2016", 2016},
+		{"empty", "", 0},
+		{"too short", "199", 0},
+		{"non-numeric placeholder", "TBAX", 0},
+		{"mixed junk", "19x8-01-01", 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, releaseYear(tc.date))
+		})
+	}
+}
+
+func TestProductionCountryCodes(t *testing.T) {
+	assert.Nil(t, productionCountryCodes(nil))
+	assert.Nil(t, productionCountryCodes([]models.ProductionCountry{}))
+
+	assert.Equal(t, []string{"US", "DE"}, productionCountryCodes([]models.ProductionCountry{
+		{ISO3166_1: "US", Name: "United States of America"},
+		{ISO3166_1: "DE", Name: "Germany"},
+	}))
+
+	// Blank / whitespace-only codes are dropped, mirroring media_store.go
+	// countryCodes — otherwise the prompt renders a dangling ", ".
+	assert.Equal(t, []string{"JP"}, productionCountryCodes([]models.ProductionCountry{
+		{ISO3166_1: "  ", Name: "Blank"},
+		{ISO3166_1: " JP ", Name: "Japan"},
+		{ISO3166_1: "", Name: "Empty"},
+	}))
 }

@@ -744,3 +744,106 @@ func TestTranslationOutcome_DemotesVerdict(t *testing.T) {
 		})
 	}
 }
+
+// ─── 9R-8: media metadata option ────────────────────────────────────────────
+
+func sampleShowMetadata() prompts.MediaMetadata {
+	return prompts.MediaMetadata{
+		Title:         "Stranger Things",
+		OriginalTitle: "Stranger Things",
+		Year:          2016,
+		Genres:        []string{"Drama", "Mystery"},
+		Overview:      "Kids in Hawkins face a creature from another dimension.",
+		Countries:     []string{"US"},
+	}
+}
+
+func TestTranslateWithGlossaryHarvest_MediaMetadataRidesTheSystemPrompt(t *testing.T) {
+	mock := &mockTranslationCompleter{response: "[1] 你好"}
+	svc := NewTranslationService(mock, nil)
+
+	_, _, _, err := svc.TranslateWithGlossaryHarvest(context.Background(),
+		[]TranslationBlock{{Index: 1, Text: "Hello"}}, nil, nil,
+		WithMediaMetadata(sampleShowMetadata()))
+	require.NoError(t, err)
+	require.Len(t, mock.calls, 1)
+
+	sys := mock.calls[0].SystemPrompt
+	assert.True(t, strings.HasPrefix(sys, prompts.SubtitleTranslatorSystemPrompt),
+		"the invariant prompt stays the stable prefix — metadata is appended, never prepended")
+	assert.Contains(t, sys, "- Title: Stranger Things")
+	assert.Contains(t, sys, "- Year: 2016")
+	assert.Contains(t, sys, "- Production countries: US")
+	// The sub-5-5 [@contract-v1] harvest trailer instruction must survive the
+	// composition intact — the parser side depends on it verbatim.
+	assert.Contains(t, sys, "===TERMS===")
+	// The user prompt is untouched: metadata must NOT be routed through the
+	// P11-pinned prompt builders (that would force a version bump).
+	assert.NotContains(t, mock.calls[0].UserPrompt, "Media context")
+}
+
+func TestTranslateWithGlossaryHarvest_NoOptionsIsByteIdentical(t *testing.T) {
+	mock := &mockTranslationCompleter{response: "[1] 你好"}
+	svc := NewTranslationService(mock, nil)
+
+	_, _, _, err := svc.TranslateWithGlossaryHarvest(context.Background(),
+		[]TranslationBlock{{Index: 1, Text: "Hello"}}, nil, nil)
+	require.NoError(t, err)
+	require.Len(t, mock.calls, 1)
+	assert.Equal(t, prompts.SubtitleTranslatorSystemPrompt, mock.calls[0].SystemPrompt)
+}
+
+// TestTranslateWithGlossaryHarvest_ZeroMetadataIsByteIdentical guards the case
+// the fail-soft path actually produces: the option IS passed, carrying the zero
+// value, because a metadata lookup missed.
+func TestTranslateWithGlossaryHarvest_ZeroMetadataIsByteIdentical(t *testing.T) {
+	mock := &mockTranslationCompleter{response: "[1] 你好"}
+	svc := NewTranslationService(mock, nil)
+
+	_, _, _, err := svc.TranslateWithGlossaryHarvest(context.Background(),
+		[]TranslationBlock{{Index: 1, Text: "Hello"}}, nil, nil,
+		WithMediaMetadata(prompts.MediaMetadata{}))
+	require.NoError(t, err)
+	require.Len(t, mock.calls, 1)
+	assert.Equal(t, prompts.SubtitleTranslatorSystemPrompt, mock.calls[0].SystemPrompt)
+}
+
+func TestTranslateWithGlossary_ForwardsMediaMetadata(t *testing.T) {
+	wrapperMock := &mockTranslationCompleter{response: "[1] 你好"}
+	_, _, err := NewTranslationService(wrapperMock, nil).TranslateWithGlossary(context.Background(),
+		[]TranslationBlock{{Index: 1, Text: "Hello"}}, nil, nil,
+		WithMediaMetadata(sampleShowMetadata()))
+	require.NoError(t, err)
+
+	coreMock := &mockTranslationCompleter{response: "[1] 你好"}
+	_, _, _, err = NewTranslationService(coreMock, nil).TranslateWithGlossaryHarvest(context.Background(),
+		[]TranslationBlock{{Index: 1, Text: "Hello"}}, nil, nil,
+		WithMediaMetadata(sampleShowMetadata()))
+	require.NoError(t, err)
+
+	require.Len(t, wrapperMock.calls, 1)
+	require.Len(t, coreMock.calls, 1)
+	assert.Equal(t, coreMock.calls[0].SystemPrompt, wrapperMock.calls[0].SystemPrompt,
+		"the wrapper must forward options verbatim")
+}
+
+// TestTranslateWithGlossaryHarvest_MetadataComposedOncePerRun pins that the
+// media context is built outside the batch loop: every batch of one run must
+// see the SAME system prompt, which is also what a prompt-cache prefix needs.
+func TestTranslateWithGlossaryHarvest_MetadataComposedOncePerRun(t *testing.T) {
+	mock := &mockTranslationCompleter{response: "[1] 你好"}
+	svc := NewTranslationService(mock, nil)
+
+	blocks := make([]TranslationBlock, 0, 25)
+	for i := 1; i <= 25; i++ {
+		blocks = append(blocks, TranslationBlock{Index: i, Text: fmt.Sprintf("Line %d", i)})
+	}
+
+	_, _, _, err := svc.TranslateWithGlossaryHarvest(context.Background(), blocks, nil, nil,
+		WithMediaMetadata(sampleShowMetadata()))
+	require.NoError(t, err)
+	require.Len(t, mock.calls, 3, "25 blocks at batch size 10 = 3 batches")
+	for i, call := range mock.calls {
+		assert.Equal(t, mock.calls[0].SystemPrompt, call.SystemPrompt, "batch %d", i+1)
+	}
+}
