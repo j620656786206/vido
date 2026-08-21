@@ -26,7 +26,11 @@ Caption 節點照抄 `b6UOEN` 的樣式：
 `fill:"#888888"`, `fontFamily:"Noto Sans TC"`, `fontSize:14`, `fontWeight:"600"`，
 內容為 `J5 · 入庫自動生成 · 部署未啟用狀態規格`。
 
-frame 高度由內容決定（預估 ~1120）。背景 `$bg-primary`，圓角 `$radius-lg`，內距 32。
+frame 高度由內容決定。背景 **`$bg-secondary`**，圓角 `$radius-lg`，內距 32。
+
+> ⚠️ **2026-08-21 更正**：初版此處寫成 `$bg-primary`（外深內淺），與隔壁 `J4-D` **相反** ——
+> J4-D 是 frame `#24304A`（外淺）、強調區塊 `#1B2336`（內深）。兩張 spec 頁並排在同一個 y，
+> 內外反過來會看起來像出錯。日後複用本提示詞，**先讀 J4-D 的實際 fill 再決定**。
 所有區塊寬 1176（=1240−32×2），縱向間距 28。
 
 **排版一律照 `sPzZT`(J4-D) 的既有慣例**：先用 `Get("sPzZT", {depth:3})` 讀它的
@@ -38,7 +42,7 @@ frame 高度由內容決定（預估 ~1120）。背景 `$bg-primary`，圓角 `$
 
 | 用途 | token |
 |---|---|
-| 背景 | `$bg-primary` / 區塊底 `$bg-secondary` |
+| 背景 | frame `$bg-secondary` / 強調區塊底 `$bg-primary`（外淺內深，同 J4-D） |
 | 分隔線 | `$border-subtle` |
 | 主要文字 | `$text-primary` |
 | 次要文字 | `$text-secondary` |

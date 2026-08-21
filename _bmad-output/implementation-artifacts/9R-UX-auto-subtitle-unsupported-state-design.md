@@ -146,10 +146,33 @@ mockup 只畫主要狀態 —— 這是 J4-D 區塊 D 已經建立的慣例（�
 ## 流程
 
 1. ✅ Sally 出裁定與提示詞 ← **本文件 ＋ `-prompt.md`**
-2. ⬜ Alexyu 跑 Pencil Inline AI Agent
-3. ⬜ Sally MCP review（逐條複驗：文案逐字、`ctx.problems` 零筆、觸控目標 ≥44px、E5-D/E5-M/J4-D 零改動）
-4. ⬜ 更新 `scripts/export-pen-screenshots.py` 的 `SCREENS` dict：`J5-D` → `("flow-j-specs", "j5-d")`
-5. ⬜ 匯出截圖、與 `.pen` 同 commit
+2. ✅ Alexyu 跑 Pencil Inline AI Agent
+3. ✅ Sally MCP review —— **PASS（一輪）**，修正一處底色（見下）
+4. ✅ `SCREENS` dict：`alrIw` → `("flow-j-specs", "j5-d")`
+5. ✅ 匯出截圖、與 `.pen` 同 commit（PR **#252** merged 2026-08-21）
+6. ⬜ 落地 → `9R-10b-m4-unsupported-state-frontend`（ready-for-dev）
+
+### MCP 複驗結果（2026-08-21）
+
+| 檢查 | 結果 |
+|---|---|
+| 通知列兩句 vs `subtitle_pipeline_handler.go:112-113` | **逐字相同**（行動版斷行處不留空格＝正確，非漏字） |
+| `ctx.problems` | **0 筆** |
+| 卡片三態 | `$success`／`$warning`／整段不出現，齊全 |
+| 元件實例 | `Fn5MZ`・`VSXl5` 為真 ref，非複製品 |
+| 觸控目標 | 桌面 21（＝E5-D）／行動 **45** |
+| `E5-D`／`E5-M`／`J4-D` | **零改動** |
+| 「掃描」逐畫面 | E5-D **0** ／ E5-M **0** ／ J4-D **2** ／ J5-D **1** |
+
+J5-D 那 1 處是區塊 F 稽核清單的**規則本身**，與 J4-D 的 2 處同性質
+（規格頁後設敘述，上一輪已審定為正確必要）。使用者真的會看到的 mockup 仍是 0。
+⚠️ 自檢腳本的正確規則是「**只掃 mockup 畫面**」，不是「排除區塊 F」。
+
+**複驗修正一處**：J5-D 的內外底色與 J4-D 相反（外深內淺）。兩張 spec 頁並排在同一個 y，
+內外反過來會看起來像出錯 → 對調為外淺內深（frame `$bg-secondary`／強調區塊 `$bg-primary`），
+三個單屬性 `Update`。
+⚠️ **`-prompt.md` 的底色段寫反了** —— 日後複用 J-spec 頁提示詞，
+要先讀 J4-D 的實際 fill（frame `#24304A` 外淺、強調區塊 `#1B2336` 內深）。
 
 ## 驗收標準
 
