@@ -146,3 +146,29 @@ func (h *ASRProviderHolder) TranscribeWithLanguage(ctx context.Context, audioPat
 	}
 	return provider.TranscribeWithLanguage(ctx, audioPath, lang)
 }
+
+// TranscribeDetailed forwards the 9R-5 hallucination-filter seam to the live
+// client. Without this the holder — which is what the pipeline actually holds —
+// would fail the ai.DetailedTranscriber type assertion, and the whole-file
+// empty-result guard would silently never engage.
+//
+// A resolved provider that is NOT a DetailedTranscriber (a future alternative
+// engine) degrades to the plain SRT with Filtered=false, exactly as a direct
+// caller would.
+func (h *ASRProviderHolder) TranscribeDetailed(ctx context.Context, audioPath, lang string) (ai.TranscriptionDetail, error) {
+	provider, err := h.Get(ctx)
+	if err != nil {
+		return ai.TranscriptionDetail{}, err
+	}
+	if detailed, ok := provider.(ai.DetailedTranscriber); ok {
+		return detailed.TranscribeDetailed(ctx, audioPath, lang)
+	}
+	srt, err := provider.TranscribeWithLanguage(ctx, audioPath, lang)
+	if err != nil {
+		return ai.TranscriptionDetail{}, err
+	}
+	return ai.TranscriptionDetail{SRT: srt, Unfiltered: srt}, nil
+}
+
+// Compile-time proof the holder carries the detailed seam through.
+var _ ai.DetailedTranscriber = (*ASRProviderHolder)(nil)

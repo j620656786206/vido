@@ -13,6 +13,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -57,6 +59,12 @@ type WhisperClient struct {
 	// self-hosted OpenAI-compatible engines use their own id (e.g. Speaches
 	// "Systran/faster-whisper-small").
 	model string
+	// verboseUnsupported latches once this endpoint proves it cannot serve
+	// `response_format=verbose_json` (Story 9R-5), so a ten-chunk file probes
+	// once instead of ten times. Set ONLY on a permanent 4xx or an unusable
+	// 200 body — never on a transient fault, which would silently disable
+	// hallucination filtering for the life of the process.
+	verboseUnsupported atomic.Bool
 }
 
 // WhisperOption is a functional option for configuring WhisperClient.
@@ -174,24 +182,188 @@ func (c *WhisperClient) Transcribe(ctx context.Context, audioPath string) (strin
 // An empty lang means Whisper auto-detects (only correct when the track language
 // is unknown/und — auto-detection mis-fires on mixed/background audio).
 func (c *WhisperClient) TranscribeWithLanguage(ctx context.Context, audioPath, lang string) (string, error) {
+	detail, err := c.TranscribeDetailed(ctx, audioPath, lang)
+	if err != nil {
+		return "", err
+	}
+	return detail.SRT, nil
+}
+
+// TranscribeDetailed is TranscribeWithLanguage plus what the 9R-5 hallucination
+// filter dropped, so a caller that owns the WHOLE file (the chunking loop in
+// services.TranscriptionService) can tell "this ten-minute chunk really was
+// silent credits" apart from "the filter just deleted the entire movie".
+//
+// It is a SEPARATE optional interface rather than a widening of ai.ASRProvider:
+// 9R-9's swap-in promise is that any OpenAI-compatible engine satisfies the
+// provider interface, and growing that interface would break every alternative
+// implementation. Callers type-assert DetailedTranscriber and degrade to the
+// plain SRT when it is absent — the ai.CachingCompleter precedent
+// (services/translation_service.go).
+func (c *WhisperClient) TranscribeDetailed(ctx context.Context, audioPath, lang string) (TranscriptionDetail, error) {
 	// sub-5-2 AC #3: only the PAID hosted API needs a key. A self-hosted
 	// OpenAI-compatible engine (Speaches / WhisperLive / Subgen) authenticates
 	// nothing, and requiring a key here forced those deployments to invent a
 	// dummy OPENAI_API_KEY — while sub-5-1 was already metering them at $0 and
 	// the docs advertised them as supported. Same single predicate as metering.
 	if c.apiKey == "" && !c.isSelfHosted() {
-		return "", ErrWhisperNotConfigured
+		return TranscriptionDetail{}, ErrWhisperNotConfigured
 	}
 
-	// Build multipart form body once; per-attempt timeouts are applied inside
-	// the retry loop below.
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
+	audio, err := c.readAudioForUpload(audioPath)
+	if err != nil {
+		return TranscriptionDetail{}, err
+	}
+	filename := filepath.Base(audioPath)
 
-	// Add audio file
+	c.logger.Debug("Whisper API request", "file", filename)
+
+	detail, ok, err := c.transcribeVerbose(ctx, audio, filename, lang)
+	if err != nil {
+		return TranscriptionDetail{}, err
+	}
+	if !ok {
+		// 9R-5: the engine cannot serve verbose_json, so there are no segments
+		// to judge. Re-ask for plain SRT — verbose_json's `text` field has no
+		// timestamps, so "give up on verbose" must NOT mean "give up on
+		// subtitles". Unfiltered mirrors SRT: nothing was inspected.
+		srt, _, err := c.postTranscription(ctx, audio, filename, lang, transcribeFormatSRT)
+		if err != nil {
+			return TranscriptionDetail{}, err
+		}
+		detail = TranscriptionDetail{SRT: srt, Unfiltered: srt}
+	}
+
+	// 9R-11: meter ASR cost by audio minutes against the per-run budget.
+	// sub-5-1 AC #1: at the SAME rate the estimator quotes for this endpoint —
+	// a self-hosted server records $0 instead of a fabricated hosted-rate bill.
+	//
+	// 9R-5: metered EXACTLY ONCE per audio file, after the final answer is in
+	// hand. The verbose→srt fallback issues a second HTTP request; billing the
+	// same minutes twice would burn the 9R-11 run budget at double rate and
+	// trip the ceiling halfway through a film.
+	if b := BudgetFromContext(ctx); b != nil {
+		if dur, _, derr := parseWAVInfo(audioPath); derr == nil {
+			b.RecordASRWithRate(dur, EstimatedASRPerMinuteUSD(c.isSelfHosted()))
+		}
+	}
+
+	c.logger.Info("Whisper transcription complete",
+		"file", filename,
+		"srt_bytes", len(detail.SRT),
+		"filtered", detail.Filtered,
+	)
+
+	return detail, nil
+}
+
+// transcribeVerbose runs the verbose_json path. ok=false means "this engine
+// cannot do verbose_json, fall back to srt" — never an outright failure.
+func (c *WhisperClient) transcribeVerbose(ctx context.Context, audio []byte, filename, lang string) (TranscriptionDetail, bool, error) {
+	if c.verboseUnsupported.Load() {
+		return TranscriptionDetail{}, false, nil
+	}
+
+	body, status, err := c.postTranscription(ctx, audio, filename, lang, transcribeFormatVerboseJSON)
+	if err != nil {
+		// ONLY a permanent 4xx means "this engine does not implement the
+		// format". A 5xx or a timeout is a transient fault that retryTransient
+		// (9R-4) has already re-tried — latching on it would let one bad
+		// minute disable hallucination filtering for the life of the process,
+		// silently and forever.
+		if status >= 400 && status < 500 {
+			c.markVerboseUnsupported("engine rejected verbose_json", status, err)
+			return TranscriptionDetail{}, false, nil
+		}
+		return TranscriptionDetail{}, false, err
+	}
+
+	vt, perr := parseVerboseTranscription(body)
+	if perr != nil {
+		// A 200 that is not parseable verbose_json (plain SRT echoed back) or
+		// that carries a transcript with no segment array is the same class of
+		// "accepts the field, does not implement it".
+		c.markVerboseUnsupported("verbose_json response unusable", status, perr)
+		return TranscriptionDetail{}, false, nil
+	}
+
+	// CR H1: an empty segment array with an empty transcript is SILENCE, not a
+	// broken engine. Latching the fallback here disabled hallucination
+	// filtering for the rest of the process the first time a chunk of credits
+	// came back quiet — the exact input this story exists to handle.
+	if len(vt.Segments) == 0 {
+		c.logger.Info("transcription returned no speech",
+			"file", filename, "duration_seconds", vt.Duration)
+		return TranscriptionDetail{Filtered: true}, true, nil
+	}
+
+	kept, dropped := filterHallucinations(vt.Segments)
+	detail := TranscriptionDetail{
+		SRT:          segmentsToSRT(kept),
+		Unfiltered:   segmentsToSRT(vt.Segments),
+		SegmentsIn:   len(vt.Segments),
+		SegmentsKept: len(kept),
+		Filtered:     true,
+	}
+
+	for _, d := range dropped {
+		c.logger.Debug("hallucination filter dropped a segment",
+			"file", filename,
+			"reason", d.Reason,
+			"start", d.Segment.Start,
+			"end", d.Segment.End,
+			"text", strings.TrimSpace(d.Segment.Text),
+			"no_speech_prob", d.Segment.NoSpeechProb,
+			"avg_logprob", d.Segment.AvgLogprob,
+			"compression_ratio", d.Segment.CompressionRatio,
+		)
+	}
+
+	ratio := detail.DropRatio()
+	c.logger.Info("hallucination filter applied",
+		"file", filename,
+		"segments_in", detail.SegmentsIn,
+		"segments_kept", detail.SegmentsKept,
+		"dropped_by_reason", dropReasonCounts(dropped),
+		"drop_ratio", ratio,
+	)
+	if ratio > hallucinationDropRatioWarn {
+		// The POC gap between an official subtitle and a generated one was ~5%
+		// (1029 vs 1082 cues). Losing a fifth of the file says the thresholds
+		// are wrong, not that the audio was quiet — and an operator has no
+		// other way to see it.
+		c.logger.Warn("hallucination filter dropped an unusually large share of the transcript",
+			"file", filename,
+			"drop_ratio", ratio,
+			"segments_in", detail.SegmentsIn,
+			"segments_kept", detail.SegmentsKept,
+		)
+	}
+
+	return detail, true, nil
+}
+
+// markVerboseUnsupported latches the fallback so a ten-chunk file probes once
+// instead of ten times.
+func (c *WhisperClient) markVerboseUnsupported(reason string, status int, cause error) {
+	if c.verboseUnsupported.Swap(true) {
+		return
+	}
+	c.logger.Warn("falling back to plain SRT — hallucination filtering disabled for this endpoint",
+		"reason", reason,
+		"status_code", status,
+		"self_hosted", c.isSelfHosted(),
+		"base_url", c.baseURL,
+		"error", cause,
+	)
+}
+
+// readAudioForUpload loads the audio file with the 9R-3 size guard applied
+// BEFORE the read, so an oversized file is refused rather than buffered.
+func (c *WhisperClient) readAudioForUpload(audioPath string) ([]byte, error) {
 	file, err := os.Open(audioPath)
 	if err != nil {
-		return "", fmt.Errorf("whisper: open audio file: %w", err)
+		return nil, fmt.Errorf("whisper: open audio file: %w", err)
 	}
 	defer file.Close()
 
@@ -199,45 +371,64 @@ func (c *WhisperClient) TranscribeWithLanguage(ctx context.Context, audioPath, l
 	// means the chunking layer misbehaved — truncated audio would silently
 	// lose dialogue.
 	if info, err := file.Stat(); err == nil && info.Size() > WhisperMaxFileSize {
-		return "", fmt.Errorf("whisper: audio file %q is %d bytes, exceeds the %d-byte API limit — chunking failed upstream", filepath.Base(audioPath), info.Size(), int64(WhisperMaxFileSize))
+		return nil, fmt.Errorf("whisper: audio file %q is %d bytes, exceeds the %d-byte API limit — chunking failed upstream", filepath.Base(audioPath), info.Size(), int64(WhisperMaxFileSize))
 	}
 
-	part, err := writer.CreateFormFile("file", filepath.Base(audioPath))
+	audio, err := io.ReadAll(io.LimitReader(file, WhisperMaxFileSize))
 	if err != nil {
-		return "", fmt.Errorf("whisper: create form file: %w", err)
+		return nil, fmt.Errorf("whisper: read audio data: %w", err)
 	}
-	if _, err := io.Copy(part, file); err != nil {
-		return "", fmt.Errorf("whisper: copy audio data: %w", err)
+	return audio, nil
+}
+
+// buildTranscribeBody assembles the multipart payload for one response format.
+// Built per format because response_format is a form field: the verbose→srt
+// fallback needs a second body, not a second file read.
+func (c *WhisperClient) buildTranscribeBody(audio []byte, filename, lang, format string) ([]byte, string, error) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	part, err := writer.CreateFormFile("file", filename)
+	if err != nil {
+		return nil, "", fmt.Errorf("whisper: create form file: %w", err)
+	}
+	if _, err := part.Write(audio); err != nil {
+		return nil, "", fmt.Errorf("whisper: copy audio data: %w", err)
 	}
 
-	// Add model and response format fields
 	if err := writer.WriteField("model", c.model); err != nil {
-		return "", fmt.Errorf("whisper: write model field: %w", err)
+		return nil, "", fmt.Errorf("whisper: write model field: %w", err)
 	}
-	if err := writer.WriteField("response_format", "srt"); err != nil {
-		return "", fmt.Errorf("whisper: write format field: %w", err)
+	if err := writer.WriteField("response_format", format); err != nil {
+		return nil, "", fmt.Errorf("whisper: write format field: %w", err)
 	}
 	// Pin language when known — avoids unreliable auto-detection (e.g. an English
 	// episode mis-detected as Chinese due to a few seconds of background TV audio).
 	if lang != "" {
 		if err := writer.WriteField("language", lang); err != nil {
-			return "", fmt.Errorf("whisper: write language field: %w", err)
+			return nil, "", fmt.Errorf("whisper: write language field: %w", err)
 		}
 	}
 
 	if err := writer.Close(); err != nil {
-		return "", fmt.Errorf("whisper: close writer: %w", err)
+		return nil, "", fmt.Errorf("whisper: close writer: %w", err)
+	}
+	return body.Bytes(), writer.FormDataContentType(), nil
+}
+
+// postTranscription performs one transcription request under the shared
+// throttle + per-run budget (9R-11) with bounded transient retry (9R-4). The
+// returned status is the last HTTP status observed (0 when the request never
+// got a response), which is how the caller tells "this engine does not support
+// verbose_json" (4xx) from "the network hiccuped" (5xx / timeout).
+func (c *WhisperClient) postTranscription(ctx context.Context, audio []byte, filename, lang, format string) (string, int, error) {
+	bodyBytes, contentType, err := c.buildTranscribeBody(audio, filename, lang, format)
+	if err != nil {
+		return "", 0, err
 	}
 
-	bodyBytes := body.Bytes()
-	contentType := writer.FormDataContentType()
-
-	c.logger.Debug("Whisper API request", "file", filepath.Base(audioPath))
-
-	// Execute under the shared throttle + per-run budget (9R-11), with bounded
-	// transient retry (9R-4): a single transient timeout previously killed a
-	// full multi-chunk transcription run.
-	srt, err := governed(ctx, c.governor, "whisper.transcribe", func() (string, error) {
+	lastStatus := 0
+	out, err := governed(ctx, c.governor, "whisper.transcribe", func() (string, error) {
 		return retryTransient(ctx, "whisper.transcribe", func() (string, bool, error) {
 			attemptCtx, cancel := context.WithTimeout(ctx, c.timeout)
 			defer cancel()
@@ -268,6 +459,7 @@ func (c *WhisperClient) TranscribeWithLanguage(ctx context.Context, audioPath, l
 				return "", true, fmt.Errorf("whisper: read response: %w", err)
 			}
 
+			lastStatus = resp.StatusCode
 			if resp.StatusCode != http.StatusOK {
 				c.logger.Warn("Whisper API error",
 					"status_code", resp.StatusCode,
@@ -280,21 +472,9 @@ func (c *WhisperClient) TranscribeWithLanguage(ctx context.Context, audioPath, l
 		})
 	})
 	if err != nil {
-		return "", err
+		return "", lastStatus, err
 	}
-
-	// 9R-11: meter ASR cost by audio minutes against the per-run budget.
-	// sub-5-1 AC #1: at the SAME rate the estimator quotes for this endpoint —
-	// a self-hosted server records $0 instead of a fabricated hosted-rate bill.
-	if b := BudgetFromContext(ctx); b != nil {
-		if dur, _, derr := parseWAVInfo(audioPath); derr == nil {
-			b.RecordASRWithRate(dur, EstimatedASRPerMinuteUSD(c.isSelfHosted()))
-		}
-	}
-
-	c.logger.Info("Whisper transcription complete", "file", filepath.Base(audioPath), "srt_bytes", len(srt))
-
-	return srt, nil
+	return out, lastStatus, nil
 }
 
 // NeedsChunking returns true if the audio file exceeds the per-chunk size

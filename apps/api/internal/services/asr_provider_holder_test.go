@@ -4,6 +4,10 @@ import (
 	"bytes"
 	"context"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -253,4 +257,51 @@ func TestTranscriptionService_PlainProviderWithoutProbeStaysAvailable(t *testing
 	svc := NewTranscriptionService(extractor, ai.NewWhisperClient("sk-direct"), nil, nil)
 
 	assert.True(t, svc.IsAvailable())
+}
+
+// ─── 9R-5: the detailed (hallucination-filter) seam must survive the holder ──
+
+// CR M2: the pipeline holds the HOLDER, not the client. If the holder does not
+// carry ai.DetailedTranscriber through, transcribeAudio's type assertion fails
+// and the whole-file empty-transcript guard silently never engages — no error,
+// no log, just a feature that quietly does nothing.
+func TestASRProviderHolder_SatisfiesDetailedTranscriber(t *testing.T) {
+	var _ ai.DetailedTranscriber = (*ASRProviderHolder)(nil)
+}
+
+func TestASRProviderHolder_TranscribeDetailedForwardsToTheClient(t *testing.T) {
+	body := `{"language":"english","duration":109.0,"segments":[
+	  {"id":0,"start":10.0,"end":12.0,"text":"Real dialogue","avg_logprob":-0.25,"compression_ratio":1.4,"no_speech_prob":0.01},
+	  {"id":1,"start":13.0,"end":15.0,"text":"More dialogue","avg_logprob":-0.3,"compression_ratio":1.3,"no_speech_prob":0.02},
+	  {"id":2,"start":100.0,"end":103.0,"text":"Thanks for watching!","avg_logprob":-0.9,"compression_ratio":1.5,"no_speech_prob":0.55},
+	  {"id":3,"start":103.0,"end":106.0,"text":"Like and subscribe.","avg_logprob":-1.2,"compression_ratio":1.6,"no_speech_prob":0.72},
+	  {"id":4,"start":106.0,"end":109.0,"text":"See you next time.","avg_logprob":-0.95,"compression_ratio":1.4,"no_speech_prob":0.61}
+	]}`
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(body))
+	}))
+	defer server.Close()
+
+	h := NewASRProviderHolder(
+		NewKeyResolver(&fakeSecrets{}, EnvKeys{OpenAI: "sk-test"}, nil),
+		server.URL, "", nil)
+
+	audio := filepath.Join(t.TempDir(), "audio.wav")
+	require.NoError(t, os.WriteFile(audio, []byte("RIFFfakewavdata"), 0644))
+
+	detail, err := h.TranscribeDetailed(context.Background(), audio, "en")
+	require.NoError(t, err)
+
+	assert.True(t, detail.Filtered, "the filter verdict must reach the caller through the holder")
+	assert.Equal(t, 5, detail.SegmentsIn)
+	assert.Equal(t, 2, detail.SegmentsKept)
+	assert.NotContains(t, detail.SRT, "subscribe")
+	assert.Contains(t, detail.Unfiltered, "subscribe",
+		"the recovery text the whole-file guard depends on must survive the hop")
+}
+
+func TestASRProviderHolder_TranscribeDetailedPropagatesUnconfigured(t *testing.T) {
+	h := NewASRProviderHolder(NewKeyResolver(&fakeSecrets{}, EnvKeys{}, nil), "", "", nil)
+	_, err := h.TranscribeDetailed(context.Background(), "irrelevant.wav", "en")
+	require.ErrorIs(t, err, ai.ErrWhisperNotConfigured)
 }

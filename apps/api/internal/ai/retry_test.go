@@ -101,7 +101,11 @@ func TestWhisperClient_RetriesTransientThenSucceeds(t *testing.T) {
 			w.WriteHeader(http.StatusTooManyRequests)
 			return
 		}
-		w.Write([]byte("1\n00:00:00,000 --> 00:00:01,000\nrecovered\n"))
+		// 9R-5: answer the verbose_json request properly so this test measures
+		// ONE transient retry and nothing else — an SRT echo here would trip the
+		// fallback probe and add a third request that has nothing to do with retry.
+		w.Write([]byte(`{"segments":[{"id":0,"start":0.0,"end":1.0,"text":"recovered",` +
+			`"avg_logprob":-0.2,"compression_ratio":1.2,"no_speech_prob":0.01}]}`))
 	}))
 	defer server.Close()
 
