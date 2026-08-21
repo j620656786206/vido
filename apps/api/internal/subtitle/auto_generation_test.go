@@ -94,6 +94,32 @@ func deferredRun(mediaID string) models.SubtitleRun {
 	}
 }
 
+// skippedRun is a `skipped` row that is NOT a deferral — a decline the pipeline
+// reached on its own (fail-closed detection, an unusable stream).
+func skippedRun(mediaID, reason string) models.SubtitleRun {
+	return models.SubtitleRun{
+		MediaID:      mediaID,
+		Status:       models.SubtitleRunSkipped,
+		ErrorMessage: reason,
+	}
+}
+
+func failedRun(mediaID string) models.SubtitleRun {
+	return models.SubtitleRun{
+		MediaID:      mediaID,
+		Status:       models.SubtitleRunFailed,
+		ErrorMessage: "subtitle pipeline: movie " + mediaID + ": probe: ffprobe: no such file or directory",
+	}
+}
+
+func failedRuns(mediaID string, n int) []models.SubtitleRun {
+	out := make([]models.SubtitleRun, 0, n)
+	for i := 0; i < n; i++ {
+		out = append(out, failedRun(mediaID))
+	}
+	return out
+}
+
 type autoFakeLibraryPolicy struct {
 	enabled map[string]struct{}
 	err     error
@@ -110,22 +136,37 @@ type autoProcessedCall struct {
 	opts ProcessItemOptions
 }
 
+// autoFakeItemProcessor is mutex-guarded because the single-flight test calls
+// Run from two goroutines: a regression there must surface as a failed
+// assertion on the recorded calls, not as a data race that only -race sees
+// (補審 M7).
 type autoFakeItemProcessor struct {
+	mu      sync.Mutex
 	calls   []autoProcessedCall
 	outcome func(ref MediaRef) (*ProcessOutcome, error)
 }
 
 func (f *autoFakeItemProcessor) ProcessItem(_ context.Context, ref MediaRef, opts ProcessItemOptions) (*ProcessOutcome, error) {
+	f.mu.Lock()
 	f.calls = append(f.calls, autoProcessedCall{ref: ref, opts: opts})
-	if f.outcome != nil {
-		return f.outcome(ref)
+	outcome := f.outcome
+	f.mu.Unlock()
+	if outcome != nil {
+		return outcome(ref)
 	}
 	return &ProcessOutcome{Kind: RouteDeliverDirect}, nil
 }
 
+func (f *autoFakeItemProcessor) recorded() []autoProcessedCall {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]autoProcessedCall(nil), f.calls...)
+}
+
 func (f *autoFakeItemProcessor) refIDs() []string {
-	out := make([]string, 0, len(f.calls))
-	for _, c := range f.calls {
+	calls := f.recorded()
+	out := make([]string, 0, len(calls))
+	for _, c := range calls {
 		out = append(out, c.ref.ID)
 	}
 	return out
@@ -444,7 +485,8 @@ func TestAutoGenerator_ExcludesPreviouslyDeferredItems(t *testing.T) {
 
 	assert.Equal(t, []string{"m-free-1", "m-free-2"}, h.item.refIDs(),
 		"the budget must move PAST items already known to need paid work — otherwise the free items are never reached")
-	assert.Equal(t, 1, h.runs.calls, "one deferred-run query per round, not one per item")
+	assert.Equal(t, 2, h.runs.calls,
+		"two run queries per round (skipped + failed, 補審 M1), not one per item")
 }
 
 func TestAutoGenerator_DeferredExclusionIgnoresOtherSkippedRuns(t *testing.T) {
@@ -475,6 +517,94 @@ func TestAutoGenerator_DeferredRunLookupFailureAborts(t *testing.T) {
 
 	assert.Empty(t, h.item.calls,
 		"an unreadable run table must abort the round — proceeding would re-burn every deferred item")
+}
+
+// TestAutoGenerator_ExcludesDeferredEPISODES is the episode twin of the movie
+// exclusion above (補審 M5). The two families run through separate loops with
+// separate guards, and only the movie one was pinned — deleting the episode
+// guard left the whole suite green, so H1 could come back for TV alone.
+func TestAutoGenerator_ExcludesDeferredEpisodes(t *testing.T) {
+	eligible := models.SubtitleStatusNotSearched
+	h := newAutoHarness(t, WithAutoMaxPerRun(2))
+	h.policy.enabled = autoEnabledSet("lib-a")
+	h.series.byID["s1"] = autoSeriesIn("s1", "lib-a")
+	h.episodes.episodes = []models.Episode{
+		autoEpisodeIn("e-paid-1", "s1", eligible),
+		autoEpisodeIn("e-paid-2", "s1", eligible),
+		autoEpisodeIn("e-free-1", "s1", eligible),
+		autoEpisodeIn("e-free-2", "s1", eligible),
+	}
+	h.runs.runs = []models.SubtitleRun{deferredRun("e-paid-1"), deferredRun("e-paid-2")}
+
+	h.gen.Run(context.Background())
+
+	assert.Equal(t, []string{"e-free-1", "e-free-2"}, h.item.refIDs(),
+		"the episode loop must skip parked items too — the movie guard alone leaves TV starving")
+}
+
+// ─── 補審 M1: an item that keeps FAILING must stop eating the budget ───────
+
+// TestAutoGenerator_ExcludesItemsThatKeepFailing pins the second half of the
+// starvation fix. A failed run puts the media row back at `not_searched`
+// (failItem) and leaves no sidecar, so without this the same broken file is
+// re-probed and re-recorded on every scan for the life of the library.
+func TestAutoGenerator_ExcludesItemsThatKeepFailing(t *testing.T) {
+	eligible := models.SubtitleStatusNotSearched
+	h := newAutoHarness(t, WithAutoMaxPerRun(2))
+	h.policy.enabled = autoEnabledSet("lib-a")
+	h.movies.movies = []models.Movie{
+		autoMovieIn("m-broken-1", "lib-a", eligible),
+		autoMovieIn("m-broken-2", "lib-a", eligible),
+		autoMovieIn("m-free-1", "lib-a", eligible),
+		autoMovieIn("m-free-2", "lib-a", eligible),
+	}
+	h.runs.runs = append(
+		failedRuns("m-broken-1", autoFailureAttemptLimit),
+		failedRuns("m-broken-2", autoFailureAttemptLimit+2)...,
+	)
+
+	h.gen.Run(context.Background())
+
+	assert.Equal(t, []string{"m-free-1", "m-free-2"}, h.item.refIDs(),
+		"a file that cannot be processed must not re-occupy the budget on every scan")
+}
+
+// TestAutoGenerator_RetriesAnItemBelowTheFailureLimit is the other side of the
+// boundary: one bad scan is usually the NAS, not the file, so the item must
+// still be retried. Without this the limit could silently become 1 and nothing
+// would notice.
+func TestAutoGenerator_RetriesAnItemBelowTheFailureLimit(t *testing.T) {
+	h := newAutoHarness(t)
+	h.policy.enabled = autoEnabledSet("lib-a")
+	h.movies.movies = []models.Movie{autoMovieIn("m1", "lib-a", models.SubtitleStatusNotSearched)}
+	// A literal 2, deliberately not autoFailureAttemptLimit-1: expressed in
+	// terms of the constant this test moves WITH the limit and could never
+	// catch it being lowered, which is the regression it exists for.
+	h.runs.runs = failedRuns("m1", 2)
+
+	h.gen.Run(context.Background())
+
+	assert.Equal(t, []string{"m1"}, h.item.refIDs(),
+		"below the limit the item is still retried — a transient share hiccup is not a verdict")
+}
+
+// ─── 補審 M3: the LATEST skipped run decides, as the comment always claimed ──
+
+func TestAutoGenerator_LatestSkippedRunDecidesTheExclusion(t *testing.T) {
+	h := newAutoHarness(t)
+	h.policy.enabled = autoEnabledSet("lib-a")
+	h.movies.movies = []models.Movie{autoMovieIn("m1", "lib-a", models.SubtitleStatusNotSearched)}
+	// Newest first, the ListByStatus contract: the deferral is HISTORY, the
+	// current verdict is the decline above it.
+	h.runs.runs = []models.SubtitleRun{
+		skippedRun("m1", "stream 2 tagged und: detector returned unrecognized variant — failing closed (P0)"),
+		deferredRun("m1"),
+	}
+
+	h.gen.Run(context.Background())
+
+	assert.Equal(t, []string{"m1"}, h.item.refIDs(),
+		"an older deferral must not outvote the latest skipped run — that guard was inert before 補審 M3")
 }
 
 func TestAutoGenerator_WithoutDeferredRunPortStillWorks(t *testing.T) {
@@ -531,14 +661,25 @@ func TestAutoGenerator_SecondRoundIsSkippedWhileOneIsInFlight(t *testing.T) {
 		autoMovieIn("m2", "lib-a", models.SubtitleStatusNotSearched),
 	}
 
+	// 補審 M7: the gate blocks the FIRST caller only, and never the second.
+	// The previous shape used sync.Once, whose Do() blocks every other caller
+	// until the first returns — so removing the single-flight guard did not
+	// fail this assertion, it DEADLOCKED the package and surfaced as
+	// `panic: test timed out`, which reads like infrastructure rather than the
+	// regression it is.
 	entered := make(chan struct{})
 	release := make(chan struct{})
-	var once sync.Once
+	var mu sync.Mutex
+	first := true
 	h.item.outcome = func(MediaRef) (*ProcessOutcome, error) {
-		once.Do(func() {
+		mu.Lock()
+		isFirst := first
+		first = false
+		mu.Unlock()
+		if isFirst {
 			close(entered)
 			<-release
-		})
+		}
 		return &ProcessOutcome{Kind: RouteDeliverDirect}, nil
 	}
 
@@ -553,4 +694,23 @@ func TestAutoGenerator_SecondRoundIsSkippedWhileOneIsInFlight(t *testing.T) {
 
 	assert.Equal(t, []string{"m1", "m2"}, h.item.refIDs(),
 		"the overlapping round must be a no-op — two rounds over one item list race two ProcessItem calls onto one sidecar path")
+}
+
+// TestAutoGenerator_InFlightFlagIsReleasedAfterTheRound pins the OTHER half of
+// the single-flight guard (補審 M7): the release.
+//
+// Nothing covered it, so deleting the deferred unlock left the suite green
+// while production lost the feature outright — the flag would stay true for the
+// life of the process and every later scan would no-op, with one Debug line as
+// the only trace.
+func TestAutoGenerator_InFlightFlagIsReleasedAfterTheRound(t *testing.T) {
+	h := newAutoHarness(t)
+	h.policy.enabled = autoEnabledSet("lib-a")
+	h.movies.movies = []models.Movie{autoMovieIn("m1", "lib-a", models.SubtitleStatusNotSearched)}
+
+	h.gen.Run(context.Background())
+	h.gen.Run(context.Background())
+
+	assert.Equal(t, []string{"m1", "m1"}, h.item.refIDs(),
+		"a finished round must free the slot — a stuck flag kills auto-generation until the container restarts")
 }

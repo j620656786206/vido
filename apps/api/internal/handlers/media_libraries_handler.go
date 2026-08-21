@@ -13,11 +13,47 @@ import (
 // MediaLibrariesHandler handles HTTP requests for media library CRUD management.
 type MediaLibrariesHandler struct {
 	service services.MediaLibraryServiceInterface
+	// autoSubtitleSupported answers "does THIS deployment run the free
+	// auto-generation lane at all" (補審 M4).
+	//
+	// The `auto_subtitle` column is writable in every mode, but the trigger
+	// that honours it is built only inside main.go's
+	// `if cfg.SubtitlePipelineEnabled()` block — and the shipped default is
+	// `legacy` (config.go, docs/deployment.md). Without this the settings page
+	// offers an opt-in that, on a default install, can never do anything and
+	// says nothing about it: the user ticks the box, saves successfully, and
+	// waits forever. Capability honor, the transcription-handler precedent: a
+	// deployment that cannot do the thing does not offer it.
+	autoSubtitleSupported func() bool
+}
+
+// MediaLibrariesHandlerOption configures optional handler capabilities.
+type MediaLibrariesHandlerOption func(*MediaLibrariesHandler)
+
+// WithAutoSubtitleSupport supplies the predicate behind
+// `auto_subtitle_supported` in the list response. Wired from
+// cfg.SubtitlePipelineEnabled.
+func WithAutoSubtitleSupport(supported func() bool) MediaLibrariesHandlerOption {
+	return func(h *MediaLibrariesHandler) {
+		if supported != nil {
+			h.autoSubtitleSupported = supported
+		}
+	}
 }
 
 // NewMediaLibrariesHandler creates a new MediaLibrariesHandler.
-func NewMediaLibrariesHandler(service services.MediaLibraryServiceInterface) *MediaLibrariesHandler {
-	return &MediaLibrariesHandler{service: service}
+//
+// Unwired, the capability reports FALSE: a caller that never declared the
+// pipeline does not get to advertise a lane it may not have.
+func NewMediaLibrariesHandler(service services.MediaLibraryServiceInterface, opts ...MediaLibrariesHandlerOption) *MediaLibrariesHandler {
+	h := &MediaLibrariesHandler{
+		service:               service,
+		autoSubtitleSupported: func() bool { return false },
+	}
+	for _, opt := range opts {
+		opt(h)
+	}
+	return h
 }
 
 // RegisterRoutes registers media library management routes on the given router group.
@@ -43,7 +79,14 @@ func (h *MediaLibrariesHandler) ListLibraries(c *gin.Context) {
 		InternalServerError(c, "Failed to list libraries")
 		return
 	}
-	SuccessResponse(c, gin.H{"libraries": libraries})
+	// `auto_subtitle_supported` rides the LIST response rather than a new
+	// endpoint: the settings page that hosts the opt-in already fetches this
+	// exact payload, so the capability costs zero extra requests and zero new
+	// wire surface (additive on v1).
+	SuccessResponse(c, gin.H{
+		"libraries":               libraries,
+		"auto_subtitle_supported": h.autoSubtitleSupported(),
+	})
 }
 
 // GetLibrary handles GET /api/v1/libraries/:id

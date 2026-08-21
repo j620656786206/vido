@@ -22,6 +22,28 @@ import (
 // finished.
 const AutoGenerationMaxPerRun = 20
 
+// autoFailureAttemptLimit bounds how many times the free lane retries one item
+// that fails outright.
+//
+// 補審 M1. The CR H1 exclusion covers items parked at the PAID threshold — but
+// an item that FAILS (unreadable container, ffprobe absent, a share that went
+// away mid-extract) writes a `failed` run and puts the media row back at
+// `not_searched` (process_item.go failItem), so it is re-enumerated,
+// re-attempted and re-recorded on EVERY scan, forever. That is H1's starvation
+// with a broken file in place of a paid one: twenty such files at the head of
+// the alphabet spend the whole per-run budget, and the free items behind them
+// are never reached.
+//
+// Three, not one: a single failure is very often the NAS rather than the file
+// (a sleeping disk, a share that reconnected a second late), and parking an
+// item on the first transient error would be its own silent bug.
+//
+// Parking is not a verdict on the item. The manual paths — POST
+// /subtitles/pipeline/run and the generate-subtitles list — still process it,
+// and a run that finally delivers zh-Hant removes it from this enumeration
+// altogether.
+const autoFailureAttemptLimit = 3
+
 // autoEligibleStatuses is the status set the trigger will act on.
 //
 // Everything else is deliberately excluded: `found` is done, `skipped` and
@@ -44,8 +66,8 @@ type AutoLibraryPolicy interface {
 	AutoSubtitleLibraryIDs(ctx context.Context) (map[string]struct{}, error)
 }
 
-// AutoDeferredRunLister reads back the runs that stopped at the threshold of
-// paid work, so the trigger can stop re-probing them.
+// AutoDeferredRunLister reads back the runs the free lane must not spend this
+// round's budget on, so the trigger can stop re-probing them.
 //
 // WHY THIS PORT EXISTS (CR H1). The pipeline's pre-flight gate is "does an
 // acceptable sidecar already exist" — and a deferred item never gets one. Left
@@ -54,6 +76,11 @@ type AutoLibraryPolicy interface {
 // scan, forever, while the free items further down the list were never
 // reached: the feature would burn CPU and appear to do nothing. Excluding
 // already-deferred items is what makes the budget move down the list.
+//
+// It reads TWO statuses, not one (補審 M1): `skipped` carries the deferral
+// marker, and `failed` carries the item that cannot be processed at all. Both
+// re-occupy the budget on every scan for exactly the same reason — neither
+// leaves a sidecar behind for the pre-flight to find.
 //
 // *repository.SubtitleRunRepository satisfies it.
 type AutoDeferredRunLister interface {
@@ -238,7 +265,7 @@ func (g *AutoGenerator) Run(ctx context.Context) {
 func (g *AutoGenerator) collect(ctx context.Context, enabled map[string]struct{}) ([]MediaRef, error) {
 	refs := make([]MediaRef, 0, g.maxPerRun)
 
-	deferred, err := g.deferredMediaIDs(ctx)
+	excluded, err := g.excludedMediaIDs(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +279,7 @@ func (g *AutoGenerator) collect(ctx context.Context, enabled map[string]struct{}
 			if len(refs) >= g.maxPerRun {
 				return refs, nil
 			}
-			if _, skip := deferred[m.ID]; skip {
+			if _, skip := excluded[m.ID]; skip {
 				continue
 			}
 			if !autoEligible(m.SubtitleStatus) || !inEnabledLibrary(m.LibraryID, enabled) {
@@ -274,7 +301,7 @@ func (g *AutoGenerator) collect(ctx context.Context, enabled map[string]struct{}
 			if len(refs) >= g.maxPerRun {
 				return refs, nil
 			}
-			if _, skip := deferred[e.ID]; skip {
+			if _, skip := excluded[e.ID]; skip {
 				continue
 			}
 			if !autoEligible(e.SubtitleStatus) {
@@ -325,32 +352,59 @@ func inEnabledLibrary(libraryID models.NullString, enabled map[string]struct{}) 
 	return ok
 }
 
-// deferredMediaIDs returns the media ids whose latest recorded run stopped at
-// the threshold of paid work (CR H1).
+// excludedMediaIDs returns the media ids this round must not spend budget on:
+// items parked at the threshold of paid work (CR H1), and items that have
+// failed outright autoFailureAttemptLimit times (補審 M1).
 //
-// ONE query per round, not one per item. The port is optional: without it the
-// trigger still runs correctly, it just re-probes deferred items — so a boot
-// that does not wire it degrades in cost, never in correctness.
-func (g *AutoGenerator) deferredMediaIDs(ctx context.Context) (map[string]struct{}, error) {
+// TWO queries per round, not one per item. The port is optional: without it the
+// trigger still runs correctly, it just re-probes parked items — so a boot that
+// does not wire it degrades in cost, never in correctness.
+func (g *AutoGenerator) excludedMediaIDs(ctx context.Context) (map[string]struct{}, error) {
 	if g.runs == nil {
 		return map[string]struct{}{}, nil
 	}
-	runs, err := g.runs.ListByStatus(ctx, models.SubtitleRunSkipped, 0)
+	out := map[string]struct{}{}
+
+	skipped, err := g.runs.ListByStatus(ctx, models.SubtitleRunSkipped, 0)
 	if err != nil {
 		return nil, err
 	}
-	// ListByStatus is newest-first, so the FIRST row seen for a media id is its
-	// latest skipped run — which is the one that decides whether the item is
-	// currently parked awaiting consent.
-	out := make(map[string]struct{}, len(runs))
-	for _, r := range runs {
-		if _, seen := out[r.MediaID]; seen {
+	// ListByStatus is newest-first (`ORDER BY started_at DESC`), so the FIRST
+	// row seen for a media id is its latest skipped run — the one that decides
+	// whether the item is currently parked awaiting consent.
+	//
+	// 補審 M3: every id seen is recorded, not just the deferred ones. Keyed on
+	// the deferred ids alone the guard was inert — a media id whose LATEST
+	// skipped run reached a different verdict would still be excluded by any
+	// older deferral, which is not what this comment claimed and not what the
+	// exclusion is for.
+	decided := make(map[string]struct{}, len(skipped))
+	for _, r := range skipped {
+		if _, seen := decided[r.MediaID]; seen {
 			continue
 		}
+		decided[r.MediaID] = struct{}{}
 		if strings.HasPrefix(r.ErrorMessage, DeferredPaidRunPrefix) {
 			out[r.MediaID] = struct{}{}
 		}
 	}
+
+	failed, err := g.runs.ListByStatus(ctx, models.SubtitleRunFailed, 0)
+	if err != nil {
+		return nil, err
+	}
+	// Failures are COUNTED rather than latest-wins: what parks an item is a
+	// RUN of bad attempts, not one bad day. An item still enumerable here has
+	// by definition never had a run that delivered its zh-Hant subtitle, so
+	// every failed row it carries is a free-lane attempt that came to nothing.
+	attempts := make(map[string]int, len(failed))
+	for _, r := range failed {
+		attempts[r.MediaID]++
+		if attempts[r.MediaID] >= autoFailureAttemptLimit {
+			out[r.MediaID] = struct{}{}
+		}
+	}
+
 	return out, nil
 }
 
