@@ -15,32 +15,54 @@ type NFOGenerator struct{}
 
 // MovieNFO represents a Kodi-compatible movie NFO structure
 type MovieNFO struct {
-	XMLName       xml.Name    `xml:"movie"`
-	Title         string      `xml:"title"`
-	OriginalTitle string      `xml:"originaltitle,omitempty"`
-	Year          string      `xml:"year"`
-	Plot          string      `xml:"plot,omitempty"`
-	Genres        []string    `xml:"genre"`
-	Directors     []string    `xml:"director,omitempty"`
-	Actors        []NFOActor  `xml:"actor,omitempty"`
+	XMLName       xml.Name      `xml:"movie"`
+	Title         string        `xml:"title"`
+	OriginalTitle string        `xml:"originaltitle,omitempty"`
+	Year          string        `xml:"year"`
+	Plot          string        `xml:"plot,omitempty"`
+	Genres        []string      `xml:"genre"`
+	Directors     []string      `xml:"director,omitempty"`
+	Actors        []NFOActor    `xml:"actor,omitempty"`
 	UniqueIDs     []NFOUniqueID `xml:"uniqueid,omitempty"`
-	Thumb         string      `xml:"thumb,omitempty"`
-	Rating        float64     `xml:"rating,omitempty"`
+	Thumb         string        `xml:"thumb,omitempty"`
+	Rating        float64       `xml:"rating,omitempty"`
 }
 
 // SeriesNFO represents a Kodi-compatible TV show NFO structure
 type SeriesNFO struct {
-	XMLName       xml.Name    `xml:"tvshow"`
-	Title         string      `xml:"title"`
-	OriginalTitle string      `xml:"originaltitle,omitempty"`
-	Year          string      `xml:"year"`
-	Plot          string      `xml:"plot,omitempty"`
-	Genres        []string    `xml:"genre"`
-	Actors        []NFOActor  `xml:"actor,omitempty"`
+	XMLName       xml.Name      `xml:"tvshow"`
+	Title         string        `xml:"title"`
+	OriginalTitle string        `xml:"originaltitle,omitempty"`
+	Year          string        `xml:"year"`
+	Plot          string        `xml:"plot,omitempty"`
+	Genres        []string      `xml:"genre"`
+	Actors        []NFOActor    `xml:"actor,omitempty"`
 	UniqueIDs     []NFOUniqueID `xml:"uniqueid,omitempty"`
-	Thumb         string      `xml:"thumb,omitempty"`
-	Rating        float64     `xml:"rating,omitempty"`
-	Status        string      `xml:"status,omitempty"`
+	Thumb         string        `xml:"thumb,omitempty"`
+	Rating        float64       `xml:"rating,omitempty"`
+	Status        string        `xml:"status,omitempty"`
+}
+
+// EpisodeNFO represents a Kodi-compatible per-episode NFO structure (9R-13a).
+//
+// The root element is `episodedetails`, NOT `episode` — Kodi, Jellyfin and Emby
+// all key on that exact name and silently ignore a file rooted anything else.
+//
+// There is no actor block: `models.Episode` carries no credits (only the parent
+// series does), so per-episode cast would have to be invented. That is a stated
+// scope fact, not an oversight.
+type EpisodeNFO struct {
+	XMLName   xml.Name      `xml:"episodedetails"`
+	Title     string        `xml:"title"`
+	ShowTitle string        `xml:"showtitle,omitempty"`
+	Season    int           `xml:"season"`
+	Episode   int           `xml:"episode"`
+	Plot      string        `xml:"plot,omitempty"`
+	Aired     string        `xml:"aired,omitempty"`
+	Runtime   int           `xml:"runtime,omitempty"`
+	Rating    float64       `xml:"rating,omitempty"`
+	Thumb     string        `xml:"thumb,omitempty"`
+	UniqueIDs []NFOUniqueID `xml:"uniqueid,omitempty"`
 }
 
 // NFOActor represents an actor entry in NFO

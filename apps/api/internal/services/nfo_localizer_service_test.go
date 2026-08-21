@@ -175,3 +175,351 @@ func TestNFOLocalizer_KeylessBootConstructsAndRecoversWhenAKeyArrives(t *testing
 
 	assert.True(t, svc.IsAvailable(), "a saved key must revive the feature without a restart")
 }
+
+// ─── 9R-13a: TV (tvshow.nfo + per-episode .nfo) ─────────────────────────────
+
+// showTree builds a real on-disk layout so path assertions mean something:
+//
+//	<tmp>/Buffy/          ← series.FilePath (the SHOW FOLDER, not a file)
+//	<tmp>/Buffy/Season01/S01E01.mkv
+func showTree(t *testing.T) (showDir, episodePath string) {
+	t.Helper()
+	showDir = filepath.Join(t.TempDir(), "Buffy")
+	seasonDir := filepath.Join(showDir, "Season01")
+	require.NoError(t, os.MkdirAll(seasonDir, 0o755))
+	episodePath = filepath.Join(seasonDir, "Buffy.S01E01.mkv")
+	require.NoError(t, os.WriteFile(episodePath, []byte("fake"), 0o644))
+	return showDir, episodePath
+}
+
+func sampleSeries(showDir string) models.Series {
+	return models.Series{
+		ID:            "series-1",
+		Title:         "Buffy the Vampire Slayer",
+		OriginalTitle: models.NewNullString("Buffy the Vampire Slayer"),
+		FirstAirDate:  "1997",
+		Overview:      models.NewNullString("A teenager battles the forces of darkness."),
+		Genres:        []string{"Drama", "Fantasy"},
+		VoteAverage:   models.NewNullFloat64(8.3),
+		TMDbID:        models.NewNullInt64(95),
+		Status:        models.NewNullString("Ended"),
+		CreditsJSON:   models.NewNullString(`{"cast":[{"name":"Sarah Michelle Gellar","character":"Buffy Summers"}]}`),
+		FilePath:      models.NewNullString(showDir),
+	}
+}
+
+func sampleEpisode(episodePath string) models.Episode {
+	return models.Episode{
+		ID:            "episode-1",
+		SeriesID:      "series-1",
+		SeasonNumber:  1,
+		EpisodeNumber: 1,
+		Title:         models.NewNullString("Welcome to the Hellmouth"),
+		Overview:      models.NewNullString("Buffy arrives in Sunnydale."),
+		AirDate:       models.NewNullString("1997-03-10"),
+		TMDbID:        models.NewNullInt64(11111),
+		FilePath:      models.NewNullString(episodePath),
+	}
+}
+
+// 🔴 The single most important assertion in this story: tvshow.nfo lands INSIDE
+// the show folder. series.FilePath is already the folder, so a stray
+// filepath.Dir() would put it in the library ROOT — invisible to every player
+// and polluting the user's library. Asserted on the FULL path, not a substring.
+func TestNFOLocalizer_TVShow_WritesInsideTheShowFolder(t *testing.T) {
+	showDir, _ := showTree(t)
+	series := sampleSeries(showDir)
+	// 5 fields: title, plot, 2 genres, 1 role.
+	resp := "[1] 魔法奇兵\n[2] 少女對抗黑暗勢力\n[3] 劇情\n[4] 奇幻\n[5] 巴菲·桑默斯"
+	svc := newLocalizer(t, resp, nil)
+
+	res, err := svc.LocalizeTVShowNFO(context.Background(), series)
+	require.NoError(t, err)
+
+	assert.Equal(t, filepath.Join(showDir, "tvshow.nfo"), res.Path)
+	assert.NotEqual(t, filepath.Join(filepath.Dir(showDir), "tvshow.nfo"), res.Path,
+		"a stray filepath.Dir() would write into the library root")
+	assert.False(t, res.Replaced)
+
+	body, err := os.ReadFile(res.Path)
+	require.NoError(t, err)
+	out := string(body)
+	assert.Contains(t, out, "<tvshow>")
+	assert.Contains(t, out, "<title>魔法奇兵</title>")
+	assert.Contains(t, out, "<genre>劇情</genre>")
+	assert.Contains(t, out, "巴菲·桑默斯")
+	// Preserved: original title, year, uniqueid, person name, status.
+	assert.Contains(t, out, "<originaltitle>Buffy the Vampire Slayer</originaltitle>")
+	assert.Contains(t, out, "<year>1997</year>")
+	assert.Contains(t, out, `type="tmdb"`)
+	assert.Contains(t, out, "Sarah Michelle Gellar")
+	assert.Contains(t, out, "<status>Ended</status>")
+}
+
+func TestNFOLocalizer_TVShow_BacksUpExistingThenReplaces(t *testing.T) {
+	showDir, _ := showTree(t)
+	target := filepath.Join(showDir, "tvshow.nfo")
+	require.NoError(t, os.WriteFile(target, []byte("<tvshow><title>ORIGINAL</title></tvshow>"), 0o644))
+
+	svc := newLocalizer(t, "[1] 魔法奇兵\n[2] 少女對抗黑暗勢力\n[3] 劇情\n[4] 奇幻\n[5] 巴菲", nil)
+	res, err := svc.LocalizeTVShowNFO(context.Background(), sampleSeries(showDir))
+	require.NoError(t, err)
+
+	assert.True(t, res.Replaced)
+	assert.Equal(t, target+".orig", res.BackupPath)
+	backup, err := os.ReadFile(res.BackupPath)
+	require.NoError(t, err)
+	assert.Contains(t, string(backup), "ORIGINAL", "the user's original must survive verbatim")
+
+	written, _ := os.ReadFile(target)
+	assert.Contains(t, string(written), "魔法奇兵")
+}
+
+// Re-running localization must never let a previously localized file become the
+// "original" — the backup is written once and then left alone forever.
+func TestNFOLocalizer_TVShow_ExistingBackupIsNeverOverwritten(t *testing.T) {
+	showDir, _ := showTree(t)
+	target := filepath.Join(showDir, "tvshow.nfo")
+	require.NoError(t, os.WriteFile(target, []byte("SECOND RUN CONTENT"), 0o644))
+	require.NoError(t, os.WriteFile(target+".orig", []byte("THE TRUE ORIGINAL"), 0o644))
+
+	svc := newLocalizer(t, "[1] 魔法奇兵\n[2] 少女對抗黑暗勢力\n[3] 劇情\n[4] 奇幻\n[5] 巴菲", nil)
+	_, err := svc.LocalizeTVShowNFO(context.Background(), sampleSeries(showDir))
+	require.NoError(t, err)
+
+	backup, _ := os.ReadFile(target + ".orig")
+	assert.Equal(t, "THE TRUE ORIGINAL", string(backup))
+}
+
+func TestNFOLocalizer_TVShow_NoFolderPathIsAnError(t *testing.T) {
+	svc := newLocalizer(t, "[1] x", nil)
+	series := sampleSeries("")
+	series.FilePath = models.NullString{}
+	_, err := svc.LocalizeTVShowNFO(context.Background(), series)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no folder path")
+}
+
+// 🔴 An episode's FilePath IS a file, so the .nfo goes beside it — inside the
+// season folder, NOT in the show folder.
+func TestNFOLocalizer_Episode_WritesBesideTheEpisodeFile(t *testing.T) {
+	showDir, episodePath := showTree(t)
+	svc := newLocalizer(t, "[1] 歡迎來到地獄口\n[2] 巴菲來到桑尼戴爾", nil)
+
+	res, err := svc.LocalizeEpisodeNFO(context.Background(), sampleEpisode(episodePath), "魔法奇兵")
+	require.NoError(t, err)
+
+	assert.Equal(t, filepath.Join(filepath.Dir(episodePath), "Buffy.S01E01.nfo"), res.Path)
+	assert.NotEqual(t, filepath.Join(showDir, "Buffy.S01E01.nfo"), res.Path,
+		"the episode nfo belongs in the SEASON folder, beside its video")
+
+	body, _ := os.ReadFile(res.Path)
+	out := string(body)
+	assert.Contains(t, out, "<episodedetails>", "Kodi keys on this exact root element")
+	assert.Contains(t, out, "<title>歡迎來到地獄口</title>")
+	assert.Contains(t, out, "<plot>巴菲來到桑尼戴爾</plot>")
+	assert.Contains(t, out, "<showtitle>魔法奇兵</showtitle>")
+	assert.Contains(t, out, "<season>1</season>")
+	assert.Contains(t, out, "<episode>1</episode>")
+	assert.Contains(t, out, "<aired>1997-03-10</aired>")
+	assert.NotContains(t, out, "<actor>", "episodes carry no credits — no invented cast")
+}
+
+func TestNFOLocalizer_Episode_BacksUpExistingThenReplaces(t *testing.T) {
+	_, episodePath := showTree(t)
+	target := filepath.Join(filepath.Dir(episodePath), "Buffy.S01E01.nfo")
+	require.NoError(t, os.WriteFile(target, []byte("ORIGINAL EPISODE NFO"), 0o644))
+
+	svc := newLocalizer(t, "[1] 歡迎來到地獄口\n[2] 巴菲來到桑尼戴爾", nil)
+	res, err := svc.LocalizeEpisodeNFO(context.Background(), sampleEpisode(episodePath), "魔法奇兵")
+	require.NoError(t, err)
+
+	assert.True(t, res.Replaced)
+	backup, _ := os.ReadFile(target + ".orig")
+	assert.Equal(t, "ORIGINAL EPISODE NFO", string(backup))
+}
+
+// 🔴 The glossary must key on the parent SERIES. A per-episode key gives every
+// episode its own private vocabulary, so one character is rendered two ways
+// across a season — the bug sub-5-5 CR H1 fixed on the subtitle side.
+func TestNFOLocalizer_Episode_GlossaryKeysOnTheParentSeries(t *testing.T) {
+	_, episodePath := showTree(t)
+	spy := &glossaryKeySpy{}
+	svc := NewNFOLocalizerService(
+		NewTranslationService(&mockTranslationCompleter{response: "[1] 歡迎來到地獄口\n[2] 巴菲來到桑尼戴爾"}, nil),
+		spy, nil)
+	require.NotNil(t, svc)
+
+	_, err := svc.LocalizeEpisodeNFO(context.Background(), sampleEpisode(episodePath), "魔法奇兵")
+	require.NoError(t, err)
+
+	require.Len(t, spy.keys, 1)
+	assert.Equal(t, "series-1", spy.keys[0], "must be the SeriesID, never the episode id")
+}
+
+// A translation response that omits a key leaves that field alone.
+func TestNFOLocalizer_Episode_MissingTranslationKeepsTheOriginal(t *testing.T) {
+	_, episodePath := showTree(t)
+	// Only [1] comes back — [2] (plot) is missing.
+	svc := newLocalizer(t, "[1] 歡迎來到地獄口", nil)
+
+	res, err := svc.LocalizeEpisodeNFO(context.Background(), sampleEpisode(episodePath), "魔法奇兵")
+	require.NoError(t, err)
+
+	body, _ := os.ReadFile(res.Path)
+	assert.Contains(t, string(body), "<title>歡迎來到地獄口</title>")
+	assert.Contains(t, string(body), "<plot>Buffy arrives in Sunnydale.</plot>",
+		"a missing key keeps the original — per-field fail-soft")
+}
+
+func TestNFOLocalizer_Episode_NoFilePathIsAnError(t *testing.T) {
+	svc := newLocalizer(t, "[1] x", nil)
+	ep := sampleEpisode("")
+	ep.FilePath = models.NullString{}
+	_, err := svc.LocalizeEpisodeNFO(context.Background(), ep, "魔法奇兵")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no file path")
+}
+
+// ─── whole-show batch ───────────────────────────────────────────────────────
+
+type stubEpisodeLister struct {
+	episodes []models.Episode
+	err      error
+	calls    int
+}
+
+func (l *stubEpisodeLister) FindBySeriesID(ctx context.Context, seriesID string) ([]models.Episode, error) {
+	l.calls++
+	if l.err != nil {
+		return nil, l.err
+	}
+	return l.episodes, nil
+}
+
+type glossaryKeySpy struct {
+	glossaryReturningStub
+	keys []string
+}
+
+func (g *glossaryKeySpy) LookupByMedia(ctx context.Context, mediaID string, confirmedOnly bool) (map[string]string, error) {
+	g.keys = append(g.keys, mediaID)
+	return nil, nil
+}
+
+func TestNFOLocalizer_Batch_SkipsEpisodesWithoutFilesAndKeepsGoing(t *testing.T) {
+	showDir, episodePath := showTree(t)
+	second := filepath.Join(filepath.Dir(episodePath), "Buffy.S01E02.mkv")
+	require.NoError(t, os.WriteFile(second, []byte("fake"), 0o644))
+
+	withFile := sampleEpisode(episodePath)
+	withFile2 := sampleEpisode(second)
+	withFile2.ID = "episode-2"
+	withFile2.EpisodeNumber = 2
+	noFile := sampleEpisode("")
+	noFile.ID = "episode-3"
+	noFile.FilePath = models.NullString{}
+
+	lister := &stubEpisodeLister{episodes: []models.Episode{withFile, withFile2, noFile}}
+	svc := newLocalizer(t, "[1] 譯名\n[2] 譯述\n[3] 劇情\n[4] 奇幻\n[5] 角色", nil)
+	svc.SetEpisodeLister(lister)
+
+	res, err := svc.LocalizeSeriesNFOWithEpisodes(context.Background(), sampleSeries(showDir))
+	require.NoError(t, err)
+
+	assert.Equal(t, 2, res.Succeeded)
+	assert.Equal(t, 0, res.Failed)
+	assert.Equal(t, 1, res.Skipped)
+	assert.Equal(t, 1, lister.calls, "the series is enumerated exactly once — no N+1")
+	assert.FileExists(t, filepath.Join(showDir, "tvshow.nfo"))
+	assert.FileExists(t, filepath.Join(filepath.Dir(episodePath), "Buffy.S01E01.nfo"))
+	assert.FileExists(t, filepath.Join(filepath.Dir(second), "Buffy.S01E02.nfo"))
+}
+
+// The show file is already on disk by the time enumeration runs; a lister
+// failure must degrade to show-only rather than report total failure.
+func TestNFOLocalizer_Batch_ListerFailureStillReportsTheShowFile(t *testing.T) {
+	showDir, _ := showTree(t)
+	svc := newLocalizer(t, "[1] 魔法奇兵\n[2] 少女對抗黑暗勢力\n[3] 劇情\n[4] 奇幻\n[5] 巴菲", nil)
+	svc.SetEpisodeLister(&stubEpisodeLister{err: assertAnError})
+
+	res, err := svc.LocalizeSeriesNFOWithEpisodes(context.Background(), sampleSeries(showDir))
+	require.NoError(t, err)
+	assert.NotNil(t, res.Show)
+	assert.Empty(t, res.Episodes)
+	assert.Equal(t, 0, res.Succeeded)
+	assert.FileExists(t, filepath.Join(showDir, "tvshow.nfo"))
+}
+
+func TestNFOLocalizer_Batch_NoListerWiredLocalizesShowOnly(t *testing.T) {
+	showDir, _ := showTree(t)
+	svc := newLocalizer(t, "[1] 魔法奇兵\n[2] 少女對抗黑暗勢力\n[3] 劇情\n[4] 奇幻\n[5] 巴菲", nil)
+
+	res, err := svc.LocalizeSeriesNFOWithEpisodes(context.Background(), sampleSeries(showDir))
+	require.NoError(t, err)
+	assert.NotNil(t, res.Show)
+	assert.Empty(t, res.Episodes)
+}
+
+var assertAnError = errorString("episode lookup exploded")
+
+type errorString string
+
+func (e errorString) Error() string { return string(e) }
+
+// CR M1: a 24-episode run used to re-read the SAME series glossary 24 times.
+// After the fix the whole-show batch reads it twice in total — once for the
+// show file, once for the episode loop — regardless of episode count.
+func TestNFOLocalizer_Batch_LoadsTheShowGlossaryOncePerRunNotPerEpisode(t *testing.T) {
+	showDir, episodePath := showTree(t)
+	seasonDir := filepath.Dir(episodePath)
+	episodes := []models.Episode{sampleEpisode(episodePath)}
+	for i := 2; i <= 4; i++ {
+		path := filepath.Join(seasonDir, "Buffy.S01E0"+string(rune('0'+i))+".mkv")
+		require.NoError(t, os.WriteFile(path, []byte("fake"), 0o644))
+		ep := sampleEpisode(path)
+		ep.ID = "episode-" + string(rune('0'+i))
+		ep.EpisodeNumber = i
+		episodes = append(episodes, ep)
+	}
+
+	spy := &glossaryKeySpy{}
+	svc := NewNFOLocalizerService(
+		NewTranslationService(&mockTranslationCompleter{response: "[1] 譯名\n[2] 譯述\n[3] 劇情\n[4] 奇幻\n[5] 角色"}, nil),
+		spy, nil)
+	require.NotNil(t, svc)
+	svc.SetEpisodeLister(&stubEpisodeLister{episodes: episodes})
+
+	res, err := svc.LocalizeSeriesNFOWithEpisodes(context.Background(), sampleSeries(showDir))
+	require.NoError(t, err)
+	require.Equal(t, 4, res.Succeeded)
+
+	assert.Len(t, spy.keys, 2,
+		"one glossary read for the show file + one for the whole episode loop — never one per episode")
+	for _, k := range spy.keys {
+		assert.Equal(t, "series-1", k)
+	}
+}
+
+// CR M3: tvshow.nfo is JOINED onto series.FilePath, so a path that is not a
+// directory must fail with something an operator can act on rather than an
+// os.WriteFile "not a directory" from deep inside the write.
+func TestNFOLocalizer_TVShow_FilePathPointingAtAFileIsAClearError(t *testing.T) {
+	_, episodePath := showTree(t)
+	series := sampleSeries(episodePath) // a FILE, not the show folder
+
+	svc := newLocalizer(t, "[1] x", nil)
+	_, err := svc.LocalizeTVShowNFO(context.Background(), series)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not a readable directory")
+	assert.NotContains(t, err.Error(), "localize fields",
+		"the guard must fire before any translation is paid for")
+}
+
+func TestNFOLocalizer_TVShow_MissingFolderIsAClearError(t *testing.T) {
+	svc := newLocalizer(t, "[1] x", nil)
+	_, err := svc.LocalizeTVShowNFO(context.Background(), sampleSeries(filepath.Join(t.TempDir(), "gone")))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not a readable directory")
+}

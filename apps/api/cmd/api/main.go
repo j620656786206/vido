@@ -799,7 +799,11 @@ func main() {
 	// 9R-13: .nfo metadata localizer (movies) — additive zh-TW .nfo via the
 	// shared translation + glossary infra. nil when no translation provider.
 	nfoLocalizer := services.NewNFOLocalizerService(translationService, repos.Glossary, slog.Default())
-	nfoLocalizerHandler := handlers.NewNFOLocalizerHandler(movieService, nfoLocalizer)
+	if nfoLocalizer != nil {
+		// 9R-13a: episode enumeration behind ?include_episodes=true.
+		nfoLocalizer.SetEpisodeLister(repos.Episodes)
+	}
+	nfoLocalizerHandler := handlers.NewNFOLocalizerHandler(movieService, seriesService, repos.Episodes, nfoLocalizer)
 	subtitleHandler := handlers.NewSubtitleHandler(
 		subtitleProviders, subtitleScorer, subtitleConverter, subtitlePlacer,
 		sseHub, repos.Movies, repos.Series,
@@ -958,7 +962,7 @@ func main() {
 		keySettingsHandler.RegisterRoutes(apiV1)          // GET/PUT /api/v1/settings/keys + POST /test (Story sub-2-1a, FR25)
 		transcriptionHandler.RegisterRoutes(apiV1)
 		if nfoLocalizer != nil {
-			nfoLocalizerHandler.RegisterRoutes(apiV1) // POST /movies/:id/localize-nfo (9R-13)
+			nfoLocalizerHandler.RegisterRoutes(apiV1) // POST /{movies,series,episodes}/:id/localize-nfo (9R-13 + 9R-13a)
 		}
 		// SSE event stream endpoint
 		apiV1.GET("/events", sse.Handler(sseHub))
