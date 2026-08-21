@@ -1,6 +1,6 @@
 # Story 9R-UX: .nfo 在地化的入口與覆寫確認（design）
 
-Status: ready-for-dev
+Status: done  <!-- Sally 2026-08-21：五段提示詞全數執行完畢，MCP 唯讀 review **PASS**（逐字比對 23 個文字節點零改動、全樹零裁切）。截圖已產出並只 stage 真變更的 4 張。 -->
 
 **Epic:** epic-9R-subtitle-route-c · **Risk: 🟡 UX/DESIGN-ONLY（Sally ux-designer，NOT dev）· 零程式碼 —— 但文案要讓人敢按「覆寫我的檔案」**
 **Created:** 2026-08-21（SM Bob, create-story）
@@ -154,12 +154,12 @@ return <LocalDetailV2 type={type} id={id} />;
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1（AC #1 / #2）** —— 讀 `LocalDetailV2.tsx:147-184` 與 v2 詳情設計節點，裁定入口位置與電影/影集差異
-- [ ] **Task 2（AC #3）** —— 覆寫確認對話框：畫面 + 逐字文案定稿（含成本與備份說明、`include_episodes` 選擇與預設值）
-- [ ] **Task 3（AC #4）** —— 結果回饋的呈現（單一 / 整劇三數字）
-- [ ] **Task 4（AC #5）** —— 產出自包含的節點錨定提示詞檔，交 Alexyu 執行
-- [ ] **Task 5（AC #5）** —— Alexyu 回報完成後，Sally MCP 唯讀 review：逐字比對 + `ctx.bounds`/`ctx.problems`
-- [ ] **Task 6** —— 更新 `SCREENS` dict（若有新畫面）、確認截圖已產出且只 stage 真變更
+- [x] **Task 1（AC #1 / #2）** —— 讀 `LocalDetailV2.tsx:147-184` 與 v2 詳情設計節點，裁定入口位置與電影/影集差異
+- [x] **Task 2（AC #3）** —— 覆寫確認對話框：畫面 + 逐字文案定稿（含成本與備份說明、`include_episodes` 選擇與預設值）
+- [x] **Task 3（AC #4）** —— 結果回饋的呈現（單一 / 整劇三數字）
+- [x] **Task 4（AC #5）** —— 產出自包含的節點錨定提示詞檔，交 Alexyu 執行
+- [x] **Task 5（AC #5）** —— Alexyu 回報完成後，Sally MCP 唯讀 review：逐字比對 + `ctx.bounds`/`ctx.problems`
+- [x] **Task 6** —— 更新 `SCREENS` dict（若有新畫面）、確認截圖已產出且只 stage 真變更
 
 ---
 
@@ -220,7 +220,85 @@ return <LocalDetailV2 type={type} id={id} />;
 
 ### Debug Log References
 
+- **Pencil MCP 唯讀查證**（`get_app_state` + `execute` 的 `Get`）：
+  - `uRGu2` = frame **`B3p-D`**、`N2fmG6` = frame **`B4p-D`**、`SzNRb` = frame **`B3p-M`** —— 三者都是 **screen frame，不是 Reusable Component**（36 個 Reusable Components 清單裡查無這兩個 id）。
+  - 動作列節點：`D2HOt`（B3p-D）／`KgifB`（B4p-D）／`vWLjV`（B3p-M），皆為 auto-layout（`gap`/`padding`/`alignItems`）。
+  - 🔴 **三個動作列的內容全是舊的**：`播放`(play)／`加入片單`(plus)／`⋯`(ellipsis)。
+    程式碼渲染的是 `管理字幕`／`修改資訊`／`複製檔案路徑`（`LocalDetailV2.tsx:147-184`）。**零重疊。**
+  - 交叉查證：`grep -rln "片單|watchlist" apps/web/src` → **空**；`LocalDetailV2.tsx:10-14` 檔頭明文
+    「Vido has NO playback path … there is NO 播放 button」。⇒ **設計稿在設計兩個不存在的功能**。
+  - `GetVariables()` 36 個變數：**`text-tertiary` 與 `border-default` 不存在**（初稿提示詞誤用），
+    已改為 `text-muted` / `border-subtle` 後才交付 —— inline agent 沒有對話上下文，錯的變數名會讓它自行猜測。
+  - Toast：`apps/web/src/components/ui/` **沒有 Toast 元件**；既有語彙是 `RequestButton.tsx` 的
+    inline pill（`role="status"` + `aria-live="polite"` + rounded-full + tinted）。
+  - J-spec 版面：J4-D `x=19720`／J5-D `x=21060`（`y=24300`，寬 1240，步進 1340），
+    caption 命名 `Caption J{N}-D`、`y = frame.y - 30`、fontSize 14 / weight 600 / `#888888`
+    ⇒ **J6-D 落在 `x=22400, y=24300`**。
+
 ### Completion Notes List
+
+## ✅ Sally MCP 唯讀 review：**PASS**（2026-08-21）
+
+五段提示詞由 Alexyu 以 Pencil Inline AI Agent 執行完畢，Sally 逐段獨立驗證：
+
+| 段 | 產出 | 驗證結果 |
+|---|---|---|
+| 1 | `D2HOt`（B3p-D）四顆動作 | ✅ 順序／圖示／文字全對，新節點 `hR1BD` 逐項合規，寬 484／容器 962，零裁切 |
+| 2 | `KgifB`（B4p-D）四顆動作 | ✅ 與電影版**逐項相同**，新節點 `k8YyiI`，寬 484，零裁切 |
+| 3 | `vWLjV`（B3p-M）兩排四顆 | ✅ 四顆皆 174×46，`174+10+174 = 358 = 390−32(padding)` 剛好填滿，零裁切 |
+| 4 | `zMYsL`（J6-D）兩個對話框 | ✅ **17 個文字節點逐字全對**，座標 `22400,24300` 精確，區域無重疊，零裁切 |
+| 5 | `Ki1Uc`（sec-result）四態 pill | ✅ **6 個文字節點逐字全對**，四顆 `h=40 r=999`，零裁切 |
+
+**逐字比對合計 23 個文字節點，零改動、零潤飾。** 定稿文案是產品對使用者的承諾，這點必須零容忍。
+
+### 🔁 inline agent 回報的 3 次偏離 —— **全部追認，且全部反饋回未執行的段落**
+
+| # | 偏離 | Sally 裁決 | 連帶修正 |
+|---|---|---|---|
+| 1 | `subtitles` 圖示不存在 → 改用 `captions` | ✅ **追認，且是我寫錯** —— `captions` 在本檔**已用 14 次**（既有字幕語彙），`subtitles` 0 次 | 提示詞 2、3 同步改 |
+| 2 | `alignItems: "stretch"` schema 不吃 → 改用 `start` | ✅ **追認** —— 實查全檔 `alignItems` 只有 `center`×2797 / `end`×101；撐滿本就該靠 `width: "fill_container"` | 🔴 **連帶發現提示詞 4、5 有 6 處 CSS 寫法**（`flex-end`×2 / `flex-start`×4）會全部噴錯，已預先修正 |
+| 3 | `fill_container` 的 text 需 `textGrowth: "fixed-width"`；`transparent` 不存在需用 `#00000000` | ✅ **追認** —— 沒有 `textGrowth`，長中文會排成不換行單行、爆出對話框 | 提示詞 5 的 `note` 同步補上 |
+
+> **這個回報迴路的價值**：三次偏離讓提示詞檔在**尚未執行**的段落先修好，估計省下至少 9 次失敗的 execute。
+
+### 截圖交付
+
+`python3 scripts/export-pen-screenshots.py` 產出 161 張；依慣例**只 stage 設計真變更的 4 張**，
+其餘 151 張 re-render 雜訊以 `git checkout` 丟棄（全量重跑非決定性，每張都有 byte diff）：
+
+| 檔案 | 變化 |
+|---|---|
+| `flow-b-detail-v2/b3p-d.png` | 91,563 → 95,224 |
+| `flow-b-detail-v2/b4p-d.png` | 92,959 → 93,148 |
+| `flow-b-detail-v2/b3p-m.png` | 72,585 → 77,468 |
+| `flow-j-specs/j6-d.png` | **新增** 37,667 |
+
+存檔已驗證落盤（`hR1BD`／`k8YyiI`／`w1nnr`／`zMYsL`／`Ki1Uc` 五個新節點皆在磁碟上的 `.pen` 內）。
+`scripts/export-pen-screenshots.py` 的 `SCREENS` 已登記 `"zMYsL": ("flow-j-specs", "j6-d")`。
+
+⚖️ **Alexyu 裁定 2026-08-21：順手校正整排**（不在三顆假按鈕旁邊加第四顆）。
+
+**七項設計裁定**（完整理由表見 `9R-UX-nfo-localization-entry-design-prompt.md` 末段）：
+
+1. **AC #1 入口** —— 選 (a)：直接加第四顆**有標籤的** secondary 按鈕，排在「修改資訊」後、「複製路徑」前。
+   **不引入 overflow `⋯`** —— 把一個會覆寫檔案的動作藏進選單，風險與可見度不對等。
+2. **AC #1 手機** —— `B3p-M` 改成**兩排、每排兩個、四個都有文字標籤**。390 寬放不下四顆有標籤的按鈕，
+   而壓成無標籤 icon 更糟：會覆寫檔案的按鈕不該是猜謎圖示。
+3. **AC #2 電影 vs 影集** —— 按鈕**完全一致**（同位置、同 `languages` 圖示、同文字「在地化資訊」），
+   差異全部收在確認對話框。在按鈕上分岔會讓人以為是兩個不同功能。
+4. **AC #3 ⚠️ 推翻 story 的預設：電影也要確認對話框。**
+   story AC #3.3 說電影 additive 所以免確認，但**電影一樣會花錢**（LLM 翻譯）。
+   2026-08-19「花錢須同意」的精神是付費動作要有明確同意動作 —— 一鍵無提示就開始計費不可接受。
+   電影版對話框講「不會覆寫」＋「會花額度」兩件事（安心 ＋ 誠實）。
+5. **AC #4 `include_episodes` 預設不勾** —— 勾了等於第一次嘗試就可能花 24 倍的錢。
+   「先做一部、滿意再做整劇」是自然的學習路徑。
+6. **AC #3 主鍵文案** —— 電影「**開始在地化**」／影集「**備份並覆寫**」。不得是含糊的「確定」；
+   影集那顆要把兩個動作都說出來（先備份、才覆寫）。
+7. **AC #4 結果回饋** —— **inline 狀態 pill 就地取代按鈕**，不是浮動 toast（repo 沒有共用 Toast 系統，
+   沿用 `RequestButton` 既有語彙）。四態：電影成功／影集覆寫成功／整劇部分成功／未設定金鑰。
+   `skipped` 對使用者說「**略過**」，spec 附註解釋「DB 有這集但硬碟沒檔案」。
+
+**交付**：`9R-UX-nfo-localization-entry-design-prompt.md` —— 五段自包含提示詞（節點 id、定稿字串、樣式規格全部寫死）。
 
 ### Discovery Triage
 
@@ -228,7 +306,15 @@ return <LocalDetailV2 type={type} id={id} />;
   - 若 **NO**：寫 `N/A — no out-of-scope work discovered`。
   - 若 **YES**：每項一列，歸入**恰好一條** lane（① / ② / ③）。
 
-**已預見的候選：**
+**YES —— 3 項（Sally 於 2026-08-21 裁定期間發現）：**
+
+| Lane | 發現 | 說明 |
+|---|---|---|
+| ① expand-scope-in-place | **設計稿在設計兩個不存在的功能**（播放／加入片單），三個 v2 詳情 frame 皆然 | ⚖️ Alexyu 裁定「順手校正整排」⇒ 由《提示詞 1-3》就地吸收 |
+| ③ backlog | **`LocalDetailV2.tsx` 的 Rule 21 檔頭語法與現實不符** —— 寫 `Implements: Component/Detail-Movie-v2 (uRGu2)`，但 `uRGu2` 是 **screen frame 不是 Reusable Component**；依 Rule 21 應為 `// Design ref: ux-design.pen Screen {Name} ({id})` | 需開條目。本 story 不改（不在範圍） |
+| ③ backlog | **v2 影集詳情沒有手機版畫面** —— 只有 `B3p-M`（電影），**沒有 `B4p-M`**。影集手機的季集手風琴與本案的兩排動作列在手機上無設計覆蓋 | 需開條目 |
+
+**其餘候選：**
 
 - **v1 詳情頁（`MediaDetailPanel` / `DetailPanelMenu` / `Screen 4c`）是死程式碼** —— 本 story 只是「不去動它」。
   若 Sally 認為 v2 遷移已足以刪除 v1，那是**獨立的清理案**（lane ③），需連同 gallery fixture 與 `Screen 4c` 設計節點一併處理。

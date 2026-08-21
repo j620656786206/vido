@@ -150,6 +150,9 @@ SCREENS = {
     # Pipeline-disabled honest-state spec (9R-10b M4) — VIDO_SUBTITLE_PIPELINE_MODE=legacy:
     # 4-way decision matrix, disabled Modal field + notice bar, LibraryCard footer tri-state.
     "alrIw": ("flow-j-specs", "j5-d"),
+    # .nfo localization confirm/result spec (9R-13b) — movie additive (no overwrite)
+    # vs TV single-slot backup-and-replace, per-episode opt-in, AI-quota notice.
+    "zMYsL": ("flow-j-specs", "j6-d"),
     # Design system reference docs (top of canvas, no flow code)
     "8SSzc": ("design-system", "design-system-reference"),
     "sJzat": ("design-system", "component-library"),
