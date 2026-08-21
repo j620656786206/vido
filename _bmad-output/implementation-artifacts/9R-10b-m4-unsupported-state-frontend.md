@@ -423,7 +423,22 @@ WCAG 對「停用元件」的對比豁免給的是**控制項本身**，不涵�
 換句話說，我們把「你為什麼該去開這個功能」用一個已知讀不清的顏色印出來。
 
 這是 Sally 的裁定（J5-D 區塊 D 明文），**不是 dev 缺陷** ⇒ 不自行修改。
-→ 立案 `9R-UX-disabled-state-description-contrast`（Rule 24 ②，等 Sally 裁定）。
+→ 立案 `9R-UX-disabled-state-description-contrast`（Rule 24 ②）。
+
+**⚖️ 已裁定並修復（2026-08-21，同 PR）** —— Sally **自我更正**：初版把兩句說明也降色是錯的。
+
+實測（背景 `#1b2336`）：`$text-disabled` **3.55:1**（12px 內文需 4.5 ⇒ 不通過）／
+`$text-muted` 6.71 ✅／`$text-secondary` **7.47** ✅。
+
+裁定：**停用的是「控制項」，不是「說明」**。checkbox 與**開關標籤**降色**保留**
+（標籤是該 checkbox 的可及名稱，屬 WCAG 1.4.3 明文豁免的 inactive user interface component）；
+**兩句說明維持 `$text-secondary` 不降色**。
+不折衷用 `$text-muted` 的理由：與 `$text-secondary` 視覺差幾乎看不出來，
+會是「程式碼裡有、眼睛看不到」的區別。
+**落地**：兩個說明 `<p>` 改為無條件 `text-[var(--text-secondary)]`；
+測試改名為 `dims the CONTROL but never the description`，**兩側都釘**
+（把說明降回去 → 紅；把標籤的降色拿掉 → 也紅）。
+`.pen` 的 `J5-D` 同步更正（4 節點 ＋ 區塊F 理由 ⑥），`j5-d.png` 重匯。
 
 ### 修後閘門（全綠）
 

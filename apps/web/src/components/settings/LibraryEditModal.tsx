@@ -303,23 +303,22 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
               </div>
             )}
 
+            {/* NOT dimmed in the disabled state (Sally, 2026-08-21 — a revision
+                of her own J5-D ruling). `--text-disabled` is annotated in
+                styles.css:47 as `intentionally sub-AA`; measured it is 3.55:1
+                on --bg-primary, and 12px body copy needs 4.5:1.
+                WCAG 1.4.3 exempts "inactive user interface components" — the
+                checkbox and its accessible name (the label above) qualify and
+                ARE dimmed. These two sentences do not: they are the only thing
+                that tells the user what the feature would do for them, i.e.
+                the only reason to go and set the variable. Printing that in a
+                colour the design system itself marks as unreadable repeats the
+                hide-the-field mistake in a different costume. */}
             <div className="space-y-1.5 pl-[30px]">
-              <p
-                className={`text-xs leading-relaxed ${
-                  autoSubtitleSupported
-                    ? 'text-[var(--text-secondary)]'
-                    : 'text-[var(--text-disabled)]'
-                }`}
-              >
+              <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
                 影片內建繁體中文字幕會直接沿用，簡體字幕自動轉成繁體。這些都在本機執行，不會產生費用。
               </p>
-              <p
-                className={`text-xs leading-relaxed ${
-                  autoSubtitleSupported
-                    ? 'text-[var(--text-secondary)]'
-                    : 'text-[var(--text-disabled)]'
-                }`}
-              >
+              <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
                 需要 AI
                 翻譯或語音辨識的影片不會自動處理，它們會留在「產生字幕」清單裡，標好預估金額等你確認。
               </p>

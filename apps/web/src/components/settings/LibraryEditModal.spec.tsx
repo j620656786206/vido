@@ -267,11 +267,15 @@ describe('LibraryEditModal', () => {
     );
   });
 
-  it('dims the label and the frozen description in the disabled state', () => {
-    // The copy itself is FROZEN (2026-08-19 ruling) — only its colour may
-    // change. Dimming is what tells the eye the whole block is inert; without
-    // it a greyed checkbox sits under full-strength text and reads as a
-    // rendering bug rather than a state.
+  it('dims the CONTROL but never the description (Sally 2026-08-21 contrast ruling)', () => {
+    // The dividing line is WCAG 1.4.3's own wording: the exemption covers
+    // "inactive user interface components". The checkbox and its accessible
+    // name — the label — qualify, so they dim. The two sentences below do not:
+    // they are the only thing telling the user what the feature would do, i.e.
+    // the only reason to go and set the variable. `--text-disabled` measures
+    // 3.55:1 on --bg-primary and is annotated `intentionally sub-AA` in
+    // styles.css:47; 12px body copy needs 4.5:1. Dimming them would repeat the
+    // hide-the-field mistake in a different costume.
     vi.mocked(useMediaLibraries).mockReturnValue(
       unsupportedQuery as ReturnType<typeof useMediaLibraries>
     );
@@ -284,7 +288,8 @@ describe('LibraryEditModal', () => {
     );
 
     expect(label.className).toContain('text-[var(--text-disabled)]');
-    expect(description.className).toContain('text-[var(--text-disabled)]');
+    expect(description.className).toContain('text-[var(--text-secondary)]');
+    expect(description.className).not.toContain('text-[var(--text-disabled)]');
   });
 
   it('keeps the label and description at full strength when supported', () => {

@@ -100,7 +100,12 @@ frame 高度由內容決定。背景 **`$bg-secondary`**，圓角 `$radius-lg`�
 1. checkbox 換成元件實例 **`Fn5MZ`**（CheckboxDisabledChecked，代表「已勾但停用」）
    —— 桌面右側再放一個小的 **`VSXl5`**（CheckboxDisabledEmpty）標註 `未勾時用這個`
 2. 開關標籤文字 fill 改 **`$text-disabled`**（內容一字不改）
-3. 兩句既有說明 fill 改 **`$text-disabled`**（內容一字不改）
+3. 兩句既有說明 fill **維持 `$text-secondary`**（內容一字不改，**且不降色**）
+
+   > ⚖️ **2026-08-21 修訂**：初版寫「降 `$text-disabled`」是錯的。
+   > 該 token 在 `styles.css:47` 被註記為 `intentionally sub-AA`，實測 3.55:1，
+   > 12px 內文不通過 AA。WCAG 1.4.3 豁免的是「inactive user interface components」——
+   > 控制項與其可及名稱（開關標籤）可以降，**旁邊的說明散文不行**。
 4. **新增通知列**，位置在 checkbox 列**正下方、兩句說明之上**：
    - 底 `$info-tint`，圓角 `$radius-sm`，內距 12，左緣 4px 實心 `$info` 直條
    - 第一行 `$text-primary` 13px：`字幕生成管線尚未啟用，這個選項無法變更。`
