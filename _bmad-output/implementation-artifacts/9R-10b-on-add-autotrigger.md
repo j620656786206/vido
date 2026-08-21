@@ -701,6 +701,12 @@ FE 在 `!== false` 時才渲染該欄位 —— 欄位缺席讀作「未知」�
 沿用的是本專案既有的 capability-honor 先例（`transcription_handler.go:71` 未接線就不掛路由）。
 反證：閘門改成恆真 → 轉紅。
 
+⚖️ **Alexyu 2026-08-21 裁定**：「顯示但停用＋一句說明」的變體交 Sally 出設計稿 ⇒
+`9R-UX-auto-subtitle-unsupported-state-design`（Rule 24 ②）。現況（隱藏）是本 PR 的保守選擇。
+該 story 同時要裁 **`LibraryCard` footer 的殘留缺口**：`LibraryCard.tsx:115` 只讀
+`library.autoSubtitle`、**沒有 capability 閘門** ⇒ legacy 模式下若 DB 仍有 `auto_subtitle=1`，
+卡片會顯示「· 自動處理免費字幕」**宣稱一件沒在發生的事**。本 PR 只擋了 modal 沒擋卡片。
+
 **M5 / M7 —— 兩個測試洞**
 episode 迴圈的排除守衛零覆蓋（刪掉整包仍綠）；single-flight 的**釋放**零覆蓋（刪掉 `defer`
 解鎖仍綠，而生產後果是功能死到重開容器、只留一行 Debug）。各補一例並反證。
