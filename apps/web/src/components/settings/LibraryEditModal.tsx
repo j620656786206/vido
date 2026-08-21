@@ -28,6 +28,16 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
   const isEditMode = !!libraryId;
   const existingLibrary = data?.libraries?.find((l) => l.id === libraryId);
 
+  // 補審 M4 — capability honor. The auto-generator that honours this opt-in is
+  // built only when the API runs in `pipeline` mode, and the shipped default is
+  // `legacy`. Offering the checkbox there is a promise nothing keeps: the user
+  // ticks it, the save succeeds, and no subtitle is ever produced.
+  //
+  // `!== false` on purpose: an API that does not report the capability at all
+  // reads as unknown, and unknown keeps the control — hiding a shipped feature
+  // on a missing field would be the worse failure.
+  const autoSubtitleSupported = data?.autoSubtitleSupported !== false;
+
   const [name, setName] = useState('');
   const [contentType, setContentType] = useState<'movie' | 'series'>('movie');
   const [autoSubtitle, setAutoSubtitle] = useState(false);
@@ -46,12 +56,20 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
     setError(null);
     try {
       if (isEditMode && libraryId) {
-        await updateLibrary.mutateAsync({ id: libraryId, name, contentType, autoSubtitle });
+        await updateLibrary.mutateAsync({
+          id: libraryId,
+          name,
+          contentType,
+          // Omitted when unsupported: the field is optional on update, and
+          // omitting leaves whatever the library already had untouched rather
+          // than silently clearing an opt-in made while the pipeline was on.
+          ...(autoSubtitleSupported ? { autoSubtitle } : {}),
+        });
       } else {
         await createLibrary.mutateAsync({
           name,
           contentType,
-          autoSubtitle,
+          ...(autoSubtitleSupported ? { autoSubtitle } : {}),
           paths: newPath.trim() ? [newPath.trim()] : undefined,
         });
       }
@@ -209,40 +227,42 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
               The copy is frozen by the 2026-08-19 ruling 「花錢須同意」 and must
               keep saying both halves — free work happens, paid work waits — and
               must never imply that scanning itself produces subtitles. */}
-          <div
-            className="border-t border-[var(--border-subtle)]/50 pt-4"
-            data-testid="library-auto-subtitle-field"
-          >
-            {/* The label WRAPS the input so the whole row is the hit area, and
+          {autoSubtitleSupported && (
+            <div
+              className="border-t border-[var(--border-subtle)]/50 pt-4"
+              data-testid="library-auto-subtitle-field"
+            >
+              {/* The label WRAPS the input so the whole row is the hit area, and
                 still carries htmlFor like every other field in this modal. The
                 row is min-h-[44px] because this is the one control here that a
                 phone user has to hit deliberately. */}
-            <label
-              htmlFor="library-auto-subtitle-checkbox"
-              className="flex min-h-[44px] cursor-pointer items-start gap-2.5 py-1.5"
-            >
-              <input
-                id="library-auto-subtitle-checkbox"
-                type="checkbox"
-                checked={autoSubtitle}
-                onChange={(e) => setAutoSubtitle(e.target.checked)}
-                className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded accent-[var(--accent-primary)]"
-                data-testid="library-auto-subtitle-checkbox"
-              />
-              <span className="text-sm font-medium leading-relaxed text-[var(--text-primary)]">
-                新檔入庫後，自動完成免費的字幕處理
-              </span>
-            </label>
-            <div className="space-y-1.5 pl-[30px]">
-              <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
-                影片內建繁體中文字幕會直接沿用，簡體字幕自動轉成繁體。這些都在本機執行，不會產生費用。
-              </p>
-              <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
-                需要 AI
-                翻譯或語音辨識的影片不會自動處理，它們會留在「產生字幕」清單裡，標好預估金額等你確認。
-              </p>
+              <label
+                htmlFor="library-auto-subtitle-checkbox"
+                className="flex min-h-[44px] cursor-pointer items-start gap-2.5 py-1.5"
+              >
+                <input
+                  id="library-auto-subtitle-checkbox"
+                  type="checkbox"
+                  checked={autoSubtitle}
+                  onChange={(e) => setAutoSubtitle(e.target.checked)}
+                  className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded accent-[var(--accent-primary)]"
+                  data-testid="library-auto-subtitle-checkbox"
+                />
+                <span className="text-sm font-medium leading-relaxed text-[var(--text-primary)]">
+                  新檔入庫後，自動完成免費的字幕處理
+                </span>
+              </label>
+              <div className="space-y-1.5 pl-[30px]">
+                <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+                  影片內建繁體中文字幕會直接沿用，簡體字幕自動轉成繁體。這些都在本機執行，不會產生費用。
+                </p>
+                <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+                  需要 AI
+                  翻譯或語音辨識的影片不會自動處理，它們會留在「產生字幕」清單裡，標好預估金額等你確認。
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="flex gap-3">

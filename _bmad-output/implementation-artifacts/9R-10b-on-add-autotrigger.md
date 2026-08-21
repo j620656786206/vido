@@ -481,6 +481,21 @@ authoring 的 AC #2 只列了 modal 內的 checkbox，**漏了 Sally 裁定 3 �
 | `tests/visual/.../settings-library-edit-modal/{default,hover,focus}-visual-darwin.png` | modified — rebless（CR M3 補列） |
 | `tests/visual/.../settings-library-edit-modal/{default,hover,focus}-visual-linux.png` | **deleted** — 交 CI bootstrap（CR M3 補列，已由 #248 補回） |
 
+**補審 Medium 複查（2026-08-21）新增／修改**
+
+| 檔案 | 動作 |
+|---|---|
+| `apps/api/internal/subtitle/auto_generation.go` | modified — `autoFailureAttemptLimit=3`；`deferredMediaIDs` → `excludedMediaIDs`（skipped＋failed 兩查詢、latest-wins 真的成立） |
+| `apps/api/internal/subtitle/auto_generation_test.go` | modified — fake 加 mutex；in-flight fake 改非阻塞閘門；新增 6 例（episode 排除／failed 排除＋邊界／latest-wins／旗標釋放） |
+| `apps/api/internal/subtitle/cost_consent_free_lane_test.go` | modified — writer↔reader 契約測試跟著改名 |
+| `apps/api/internal/handlers/media_libraries_handler.go` | modified — `WithAutoSubtitleSupport` 選項＋list 回應加 `auto_subtitle_supported` |
+| `apps/api/internal/handlers/media_libraries_capability_test.go` | **new** — 3 例（pipeline／legacy／未接線） |
+| `apps/api/cmd/api/main.go` | modified — 注入 capability 述詞；修正排序註解的錯誤宣稱 |
+| `apps/web/src/services/mediaLibraryService.ts` | modified — `LibraryListResponse.autoSubtitleSupported?` |
+| `apps/web/src/components/settings/LibraryEditModal.tsx` | modified — capability 閘門（欄位與 payload 兩處） |
+| `apps/web/src/components/settings/LibraryEditModal.spec.tsx` | modified — capability mock 每例釘住；新增 4 例（共 13） |
+| `_bmad-output/implementation-artifacts/sprint-status.yaml` | modified — 立案 M2／M6 兩條 |
+
 **未改動（刻意）**：`apps/api/internal/cost_consent_test.go`（`git diff` 0 行）、`WorkerPool`、
 `GenerationBatchProcessor`、F14–F20 同意流程、`scanner_service.go`、`SetOnScanComplete` 簽章。
 
@@ -496,6 +511,7 @@ authoring 的 AC #2 只列了 modal 內的 checkbox，**漏了 Sally 裁定 3 �
 | 2026-08-20 | **Task 3（AC #2 BE）** —— migration 031 `media_libraries.auto_subtitle DEFAULT 0`、model 欄位、repo 四處 CRUD、`UpdateLibraryRequest.AutoSubtitle *bool`（指標選填，缺席不覆寫）。零新增 endpoint。13 例新測試。 |
 | 2026-08-20 | **Task 4（AC #6/#7）** —— `cost_consent_free_lane_test.go` 走真 Pipeline 斷言付費埠呼叫計數 0，並以 fault injection 反證（閘門停用 → 6 例轉紅）。`cost_consent_test.go` 一字未改。`AutoGenerator` 起訖各一行 `slog.Info` ＋四個計數。 |
 | 2026-08-20 | **Task 5（AC #2 FE）** —— `LibraryEditModal` 第四欄位 checkbox＋三句定稿文案（逐字照 E5-D），Rule 21 檔頭更正為 `E5-D (hUVYm) · E5-M (P0P82x) · J4-D (sPzZT)`。**Rule 24 ① 吸收**：`LibraryCard` footer 顯示開關狀態。FE 共 10 例。 |
+| 2026-08-21 | **補審 Medium 逐條複查** —— 8 條裁定：6 真、1 半真、1 已立案。修 M1（`failed` 也進排除集合，門檻 3）／M3（latest-wins 真的成立）／M4（capability honor：`auto_subtitle_supported` riding list payload，legacy 模式不再提供勾不到的開關）／M5＋M7（episode 排除與旗標釋放各補測試，in-flight 回歸改以斷言而非整包 timeout 呈現）。立案 M2／M6。六項各以 fault injection 反證。 |
 | 2026-08-20 | **Task 6（AC #8）** —— `nx test api` 全綠、`nx test web` 2698 例全綠、`nx lint api`（釘版 staticcheck-2026.1）綠、`nx lint web` 綠、`format:check` 綠。 |
 
 ---
@@ -637,7 +653,80 @@ writer 一旦不用該常數，排除集合靜默變空、H1 餓死問題無聲�
 - `preexisting-fail-generation-batch-cancel-mid-item-flake` —— `time.Sleep(50ms)` 造成的負載敏感 flake，
   已證非本次造成（隔離 5/5、整包 3/3、乾淨樹全綠、第二次 `nx test api` 全綠）。
 - `bugfix-autogenerator-no-timeout-or-shutdown`（CR-249 L1）。
-- 其餘 8 個 Medium 級發現（排除集合永不過期、只涵蓋 `skipped` 不涵蓋 `failed`、
-  single-flight 是丟棄而非延後、UI 開關無條件顯示但 generator 只在 pipeline 模式存在 等）
-  尚未逐條複查，**不在此宣稱其真偽**。
+---
+
+## 🔎 補審 Medium 逐條複查 — 2026-08-21
+
+上一節結尾曾記「其餘 8 個 Medium 尚未逐條複查」。本節是那次複查：從 workflow journal
+（`wf_86029b57-b6f/journal.jsonl`，24 個發現原文）取回每一條的原始主張，**逐條對現況程式碼
+親自查證**後裁定，不轉述 agent 的判詞。
+
+| # | 主張 | 判定 | 決定 |
+|---|---|---|---|
+| M1 | 排除集合只涵蓋 `skipped`，不涵蓋 `failed` | **真** | ✅ 已修 |
+| M2 | 排除集合永不過期 | **半真** | ⏭️ 立案 `bugfix-auto-exclusion-never-expires` |
+| M3 | 「最新一筆勝出」是註解說的，不是程式做的 | **真（小）** | ✅ 已修 |
+| M4 | UI 開關無條件顯示，generator 只在 pipeline 模式存在 | **真** | ✅ 已修 |
+| M5 | episode 半邊的排除守衛零測試 | **真** | ✅ 已修 |
+| M6 | single-flight 是丟棄而非延後 | **真** | ⏭️ 立案 `bugfix-autogenerator-dropped-round-not-deferred` |
+| M7 | single-flight 的**釋放**零測試；回歸長得像整包 timeout | **真** | ✅ 已修 |
+| M8 | `context.Background()`、無逾時、無關機掛鉤 | **真** | ⏭️ 已立案（CR-249 L1） |
+
+### 已修
+
+**M1 —— 永久失敗的項目每次掃描重佔配額**
+`excludedMediaIDs`（原 `deferredMediaIDs`）只查 `SubtitleRunSkipped`。而 `failItem`
+（`process_item.go:682`）把 media 列還原成 `not_searched` 並記一列 `failed` run ⇒ 壞檔
+**沒有 sidecar、不在排除集合、狀態仍可列舉**，於是每次掃描重新被撈、重跑一次 ffprobe、
+再多寫一列 run —— 這正是 H1 的餓死，只是把「付費項目」換成「壞檔」。
+修：新增 `autoFailureAttemptLimit = 3`，第二次查詢 `SubtitleRunFailed` 並**計數**，達門檻即排除。
+門檻取 3 而非 1，因為單次失敗常常是 NAS 而不是檔案（硬碟休眠、share 慢一秒重連）。
+排除不是對該項目的終局裁決：手動路徑仍會處理它。
+反證：拿掉 failed 查詢 → 轉紅；門檻改 1 或 2 → 邊界測試轉紅。
+
+**M3 —— dedup 守衛形同虛設**
+`out` 只裝延後列，`seen` 守衛因此只在「已標記延後」時才命中 ⇒ 實際語意是「**曾經**延後過就排除」，
+不是註解宣稱的「最新那筆決定」。修：另建 `decided` 集合記錄**每個看過的 media id**，
+讓 newest-first 真的決定結果。反證：還原成舊寫法 → 轉紅。
+
+**M4 —— 勾了永遠不會發生任何事**
+`config.go:160` 預設 `legacy`；`AutoGenerator` 整段 wiring 在 `main.go:608` 的
+`if cfg.SubtitlePipelineEnabled()` 內；`LibraryEditModal` 零 gating ⇒ **預設安裝**的使用者
+勾選、存檔成功、然後永遠等不到字幕，畫面上沒有任何東西解釋。
+修：`GET /api/v1/libraries` 的既有 list payload 加 `auto_subtitle_supported`（additive on v1，
+**零新 endpoint**，因為設定頁本來就在打這支），由 `handlers.WithAutoSubtitleSupport(cfg.SubtitlePipelineEnabled)` 注入；
+FE 在 `!== false` 時才渲染該欄位 —— 欄位缺席讀作「未知」而非「不支援」，
+把一個已出貨的控制項因為少一個 key 就藏起來是更糟的失敗。不支援時 update payload
+**省略** `autoSubtitle`（而非送 `false`），以免清掉使用者在 pipeline 模式下做過的選擇。
+沿用的是本專案既有的 capability-honor 先例（`transcription_handler.go:71` 未接線就不掛路由）。
+反證：閘門改成恆真 → 轉紅。
+
+**M5 / M7 —— 兩個測試洞**
+episode 迴圈的排除守衛零覆蓋（刪掉整包仍綠）；single-flight 的**釋放**零覆蓋（刪掉 `defer`
+解鎖仍綠，而生產後果是功能死到重開容器、只留一行 Debug）。各補一例並反證。
+順帶把 `TestAutoGenerator_SecondRoundIsSkippedWhileOneIsInFlight` 的 fake 從 `sync.Once`
+換成只擋第一位呼叫者的閘門 —— `Once.Do` 會阻塞其他呼叫者，導致守衛一被拿掉就是
+**整包 `panic: test timed out`**，看起來像基礎設施故障而不是回歸。現在它以斷言失敗呈現。
+`autoFakeItemProcessor` 同時加上 mutex，讓兩個 goroutine 的呼叫紀錄可安全比對。
+
+**順帶更正**：`main.go` 的排序註解仍寫著「auto-trigger 的語言路由讀 enrichment 寫的 metadata」
+—— 上一節已判定此宣稱錯兩層，但只改了 story 沒改程式碼註解。已改寫成事實：
+排序是慣例不是依賴，讓並行安全的是 enrichment 的**窄寫入器**。
+
+### 未修，已立案
+
+- `bugfix-auto-exclusion-never-expires`（M2）—— 主線（需 ASR）永久排除本來就對，
+  缺口只有「換檔後有內嵌中文軌」與「升級後免費層支援了新格式」。需要一個可比對的檔案版本來源，
+  屬設計決定。
+- `bugfix-autogenerator-dropped-round-not-deferred`（M6）—— 掃描完成回呼只在
+  `FilesCreated>0 || FilesUpdated>0` 才觸發（`scanner_service.go:314`），被丟掉的一輪要等
+  下一次有檔案變動的掃描。補跑機制與 M8 的 lifecycle 決定互相牽動，應一起裁定。
+- `bugfix-autogenerator-no-timeout-or-shutdown`（M8＝CR-249 L1，早已立案）。
+  **與 M7 合起來才是完整危害**：卡住的一輪永不返回 ⇒ `running` 永遠為真 ⇒ 功能失效到重開機。
+
+### 閘門（全綠）
+
+`pnpm nx test api` ✅ ｜ `pnpm nx test web` ✅ ｜ `pnpm nx lint api`（釘版 staticcheck-2026.1）✅ ｜
+`pnpm nx lint web` ✅ ｜ `pnpm format:check` ✅ ｜ `tsc --noEmit` **147**（＝main 基準，零新增）。
+六項修復各自以 fault injection 反證轉紅。
 

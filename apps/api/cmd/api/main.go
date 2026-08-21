@@ -660,8 +660,13 @@ func main() {
 		//
 		// 9R-10b: the scan-complete slot is COMPOSED, never re-registered.
 		// `postScanEnrichment` above is passed through byte-for-byte and runs
-		// FIRST — the auto-trigger's language routing reads the metadata that
-		// enrichment writes. What follows it is the FREE lane only: every item
+		// FIRST. Ordering is convention, NOT a dependency (補審 correction):
+		// SelectAndRoute probes the FILE, and neither free route reads
+		// item.Context at all — enrichment metadata reaches the pipeline only
+		// via RouteTranslate and the runVersion hash. The two callbacks are
+		// each `go`-spawned, so they overlap regardless; what makes the overlap
+		// safe is enrichment's NARROW writer (UpdateEnrichedMetadata), not this
+		// order. What follows it is the FREE lane only: every item
 		// is processed with ProcessItemOptions.FreeOnly, so an embedded Chinese
 		// track is finished locally while anything that would bill stops at the
 		// threshold and waits for the estimate screen. The paid sweep this slot
@@ -757,7 +762,14 @@ func main() {
 	searchService := services.NewSearchService(searchClient, libraryService)
 	searchHandler := handlers.NewSearchHandler(searchService)
 	libraryHandler := handlers.NewLibraryHandler(libraryService)
-	mediaLibrariesHandler := handlers.NewMediaLibrariesHandler(mediaLibraryService)
+	// 補審 M4: the opt-in checkbox is only offered where the trigger that
+	// honours it is actually built — the `if cfg.SubtitlePipelineEnabled()`
+	// block above. The default mode is `legacy`, where it would be a promise
+	// nothing keeps.
+	mediaLibrariesHandler := handlers.NewMediaLibrariesHandler(
+		mediaLibraryService,
+		handlers.WithAutoSubtitleSupport(cfg.SubtitlePipelineEnabled),
+	)
 	exploreBlocksHandler := handlers.NewExploreBlocksHandler(exploreBlockService)                // Story 10.3
 	filterPresetsHandler := handlers.NewFilterPresetsHandler(filterPresetService)                // Story 11.4
 	requestHandler := handlers.NewRequestHandler(requestService)                                 // Story 13-1a

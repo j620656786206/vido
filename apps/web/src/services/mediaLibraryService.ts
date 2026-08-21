@@ -36,6 +36,20 @@ export interface MediaLibraryWithPaths extends MediaLibrary {
   mediaCount: number;
 }
 
+export interface LibraryListResponse {
+  libraries: MediaLibraryWithPaths[];
+  /**
+   * Whether THIS deployment actually runs the free auto-generation lane
+   * (補審 M4). The trigger is built only when `VIDO_SUBTITLE_PIPELINE_MODE` is
+   * `pipeline`, and the shipped default is `legacy` — so `autoSubtitle` is
+   * writable everywhere but honoured only here.
+   *
+   * Optional so an older API (which omits the key) reads as "unknown", and the
+   * UI keeps showing the control rather than hiding it on a guess.
+   */
+  autoSubtitleSupported?: boolean;
+}
+
 export interface CreateLibraryRequest {
   name: string;
   contentType: 'movie' | 'series';
@@ -77,8 +91,8 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
 }
 
 export const mediaLibraryService = {
-  async getAll(): Promise<{ libraries: MediaLibraryWithPaths[] }> {
-    return fetchApi<{ libraries: MediaLibraryWithPaths[] }>('/libraries');
+  async getAll(): Promise<LibraryListResponse> {
+    return fetchApi<LibraryListResponse>('/libraries');
   },
 
   async getById(id: string): Promise<MediaLibraryWithPaths> {

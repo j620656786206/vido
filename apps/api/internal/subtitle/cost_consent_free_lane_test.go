@@ -137,7 +137,7 @@ func TestFreeLane_DeferredItemStaysOnTheConsentList(t *testing.T) {
 // TestDeferredMarker_WriterAndReaderAgree closes a silent-failure gap.
 //
 // DeferredPaidRunPrefix is written by Pipeline.deferPaidItem and read back by
-// AutoGenerator.deferredMediaIDs. Nothing else connects them: if the writer's
+// AutoGenerator.excludedMediaIDs. Nothing else connects them: if the writer's
 // message format drifts, the reader simply stops matching, the exclusion set
 // goes empty, and the H1 starvation bug returns — silently, with every existing
 // test still green, because every other test stubs one side or the other.
@@ -159,7 +159,7 @@ func TestDeferredMarker_WriterAndReaderAgree(t *testing.T) {
 			ErrorMessage: written.ErrorMessage,
 		}}}),
 	)
-	got, err := gen.deferredMediaIDs(context.Background())
+	got, err := gen.excludedMediaIDs(context.Background())
 	require.NoError(t, err)
 
 	assert.Contains(t, got, h.ref.ID,

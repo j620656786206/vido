@@ -6,6 +6,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { LibraryEditModal } from './LibraryEditModal';
+import { useMediaLibraries } from '../../hooks/useMediaLibrary';
 
 const mutation = { mutateAsync: vi.fn().mockResolvedValue({}), isPending: false };
 
@@ -28,6 +29,16 @@ const librariesQuery = {
   },
 };
 
+// Same referential-stability rule as librariesQuery above: one constant per
+// capability state, never a literal rebuilt inside a test.
+const unsupportedQuery = {
+  data: { ...librariesQuery.data, autoSubtitleSupported: false },
+};
+
+const supportedQuery = {
+  data: { ...librariesQuery.data, autoSubtitleSupported: true },
+};
+
 vi.mock('../../hooks/useMediaLibrary', () => ({
   useMediaLibraries: vi.fn(() => librariesQuery),
   useCreateLibrary: () => mutation,
@@ -39,6 +50,11 @@ vi.mock('../../hooks/useMediaLibrary', () => ({
 describe('LibraryEditModal', () => {
   beforeEach(() => {
     mutation.mutateAsync.mockClear();
+    // The component renders more than once (the hydrate effect re-renders it),
+    // so the capability must be pinned for the whole test, not handed out once.
+    vi.mocked(useMediaLibraries).mockReturnValue(
+      librariesQuery as ReturnType<typeof useMediaLibraries>
+    );
   });
 
   it('associates every form label with its control (retro-11-AI1b htmlFor/id)', () => {
@@ -149,6 +165,59 @@ describe('LibraryEditModal', () => {
     await vi.waitFor(() => expect(mutation.mutateAsync).toHaveBeenCalled());
     expect(mutation.mutateAsync).toHaveBeenCalledWith(
       expect.objectContaining({ autoSubtitle: false })
+    );
+  });
+
+  // ─── 補審 M4: capability honor ───────────────────────────────────────────
+  //
+  // The generator that honours this opt-in is built only when the API runs in
+  // `pipeline` mode, and the shipped default is `legacy`. Offering the checkbox
+  // there is a promise nothing keeps — the user ticks it, the save succeeds,
+  // and no subtitle is ever produced, with nothing on screen to explain why.
+
+  it('hides the opt-in when the deployment does not run the auto lane', () => {
+    vi.mocked(useMediaLibraries).mockReturnValue(
+      unsupportedQuery as ReturnType<typeof useMediaLibraries>
+    );
+
+    render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
+
+    expect(screen.queryByTestId('library-auto-subtitle-field')).not.toBeInTheDocument();
+    expect(screen.getByTestId('library-name-input')).toBeInTheDocument();
+  });
+
+  it('shows the opt-in when the deployment reports it supported', () => {
+    vi.mocked(useMediaLibraries).mockReturnValue(
+      supportedQuery as ReturnType<typeof useMediaLibraries>
+    );
+
+    render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
+
+    expect(screen.getByTestId('library-auto-subtitle-field')).toBeInTheDocument();
+  });
+
+  it('keeps the opt-in visible when the API does not report the capability', () => {
+    // An API that omits the field is UNKNOWN, not unsupported. Hiding a shipped
+    // control on a missing key would be the worse failure of the two.
+    render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
+
+    expect(screen.getByTestId('library-auto-subtitle-field')).toBeInTheDocument();
+  });
+
+  it('omits autoSubtitle from the update payload when unsupported', async () => {
+    // Omitted, not `false`: the field is optional on update, so omitting leaves
+    // an opt-in made while the pipeline was enabled exactly as the user left it
+    // instead of silently clearing it from a screen that never showed it.
+    vi.mocked(useMediaLibraries).mockReturnValue(
+      unsupportedQuery as ReturnType<typeof useMediaLibraries>
+    );
+
+    render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
+    fireEvent.click(screen.getByTestId('library-save-button'));
+
+    await vi.waitFor(() => expect(mutation.mutateAsync).toHaveBeenCalled());
+    expect(mutation.mutateAsync).toHaveBeenCalledWith(
+      expect.not.objectContaining({ autoSubtitle: expect.anything() })
     );
   });
 });
