@@ -147,6 +147,9 @@ SCREENS = {
     # On-add auto-generation free/paid boundary spec (9R-10b) — 2026-08-07/08-19 rulings,
     # two-tier table, control states, LibraryCard footer, copy rationale.
     "sPzZT": ("flow-j-specs", "j4-d"),
+    # Pipeline-disabled honest-state spec (9R-10b M4) — VIDO_SUBTITLE_PIPELINE_MODE=legacy:
+    # 4-way decision matrix, disabled Modal field + notice bar, LibraryCard footer tri-state.
+    "alrIw": ("flow-j-specs", "j5-d"),
     # Design system reference docs (top of canvas, no flow code)
     "8SSzc": ("design-system", "design-system-reference"),
     "sJzat": ("design-system", "component-library"),

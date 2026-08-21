@@ -164840,6 +164840,1500 @@
           ]
         }
       ]
+    },
+    {
+      "type": "text",
+      "id": "t186uB",
+      "x": 21060,
+      "y": 24270,
+      "name": "Caption J5-D",
+      "fill": "#888888",
+      "content": "J5 · 入庫自動生成 · 部署未啟用狀態規格",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 14,
+      "fontWeight": "600"
+    },
+    {
+      "type": "frame",
+      "id": "alrIw",
+      "x": 21060,
+      "y": 24300,
+      "name": "J5-D",
+      "width": 1240,
+      "fill": "$bg-secondary",
+      "cornerRadius": "$radius-lg",
+      "stroke": "$border-subtle",
+      "strokeWidth": 1,
+      "layout": "vertical",
+      "gap": 28,
+      "padding": 32,
+      "children": [
+        {
+          "type": "frame",
+          "id": "QtO8a",
+          "name": "區塊A-標題",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "e3Ew4v",
+              "name": "主標",
+              "fill": "$text-primary",
+              "content": "部署未啟用時的誠實狀態 —— 控制項與卡片",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 22,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "iPiyQ",
+              "name": "副標",
+              "fill": "$text-muted",
+              "content": "9R-10b 補審 M4 · VIDO_SUBTITLE_PIPELINE_MODE 預設 legacy，此時這個開關不可能生效",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "nCHuq",
+          "name": "區塊B-三條事實",
+          "width": "fill_container",
+          "fill": "$bg-primary",
+          "cornerRadius": "$radius-md",
+          "layout": "vertical",
+          "gap": 10,
+          "padding": 16,
+          "children": [
+            {
+              "type": "text",
+              "id": "ldIfQ",
+              "name": "小標",
+              "fill": "$text-primary",
+              "content": "⚙️ 為什麼會有這個狀態",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 13,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "UmK0B",
+              "name": "事實1",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "出貨預設是 legacy（config.go:160）。只有 pipeline 模式才會建構自動生成器（main.go 的 if cfg.SubtitlePipelineEnabled() 區塊）。",
+              "lineHeight": 1.6,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12.5,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "wo6Dt",
+              "name": "事實2",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "這是 env-only 設定：沒有設定頁入口，改完必須重啟容器（docs/deployment.md:134 明列它是無 UI 的環境變數之一）。",
+              "lineHeight": 1.6,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12.5,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "nmGJh",
+              "name": "事實3",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "auto_subtitle 欄位在任何模式都寫得進資料庫 —— 存得下，但執行的人不存在。",
+              "lineHeight": 1.6,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12.5,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "G8Gpg",
+          "name": "區塊C-決策矩陣",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "BDjvw",
+              "name": "小標",
+              "fill": "$text-primary",
+              "content": "四種組合，四個答案",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 13,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "Q9tTDw",
+              "name": "表格",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "TDQbq",
+                  "name": "表頭",
+                  "width": "fill_container",
+                  "fill": "$bg-secondary",
+                  "padding": [
+                    10,
+                    14
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "KNP6y",
+                      "name": "表頭欄1",
+                      "width": 160,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "S8jFbd",
+                          "name": "欄名",
+                          "fill": "$text-muted",
+                          "content": "伺服器模式",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "aTsLp",
+                      "name": "表頭欄2",
+                      "width": 140,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "vibbq",
+                          "name": "欄名",
+                          "fill": "$text-muted",
+                          "content": "媒體庫勾選",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "B8uxw",
+                      "name": "表頭欄3",
+                      "width": 260,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "QQtTR",
+                          "name": "欄名",
+                          "fill": "$text-muted",
+                          "content": "Modal 欄位",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "x9xwop",
+                      "name": "表頭欄4",
+                      "width": 588,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "O63Ek7",
+                          "name": "欄名",
+                          "fill": "$text-muted",
+                          "content": "卡片 footer",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "PM638",
+                  "name": "列1-pipeline-已勾",
+                  "width": "fill_container",
+                  "stroke": "$border-subtle",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "V2B1g",
+                      "name": "欄1-模式",
+                      "width": 160,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Uhduh",
+                          "name": "值",
+                          "fill": "$text-primary",
+                          "content": "pipeline",
+                          "lineHeight": 1.5,
+                          "fontFamily": "JetBrains Mono",
+                          "fontSize": 12.5,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "vgfkT",
+                      "name": "欄2-勾選",
+                      "width": 140,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "KLUTL",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "已勾",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "OYiab",
+                      "name": "欄3-Modal",
+                      "width": 260,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "kOOLH",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "正常，可變更",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "tjFzz",
+                      "name": "欄4-Footer",
+                      "width": 588,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "B8yiEo",
+                          "name": "值",
+                          "fill": "$success",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "「· 自動處理免費字幕」",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "CBFYD",
+                  "name": "列2-pipeline-未勾",
+                  "width": "fill_container",
+                  "stroke": "$border-subtle",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "gB4ul",
+                      "name": "欄1-模式",
+                      "width": 160,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Z62SRU",
+                          "name": "值",
+                          "fill": "$text-primary",
+                          "content": "pipeline",
+                          "lineHeight": 1.5,
+                          "fontFamily": "JetBrains Mono",
+                          "fontSize": 12.5,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "W6P873",
+                      "name": "欄2-勾選",
+                      "width": 140,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Eghn0",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "未勾",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "RUfLj",
+                      "name": "欄3-Modal",
+                      "width": 260,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "bkJrN",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "正常，可變更",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "o43W5Q",
+                      "name": "欄4-Footer",
+                      "width": 588,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "r7U8r",
+                          "name": "值",
+                          "fill": "$text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "整段不出現",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "w2eav",
+                  "name": "列3-legacy-已勾",
+                  "width": "fill_container",
+                  "fill": "$warning-tint",
+                  "stroke": "$border-subtle",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "vcPGA",
+                      "name": "欄1-模式",
+                      "width": 160,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hfTod",
+                          "name": "值",
+                          "fill": "$text-primary",
+                          "content": "legacy",
+                          "lineHeight": 1.5,
+                          "fontFamily": "JetBrains Mono",
+                          "fontSize": 12.5,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "FWiFY",
+                      "name": "欄2-勾選",
+                      "width": 140,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "ZkC2K",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "已勾",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "dnDB2",
+                      "name": "欄3-Modal",
+                      "width": 260,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "m59HF",
+                          "name": "值",
+                          "fill": "$text-primary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "停用 ＋ 通知列",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "aIXtf",
+                      "name": "欄4-Footer",
+                      "width": 588,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "MCdXh",
+                          "name": "值",
+                          "fill": "$warning",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "「· 自動處理免費字幕（伺服器未啟用）」",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "lvOkM",
+                  "name": "列4-legacy-未勾",
+                  "width": "fill_container",
+                  "fill": "$warning-tint",
+                  "stroke": "$border-subtle",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "V6HZHv",
+                      "name": "欄1-模式",
+                      "width": 160,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "kLjoS",
+                          "name": "值",
+                          "fill": "$text-primary",
+                          "content": "legacy",
+                          "lineHeight": 1.5,
+                          "fontFamily": "JetBrains Mono",
+                          "fontSize": 12.5,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "iJU0p",
+                      "name": "欄2-勾選",
+                      "width": 140,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "LQMPx",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "未勾",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "e3gO1",
+                      "name": "欄3-Modal",
+                      "width": 260,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "RkvCb",
+                          "name": "值",
+                          "fill": "$text-primary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "停用 ＋ 通知列",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "C1zIS",
+                      "name": "欄4-Footer",
+                      "width": 588,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "pSAkG",
+                          "name": "值",
+                          "fill": "$text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "整段不出現",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "EUfp9",
+              "name": "註記",
+              "fill": "$text-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "綠＝正在發生 · 琥珀＝你要求了但沒發生 · 不出現＝你沒要求。琥珀只用在系統與使用者意願不一致的那一格。",
+              "lineHeight": 1.6,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "rdOsw",
+          "name": "區塊D-Modal停用態",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "je5jG",
+              "name": "小標",
+              "fill": "$text-primary",
+              "content": "編輯媒體庫 Modal —— 停用態（桌面 472 / 行動 318）",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 13,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "xpo7m",
+              "name": "Specimens",
+              "width": "fill_container",
+              "gap": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "v4Z6AQ",
+                  "name": "Specimen-桌面",
+                  "fill": "$bg-secondary",
+                  "cornerRadius": "$radius-md",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "G7bwIM",
+                      "name": "標題",
+                      "fill": "$text-muted",
+                      "content": "桌面 472 · 停用態（已勾）",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "EXotb",
+                      "name": "內容",
+                      "gap": 20,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "T4cnlK",
+                          "name": "自動生成開關-停用",
+                          "width": 472,
+                          "layout": "vertical",
+                          "gap": 10,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "q4wZE",
+                              "name": "開關列",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "children": [
+                                {
+                                  "id": "c1s2E",
+                                  "type": "ref",
+                                  "ref": "Fn5MZ",
+                                  "name": "Checkbox-停用已勾"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "n5uM6",
+                                  "name": "開關標籤",
+                                  "fill": "$text-disabled",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "新檔入庫後，自動完成免費的字幕處理",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "fSKUG",
+                              "name": "通知列-管線未啟用",
+                              "width": "fill_container",
+                              "fill": "$info-tint",
+                              "cornerRadius": "$radius-sm",
+                              "stroke": "$info",
+                              "strokeWidth": {
+                                "left": 4
+                              },
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "gap": 4,
+                              "padding": 12,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "StBWt",
+                                  "name": "通知1",
+                                  "fill": "$text-primary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "字幕生成管線尚未啟用，這個選項無法變更。",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "RbGr5",
+                                  "name": "通知2",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 2,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "N6Btb",
+                                      "name": "行1",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "ttaQ8",
+                                          "name": "文字1",
+                                          "fill": "$text-secondary",
+                                          "content": "請將 ",
+                                          "lineHeight": 1.5,
+                                          "fontFamily": "Noto Sans TC",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "KLRCQ",
+                                          "name": "env-var",
+                                          "fill": "$text-primary",
+                                          "content": "VIDO_SUBTITLE_PIPELINE_MODE",
+                                          "lineHeight": 1.5,
+                                          "fontFamily": "JetBrains Mono",
+                                          "fontSize": 12,
+                                          "fontWeight": "500"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "wV8Hp",
+                                          "name": "文字3",
+                                          "fill": "$text-secondary",
+                                          "content": " 設為 pipeline 後重啟伺服器。",
+                                          "lineHeight": 1.5,
+                                          "fontFamily": "Noto Sans TC",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Q6qeHW",
+                              "name": "說明",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "padding": [
+                                0,
+                                0,
+                                0,
+                                30
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "t7wDzA",
+                                  "name": "說明1",
+                                  "fill": "$text-disabled",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "影片內建繁體中文字幕會直接沿用，簡體字幕自動轉成繁體。這些都在本機執行，不會產生費用。",
+                                  "lineHeight": 1.6,
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 12.5,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "pvTbk",
+                                  "name": "說明2",
+                                  "fill": "$text-disabled",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "需要 AI 翻譯或語音辨識的影片不會自動處理，它們會留在「產生字幕」清單裡，標好預估金額等你確認。",
+                                  "lineHeight": 1.6,
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 12.5,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "HwS7N",
+                          "name": "未勾註標",
+                          "width": 120,
+                          "layout": "vertical",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "id": "G0ngqC",
+                              "type": "ref",
+                              "ref": "VSXl5",
+                              "name": "Checkbox-停用未勾"
+                            },
+                            {
+                              "type": "text",
+                              "id": "w1OMx",
+                              "name": "註標文字",
+                              "fill": "$text-muted",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "未勾時用這個",
+                              "lineHeight": 1.5,
+                              "fontFamily": "Noto Sans TC",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "b189F",
+                  "name": "Specimen-行動",
+                  "fill": "$bg-secondary",
+                  "cornerRadius": "$radius-md",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "KuPNb",
+                      "name": "標題",
+                      "fill": "$text-muted",
+                      "content": "行動 318 · 停用態（已勾）",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "z8c8A1",
+                      "name": "自動生成開關-停用",
+                      "width": 318,
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "xHHZe",
+                          "name": "開關列",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "padding": [
+                            12,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "id": "Qk7Yk",
+                              "type": "ref",
+                              "ref": "Fn5MZ",
+                              "name": "Checkbox-停用已勾"
+                            },
+                            {
+                              "type": "text",
+                              "id": "kKgin",
+                              "name": "開關標籤",
+                              "fill": "$text-disabled",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "新檔入庫後，自動完成免費的字幕處理",
+                              "lineHeight": 1.5,
+                              "fontFamily": "Noto Sans TC",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "JQkdr",
+                          "name": "通知列-管線未啟用",
+                          "width": "fill_container",
+                          "fill": "$info-tint",
+                          "cornerRadius": "$radius-sm",
+                          "stroke": "$info",
+                          "strokeWidth": {
+                            "left": 4
+                          },
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "padding": 12,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Jcop7",
+                              "name": "通知1",
+                              "fill": "$text-primary",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "字幕生成管線尚未啟用，這個選項無法變更。",
+                              "lineHeight": 1.5,
+                              "fontFamily": "Noto Sans TC",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "HcL5V",
+                              "name": "通知2",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 2,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "eJyZI",
+                                  "name": "行1",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "O1IjIf",
+                                      "name": "文字1",
+                                      "fill": "$text-secondary",
+                                      "content": "請將 ",
+                                      "lineHeight": 1.5,
+                                      "fontFamily": "Noto Sans TC",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "A2wavz",
+                                      "name": "env-var",
+                                      "fill": "$text-primary",
+                                      "content": "VIDO_SUBTITLE_PIPELINE_MODE",
+                                      "lineHeight": 1.5,
+                                      "fontFamily": "JetBrains Mono",
+                                      "fontSize": 12,
+                                      "fontWeight": "500"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "kkWpI",
+                                  "name": "行2",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "Dw2iH",
+                                      "name": "文字1",
+                                      "fill": "$text-secondary",
+                                      "content": "設為 pipeline 後重啟伺服器。",
+                                      "lineHeight": 1.5,
+                                      "fontFamily": "Noto Sans TC",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "f5Jj1",
+                          "name": "說明",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "padding": [
+                            0,
+                            0,
+                            0,
+                            30
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "ZYFGL",
+                              "name": "說明1",
+                              "fill": "$text-disabled",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "影片內建繁體中文字幕會直接沿用，簡體字幕自動轉成繁體。這些都在本機執行，不會產生費用。",
+                              "lineHeight": 1.6,
+                              "fontFamily": "Noto Sans TC",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "hw8te",
+                              "name": "說明2",
+                              "fill": "$text-disabled",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "需要 AI 翻譯或語音辨識的影片不會自動處理，它們會留在「產生字幕」清單裡，標好預估金額等你確認。",
+                              "lineHeight": 1.6,
+                              "fontFamily": "Noto Sans TC",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "K9idG",
+          "name": "區塊E-卡片footer",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "Bs6RC",
+              "name": "小標",
+              "fill": "$text-primary",
+              "content": "LibraryCard footer —— 三態並陳",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 13,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "rqFrG",
+              "name": "Specimens",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Oj4bG",
+                  "name": "卡片-已啟用 · 已勾",
+                  "width": "fill_container",
+                  "fill": "$bg-secondary",
+                  "cornerRadius": "$radius-md",
+                  "stroke": "$border-subtle",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "W4sVb",
+                      "name": "狀態標籤",
+                      "fill": "$success",
+                      "content": "已啟用 · 已勾",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "XSwpY",
+                      "name": "庫名",
+                      "fill": "$text-primary",
+                      "content": "我的電影",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Ff2ZU",
+                      "name": "Footer",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "zWQ9R",
+                          "name": "前段",
+                          "fill": "$text-muted",
+                          "content": "2 個資料夾 · 316 個項目 · ",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "QBXxt",
+                          "name": "自動處理段",
+                          "fill": "$success",
+                          "content": "自動處理免費字幕",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "nJ0bG",
+                  "name": "卡片-未啟用 · 已勾",
+                  "width": "fill_container",
+                  "fill": "$bg-secondary",
+                  "cornerRadius": "$radius-md",
+                  "stroke": "$border-subtle",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "atbX7",
+                      "name": "狀態標籤",
+                      "fill": "$warning",
+                      "content": "未啟用 · 已勾",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "NILmM",
+                      "name": "庫名",
+                      "fill": "$text-primary",
+                      "content": "我的電影",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "d94Jm",
+                      "name": "Footer",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "YiwBQ",
+                          "name": "前段",
+                          "fill": "$text-muted",
+                          "content": "2 個資料夾 · 316 個項目 · ",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "gP837",
+                          "name": "自動處理段",
+                          "fill": "$warning",
+                          "content": "自動處理免費字幕（伺服器未啟用）",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "h7Mjff",
+                  "name": "卡片-任一 · 未勾",
+                  "width": "fill_container",
+                  "fill": "$bg-secondary",
+                  "cornerRadius": "$radius-md",
+                  "stroke": "$border-subtle",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "HALxa",
+                      "name": "狀態標籤",
+                      "fill": "$text-muted",
+                      "content": "任一 · 未勾",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "NwybV",
+                      "name": "庫名",
+                      "fill": "$text-primary",
+                      "content": "我的電影",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "W5uv4",
+                      "name": "Footer",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "X5Vdo6",
+                          "name": "前段",
+                          "fill": "$text-muted",
+                          "content": "2 個資料夾 · 316 個項目",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "TODyK",
+                      "name": "註標",
+                      "fill": "$text-disabled",
+                      "content": "（自動處理那一段整段不出現）",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "nVZMg",
+              "name": "註記",
+              "fill": "$text-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "括號裡指名「誰」沒啟用。少了它會被讀成「你沒勾」—— 而使用者明明勾了，那是最糟的誤讀。",
+              "lineHeight": 1.6,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "wQgdT",
+          "name": "區塊F-文案理由",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "text",
+              "id": "PHzzY",
+              "name": "小標",
+              "fill": "$text-primary",
+              "content": "文案的五條理由（逐條可指認）",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 13,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "SbU6L",
+              "name": "理由1",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "① 兩句通知沿用已出貨的 409 文案，逐字相同（subtitle_pipeline_handler.go:112-113）—— 撞過 API 錯誤的使用者會認得同一句話。",
+              "lineHeight": 1.5,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12.5,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "bfF82",
+              "name": "理由2",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "② 顯示 env var 名稱是 Alexyu 2026-08-21 裁定：那是唯一可行的下一步，藏起來等於請使用者猜一個猜不到的字串。",
+              "lineHeight": 1.5,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12.5,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "Y93ti",
+              "name": "理由3",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "③ 凍結的三句（開關標籤＋兩段說明）一字不改，停用態只降 fill —— 「這功能會幫我做什麼」正是使用者決定要不要去改 env var 的依據。",
+              "lineHeight": 1.5,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12.5,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "LbdL3",
+              "name": "理由4",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "④ 全文不出現「掃描」二字（sub-4-3 AC #6 / 2026-08-07 誤解的原產地）。",
+              "lineHeight": 1.5,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12.5,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "MXIOi",
+              "name": "理由5",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "⑤ 不作金額保證、不暗示自動化會花錢。",
+              "lineHeight": 1.5,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12.5,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "NQxPo",
+          "name": "區塊G-落地備註",
+          "width": "fill_container",
+          "fill": "$bg-primary",
+          "cornerRadius": "$radius-md",
+          "layout": "vertical",
+          "gap": 10,
+          "padding": 16,
+          "children": [
+            {
+              "type": "text",
+              "id": "NiOJl",
+              "name": "小標",
+              "fill": "$text-primary",
+              "content": "🛠 落地備註",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 13,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "K2R8gE",
+              "name": "備註1",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Modal：LibraryEditModal.tsx 目前是 autoSubtitleSupported && (...) 整段隱藏（PR #250）→ 改為永遠渲染，不支援時走本頁停用態。",
+              "lineHeight": 1.6,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12.5,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "x8rvc",
+              "name": "備註2",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "卡片：LibraryCard.tsx:115 目前只讀 library.autoSubtitle、無 capability 閘門 → 需要把 autoSubtitleSupported 傳進卡片（props 或由 MediaLibraryManager 供給）。",
+              "lineHeight": 1.6,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12.5,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "FqFY4",
+              "name": "備註3",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "資料來源已經有了：GET /api/v1/libraries 的 auto_subtitle_supported（PR #250 已出貨）。不需要新 endpoint、不需要新欄位。",
+              "lineHeight": 1.6,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12.5,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "Wnyic",
+              "name": "備註4",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "停用時 update payload 仍省略 autoSubtitle（PR #250 既有行為），以免清掉使用者在 pipeline 模式下做過的選擇。",
+              "lineHeight": 1.6,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12.5,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
     }
   ],
   "variables": {
