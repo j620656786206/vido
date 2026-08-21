@@ -861,7 +861,11 @@ func (s *TranscriptionService) transcribeAudio(ctx context.Context, audioPath, l
 	}
 
 	if !needsChunk {
-		return s.asr.TranscribeWithLanguage(ctx, audioPath, lang)
+		filtered, unfiltered, err := s.transcribeOne(ctx, audioPath, lang)
+		if err != nil {
+			return "", err
+		}
+		return s.guardAgainstEmptyTranscript(filtered, unfiltered), nil
 	}
 
 	// Split and transcribe chunks
@@ -881,19 +885,79 @@ func (s *TranscriptionService) transcribeAudio(ctx context.Context, audioPath, l
 	}()
 
 	var srtChunks []string
+	// 9R-5: kept alongside so the whole-FILE guard below has something to fall
+	// back to. Each chunk is its own API call, which is why hallucination
+	// filtering is automatically per-chunk and automatically happens before the
+	// merge — no change to SplitAudioChunks/MergeSRTChunks was needed.
+	var unfilteredChunks []string
 	for i, chunkPath := range chunks {
 		s.logger.Info("transcribing chunk",
 			"chunk", i+1,
 			"total", len(chunks),
 		)
-		srt, err := s.asr.TranscribeWithLanguage(ctx, chunkPath, lang)
+		filtered, unfiltered, err := s.transcribeOne(ctx, chunkPath, lang)
 		if err != nil {
 			return "", fmt.Errorf("transcribe chunk %d/%d: %w", i+1, len(chunks), err)
 		}
-		srtChunks = append(srtChunks, srt)
+		srtChunks = append(srtChunks, filtered)
+		unfilteredChunks = append(unfilteredChunks, unfiltered)
 	}
 
-	return ai.MergeSRTChunks(srtChunks, chunkSeconds), nil
+	return s.guardAgainstEmptyTranscript(
+		ai.MergeSRTChunks(srtChunks, chunkSeconds),
+		ai.MergeSRTChunks(unfilteredChunks, chunkSeconds),
+	), nil
+}
+
+// transcribeOne returns both the hallucination-filtered SRT and the unfiltered
+// one for a single audio file.
+//
+// The detailed seam is OPTIONAL (ai.DetailedTranscriber, the ai.CachingCompleter
+// precedent): an ASR provider that does not implement it — or an engine that
+// could not serve verbose_json — simply reports the same string twice, which
+// makes the guard below a no-op rather than a failure.
+func (s *TranscriptionService) transcribeOne(ctx context.Context, audioPath, lang string) (filtered, unfiltered string, err error) {
+	if detailed, ok := s.asr.(ai.DetailedTranscriber); ok {
+		d, err := detailed.TranscribeDetailed(ctx, audioPath, lang)
+		if err != nil {
+			return "", "", err
+		}
+		return d.SRT, d.Unfiltered, nil
+	}
+	srt, err := s.asr.TranscribeWithLanguage(ctx, audioPath, lang)
+	if err != nil {
+		return "", "", err
+	}
+	return srt, srt, nil
+}
+
+// guardAgainstEmptyTranscript is the 9R-5 whole-FILE safety net.
+//
+// A single chunk collapsing to nothing is LEGITIMATE and is the headline case:
+// ten minutes of silent credits that whisper filled with an invented outro
+// should leave no cues at all. An entire FILE collapsing is different — no film
+// is wall-to-wall hallucination, so that outcome means the thresholds misfired.
+//
+// Letting it through would be actively harmful, not merely lossy: runPipeline
+// writes srtContent to disk unconditionally, so the user would get a 0-byte
+// .en.srt, translateSRT would then fail with "no subtitle blocks to translate",
+// translateAndPersist would swallow that as non-fatal, and the row would end up
+// claiming `untranslated` over an empty file — the same class of lying status
+// bugfix-j was written to remove.
+func (s *TranscriptionService) guardAgainstEmptyTranscript(filtered, unfiltered string) string {
+	if countSRTCues(filtered) > 0 || countSRTCues(unfiltered) == 0 {
+		return filtered
+	}
+	s.logger.Warn("hallucination filter would have emptied the entire transcript — delivering the unfiltered text instead",
+		"unfiltered_cues", countSRTCues(unfiltered),
+	)
+	return unfiltered
+}
+
+// countSRTCues counts cues by their timestamp arrow — the one line every cue
+// has and no dialogue line can contain.
+func countSRTCues(srt string) int {
+	return strings.Count(srt, " --> ")
 }
 
 // glossaryMediaKey resolves which glossary a run feeds from and harvests into

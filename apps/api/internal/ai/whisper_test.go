@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -27,14 +29,20 @@ func TestWhisperClient_Transcribe_Success(t *testing.T) {
 		err := r.ParseMultipartForm(32 << 20)
 		require.NoError(t, err)
 		assert.Equal(t, "whisper-1", r.FormValue("model"))
-		assert.Equal(t, "srt", r.FormValue("response_format"))
+		// 9R-5 DELIBERATE CONTRACT CHANGE (was "srt", story 9-2a task 2.3):
+		// only verbose_json carries the per-segment confidence the
+		// hallucination filter judges on. The SRT the caller receives is now
+		// rendered here from those segments — see segmentsToSRT.
+		assert.Equal(t, "verbose_json", r.FormValue("response_format"))
 
 		_, header, err := r.FormFile("file")
 		require.NoError(t, err)
 		assert.NotEmpty(t, header.Filename)
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(expectedSRT))
+		w.Write([]byte(`{"language":"english","duration":3.0,"segments":[` +
+			`{"id":0,"start":1.0,"end":3.0,"text":"Hello world",` +
+			`"avg_logprob":-0.2,"compression_ratio":1.2,"no_speech_prob":0.01}]}`))
 	}))
 	defer server.Close()
 
@@ -771,4 +779,274 @@ func TestWhisperClient_SelfHostedWithAKeyStillSendsIt(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, present)
 	assert.Equal(t, "Bearer sk-lan", seen)
+}
+
+// --- 9R-5: verbose_json request, hallucination filter, sticky SRT fallback ---
+
+const verboseJSONOneCue = `{"language":"english","duration":3.0,"segments":[` +
+	`{"id":0,"start":1.0,"end":3.0,"text":"Hello world",` +
+	`"avg_logprob":-0.2,"compression_ratio":1.2,"no_speech_prob":0.01}]}`
+
+// formatRecorder captures the response_format of every request the client makes,
+// so a test can assert the exact request SEQUENCE rather than just the outcome.
+type formatRecorder struct {
+	mu      sync.Mutex
+	formats []string
+}
+
+func (fr *formatRecorder) record(t *testing.T, r *http.Request) string {
+	t.Helper()
+	require.NoError(t, r.ParseMultipartForm(32<<20))
+	f := r.FormValue("response_format")
+	fr.mu.Lock()
+	defer fr.mu.Unlock()
+	fr.formats = append(fr.formats, f)
+	return f
+}
+
+func (fr *formatRecorder) seen() []string {
+	fr.mu.Lock()
+	defer fr.mu.Unlock()
+	return append([]string(nil), fr.formats...)
+}
+
+// An engine that REJECTS verbose_json must still produce subtitles: the
+// verbose_json `text` field carries no timestamps, so "no segments" can never
+// be allowed to mean "no subtitle".
+func TestWhisperClient_RejectedVerboseFallsBackToSRTAndLatches(t *testing.T) {
+	fallbackSRT := "1\n00:00:01,000 --> 00:00:03,000\nHello world\n\n"
+	rec := &formatRecorder{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if rec.record(t, r) == "verbose_json" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`{"error":{"message":"unsupported response_format"}}`))
+			return
+		}
+		w.Write([]byte(fallbackSRT))
+	}))
+	defer server.Close()
+
+	c := NewWhisperClient("test-key", WithWhisperBaseURL(server.URL))
+	audio := writeTempAudio(t)
+
+	srt, err := c.Transcribe(context.Background(), audio)
+	require.NoError(t, err)
+	assert.Equal(t, fallbackSRT, srt)
+
+	// A second call must NOT probe again — a ten-chunk file would otherwise
+	// pay ten pointless round trips.
+	srt2, err := c.Transcribe(context.Background(), audio)
+	require.NoError(t, err)
+	assert.Equal(t, fallbackSRT, srt2)
+
+	assert.Equal(t, []string{"verbose_json", "srt", "srt"}, rec.seen(),
+		"probe once, then stay on srt for the life of the client")
+}
+
+// A 200 that is not verbose_json (an engine echoing SRT back regardless of the
+// requested format) is the same class of failure as an outright rejection.
+func TestWhisperClient_UnparseableVerboseBodyFallsBack(t *testing.T) {
+	srtBody := "1\n00:00:01,000 --> 00:00:02,000\nEchoed\n\n"
+	rec := &formatRecorder{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rec.record(t, r)
+		w.Write([]byte(srtBody))
+	}))
+	defer server.Close()
+
+	c := NewWhisperClient("test-key", WithWhisperBaseURL(server.URL))
+	srt, err := c.Transcribe(context.Background(), writeTempAudio(t))
+	require.NoError(t, err)
+	assert.Equal(t, srtBody, srt)
+	assert.Equal(t, []string{"verbose_json", "srt"}, rec.seen())
+}
+
+// A transcript with no segment array = the engine served the wrong JSON shape.
+// The words exist but nothing says WHEN, so recover a cueable transcript.
+func TestWhisperClient_TextWithoutSegmentsFallsBack(t *testing.T) {
+	rec := &formatRecorder{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if rec.record(t, r) == "verbose_json" {
+			w.Write([]byte(`{"text":"Hello there, this is real dialogue","segments":[]}`))
+			return
+		}
+		w.Write([]byte("1\n00:00:01,000 --> 00:00:02,000\nFrom srt\n\n"))
+	}))
+	defer server.Close()
+
+	c := NewWhisperClient("test-key", WithWhisperBaseURL(server.URL))
+	srt, err := c.Transcribe(context.Background(), writeTempAudio(t))
+	require.NoError(t, err)
+	assert.Contains(t, srt, "From srt")
+	assert.Equal(t, []string{"verbose_json", "srt"}, rec.seen())
+}
+
+// 🔴 CR H1 REGRESSION GUARD. A genuinely SILENT chunk answers with an empty
+// segment array and an empty transcript — ten minutes of credits, the single
+// most on-topic input this story has. Treating that as a broken engine latched
+// the fallback and killed hallucination filtering for every later chunk AND
+// every later media item, while paying a wasted srt request each time.
+func TestWhisperClient_SilentChunkDoesNotLatchTheFallback(t *testing.T) {
+	rec := &formatRecorder{}
+	silent := true
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if rec.record(t, r) == "verbose_json" && silent {
+			w.Write([]byte(`{"task":"transcribe","language":"english","duration":600.0,"text":"","segments":[]}`))
+			return
+		}
+		w.Write([]byte(verboseJSONOneCue))
+	}))
+	defer server.Close()
+
+	c := NewWhisperClient("test-key", WithWhisperBaseURL(server.URL))
+	audio := writeTempAudio(t)
+
+	detail, err := c.TranscribeDetailed(context.Background(), audio, "en")
+	require.NoError(t, err)
+	assert.Equal(t, "", detail.SRT, "silence transcribes to nothing")
+	assert.True(t, detail.Filtered, "segments WERE inspected — there simply were none")
+	assert.False(t, c.verboseUnsupported.Load(), "silence is not evidence the engine lacks verbose_json")
+
+	silent = false
+	srt, err := c.Transcribe(context.Background(), audio)
+	require.NoError(t, err)
+	assert.Contains(t, srt, "Hello world", "filtering must still be live for later chunks")
+
+	for _, f := range rec.seen() {
+		assert.Equal(t, "verbose_json", f, "a silent chunk must not trigger a wasted srt request")
+	}
+}
+
+// 🔴 A transient fault must NEVER latch the fallback: one bad minute would
+// otherwise disable hallucination filtering for the life of the process, with
+// no signal that it happened.
+func TestWhisperClient_TransientFailureDoesNotLatchTheFallback(t *testing.T) {
+	rec := &formatRecorder{}
+	var failing atomic.Bool
+	failing.Store(true)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rec.record(t, r)
+		if failing.Load() {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.Write([]byte(verboseJSONOneCue))
+	}))
+	defer server.Close()
+
+	c := NewWhisperClient("test-key", WithWhisperBaseURL(server.URL))
+	audio := writeTempAudio(t)
+
+	_, err := c.Transcribe(context.Background(), audio)
+	require.Error(t, err, "a 5xx that outlives the retry budget must surface")
+	assert.False(t, c.verboseUnsupported.Load(), "5xx is not evidence the engine lacks verbose_json")
+
+	failing.Store(false)
+	srt, err := c.Transcribe(context.Background(), audio)
+	require.NoError(t, err)
+	assert.Contains(t, srt, "Hello world")
+
+	for _, f := range rec.seen() {
+		assert.Equal(t, "verbose_json", f, "no request should ever have degraded to srt")
+	}
+}
+
+// 🔴 The fallback issues a SECOND request. Billing the same audio twice would
+// burn the 9R-11 run budget at double rate and trip the ceiling mid-film.
+func TestWhisperClient_MetersAudioExactlyOnceAcrossTheFallback(t *testing.T) {
+	rec := &formatRecorder{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if rec.record(t, r) == "verbose_json" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		w.Write([]byte("1\n00:00:01,000 --> 00:00:02,000\nHi\n\n"))
+	}))
+	defer server.Close()
+
+	f, err := os.CreateTemp(t.TempDir(), "meter-*.wav")
+	require.NoError(t, err)
+	byteRate := uint32(32000)
+	writeWAVWithChunks(t, f, byteRate, byteRate*30, false) // 30 seconds
+
+	c := NewWhisperClient("test-key", WithWhisperBaseURL(server.URL))
+	b := NewBudget(0)
+	ctx := WithBudget(context.Background(), b)
+
+	_, err = c.Transcribe(ctx, f.Name())
+	require.NoError(t, err)
+
+	snap := b.Snapshot()
+	assert.Equal(t, 1, snap.ASRCalls, "two HTTP requests, ONE billable transcription")
+	assert.InDelta(t, 30.0, snap.ASRSeconds, 0.01)
+	assert.Equal(t, []string{"verbose_json", "srt"}, rec.seen())
+}
+
+func TestWhisperClient_TranscribeDetailed_ReportsWhatTheFilterRemoved(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"language":"english","duration":109.0,"segments":[
+		  {"id":0,"start":10.0,"end":12.0,"text":"Real dialogue","avg_logprob":-0.25,"compression_ratio":1.4,"no_speech_prob":0.01},
+		  {"id":1,"start":13.0,"end":15.0,"text":"More dialogue","avg_logprob":-0.3,"compression_ratio":1.3,"no_speech_prob":0.02},
+		  {"id":2,"start":100.0,"end":103.0,"text":"Thanks for watching!","avg_logprob":-0.9,"compression_ratio":1.5,"no_speech_prob":0.55},
+		  {"id":3,"start":103.0,"end":106.0,"text":"Like and subscribe.","avg_logprob":-1.2,"compression_ratio":1.6,"no_speech_prob":0.72},
+		  {"id":4,"start":106.0,"end":109.0,"text":"See you next time.","avg_logprob":-0.95,"compression_ratio":1.4,"no_speech_prob":0.61}
+		]}`))
+	}))
+	defer server.Close()
+
+	c := NewWhisperClient("test-key", WithWhisperBaseURL(server.URL))
+	detail, err := c.TranscribeDetailed(context.Background(), writeTempAudio(t), "en")
+	require.NoError(t, err)
+
+	assert.True(t, detail.Filtered)
+	assert.Equal(t, 5, detail.SegmentsIn)
+	assert.Equal(t, 2, detail.SegmentsKept)
+	assert.InDelta(t, 0.6, detail.DropRatio(), 0.001)
+	assert.NotContains(t, detail.SRT, "subscribe")
+	assert.Contains(t, detail.SRT, "Real dialogue")
+	assert.Contains(t, detail.Unfiltered, "subscribe", "the unfiltered rendering is the recovery path")
+	assert.Equal(t, 5, strings.Count(detail.Unfiltered, " --> "))
+}
+
+// When the engine cannot serve verbose_json there are no segments to judge, so
+// the detail must say so rather than implying an empty filter pass.
+func TestWhisperClient_TranscribeDetailed_FallbackReportsUnfiltered(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.NoError(t, r.ParseMultipartForm(32<<20))
+		if r.FormValue("response_format") == "verbose_json" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		w.Write([]byte("1\n00:00:01,000 --> 00:00:02,000\nPlain\n\n"))
+	}))
+	defer server.Close()
+
+	c := NewWhisperClient("test-key", WithWhisperBaseURL(server.URL))
+	detail, err := c.TranscribeDetailed(context.Background(), writeTempAudio(t), "")
+	require.NoError(t, err)
+
+	assert.False(t, detail.Filtered)
+	assert.Equal(t, detail.SRT, detail.Unfiltered)
+	assert.Zero(t, detail.SegmentsIn)
+	assert.Zero(t, detail.DropRatio())
+}
+
+func TestWhisperClient_SatisfiesDetailedTranscriber(t *testing.T) {
+	var _ DetailedTranscriber = NewWhisperClient("k")
+}
+
+// AC #4: a chunk that collapses to nothing must not corrupt the merge — the
+// remaining chunks keep contiguous numbering and correctly shifted timestamps.
+func TestMergeSRTChunks_HandlesAFullyFilteredChunk(t *testing.T) {
+	first := segmentsToSRT([]whisperSegment{speech(1, 2, "One"), speech(3, 4, "Two")})
+	emptied := "" // an entire ten minutes of hallucinated credits
+	third := segmentsToSRT([]whisperSegment{speech(5, 6, "Three")})
+
+	merged := MergeSRTChunks([]string{first, emptied, third}, 600)
+
+	assert.Contains(t, merged, "1\n00:00:01,000 --> 00:00:02,000\nOne")
+	assert.Contains(t, merged, "2\n00:00:03,000 --> 00:00:04,000\nTwo")
+	assert.Contains(t, merged, "3\n00:20:05,000 --> 00:20:06,000\nThree",
+		"the third chunk keeps its 2x600s offset and continues the numbering")
+	assert.NotContains(t, merged, "4\n")
 }

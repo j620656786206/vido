@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -14,8 +15,16 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// MockRetryRepository is a mock implementation for testing
+// MockRetryRepository is a mock implementation for testing.
+//
+// PRE-EXISTING FIX (found by 9R-5 CR while running -race): the map is reached
+// from BOTH the test goroutine and the RetryScheduler's own goroutine
+// (TriggerImmediate spawns one), so every accessor needs the lock. Without it
+// `go test -race ./internal/services/` reports a genuine data race on clean
+// main — the mock, not production code, but it makes -race unusable for the
+// whole package.
 type MockRetryRepository struct {
+	mu    sync.RWMutex
 	items map[string]*retry.RetryItem
 }
 
@@ -26,15 +35,24 @@ func NewMockRetryRepository() *MockRetryRepository {
 }
 
 func (m *MockRetryRepository) Add(ctx context.Context, item *retry.RetryItem) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	m.items[item.ID] = item
 	return nil
 }
 
 func (m *MockRetryRepository) FindByID(ctx context.Context, id string) (*retry.RetryItem, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	return m.items[id], nil
 }
 
 func (m *MockRetryRepository) FindByTaskID(ctx context.Context, taskID string) (*retry.RetryItem, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	for _, item := range m.items {
 		if item.TaskID == taskID {
 			return item, nil
@@ -44,6 +62,9 @@ func (m *MockRetryRepository) FindByTaskID(ctx context.Context, taskID string) (
 }
 
 func (m *MockRetryRepository) GetPending(ctx context.Context, now time.Time) ([]*retry.RetryItem, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	var pending []*retry.RetryItem
 	for _, item := range m.items {
 		if !item.NextAttemptAt.After(now) {
@@ -54,6 +75,9 @@ func (m *MockRetryRepository) GetPending(ctx context.Context, now time.Time) ([]
 }
 
 func (m *MockRetryRepository) GetAll(ctx context.Context) ([]*retry.RetryItem, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	var all []*retry.RetryItem
 	for _, item := range m.items {
 		all = append(all, item)
@@ -62,6 +86,9 @@ func (m *MockRetryRepository) GetAll(ctx context.Context) ([]*retry.RetryItem, e
 }
 
 func (m *MockRetryRepository) Update(ctx context.Context, item *retry.RetryItem) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	if _, exists := m.items[item.ID]; !exists {
 		return errors.New("not found")
 	}
@@ -70,6 +97,9 @@ func (m *MockRetryRepository) Update(ctx context.Context, item *retry.RetryItem)
 }
 
 func (m *MockRetryRepository) Delete(ctx context.Context, id string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	if _, exists := m.items[id]; !exists {
 		return errors.New("not found")
 	}
@@ -78,6 +108,9 @@ func (m *MockRetryRepository) Delete(ctx context.Context, id string) error {
 }
 
 func (m *MockRetryRepository) DeleteByTaskID(ctx context.Context, taskID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	for id, item := range m.items {
 		if item.TaskID == taskID {
 			delete(m.items, id)
@@ -88,10 +121,16 @@ func (m *MockRetryRepository) DeleteByTaskID(ctx context.Context, taskID string)
 }
 
 func (m *MockRetryRepository) Count(ctx context.Context) (int, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	return len(m.items), nil
 }
 
 func (m *MockRetryRepository) CountByTaskType(ctx context.Context, taskType string) (int, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	count := 0
 	for _, item := range m.items {
 		if item.TaskType == taskType {
@@ -102,6 +141,9 @@ func (m *MockRetryRepository) CountByTaskType(ctx context.Context, taskType stri
 }
 
 func (m *MockRetryRepository) ClearAll(ctx context.Context) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	m.items = make(map[string]*retry.RetryItem)
 	return nil
 }
