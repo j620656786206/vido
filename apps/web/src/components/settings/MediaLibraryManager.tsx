@@ -50,6 +50,10 @@ export function MediaLibraryManager() {
             <LibraryCard
               key={lib.id}
               library={lib}
+              // 9R-10b-M4: same `!== false` semantics as the edit modal — an API
+              // that omits the field is UNKNOWN, not unsupported, and unknown
+              // keeps the existing (supported) behaviour.
+              autoSubtitleSupported={data?.autoSubtitleSupported !== false}
               onEdit={() => setEditModal({ open: true, libraryId: lib.id })}
             />
           ))}

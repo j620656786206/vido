@@ -52,7 +52,7 @@ function libraryWith(autoSubtitle: boolean): MediaLibraryWithPaths {
 
 describe('LibraryCard auto-subtitle state', () => {
   it('shows the opt-in in the footer when the library is on', () => {
-    render(<LibraryCard library={libraryWith(true)} onEdit={vi.fn()} />);
+    render(<LibraryCard library={libraryWith(true)} autoSubtitleSupported onEdit={vi.fn()} />);
 
     expect(screen.getByTestId('library-card-footer')).toHaveTextContent(
       '2 個資料夾 · 316 個項目 · 自動處理免費字幕'
@@ -60,7 +60,7 @@ describe('LibraryCard auto-subtitle state', () => {
   });
 
   it('says nothing at all when the library is off', () => {
-    render(<LibraryCard library={libraryWith(false)} onEdit={vi.fn()} />);
+    render(<LibraryCard library={libraryWith(false)} autoSubtitleSupported onEdit={vi.fn()} />);
 
     const footer = screen.getByTestId('library-card-footer');
     expect(footer).toHaveTextContent('2 個資料夾 · 316 個項目');
@@ -68,7 +68,60 @@ describe('LibraryCard auto-subtitle state', () => {
   });
 
   it('never implies that scanning itself generates subtitles (sub-4-3 AC #6)', () => {
-    render(<LibraryCard library={libraryWith(true)} onEdit={vi.fn()} />);
+    render(<LibraryCard library={libraryWith(true)} autoSubtitleSupported onEdit={vi.fn()} />);
+
+    expect(screen.getByTestId('library-card-footer').textContent).not.toContain('掃描');
+  });
+
+  // ─── 9R-10b-M4: the card must not claim something that is not happening ───
+  //
+  // `auto_subtitle` is writable in every mode, but the generator that honours
+  // it exists only when the API runs in `pipeline` mode. A library left opted
+  // in after the server was switched back to `legacy` kept showing the green
+  // "自動處理免費字幕" — announcing work nobody was doing.
+  //
+  // Colour is a RULE, not three separate decisions:
+  //   success = it is happening
+  //   warning = you asked for it, and it is NOT happening
+  //   absent  = you did not ask
+
+  it('warns, rather than boasts, when the server cannot honour the opt-in', () => {
+    render(
+      <LibraryCard library={libraryWith(true)} autoSubtitleSupported={false} onEdit={vi.fn()} />
+    );
+
+    const status = screen.getByTestId('library-card-auto-subtitle-status');
+    // The parenthetical names WHO is not enabled. Without it this reads as
+    // "you didn't tick the box" — and the user did tick it, which is the
+    // worst possible misreading.
+    expect(status).toHaveTextContent('自動處理免費字幕（伺服器未啟用）');
+    expect(status.className).toContain('text-[var(--warning)]');
+  });
+
+  it('stays green when the server DOES honour the opt-in', () => {
+    render(<LibraryCard library={libraryWith(true)} autoSubtitleSupported onEdit={vi.fn()} />);
+
+    const status = screen.getByTestId('library-card-auto-subtitle-status');
+    expect(status).toHaveTextContent('自動處理免費字幕');
+    expect(status.textContent).not.toContain('伺服器未啟用');
+    expect(status.className).toContain('text-[var(--success)]');
+  });
+
+  it('says nothing when the library is off AND the server cannot honour it', () => {
+    // Deliberately silent: the user never asked for anything here, so the card
+    // has no reason to worry them about a capability they did not request.
+    render(
+      <LibraryCard library={libraryWith(false)} autoSubtitleSupported={false} onEdit={vi.fn()} />
+    );
+
+    expect(screen.queryByTestId('library-card-auto-subtitle-status')).not.toBeInTheDocument();
+    expect(screen.getByTestId('library-card-footer')).toHaveTextContent('2 個資料夾 · 316 個項目');
+  });
+
+  it('never implies scanning generates subtitles in the unsupported state either', () => {
+    render(
+      <LibraryCard library={libraryWith(true)} autoSubtitleSupported={false} onEdit={vi.fn()} />
+    );
 
     expect(screen.getByTestId('library-card-footer').textContent).not.toContain('掃描');
   });

@@ -2937,6 +2937,14 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
           },
         ],
       } satisfies MediaLibraryWithPaths,
+      // 9R-10b-M4: `autoSubtitleSupported` became a REQUIRED prop of
+      // LibraryCard. The `as ComponentType<Record<string, unknown>>` cast below
+      // hides missing props from tsc, so this has to be kept in sync by hand —
+      // the same class of gap PR #250 CR M3 caught in this file. `true` keeps
+      // the gallery on the shipped-default state; the fixture's
+      // `autoSubtitle: false` means the status segment is absent either way,
+      // so the visual baseline is unchanged.
+      autoSubtitleSupported: true,
       onEdit: noop,
     },
     penNode: 'screen-section',

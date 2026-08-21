@@ -171,19 +171,150 @@ describe('LibraryEditModal', () => {
   // ─── 補審 M4: capability honor ───────────────────────────────────────────
   //
   // The generator that honours this opt-in is built only when the API runs in
-  // `pipeline` mode, and the shipped default is `legacy`. Offering the checkbox
-  // there is a promise nothing keeps — the user ticks it, the save succeeds,
-  // and no subtitle is ever produced, with nothing on screen to explain why.
+  // `pipeline` mode, and the shipped default is `legacy`. Offering a checkbox
+  // that does nothing is a promise nothing keeps — the user ticks it, the save
+  // succeeds, and no subtitle is ever produced.
+  //
+  // 9R-10b-M4: the first fix HID the whole field. Honest, but it also stopped
+  // telling the user the feature exists and how to switch it on. Sally's
+  // 2026-08-21 ruling (design J5-D) replaces hiding with a DISABLED state that
+  // names the one thing the user can act on.
 
-  it('hides the opt-in when the deployment does not run the auto lane', () => {
+  it('keeps the opt-in on screen — disabled — when the deployment cannot honour it', () => {
     vi.mocked(useMediaLibraries).mockReturnValue(
       unsupportedQuery as ReturnType<typeof useMediaLibraries>
     );
 
     render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
 
-    expect(screen.queryByTestId('library-auto-subtitle-field')).not.toBeInTheDocument();
-    expect(screen.getByTestId('library-name-input')).toBeInTheDocument();
+    expect(screen.getByTestId('library-auto-subtitle-field')).toBeInTheDocument();
+    expect(screen.getByTestId('library-auto-subtitle-checkbox')).toBeDisabled();
+  });
+
+  it('says WHY the option is disabled and WHAT to do about it', () => {
+    // Both halves matter on their own: "why is it grey" and "what do I type".
+    // The second sentence is verbatim from the API's own 409 suggestion
+    // (subtitle_pipeline_handler.go:113) so a user who hit that error over the
+    // API reads the same words here.
+    vi.mocked(useMediaLibraries).mockReturnValue(
+      unsupportedQuery as ReturnType<typeof useMediaLibraries>
+    );
+
+    render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
+
+    const notice = screen.getByTestId('library-auto-subtitle-unsupported-notice');
+    expect(notice).toHaveTextContent('字幕生成管線尚未啟用，這個選項無法變更。');
+    expect(notice).toHaveTextContent(
+      '請將 VIDO_SUBTITLE_PIPELINE_MODE 設為 pipeline 後重啟伺服器。'
+    );
+  });
+
+  it('puts the notice between the control and the description, in that order', () => {
+    // AC #2 ordering, and it has a reason: the eye lands on a greyed control
+    // and asks "why", so the answer comes first; the description below then
+    // answers "what would it even do", which is what makes the user decide
+    // whether to go and change the variable at all. Reversed, the user reads a
+    // pitch for a feature before learning they cannot switch it on.
+    vi.mocked(useMediaLibraries).mockReturnValue(
+      unsupportedQuery as ReturnType<typeof useMediaLibraries>
+    );
+
+    render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
+
+    const checkbox = screen.getByTestId('library-auto-subtitle-checkbox');
+    const notice = screen.getByTestId('library-auto-subtitle-unsupported-notice');
+    const description = screen.getByText(
+      '影片內建繁體中文字幕會直接沿用，簡體字幕自動轉成繁體。這些都在本機執行，不會產生費用。'
+    );
+
+    expect(checkbox.compareDocumentPosition(notice) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    );
+    expect(notice.compareDocumentPosition(description) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    );
+  });
+
+  it('renders the env var as a copyable monospace token, not prose', () => {
+    // It is a string the user must type EXACTLY. Prose styling invites typos.
+    vi.mocked(useMediaLibraries).mockReturnValue(
+      unsupportedQuery as ReturnType<typeof useMediaLibraries>
+    );
+
+    render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
+
+    const token = screen.getByTestId('library-auto-subtitle-env-var');
+    expect(token).toHaveTextContent('VIDO_SUBTITLE_PIPELINE_MODE');
+    expect(token.className).toContain('font-mono');
+  });
+
+  it('ties the disabled checkbox to its explanation for screen readers', () => {
+    // A disabled input is skipped by the tab order entirely, so without
+    // aria-describedby the reason it is disabled never reaches a
+    // keyboard/screen-reader user at all.
+    vi.mocked(useMediaLibraries).mockReturnValue(
+      unsupportedQuery as ReturnType<typeof useMediaLibraries>
+    );
+
+    render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
+
+    const checkbox = screen.getByTestId('library-auto-subtitle-checkbox');
+    const notice = screen.getByTestId('library-auto-subtitle-unsupported-notice');
+    expect(notice).toHaveAttribute('id', 'library-auto-subtitle-unsupported-notice');
+    expect(checkbox).toHaveAttribute(
+      'aria-describedby',
+      'library-auto-subtitle-unsupported-notice'
+    );
+  });
+
+  it('dims the CONTROL but never the description (Sally 2026-08-21 contrast ruling)', () => {
+    // The dividing line is WCAG 1.4.3's own wording: the exemption covers
+    // "inactive user interface components". The checkbox and its accessible
+    // name — the label — qualify, so they dim. The two sentences below do not:
+    // they are the only thing telling the user what the feature would do, i.e.
+    // the only reason to go and set the variable. `--text-disabled` measures
+    // 3.55:1 on --bg-primary and is annotated `intentionally sub-AA` in
+    // styles.css:47; 12px body copy needs 4.5:1. Dimming them would repeat the
+    // hide-the-field mistake in a different costume.
+    vi.mocked(useMediaLibraries).mockReturnValue(
+      unsupportedQuery as ReturnType<typeof useMediaLibraries>
+    );
+
+    render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
+
+    const label = screen.getByText('新檔入庫後，自動完成免費的字幕處理');
+    const description = screen.getByText(
+      '影片內建繁體中文字幕會直接沿用，簡體字幕自動轉成繁體。這些都在本機執行，不會產生費用。'
+    );
+
+    expect(label.className).toContain('text-[var(--text-disabled)]');
+    expect(description.className).toContain('text-[var(--text-secondary)]');
+    expect(description.className).not.toContain('text-[var(--text-disabled)]');
+  });
+
+  it('keeps the label and description at full strength when supported', () => {
+    vi.mocked(useMediaLibraries).mockReturnValue(
+      supportedQuery as ReturnType<typeof useMediaLibraries>
+    );
+
+    render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
+
+    expect(screen.getByText('新檔入庫後，自動完成免費的字幕處理').className).toContain(
+      'text-[var(--text-primary)]'
+    );
+  });
+
+  it('shows no unsupported notice when the deployment DOES run the auto lane', () => {
+    vi.mocked(useMediaLibraries).mockReturnValue(
+      supportedQuery as ReturnType<typeof useMediaLibraries>
+    );
+
+    render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
+
+    expect(
+      screen.queryByTestId('library-auto-subtitle-unsupported-notice')
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId('library-auto-subtitle-checkbox')).toBeEnabled();
   });
 
   it('shows the opt-in when the deployment reports it supported', () => {

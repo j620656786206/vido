@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen 10 Settings Desktop (6UCtX) · J4-D (sPzZT)
+// Design ref: ux-design.pen Screen 10 Settings Desktop (6UCtX) · J4-D (sPzZT) · J5-D (alrIw)
 /**
  * Library Card component for displaying a media library in Settings (Story 7b-4)
  */
@@ -11,6 +11,17 @@ import type { MediaLibraryWithPaths } from '../../services/mediaLibraryService';
 
 interface LibraryCardProps {
   library: MediaLibraryWithPaths;
+  /**
+   * Whether THIS deployment actually runs the free auto-generation lane
+   * (9R-10b-M4). `auto_subtitle` is writable in every mode, but the generator
+   * that honours it is built only when the API runs in `pipeline` mode — so a
+   * library left opted in after a switch back to `legacy` would otherwise keep
+   * announcing work nobody is doing.
+   *
+   * Supplied by MediaLibraryManager from the same `useMediaLibraries()` query
+   * that provides the libraries themselves — no extra request, no new hook.
+   */
+  autoSubtitleSupported: boolean;
   onEdit: () => void;
 }
 
@@ -22,7 +33,7 @@ const STATUS_CONFIG = {
   unknown: { color: 'text-[var(--text-secondary)]', bg: 'bg-[var(--text-muted)]', label: '未檢查' },
 } as const;
 
-export function LibraryCard({ library, onEdit }: LibraryCardProps) {
+export function LibraryCard({ library, autoSubtitleSupported, onEdit }: LibraryCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [removeMedia, setRemoveMedia] = useState(false);
@@ -109,11 +120,27 @@ export function LibraryCard({ library, onEdit }: LibraryCardProps) {
           grammar instead of getting a new badge: the path rows above already own a
           coloured-dot status vocabulary, and a second one would compete with it for
           the same glance. Success green is borrowed from the consent flow, where it
-          means exactly this: costs nothing. Absent entirely when the library is off. */}
+          means exactly this: costs nothing. Absent entirely when the library is off.
+
+          9R-10b-M4 (design J5-D block E) — colour here is a RULE, not three
+          separate decisions:
+            success = it IS happening
+            warning = you asked for it, and it is NOT happening
+            absent  = you did not ask
+          The parenthetical names WHO is not enabled. Dropped, the line reads as
+          "you didn't tick the box" — and the user DID tick it, which is the
+          worst available misreading. */}
       <div className="text-xs text-[var(--text-muted)]" data-testid="library-card-footer">
         {(library.paths || []).length} 個資料夾 · {library.mediaCount} 個項目
         {library.autoSubtitle && (
-          <span className="font-medium text-[var(--success)]"> · 自動處理免費字幕</span>
+          <span
+            className={`font-medium ${
+              autoSubtitleSupported ? 'text-[var(--success)]' : 'text-[var(--warning)]'
+            }`}
+            data-testid="library-card-auto-subtitle-status"
+          >
+            {autoSubtitleSupported ? ' · 自動處理免費字幕' : ' · 自動處理免費字幕（伺服器未啟用）'}
+          </span>
         )}
       </div>
 
