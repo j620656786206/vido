@@ -25,6 +25,11 @@ type NFOLocalizerService struct {
 	translation  *TranslationService
 	glossaryRepo repository.GlossaryRepositoryInterface
 	logger       *slog.Logger
+
+	// episodes enumerates a series' episodes for the 9R-13a whole-show batch.
+	// Optional / nil-safe — unwired means `include_episodes` localizes the show
+	// file only.
+	episodes NFOEpisodeLister
 }
 
 // NewNFOLocalizerService creates the localizer. Returns nil only when no
@@ -115,26 +120,11 @@ func (s *NFOLocalizerService) translateFields(ctx context.Context, nfo MovieNFO,
 		fields = append(fields, TranslationField{Key: "role:" + strconv.Itoa(i), Text: a.Role})
 	}
 
-	// Drop empty-text fields so the model isn't asked to translate blanks.
-	nonEmpty := fields[:0:0]
-	for _, f := range fields {
-		if strings.TrimSpace(f.Text) != "" {
-			nonEmpty = append(nonEmpty, f)
-		}
-	}
-	if len(nonEmpty) == 0 {
-		return nfo, nil
-	}
-
-	out, err := s.translation.TranslateRequest(ctx, TranslationRequest{Fields: nonEmpty, Glossary: glossary})
+	byKey, err := s.translateKeyedFields(ctx, fields, glossary)
 	if err != nil {
 		return nfo, err
 	}
 
-	byKey := make(map[string]string, len(out))
-	for _, f := range out {
-		byKey[f.Key] = f.Text
-	}
 	if v, ok := byKey["title"]; ok {
 		nfo.Title = v
 	}
@@ -252,4 +242,367 @@ func writeAdditiveNFO(mediaFilePath string, data []byte) (*NFOLocalizeResult, er
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
+}
+
+// translateKeyedFields is the shared translate step behind every *toNFO
+// localizer (9R-13a). Extracted from translateFields so the TV path reuses the
+// movie path's exact semantics instead of growing a second, drifting copy:
+// blank fields are never sent, an all-blank set short-circuits without an API
+// call, and a key missing from the response simply has no entry (the caller's
+// `if v, ok :=` keeps the original — per-field fail-soft).
+func (s *NFOLocalizerService) translateKeyedFields(ctx context.Context, fields []TranslationField, glossary []GlossaryPair) (map[string]string, error) {
+	nonEmpty := fields[:0:0]
+	for _, f := range fields {
+		if strings.TrimSpace(f.Text) != "" {
+			nonEmpty = append(nonEmpty, f)
+		}
+	}
+	if len(nonEmpty) == 0 {
+		return nil, nil
+	}
+
+	out, err := s.translation.TranslateRequest(ctx, TranslationRequest{Fields: nonEmpty, Glossary: glossary})
+	if err != nil {
+		return nil, err
+	}
+
+	byKey := make(map[string]string, len(out))
+	for _, f := range out {
+		byKey[f.Key] = f.Text
+	}
+	return byKey, nil
+}
+
+// ─── TV: tvshow.nfo and per-episode .nfo (Story 9R-13a) ─────────────────────
+//
+// TV names are SINGLE-SLOT: `tvshow.nfo` and `<episode-basename>.nfo` are the
+// only names every player recognises, and language-suffixed variants are
+// ignored by all three (spike 9R-S1). There is therefore no additive option the
+// movie path enjoys — TV is backup-and-replace, which is why it is gated behind
+// an explicit confirmation at the handler.
+
+// NFOEpisodeLister enumerates a series' episodes for the whole-show batch.
+// Narrow on purpose (Rule 11) — *repository.EpisodeRepository satisfies it;
+// main.go injects it. Nil-safe: without it, `include_episodes` degrades to
+// localizing the show file only.
+type NFOEpisodeLister interface {
+	FindBySeriesID(ctx context.Context, seriesID string) ([]models.Episode, error)
+}
+
+// SetEpisodeLister wires the episode enumeration behind the whole-show batch.
+func (s *NFOLocalizerService) SetEpisodeLister(l NFOEpisodeLister) {
+	s.episodes = l
+}
+
+// NFOSeriesLocalizeResult reports a whole-show run.
+//
+// Skipped counts episodes with no file path — a row TMDb knows about but the
+// scanner has never seen on disk. That is not a failure: there is simply
+// nowhere to put the file.
+type NFOSeriesLocalizeResult struct {
+	Show      *NFOLocalizeResult   `json:"show"`
+	Episodes  []*NFOLocalizeResult `json:"episodes"`
+	Succeeded int                  `json:"succeeded"`
+	Failed    int                  `json:"failed"`
+	Skipped   int                  `json:"skipped"`
+}
+
+// LocalizeTVShowNFO localizes a series' metadata to zh-TW and writes
+// `tvshow.nfo` in the show folder, backing up any original first.
+func (s *NFOLocalizerService) LocalizeTVShowNFO(ctx context.Context, series models.Series) (*NFOLocalizeResult, error) {
+	if !s.IsAvailable() {
+		return nil, fmt.Errorf("nfo localizer not available")
+	}
+	if !series.FilePath.Valid || series.FilePath.String == "" {
+		return nil, fmt.Errorf("series has no folder path — scan the media library first")
+	}
+	// CR M3: the field is a free-form string, and tvshow.nfo is JOINED onto it.
+	// If it ever holds a file (SaveSeriesFromTMDb takes a file path, even though
+	// nothing calls it today) the write fails deep inside os.WriteFile with
+	// "not a directory" against a path the operator never typed. Say what is
+	// actually wrong instead.
+	if info, err := os.Stat(series.FilePath.String); err != nil || !info.IsDir() {
+		return nil, fmt.Errorf("series folder %q is not a readable directory — rescan the media library", series.FilePath.String)
+	}
+
+	nfo := seriesToNFO(series)
+
+	glossary := s.loadGlossary(ctx, series.ID)
+	localized, err := s.translateSeriesFields(ctx, nfo, glossary)
+	if err != nil {
+		return nil, fmt.Errorf("localize fields: %w", err)
+	}
+
+	// 🔴 series.FilePath is ALREADY the show FOLDER (media_ingest_service.go
+	// stores SeriesDirFor's output, which climbs past `Season 02`/`S02`/`第二季`).
+	// Taking filepath.Dir of it — the movie path's shape, where FilePath is a
+	// FILE — would write tvshow.nfo one level UP, into the library root: no
+	// player would find it and the user's library root would be polluted.
+	return writeReplaceNFO(filepath.Join(series.FilePath.String, "tvshow.nfo"), marshalNFO(localized))
+}
+
+// LocalizeEpisodeNFO localizes one episode and writes `<basename>.nfo` beside
+// the episode file. showTitle populates <showtitle> and is passed in so a
+// whole-show batch resolves the series exactly once.
+func (s *NFOLocalizerService) LocalizeEpisodeNFO(ctx context.Context, episode models.Episode, showTitle string) (*NFOLocalizeResult, error) {
+	if !s.IsAvailable() {
+		return nil, fmt.Errorf("nfo localizer not available")
+	}
+	if !episode.FilePath.Valid || episode.FilePath.String == "" {
+		return nil, fmt.Errorf("episode has no file path — scan the media library first")
+	}
+
+	// 🔴 The glossary keys on the parent SERIES, never the episode. A per-episode
+	// key gives every episode of one show its own private vocabulary, so the same
+	// character is rendered differently in episode 3 and episode 4 — the exact
+	// bug sub-5-5 CR H1 fixed on the subtitle side.
+	return s.localizeEpisodeWithGlossary(ctx, episode, showTitle, s.loadGlossary(ctx, episode.SeriesID))
+}
+
+// localizeEpisodeWithGlossary is LocalizeEpisodeNFO with the show glossary
+// already in hand.
+//
+// CR M1: a 24-episode run used to re-read the SAME series glossary 24 times —
+// an N+1 on exactly the axis AC #4.3 called out, just on the glossary rather
+// than the series row. The whole-show batch now loads it once and threads it
+// through; the single-episode entry point above still loads its own.
+func (s *NFOLocalizerService) localizeEpisodeWithGlossary(ctx context.Context, episode models.Episode, showTitle string, glossary []GlossaryPair) (*NFOLocalizeResult, error) {
+	nfo := episodeToNFO(episode, showTitle)
+
+	localized, err := s.translateEpisodeFields(ctx, nfo, glossary)
+	if err != nil {
+		return nil, fmt.Errorf("localize fields: %w", err)
+	}
+
+	// An episode's FilePath IS a file, so the directory has to be derived —
+	// the opposite of the series case above.
+	dir := filepath.Dir(episode.FilePath.String)
+	base := strings.TrimSuffix(filepath.Base(episode.FilePath.String), filepath.Ext(episode.FilePath.String))
+	return writeReplaceNFO(filepath.Join(dir, base+".nfo"), marshalNFO(localized))
+}
+
+// LocalizeSeriesNFOWithEpisodes localizes tvshow.nfo and then every episode.
+//
+// Fail-soft per episode (Rule 13 case 3): one unreadable file must not abandon
+// the other 23. The show file is NOT fail-soft — if it cannot be written the
+// caller asked for something that could not start.
+func (s *NFOLocalizerService) LocalizeSeriesNFOWithEpisodes(ctx context.Context, series models.Series) (*NFOSeriesLocalizeResult, error) {
+	show, err := s.LocalizeTVShowNFO(ctx, series)
+	if err != nil {
+		return nil, err
+	}
+
+	out := &NFOSeriesLocalizeResult{Show: show, Episodes: []*NFOLocalizeResult{}}
+	if s.episodes == nil {
+		s.logger.Warn("no episode lister wired — localized the show file only",
+			"series_id", series.ID)
+		return out, nil
+	}
+
+	episodes, err := s.episodes.FindBySeriesID(ctx, series.ID)
+	if err != nil {
+		// The show file is already written; reporting a hard failure would
+		// hide that. Degrade to show-only and say so.
+		s.logger.Warn("could not enumerate episodes — localized the show file only",
+			"series_id", series.ID, "error", err)
+		return out, nil
+	}
+
+	// The series is resolved ONCE; showTitle rides along so no episode goes
+	// back to the database for its parent (N+1).
+	showTitle := series.Title
+	// CR M1: one glossary read for the whole show, not one per episode.
+	glossary := s.loadGlossary(ctx, series.ID)
+	for _, ep := range episodes {
+		if !ep.FilePath.Valid || ep.FilePath.String == "" {
+			out.Skipped++
+			continue
+		}
+		res, err := s.localizeEpisodeWithGlossary(ctx, ep, showTitle, glossary)
+		if err != nil {
+			out.Failed++
+			s.logger.Warn("episode nfo localization failed — continuing with the rest",
+				"series_id", series.ID, "episode_id", ep.ID,
+				"season", ep.SeasonNumber, "episode", ep.EpisodeNumber, "error", err)
+			continue
+		}
+		out.Succeeded++
+		out.Episodes = append(out.Episodes, res)
+	}
+
+	s.logger.Info("series nfo localization complete",
+		"series_id", series.ID, "succeeded", out.Succeeded,
+		"failed", out.Failed, "skipped", out.Skipped)
+	return out, nil
+}
+
+// translateSeriesFields mirrors translateFields for the tvshow shape.
+func (s *NFOLocalizerService) translateSeriesFields(ctx context.Context, nfo SeriesNFO, glossary []GlossaryPair) (SeriesNFO, error) {
+	var fields []TranslationField
+	fields = append(fields, TranslationField{Key: "title", Text: nfo.Title})
+	fields = append(fields, TranslationField{Key: "plot", Text: nfo.Plot})
+	for i, g := range nfo.Genres {
+		fields = append(fields, TranslationField{Key: "genre:" + strconv.Itoa(i), Text: g})
+	}
+	for i, a := range nfo.Actors {
+		fields = append(fields, TranslationField{Key: "role:" + strconv.Itoa(i), Text: a.Role})
+	}
+
+	byKey, err := s.translateKeyedFields(ctx, fields, glossary)
+	if err != nil {
+		return nfo, err
+	}
+
+	if v, ok := byKey["title"]; ok {
+		nfo.Title = v
+	}
+	if v, ok := byKey["plot"]; ok {
+		nfo.Plot = v
+	}
+	for i := range nfo.Genres {
+		if v, ok := byKey["genre:"+strconv.Itoa(i)]; ok {
+			nfo.Genres[i] = v
+		}
+	}
+	for i := range nfo.Actors {
+		if v, ok := byKey["role:"+strconv.Itoa(i)]; ok {
+			nfo.Actors[i].Role = v
+		}
+	}
+	return nfo, nil
+}
+
+// translateEpisodeFields translates the only two localizable episode fields.
+func (s *NFOLocalizerService) translateEpisodeFields(ctx context.Context, nfo EpisodeNFO, glossary []GlossaryPair) (EpisodeNFO, error) {
+	fields := []TranslationField{
+		{Key: "title", Text: nfo.Title},
+		{Key: "plot", Text: nfo.Plot},
+	}
+
+	byKey, err := s.translateKeyedFields(ctx, fields, glossary)
+	if err != nil {
+		return nfo, err
+	}
+
+	if v, ok := byKey["title"]; ok {
+		nfo.Title = v
+	}
+	if v, ok := byKey["plot"]; ok {
+		nfo.Plot = v
+	}
+	// ShowTitle is deliberately NOT translated here: it is the parent series'
+	// title, localized once by LocalizeTVShowNFO. Translating it per episode
+	// would spend tokens to produce the same string N times — and risk N
+	// different renderings of one show name.
+	return nfo, nil
+}
+
+// seriesToNFO mirrors NFOGenerator.GenerateSeriesNFO's field mapping (kept here
+// for the same reason movieToNFO is: localization sources from the DB record).
+func seriesToNFO(series models.Series) SeriesNFO {
+	nfo := SeriesNFO{Title: series.Title, Year: series.FirstAirDate}
+	if series.OriginalTitle.Valid {
+		nfo.OriginalTitle = series.OriginalTitle.String
+	}
+	if series.Overview.Valid {
+		nfo.Plot = series.Overview.String
+	}
+	if series.Genres != nil {
+		nfo.Genres = append([]string(nil), series.Genres...)
+	}
+	if series.VoteAverage.Valid {
+		nfo.Rating = series.VoteAverage.Float64
+	}
+	if series.PosterPath.Valid {
+		nfo.Thumb = series.PosterPath.String
+	}
+	if series.Status.Valid {
+		nfo.Status = series.Status.String
+	}
+	if series.CreditsJSON.Valid {
+		var credits CreditsData
+		if err := json.Unmarshal([]byte(series.CreditsJSON.String), &credits); err == nil {
+			for _, p := range credits.Cast {
+				if len(nfo.Actors) >= 10 {
+					break
+				}
+				nfo.Actors = append(nfo.Actors, NFOActor{Name: p.Name, Role: p.Character})
+			}
+		}
+	}
+	if series.TMDbID.Valid {
+		nfo.UniqueIDs = append(nfo.UniqueIDs, NFOUniqueID{Type: "tmdb", Value: fmt.Sprintf("%d", series.TMDbID.Int64)})
+	}
+	if series.IMDbID.Valid {
+		nfo.UniqueIDs = append(nfo.UniqueIDs, NFOUniqueID{Type: "imdb", Value: series.IMDbID.String})
+	}
+	return nfo
+}
+
+// episodeToNFO builds an EpisodeNFO from the DB record. `Overview` maps to
+// <plot>: the episodes table has no plot column, the same shape movieToNFO
+// uses for movies.
+func episodeToNFO(episode models.Episode, showTitle string) EpisodeNFO {
+	nfo := EpisodeNFO{
+		ShowTitle: showTitle,
+		Season:    episode.SeasonNumber,
+		Episode:   episode.EpisodeNumber,
+	}
+	if episode.Title.Valid {
+		nfo.Title = episode.Title.String
+	}
+	if episode.Overview.Valid {
+		nfo.Plot = episode.Overview.String
+	}
+	if episode.AirDate.Valid {
+		nfo.Aired = episode.AirDate.String
+	}
+	if episode.Runtime.Valid {
+		nfo.Runtime = int(episode.Runtime.Int64)
+	}
+	if episode.VoteAverage.Valid {
+		nfo.Rating = episode.VoteAverage.Float64
+	}
+	if episode.StillPath.Valid {
+		nfo.Thumb = episode.StillPath.String
+	}
+	if episode.TMDbID.Valid {
+		nfo.UniqueIDs = append(nfo.UniqueIDs, NFOUniqueID{Type: "tmdb", Value: fmt.Sprintf("%d", episode.TMDbID.Int64)})
+	}
+	return nfo
+}
+
+// writeReplaceNFO writes zh-TW nfo bytes to a SINGLE-SLOT target, backing up any
+// original exactly once.
+//
+// Separate from writeAdditiveNFO rather than a mode flag on it: that function
+// encodes the MOVIE two-slot layout (`<basename>.nfo` + `movie.nfo`), which has
+// no TV counterpart. Teaching it a third layout would make the movie path's
+// free-slot logic conditional on media type for no shared behaviour.
+//
+// The backup is written only when one does not already exist, so re-running
+// localization can never overwrite the user's true original with a previously
+// localized copy.
+func writeReplaceNFO(targetPath string, data []byte) (*NFOLocalizeResult, error) {
+	if !fileExists(targetPath) {
+		if err := os.WriteFile(targetPath, data, 0o644); err != nil {
+			return nil, fmt.Errorf("write nfo: %w", err)
+		}
+		return &NFOLocalizeResult{Path: targetPath}, nil
+	}
+
+	backup := targetPath + ".orig"
+	if !fileExists(backup) {
+		orig, err := os.ReadFile(targetPath)
+		if err != nil {
+			return nil, fmt.Errorf("read original nfo for backup: %w", err)
+		}
+		if err := os.WriteFile(backup, orig, 0o644); err != nil {
+			return nil, fmt.Errorf("back up original nfo: %w", err)
+		}
+	}
+	if err := os.WriteFile(targetPath, data, 0o644); err != nil {
+		return nil, fmt.Errorf("write nfo: %w", err)
+	}
+	return &NFOLocalizeResult{Path: targetPath, BackupPath: backup, Replaced: true}, nil
 }
