@@ -75281,7 +75281,7 @@
                             {
                               "type": "frame",
                               "id": "YcRA2",
-                              "name": "play",
+                              "name": "act-subtitle",
                               "height": 44,
                               "fill": "$accent-primary",
                               "cornerRadius": 8,
@@ -75299,7 +75299,7 @@
                                   "name": "i",
                                   "width": 18,
                                   "height": 18,
-                                  "icon": "play",
+                                  "icon": "captions",
                                   "library": "lucide",
                                   "fill": "$text-on-accent"
                                 },
@@ -75308,7 +75308,7 @@
                                   "id": "JGyMs",
                                   "name": "l",
                                   "fill": "$text-on-accent",
-                                  "content": "播放",
+                                  "content": "管理字幕",
                                   "fontFamily": "Noto Sans TC",
                                   "fontSize": 15,
                                   "fontWeight": "600"
@@ -75318,7 +75318,7 @@
                             {
                               "type": "frame",
                               "id": "jAg2N",
-                              "name": "addlist",
+                              "name": "act-edit",
                               "height": 44,
                               "fill": "#FFFFFF1A",
                               "cornerRadius": 8,
@@ -75336,7 +75336,7 @@
                                   "name": "i",
                                   "width": 18,
                                   "height": 18,
-                                  "icon": "plus",
+                                  "icon": "pencil",
                                   "library": "lucide",
                                   "fill": "$text-primary"
                                 },
@@ -75345,7 +75345,44 @@
                                   "id": "mNMfq",
                                   "name": "l",
                                   "fill": "$text-primary",
-                                  "content": "加入片單",
+                                  "content": "修改資訊",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "hR1BD",
+                              "name": "act-localize",
+                              "height": 44,
+                              "fill": "#FFFFFF1A",
+                              "cornerRadius": 8,
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                20
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "nVl2H",
+                                  "name": "i",
+                                  "width": 18,
+                                  "height": 18,
+                                  "icon": "languages",
+                                  "library": "lucide",
+                                  "fill": "$text-primary"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "qeVIt",
+                                  "name": "l",
+                                  "fill": "$text-primary",
+                                  "content": "在地化資訊",
                                   "fontFamily": "Noto Sans TC",
                                   "fontSize": 15,
                                   "fontWeight": "600"
@@ -75355,7 +75392,7 @@
                             {
                               "type": "frame",
                               "id": "P1E87",
-                              "name": "more",
+                              "name": "act-copypath",
                               "width": 44,
                               "height": 44,
                               "fill": "#FFFFFF1A",
@@ -75369,7 +75406,7 @@
                                   "name": "i",
                                   "width": 20,
                                   "height": 20,
-                                  "icon": "ellipsis",
+                                  "icon": "copy",
                                   "library": "lucide",
                                   "fill": "$text-primary"
                                 }
@@ -78464,7 +78501,7 @@
                             {
                               "type": "frame",
                               "id": "W92ihe",
-                              "name": "play",
+                              "name": "act-subtitle",
                               "height": 44,
                               "fill": "$accent-primary",
                               "cornerRadius": 8,
@@ -78482,7 +78519,7 @@
                                   "name": "i",
                                   "width": 18,
                                   "height": 18,
-                                  "icon": "play",
+                                  "icon": "captions",
                                   "library": "lucide",
                                   "fill": "$text-on-accent"
                                 },
@@ -78491,7 +78528,7 @@
                                   "id": "EDQNN",
                                   "name": "l",
                                   "fill": "$text-on-accent",
-                                  "content": "播放",
+                                  "content": "管理字幕",
                                   "fontFamily": "Noto Sans TC",
                                   "fontSize": 15,
                                   "fontWeight": "600"
@@ -78501,7 +78538,7 @@
                             {
                               "type": "frame",
                               "id": "K3jci1",
-                              "name": "addlist",
+                              "name": "act-edit",
                               "height": 44,
                               "fill": "#FFFFFF1A",
                               "cornerRadius": 8,
@@ -78519,7 +78556,7 @@
                                   "name": "i",
                                   "width": 18,
                                   "height": 18,
-                                  "icon": "plus",
+                                  "icon": "pencil",
                                   "library": "lucide",
                                   "fill": "$text-primary"
                                 },
@@ -78528,7 +78565,44 @@
                                   "id": "ckB3X",
                                   "name": "l",
                                   "fill": "$text-primary",
-                                  "content": "加入片單",
+                                  "content": "修改資訊",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "k8YyiI",
+                              "name": "act-localize",
+                              "height": 44,
+                              "fill": "#FFFFFF1A",
+                              "cornerRadius": 8,
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                20
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "fnF7d",
+                                  "name": "i",
+                                  "width": 18,
+                                  "height": 18,
+                                  "icon": "languages",
+                                  "library": "lucide",
+                                  "fill": "$text-primary"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "ufWEH",
+                                  "name": "l",
+                                  "fill": "$text-primary",
+                                  "content": "在地化資訊",
                                   "fontFamily": "Noto Sans TC",
                                   "fontSize": 15,
                                   "fontWeight": "600"
@@ -78538,7 +78612,7 @@
                             {
                               "type": "frame",
                               "id": "HwmjA",
-                              "name": "more",
+                              "name": "act-copypath",
                               "width": 44,
                               "height": 44,
                               "fill": "#FFFFFF1A",
@@ -78552,7 +78626,7 @@
                                   "name": "i",
                                   "width": 20,
                                   "height": 20,
-                                  "icon": "ellipsis",
+                                  "icon": "copy",
                                   "library": "lucide",
                                   "fill": "$text-primary"
                                 }
@@ -79373,90 +79447,166 @@
           "id": "vWLjV",
           "name": "actions",
           "width": "fill_container",
+          "layout": "vertical",
           "gap": 10,
           "padding": [
             12,
             16
           ],
-          "alignItems": "center",
           "children": [
             {
               "type": "frame",
-              "id": "WelmG",
-              "name": "play",
+              "id": "N1U2w",
+              "name": "row-1",
               "width": "fill_container",
-              "height": 46,
-              "fill": "$accent-primary",
-              "cornerRadius": 8,
-              "gap": 8,
-              "justifyContent": "center",
+              "gap": 10,
               "alignItems": "center",
               "children": [
                 {
-                  "type": "icon",
-                  "id": "om3jb",
-                  "name": "i",
-                  "width": 18,
-                  "height": 18,
-                  "icon": "play",
-                  "library": "lucide",
-                  "fill": "$text-on-accent"
+                  "type": "frame",
+                  "id": "WelmG",
+                  "name": "act-subtitle",
+                  "width": "fill_container",
+                  "height": 46,
+                  "fill": "$accent-primary",
+                  "cornerRadius": 8,
+                  "gap": 8,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "om3jb",
+                      "name": "i",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "captions",
+                      "library": "lucide",
+                      "fill": "$text-on-accent"
+                    },
+                    {
+                      "type": "text",
+                      "id": "WPXfz",
+                      "name": "l",
+                      "fill": "$text-on-accent",
+                      "content": "管理字幕",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 15,
+                      "fontWeight": "600"
+                    }
+                  ]
                 },
                 {
-                  "type": "text",
-                  "id": "WPXfz",
-                  "name": "l",
-                  "fill": "$text-on-accent",
-                  "content": "播放",
-                  "fontFamily": "Noto Sans TC",
-                  "fontSize": 15,
-                  "fontWeight": "600"
+                  "type": "frame",
+                  "id": "w1nnr",
+                  "name": "act-localize",
+                  "width": "fill_container",
+                  "height": 46,
+                  "fill": "$bg-tertiary",
+                  "cornerRadius": 8,
+                  "gap": 8,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "BPntI",
+                      "name": "i",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "languages",
+                      "library": "lucide",
+                      "fill": "$text-primary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "hXP8C",
+                      "name": "l",
+                      "fill": "$text-primary",
+                      "content": "在地化資訊",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 15,
+                      "fontWeight": "600"
+                    }
+                  ]
                 }
               ]
             },
             {
               "type": "frame",
-              "id": "WjEQg",
-              "name": "b-plus",
-              "width": 46,
-              "height": 46,
-              "fill": "$bg-tertiary",
-              "cornerRadius": 8,
-              "justifyContent": "center",
+              "id": "T5I4x",
+              "name": "row-2",
+              "width": "fill_container",
+              "gap": 10,
               "alignItems": "center",
               "children": [
                 {
-                  "type": "icon",
-                  "id": "b9ZMI",
-                  "name": "i",
-                  "width": 20,
-                  "height": 20,
-                  "icon": "plus",
-                  "library": "lucide",
-                  "fill": "$text-primary"
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "F6DsD",
-              "name": "b-ellipsis",
-              "width": 46,
-              "height": 46,
-              "fill": "$bg-tertiary",
-              "cornerRadius": 8,
-              "justifyContent": "center",
-              "alignItems": "center",
-              "children": [
+                  "type": "frame",
+                  "id": "WjEQg",
+                  "name": "act-edit",
+                  "width": "fill_container",
+                  "height": 46,
+                  "fill": "$bg-tertiary",
+                  "cornerRadius": 8,
+                  "gap": 8,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "b9ZMI",
+                      "name": "i",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "pencil",
+                      "library": "lucide",
+                      "fill": "$text-primary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "KdhrZ",
+                      "name": "l",
+                      "fill": "$text-primary",
+                      "content": "修改資訊",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 15,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
                 {
-                  "type": "icon",
-                  "id": "nHiyy",
-                  "name": "i",
-                  "width": 20,
-                  "height": 20,
-                  "icon": "ellipsis",
-                  "library": "lucide",
-                  "fill": "$text-primary"
+                  "type": "frame",
+                  "id": "F6DsD",
+                  "name": "act-copypath",
+                  "width": "fill_container",
+                  "height": 46,
+                  "fill": "$bg-tertiary",
+                  "cornerRadius": 8,
+                  "gap": 8,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "nHiyy",
+                      "name": "i",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "copy",
+                      "library": "lucide",
+                      "fill": "$text-primary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "nOtAw",
+                      "name": "l",
+                      "fill": "$text-primary",
+                      "content": "複製路徑",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 15,
+                      "fontWeight": "600"
+                    }
+                  ]
                 }
               ]
             }
@@ -166343,6 +166493,681 @@
               "fontFamily": "Noto Sans TC",
               "fontSize": 12.5,
               "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "I7d3Hz",
+      "x": 22400,
+      "y": 24270,
+      "name": "Caption J6-D",
+      "fill": "#888888",
+      "content": "J6 · .nfo 在地化 · 確認與結果規格",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 14,
+      "fontWeight": "600"
+    },
+    {
+      "type": "frame",
+      "id": "zMYsL",
+      "x": 22400,
+      "y": 24300,
+      "name": "J6-D",
+      "width": 1240,
+      "fill": "$bg-primary",
+      "layout": "vertical",
+      "gap": 28,
+      "padding": 32,
+      "children": [
+        {
+          "type": "frame",
+          "id": "koJuS",
+          "name": "row-dialogs",
+          "width": "fill_container",
+          "gap": 32,
+          "children": [
+            {
+              "type": "frame",
+              "id": "Lhccr",
+              "name": "sec-movie",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "jMe4v",
+                  "name": "sh",
+                  "fill": "$text-secondary",
+                  "content": "A · 電影：在地化確認（additive，不覆寫）",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 13,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "mTaCD",
+                  "name": "dialog-movie",
+                  "width": 520,
+                  "fill": "$bg-secondary",
+                  "cornerRadius": "$radius-lg",
+                  "stroke": "$border-subtle",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 16,
+                  "padding": 24,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "orSTM",
+                      "name": "title",
+                      "fill": "$text-primary",
+                      "content": "將資訊在地化為繁體中文",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 18,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "c52Diq",
+                      "name": "body",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Vido 會用 AI 把片名、劇情與角色名翻成繁體中文，寫成播放器讀得到的 .nfo 檔。",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 14
+                    },
+                    {
+                      "type": "frame",
+                      "id": "g0tscA",
+                      "name": "note-safe",
+                      "width": "fill_container",
+                      "fill": "$success-tint",
+                      "cornerRadius": 8,
+                      "gap": 8,
+                      "padding": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "Wj8cH",
+                          "name": "i",
+                          "width": 18,
+                          "height": 18,
+                          "icon": "shield-check",
+                          "library": "lucide",
+                          "fill": "$success"
+                        },
+                        {
+                          "type": "text",
+                          "id": "vQUP6",
+                          "name": "t",
+                          "fill": "$success",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "不會覆寫你現有的 .nfo —— 會寫進另一個播放器同樣認得的檔名",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "krEey",
+                      "name": "note-cost",
+                      "width": "fill_container",
+                      "fill": "$info-tint",
+                      "cornerRadius": 8,
+                      "gap": 8,
+                      "padding": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "T41tQy",
+                          "name": "i",
+                          "width": 18,
+                          "height": 18,
+                          "icon": "sparkles",
+                          "library": "lucide",
+                          "fill": "$info"
+                        },
+                        {
+                          "type": "text",
+                          "id": "PlaSn",
+                          "name": "t",
+                          "fill": "$info",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "會使用 AI 翻譯額度",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "A6HPJ5",
+                      "name": "btnrow",
+                      "width": "fill_container",
+                      "gap": 10,
+                      "justifyContent": "end",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "CI40A",
+                          "name": "btn-cancel",
+                          "height": 40,
+                          "fill": "#FFFFFF1A",
+                          "cornerRadius": 8,
+                          "padding": [
+                            0,
+                            18
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "v0SJxF",
+                              "name": "l",
+                              "fill": "$text-primary",
+                              "content": "取消",
+                              "fontFamily": "Noto Sans TC",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "HhH9f",
+                          "name": "btn-confirm",
+                          "height": 40,
+                          "fill": "$accent-primary",
+                          "cornerRadius": 8,
+                          "padding": [
+                            0,
+                            18
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "PZpKf",
+                              "name": "l",
+                              "fill": "$text-on-accent",
+                              "content": "開始在地化",
+                              "fontFamily": "Noto Sans TC",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "EalPK",
+              "name": "sec-tv",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "HrTob",
+                  "name": "sh",
+                  "fill": "$text-secondary",
+                  "content": "B · 影集：覆寫確認（單槽，一定覆寫）",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 13,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "OaeDY",
+                  "name": "dialog-tv",
+                  "width": 520,
+                  "fill": "$bg-secondary",
+                  "cornerRadius": "$radius-lg",
+                  "stroke": "$border-subtle",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 16,
+                  "padding": 24,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "pxWU2",
+                      "name": "title",
+                      "fill": "$text-primary",
+                      "content": "將資訊在地化為繁體中文",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 18,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "BKnDL",
+                      "name": "body",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Vido 會用 AI 把劇名、簡介與角色名翻成繁體中文。",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 14
+                    },
+                    {
+                      "type": "frame",
+                      "id": "H9nJve",
+                      "name": "note-replace",
+                      "width": "fill_container",
+                      "fill": "$warning-tint",
+                      "cornerRadius": 8,
+                      "gap": 10,
+                      "padding": 12,
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "tPSgK",
+                          "name": "i",
+                          "width": 18,
+                          "height": 18,
+                          "icon": "triangle-alert",
+                          "library": "lucide",
+                          "fill": "$warning"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "AeSWq",
+                          "name": "txt",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "y400F",
+                              "name": "t",
+                              "fill": "$warning",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "影集只有一個檔名可用，這會覆寫現有的 tvshow.nfo。",
+                              "fontFamily": "Noto Sans TC",
+                              "fontSize": 13,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "DaML0",
+                              "name": "t",
+                              "fill": "$warning",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "原始檔會先備份成 tvshow.nfo.orig；之後再執行也不會覆蓋這份備份。",
+                              "fontFamily": "Noto Sans TC",
+                              "fontSize": 13
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "p9YFh",
+                      "name": "note-cost",
+                      "width": "fill_container",
+                      "fill": "$info-tint",
+                      "cornerRadius": 8,
+                      "gap": 8,
+                      "padding": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "W9yvEe",
+                          "name": "i",
+                          "width": 18,
+                          "height": 18,
+                          "icon": "sparkles",
+                          "library": "lucide",
+                          "fill": "$info"
+                        },
+                        {
+                          "type": "text",
+                          "id": "n1qxN",
+                          "name": "t",
+                          "fill": "$info",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "會使用 AI 翻譯額度",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "e01yf1",
+                      "name": "opt-episodes",
+                      "width": "fill_container",
+                      "gap": 10,
+                      "padding": [
+                        12,
+                        0,
+                        0,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "r8EaWk",
+                          "name": "cb",
+                          "width": 18,
+                          "height": 18,
+                          "fill": "#00000000",
+                          "cornerRadius": 4,
+                          "stroke": "$border-subtle",
+                          "strokeWidth": 1.5
+                        },
+                        {
+                          "type": "frame",
+                          "id": "noeJj",
+                          "name": "txt",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "rCFZq",
+                              "name": "t",
+                              "fill": "$text-primary",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "連同每一集的集名與劇情",
+                              "fontFamily": "Noto Sans TC",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "PJUl3",
+                              "name": "t",
+                              "fill": "$text-muted",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "每一集各翻譯一次，額度用量會明顯增加。",
+                              "fontFamily": "Noto Sans TC",
+                              "fontSize": 12
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "PIpQt",
+                      "name": "btnrow",
+                      "width": "fill_container",
+                      "gap": 10,
+                      "justifyContent": "end",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "UIRhm",
+                          "name": "btn-cancel",
+                          "height": 40,
+                          "fill": "#FFFFFF1A",
+                          "cornerRadius": 8,
+                          "padding": [
+                            0,
+                            18
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "BgmHc",
+                              "name": "l",
+                              "fill": "$text-primary",
+                              "content": "取消",
+                              "fontFamily": "Noto Sans TC",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "fphM7",
+                          "name": "btn-confirm",
+                          "height": 40,
+                          "fill": "$accent-primary",
+                          "cornerRadius": 8,
+                          "padding": [
+                            0,
+                            18
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "W9JwTI",
+                              "name": "l",
+                              "fill": "$text-on-accent",
+                              "content": "備份並覆寫",
+                              "fontFamily": "Noto Sans TC",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Ki1Uc",
+          "name": "sec-result",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "I2uKYB",
+              "name": "sh",
+              "fill": "$text-secondary",
+              "content": "C · 結果狀態（inline pill，就地取代那顆按鈕，不是浮動 toast）",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 13,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "RbtSk",
+              "name": "pills",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "k8fdsI",
+                  "name": "pill-movie-ok",
+                  "height": 40,
+                  "fill": "$success-tint",
+                  "cornerRadius": 999,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "PPe3I",
+                      "name": "i",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "check",
+                      "library": "lucide",
+                      "fill": "$success"
+                    },
+                    {
+                      "type": "text",
+                      "id": "vJa2G",
+                      "name": "t",
+                      "fill": "$success",
+                      "content": "已寫入繁中資訊",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "fYzJs",
+                  "name": "pill-tv-ok",
+                  "height": 40,
+                  "fill": "$success-tint",
+                  "cornerRadius": 999,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "UF2VZ",
+                      "name": "i",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "check",
+                      "library": "lucide",
+                      "fill": "$success"
+                    },
+                    {
+                      "type": "text",
+                      "id": "NXZcS",
+                      "name": "t",
+                      "fill": "$success",
+                      "content": "已覆寫，原檔已備份為 .nfo.orig",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "myDBv",
+                  "name": "pill-batch-partial",
+                  "height": 40,
+                  "fill": "$warning-tint",
+                  "cornerRadius": 999,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "vFMsP",
+                      "name": "i",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "triangle-alert",
+                      "library": "lucide",
+                      "fill": "$warning"
+                    },
+                    {
+                      "type": "text",
+                      "id": "TzfYf",
+                      "name": "t",
+                      "fill": "$warning",
+                      "content": "影集資訊已更新 · 22 集完成、2 集略過",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "tQq6B",
+                  "name": "pill-disabled",
+                  "height": 40,
+                  "fill": "$error-tint",
+                  "cornerRadius": 999,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "a5fQU",
+                      "name": "i",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "key-round",
+                      "library": "lucide",
+                      "fill": "$error"
+                    },
+                    {
+                      "type": "text",
+                      "id": "W7TVOY",
+                      "name": "t",
+                      "fill": "$error",
+                      "content": "尚未設定翻譯服務 · 前往設定",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "rfsSW",
+              "name": "note",
+              "fill": "$text-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "「略過」＝資料庫有這一集，但硬碟上找不到對應的影片檔，所以沒有地方可以放 .nfo。",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12
             }
           ]
         }
