@@ -17,13 +17,18 @@ import (
 // MovieMetadataRepository defines the interface for movie metadata operations
 type MovieMetadataRepository interface {
 	FindByID(ctx context.Context, id string) (*models.Movie, error)
+	// Update is the WIDE writer — kept for the user-edit path, which owns the
+	// fields it writes (bugfix-wide-update-stale-copy-other-callers §audit #5).
 	Update(ctx context.Context, movie *models.Movie) error
+	// UpdatePosterPath is the single-intent writer for poster upload/fetch.
+	UpdatePosterPath(ctx context.Context, id, posterPath string) error
 }
 
 // SeriesMetadataRepository defines the interface for series metadata operations
 type SeriesMetadataRepository interface {
 	FindByID(ctx context.Context, id string) (*models.Series, error)
 	Update(ctx context.Context, series *models.Series) error
+	UpdatePosterPath(ctx context.Context, id, posterPath string) error
 }
 
 // MetadataEditService handles metadata editing operations for movies and series
@@ -150,6 +155,9 @@ func (s *MetadataEditService) updateMovieMetadata(ctx context.Context, req *Upda
 	movie.UpdatedAt = now
 
 	// Save to database
+	// Wide Update kept on purpose (bugfix-wide-update-stale-copy-other-callers
+	// §audit #5): a user edit owns the fields it writes; the row was loaded
+	// microseconds ago in this same call, so there is no stale-copy window.
 	if err := s.movieRepo.Update(ctx, movie); err != nil {
 		s.logger.Error("Failed to update movie metadata",
 			"id", req.ID,
@@ -239,6 +247,7 @@ func (s *MetadataEditService) updateSeriesMetadata(ctx context.Context, req *Upd
 	series.UpdatedAt = now
 
 	// Save to database
+	// Wide Update kept on purpose (§audit #5) — see updateMovieMetadata.
 	if err := s.seriesRepo.Update(ctx, series); err != nil {
 		s.logger.Error("Failed to update series metadata",
 			"id", req.ID,
@@ -307,22 +316,19 @@ func (s *MetadataEditService) UploadPoster(ctx context.Context, req *UploadPoste
 // updatePosterPath updates only the poster path in the database
 func (s *MetadataEditService) updatePosterPath(ctx context.Context, id, mediaType, posterURL string) error {
 	switch mediaType {
+	// Narrow writes (bugfix-wide-update-stale-copy-other-callers §audit #6):
+	// a one-column intent must not write 30+ columns back from a copy. The
+	// FindByID stays so a missing id keeps the same not-found error shape.
 	case "series":
-		series, err := s.seriesRepo.FindByID(ctx, id)
-		if err != nil {
+		if _, err := s.seriesRepo.FindByID(ctx, id); err != nil {
 			return err
 		}
-		series.PosterPath = models.NewNullString(posterURL)
-		series.UpdatedAt = time.Now()
-		return s.seriesRepo.Update(ctx, series)
+		return s.seriesRepo.UpdatePosterPath(ctx, id, posterURL)
 	default:
-		movie, err := s.movieRepo.FindByID(ctx, id)
-		if err != nil {
+		if _, err := s.movieRepo.FindByID(ctx, id); err != nil {
 			return err
 		}
-		movie.PosterPath = models.NewNullString(posterURL)
-		movie.UpdatedAt = time.Now()
-		return s.movieRepo.Update(ctx, movie)
+		return s.movieRepo.UpdatePosterPath(ctx, id, posterURL)
 	}
 }
 

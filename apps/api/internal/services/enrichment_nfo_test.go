@@ -129,6 +129,16 @@ func (m *mockMovieRepoForNFO) UpdateEnrichedMetadata(ctx context.Context, movie 
 	return nil
 }
 
+// Single-intent writers — not exercised by enrichment.
+func (m *mockMovieRepoForNFO) UpdateScanFileInfo(context.Context, string, int64, models.ParseStatus) error {
+	return nil
+}
+func (m *mockMovieRepoForNFO) MarkRemoved(context.Context, string) error { return nil }
+func (m *mockMovieRepoForNFO) UpdateParseStatus(context.Context, string, models.ParseStatus) error {
+	return nil
+}
+func (m *mockMovieRepoForNFO) UpdatePosterPath(context.Context, string, string) error { return nil }
+
 func (m *mockMovieRepoForNFO) FindByParseStatus(ctx context.Context, status models.ParseStatus) ([]models.Movie, error) {
 	return nil, nil
 }

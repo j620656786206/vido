@@ -9,10 +9,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/vido/api/internal/database/migrations"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
+	"github.com/vido/api/internal/testutil"
 	"github.com/vido/api/internal/tmdb"
 
 	_ "modernc.org/sqlite"
@@ -896,4 +898,29 @@ func TestLibraryService_GetSeriesByID(t *testing.T) {
 		assert.ErrorContains(t, err, "series ID cannot be empty")
 		assert.Nil(t, series)
 	})
+}
+
+// bugfix-wide-update-stale-copy-other-callers §audit #4: BatchReparse is a
+// one-column intent and must never write the whole row back.
+func TestLibraryService_BatchReparse_UsesNarrowParseStatusWriter(t *testing.T) {
+	movieRepo := new(testutil.MockMovieRepository)
+	seriesRepo := new(testutil.MockSeriesRepository)
+	service := NewLibraryService(movieRepo, seriesRepo, nil)
+
+	movieRepo.On("FindByID", mock.Anything, "m1").Return(&models.Movie{ID: "m1", ParseStatus: models.ParseStatusSuccess}, nil)
+	movieRepo.On("UpdateParseStatus", mock.Anything, "m1", models.ParseStatusPending).Return(nil)
+	seriesRepo.On("FindByID", mock.Anything, "s1").Return(&models.Series{ID: "s1", ParseStatus: models.ParseStatusSuccess}, nil)
+	seriesRepo.On("UpdateParseStatus", mock.Anything, "s1", models.ParseStatusPending).Return(nil)
+
+	res, err := service.BatchReparse(context.Background(), []string{"m1"}, "movie")
+	require.NoError(t, err)
+	assert.Equal(t, 1, res.SuccessCount)
+	res, err = service.BatchReparse(context.Background(), []string{"s1"}, "series")
+	require.NoError(t, err)
+	assert.Equal(t, 1, res.SuccessCount)
+
+	movieRepo.AssertCalled(t, "UpdateParseStatus", mock.Anything, "m1", models.ParseStatusPending)
+	movieRepo.AssertNotCalled(t, "Update", mock.Anything, mock.Anything)
+	seriesRepo.AssertCalled(t, "UpdateParseStatus", mock.Anything, "s1", models.ParseStatusPending)
+	seriesRepo.AssertNotCalled(t, "Update", mock.Anything, mock.Anything)
 }

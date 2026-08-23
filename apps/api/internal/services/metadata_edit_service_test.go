@@ -20,6 +20,10 @@ type mockMovieMetadataRepository struct {
 	movies     map[string]*models.Movie
 	findByIDFn func(ctx context.Context, id string) (*models.Movie, error)
 	updateFn   func(ctx context.Context, movie *models.Movie) error
+	// updateCalls / posterPathCalls pin WHICH writer a path used
+	// (bugfix-wide-update-stale-copy-other-callers §audit #6).
+	updateCalls     int
+	posterPathCalls int
 }
 
 func newMockMovieRepo() *mockMovieMetadataRepository {
@@ -40,10 +44,22 @@ func (m *mockMovieMetadataRepository) FindByID(ctx context.Context, id string) (
 }
 
 func (m *mockMovieMetadataRepository) Update(ctx context.Context, movie *models.Movie) error {
+	m.updateCalls++
 	if m.updateFn != nil {
 		return m.updateFn(ctx, movie)
 	}
 	m.movies[movie.ID] = movie
+	return nil
+}
+
+// UpdatePosterPath mirrors the real narrow writer: only poster_path moves.
+func (m *mockMovieMetadataRepository) UpdatePosterPath(_ context.Context, id, posterPath string) error {
+	movie, ok := m.movies[id]
+	if !ok {
+		return ErrUpdateMetadataNotFound
+	}
+	movie.PosterPath = models.NewNullString(posterPath)
+	m.posterPathCalls++
 	return nil
 }
 
@@ -76,6 +92,15 @@ func (m *mockSeriesMetadataRepository) Update(ctx context.Context, series *model
 		return m.updateFn(ctx, series)
 	}
 	m.series[series.ID] = series
+	return nil
+}
+
+func (m *mockSeriesMetadataRepository) UpdatePosterPath(_ context.Context, id, posterPath string) error {
+	series, ok := m.series[id]
+	if !ok {
+		return ErrUpdateMetadataNotFound
+	}
+	series.PosterPath = models.NewNullString(posterPath)
 	return nil
 }
 
@@ -283,6 +308,10 @@ func TestMetadataEditService_UploadPoster_Success(t *testing.T) {
 	assert.NotNil(t, result)
 	assert.Contains(t, result.PosterURL, "movie-1")
 	assert.Contains(t, result.ThumbnailURL, "movie-1-thumb")
+	// §audit #6: a one-column intent goes through the single-intent writer.
+	assert.Equal(t, 1, movieRepo.posterPathCalls, "poster upload must use UpdatePosterPath")
+	assert.Equal(t, 0, movieRepo.updateCalls, "…and never the wide Update")
+	assert.Equal(t, result.PosterURL, movieRepo.movies["movie-1"].PosterPath.String)
 }
 
 func TestMetadataEditService_UploadPoster_NoProcessor(t *testing.T) {

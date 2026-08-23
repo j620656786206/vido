@@ -135,6 +135,8 @@ func (s *SeriesService) Update(ctx context.Context, series *models.Series) error
 
 	slog.Info("Updating series", "series_id", series.ID, "title", series.Title)
 
+	// Wide Update kept on purpose (bugfix-wide-update-stale-copy-other-callers
+	// §audit #8): PUT /series/:id is a user edit that owns these fields.
 	if err := s.repo.Update(ctx, series); err != nil {
 		slog.Error("Failed to update series", "error", err, "series_id", series.ID)
 		return fmt.Errorf("failed to update series: %w", err)

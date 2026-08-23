@@ -790,16 +790,17 @@ func (s *LibraryService) BatchReparse(ctx context.Context, ids []string, mediaTy
 			if findErr != nil {
 				err = findErr
 			} else {
-				movie.ParseStatus = "pending"
-				err = s.movieRepo.Update(ctx, movie)
+				// Narrow write (bugfix-wide-update-stale-copy-other-callers
+				// §audit #4): one-column intent; FindByID above keeps the
+				// 404-per-id behaviour of the batch result.
+				err = s.movieRepo.UpdateParseStatus(ctx, movie.ID, models.ParseStatusPending)
 			}
 		} else {
 			series, findErr := s.seriesRepo.FindByID(ctx, id)
 			if findErr != nil {
 				err = findErr
 			} else {
-				series.ParseStatus = "pending"
-				err = s.seriesRepo.Update(ctx, series)
+				err = s.seriesRepo.UpdateParseStatus(ctx, series.ID, models.ParseStatusPending)
 			}
 		}
 		if err != nil {
