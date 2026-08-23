@@ -151,54 +151,54 @@ func genEpisode(id string, season, episode int, title, filePath string) models.E
 // waitUntilIdle polls until no batch is running (terminal state reached).
 func waitUntilIdle(t *testing.T, p *GenerationBatchProcessor) {
 	t.Helper()
-	deadline := time.Now().Add(3 * time.Second)
-	for time.Now().Before(deadline) {
-		if !p.IsRunning() {
-			return
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-	t.Fatal("batch did not reach a terminal state in time")
+	require.Eventually(t, func() bool { return !p.IsRunning() }, 3*time.Second, 5*time.Millisecond,
+		"batch did not reach a terminal state in time")
 }
 
-// drainEvents collects all generation_batch_progress payloads currently queued.
-// Every caller expects at least one event, so it WAITS (bounded) for the first
-// one before the non-blocking drain — the Hub's fan-out goroutine races the
-// test's fixed post-cancel sleep, and under load a bare drain came up empty
-// (pre-existing flake, fixed in-place during sub-5-5 per Epic 9c retro AI-2).
-func drainEvents(client *sse.Client) []map[string]interface{} {
+// eventsUntilTerminal reads generation_batch_progress payloads from the client
+// until the FIRST terminal status (anything but `running`) and returns every
+// payload seen up to and including it. Bounded by a 2 s deadline that fails
+// the test with the statuses seen so far.
+//
+// This replaces the former `time.Sleep(50ms)` + non-blocking drain
+// (preexisting-fail-generation-batch-cancel-mid-item-flake). Two things made
+// the sleep necessary and unreliable: `finish` clears activeBatch — so
+// waitUntilIdle returns — BEFORE it broadcasts the terminal event, and the
+// Hub's fan-out goroutine races the test thread. Waiting for the event the
+// test is about to assert on is the only synchronisation that cannot lose.
+func eventsUntilTerminal(t *testing.T, client *sse.Client) []map[string]interface{} {
+	t.Helper()
 	var out []map[string]interface{}
 	deadline := time.After(2 * time.Second)
 	for {
 		select {
-		case ev := <-client.Events:
+		case ev, ok := <-client.Events:
+			if !ok {
+				t.Fatalf("SSE client closed before a terminal status; saw %v", statusesOf(out))
+			}
 			if ev.Type != sse.EventGenerationBatchProgress {
 				continue
 			}
-			if data, ok := ev.Data.(map[string]interface{}); ok {
-				out = append(out, data)
+			data, ok := ev.Data.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			out = append(out, data)
+			if status, _ := data["status"].(string); status != GenerationBatchStatusRunning {
+				return out
 			}
 		case <-deadline:
-			return out
-		default:
-			if len(out) == 0 {
-				// Nothing yet — block briefly instead of returning empty.
-				select {
-				case ev := <-client.Events:
-					if ev.Type != sse.EventGenerationBatchProgress {
-						continue
-					}
-					if data, ok := ev.Data.(map[string]interface{}); ok {
-						out = append(out, data)
-					}
-					continue
-				case <-deadline:
-					return out
-				}
-			}
-			return out
+			t.Fatalf("no terminal generation_batch_progress event within 2s; saw %v", statusesOf(out))
 		}
 	}
+}
+
+func statusesOf(events []map[string]interface{}) []interface{} {
+	out := make([]interface{}, 0, len(events))
+	for _, e := range events {
+		out = append(out, e["status"])
+	}
+	return out
 }
 
 func newTestGenerationProcessor(t *testing.T, runner *fakeGenerationRunner, finder *fakeCandidateFinder, budgetUSD float64) (*GenerationBatchProcessor, *sse.Client) {
@@ -211,6 +211,12 @@ func newTestGenerationProcessorWithEpisodes(t *testing.T, runner *fakeGeneration
 	hub := sse.NewHub()
 	t.Cleanup(func() { hub.Close() })
 	client := hub.Register()
+	// Register only ENQUEUES the client; Hub.Run registers it later and picks
+	// randomly between register and broadcast when both are ready — so a batch
+	// started right away could fan its events out to zero clients. Wait for
+	// the registration to land before handing the processor back.
+	require.Eventually(t, func() bool { return hub.ClientCount() == 1 }, 2*time.Second, time.Millisecond,
+		"SSE client never registered")
 	var epFinder generationEpisodeFinder
 	if episodes != nil {
 		epFinder = episodes
@@ -256,8 +262,7 @@ func TestGenerationBatch_MissingScope_SequentialComplete(t *testing.T) {
 	waitUntilIdle(t, p)
 	assert.Equal(t, []string{uuidA, uuidB, uuidC}, runner.callIDs(), "items must run sequentially in queue order")
 
-	time.Sleep(50 * time.Millisecond) // let SSE fan-out drain
-	events := drainEvents(client)
+	events := eventsUntilTerminal(t, client)
 	require.NotEmpty(t, events)
 	last := events[len(events)-1]
 	assert.Equal(t, GenerationBatchStatusComplete, last["status"])
@@ -275,9 +280,8 @@ func TestGenerationBatch_SSEPayloadFields(t *testing.T) {
 	_, _, err := p.Start(context.Background(), "missing", nil, 0)
 	require.NoError(t, err)
 	waitUntilIdle(t, p)
-	time.Sleep(50 * time.Millisecond)
 
-	events := drainEvents(client)
+	events := eventsUntilTerminal(t, client)
 	require.NotEmpty(t, events)
 	wantKeys := []string{
 		"batch_id", "total_items", "current_index", "current_media_id",
@@ -319,8 +323,7 @@ func TestGenerationBatch_PerItemFailContinue(t *testing.T) {
 
 	assert.Equal(t, []string{uuidA, uuidB, uuidC, uuidD}, runner.callIDs(), "loop must continue past failures")
 
-	time.Sleep(50 * time.Millisecond)
-	events := drainEvents(client)
+	events := eventsUntilTerminal(t, client)
 	require.NotEmpty(t, events)
 	last := events[len(events)-1]
 	assert.Equal(t, GenerationBatchStatusComplete, last["status"])
@@ -357,8 +360,7 @@ func TestGenerationBatch_CancelMidItem(t *testing.T) {
 
 	assert.Equal(t, []string{uuidA}, runner.callIDs(), "queued items must never start after cancel")
 
-	time.Sleep(50 * time.Millisecond)
-	events := drainEvents(client)
+	events := eventsUntilTerminal(t, client)
 	require.NotEmpty(t, events)
 	last := events[len(events)-1]
 	assert.Equal(t, GenerationBatchStatusCancelled, last["status"])
@@ -396,8 +398,7 @@ func TestGenerationBatch_BudgetCeiling_PreCheck(t *testing.T) {
 
 	assert.Equal(t, []string{uuidA}, runner.callIDs(), "items after the ceiling hit must not start")
 
-	time.Sleep(50 * time.Millisecond)
-	events := drainEvents(client)
+	events := eventsUntilTerminal(t, client)
 	require.NotEmpty(t, events)
 	last := events[len(events)-1]
 	assert.Equal(t, GenerationBatchStatusBudgetCeiling, last["status"])
@@ -430,8 +431,7 @@ func TestGenerationBatch_BudgetCeiling_MidItem(t *testing.T) {
 
 	assert.Equal(t, []string{uuidA, uuidB}, runner.callIDs())
 
-	time.Sleep(50 * time.Millisecond)
-	events := drainEvents(client)
+	events := eventsUntilTerminal(t, client)
 	require.NotEmpty(t, events)
 	last := events[len(events)-1]
 	assert.Equal(t, GenerationBatchStatusBudgetCeiling, last["status"])
@@ -718,8 +718,7 @@ func TestGenerationBatch_RequestedBudgetOverridesDefault(t *testing.T) {
 
 	p.Cancel()
 	waitUntilIdle(t, p)
-	time.Sleep(50 * time.Millisecond)
-	events := drainEvents(client)
+	events := eventsUntilTerminal(t, client)
 	require.NotEmpty(t, events)
 	assert.Equal(t, 2.5, events[len(events)-1]["budget_usd"])
 }
@@ -748,8 +747,7 @@ func TestGenerationBatch_RequestedBudgetEnforced(t *testing.T) {
 	waitUntilIdle(t, p)
 
 	assert.Equal(t, []string{uuidA}, runner.callIDs(), "the request ceiling must gate the queue")
-	time.Sleep(50 * time.Millisecond)
-	events := drainEvents(client)
+	events := eventsUntilTerminal(t, client)
 	require.NotEmpty(t, events)
 	last := events[len(events)-1]
 	assert.Equal(t, GenerationBatchStatusBudgetCeiling, last["status"])
@@ -801,8 +799,7 @@ func TestGenerationBatch_SkippedItemCountsAsFail(t *testing.T) {
 
 	assert.Equal(t, []string{uuidA, uuidB, uuidC}, runner.callIDs(), "a skipped item must not stop the batch")
 
-	time.Sleep(50 * time.Millisecond)
-	events := drainEvents(client)
+	events := eventsUntilTerminal(t, client)
 	require.NotEmpty(t, events)
 	last := events[len(events)-1]
 	assert.Equal(t, GenerationBatchStatusComplete, last["status"])
