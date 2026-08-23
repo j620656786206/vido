@@ -155,6 +155,14 @@ type AutoGenerator struct {
 	// sidecar path.
 	mu      sync.Mutex
 	running bool
+	// pending records a trigger that landed while a round was in flight
+	// (bugfix-autogenerator-dropped-round-not-deferred). A FLAG, not a
+	// counter: every round re-enumerates the whole eligible set, so one
+	// follow-up covers any number of merged triggers. Without it the trigger
+	// was dropped — and scanner_service.go only fires scan-complete when a
+	// scan created or updated files, so "the next scan picks it up" could be
+	// days away on a quiet library.
+	pending bool
 }
 
 // AutoGeneratorOption injects one optional port.
@@ -222,30 +230,46 @@ func NewAutoGenerator(item ItemProcessor, policy AutoLibraryPolicy, logger *slog
 // (cmd/api/main.go). The scanner's completion path must not wait on minutes of
 // ffmpeg.
 func (g *AutoGenerator) ScanCallback() func() {
-	return func() { g.spawnRound() }
+	return func() { g.spawnRound(spawnReasonScan) }
 }
 
 // spawnRound starts one round on its own goroutine under the generator's
 // lifetime ctx, or does nothing once Stop has been called (D4: a scan completing
-// inside the shutdown window must not start work behind Stop's back).
+// inside the shutdown window must not start work behind Stop's back). Reports
+// whether a round was started. `reason` is logged; the two callers are the
+// scan-complete hook and the deferred follow-up (bugfix-autogenerator-dropped-
+// round-not-deferred).
 //
-// Its own method so a later re-run path (bugfix-autogenerator-dropped-round-
-// not-deferred's `pending` flag) enters through the same stopped/wg bookkeeping.
-func (g *AutoGenerator) spawnRound() {
+// WaitGroup safety is the `mu` ordering, nothing else: the stopped check and
+// the wg.Add sit in ONE critical section, and Stop sets stopped under the same
+// lock BEFORE it calls wg.Wait — so an Add either happens-before the Wait or
+// is refused. This matters because the Add here CAN be from zero (a follow-up
+// spawned at the end of a round that was entered by a direct Run, not by a
+// goroutine of ours). Do not hoist the stopped check out of the lock.
+func (g *AutoGenerator) spawnRound(reason string) bool {
 	g.mu.Lock()
 	if g.stopped {
 		g.mu.Unlock()
-		g.logger.Debug("subtitle auto-generation: stopped — scan-complete ignored")
-		return
+		g.logger.Debug("subtitle auto-generation: stopped — round not started", "reason", reason)
+		return false
 	}
 	g.wg.Add(1)
 	g.mu.Unlock()
 
+	if reason == spawnReasonDeferred {
+		g.logger.Info("subtitle auto-generation: starting deferred follow-up round", "reason", reason)
+	}
 	go func() {
 		defer g.wg.Done()
 		g.Run(g.lifetime)
 	}()
+	return true
 }
+
+const (
+	spawnReasonScan     = "scan_complete"
+	spawnReasonDeferred = "deferred_trigger"
+)
 
 // Stop cancels the in-flight round (if any) and blocks until its goroutine has
 // returned, so failItem's cleanup writes land while the database is still open
@@ -259,6 +283,7 @@ func (g *AutoGenerator) Stop() {
 	g.mu.Lock()
 	first := !g.stopped
 	g.stopped = true
+	g.pending = false // a queued follow-up is dropped: shutdown is not the time to start work
 	g.mu.Unlock()
 
 	// cancel is safe to call repeatedly; the wait sits OUTSIDE the lock so a
@@ -272,20 +297,31 @@ func (g *AutoGenerator) Stop() {
 
 // Run executes one round: read the policy, enumerate, filter, process.
 //
-// Synchronous on purpose — ScanCallback owns the goroutine, so tests can assert
-// the outcome without synchronising on one.
+// Synchronous for the round itself — but if a trigger landed while this round
+// was in flight, Run leaves ONE follow-up goroutine behind (under `lifetime`,
+// never under the caller's ctx) on return; callers that need quiescence call
+// Stop to drain it. spawnRound is the only production entry.
 func (g *AutoGenerator) Run(ctx context.Context) {
 	if g.item == nil || g.policy == nil {
 		return
 	}
 
-	// CR M1: one round at a time. A second scan completing mid-round is a
-	// no-op, not a second pass over the same items — the next scan picks up
-	// whatever this one did not reach.
+	// A trigger whose ctx is already dead is not a trigger: it must neither
+	// start a round nor queue a follow-up (a callback that raced Stop is the
+	// production case — the policy read would fail and log at Error level on
+	// every shutdown for no reason).
+	if ctx.Err() != nil {
+		g.logger.Debug("subtitle auto-generation: round cancelled before it started")
+		return
+	}
+
+	// CR M1: one round at a time — a trigger landing mid-round never starts a
+	// CONCURRENT pass (two rounds would race two ProcessItem calls onto one
+	// sidecar path). It is queued as one follow-up round instead of dropped
+	// (bugfix-autogenerator-dropped-round-not-deferred).
 	//
-	// Also refuses to start after Stop (review L5): spawnRound is the only
-	// production entry and already checks this, but a future direct caller
-	// (the M6 re-run) must not be able to run outside Stop's drain.
+	// Also refuses to start after Stop (review L5): spawnRound already checks
+	// this, but a direct caller must not be able to run outside Stop's drain.
 	g.mu.Lock()
 	if g.stopped {
 		g.mu.Unlock()
@@ -293,8 +329,9 @@ func (g *AutoGenerator) Run(ctx context.Context) {
 		return
 	}
 	if g.running {
+		g.pending = true
 		g.mu.Unlock()
-		g.logger.Debug("subtitle auto-generation: a round is already in flight — skipping")
+		g.logger.Debug("subtitle auto-generation: a round is already in flight — follow-up round queued")
 		return
 	}
 	g.running = true
@@ -302,16 +339,16 @@ func (g *AutoGenerator) Run(ctx context.Context) {
 	defer func() {
 		g.mu.Lock()
 		g.running = false
+		rerun := g.pending
+		g.pending = false
 		g.mu.Unlock()
+		if rerun {
+			// OUTSIDE mu: spawnRound takes the lock itself, and it refuses once
+			// Stop has run (see its comment for why that ordering is the whole
+			// WaitGroup-safety argument).
+			g.spawnRound(spawnReasonDeferred)
+		}
 	}()
-
-	// A round whose ctx is already dead (a callback that raced Stop) must not
-	// touch the database: the policy read would fail and log at Error level
-	// on every shutdown for no reason.
-	if ctx.Err() != nil {
-		g.logger.Debug("subtitle auto-generation: round cancelled before it started")
-		return
-	}
 
 	// 9R-10a CR M1: a failed read is NOT an empty answer. On the NAS this is a
 	// locked SQLite file, and treating that as "nobody opted in" would make the

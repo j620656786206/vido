@@ -218,6 +218,10 @@ func autoEnabledSet(ids ...string) map[string]struct{} {
 }
 
 type autoHarness struct {
+	// blockSecondOnCancel makes overlapHarness's 2nd ProcessItem call wait on
+	// ctx.Done() (used by the Stop-drops-follow-up test).
+	blockSecondOnCancel bool
+
 	gen      *AutoGenerator
 	movies   *autoFakeMovieFinder
 	episodes *autoFakeEpisodeFinder
@@ -671,47 +675,152 @@ func TestAutoGenerator_GenuineSeriesLookupFailureStillAborts(t *testing.T) {
 
 // ─── CR M1: one round at a time ───────────────────────────────────────────
 
-func TestAutoGenerator_SecondRoundIsSkippedWhileOneIsInFlight(t *testing.T) {
-	h := newAutoHarness(t)
+// ─── bugfix-autogenerator-dropped-round-not-deferred ───────────────────────
+//
+// overlapHarness blocks the FIRST ProcessItem call until release is closed and
+// reports when it has been entered, so a test can land extra triggers mid-round.
+// `fourth` closes when the 4th ProcessItem call lands — i.e. the follow-up
+// round has reached its last item — so a test can wait for it without Stop
+// (which would cancel the follow-up, AC #4) and without a sleep.
+func overlapHarness(t *testing.T) (h *autoHarness, entered, release, fourth chan struct{}) {
+	t.Helper()
+	h = newAutoHarness(t)
 	h.policy.enabled = autoEnabledSet("lib-a")
 	h.movies.movies = []models.Movie{
 		autoMovieIn("m1", "lib-a", models.SubtitleStatusNotSearched),
 		autoMovieIn("m2", "lib-a", models.SubtitleStatusNotSearched),
 	}
-
-	// 補審 M7: the gate blocks the FIRST caller only, and never the second.
-	// The previous shape used sync.Once, whose Do() blocks every other caller
-	// until the first returns — so removing the single-flight guard did not
-	// fail this assertion, it DEADLOCKED the package and surfaced as
-	// `panic: test timed out`, which reads like infrastructure rather than the
-	// regression it is.
-	entered := make(chan struct{})
-	release := make(chan struct{})
-	var mu sync.Mutex
-	first := true
-	h.item.outcome = func(context.Context, MediaRef) (*ProcessOutcome, error) {
-		mu.Lock()
-		isFirst := first
-		first = false
-		mu.Unlock()
-		if isFirst {
+	entered = make(chan struct{})
+	release = make(chan struct{})
+	fourth = make(chan struct{})
+	var once, fourthOnce sync.Once
+	var n atomic.Int32
+	h.item.outcome = func(ctx context.Context, _ MediaRef) (*ProcessOutcome, error) {
+		once.Do(func() {
 			close(entered)
 			<-release
+		})
+		if h.blockSecondOnCancel && n.Load() == 1 {
+			// The 2nd call waits for the generator's cancel — which happens only
+			// AFTER stopped=true/pending=false under mu — so the round provably
+			// observes Stop before its deferred unlock runs.
+			<-ctx.Done()
+		}
+		if n.Add(1) == 4 {
+			fourthOnce.Do(func() { close(fourth) })
 		}
 		return &ProcessOutcome{Kind: RouteDeliverDirect}, nil
 	}
+	return h, entered, release, fourth
+}
+
+// AC #1 + #6: an overlapping trigger is queued, not dropped — and still never
+// runs CONCURRENTLY with the round in flight (the CR M1 invariant).
+//
+// 補審 M7 note still applies: the guard must return for the second caller, not
+// block it — a sync.Once-style block deadlocks the package and shows up as
+// `panic: test timed out`.
+func TestAutoGenerator_OverlappingTriggerIsDeferredNotDropped(t *testing.T) {
+	h, entered, release, fourth := overlapHarness(t)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() { defer wg.Done(); h.gen.Run(context.Background()) }()
 
 	<-entered
-	h.gen.Run(context.Background()) // second scan lands mid-round
+	h.gen.Run(context.Background()) // second scan lands mid-round; must return at once
+	assert.Equal(t, []string{"m1"}, h.item.refIDs(), "the second trigger must not start a concurrent pass")
 	close(release)
 	wg.Wait()
+	<-fourth     // the follow-up reached its last item
+	h.gen.Stop() // and is drained (its goroutine returns before Stop does)
 
-	assert.Equal(t, []string{"m1", "m2"}, h.item.refIDs(),
-		"the overlapping round must be a no-op — two rounds over one item list race two ProcessItem calls onto one sidecar path")
+	assert.Equal(t, []string{"m1", "m2", "m1", "m2"}, h.item.refIDs(),
+		"the overlapping trigger must produce ONE follow-up round after the first ends — a dropped trigger waits for the next scan that happens to add files")
+	assert.Equal(t, 2, h.policy.calls, "AC #3: the follow-up must not re-trigger itself")
+}
+
+// AC #5: the queue and the follow-up are visible in the log.
+func TestAutoGenerator_DeferredFollowUpIsLogged(t *testing.T) {
+	var logs bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	movies := &autoFakeMovieFinder{movies: []models.Movie{autoMovieIn("m1", "lib-a", models.SubtitleStatusNotSearched)}}
+	item := &autoFakeItemProcessor{}
+	gen := NewAutoGenerator(item, &autoFakeLibraryPolicy{enabled: autoEnabledSet("lib-a")}, logger,
+		WithAutoCandidateFinders(movies, nil))
+	t.Cleanup(gen.Stop)
+
+	entered, release, second := make(chan struct{}), make(chan struct{}), make(chan struct{})
+	var n atomic.Int32
+	item.outcome = func(context.Context, MediaRef) (*ProcessOutcome, error) {
+		switch n.Add(1) {
+		case 1:
+			close(entered)
+			<-release
+		case 2:
+			close(second)
+		}
+		return &ProcessOutcome{Kind: RouteDeliverDirect}, nil
+	}
+
+	gen.ScanCallback()()
+	<-entered
+	gen.Run(context.Background())
+	close(release)
+	<-second
+	gen.Stop()
+
+	out := logs.String()
+	assert.Contains(t, out, "follow-up round queued")
+	assert.Contains(t, out, "starting deferred follow-up round")
+	assert.Contains(t, out, "reason=deferred_trigger")
+}
+
+// AC #2: N triggers during one round merge into one follow-up.
+func TestAutoGenerator_ManyOverlappingTriggersMergeIntoOneFollowUp(t *testing.T) {
+	h, entered, release, fourth := overlapHarness(t)
+
+	h.gen.ScanCallback()()
+	<-entered
+	// Direct Run calls, not ScanCallback: a `go`-spawned trigger that is only
+	// scheduled AFTER the first round ends is legitimately a NEW trigger (and
+	// would correctly queue a third round) — the test must land all three
+	// while the round is provably in flight.
+	h.gen.Run(context.Background())
+	h.gen.Run(context.Background())
+	h.gen.Run(context.Background())
+	close(release)
+	<-fourth
+	h.gen.Stop()
+
+	assert.Equal(t, []string{"m1", "m2", "m1", "m2"}, h.item.refIDs(),
+		"each round re-enumerates the whole eligible set, so a second follow-up would find nothing the first did not")
+	assert.Equal(t, 2, h.policy.calls)
+}
+
+// AC #4: Stop drops the pending follow-up.
+func TestAutoGenerator_StopDropsThePendingFollowUp(t *testing.T) {
+	h, entered, release, _ := overlapHarness(t)
+	h.blockSecondOnCancel = true
+
+	h.gen.ScanCallback()()
+	<-entered
+	h.gen.Run(context.Background()) // queued (synchronous trigger — see the merge test)
+	stopped := make(chan struct{})
+	go func() { h.gen.Stop(); close(stopped) }()
+	close(release)
+	<-stopped
+
+	// Deterministic (review H1): m2 blocks until Stop's cancel, which is issued
+	// only after stopped/pending were written under mu — so the round's defer
+	// is guaranteed to see pending=false, whatever the scheduler does.
+	assert.Equal(t, 1, h.policy.calls, "shutdown is not the time to start work — the next boot's first scan covers it")
+	// Two legitimate endings, both "Stop won": the cancel landed before m1
+	// returned (loop head breaks → [m1]) or after (m2 runs, waits for the
+	// cancel → [m1 m2]). What must never appear is a third item — a follow-up.
+	ids := h.item.refIDs()
+	assert.LessOrEqual(t, len(ids), 2, "a follow-up round ran after Stop: %v", ids)
+	assert.Equal(t, "m1", ids[0])
 }
 
 // TestAutoGenerator_InFlightFlagIsReleasedAfterTheRound pins the OTHER half of
