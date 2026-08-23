@@ -66,6 +66,23 @@ func (m *MockMovieRepository) UpdateEnrichedMetadata(ctx context.Context, movie 
 	return m.Called(ctx, movie).Error(0)
 }
 
+// Single-intent writers (bugfix-wide-update-stale-copy-other-callers).
+func (m *MockMovieRepository) UpdateScanFileInfo(ctx context.Context, id string, fileSize int64, parseStatus models.ParseStatus) error {
+	return m.Called(ctx, id, fileSize, parseStatus).Error(0)
+}
+
+func (m *MockMovieRepository) MarkRemoved(ctx context.Context, id string) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+func (m *MockMovieRepository) UpdateParseStatus(ctx context.Context, id string, status models.ParseStatus) error {
+	return m.Called(ctx, id, status).Error(0)
+}
+
+func (m *MockMovieRepository) UpdatePosterPath(ctx context.Context, id, posterPath string) error {
+	return m.Called(ctx, id, posterPath).Error(0)
+}
+
 func (m *MockMovieRepository) Delete(ctx context.Context, id string) error {
 	return m.Called(ctx, id).Error(0)
 }
@@ -256,6 +273,19 @@ func (m *MockSeriesRepository) Update(ctx context.Context, series *models.Series
 // expectation so an accidental return to the wide writer fails loudly.
 func (m *MockSeriesRepository) UpdateEnrichedMetadata(ctx context.Context, series *models.Series) error {
 	return m.Called(ctx, series).Error(0)
+}
+
+// Single-intent writers (bugfix-wide-update-stale-copy-other-callers).
+func (m *MockSeriesRepository) UpdateFileSize(ctx context.Context, id string, fileSize int64) error {
+	return m.Called(ctx, id, fileSize).Error(0)
+}
+
+func (m *MockSeriesRepository) UpdateParseStatus(ctx context.Context, id string, status models.ParseStatus) error {
+	return m.Called(ctx, id, status).Error(0)
+}
+
+func (m *MockSeriesRepository) UpdatePosterPath(ctx context.Context, id, posterPath string) error {
+	return m.Called(ctx, id, posterPath).Error(0)
 }
 
 func (m *MockSeriesRepository) Delete(ctx context.Context, id string) error {

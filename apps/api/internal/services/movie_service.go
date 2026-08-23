@@ -111,6 +111,9 @@ func (s *MovieService) Update(ctx context.Context, movie *models.Movie) error {
 
 	slog.Info("Updating movie", "movie_id", movie.ID, "title", movie.Title)
 
+	// Wide Update kept on purpose (bugfix-wide-update-stale-copy-other-callers
+	// §audit #7): PUT /movies/:id is a user edit that owns these fields; the
+	// handler loaded the row just before binding the body — no long window.
 	if err := s.repo.Update(ctx, movie); err != nil {
 		slog.Error("Failed to update movie", "error", err, "movie_id", movie.ID)
 		return fmt.Errorf("failed to update movie: %w", err)

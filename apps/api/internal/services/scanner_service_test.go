@@ -198,7 +198,7 @@ func TestScannerService_StartScan_DuplicateDetection_SizeChanged(t *testing.T) {
 		FileSize: models.NewNullInt64(999), // different size
 	}
 	movieRepo.On("FindByFilePath", mock.Anything, resolvedPath).Return(existingMovie, nil)
-	movieRepo.On("Update", mock.Anything, mock.AnythingOfType("*models.Movie")).Return(nil)
+	movieRepo.On("UpdateScanFileInfo", mock.Anything, "existing-id", int64(len("fake video content")), models.ParseStatusPending).Return(nil)
 
 	ctx := context.Background()
 	result, err := svc.StartScan(ctx)
@@ -210,7 +210,10 @@ func TestScannerService_StartScan_DuplicateDetection_SizeChanged(t *testing.T) {
 	assert.Equal(t, 1, result.FilesUpdated)
 	assert.Equal(t, 0, result.FilesSkipped)
 
-	movieRepo.AssertCalled(t, "Update", mock.Anything, mock.AnythingOfType("*models.Movie"))
+	// bugfix-wide-update-stale-copy-other-callers §audit #1: the size/parse
+	// intent goes through the single-intent writer, never the wide Update.
+	movieRepo.AssertCalled(t, "UpdateScanFileInfo", mock.Anything, "existing-id", int64(len("fake video content")), models.ParseStatusPending)
+	movieRepo.AssertNotCalled(t, "Update", mock.Anything, mock.Anything)
 }
 
 func TestScannerService_StartScan_VideoFormatFiltering(t *testing.T) {
@@ -626,9 +629,7 @@ func TestScannerService_IncrementalScan_DetectRemovedFiles(t *testing.T) {
 	// Override the default Maybe() mock with a specific one
 	movieRepo.ExpectedCalls = filterCalls(movieRepo.ExpectedCalls, "FindAllWithFilePath")
 	movieRepo.On("FindAllWithFilePath", mock.Anything).Return(existingMovies, nil)
-	movieRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Movie) bool {
-		return m.ID == "movie-1" && m.IsRemoved == true
-	})).Return(nil)
+	movieRepo.On("MarkRemoved", mock.Anything, "movie-1").Return(nil)
 
 	ctx := context.Background()
 	result, err := svc.StartScan(ctx)
@@ -637,9 +638,12 @@ func TestScannerService_IncrementalScan_DetectRemovedFiles(t *testing.T) {
 	assert.NotNil(t, result)
 	assert.Equal(t, 1, result.FilesRemoved)
 
-	movieRepo.AssertCalled(t, "Update", mock.Anything, mock.MatchedBy(func(m *models.Movie) bool {
-		return m.ID == "movie-1" && m.IsRemoved == true
-	}))
+	// bugfix-wide-update-stale-copy-other-callers §audit #2: the removed-file
+	// pass holds a copy of EVERY movie loaded before its os.Stat walk; the
+	// wide Update would write that stale copy back over a concurrent subtitle
+	// write. Only the single-column writer may be used here.
+	movieRepo.AssertCalled(t, "MarkRemoved", mock.Anything, "movie-1")
+	movieRepo.AssertNotCalled(t, "Update", mock.Anything, mock.Anything)
 }
 
 func TestScannerService_IncrementalScan_MtimeChange(t *testing.T) {
@@ -660,7 +664,7 @@ func TestScannerService_IncrementalScan_MtimeChange(t *testing.T) {
 		UpdatedAt: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), // old time
 	}
 	movieRepo.On("FindByFilePath", mock.Anything, resolvedPath).Return(existingMovie, nil)
-	movieRepo.On("Update", mock.Anything, mock.AnythingOfType("*models.Movie")).Return(nil)
+	movieRepo.On("UpdateScanFileInfo", mock.Anything, "existing-id", mock.AnythingOfType("int64"), models.ParseStatusPending).Return(nil)
 
 	ctx := context.Background()
 	result, err := svc.StartScan(ctx)
@@ -671,7 +675,8 @@ func TestScannerService_IncrementalScan_MtimeChange(t *testing.T) {
 	assert.Equal(t, 1, result.FilesUpdated) // updated because mtime is newer
 	assert.Equal(t, 0, result.FilesSkipped)
 
-	movieRepo.AssertCalled(t, "Update", mock.Anything, mock.AnythingOfType("*models.Movie"))
+	movieRepo.AssertCalled(t, "UpdateScanFileInfo", mock.Anything, "existing-id", mock.AnythingOfType("int64"), models.ParseStatusPending)
+	movieRepo.AssertNotCalled(t, "Update", mock.Anything, mock.Anything)
 }
 
 // filterCalls removes mock calls matching the given method name

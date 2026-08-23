@@ -196,7 +196,15 @@ func (m *mockPQMovieRepo) Update(_ context.Context, _ *models.Movie) error { ret
 func (m *mockPQMovieRepo) UpdateEnrichedMetadata(_ context.Context, _ *models.Movie) error {
 	return nil
 }
-func (m *mockPQMovieRepo) Delete(_ context.Context, _ string) error { return nil }
+func (m *mockPQMovieRepo) UpdateScanFileInfo(context.Context, string, int64, models.ParseStatus) error {
+	return nil
+}
+func (m *mockPQMovieRepo) MarkRemoved(context.Context, string) error { return nil }
+func (m *mockPQMovieRepo) UpdateParseStatus(context.Context, string, models.ParseStatus) error {
+	return nil
+}
+func (m *mockPQMovieRepo) UpdatePosterPath(context.Context, string, string) error { return nil }
+func (m *mockPQMovieRepo) Delete(_ context.Context, _ string) error               { return nil }
 func (m *mockPQMovieRepo) List(_ context.Context, _ repository.ListParams) ([]models.Movie, *repository.PaginationResult, error) {
 	return nil, nil, nil
 }
@@ -298,7 +306,12 @@ func (m *mockPQSeriesRepo) Update(_ context.Context, _ *models.Series) error { r
 func (m *mockPQSeriesRepo) UpdateEnrichedMetadata(_ context.Context, _ *models.Series) error {
 	return nil
 }
-func (m *mockPQSeriesRepo) Delete(_ context.Context, _ string) error { return nil }
+func (m *mockPQSeriesRepo) UpdateFileSize(context.Context, string, int64) error { return nil }
+func (m *mockPQSeriesRepo) UpdateParseStatus(context.Context, string, models.ParseStatus) error {
+	return nil
+}
+func (m *mockPQSeriesRepo) UpdatePosterPath(context.Context, string, string) error { return nil }
+func (m *mockPQSeriesRepo) Delete(_ context.Context, _ string) error               { return nil }
 func (m *mockPQSeriesRepo) List(_ context.Context, _ repository.ListParams) ([]models.Series, *repository.PaginationResult, error) {
 	return nil, nil, nil
 }

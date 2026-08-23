@@ -28,6 +28,13 @@ type MovieRepositoryInterface interface {
 	// UpdateEnrichedMetadata writes ONLY the columns EnrichmentService computes,
 	// leaving the subtitle-delivery columns untouched (enriched_metadata_update.go).
 	UpdateEnrichedMetadata(ctx context.Context, movie *models.Movie) error
+	// Single-intent writers (bugfix-wide-update-stale-copy-other-callers):
+	// each persists exactly the columns its caller computes, so a scan-time
+	// pass holding a stale copy cannot revert a concurrent subtitle write.
+	UpdateScanFileInfo(ctx context.Context, id string, fileSize int64, parseStatus models.ParseStatus) error
+	MarkRemoved(ctx context.Context, id string) error
+	UpdateParseStatus(ctx context.Context, id string, status models.ParseStatus) error
+	UpdatePosterPath(ctx context.Context, id, posterPath string) error
 
 	// Delete removes a movie from the database by ID
 	Delete(ctx context.Context, id string) error
@@ -133,6 +140,10 @@ type SeriesRepositoryInterface interface {
 	Update(ctx context.Context, series *models.Series) error
 	// UpdateEnrichedMetadata writes ONLY the columns EnrichmentService computes.
 	UpdateEnrichedMetadata(ctx context.Context, series *models.Series) error
+	// Single-intent writers (bugfix-wide-update-stale-copy-other-callers).
+	UpdateFileSize(ctx context.Context, id string, fileSize int64) error
+	UpdateParseStatus(ctx context.Context, id string, status models.ParseStatus) error
+	UpdatePosterPath(ctx context.Context, id, posterPath string) error
 
 	// Delete removes a series from the database by ID
 	Delete(ctx context.Context, id string) error

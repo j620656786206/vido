@@ -485,11 +485,13 @@ func (s *ScannerService) processVideoFile(ctx context.Context, resolvedPath, sca
 			return nil
 		}
 
-		// File changed (size or mtime) — update the record and reset parse status
-		existing.FileSize = models.NewNullInt64(info.Size())
-		existing.ParseStatus = models.ParseStatusPending
-		existing.UpdatedAt = time.Now()
-		if err := s.movieRepo.Update(ctx, existing); err != nil {
+		// File changed (size or mtime) — record the new size and reset the
+		// parse status. Narrow write (bugfix-wide-update-stale-copy-other-
+		// callers §audit #1): two columns are what this pass learned; the wide
+		// Update would also write back the five subtitle columns from a copy
+		// loaded a moment ago, during the very scan whose completion starts
+		// the free subtitle lane.
+		if err := s.movieRepo.UpdateScanFileInfo(ctx, existing.ID, info.Size(), models.ParseStatusPending); err != nil {
 			return fmt.Errorf("failed to update movie record: %w", err)
 		}
 		s.mu.Lock()
@@ -654,10 +656,13 @@ func (s *ScannerService) detectRemovedFiles(ctx context.Context) (int, error) {
 			continue
 		}
 
-		// File does not exist — mark as removed
-		movie.IsRemoved = true
-		movie.UpdatedAt = time.Now()
-		if err := s.movieRepo.Update(ctx, movie); err != nil {
+		// File does not exist — mark as removed. Narrow write (bugfix-wide-
+		// update-stale-copy-other-callers §audit #2): `movies` was loaded in
+		// full ABOVE and every row since has cost an os.Stat on the NAS, so
+		// this copy can be seconds stale — and this pass runs right after
+		// scan-complete, concurrently with enrichment and the free subtitle
+		// lane. Writing the whole row back reverted their work.
+		if err := s.movieRepo.MarkRemoved(ctx, movie.ID); err != nil {
 			s.logger.Error("failed to mark movie as removed", "id", movie.ID, "path", movie.FilePath.String, "error", err)
 			continue
 		}
@@ -732,9 +737,12 @@ func (s *ScannerService) aggregateSeriesFileSizes(ctx context.Context) error {
 		}
 
 		if totalSize > 0 {
-			series.FileSize = models.NewNullInt64(totalSize)
-			series.UpdatedAt = time.Now()
-			if err := s.seriesRepo.Update(ctx, series); err != nil {
+			// Narrow write (bugfix-wide-update-stale-copy-other-callers §audit
+			// #3): `allSeries` was loaded once above; by the time row N is
+			// reached every earlier series has cost one stat per episode. The
+			// wide Update would write parse_status / poster_path / credits back
+			// from that stale copy over what enrichment wrote meanwhile.
+			if err := s.seriesRepo.UpdateFileSize(ctx, series.ID, totalSize); err != nil {
 				s.logger.Warn("failed to update series file_size",
 					"series_id", series.ID, "error", err)
 			} else {
