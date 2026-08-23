@@ -14,6 +14,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -90,12 +92,26 @@ func (f *autoFakeRunLister) ListByStatus(_ context.Context, status models.Subtit
 	return out, nil
 }
 
+// autoNow is the fixed "run time" every fixture row carries — after
+// FreeLaneEpoch, so the rows count (bugfix-auto-exclusion-never-expires AC #3).
+var autoNow = freeLaneEpoch.Add(24 * time.Hour)
+
+// autoOldFile is the default mtime the harness reports: older than every row,
+// so a parked item STAYS parked unless a test says the file changed.
+var autoOldFile = autoNow.Add(-time.Hour)
+
 func deferredRun(mediaID string) models.SubtitleRun {
 	return models.SubtitleRun{
 		MediaID:      mediaID,
 		Status:       models.SubtitleRunSkipped,
 		ErrorMessage: DeferredPaidRunPrefix + "translate requires paid work",
+		StartedAt:    autoNow,
 	}
+}
+
+func withStartedAt(r models.SubtitleRun, t time.Time) models.SubtitleRun {
+	r.StartedAt = t
+	return r
 }
 
 // skippedRun is a `skipped` row that is NOT a deferral — a decline the pipeline
@@ -105,6 +121,7 @@ func skippedRun(mediaID, reason string) models.SubtitleRun {
 		MediaID:      mediaID,
 		Status:       models.SubtitleRunSkipped,
 		ErrorMessage: reason,
+		StartedAt:    autoNow,
 	}
 }
 
@@ -113,6 +130,7 @@ func failedRun(mediaID string) models.SubtitleRun {
 		MediaID:      mediaID,
 		Status:       models.SubtitleRunFailed,
 		ErrorMessage: "subtitle pipeline: movie " + mediaID + ": probe: ffprobe: no such file or directory",
+		StartedAt:    autoNow,
 	}
 }
 
@@ -124,6 +142,7 @@ func cancelledRun(mediaID string) models.SubtitleRun {
 		MediaID:      mediaID,
 		Status:       models.SubtitleRunFailed,
 		ErrorMessage: CancelledRunPrefix + "subtitle pipeline: movie " + mediaID + ": extract: ffmpeg cancelled",
+		StartedAt:    autoNow,
 	}
 }
 
@@ -190,7 +209,7 @@ func (f *autoFakeItemProcessor) refIDs() []string {
 // ─── builders ──────────────────────────────────────────────────────────────
 
 func autoMovieIn(id, libraryID string, status models.SubtitleStatus) models.Movie {
-	m := models.Movie{ID: id, SubtitleStatus: status}
+	m := models.Movie{ID: id, SubtitleStatus: status, FilePath: models.NewNullString("/media/" + id + ".mkv")}
 	if libraryID != "" {
 		m.LibraryID = models.NewNullString(libraryID)
 	}
@@ -198,7 +217,7 @@ func autoMovieIn(id, libraryID string, status models.SubtitleStatus) models.Movi
 }
 
 func autoEpisodeIn(id, seriesID string, status models.SubtitleStatus) models.Episode {
-	return models.Episode{ID: id, SeriesID: seriesID, SubtitleStatus: status}
+	return models.Episode{ID: id, SeriesID: seriesID, SubtitleStatus: status, FilePath: models.NewNullString("/media/" + id + ".mkv")}
 }
 
 func autoSeriesIn(id, libraryID string) *models.Series {
@@ -229,7 +248,29 @@ type autoHarness struct {
 	policy   *autoFakeLibraryPolicy
 	item     *autoFakeItemProcessor
 	runs     *autoFakeRunLister
+	files    *autoFakeFiles
 }
+
+// autoFakeFiles is the mod-time port: per-path mtimes (default autoOldFile),
+// an optional error, and a record of which paths were stat-ed (AC #5).
+type autoFakeFiles struct {
+	modTimes map[string]time.Time
+	err      error
+	stats    []string
+}
+
+func (f *autoFakeFiles) modTime(path string) (time.Time, error) {
+	f.stats = append(f.stats, path)
+	if f.err != nil {
+		return time.Time{}, f.err
+	}
+	if t, ok := f.modTimes[path]; ok {
+		return t, nil
+	}
+	return autoOldFile, nil
+}
+
+func (f *autoFakeFiles) replaced(id string, at time.Time) { f.modTimes["/media/"+id+".mkv"] = at }
 
 func newAutoHarness(t *testing.T, opts ...AutoGeneratorOption) *autoHarness {
 	t.Helper()
@@ -240,12 +281,14 @@ func newAutoHarness(t *testing.T, opts ...AutoGeneratorOption) *autoHarness {
 		policy:   &autoFakeLibraryPolicy{enabled: autoEnabledSet()},
 		item:     &autoFakeItemProcessor{},
 		runs:     &autoFakeRunLister{},
+		files:    &autoFakeFiles{modTimes: map[string]time.Time{}},
 	}
 	h.gen = NewAutoGenerator(h.item, h.policy, nil,
 		append([]AutoGeneratorOption{
 			WithAutoCandidateFinders(h.movies, h.episodes),
 			WithAutoSeriesResolver(h.series),
 			WithAutoDeferredRuns(h.runs),
+			WithAutoFileModTime(h.files.modTime),
 		}, opts...)...)
 	// Releases the lifetime ctx, and gives every test free coverage that Stop
 	// after a finished round returns (review L8).
@@ -1059,4 +1102,191 @@ func TestAutoGenerator_CancelledRowsDoNotRescueAParkedItem(t *testing.T) {
 	h.gen.Run(context.Background())
 
 	assert.Empty(t, h.item.refIDs(), "genuine failures at the limit still park, whatever else is in the history")
+}
+
+// ─── bugfix-auto-exclusion-never-expires ───────────────────────────────────
+
+func exclusionHarness(t *testing.T) *autoHarness {
+	t.Helper()
+	h := newAutoHarness(t)
+	h.policy.enabled = autoEnabledSet("lib-a")
+	h.movies.movies = []models.Movie{autoMovieIn("m1", "lib-a", models.SubtitleStatusNotSearched)}
+	return h
+}
+
+// AC #1: a deferred verdict holds only while the file is the one it was made on.
+func TestAutoExclusion_ReplacedFileUnparksADeferredItem(t *testing.T) {
+	h := exclusionHarness(t)
+	h.runs.runs = []models.SubtitleRun{deferredRun("m1")}
+	h.files.replaced("m1", autoNow.Add(time.Minute)) // newer than the run
+
+	h.gen.Run(context.Background())
+
+	assert.Equal(t, []string{"m1"}, h.item.refIDs(),
+		"a new remux may carry an embedded Chinese track — the paid verdict was about the OLD file")
+}
+
+func TestAutoExclusion_OlderFileKeepsADeferredItemParked(t *testing.T) {
+	h := exclusionHarness(t)
+	h.runs.runs = []models.SubtitleRun{deferredRun("m1")}
+	h.files.replaced("m1", autoNow.Add(-time.Minute))
+
+	h.gen.Run(context.Background())
+
+	assert.Empty(t, h.item.refIDs())
+}
+
+// AC #2: only failures AFTER the current file's mtime count.
+func TestAutoExclusion_ReplacedFileResetsTheFailureCount(t *testing.T) {
+	cases := []struct {
+		name      string
+		replaced  time.Duration // mtime relative to autoNow
+		failedAts []time.Duration
+		want      []string
+	}{
+		{"all failures predate the file", time.Minute, []time.Duration{-3 * time.Minute, -2 * time.Minute, -time.Minute}, []string{"m1"}},
+		{"enough failures predate the file to drop below the limit", -90 * time.Second, []time.Duration{-3 * time.Minute, -2 * time.Minute, -time.Minute}, []string{"m1"}},
+		{"the limit is reached after the file", -10 * time.Minute, []time.Duration{-3 * time.Minute, -2 * time.Minute, -time.Minute}, nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			h := exclusionHarness(t)
+			for _, d := range tc.failedAts {
+				h.runs.runs = append(h.runs.runs, withStartedAt(failedRun("m1"), autoNow.Add(d)))
+			}
+			h.files.replaced("m1", autoNow.Add(tc.replaced))
+
+			h.gen.Run(context.Background())
+
+			assert.ElementsMatch(t, tc.want, h.item.refIDs())
+		})
+	}
+}
+
+// AC #3: rows from before the free lane's current epoch are stale verdicts.
+func TestAutoExclusion_RowsBeforeTheEpochDoNotCount(t *testing.T) {
+	before := freeLaneEpoch.Add(-time.Hour)
+	t.Run("deferred", func(t *testing.T) {
+		h := exclusionHarness(t)
+		h.runs.runs = []models.SubtitleRun{withStartedAt(deferredRun("m1"), before)}
+		h.gen.Run(context.Background())
+		assert.Equal(t, []string{"m1"}, h.item.refIDs(), "an upgrade may have made this item free")
+	})
+	t.Run("failed", func(t *testing.T) {
+		h := exclusionHarness(t)
+		for i := 0; i < autoFailureAttemptLimit; i++ {
+			h.runs.runs = append(h.runs.runs, withStartedAt(failedRun("m1"), before))
+		}
+		h.gen.Run(context.Background())
+		assert.Equal(t, []string{"m1"}, h.item.refIDs())
+	})
+	t.Run("rows after the epoch still count", func(t *testing.T) {
+		h := exclusionHarness(t)
+		h.runs.runs = []models.SubtitleRun{deferredRun("m1")}
+		h.gen.Run(context.Background())
+		assert.Empty(t, h.item.refIDs())
+	})
+}
+
+// AC #4: cannot tell → stays parked (re-probing a vanished file every scan is
+// H1's starvation again).
+func TestAutoExclusion_StatFailureKeepsTheItemParked(t *testing.T) {
+	h := exclusionHarness(t)
+	h.runs.runs = []models.SubtitleRun{deferredRun("m1")}
+	h.files.err = errors.New("stale NFS handle")
+
+	h.gen.Run(context.Background())
+
+	assert.Empty(t, h.item.refIDs())
+}
+
+func TestAutoExclusion_EmptyPathKeepsTheItemParked(t *testing.T) {
+	h := exclusionHarness(t)
+	h.movies.movies[0].FilePath = models.NullString{}
+	h.runs.runs = []models.SubtitleRun{deferredRun("m1")}
+
+	h.gen.Run(context.Background())
+
+	assert.Empty(t, h.item.refIDs())
+	assert.Empty(t, h.files.stats, "nothing to stat")
+}
+
+// AC #5: the stat happens only for items that are parked AND would otherwise
+// be selected — never for un-parked items, never for ineligible ones.
+func TestAutoExclusion_StatIsBoundedToParkedEligibleItems(t *testing.T) {
+	h := newAutoHarness(t)
+	h.policy.enabled = autoEnabledSet("lib-a")
+	h.movies.movies = []models.Movie{
+		autoMovieIn("m-parked", "lib-a", models.SubtitleStatusNotSearched),
+		autoMovieIn("m-parked-other-lib", "lib-b", models.SubtitleStatusNotSearched),
+		autoMovieIn("m-parked-found", "lib-a", models.SubtitleStatusFound),
+		autoMovieIn("m-free", "lib-a", models.SubtitleStatusNotSearched),
+	}
+	h.episodes.episodes = []models.Episode{
+		autoEpisodeIn("e-parked", "s-a", models.SubtitleStatusNotSearched),
+		autoEpisodeIn("e-parked-other-lib", "s-b", models.SubtitleStatusNotSearched),
+	}
+	h.series.byID["s-a"] = autoSeriesIn("s-a", "lib-a")
+	h.series.byID["s-b"] = autoSeriesIn("s-b", "lib-b")
+	h.runs.runs = []models.SubtitleRun{
+		deferredRun("m-parked"), deferredRun("m-parked-other-lib"), deferredRun("m-parked-found"),
+		deferredRun("e-parked"), deferredRun("e-parked-other-lib"),
+		skippedRun("m-free", "fail-closed: unusable stream"),
+	}
+
+	h.gen.Run(context.Background())
+
+	assert.Equal(t, []string{"/media/m-parked.mkv", "/media/e-parked.mkv"}, h.files.stats,
+		"episodes are stat-ed only after the series→library filter, like movies after theirs")
+	assert.Equal(t, []string{"m-free"}, h.item.refIDs())
+}
+
+// Review H1: the production lookup must notice a replacement that PRESERVED
+// mtime (rsync -a, cp -p, *arr imports) — ctime moves on every such operation.
+func TestFileChangedAt_PrefersInodeChangeTimeOverAPreservedMtime(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "movie.mkv")
+	require.NoError(t, os.WriteFile(path, []byte("v2"), 0o644))
+	old := time.Now().Add(-48 * time.Hour)
+	require.NoError(t, os.Chtimes(path, old, old)) // "rsync -a" kept the old mtime
+
+	changed, err := fileChangedAt(path)
+	require.NoError(t, err)
+
+	info, err := os.Stat(path)
+	require.NoError(t, err)
+	assert.True(t, info.ModTime().Before(time.Now().Add(-47*time.Hour)), "fixture: mtime really is old")
+	assert.True(t, changed.After(time.Now().Add(-time.Minute)),
+		"a file written a moment ago must report a recent change time even though its mtime was set back: got %v", changed)
+}
+
+// Review M2: a stat that hangs (D-state mount) must not hold the round — it
+// times out and the item stays parked.
+func TestAutoExclusion_HungStatTimesOutAndKeepsTheItemParked(t *testing.T) {
+	h := exclusionHarness(t)
+	h.runs.runs = []models.SubtitleRun{deferredRun("m1")}
+	block := make(chan struct{})
+	t.Cleanup(func() { close(block) })
+	ctx, cancel := context.WithCancel(context.Background())
+	var statted atomic.Bool
+	// The "hung" stat cancels the round itself and then never returns — so
+	// the round provably reached the stat, and the ctx ceiling (cheaper to
+	// exercise than autoStatTimeout) is what frees it.
+	h.gen.modTime = func(string) (time.Time, error) { statted.Store(true); cancel(); <-block; return autoNow, nil }
+
+	h.gen.Run(ctx)
+
+	assert.True(t, statted.Load())
+	assert.Empty(t, h.item.refIDs())
+}
+
+// AC #6: #263's cancelled rows stay out of the count regardless of mtime.
+func TestAutoExclusion_CancelledRowsStayExemptAfterReplacement(t *testing.T) {
+	h := exclusionHarness(t)
+	h.runs.runs = append(failedRuns("m1", autoFailureAttemptLimit-1), cancelledRun("m1"), cancelledRun("m1"))
+	h.files.replaced("m1", autoNow.Add(-10*time.Minute))
+
+	h.gen.Run(context.Background())
+
+	assert.Equal(t, []string{"m1"}, h.item.refIDs())
 }
