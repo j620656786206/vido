@@ -591,6 +591,9 @@ func main() {
 	var (
 		subtitlePipeline     *subtitle.Pipeline
 		subtitlePipelinePool *subtitle.WorkerPool
+		// Hoisted so the graceful-shutdown block can Stop() it
+		// (bugfix-autogenerator-no-timeout-or-shutdown AC #6). nil in legacy mode.
+		autoGenerator *subtitle.AutoGenerator
 	)
 	// Built unconditionally: the FR12 endpoint uses it to answer 404 for an
 	// unknown media id, and it is three struct fields — nothing is started.
@@ -675,7 +678,7 @@ func main() {
 		// track is finished locally while anything that would bill stops at the
 		// threshold and waits for the estimate screen. The paid sweep this slot
 		// once held stays gone.
-		autoGenerator := subtitle.NewAutoGenerator(
+		autoGenerator = subtitle.NewAutoGenerator(
 			subtitlePipeline,
 			autoSubtitlePolicyAdapter{libraries: repos.MediaLibraries},
 			slog.Default(),
@@ -698,6 +701,7 @@ func main() {
 			"scan_auto_enqueue", false,
 			// 9R-10b: free lane only, per-library opt-in, default OFF.
 			"scan_auto_free_generation", true,
+			"scan_auto_item_timeout", subtitle.AutoGenerationItemTimeout,
 			"auto_max_per_run", subtitle.AutoGenerationMaxPerRun)
 	} else {
 		// ONE line, at wiring time — not one per scanned item (AC #5).
@@ -1089,6 +1093,15 @@ func main() {
 	if subtitlePipelinePool != nil {
 		slog.Info("Stopping subtitle pipeline worker pool...")
 		subtitlePipelinePool.Stop()
+	}
+
+	// Stop the free-lane auto-generation round (bugfix-autogenerator-no-timeout-
+	// or-shutdown AC #6). MUST precede db.Close() below: Stop cancels the
+	// in-flight item and waits for it, and that item's failItem cleanup is what
+	// keeps the media row out of a stranded `extracting` status.
+	if autoGenerator != nil {
+		slog.Info("Stopping subtitle auto-generation...")
+		autoGenerator.Stop()
 	}
 
 	// Stop DVR plugin health scheduler (Story 13-4a)

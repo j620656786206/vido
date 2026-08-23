@@ -548,6 +548,16 @@ func sidecarCueCount(path string) (int, bool) {
 // single scan while the free items further down the list are never reached.
 const DeferredPaidRunPrefix = "deferred-paid: "
 
+// CancelledRunPrefix marks a `failed` run whose cause was the CALLER's
+// cancellation — a shutdown, WorkerPool stop, or a user cancelling a consent
+// batch mid-item — not the file (bugfix-autogenerator-no-timeout-or-shutdown
+// AC #5). The row is still written — failItem's cleanup is what keeps
+// the media row out of a stranded in-flight status — but
+// AutoGenerator.excludedMediaIDs does not count it toward
+// autoFailureAttemptLimit. A deadline (DeadlineExceeded) is deliberately NOT
+// marked: that one is about the file.
+const CancelledRunPrefix = "cancelled: "
+
 // deferPaidItem is the FreeOnly brake (9R-10b AC #3): the run stops at the
 // threshold of a paid call, having spent nothing.
 //
@@ -671,7 +681,16 @@ func (p *Pipeline) failItem(ctx context.Context, ref MediaRef, run *models.Subti
 		run.Status = models.SubtitleRunFailed
 		// Diagnostic English + the SUBTITLE_ sentinel. The zh-TW Rule 3
 		// envelope is composed at the handler, which sub-1-6 owns.
-		run.ErrorMessage = truncateErrorMessage(err.Error())
+		msg := err.Error()
+		// ctx.Err() as well as the cause: a subprocess killed by cancellation
+		// surfaces as an *exec.ExitError ("signal: killed"), not as
+		// context.Canceled — ffprobe_service.go only special-cases the deadline.
+		// The item ctx itself tells the two apart (Canceled on shutdown,
+		// DeadlineExceeded on the per-item timeout).
+		if errors.Is(cause, context.Canceled) || errors.Is(ctx.Err(), context.Canceled) {
+			msg = CancelledRunPrefix + msg
+		}
+		run.ErrorMessage = truncateErrorMessage(msg)
 		run.CompletedAt = &completedAt
 		if uerr := p.runs.Update(cleanupCtx, run); uerr != nil {
 			p.logger.Error("failed to record the failed subtitle run",

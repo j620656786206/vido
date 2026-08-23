@@ -8,12 +8,16 @@ package subtitle
 // opposite failure — selecting an item whose library never opted in.
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -112,6 +116,17 @@ func failedRun(mediaID string) models.SubtitleRun {
 	}
 }
 
+// cancelledRun is a `failed` row written by failItem under shutdown
+// cancellation (bugfix-autogenerator-no-timeout-or-shutdown AC #5) — it must
+// NOT count toward autoFailureAttemptLimit.
+func cancelledRun(mediaID string) models.SubtitleRun {
+	return models.SubtitleRun{
+		MediaID:      mediaID,
+		Status:       models.SubtitleRunFailed,
+		ErrorMessage: CancelledRunPrefix + "subtitle pipeline: movie " + mediaID + ": extract: ffmpeg cancelled",
+	}
+}
+
 func failedRuns(mediaID string, n int) []models.SubtitleRun {
 	out := make([]models.SubtitleRun, 0, n)
 	for i := 0; i < n; i++ {
@@ -143,16 +158,16 @@ type autoProcessedCall struct {
 type autoFakeItemProcessor struct {
 	mu      sync.Mutex
 	calls   []autoProcessedCall
-	outcome func(ref MediaRef) (*ProcessOutcome, error)
+	outcome func(ctx context.Context, ref MediaRef) (*ProcessOutcome, error)
 }
 
-func (f *autoFakeItemProcessor) ProcessItem(_ context.Context, ref MediaRef, opts ProcessItemOptions) (*ProcessOutcome, error) {
+func (f *autoFakeItemProcessor) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessItemOptions) (*ProcessOutcome, error) {
 	f.mu.Lock()
 	f.calls = append(f.calls, autoProcessedCall{ref: ref, opts: opts})
 	outcome := f.outcome
 	f.mu.Unlock()
 	if outcome != nil {
-		return outcome(ref)
+		return outcome(ctx, ref)
 	}
 	return &ProcessOutcome{Kind: RouteDeliverDirect}, nil
 }
@@ -228,6 +243,9 @@ func newAutoHarness(t *testing.T, opts ...AutoGeneratorOption) *autoHarness {
 			WithAutoSeriesResolver(h.series),
 			WithAutoDeferredRuns(h.runs),
 		}, opts...)...)
+	// Releases the lifetime ctx, and gives every test free coverage that Stop
+	// after a finished round returns (review L8).
+	t.Cleanup(h.gen.Stop)
 	return h
 }
 
@@ -429,7 +447,7 @@ func TestAutoGenerator_ContinuesWhenOneItemFails(t *testing.T) {
 		autoMovieIn("m1", "lib-a", models.SubtitleStatusNotSearched),
 		autoMovieIn("m2", "lib-a", models.SubtitleStatusNotSearched),
 	}
-	h.item.outcome = func(ref MediaRef) (*ProcessOutcome, error) {
+	h.item.outcome = func(_ context.Context, ref MediaRef) (*ProcessOutcome, error) {
 		if ref.ID == "m1" {
 			return nil, errors.New("ffmpeg exploded")
 		}
@@ -671,7 +689,7 @@ func TestAutoGenerator_SecondRoundIsSkippedWhileOneIsInFlight(t *testing.T) {
 	release := make(chan struct{})
 	var mu sync.Mutex
 	first := true
-	h.item.outcome = func(MediaRef) (*ProcessOutcome, error) {
+	h.item.outcome = func(context.Context, MediaRef) (*ProcessOutcome, error) {
 		mu.Lock()
 		isFirst := first
 		first = false
@@ -713,4 +731,223 @@ func TestAutoGenerator_InFlightFlagIsReleasedAfterTheRound(t *testing.T) {
 
 	assert.Equal(t, []string{"m1", "m1"}, h.item.refIDs(),
 		"a finished round must free the slot — a stuck flag kills auto-generation until the container restarts")
+}
+
+// ─── bugfix-autogenerator-no-timeout-or-shutdown: lifecycle ────────────────
+//
+// AC #1: Stop cancels the in-flight round and returns only after Run has.
+func TestAutoGenerator_StopCancelsTheInFlightRoundAndDrains(t *testing.T) {
+	h := newAutoHarness(t)
+	h.policy.enabled = autoEnabledSet("lib-a")
+	h.movies.movies = []models.Movie{
+		autoMovieIn("m1", "lib-a", models.SubtitleStatusNotSearched),
+		autoMovieIn("m2", "lib-a", models.SubtitleStatusNotSearched),
+	}
+
+	entered := make(chan struct{})
+	var observed error
+	var itemReturned atomic.Bool
+	h.item.outcome = func(ctx context.Context, ref MediaRef) (*ProcessOutcome, error) {
+		close(entered)
+		<-ctx.Done()
+		observed = ctx.Err()
+		itemReturned.Store(true)
+		// The real failItem returns an error on cancellation — the fake must too
+		// (9R-10b CR H2: fakes match the production contract).
+		return nil, observed
+	}
+
+	h.gen.ScanCallback()()
+	<-entered
+	h.gen.Stop()
+
+	// Stop's wg.Wait is the only thing that orders this flag before the check:
+	// without the drain, Stop returns while the item is still blocked.
+	assert.True(t, itemReturned.Load(),
+		"Stop returned while the in-flight item was still running — failItem's cleanup would race db.Close")
+	assert.True(t, errors.Is(observed, context.Canceled), "the item must see Canceled, got %v", observed)
+	assert.Equal(t, []string{"m1"}, h.item.refIDs(), "AC #2: items after the cancellation point are not started")
+}
+
+// Review M1: the item that was mid-flight at cancellation is NOT a failure —
+// its run row carries CancelledRunPrefix and is exempt from parking, so the
+// round's own counters and log lines must say the same thing.
+func TestAutoGenerator_CancelledItemIsNotCountedAsFailed(t *testing.T) {
+	var logs bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+	movies := &autoFakeMovieFinder{movies: []models.Movie{
+		autoMovieIn("m1", "lib-a", models.SubtitleStatusNotSearched),
+		autoMovieIn("m2", "lib-a", models.SubtitleStatusNotSearched),
+	}}
+	item := &autoFakeItemProcessor{}
+	gen := NewAutoGenerator(item, &autoFakeLibraryPolicy{enabled: autoEnabledSet("lib-a")}, logger,
+		WithAutoCandidateFinders(movies, nil))
+	t.Cleanup(gen.Stop)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	item.outcome = func(_ context.Context, ref MediaRef) (*ProcessOutcome, error) {
+		cancel()
+		return nil, context.Canceled
+	}
+
+	gen.Run(ctx)
+
+	out := logs.String()
+	assert.NotContains(t, out, "item failed", "a shutdown is not a file failure")
+	assert.Contains(t, out, "item cancelled mid-flight")
+	assert.Contains(t, out, "subtitle auto-generation cancelled")
+	assert.Contains(t, out, "failed=0", "counters must agree with the CancelledRunPrefix exemption: %s", out)
+	assert.Contains(t, out, "remaining=2", "the cancelled item is still owed, together with the one never started")
+}
+
+// AC #1: idempotent, and safe on a generator that never ran.
+func TestAutoGenerator_StopIsIdempotent(t *testing.T) {
+	h := newAutoHarness(t)
+	assert.NotPanics(t, func() {
+		h.gen.Stop()
+		h.gen.Stop()
+	})
+}
+
+// AC #2: cancellation landing mid-item stops the loop at that item.
+func TestAutoGenerator_CancelledRoundStopsIterating(t *testing.T) {
+	h := newAutoHarness(t)
+	h.policy.enabled = autoEnabledSet("lib-a")
+	h.movies.movies = []models.Movie{
+		autoMovieIn("m1", "lib-a", models.SubtitleStatusNotSearched),
+		autoMovieIn("m2", "lib-a", models.SubtitleStatusNotSearched),
+		autoMovieIn("m3", "lib-a", models.SubtitleStatusNotSearched),
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	h.item.outcome = func(_ context.Context, ref MediaRef) (*ProcessOutcome, error) {
+		if ref.ID == "m1" {
+			cancel()
+			return nil, context.Canceled
+		}
+		return &ProcessOutcome{Kind: RouteDeliverDirect}, nil
+	}
+
+	h.gen.Run(ctx)
+
+	assert.Equal(t, []string{"m1"}, h.item.refIDs(),
+		"after cancellation every remaining item would fail instantly and write a pointless failed row each")
+}
+
+// AC #2 (Task 1.5): a round that is already cancelled before it starts does not
+// even read the policy — otherwise every shutdown logs an Error-level
+// "cannot read library policy" line from a goroutine that raced Stop.
+func TestAutoGenerator_AlreadyCancelledRoundDoesNotReadThePolicy(t *testing.T) {
+	h := newAutoHarness(t)
+	h.policy.enabled = autoEnabledSet("lib-a")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	h.gen.Run(ctx)
+
+	assert.Equal(t, 0, h.policy.calls, "policy must not be queried on a dead ctx")
+	assert.Empty(t, h.item.refIDs())
+}
+
+// AC #3 (review L5): a DIRECT Run after Stop is refused too, not only the
+// scan-callback path — a future re-run caller cannot escape the drain.
+func TestAutoGenerator_RunAfterStopIsRefused(t *testing.T) {
+	h := newAutoHarness(t)
+	h.policy.enabled = autoEnabledSet("lib-a")
+	h.movies.movies = []models.Movie{autoMovieIn("m1", "lib-a", models.SubtitleStatusNotSearched)}
+
+	h.gen.Stop()
+	h.gen.Run(context.Background())
+
+	assert.Empty(t, h.item.refIDs())
+	assert.Equal(t, 0, h.policy.calls)
+}
+
+// AC #3: no rounds after Stop.
+func TestAutoGenerator_ScanCallbackAfterStopIsANoOp(t *testing.T) {
+	h := newAutoHarness(t)
+	h.policy.enabled = autoEnabledSet("lib-a")
+	h.movies.movies = []models.Movie{autoMovieIn("m1", "lib-a", models.SubtitleStatusNotSearched)}
+
+	h.gen.Stop()
+	h.gen.ScanCallback()()
+	h.gen.Stop() // would block forever if a goroutine had been spawned without wg bookkeeping
+
+	assert.Empty(t, h.item.refIDs(), "a scan completing inside the shutdown window must not spawn a round behind Stop's back")
+	assert.Equal(t, 0, h.policy.calls)
+}
+
+// AC #4: each item runs under its own deadline; one slow item fails on its own
+// and the next one starts with a fresh clock.
+func TestAutoGenerator_EachItemGetsItsOwnDeadline(t *testing.T) {
+	h := newAutoHarness(t, WithAutoItemTimeout(50*time.Millisecond))
+	h.policy.enabled = autoEnabledSet("lib-a")
+	h.movies.movies = []models.Movie{
+		autoMovieIn("m1", "lib-a", models.SubtitleStatusNotSearched),
+		autoMovieIn("m2", "lib-a", models.SubtitleStatusNotSearched),
+	}
+	var m1Err error
+	var m1Deadline, m2Deadline time.Time
+	var m2HasDeadline, m2Live bool
+	h.item.outcome = func(ctx context.Context, ref MediaRef) (*ProcessOutcome, error) {
+		switch ref.ID {
+		case "m1":
+			m1Deadline, _ = ctx.Deadline()
+			<-ctx.Done() // waits on the deadline itself, never on a sleep
+			m1Err = ctx.Err()
+			return nil, m1Err
+		default:
+			m2Deadline, m2HasDeadline = ctx.Deadline()
+			m2Live = ctx.Err() == nil
+			return &ProcessOutcome{Kind: RouteDeliverDirect}, nil
+		}
+	}
+
+	h.gen.Run(context.Background())
+
+	assert.Equal(t, []string{"m1", "m2"}, h.item.refIDs(), "a per-item deadline must not end the round")
+	assert.True(t, errors.Is(m1Err, context.DeadlineExceeded), "got %v", m1Err)
+	assert.True(t, m2HasDeadline && m2Live, "m2 must run under its own, unexpired deadline")
+	// Load-independent (review L6): a fresh deadline is strictly LATER than the
+	// one that already fired, whatever the scheduler did in between.
+	assert.True(t, m2Deadline.After(m1Deadline), "m2 deadline %v must be after m1's %v", m2Deadline, m1Deadline)
+}
+
+// AC #4: the default is the package constant; a non-positive override is ignored
+// (the WithAutoMaxPerRun shape).
+func TestAutoGenerator_ItemTimeoutDefaultsToTheConstant(t *testing.T) {
+	h := newAutoHarness(t, WithAutoItemTimeout(0))
+	assert.Equal(t, AutoGenerationItemTimeout, h.gen.itemTimeout)
+	assert.Equal(t, 15*time.Minute, AutoGenerationItemTimeout,
+		"must stay above defaultExtractTimeout (10m) + ffprobe (10s) so the subprocess deadlines fire first")
+}
+
+// AC #5: a shutdown-cancelled failure does not count toward parking.
+func TestAutoGenerator_CancelledFailuresDoNotCountTowardParking(t *testing.T) {
+	h := newAutoHarness(t)
+	h.policy.enabled = autoEnabledSet("lib-a")
+	h.movies.movies = []models.Movie{autoMovieIn("m1", "lib-a", models.SubtitleStatusNotSearched)}
+	// Pinned at the boundary (review L7): limit-1 genuine + 2 cancelled must
+	// still enumerate — if cancelled rows were counted this would be limit+1.
+	h.runs.runs = append(failedRuns("m1", autoFailureAttemptLimit-1), cancelledRun("m1"), cancelledRun("m1"))
+
+	h.gen.Run(context.Background())
+
+	assert.Equal(t, []string{"m1"}, h.item.refIDs(),
+		"restarts landing on the same long file must not park it — only genuine failures count")
+}
+
+// The other direction: cancelled rows do not RESCUE an item that has genuinely
+// failed `autoFailureAttemptLimit` times.
+func TestAutoGenerator_CancelledRowsDoNotRescueAParkedItem(t *testing.T) {
+	h := newAutoHarness(t)
+	h.policy.enabled = autoEnabledSet("lib-a")
+	h.movies.movies = []models.Movie{autoMovieIn("m1", "lib-a", models.SubtitleStatusNotSearched)}
+	h.runs.runs = append(failedRuns("m1", autoFailureAttemptLimit), cancelledRun("m1"), cancelledRun("m1"))
+
+	h.gen.Run(context.Background())
+
+	assert.Empty(t, h.item.refIDs(), "genuine failures at the limit still park, whatever else is in the history")
 }

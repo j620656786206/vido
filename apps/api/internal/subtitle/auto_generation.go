@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/vido/api/internal/models"
 )
@@ -21,6 +22,21 @@ import (
 // them, and the P5 pre-flight makes re-enumeration cheap for anything already
 // finished.
 const AutoGenerationMaxPerRun = 20
+
+// AutoGenerationItemTimeout bounds ONE item of a free-lane round
+// (bugfix-autogenerator-no-timeout-or-shutdown D2).
+//
+// Per item, not per round: a round is already bounded by maxPerRun × this, and
+// a round-level deadline would fail item 18 because items 1–17 were slow —
+// writing a `failed` row on a file that did nothing wrong. The value is
+// defaultExtractTimeout (10 min) + the ffprobe timeout (10 s) + slack for the
+// DB / OpenCC / placement steps, so on the common path the subprocess deadlines
+// still fire first and this one only catches the NON-subprocess hang that
+// nothing else bounds — with one gap: failItem's cleanup writes run on
+// context.WithoutCancel (process_item.go), so a database that locks up INSIDE
+// that cleanup (the 2026-08-01 FUSE incident class) is bounded by nothing here;
+// Stop() then waits on it until the container's stop grace period expires.
+const AutoGenerationItemTimeout = 15 * time.Minute
 
 // autoFailureAttemptLimit bounds how many times the free lane retries one item
 // that fails outright.
@@ -117,6 +133,20 @@ type AutoGenerator struct {
 	logger    *slog.Logger
 	maxPerRun int
 
+	// itemTimeout is the per-item deadline (AutoGenerationItemTimeout unless a
+	// test overrides it).
+	itemTimeout time.Duration
+
+	// lifetime is the parent of every round's ctx; Stop cancels it. Owned here
+	// rather than injected (D5) so main.go's wiring is one Stop() call.
+	lifetime context.Context
+	cancel   context.CancelFunc
+	// wg counts in-flight round goroutines so Stop can drain them — the
+	// WorkerPool.Stop shape. wg.Add happens under mu, in the same critical
+	// section as the stopped check, or Stop could slip between the two.
+	wg      sync.WaitGroup
+	stopped bool
+
 	// running is the single-flight guard (CR M1). Every sibling in this
 	// codebase has one — GenerationCandidateService returns ErrAnalysisRunning,
 	// GenerationBatchProcessor exposes IsRunning — and this one needs it for the
@@ -158,12 +188,29 @@ func WithAutoMaxPerRun(n int) AutoGeneratorOption {
 	}
 }
 
+// WithAutoItemTimeout overrides the per-item deadline. Tests use it; production
+// does not. Non-positive values are ignored.
+func WithAutoItemTimeout(d time.Duration) AutoGeneratorOption {
+	return func(g *AutoGenerator) {
+		if d > 0 {
+			g.itemTimeout = d
+		}
+	}
+}
+
 // NewAutoGenerator builds the trigger. A nil logger falls back to the default.
 func NewAutoGenerator(item ItemProcessor, policy AutoLibraryPolicy, logger *slog.Logger, opts ...AutoGeneratorOption) *AutoGenerator {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	g := &AutoGenerator{item: item, policy: policy, logger: logger, maxPerRun: AutoGenerationMaxPerRun}
+	lifetime, cancel := context.WithCancel(context.Background())
+	g := &AutoGenerator{
+		item: item, policy: policy, logger: logger,
+		maxPerRun:   AutoGenerationMaxPerRun,
+		itemTimeout: AutoGenerationItemTimeout,
+		lifetime:    lifetime,
+		cancel:      cancel,
+	}
 	for _, opt := range opts {
 		opt(g)
 	}
@@ -175,8 +222,51 @@ func NewAutoGenerator(item ItemProcessor, policy AutoLibraryPolicy, logger *slog
 // (cmd/api/main.go). The scanner's completion path must not wait on minutes of
 // ffmpeg.
 func (g *AutoGenerator) ScanCallback() func() {
-	return func() {
-		go g.Run(context.Background())
+	return func() { g.spawnRound() }
+}
+
+// spawnRound starts one round on its own goroutine under the generator's
+// lifetime ctx, or does nothing once Stop has been called (D4: a scan completing
+// inside the shutdown window must not start work behind Stop's back).
+//
+// Its own method so a later re-run path (bugfix-autogenerator-dropped-round-
+// not-deferred's `pending` flag) enters through the same stopped/wg bookkeeping.
+func (g *AutoGenerator) spawnRound() {
+	g.mu.Lock()
+	if g.stopped {
+		g.mu.Unlock()
+		g.logger.Debug("subtitle auto-generation: stopped — scan-complete ignored")
+		return
+	}
+	g.wg.Add(1)
+	g.mu.Unlock()
+
+	go func() {
+		defer g.wg.Done()
+		g.Run(g.lifetime)
+	}()
+}
+
+// Stop cancels the in-flight round (if any) and blocks until its goroutine has
+// returned, so failItem's cleanup writes land while the database is still open
+// (D1). Idempotent. Must be called from main.go's shutdown block BEFORE
+// db.Close().
+//
+// Deliberately unbounded, like WorkerPool.Stop: a timeout here would hand the
+// round back to exactly the closed-DB write this method exists to prevent.
+// The per-item deadline is what bounds the wait.
+func (g *AutoGenerator) Stop() {
+	g.mu.Lock()
+	first := !g.stopped
+	g.stopped = true
+	g.mu.Unlock()
+
+	// cancel is safe to call repeatedly; the wait sits OUTSIDE the lock so a
+	// draining Run can still take mu for its own single-flight bookkeeping.
+	g.cancel()
+	g.wg.Wait()
+	if first {
+		g.logger.Info("subtitle auto-generation stopped")
 	}
 }
 
@@ -192,7 +282,16 @@ func (g *AutoGenerator) Run(ctx context.Context) {
 	// CR M1: one round at a time. A second scan completing mid-round is a
 	// no-op, not a second pass over the same items — the next scan picks up
 	// whatever this one did not reach.
+	//
+	// Also refuses to start after Stop (review L5): spawnRound is the only
+	// production entry and already checks this, but a future direct caller
+	// (the M6 re-run) must not be able to run outside Stop's drain.
 	g.mu.Lock()
+	if g.stopped {
+		g.mu.Unlock()
+		g.logger.Debug("subtitle auto-generation: stopped — round refused")
+		return
+	}
 	if g.running {
 		g.mu.Unlock()
 		g.logger.Debug("subtitle auto-generation: a round is already in flight — skipping")
@@ -205,6 +304,14 @@ func (g *AutoGenerator) Run(ctx context.Context) {
 		g.running = false
 		g.mu.Unlock()
 	}()
+
+	// A round whose ctx is already dead (a callback that raced Stop) must not
+	// touch the database: the policy read would fail and log at Error level
+	// on every shutdown for no reason.
+	if ctx.Err() != nil {
+		g.logger.Debug("subtitle auto-generation: round cancelled before it started")
+		return
+	}
 
 	// 9R-10a CR M1: a failed read is NOT an empty answer. On the NAS this is a
 	// locked SQLite file, and treating that as "nobody opted in" would make the
@@ -233,10 +340,37 @@ func (g *AutoGenerator) Run(ctx context.Context) {
 	g.logger.Info("subtitle auto-generation started",
 		"libraries", len(enabled), "considered", len(refs), "max_per_run", g.maxPerRun)
 
-	var processed, deferredPaid, failed int
-	for _, ref := range refs {
-		outcome, err := g.item.ProcessItem(ctx, ref, ProcessItemOptions{FreeOnly: true})
+	var processed, deferredPaid, failed, remaining int
+	var cancelled bool
+	for i, ref := range refs {
+		if cancelled {
+			break
+		}
+		// AC #2: once cancelled, every remaining item would fail instantly and
+		// write a `failed` row each — stop at the cancellation point instead.
+		if ctx.Err() != nil {
+			remaining = len(refs) - i
+			break
+		}
+		// AC #4: one deadline per item, released as soon as the item returns
+		// (not deferred — a deferred cancel inside the loop would hold up to
+		// maxPerRun timers until the round ends).
+		itemCtx, cancelItem := context.WithTimeout(ctx, g.itemTimeout)
+		outcome, err := g.item.ProcessItem(itemCtx, ref, ProcessItemOptions{FreeOnly: true})
+		cancelItem()
 		switch {
+		case err != nil && ctx.Err() != nil:
+			// CR M1: the item that was mid-flight when the round was cancelled
+			// is not a failure of the FILE — failItem has already marked its
+			// row (CancelledRunPrefix) so it will not count toward parking, and
+			// the counters here must agree. It is folded into `remaining`: it
+			// was not finished, and the next round will re-enumerate it.
+			remaining = len(refs) - i
+			g.logger.Info("subtitle auto-generation: item cancelled mid-flight",
+				"media_id", ref.ID, "media_type", ref.MediaType)
+			// Nothing after this point can start (the loop head would break on
+			// the same ctx); break here so `remaining` keeps counting THIS item.
+			cancelled = true
 		case err != nil:
 			// Per-item failure is already recorded on the item's run row by the
 			// pipeline; stopping the round here would strand every later item
@@ -254,6 +388,13 @@ func (g *AutoGenerator) Run(ctx context.Context) {
 		}
 	}
 
+	if ctx.Err() != nil {
+		g.logger.Warn("subtitle auto-generation cancelled",
+			"libraries", len(enabled), "considered", len(refs),
+			"processed", processed, "deferred_paid", deferredPaid, "failed", failed,
+			"remaining", remaining)
+		return
+	}
 	g.logger.Info("subtitle auto-generation finished",
 		"libraries", len(enabled), "considered", len(refs),
 		"processed", processed, "deferred_paid", deferredPaid, "failed", failed)
@@ -397,8 +538,21 @@ func (g *AutoGenerator) excludedMediaIDs(ctx context.Context) (map[string]struct
 	// RUN of bad attempts, not one bad day. An item still enumerable here has
 	// by definition never had a run that delivered its zh-Hant subtitle, so
 	// every failed row it carries is a free-lane attempt that came to nothing.
+	//
+	// EXCEPT a row written under CALLER cancellation (CancelledRunPrefix,
+	// bugfix-autogenerator-no-timeout-or-shutdown AC #5) — a shutdown, a pool
+	// stop, or a user cancelling a consent batch mid-item. None of those says
+	// anything about the file, and counting them would let three restarts park
+	// an innocent item for good. (Flip side, review M3: the same long item can
+	// be re-selected first after every restart and never count — tracked with
+	// bugfix-auto-exclusion-never-expires.)
+	// A per-item DeadlineExceeded is NOT exempt — a file that takes longer than
+	// AutoGenerationItemTimeout is exactly what the limit is for.
 	attempts := make(map[string]int, len(failed))
 	for _, r := range failed {
+		if strings.HasPrefix(r.ErrorMessage, CancelledRunPrefix) {
+			continue
+		}
 		attempts[r.MediaID]++
 		if attempts[r.MediaID] >= autoFailureAttemptLimit {
 			out[r.MediaID] = struct{}{}
