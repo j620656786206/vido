@@ -1,4 +1,4 @@
-// Implements: Component/Detail-Movie-v2 (uRGu2) + Component/Detail-TV-v2 (N2fmG6)
+// Design ref: ux-design.pen Screen B3p-D (uRGu2) + Screen B4p-D (N2fmG6) + Screen B3p-M (SzNRb)
 /**
  * v2 library detail page (UX Redesign Phase 2 — UX2-3). The pilot's most
  * satisfying surface (perfect zh-TW metadata) made the most capable. Backdrop
@@ -40,12 +40,20 @@ import { DualRatingDisplay } from './DualRatingDisplay';
 import { MetadataEditorDialog } from '../metadata-editor';
 import type { MediaMetadata } from '../metadata-editor';
 import { ManageSubtitleDialogV2 } from '../subtitle/ManageSubtitleDialogV2';
+import { NfoLocalizeAction } from './NfoLocalizeAction';
 import { DetailHeroV2 } from './DetailHeroV2';
 import { DetailTechInfoV2 } from './DetailTechInfoV2';
 import { DetailSkeletonV2, DetailNotFoundV2 } from './DetailStatesV2';
 import { deriveLifecycleStatus, deriveSubtitleStatus } from '../../utils/libraryStatus';
 
 const WATCH_REGION = 'TW';
+
+// 9R-13b / 9R-UX: four actions. On mobile they wrap to two rows of two equal
+// halves (B3p-M) — every one keeps its text label, because an icon-only button
+// that overwrites a file is a guessing game. From `sm` up they sit on one row
+// at their natural widths (B3p-D / B4p-D).
+const actionBasis =
+  'flex min-h-[44px] grow basis-[calc(50%-0.25rem)] items-center sm:grow-0 sm:basis-auto';
 
 export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }) {
   const navigate = useNavigate();
@@ -151,7 +159,7 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
           type="button"
           onClick={() => setSubtitleOpen(true)}
           data-testid="action-manage-subtitle"
-          className="flex min-h-[44px] items-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-4 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)]"
+          className={`${actionBasis} justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-4 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)]`}
         >
           <Subtitles className="h-4 w-4" aria-hidden="true" />
           管理字幕
@@ -161,24 +169,34 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
         type="button"
         onClick={() => setEditorOpen(true)}
         data-testid="action-edit-metadata"
-        className="flex min-h-[44px] items-center gap-2 rounded-[var(--radius-md)] bg-[var(--bg-secondary)] px-4 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-tertiary)]"
+        className={`${actionBasis} order-3 justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--bg-secondary)] px-4 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-tertiary)] sm:order-2`}
       >
         <Pencil className="h-4 w-4" aria-hidden="true" />
         修改資訊
       </button>
+      {/* 9R-13b: order-2 on mobile so the two rows read
+          「管理字幕｜在地化資訊」/「修改資訊｜複製路徑」 per the B3p-M design;
+          sm:order-3 restores the desktop order of B3p-D / B4p-D. */}
+      <NfoLocalizeAction
+        mediaType={type}
+        id={id}
+        hasFilePath={Boolean(filePath)}
+        className={`${actionBasis} order-2 justify-center sm:order-3`}
+      />
       {filePath && (
         <button
           type="button"
           onClick={copyPath}
           aria-label="複製檔案路徑"
           data-testid="action-copy-path"
-          className="flex min-h-[44px] w-11 items-center justify-center rounded-[var(--radius-md)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
+          className={`${actionBasis} order-4 justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] sm:w-11 sm:grow-0 sm:basis-auto sm:px-0`}
         >
           {copied ? (
             <Check className="h-4 w-4 text-[var(--success)]" />
           ) : (
             <Copy className="h-4 w-4" />
           )}
+          <span className="text-sm font-medium sm:hidden">複製路徑</span>
         </button>
       )}
     </>
