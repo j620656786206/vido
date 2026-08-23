@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -796,6 +797,60 @@ func TestProcessItem_CancellationStillRecordsTheFailure(t *testing.T) {
 
 	assert.Equal(t, models.SubtitleRunFailed, h.runs.lastUpdate(t).Status)
 	assert.Equal(t, models.SubtitleStatusNotSearched, h.media.writes[len(h.media.writes)-1].status)
+}
+
+// ─── bugfix-autogenerator-no-timeout-or-shutdown AC #5: the cancelled marker ─
+
+func TestProcessItem_CancellationMarksTheRunAsCancelled(t *testing.T) {
+	h := newItemHarness(t, translateDecision("Good morning."))
+	ctx, cancel := context.WithCancel(context.Background())
+	h.trans.fn = func(int, []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+		cancel()
+		return nil, ai.CompletionUsage{}, context.Canceled
+	}
+
+	_, err := h.pipeline.ProcessItem(ctx, h.ref, ProcessItemOptions{})
+	require.Error(t, err)
+
+	last := h.runs.lastUpdate(t)
+	assert.Equal(t, models.SubtitleRunFailed, last.Status)
+	assert.True(t, strings.HasPrefix(last.ErrorMessage, CancelledRunPrefix),
+		"a shutdown-cancelled run must carry the marker so AutoGenerator does not count it: %q", last.ErrorMessage)
+}
+
+// The ctx half of the check: ffprobe killed by cancellation surfaces as an
+// *exec.ExitError, not context.Canceled — the cause alone would miss it.
+func TestProcessItem_KilledProbeUnderCancellationIsMarkedCancelled(t *testing.T) {
+	h := newItemHarness(t, translateDecision("Good morning."))
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	h.router.err = errors.New("ffprobe: signal: killed")
+
+	_, err := h.pipeline.ProcessItem(ctx, h.ref, ProcessItemOptions{})
+	require.Error(t, err)
+
+	last := h.runs.lastUpdate(t)
+	assert.Equal(t, models.SubtitleRunFailed, last.Status)
+	assert.True(t, strings.HasPrefix(last.ErrorMessage, CancelledRunPrefix),
+		"an opaque subprocess error under a cancelled ctx is still a cancellation: %q", last.ErrorMessage)
+}
+
+// A per-item deadline is about the FILE and must keep counting toward parking.
+func TestProcessItem_DeadlineExceededIsNotMarkedCancelled(t *testing.T) {
+	h := newItemHarness(t, translateDecision("Good morning."))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Hour)
+	defer cancel()
+	h.trans.fn = func(int, []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+		return nil, ai.CompletionUsage{}, context.DeadlineExceeded
+	}
+
+	_, err := h.pipeline.ProcessItem(ctx, h.ref, ProcessItemOptions{})
+	require.Error(t, err)
+
+	last := h.runs.lastUpdate(t)
+	assert.Equal(t, models.SubtitleRunFailed, last.Status)
+	assert.False(t, strings.HasPrefix(last.ErrorMessage, CancelledRunPrefix),
+		"a timeout is a verdict on the file, not on the caller: %q", last.ErrorMessage)
 }
 
 // ─── AC #1.6 + #8: progress hook ───────────────────────────────────────────
