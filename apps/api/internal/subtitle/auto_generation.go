@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"log/slog"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -37,6 +38,30 @@ const AutoGenerationMaxPerRun = 20
 // that cleanup (the 2026-08-01 FUSE incident class) is bounded by nothing here;
 // Stop() then waits on it until the container's stop grace period expires.
 const AutoGenerationItemTimeout = 15 * time.Minute
+
+// freeLaneEpoch is the date of the free lane's current capabilities
+// (bugfix-auto-exclusion-never-expires D2). A parked verdict — "needs paid
+// work", "fails outright" — written by a run that STARTED BEFORE this date was
+// reached by an older free lane and is treated as stale: the item is a
+// candidate again, and the next run writes a fresh verdict.
+//
+// BUMP THIS in any story that widens what the free lane can do (a new route, a
+// newly supported container or codec). It is deliberately a constant, not a
+// setting and not a schema column: the "an upgrade made this free" fact lives
+// in code, and this is its honest, grep-able record.
+var freeLaneEpoch = time.Date(2026, 8, 23, 0, 0, 0, 0, time.UTC)
+
+// FreeLaneEpoch exposes freeLaneEpoch read-only (review: an exported var could
+// be reassigned by any package).
+func FreeLaneEpoch() time.Time { return freeLaneEpoch }
+
+// autoStatTimeout bounds one mod-time lookup inside collect. os.Stat on a FUSE
+// / NFS / SMB path in D-state blocks uninterruptibly; without this the round
+// would hang BEFORE any item ran, outside the per-item deadline, and Stop()
+// would wait on it past the container's grace period — the exact failure
+// #263 fixed for items. The goroutine leaks on a truly hung stat; the round
+// and the shutdown do not.
+const autoStatTimeout = 10 * time.Second
 
 // autoFailureAttemptLimit bounds how many times the free lane retries one item
 // that fails outright.
@@ -133,6 +158,12 @@ type AutoGenerator struct {
 	logger    *slog.Logger
 	maxPerRun int
 
+	// modTime answers "when did this media file last change" for the
+	// exclusion-expiry judgment (bugfix-auto-exclusion-never-expires D1). A
+	// func, not an interface (Rule 11, narrow): one question, one answer.
+	// Production (fileChangedAt) answers with max(mtime, ctime) — see there.
+	modTime func(path string) (time.Time, error)
+
 	// itemTimeout is the per-item deadline (AutoGenerationItemTimeout unless a
 	// test overrides it).
 	itemTimeout time.Duration
@@ -196,6 +227,37 @@ func WithAutoMaxPerRun(n int) AutoGeneratorOption {
 	}
 }
 
+// WithAutoFileModTime overrides the file-changed lookup. Tests use it;
+// production uses fileChangedAt.
+func WithAutoFileModTime(fn func(path string) (time.Time, error)) AutoGeneratorOption {
+	return func(g *AutoGenerator) {
+		if fn != nil {
+			g.modTime = fn
+		}
+	}
+}
+
+// fileChangedAt is "when did this file last change" as the exclusion needs
+// it: the LATER of mtime and the inode change time (ctime).
+//
+// mtime alone is not enough (review H1): `rsync -a`, `cp -p`, Finder/Explorer
+// copies over SMB and Radarr/Sonarr imports all PRESERVE the source file's
+// mtime, which for a re-downloaded release is usually older than the run that
+// parked the item — the replacement would never be noticed. ctime is set by
+// the kernel on every rename/replace/copy and cannot be set from userspace,
+// so it moves forward on exactly the operations that put a new file here.
+func fileChangedAt(path string) (time.Time, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return time.Time{}, err
+	}
+	changed := info.ModTime()
+	if ctime, ok := inodeChangeTime(info); ok && ctime.After(changed) {
+		changed = ctime
+	}
+	return changed, nil
+}
+
 // WithAutoItemTimeout overrides the per-item deadline. Tests use it; production
 // does not. Non-positive values are ignored.
 func WithAutoItemTimeout(d time.Duration) AutoGeneratorOption {
@@ -216,6 +278,7 @@ func NewAutoGenerator(item ItemProcessor, policy AutoLibraryPolicy, logger *slog
 		item: item, policy: policy, logger: logger,
 		maxPerRun:   AutoGenerationMaxPerRun,
 		itemTimeout: AutoGenerationItemTimeout,
+		modTime:     fileChangedAt,
 		lifetime:    lifetime,
 		cancel:      cancel,
 	}
@@ -457,10 +520,11 @@ func (g *AutoGenerator) collect(ctx context.Context, enabled map[string]struct{}
 			if len(refs) >= g.maxPerRun {
 				return refs, nil
 			}
-			if _, skip := excluded[m.ID]; skip {
+			if !autoEligible(m.SubtitleStatus) || !inEnabledLibrary(m.LibraryID, enabled) {
 				continue
 			}
-			if !autoEligible(m.SubtitleStatus) || !inEnabledLibrary(m.LibraryID, enabled) {
+			// AFTER the cheap filters (AC #5): the parked check may stat the file.
+			if rec, parked := excluded[m.ID]; parked && g.stillParked(ctx, m.ID, rec, m.FilePath) {
 				continue
 			}
 			refs = append(refs, MediaRef{ID: m.ID, MediaType: models.SubtitleRunMediaMovie})
@@ -478,9 +542,6 @@ func (g *AutoGenerator) collect(ctx context.Context, enabled map[string]struct{}
 		for _, e := range episodes {
 			if len(refs) >= g.maxPerRun {
 				return refs, nil
-			}
-			if _, skip := excluded[e.ID]; skip {
-				continue
 			}
 			if !autoEligible(e.SubtitleStatus) {
 				continue
@@ -508,6 +569,9 @@ func (g *AutoGenerator) collect(ctx context.Context, enabled map[string]struct{}
 			if !inEnabledLibrary(libraryID, enabled) {
 				continue
 			}
+			if rec, parked := excluded[e.ID]; parked && g.stillParked(ctx, e.ID, rec, e.FilePath) {
+				continue
+			}
 			refs = append(refs, MediaRef{ID: e.ID, MediaType: models.SubtitleRunMediaEpisode})
 		}
 	}
@@ -530,18 +594,104 @@ func inEnabledLibrary(libraryID models.NullString, enabled map[string]struct{}) 
 	return ok
 }
 
-// excludedMediaIDs returns the media ids this round must not spend budget on:
-// items parked at the threshold of paid work (CR H1), and items that have
-// failed outright autoFailureAttemptLimit times (補審 M1).
+// parkedRecord is what the exclusion remembers about one media id: WHEN the
+// verdicts that park it were reached, so they can be weighed against the
+// file's current mtime (bugfix-auto-exclusion-never-expires D1).
+type parkedRecord struct {
+	// deferredAt is the start of the latest skipped run, when that run was a
+	// paid deferral; zero otherwise.
+	deferredAt time.Time
+	// failedAt holds the start of every counted (non-cancelled) failed run.
+	failedAt []time.Time
+}
+
+// stillParked weighs the record against the file as it is NOW: a deferral
+// holds only if it was reached on this file (started strictly after its
+// change time), and only failures after that time count toward the limit. A
+// zero time — the caller could not tell — keeps everything counting (fail
+// closed, D4). Equality counts as "changed" (seconds-granularity mtimes on
+// FUSE). Clock skew between a remote share and the container is accepted:
+// ctime on a local path comes from the same kernel clock as StartedAt.
+func (r parkedRecord) stillParked(mtime time.Time) bool {
+	if r.deferredAt.After(mtime) {
+		return true
+	}
+	n := 0
+	for _, at := range r.failedAt {
+		if at.After(mtime) {
+			n++
+		}
+	}
+	return n >= autoFailureAttemptLimit
+}
+
+// stillParked is the per-item judgment at the point collect would skip an
+// item: stat the file and ask the record. Unreadable path or stat failure →
+// stays parked (D4) — a vanished file would only fail again, and re-probing it
+// on every scan is the H1 starvation with a different cause.
+func (g *AutoGenerator) stillParked(ctx context.Context, id string, rec parkedRecord, path models.NullString) bool {
+	if !path.Valid || path.String == "" {
+		return true
+	}
+	mtime, err := g.boundedModTime(ctx, path.String)
+	if err != nil {
+		g.logger.Debug("subtitle auto-generation: cannot stat parked item — keeping it parked",
+			"media_id", id, "path", path.String, "error", err)
+		return true
+	}
+	parked := rec.stillParked(mtime)
+	if !parked {
+		// Debug, not Info: this repeats every round until a NEW counted row
+		// exists for the item (e.g. the re-run was cancelled mid-flight).
+		g.logger.Debug("subtitle auto-generation: parked item's file changed — candidate again",
+			"media_id", id, "file_changed", mtime.UTC().Format(time.RFC3339))
+	}
+	return parked
+}
+
+// boundedModTime runs the lookup with autoStatTimeout and the round's ctx as
+// ceilings; either expiring is reported as an error (→ stays parked).
+func (g *AutoGenerator) boundedModTime(ctx context.Context, path string) (time.Time, error) {
+	type result struct {
+		t   time.Time
+		err error
+	}
+	ch := make(chan result, 1) // buffered: a late stat must not leak a blocked goroutine
+	go func() {
+		t, err := g.modTime(path)
+		ch <- result{t, err}
+	}()
+	timer := time.NewTimer(autoStatTimeout)
+	defer timer.Stop()
+	select {
+	case r := <-ch:
+		return r.t, r.err
+	case <-ctx.Done():
+		return time.Time{}, ctx.Err()
+	case <-timer.C:
+		return time.Time{}, errStatTimeout
+	}
+}
+
+var errStatTimeout = errors.New("stat timed out")
+
+// excludedMediaIDs returns, for every media id this round would otherwise not
+// spend budget on, the record that parks it: items at the threshold of paid
+// work (CR H1), and items that have failed outright autoFailureAttemptLimit
+// times (補審 M1). The final word is stillParked's, per item, against the
+// file's mtime — this only collects the dates.
 //
 // TWO queries per round, not one per item. The port is optional: without it the
 // trigger still runs correctly, it just re-probes parked items — so a boot that
 // does not wire it degrades in cost, never in correctness.
-func (g *AutoGenerator) excludedMediaIDs(ctx context.Context) (map[string]struct{}, error) {
+//
+// Rows that started before freeLaneEpoch are ignored outright (D2): they were
+// verdicts of an older free lane.
+func (g *AutoGenerator) excludedMediaIDs(ctx context.Context) (map[string]parkedRecord, error) {
 	if g.runs == nil {
-		return map[string]struct{}{}, nil
+		return map[string]parkedRecord{}, nil
 	}
-	out := map[string]struct{}{}
+	records := map[string]parkedRecord{}
 
 	skipped, err := g.runs.ListByStatus(ctx, models.SubtitleRunSkipped, 0)
 	if err != nil {
@@ -562,8 +712,13 @@ func (g *AutoGenerator) excludedMediaIDs(ctx context.Context) (map[string]struct
 			continue
 		}
 		decided[r.MediaID] = struct{}{}
+		if !r.StartedAt.After(freeLaneEpoch) {
+			continue
+		}
 		if strings.HasPrefix(r.ErrorMessage, DeferredPaidRunPrefix) {
-			out[r.MediaID] = struct{}{}
+			rec := records[r.MediaID]
+			rec.deferredAt = r.StartedAt
+			records[r.MediaID] = rec
 		}
 	}
 
@@ -581,21 +736,27 @@ func (g *AutoGenerator) excludedMediaIDs(ctx context.Context) (map[string]struct
 	// stop, or a user cancelling a consent batch mid-item. None of those says
 	// anything about the file, and counting them would let three restarts park
 	// an innocent item for good. (Flip side, review M3: the same long item can
-	// be re-selected first after every restart and never count — tracked with
-	// bugfix-auto-exclusion-never-expires.)
+	// be re-selected first after every restart and never count.)
 	// A per-item DeadlineExceeded is NOT exempt — a file that takes longer than
 	// AutoGenerationItemTimeout is exactly what the limit is for.
-	attempts := make(map[string]int, len(failed))
 	for _, r := range failed {
-		if strings.HasPrefix(r.ErrorMessage, CancelledRunPrefix) {
+		if strings.HasPrefix(r.ErrorMessage, CancelledRunPrefix) || !r.StartedAt.After(freeLaneEpoch) {
 			continue
 		}
-		attempts[r.MediaID]++
-		if attempts[r.MediaID] >= autoFailureAttemptLimit {
-			out[r.MediaID] = struct{}{}
-		}
+		rec := records[r.MediaID]
+		rec.failedAt = append(rec.failedAt, r.StartedAt)
+		records[r.MediaID] = rec
 	}
 
+	// Keep only the ids that are parked against the OLDEST possible file
+	// (zero mtime): everything else is a candidate regardless, and dropping it
+	// here keeps the per-item stat in collect to the items that need one.
+	out := make(map[string]parkedRecord, len(records))
+	for id, rec := range records {
+		if rec.stillParked(time.Time{}) {
+			out[id] = rec
+		}
+	}
 	return out, nil
 }
 

@@ -157,8 +157,13 @@ func TestDeferredMarker_WriterAndReaderAgree(t *testing.T) {
 			MediaID:      h.ref.ID,
 			Status:       written.Status,
 			ErrorMessage: written.ErrorMessage,
+			// The writer stamps the real clock; the reader ignores rows from
+			// before FreeLaneEpoch (bugfix-auto-exclusion-never-expires D2).
+			StartedAt: written.StartedAt,
 		}}}),
 	)
+	require.True(t, written.StartedAt.After(freeLaneEpoch),
+		"the harness clock predates FreeLaneEpoch — the reader would treat a fresh deferral as stale")
 	got, err := gen.excludedMediaIDs(context.Background())
 	require.NoError(t, err)
 
