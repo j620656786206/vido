@@ -1,6 +1,6 @@
 # Story bugfix-i-2: the image ignores PUID/PGID, so a first install cannot start
 
-Status: review
+Status: done
 
 ## Story
 
