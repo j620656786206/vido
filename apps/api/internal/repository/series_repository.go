@@ -981,6 +981,27 @@ func (r *SeriesRepository) Upsert(ctx context.Context, series *models.Series) er
 	// Series exists - update with existing ID
 	series.ID = existing.ID
 	series.CreatedAt = existing.CreatedAt
+	// Preserve everything the TMDb converter never produces
+	// (bugfix-upsert-zeroes-unloaded-columns -- the movie Upsert carries the
+	// full ownership contract; the series wide Update has no subtitle columns,
+	// so the never-produced set here is the scanner/ffprobe/library surface
+	// PLUS imdb_id: unlike movies, TMDb's TV payload carries no imdb id at all
+	// (it lives behind the separate external-ids endpoint), while the series
+	// create handler sets it from the request and FindByIMDbID depends on it
+	// -- review F1: without this line a re-match NULLed it).
+	series.IMDbID = existing.IMDbID
+	series.LibraryID = existing.LibraryID
+	series.IsRemoved = existing.IsRemoved
+	series.FileSize = existing.FileSize
+	series.VideoCodec = existing.VideoCodec
+	series.VideoResolution = existing.VideoResolution
+	series.AudioCodec = existing.AudioCodec
+	series.AudioChannels = existing.AudioChannels
+	series.SubtitleTracks = existing.SubtitleTracks
+	series.HDRFormat = existing.HDRFormat
+	if !series.FilePath.Valid || series.FilePath.String == "" {
+		series.FilePath = existing.FilePath
+	}
 	// Preserve manually-edited credits across a re-scan/re-match — the scan ingestion path
 	// (SaveSeriesFromTMDb → ConvertTMDbSeriesToModel) never sets credits (manual-only via the
 	// Metadata Editor), so a fresh model carries an empty CreditsJSON. Without this, Upsert
