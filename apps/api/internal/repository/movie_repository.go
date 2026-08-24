@@ -1061,7 +1061,26 @@ func (r *MovieRepository) FindAllWithFilePath(ctx context.Context) ([]models.Mov
 	return movies, nil
 }
 
-// Upsert creates or updates a movie based on TMDb ID
+// Upsert creates or updates a movie based on TMDb ID.
+//
+// OWNERSHIP CONTRACT (bugfix-upsert-zeroes-unloaded-columns): the incoming
+// model is a FRESH conversion of a TMDb payload (ConvertTMDbMovieToModel) --
+// TMDb owns the metadata surface it produces (title, dates, genres, ratings,
+// overview, poster/backdrop, runtime, language, status, imdb/tmdb ids,
+// production_countries, spoken_languages, parse_status, metadata_source, and
+// file_path WHEN the caller passed one -- note this means a path can never be
+// CLEARED through Upsert: an empty incoming path preserves the stored one, and
+// removal flows are the scanner's is_removed, itself preserved here. The
+// imdb-id note is movie-only: TMDb's TV payload has no imdb field, so the
+// SERIES Upsert preserves imdb_id instead. Everything else on the row belongs to
+// OTHER writers and is preserved from the existing row on a re-match:
+// subtitle_status / subtitle_path / subtitle_language / subtitle_last_searched
+// / subtitle_search_score (the subtitle pipeline), library_id (library
+// assignment), is_removed (the scanner), file_size (the scanner), video_codec
+// / video_resolution / audio_codec / audio_channels / subtitle_tracks /
+// hdr_format (ffprobe), credits (manual-only, preserved below when empty).
+// If the converter grows a field, add it to the TMDb-owned list here or it
+// will be preserved-stale.
 func (r *MovieRepository) Upsert(ctx context.Context, movie *models.Movie) error {
 	if movie == nil {
 		return fmt.Errorf("movie cannot be nil")
@@ -1085,6 +1104,30 @@ func (r *MovieRepository) Upsert(ctx context.Context, movie *models.Movie) error
 	// Movie exists - update with existing ID
 	movie.ID = existing.ID
 	movie.CreatedAt = existing.CreatedAt
+	// Preserve everything the TMDb converter never produces (see the
+	// ownership contract above) -- the wide Update below writes every column,
+	// and before this block a re-match zeroed all of it: the subtitle the
+	// pipeline delivered, the library the user filed it under, the removed
+	// flag, the file size, and the ffprobe technical columns.
+	movie.SubtitleStatus = existing.SubtitleStatus
+	movie.SubtitlePath = existing.SubtitlePath
+	movie.SubtitleLanguage = existing.SubtitleLanguage
+	movie.SubtitleLastSearched = existing.SubtitleLastSearched
+	movie.SubtitleSearchScore = existing.SubtitleSearchScore
+	movie.LibraryID = existing.LibraryID
+	movie.IsRemoved = existing.IsRemoved
+	movie.FileSize = existing.FileSize
+	movie.VideoCodec = existing.VideoCodec
+	movie.VideoResolution = existing.VideoResolution
+	movie.AudioCodec = existing.AudioCodec
+	movie.AudioChannels = existing.AudioChannels
+	movie.SubtitleTracks = existing.SubtitleTracks
+	movie.HDRFormat = existing.HDRFormat
+	// file_path: the incoming one wins when the caller provided it (a re-match
+	// after a file move is a legitimate path update); otherwise keep the stored one.
+	if !movie.FilePath.Valid || movie.FilePath.String == "" {
+		movie.FilePath = existing.FilePath
+	}
 	// Preserve manually-edited credits across a re-scan/re-match. The scan ingestion path
 	// (SaveMovieFromTMDb → ConvertTMDbMovieToModel) never sets credits — they are manual-only
 	// via the Metadata Editor — so a fresh model carries an empty CreditsJSON. Without this,
