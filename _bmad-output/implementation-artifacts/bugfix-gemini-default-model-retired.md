@@ -1,6 +1,6 @@
 # Story bugfix: Gemini default model was shut down by Google
 
-Status: review
+Status: done
 
 ## Story
 
