@@ -11,7 +11,7 @@
   <Overview>Vido is a NAS media management platform for organizing movies and TV shows with automatic metadata retrieval (TMDb), AI-powered fansub filename parsing, multi-source subtitle search with Traditional Chinese (zh-TW) language detection and OpenCC conversion, and qBittorrent download integration. Built for Taiwanese and Chinese media enthusiasts managing media libraries on NAS devices.</Overview>
   <Category>MediaApp:Video</Category>
   <WebUI>http://[IP]:[PORT:8088]</WebUI>
-  <Icon>https://raw.githubusercontent.com/alexyu/vido/main/apps/web/public/favicon.ico</Icon>
+  <Icon>https://raw.githubusercontent.com/j620656786206/vido/main/apps/web/public/favicon.ico</Icon>
   <ExtraParams>--read-only --tmpfs /tmp:size=64M,mode=1777</ExtraParams>
   <PostArgs/>
   <DonateText/>
@@ -59,6 +59,28 @@
     Type="Path"
     Display="always"
     Required="true"
+    Mask="false"
+  />
+  <Config
+    Name="PUID"
+    Target="PUID"
+    Default="99"
+    Mode=""
+    Description="User ID the container runs as. Unraid's appdata is owned by nobody:users, which is 99:100 — leave these at 99/100 unless you know you need something else. The container takes ownership of its App Data and Backups folders on start, so changing this is safe and self-healing."
+    Type="Variable"
+    Display="advanced"
+    Required="false"
+    Mask="false"
+  />
+  <Config
+    Name="PGID"
+    Target="PGID"
+    Default="100"
+    Mode=""
+    Description="Group ID the container runs as. See PUID — 100 is Unraid's 'users' group."
+    Type="Variable"
+    Display="advanced"
+    Required="false"
     Mask="false"
   />
   <Config
