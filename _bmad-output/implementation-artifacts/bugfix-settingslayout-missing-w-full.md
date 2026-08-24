@@ -1,6 +1,6 @@
 # Story bugfix: SettingsLayout doesn't stretch to fill the v2 shell, leaving a giant blank void
 
-Status: review
+Status: done
 
 ## Story
 
