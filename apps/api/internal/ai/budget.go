@@ -24,13 +24,20 @@ var defaultLLMPricing = map[string]ModelPricing{
 	// Gemini rows (sub-5-1 AC #2): a Gemini call must never silently fall into
 	// the Haiku-tier fallback and record a fabricated number. Verified
 	// 2026-08-12 at https://ai.google.dev/gemini-api/docs/pricing.
-	// NOTE: gemini-2.0-flash (the current DefaultGeminiModel) was SHUT DOWN by
-	// Google on 2026-06-01 — row kept at its final published rate so any
-	// still-configured deployment meters honestly while the default-model bump
-	// is handled separately (bugfix-gemini-default-model-retired).
+	// NOTE: gemini-2.0-flash was SHUT DOWN by Google on 2026-06-01 and is no
+	// longer the default (bugfix-gemini-default-model-retired bumped it to
+	// gemini-2.5-flash-lite). The row STAYS: a deployment that pinned it via
+	// GEMINI_MODEL must meter at its final published rate rather than inherit
+	// the fallback tier and record a fabricated number.
+	// Rates below re-verified 2026-08-24 at https://ai.google.dev/gemini-api/docs/pricing.
 	"gemini-2.0-flash":      {InputPer1M: 0.10, OutputPer1M: 0.40},
 	"gemini-2.5-flash":      {InputPer1M: 0.30, OutputPer1M: 2.50},
 	"gemini-2.5-flash-lite": {InputPer1M: 0.10, OutputPer1M: 0.40},
+	// 3.x rows exist because GEMINI_MODEL can now select them; the 3.6/3.7
+	// figures are the promotional rate published through 2026-12-31.
+	"gemini-3.5-flash-lite": {InputPer1M: 0.30, OutputPer1M: 2.50},
+	"gemini-3.6-flash":      {InputPer1M: 0.75, OutputPer1M: 3.75},
+	"gemini-3.7-flash":      {InputPer1M: 0.75, OutputPer1M: 3.75},
 }
 
 // fallbackLLMPricing is used when the model id isn't in the table.

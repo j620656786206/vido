@@ -15,7 +15,15 @@ const (
 	// DefaultGeminiBaseURL is the base URL for Gemini API.
 	DefaultGeminiBaseURL = "https://generativelanguage.googleapis.com/v1beta"
 	// DefaultGeminiModel is the default model to use.
-	DefaultGeminiModel = "gemini-2.0-flash"
+	//
+	// Keep this pointing at a model that still exists. The previous value,
+	// gemini-2.0-flash, was shut down by Google on 2026-06-01 and stayed the
+	// default for ~3 months, so every Gemini deployment 404'd on every call with
+	// no way to route around it. gemini-2.5-flash-lite was verified present on
+	// ai.google.dev/gemini-api/docs/pricing on 2026-08-24 and carries the same
+	// $0.10/$0.40 per-1M rate the retired model had, so the bump is cost-neutral.
+	// Override per deployment with GEMINI_MODEL (mirrors CLAUDE_MODEL, story 9R-1).
+	DefaultGeminiModel = "gemini-2.5-flash-lite"
 	// DefaultTimeoutSeconds is the default timeout per NFR-I12.
 	DefaultTimeoutSeconds = 15
 )
@@ -265,7 +273,7 @@ func (p *GeminiProvider) Parse(ctx context.Context, req *ParseRequest) (*ParseRe
 // Gemini API types
 
 type geminiRequest struct {
-	Contents         []geminiContent         `json:"contents"`
+	Contents         []geminiContent        `json:"contents"`
 	GenerationConfig geminiGenerationConfig `json:"generation_config,omitempty"`
 }
 

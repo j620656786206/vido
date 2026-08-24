@@ -71,6 +71,12 @@ func (c *Config) GetClaudeModel() string {
 	return c.ClaudeModel
 }
 
+// GetGeminiModel returns the GEMINI_MODEL override or empty string if not set
+// (empty means the ai package's DefaultGeminiModel is used).
+func (c *Config) GetGeminiModel() string {
+	return c.GeminiModel
+}
+
 // GetEncryptionKey returns the encryption key or empty string if not set
 func (c *Config) GetEncryptionKey() string {
 	return c.EncryptionKey
