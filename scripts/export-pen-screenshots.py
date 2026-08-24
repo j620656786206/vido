@@ -153,6 +153,9 @@ SCREENS = {
     # .nfo localization confirm/result spec (9R-13b) — movie additive (no overwrite)
     # vs TV single-slot backup-and-replace, per-episode opt-in, AI-quota notice.
     "zMYsL": ("flow-j-specs", "j6-d"),
+    # Settings form-card width ruling (max-w-2xl -> max-w-3xl) — real-width math with
+    # two stacked sidebars, why C4-D's fill_container ratio is a stale assumption.
+    "JBKis": ("flow-j-specs", "j7-d"),
     # Design system reference docs (top of canvas, no flow code)
     "8SSzc": ("design-system", "design-system-reference"),
     "sJzat": ("design-system", "component-library"),
