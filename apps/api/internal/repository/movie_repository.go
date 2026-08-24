@@ -46,12 +46,13 @@ func (r *MovieRepository) Create(ctx context.Context, movie *models.Movie) error
 			id, title, original_title, release_date, genres, rating,
 			overview, poster_path, backdrop_path, runtime, original_language,
 			status, imdb_id, tmdb_id,
-			file_path, file_size, parse_status, metadata_source, library_id, vote_average,
+			file_path, file_size, parse_status, metadata_source, library_id, vote_average, vote_count,
+			popularity,
 			is_removed,
 			video_codec, video_resolution, audio_codec, audio_channels,
 			subtitle_tracks, hdr_format, production_countries, credits, spoken_languages,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err = r.db.ExecContext(ctx, query,
@@ -75,6 +76,8 @@ func (r *MovieRepository) Create(ctx context.Context, movie *models.Movie) error
 		movie.MetadataSource,
 		movie.LibraryID,
 		movie.VoteAverage,
+		movie.VoteCount,
+		movie.Popularity,
 		movie.IsRemoved,
 		movie.VideoCodec,
 		movie.VideoResolution,
@@ -564,7 +567,7 @@ const movieSelectColumns = `
 	status, imdb_id, tmdb_id,
 	file_path, file_size, parse_status, metadata_source, library_id,
 	subtitle_status, subtitle_path, subtitle_language, subtitle_last_searched, subtitle_search_score,
-	vote_average, vote_count, is_removed,
+	vote_average, vote_count, popularity, is_removed,
 	video_codec, video_resolution, audio_codec, audio_channels, subtitle_tracks, hdr_format,
 	production_countries, credits, spoken_languages,
 	douban_id, douban_rating, douban_vote_count,
@@ -626,6 +629,7 @@ func scanMovie(scanner interface {
 		&movie.SubtitleSearchScore,
 		&movie.VoteAverage,
 		&movie.VoteCount,
+		&movie.Popularity,
 		&movie.IsRemoved,
 		&movie.VideoCodec,
 		&movie.VideoResolution,
@@ -712,12 +716,13 @@ func (r *MovieRepository) BulkCreate(ctx context.Context, movies []*models.Movie
 			id, title, original_title, release_date, genres, rating,
 			overview, poster_path, backdrop_path, runtime, original_language,
 			status, imdb_id, tmdb_id,
-			file_path, file_size, parse_status, metadata_source, library_id, vote_average,
+			file_path, file_size, parse_status, metadata_source, library_id, vote_average, vote_count,
+			popularity,
 			is_removed,
 			video_codec, video_resolution, audio_codec, audio_channels,
 			subtitle_tracks, hdr_format, production_countries, credits, spoken_languages,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	stmt, err := tx.PrepareContext(ctx, query)
@@ -761,6 +766,8 @@ func (r *MovieRepository) BulkCreate(ctx context.Context, movies []*models.Movie
 			movie.MetadataSource,
 			movie.LibraryID,
 			movie.VoteAverage,
+			movie.VoteCount,
+			movie.Popularity,
 			movie.IsRemoved,
 			movie.VideoCodec,
 			movie.VideoResolution,
@@ -1066,7 +1073,7 @@ func (r *MovieRepository) FindAllWithFilePath(ctx context.Context) ([]models.Mov
 // OWNERSHIP CONTRACT (bugfix-upsert-zeroes-unloaded-columns): the incoming
 // model is a FRESH conversion of a TMDb payload (ConvertTMDbMovieToModel) --
 // TMDb owns the metadata surface it produces (title, dates, genres, ratings,
-// overview, poster/backdrop, runtime, language, status, imdb/tmdb ids,
+// overview, poster/backdrop, runtime, language, status, popularity, imdb/tmdb ids,
 // production_countries, spoken_languages, parse_status, metadata_source, and
 // file_path WHEN the caller passed one -- note this means a path can never be
 // CLEARED through Upsert: an empty incoming path preserves the stored one, and

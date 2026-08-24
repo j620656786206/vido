@@ -47,11 +47,12 @@ func (r *SeriesRepository) Create(ctx context.Context, series *models.Series) er
 			overview, poster_path, backdrop_path, number_of_seasons, number_of_episodes,
 			status, original_language, imdb_id, tmdb_id, in_production,
 			file_path, file_size, parse_status, metadata_source, library_id, vote_average, vote_count,
+			popularity,
 			is_removed,
 			video_codec, video_resolution, audio_codec, audio_channels,
 			subtitle_tracks, hdr_format, credits,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err = r.db.ExecContext(ctx, query,
@@ -79,6 +80,7 @@ func (r *SeriesRepository) Create(ctx context.Context, series *models.Series) er
 		series.LibraryID,
 		series.VoteAverage,
 		series.VoteCount,
+		series.Popularity,
 		series.IsRemoved,
 		series.VideoCodec,
 		series.VideoResolution,
@@ -209,6 +211,7 @@ func (r *SeriesRepository) Update(ctx context.Context, series *models.Series) er
 			metadata_source = ?,
 			vote_average = ?,
 			vote_count = ?,
+			popularity = ?,
 			is_removed = ?,
 			video_codec = ?,
 			video_resolution = ?,
@@ -245,6 +248,7 @@ func (r *SeriesRepository) Update(ctx context.Context, series *models.Series) er
 		series.MetadataSource,
 		series.VoteAverage,
 		series.VoteCount,
+		series.Popularity,
 		series.IsRemoved,
 		series.VideoCodec,
 		series.VideoResolution,
@@ -559,7 +563,7 @@ const seriesSelectColumns = `
 	status, original_language, imdb_id, tmdb_id, in_production,
 	file_path, file_size, parse_status, metadata_source, library_id,
 	subtitle_status, subtitle_path, subtitle_language, subtitle_last_searched, subtitle_search_score,
-	vote_average, vote_count, is_removed,
+	vote_average, vote_count, popularity, is_removed,
 	video_codec, video_resolution, audio_codec, audio_channels,
 	subtitle_tracks, hdr_format, credits,
 	douban_id, douban_rating, douban_vote_count,
@@ -621,6 +625,7 @@ func scanSeries(scanner interface {
 		&s.SubtitleSearchScore,
 		&s.VoteAverage,
 		&s.VoteCount,
+		&s.Popularity,
 		&s.IsRemoved,
 		&s.VideoCodec,
 		&s.VideoResolution,
@@ -694,11 +699,12 @@ func (r *SeriesRepository) BulkCreate(ctx context.Context, seriesList []*models.
 			overview, poster_path, backdrop_path, number_of_seasons, number_of_episodes,
 			status, original_language, imdb_id, tmdb_id, in_production,
 			file_path, file_size, parse_status, metadata_source, library_id, vote_average, vote_count,
+			popularity,
 			is_removed,
 			video_codec, video_resolution, audio_codec, audio_channels,
 			subtitle_tracks, hdr_format, credits,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	stmt, err := tx.PrepareContext(ctx, query)
@@ -746,6 +752,7 @@ func (r *SeriesRepository) BulkCreate(ctx context.Context, seriesList []*models.
 			series.LibraryID,
 			series.VoteAverage,
 			series.VoteCount,
+			series.Popularity,
 			series.IsRemoved,
 			series.VideoCodec,
 			series.VideoResolution,

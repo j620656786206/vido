@@ -48,6 +48,7 @@ func setupSeriesTestDB(t *testing.T) *sql.DB {
 			subtitle_search_score REAL,
 			vote_average REAL,
 			vote_count INTEGER,
+			popularity REAL,
 			is_removed INTEGER NOT NULL DEFAULT 0,
 			library_id TEXT,
 			video_codec TEXT,
