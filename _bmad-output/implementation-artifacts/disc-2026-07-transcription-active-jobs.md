@@ -1,6 +1,6 @@
 # Story: surface single-episode/movie transcription jobs on the Activity page
 
-Status: review
+Status: done
 
 ## Story
 
