@@ -59,6 +59,10 @@ type Config struct {
 	// ClaudeModel overrides the Claude model id (9R-1). Empty = provider default.
 	ClaudeModel string
 
+	// GeminiModel overrides the Gemini model id. Empty = provider default.
+	// Added after gemini-2.0-flash was retired with no per-deployment override.
+	GeminiModel string
+
 	// SubtitlePipelineMode selects the subtitle backend behind the D5 flag
 	// (sub-1-6 AC #1): "legacy" (default, the Epic-8 search engine) or
 	// "pipeline" (the M1 extract-and-translate generation pipeline). Read it
@@ -127,6 +131,7 @@ func Load() (*Config, error) {
 	cfg.GeminiAPIKey = cfg.loadString("GEMINI_API_KEY", "")
 	cfg.ClaudeAPIKey = cfg.loadString("CLAUDE_API_KEY", "")
 	cfg.ClaudeModel = cfg.loadString("CLAUDE_MODEL", "")
+	cfg.GeminiModel = cfg.loadString("GEMINI_MODEL", "")
 	// AI throttle/budget (9R-11): conservative NAS-friendly defaults.
 	cfg.AIMaxConcurrent = cfg.loadInt("AI_MAX_CONCURRENT", 3)
 	cfg.AIRatePerSec = cfg.loadFloat("AI_RATE_PER_SEC", 2.0)

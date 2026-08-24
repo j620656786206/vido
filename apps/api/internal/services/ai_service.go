@@ -90,6 +90,7 @@ func NewAIService(cfg *config.Config, db *sql.DB, governor *ai.Governor) (*AISer
 		GeminiAPIKey: cfg.GetGeminiAPIKey(),
 		ClaudeAPIKey: cfg.GetClaudeAPIKey(),
 		ClaudeModel:  cfg.GetClaudeModel(),
+		GeminiModel:  cfg.GetGeminiModel(),
 		Governor:     governor,
 	}
 
