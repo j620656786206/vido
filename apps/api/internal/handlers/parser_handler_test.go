@@ -91,7 +91,7 @@ func TestParserHandler_Parse_TVShow(t *testing.T) {
 func TestParserHandler_Parse_NeedsAI(t *testing.T) {
 	_, router := setupParserHandler()
 
-	body := ParseRequest{Filename: "[Leopard-Raws] Kimetsu no Yaiba - 26.mkv"}
+	body := ParseRequest{Filename: "[Leopard-Raws] Kimetsu no Yaiba (BD 1920x1080).mkv"}
 	jsonBody, _ := json.Marshal(body)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/parser/parse", bytes.NewReader(jsonBody))
@@ -164,7 +164,7 @@ func TestParserHandler_ParseBatch(t *testing.T) {
 		Filenames: []string{
 			"The.Matrix.1999.1080p.BluRay.mkv",
 			"Breaking.Bad.S01E05.720p.BluRay.mkv",
-			"[Group] Anime - 01.mkv",
+			"[Group] Anime.mkv",
 		},
 	}
 	jsonBody, _ := json.Marshal(body)

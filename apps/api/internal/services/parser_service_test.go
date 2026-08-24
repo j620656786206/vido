@@ -170,7 +170,7 @@ func TestParserService_ParseFilename_NeedsAI(t *testing.T) {
 		name     string
 		filename string
 	}{
-		{"anime fansub", "[Leopard-Raws] Kimetsu no Yaiba - 26 (BD 1920x1080).mkv"},
+		{"anime fansub", "[Leopard-Raws] Kimetsu no Yaiba (BD 1920x1080).mkv"},
 		{"Chinese fansub", "【幻櫻字幕組】【4月新番】我的英雄學院 第01話 1080P.mp4"},
 		{"no pattern match", "random_video_file.mkv"},
 	}
@@ -192,7 +192,7 @@ func TestParserService_ParseBatch(t *testing.T) {
 	filenames := []string{
 		"The.Matrix.1999.1080p.BluRay.mkv",
 		"Breaking.Bad.S01E05.720p.BluRay.mkv",
-		"[Leopard-Raws] Kimetsu no Yaiba - 26.mkv",
+		"[Leopard-Raws] Kimetsu no Yaiba (BD 1920x1080).mkv",
 	}
 
 	results := service.ParseBatch(filenames)
@@ -227,7 +227,7 @@ func TestParserServiceWithAI_DelegatesToAI_WhenRegexFails(t *testing.T) {
 	service := NewParserServiceWithAI(aiService)
 
 	// This filename is detected as fansub and can't be parsed by regex
-	filename := "[Leopard-Raws] Kimetsu no Yaiba - 26 (BD 1920x1080).mkv"
+	filename := "[Leopard-Raws] Kimetsu no Yaiba (BD 1920x1080).mkv"
 	result := service.ParseFilename(filename)
 
 	require.NotNil(t, result)
@@ -265,7 +265,7 @@ func TestParserServiceWithAI_ReturnsNeedsAI_WhenAIFails(t *testing.T) {
 	service := NewParserServiceWithAI(aiService)
 
 	// Fansub filename - will use fansub parser
-	filename := "[Leopard-Raws] Kimetsu no Yaiba - 26.mkv"
+	filename := "[Leopard-Raws] Kimetsu no Yaiba (BD 1920x1080).mkv"
 	result := service.ParseFilename(filename)
 
 	require.NotNil(t, result)
@@ -278,7 +278,7 @@ func TestParserServiceWithAI_ReturnsNeedsAI_WhenAINotConfigured(t *testing.T) {
 	aiService := &mockAIService{isConfigured: false}
 	service := NewParserServiceWithAI(aiService)
 
-	filename := "[Leopard-Raws] Kimetsu no Yaiba - 26.mkv"
+	filename := "[Leopard-Raws] Kimetsu no Yaiba (BD 1920x1080).mkv"
 	result := service.ParseFilename(filename)
 
 	require.NotNil(t, result)
@@ -560,7 +560,7 @@ func TestParserServiceWithLearning_FallsBackToAI_WhenNoLearnedPattern(t *testing
 	}
 
 	service := NewParserServiceWithLearning(aiService, learningService)
-	result := service.ParseFilename("[TestGroup] Unknown Anime - 01.mkv")
+	result := service.ParseFilename("[TestGroup] Unknown Anime.mkv")
 
 	require.NotNil(t, result)
 	// AI should be called when no learned pattern matches (either generic or fansub)
