@@ -94,7 +94,10 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
   const currentPath = routerState.location.pathname;
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col md:flex-row" data-testid="settings-layout">
+    <div
+      className="mx-auto flex w-full max-w-7xl flex-col md:flex-row"
+      data-testid="settings-layout"
+    >
       {/* Desktop sidebar */}
       <nav
         className="hidden w-56 shrink-0 border-r border-[var(--border-subtle)] md:block"
