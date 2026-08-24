@@ -79,7 +79,7 @@ func TestRunTranscription_SharesSingleFlightMapWithAsyncPath(t *testing.T) {
 
 	// Simulate an async-path registration (same map, single-flight consistency).
 	svc.mu.Lock()
-	svc.inProgress[uuidB] = "async-job"
+	svc.inProgress[uuidB] = &soloTranscriptionJob{JobID: "async-job"}
 	svc.mu.Unlock()
 
 	err := svc.RunTranscription(context.Background(), uuidB, "/test.mkv", "/media")

@@ -20,6 +20,7 @@ import {
   AlertTriangle,
   ChevronRight,
   Activity,
+  Sparkles,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useActivity } from '../../hooks/useActivity';
@@ -41,10 +42,23 @@ const ACTIVE_META: Record<string, { icon: LucideIcon; title: string }> = {
   subtitle_batch: { icon: Captions, title: '批次字幕' },
   // Story ux3-subtitle-v2-batch AC 4 — the 9R-16 generation-batch job row.
   generation_batch: { icon: Captions, title: '批次生成' },
+  // disc-2026-07-transcription-active-jobs — a solo (non-batch) 生成字幕 click,
+  // previously invisible once its progress modal closed.
+  transcription: { icon: Sparkles, title: '字幕生成中' },
 };
 
 /** Jobs whose right-hand slot renders `current / total` instead of a percent. */
 const COUNTED_KINDS = new Set(['subtitle_batch', 'generation_batch']);
+
+/**
+ * Jobs with no fractional/bounded progress to report — the backend deliberately
+ * sends percentDone=0 rather than fabricate a number (disc-2026-07-
+ * transcription-active-jobs: this service tracks discrete pipeline stages, not
+ * a byte/item count). Showing a literal "0%" for a job's entire runtime would
+ * read as stuck; these render a static "進行中" label and no progress bar
+ * instead of `${percentDone}%`.
+ */
+const NO_PERCENT_KINDS = new Set(['transcription']);
 
 function isEmpty(d: ActivitySummary): boolean {
   return (
@@ -101,6 +115,8 @@ function ActiveSection({ section, onRetry }: { section: ActiveJobsSection; onRet
             <span className="font-mono text-[13px] text-[var(--text-secondary)]">
               {j.current ?? 0} / {j.total}
             </span>
+          ) : NO_PERCENT_KINDS.has(j.kind) ? (
+            <span className="text-[13px] text-[var(--text-secondary)]">進行中</span>
           ) : (
             <span className="font-mono text-[13px] text-[var(--accent-text)]">
               {j.percentDone}%
@@ -112,7 +128,7 @@ function ActiveSection({ section, onRetry }: { section: ActiveJobsSection; onRet
             title={meta.title}
             detail={j.detail}
             right={right}
-            progress={j.percentDone}
+            progress={NO_PERCENT_KINDS.has(j.kind) ? undefined : j.percentDone}
             testId={`activity-job-${j.kind}`}
           />
         );

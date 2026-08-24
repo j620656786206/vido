@@ -41,7 +41,7 @@ func TestTranscriptionService_IsInProgress_Empty(t *testing.T) {
 func TestTranscriptionService_IsInProgress_Set(t *testing.T) {
 	svc := NewTranscriptionService(nil, nil, nil, nil)
 	svc.mu.Lock()
-	svc.inProgress[uuidB] = "job-123"
+	svc.inProgress[uuidB] = &soloTranscriptionJob{JobID: "job-123"}
 	svc.mu.Unlock()
 
 	assert.True(t, svc.IsInProgress(uuidB))
@@ -65,7 +65,7 @@ func TestTranscriptionService_StartTranscription_AlreadyInProgress(t *testing.T)
 
 	// Manually set in-progress
 	svc.mu.Lock()
-	svc.inProgress[uuidB] = "existing-job"
+	svc.inProgress[uuidB] = &soloTranscriptionJob{JobID: "existing-job"}
 	svc.mu.Unlock()
 
 	_, err := svc.StartTranscription(context.Background(), uuidB, "/test.mkv", "/media")

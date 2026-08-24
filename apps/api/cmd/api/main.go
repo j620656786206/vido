@@ -893,10 +893,12 @@ func main() {
 	subtitlePipelineHandler := handlers.NewSubtitlePipelineHandler(
 		subtitlePipelineQueue, subtitlePipelineMedia, subtitleCapabilityGate)
 	// Activity hub aggregate (UX Redesign D4-1 / ux3-2-1) — composes live scan +
-	// batch-subtitle + generation-batch progress, pending-parse count, download counts,
-	// and recent parse events. Wired after the processors since it reads them.
-	// Fail-soft per section (B1/F3).
-	activityService := services.NewActivityService(scannerService, batchProcessor, generationBatchProcessor, downloadService, repos.ParseJobs)
+	// batch-subtitle + generation-batch + solo-transcription progress, pending-parse
+	// count, download counts, and recent parse events. Wired after the processors
+	// since it reads them. Fail-soft per section (B1/F3). transcriptionService
+	// (disc-2026-07-transcription-active-jobs) surfaces ad-hoc single-episode/movie
+	// jobs that were previously invisible once their progress modal was closed.
+	activityService := services.NewActivityService(scannerService, batchProcessor, generationBatchProcessor, transcriptionService, downloadService, repos.ParseJobs)
 	activityHandler := handlers.NewActivityHandler(activityService)
 	// parseProgressHandler already initialized above with defer Close()
 	slog.Info("Handlers initialized with service injection")
