@@ -1,4 +1,4 @@
-// Implements: <utility — no .pen counterpart>
+// Design ref: ux-design.pen Screen C4-D (6UCtX) · C4-M (2H4OM)
 import { Link, useRouterState } from '@tanstack/react-router';
 import {
   Plug,

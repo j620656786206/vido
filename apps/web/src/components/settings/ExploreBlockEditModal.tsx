@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen HP-3 Block CRUD Modal (Paqlk)
+// Design ref: ux-design.pen Screen H3 (Paqlk)
 /**
  * Explore block create/edit modal — Story 10.3.
  */

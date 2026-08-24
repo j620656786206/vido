@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen — no current screen frame; FR25 金鑰設定頁 is M1.5 net-new (story sub-2-1b) and rides the designed settings shell (Screen 10 Settings Desktop, 6UCtX) rather than adding a frame of its own
+// Design ref: ux-design.pen — no current screen frame; FR25 金鑰設定頁 is M1.5 net-new (story sub-2-1b) and rides the designed settings shell (Screen C4-D, 6UCtX) rather than adding a frame of its own
 /**
  * 金鑰設定 — in-app provider API key configuration (Story sub-2-1b, FR25 /
  * architecture D9 NFR-S3).

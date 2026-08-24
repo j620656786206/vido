@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen 10 Settings Desktop (6UCtX)
+// Design ref: ux-design.pen — no current screen frame; 系統日誌 tab was never given a frame — rides the designed settings shell (Screen C4-D, 6UCtX)
 import { useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { cn } from '../../lib/utils';

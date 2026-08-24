@@ -1,8 +1,8 @@
-// Design ref: ux-design.pen Screen 10 Settings Desktop (6UCtX)
+// Design ref: ux-design.pen Screen H5-D (Y5XvRv) · H3 (Paqlk)
 /**
  * Settings → 自訂首頁 — Story 10.3 management UI.
  *
- * Design ref: ux-design.pen Screen HP-5 (Y5XvRv), section C PhBJ8 — bugfix-10-6
+ * Design ref: ux-design.pen Screen H5-D (Y5XvRv), section C PhBJ8 — bugfix-10-6
  * polish (lucide content-type icons in place of 🎬/📺 emoji).
  */
 

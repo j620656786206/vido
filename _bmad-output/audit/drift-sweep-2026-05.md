@@ -374,3 +374,29 @@ wizard + pattern-learning prompt.
 | Rendered-baseline snapshot | `tests/visual/components.visual.spec.ts-snapshots/components/` (262 PNGs, 19-4b queue) |
 | `.pen` source | `ux-design.pen` (read-only — Pencil MCP `get_editor_state` + `get_screenshot`) |
 | ESLint grammar | `local/implements-pen-node-id` extended this story to accept the `// Design ref:` form (19-3 `[@contract-v3]`) — see story 19-8 Task 5 |
+
+## Addendum 2026-08 — 6UCtX correction (bugfix-settings-design-ref-6uctx-sweep)
+
+The 19-8 sweep blanket-upgraded every settings screen-section placeholder to `6UCtX` and recorded the rows above as `exact`. Field verification (9R-UX-auto-generation-toggle-design, 2026-08; re-verified 2026-08-24 via Pencil MCP read-only `Get`) established: **`6UCtX` = frame `C4-D` = the 連線設定 (qBittorrent) settings tab** (host/username/password form; 7-item sidebar with no 媒體庫掃描). It is NOT a generic "Settings Desktop" screen. A full-document text scan additionally established that the 快取管理 / 系統日誌 / 服務狀態 / 匯出/匯入 / 效能監控 tabs exist **only as sidebar items** in C4/C5/E1 — no dedicated screen frames. The original rows are retained above as the durable 19-8 record; the table below is the corrected mapping. Future re-scans should grep THIS table.
+
+| File (`apps/web/src/components/`) | 19-8 claim | Corrected ref (2026-08-24) | Basis |
+|---|---|---|---|
+| `settings/QBittorrentForm.tsx` | `6UCtX` exact | `Screen C4-D (6UCtX) · C4-M (2H4OM)` — **ID was correct**, legacy label replaced | C4-D IS the qBT connection form |
+| `settings/ConnectionTestResult.tsx` | `6UCtX` exact | `Screen C4-D (6UCtX) · C4-M (2H4OM)` — ID was correct | 測試連線 lives on C4 |
+| `settings/MediaLibraryManager.tsx` | `6UCtX` exact | `Screen E1-D (KvZSc) · E1-M (uABWl)` | E1 = 媒體庫掃描 (媒體資料夾／掃描排程／掃描媒體庫) |
+| `settings/LibraryCard.tsx` | `6UCtX` exact | `Screen E1-D (KvZSc) · E1-M (uABWl) · J4-D (sPzZT) · J5-D (alrIw)` (J refs retained) | as above |
+| `settings/CacheManagement.tsx` | `6UCtX` exact | design-coverage gap — 快取管理 tab has no frame; rides settings shell (C4-D) | tab is sidebar-item-only |
+| `settings/CacheTypeCard.tsx` | `6UCtX` exact | design-coverage gap — 快取管理 | as above |
+| `settings/LogsViewer.tsx` | `6UCtX` exact | design-coverage gap — 系統日誌 | as above |
+| `settings/LogEntry.tsx` | `6UCtX` exact | design-coverage gap — 系統日誌 | as above |
+| `settings/LogFilters.tsx` | `6UCtX` exact | design-coverage gap — 系統日誌 | as above |
+| `settings/ServiceStatusDashboard.tsx` | `6UCtX` exact | design-coverage gap — 服務狀態 | as above |
+| `settings/ServiceStatusCard.tsx` | `6UCtX` exact | design-coverage gap — 服務狀態 | as above |
+| `settings/MetadataExport.tsx` | `6UCtX` exact | design-coverage gap — 匯出/匯入 (the 匯出中繼資料 hits in B2/B5 are the detail-page context-menu item, a different component) | as above |
+| `settings/ExploreBlocksSettings.tsx` | `6UCtX` exact | `Screen H5-D (Y5XvRv) · H3 (Paqlk)` | the file's own inner doc-comment already carried the true ref (legacy name `HP-5`) |
+| `learning/LearnedPatternsSettings.tsx` | `6UCtX` exact | design-coverage gap — learning feature postdates the .pen design | consistent with 19-8's own `learning/LearnPatternPrompt` classification |
+| `health/QBStatusIndicator.tsx` | `6UCtX` exact | design-coverage gap — Story 4.6 connection-health indicator; C4-D shows only the qBT form, no status UI. Currently orphaned from live routes (dashboard-era; kept for gallery/visual baselines). NOT `Component/SidebarFooterStatus (PrmQG)` — that is `shell/SidebarFooter.tsx` | render-site + .pen verification |
+| `health/ConnectionHistoryPanel.tsx` | `6UCtX` exact | design-coverage gap — Story 4.6 connection-history side panel; no frame shows it. Also orphaned from live routes | as above |
+| `settings/ApiKeysForm.tsx` | gap form (already honest) | unchanged form; stale parenthetical `(Screen 10 Settings Desktop, 6UCtX)` → `(Screen C4-D, 6UCtX)` | label refresh only |
+
+Out of scope (deliberately untouched): legacy-era screen NAMES with correct IDs elsewhere (e.g. `Screen 11 Backup Management Desktop (uhAKd)`, `Screen 1 Library Grid Desktop (KNI8F)`) — stale labels, right IDs, zero traceability harm.

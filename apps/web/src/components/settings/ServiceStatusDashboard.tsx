@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen 10 Settings Desktop (6UCtX)
+// Design ref: ux-design.pen — no current screen frame; 服務狀態 tab was never given a frame — rides the designed settings shell (Screen C4-D, 6UCtX)
 import { useEffect, useRef, useState } from 'react';
 import { Activity, Bell, Loader2 } from 'lucide-react';
 import { useServiceStatuses, useTestServiceConnection } from '../../hooks/useServiceStatus';

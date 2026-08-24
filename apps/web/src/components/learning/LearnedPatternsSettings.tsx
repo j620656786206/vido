@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen 10 Settings Desktop (6UCtX)
+// Design ref: ux-design.pen — no current screen frame; learning feature postdates the .pen design (epic-19-8 sweep finding)
 /**
  * LearnedPatternsSettings Component (Story 3.9 - AC3)
  * Displays and manages learned filename patterns in settings
