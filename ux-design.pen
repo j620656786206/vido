@@ -166579,7 +166579,8 @@
                       "width": "fill_container",
                       "content": "Vido 會用 AI 把片名、劇情與角色名翻成繁體中文，寫成播放器讀得到的 .nfo 檔。",
                       "fontFamily": "Noto Sans TC",
-                      "fontSize": 14
+                      "fontSize": 14,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "frame",
@@ -166767,7 +166768,8 @@
                       "width": "fill_container",
                       "content": "Vido 會用 AI 把劇名、簡介與角色名翻成繁體中文。",
                       "fontFamily": "Noto Sans TC",
-                      "fontSize": 14
+                      "fontSize": 14,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "frame",
@@ -166818,7 +166820,8 @@
                               "width": "fill_container",
                               "content": "原始檔會先備份成 tvshow.nfo.orig；之後再執行也不會覆蓋這份備份。",
                               "fontFamily": "Noto Sans TC",
-                              "fontSize": 13
+                              "fontSize": 13,
+                              "fontWeight": "normal"
                             }
                           ]
                         }
@@ -166912,7 +166915,8 @@
                               "width": "fill_container",
                               "content": "每一集各翻譯一次，額度用量會明顯增加。",
                               "fontFamily": "Noto Sans TC",
-                              "fontSize": 12
+                              "fontSize": 12,
+                              "fontWeight": "normal"
                             }
                           ]
                         }
@@ -167167,7 +167171,694 @@
               "width": "fill_container",
               "content": "「略過」＝資料庫有這一集，但硬碟上找不到對應的影片檔，所以沒有地方可以放 .nfo。",
               "fontFamily": "Noto Sans TC",
-              "fontSize": 12
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "N4g3Y",
+      "x": 23740,
+      "y": 24270,
+      "name": "Caption J7-D",
+      "fill": "#888888",
+      "content": "J7 · 設定頁表單卡片寬度裁定",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 14,
+      "fontWeight": "600"
+    },
+    {
+      "type": "frame",
+      "id": "JBKis",
+      "x": 23740,
+      "y": 24300,
+      "name": "J7-D",
+      "width": 1240,
+      "fill": "$bg-secondary",
+      "cornerRadius": "$radius-lg",
+      "stroke": "$border-subtle",
+      "strokeWidth": 1,
+      "layout": "vertical",
+      "gap": 28,
+      "padding": 32,
+      "children": [
+        {
+          "type": "frame",
+          "id": "oKb7A",
+          "name": "區塊A-標題",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "Dncpk",
+              "name": "主標",
+              "fill": "$text-primary",
+              "content": "設定頁表單卡片寬度 —— 為什麼看起來留白很多",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 22,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "URUgp",
+              "name": "副標",
+              "fill": "$text-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "C4-D（連線設定）畫的時候，App 主側欄（Navigation Shell v2）還不存在，所以設計稿的寬度比例已經不能直接照抄。",
+              "lineHeight": 1.5,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "b1Xb1",
+          "name": "區塊B-為什麼會有這個狀態",
+          "width": "fill_container",
+          "fill": "$bg-primary",
+          "cornerRadius": "$radius-md",
+          "layout": "vertical",
+          "gap": 10,
+          "padding": 16,
+          "children": [
+            {
+              "type": "text",
+              "id": "s1Qi4",
+              "name": "小標",
+              "fill": "$text-primary",
+              "content": "⚙️ 為什麼會有這個狀態",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 13,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "DhNud",
+              "name": "事實1",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "C4-D 設計稿在 1440px 畫布上只算了一層側欄（240px，即設定子選單本身），content-area 量出來是 fill_container、bounds.width=1200px，form-card 也是 fill_container、bounds.width=1136px（幾乎填滿）。",
+              "lineHeight": 1.6,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12.5,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "n5ECl",
+              "name": "事實2",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "但這張設計稿的時間點早於 Navigation Shell v2（左側 App 主導覽）被加進來 —— 也就是說設計稿從未把「兩層側欄疊加」算進去。",
+              "lineHeight": 1.6,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12.5,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "fL6ii",
+          "name": "區塊C-真實寬度算式",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "tZhnm",
+              "name": "小標",
+              "fill": "$text-primary",
+              "content": "真實寬度算式（1440px 視窗，側欄展開）",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 13,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "W8Jg18",
+              "name": "表格",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "uyk5D",
+                  "name": "表頭",
+                  "width": "fill_container",
+                  "fill": "$bg-secondary",
+                  "padding": [
+                    10,
+                    14
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "JIpPt",
+                      "name": "表頭欄-項目",
+                      "width": 848,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "P0IBTR",
+                          "name": "欄名",
+                          "fill": "$text-muted",
+                          "content": "項目",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ft4ce",
+                      "name": "表頭欄-寬度",
+                      "width": 300,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "b7wqt",
+                          "name": "欄名",
+                          "fill": "$text-muted",
+                          "content": "寬度",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "d4pFJ",
+                  "name": "列1-App主側欄",
+                  "width": "fill_container",
+                  "stroke": "$border-subtle",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "klCx1",
+                      "name": "欄1-項目",
+                      "width": 848,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "nJts0",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "App 主側欄 AppSidebar.tsx:46（展開 / 收合）",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "N8hifl",
+                      "name": "欄2-寬度",
+                      "width": 300,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "BCgg8",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "240px / 64px",
+                          "lineHeight": 1.5,
+                          "fontFamily": "JetBrains Mono",
+                          "fontSize": 12.5,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "dTfPc",
+                  "name": "列2-設定子選單",
+                  "width": "fill_container",
+                  "stroke": "$border-subtle",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Ivd4l",
+                      "name": "欄1-項目",
+                      "width": 848,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Mq6Uy",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "設定子選單 SettingsLayout.tsx（w-56）",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "JV5Jh",
+                      "name": "欄2-寬度",
+                      "width": 300,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "luWlb",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "224px",
+                          "lineHeight": 1.5,
+                          "fontFamily": "JetBrains Mono",
+                          "fontSize": 12.5,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "a6szMu",
+                  "name": "列3-設定外殼",
+                  "width": "fill_container",
+                  "stroke": "$border-subtle",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "pwlOO",
+                      "name": "欄1-項目",
+                      "width": 848,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "OYJ0z",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "設定外殼 max-w-7xl（SettingsLayout.tsx 根 div，PR #278 已修正置中）",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "FYevV",
+                      "name": "欄2-寬度",
+                      "width": 300,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "KZVvl",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "1280px",
+                          "lineHeight": 1.5,
+                          "fontFamily": "JetBrains Mono",
+                          "fontSize": 12.5,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "P9cPde",
+                  "name": "列4-目前表單卡片",
+                  "width": "fill_container",
+                  "fill": "$warning-tint",
+                  "stroke": "$border-subtle",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "G7wvh",
+                      "name": "欄1-項目",
+                      "width": 848,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Dr8dC",
+                          "name": "值",
+                          "fill": "$text-primary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "目前表單卡片 max-w-2xl（僅 connection.tsx、ApiKeysForm.tsx 兩檔）",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "qg8S0",
+                      "name": "欄2-寬度",
+                      "width": 300,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "qhVLw",
+                          "name": "值",
+                          "fill": "$warning",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "672px",
+                          "lineHeight": 1.5,
+                          "fontFamily": "JetBrains Mono",
+                          "fontSize": 12.5,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "dHbT0",
+                  "name": "列5-設計稿原意",
+                  "width": "fill_container",
+                  "stroke": "$border-subtle",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "K45Ln",
+                      "name": "欄1-項目",
+                      "width": 848,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "GHR9x",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "C4-D 設計稿原意（不含 App 主側欄的舊假設）",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "YDlRE",
+                      "name": "欄2-寬度",
+                      "width": 300,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "sUWRg",
+                          "name": "值",
+                          "fill": "$text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "1136px（填滿）",
+                          "lineHeight": 1.5,
+                          "fontFamily": "JetBrains Mono",
+                          "fontSize": 12.5,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "P5YVm",
+              "name": "註記",
+              "fill": "$text-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "琥珀＝本次要動的那一格。最後一列是舊假設，只能當方向參考，不能當今天的絕對真理。",
+              "lineHeight": 1.6,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "A9CTVC",
+          "name": "區塊D-裁定",
+          "width": "fill_container",
+          "fill": "$bg-primary",
+          "cornerRadius": "$radius-md",
+          "layout": "vertical",
+          "gap": 10,
+          "padding": 16,
+          "children": [
+            {
+              "type": "text",
+              "id": "R9qvPX",
+              "name": "小標",
+              "fill": "$text-primary",
+              "content": "⚖️ 裁定：max-w-2xl → max-w-3xl",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 13,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "KUmTE",
+              "name": "裁定內文",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "表單卡片寬度從 max-w-2xl（672px）放寬到 max-w-3xl（768px），兩頁（連線設定、金鑰設定）統一套用。",
+              "lineHeight": 1.6,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12.5,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "vLuRD",
+              "name": "裁定不採用",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "不採用設計稿原始的 1136px（填滿寬度）—— 四個短欄位的輸入框若撐到 1136px 寬會難以閱讀，違反表單易讀性常規。",
+              "lineHeight": 1.6,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12.5,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "RNecx",
+              "name": "裁定影響範圍",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "其餘 9 個設定子頁（快取、日誌、掃描…）本來就沒有寬度限制，維持不變、不受影響。",
+              "lineHeight": 1.6,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12.5,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "laTqb",
+          "name": "區塊E-文案理由",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "text",
+              "id": "bxvZ8",
+              "name": "小標",
+              "fill": "$text-primary",
+              "content": "文案的理由（逐條可指認）",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 13,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "S66FgF",
+              "name": "理由1",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "① C4-D 的 fill_container 比例是在缺一層側欄的舊假設下量出來的，不能當今天的絕對真理，只能當方向參考。",
+              "lineHeight": 1.5,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12.5,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "rIDkO",
+              "name": "理由2",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "② 672px 對純文字輸入框不算窄，是業界常見設定頁寬度（GitHub、Stripe 等同類頁面），使用者原本感受到的「留白過多」主要來自另一個已修好的 bug（SettingsLayout 缺 w-full，整團貼左）。",
+              "lineHeight": 1.5,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12.5,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "OZtaw",
+              "name": "理由3",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "③ 768px 在「不讓輸入框過寬」與「減少雙層置中疊加的空曠感」之間取得平衡，是提案值、非最終值 —— Alexyu 執行時可自行調整這個數字。",
+              "lineHeight": 1.5,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12.5,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "RTkp9",
+              "name": "理由4",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "④ 只影響 connection.tsx 與 ApiKeysForm.tsx 這兩個離群檔案，其餘子頁的版型維持一致、不動。",
+              "lineHeight": 1.5,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12.5,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "c1ngpb",
+          "name": "區塊F-落地備註",
+          "width": "fill_container",
+          "fill": "$bg-primary",
+          "cornerRadius": "$radius-md",
+          "layout": "vertical",
+          "gap": 10,
+          "padding": 16,
+          "children": [
+            {
+              "type": "text",
+              "id": "XA47p",
+              "name": "小標",
+              "fill": "$text-primary",
+              "content": "🛠 落地備註",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 13,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "H01jS",
+              "name": "備註1",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "apps/web/src/routes/settings/connection.tsx:10 —— mx-auto max-w-2xl 改為 mx-auto max-w-3xl",
+              "lineHeight": 1.6,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12.5,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "NeiRU",
+              "name": "備註2",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "apps/web/src/components/settings/ApiKeysForm.tsx:215 —— mx-auto max-w-2xl 改為 mx-auto max-w-3xl",
+              "lineHeight": 1.6,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12.5,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "q2XdNq",
+              "name": "備註3",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "兩處改動需搭配一個小型 bugfix story（沿用今天 bugfix-i-2-puid-pgid／bugfix-settingslayout-missing-w-full 同規格：1 AC、附回歸測試、RED-GREEN 驗證、視覺截圖比對），先確認本畫面的裁定寬度後才動工。",
+              "lineHeight": 1.6,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12.5,
+              "fontWeight": "normal"
             }
           ]
         }
