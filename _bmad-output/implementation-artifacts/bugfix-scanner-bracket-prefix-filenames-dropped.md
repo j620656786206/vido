@@ -1,6 +1,6 @@
 # Story bugfix: scanner drops bracket-prefixed episode filenames
 
-Status: review
+Status: done
 
 ## Story
 
