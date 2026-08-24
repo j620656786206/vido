@@ -22,23 +22,28 @@ func (p *MovieParser) Parse(filename string) *ParseResult {
 		MediaType:        MediaTypeUnknown,
 	}
 
-	// Skip if it looks like a TV show
-	if tvShowPattern.MatchString(filename) {
-		return result
+	// A release-group prefix is not a reason to give up — strip it and judge the remainder,
+	// the same way TVParser does. Doing this on only one of the two parsers would leave the
+	// identical defect live one file away.
+	name := filename
+	if leadingTagPattern.MatchString(name) {
+		if name = StripLeadingTags(name); name == "" {
+			return result
+		}
 	}
 
-	// Skip if it looks like anime/fansub
-	if animePattern.MatchString(filename) {
+	// Skip if it looks like a TV show
+	if tvShowPattern.MatchString(name) {
 		return result
 	}
 
 	// Try standard movie pattern first
-	if p.parseStandardFormat(filename, result) {
+	if p.parseStandardFormat(name, result) {
 		return result
 	}
 
 	// Try parentheses year format
-	if p.parseParensFormat(filename, result) {
+	if p.parseParensFormat(name, result) {
 		return result
 	}
 
@@ -47,18 +52,21 @@ func (p *MovieParser) Parse(filename string) *ParseResult {
 
 // CanParse returns true if this parser can handle the given filename.
 func (p *MovieParser) CanParse(filename string) bool {
-	// Exclude TV shows
-	if tvShowPattern.MatchString(filename) {
-		return false
+	// Must agree with Parse: same strip, same exclusions, same order.
+	name := filename
+	if leadingTagPattern.MatchString(name) {
+		if name = StripLeadingTags(name); name == "" {
+			return false
+		}
 	}
 
-	// Exclude anime/fansub
-	if animePattern.MatchString(filename) {
+	// Exclude TV shows
+	if tvShowPattern.MatchString(name) {
 		return false
 	}
 
 	// Must have a year pattern
-	return moviePatternStandard.MatchString(filename) || moviePatternParens.MatchString(filename)
+	return moviePatternStandard.MatchString(name) || moviePatternParens.MatchString(name)
 }
 
 // parseStandardFormat handles Movie.Name.2024.1080p.BluRay.mkv format

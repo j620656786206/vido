@@ -333,8 +333,11 @@ func TestTVParser_CannotParse(t *testing.T) {
 			filename: "The.Matrix.1999.1080p.BluRay.mkv",
 		},
 		{
-			name:     "fansub bracket format",
-			filename: "[Leopard-Raws] Kimetsu no Yaiba - 26 (BD 1920x1080).mkv",
+			// A leading [Group] tag used to be an unconditional give-up. It is not any
+			// more — see TestTVParserLeadingReleaseGroupTag. What still cannot be parsed
+			// is a tagged name with no episode marker of any kind behind the tag.
+			name:     "fansub bracket with no episode marker",
+			filename: "[Leopard-Raws] Kimetsu no Yaiba (BD 1920x1080).mkv",
 		},
 		{
 			name:     "Chinese fansub",
@@ -368,7 +371,10 @@ func TestTVParser_CanParse(t *testing.T) {
 		{"1x05 format", "House.1x13.720p.mkv", true},
 		{"daily show format", "The.Daily.Show.2024.01.15.720p.mkv", true},
 		{"movie format", "The.Matrix.1999.1080p.BluRay.mkv", false},
-		{"fansub bracket format", "[Group] Anime - 01 [1080p].mkv", false},
+		// The leading tag is stripped and the remainder judged, so an episode number behind
+		// a group tag is now parseable (it always was — the tag just hid it).
+		{"fansub bracket with episode number", "[Group] Anime - 01 [1080p].mkv", true},
+		{"fansub bracket without episode number", "[Group] Anime [1080p].mkv", false},
 	}
 
 	for _, tt := range tests {

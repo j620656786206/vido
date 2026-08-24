@@ -1,6 +1,9 @@
 package parser
 
-import "regexp"
+import (
+	"regexp"
+	"strings"
+)
 
 // Movie patterns for standard naming conventions
 var (
@@ -22,12 +25,29 @@ var (
 			`(?:\.[a-z0-9]{2,4})?$`, // Extension
 	)
 
-	// TV Show detection patterns (to exclude from movie parsing)
-	tvShowPattern = regexp.MustCompile(`(?i)[Ss]\d{1,2}[Ee]\d{1,3}|\d{1,2}x\d{1,3}`)
+	// TV Show detection patterns (to exclude from movie parsing).
+	// The NxNN alternative is fenced by separators/anchors so a resolution token does not
+	// look like an episode marker — "1920x1080" contains "20x108", which used to match and
+	// permanently blocked every anime-dash release that states its resolution.
+	tvShowPattern = regexp.MustCompile(`(?i)[Ss]\d{1,2}[Ee]\d{1,3}|(?:^|[\s._-])\d{1,2}x\d{1,3}(?:[\s._-]|$)`)
 
-	// Anime/fansub detection (to exclude from movie parsing)
-	animePattern = regexp.MustCompile(`^\[.+?\]`)
+	// Leading release-group / fansub tags: "[LoliHouse] ", "[47BT][我们的星球]", "[主角]."
+	// Only anchored at the start — a trailing "[CRC32]" is part of the name, not a prefix.
+	leadingTagPattern = regexp.MustCompile(`^(?:\[[^\]]*\][\s._-]*)+`)
 )
+
+// StripLeadingTags removes leading release-group tags and the separators that follow them.
+//
+// Fansub and scene releases prefix an otherwise conventional name with their own tag
+// ("[ToonsHub] Show S01E05.mkv"). Matching against the remainder is what lets the ordinary
+// patterns see the SxxExx that is already there. Returns "" when the name is nothing but
+// tags, which callers treat as unparseable rather than as a title.
+func StripLeadingTags(filename string) string {
+	stripped := leadingTagPattern.ReplaceAllString(filename, "")
+	// A malformed extra "]" ("[47BT][x]]Our.Planet.mp4") survives the tag match; it is
+	// punctuation, never the first character of a real title.
+	return strings.TrimLeft(stripped, "] ._-")
+}
 
 // TV Show patterns for standard naming conventions
 var (
@@ -58,7 +78,6 @@ var (
 			`(?:[.\s_-]+.+)?` + // Optional rest
 			`(?:\.[a-z0-9]{2,4})?$`, // Extension
 	)
-
 )
 
 // Quality patterns

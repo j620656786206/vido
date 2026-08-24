@@ -43,33 +43,40 @@ func (p *TVParser) Parse(filename string) *ParseResult {
 		MediaType:        MediaTypeUnknown,
 	}
 
-	// Skip anime fansub bracket format - these need AI
-	if animePattern.MatchString(filename) {
-		return result
+	// A fansub/release-group prefix hides an otherwise conventional name from every pattern
+	// below, so match against the remainder. This used to be an unconditional give-up that
+	// deferred to AI; on the 2026-08 NAS corpus it abandoned 408 of 412 files — including
+	// names carrying a plain SxxExx — and every one of them collapsed onto the same
+	// episode-0 placeholder row. result.OriginalFilename keeps the untouched name.
+	name := filename
+	if leadingTagPattern.MatchString(name) {
+		if name = StripLeadingTags(name); name == "" {
+			return result
+		}
 	}
 
 	// Try standard S01E05 format first (most common)
-	if p.parseStandardFormat(filename, result) {
+	if p.parseStandardFormat(name, result) {
 		return result
 	}
 
 	// Try alternative 1x05 format
-	if p.parseAltFormat(filename, result) {
+	if p.parseAltFormat(name, result) {
 		return result
 	}
 
 	// Try daily show format (2024.01.15)
-	if p.parseDailyFormat(filename, result) {
+	if p.parseDailyFormat(name, result) {
 		return result
 	}
 
 	// Try anime Episode/Ep format
-	if p.parseAnimeEpFormat(filename, result) {
+	if p.parseAnimeEpFormat(name, result) {
 		return result
 	}
 
 	// Try anime dash format (Title - 01)
-	if p.parseAnimeDashFormat(filename, result) {
+	if p.parseAnimeDashFormat(name, result) {
 		return result
 	}
 
@@ -78,16 +85,19 @@ func (p *TVParser) Parse(filename string) *ParseResult {
 
 // CanParse returns true if this parser can handle the given filename.
 func (p *TVParser) CanParse(filename string) bool {
-	// Skip fansub bracket format
-	if animePattern.MatchString(filename) {
-		return false
+	// Must agree with Parse: anything Parse resolves has to answer true here.
+	name := filename
+	if leadingTagPattern.MatchString(name) {
+		if name = StripLeadingTags(name); name == "" {
+			return false
+		}
 	}
 
-	return tvPatternStandard.MatchString(filename) ||
-		tvPatternAlt.MatchString(filename) ||
-		tvPatternDaily.MatchString(filename) ||
-		tvPatternAnimeEp.MatchString(filename) ||
-		tvPatternAnimeDash.MatchString(filename)
+	return tvPatternStandard.MatchString(name) ||
+		tvPatternAlt.MatchString(name) ||
+		tvPatternDaily.MatchString(name) ||
+		tvPatternAnimeEp.MatchString(name) ||
+		tvPatternAnimeDash.MatchString(name)
 }
 
 // parseStandardFormat handles Show.Name.S01E05.720p.WEB-DL.mkv format
