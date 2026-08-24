@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen H1 Settings Scanner Desktop (KvZSc)
+// Design ref: ux-design.pen Screen E1-D (KvZSc) · E1-M (uABWl)
 /**
  * Scanner Settings component (Story 7.3)
  * Displays media folder paths, scan schedule, last scan info, and scan trigger button.

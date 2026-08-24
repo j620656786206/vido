@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen 10 Settings Desktop (6UCtX)
+// Design ref: ux-design.pen Screen E1-D (KvZSc) · E1-M (uABWl)
 /**
  * Media Library Manager component for Settings page (Story 7b-4)
  * Replaces the env var display section in ScannerSettings.

@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen 10 Settings Desktop (6UCtX)
+// Design ref: ux-design.pen Screen C4-D (6UCtX) · C4-M (2H4OM)
 import { useState, useEffect } from 'react';
 import { Loader2, Plug, Save } from 'lucide-react';
 import { cn } from '../../lib/utils';

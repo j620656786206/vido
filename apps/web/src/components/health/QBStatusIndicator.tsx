@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen 10 Settings Desktop (6UCtX)
+// Design ref: ux-design.pen — no current screen frame; Story 4.6 connection-health indicator postdates the .pen design (C4-D shows only the qBT connection form)
 /**
  * qBittorrent connection status indicator (Story 4.6 - AC1, AC2)
  */

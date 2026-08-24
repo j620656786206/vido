@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen 10 Settings Desktop (6UCtX) · J4-D (sPzZT) · J5-D (alrIw)
+// Design ref: ux-design.pen Screen E1-D (KvZSc) · E1-M (uABWl) · J4-D (sPzZT) · J5-D (alrIw)
 /**
  * Library Card component for displaying a media library in Settings (Story 7b-4)
  */
