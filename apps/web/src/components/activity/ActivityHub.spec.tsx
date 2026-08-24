@@ -176,6 +176,57 @@ describe('ActivityHub (v2 Activity hub — four states + fail-soft)', () => {
     expect(row).toHaveTextContent('12 / 38');
   });
 
+  it('[disc-2026-07-transcription-active-jobs] a solo transcription job renders its own kind, not the generic fallback', async () => {
+    mockUseActivity.mockReturnValue(
+      result({
+        data: summary({
+          activeJobs: {
+            status: 'ok',
+            jobs: [
+              {
+                kind: 'transcription',
+                percentDone: 0,
+                detail: '龍族前傳 S03E01',
+                current: 1,
+                total: 0,
+              },
+            ],
+          },
+        }),
+      })
+    );
+    renderHub();
+
+    const row = await screen.findByTestId('activity-job-transcription');
+    expect(row).toHaveTextContent('字幕生成中');
+    expect(row).toHaveTextContent('龍族前傳 S03E01');
+    // The backend deliberately never fabricates a percent for this kind — the
+    // row must show a static "進行中" label, not "0%" (which would read as
+    // stuck) and must not render a progress bar filled to 0.
+    expect(row).toHaveTextContent('進行中');
+    expect(row).not.toHaveTextContent('0%');
+    expect(screen.queryByRole('progressbar')).toBeNull();
+  });
+
+  it('[disc-2026-07-transcription-active-jobs] an unrecognized kind still falls back to a generic row (defensive baseline)', async () => {
+    mockUseActivity.mockReturnValue(
+      result({
+        data: summary({
+          activeJobs: {
+            status: 'ok',
+            jobs: [
+              { kind: 'some_future_kind', percentDone: 10, detail: 'x', current: 0, total: 0 },
+            ],
+          },
+        }),
+      })
+    );
+    renderHub();
+
+    const row = await screen.findByTestId('activity-job-some_future_kind');
+    expect(row).toHaveTextContent('some_future_kind');
+  });
+
   it('[P1] 批次生成字幕 CTA opens the batch dialog (ux3-subtitle-v2-batch AC 4a)', async () => {
     mockUseActivity.mockReturnValue(result({ data: summary() }));
     renderHub();

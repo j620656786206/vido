@@ -151,7 +151,7 @@ type TranscriptionService struct {
 	seriesReader SeriesMetadataReader
 
 	mu         sync.Mutex
-	inProgress map[string]string // mediaID (UUID string, 9R-18) → jobID
+	inProgress map[string]*soloTranscriptionJob // mediaID (UUID string, 9R-18) → job record
 }
 
 // NewTranscriptionService creates a new TranscriptionService.
@@ -170,7 +170,7 @@ func NewTranscriptionService(
 		sseHub:         sseHub,
 		logger:         logger.With("service", "transcription"),
 		timeout:        5 * time.Minute,
-		inProgress:     make(map[string]string),
+		inProgress:     make(map[string]*soloTranscriptionJob),
 	}
 }
 
@@ -302,7 +302,11 @@ func (s *TranscriptionService) StartTranscription(ctx context.Context, mediaID s
 		return "", ErrTranscriptionDisabled
 	}
 
-	jobID, err := s.acquireJob(mediaID)
+	// disc-2026-07-transcription-active-jobs: resolve the Activity-row title
+	// BEFORE acquiring the lock — acquireJob must stay a fast, I/O-free
+	// map operation.
+	title := s.resolveActivityTitle(ctx, cfg.mediaType, mediaID)
+	jobID, err := s.acquireJob(mediaID, title, true)
 	if err != nil {
 		return "", err
 	}
@@ -336,7 +340,13 @@ func (s *TranscriptionService) RunTranscription(ctx context.Context, mediaID str
 		return ErrTranscriptionDisabled
 	}
 
-	jobID, err := s.acquireJob(mediaID)
+	// disc-2026-07-transcription-active-jobs: RunTranscription is shared by
+	// GenerationBatchProcessor and the pipeline-mode ASR fallback adapter —
+	// neither is a solo ad-hoc click, and a batch item already has its own
+	// Activity row (generation_batch). solo=false skips ActivityProgress
+	// counting for it (see soloTranscriptionJob), and skipping the title
+	// resolution entirely avoids a wasted DB lookup on the batch hot path.
+	jobID, err := s.acquireJob(mediaID, "", false)
 	if err != nil {
 		return err
 	}
@@ -358,18 +368,98 @@ func (s *TranscriptionService) resolveBudget(ctx context.Context) (*ai.Budget, c
 	return b, ai.WithBudget(ctx, b)
 }
 
+// soloTranscriptionJob is the Activity-visibility record for one in-flight
+// job (disc-2026-07-transcription-active-jobs). Title is resolved once, at
+// acquire time — never re-queried per broadcast, keeping this cheap.
+//
+// Solo distinguishes an ad-hoc single-media click (StartTranscription, the
+// media-detail-page "生成字幕" button) from a batch/pipeline-triggered run
+// (RunTranscription, shared by GenerationBatchProcessor and the pipeline-mode
+// ASR fallback adapter). Both share this SAME map for its original purpose —
+// single-flight dedup, so a batch item and a solo click on the same media
+// still correctly 409 each other — but only Solo jobs should count toward
+// ActivityProgress(): a batch item already has its own Activity row
+// ("generation_batch"), and counting it again here would double-count the
+// exact same underlying job as two rows.
+type soloTranscriptionJob struct {
+	JobID string
+	Title string
+	Solo  bool
+}
+
 // acquireJob registers a media ID in the single-flight map shared by the async
 // and sync entries, returning the new job ID or ErrTranscriptionInProgress.
-// runPipeline's deferred cleanup releases the slot.
-func (s *TranscriptionService) acquireJob(mediaID string) (string, error) {
+// runPipeline's deferred cleanup releases the slot. title is a pre-resolved
+// display string (see resolveActivityTitle) — resolving it requires DB reads,
+// which must happen BEFORE this call, never while holding s.mu. Batch/pipeline
+// callers pass an empty title and solo=false (see soloTranscriptionJob) —
+// skipping the title lookup entirely for them, not just hiding it later.
+func (s *TranscriptionService) acquireJob(mediaID, title string, solo bool) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, exists := s.inProgress[mediaID]; exists {
 		return "", ErrTranscriptionInProgress
 	}
 	jobID := uuid.New().String()
-	s.inProgress[mediaID] = jobID
+	s.inProgress[mediaID] = &soloTranscriptionJob{JobID: jobID, Title: title, Solo: solo}
 	return jobID, nil
+}
+
+// resolveActivityTitle looks up a human-readable title for the Activity page's
+// in-flight-jobs row (disc-2026-07-transcription-active-jobs). Fail-soft by
+// design: a display-string lookup must never block or fail the transcription
+// itself, and never fabricates a title — on any miss it falls back to the raw
+// mediaID, mirroring the existing "series metadata lookup failed" pattern
+// this file already uses for the translation-prompt context lookup.
+func (s *TranscriptionService) resolveActivityTitle(ctx context.Context, mediaType, mediaID string) string {
+	switch mediaType {
+	case models.SubtitleRunMediaEpisode:
+		if s.episodeReader == nil {
+			return mediaID
+		}
+		episode, err := s.episodeReader.FindByID(ctx, mediaID)
+		if err != nil || episode == nil || episode.SeriesID == "" || s.seriesReader == nil {
+			return mediaID
+		}
+		series, err := s.seriesReader.FindByID(ctx, episode.SeriesID)
+		if err != nil || series == nil {
+			return mediaID
+		}
+		return fmt.Sprintf("%s S%02dE%02d", series.Title, episode.SeasonNumber, episode.EpisodeNumber)
+	default:
+		if s.stateReader == nil {
+			return mediaID
+		}
+		movie, err := s.stateReader.FindByID(ctx, mediaID)
+		if err != nil || movie == nil {
+			return mediaID
+		}
+		return movie.Title
+	}
+}
+
+// ActivityProgress implements the same shape every other Activity in-flight
+// source already satisfies (services.batchJobSource — see activity_service.go)
+// so this service slots in as a 6th source with zero bespoke wiring on the
+// Activity side (disc-2026-07-transcription-active-jobs). percentDone and
+// total are always 0: this service tracks discrete pipeline stages, not a
+// fractional or bounded count, and fabricating a percentage would misreport
+// real progress the same way a $0 AI-usage record would misreport real cost.
+// currentItem is one representative in-flight job's title — which one is
+// unspecified when more than one job is running (Go map iteration order);
+// any currently-running job's title honestly answers "something is
+// generating right now," and picking is not worth ordering machinery for.
+func (s *TranscriptionService) ActivityProgress() (active bool, percentDone, current, total int, currentItem string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, job := range s.inProgress {
+		if !job.Solo {
+			continue // batch/pipeline job — already counted via generation_batch's own row
+		}
+		current++
+		currentItem = job.Title
+	}
+	return current > 0, 0, current, 0, currentItem
 }
 
 // TranscriptionOption configures optional transcription behavior.
