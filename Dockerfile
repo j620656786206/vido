@@ -69,7 +69,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
 FROM alpine:3.21
 
 # Install runtime dependencies
-RUN apk add --no-cache ca-certificates tzdata ffmpeg
+RUN apk add --no-cache ca-certificates tzdata ffmpeg su-exec
 
 # Create non-root user (matching existing API Dockerfile)
 RUN addgroup -g 1000 vido && \
@@ -87,7 +87,19 @@ COPY --from=web-builder --chown=vido:vido /app/dist/apps/web /app/public
 
 WORKDIR /home/vido
 
-USER vido
+# PUID/PGID support (bugfix-i-2): the entrypoint starts as root ONLY to take
+# ownership of the writable bind mounts, then drops to PUID:PGID via su-exec
+# before exec'ing the API. `USER vido` was removed for that reason — without a
+# root step there is no way to fix a bind mount Docker created as root:root,
+# which is exactly how a first-time Unraid install failed to boot.
+# Defaults keep the historical 1000:1000 identity.
+ENV PUID=1000 \
+    PGID=1000
+
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 EXPOSE 8080
 
