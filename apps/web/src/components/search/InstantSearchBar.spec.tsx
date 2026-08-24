@@ -115,9 +115,14 @@ describe('InstantSearchBar', () => {
     expect(screen.queryByTestId('search-suggestions')).not.toBeInTheDocument();
     expect(tmdbService.unifiedSearch).not.toHaveBeenCalled();
 
-    // After the 300ms debounce + query resolution, suggestions render.
-    await waitFor(() => expect(screen.getByTestId('search-suggestions')).toBeInTheDocument());
-    expect(tmdbService.unifiedSearch).toHaveBeenCalledWith('你的名字');
+    // After the 300ms debounce, the fetch fires. AWAIT THE SPY, not the
+    // dropdown: the dropdown opens on the debounce alone (it has a loading
+    // state), BEFORE React Query invokes the mocked fetch — asserting the spy
+    // synchronously in that gap is the flake this file was on the board for
+    // (preexisting-fail-instant-search-debounce-flake; red on a saturated
+    // runner 2026-06-05 and again on PR #267's first CI run).
+    await waitFor(() => expect(tmdbService.unifiedSearch).toHaveBeenCalledWith('你的名字'));
+    expect(screen.getByTestId('search-suggestions')).toBeInTheDocument();
   });
 
   it('does not search for queries shorter than 2 characters', async () => {
@@ -128,7 +133,10 @@ describe('InstantSearchBar', () => {
     fireEvent.change(input, { target: { value: '你' } });
 
     // Wait past the debounce window inside act() so the resulting state update
-    // (debouncedQuery → '你') is flushed without an act warning.
+    // (debouncedQuery → '你') is flushed without an act warning. Deliberately a
+    // real sleep, NOT fake timers: this asserts a NEGATIVE (never called), so a
+    // scheduler stall only makes it stronger — and use-debounce + React Query +
+    // waitFor under vi.useFakeTimers is an interop tarpit for zero gain.
     await act(async () => {
       await new Promise((r) => setTimeout(r, 350));
     });
@@ -143,6 +151,9 @@ describe('InstantSearchBar', () => {
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: '你的名字' } });
 
+    // Spy first (the fetch actually ran), then rendered text — the text wait
+    // otherwise starts its 1s budget while debounce + fetch are still queued.
+    await waitFor(() => expect(tmdbService.unifiedSearch).toHaveBeenCalledWith('你的名字'));
     await waitFor(() => expect(screen.getByText('你的名字')).toBeInTheDocument());
     fireEvent.click(screen.getByText('你的名字'));
 
@@ -156,7 +167,9 @@ describe('InstantSearchBar', () => {
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: '你的名字' } });
     // Wait for an actual result row (not just the container, which renders while
-    // results are still loading) so the navigable list is populated.
+    // results are still loading) so the navigable list is populated. Spy first —
+    // same ordering rationale as the debounce test above.
+    await waitFor(() => expect(tmdbService.unifiedSearch).toHaveBeenCalledWith('你的名字'));
     await waitFor(() => expect(screen.getByText('進擊的巨人')).toBeInTheDocument());
 
     // ArrowDown highlights the first navigable (the movie), ArrowDown again the TV show.
