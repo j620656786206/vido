@@ -92,6 +92,24 @@ describe('SettingsLayout', () => {
     expect(await screen.findByTestId('settings-layout')).toBeInTheDocument();
   });
 
+  // Regression test (bugfix-settingslayout-missing-w-full): the root div is a
+  // flex item inside AppShellV2's `<main class="flex flex-1 flex-col">` — a
+  // column flex container. Without `w-full`, a flex item with only a
+  // `max-w-*` cap shrink-wraps to its content's width instead of stretching
+  // to fill the container before the max-width caps it, so the whole
+  // sidebar+form cluster hugs the left edge with a large empty void on the
+  // right on wide viewports. Every other v2-shell page using this same
+  // `mx-auto flex ... max-w-*` shape (HomeBrowseV2, ActivityHub,
+  // DownloadsBrowseV2, ExploreBlock) carries `w-full` — this asserts
+  // SettingsLayout matches that established pattern.
+  it('stretches to fill the flex-col shell instead of shrink-wrapping to content width', async () => {
+    renderWithRouter();
+    const layout = await screen.findByTestId('settings-layout');
+    expect(layout.className.split(/\s+/)).toEqual(
+      expect.arrayContaining(['w-full', 'max-w-7xl', 'mx-auto'])
+    );
+  });
+
   it('renders the desktop sidebar', async () => {
     renderWithRouter();
     expect(await screen.findByTestId('settings-sidebar')).toBeInTheDocument();
