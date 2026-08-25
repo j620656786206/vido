@@ -33,9 +33,19 @@ export function LogsViewer() {
     setPage(1);
   }, []);
 
+  // Two-step confirm — one click on a 14k-row purge is a real loss with no
+  // undo, and the cache page's per-type clears already taught users that this
+  // app confirms destructive actions.
+  const [confirmingClearOld, setConfirmingClearOld] = useState(false);
+
   const handleClearOld = () => {
+    if (!confirmingClearOld) {
+      setConfirmingClearOld(true);
+      return;
+    }
     clearLogs.mutate(30, {
       onSuccess: (result) => setLastResult(result),
+      onSettled: () => setConfirmingClearOld(false),
     });
   };
 
@@ -72,19 +82,34 @@ export function LogsViewer() {
           </div>
         </div>
 
-        <button
-          onClick={handleClearOld}
-          disabled={clearLogs.isPending}
-          className="flex items-center gap-2 rounded-lg bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-tertiary)] disabled:opacity-50"
-          data-testid="clear-old-logs-btn"
-        >
-          {clearLogs.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Trash2 className="h-4 w-4" />
+        <div className="flex items-center gap-2">
+          {confirmingClearOld && !clearLogs.isPending && (
+            <button
+              onClick={() => setConfirmingClearOld(false)}
+              className="rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              data-testid="clear-old-logs-cancel-btn"
+            >
+              取消
+            </button>
           )}
-          清除 30 天前
-        </button>
+          <button
+            onClick={handleClearOld}
+            disabled={clearLogs.isPending}
+            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
+              confirmingClearOld
+                ? 'bg-[var(--error)] text-white hover:bg-[var(--error-pressed)]'
+                : 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
+            }`}
+            data-testid="clear-old-logs-btn"
+          >
+            {clearLogs.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
+            {confirmingClearOld ? '確認清除 30 天前' : '清除 30 天前'}
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
