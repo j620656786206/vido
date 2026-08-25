@@ -16,11 +16,13 @@ import prettier from 'eslint-config-prettier';
 // `local/time-dependent-fixture-stability` (Rule 23).
 import implementsPenNodeId from './apps/web/src/eslint-rules/implements-pen-node-id.js';
 import timeDependentFixtureStability from './apps/web/src/eslint-rules/time-dependent-fixture-stability.js';
+import noHardcodedPalette from './apps/web/src/eslint-rules/no-hardcoded-palette.js';
 
 const localRules = {
   rules: {
     ...implementsPenNodeId.rules,
     ...timeDependentFixtureStability.rules,
+    ...noHardcodedPalette.rules,
   },
 };
 
@@ -247,6 +249,23 @@ export default [
     },
     rules: {
       'local/time-dependent-fixture-stability': 'error',
+    },
+  },
+
+  // Token-debt door-closer (refactor-token-debt-endgame, 2026-08-25) — after
+  // PRs #291/#292/#294/#295 migrated all 231 hardcoded Tailwind palette
+  // literals to the styles.css semantic tokens, this keeps the count at zero.
+  // Exemption-free by construction: the migration left nothing to allowlist.
+  // Scope adds routes/** (the debt lived there too), unlike Rule 21/23 which
+  // are component-header rules.
+  {
+    files: ['apps/web/src/components/**/*.{ts,tsx}', 'apps/web/src/routes/**/*.{ts,tsx}'],
+    ignores: ['apps/web/src/**/*.spec.{ts,tsx}', 'apps/web/src/**/*.test.{ts,tsx}'],
+    plugins: {
+      local: localRules,
+    },
+    rules: {
+      'local/no-hardcoded-palette': 'error',
     },
   },
 

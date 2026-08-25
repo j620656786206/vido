@@ -284,7 +284,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
             {!autoSubtitleSupported && (
               <div
                 id="library-auto-subtitle-unsupported-notice"
-                className="my-2 rounded-[var(--radius-sm)] border-l-4 border-[var(--info)] bg-[var(--info-tint)] p-3"
+                className="my-2 rounded-[var(--radius-sm)] bg-[var(--info-tint)] p-3"
                 data-testid="library-auto-subtitle-unsupported-notice"
               >
                 <p className="text-[13px] font-medium leading-relaxed text-[var(--text-primary)]">

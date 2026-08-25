@@ -146,7 +146,7 @@ export function LibraryCard({ library, autoSubtitleSupported, onEdit }: LibraryC
 
       {/* Delete Confirmation */}
       {confirmDelete && (
-        <div className="mt-3 rounded-lg border border-[var(--error)]/50 bg-[var(--error-tint)] p-3">
+        <div className="mt-3 rounded-lg bg-[var(--error-tint)] p-3">
           <p className="mb-2 text-sm text-[var(--error-text)]">確定要刪除「{library.name}」嗎？</p>
           <label className="mb-3 flex items-center gap-2 text-xs text-[var(--text-secondary)]">
             <input

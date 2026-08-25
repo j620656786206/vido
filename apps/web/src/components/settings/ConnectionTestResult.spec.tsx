@@ -35,13 +35,16 @@ describe('ConnectionTestResult', () => {
     render(<ConnectionTestResult success={true} message="Connected" version="v4.5.2" />);
 
     const el = screen.getByTestId('connection-test-result');
-    expect(el.className).toContain('border-[var(--success)]');
+    expect(el.className).toContain('bg-[var(--success-tint)]');
+    // 色調優先: the tint IS the state — no same-family border on a tinted surface.
+    expect(el.className).not.toContain('border-[var(--success)]');
   });
 
   it('applies failure styling', () => {
     render(<ConnectionTestResult success={false} message="Failed" />);
 
     const el = screen.getByTestId('connection-test-result');
-    expect(el.className).toContain('border-[var(--error)]');
+    expect(el.className).toContain('bg-[var(--error-tint)]');
+    expect(el.className).not.toContain('border-[var(--error)]');
   });
 });

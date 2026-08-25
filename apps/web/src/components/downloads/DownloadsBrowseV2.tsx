@@ -207,7 +207,7 @@ export function DownloadsBrowseV2() {
                 className={cn(
                   'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
                   isActive
-                    ? 'border-[var(--accent-primary)] bg-[var(--accent-tint)] text-[var(--accent-text)]'
+                    ? 'border-transparent bg-[var(--accent-tint)] text-[var(--accent-text)]'
                     : 'border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 )}
               >
