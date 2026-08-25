@@ -1,6 +1,7 @@
 package qbittorrent
 
 import (
+	"errors"
 	"fmt"
 	"time"
 )
@@ -44,4 +45,16 @@ const (
 	ErrCodeAuthFailed       = "QBITTORRENT_AUTH_FAILED"
 	ErrCodeTimeout          = "QBITTORRENT_TIMEOUT"
 	ErrCodeNotConfigured    = "QBITTORRENT_NOT_CONFIGURED"
+	// ErrCodeConfigDecryptFailed is returned when the stored password exists but
+	// cannot be decrypted — almost always ENCRYPTION_KEY changing under a saved
+	// secret. It is split out from INTERNAL_ERROR because the fix is specific and
+	// the user can perform it; a generic 500 sends them to "try again later",
+	// which will never work.
+	ErrCodeConfigDecryptFailed = "QBITTORRENT_CONFIG_DECRYPT_FAILED"
 )
+
+// ErrConfigDecryptFailed is the sentinel behind ErrCodeConfigDecryptFailed.
+// It lives in this package rather than in services/ because the handler layer
+// deliberately does not import services (it declares its own interface), and
+// both layers already import this one.
+var ErrConfigDecryptFailed = errors.New("qbittorrent: stored password could not be decrypted")

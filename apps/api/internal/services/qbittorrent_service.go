@@ -58,7 +58,10 @@ func (s *QBittorrentService) GetConfig(ctx context.Context) (*qbittorrent.Config
 		password, err = s.secretsService.Retrieve(ctx, SettingQBPassword)
 		if err != nil {
 			slog.Error("Failed to decrypt qBittorrent password", "error", err)
-			return nil, fmt.Errorf("failed to decrypt password: %w", err)
+			// Wrap the SENTINEL, not the crypto error: the handler needs to branch
+			// on "decrypt failed" and the crypto detail must stay in the log, not
+			// travel to the client.
+			return nil, fmt.Errorf("%w: %v", qbittorrent.ErrConfigDecryptFailed, err)
 		}
 	}
 

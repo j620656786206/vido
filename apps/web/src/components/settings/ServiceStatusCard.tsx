@@ -10,6 +10,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import type { ServiceStatus, ServiceConnectionStatus } from '../../services/serviceStatusService';
+import { formatRelativeTime } from '../../utils/relativeTime';
 
 const statusConfig: Record<
   ServiceConnectionStatus,
@@ -65,6 +66,13 @@ export function ServiceStatusCard({ service, onTest, isTesting }: ServiceStatusC
 
   const showDetail = service.status !== 'connected' && service.status !== 'unconfigured';
 
+  // Freshness is unconditional. It used to live ONLY inside the detail panel,
+  // and showDetail is false for exactly the two states a returning user checks
+  // most (connected / unconfigured) — so a green dot could never say whether it
+  // was verified 2 seconds or 6 hours ago. A status readout without a time is
+  // asking to be taken on faith.
+  const lastCheckLabel = formatRelativeTime(service.lastCheckAt) || '尚未檢查';
+
   return (
     <div
       className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4"
@@ -83,6 +91,12 @@ export function ServiceStatusCard({ service, onTest, isTesting }: ServiceStatusC
                 <span className="text-[var(--text-muted)]">{service.responseTimeMs}ms</span>
               )}
             </div>
+            <p
+              className="mt-0.5 text-xs text-[var(--text-muted)]"
+              data-testid={`last-check-${service.name}`}
+            >
+              檢查於 {lastCheckLabel}
+            </p>
           </div>
         </div>
 
