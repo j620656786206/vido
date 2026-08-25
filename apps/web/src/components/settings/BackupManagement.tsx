@@ -142,7 +142,7 @@ export function BackupManagement() {
       {/* Error display */}
       {createError && (
         <div
-          className="rounded-lg border border-red-800 bg-red-900/20 px-4 py-3 text-sm text-[var(--error)]"
+          className="rounded-lg border border-[var(--error)] bg-[var(--error-tint)] px-4 py-3 text-sm text-[var(--error)]"
           role="alert"
           data-testid="create-error"
         >
@@ -172,7 +172,7 @@ export function BackupManagement() {
 
       {deleteError && (
         <div
-          className="rounded-lg border border-red-800 bg-red-900/20 px-4 py-3 text-sm text-[var(--error)]"
+          className="rounded-lg border border-[var(--error)] bg-[var(--error-tint)] px-4 py-3 text-sm text-[var(--error)]"
           role="alert"
           data-testid="delete-error"
         >

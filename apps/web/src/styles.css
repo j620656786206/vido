@@ -16,6 +16,9 @@
   --accent-primary: #3b82f6;
   --accent-hover: #60a5fa;
   --accent-pressed: #2563eb;
+  /* Mirrors --accent-pressed for the destructive role. These buttons were
+   * already hovering to red-700; the value is unchanged, it just has a name now. */
+  --error-pressed: #b91c1c;
 
   /* Semantic */
   --success: #22c55e;
@@ -40,7 +43,13 @@
   --accent-text: #60a5fa; /* accent body text / active label (TC-2 AA-safe) */
   --success-tint: #22c55e1f; /* success badge bg, 已入庫 pill */
   --error-tint: #ef44441f; /* error badge bg, failed-state pill */
-  --error-text: #f87171; /* error body text (TC-2 AA-safe) */
+  /* Raised from #f87171 (2026-08-25, refactor-token-debt-red). Measured: the old
+   * value was 4.05:1 on --bg-tertiary and 4.34:1 on an --error-tint surface —
+   * BELOW the AA gate PRODUCT.md calls 硬性要求, in 34 existing usages. #fca5a5
+   * clears every surface (worst case 5.44:1) and is the value five call sites
+   * were already hardcoding as text-red-300, so the intent was there all along.
+   * Same precedent as --text-muted, raised for the same reason a release ago. */
+  --error-text: #fca5a5; /* error body text (TC-2 AA-safe on all surfaces) */
   --warning-tint: #f59e0b1f; /* warning badge bg, 整理中 pill */
   --info-tint: #06b6d41f; /* info badge bg, 想要 pill */
   --text-on-accent: #ffffff; /* label/icon on accent fills (buttons, pills) */

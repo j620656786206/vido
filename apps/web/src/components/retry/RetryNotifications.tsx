@@ -152,7 +152,7 @@ function getColorsForType(type: NotificationType) {
     case 'error':
       return {
         bg: 'bg-[var(--error)]/10',
-        border: 'border-red-500/20',
+        border: 'border-[var(--error)]/20',
         icon: 'text-[var(--error)]',
         text: 'text-[var(--error)]',
       };

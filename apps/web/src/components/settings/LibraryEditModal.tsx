@@ -122,7 +122,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
         </div>
 
         {error && (
-          <div className="mb-4 rounded-lg bg-red-900/30 px-3 py-2 text-sm text-[var(--error)]">
+          <div className="mb-4 rounded-lg bg-[var(--error-tint)] px-3 py-2 text-sm text-[var(--error)]">
             {error}
           </div>
         )}

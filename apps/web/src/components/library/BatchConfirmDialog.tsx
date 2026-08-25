@@ -16,7 +16,7 @@ const ACTION_CONFIG = {
     message: (count: number) => `確定要刪除 ${count} 個項目嗎？`,
     warning: '此操作無法復原',
     confirmText: '刪除',
-    confirmClass: 'bg-[var(--error)] hover:bg-red-700 text-white',
+    confirmClass: 'bg-[var(--error)] hover:bg-[var(--error-pressed)] text-white',
   },
   reparse: {
     title: '確認重新解析',

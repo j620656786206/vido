@@ -42,6 +42,6 @@ describe('ConnectionTestResult', () => {
     render(<ConnectionTestResult success={false} message="Failed" />);
 
     const el = screen.getByTestId('connection-test-result');
-    expect(el.className).toContain('border-red-700');
+    expect(el.className).toContain('border-[var(--error)]');
   });
 });

@@ -33,9 +33,9 @@ const levelConfig: Record<
     icon: '⚡',
   },
   offline: {
-    bgColor: 'bg-red-900/20',
-    borderColor: 'border-red-500/30',
-    textColor: 'text-red-200',
+    bgColor: 'bg-[var(--error-tint)]',
+    borderColor: 'border-[var(--error)]/30',
+    textColor: 'text-[var(--error-text)]',
     icon: '🔴',
   },
 };

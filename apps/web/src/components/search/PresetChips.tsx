@@ -156,7 +156,7 @@ export function PresetChips({ onApplyPreset, className }: PresetChipsProps) {
                 onClick={handleConfirmDelete}
                 disabled={deletePreset.isPending}
                 data-testid="preset-delete-confirm"
-                className="flex-1 rounded-lg bg-[var(--error)] px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                className="flex-1 rounded-lg bg-[var(--error)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--error-pressed)] disabled:opacity-50"
               >
                 {deletePreset.isPending ? '刪除中...' : '刪除'}
               </button>

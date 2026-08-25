@@ -28,9 +28,9 @@ const statusConfig = {
     Icon: AlertTriangle,
   },
   down: {
-    dotColor: 'bg-red-400',
+    dotColor: 'bg-[var(--error)]',
     textColor: 'text-[var(--error)]',
-    bgColor: 'bg-red-900/30',
+    bgColor: 'bg-[var(--error-tint)]',
     label: 'qBittorrent 未連線',
     Icon: WifiOff,
   },
