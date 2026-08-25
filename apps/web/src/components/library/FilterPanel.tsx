@@ -218,7 +218,7 @@ export function FilterPanel({
         ) : genresError ? (
           <div
             data-testid="filter-genre-error"
-            className="flex flex-col items-start gap-1.5 rounded-[var(--radius-md)] border border-[var(--error)] bg-[var(--error-tint)] p-3"
+            className="flex flex-col items-start gap-1.5 rounded-[var(--radius-md)] bg-[var(--error-tint)] p-3"
           >
             <span className="inline-flex items-center gap-1.5 text-sm text-[var(--error-text)]">
               <TriangleAlert className="h-3.5 w-3.5" aria-hidden="true" />

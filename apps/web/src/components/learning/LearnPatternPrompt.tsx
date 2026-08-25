@@ -58,10 +58,7 @@ export function LearnPatternPrompt({
 
   return (
     <div
-      className={cn(
-        'rounded-lg border border-[var(--warning)]/30 bg-[var(--warning-tint)] p-4',
-        'backdrop-blur-sm'
-      )}
+      className={cn('rounded-lg bg-[var(--warning-tint)] p-4', 'backdrop-blur-sm')}
       role="alert"
       data-testid="learn-pattern-prompt"
     >

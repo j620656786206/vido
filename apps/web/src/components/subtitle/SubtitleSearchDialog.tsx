@@ -153,11 +153,9 @@ export function SubtitleSearchDialog({
   }, []);
 
   const scoreColor = (score: number) => {
-    if (score > 0.7)
-      return 'text-[var(--success)] bg-[var(--success-tint)] border-[var(--success)]/40';
-    if (score > 0.4)
-      return 'text-[var(--warning)] bg-[var(--warning-tint)] border-[var(--warning)]/40';
-    return 'text-[var(--error)] bg-[var(--error-tint)] border-[var(--error)]/40';
+    if (score > 0.7) return 'text-[var(--success)] bg-[var(--success-tint)]';
+    if (score > 0.4) return 'text-[var(--warning)] bg-[var(--warning-tint)]';
+    return 'text-[var(--error)] bg-[var(--error-tint)]';
   };
 
   if (!open) return null;

@@ -7,17 +7,17 @@ const LOG_LEVELS = ['ERROR', 'WARN', 'INFO', 'DEBUG'] as const;
 
 const LEVEL_CHIP_STYLES: Record<string, { active: string; inactive: string }> = {
   ERROR: {
-    active: 'border-[var(--error)] bg-[var(--error-tint)] text-[var(--error-text)]',
+    active: 'border-transparent bg-[var(--error-tint)] text-[var(--error-text)]',
     inactive:
       'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--error)]/50 hover:text-[var(--error-text)]',
   },
   WARN: {
-    active: 'border-[var(--warning)] bg-[var(--warning-tint)] text-[var(--warning-text)]',
+    active: 'border-transparent bg-[var(--warning-tint)] text-[var(--warning-text)]',
     inactive:
       'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--warning)]/50 hover:text-[var(--warning-text)]',
   },
   INFO: {
-    active: 'border-[var(--accent-hover)] bg-[var(--accent-tint)] text-[var(--accent-text)]',
+    active: 'border-transparent bg-[var(--accent-tint)] text-[var(--accent-text)]',
     inactive:
       'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--accent-hover)]/50 hover:text-[var(--accent-text)]',
   },

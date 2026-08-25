@@ -77,7 +77,7 @@ export function CacheManagement() {
       {/* Last result feedback */}
       {lastResult && (
         <div
-          className="flex items-center gap-2 rounded-lg border border-[var(--success)] bg-[var(--success-tint)] px-4 py-3 text-sm text-[var(--success-text)]"
+          className="flex items-center gap-2 rounded-lg bg-[var(--success-tint)] px-4 py-3 text-sm text-[var(--success-text)]"
           data-testid="cache-result"
         >
           <Trash2 className="h-4 w-4 flex-shrink-0" />
