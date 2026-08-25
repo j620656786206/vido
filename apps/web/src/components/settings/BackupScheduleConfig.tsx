@@ -46,7 +46,7 @@ export function BackupScheduleConfig() {
         hour,
         dayOfWeek,
       });
-      setMessage(newEnabled ? '✅ 自動備份已啟用' : '自動備份已停用');
+      setMessage(newEnabled ? '自動備份已啟用' : '自動備份已停用');
     } catch (err) {
       setEnabled(!newEnabled);
       setFrequency(prevFrequency);
@@ -64,7 +64,7 @@ export function BackupScheduleConfig() {
         hour,
         dayOfWeek,
       });
-      setMessage('✅ 排程設定已儲存');
+      setMessage('排程設定已儲存');
     } catch (err) {
       setMessage(err instanceof Error ? err.message : '更新失敗');
     }

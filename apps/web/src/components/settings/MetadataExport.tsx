@@ -1,6 +1,6 @@
 // Design ref: ux-design.pen — no current screen frame; 匯出/匯入 tab was never given a frame — rides the designed settings shell (Screen C4-D, 6UCtX)
 import { useState } from 'react';
-import { FileDown, Loader2, Download } from 'lucide-react';
+import { FileDown, Loader2, Download, Check, XCircle } from 'lucide-react';
 import { useExport } from '../../hooks/useBackups';
 import { backupService } from '../../services/backupService';
 
@@ -15,7 +15,10 @@ const FORMAT_OPTIONS: { value: ExportFormat; label: string; description: string 
 export function MetadataExport() {
   const exportMutation = useExport();
   const [format, setFormat] = useState<ExportFormat>('json');
-  const [message, setMessage] = useState<string | null>(null);
+  // Outcome rides with the text so the feedback wears the vocabulary's colour
+  // (ok = neutral, error = --error-*) — and lucide, never emoji: emoji escape
+  // both the token system and the contrast gate.
+  const [message, setMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
   const [downloadId, setDownloadId] = useState<string | null>(null);
 
   const handleExport = async () => {
@@ -25,15 +28,15 @@ export function MetadataExport() {
     try {
       const result = await exportMutation.mutateAsync(format);
       if (result.status === 'completed') {
-        setMessage(`✅ ${result.message}`);
+        setMessage({ tone: 'ok', text: result.message });
         if (result.exportId && result.format !== 'nfo') {
           setDownloadId(result.exportId);
         }
       } else {
-        setMessage(`⚠️ 匯出失敗：${result.error || '未知錯誤'}`);
+        setMessage({ tone: 'error', text: `匯出失敗：${result.error || '未知錯誤'}` });
       }
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : '匯出失敗');
+      setMessage({ tone: 'error', text: err instanceof Error ? err.message : '匯出失敗' });
     }
   };
 
@@ -98,8 +101,21 @@ export function MetadataExport() {
 
         {/* Message */}
         {message && (
-          <p className="text-xs text-[var(--text-secondary)]" data-testid="export-message">
-            {message}
+          <p
+            className={
+              message.tone === 'error'
+                ? 'flex items-center gap-1.5 text-xs text-[var(--error-text)]'
+                : 'flex items-center gap-1.5 text-xs text-[var(--text-secondary)]'
+            }
+            role={message.tone === 'error' ? 'alert' : 'status'}
+            data-testid="export-message"
+          >
+            {message.tone === 'error' ? (
+              <XCircle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            ) : (
+              <Check className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            )}
+            {message.text}
           </p>
         )}
 
