@@ -48,6 +48,44 @@ const rateLimitedService: ServiceStatus = {
 };
 
 describe('ServiceStatusCard', () => {
+  // Freshness used to live ONLY inside 顯示詳情, and the toggle does not exist
+  // for connected/unconfigured — the two states a returning user checks most.
+  // A green dot that cannot say WHEN it was verified is asking to be trusted.
+  describe('freshness is unconditional', () => {
+    it.each([
+      ['connected', connectedService, 'service-card-tmdb', 'last-check-tmdb'],
+      ['unconfigured', unconfiguredService, 'service-card-ai', 'last-check-ai'],
+    ])(
+      'shows 最後檢查 for a %s service without expanding anything',
+      (_label, service, cardId, checkId) => {
+        render(
+          React.createElement(ServiceStatusCard, {
+            service: service as ServiceStatus,
+            onTest: vi.fn(),
+            isTesting: false,
+          })
+        );
+
+        expect(screen.getByTestId(cardId)).toBeInTheDocument();
+        // No detail toggle exists for these states, so this must be on the card.
+        expect(screen.queryByTestId(`detail-toggle-${(service as ServiceStatus).name}`)).toBeNull();
+        expect(screen.getByTestId(checkId)).toHaveTextContent('檢查於');
+      }
+    );
+
+    it('falls back to 尚未檢查 rather than printing an empty time', () => {
+      render(
+        React.createElement(ServiceStatusCard, {
+          service: { ...connectedService, lastCheckAt: '' },
+          onTest: vi.fn(),
+          isTesting: false,
+        })
+      );
+
+      expect(screen.getByTestId('last-check-tmdb')).toHaveTextContent('尚未檢查');
+    });
+  });
+
   it('renders connected service correctly', () => {
     const onTest = vi.fn();
     render(

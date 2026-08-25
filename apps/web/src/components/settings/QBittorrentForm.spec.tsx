@@ -3,6 +3,17 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { QBittorrentForm } from './QBittorrentForm';
+import { QBittorrentApiError } from '../../services/qbittorrent';
+
+// The error banner links to 金鑰設定; stub Link so this stays a component test
+// instead of dragging in a memory router.
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ to, children, ...rest }: { to: string; children: React.ReactNode }) => (
+    <a href={to} {...rest}>
+      {children}
+    </a>
+  ),
+}));
 
 // Mock the hooks
 const mockGetConfig = vi.fn();
@@ -39,6 +50,75 @@ describe('QBittorrentForm', () => {
     mockGetConfig.mockReturnValue({
       data: { host: '', username: '', basePath: '', configured: false },
       isLoading: false,
+    });
+  });
+
+  // An empty form is an assertion that nothing is saved. Rendering one over a
+  // failed read tells a user whose config exists that they never configured it,
+  // and they retype credentials that were already there.
+  describe('load failure', () => {
+    it('replaces the form with a banner instead of rendering empty fields', () => {
+      mockGetConfig.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        isError: true,
+        error: new QBittorrentApiError(
+          'Failed to retrieve qBittorrent configuration',
+          'INTERNAL_ERROR'
+        ),
+        refetch: vi.fn(),
+        isFetching: false,
+      });
+
+      renderWithProviders(<QBittorrentForm />);
+
+      expect(screen.getByTestId('qb-config-load-error')).toBeInTheDocument();
+      expect(screen.queryByLabelText('主機位址')).not.toBeInTheDocument();
+      expect(screen.queryByText('儲存設定')).not.toBeInTheDocument();
+      expect(screen.getByTestId('qb-config-error-keys-link')).toHaveAttribute(
+        'href',
+        '/settings/keys'
+      );
+    });
+
+    it('names the real cause when the backend reports a decrypt failure', () => {
+      mockGetConfig.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        isError: true,
+        error: new QBittorrentApiError(
+          'Stored qBittorrent password could not be decrypted',
+          'QBITTORRENT_CONFIG_DECRYPT_FAILED',
+          'ENCRYPTION_KEY is missing or has changed'
+        ),
+        refetch: vi.fn(),
+        isFetching: false,
+      });
+
+      renderWithProviders(<QBittorrentForm />);
+
+      const banner = screen.getByTestId('qb-config-load-error');
+      expect(banner).toHaveTextContent('儲存的密碼解不開');
+      expect(banner).toHaveTextContent('ENCRYPTION_KEY');
+      // The whole point: do NOT let the user conclude nothing was ever saved.
+      expect(banner).toHaveTextContent('設定已經存在，不是沒設定過');
+    });
+
+    it('offers a retry that refetches', async () => {
+      const refetch = vi.fn();
+      mockGetConfig.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        isError: true,
+        error: new QBittorrentApiError('boom', 'INTERNAL_ERROR'),
+        refetch,
+        isFetching: false,
+      });
+
+      renderWithProviders(<QBittorrentForm />);
+      await userEvent.click(screen.getByTestId('qb-config-retry'));
+
+      expect(refetch).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -1,12 +1,14 @@
 // Design ref: ux-design.pen Screen C4-D (6UCtX) · C4-M (2H4OM)
 import { useState, useEffect } from 'react';
-import { Loader2, Plug, Save } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
+import { AlertTriangle, Loader2, Plug, RefreshCw, Save } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import {
   useQBittorrentConfig,
   useSaveQBConfig,
   useTestQBConnection,
 } from '../../hooks/useQBittorrent';
+import { QB_CONFIG_DECRYPT_FAILED, QBittorrentApiError } from '../../services/qbittorrent';
 import { ConnectionTestResult } from './ConnectionTestResult';
 
 interface TestResult {
@@ -17,7 +19,14 @@ interface TestResult {
 }
 
 export function QBittorrentForm() {
-  const { data: config, isLoading } = useQBittorrentConfig();
+  const {
+    data: config,
+    isLoading,
+    isError,
+    error: loadError,
+    refetch,
+    isFetching,
+  } = useQBittorrentConfig();
   const saveMutation = useSaveQBConfig();
   const testMutation = useTestQBConnection();
 
@@ -75,6 +84,62 @@ export function QBittorrentForm() {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-6 w-6 animate-spin text-[var(--text-secondary)]" />
+      </div>
+    );
+  }
+
+  // Load failure REPLACES the form; it never renders underneath a banner.
+  // An empty form is an assertion that nothing is saved — printing one over a
+  // failed read tells a user whose config exists that they never configured it,
+  // and they retype credentials that were already there. Better no readout than
+  // a flattering one.
+  if (isError) {
+    const decryptFailed =
+      loadError instanceof QBittorrentApiError && loadError.code === QB_CONFIG_DECRYPT_FAILED;
+
+    return (
+      <div
+        data-testid="qb-config-load-error"
+        role="status"
+        aria-live="polite"
+        className="flex items-start gap-3 rounded-md bg-[var(--error-tint)] p-4"
+      >
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--error)]" aria-hidden="true" />
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-[var(--error-text)]">
+            {decryptFailed
+              ? '無法讀取 qBittorrent 設定：儲存的密碼解不開'
+              : '無法讀取 qBittorrent 設定'}
+          </p>
+          <p className="text-sm text-[var(--text-primary)]">
+            {decryptFailed
+              ? 'ENCRYPTION_KEY 遺失或已變更，先前存的密碼因此無法解密。設定已經存在，不是沒設定過 —— 請還原原本的 ENCRYPTION_KEY 後重啟，或重新輸入一次密碼，讓它用目前的金鑰重新加密。'
+              : loadError?.message || '伺服器沒有回傳設定內容。設定可能仍然存在，這裡只是讀不到。'}
+          </p>
+          <div className="flex flex-wrap items-center gap-4 pt-1">
+            <button
+              type="button"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              data-testid="qb-config-retry"
+              className="flex items-center gap-1.5 rounded-md bg-[var(--bg-tertiary)] px-3 py-1.5 text-sm font-medium text-[var(--text-primary)] transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isFetching ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
+              重新載入
+            </button>
+            <Link
+              to="/settings/keys"
+              data-testid="qb-config-error-keys-link"
+              className="text-sm font-medium text-[var(--accent-text)] underline underline-offset-2"
+            >
+              前往金鑰設定
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }

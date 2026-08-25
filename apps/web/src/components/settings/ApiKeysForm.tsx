@@ -211,13 +211,12 @@ export function ApiKeysForm() {
     );
   }
 
+  // J7-D applies to the FORM BODY, not the page. The page header lives in the
+  // route (keys.tsx), matching connection.tsx — otherwise the h1 gets narrowed
+  // too and the heading jumps 160px as you move between settings tabs, which
+  // makes a deliberate rule read as a bug.
   return (
     <div className="max-w-3xl">
-      <h1 className="mb-2 text-2xl font-bold text-[var(--text-primary)]">金鑰設定</h1>
-      <p className="mb-6 text-sm text-[var(--text-secondary)]">
-        設定 Vido 使用的第三方服務 API 金鑰。金鑰會加密後儲存於 NAS，並優先於環境變數。
-      </p>
-
       {isError && (
         <div
           data-testid="api-keys-load-error"

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/vido/api/internal/qbittorrent"
 )
 
@@ -136,6 +138,62 @@ func TestQBittorrentHandler_GetConfig(t *testing.T) {
 				assert.True(t, ok)
 				tt.checkResponse(t, data)
 			}
+
+			mockService.AssertExpectations(t)
+		})
+	}
+}
+
+// A saved-but-undecryptable password is the one GetConfig failure the user can
+// fix, so it must NOT be flattened into INTERNAL_ERROR's "try again later" —
+// that advice is false here and retrying never works. Detection is errors.Is
+// against the sentinel, so re-wording the wrapped message cannot break it.
+func TestQBittorrentHandler_GetConfig_ErrorCodes(t *testing.T) {
+	tests := []struct {
+		name               string
+		serviceErr         error
+		expectedCode       string
+		suggestionContains string
+	}{
+		{
+			name:               "decrypt failure gets its own actionable code",
+			serviceErr:         fmt.Errorf("%w: cipher: message authentication failed", qbittorrent.ErrConfigDecryptFailed),
+			expectedCode:       qbittorrent.ErrCodeConfigDecryptFailed,
+			suggestionContains: "ENCRYPTION_KEY",
+		},
+		{
+			name:         "any other failure stays INTERNAL_ERROR",
+			serviceErr:   errors.New("database is locked"),
+			expectedCode: "INTERNAL_ERROR",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockService := new(MockQBittorrentService)
+			mockService.On("GetConfig", mock.Anything).Return(nil, tt.serviceErr)
+
+			handler := NewQBittorrentHandler(mockService)
+			router := setupQBRouter(handler)
+
+			req, _ := http.NewRequest(http.MethodGet, "/api/v1/settings/qbittorrent", nil)
+			resp := httptest.NewRecorder()
+			router.ServeHTTP(resp, req)
+
+			assert.Equal(t, http.StatusInternalServerError, resp.Code)
+
+			var apiResp APIResponse
+			require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &apiResp))
+			assert.False(t, apiResp.Success)
+			require.NotNil(t, apiResp.Error)
+			assert.Equal(t, tt.expectedCode, apiResp.Error.Code)
+
+			if tt.suggestionContains != "" {
+				assert.Contains(t, apiResp.Error.Suggestion, tt.suggestionContains)
+			}
+
+			// The crypto detail belongs in the server log, never in the payload.
+			assert.NotContains(t, apiResp.Error.Message, "authentication failed")
 
 			mockService.AssertExpectations(t)
 		})
