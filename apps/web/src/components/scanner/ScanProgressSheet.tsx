@@ -262,7 +262,7 @@ export function ScanProgressSheet({
                 type="button"
                 onClick={handleCancelConfirm}
                 disabled={isCancelling}
-                className="rounded-md bg-[var(--error)] px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50"
+                className="rounded-md bg-[var(--error)] px-3 py-1.5 text-sm text-white hover:bg-[var(--error-pressed)] disabled:opacity-50"
                 data-testid="sheet-cancel-confirm-btn"
               >
                 {isCancelling ? '取消中...' : '取消掃描'}

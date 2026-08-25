@@ -257,7 +257,7 @@ export function MetadataEditorDialog({
                 'text-white placeholder-[var(--text-muted)]',
                 'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
                 'transition-colors',
-                errors.title ? 'border-red-500' : 'border-[var(--border-subtle)]'
+                errors.title ? 'border-[var(--error)]' : 'border-[var(--border-subtle)]'
               )}
               placeholder="輸入中文標題"
             />
@@ -307,7 +307,7 @@ export function MetadataEditorDialog({
                 'text-white placeholder-[var(--text-muted)]',
                 'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
                 'transition-colors',
-                errors.year ? 'border-red-500' : 'border-[var(--border-subtle)]'
+                errors.year ? 'border-[var(--error)]' : 'border-[var(--border-subtle)]'
               )}
               placeholder="輸入年份"
               min={1900}

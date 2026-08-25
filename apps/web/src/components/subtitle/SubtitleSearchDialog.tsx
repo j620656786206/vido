@@ -155,7 +155,7 @@ export function SubtitleSearchDialog({
   const scoreColor = (score: number) => {
     if (score > 0.7) return 'text-[var(--success)] bg-green-400/10 border-green-400/40';
     if (score > 0.4) return 'text-[var(--warning)] bg-yellow-400/10 border-yellow-400/40';
-    return 'text-[var(--error)] bg-red-400/10 border-red-400/40';
+    return 'text-[var(--error)] bg-[var(--error-tint)] border-[var(--error)]/40';
   };
 
   if (!open) return null;
@@ -269,7 +269,7 @@ export function SubtitleSearchDialog({
 
           {/* Search Error (M8) */}
           {searchError && (
-            <div className="rounded-lg border border-red-500/30 bg-[var(--error)]/10 p-3 text-sm text-[var(--error)]">
+            <div className="rounded-lg border border-[var(--error)]/30 bg-[var(--error)]/10 p-3 text-sm text-[var(--error)]">
               搜尋失敗：{searchError.message}
             </div>
           )}

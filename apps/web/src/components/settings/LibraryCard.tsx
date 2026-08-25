@@ -27,9 +27,9 @@ interface LibraryCardProps {
 
 const STATUS_CONFIG = {
   accessible: { color: 'text-[var(--success)]', bg: 'bg-green-400', label: '已連線' },
-  not_found: { color: 'text-[var(--error)]', bg: 'bg-red-400', label: '無法存取' },
-  not_readable: { color: 'text-[var(--error)]', bg: 'bg-red-400', label: '無法讀取' },
-  not_directory: { color: 'text-[var(--error)]', bg: 'bg-red-400', label: '非目錄' },
+  not_found: { color: 'text-[var(--error)]', bg: 'bg-[var(--error)]', label: '無法存取' },
+  not_readable: { color: 'text-[var(--error)]', bg: 'bg-[var(--error)]', label: '無法讀取' },
+  not_directory: { color: 'text-[var(--error)]', bg: 'bg-[var(--error)]', label: '非目錄' },
   unknown: { color: 'text-[var(--text-secondary)]', bg: 'bg-[var(--text-muted)]', label: '未檢查' },
 } as const;
 
@@ -146,8 +146,8 @@ export function LibraryCard({ library, autoSubtitleSupported, onEdit }: LibraryC
 
       {/* Delete Confirmation */}
       {confirmDelete && (
-        <div className="mt-3 rounded-lg border border-red-800/50 bg-red-950/30 p-3">
-          <p className="mb-2 text-sm text-red-300">確定要刪除「{library.name}」嗎？</p>
+        <div className="mt-3 rounded-lg border border-[var(--error)]/50 bg-[var(--error-tint)] p-3">
+          <p className="mb-2 text-sm text-[var(--error-text)]">確定要刪除「{library.name}」嗎？</p>
           <label className="mb-3 flex items-center gap-2 text-xs text-[var(--text-secondary)]">
             <input
               type="checkbox"
@@ -169,7 +169,7 @@ export function LibraryCard({ library, autoSubtitleSupported, onEdit }: LibraryC
               type="button"
               onClick={handleDelete}
               disabled={deleteLibrary.isPending}
-              className="rounded bg-[var(--error)] px-3 py-1 text-xs text-white hover:bg-red-700 disabled:opacity-50"
+              className="rounded bg-[var(--error)] px-3 py-1 text-xs text-white hover:bg-[var(--error-pressed)] disabled:opacity-50"
               data-testid="confirm-delete-button"
             >
               {deleteLibrary.isPending ? '刪除中...' : '確認刪除'}

@@ -27,7 +27,7 @@ export function MediaLibraryManager() {
 
   if (error) {
     return (
-      <div className="flex items-center gap-2 rounded-lg bg-red-900/30 px-4 py-3 text-sm text-[var(--error)]">
+      <div className="flex items-center gap-2 rounded-lg bg-[var(--error-tint)] px-4 py-3 text-sm text-[var(--error)]">
         <AlertCircle className="h-4 w-4 shrink-0" />
         無法載入媒體庫設定
       </div>

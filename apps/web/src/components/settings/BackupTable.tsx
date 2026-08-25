@@ -8,7 +8,7 @@ const statusConfig: Record<BackupStatus, { label: string; color: string; bg: str
   completed: { label: '完成', color: 'text-[var(--success)]', bg: 'bg-green-400/10' },
   running: { label: '執行中', color: 'text-[var(--accent-primary)]', bg: 'bg-blue-400/10' },
   pending: { label: '等待中', color: 'text-[var(--warning)]', bg: 'bg-yellow-400/10' },
-  failed: { label: '失敗', color: 'text-[var(--error)]', bg: 'bg-red-400/10' },
+  failed: { label: '失敗', color: 'text-[var(--error)]', bg: 'bg-[var(--error-tint)]' },
   corrupted: { label: '已損壞', color: 'text-[var(--warning)]', bg: 'bg-orange-400/10' },
 };
 
@@ -77,7 +77,7 @@ export function BackupTable({
                 className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-medium ${config.bg} ${config.color}`}
               >
                 <span
-                  className={`inline-block h-1.5 w-1.5 rounded-full ${backup.status === 'completed' ? 'bg-green-400' : backup.status === 'running' ? 'bg-blue-400' : backup.status === 'pending' ? 'bg-yellow-400' : backup.status === 'corrupted' ? 'bg-orange-400' : 'bg-red-400'}`}
+                  className={`inline-block h-1.5 w-1.5 rounded-full ${backup.status === 'completed' ? 'bg-green-400' : backup.status === 'running' ? 'bg-blue-400' : backup.status === 'pending' ? 'bg-yellow-400' : backup.status === 'corrupted' ? 'bg-orange-400' : 'bg-[var(--error)]'}`}
                 />
                 {config.label}
               </span>

@@ -35,13 +35,13 @@ const statusConfig: Record<
   },
   error: {
     color: 'text-[var(--error)]',
-    bg: 'bg-red-400/10',
+    bg: 'bg-[var(--error-tint)]',
     icon: XCircle,
     label: '錯誤',
   },
   disconnected: {
     color: 'text-[var(--error)]',
-    bg: 'bg-red-400/10',
+    bg: 'bg-[var(--error-tint)]',
     icon: WifiOff,
     label: '已斷線',
   },

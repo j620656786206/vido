@@ -50,7 +50,10 @@ export function DownloadFilterTabs({
               isActive
                 ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/20 text-blue-300'
                 : 'border-[var(--border-subtle)] bg-[var(--bg-tertiary)]/50 text-[var(--text-secondary)] hover:border-[var(--text-muted)] hover:text-[var(--text-primary)]',
-              f.value === 'error' && count > 0 && !isActive && 'border-red-700 text-[var(--error)]'
+              f.value === 'error' &&
+                count > 0 &&
+                !isActive &&
+                'border-[var(--error)] text-[var(--error)]'
             )}
           >
             <span>{f.icon}</span>

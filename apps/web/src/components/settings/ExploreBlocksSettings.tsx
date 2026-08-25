@@ -104,7 +104,7 @@ export function ExploreBlocksSettings() {
         <div
           role="alert"
           data-testid="explore-blocks-operation-error"
-          className="rounded-lg bg-red-900/30 px-3 py-2 text-sm text-[var(--error)]"
+          className="rounded-lg bg-[var(--error-tint)] px-3 py-2 text-sm text-[var(--error)]"
         >
           {operationError}
         </div>
@@ -186,7 +186,7 @@ export function ExploreBlocksSettings() {
                 onClick={() => setConfirmDeleteId(block.id)}
                 aria-label={`刪除 ${block.name}`}
                 data-testid={`explore-block-delete-${block.id}`}
-                className="rounded p-1.5 text-[var(--text-secondary)] hover:bg-red-900/30 hover:text-[var(--error)]"
+                className="rounded p-1.5 text-[var(--text-secondary)] hover:bg-[var(--error-tint)] hover:text-[var(--error)]"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -233,7 +233,7 @@ export function ExploreBlocksSettings() {
                 onClick={handleConfirmDelete}
                 disabled={deleteBlock.isPending}
                 data-testid="explore-block-delete-confirm-button"
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                className="rounded-lg bg-[var(--error)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--error-pressed)] disabled:opacity-50"
               >
                 {deleteBlock.isPending ? '刪除中...' : '確認刪除'}
               </button>

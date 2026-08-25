@@ -32,7 +32,7 @@ const levelConfig: Record<
   },
   offline: {
     color: 'text-[var(--error)]',
-    bgColor: 'bg-red-400/10',
+    bgColor: 'bg-[var(--error-tint)]',
     label: '離線模式',
     icon: '⚫',
   },

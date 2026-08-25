@@ -138,7 +138,7 @@ export function ExploreBlockEditModal({ block, onClose }: ExploreBlockEditModalP
         {error && (
           <div
             role="alert"
-            className="mb-4 rounded-lg bg-red-900/30 px-3 py-2 text-sm text-[var(--error)]"
+            className="mb-4 rounded-lg bg-[var(--error-tint)] px-3 py-2 text-sm text-[var(--error)]"
           >
             {error}
           </div>

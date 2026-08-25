@@ -223,7 +223,7 @@ class FixtureErrorBoundary extends Component<
       return (
         <div
           data-gallery-error="true"
-          className="rounded border border-[var(--error)] bg-red-950/40 px-3 py-2 text-xs text-[var(--error)]"
+          className="rounded border border-[var(--error)] bg-[var(--error-tint)] px-3 py-2 text-xs text-[var(--error)]"
         >
           ⚠ fixture error: {this.state.error.message}
         </div>

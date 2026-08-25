@@ -7,9 +7,9 @@ const LOG_LEVELS = ['ERROR', 'WARN', 'INFO', 'DEBUG'] as const;
 
 const LEVEL_CHIP_STYLES: Record<string, { active: string; inactive: string }> = {
   ERROR: {
-    active: 'border-red-400 bg-red-400/20 text-red-300',
+    active: 'border-[var(--error)] bg-[var(--error-tint)] text-[var(--error-text)]',
     inactive:
-      'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-red-400/50 hover:text-red-300',
+      'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--error)]/50 hover:text-[var(--error-text)]',
   },
   WARN: {
     active: 'border-yellow-400 bg-yellow-400/20 text-yellow-300',

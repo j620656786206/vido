@@ -22,7 +22,7 @@ export function ConnectionTestResult({
         'mt-4 flex items-start gap-3 rounded-lg border p-4',
         success
           ? 'border-green-700 bg-green-900/30 text-green-300'
-          : 'border-red-700 bg-red-900/30 text-red-300'
+          : 'border-[var(--error)] bg-[var(--error-tint)] text-[var(--error-text)]'
       )}
     >
       {success ? (
