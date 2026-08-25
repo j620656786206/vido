@@ -137,6 +137,8 @@ components:
 
 # Design System: Vido
 
+> ⚠️ **2026-08-25 起本文件的色彩章節為歷史版本（訊號藍時代）。** 現行視覺世界是「夜行」（墨綠底×宣紙白×金），權威來源是 `apps/web/src/styles.css` 的 token 區塊與 `styles-contrast.spec.ts` 閘門。待夜行沉澱後以 `/impeccable document` 重新記錄。
+
 > 章節標題與 frontmatter 的 token 名稱保持英文——DESIGN.md 規格靠精確標題解析，token 名稱等同程式碼識別碼。其餘內文為繁體中文，與 PRODUCT.md 一致。
 
 ## Overview

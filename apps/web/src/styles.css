@@ -6,72 +6,81 @@
  * Tailwind v4: use bg-[var(--bg-primary)], text-[var(--text-primary)], etc.
  * ============================================================================= */
 :root {
+  /* -------------------------------------------------------------------------
+   * 夜行 (Nightwalk) — the wuxia reskin, 2026-08-25 (feat/nightwalk-reskin).
+   * Ink-green grounds, 宣紙 warm-white text, GOLD as「你在這裡」, cinnabar
+   * reserved for faults and destruction. Colour only: radii and type faces are
+   * separate, later decisions. Every *-text token is gated by
+   * styles-contrast.spec.ts (plain + own-tint surfaces); the values below went
+   * in pre-measured and passed 30/30 on the first run. Historical comments on
+   * individual tokens refer to the signal-blue era and are kept as history.
+   * --------------------------------------------------------------------- */
   /* Background */
-  --bg-primary: #1b2336;
-  --bg-secondary: #24304a;
-  --bg-tertiary: #2e3b56;
-  --border-subtle: #374461;
+  --bg-primary: #0c1512;
+  --bg-secondary: #132320;
+  --bg-tertiary: #1b302b;
+  --border-subtle: #274039;
 
   /* Accent / Brand */
-  --accent-primary: #3b82f6;
-  --accent-hover: #60a5fa;
-  --accent-pressed: #2563eb;
+  --accent-primary: #c9a24b;
+  --accent-hover: #e0be72;
+  --accent-pressed: #a8853c;
   /* Mirrors --accent-pressed for the destructive role. These buttons were
    * already hovering to red-700; the value is unchanged, it just has a name now. */
-  --error-pressed: #b91c1c;
+  --error-pressed: #9c3a2b;
 
   /* Semantic */
-  --success: #22c55e;
-  --error: #ef4444;
-  --warning: #f59e0b;
+  --success: #6fbfa8;
+  --error: #c0392b;
+  --warning: #d4763f;
   --info: #06b6d4;
 
   /* Text */
-  --text-primary: #f2f2f2;
-  --text-secondary: #b3b3b3;
+  --text-primary: #eae4d6;
+  --text-secondary: #a8b3ac;
   /* R5 fix (design-language-v2 §2.2): #808080 failed WCAG AA (3.3–4.0:1).
-   * #A0AABE passes AA ≥4.5:1 on all three dark surfaces at any size. */
-  --text-muted: #a0aabe;
-  --text-inverse: #1b2336;
+   * #8fa096 passes AA ≥4.5:1 on all three dark surfaces at any size. */
+  --text-muted: #8fa096;
+  --text-inverse: #0c1512;
 
   /* -------------------------------------------------------------------------
    * Design Language v2 — semantic tokens (R3 fix, design-language-v2 §2.4)
    * Gives the 30+ hardcoded literals a single home. 8-digit hex = #RRGGBBAA.
    * --------------------------------------------------------------------- */
-  --accent-subtle: #3b82f626; /* ~15% — active nav-item wash, selected-row tint */
-  --accent-tint: #3b82f61f; /* ~12% — accent badge / chip background */
-  /* Raised from #60a5fa (2026-08-25, refactor-token-debt-blue). Measured worst
+  --accent-subtle: #c9a24b26; /* ~15% — active nav-item wash, selected-row tint */
+  --accent-tint: #c9a24b1f; /* ~12% — accent badge / chip background */
+  /* Raised from #e0be72 (2026-08-25, refactor-token-debt-blue). Measured worst
    * case 3.52:1 — on an --accent-primary/20 chip over --bg-tertiary — and 4.40:1
    * on plain --bg-tertiary. Sub-AA in 55 usages, including the one PR #287 told
-   * callers to swap TO. #93c5fd clears every surface (worst 4.97:1) and is the
+   * callers to swap TO. #e0be72 clears every surface (worst 4.97:1) and is the
    * value 24 call sites were already hardcoding as text-blue-300. */
-  --accent-text: #93c5fd; /* accent body text / active label (AA-safe on all surfaces) */
-  --success-tint: #22c55e1f; /* success badge bg, 已入庫 pill */
+  --accent-text: #e0be72; /* accent body text / active label (AA-safe on all surfaces) */
+  --success-tint: #6fbfa81f; /* success badge bg, 已入庫 pill */
   /* (2026-08-25, refactor-token-debt-success) Fourth slice, fourth confirmation:
    * --success as TEXT measures 4.04:1 on its own tint over --bg-tertiary. Green-400
    * keeps the hue (unlike the emerald drift below) — worst case 5.28:1. */
-  --success-text: #4ade80; /* success body text (AA-safe on all surfaces) */
-  --error-tint: #ef44441f; /* error badge bg, failed-state pill */
+  --success-text: #8fd3be; /* success body text (AA-safe on all surfaces) */
+  --error-tint: #c0392b1f; /* error badge bg, failed-state pill */
   /* Raised from #f87171 (2026-08-25, refactor-token-debt-red). Measured: the old
    * value was 4.05:1 on --bg-tertiary and 4.34:1 on an --error-tint surface —
-   * BELOW the AA gate PRODUCT.md calls 硬性要求, in 34 existing usages. #fca5a5
+   * BELOW the AA gate PRODUCT.md calls 硬性要求, in 34 existing usages. #e08a76
    * clears every surface (worst case 5.44:1) and is the value five call sites
    * were already hardcoding as text-red-300, so the intent was there all along.
    * Same precedent as --text-muted, raised for the same reason a release ago. */
-  --error-text: #fca5a5; /* error body text (TC-2 AA-safe on all surfaces) */
-  --warning-tint: #f59e0b1f; /* warning badge bg, 整理中 pill */
+  --error-text: #e08a76; /* error body text (TC-2 AA-safe on all surfaces) */
+  --warning-tint: #d4763f1f; /* warning badge bg, 整理中 pill */
   /* (2026-08-25, refactor-token-debt-warning) Third slice, third confirmation of
    * the same defect class: --warning as TEXT measures 4.31:1 worst case (on a
-   * warning-tinted surface over --bg-tertiary) — sub-AA. #fbbf24 (amber-400) is
+   * warning-tinted surface over --bg-tertiary) — sub-AA. #e8b04b (amber-400) is
    * what 10 call sites were already hardcoding; worst case 5.54:1. */
-  --warning-text: #fbbf24; /* warning body text (AA-safe on all surfaces) */
+  --warning-text: #e8b04b; /* warning body text (AA-safe on all surfaces) */
   --warning-pressed: #d97706; /* warning button hover — mirrors --accent/--error-pressed */
   --info-tint: #06b6d41f; /* info badge bg, 想要 pill */
   --info-text: #22d3ee; /* info body text (AA-safe on all surfaces, worst 5.14:1) */
-  --text-on-accent: #ffffff; /* label/icon on accent fills (buttons, pills) */
-  --text-disabled: #6e7891; /* disabled/decorative text — intentionally sub-AA (TC-1) */
+  --text-on-accent: #14161a; /* label/icon on accent fills (buttons, pills) */
+  --text-disabled: #5e6e66; /* disabled/decorative text — intentionally sub-AA (TC-1) */
   --overlay-scrim: #000000b3; /* 70% — modal / bottom-sheet backdrop */
-  --focus-ring: #3b82f6; /* keyboard focus outline (= accent-primary, aliased) */
+  --focus-ring: #c9a24b; /* keyboard focus outline (= accent-primary, aliased) */
 
   /* Border Radius */
   --radius-sm: 4px;
