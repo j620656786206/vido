@@ -27,7 +27,7 @@ export function MediaLibraryManager() {
 
   if (error) {
     return (
-      <div className="flex items-center gap-2 rounded-lg bg-[var(--error-tint)] px-4 py-3 text-sm text-[var(--error)]">
+      <div className="flex items-center gap-2 rounded-lg bg-[var(--error-tint)] px-4 py-3 text-sm text-[var(--error-text)]">
         <AlertCircle className="h-4 w-4 shrink-0" />
         無法載入媒體庫設定
       </div>
@@ -63,7 +63,7 @@ export function MediaLibraryManager() {
       <button
         type="button"
         onClick={() => setEditModal({ open: true })}
-        className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--border-subtle)]/50 py-2.5 text-sm text-[var(--text-secondary)] transition-colors hover:border-[var(--accent-primary)]/50 hover:text-[var(--accent-primary)]"
+        className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--border-subtle)]/50 py-2.5 text-sm text-[var(--text-secondary)] transition-colors hover:border-[var(--accent-primary)]/50 hover:text-[var(--accent-text)]"
         data-testid="add-library-button"
       >
         <Plus className="h-4 w-4" />

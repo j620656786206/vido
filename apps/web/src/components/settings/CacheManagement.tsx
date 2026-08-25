@@ -32,7 +32,7 @@ export function CacheManagement() {
   if (error) {
     return (
       <div className="py-10 text-center" data-testid="cache-error">
-        <p className="text-[var(--error)]">無法載入快取資訊</p>
+        <p className="text-[var(--error-text)]">無法載入快取資訊</p>
         <p className="mt-1 text-sm text-[var(--text-muted)]">{error.message}</p>
       </div>
     );

@@ -22,25 +22,25 @@ const statusConfig: Record<
   }
 > = {
   connected: {
-    color: 'text-[var(--success)]',
+    color: 'text-[var(--success-text)]',
     bg: 'bg-[var(--success-tint)]',
     icon: CheckCircle,
     label: '已連線',
   },
   rate_limited: {
-    color: 'text-[var(--warning)]',
+    color: 'text-[var(--warning-text)]',
     bg: 'bg-[var(--warning-tint)]',
     icon: AlertTriangle,
     label: '速率限制',
   },
   error: {
-    color: 'text-[var(--error)]',
+    color: 'text-[var(--error-text)]',
     bg: 'bg-[var(--error-tint)]',
     icon: XCircle,
     label: '錯誤',
   },
   disconnected: {
-    color: 'text-[var(--error)]',
+    color: 'text-[var(--error-text)]',
     bg: 'bg-[var(--error-tint)]',
     icon: WifiOff,
     label: '已斷線',

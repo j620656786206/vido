@@ -193,7 +193,7 @@ export function BackupScheduleConfig() {
           <button
             onClick={handleSave}
             disabled={updateSchedule.isPending}
-            className="flex items-center gap-2 rounded-lg bg-[var(--accent-primary)] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[var(--accent-hover)] disabled:opacity-50"
+            className="flex items-center gap-2 rounded-lg bg-[var(--accent-primary)] px-3 py-1.5 text-xs font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-hover)] disabled:opacity-50"
             data-testid="schedule-save-btn"
           >
             {updateSchedule.isPending && <Loader2 className="h-3 w-3 animate-spin" />}

@@ -26,10 +26,10 @@ interface LibraryCardProps {
 }
 
 const STATUS_CONFIG = {
-  accessible: { color: 'text-[var(--success)]', bg: 'bg-[var(--success)]', label: '已連線' },
-  not_found: { color: 'text-[var(--error)]', bg: 'bg-[var(--error)]', label: '無法存取' },
-  not_readable: { color: 'text-[var(--error)]', bg: 'bg-[var(--error)]', label: '無法讀取' },
-  not_directory: { color: 'text-[var(--error)]', bg: 'bg-[var(--error)]', label: '非目錄' },
+  accessible: { color: 'text-[var(--success-text)]', bg: 'bg-[var(--success)]', label: '已連線' },
+  not_found: { color: 'text-[var(--error-text)]', bg: 'bg-[var(--error)]', label: '無法存取' },
+  not_readable: { color: 'text-[var(--error-text)]', bg: 'bg-[var(--error)]', label: '無法讀取' },
+  not_directory: { color: 'text-[var(--error-text)]', bg: 'bg-[var(--error)]', label: '非目錄' },
   unknown: { color: 'text-[var(--text-secondary)]', bg: 'bg-[var(--text-muted)]', label: '未檢查' },
 } as const;
 
@@ -88,7 +88,7 @@ export function LibraryCard({ library, autoSubtitleSupported, onEdit }: LibraryC
                   setMenuOpen(false);
                   setConfirmDelete(true);
                 }}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-[var(--error)] hover:bg-[var(--bg-tertiary)]"
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-[var(--error-text)] hover:bg-[var(--bg-tertiary)]"
               >
                 <Trash2 className="h-3 w-3" /> 刪除
               </button>
@@ -135,7 +135,7 @@ export function LibraryCard({ library, autoSubtitleSupported, onEdit }: LibraryC
         {library.autoSubtitle && (
           <span
             className={`font-medium ${
-              autoSubtitleSupported ? 'text-[var(--success)]' : 'text-[var(--warning)]'
+              autoSubtitleSupported ? 'text-[var(--success-text)]' : 'text-[var(--warning-text)]'
             }`}
             data-testid="library-card-auto-subtitle-status"
           >

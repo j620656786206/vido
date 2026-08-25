@@ -52,7 +52,7 @@ export function LogsViewer() {
   if (error) {
     return (
       <div className="py-10 text-center" data-testid="logs-error">
-        <p className="text-[var(--error)]">無法載入系統日誌</p>
+        <p className="text-[var(--error-text)]">無法載入系統日誌</p>
         <p className="mt-1 text-sm text-[var(--text-muted)]">{error.message}</p>
       </div>
     );
