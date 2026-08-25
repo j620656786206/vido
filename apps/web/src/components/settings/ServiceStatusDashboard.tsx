@@ -110,7 +110,7 @@ export function ServiceStatusDashboard() {
       {/* Status change notifications (AC3) */}
       {statusChanges.length > 0 && (
         <div
-          className="flex items-start gap-3 rounded-lg border border-[var(--accent-hover)] bg-[var(--accent-tint)] px-4 py-3"
+          className="flex items-start gap-3 rounded-lg bg-[var(--accent-tint)] px-4 py-3"
           role="status"
           aria-live="polite"
           data-testid="status-change-notification"
@@ -147,7 +147,7 @@ export function ServiceStatusDashboard() {
 
       {testError && (
         <div
-          className="rounded-lg border border-[var(--error)] bg-[var(--error-tint)] px-4 py-3 text-sm text-[var(--error)]"
+          className="rounded-lg bg-[var(--error-tint)] px-4 py-3 text-sm text-[var(--error)]"
           role="alert"
           data-testid="test-error"
         >

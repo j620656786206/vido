@@ -19,10 +19,10 @@ export function ConnectionTestResult({
     <div
       data-testid="connection-test-result"
       className={cn(
-        'mt-4 flex items-start gap-3 rounded-lg border p-4',
+        'mt-4 flex items-start gap-3 rounded-lg p-4',
         success
-          ? 'border-[var(--success)] bg-[var(--success-tint)] text-[var(--success-text)]'
-          : 'border-[var(--error)] bg-[var(--error-tint)] text-[var(--error-text)]'
+          ? 'bg-[var(--success-tint)] text-[var(--success-text)]'
+          : 'bg-[var(--error-tint)] text-[var(--error-text)]'
       )}
     >
       {success ? (

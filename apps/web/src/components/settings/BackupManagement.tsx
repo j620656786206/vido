@@ -142,7 +142,7 @@ export function BackupManagement() {
       {/* Error display */}
       {createError && (
         <div
-          className="rounded-lg border border-[var(--error)] bg-[var(--error-tint)] px-4 py-3 text-sm text-[var(--error)]"
+          className="rounded-lg bg-[var(--error-tint)] px-4 py-3 text-sm text-[var(--error)]"
           role="alert"
           data-testid="create-error"
         >
@@ -152,7 +152,7 @@ export function BackupManagement() {
 
       {verifyMessage && (
         <div
-          className="rounded-lg border border-[var(--accent-hover)] bg-[var(--accent-tint)] px-4 py-3 text-sm text-[var(--accent-text)]"
+          className="rounded-lg bg-[var(--accent-tint)] px-4 py-3 text-sm text-[var(--accent-text)]"
           role="status"
           data-testid="verify-message"
         >
@@ -162,7 +162,7 @@ export function BackupManagement() {
 
       {restoreMessage && (
         <div
-          className="rounded-lg border border-[var(--warning)] bg-[var(--warning-tint)] px-4 py-3 text-sm text-[var(--warning-text)]"
+          className="rounded-lg bg-[var(--warning-tint)] px-4 py-3 text-sm text-[var(--warning-text)]"
           role="status"
           data-testid="restore-message"
         >
@@ -172,7 +172,7 @@ export function BackupManagement() {
 
       {deleteError && (
         <div
-          className="rounded-lg border border-[var(--error)] bg-[var(--error-tint)] px-4 py-3 text-sm text-[var(--error)]"
+          className="rounded-lg bg-[var(--error-tint)] px-4 py-3 text-sm text-[var(--error)]"
           role="alert"
           data-testid="delete-error"
         >

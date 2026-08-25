@@ -71,7 +71,7 @@ export function MetadataExport() {
                 value={opt.value}
                 checked={format === opt.value}
                 onChange={() => setFormat(opt.value)}
-                className="accent-blue-500"
+                className="accent-[var(--accent-primary)]"
               />
               <div>
                 <span className="text-sm font-medium text-[var(--text-primary)]">{opt.label}</span>

@@ -107,7 +107,7 @@ export function DegradationMessage({ message, missingFields, className }: Degrad
   return (
     <div
       className={cn(
-        'rounded-lg border border-[var(--warning)]/20 bg-[var(--warning-tint)] p-3 text-sm text-[var(--warning-text)]',
+        'rounded-lg bg-[var(--warning-tint)] p-3 text-sm text-[var(--warning-text)]',
         className
       )}
       role="status"

@@ -107,7 +107,7 @@ export function DownloadsQbtErrorV2({
       data-testid="downloads-qbt-error-v2"
       role="alert"
       className={cn(
-        'flex flex-col items-center rounded-[var(--radius-lg)] border border-[var(--error)] bg-[var(--error-tint)] px-6 py-12 text-center'
+        'flex flex-col items-center rounded-[var(--radius-lg)] bg-[var(--error-tint)] px-6 py-12 text-center'
       )}
     >
       <PlugZap className="h-10 w-10 text-[var(--error-text)]" aria-hidden="true" />
