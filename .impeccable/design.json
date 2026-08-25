@@ -1,0 +1,424 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-25T02:28:07.849Z",
+  "title": "Design System: Vido",
+  "extensions": {
+    "colorMeta": {
+      "midnight": {
+        "role": "neutral",
+        "displayName": "Midnight",
+        "canonical": "oklch(25.8% 0.0378 266.3)",
+        "tonalRamp": [
+          "oklch(15.0% 0.0378 266.3)",
+          "oklch(26.4% 0.0378 266.3)",
+          "oklch(37.9% 0.0378 266.3)",
+          "oklch(49.3% 0.0378 266.3)",
+          "oklch(60.7% 0.0378 266.3)",
+          "oklch(72.1% 0.0378 266.3)",
+          "oklch(83.6% 0.0378 266.3)",
+          "oklch(95.0% 0.0378 266.3)"
+        ]
+      },
+      "slate-raised": {
+        "role": "neutral",
+        "displayName": "Slate Raised",
+        "canonical": "oklch(31.1% 0.0498 264.7)",
+        "tonalRamp": [
+          "oklch(15.0% 0.0498 264.7)",
+          "oklch(26.4% 0.0498 264.7)",
+          "oklch(37.9% 0.0498 264.7)",
+          "oklch(49.3% 0.0498 264.7)",
+          "oklch(60.7% 0.0498 264.7)",
+          "oklch(72.1% 0.0498 264.7)",
+          "oklch(83.6% 0.0498 264.7)",
+          "oklch(95.0% 0.0498 264.7)"
+        ]
+      },
+      "slate-hover": {
+        "role": "neutral",
+        "displayName": "Slate Hover",
+        "canonical": "oklch(35.3% 0.0504 264.2)",
+        "tonalRamp": [
+          "oklch(15.0% 0.0504 264.2)",
+          "oklch(26.4% 0.0504 264.2)",
+          "oklch(37.9% 0.0504 264.2)",
+          "oklch(49.3% 0.0504 264.2)",
+          "oklch(60.7% 0.0504 264.2)",
+          "oklch(72.1% 0.0504 264.2)",
+          "oklch(83.6% 0.0504 264.2)",
+          "oklch(95.0% 0.0504 264.2)"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "oklch(38.8% 0.0525 265.5)",
+        "tonalRamp": [
+          "oklch(15.0% 0.0525 265.5)",
+          "oklch(26.4% 0.0525 265.5)",
+          "oklch(37.9% 0.0525 265.5)",
+          "oklch(49.3% 0.0525 265.5)",
+          "oklch(60.7% 0.0525 265.5)",
+          "oklch(72.1% 0.0525 265.5)",
+          "oklch(83.6% 0.0525 265.5)",
+          "oklch(95.0% 0.0525 265.5)"
+        ]
+      },
+      "signal-blue": {
+        "role": "primary",
+        "displayName": "Signal Blue",
+        "canonical": "oklch(62.3% 0.1880 259.8)",
+        "tonalRamp": [
+          "oklch(15.0% 0.1880 259.8)",
+          "oklch(26.4% 0.1880 259.8)",
+          "oklch(37.9% 0.1880 259.8)",
+          "oklch(49.3% 0.1880 259.8)",
+          "oklch(60.7% 0.1880 259.8)",
+          "oklch(72.1% 0.1880 259.8)",
+          "oklch(83.6% 0.1880 259.8)",
+          "oklch(95.0% 0.1880 259.8)"
+        ]
+      },
+      "running-green": {
+        "role": "secondary",
+        "displayName": "Running Green",
+        "canonical": "oklch(72.3% 0.1920 149.6)",
+        "tonalRamp": [
+          "oklch(15.0% 0.1920 149.6)",
+          "oklch(26.4% 0.1920 149.6)",
+          "oklch(37.9% 0.1920 149.6)",
+          "oklch(49.3% 0.1920 149.6)",
+          "oklch(60.7% 0.1920 149.6)",
+          "oklch(72.1% 0.1920 149.6)",
+          "oklch(83.6% 0.1920 149.6)",
+          "oklch(95.0% 0.1920 149.6)"
+        ]
+      },
+      "fault-red": {
+        "role": "secondary",
+        "displayName": "Fault Red",
+        "canonical": "oklch(63.7% 0.2078 25.3)",
+        "tonalRamp": [
+          "oklch(15.0% 0.2078 25.3)",
+          "oklch(26.4% 0.2078 25.3)",
+          "oklch(37.9% 0.2078 25.3)",
+          "oklch(49.3% 0.2078 25.3)",
+          "oklch(60.7% 0.2078 25.3)",
+          "oklch(72.1% 0.2078 25.3)",
+          "oklch(83.6% 0.2078 25.3)",
+          "oklch(95.0% 0.2078 25.3)"
+        ]
+      },
+      "asked-amber": {
+        "role": "secondary",
+        "displayName": "Asked Amber",
+        "canonical": "oklch(76.9% 0.1647 70.1)",
+        "tonalRamp": [
+          "oklch(15.0% 0.1647 70.1)",
+          "oklch(26.4% 0.1647 70.1)",
+          "oklch(37.9% 0.1647 70.1)",
+          "oklch(49.3% 0.1647 70.1)",
+          "oklch(60.7% 0.1647 70.1)",
+          "oklch(72.1% 0.1647 70.1)",
+          "oklch(83.6% 0.1647 70.1)",
+          "oklch(95.0% 0.1647 70.1)"
+        ]
+      },
+      "note-cyan": {
+        "role": "tertiary",
+        "displayName": "Note Cyan",
+        "canonical": "oklch(71.5% 0.1257 215.2)",
+        "tonalRamp": [
+          "oklch(15.0% 0.1257 215.2)",
+          "oklch(26.4% 0.1257 215.2)",
+          "oklch(37.9% 0.1257 215.2)",
+          "oklch(49.3% 0.1257 215.2)",
+          "oklch(60.7% 0.1257 215.2)",
+          "oklch(72.1% 0.1257 215.2)",
+          "oklch(83.6% 0.1257 215.2)",
+          "oklch(95.0% 0.1257 215.2)"
+        ]
+      },
+      "read-white": {
+        "role": "neutral",
+        "displayName": "Read White",
+        "canonical": "oklch(96.1% 0.0000 89.9)",
+        "tonalRamp": [
+          "oklch(15.0% 0.0000 89.9)",
+          "oklch(26.4% 0.0000 89.9)",
+          "oklch(37.9% 0.0000 89.9)",
+          "oklch(49.3% 0.0000 89.9)",
+          "oklch(60.7% 0.0000 89.9)",
+          "oklch(72.1% 0.0000 89.9)",
+          "oklch(83.6% 0.0000 89.9)",
+          "oklch(95.0% 0.0000 89.9)"
+        ]
+      },
+      "read-grey": {
+        "role": "neutral",
+        "displayName": "Read Grey",
+        "canonical": "oklch(76.7% 0.0000 89.9)",
+        "tonalRamp": [
+          "oklch(15.0% 0.0000 89.9)",
+          "oklch(26.4% 0.0000 89.9)",
+          "oklch(37.9% 0.0000 89.9)",
+          "oklch(49.3% 0.0000 89.9)",
+          "oklch(60.7% 0.0000 89.9)",
+          "oklch(72.1% 0.0000 89.9)",
+          "oklch(83.6% 0.0000 89.9)",
+          "oklch(95.0% 0.0000 89.9)"
+        ]
+      },
+      "read-dim": {
+        "role": "neutral",
+        "displayName": "Read Dim",
+        "canonical": "oklch(73.7% 0.0310 264.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.0310 264.4)",
+          "oklch(26.4% 0.0310 264.4)",
+          "oklch(37.9% 0.0310 264.4)",
+          "oklch(49.3% 0.0310 264.4)",
+          "oklch(60.7% 0.0310 264.4)",
+          "oklch(72.1% 0.0310 264.4)",
+          "oklch(83.6% 0.0310 264.4)",
+          "oklch(95.0% 0.0310 264.4)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "只用於詳情頁 hero 標題。全 app 7 次——不是一般標題層級。"
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "頁面標題。一個畫面一個。"
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "區段與卡片標題。"
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "預設值。實測 589 次——說明、列表列、表單標籤。"
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "徽章、藥丸、metadata、表頭。實測 254 次。"
+      },
+      "readout": {
+        "displayName": "Readout",
+        "purpose": "等寬。計數、進度數字、位元組大小、ID、路徑——任何可能跨列比較的東西。"
+      }
+    },
+    "shadows": [
+      {
+        "name": "sm",
+        "value": "0 1px 2px rgba(0,0,0,0.3)",
+        "purpose": "有填色、可按的控制項——主要／次要／破壞性按鈕。"
+      },
+      {
+        "name": "md",
+        "value": "0 4px 8px rgba(0,0,0,0.4)",
+        "purpose": "Card 基本元件。"
+      },
+      {
+        "name": "lg",
+        "value": "0 8px 16px rgba(0,0,0,0.5)",
+        "purpose": "罕見的中間階。"
+      },
+      {
+        "name": "xl",
+        "value": "0 12px 24px rgba(0,0,0,0.6)",
+        "purpose": "只給真正的覆蓋層——Dialog、Sheet、詳情頁 hero。4 次使用，刻意的上限。"
+      }
+    ],
+    "motion": [
+      {
+        "name": "transition-colors",
+        "value": "150ms ease",
+        "purpose": "導覽項與按鈕 hover／active 色彩位移的預設值。"
+      },
+      {
+        "name": "fadeIn",
+        "value": "opacity 0→1 with translateY(8px)→0",
+        "purpose": "下拉選單、toast、展開面板的進場。"
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation-duration: 0.01ms !important",
+        "purpose": "全域 prefers-reduced-motion 覆寫——所有動畫與轉場一律收合。"
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "唯一以實心承載強調色的控制項。用於一個畫面上「確認送出」的那個動作。",
+      "html": "<button class=\"ds-btn-primary\">儲存設定</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:36px;padding:8px 16px;border:none;border-radius:var(--radius-md,8px);background:var(--accent-primary,#3b82f6);color:#fff;font-family:\"Noto Sans TC\",-apple-system,sans-serif;font-size:14px;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:background .15s ease}.ds-btn-primary:hover{background:var(--accent-hover,#60a5fa)}.ds-btn-primary:active{background:var(--accent-pressed,#2563eb)}.ds-btn-primary:focus-visible{outline:2px solid var(--focus-ring,#3b82f6);outline-offset:2px}.ds-btn-primary:disabled{opacity:.5;pointer-events:none}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "主要按鈕旁的非確認動作。色調式，不用強調色。",
+      "html": "<button class=\"ds-btn-secondary\">測試連線</button>",
+      "css": ".ds-btn-secondary{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:36px;padding:8px 16px;border:none;border-radius:var(--radius-md,8px);background:var(--bg-tertiary,#2e3b56);color:var(--text-primary,#f2f2f2);font-family:\"Noto Sans TC\",-apple-system,sans-serif;font-size:14px;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:background .15s ease}.ds-btn-secondary:hover{background:rgba(46,59,86,.8)}.ds-btn-secondary:focus-visible{outline:2px solid var(--focus-ring,#3b82f6);outline-offset:2px}.ds-btn-secondary:disabled{opacity:.5;pointer-events:none}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "未 hover 前沒有填色。密集列中純圖示動作的預設選擇。",
+      "html": "<button class=\"ds-btn-ghost\">取消</button>",
+      "css": ".ds-btn-ghost{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:36px;padding:8px 16px;border:none;border-radius:var(--radius-md,8px);background:transparent;color:var(--text-primary,#f2f2f2);font-family:\"Noto Sans TC\",-apple-system,sans-serif;font-size:14px;font-weight:500;transition:background .15s ease}.ds-btn-ghost:hover{background:var(--bg-tertiary,#2e3b56)}.ds-btn-ghost:focus-visible{outline:2px solid var(--focus-ring,#3b82f6);outline-offset:2px}"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "色調填色加髮絲線邊框。focus 時邊框轉為強調色並加 1px 環。",
+      "html": "<input class=\"ds-input\" placeholder=\"http://192.168.1.100:8080\" />",
+      "css": ".ds-input{width:100%;box-sizing:border-box;padding:8px 12px;border:1px solid var(--border-subtle,#374461);border-radius:var(--radius-md,8px);background:var(--bg-secondary,#24304a);color:var(--text-primary,#f2f2f2);font-family:\"Noto Sans TC\",-apple-system,sans-serif;font-size:14px;transition:border-color .15s ease,box-shadow .15s ease}.ds-input::placeholder{color:var(--text-muted,#a0aabe)}.ds-input:focus{outline:none;border-color:var(--accent-primary,#3b82f6);box-shadow:0 0 0 1px var(--accent-primary,#3b82f6)}.ds-input:disabled{opacity:.5;cursor:not-allowed}"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "一張卡片之所以是卡片，是因為它比頁面亮一階——陰影只是確認它。",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-title\">連線設定</div><div class=\"ds-card-desc\">設定 qBittorrent 連線資訊，以便從 Vido 監控下載狀態。</div></div>",
+      "css": ".ds-card{border-radius:var(--radius-lg,12px);background:var(--bg-secondary,#24304a);box-shadow:0 4px 8px rgba(0,0,0,.4);padding:24px;font-family:\"Noto Sans TC\",-apple-system,sans-serif}.ds-card-title{font-size:18px;font-weight:600;line-height:1;color:var(--text-primary,#f2f2f2);margin-bottom:6px}.ds-card-desc{font-size:14px;line-height:1.6;color:var(--text-secondary,#b3b3b3)}"
+    },
+    {
+      "name": "Running Badge",
+      "kind": "chip",
+      "refersTo": "badge-running",
+      "description": "綠色代表「現在正在發生」。絕不用於已完成的事。",
+      "html": "<span class=\"ds-badge-running\">生成中</span>",
+      "css": ".ds-badge-running{display:inline-flex;align-items:center;padding:2px 8px;border-radius:var(--radius-sm,4px);background:rgba(34,197,94,.12);color:var(--success,#22c55e);font-family:\"Noto Sans TC\",-apple-system,sans-serif;font-size:12px;font-weight:500;line-height:1.4}"
+    },
+    {
+      "name": "Asked Badge",
+      "kind": "chip",
+      "refersTo": "badge-asked",
+      "description": "系統裡最重要的一個標記：你要求了，而它沒有在發生。這是唯一能浮現「系統與使用者意願不一致」的方式。",
+      "html": "<span class=\"ds-badge-asked\">伺服器未啟用</span>",
+      "css": ".ds-badge-asked{display:inline-flex;align-items:center;padding:2px 8px;border-radius:var(--radius-sm,4px);background:rgba(245,158,11,.12);color:var(--warning,#f59e0b);font-family:\"Noto Sans TC\",-apple-system,sans-serif;font-size:12px;font-weight:500;line-height:1.4}"
+    },
+    {
+      "name": "Fault Badge",
+      "kind": "chip",
+      "refersTo": "badge-fault",
+      "description": "壞掉了。使用 AA-safe 的紅色文字階，而非飽和的填色色。",
+      "html": "<span class=\"ds-badge-fault\">失敗</span>",
+      "css": ".ds-badge-fault{display:inline-flex;align-items:center;padding:2px 8px;border-radius:var(--radius-sm,4px);background:rgba(239,68,68,.12);color:var(--error-text,#f87171);font-family:\"Noto Sans TC\",-apple-system,sans-serif;font-size:12px;font-weight:500;line-height:1.4}"
+    },
+    {
+      "name": "Sidebar Nav Item",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "active 狀態是 15% 強調色淡洗，絕不實心填滿。此處展示的是 active 狀態。",
+      "html": "<a class=\"ds-nav-item ds-nav-item-active\" href=\"#\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/></svg><span>設定</span></a>",
+      "css": ".ds-nav-item{display:flex;align-items:center;gap:12px;min-height:44px;padding:8px 10px;border-radius:var(--radius-md,8px);color:var(--text-muted,#a0aabe);font-family:\"Noto Sans TC\",-apple-system,sans-serif;font-size:14px;font-weight:500;text-decoration:none;transition:background .15s ease,color .15s ease}.ds-nav-item:hover{background:var(--bg-tertiary,#2e3b56);color:var(--text-primary,#f2f2f2)}.ds-nav-item-active{background:rgba(59,130,246,.15);color:var(--text-primary,#f2f2f2);font-weight:600}.ds-nav-item:focus-visible{outline:2px solid var(--focus-ring,#3b82f6);outline-offset:2px}"
+    },
+    {
+      "name": "Status Row",
+      "kind": "custom",
+      "description": "活動中心背後的招牌模式。圖示晶片、標題、原因說明、右側槽。右槽在沒有真實進度時顯示「進行中」——而且完全不渲染進度條，不是渲染一條空的。",
+      "html": "<div class=\"ds-status-row\"><div class=\"ds-status-chip\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z\"/></svg></div><div class=\"ds-status-text\"><div class=\"ds-status-title\">字幕生成中</div><div class=\"ds-status-detail\">龍族前傳 S03E01</div></div><span class=\"ds-status-right\">進行中</span></div>",
+      "css": ".ds-status-row{display:flex;align-items:center;gap:12px;padding:16px;border-radius:var(--radius-lg,12px);background:var(--bg-secondary,#24304a);font-family:\"Noto Sans TC\",-apple-system,sans-serif}.ds-status-chip{display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex-shrink:0;border-radius:var(--radius-md,8px);background:var(--bg-tertiary,#2e3b56);color:var(--text-secondary,#b3b3b3)}.ds-status-text{min-width:0;flex:1}.ds-status-title{font-size:14px;font-weight:600;color:var(--text-primary,#f2f2f2)}.ds-status-detail{font-size:13px;color:var(--text-secondary,#b3b3b3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ds-status-right{font-size:13px;color:var(--text-secondary,#b3b3b3);flex-shrink:0}"
+    }
+  ],
+  "narrative": {
+    "northStar": "誠實的讀數（The Honest Readout）",
+    "overview": "Vido 會在使用者不在的時候，於別人的 NAS 上持續跑上好幾分鐘，而且花的是真的錢。這個介面上的每一塊，本質都是「別處正在發生的事」的讀數——而會諂媚的讀數比沒有讀數更糟。一個不知道進度卻顯示 90% 的儀表不是體貼，是說謊。整套視覺系統存在的理由，就是讓背景工作的真實狀態在昏暗房間裡一眼可讀，而使用者不需要「相信」任何東西。\n\n這導致一個刻意不華麗的介面。文字小而密——全 app text-sm 出現 589 次、text-xs 254 次，對比 text-4xl 只有 7 次——因為它的任務是把一整座真實片庫的狀態塞進一個畫面，不是製造第一印象。深度幾乎全靠三階背景色而非陰影（色階 525 次 vs 陰影 11 次），所以眼睛讀得出結構，卻不會有任何東西感覺被墊高或裝飾過。強調色被配給到近乎稀有：訊號藍從不填滿導覽項目，只以 15% 淡洗帶過。\n\n這套系統唯一願意花成本的地方是誠實。狀態色是資料不是裝飾，而且語意固定：綠＝正在發生、琥珀＝你要求了但沒發生、不出現＝你沒要求。這組詞彙比任何程度的精緻都值錢，任何「視覺改善」都不准把它弄模糊。",
+    "keyCharacteristics": [
+      "只有暗色單一主題——沒有淺色模式，連骨架都沒有，只留了一行註解",
+      "刻意密集：內文 14px、標籤 12px，這就是工作區間",
+      "深度來自色階，不是陰影",
+      "強調色配給制；語意色只保留給狀態，絕不用於強調",
+      "對比度是硬性關卡（WCAG AA 4.5:1），全系統只有一個有記錄的例外"
+    ],
+    "rules": [
+      {
+        "name": "固定詞彙規則（The Fixed Vocabulary Rule）",
+        "body": "綠＝正在發生。琥珀＝你要求了但沒發生。不出現＝你沒要求。狀態色不得被挪用為強調、裝飾或分類——它一旦出現，就是在對「狀態」做出主張，而那個主張必須為真。",
+        "section": "colors"
+      },
+      {
+        "name": "配給強調規則（The Rationed Accent Rule）",
+        "body": "訊號藍只填滿「要被按的控制項」。僅僅是「目前所在」的狀態——active 導覽項、選取的列——用 15% 淡洗（--accent-subtle），絕不用實心填滿。全 app 閱讀文字背後的實心強調色背景數量是 0，而那正是預期的數字。",
+        "section": "colors"
+      },
+      {
+        "name": "兩種藍規則（The Two Blues Rule）",
+        "body": "--accent-primary 給人按，--accent-text 給人讀。換過來會無聲地破壞對比度。紅色也有同一組分工（--error / --error-text）。",
+        "section": "colors"
+      },
+      {
+        "name": "預設小字規則（The Small-By-Default Rule）",
+        "body": "14px 是內文、12px 是標籤。伸手拿更大的尺寸，等於主張「這段文字比頁面的實際內容更重要」——而它通常不是。實測分布 589 次 text-sm 對 7 次 text-4xl 是預期的形狀，不是待修正的意外。",
+        "section": "typography"
+      },
+      {
+        "name": "比較才用等寬規則（The Mono-For-Comparison Rule）",
+        "body": "如果同一個值的兩個實例可能被沿著欄位上下對照，就用等寬。散文永遠不用等寬；使用者只掃一眼、不會拿去比的數字也不需要。",
+        "section": "typography"
+      },
+      {
+        "name": "貼齊側欄規則（The Flush Sidebar Rule）",
+        "body": "側欄要貼齊它旁邊的東西。只有內容拿閱讀寬度限制，而且靠左對齊，讓每一欄共用同一條左邊線——多出來的寬度收在右邊，讀起來是頁面留白，不是一個洞。",
+        "section": "layout"
+      },
+      {
+        "name": "色調優先規則（The Tone-First Rule）",
+        "body": "伸手拿陰影之前先伸手拿背景階。如果一個面需要讀起來與頁面分離，它就是抬升板岩。只有當這個面真的浮在它所覆蓋的內容之上時，才加陰影。",
+        "section": "elevation"
+      },
+      {
+        "name": "單一圓角規則（The One Radius Rule）",
+        "body": "沒有理由就用 8px。卡片用 12px 是因為它夠大、8px 會讀起來偏銳；徽章用 4px 是因為它夠小、8px 會讀起來偏圓。其他一律 8px。",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do 嚴格照狀態詞彙用色：綠＝正在發生、琥珀＝要求了但沒發生、不出現＝沒要求。",
+      "Do 先伸手拿背景階（午夜 → 抬升板岩 → 互動板岩），再考慮陰影。",
+      "Do 顏色被讀時用 --accent-text / --error-text，被按或填色時用 --accent-primary / --error。",
+      "Do 內文維持 14px、標籤 12px；密度就是設計。",
+      "Do 任何使用者可能跨列比較的數字都用等寬字。",
+      "Do 側欄保持貼齊，寬度限制搬到內容格並靠左對齊。",
+      "Do 不可用的控制項留在畫面上、標為停用，並說明原因。"
+    ],
+    "donts": [
+      "Don't 渲染系統根本沒在量測的百分比。靜態的「進行中」是誠實的；整段執行期間都顯示 0% 會被讀成卡住。",
+      "Don't 把 --text-disabled（#6e7891, 3.55:1）用在任何使用者需要讀的東西上。它只給停用控制項，而且是全系統唯一有記錄的低於 AA 的值。",
+      "Don't 用實心訊號藍填滿導覽項目。「目前所在」用 15% 淡洗。",
+      "Don't 給已經有色階的填色面再加邊框。",
+      "Don't 對「包含側欄的版型根層」設寬度限制再置中——那會讓側欄脫離，在兩個導覽之間開一個洞。",
+      "Don't 隨手加上淺色主題。這裡每一個 token 都是為深色底調過的，包括 0.3–0.6 的陰影 alpha——那是一個獨立專案。",
+      "Don't 引入 display 字體或第二種個性。一套人文無襯線加一套等寬，就是全部。"
+    ]
+  }
+}
