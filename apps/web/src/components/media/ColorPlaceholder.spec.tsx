@@ -5,8 +5,10 @@ import { ColorPlaceholder, filenameToGradient } from './ColorPlaceholder';
 describe('filenameToGradient', () => {
   it('returns two HSL color strings', () => {
     const [a, b] = filenameToGradient('test-movie.mkv');
-    expect(a).toMatch(/^hsl\(\d+, 65%, 35%\)$/);
-    expect(b).toMatch(/^hsl\(\d+, 55%, 45%\)$/);
+    // Lightness stops are part of the contract: clamped dark (26%/32%) so the
+    // light initial letter clears 3:1 on every hash-derived hue (critique R1).
+    expect(a).toMatch(/^hsl\(\d+, 45%, 26%\)$/);
+    expect(b).toMatch(/^hsl\(\d+, 40%, 32%\)$/);
   });
 
   it('is deterministic — same input produces same output', () => {
@@ -23,8 +25,8 @@ describe('filenameToGradient', () => {
 
   it('handles empty string without throwing', () => {
     const [a, b] = filenameToGradient('');
-    expect(a).toMatch(/^hsl\(\d+, 65%, 35%\)$/);
-    expect(b).toMatch(/^hsl\(\d+, 55%, 45%\)$/);
+    expect(a).toMatch(/^hsl\(\d+, 45%, 26%\)$/);
+    expect(b).toMatch(/^hsl\(\d+, 40%, 32%\)$/);
   });
 });
 

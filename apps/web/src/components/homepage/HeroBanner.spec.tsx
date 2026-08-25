@@ -159,14 +159,22 @@ describe('HeroBanner', () => {
     expect(link.href).toMatch(/\/media\/tv\/1396$/);
   });
 
-  it('[P1] clicking the slide navigates to detail page (AC #3 / M3 fix)', async () => {
+  // Critique R1 P1 reshaped the slide: role="link" wrapping a button and a
+  // Link violated ARIA (no interactive descendants inside a link). The
+  // container is now a plain pointer surface; the ACCESSIBLE path is the
+  // title <Link> (plus 查看詳情/play). Click convenience must still work.
+  it('[P1] full-slide click is a NATIVE stretched link, not a role="link" div', async () => {
     mockHook({ data: [item({ id: 7, mediaType: 'movie', title: 'Slide Click Test' })] });
     renderBanner();
     const slide = await screen.findByTestId('hero-banner-slide');
-    expect(slide).toHaveAttribute('role', 'link');
-    expect(slide).toHaveAttribute('aria-label', '查看 Slide Click Test');
+    expect(slide).not.toHaveAttribute('role');
+    expect(slide).not.toHaveAttribute('tabindex');
 
-    fireEvent.click(slide);
+    // The title link stretches over the slide (after:inset-0) — clicking it
+    // IS the full-surface click path.
+    const link = screen.getByTestId('hero-banner-title-link');
+    expect(link.className).toContain('after:absolute after:inset-0');
+    fireEvent.click(link);
     await waitFor(() => expect(screen.getByText('Media Detail')).toBeInTheDocument());
   });
 
@@ -192,20 +200,55 @@ describe('HeroBanner', () => {
     const slides = screen.getAllByTestId('hero-banner-slide');
 
     expect(slides[0]).not.toHaveAttribute('inert');
-    expect(slides[0].getAttribute('tabindex')).toBe('0');
+    // The container itself is no longer focusable (critique R1 P1) — the
+    // active slide's tab stops are its REAL controls, led by the title link.
+    expect(slides[0].querySelector('h2 a')).not.toBeNull();
 
     expect(slides[1]).toHaveAttribute('inert');
-    expect(slides[1].getAttribute('tabindex')).toBe('-1');
     expect(slides[2]).toHaveAttribute('inert');
-    expect(slides[2].getAttribute('tabindex')).toBe('-1');
   });
 
-  it('[P2] keyboard Enter on slide navigates to detail (M3 keyboard support)', async () => {
-    mockHook({ data: [item({ id: 13, mediaType: 'movie' })] });
+  it('[P2] keyboard path: the title is a real link to detail (critique R1 P1)', async () => {
+    mockHook({ data: [item({ id: 13, mediaType: 'movie', title: 'KB Title' })] });
     renderBanner();
-    const slide = await screen.findByTestId('hero-banner-slide');
-    fireEvent.keyDown(slide, { key: 'Enter' });
+    await screen.findByTestId('hero-banner-title');
+    const link = screen.getByTestId('hero-banner-title-link') as HTMLAnchorElement;
+    expect(link.href).toMatch(/\/media\/movie\/13$/);
+    fireEvent.click(link);
     await waitFor(() => expect(screen.getByText('Media Detail')).toBeInTheDocument());
+  });
+
+  it('[P1] pause button stops rotation and survives mouse-leave (WCAG 2.2.2)', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockHook({ data: [item({ id: 1, title: 'A' }), item({ id: 2, title: 'B' })] });
+    renderBanner();
+    await screen.findByTestId('hero-banner');
+    const pause = screen.getByTestId('hero-banner-pause');
+    expect(pause).toHaveAttribute('aria-label', '暫停輪播');
+
+    fireEvent.click(pause);
+    expect(pause).toHaveAttribute('aria-label', '繼續輪播');
+    expect(pause).toHaveAttribute('aria-pressed', 'true');
+
+    // Hover in/out must NOT clear the user's explicit pause.
+    fireEvent.mouseEnter(screen.getByTestId('hero-banner'));
+    fireEvent.mouseLeave(screen.getByTestId('hero-banner'));
+    act(() => {
+      vi.advanceTimersByTime(20000);
+    });
+    const actives = screen
+      .getAllByTestId('hero-banner-slide')
+      .map((el) => el.getAttribute('data-active'));
+    expect(actives).toEqual(['true', 'false']);
+
+    fireEvent.click(pause);
+    act(() => {
+      vi.advanceTimersByTime(8000);
+    });
+    expect(
+      screen.getAllByTestId('hero-banner-slide').map((el) => el.getAttribute('data-active'))
+    ).toEqual(['false', 'true']);
+    vi.useRealTimers();
   });
 
   it('[P1] auto-rotates every 8s (AC #2)', async () => {
