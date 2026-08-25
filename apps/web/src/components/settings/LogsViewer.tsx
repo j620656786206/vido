@@ -72,14 +72,10 @@ export function LogsViewer() {
     <div className="space-y-4" data-testid="logs-viewer">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <FileText className="h-5 w-5 text-[var(--text-secondary)]" />
-          <div>
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">系統日誌</h2>
-            <p className="text-sm text-[var(--text-secondary)]">
-              共 {data?.total.toLocaleString() ?? 0} 筆記錄
-            </p>
-          </div>
+        {/* Title at the route level; this is the live record count. */}
+        <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+          <FileText className="h-4 w-4" aria-hidden="true" />
+          <span>共 {data?.total.toLocaleString() ?? 0} 筆記錄</span>
         </div>
 
         <div className="flex items-center gap-2">

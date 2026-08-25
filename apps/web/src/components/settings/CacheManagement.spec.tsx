@@ -179,7 +179,9 @@ describe('CacheManagement', () => {
     } as any);
 
     renderWithQuery(React.createElement(CacheManagement));
-    expect(screen.getByText('快取管理')).toBeInTheDocument();
+    // Title lives at the route level now (one header contract); the component
+    // keeps the live total readout.
+    expect(screen.getByText(/總計/)).toBeInTheDocument();
   });
 
   it('disables clear old cache button while pending', () => {

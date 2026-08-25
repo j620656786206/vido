@@ -165,8 +165,8 @@ describe('ServiceStatusDashboard', () => {
     } as any);
 
     renderWithQuery(React.createElement(ServiceStatusDashboard));
-    expect(screen.getByText('服務狀態')).toBeInTheDocument();
-    expect(screen.getByText('監控外部服務連線狀態')).toBeInTheDocument();
+    // Title/description live at the route level now (one header contract).
+    expect(screen.getByTestId('service-status-dashboard')).toBeInTheDocument();
   });
 
   it('[P1] calls mutateAsync when test button is clicked on a service card', async () => {

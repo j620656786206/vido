@@ -145,8 +145,10 @@ describe('BackupManagement', () => {
     } as any);
 
     renderWithQuery(React.createElement(BackupManagement));
-    expect(screen.getByText('備份與還原')).toBeInTheDocument();
-    expect(screen.getByText('建立與管理 Vido 資料庫備份，確保資料安全')).toBeInTheDocument();
+    // Title/description live at the route level now (one header contract);
+    // the component's own anchor is its testid + primary action.
+    expect(screen.getByTestId('backup-management')).toBeInTheDocument();
+    expect(screen.getByTestId('create-backup-btn')).toBeInTheDocument();
   });
 
   it('calls createBackup when button is clicked', async () => {

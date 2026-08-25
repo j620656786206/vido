@@ -6,5 +6,11 @@ export const Route = createFileRoute('/settings/status')({
 });
 
 function StatusSettingsPage() {
-  return <ServiceStatusDashboard />;
+  return (
+    <div>
+      <h1 className="mb-2 text-2xl font-bold text-[var(--text-primary)]">服務狀態</h1>
+      <p className="mb-6 text-sm text-[var(--text-secondary)]">監控外部服務連線狀態。</p>
+      <ServiceStatusDashboard />
+    </div>
+  );
 }

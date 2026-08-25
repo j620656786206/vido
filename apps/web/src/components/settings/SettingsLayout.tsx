@@ -136,103 +136,115 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
   }, [currentPath]);
 
   return (
+    // The strip and the content share ONE centered container, so their left
+    // edges stay glued to each other while spare width falls on BOTH sides.
+    // (Alexyu, 2026-08-25, from an ultra-wide screenshot: the old
+    // spare-width-all-on-the-right ruling reads lopsided past ~1600px. The
+    // historical dead-gap bug this replaces was about centering the LAYOUT
+    // ROOT while a second rail existed — the rail is a tab strip now, so
+    // centering the container cannot detach anything.)
     <div className="min-h-[calc(100vh-8rem)] p-6" data-testid="settings-layout">
-      {/* Visually tabs, semantically NAVIGATION. These change route, so there are
+      {/* 1152px, not 1024: the ten-tab strip measures 1072px, and at 1440 the
+          content pane is exactly 1152 — so this width is invisible at 1440 and
+          only buys balance on ultra-wide screens. */}
+      <div className="mx-auto w-full max-w-6xl">
+        {/* Visually tabs, semantically NAVIGATION. These change route, so there are
           no tabpanels in this document and role="tablist" would promise a widget
           the DOM does not implement. A nav of links carrying aria-current is the
           honest markup for what actually happens. */}
-      <nav aria-label="設定分類" data-testid="settings-tabs" className="relative">
-        <div
-          ref={stripRef}
-          data-testid="settings-tabs-strip"
-          className="flex items-center gap-1 overflow-x-auto pb-3 pr-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
-          {GROUP_ORDER.map((group, groupIndex) => {
-            const items = SETTINGS_CATEGORIES.filter((c) => c.group === group);
-            if (items.length === 0) return null;
+        <nav aria-label="設定分類" data-testid="settings-tabs" className="relative">
+          <div
+            ref={stripRef}
+            data-testid="settings-tabs-strip"
+            className="flex items-center gap-1 overflow-x-auto pb-3 pr-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {GROUP_ORDER.map((group, groupIndex) => {
+              const items = SETTINGS_CATEGORIES.filter((c) => c.group === group);
+              if (items.length === 0) return null;
 
-            return (
-              <div key={group} className="flex shrink-0 items-center gap-1">
-                {groupIndex > 0 && (
-                  // Presentational only. The grouping reaches assistive tech
-                  // through the accessible names below, never through a rule.
-                  <span
-                    aria-hidden="true"
-                    data-testid={`settings-tabs-divider-${group}`}
-                    className="mx-2 h-5 w-px shrink-0 bg-[var(--border-subtle)]"
-                  />
-                )}
-                {items.map((cat) => {
-                  const isEnabled = cat.enabled !== false;
+              return (
+                <div key={group} className="flex shrink-0 items-center gap-1">
+                  {groupIndex > 0 && (
+                    // Presentational only. The grouping reaches assistive tech
+                    // through the accessible names below, never through a rule.
+                    <span
+                      aria-hidden="true"
+                      data-testid={`settings-tabs-divider-${group}`}
+                      className="mx-2 h-5 w-px shrink-0 bg-[var(--border-subtle)]"
+                    />
+                  )}
+                  {items.map((cat) => {
+                    const isEnabled = cat.enabled !== false;
 
-                  if (!isEnabled) {
-                    // Kept on screen with its reason attached, per the disabled
-                    // rule — and reachable, which the old <span title=…> was not.
+                    if (!isEnabled) {
+                      // Kept on screen with its reason attached, per the disabled
+                      // rule — and reachable, which the old <span title=…> was not.
+                      return (
+                        <span
+                          key={cat.key}
+                          role="link"
+                          aria-disabled="true"
+                          tabIndex={0}
+                          aria-label={`${cat.label}：${UNAVAILABLE_REASON}`}
+                          title={UNAVAILABLE_REASON}
+                          data-testid={`settings-tab-${cat.key}`}
+                          className="flex min-h-[44px] shrink-0 cursor-not-allowed items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm font-medium text-[var(--text-muted)]"
+                        >
+                          {cat.label}
+                          <span className="rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-1.5 py-0.5 text-[11px]">
+                            {UNAVAILABLE_BADGE}
+                          </span>
+                        </span>
+                      );
+                    }
+
                     return (
-                      <span
+                      <Link
                         key={cat.key}
-                        role="link"
-                        aria-disabled="true"
-                        tabIndex={0}
-                        aria-label={`${cat.label}：${UNAVAILABLE_REASON}`}
-                        title={UNAVAILABLE_REASON}
+                        to={cat.to}
+                        // Active state is TanStack Router's `data-status`, NOT a
+                        // hand-rolled startsWith — the ADR in SidebarNavItem.tsx:5-6
+                        // mandates this, and the old rail was the one nav that
+                        // disagreed. `aria-current="page"` comes from Link for free;
+                        // setting it here was dead code.
+                        activeOptions={{ exact: false, includeSearch: false }}
+                        // The group rides in the accessible name so a screen-reader
+                        // user gets the same structure a sighted user reads off the
+                        // dividers.
+                        aria-label={`${GROUP_LABEL[cat.group]}：${cat.label}`}
                         data-testid={`settings-tab-${cat.key}`}
-                        className="flex min-h-[44px] shrink-0 cursor-not-allowed items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm font-medium text-[var(--text-muted)]"
+                        className={cn(
+                          // 44px is the system minimum the retired 30px chips missed.
+                          'flex min-h-[44px] shrink-0 items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm font-medium transition-colors',
+                          'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]',
+                          'data-[status=active]:bg-[var(--accent-subtle)] data-[status=active]:font-semibold data-[status=active]:text-[var(--text-primary)]'
+                        )}
                       >
                         {cat.label}
-                        <span className="rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-1.5 py-0.5 text-[11px]">
-                          {UNAVAILABLE_BADGE}
-                        </span>
-                      </span>
+                      </Link>
                     );
-                  }
+                  })}
+                </div>
+              );
+            })}
+          </div>
 
-                  return (
-                    <Link
-                      key={cat.key}
-                      to={cat.to}
-                      // Active state is TanStack Router's `data-status`, NOT a
-                      // hand-rolled startsWith — the ADR in SidebarNavItem.tsx:5-6
-                      // mandates this, and the old rail was the one nav that
-                      // disagreed. `aria-current="page"` comes from Link for free;
-                      // setting it here was dead code.
-                      activeOptions={{ exact: false, includeSearch: false }}
-                      // The group rides in the accessible name so a screen-reader
-                      // user gets the same structure a sighted user reads off the
-                      // dividers.
-                      aria-label={`${GROUP_LABEL[cat.group]}：${cat.label}`}
-                      data-testid={`settings-tab-${cat.key}`}
-                      className={cn(
-                        // 44px is the system minimum the retired 30px chips missed.
-                        'flex min-h-[44px] shrink-0 items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm font-medium transition-colors',
-                        'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]',
-                        'data-[status=active]:bg-[var(--accent-subtle)] data-[status=active]:font-semibold data-[status=active]:text-[var(--text-primary)]'
-                      )}
-                    >
-                      {cat.label}
-                    </Link>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* The clipped tab has to LOOK clipped. Without this the strip ends flush
+          {/* The clipped tab has to LOOK clipped. Without this the strip ends flush
             at the container edge and reads as the whole list — which is exactly
             how five categories went missing on mobile. */}
-        <span
-          aria-hidden="true"
-          data-testid="settings-tabs-fade"
-          className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-[var(--bg-primary)] to-transparent"
-        />
-      </nav>
+          <span
+            aria-hidden="true"
+            data-testid="settings-tabs-fade"
+            className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-[var(--bg-primary)] to-transparent"
+          />
+        </nav>
 
-      {/* The strip gets the full column; the CONTENT keeps its measure. Removing
+        {/* The strip gets the full column; the CONTENT keeps its measure. Removing
           the rail freed ~224px, and spending all of it on longer log lines and
           wider form rows would be a regression dressed as a win. */}
-      <div className="border-t border-[var(--border-subtle)] pt-6" data-testid="settings-content">
-        <div className="w-full max-w-5xl">{children}</div>
+        <div className="border-t border-[var(--border-subtle)] pt-6" data-testid="settings-content">
+          {children}
+        </div>
       </div>
     </div>
   );
