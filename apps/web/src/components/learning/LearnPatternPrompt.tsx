@@ -187,9 +187,9 @@ export function LearnSuccessToast({ pattern, onClose }: LearnSuccessToastProps) 
       aria-live="polite"
       data-testid="learn-success-toast"
     >
-      <Lightbulb className="h-5 w-5 text-blue-200" />
+      <Lightbulb className="h-5 w-5 text-[var(--accent-text)]" />
       <span>已學習此規則</span>
-      <span className="text-blue-200 text-sm">（{pattern}）</span>
+      <span className="text-[var(--accent-text)] text-sm">（{pattern}）</span>
       {onClose && (
         <button
           onClick={onClose}

@@ -181,7 +181,7 @@ describe('DiscoverBrowseV2', () => {
     const chip = await screen.findByTestId('filter-chip-genre-28');
     // summary variant uses muted outline styling, not the accent-filled legacy chip.
     expect(chip.className).toContain('text-[var(--text-secondary)]');
-    expect(chip.className).not.toContain('text-blue-300');
+    expect(chip.className).not.toContain('text-[var(--accent-text)]');
   });
 
   it('shows the v2 loading skeleton while results load (AC #8 / I6)', async () => {

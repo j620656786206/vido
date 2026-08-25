@@ -90,7 +90,7 @@ export function RecentMediaPanel({ className, hideWhenEmpty = false }: RecentMed
         <div className="border-t border-[var(--border-subtle)] px-4 py-2">
           <Link
             to="/library"
-            className="text-sm text-[var(--accent-primary)] hover:text-blue-300 hover:underline"
+            className="text-sm text-[var(--accent-primary)] hover:text-[var(--accent-text)] hover:underline"
           >
             查看全部媒體庫 →
           </Link>

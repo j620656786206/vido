@@ -107,7 +107,7 @@ export function MetadataExport() {
         {downloadId && (
           <a
             href={backupService.getExportDownloadUrl(downloadId)}
-            className="inline-flex items-center gap-1 text-xs text-[var(--accent-primary)] hover:text-blue-300"
+            className="inline-flex items-center gap-1 text-xs text-[var(--accent-primary)] hover:text-[var(--accent-text)]"
             data-testid="export-download-link"
           >
             <Download className="h-3 w-3" />

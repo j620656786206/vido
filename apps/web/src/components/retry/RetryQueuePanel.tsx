@@ -56,7 +56,7 @@ export function RetryQueuePanel({ className }: RetryQueuePanelProps) {
         </p>
         <button
           onClick={() => refetch()}
-          className="text-sm text-[var(--accent-primary)] hover:text-blue-300 flex items-center gap-1"
+          className="text-sm text-[var(--accent-primary)] hover:text-[var(--accent-text)] flex items-center gap-1"
         >
           <RefreshCw className="h-4 w-4" />
           重試

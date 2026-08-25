@@ -257,7 +257,10 @@ export function QBittorrentForm() {
           className={cn(
             'flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors',
             isSubmitting || !host || !username || !password
-              ? 'cursor-not-allowed bg-blue-800 text-[var(--accent-primary)]'
+              ? // Matches the sibling 測試連線 button's disabled treatment. The old
+                // bg-blue-800 + accent text measured 2.4:1 — the critique's worst
+                // single reading — and was also this form's only palette literal.
+                'cursor-not-allowed bg-[var(--bg-tertiary)] text-[var(--text-muted)]'
               : 'bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-hover)]'
           )}
         >

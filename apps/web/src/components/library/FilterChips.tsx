@@ -50,7 +50,7 @@ export function FilterChips({
       {filters.genres.map((genre) => (
         <span
           key={genre}
-          className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-blue-300"
+          className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)]"
         >
           {genre}
           <button
@@ -64,7 +64,7 @@ export function FilterChips({
       ))}
 
       {hasYearRange ? (
-        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-blue-300">
+        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)]">
           {filters.yearMin}–{filters.yearMax} 年
           <button
             onClick={removeYearRange}
@@ -77,7 +77,7 @@ export function FilterChips({
       ) : (
         <>
           {filters.yearMin !== undefined && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-blue-300">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)]">
               {filters.yearMin} 年起
               <button
                 onClick={onRemoveYearMin}
@@ -90,7 +90,7 @@ export function FilterChips({
           )}
 
           {filters.yearMax !== undefined && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-blue-300">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)]">
               至 {filters.yearMax} 年
               <button
                 onClick={onRemoveYearMax}
@@ -105,7 +105,7 @@ export function FilterChips({
       )}
 
       {filters.unmatched && (
-        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-blue-300">
+        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)]">
           未匹配
           <button
             onClick={onRemoveUnmatched}

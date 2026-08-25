@@ -157,7 +157,7 @@ describe('FilterChips', () => {
     expect(chipSpans.length).toBe(2); // 1 genre + 1 combined decade-range chip
     chipSpans.forEach((span) => {
       expect(span.className).toContain('bg-[var(--accent-primary)]/20');
-      expect(span.className).toContain('text-blue-300');
+      expect(span.className).toContain('text-[var(--accent-text)]');
       expect(span.className).not.toContain('green');
     });
   });

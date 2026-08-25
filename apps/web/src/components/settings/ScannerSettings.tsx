@@ -148,7 +148,7 @@ export function ScannerSettings() {
             value={schedule?.frequency ?? 'manual'}
             onChange={(e) => handleScheduleChange(e.target.value as ScheduleFrequency)}
             disabled={updateSchedule.isPending}
-            className="w-48 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+            className="w-48 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:border-[var(--accent-hover)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-hover)]"
             data-testid="schedule-select"
           >
             {SCHEDULE_OPTIONS.map((opt) => (
@@ -184,7 +184,7 @@ export function ScannerSettings() {
           className={cn(
             'flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3.5 text-sm font-semibold transition-colors',
             isScanning || triggerScan.isPending
-              ? 'cursor-not-allowed bg-[var(--accent-primary)]/50 text-blue-200'
+              ? 'cursor-not-allowed bg-[var(--accent-primary)]/50 text-[var(--accent-text)]'
               : 'bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary)]'
           )}
           data-testid="scan-trigger-button"

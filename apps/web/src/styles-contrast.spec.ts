@@ -46,7 +46,14 @@ const SURFACES = ['bg-primary', 'bg-secondary', 'bg-tertiary'] as const;
  * excluded and documented as intentionally sub-AA (TC-1) — an exemption with a
  * reason, not an oversight.
  */
-const BODY_TEXT_TOKENS = ['text-primary', 'text-secondary', 'text-muted', 'error-text'] as const;
+const BODY_TEXT_TOKENS = [
+  'text-primary',
+  'text-secondary',
+  'text-muted',
+  'error-text',
+  'accent-text',
+  'info-text',
+] as const;
 
 describe('styles.css — text tokens clear WCAG AA on every surface', () => {
   const cases = BODY_TEXT_TOKENS.flatMap((t) => SURFACES.map((s) => [t, s] as const));

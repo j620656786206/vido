@@ -17,9 +17,9 @@ const LEVEL_CHIP_STYLES: Record<string, { active: string; inactive: string }> = 
       'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-yellow-400/50 hover:text-yellow-300',
   },
   INFO: {
-    active: 'border-blue-400 bg-blue-400/20 text-blue-300',
+    active: 'border-[var(--accent-hover)] bg-[var(--accent-tint)] text-[var(--accent-text)]',
     inactive:
-      'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-blue-400/50 hover:text-blue-300',
+      'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--accent-hover)]/50 hover:text-[var(--accent-text)]',
   },
   DEBUG: {
     active: 'border-[var(--border-subtle)] bg-[var(--text-muted)]/20 text-[var(--text-secondary)]',
@@ -90,7 +90,7 @@ export function LogFilters({ level, keyword, onLevelChange, onKeywordChange }: L
           onKeyDown={handleKeyDown}
           placeholder="搜尋關鍵字..."
           aria-label="搜尋關鍵字"
-          className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] py-1.5 pl-9 pr-8 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-blue-400 focus:outline-none"
+          className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] py-1.5 pl-9 pr-8 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent-hover)] focus:outline-none"
           data-testid="log-keyword-input"
         />
         {inputValue && (

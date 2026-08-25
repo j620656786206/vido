@@ -9,7 +9,7 @@ interface SourceConfig {
 }
 
 const SOURCE_CONFIG: Record<MetadataSource, SourceConfig> = {
-  tmdb: { icon: '🎬', label: 'TMDb', color: '#0d253f', bgColor: 'bg-blue-900/50' },
+  tmdb: { icon: '🎬', label: 'TMDb', color: '#0d253f', bgColor: 'bg-[var(--accent-tint)]' },
   douban: { icon: '📗', label: '豆瓣', color: '#00b51d', bgColor: 'bg-green-900/50' },
   wikipedia: {
     icon: '📖',
