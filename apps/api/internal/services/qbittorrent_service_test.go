@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/qbittorrent"
 	"github.com/vido/api/internal/repository"
@@ -183,6 +184,30 @@ func TestQBittorrentService_GetConfig(t *testing.T) {
 			mockSecrets.AssertExpectations(t)
 		})
 	}
+}
+
+// The handler branches on this sentinel to give the user an ENCRYPTION_KEY fix
+// instead of "try again later". Assert the wrapping directly: a plain
+// assert.Error (above) stays green if someone drops the %w and the handler
+// silently falls back to INTERNAL_ERROR.
+func TestQBittorrentService_GetConfig_DecryptFailureWrapsSentinel(t *testing.T) {
+	mockRepo := new(MockQBSettingsRepo)
+	mockSecrets := new(MockQBSecretsService)
+
+	mockRepo.On("GetString", mock.Anything, SettingQBHost).Return("http://host:8080", nil)
+	mockRepo.On("GetString", mock.Anything, SettingQBUsername).Return("admin", nil)
+	mockRepo.On("GetString", mock.Anything, SettingQBBasePath).Return("", nil)
+	mockSecrets.On("Exists", mock.Anything, SettingQBPassword).Return(true, nil)
+	mockSecrets.On("Retrieve", mock.Anything, SettingQBPassword).
+		Return("", errors.New("cipher: message authentication failed"))
+
+	service := NewQBittorrentService(mockRepo, mockSecrets)
+	_, err := service.GetConfig(context.Background())
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, qbittorrent.ErrConfigDecryptFailed)
+	// The underlying crypto detail stays reachable for the server log.
+	assert.Contains(t, err.Error(), "authentication failed")
 }
 
 func TestQBittorrentService_SaveConfig(t *testing.T) {

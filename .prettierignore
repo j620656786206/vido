@@ -29,6 +29,12 @@ pnpm-lock.yaml
 _bmad/
 _bmad-output/
 
+# Impeccable critique snapshots — written by scripts/critique-storage.mjs, not
+# hand-authored. Same category as _bmad-output/ above: every `/impeccable
+# critique` run drops a new archive here, and without this every run would
+# break format:check until someone remembered to reformat a generated file.
+.impeccable/critique/
+
 # Claude Code settings
 .claude/
 .claude_settings.json

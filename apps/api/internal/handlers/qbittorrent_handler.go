@@ -52,6 +52,18 @@ func (h *QBittorrentHandler) GetConfig(c *gin.Context) {
 	config, err := h.service.GetConfig(c.Request.Context())
 	if err != nil {
 		slog.Error("Failed to get qBittorrent config", "error", err)
+		// A saved-but-undecryptable password is the one GetConfig failure the user
+		// can actually fix, so it does not get flattened into INTERNAL_ERROR's
+		// "try again later" — that advice is false here and the retry never works.
+		if errors.Is(err, qbittorrent.ErrConfigDecryptFailed) {
+			ErrorResponse(c, http.StatusInternalServerError,
+				qbittorrent.ErrCodeConfigDecryptFailed,
+				"Stored qBittorrent password could not be decrypted",
+				"ENCRYPTION_KEY is missing or has changed since the password was saved. "+
+					"Restore the original ENCRYPTION_KEY and restart, or re-enter the "+
+					"qBittorrent password to store it under the current key.")
+			return
+		}
 		InternalServerError(c, "Failed to retrieve qBittorrent configuration")
 		return
 	}
