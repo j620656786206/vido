@@ -138,7 +138,7 @@ export function ExploreBlockEditModal({ block, onClose }: ExploreBlockEditModalP
         {error && (
           <div
             role="alert"
-            className="mb-4 rounded-lg bg-[var(--error-tint)] px-3 py-2 text-sm text-[var(--error)]"
+            className="mb-4 rounded-lg bg-[var(--error-tint)] px-3 py-2 text-sm text-[var(--error-text)]"
           >
             {error}
           </div>
@@ -243,7 +243,7 @@ export function ExploreBlockEditModal({ block, onClose }: ExploreBlockEditModalP
             onClick={handleSave}
             disabled={!name.trim() || isSaving}
             data-testid="explore-block-save-button"
-            className="flex-1 rounded-lg bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--accent-pressed)] disabled:opacity-50"
+            className="flex-1 rounded-lg bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-[var(--text-on-accent)] hover:bg-[var(--accent-pressed)] disabled:opacity-50"
           >
             {isSaving ? '儲存中...' : isEditMode ? '儲存變更' : '儲存區塊'}
           </button>

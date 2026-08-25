@@ -122,7 +122,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
         </div>
 
         {error && (
-          <div className="mb-4 rounded-lg bg-[var(--error-tint)] px-3 py-2 text-sm text-[var(--error)]">
+          <div className="mb-4 rounded-lg bg-[var(--error-tint)] px-3 py-2 text-sm text-[var(--error-text)]">
             {error}
           </div>
         )}
@@ -188,7 +188,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
                       type="button"
                       onClick={() => handleRemovePath(p.id)}
                       aria-label={`移除路徑 ${p.path}`}
-                      className="ml-2 rounded p-0.5 text-[var(--text-muted)] hover:text-[var(--error)]"
+                      className="ml-2 rounded p-0.5 text-[var(--text-muted)] hover:text-[var(--error-text)]"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -338,7 +338,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
             type="button"
             onClick={handleSave}
             disabled={!name.trim() || isSaving}
-            className="flex-1 rounded-lg bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--accent-pressed)] disabled:opacity-50"
+            className="flex-1 rounded-lg bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-[var(--text-on-accent)] hover:bg-[var(--accent-pressed)] disabled:opacity-50"
             data-testid="library-save-button"
           >
             {isSaving ? '儲存中...' : isEditMode ? '儲存變更' : '建立'}

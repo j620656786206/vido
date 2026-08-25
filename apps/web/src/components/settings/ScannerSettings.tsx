@@ -116,9 +116,11 @@ export function ScannerSettings() {
         <div
           className={cn(
             'flex items-center gap-2 rounded-lg px-4 py-3 text-sm',
-            notification.type === 'success' && 'bg-[var(--success-tint)] text-[var(--success)]',
-            notification.type === 'warning' && 'bg-[var(--warning-tint)] text-[var(--warning)]',
-            notification.type === 'error' && 'bg-[var(--error-tint)] text-[var(--error)]'
+            notification.type === 'success' &&
+              'bg-[var(--success-tint)] text-[var(--success-text)]',
+            notification.type === 'warning' &&
+              'bg-[var(--warning-tint)] text-[var(--warning-text)]',
+            notification.type === 'error' && 'bg-[var(--error-tint)] text-[var(--error-text)]'
           )}
           data-testid="scanner-notification"
           role="alert"
@@ -185,7 +187,7 @@ export function ScannerSettings() {
             'flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3.5 text-sm font-semibold transition-colors',
             isScanning || triggerScan.isPending
               ? 'cursor-not-allowed bg-[var(--accent-primary)]/50 text-[var(--accent-text)]'
-              : 'bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary)]'
+              : 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] hover:bg-[var(--accent-primary)]'
           )}
           data-testid="scan-trigger-button"
         >

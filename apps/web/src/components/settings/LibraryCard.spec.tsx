@@ -95,7 +95,7 @@ describe('LibraryCard auto-subtitle state', () => {
     // "you didn't tick the box" — and the user did tick it, which is the
     // worst possible misreading.
     expect(status).toHaveTextContent('自動處理免費字幕（伺服器未啟用）');
-    expect(status.className).toContain('text-[var(--warning)]');
+    expect(status.className).toContain('text-[var(--warning-text)]');
   });
 
   it('stays green when the server DOES honour the opt-in', () => {
@@ -104,7 +104,7 @@ describe('LibraryCard auto-subtitle state', () => {
     const status = screen.getByTestId('library-card-auto-subtitle-status');
     expect(status).toHaveTextContent('自動處理免費字幕');
     expect(status.textContent).not.toContain('伺服器未啟用');
-    expect(status.className).toContain('text-[var(--success)]');
+    expect(status.className).toContain('text-[var(--success-text)]');
   });
 
   it('says nothing when the library is off AND the server cannot honour it', () => {

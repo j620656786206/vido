@@ -81,7 +81,7 @@ export function ExploreBlocksSettings() {
           type="button"
           onClick={() => setModalMode({ type: 'create' })}
           data-testid="explore-blocks-add-button"
-          className="flex items-center gap-2 rounded-md bg-[var(--accent-primary)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--accent-pressed)]"
+          className="flex items-center gap-2 rounded-md bg-[var(--accent-primary)] px-3 py-2 text-sm font-medium text-[var(--text-on-accent)] hover:bg-[var(--accent-pressed)]"
         >
           <Plus className="h-4 w-4" />
           新增區塊
@@ -95,7 +95,7 @@ export function ExploreBlocksSettings() {
       )}
 
       {isError && (
-        <p className="text-sm text-[var(--error)]" role="alert">
+        <p className="text-sm text-[var(--error-text)]" role="alert">
           無法載入區塊列表，請稍後再試。
         </p>
       )}
@@ -104,7 +104,7 @@ export function ExploreBlocksSettings() {
         <div
           role="alert"
           data-testid="explore-blocks-operation-error"
-          className="rounded-lg bg-[var(--error-tint)] px-3 py-2 text-sm text-[var(--error)]"
+          className="rounded-lg bg-[var(--error-tint)] px-3 py-2 text-sm text-[var(--error-text)]"
         >
           {operationError}
         </div>
@@ -186,7 +186,7 @@ export function ExploreBlocksSettings() {
                 onClick={() => setConfirmDeleteId(block.id)}
                 aria-label={`刪除 ${block.name}`}
                 data-testid={`explore-block-delete-${block.id}`}
-                className="rounded p-1.5 text-[var(--text-secondary)] hover:bg-[var(--error-tint)] hover:text-[var(--error)]"
+                className="rounded p-1.5 text-[var(--text-secondary)] hover:bg-[var(--error-tint)] hover:text-[var(--error-text)]"
               >
                 <Trash2 className="h-4 w-4" />
               </button>

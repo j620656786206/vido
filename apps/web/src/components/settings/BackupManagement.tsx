@@ -95,7 +95,7 @@ export function BackupManagement() {
   if (error) {
     return (
       <div className="py-10 text-center" data-testid="backup-error">
-        <p className="text-[var(--error)]">無法載入備份資料</p>
+        <p className="text-[var(--error-text)]">無法載入備份資料</p>
         <p className="mt-1 text-sm text-[var(--text-muted)]">{error.message}</p>
       </div>
     );
@@ -127,7 +127,7 @@ export function BackupManagement() {
         <button
           onClick={handleCreate}
           disabled={createBackup.isPending}
-          className="flex items-center gap-2 rounded-lg bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-hover)] disabled:opacity-50"
+          className="flex items-center gap-2 rounded-lg bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-hover)] disabled:opacity-50"
           data-testid="create-backup-btn"
         >
           {createBackup.isPending ? (
@@ -142,7 +142,7 @@ export function BackupManagement() {
       {/* Error display */}
       {createError && (
         <div
-          className="rounded-lg bg-[var(--error-tint)] px-4 py-3 text-sm text-[var(--error)]"
+          className="rounded-lg bg-[var(--error-tint)] px-4 py-3 text-sm text-[var(--error-text)]"
           role="alert"
           data-testid="create-error"
         >
@@ -172,7 +172,7 @@ export function BackupManagement() {
 
       {deleteError && (
         <div
-          className="rounded-lg bg-[var(--error-tint)] px-4 py-3 text-sm text-[var(--error)]"
+          className="rounded-lg bg-[var(--error-tint)] px-4 py-3 text-sm text-[var(--error-text)]"
           role="alert"
           data-testid="delete-error"
         >

@@ -5,15 +5,19 @@ import { backupService } from '../../services/backupService';
 import { formatBytes } from '../../utils/formatBytes';
 
 const statusConfig: Record<BackupStatus, { label: string; color: string; bg: string }> = {
-  completed: { label: '完成', color: 'text-[var(--success)]', bg: 'bg-[var(--success-tint)]' },
+  completed: { label: '完成', color: 'text-[var(--success-text)]', bg: 'bg-[var(--success-tint)]' },
   running: {
     label: '執行中',
-    color: 'text-[var(--accent-primary)]',
+    color: 'text-[var(--accent-text)]',
     bg: 'bg-[var(--accent-tint)]',
   },
-  pending: { label: '等待中', color: 'text-[var(--warning)]', bg: 'bg-[var(--warning-tint)]' },
-  failed: { label: '失敗', color: 'text-[var(--error)]', bg: 'bg-[var(--error-tint)]' },
-  corrupted: { label: '已損壞', color: 'text-[var(--warning)]', bg: 'bg-[var(--warning-tint)]' },
+  pending: { label: '等待中', color: 'text-[var(--warning-text)]', bg: 'bg-[var(--warning-tint)]' },
+  failed: { label: '失敗', color: 'text-[var(--error-text)]', bg: 'bg-[var(--error-tint)]' },
+  corrupted: {
+    label: '已損壞',
+    color: 'text-[var(--warning-text)]',
+    bg: 'bg-[var(--warning-tint)]',
+  },
 };
 
 function formatDate(dateStr: string): string {
@@ -101,7 +105,7 @@ export function BackupTable({
                   <button
                     onClick={() => onVerify(backup.id)}
                     disabled={isVerifying}
-                    className="text-[var(--text-secondary)] transition-colors hover:text-[var(--accent-primary)] disabled:opacity-50"
+                    className="text-[var(--text-secondary)] transition-colors hover:text-[var(--accent-text)] disabled:opacity-50"
                     data-testid={`verify-btn-${backup.id}`}
                     title="驗證完整性"
                   >
@@ -120,7 +124,7 @@ export function BackupTable({
               <button
                 onClick={() => onDelete(backup.id)}
                 disabled={isDeleting}
-                className="text-[var(--text-secondary)] transition-colors hover:text-[var(--error)] disabled:opacity-50"
+                className="text-[var(--text-secondary)] transition-colors hover:text-[var(--error-text)] disabled:opacity-50"
                 data-testid={`delete-btn-${backup.id}`}
                 title="刪除"
               >
