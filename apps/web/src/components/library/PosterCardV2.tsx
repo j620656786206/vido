@@ -39,6 +39,16 @@ interface PosterCardV2Props {
   onSelect?: (e: React.MouseEvent) => void;
 }
 
+/**
+ * First LETTER or CJK char for the no-poster tile —「[FanSub] 未知電影」used
+ * to render a giant「[」(critique R3 minor). Falls back to the raw first char
+ * when the title is all symbols.
+ */
+function fallbackInitial(title: string): string {
+  const m = title.match(/[\p{L}\p{N}]/u);
+  return m ? m[0] : title.slice(0, 1) || '?';
+}
+
 export function PosterCardV2({
   id,
   type,
@@ -90,7 +100,7 @@ export function PosterCardV2({
             style={{ backgroundImage: `linear-gradient(135deg, ${from}, ${to})` }}
             aria-hidden="true"
           >
-            {title.slice(0, 1)}
+            {fallbackInitial(title)}
           </div>
         )}
 

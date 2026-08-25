@@ -32,7 +32,10 @@ export function useExploreBlockContent(id: string | undefined) {
     queryFn: () => exploreBlockService.getContent(id as string),
     enabled: !!id,
     staleTime: FIVE_MINUTES,
-    retry: 1,
+    // retry:false (critique R3 P2): on a LAN the realistic failure is「TMDb
+    // 未設定/斷線」, which a retry never fixes — it only doubles the skeleton
+    // time before the degraded state can tell the truth (measured 4s→~1s).
+    retry: false,
   });
 }
 

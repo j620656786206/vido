@@ -47,9 +47,14 @@ function HeroBannerSlide({ item, active, onPlayClick }: HeroBannerSlideProps) {
       // the browser removes the subtree from focus order, hit-testing, and
       // the accessibility tree (M1 fix).
       inert={!active}
+      // Outgoing slide fades FASTER than the incoming one (300 vs 700ms) so
+      // the two title layers never sit half-mixed — the 8-second rotation used
+      // to print a CJK double-exposure for 700ms every turn (critique R3 P3).
       className={cn(
-        'absolute inset-0 transition-opacity duration-700 ease-in-out',
-        active ? 'opacity-100' : 'pointer-events-none opacity-0'
+        'absolute inset-0 ease-in-out',
+        active
+          ? 'opacity-100 transition-opacity duration-700'
+          : 'pointer-events-none opacity-0 transition-opacity duration-300'
       )}
     >
       {fallbackBackdrop && !imageBroken && (
@@ -74,7 +79,7 @@ function HeroBannerSlide({ item, active, onPlayClick }: HeroBannerSlideProps) {
           the shared left edge (measured 264 vs 288, critique R2 P2). */}
       <div className="absolute inset-x-0 bottom-0 pb-12 sm:pb-16 lg:pb-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="flex items-center gap-3 text-sm text-[var(--text-secondary)]">
+          <div className="flex items-center gap-3 text-sm text-[var(--text-primary)]">
             <span className="rounded bg-[var(--overlay-scrim)] px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-[var(--text-primary)]">
               {item.mediaType === 'movie' ? '電影' : '影集'}
             </span>
@@ -90,7 +95,9 @@ function HeroBannerSlide({ item, active, onPlayClick }: HeroBannerSlideProps) {
           {/* lg was text-5xl=48px — past the Display ceiling (36px). The title
               carries the slide's accessible link now that the container is
               non-interactive. */}
-          <h2
+          {/* p, not h2 (critique R3 minor): a movie title in the document
+              outline masqueraded as a section heading. */}
+          <p
             className="mt-3 text-2xl font-bold sm:text-3xl lg:text-4xl"
             data-testid="hero-banner-title"
           >
@@ -102,7 +109,7 @@ function HeroBannerSlide({ item, active, onPlayClick }: HeroBannerSlideProps) {
             >
               {item.title}
             </Link>
-          </h2>
+          </p>
 
           {item.overview && (
             <p
@@ -221,8 +228,11 @@ export function HeroBanner() {
           // decorative span INSIDE the button — the 8px dot itself was the
           // whole target before critique R1). The pause button is the WCAG
           // 2.2.2 stop mechanism: hover-pause never reached touch devices.
+          // The dot group sits on a scrim pill (Shapes amendment: lawful for
+          // overlay micro-elements) — bare dots over arbitrary stills measured
+          // 1.87:1 (critique R3 P2); the scrim gives them a floor.
           <div
-            className="absolute bottom-1 left-1/2 z-10 flex -translate-x-1/2 items-center"
+            className="absolute bottom-1 left-1/2 z-10 flex -translate-x-1/2 items-center rounded-full bg-[var(--overlay-scrim)] px-1"
             data-testid="hero-banner-dots"
           >
             <button
@@ -231,7 +241,7 @@ export function HeroBanner() {
               aria-pressed={userPaused}
               data-testid="hero-banner-pause"
               onClick={() => setUserPaused((p) => !p)}
-              className="flex h-11 w-11 items-center justify-center text-[var(--text-primary)]/70 transition-colors hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+              className="flex h-11 w-11 items-center justify-center text-[var(--text-primary)]/80 transition-colors hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
             >
               {userPaused ? (
                 <Play className="h-4 w-4 fill-current" />
@@ -255,7 +265,7 @@ export function HeroBanner() {
                     'h-2 rounded-full transition-all',
                     idx === activeIndex
                       ? 'w-8 bg-[var(--text-primary)]'
-                      : 'w-2 bg-[var(--text-primary)]/50'
+                      : 'w-2 bg-[var(--text-primary)]/70'
                   )}
                 />
               </button>
