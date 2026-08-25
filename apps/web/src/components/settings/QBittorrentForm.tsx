@@ -1,7 +1,7 @@
 // Design ref: ux-design.pen Screen C4-D (6UCtX) · C4-M (2H4OM)
 import { useState, useEffect } from 'react';
 import { Link } from '@tanstack/react-router';
-import { AlertTriangle, Loader2, Plug, RefreshCw, Save } from 'lucide-react';
+import { AlertTriangle, Check, Loader2, Plug, RefreshCw, Save } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import {
   useQBittorrentConfig,
@@ -227,7 +227,12 @@ export function QBittorrentForm() {
       {testResult && <ConnectionTestResult {...testResult} />}
 
       {saveSuccess && !testResult && (
-        <p className="mt-4 text-sm text-[var(--success-text)]">設定已儲存</p>
+        // 固定詞彙: green means IN PROGRESS. A completed save is a neutral
+        // report — spending green on "done" devalues the green that says 已連線.
+        <p className="mt-4 flex items-center gap-1.5 text-sm text-[var(--text-secondary)]">
+          <Check className="h-4 w-4" aria-hidden="true" />
+          設定已儲存
+        </p>
       )}
 
       {saveMutation.isError && !testResult && (

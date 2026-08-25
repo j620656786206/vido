@@ -78,6 +78,24 @@ describe('CacheManagement', () => {
     });
   });
 
+  // 固定詞彙: green means IN PROGRESS. 已清除 is a report of done-ness and
+  // wears neutral — spending green on "done" devalues the green of 已連線.
+  it('reports a completed clear in neutral, not success green', async () => {
+    const clearOld = vi.fn().mockResolvedValue({ entriesRemoved: 5, bytesReclaimed: 0 });
+    mockUseClearByAge.mockReturnValue({ mutateAsync: clearOld, isPending: false } as any);
+    mockUseCacheStats.mockReturnValue({
+      data: { totalSizeBytes: 0, cacheTypes: [] },
+      isLoading: false,
+    } as any);
+    renderWithQuery(React.createElement(CacheManagement));
+    const user = userEvent.setup();
+    await user.click(await screen.findByTestId('clear-old-cache-btn'));
+    await user.click(screen.getByTestId('clear-old-cache-btn'));
+    const banner = await screen.findByTestId('cache-result');
+    expect(banner.className).toContain('bg-[var(--bg-tertiary)]');
+    expect(banner.className).not.toContain('success');
+  });
+
   it('renders loading state', () => {
     mockUseCacheStats.mockReturnValue({
       data: undefined,

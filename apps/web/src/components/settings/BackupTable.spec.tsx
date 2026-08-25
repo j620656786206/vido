@@ -37,6 +37,23 @@ const runningBackup: Backup = {
 };
 
 describe('BackupTable', () => {
+  it('完成 wears neutral — green is reserved for live states', () => {
+    render(
+      React.createElement(BackupTable, {
+        backups: [completedBackup],
+        onDelete: vi.fn(),
+        onVerify: vi.fn(),
+        onRestore: vi.fn(),
+        isDeleting: false,
+        isVerifying: false,
+        isRestoring: false,
+      })
+    );
+    const label = screen.getByText('完成');
+    expect(label.className).toContain('text-[var(--text-secondary)]');
+    expect(label.className).not.toContain('success');
+  });
+
   it('renders table header', () => {
     const onDelete = vi.fn();
     render(
