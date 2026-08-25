@@ -92,9 +92,9 @@ function stateLabel(state: KeyState | undefined): string {
 function stateToneClass(state: KeyState | undefined): string {
   switch (state?.source) {
     case 'secret':
-      return 'bg-[var(--success-tint)] text-[var(--success)]';
+      return 'bg-[var(--success-tint)] text-[var(--success-text)]';
     case 'env':
-      return 'bg-[var(--info-tint)] text-[var(--info)]';
+      return 'bg-[var(--info-tint)] text-[var(--info-text)]';
     default:
       return 'bg-[var(--bg-tertiary)] text-[var(--text-muted)]';
   }
@@ -225,7 +225,7 @@ export function ApiKeysForm() {
           className="mb-6 flex items-start gap-3 rounded-md bg-[var(--error-tint)] p-4"
         >
           <AlertTriangle
-            className="mt-0.5 h-4 w-4 shrink-0 text-[var(--error)]"
+            className="mt-0.5 h-4 w-4 shrink-0 text-[var(--error-text)]"
             aria-hidden="true"
           />
           <p className="text-sm text-[var(--error-text)]">
@@ -244,7 +244,7 @@ export function ApiKeysForm() {
           className="mb-6 flex items-start gap-3 rounded-md bg-[var(--warning-tint)] p-4"
         >
           <AlertTriangle
-            className="mt-0.5 h-4 w-4 shrink-0 text-[var(--warning)]"
+            className="mt-0.5 h-4 w-4 shrink-0 text-[var(--warning-text)]"
             aria-hidden="true"
           />
           <p className="text-sm text-[var(--text-primary)]">
@@ -267,7 +267,7 @@ export function ApiKeysForm() {
         >
           <div className="flex items-start gap-3">
             <ShieldAlert
-              className="mt-0.5 h-4 w-4 shrink-0 text-[var(--warning)]"
+              className="mt-0.5 h-4 w-4 shrink-0 text-[var(--warning-text)]"
               aria-hidden="true"
             />
             <p className="text-sm text-[var(--text-primary)]">
@@ -355,7 +355,7 @@ export function ApiKeysForm() {
                   {state?.source === 'env' && (
                     <p
                       data-testid={`key-env-override-note-${row.name}`}
-                      className="mb-3 text-xs text-[var(--info)]"
+                      className="mb-3 text-xs text-[var(--info-text)]"
                     >
                       在此儲存的金鑰會覆蓋環境變數提供的設定。
                     </p>
@@ -496,7 +496,7 @@ export function ApiKeysForm() {
                           aria-live="polite"
                           className={cn(
                             'text-sm',
-                            result.ok ? 'text-[var(--success)]' : 'text-[var(--error-text)]'
+                            result.ok ? 'text-[var(--success-text)]' : 'text-[var(--error-text)]'
                           )}
                         >
                           {result.message}
@@ -511,7 +511,7 @@ export function ApiKeysForm() {
 
           <div className="mt-6 flex flex-col items-end gap-3">
             {saveSuccess && (
-              <p role="status" aria-live="polite" className="text-sm text-[var(--success)]">
+              <p role="status" aria-live="polite" className="text-sm text-[var(--success-text)]">
                 金鑰已儲存
               </p>
             )}

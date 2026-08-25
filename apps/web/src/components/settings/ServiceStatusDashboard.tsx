@@ -90,7 +90,7 @@ export function ServiceStatusDashboard() {
   if (error) {
     return (
       <div className="py-10 text-center" data-testid="status-error">
-        <p className="text-[var(--error)]">無法載入服務狀態</p>
+        <p className="text-[var(--error-text)]">無法載入服務狀態</p>
         <p className="mt-1 text-sm text-[var(--text-muted)]">{error.message}</p>
       </div>
     );
@@ -115,7 +115,7 @@ export function ServiceStatusDashboard() {
           aria-live="polite"
           data-testid="status-change-notification"
         >
-          <Bell className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-primary)]" />
+          <Bell className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-text)]" />
           <div className="space-y-1 text-sm text-[var(--accent-text)]">
             {statusChanges.map((change, i) => (
               <p key={i}>
@@ -147,7 +147,7 @@ export function ServiceStatusDashboard() {
 
       {testError && (
         <div
-          className="rounded-lg bg-[var(--error-tint)] px-4 py-3 text-sm text-[var(--error)]"
+          className="rounded-lg bg-[var(--error-tint)] px-4 py-3 text-sm text-[var(--error-text)]"
           role="alert"
           data-testid="test-error"
         >

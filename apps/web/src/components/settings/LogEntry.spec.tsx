@@ -35,13 +35,13 @@ describe('LogEntry', () => {
     render(<LogEntry log={makeLog({ level: 'ERROR' })} />);
     const badge = screen.getByTestId('log-level');
     expect(badge).toHaveTextContent('ERROR');
-    expect(badge.className).toContain('text-[var(--error)]');
+    expect(badge.className).toContain('text-[var(--error-text)]');
   });
 
   it('renders color-coded badge for WARN level', () => {
     render(<LogEntry log={makeLog({ level: 'WARN' })} />);
     const badge = screen.getByTestId('log-level');
-    expect(badge.className).toContain('text-[var(--warning)]');
+    expect(badge.className).toContain('text-[var(--warning-text)]');
   });
 
   it('renders color-coded badge for DEBUG level', () => {

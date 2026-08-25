@@ -104,7 +104,10 @@ export function QBittorrentForm() {
         aria-live="polite"
         className="flex items-start gap-3 rounded-md bg-[var(--error-tint)] p-4"
       >
-        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--error)]" aria-hidden="true" />
+        <AlertTriangle
+          className="mt-0.5 h-4 w-4 shrink-0 text-[var(--error-text)]"
+          aria-hidden="true"
+        />
         <div className="space-y-2">
           <p className="text-sm font-medium text-[var(--error-text)]">
             {decryptFailed
@@ -224,11 +227,11 @@ export function QBittorrentForm() {
       {testResult && <ConnectionTestResult {...testResult} />}
 
       {saveSuccess && !testResult && (
-        <p className="mt-4 text-sm text-[var(--success)]">設定已儲存</p>
+        <p className="mt-4 text-sm text-[var(--success-text)]">設定已儲存</p>
       )}
 
       {saveMutation.isError && !testResult && (
-        <p className="mt-4 text-sm text-[var(--error)]">{saveMutation.error.message}</p>
+        <p className="mt-4 text-sm text-[var(--error-text)]">{saveMutation.error.message}</p>
       )}
 
       <div className="mt-6 flex flex-col gap-3 md:flex-row md:justify-end">
@@ -261,7 +264,7 @@ export function QBittorrentForm() {
                 // bg-blue-800 + accent text measured 2.4:1 — the critique's worst
                 // single reading — and was also this form's only palette literal.
                 'cursor-not-allowed bg-[var(--bg-tertiary)] text-[var(--text-muted)]'
-              : 'bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-hover)]'
+              : 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] hover:bg-[var(--accent-hover)]'
           )}
         >
           {saveMutation.isPending ? (

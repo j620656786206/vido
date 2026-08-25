@@ -5,9 +5,9 @@ import { cn } from '../../lib/utils';
 import type { SystemLog } from '../../services/logService';
 
 const LEVEL_STYLES: Record<string, string> = {
-  ERROR: 'text-[var(--error)] bg-[var(--error-tint)]',
-  WARN: 'text-[var(--warning)] bg-[var(--warning-tint)]',
-  INFO: 'text-[var(--accent-primary)] bg-[var(--accent-tint)]',
+  ERROR: 'text-[var(--error-text)] bg-[var(--error-tint)]',
+  WARN: 'text-[var(--warning-text)] bg-[var(--warning-tint)]',
+  INFO: 'text-[var(--accent-text)] bg-[var(--accent-tint)]',
   DEBUG: 'text-[var(--text-secondary)] bg-[var(--text-muted)]/10',
 };
 

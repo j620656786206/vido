@@ -85,7 +85,7 @@ export function MetadataExport() {
         <button
           onClick={handleExport}
           disabled={exportMutation.isPending}
-          className="flex items-center gap-2 rounded-lg bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-hover)] disabled:opacity-50"
+          className="flex items-center gap-2 rounded-lg bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-hover)] disabled:opacity-50"
           data-testid="export-btn"
         >
           {exportMutation.isPending ? (
@@ -107,7 +107,7 @@ export function MetadataExport() {
         {downloadId && (
           <a
             href={backupService.getExportDownloadUrl(downloadId)}
-            className="inline-flex items-center gap-1 text-xs text-[var(--accent-primary)] hover:text-[var(--accent-text)]"
+            className="inline-flex items-center gap-1 text-xs text-[var(--accent-text)] hover:text-[var(--accent-text)]"
             data-testid="export-download-link"
           >
             <Download className="h-3 w-3" />
