@@ -22,6 +22,9 @@ vi.mock('../../hooks/useLibrary', () => ({
 vi.mock('../../hooks/useStatusSummary', () => ({
   useStatusSummary: () => ({ data: undefined }),
 }));
+vi.mock('../../hooks/useActivity', () => ({
+  useInflightJobCount: () => undefined,
+}));
 
 import { AppShellV2 } from './AppShellV2';
 

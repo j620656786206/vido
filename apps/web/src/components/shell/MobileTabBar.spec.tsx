@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   createRootRoute,
   createRoute,
@@ -11,6 +11,10 @@ import {
 
 vi.mock('../../hooks/useStatusSummary', () => ({
   useStatusSummary: () => ({ data: undefined }),
+}));
+let mockInflight: number | undefined;
+vi.mock('../../hooks/useActivity', () => ({
+  useInflightJobCount: () => mockInflight,
 }));
 
 import { MobileTabBar } from './MobileTabBar';
@@ -60,5 +64,26 @@ describe('MobileTabBar', () => {
   it('the bar carries the primary-navigation aria-label', async () => {
     renderBar();
     expect(await screen.findByTestId('mobile-tab-bar')).toHaveAttribute('aria-label', '主要導航');
+  });
+});
+
+describe('MobileTabBar — in-flight job badge (feat-nav-badge-inflight-jobs)', () => {
+  afterEach(() => {
+    mockInflight = undefined;
+  });
+
+  it('活動 tab wears the count and speaks it to AT', async () => {
+    mockInflight = 3;
+    renderBar();
+    const activity = await screen.findByTestId('nav-activity');
+    expect(screen.getByTestId('nav-activity-badge')).toHaveTextContent('3');
+    expect(activity).toHaveAttribute('aria-label', '活動（3 個任務進行中）');
+  });
+
+  it('badge absent at zero / while unmeasured', async () => {
+    renderBar();
+    await screen.findByTestId('nav-activity');
+    expect(screen.queryByTestId('nav-activity-badge')).toBeNull();
+    expect(screen.getByTestId('nav-activity')).toHaveAttribute('aria-label', '活動');
   });
 });

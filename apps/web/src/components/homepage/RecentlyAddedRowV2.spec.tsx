@@ -8,6 +8,19 @@ vi.mock('../../hooks/useLibrary', () => ({
 }));
 // Stub PosterCardV2 — it needs the router + image pipeline; here we only care that a
 // card renders per item. Its own behaviour (badge, links) is covered by its spec.
+// The chip is a real router <Link> now (its door to /activity); this spec has
+// no router, so stub Link as a plain anchor.
+vi.mock('@tanstack/react-router', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    Link: ({ to, children, ...rest }: { to: string; children: React.ReactNode }) => (
+      <a href={to} {...rest}>
+        {children}
+      </a>
+    ),
+  };
+});
 vi.mock('../library/PosterCardV2', () => ({
   PosterCardV2: ({ id, title }: { id: string; title: string }) =>
     React.createElement('div', { 'data-testid': `card-${id}` }, title),
@@ -101,5 +114,19 @@ describe('RecentlyAddedRowV2 (own-content 最近新增 row — four states)', ()
     mockUseRecentlyAdded.mockReturnValue(result({ data: [movie('a'), movie('b')] }));
     rerender(<RecentlyAddedRowV2 />);
     expect(screen.queryByTestId('home-recent-progress')).toBeNull();
+  });
+
+  // disc-2026-08-home-inflight-chip-dead-end — dead end + wrong colour, fixed:
+  it('[P2] chip is a DOOR to /activity and wears running green', () => {
+    mockUseRecentlyAdded.mockReturnValue(
+      result({ data: [movie('a', { parseStatus: 'pending' }), movie('b')] })
+    );
+    render(<RecentlyAddedRowV2 />);
+    const chip = screen.getByTestId('home-recent-progress');
+    expect(chip).toHaveAttribute('href', '/activity');
+    // 固定詞彙: 綠＝正在發生 (was gold = 你在這裡)
+    expect(chip.className).toContain('bg-[var(--success-tint)]');
+    expect(chip.className).toContain('text-[var(--success-text)]');
+    expect(chip.className).not.toContain('accent');
   });
 });

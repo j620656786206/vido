@@ -49,19 +49,46 @@ export function SidebarNavItem({
 }: SidebarNavItemProps) {
   const activeOptions = { exact, ...(includeSearch === undefined ? {} : { includeSearch }) };
   const hasCount = typeof count === 'number';
+  const hasBadge = typeof badge === 'number' && badge > 0;
+  // The Link carries aria-label, which REPLACES subtree text in the accessible
+  // name — so a live badge must be spoken through it, not just drawn.
+  const a11yLabel = hasBadge
+    ? `${label}（${badge} 個任務進行中）`
+    : hasCount
+      ? `${label}（${count}）`
+      : label;
 
   if (collapsed) {
     return (
-      <Tooltip content={hasCount ? `${label} · ${count!.toLocaleString()}` : label}>
+      <Tooltip
+        content={
+          hasBadge
+            ? `${label} · ${badge} 個任務進行中`
+            : hasCount
+              ? `${label} · ${count!.toLocaleString()}`
+              : label
+        }
+      >
         <Link
           to={to}
           search={search}
           activeOptions={activeOptions}
           data-testid={`nav-${navKey}`}
-          aria-label={hasCount ? `${label}（${count}）` : label}
-          className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] data-[status=active]:bg-[var(--accent-subtle)] data-[status=active]:text-[var(--accent-hover)]"
+          aria-label={a11yLabel}
+          className="relative flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] data-[status=active]:bg-[var(--accent-subtle)] data-[status=active]:text-[var(--accent-hover)]"
         >
           <Icon className="h-5 w-5" aria-hidden="true" />
+          {hasBadge && (
+            // The collapsed rail is exactly the「回來查」posture — the readout
+            // must survive collapse. Same rationed recipe as the expanded pill.
+            <span
+              aria-hidden="true"
+              data-testid={`nav-${navKey}-badge`}
+              className="absolute right-0.5 top-0.5 rounded-full bg-[var(--accent-subtle)] px-1 py-px font-mono text-[10px] leading-none text-[var(--accent-text)]"
+            >
+              {badge}
+            </span>
+          )}
         </Link>
       </Tooltip>
     );
@@ -73,7 +100,7 @@ export function SidebarNavItem({
       search={search}
       activeOptions={activeOptions}
       data-testid={`nav-${navKey}`}
-      aria-label={label}
+      aria-label={a11yLabel}
       className={cn(
         'group/navitem flex min-h-[44px] items-center gap-3 rounded-[var(--radius-md)] px-2.5 py-2 text-sm font-medium transition-colors',
         'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]',
@@ -94,12 +121,16 @@ export function SidebarNavItem({
           {count!.toLocaleString()}
         </span>
       )}
-      {typeof badge === 'number' && badge > 0 && (
-        // Latent, not live: no caller passes `badge` yet (feat-nav-badge-inflight-jobs).
-        // Fixed now because the moment it IS wired it would ship white-on-solid-accent
-        // at 3.68:1, same as the filter-rail count badge. A badge is a readout, so the
-        // rationed-accent rule wants the wash here regardless of contrast.
-        <span className="ml-auto rounded-full bg-[var(--accent-subtle)] px-1.5 py-0.5 font-mono text-[11px] leading-none text-[var(--accent-text)]">
+      {hasBadge && (
+        // LIVE since feat-nav-badge-inflight-jobs — wired to the /activity
+        // active-jobs count. A badge is a readout, so the rationed-accent rule
+        // wants the wash, never a solid fill (and white-on-solid measured
+        // 3.68:1 back when this was latent).
+        <span
+          aria-hidden="true"
+          data-testid={`nav-${navKey}-badge`}
+          className="ml-auto rounded-full bg-[var(--accent-subtle)] px-1.5 py-0.5 font-mono text-[11px] leading-none text-[var(--accent-text)]"
+        >
           {badge}
         </span>
       )}

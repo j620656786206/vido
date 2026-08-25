@@ -11,6 +11,7 @@
 import { Link } from '@tanstack/react-router';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useLibraryStats } from '../../hooks/useLibrary';
+import { useInflightJobCount } from '../../hooks/useActivity';
 import { TooltipProvider, Tooltip } from '../ui/Tooltip';
 import { SidebarNavItem } from './SidebarNavItem';
 import { SidebarGroupLabel } from './SidebarGroupLabel';
@@ -35,6 +36,9 @@ interface AppSidebarProps {
 
 export function AppSidebar({ collapsed, onToggleCollapse }: AppSidebarProps) {
   const { data: stats } = useLibraryStats();
+  // feat-nav-badge-inflight-jobs: the one chrome element that answers「現在有
+  // 東西在跑嗎」. Same query the Activity hub polls — no second counting path.
+  const inflightJobs = useInflightJobCount();
 
   return (
     <TooltipProvider>
@@ -107,6 +111,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: AppSidebarProps) {
                   icon={d.icon}
                   navKey={d.key}
                   exact={d.exact}
+                  badge={d.key === ACTIVITY.key ? inflightJobs : undefined}
                 />
               ))}
             </div>
@@ -158,6 +163,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: AppSidebarProps) {
                 label={ACTIVITY.label}
                 icon={ACTIVITY.icon}
                 navKey={ACTIVITY.key}
+                badge={inflightJobs}
               />
               <SidebarNavItem
                 to={DOWNLOADS.to}
