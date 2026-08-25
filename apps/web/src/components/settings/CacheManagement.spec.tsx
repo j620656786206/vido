@@ -43,7 +43,9 @@ describe('CacheManagement', () => {
   // pixels above per-type clears that DO confirm. Same grammar now.
   describe('清除 30 天前的快取 is a two-step confirm', () => {
     const arm = async () => {
-      const clearOld = vi.fn().mockResolvedValue({ clearedEntries: 3 });
+      // Shape must match CleanupResult — a wrong key here made the result banner
+      // render undefined.toLocaleString() and blow up only under CI timing.
+      const clearOld = vi.fn().mockResolvedValue({ entriesRemoved: 3, bytesReclaimed: 0 });
       mockUseClearByAge.mockReturnValue({ mutateAsync: clearOld, isPending: false } as any);
       mockUseCacheStats.mockReturnValue({
         data: { totalSizeBytes: 0, cacheTypes: [] },
