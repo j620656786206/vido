@@ -94,10 +94,7 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
   const currentPath = routerState.location.pathname;
 
   return (
-    <div
-      className="mx-auto flex w-full max-w-7xl flex-col md:flex-row"
-      data-testid="settings-layout"
-    >
+    <div className="flex w-full flex-col md:flex-row" data-testid="settings-layout">
       {/* Desktop sidebar */}
       <nav
         className="hidden w-56 shrink-0 border-r border-[var(--border-subtle)] md:block"
@@ -185,9 +182,13 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
         </div>
       </nav>
 
-      {/* Content area */}
+      {/* Content area. The width cap lives HERE, not on the layout root: capping
+          the root centred the sidebar too, detaching it from the app sidebar and
+          leaving a dead vertical gap between the two navs. Left-aligned (no
+          mx-auto) so all three panes read as one continuous left edge and the
+          leftover width collects on the right as page margin. */}
       <div className="min-h-[calc(100vh-8rem)] flex-1 p-6" data-testid="settings-content">
-        {children}
+        <div className="w-full max-w-5xl">{children}</div>
       </div>
     </div>
   );
