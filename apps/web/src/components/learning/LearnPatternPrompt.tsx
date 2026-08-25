@@ -149,9 +149,9 @@ export function PatternAppliedToast({ patternTitle, onClose }: PatternAppliedToa
       aria-live="polite"
       data-testid="pattern-applied-toast"
     >
-      <Check className="h-5 w-5 text-green-200" />
+      <Check className="h-5 w-5 text-[var(--success-text)]" />
       <span>✓ 已套用你之前的設定</span>
-      <span className="text-green-200 text-sm">（{patternTitle}）</span>
+      <span className="text-[var(--success-text)] text-sm">（{patternTitle}）</span>
       {onClose && (
         <button
           onClick={onClose}

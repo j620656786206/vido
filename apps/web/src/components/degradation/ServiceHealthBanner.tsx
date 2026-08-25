@@ -15,9 +15,9 @@ const levelConfig: Record<
   { bgColor: string; borderColor: string; textColor: string; icon: string }
 > = {
   normal: {
-    bgColor: 'bg-green-900/20',
-    borderColor: 'border-green-500/30',
-    textColor: 'text-green-200',
+    bgColor: 'bg-[var(--success-tint)]',
+    borderColor: 'border-[var(--success)]/30',
+    textColor: 'text-[var(--success-text)]',
     icon: '✓',
   },
   partial: {

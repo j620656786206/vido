@@ -81,7 +81,7 @@ function NewMediaToastItem({ notification, onDismiss }: NewMediaToastItemProps) 
   return (
     <div
       className={cn(
-        'flex items-center gap-3 rounded-lg border border-emerald-500/20 bg-[var(--bg-secondary)] p-3 shadow-lg transition-all duration-300',
+        'flex items-center gap-3 rounded-lg border border-[var(--success)]/20 bg-[var(--bg-secondary)] p-3 shadow-lg transition-all duration-300',
         isVisible ? 'translate-x-0 opacity-100' : 'translate-x-4 opacity-0'
       )}
       data-testid={`new-media-toast-${notification.id}`}
@@ -100,7 +100,7 @@ function NewMediaToastItem({ notification, onDismiss }: NewMediaToastItemProps) 
 
       {/* Content */}
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-emerald-400">已新增至媒體庫</p>
+        <p className="text-sm font-medium text-[var(--success-text)]">已新增至媒體庫</p>
         <p className="truncate text-xs text-[var(--text-secondary)]">{media.title}</p>
         <span className="text-[10px] text-[var(--text-secondary)]">
           {mediaTypeLabels[media.mediaType]}

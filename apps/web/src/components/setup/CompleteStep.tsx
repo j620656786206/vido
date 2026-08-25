@@ -41,7 +41,7 @@ export function CompleteStep({ data, onNext, onBack, isSubmitting }: StepProps) 
           type="button"
           onClick={onNext}
           disabled={isSubmitting}
-          className="flex-1 rounded-lg bg-[var(--success)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+          className="flex-1 rounded-lg bg-[var(--success)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--success)] disabled:opacity-50"
           data-testid="finish-button"
         >
           {isSubmitting ? '儲存中...' : '完成設定'}

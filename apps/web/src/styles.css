@@ -47,6 +47,10 @@
    * value 24 call sites were already hardcoding as text-blue-300. */
   --accent-text: #93c5fd; /* accent body text / active label (AA-safe on all surfaces) */
   --success-tint: #22c55e1f; /* success badge bg, 已入庫 pill */
+  /* (2026-08-25, refactor-token-debt-success) Fourth slice, fourth confirmation:
+   * --success as TEXT measures 4.04:1 on its own tint over --bg-tertiary. Green-400
+   * keeps the hue (unlike the emerald drift below) — worst case 5.28:1. */
+  --success-text: #4ade80; /* success body text (AA-safe on all surfaces) */
   --error-tint: #ef44441f; /* error badge bg, failed-state pill */
   /* Raised from #f87171 (2026-08-25, refactor-token-debt-red). Measured: the old
    * value was 4.05:1 on --bg-tertiary and 4.34:1 on an --error-tint surface —

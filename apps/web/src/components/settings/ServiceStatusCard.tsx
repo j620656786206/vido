@@ -23,7 +23,7 @@ const statusConfig: Record<
 > = {
   connected: {
     color: 'text-[var(--success)]',
-    bg: 'bg-green-400/10',
+    bg: 'bg-[var(--success-tint)]',
     icon: CheckCircle,
     label: '已連線',
   },

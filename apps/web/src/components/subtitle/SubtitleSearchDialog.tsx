@@ -153,7 +153,8 @@ export function SubtitleSearchDialog({
   }, []);
 
   const scoreColor = (score: number) => {
-    if (score > 0.7) return 'text-[var(--success)] bg-green-400/10 border-green-400/40';
+    if (score > 0.7)
+      return 'text-[var(--success)] bg-[var(--success-tint)] border-[var(--success)]/40';
     if (score > 0.4)
       return 'text-[var(--warning)] bg-[var(--warning-tint)] border-[var(--warning)]/40';
     return 'text-[var(--error)] bg-[var(--error-tint)] border-[var(--error)]/40';
@@ -401,7 +402,7 @@ export function SubtitleSearchDialog({
                             {downloadedIds.has(result.id) ? (
                               <button
                                 disabled
-                                className="rounded-md border border-green-600/40 bg-[var(--success)]/10 px-2 py-1 text-xs text-[var(--success)]"
+                                className="rounded-md border border-[var(--success)]/40 bg-[var(--success)]/10 px-2 py-1 text-xs text-[var(--success)]"
                               >
                                 <Check className="h-3 w-3" />
                               </button>

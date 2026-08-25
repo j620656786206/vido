@@ -5,7 +5,7 @@ import { backupService } from '../../services/backupService';
 import { formatBytes } from '../../utils/formatBytes';
 
 const statusConfig: Record<BackupStatus, { label: string; color: string; bg: string }> = {
-  completed: { label: '完成', color: 'text-[var(--success)]', bg: 'bg-green-400/10' },
+  completed: { label: '完成', color: 'text-[var(--success)]', bg: 'bg-[var(--success-tint)]' },
   running: {
     label: '執行中',
     color: 'text-[var(--accent-primary)]',
@@ -81,7 +81,7 @@ export function BackupTable({
                 className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-medium ${config.bg} ${config.color}`}
               >
                 <span
-                  className={`inline-block h-1.5 w-1.5 rounded-full ${backup.status === 'completed' ? 'bg-green-400' : backup.status === 'running' ? 'bg-[var(--accent-primary)]' : backup.status === 'pending' ? 'bg-[var(--warning)]' : backup.status === 'corrupted' ? 'bg-[var(--warning)]' : 'bg-[var(--error)]'}`}
+                  className={`inline-block h-1.5 w-1.5 rounded-full ${backup.status === 'completed' ? 'bg-[var(--success)]' : backup.status === 'running' ? 'bg-[var(--accent-primary)]' : backup.status === 'pending' ? 'bg-[var(--warning)]' : backup.status === 'corrupted' ? 'bg-[var(--warning)]' : 'bg-[var(--error)]'}`}
                 />
                 {config.label}
               </span>

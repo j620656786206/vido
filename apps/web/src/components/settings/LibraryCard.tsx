@@ -26,7 +26,7 @@ interface LibraryCardProps {
 }
 
 const STATUS_CONFIG = {
-  accessible: { color: 'text-[var(--success)]', bg: 'bg-green-400', label: '已連線' },
+  accessible: { color: 'text-[var(--success)]', bg: 'bg-[var(--success)]', label: '已連線' },
   not_found: { color: 'text-[var(--error)]', bg: 'bg-[var(--error)]', label: '無法存取' },
   not_readable: { color: 'text-[var(--error)]', bg: 'bg-[var(--error)]', label: '無法讀取' },
   not_directory: { color: 'text-[var(--error)]', bg: 'bg-[var(--error)]', label: '非目錄' },
