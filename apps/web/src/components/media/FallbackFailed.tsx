@@ -94,8 +94,8 @@ export function FallbackFailed({
           )}
 
           <div className="flex items-center gap-2.5 text-sm" data-testid="file-info-status">
-            <CircleAlert className="h-4 w-4 flex-shrink-0 text-amber-500" />
-            <span className="text-amber-400">{parseStatusLabel(parseStatus)}</span>
+            <CircleAlert className="h-4 w-4 flex-shrink-0 text-[var(--warning)]" />
+            <span className="text-[var(--warning-text)]">{parseStatusLabel(parseStatus)}</span>
           </div>
         </div>
       </div>

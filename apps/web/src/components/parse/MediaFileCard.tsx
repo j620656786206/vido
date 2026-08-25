@@ -54,7 +54,7 @@ export function MediaFileCard({ file, isParsing = false, onClick, className }: M
         'relative flex flex-col rounded-lg border bg-[var(--bg-secondary)]/50 overflow-hidden',
         'cursor-pointer hover:bg-[var(--bg-secondary)] transition-colors',
         file.parseStatus === 'failed' && 'border-[var(--error)]/30',
-        file.parseStatus === 'needs_ai' && 'border-yellow-500/30',
+        file.parseStatus === 'needs_ai' && 'border-[var(--warning)]/30',
         file.parseStatus === 'success' && 'border-[var(--border-subtle)]',
         file.parseStatus === 'pending' && 'border-[var(--border-subtle)]',
         className

@@ -59,18 +59,18 @@ export function LearnPatternPrompt({
   return (
     <div
       className={cn(
-        'rounded-lg border border-amber-500/30 bg-amber-500/10 p-4',
+        'rounded-lg border border-[var(--warning)]/30 bg-[var(--warning-tint)] p-4',
         'backdrop-blur-sm'
       )}
       role="alert"
       data-testid="learn-pattern-prompt"
     >
       <div className="flex items-start gap-3">
-        <div className="flex-shrink-0 rounded-full bg-amber-500/20 p-2">
-          <Lightbulb className="h-5 w-5 text-amber-400" />
+        <div className="flex-shrink-0 rounded-full bg-[var(--warning-tint)] p-2">
+          <Lightbulb className="h-5 w-5 text-[var(--warning-text)]" />
         </div>
         <div className="flex-1 min-w-0">
-          <h4 className="text-sm font-medium text-amber-200">學習此規則？</h4>
+          <h4 className="text-sm font-medium text-[var(--warning-text)]">學習此規則？</h4>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
             系統偵測到以下規則，是否記住以便未來自動套用？
           </p>
@@ -93,8 +93,8 @@ export function LearnPatternPrompt({
               disabled={isLoading}
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5',
-                'bg-amber-600 text-white text-sm font-medium',
-                'hover:bg-amber-500 transition-colors',
+                'bg-[var(--warning)] text-white text-sm font-medium',
+                'hover:bg-[var(--warning-pressed)] transition-colors',
                 'disabled:opacity-50 disabled:cursor-not-allowed'
               )}
               data-testid="confirm-learn-button"

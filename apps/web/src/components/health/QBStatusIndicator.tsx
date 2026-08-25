@@ -21,9 +21,9 @@ const statusConfig = {
     Icon: Wifi,
   },
   degraded: {
-    dotColor: 'bg-yellow-400',
+    dotColor: 'bg-[var(--warning)]',
     textColor: 'text-[var(--warning)]',
-    bgColor: 'bg-yellow-900/30',
+    bgColor: 'bg-[var(--warning-tint)]',
     label: 'qBittorrent 連線不穩定',
     Icon: AlertTriangle,
   },

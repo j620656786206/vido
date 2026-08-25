@@ -12,9 +12,9 @@ const LEVEL_CHIP_STYLES: Record<string, { active: string; inactive: string }> = 
       'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--error)]/50 hover:text-[var(--error-text)]',
   },
   WARN: {
-    active: 'border-yellow-400 bg-yellow-400/20 text-yellow-300',
+    active: 'border-[var(--warning)] bg-[var(--warning-tint)] text-[var(--warning-text)]',
     inactive:
-      'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-yellow-400/50 hover:text-yellow-300',
+      'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--warning)]/50 hover:text-[var(--warning-text)]',
   },
   INFO: {
     active: 'border-[var(--accent-hover)] bg-[var(--accent-tint)] text-[var(--accent-text)]',

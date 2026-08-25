@@ -22,8 +22,8 @@ export function RestoreConfirmDialog({
     >
       <div className="mx-4 w-full max-w-md rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-6 shadow-2xl">
         <div className="mb-4 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10">
-            <AlertTriangle className="h-5 w-5 text-amber-400" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--warning-tint)]">
+            <AlertTriangle className="h-5 w-5 text-[var(--warning-text)]" />
           </div>
           <h3 className="text-lg font-semibold text-[var(--text-primary)]">確認還原</h3>
         </div>
@@ -31,7 +31,7 @@ export function RestoreConfirmDialog({
         <div className="mb-6 space-y-3">
           <p className="text-sm text-[var(--text-secondary)]">
             即將從以下備份還原資料，
-            <strong className="text-amber-400">這將會取代目前所有的資料</strong>。
+            <strong className="text-[var(--warning-text)]">這將會取代目前所有的資料</strong>。
           </p>
           <div className="rounded-lg bg-[var(--bg-primary)] px-3 py-2 text-xs text-[var(--text-secondary)]">
             <p data-testid="restore-filename">{backup.filename}</p>
@@ -53,7 +53,7 @@ export function RestoreConfirmDialog({
           <button
             onClick={onConfirm}
             disabled={isRestoring}
-            className="flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-500 disabled:opacity-50"
+            className="flex items-center gap-2 rounded-lg bg-[var(--warning)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--warning-pressed)] disabled:opacity-50"
             data-testid="restore-confirm-btn"
           >
             {isRestoring ? (

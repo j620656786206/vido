@@ -159,7 +159,7 @@ function getColorsForType(type: NotificationType) {
     case 'warning':
       return {
         bg: 'bg-[var(--warning)]/10',
-        border: 'border-yellow-500/20',
+        border: 'border-[var(--warning)]/20',
         icon: 'text-[var(--warning)]',
         text: 'text-[var(--warning)]',
       };

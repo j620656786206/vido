@@ -117,7 +117,7 @@ export function ScannerSettings() {
           className={cn(
             'flex items-center gap-2 rounded-lg px-4 py-3 text-sm',
             notification.type === 'success' && 'bg-green-900/30 text-[var(--success)]',
-            notification.type === 'warning' && 'bg-yellow-900/30 text-[var(--warning)]',
+            notification.type === 'warning' && 'bg-[var(--warning-tint)] text-[var(--warning)]',
             notification.type === 'error' && 'bg-[var(--error-tint)] text-[var(--error)]'
           )}
           data-testid="scanner-notification"

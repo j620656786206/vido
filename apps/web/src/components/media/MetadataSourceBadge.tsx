@@ -18,7 +18,7 @@ const SOURCE_CONFIG: Record<MetadataSource, SourceConfig> = {
     bgColor: 'bg-[var(--bg-tertiary)]/50',
   },
   ai: { icon: '🤖', label: 'AI 解析', color: '#7c3aed', bgColor: 'bg-purple-900/50' },
-  manual: { icon: '✏️', label: '手動輸入', color: '#f59e0b', bgColor: 'bg-amber-900/50' },
+  manual: { icon: '✏️', label: '手動輸入', color: '#f59e0b', bgColor: 'bg-[var(--warning-tint)]' },
 };
 
 export interface MetadataSourceBadgeProps {

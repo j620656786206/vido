@@ -11,9 +11,9 @@ const statusConfig: Record<BackupStatus, { label: string; color: string; bg: str
     color: 'text-[var(--accent-primary)]',
     bg: 'bg-[var(--accent-tint)]',
   },
-  pending: { label: '等待中', color: 'text-[var(--warning)]', bg: 'bg-yellow-400/10' },
+  pending: { label: '等待中', color: 'text-[var(--warning)]', bg: 'bg-[var(--warning-tint)]' },
   failed: { label: '失敗', color: 'text-[var(--error)]', bg: 'bg-[var(--error-tint)]' },
-  corrupted: { label: '已損壞', color: 'text-[var(--warning)]', bg: 'bg-orange-400/10' },
+  corrupted: { label: '已損壞', color: 'text-[var(--warning)]', bg: 'bg-[var(--warning-tint)]' },
 };
 
 function formatDate(dateStr: string): string {
@@ -81,7 +81,7 @@ export function BackupTable({
                 className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-medium ${config.bg} ${config.color}`}
               >
                 <span
-                  className={`inline-block h-1.5 w-1.5 rounded-full ${backup.status === 'completed' ? 'bg-green-400' : backup.status === 'running' ? 'bg-[var(--accent-primary)]' : backup.status === 'pending' ? 'bg-yellow-400' : backup.status === 'corrupted' ? 'bg-orange-400' : 'bg-[var(--error)]'}`}
+                  className={`inline-block h-1.5 w-1.5 rounded-full ${backup.status === 'completed' ? 'bg-green-400' : backup.status === 'running' ? 'bg-[var(--accent-primary)]' : backup.status === 'pending' ? 'bg-[var(--warning)]' : backup.status === 'corrupted' ? 'bg-[var(--warning)]' : 'bg-[var(--error)]'}`}
                 />
                 {config.label}
               </span>
@@ -92,7 +92,7 @@ export function BackupTable({
                   <button
                     onClick={() => onRestore(backup.id)}
                     disabled={isRestoring}
-                    className="text-[var(--text-secondary)] transition-colors hover:text-amber-400 disabled:opacity-50"
+                    className="text-[var(--text-secondary)] transition-colors hover:text-[var(--warning-text)] disabled:opacity-50"
                     data-testid={`restore-btn-${backup.id}`}
                     title="還原"
                   >

@@ -162,7 +162,7 @@ export function BackupManagement() {
 
       {restoreMessage && (
         <div
-          className="rounded-lg border border-amber-800 bg-amber-900/20 px-4 py-3 text-sm text-amber-300"
+          className="rounded-lg border border-[var(--warning)] bg-[var(--warning-tint)] px-4 py-3 text-sm text-[var(--warning-text)]"
           role="status"
           data-testid="restore-message"
         >

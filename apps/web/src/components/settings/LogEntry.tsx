@@ -6,7 +6,7 @@ import type { SystemLog } from '../../services/logService';
 
 const LEVEL_STYLES: Record<string, string> = {
   ERROR: 'text-[var(--error)] bg-[var(--error-tint)]',
-  WARN: 'text-[var(--warning)] bg-yellow-400/10',
+  WARN: 'text-[var(--warning)] bg-[var(--warning-tint)]',
   INFO: 'text-[var(--accent-primary)] bg-[var(--accent-tint)]',
   DEBUG: 'text-[var(--text-secondary)] bg-[var(--text-muted)]/10',
 };
@@ -85,7 +85,7 @@ export function LogEntry({ log }: LogEntryProps) {
       {expanded && (
         <div className="ml-11 mt-2 space-y-2" data-testid="log-details">
           {hasHint && (
-            <div className="flex items-start gap-2 rounded bg-yellow-900/20 px-3 py-2 text-sm text-yellow-300">
+            <div className="flex items-start gap-2 rounded bg-[var(--warning-tint)] px-3 py-2 text-sm text-[var(--warning-text)]">
               <Lightbulb className="mt-0.5 h-4 w-4 shrink-0" />
               <span data-testid="log-hint">{log.hint}</span>
             </div>

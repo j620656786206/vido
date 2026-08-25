@@ -29,7 +29,7 @@ const statusConfig: Record<
   },
   rate_limited: {
     color: 'text-[var(--warning)]',
-    bg: 'bg-yellow-400/10',
+    bg: 'bg-[var(--warning-tint)]',
     icon: AlertTriangle,
     label: '速率限制',
   },
