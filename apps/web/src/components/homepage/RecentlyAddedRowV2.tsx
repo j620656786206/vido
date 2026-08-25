@@ -22,7 +22,8 @@
  * Token-only colors; Noto Sans TC (CJK) + JetBrains Mono (the numeric chip). 44px touch
  * floor on the 重試 control (N5).
  */
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useRef } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useRecentlyAdded } from '../../hooks/useLibrary';
 import { PosterCardV2 } from '../library/PosterCardV2';
@@ -74,6 +75,14 @@ function countInProgress(items: LibraryItem[]): number {
 
 export function RecentlyAddedRowV2() {
   const { data, isLoading, isError, refetch } = useRecentlyAdded(RECENT_LIMIT);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+
+  const scroll = (direction: 'left' | 'right') => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const delta = direction === 'right' ? el.clientWidth * 0.8 : -el.clientWidth * 0.8;
+    el.scrollBy({ left: delta, behavior: 'smooth' });
+  };
   const items = data ?? [];
   const cards = items.map(toCard).filter(Boolean) as CardFields[];
   const inProgress = countInProgress(items);
@@ -81,24 +90,25 @@ export function RecentlyAddedRowV2() {
   return (
     <section data-testid="home-recently-added" aria-labelledby="home-ra-title">
       <div className="mb-3 flex items-center justify-between">
-        <h2 id="home-ra-title" className="text-xl font-semibold text-[var(--text-primary)]">
+        <h2 id="home-ra-title" className="text-lg font-semibold text-[var(--text-primary)]">
           最近新增
         </h2>
-        {/* 進行中 · N — exception-signal chip (hidden at 0). Critique R1 filed
-            it as a GOLD-wearing dead end (disc-2026-08-home-inflight-chip-dead-
-            end): now running green (固定詞彙: 綠＝正在發生) with a door to the
-            Activity hub. The count stays scoped to THIS row's items — /activity
-            `pending.parse_count` measures the parse-job QUEUE (capped), a
-            different quantity that diverges from item parseStatus (0 vs 3 on
-            the seeded env), so swapping it in would trade a narrow-but-true
-            readout for a wrong one. */}
+        {/* 整理中 · N — exception-signal chip (hidden at 0), a door to the
+            Activity hub. ⚖️ R2 ruling (2026-08-26): parseStatus=pending is
+            QUEUED, not running — the same items' poster badges wear amber
+            整理中, and one screen may not dress one truth in two colours
+            (固定詞彙). The chip now matches the badge exactly: same word, same
+            amber. (R1 had briefly ruled it green; R2's contradiction finding
+            superseded that.) Count stays scoped to THIS row — /activity
+            pending.parse_count measures the capped parse-job QUEUE, which
+            live-diverges from item parseStatus (0 vs 3 on the seeded env). */}
         {inProgress > 0 && (
           <Link
             to="/activity"
             data-testid="home-recent-progress"
-            className="flex items-center gap-1 rounded-full bg-[var(--success-tint)] px-2.5 py-1 text-xs font-medium text-[var(--success-text)] transition-colors hover:bg-[var(--bg-tertiary)]"
+            className="flex items-center gap-1 rounded-[var(--radius-md)] bg-[var(--warning-tint)] px-2.5 py-1 text-xs font-medium text-[var(--warning-text)] transition-colors hover:bg-[var(--bg-tertiary)]"
           >
-            進行中
+            整理中
             <span className="font-mono tabular-nums">· {inProgress}</span>
           </Link>
         )}
@@ -145,24 +155,56 @@ export function RecentlyAddedRowV2() {
           尚無最近新增
         </p>
       ) : (
-        <div
-          data-testid="home-recent-row"
-          className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:thin] md:gap-4"
-        >
-          {cards.map((c) => (
-            <div key={`${c.type}-${c.id}`} className="w-[140px] shrink-0 sm:w-[160px]">
-              <PosterCardV2
-                id={c.id}
-                type={c.type}
-                title={c.title}
-                posterPath={c.posterPath}
-                year={c.year}
-                meta={c.meta}
-                voteAverage={c.voteAverage}
-                media={c.media}
-              />
-            </div>
-          ))}
+        // Same scroll affordance as the explore rows (critique R2 P2: two
+        // horizontal shelves on one page spoke two grammars — this one had NO
+        // chevrons/scrims while a clipped first card begged for them).
+        <div className="group/scroller relative">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 left-0 z-0 hidden w-14 bg-gradient-to-r from-[var(--bg-primary)] to-transparent opacity-0 transition-opacity duration-300 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 right-0 z-0 hidden w-14 bg-gradient-to-l from-[var(--bg-primary)] to-transparent opacity-0 transition-opacity duration-300 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
+          />
+          <button
+            type="button"
+            onClick={() => scroll('left')}
+            aria-label="向左捲動"
+            data-testid="home-recent-scroll-left"
+            className="absolute left-0 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] opacity-0 shadow-lg ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity duration-300 hover:bg-[var(--bg-tertiary)] focus-visible:opacity-100 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scroll('right')}
+            aria-label="向右捲動"
+            data-testid="home-recent-scroll-right"
+            className="absolute right-0 top-1/2 z-10 hidden translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] opacity-0 shadow-lg ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity duration-300 hover:bg-[var(--bg-tertiary)] focus-visible:opacity-100 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+          <div
+            ref={scrollerRef}
+            data-testid="home-recent-row"
+            className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:thin] md:gap-4"
+          >
+            {cards.map((c) => (
+              <div key={`${c.type}-${c.id}`} className="w-[140px] shrink-0 sm:w-[160px]">
+                <PosterCardV2
+                  id={c.id}
+                  type={c.type}
+                  title={c.title}
+                  posterPath={c.posterPath}
+                  year={c.year}
+                  meta={c.meta}
+                  voteAverage={c.voteAverage}
+                  media={c.media}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </section>

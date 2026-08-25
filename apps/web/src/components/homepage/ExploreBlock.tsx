@@ -1,6 +1,5 @@
 // Design ref: ux-design.pen Screen HP-5 ExploreBlock Polish (Y5XvRv)
 import { useEffect, useMemo, useRef } from 'react';
-import { Link } from '@tanstack/react-router';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { useExploreBlockContent } from '../../hooks/useExploreBlocks';
 import { useInViewport } from '../../hooks/useInViewport';
@@ -62,10 +61,6 @@ export function ExploreBlock({ block, ownership, eager = true, onVisible }: Expl
 
   if (isError) return null;
 
-  // Match the "查看更多" destination to block content type — routes to
-  // the matching TMDb discover view pre-scoped to this block's filters.
-  const seeMoreTo = buildSeeMoreTarget(block);
-
   const scroll = (direction: 'left' | 'right') => {
     const el = scrollerRef.current;
     if (!el) return;
@@ -90,20 +85,14 @@ export function ExploreBlock({ block, ownership, eager = true, onVisible }: Expl
     >
       <div className="mb-3 flex items-end justify-between">
         <h2
-          className="text-lg font-semibold text-[var(--text-primary)] md:text-xl"
+          className="text-lg font-semibold text-[var(--text-primary)]"
           data-testid="explore-block-title"
         >
           {block.name}
         </h2>
-        <Link
-          to={seeMoreTo.to}
-          search={seeMoreTo.search}
-          className="flex items-center gap-1 text-sm text-[var(--text-secondary)] hover:text-[var(--accent-primary)]"
-          data-testid="explore-block-see-more"
-        >
-          查看更多
-          <ChevronRight className="h-4 w-4" />
-        </Link>
+        {/* 查看更多 was REMOVED (critique R2 P2): it promised「more of this
+            row」and delivered an unfiltered /search. It returns with Epic 11's
+            filter scaffolding, when the link can keep its promise. */}
       </div>
 
       <div className="group/scroller relative">
@@ -255,17 +244,4 @@ function getBlockItems(data: { movies?: Movie[]; tvShows?: TVShow[] } | undefine
     }
   }
   return items;
-}
-
-// "查看更多" routes into the main search view with filter pre-applied when
-// filter scaffolding (Epic 11) lands. For now, route to /search — the target
-// can be refined later without touching ExploreBlock call sites.
-function buildSeeMoreTarget(_block: ExploreBlockType): {
-  to: string;
-  search: Record<string, unknown>;
-} {
-  return {
-    to: '/search',
-    search: {},
-  };
 }

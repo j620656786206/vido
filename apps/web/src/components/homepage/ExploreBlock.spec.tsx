@@ -102,7 +102,7 @@ describe('ExploreBlock', () => {
     expect(skeletons.length).toBeGreaterThan(0);
   });
 
-  it('renders title and see-more link', async () => {
+  it('renders the title; 查看更多 stays OUT until Epic 11 lets it keep its promise', async () => {
     mockHook.mockReturnValue({
       data: { blockId: 'block-1', contentType: 'movie', movies: [], totalItems: 0 },
       isLoading: false,
@@ -111,7 +111,8 @@ describe('ExploreBlock', () => {
     renderBlock(testBlock({ name: '熱門韓劇' }));
 
     expect(await screen.findByTestId('explore-block-title')).toHaveTextContent('熱門韓劇');
-    expect(screen.getByTestId('explore-block-see-more')).toBeInTheDocument();
+    // Critique R2 P2: it promised「more of this row」and delivered unfiltered /search.
+    expect(screen.queryByTestId('explore-block-see-more')).toBeNull();
   });
 
   it('renders movie poster cards when content_type is movie', async () => {

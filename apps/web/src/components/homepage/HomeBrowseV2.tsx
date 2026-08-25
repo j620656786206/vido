@@ -29,6 +29,10 @@ import { RecentlyAddedRowV2 } from './RecentlyAddedRowV2';
 export function HomeBrowseV2() {
   return (
     <div data-testid="home-v2-root" className="flex flex-col gap-6 py-6 md:gap-8">
+      {/* The page never stated its own name — heading outline began at H2
+          (critique R2 P3). Visually the sections carry the page; the h1 is
+          for AT and the document outline. */}
+      <h1 className="sr-only">首頁</h1>
       {/* OWN-CONTENT zone — structurally ABOVE external curation (D3 ordering law). */}
       <section
         data-testid="home-own-content"

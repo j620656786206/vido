@@ -1,5 +1,6 @@
 // Design ref: ux-design.pen Screen HP-1 Homepage Desktop (sAaCR)
 import { useEffect, useMemo, useRef } from 'react';
+import { Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import tmdbService from '../../services/tmdb';
@@ -94,7 +95,7 @@ export function TrailerModal({ open, onClose, mediaType, tmdbId, title }: Traile
       aria-modal="true"
       aria-label={`${title} 預告片`}
       data-testid="trailer-modal"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-scrim)] p-4"
     >
       {/* Mouse-only dismiss affordance; keyboard users close via Escape. */}
       <div
@@ -124,11 +125,23 @@ export function TrailerModal({ open, onClose, mediaType, tmdbId, title }: Traile
         )}
 
         {!isLoading && (isError || !trailer) && (
+          // Critique R2 P2: this was a dead end — a huge empty box with one
+          // line and no way forward. The door goes where the trailer's click
+          // would have led anyway.
           <div
             data-testid="trailer-modal-empty"
-            className="flex aspect-video w-full items-center justify-center rounded-lg bg-[var(--bg-secondary)] text-[var(--text-secondary)]"
+            className="flex aspect-video w-full flex-col items-center justify-center gap-4 rounded-lg bg-[var(--bg-secondary)] text-[var(--text-secondary)]"
           >
             找不到預告片
+            <Link
+              to="/media/$type/$id"
+              params={{ type: mediaType, id: String(tmdbId) }}
+              onClick={onClose}
+              data-testid="trailer-modal-detail-link"
+              className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-4 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--border-subtle)]"
+            >
+              前往詳情頁
+            </Link>
           </div>
         )}
 

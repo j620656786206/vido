@@ -217,11 +217,11 @@ describe('PosterCard', () => {
     // per Rule 16 (toBeInTheDocument / toHaveClass over toBeVisible for hover-CSS-dependent
     // elements). Runtime opacity transition is exercised by tests/e2e/poster-card-hover.spec.ts.
 
-    it('[P0] center play overlay is in DOM with hover-only visibility classes (AC #1)', () => {
+    // Critique R2 P1: the ▶ overlay promised playback the product does not
+    // have (the click lands on the detail page). Removed — assert it STAYS out.
+    it('[P0] the lying center play overlay is gone', () => {
       render(<PosterCard {...defaultProps} />);
-      const overlay = screen.getByTestId('hover-play-overlay');
-      expect(overlay).toBeInTheDocument();
-      expect(overlay).toHaveClass('hidden', 'lg:flex', 'opacity-0', 'lg:group-hover:opacity-100');
+      expect(screen.queryByTestId('hover-play-overlay')).not.toBeInTheDocument();
     });
 
     it('[P1] center play overlay is NOT rendered in selection mode (AC #1)', () => {

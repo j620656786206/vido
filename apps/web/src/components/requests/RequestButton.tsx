@@ -89,7 +89,7 @@ export function RequestButton({
         role="status"
         aria-live="polite"
         className={cn(
-          'inline-flex items-center gap-1.5 rounded-full bg-[var(--success-tint)] px-4 py-2.5 text-[13px] font-semibold text-[var(--success)]',
+          'inline-flex items-center gap-1.5 rounded-full bg-[var(--success-tint)] px-4 py-2.5 text-[13px] font-semibold text-[var(--success-text)]',
           fullWidth && 'w-full justify-center',
           className
         )}
@@ -112,7 +112,7 @@ export function RequestButton({
           role="status"
           aria-live="polite"
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-full bg-[var(--info-tint)] px-4 py-2.5 text-[13px] font-semibold text-[var(--info)]',
+            'inline-flex items-center gap-1.5 rounded-full bg-[var(--info-tint)] px-4 py-2.5 text-[13px] font-semibold text-[var(--info-text)]',
             fullWidth && 'w-full justify-center',
             className
           )}

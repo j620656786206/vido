@@ -95,7 +95,7 @@ describe('RecentlyAddedRowV2 (own-content 最近新增 row — four states)', ()
     expect(screen.getByTestId('card-b')).toBeInTheDocument();
   });
 
-  it('[P2] 進行中 · N chip counts pending items, hidden when none', () => {
+  it('[P2] 整理中 · N chip counts pending items, hidden when none', () => {
     mockUseRecentlyAdded.mockReturnValue(
       result({
         data: [
@@ -107,7 +107,7 @@ describe('RecentlyAddedRowV2 (own-content 最近新增 row — four states)', ()
     );
     const { rerender } = render(<RecentlyAddedRowV2 />);
     const chip = screen.getByTestId('home-recent-progress');
-    expect(chip).toHaveTextContent('進行中');
+    expect(chip).toHaveTextContent('整理中');
     expect(chip).toHaveTextContent('2');
 
     // No pending items → chip is suppressed (exception-signal only).
@@ -116,17 +116,19 @@ describe('RecentlyAddedRowV2 (own-content 最近新增 row — four states)', ()
     expect(screen.queryByTestId('home-recent-progress')).toBeNull();
   });
 
-  // disc-2026-08-home-inflight-chip-dead-end — dead end + wrong colour, fixed:
-  it('[P2] chip is a DOOR to /activity and wears running green', () => {
+  // ⚖️ R2 ruling: pending = QUEUED → amber, matching the poster badge exactly
+  // (one screen, one truth, one colour). Supersedes R1's brief green.
+  it('[P2] chip is a DOOR to /activity and wears the badge-matching amber', () => {
     mockUseRecentlyAdded.mockReturnValue(
       result({ data: [movie('a', { parseStatus: 'pending' }), movie('b')] })
     );
     render(<RecentlyAddedRowV2 />);
     const chip = screen.getByTestId('home-recent-progress');
     expect(chip).toHaveAttribute('href', '/activity');
-    // 固定詞彙: 綠＝正在發生 (was gold = 你在這裡)
-    expect(chip.className).toContain('bg-[var(--success-tint)]');
-    expect(chip.className).toContain('text-[var(--success-text)]');
+    expect(chip).toHaveTextContent('整理中');
+    expect(chip.className).toContain('bg-[var(--warning-tint)]');
+    expect(chip.className).toContain('text-[var(--warning-text)]');
+    expect(chip.className).not.toContain('success');
     expect(chip.className).not.toContain('accent');
   });
 });
