@@ -36,7 +36,7 @@ export function DownloadItem({ download, expanded, onToggleExpand }: DownloadIte
                 className={cn(
                   'h-full rounded-full transition-all',
                   download.progress >= 1
-                    ? 'bg-emerald-500'
+                    ? 'bg-[var(--success)]'
                     : download.status === 'error'
                       ? 'bg-[var(--error)]'
                       : 'bg-[var(--accent-primary)]'
@@ -72,7 +72,7 @@ export function DownloadItem({ download, expanded, onToggleExpand }: DownloadIte
               (download.parseStatus ? (
                 <DownloadParseStatusBadge parseStatus={download.parseStatus} />
               ) : (
-                <p className="text-emerald-400">完成</p>
+                <p className="text-[var(--success-text)]">完成</p>
               ))}
             {download.status === 'paused' && <p className="text-[var(--warning)]">已暫停</p>}
             {download.status === 'error' && <p className="text-[var(--error)]">錯誤</p>}

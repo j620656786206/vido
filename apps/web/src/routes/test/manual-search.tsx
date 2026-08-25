@@ -204,7 +204,7 @@ function TestManualSearchPage() {
               {completedFiles.map((file) => (
                 <span
                   key={file.id}
-                  className="px-3 py-1 bg-green-900/30 text-[var(--success)] rounded-full text-sm"
+                  className="px-3 py-1 bg-[var(--success-tint)] text-[var(--success)] rounded-full text-sm"
                   data-testid={`completed-${file.id}`}
                 >
                   {file.parsedInfo?.title || file.filename}

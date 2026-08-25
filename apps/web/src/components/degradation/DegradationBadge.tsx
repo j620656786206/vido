@@ -14,7 +14,7 @@ const levelConfig: Record<
 > = {
   normal: {
     color: 'text-[var(--success)]',
-    bgColor: 'bg-green-400/10',
+    bgColor: 'bg-[var(--success-tint)]',
     label: '正常',
     icon: '✓',
   },

@@ -21,7 +21,7 @@ export function ConnectionTestResult({
       className={cn(
         'mt-4 flex items-start gap-3 rounded-lg border p-4',
         success
-          ? 'border-green-700 bg-green-900/30 text-green-300'
+          ? 'border-[var(--success)] bg-[var(--success-tint)] text-[var(--success-text)]'
           : 'border-[var(--error)] bg-[var(--error-tint)] text-[var(--error-text)]'
       )}
     >

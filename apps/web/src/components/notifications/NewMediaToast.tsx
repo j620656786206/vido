@@ -37,7 +37,7 @@ export function NewMediaToast({ title, posterUrl, mediaType }: NewMediaToastProp
       </div>
 
       {/* Success indicator */}
-      <span className="shrink-0 text-emerald-400">✓</span>
+      <span className="shrink-0 text-[var(--success-text)]">✓</span>
     </div>
   );
 }

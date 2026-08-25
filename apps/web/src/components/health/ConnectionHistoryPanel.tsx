@@ -20,10 +20,10 @@ const eventTypeConfig: Record<
   ConnectionEventType,
   { label: string; Icon: React.ComponentType<{ className?: string }>; color: string }
 > = {
-  connected: { label: '已連線', Icon: Wifi, color: 'text-emerald-400' },
+  connected: { label: '已連線', Icon: Wifi, color: 'text-[var(--success-text)]' },
   disconnected: { label: '已斷線', Icon: WifiOff, color: 'text-[var(--error)]' },
   error: { label: '錯誤', Icon: AlertTriangle, color: 'text-[var(--warning)]' },
-  recovered: { label: '已恢復', Icon: RefreshCw, color: 'text-emerald-400' },
+  recovered: { label: '已恢復', Icon: RefreshCw, color: 'text-[var(--success-text)]' },
 };
 
 const validEventTypes: ConnectionEventType[] = ['connected', 'disconnected', 'error', 'recovered'];

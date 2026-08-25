@@ -10,14 +10,14 @@ interface SourceConfig {
 
 const SOURCE_CONFIG: Record<MetadataSource, SourceConfig> = {
   tmdb: { icon: '🎬', label: 'TMDb', color: '#0d253f', bgColor: 'bg-[var(--accent-tint)]' },
-  douban: { icon: '📗', label: '豆瓣', color: '#00b51d', bgColor: 'bg-green-900/50' },
+  douban: { icon: '📗', label: '豆瓣', color: '#00b51d', bgColor: 'bg-[var(--success-tint)]' },
   wikipedia: {
     icon: '📖',
     label: 'Wikipedia',
     color: '#636466',
     bgColor: 'bg-[var(--bg-tertiary)]/50',
   },
-  ai: { icon: '🤖', label: 'AI 解析', color: '#7c3aed', bgColor: 'bg-purple-900/50' },
+  ai: { icon: '🤖', label: 'AI 解析', color: '#7c3aed', bgColor: 'bg-[var(--info-tint)]' },
   manual: { icon: '✏️', label: '手動輸入', color: '#f59e0b', bgColor: 'bg-[var(--warning-tint)]' },
 };
 

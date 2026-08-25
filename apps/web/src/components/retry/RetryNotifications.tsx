@@ -145,7 +145,7 @@ function getColorsForType(type: NotificationType) {
     case 'success':
       return {
         bg: 'bg-[var(--success)]/10',
-        border: 'border-green-500/20',
+        border: 'border-[var(--success)]/20',
         icon: 'text-[var(--success)]',
         text: 'text-[var(--success)]',
       };

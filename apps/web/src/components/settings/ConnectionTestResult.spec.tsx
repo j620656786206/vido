@@ -35,7 +35,7 @@ describe('ConnectionTestResult', () => {
     render(<ConnectionTestResult success={true} message="Connected" version="v4.5.2" />);
 
     const el = screen.getByTestId('connection-test-result');
-    expect(el.className).toContain('border-green-700');
+    expect(el.className).toContain('border-[var(--success)]');
   });
 
   it('applies failure styling', () => {

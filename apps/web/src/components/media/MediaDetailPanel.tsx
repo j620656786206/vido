@@ -254,7 +254,7 @@ export function MediaDetailPanel({
             {onPlay && (
               <button
                 onClick={onPlay}
-                className="flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-500"
+                className="flex-1 rounded-lg bg-[var(--success)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--success)]"
                 data-testid="detail-play-button"
               >
                 播放
