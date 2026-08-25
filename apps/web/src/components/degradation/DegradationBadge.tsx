@@ -20,13 +20,13 @@ const levelConfig: Record<
   },
   partial: {
     color: 'text-[var(--warning)]',
-    bgColor: 'bg-yellow-400/10',
+    bgColor: 'bg-[var(--warning-tint)]',
     label: '部分降級',
     icon: '⚠',
   },
   minimal: {
     color: 'text-[var(--warning)]',
-    bgColor: 'bg-orange-400/10',
+    bgColor: 'bg-[var(--warning-tint)]',
     label: '功能受限',
     icon: '⚡',
   },

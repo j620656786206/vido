@@ -78,7 +78,7 @@ export function ApiKeysStep({ data, onUpdate, onNext, onBack, onSkip }: StepProp
 
       {!data.tmdbApiKey && !data.aiProvider && (
         <div
-          className="mb-6 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-400"
+          className="mb-6 rounded-lg border border-[var(--warning)]/30 bg-[var(--warning-tint)] px-4 py-3 text-sm text-[var(--warning-text)]"
           data-testid="skip-warning"
         >
           跳過 API 金鑰設定將會限制部分功能，例如自動取得元資料和 AI 檔名解析。

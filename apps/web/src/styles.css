@@ -56,6 +56,12 @@
    * Same precedent as --text-muted, raised for the same reason a release ago. */
   --error-text: #fca5a5; /* error body text (TC-2 AA-safe on all surfaces) */
   --warning-tint: #f59e0b1f; /* warning badge bg, 整理中 pill */
+  /* (2026-08-25, refactor-token-debt-warning) Third slice, third confirmation of
+   * the same defect class: --warning as TEXT measures 4.31:1 worst case (on a
+   * warning-tinted surface over --bg-tertiary) — sub-AA. #fbbf24 (amber-400) is
+   * what 10 call sites were already hardcoding; worst case 5.54:1. */
+  --warning-text: #fbbf24; /* warning body text (AA-safe on all surfaces) */
+  --warning-pressed: #d97706; /* warning button hover — mirrors --accent/--error-pressed */
   --info-tint: #06b6d41f; /* info badge bg, 想要 pill */
   --info-text: #22d3ee; /* info body text (AA-safe on all surfaces, worst 5.14:1) */
   --text-on-accent: #ffffff; /* label/icon on accent fills (buttons, pills) */

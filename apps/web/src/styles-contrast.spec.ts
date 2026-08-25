@@ -32,6 +32,24 @@ function luminance(hex: string): number {
   );
 }
 
+/** Composite an #RRGGBBAA tint over an opaque surface. */
+function flatten(tint8: string, surface: string): string {
+  const n = parseInt(tint8.slice(1, 7), 16);
+  const a = parseInt(tint8.slice(7, 9), 16) / 255;
+  const b = parseInt(surface.slice(1), 16);
+  const mix = (x: number, y: number) => Math.round(x * a + y * (1 - a));
+  const r = mix((n >> 16) & 255, (b >> 16) & 255);
+  const g = mix((n >> 8) & 255, (b >> 8) & 255);
+  const bl = mix(n & 255, b & 255);
+  return `#${((r << 16) | (g << 8) | bl).toString(16).padStart(6, '0')}`;
+}
+
+function token8(name: string): string {
+  const m = CSS.match(new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{8})\\b`));
+  if (!m) throw new Error(`8-digit token --${name} not found in styles.css`);
+  return m[1];
+}
+
 function ratio(fg: string, bg: string): number {
   const a = luminance(fg);
   const b = luminance(bg);
@@ -53,6 +71,7 @@ const BODY_TEXT_TOKENS = [
   'error-text',
   'accent-text',
   'info-text',
+  'warning-text',
 ] as const;
 
 describe('styles.css — text tokens clear WCAG AA on every surface', () => {
@@ -63,6 +82,27 @@ describe('styles.css — text tokens clear WCAG AA on every surface', () => {
     expect(
       Number(r.toFixed(2)),
       `--${tokenName} (${token(tokenName)}) on --${surface} (${token(surface)}) is ${r.toFixed(2)}:1`
+    ).toBeGreaterThanOrEqual(4.5);
+  });
+
+  // The plain-surface cases above have a blind spot this suite was caught by:
+  // --warning (#f59e0b) passes every plain surface yet measures 4.31:1 on its
+  // OWN tint over --bg-tertiary — and semantic text usually sits on its own
+  // tint (an error message inside an error banner). So each *-text token is
+  // also gated against its family tint composited over the darkest surface.
+  const TINT_PAIRS = [
+    ['error-text', 'error-tint'],
+    ['accent-text', 'accent-tint'],
+    ['info-text', 'info-tint'],
+    ['warning-text', 'warning-tint'],
+  ] as const;
+
+  it.each(TINT_PAIRS)('--%s on its own --%s over --bg-tertiary is ≥4.5:1', (text, tint) => {
+    const surface = flatten(token8(tint), token('bg-tertiary'));
+    const r = ratio(token(text), surface);
+    expect(
+      Number(r.toFixed(2)),
+      `--${text} (${token(text)}) on ${surface} (--${tint} over --bg-tertiary) is ${r.toFixed(2)}:1`
     ).toBeGreaterThanOrEqual(4.5);
   });
 

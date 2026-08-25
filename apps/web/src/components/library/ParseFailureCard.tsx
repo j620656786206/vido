@@ -55,14 +55,14 @@ export function ParseFailureCard({ file, onMetadataApplied, className }: ParseFa
     <>
       <div
         className={cn(
-          'relative flex flex-col rounded-lg border border-amber-500/30 bg-[var(--bg-secondary)]/50 overflow-hidden',
+          'relative flex flex-col rounded-lg border border-[var(--warning)]/30 bg-[var(--bg-secondary)]/50 overflow-hidden',
           className
         )}
         data-testid="parse-failure-card"
       >
         {/* Warning indicator */}
         <div className="absolute top-2 right-2 z-10">
-          <span className="flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-1 text-xs text-amber-400">
+          <span className="flex items-center gap-1 rounded-full bg-[var(--warning-tint)] px-2 py-1 text-xs text-[var(--warning-text)]">
             <AlertTriangle className="h-3 w-3" />
             無法識別
           </span>

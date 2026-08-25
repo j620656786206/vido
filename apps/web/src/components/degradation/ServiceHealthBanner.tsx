@@ -21,15 +21,15 @@ const levelConfig: Record<
     icon: '✓',
   },
   partial: {
-    bgColor: 'bg-yellow-900/20',
-    borderColor: 'border-yellow-500/30',
-    textColor: 'text-yellow-200',
+    bgColor: 'bg-[var(--warning-tint)]',
+    borderColor: 'border-[var(--warning)]/30',
+    textColor: 'text-[var(--warning-text)]',
     icon: '⚠️',
   },
   minimal: {
-    bgColor: 'bg-orange-900/20',
-    borderColor: 'border-orange-500/30',
-    textColor: 'text-orange-200',
+    bgColor: 'bg-[var(--warning-tint)]',
+    borderColor: 'border-[var(--warning)]/30',
+    textColor: 'text-[var(--warning-text)]',
     icon: '⚡',
   },
   offline: {

@@ -58,7 +58,7 @@ export function LearnedPatternsSettings({ onError }: LearnedPatternsSettingsProp
       {/* Header with count (AC3) */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Lightbulb className="h-5 w-5 text-amber-400" />
+          <Lightbulb className="h-5 w-5 text-[var(--warning-text)]" />
           <h3 className="text-lg font-medium text-white">自訂規則</h3>
         </div>
         <span className="text-sm text-[var(--text-secondary)]" data-testid="patterns-count">
@@ -75,7 +75,8 @@ export function LearnedPatternsSettings({ onError }: LearnedPatternsSettingsProp
           <span>共套用 {stats.totalApplied} 次</span>
           {stats.mostUsedPattern && (
             <span className="ml-2">
-              · 最常使用：<span className="text-amber-400">{stats.mostUsedPattern}</span> (
+              · 最常使用：
+              <span className="text-[var(--warning-text)]">{stats.mostUsedPattern}</span> (
               {stats.mostUsedCount} 次)
             </span>
           )}

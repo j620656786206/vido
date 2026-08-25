@@ -154,7 +154,8 @@ export function SubtitleSearchDialog({
 
   const scoreColor = (score: number) => {
     if (score > 0.7) return 'text-[var(--success)] bg-green-400/10 border-green-400/40';
-    if (score > 0.4) return 'text-[var(--warning)] bg-yellow-400/10 border-yellow-400/40';
+    if (score > 0.4)
+      return 'text-[var(--warning)] bg-[var(--warning-tint)] border-[var(--warning)]/40';
     return 'text-[var(--error)] bg-[var(--error-tint)] border-[var(--error)]/40';
   };
 

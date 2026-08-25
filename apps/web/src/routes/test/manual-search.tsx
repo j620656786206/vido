@@ -137,7 +137,7 @@ function TestManualSearchPage() {
             and Selection)
           </p>
           <div className="mt-4 flex gap-4 text-sm">
-            <span className="text-amber-400" data-testid="pending-count">
+            <span className="text-[var(--warning-text)]" data-testid="pending-count">
               Pending: {availableFiles.length}
             </span>
             <span className="text-[var(--success)]" data-testid="applied-count">
