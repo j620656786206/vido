@@ -67,7 +67,7 @@ export function ParseCompleteToast({
       {isFailed ? (
         <XCircle className="h-5 w-5 shrink-0 text-[var(--error)]" />
       ) : (
-        <CheckCircle className="h-5 w-5 shrink-0 text-emerald-400" />
+        <CheckCircle className="h-5 w-5 shrink-0 text-[var(--success-text)]" />
       )}
     </div>
   );

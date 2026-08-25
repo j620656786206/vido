@@ -40,8 +40,8 @@ const STATUS_CONFIG: Record<
   },
   completed_with_media: {
     icon: CheckCircle,
-    color: 'text-emerald-400',
-    bgColor: 'bg-emerald-500/10',
+    color: 'text-[var(--success-text)]',
+    bgColor: 'bg-[var(--success-tint)]',
     label: '已入庫',
   },
   failed: {

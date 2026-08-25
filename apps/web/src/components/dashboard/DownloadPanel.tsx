@@ -125,14 +125,14 @@ function ConnectionStatusBadge({ connected, loading }: { connected: boolean; loa
       className={cn(
         'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs',
         connected
-          ? 'bg-emerald-900/30 text-emerald-400'
+          ? 'bg-[var(--success-tint)] text-[var(--success-text)]'
           : 'bg-[var(--error-tint)] text-[var(--error)]'
       )}
     >
       <span
         className={cn(
           'h-1.5 w-1.5 rounded-full',
-          connected ? 'bg-emerald-400' : 'bg-[var(--error)]'
+          connected ? 'bg-[var(--success)]' : 'bg-[var(--error)]'
         )}
       />
       {connected ? '已連線' : '未連線'}
@@ -166,7 +166,7 @@ function CompactDownloadItem({ download }: { download: Download }) {
             className={cn(
               'h-full rounded-full transition-all',
               download.progress >= 1
-                ? 'bg-emerald-500'
+                ? 'bg-[var(--success)]'
                 : download.status === 'error'
                   ? 'bg-[var(--error)]'
                   : 'bg-[var(--accent-primary)]'

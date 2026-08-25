@@ -14,9 +14,9 @@ interface QBStatusIndicatorProps {
 
 const statusConfig = {
   healthy: {
-    dotColor: 'bg-emerald-400',
-    textColor: 'text-emerald-400',
-    bgColor: 'bg-emerald-900/30',
+    dotColor: 'bg-[var(--success)]',
+    textColor: 'text-[var(--success-text)]',
+    bgColor: 'bg-[var(--success-tint)]',
     label: 'qBittorrent 已連線',
     Icon: Wifi,
   },

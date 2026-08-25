@@ -72,6 +72,7 @@ const BODY_TEXT_TOKENS = [
   'accent-text',
   'info-text',
   'warning-text',
+  'success-text',
 ] as const;
 
 describe('styles.css — text tokens clear WCAG AA on every surface', () => {
@@ -95,6 +96,7 @@ describe('styles.css — text tokens clear WCAG AA on every surface', () => {
     ['accent-text', 'accent-tint'],
     ['info-text', 'info-tint'],
     ['warning-text', 'warning-tint'],
+    ['success-text', 'success-tint'],
   ] as const;
 
   it.each(TINT_PAIRS)('--%s on its own --%s over --bg-tertiary is ≥4.5:1', (text, tint) => {

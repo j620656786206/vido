@@ -221,7 +221,7 @@ export function PosterCard({
           {isNew && (
             <span
               data-testid="new-badge"
-              className="rounded bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white"
+              className="rounded bg-[var(--success)] px-1.5 py-0.5 text-[10px] font-bold text-white"
             >
               新增
             </span>

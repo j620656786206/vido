@@ -79,7 +79,7 @@ export function EmptyReadyForScan() {
         <div
           className={`mt-6 flex items-center gap-2 rounded-lg px-4 py-3 text-sm ${
             notification.type === 'success'
-              ? 'bg-green-900/30 text-[var(--success)]'
+              ? 'bg-[var(--success-tint)] text-[var(--success)]'
               : 'bg-[var(--error-tint)] text-[var(--error)]'
           }`}
           data-testid="empty-ready-for-scan-notification"
