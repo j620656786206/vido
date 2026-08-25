@@ -7,7 +7,7 @@ import type { SystemLog } from '../../services/logService';
 const LEVEL_STYLES: Record<string, string> = {
   ERROR: 'text-[var(--error)] bg-[var(--error-tint)]',
   WARN: 'text-[var(--warning)] bg-yellow-400/10',
-  INFO: 'text-[var(--accent-primary)] bg-blue-400/10',
+  INFO: 'text-[var(--accent-primary)] bg-[var(--accent-tint)]',
   DEBUG: 'text-[var(--text-secondary)] bg-[var(--text-muted)]/10',
 };
 

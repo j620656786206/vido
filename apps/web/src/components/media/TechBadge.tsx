@@ -4,11 +4,18 @@ import { cn } from '@/lib/utils';
 
 export type TechBadgeCategory = 'video' | 'audio' | 'hdr' | 'subtitle';
 
+/**
+ * Tech badges are INFORMATION badges, not status: video/audio/hdr/subtitle are
+ * categories, so they may keep distinct hues — but as tokens, not raw palette.
+ * The *-500 text shades measured 3.1–4.4:1 on their own tints; the readable
+ * variants clear AA. Converted whole (all four variants at once) rather than
+ * one hue per slice, so the component never ships half-migrated.
+ */
 const CATEGORY_CLASSES: Record<TechBadgeCategory, string> = {
-  video: 'bg-blue-500/20 text-blue-500',
-  audio: 'bg-purple-500/20 text-purple-500',
-  hdr: 'bg-amber-500/20 text-amber-500',
-  subtitle: 'bg-emerald-500/20 text-emerald-500',
+  video: 'bg-[var(--accent-tint)] text-[var(--accent-text)]',
+  audio: 'bg-[var(--info-tint)] text-[var(--info-text)]',
+  hdr: 'bg-[var(--warning-tint)] text-[var(--warning)]',
+  subtitle: 'bg-[var(--success-tint)] text-[var(--success)]',
 };
 
 export interface TechBadgeProps {

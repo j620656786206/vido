@@ -40,7 +40,12 @@
    * --------------------------------------------------------------------- */
   --accent-subtle: #3b82f626; /* ~15% — active nav-item wash, selected-row tint */
   --accent-tint: #3b82f61f; /* ~12% — accent badge / chip background */
-  --accent-text: #60a5fa; /* accent body text / active label (TC-2 AA-safe) */
+  /* Raised from #60a5fa (2026-08-25, refactor-token-debt-blue). Measured worst
+   * case 3.52:1 — on an --accent-primary/20 chip over --bg-tertiary — and 4.40:1
+   * on plain --bg-tertiary. Sub-AA in 55 usages, including the one PR #287 told
+   * callers to swap TO. #93c5fd clears every surface (worst 4.97:1) and is the
+   * value 24 call sites were already hardcoding as text-blue-300. */
+  --accent-text: #93c5fd; /* accent body text / active label (AA-safe on all surfaces) */
   --success-tint: #22c55e1f; /* success badge bg, 已入庫 pill */
   --error-tint: #ef44441f; /* error badge bg, failed-state pill */
   /* Raised from #f87171 (2026-08-25, refactor-token-debt-red). Measured: the old
@@ -52,6 +57,7 @@
   --error-text: #fca5a5; /* error body text (TC-2 AA-safe on all surfaces) */
   --warning-tint: #f59e0b1f; /* warning badge bg, 整理中 pill */
   --info-tint: #06b6d41f; /* info badge bg, 想要 pill */
+  --info-text: #22d3ee; /* info body text (AA-safe on all surfaces, worst 5.14:1) */
   --text-on-accent: #ffffff; /* label/icon on accent fills (buttons, pills) */
   --text-disabled: #6e7891; /* disabled/decorative text — intentionally sub-AA (TC-1) */
   --overlay-scrim: #000000b3; /* 70% — modal / bottom-sheet backdrop */

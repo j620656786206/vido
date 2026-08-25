@@ -114,7 +114,7 @@ export function FallbackFailed({
 
         <button
           onClick={onEditClick}
-          className="w-full text-center text-sm font-medium text-[var(--accent-primary)] transition-colors hover:text-blue-300"
+          className="w-full text-center text-sm font-medium text-[var(--accent-primary)] transition-colors hover:text-[var(--accent-text)]"
           data-testid="cta-manual-edit"
         >
           手動編輯

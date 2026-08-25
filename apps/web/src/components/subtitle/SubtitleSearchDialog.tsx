@@ -229,7 +229,7 @@ export function SubtitleSearchDialog({
                     type="checkbox"
                     checked={selectedProviders.includes(p.id)}
                     onChange={() => toggleProvider(p.id)}
-                    className="rounded border-[var(--border-subtle)] bg-[var(--bg-tertiary)] text-blue-600 focus:ring-[var(--accent-primary)]"
+                    className="rounded border-[var(--border-subtle)] bg-[var(--bg-tertiary)] text-[var(--accent-primary)] focus:ring-[var(--accent-primary)]"
                     data-testid={`provider-${p.id}`}
                   />
                   <span className="text-sm text-[var(--text-secondary)]">{p.label}</span>

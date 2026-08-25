@@ -110,13 +110,13 @@ export function ServiceStatusDashboard() {
       {/* Status change notifications (AC3) */}
       {statusChanges.length > 0 && (
         <div
-          className="flex items-start gap-3 rounded-lg border border-blue-800 bg-blue-900/20 px-4 py-3"
+          className="flex items-start gap-3 rounded-lg border border-[var(--accent-hover)] bg-[var(--accent-tint)] px-4 py-3"
           role="status"
           aria-live="polite"
           data-testid="status-change-notification"
         >
           <Bell className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-primary)]" />
-          <div className="space-y-1 text-sm text-blue-300">
+          <div className="space-y-1 text-sm text-[var(--accent-text)]">
             {statusChanges.map((change, i) => (
               <p key={i}>
                 {change.displayName}：{change.from} → {change.to}

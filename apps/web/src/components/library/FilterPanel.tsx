@@ -186,7 +186,7 @@ export function FilterPanel({
               aria-pressed={mediaType === t}
               className={`inline-flex min-h-[44px] items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-colors ${
                 mediaType === t
-                  ? 'border border-[var(--accent-primary)] bg-[var(--accent-primary)]/15 text-blue-300'
+                  ? 'border border-[var(--accent-primary)] bg-[var(--accent-primary)]/15 text-[var(--accent-text)]'
                   : 'border border-transparent bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
               }`}
             >
@@ -245,7 +245,7 @@ export function FilterPanel({
                 aria-pressed={selectedGenres.includes(genre)}
                 className={`inline-flex min-h-[44px] items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-colors ${
                   selectedGenres.includes(genre)
-                    ? 'border border-[var(--accent-primary)] bg-[var(--accent-primary)]/15 text-blue-300'
+                    ? 'border border-[var(--accent-primary)] bg-[var(--accent-primary)]/15 text-[var(--accent-text)]'
                     : 'border border-transparent bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
                 }`}
               >
@@ -272,7 +272,7 @@ export function FilterPanel({
             aria-pressed={selectedUnmatched}
             className={`inline-flex min-h-[44px] items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-colors ${
               selectedUnmatched
-                ? 'border border-[var(--accent-primary)] bg-[var(--accent-primary)]/15 text-blue-300'
+                ? 'border border-[var(--accent-primary)] bg-[var(--accent-primary)]/15 text-[var(--accent-text)]'
                 : 'border border-transparent bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
             }`}
           >
@@ -296,7 +296,7 @@ export function FilterPanel({
               aria-pressed={selectedDecades.includes(decade.label)}
               className={`inline-flex min-h-[44px] items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-colors ${
                 selectedDecades.includes(decade.label)
-                  ? 'border border-[var(--accent-primary)] bg-[var(--accent-primary)]/15 text-blue-300'
+                  ? 'border border-[var(--accent-primary)] bg-[var(--accent-primary)]/15 text-[var(--accent-text)]'
                   : 'border border-transparent bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
               }`}
             >

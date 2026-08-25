@@ -152,7 +152,7 @@ export function BackupManagement() {
 
       {verifyMessage && (
         <div
-          className="rounded-lg border border-blue-800 bg-blue-900/20 px-4 py-3 text-sm text-blue-300"
+          className="rounded-lg border border-[var(--accent-hover)] bg-[var(--accent-tint)] px-4 py-3 text-sm text-[var(--accent-text)]"
           role="status"
           data-testid="verify-message"
         >

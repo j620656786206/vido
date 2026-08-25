@@ -11,25 +11,25 @@ describe('TechBadge', () => {
   it('renders with video category styling', () => {
     render(<TechBadge label="4K" category="video" />);
     const badge = screen.getByTestId('tech-badge');
-    expect(badge).toHaveClass('bg-blue-500/20', 'text-blue-500');
+    expect(badge).toHaveClass('bg-[var(--accent-tint)]', 'text-[var(--accent-text)]');
   });
 
   it('renders with audio category styling', () => {
     render(<TechBadge label="DTS 5.1" category="audio" />);
     const badge = screen.getByTestId('tech-badge');
-    expect(badge).toHaveClass('bg-purple-500/20', 'text-purple-500');
+    expect(badge).toHaveClass('bg-[var(--info-tint)]', 'text-[var(--info-text)]');
   });
 
   it('renders with hdr category styling', () => {
     render(<TechBadge label="HDR10" category="hdr" />);
     const badge = screen.getByTestId('tech-badge');
-    expect(badge).toHaveClass('bg-amber-500/20', 'text-amber-500');
+    expect(badge).toHaveClass('bg-[var(--warning-tint)]', 'text-[var(--warning)]');
   });
 
   it('renders with subtitle category styling', () => {
     render(<TechBadge label="3 字幕" category="subtitle" />);
     const badge = screen.getByTestId('tech-badge');
-    expect(badge).toHaveClass('bg-emerald-500/20', 'text-emerald-500');
+    expect(badge).toHaveClass('bg-[var(--success-tint)]', 'text-[var(--success)]');
   });
 
   it('applies custom className', () => {
