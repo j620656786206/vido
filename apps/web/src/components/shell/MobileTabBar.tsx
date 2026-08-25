@@ -8,11 +8,15 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { MoreHorizontal } from 'lucide-react';
-import { MOBILE_TABS } from './navModel';
+import { ACTIVITY, MOBILE_TABS } from './navModel';
+import { useInflightJobCount } from '../../hooks/useActivity';
 import { MobileMoreSheet } from './MobileMoreSheet';
 
 export function MobileTabBar() {
   const [moreOpen, setMoreOpen] = useState(false);
+  // Same in-flight readout as the desktop rail (feat-nav-badge-inflight-jobs):
+  // on a phone the returning user's「現在有東西在跑嗎」must not cost a tap.
+  const inflightJobs = useInflightJobCount();
 
   return (
     <>
@@ -23,6 +27,8 @@ export function MobileTabBar() {
       >
         {MOBILE_TABS.map((d) => {
           const Icon = d.icon;
+          const badge = d.key === ACTIVITY.key ? inflightJobs : undefined;
+          const hasBadge = typeof badge === 'number' && badge > 0;
           return (
             <Link
               key={d.key}
@@ -30,12 +36,23 @@ export function MobileTabBar() {
               search={d.search}
               activeOptions={{ exact: !!d.exact, includeSearch: false }}
               data-testid={`nav-${d.key}`}
-              aria-label={d.label}
+              aria-label={hasBadge ? `${d.label}（${badge} 個任務進行中）` : d.label}
               // --accent-primary on --bg-secondary measured 3.58:1 at 11px; --accent-text
               // (the read-me blue) measures 5.17:1 on the same ground.
               className="group/tab flex flex-1 flex-col items-center justify-center gap-1 pt-1 text-[var(--text-muted)] transition-colors data-[status=active]:text-[var(--accent-text)]"
             >
-              <Icon className="h-6 w-6" aria-hidden="true" />
+              <span className="relative">
+                <Icon className="h-6 w-6" aria-hidden="true" />
+                {hasBadge && (
+                  <span
+                    aria-hidden="true"
+                    data-testid={`nav-${d.key}-badge`}
+                    className="absolute -right-2 -top-1 rounded-full bg-[var(--accent-subtle)] px-1 py-px font-mono text-[10px] leading-none text-[var(--accent-text)]"
+                  >
+                    {badge}
+                  </span>
+                )}
+              </span>
               <span className="text-[11px] font-medium group-data-[status=active]/tab:font-bold">
                 {d.label}
               </span>

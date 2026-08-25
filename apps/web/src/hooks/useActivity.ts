@@ -36,3 +36,16 @@ export function useActivity() {
     refetchOnWindowFocus: true,
   });
 }
+
+/**
+ * Live in-flight job count for the nav badge (feat-nav-badge-inflight-jobs).
+ * One counting path only: the same GET /api/v1/activity the hub reads —
+ * TanStack Query dedupes across every mount (sidebar, tab bar, hub). Returns
+ * undefined while loading / when the section is degraded, so the badge is
+ * ABSENT rather than showing a number nobody measured (誠實的讀數).
+ */
+export function useInflightJobCount(): number | undefined {
+  const { data } = useActivity();
+  const section = data?.activeJobs;
+  return section?.status === 'ok' ? section.jobs.length : undefined;
+}

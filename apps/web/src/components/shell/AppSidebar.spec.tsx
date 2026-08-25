@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   createRootRoute,
   createRoute,
@@ -14,6 +14,11 @@ vi.mock('../../hooks/useLibrary', () => ({
 }));
 vi.mock('../../hooks/useStatusSummary', () => ({
   useStatusSummary: () => ({ data: undefined }),
+}));
+// feat-nav-badge-inflight-jobs — default: no jobs (badge absent). Tests flip it.
+let mockInflight: number | undefined;
+vi.mock('../../hooks/useActivity', () => ({
+  useInflightJobCount: () => mockInflight,
 }));
 
 import { AppSidebar } from './AppSidebar';
@@ -92,5 +97,44 @@ describe('AppSidebar', () => {
     renderSidebar({ path: '/downloads' });
     const downloads = await screen.findByTestId('nav-downloads');
     expect(downloads).toHaveAttribute('data-status', 'active');
+  });
+});
+
+describe('AppSidebar — in-flight job badge (feat-nav-badge-inflight-jobs)', () => {
+  afterEach(() => {
+    mockInflight = undefined;
+  });
+
+  it('活動 wears the count when jobs are running, and speaks it to AT', async () => {
+    mockInflight = 3;
+    renderSidebar();
+    const activity = await screen.findByTestId('nav-activity');
+    expect(screen.getByTestId('nav-activity-badge')).toHaveTextContent('3');
+    expect(activity).toHaveAttribute('aria-label', '活動（3 個任務進行中）');
+  });
+
+  it('badge is ABSENT at zero and while the source is degraded/loading', async () => {
+    mockInflight = 0;
+    renderSidebar();
+    await screen.findByTestId('nav-activity');
+    expect(screen.queryByTestId('nav-activity-badge')).toBeNull();
+    expect(screen.getByTestId('nav-activity')).toHaveAttribute('aria-label', '活動');
+  });
+
+  it('the readout survives the collapsed rail', async () => {
+    mockInflight = 2;
+    renderSidebar({ collapsed: true });
+    const activity = await screen.findByTestId('nav-activity');
+    expect(screen.getByTestId('nav-activity-badge')).toHaveTextContent('2');
+    expect(activity).toHaveAttribute('aria-label', '活動（2 個任務進行中）');
+  });
+
+  it('the badge is a wash readout, never a solid accent fill (配給強調)', async () => {
+    mockInflight = 5;
+    renderSidebar();
+    const badge = await screen.findByTestId('nav-activity-badge');
+    expect(badge.className).toContain('bg-[var(--accent-subtle)]');
+    expect(badge.className).toContain('text-[var(--accent-text)]');
+    expect(badge.className).not.toContain('bg-[var(--accent-primary)]');
   });
 });

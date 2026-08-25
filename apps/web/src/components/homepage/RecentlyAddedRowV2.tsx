@@ -23,6 +23,7 @@
  * floor on the 重試 control (N5).
  */
 import { AlertTriangle } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
 import { useRecentlyAdded } from '../../hooks/useLibrary';
 import { PosterCardV2 } from '../library/PosterCardV2';
 import type { LibraryItem, LibraryMovie, LibrarySeries } from '../../types/library';
@@ -83,15 +84,23 @@ export function RecentlyAddedRowV2() {
         <h2 id="home-ra-title" className="text-xl font-semibold text-[var(--text-primary)]">
           最近新增
         </h2>
-        {/* 進行中 · N — lifecycle chip, exception-signal only (hidden at 0). */}
+        {/* 進行中 · N — exception-signal chip (hidden at 0). Critique R1 filed
+            it as a GOLD-wearing dead end (disc-2026-08-home-inflight-chip-dead-
+            end): now running green (固定詞彙: 綠＝正在發生) with a door to the
+            Activity hub. The count stays scoped to THIS row's items — /activity
+            `pending.parse_count` measures the parse-job QUEUE (capped), a
+            different quantity that diverges from item parseStatus (0 vs 3 on
+            the seeded env), so swapping it in would trade a narrow-but-true
+            readout for a wrong one. */}
         {inProgress > 0 && (
-          <span
+          <Link
+            to="/activity"
             data-testid="home-recent-progress"
-            className="flex items-center gap-1 rounded-full bg-[var(--accent-tint)] px-2.5 py-1 text-xs font-medium text-[var(--accent-text)]"
+            className="flex items-center gap-1 rounded-full bg-[var(--success-tint)] px-2.5 py-1 text-xs font-medium text-[var(--success-text)] transition-colors hover:bg-[var(--bg-tertiary)]"
           >
             進行中
             <span className="font-mono tabular-nums">· {inProgress}</span>
-          </span>
+          </Link>
         )}
       </div>
 
