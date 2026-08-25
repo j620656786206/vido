@@ -19,7 +19,7 @@
  *    so localhost — secure by definition — never trains users to dismiss it.
  */
 import { useState } from 'react';
-import { AlertTriangle, Loader2, Plug, Save, ShieldAlert, Trash2 } from 'lucide-react';
+import { AlertTriangle, Loader2, Plug, Save, ShieldAlert, Trash2, Check } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useKeySettings, useSaveKeys, useTestClaudeKey } from '../../hooks/useKeySettings';
 import {
@@ -511,7 +511,14 @@ export function ApiKeysForm() {
 
           <div className="mt-6 flex flex-col items-end gap-3">
             {saveSuccess && (
-              <p role="status" aria-live="polite" className="text-sm text-[var(--success-text)]">
+              // 固定詞彙: green means IN PROGRESS; a completed save is a neutral
+              // report — same pattern as QBittorrentForm one tab away.
+              <p
+                role="status"
+                aria-live="polite"
+                className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)]"
+              >
+                <Check className="h-4 w-4" aria-hidden="true" />
                 金鑰已儲存
               </p>
             )}

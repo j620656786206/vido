@@ -17,12 +17,14 @@ import prettier from 'eslint-config-prettier';
 import implementsPenNodeId from './apps/web/src/eslint-rules/implements-pen-node-id.js';
 import timeDependentFixtureStability from './apps/web/src/eslint-rules/time-dependent-fixture-stability.js';
 import noHardcodedPalette from './apps/web/src/eslint-rules/no-hardcoded-palette.js';
+import noEmojiInUi from './apps/web/src/eslint-rules/no-emoji-in-ui.js';
 
 const localRules = {
   rules: {
     ...implementsPenNodeId.rules,
     ...timeDependentFixtureStability.rules,
     ...noHardcodedPalette.rules,
+    ...noEmojiInUi.rules,
   },
 };
 
@@ -266,6 +268,25 @@ export default [
     },
     rules: {
       'local/no-hardcoded-palette': 'error',
+    },
+  },
+
+  // Vocabulary door-closer (fix-settings-graduation, 2026-08-25) — emoji
+  // pictographs are hardcoded colour neither the token rule nor the contrast
+  // gate can see (a ✅ is a green no spec measures). Settings-only scope:
+  // exemption-free there after this PR; the repo-wide sweep is filed as
+  // disc-2026-08-emoji-sweep-repo-wide — widen the glob when it lands.
+  {
+    files: [
+      'apps/web/src/components/settings/**/*.{ts,tsx}',
+      'apps/web/src/routes/settings/**/*.{ts,tsx}',
+    ],
+    ignores: ['apps/web/src/**/*.spec.{ts,tsx}', 'apps/web/src/**/*.test.{ts,tsx}'],
+    plugins: {
+      local: localRules,
+    },
+    rules: {
+      'local/no-emoji-in-ui': 'error',
     },
   },
 

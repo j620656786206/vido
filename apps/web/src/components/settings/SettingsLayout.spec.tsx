@@ -149,7 +149,10 @@ describe('SettingsLayout', () => {
         (g) => SETTINGS_CATEGORIES.filter((c) => c.group === g).length
       );
       expect(Math.max(...sizes)).toBeLessThanOrEqual(4);
-      expect(sizes).toEqual([3, 2, 3, 2]);
+      // export graduated to maintenance (fix-settings-graduation) — the
+      // exporter had been live inside 備份與還原 all along; maintenance hits
+      // the ≤4 ceiling exactly and 尚未開放 shrinks to performance alone.
+      expect(sizes).toEqual([3, 2, 4, 1]);
     });
 
     it('draws a divider between groups but never before the first', async () => {
@@ -247,26 +250,39 @@ describe('SettingsLayout', () => {
   });
 
   describe('unavailable categories', () => {
-    it.each([
-      ['export', '匯出/匯入'],
-      ['performance', '效能監控'],
-    ])('%s stays visible, reachable, and says why', async (key, label) => {
-      renderWithRouter();
-      const tab = await screen.findByTestId(`settings-tab-${key}`);
-      expect(tab).toHaveTextContent(label);
-      expect(tab).toHaveTextContent('尚未開放');
-      expect(tab).not.toHaveTextContent('Coming Soon');
-      expect(tab).toHaveAttribute('role', 'link');
-      expect(tab).toHaveAttribute('aria-disabled', 'true');
-      expect(tab).toHaveAttribute('tabindex', '0');
-      expect(tab).toHaveAttribute('aria-label', `${label}：此功能尚未實作`);
-    });
+    it.each([['performance', '效能監控']])(
+      '%s stays visible, reachable, and says why',
+      async (key, label) => {
+        renderWithRouter();
+        const tab = await screen.findByTestId(`settings-tab-${key}`);
+        expect(tab).toHaveTextContent(label);
+        expect(tab).toHaveTextContent('尚未開放');
+        expect(tab).not.toHaveTextContent('Coming Soon');
+        expect(tab).toHaveAttribute('role', 'link');
+        expect(tab).toHaveAttribute('aria-disabled', 'true');
+        expect(tab).toHaveAttribute('tabindex', '0');
+        expect(tab).toHaveAttribute('aria-label', `${label}：此功能尚未實作`);
+      }
+    );
 
     it('does not navigate when an unavailable tab is clicked', async () => {
       const user = userEvent.setup();
       renderWithRouter('/settings/connection');
-      await user.click(await screen.findByTestId('settings-tab-export'));
+      await user.click(await screen.findByTestId('settings-tab-performance'));
       expect(screen.getByTestId('connection-page')).toBeInTheDocument();
+    });
+
+    // The other side of the graduation: export is a REAL link now. A tab that
+    // kept the disabled costume after its page went live would be the same
+    // lie in the opposite direction.
+    it('export graduated: enabled, navigable, no 尚未開放 badge', async () => {
+      const user = userEvent.setup();
+      renderWithRouter('/settings/connection');
+      const tab = await screen.findByTestId('settings-tab-export');
+      expect(tab).not.toHaveTextContent('尚未開放');
+      expect(tab).not.toHaveAttribute('aria-disabled');
+      await user.click(tab);
+      expect(await screen.findByText('Export')).toBeInTheDocument();
     });
   });
 

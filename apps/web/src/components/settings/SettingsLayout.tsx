@@ -95,11 +95,14 @@ const SETTINGS_CATEGORIES: SettingsCategory[] = [
     group: 'maintenance',
   },
   {
+    // 匯出 shipped inside 備份與還原 long before this tab was un-parked — the
+    // strip claiming「尚未實作」while a working exporter lived one tab away was
+    // the chrome's one outright false statement (critique R1, fixed R4). 匯入
+    // is still honestly pending, stated on the page itself.
     key: 'export',
     label: '匯出/匯入',
     to: '/settings/export',
-    group: 'unavailable',
-    enabled: false,
+    group: 'maintenance',
   },
   {
     key: 'performance',

@@ -12,7 +12,6 @@ import {
 import { BackupTable } from './BackupTable';
 import { RestoreConfirmDialog } from './RestoreConfirmDialog';
 import { BackupScheduleConfig } from './BackupScheduleConfig';
-import { MetadataExport } from './MetadataExport';
 import { formatBytes } from '../../utils/formatBytes';
 import type { Backup } from '../../services/backupService';
 
@@ -218,9 +217,6 @@ export function BackupManagement() {
 
       {/* Schedule config */}
       <BackupScheduleConfig />
-
-      {/* Metadata export */}
-      <MetadataExport />
 
       {/* Restore confirmation dialog */}
       {restoreTarget && (
