@@ -116,8 +116,9 @@ export function ScannerSettings() {
         <div
           className={cn(
             'flex items-center gap-2 rounded-lg px-4 py-3 text-sm',
-            notification.type === 'success' &&
-              'bg-[var(--success-tint)] text-[var(--success-text)]',
+            // 固定詞彙: completion notices are neutral; green stays with
+            // states that are LIVE right now.
+            notification.type === 'success' && 'bg-[var(--bg-tertiary)] text-[var(--text-primary)]',
             notification.type === 'warning' &&
               'bg-[var(--warning-tint)] text-[var(--warning-text)]',
             notification.type === 'error' && 'bg-[var(--error-tint)] text-[var(--error-text)]'
