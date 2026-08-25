@@ -43,6 +43,55 @@ function setData(data: StatusSummary | undefined) {
 describe('SidebarFooter (status strip)', () => {
   beforeEach(() => vi.clearAllMocks());
 
+  // 8px dots conveying health by hue alone leave a low-vision SIGHTED user with
+  // red-versus-green and nothing else. Screen readers were already served; these
+  // assertions are about the pixels.
+  describe('health is carried by shape, not colour alone', () => {
+    const shapeOf = (status: string, name = 'qbittorrent') => {
+      setData(
+        summary({
+          serviceHealth: {
+            status: 'ok',
+            services: [
+              {
+                name,
+                displayName: 'qBittorrent',
+                status: status as never,
+                message: '',
+                lastSuccessAt: null,
+                lastCheckAt: '',
+                responseTimeMs: 0,
+              },
+            ],
+          },
+        })
+      );
+      render(<SidebarFooter />);
+      return screen.getByTestId(`status-dot-${name}`).className;
+    };
+
+    it('healthy is a plain filled dot', () => {
+      const cls = shapeOf('connected');
+      expect(cls).toContain('bg-[var(--success)]');
+      expect(cls).not.toContain('ring-2');
+      expect(cls).not.toContain('border');
+    });
+
+    it.each(['error', 'disconnected', 'rate_limited'])(
+      '%s gets a halo so it is bigger than the dots that need nothing',
+      (status) => {
+        expect(shapeOf(status)).toContain('ring-2');
+      }
+    );
+
+    it('never-configured is a hollow ring, not a filled dot', () => {
+      const cls = shapeOf('unconfigured');
+      expect(cls).toContain('border');
+      expect(cls).toContain('bg-transparent');
+      expect(cls).not.toContain('ring-2');
+    });
+  });
+
   it('renders disk / scan / queue / health dot when all sections are ok', () => {
     setData(summary());
     render(<SidebarFooter />);

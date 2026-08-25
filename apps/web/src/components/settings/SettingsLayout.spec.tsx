@@ -179,23 +179,23 @@ describe('SettingsLayout', () => {
   it('highlights the active sidebar item for connection route', async () => {
     renderWithRouter('/settings/connection');
     const connectionNav = await screen.findByTestId('settings-nav-connection');
-    expect(connectionNav).toHaveClass('text-[var(--accent-primary)]');
-    expect(connectionNav).toHaveClass('bg-[var(--bg-tertiary)]');
-    expect(connectionNav).toHaveClass('border-blue-400');
+    expect(connectionNav).toHaveClass('text-[var(--text-primary)]');
+    expect(connectionNav).toHaveClass('font-semibold');
+    expect(connectionNav).toHaveClass('bg-[var(--accent-subtle)]');
   });
 
   it('shows inactive styling for non-active sidebar items', async () => {
     renderWithRouter('/settings/connection');
     const cacheNav = await screen.findByTestId('settings-nav-cache');
     expect(cacheNav).toHaveClass('text-[var(--text-secondary)]');
-    expect(cacheNav).toHaveClass('border-transparent');
+    expect(cacheNav).not.toHaveClass('bg-[var(--accent-subtle)]');
   });
 
   it('highlights the active mobile tab for connection route', async () => {
     renderWithRouter('/settings/connection');
     const connectionTab = await screen.findByTestId('settings-tab-connection');
-    expect(connectionTab).toHaveClass('text-[var(--accent-primary)]');
-    expect(connectionTab).toHaveClass('border-blue-400');
+    expect(connectionTab).toHaveClass('text-[var(--text-primary)]');
+    expect(connectionTab).toHaveClass('bg-[var(--accent-subtle)]');
   });
 
   it('displays abbreviated labels in mobile tabs', async () => {
@@ -228,50 +228,72 @@ describe('SettingsLayout', () => {
   it('highlights cache sidebar item when navigated to /settings/cache', async () => {
     renderWithRouter('/settings/cache');
     const cacheNav = await screen.findByTestId('settings-nav-cache');
-    expect(cacheNav).toHaveClass('text-[var(--accent-primary)]');
-    expect(cacheNav).toHaveClass('bg-[var(--bg-tertiary)]');
-    expect(cacheNav).toHaveClass('border-blue-400');
+    expect(cacheNav).toHaveClass('text-[var(--text-primary)]');
+    expect(cacheNav).toHaveClass('font-semibold');
+    expect(cacheNav).toHaveClass('bg-[var(--accent-subtle)]');
     // connection should be inactive
     const connectionNav = screen.getByTestId('settings-nav-connection');
     expect(connectionNav).toHaveClass('text-[var(--text-secondary)]');
-    expect(connectionNav).toHaveClass('border-transparent');
+    expect(connectionNav).not.toHaveClass('bg-[var(--accent-subtle)]');
   });
 
   it('highlights logs sidebar item when navigated to /settings/logs', async () => {
     renderWithRouter('/settings/logs');
     const logsNav = await screen.findByTestId('settings-nav-logs');
-    expect(logsNav).toHaveClass('text-[var(--accent-primary)]');
-    expect(logsNav).toHaveClass('border-blue-400');
+    expect(logsNav).toHaveClass('text-[var(--text-primary)]');
+    expect(logsNav).toHaveClass('bg-[var(--accent-subtle)]');
   });
 
   it('highlights status sidebar item when navigated to /settings/status', async () => {
     renderWithRouter('/settings/status');
     const statusNav = await screen.findByTestId('settings-nav-status');
-    expect(statusNav).toHaveClass('text-[var(--accent-primary)]');
-    expect(statusNav).toHaveClass('border-blue-400');
+    expect(statusNav).toHaveClass('text-[var(--text-primary)]');
+    expect(statusNav).toHaveClass('bg-[var(--accent-subtle)]');
   });
 
   it('highlights backup sidebar item when navigated to /settings/backup', async () => {
     renderWithRouter('/settings/backup');
     const backupNav = await screen.findByTestId('settings-nav-backup');
-    expect(backupNav).toHaveClass('text-[var(--accent-primary)]');
-    expect(backupNav).toHaveClass('border-blue-400');
+    expect(backupNav).toHaveClass('text-[var(--text-primary)]');
+    expect(backupNav).toHaveClass('bg-[var(--accent-subtle)]');
   });
 
-  it('renders disabled export sidebar item with Coming Soon badge', async () => {
+  it('renders disabled export sidebar item with a zh-TW unavailable badge', async () => {
     renderWithRouter('/settings/connection');
     const exportNav = await screen.findByTestId('settings-nav-export');
     expect(exportNav).toHaveClass('cursor-not-allowed');
     expect(exportNav).toHaveClass('text-[var(--text-muted)]');
-    expect(exportNav).toHaveTextContent('Coming Soon');
+    expect(exportNav).toHaveTextContent('尚未開放');
+    expect(exportNav).not.toHaveTextContent('Coming Soon');
   });
 
-  it('renders disabled performance sidebar item with Coming Soon badge', async () => {
+  it('renders disabled performance sidebar item with a zh-TW unavailable badge', async () => {
     renderWithRouter('/settings/connection');
     const perfNav = await screen.findByTestId('settings-nav-performance');
     expect(perfNav).toHaveClass('cursor-not-allowed');
     expect(perfNav).toHaveClass('text-[var(--text-muted)]');
-    expect(perfNav).toHaveTextContent('Coming Soon');
+    expect(perfNav).toHaveTextContent('尚未開放');
+  });
+
+  // The reason used to live only in a hover `title`, on an element that was not
+  // focusable and not in the tab order — so keyboard and touch users met a dead
+  // row with no explanation at all.
+  it.each([
+    ['settings-nav-export', '匯出/匯入'],
+    ['settings-nav-performance', '效能監控'],
+  ])('keeps the disabled row %s reachable and self-explaining', async (testId, label) => {
+    renderWithRouter('/settings/connection');
+    const row = await screen.findByTestId(testId);
+    expect(row).toHaveAttribute('role', 'link');
+    expect(row).toHaveAttribute('aria-disabled', 'true');
+    expect(row).toHaveAttribute('tabindex', '0');
+    expect(row).toHaveAttribute('aria-label', `${label}：此功能尚未實作`);
+  });
+
+  it('marks the active category with aria-current so it is not colour-only', async () => {
+    renderWithRouter('/settings/cache');
+    expect(await screen.findByTestId('settings-nav-cache')).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByTestId('settings-nav-connection')).not.toHaveAttribute('aria-current');
   });
 
   // --- Mobile tab active states for each category ---
@@ -279,8 +301,8 @@ describe('SettingsLayout', () => {
   it('highlights cache mobile tab when navigated to /settings/cache', async () => {
     renderWithRouter('/settings/cache');
     const cacheTab = await screen.findByTestId('settings-tab-cache');
-    expect(cacheTab).toHaveClass('text-[var(--accent-primary)]');
-    expect(cacheTab).toHaveClass('border-blue-400');
+    expect(cacheTab).toHaveClass('text-[var(--text-primary)]');
+    expect(cacheTab).toHaveClass('bg-[var(--accent-subtle)]');
     // connection tab should be inactive
     const connectionTab = screen.getByTestId('settings-tab-connection');
     expect(connectionTab).toHaveClass('text-[var(--text-secondary)]');
@@ -360,17 +382,15 @@ describe('SettingsLayout', () => {
     await screen.findByTestId('settings-sidebar');
 
     // Verify connection is active initially
-    expect(screen.getByTestId('settings-nav-connection')).toHaveClass(
-      'text-[var(--accent-primary)]'
-    );
+    expect(screen.getByTestId('settings-nav-connection')).toHaveClass('text-[var(--text-primary)]');
 
     // Click cache
     await user.click(screen.getByTestId('settings-nav-cache'));
 
     // Cache should now be active
     const cacheNav = await screen.findByTestId('settings-nav-cache');
-    expect(cacheNav).toHaveClass('text-[var(--accent-primary)]');
-    expect(cacheNav).toHaveClass('border-blue-400');
+    expect(cacheNav).toHaveClass('text-[var(--text-primary)]');
+    expect(cacheNav).toHaveClass('bg-[var(--accent-subtle)]');
 
     // Connection should now be inactive
     expect(screen.getByTestId('settings-nav-connection')).toHaveClass(
@@ -387,7 +407,7 @@ describe('SettingsLayout', () => {
     await user.click(screen.getByTestId('settings-tab-logs'));
 
     const logsTab = await screen.findByTestId('settings-tab-logs');
-    expect(logsTab).toHaveClass('text-[var(--accent-primary)]');
+    expect(logsTab).toHaveClass('text-[var(--text-primary)]');
   });
 
   // --- Content rendering ---

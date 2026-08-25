@@ -95,7 +95,11 @@ export function SidebarNavItem({
         </span>
       )}
       {typeof badge === 'number' && badge > 0 && (
-        <span className="ml-auto rounded-full bg-[var(--accent-primary)] px-1.5 py-0.5 font-mono text-[11px] leading-none text-[var(--text-on-accent)]">
+        // Latent, not live: no caller passes `badge` yet (feat-nav-badge-inflight-jobs).
+        // Fixed now because the moment it IS wired it would ship white-on-solid-accent
+        // at 3.68:1, same as the filter-rail count badge. A badge is a readout, so the
+        // rationed-accent rule wants the wash here regardless of contrast.
+        <span className="ml-auto rounded-full bg-[var(--accent-subtle)] px-1.5 py-0.5 font-mono text-[11px] leading-none text-[var(--accent-text)]">
           {badge}
         </span>
       )}

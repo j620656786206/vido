@@ -31,7 +31,9 @@ export function MobileTabBar() {
               activeOptions={{ exact: !!d.exact, includeSearch: false }}
               data-testid={`nav-${d.key}`}
               aria-label={d.label}
-              className="group/tab flex flex-1 flex-col items-center justify-center gap-1 pt-1 text-[var(--text-muted)] transition-colors data-[status=active]:text-[var(--accent-primary)]"
+              // --accent-primary on --bg-secondary measured 3.58:1 at 11px; --accent-text
+              // (the read-me blue) measures 5.17:1 on the same ground.
+              className="group/tab flex flex-1 flex-col items-center justify-center gap-1 pt-1 text-[var(--text-muted)] transition-colors data-[status=active]:text-[var(--accent-text)]"
             >
               <Icon className="h-6 w-6" aria-hidden="true" />
               <span className="text-[11px] font-medium group-data-[status=active]/tab:font-bold">

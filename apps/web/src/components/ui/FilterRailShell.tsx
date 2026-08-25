@@ -4,7 +4,7 @@
 // shell (264px, $bg-primary, right hairline, 篩選 header + Mono active-count badge
 // + collapse chevron, scrollable body, pinned footer) instead of forking a copy.
 // The body (a FilterPanel) and the footer content stay rail-specific via slots.
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { PanelLeftClose } from 'lucide-react';
 
 interface FilterRailShellProps {
@@ -36,19 +36,30 @@ export function FilterRailShell({
   children,
   footer,
 }: FilterRailShellProps) {
+  // The rail was an unlabeled <aside> — a complementary landmark with no name,
+  // so AT users got "complementary" and nothing else. Point it at the heading it
+  // already renders rather than repeating the string.
+  const headingId = useId();
+
   return (
     <aside
       data-testid={testId}
+      aria-labelledby={headingId}
       className="sticky top-16 flex h-[calc(100vh-4rem)] w-[264px] flex-shrink-0 flex-col border-r border-[var(--border-subtle)]"
     >
       {/* Rail header */}
       <div className="flex items-center justify-between px-5 pb-3 pt-5">
         <div className="flex items-center gap-2">
-          <h3 className="text-[15px] font-bold text-[var(--text-primary)]">篩選</h3>
+          <h3 id={headingId} className="text-[15px] font-bold text-[var(--text-primary)]">
+            篩選
+          </h3>
           {activeCount > 0 && (
             <span
               data-testid={activeCountTestId}
-              className="inline-flex items-center justify-center rounded-full bg-[var(--accent-primary)] px-1.5 py-0.5 font-mono text-[11px] font-medium tabular-nums text-[var(--text-on-accent)]"
+              // White on solid --accent-primary measured 3.68:1 at 11px. This is a
+              // READOUT, not a control, so the rationed-accent rule wants the wash
+              // here anyway — the fix and the rule point the same way.
+              className="inline-flex items-center justify-center rounded-full bg-[var(--accent-subtle)] px-1.5 py-0.5 font-mono text-[11px] font-medium tabular-nums text-[var(--accent-text)]"
             >
               {activeCount}
             </span>
