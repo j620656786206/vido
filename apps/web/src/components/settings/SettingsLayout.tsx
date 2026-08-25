@@ -1,89 +1,9 @@
 // Design ref: ux-design.pen Screen C4-D (6UCtX) · C4-M (2H4OM)
+// ⚠️ The .pen still shows the RETIRED vertical rail. feat-settings-tabs-ia reshapes
+// this surface in code; the design file is brought back into line in the same story.
+import { useEffect, useRef } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
-import {
-  Plug,
-  Database,
-  FileText,
-  Activity,
-  HardDrive,
-  ArrowUpDown,
-  Gauge,
-  ScanLine,
-  LayoutGrid,
-  KeyRound,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
-
-interface SettingsCategory {
-  key: string;
-  label: string;
-  shortLabel: string;
-  icon: LucideIcon;
-  to: string;
-  enabled?: boolean;
-}
-
-const SETTINGS_CATEGORIES: SettingsCategory[] = [
-  {
-    key: 'connection',
-    label: '連線設定',
-    shortLabel: '連線',
-    icon: Plug,
-    to: '/settings/connection',
-  },
-  {
-    // Story sub-2-1b (FR25) — sits next to 連線設定 because both configure how
-    // Vido reaches an external service. Without this entry the route would be
-    // orphaned: /settings/ redirects to /settings/connection, so the sidebar IS
-    // the settings index.
-    key: 'keys',
-    label: '金鑰設定',
-    shortLabel: '金鑰',
-    icon: KeyRound,
-    to: '/settings/keys',
-  },
-  {
-    key: 'scanner',
-    label: '媒體庫掃描',
-    shortLabel: '掃描',
-    icon: ScanLine,
-    to: '/settings/scanner',
-  },
-  {
-    key: 'homepage',
-    label: '自訂首頁',
-    shortLabel: '首頁',
-    icon: LayoutGrid,
-    to: '/settings/homepage',
-  },
-  { key: 'cache', label: '快取管理', shortLabel: '快取', icon: Database, to: '/settings/cache' },
-  { key: 'logs', label: '系統日誌', shortLabel: '日誌', icon: FileText, to: '/settings/logs' },
-  { key: 'status', label: '服務狀態', shortLabel: '狀態', icon: Activity, to: '/settings/status' },
-  {
-    key: 'backup',
-    label: '備份與還原',
-    shortLabel: '備份',
-    icon: HardDrive,
-    to: '/settings/backup',
-  },
-  {
-    key: 'export',
-    label: '匯出/匯入',
-    shortLabel: '匯出',
-    icon: ArrowUpDown,
-    to: '/settings/export',
-    enabled: false,
-  },
-  {
-    key: 'performance',
-    label: '效能監控',
-    shortLabel: '效能',
-    icon: Gauge,
-    to: '/settings/performance',
-    enabled: false,
-  },
-];
 
 /**
  * Shown on categories that are routed but not built. Chinese, because it is the
@@ -93,6 +13,103 @@ const SETTINGS_CATEGORIES: SettingsCategory[] = [
 const UNAVAILABLE_BADGE = '尚未開放';
 const UNAVAILABLE_REASON = '此功能尚未實作';
 
+/**
+ * The three clusters the flat list always had and never showed. Ten ungrouped
+ * options sat well past the ≤4-per-decision-point line; each of these is 2–3.
+ * `unavailable` is not a fourth topic — it is where routed-but-unbuilt entries
+ * park, so they stop interrupting a real group.
+ */
+type SettingsGroup = 'connection' | 'library' | 'maintenance' | 'unavailable';
+
+const GROUP_ORDER: SettingsGroup[] = ['connection', 'library', 'maintenance', 'unavailable'];
+
+const GROUP_LABEL: Record<SettingsGroup, string> = {
+  connection: '連線',
+  library: '媒體庫',
+  maintenance: '維護',
+  unavailable: '尚未開放',
+};
+
+interface SettingsCategory {
+  key: string;
+  label: string;
+  to: string;
+  group: SettingsGroup;
+  enabled?: boolean;
+}
+
+/**
+ * Order is MEANING, not insertion order. 服務狀態 moved up to sit with the things
+ * it reports on, and 備份與還原 moved down to sit with the other maintenance
+ * chores. Both moves are the point of the grouping.
+ */
+const SETTINGS_CATEGORIES: SettingsCategory[] = [
+  {
+    key: 'connection',
+    label: '連線設定',
+    to: '/settings/connection',
+    group: 'connection',
+  },
+  {
+    // Story sub-2-1b (FR25) — sits next to 連線設定 because both configure how
+    // Vido reaches an external service.
+    key: 'keys',
+    label: '金鑰設定',
+    to: '/settings/keys',
+    group: 'connection',
+  },
+  {
+    key: 'status',
+    label: '服務狀態',
+    to: '/settings/status',
+    group: 'connection',
+  },
+  {
+    key: 'scanner',
+    label: '媒體庫掃描',
+    to: '/settings/scanner',
+    group: 'library',
+  },
+  {
+    key: 'homepage',
+    label: '自訂首頁',
+    to: '/settings/homepage',
+    group: 'library',
+  },
+  {
+    key: 'cache',
+    label: '快取管理',
+    to: '/settings/cache',
+    group: 'maintenance',
+  },
+  {
+    key: 'logs',
+    label: '系統日誌',
+    to: '/settings/logs',
+    group: 'maintenance',
+  },
+  {
+    key: 'backup',
+    label: '備份與還原',
+    to: '/settings/backup',
+    group: 'maintenance',
+  },
+  {
+    key: 'export',
+    label: '匯出/匯入',
+    to: '/settings/export',
+    group: 'unavailable',
+    enabled: false,
+  },
+  {
+    key: 'performance',
+    label: '效能監控',
+    to: '/settings/performance',
+    group: 'unavailable',
+    enabled: false,
+  },
+];
+
 interface SettingsLayoutProps {
   children: React.ReactNode;
 }
@@ -101,132 +118,125 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
   const routerState = useRouterState();
   const currentPath = routerState.location.pathname;
 
-  return (
-    <div className="flex w-full flex-col md:flex-row" data-testid="settings-layout">
-      {/* Desktop sidebar */}
-      <nav
-        className="hidden w-56 shrink-0 border-r border-[var(--border-subtle)] md:block"
-        aria-label="設定分類導航"
-        data-testid="settings-sidebar"
-      >
-        <ul className="py-4">
-          {SETTINGS_CATEGORIES.map((cat) => {
-            const isActive = currentPath.startsWith(cat.to);
-            const isEnabled = cat.enabled !== false;
-            const Icon = cat.icon;
-            return (
-              <li key={cat.key}>
-                {isEnabled ? (
-                  <Link
-                    to={cat.to}
-                    aria-current={isActive ? 'page' : undefined}
-                    className={cn(
-                      'flex items-center gap-3 px-4 py-2.5 text-sm transition-colors',
-                      // "You are here" used to be --accent-primary on --bg-tertiary:
-                      // 3.04:1, below the 4.5:1 PRODUCT.md calls a hard gate, and
-                      // BELOW the 3.55:1 that got --text-disabled rejected. The
-                      // inactive rows passed at 7.47:1, so the one row that had to
-                      // stand out was the only one you could not read. This is the
-                      // recipe SidebarNavItem.tsx:80 already proves at 10.00:1.
-                      // Note --accent-text alone is NOT enough here: 4.40:1 on
-                      // --bg-tertiary, still short. The wash is what carries it.
-                      isActive
-                        ? 'bg-[var(--accent-subtle)] font-semibold text-[var(--text-primary)]'
-                        : 'font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
-                    )}
-                    data-testid={`settings-nav-${cat.key}`}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" />
-                    {cat.label}
-                  </Link>
-                ) : (
-                  // Kept on screen with its reason attached, per the disabled rule.
-                  // It was a plain <span title=…>: not focusable, not in the tab
-                  // order, and the reason lived in a hover tooltip — so keyboard
-                  // and touch users got a dead row with no explanation. role=link
-                  // + aria-disabled + tabIndex keeps it reachable and announces
-                  // why, without making it navigate.
-                  <span
-                    role="link"
-                    aria-disabled="true"
-                    tabIndex={0}
-                    aria-label={`${cat.label}：${UNAVAILABLE_REASON}`}
-                    className="flex cursor-not-allowed items-center gap-3 px-4 py-2.5 text-sm font-medium text-[var(--text-muted)]"
-                    data-testid={`settings-nav-${cat.key}`}
-                    title={UNAVAILABLE_REASON}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    {cat.label}
-                    <span className="ml-auto rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-1.5 py-0.5 text-[11px] text-[var(--text-muted)]">
-                      {UNAVAILABLE_BADGE}
-                    </span>
-                  </span>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+  const stripRef = useRef<HTMLDivElement>(null);
 
-      {/* Mobile horizontal tabs */}
-      <nav
-        className="overflow-x-auto border-b border-[var(--border-subtle)] md:hidden"
-        aria-label="設定分類標籤"
-        data-testid="settings-tabs"
-      >
-        <div className="flex gap-1 px-4 py-2">
-          {SETTINGS_CATEGORIES.map((cat) => {
-            const isActive = currentPath.startsWith(cat.to);
-            const isEnabled = cat.enabled !== false;
-            const Icon = cat.icon;
-            return isEnabled ? (
-              <Link
-                key={cat.key}
-                to={cat.to}
-                aria-current={isActive ? 'page' : undefined}
-                className={cn(
-                  'flex shrink-0 items-center gap-1.5 rounded-full border border-transparent px-3 py-1.5 text-xs transition-colors',
-                  // Same inversion as the desktop rail, worse for being 12px:
-                  // --accent-primary on --bg-primary measured 4.26:1.
-                  isActive
-                    ? 'bg-[var(--accent-subtle)] font-semibold text-[var(--text-primary)]'
-                    : 'font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
+  // The retired mobile strip hid five of ten categories behind a swipe with no
+  // fade, no arrow and no clipped tab — so it read as complete and half the
+  // settings IA was unreachable in practice. Scrolling the active tab into view
+  // means you at least always start from where you are, at any width.
+  useEffect(() => {
+    const strip = stripRef.current;
+    if (!strip) return;
+    if (strip.scrollWidth <= strip.clientWidth) return;
+    // The router owns "active"; read its marker rather than keeping a second
+    // opinion in a ref.
+    strip
+      .querySelector('[data-status="active"]')
+      ?.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }, [currentPath]);
+
+  return (
+    <div className="min-h-[calc(100vh-8rem)] p-6" data-testid="settings-layout">
+      {/* Visually tabs, semantically NAVIGATION. These change route, so there are
+          no tabpanels in this document and role="tablist" would promise a widget
+          the DOM does not implement. A nav of links carrying aria-current is the
+          honest markup for what actually happens. */}
+      <nav aria-label="設定分類" data-testid="settings-tabs" className="relative">
+        <div
+          ref={stripRef}
+          data-testid="settings-tabs-strip"
+          className="flex items-center gap-1 overflow-x-auto pb-3 pr-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {GROUP_ORDER.map((group, groupIndex) => {
+            const items = SETTINGS_CATEGORIES.filter((c) => c.group === group);
+            if (items.length === 0) return null;
+
+            return (
+              <div key={group} className="flex shrink-0 items-center gap-1">
+                {groupIndex > 0 && (
+                  // Presentational only. The grouping reaches assistive tech
+                  // through the accessible names below, never through a rule.
+                  <span
+                    aria-hidden="true"
+                    data-testid={`settings-tabs-divider-${group}`}
+                    className="mx-2 h-5 w-px shrink-0 bg-[var(--border-subtle)]"
+                  />
                 )}
-                data-testid={`settings-tab-${cat.key}`}
-              >
-                <Icon className="h-3.5 w-3.5 shrink-0" />
-                {cat.shortLabel}
-              </Link>
-            ) : (
-              <span
-                key={cat.key}
-                role="link"
-                aria-disabled="true"
-                tabIndex={0}
-                aria-label={`${cat.shortLabel}：${UNAVAILABLE_REASON}`}
-                className="flex shrink-0 cursor-not-allowed items-center gap-1.5 rounded-full border border-transparent px-3 py-1.5 text-xs font-medium text-[var(--text-muted)]"
-                data-testid={`settings-tab-${cat.key}`}
-                title={UNAVAILABLE_REASON}
-              >
-                <Icon className="h-3.5 w-3.5 shrink-0" />
-                {cat.shortLabel}
-              </span>
+                {items.map((cat) => {
+                  const isEnabled = cat.enabled !== false;
+
+                  if (!isEnabled) {
+                    // Kept on screen with its reason attached, per the disabled
+                    // rule — and reachable, which the old <span title=…> was not.
+                    return (
+                      <span
+                        key={cat.key}
+                        role="link"
+                        aria-disabled="true"
+                        tabIndex={0}
+                        aria-label={`${cat.label}：${UNAVAILABLE_REASON}`}
+                        title={UNAVAILABLE_REASON}
+                        data-testid={`settings-tab-${cat.key}`}
+                        className="flex min-h-[44px] shrink-0 cursor-not-allowed items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm font-medium text-[var(--text-muted)]"
+                      >
+                        {cat.label}
+                        <span className="rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-1.5 py-0.5 text-[11px]">
+                          {UNAVAILABLE_BADGE}
+                        </span>
+                      </span>
+                    );
+                  }
+
+                  return (
+                    <Link
+                      key={cat.key}
+                      to={cat.to}
+                      // Active state is TanStack Router's `data-status`, NOT a
+                      // hand-rolled startsWith — the ADR in SidebarNavItem.tsx:5-6
+                      // mandates this, and the old rail was the one nav that
+                      // disagreed. `aria-current="page"` comes from Link for free;
+                      // setting it here was dead code.
+                      activeOptions={{ exact: false, includeSearch: false }}
+                      // The group rides in the accessible name so a screen-reader
+                      // user gets the same structure a sighted user reads off the
+                      // dividers.
+                      aria-label={`${GROUP_LABEL[cat.group]}：${cat.label}`}
+                      data-testid={`settings-tab-${cat.key}`}
+                      className={cn(
+                        // 44px is the system minimum the retired 30px chips missed.
+                        'flex min-h-[44px] shrink-0 items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm font-medium transition-colors',
+                        'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]',
+                        'data-[status=active]:bg-[var(--accent-subtle)] data-[status=active]:font-semibold data-[status=active]:text-[var(--text-primary)]'
+                      )}
+                    >
+                      {cat.label}
+                    </Link>
+                  );
+                })}
+              </div>
             );
           })}
         </div>
+
+        {/* The clipped tab has to LOOK clipped. Without this the strip ends flush
+            at the container edge and reads as the whole list — which is exactly
+            how five categories went missing on mobile. */}
+        <span
+          aria-hidden="true"
+          data-testid="settings-tabs-fade"
+          className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-[var(--bg-primary)] to-transparent"
+        />
       </nav>
 
-      {/* Content area. The width cap lives HERE, not on the layout root: capping
-          the root centred the sidebar too, detaching it from the app sidebar and
-          leaving a dead vertical gap between the two navs. Left-aligned (no
-          mx-auto) so all three panes read as one continuous left edge and the
-          leftover width collects on the right as page margin. */}
-      <div className="min-h-[calc(100vh-8rem)] flex-1 p-6" data-testid="settings-content">
+      {/* The strip gets the full column; the CONTENT keeps its measure. Removing
+          the rail freed ~224px, and spending all of it on longer log lines and
+          wider form rows would be a regression dressed as a win. */}
+      <div className="border-t border-[var(--border-subtle)] pt-6" data-testid="settings-content">
         <div className="w-full max-w-5xl">{children}</div>
       </div>
     </div>
   );
 }
 
-export { SETTINGS_CATEGORIES };
-export type { SettingsCategory };
+export { SETTINGS_CATEGORIES, GROUP_ORDER, GROUP_LABEL, UNAVAILABLE_BADGE, UNAVAILABLE_REASON };
+export type { SettingsCategory, SettingsGroup };

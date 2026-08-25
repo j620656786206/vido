@@ -90,424 +90,203 @@ describe('SettingsLayout', () => {
   it('renders the settings layout container', async () => {
     renderWithRouter();
     expect(await screen.findByTestId('settings-layout')).toBeInTheDocument();
+    expect(screen.getByTestId('settings-content')).toBeInTheDocument();
   });
 
-  // Regression test (bugfix-settingslayout-missing-w-full): the root div is a
-  // flex item inside AppShellV2's `<main class="flex flex-1 flex-col">` — a
-  // column flex container. Without `w-full` it shrink-wraps to content width
-  // instead of stretching to fill, so the whole sidebar+form cluster collapses
-  // toward one edge on wide viewports.
-  it('stretches to fill the flex-col shell instead of shrink-wrapping to content width', async () => {
+  // The ruling: rail 2 is a PAGE TOOL, not a second navigation level. Settings
+  // was the one place that broke it — it navigated while wearing the costume.
+  it('has no vertical rail at all', async () => {
     renderWithRouter();
-    const layout = await screen.findByTestId('settings-layout');
-    expect(layout.className.split(/\s+/)).toContain('w-full');
-  });
-
-  // Regression test (bugfix-settings-sidebar-detached-from-app-sidebar): the
-  // width cap belongs on the CONTENT pane, never on the layout root. Capping
-  // the root and centring it (`mx-auto max-w-7xl`) also centred the settings
-  // SIDEBAR, pushing it 200px clear of AppShellV2's app sidebar at 1920px and
-  // leaving a dead vertical gap between the two navs that reads as a hole
-  // where something is missing. Measured before the fix: app sidebar ends at
-  // x=240, settings nav began at x=440.
-  it('does not cap or centre the layout root — the sidebar must sit flush against the app sidebar', async () => {
-    renderWithRouter();
-    const classes = (await screen.findByTestId('settings-layout')).className.split(/\s+/);
-    expect(classes).not.toContain('mx-auto');
-    expect(classes.some((c) => c.startsWith('max-w-'))).toBe(false);
-  });
-
-  it('caps the content pane instead, left-aligned so the panes share one left edge', async () => {
-    renderWithRouter();
-    const inner = (await screen.findByTestId('settings-content')).firstElementChild;
-    const classes = inner?.className.split(/\s+/) ?? [];
-    expect(classes.some((c) => c.startsWith('max-w-'))).toBe(true);
-    // Left-aligned on purpose: centring the content would re-open a gap
-    // between the settings sidebar and the content it belongs to.
-    expect(classes).not.toContain('mx-auto');
-  });
-
-  it('renders the desktop sidebar', async () => {
-    renderWithRouter();
-    expect(await screen.findByTestId('settings-sidebar')).toBeInTheDocument();
-  });
-
-  it('renders the mobile tabs', async () => {
-    renderWithRouter();
-    expect(await screen.findByTestId('settings-tabs')).toBeInTheDocument();
-  });
-
-  it('renders the sidebar navigation items', async () => {
-    renderWithRouter();
-    await screen.findByTestId('settings-sidebar');
-    expect(screen.getByTestId('settings-nav-connection')).toBeInTheDocument();
-    expect(screen.getByTestId('settings-nav-keys')).toBeInTheDocument();
-    expect(screen.getByTestId('settings-nav-cache')).toBeInTheDocument();
-    expect(screen.getByTestId('settings-nav-logs')).toBeInTheDocument();
-    expect(screen.getByTestId('settings-nav-status')).toBeInTheDocument();
-    expect(screen.getByTestId('settings-nav-backup')).toBeInTheDocument();
-    expect(screen.getByTestId('settings-nav-export')).toBeInTheDocument();
-    expect(screen.getByTestId('settings-nav-performance')).toBeInTheDocument();
-  });
-
-  it('renders the mobile tab items', async () => {
-    renderWithRouter();
-    await screen.findByTestId('settings-tabs');
-    expect(screen.getByTestId('settings-tab-connection')).toBeInTheDocument();
-    expect(screen.getByTestId('settings-tab-keys')).toBeInTheDocument();
-    expect(screen.getByTestId('settings-tab-cache')).toBeInTheDocument();
-    expect(screen.getByTestId('settings-tab-logs')).toBeInTheDocument();
-    expect(screen.getByTestId('settings-tab-status')).toBeInTheDocument();
-    expect(screen.getByTestId('settings-tab-backup')).toBeInTheDocument();
-    expect(screen.getByTestId('settings-tab-export')).toBeInTheDocument();
-    expect(screen.getByTestId('settings-tab-performance')).toBeInTheDocument();
-  });
-
-  it('displays correct zh-TW labels for categories', async () => {
-    renderWithRouter();
-    await screen.findByTestId('settings-sidebar');
-    expect(screen.getByTestId('settings-nav-connection')).toHaveTextContent('連線設定');
-    expect(screen.getByTestId('settings-nav-keys')).toHaveTextContent('金鑰設定');
-    expect(screen.getByTestId('settings-nav-cache')).toHaveTextContent('快取管理');
-    expect(screen.getByTestId('settings-nav-logs')).toHaveTextContent('系統日誌');
-    expect(screen.getByTestId('settings-nav-status')).toHaveTextContent('服務狀態');
-    expect(screen.getByTestId('settings-nav-backup')).toHaveTextContent('備份與還原');
-    expect(screen.getByTestId('settings-nav-export')).toHaveTextContent('匯出/匯入');
-    expect(screen.getByTestId('settings-nav-performance')).toHaveTextContent('效能監控');
-  });
-
-  it('highlights the active sidebar item for connection route', async () => {
-    renderWithRouter('/settings/connection');
-    const connectionNav = await screen.findByTestId('settings-nav-connection');
-    expect(connectionNav).toHaveClass('text-[var(--text-primary)]');
-    expect(connectionNav).toHaveClass('font-semibold');
-    expect(connectionNav).toHaveClass('bg-[var(--accent-subtle)]');
-  });
-
-  it('shows inactive styling for non-active sidebar items', async () => {
-    renderWithRouter('/settings/connection');
-    const cacheNav = await screen.findByTestId('settings-nav-cache');
-    expect(cacheNav).toHaveClass('text-[var(--text-secondary)]');
-    expect(cacheNav).not.toHaveClass('bg-[var(--accent-subtle)]');
-  });
-
-  it('highlights the active mobile tab for connection route', async () => {
-    renderWithRouter('/settings/connection');
-    const connectionTab = await screen.findByTestId('settings-tab-connection');
-    expect(connectionTab).toHaveClass('text-[var(--text-primary)]');
-    expect(connectionTab).toHaveClass('bg-[var(--accent-subtle)]');
-  });
-
-  it('displays abbreviated labels in mobile tabs', async () => {
-    renderWithRouter();
-    await screen.findByTestId('settings-tabs');
-    expect(screen.getByTestId('settings-tab-connection')).toHaveTextContent('連線');
-    expect(screen.getByTestId('settings-tab-cache')).toHaveTextContent('快取');
-    expect(screen.getByTestId('settings-tab-logs')).toHaveTextContent('日誌');
-  });
-
-  it('renders the content area', async () => {
-    renderWithRouter();
-    expect(await screen.findByTestId('settings-content')).toBeInTheDocument();
-  });
-
-  it('renders sidebar with aria-label for accessibility', async () => {
-    renderWithRouter();
-    const sidebar = await screen.findByTestId('settings-sidebar');
-    expect(sidebar).toHaveAttribute('aria-label', '設定分類導航');
-  });
-
-  it('renders mobile tabs with aria-label for accessibility', async () => {
-    renderWithRouter();
-    const tabs = await screen.findByTestId('settings-tabs');
-    expect(tabs).toHaveAttribute('aria-label', '設定分類標籤');
-  });
-
-  // --- Navigation between categories ---
-
-  it('highlights cache sidebar item when navigated to /settings/cache', async () => {
-    renderWithRouter('/settings/cache');
-    const cacheNav = await screen.findByTestId('settings-nav-cache');
-    expect(cacheNav).toHaveClass('text-[var(--text-primary)]');
-    expect(cacheNav).toHaveClass('font-semibold');
-    expect(cacheNav).toHaveClass('bg-[var(--accent-subtle)]');
-    // connection should be inactive
-    const connectionNav = screen.getByTestId('settings-nav-connection');
-    expect(connectionNav).toHaveClass('text-[var(--text-secondary)]');
-    expect(connectionNav).not.toHaveClass('bg-[var(--accent-subtle)]');
-  });
-
-  it('highlights logs sidebar item when navigated to /settings/logs', async () => {
-    renderWithRouter('/settings/logs');
-    const logsNav = await screen.findByTestId('settings-nav-logs');
-    expect(logsNav).toHaveClass('text-[var(--text-primary)]');
-    expect(logsNav).toHaveClass('bg-[var(--accent-subtle)]');
-  });
-
-  it('highlights status sidebar item when navigated to /settings/status', async () => {
-    renderWithRouter('/settings/status');
-    const statusNav = await screen.findByTestId('settings-nav-status');
-    expect(statusNav).toHaveClass('text-[var(--text-primary)]');
-    expect(statusNav).toHaveClass('bg-[var(--accent-subtle)]');
-  });
-
-  it('highlights backup sidebar item when navigated to /settings/backup', async () => {
-    renderWithRouter('/settings/backup');
-    const backupNav = await screen.findByTestId('settings-nav-backup');
-    expect(backupNav).toHaveClass('text-[var(--text-primary)]');
-    expect(backupNav).toHaveClass('bg-[var(--accent-subtle)]');
-  });
-
-  it('renders disabled export sidebar item with a zh-TW unavailable badge', async () => {
-    renderWithRouter('/settings/connection');
-    const exportNav = await screen.findByTestId('settings-nav-export');
-    expect(exportNav).toHaveClass('cursor-not-allowed');
-    expect(exportNav).toHaveClass('text-[var(--text-muted)]');
-    expect(exportNav).toHaveTextContent('尚未開放');
-    expect(exportNav).not.toHaveTextContent('Coming Soon');
-  });
-
-  it('renders disabled performance sidebar item with a zh-TW unavailable badge', async () => {
-    renderWithRouter('/settings/connection');
-    const perfNav = await screen.findByTestId('settings-nav-performance');
-    expect(perfNav).toHaveClass('cursor-not-allowed');
-    expect(perfNav).toHaveClass('text-[var(--text-muted)]');
-    expect(perfNav).toHaveTextContent('尚未開放');
-  });
-
-  // The reason used to live only in a hover `title`, on an element that was not
-  // focusable and not in the tab order — so keyboard and touch users met a dead
-  // row with no explanation at all.
-  it.each([
-    ['settings-nav-export', '匯出/匯入'],
-    ['settings-nav-performance', '效能監控'],
-  ])('keeps the disabled row %s reachable and self-explaining', async (testId, label) => {
-    renderWithRouter('/settings/connection');
-    const row = await screen.findByTestId(testId);
-    expect(row).toHaveAttribute('role', 'link');
-    expect(row).toHaveAttribute('aria-disabled', 'true');
-    expect(row).toHaveAttribute('tabindex', '0');
-    expect(row).toHaveAttribute('aria-label', `${label}：此功能尚未實作`);
-  });
-
-  it('marks the active category with aria-current so it is not colour-only', async () => {
-    renderWithRouter('/settings/cache');
-    expect(await screen.findByTestId('settings-nav-cache')).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByTestId('settings-nav-connection')).not.toHaveAttribute('aria-current');
-  });
-
-  // --- Mobile tab active states for each category ---
-
-  it('highlights cache mobile tab when navigated to /settings/cache', async () => {
-    renderWithRouter('/settings/cache');
-    const cacheTab = await screen.findByTestId('settings-tab-cache');
-    expect(cacheTab).toHaveClass('text-[var(--text-primary)]');
-    expect(cacheTab).toHaveClass('bg-[var(--accent-subtle)]');
-    // connection tab should be inactive
-    const connectionTab = screen.getByTestId('settings-tab-connection');
-    expect(connectionTab).toHaveClass('text-[var(--text-secondary)]');
-  });
-
-  it('renders disabled performance mobile tab without active styling', async () => {
-    renderWithRouter('/settings/connection');
-    const perfTab = await screen.findByTestId('settings-tab-performance');
-    expect(perfTab).toHaveClass('cursor-not-allowed');
-    expect(perfTab).toHaveClass('text-[var(--text-muted)]');
-  });
-
-  // --- All 7 categories have correct routes ---
-
-  it('sidebar navigation items link to correct routes', async () => {
-    renderWithRouter();
-    await screen.findByTestId('settings-sidebar');
-    expect(screen.getByTestId('settings-nav-connection')).toHaveAttribute(
-      'href',
-      '/settings/connection'
-    );
-    expect(screen.getByTestId('settings-nav-cache')).toHaveAttribute('href', '/settings/cache');
-    expect(screen.getByTestId('settings-nav-logs')).toHaveAttribute('href', '/settings/logs');
-    expect(screen.getByTestId('settings-nav-status')).toHaveAttribute('href', '/settings/status');
-    expect(screen.getByTestId('settings-nav-backup')).toHaveAttribute('href', '/settings/backup');
-    // export and performance are disabled — rendered as spans, no href
-    expect(screen.getByTestId('settings-nav-export').tagName).toBe('SPAN');
-    expect(screen.getByTestId('settings-nav-performance').tagName).toBe('SPAN');
-  });
-
-  it('mobile tab items link to correct routes', async () => {
-    renderWithRouter();
-    await screen.findByTestId('settings-tabs');
-    expect(screen.getByTestId('settings-tab-connection')).toHaveAttribute(
-      'href',
-      '/settings/connection'
-    );
-    expect(screen.getByTestId('settings-tab-cache')).toHaveAttribute('href', '/settings/cache');
-    expect(screen.getByTestId('settings-tab-logs')).toHaveAttribute('href', '/settings/logs');
-    expect(screen.getByTestId('settings-tab-status')).toHaveAttribute('href', '/settings/status');
-    expect(screen.getByTestId('settings-tab-backup')).toHaveAttribute('href', '/settings/backup');
-    // export and performance are disabled — rendered as spans, no href
-    expect(screen.getByTestId('settings-tab-export').tagName).toBe('SPAN');
-    expect(screen.getByTestId('settings-tab-performance').tagName).toBe('SPAN');
-  });
-
-  // --- Mobile abbreviated labels vs desktop full labels ---
-
-  it('displays all abbreviated labels in mobile tabs', async () => {
-    renderWithRouter();
-    await screen.findByTestId('settings-tabs');
-    expect(screen.getByTestId('settings-tab-connection')).toHaveTextContent('連線');
-    expect(screen.getByTestId('settings-tab-cache')).toHaveTextContent('快取');
-    expect(screen.getByTestId('settings-tab-logs')).toHaveTextContent('日誌');
-    expect(screen.getByTestId('settings-tab-status')).toHaveTextContent('狀態');
-    expect(screen.getByTestId('settings-tab-backup')).toHaveTextContent('備份');
-    expect(screen.getByTestId('settings-tab-export')).toHaveTextContent('匯出');
-    expect(screen.getByTestId('settings-tab-performance')).toHaveTextContent('效能');
-  });
-
-  it('mobile tabs use shortLabel (not full label) for brevity', async () => {
-    renderWithRouter();
-    await screen.findByTestId('settings-tabs');
-    // Mobile tabs should NOT contain the full labels (which have extra characters)
-    // e.g. '連線設定' vs '連線', '備份與還原' vs '備份'
-    const backupTab = screen.getByTestId('settings-tab-backup');
-    expect(backupTab.textContent).not.toContain('與還原');
-    const exportTab = screen.getByTestId('settings-tab-export');
-    expect(exportTab.textContent).not.toContain('/匯入');
-  });
-
-  // --- Clicking sidebar item navigates and changes active state ---
-
-  it('clicking a sidebar item navigates and updates active state', async () => {
-    const user = userEvent.setup();
-    renderWithRouter('/settings/connection');
-    await screen.findByTestId('settings-sidebar');
-
-    // Verify connection is active initially
-    expect(screen.getByTestId('settings-nav-connection')).toHaveClass('text-[var(--text-primary)]');
-
-    // Click cache
-    await user.click(screen.getByTestId('settings-nav-cache'));
-
-    // Cache should now be active
-    const cacheNav = await screen.findByTestId('settings-nav-cache');
-    expect(cacheNav).toHaveClass('text-[var(--text-primary)]');
-    expect(cacheNav).toHaveClass('bg-[var(--accent-subtle)]');
-
-    // Connection should now be inactive
-    expect(screen.getByTestId('settings-nav-connection')).toHaveClass(
-      'text-[var(--text-secondary)]'
-    );
-  });
-
-  it('clicking a mobile tab navigates and updates active state', async () => {
-    const user = userEvent.setup();
-    renderWithRouter('/settings/connection');
-    await screen.findByTestId('settings-tabs');
-
-    // Click logs tab
-    await user.click(screen.getByTestId('settings-tab-logs'));
-
-    const logsTab = await screen.findByTestId('settings-tab-logs');
-    expect(logsTab).toHaveClass('text-[var(--text-primary)]');
-  });
-
-  // --- Content rendering ---
-
-  it('renders child content in the content area for connection route', async () => {
-    renderWithRouter('/settings/connection');
-    expect(await screen.findByTestId('connection-page')).toBeInTheDocument();
-    expect(screen.getByTestId('connection-page')).toHaveTextContent('Connection');
-  });
-
-  it('renders child content in the content area for cache route', async () => {
-    renderWithRouter('/settings/cache');
-    expect(await screen.findByTestId('cache-page')).toBeInTheDocument();
-    expect(screen.getByTestId('cache-page')).toHaveTextContent('Cache');
-  });
-
-  // --- SETTINGS_CATEGORIES export ---
-
-  it('exports SETTINGS_CATEGORIES with exactly 10 entries', () => {
-    // 10 entries: connection, keys (Story sub-2-1b), scanner, homepage
-    // (Story 10.3), cache, logs, status, backup, export, performance.
-    expect(SETTINGS_CATEGORIES).toHaveLength(10);
-  });
-
-  it('SETTINGS_CATEGORIES entries have required fields', () => {
+    await screen.findByTestId('settings-layout');
+    expect(screen.queryByTestId('settings-sidebar')).toBeNull();
+    // The old rail rendered its own item testids; nothing may still use them.
     for (const cat of SETTINGS_CATEGORIES) {
-      expect(cat).toHaveProperty('key');
-      expect(cat).toHaveProperty('label');
-      expect(cat).toHaveProperty('shortLabel');
-      expect(cat).toHaveProperty('icon');
-      expect(cat).toHaveProperty('to');
-      expect(cat.to).toMatch(/^\/settings\//);
+      expect(screen.queryByTestId(`settings-nav-${cat.key}`)).toBeNull();
     }
   });
 
-  // --- Sidebar uses <nav> elements ---
-
-  it('sidebar is rendered as a nav element', async () => {
+  // One strip at every width — the desktop rail and the mobile chip strip used to
+  // be two different components with two different contracts.
+  it('renders exactly one navigation, not a desktop one and a mobile one', async () => {
     renderWithRouter();
-    const sidebar = await screen.findByTestId('settings-sidebar');
-    expect(sidebar.tagName).toBe('NAV');
+    await screen.findByTestId('settings-layout');
+    expect(screen.getAllByTestId('settings-tabs')).toHaveLength(1);
+    for (const cat of SETTINGS_CATEGORIES) {
+      expect(screen.getAllByTestId(`settings-tab-${cat.key}`)).toHaveLength(1);
+    }
   });
 
-  it('mobile tabs container is rendered as a nav element', async () => {
+  it('is navigation, not an ARIA tablist — these change route, not panel', async () => {
     renderWithRouter();
-    const tabs = await screen.findByTestId('settings-tabs');
-    expect(tabs.tagName).toBe('NAV');
+    const nav = await screen.findByTestId('settings-tabs');
+    expect(nav.tagName).toBe('NAV');
+    expect(nav).toHaveAttribute('aria-label', '設定分類');
+    expect(nav.querySelector('[role="tablist"]')).toBeNull();
+    expect(nav.querySelector('[role="tab"]')).toBeNull();
   });
 
-  // --- Layout structure ---
+  describe('grouping', () => {
+    it('orders the categories by meaning, not by insertion', async () => {
+      renderWithRouter();
+      await screen.findByTestId('settings-tabs');
+      const order = SETTINGS_CATEGORIES.map((c) => c.key);
+      expect(order).toEqual([
+        'connection',
+        'keys',
+        'status', // moved UP to sit with what it reports on
+        'scanner',
+        'homepage',
+        'cache',
+        'logs',
+        'backup', // moved DOWN to sit with the other chores
+        'export',
+        'performance',
+      ]);
+    });
 
-  it('content area is inside the layout container', async () => {
-    renderWithRouter();
-    const layout = await screen.findByTestId('settings-layout');
-    const content = screen.getByTestId('settings-content');
-    expect(layout).toContainElement(content);
+    it('keeps every group inside the ≤4-per-decision-point rule', () => {
+      const sizes = ['connection', 'library', 'maintenance', 'unavailable'].map(
+        (g) => SETTINGS_CATEGORIES.filter((c) => c.group === g).length
+      );
+      expect(Math.max(...sizes)).toBeLessThanOrEqual(4);
+      expect(sizes).toEqual([3, 2, 3, 2]);
+    });
+
+    it('draws a divider between groups but never before the first', async () => {
+      renderWithRouter();
+      await screen.findByTestId('settings-tabs');
+      expect(screen.queryByTestId('settings-tabs-divider-connection')).toBeNull();
+      expect(screen.getByTestId('settings-tabs-divider-library')).toBeInTheDocument();
+      expect(screen.getByTestId('settings-tabs-divider-maintenance')).toBeInTheDocument();
+      expect(screen.getByTestId('settings-tabs-divider-unavailable')).toBeInTheDocument();
+    });
+
+    it('hides the dividers from AT and carries the group in the accessible name', async () => {
+      renderWithRouter();
+      await screen.findByTestId('settings-tabs');
+      expect(screen.getByTestId('settings-tabs-divider-library')).toHaveAttribute(
+        'aria-hidden',
+        'true'
+      );
+      // A decorative rule conveys nothing to a screen reader; the name must.
+      expect(screen.getByTestId('settings-tab-status')).toHaveAttribute(
+        'aria-label',
+        '連線：服務狀態'
+      );
+      expect(screen.getByTestId('settings-tab-backup')).toHaveAttribute(
+        'aria-label',
+        '維護：備份與還原'
+      );
+    });
   });
 
-  it('sidebar is inside the layout container', async () => {
-    renderWithRouter();
-    const layout = await screen.findByTestId('settings-layout');
-    const sidebar = screen.getByTestId('settings-sidebar');
-    expect(layout).toContainElement(sidebar);
+  describe('overflow is signposted', () => {
+    it('renders an edge fade so a clipped tab looks clipped', async () => {
+      renderWithRouter();
+      await screen.findByTestId('settings-tabs');
+      const fade = screen.getByTestId('settings-tabs-fade');
+      expect(fade).toHaveAttribute('aria-hidden', 'true');
+      expect(fade.className).toContain('pointer-events-none');
+    });
+
+    it('lets the strip scroll instead of clipping items away', async () => {
+      renderWithRouter();
+      const strip = await screen.findByTestId('settings-tabs-strip');
+      expect(strip.className).toContain('overflow-x-auto');
+    });
   });
 
-  // --- Redirect behavior (AC4, AC5) ---
-
-  it('redirects /settings/ to /settings/connection (AC4)', async () => {
-    const rootRoute = createRootRoute({
-      component: () => React.createElement(Outlet),
-    });
-    const settingsRoute = createRoute({
-      getParentRoute: () => rootRoute,
-      path: '/settings',
-      component: () => React.createElement(SettingsLayout, null, React.createElement(Outlet)),
-    });
-    const indexRoute = createRoute({
-      getParentRoute: () => settingsRoute,
-      path: '/',
-      beforeLoad: () => {
-        throw new Error('redirect:/settings/connection');
-      },
-    });
-    const connectionRoute = createRoute({
-      getParentRoute: () => settingsRoute,
-      path: '/connection',
-      component: () =>
-        React.createElement('div', { 'data-testid': 'connection-page' }, 'Connection'),
-    });
-    rootRoute.addChildren([settingsRoute.addChildren([indexRoute, connectionRoute])]);
-    // Verify the redirect route file uses beforeLoad with redirect
-    // (structural test — TanStack Router redirect throws are hard to test in unit context)
-    const { Route: IndexRoute } = await import('../../routes/settings/index');
-    expect(IndexRoute).toBeDefined();
-    expect(IndexRoute.options).toHaveProperty('beforeLoad');
+  describe('touch targets', () => {
+    it.each(SETTINGS_CATEGORIES.map((c) => c.key))(
+      '%s meets the 44px minimum the old 30px chips missed',
+      async (key) => {
+        renderWithRouter();
+        const tab = await screen.findByTestId(`settings-tab-${key}`);
+        expect(tab.className).toContain('min-h-[44px]');
+      }
+    );
   });
 
-  it('qbittorrent route has redirect beforeLoad (AC5)', async () => {
-    const { Route: QBRoute } = await import('../../routes/settings/qbittorrent');
-    expect(QBRoute).toBeDefined();
-    expect(QBRoute.options).toHaveProperty('beforeLoad');
+  describe('active state', () => {
+    it.each([
+      ['/settings/connection', 'connection'],
+      ['/settings/cache', 'cache'],
+      ['/settings/logs', 'logs'],
+      ['/settings/status', 'status'],
+      ['/settings/backup', 'backup'],
+    ])('marks %s active through the router, not a hand-rolled match', async (path, key) => {
+      renderWithRouter(path);
+      const tab = await screen.findByTestId(`settings-tab-${key}`);
+      // Both of these come from TanStack Router. The old rail hand-rolled
+      // `currentPath.startsWith()`, which the ADR in SidebarNavItem.tsx:5-6
+      // forbids and which the tab strip briefly inherited.
+      expect(tab).toHaveAttribute('data-status', 'active');
+      expect(tab).toHaveAttribute('aria-current', 'page');
+    });
+
+    it('leaves every other tab inactive', async () => {
+      renderWithRouter('/settings/cache');
+      await screen.findByTestId('settings-tab-cache');
+      const connection = screen.getByTestId('settings-tab-connection');
+      expect(connection).not.toHaveAttribute('aria-current');
+      expect(connection).not.toHaveAttribute('data-status', 'active');
+    });
+
+    // The styling now rides on a `data-[status=active]:` variant, which means the
+    // class string is IDENTICAL on every tab — asserting `.className` contains it
+    // would pass for an inactive tab too. Assert the recipe once, structurally,
+    // and let the data-status assertions above carry which tab wears it.
+    it('dresses the active state in the AA-safe recipe, not the 3.04:1 one', async () => {
+      renderWithRouter('/settings/connection');
+      const tab = await screen.findByTestId('settings-tab-connection');
+      expect(tab.className).toContain('data-[status=active]:bg-[var(--accent-subtle)]');
+      expect(tab.className).toContain('data-[status=active]:text-[var(--text-primary)]');
+      // --accent-primary as a label colour measured 3.04:1 (PR #287).
+      expect(tab.className).not.toContain('text-[var(--accent-primary)]');
+    });
+  });
+
+  describe('unavailable categories', () => {
+    it.each([
+      ['export', '匯出/匯入'],
+      ['performance', '效能監控'],
+    ])('%s stays visible, reachable, and says why', async (key, label) => {
+      renderWithRouter();
+      const tab = await screen.findByTestId(`settings-tab-${key}`);
+      expect(tab).toHaveTextContent(label);
+      expect(tab).toHaveTextContent('尚未開放');
+      expect(tab).not.toHaveTextContent('Coming Soon');
+      expect(tab).toHaveAttribute('role', 'link');
+      expect(tab).toHaveAttribute('aria-disabled', 'true');
+      expect(tab).toHaveAttribute('tabindex', '0');
+      expect(tab).toHaveAttribute('aria-label', `${label}：此功能尚未實作`);
+    });
+
+    it('does not navigate when an unavailable tab is clicked', async () => {
+      const user = userEvent.setup();
+      renderWithRouter('/settings/connection');
+      await user.click(await screen.findByTestId('settings-tab-export'));
+      expect(screen.getByTestId('connection-page')).toBeInTheDocument();
+    });
+  });
+
+  describe('navigation', () => {
+    it('clicking a tab changes route and moves the active state', async () => {
+      const user = userEvent.setup();
+      renderWithRouter('/settings/connection');
+      await screen.findByTestId('settings-tabs');
+
+      await user.click(screen.getByTestId('settings-tab-cache'));
+
+      expect(await screen.findByTestId('cache-page')).toBeInTheDocument();
+      expect(screen.getByTestId('settings-tab-cache')).toHaveAttribute('aria-current', 'page');
+      expect(screen.getByTestId('settings-tab-connection')).not.toHaveAttribute('aria-current');
+    });
+
+    it('renders the routed child inside the content area', async () => {
+      renderWithRouter('/settings/connection');
+      const content = await screen.findByTestId('settings-content');
+      expect(content).toContainElement(screen.getByTestId('connection-page'));
+    });
   });
 });
