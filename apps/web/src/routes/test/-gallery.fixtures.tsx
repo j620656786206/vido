@@ -242,6 +242,23 @@ import type { ServiceStatusResponse } from '../../services/serviceStatusService'
 
 const noop = () => {};
 
+/**
+ * Fixture timestamps that render a STABLE relative label.
+ *
+ * ServiceStatusCard prints `檢查於 <formatRelativeTime(lastCheckAt)>`. A
+ * hardcoded absolute date in a fixture renders a label that grows by one every
+ * day ("68 天前" → "69 天前" → …), which silently rots the visual baseline —
+ * the suite would go red every single day with nobody having changed anything.
+ *
+ * Offsets are placed mid-bucket (formatRelativeTime buckets: <45s 剛剛,
+ * <60min N 分鐘前, <24h N 小時前, else N 天前) so a slow render cannot tip the
+ * label into the neighbouring bucket.
+ */
+const agoIso = (seconds: number) => new Date(Date.now() - seconds * 1000).toISOString();
+const JUST_NOW = () => agoIso(5); // 剛剛      — bucket 0-44s, ~40s of slack
+const MINUTES_AGO = () => agoIso(330); // 5 分鐘前  — bucket 300-359s, 30s either side
+const HOURS_AGO = () => agoIso(9000); // 2 小時前  — bucket 2h-2h59m, dead centre
+
 // ----- Shared mock-data consts for 19-4b Task 2 (parse/* and scanner/* fixtures) -----
 const PARSE_STEPS_FAILED: ParseStep[] = [
   { name: 'filename_extract', label: '解析檔名', status: 'success' },
@@ -1812,7 +1829,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         status: 'connected',
         message: '已連線',
         lastSuccessAt: '2026-02-10T14:30:00Z',
-        lastCheckAt: '2026-02-10T14:30:00Z',
+        lastCheckAt: JUST_NOW(),
         responseTimeMs: 45,
       },
       onTest: noop,
@@ -3172,7 +3189,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
               status: 'connected',
               message: '已連線',
               lastSuccessAt: '2026-03-22T14:30:00Z',
-              lastCheckAt: '2026-03-22T14:30:00Z',
+              lastCheckAt: JUST_NOW(),
               responseTimeMs: 45,
             },
             {
@@ -3181,7 +3198,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
               status: 'connected',
               message: '已連線',
               lastSuccessAt: '2026-03-22T14:29:00Z',
-              lastCheckAt: '2026-03-22T14:30:00Z',
+              lastCheckAt: MINUTES_AGO(),
               responseTimeMs: 12,
             },
             {
@@ -3190,7 +3207,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
               status: 'unconfigured',
               message: '未設定',
               lastSuccessAt: null,
-              lastCheckAt: '2026-03-22T14:30:00Z',
+              lastCheckAt: HOURS_AGO(),
               responseTimeMs: 0,
             },
           ],
