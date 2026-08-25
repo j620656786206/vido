@@ -14,12 +14,28 @@ import type { ServiceConnectionStatus } from '../../services/serviceStatusServic
 import { Tooltip } from '../ui/Tooltip';
 import { cn } from '../../lib/utils';
 
-const DOT_COLOR: Record<ServiceConnectionStatus, string> = {
+/**
+ * Health is carried by SHAPE as well as colour.
+ *
+ * These are 8px dots. A screen reader was already served (each carries an
+ * aria-label), but a low-vision SIGHTED user got red-versus-green at 8px with
+ * nothing else to go on — meaning by colour alone, which is exactly what the
+ * accessibility floor forbids. Three distinguishable forms now do the work and
+ * colour only adds nuance on top:
+ *
+ *   filled            → healthy
+ *   filled + halo     → needs attention (limited / error / offline)
+ *   hollow ring       → never configured, so nothing is wrong
+ *
+ * The halo also makes the dots that matter physically larger than the ones that
+ * do not, which is the right way round.
+ */
+const DOT_SHAPE: Record<ServiceConnectionStatus, string> = {
   connected: 'bg-[var(--success)]',
-  rate_limited: 'bg-[var(--warning)]',
-  error: 'bg-[var(--error)]',
-  disconnected: 'bg-[var(--error)]',
-  unconfigured: 'bg-[var(--text-disabled)]',
+  rate_limited: 'bg-[var(--warning)] ring-2 ring-[var(--warning-tint)]',
+  error: 'bg-[var(--error)] ring-2 ring-[var(--error-tint)]',
+  disconnected: 'bg-[var(--error)] ring-2 ring-[var(--error-tint)]',
+  unconfigured: 'border border-[var(--text-disabled)] bg-transparent',
 };
 const DOT_LABEL: Record<ServiceConnectionStatus, string> = {
   connected: '正常',
@@ -55,7 +71,7 @@ export function SidebarFooter({ collapsed = false }: SidebarFooterProps) {
             role="img"
             aria-label={`${s.displayName}：${DOT_LABEL[s.status]}`}
             data-testid={`status-dot-${s.name}`}
-            className={cn('inline-block h-2 w-2 rounded-full', DOT_COLOR[s.status])}
+            className={cn('inline-block h-2 w-2 rounded-full', DOT_SHAPE[s.status])}
           />
         </Tooltip>
       ))
@@ -66,7 +82,7 @@ export function SidebarFooter({ collapsed = false }: SidebarFooterProps) {
           <span
             key={i}
             aria-hidden="true"
-            className="inline-block h-2 w-2 rounded-full bg-[var(--text-disabled)]"
+            className="inline-block h-2 w-2 rounded-full border border-[var(--text-disabled)]"
           />
         ))}
       </>

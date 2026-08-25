@@ -85,6 +85,14 @@ const SETTINGS_CATEGORIES: SettingsCategory[] = [
   },
 ];
 
+/**
+ * Shown on categories that are routed but not built. Chinese, because it is the
+ * only string in this chrome a 繁中-first user would otherwise have to read in
+ * English — and "Coming Soon" does not tell them whether it is unbuilt or broken.
+ */
+const UNAVAILABLE_BADGE = '尚未開放';
+const UNAVAILABLE_REASON = '此功能尚未實作';
+
 interface SettingsLayoutProps {
   children: React.ReactNode;
 }
@@ -111,11 +119,20 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
                 {isEnabled ? (
                   <Link
                     to={cat.to}
+                    aria-current={isActive ? 'page' : undefined}
                     className={cn(
-                      'flex items-center gap-3 border-l-2 px-4 py-2.5 text-sm font-medium transition-colors',
+                      'flex items-center gap-3 px-4 py-2.5 text-sm transition-colors',
+                      // "You are here" used to be --accent-primary on --bg-tertiary:
+                      // 3.04:1, below the 4.5:1 PRODUCT.md calls a hard gate, and
+                      // BELOW the 3.55:1 that got --text-disabled rejected. The
+                      // inactive rows passed at 7.47:1, so the one row that had to
+                      // stand out was the only one you could not read. This is the
+                      // recipe SidebarNavItem.tsx:80 already proves at 10.00:1.
+                      // Note --accent-text alone is NOT enough here: 4.40:1 on
+                      // --bg-tertiary, still short. The wash is what carries it.
                       isActive
-                        ? 'border-blue-400 bg-[var(--bg-tertiary)] text-[var(--accent-primary)]'
-                        : 'border-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
+                        ? 'bg-[var(--accent-subtle)] font-semibold text-[var(--text-primary)]'
+                        : 'font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
                     )}
                     data-testid={`settings-nav-${cat.key}`}
                   >
@@ -123,15 +140,25 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
                     {cat.label}
                   </Link>
                 ) : (
+                  // Kept on screen with its reason attached, per the disabled rule.
+                  // It was a plain <span title=…>: not focusable, not in the tab
+                  // order, and the reason lived in a hover tooltip — so keyboard
+                  // and touch users got a dead row with no explanation. role=link
+                  // + aria-disabled + tabIndex keeps it reachable and announces
+                  // why, without making it navigate.
                   <span
-                    className="flex cursor-not-allowed items-center gap-3 border-l-2 border-transparent px-4 py-2.5 text-sm font-medium text-[var(--text-muted)]"
+                    role="link"
+                    aria-disabled="true"
+                    tabIndex={0}
+                    aria-label={`${cat.label}：${UNAVAILABLE_REASON}`}
+                    className="flex cursor-not-allowed items-center gap-3 px-4 py-2.5 text-sm font-medium text-[var(--text-muted)]"
                     data-testid={`settings-nav-${cat.key}`}
-                    title="此功能尚未實作"
+                    title={UNAVAILABLE_REASON}
                   >
-                    <Icon className="h-4 w-4 shrink-0" />
+                    <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
                     {cat.label}
-                    <span className="ml-auto rounded bg-[var(--bg-tertiary)] px-1.5 py-0.5 text-[10px] text-[var(--text-muted)]">
-                      Coming Soon
+                    <span className="ml-auto rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-1.5 py-0.5 text-[11px] text-[var(--text-muted)]">
+                      {UNAVAILABLE_BADGE}
                     </span>
                   </span>
                 )}
@@ -156,11 +183,14 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
               <Link
                 key={cat.key}
                 to={cat.to}
+                aria-current={isActive ? 'page' : undefined}
                 className={cn(
-                  'flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                  'flex shrink-0 items-center gap-1.5 rounded-full border border-transparent px-3 py-1.5 text-xs transition-colors',
+                  // Same inversion as the desktop rail, worse for being 12px:
+                  // --accent-primary on --bg-primary measured 4.26:1.
                   isActive
-                    ? 'border border-blue-400 text-[var(--accent-primary)]'
-                    : 'border border-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
+                    ? 'bg-[var(--accent-subtle)] font-semibold text-[var(--text-primary)]'
+                    : 'font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
                 )}
                 data-testid={`settings-tab-${cat.key}`}
               >
@@ -170,9 +200,13 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
             ) : (
               <span
                 key={cat.key}
+                role="link"
+                aria-disabled="true"
+                tabIndex={0}
+                aria-label={`${cat.shortLabel}：${UNAVAILABLE_REASON}`}
                 className="flex shrink-0 cursor-not-allowed items-center gap-1.5 rounded-full border border-transparent px-3 py-1.5 text-xs font-medium text-[var(--text-muted)]"
                 data-testid={`settings-tab-${cat.key}`}
-                title="此功能尚未實作"
+                title={UNAVAILABLE_REASON}
               >
                 <Icon className="h-3.5 w-3.5 shrink-0" />
                 {cat.shortLabel}

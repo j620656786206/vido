@@ -80,7 +80,10 @@ export function AppSidebar({ collapsed, onToggleCollapse }: AppSidebarProps) {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto px-2 py-2">
+        {/* The wrapping <aside> is the landmark; this is the navigation inside it.
+            It was unnamed, so AT announced two nested regions and could only name
+            one. Distinct label, not a repeat of the aside's. */}
+        <nav aria-label="內容與任務" className="flex-1 overflow-y-auto px-2 py-2">
           {collapsed ? (
             <div className="flex flex-col items-center gap-1">
               <Tooltip content="展開側邊欄">

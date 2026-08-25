@@ -55,6 +55,18 @@ describe('AppSidebar', () => {
     expect(screen.queryByTestId('nav-system')).not.toBeInTheDocument();
   });
 
+  // The <aside> was the only named landmark; the <nav> inside it was anonymous,
+  // so AT announced two nested regions and could name only one.
+  it('names the nav inside the sidebar distinctly from the sidebar itself', async () => {
+    renderSidebar();
+    const aside = await screen.findByTestId('app-sidebar');
+    expect(aside).toHaveAttribute('aria-label', '主要導航');
+    const nav = aside.querySelector('nav');
+    expect(nav).not.toBeNull();
+    expect(nav).toHaveAttribute('aria-label', '內容與任務');
+    expect(nav!.getAttribute('aria-label')).not.toBe(aside.getAttribute('aria-label'));
+  });
+
   it('shows library counts from the stats query', async () => {
     renderSidebar();
     await screen.findByTestId('nav-movies');
