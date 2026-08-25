@@ -94,20 +94,37 @@ describe('SettingsLayout', () => {
 
   // Regression test (bugfix-settingslayout-missing-w-full): the root div is a
   // flex item inside AppShellV2's `<main class="flex flex-1 flex-col">` — a
-  // column flex container. Without `w-full`, a flex item with only a
-  // `max-w-*` cap shrink-wraps to its content's width instead of stretching
-  // to fill the container before the max-width caps it, so the whole
-  // sidebar+form cluster hugs the left edge with a large empty void on the
-  // right on wide viewports. Every other v2-shell page using this same
-  // `mx-auto flex ... max-w-*` shape (HomeBrowseV2, ActivityHub,
-  // DownloadsBrowseV2, ExploreBlock) carries `w-full` — this asserts
-  // SettingsLayout matches that established pattern.
+  // column flex container. Without `w-full` it shrink-wraps to content width
+  // instead of stretching to fill, so the whole sidebar+form cluster collapses
+  // toward one edge on wide viewports.
   it('stretches to fill the flex-col shell instead of shrink-wrapping to content width', async () => {
     renderWithRouter();
     const layout = await screen.findByTestId('settings-layout');
-    expect(layout.className.split(/\s+/)).toEqual(
-      expect.arrayContaining(['w-full', 'max-w-7xl', 'mx-auto'])
-    );
+    expect(layout.className.split(/\s+/)).toContain('w-full');
+  });
+
+  // Regression test (bugfix-settings-sidebar-detached-from-app-sidebar): the
+  // width cap belongs on the CONTENT pane, never on the layout root. Capping
+  // the root and centring it (`mx-auto max-w-7xl`) also centred the settings
+  // SIDEBAR, pushing it 200px clear of AppShellV2's app sidebar at 1920px and
+  // leaving a dead vertical gap between the two navs that reads as a hole
+  // where something is missing. Measured before the fix: app sidebar ends at
+  // x=240, settings nav began at x=440.
+  it('does not cap or centre the layout root — the sidebar must sit flush against the app sidebar', async () => {
+    renderWithRouter();
+    const classes = (await screen.findByTestId('settings-layout')).className.split(/\s+/);
+    expect(classes).not.toContain('mx-auto');
+    expect(classes.some((c) => c.startsWith('max-w-'))).toBe(false);
+  });
+
+  it('caps the content pane instead, left-aligned so the panes share one left edge', async () => {
+    renderWithRouter();
+    const inner = (await screen.findByTestId('settings-content')).firstElementChild;
+    const classes = inner?.className.split(/\s+/) ?? [];
+    expect(classes.some((c) => c.startsWith('max-w-'))).toBe(true);
+    // Left-aligned on purpose: centring the content would re-open a gap
+    // between the settings sidebar and the content it belongs to.
+    expect(classes).not.toContain('mx-auto');
   });
 
   it('renders the desktop sidebar', async () => {

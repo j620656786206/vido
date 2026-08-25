@@ -212,7 +212,7 @@ export function ApiKeysForm() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="max-w-3xl">
       <h1 className="mb-2 text-2xl font-bold text-[var(--text-primary)]">金鑰設定</h1>
       <p className="mb-6 text-sm text-[var(--text-secondary)]">
         設定 Vido 使用的第三方服務 API 金鑰。金鑰會加密後儲存於 NAS，並優先於環境變數。
