@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CacheManagement } from './CacheManagement';
@@ -38,6 +39,45 @@ beforeEach(() => {
 });
 
 describe('CacheManagement', () => {
+  // The critique's Error-Prevention finding: this one-click purge sat ten
+  // pixels above per-type clears that DO confirm. Same grammar now.
+  describe('清除 30 天前的快取 is a two-step confirm', () => {
+    const arm = async () => {
+      // Shape must match CleanupResult — a wrong key here made the result banner
+      // render undefined.toLocaleString() and blow up only under CI timing.
+      const clearOld = vi.fn().mockResolvedValue({ entriesRemoved: 3, bytesReclaimed: 0 });
+      mockUseClearByAge.mockReturnValue({ mutateAsync: clearOld, isPending: false } as any);
+      mockUseCacheStats.mockReturnValue({
+        data: { totalSizeBytes: 0, cacheTypes: [] },
+        isLoading: false,
+      } as any);
+      renderWithQuery(React.createElement(CacheManagement));
+      const user = userEvent.setup();
+      await user.click(await screen.findByTestId('clear-old-cache-btn'));
+      return { user, clearOld };
+    };
+
+    it('first click only arms — nothing is cleared yet', async () => {
+      const { clearOld } = await arm();
+      expect(clearOld).not.toHaveBeenCalled();
+      expect(screen.getByTestId('clear-old-cache-btn')).toHaveTextContent('確認清除');
+      expect(screen.getByTestId('clear-old-cache-cancel-btn')).toBeInTheDocument();
+    });
+
+    it('second click actually clears', async () => {
+      const { user, clearOld } = await arm();
+      await user.click(screen.getByTestId('clear-old-cache-btn'));
+      expect(clearOld).toHaveBeenCalledWith(30);
+    });
+
+    it('取消 disarms without clearing', async () => {
+      const { user, clearOld } = await arm();
+      await user.click(screen.getByTestId('clear-old-cache-cancel-btn'));
+      expect(clearOld).not.toHaveBeenCalled();
+      expect(screen.getByTestId('clear-old-cache-btn')).not.toHaveTextContent('確認');
+    });
+  });
+
   it('renders loading state', () => {
     mockUseCacheStats.mockReturnValue({
       data: undefined,

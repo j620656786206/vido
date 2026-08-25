@@ -57,6 +57,38 @@ function createWrapper() {
 }
 
 describe('LogsViewer', () => {
+  // Same Error-Prevention finding as the cache page: a one-click purge of a
+  // 14k-row table, now armed-then-confirmed like every other destructive clear.
+  describe('清除 30 天前 is a two-step confirm', () => {
+    const arm = async () => {
+      vi.mocked(logService.getLogs).mockResolvedValue(mockLogs);
+      vi.mocked(logService.clearLogs).mockResolvedValue({ entriesRemoved: 9, days: 30 });
+      render(<LogsViewer />, { wrapper: createWrapper() });
+      const user = userEvent.setup();
+      await user.click(await screen.findByTestId('clear-old-logs-btn'));
+      return user;
+    };
+
+    it('first click only arms', async () => {
+      await arm();
+      expect(logService.clearLogs).not.toHaveBeenCalled();
+      expect(screen.getByTestId('clear-old-logs-btn')).toHaveTextContent('確認清除');
+      expect(screen.getByTestId('clear-old-logs-cancel-btn')).toBeInTheDocument();
+    });
+
+    it('second click clears', async () => {
+      const user = await arm();
+      await user.click(screen.getByTestId('clear-old-logs-btn'));
+      await waitFor(() => expect(logService.clearLogs).toHaveBeenCalledWith(30));
+    });
+
+    it('取消 disarms without clearing', async () => {
+      const user = await arm();
+      await user.click(screen.getByTestId('clear-old-logs-cancel-btn'));
+      expect(logService.clearLogs).not.toHaveBeenCalled();
+    });
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -161,6 +193,8 @@ describe('LogsViewer', () => {
       expect(screen.getByTestId('logs-viewer')).toBeInTheDocument();
     });
 
+    // Two clicks by design since the two-step confirm landed (arm → confirm).
+    await user.click(screen.getByTestId('clear-old-logs-btn'));
     await user.click(screen.getByTestId('clear-old-logs-btn'));
 
     await waitFor(() => {
