@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { MoreHorizontal, Check, Play, Star, Film } from 'lucide-react';
+import { MoreHorizontal, Check, Star, Film } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { getImageUrl, getImageSrcSet, getImageSizes } from '../../lib/image';
 import { useMovieDetails, useTVShowDetails } from '../../hooks/useMediaDetails';
@@ -226,13 +226,13 @@ export function PosterCard({
           {isNew && (
             <span
               data-testid="new-badge"
-              className="rounded bg-[var(--success)] px-1.5 py-0.5 text-[10px] font-bold text-white"
+              className="rounded bg-[var(--success)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--text-on-accent)]"
             >
               新增
             </span>
           )}
           {metadataSource && (
-            <span className="rounded bg-[var(--accent-primary)]/80 px-1.5 py-0.5 text-[10px] font-medium text-white">
+            <span className="rounded bg-[var(--accent-primary)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-on-accent)]">
               {metadataSource}
             </span>
           )}
@@ -259,19 +259,11 @@ export function PosterCard({
           </button>
         )}
 
-        {/* Center play overlay — MQbvp: large circular ▶ play affordance, hover-only, decorative (no onClick — propagates to <Link>) */}
-        {!selectable && (
-          <div
-            data-testid="hover-play-overlay"
-            aria-hidden="true"
-            className="absolute inset-0 z-10 hidden items-center justify-center opacity-0 transition-opacity duration-300 lg:flex lg:group-hover:opacity-100"
-          >
-            <div className="rounded-full bg-black/60 p-4 backdrop-blur-sm">
-              <Play className="h-8 w-8 fill-white text-white" />
-            </div>
-          </div>
-        )}
-
+        {/* The MQbvp hover ▶ overlay was REMOVED (critique R2 P1): a big play
+            affordance promised playback the product does not have — the click
+            lands on the detail page. 誠實優先於好看: the card is a link, and
+            the existing hover scale + title tint already say「可以點」without
+            claiming「可以播」. */}
         {/* Note: MQbvp design originally specified a bottom-left title/year overlay,
             but Party Mode 2026-05-08 (Sally + Alexyu) determined this duplicates the
             below-image title (RusTY) and has legibility issues against varying poster

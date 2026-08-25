@@ -218,6 +218,32 @@ describe('HeroBanner', () => {
     await waitFor(() => expect(screen.getByText('Media Detail')).toBeInTheDocument());
   });
 
+  it('[P1] keyboard focus pauses rotation — inert must never steal focus (R2)', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockHook({ data: [item({ id: 1, title: 'A' }), item({ id: 2, title: 'B' })] });
+    renderBanner();
+    await screen.findByTestId('hero-banner');
+
+    // Focus enters the hero (capture phase catches any descendant focus).
+    fireEvent.focus(screen.getAllByTestId('hero-banner-title-link')[0]);
+    act(() => {
+      vi.advanceTimersByTime(20000);
+    });
+    expect(
+      screen.getAllByTestId('hero-banner-slide').map((el) => el.getAttribute('data-active'))
+    ).toEqual(['true', 'false']);
+
+    // Focus leaves → rotation resumes.
+    fireEvent.blur(screen.getAllByTestId('hero-banner-title-link')[0]);
+    act(() => {
+      vi.advanceTimersByTime(8000);
+    });
+    expect(
+      screen.getAllByTestId('hero-banner-slide').map((el) => el.getAttribute('data-active'))
+    ).toEqual(['false', 'true']);
+    vi.useRealTimers();
+  });
+
   it('[P1] pause button stops rotation and survives mouse-leave (WCAG 2.2.2)', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     mockHook({ data: [item({ id: 1, title: 'A' }), item({ id: 2, title: 'B' })] });

@@ -14,6 +14,20 @@ vi.mock('../../services/tmdb', () => ({
 
 import tmdbService from '../../services/tmdb';
 
+// The empty state carries a real router <Link> door now; this spec has no
+// router, so stub Link as a plain anchor.
+vi.mock('@tanstack/react-router', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    Link: ({ to, children, ...rest }: { to: string; children: React.ReactNode }) => (
+      <a href={to} {...rest}>
+        {children}
+      </a>
+    ),
+  };
+});
+
 const mockGetMovieVideos = vi.mocked(tmdbService.getMovieVideos);
 const mockGetTVShowVideos = vi.mocked(tmdbService.getTVShowVideos);
 

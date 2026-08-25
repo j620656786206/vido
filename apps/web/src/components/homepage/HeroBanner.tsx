@@ -69,8 +69,11 @@ function HeroBannerSlide({ item, active, onPlayClick }: HeroBannerSlideProps) {
           so the hero melts into the page instead of sitting on a foreign slab */}
       <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-primary)] via-[var(--bg-primary)]/70 to-transparent" />
 
-      <div className="absolute inset-x-0 bottom-0 px-4 pb-12 sm:px-8 sm:pb-16 lg:px-12 lg:pb-20">
-        <div className="mx-auto max-w-7xl">
+      {/* Same gutter recipe as every sibling section (px-4 sm:px-6 within the
+          centered max-w-7xl) — the old lg:px-12 pushed the hero title 24px off
+          the shared left edge (measured 264 vs 288, critique R2 P2). */}
+      <div className="absolute inset-x-0 bottom-0 pb-12 sm:pb-16 lg:pb-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="flex items-center gap-3 text-sm text-[var(--text-secondary)]">
             <span className="rounded bg-[var(--overlay-scrim)] px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-[var(--text-primary)]">
               {item.mediaType === 'movie' ? '電影' : '影集'}
@@ -115,7 +118,7 @@ function HeroBannerSlide({ item, active, onPlayClick }: HeroBannerSlideProps) {
               type="button"
               onClick={() => onPlayClick(item)}
               data-testid="hero-banner-play-trailer"
-              className="relative z-10 flex min-h-[44px] items-center gap-2 rounded-full bg-[var(--accent-primary)] px-5 py-2 text-sm font-semibold text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-hover)]"
+              className="relative z-10 flex min-h-[44px] items-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-5 py-2 text-sm font-semibold text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-hover)]"
             >
               <Play className="h-4 w-4 fill-current" />
               觀看預告片
@@ -124,7 +127,7 @@ function HeroBannerSlide({ item, active, onPlayClick }: HeroBannerSlideProps) {
               to="/media/$type/$id"
               params={{ type: item.mediaType, id: String(item.id) }}
               data-testid="hero-banner-detail-link"
-              className="relative z-10 flex min-h-[44px] items-center rounded-full bg-[var(--overlay-scrim)] px-5 py-2 text-sm font-semibold text-[var(--text-primary)] backdrop-blur transition-colors hover:bg-[var(--bg-tertiary)]"
+              className="relative z-10 flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--overlay-scrim)] px-5 py-2 text-sm font-semibold text-[var(--text-primary)] backdrop-blur transition-colors hover:bg-[var(--bg-tertiary)]"
             >
               查看詳情
             </Link>
@@ -198,6 +201,11 @@ export function HeroBanner() {
         className="relative h-[250px] w-full overflow-hidden bg-[var(--bg-primary)] md:h-[400px]"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
+        // Keyboard parity for the hover-pause (critique R2 P1): rotation flips
+        // the focused slide to `inert`, which THROWS FOCUS TO <body> (measured
+        // at 8.6s) — a keyboard user could never finish tabbing the hero.
+        onFocusCapture={() => setIsPaused(true)}
+        onBlurCapture={() => setIsPaused(false)}
       >
         {items.map((item, idx) => (
           <HeroBannerSlide

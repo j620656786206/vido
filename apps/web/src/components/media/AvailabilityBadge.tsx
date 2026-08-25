@@ -12,9 +12,13 @@ export interface AvailabilityBadgeProps {
 // metadata-source, type) — same font size, padding, and rounding. The colour
 // layer uses CSS variables from the design system so a future light-theme
 // swap continues to work.
+// 已有 wore text-white on the jade fill — measured 2.17:1 (critique R2 P0,
+// the last nest of the token-debt class). --text-on-accent is the ink cut
+// for exactly this job: 8.36:1 on --success. requested keeps its dark ink
+// (5.71:1, passes).
 const variantClasses: Record<AvailabilityBadgeVariant, string> = {
-  owned: 'bg-[var(--success)] text-white',
-  requested: 'bg-[var(--warning)] text-[var(--bg-primary)]',
+  owned: 'bg-[var(--success)] text-[var(--text-on-accent)]',
+  requested: 'bg-[var(--warning)] text-[var(--text-on-accent)]',
 };
 
 const variantLabels: Record<AvailabilityBadgeVariant, string> = {

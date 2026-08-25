@@ -16,10 +16,10 @@
 export function ContinueWatchingSlot() {
   return (
     <section data-testid="home-continue-watching" aria-labelledby="home-cw-title">
-      <h2 id="home-cw-title" className="mb-3 text-xl font-semibold text-[var(--text-primary)]">
+      <h2 id="home-cw-title" className="mb-3 text-lg font-semibold text-[var(--text-primary)]">
         繼續觀看
       </h2>
-      <div className="flex h-24 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-6 text-center">
+      <div className="flex h-24 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--bg-secondary)] px-6 text-center">
         <p className="text-sm text-[var(--text-muted)]">連接 Plex / Jellyfin 後顯示</p>
       </div>
     </section>
