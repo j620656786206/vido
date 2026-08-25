@@ -237,12 +237,15 @@ describe('PosterCard', () => {
       expect(kebab).not.toHaveClass('left-2');
     });
 
-    it('[P0] rating badge repositioned to bottom-right (AC #1)', () => {
+    // Critique R1 P2 supersedes MQbvp's bottom-right slot: the v2 card
+    // (PosterCardV2, H1-D-v2) put ratings bottom-LEFT, and one page carried
+    // both corners at once. Old card now follows the v2 recipe.
+    it('[P0] rating badge sits bottom-left (aligned with PosterCardV2)', () => {
       const { container } = render(<PosterCard {...defaultProps} voteAverage={8.5} />);
-      const ratingWrapper = container.querySelector('.absolute.bottom-2.right-2');
+      const ratingWrapper = container.querySelector('.absolute.bottom-2.left-2');
       expect(ratingWrapper).toBeInTheDocument();
-      const ratingWrapperLeft = container.querySelector('.absolute.bottom-2.left-2');
-      expect(ratingWrapperLeft).not.toBeInTheDocument();
+      const ratingWrapperRight = container.querySelector('.absolute.bottom-2.right-2');
+      expect(ratingWrapperRight).not.toBeInTheDocument();
     });
 
     it('[P0] in-card title overlay is intentionally NOT rendered (Party Mode 2026-05-08 design correction)', () => {
@@ -549,7 +552,7 @@ describe('PosterCard', () => {
   describe('Rating badge glyph (bugfix-10-7 AC #3 — lucide <Star>, not the ⭐ emoji)', () => {
     it('[P0] renders a lucide <Star> SVG inside the rating chip and no ⭐ emoji', () => {
       const { container } = render(<PosterCard {...defaultProps} voteAverage={8.4} />);
-      const ratingChip = container.querySelector('.absolute.bottom-2.right-2');
+      const ratingChip = container.querySelector('.absolute.bottom-2.left-2');
       expect(ratingChip).not.toBeNull();
       expect(ratingChip?.querySelector('svg')).not.toBeNull();
       expect(screen.queryByText(/⭐/)).toBeNull();

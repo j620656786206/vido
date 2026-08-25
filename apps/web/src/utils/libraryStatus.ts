@@ -32,12 +32,17 @@ export interface StatusDescriptor {
   steadyState?: boolean;
 }
 
+// Text ALWAYS wears the *-text AA variant — the raw family colours measure
+// sub-AA as text (styles.css documents 4.31:1 worst case for --warning; the
+// critique R1 probe measured 整理中 at 3.73:1 on its own tint-over-tertiary).
+// The *-text tokens are held ≥AA on tint-composited surfaces by
+// styles-contrast.spec.ts.
 const TINT = {
-  success: 'bg-[var(--success-tint)] text-[var(--success)]',
+  success: 'bg-[var(--success-tint)] text-[var(--success-text)]',
   accent: 'bg-[var(--accent-tint)] text-[var(--accent-text)]',
-  warning: 'bg-[var(--warning-tint)] text-[var(--warning)]',
+  warning: 'bg-[var(--warning-tint)] text-[var(--warning-text)]',
   error: 'bg-[var(--error-tint)] text-[var(--error-text)]',
-  info: 'bg-[var(--info-tint)] text-[var(--info)]',
+  info: 'bg-[var(--info-tint)] text-[var(--info-text)]',
   neutral: 'bg-[var(--bg-tertiary)] text-[var(--text-muted)]',
 } as const;
 

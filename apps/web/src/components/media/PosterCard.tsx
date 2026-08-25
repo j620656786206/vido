@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { MoreHorizontal, Check, Play, Star } from 'lucide-react';
+import { MoreHorizontal, Check, Play, Star, Film } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { getImageUrl, getImageSrcSet, getImageSizes } from '../../lib/image';
 import { useMovieDetails, useTVShowDetails } from '../../hooks/useMediaDetails';
@@ -34,6 +34,12 @@ export interface PosterCardProps {
   selectable?: boolean;
   selected?: boolean;
   onSelect?: (e: React.MouseEvent) => void;
+  /**
+   * Critique R1 P2/#8 — a row whose HEADING already names the type (熱門影集)
+   * repeats it on every card as pure noise. Mixed grids (search) keep the
+   * default; single-type rows pass false.
+   */
+  showTypeBadge?: boolean;
 }
 
 export function PosterCard({
@@ -52,6 +58,7 @@ export function PosterCard({
   selectable,
   selected,
   onSelect,
+  showTypeBadge = true,
 }: PosterCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -132,7 +139,7 @@ export function PosterCard({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       className={cn(
-        'group relative block rounded-lg',
+        'group relative block rounded-[var(--radius-lg)]',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]',
         // Minimum touch target size (44px) ensured by aspect-ratio and grid min-width
         'min-h-[44px]',
@@ -143,7 +150,7 @@ export function PosterCard({
         // WORKAROUND (bugfix-10-4): Chromium drops border-radius clip when transform:scale
         // and overflow-hidden combine on a GPU layer. Use clip-path so corners stay rounded
         // throughout the hover scale-105 transition.
-        style={{ clipPath: 'inset(0 round 0.5rem)' }}
+        style={{ clipPath: 'inset(0 round 0.75rem)' }}
         className={cn(
           'relative aspect-[2/3] bg-[var(--bg-secondary)]',
           'transition-all duration-300 ease-out',
@@ -185,9 +192,7 @@ export function PosterCard({
             data-testid="poster-fallback"
             className="flex h-full w-full items-center justify-center bg-[var(--bg-tertiary)]"
           >
-            <span role="img" aria-label="無海報圖片" className="text-4xl text-[var(--text-muted)]">
-              🎬
-            </span>
+            <Film aria-label="無海報圖片" className="h-10 w-10 text-[var(--text-muted)]" />
           </div>
         )}
 
@@ -231,9 +236,11 @@ export function PosterCard({
               {metadataSource}
             </span>
           )}
-          <span className="rounded bg-black/70 px-2 py-0.5 text-xs font-medium text-white">
-            {type === 'movie' ? '電影' : '影集'}
-          </span>
+          {showTypeBadge && (
+            <span className="rounded bg-[var(--overlay-scrim)] px-2 py-0.5 text-xs font-medium text-[var(--text-primary)]">
+              {type === 'movie' ? '電影' : '影集'}
+            </span>
+          )}
         </div>
 
         {/* Kebab menu — MQbvp: top-RIGHT slot (was top-LEFT in pre-bugfix-10-4), hover-only via group-hover */}
@@ -278,14 +285,17 @@ export function PosterCard({
             same collision strategy as the top-right badge cluster vs the kebab. */}
         {voteAverage !== undefined && voteAverage > 0 && (
           <div
+            // Critique R1 P2: aligned with PosterCardV2's recipe — bottom-LEFT,
+            // scrim token, mono digits, 宣紙白. Two card systems on one page had
+            // opposite rating corners; and --warning is a STATUS colour, not a
+            // rating decoration (固定詞彙).
             className={cn(
-              'absolute bottom-2 right-2 z-20',
+              'absolute bottom-2 left-2 z-20',
               showRequestOverlay && 'transition-opacity duration-300 lg:group-hover:opacity-0'
             )}
           >
-            <span className="flex items-center gap-1 rounded bg-black/70 px-2 py-0.5 text-xs text-[var(--warning)]">
-              {/* stroke inherits currentColor (var(--warning)) from the span — only `fill` needs setting */}
-              <Star className="h-3 w-3 fill-[var(--warning)]" aria-hidden="true" />
+            <span className="flex items-center gap-1 rounded-full bg-[var(--overlay-scrim)] px-2 py-0.5 font-mono text-xs text-[var(--text-primary)]">
+              <Star className="h-3 w-3 fill-current" aria-hidden="true" />
               {voteAverage.toFixed(1)}
             </span>
           </div>
@@ -323,8 +333,13 @@ export function PosterCard({
           card height never changes: a year-less card mustn't grow a line when the runtime
           resolves on hover (AC #1: "MUST NOT push the card layout" — bugfix-10-7 CR M1).
           `truncate` keeps it on one line; only the title gets <HighlightText>. */}
+      {/* Critique R1 P2: same 2-line CJK title grid as PosterCardV2 (§3.3) —
+          the two card systems disagreed on title lines AND hardcoded white. */}
       <div className="mt-2">
-        <h3 className="truncate text-sm font-medium text-white">
+        <h3
+          className="line-clamp-2 min-h-[2.75em] text-sm font-medium leading-snug text-[var(--text-primary)]"
+          title={title}
+        >
           <HighlightText text={title} query={highlightQuery} />
         </h3>
         <p className="truncate text-xs text-[var(--text-secondary)]">{metaLine || '\u00A0'}</p>

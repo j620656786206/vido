@@ -1,7 +1,7 @@
 // Design ref: ux-design.pen Screen HP-1 Homepage Desktop (sAaCR)
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from '@tanstack/react-router';
-import { Play, Star } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
+import { Pause, Play, Star } from 'lucide-react';
 import { useTrendingHero } from '../../hooks/useTrending';
 import { getImageUrl, getBackdropSrcSet, getBackdropSizes } from '../../lib/image';
 import { cn } from '../../lib/utils';
@@ -20,10 +20,9 @@ interface HeroBannerSlideProps {
   item: HeroBannerItem;
   active: boolean;
   onPlayClick: (item: HeroBannerItem) => void;
-  onSlideActivate: (item: HeroBannerItem) => void;
 }
 
-function HeroBannerSlide({ item, active, onPlayClick, onSlideActivate }: HeroBannerSlideProps) {
+function HeroBannerSlide({ item, active, onPlayClick }: HeroBannerSlideProps) {
   // w1280 src is the safe baseline; srcset upgrades to original for desktop and
   // downgrades to w780 for mobile so we don't push 3–5MB images at handsets.
   const fallbackBackdrop = getImageUrl(item.backdropPath, 'w1280');
@@ -35,6 +34,12 @@ function HeroBannerSlide({ item, active, onPlayClick, onSlideActivate }: HeroBan
   return (
     // M3 fix: whole slide is now a navigable surface. M1 fix: inert removes
     // inactive slides from a11y tree + tab order without ad-hoc tabIndex hacks.
+    // Critique R1 P1: the slide used to be role="link" WRAPPING a button and a
+    // Link — ARIA forbids interactive descendants inside a link, so SR users
+    // heard a link with two buttons trapped inside. Now the container carries
+    // NO interaction at all: the title <Link> stretches over the whole slide
+    // (after:inset-0), so full-surface click is a NATIVE anchor, and the two
+    // CTAs sit above it on z-10.
     <div
       data-testid="hero-banner-slide"
       data-active={active ? 'true' : 'false'}
@@ -42,18 +47,8 @@ function HeroBannerSlide({ item, active, onPlayClick, onSlideActivate }: HeroBan
       // the browser removes the subtree from focus order, hit-testing, and
       // the accessibility tree (M1 fix).
       inert={!active}
-      role="link"
-      aria-label={`查看 ${item.title}`}
-      tabIndex={active ? 0 : -1}
-      onClick={() => onSlideActivate(item)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onSlideActivate(item);
-        }
-      }}
       className={cn(
-        'absolute inset-0 cursor-pointer transition-opacity duration-700 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black',
+        'absolute inset-0 transition-opacity duration-700 ease-in-out',
         active ? 'opacity-100' : 'pointer-events-none opacity-0'
       )}
     >
@@ -70,34 +65,45 @@ function HeroBannerSlide({ item, active, onPlayClick, onSlideActivate }: HeroBan
           data-testid="hero-banner-backdrop"
         />
       )}
-      {/* Bottom-up gradient for text legibility */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent" />
+      {/* Bottom-up gradient for text legibility — 夜行 ground, not raw black,
+          so the hero melts into the page instead of sitting on a foreign slab */}
+      <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-primary)] via-[var(--bg-primary)]/70 to-transparent" />
 
       <div className="absolute inset-x-0 bottom-0 px-4 pb-12 sm:px-8 sm:pb-16 lg:px-12 lg:pb-20">
         <div className="mx-auto max-w-7xl">
-          <div className="flex items-center gap-3 text-sm text-white/80">
-            <span className="rounded bg-white/20 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider">
+          <div className="flex items-center gap-3 text-sm text-[var(--text-secondary)]">
+            <span className="rounded bg-[var(--overlay-scrim)] px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-[var(--text-primary)]">
               {item.mediaType === 'movie' ? '電影' : '影集'}
             </span>
             {year && <span data-testid="hero-banner-year">{year}</span>}
             {item.voteAverage > 0 && (
               <span className="flex items-center gap-1" data-testid="hero-banner-rating">
-                <Star className="h-4 w-4 fill-[var(--warning)] text-[var(--warning)]" />
+                <Star className="h-4 w-4 fill-current" />
                 {item.voteAverage.toFixed(1)}
               </span>
             )}
           </div>
 
+          {/* lg was text-5xl=48px — past the Display ceiling (36px). The title
+              carries the slide's accessible link now that the container is
+              non-interactive. */}
           <h2
-            className="mt-3 text-2xl font-bold text-white sm:text-4xl lg:text-5xl"
+            className="mt-3 text-2xl font-bold sm:text-3xl lg:text-4xl"
             data-testid="hero-banner-title"
           >
-            {item.title}
+            <Link
+              to="/media/$type/$id"
+              params={{ type: item.mediaType, id: String(item.id) }}
+              data-testid="hero-banner-title-link"
+              className="text-[var(--text-primary)] after:absolute after:inset-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-primary)]"
+            >
+              {item.title}
+            </Link>
           </h2>
 
           {item.overview && (
             <p
-              className="mt-3 line-clamp-2 max-w-2xl text-sm text-white/90 sm:line-clamp-3 sm:text-base"
+              className="mt-3 line-clamp-2 max-w-2xl text-sm text-[var(--text-primary)] sm:line-clamp-3 sm:text-base"
               data-testid="hero-banner-overview"
             >
               {item.overview}
@@ -107,13 +113,9 @@ function HeroBannerSlide({ item, active, onPlayClick, onSlideActivate }: HeroBan
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <button
               type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onPlayClick(item);
-              }}
+              onClick={() => onPlayClick(item)}
               data-testid="hero-banner-play-trailer"
-              className="flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-black transition-colors hover:bg-white/90"
+              className="relative z-10 flex min-h-[44px] items-center gap-2 rounded-full bg-[var(--accent-primary)] px-5 py-2 text-sm font-semibold text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-hover)]"
             >
               <Play className="h-4 w-4 fill-current" />
               觀看預告片
@@ -121,9 +123,8 @@ function HeroBannerSlide({ item, active, onPlayClick, onSlideActivate }: HeroBan
             <Link
               to="/media/$type/$id"
               params={{ type: item.mediaType, id: String(item.id) }}
-              onClick={(e) => e.stopPropagation()}
               data-testid="hero-banner-detail-link"
-              className="rounded-full bg-white/20 px-5 py-2 text-sm font-semibold text-white backdrop-blur transition-colors hover:bg-white/30"
+              className="relative z-10 flex min-h-[44px] items-center rounded-full bg-[var(--overlay-scrim)] px-5 py-2 text-sm font-semibold text-[var(--text-primary)] backdrop-blur transition-colors hover:bg-[var(--bg-tertiary)]"
             >
               查看詳情
             </Link>
@@ -137,17 +138,20 @@ function HeroBannerSlide({ item, active, onPlayClick, onSlideActivate }: HeroBan
 export function HeroBanner() {
   const { data, isLoading, isError } = useTrendingHero('week');
   const [activeIndex, setActiveIndex] = useState(0);
+  // Hover-pause and the explicit pause BUTTON are separate states: hover is a
+  // convenience that must not undo the user's explicit choice (WCAG 2.2.2 —
+  // before critique R1 there was NO way to stop rotation on touch devices).
   const [isPaused, setIsPaused] = useState(false);
+  const [userPaused, setUserPaused] = useState(false);
   const [trailerItem, setTrailerItem] = useState<HeroBannerItem | null>(null);
   const intervalRef = useRef<number | null>(null);
-  const navigate = useNavigate();
 
   const items = data ?? [];
   const hasItems = items.length > 0;
 
   // Auto-rotate every ROTATION_INTERVAL_MS unless paused or only one item.
   useEffect(() => {
-    if (!hasItems || isPaused || items.length < 2 || trailerItem) return;
+    if (!hasItems || isPaused || userPaused || items.length < 2 || trailerItem) return;
     intervalRef.current = window.setInterval(() => {
       setActiveIndex((prev) => (prev + 1) % items.length);
     }, ROTATION_INTERVAL_MS);
@@ -157,7 +161,7 @@ export function HeroBanner() {
         intervalRef.current = null;
       }
     };
-  }, [hasItems, items.length, isPaused, trailerItem]);
+  }, [hasItems, items.length, isPaused, userPaused, trailerItem]);
 
   // Reset active index if data shrinks beneath it.
   useEffect(() => {
@@ -183,13 +187,6 @@ export function HeroBanner() {
     return null;
   }
 
-  const handleSlideActivate = (item: HeroBannerItem) => {
-    navigate({
-      to: '/media/$type/$id',
-      params: { type: item.mediaType, id: String(item.id) },
-    });
-  };
-
   return (
     <>
       <section
@@ -198,7 +195,7 @@ export function HeroBanner() {
         // Story 10-5 Task 4.1 — hero uses fixed heights rather than vh so the
         // layout is predictable across device classes (mobile compact 250px,
         // desktop 400px at md+). Matches design tokens in hp1/hp2 Pencil mocks.
-        className="relative h-[250px] w-full overflow-hidden bg-black md:h-[400px]"
+        className="relative h-[250px] w-full overflow-hidden bg-[var(--bg-primary)] md:h-[400px]"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >
@@ -208,15 +205,32 @@ export function HeroBanner() {
             item={item}
             active={idx === activeIndex}
             onPlayClick={setTrailerItem}
-            onSlideActivate={handleSlideActivate}
           />
         ))}
 
         {items.length > 1 && (
+          // Every control here is a ≥44px touch target (the visible dot is a
+          // decorative span INSIDE the button — the 8px dot itself was the
+          // whole target before critique R1). The pause button is the WCAG
+          // 2.2.2 stop mechanism: hover-pause never reached touch devices.
           <div
-            className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 gap-2"
+            className="absolute bottom-1 left-1/2 z-10 flex -translate-x-1/2 items-center"
             data-testid="hero-banner-dots"
           >
+            <button
+              type="button"
+              aria-label={userPaused ? '繼續輪播' : '暫停輪播'}
+              aria-pressed={userPaused}
+              data-testid="hero-banner-pause"
+              onClick={() => setUserPaused((p) => !p)}
+              className="flex h-11 w-11 items-center justify-center text-[var(--text-primary)]/70 transition-colors hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+            >
+              {userPaused ? (
+                <Play className="h-4 w-4 fill-current" />
+              ) : (
+                <Pause className="h-4 w-4 fill-current" />
+              )}
+            </button>
             {items.map((item, idx) => (
               <button
                 key={item.mediaType + '-' + item.id + '-dot'}
@@ -225,11 +239,18 @@ export function HeroBanner() {
                 aria-current={idx === activeIndex}
                 data-testid={`hero-banner-dot-${idx}`}
                 onClick={() => setActiveIndex(idx)}
-                className={cn(
-                  'h-2 rounded-full transition-all',
-                  idx === activeIndex ? 'w-8 bg-white' : 'w-2 bg-white/50 hover:bg-white/80'
-                )}
-              />
+                className="flex h-11 min-w-[24px] items-center justify-center px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+              >
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    'h-2 rounded-full transition-all',
+                    idx === activeIndex
+                      ? 'w-8 bg-[var(--text-primary)]'
+                      : 'w-2 bg-[var(--text-primary)]/50'
+                  )}
+                />
+              </button>
             ))}
           </div>
         )}

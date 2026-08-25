@@ -82,7 +82,11 @@ export function PosterCardV2({
           <img src={img} alt={title} loading="lazy" className="h-full w-full object-cover" />
         ) : (
           <div
-            className="flex h-full w-full items-center justify-center text-3xl font-bold text-[var(--text-on-accent)]"
+            // 宣紙白, not --text-on-accent: the gradient hue is title-hash-derived,
+            // and dark ink over a light hash measured 2.4:1 (critique R1 P0). The
+            // hash palette is lightness-clamped dark (ColorPlaceholder), so light
+            // text is guaranteed ≥3:1 on every tile.
+            className="flex h-full w-full items-center justify-center text-3xl font-bold text-[var(--text-primary)]"
             style={{ backgroundImage: `linear-gradient(135deg, ${from}, ${to})` }}
             aria-hidden="true"
           >
@@ -105,17 +109,30 @@ export function PosterCardV2({
         )}
 
         {badge && (
+          // Opaque --bg-secondary underlay: the 12% tint alone composites over
+          // ARBITRARY poster art (1.58:1 on a light hash tile — critique R1 P0).
+          // Over the solid underlay the composite is deterministic and the
+          // *-text tokens are gate-verified on exactly that kind of surface.
           <span
             data-testid="poster-status-badge"
-            className={`absolute right-1.5 top-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium ${badge.className}`}
+            className="absolute right-1.5 top-1.5 rounded-full bg-[var(--bg-secondary)]"
           >
-            {badge.label}
+            <span
+              className={`block rounded-full px-2 py-0.5 text-[11px] font-medium ${badge.className}`}
+            >
+              {badge.label}
+            </span>
           </span>
         )}
 
         {typeof voteAverage === 'number' && voteAverage > 0 && (
-          <span className="absolute bottom-1.5 left-1.5 flex items-center gap-0.5 rounded-full bg-[var(--overlay-scrim)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--text-on-accent)]">
-            <Star className="h-3 w-3 fill-[var(--warning)] text-[var(--warning)]" />
+          // 宣紙白 on the scrim (11.9:1) — NOT --text-on-accent: that ink is cut
+          // for GOLD fills and measures 1.1:1 on the 70% black scrim (critique
+          // R1 P0, confirmed by two independent probes). Star inherits it too:
+          // --warning is a STATUS colour (asked-but-not-happening), a decorative
+          // rating star must not dilute it.
+          <span className="absolute bottom-1.5 left-1.5 flex items-center gap-0.5 rounded-full bg-[var(--overlay-scrim)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--text-primary)]">
+            <Star className="h-3 w-3 fill-current" />
             {voteAverage.toFixed(1)}
           </span>
         )}

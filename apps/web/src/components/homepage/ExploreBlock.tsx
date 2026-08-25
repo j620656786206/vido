@@ -185,6 +185,9 @@ export function ExploreBlock({ block, ownership, eager = true, onVisible }: Expl
                   genreIds={item.genreIds}
                   isOwned={isOwned(item.id)}
                   isRequested={isRequested(item.id)}
+                  // The block heading already names the type (熱門影集) — a chip
+                  // per card repeats known information ×8 (critique R1 #8).
+                  showTypeBadge={false}
                 />
               </div>
             ))}

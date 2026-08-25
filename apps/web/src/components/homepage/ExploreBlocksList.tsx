@@ -1,5 +1,6 @@
 // Design ref: ux-design.pen Screen HP-1 Homepage Desktop (sAaCR)
 import { useCallback, useMemo, useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import { useQueries } from '@tanstack/react-query';
 import { useExploreBlocks, exploreBlockKeys } from '../../hooks/useExploreBlocks';
 import { useOwnedMedia } from '../../hooks/useOwnedMedia';
@@ -41,7 +42,10 @@ const EAGER_BLOCK_COUNT = 2;
 export function ExploreBlocksList() {
   const { data, isLoading, isError } = useExploreBlocks();
 
-  if (isError) return null;
+  // 固定詞彙 (critique R1 P1): the user CONFIGURED these blocks — when they
+  // cannot load, silence renders「不存在＝你沒要求」, which is a lie. The amber
+  // line is the honest state: you asked for this, and it is not happening.
+  if (isError) return <ExploreDegradedNotice reason="blocks" />;
 
   // L2 fix: reserve vertical space during loading to prevent layout shift
   if (isLoading) {
@@ -110,8 +114,16 @@ function ExploreBlocksListInner({ blocks }: { blocks: ExploreBlockType[] }) {
 
   const ownership = useOwnedMedia(tmdbIds);
 
+  // Same honesty rule per block: a block whose CONTENT query failed hides
+  // itself (fail-soft, F3) but must not vanish silently — one quiet page-level
+  // line accounts for every hidden block instead of per-block noise.
+  const failedCount = blocks.filter(
+    (_, index) => isEager(index) && contentQueries[index]?.isError
+  ).length;
+
   return (
     <div data-testid="explore-blocks-list" className="flex flex-col gap-6 md:gap-8">
+      {failedCount > 0 && <ExploreDegradedNotice reason="content" count={failedCount} />}
       {blocks.map((block, index) => (
         <ExploreBlock
           key={block.id}
@@ -121,6 +133,40 @@ function ExploreBlocksListInner({ blocks }: { blocks: ExploreBlockType[] }) {
           onVisible={() => markVisible(index)}
         />
       ))}
+    </div>
+  );
+}
+
+/**
+ * The degraded-state readout (critique R1 P1 — skeleton-then-vanish was the
+ * page claiming the user never configured explore blocks). Quiet inline line,
+ * warning vocabulary (asked-but-not-happening), with the one door that can
+ * actually fix it. role="status": informative, not interruptive.
+ */
+function ExploreDegradedNotice({
+  reason,
+  count,
+}: {
+  reason: 'blocks' | 'content';
+  count?: number;
+}) {
+  const text =
+    reason === 'blocks' ? '探索區塊目前無法載入' : `${count} 個探索區塊的內容目前無法載入`;
+  return (
+    <div
+      role="status"
+      data-testid="explore-degraded-notice"
+      className="mx-auto w-full max-w-7xl px-4 sm:px-6"
+    >
+      <p className="flex flex-wrap items-center gap-x-2 rounded-[var(--radius-md)] bg-[var(--warning-tint)] px-3 py-2 text-sm text-[var(--warning-text)]">
+        {text}（TMDb 未設定或無法連線）
+        <Link
+          to="/settings/connection"
+          className="font-medium underline underline-offset-2 hover:text-[var(--text-primary)]"
+        >
+          前往連線設定
+        </Link>
+      </p>
     </div>
   );
 }
