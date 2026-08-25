@@ -12,7 +12,7 @@
  *
  * Coverage gaps closed (vs. unit tests):
  *   - [P0] CSS :hover at lg: viewport actually drives opacity 0 → 1 on
- *     the center hover-play-overlay
+ *     (the center hover-play-overlay was REMOVED by critique R2 — guards below)
  *   - [P0] Top-right badge cluster fades opacity 1 → 0 on hover (collision
  *     strategy from AC #10 — kebab takes over the corner)
  *   - [P0] Bottom-left title/year overlay must NOT be rendered — locks in
@@ -164,7 +164,11 @@ test.describe('PosterCard Hover @ui @poster-card @bugfix-10-4', () => {
     );
   });
 
-  test('[P0] hover at lg: viewport reveals center play overlay (opacity 0 → 1)', async ({
+  // Critique R2 P1 (2026-08-26) REMOVED the center ▶ overlay: it promised
+  // playback the product does not have (the click lands on the detail page).
+  // This guard fires if anyone re-introduces it without re-opening that
+  // decision — the mirror of the bottom-left-title guard below.
+  test('[P0] the lying center play overlay stays out of the DOM, hover included', async ({
     page,
   }) => {
     await stubHomepageBaseline(page);
@@ -172,20 +176,12 @@ test.describe('PosterCard Hover @ui @poster-card @bugfix-10-4', () => {
 
     await page.goto('/');
 
-    // GIVEN: card has rendered inside its ExploreBlock at lg viewport
     const card = page.getByTestId('poster-card').first();
     await expect(card).toBeVisible();
+    await expect(card.getByTestId('hover-play-overlay')).toHaveCount(0);
 
-    const playOverlay = card.getByTestId('hover-play-overlay');
-
-    // BEFORE hover: overlay is in layout (lg:flex) but transparent (opacity-0)
-    await expect(playOverlay).toHaveCSS('opacity', '0');
-
-    // WHEN: user hovers the card
     await card.hover();
-
-    // THEN: lg:group-hover:opacity-100 drives the transition to opacity 1
-    await expect(playOverlay).toHaveCSS('opacity', '1');
+    await expect(card.getByTestId('hover-play-overlay')).toHaveCount(0);
   });
 
   test('[P0] bottom-left title overlay is NOT rendered — Party Mode 2026-05-08 dev-time decision (regression guard)', async ({
@@ -283,11 +279,9 @@ test.describe('PosterCard Hover @ui @poster-card @bugfix-10-4', () => {
     await expect(badgeCluster).toHaveCSS('scale', '0.95');
   });
 
-  test('[P1] mobile viewport (375x667) — hover overlay layer stays out of layout (AC #6)', async ({
+  test('[P1] mobile viewport (375x667) — no play overlay there either (AC #6 heir)', async ({
     page,
   }) => {
-    // GIVEN: viewport set to mobile width BEFORE navigation so the first
-    // render is at < lg breakpoint
     await page.setViewportSize({ width: 375, height: 667 });
 
     await stubHomepageBaseline(page);
@@ -297,20 +291,10 @@ test.describe('PosterCard Hover @ui @poster-card @bugfix-10-4', () => {
 
     const card = page.getByTestId('poster-card').first();
     await expect(card).toBeVisible();
-
-    const playOverlay = card.getByTestId('hover-play-overlay');
-
-    // The element exists in the DOM but `hidden lg:flex` resolves to
-    // display: none at < lg — toBeVisible is false even after a hover
-    // attempt. Touch users tap to navigate; no hover affordance.
-    await expect(playOverlay).not.toBeVisible();
-    await expect(playOverlay).toHaveCSS('display', 'none');
+    await expect(card.getByTestId('hover-play-overlay')).toHaveCount(0);
 
     await card.hover();
-
-    // Mobile hover (some pointer-capable mobile browsers) MUST NOT reveal
-    // the overlay — `lg:group-hover:opacity-100` does not fire below lg.
-    await expect(playOverlay).not.toBeVisible();
+    await expect(card.getByTestId('hover-play-overlay')).toHaveCount(0);
   });
 
   test('[P1] click on card body navigates to /media/movie/$id (AC #5)', async ({ page }) => {
@@ -346,7 +330,7 @@ test.describe('PosterCard Hover @ui @poster-card @bugfix-10-4', () => {
     await page.waitForURL(/\/media\/movie\/603(\?|$)/);
   });
 
-  test('[P1] click on decorative center play overlay ALSO navigates — overlay does not capture clicks (AC #1 + AC #5)', async ({
+  test('[P1] hovered poster center still navigates — nothing intercepts the card link (AC #1 + AC #5 heir)', async ({
     page,
   }) => {
     await stubHomepageBaseline(page);
@@ -364,16 +348,11 @@ test.describe('PosterCard Hover @ui @poster-card @bugfix-10-4', () => {
     const card = page.getByTestId('poster-card').first();
     await expect(card).toBeVisible();
 
-    // GIVEN: hover reveals the play overlay
+    // Click dead-center of the poster (where the removed ▶ used to sit)
+    // while hovered — the card <Link> must receive it.
     await card.hover();
-    const playOverlay = card.getByTestId('hover-play-overlay');
-    await expect(playOverlay).toHaveCSS('opacity', '1');
+    await card.click();
 
-    // WHEN: user clicks the play overlay (which is decorative — has no
-    // own onClick handler; click must bubble to parent <Link>)
-    await playOverlay.click();
-
-    // THEN: same navigation as a card-body click
     await page.waitForURL(/\/media\/movie\/603(\?|$)/);
   });
 });

@@ -510,7 +510,10 @@ test.describe('HeroBanner Trailer Modal @ui @hero-banner @story-10-2', () => {
 
     const modal = page.getByTestId('trailer-modal');
     await expect(modal).toBeVisible();
-    await expect(page.getByTestId('trailer-modal-empty')).toHaveText('找不到預告片');
+    // Critique R2 P2: the empty state now carries a 前往詳情頁 door — the box
+    // is no longer a dead end, so the copy is contains, not equals.
+    await expect(page.getByTestId('trailer-modal-empty')).toContainText('找不到預告片');
+    await expect(page.getByTestId('trailer-modal-detail-link')).toBeVisible();
     await expect(page.getByTestId('trailer-modal-iframe')).toHaveCount(0);
   });
 
