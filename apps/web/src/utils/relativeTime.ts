@@ -7,6 +7,10 @@ export function formatRelativeTime(iso: string | undefined, now: number = Date.n
   if (!iso) return '';
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return '';
+  // Go's zero time ("0001-01-01T00:00:00Z") and other ancient sentinels parse
+  // fine and then render as「739852 天前」— an absurd readout is worse than an
+  // honest empty one. Anything before 2000 is "never", not "long ago".
+  if (then < Date.UTC(2000, 0, 1)) return '';
   const sec = Math.floor((now - then) / 1000);
   if (sec < 45) return '剛剛';
   const min = Math.floor(sec / 60);

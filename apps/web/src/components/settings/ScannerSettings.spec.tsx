@@ -86,7 +86,7 @@ describe('ScannerSettings', () => {
 
   it('renders scanner settings section', () => {
     renderWithProviders();
-    expect(screen.getByText('媒體庫掃描')).toBeInTheDocument();
+    // Title lives at the route level now (one header contract).
     expect(screen.getByTestId('scanner-settings')).toBeInTheDocument();
   });
 

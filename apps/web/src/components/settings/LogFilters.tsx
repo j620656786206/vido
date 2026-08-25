@@ -17,9 +17,9 @@ const LEVEL_CHIP_STYLES: Record<string, { active: string; inactive: string }> = 
       'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--warning)]/50 hover:text-[var(--warning-text)]',
   },
   INFO: {
-    active: 'border-transparent bg-[var(--accent-tint)] text-[var(--accent-text)]',
+    active: 'border-transparent bg-[var(--info-tint)] text-[var(--info-text)]',
     inactive:
-      'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--accent-hover)]/50 hover:text-[var(--accent-text)]',
+      'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--info)]/50 hover:text-[var(--info-text)]',
   },
   DEBUG: {
     active: 'border-[var(--border-subtle)] bg-[var(--text-muted)]/20 text-[var(--text-secondary)]',

@@ -60,7 +60,7 @@ export function CacheTypeCard({ cacheType, onClear }: CacheTypeCardProps) {
         {confirming && !clearing && (
           <button
             onClick={handleCancel}
-            className="rounded px-2 py-1 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            className="min-h-[44px] rounded px-2 py-1 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] sm:min-h-0"
             data-testid="cache-cancel-btn"
           >
             取消
@@ -69,7 +69,7 @@ export function CacheTypeCard({ cacheType, onClear }: CacheTypeCardProps) {
         <button
           onClick={handleClear}
           disabled={clearing}
-          className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium transition-colors ${
+          className={`flex min-h-[44px] items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium transition-colors sm:min-h-0 ${
             confirming
               ? 'bg-[var(--error)] text-white hover:bg-[var(--error-pressed)]'
               : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'

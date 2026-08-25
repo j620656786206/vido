@@ -1,6 +1,7 @@
 // Design ref: ux-design.pen Screen 11 Backup Management Desktop (uhAKd)
 import { useState } from 'react';
-import { HardDrive, Loader2, Plus } from 'lucide-react';
+import { AlertTriangle, Check, Loader2, Plus, XCircle } from 'lucide-react';
+import { cn } from '../../lib/utils';
 import {
   useBackups,
   useCreateBackup,
@@ -15,6 +16,19 @@ import { MetadataExport } from './MetadataExport';
 import { formatBytes } from '../../utils/formatBytes';
 import type { Backup } from '../../services/backupService';
 
+/** 固定詞彙: ok = done-ness = NEUTRAL; warn = 你要求了但沒發生; error = 壞掉了. */
+const TONE_CLASSES = {
+  ok: 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]',
+  warn: 'bg-[var(--warning-tint)] text-[var(--warning-text)]',
+  error: 'bg-[var(--error-tint)] text-[var(--error-text)]',
+} as const;
+
+const TONE_ICONS = {
+  ok: <Check className="h-4 w-4 shrink-0" aria-hidden="true" />,
+  warn: <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />,
+  error: <XCircle className="h-4 w-4 shrink-0" aria-hidden="true" />,
+} as const;
+
 export function BackupManagement() {
   const { data, isLoading, error } = useBackups();
   const createBackup = useCreateBackup();
@@ -23,8 +37,13 @@ export function BackupManagement() {
   const restoreBackup = useRestoreBackup();
   const [createError, setCreateError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
-  const [restoreMessage, setRestoreMessage] = useState<string | null>(null);
+  // Feedback carries its OUTCOME so the banner can wear the vocabulary's colour:
+  // ok → neutral (done-ness never wears green/gold), warn → --warning-*, error →
+  // --error-*. A corruption warning in gold and a success in amber were both
+  // lying in the product's own colour language at its two highest-stakes moments.
+  type Feedback = { tone: 'ok' | 'warn' | 'error'; text: string };
+  const [verifyMessage, setVerifyMessage] = useState<Feedback | null>(null);
+  const [restoreMessage, setRestoreMessage] = useState<Feedback | null>(null);
   const [restoreTarget, setRestoreTarget] = useState<Backup | null>(null);
 
   const handleCreate = async () => {
@@ -51,12 +70,12 @@ export function BackupManagement() {
     try {
       const result = await verifyBackup.mutateAsync(id);
       if (result.match) {
-        setVerifyMessage('✅ 備份驗證通過，資料完整');
+        setVerifyMessage({ tone: 'ok', text: '備份驗證通過，資料完整' });
       } else {
-        setVerifyMessage('⚠️ 備份校驗碼不符，檔案可能已損壞');
+        setVerifyMessage({ tone: 'warn', text: '備份校驗碼不符，檔案可能已損壞' });
       }
     } catch (err) {
-      setVerifyMessage(err instanceof Error ? err.message : '驗證失敗');
+      setVerifyMessage({ tone: 'error', text: err instanceof Error ? err.message : '驗證失敗' });
     }
   };
 
@@ -74,13 +93,13 @@ export function BackupManagement() {
       const result = await restoreBackup.mutateAsync(restoreTarget.id);
       setRestoreTarget(null);
       if (result.status === 'completed') {
-        setRestoreMessage('✅ 還原完成，資料庫已恢復');
+        setRestoreMessage({ tone: 'ok', text: '還原完成，資料庫已恢復' });
       } else {
-        setRestoreMessage(`⚠️ 還原失敗：${result.error || '未知錯誤'}`);
+        setRestoreMessage({ tone: 'error', text: `還原失敗：${result.error || '未知錯誤'}` });
       }
     } catch (err) {
       setRestoreTarget(null);
-      setRestoreMessage(err instanceof Error ? err.message : '還原失敗');
+      setRestoreMessage({ tone: 'error', text: err instanceof Error ? err.message : '還原失敗' });
     }
   };
 
@@ -106,17 +125,6 @@ export function BackupManagement() {
 
   return (
     <div className="space-y-6" data-testid="backup-management">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <HardDrive className="h-5 w-5 text-[var(--text-secondary)]" />
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">備份與還原</h2>
-          <p className="text-sm text-[var(--text-secondary)]">
-            建立與管理 Vido 資料庫備份，確保資料安全
-          </p>
-        </div>
-      </div>
-
       {/* Action bar */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
@@ -152,21 +160,29 @@ export function BackupManagement() {
 
       {verifyMessage && (
         <div
-          className="rounded-lg bg-[var(--accent-tint)] px-4 py-3 text-sm text-[var(--accent-text)]"
-          role="status"
+          className={cn(
+            'flex items-center gap-2 rounded-lg px-4 py-3 text-sm',
+            TONE_CLASSES[verifyMessage.tone]
+          )}
+          role={verifyMessage.tone === 'error' ? 'alert' : 'status'}
           data-testid="verify-message"
         >
-          {verifyMessage}
+          {TONE_ICONS[verifyMessage.tone]}
+          {verifyMessage.text}
         </div>
       )}
 
       {restoreMessage && (
         <div
-          className="rounded-lg bg-[var(--warning-tint)] px-4 py-3 text-sm text-[var(--warning-text)]"
-          role="status"
+          className={cn(
+            'flex items-center gap-2 rounded-lg px-4 py-3 text-sm',
+            TONE_CLASSES[restoreMessage.tone]
+          )}
+          role={restoreMessage.tone === 'error' ? 'alert' : 'status'}
           data-testid="restore-message"
         >
-          {restoreMessage}
+          {TONE_ICONS[restoreMessage.tone]}
+          {restoreMessage.text}
         </div>
       )}
 

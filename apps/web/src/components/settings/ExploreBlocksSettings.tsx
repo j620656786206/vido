@@ -70,13 +70,8 @@ export function ExploreBlocksSettings() {
 
   return (
     <div className="space-y-6" data-testid="explore-blocks-settings">
-      <header className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">自訂首頁區塊</h2>
-          <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            管理首頁上的探索區塊。每個區塊會依條件從 TMDb 拉取推薦內容。
-          </p>
-        </div>
+      {/* Title/description live at the route level; this row keeps the action. */}
+      <div className="flex items-center justify-end">
         <button
           type="button"
           onClick={() => setModalMode({ type: 'create' })}
@@ -86,7 +81,7 @@ export function ExploreBlocksSettings() {
           <Plus className="h-4 w-4" />
           新增區塊
         </button>
-      </header>
+      </div>
 
       {isLoading && (
         <p className="text-sm text-[var(--text-muted)]" data-testid="explore-blocks-loading">
@@ -158,7 +153,7 @@ export function ExploreBlocksSettings() {
                 disabled={index === 0 || reorderBlocks.isPending}
                 aria-label={`上移 ${block.name}`}
                 data-testid={`explore-block-move-up-${block.id}`}
-                className="rounded p-1.5 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] disabled:opacity-30"
+                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded p-1.5 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] sm:min-h-0 sm:min-w-0 disabled:opacity-30"
               >
                 <ArrowUp className="h-4 w-4" />
               </button>
@@ -168,7 +163,7 @@ export function ExploreBlocksSettings() {
                 disabled={index === blocks.length - 1 || reorderBlocks.isPending}
                 aria-label={`下移 ${block.name}`}
                 data-testid={`explore-block-move-down-${block.id}`}
-                className="rounded p-1.5 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] disabled:opacity-30"
+                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded p-1.5 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] sm:min-h-0 sm:min-w-0 disabled:opacity-30"
               >
                 <ArrowDown className="h-4 w-4" />
               </button>
@@ -177,7 +172,7 @@ export function ExploreBlocksSettings() {
                 onClick={() => setModalMode({ type: 'edit', block })}
                 aria-label={`編輯 ${block.name}`}
                 data-testid={`explore-block-edit-${block.id}`}
-                className="rounded p-1.5 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
+                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded p-1.5 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] sm:min-h-0 sm:min-w-0"
               >
                 <Pencil className="h-4 w-4" />
               </button>
@@ -186,7 +181,7 @@ export function ExploreBlocksSettings() {
                 onClick={() => setConfirmDeleteId(block.id)}
                 aria-label={`刪除 ${block.name}`}
                 data-testid={`explore-block-delete-${block.id}`}
-                className="rounded p-1.5 text-[var(--text-secondary)] hover:bg-[var(--error-tint)] hover:text-[var(--error-text)]"
+                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded p-1.5 text-[var(--text-secondary)] hover:bg-[var(--error-tint)] hover:text-[var(--error-text)] sm:min-h-0 sm:min-w-0"
               >
                 <Trash2 className="h-4 w-4" />
               </button>

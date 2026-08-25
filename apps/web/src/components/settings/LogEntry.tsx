@@ -7,7 +7,9 @@ import type { SystemLog } from '../../services/logService';
 const LEVEL_STYLES: Record<string, string> = {
   ERROR: 'text-[var(--error-text)] bg-[var(--error-tint)]',
   WARN: 'text-[var(--warning-text)] bg-[var(--warning-tint)]',
-  INFO: 'text-[var(--accent-text)] bg-[var(--accent-tint)]',
+  // INFO wears --info-*, not gold: gold is 你在這裡, and thousands of log rows
+  // wearing it would dilute the one colour that must stay rare.
+  INFO: 'text-[var(--info-text)] bg-[var(--info-tint)]',
   DEBUG: 'text-[var(--text-secondary)] bg-[var(--text-muted)]/10',
 };
 
@@ -38,7 +40,8 @@ export function LogEntry({ log }: LogEntryProps) {
         {/* Expand toggle */}
         <button
           onClick={() => setExpanded(!expanded)}
-          className="mt-0.5 text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+          // 44px hit area on touch (the glyph stays 16px); desktop reverts to compact.
+          className="-m-1.5 flex min-h-[44px] min-w-[44px] items-center justify-center p-1.5 text-[var(--text-muted)] hover:text-[var(--text-secondary)] sm:mt-0.5 sm:block sm:min-h-0 sm:min-w-0 sm:p-0 sm:-m-0"
           disabled={!hasContext && !hasHint}
           aria-label={expanded ? '收合' : '展開'}
           data-testid="log-expand-btn"

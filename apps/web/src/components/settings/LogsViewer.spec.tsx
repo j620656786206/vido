@@ -111,8 +111,8 @@ describe('LogsViewer', () => {
     const entries = screen.getAllByTestId('log-entry');
     expect(entries).toHaveLength(3);
 
-    // Check header
-    expect(screen.getByText('系統日誌')).toBeInTheDocument();
+    // Page titles live at the ROUTE level now (one header contract, critique R3 P1#1);
+    // the component keeps only the live record-count readout.
     expect(screen.getByText(/共 3 筆記錄/)).toBeInTheDocument();
   });
 

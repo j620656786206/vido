@@ -103,14 +103,6 @@ export function ScannerSettings() {
 
   return (
     <div className="space-y-6" data-testid="scanner-settings">
-      {/* Header */}
-      <div>
-        <h2 className="text-xl font-semibold text-[var(--text-primary)]">媒體庫掃描</h2>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">
-          設定掃描資料夾、排程，以及手動觸發媒體庫掃描
-        </p>
-      </div>
-
       {/* Notification */}
       {notification && (
         <div

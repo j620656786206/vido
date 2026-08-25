@@ -1,6 +1,6 @@
 // Design ref: ux-design.pen — no current screen frame; 服務狀態 tab was never given a frame — rides the designed settings shell (Screen C4-D, 6UCtX)
 import { useEffect, useRef, useState } from 'react';
-import { Activity, Bell, Loader2 } from 'lucide-react';
+import { Bell, Loader2 } from 'lucide-react';
 import { useServiceStatuses, useTestServiceConnection } from '../../hooks/useServiceStatus';
 import { ServiceStatusCard } from './ServiceStatusCard';
 import type { ServiceConnectionStatus } from '../../services/serviceStatusService';
@@ -98,15 +98,6 @@ export function ServiceStatusDashboard() {
 
   return (
     <div className="space-y-6" data-testid="service-status-dashboard">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Activity className="h-5 w-5 text-[var(--text-secondary)]" />
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">服務狀態</h2>
-          <p className="text-sm text-[var(--text-secondary)]">監控外部服務連線狀態</p>
-        </div>
-      </div>
-
       {/* Status change notifications (AC3) */}
       {statusChanges.length > 0 && (
         <div

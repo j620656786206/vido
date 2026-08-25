@@ -103,7 +103,7 @@ export function ServiceStatusCard({ service, onTest, isTesting }: ServiceStatusC
         <button
           onClick={() => onTest(service.name)}
           disabled={isTesting}
-          className="flex items-center gap-1.5 rounded-lg bg-[var(--bg-tertiary)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] disabled:opacity-50"
+          className="flex min-h-[44px] items-center gap-1.5 rounded-lg bg-[var(--bg-tertiary)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] disabled:opacity-50 sm:min-h-0"
           data-testid={`test-btn-${service.name}`}
         >
           {isTesting ? (

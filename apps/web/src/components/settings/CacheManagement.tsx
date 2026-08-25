@@ -16,7 +16,7 @@ export function CacheManagement() {
     setLastResult(result);
   };
 
-  // Second click within the armed state confirms; anywhere else disarms. Same
+  // Second click confirms; 取消 (or completion) disarms. Same
   // grammar as CacheTypeCard's per-type clear — the critique's Error-Prevention
   // finding was not that this action lacked ceremony, but that its ceremony
   // CONTRADICTED the pattern ten pixels below it.
@@ -56,14 +56,11 @@ export function CacheManagement() {
     <div className="space-y-6" data-testid="cache-management">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Database className="h-5 w-5 text-[var(--text-secondary)]" />
-          <div>
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">快取管理</h2>
-            <p className="text-sm text-[var(--text-secondary)]">
-              總計 {stats ? formatBytes(stats.totalSizeBytes) : '—'}
-            </p>
-          </div>
+        {/* Page title lives at the route level (one header contract for all
+            settings tabs); this line is the live DATA readout, not a heading. */}
+        <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+          <Database className="h-4 w-4" aria-hidden="true" />
+          <span>總計 {stats ? formatBytes(stats.totalSizeBytes) : '—'}</span>
         </div>
 
         <div className="flex items-center gap-2">
