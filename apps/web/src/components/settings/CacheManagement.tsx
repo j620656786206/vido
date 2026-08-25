@@ -16,9 +16,23 @@ export function CacheManagement() {
     setLastResult(result);
   };
 
+  // Second click within the armed state confirms; anywhere else disarms. Same
+  // grammar as CacheTypeCard's per-type clear — the critique's Error-Prevention
+  // finding was not that this action lacked ceremony, but that its ceremony
+  // CONTRADICTED the pattern ten pixels below it.
+  const [confirmingClearOld, setConfirmingClearOld] = useState(false);
+
   const handleClearOld = async () => {
-    const result = await clearByAge.mutateAsync(30);
-    setLastResult(result);
+    if (!confirmingClearOld) {
+      setConfirmingClearOld(true);
+      return;
+    }
+    try {
+      const result = await clearByAge.mutateAsync(30);
+      setLastResult(result);
+    } finally {
+      setConfirmingClearOld(false);
+    }
   };
 
   if (isLoading) {
@@ -52,19 +66,34 @@ export function CacheManagement() {
           </div>
         </div>
 
-        <button
-          onClick={handleClearOld}
-          disabled={clearByAge.isPending}
-          className="flex items-center gap-2 rounded-lg bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-tertiary)] disabled:opacity-50"
-          data-testid="clear-old-cache-btn"
-        >
-          {clearByAge.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Clock className="h-4 w-4" />
+        <div className="flex items-center gap-2">
+          {confirmingClearOld && !clearByAge.isPending && (
+            <button
+              onClick={() => setConfirmingClearOld(false)}
+              className="rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              data-testid="clear-old-cache-cancel-btn"
+            >
+              取消
+            </button>
           )}
-          清除 30 天前的快取
-        </button>
+          <button
+            onClick={handleClearOld}
+            disabled={clearByAge.isPending}
+            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
+              confirmingClearOld
+                ? 'bg-[var(--error)] text-white hover:bg-[var(--error-pressed)]'
+                : 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
+            }`}
+            data-testid="clear-old-cache-btn"
+          >
+            {clearByAge.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Clock className="h-4 w-4" />
+            )}
+            {confirmingClearOld ? '確認清除 30 天前的快取' : '清除 30 天前的快取'}
+          </button>
+        </div>
       </div>
 
       {/* Cache type cards */}
