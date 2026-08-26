@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
@@ -136,5 +136,58 @@ describe('prefers-reduced-motion', () => {
 
   it('smooth scrolling is switched off too', () => {
     expect(CSS).toMatch(/scroll-behavior:\s*auto\s*!important/);
+  });
+});
+
+/**
+ * ⚠️ THE ONE THAT SHIPPED BROKEN TWICE — first as `active:scale-100`, then as
+ * `transition-[opacity,transform]`. Both are the same mistake wearing different
+ * clothes: a transition that names a property nothing changes, next to a
+ * property that changes and is not named.
+ *
+ * Tailwind v4 compiles rotate-*, scale-* and translate-* to the INDIVIDUAL
+ * transform properties (`.rotate-0 { rotate: none }`), which
+ * `transition-property: transform` does not cover. v4's own
+ * `transition-transform` expands to `transform, translate, scale, rotate`
+ * precisely for this reason — so the built-in is safe and a HAND-WRITTEN
+ * arbitrary list naming `transform` is the trap. It fails silently: the
+ * element still reaches its final state, it just teleports there, which on a
+ * cross-fade looks like a design decision rather than a bug.
+ */
+describe('Tailwind v4 individual transform properties', () => {
+  const SRC = join(__dirname);
+  const files: string[] = [];
+  (function walk(dir: string) {
+    for (const e of readdirSync(dir)) {
+      const p = join(dir, e);
+      if (statSync(p).isDirectory()) walk(p);
+      else if (p.endsWith('.tsx') && !p.includes('.spec.')) files.push(p);
+    }
+  })(SRC);
+
+  /** An arbitrary transition list — `transition-[a,b]` — that names `transform`. */
+  const HANDWRITTEN_TRANSFORM = /transition-\[[^\]]*\btransform\b[^\]]*\]/;
+  /** rotate-45 / scale-95 / -translate-x-1/2 / scale-[var(--x)] … */
+  const INDIVIDUAL = /(?:^|[\s"'`:])-?(?:rotate|scale|translate-[xyz]?)-[[\w./[\]()-]/;
+
+  it('no component hand-writes a transition list naming `transform` beside an individual transform utility', () => {
+    const offenders = files.filter((f) => {
+      const src = readFileSync(f, 'utf8');
+      return HANDWRITTEN_TRANSFORM.test(src) && INDIVIDUAL.test(src);
+    });
+    expect(
+      offenders.map((f) => f.slice(SRC.length + 1)),
+      'Use the built-in `transition-transform` (which covers transform, translate, scale and rotate) or name the individual property — `transition-[opacity,rotate]`.'
+    ).toEqual([]);
+  });
+
+  it('ThemeToggle transitions `rotate`, the property its faces actually change', () => {
+    const src = readFileSync(join(SRC, 'components/shell/ThemeToggle.tsx'), 'utf8');
+    const face = src.match(/const face =\s*'([^']*)'/)![1];
+    expect(face, 'the face transition list must name rotate').toContain('rotate');
+    expect(
+      face,
+      '`transform` is never set on these faces — naming it hides the missing rotate'
+    ).not.toMatch(/transition-\[[^\]]*\btransform\b/);
   });
 });

@@ -47,7 +47,16 @@ interface ThemeToggleProps {
  * sync when the icon scale changes between variants.
  */
 function ThemeFaces({ next, size }: { next: 'light' | 'dark'; size: string }) {
-  const face = 'col-start-1 row-start-1 transition-[opacity,transform] ease-[var(--ease-settle)]';
+  // ⚠️ `rotate`, NOT `transform`. Tailwind v4 compiles rotate-* to the
+  // INDIVIDUAL `rotate` property (`.rotate-0 { rotate: none }`), which
+  // `transition-property: transform` does not cover — v4's own
+  // `transition-transform` expands to `transform, translate, scale, rotate`
+  // precisely because of this. Writing the list by hand and naming `transform`
+  // got it wrong in both directions at once: `transform` is never set on these
+  // faces (dead weight) and `rotate` — the one thing that actually changes —
+  // was excluded, so the turn snapped in a single frame and only the opacity
+  // cross-faded. The whole point of --motion-turn never rendered.
+  const face = 'col-start-1 row-start-1 transition-[opacity,rotate] ease-[var(--ease-settle)]';
   // Entering settles in over --motion-state; leaving clears out faster, the
   // same asymmetry the hero cross-fade uses.
   const shown = 'opacity-100 rotate-0 duration-[var(--motion-state)]';
