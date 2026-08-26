@@ -46,6 +46,16 @@ inputDocuments:
    ordering) but its **live data is deferred to Epic 17**; the block renders
    fail-soft-empty (or is hidden) until a media server is connected.
 
+> **Addendum 2026-08-26 (Home v3).** Destination #1's Home v2 page composition is
+> superseded by the **Home v3 identity rework** (`home-v3-identity-brief.md`; design
+> merged PR #323 as `flow-h-homepage-v3` H1-D-v3/H7-D-v3/H2-M-v3/H8-SPEC-v3; change
+> routed via `sprint-change-proposal-2026-08-26.md`). Skeleton becomes: 讀數帶 4 格
+> (coverage/processed-today/needs-attention/in-flight) → own-library STATIC hero
+> (manual switching, no autoplay) → 最近新增 (unchanged) → TMDb tail (owned filtered
+> out, whole block absent when degraded). D3 own-above-external is unchanged and
+> strengthened. Epic `ux3-home-v3`, stories ux3-1-5…1-8 in sprint-status.yaml. The
+> flow-h-homepage-v2 frames are renamed 〔已淘汰→v3〕 and die after v3 ships.
+
 ## 1. The 7 destinations → status / source flow / Phase-3 epic
 
 Verb tags: ✅ done (pilot) · 🆕 net-new · ✏️ migrate-existing · ➡️ move.

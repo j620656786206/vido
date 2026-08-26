@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -71,6 +72,14 @@ func (m *mockParseJobRepo) Delete(_ context.Context, _ string) error {
 }
 
 func (m *mockParseJobRepo) ListAll(_ context.Context, _ int) ([]*models.ParseJob, error) {
+	return nil, nil
+}
+
+func (m *mockParseJobRepo) CountByStatus(_ context.Context, _ models.ParseJobStatus) (int, error) {
+	return 0, nil
+}
+
+func (m *mockParseJobRepo) CompletedMediaIDsSince(_ context.Context, _ time.Time) ([]string, error) {
 	return nil, nil
 }
 

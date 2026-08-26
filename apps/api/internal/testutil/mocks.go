@@ -190,6 +190,11 @@ func (m *MockMovieRepository) CountMissingZhHantSubtitle(ctx context.Context) (i
 	return args.Int(0), args.Error(1)
 }
 
+func (m *MockMovieRepository) CountZhHantSubtitle(ctx context.Context) (int, error) {
+	args := m.Called(ctx)
+	return args.Int(0), args.Error(1)
+}
+
 func (m *MockMovieRepository) FindAllWithFilePath(ctx context.Context) ([]models.Movie, error) {
 	args := m.Called(ctx)
 	if args.Get(0) == nil {
@@ -395,6 +400,11 @@ func (m *MockSeriesRepository) UpdateDoubanRating(ctx context.Context, id, douba
 	return args.Error(0)
 }
 
+func (m *MockSeriesRepository) CountZhHantCovered(ctx context.Context) (int, error) {
+	args := m.Called(ctx)
+	return args.Int(0), args.Error(1)
+}
+
 // Compile-time interface check
 var _ repository.SeriesRepositoryInterface = (*MockSeriesRepository)(nil)
 
@@ -422,6 +432,7 @@ func SetupDefaultMovieExpectations(m *MockMovieRepository) {
 	m.On("FindNeedingSubtitleSearch", mock.Anything, mock.Anything).Maybe().Return([]models.Movie(nil), nil)
 	m.On("FindMissingZhHantSubtitle", mock.Anything).Maybe().Return([]models.Movie(nil), nil)
 	m.On("CountMissingZhHantSubtitle", mock.Anything).Maybe().Return(0, nil)
+	m.On("CountZhHantSubtitle", mock.Anything).Maybe().Return(0, nil)
 	m.On("FindAllWithFilePath", mock.Anything).Maybe().Return([]models.Movie(nil), nil)
 	m.On("GetStats", mock.Anything).Maybe().Return((*repository.MediaStats)(nil), nil)
 	m.On("FindOwnedTMDbIDs", mock.Anything, mock.Anything).Maybe().Return([]int64(nil), nil)
@@ -449,6 +460,7 @@ func SetupDefaultSeriesExpectations(m *MockSeriesRepository) {
 	m.On("UpdateSubtitleStatus", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(nil)
 	m.On("FindBySubtitleStatus", mock.Anything, mock.Anything).Maybe().Return([]models.Series(nil), nil)
 	m.On("FindNeedingSubtitleSearch", mock.Anything, mock.Anything).Maybe().Return([]models.Series(nil), nil)
+	m.On("CountZhHantCovered", mock.Anything).Maybe().Return(0, nil)
 	m.On("GetStats", mock.Anything).Maybe().Return((*repository.MediaStats)(nil), nil)
 	m.On("FindOwnedTMDbIDs", mock.Anything, mock.Anything).Maybe().Return([]int64(nil), nil)
 	m.On("UpdateDoubanRating", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(nil)

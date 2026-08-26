@@ -949,6 +949,28 @@ func (r *MovieRepository) CountMissingZhHantSubtitle(ctx context.Context) (int, 
 	return count, nil
 }
 
+// hasZhHantSubtitleWhere is the INVERSE of missingZhHantSubtitleWhere over the
+// same population (on-disk, not-removed): the coverage numerator (ux3-1-6).
+// Fileless movies match NEITHER predicate — they count in the denominator only,
+// which keeps the 42/55 readout honest.
+const hasZhHantSubtitleWhere = `
+	subtitle_language = 'zh-Hant'
+	AND file_path IS NOT NULL AND file_path != ''
+	AND (is_removed = 0 OR is_removed IS NULL)
+`
+
+// CountZhHantSubtitle counts movies that HAVE a zh-Hant subtitle on record —
+// the home-summary coverage numerator (Story ux3-1-6).
+func (r *MovieRepository) CountZhHantSubtitle(ctx context.Context) (int, error) {
+	query := fmt.Sprintf(`SELECT COUNT(*) FROM movies WHERE %s`, hasZhHantSubtitleWhere)
+
+	var count int
+	if err := r.db.QueryRowContext(ctx, query).Scan(&count); err != nil {
+		return 0, fmt.Errorf("failed to count movies with zh-Hant subtitle: %w", err)
+	}
+	return count, nil
+}
+
 // FindNeedingSubtitleSearch retrieves movies not yet searched or last searched before threshold
 func (r *MovieRepository) FindNeedingSubtitleSearch(ctx context.Context, olderThan time.Time) ([]models.Movie, error) {
 	query := fmt.Sprintf(`
