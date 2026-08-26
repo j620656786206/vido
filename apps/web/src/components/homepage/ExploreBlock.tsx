@@ -9,6 +9,7 @@ import type { Movie, TVShow } from '../../types/tmdb';
 import { PosterCard } from '../media/PosterCard';
 import { ExploreBlockSkeleton } from './ExploreBlockSkeleton';
 import { cn } from '../../lib/utils';
+import { scrollByMotionSafe } from '../../lib/motion';
 
 interface ExploreBlockProps {
   block: ExploreBlockType;
@@ -80,7 +81,9 @@ export function ExploreBlock({ block, ownership, eager = true, onVisible }: Expl
     const el = scrollerRef.current;
     if (!el) return;
     const delta = direction === 'right' ? el.clientWidth * 0.8 : -el.clientWidth * 0.8;
-    el.scrollBy({ left: delta, behavior: 'smooth' });
+    // NOT el.scrollBy({ behavior: 'smooth' }) — an explicit JS behavior beats
+    // `scroll-behavior: auto`, so the CSS reduced-motion net cannot see this.
+    scrollByMotionSafe(el, { left: delta });
   };
 
   // While waiting to enter the viewport (lazy) or while the query is inflight,
@@ -140,7 +143,9 @@ export function ExploreBlock({ block, ownership, eager = true, onVisible }: Expl
             can't clash with PosterCard's own `group` usage in the subtree (cf.
             bugfix-10-4 CR H2 cascade trap). `pointer-events-none` on the scrims
             so they never eat a scroll/click. Fade duration matches PosterCard's
-            hover overlay (`duration-300`, bugfix-10-6 CR L2).
+            hover overlay — both are now --motion-state, which is the token for
+            "a secondary element appeared because you touched something else"
+            (bugfix-10-6 CR L2, retokenised in feat-nightwalk-motion-pass).
             TODO: optionally hide a side's chevron when that direction has no
             scroll room (track scrollLeft/scrollWidth via onScroll + a
             ResizeObserver). Intentionally skipped here (bugfix-10-6 AC #1
@@ -150,18 +155,18 @@ export function ExploreBlock({ block, ownership, eager = true, onVisible }: Expl
           <>
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-y-0 left-0 z-0 hidden w-14 bg-gradient-to-r from-[var(--bg-primary)] to-transparent opacity-0 transition-opacity duration-300 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
+              className="pointer-events-none absolute inset-y-0 left-0 z-0 hidden w-14 bg-gradient-to-r from-[var(--bg-primary)] to-transparent opacity-0 transition-opacity duration-[var(--motion-state)] group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
             />
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-y-0 right-0 z-0 hidden w-14 bg-gradient-to-l from-[var(--bg-primary)] to-transparent opacity-0 transition-opacity duration-300 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
+              className="pointer-events-none absolute inset-y-0 right-0 z-0 hidden w-14 bg-gradient-to-l from-[var(--bg-primary)] to-transparent opacity-0 transition-opacity duration-[var(--motion-state)] group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
             />
             <button
               type="button"
               onClick={() => scroll('left')}
               aria-label="向左捲動"
               data-testid="explore-block-scroll-left"
-              className="absolute left-0 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] opacity-0 shadow-lg ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity duration-300 hover:bg-[var(--bg-tertiary)] focus-visible:opacity-100 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
+              className="absolute left-0 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] opacity-0 shadow-lg ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity duration-[var(--motion-state)] hover:bg-[var(--bg-tertiary)] focus-visible:opacity-100 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -170,7 +175,7 @@ export function ExploreBlock({ block, ownership, eager = true, onVisible }: Expl
               onClick={() => scroll('right')}
               aria-label="向右捲動"
               data-testid="explore-block-scroll-right"
-              className="absolute right-0 top-1/2 z-10 hidden translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] opacity-0 shadow-lg ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity duration-300 hover:bg-[var(--bg-tertiary)] focus-visible:opacity-100 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
+              className="absolute right-0 top-1/2 z-10 hidden translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] opacity-0 shadow-lg ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity duration-[var(--motion-state)] hover:bg-[var(--bg-tertiary)] focus-visible:opacity-100 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
             >
               <ChevronRight className="h-5 w-5" />
             </button>

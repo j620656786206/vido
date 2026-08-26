@@ -55,7 +55,7 @@ export function RecentMediaPanel({ className, hideWhenEmpty = false }: RecentMed
       <div
         id="recent-media-content"
         className={cn(
-          'overflow-hidden transition-all duration-300',
+          'overflow-hidden transition-all duration-[var(--motion-move)]',
           isExpanded
             ? 'max-h-[2000px] opacity-100'
             : 'max-h-0 opacity-0 lg:max-h-none lg:opacity-100'

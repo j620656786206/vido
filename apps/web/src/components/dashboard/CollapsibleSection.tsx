@@ -68,7 +68,7 @@ export function CollapsibleSection({
       <div
         id={`${testId}-content`}
         className={cn(
-          'overflow-hidden transition-all duration-300',
+          'overflow-hidden transition-all duration-[var(--motion-move)]',
           // On mobile: collapse/expand, on desktop: always show
           isExpanded
             ? 'max-h-[2000px] opacity-100'

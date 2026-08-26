@@ -32,6 +32,7 @@ import { useRef } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useRecentlyAdded, RECENT_LIMIT } from '../../hooks/useLibrary';
 import { PosterCardV2 } from '../library/PosterCardV2';
+import { scrollByMotionSafe } from '../../lib/motion';
 import type { LibraryItem, LibraryMovie, LibrarySeries } from '../../types/library';
 
 const SKELETON_COUNT = 8;
@@ -85,7 +86,9 @@ export function RecentlyAddedRowV2() {
     const el = scrollerRef.current;
     if (!el) return;
     const delta = direction === 'right' ? el.clientWidth * 0.8 : -el.clientWidth * 0.8;
-    el.scrollBy({ left: delta, behavior: 'smooth' });
+    // NOT el.scrollBy({ behavior: 'smooth' }) — an explicit JS behavior beats
+    // `scroll-behavior: auto`, so the CSS reduced-motion net cannot see this.
+    scrollByMotionSafe(el, { left: delta });
   };
   const items = data ?? [];
   const cards = items.map(toCard).filter(Boolean) as CardFields[];
@@ -170,18 +173,18 @@ export function RecentlyAddedRowV2() {
         <div className="group/scroller relative">
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-y-0 left-0 z-0 hidden w-14 bg-gradient-to-r from-[var(--bg-primary)] to-transparent opacity-0 transition-opacity duration-300 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
+            className="pointer-events-none absolute inset-y-0 left-0 z-0 hidden w-14 bg-gradient-to-r from-[var(--bg-primary)] to-transparent opacity-0 transition-opacity duration-[var(--motion-state)] group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
           />
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-y-0 right-0 z-0 hidden w-14 bg-gradient-to-l from-[var(--bg-primary)] to-transparent opacity-0 transition-opacity duration-300 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
+            className="pointer-events-none absolute inset-y-0 right-0 z-0 hidden w-14 bg-gradient-to-l from-[var(--bg-primary)] to-transparent opacity-0 transition-opacity duration-[var(--motion-state)] group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
           />
           <button
             type="button"
             onClick={() => scroll('left')}
             aria-label="向左捲動"
             data-testid="home-recent-scroll-left"
-            className="absolute left-0 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] opacity-0 shadow-lg ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity duration-300 hover:bg-[var(--bg-tertiary)] focus-visible:opacity-100 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
+            className="absolute left-0 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] opacity-0 shadow-lg ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity duration-[var(--motion-state)] hover:bg-[var(--bg-tertiary)] focus-visible:opacity-100 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
@@ -190,7 +193,7 @@ export function RecentlyAddedRowV2() {
             onClick={() => scroll('right')}
             aria-label="向右捲動"
             data-testid="home-recent-scroll-right"
-            className="absolute right-0 top-1/2 z-10 hidden translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] opacity-0 shadow-lg ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity duration-300 hover:bg-[var(--bg-tertiary)] focus-visible:opacity-100 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
+            className="absolute right-0 top-1/2 z-10 hidden translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] opacity-0 shadow-lg ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity duration-[var(--motion-state)] hover:bg-[var(--bg-tertiary)] focus-visible:opacity-100 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
           >
             <ChevronRight className="h-5 w-5" />
           </button>

@@ -37,7 +37,7 @@ export function SearchResultCard({ item, isSelected, onSelect }: SearchResultCar
       className={cn(
         'group relative text-left w-full rounded-lg overflow-hidden',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]',
-        'transition-all duration-200',
+        'transition-all duration-[var(--motion-touch)]',
         isSelected && 'ring-2 ring-[var(--accent-primary)]'
       )}
       data-testid="search-result-card"
@@ -46,7 +46,7 @@ export function SearchResultCard({ item, isSelected, onSelect }: SearchResultCar
       <div
         className={cn(
           'relative aspect-[2/3] overflow-hidden rounded-lg bg-[var(--bg-secondary)]',
-          'transition-transform duration-150 ease-out',
+          'transition-transform duration-[var(--motion-touch)] ease-out',
           'group-hover:scale-[1.02]'
         )}
       >

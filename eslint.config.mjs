@@ -19,6 +19,7 @@ import timeDependentFixtureStability from './apps/web/src/eslint-rules/time-depe
 import noHardcodedPalette from './apps/web/src/eslint-rules/no-hardcoded-palette.js';
 import noEmojiInUi from './apps/web/src/eslint-rules/no-emoji-in-ui.js';
 import noBaseSemanticAsText from './apps/web/src/eslint-rules/no-base-semantic-as-text.js';
+import noHardcodedDuration from './apps/web/src/eslint-rules/no-hardcoded-duration.js';
 
 const localRules = {
   rules: {
@@ -27,6 +28,7 @@ const localRules = {
     ...noHardcodedPalette.rules,
     ...noEmojiInUi.rules,
     ...noBaseSemanticAsText.rules,
+    ...noHardcodedDuration.rules,
   },
 };
 
@@ -279,6 +281,11 @@ export default [
       // defect expressed in the token vocabulary instead of around it, which is
       // where 266 sites had quietly re-created it.
       'local/no-base-semantic-as-text': 'error',
+      // The time axis of the same idea (feat-nightwalk-motion-pass, 2026-08-26).
+      // styles.css now owns durations the way it owns colours, and for a
+      // stronger reason: --motion-* is the handle prefers-reduced-motion pulls.
+      // A literal `duration-300` cannot be turned down by that override.
+      'local/no-hardcoded-duration': 'error',
     },
   },
 

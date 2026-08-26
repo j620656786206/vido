@@ -131,14 +131,21 @@ function HeroSlide({
       data-testid="hero-banner-slide"
       data-active={active ? 'true' : 'false'}
       inert={!active}
-      // Outgoing slide fades FASTER than the incoming one (300 vs 700ms) so
-      // two title layers never sit half-mixed (critique R3 P3). The fade now
-      // only ever answers a user gesture — the hero itself never moves.
+      // Outgoing slide fades FASTER than the incoming one so two title layers
+      // never sit half-mixed (critique R3 P3) — that asymmetry is now the
+      // house rule (--motion-arrive / --motion-leave), not a local choice.
+      //
+      // The curves differ too, and that is the point: the incoming frame gets
+      // --ease-settle (exponential decay — it arrives fast and comes to rest),
+      // the outgoing gets --ease-leave (commits immediately). Symmetric
+      // ease-in-out made both halves linger in the middle, which is exactly
+      // where a cross-fade looks like a smear. The fade only ever answers a
+      // user gesture — the hero never moves on its own.
       className={cn(
-        'absolute inset-0 ease-in-out',
+        'absolute inset-0',
         active
-          ? 'opacity-100 transition-opacity duration-700'
-          : 'pointer-events-none opacity-0 transition-opacity duration-300'
+          ? 'opacity-100 transition-opacity duration-[var(--motion-arrive)] ease-[var(--ease-settle)]'
+          : 'pointer-events-none opacity-0 transition-opacity duration-[var(--motion-leave)] ease-[var(--ease-leave)]'
       )}
     >
       {fallbackBackdrop && !imageBroken && (
@@ -259,7 +266,7 @@ function HeroSlide({
               to="/media/$type/$id"
               params={{ type: item.type, id: item.id }}
               data-testid="hero-banner-detail-link"
-              className="relative z-10 flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-5 py-2 text-sm font-semibold text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-hover)]"
+              className="relative z-10 flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-5 py-2 text-sm font-semibold text-[var(--text-on-accent)] transition-colors duration-[var(--motion-touch)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-pressed)]"
             >
               查看詳情
             </Link>
@@ -356,7 +363,7 @@ export function HeroBanner() {
             aria-label="上一部"
             data-testid="hero-banner-prev"
             onClick={() => goTo(activeIndex - 1)}
-            className="flex h-11 w-11 items-center justify-center text-[var(--text-on-scrim)]/80 transition-colors hover:text-[var(--text-on-scrim)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+            className="flex h-11 w-11 items-center justify-center text-[var(--text-on-scrim)]/80 transition-colors duration-[var(--motion-touch)] hover:text-[var(--text-on-scrim)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -370,10 +377,17 @@ export function HeroBanner() {
               onClick={() => goTo(idx)}
               className="flex h-11 min-w-[24px] items-center justify-center px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
             >
+              {/* transition-all was animating every property the browser could
+                  interpolate, including the paint-heavy ones nobody asked for.
+                  Only two things actually change here — the pill's width and
+                  its colour — so only those two transition. Width is a layout
+                  property, but on an 8px-tall span inside a fixed-height row it
+                  reflows nothing, and the STRETCH is the meaning: the active
+                  dot elongates toward the slide it stands for. */}
               <span
                 aria-hidden="true"
                 className={cn(
-                  'h-2 rounded-full transition-all',
+                  'h-2 rounded-full transition-[width,background-color] duration-[var(--motion-state)] ease-[var(--ease-settle)]',
                   idx === activeIndex
                     ? 'w-8 bg-[var(--text-on-scrim)]'
                     : 'w-2 bg-[var(--text-on-scrim)]/70'
@@ -386,7 +400,7 @@ export function HeroBanner() {
             aria-label="下一部"
             data-testid="hero-banner-next"
             onClick={() => goTo(activeIndex + 1)}
-            className="flex h-11 w-11 items-center justify-center text-[var(--text-on-scrim)]/80 transition-colors hover:text-[var(--text-on-scrim)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+            className="flex h-11 w-11 items-center justify-center text-[var(--text-on-scrim)]/80 transition-colors duration-[var(--motion-touch)] hover:text-[var(--text-on-scrim)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
           >
             <ChevronRight className="h-4 w-4" />
           </button>

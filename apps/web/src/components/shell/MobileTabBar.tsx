@@ -11,6 +11,7 @@ import { MoreHorizontal } from 'lucide-react';
 import { ACTIVITY, MOBILE_TABS } from './navModel';
 import { useInflightJobCount } from '../../hooks/useActivity';
 import { MobileMoreSheet } from './MobileMoreSheet';
+import { InFlightBadge } from './InFlightBadge';
 
 export function MobileTabBar() {
   const [moreOpen, setMoreOpen] = useState(false);
@@ -44,13 +45,12 @@ export function MobileTabBar() {
               <span className="relative">
                 <Icon className="h-6 w-6" aria-hidden="true" />
                 {hasBadge && (
-                  <span
-                    aria-hidden="true"
-                    data-testid={`nav-${d.key}-badge`}
-                    className="absolute -right-2 -top-1 rounded-full bg-[var(--accent-subtle)] px-1 py-px font-mono text-[10px] leading-none text-[var(--accent-text)]"
-                  >
-                    {badge}
-                  </span>
+                  <InFlightBadge
+                    count={badge!}
+                    variant="rail"
+                    testId={`nav-${d.key}-badge`}
+                    className="absolute -right-2 -top-1"
+                  />
                 )}
               </span>
               <span className="text-[11px] font-medium group-data-[status=active]/tab:font-bold">

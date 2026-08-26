@@ -395,7 +395,7 @@ export function GenerationBatchPanelV2({
               >
                 <div
                   data-testid="gen-batch-progress-bar"
-                  className="h-full rounded-[var(--radius-sm)] bg-[var(--accent-primary)] transition-all duration-300"
+                  className="h-full rounded-[var(--radius-sm)] bg-[var(--accent-primary)] transition-all duration-[var(--motion-move)]"
                   style={{ width: `${pct}%` }}
                 />
               </div>
