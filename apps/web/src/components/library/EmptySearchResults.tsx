@@ -6,10 +6,25 @@ interface EmptySearchResultsProps {
   onClear: () => void;
 }
 
+/**
+ * The entrance animation here was DELETED rather than revived.
+ *
+ * This element carried `animate-in fade-in delay-500 fill-mode-backwards` —
+ * tailwindcss-animate classes for a plugin this project never installed, so it
+ * has always rendered instantly. Making them work would have been a
+ * REGRESSION: a 500ms delay before an answer the user is actively waiting for,
+ * then a 320ms fade on top of that.
+ *
+ * DESIGN.md's Motion section licenses motion for feedback, for a state change,
+ * or for work genuinely in flight. "The page finished loading" is none of the
+ * three, and an Operate surface must never make someone wait through an
+ * entrance. If a fast query ever flashes this state, the fix belongs in the
+ * query gating, not in a delay.
+ */
 export function EmptySearchResults({ query, onClear }: EmptySearchResultsProps) {
   return (
     <div
-      className="flex flex-col items-center justify-center py-16 text-center animate-in fade-in duration-[var(--motion-move)] delay-500 fill-mode-backwards"
+      className="flex flex-col items-center justify-center py-16 text-center"
       data-testid="empty-search-results"
     >
       <Search className="h-12 w-12 text-[var(--text-muted)] mb-4" aria-hidden="true" />

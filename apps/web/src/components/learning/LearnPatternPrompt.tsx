@@ -140,7 +140,12 @@ export function PatternAppliedToast({ patternTitle, onClose }: PatternAppliedToa
         'fixed bottom-6 left-1/2 -translate-x-1/2 z-50',
         'flex items-center gap-2 px-4 py-2 rounded-lg',
         'bg-[var(--success)] text-[var(--text-on-accent)] shadow-lg',
-        'animate-in fade-in slide-in-from-bottom-4'
+        // Was `animate-in fade-in slide-in-from-bottom-4` — tailwindcss-animate
+        // classes for a plugin this project never installed, so they emitted
+        // nothing. --animate-surface-rise is the token-driven equivalent, and it
+        // animates `transform` rather than `translate` so the -translate-x-1/2
+        // centring above survives.
+        'animate-surface-rise'
       )}
       role="status"
       aria-live="polite"
@@ -178,7 +183,12 @@ export function LearnSuccessToast({ pattern, onClose }: LearnSuccessToastProps) 
         'fixed bottom-6 left-1/2 -translate-x-1/2 z-50',
         'flex items-center gap-2 px-4 py-2 rounded-lg',
         'bg-[var(--accent-primary)] text-[var(--text-on-accent)] shadow-lg',
-        'animate-in fade-in slide-in-from-bottom-4'
+        // Was `animate-in fade-in slide-in-from-bottom-4` — tailwindcss-animate
+        // classes for a plugin this project never installed, so they emitted
+        // nothing. --animate-surface-rise is the token-driven equivalent, and it
+        // animates `transform` rather than `translate` so the -translate-x-1/2
+        // centring above survives.
+        'animate-surface-rise'
       )}
       role="status"
       aria-live="polite"

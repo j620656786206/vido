@@ -318,7 +318,15 @@ test.describe('Scan Progress Card — SSE-driven @e2e @scanner @scan-progress', 
     await expect(page.getByTestId('view-unmatched-link')).toBeVisible();
 
     // AND: the auto-dismiss affordance + manual dismiss are present.
-    await expect(page.getByTestId('auto-dismiss-bar')).toBeVisible();
+    // NOT toBeVisible(): the bar now genuinely counts down (it was frozen while
+    // `animate-shrink` lived in the never-loaded tailwind.config.js), and a
+    // countdown that has run scales to zero width, which Playwright reads as
+    // not visible. Assert what the test actually means — the affordance exists
+    // AND is running — which is a stronger claim than the geometric one and is
+    // not coupled to how far through the ten seconds we happen to be.
+    const autoDismissBar = page.getByTestId('auto-dismiss-bar');
+    await expect(autoDismissBar).toHaveCount(1);
+    await expect(autoDismissBar).toHaveClass(/animate-countdown/);
     await page.getByTestId('scan-dismiss-btn').click();
     await expect(page.getByTestId('scan-progress-card')).toHaveCount(0);
   });
