@@ -284,3 +284,44 @@ describe('every animation named in source actually exists', () => {
     ).toEqual([]);
   });
 });
+
+/**
+ * ⚠️ THE PIN THAT WAS NEVER APPLIED.
+ *
+ * `playwright.config.ts` pinned `reducedMotion: 'reduce'` on the `visual`
+ * project's `use` block, with a comment saying it killed CSS motion so
+ * snapshots stayed stable. It did not. `reducedMotion` is NOT a
+ * PlaywrightTestOptions fixture — the test runner silently drops it, and it
+ * only reaches the browser via `contextOptions`. Proved behaviourally:
+ * `use.reducedMotion` → matchMedia reduce = FALSE; `use.contextOptions.
+ * reducedMotion` → true. The `colorScheme` pin on the line above DOES work,
+ * which is why the miss survived every baseline in the suite.
+ *
+ * The cost was real and it surfaced here: with reduce never applied,
+ * `motion-reduce:animate-none` never matched, so the scan card's 10s countdown
+ * genuinely ran and toHaveScreenshot's `animations: 'disabled'` called
+ * `animation.finish()` — `fill: forwards` pinned scale:0 and the bar
+ * screenshotted fully drained (892px diff, 20× the budget).
+ *
+ * `tsc` catches this exact mistake ("'reducedMotion' does not exist in type
+ * 'UseOptions<…>'"), but playwright.config.ts is in no tsconfig and CI has no
+ * typecheck step, so nothing did. Until that changes, this guards the one key
+ * whose silence this project has already paid for.
+ */
+describe('the visual harness actually applies reduced motion', () => {
+  const PW = readFileSync(join(__dirname, '../../../playwright.config.ts'), 'utf8');
+
+  it('pins reducedMotion through contextOptions, where Playwright reads it', () => {
+    expect(PW).toMatch(/contextOptions:\s*\{[^}]*reducedMotion:\s*'reduce'/);
+  });
+
+  it('never pins reducedMotion directly in `use` — the runner ignores it there', () => {
+    const stripped = PW.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+    // Every occurrence left must be the contextOptions one.
+    const all = [...stripped.matchAll(/reducedMotion/g)].length;
+    const nested = [...stripped.matchAll(/contextOptions:\s*\{[^}]*reducedMotion/g)].length;
+    expect(all, 'a bare `reducedMotion` in `use` is silently dropped by the test runner').toBe(
+      nested
+    );
+  });
+});
