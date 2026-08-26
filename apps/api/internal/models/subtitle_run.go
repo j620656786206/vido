@@ -117,6 +117,13 @@ type SubtitleRun struct {
 	ErrorMessage    string            `db:"error_message" json:"error_message,omitempty"`
 	StartedAt       time.Time         `db:"started_at" json:"started_at"`
 	CompletedAt     *time.Time        `db:"completed_at" json:"completed_at,omitempty"`
+	// SpentUSD/BudgetUSD are this run's OWN ai.Budget delta and ceiling,
+	// stamped at every terminal transition (ux3-1-6, migration 032). Pointers
+	// on purpose: NULL means "recorded before migration 032 / legacy path" —
+	// absent is not $0, and home-summary skips NULL rows when resolving the
+	// latest-spend readout.
+	SpentUSD  *float64 `db:"spent_usd" json:"spent_usd,omitempty"`
+	BudgetUSD *float64 `db:"budget_usd" json:"budget_usd,omitempty"`
 }
 
 // Validate checks the caller-supplied fields of a run before it is persisted.

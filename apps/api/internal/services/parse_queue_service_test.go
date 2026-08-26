@@ -114,6 +114,14 @@ func (m *mockPQParseJobRepo) ListAll(_ context.Context, limit int) ([]*models.Pa
 	return all, nil
 }
 
+func (m *mockPQParseJobRepo) CountByStatus(_ context.Context, _ models.ParseJobStatus) (int, error) {
+	return 0, nil
+}
+
+func (m *mockPQParseJobRepo) CompletedMediaIDsSince(_ context.Context, _ time.Time) ([]string, error) {
+	return nil, nil
+}
+
 var _ repository.ParseJobRepositoryInterface = (*mockPQParseJobRepo)(nil)
 
 type mockPQParserService struct {
@@ -256,6 +264,10 @@ func (m *mockPQMovieRepo) UpdateDoubanRating(_ context.Context, _, _ string, _ f
 	return nil
 }
 
+func (m *mockPQMovieRepo) CountZhHantSubtitle(_ context.Context) (int, error) {
+	return 0, nil
+}
+
 var _ repository.MovieRepositoryInterface = (*mockPQMovieRepo)(nil)
 
 type mockPQSeriesRepo struct {
@@ -354,6 +366,10 @@ func (m *mockPQSeriesRepo) FindOwnedTMDbIDs(_ context.Context, _ []int64) ([]int
 }
 func (m *mockPQSeriesRepo) UpdateDoubanRating(_ context.Context, _, _ string, _ float64, _ int) error {
 	return nil
+}
+
+func (m *mockPQSeriesRepo) CountZhHantCovered(_ context.Context) (int, error) {
+	return 0, nil
 }
 
 var _ repository.SeriesRepositoryInterface = (*mockPQSeriesRepo)(nil)

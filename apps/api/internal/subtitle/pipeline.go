@@ -450,6 +450,13 @@ type processScope struct {
 	// harvestedTerms counts the glossary terms this item's harvest actually
 	// INSERTED (deduped conflicts excluded) — the AC #6 completion-log figure.
 	harvestedTerms int
+
+	// spentUSDAtStart snapshots the ctx Budget's cumulative spend when THIS
+	// item began. A consent batch shares ONE Budget across items (sub-4-2), so
+	// the per-run spend stamped at the terminal write (ux3-1-6) must be the
+	// delta from here, not the batch running total — otherwise every run row
+	// would misattribute its siblings' cost.
+	spentUSDAtStart float64
 }
 
 type processScopeKey struct{}

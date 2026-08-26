@@ -33,6 +33,23 @@ type SubtitleRunRepositoryInterface interface {
 	// ListByStatus returns runs in the given state, newest first. limit <= 0
 	// means no limit.
 	ListByStatus(ctx context.Context, status models.SubtitleRunStatus, limit int) ([]models.SubtitleRun, error)
+	// CountByStatus counts runs in the given state (ux3-1-6 attention cell).
+	CountByStatus(ctx context.Context, status models.SubtitleRunStatus) (int, error)
+	// CompletedMediaRefsSince returns the distinct (media_id, media_type) pairs
+	// of runs completed at/after `since` (ux3-1-6 processed-today cell). The
+	// day window bounds the result set — no LIMIT by design (tech-spec D2).
+	CompletedMediaRefsSince(ctx context.Context, since time.Time) ([]SubtitleRunMediaRef, error)
+	// LatestWithSpend returns the most recently completed terminal run that has
+	// a recorded spend, or (nil, nil) when none exists yet — absence is the
+	// normal pre-migration-032 state, not an error (ux3-1-6 spend readout).
+	LatestWithSpend(ctx context.Context) (*models.SubtitleRun, error)
+}
+
+// SubtitleRunMediaRef is one distinct media identity touched by a run —
+// the processed-today dedupe grain (ux3-1-6).
+type SubtitleRunMediaRef struct {
+	MediaID   string
+	MediaType string
 }
 
 // SubtitleRunRepository provides SQLite data access for subtitle-run provenance.
@@ -49,22 +66,24 @@ func NewSubtitleRunRepository(db *sql.DB) *SubtitleRunRepository {
 var _ SubtitleRunRepositoryInterface = (*SubtitleRunRepository)(nil)
 
 // subtitleRunColumns keeps INSERT/UPDATE/SELECT/scan in sync (Rule 15 DB Column
-// Sync). All 16 columns of migration 030, in table order. The bugfix-20-1
-// precedent — series.seasons was never added to the select list, so GetSeasons
-// silently returned [] for every series — is why this is one constant used
-// everywhere rather than four hand-written lists.
+// Sync). All 18 columns — the 16 of migration 030 in table order, plus the two
+// spend columns of migration 032. The bugfix-20-1 precedent — series.seasons
+// was never added to the select list, so GetSeasons silently returned [] for
+// every series — is why this is one constant used everywhere rather than four
+// hand-written lists.
 const subtitleRunColumns = `id, media_id, media_type, tmdb_id, metadata_hash, glossary_version, ` +
 	`prompt_version, model_id, status, source_language, output_path, cue_count, ` +
-	`cache_enabled, error_message, started_at, completed_at`
+	`cache_enabled, error_message, started_at, completed_at, spent_usd, budget_usd`
 
-// subtitleRunInsertPlaceholders matches subtitleRunColumns 1:1 (16 values).
-const subtitleRunInsertPlaceholders = `?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?`
+// subtitleRunInsertPlaceholders matches subtitleRunColumns 1:1 (18 values).
+const subtitleRunInsertPlaceholders = `?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?`
 
 // subtitleRunUpdateAssignments covers every column except the id key, so an
 // Update can never leave a column stale.
 const subtitleRunUpdateAssignments = `media_id = ?, media_type = ?, tmdb_id = ?, metadata_hash = ?, ` +
 	`glossary_version = ?, prompt_version = ?, model_id = ?, status = ?, source_language = ?, ` +
-	`output_path = ?, cue_count = ?, cache_enabled = ?, error_message = ?, started_at = ?, completed_at = ?`
+	`output_path = ?, cue_count = ?, cache_enabled = ?, error_message = ?, started_at = ?, completed_at = ?, ` +
+	`spent_usd = ?, budget_usd = ?`
 
 // subtitleRunValues returns the 16 column values in subtitleRunColumns order.
 // Both time columns are normalized to UTC before storage: the driver stores a
@@ -80,13 +99,13 @@ func subtitleRunValues(run *models.SubtitleRun) []any {
 	return []any{
 		run.ID, run.MediaID, run.MediaType, run.TMDbID, run.MetadataHash, run.GlossaryVersion,
 		run.PromptVersion, run.ModelID, run.Status, run.SourceLanguage, run.OutputPath, run.CueCount,
-		run.CacheEnabled, run.ErrorMessage, run.StartedAt.UTC(), completedAt,
+		run.CacheEnabled, run.ErrorMessage, run.StartedAt.UTC(), completedAt, run.SpentUSD, run.BudgetUSD,
 	}
 }
 
-// scanSubtitleRun reads all 16 columns in subtitleRunColumns order. The four
+// scanSubtitleRun reads all 18 columns in subtitleRunColumns order. The four
 // nullable TEXT/INTEGER columns go through sql.Null* so a row written by any
-// other path (e.g. a bare INSERT) still scans; the two nullable columns modelled
+// other path (e.g. a bare INSERT) still scans; the nullable columns modelled
 // as pointers stay pointers so "unset" survives the round trip.
 func scanSubtitleRun(scanner interface{ Scan(dest ...any) error }) (models.SubtitleRun, error) {
 	var run models.SubtitleRun
@@ -96,7 +115,7 @@ func scanSubtitleRun(scanner interface{ Scan(dest ...any) error }) (models.Subti
 	err := scanner.Scan(
 		&run.ID, &run.MediaID, &run.MediaType, &run.TMDbID, &run.MetadataHash, &run.GlossaryVersion,
 		&run.PromptVersion, &run.ModelID, &run.Status, &sourceLanguage, &outputPath, &cueCount,
-		&run.CacheEnabled, &errorMessage, &run.StartedAt, &run.CompletedAt,
+		&run.CacheEnabled, &errorMessage, &run.StartedAt, &run.CompletedAt, &run.SpentUSD, &run.BudgetUSD,
 	)
 	if err != nil {
 		return run, err
@@ -239,4 +258,57 @@ func (r *SubtitleRunRepository) ListByStatus(ctx context.Context, status models.
 		return nil, fmt.Errorf("error iterating subtitle runs: %w", err)
 	}
 	return runs, nil
+}
+
+func (r *SubtitleRunRepository) CountByStatus(ctx context.Context, status models.SubtitleRunStatus) (int, error) {
+	var count int
+	if err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM subtitle_runs WHERE status = ?`, status).Scan(&count); err != nil {
+		return 0, fmt.Errorf("failed to count subtitle runs by status: %w", err)
+	}
+	return count, nil
+}
+
+// CompletedMediaRefsSince compares lexicographically over the driver's time
+// text — correct because this table ALWAYS writes UTC (subtitleRunValues
+// normalizes both time columns) and the parameter is UTC-normalized too.
+// SQLite's datetime() cannot parse the driver's Go String() format, so a
+// datetime() wrapper would return NULL and match nothing.
+func (r *SubtitleRunRepository) CompletedMediaRefsSince(ctx context.Context, since time.Time) ([]SubtitleRunMediaRef, error) {
+	query := `SELECT DISTINCT media_id, media_type FROM subtitle_runs
+		WHERE status = ? AND completed_at IS NOT NULL AND completed_at >= ?`
+
+	rows, err := r.db.QueryContext(ctx, query, models.SubtitleRunCompleted, since.UTC())
+	if err != nil {
+		return nil, fmt.Errorf("failed to query completed subtitle runs since: %w", err)
+	}
+	defer rows.Close()
+
+	var refs []SubtitleRunMediaRef
+	for rows.Next() {
+		var ref SubtitleRunMediaRef
+		if err := rows.Scan(&ref.MediaID, &ref.MediaType); err != nil {
+			return nil, fmt.Errorf("failed to scan completed subtitle run ref: %w", err)
+		}
+		refs = append(refs, ref)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating completed subtitle run refs: %w", err)
+	}
+	return refs, nil
+}
+
+func (r *SubtitleRunRepository) LatestWithSpend(ctx context.Context) (*models.SubtitleRun, error) {
+	query := `SELECT ` + subtitleRunColumns + ` FROM subtitle_runs
+		WHERE spent_usd IS NOT NULL AND completed_at IS NOT NULL
+		ORDER BY completed_at DESC LIMIT 1`
+
+	run, err := scanSubtitleRun(r.db.QueryRowContext(ctx, query))
+	if errors.Is(err, sql.ErrNoRows) {
+		// Absence is the normal state until the first post-032 pipeline run.
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to find latest subtitle run with spend: %w", err)
+	}
+	return &run, nil
 }

@@ -100,6 +100,11 @@ type MovieRepositoryInterface interface {
 	// Needed by: Story 9R-16 (generation-batch preview)
 	CountMissingZhHantSubtitle(ctx context.Context) (int, error)
 
+	// CountZhHantSubtitle counts movies that HAVE a zh-Hant subtitle on record —
+	// the inverse of missingZhHantSubtitleWhere over on-disk, not-removed movies
+	// Needed by: Story ux3-1-6 (home-summary coverage cell)
+	CountZhHantSubtitle(ctx context.Context) (int, error)
+
 	// FindAllWithFilePath retrieves all movies that have a non-null file_path and are not removed
 	// Needed by: Story 7-2 (detect removed files during incremental scan)
 	FindAllWithFilePath(ctx context.Context) ([]models.Movie, error)
@@ -201,6 +206,12 @@ type SeriesRepositoryInterface interface {
 	// GetStats returns aggregate statistics including total and unmatched counts
 	// Needed by: Story 9c-4 (unmatched filter count badge)
 	GetStats(ctx context.Context) (*MediaStats, error)
+
+	// CountZhHantCovered counts not-removed series that have ≥1 on-disk episode
+	// AND no on-disk episode missing a zh-Hant subtitle (a zero-episode series
+	// is NOT covered — no vacuous truth)
+	// Needed by: Story ux3-1-6 (home-summary coverage cell)
+	CountZhHantCovered(ctx context.Context) (int, error)
 
 	// FindOwnedTMDbIDs returns the subset of input TMDb IDs that exist in the series
 	// table and are not soft-deleted. Single batched query to avoid N+1.
@@ -432,6 +443,14 @@ type ParseJobRepositoryInterface interface {
 
 	// ListAll retrieves all parse jobs ordered by creation time descending
 	ListAll(ctx context.Context, limit int) ([]*models.ParseJob, error)
+
+	// CountByStatus counts parse jobs in the given state — a real COUNT(*)
+	// Needed by: Story ux3-1-6 (home-summary attention cell)
+	CountByStatus(ctx context.Context, status models.ParseJobStatus) (int, error)
+
+	// CompletedMediaIDsSince returns distinct media ids of jobs completed at/after since
+	// Needed by: Story ux3-1-6 (home-summary processed-today cell)
+	CompletedMediaIDsSince(ctx context.Context, since time.Time) ([]string, error)
 }
 
 // RetryItem is imported from retry package for interface definition

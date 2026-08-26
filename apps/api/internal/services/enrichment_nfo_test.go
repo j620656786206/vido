@@ -195,6 +195,9 @@ func (m *mockMovieRepoForNFO) FindMissingZhHantSubtitle(ctx context.Context) ([]
 func (m *mockMovieRepoForNFO) CountMissingZhHantSubtitle(ctx context.Context) (int, error) {
 	return 0, nil
 }
+func (m *mockMovieRepoForNFO) CountZhHantSubtitle(ctx context.Context) (int, error) {
+	return 0, nil
+}
 func (m *mockMovieRepoForNFO) FindAllWithFilePath(ctx context.Context) ([]models.Movie, error) {
 	return nil, nil
 }

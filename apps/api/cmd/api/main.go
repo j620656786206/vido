@@ -900,6 +900,17 @@ func main() {
 	// jobs that were previously invisible once their progress modal was closed.
 	activityService := services.NewActivityService(scannerService, batchProcessor, generationBatchProcessor, transcriptionService, downloadService, repos.ParseJobs)
 	activityHandler := handlers.NewActivityHandler(activityService)
+
+	// Home v3 readout-band aggregate (ux3-1-6, tech-spec D1). The four in-flight
+	// sources are the SAME instances /activity reads (D2: one counting path with
+	// the nav badge); generationBatchProcessor doubles as the live-spend source
+	// for the attention cell (D3 precedence: live batch over last persisted run).
+	homeSummaryService := services.NewHomeSummaryService(
+		repos.Movies, repos.Series, repos.ParseJobs, repos.SubtitleRuns,
+		scannerService, batchProcessor, generationBatchProcessor, transcriptionService,
+		generationBatchProcessor,
+	)
+	homeSummaryHandler := handlers.NewHomeSummaryHandler(homeSummaryService)
 	// parseProgressHandler already initialized above with defer Close()
 	slog.Info("Handlers initialized with service injection")
 
@@ -937,6 +948,7 @@ func main() {
 		statusHandler.RegisterRoutes(apiV1)        // Must be before settingsHandler to avoid /settings/:key conflict
 		statusSummaryHandler.RegisterRoutes(apiV1) // GET /api/v1/status/summary — ambient NAS status strip (ux3-0-3, D4-2)
 		activityHandler.RegisterRoutes(apiV1)      // GET /api/v1/activity — Activity hub aggregate (ux3-2-1, D4-1)
+		homeSummaryHandler.RegisterRoutes(apiV1)   // GET /api/v1/home-summary — Home v3 readout band (ux3-1-6)
 		backupHandler.RegisterRoutes(apiV1)        // Must be before settingsHandler to avoid /settings/:key conflict
 		exportHandler.RegisterRoutes(apiV1)        // Must be before settingsHandler to avoid /settings/:key conflict
 		settingsHandler.RegisterRoutes(apiV1)

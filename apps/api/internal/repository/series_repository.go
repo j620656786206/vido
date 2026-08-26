@@ -536,6 +536,34 @@ func (r *SeriesRepository) Count(ctx context.Context) (int, error) {
 	return count, nil
 }
 
+// CountZhHantCovered counts series that are fully zh-Hant covered — the series
+// half of the home-summary coverage numerator (Story ux3-1-6, by 部).
+//
+// "Covered" requires BOTH: at least one on-disk episode (a zero-episode series
+// is NOT vacuously covered) AND no on-disk episode matching the shared
+// missing-predicate (episode_repository.go missingZhHantSubtitleEpisodeWhere,
+// inlined here with the e. alias). Episode-grain detail stays on the library
+// page; this readout counts whole series.
+func (r *SeriesRepository) CountZhHantCovered(ctx context.Context) (int, error) {
+	query := fmt.Sprintf(`SELECT COUNT(*) FROM series s
+		WHERE %s
+		AND EXISTS (
+			SELECT 1 FROM episodes e WHERE e.series_id = s.id
+			AND e.file_path IS NOT NULL AND e.file_path != ''
+		)
+		AND NOT EXISTS (
+			SELECT 1 FROM episodes e WHERE e.series_id = s.id
+			AND (e.subtitle_language IS NULL OR e.subtitle_language != 'zh-Hant')
+			AND e.file_path IS NOT NULL AND e.file_path != ''
+		)`, notRemovedSeriesQualified("s"))
+
+	var count int
+	if err := r.db.QueryRowContext(ctx, query).Scan(&count); err != nil {
+		return 0, fmt.Errorf("failed to count zh-Hant covered series: %w", err)
+	}
+	return count, nil
+}
+
 // GetStats returns aggregate statistics including total and unmatched counts
 func (r *SeriesRepository) GetStats(ctx context.Context) (*MediaStats, error) {
 	var stats MediaStats

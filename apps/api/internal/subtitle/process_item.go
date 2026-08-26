@@ -89,6 +89,11 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 	if ai.BudgetFromContext(ctx) == nil {
 		ctx = ai.WithBudget(ctx, ai.NewBudget(p.runBudgetUSD))
 	}
+	// A batch-shared Budget arrives with spend already on the meter; the
+	// per-run figure stamped at the terminal write is the delta from here.
+	if b := ai.BudgetFromContext(ctx); b != nil {
+		scope.spentUSDAtStart = b.SpentUSD()
+	}
 
 	// ── Step 2: run row + media status ──────────────────────────────────────
 	run := &models.SubtitleRun{
@@ -208,6 +213,7 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 	run.SourceLanguage = sourceLanguageOf(decision)
 	run.CacheEnabled = scope.cacheEnabled
 	run.CompletedAt = &completedAt
+	p.stampRunSpend(ctx, run)
 	if err := p.runs.Update(ctx, run); err != nil {
 		// The sidecar IS on disk. Reverting the media row to `not_searched`
 		// keeps the item retryable, and the next run's P5 pre-flight will see
@@ -471,6 +477,7 @@ func (p *Pipeline) transcribeFallback(
 		run.CueCount = cueCount
 		outcome.SubtitlePath = zhPath
 	}
+	p.stampRunSpend(ctx, run)
 	if err := p.runs.Update(ctx, run); err != nil {
 		return p.failItem(ctx, ref, run, "record asr provenance", err)
 	}
@@ -495,6 +502,7 @@ func (p *Pipeline) pauseASRItem(ctx context.Context, ref MediaRef, run *models.S
 	run.Status = models.SubtitleRunFailed
 	run.ErrorMessage = truncateErrorMessage(err.Error())
 	run.CompletedAt = &completedAt
+	p.stampRunSpend(ctx, run)
 	if uerr := p.runs.Update(cleanupCtx, run); uerr != nil {
 		p.logger.Error("failed to record the budget-paused subtitle run",
 			"media_id", ref.ID, "run_id", run.ID, "error", uerr)
@@ -504,6 +512,29 @@ func (p *Pipeline) pauseASRItem(ctx context.Context, ref MediaRef, run *models.S
 	p.logger.Info("subtitle pipeline ASR fallback paused on the budget ceiling",
 		"media_id", ref.ID, "media_type", ref.MediaType)
 	return nil, err
+}
+
+// stampRunSpend copies this item's OWN ai.Budget delta and ceiling onto the run
+// row (ux3-1-6, migration 032). Called before EVERY terminal write — completed,
+// failed, and skipped alike: cost was incurred regardless of outcome. Nil-safe:
+// a budget-less ctx (unit tests, unwired paths) leaves the pointers nil, and
+// NULL means "not recorded", which downstream readers treat differently from $0.
+func (p *Pipeline) stampRunSpend(ctx context.Context, run *models.SubtitleRun) {
+	b := ai.BudgetFromContext(ctx)
+	if b == nil || run == nil {
+		return
+	}
+	snap := b.Snapshot()
+	spent := snap.SpentUSD
+	if scope := processScopeFrom(ctx); scope != nil {
+		spent -= scope.spentUSDAtStart
+		if spent < 0 {
+			spent = 0
+		}
+	}
+	budget := snap.BudgetUSD
+	run.SpentUSD = &spent
+	run.BudgetUSD = &budget
 }
 
 // sidecarWrittenSince reports whether the sidecar at path was (re)written
@@ -595,6 +626,7 @@ func (p *Pipeline) deferPaidItem(
 	run.Status = models.SubtitleRunSkipped
 	run.ErrorMessage = DeferredPaidRunPrefix + string(decision.Kind) + " requires paid work — awaiting cost consent (9R-10b AC #3)"
 	run.CompletedAt = &completedAt
+	p.stampRunSpend(ctx, run)
 
 	if err := p.runs.Update(ctx, run); err != nil {
 		return p.failItem(ctx, ref, run, "record deferral", err)
@@ -643,6 +675,7 @@ func (p *Pipeline) recordSkip(
 	// it carries the routing reason, not a failure.
 	run.ErrorMessage = decision.Reason
 	run.CompletedAt = &completedAt
+	p.stampRunSpend(ctx, run)
 
 	if err := p.runs.Update(ctx, run); err != nil {
 		return p.failItem(ctx, ref, run, "record skip", err)
@@ -692,6 +725,7 @@ func (p *Pipeline) failItem(ctx context.Context, ref MediaRef, run *models.Subti
 		}
 		run.ErrorMessage = truncateErrorMessage(msg)
 		run.CompletedAt = &completedAt
+		p.stampRunSpend(ctx, run)
 		if uerr := p.runs.Update(cleanupCtx, run); uerr != nil {
 			p.logger.Error("failed to record the failed subtitle run",
 				"media_id", ref.ID, "run_id", run.ID, "error", uerr)
