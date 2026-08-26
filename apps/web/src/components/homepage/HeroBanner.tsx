@@ -185,34 +185,44 @@ function HeroSlide({ item, active }: { item: HeroItem; active: boolean }) {
               row over a known floor keeps every token's measured contrast true
               here, instead of re-deriving a hero-only palette. */}
           <div className="mt-3 inline-flex max-w-full flex-wrap items-center gap-3 rounded-[var(--radius-md)] bg-[var(--overlay-scrim)] px-2 py-1 text-sm text-[var(--text-on-scrim)]">
-            {badge &&
-              (badge.actionable ? (
-                // relative z-10 keeps it above the title's stretched anchor so
-                // the badge is its own target; after:-inset-y grows the touch
-                // area to the 44px floor without fattening the pill.
-                <Link
-                  to="/media/$type/$id"
-                  params={{ type: item.type, id: item.id }}
-                  data-testid="hero-banner-subtitle-badge"
-                  aria-label={`${badge.label}，前往 ${item.title} 的詳情頁處理`}
-                  className={cn(
-                    'relative z-10 rounded-[var(--radius-sm)] px-2 py-0.5 text-xs font-medium underline underline-offset-2 after:absolute after:-inset-x-1 after:-inset-y-3 after:content-[""] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
-                    badge.className
-                  )}
-                >
-                  {badge.label}
-                </Link>
-              ) : (
-                <span
-                  data-testid="hero-banner-subtitle-badge"
-                  className={cn(
-                    'rounded-[var(--radius-sm)] px-2 py-0.5 text-xs font-medium',
-                    badge.className
-                  )}
-                >
-                  {badge.label}
-                </span>
-              ))}
+            {/* OPAQUE underlay, the PosterCardV2:128 precedent. The *-tint
+                tokens are ~12–20% alpha and the gate measures them composited
+                over a --bg-* PAGE ground. Here the badge rides the scrim, so
+                without this the tint composites over a DARK veil instead and
+                the light theme's ink-green --success-text lands at 1.47:1 —
+                measured, and reported from a phone. An opaque chip restores
+                the stack the gate actually guarantees, for every semantic. */}
+            {badge && (
+              <span className="inline-flex rounded-[var(--radius-sm)] bg-[var(--bg-secondary)]">
+                {badge.actionable ? (
+                  // relative z-10 keeps it above the title's stretched anchor so
+                  // the badge is its own target; after:-inset-y grows the touch
+                  // area to the 44px floor without fattening the pill.
+                  <Link
+                    to="/media/$type/$id"
+                    params={{ type: item.type, id: item.id }}
+                    data-testid="hero-banner-subtitle-badge"
+                    aria-label={`${badge.label}，前往 ${item.title} 的詳情頁處理`}
+                    className={cn(
+                      'relative z-10 rounded-[var(--radius-sm)] px-2 py-0.5 text-xs font-medium underline underline-offset-2 after:absolute after:-inset-x-1 after:-inset-y-3 after:content-[""] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
+                      badge.className
+                    )}
+                  >
+                    {badge.label}
+                  </Link>
+                ) : (
+                  <span
+                    data-testid="hero-banner-subtitle-badge"
+                    className={cn(
+                      'rounded-[var(--radius-sm)] px-2 py-0.5 text-xs font-medium',
+                      badge.className
+                    )}
+                  >
+                    {badge.label}
+                  </span>
+                )}
+              </span>
+            )}
             {item.year && <span data-testid="hero-banner-year">{item.year}</span>}
             <span data-testid="hero-banner-type">{item.type === 'movie' ? '電影' : '影集'}</span>
             {item.voteAverage != null && item.voteAverage > 0 && (
