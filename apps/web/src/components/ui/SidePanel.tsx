@@ -59,7 +59,7 @@ export function SidePanel({ isOpen, onClose, children, title, className }: SideP
              themes: a paper page behind a panel still needs a boundary.
              Was black/50; the token is 70%. */
           'absolute inset-0 bg-[var(--overlay-scrim)] backdrop-blur-sm',
-          'transition-opacity duration-200',
+          'transition-opacity duration-[var(--motion-move)]',
           isOpen ? 'opacity-100' : 'opacity-0'
         )}
         data-testid="side-panel-backdrop"
@@ -77,7 +77,7 @@ export function SidePanel({ isOpen, onClose, children, title, className }: SideP
           // Background and shadow
           'bg-[var(--bg-primary)] shadow-2xl',
           // Task 3.2: Slide-in animation from right (300ms)
-          'transform transition-transform duration-300 ease-out',
+          'transform transition-transform duration-[var(--motion-move)] ease-out',
           isOpen ? 'translate-x-0' : 'translate-x-full',
           className
         )}

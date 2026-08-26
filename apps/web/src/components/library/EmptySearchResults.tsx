@@ -9,7 +9,7 @@ interface EmptySearchResultsProps {
 export function EmptySearchResults({ query, onClear }: EmptySearchResultsProps) {
   return (
     <div
-      className="flex flex-col items-center justify-center py-16 text-center animate-in fade-in duration-500 delay-500 fill-mode-backwards"
+      className="flex flex-col items-center justify-center py-16 text-center animate-in fade-in duration-[var(--motion-move)] delay-500 fill-mode-backwards"
       data-testid="empty-search-results"
     >
       <Search className="h-12 w-12 text-[var(--text-muted)] mb-4" aria-hidden="true" />

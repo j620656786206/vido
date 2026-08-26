@@ -46,7 +46,7 @@ export function BatchProgress({
         <div className="mb-2 h-2 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
           <div
             data-testid="progress-bar"
-            className="h-full rounded-full bg-[var(--accent-primary)] transition-all duration-300"
+            className="h-full rounded-full bg-[var(--accent-primary)] transition-all duration-[var(--motion-move)]"
             style={{ width: `${progress}%` }}
           />
         </div>

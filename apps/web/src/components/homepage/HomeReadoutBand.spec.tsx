@@ -186,4 +186,46 @@ describe('HomeReadoutBand (Home v3 讀數帶 — ux3-1-7)', () => {
     expect(screen.queryByTestId('home-readout-band')).toBeNull();
     expect(screen.queryByTestId('home-readout-skeleton')).toBeNull();
   });
+
+  /**
+   * Motion licence ③ (styles.css):「動的東西＝正在發生的事」. The breath is a
+   * CLAIM that jobs are running, so it is bound to the same honesty contract
+   * as the colour vocabulary — a still 進行中 cell and a moving one must mean
+   * different things, and only the backend gets to say which.
+   */
+  describe('[P1] 進行中 breathes only while something is actually in flight', () => {
+    const icon = () => screen.getByTestId('readout-inflight').querySelector('svg')!;
+
+    it('breathes when the count is above zero', () => {
+      mockUseHomeSummary.mockReturnValue(result({ data: summary() })); // count: 2
+      render(<HomeReadoutBand />);
+      expect(icon().getAttribute('class')).toContain('motion-safe:animate-breathe');
+    });
+
+    it('is perfectly still at 0 — the stillness IS the readout', () => {
+      mockUseHomeSummary.mockReturnValue(
+        result({ data: summary({ inFlight: { status: 'ok', count: 0 } }) })
+      );
+      render(<HomeReadoutBand />);
+      expect(icon().getAttribute('class')).not.toContain('animate-breathe');
+    });
+
+    it('is still when the count is UNMEASURABLE — unknown is not the same as busy', () => {
+      mockUseHomeSummary.mockReturnValue(
+        result({ data: summary({ inFlight: { status: 'unavailable' } }) })
+      );
+      render(<HomeReadoutBand />);
+      expect(icon().getAttribute('class')).not.toContain('animate-breathe');
+    });
+
+    it('no OTHER cell ever breathes — three of the four are settled facts', () => {
+      mockUseHomeSummary.mockReturnValue(result({ data: summary() }));
+      render(<HomeReadoutBand />);
+      for (const id of ['readout-coverage', 'readout-processed', 'readout-attention']) {
+        expect(screen.getByTestId(id).innerHTML, `${id} must not move`).not.toContain(
+          'animate-breathe'
+        );
+      }
+    });
+  });
 });

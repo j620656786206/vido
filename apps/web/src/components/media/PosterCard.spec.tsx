@@ -567,7 +567,11 @@ describe('PosterCard', () => {
       expect(badgeCluster).not.toBeNull();
       expect(badgeCluster).toHaveClass(
         'transition-all',
-        'duration-300',
+        // The literal 300ms became a token in feat-nightwalk-motion-pass. The
+        // duration is asserted here for the reason the original AC gave — the
+        // recede must stay in step with the wrapper's hover — so the guard is
+        // now "the same token the wrapper uses", not "300".
+        'duration-[var(--motion-state)]',
         'origin-top-right',
         'lg:group-hover:scale-95',
         'lg:group-hover:opacity-0'

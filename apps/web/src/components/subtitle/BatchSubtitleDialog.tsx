@@ -150,7 +150,7 @@ export function BatchSubtitlePanel({
               <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
                 <div
                   data-testid="batch-subtitle-progress-bar"
-                  className="h-full rounded-full bg-[var(--accent-primary)] transition-all duration-300"
+                  className="h-full rounded-full bg-[var(--accent-primary)] transition-all duration-[var(--motion-move)]"
                   style={{ width: `${pct}%` }}
                 />
               </div>

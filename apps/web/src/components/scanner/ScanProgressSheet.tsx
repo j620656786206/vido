@@ -190,7 +190,7 @@ export function ScanProgressSheet({
         <div className="mb-3 flex items-center gap-3">
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
             <div
-              className="h-full rounded-full bg-[var(--accent-primary)] transition-[width] duration-300"
+              className="h-full rounded-full bg-[var(--accent-primary)] transition-[width] duration-[var(--motion-move)]"
               style={{ width: `${state.percentDone}%` }}
               data-testid="sheet-progress-bar"
             />

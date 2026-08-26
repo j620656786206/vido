@@ -133,8 +133,11 @@ describe('AppSidebar — in-flight job badge (feat-nav-badge-inflight-jobs)', ()
     mockInflight = 5;
     renderSidebar();
     const badge = await screen.findByTestId('nav-activity-badge');
-    expect(badge.className).toContain('bg-[var(--accent-subtle)]');
+    // The wash lives on the breathing halo behind the digit, not on the badge
+    // box itself (InFlightBadge) — assert on the subtree so the rule survives
+    // that split. The figure keeps the accent TEXT twin either way.
+    expect(badge.innerHTML).toContain('bg-[var(--accent-subtle)]');
     expect(badge.className).toContain('text-[var(--accent-text)]');
-    expect(badge.className).not.toContain('bg-[var(--accent-primary)]');
+    expect(badge.outerHTML).not.toContain('bg-[var(--accent-primary)]');
   });
 });

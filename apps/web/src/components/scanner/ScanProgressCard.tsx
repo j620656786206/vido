@@ -274,7 +274,7 @@ export function ScanProgressCard({
         <div className="mb-1 flex items-center justify-between">
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
             <div
-              className="h-full rounded-full bg-[var(--accent-primary)] transition-[width] duration-300"
+              className="h-full rounded-full bg-[var(--accent-primary)] transition-[width] duration-[var(--motion-move)]"
               style={{ width: `${state.percentDone}%` }}
               data-testid="scan-progress-bar"
             />

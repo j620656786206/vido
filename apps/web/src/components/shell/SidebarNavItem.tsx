@@ -12,6 +12,7 @@ import { Link } from '@tanstack/react-router';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Tooltip } from '../ui/Tooltip';
+import { InFlightBadge } from './InFlightBadge';
 
 export interface SidebarNavItemProps {
   to: string;
@@ -84,13 +85,12 @@ export function SidebarNavItem({
           {hasBadge && (
             // The collapsed rail is exactly the「回來查」posture — the readout
             // must survive collapse. Same rationed recipe as the expanded pill.
-            <span
-              aria-hidden="true"
-              data-testid={`nav-${navKey}-badge`}
-              className="absolute right-0.5 top-0.5 rounded-full bg-[var(--accent-subtle)] px-1 py-px font-mono text-[10px] leading-none text-[var(--accent-text)]"
-            >
-              {badge}
-            </span>
+            <InFlightBadge
+              count={badge!}
+              variant="rail"
+              testId={`nav-${navKey}-badge`}
+              className="absolute right-0.5 top-0.5"
+            />
           )}
         </Link>
       </Tooltip>
@@ -131,13 +131,12 @@ export function SidebarNavItem({
         // active-jobs count. A badge is a readout, so the rationed-accent rule
         // wants the wash, never a solid fill (and white-on-solid measured
         // 3.68:1 back when this was latent).
-        <span
-          aria-hidden="true"
-          data-testid={`nav-${navKey}-badge`}
-          className="ml-auto rounded-full bg-[var(--accent-subtle)] px-1.5 py-0.5 font-mono text-[11px] leading-none text-[var(--accent-text)]"
-        >
-          {badge}
-        </span>
+        <InFlightBadge
+          count={badge!}
+          variant="row"
+          testId={`nav-${navKey}-badge`}
+          className="ml-auto"
+        />
       )}
     </Link>
   );

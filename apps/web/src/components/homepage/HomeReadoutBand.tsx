@@ -66,6 +66,13 @@ interface ReadoutCellProps {
   /** null = unmeasurable (cell shows label only, no number). */
   value: string | null;
   exception?: boolean;
+  /**
+   * Motion licence ③: work is happening RIGHT NOW behind this cell, so its
+   * icon breathes. Only 進行中 with a non-zero count may pass this — a static
+   * fact that moves is the time-axis version of a green badge on a job that
+   * never ran. See the motion block in styles.css.
+   */
+  live?: boolean;
   testId: string;
 }
 
@@ -78,6 +85,7 @@ function ReadoutCell({
   ariaLabel,
   value,
   exception,
+  live,
   testId,
 }: ReadoutCellProps) {
   return (
@@ -86,10 +94,17 @@ function ReadoutCell({
       search={search}
       aria-label={ariaLabel}
       data-testid={testId}
-      className="flex min-h-[44px] flex-1 flex-col items-center justify-center gap-1 rounded-[var(--radius-md)] px-3 py-2 text-center transition-colors hover:bg-[var(--bg-tertiary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+      // Every cell is a door and none of them looked like one until you were
+      // already on it. active: gives the tap somewhere to land — on a phone
+      // there is no hover, so without it the only feedback for「我按到了嗎」
+      // is the route change, which is exactly when the app is busiest.
+      className="flex min-h-[44px] flex-1 flex-col items-center justify-center gap-1 rounded-[var(--radius-md)] px-3 py-2 text-center transition-colors duration-[var(--motion-touch)] hover:bg-[var(--bg-tertiary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] active:bg-[var(--bg-tertiary)]"
     >
       <span className="flex items-center gap-1 text-[11px] text-[var(--text-muted)]">
-        <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+        <Icon
+          className={cn('h-3.5 w-3.5', live && 'motion-safe:animate-breathe')}
+          aria-hidden="true"
+        />
         {label}
         {action && (
           <span data-testid={`${testId}-action`} className="text-[var(--accent-text)]">
@@ -204,6 +219,10 @@ export function HomeReadoutBand() {
               : '進行中任務數目前無法取得，前往活動中心'
           }
           value={inFlight.status === 'ok' ? `${inFlight.count} 個任務` : null}
+          // The page's one moving thing, and only while the count is real and
+          // above zero. 0 個任務 sits perfectly still — that stillness is the
+          // readout.
+          live={inFlight.status === 'ok' && inFlight.count > 0}
           testId="readout-inflight"
         />
       </div>

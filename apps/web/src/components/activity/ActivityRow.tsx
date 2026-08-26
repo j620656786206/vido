@@ -71,7 +71,7 @@ export function ActivityRow({
           aria-valuemax={100}
         >
           <div
-            className="h-full rounded-full bg-[var(--accent-primary)] transition-[width] duration-500 motion-reduce:transition-none"
+            className="h-full rounded-full bg-[var(--accent-primary)] transition-[width] duration-[var(--motion-move)] motion-reduce:transition-none"
             style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
           />
         </div>

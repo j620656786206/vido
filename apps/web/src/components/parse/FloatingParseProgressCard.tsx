@@ -76,7 +76,7 @@ export function FloatingParseProgressCard({
       className={cn(
         'fixed bottom-6 right-6 w-[420px] bg-[var(--bg-secondary)] rounded-xl shadow-2xl',
         'border border-[var(--border-subtle)]',
-        'animate-in slide-in-from-right-5 duration-300',
+        'animate-in slide-in-from-right-5 duration-[var(--motion-move)]',
         isMinimized && 'h-auto',
         className
       )}
@@ -136,7 +136,7 @@ export function FloatingParseProgressCard({
             >
               <div
                 className={cn(
-                  'h-full rounded-full transition-all duration-500 ease-out',
+                  'h-full rounded-full transition-all duration-[var(--motion-move)] ease-out',
                   isSuccess && 'bg-[var(--success)]',
                   isFailed && 'bg-[var(--error)]',
                   isParsing && 'bg-[var(--accent-primary)]'

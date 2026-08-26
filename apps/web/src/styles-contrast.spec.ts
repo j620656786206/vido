@@ -301,8 +301,10 @@ describe.each(ALL_THEMES)('styles.css [%s] — token contrast gate', (theme) => 
 describe('the two theme blocks declare the same token set', () => {
   const names = (block: string) =>
     new Set([...block.matchAll(/(--[a-z0-9-]+):/g)].map((m) => m[1]));
-  // Theme-independent: geometry and spacing live only in :root by design.
-  const THEME_INDEPENDENT = /^--(radius|gap)-/;
+  // Theme-independent: geometry, spacing and MOTION live only in :root by
+  // design. 夜行 and 日巡 are the same world at different hours — the light
+  // changes, the way things move does not.
+  const THEME_INDEPENDENT = /^--(radius|gap|motion|ease)-|^--breath$/;
 
   it('every theme-dependent token in :root is redeclared for light', () => {
     const dark = [...names(THEMES.dark)].filter((n) => !THEME_INDEPENDENT.test(n));

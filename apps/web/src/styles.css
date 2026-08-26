@@ -112,6 +112,49 @@
   --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
   --shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.6);
 
+  /* ---------------------------------------------------------------------------
+   * Motion — 夜行 has a motion vocabulary the same way it has a colour one, and
+   * it is bound by the SAME honesty contract:
+   *
+   *      動的東西 ＝ 正在發生的事。靜的東西 ＝ 已經定案的事實。
+   *
+   * A moving element is a CLAIM that work is happening. Nothing may move merely
+   * to be interesting — that is 固定詞彙's「一個畫面不可以把一個真相穿兩種顏色」
+   * extended from colour to time. So there are exactly three licences to move:
+   *   ① 回應手勢   the user touched it            → --motion-touch
+   *   ② 解釋改變   a state or position changed    → --motion-state / --motion-move
+   *   ③ 它真的在跑 genuinely in-flight work, and ONLY while in flight → --breath
+   * Anything outside those three is animation debt and gets deleted, not tuned.
+   *
+   * Character: 輕功 — quick off the ground, slow to settle, never a rebound. A
+   * bounce or elastic curve puts weight back into a world built on weightless-
+   * ness, so --ease-settle is a pure exponential decay and there is no spring.
+   * Exit is always faster than entrance (--motion-leave < --motion-arrive):
+   * arriving is information, leaving is just getting out of the way.
+   * ------------------------------------------------------------------------- */
+  --motion-touch: 120ms; /* ① hover / press / focus — feedback, must feel instant */
+  --motion-state: 200ms; /* ② colour, badge, disclosure — a value changed */
+  --motion-move: 320ms; /* ② position, layout, overlay — something travelled */
+  --motion-arrive: 640ms; /* ② the hero's manual cross-fade, the one long move */
+  --motion-leave: 240ms; /* ② the outgoing half of any pair */
+  --ease-settle: cubic-bezier(0.16, 1, 0.3, 1); /* 落定 — confident arrival, no rebound */
+  --ease-leave: cubic-bezier(0.4, 0, 0.9, 0.4); /* 退場 — commits immediately */
+  --breath: 2400ms; /* ③ the in-flight breath. Slow enough to read as ALIVE, not as ALERT */
+
+  /* DISTANCE, not time — and the reason it is a separate token. Reduced motion
+   * collapses durations to ~0, which does not REMOVE a hover lift, it turns it
+   * into an instant JUMP. Zeroing the spatial amount is the only way to say
+   * "do not move" while keeping the colour feedback that proves a click landed.
+   * See the @media (prefers-reduced-motion) block below. */
+  --motion-lift: 1.02; /* card hover scale */
+  /* The press. It has to be its own value, and it has to be BELOW 1: on a
+   * phone there is no hover, so `active:scale-100` — which reads like a press
+   * state — is a no-op, because 1 is already where the card is sitting. Touch
+   * feedback only exists if the card goes somewhere it was not. */
+  --motion-press: 0.97;
+  --motion-rise: 8px; /* the travel in fadeIn and any enter-from-below */
+  --motion-turn: 90deg; /* the 夜行⇄日巡 icon swap — sun and moon trade places */
+
   /* Spacing (reference only — use Tailwind utilities: gap-1=4px, gap-2=8px, etc.) */
   --gap-xs: 4px;
   --gap-sm: 8px;
@@ -234,15 +277,67 @@
   --shadow-xl: 0 4px 8px rgba(22, 35, 29, 0.07), 0 16px 32px rgba(22, 35, 29, 0.09);
 }
 
+/* Reduced motion, part 1 of 2 — the TOKENS.
+ *
+ * ⚠️ This block MUST stay OUTSIDE @layer base. Custom properties declared in a
+ * layer LOSE to unlayered ones, and :root above is unlayered — put this inside
+ * the layer and every override here is silently discarded. (Part 2, the `*`
+ * safety net, lives in @layer base because it only sets real properties.)
+ *
+ * Two axes, turned down differently: TIME collapses so nothing lingers, and
+ * DISTANCE goes to zero so feedback that would otherwise snap into a new
+ * position does not move at all. Colour and state transitions survive by
+ * design — someone who asked for less motion still has to see that their tap
+ * landed. Reduced motion means gentler, not dead. */
+@media (prefers-reduced-motion: reduce) {
+  :root,
+  [data-theme='light'] {
+    --motion-touch: 1ms;
+    --motion-state: 1ms;
+    --motion-move: 1ms;
+    --motion-arrive: 1ms;
+    --motion-leave: 1ms;
+    --motion-lift: 1;
+    --motion-press: 1;
+    --motion-rise: 0px;
+    --motion-turn: 0deg;
+  }
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(var(--motion-rise));
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* ③ 它真的在跑 — the ONLY animation in this stylesheet that runs without a
+ * gesture, and the only one allowed to, because its movement is TRUE: it is
+ * mounted exclusively while a job is actually in flight and unmounts the
+ * instant the count reaches zero. A breath, not a blink — opacity only, no
+ * scale, 2.4s, so it reads as 活著 rather than as 警告 (amber owns alarm).
+ * Never attach this to a static fact. */
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* Registered through @theme rather than written as a plain class so Tailwind
+ * emits it as a real utility — which is what makes `motion-safe:animate-breathe`
+ * legal. A hand-rolled `.animate-breathe` cannot take a variant, and the
+ * variant is the point: this animation must be switchable off at the call site
+ * as well as by the global net. */
+@theme {
+  --animate-breathe: breathe var(--breath) cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 /* Global dark theme baseline */
@@ -281,13 +376,27 @@
     outline-offset: 2px;
   }
 
-  /* Reduced motion */
+  /* Reduced motion, part 2 of 2 — the safety net for anything that did NOT go
+   * through the motion tokens (third-party CSS, a stray literal duration).
+   * The tokens in the unlayered block above are the real mechanism.
+   *
+   * ⚠️ `animation-iteration-count: 1` is load-bearing, not tidiness. Without
+   * it an INFINITE keyframe — the skeleton pulse, the in-flight breath — keeps
+   * looping while its duration is clamped to ~0, i.e. it strobes. That is the
+   * precise hazard this media query exists to prevent, and the canonical
+   * snippet this project copied had dropped the line. Do not drop it again.
+   *
+   * `scroll-behavior: auto` covers the chevron scrollers, which call
+   * scrollBy({ behavior: 'smooth' }): vestibular triggers do not care whether
+   * the movement came from CSS or from JS. */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
     *::after {
-      animation-duration: 0.01ms !important;
-      transition-duration: 0.01ms !important;
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 1ms !important;
+      scroll-behavior: auto !important;
     }
   }
 }

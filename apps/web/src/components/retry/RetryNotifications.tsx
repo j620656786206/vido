@@ -89,7 +89,7 @@ function NotificationToast({ notification, onDismiss }: NotificationToastProps) 
   return (
     <div
       className={cn(
-        'rounded-lg border shadow-lg p-3 transition-all duration-300',
+        'rounded-lg border shadow-lg p-3 transition-all duration-[var(--motion-move)]',
         colors.bg,
         colors.border,
         isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'

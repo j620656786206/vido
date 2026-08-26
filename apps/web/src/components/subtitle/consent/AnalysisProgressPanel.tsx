@@ -37,7 +37,7 @@ export function AnalysisProgressPanel({
         >
           <div
             data-testid="consent-analysis-bar"
-            className="h-full rounded-[var(--radius-sm)] bg-[var(--accent-primary)] transition-all duration-300"
+            className="h-full rounded-[var(--radius-sm)] bg-[var(--accent-primary)] transition-all duration-[var(--motion-move)]"
             style={{ width: `${pct}%` }}
           />
         </div>

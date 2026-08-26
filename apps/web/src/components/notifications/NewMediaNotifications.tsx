@@ -81,7 +81,7 @@ function NewMediaToastItem({ notification, onDismiss }: NewMediaToastItemProps) 
   return (
     <div
       className={cn(
-        'flex items-center gap-3 rounded-lg border border-[var(--success)]/20 bg-[var(--bg-secondary)] p-3 shadow-lg transition-all duration-300',
+        'flex items-center gap-3 rounded-lg border border-[var(--success)]/20 bg-[var(--bg-secondary)] p-3 shadow-lg transition-all duration-[var(--motion-move)]',
         isVisible ? 'translate-x-0 opacity-100' : 'translate-x-4 opacity-0'
       )}
       data-testid={`new-media-toast-${notification.id}`}

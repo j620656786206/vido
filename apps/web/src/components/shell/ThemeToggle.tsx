@@ -29,14 +29,63 @@ interface ThemeToggleProps {
   className?: string;
 }
 
+/**
+ * ② 解釋改變, and the one interaction in this app that gets authored rather
+ * than merely tokenised.
+ *
+ * Swapping the element outright made the destination icon TELEPORT: the button
+ * changed identity between two frames, which is the one thing a toggle must
+ * not do — you cannot tell a swap from a re-render. So both faces are always
+ * mounted and they TRADE PLACES: sun and moon turn past each other on the same
+ * axis, which is what 夜行⇄日巡 literally means. The rotation is the message,
+ * so it comes from --motion-turn and lands at 0deg under reduced motion — the
+ * opacity cross-fade survives, and with durations at 1ms it reads as a clean
+ * instant swap rather than a suppressed spin.
+ *
+ * Both faces sit in one grid cell instead of absolute-positioning, so the
+ * button reserves its own size with no magic numbers and nothing to keep in
+ * sync when the icon scale changes between variants.
+ */
+function ThemeFaces({ next, size }: { next: 'light' | 'dark'; size: string }) {
+  // ⚠️ `rotate`, NOT `transform`. Tailwind v4 compiles rotate-* to the
+  // INDIVIDUAL `rotate` property (`.rotate-0 { rotate: none }`), which
+  // `transition-property: transform` does not cover — v4's own
+  // `transition-transform` expands to `transform, translate, scale, rotate`
+  // precisely because of this. Writing the list by hand and naming `transform`
+  // got it wrong in both directions at once: `transform` is never set on these
+  // faces (dead weight) and `rotate` — the one thing that actually changes —
+  // was excluded, so the turn snapped in a single frame and only the opacity
+  // cross-faded. The whole point of --motion-turn never rendered.
+  const face = 'col-start-1 row-start-1 transition-[opacity,rotate] ease-[var(--ease-settle)]';
+  // Entering settles in over --motion-state; leaving clears out faster, the
+  // same asymmetry the hero cross-fade uses.
+  const shown = 'opacity-100 rotate-0 duration-[var(--motion-state)]';
+  const hidden = 'opacity-0 duration-[var(--motion-leave)]';
+  return (
+    <span className={cn('grid shrink-0', size)} aria-hidden="true">
+      <Sun
+        className={cn(
+          face,
+          size,
+          next === 'light' ? shown : cn(hidden, 'rotate-[var(--motion-turn)]')
+        )}
+      />
+      <Moon
+        className={cn(
+          face,
+          size,
+          next === 'dark' ? shown : cn(hidden, 'rotate-[calc(var(--motion-turn)*-1)]')
+        )}
+      />
+    </span>
+  );
+}
+
 export function ThemeToggle({ variant = 'rail', className }: ThemeToggleProps) {
   const [theme, setTheme] = useTheme();
   const next = theme === 'dark' ? 'light' : 'dark';
   const nextName = next === 'light' ? '日巡' : '夜行';
   const label = `切換到${nextName}`;
-  // The icon shows the DESTINATION, matching the label — a sun on the button
-  // that turns the lights on.
-  const Icon = next === 'light' ? Sun : Moon;
 
   if (variant === 'row') {
     return (
@@ -47,11 +96,11 @@ export function ThemeToggle({ variant = 'rail', className }: ThemeToggleProps) {
         data-theme-next={next}
         aria-label={label}
         className={cn(
-          'flex min-h-[44px] w-full items-center gap-2 rounded-[var(--radius-md)] px-2 text-[11px] text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
+          'flex min-h-[44px] w-full items-center gap-2 rounded-[var(--radius-md)] px-2 text-[11px] text-[var(--text-muted)] transition-colors duration-[var(--motion-touch)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
           className
         )}
       >
-        <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+        <ThemeFaces next={next} size="h-3.5 w-3.5" />
         <span className="truncate">{label}</span>
       </button>
     );
@@ -66,11 +115,11 @@ export function ThemeToggle({ variant = 'rail', className }: ThemeToggleProps) {
         data-theme-next={next}
         aria-label={label}
         className={cn(
-          'flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
+          'flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-secondary)] transition-colors duration-[var(--motion-touch)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
           className
         )}
       >
-        <Icon className="h-5 w-5" aria-hidden="true" />
+        <ThemeFaces next={next} size="h-5 w-5" />
       </button>
     </Tooltip>
   );

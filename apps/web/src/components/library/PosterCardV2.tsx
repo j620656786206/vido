@@ -83,8 +83,21 @@ export function PosterCardV2({
       }
       className="group/card flex flex-col gap-2"
     >
+      {/* ① 回應手勢, on --motion-touch and --motion-lift so reduced motion holds
+          the scale at 1 while the title still turns gold — the hover is never
+          silent, it just stops moving.
+          The press goes to --motion-press (BELOW 1), not back to 1. PRODUCT.md
+          says 手機與桌機同等重要, and on a phone there is no hover to答: a card
+          that only reacts to :hover has no feedback at all on the surface half
+          the users are on. `active:scale-100` looks like a press state and is a
+          no-op, because 1 is where the card already sits. (v1 PosterCard has had
+          active:scale-[0.98] since bugfix-10-4; this brings V2 in line.)
+          NO shadow escalation on hover, deliberately: DESIGN.md's Tone-First
+          Rule rations shadow to things that genuinely float (11 uses app-wide
+          against 525 tone steps), and lifting every poster in a grid would spend
+          that budget on the most repeated element in the app. */}
       <div
-        className={`relative aspect-[2/3] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--bg-secondary)] shadow-[var(--shadow-md)] transition-transform duration-200 group-hover/card:scale-[1.02] group-focus-visible/card:scale-[1.02] ${
+        className={`relative aspect-[2/3] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--bg-secondary)] shadow-[var(--shadow-md)] transition-transform duration-[var(--motion-touch)] ease-[var(--ease-settle)] group-hover/card:scale-[var(--motion-lift)] group-focus-visible/card:scale-[var(--motion-lift)] group-active/card:scale-[var(--motion-press)] ${
           selected ? 'ring-2 ring-[var(--accent-primary)]' : ''
         }`}
       >
@@ -108,7 +121,7 @@ export function PosterCardV2({
           <span
             data-testid={`poster-select-indicator-${id}`}
             aria-hidden="true"
-            className={`absolute left-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors ${
+            className={`absolute left-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors duration-[var(--motion-state)] ${
               selected
                 ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
                 : 'border-[var(--text-on-accent)] bg-[var(--overlay-scrim)] text-transparent'
@@ -158,7 +171,7 @@ export function PosterCardV2({
       {/* 2-line CJK title grid (§3.3) — reserves two lines, ellipsis on overflow */}
       <div>
         <h3
-          className="line-clamp-2 min-h-[2.75em] text-sm font-medium leading-snug text-[var(--text-primary)] transition-colors group-hover/card:text-[var(--accent-text)]"
+          className="line-clamp-2 min-h-[2.75em] text-sm font-medium leading-snug text-[var(--text-primary)] transition-colors duration-[var(--motion-touch)] group-hover/card:text-[var(--accent-text)]"
           title={title}
         >
           {title}

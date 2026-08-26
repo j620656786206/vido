@@ -153,7 +153,7 @@ export function PosterCard({
         style={{ clipPath: 'inset(0 round 0.75rem)' }}
         className={cn(
           'relative aspect-[2/3] bg-[var(--bg-secondary)]',
-          'transition-all duration-300 ease-out',
+          'transition-all duration-[var(--motion-state)] ease-out',
           'transform-gpu',
           // Hover effects only on desktop (lg breakpoint) — disabled in selection mode
           !selectable && 'lg:group-hover:scale-105 lg:group-hover:shadow-2xl',
@@ -217,9 +217,10 @@ export function PosterCard({
 
         {/* Top-right badge cluster — visible by default; on hover it RECEDES (opacity + scale-95,
             anchored at its top-right corner) so the kebab takes over (MQbvp collision strategy per
-            bugfix-10-4 AC #1 / bugfix-10-7 AC #2). transition-all + duration-300 stays in sync with
-            the image-wrapper's lg:group-hover:scale-105 transition for a unified kinetic feel. */}
-        <div className="absolute right-2 top-2 flex origin-top-right items-center gap-1 transition-all duration-300 lg:group-hover:scale-95 lg:group-hover:opacity-0">
+            bugfix-10-4 AC #1 / bugfix-10-7 AC #2). Every layer of this hover — wrapper scale, badge
+            recede, kebab, gradient — runs on --motion-state, because it is ONE gesture and a card
+            whose parts arrive at different times reads as four cards. Change one, change them all. */}
+        <div className="absolute right-2 top-2 flex origin-top-right items-center gap-1 transition-all duration-[var(--motion-state)] lg:group-hover:scale-95 lg:group-hover:opacity-0">
           {/* Story 10-4 — availability badges win position over 新增 so owners
               see ownership first. Only one of owned/requested renders. */}
           {isOwned ? (
@@ -261,7 +262,7 @@ export function PosterCard({
             // both themes. The icon stays literal white: it is the only value that
             // clears the scrim in BOTH themes (see the report on --text-on-scrim).
             // The 90% hover keeps its own alpha; no token carries it.
-            className="absolute right-2 top-2 z-20 rounded-full bg-[var(--overlay-scrim)] p-1.5 text-[var(--text-on-scrim)] opacity-0 transition-opacity duration-300 hover:bg-[var(--overlay-scrim)] lg:group-hover:opacity-100"
+            className="absolute right-2 top-2 z-20 rounded-full bg-[var(--overlay-scrim)] p-1.5 text-[var(--text-on-scrim)] opacity-0 transition-opacity duration-[var(--motion-state)] hover:bg-[var(--overlay-scrim)] lg:group-hover:opacity-100"
             aria-label="更多選項"
             data-testid="poster-menu-button"
           >
@@ -293,7 +294,8 @@ export function PosterCard({
             // rating decoration (固定詞彙).
             className={cn(
               'absolute bottom-2 left-2 z-20',
-              showRequestOverlay && 'transition-opacity duration-300 lg:group-hover:opacity-0'
+              showRequestOverlay &&
+                'transition-opacity duration-[var(--motion-state)] lg:group-hover:opacity-0'
             )}
           >
             <span className="flex items-center gap-1 rounded-full bg-[var(--overlay-scrim)] px-2 py-0.5 font-mono text-xs text-[var(--text-on-scrim)]">
@@ -316,7 +318,7 @@ export function PosterCard({
             // The gradient's dark stop is a scrim over POSTER ART, so it shares the
             // scrim token with the badges and the kebab above rather than being a
             // fourth private black. Its alpha moves 80% → the token's 70%.
-            className="pointer-events-none absolute inset-x-0 bottom-0 z-10 hidden bg-gradient-to-t from-[var(--overlay-scrim)] to-transparent p-3 pt-8 opacity-0 transition-opacity duration-300 lg:block lg:group-hover:pointer-events-auto lg:group-hover:opacity-100 lg:group-focus-within:pointer-events-auto lg:group-focus-within:opacity-100"
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-10 hidden bg-gradient-to-t from-[var(--overlay-scrim)] to-transparent p-3 pt-8 opacity-0 transition-opacity duration-[var(--motion-state)] lg:block lg:group-hover:pointer-events-auto lg:group-hover:opacity-100 lg:group-focus-within:pointer-events-auto lg:group-focus-within:opacity-100"
           >
             <RequestButton
               tmdbId={tmdbId}

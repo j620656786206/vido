@@ -25,9 +25,9 @@ export function Sheet({ open, onOpenChange, title, ariaLabel, children }: SheetP
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-[70] bg-[var(--overlay-scrim)] transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
+        <Dialog.Backdrop className="fixed inset-0 z-[70] bg-[var(--overlay-scrim)] transition-opacity duration-[var(--motion-move)] data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
         <Dialog.Popup
-          className="fixed inset-x-0 bottom-0 z-[71] max-h-[85vh] overflow-y-auto rounded-t-[var(--radius-xl)] border-t border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[var(--shadow-xl)] transition-transform duration-200 data-[ending-style]:translate-y-full data-[starting-style]:translate-y-full"
+          className="fixed inset-x-0 bottom-0 z-[71] max-h-[85vh] overflow-y-auto rounded-t-[var(--radius-xl)] border-t border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[var(--shadow-xl)] transition-transform duration-[var(--motion-move)] data-[ending-style]:translate-y-full data-[starting-style]:translate-y-full"
           data-testid="bottom-sheet"
         >
           {/* Drag handle affordance */}
