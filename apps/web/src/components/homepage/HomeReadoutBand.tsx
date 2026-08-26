@@ -51,6 +51,15 @@ function attentionText(cell: AttentionCell): { text: string; exception: boolean 
 interface ReadoutCellProps {
   icon: LucideIcon;
   label: string;
+  /**
+   * The call-to-action half of the label, set apart in accent (H5-D-v3 draws
+   * 「繁中字幕 · 開始掃描」 with only the second half gold — accent is 你在這裡
+   * / the action, so a flat muted label hides that the cell is a door). The
+   * token is `--accent-text`, NOT the design's literal `--accent-primary`:
+   * styles.css records that #c9a24b measures 4.40:1 as text and was ratified
+   * out of text roles, so this honours the intent at the AA-safe value.
+   */
+  action?: string;
   to: string;
   search?: Record<string, unknown>;
   ariaLabel: string;
@@ -63,6 +72,7 @@ interface ReadoutCellProps {
 function ReadoutCell({
   icon: Icon,
   label,
+  action,
   to,
   search,
   ariaLabel,
@@ -81,6 +91,11 @@ function ReadoutCell({
       <span className="flex items-center gap-1 text-[11px] text-[var(--text-muted)]">
         <Icon className="h-3.5 w-3.5" aria-hidden="true" />
         {label}
+        {action && (
+          <span data-testid={`${testId}-action`} className="text-[var(--accent-text)]">
+            · {action}
+          </span>
+        )}
       </span>
       {value !== null && (
         <span
@@ -135,7 +150,8 @@ export function HomeReadoutBand() {
             fresh library (0/0) the same cell becomes the 開始掃描 door. */}
         <ReadoutCell
           icon={Captions}
-          label={firstRun ? '繁中字幕 · 開始掃描' : '繁中字幕'}
+          label="繁中字幕"
+          action={firstRun ? '開始掃描' : undefined}
           to={firstRun ? '/settings/scanner' : '/library'}
           ariaLabel={
             coverage.status === 'ok'

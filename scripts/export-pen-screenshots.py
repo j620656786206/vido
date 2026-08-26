@@ -273,6 +273,9 @@ SCREENS = {
     "EoCQ4": ("flow-h-homepage-v3", "h7-d-v3"),
     "uGCAU": ("flow-h-homepage-v3", "h2-m-v3"),
     "iWUSV": ("flow-h-homepage-v3", "h8-spec-v3"),
+    "B7UO8": ("flow-h-homepage-v3", "h4-d-v3"),
+    "RvS6c": ("flow-h-homepage-v3", "h5-d-v3"),
+    "zRyNS": ("flow-h-homepage-v3", "h6-d-v3"),
 }
 
 

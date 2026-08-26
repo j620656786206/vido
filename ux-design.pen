@@ -170639,6 +170639,1597 @@
           "fontWeight": "normal"
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "B7UO8",
+      "x": 21850,
+      "y": 45300,
+      "name": "H4-D-v3 · 首頁 v3（載入骨架）",
+      "width": 1440,
+      "fill": "#0c1512",
+      "children": [
+        {
+          "id": "amRZW",
+          "type": "ref",
+          "ref": "BDeUS",
+          "name": "Sidebar",
+          "height": 1362
+        },
+        {
+          "type": "frame",
+          "id": "JVGRP",
+          "name": "Content",
+          "width": "fill_container",
+          "fill": "#0c1512",
+          "layout": "vertical",
+          "gap": 32,
+          "padding": [
+            24,
+            0,
+            64,
+            0
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "rectangle",
+              "cornerRadius": 12,
+              "id": "OrejK",
+              "name": "讀數帶骨架",
+              "fill": "#132320",
+              "width": 1152,
+              "height": 83
+            },
+            {
+              "type": "rectangle",
+              "cornerRadius": 12,
+              "id": "jLHfI",
+              "name": "Hero 骨架",
+              "fill": "#132320",
+              "width": "fill_container",
+              "height": 400
+            },
+            {
+              "type": "frame",
+              "id": "iaLtO",
+              "name": "最近新增骨架",
+              "width": 1152,
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 4,
+                  "id": "kgBKg",
+                  "name": "標題骨架",
+                  "fill": "#132320",
+                  "width": 120,
+                  "height": 20
+                },
+                {
+                  "type": "frame",
+                  "id": "TzlKu",
+                  "name": "卡片列",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "bI64D",
+                      "name": "海報骨架 1",
+                      "width": 160,
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 12,
+                          "id": "e05fxQ",
+                          "name": "海報",
+                          "fill": "#132320",
+                          "width": "fill_container",
+                          "height": 240
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "mfBLp",
+                          "name": "標題條",
+                          "fill": "#132320",
+                          "width": 128,
+                          "height": 14
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "DCXwR",
+                          "name": "次要條",
+                          "fill": "#1b302b",
+                          "width": 64,
+                          "height": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "AITnK",
+                      "name": "海報骨架 2",
+                      "width": 160,
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 12,
+                          "id": "zJiEM",
+                          "name": "海報",
+                          "fill": "#132320",
+                          "width": "fill_container",
+                          "height": 240
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "ihZHR",
+                          "name": "標題條",
+                          "fill": "#132320",
+                          "width": 128,
+                          "height": 14
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "tzbkA",
+                          "name": "次要條",
+                          "fill": "#1b302b",
+                          "width": 64,
+                          "height": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "N79WY5",
+                      "name": "海報骨架 3",
+                      "width": 160,
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 12,
+                          "id": "rAkRY",
+                          "name": "海報",
+                          "fill": "#132320",
+                          "width": "fill_container",
+                          "height": 240
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "SjdIX",
+                          "name": "標題條",
+                          "fill": "#132320",
+                          "width": 128,
+                          "height": 14
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "Qnbx7",
+                          "name": "次要條",
+                          "fill": "#1b302b",
+                          "width": 64,
+                          "height": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "w2pSct",
+                      "name": "海報骨架 4",
+                      "width": 160,
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 12,
+                          "id": "t22PUY",
+                          "name": "海報",
+                          "fill": "#132320",
+                          "width": "fill_container",
+                          "height": 240
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "XDbww",
+                          "name": "標題條",
+                          "fill": "#132320",
+                          "width": 128,
+                          "height": 14
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "WLUkG",
+                          "name": "次要條",
+                          "fill": "#1b302b",
+                          "width": 64,
+                          "height": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "sekbl",
+                      "name": "海報骨架 5",
+                      "width": 160,
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 12,
+                          "id": "gcrl7",
+                          "name": "海報",
+                          "fill": "#132320",
+                          "width": "fill_container",
+                          "height": 240
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "dV56G",
+                          "name": "標題條",
+                          "fill": "#132320",
+                          "width": 128,
+                          "height": 14
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "iVAqh",
+                          "name": "次要條",
+                          "fill": "#1b302b",
+                          "width": 64,
+                          "height": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ASLD2",
+                      "name": "海報骨架 6",
+                      "width": 160,
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 12,
+                          "id": "f7UdX9",
+                          "name": "海報",
+                          "fill": "#132320",
+                          "width": "fill_container",
+                          "height": 240
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "mE8yb",
+                          "name": "標題條",
+                          "fill": "#132320",
+                          "width": 128,
+                          "height": 14
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "USeSL",
+                          "name": "次要條",
+                          "fill": "#1b302b",
+                          "width": 64,
+                          "height": 12
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "R6GOpl",
+              "name": "TMDb 探索骨架",
+              "width": 1152,
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 4,
+                  "id": "ANSs5",
+                  "name": "標題骨架",
+                  "fill": "#132320",
+                  "width": 120,
+                  "height": 20
+                },
+                {
+                  "type": "frame",
+                  "id": "Cmr5f",
+                  "name": "卡片列",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "rjOMX",
+                      "name": "海報骨架 1",
+                      "width": 160,
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 12,
+                          "id": "JLcyG",
+                          "name": "海報",
+                          "fill": "#132320",
+                          "width": "fill_container",
+                          "height": 240
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "KQu4n",
+                          "name": "標題條",
+                          "fill": "#132320",
+                          "width": 128,
+                          "height": 14
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "uvuWH",
+                          "name": "次要條",
+                          "fill": "#1b302b",
+                          "width": 64,
+                          "height": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "C3iE0N",
+                      "name": "海報骨架 2",
+                      "width": 160,
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 12,
+                          "id": "q5Rgq7",
+                          "name": "海報",
+                          "fill": "#132320",
+                          "width": "fill_container",
+                          "height": 240
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "lMp1Z",
+                          "name": "標題條",
+                          "fill": "#132320",
+                          "width": 128,
+                          "height": 14
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "Zmzgy",
+                          "name": "次要條",
+                          "fill": "#1b302b",
+                          "width": 64,
+                          "height": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "KdBkF",
+                      "name": "海報骨架 3",
+                      "width": 160,
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 12,
+                          "id": "ZhihA",
+                          "name": "海報",
+                          "fill": "#132320",
+                          "width": "fill_container",
+                          "height": 240
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "ub80t",
+                          "name": "標題條",
+                          "fill": "#132320",
+                          "width": 128,
+                          "height": 14
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "aj3YD",
+                          "name": "次要條",
+                          "fill": "#1b302b",
+                          "width": 64,
+                          "height": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ccmGs",
+                      "name": "海報骨架 4",
+                      "width": 160,
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 12,
+                          "id": "xq2p4",
+                          "name": "海報",
+                          "fill": "#132320",
+                          "width": "fill_container",
+                          "height": 240
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "udXm1",
+                          "name": "標題條",
+                          "fill": "#132320",
+                          "width": 128,
+                          "height": 14
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "Vr41e",
+                          "name": "次要條",
+                          "fill": "#1b302b",
+                          "width": 64,
+                          "height": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ZDNOA",
+                      "name": "海報骨架 5",
+                      "width": 160,
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 12,
+                          "id": "FY387",
+                          "name": "海報",
+                          "fill": "#132320",
+                          "width": "fill_container",
+                          "height": 240
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "bTUMg",
+                          "name": "標題條",
+                          "fill": "#132320",
+                          "width": 128,
+                          "height": 14
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "YjXsY",
+                          "name": "次要條",
+                          "fill": "#1b302b",
+                          "width": 64,
+                          "height": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "sBWbD",
+                      "name": "海報骨架 6",
+                      "width": 160,
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 12,
+                          "id": "QrPaa",
+                          "name": "海報",
+                          "fill": "#132320",
+                          "width": "fill_container",
+                          "height": 240
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "pE5bX",
+                          "name": "標題條",
+                          "fill": "#132320",
+                          "width": 128,
+                          "height": 14
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "QSl4G",
+                          "name": "次要條",
+                          "fill": "#1b302b",
+                          "width": 64,
+                          "height": 12
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "R8RKRt",
+              "name": "註記",
+              "fill": "#8fa096",
+              "textGrowth": "fixed-width",
+              "width": 1152,
+              "content": "每一區各自載入、各自失敗；此稿只描述全部同時在載入的最壞情況。",
+              "lineHeight": 1.6,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "isAw5",
+      "x": 21850,
+      "y": 45260,
+      "name": "cap-H4-D-v3",
+      "fill": "$text-secondary",
+      "content": "H4-D-v3 · 首頁 v3（載入骨架）",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 20,
+      "fontWeight": "600"
+    },
+    {
+      "type": "frame",
+      "id": "RvS6c",
+      "x": 23410,
+      "y": 45300,
+      "name": "H5-D-v3 · 首頁 v3（空片庫・首跑）",
+      "width": 1440,
+      "fill": "#0c1512",
+      "children": [
+        {
+          "id": "jJgXK",
+          "type": "ref",
+          "ref": "BDeUS",
+          "name": "Sidebar",
+          "height": 704
+        },
+        {
+          "type": "frame",
+          "id": "NOSyq",
+          "name": "Content",
+          "width": "fill_container",
+          "fill": "#0c1512",
+          "layout": "vertical",
+          "gap": 32,
+          "padding": [
+            24,
+            0,
+            64,
+            0
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "Q0sVK",
+              "name": "讀數帶",
+              "width": 1152,
+              "fill": "#132320",
+              "cornerRadius": 12,
+              "padding": [
+                16,
+                0
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "g7Lbz3",
+                  "name": "門格 繁中字幕",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "wzThO",
+                      "name": "標籤列",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "RqLyF",
+                          "name": "icon-captions",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "captions",
+                          "library": "lucide",
+                          "fill": "#8fa096"
+                        },
+                        {
+                          "type": "text",
+                          "id": "CPKoA",
+                          "name": "標籤",
+                          "fill": "#8fa096",
+                          "content": "繁中字幕",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "ZGuwT",
+                          "name": "分隔",
+                          "fill": "#8fa096",
+                          "content": "·",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "MnPt1",
+                          "name": "門動作",
+                          "fill": "#c9a24b",
+                          "content": "開始掃描",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 11,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "x7VxM",
+                          "name": "icon-chevron-right",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "chevron-right",
+                          "library": "lucide",
+                          "fill": "#c9a24b"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "T88sT",
+                      "name": "數字",
+                      "fill": "#eae4d6",
+                      "content": "0/0",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 20,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "CPqQE",
+                  "name": "分隔線",
+                  "fill": "#274039",
+                  "width": 1,
+                  "height": 44
+                },
+                {
+                  "type": "frame",
+                  "id": "kiWuj",
+                  "name": "門格 今天處理",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "hbzrF",
+                      "name": "標籤列",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "jNx8p",
+                          "name": "icon-check-check",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "check-check",
+                          "library": "lucide",
+                          "fill": "#8fa096"
+                        },
+                        {
+                          "type": "text",
+                          "id": "UeDrz",
+                          "name": "標籤",
+                          "fill": "#8fa096",
+                          "content": "今天處理",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "Zv0OB",
+                      "name": "數字",
+                      "fill": "#eae4d6",
+                      "content": "0 部",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 20,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "v1EGV",
+                  "name": "分隔線",
+                  "fill": "#274039",
+                  "width": 1,
+                  "height": 44
+                },
+                {
+                  "type": "frame",
+                  "id": "fxdzo",
+                  "name": "門格 需要注意",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "LkRjv",
+                      "name": "標籤列",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "Dlu4C",
+                          "name": "icon-triangle-alert",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "triangle-alert",
+                          "library": "lucide",
+                          "fill": "#8fa096"
+                        },
+                        {
+                          "type": "text",
+                          "id": "V6RrW",
+                          "name": "標籤",
+                          "fill": "#8fa096",
+                          "content": "需要注意",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "j8SdB",
+                      "name": "數字",
+                      "fill": "#eae4d6",
+                      "content": "一切正常",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 20,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "PA7Ec",
+                  "name": "分隔線",
+                  "fill": "#274039",
+                  "width": 1,
+                  "height": 44
+                },
+                {
+                  "type": "frame",
+                  "id": "zDZ2X",
+                  "name": "門格 進行中",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "eG5Kp",
+                      "name": "標籤列",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "ju7Tl",
+                          "name": "icon-activity",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "activity",
+                          "library": "lucide",
+                          "fill": "#8fa096"
+                        },
+                        {
+                          "type": "text",
+                          "id": "J1I6Wm",
+                          "name": "標籤",
+                          "fill": "#8fa096",
+                          "content": "進行中",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "SjDDq",
+                      "name": "數字",
+                      "fill": "#eae4d6",
+                      "content": "0 個任務",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 20,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "gR1O0",
+              "name": "最近新增",
+              "width": 1152,
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "jcugf",
+                  "name": "標題列",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "E0V2T",
+                      "name": "標題",
+                      "fill": "#eae4d6",
+                      "content": "最近新增",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 20,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "oW2Sa",
+                  "name": "空狀態文字",
+                  "fill": "#8fa096",
+                  "content": "尚無最近新增",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "iyJHI",
+              "name": "TMDb 探索",
+              "width": 1152,
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "sI2tI",
+                  "name": "標題區",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "FnEfI",
+                      "name": "標題",
+                      "fill": "#eae4d6",
+                      "content": "熱門電影",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "HMhJD",
+                      "name": "過濾說明",
+                      "fill": "#8fa096",
+                      "content": "已擁有的作品不會出現在這裡",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "pLkNA",
+                  "name": "卡片列",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "children": [
+                    {
+                      "id": "kufNq",
+                      "type": "ref",
+                      "ref": "hD7Tw",
+                      "name": "PosterCard 1",
+                      "width": 160,
+                      "descendants": {
+                        "I4I8B7": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "id": "J0e1Kn",
+                      "type": "ref",
+                      "ref": "hD7Tw",
+                      "name": "PosterCard 2",
+                      "width": 160,
+                      "descendants": {
+                        "I4I8B7": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "id": "GzxXC",
+                      "type": "ref",
+                      "ref": "hD7Tw",
+                      "name": "PosterCard 3",
+                      "width": 160,
+                      "descendants": {
+                        "I4I8B7": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "id": "vVzCU",
+                      "type": "ref",
+                      "ref": "hD7Tw",
+                      "name": "PosterCard 4",
+                      "width": 160,
+                      "descendants": {
+                        "I4I8B7": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "id": "t0oZq",
+                      "type": "ref",
+                      "ref": "hD7Tw",
+                      "name": "PosterCard 5",
+                      "width": 160,
+                      "descendants": {
+                        "I4I8B7": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "id": "FXCx3",
+                      "type": "ref",
+                      "ref": "hD7Tw",
+                      "name": "PosterCard 6",
+                      "width": 160,
+                      "descendants": {
+                        "I4I8B7": {
+                          "enabled": false
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "Nb81R",
+              "name": "註記",
+              "fill": "#8fa096",
+              "textGrowth": "fixed-width",
+              "width": 1152,
+              "content": "片庫為 0 時 hero 不渲染（例外訊號原則）；覆蓋率 0/0 是資訊不是錯誤，該格改為「開始掃描」的門。",
+              "lineHeight": 1.6,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "g6bZR",
+      "x": 23410,
+      "y": 45260,
+      "name": "cap-H5-D-v3",
+      "fill": "$text-secondary",
+      "content": "H5-D-v3 · 首頁 v3（空片庫・首跑）",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 20,
+      "fontWeight": "600"
+    },
+    {
+      "type": "frame",
+      "id": "zRyNS",
+      "x": 24970,
+      "y": 45300,
+      "name": "H6-D-v3 · 首頁 v3（自家內容載入失敗）",
+      "width": 1440,
+      "fill": "#0c1512",
+      "children": [
+        {
+          "id": "VTGl0",
+          "type": "ref",
+          "ref": "BDeUS",
+          "name": "Sidebar",
+          "height": 752
+        },
+        {
+          "type": "frame",
+          "id": "CVOkm",
+          "name": "Content",
+          "width": "fill_container",
+          "fill": "#0c1512",
+          "layout": "vertical",
+          "gap": 32,
+          "padding": [
+            24,
+            0,
+            64,
+            0
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "wat2t",
+              "name": "讀數帶",
+              "width": 1152,
+              "fill": "#132320",
+              "cornerRadius": 12,
+              "padding": [
+                16,
+                0
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "e5tnU",
+                  "name": "門格 繁中字幕",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "b0XAx",
+                      "name": "標籤列",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "P1lGS",
+                          "name": "icon-captions",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "captions",
+                          "library": "lucide",
+                          "fill": "#8fa096"
+                        },
+                        {
+                          "type": "text",
+                          "id": "jtYok",
+                          "name": "標籤",
+                          "fill": "#8fa096",
+                          "content": "繁中字幕",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "YCIet",
+                      "name": "數字",
+                      "fill": "#eae4d6",
+                      "content": "42/55",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 20,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "qG69k",
+                  "name": "分隔線",
+                  "fill": "#274039",
+                  "width": 1,
+                  "height": 44
+                },
+                {
+                  "type": "frame",
+                  "id": "WxohQ",
+                  "name": "門格 今天處理",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "yRDqW",
+                      "name": "標籤列",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "T1M17",
+                          "name": "icon-check-check",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "check-check",
+                          "library": "lucide",
+                          "fill": "#8fa096"
+                        },
+                        {
+                          "type": "text",
+                          "id": "IpMD5",
+                          "name": "標籤",
+                          "fill": "#8fa096",
+                          "content": "今天處理",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "FTUV5",
+                      "name": "數字",
+                      "fill": "#eae4d6",
+                      "content": "3 部",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 20,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "yZp0w",
+                  "name": "分隔線",
+                  "fill": "#274039",
+                  "width": 1,
+                  "height": 44
+                },
+                {
+                  "type": "frame",
+                  "id": "Zfcgz",
+                  "name": "門格 需要注意",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "J6nbpC",
+                      "name": "標籤列",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "rZCOS",
+                          "name": "icon-triangle-alert",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "triangle-alert",
+                          "library": "lucide",
+                          "fill": "#8fa096"
+                        },
+                        {
+                          "type": "text",
+                          "id": "ac05t",
+                          "name": "標籤",
+                          "fill": "#8fa096",
+                          "content": "需要注意",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "ovxT4",
+                      "name": "數字",
+                      "fill": "#e8b04b",
+                      "content": "2 部失敗 · $1.2/$5",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 20,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "GngH0",
+                  "name": "分隔線",
+                  "fill": "#274039",
+                  "width": 1,
+                  "height": 44
+                },
+                {
+                  "type": "frame",
+                  "id": "HNkgy",
+                  "name": "門格 進行中",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "ISO9q",
+                      "name": "標籤列",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "KOrX1",
+                          "name": "icon-activity",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "activity",
+                          "library": "lucide",
+                          "fill": "#8fa096"
+                        },
+                        {
+                          "type": "text",
+                          "id": "sywE9",
+                          "name": "標籤",
+                          "fill": "#8fa096",
+                          "content": "進行中",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "Oftyp",
+                      "name": "數字",
+                      "fill": "#eae4d6",
+                      "content": "2 個任務",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 20,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Bvbb6",
+              "name": "最近新增",
+              "width": 1152,
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "fdLqa",
+                  "name": "標題列",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "kcJya",
+                      "name": "標題",
+                      "fill": "#eae4d6",
+                      "content": "最近新增",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 20,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "vG7N6",
+                  "name": "錯誤橫幅",
+                  "width": "fill_container",
+                  "fill": "#c0392b1f",
+                  "cornerRadius": 8,
+                  "padding": [
+                    12,
+                    20
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "JjyJw",
+                      "name": "訊息列",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "bV4yj",
+                          "name": "icon-triangle-alert",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "triangle-alert",
+                          "library": "lucide",
+                          "fill": "#e08a76"
+                        },
+                        {
+                          "type": "text",
+                          "id": "CJvcN",
+                          "name": "錯誤訊息",
+                          "fill": "#e08a76",
+                          "content": "無法載入，請稍後再試",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "XmtYs",
+                      "name": "重試按鈕",
+                      "height": 44,
+                      "cornerRadius": 8,
+                      "stroke": "#e08a764d",
+                      "strokeWidth": 1,
+                      "padding": [
+                        0,
+                        20
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "aWgOu",
+                          "name": "按鈕文字",
+                          "fill": "#e08a76",
+                          "content": "重試",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "X9Py61",
+              "name": "TMDb 探索",
+              "width": 1152,
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "CrRM9",
+                  "name": "標題區",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "TM5ia",
+                      "name": "標題",
+                      "fill": "#eae4d6",
+                      "content": "熱門電影",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "KUqkg",
+                      "name": "過濾說明",
+                      "fill": "#8fa096",
+                      "content": "已擁有的作品不會出現在這裡",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "kxTBM",
+                  "name": "卡片列",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "children": [
+                    {
+                      "id": "t6azzK",
+                      "type": "ref",
+                      "ref": "hD7Tw",
+                      "name": "PosterCard 1",
+                      "width": 160,
+                      "descendants": {
+                        "I4I8B7": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "id": "Slm5L",
+                      "type": "ref",
+                      "ref": "hD7Tw",
+                      "name": "PosterCard 2",
+                      "width": 160,
+                      "descendants": {
+                        "I4I8B7": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "id": "bAGCa",
+                      "type": "ref",
+                      "ref": "hD7Tw",
+                      "name": "PosterCard 3",
+                      "width": 160,
+                      "descendants": {
+                        "I4I8B7": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "id": "wfI87",
+                      "type": "ref",
+                      "ref": "hD7Tw",
+                      "name": "PosterCard 4",
+                      "width": 160,
+                      "descendants": {
+                        "I4I8B7": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "id": "EZsAx",
+                      "type": "ref",
+                      "ref": "hD7Tw",
+                      "name": "PosterCard 5",
+                      "width": 160,
+                      "descendants": {
+                        "I4I8B7": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "id": "M5hqi",
+                      "type": "ref",
+                      "ref": "hD7Tw",
+                      "name": "PosterCard 6",
+                      "width": 160,
+                      "descendants": {
+                        "I4I8B7": {
+                          "enabled": false
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "O1IXF",
+              "name": "註記",
+              "fill": "#8fa096",
+              "textGrowth": "fixed-width",
+              "width": 1152,
+              "content": "hero 與最近新增共用同一個查詢：該查詢失敗時 hero 一併缺席，錯誤只由最近新增這一條橫幅說一次，不重複報。TMDb 側的失敗另見 H7-D-v3。",
+              "lineHeight": 1.6,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "pp0x3",
+      "x": 24970,
+      "y": 45260,
+      "name": "cap-H6-D-v3",
+      "fill": "$text-secondary",
+      "content": "H6-D-v3 · 首頁 v3（自家內容載入失敗）",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 20,
+      "fontWeight": "600"
     }
   ],
   "variables": {

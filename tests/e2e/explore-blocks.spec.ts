@@ -305,7 +305,9 @@ test.describe('Explore Blocks — owned filter @ui @explore-blocks @ux3-1-8', ()
 
     // A row that silently deletes items reads as「TMDb 內容變少了」— the caption
     // is what keeps the filter honest, so it is part of the contract.
-    await expect(block.getByTestId('explore-block-caption')).toHaveText('已擁有的作品不會出現這裡');
+    await expect(block.getByTestId('explore-block-caption')).toHaveText(
+      '已擁有的作品不會出現在這裡'
+    );
   });
 
   test('[P1] a row whose every title is owned shows the all-owned message, not the no-results one', async ({
