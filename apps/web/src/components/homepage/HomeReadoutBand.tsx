@@ -151,6 +151,32 @@ export function HomeReadoutBand() {
 
   const { coverage, processedToday, attention, inFlight } = data;
   const firstRun = coverage.status === 'ok' && coverage.total === 0;
+  /**
+   * ⚖️ Alexyu 2026-08-27. 產生字幕 → (`/library?generate=true`) existed in
+   * exactly TWO places, both inside a scan-complete toast that destroys itself
+   * after ten seconds: ScanProgressCard.tsx:215 and ScanProgressSheet.tsx:132.
+   * A grep of the app finds no third entry point. So the scan would announce
+   *「N 部影片缺繁中字幕」 and then take away the only one-tap way to act on it,
+   * seconds later — worst of all on a phone, where the toast cannot be paused.
+   *
+   * The door belongs on a surface that is always there. This cell already IS
+   * that surface: it is the product's reason to exist as one number, and it
+   * already carries an `action` half (H5-D-v3 draws 「繁中字幕 · 開始掃描」)
+   * for the first-run case. Same mechanism, one more rung on the ladder.
+   *
+   * ⚠️ The NUMBER does not change, only the door. `coverage` counts TITLES
+   * (movieCovered + seriesCovered, home_summary_service.go:157-167) while the
+   * toast's missingSubtitleCount counts EPISODES too
+   * (totalItemsIncludingEpisodes, ScanProgress.tsx:67). They are different
+   * quantities; showing one under the other's label would be the kind of
+   * almost-right number this product exists not to print.
+   */
+  // No `total > 0` guard: Covered ≤ Total by construction (the backend says so
+  // at home_summary_service.go:99), so 0/0 already fails `covered < total` —
+  // and `firstRun` wins the ternary below regardless. A redundant clause that
+  // reads like a guard is worse than no clause: it invites the next reader to
+  // trust a check that was never doing anything.
+  const hasUncovered = coverage.status === 'ok' && coverage.covered < coverage.total;
   const attentionLine = attentionText(attention);
 
   return (
@@ -161,18 +187,24 @@ export function HomeReadoutBand() {
         aria-label="媒體庫讀數"
         className="grid grid-cols-2 divide-[var(--border-subtle)] rounded-[var(--radius-lg)] bg-[var(--bg-secondary)] py-1 max-md:divide-y md:flex md:divide-x"
       >
-        {/* ① 繁中覆蓋率 — the product's reason to exist as ONE number. On a
-            fresh library (0/0) the same cell becomes the 開始掃描 door. */}
+        {/* ① 繁中覆蓋率 — the product's reason to exist as ONE number, and the
+            cell whose door depends on what the number says. The ladder:
+              0/0        → 開始掃描 (there is nothing to cover yet)
+              covered<total → 產生字幕 (the permanent home of the consent flow)
+              全部覆蓋   → no action; the number is the whole message. */}
         <ReadoutCell
           icon={Captions}
           label="繁中字幕"
-          action={firstRun ? '開始掃描' : undefined}
+          action={firstRun ? '開始掃描' : hasUncovered ? '產生字幕' : undefined}
           to={firstRun ? '/settings/scanner' : '/library'}
+          search={hasUncovered ? { generate: true } : undefined}
           ariaLabel={
             coverage.status === 'ok'
               ? firstRun
                 ? '尚無媒體，前往掃描設定'
-                : `繁中字幕覆蓋 ${coverage.covered} / ${coverage.total} 部，前往媒體庫`
+                : hasUncovered
+                  ? `繁中字幕覆蓋 ${coverage.covered} / ${coverage.total} 部，前往產生字幕`
+                  : `繁中字幕覆蓋 ${coverage.covered} / ${coverage.total} 部，前往媒體庫`
               : '繁中字幕覆蓋率目前無法取得，前往媒體庫'
           }
           value={coverage.status === 'ok' ? `${coverage.covered}/${coverage.total}` : null}
