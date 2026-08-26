@@ -23,6 +23,7 @@
  */
 import { HeroBanner } from './HeroBanner';
 import { ExploreBlocksList } from './ExploreBlocksList';
+import { HomeReadoutBand } from './HomeReadoutBand';
 import { RecentlyAddedRowV2 } from './RecentlyAddedRowV2';
 
 export function HomeBrowseV2() {
@@ -32,6 +33,10 @@ export function HomeBrowseV2() {
           (critique R2 P3). Visually the sections carry the page; the h1 is
           for AT and the document outline. */}
       <h1 className="sr-only">首頁</h1>
+      {/* Home v3 讀數帶 (ux3-1-7, H1-D-v3): the Operate readout sits above
+          EVERYTHING — the returning user reads first, browses second. Section
+          order below it is untouched here; ux3-1-8 owns the hero/tail swap. */}
+      <HomeReadoutBand />
       {/* OWN-CONTENT zone — structurally ABOVE external curation (D3 ordering law). */}
       <section
         data-testid="home-own-content"
