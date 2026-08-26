@@ -110,12 +110,41 @@ const jsonOk = <T>(body: T) => ({
   body: JSON.stringify({ success: true, data: body }),
 });
 
+/** An active (pending) request — what earns a card its 已請求 badge. */
+const activeMovieRequest = (tmdbId: number, title: string) => ({
+  id: `req-${tmdbId}`,
+  tmdb_id: tmdbId,
+  media_type: 'movie',
+  title,
+  status: 'pending',
+  fulfilment_source: null,
+  external_id: null,
+  seasons: null,
+  episodes: null,
+});
+
 async function stubHomepageBaseline(page: import('@playwright/test').Page) {
-  await page.route(`${ROUTE_API}/tmdb/trending/movies*`, (route: Route) =>
-    route.fulfill(jsonOk({ page: 1, results: [], total_pages: 0, total_results: 0 }))
+  // ux3-1-8: the hero reads the OWN library and the readout band reads
+  // /home-summary. Both MUST be stubbed here — an unstubbed call reaches the
+  // real API, and a homepage whose layout depends on live data breaks this
+  // file's own network-first determinism rule (the click-coordinate test in
+  // particular measures a boundingBox that a late-arriving hero would move).
+  await page.route(`${ROUTE_API}/library/recent*`, (route: Route) =>
+    route.fulfill(jsonOk({ items: [], page: 1, page_size: 20, total_items: 0, total_pages: 0 }))
   );
-  await page.route(`${ROUTE_API}/tmdb/trending/tv*`, (route: Route) =>
-    route.fulfill(jsonOk({ page: 1, results: [], total_pages: 0, total_results: 0 }))
+  await page.route(`${ROUTE_API}/home-summary`, (route: Route) =>
+    route.fulfill(
+      jsonOk({
+        coverage: { status: 'ok', covered: 0, total: 0 },
+        processed_today: { status: 'ok', count: 0 },
+        attention: { status: 'ok', failed_count: 0 },
+        in_flight: { status: 'ok', count: 0 },
+      })
+    )
+  );
+  // No open requests by default — the two badge-cluster tests opt in.
+  await page.route(`${ROUTE_API}/requests`, (route: Route) =>
+    route.fulfill(jsonOk({ requests: [] }))
   );
   await page.route(`${ROUTE_API}/downloads*`, (route: Route) =>
     route.fulfill(jsonOk({ items: [], page: 1, pageSize: 100, totalItems: 0, totalPages: 1 }))
@@ -132,6 +161,10 @@ async function stubHomepageBaseline(page: import('@playwright/test').Page) {
 async function stubExploreBlocksWith(
   page: import('@playwright/test').Page,
   content: typeof movieContent,
+  // ux3-1-8: kept at its default by every caller now — an OWNED id would
+  // delete the card from the explore row, and every test in this file needs
+  // the card to exist. Left as a parameter so a future non-homepage surface
+  // can reuse the helper.
   ownedIds: number[] = []
 ) {
   await page.route(`${ROUTE_API}/explore-blocks`, (route: Route) =>
@@ -217,23 +250,26 @@ test.describe('PosterCard Hover @ui @poster-card @bugfix-10-4', () => {
     page,
   }) => {
     await stubHomepageBaseline(page);
-    // Mock movie 603 as owned so AvailabilityBadge renders inside the cluster.
-    // Without an owned/new/type badge, the cluster wrapper still mounts but
-    // has no visible children — opacity assertions become noise.
-    await stubExploreBlocksWith(page, movieContent, [603]);
+    // The cluster needs a badge inside it or the opacity assertions are noise.
+    // ux3-1-8 retired the OWNED anchor these two tests used to rely on: an
+    // owned title is now deleted from the explore row, so the card it was
+    // hovering cannot exist. 已請求 is the badge that IS reachable here —
+    // requested-but-not-owned survives the filter by design — and the cluster's
+    // hover behaviour is the same whichever badge fills it.
+    await stubExploreBlocksWith(page, movieContent);
+    await page.route(`${ROUTE_API}/requests`, (route: Route) =>
+      route.fulfill(jsonOk({ requests: [activeMovieRequest(603, '駭客任務')] }))
+    );
 
     await page.goto('/');
 
     const card = page.getByTestId('poster-card').first();
     await expect(card).toBeVisible();
 
-    // The cluster wrapper is the parent of any badge in the top-right
-    // cluster. Use the owned badge as the anchor — it is the only badge
-    // guaranteed to exist with this fixture.
-    const ownedBadge = card.getByTestId('availability-badge-owned');
-    await expect(ownedBadge).toBeVisible();
+    const anchorBadge = card.getByTestId('availability-badge-requested');
+    await expect(anchorBadge).toBeVisible();
 
-    const badgeCluster = ownedBadge.locator('xpath=..');
+    const badgeCluster = anchorBadge.locator('xpath=..');
 
     // BEFORE hover: cluster fully opaque
     await expect(badgeCluster).toHaveCSS('opacity', '1');
@@ -258,16 +294,20 @@ test.describe('PosterCard Hover @ui @poster-card @bugfix-10-4', () => {
     // property (`scale: 95% 95%`), NOT a `transform: matrix(...)`. Assert on
     // `scale` — `getComputedStyle().transform` stays `none` for `scale-*` in v4.
     await stubHomepageBaseline(page);
-    await stubExploreBlocksWith(page, movieContent, [603]);
+    // 已請求 anchor, same reason as the sibling opacity test above (ux3-1-8).
+    await stubExploreBlocksWith(page, movieContent);
+    await page.route(`${ROUTE_API}/requests`, (route: Route) =>
+      route.fulfill(jsonOk({ requests: [activeMovieRequest(603, '駭客任務')] }))
+    );
 
     await page.goto('/');
 
     const card = page.getByTestId('poster-card').first();
     await expect(card).toBeVisible();
 
-    const ownedBadge = card.getByTestId('availability-badge-owned');
-    await expect(ownedBadge).toBeVisible();
-    const badgeCluster = ownedBadge.locator('xpath=..');
+    const anchorBadge = card.getByTestId('availability-badge-requested');
+    await expect(anchorBadge).toBeVisible();
+    const badgeCluster = anchorBadge.locator('xpath=..');
 
     // BEFORE hover: no scale applied — full size
     await expect(badgeCluster).toHaveCSS('scale', 'none');

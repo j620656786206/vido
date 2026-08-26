@@ -266,14 +266,3 @@ export interface VideosResponse {
   id: number;
   results: Video[];
 }
-
-// Story 10-2 — Hero banner item (movie or TV) normalized for carousel display.
-export interface HeroBannerItem {
-  id: number;
-  mediaType: MediaType;
-  title: string;
-  overview: string;
-  backdropPath: string | null;
-  releaseDate: string; // movie release_date OR series first_air_date
-  voteAverage: number;
-}

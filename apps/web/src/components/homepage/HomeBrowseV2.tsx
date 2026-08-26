@@ -1,4 +1,5 @@
-// Design ref: ux-design.pen Screen H1-D-v2 (yixu1)
+// Design ref: ux-design.pen Screen H1-D-v3 (k2Otv)
+// Companion frames: H7-D-v3 (EoCQ4) degraded · H2-M-v3 (uGCAU) mobile
 /**
  * Home v2 composition (UX Redesign Phase 3 — ux3-1-2 / epic ux3-home-v2).
  *
@@ -34,10 +35,16 @@ export function HomeBrowseV2() {
           for AT and the document outline. */}
       <h1 className="sr-only">首頁</h1>
       {/* Home v3 讀數帶 (ux3-1-7, H1-D-v3): the Operate readout sits above
-          EVERYTHING — the returning user reads first, browses second. Section
-          order below it is untouched here; ux3-1-8 owns the hero/tail swap. */}
+          EVERYTHING — the returning user reads first, browses second. */}
       <HomeReadoutBand />
-      {/* OWN-CONTENT zone — structurally ABOVE external curation (D3 ordering law). */}
+
+      {/* OWN-LIBRARY hero (ux3-1-8, H1-D-v3): the page's largest surface now
+          sells the user's OWN shelf — static, manually switched, absent when
+          no backdrop exists. D3 own-above-external holds and strengthens: the
+          hero itself is own content now, so the ENTIRE first fold is yours. */}
+      <HeroBanner />
+
+      {/* OWN-CONTENT zone — still structurally ABOVE external curation (D3). */}
       <section
         data-testid="home-own-content"
         aria-label="我的媒體庫"
@@ -47,12 +54,14 @@ export function HomeBrowseV2() {
             Epic 17 exists. Its「連接 Plex / Jellyfin 後顯示」was a door that
             leads nowhere — 固定詞彙 says不出現＝你沒要求 is the only honest
             state for a feature nobody can enable. The component survives for
-            Epic 17; first fold now opens on the user's own shelf. */}
+            Epic 17. */}
         <RecentlyAddedRowV2 />
       </section>
 
-      {/* EXTERNAL curation — below own-content. Epic 10's Hero + Explore, kept in full. */}
-      <HeroBanner />
+      {/* EXTERNAL curation retreats to the TAIL (ux3-1-8, H1-D-v3): TMDb rows
+          filter out owned items (discovery is their only job) and the whole
+          group is absent when TMDb is degraded (H7-D-v3 — the page stays
+          complete and isomorphic without it). */}
       <ExploreBlocksList />
     </div>
   );

@@ -213,6 +213,7 @@ const ownedFalse: OwnedMediaState = {
   isRequested: () => false,
   isLoading: false,
   error: null,
+  isSettled: true,
 };
 const ownedTrue: OwnedMediaState = {
   owned: new Set<number>([12345]),
@@ -220,6 +221,7 @@ const ownedTrue: OwnedMediaState = {
   isRequested: () => false,
   isLoading: false,
   error: null,
+  isSettled: true,
 };
 // CR H2 — `isOwned` returns true so the loading-state test actually exercises
 // the `!ownership.isLoading` guard. With the prior `() => false` fixture, the

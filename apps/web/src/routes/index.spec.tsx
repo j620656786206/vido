@@ -18,12 +18,12 @@ vi.mock('../components/homepage/HomeBrowseV2', () => ({
   HomeBrowseV2: () => React.createElement('div', { 'data-testid': 'stub-home-v2' }, 'home-v2'),
 }));
 
-// Mock tmdbService so the route loader does not issue real network traffic
-// during the render.
-vi.mock('../services/tmdb', () => ({
-  default: {
-    getTrendingMovies: vi.fn().mockResolvedValue({ results: [] }),
-    getTrendingTVShows: vi.fn().mockResolvedValue({ results: [] }),
+// ux3-1-8: the loader seeds the OWN-library recently-added query (the hero's
+// new source) instead of TMDb trending. Mock the service so the loader issues
+// no real network traffic during the render.
+vi.mock('../services/libraryService', () => ({
+  libraryService: {
+    getRecentlyAdded: vi.fn().mockResolvedValue([]),
   },
 }));
 
@@ -80,12 +80,15 @@ describe('routes/index (ux3-cutover-3)', () => {
     expect(screen.queryByTestId('homepage-root')).toBeNull();
   });
 
-  it('[P1] Task 2.4 — route loader prefetches trending hero data', async () => {
+  it('[P1] ux3-1-8 — the loader prefetches the OWN-library recently-added query (the hero source), not TMDb trending', async () => {
     renderHome();
     await screen.findByTestId('stub-home-v2');
     const mockPrefetch = vi.mocked(mockedQueryClient.prefetchQuery);
     expect(mockPrefetch).toHaveBeenCalled();
     const call = mockPrefetch.mock.calls[0]?.[0];
-    expect(call?.queryKey).toEqual(['trending', 'hero', 'week']);
+    // MUST match useRecentlyAdded(20)'s key exactly — a drifted key seeds a
+    // cache entry nothing reads, and the prefetch silently buys nothing.
+    expect(call?.queryKey).toEqual(['library', 'recent', 20]);
+    expect(call?.queryKey).not.toEqual(['trending', 'hero', 'week']);
   });
 });

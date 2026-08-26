@@ -1,394 +1,267 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-  createMemoryHistory,
-  RouterProvider,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  Outlet,
-} from '@tanstack/react-router';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import React from 'react';
-import { HeroBanner } from './HeroBanner';
-import type { HeroBannerItem } from '../../types/tmdb';
+import type { LibraryItem } from '../../types/library';
 
-vi.mock('../../hooks/useTrending', () => ({
-  useTrendingHero: vi.fn(),
+vi.mock('../../hooks/useLibrary', () => ({
+  useRecentlyAdded: vi.fn(),
+  // ux3-1-8 made the window a shared constant; a wholesale module mock must
+  // re-export it or every consumer of this mock dies at import time.
+  RECENT_LIMIT: 20,
+  RECENT_STALE_TIME_MS: 30_000,
 }));
-
-vi.mock('../../services/tmdb', () => ({
-  default: {
-    getMovieVideos: vi.fn(),
-    getTVShowVideos: vi.fn(),
-  },
-}));
-
-import { useTrendingHero } from '../../hooks/useTrending';
-import tmdbService from '../../services/tmdb';
-
-const mockUseTrendingHero = vi.mocked(useTrendingHero);
-const mockGetMovieVideos = vi.mocked(tmdbService.getMovieVideos);
-
-function item(overrides: Partial<HeroBannerItem> = {}): HeroBannerItem {
+// The hero's title/CTA are router <Link>s; this spec has no router, so stub
+// Link as a plain anchor that serialises its params for href assertions.
+vi.mock('@tanstack/react-router', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
   return {
-    id: 550,
-    mediaType: 'movie',
-    title: '鬥陣俱樂部',
-    overview: '一段關於失眠者與肥皂商人的旅程。',
-    backdropPath: '/backdrop.jpg',
-    releaseDate: '1999-10-15',
-    voteAverage: 8.4,
-    ...overrides,
+    ...actual,
+    Link: ({
+      to,
+      params,
+      children,
+      ...rest
+    }: {
+      to: string;
+      params?: Record<string, string>;
+      children: React.ReactNode;
+    }) => (
+      <a href={params ? to.replace('$type', params.type).replace('$id', params.id) : to} {...rest}>
+        {children}
+      </a>
+    ),
   };
+});
+
+import { useRecentlyAdded } from '../../hooks/useLibrary';
+import { HeroBanner, toHeroItems } from './HeroBanner';
+
+const mockUseRecentlyAdded = vi.mocked(useRecentlyAdded);
+
+function movie(id: string, over: Record<string, unknown> = {}): LibraryItem {
+  return {
+    type: 'movie',
+    movie: {
+      id,
+      title: `電影 ${id}`,
+      posterPath: '/p.jpg',
+      backdropPath: `/backdrop-${id}.jpg`,
+      releaseDate: '2024-05-10',
+      voteAverage: 8.2,
+      parseStatus: 'success',
+      subtitleStatus: 'found',
+      subtitleLanguage: 'zh-Hant',
+      createdAt: '2026-08-01T00:00:00Z',
+      ...over,
+    },
+  } as unknown as LibraryItem;
 }
 
-function renderBanner() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-
-  // Root must render <Outlet /> so child routes have somewhere to mount.
-  // Otherwise navigate({ to: '/media/...' }) updates the URL but no detail
-  // component appears, and tests for slide-click navigation can't observe
-  // the result.
-  const rootRoute = createRootRoute({
-    component: () => React.createElement(React.Fragment, null, React.createElement(Outlet)),
-  });
-  const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/',
-    component: () => React.createElement(HeroBanner),
-  });
-  const mediaRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/media/$type/$id',
-    component: () => React.createElement('div', null, 'Media Detail'),
-  });
-
-  const routeTree = rootRoute.addChildren([indexRoute, mediaRoute]);
-  const router = createRouter({
-    routeTree,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
-  });
-
-  return render(
-    React.createElement(
-      QueryClientProvider,
-      { client: queryClient },
-      React.createElement(RouterProvider, { router } as any)
-    )
-  );
+function series(id: string, over: Record<string, unknown> = {}): LibraryItem {
+  return {
+    type: 'tv',
+    series: {
+      id,
+      title: `影集 ${id}`,
+      posterPath: '/p.jpg',
+      backdropPath: `/backdrop-${id}.jpg`,
+      firstAirDate: '2023-01-15',
+      voteAverage: 9.0,
+      parseStatus: 'success',
+      subtitleStatus: 'not_found',
+      createdAt: '2026-08-02T00:00:00Z',
+      ...over,
+    },
+  } as unknown as LibraryItem;
 }
 
-function mockHook(overrides: Partial<ReturnType<typeof useTrendingHero>> = {}) {
-  mockUseTrendingHero.mockReturnValue({
-    data: [],
+function result(over: Record<string, unknown> = {}) {
+  return {
+    data: undefined,
     isLoading: false,
     isError: false,
-    isSuccess: true,
-    error: null,
-    ...overrides,
-  } as ReturnType<typeof useTrendingHero>);
+    refetch: vi.fn(),
+    ...over,
+  } as unknown as ReturnType<typeof useRecentlyAdded>;
 }
 
-describe('HeroBanner', () => {
+const activeSlide = () =>
+  document.querySelector<HTMLElement>('[data-testid="hero-banner-slide"][data-active="true"]');
+
+describe('HeroBanner (Home v3 own-library static hero — ux3-1-8)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useRealTimers();
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.useRealTimers();
+  it('[P1] renders the newest own item with 最新入庫 eyebrow, title link to the LIBRARY detail route, and gold 查看詳情 CTA', () => {
+    mockUseRecentlyAdded.mockReturnValue(result({ data: [movie('m1'), movie('m2')] }));
+    render(<HeroBanner />);
+
+    expect(screen.getByTestId('hero-banner')).toBeInTheDocument();
+    const slide = activeSlide()!;
+    expect(slide.querySelector('[data-testid="hero-banner-eyebrow"]')).toHaveTextContent(
+      '最新入庫'
+    );
+    expect(slide.querySelector('[data-testid="hero-banner-title"]')).toHaveTextContent('電影 m1');
+    // LIBRARY id in the route — not a TMDb id.
+    expect(slide.querySelector('[data-testid="hero-banner-title-link"]')).toHaveAttribute(
+      'href',
+      '/media/movie/m1'
+    );
+    expect(slide.querySelector('[data-testid="hero-banner-detail-link"]')).toHaveAttribute(
+      'href',
+      '/media/movie/m1'
+    );
+    expect(slide.querySelector('[data-testid="hero-banner-year"]')).toHaveTextContent('2024');
   });
 
-  it('[P1] hides section when API returns empty (AC #5)', async () => {
-    mockHook({ data: [], isSuccess: true });
-    renderBanner();
-    // Wait one tick for the router to mount, then assert nothing rendered.
-    await Promise.resolve();
-    expect(screen.queryByTestId('hero-banner')).toBeNull();
-    expect(screen.queryByTestId('hero-banner-skeleton')).toBeNull();
+  it('[P1] the subtitle badge celebrates the zh-Hant steady state (繁中字幕 ✓ 已就緒, success tint)', () => {
+    mockUseRecentlyAdded.mockReturnValue(result({ data: [movie('m1')] }));
+    render(<HeroBanner />);
+    const badge = screen.getByTestId('hero-banner-subtitle-badge');
+    expect(badge).toHaveTextContent('繁中字幕 ✓ 已就緒');
+    expect(badge.className).toContain('success');
   });
 
-  it('[P1] hides section when API errors (AC #5)', async () => {
-    mockHook({ data: undefined, isError: true, isSuccess: false, error: new Error('boom') });
-    renderBanner();
-    await Promise.resolve();
-    expect(screen.queryByTestId('hero-banner')).toBeNull();
+  it('[P1] a missing-subtitle item wears the grid vocabulary (缺字幕) AND is a door (brief §3「缺字幕→門」)', () => {
+    mockUseRecentlyAdded.mockReturnValue(result({ data: [series('s1')] }));
+    render(<HeroBanner />);
+    const badge = screen.getByTestId('hero-banner-subtitle-badge');
+    expect(badge).toHaveTextContent('缺字幕');
+    expect(badge.className).not.toContain('success');
+    // A named problem with no way to act on it is the dead end this redesign
+    // keeps deleting.
+    expect(badge.tagName).toBe('A');
+    expect(badge).toHaveAttribute('href', '/media/tv/s1');
   });
 
-  it('[P1] renders skeleton while loading', async () => {
-    mockHook({ data: undefined, isLoading: true, isSuccess: false });
-    renderBanner();
-    expect(await screen.findByTestId('hero-banner-skeleton')).toBeInTheDocument();
+  it('[P0] 固定詞彙 — a LIFECYCLE exception outranks the subtitle verdict, so the hero cannot show green while the poster below shows amber', () => {
+    // Same item, both states true: zh-Hant subtitle on record AND a re-parse in
+    // flight. The grid's pickPosterBadge shows 整理中; the hero must agree.
+    mockUseRecentlyAdded.mockReturnValue(
+      result({ data: [movie('m1', { parseStatus: 'pending' })] })
+    );
+    render(<HeroBanner />);
+    const badge = screen.getByTestId('hero-banner-subtitle-badge');
+    expect(badge).toHaveTextContent('整理中');
+    expect(badge).not.toHaveTextContent('已就緒');
+    expect(badge.className).toContain('warning');
+    // The app's own in-flight work is the Activity hub's business, not a door
+    // into the item — so this one stays a statement.
+    expect(badge.tagName).toBe('SPAN');
   });
 
-  it('[P1] renders backdrop, title, year, rating, overview (AC #1)', async () => {
-    mockHook({ data: [item()] });
-    renderBanner();
-
-    expect(await screen.findByTestId('hero-banner-title')).toHaveTextContent('鬥陣俱樂部');
-    expect(screen.getByTestId('hero-banner-year')).toHaveTextContent('1999');
-    expect(screen.getByTestId('hero-banner-rating')).toHaveTextContent('8.4');
-    expect(screen.getByTestId('hero-banner-overview')).toHaveTextContent('一段關於失眠者');
-    const backdrop = screen.getByTestId('hero-banner-backdrop') as HTMLImageElement;
-    // H1 fix: w1280 baseline + responsive srcset (no longer downloads `original`
-    // unconditionally on mobile).
-    expect(backdrop.src).toContain('/w1280/backdrop.jpg');
-    expect(backdrop.srcset).toContain('/w780/backdrop.jpg 780w');
-    expect(backdrop.srcset).toContain('/w1280/backdrop.jpg 1280w');
-    expect(backdrop.srcset).toContain('/original/backdrop.jpg 1920w');
-    expect(backdrop.getAttribute('decoding')).toBe('async');
+  it('[P1] a failed parse shows 失敗 on the hero too (same ladder as the grid)', () => {
+    mockUseRecentlyAdded.mockReturnValue(
+      result({ data: [movie('m1', { parseStatus: 'failed' })] })
+    );
+    render(<HeroBanner />);
+    expect(screen.getByTestId('hero-banner-subtitle-badge')).toHaveTextContent('失敗');
   });
 
-  it('[P1] hides backdrop image when load fails (L2 fix)', async () => {
-    mockHook({ data: [item()] });
-    renderBanner();
-    const backdrop = (await screen.findByTestId('hero-banner-backdrop')) as HTMLImageElement;
-    fireEvent.error(backdrop);
-    expect(screen.queryByTestId('hero-banner-backdrop')).toBeNull();
+  it('[P0] STATIC by ruling — no pause button, no play/trailer CTA, and no timer-driven rotation', () => {
+    vi.useFakeTimers();
+    try {
+      mockUseRecentlyAdded.mockReturnValue(result({ data: [movie('m1'), movie('m2')] }));
+      render(<HeroBanner />);
+
+      expect(screen.queryByTestId('hero-banner-pause')).toBeNull();
+      expect(screen.queryByTestId('hero-banner-play-trailer')).toBeNull();
+
+      expect(activeSlide()!.textContent).toContain('電影 m1');
+      // 8s used to rotate the old carousel; nothing may move now.
+      act(() => {
+        vi.advanceTimersByTime(30000);
+      });
+      expect(activeSlide()!.textContent).toContain('電影 m1');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
-  it('[P1] detail link points at /media/$type/$id with TMDb id (AC #3)', async () => {
-    mockHook({ data: [item({ id: 1396, mediaType: 'tv', title: 'Breaking Bad' })] });
-    renderBanner();
+  it('[P1] manual switching — dots and prev/next chevrons change the active slide', () => {
+    mockUseRecentlyAdded.mockReturnValue(
+      result({ data: [movie('m1'), movie('m2'), series('s1')] })
+    );
+    render(<HeroBanner />);
 
-    const link = (await screen.findByTestId('hero-banner-detail-link')) as HTMLAnchorElement;
-    expect(link.href).toMatch(/\/media\/tv\/1396$/);
+    fireEvent.click(screen.getByTestId('hero-banner-dot-1'));
+    expect(activeSlide()!.textContent).toContain('電影 m2');
+
+    fireEvent.click(screen.getByTestId('hero-banner-next'));
+    expect(activeSlide()!.textContent).toContain('影集 s1');
+
+    // prev wraps around from index 0.
+    fireEvent.click(screen.getByTestId('hero-banner-dot-0'));
+    fireEvent.click(screen.getByTestId('hero-banner-prev'));
+    expect(activeSlide()!.textContent).toContain('影集 s1');
   });
 
-  // Critique R1 P1 reshaped the slide: role="link" wrapping a button and a
-  // Link violated ARIA (no interactive descendants inside a link). The
-  // container is now a plain pointer surface; the ACCESSIBLE path is the
-  // title <Link> (plus 查看詳情/play). Click convenience must still work.
-  it('[P1] full-slide click is a NATIVE stretched link, not a role="link" div', async () => {
-    mockHook({ data: [item({ id: 7, mediaType: 'movie', title: 'Slide Click Test' })] });
-    renderBanner();
-    const slide = await screen.findByTestId('hero-banner-slide');
-    expect(slide).not.toHaveAttribute('role');
-    expect(slide).not.toHaveAttribute('tabindex');
-
-    // The title link stretches over the slide (after:inset-0) — clicking it
-    // IS the full-surface click path.
-    const link = screen.getByTestId('hero-banner-title-link');
-    expect(link.className).toContain('after:absolute after:inset-0');
-    fireEvent.click(link);
-    await waitFor(() => expect(screen.getByText('Media Detail')).toBeInTheDocument());
-  });
-
-  it('[P1] play button click does NOT bubble into slide navigation', async () => {
-    mockGetMovieVideos.mockResolvedValue({ id: 1, results: [] });
-    mockHook({ data: [item({ id: 99 })] });
-    renderBanner();
-    const slide = await screen.findByTestId('hero-banner-slide');
-    const playBtn = screen.getByTestId('hero-banner-play-trailer');
-    fireEvent.click(playBtn);
-    // Modal opens, slide remains (no navigation away).
-    expect(await screen.findByTestId('trailer-modal')).toBeInTheDocument();
-    expect(slide).toBeInTheDocument();
-    expect(screen.queryByText('Media Detail')).toBeNull();
-  });
-
-  it('[P1] inactive slides are inert and removed from tab order (M1 fix)', async () => {
-    mockHook({
-      data: [item({ id: 1 }), item({ id: 2 }), item({ id: 3 })],
-    });
-    renderBanner();
-    await screen.findByTestId('hero-banner');
-    const slides = screen.getAllByTestId('hero-banner-slide');
-
-    expect(slides[0]).not.toHaveAttribute('inert');
-    // The container itself is no longer focusable (critique R1 P1) — the
-    // active slide's tab stops are its REAL controls, led by the title link.
-    expect(slides[0].querySelector('[data-testid="hero-banner-title"] a')).not.toBeNull();
-
-    expect(slides[1]).toHaveAttribute('inert');
-    expect(slides[2]).toHaveAttribute('inert');
-  });
-
-  it('[P2] keyboard path: the title is a real link to detail (critique R1 P1)', async () => {
-    mockHook({ data: [item({ id: 13, mediaType: 'movie', title: 'KB Title' })] });
-    renderBanner();
-    await screen.findByTestId('hero-banner-title');
-    const link = screen.getByTestId('hero-banner-title-link') as HTMLAnchorElement;
-    expect(link.href).toMatch(/\/media\/movie\/13$/);
-    fireEvent.click(link);
-    await waitFor(() => expect(screen.getByText('Media Detail')).toBeInTheDocument());
-  });
-
-  it('[P1] keyboard focus pauses rotation — inert must never steal focus (R2)', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    mockHook({ data: [item({ id: 1, title: 'A' }), item({ id: 2, title: 'B' })] });
-    renderBanner();
-    await screen.findByTestId('hero-banner');
-
-    // Focus enters the hero (capture phase catches any descendant focus).
-    fireEvent.focus(screen.getAllByTestId('hero-banner-title-link')[0]);
-    act(() => {
-      vi.advanceTimersByTime(20000);
-    });
-    expect(
-      screen.getAllByTestId('hero-banner-slide').map((el) => el.getAttribute('data-active'))
-    ).toEqual(['true', 'false']);
-
-    // Focus leaves → rotation resumes.
-    fireEvent.blur(screen.getAllByTestId('hero-banner-title-link')[0]);
-    act(() => {
-      vi.advanceTimersByTime(8000);
-    });
-    expect(
-      screen.getAllByTestId('hero-banner-slide').map((el) => el.getAttribute('data-active'))
-    ).toEqual(['false', 'true']);
-    vi.useRealTimers();
-  });
-
-  it('[P1] pause button stops rotation and survives mouse-leave (WCAG 2.2.2)', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    mockHook({ data: [item({ id: 1, title: 'A' }), item({ id: 2, title: 'B' })] });
-    renderBanner();
-    await screen.findByTestId('hero-banner');
-    const pause = screen.getByTestId('hero-banner-pause');
-    expect(pause).toHaveAttribute('aria-label', '暫停輪播');
-
-    fireEvent.click(pause);
-    expect(pause).toHaveAttribute('aria-label', '繼續輪播');
-    expect(pause).toHaveAttribute('aria-pressed', 'true');
-
-    // Hover in/out must NOT clear the user's explicit pause.
-    fireEvent.mouseEnter(screen.getByTestId('hero-banner'));
-    fireEvent.mouseLeave(screen.getByTestId('hero-banner'));
-    act(() => {
-      vi.advanceTimersByTime(20000);
-    });
-    const actives = screen
-      .getAllByTestId('hero-banner-slide')
-      .map((el) => el.getAttribute('data-active'));
-    expect(actives).toEqual(['true', 'false']);
-
-    fireEvent.click(pause);
-    act(() => {
-      vi.advanceTimersByTime(8000);
-    });
-    expect(
-      screen.getAllByTestId('hero-banner-slide').map((el) => el.getAttribute('data-active'))
-    ).toEqual(['false', 'true']);
-    vi.useRealTimers();
-  });
-
-  it('[P1] auto-rotates every 8s (AC #2)', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    mockHook({
-      data: [item({ id: 1, title: 'A' }), item({ id: 2, title: 'B' }), item({ id: 3, title: 'C' })],
-    });
-    renderBanner();
-    await screen.findByTestId('hero-banner');
-
-    const slidesActive = () =>
-      screen.getAllByTestId('hero-banner-slide').map((el) => el.getAttribute('data-active'));
-
-    expect(slidesActive()).toEqual(['true', 'false', 'false']);
-
-    act(() => {
-      vi.advanceTimersByTime(8000);
-    });
-    expect(slidesActive()).toEqual(['false', 'true', 'false']);
-
-    act(() => {
-      vi.advanceTimersByTime(8000);
-    });
-    expect(slidesActive()).toEqual(['false', 'false', 'true']);
-
-    // Wraps around
-    act(() => {
-      vi.advanceTimersByTime(8000);
-    });
-    expect(slidesActive()).toEqual(['true', 'false', 'false']);
-  });
-
-  it('[P1] pauses rotation on hover (Task 1.5)', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    mockHook({
-      data: [item({ id: 1 }), item({ id: 2 })],
-    });
-    renderBanner();
-    const banner = await screen.findByTestId('hero-banner');
-
-    fireEvent.mouseEnter(banner);
-
-    act(() => {
-      vi.advanceTimersByTime(20000);
-    });
-    expect(screen.getAllByTestId('hero-banner-slide')[0].getAttribute('data-active')).toBe('true');
-
-    fireEvent.mouseLeave(banner);
-    act(() => {
-      vi.advanceTimersByTime(8000);
-    });
-    expect(screen.getAllByTestId('hero-banner-slide')[1].getAttribute('data-active')).toBe('true');
-  });
-
-  it('[P1] does not auto-rotate when only one item', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    mockHook({ data: [item()] });
-    renderBanner();
-    await screen.findByTestId('hero-banner');
-
+  it('[P1] items without a backdrop are excluded; ONE dressed item → single slide, dots hidden', () => {
+    mockUseRecentlyAdded.mockReturnValue(
+      result({ data: [movie('m1'), movie('m2', { backdropPath: null })] })
+    );
+    render(<HeroBanner />);
+    expect(screen.getAllByTestId('hero-banner-slide')).toHaveLength(1);
     expect(screen.queryByTestId('hero-banner-dots')).toBeNull();
-    act(() => {
-      vi.advanceTimersByTime(30000);
-    });
-    expect(screen.getAllByTestId('hero-banner-slide')[0].getAttribute('data-active')).toBe('true');
   });
 
-  it('[P1] dot click jumps to that slide (Task 1.6)', async () => {
-    mockHook({
-      data: [item({ id: 1 }), item({ id: 2 }), item({ id: 3 })],
-    });
-    renderBanner();
-    await screen.findByTestId('hero-banner');
+  it('[P1] caps the hero at 5 dressed items (newest first)', () => {
+    const many = ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map((id) => movie(id));
+    expect(toHeroItems(many as LibraryItem[])).toHaveLength(5);
+  });
 
+  it('[P0] 例外訊號原則 — no backdrops at all → the hero renders NOTHING (absent, not an empty frame)', () => {
+    mockUseRecentlyAdded.mockReturnValue(result({ data: [movie('m1', { backdropPath: null })] }));
+    const { container } = render(<HeroBanner />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('[P1] error state stays quiet here — the 最近新增 row is the shared query’s one spokesman', () => {
+    mockUseRecentlyAdded.mockReturnValue(result({ isError: true }));
+    const { container } = render(<HeroBanner />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('[P2] loading renders the hero-shaped skeleton', () => {
+    mockUseRecentlyAdded.mockReturnValue(result({ isLoading: true }));
+    render(<HeroBanner />);
+    expect(screen.getByTestId('hero-banner-skeleton')).toBeInTheDocument();
+  });
+
+  it('[P0] the selection is keyed by IDENTITY — a 30s refetch that prepends a new item must NOT swap the slide the user chose', () => {
+    // The whole point of ux3-1-8: nothing moves unless the user moves it. With
+    // an index-keyed selection, useRecentlyAdded's 30s poll landing a new
+    // backdrop-bearing item would silently re-point the chosen slide — a
+    // self-moving hero wearing a different mechanism.
+    mockUseRecentlyAdded.mockReturnValue(result({ data: [movie('m1'), movie('m2')] }));
+    const { rerender } = render(<HeroBanner />);
+
+    fireEvent.click(screen.getByTestId('hero-banner-dot-1'));
+    expect(activeSlide()!.textContent).toContain('電影 m2');
+
+    // A scan finishes; the poll returns with a NEWER item at the head.
+    mockUseRecentlyAdded.mockReturnValue(result({ data: [movie('m0'), movie('m1'), movie('m2')] }));
+    rerender(<HeroBanner />);
+
+    // Still the movie the user picked — not whatever now sits at index 1.
+    expect(activeSlide()!.textContent).toContain('電影 m2');
+  });
+
+  it('[P1] a shrinking list falls back to the newest DURING render — the hero never blinks to a slide-less frame', () => {
+    mockUseRecentlyAdded.mockReturnValue(result({ data: [movie('m1'), movie('m2'), movie('m3')] }));
+    const { rerender } = render(<HeroBanner />);
     fireEvent.click(screen.getByTestId('hero-banner-dot-2'));
-    const slides = screen.getAllByTestId('hero-banner-slide');
-    expect(slides[2].getAttribute('data-active')).toBe('true');
-    expect(slides[0].getAttribute('data-active')).toBe('false');
-  });
+    expect(activeSlide()!.textContent).toContain('電影 m3');
 
-  it('[P1] play button opens trailer modal (AC #6)', async () => {
-    mockGetMovieVideos.mockResolvedValue({ id: 1, results: [] });
-    mockHook({ data: [item({ id: 1 })] });
-    renderBanner();
+    // The row refetches every 30s; an item can vanish from under the selection.
+    mockUseRecentlyAdded.mockReturnValue(result({ data: [movie('m1')] }));
+    rerender(<HeroBanner />);
 
-    fireEvent.click(await screen.findByTestId('hero-banner-play-trailer'));
-    expect(await screen.findByTestId('trailer-modal')).toBeInTheDocument();
-  });
-
-  it('[P2] does not render rating badge when voteAverage is 0', async () => {
-    mockHook({ data: [item({ voteAverage: 0 })] });
-    renderBanner();
-    await screen.findByTestId('hero-banner');
-    expect(screen.queryByTestId('hero-banner-rating')).toBeNull();
-  });
-
-  it('[P2] does not render year when releaseDate is missing', async () => {
-    mockHook({ data: [item({ releaseDate: '' })] });
-    renderBanner();
-    await screen.findByTestId('hero-banner');
-    expect(screen.queryByTestId('hero-banner-year')).toBeNull();
-  });
-
-  it('[P2] does not render backdrop image when backdropPath is null', async () => {
-    mockHook({ data: [item({ backdropPath: null })] });
-    renderBanner();
-    await screen.findByTestId('hero-banner');
-    expect(screen.queryByTestId('hero-banner-backdrop')).toBeNull();
-  });
-
-  it('[P2] uses TV Chinese label "影集" for TV mediaType', async () => {
-    mockHook({ data: [item({ mediaType: 'tv' })] });
-    renderBanner();
-    await screen.findByTestId('hero-banner');
-    expect(screen.getByText('影集')).toBeInTheDocument();
+    // Exactly one slide is active on the very first frame after the shrink.
+    expect(
+      document.querySelectorAll('[data-testid="hero-banner-slide"][data-active="true"]')
+    ).toHaveLength(1);
+    expect(activeSlide()!.textContent).toContain('電影 m1');
   });
 });

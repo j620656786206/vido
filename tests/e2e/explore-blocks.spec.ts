@@ -11,6 +11,8 @@
  *   - AC#4 edit/delete updates list without page reload
  *   - AC#5 default blocks pre-seeded
  *   - AC#6 content uses TMDb discover with block params
+ *   - ux3-1-8 owned titles are FILTERED OUT of the rows (+ the caption that
+ *     announces the rule, and the all-owned empty fork)
  *
  * @tags @ui @explore-blocks @story-10-3
  */
@@ -113,6 +115,15 @@ const mockQBConfig = {
   configured: true,
 };
 
+// ux3-1-7 readout band — every cell present and boring, so the band never
+// becomes the reason a homepage assertion moves.
+const emptyHomeSummary = {
+  coverage: { status: 'ok', covered: 0, total: 0 },
+  processed_today: { status: 'ok', count: 0 },
+  attention: { status: 'ok', failed_count: 0 },
+  in_flight: { status: 'ok', count: 0 },
+};
+
 // =============================================================================
 // Helpers
 // =============================================================================
@@ -122,6 +133,18 @@ const jsonOk = <T>(body: T) => ({
   contentType: 'application/json',
   body: JSON.stringify({ success: true, data: body }),
 });
+
+/**
+ * Pin the ownership verdict for the whole page. Since ux3-1-8 an owned title is
+ * DELETED from the row rather than badged, so ownership is now an input to the
+ * card COUNT of every test in this file — leaving it to the shared backend
+ * would make each count depend on whatever that library happens to hold.
+ */
+async function stubCheckOwned(page: import('@playwright/test').Page, ownedIds: number[]) {
+  await page.route(`${ROUTE_API}/media/check-owned`, (route: Route) =>
+    route.fulfill(jsonOk({ owned_ids: ownedIds }))
+  );
+}
 
 async function stubHomepageBaseline(page: import('@playwright/test').Page) {
   await page.route(`${ROUTE_API}/tmdb/trending/movies*`, (route: Route) =>
@@ -139,6 +162,19 @@ async function stubHomepageBaseline(page: import('@playwright/test').Page) {
   );
   await page.route(`${ROUTE_API}/health/services*`, (route: Route) =>
     route.fulfill(jsonOk({ services: [] }))
+  );
+  // Default: the user owns nothing, so every block renders its full payload.
+  // The owned-filter tests re-register this route AFTER calling the baseline —
+  // Playwright resolves the most recently registered handler first.
+  await stubCheckOwned(page, []);
+  // ux3-1-8 moved the own-library hero above the explore tail, and both the
+  // hero and the 最近新增 row read /library/recent. Neither is under test here;
+  // an empty library keeps the homepage DOM hermetic.
+  await page.route(`${ROUTE_API}/library/recent*`, (route: Route) =>
+    route.fulfill(jsonOk({ items: [], page: 1, pageSize: 20, totalItems: 0, totalPages: 0 }))
+  );
+  await page.route(`${ROUTE_API}/home-summary`, (route: Route) =>
+    route.fulfill(jsonOk(emptyHomeSummary))
   );
 }
 
@@ -206,6 +242,8 @@ test.describe('Homepage Explore Blocks @ui @explore-blocks @story-10-3', () => {
   // still renders (only an errored query hides it), shows the
   // "沒有符合條件的內容" message, and renders NO scroll chevrons (nothing to
   // scroll ⇒ no affordance ⇒ the left-edge message can never be clipped).
+  // ux3-1-8 forked that copy in two: this is the TMDb-returned-nothing branch,
+  // and it must NOT drift into the all-owned congratulation (covered below).
   test('[P2] empty block shows the no-results message and no scroll chevrons (bugfix-10-6 AC#5)', async ({
     page,
   }) => {
@@ -227,6 +265,80 @@ test.describe('Homepage Explore Blocks @ui @explore-blocks @story-10-3', () => {
     await expect(block.getByTestId('explore-block-scroll-left')).toHaveCount(0);
     await expect(block.getByTestId('explore-block-scroll-right')).toHaveCount(0);
   });
+});
+
+// =============================================================================
+// Owned-title filter (ux3-1-8) — the explore tail is DISCOVERY only, so a title
+// already in the library drops out of the row instead of being badged 已有.
+// =============================================================================
+
+test.describe('Explore Blocks — owned filter @ui @explore-blocks @ux3-1-8', () => {
+  test('[P0] an owned title is removed from the row, and the row says so', async ({ page }) => {
+    await stubHomepageBaseline(page);
+    await page.route(`${ROUTE_API}/explore-blocks`, (route: Route) =>
+      route.fulfill(jsonOk({ blocks: [defaultBlocks.blocks[0]] }))
+    );
+    await page.route(`${ROUTE_API}/explore-blocks/b-movies/content`, (route: Route) =>
+      route.fulfill(jsonOk(movieContent))
+    );
+    // 電影 A (TMDb id 1) is already in the library; 電影 B (id 2) is not.
+    await stubCheckOwned(page, [1]);
+
+    await page.goto('/');
+
+    const block = page.getByTestId('explore-block-b-movies');
+    await expect(block).toBeVisible();
+
+    // The regression this catches: an "owned" item surviving as a card (the
+    // pre-ux3-1-8 behaviour, where ownership only painted a badge). Assert on
+    // the href rather than the count alone so a filter that drops the WRONG
+    // card cannot pass.
+    await expect(block.getByTestId('poster-card')).toHaveCount(1);
+    await expect(block.locator('[data-testid="poster-card"][href$="/media/movie/1"]')).toHaveCount(
+      0
+    );
+    await expect(block.getByTestId('poster-card')).toHaveAttribute('href', /\/media\/movie\/2$/);
+
+    // Corollary: with owned items gone, the 已有 badge is unreachable on this
+    // surface. (Its live coverage moved to /discover — availability-badges.spec.)
+    await expect(block.getByTestId('availability-badge-owned')).toHaveCount(0);
+
+    // A row that silently deletes items reads as「TMDb 內容變少了」— the caption
+    // is what keeps the filter honest, so it is part of the contract.
+    await expect(block.getByTestId('explore-block-caption')).toHaveText('已擁有的作品不會出現這裡');
+  });
+
+  test('[P1] a row whose every title is owned shows the all-owned message, not the no-results one', async ({
+    page,
+  }) => {
+    await stubHomepageBaseline(page);
+    await page.route(`${ROUTE_API}/explore-blocks`, (route: Route) =>
+      route.fulfill(jsonOk({ blocks: [defaultBlocks.blocks[0]] }))
+    );
+    await page.route(`${ROUTE_API}/explore-blocks/b-movies/content`, (route: Route) =>
+      route.fulfill(jsonOk(movieContent))
+    );
+    await stubCheckOwned(page, [1, 2]);
+
+    await page.goto('/');
+
+    const block = page.getByTestId('explore-block-b-movies');
+    await expect(block).toBeVisible();
+    await expect(block.getByTestId('poster-card')).toHaveCount(0);
+
+    // TMDb DID return content — telling the user「沒有符合條件的內容」here would
+    // be a lie about the upstream, so the empty state must take the other fork.
+    await expect(block.getByTestId('explore-block-empty')).toHaveText('這排的作品你都已經擁有了');
+
+    // Nothing left to scroll ⇒ no chevrons over the message (bugfix-10-6 AC#5
+    // must survive the new emptiness path too).
+    await expect(block.getByTestId('explore-block-scroll-left')).toHaveCount(0);
+    await expect(block.getByTestId('explore-block-scroll-right')).toHaveCount(0);
+  });
+
+  // The filter's fail-OPEN behaviour (check-owned 500 ⇒ the row keeps every
+  // card) lives in availability-badges.spec.ts, which already owns the
+  // check-owned failure path — not duplicated here.
 });
 
 // =============================================================================

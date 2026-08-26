@@ -13,9 +13,11 @@
  *     the 3rd block's content endpoint must NOT be hit until the user
  *     scrolls it into view. Vitest can't observe this because its
  *     IntersectionObserver is an inert stub.
- *   - AC #2: route-loader prefetch on Link hover — fires the trending
- *     request BEFORE navigation (requires a real router + a real Link to
- *     hover), cannot be exercised from an isolated component spec.
+ *   - AC #2: route-loader prefetch on Link hover — fires the own-library
+ *     recently-added request BEFORE navigation (requires a real router + a
+ *     real Link to hover), cannot be exercised from an isolated component
+ *     spec. (ux3-1-8 moved that prefetch off TMDb trending onto
+ *     library/recent, the hero's new source.)
  *   - AC #3: hero height is a Tailwind arbitrary class (`h-[250px]` /
  *     `md:h-[400px]`) — the only way to verify it compiles and yields the
  *     right pixel height is a real browser at viewport 390/1440.
@@ -31,7 +33,14 @@
  * Network-first: every route is intercepted BEFORE page.goto() so the
  * homepage never touches live TMDb / local backend services.
  *
- * @tags @ui @homepage @story-10-5
+ * ux3-1-8 (Home v3 identity flip) rewrites what "hero" means here: the hero
+ * is now the OWN library's newest backdrop-bearing items (GET
+ * /library/recent?limit=20), it is STATIC (no autoplay/pause), and it sits
+ * ABOVE the own-content row while the TMDb explore rows retreat to the tail.
+ * Everything in this file that used to be phrased in TMDb-trending terms is
+ * re-anchored on that source.
+ *
+ * @tags @ui @homepage @story-10-5 @story-ux3-1-8
  */
 
 import { test, expect } from '../support/fixtures';
@@ -50,30 +59,77 @@ const mockQBConfig = {
   configured: true,
 };
 
-const mockTrendingMovies = {
-  page: 1,
-  results: [
+// ux3-1-8: the hero's ONLY source. Two items carry a backdrop (hero-eligible,
+// so the dots pill renders too); the third has none — it feeds the 最近新增
+// row but must never reach the hero. Wire shape = LibraryListResponse.
+const mockLibraryRecent = {
+  items: [
     {
-      id: 101,
-      title: '鬼滅之刃：無限城篇',
-      overview: '炭治郎與鬼殺隊潛入無限城。',
-      backdrop_path: '/bg1.jpg',
-      poster_path: '/p1.jpg',
-      release_date: '2024-05-10',
-      vote_average: 8.2,
-      vote_count: 1250,
-      media_type: 'movie',
+      type: 'movie',
+      movie: {
+        id: '5c2a9d3e-1f4b-4a8c-9d2e-3f5a7b9c1d63',
+        title: '駭客任務',
+        release_date: '1999-03-31',
+        genres: ['動作', '科幻'],
+        poster_path: '/matrix.jpg',
+        backdrop_path: '/matrix-bg.jpg',
+        vote_average: 8.7,
+        parse_status: 'parsed',
+        created_at: '2026-08-20T00:00:00Z',
+        updated_at: '2026-08-20T00:00:00Z',
+      },
+    },
+    {
+      type: 'series',
+      series: {
+        id: '8e4b2c6a-7d1f-4e3a-b5c9-2a6d8f0e4b57',
+        title: '黑鏡',
+        first_air_date: '2011-12-04',
+        genres: ['劇情', '科幻'],
+        poster_path: '/black-mirror.jpg',
+        backdrop_path: '/black-mirror-bg.jpg',
+        vote_average: 8.3,
+        parse_status: 'parsed',
+        created_at: '2026-08-19T00:00:00Z',
+        updated_at: '2026-08-19T00:00:00Z',
+      },
+    },
+    {
+      type: 'movie',
+      movie: {
+        id: 'c1d7f4b2-9a3e-4c6d-8b0f-5e2a7c9d1b48',
+        title: '沒有劇照的片',
+        release_date: '2020-01-01',
+        genres: ['紀錄'],
+        poster_path: '/no-backdrop.jpg',
+        parse_status: 'parsed',
+        created_at: '2026-08-18T00:00:00Z',
+        updated_at: '2026-08-18T00:00:00Z',
+      },
     },
   ],
+  page: 1,
+  page_size: 20,
+  total_items: 3,
   total_pages: 1,
-  total_results: 1,
 };
 
-const mockTrendingTV = {
+const emptyLibraryRecent = {
+  items: [],
   page: 1,
-  results: [],
+  page_size: 20,
+  total_items: 0,
   total_pages: 0,
-  total_results: 0,
+};
+
+// Home v3 readout band (ux3-1-7) — the first section of the page. Stubbed so
+// the band is a deterministic DOM node in the order assertion instead of a
+// fail-soft blank that would silently pass any ordering.
+const mockHomeSummary = {
+  coverage: { status: 'ok', covered: 2, total: 3 },
+  processed_today: { status: 'ok', count: 1 },
+  attention: { status: 'ok', failed_count: 0 },
+  in_flight: { status: 'ok', count: 0 },
 };
 
 const mockBlocks = {
@@ -203,17 +259,20 @@ const jsonOk = <T>(body: T) => ({
 // =============================================================================
 
 async function stubHomepageBaseline(page: import('@playwright/test').Page) {
-  // TMDb trending (HeroBanner). Uses jsonOk — the frontend's fetchApi
-  // unwraps `{success,data}` and throws when `.success` is absent.
-  await page.route(`${ROUTE_API}/tmdb/trending/movies*`, (route: Route) =>
-    route.fulfill(jsonOk(mockTrendingMovies))
+  // ux3-1-8: own-library recently-added feeds BOTH the hero and the 最近新增
+  // row (one query, deduped). Uses jsonOk — the frontend's fetchApi unwraps
+  // `{success,data}` and throws when `.success` is absent.
+  await page.route(`${ROUTE_API}/library/recent*`, (route: Route) =>
+    route.fulfill(jsonOk(mockLibraryRecent))
   );
-  await page.route(`${ROUTE_API}/tmdb/trending/tv*`, (route: Route) =>
-    route.fulfill(jsonOk(mockTrendingTV))
+  // Home v3 readout band (ux3-1-7) — first section of the page.
+  await page.route(`${ROUTE_API}/home-summary`, (route: Route) =>
+    route.fulfill(jsonOk(mockHomeSummary))
   );
-  // TMDb image CDN — stub with a 1x1 PNG so `<img onError>` never fires and
-  // `imageBroken` never unmounts the backdrop in CI (where image.tmdb.org is
-  // unreachable).
+  // TMDb image CDN — the hero's backdrops are own-library rows but the paths
+  // are still TMDb-hosted. Stub with a 1x1 PNG so `<img onError>` never fires
+  // and `imageBroken` never unmounts the backdrop in CI (where image.tmdb.org
+  // is unreachable).
   await page.route(/image\.tmdb\.org\/.*/, (route: Route) =>
     route.fulfill({
       status: 200,
@@ -253,44 +312,77 @@ async function stubHomepageBaseline(page: import('@playwright/test').Page) {
 }
 
 // =============================================================================
-// AC #1 — Section order in the real DOM (hero → explore → recent → downloads)
+// AC #1 — Section order in the real DOM (readout → hero → own row → explore)
 // =============================================================================
 
-test.describe('Homepage section order @ui @homepage @story-10-5', () => {
-  // ux3-cutover-3: the legacy Hero→Explore→Recent→Downloads order is gone with
-  // the legacy home. v2 = D3 ordering law — OWN-CONTENT (繼續觀看 slot + 最近新增)
-  // structurally ABOVE the external curation (Hero + Explore); dashboard
-  // remnants absent by design (ux3-1-4).
-  test('[P0] D3 — own-content renders ABOVE Hero and Explore; dashboard remnants absent', async ({
+test.describe('Homepage section order @ui @homepage @story-10-5 @story-ux3-1-8', () => {
+  // ux3-1-8 (Home v3): D3's own-above-external law still holds and gets
+  // STRONGER — the hero is own content now, so readout band + hero + 最近新增
+  // are all yours and the TMDb explore rows are the tail. The v2 order
+  // (own-content ABOVE hero) is the regression this test catches.
+  test('[P0] ux3-1-8 — 讀數帶 → 自有 Hero → 最近新增 → TMDb 探索尾巴（依此 DOM 順序）', async ({
     page,
   }) => {
     await stubHomepageBaseline(page);
-    await page.route(`${ROUTE_API}/library/recent*`, (route: Route) =>
-      route.fulfill(jsonOk({ items: [], page: 1, pageSize: 12, totalItems: 0, totalPages: 0 }))
-    );
 
     await page.goto('/');
     await expect(page.getByTestId('home-v2-root')).toBeVisible();
-    await expect(page.getByTestId('home-own-content')).toBeVisible();
+    await expect(page.getByTestId('home-readout-band')).toBeVisible();
     await expect(page.getByTestId('hero-banner')).toBeVisible();
+    await expect(page.getByTestId('home-own-content')).toBeVisible();
     await expect(page.getByTestId('explore-blocks-list')).toBeVisible();
 
-    const order = await page.getByTestId('home-v2-root').evaluate((el) => {
-      const selectors = [
-        '[data-testid="home-own-content"]',
-        '[data-testid="hero-banner"]',
-        '[data-testid="explore-blocks-list"]',
-      ];
-      return selectors
-        .map((sel) => el.querySelector(sel))
-        .filter((n): n is Element => Boolean(n))
-        .map((n) => n.getAttribute('data-testid'));
-    });
-    expect(order).toEqual(['home-own-content', 'hero-banner', 'explore-blocks-list']);
+    // ONE querySelectorAll, not one query per selector: querySelectorAll
+    // returns document order, so the array is the real DOM order. (Mapping
+    // over a selector list — the pre-ux3-1-8 shape of this test — echoed the
+    // selector array back and would have passed on ANY ordering.)
+    const order = await page
+      .getByTestId('home-v2-root')
+      .evaluate((el) =>
+        Array.from(
+          el.querySelectorAll(
+            '[data-testid="home-readout-band"],[data-testid="hero-banner"],[data-testid="home-own-content"],[data-testid="explore-blocks-list"]'
+          )
+        ).map((n) => n.getAttribute('data-testid'))
+      );
+    expect(order).toEqual([
+      'home-readout-band',
+      'hero-banner',
+      'home-own-content',
+      'explore-blocks-list',
+    ]);
+
+    // The hero on this page is the OWN-library one: 最新入庫 is copy no TMDb
+    // trending hero ever carried, so a revert to the trending source fails here
+    // even if the section order survived. `.first()` = the active slide (every
+    // slide carries its own eyebrow).
+    await expect(page.getByTestId('hero-banner-eyebrow').first()).toHaveText('最新入庫');
 
     // D3 guardrail #3 (ux3-1-4): Epic-4 dashboard remnants stay off the home.
     await expect(page.getByTestId('download-panel')).toHaveCount(0);
     await expect(page.getByTestId('recent-media-panel')).toHaveCount(0);
+  });
+
+  test('[P0] ux3-1-8 — 首頁不再向 TMDb trending 要任何資料', async ({ page }) => {
+    await stubHomepageBaseline(page);
+    // The retired hero source. Counting (and answering) it rather than leaving
+    // it unrouted: an un-stubbed hit would fall through to the real backend and
+    // pass silently, which is exactly the regression — a TMDb hero creeping
+    // back in — this guard exists to catch.
+    // RegExp, not a glob: `*` stops at `/`, so `**/tmdb/trending*` would sail
+    // straight past `/tmdb/trending/movies` — the very URL this guard is for.
+    let trendingHits = 0;
+    await page.route(/\/api\/v1\/tmdb\/trending/, (route: Route) => {
+      trendingHits += 1;
+      return route.fulfill(jsonOk({ page: 1, results: [], total_pages: 0, total_results: 0 }));
+    });
+
+    await page.goto('/');
+    await expect(page.getByTestId('hero-banner')).toBeVisible();
+    await expect(page.getByTestId('explore-blocks-list')).toBeVisible();
+    await page.waitForLoadState('networkidle');
+
+    expect(trendingHits).toBe(0);
   });
 });
 
@@ -299,6 +391,9 @@ test.describe('Homepage section order @ui @homepage @story-10-5', () => {
 // =============================================================================
 
 test.describe('Homepage responsive hero height @ui @homepage @story-10-5', () => {
+  // ux3-1-8: these only measure anything while the hero HAS content, and the
+  // hero's content is now own-library rows with a backdrop_path — the baseline
+  // stub's mockLibraryRecent is what keeps them from silently measuring nothing.
   test('[P0] AC #3 — hero is 250px tall at mobile (390×844 iPhone)', async ({ page }) => {
     await stubHomepageBaseline(page);
     await page.setViewportSize({ width: 390, height: 844 });
@@ -407,25 +502,31 @@ test.describe('Homepage lazy-load @ui @homepage @story-10-5', () => {
     // it non-deterministic. b3's fetch-on-scroll is the authoritative proof.)
   });
 
-  test('[P1] AC #2 — route loader prefetches trending hero BEFORE navigation when a Link to "/" is hovered', async ({
+  test('[P1] AC #2 — route loader prefetches the own-library hero BEFORE navigation when a Link to "/" is hovered', async ({
     page,
   }) => {
     await stubHomepageBaseline(page);
-    let trendingMoviesHits = 0;
-    await page.route(`${ROUTE_API}/tmdb/trending/movies*`, (route: Route) => {
-      trendingMoviesHits += 1;
-      return route.fulfill(jsonOk(mockTrendingMovies));
+    // ux3-1-8: the index loader seeds libraryKeys.recent(20) now, not the
+    // retired TMDb trending query. Watching the wrong endpoint here would let
+    // the prefetch rot away unnoticed (the page still works, it just gets
+    // slower), so the counter follows the hero's real source.
+    let recentHits = 0;
+    await page.route(`${ROUTE_API}/library/recent*`, (route: Route) => {
+      recentHits += 1;
+      return route.fulfill(jsonOk(mockLibraryRecent));
     });
 
-    // Start on a different route so the homepage loader has not yet run.
+    // Start on a different route so the homepage loader has not yet run —
+    // /library does not mount useRecentlyAdded, so the recent query is cold
+    // and the prefetch cannot be masked by a fresh (staleTime 30s) cache entry.
     await page.goto('/library');
     await page.waitForLoadState('networkidle');
-    const baselineHits = trendingMoviesHits;
+    const baselineHits = recentHits;
 
     // AppShell houses a logo Link to "/" (text content "vido"). Hover fires
     // the router's intent-preload, which runs the index route loader
-    // (prefetchQuery for trending hero). The request should appear before
-    // we navigate.
+    // (prefetchQuery for the recently-added hero source). The request should
+    // appear before we navigate.
     // v2 shell: the sidebar logo Link to "/" (accessible name may include the
     // wordmark styling) — match any link pointing home.
     const homeLink = page.locator('a[href="/"]').first();
@@ -433,8 +534,8 @@ test.describe('Homepage lazy-load @ui @homepage @story-10-5', () => {
     await homeLink.hover();
 
     await expect
-      .poll(() => trendingMoviesHits, {
-        message: 'Route loader prefetch should fire trending/movies on Link hover',
+      .poll(() => recentHits, {
+        message: 'Route loader prefetch should fire library/recent on Link hover',
         timeout: 3000,
       })
       .toBeGreaterThan(baselineHits);
@@ -479,44 +580,69 @@ test.describe('Homepage per-block skeleton @ui @homepage @story-10-5', () => {
 // AC #5 — Empty-section hide behavior in a real browser
 // =============================================================================
 
-test.describe('Homepage empty-section hide @ui @homepage @story-10-5', () => {
-  // ux3-cutover-3: v2 semantics — Hero/Explore still hide when empty, but the
-  // own-content zone stays (最近新增 shows its quiet 尚無最近新增 note instead of
-  // vanishing, ux3-1-2 H5 sparse state) and the dashboard panels are always
-  // absent (D3 guardrail, ux3-1-4).
-  test('[P0] all-empty: Hero/Explore hide, own-content shows the sparse note, no panels', async ({
+test.describe('Homepage empty-section hide @ui @homepage @story-10-5 @story-ux3-1-8', () => {
+  // ux3-1-8 rewrites WHY the hero can be absent: it is no longer "TMDb gave us
+  // nothing" but "no own item can dress a hero". An empty library therefore
+  // takes the hero with it, while the own-content zone stays (最近新增 shows its
+  // quiet 尚無最近新增 note instead of vanishing, ux3-1-2 H5 sparse state) and
+  // the dashboard panels are always absent (D3 guardrail, ux3-1-4).
+  test('[P0] 空片庫 + 空 blocks：Hero/Explore 缺席，最近新增留下清淡提示，無 dashboard 殘骸', async ({
     page,
   }) => {
     await stubHomepageBaseline(page);
-    await page.route(`${ROUTE_API}/tmdb/trending/movies*`, (route: Route) =>
-      route.fulfill(jsonOk({ page: 1, results: [], total_pages: 0, total_results: 0 }))
-    );
-    await page.route(`${ROUTE_API}/tmdb/trending/tv*`, (route: Route) =>
-      route.fulfill(jsonOk({ page: 1, results: [], total_pages: 0, total_results: 0 }))
-    );
     await page.route(`${ROUTE_API}/explore-blocks`, (route: Route) =>
       route.fulfill(jsonOk({ blocks: [] }))
     );
     await page.route(`${ROUTE_API}/library/recent*`, (route: Route) =>
-      route.fulfill(jsonOk({ items: [], page: 1, pageSize: 12, totalItems: 0, totalPages: 0 }))
+      route.fulfill(jsonOk(emptyLibraryRecent))
     );
 
     await page.goto('/');
     await expect(page.getByTestId('home-v2-root')).toBeVisible();
 
+    // The sparse note proves the recent query RESOLVED — without it, asserting
+    // hero-banner count 0 would also pass while the hero was still a skeleton.
+    await expect(page.getByTestId('home-recent-empty')).toBeVisible();
+    await expect(page.getByTestId('hero-banner-skeleton')).toHaveCount(0);
     await expect(page.getByTestId('hero-banner')).toHaveCount(0);
     await expect(page.getByTestId('explore-blocks-list')).toHaveCount(0);
-    await expect(page.getByTestId('home-recent-empty')).toBeVisible();
     await expect(page.getByTestId('download-panel')).toHaveCount(0);
     await expect(page.getByTestId('recent-media-panel')).toHaveCount(0);
     await expect(page.getByText('目前沒有下載任務')).toHaveCount(0);
   });
 
-  test('[P1] populated downloads still render NO download panel on home (D3)', async ({ page }) => {
+  // Replaces the retired「TMDb trending 空 → Hero 隱藏」premise with the rule
+  // that actually governs absence now. This is the honest half of the identity
+  // flip: fresh items with no artwork must NOT produce an empty hero frame,
+  // and must NOT take the 最近新增 row down with them.
+  test('[P0] ux3-1-8 — 最近入庫都沒有 backdrop：Hero 缺席，但最近新增照常列出', async ({
+    page,
+  }) => {
     await stubHomepageBaseline(page);
     await page.route(`${ROUTE_API}/library/recent*`, (route: Route) =>
-      route.fulfill(jsonOk({ items: [], page: 1, pageSize: 12, totalItems: 0, totalPages: 0 }))
+      route.fulfill(
+        jsonOk({
+          ...emptyLibraryRecent,
+          items: [mockLibraryRecent.items[2]],
+          total_items: 1,
+          total_pages: 1,
+        })
+      )
     );
+
+    await page.goto('/');
+    await expect(page.getByTestId('home-v2-root')).toBeVisible();
+
+    // The row rendering the very item the hero rejected = the query resolved,
+    // so the hero's absence below is a decision, not a pending state.
+    await expect(page.getByTestId('home-recent-row')).toBeVisible();
+    await expect(page.getByTestId('home-recent-row').getByText('沒有劇照的片')).toBeVisible();
+    await expect(page.getByTestId('hero-banner-skeleton')).toHaveCount(0);
+    await expect(page.getByTestId('hero-banner')).toHaveCount(0);
+  });
+
+  test('[P1] populated downloads still render NO download panel on home (D3)', async ({ page }) => {
+    await stubHomepageBaseline(page);
 
     await page.goto('/');
     await expect(page.getByTestId('home-v2-root')).toBeVisible();

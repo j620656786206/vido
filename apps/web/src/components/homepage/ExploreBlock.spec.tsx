@@ -30,6 +30,9 @@ const stubOwnership: OwnedMediaState = {
   isRequested: () => false,
   isLoading: false,
   error: null,
+  // A settled verdict by default: most tests care about rendering, not about
+  // the ux3-1-8 filter's gating.
+  isSettled: true,
 };
 
 function testBlock(overrides: Partial<ExploreBlockType> = {}): ExploreBlockType {
@@ -49,7 +52,7 @@ function testBlock(overrides: Partial<ExploreBlockType> = {}): ExploreBlockType 
   };
 }
 
-function renderBlock(block: ExploreBlockType) {
+function renderBlock(block: ExploreBlockType, ownership: OwnedMediaState = stubOwnership) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
   const rootRoute = createRootRoute({
@@ -58,7 +61,7 @@ function renderBlock(block: ExploreBlockType) {
   const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/',
-    component: () => React.createElement(ExploreBlock, { block, ownership: stubOwnership }),
+    component: () => React.createElement(ExploreBlock, { block, ownership }),
   });
   const mediaRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -200,6 +203,151 @@ describe('ExploreBlock', () => {
 
     expect(await screen.findByTestId('explore-block-empty')).toHaveTextContent(
       '沒有符合條件的內容'
+    );
+  });
+
+  // --- ux3-1-8: owned items leave the discovery row (frontend-only filter) ---
+
+  it('[P1] ux3-1-8 — owned items are filtered OUT; the caption says so', async () => {
+    mockHook.mockReturnValue({
+      data: {
+        blockId: 'block-1',
+        contentType: 'movie',
+        movies: [
+          { id: 1, title: '已擁有的電影', posterPath: '/p1.jpg', voteAverage: 8, genreIds: [] },
+          { id: 2, title: '還沒有的電影', posterPath: '/p2.jpg', voteAverage: 7, genreIds: [] },
+        ],
+        totalItems: 2,
+      },
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useExploreBlockContent>);
+
+    renderBlock(testBlock(), {
+      ...stubOwnership,
+      owned: new Set<number>([1]),
+      isOwned: (id) => id === 1,
+    });
+
+    expect(await screen.findByText('還沒有的電影')).toBeInTheDocument();
+    expect(screen.queryByText('已擁有的電影')).toBeNull();
+    expect(screen.getByTestId('explore-block-caption')).toHaveTextContent(
+      '已擁有的作品不會出現這裡'
+    );
+  });
+
+  it('[P1] ux3-1-8 — while the ownership lookup is inflight the row renders UNFILTERED (no shrink flash)', async () => {
+    mockHook.mockReturnValue({
+      data: {
+        blockId: 'block-1',
+        contentType: 'movie',
+        movies: [
+          { id: 1, title: '已擁有的電影', posterPath: '/p1.jpg', voteAverage: 8, genreIds: [] },
+          { id: 2, title: '還沒有的電影', posterPath: '/p2.jpg', voteAverage: 7, genreIds: [] },
+        ],
+        totalItems: 2,
+      },
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useExploreBlockContent>);
+
+    renderBlock(testBlock(), {
+      ...stubOwnership,
+      isLoading: true,
+      isSettled: false,
+      owned: new Set<number>([1]),
+      isOwned: (id) => id === 1,
+    });
+
+    expect(await screen.findByText('已擁有的電影')).toBeInTheDocument();
+    expect(screen.getByText('還沒有的電影')).toBeInTheDocument();
+    // No filter ran, so the row may not claim one did.
+    expect(screen.queryByTestId('explore-block-caption')).toBeNull();
+  });
+
+  it('[P1] ux3-1-8 誠實 — a DISABLED ownership query is not a verdict: nothing filtered, no caption', async () => {
+    mockHook.mockReturnValue({
+      data: {
+        blockId: 'block-1',
+        contentType: 'movie',
+        movies: [
+          { id: 1, title: '已擁有的電影', posterPath: '/p1.jpg', voteAverage: 8, genreIds: [] },
+          { id: 2, title: '還沒有的電影', posterPath: '/p2.jpg', voteAverage: 7, genreIds: [] },
+        ],
+        totalItems: 2,
+      },
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useExploreBlockContent>);
+
+    // The shape a DISABLED useOwnedMedia returns while the parent's stability
+    // gate blanks the id batch: not loading, no error, empty owned set. Reading
+    // that as a settled verdict is the bug this guard pins (3 review lenses).
+    renderBlock(testBlock(), {
+      ...stubOwnership,
+      isLoading: false,
+      error: null,
+      isSettled: false,
+      owned: new Set<number>(),
+      isOwned: () => false,
+    });
+
+    expect(await screen.findByText('已擁有的電影')).toBeInTheDocument();
+    expect(screen.getByText('還沒有的電影')).toBeInTheDocument();
+    expect(screen.queryByTestId('explore-block-caption')).toBeNull();
+  });
+
+  it('[P1] ux3-1-8 誠實 — a FAILED ownership lookup filters nothing, so the caption makes no claim', async () => {
+    mockHook.mockReturnValue({
+      data: {
+        blockId: 'block-1',
+        contentType: 'movie',
+        movies: [
+          { id: 1, title: '已擁有的電影', posterPath: '/p1.jpg', voteAverage: 8, genreIds: [] },
+          { id: 2, title: '還沒有的電影', posterPath: '/p2.jpg', voteAverage: 7, genreIds: [] },
+        ],
+        totalItems: 2,
+      },
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useExploreBlockContent>);
+
+    // A failed POST /media/check-owned leaves `owned` empty — isOwned answers
+    // "no" for everything, so NOTHING is filtered. A standing caption would be
+    // the page taking credit for work it did not do.
+    renderBlock(testBlock(), {
+      ...stubOwnership,
+      error: new Error('check-owned failed'),
+      isSettled: false,
+    });
+
+    expect(await screen.findByText('已擁有的電影')).toBeInTheDocument();
+    expect(screen.getByText('還沒有的電影')).toBeInTheDocument();
+    expect(screen.queryByTestId('explore-block-caption')).toBeNull();
+  });
+
+  it('[P2] ux3-1-8 — a row emptied BY the filter says so (你都已經擁有了), not 沒有符合條件的內容', async () => {
+    mockHook.mockReturnValue({
+      data: {
+        blockId: 'block-1',
+        contentType: 'movie',
+        movies: [
+          { id: 1, title: '已擁有的電影', posterPath: '/p1.jpg', voteAverage: 8, genreIds: [] },
+        ],
+        totalItems: 1,
+      },
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useExploreBlockContent>);
+
+    renderBlock(testBlock(), {
+      ...stubOwnership,
+      owned: new Set<number>([1]),
+      isOwned: (id) => id === 1,
+    });
+
+    expect(await screen.findByTestId('explore-block-empty')).toHaveTextContent(
+      '這排的作品你都已經擁有了'
     );
   });
 
