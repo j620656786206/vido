@@ -104,7 +104,16 @@ function heroStatusBadge(media: LibraryMovie | LibrarySeries) {
 /** Subtitle verdicts the user can act on from the item's detail page. */
 const ACTIONABLE_SUBTITLE_LABELS = new Set(['缺字幕', '未翻譯', '簡中']);
 
-function HeroSlide({ item, active }: { item: HeroItem; active: boolean }) {
+function HeroSlide({
+  item,
+  active,
+  hasControls,
+}: {
+  item: HeroItem;
+  active: boolean;
+  /** The dots pill is absolutely positioned over this slide's lower edge. */
+  hasControls: boolean;
+}) {
   // w780 src is the safe baseline; srcset upgrades to w1280/original on wide
   // viewports so handsets never pay a 3–5MB image.
   const fallbackBackdrop = getImageUrl(item.backdropPath, 'w780');
@@ -148,8 +157,20 @@ function HeroSlide({ item, active }: { item: HeroItem; active: boolean }) {
       {/* Bottom-up gradient for text legibility — 夜行 ground, not raw black */}
       <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-primary)] via-[var(--bg-primary)]/70 to-transparent" />
 
-      {/* Same gutter recipe as every sibling section (critique R2 P2). */}
-      <div className="absolute inset-x-0 bottom-0 pb-12 sm:pb-16 lg:pb-20">
+      {/* Same gutter recipe as every sibling section (critique R2 P2).
+          The bottom padding has to CLEAR the dots pill, which is absolutely
+          positioned over this same lower edge (44px tall + 4px inset). At 400px
+          the old pb-12 happened to leave 32px of air; at the mobile 250px it
+          left ZERO — the CTA and the carousel controls touched exactly, which
+          is what read as 怪怪的 on a phone. Measured, not guessed. The extra
+          space is only reserved when the controls actually render (a single
+          dressed item has no pill and should keep the room). */}
+      <div
+        className={cn(
+          'absolute inset-x-0 bottom-0 lg:pb-20',
+          hasControls ? 'pb-16 sm:pb-20' : 'pb-12 sm:pb-16'
+        )}
+      >
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           {/* The eyebrow sits at the TOP of the content block, where the
               bottom-up gradient is thinnest — bare --text-secondary measured
@@ -301,7 +322,12 @@ export function HeroBanner() {
       className="relative h-[250px] w-full overflow-hidden bg-[var(--bg-primary)] md:h-[400px]"
     >
       {items.map((item, idx) => (
-        <HeroSlide key={heroKey(item)} item={item} active={idx === activeIndex} />
+        <HeroSlide
+          key={heroKey(item)}
+          item={item}
+          active={idx === activeIndex}
+          hasControls={items.length > 1}
+        />
       ))}
 
       {/* Switching slides replaces the title, badge, meta AND both link
