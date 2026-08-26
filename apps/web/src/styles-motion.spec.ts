@@ -191,3 +191,96 @@ describe('Tailwind v4 individual transform properties', () => {
     ).not.toMatch(/transition-\[[^\]]*\btransform\b/);
   });
 });
+
+/**
+ * ⚠️ THE ONE THAT WENT UNNOTICED FOR MONTHS.
+ *
+ * `animate-shrink` was declared in apps/web/tailwind.config.js — a v3-shaped
+ * config that Tailwind v4 never loads, because styles.css carries no @config.
+ * It emitted zero CSS, so ScanProgressCard's auto-dismiss countdown sat frozen
+ * at full width while a real 10-second setTimeout destroyed the card the user
+ * was reading. The tailwindcss-animate family (animate-in, fade-in-0,
+ * slide-in-from-*, zoom-in-*, fill-mode-*) was dead the same way: the plugin
+ * that defines it was never installed.
+ *
+ * Nothing warns you. A class that does not exist is indistinguishable from a
+ * class that exists and does nothing — the element simply appears. So the
+ * guard has to be "every animation named in source is actually registered".
+ */
+describe('every animation named in source actually exists', () => {
+  const SRC = join(__dirname);
+  const files: string[] = [];
+  (function walk(dir: string) {
+    for (const e of readdirSync(dir)) {
+      const p = join(dir, e);
+      if (statSync(p).isDirectory()) walk(p);
+      else if (/\.tsx?$/.test(p) && !p.includes('.spec.')) files.push(p);
+    }
+  })(SRC);
+  /**
+   * Comments are stripped before scanning. A class name inside a comment is
+   * not a class — and every one of these rules is documented in prose that
+   * quotes the very names it bans, so without this the guard reports its own
+   * explanations as violations.
+   */
+  const stripComments = (s: string) =>
+    s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+
+  const sources = files.map(
+    (f) => [f.slice(SRC.length + 1), stripComments(readFileSync(f, 'utf8'))] as const
+  );
+
+  /** Registered by Tailwind core — these need no @theme entry. */
+  const CORE = new Set(['spin', 'ping', 'pulse', 'bounce', 'none']);
+  /** Registered by this project, in the @theme block of styles.css. */
+  const REGISTERED = new Set([...CSS.matchAll(/--animate-([a-z0-9-]+):/g)].map((m) => m[1]));
+  /** Keyframes this stylesheet defines, for the `animate-[name_…]` arbitrary form. */
+  const KEYFRAMES = new Set([...CSS.matchAll(/@keyframes\s+([A-Za-z0-9_-]+)/g)].map((m) => m[1]));
+
+  it('styles.css registers the animations this pass added', () => {
+    for (const n of ['breathe', 'overlay-enter', 'overlay-exit', 'dialog-enter', 'dialog-exit'])
+      expect(REGISTERED, `--animate-${n} is missing from @theme`).toContain(n);
+  });
+
+  it('every `animate-<name>` utility in source is registered somewhere', () => {
+    const unknown: string[] = [];
+    for (const [file, src] of sources) {
+      // Skip the arbitrary form here; it gets its own assertion below.
+      for (const m of src.matchAll(/(?:^|[\s"'`:])animate-([a-z][a-z0-9-]*)\b/g)) {
+        const name = m[1];
+        if (CORE.has(name) || REGISTERED.has(name)) continue;
+        unknown.push(`${file}: animate-${name}`);
+      }
+    }
+    expect(
+      [...new Set(unknown)],
+      'Register it in the @theme block of styles.css (`--animate-<name>: <keyframes> …`) with a matching @keyframes, the way --animate-breathe is. A class Tailwind never emits fails silently.'
+    ).toEqual([]);
+  });
+
+  it('every `animate-[<keyframes>_…]` arbitrary animation names a real @keyframes', () => {
+    const unknown: string[] = [];
+    for (const [file, src] of sources)
+      for (const m of src.matchAll(/animate-\[([A-Za-z0-9_-]+?)[_\]]/g))
+        if (!KEYFRAMES.has(m[1]))
+          unknown.push(`${file}: @keyframes ${m[1]} not found in styles.css`);
+    expect([...new Set(unknown)]).toEqual([]);
+  });
+
+  /**
+   * These are tailwindcss-animate's vocabulary. The plugin is deliberately NOT
+   * a dependency: it redefines the `duration`, `delay` and `ease` utilities to
+   * drive `animation-*` as well as `transition-*`, which would reintroduce
+   * exactly the literal durations `local/no-hardcoded-duration` was written to
+   * close.
+   */
+  it('the tailwindcss-animate vocabulary stays out — the plugin is not installed', () => {
+    const DEAD =
+      /(?:^|[\s"'`:])(animate-in|animate-out|fade-in(?:-\d+)?|fade-out(?:-\d+)?|slide-in-from-[a-z]+-\d+|slide-out-to-[a-z]+-\d+|zoom-in(?:-\d+)?|zoom-out(?:-\d+)?|fill-mode-[a-z]+)\b/;
+    const offenders = sources.filter(([, src]) => DEAD.test(src)).map(([f]) => f);
+    expect(
+      offenders,
+      'These come from tailwindcss-animate, which this project does not install — they emit nothing. Use a --animate-* token from styles.css instead.'
+    ).toEqual([]);
+  });
+});

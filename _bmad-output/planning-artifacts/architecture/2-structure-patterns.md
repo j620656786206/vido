@@ -39,7 +39,6 @@ vido/
 │       │   ├── stores/         # Global state (Zustand if needed)
 │       │   ├── utils/          # Utility functions
 │       │   └── test/           # Test utilities and setup
-│       ├── tailwind.config.js
 │       ├── vitest.config.ts
 │       └── vite.config.ts
 │
@@ -249,7 +248,7 @@ sse/
 
 **Frontend Configuration:**
 - ✅ **Vite config:** `/apps/web/vite.config.ts`
-- ✅ **Tailwind config:** `/apps/web/tailwind.config.js`
+- ✅ **Tailwind theme:** `/apps/web/src/styles.css` — the `@theme` block. ⚠️ 2026-08-26: `/apps/web/tailwind.config.js` was DELETED. It was a v3-shaped config that Tailwind v4 never loaded (styles.css has no `@config`), so every keyframe and theme value declared in it emitted zero CSS. Do NOT recreate it; register animations and theme values in `styles.css`'s `@theme` block, which `styles-motion.spec.ts` now gates.
 - ✅ **Vitest config:** `/apps/web/vitest.config.ts`
 - ✅ **TypeScript config:** `/apps/web/tsconfig.json`
 - ❌ **Anti-pattern:** Root-level configs (conflicts with monorepo)
