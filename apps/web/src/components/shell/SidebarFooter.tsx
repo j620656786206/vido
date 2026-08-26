@@ -10,6 +10,7 @@
  * respects `prefers-reduced-motion`.
  */
 import { useStatusSummary } from '../../hooks/useStatusSummary';
+import { ThemeToggle } from './ThemeToggle';
 import type { ServiceConnectionStatus } from '../../services/serviceStatusService';
 import { Tooltip } from '../ui/Tooltip';
 import { cn } from '../../lib/utils';
@@ -94,6 +95,10 @@ export function SidebarFooter({ collapsed = false }: SidebarFooterProps) {
         className="flex flex-col items-center gap-1.5 border-t border-[var(--border-subtle)] py-3"
         data-testid="sidebar-footer-status"
       >
+        {/* ⚖️「放到設定裡面有點太深了」— the theme switch sits with the ambient
+            strip because both are shell-level state you glance at, never
+            navigate to. Icon-only on the collapsed rail, like the nav items. */}
+        <ThemeToggle variant="rail" />
         {dots}
       </div>
     );
@@ -116,6 +121,8 @@ export function SidebarFooter({ collapsed = false }: SidebarFooterProps) {
       className="space-y-2 border-t border-[var(--border-subtle)] px-2.5 py-3"
       data-testid="sidebar-footer-status"
     >
+      {/* ⚖️「放到設定裡面有點太深了」— see the collapsed branch above. */}
+      <ThemeToggle variant="row" className="-mx-0.5" />
       {/* Disk headroom */}
       <div data-testid="status-disk">
         <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
