@@ -160,4 +160,65 @@ describe('ScanProgressSheet', () => {
     fireEvent.click(screen.getByTestId('scan-progress-sheet'));
     expect(screen.getByText(/1 分 42 秒/)).toBeInTheDocument();
   });
+  /**
+   * ⚖️ Alexyu 2026-08-27 ruling, on the mobile sheet specifically.
+   *
+   * He asked for the countdown bar AND explicitly refused pause-on-touch:
+   *「當我按下掃描媒體庫之後，我不希望畫面一直停留在那個地方不動。我手機可能
+   * 還要做其他事情，它不像桌機一樣，我開個網頁就可以去忙別的事了。」
+   *
+   * That makes the two surfaces deliberately DIFFERENT — the desktop card
+   * pauses on hover, this one must not pause at all — which is exactly the kind
+   * of asymmetry a future reader would "fix" by copying the desktop behaviour
+   * across. These guard the ruling, not the implementation.
+   */
+  describe('auto-dismiss countdown (mobile ruling)', () => {
+    it('[P1] shows a countdown bar so the dismissal is predictable', () => {
+      render(
+        <ScanProgressSheet state={completeState} onCancel={mockCancel} onDismiss={mockDismiss} />
+      );
+      const bar = screen.getByTestId('sheet-auto-dismiss-bar');
+      expect(bar.className).toContain('animate-countdown');
+      // Reduced motion must leave a STILL bar rather than an instantly-empty
+      // one: `forwards` plus the global 1ms clamp would claim「時間到」with ten
+      // seconds still on the real timer.
+      expect(bar.className).toContain('motion-reduce:animate-none');
+    });
+
+    it('[P1] the bar and the real timer read the same constant', () => {
+      render(
+        <ScanProgressSheet state={completeState} onCancel={mockCancel} onDismiss={mockDismiss} />
+      );
+      const bar = screen.getByTestId('sheet-auto-dismiss-bar');
+      expect(bar.style.animationDuration).toBe('10000ms');
+
+      // …and that is genuinely when it goes.
+      expect(mockDismiss).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(10000);
+      expect(mockDismiss).toHaveBeenCalledTimes(1);
+    });
+
+    it('[P1] touching it does NOT pause the countdown — mobile must not be held hostage', () => {
+      render(
+        <ScanProgressSheet state={completeState} onCancel={mockCancel} onDismiss={mockDismiss} />
+      );
+      const sheet = screen.getByTestId('scan-progress-sheet');
+
+      // Every gesture a reader might make while looking at it.
+      fireEvent.touchStart(sheet, { touches: [{ clientY: 200 }] });
+      fireEvent.pointerDown(sheet);
+      fireEvent.mouseEnter(sheet);
+      vi.advanceTimersByTime(10000);
+
+      expect(mockDismiss).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId('sheet-auto-dismiss-bar').style.animationPlayState).toBe('');
+    });
+
+    it('[P2] the cancelled toast counts down too — it is the same self-destruct', () => {
+      render(
+        <ScanProgressSheet state={cancelledState} onCancel={mockCancel} onDismiss={mockDismiss} />
+      );
+      expect(screen.getByTestId('sheet-auto-dismiss-bar')).toBeInTheDocument();
+    });
+  });
 });

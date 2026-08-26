@@ -138,6 +138,27 @@ export function ScanProgressSheet({
             </button>
           </div>
         )}
+
+        {/* Auto-dismiss countdown.
+            ⚖️ Alexyu 2026-08-27: the bar, but deliberately NO pause-on-touch.
+            「當我按下掃描媒體庫之後，我不希望畫面一直停留在那個地方不動」— on a
+            phone the sheet must leave on its own, so the bar's job is to make
+            the leaving PREDICTABLE, not preventable. That is the opposite of
+            the desktop card, where hover pauses it: a phone has no hover, and
+            a touch-to-pause would trade「擋住你」for「留住門」when neither
+            should be given up. The door is kept instead by giving 產生字幕 a
+            permanent home on the homepage readout band.
+            No isAutoDismissing state needed: this whole return branch IS the
+            auto-dismissing state, so the bar mounts exactly when the timer at
+            :53 starts. Duration comes from the same constant for the same
+            reason as the desktop card — they must not drift. */}
+        <div className="mt-3 h-0.5 w-full overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
+          <div
+            className="h-full origin-left animate-countdown bg-[var(--text-muted)] motion-reduce:animate-none"
+            style={{ animationDuration: `${AUTO_DISMISS_MS}ms` }}
+            data-testid="sheet-auto-dismiss-bar"
+          />
+        </div>
       </div>
     );
   }
