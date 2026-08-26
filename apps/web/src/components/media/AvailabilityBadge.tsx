@@ -8,17 +8,19 @@ export interface AvailabilityBadgeProps {
   className?: string;
 }
 
-// Visually consistent with the sibling badges inside PosterCard (new-badge,
-// metadata-source, type) — same font size, padding, and rounding. The colour
-// layer uses CSS variables from the design system so a future light-theme
-// swap continues to work.
-// 已有 wore text-white on the jade fill — measured 2.17:1 (critique R2 P0,
-// the last nest of the token-debt class). --text-on-accent is the ink cut
-// for exactly this job: 8.36:1 on --success. requested keeps its dark ink
-// (5.71:1, passes).
+// Critique R3 remake (2026-08-26) — the badge had three diseases in one:
+// ① 已有 wore SOLID running-green, but ownership is a static FACT — 固定詞彙
+//   forbids green for anything that is not happening right now, and this was
+//   the page's most frequent status colour (12×). 已有 is a CLASSIFICATION,
+//   so it wears the neutral scrim recipe (same as the type badge).
+// ② 已請求 is genuinely amber grammar (asked-and-not-yet-happening) → the
+//   V2 badge recipe: warning tint + AA text over an opaque backing.
+// ③ Both were 10px functional text (detector floor 11px) and square-cornered
+//   while every V2 badge is a pill — the Shapes amendment makes the pill the
+//   lawful shape for poster-overlay micro-elements.
 const variantClasses: Record<AvailabilityBadgeVariant, string> = {
-  owned: 'bg-[var(--success)] text-[var(--text-on-accent)]',
-  requested: 'bg-[var(--warning)] text-[var(--text-on-accent)]',
+  owned: 'bg-[var(--overlay-scrim)] text-[var(--text-primary)]',
+  requested: 'bg-[var(--bg-secondary)]',
 };
 
 const variantLabels: Record<AvailabilityBadgeVariant, string> = {
@@ -38,19 +40,28 @@ const variantTestIds: Record<AvailabilityBadgeVariant, string> = {
  * lands in Phase 3 — see Story 10-4 AC #5.
  */
 export function AvailabilityBadge({ variant, className }: AvailabilityBadgeProps) {
+  // NO role="status"/aria-live (critique R3): a grid resolving ownership used
+  // to fire 12 simultaneous「已有」announcements — SR spam for a static fact.
+  if (variant === 'requested') {
+    return (
+      <span
+        data-testid={variantTestIds[variant]}
+        className={cn('rounded-full', variantClasses[variant], className)}
+      >
+        <span className="block rounded-full bg-[var(--warning-tint)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--warning-text)]">
+          {variantLabels[variant]}
+        </span>
+      </span>
+    );
+  }
   return (
     <span
       data-testid={variantTestIds[variant]}
       className={cn(
-        'rounded px-1.5 py-0.5 text-[10px] font-bold',
+        'rounded-full px-1.5 py-0.5 text-[11px] font-medium',
         variantClasses[variant],
         className
       )}
-      // Badge appears async after the ownership POST resolves — announce it
-      // politely so screen-reader users hear the change without interrupting.
-      role="status"
-      aria-live="polite"
-      aria-label={variantLabels[variant]}
     >
       {variantLabels[variant]}
     </span>

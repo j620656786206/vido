@@ -67,8 +67,9 @@ export function useTrendingHero(timeWindow: 'day' | 'week' = 'week') {
     queryKey: trendingKeys.hero(timeWindow),
     queryFn: () => fetchTrendingHero(timeWindow),
     staleTime: HERO_BANNER_STALE_TIME_MS,
-    // Banner must hide gracefully (AC #5) within ~1s, not after the default
-    // 3-retry exponential backoff (~4s+ silent failure). (Code review L1.)
-    retry: 1,
+    // retry:false (critique R3 P2): on a LAN the realistic failure is「TMDb
+    // 未設定/斷線」, which a retry never fixes — it only doubles the skeleton
+    // time before the degraded state can tell the truth (measured 4s→~1s).
+    retry: false,
   });
 }

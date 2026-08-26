@@ -23,7 +23,6 @@
  */
 import { HeroBanner } from './HeroBanner';
 import { ExploreBlocksList } from './ExploreBlocksList';
-import { ContinueWatchingSlot } from './ContinueWatchingSlot';
 import { RecentlyAddedRowV2 } from './RecentlyAddedRowV2';
 
 export function HomeBrowseV2() {
@@ -39,7 +38,11 @@ export function HomeBrowseV2() {
         aria-label="我的媒體庫"
         className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 sm:px-6"
       >
-        <ContinueWatchingSlot />
+        {/* ⚖️ R3 ruling (2026-08-26): ContinueWatchingSlot is UNMOUNTED until
+            Epic 17 exists. Its「連接 Plex / Jellyfin 後顯示」was a door that
+            leads nowhere — 固定詞彙 says不出現＝你沒要求 is the only honest
+            state for a feature nobody can enable. The component survives for
+            Epic 17; first fold now opens on the user's own shelf. */}
         <RecentlyAddedRowV2 />
       </section>
 

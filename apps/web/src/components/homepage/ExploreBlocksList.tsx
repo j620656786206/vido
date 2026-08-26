@@ -89,7 +89,7 @@ function ExploreBlocksListInner({ blocks }: { blocks: ExploreBlockType[] }) {
       queryKey: exploreBlockKeys.content(block.id),
       queryFn: () => exploreBlockService.getContent(block.id),
       staleTime: FIVE_MINUTES,
-      retry: 1,
+      retry: false,
       enabled: isEager(index),
     })),
   });

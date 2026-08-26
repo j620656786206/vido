@@ -224,15 +224,17 @@ export function PosterCard({
             <AvailabilityBadge variant="requested" />
           ) : null}
           {isNew && (
+            // 新增 is a classification (recently-added), not a live status —
+            // neutral scrim, never green (critique R3, same ruling as 已有).
             <span
               data-testid="new-badge"
-              className="rounded bg-[var(--success)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--text-on-accent)]"
+              className="rounded-full bg-[var(--overlay-scrim)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--text-primary)]"
             >
               新增
             </span>
           )}
           {metadataSource && (
-            <span className="rounded bg-[var(--accent-primary)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-on-accent)]">
+            <span className="rounded-full bg-[var(--overlay-scrim)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--text-primary)]">
               {metadataSource}
             </span>
           )}
@@ -334,7 +336,9 @@ export function PosterCard({
         >
           <HighlightText text={title} query={highlightQuery} />
         </h3>
-        <p className="truncate text-xs text-[var(--text-secondary)]">{metaLine || '\u00A0'}</p>
+        <p className="truncate font-mono text-[11px] text-[var(--text-secondary)]">
+          {metaLine || '\u00A0'}
+        </p>
       </div>
     </Link>
   );

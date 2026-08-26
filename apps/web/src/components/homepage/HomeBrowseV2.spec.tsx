@@ -11,9 +11,6 @@ vi.mock('./HeroBanner', () => ({
 vi.mock('./ExploreBlocksList', () => ({
   ExploreBlocksList: () => React.createElement('div', { 'data-testid': 'stub-explore' }, 'explore'),
 }));
-vi.mock('./ContinueWatchingSlot', () => ({
-  ContinueWatchingSlot: () => React.createElement('div', { 'data-testid': 'stub-cw' }, 'cw'),
-}));
 vi.mock('./RecentlyAddedRowV2', () => ({
   RecentlyAddedRowV2: () =>
     React.createElement('div', { 'data-testid': 'stub-recent-v2' }, 'recent'),
@@ -32,12 +29,14 @@ describe('HomeBrowseV2 (Home v2 composition)', () => {
 
     const order = Array.from(
       root.querySelectorAll<HTMLElement>(
-        '[data-testid="stub-cw"], [data-testid="stub-recent-v2"], [data-testid="stub-hero"], [data-testid="stub-explore"]'
+        '[data-testid="stub-recent-v2"], [data-testid="stub-hero"], [data-testid="stub-explore"]'
       )
     ).map((el) => el.getAttribute('data-testid'));
 
-    // Both own-content blocks precede both external-curation blocks, in this order.
-    expect(order).toEqual(['stub-cw', 'stub-recent-v2', 'stub-hero', 'stub-explore']);
+    // Own-content precedes both external-curation blocks, in this order.
+    // (⚖️ R3: ContinueWatchingSlot is unmounted until Epic 17 exists — its
+    // Plex/Jellyfin promise was a door that led nowhere.)
+    expect(order).toEqual(['stub-recent-v2', 'stub-hero', 'stub-explore']);
   });
 
   it('[P1] D3 ordering law — own-content zone DOM-precedes the Hero', () => {
@@ -59,9 +58,9 @@ describe('HomeBrowseV2 (Home v2 composition)', () => {
     expect(screen.queryByTestId('qb-status-indicator')).toBeNull();
   });
 
-  it('[P2] both own-content blocks render — the reserved slot is never silently dropped', () => {
+  it('[P2] own-content renders; the CW reserved slot stays OUT until Epic 17 (⚖️ R3)', () => {
     render(<HomeBrowseV2 />);
-    expect(screen.getByTestId('stub-cw')).toBeInTheDocument();
+    expect(screen.queryByTestId('stub-cw')).toBeNull(); // R3: unmounted until Epic 17
     expect(screen.getByTestId('stub-recent-v2')).toBeInTheDocument();
   });
 });

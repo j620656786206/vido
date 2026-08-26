@@ -110,7 +110,7 @@ export function TrailerModal({ open, onClose, mediaType, tmdbId, title }: Traile
           onClick={onClose}
           aria-label="關閉預告片"
           data-testid="trailer-modal-close"
-          className="absolute -top-10 right-0 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white transition-colors hover:bg-white/40"
+          className="absolute -top-10 right-0 flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-white transition-colors hover:bg-white/40"
         >
           <X className="h-5 w-5" />
         </button>

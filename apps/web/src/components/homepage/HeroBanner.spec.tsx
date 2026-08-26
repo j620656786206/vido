@@ -202,7 +202,7 @@ describe('HeroBanner', () => {
     expect(slides[0]).not.toHaveAttribute('inert');
     // The container itself is no longer focusable (critique R1 P1) — the
     // active slide's tab stops are its REAL controls, led by the title link.
-    expect(slides[0].querySelector('h2 a')).not.toBeNull();
+    expect(slides[0].querySelector('[data-testid="hero-banner-title"] a')).not.toBeNull();
 
     expect(slides[1]).toHaveAttribute('inert');
     expect(slides[2]).toHaveAttribute('inert');

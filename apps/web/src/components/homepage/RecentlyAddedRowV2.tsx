@@ -106,7 +106,9 @@ export function RecentlyAddedRowV2() {
           <Link
             to="/activity"
             data-testid="home-recent-progress"
-            className="flex items-center gap-1 rounded-[var(--radius-md)] bg-[var(--warning-tint)] px-2.5 py-1 text-xs font-medium text-[var(--warning-text)] transition-colors hover:bg-[var(--bg-tertiary)]"
+            // after:-inset-y grows the TOUCH target to ≥44px without fattening
+            // the visual pill (critique R3 P3 — measured 24px, N5 floor is 44).
+            className="relative flex items-center gap-1 rounded-[var(--radius-md)] bg-[var(--warning-tint)] px-2.5 py-1 text-xs font-medium text-[var(--warning-text)] transition-colors after:absolute after:-inset-x-1 after:-inset-y-2.5 after:content-[''] hover:bg-[var(--bg-tertiary)]"
           >
             整理中
             <span className="font-mono tabular-nums">· {inProgress}</span>
