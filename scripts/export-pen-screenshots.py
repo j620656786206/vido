@@ -180,12 +180,9 @@ SCREENS = {
     "Tqy3E": ("flow-b-detail-v2", "b7p-d"),
     "UH0sk": ("flow-b-detail-v2", "b8p-d"),
     "SzNRb": ("flow-b-detail-v2", "b3p-m"),
-    # flow-h-homepage-v2 — Phase-3 ux3-1-1 (Home v2 redesign: own-content above Hero+Explore, D3)
-    "yixu1": ("flow-h-homepage-v2", "h1-d"),
-    "uCfjb": ("flow-h-homepage-v2", "h2-m"),
-    "nnGs6": ("flow-h-homepage-v2", "h4-d"),
-    "Z7OJB": ("flow-h-homepage-v2", "h5-d"),
-    "xCQA7": ("flow-h-homepage-v2", "h6-d"),
+    # flow-h-homepage-v2 — RETIRED 2026-08-26. The five v2 homepage frames were
+    # deleted from ux-design.pen once Home v3 shipped AND its own state frames
+    # (H4/H5/H6-D-v3) existed; see flow-h-homepage-v3 below.
     # flow-k-activity-v2 — Phase-3 ux3-2-1 (Activity hub v2: net-new D4-1 destination,
     # explain-why rows aggregating scan/subtitle/AI/parse + downloads-summary; four states)
     "kMeWS": ("flow-k-activity-v2", "a1-d"),
@@ -268,7 +265,7 @@ SCREENS = {
     "D7MOm": ("flow-f-subtitle-v2", "f20-d-v2"),
     # flow-h-homepage-v3 — home identity rework (home-v3-identity-brief.md: 讀數帶 4 格 +
     # 自家片庫靜態 hero + TMDb 尾巴濾已擁有; H7 = TMDb 降級態; H8 = 讀數帶金額顯示規則 spec).
-    # Supersedes flow-h-homepage-v2 (v2 frames renamed 〔已淘汰→v3〕, deleted after v3 ships).
+    # Superseded flow-h-homepage-v2, whose five frames were deleted 2026-08-26.
     "k2Otv": ("flow-h-homepage-v3", "h1-d-v3"),
     "EoCQ4": ("flow-h-homepage-v3", "h7-d-v3"),
     "uGCAU": ("flow-h-homepage-v3", "h2-m-v3"),

@@ -1,5 +1,14 @@
 # Story ux3-1-1 — Home v2 design (`.pen` flow-h → v2)
 
+> **⚠️ SUPERSEDED 2026-08-26 — the five frames this story drew no longer exist.**
+> Home v3 (epic `ux3-home-v3`) replaced the page composition, and once v3 had its
+> own state frames (H4/H5/H6-D-v3) the v2 originals — `yixu1`, `uCfjb`, `nnGs6`,
+> `Z7OJB`, `xCQA7` — were deleted from `ux-design.pen` along with the
+> `flow-h-homepage-v2/` screenshot folder. This document is kept as the durable
+> record of what that story decided (notably the D3 own-above-external law, which
+> SURVIVES in v3 in a stronger form: the hero itself is own content now). Every
+> node ID below is dead — see `flow-h-homepage-v3/` for the live frames.
+
 **Epic:** ux3-home-v2 (UX Redesign Phase 3) · **Status:** done (design landed + reviewed)
 **Owner:** ux-designer (Pencil in-app AI agents, MCP-reviewed) · **Type:** design · **FRs:** PH3-M1, PH3-R1
 

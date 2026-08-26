@@ -39,7 +39,8 @@ For non-trivial features, work **architecture-first**: outline the design and va
    - `flow-h-homepage/` — Homepage TV Wall / Loading skeleton / Block CRUD modal / ExploreBlock spec
    - `flow-i-advanced-search/` — Filter chips / Suggestions dropdown / Save preset / Filter sheet
    - `flow-j-specs/` — Design-decision spec screens (e.g. PosterCard info-density)
-   - `flow-*-v2/` — v2-redesign counterparts of the above (`flow-a-browse-v2`, `flow-b-detail-v2`, `flow-d-downloads-v2`, `flow-h-homepage-v2`, `flow-i-discover-v2`)
+   - `flow-*-v2/` — v2-redesign counterparts of the above (`flow-a-browse-v2`, `flow-b-detail-v2`, `flow-d-downloads-v2`, `flow-i-discover-v2`)
+   - `flow-h-homepage-v3/` — Home v3 identity rework: full desktop / TMDb-degraded / mobile / 金額顯示規則 spec / loading-skeleton / empty-library-first-run / own-content-failed. **Supersedes `flow-h-homepage-v2`, whose five frames were deleted from the `.pen` on 2026-08-26** once v3 had its own state frames.
    - `flow-k-activity-v2/` — Activity hub v2 (net-new D4-1 destination)
    - `flow-l-requests-v2/` — Request System (Epic 13): 想要 button 3-state / season-episode tree / 5-status request list
    - `design-system/` — Design System Reference + Component Library docs
