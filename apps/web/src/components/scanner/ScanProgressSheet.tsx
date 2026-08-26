@@ -93,9 +93,9 @@ export function ScanProgressSheet({
             {state.isCancelled ? (
               <XCircle className="h-5 w-5 text-[var(--text-secondary)]" />
             ) : state.errorCount > 0 ? (
-              <AlertTriangle className="h-5 w-5 text-[var(--warning)]" />
+              <AlertTriangle className="h-5 w-5 text-[var(--warning-text)]" />
             ) : (
-              <CheckCircle className="h-5 w-5 text-[var(--success)]" />
+              <CheckCircle className="h-5 w-5 text-[var(--success-text)]" />
             )}
             <span className="text-sm font-semibold text-[var(--text-primary)]">
               {state.isCancelled ? '掃描已取消' : '掃描完成'}
@@ -131,7 +131,7 @@ export function ScanProgressSheet({
                 onDismiss();
                 navigate({ to: '/library', search: { generate: true } });
               }}
-              className="text-xs text-[var(--accent-primary)] underline-offset-2 hover:underline"
+              className="text-xs text-[var(--accent-text)] underline-offset-2 hover:underline"
               data-testid="generate-subtitles-link"
             >
               產生字幕 →
@@ -154,7 +154,7 @@ export function ScanProgressSheet({
         data-testid="scan-progress-sheet"
         aria-label="展開掃描進度"
       >
-        <Loader className="h-4 w-4 animate-spin text-[var(--accent-primary)]" />
+        <Loader className="h-4 w-4 animate-spin text-[var(--accent-text)]" />
         <span className="text-sm font-medium text-[var(--text-primary)]">
           掃描中 {state.percentDone}%
         </span>
@@ -225,13 +225,13 @@ export function ScanProgressSheet({
           </span>
           <span className="flex items-center gap-1">
             <AlertTriangle
-              className={cn('h-3.5 w-3.5', state.errorCount > 0 && 'text-[var(--error)]')}
+              className={cn('h-3.5 w-3.5', state.errorCount > 0 && 'text-[var(--error-text)]')}
             />
             錯誤{' '}
             <span
               className={cn(
                 'font-mono',
-                state.errorCount > 0 ? 'text-[var(--error)]' : 'text-[var(--text-primary)]'
+                state.errorCount > 0 ? 'text-[var(--error-text)]' : 'text-[var(--text-primary)]'
               )}
             >
               {state.errorCount}

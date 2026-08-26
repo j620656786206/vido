@@ -75,7 +75,12 @@ export function TMDbDetailV2({ type, tmdbId }: { type: 'movie' | 'tv'; tmdbId: n
         originalTitle={originalTitle}
         badges={
           owned
-            ? [{ label: '已入庫', className: 'bg-[var(--success-tint)] text-[var(--success)]' }]
+            ? [
+                {
+                  label: '已入庫',
+                  className: 'bg-[var(--success-tint)] text-[var(--success-text)]',
+                },
+              ]
             : []
         }
         meta={meta}

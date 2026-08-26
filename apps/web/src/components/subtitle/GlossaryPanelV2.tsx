@@ -165,7 +165,10 @@ export function GlossaryPanelV2({ mediaId, mediaTitle, open, onOpenChange }: Glo
               data-testid="glossary-error"
               className="flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--error-tint)] p-3"
             >
-              <CircleAlert className="h-4 w-4 shrink-0 text-[var(--error)]" aria-hidden="true" />
+              <CircleAlert
+                className="h-4 w-4 shrink-0 text-[var(--error-text)]"
+                aria-hidden="true"
+              />
               <p className="flex-1 text-[13px] text-[var(--error-text)]">名詞對照表載入失敗</p>
               <button
                 type="button"

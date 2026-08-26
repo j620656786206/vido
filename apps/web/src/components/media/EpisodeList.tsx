@@ -72,7 +72,7 @@ export function episodeCode(seasonNumber: number, episodeNumber: number): string
 //     CheckCircle2 (found) · XCircle (not_found / no_text_source) · CircleSlash (skipped)
 //   BARE glyph = not an outcome yet.
 //     Minus (not_searched) · Loader2 (the four in-flight states)
-// Colour is URGENCY, not outcome: --error = the user can do something about it,
+// Colour is URGENCY, not outcome: --error-text = the user can do something about it,
 // --text-muted = nothing to do, --success = done, --accent-text = in progress
 // (accent stays reserved for in-progress — Sally 2026-07-05).
 //
@@ -83,8 +83,13 @@ const SUBTITLE_STATUS: Record<
   string,
   { Icon: typeof CheckCircle2; color: string; label: string; spin?: boolean }
 > = {
-  found: { Icon: CheckCircle2, color: 'text-[var(--success)]', label: '已找到字幕' },
-  not_found: { Icon: XCircle, color: 'text-[var(--error)]', label: '找不到字幕' },
+  // Uniform with its siblings below. `--success` DOES clear the 3:1 icon floor
+  // (6.44:1), unlike cinnabar — this moves for vocabulary, not for contrast.
+  found: { Icon: CheckCircle2, color: 'text-[var(--success-text)]', label: '已找到字幕' },
+  // `--error-text`, not `--error`, for the same reason `searching` moved to the
+  // accent twin below: an icon only owes WCAG 1.4.11's 3:1, and #c0392b does not
+  // clear even that — 2.57:1 on `--bg-tertiary`, 2.42:1 on an error-tinted row.
+  not_found: { Icon: XCircle, color: 'text-[var(--error-text)]', label: '找不到字幕' },
   // Re-tinted --warning → --accent-text per sub-1-7a AC #5: `searching` IS an
   // in-progress state, and two colours for one meaning next to the three spinners
   // below would read as a distinction that does not exist.

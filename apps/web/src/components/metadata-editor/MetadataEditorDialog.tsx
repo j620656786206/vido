@@ -245,7 +245,7 @@ export function MetadataEditorDialog({
               htmlFor="metadata-title"
               className="block text-sm font-medium text-[var(--text-secondary)] mb-1"
             >
-              標題（中文）<span className="text-[var(--error)]">*</span>
+              標題（中文）<span className="text-[var(--error-text)]">*</span>
             </label>
             <input
               id="metadata-title"
@@ -262,7 +262,7 @@ export function MetadataEditorDialog({
               placeholder="輸入中文標題"
             />
             {errors.title && (
-              <p className="mt-1 text-sm text-[var(--error)]">{errors.title.message}</p>
+              <p className="mt-1 text-sm text-[var(--error-text)]">{errors.title.message}</p>
             )}
           </div>
 
@@ -295,7 +295,7 @@ export function MetadataEditorDialog({
               htmlFor="metadata-year"
               className="block text-sm font-medium text-[var(--text-secondary)] mb-1"
             >
-              年份 <span className="text-[var(--error)]">*</span>
+              年份 <span className="text-[var(--error-text)]">*</span>
             </label>
             <input
               id="metadata-year"
@@ -314,7 +314,7 @@ export function MetadataEditorDialog({
               max={2100}
             />
             {errors.year && (
-              <p className="mt-1 text-sm text-[var(--error)]">{errors.year.message}</p>
+              <p className="mt-1 text-sm text-[var(--error-text)]">{errors.year.message}</p>
             )}
           </div>
 
@@ -391,7 +391,7 @@ export function MetadataEditorDialog({
                     type="button"
                     onClick={() => removeCastMember(actor)}
                     aria-label={`移除 ${actor}`}
-                    className="text-[var(--text-secondary)] hover:text-[var(--error)] transition-colors"
+                    className="text-[var(--text-secondary)] hover:text-[var(--error-text)] transition-colors"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -470,7 +470,9 @@ export function MetadataEditorDialog({
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-[var(--border-subtle)] px-6 py-4">
           {updateMutation.error && (
-            <p className="text-sm text-[var(--error)]">更新失敗：{updateMutation.error.message}</p>
+            <p className="text-sm text-[var(--error-text)]">
+              更新失敗：{updateMutation.error.message}
+            </p>
           )}
           <div className="flex gap-3 ml-auto">
             <button

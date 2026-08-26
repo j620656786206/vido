@@ -68,7 +68,7 @@ export function SelectionToolbar({
           disabled={isProcessing}
           data-testid="batch-delete-btn"
           aria-label="刪除選取項目"
-          className="flex items-center gap-1.5 rounded-lg bg-[var(--error)]/20 px-3 py-1.5 text-sm text-[var(--error)] transition-colors hover:bg-[var(--error)]/30 hover:text-[var(--error-text)] disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-lg bg-[var(--error)]/20 px-3 py-1.5 text-sm text-[var(--error-text)] transition-colors hover:bg-[var(--error)]/30 disabled:opacity-50"
         >
           <Trash2 size={14} />
           <span className="hidden sm:inline">刪除選取項目</span>

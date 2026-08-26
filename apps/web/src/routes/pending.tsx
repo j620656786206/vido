@@ -9,7 +9,7 @@ function PendingPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Clock className="h-6 w-6 text-[var(--warning)]" />
+        <Clock className="h-6 w-6 text-[var(--warning-text)]" />
         <h1 className="text-2xl font-bold text-white">待解析</h1>
       </div>
 

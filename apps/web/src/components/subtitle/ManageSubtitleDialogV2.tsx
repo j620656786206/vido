@@ -73,11 +73,15 @@ function languageDescriptor(lang: string): { label: string; pillClass: string; i
   if (HANT.has(l))
     return {
       label: '繁中',
-      pillClass: 'bg-[var(--success-tint)] text-[var(--success)]',
+      pillClass: 'bg-[var(--success-tint)] text-[var(--success-text)]',
       isHans: false,
     };
   if (HANS.has(l))
-    return { label: '簡中', pillClass: 'bg-[var(--info-tint)] text-[var(--info)]', isHans: true };
+    return {
+      label: '簡中',
+      pillClass: 'bg-[var(--info-tint)] text-[var(--info-text)]',
+      isHans: true,
+    };
   if (l === 'en' || l.startsWith('en-'))
     return {
       label: '英文',
@@ -342,7 +346,7 @@ export function ManageSubtitleDialogV2({
                 onRetry={startGeneration}
               />
               <div className="flex justify-center">
-                <span className="flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--info-tint)] px-2 py-1 text-[11px] text-[var(--info)]">
+                <span className="flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--info-tint)] px-2 py-1 text-[11px] text-[var(--info-text)]">
                   <Radio className="h-3 w-3" aria-hidden="true" />
                   即時更新（SSE）
                 </span>
@@ -426,7 +430,10 @@ export function ManageSubtitleDialogV2({
                   data-testid="generation-not-configured"
                   className="flex items-center gap-3.5 rounded-[var(--radius-md)] bg-[var(--warning-tint)] p-4"
                 >
-                  <Settings className="h-5 w-5 shrink-0 text-[var(--warning)]" aria-hidden="true" />
+                  <Settings
+                    className="h-5 w-5 shrink-0 text-[var(--warning-text)]"
+                    aria-hidden="true"
+                  />
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     {/* sub-2-2d AC #1 — γ's ratified ASR copy: the 503 gate is
                         FFmpeg+ASR (transcription_service.go), so the panel names
@@ -462,7 +469,7 @@ export function ManageSubtitleDialogV2({
                   className="flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--error-tint)] p-3"
                 >
                   <CircleAlert
-                    className="h-4 w-4 shrink-0 text-[var(--error)]"
+                    className="h-4 w-4 shrink-0 text-[var(--error-text)]"
                     aria-hidden="true"
                   />
                   <p className="flex-1 text-[13px] text-[var(--error-text)]">

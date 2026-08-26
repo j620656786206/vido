@@ -89,7 +89,7 @@ function StepMark({ state }: { state: StepState }) {
       )}
     >
       {state === 'done' && (
-        <Check className="h-3.5 w-3.5 text-[var(--success)]" aria-hidden="true" />
+        <Check className="h-3.5 w-3.5 text-[var(--success-text)]" aria-hidden="true" />
       )}
       {state === 'active' && (
         <LoaderCircle
@@ -97,7 +97,9 @@ function StepMark({ state }: { state: StepState }) {
           aria-hidden="true"
         />
       )}
-      {state === 'failed' && <X className="h-3.5 w-3.5 text-[var(--error)]" aria-hidden="true" />}
+      {state === 'failed' && (
+        <X className="h-3.5 w-3.5 text-[var(--error-text)]" aria-hidden="true" />
+      )}
       {state === 'pending' && (
         <span className="h-1.5 w-1.5 rounded-full bg-[var(--text-muted)]" aria-hidden="true" />
       )}
@@ -189,7 +191,7 @@ export function GenerationProgressV2({
           data-testid="gen-failed-panel"
           className="flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--error-tint)] p-3"
         >
-          <CircleAlert className="h-4 w-4 shrink-0 text-[var(--error)]" aria-hidden="true" />
+          <CircleAlert className="h-4 w-4 shrink-0 text-[var(--error-text)]" aria-hidden="true" />
           <p className="flex-1 text-[13px] text-[var(--error-text)]">
             失敗於{failedStageName}
             {error ? `：${error}` : ''}

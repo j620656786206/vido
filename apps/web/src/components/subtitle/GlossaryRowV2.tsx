@@ -15,7 +15,7 @@ import { cn } from '../../lib/utils';
 import type { GlossaryTerm, GlossarySource } from '../../services/glossaryService';
 
 const SOURCE_BADGE: Record<GlossarySource, { label: string; className: string }> = {
-  subtitle: { label: '字幕', className: 'bg-[var(--info-tint)] text-[var(--info)]' },
+  subtitle: { label: '字幕', className: 'bg-[var(--info-tint)] text-[var(--info-text)]' },
   metadata: { label: '中繼資料', className: 'bg-[var(--accent-tint)] text-[var(--accent-text)]' },
   manual: { label: '手動', className: 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]' },
 };
@@ -94,7 +94,7 @@ export function GlossaryRowV2({
       {!term.confirmed && (
         <span
           data-testid={`glossary-unconfirmed-${term.id}`}
-          className="shrink-0 rounded-[var(--radius-sm)] bg-[var(--warning-tint)] px-2 py-0.5 text-[11px] text-[var(--warning)]"
+          className="shrink-0 rounded-[var(--radius-sm)] bg-[var(--warning-tint)] px-2 py-0.5 text-[11px] text-[var(--warning-text)]"
         >
           未確認
         </span>
@@ -107,7 +107,7 @@ export function GlossaryRowV2({
             onClick={saveEdit}
             disabled={busy}
             data-testid={`glossary-save-${term.id}`}
-            className="flex min-h-[44px] shrink-0 items-center px-2.5 text-[13px] font-semibold text-[var(--accent-text)] hover:text-[var(--accent-hover)] disabled:opacity-50"
+            className="flex min-h-[44px] shrink-0 items-center px-2.5 text-[13px] font-semibold text-[var(--accent-text)] hover:underline disabled:opacity-50"
           >
             儲存
           </button>
@@ -130,7 +130,7 @@ export function GlossaryRowV2({
               onClick={() => onConfirm(term.id)}
               disabled={busy}
               data-testid={`glossary-confirm-${term.id}`}
-              className="flex min-h-[44px] shrink-0 items-center px-2.5 text-[13px] font-semibold text-[var(--accent-text)] hover:text-[var(--accent-hover)] disabled:opacity-50"
+              className="flex min-h-[44px] shrink-0 items-center px-2.5 text-[13px] font-semibold text-[var(--accent-text)] hover:underline disabled:opacity-50"
             >
               確認
             </button>

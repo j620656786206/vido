@@ -370,7 +370,7 @@ export function GenerationConsentView({
 
           {phase === 'error' && (
             <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-12">
-              <p data-testid="consent-load-error" className="text-sm text-[var(--error)]">
+              <p data-testid="consent-load-error" className="text-sm text-[var(--error-text)]">
                 {loadError}
               </p>
               <button

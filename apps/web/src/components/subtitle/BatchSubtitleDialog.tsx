@@ -96,7 +96,7 @@ export function BatchSubtitlePanel({
                     value="library"
                     checked={scope === 'library'}
                     onChange={() => setScope('library')}
-                    className="text-[var(--accent-primary)]"
+                    className="text-[var(--accent-text)]"
                     data-testid="batch-subtitle-scope-library"
                   />
                   <span className="text-sm text-white">整個媒體庫</span>
@@ -109,7 +109,7 @@ export function BatchSubtitlePanel({
                       value="season"
                       checked={scope === 'season'}
                       onChange={() => setScope('season')}
-                      className="text-[var(--accent-primary)]"
+                      className="text-[var(--accent-text)]"
                       data-testid="batch-subtitle-scope-season"
                     />
                     <span className="text-sm text-white">整季</span>
@@ -118,7 +118,7 @@ export function BatchSubtitlePanel({
               </fieldset>
 
               {startError && (
-                <p className="text-sm text-[var(--error)]" data-testid="batch-subtitle-error">
+                <p className="text-sm text-[var(--error-text)]" data-testid="batch-subtitle-error">
                   {startError}
                 </p>
               )}
@@ -159,10 +159,10 @@ export function BatchSubtitlePanel({
                   {progress.currentIndex} / {progress.totalItems}
                 </span>
                 <div className="flex gap-3 text-sm">
-                  <span className="text-[var(--success)]" data-testid="batch-subtitle-found">
+                  <span className="text-[var(--success-text)]" data-testid="batch-subtitle-found">
                     找到 {progress.successCount}
                   </span>
-                  <span className="text-[var(--error)]" data-testid="batch-subtitle-notfound">
+                  <span className="text-[var(--error-text)]" data-testid="batch-subtitle-notfound">
                     未找到 {progress.failCount}
                   </span>
                 </div>
@@ -207,7 +207,7 @@ export function BatchSubtitlePanel({
                         onConfirmCancel();
                       }}
                       data-testid="batch-subtitle-cancel-confirm-btn"
-                      className="rounded-lg bg-[var(--error)]/20 px-3 py-1.5 text-sm text-[var(--error)] hover:bg-[var(--error)]/30"
+                      className="rounded-lg bg-[var(--error)]/20 px-3 py-1.5 text-sm text-[var(--error-text)] hover:bg-[var(--error)]/30"
                     >
                       確定取消
                     </button>
@@ -233,7 +233,7 @@ export function BatchSubtitlePanel({
                 <button
                   onClick={onViewNotFound}
                   data-testid="batch-subtitle-view-notfound"
-                  className="text-sm text-[var(--accent-primary)] hover:text-[var(--accent-hover)]"
+                  className="text-sm text-[var(--accent-text)] hover:underline"
                 >
                   查看未找到項目
                 </button>

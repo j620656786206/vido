@@ -106,7 +106,7 @@ export function ScanProgressCard({
         className="flex items-center gap-2 rounded-full bg-[var(--bg-secondary)] px-4 py-2 shadow-lg"
         data-testid="scan-progress-pill"
       >
-        <Loader className="h-4 w-4 animate-spin text-[var(--accent-primary)]" />
+        <Loader className="h-4 w-4 animate-spin text-[var(--accent-text)]" />
         <span className="text-sm font-medium text-[var(--text-primary)]">
           掃描中 {state.percentDone}%
         </span>
@@ -131,9 +131,9 @@ export function ScanProgressCard({
             {state.isCancelled ? (
               <XCircle className="h-5 w-5 text-[var(--text-secondary)]" />
             ) : state.errorCount > 0 ? (
-              <AlertTriangle className="h-5 w-5 text-[var(--warning)]" />
+              <AlertTriangle className="h-5 w-5 text-[var(--warning-text)]" />
             ) : (
-              <CheckCircle className="h-5 w-5 text-[var(--success)]" />
+              <CheckCircle className="h-5 w-5 text-[var(--success-text)]" />
             )}
             <span className="text-sm font-semibold text-[var(--text-primary)]">
               {state.isCancelled ? '掃描已取消' : '掃描完成'}
@@ -188,7 +188,7 @@ export function ScanProgressCard({
               onDismiss();
               navigate({ to: '/', search: { status: 'unmatched' } });
             }}
-            className="text-sm text-[var(--accent-primary)] underline-offset-2 hover:underline"
+            className="text-sm text-[var(--accent-text)] underline-offset-2 hover:underline"
             data-testid="view-unmatched-link"
           >
             查看未比對項目
@@ -200,7 +200,7 @@ export function ScanProgressCard({
                 onDismiss();
                 navigate({ to: '/', search: { status: 'error' } });
               }}
-              className="text-sm text-[var(--accent-primary)] underline-offset-2 hover:underline"
+              className="text-sm text-[var(--accent-text)] underline-offset-2 hover:underline"
               data-testid="view-errors-link"
             >
               查看錯誤
@@ -214,7 +214,7 @@ export function ScanProgressCard({
                 // F17 deep link → the consent flow (library route, Rule 26-safe param).
                 navigate({ to: '/library', search: { generate: true } });
               }}
-              className="text-sm text-[var(--accent-primary)] underline-offset-2 hover:underline"
+              className="text-sm text-[var(--accent-text)] underline-offset-2 hover:underline"
               data-testid="generate-subtitles-link"
             >
               產生字幕 →
@@ -310,13 +310,13 @@ export function ScanProgressCard({
         </span>
         <span className="flex items-center gap-1">
           <AlertTriangle
-            className={cn('h-3.5 w-3.5', state.errorCount > 0 && 'text-[var(--error)]')}
+            className={cn('h-3.5 w-3.5', state.errorCount > 0 && 'text-[var(--error-text)]')}
           />
           <span>錯誤</span>
           <span
             className={cn(
               'font-mono',
-              state.errorCount > 0 ? 'text-[var(--error)]' : 'text-[var(--text-primary)]'
+              state.errorCount > 0 ? 'text-[var(--error-text)]' : 'text-[var(--text-primary)]'
             )}
           >
             {state.errorCount}

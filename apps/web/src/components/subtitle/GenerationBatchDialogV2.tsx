@@ -133,14 +133,14 @@ function RowStageLabel({ state }: { state: RowState }) {
   switch (state) {
     case 'done':
       return (
-        <span className="flex shrink-0 items-center gap-1.5 text-xs text-[var(--success)]">
+        <span className="flex shrink-0 items-center gap-1.5 text-xs text-[var(--success-text)]">
           <Check className="h-4 w-4" aria-hidden="true" />
           完成
         </span>
       );
     case 'failed':
       return (
-        <span className="flex shrink-0 items-center gap-1.5 text-xs text-[var(--error)]">
+        <span className="flex shrink-0 items-center gap-1.5 text-xs text-[var(--error-text)]">
           <CircleAlert className="h-4 w-4" aria-hidden="true" />
           失敗
         </span>
@@ -340,7 +340,10 @@ export function GenerationBatchPanelV2({
               data-testid="gen-batch-budget-banner"
               className="flex items-center gap-2.5 rounded-[var(--radius-md)] bg-[var(--warning-tint)] p-3"
             >
-              <CircleAlert className="h-4 w-4 shrink-0 text-[var(--warning)]" aria-hidden="true" />
+              <CircleAlert
+                className="h-4 w-4 shrink-0 text-[var(--warning-text)]"
+                aria-hidden="true"
+              />
               <p className="flex flex-wrap items-center gap-[3px] text-[13px] text-[var(--text-primary)]">
                 已達本次預算上限（
                 <span className="font-mono font-semibold tabular-nums">
@@ -360,7 +363,10 @@ export function GenerationBatchPanelV2({
               data-testid="gen-batch-error-banner"
               className="flex items-center gap-2.5 rounded-[var(--radius-md)] bg-[var(--error-tint)] p-3"
             >
-              <CircleAlert className="h-4 w-4 shrink-0 text-[var(--error)]" aria-hidden="true" />
+              <CircleAlert
+                className="h-4 w-4 shrink-0 text-[var(--error-text)]"
+                aria-hidden="true"
+              />
               <p className="text-[13px] text-[var(--error-text)]">
                 批次發生錯誤，已完成的字幕會保留
               </p>
@@ -461,7 +467,7 @@ export function GenerationBatchPanelV2({
               {isRunning && (
                 <span
                   data-testid="gen-batch-sse-chip"
-                  className="flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--info-tint)] px-2 py-1 text-[11px] text-[var(--info)]"
+                  className="flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--info-tint)] px-2 py-1 text-[11px] text-[var(--info-text)]"
                 >
                   <Radio className="h-3 w-3" aria-hidden="true" />
                   即時更新（SSE）
@@ -505,7 +511,7 @@ export function GenerationBatchPanelV2({
                     onConfirmCancelAll();
                   }}
                   data-testid="gen-batch-cancel-confirm-btn"
-                  className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--error-tint)] px-4 text-sm text-[var(--error)] transition-colors hover:opacity-80"
+                  className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--error-tint)] px-4 text-sm text-[var(--error-text)] transition-colors hover:opacity-80"
                 >
                   確定取消
                 </button>
@@ -532,7 +538,7 @@ export function GenerationBatchPanelV2({
               type="button"
               onClick={onRetryFailed}
               data-testid="gen-batch-retry-failed-btn"
-              className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--error-tint)] px-5 text-sm font-medium text-[var(--error)] transition-colors hover:opacity-80"
+              className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--error-tint)] px-5 text-sm font-medium text-[var(--error-text)] transition-colors hover:opacity-80"
             >
               重試失敗項目
             </button>

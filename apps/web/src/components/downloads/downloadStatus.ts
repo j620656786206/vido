@@ -6,7 +6,8 @@
  * download-specific palette (ux3-4-1 decision #5), so the download status pill and the library poster
  * badge read as one system. Rendered as a static `<span>` pill (the v2 convention — PosterCardV2:73;
  * ARIA lives on the filter tab controls, not the pill). Colored text uses the AA-safe `*-text`
- * variants for accent/error (TC-2); CJK labels stay in the default Noto Sans TC (TY-1).
+ * variants throughout (TC-2) — a base token as pill TEXT on its own tint is the sub-AA case those
+ * twins exist to replace; CJK labels stay in the default Noto Sans TC (TY-1).
  */
 import type { TorrentStatus } from '../../services/downloadService';
 
@@ -18,11 +19,11 @@ export interface DownloadStatusDescriptor {
 
 // Token strings kept identical to libraryStatus.ts TINT so the two badge systems stay visually unified.
 const TINT = {
-  success: 'bg-[var(--success-tint)] text-[var(--success)]',
+  success: 'bg-[var(--success-tint)] text-[var(--success-text)]',
   accent: 'bg-[var(--accent-tint)] text-[var(--accent-text)]',
-  warning: 'bg-[var(--warning-tint)] text-[var(--warning)]',
+  warning: 'bg-[var(--warning-tint)] text-[var(--warning-text)]',
   error: 'bg-[var(--error-tint)] text-[var(--error-text)]',
-  info: 'bg-[var(--info-tint)] text-[var(--info)]',
+  info: 'bg-[var(--info-tint)] text-[var(--info-text)]',
   neutral: 'bg-[var(--bg-tertiary)] text-[var(--text-muted)]',
 } as const;
 

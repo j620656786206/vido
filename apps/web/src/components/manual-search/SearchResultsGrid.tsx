@@ -77,7 +77,7 @@ export function SearchResultsGrid({
       <div className="relative">
         <SearchResultsSkeleton />
         <div className="absolute inset-0 flex items-center justify-center bg-[var(--bg-primary)]/50">
-          <Loader2 className="h-8 w-8 text-[var(--accent-primary)] animate-spin" />
+          <Loader2 className="h-8 w-8 text-[var(--accent-text)] animate-spin" />
         </div>
       </div>
     );

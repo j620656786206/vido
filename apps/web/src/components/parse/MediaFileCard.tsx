@@ -93,7 +93,7 @@ export function MediaFileCard({ file, isParsing = false, onClick, className }: M
         ) : (
           <div className="flex flex-col items-center text-[var(--text-muted)]">
             {isParsing ? (
-              <Loader2 className="h-12 w-12 animate-spin text-[var(--accent-primary)]" />
+              <Loader2 className="h-12 w-12 animate-spin text-[var(--accent-text)]" />
             ) : isTV ? (
               <Tv className="h-12 w-12" />
             ) : (

@@ -22,14 +22,14 @@ const statusConfig = {
   },
   degraded: {
     dotColor: 'bg-[var(--warning)]',
-    textColor: 'text-[var(--warning)]',
+    textColor: 'text-[var(--warning-text)]',
     bgColor: 'bg-[var(--warning-tint)]',
     label: 'qBittorrent 連線不穩定',
     Icon: AlertTriangle,
   },
   down: {
     dotColor: 'bg-[var(--error)]',
-    textColor: 'text-[var(--error)]',
+    textColor: 'text-[var(--error-text)]',
     bgColor: 'bg-[var(--error-tint)]',
     label: 'qBittorrent 未連線',
     Icon: WifiOff,

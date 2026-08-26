@@ -153,9 +153,9 @@ export function SubtitleSearchDialog({
   }, []);
 
   const scoreColor = (score: number) => {
-    if (score > 0.7) return 'text-[var(--success)] bg-[var(--success-tint)]';
-    if (score > 0.4) return 'text-[var(--warning)] bg-[var(--warning-tint)]';
-    return 'text-[var(--error)] bg-[var(--error-tint)]';
+    if (score > 0.7) return 'text-[var(--success-text)] bg-[var(--success-tint)]';
+    if (score > 0.4) return 'text-[var(--warning-text)] bg-[var(--warning-tint)]';
+    return 'text-[var(--error-text)] bg-[var(--error-tint)]';
   };
 
   if (!open) return null;
@@ -229,7 +229,7 @@ export function SubtitleSearchDialog({
                     type="checkbox"
                     checked={selectedProviders.includes(p.id)}
                     onChange={() => toggleProvider(p.id)}
-                    className="rounded border-[var(--border-subtle)] bg-[var(--bg-tertiary)] text-[var(--accent-primary)] focus:ring-[var(--accent-primary)]"
+                    className="rounded border-[var(--border-subtle)] bg-[var(--bg-tertiary)] text-[var(--accent-text)] focus:ring-[var(--accent-primary)]"
                     data-testid={`provider-${p.id}`}
                   />
                   <span className="text-sm text-[var(--text-secondary)]">{p.label}</span>
@@ -269,7 +269,7 @@ export function SubtitleSearchDialog({
 
           {/* Search Error (M8) */}
           {searchError && (
-            <div className="rounded-lg border border-[var(--error)]/30 bg-[var(--error)]/10 p-3 text-sm text-[var(--error)]">
+            <div className="rounded-lg border border-[var(--error)]/30 bg-[var(--error)]/10 p-3 text-sm text-[var(--error-text)]">
               搜尋失敗：{searchError.message}
             </div>
           )}
@@ -400,7 +400,7 @@ export function SubtitleSearchDialog({
                             {downloadedIds.has(result.id) ? (
                               <button
                                 disabled
-                                className="rounded-md border border-[var(--success)]/40 bg-[var(--success)]/10 px-2 py-1 text-xs text-[var(--success)]"
+                                className="rounded-md border border-[var(--success)]/40 bg-[var(--success)]/10 px-2 py-1 text-xs text-[var(--success-text)]"
                               >
                                 <Check className="h-3 w-3" />
                               </button>
@@ -421,7 +421,7 @@ export function SubtitleSearchDialog({
                           </div>
                           {/* Per-row download error (Task 9.5) */}
                           {downloadErrorMap[result.id] && (
-                            <p className="mt-1 text-xs text-[var(--error)]">
+                            <p className="mt-1 text-xs text-[var(--error-text)]">
                               {downloadErrorMap[result.id]}
                             </p>
                           )}

@@ -77,8 +77,8 @@ export function UnidentifiedFileCard({
             <span>已嘗試：</span>
             {attemptedSources.map((source, index) => (
               <span key={source} className="flex items-center gap-1">
-                <span className="text-[var(--error)]">{sourceLabels[source] || source}</span>
-                <span className="text-[var(--error)]">✗</span>
+                <span className="text-[var(--error-text)]">{sourceLabels[source] || source}</span>
+                <span className="text-[var(--error-text)]">✗</span>
                 {index < attemptedSources.length - 1 && (
                   <span className="text-[var(--text-muted)]">→</span>
                 )}

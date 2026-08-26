@@ -12,26 +12,29 @@ const levelConfig: Record<
   DegradationLevel,
   { color: string; bgColor: string; label: string; icon: string }
 > = {
+  // `color` dresses the whole pill — glyph AND label — over the matching `-tint`, which
+  // is the exact surface styles.css measured the base tokens as sub-AA on. Body text
+  // takes the AA-safe twins; the `-tint` backgrounds are unaffected.
   normal: {
-    color: 'text-[var(--success)]',
+    color: 'text-[var(--success-text)]',
     bgColor: 'bg-[var(--success-tint)]',
     label: '正常',
     icon: '✓',
   },
   partial: {
-    color: 'text-[var(--warning)]',
+    color: 'text-[var(--warning-text)]',
     bgColor: 'bg-[var(--warning-tint)]',
     label: '部分降級',
     icon: '⚠',
   },
   minimal: {
-    color: 'text-[var(--warning)]',
+    color: 'text-[var(--warning-text)]',
     bgColor: 'bg-[var(--warning-tint)]',
     label: '功能受限',
     icon: '⚡',
   },
   offline: {
-    color: 'text-[var(--error)]',
+    color: 'text-[var(--error-text)]',
     bgColor: 'bg-[var(--error-tint)]',
     label: '離線模式',
     icon: '⚫',

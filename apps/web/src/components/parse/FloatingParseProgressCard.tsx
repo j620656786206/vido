@@ -87,9 +87,9 @@ export function FloatingParseProgressCard({
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)]">
         <div className="flex items-center gap-2">
-          {isParsing && <Loader2 className="h-4 w-4 text-[var(--accent-primary)] animate-spin" />}
-          {isSuccess && <CheckCircle className="h-4 w-4 text-[var(--success)]" />}
-          {isFailed && <XCircle className="h-4 w-4 text-[var(--error)]" />}
+          {isParsing && <Loader2 className="h-4 w-4 text-[var(--accent-text)] animate-spin" />}
+          {isSuccess && <CheckCircle className="h-4 w-4 text-[var(--success-text)]" />}
+          {isFailed && <XCircle className="h-4 w-4 text-[var(--error-text)]" />}
           <span className="font-medium text-white">
             {isParsing && '正在解析...'}
             {isSuccess && '✅ 解析完成！'}
@@ -168,7 +168,7 @@ export function FloatingParseProgressCard({
           {/* Success Message */}
           {isSuccess && progress.result && (
             <div className="bg-[var(--success)]/10 rounded-lg p-3 text-sm">
-              <div className="text-[var(--success)] font-medium">
+              <div className="text-[var(--success-text)] font-medium">
                 {progress.result.title}
                 {progress.result.year && ` (${progress.result.year})`}
               </div>
@@ -197,7 +197,7 @@ export function FloatingParseProgressCard({
 
       {/* Connection Error */}
       {error && (
-        <div className="px-4 py-2 text-sm text-[var(--warning)] border-t border-[var(--border-subtle)]">
+        <div className="px-4 py-2 text-sm text-[var(--warning-text)] border-t border-[var(--border-subtle)]">
           ⚠️ 連線中斷，嘗試重新連線...
         </div>
       )}

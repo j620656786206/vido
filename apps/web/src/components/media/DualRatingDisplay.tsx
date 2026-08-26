@@ -32,8 +32,15 @@ function RatingBadge({
       <span className="text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
         {label}
       </span>
-      <Star className="h-4 w-4 fill-[var(--warning)] text-[var(--warning)]" aria-hidden="true" />
-      <span className="font-semibold text-[var(--warning)]">{rating.toFixed(1)}</span>
+      {/* fill- and text- move TOGETHER, so the star stays single-toned while the row
+          stays one shade. Leaving the glyph on `--warning` beside a `--warning-text`
+          number was the only two-shade rating row in the app — 固定詞彙 forbids one
+          screen dressing one truth in two colours. */}
+      <Star
+        className="h-4 w-4 fill-[var(--warning-text)] text-[var(--warning-text)]"
+        aria-hidden="true"
+      />
+      <span className="font-semibold text-[var(--warning-text)]">{rating.toFixed(1)}</span>
       {voteCount != null && voteCount > 0 && (
         <span className="text-xs text-[var(--text-secondary)]">({formatVoteCount(voteCount)})</span>
       )}

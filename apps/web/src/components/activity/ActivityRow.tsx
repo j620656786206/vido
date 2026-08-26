@@ -15,8 +15,8 @@ export type RowTone = 'neutral' | 'success' | 'error';
 
 const TONE: Record<RowTone, { icon: string; wrap: string }> = {
   neutral: { icon: 'text-[var(--text-secondary)]', wrap: 'bg-[var(--bg-tertiary)]' },
-  success: { icon: 'text-[var(--success)]', wrap: 'bg-[var(--success-tint)]' },
-  error: { icon: 'text-[var(--error)]', wrap: 'bg-[var(--error-tint)]' },
+  success: { icon: 'text-[var(--success-text)]', wrap: 'bg-[var(--success-tint)]' },
+  error: { icon: 'text-[var(--error-text)]', wrap: 'bg-[var(--error-tint)]' },
 };
 
 interface ActivityRowProps {

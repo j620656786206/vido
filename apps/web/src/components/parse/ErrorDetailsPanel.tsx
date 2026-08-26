@@ -53,14 +53,14 @@ export function ErrorDetailsPanel({
       {/* Failed Steps Summary */}
       {failedSteps.length > 0 && (
         <div className="bg-[var(--error)]/10 rounded-lg p-3 space-y-2">
-          <h4 className="font-medium text-[var(--error)] flex items-center gap-2">
+          <h4 className="font-medium text-[var(--error-text)] flex items-center gap-2">
             <XCircle className="h-4 w-4" />
             失敗原因
           </h4>
           <ul className="space-y-1.5 text-sm" data-testid="failed-steps-list">
             {failedSteps.map((step) => (
               <li key={step.name} className="flex items-start gap-2">
-                <XCircle className="h-3.5 w-3.5 text-[var(--error)] mt-0.5 flex-shrink-0" />
+                <XCircle className="h-3.5 w-3.5 text-[var(--error-text)] mt-0.5 flex-shrink-0" />
                 <span className="text-[var(--text-secondary)]">
                   {step.label}
                   {step.error && (
@@ -80,11 +80,11 @@ export function ErrorDetailsPanel({
           <div key={step.name} className="flex items-center">
             <span
               className={cn(
-                step.status === 'success' && 'text-[var(--success)]',
-                step.status === 'failed' && 'text-[var(--error)]',
+                step.status === 'success' && 'text-[var(--success-text)]',
+                step.status === 'failed' && 'text-[var(--error-text)]',
                 step.status === 'skipped' && 'text-[var(--text-muted)]',
                 step.status === 'pending' && 'text-[var(--text-secondary)]',
-                step.status === 'in_progress' && 'text-[var(--accent-primary)]'
+                step.status === 'in_progress' && 'text-[var(--accent-text)]'
               )}
             >
               {getSourceDisplayName(step.name)}
@@ -149,7 +149,7 @@ export function CompactErrorSummary({
 
   return (
     <div
-      className={cn('text-xs text-[var(--error)]', className)}
+      className={cn('text-xs text-[var(--error-text)]', className)}
       data-testid="compact-error-summary"
     >
       <span>{failedSteps.length} 個來源失敗</span>

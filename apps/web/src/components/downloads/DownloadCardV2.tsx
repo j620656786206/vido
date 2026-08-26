@@ -115,7 +115,7 @@ export function DownloadCardV2({
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-secondary)]">
         {download.status === 'downloading' && (
           <>
-            <span className="font-mono tabular-nums text-[var(--success)]">
+            <span className="font-mono tabular-nums text-[var(--success-text)]">
               ↓ {formatSpeed(download.downloadSpeed)}
             </span>
             <span className="font-mono tabular-nums">ETA {formatETA(download.eta)}</span>

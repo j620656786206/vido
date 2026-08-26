@@ -23,13 +23,13 @@ describe('TechBadge', () => {
   it('renders with hdr category styling', () => {
     render(<TechBadge label="HDR10" category="hdr" />);
     const badge = screen.getByTestId('tech-badge');
-    expect(badge).toHaveClass('bg-[var(--warning-tint)]', 'text-[var(--warning)]');
+    expect(badge).toHaveClass('bg-[var(--warning-tint)]', 'text-[var(--warning-text)]');
   });
 
   it('renders with subtitle category styling', () => {
     render(<TechBadge label="3 字幕" category="subtitle" />);
     const badge = screen.getByTestId('tech-badge');
-    expect(badge).toHaveClass('bg-[var(--success-tint)]', 'text-[var(--success)]');
+    expect(badge).toHaveClass('bg-[var(--success-tint)]', 'text-[var(--success-text)]');
   });
 
   it('applies custom className', () => {

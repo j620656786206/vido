@@ -56,7 +56,7 @@ export function BatchProgress({
         {/* Error list */}
         {hasErrors && (
           <div className="mb-4 max-h-32 overflow-y-auto rounded-lg bg-[var(--bg-primary)] p-3">
-            <p className="mb-2 text-xs font-medium text-[var(--error)]">
+            <p className="mb-2 text-xs font-medium text-[var(--error-text)]">
               {errors.length} 個項目失敗：
             </p>
             {errors.map((err) => (

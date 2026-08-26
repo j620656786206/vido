@@ -192,7 +192,7 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
           className={`${actionBasis} order-4 justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] sm:w-11 sm:grow-0 sm:basis-auto sm:px-0`}
         >
           {copied ? (
-            <Check className="h-4 w-4 text-[var(--success)]" />
+            <Check className="h-4 w-4 text-[var(--success-text)]" />
           ) : (
             <Copy className="h-4 w-4" />
           )}

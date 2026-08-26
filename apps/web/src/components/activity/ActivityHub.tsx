@@ -180,7 +180,7 @@ function PendingSectionView({
             to="/library"
             search={{ unmatched: true }}
             data-testid="activity-pending-cta"
-            className="flex items-center gap-1 text-[13px] font-medium text-[var(--accent-primary)] hover:text-[var(--accent-hover)]"
+            className="flex items-center gap-1 text-[13px] font-medium text-[var(--accent-text)] hover:underline"
           >
             前往處理
             <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -243,7 +243,7 @@ function DownloadsSectionView({
           <Link
             to="/downloads"
             data-testid="activity-downloads-cta"
-            className="flex items-center gap-1 text-[13px] font-medium text-[var(--accent-primary)] hover:text-[var(--accent-hover)]"
+            className="flex items-center gap-1 text-[13px] font-medium text-[var(--accent-text)] hover:underline"
           >
             開啟下載頁
             <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />

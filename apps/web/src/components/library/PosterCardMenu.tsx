@@ -137,7 +137,7 @@ export function PosterCardMenu({
                 className={cn(
                   'flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition-colors',
                   item.variant === 'danger'
-                    ? 'text-[var(--error)] hover:bg-[var(--error)]/10'
+                    ? 'text-[var(--error-text)] hover:bg-[var(--error)]/10'
                     : 'text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
                 )}
                 data-testid={`menu-item-${index}`}
@@ -166,7 +166,7 @@ export function PosterCardMenu({
             className={cn(
               'flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition-colors',
               item.variant === 'danger'
-                ? 'text-[var(--error)] hover:bg-[var(--error)]/10'
+                ? 'text-[var(--error-text)] hover:bg-[var(--error)]/10'
                 : 'text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
             )}
             data-testid={`menu-item-${index}`}

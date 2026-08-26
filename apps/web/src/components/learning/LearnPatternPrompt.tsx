@@ -78,9 +78,9 @@ export function LearnPatternPrompt({
             data-testid="pattern-preview"
           >
             {extractedPattern.fansubGroup && (
-              <span className="text-[var(--accent-primary)]">[{extractedPattern.fansubGroup}]</span>
+              <span className="text-[var(--accent-text)]">[{extractedPattern.fansubGroup}]</span>
             )}{' '}
-            <span className="text-[var(--success)]">{extractedPattern.titlePattern}</span>
+            <span className="text-[var(--success-text)]">{extractedPattern.titlePattern}</span>
           </div>
 
           {/* Action Buttons */}

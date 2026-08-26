@@ -143,7 +143,10 @@ export function RecentlyAddedRowV2() {
           className="flex items-center justify-between gap-3 rounded-[var(--radius-lg)] bg-[var(--error-tint)] px-4 py-3"
         >
           <p className="flex items-center gap-2 text-sm font-medium text-[var(--error-text)]">
-            <AlertTriangle className="h-4 w-4 shrink-0 text-[var(--error)]" aria-hidden="true" />
+            <AlertTriangle
+              className="h-4 w-4 shrink-0 text-[var(--error-text)]"
+              aria-hidden="true"
+            />
             無法載入，請稍後再試
           </p>
           <button

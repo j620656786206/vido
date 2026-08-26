@@ -98,8 +98,8 @@ function CandidateRow({
           className={cn(
             'rounded-[var(--radius-sm)] px-2 py-0.5 text-[11px]',
             isExtract
-              ? 'bg-[var(--success-tint)] text-[var(--success)]'
-              : 'bg-[var(--warning-tint)] text-[var(--warning)]'
+              ? 'bg-[var(--success-tint)] text-[var(--success-text)]'
+              : 'bg-[var(--warning-tint)] text-[var(--warning-text)]'
           )}
         >
           {isExtract ? '抽取' : '語音辨識'}
@@ -108,7 +108,7 @@ function CandidateRow({
           data-testid={`consent-row-usd-${candidate.mediaId}`}
           className={cn(
             'font-mono text-[13px] font-semibold tabular-nums',
-            isExtract ? 'text-[var(--success)]' : 'text-[var(--warning)]'
+            isExtract ? 'text-[var(--success-text)]' : 'text-[var(--warning-text)]'
           )}
         >
           {candidate.runtimeKnown
@@ -189,12 +189,12 @@ function GroupHeaderRow({
         className="flex shrink-0 items-center gap-1.5 text-[11px]"
       >
         {groupTotals.selectedExtractCount > 0 && (
-          <span className="rounded-[var(--radius-sm)] bg-[var(--success-tint)] px-1.5 py-0.5 text-[var(--success)]">
+          <span className="rounded-[var(--radius-sm)] bg-[var(--success-tint)] px-1.5 py-0.5 text-[var(--success-text)]">
             抽取 {groupTotals.selectedExtractCount}
           </span>
         )}
         {groupTotals.selectedAsrCount > 0 && (
-          <span className="rounded-[var(--radius-sm)] bg-[var(--warning-tint)] px-1.5 py-0.5 text-[var(--warning)]">
+          <span className="rounded-[var(--radius-sm)] bg-[var(--warning-tint)] px-1.5 py-0.5 text-[var(--warning-text)]">
             語音辨識 {groupTotals.selectedAsrCount}
           </span>
         )}
@@ -266,12 +266,12 @@ export function CandidateListPanel({
       {label}
       <span className="font-mono font-semibold tabular-nums">{count}</span>
       {marker === 'free' && (
-        <span className="rounded-[var(--radius-sm)] bg-[var(--success-tint)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--success)]">
+        <span className="rounded-[var(--radius-sm)] bg-[var(--success-tint)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--success-text)]">
           僅翻譯費
         </span>
       )}
       {marker === 'paid' && (
-        <span className="rounded-[var(--radius-sm)] bg-[var(--warning-tint)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--warning)]">
+        <span className="rounded-[var(--radius-sm)] bg-[var(--warning-tint)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--warning-text)]">
           付費
         </span>
       )}
@@ -290,7 +290,7 @@ export function CandidateListPanel({
             data-testid="consent-summary-usd"
             className={cn(
               'font-mono font-semibold tabular-nums',
-              overBudget ? 'text-[var(--warning)]' : 'text-[var(--text-primary)]'
+              overBudget ? 'text-[var(--warning-text)]' : 'text-[var(--text-primary)]'
             )}
           >
             {usd(totals.selectedTotalUsd)}
@@ -400,7 +400,7 @@ export function CandidateListPanel({
 
         <p className="text-xs text-[var(--text-muted)]">金額為預估值，實際費用依內容長度而定。</p>
         {startError && (
-          <p data-testid="consent-start-error" className="text-sm text-[var(--error)]">
+          <p data-testid="consent-start-error" className="text-sm text-[var(--error-text)]">
             {startError}
           </p>
         )}
@@ -412,7 +412,7 @@ export function CandidateListPanel({
           data-testid="consent-over-budget-banner"
           className="mx-6 mb-2 flex items-center gap-2.5 rounded-[var(--radius-md)] bg-[var(--warning-tint)] p-3"
         >
-          <CircleAlert className="h-4 w-4 shrink-0 text-[var(--warning)]" aria-hidden="true" />
+          <CircleAlert className="h-4 w-4 shrink-0 text-[var(--warning-text)]" aria-hidden="true" />
           <p className="flex flex-wrap items-center gap-[3px] text-[13px] text-[var(--text-primary)]">
             預估
             <span className="font-mono font-semibold tabular-nums">
@@ -441,7 +441,7 @@ export function CandidateListPanel({
               data-testid="consent-footer-usd"
               className={cn(
                 'font-mono font-semibold tabular-nums',
-                overBudget ? 'text-[var(--warning)]' : 'text-[var(--text-primary)]'
+                overBudget ? 'text-[var(--warning-text)]' : 'text-[var(--text-primary)]'
               )}
             >
               {usd(totals.selectedTotalUsd)}

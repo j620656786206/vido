@@ -134,7 +134,7 @@ export function SetupWizard() {
 
       {error && (
         <div
-          className="mb-4 rounded-lg border border-[var(--error)]/30 bg-[var(--error)]/10 px-4 py-3 text-sm text-[var(--error)]"
+          className="mb-4 rounded-lg border border-[var(--error)]/30 bg-[var(--error)]/10 px-4 py-3 text-sm text-[var(--error-text)]"
           role="alert"
           data-testid="setup-error"
         >

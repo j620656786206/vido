@@ -17,7 +17,7 @@ export function DownloadDetails({ hash }: DownloadDetailsProps) {
 
   if (error) {
     return (
-      <div className="py-4 text-center text-sm text-[var(--error)]">
+      <div className="py-4 text-center text-sm text-[var(--error-text)]">
         無法載入詳細資料：{error.message}
       </div>
     );

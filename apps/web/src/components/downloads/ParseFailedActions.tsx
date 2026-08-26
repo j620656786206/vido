@@ -21,7 +21,7 @@ export function ParseFailedActions({
 }: ParseFailedActionsProps) {
   return (
     <div className={cn('flex flex-col gap-2', className)} data-testid="parse-failed-actions">
-      {errorMessage && <p className="text-xs text-[var(--error)]">{errorMessage}</p>}
+      {errorMessage && <p className="text-xs text-[var(--error-text)]">{errorMessage}</p>}
       <div className="flex gap-2">
         <button
           type="button"

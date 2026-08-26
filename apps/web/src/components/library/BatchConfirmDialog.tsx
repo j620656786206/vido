@@ -77,7 +77,7 @@ export function BatchConfirmDialog({
       >
         {action === 'delete' && (
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--error)]/20">
-            <AlertTriangle className="h-6 w-6 text-[var(--error)]" />
+            <AlertTriangle className="h-6 w-6 text-[var(--error-text)]" />
           </div>
         )}
 
@@ -93,7 +93,10 @@ export function BatchConfirmDialog({
         </p>
 
         {config.warning && (
-          <p className="mb-4 text-center text-xs text-[var(--error)]" data-testid="confirm-warning">
+          <p
+            className="mb-4 text-center text-xs text-[var(--error-text)]"
+            data-testid="confirm-warning"
+          >
             {config.warning}
           </p>
         )}

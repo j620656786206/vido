@@ -47,7 +47,7 @@ export function RetryQueuePanel({ className }: RetryQueuePanelProps) {
   if (isError) {
     return (
       <div className={cn('p-4', className)} data-testid="retry-queue-error">
-        <div className="flex items-center gap-2 text-[var(--error)] mb-2">
+        <div className="flex items-center gap-2 text-[var(--error-text)] mb-2">
           <AlertCircle className="h-5 w-5" />
           <span>載入失敗</span>
         </div>
@@ -56,7 +56,7 @@ export function RetryQueuePanel({ className }: RetryQueuePanelProps) {
         </p>
         <button
           onClick={() => refetch()}
-          className="text-sm text-[var(--accent-primary)] hover:text-[var(--accent-text)] flex items-center gap-1"
+          className="text-sm text-[var(--accent-text)] hover:underline flex items-center gap-1"
         >
           <RefreshCw className="h-4 w-4" />
           重試
@@ -89,7 +89,7 @@ export function RetryQueuePanel({ className }: RetryQueuePanelProps) {
           className="py-8 text-center text-[var(--text-secondary)]"
           data-testid="retry-queue-empty"
         >
-          <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-[var(--success)]" />
+          <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-[var(--success-text)]" />
           <p>目前沒有待重試項目</p>
         </div>
       )}
@@ -158,7 +158,7 @@ function RetryItemCard({
 
       {/* Error message if present */}
       {item.lastError && (
-        <div className="text-xs text-[var(--error)] bg-[var(--error)]/10 rounded px-2 py-1">
+        <div className="text-xs text-[var(--error-text)] bg-[var(--error)]/10 rounded px-2 py-1">
           {item.lastError}
         </div>
       )}

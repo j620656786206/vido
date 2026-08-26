@@ -13,7 +13,7 @@ export function FallbackPending({ filename }: FallbackPendingProps) {
     >
       {/* Spinner */}
       <Loader2
-        className="h-10 w-10 animate-spin text-[var(--accent-primary)]"
+        className="h-10 w-10 animate-spin text-[var(--accent-text)]"
         data-testid="pending-spinner"
       />
 

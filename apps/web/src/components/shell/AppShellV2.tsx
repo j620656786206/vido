@@ -75,7 +75,7 @@ export function AppShellV2({ children }: AppShellV2Props) {
           <Link
             to="/"
             aria-label="vido 首頁"
-            className="text-lg font-bold text-[var(--accent-primary)] sm:hidden"
+            className="text-lg font-bold text-[var(--accent-text)] sm:hidden"
           >
             vido
           </Link>
