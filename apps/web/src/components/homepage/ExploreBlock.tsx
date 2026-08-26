@@ -117,7 +117,7 @@ export function ExploreBlock({ block, ownership, eager = true, onVisible }: Expl
               className="mt-0.5 text-xs text-[var(--text-muted)]"
               data-testid="explore-block-caption"
             >
-              已擁有的作品不會出現這裡
+              已擁有的作品不會出現在這裡
             </p>
           )}
         </div>

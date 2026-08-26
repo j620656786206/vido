@@ -151,6 +151,15 @@ describe('HomeReadoutBand (Home v3 讀數帶 — ux3-1-7)', () => {
     expect(cell).toHaveAttribute('href', '/settings/scanner');
     expect(cell).toHaveTextContent('開始掃描');
     expect(screen.getByTestId('readout-coverage-value')).toHaveTextContent('0/0');
+    // H5-D-v3 sets the CTA half apart in accent — a flat muted label hides
+    // that this cell is the one door a brand-new user needs.
+    expect(screen.getByTestId('readout-coverage-action').className).toContain('accent-text');
+  });
+
+  it('[P2] the accent CTA half appears ONLY on first run — a stocked library has a plain label', () => {
+    mockUseHomeSummary.mockReturnValue(result({ data: summary() }));
+    render(<HomeReadoutBand />);
+    expect(screen.queryByTestId('readout-coverage-action')).toBeNull();
   });
 
   it('[P2] 0 renders as 0 — a quiet day is a readout, not an absence (0 是資訊)', () => {

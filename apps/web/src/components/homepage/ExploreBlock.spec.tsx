@@ -232,7 +232,7 @@ describe('ExploreBlock', () => {
     expect(await screen.findByText('還沒有的電影')).toBeInTheDocument();
     expect(screen.queryByText('已擁有的電影')).toBeNull();
     expect(screen.getByTestId('explore-block-caption')).toHaveTextContent(
-      '已擁有的作品不會出現這裡'
+      '已擁有的作品不會出現在這裡'
     );
   });
 
