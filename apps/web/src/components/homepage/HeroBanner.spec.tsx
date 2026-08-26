@@ -236,6 +236,22 @@ describe('HeroBanner (Home v3 own-library static hero — ux3-1-8)', () => {
     expect(underlay.className).toContain('bg-[var(--bg-secondary)]');
   });
 
+  it('[P1] the content block reserves room for the controls — they used to touch on mobile', () => {
+    // Measured on a phone: the CTA's bottom edge and the dots pill's top edge
+    // were both y=437, zero clearance. The pill is absolutely positioned over
+    // this same lower edge, so the padding has to know whether it exists.
+    mockUseRecentlyAdded.mockReturnValue(result({ data: [movie('m1'), movie('m2')] }));
+    const { container, unmount } = render(<HeroBanner />);
+    const withControls = container.querySelector('.absolute.inset-x-0.bottom-0')!;
+    expect(withControls.className).toContain('pb-16');
+    unmount();
+
+    // A single dressed item renders no pill, so it keeps the room.
+    mockUseRecentlyAdded.mockReturnValue(result({ data: [movie('m1')] }));
+    const { container: solo } = render(<HeroBanner />);
+    expect(solo.querySelector('.absolute.inset-x-0.bottom-0')!.className).toContain('pb-12');
+  });
+
   it('[P2] loading renders the hero-shaped skeleton', () => {
     mockUseRecentlyAdded.mockReturnValue(result({ isLoading: true }));
     render(<HeroBanner />);

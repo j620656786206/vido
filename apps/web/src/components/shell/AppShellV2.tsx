@@ -12,6 +12,7 @@ import { Link } from '@tanstack/react-router';
 import { ArrowLeft, Search } from 'lucide-react';
 import { AppSidebar } from './AppSidebar';
 import { MobileTabBar } from './MobileTabBar';
+import { ThemeToggle } from './ThemeToggle';
 import { InstantSearchBar } from '../search/InstantSearchBar';
 import { ScanProgress } from '../scanner/ScanProgress';
 
@@ -83,13 +84,17 @@ export function AppShellV2({ children }: AppShellV2Props) {
           <div className="ml-auto hidden sm:flex">
             <InstantSearchBar variant="desktop" className="w-72" />
           </div>
+          {/* Mobile theme switch. Mobile has NO sidebar, so the header is the
+              only always-on-screen surface — the desktop copy lives in the
+              sidebar footer and the two never render at the same breakpoint. */}
+          <ThemeToggle variant="rail" className="ml-auto sm:hidden" />
           {/* Mobile search toggle */}
           <button
             type="button"
             onClick={() => setMobileSearchOpen(true)}
             aria-label="搜尋"
             data-testid="mobile-search-toggle"
-            className="ml-auto flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] sm:hidden"
+            className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] sm:hidden"
           >
             <Search className="h-5 w-5" aria-hidden="true" />
           </button>
