@@ -15,6 +15,9 @@ vi.mock('./RecentlyAddedRowV2', () => ({
   RecentlyAddedRowV2: () =>
     React.createElement('div', { 'data-testid': 'stub-recent-v2' }, 'recent'),
 }));
+vi.mock('./HomeReadoutBand', () => ({
+  HomeReadoutBand: () => React.createElement('div', { 'data-testid': 'stub-readout' }, 'readout'),
+}));
 
 import { HomeBrowseV2 } from './HomeBrowseV2';
 
@@ -62,5 +65,16 @@ describe('HomeBrowseV2 (Home v2 composition)', () => {
     render(<HomeBrowseV2 />);
     expect(screen.queryByTestId('stub-cw')).toBeNull(); // R3: unmounted until Epic 17
     expect(screen.getByTestId('stub-recent-v2')).toBeInTheDocument();
+  });
+
+  it('[P1] ux3-1-7 — the readout band is the FIRST section, above everything (讀數先於瀏覽)', () => {
+    render(<HomeBrowseV2 />);
+    const root = screen.getByTestId('home-v2-root');
+    const order = Array.from(
+      root.querySelectorAll<HTMLElement>(
+        '[data-testid="stub-readout"], [data-testid="stub-recent-v2"], [data-testid="stub-hero"], [data-testid="stub-explore"]'
+      )
+    ).map((el) => el.getAttribute('data-testid'));
+    expect(order[0]).toBe('stub-readout');
   });
 });
