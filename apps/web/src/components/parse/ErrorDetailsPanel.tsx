@@ -102,7 +102,7 @@ export function ErrorDetailsPanel({
       <div className="flex flex-col gap-2" data-testid="action-buttons">
         <button
           onClick={onManualSearch}
-          className="w-full flex items-center justify-center gap-2 rounded-lg bg-[var(--accent-primary)] hover:bg-[var(--accent-pressed)] px-4 py-2.5 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
+          className="w-full flex items-center justify-center gap-2 rounded-lg bg-[var(--accent-primary)] hover:bg-[var(--accent-pressed)] px-4 py-2.5 text-sm font-medium text-[var(--text-on-accent)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
           data-testid="manual-search-button"
         >
           <Search className="h-4 w-4" />
@@ -111,7 +111,9 @@ export function ErrorDetailsPanel({
 
         <button
           onClick={onEditFilename}
-          className="w-full flex items-center justify-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] hover:bg-[var(--bg-tertiary)] px-4 py-2.5 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--text-muted)]"
+          // --bg-tertiary is a page ground, not a semantic fill — page ink, not
+          // the accent-fill ink its sibling button above carries.
+          className="w-full flex items-center justify-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] hover:bg-[var(--bg-tertiary)] px-4 py-2.5 text-sm font-medium text-[var(--text-primary)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--text-muted)]"
           data-testid="edit-filename-button"
         >
           <Edit className="h-4 w-4" />

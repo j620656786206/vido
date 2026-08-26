@@ -114,14 +114,18 @@ function MediaCard({ media }: { media: RecentMedia }) {
           </div>
         )}
         {media.justAdded && (
-          <span className="absolute right-1 top-1 rounded bg-[var(--accent-primary)] px-1.5 py-0.5 text-[10px] font-medium text-white">
+          /* Sits on its own SOLID accent fill, not on the poster underneath, so
+             this takes --text-on-accent rather than the scrim's --text-inverse. */
+          <span className="absolute right-1 top-1 rounded bg-[var(--accent-primary)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-on-accent)]">
             剛剛新增
           </span>
         )}
         {/* Hover Quick Action (AC5) */}
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+        {/* --overlay-scrim stays DARK in both themes because it covers poster
+            ARTWORK, which is identical either way. Was black/50; token is 70%. */}
+        <div className="absolute inset-0 flex items-center justify-center bg-[var(--overlay-scrim)] opacity-0 transition-opacity group-hover:opacity-100">
           <span
-            className="rounded-full bg-[var(--accent-primary)] p-2 text-white shadow-lg"
+            className="rounded-full bg-[var(--accent-primary)] p-2 text-[var(--text-on-accent)] shadow-lg"
             aria-label={`查看 ${media.title} 詳情`}
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

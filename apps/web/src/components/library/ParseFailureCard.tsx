@@ -80,7 +80,10 @@ export function ParseFailureCard({ file, onMetadataApplied, className }: ParseFa
         {/* Content */}
         <div className="flex-1 p-3">
           {/* Filename/Title */}
-          <h3 className="text-sm font-medium text-white line-clamp-2 mb-1" title={file.filename}>
+          <h3
+            className="text-sm font-medium text-[var(--text-primary)] line-clamp-2 mb-1"
+            title={file.filename}
+          >
             {file.parsedInfo?.title || file.filename}
           </h3>
 
@@ -115,7 +118,7 @@ export function ParseFailureCard({ file, onMetadataApplied, className }: ParseFa
           {/* Manual Search button (AC1: Manual Search Dialog) */}
           <button
             onClick={() => setIsDialogOpen(true)}
-            className="w-full flex items-center justify-center gap-2 rounded-lg bg-[var(--accent-primary)] hover:bg-[var(--accent-pressed)] px-3 py-2 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
+            className="w-full flex items-center justify-center gap-2 rounded-lg bg-[var(--accent-primary)] hover:bg-[var(--accent-pressed)] px-3 py-2 text-sm font-medium text-[var(--text-on-accent)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
             data-testid="manual-search-button"
           >
             <Search className="h-4 w-4" />

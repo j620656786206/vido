@@ -118,8 +118,14 @@ export function PosterCardMenu({
   if (isMobile) {
     return (
       <>
-        {/* Backdrop — mouse-only dismiss affordance; keyboard users close via Escape. */}
-        <div aria-hidden="true" className="fixed inset-0 z-40 bg-black/50" onClick={onClose} />
+        {/* Backdrop — mouse-only dismiss affordance; keyboard users close via Escape.
+            The scrim token's documented second role; stays ink in both themes so a
+            paper bottom sheet keeps a boundary. Alpha rises 50% → the token's 70%. */}
+        <div
+          aria-hidden="true"
+          className="fixed inset-0 z-40 bg-[var(--overlay-scrim)]"
+          onClick={onClose}
+        />
         {/* Bottom sheet */}
         <div
           ref={menuRef}

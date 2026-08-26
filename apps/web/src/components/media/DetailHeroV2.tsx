@@ -61,7 +61,7 @@ export function DetailHeroV2({
         onClick={onBack}
         aria-label="返回媒體庫"
         data-testid="detail-back"
-        className="absolute left-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-[var(--overlay-scrim)] text-[var(--text-on-accent)] backdrop-blur-sm transition-colors hover:bg-[var(--bg-tertiary)]"
+        className="absolute left-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-[var(--overlay-scrim)] text-[var(--text-on-scrim)] backdrop-blur-sm transition-colors hover:bg-[var(--bg-tertiary)]"
       >
         <ArrowLeft className="h-5 w-5" aria-hidden="true" />
       </button>

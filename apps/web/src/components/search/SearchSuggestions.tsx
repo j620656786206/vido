@@ -278,7 +278,7 @@ function MediaRow({
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm text-white">{title}</div>
+        <div className="truncate text-sm text-[var(--text-primary)]">{title}</div>
         <div className="truncate text-xs text-[var(--text-muted)]">
           {meta}
           {rating > 0 && (
@@ -323,7 +323,7 @@ function PersonRow({ person }: { person: Person }) {
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm text-white">{person.name}</div>
+        <div className="truncate text-sm text-[var(--text-primary)]">{person.name}</div>
         {subtitle && <div className="truncate text-xs text-[var(--text-muted)]">{subtitle}</div>}
       </div>
     </div>

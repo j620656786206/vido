@@ -110,7 +110,8 @@ function TestManualSearchPage() {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">Access Denied</h1>
+          {/* Page-ground heading — ink, not paper: it sits on --bg-primary. */}
+          <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-4">Access Denied</h1>
           <p className="text-[var(--text-secondary)]">
             This page is only available in test environments.
           </p>
@@ -131,7 +132,10 @@ function TestManualSearchPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-white mb-2">E2E Test: Manual Search Flow</h1>
+          {/* Page-ground heading — ink, not paper: it sits on --bg-primary. */}
+          <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-2">
+            E2E Test: Manual Search Flow
+          </h1>
           <p className="text-[var(--text-secondary)]">
             This page provides test fixtures for E2E testing of Story 3-7 (Manual Metadata Search
             and Selection)
@@ -148,7 +152,8 @@ function TestManualSearchPage() {
 
         {/* Test Scenario Info */}
         <div className="bg-[var(--bg-secondary)]/50 rounded-lg p-4 mb-8 text-sm">
-          <h2 className="text-white font-medium mb-2">Test Scenarios:</h2>
+          {/* Ground heading — the card behind it is --bg-secondary, a page surface. */}
+          <h2 className="text-[var(--text-primary)] font-medium mb-2">Test Scenarios:</h2>
           <ul className="text-[var(--text-secondary)] space-y-1 list-disc list-inside">
             <li>
               <code>test-movie-001</code>: Movie with parsed info (Fight Club 1999)
@@ -186,7 +191,9 @@ function TestManualSearchPage() {
             </p>
             <button
               onClick={() => setAppliedItems([])}
-              className="mt-4 px-4 py-2 bg-[var(--bg-tertiary)] text-white rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
+              // --bg-tertiary is a page ground, not a semantic fill — this label is
+              // ink on paper, so it takes --text-primary rather than --text-on-accent.
+              className="mt-4 px-4 py-2 bg-[var(--bg-tertiary)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
               data-testid="reset-test-data"
             >
               Reset Test Data
@@ -197,7 +204,8 @@ function TestManualSearchPage() {
         {/* Completed Items */}
         {completedFiles.length > 0 && availableFiles.length > 0 && (
           <div className="mt-12">
-            <h2 className="text-lg font-medium text-white mb-4">
+            {/* Page-ground heading — ink, not paper: it sits on --bg-primary. */}
+            <h2 className="text-lg font-medium text-[var(--text-primary)] mb-4">
               Completed ({completedFiles.length})
             </h2>
             <div className="flex flex-wrap gap-2" data-testid="completed-items">

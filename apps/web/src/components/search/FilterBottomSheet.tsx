@@ -92,7 +92,7 @@ export function FilterBottomSheet({
         onClick={onClose}
         className={cn(
           'absolute inset-0 backdrop-blur-sm',
-          isV2 ? 'bg-[var(--overlay-scrim)]' : 'bg-black/50'
+          isV2 ? 'bg-[var(--overlay-scrim)]' : 'bg-[var(--overlay-scrim)]'
         )}
         data-testid="filter-sheet-backdrop"
       />
@@ -115,7 +115,7 @@ export function FilterBottomSheet({
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 pb-3">
-          <h2 className="text-lg font-semibold text-white">篩選條件</h2>
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">篩選條件</h2>
           <button
             onClick={handleClear}
             data-testid="filter-sheet-clear"
@@ -135,7 +135,9 @@ export function FilterBottomSheet({
           <button
             onClick={handleApply}
             data-testid="filter-sheet-apply"
-            className="w-full rounded-lg bg-[var(--accent-primary)] py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            // Label on a SOLID accent fill, not on a page ground: the on-accent
+            // token flips with the theme (ink on 夜行's gold, paper on 日巡's).
+            className="w-full rounded-lg bg-[var(--accent-primary)] py-3 text-sm font-semibold text-[var(--text-on-accent)] transition-opacity hover:opacity-90"
           >
             套用篩選{isCounting ? '' : `（${totalResults} 部結果）`}
           </button>

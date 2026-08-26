@@ -90,7 +90,7 @@ export function LearnPatternPrompt({
               disabled={isLoading}
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5',
-                'bg-[var(--warning)] text-white text-sm font-medium',
+                'bg-[var(--warning)] text-[var(--text-on-accent)] text-sm font-medium',
                 'hover:bg-[var(--warning-pressed)] transition-colors',
                 'disabled:opacity-50 disabled:cursor-not-allowed'
               )}
@@ -139,7 +139,7 @@ export function PatternAppliedToast({ patternTitle, onClose }: PatternAppliedToa
       className={cn(
         'fixed bottom-6 left-1/2 -translate-x-1/2 z-50',
         'flex items-center gap-2 px-4 py-2 rounded-lg',
-        'bg-[var(--success)] text-white shadow-lg',
+        'bg-[var(--success)] text-[var(--text-on-accent)] shadow-lg',
         'animate-in fade-in slide-in-from-bottom-4'
       )}
       role="status"
@@ -177,7 +177,7 @@ export function LearnSuccessToast({ pattern, onClose }: LearnSuccessToastProps) 
       className={cn(
         'fixed bottom-6 left-1/2 -translate-x-1/2 z-50',
         'flex items-center gap-2 px-4 py-2 rounded-lg',
-        'bg-[var(--accent-primary)] text-white shadow-lg',
+        'bg-[var(--accent-primary)] text-[var(--text-on-accent)] shadow-lg',
         'animate-in fade-in slide-in-from-bottom-4'
       )}
       role="status"

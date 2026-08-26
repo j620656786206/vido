@@ -418,7 +418,7 @@ export function ApiKeysForm() {
                           type="button"
                           onClick={() => handleClear(row.name)}
                           data-testid={`key-clear-confirm-yes-${row.name}`}
-                          className="rounded-md bg-[var(--error)] px-3 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                          className="rounded-md bg-[var(--error)] px-3 py-1.5 text-sm font-medium text-[var(--text-on-scrim)] transition-opacity hover:opacity-90"
                         >
                           確認清除
                         </button>

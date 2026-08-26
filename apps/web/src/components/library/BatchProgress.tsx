@@ -31,12 +31,14 @@ export function BatchProgress({
   return (
     <div
       data-testid="batch-progress"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      // Modal backdrop = the scrim token's documented second role; stays ink in both
+      // themes so a paper modal keeps a boundary. Alpha 60% → the token's 70%.
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-scrim)]"
       role="dialog"
       aria-modal="true"
     >
       <div className="mx-4 w-full max-w-sm rounded-xl bg-[var(--bg-secondary)] p-6 shadow-2xl">
-        <h3 className="mb-4 text-lg font-semibold text-white">
+        <h3 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
           {isComplete ? '操作完成' : action}
         </h3>
 
@@ -72,7 +74,7 @@ export function BatchProgress({
             <button
               onClick={onCancel}
               data-testid="progress-cancel-btn"
-              className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-white"
+              className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
             >
               <X size={14} />
               取消
@@ -82,7 +84,9 @@ export function BatchProgress({
             <button
               onClick={onClose}
               data-testid="progress-close-btn"
-              className="rounded-lg bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--bg-tertiary)]"
+              // --bg-tertiary is a page GROUND, not a semantic fill, so this label is
+              // --text-primary and not --text-on-accent (which is cut for gold/cinnabar).
+              className="rounded-lg bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-tertiary)]"
             >
               關閉
             </button>

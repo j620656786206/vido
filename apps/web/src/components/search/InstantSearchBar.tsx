@@ -171,7 +171,7 @@ export function InstantSearchBar({
           <button
             type="button"
             onClick={() => setValue('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] transition-colors hover:text-white focus:outline-none"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] focus:outline-none"
             aria-label="清除搜尋"
             data-testid="instant-search-clear"
           >

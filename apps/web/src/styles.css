@@ -33,7 +33,12 @@
   --success: #6fbfa8;
   --error: #c0392b;
   --warning: #d4763f;
-  --info: #06b6d4;
+  /* 靛青 indigo-teal. ⚖️ A2 (2026-08-26): the bright cyan #06b6d4 was the last
+   * signal-blue-era leftover — the one hue with no wuxia justification in
+   * either theme — so it changed in BOTH rather than leaving --info as the
+   * single token where the two themes are not the same world. Lightened from
+   * light's #0b657d only as far as carrying --text-on-accent needs (4.93:1). */
+  --info: #1391b2;
 
   /* Text */
   --text-primary: #eae4d6;
@@ -75,9 +80,22 @@
    * what 10 call sites were already hardcoding; worst case 5.54:1. */
   --warning-text: #e8b04b; /* warning body text (AA-safe on all surfaces) */
   --warning-pressed: #d97706; /* warning button hover — mirrors --accent/--error-pressed */
-  --info-tint: #06b6d41f; /* info badge bg, 想要 pill */
-  --info-text: #22d3ee; /* info body text (AA-safe on all surfaces, worst 5.14:1) */
+  /* The tint PIGMENT follows the semantic: a cyan wash under 靛青 text would
+   * be two hues telling one story. Re-measured, not inherited. */
+  --info-tint: #1391b21f; /* info badge bg, 想要 pill */
+  --info-text: #5bc4dd; /* 靛青 body text (A2). Worst 5.92:1, on its own tint over --bg-tertiary */
   --text-on-accent: #14161a; /* label/icon on accent fills (buttons, pills) */
+  /* The label for a surface that does NOT invert. Two of those exist:
+   *   1. the poster --overlay-scrim (a photograph needs a dark veil in
+   *      daylight too), worst case 7.95:1 dark / 6.44:1 light over white art;
+   *   2. 硃砂 --error / --error-pressed, the one pigment that survives
+   *      inversion unchanged — 5.03:1 / 6.36:1 in BOTH themes.
+   * Identical in both blocks ON PURPOSE. Neither existing token works:
+   * --text-primary is 1.19:1 on the scrim in light, --text-inverse is 1.13:1
+   * there in dark, and --text-on-accent is 3.33:1 on cinnabar in dark — each
+   * trades one theme's bug for the other's.
+   * ⚠️ If you change it, change it in BOTH blocks or the parity test fails. */
+  --text-on-scrim: #faf6ea;
   --text-disabled: #5e6e66; /* disabled/decorative text — intentionally sub-AA (TC-1) */
   --overlay-scrim: #000000b3; /* 70% — modal / bottom-sheet backdrop */
   --focus-ring: #c9a24b; /* keyboard focus outline (= accent-primary, aliased) */
@@ -101,9 +119,119 @@
   --gap-lg: 16px;
   --gap-xl: 24px;
   --gap-2xl: 32px;
+}
 
-  /* Reserved for future light theme */
-  /* [data-theme="light"] { ... } */
+/* =============================================================================
+ * 日巡 (Daywalk) — the light theme, 2026-08-26.
+ * The same wuxia world at noon: three weights of 宣紙 ground, 松煙墨 pine-soot
+ * ink for text, GOLD unchanged in ROLE (「你在這裡」/the action), 硃砂 cinnabar
+ * still faults-and-destruction only. Dark remains the default; this is opt-in.
+ *
+ * TWO RULES INVERT AND THE TOKEN NAMES DO NOT SAY SO — read before editing:
+ *   1. --bg-tertiary is now the DARKEST ground, so it is the worst case for
+ *      every text token and it binds the whole palette.
+ *   2. --accent-hover goes DARKER, not lighter. It is the ONLY state token
+ *      whose sense inverts: --accent-pressed / --error-pressed /
+ *      --warning-pressed already darken in 夜行 and keep that direction here.
+ *      Any component that lightens on its own (filter: brightness(),
+ *      hover:brightness-110, color-mix toward white) moves the WRONG WAY.
+ *
+ * Every value below is gated by styles-contrast.spec.ts, which parses this
+ * block SEPARATELY from :root. Do not add a token here without a light
+ * counterpart case in that spec — the parity assertion will fail you.
+ * ------------------------------------------------------------------------- */
+[data-theme='light'] {
+  /* Background — 宣紙: raw sheet → second sheet → pressed sheet.
+   * ΔL* 5.04 / 4.75 against 夜行's own 6.31 / 5.76, so cards and hover rows
+   * stay as findable in light as in dark. Never #ffffff — a clinical white
+   * breaks the world instantly. */
+  --bg-primary: #faf6ea;
+  --bg-secondary: #f0e7d3;
+  --bg-tertiary: #e5d9c3;
+  /* The deckle edge. Matched to 夜行 by ΔL* (19.51 vs 18.99) AND by ratio
+   * (1.70 vs 1.66) — both axes agree, which is why this value is defensible.
+   * Ungated in BOTH themes; decorative, not informational. See §8.1 / A4. */
+  --border-subtle: #cdbe9b;
+
+  /* Accent / Brand — 泥金, gold ground in glue, which dries deep.
+   * #c9a24b is 2.22:1 on this paper. An exhaustive sweep of its hue returns
+   * the EMPTY SET for a value clearing 3:1 on all three grounds while
+   * carrying an ink label — --bg-tertiary is the binding constraint (A1).
+   * The state ladder DARKENS and the label contrast is monotone increasing
+   * 5.30 → 6.88 → 9.14, so no interaction state can break AA. */
+  --accent-primary: #886208;
+  --accent-hover: #725205;
+  --accent-pressed: #5b4103;
+  /* UNCHANGED from 夜行. Cinnabar's press already darkens there (1.26:1);
+   * inverting it a second time would split the family across themes. */
+  --error-pressed: #9c3a2b;
+
+  /* Semantic solids. INVARIANT: every solid stays at Y ≤ 0.1737 so
+   * --text-on-accent clears 4.5:1 on it. Lightening any of these by eye
+   * silently drops every button label on that fill below AA. */
+  --success: #0b7352; /* 青碧 jade, deepened */
+  --error: #c0392b; /* 硃砂 — UNCHANGED, the only colour that survives inversion */
+  --warning: #a6510c; /* 赭 burnt ochre (#d4763f is 2.97:1 here — fails the 3:1 fill floor) */
+  --info: #0b657d; /* 靛青 — see A2; the one token that reads as a different hue */
+  --warning-pressed: #8b4208;
+
+  /* Text — 松煙墨 pine-soot ink with a green cast, the inversion of 夜行's
+   * ink-green grounds. Deliberately not a neutral black. */
+  --text-primary: #16231d; /* 15.04 / 13.21 / 11.64 */
+  --text-secondary: #32493e; /* 9.01 / 7.91 / 6.97 */
+  --text-muted: #41554c; /* 7.39 / 6.50 / 5.72 */
+  /* Flips to paper, preserving 夜行's property that this EQUALS --bg-primary.
+   * TRAP: a call site that used this to mean "the dark ground" inverts wrongly
+   * and silently. Audit every usage — must-fix #4. */
+  --text-inverse: #faf6ea;
+
+  /* Semantic tints — alphas RISE (0x1f → 0x33; --accent-subtle 0x26 → 0x40).
+   * 12% of a pigment over paper is nearly invisible; the alpha must rise for
+   * the chip to exist at all. These are CONTRAST INPUTS, not decoration.
+   * The PIGMENT stays 夜行's bright value on purpose: a thin wash of the dark
+   * gold goes muddy khaki AND drops --accent-text to exactly 4.50:1, one
+   * rounding step from failing (verified). --error-tint is the tightest in
+   * the palette: AA breaks past 0x47 (20 steps of headroom). */
+  --accent-subtle: #c9a24b40; /* ~25% — active nav wash, selected-row tint */
+  --accent-tint: #c9a24b33; /* ~20% — accent badge / chip background */
+  --accent-text: #654804; /* 7.83 / 6.88 / 6.06; worst 5.46 on own tint over --bg-tertiary */
+  --success-tint: #6fbfa833;
+  --success-text: #06583e; /* worst 5.56 */
+  --error-tint: #c0392b33;
+  --error-text: #87251b; /* worst 5.02 — the binding pair of the whole palette */
+  --warning-tint: #d4763f33;
+  --warning-text: #7b3a06; /* worst 5.22 */
+  --info-tint: #1391b233; /* pigment follows the semantic, per the dark block's note */
+  --info-text: #075469; /* worst 5.27 */
+
+  /* INVERTS from ink to paper — the direct consequence of darkening the gold.
+   * Clears 4.5:1 on every solid it legitimately lands on (worst 5.21 on
+   * cinnabar). Also retires 夜行's #14161a, a cool near-black left over from
+   * the signal-blue era. */
+  --text-on-accent: #fdfaf2;
+  /* Same value as :root — see the note there. The scrim is the one surface
+   * that does not invert, so this is the one text token that does not either. */
+  --text-on-scrim: #faf6ea;
+  /* The one documented sub-AA exemption — intentionally sub-AA (TC-1).
+   * Deliberately tuned to 3.40:1 on --bg-primary, matching 夜行's 3.44:1.
+   * A naive inversion of #5e6e66 measures 4.69:1 on paper, which would PASS
+   * AA and quietly break the exemption assertion. Do not "fix" this value. */
+  --text-disabled: #7a8980;
+  /* DOES NOT INVERT. The scrim covers poster ARTWORK, not the theme, and the
+   * artwork is identical in both themes. A paper-coloured scrim bleaches key
+   * art to pastel and leaves a paper modal with no boundary. Keeps 70%,
+   * re-tinted from neutral #000 to 夜行's own ink-green. Carries must-fix #3. */
+  --overlay-scrim: #0c1512b3;
+  --focus-ring: #886208; /* = --accent-primary. 5.12 / 4.50 / 3.96 — clears WCAG 1.4.11 on all three */
+
+  /* Shadows are INK, not soot: rgba of --text-primary at low alpha, because
+   * black at 30–60% on warm paper reads as a bruise. Two layers from md up —
+   * on paper, elevation is a crisp near-edge plus a soft cast; a single blur
+   * at low alpha simply disappears. Total ink ≤15.4% where 夜行 used 60%. */
+  --shadow-sm: 0 1px 2px rgba(22, 35, 29, 0.06);
+  --shadow-md: 0 1px 2px rgba(22, 35, 29, 0.05), 0 4px 8px rgba(22, 35, 29, 0.06);
+  --shadow-lg: 0 2px 4px rgba(22, 35, 29, 0.06), 0 8px 16px rgba(22, 35, 29, 0.07);
+  --shadow-xl: 0 4px 8px rgba(22, 35, 29, 0.07), 0 16px 32px rgba(22, 35, 29, 0.09);
 }
 
 @keyframes fadeIn {

@@ -10,10 +10,13 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        /* Labels on a SOLID semantic fill take --text-on-accent, not a literal
+           white: the token flips with the theme (ink in 夜行, paper in 日巡),
+           so the same fill keeps a legible label in both. */
         default:
-          'bg-[var(--accent-primary)] text-white shadow-[var(--shadow-sm)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-pressed)]',
+          'bg-[var(--accent-primary)] text-[var(--text-on-accent)] shadow-[var(--shadow-sm)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-pressed)]',
         destructive:
-          'bg-[var(--error)] text-white shadow-[var(--shadow-sm)] hover:bg-[var(--error)]/90',
+          'bg-[var(--error)] text-[var(--text-on-scrim)] shadow-[var(--shadow-sm)] hover:bg-[var(--error)]/90',
         outline:
           'border border-[var(--border-subtle)] bg-transparent text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]',
         secondary:

@@ -8,9 +8,12 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-[var(--accent-primary)] text-white',
+        /* Labels on a SOLID semantic fill take --text-on-accent, not a literal
+           white: the token flips with the theme (ink in 夜行, paper in 日巡),
+           so the same fill keeps a legible label in both. */
+        default: 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]',
         secondary: 'bg-[var(--bg-tertiary)] text-[var(--text-primary)]',
-        destructive: 'bg-[var(--error)] text-white',
+        destructive: 'bg-[var(--error)] text-[var(--text-on-scrim)]',
         outline: 'border border-[var(--border-subtle)] text-[var(--text-secondary)]',
         success: 'bg-[var(--success)]/20 text-[var(--success-text)]',
         warning: 'bg-[var(--warning)]/20 text-[var(--warning-text)]',

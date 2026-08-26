@@ -48,7 +48,8 @@ export function BatchSubtitlePanel({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center"
+      // The scrim stays dark in both themes — it dims the page behind the sheet.
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-scrim)] sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="batch-subtitle-title"
@@ -67,13 +68,16 @@ export function BatchSubtitlePanel({
       <div className="relative w-full rounded-t-2xl bg-[var(--bg-secondary)] shadow-2xl sm:mx-4 sm:max-w-md sm:rounded-xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-5 py-4">
-          <h2 id="batch-subtitle-title" className="text-base font-semibold text-white">
+          <h2
+            id="batch-subtitle-title"
+            className="text-base font-semibold text-[var(--text-primary)]"
+          >
             {status === 'complete' ? '批次字幕搜尋完成' : '批次字幕搜尋'}
           </h2>
           {!isProcessing && (
             <button
               onClick={onClose}
-              className="rounded-lg p-1 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white"
+              className="rounded-lg p-1 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
               aria-label="關閉"
             >
               <X className="h-5 w-5" />
@@ -99,7 +103,7 @@ export function BatchSubtitlePanel({
                     className="text-[var(--accent-text)]"
                     data-testid="batch-subtitle-scope-library"
                   />
-                  <span className="text-sm text-white">整個媒體庫</span>
+                  <span className="text-sm text-[var(--text-primary)]">整個媒體庫</span>
                 </label>
                 {seasonId && (
                   <label className="flex cursor-pointer items-center gap-2">
@@ -112,7 +116,7 @@ export function BatchSubtitlePanel({
                       className="text-[var(--accent-text)]"
                       data-testid="batch-subtitle-scope-season"
                     />
-                    <span className="text-sm text-white">整季</span>
+                    <span className="text-sm text-[var(--text-primary)]">整季</span>
                   </label>
                 )}
               </fieldset>
@@ -127,7 +131,7 @@ export function BatchSubtitlePanel({
                 onClick={() => onStart(scope)}
                 disabled={starting}
                 data-testid="batch-subtitle-start-btn"
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--accent-primary)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-pressed)] disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--accent-primary)] px-4 py-2.5 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)] disabled:opacity-50"
               >
                 {starting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -181,7 +185,7 @@ export function BatchSubtitlePanel({
                 <button
                   onClick={() => setConfirmingCancel(true)}
                   data-testid="batch-subtitle-cancel-btn"
-                  className="flex w-full items-center justify-center gap-1 rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-white"
+                  className="flex w-full items-center justify-center gap-1 rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
                 >
                   <X size={14} />
                   取消
@@ -197,7 +201,7 @@ export function BatchSubtitlePanel({
                   <div className="flex justify-end gap-2">
                     <button
                       onClick={() => setConfirmingCancel(false)}
-                      className="rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white"
+                      className="rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
                     >
                       繼續搜尋
                     </button>
@@ -240,7 +244,9 @@ export function BatchSubtitlePanel({
                 <button
                   onClick={onClose}
                   data-testid="batch-subtitle-close-btn"
-                  className="rounded-lg bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-white transition hover:opacity-80"
+                  // --bg-tertiary is a page ground, not a semantic fill, so this
+                  // button carries page ink rather than accent-fill ink.
+                  className="rounded-lg bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:opacity-80"
                 >
                   關閉
                 </button>

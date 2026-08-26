@@ -52,7 +52,7 @@ export function CastEditor({
         {cast.map((actor) => (
           <span
             key={actor}
-            className="inline-flex items-center gap-1 px-2 py-1 bg-[var(--bg-secondary)] text-white rounded-lg text-sm"
+            className="inline-flex items-center gap-1 px-2 py-1 bg-[var(--bg-secondary)] text-[var(--text-primary)] rounded-lg text-sm"
           >
             {actor}
             <button
@@ -76,7 +76,7 @@ export function CastEditor({
         className={cn(
           'w-full px-4 py-2',
           'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg',
-          'text-white placeholder-[var(--text-muted)]',
+          'text-[var(--text-primary)] placeholder-[var(--text-muted)]',
           'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
           'transition-colors'
         )}

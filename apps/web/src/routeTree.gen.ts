@@ -33,6 +33,7 @@ import { Route as SettingsExportRouteImport } from './routes/settings/export'
 import { Route as SettingsConnectionRouteImport } from './routes/settings/connection'
 import { Route as SettingsCacheRouteImport } from './routes/settings/cache'
 import { Route as SettingsBackupRouteImport } from './routes/settings/backup'
+import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
 import { Route as LibraryTvRouteImport } from './routes/library/tv'
 import { Route as LibraryMoviesRouteImport } from './routes/library/movies'
 import { Route as MediaTypeIdRouteImport } from './routes/media/$type.$id'
@@ -157,6 +158,11 @@ const SettingsBackupRoute = SettingsBackupRouteImport.update({
   path: '/backup',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsAppearanceRoute = SettingsAppearanceRouteImport.update({
+  id: '/appearance',
+  path: '/appearance',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const LibraryTvRoute = LibraryTvRouteImport.update({
   id: '/tv',
   path: '/tv',
@@ -185,6 +191,7 @@ export interface FileRoutesByFullPath {
   '/setup': typeof SetupRoute
   '/library/movies': typeof LibraryMoviesRoute
   '/library/tv': typeof LibraryTvRoute
+  '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/backup': typeof SettingsBackupRoute
   '/settings/cache': typeof SettingsCacheRoute
   '/settings/connection': typeof SettingsConnectionRoute
@@ -212,6 +219,7 @@ export interface FileRoutesByTo {
   '/setup': typeof SetupRoute
   '/library/movies': typeof LibraryMoviesRoute
   '/library/tv': typeof LibraryTvRoute
+  '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/backup': typeof SettingsBackupRoute
   '/settings/cache': typeof SettingsCacheRoute
   '/settings/connection': typeof SettingsConnectionRoute
@@ -242,6 +250,7 @@ export interface FileRoutesById {
   '/setup': typeof SetupRoute
   '/library/movies': typeof LibraryMoviesRoute
   '/library/tv': typeof LibraryTvRoute
+  '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/backup': typeof SettingsBackupRoute
   '/settings/cache': typeof SettingsCacheRoute
   '/settings/connection': typeof SettingsConnectionRoute
@@ -273,6 +282,7 @@ export interface FileRouteTypes {
     | '/setup'
     | '/library/movies'
     | '/library/tv'
+    | '/settings/appearance'
     | '/settings/backup'
     | '/settings/cache'
     | '/settings/connection'
@@ -300,6 +310,7 @@ export interface FileRouteTypes {
     | '/setup'
     | '/library/movies'
     | '/library/tv'
+    | '/settings/appearance'
     | '/settings/backup'
     | '/settings/cache'
     | '/settings/connection'
@@ -329,6 +340,7 @@ export interface FileRouteTypes {
     | '/setup'
     | '/library/movies'
     | '/library/tv'
+    | '/settings/appearance'
     | '/settings/backup'
     | '/settings/cache'
     | '/settings/connection'
@@ -532,6 +544,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsBackupRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/appearance': {
+      id: '/settings/appearance'
+      path: '/appearance'
+      fullPath: '/settings/appearance'
+      preLoaderRoute: typeof SettingsAppearanceRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/library/tv': {
       id: '/library/tv'
       path: '/tv'
@@ -572,6 +591,7 @@ const LibraryRouteWithChildren =
   LibraryRoute._addFileChildren(LibraryRouteChildren)
 
 interface SettingsRouteChildren {
+  SettingsAppearanceRoute: typeof SettingsAppearanceRoute
   SettingsBackupRoute: typeof SettingsBackupRoute
   SettingsCacheRoute: typeof SettingsCacheRoute
   SettingsConnectionRoute: typeof SettingsConnectionRoute
@@ -587,6 +607,7 @@ interface SettingsRouteChildren {
 }
 
 const SettingsRouteChildren: SettingsRouteChildren = {
+  SettingsAppearanceRoute: SettingsAppearanceRoute,
   SettingsBackupRoute: SettingsBackupRoute,
   SettingsCacheRoute: SettingsCacheRoute,
   SettingsConnectionRoute: SettingsConnectionRoute,

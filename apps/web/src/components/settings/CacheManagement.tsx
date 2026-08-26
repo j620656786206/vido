@@ -78,7 +78,7 @@ export function CacheManagement() {
             disabled={clearByAge.isPending}
             className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
               confirmingClearOld
-                ? 'bg-[var(--error)] text-white hover:bg-[var(--error-pressed)]'
+                ? 'bg-[var(--error)] text-[var(--text-on-scrim)] hover:bg-[var(--error-pressed)]'
                 : 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
             }`}
             data-testid="clear-old-cache-btn"

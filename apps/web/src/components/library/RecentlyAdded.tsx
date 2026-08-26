@@ -56,7 +56,7 @@ export function RecentlyAdded() {
   return (
     <section data-testid="recently-added-section" className="mb-8">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-white">最近新增</h2>
+        <h2 className="text-xl font-semibold text-[var(--text-primary)]">最近新增</h2>
         <Link
           to="/library"
           search={{ sortBy: 'created_at', sortOrder: 'desc' }}

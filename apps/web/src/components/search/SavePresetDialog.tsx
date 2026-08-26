@@ -74,7 +74,9 @@ export function SavePresetDialog({ filters, onClose }: SavePresetDialogProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      // Modal backdrop — the scrim token's documented role. It stays DARK in
+      // both themes on purpose, so it needs no light-theme counterpart.
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-scrim)]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="save-preset-modal-title"
@@ -153,7 +155,8 @@ export function SavePresetDialog({ filters, onClose }: SavePresetDialogProps) {
               previewChips.map((chip) => (
                 <span
                   key={chip.key}
-                  className="rounded-full bg-[var(--accent-primary)] px-2 py-0.5 text-[11px] text-white"
+                  // Label on a SOLID accent fill, not on a page ground.
+                  className="rounded-full bg-[var(--accent-primary)] px-2 py-0.5 text-[11px] text-[var(--text-on-accent)]"
                 >
                   {chip.label}
                 </span>
@@ -177,7 +180,9 @@ export function SavePresetDialog({ filters, onClose }: SavePresetDialogProps) {
             onClick={handleSave}
             disabled={!name.trim() || isSaving}
             data-testid="save-preset-confirm"
-            className="rounded-lg bg-[var(--accent-primary)] px-5 py-2 text-sm font-semibold text-white hover:bg-[var(--accent-pressed)] disabled:opacity-50"
+            // Label on a SOLID accent fill, and the hover fill only darkens —
+            // the on-accent token carries both states.
+            className="rounded-lg bg-[var(--accent-primary)] px-5 py-2 text-sm font-semibold text-[var(--text-on-accent)] hover:bg-[var(--accent-pressed)] disabled:opacity-50"
           >
             {isSaving ? '儲存中...' : '儲存'}
           </button>

@@ -169,7 +169,7 @@ export function LibraryCard({ library, autoSubtitleSupported, onEdit }: LibraryC
               type="button"
               onClick={handleDelete}
               disabled={deleteLibrary.isPending}
-              className="rounded bg-[var(--error)] px-3 py-1 text-xs text-white hover:bg-[var(--error-pressed)] disabled:opacity-50"
+              className="rounded bg-[var(--error)] px-3 py-1 text-xs text-[var(--text-on-scrim)] hover:bg-[var(--error-pressed)] disabled:opacity-50"
               data-testid="confirm-delete-button"
             >
               {deleteLibrary.isPending ? '刪除中...' : '確認刪除'}

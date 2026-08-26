@@ -71,7 +71,7 @@ export function CacheTypeCard({ cacheType, onClear }: CacheTypeCardProps) {
           disabled={clearing}
           className={`flex min-h-[44px] items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium transition-colors sm:min-h-0 ${
             confirming
-              ? 'bg-[var(--error)] text-white hover:bg-[var(--error-pressed)]'
+              ? 'bg-[var(--error)] text-[var(--text-on-scrim)] hover:bg-[var(--error-pressed)]'
               : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
           } disabled:opacity-50`}
           data-testid="cache-clear-btn"

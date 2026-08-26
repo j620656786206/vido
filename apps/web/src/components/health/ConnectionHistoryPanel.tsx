@@ -48,7 +48,7 @@ export function ConnectionHistoryPanel({ isOpen, onClose }: ConnectionHistoryPan
             className={cn(
               'rounded-full px-2.5 py-1 text-xs transition-colors',
               filterType === 'all'
-                ? 'bg-[var(--accent-primary)] text-white'
+                ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
                 : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
             )}
           >
@@ -63,7 +63,7 @@ export function ConnectionHistoryPanel({ isOpen, onClose }: ConnectionHistoryPan
                 className={cn(
                   'rounded-full px-2.5 py-1 text-xs transition-colors',
                   filterType === type
-                    ? 'bg-[var(--accent-primary)] text-white'
+                    ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
                     : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
                 )}
               >

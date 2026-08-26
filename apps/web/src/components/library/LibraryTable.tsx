@@ -124,7 +124,7 @@ export function LibraryTable({
                 {col.sortable ? (
                   <button
                     onClick={() => onSort?.(col.key as SortField)}
-                    className="inline-flex items-center gap-1 transition-colors hover:text-white"
+                    className="inline-flex items-center gap-1 transition-colors hover:text-[var(--text-primary)]"
                     data-testid={`sort-${col.key}`}
                   >
                     {col.label}
@@ -166,7 +166,7 @@ export function LibraryTable({
                       className={cn(
                         'flex h-5 w-5 items-center justify-center rounded border-2 transition-colors',
                         isSelected
-                          ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)] text-white'
+                          ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
                           : 'border-[var(--border-subtle)] bg-transparent'
                       )}
                     >
@@ -199,7 +199,7 @@ export function LibraryTable({
                     params={{ type: data.type, id: String(data.id) }}
                     className="block"
                   >
-                    <div className="text-sm font-medium text-white hover:text-[var(--accent-text)]">
+                    <div className="text-sm font-medium text-[var(--text-primary)] hover:text-[var(--accent-text)]">
                       <HighlightText text={data.title} query={highlightQuery} />
                     </div>
                     {data.originalTitle && data.originalTitle !== data.title && (

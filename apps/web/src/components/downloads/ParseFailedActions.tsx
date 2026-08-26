@@ -28,7 +28,7 @@ export function ParseFailedActions({
           className={cn(
             'inline-flex items-center gap-1 rounded px-2 py-1 text-xs',
             'border border-[var(--border-subtle)] text-[var(--text-secondary)] transition-colors',
-            'hover:border-[var(--text-muted)] hover:text-white',
+            'hover:border-[var(--text-muted)] hover:text-[var(--text-primary)]',
             'disabled:cursor-not-allowed disabled:opacity-50'
           )}
           onClick={onRetry}
@@ -44,7 +44,7 @@ export function ParseFailedActions({
             className={cn(
               'inline-flex items-center gap-1 rounded px-2 py-1 text-xs',
               'border border-[var(--border-subtle)] text-[var(--text-secondary)] transition-colors',
-              'hover:border-[var(--text-muted)] hover:text-white'
+              'hover:border-[var(--text-muted)] hover:text-[var(--text-primary)]'
             )}
             onClick={() => onManualSearch(torrentHash)}
             aria-label="手動搜尋"

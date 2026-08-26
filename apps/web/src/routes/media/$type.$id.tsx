@@ -48,11 +48,14 @@ function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center">
       <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold text-white">404</h1>
+        {/* Page-ground heading — ink, not paper: it sits on --bg-primary. */}
+        <h1 className="mb-4 text-4xl font-bold text-[var(--text-primary)]">404</h1>
         <p className="mb-6 text-[var(--text-secondary)]">找不到該媒體內容</p>
         <button
           onClick={() => navigate({ to: '/library' })}
-          className="rounded-lg bg-[var(--accent-primary)] px-4 py-2 text-white hover:bg-[var(--accent-pressed)]"
+          // Label on a solid --accent-primary fill: the on-accent token flips with
+          // the theme, a literal white cannot.
+          className="rounded-lg bg-[var(--accent-primary)] px-4 py-2 text-[var(--text-on-accent)] hover:bg-[var(--accent-pressed)]"
         >
           返回媒體庫
         </button>

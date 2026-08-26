@@ -82,7 +82,7 @@ function InfoRow({ label, value, testId }: InfoRowProps) {
   return (
     <div className="flex justify-between" data-testid={testId}>
       <span className="text-[var(--text-secondary)]">{label}</span>
-      <span className="text-white">{value}</span>
+      <span className="text-[var(--text-primary)]">{value}</span>
     </div>
   );
 }

@@ -78,8 +78,13 @@ export function SearchResultCard({ item, isSelected, onSelect }: SearchResultCar
         <div className="absolute right-2 top-2">
           <span
             className={cn(
-              'rounded px-2 py-0.5 text-xs font-medium text-white',
-              SOURCE_COLORS[item.source] || 'bg-[var(--bg-tertiary)]'
+              'rounded px-2 py-0.5 text-xs font-medium',
+              // The foreground has to follow the ground: SOURCE_COLORS entries
+              // are SOLID semantic fills, but the fallback is a page ground,
+              // and --text-on-accent on it is paper-on-paper in 日巡.
+              SOURCE_COLORS[item.source]
+                ? cn(SOURCE_COLORS[item.source], 'text-[var(--text-on-accent)]')
+                : 'bg-[var(--bg-tertiary)] text-[var(--text-primary)]'
             )}
           >
             {item.source.toUpperCase()}
@@ -89,7 +94,9 @@ export function SearchResultCard({ item, isSelected, onSelect }: SearchResultCar
         {/* Rating badge */}
         {item.rating !== undefined && item.rating > 0 && (
           <div className="absolute bottom-2 left-2">
-            <span className="flex items-center gap-1 rounded bg-black/70 px-2 py-0.5 text-xs text-[var(--warning-text)]">
+            {/* Scrim chip over POSTER ARTWORK — the artwork is identical in both
+                themes, so this ground stays dark in both. Already the token's 70%. */}
+            <span className="flex items-center gap-1 rounded bg-[var(--overlay-scrim)] px-2 py-0.5 text-xs text-[var(--text-on-scrim)]">
               ⭐ {item.rating.toFixed(1)}
             </span>
           </div>
@@ -99,22 +106,27 @@ export function SearchResultCard({ item, isSelected, onSelect }: SearchResultCar
         {isSelected && (
           <div className="absolute inset-0 bg-[var(--accent-primary)]/20 flex items-center justify-center">
             <div className="rounded-full bg-[var(--accent-primary)] p-2">
-              <Check className="h-6 w-6 text-white" />
+              {/* Icon on a SOLID accent fill, not on the poster behind it. */}
+              <Check className="h-6 w-6 text-[var(--text-on-accent)]" />
             </div>
           </div>
         )}
 
         {/* Hover overlay with overview */}
         {showOverview && item.overview && (
-          <div className="absolute inset-0 bg-black/80 p-3 overflow-y-auto">
-            <p className="text-xs text-[var(--text-secondary)] line-clamp-[10]">{item.overview}</p>
+          <div className="absolute inset-0 bg-[var(--overlay-scrim)] p-3 overflow-y-auto">
+            <p className="text-xs text-[var(--text-on-scrim)]/80 line-clamp-[10]">
+              {item.overview}
+            </p>
           </div>
         )}
       </div>
 
       {/* Title and year */}
       <div className="mt-2 px-1">
-        <h3 className="truncate text-sm font-medium text-white">{item.titleZhTW || item.title}</h3>
+        <h3 className="truncate text-sm font-medium text-[var(--text-primary)]">
+          {item.titleZhTW || item.title}
+        </h3>
         {item.titleZhTW && item.titleZhTW !== item.title && (
           <p className="truncate text-xs text-[var(--text-secondary)]">{item.title}</p>
         )}

@@ -59,8 +59,8 @@ export function GenreSelector({
             className={cn(
               'px-3 py-1.5 rounded-full text-sm font-medium transition-colors',
               selectedGenres.includes(genre.value)
-                ? 'bg-[var(--accent-primary)] text-white'
-                : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
+                ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
+                : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
             )}
             aria-pressed={selectedGenres.includes(genre.value)}
           >

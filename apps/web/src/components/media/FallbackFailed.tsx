@@ -42,7 +42,10 @@ export function FallbackFailed({
       {/* Inline icon + title row */}
       <div className="flex items-center gap-3">
         <SearchX className="h-6 w-6 flex-shrink-0 text-[var(--text-secondary)]" />
-        <h2 className="text-lg font-semibold text-white" data-testid="fallback-failed-title">
+        <h2
+          className="text-lg font-semibold text-[var(--text-primary)]"
+          data-testid="fallback-failed-title"
+        >
           {mediaType === 'tv' ? '我們找不到這部電視節目的資料' : '我們找不到這部電影的資料'}
         </h2>
       </div>
@@ -107,7 +110,9 @@ export function FallbackFailed({
         <Link
           to="/search"
           search={{ q: searchQuery }}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--accent-primary)] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-pressed)]"
+          // Label on a SOLID accent fill: the on-accent token is the one that
+          // follows 日巡 onto the same fill, which a literal white cannot.
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--accent-primary)] px-4 py-3 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)]"
           data-testid="cta-search-metadata"
         >
           <Search className="h-4 w-4" />

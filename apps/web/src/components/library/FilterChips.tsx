@@ -119,7 +119,7 @@ export function FilterChips({
 
       <button
         onClick={onClearAll}
-        className="text-sm text-[var(--text-secondary)] underline-offset-2 hover:text-white hover:underline"
+        className="text-sm text-[var(--text-secondary)] underline-offset-2 hover:text-[var(--text-primary)] hover:underline"
       >
         清除全部篩選
       </button>

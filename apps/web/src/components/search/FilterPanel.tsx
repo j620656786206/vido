@@ -43,7 +43,7 @@ const chipClass = (active: boolean, deadEnd = false) =>
     'inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-colors',
     active
       ? 'border border-[var(--accent-primary)] bg-[var(--accent-primary)]/15 text-[var(--accent-text)]'
-      : 'border border-transparent bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-white',
+      : 'border border-transparent bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
     // Dead-end (0-result) facet: dimmed but still clickable (.pen FacetCountChip
     // Dead-end = opacity 0.7); NOT disabled (AC2).
     deadEnd && 'opacity-70'
@@ -254,7 +254,7 @@ export function FilterPanel({
             placeholder="不限"
             aria-label="最早年份"
             data-testid="filter-year-gte"
-            className="w-24 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-2 py-1.5 text-sm text-white placeholder:text-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none"
+            className="w-24 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-2 py-1.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none"
           />
           <span className="text-[var(--text-secondary)]">—</span>
           <input
@@ -265,7 +265,7 @@ export function FilterPanel({
             placeholder="不限"
             aria-label="最晚年份"
             data-testid="filter-year-lte"
-            className="w-24 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-2 py-1.5 text-sm text-white placeholder:text-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none"
+            className="w-24 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-2 py-1.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none"
           />
         </div>
       </section>
@@ -324,7 +324,7 @@ export function FilterPanel({
           onChange={(e) => onChange({ ...filters, sortBy: e.target.value as SortKey })}
           data-testid="filter-sort"
           aria-label="排序方式"
-          className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-2 py-1.5 text-sm text-white focus:border-[var(--accent-primary)] focus:outline-none"
+          className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-2 py-1.5 text-sm text-[var(--text-primary)] focus:border-[var(--accent-primary)] focus:outline-none"
         >
           {SORT_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>

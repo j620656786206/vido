@@ -48,9 +48,11 @@ export function MediaTypeTabs({
             className={cn(
               'px-4 py-2 rounded-lg font-medium transition-colors',
               'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]',
+              // Active = label on a SOLID accent fill (on-accent token); inactive
+              // = label on a page ground, so it takes the ordinary ink.
               isActive
-                ? 'bg-[var(--accent-primary)] text-white'
-                : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
+                ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
+                : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
             )}
           >
             {tab.label}
@@ -59,7 +61,7 @@ export function MediaTypeTabs({
                 className={cn(
                   'ml-2 px-2 py-0.5 text-xs rounded-full',
                   isActive
-                    ? 'bg-[var(--accent-primary)] text-white'
+                    ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
                     : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]'
                 )}
               >

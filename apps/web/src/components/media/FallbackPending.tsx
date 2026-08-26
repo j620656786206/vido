@@ -18,7 +18,7 @@ export function FallbackPending({ filename }: FallbackPendingProps) {
       />
 
       {/* Primary message */}
-      <h2 className="mt-5 text-lg font-semibold text-white">正在搜尋電影資訊⋯</h2>
+      <h2 className="mt-5 text-lg font-semibold text-[var(--text-primary)]">正在搜尋電影資訊⋯</h2>
 
       {/* Secondary description */}
       <p className="mt-2 text-sm text-[var(--text-secondary)]">

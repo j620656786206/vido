@@ -16,7 +16,10 @@ function DialogOverlay({
   return (
     <DialogPrimitive.Overlay
       className={cn(
-        'fixed inset-0 z-50 bg-black/60 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+        /* --overlay-scrim is the modal-backdrop token and stays DARK in both
+           themes: a paper modal on paper ground needs the same boundary a dark
+           one does. Was black/60; the token is 70%. */
+        'fixed inset-0 z-50 bg-[var(--overlay-scrim)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
         className
       )}
       {...props}

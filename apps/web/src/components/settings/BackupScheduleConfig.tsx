@@ -100,7 +100,7 @@ export function BackupScheduleConfig() {
           aria-label="自動備份"
         >
           <span
-            className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${enabled ? 'translate-x-5' : 'translate-x-0'}`}
+            className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-[var(--text-on-scrim)] transition-transform ${enabled ? 'translate-x-5' : 'translate-x-0'}`}
           />
         </button>
       </div>

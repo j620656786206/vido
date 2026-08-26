@@ -25,7 +25,9 @@ describe('AvailabilityBadge (Story 10-4 AC #3 · R3 remake)', () => {
     render(<AvailabilityBadge variant="owned" />);
     const el = screen.getByTestId('availability-badge-owned');
     expect(el.className).toContain('bg-[var(--overlay-scrim)]');
-    expect(el.className).toContain('text-[var(--text-primary)]');
+    // 日巡: the scrim does not flip, so its label must not either —
+    // --text-primary here would be near-black ink on a dark veil (2.34:1).
+    expect(el.className).toContain('text-[var(--text-on-scrim)]');
     expect(el.className).not.toContain('--success');
   });
 

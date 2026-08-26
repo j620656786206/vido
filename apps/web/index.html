@@ -8,6 +8,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="stylesheet" href="/src/styles.css" />
+    <script>
+      // Stamp the theme BEFORE first paint. :root is the dark theme, so without
+      // this a light user gets a full-viewport ink-green flash until React
+      // mounts — hundreds of ms on a cold NAS load over LAN. Dark writes no
+      // attribute; :root stays the single source of the default.
+      //
+      // Must stay in sync with src/hooks/useTheme.ts: same key, same media
+      // query, same precedence (stored choice > OS > dark). This runs before
+      // any module does, so it cannot import that file.
+      try {
+        var stored = localStorage.getItem('vido:theme');
+        var light =
+          stored === 'light' ||
+          (stored !== 'dark' &&
+            typeof window.matchMedia === 'function' &&
+            window.matchMedia('(prefers-color-scheme: light)').matches);
+        if (light) document.documentElement.setAttribute('data-theme', 'light');
+      } catch (e) {
+        /* private mode / storage disabled — fall through to the dark default */
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -16,21 +16,29 @@ const ACTION_CONFIG = {
     message: (count: number) => `確定要刪除 ${count} 個項目嗎？`,
     warning: '此操作無法復原',
     confirmText: '刪除',
-    confirmClass: 'bg-[var(--error)] hover:bg-[var(--error-pressed)] text-white',
+    // STAYS a literal. 硃砂 --error is the one fill that does NOT invert between
+    // themes (styles.css:162), but --text-on-accent DOES — so the token measures
+    // 3.33:1 on --error and 2.63:1 on --error-pressed in DARK, below AA. This is
+    // the exclusion styles-contrast.spec.ts:208 already documents. White is
+    // non-inverting like the fill and holds 5.44:1 in BOTH themes. Needs an
+    // always-paper token before it can be named; see the sweep report.
+    confirmClass: 'bg-[var(--error)] hover:bg-[var(--error-pressed)] text-[var(--text-on-scrim)]',
   },
   reparse: {
     title: '確認重新解析',
     message: (count: number) => `確定要重新解析 ${count} 個項目嗎？`,
     warning: '現有元數據將被重置',
     confirmText: '重新解析',
-    confirmClass: 'bg-[var(--accent-primary)] hover:bg-[var(--accent-pressed)] text-white',
+    confirmClass:
+      'bg-[var(--accent-primary)] hover:bg-[var(--accent-pressed)] text-[var(--text-on-accent)]',
   },
   export: {
     title: '確認匯出',
     message: (count: number) => `確定要匯出 ${count} 個項目的元數據嗎？`,
     warning: '',
     confirmText: '匯出',
-    confirmClass: 'bg-[var(--accent-primary)] hover:bg-[var(--accent-pressed)] text-white',
+    confirmClass:
+      'bg-[var(--accent-primary)] hover:bg-[var(--accent-pressed)] text-[var(--text-on-accent)]',
   },
 };
 
@@ -59,7 +67,10 @@ export function BatchConfirmDialog({
   return (
     <div
       data-testid="batch-confirm-dialog"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      // Modal backdrop = the scrim token's documented second role. It stays ink in
+      // both themes on purpose: paper-coloured, a light modal would have no boundary.
+      // Alpha rises 60% → the token's 70%; the extra 10% is the token's, not a redesign.
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-scrim)]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="batch-confirm-title"
@@ -81,7 +92,10 @@ export function BatchConfirmDialog({
           </div>
         )}
 
-        <h3 id="batch-confirm-title" className="mb-2 text-center text-lg font-semibold text-white">
+        <h3
+          id="batch-confirm-title"
+          className="mb-2 text-center text-lg font-semibold text-[var(--text-primary)]"
+        >
           {config.title}
         </h3>
 

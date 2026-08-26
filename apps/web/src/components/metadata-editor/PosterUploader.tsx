@@ -126,8 +126,8 @@ export function PosterUploader({
           className={cn(
             'px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5',
             uploadMethod === 'file'
-              ? 'bg-[var(--accent-primary)] text-white'
-              : 'text-[var(--text-secondary)] hover:text-white'
+              ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
+              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
           )}
         >
           <Upload className="h-4 w-4" />
@@ -139,8 +139,8 @@ export function PosterUploader({
           className={cn(
             'px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5',
             uploadMethod === 'url'
-              ? 'bg-[var(--accent-primary)] text-white'
-              : 'text-[var(--text-secondary)] hover:text-white'
+              ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
+              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
           )}
         >
           <Link className="h-4 w-4" />
@@ -198,7 +198,7 @@ export function PosterUploader({
                   e.stopPropagation();
                   clearPreview();
                 }}
-                className="absolute -top-2 -right-2 p-1 bg-[var(--error)] text-white rounded-full hover:bg-[var(--error)] transition-colors"
+                className="absolute -top-2 -right-2 p-1 bg-[var(--error)] text-[var(--text-on-scrim)] rounded-full hover:bg-[var(--error)] transition-colors"
                 aria-label="清除預覽"
               >
                 <X className="h-4 w-4" />
@@ -223,7 +223,7 @@ export function PosterUploader({
             className={cn(
               'flex-1 px-4 py-2',
               'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg',
-              'text-white placeholder-[var(--text-muted)]',
+              'text-[var(--text-primary)] placeholder-[var(--text-muted)]',
               'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
               'transition-colors'
             )}
@@ -234,7 +234,7 @@ export function PosterUploader({
             onClick={handleUrlSubmit}
             disabled={!urlInput.trim()}
             className={cn(
-              'px-4 py-2 rounded-lg bg-[var(--accent-primary)] text-white',
+              'px-4 py-2 rounded-lg bg-[var(--accent-primary)] text-[var(--text-on-accent)]',
               'hover:bg-[var(--accent-pressed)] transition-colors',
               'disabled:opacity-50 disabled:cursor-not-allowed'
             )}
