@@ -223,6 +223,19 @@ describe('HeroBanner (Home v3 own-library static hero — ux3-1-8)', () => {
     expect(container.firstChild).toBeNull();
   });
 
+  it('[P0] the status badge sits on an OPAQUE underlay — a tint over the scrim is unmeasured', () => {
+    // Reported from a phone in 日巡: the green read as invisible. The *-tint
+    // tokens are ~12–20% alpha and styles-contrast.spec.ts measures them
+    // composited over a --bg-* PAGE ground; the hero puts the badge on the
+    // scrim instead, where light's ink-green --success-text measured 1.47:1.
+    // The opaque chip restores the stack the gate actually guarantees.
+    mockUseRecentlyAdded.mockReturnValue(result({ data: [movie('m1')] }));
+    render(<HeroBanner />);
+    const badge = screen.getByTestId('hero-banner-subtitle-badge');
+    const underlay = badge.parentElement!;
+    expect(underlay.className).toContain('bg-[var(--bg-secondary)]');
+  });
+
   it('[P2] loading renders the hero-shaped skeleton', () => {
     mockUseRecentlyAdded.mockReturnValue(result({ isLoading: true }));
     render(<HeroBanner />);
