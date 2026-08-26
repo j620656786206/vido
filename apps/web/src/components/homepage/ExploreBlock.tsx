@@ -50,8 +50,23 @@ export function ExploreBlock({ block, ownership, eager = true, onVisible }: Expl
   const { data, isLoading, isError } = useExploreBlockContent(shouldFetch ? block.id : undefined);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
 
-  const items = useMemo(() => getBlockItems(data), [data]);
-  const { isOwned, isRequested } = ownership;
+  const allItems = useMemo(() => getBlockItems(data), [data]);
+  const { isOwned, isRequested, isSettled: ownershipSettled } = ownership;
+
+  // ux3-1-8 (shape ruling 濾掉已有): discovery is this row's ONLY job — an
+  // owned item here just counts what you have, so it drops out.
+  //
+  // Gated on the POSITIVE verdict signal, never on `!isLoading && !error`: a
+  // DISABLED ownership query (no ids collected yet, or the parent's stability
+  // gate blanking the batch while a lazy block loads) reports isLoading:false
+  // with an empty owned set, so the absence-of-loading test would read
+  // "checked, nothing owned" when nothing was checked — the row would render
+  // unfiltered while the caption below claimed otherwise.
+  const filterApplies = ownershipSettled;
+  const items = useMemo(
+    () => (filterApplies ? allItems.filter((item) => !isOwned(item.id)) : allItems),
+    [allItems, isOwned, filterApplies]
+  );
 
   // Notify the parent once per block so its useQueries slot enables — shared
   // TanStack Query cache means only one network request is actually issued.
@@ -84,12 +99,28 @@ export function ExploreBlock({ block, ownership, eager = true, onVisible }: Expl
       className="mx-auto w-full max-w-7xl px-4 sm:px-6"
     >
       <div className="mb-3 flex items-end justify-between">
-        <h2
-          className="text-lg font-semibold text-[var(--text-primary)]"
-          data-testid="explore-block-title"
-        >
-          {block.name}
-        </h2>
+        <div>
+          <h2
+            className="text-lg font-semibold text-[var(--text-primary)]"
+            data-testid="explore-block-title"
+          >
+            {block.name}
+          </h2>
+          {/* ux3-1-8 (H1-D-v3): the filter announces itself — a row that
+              silently drops items would read as TMDb having less content.
+              The caption appears ONLY while the filter is actually applied:
+              when the ownership lookup is inflight or failed, nothing is being
+              filtered, and a standing claim of「已擁有的不會出現」would be the
+              page flattering itself about work it did not do (誠實優先於好看). */}
+          {filterApplies && !showSkeleton && (
+            <p
+              className="mt-0.5 text-xs text-[var(--text-muted)]"
+              data-testid="explore-block-caption"
+            >
+              已擁有的作品不會出現這裡
+            </p>
+          )}
+        </div>
         {/* 查看更多 was REMOVED (critique R2 P2): it promised「more of this
             row」and delivered an unfiltered /search. It returns with Epic 11's
             filter scaffolding, when the link can keep its promise. */}
@@ -186,7 +217,10 @@ export function ExploreBlock({ block, ownership, eager = true, onVisible }: Expl
                 className="py-8 text-sm text-[var(--text-muted)]"
                 data-testid="explore-block-empty"
               >
-                沒有符合條件的內容
+                {/* Two different empty truths (ux3-1-8): TMDb returned nothing
+                    vs. TMDb returned things you already own — the second is a
+                    small congratulation, not a shrug. */}
+                {allItems.length > 0 ? '這排的作品你都已經擁有了' : '沒有符合條件的內容'}
               </div>
             )}
           </div>

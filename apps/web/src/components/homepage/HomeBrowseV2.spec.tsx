@@ -26,7 +26,7 @@ describe('HomeBrowseV2 (Home v2 composition)', () => {
     vi.clearAllMocks();
   });
 
-  it('[P1] D3 ordering law — own-content (繼續觀看 + 最近新增) is structurally ABOVE Hero + Explore', () => {
+  it('[P1] D3 ordering law (v3 form) — own content (hero + 最近新增) is structurally ABOVE the TMDb tail', () => {
     render(<HomeBrowseV2 />);
     const root = screen.getByTestId('home-v2-root');
 
@@ -36,19 +36,19 @@ describe('HomeBrowseV2 (Home v2 composition)', () => {
       )
     ).map((el) => el.getAttribute('data-testid'));
 
-    // Own-content precedes both external-curation blocks, in this order.
-    // (⚖️ R3: ContinueWatchingSlot is unmounted until Epic 17 exists — its
-    // Plex/Jellyfin promise was a door that led nowhere.)
-    expect(order).toEqual(['stub-recent-v2', 'stub-hero', 'stub-explore']);
+    // ux3-1-8: the hero is OWN content now (own-library newest-with-backdrop),
+    // so the entire first fold is yours — hero, then 最近新增, then the TMDb
+    // tail last. D3 own-above-external holds and strengthens.
+    expect(order).toEqual(['stub-hero', 'stub-recent-v2', 'stub-explore']);
   });
 
-  it('[P1] D3 ordering law — own-content zone DOM-precedes the Hero', () => {
+  it('[P1] D3 ordering law — the TMDb tail DOM-follows the own-content zone', () => {
     render(<HomeBrowseV2 />);
     const ownContent = screen.getByTestId('home-own-content');
-    const hero = screen.getByTestId('stub-hero');
-    // compareDocumentPosition: FOLLOWING bit set means `hero` comes after own-content.
+    const explore = screen.getByTestId('stub-explore');
+    // compareDocumentPosition: FOLLOWING bit set means `explore` comes after own-content.
     expect(
-      ownContent.compareDocumentPosition(hero) & Node.DOCUMENT_POSITION_FOLLOWING
+      ownContent.compareDocumentPosition(explore) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
   });
 

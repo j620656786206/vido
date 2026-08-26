@@ -97,11 +97,24 @@ describe('ExploreBlocksList', () => {
     expect(await screen.findByTestId('explore-blocks-loading')).toBeInTheDocument();
   });
 
-  it('renders nothing on error', async () => {
+  // The name used to say "renders nothing on error", which stopped being true
+  // when critique R1 replaced the silent vanish with the amber notice — and the
+  // assertion never checked what DOES render, so the degraded state (ux3-1-8
+  // AC #6 / design H7-D-v3) had zero coverage anywhere in the repo.
+  it('[P0] renders the amber degraded notice — NOT silence — when the blocks query fails (H7-D-v3)', async () => {
     mockList.mockReturnValue({ data: undefined, isLoading: false, isError: true } as any);
-    const { container } = renderList();
+    renderList();
     await Promise.resolve();
-    expect(container.querySelector('[data-testid="explore-blocks-list"]')).toBeNull();
+
+    // The block list itself is gone…
+    expect(screen.queryByTestId('explore-blocks-list')).toBeNull();
+    // …but the page accounts for it: 固定詞彙 says 不出現＝你沒要求, and the
+    // user DID configure these blocks, so silence would be a lie.
+    const notice = await screen.findByTestId('explore-degraded-notice');
+    expect(notice).toHaveTextContent('探索區塊目前無法載入');
+    expect(notice).toHaveTextContent('TMDb 未設定或無法連線');
+    // A named problem with the one door that can actually fix it.
+    expect(screen.getByText('前往連線設定')).toBeInTheDocument();
   });
 
   it('renders nothing when blocks array is empty', async () => {

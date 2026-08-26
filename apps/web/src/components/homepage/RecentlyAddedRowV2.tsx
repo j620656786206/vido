@@ -1,4 +1,10 @@
-// Design ref: ux-design.pen Screen H1-D-v2 (yixu1) — own-content zone, 最近新增 row (gda31)
+// Design ref: ux-design.pen Screen H1-D-v3 (k2Otv)
+// Section: own-content zone, 最近新增 row.
+// ux3-1-8 re-anchored this from H1-D-v2 (yixu1): the row itself is unchanged by
+// Home v3 (brief §4「不動：最近新增列內部」), but the frame that CONTAINS it is
+// now H1-D-v3 — the v2 frames are marked 〔已淘汰→v3〕 and get deleted once v3
+// ships. The per-state refs below still name v2 frames because v3 drew no
+// state variants (tracked: disc-2026-08-home-v3-missing-state-frames).
 /**
  * Recently-added own-content row (UX Redesign Phase 3 — ux3-1-2).
  *
@@ -25,11 +31,10 @@
 import { AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRef } from 'react';
 import { Link } from '@tanstack/react-router';
-import { useRecentlyAdded } from '../../hooks/useLibrary';
+import { useRecentlyAdded, RECENT_LIMIT } from '../../hooks/useLibrary';
 import { PosterCardV2 } from '../library/PosterCardV2';
 import type { LibraryItem, LibraryMovie, LibrarySeries } from '../../types/library';
 
-const RECENT_LIMIT = 20;
 const SKELETON_COUNT = 8;
 
 interface CardFields {

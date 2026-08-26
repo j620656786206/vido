@@ -5,6 +5,10 @@ import type { LibraryItem } from '../../types/library';
 
 vi.mock('../../hooks/useLibrary', () => ({
   useRecentlyAdded: vi.fn(),
+  // ux3-1-8 made the window a shared constant; a wholesale module mock must
+  // re-export it or every consumer of this mock dies at import time.
+  RECENT_LIMIT: 20,
+  RECENT_STALE_TIME_MS: 30_000,
 }));
 // Stub PosterCardV2 — it needs the router + image pipeline; here we only care that a
 // card renders per item. Its own behaviour (badge, links) is covered by its spec.

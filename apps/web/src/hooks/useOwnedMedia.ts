@@ -34,6 +34,15 @@ export interface OwnedMediaState {
   isRequested(tmdbId: number | null | undefined): boolean;
   isLoading: boolean;
   error: Error | null;
+  /**
+   * True only when a real ownership verdict is in hand (ux3-1-8). Callers that
+   * ACT on ownership — the explore rows delete owned titles and caption the
+   * fact — must gate on this, never on `!isLoading && !error`: a DISABLED
+   * query (no ids yet, or the parent's stability gate blanking the batch)
+   * reports `isLoading: false` with an empty `owned` set, which reads as
+   * "checked, and nothing is owned" when nothing was checked at all.
+   */
+  isSettled: boolean;
 }
 
 const EMPTY: readonly number[] = Object.freeze([]);
@@ -65,6 +74,12 @@ export function useOwnedMedia(tmdbIds: readonly number[] = EMPTY): OwnedMediaSta
     // across route transitions without thrashing the backend.
     staleTime: 60 * 1000,
     retry: 1,
+    // The id batch GROWS as lazy explore blocks reveal, and each new batch is a
+    // NEW query key — without this the hook would fall back to "no verdict"
+    // mid-session and, since ux3-1-8, owned posters would visibly pop back into
+    // rows they had already left. Carrying the previous verdict forward keeps
+    // the already-checked ids answered while the wider batch is inflight.
+    placeholderData: (previous: number[] | undefined) => previous,
   });
 
   // Rebuild the Set only when the query payload changes, not every render.
@@ -84,6 +99,10 @@ export function useOwnedMedia(tmdbIds: readonly number[] = EMPTY): OwnedMediaSta
 
   const error = (query.error as Error | null) ?? null;
 
+  // A disabled query is never "success", so this is false exactly when no
+  // verdict exists — including the enabled-but-first-load and the errored case.
+  const isSettled = enabled && query.isSuccess && error === null;
+
   return useMemo<OwnedMediaState>(
     () => ({
       owned,
@@ -91,7 +110,8 @@ export function useOwnedMedia(tmdbIds: readonly number[] = EMPTY): OwnedMediaSta
       isRequested,
       isLoading: query.isLoading,
       error,
+      isSettled,
     }),
-    [owned, isOwned, isRequested, query.isLoading, error]
+    [owned, isOwned, isRequested, query.isLoading, error, isSettled]
   );
 }

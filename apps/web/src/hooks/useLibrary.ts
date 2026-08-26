@@ -26,12 +26,21 @@ export function useLibraryList(params: LibraryListParams) {
   });
 }
 
-export function useRecentlyAdded(limit: number = 20) {
+/**
+ * The recently-added window, shared by the 最近新增 row, the Home v3 hero, and
+ * the `/` route loader's prefetch (ux3-1-8). Exported so the prefetch cannot
+ * drift from the hook: a mismatched limit or staleTime seeds a cache entry
+ * nothing reads, and the prefetch silently buys nothing.
+ */
+export const RECENT_LIMIT = 20;
+export const RECENT_STALE_TIME_MS = 30 * 1000; // NFR-P9
+
+export function useRecentlyAdded(limit: number = RECENT_LIMIT) {
   return useQuery({
     queryKey: libraryKeys.recent(limit),
     queryFn: () => libraryService.getRecentlyAdded(limit),
-    staleTime: 30 * 1000, // 30s (NFR-P9)
-    refetchInterval: 30_000, // Auto-refresh every 30s
+    staleTime: RECENT_STALE_TIME_MS,
+    refetchInterval: RECENT_STALE_TIME_MS, // Auto-refresh on the same cadence
   });
 }
 

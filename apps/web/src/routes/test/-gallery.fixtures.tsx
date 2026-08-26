@@ -203,11 +203,10 @@ import { downloadKeys } from '../../hooks/useDownloads';
 import { qbittorrentKeys } from '../../hooks/useQBittorrent';
 import { mediaKeys } from '../../hooks/useDashboardData';
 import { healthKeys } from '../../hooks/useConnectionHealth';
-import { trendingKeys } from '../../hooks/useTrending';
 import { exploreBlockKeys } from '../../hooks/useExploreBlocks';
 import { ownedMediaKeys } from '../../hooks/useOwnedMedia';
 import { learningKeys } from '../../hooks/useLearning';
-import { libraryKeys } from '../../hooks/useLibrary';
+import { libraryKeys, RECENT_LIMIT } from '../../hooks/useLibrary';
 import { libraryKeys as mediaLibraryKeys } from '../../hooks/useMediaLibrary';
 import { retryKeys } from '../../hooks/useRetry';
 import { backupKeys } from '../../hooks/useBackups';
@@ -219,7 +218,7 @@ import { serviceStatusKeys } from '../../hooks/useServiceStatus';
 import type { FilterValues } from '../../components/library/FilterPanel';
 import type { OwnedMediaState } from '../../hooks/useOwnedMedia';
 import type { LibraryItem, LibraryMediaType } from '../../types/library';
-import type { Movie, MovieDetails, Credits, HeroBannerItem } from '../../types/tmdb';
+import type { Movie, MovieDetails, Credits } from '../../types/tmdb';
 import type {
   PaginatedDownloads,
   DownloadDetails as DownloadDetailsResponse,
@@ -2176,20 +2175,41 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     component: HeroBanner as ComponentType<Record<string, unknown>>,
     penNode: 'screen-section',
     width: 1200,
+    // ux3-1-8: the hero reads the OWN library now (newest-with-backdrop from
+    // the shared recently-added query), not TMDb trending.
+    //
+    // NOTE the seed uses `RECENT_LIMIT` — the same constant the hero passes to
+    // useRecentlyAdded — because GalleryFixtureSeed writes onto the app's ONE
+    // shared QueryClient and last-fixture-wins across siblings on a key. The
+    // two `library-recently-added` fixtures below seed this same key with
+    // backdrop-less payloads, so when the gallery is browsed un-filtered they
+    // would blank this hero. Their own comment owns that trade; this one is
+    // pinned to the constant so at least the key can never drift from the hook.
     seedQueries: [
       {
-        queryKey: trendingKeys.hero('week'),
+        queryKey: libraryKeys.recent(RECENT_LIMIT),
         data: [
           {
-            id: 550,
-            mediaType: 'movie',
-            title: '鬥陣俱樂部',
-            overview: '一段關於失眠者與肥皂商人的旅程。',
-            backdropPath: '/backdrop.jpg',
-            releaseDate: '1999-10-15',
-            voteAverage: 8.4,
+            type: 'movie',
+            movie: {
+              id: 'hero-mov-1',
+              title: '鬥陣俱樂部',
+              originalTitle: 'Fight Club',
+              overview: '一段關於失眠者與肥皂商人的旅程。',
+              posterPath: '/p-hero-1.jpg',
+              backdropPath: '/backdrop.jpg',
+              releaseDate: '1999-10-15',
+              voteAverage: 8.4,
+              parseStatus: 'complete',
+              subtitleStatus: 'found',
+              subtitleLanguage: 'zh-Hant',
+              metadataSource: 'tmdb',
+              genres: ['劇情'],
+              createdAt: '2026-05-12T08:00:00Z',
+              updatedAt: '2026-05-12T08:00:00Z',
+            },
           },
-        ] satisfies HeroBannerItem[],
+        ] satisfies LibraryItem[],
       },
     ],
   },
@@ -2218,6 +2238,9 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         isRequested: () => false,
         isLoading: false,
         error: null,
+        // ux3-1-8: a settled verdict, so the fixture shows the filtered row
+        // (and its caption) rather than the un-checked passthrough state.
+        isSettled: true,
       } satisfies OwnedMediaState,
       eager: true,
     },
