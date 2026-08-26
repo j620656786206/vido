@@ -256,7 +256,7 @@ describe('HomeReadoutBand (Home v3 讀數帶 — ux3-1-7)', () => {
       expect(action()).toHaveTextContent('產生字幕');
       expect(screen.getByTestId('readout-coverage')).toHaveAttribute(
         'aria-label',
-        '繁中字幕覆蓋 3 / 7 部，前往產生字幕'
+        '繁中字幕，已覆蓋 3 / 7 部，前往產生字幕'
       );
     });
 
@@ -298,5 +298,52 @@ describe('HomeReadoutBand (Home v3 讀數帶 — ux3-1-7)', () => {
       render(<HomeReadoutBand />);
       expect(screen.getByTestId('readout-coverage-value')).toHaveTextContent('3/7');
     });
+  });
+
+  /**
+   * WCAG 2.5.3 Label in Name — all four cells failed this, caught by the
+   * 2026-08-27 critique's browser pass. 需要注意 was the worst: those four
+   * characters appeared NOWHERE in its accessible name, so voice control could
+   * not activate the cell by the label the user can see. The others reordered
+   * the words or inserted a character (今天處理 → 今天處理**了**).
+   *
+   * The rule is mechanical, which is why it is testable: the accessible name
+   * must START with the visible label, verbatim.
+   */
+  describe("[P1] WCAG 2.5.3 — every cell's accessible name starts with its visible label", () => {
+    const CELLS = [
+      ['readout-coverage', '繁中字幕'],
+      ['readout-processed', '今天處理'],
+      ['readout-attention', '需要注意'],
+      ['readout-inflight', '進行中'],
+    ] as const;
+
+    it.each(CELLS)('%s begins with 「%s」', (testId, label) => {
+      mockUseHomeSummary.mockReturnValue(result({ data: summary() }));
+      render(<HomeReadoutBand />);
+      expect(screen.getByTestId(testId).getAttribute('aria-label')).toMatch(
+        new RegExp(`^${label}`)
+      );
+    });
+
+    it.each(CELLS)(
+      '%s still begins with 「%s」 when its source is unmeasurable',
+      (testId, label) => {
+        mockUseHomeSummary.mockReturnValue(
+          result({
+            data: summary({
+              coverage: { status: 'unavailable' },
+              processedToday: { status: 'unavailable' },
+              attention: { status: 'unavailable' },
+              inFlight: { status: 'unavailable' },
+            }),
+          })
+        );
+        render(<HomeReadoutBand />);
+        expect(screen.getByTestId(testId).getAttribute('aria-label')).toMatch(
+          new RegExp(`^${label}`)
+        );
+      }
+    );
   });
 });

@@ -296,16 +296,26 @@ export function HeroBanner() {
   const selectedPosition = selectedKey ? items.findIndex((i) => heroKey(i) === selectedKey) : -1;
   const activeIndex = selectedPosition >= 0 ? selectedPosition : 0;
 
+  /**
+   * The skeleton reserves NO height. It used to be h-[250px] md:h-[400px] —
+   * the same box the resolved hero occupies — which is correct only when a
+   * hero actually arrives. When no own item can dress the hero the section
+   * returns null, so the reservation collapsed and everything below jumped:
+   * measured CLS 0.3237 (0.2139 @127ms), `home-recently-added` snapping
+   * y=652 → y=185, against a "good" threshold of 0.1 (critique 2026-08-27 P1).
+   *
+   * Reserving and not-reserving are a symmetric trade — one shifts the
+   * degraded state, the other shifts the healthy one. PRODUCT.md settles which
+   * to optimise for, and it is not a matter of taste: **降級是常態 —
+   * 多數使用者不會設滿所有 API key** (§Operating Context). The state where no
+   * backdrop exists is the ordinary one for this product's users, especially
+   * on first run, so the page must not promise a hero before it has one.
+   *
+   * `aria-busy` stays: the section is still loading, it just does not claim
+   * space it may never use.
+   */
   if (isLoading) {
-    return (
-      <section
-        data-testid="hero-banner-skeleton"
-        aria-busy="true"
-        className="relative h-[250px] w-full overflow-hidden bg-[var(--bg-secondary)] md:h-[400px]"
-      >
-        <div className="h-full w-full animate-pulse bg-[var(--bg-tertiary)] motion-reduce:animate-none" />
-      </section>
-    );
+    return <section data-testid="hero-banner-skeleton" aria-busy="true" aria-hidden="true" />;
   }
 
   // 例外訊號原則: no own item can dress the hero → the section is absent, and

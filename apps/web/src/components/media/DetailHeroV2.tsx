@@ -74,7 +74,11 @@ export function DetailHeroV2({
               <img src={poster} alt={title} className="h-full w-full object-cover" />
             ) : (
               <div
-                className="flex h-full w-full items-center justify-center text-3xl font-bold text-[var(--text-on-accent)]"
+                // --text-on-scrim, not --text-on-accent: this tile is the same
+                // hash gradient the poster cards use — clamped DARK — so the
+                // near-black --text-on-accent (#14161a) was low-contrast on it
+                // in BOTH themes, not just 日巡. Same fix, same reason.
+                className="flex h-full w-full items-center justify-center text-3xl font-bold text-[var(--text-on-scrim)]"
                 style={{ backgroundImage: `linear-gradient(135deg, ${from}, ${to})` }}
                 aria-hidden="true"
               >

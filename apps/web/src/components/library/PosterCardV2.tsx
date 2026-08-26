@@ -105,11 +105,17 @@ export function PosterCardV2({
           <img src={img} alt={title} loading="lazy" className="h-full w-full object-cover" />
         ) : (
           <div
-            // 宣紙白, not --text-on-accent: the gradient hue is title-hash-derived,
-            // and dark ink over a light hash measured 2.4:1 (critique R1 P0). The
-            // hash palette is lightness-clamped dark (ColorPlaceholder), so light
-            // text is guaranteed ≥3:1 on every tile.
-            className="flex h-full w-full items-center justify-center text-3xl font-bold text-[var(--text-primary)]"
+            // --text-on-scrim, NOT --text-primary. The reasoning that put
+            // --text-primary here was sound at the time — the hash palette is
+            // lightness-clamped dark, so a LIGHT letter clears 3:1 on every hue
+            // (critique R1 P0). Then 日巡 shipped and --text-primary inverted to
+            // ink (#16231d) while the tile, being hash-derived rather than
+            // theme-derived, did NOT. Measured in light: 1.45 / 1.75 / 2.07 /
+            // 2.18 / 2.39 — every one under the 3:1 floor, on the largest
+            // elements of a new user's homepage (critique 2026-08-27 P1).
+            // This tile is a surface that does not invert, which is exactly
+            // what --text-on-scrim is for; it is #faf6ea in BOTH themes.
+            className="flex h-full w-full items-center justify-center text-3xl font-bold text-[var(--text-on-scrim)]"
             style={{ backgroundImage: `linear-gradient(135deg, ${from}, ${to})` }}
             aria-hidden="true"
           >
