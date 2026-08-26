@@ -238,7 +238,7 @@ describe('PosterCard', () => {
     });
 
     // Critique R1 P2 supersedes MQbvp's bottom-right slot: the v2 card
-    // (PosterCardV2, H1-D-v2) put ratings bottom-LEFT, and one page carried
+    // (PosterCardV2, H1-D-v3) put ratings bottom-LEFT, and one page carried
     // both corners at once. Old card now follows the v2 recipe.
     it('[P0] rating badge sits bottom-left (aligned with PosterCardV2)', () => {
       const { container } = render(<PosterCard {...defaultProps} voteAverage={8.5} />);

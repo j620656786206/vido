@@ -67,14 +67,14 @@ describe('RecentlyAddedRowV2 (own-content 最近新增 row — four states)', ()
     vi.clearAllMocks();
   });
 
-  it('[P1] Loading — renders the poster-shaped skeleton row (H4-D-v2)', () => {
+  it('[P1] Loading — renders the poster-shaped skeleton row (H4-D-v3)', () => {
     mockUseRecentlyAdded.mockReturnValue(result({ isLoading: true }));
     render(<RecentlyAddedRowV2 />);
     expect(screen.getByTestId('home-recent-skeleton')).toBeInTheDocument();
     expect(screen.queryByTestId('home-recent-row')).toBeNull();
   });
 
-  it('[P1] Empty — graceful 「尚無最近新增」 hint, no error (H5-D-v2)', () => {
+  it('[P1] Empty — graceful 「尚無最近新增」 hint, no error (H5-D-v3)', () => {
     mockUseRecentlyAdded.mockReturnValue(result({ data: [] }));
     render(<RecentlyAddedRowV2 />);
     const empty = screen.getByTestId('home-recent-empty');
@@ -82,7 +82,7 @@ describe('RecentlyAddedRowV2 (own-content 最近新增 row — four states)', ()
     expect(screen.queryByTestId('home-recent-error')).toBeNull();
   });
 
-  it('[P1] Error — fail-soft inline banner + 重試 retries (H6-D-v2)', () => {
+  it('[P1] Error — fail-soft inline banner + 重試 retries (H6-D-v3)', () => {
     const refetch = vi.fn();
     mockUseRecentlyAdded.mockReturnValue(result({ isError: true, refetch }));
     render(<RecentlyAddedRowV2 />);

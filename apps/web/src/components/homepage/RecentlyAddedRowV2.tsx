@@ -1,10 +1,9 @@
 // Design ref: ux-design.pen Screen H1-D-v3 (k2Otv)
 // Section: own-content zone, 最近新增 row.
-// ux3-1-8 re-anchored this from H1-D-v2 (yixu1): the row itself is unchanged by
-// Home v3 (brief §4「不動：最近新增列內部」), but the frame that CONTAINS it is
-// now H1-D-v3 — the v2 frames are marked 〔已淘汰→v3〕 and get deleted once v3
-// ships. The per-state refs below still name v2 frames because v3 drew no
-// state variants (tracked: disc-2026-08-home-v3-missing-state-frames).
+// Re-anchored from the v2 frames in two steps: ux3-1-8 moved the containing
+// frame to H1-D-v3, and the v3 state frames (H4/H5/H6-D-v3) replaced the v2
+// state refs below once they were drawn. The five v2 homepage frames are now
+// deleted from the .pen.
 /**
  * Recently-added own-content row (UX Redesign Phase 3 — ux3-1-2).
  *
@@ -15,13 +14,13 @@
  * 繼續觀看, above Hero/Explore).
  *
  * Four states (§7 / N4), each fail-soft (F3) so the home page never hard-fails:
- *  - Loading  → poster-shaped skeleton row (reduced-motion aware), matches H4-D-v2.
- *  - Empty    → quiet 「尚無最近新增」 hint, graceful collapse with no top gap (H5-D-v2).
- *  - Error    → compact inline error-tint banner + 重試 (H6-D-v2); the section degrades
+ *  - Loading  → poster-shaped skeleton row (reduced-motion aware), matches H4-D-v3 (B7UO8).
+ *  - Empty    → quiet 「尚無最近新增」 hint, graceful collapse with no top gap (H5-D-v3, RvS6c).
+ *  - Error    → compact inline error-tint banner + 重試 (H6-D-v3, zRyNS); the section degrades
  *               alone, Hero/Explore below still render.
  *  - Data     → horizontal scroller of PosterCardV2.
  *
- * Header carries the 進行中 · N lifecycle chip (H1-D-v2): N = items currently being
+ * Header carries the 進行中 · N lifecycle chip (H1-D-v3): N = items currently being
  * processed (parseStatus 'pending' = 整理中), derived from the same data the row already
  * fetches — no extra request. Hidden when N = 0 (exception-signal only, like the badge).
  *
@@ -157,7 +156,7 @@ export function RecentlyAddedRowV2() {
           </button>
         </div>
       ) : cards.length === 0 ? (
-        // Sparse/empty (H5-D-v2): graceful collapse, quiet hint, no top gap.
+        // Sparse/empty (H5-D-v3): graceful collapse, quiet hint, no top gap.
         <p data-testid="home-recent-empty" className="text-sm text-[var(--text-muted)]">
           尚無最近新增
         </p>
