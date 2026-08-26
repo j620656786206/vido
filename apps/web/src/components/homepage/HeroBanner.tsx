@@ -158,7 +158,7 @@ function HeroSlide({ item, active }: { item: HeroItem; active: boolean }) {
               Shapes-amendment treatment the dot pill and the poster overlay
               badges already use). */}
           <p
-            className="inline-block rounded-[var(--radius-sm)] bg-[var(--overlay-scrim)] px-2 py-0.5 text-xs font-medium uppercase tracking-wider text-[var(--text-primary)]"
+            className="inline-block rounded-[var(--radius-sm)] bg-[var(--overlay-scrim)] px-2 py-0.5 text-xs font-medium uppercase tracking-wider text-[var(--text-on-scrim)]"
             data-testid="hero-banner-eyebrow"
           >
             最新入庫
@@ -184,7 +184,7 @@ function HeroSlide({ item, active }: { item: HeroItem; active: boolean }) {
               backdrop the success tint measured 2.95:1. Compositing the whole
               row over a known floor keeps every token's measured contrast true
               here, instead of re-deriving a hero-only palette. */}
-          <div className="mt-3 inline-flex max-w-full flex-wrap items-center gap-3 rounded-[var(--radius-md)] bg-[var(--overlay-scrim)] px-2 py-1 text-sm text-[var(--text-primary)]">
+          <div className="mt-3 inline-flex max-w-full flex-wrap items-center gap-3 rounded-[var(--radius-md)] bg-[var(--overlay-scrim)] px-2 py-1 text-sm text-[var(--text-on-scrim)]">
             {badge &&
               (badge.actionable ? (
                 // relative z-10 keeps it above the title's stretched anchor so
@@ -320,7 +320,7 @@ export function HeroBanner() {
             aria-label="上一部"
             data-testid="hero-banner-prev"
             onClick={() => goTo(activeIndex - 1)}
-            className="flex h-11 w-11 items-center justify-center text-[var(--text-primary)]/80 transition-colors hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+            className="flex h-11 w-11 items-center justify-center text-[var(--text-on-scrim)]/80 transition-colors hover:text-[var(--text-on-scrim)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -339,8 +339,8 @@ export function HeroBanner() {
                 className={cn(
                   'h-2 rounded-full transition-all',
                   idx === activeIndex
-                    ? 'w-8 bg-[var(--text-primary)]'
-                    : 'w-2 bg-[var(--text-primary)]/70'
+                    ? 'w-8 bg-[var(--text-on-scrim)]'
+                    : 'w-2 bg-[var(--text-on-scrim)]/70'
                 )}
               />
             </button>
@@ -350,7 +350,7 @@ export function HeroBanner() {
             aria-label="下一部"
             data-testid="hero-banner-next"
             onClick={() => goTo(activeIndex + 1)}
-            className="flex h-11 w-11 items-center justify-center text-[var(--text-primary)]/80 transition-colors hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+            className="flex h-11 w-11 items-center justify-center text-[var(--text-on-scrim)]/80 transition-colors hover:text-[var(--text-on-scrim)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
           >
             <ChevronRight className="h-4 w-4" />
           </button>

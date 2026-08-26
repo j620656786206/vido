@@ -97,7 +97,7 @@ function CreditPerson({ name, subtitle, profilePath }: CreditPersonProps) {
         )}
       </div>
       {/* Task 5.4: Actor name and character name */}
-      <p className="text-xs font-medium text-white truncate w-full" title={name}>
+      <p className="text-xs font-medium text-[var(--text-primary)] truncate w-full" title={name}>
         {name}
       </p>
       {subtitle && (

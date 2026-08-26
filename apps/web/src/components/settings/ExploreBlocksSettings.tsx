@@ -198,8 +198,11 @@ export function ExploreBlocksSettings() {
       )}
 
       {confirmDeleteId && (
+        /* --overlay-scrim is the modal-backdrop token and stays DARK in both
+           themes: a paper modal on paper ground needs the same boundary a dark
+           one does. Was black/60; the token is 70%. */
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-scrim)]"
           data-testid="explore-block-delete-confirm"
           role="dialog"
           aria-modal="true"
@@ -228,7 +231,7 @@ export function ExploreBlocksSettings() {
                 onClick={handleConfirmDelete}
                 disabled={deleteBlock.isPending}
                 data-testid="explore-block-delete-confirm-button"
-                className="rounded-lg bg-[var(--error)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--error-pressed)] disabled:opacity-50"
+                className="rounded-lg bg-[var(--error)] px-4 py-2 text-sm font-medium text-[var(--text-on-scrim)] hover:bg-[var(--error-pressed)] disabled:opacity-50"
               >
                 {deleteBlock.isPending ? '刪除中...' : '確認刪除'}
               </button>

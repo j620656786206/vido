@@ -74,7 +74,7 @@ export function QBittorrentStep({ data, onUpdate, onNext, onBack, onSkip }: Step
         <button
           type="button"
           onClick={onNext}
-          className="flex-1 rounded-lg bg-[var(--accent-primary)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-pressed)]"
+          className="flex-1 rounded-lg bg-[var(--accent-primary)] px-4 py-2.5 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)]"
           data-testid="next-button"
         >
           下一步

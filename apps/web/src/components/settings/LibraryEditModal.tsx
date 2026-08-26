@@ -102,7 +102,10 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
   const isSaving = createLibrary.isPending || updateLibrary.isPending;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+    /* --overlay-scrim is the modal-backdrop token and stays DARK in both themes:
+       a paper modal on paper ground needs the same boundary a dark one does.
+       Was black/60; the token is 70%. */
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-scrim)]">
       <div
         className="w-full max-w-md rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-6 shadow-xl"
         data-testid="library-edit-modal"

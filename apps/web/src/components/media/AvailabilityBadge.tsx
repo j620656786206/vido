@@ -19,7 +19,7 @@ export interface AvailabilityBadgeProps {
 //   while every V2 badge is a pill — the Shapes amendment makes the pill the
 //   lawful shape for poster-overlay micro-elements.
 const variantClasses: Record<AvailabilityBadgeVariant, string> = {
-  owned: 'bg-[var(--overlay-scrim)] text-[var(--text-primary)]',
+  owned: 'bg-[var(--overlay-scrim)] text-[var(--text-on-scrim)]',
   requested: 'bg-[var(--bg-secondary)]',
 };
 

@@ -141,7 +141,14 @@ export function PosterCardV2({
           // R1 P0, confirmed by two independent probes). Star inherits it too:
           // --warning is a STATUS colour (asked-but-not-happening), a decorative
           // rating star must not dilute it.
-          <span className="absolute bottom-1.5 left-1.5 flex items-center gap-0.5 rounded-full bg-[var(--overlay-scrim)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--text-primary)]">
+          //
+          // KNOWN DEFECT, 日巡: --text-primary is ink in light, so this reads
+          // 1.19–2.34:1 on the scrim. It is NOT fixable by swapping tokens —
+          // --text-inverse and --text-on-accent are both ink in DARK (1.13 /
+          // 1.16), so either one just moves the P0 to the default theme. The
+          // scrim does not invert, so its label must not invert either, and no
+          // such token exists yet. Blocked on an always-paper --text-on-scrim.
+          <span className="absolute bottom-1.5 left-1.5 flex items-center gap-0.5 rounded-full bg-[var(--overlay-scrim)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--text-on-scrim)]">
             <Star className="h-3 w-3 fill-current" />
             {voteAverage.toFixed(1)}
           </span>

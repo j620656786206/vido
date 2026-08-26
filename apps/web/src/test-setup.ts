@@ -71,3 +71,21 @@ if (typeof localStorage === 'undefined' || typeof localStorage.clear !== 'functi
     configurable: true,
   });
 }
+
+// jsdom does not implement matchMedia. The theme hook (⚖️ A3: follow the OS
+// when the user has expressed no choice) consults it on mount, so without a
+// stub every test that mounts the shell would crash. Defaults to "no
+// preference", i.e. the dark default — tests that care override per-spec, the
+// pattern ScanProgress.spec.tsx:59-73 already uses.
+if (typeof globalThis.matchMedia !== 'function') {
+  globalThis.matchMedia = ((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia;
+}

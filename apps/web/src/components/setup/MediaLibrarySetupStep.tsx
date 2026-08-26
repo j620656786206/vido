@@ -139,7 +139,7 @@ export function MediaLibrarySetupStep({ data, onUpdate, onNext, onBack }: StepPr
           type="button"
           onClick={onNext}
           disabled={hasEmptyPath}
-          className="flex-1 rounded-lg bg-[var(--accent-primary)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-pressed)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex-1 rounded-lg bg-[var(--accent-primary)] px-4 py-2.5 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)] disabled:cursor-not-allowed disabled:opacity-50"
           data-testid="next-button"
         >
           下一步

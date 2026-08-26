@@ -121,6 +121,10 @@ export default [
         EventSource: 'readonly',
         MessageEvent: 'readonly',
         IntersectionObserver: 'readonly',
+        // The theme hook consults prefers-color-scheme (⚖️ A3: follow the OS
+        // until the user picks a side), so these two DOM types are referenced.
+        MediaQueryList: 'readonly',
+        MediaQueryListEvent: 'readonly',
         IntersectionObserverEntry: 'readonly',
         // Node globals
         process: 'readonly',

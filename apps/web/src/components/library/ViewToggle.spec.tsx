@@ -31,7 +31,7 @@ describe('ViewToggle', () => {
     render(<ViewToggle view="grid" onViewChange={vi.fn()} />);
     const gridButton = screen.getByLabelText('格狀檢視');
     expect(gridButton.className).toContain('bg-[var(--accent-primary)]');
-    expect(gridButton.className).toContain('text-white');
+    expect(gridButton.className).toContain('text-[var(--text-on-accent)]');
   });
 
   it('applies inactive styling to list button when grid is selected', () => {

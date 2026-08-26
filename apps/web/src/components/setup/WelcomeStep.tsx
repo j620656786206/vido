@@ -40,7 +40,7 @@ export function WelcomeStep({ data, onUpdate, onNext }: StepProps) {
       <button
         type="button"
         onClick={onNext}
-        className="w-full rounded-lg bg-[var(--accent-primary)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-pressed)]"
+        className="w-full rounded-lg bg-[var(--accent-primary)] px-4 py-2.5 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)]"
         data-testid="next-button"
       >
         下一步

@@ -40,7 +40,7 @@ function EmptyState({ searchedSources }: { searchedSources?: string[] }) {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
       <Search className="h-12 w-12 text-[var(--text-muted)] mb-4" />
-      <h3 className="text-lg font-medium text-white mb-2">找不到結果</h3>
+      <h3 className="text-lg font-medium text-[var(--text-primary)] mb-2">找不到結果</h3>
       <p className="text-[var(--text-secondary)] max-w-md">試試其他關鍵字或選擇不同的來源</p>
       {searchedSources && searchedSources.length > 0 && (
         <p className="text-[var(--text-muted)] text-sm mt-2">
@@ -58,7 +58,7 @@ function InitialState() {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
       <Search className="h-12 w-12 text-[var(--text-muted)] mb-4" />
-      <h3 className="text-lg font-medium text-white mb-2">搜尋 Metadata</h3>
+      <h3 className="text-lg font-medium text-[var(--text-primary)] mb-2">搜尋 Metadata</h3>
       <p className="text-[var(--text-secondary)]">輸入至少 2 個字元開始搜尋</p>
     </div>
   );

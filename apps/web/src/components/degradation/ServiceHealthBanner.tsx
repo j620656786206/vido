@@ -98,7 +98,10 @@ export function ServiceHealthBanner({
       {onDismiss && (
         <button
           onClick={onDismiss}
-          className={cn('rounded p-1 transition-colors hover:bg-white/10', config.textColor)}
+          className={cn(
+            'rounded p-1 transition-colors hover:bg-[var(--text-primary)]/10',
+            config.textColor
+          )}
           aria-label="關閉通知"
         >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -202,9 +202,13 @@ export function PosterCard({
             data-testid="selection-checkbox"
             className={cn(
               'absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded border-2 transition-colors',
+              // Selected: the ✓ sits on a SOLID accent fill, so it wears the
+              // on-accent token. Unselected: the box floats on POSTER ART, and
+              // its white rim / black wash are the imagery relationship — no
+              // theme token owns those alphas, so they stay literal.
               selected
-                ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)] text-white'
-                : 'border-white/60 bg-black/40'
+                ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
+                : 'border-[var(--text-on-scrim)]/60 bg-[var(--overlay-scrim)]/60'
             )}
           >
             {selected && <Check className="h-4 w-4" />}
@@ -228,18 +232,18 @@ export function PosterCard({
             // neutral scrim, never green (critique R3, same ruling as 已有).
             <span
               data-testid="new-badge"
-              className="rounded-full bg-[var(--overlay-scrim)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--text-primary)]"
+              className="rounded-full bg-[var(--overlay-scrim)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--text-on-scrim)]"
             >
               新增
             </span>
           )}
           {metadataSource && (
-            <span className="rounded-full bg-[var(--overlay-scrim)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--text-primary)]">
+            <span className="rounded-full bg-[var(--overlay-scrim)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--text-on-scrim)]">
               {metadataSource}
             </span>
           )}
           {showTypeBadge && (
-            <span className="rounded bg-[var(--overlay-scrim)] px-2 py-0.5 text-xs font-medium text-[var(--text-primary)]">
+            <span className="rounded bg-[var(--overlay-scrim)] px-2 py-0.5 text-xs font-medium text-[var(--text-on-scrim)]">
               {type === 'movie' ? '電影' : '影集'}
             </span>
           )}
@@ -253,7 +257,11 @@ export function PosterCard({
               e.stopPropagation();
               onMenuClick(e);
             }}
-            className="absolute right-2 top-2 z-20 rounded-full bg-black/70 p-1.5 text-white opacity-0 transition-opacity duration-300 hover:bg-black/90 lg:group-hover:opacity-100"
+            // Kebab floats on POSTER ART, so its backing is the scrim token — dark in
+            // both themes. The icon stays literal white: it is the only value that
+            // clears the scrim in BOTH themes (see the report on --text-on-scrim).
+            // The 90% hover keeps its own alpha; no token carries it.
+            className="absolute right-2 top-2 z-20 rounded-full bg-[var(--overlay-scrim)] p-1.5 text-[var(--text-on-scrim)] opacity-0 transition-opacity duration-300 hover:bg-[var(--overlay-scrim)] lg:group-hover:opacity-100"
             aria-label="更多選項"
             data-testid="poster-menu-button"
           >
@@ -288,7 +296,7 @@ export function PosterCard({
               showRequestOverlay && 'transition-opacity duration-300 lg:group-hover:opacity-0'
             )}
           >
-            <span className="flex items-center gap-1 rounded-full bg-[var(--overlay-scrim)] px-2 py-0.5 font-mono text-xs text-[var(--text-primary)]">
+            <span className="flex items-center gap-1 rounded-full bg-[var(--overlay-scrim)] px-2 py-0.5 font-mono text-xs text-[var(--text-on-scrim)]">
               <Star className="h-3 w-3 fill-current" aria-hidden="true" />
               {voteAverage.toFixed(1)}
             </span>
@@ -305,7 +313,10 @@ export function PosterCard({
             // CR M2: group-focus-within mirrors group-hover so keyboard users who Tab
             // onto the (otherwise invisible) button get the revealed scrim, not a
             // focus ring floating on an invisible control.
-            className="pointer-events-none absolute inset-x-0 bottom-0 z-10 hidden bg-gradient-to-t from-black/80 to-transparent p-3 pt-8 opacity-0 transition-opacity duration-300 lg:block lg:group-hover:pointer-events-auto lg:group-hover:opacity-100 lg:group-focus-within:pointer-events-auto lg:group-focus-within:opacity-100"
+            // The gradient's dark stop is a scrim over POSTER ART, so it shares the
+            // scrim token with the badges and the kebab above rather than being a
+            // fourth private black. Its alpha moves 80% → the token's 70%.
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-10 hidden bg-gradient-to-t from-[var(--overlay-scrim)] to-transparent p-3 pt-8 opacity-0 transition-opacity duration-300 lg:block lg:group-hover:pointer-events-auto lg:group-hover:opacity-100 lg:group-focus-within:pointer-events-auto lg:group-focus-within:opacity-100"
           >
             <RequestButton
               tmdbId={tmdbId}

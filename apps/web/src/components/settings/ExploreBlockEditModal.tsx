@@ -108,8 +108,11 @@ export function ExploreBlockEditModal({ block, onClose }: ExploreBlockEditModalP
   const isSaving = createBlock.isPending || updateBlock.isPending;
 
   return (
+    /* --overlay-scrim is the modal-backdrop token and stays DARK in both themes:
+       a paper modal on paper ground needs the same boundary a dark one does.
+       Was black/60; the token is 70%. */
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-scrim)]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="explore-block-modal-title"

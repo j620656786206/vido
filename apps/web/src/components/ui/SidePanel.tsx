@@ -55,7 +55,10 @@ export function SidePanel({ isOpen, onClose, children, title, className }: SideP
       <div
         aria-hidden="true"
         className={cn(
-          'absolute inset-0 bg-black/50 backdrop-blur-sm',
+          /* --overlay-scrim is the modal-backdrop token and stays DARK in both
+             themes: a paper page behind a panel still needs a boundary.
+             Was black/50; the token is 70%. */
+          'absolute inset-0 bg-[var(--overlay-scrim)] backdrop-blur-sm',
           'transition-opacity duration-200',
           isOpen ? 'opacity-100' : 'opacity-0'
         )}
@@ -83,7 +86,7 @@ export function SidePanel({ isOpen, onClose, children, title, className }: SideP
         {/* Header with close button */}
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-4 py-3">
           {title && (
-            <h2 id="side-panel-title" className="text-lg font-semibold text-white">
+            <h2 id="side-panel-title" className="text-lg font-semibold text-[var(--text-primary)]">
               {title}
             </h2>
           )}
@@ -92,7 +95,7 @@ export function SidePanel({ isOpen, onClose, children, title, className }: SideP
             onClick={onClose}
             className={cn(
               'rounded-lg p-2 text-[var(--text-secondary)]',
-              'hover:bg-[var(--bg-secondary)] hover:text-white',
+              'hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]',
               'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]',
               'transition-colors',
               // Position close button on the right if no title

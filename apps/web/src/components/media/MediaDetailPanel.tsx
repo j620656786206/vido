@@ -166,7 +166,7 @@ export function MediaDetailPanel({
               />
             ))}
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-bold text-white" data-testid="detail-title">
+            <h1 className="text-xl font-bold text-[var(--text-primary)]" data-testid="detail-title">
               {title}
             </h1>
             {originalTitle && originalTitle !== title && (
@@ -228,13 +228,13 @@ export function MediaDetailPanel({
         {director && (
           <div className="mt-4">
             <span className="text-sm text-[var(--text-secondary)]">導演：</span>
-            <span className="ml-2 text-sm text-white">{director.name}</span>
+            <span className="ml-2 text-sm text-[var(--text-primary)]">{director.name}</span>
           </div>
         )}
         {tvShow?.createdBy && tvShow.createdBy.length > 0 && (
           <div className="mt-4">
             <span className="text-sm text-[var(--text-secondary)]">創作者：</span>
-            <span className="ml-2 text-sm text-white">
+            <span className="ml-2 text-sm text-[var(--text-primary)]">
               {tvShow.createdBy.map((c) => c.name).join(', ')}
             </span>
           </div>
@@ -244,7 +244,9 @@ export function MediaDetailPanel({
         {topCast.length > 0 && (
           <div className="mt-4" data-testid="detail-cast">
             <span className="text-sm text-[var(--text-secondary)]">主演：</span>
-            <span className="ml-2 text-sm text-white">{topCast.map((c) => c.name).join('、')}</span>
+            <span className="ml-2 text-sm text-[var(--text-primary)]">
+              {topCast.map((c) => c.name).join('、')}
+            </span>
           </div>
         )}
 
@@ -254,7 +256,9 @@ export function MediaDetailPanel({
             {onPlay && (
               <button
                 onClick={onPlay}
-                className="flex-1 rounded-lg bg-[var(--success)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--success)]"
+                // Label on a SOLID semantic fill — the on-accent token follows the
+                // theme onto 日巡's fills; the literal white could not.
+                className="flex-1 rounded-lg bg-[var(--success)] px-4 py-2.5 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--success)]"
                 data-testid="detail-play-button"
               >
                 播放
@@ -350,7 +354,7 @@ function TrailerSection({
       <div className="mt-6">
         <button
           onClick={() => setShowTrailers(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--bg-secondary)] px-4 py-3 text-sm text-white transition-colors hover:bg-[var(--bg-tertiary)]"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--bg-secondary)] px-4 py-3 text-sm text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-tertiary)]"
           data-testid="load-trailers-button"
         >
           <span className="text-lg">▶</span>

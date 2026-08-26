@@ -110,7 +110,7 @@ export function PresetChips({ onApplyPreset, className }: PresetChipsProps) {
             onTouchEnd={cancelLongPress}
             onTouchMove={cancelLongPress}
             title={`套用「${preset.name}」（右鍵或長按可刪除）`}
-            className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3.5 py-1 text-xs font-medium text-[var(--text-secondary)] hover:border-[var(--accent-primary)] hover:text-white"
+            className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3.5 py-1 text-xs font-medium text-[var(--text-secondary)] hover:border-[var(--accent-primary)] hover:text-[var(--text-primary)]"
           >
             {preset.name}
           </button>
@@ -119,7 +119,8 @@ export function PresetChips({ onApplyPreset, className }: PresetChipsProps) {
 
       {pendingDelete && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          // Modal backdrop — the scrim token's documented role, dark in both themes.
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-scrim)]"
           role="dialog"
           aria-modal="true"
           aria-labelledby="preset-delete-title"
@@ -135,7 +136,7 @@ export function PresetChips({ onApplyPreset, className }: PresetChipsProps) {
           <div className="relative mx-4 w-full max-w-sm rounded-xl bg-[var(--bg-secondary)] p-6 shadow-2xl">
             <h3
               id="preset-delete-title"
-              className="mb-2 text-center text-lg font-semibold text-white"
+              className="mb-2 text-center text-lg font-semibold text-[var(--text-primary)]"
             >
               刪除預設
             </h3>
@@ -156,7 +157,9 @@ export function PresetChips({ onApplyPreset, className }: PresetChipsProps) {
                 onClick={handleConfirmDelete}
                 disabled={deletePreset.isPending}
                 data-testid="preset-delete-confirm"
-                className="flex-1 rounded-lg bg-[var(--error)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--error-pressed)] disabled:opacity-50"
+                // Label on a SOLID cinnabar fill — --error is unchanged across
+                // both themes, but the label that rides it is not.
+                className="flex-1 rounded-lg bg-[var(--error)] px-4 py-2 text-sm font-medium text-[var(--text-on-scrim)] hover:bg-[var(--error-pressed)] disabled:opacity-50"
               >
                 {deletePreset.isPending ? '刪除中...' : '刪除'}
               </button>

@@ -19,11 +19,21 @@ const UNAVAILABLE_REASON = '此功能尚未實作';
  * `unavailable` is not a fourth topic — it is where routed-but-unbuilt entries
  * park, so they stop interrupting a real group.
  */
-type SettingsGroup = 'connection' | 'library' | 'maintenance' | 'unavailable';
+type SettingsGroup = 'appearance' | 'connection' | 'library' | 'maintenance' | 'unavailable';
 
-const GROUP_ORDER: SettingsGroup[] = ['connection', 'library', 'maintenance', 'unavailable'];
+// 外觀 leads: it is the only group that changes how everything else LOOKS, and
+// it is the one setting a new user is most likely to want before anything is
+// even connected (ADR D4-3 — Settings holds preferences, System holds ops).
+const GROUP_ORDER: SettingsGroup[] = [
+  'appearance',
+  'connection',
+  'library',
+  'maintenance',
+  'unavailable',
+];
 
 const GROUP_LABEL: Record<SettingsGroup, string> = {
+  appearance: '外觀',
   connection: '連線',
   library: '媒體庫',
   maintenance: '維護',
@@ -44,6 +54,12 @@ interface SettingsCategory {
  * chores. Both moves are the point of the grouping.
  */
 const SETTINGS_CATEGORIES: SettingsCategory[] = [
+  {
+    key: 'appearance',
+    label: '外觀',
+    to: '/settings/appearance',
+    group: 'appearance',
+  },
   {
     key: 'connection',
     label: '連線設定',

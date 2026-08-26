@@ -69,7 +69,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
           'flex items-center justify-center w-10 h-10 rounded-lg transition-colors',
           isFirstPage
             ? 'text-[var(--text-muted)] cursor-not-allowed'
-            : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
+            : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
         )}
         aria-label="上一頁"
       >
@@ -97,8 +97,8 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
             className={cn(
               'w-10 h-10 rounded-lg font-medium transition-colors',
               isActive
-                ? 'bg-[var(--accent-primary)] text-white'
-                : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
+                ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
+                : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
             )}
             aria-label={`第 ${page} 頁`}
             aria-current={isActive ? 'page' : undefined}
@@ -116,7 +116,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
           'flex items-center justify-center w-10 h-10 rounded-lg transition-colors',
           isLastPage
             ? 'text-[var(--text-muted)] cursor-not-allowed'
-            : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
+            : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
         )}
         aria-label="下一頁"
       >

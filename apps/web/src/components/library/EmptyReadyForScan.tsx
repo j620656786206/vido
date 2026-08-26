@@ -61,14 +61,14 @@ export function EmptyReadyForScan() {
           type="button"
           onClick={handleScan}
           disabled={isPending}
-          className="rounded-lg bg-[var(--accent-primary)] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-pressed)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-lg bg-[var(--accent-primary)] px-5 py-2.5 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)] disabled:cursor-not-allowed disabled:opacity-60"
           data-testid="empty-ready-for-scan-trigger-btn"
         >
           {isPending ? '掃描中…' : '立即掃描'}
         </button>
         <Link
           to="/downloads"
-          className="rounded-lg border border-[var(--border-subtle)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--text-muted)] hover:text-white"
+          className="rounded-lg border border-[var(--border-subtle)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--text-muted)] hover:text-[var(--text-primary)]"
           data-testid="empty-ready-for-scan-downloads-btn"
         >
           前往下載中

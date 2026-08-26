@@ -131,6 +131,10 @@ describe('SettingsLayout', () => {
       await screen.findByTestId('settings-tabs');
       const order = SETTINGS_CATEGORIES.map((c) => c.key);
       expect(order).toEqual([
+        // 外觀 leads (日巡 light-theme story): the only group that changes how
+        // everything else LOOKS, and the one a new user may want before
+        // anything is connected.
+        'appearance',
         'connection',
         'keys',
         'status', // moved UP to sit with what it reports on
@@ -145,20 +149,25 @@ describe('SettingsLayout', () => {
     });
 
     it('keeps every group inside the ≤4-per-decision-point rule', () => {
-      const sizes = ['connection', 'library', 'maintenance', 'unavailable'].map(
+      const sizes = ['appearance', 'connection', 'library', 'maintenance', 'unavailable'].map(
         (g) => SETTINGS_CATEGORIES.filter((c) => c.group === g).length
       );
       expect(Math.max(...sizes)).toBeLessThanOrEqual(4);
       // export graduated to maintenance (fix-settings-graduation) — the
       // exporter had been live inside 備份與還原 all along; maintenance hits
       // the ≤4 ceiling exactly and 尚未開放 shrinks to performance alone.
-      expect(sizes).toEqual([3, 2, 4, 1]);
+      // 外觀 is a group of one on purpose — a theme choice is not a settings
+      // page's worth of options, and folding it into 連線 would put a display
+      // preference among service credentials.
+      expect(sizes).toEqual([1, 3, 2, 4, 1]);
     });
 
     it('draws a divider between groups but never before the first', async () => {
       renderWithRouter();
       await screen.findByTestId('settings-tabs');
-      expect(screen.queryByTestId('settings-tabs-divider-connection')).toBeNull();
+      // 外觀 is first now, so IT is the group that must carry no divider.
+      expect(screen.queryByTestId('settings-tabs-divider-appearance')).toBeNull();
+      expect(screen.getByTestId('settings-tabs-divider-connection')).toBeInTheDocument();
       expect(screen.getByTestId('settings-tabs-divider-library')).toBeInTheDocument();
       expect(screen.getByTestId('settings-tabs-divider-maintenance')).toBeInTheDocument();
       expect(screen.getByTestId('settings-tabs-divider-unavailable')).toBeInTheDocument();

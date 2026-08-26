@@ -106,7 +106,11 @@ export function MediaFileCard({ file, isParsing = false, onClick, className }: M
       {/* Content */}
       <div className="flex-1 p-3">
         {/* Title */}
-        <h3 className="text-sm font-medium text-white line-clamp-2 mb-1" title={file.filename}>
+        {/* Sits under the poster on the card ground, not over the artwork. */}
+        <h3
+          className="text-sm font-medium text-[var(--text-primary)] line-clamp-2 mb-1"
+          title={file.filename}
+        >
           {displayTitle}
         </h3>
 
@@ -173,7 +177,9 @@ export function MediaFileRow({ file, isParsing = false, onClick, className }: Me
       {/* Title and info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-medium text-white truncate">{displayTitle}</h3>
+          <h3 className="text-sm font-medium text-[var(--text-primary)] truncate">
+            {displayTitle}
+          </h3>
           {year && (
             <span className="text-xs text-[var(--text-secondary)] flex-shrink-0">{year}</span>
           )}

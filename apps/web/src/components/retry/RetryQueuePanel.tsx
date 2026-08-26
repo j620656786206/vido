@@ -72,7 +72,8 @@ export function RetryQueuePanel({ className }: RetryQueuePanelProps) {
     <div className={cn('space-y-4', className)} data-testid="retry-queue-panel">
       {/* Header with stats */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium text-white flex items-center gap-2">
+        {/* Panel heading on the page ground — ink, not paper. */}
+        <h3 className="text-lg font-medium text-[var(--text-primary)] flex items-center gap-2">
           <RefreshCw className="h-5 w-5" />
           重試隊列
         </h3>
@@ -171,7 +172,9 @@ function RetryItemCard({
           className={cn(
             'flex-1 flex items-center justify-center gap-1.5',
             'rounded px-3 py-1.5 text-sm font-medium',
-            'bg-[var(--accent-primary)] hover:bg-[var(--accent-pressed)] text-white',
+            // Label on a solid --accent-primary fill: the on-accent token flips
+            // with the theme, a literal white cannot.
+            'bg-[var(--accent-primary)] hover:bg-[var(--accent-pressed)] text-[var(--text-on-accent)]',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             'transition-colors'
           )}

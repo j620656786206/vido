@@ -170,7 +170,9 @@ export function FilterPanel({
 
   return (
     <div className="flex h-full flex-col" data-testid="filter-panel">
-      {!instant && <h3 className="mb-4 text-sm font-semibold text-white">篩選條件</h3>}
+      {!instant && (
+        <h3 className="mb-4 text-sm font-semibold text-[var(--text-primary)]">篩選條件</h3>
+      )}
 
       {/* Type Section */}
       <div className="mb-4">
@@ -313,7 +315,7 @@ export function FilterPanel({
           <button
             onClick={handleApply}
             data-testid="filter-apply"
-            className="flex-1 rounded-md bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-hover)]"
+            className="flex-1 rounded-md bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-hover)]"
           >
             套用
           </button>

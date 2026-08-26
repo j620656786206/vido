@@ -110,7 +110,7 @@ export function TrailerModal({ open, onClose, mediaType, tmdbId, title }: Traile
           onClick={onClose}
           aria-label="關閉預告片"
           data-testid="trailer-modal-close"
-          className="absolute -top-10 right-0 flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-white transition-colors hover:bg-white/40"
+          className="absolute -top-10 right-0 flex h-11 w-11 items-center justify-center rounded-full bg-[var(--text-on-scrim)]/20 text-[var(--text-on-scrim)] transition-colors hover:bg-[var(--text-on-scrim)]/40"
         >
           <X className="h-5 w-5" />
         </button>
@@ -145,6 +145,9 @@ export function TrailerModal({ open, onClose, mediaType, tmdbId, title }: Traile
           </div>
         )}
 
+        {/* The letterbox below is literal black on purpose, in both themes:
+            YouTube's own player chrome is black, so a paper-white box in 日巡
+            would frame the video in a bright halo. */}
         {!isLoading && trailer && (
           <div className="aspect-video w-full overflow-hidden rounded-lg bg-black">
             <iframe

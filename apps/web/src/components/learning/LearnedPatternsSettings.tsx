@@ -59,7 +59,7 @@ export function LearnedPatternsSettings({ onError }: LearnedPatternsSettingsProp
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Lightbulb className="h-5 w-5 text-[var(--warning-text)]" />
-          <h3 className="text-lg font-medium text-white">自訂規則</h3>
+          <h3 className="text-lg font-medium text-[var(--text-primary)]">自訂規則</h3>
         </div>
         <span className="text-sm text-[var(--text-secondary)]" data-testid="patterns-count">
           已記住 {stats?.totalPatterns ?? patterns.length} 個自訂規則
@@ -113,7 +113,9 @@ export function LearnedPatternsSettings({ onError }: LearnedPatternsSettingsProp
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-sm text-white truncate">{pattern.pattern}</span>
+                    <span className="font-mono text-sm text-[var(--text-primary)] truncate">
+                      {pattern.pattern}
+                    </span>
                     <span
                       className={cn(
                         'px-1.5 py-0.5 rounded text-xs',

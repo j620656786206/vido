@@ -10,7 +10,8 @@ function PendingPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Clock className="h-6 w-6 text-[var(--warning-text)]" />
-        <h1 className="text-2xl font-bold text-white">待解析</h1>
+        {/* Page-ground heading — ink, not paper: it sits on --bg-primary. */}
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">待解析</h1>
       </div>
 
       <div className="rounded-xl bg-[var(--bg-secondary)]/50 p-8 text-center">

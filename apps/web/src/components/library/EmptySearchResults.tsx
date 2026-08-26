@@ -25,7 +25,7 @@ export function EmptySearchResults({ query, onClear }: EmptySearchResultsProps) 
       <button
         onClick={onClear}
         className="px-4 py-2 bg-[var(--bg-tertiary)] text-[var(--text-secondary)] rounded-lg text-sm
-                   hover:bg-[var(--bg-tertiary)] hover:text-white transition-colors
+                   hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] transition-colors
                    focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
         type="button"
       >

@@ -16,8 +16,11 @@ export function RestoreConfirmDialog({
   onCancel,
 }: RestoreConfirmDialogProps) {
   return (
+    /* --overlay-scrim is the modal-backdrop token and stays DARK in both themes:
+       a paper modal on paper ground needs the same boundary a dark one does.
+       Was black/60; the token is 70%. */
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-scrim)]"
       data-testid="restore-confirm-dialog"
     >
       <div className="mx-4 w-full max-w-md rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-6 shadow-2xl">

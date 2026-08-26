@@ -73,7 +73,7 @@ export function FilterChipBar({
         <button
           onClick={onClearAll}
           data-testid="clear-all-filters"
-          className="text-sm text-[var(--text-secondary)] underline-offset-2 hover:text-white hover:underline"
+          className="text-sm text-[var(--text-secondary)] underline-offset-2 hover:text-[var(--text-primary)] hover:underline"
         >
           清除全部
         </button>
@@ -85,7 +85,7 @@ export function FilterChipBar({
           onClick={onSavePreset}
           data-testid="save-preset-button"
           aria-label="儲存篩選"
-          className="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] px-3 py-1 text-xs text-[var(--text-muted)] hover:border-[var(--accent-primary)] hover:text-white"
+          className="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] px-3 py-1 text-xs text-[var(--text-muted)] hover:border-[var(--accent-primary)] hover:text-[var(--text-primary)]"
         >
           <Plus className="h-3 w-3" />
           儲存篩選

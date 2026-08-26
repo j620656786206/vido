@@ -169,7 +169,8 @@ export function ManualSearchDialog({
           keyboard users close via Escape) */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        // Modal backdrop — the scrim token's documented role, dark in both themes.
+        className="absolute inset-0 bg-[var(--overlay-scrim)] backdrop-blur-sm"
         data-testid="dialog-backdrop"
         onClick={onClose}
       />
@@ -186,14 +187,14 @@ export function ManualSearchDialog({
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-6 py-4">
-          <h2 id="manual-search-title" className="text-xl font-semibold text-white">
+          <h2 id="manual-search-title" className="text-xl font-semibold text-[var(--text-primary)]">
             手動搜尋 Metadata
           </h2>
           <button
             onClick={onClose}
             className={cn(
               'rounded-lg p-2 text-[var(--text-secondary)]',
-              'hover:bg-[var(--bg-secondary)] hover:text-white',
+              'hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]',
               'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]',
               'transition-colors'
             )}
@@ -224,7 +225,7 @@ export function ManualSearchDialog({
               className={cn(
                 'w-full pl-10 pr-4 py-3',
                 'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg',
-                'text-white placeholder-[var(--text-muted)]',
+                'text-[var(--text-primary)] placeholder-[var(--text-muted)]',
                 'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
                 'transition-colors'
               )}
@@ -247,9 +248,11 @@ export function ManualSearchDialog({
                   onClick={() => setMediaType('movie')}
                   className={cn(
                     'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+                    // Selected = label on a SOLID accent fill; unselected rides
+                    // the segmented control's own --bg-secondary ground.
                     mediaType === 'movie'
-                      ? 'bg-[var(--accent-primary)] text-white'
-                      : 'text-[var(--text-secondary)] hover:text-white'
+                      ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                   )}
                 >
                   電影
@@ -259,8 +262,8 @@ export function ManualSearchDialog({
                   className={cn(
                     'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
                     mediaType === 'tv'
-                      ? 'bg-[var(--accent-primary)] text-white'
-                      : 'text-[var(--text-secondary)] hover:text-white'
+                      ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                   )}
                 >
                   影集
@@ -276,7 +279,7 @@ export function ManualSearchDialog({
                 onChange={(e) => setSource(e.target.value as SourceType)}
                 className={cn(
                   'px-3 py-1.5 rounded-lg text-sm',
-                  'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-white',
+                  'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)]',
                   'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]'
                 )}
               >
@@ -309,12 +312,14 @@ export function ManualSearchDialog({
 
         {/* Confirmation Dialog */}
         {showConfirmation && selectedItem && (
-          <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+          // Nested-dialog backdrop — the scrim token's documented role, and it
+          // already carried the token's own 70%.
+          <div className="absolute inset-0 bg-[var(--overlay-scrim)] flex items-center justify-center">
             <div
               className="bg-[var(--bg-secondary)] rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl"
               data-testid="confirmation-dialog"
             >
-              <h3 className="text-lg font-semibold text-white mb-4">確認選擇</h3>
+              <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">確認選擇</h3>
               <div className="flex gap-4 mb-6">
                 {selectedItem.posterUrl && (
                   <img
@@ -324,7 +329,7 @@ export function ManualSearchDialog({
                   />
                 )}
                 <div>
-                  <p className="text-white font-medium">{selectedItem.title}</p>
+                  <p className="text-[var(--text-primary)] font-medium">{selectedItem.title}</p>
                   {selectedItem.titleZhTW && selectedItem.titleZhTW !== selectedItem.title && (
                     <p className="text-[var(--text-secondary)] text-sm">{selectedItem.titleZhTW}</p>
                   )}
@@ -344,7 +349,8 @@ export function ManualSearchDialog({
                   onClick={handleConfirm}
                   disabled={applyMetadata.isPending}
                   className={cn(
-                    'px-4 py-2 rounded-lg bg-[var(--accent-primary)] text-white',
+                    // Label on a SOLID accent fill, not on a page ground.
+                    'px-4 py-2 rounded-lg bg-[var(--accent-primary)] text-[var(--text-on-accent)]',
                     'hover:bg-[var(--accent-pressed)] transition-colors',
                     'disabled:opacity-50 disabled:cursor-not-allowed',
                     'flex items-center gap-2'

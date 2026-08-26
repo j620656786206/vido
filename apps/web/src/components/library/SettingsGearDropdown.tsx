@@ -63,7 +63,7 @@ export function SettingsGearDropdown({
     <div ref={dropdownRef} className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="rounded-lg p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-white"
+        className="rounded-lg p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
         aria-label="媒體庫設定"
         data-testid="settings-gear-button"
       >
@@ -91,7 +91,7 @@ export function SettingsGearDropdown({
                   className={cn(
                     'flex-1 rounded-md px-3 py-1.5 text-sm transition-colors',
                     preferences.density === size
-                      ? 'bg-[var(--accent-primary)] text-white'
+                      ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
                       : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
                   )}
                 >
@@ -113,7 +113,7 @@ export function SettingsGearDropdown({
               id="gear-default-sort"
               value={preferences.defaultSort}
               onChange={(e) => updatePref({ defaultSort: e.target.value })}
-              className="w-full rounded-md bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-white outline-none"
+              className="w-full rounded-md bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none"
             >
               <option value="created_at">加入日期</option>
               <option value="title">標題</option>
@@ -138,7 +138,7 @@ export function SettingsGearDropdown({
                   className={cn(
                     'flex-1 rounded-md px-3 py-1.5 text-sm transition-colors',
                     preferences.titleLanguage === lang
-                      ? 'bg-[var(--accent-primary)] text-white'
+                      ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
                       : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
                   )}
                 >

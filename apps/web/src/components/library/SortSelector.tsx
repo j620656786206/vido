@@ -66,7 +66,7 @@ export function SortSelector({ sortBy, sortOrder, onSortChange }: SortSelectorPr
     <div ref={dropdownRef} className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center gap-2 rounded-lg bg-[var(--bg-secondary)] px-3 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-white"
+        className="inline-flex items-center gap-2 rounded-lg bg-[var(--bg-secondary)] px-3 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
         aria-label="排序方式"
         data-testid="sort-selector-button"
       >
@@ -94,8 +94,8 @@ export function SortSelector({ sortBy, sortOrder, onSortChange }: SortSelectorPr
               className={cn(
                 'flex w-full items-center justify-between px-4 py-2 text-sm transition-colors',
                 sortBy === option.field
-                  ? 'bg-[var(--accent-primary)] text-white'
-                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
+                  ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
               )}
             >
               <span>{option.label}</span>

@@ -203,7 +203,10 @@ export function MetadataEditorDialog({
       {/* Backdrop — deliberately NOT click-to-dismiss: this is an edit form
           and an accidental backdrop click would discard unsaved changes.
           Keyboard users close via Escape; mouse users via the 關閉 button. */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      {/* --overlay-scrim is the modal-backdrop token and stays DARK in both
+          themes: a paper modal on paper ground needs the same boundary a dark
+          one does. Was black/60; the token is 70%. */}
+      <div className="absolute inset-0 bg-[var(--overlay-scrim)] backdrop-blur-sm" />
 
       {/* Dialog */}
       <div
@@ -217,14 +220,17 @@ export function MetadataEditorDialog({
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-6 py-4">
-          <h2 id="metadata-editor-title" className="text-xl font-semibold text-white">
+          <h2
+            id="metadata-editor-title"
+            className="text-xl font-semibold text-[var(--text-primary)]"
+          >
             編輯媒體資訊
           </h2>
           <button
             onClick={onClose}
             className={cn(
               'rounded-lg p-2 text-[var(--text-secondary)]',
-              'hover:bg-[var(--bg-secondary)] hover:text-white',
+              'hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]',
               'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]',
               'transition-colors'
             )}
@@ -254,7 +260,7 @@ export function MetadataEditorDialog({
               className={cn(
                 'w-full px-4 py-2',
                 'bg-[var(--bg-secondary)] border rounded-lg',
-                'text-white placeholder-[var(--text-muted)]',
+                'text-[var(--text-primary)] placeholder-[var(--text-muted)]',
                 'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
                 'transition-colors',
                 errors.title ? 'border-[var(--error)]' : 'border-[var(--border-subtle)]'
@@ -281,7 +287,7 @@ export function MetadataEditorDialog({
               className={cn(
                 'w-full px-4 py-2',
                 'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg',
-                'text-white placeholder-[var(--text-muted)]',
+                'text-[var(--text-primary)] placeholder-[var(--text-muted)]',
                 'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
                 'transition-colors'
               )}
@@ -304,7 +310,7 @@ export function MetadataEditorDialog({
               className={cn(
                 'w-full px-4 py-2',
                 'bg-[var(--bg-secondary)] border rounded-lg',
-                'text-white placeholder-[var(--text-muted)]',
+                'text-[var(--text-primary)] placeholder-[var(--text-muted)]',
                 'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
                 'transition-colors',
                 errors.year ? 'border-[var(--error)]' : 'border-[var(--border-subtle)]'
@@ -339,8 +345,8 @@ export function MetadataEditorDialog({
                   className={cn(
                     'px-3 py-1.5 rounded-full text-sm font-medium transition-colors',
                     selectedGenres?.includes(genre.value)
-                      ? 'bg-[var(--accent-primary)] text-white'
-                      : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
+                      ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
+                      : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
                   )}
                 >
                   {genre.label}
@@ -364,7 +370,7 @@ export function MetadataEditorDialog({
               className={cn(
                 'w-full px-4 py-2',
                 'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg',
-                'text-white placeholder-[var(--text-muted)]',
+                'text-[var(--text-primary)] placeholder-[var(--text-muted)]',
                 'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
                 'transition-colors'
               )}
@@ -384,7 +390,7 @@ export function MetadataEditorDialog({
               {castList?.map((actor) => (
                 <span
                   key={actor}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-[var(--bg-secondary)] text-white rounded-lg text-sm"
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-[var(--bg-secondary)] text-[var(--text-primary)] rounded-lg text-sm"
                 >
                   {actor}
                   <button
@@ -405,7 +411,7 @@ export function MetadataEditorDialog({
               className={cn(
                 'w-full px-4 py-2',
                 'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg',
-                'text-white placeholder-[var(--text-muted)]',
+                'text-[var(--text-primary)] placeholder-[var(--text-muted)]',
                 'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
                 'transition-colors'
               )}
@@ -435,7 +441,7 @@ export function MetadataEditorDialog({
               className={cn(
                 'w-full px-4 py-2',
                 'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg',
-                'text-white placeholder-[var(--text-muted)]',
+                'text-[var(--text-primary)] placeholder-[var(--text-muted)]',
                 'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
                 'transition-colors resize-none'
               )}
@@ -458,7 +464,7 @@ export function MetadataEditorDialog({
               className={cn(
                 'w-full px-4 py-2',
                 'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg',
-                'text-white placeholder-[var(--text-muted)]',
+                'text-[var(--text-primary)] placeholder-[var(--text-muted)]',
                 'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
                 'transition-colors'
               )}
@@ -487,7 +493,7 @@ export function MetadataEditorDialog({
               onClick={handleSubmit(onSubmit)}
               disabled={updateMutation.isPending || !isDirty}
               className={cn(
-                'px-4 py-2 rounded-lg bg-[var(--accent-primary)] text-white',
+                'px-4 py-2 rounded-lg bg-[var(--accent-primary)] text-[var(--text-on-accent)]',
                 'hover:bg-[var(--accent-pressed)] transition-colors',
                 'disabled:opacity-50 disabled:cursor-not-allowed',
                 'flex items-center gap-2'

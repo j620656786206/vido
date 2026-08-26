@@ -90,7 +90,7 @@ export function FloatingParseProgressCard({
           {isParsing && <Loader2 className="h-4 w-4 text-[var(--accent-text)] animate-spin" />}
           {isSuccess && <CheckCircle className="h-4 w-4 text-[var(--success-text)]" />}
           {isFailed && <XCircle className="h-4 w-4 text-[var(--error-text)]" />}
-          <span className="font-medium text-white">
+          <span className="font-medium text-[var(--text-primary)]">
             {isParsing && '正在解析...'}
             {isSuccess && '✅ 解析完成！'}
             {isFailed && '❌ 解析失敗'}
@@ -100,7 +100,7 @@ export function FloatingParseProgressCard({
         <div className="flex items-center gap-1">
           <button
             onClick={() => setIsMinimized(!isMinimized)}
-            className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-white transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
             aria-label={isMinimized ? '展開' : '縮小'}
             data-testid="minimize-button"
           >
@@ -108,7 +108,7 @@ export function FloatingParseProgressCard({
           </button>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-white transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
             aria-label="關閉進度卡片"
             data-testid="close-button"
           >
@@ -124,7 +124,7 @@ export function FloatingParseProgressCard({
           <div className="space-y-1.5">
             <div className="flex justify-between text-sm">
               <span className="text-[var(--text-secondary)]">進度</span>
-              <span className="text-white">{progress.percentage}%</span>
+              <span className="text-[var(--text-primary)]">{progress.percentage}%</span>
             </div>
             <div
               className="h-2 bg-[var(--bg-tertiary)] rounded-full overflow-hidden"
@@ -191,7 +191,7 @@ export function FloatingParseProgressCard({
           <span className="text-[var(--text-secondary)] truncate flex-1 mr-2">
             {progress.filename}
           </span>
-          <span className="text-white font-medium">{progress.percentage}%</span>
+          <span className="text-[var(--text-primary)] font-medium">{progress.percentage}%</span>
         </div>
       )}
 

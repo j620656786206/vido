@@ -240,7 +240,8 @@ function ComponentGalleryPage() {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <h1 className="mb-4 text-2xl font-bold text-white">Access Denied</h1>
+          {/* Page-ground heading — ink, not paper: it sits on --bg-primary. */}
+          <h1 className="mb-4 text-2xl font-bold text-[var(--text-primary)]">Access Denied</h1>
           <p className="text-[var(--text-secondary)]">
             This page is only available in test environments.
           </p>
@@ -256,7 +257,10 @@ function ComponentGalleryPage() {
   if (manifest) {
     return (
       <div className="p-8" data-testid="component-gallery-manifest">
-        <h1 className="mb-2 text-2xl font-bold text-white">Component Gallery Manifest</h1>
+        {/* Page-ground heading — ink, not paper: it sits on --bg-primary. */}
+        <h1 className="mb-2 text-2xl font-bold text-[var(--text-primary)]">
+          Component Gallery Manifest
+        </h1>
         <p className="mb-4 text-sm text-[var(--text-secondary)]">
           {GALLERY_FIXTURES.length} fixtures. Visual spec consumes this list, then visits{' '}
           <code>/test/gallery?fixture=&lt;id&gt;</code> per fixture.
@@ -290,7 +294,8 @@ function ComponentGalleryPage() {
   return (
     <div className="p-8" data-testid="component-gallery-page">
       <div className="mx-auto max-w-7xl">
-        <h1 className="mb-2 text-2xl font-bold text-white">
+        {/* Page-ground heading — ink, not paper: it sits on --bg-primary. */}
+        <h1 className="mb-2 text-2xl font-bold text-[var(--text-primary)]">
           Component Visual Gallery (story 19-4 / 19-4b)
         </h1>
         <p className="mb-8 text-sm text-[var(--text-secondary)]">

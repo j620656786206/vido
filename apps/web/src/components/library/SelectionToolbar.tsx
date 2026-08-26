@@ -26,7 +26,10 @@ export function SelectionToolbar({
       className="sticky top-0 z-20 flex flex-col gap-2 rounded-lg bg-[var(--bg-secondary)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
     >
       <div className="flex items-center gap-4">
-        <span className="text-sm font-medium text-white" data-testid="selected-count">
+        <span
+          className="text-sm font-medium text-[var(--text-primary)]"
+          data-testid="selected-count"
+        >
           已選取 {selectedCount} 項
         </span>
       </div>
@@ -36,7 +39,7 @@ export function SelectionToolbar({
           disabled={isProcessing}
           data-testid="batch-reparse-btn"
           aria-label="重新解析"
-          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-white disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] disabled:opacity-50"
         >
           <RefreshCw size={14} />
           <span className="hidden sm:inline">重新解析</span>
@@ -46,7 +49,7 @@ export function SelectionToolbar({
           disabled={isProcessing}
           data-testid="batch-export-btn"
           aria-label="匯出中繼資料"
-          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-white disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] disabled:opacity-50"
         >
           <Download size={14} />
           <span className="hidden sm:inline">匯出中繼資料</span>
@@ -58,7 +61,7 @@ export function SelectionToolbar({
           disabled={isProcessing}
           data-testid="batch-subtitle-btn"
           aria-label="批次生成字幕"
-          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-white disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] disabled:opacity-50"
         >
           <Captions size={14} />
           <span className="hidden sm:inline">批次生成字幕</span>
@@ -77,7 +80,7 @@ export function SelectionToolbar({
         <button
           onClick={onCancel}
           data-testid="batch-cancel-btn"
-          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-white"
+          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
         >
           <X size={14} />
           取消

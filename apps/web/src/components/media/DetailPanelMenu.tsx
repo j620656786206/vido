@@ -34,7 +34,7 @@ export function DetailPanelMenu({ onReparse, onExport, onDelete }: DetailPanelMe
           setIsOpen(nextOpen);
           if (!nextOpen) setShowConfirm(false);
         }}
-        className="rounded-lg p-1.5 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-white"
+        className="rounded-lg p-1.5 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
         aria-label="更多操作"
         aria-expanded={isOpen}
         aria-haspopup="menu"
@@ -94,7 +94,9 @@ export function DetailPanelMenu({ onReparse, onExport, onDelete }: DetailPanelMe
                     setIsOpen(false);
                     setShowConfirm(false);
                   }}
-                  className="rounded bg-[var(--error)] px-3 py-1 text-xs text-white hover:bg-[var(--error)]"
+                  // Label on a SOLID semantic fill, so it takes the on-accent token:
+                  // the literal white could not follow 日巡, the token does.
+                  className="rounded bg-[var(--error)] px-3 py-1 text-xs text-[var(--text-on-scrim)] hover:bg-[var(--error)]"
                   data-testid="confirm-delete"
                 >
                   確定

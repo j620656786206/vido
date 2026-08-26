@@ -63,13 +63,13 @@ export function SearchBar({
         placeholder={placeholder}
         aria-label="搜尋"
         className="w-full pl-10 pr-10 py-3 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg
-                   text-white placeholder-[var(--text-muted)] focus:outline-none focus:ring-2
+                   text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2
                    focus:ring-[var(--accent-primary)] focus:border-transparent transition-colors"
       />
       {value && (
         <button
           onClick={handleClear}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-white
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]
                      transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] rounded"
           aria-label="清除搜尋"
           type="button"

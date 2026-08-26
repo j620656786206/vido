@@ -182,7 +182,7 @@ export function GlossaryRowV2({
                 onDelete(term.id);
               }}
               data-testid={`glossary-delete-confirm-${term.id}`}
-              className="flex min-h-[44px] items-center justify-center rounded-[var(--radius-md)] bg-[var(--error)] px-4 text-sm font-medium text-[var(--text-on-accent)]"
+              className="flex min-h-[44px] items-center justify-center rounded-[var(--radius-md)] bg-[var(--error)] px-4 text-sm font-medium text-[var(--text-on-scrim)]"
             >
               刪除
             </button>
