@@ -35,7 +35,7 @@ function reducedMotionTokenBlock(): string {
 
 describe('motion tokens', () => {
   const TIME = ['motion-touch', 'motion-state', 'motion-move', 'motion-arrive', 'motion-leave'];
-  const DISTANCE = ['motion-lift', 'motion-rise', 'motion-turn'];
+  const DISTANCE = ['motion-lift', 'motion-press', 'motion-rise', 'motion-turn'];
 
   it.each([...TIME, ...DISTANCE, 'breath'])('--%s is declared in :root', (name) => {
     expect(CSS).toMatch(new RegExp(`^\\s*--${name}:`, 'm'));
@@ -67,6 +67,22 @@ describe('motion tokens', () => {
   it('the in-flight breath is slow enough to read as alive, not as alarm', () => {
     expect(Number(CSS.match(/--breath:\s*(\d+)ms/)![1])).toBeGreaterThanOrEqual(1500);
   });
+
+  /**
+   * ⚠️ THE ONE THAT SHIPPED BROKEN ONCE. A press state written as
+   * `active:scale-100` reads like feedback and is a NO-OP: 1 is where the
+   * element already sits. On desktop the bug hides, because hover has moved
+   * the card to 1.02 first and the press appears to settle it. On a phone
+   * there is no hover, so the tap does nothing at all — on the surface
+   * PRODUCT.md calls 同等重要. The press value must be BELOW rest, or it is
+   * not a press.
+   */
+  it('--motion-press goes BELOW rest — a press that lands on 1 is a no-op on touch', () => {
+    const press = Number(CSS.match(/--motion-press:\s*([\d.]+)\s*;/)![1]);
+    const lift = Number(CSS.match(/--motion-lift:\s*([\d.]+)\s*;/)![1]);
+    expect(press, '--motion-press must be < 1 or touch gets no feedback').toBeLessThan(1);
+    expect(lift, '--motion-lift must be > 1 or hover gets no feedback').toBeGreaterThan(1);
+  });
 });
 
 describe('prefers-reduced-motion', () => {
@@ -90,6 +106,7 @@ describe('prefers-reduced-motion', () => {
   // spatial amount actually stops the movement.
   it('every DISTANCE token goes to zero, so nothing snaps into a new position', () => {
     expect(block).toMatch(/--motion-lift:\s*1\s*;/);
+    expect(block).toMatch(/--motion-press:\s*1\s*;/);
     expect(block).toMatch(/--motion-rise:\s*0px/);
     expect(block).toMatch(/--motion-turn:\s*0deg/);
   });

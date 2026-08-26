@@ -147,6 +147,11 @@
    * "do not move" while keeping the colour feedback that proves a click landed.
    * See the @media (prefers-reduced-motion) block below. */
   --motion-lift: 1.02; /* card hover scale */
+  /* The press. It has to be its own value, and it has to be BELOW 1: on a
+   * phone there is no hover, so `active:scale-100` — which reads like a press
+   * state — is a no-op, because 1 is already where the card is sitting. Touch
+   * feedback only exists if the card goes somewhere it was not. */
+  --motion-press: 0.97;
   --motion-rise: 8px; /* the travel in fadeIn and any enter-from-below */
   --motion-turn: 90deg; /* the 夜行⇄日巡 icon swap — sun and moon trade places */
 
@@ -293,6 +298,7 @@
     --motion-arrive: 1ms;
     --motion-leave: 1ms;
     --motion-lift: 1;
+    --motion-press: 1;
     --motion-rise: 0px;
     --motion-turn: 0deg;
   }

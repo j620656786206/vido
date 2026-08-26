@@ -86,14 +86,18 @@ export function PosterCardV2({
       {/* ① 回應手勢, on --motion-touch and --motion-lift so reduced motion holds
           the scale at 1 while the title still turns gold — the hover is never
           silent, it just stops moving.
+          The press goes to --motion-press (BELOW 1), not back to 1. PRODUCT.md
+          says 手機與桌機同等重要, and on a phone there is no hover to答: a card
+          that only reacts to :hover has no feedback at all on the surface half
+          the users are on. `active:scale-100` looks like a press state and is a
+          no-op, because 1 is where the card already sits. (v1 PosterCard has had
+          active:scale-[0.98] since bugfix-10-4; this brings V2 in line.)
           NO shadow escalation on hover, deliberately: DESIGN.md's Tone-First
           Rule rations shadow to things that genuinely float (11 uses app-wide
           against 525 tone steps), and lifting every poster in a grid would spend
-          that budget on the most repeated element in the app. The press state is
-          the one place a card may go BELOW rest — settling back to 1 answers the
-          tap on touch, where there is no hover to answer it. */}
+          that budget on the most repeated element in the app. */}
       <div
-        className={`relative aspect-[2/3] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--bg-secondary)] shadow-[var(--shadow-md)] transition-transform duration-[var(--motion-touch)] ease-[var(--ease-settle)] group-hover/card:scale-[var(--motion-lift)] group-focus-visible/card:scale-[var(--motion-lift)] group-active/card:scale-100 ${
+        className={`relative aspect-[2/3] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--bg-secondary)] shadow-[var(--shadow-md)] transition-transform duration-[var(--motion-touch)] ease-[var(--ease-settle)] group-hover/card:scale-[var(--motion-lift)] group-focus-visible/card:scale-[var(--motion-lift)] group-active/card:scale-[var(--motion-press)] ${
           selected ? 'ring-2 ring-[var(--accent-primary)]' : ''
         }`}
       >
