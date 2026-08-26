@@ -43,7 +43,7 @@ export function SidebarGroupParent({
           className="group/parent flex min-h-[44px] flex-1 items-center gap-3 rounded-[var(--radius-md)] px-2.5 py-2 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] data-[status=active]:font-semibold data-[status=active]:text-[var(--text-primary)]"
         >
           <Icon
-            className="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)] transition-colors group-hover/parent:text-[var(--text-secondary)] group-data-[status=active]/parent:text-[var(--accent-hover)]"
+            className="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)] transition-colors group-hover/parent:text-[var(--text-secondary)] group-data-[status=active]/parent:text-[var(--accent-text)]"
             aria-hidden="true"
           />
           <span className="truncate">{label}</span>

@@ -18,6 +18,7 @@ import implementsPenNodeId from './apps/web/src/eslint-rules/implements-pen-node
 import timeDependentFixtureStability from './apps/web/src/eslint-rules/time-dependent-fixture-stability.js';
 import noHardcodedPalette from './apps/web/src/eslint-rules/no-hardcoded-palette.js';
 import noEmojiInUi from './apps/web/src/eslint-rules/no-emoji-in-ui.js';
+import noBaseSemanticAsText from './apps/web/src/eslint-rules/no-base-semantic-as-text.js';
 
 const localRules = {
   rules: {
@@ -25,6 +26,7 @@ const localRules = {
     ...timeDependentFixtureStability.rules,
     ...noHardcodedPalette.rules,
     ...noEmojiInUi.rules,
+    ...noBaseSemanticAsText.rules,
   },
 };
 
@@ -268,6 +270,11 @@ export default [
     },
     rules: {
       'local/no-hardcoded-palette': 'error',
+      // The other half of the same door (2026-08-26): the palette rule catches
+      // `text-red-400`, this catches `text-[var(--error)]` — the same sub-AA
+      // defect expressed in the token vocabulary instead of around it, which is
+      // where 266 sites had quietly re-created it.
+      'local/no-base-semantic-as-text': 'error',
     },
   },
 

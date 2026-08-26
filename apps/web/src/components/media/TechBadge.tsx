@@ -14,8 +14,8 @@ export type TechBadgeCategory = 'video' | 'audio' | 'hdr' | 'subtitle';
 const CATEGORY_CLASSES: Record<TechBadgeCategory, string> = {
   video: 'bg-[var(--accent-tint)] text-[var(--accent-text)]',
   audio: 'bg-[var(--info-tint)] text-[var(--info-text)]',
-  hdr: 'bg-[var(--warning-tint)] text-[var(--warning)]',
-  subtitle: 'bg-[var(--success-tint)] text-[var(--success)]',
+  hdr: 'bg-[var(--warning-tint)] text-[var(--warning-text)]',
+  subtitle: 'bg-[var(--success-tint)] text-[var(--success-text)]',
 };
 
 export interface TechBadgeProps {

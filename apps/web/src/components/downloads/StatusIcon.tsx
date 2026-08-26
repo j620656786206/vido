@@ -8,12 +8,12 @@ interface StatusIconProps {
 }
 
 const statusConfig: Record<TorrentStatus, { label: string; color: string; icon: string }> = {
-  downloading: { label: '下載中', color: 'text-[var(--success)]', icon: '↓' },
-  paused: { label: '已暫停', color: 'text-[var(--warning)]', icon: '⏸' },
-  seeding: { label: '做種中', color: 'text-[var(--accent-primary)]', icon: '↑' },
+  downloading: { label: '下載中', color: 'text-[var(--success-text)]', icon: '↓' },
+  paused: { label: '已暫停', color: 'text-[var(--warning-text)]', icon: '⏸' },
+  seeding: { label: '做種中', color: 'text-[var(--accent-text)]', icon: '↑' },
   completed: { label: '已完成', color: 'text-[var(--success-text)]', icon: '✓' },
-  stalled: { label: '停滯中', color: 'text-[var(--warning)]', icon: '⏳' },
-  error: { label: '錯誤', color: 'text-[var(--error)]', icon: '✗' },
+  stalled: { label: '停滯中', color: 'text-[var(--warning-text)]', icon: '⏳' },
+  error: { label: '錯誤', color: 'text-[var(--error-text)]', icon: '✗' },
   queued: { label: '排隊中', color: 'text-[var(--text-secondary)]', icon: '⏱' },
   checking: { label: '檢查中', color: 'text-[var(--info-text)]', icon: '⟳' },
 };

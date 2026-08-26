@@ -77,7 +77,7 @@ export function DetailPanelMenu({ onReparse, onExport, onDelete }: DetailPanelMe
           {!showConfirm ? (
             <button
               onClick={() => setShowConfirm(true)}
-              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--error)] hover:bg-[var(--bg-tertiary)]"
+              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--error-text)] hover:bg-[var(--bg-tertiary)]"
               role="menuitem"
               data-testid="menu-delete"
             >

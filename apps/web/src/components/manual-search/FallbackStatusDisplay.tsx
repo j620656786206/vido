@@ -43,10 +43,10 @@ export function FallbackStatusDisplay({ status, className }: FallbackStatusDispl
               className={cn(
                 'flex items-center gap-1 px-2 py-1 rounded text-sm',
                 attempt.success
-                  ? 'bg-[var(--success)]/20 text-[var(--success)]'
+                  ? 'bg-[var(--success)]/20 text-[var(--success-text)]'
                   : attempt.skipped
                     ? 'bg-[var(--text-muted)]/20 text-[var(--text-secondary)]'
-                    : 'bg-[var(--error)]/20 text-[var(--error)]'
+                    : 'bg-[var(--error)]/20 text-[var(--error-text)]'
               )}
             >
               {SOURCE_NAMES[attempt.source] || attempt.source}
@@ -75,7 +75,7 @@ export function FallbackStatusDisplay({ status, className }: FallbackStatusDispl
       )}
 
       {status.cancelled && (
-        <p className="text-sm text-[var(--warning)] mt-2">搜尋被取消，請重新嘗試。</p>
+        <p className="text-sm text-[var(--warning-text)] mt-2">搜尋被取消，請重新嘗試。</p>
       )}
     </div>
   );

@@ -20,9 +20,12 @@ const eventTypeConfig: Record<
   ConnectionEventType,
   { label: string; Icon: React.ComponentType<{ className?: string }>; color: string }
 > = {
+  // `color` only ever paints the row's icon, so WCAG's 3:1 non-text floor would let the
+  // base tokens stand. They don't, because connected/recovered already migrated to the
+  // AA-safe twins — a half-migrated map paints one status vocabulary in two shades.
   connected: { label: '已連線', Icon: Wifi, color: 'text-[var(--success-text)]' },
-  disconnected: { label: '已斷線', Icon: WifiOff, color: 'text-[var(--error)]' },
-  error: { label: '錯誤', Icon: AlertTriangle, color: 'text-[var(--warning)]' },
+  disconnected: { label: '已斷線', Icon: WifiOff, color: 'text-[var(--error-text)]' },
+  error: { label: '錯誤', Icon: AlertTriangle, color: 'text-[var(--warning-text)]' },
   recovered: { label: '已恢復', Icon: RefreshCw, color: 'text-[var(--success-text)]' },
 };
 

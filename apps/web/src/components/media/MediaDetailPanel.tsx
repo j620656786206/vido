@@ -184,7 +184,7 @@ export function MediaDetailPanel({
               {runtime && runtime > 0 && <span data-testid="detail-runtime">{runtime} 分鐘</span>}
               {details.voteAverage > 0 && (
                 <span
-                  className="flex items-center gap-1 text-[var(--warning)]"
+                  className="flex items-center gap-1 text-[var(--warning-text)]"
                   data-testid="detail-rating"
                 >
                   ⭐ {details.voteAverage.toFixed(1)}
@@ -263,7 +263,7 @@ export function MediaDetailPanel({
             {onAddToList && (
               <button
                 onClick={onAddToList}
-                className="flex-1 rounded-lg border border-[var(--accent-primary)] px-4 py-2.5 text-sm font-medium text-[var(--accent-primary)] transition-colors hover:bg-[var(--accent-hover)]/10"
+                className="flex-1 rounded-lg border border-[var(--accent-primary)] px-4 py-2.5 text-sm font-medium text-[var(--accent-text)] transition-colors hover:bg-[var(--accent-hover)]/10"
                 data-testid="detail-add-to-list-button"
               >
                 加入清單

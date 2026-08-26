@@ -199,7 +199,7 @@ export function SearchSuggestions({
           <button
             type="button"
             onClick={onSubmitAll}
-            className="flex w-full items-center justify-center gap-1 border-t border-[var(--border-subtle)] px-4 py-2 text-sm text-[var(--accent-primary)] transition-colors hover:bg-[var(--bg-tertiary)]"
+            className="flex w-full items-center justify-center gap-1 border-t border-[var(--border-subtle)] px-4 py-2 text-sm text-[var(--accent-text)] transition-colors hover:bg-[var(--bg-tertiary)]"
             data-testid="search-suggestions-submit-all"
           >
             按 Enter 查看所有結果 →
@@ -290,7 +290,7 @@ function MediaRow({
       </div>
       {owned && (
         <span
-          className="shrink-0 rounded-full bg-[var(--accent-primary)]/15 px-2 py-0.5 text-xs text-[var(--accent-primary)]"
+          className="shrink-0 rounded-full bg-[var(--accent-primary)]/15 px-2 py-0.5 text-xs text-[var(--accent-text)]"
           data-testid="search-suggestion-owned-badge"
         >
           已擁有

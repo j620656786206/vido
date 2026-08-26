@@ -118,9 +118,9 @@ export function LearnedPatternsSettings({ onError }: LearnedPatternsSettingsProp
                       className={cn(
                         'px-1.5 py-0.5 rounded text-xs',
                         pattern.patternType === 'fansub'
-                          ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-primary)]'
+                          ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-text)]'
                           : pattern.patternType === 'standard'
-                            ? 'bg-[var(--success)]/20 text-[var(--success)]'
+                            ? 'bg-[var(--success)]/20 text-[var(--success-text)]'
                             : 'bg-[var(--text-muted)]/20 text-[var(--text-secondary)]'
                       )}
                     >
@@ -149,13 +149,13 @@ export function LearnedPatternsSettings({ onError }: LearnedPatternsSettingsProp
                   {pattern.fansubGroup && (
                     <div className="flex gap-2 text-sm">
                       <span className="text-[var(--text-muted)]">字幕組：</span>
-                      <span className="text-[var(--accent-primary)]">{pattern.fansubGroup}</span>
+                      <span className="text-[var(--accent-text)]">{pattern.fansubGroup}</span>
                     </div>
                   )}
                   {pattern.titlePattern && (
                     <div className="flex gap-2 text-sm">
                       <span className="text-[var(--text-muted)]">標題：</span>
-                      <span className="text-[var(--success)]">{pattern.titlePattern}</span>
+                      <span className="text-[var(--success-text)]">{pattern.titlePattern}</span>
                     </div>
                   )}
                   {pattern.tmdbId && (
@@ -177,7 +177,7 @@ export function LearnedPatternsSettings({ onError }: LearnedPatternsSettingsProp
                     disabled={deletingId === pattern.id}
                     className={cn(
                       'mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded',
-                      'bg-[var(--error)]/20 text-[var(--error)] text-sm',
+                      'bg-[var(--error)]/20 text-[var(--error-text)] text-sm',
                       'hover:bg-[var(--error)]/30 transition-colors',
                       'disabled:opacity-50 disabled:cursor-not-allowed'
                     )}

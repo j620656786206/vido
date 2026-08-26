@@ -113,7 +113,7 @@ export function SavePresetDialog({ filters, onClose }: SavePresetDialogProps) {
           <div
             role="alert"
             data-testid="save-preset-error"
-            className="mb-4 rounded-lg bg-[var(--error-tint)] px-3 py-2 text-sm text-[var(--error)]"
+            className="mb-4 rounded-lg bg-[var(--error-tint)] px-3 py-2 text-sm text-[var(--error-text)]"
           >
             {error}
           </div>

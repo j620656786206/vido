@@ -89,7 +89,7 @@ export function CountdownTimer({
     <div
       className={cn(
         'inline-flex items-center gap-1.5 text-sm font-mono',
-        isImmediate ? 'text-[var(--accent-primary)]' : 'text-[var(--text-secondary)]',
+        isImmediate ? 'text-[var(--accent-text)]' : 'text-[var(--text-secondary)]',
         className
       )}
       data-testid="countdown-timer"

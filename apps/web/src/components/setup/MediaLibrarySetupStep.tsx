@@ -104,7 +104,7 @@ export function MediaLibrarySetupStep({ data, onUpdate, onNext, onBack }: StepPr
                 <button
                   type="button"
                   onClick={() => removeLibrary(index)}
-                  className="rounded-md p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--error)]"
+                  className="rounded-md p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--error-text)]"
                   data-testid={`library-remove-${index}`}
                   aria-label="移除此媒體庫"
                 >
@@ -119,7 +119,7 @@ export function MediaLibrarySetupStep({ data, onUpdate, onNext, onBack }: StepPr
       <button
         type="button"
         onClick={addLibrary}
-        className="mb-6 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--border-subtle)]/50 py-2.5 text-sm text-[var(--text-secondary)] transition-colors hover:border-[var(--accent-primary)]/50 hover:text-[var(--accent-primary)]"
+        className="mb-6 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--border-subtle)]/50 py-2.5 text-sm text-[var(--text-secondary)] transition-colors hover:border-[var(--accent-primary)]/50 hover:text-[var(--accent-text)]"
         data-testid="add-library-button"
       >
         <Plus className="h-4 w-4" />

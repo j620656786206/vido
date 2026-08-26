@@ -89,7 +89,7 @@ export function SearchResultCard({ item, isSelected, onSelect }: SearchResultCar
         {/* Rating badge */}
         {item.rating !== undefined && item.rating > 0 && (
           <div className="absolute bottom-2 left-2">
-            <span className="flex items-center gap-1 rounded bg-black/70 px-2 py-0.5 text-xs text-[var(--warning)]">
+            <span className="flex items-center gap-1 rounded bg-black/70 px-2 py-0.5 text-xs text-[var(--warning-text)]">
               ⭐ {item.rating.toFixed(1)}
             </span>
           </div>

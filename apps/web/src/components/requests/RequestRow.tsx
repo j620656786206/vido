@@ -15,14 +15,22 @@ import type { MediaRequest, RequestStatus } from '../../services/requestService'
 
 /** DL-v2 §2.5 status→token map — one state machine, no bespoke palette. */
 const STATUS_TOKENS: Record<RequestStatus, { label: string; pillBg: string; fg: string }> = {
-  pending: { label: '想要', pillBg: 'bg-[var(--info-tint)]', fg: 'text-[var(--info)]' },
-  searching: { label: '搜尋中', pillBg: 'bg-[var(--warning-tint)]', fg: 'text-[var(--warning)]' },
+  pending: { label: '想要', pillBg: 'bg-[var(--info-tint)]', fg: 'text-[var(--info-text)]' },
+  searching: {
+    label: '搜尋中',
+    pillBg: 'bg-[var(--warning-tint)]',
+    fg: 'text-[var(--warning-text)]',
+  },
   downloading: {
     label: '下載中',
     pillBg: 'bg-[var(--accent-tint)]',
     fg: 'text-[var(--accent-text)]',
   },
-  completed: { label: '已入庫', pillBg: 'bg-[var(--success-tint)]', fg: 'text-[var(--success)]' },
+  completed: {
+    label: '已入庫',
+    pillBg: 'bg-[var(--success-tint)]',
+    fg: 'text-[var(--success-text)]',
+  },
   failed: { label: '失敗', pillBg: 'bg-[var(--error-tint)]', fg: 'text-[var(--error-text)]' },
 };
 

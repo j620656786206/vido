@@ -73,7 +73,7 @@ export function TrailerSection({ tmdbId, type, title }: TrailerSectionProps) {
           href={pickTmdbVideoFallbackUrl(tmdbId, type)}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm font-medium text-[var(--accent-primary)] hover:underline"
+          className="text-sm font-medium text-[var(--accent-text)] hover:underline"
           data-testid="trailer-section-fallback-link"
         >
           在 TMDB 觀看預告片

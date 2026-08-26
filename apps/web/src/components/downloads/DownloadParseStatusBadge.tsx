@@ -20,21 +20,21 @@ const STATUS_CONFIG: Record<
 > = {
   pending: {
     icon: Loader2,
-    color: 'text-[var(--accent-primary)]',
+    color: 'text-[var(--accent-text)]',
     bgColor: 'bg-[var(--accent-primary)]/10',
     label: '解析中...',
     animate: true,
   },
   processing: {
     icon: Loader2,
-    color: 'text-[var(--accent-primary)]',
+    color: 'text-[var(--accent-text)]',
     bgColor: 'bg-[var(--accent-primary)]/10',
     label: '解析中...',
     animate: true,
   },
   completed: {
     icon: CheckCircle,
-    color: 'text-[var(--success)]',
+    color: 'text-[var(--success-text)]',
     bgColor: 'bg-[var(--success)]/10',
     label: '已解析',
   },
@@ -46,7 +46,7 @@ const STATUS_CONFIG: Record<
   },
   failed: {
     icon: XCircle,
-    color: 'text-[var(--error)]',
+    color: 'text-[var(--error-text)]',
     bgColor: 'bg-[var(--error)]/10',
     label: '解析失敗',
   },

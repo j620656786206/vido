@@ -169,7 +169,7 @@ export function StreamingAvailability({
           href={region.link}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm font-medium text-[var(--accent-primary)] hover:underline"
+          className="text-sm font-medium text-[var(--accent-text)] hover:underline"
           data-testid="streaming-availability-link"
         >
           前往 TMDB 觀看頁

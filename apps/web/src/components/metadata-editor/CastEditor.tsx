@@ -58,7 +58,7 @@ export function CastEditor({
             <button
               type="button"
               onClick={() => onRemove(actor)}
-              className="text-[var(--text-secondary)] hover:text-[var(--error)] transition-colors"
+              className="text-[var(--text-secondary)] hover:text-[var(--error-text)] transition-colors"
               aria-label={`移除 ${actor}`}
             >
               <X className="h-3 w-3" />

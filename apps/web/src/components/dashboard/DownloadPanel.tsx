@@ -105,10 +105,7 @@ export function DownloadPanel({ className, hideWhenEmpty = false }: DownloadPane
 
         {/* Footer */}
         <div className="border-t border-[var(--border-subtle)] px-4 py-2">
-          <Link
-            to="/downloads"
-            className="text-sm text-[var(--accent-primary)] hover:text-[var(--accent-text)] hover:underline"
-          >
+          <Link to="/downloads" className="text-sm text-[var(--accent-text)] hover:underline">
             查看全部下載 →
           </Link>
         </div>
@@ -126,7 +123,7 @@ function ConnectionStatusBadge({ connected, loading }: { connected: boolean; loa
         'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs',
         connected
           ? 'bg-[var(--success-tint)] text-[var(--success-text)]'
-          : 'bg-[var(--error-tint)] text-[var(--error)]'
+          : 'bg-[var(--error-tint)] text-[var(--error-text)]'
       )}
     >
       <span
@@ -147,7 +144,7 @@ function DisconnectedState() {
       <p className="text-sm text-[var(--text-secondary)]">qBittorrent 未連線</p>
       <Link
         to="/settings/qbittorrent"
-        className="mt-2 text-sm text-[var(--accent-primary)] hover:text-[var(--accent-text)] hover:underline"
+        className="mt-2 text-sm text-[var(--accent-text)] hover:underline"
       >
         前往設定
       </Link>

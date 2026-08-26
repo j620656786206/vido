@@ -94,7 +94,9 @@ export function FallbackFailed({
           )}
 
           <div className="flex items-center gap-2.5 text-sm" data-testid="file-info-status">
-            <CircleAlert className="h-4 w-4 flex-shrink-0 text-[var(--warning)]" />
+            {/* Twin, not the base token: the glyph shares a line with the label
+                below, which is already `--warning-text` — one idea, one shade. */}
+            <CircleAlert className="h-4 w-4 flex-shrink-0 text-[var(--warning-text)]" />
             <span className="text-[var(--warning-text)]">{parseStatusLabel(parseStatus)}</span>
           </div>
         </div>
@@ -112,9 +114,11 @@ export function FallbackFailed({
           搜尋 Metadata
         </Link>
 
+        {/* Hover moved from a colour change to an underline: the resting state is now
+            `--accent-text` itself, which is the value the old hover reached for. */}
         <button
           onClick={onEditClick}
-          className="w-full text-center text-sm font-medium text-[var(--accent-primary)] transition-colors hover:text-[var(--accent-text)]"
+          className="w-full text-center text-sm font-medium text-[var(--accent-text)] transition-colors hover:underline"
           data-testid="cta-manual-edit"
         >
           手動編輯

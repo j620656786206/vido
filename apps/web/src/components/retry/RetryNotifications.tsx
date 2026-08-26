@@ -146,29 +146,29 @@ function getColorsForType(type: NotificationType) {
       return {
         bg: 'bg-[var(--success)]/10',
         border: 'border-[var(--success)]/20',
-        icon: 'text-[var(--success)]',
-        text: 'text-[var(--success)]',
+        icon: 'text-[var(--success-text)]',
+        text: 'text-[var(--success-text)]',
       };
     case 'error':
       return {
         bg: 'bg-[var(--error)]/10',
         border: 'border-[var(--error)]/20',
-        icon: 'text-[var(--error)]',
-        text: 'text-[var(--error)]',
+        icon: 'text-[var(--error-text)]',
+        text: 'text-[var(--error-text)]',
       };
     case 'warning':
       return {
         bg: 'bg-[var(--warning)]/10',
         border: 'border-[var(--warning)]/20',
-        icon: 'text-[var(--warning)]',
-        text: 'text-[var(--warning)]',
+        icon: 'text-[var(--warning-text)]',
+        text: 'text-[var(--warning-text)]',
       };
     default:
       return {
         bg: 'bg-[var(--accent-primary)]/10',
         border: 'border-[var(--accent-primary)]/20',
-        icon: 'text-[var(--accent-primary)]',
-        text: 'text-[var(--accent-primary)]',
+        icon: 'text-[var(--accent-text)]',
+        text: 'text-[var(--accent-text)]',
       };
   }
 }

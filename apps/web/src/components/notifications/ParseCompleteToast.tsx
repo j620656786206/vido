@@ -48,14 +48,14 @@ export function ParseCompleteToast({
         <p
           className={cn(
             'text-sm font-medium',
-            isFailed ? 'text-[var(--error)]' : 'text-[var(--text-primary)]'
+            isFailed ? 'text-[var(--error-text)]' : 'text-[var(--text-primary)]'
           )}
         >
           {isFailed ? '解析失敗' : '解析完成'}
         </p>
         <p className="truncate text-xs text-[var(--text-secondary)]">{title}</p>
         {isFailed && errorMessage ? (
-          <p className="truncate text-[10px] text-[var(--error)]/70">{errorMessage}</p>
+          <p className="truncate text-[10px] text-[var(--error-text)]">{errorMessage}</p>
         ) : (
           <span className="text-[10px] text-[var(--text-secondary)]">
             {mediaTypeLabels[mediaType]}
@@ -65,7 +65,7 @@ export function ParseCompleteToast({
 
       {/* Status indicator */}
       {isFailed ? (
-        <XCircle className="h-5 w-5 shrink-0 text-[var(--error)]" />
+        <XCircle className="h-5 w-5 shrink-0 text-[var(--error-text)]" />
       ) : (
         <CheckCircle className="h-5 w-5 shrink-0 text-[var(--success-text)]" />
       )}

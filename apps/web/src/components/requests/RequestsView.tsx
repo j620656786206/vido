@@ -79,7 +79,7 @@ export function RequestsView({ onExplore }: RequestsViewProps) {
           type="button"
           data-testid="requests-go-explore"
           onClick={onExplore}
-          className="flex h-11 items-center px-3 text-sm font-medium text-[var(--accent-text)] transition-colors hover:text-[var(--accent-primary)]"
+          className="flex h-11 items-center px-3 text-sm font-medium text-[var(--accent-text)] transition-colors hover:underline"
         >
           前往探索
         </button>

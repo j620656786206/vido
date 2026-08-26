@@ -79,7 +79,7 @@ export function ConfirmGenerationDialog({
                 data-testid="consent-confirm-total-usd"
                 className={cn(
                   'font-mono font-semibold tabular-nums',
-                  overBudget ? 'text-[var(--warning)]' : 'text-[var(--text-primary)]'
+                  overBudget ? 'text-[var(--warning-text)]' : 'text-[var(--text-primary)]'
                 )}
               >
                 {usd(totals.selectedTotalUsd)}

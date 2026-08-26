@@ -75,7 +75,10 @@ export function SidebarNavItem({
           activeOptions={activeOptions}
           data-testid={`nav-${navKey}`}
           aria-label={a11yLabel}
-          className="relative flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] data-[status=active]:bg-[var(--accent-subtle)] data-[status=active]:text-[var(--accent-hover)]"
+          // The active colour paints an icon (3:1 would do), but the badge below
+          // it is already --accent-text; one rail cell must not carry two shades
+          // of the same accent, so the icon takes the text twin too.
+          className="relative flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] data-[status=active]:bg-[var(--accent-subtle)] data-[status=active]:text-[var(--accent-text)]"
         >
           <Icon className="h-5 w-5" aria-hidden="true" />
           {hasBadge && (
@@ -110,7 +113,9 @@ export function SidebarNavItem({
     >
       <Icon
         className={cn(
-          'shrink-0 text-[var(--text-muted)] transition-colors group-hover/navitem:text-[var(--text-secondary)] group-data-[status=active]/navitem:text-[var(--accent-hover)]',
+          // Icon-only would license the 3:1 base token, but the badge at the end
+          // of this same row is --accent-text — one row, one shade of accent.
+          'shrink-0 text-[var(--text-muted)] transition-colors group-hover/navitem:text-[var(--text-secondary)] group-data-[status=active]/navitem:text-[var(--accent-text)]',
           indent ? 'h-4 w-4' : 'h-[18px] w-[18px]'
         )}
         aria-hidden="true"

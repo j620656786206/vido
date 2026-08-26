@@ -140,7 +140,7 @@ function TestManualSearchPage() {
             <span className="text-[var(--warning-text)]" data-testid="pending-count">
               Pending: {availableFiles.length}
             </span>
-            <span className="text-[var(--success)]" data-testid="applied-count">
+            <span className="text-[var(--success-text)]" data-testid="applied-count">
               Applied: {completedFiles.length}
             </span>
           </div>
@@ -181,7 +181,7 @@ function TestManualSearchPage() {
           </div>
         ) : (
           <div className="text-center py-12" data-testid="all-applied-message">
-            <p className="text-[var(--success)] text-lg font-medium">
+            <p className="text-[var(--success-text)] text-lg font-medium">
               All metadata applied successfully!
             </p>
             <button
@@ -204,7 +204,7 @@ function TestManualSearchPage() {
               {completedFiles.map((file) => (
                 <span
                   key={file.id}
-                  className="px-3 py-1 bg-[var(--success-tint)] text-[var(--success)] rounded-full text-sm"
+                  className="px-3 py-1 bg-[var(--success-tint)] text-[var(--success-text)] rounded-full text-sm"
                   data-testid={`completed-${file.id}`}
                 >
                   {file.parsedInfo?.title || file.filename}

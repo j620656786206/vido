@@ -186,7 +186,7 @@ export function PosterUploader({
           />
           {isUploading ? (
             <div className="flex flex-col items-center gap-2">
-              <Loader2 className="h-8 w-8 text-[var(--accent-primary)] animate-spin" />
+              <Loader2 className="h-8 w-8 text-[var(--accent-text)] animate-spin" />
               <p className="text-[var(--text-secondary)]">上傳中...</p>
             </div>
           ) : preview ? (
@@ -246,7 +246,7 @@ export function PosterUploader({
 
       {/* Error Display */}
       {(validationError || error) && (
-        <p className="text-sm text-[var(--error)]">{validationError || error}</p>
+        <p className="text-sm text-[var(--error-text)]">{validationError || error}</p>
       )}
     </div>
   );

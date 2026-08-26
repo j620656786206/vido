@@ -60,7 +60,7 @@ export function LibraryErrorV2({ code, onRetry }: { code?: string; onRetry: () =
       role="alert"
       className="flex flex-col items-center justify-center rounded-[var(--radius-lg)] bg-[var(--error-tint)] px-6 py-16 text-center"
     >
-      <AlertTriangle className="h-10 w-10 text-[var(--error)]" aria-hidden="true" />
+      <AlertTriangle className="h-10 w-10 text-[var(--error-text)]" aria-hidden="true" />
       <h3 className="mt-3 text-base font-semibold text-[var(--text-primary)]">無法載入媒體庫</h3>
       <p className="mt-1 text-sm text-[var(--error-text)]">
         請稍後再試

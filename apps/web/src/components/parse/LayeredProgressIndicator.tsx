@@ -25,9 +25,12 @@ const STEP_ICON_CONFIG: Record<
   { icon: typeof Circle; color: string; animate?: boolean }
 > = {
   pending: { icon: Circle, color: 'text-[var(--text-muted)]' },
-  in_progress: { icon: Loader2, color: 'text-[var(--accent-primary)]', animate: true },
-  success: { icon: CheckCircle, color: 'text-[var(--success)]' },
-  failed: { icon: XCircle, color: 'text-[var(--error)]' },
+  // in_progress/failed share a row with a label that takes the AA-safe twin (ProgressStep), so the
+  // icon takes it too rather than painting one line in two shades of the same idea. success keeps
+  // the base fill token — its label is --text-primary, so nothing on that row is success-colored.
+  in_progress: { icon: Loader2, color: 'text-[var(--accent-text)]', animate: true },
+  success: { icon: CheckCircle, color: 'text-[var(--success-text)]' },
+  failed: { icon: XCircle, color: 'text-[var(--error-text)]' },
   skipped: { icon: MinusCircle, color: 'text-[var(--text-secondary)]' },
 };
 
@@ -71,9 +74,9 @@ function ProgressStep({
             className={cn(
               'flex-1',
               step.status === 'pending' && 'text-[var(--text-secondary)]',
-              step.status === 'in_progress' && 'text-[var(--accent-primary)]',
+              step.status === 'in_progress' && 'text-[var(--accent-text)]',
               step.status === 'success' && 'text-[var(--text-primary)]',
-              step.status === 'failed' && 'text-[var(--error)]',
+              step.status === 'failed' && 'text-[var(--error-text)]',
               step.status === 'skipped' && 'text-[var(--text-muted)]'
             )}
           >
@@ -81,11 +84,14 @@ function ProgressStep({
           </span>
 
           {step.status === 'in_progress' && (
-            <span className="text-sm text-[var(--accent-primary)] animate-pulse">搜尋中...</span>
+            <span className="text-sm text-[var(--accent-text)] animate-pulse">搜尋中...</span>
           )}
 
           {step.status === 'failed' && step.error && (
-            <span className="text-sm text-[var(--error)] truncate max-w-[150px]" title={step.error}>
+            <span
+              className="text-sm text-[var(--error-text)] truncate max-w-[150px]"
+              title={step.error}
+            >
               {step.error}
             </span>
           )}
@@ -186,11 +192,11 @@ export function SourceChainIndicator({
         <div key={step.name} className="flex items-center">
           <span
             className={cn(
-              step.status === 'success' && 'text-[var(--success)]',
-              step.status === 'failed' && 'text-[var(--error)]',
+              step.status === 'success' && 'text-[var(--success-text)]',
+              step.status === 'failed' && 'text-[var(--error-text)]',
               step.status === 'skipped' && 'text-[var(--text-muted)]',
               step.status === 'pending' && 'text-[var(--text-secondary)]',
-              step.status === 'in_progress' && 'text-[var(--accent-primary)]'
+              step.status === 'in_progress' && 'text-[var(--accent-text)]'
             )}
           >
             {getSourceName(step.name)}

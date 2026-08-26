@@ -16,7 +16,7 @@ export function ConsentEmptyState() {
         aria-hidden="true"
         className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--bg-tertiary)]"
       >
-        <SquareCheck className="h-8 w-8 text-[var(--success)]" />
+        <SquareCheck className="h-8 w-8 text-[var(--success-text)]" />
       </span>
       <p className="text-base font-semibold text-[var(--text-primary)]">所有影片都有繁中字幕了</p>
       <p className="text-[13px] text-[var(--text-secondary)]">

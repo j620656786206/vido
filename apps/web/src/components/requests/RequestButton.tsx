@@ -180,7 +180,7 @@ function RequestToast({
     >
       {toast.kind === 'success' ? (
         <>
-          <Check className="h-[18px] w-[18px] text-[var(--success)]" aria-hidden="true" />
+          <Check className="h-[18px] w-[18px] text-[var(--success-text)]" aria-hidden="true" />
           <span className="text-sm font-semibold text-[var(--text-primary)]">已加入想要清單</span>
           <button
             type="button"

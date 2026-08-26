@@ -39,14 +39,15 @@ export function RetryQueueSection({ className, detailed = false }: RetryQueueSec
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 text-sm">
-          <RefreshCw className="h-4 w-4 text-[var(--warning)]" />
+          {/* Icon shares this row with the count pill's AA-safe twin, so it takes the twin too. */}
+          <RefreshCw className="h-4 w-4 text-[var(--warning-text)]" />
           <span className="text-[var(--text-secondary)]">重試隊列</span>
-          <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--warning)]/20 text-[var(--warning)]">
+          <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--warning)]/20 text-[var(--warning-text)]">
             {items.length}
           </span>
         </div>
         {stats && stats.totalSucceeded > 0 && (
-          <span className="text-xs text-[var(--success)] flex items-center gap-1">
+          <span className="text-xs text-[var(--success-text)] flex items-center gap-1">
             <CheckCircle2 className="h-3 w-3" />
             {stats.totalSucceeded} 已成功
           </span>
@@ -80,7 +81,7 @@ export function RetryQueueSection({ className, detailed = false }: RetryQueueSec
 
       {/* Warning for exhausted retries */}
       {stats && stats.totalFailed > 0 && (
-        <div className="mt-2 flex items-center gap-1.5 text-xs text-[var(--warning)]">
+        <div className="mt-2 flex items-center gap-1.5 text-xs text-[var(--warning-text)]">
           <AlertTriangle className="h-3 w-3" />
           <span>{stats.totalFailed} 項需要手動處理</span>
         </div>

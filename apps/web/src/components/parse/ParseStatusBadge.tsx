@@ -40,26 +40,26 @@ const STATUS_CONFIG: Record<
   },
   parsing: {
     icon: Loader2,
-    color: 'text-[var(--accent-primary)]',
+    color: 'text-[var(--accent-text)]',
     bgColor: 'bg-[var(--accent-primary)]/10',
     label: '解析中',
     animate: true,
   },
   success: {
     icon: CheckCircle,
-    color: 'text-[var(--success)]',
+    color: 'text-[var(--success-text)]',
     bgColor: 'bg-[var(--success)]/10',
     label: '已完成',
   },
   needs_ai: {
     icon: AlertTriangle,
-    color: 'text-[var(--warning)]',
+    color: 'text-[var(--warning-text)]',
     bgColor: 'bg-[var(--warning)]/10',
     label: '需要處理',
   },
   failed: {
     icon: XCircle,
-    color: 'text-[var(--error)]',
+    color: 'text-[var(--error-text)]',
     bgColor: 'bg-[var(--error)]/10',
     label: '失敗',
   },
@@ -68,7 +68,7 @@ const STATUS_CONFIG: Record<
 // For in-progress/parsing state, we use a special indicator
 const PARSING_CONFIG = {
   icon: Loader2,
-  color: 'text-[var(--accent-primary)]',
+  color: 'text-[var(--accent-text)]',
   bgColor: 'bg-[var(--accent-primary)]/10',
   label: '解析中',
   animate: true,

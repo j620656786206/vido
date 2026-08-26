@@ -199,7 +199,7 @@ export function LibraryTable({
                     params={{ type: data.type, id: String(data.id) }}
                     className="block"
                   >
-                    <div className="text-sm font-medium text-white hover:text-[var(--accent-primary)]">
+                    <div className="text-sm font-medium text-white hover:text-[var(--accent-text)]">
                       <HighlightText text={data.title} query={highlightQuery} />
                     </div>
                     {data.originalTitle && data.originalTitle !== data.title && (
@@ -226,7 +226,7 @@ export function LibraryTable({
                 </td>
                 <td className="px-3 py-2 text-center text-sm">
                   {data.rating != null ? (
-                    <span className="text-[var(--warning)]">★ {data.rating.toFixed(1)}</span>
+                    <span className="text-[var(--warning-text)]">★ {data.rating.toFixed(1)}</span>
                   ) : (
                     <span className="text-[var(--text-muted)]">-</span>
                   )}

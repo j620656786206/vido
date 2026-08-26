@@ -273,9 +273,9 @@ function Note({
   children: React.ReactNode;
 }) {
   const tones = {
-    success: 'bg-[var(--success-tint)] text-[var(--success)]',
-    info: 'bg-[var(--info-tint)] text-[var(--info)]',
-    warning: 'bg-[var(--warning-tint)] text-[var(--warning)]',
+    success: 'bg-[var(--success-tint)] text-[var(--success-text)]',
+    info: 'bg-[var(--info-tint)] text-[var(--info-text)]',
+    warning: 'bg-[var(--warning-tint)] text-[var(--warning-text)]',
   } as const;
   return (
     <div
@@ -307,7 +307,7 @@ function ResultPill({
       <span
         {...common}
         data-testid="nfo-result-disabled"
-        className={cn(pillBase, 'bg-[var(--error-tint)] text-[var(--error)]')}
+        className={cn(pillBase, 'bg-[var(--error-tint)] text-[var(--error-text)]')}
       >
         <KeyRound className="h-[18px] w-[18px]" aria-hidden="true" />
         尚未設定翻譯服務 ·{' '}
@@ -323,7 +323,7 @@ function ResultPill({
       <span
         {...common}
         data-testid="nfo-result-error"
-        className={cn(pillBase, 'bg-[var(--error-tint)] text-[var(--error)]')}
+        className={cn(pillBase, 'bg-[var(--error-tint)] text-[var(--error-text)]')}
       >
         <TriangleAlert className="h-[18px] w-[18px]" aria-hidden="true" />
         {outcome.message} ·{' '}
@@ -354,8 +354,8 @@ function ResultPill({
         className={cn(
           pillBase,
           clean
-            ? 'bg-[var(--success-tint)] text-[var(--success)]'
-            : 'bg-[var(--warning-tint)] text-[var(--warning)]'
+            ? 'bg-[var(--success-tint)] text-[var(--success-text)]'
+            : 'bg-[var(--warning-tint)] text-[var(--warning-text)]'
         )}
       >
         {clean ? (
@@ -372,7 +372,7 @@ function ResultPill({
     <span
       {...common}
       data-testid="nfo-result-ok"
-      className={cn(pillBase, 'bg-[var(--success-tint)] text-[var(--success)]')}
+      className={cn(pillBase, 'bg-[var(--success-tint)] text-[var(--success-text)]')}
     >
       <Check className="h-[18px] w-[18px]" aria-hidden="true" />
       {outcome.replaced ? '已覆寫，原檔已備份為 .nfo.orig' : '已寫入繁中資訊'}

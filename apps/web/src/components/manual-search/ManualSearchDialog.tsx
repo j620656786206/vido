@@ -231,7 +231,7 @@ export function ManualSearchDialog({
             />
             {isLoading && (
               <Loader2
-                className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--accent-primary)] animate-spin"
+                className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--accent-text)] animate-spin"
                 aria-hidden="true"
               />
             )}
@@ -293,7 +293,7 @@ export function ManualSearchDialog({
         {/* Results Area */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {error && (
-            <div className="text-center py-8 text-[var(--error)]">
+            <div className="text-center py-8 text-[var(--error-text)]">
               <p>搜尋失敗：{error.message}</p>
             </div>
           )}
@@ -355,7 +355,7 @@ export function ManualSearchDialog({
                 </button>
               </div>
               {applyMetadata.error && (
-                <p className="mt-4 text-sm text-[var(--error)]">
+                <p className="mt-4 text-sm text-[var(--error-text)]">
                   套用失敗：{applyMetadata.error.message}
                 </p>
               )}

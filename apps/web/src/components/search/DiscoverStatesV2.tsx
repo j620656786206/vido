@@ -85,7 +85,7 @@ export function DiscoverSectionErrorV2({
       role="alert"
       className="mb-4 flex flex-wrap items-center gap-3 rounded-[var(--radius-md)] bg-[var(--error-tint)] px-4 py-3 text-sm"
     >
-      <AlertTriangle className="h-5 w-5 shrink-0 text-[var(--error)]" aria-hidden="true" />
+      <AlertTriangle className="h-5 w-5 shrink-0 text-[var(--error-text)]" aria-hidden="true" />
       <span className="text-[var(--error-text)]">
         {message}
         {code ? (

@@ -53,7 +53,7 @@ import { usd } from '../../lib/currency';
 
 const FEED_TONE_CLASS: Record<FeedTone, string> = {
   active: 'text-[var(--accent-text)]',
-  done: 'text-[var(--success)]',
+  done: 'text-[var(--success-text)]',
   failed: 'text-[var(--error-text)]',
   info: 'text-[var(--text-secondary)]',
 };
@@ -116,7 +116,7 @@ function OverallStrip({ progress }: { progress: GenerationBatchProgressState }) 
 
 function SseChip() {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--info-tint)] px-2 py-1 text-[11px] text-[var(--info)]">
+    <span className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--info-tint)] px-2 py-1 text-[11px] text-[var(--info-text)]">
       <Radio className="h-3 w-3" aria-hidden="true" />
       即時更新（SSE）
     </span>
@@ -127,7 +127,7 @@ function QueueRowLabel({ state }: { state: string }) {
   switch (state) {
     case 'done':
       return (
-        <span className="flex shrink-0 items-center gap-1.5 text-xs text-[var(--success)]">
+        <span className="flex shrink-0 items-center gap-1.5 text-xs text-[var(--success-text)]">
           <Check className="h-4 w-4" aria-hidden="true" />
           完成
         </span>
@@ -264,18 +264,20 @@ function BudgetBanner({ progress }: { progress: GenerationBatchProgressState }) 
       className="flex items-center gap-2.5 rounded-[var(--radius-md)] bg-[var(--warning-tint)] px-4 py-3"
     >
       <CircleAlert
-        className="h-[18px] w-[18px] shrink-0 text-[var(--warning)]"
+        className="h-[18px] w-[18px] shrink-0 text-[var(--warning-text)]"
         aria-hidden="true"
       />
       <p className="text-sm text-[var(--text-primary)]">
         已達本次預算上限（
-        <span className="font-mono font-semibold tabular-nums text-[var(--warning)]">
+        <span className="font-mono font-semibold tabular-nums text-[var(--warning-text)]">
           {usd(budgetUsd)}
         </span>
         ）— 已完成{' '}
-        <span className="font-mono font-semibold tabular-nums text-[var(--warning)]">{done}</span>{' '}
+        <span className="font-mono font-semibold tabular-nums text-[var(--warning-text)]">
+          {done}
+        </span>{' '}
         部，剩餘{' '}
-        <span className="font-mono font-semibold tabular-nums text-[var(--warning)]">
+        <span className="font-mono font-semibold tabular-nums text-[var(--warning-text)]">
           {remaining}
         </span>{' '}
         部下次繼續
@@ -285,7 +287,7 @@ function BudgetBanner({ progress }: { progress: GenerationBatchProgressState }) 
 }
 
 const TERMINAL_COPY: Record<string, { label: string; tone: string }> = {
-  complete: { label: '全部完成', tone: 'text-[var(--success)]' },
+  complete: { label: '全部完成', tone: 'text-[var(--success-text)]' },
   cancelled: { label: '已取消', tone: 'text-[var(--text-muted)]' },
   error: { label: '批次發生錯誤', tone: 'text-[var(--error-text)]' },
 };

@@ -53,7 +53,7 @@ export function DownloadFilterTabs({
               f.value === 'error' &&
                 count > 0 &&
                 !isActive &&
-                'border-[var(--error)] text-[var(--error)]'
+                'border-[var(--error)] text-[var(--error-text)]'
             )}
           >
             <span>{f.icon}</span>

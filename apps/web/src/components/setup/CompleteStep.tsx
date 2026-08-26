@@ -6,7 +6,7 @@ export function CompleteStep({ data, onNext, onBack, isSubmitting }: StepProps) 
   return (
     <div data-testid="complete-step">
       <div className="mb-6 flex flex-col items-center">
-        <CheckCircle className="mb-3 h-12 w-12 text-[var(--success)]" />
+        <CheckCircle className="mb-3 h-12 w-12 text-[var(--success-text)]" />
         <h2 className="text-lg font-semibold text-[var(--text-primary)]">設定完成！</h2>
         <p className="mt-1 text-sm text-[var(--text-secondary)]">以下是您的設定摘要。</p>
       </div>

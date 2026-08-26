@@ -40,7 +40,7 @@ function StarRating({ rating }: { rating: number }) {
     <span
       role="img"
       aria-label={`${filled} 星`}
-      className="text-sm text-[var(--accent-primary)]"
+      className="text-sm text-[var(--accent-text)]"
       data-testid="douban-comment-rating"
     >
       {'★'.repeat(filled)}
@@ -75,7 +75,7 @@ export function DoubanSection({ doubanId, summary, isLoading, isError }: DoubanS
         href={doubanUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-sm font-medium text-[var(--accent-primary)] hover:underline"
+        className="text-sm font-medium text-[var(--accent-text)] hover:underline"
         data-testid="douban-page-link"
       >
         查看豆瓣頁面

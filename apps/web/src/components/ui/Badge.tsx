@@ -12,9 +12,9 @@ const badgeVariants = cva(
         secondary: 'bg-[var(--bg-tertiary)] text-[var(--text-primary)]',
         destructive: 'bg-[var(--error)] text-white',
         outline: 'border border-[var(--border-subtle)] text-[var(--text-secondary)]',
-        success: 'bg-[var(--success)]/20 text-[var(--success)]',
-        warning: 'bg-[var(--warning)]/20 text-[var(--warning)]',
-        info: 'bg-[var(--info)]/20 text-[var(--info)]',
+        success: 'bg-[var(--success)]/20 text-[var(--success-text)]',
+        warning: 'bg-[var(--warning)]/20 text-[var(--warning-text)]',
+        info: 'bg-[var(--info)]/20 text-[var(--info-text)]',
       },
     },
     defaultVariants: {

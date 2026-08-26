@@ -119,7 +119,7 @@ export function FilterBottomSheet({
           <button
             onClick={handleClear}
             data-testid="filter-sheet-clear"
-            className="text-sm text-[var(--accent-primary)] hover:underline"
+            className="text-sm text-[var(--accent-text)] hover:underline"
           >
             清除全部
           </button>

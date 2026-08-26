@@ -61,12 +61,14 @@ export function DownloadItem({ download, expanded, onToggleExpand }: DownloadIte
           <div className="text-right text-sm">
             {download.status === 'downloading' && (
               <>
-                <p className="text-[var(--success)]">↓ {formatSpeed(download.downloadSpeed)}</p>
+                <p className="text-[var(--success-text)]">
+                  ↓ {formatSpeed(download.downloadSpeed)}
+                </p>
                 <p className="text-[var(--text-secondary)]">{formatETA(download.eta)}</p>
               </>
             )}
             {download.status === 'seeding' && (
-              <p className="text-[var(--accent-primary)]">↑ {formatSpeed(download.uploadSpeed)}</p>
+              <p className="text-[var(--accent-text)]">↑ {formatSpeed(download.uploadSpeed)}</p>
             )}
             {download.status === 'completed' &&
               (download.parseStatus ? (
@@ -74,8 +76,8 @@ export function DownloadItem({ download, expanded, onToggleExpand }: DownloadIte
               ) : (
                 <p className="text-[var(--success-text)]">完成</p>
               ))}
-            {download.status === 'paused' && <p className="text-[var(--warning)]">已暫停</p>}
-            {download.status === 'error' && <p className="text-[var(--error)]">錯誤</p>}
+            {download.status === 'paused' && <p className="text-[var(--warning-text)]">已暫停</p>}
+            {download.status === 'error' && <p className="text-[var(--error-text)]">錯誤</p>}
           </div>
 
           {/* Expand indicator */}

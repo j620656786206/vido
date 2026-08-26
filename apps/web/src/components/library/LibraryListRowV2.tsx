@@ -115,7 +115,7 @@ export function LibraryListRowV2({
 
       {typeof voteAverage === 'number' && voteAverage > 0 && (
         <span className="hidden shrink-0 items-center gap-0.5 font-mono text-[11px] text-[var(--text-secondary)] sm:flex">
-          <Star className="h-3 w-3 fill-[var(--warning)] text-[var(--warning)]" />
+          <Star className="h-3 w-3 fill-[var(--warning)] text-[var(--warning-text)]" />
           {voteAverage.toFixed(1)}
         </span>
       )}
