@@ -266,6 +266,13 @@ SCREENS = {
     "zBik1": ("flow-f-subtitle-v2", "f18-d-v2"),
     "KThbY": ("flow-f-subtitle-v2", "f19-d-v2"),
     "D7MOm": ("flow-f-subtitle-v2", "f20-d-v2"),
+    # flow-h-homepage-v3 — home identity rework (home-v3-identity-brief.md: 讀數帶 4 格 +
+    # 自家片庫靜態 hero + TMDb 尾巴濾已擁有; H7 = TMDb 降級態; H8 = 讀數帶金額顯示規則 spec).
+    # Supersedes flow-h-homepage-v2 (v2 frames renamed 〔已淘汰→v3〕, deleted after v3 ships).
+    "k2Otv": ("flow-h-homepage-v3", "h1-d-v3"),
+    "EoCQ4": ("flow-h-homepage-v3", "h7-d-v3"),
+    "uGCAU": ("flow-h-homepage-v3", "h2-m-v3"),
+    "iWUSV": ("flow-h-homepage-v3", "h8-spec-v3"),
 }
 
 
