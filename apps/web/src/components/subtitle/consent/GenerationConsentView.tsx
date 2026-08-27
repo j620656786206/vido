@@ -88,6 +88,22 @@ export function GenerationConsentView({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  /**
+   * Why the list came back empty. `listableCandidates()` keeps only
+   * extract/asr routes, so an empty list means「nothing is generatable」— which
+   * is NOT the same claim as「everything already has subtitles」. Recording
+   * which one actually happened is what stops the empty state lying; see the
+   * header of ConsentEmptyState.tsx. Defaults to the non-claiming reason.
+   */
+  const [emptyAllCovered, setEmptyAllCovered] = useState(false);
+  /**
+   * How many titles the analysis looked at, for the empty state's readout.
+   * Taken from the SNAPSHOT, not from `analysis.progress`: the `ready` path
+   * never starts SSE tracking, so the progress hook is still 0/0 there — which
+   * is exactly the path a cached analysis takes, and exactly the path that was
+   * printing the false claim.
+   */
+  const [analyzedCount, setAnalyzedCount] = useState<number | undefined>(undefined);
 
   const analysis = useGenerationCandidatesProgress();
   const { startTracking: startAnalysisTracking, reset: resetAnalysis } = analysis;
@@ -101,6 +117,12 @@ export function GenerationConsentView({
       const listable = groupOrder(listableCandidates(all));
       setCandidates(listable);
       if (listable.length === 0) {
+        // The ONLY case that earns「所有影片都有繁中字幕了」: the analysis
+        // returned records and every one was filtered out as already covered.
+        // `all.length === 0` means nothing generatable was found at all — a
+        // different fact, and the one a series-only library hits (ASR is
+        // movies-only today).
+        setEmptyAllCovered(all.length > 0);
         setPhase('empty');
         return;
       }
@@ -131,6 +153,7 @@ export function GenerationConsentView({
           setBudgetText(snap.defaultBudgetUsd.toFixed(2));
         }
         if (!forceAnalyze && snap.status === 'ready' && snap.result) {
+          setAnalyzedCount(snap.total || snap.analyzed);
           seedList(snap.result.candidates);
           return;
         }
@@ -176,8 +199,10 @@ export function GenerationConsentView({
         .getGenerationCandidates()
         .then((snap) => {
           if (cancelled) return;
-          if (snap.status === 'ready' && snap.result) seedList(snap.result.candidates);
-          else if (snap.status === 'cancelled') onClose();
+          if (snap.status === 'ready' && snap.result) {
+            setAnalyzedCount(snap.total || snap.analyzed);
+            seedList(snap.result.candidates);
+          } else if (snap.status === 'cancelled') onClose();
           else if (snap.status === 'error') {
             setLoadError(snap.error || '分析失敗');
             setPhase('error');
@@ -201,8 +226,14 @@ export function GenerationConsentView({
       void subtitleService
         .getGenerationCandidates()
         .then((snap) => {
+          setAnalyzedCount(snap.total || snap.analyzed);
           if (snap.result) seedList(snap.result.candidates);
-          else setPhase('empty');
+          else {
+            // No result object at all — the analysis produced nothing to
+            // classify, so this can never be the「everything is covered」case.
+            setEmptyAllCovered(false);
+            setPhase('empty');
+          }
         })
         .catch((err) => {
           setLoadError(err instanceof Error ? err.message : '無法載入候選清單');
@@ -318,7 +349,9 @@ export function GenerationConsentView({
               : phase === 'list'
                 ? '候選清單已就緒'
                 : phase === 'empty'
-                  ? '所有影片都有繁中字幕了'
+                  ? emptyAllCovered
+                    ? '所有影片都有繁中字幕了'
+                    : '沒有找到可以產生字幕的項目'
                   : ''}
           </p>
 
@@ -354,7 +387,7 @@ export function GenerationConsentView({
 
           {phase === 'empty' && (
             <>
-              <ConsentEmptyState />
+              <ConsentEmptyState allCovered={emptyAllCovered} analyzed={analyzedCount} />
               <div className="flex shrink-0 items-center justify-end border-t border-[var(--border-subtle)] px-6 py-3.5">
                 <button
                   type="button"

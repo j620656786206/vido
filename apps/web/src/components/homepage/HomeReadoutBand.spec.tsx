@@ -156,8 +156,17 @@ describe('HomeReadoutBand (Home v3 讀數帶 — ux3-1-7)', () => {
     expect(screen.getByTestId('readout-coverage-action').className).toContain('accent-text');
   });
 
-  it('[P2] the accent CTA half appears ONLY on first run — a stocked library has a plain label', () => {
-    mockUseHomeSummary.mockReturnValue(result({ data: summary() }));
+  /**
+   * Was「the accent CTA appears ONLY on first run」. ⚖️ Alexyu 2026-08-27 gave
+   * the cell a second rung (產生字幕, when the library is not fully covered),
+   * so the rule it was really guarding is now: the CTA is EARNED, never
+   * decoration — a fully-covered library still shows a plain label. The three
+   * rungs get their own describe block below.
+   */
+  it('[P2] the accent CTA half is earned — a fully-covered library has a plain label', () => {
+    mockUseHomeSummary.mockReturnValue(
+      result({ data: summary({ coverage: { status: 'ok', covered: 55, total: 55 } }) })
+    );
     render(<HomeReadoutBand />);
     expect(screen.queryByTestId('readout-coverage-action')).toBeNull();
   });
@@ -227,5 +236,114 @@ describe('HomeReadoutBand (Home v3 讀數帶 — ux3-1-7)', () => {
         );
       }
     });
+  });
+
+  /**
+   * ⚖️ Alexyu 2026-08-27. 產生字幕 → lived ONLY inside the scan-complete toast,
+   * which self-destructs after 10s — so the scan announced「N 部影片缺繁中字幕」
+   * and then removed the only one-tap way to act on it. This cell is now its
+   * permanent home. These guard the ladder AND the honesty rule that made the
+   * change safe: the door is new, the NUMBER is not.
+   */
+  describe('[P1] cell ① 繁中字幕 — the permanent 產生字幕 door', () => {
+    const action = () => screen.queryByTestId('readout-coverage-action');
+
+    it('offers 產生字幕 when the library is not fully covered', () => {
+      mockUseHomeSummary.mockReturnValue(
+        result({ data: summary({ coverage: { status: 'ok', covered: 3, total: 7 } }) })
+      );
+      render(<HomeReadoutBand />);
+      expect(action()).toHaveTextContent('產生字幕');
+      expect(screen.getByTestId('readout-coverage')).toHaveAttribute(
+        'aria-label',
+        '繁中字幕，已覆蓋 3 / 7 部，前往產生字幕'
+      );
+    });
+
+    it('offers NOTHING when every title is already covered — the number is the message', () => {
+      mockUseHomeSummary.mockReturnValue(
+        result({ data: summary({ coverage: { status: 'ok', covered: 7, total: 7 } }) })
+      );
+      render(<HomeReadoutBand />);
+      expect(action()).toBeNull();
+    });
+
+    it('still offers 開始掃描 on a fresh library — 0/0 is not "uncovered", it is empty', () => {
+      mockUseHomeSummary.mockReturnValue(
+        result({ data: summary({ coverage: { status: 'ok', covered: 0, total: 0 } }) })
+      );
+      render(<HomeReadoutBand />);
+      expect(action()).toHaveTextContent('開始掃描');
+    });
+
+    it('offers no door when coverage is UNMEASURABLE — unknown is not "some are missing"', () => {
+      mockUseHomeSummary.mockReturnValue(
+        result({ data: summary({ coverage: { status: 'unavailable' } }) })
+      );
+      render(<HomeReadoutBand />);
+      expect(action()).toBeNull();
+      expect(screen.queryByTestId('readout-coverage-value')).toBeNull();
+    });
+
+    /**
+     * The reason this change is safe. `coverage` counts TITLES; the toast's
+     * missingSubtitleCount counts EPISODES too. Printing the toast's number
+     * under this label would be an almost-right number, which is the one thing
+     * this product refuses to do. The door moved; the readout did not.
+     */
+    it('adds the door WITHOUT touching the number', () => {
+      mockUseHomeSummary.mockReturnValue(
+        result({ data: summary({ coverage: { status: 'ok', covered: 3, total: 7 } }) })
+      );
+      render(<HomeReadoutBand />);
+      expect(screen.getByTestId('readout-coverage-value')).toHaveTextContent('3/7');
+    });
+  });
+
+  /**
+   * WCAG 2.5.3 Label in Name — all four cells failed this, caught by the
+   * 2026-08-27 critique's browser pass. 需要注意 was the worst: those four
+   * characters appeared NOWHERE in its accessible name, so voice control could
+   * not activate the cell by the label the user can see. The others reordered
+   * the words or inserted a character (今天處理 → 今天處理**了**).
+   *
+   * The rule is mechanical, which is why it is testable: the accessible name
+   * must START with the visible label, verbatim.
+   */
+  describe("[P1] WCAG 2.5.3 — every cell's accessible name starts with its visible label", () => {
+    const CELLS = [
+      ['readout-coverage', '繁中字幕'],
+      ['readout-processed', '今天處理'],
+      ['readout-attention', '需要注意'],
+      ['readout-inflight', '進行中'],
+    ] as const;
+
+    it.each(CELLS)('%s begins with 「%s」', (testId, label) => {
+      mockUseHomeSummary.mockReturnValue(result({ data: summary() }));
+      render(<HomeReadoutBand />);
+      expect(screen.getByTestId(testId).getAttribute('aria-label')).toMatch(
+        new RegExp(`^${label}`)
+      );
+    });
+
+    it.each(CELLS)(
+      '%s still begins with 「%s」 when its source is unmeasurable',
+      (testId, label) => {
+        mockUseHomeSummary.mockReturnValue(
+          result({
+            data: summary({
+              coverage: { status: 'unavailable' },
+              processedToday: { status: 'unavailable' },
+              attention: { status: 'unavailable' },
+              inFlight: { status: 'unavailable' },
+            }),
+          })
+        );
+        render(<HomeReadoutBand />);
+        expect(screen.getByTestId(testId).getAttribute('aria-label')).toMatch(
+          new RegExp(`^${label}`)
+        );
+      }
+    );
   });
 });
