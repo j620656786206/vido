@@ -43,10 +43,18 @@ See `_bmad-output/planning-artifacts/architecture/consolidation-refactoring-plan
 
 ## 🎯 Core Architectural Decisions (MANDATORY)
 
-### 1. CSS Framework: Tailwind CSS v3.x
+### 1. CSS Framework: Tailwind CSS v4
 
 - **Use:** Utility-first classes for all styling
-- **Config:** `/apps/web/tailwind.config.js`
+- **Theme / keyframes:** `/apps/web/src/styles.css` — the `@theme` block, and nowhere else.
+- ⚠️ **2026-08-26:** `/apps/web/tailwind.config.js` was DELETED and must not be recreated.
+  It was a **v3-shaped** config, and v4 only reads such a file when a stylesheet points at
+  it with `@config` — `styles.css` never did. Everything declared in it therefore emitted
+  **zero CSS**, silently: `animate-shrink` left ScanProgressCard's auto-dismiss countdown
+  frozen at full width for months while a real 10s timer destroyed the card underneath it.
+  A class Tailwind never emits looks exactly like a class that does nothing.
+  `apps/web/src/styles-motion.spec.ts` now fails the build if source names an animation
+  that is not registered.
 - **Why:** Bundle size optimization, design system consistency
 
 ### 2. Testing Infrastructure
@@ -1260,7 +1268,6 @@ vido/
 │       │   ├── services/       # API clients
 │       │   ├── stores/         # Zustand (UI state only)
 │       │   └── utils/
-│       └── tailwind.config.js
 │
 ├── libs/
 │   └── shared-types/           # TypeScript types

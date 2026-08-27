@@ -98,7 +98,21 @@ export function ScanProgress() {
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50" data-testid="scan-progress-wrapper">
+    /* ⚖️ Alexyu 2026-08-27:「我手機可能還要做其他事情，它不像桌機一樣，我開個
+       網頁就可以去忙別的事了」— this sheet is z-50 and MobileTabBar is z-40 at
+       the same `bottom-0`, so it used to SIT ON the bottom navigation: while it
+       was up you could not reach 首頁/媒體庫/活動/下載/更多 at all. On a phone,
+       where you switch tasks constantly, being blocked is worse than being
+       interrupted. Lifting it clear means the ten-second timer is a
+       convenience rather than the only escape.
+       The offset is gated at `sm` and not at the 768px sheet breakpoint ON
+       PURPOSE: MobileTabBar is `sm:hidden`, so between 640px and 767px the
+       sheet renders with no tab bar beneath it and must sit flush. Keep these
+       two breakpoints in step — they answer the same question. */
+    <div
+      className="fixed inset-x-0 bottom-[calc(84px+env(safe-area-inset-bottom))] z-50 sm:bottom-0"
+      data-testid="scan-progress-wrapper"
+    >
       <ScanProgressSheet
         state={scanProgress}
         onCancel={handleCancel}

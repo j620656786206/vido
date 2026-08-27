@@ -19,7 +19,12 @@ function DialogOverlay({
         /* --overlay-scrim is the modal-backdrop token and stays DARK in both
            themes: a paper modal on paper ground needs the same boundary a dark
            one does. Was black/60; the token is 70%. */
-        'fixed inset-0 z-50 bg-[var(--overlay-scrim)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+        /* The animate-in / fade-in-0 family this replaced came from
+           tailwindcss-animate, a plugin this project never installed — it
+           emitted zero CSS, so every modal in the subtitle flow popped in and
+           out on a single frame. Replaced with keyframes styles.css owns and
+           the motion tokens drive. */
+        'fixed inset-0 z-50 bg-[var(--overlay-scrim)] data-[state=open]:animate-overlay-enter data-[state=closed]:animate-overlay-exit',
         className
       )}
       {...props}
@@ -37,7 +42,11 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Content
         className={cn(
-          'fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-xl)] bg-[var(--bg-secondary)] p-6 shadow-[var(--shadow-xl)] duration-[var(--motion-move)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+          /* `duration-[…]` is gone with them: it sets --tw-duration, which a
+             `animation:` shorthand never reads — the timing lives in the
+             --animate-dialog-* tokens instead. Enter and exit carry DIFFERENT
+             animation-names on purpose; see the ⚠️ in styles.css. */
+          'fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-xl)] bg-[var(--bg-secondary)] p-6 shadow-[var(--shadow-xl)] data-[state=open]:animate-dialog-enter data-[state=closed]:animate-dialog-exit',
           className
         )}
         {...props}

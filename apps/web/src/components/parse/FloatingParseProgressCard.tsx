@@ -76,7 +76,10 @@ export function FloatingParseProgressCard({
       className={cn(
         'fixed bottom-6 right-6 w-[420px] bg-[var(--bg-secondary)] rounded-xl shadow-2xl',
         'border border-[var(--border-subtle)]',
-        'animate-in slide-in-from-right-5 duration-[var(--motion-move)]',
+        // Was `animate-in slide-in-from-right-5` plus a duration-* that an
+        // `animation:` shorthand never reads — tailwindcss-animate classes for
+        // a plugin this project never installed, so the card simply appeared.
+        'animate-surface-slide-in-right',
         isMinimized && 'h-auto',
         className
       )}

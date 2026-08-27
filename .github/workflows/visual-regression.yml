@@ -180,9 +180,13 @@ jobs:
       #     bugfix-19-4b-1-followup CR M1 指認、明文 carry-forward 到本 P3 的
       #     已知缺口(bisect-regression.yml 早已含本路徑)。
       #   - `apps/web/postcss.config.js`: Tailwind→CSS 的 transform pipeline
-      #     (`@tailwindcss/postcss` + `autoprefixer`)。比 `tailwind.config.js`
-      #     更直接決定 render 後像素 —— 移掉 autoprefixer 即改變輸出。原 filter
-      #     看 tailwind.config.js 卻漏了驅動它的 postcss.config.js。
+      #     (`@tailwindcss/postcss` + `autoprefixer`)。直接決定 render 後像素
+      #     —— 移掉 autoprefixer 即改變輸出。
+      #     ⚠️ 2026-08-26 更新:原本這裡還監看 `apps/web/tailwind.config.js`,
+      #     但那是 v3 格式的設定檔、Tailwind v4 從來沒讀過它(styles.css 沒有
+      #     @config),裡面宣告的 keyframes 全部沒有產出 CSS。該檔已刪除,
+      #     主題與 keyframes 的唯一註冊管道是 `apps/web/src/styles.css` 的
+      #     @theme 區塊 —— 而 styles.css 本來就在這份 filter 裡。
       #   - `apps/web/vite.config.mts`: visual diff 跑在 `nx serve web`(Vite
       #     dev server)上,本檔設定該 server 的 plugins / CSS 處理 / asset 行為,
       #     是 gallery 渲染的決定面之一。
@@ -202,7 +206,6 @@ jobs:
               - 'apps/web/src/routes/**'
               - 'apps/web/src/styles.css'
               - 'apps/web/src/app/**'
-              - 'apps/web/tailwind.config.js'
               - 'apps/web/postcss.config.js'
               - 'apps/web/vite.config.mts'
               - 'apps/web/src/main.tsx'
@@ -223,7 +226,7 @@ jobs:
           echo "Paths watched:"
           echo "  apps/web/src/{components,routes,app}/**"
           echo "  apps/web/src/{styles.css,main.tsx}"
-          echo "  apps/web/{tailwind.config.js,postcss.config.js,vite.config.mts,index.html}"
+          echo "  apps/web/{postcss.config.js,vite.config.mts,index.html}"
           echo "  tests/visual/**"
           echo "  playwright.config.ts"
           echo "  package.json"

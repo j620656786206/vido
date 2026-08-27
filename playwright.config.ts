@@ -157,7 +157,20 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 800 },
         colorScheme: 'dark', // Vido's only theme — pin it so a future light theme can't silently rebaseline.
-        reducedMotion: 'reduce', // kill CSS transitions so hover/focus snapshots are stable.
+        // ⚠️ MUST be nested under contextOptions. A top-level `reducedMotion`
+        // in `use` is NOT a PlaywrightTestOptions fixture — the test runner
+        // silently drops it (playwright/lib/index.js forwards `colorScheme`
+        // but contains ZERO references to `reducedMotion`), so this pin was
+        // dead for every baseline in this suite while the colorScheme pin
+        // beside it worked, which is exactly why nobody noticed.
+        // Proved behaviourally: `use.reducedMotion` → matchMedia reduce=false;
+        // `use.contextOptions.reducedMotion` → true.
+        // The cost was real: with reduce never applied, `motion-reduce:animate-none`
+        // never matched, so the scan card's 10s countdown genuinely ran and
+        // toHaveScreenshot's `animations:'disabled'` called animation.finish()
+        // — `fill: forwards` then pinned scale:0 and the bar screenshotted
+        // fully drained (892px diff, 20× the budget).
+        contextOptions: { reducedMotion: 'reduce' }, // kill CSS motion so snapshots are stable.
       },
     },
 

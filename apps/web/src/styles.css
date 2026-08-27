@@ -331,13 +331,126 @@
   }
 }
 
-/* Registered through @theme rather than written as a plain class so Tailwind
- * emits it as a real utility — which is what makes `motion-safe:animate-breathe`
- * legal. A hand-rolled `.animate-breathe` cannot take a variant, and the
- * variant is the point: this animation must be switchable off at the call site
- * as well as by the global net. */
+/* ② 解釋改變 — OVERLAYS.
+ *
+ * An overlay that appears on one frame gives no answer to「這是從哪來的？」, and
+ * one that vanishes on one frame takes the answer away again. These four exist
+ * because the app's modals are where the expensive, chargeable decisions get
+ * made (the subtitle consent flow runs through them) and a modal that blinks
+ * into place reads as a glitch rather than as a deliberate interruption.
+ *
+ * ⚠️ ENTER AND EXIT MUST NOT SHARE AN ANIMATION-NAME. Radix's Presence decides
+ * whether to defer unmount by comparing the previous and current computed
+ * `animation-name` (@radix-ui/react-presence index.mjs:62-66). Give the two
+ * states the same name and it concludes nothing is animating, unmounts on the
+ * spot, and the exit is never seen — silently, exactly like the dead classes
+ * these replace. Same file, line 59: a computed name of `none` also unmounts
+ * immediately, which is why `motion-reduce` can never hang a dialog open.
+ *
+ * SCALE, not transform: the dialog is centred with `-translate-x-1/2
+ * -translate-y-1/2`, which in Tailwind v4 sets the individual `translate`
+ * property. Animating the individual `scale` property composes with it;
+ * animating `transform` would have to re-state the centring or lose it. */
+@keyframes overlay-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes overlay-exit {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    scale: 0.96;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+@keyframes dialog-exit {
+  from {
+    opacity: 1;
+    scale: 1;
+  }
+  to {
+    opacity: 0;
+    scale: 0.96;
+  }
+}
+
+/* ② 解釋改變 — TRANSIENT SURFACES that arrive at an edge (toasts, floating
+ * cards). They travel --motion-rise so the distance is the same one fadeIn
+ * uses, and they animate `transform` rather than the individual `translate`
+ * property BECAUSE these elements are centred or pinned with translate-*
+ * utilities: `transform` composes on top of `translate` instead of replacing
+ * it. Do not "simplify" these to `translate:` — a bottom-centred toast would
+ * jump to the left edge. */
+@keyframes surface-rise {
+  from {
+    opacity: 0;
+    transform: translateY(var(--motion-rise));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes surface-slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(calc(var(--motion-rise) * 2.5));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ③ 它真的在跑 — the auto-dismiss countdown. NOT decoration and NOT ordinary
+ * motion: it is the ONLY warning that ScanProgressCard is about to destroy
+ * itself while you are still reading it, and its duration is a DEADLINE, so it
+ * is deliberately not a --motion-* token. The call site overrides
+ * animation-duration inline from AUTO_DISMISS_MS so the bar and the setTimeout
+ * cannot drift apart; the 10s here is only the fallback that keeps the
+ * shorthand valid. Scale, with a left origin, rather than width — a width
+ * keyframe on a 2px bar reflows on every frame for no gain. */
+@keyframes countdown {
+  from {
+    scale: 1 1;
+  }
+  to {
+    scale: 0 1;
+  }
+}
+
+/* Registered through @theme rather than written as plain classes so Tailwind
+ * emits them as real utilities — which is what makes `motion-safe:animate-breathe`
+ * and `data-[state=open]:animate-dialog-enter` legal. A hand-rolled
+ * `.animate-*` cannot take a variant, and the variants ARE the point here.
+ *
+ * Plain @theme, never `@theme inline`: these values reference :root tokens, so
+ * they inherit the reduced-motion collapse at the top of this file for free.
+ * `@theme inline` would bake the value into the utility and opt out of it. */
 @theme {
   --animate-breathe: breathe var(--breath) cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-overlay-enter: overlay-enter var(--motion-move) var(--ease-settle) both;
+  --animate-overlay-exit: overlay-exit var(--motion-leave) var(--ease-leave) both;
+  --animate-dialog-enter: dialog-enter var(--motion-move) var(--ease-settle) both;
+  --animate-dialog-exit: dialog-exit var(--motion-leave) var(--ease-leave) both;
+  --animate-surface-rise: surface-rise var(--motion-move) var(--ease-settle) both;
+  --animate-surface-slide-in-right: surface-slide-in-right var(--motion-move) var(--ease-settle)
+    both;
+  --animate-countdown: countdown 10s linear forwards;
 }
 
 /* Global dark theme baseline */

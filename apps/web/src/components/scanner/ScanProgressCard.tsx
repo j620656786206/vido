@@ -222,14 +222,32 @@ export function ScanProgressCard({
           )}
         </div>
 
-        {/* Auto-dismiss progress bar */}
+        {/* Auto-dismiss progress bar.
+            This card destroys itself after AUTO_DISMISS_MS while the reader may
+            still be deciding between 查看未比對項目 / 查看錯誤 / 產生字幕, and
+            this 2px bar is the ONLY warning it gives — the copy never says the
+            card is on a timer. It was frozen at full width from the day it
+            shipped, because `animate-shrink` was declared in tailwind.config.js
+            and Tailwind v4 never loads that file. So the one honest signal read
+            「時間還很多」right up to the moment the card vanished.
+            The duration is set inline from AUTO_DISMISS_MS rather than baked
+            into the keyframe: the bar and the setTimeout must not be able to
+            drift apart. Units are mandatory — a bare number in an animation
+            shorthand parses as an iteration COUNT.
+            `motion-reduce:animate-none` stays and is load-bearing: `forwards`
+            plus the global 1ms clamp would otherwise empty the bar instantly
+            and then sit at zero for the remaining ten seconds, which is a
+            worse lie than the frozen one. */}
         <div className="mt-3 h-0.5 w-full overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
           <div
             className={cn(
-              'h-full bg-[var(--text-muted)] motion-reduce:animate-none',
-              isAutoDismissing && 'animate-shrink'
+              'h-full origin-left bg-[var(--text-muted)] motion-reduce:animate-none',
+              isAutoDismissing && 'animate-countdown'
             )}
-            style={isPaused ? { animationPlayState: 'paused' } : undefined}
+            style={{
+              animationDuration: `${AUTO_DISMISS_MS}ms`,
+              ...(isPaused ? { animationPlayState: 'paused' } : {}),
+            }}
             data-testid="auto-dismiss-bar"
           />
         </div>
