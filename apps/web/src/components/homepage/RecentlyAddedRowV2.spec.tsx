@@ -86,7 +86,8 @@ describe('RecentlyAddedRowV2 (own-content 最近新增 row — four states)', ()
     const refetch = vi.fn();
     mockUseRecentlyAdded.mockReturnValue(result({ isError: true, refetch }));
     render(<RecentlyAddedRowV2 />);
-    expect(screen.getByTestId('home-recent-error')).toHaveTextContent('無法載入，請稍後再試');
+    expect(screen.getByTestId('home-recent-error')).toHaveTextContent('最近新增目前無法載入');
+    expect(screen.getByTestId('home-recent-error')).toHaveTextContent('其他首頁內容仍可使用');
     fireEvent.click(screen.getByTestId('home-recent-retry'));
     expect(refetch).toHaveBeenCalledTimes(1);
   });

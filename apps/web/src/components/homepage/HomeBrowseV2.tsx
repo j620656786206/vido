@@ -30,10 +30,13 @@ import { RecentlyAddedRowV2 } from './RecentlyAddedRowV2';
 export function HomeBrowseV2() {
   return (
     <div data-testid="home-v2-root" className="flex flex-col gap-6 py-6 md:gap-8">
-      {/* The page never stated its own name — heading outline began at H2
-          (critique R2 P3). Visually the sections carry the page; the h1 is
-          for AT and the document outline. */}
-      <h1 className="sr-only">首頁</h1>
+      {/* Keep the page identity visible even when data-backed sections degrade.
+          It is intentionally restrained: the readout band remains the first
+          operating surface, while「首頁」prevents an error state from looking
+          like a standalone 最近新增 page. */}
+      <h1 className="mx-auto w-full max-w-7xl px-4 text-lg font-semibold text-[var(--text-primary)] sm:px-6">
+        首頁
+      </h1>
       {/* Home v3 讀數帶 (ux3-1-7, H1-D-v3): the Operate readout sits above
           EVERYTHING — the returning user reads first, browses second. */}
       <HomeReadoutBand />

@@ -1,5 +1,5 @@
 // Design ref: ux-design.pen Screen HP-5 ExploreBlock Polish (Y5XvRv)
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { useExploreBlockContent } from '../../hooks/useExploreBlocks';
 import { useInViewport } from '../../hooks/useInViewport';
@@ -37,6 +37,7 @@ interface ExploreBlockProps {
  */
 export function ExploreBlock({ block, ownership, eager = true, onVisible }: ExploreBlockProps) {
   const sectionRef = useRef<HTMLElement | null>(null);
+  const [canScrollRight, setCanScrollRight] = useState(true);
   // Eager blocks already pass their own visibility assertion to parent; skip
   // mounting a no-op observer for them. rootMargin trades a little bandwidth
   // for a smoother reveal on lazy blocks — posters are in place by the time
@@ -75,8 +76,6 @@ export function ExploreBlock({ block, ownership, eager = true, onVisible }: Expl
     if (isInViewport && !eager && onVisible) onVisible();
   }, [isInViewport, eager, onVisible]);
 
-  if (isError) return null;
-
   const scroll = (direction: 'left' | 'right') => {
     const el = scrollerRef.current;
     if (!el) return;
@@ -93,6 +92,33 @@ export function ExploreBlock({ block, ownership, eager = true, onVisible }: Expl
   // there is something to scroll — an empty block renders just the
   // "沒有符合條件的內容" message, with no chevron over it (bugfix-10-6 AC #5).
   const hasItems = !showSkeleton && items.length > 0;
+
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el || !hasItems) {
+      setCanScrollRight(false);
+      return;
+    }
+    const update = () => {
+      const hasMeasuredGeometry = el.scrollWidth > 0 || el.clientWidth > 0;
+      setCanScrollRight(
+        !hasMeasuredGeometry || el.scrollWidth - el.clientWidth - el.scrollLeft > 1
+      );
+    };
+    update();
+    el.addEventListener('scroll', update, { passive: true });
+    const observer =
+      typeof window === 'undefined' || !('ResizeObserver' in window)
+        ? null
+        : new window.ResizeObserver(update);
+    observer?.observe(el);
+    return () => {
+      el.removeEventListener('scroll', update);
+      observer?.disconnect();
+    };
+  }, [hasItems, items.length]);
+
+  if (isError) return null;
 
   return (
     <section
@@ -159,7 +185,10 @@ export function ExploreBlock({ block, ownership, eager = true, onVisible }: Expl
             />
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-y-0 right-0 z-0 hidden w-14 bg-gradient-to-l from-[var(--bg-primary)] to-transparent opacity-0 transition-opacity duration-[var(--motion-state)] group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
+              className={cn(
+                'pointer-events-none absolute inset-y-0 right-0 z-0 hidden w-14 bg-gradient-to-l from-[var(--bg-primary)] to-transparent transition-opacity duration-[var(--motion-state)] lg:block',
+                canScrollRight ? 'opacity-100' : 'opacity-0'
+              )}
             />
             <button
               type="button"
@@ -175,7 +204,10 @@ export function ExploreBlock({ block, ownership, eager = true, onVisible }: Expl
               onClick={() => scroll('right')}
               aria-label="向右捲動"
               data-testid="explore-block-scroll-right"
-              className="absolute right-0 top-1/2 z-10 hidden translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] opacity-0 shadow-lg ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity duration-[var(--motion-state)] hover:bg-[var(--bg-tertiary)] focus-visible:opacity-100 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
+              className={cn(
+                'absolute right-0 top-1/2 z-10 hidden translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] shadow-lg ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity duration-[var(--motion-state)] hover:bg-[var(--bg-tertiary)] focus-visible:opacity-100 lg:block',
+                canScrollRight ? 'opacity-70 hover:opacity-100' : 'pointer-events-none opacity-0'
+              )}
             >
               <ChevronRight className="h-5 w-5" />
             </button>
@@ -187,6 +219,11 @@ export function ExploreBlock({ block, ownership, eager = true, onVisible }: Expl
         ) : (
           <div
             ref={scrollerRef}
+            onScroll={() => {
+              const el = scrollerRef.current;
+              if (!el) return;
+              setCanScrollRight(el.scrollWidth - el.clientWidth - el.scrollLeft > 1);
+            }}
             data-testid="explore-block-scroller"
             className={cn(
               'flex gap-4 overflow-x-auto pb-2 snap-x',

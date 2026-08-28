@@ -93,7 +93,7 @@ describe('HeroBanner (Home v3 own-library static hero — ux3-1-8)', () => {
     vi.clearAllMocks();
   });
 
-  it('[P1] renders the newest own item with 最新入庫 eyebrow, title link to the LIBRARY detail route, and gold 查看詳情 CTA', () => {
+  it('[P1] renders the newest own item with 最新入庫 eyebrow, title, and one gold 查看詳情 CTA', () => {
     mockUseRecentlyAdded.mockReturnValue(result({ data: [movie('m1'), movie('m2')] }));
     render(<HeroBanner />);
 
@@ -103,11 +103,8 @@ describe('HeroBanner (Home v3 own-library static hero — ux3-1-8)', () => {
       '最新入庫'
     );
     expect(slide.querySelector('[data-testid="hero-banner-title"]')).toHaveTextContent('電影 m1');
-    // LIBRARY id in the route — not a TMDb id.
-    expect(slide.querySelector('[data-testid="hero-banner-title-link"]')).toHaveAttribute(
-      'href',
-      '/media/movie/m1'
-    );
+    expect(slide.querySelector('[data-testid="hero-banner-title"] a')).toBeNull();
+    // The one explicit detail door uses the local library id, not a TMDb id.
     expect(slide.querySelector('[data-testid="hero-banner-detail-link"]')).toHaveAttribute(
       'href',
       '/media/movie/m1'

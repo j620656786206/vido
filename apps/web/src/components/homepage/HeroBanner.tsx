@@ -123,10 +123,10 @@ function HeroSlide({
   const [imageBroken, setImageBroken] = useState(false);
 
   return (
-    // The container carries NO interaction (critique R1 P1 lineage): the title
-    // <Link> stretches over the whole slide (after:inset-0) so full-surface
-    // click is a NATIVE anchor; the CTA sits above it on z-10. `inert` removes
-    // inactive slides from focus order + the a11y tree.
+    // The container carries NO interaction. The explicit CTA below is the
+    // single detail destination; the actionable subtitle badge remains its
+    // own target when a subtitle problem can be fixed. `inert` removes inactive
+    // slides from focus order + the accessibility tree.
     <div
       data-testid="hero-banner-slide"
       data-active={active ? 'true' : 'false'}
@@ -193,17 +193,10 @@ function HeroSlide({
           </p>
 
           <p
-            className="mt-2 text-2xl font-bold sm:text-3xl lg:text-4xl"
+            className="mt-2 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl lg:text-4xl"
             data-testid="hero-banner-title"
           >
-            <Link
-              to="/media/$type/$id"
-              params={{ type: item.type, id: item.id }}
-              data-testid="hero-banner-title-link"
-              className="text-[var(--text-primary)] after:absolute after:inset-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-primary)]"
-            >
-              {item.title}
-            </Link>
+            {item.title}
           </p>
 
           {/* The meta row rides its own scrim. The status tints are 12%-alpha
@@ -347,8 +340,8 @@ export function HeroBanner() {
         />
       ))}
 
-      {/* Switching slides replaces the title, badge, meta AND both link
-          destinations while focus stays on the button that did it — with the
+      {/* Switching slides replaces the title, badge, meta AND the CTA
+          destination while focus stays on the button that did it — with the
           inactive slides `inert`, a screen reader would otherwise hear nothing
           at all. One polite live region names what the hero now shows; it is
           only ever driven by a user gesture, so it can never chatter. */}
