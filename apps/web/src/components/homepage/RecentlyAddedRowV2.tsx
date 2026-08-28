@@ -28,11 +28,12 @@
  * floor on the 重試 control (N5).
  */
 import { AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useRecentlyAdded, RECENT_LIMIT } from '../../hooks/useLibrary';
 import { PosterCardV2 } from '../library/PosterCardV2';
 import { scrollByMotionSafe } from '../../lib/motion';
+import { cn } from '../../lib/utils';
 import type { LibraryItem, LibraryMovie, LibrarySeries } from '../../types/library';
 
 const SKELETON_COUNT = 8;
@@ -81,6 +82,10 @@ function countInProgress(items: LibraryItem[]): number {
 export function RecentlyAddedRowV2() {
   const { data, isLoading, isError, refetch } = useRecentlyAdded(RECENT_LIMIT);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  // A quiet right-edge cue is visible only while the row can actually advance.
+  // jsdom reports zero geometry, so the initial true value keeps the control
+  // discoverable until a real browser measurement is available.
+  const [canScrollRight, setCanScrollRight] = useState(true);
 
   const scroll = (direction: 'left' | 'right') => {
     const el = scrollerRef.current;
@@ -93,6 +98,32 @@ export function RecentlyAddedRowV2() {
   const items = data ?? [];
   const cards = items.map(toCard).filter(Boolean) as CardFields[];
   const inProgress = countInProgress(items);
+
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el || cards.length === 0) {
+      setCanScrollRight(false);
+      return;
+    }
+
+    const update = () => {
+      const hasMeasuredGeometry = el.scrollWidth > 0 || el.clientWidth > 0;
+      setCanScrollRight(
+        !hasMeasuredGeometry || el.scrollWidth - el.clientWidth - el.scrollLeft > 1
+      );
+    };
+    update();
+    el.addEventListener('scroll', update, { passive: true });
+    const observer =
+      typeof window === 'undefined' || !('ResizeObserver' in window)
+        ? null
+        : new window.ResizeObserver(update);
+    observer?.observe(el);
+    return () => {
+      el.removeEventListener('scroll', update);
+      observer?.disconnect();
+    };
+  }, [cards.length]);
 
   return (
     <section data-testid="home-recently-added" aria-labelledby="home-ra-title">
@@ -150,7 +181,10 @@ export function RecentlyAddedRowV2() {
               className="h-4 w-4 shrink-0 text-[var(--error-text)]"
               aria-hidden="true"
             />
-            無法載入，請稍後再試
+            最近新增目前無法載入
+          </p>
+          <p className="text-sm text-[var(--text-secondary)]">
+            這個區塊的資料暫時無法取得，其他首頁內容仍可使用。
           </p>
           <button
             type="button"
@@ -177,7 +211,10 @@ export function RecentlyAddedRowV2() {
           />
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-y-0 right-0 z-0 hidden w-14 bg-gradient-to-l from-[var(--bg-primary)] to-transparent opacity-0 transition-opacity duration-[var(--motion-state)] group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
+            className={cn(
+              'pointer-events-none absolute inset-y-0 right-0 z-0 hidden w-14 bg-gradient-to-l from-[var(--bg-primary)] to-transparent transition-opacity duration-[var(--motion-state)] lg:block',
+              canScrollRight ? 'opacity-100' : 'opacity-0'
+            )}
           />
           <button
             type="button"
@@ -193,12 +230,20 @@ export function RecentlyAddedRowV2() {
             onClick={() => scroll('right')}
             aria-label="向右捲動"
             data-testid="home-recent-scroll-right"
-            className="absolute right-0 top-1/2 z-10 hidden translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] opacity-0 shadow-lg ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity duration-[var(--motion-state)] hover:bg-[var(--bg-tertiary)] focus-visible:opacity-100 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
+            className={cn(
+              'absolute right-0 top-1/2 z-10 hidden translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] shadow-lg ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity duration-[var(--motion-state)] hover:bg-[var(--bg-tertiary)] focus-visible:opacity-100 lg:block',
+              canScrollRight ? 'opacity-70 hover:opacity-100' : 'pointer-events-none opacity-0'
+            )}
           >
             <ChevronRight className="h-5 w-5" />
           </button>
           <div
             ref={scrollerRef}
+            onScroll={() => {
+              const el = scrollerRef.current;
+              if (!el) return;
+              setCanScrollRight(el.scrollWidth - el.clientWidth - el.scrollLeft > 1);
+            }}
             data-testid="home-recent-row"
             className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:thin] md:gap-4"
           >

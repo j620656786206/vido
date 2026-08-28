@@ -28,6 +28,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/vido/api/internal/config"
 	"github.com/vido/api/internal/database"
@@ -40,15 +41,16 @@ func main() {
 	dataDir := flag.String("data-dir", "./vido-test-data", "directory for the seeded vido.db")
 	mediaRoot := flag.String("media-root", "", "if set, create dummy media files here and use it in file_path/library paths")
 	reset := flag.Bool("reset", false, "delete an existing database before seeding")
+	failureFixtures := flag.Bool("failure-fixtures", false, "add deterministic failed parse/subtitle runs for homepage failure-state verification")
 	flag.Parse()
 
-	if err := run(*dataDir, *mediaRoot, *reset); err != nil {
+	if err := run(*dataDir, *mediaRoot, *reset, *failureFixtures); err != nil {
 		slog.Error("seed failed", "error", err)
 		os.Exit(1)
 	}
 }
 
-func run(dataDir, mediaRoot string, reset bool) error {
+func run(dataDir, mediaRoot string, reset bool, failureFixtures bool) error {
 	ctx := context.Background()
 
 	if err := os.MkdirAll(dataDir, 0o755); err != nil {
@@ -109,6 +111,11 @@ func run(dataDir, mediaRoot string, reset bool) error {
 	if err != nil {
 		return fmt.Errorf("seed series: %w", err)
 	}
+	if failureFixtures {
+		if err := seedFailureFixtures(ctx, repos, mediaRoot); err != nil {
+			return fmt.Errorf("seed failure fixtures: %w", err)
+		}
+	}
 
 	// The seeded env must land on the app, not the first-run wizard: __root.tsx
 	// redirects to /setup while `setup_completed` is unset, and the wizard can't
@@ -124,7 +131,32 @@ func run(dataDir, mediaRoot string, reset bool) error {
 		"movies", movieCount,
 		"series", seriesCount,
 		"episodes", episodeCount,
+		"failure_fixtures", failureFixtures,
 	)
+	return nil
+}
+
+// seedFailureFixtures adds records consumed by GET /home-summary's attention
+// cell. Media.ParseStatus alone is library metadata; the summary counts these
+// durable job/run failures, so keep the two concepts explicit in the fixture.
+func seedFailureFixtures(ctx context.Context, repos *repository.Repositories, mediaRoot string) error {
+	parseErr := "fixture: metadata parser could not identify a release group"
+	mediaID := "seed-mv-102"
+	if err := repos.ParseJobs.Create(ctx, &models.ParseJob{
+		ID: "seed-failure-parse-001", TorrentHash: "seed-failure-hash-001",
+		FilePath: filepath.Join(mediaRoot, "movies", "[Fixture] metadata-failure.mkv"),
+		FileName: "[Fixture] metadata-failure.mkv", Status: models.ParseJobFailed,
+		MediaID: &mediaID, ErrorMessage: &parseErr,
+	}); err != nil {
+		return err
+	}
+	if err := repos.SubtitleRuns.Create(ctx, &models.SubtitleRun{
+		ID: "seed-failure-run-001", MediaID: "seed-mv-001", MediaType: models.SubtitleRunMediaMovie,
+		Status: models.SubtitleRunFailed, ErrorMessage: "fixture: subtitle provider unavailable",
+		StartedAt: time.Now().UTC(),
+	}); err != nil {
+		return err
+	}
 	return nil
 }
 

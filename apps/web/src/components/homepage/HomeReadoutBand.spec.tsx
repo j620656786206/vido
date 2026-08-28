@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import type { HomeSummary } from '../../services/homeSummaryService';
 
@@ -185,15 +185,28 @@ describe('HomeReadoutBand (Home v3 讀數帶 — ux3-1-7)', () => {
     expect(screen.getByTestId('readout-inflight-value')).toHaveTextContent('0 個任務');
   });
 
-  it('[P2] loading renders the band-shaped skeleton; whole-request error renders NOTHING (fail-soft)', () => {
+  it('[P1] loading renders the band-shaped skeleton; whole-request error keeps an honest recovery band', () => {
     mockUseHomeSummary.mockReturnValue(result({ isLoading: true }));
     const { rerender } = render(<HomeReadoutBand />);
     expect(screen.getByTestId('home-readout-skeleton')).toBeInTheDocument();
 
-    mockUseHomeSummary.mockReturnValue(result({ isError: true }));
+    const refetch = vi.fn();
+    mockUseHomeSummary.mockReturnValue(result({ isError: true, refetch }));
     rerender(<HomeReadoutBand />);
+    expect(screen.getByTestId('home-readout-error')).toHaveTextContent('媒體庫讀數目前無法取得');
+    expect(screen.getByTestId('home-readout-error')).toHaveTextContent('其他首頁內容仍可使用');
+    expect(screen.getByTestId('home-readout-activity')).toHaveAttribute('href', '/activity');
+    fireEvent.click(screen.getByTestId('home-readout-retry'));
+    expect(refetch).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId('home-readout-band')).toBeNull();
     expect(screen.queryByTestId('home-readout-skeleton')).toBeNull();
+  });
+
+  it('[P2] whole-request error disables a repeated retry while the refetch is in flight', () => {
+    mockUseHomeSummary.mockReturnValue(result({ isError: true, isFetching: true }));
+    render(<HomeReadoutBand />);
+    expect(screen.getByTestId('home-readout-retry')).toBeDisabled();
+    expect(screen.getByTestId('home-readout-retry')).toHaveTextContent('重新讀取中');
   });
 
   /**

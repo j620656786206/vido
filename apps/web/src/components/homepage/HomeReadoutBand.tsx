@@ -17,6 +17,9 @@
  *    (--warning-text, 要求了但沒發生) is worn ONLY when failures > 0.
  *  - the spend trio is shown only when the backend sent one (absent ≠ $0);
  *    amounts fold per H8-SPEC-v3 (formatUsdShort) so no cell ever truncates.
+ *  - a whole-summary failure still renders one honest, actionable band. The
+ *    endpoint cannot identify a trustworthy source or timestamp, so this state
+ *    names neither; inventing either would break the contract it protects.
  */
 import { Link } from '@tanstack/react-router';
 import { Activity, AlertTriangle, Captions, CheckCheck } from 'lucide-react';
@@ -152,12 +155,56 @@ function ReadoutCell({
 }
 
 export function HomeReadoutBand() {
-  const { data, isLoading, isError } = useHomeSummary();
+  const { data, isLoading, isError, isFetching, refetch } = useHomeSummary();
 
-  // A whole-request failure means NOTHING was measured: the band absents
-  // itself entirely rather than rendering four empty label stubs. The page's
-  // sections below carry on (fail-soft, F3).
-  if (isError) return null;
+  // A whole-request failure means no value was measured, not that the readout
+  // stopped mattering. Keep one compact band so the homepage remains a useful
+  // operating surface: state, recovery, and a diagnostic destination all stay
+  // present without inventing four unknown values or a false cause.
+  if (isError) {
+    return (
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
+        <section
+          data-testid="home-readout-error"
+          role="status"
+          aria-live="polite"
+          aria-label="媒體庫讀數目前無法取得"
+          className="flex flex-col gap-3 rounded-[var(--radius-lg)] bg-[var(--error-tint)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="flex min-w-0 items-start gap-3">
+            <AlertTriangle
+              className="mt-0.5 h-5 w-5 shrink-0 text-[var(--error-text)]"
+              aria-hidden="true"
+            />
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-[var(--error-text)]">媒體庫讀數目前無法取得</p>
+              <p className="mt-0.5 text-sm text-[var(--text-secondary)]">
+                請重新讀取；其他首頁內容仍可使用。
+              </p>
+            </div>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              disabled={isFetching}
+              data-testid="home-readout-retry"
+              className="min-h-[44px] rounded-[var(--radius-md)] px-4 text-sm font-medium text-[var(--error-text)] transition-colors hover:bg-[var(--error)]/10 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isFetching ? '重新讀取中' : '重新讀取'}
+            </button>
+            <Link
+              to="/activity"
+              data-testid="home-readout-activity"
+              className="flex min-h-[44px] items-center px-2 text-sm font-medium text-[var(--text-primary)] underline underline-offset-2 transition-colors hover:text-[var(--error-text)]"
+            >
+              查看活動中心
+            </Link>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   /**
    * The skeleton is built from the band's OWN shell and cell box, not from a

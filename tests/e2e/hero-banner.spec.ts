@@ -271,7 +271,9 @@ test.describe('HeroBanner own-library identity @ui @hero-banner @ux3-1-8', () =>
     );
   });
 
-  test('[P1] links address the LIBRARY uuid, not a TMDb numeric id', async ({ page }) => {
+  test('[P1] the single detail door addresses the LIBRARY uuid, not a TMDb numeric id', async ({
+    page,
+  }) => {
     await stubHomepageBaseline(page);
     await stubRecent(page, dressedLibrary);
     // The detail page reads the LOCAL row for a UUID (classifyId → local-uuid);
@@ -283,16 +285,10 @@ test.describe('HeroBanner own-library identity @ui @hero-banner @ux3-1-8', () =>
     await page.goto('/');
 
     const first = activeSlide(page);
-    // Both doors (stretched title link + gold CTA) address the library row.
-    await expect(first.getByTestId('hero-banner-title-link')).toHaveAttribute(
-      'href',
-      `/media/movie/${MOVIE_A_ID}`
-    );
+    // The gold CTA is the one explicit detail door for the library row.
     const cta = first.getByTestId('hero-banner-detail-link');
     await expect(cta).toHaveAttribute('href', `/media/movie/${MOVIE_A_ID}`);
 
-    // The CTA sits on z-10 over a full-surface stretched anchor — clicking it
-    // must actually reach the CTA, not be swallowed by the overlay.
     await cta.click();
     await page.waitForURL(`**/media/movie/${MOVIE_A_ID}`);
     expect(page.url()).toContain(`/media/movie/${MOVIE_A_ID}`);

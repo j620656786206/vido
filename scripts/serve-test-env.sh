@@ -11,6 +11,7 @@
 #   scripts/serve-test-env.sh                # build + reseed + serve on :8090
 #   scripts/serve-test-env.sh --skip-build   # reuse existing dist/apps/web
 #   scripts/serve-test-env.sh --keep-db      # keep the current seeded DB
+#   scripts/serve-test-env.sh --failure-fixtures # add homepage failure-state data
 #
 # Env overrides:
 #   VIDO_TEST_ENV_DIR  (default: <repo>/.vido-test-env)
@@ -23,10 +24,12 @@ PORT="${VIDO_TEST_PORT:-8090}"
 
 SKIP_BUILD=0
 KEEP_DB=0
+FAILURE_FIXTURES=0
 for arg in "$@"; do
   case "$arg" in
     --skip-build) SKIP_BUILD=1 ;;
     --keep-db) KEEP_DB=1 ;;
+    --failure-fixtures) FAILURE_FIXTURES=1 ;;
     *)
       echo "unknown option: $arg" >&2
       exit 1
@@ -57,7 +60,11 @@ fi
 
 if [[ "$KEEP_DB" -eq 0 ]]; then
   echo "==> Seeding fixture database"
-  (cd "$ROOT/apps/api" && go run ./cmd/seed --data-dir "$ENV_DIR/data" --media-root "$ENV_DIR/media" --reset)
+  SEED_FAILURE_ARG=()
+  if [[ "$FAILURE_FIXTURES" -eq 1 ]]; then
+    SEED_FAILURE_ARG+=(--failure-fixtures)
+  fi
+  (cd "$ROOT/apps/api" && go run ./cmd/seed --data-dir "$ENV_DIR/data" --media-root "$ENV_DIR/media" --reset "${SEED_FAILURE_ARG[@]}")
 else
   echo "==> Keeping existing database"
 fi
