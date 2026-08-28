@@ -1,11 +1,18 @@
 package douban
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestMain(m *testing.M) {
+	os.Setenv("VIDO_OPENCC_BIN", "../subtitle/testdata/opencc-helper.sh")
+	os.Setenv("VIDO_OPENCC_CONFIG", "../subtitle/testdata/s2twp.json")
+	os.Exit(m.Run())
+}
 
 func TestNewChineseConverter(t *testing.T) {
 	converter := NewChineseConverter(nil)

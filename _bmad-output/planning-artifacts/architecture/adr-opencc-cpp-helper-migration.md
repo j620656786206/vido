@@ -1,6 +1,6 @@
 # ADR: OpenCC backend migration to the official C++ helper
 
-**Status:** In progress (opt-in implementation)
+**Status:** Accepted (helper-only implementation)
 
 ## Decision
 
@@ -21,4 +21,4 @@ Use the official C++ OpenCC CLI as the production conversion backend, invoked by
 
 ## Exit criteria
 
-Golden corpus parity, multi-architecture image tests, NAS smoke tests, and SBOM/license review must pass before switching the default backend or publishing a project-wide MIT/Apache license.
+Golden corpus parity, multi-architecture image tests, NAS smoke tests, and SBOM/license review passed for the OpenCC backend migration. Vido source is Apache-2.0; Docker images retain third-party FFmpeg/Alpine notices and must not be labeled as pure Apache-2.0.

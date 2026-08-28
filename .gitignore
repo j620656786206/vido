@@ -105,4 +105,5 @@ testsprite_tests/tmp/config.json
 
 # 本機產出的截圖與文章草稿(不進版控)
 output/
+artifacts/sbom/
 .claude/github-star-reminder.txt

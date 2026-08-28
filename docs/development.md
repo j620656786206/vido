@@ -203,4 +203,4 @@ A few paths date from the project's initial scaffold and are not part of the bui
 
 ## 授權
 
-授權條款尚未確定，原因見 [README](../README.md#授權)。
+Vido 原始碼採 Apache-2.0；Docker image 內的 FFmpeg、Alpine 與 OpenCC 等第三方元件仍依各自授權散布，請參閱 [license inventory](licenses/opencc.md) 與 release SBOM。

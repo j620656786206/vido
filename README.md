@@ -135,13 +135,11 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 ## 授權
 
-**授權條款尚未確定**，目前保留所有權利。
+**Vido 原始碼採 Apache-2.0**；Docker image 內的第三方元件依各自授權散布。
 
-原因是相依鏈中有一個 GPL-2.0 的傳遞相依（簡繁轉換用的 `opencc` → `liuzl/da` → `liuzl/cedar-go`），已確認會被靜態連結進 binary。在替換掉該相依之前，宣告任何寬鬆授權都與散布的實際內容不符，因此暫不宣告。
+先前的 Go OpenCC binding 會帶入 GPL-2.0 傳遞相依；該 binding 與 `liuzl/da`、`liuzl/cedar-go` 已經移除。正式條款見根目錄 [`LICENSE`](LICENSE)；Docker image 的第三方 SBOM、字典與 notices 仍須依各自授權處理。
 
-處理完之後會補上正式的 LICENSE。
-
-簡繁轉換正從 Go binding 遷移到官方 C++ OpenCC helper；目前是 opt-in 驗證階段，細節與驗收門檻見 [`docs/opencc-helper-migration.md`](docs/opencc-helper-migration.md)。在 GPL 傳遞相依移除並完成 SBOM 盤點前，請勿將整個 App 視為 MIT 或 Apache-2.0。
+簡繁轉換已改為只使用官方 C++ OpenCC helper，Go GPL binding 已從 production dependency graph 移除。每次 release 仍須依 SBOM、字典 inventory 與第三方 notices 流程審核，詳見 [`docs/opencc-helper-migration.md`](docs/opencc-helper-migration.md) 與 [`docs/licenses/opencc.md`](docs/licenses/opencc.md)。
 
 ## 第三方服務與資料來源
 

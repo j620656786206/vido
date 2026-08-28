@@ -8,18 +8,15 @@ import (
 	"os/exec"
 	"sync"
 	"time"
-
-	"github.com/longbridgeapp/opencc"
 )
 
 // ChineseConverter handles Simplified to Traditional Chinese conversion
 type ChineseConverter struct {
-	converter *opencc.OpenCC
-	helper    *cppHelper
-	logger    *slog.Logger
-	mu        sync.RWMutex
-	initErr   error
-	initOnce  sync.Once
+	helper   *cppHelper
+	logger   *slog.Logger
+	mu       sync.RWMutex
+	initErr  error
+	initOnce sync.Once
 }
 
 type cppHelper struct {
@@ -41,40 +38,21 @@ func NewChineseConverter(logger *slog.Logger) *ChineseConverter {
 // init lazily initializes the converter
 func (c *ChineseConverter) init() error {
 	c.initOnce.Do(func() {
-		if os.Getenv("VIDO_OPENCC_BACKEND") == "cpp" {
-			path := os.Getenv("VIDO_OPENCC_BIN")
-			if path == "" {
-				path = "opencc"
-			}
-			resolved, err := exec.LookPath(path)
-			if err != nil {
-				c.initErr = err
-				return
-			}
-			config := os.Getenv("VIDO_OPENCC_CONFIG")
-			if config == "" {
-				config = "/usr/share/opencc/s2twp.json"
-			}
-			c.helper = &cppHelper{path: resolved, config: config}
-			c.logger.Info("OpenCC C++ helper initialized", "profile", "s2twp", "binary", resolved)
-			return
+		path := os.Getenv("VIDO_OPENCC_BIN")
+		if path == "" {
+			path = "opencc"
 		}
-
-		// Use s2twp for best Traditional Chinese (Taiwan) conversion
-		// s2twp = Simplified to Traditional (Taiwan) with phrases
-		converter, err := opencc.New("s2twp")
+		resolved, err := exec.LookPath(path)
 		if err != nil {
-			c.logger.Error("Failed to initialize OpenCC converter",
-				"profile", "s2twp",
-				"error", err,
-			)
 			c.initErr = err
 			return
 		}
-		c.converter = converter
-		c.logger.Info("OpenCC converter initialized",
-			"profile", "s2twp",
-		)
+		config := os.Getenv("VIDO_OPENCC_CONFIG")
+		if config == "" {
+			config = "/usr/share/opencc/s2twp.json"
+		}
+		c.helper = &cppHelper{path: resolved, config: config}
+		c.logger.Info("OpenCC C++ helper initialized", "profile", "s2twp", "binary", resolved)
 	})
 	return c.initErr
 }
@@ -106,20 +84,7 @@ func (c *ChineseConverter) ToTraditional(simplified string) (string, error) {
 		return string(out), nil
 	}
 
-	if c.converter == nil {
-		return simplified, nil
-	}
-
-	traditional, err := c.converter.Convert(simplified)
-	if err != nil {
-		c.logger.Warn("Failed to convert to Traditional Chinese",
-			"error", err,
-			"input_length", len(simplified),
-		)
-		return simplified, err
-	}
-
-	return traditional, nil
+	return simplified, nil
 }
 
 // IsTraditional checks if the text appears to be Traditional Chinese

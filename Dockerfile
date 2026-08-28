@@ -130,7 +130,6 @@ ENV PORT=8080 \
     ENV=production \
     DB_PATH=/vido-data/vido.db \
     VIDO_PUBLIC_DIR=/app/public \
-    VIDO_OPENCC_BACKEND=cpp \
     VIDO_OPENCC_BIN=/usr/local/bin/opencc \
     VIDO_OPENCC_CONFIG=/usr/share/opencc/s2twp.json
 

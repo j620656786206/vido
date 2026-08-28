@@ -94,7 +94,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
 ENV PORT=8080 \
     ENV=production \
     DB_PATH=/vido-data/vido.db \
-    VIDO_OPENCC_BACKEND=cpp \
     VIDO_OPENCC_BIN=/usr/local/bin/opencc \
     VIDO_OPENCC_CONFIG=/usr/share/opencc/s2twp.json
 
