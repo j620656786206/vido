@@ -25,24 +25,21 @@ You do **not** need to install anything on the host beyond Docker:
 
 ## Quick Start
 
-Deploy Vido in under 5 minutes:
+For a NAS installation, use the published multi-architecture image. You do not
+need to clone the repository or build the image yourself:
 
 ```bash
-# 1. Clone the repository (if not already done)
-git clone https://github.com/your-org/vido.git
-cd vido
+# 1. Download the NAS Compose file
+curl -LO https://raw.githubusercontent.com/j620656786206/vido/main/docs/docker-compose.nas.yml
 
-# 2. Create environment file (optional - sensible defaults are provided)
-cp .env.example .env
+# 2. Edit the three host paths in the file, then start the application
+docker compose -f docker-compose.nas.yml up -d
 
-# 3. Start the application
-docker-compose up -d
-
-# 4. Access Vido
-open http://localhost:8080
+# 3. Access Vido on the NAS port selected in the file
+open http://localhost:8088
 ```
 
-That's it! Vido should now be running at `http://localhost:8080`.
+That's it! Vido should now be running at `http://localhost:8088`.
 
 ## Configuration
 
@@ -56,11 +53,11 @@ cp .env.example .env
 
 #### Essential Variables
 
-| Variable       | Default   | Description                |
-| -------------- | --------- | -------------------------- |
-| `WEB_PORT`     | `8080`    | Port for web interface     |
-| `MEDIA_PATH`   | `./media` | Path to your media library |
-| `TMDB_API_KEY` | (none)    | TMDb API key for metadata  |
+| Variable       | Default | Description                                       |
+| -------------- | ------- | ------------------------------------------------- |
+| `VIDO_PORT`    | `8088`  | NAS host port mapped to the container's port 8080 |
+| `MEDIA_PATH`   | —       | Path to your media library (set in Compose)       |
+| `TMDB_API_KEY` | (none)  | TMDb API key for metadata                         |
 
 #### Database Variables
 
@@ -165,11 +162,10 @@ Access at `http://localhost:8080`
 ### Scenario 2: Custom Ports
 
 ```bash
-# .env file
-WEB_PORT=9000
-API_PORT=9001
+# .env file (or edit the `ports` entry in the Compose file)
+VIDO_PORT=9000
 
-docker-compose up -d
+docker compose -f docker-compose.nas.yml up -d
 ```
 
 Access at `http://localhost:9000`
@@ -183,20 +179,13 @@ docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 ### Scenario 4: NAS Deployment (Synology/QNAP)
 
-1. Copy the `docker-compose.yml` to your NAS
-2. Create `.env` file:
+Use the platform-specific guides:
 
-```bash
-WEB_PORT=8080
-MEDIA_PATH=/volume1/video
-TMDB_API_KEY=your_key_here
-```
+- [Synology DSM／Container Manager 安裝指南](synology-installation-guide.zh-TW.md)
+- [QNAP QTS／Container Station 安裝指南](qnap-installation-guide.zh-TW.md)
 
-3. Run:
-
-```bash
-docker-compose up -d
-```
+Both guides use the same public image and the same three mounts: application
+data, backups, and a read-only media library.
 
 ## Volume Management
 
