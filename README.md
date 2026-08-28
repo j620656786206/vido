@@ -60,6 +60,16 @@
 
 需要 Docker 與 Docker Compose。
 
+如果你使用 Synology 或 QNAP NAS，請直接參考平台安裝指南；不需要在 NAS 上
+下載原始碼或自行建置 image：
+
+- [Synology DSM／Container Manager 安裝指南](docs/synology-installation-guide.zh-TW.md)
+- [QNAP QTS／Container Station 安裝指南](docs/qnap-installation-guide.zh-TW.md)
+
+### 從原始碼啟動（開發者）
+
+以下流程會從原始碼建置，適合開發者；NAS 使用者請使用上面的平台指南。
+
 ```bash
 git clone https://github.com/j620656786206/vido.git
 cd vido

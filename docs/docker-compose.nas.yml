@@ -1,0 +1,31 @@
+services:
+  vido:
+    image: ghcr.io/j620656786206/vido:latest
+    container_name: vido
+    restart: unless-stopped
+    ports:
+      - '${VIDO_PORT:-8088}:8080'
+    volumes:
+      # Change these host paths for your NAS.
+      - /path/to/vido/data:/vido-data
+      - /path/to/vido/backups:/vido-backups
+      - /path/to/media:/media:ro
+    environment:
+      ENV: production
+      TMDB_DEFAULT_LANGUAGE: zh-TW
+      TMDB_API_KEY: ''
+      PUID: '1000'
+      PGID: '1000'
+      AI_PROVIDER: gemini
+      GEMINI_API_KEY: ''
+      CLAUDE_API_KEY: ''
+      OPENAI_API_KEY: ''
+      ASR_BASE_URL: ''
+      ASR_MODEL: ''
+      AI_RUN_BUDGET_USD: '5'
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:8080/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
