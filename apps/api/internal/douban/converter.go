@@ -1,8 +1,13 @@
 package douban
 
 import (
+	"bytes"
+	"context"
 	"log/slog"
+	"os"
+	"os/exec"
 	"sync"
+	"time"
 
 	"github.com/longbridgeapp/opencc"
 )
@@ -10,10 +15,16 @@ import (
 // ChineseConverter handles Simplified to Traditional Chinese conversion
 type ChineseConverter struct {
 	converter *opencc.OpenCC
+	helper    *cppHelper
 	logger    *slog.Logger
 	mu        sync.RWMutex
 	initErr   error
 	initOnce  sync.Once
+}
+
+type cppHelper struct {
+	path   string
+	config string
 }
 
 // NewChineseConverter creates a new Chinese converter
@@ -30,6 +41,25 @@ func NewChineseConverter(logger *slog.Logger) *ChineseConverter {
 // init lazily initializes the converter
 func (c *ChineseConverter) init() error {
 	c.initOnce.Do(func() {
+		if os.Getenv("VIDO_OPENCC_BACKEND") == "cpp" {
+			path := os.Getenv("VIDO_OPENCC_BIN")
+			if path == "" {
+				path = "opencc"
+			}
+			resolved, err := exec.LookPath(path)
+			if err != nil {
+				c.initErr = err
+				return
+			}
+			config := os.Getenv("VIDO_OPENCC_CONFIG")
+			if config == "" {
+				config = "/usr/share/opencc/s2twp.json"
+			}
+			c.helper = &cppHelper{path: resolved, config: config}
+			c.logger.Info("OpenCC C++ helper initialized", "profile", "s2twp", "binary", resolved)
+			return
+		}
+
 		// Use s2twp for best Traditional Chinese (Taiwan) conversion
 		// s2twp = Simplified to Traditional (Taiwan) with phrases
 		converter, err := opencc.New("s2twp")
@@ -61,6 +91,20 @@ func (c *ChineseConverter) ToTraditional(simplified string) (string, error) {
 
 	c.mu.RLock()
 	defer c.mu.RUnlock()
+	if c.helper != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		cmd := exec.CommandContext(ctx, c.helper.path, "-c", c.helper.config, "-i", "/dev/stdin", "-o", "/dev/stdout")
+		cmd.Stdin = bytes.NewBufferString(simplified)
+		out, err := cmd.Output()
+		if ctx.Err() != nil {
+			return simplified, ctx.Err()
+		}
+		if err != nil {
+			return simplified, err
+		}
+		return string(out), nil
+	}
 
 	if c.converter == nil {
 		return simplified, nil

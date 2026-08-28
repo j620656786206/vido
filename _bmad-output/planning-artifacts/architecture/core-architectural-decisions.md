@@ -991,7 +991,7 @@ type SubtitleProvider interface {
 
 **Key Design Decisions:**
 - **Content-based language detection** (not filename-based) — Unicode unique character set analysis (~2000 simplified-only + ~2000 traditional-only chars). Threshold: >70% traditional = zh-Hant. Accuracy target: >99%, latency ~3-5ms/file.
-- **OpenCC integration** via Go binding or subprocess for 簡→繁 conversion; profile: **s2twp**
+- **OpenCC integration** uses the official C++ helper via subprocess for 簡→繁 conversion; profile: **s2twp**. The legacy Go binding remains only as a migration fallback until parity and license gates pass.
 - **Subtitle cache** in SQLite (search results TTL 24h, downloaded subtitles permanent)
 - **Parallel search** across all configured sources with configurable timeout per provider (default 10s). Assrt API key is optional.
 - **Subtitle extension:** `.zh-Hant.srt` (IETF BCP 47, compatible with Plex/Jellyfin/Infuse)

@@ -1,6 +1,7 @@
 package subtitle
 
 import (
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -8,6 +9,22 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestConverter_CPPHelperBackend(t *testing.T) {
+	dir := t.TempDir()
+	bin := dir + "/opencc"
+	require.NoError(t, os.WriteFile(bin, []byte("#!/bin/sh\ncat\n"), 0o755))
+	t.Setenv("VIDO_OPENCC_BACKEND", "cpp")
+	t.Setenv("VIDO_OPENCC_BIN", bin)
+	t.Setenv("VIDO_OPENCC_CONFIG", dir+"/s2twp.json")
+
+	c, err := NewConverter()
+	require.NoError(t, err)
+	require.True(t, c.IsAvailable())
+	got, err := c.ConvertS2TWP([]byte("\ufeff測試"))
+	require.NoError(t, err)
+	assert.Equal(t, "\ufeff測試", string(got), "helper must preserve UTF-8 BOM")
+}
 
 func TestNewConverter(t *testing.T) {
 	c, err := NewConverter()

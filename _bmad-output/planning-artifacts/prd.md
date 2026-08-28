@@ -144,7 +144,7 @@ Bazarr = search-first, weak zh-TW. Whisper-based auto-sub tools (whisper-subs / 
 ### Robustness Pattern — Two-Stage Translation Guarantee
 
 - **LLM handles SEMANTICS** (meaning, tone, Taiwan phrasing) via a structured prompt — translate to Taiwan Traditional Chinese, text-only, **never touch cue numbering / timestamps** (timestamps are re-stitched programmatically) — plus injected metadata and the per-show glossary.
-- **OpenCC s2twp runs as a DETERMINISTIC final pass** on the output, guaranteeing Traditional script even if the LLM leaks Simplified characters (idempotent on already-Traditional text; reuses the existing `converter.go`). **LLM = semantics, OpenCC = orthography.**
+- **Official C++ OpenCC helper `s2twp` runs as a DETERMINISTIC final pass** on the output, guaranteeing Traditional script even if the LLM leaks Simplified characters (idempotent on already-Traditional text; `converter.go` keeps the stable contract). During migration, the legacy Go backend is fallback-only. **LLM = semantics, OpenCC = orthography.**
 - **Per-cue quality gate:** detect Simplified leakage (`detector.go`), empty / echoed cues, and cue-count mismatch → retry only the affected cues; assert output timestamps equal the source cue-by-cue.
 
 ### Translation Quality Notes (informs functional requirements)

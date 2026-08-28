@@ -78,7 +78,9 @@ jobs:
             org.opencontainers.image.title=Vido
             org.opencontainers.image.description=NAS Media Management Platform with Traditional Chinese metadata support
             org.opencontainers.image.vendor=vido
-            org.opencontainers.image.licenses=MIT
+            # License is intentionally NOASSERTION until the OpenCC migration
+            # removes GPL transitive dependencies and SBOM review is complete.
+            org.opencontainers.image.licenses=NOASSERTION
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v7
