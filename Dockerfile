@@ -40,7 +40,22 @@ COPY nx.json tsconfig.base.json ./
 # NX_DAEMON=false prevents Nx daemon crashes under QEMU arm64 emulation
 RUN NX_DAEMON=false npx nx build web --configuration=production
 
-# Stage 2: Build backend
+# Stage 2: Build official C++ OpenCC helper
+# Pin the upstream release so the conversion dictionaries and binary are
+# reproducible across NAS architectures. Buildx compiles this stage for the
+# target platform (amd64/arm64) without cgo in the Go API.
+# ------------------------------------------------------------------------------
+FROM alpine:3.21 AS opencc-builder
+ARG OPENCC_VERSION=ver.1.4.2
+RUN apk add --no-cache git cmake make g++ python3
+WORKDIR /src
+RUN git clone --depth 1 --branch "${OPENCC_VERSION}" https://github.com/BYVoid/OpenCC.git opencc
+WORKDIR /src/opencc
+RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/opencc -DENABLE_GTEST=OFF \
+    && cmake --build build --parallel \
+    && cmake --install build
+
+# Stage 3: Build backend
 # ------------------------------------------------------------------------------
 FROM golang:1.25-alpine AS api-builder
 
@@ -64,7 +79,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -trimpath \
     -o /api ./cmd/api
 
-# Stage 3: Runtime
+# Stage 4: Runtime
 # ------------------------------------------------------------------------------
 FROM alpine:3.21
 
@@ -81,6 +96,11 @@ RUN mkdir -p /vido-data /vido-backups /app/public && \
 
 # Copy binary from api-builder
 COPY --from=api-builder /api /usr/local/bin/api
+
+# Official OpenCC CLI and s2twp dictionaries (Apache-2.0 upstream).
+COPY --from=opencc-builder /opt/opencc/bin/opencc /usr/local/bin/opencc
+COPY --from=opencc-builder /opt/opencc/lib/ /usr/local/lib/
+COPY --from=opencc-builder /opt/opencc/share/opencc/ /usr/share/opencc/
 
 # Copy built web assets from web-builder
 COPY --from=web-builder --chown=vido:vido /app/dist/apps/web /app/public
@@ -109,6 +129,9 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
 ENV PORT=8080 \
     ENV=production \
     DB_PATH=/vido-data/vido.db \
-    VIDO_PUBLIC_DIR=/app/public
+    VIDO_PUBLIC_DIR=/app/public \
+    VIDO_OPENCC_BACKEND=cpp \
+    VIDO_OPENCC_BIN=/usr/local/bin/opencc \
+    VIDO_OPENCC_CONFIG=/usr/share/opencc/s2twp.json
 
 CMD ["api"]

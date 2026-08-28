@@ -122,12 +122,12 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 ## 技術架構
 
-| 層   | 技術                                             |
-| ---- | ------------------------------------------------ |
-| 前端 | React 19、TanStack Router/Query、Tailwind CSS v4 |
-| 後端 | Go 1.25、Gin、SQLite (WAL + FTS5)                |
-| 字幕 | opencc（簡→繁）、Whisper（語音辨識）、ffmpeg     |
-| 部署 | Docker、單一容器                                 |
+| 層   | 技術                                                         |
+| ---- | ------------------------------------------------------------ |
+| 前端 | React 19、TanStack Router/Query、Tailwind CSS v4             |
+| 後端 | Go 1.25、Gin、SQLite (WAL + FTS5)                            |
+| 字幕 | 官方 C++ OpenCC helper（簡→繁）、Whisper（語音辨識）、ffmpeg |
+| 部署 | Docker、單一容器                                             |
 
 ## 開發
 
@@ -140,6 +140,8 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 原因是相依鏈中有一個 GPL-2.0 的傳遞相依（簡繁轉換用的 `opencc` → `liuzl/da` → `liuzl/cedar-go`），已確認會被靜態連結進 binary。在替換掉該相依之前，宣告任何寬鬆授權都與散布的實際內容不符，因此暫不宣告。
 
 處理完之後會補上正式的 LICENSE。
+
+簡繁轉換正從 Go binding 遷移到官方 C++ OpenCC helper；目前是 opt-in 驗證階段，細節與驗收門檻見 [`docs/opencc-helper-migration.md`](docs/opencc-helper-migration.md)。在 GPL 傳遞相依移除並完成 SBOM 盤點前，請勿將整個 App 視為 MIT 或 Apache-2.0。
 
 ## 第三方服務與資料來源
 

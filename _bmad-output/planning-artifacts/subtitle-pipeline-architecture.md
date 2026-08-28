@@ -360,7 +360,7 @@ A chunk batches cues into one request; a failure inside a chunk retries **only t
 ```
 LLM output
   → quality gate  (Simplified leakage / empty / echoed / cue-count mismatch)  → per-cue retry
-  → OpenCC s2twp  (deterministic final pass)
+  → official C++ OpenCC helper s2twp  (deterministic final pass; Go fallback during migration)
   → output
 ```
 

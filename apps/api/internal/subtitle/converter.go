@@ -2,9 +2,13 @@ package subtitle
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log/slog"
+	"os"
+	"os/exec"
 	"sync"
+	"time"
 
 	"github.com/longbridgeapp/opencc"
 )
@@ -14,8 +18,9 @@ const (
 	ProfileS2TWP = "s2twp" // Simplified → Traditional (Taiwan standard + Taiwan phrases)
 )
 
-// Converter wraps OpenCC for Chinese variant conversion.
-// It uses the pure Go opencc binding (no external binary required).
+// Converter wraps OpenCC for Chinese variant conversion. Production can opt
+// into the official C++ helper with VIDO_OPENCC_BACKEND=cpp; the pure-Go
+// binding remains a migration fallback until parity and license gates pass.
 //
 // Converter is safe for concurrent use. The underlying opencc library performs
 // read-only dictionary lookups after initialization, and non-default profiles
@@ -24,12 +29,38 @@ type Converter struct {
 	cc        *opencc.OpenCC
 	available bool
 	cache     sync.Map // profile string → *opencc.OpenCC
+	helper    *openCCHelper
+}
+
+// openCCHelper invokes the official C++ OpenCC CLI. It is opt-in while the
+// migration is validated; production images can set VIDO_OPENCC_BACKEND=cpp.
+type openCCHelper struct {
+	path    string
+	config  string
+	timeout time.Duration
 }
 
 // NewConverter creates a Converter initialized with the s2twp profile.
 // Returns an error if OpenCC initialization fails, but the Converter is still
 // usable in degraded mode (IsAvailable returns false, Convert returns originals).
 func NewConverter() (*Converter, error) {
+	if os.Getenv("VIDO_OPENCC_BACKEND") == "cpp" {
+		path := os.Getenv("VIDO_OPENCC_BIN")
+		if path == "" {
+			path = "opencc"
+		}
+		resolved, err := exec.LookPath(path)
+		if err != nil {
+			return &Converter{available: false}, fmt.Errorf("opencc helper: %w", err)
+		}
+		config := os.Getenv("VIDO_OPENCC_CONFIG")
+		if config == "" {
+			config = "/usr/share/opencc/s2twp.json"
+		}
+		slog.Info("OpenCC C++ helper initialized", "profile", ProfileS2TWP, "binary", resolved, "config", config)
+		return &Converter{available: true, helper: &openCCHelper{path: resolved, config: config, timeout: 30 * time.Second}}, nil
+	}
+
 	cc, err := opencc.New(ProfileS2TWP)
 	if err != nil {
 		slog.Warn("OpenCC initialization failed — converter will operate in degraded mode",
@@ -75,6 +106,16 @@ func (c *Converter) Convert(content []byte, profile string) ([]byte, error) {
 	hasBOM := len(stripped) < len(content)
 
 	input := string(stripped)
+	if c.helper != nil {
+		output, err := c.helper.convert(input, profile)
+		if err != nil {
+			return content, fmt.Errorf("opencc helper: %w", err)
+		}
+		if hasBOM {
+			return append(append([]byte{}, bom...), []byte(output)...), nil
+		}
+		return []byte(output), nil
+	}
 
 	// Look up or create the converter for this profile (cached)
 	cc, err := c.getOrCreateCC(profile)
@@ -101,6 +142,29 @@ func (c *Converter) Convert(content []byte, profile string) ([]byte, error) {
 	}
 
 	return []byte(output), nil
+}
+
+func (h *openCCHelper) convert(input, profile string) (string, error) {
+	if profile != ProfileS2TWP {
+		return "", fmt.Errorf("unsupported profile %q", profile)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), h.timeout)
+	defer cancel()
+	// OpenCC's CLI requires explicit input/output paths for streaming. The
+	// procfs devices keep the helper stateless and avoid temporary files.
+	cmd := exec.CommandContext(ctx, h.path, "-c", h.config, "-i", "/dev/stdin", "-o", "/dev/stdout")
+	cmd.Stdin = bytes.NewBufferString(input)
+	output, err := cmd.Output()
+	if ctx.Err() != nil {
+		return "", ctx.Err()
+	}
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return "", fmt.Errorf("exit status %d: %s", exitErr.ExitCode(), bytes.TrimSpace(exitErr.Stderr))
+		}
+		return "", err
+	}
+	return string(output), nil
 }
 
 // getOrCreateCC returns a cached OpenCC instance for the given profile,
