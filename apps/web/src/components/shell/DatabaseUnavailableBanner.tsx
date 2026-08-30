@@ -1,5 +1,8 @@
+// Implements: <utility — no .pen counterpart>
 /**
  * Global database-outage banner (bugfix-i-3-db-dead-returns-200).
+ * (Rule 21 exemption: ops/outage chrome with no designed .pen screen yet —
+ * if Sally later designs a dedicated outage state, upgrade this header.)
  *
  * When the database dies, every data-backed call fails — historically each in
  * its own way, which made ONE data-layer incident look like ten distinct bugs
