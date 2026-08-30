@@ -120,31 +120,11 @@ func (h *DownloadHandler) ListDownloads(c *gin.Context) {
 		return
 	}
 
-	// Enrich with parse status if service is available
-	var allItems []DownloadItem
-	if h.parseQueueSvc != nil {
-		allItems = make([]DownloadItem, len(torrents))
-		for i, t := range torrents {
-			allItems[i] = DownloadItem{Torrent: t}
-			if t.Status == qbittorrent.StatusCompleted || t.Status == qbittorrent.StatusSeeding {
-				if job, err := h.parseQueueSvc.GetJobStatus(c.Request.Context(), t.Hash); err == nil && job != nil {
-					allItems[i].ParseStatus = &DownloadParseStatus{
-						Status:       job.Status,
-						ErrorMessage: job.ErrorMessage,
-						MediaID:      job.MediaID,
-					}
-				}
-			}
-		}
-	} else {
-		allItems = make([]DownloadItem, len(torrents))
-		for i, t := range torrents {
-			allItems[i] = DownloadItem{Torrent: t}
-		}
-	}
-
-	// Apply pagination
-	total := len(allItems)
+	// Paginate FIRST, enrich AFTER (bugfix-f-downloads-activity-perf): parse
+	// status is one DB lookup per completed/seeding torrent, and doing it for
+	// the whole list meant thousands of lookups per request on a large seed box
+	// — for a page that renders at most 500 rows. Only the visible page pays.
+	total := len(torrents)
 	totalPages := (total + pageSize - 1) / pageSize
 	start := (page - 1) * pageSize
 	end := start + pageSize
@@ -154,9 +134,27 @@ func (h *DownloadHandler) ListDownloads(c *gin.Context) {
 	if end > total {
 		end = total
 	}
+	pageTorrents := torrents[start:end]
+
+	pageItems := make([]DownloadItem, len(pageTorrents))
+	for i, t := range pageTorrents {
+		pageItems[i] = DownloadItem{Torrent: t}
+		if h.parseQueueSvc == nil {
+			continue
+		}
+		if t.Status == qbittorrent.StatusCompleted || t.Status == qbittorrent.StatusSeeding {
+			if job, err := h.parseQueueSvc.GetJobStatus(c.Request.Context(), t.Hash); err == nil && job != nil {
+				pageItems[i].ParseStatus = &DownloadParseStatus{
+					Status:       job.Status,
+					ErrorMessage: job.ErrorMessage,
+					MediaID:      job.MediaID,
+				}
+			}
+		}
+	}
 
 	SuccessResponse(c, PaginatedResponse{
-		Items:      allItems[start:end],
+		Items:      pageItems,
 		Page:       page,
 		PageSize:   pageSize,
 		TotalItems: total,

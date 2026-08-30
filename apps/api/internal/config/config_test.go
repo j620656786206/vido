@@ -992,3 +992,31 @@ func splitEnvPair(e string) []string {
 	}
 	return []string{e}
 }
+
+// =============================================================================
+// bugfix-system-logs-no-retention: VIDO_LOG_RETENTION_DAYS
+// =============================================================================
+
+func TestLoad_LogRetentionDays_Default(t *testing.T) {
+	os.Unsetenv("VIDO_LOG_RETENTION_DAYS")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.Equal(t, 14, cfg.LogRetentionDays)
+}
+
+func TestLoad_LogRetentionDays_Override(t *testing.T) {
+	t.Setenv("VIDO_LOG_RETENTION_DAYS", "30")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.Equal(t, 30, cfg.LogRetentionDays)
+}
+
+func TestLoad_LogRetentionDays_DisabledByZero(t *testing.T) {
+	t.Setenv("VIDO_LOG_RETENTION_DAYS", "0")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.Equal(t, 0, cfg.LogRetentionDays)
+}
