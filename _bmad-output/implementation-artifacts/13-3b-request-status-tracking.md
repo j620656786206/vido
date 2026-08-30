@@ -1,6 +1,6 @@
 # Story 13.3b: Request Status Tracking — Frontend Live 想要清單 (SSE upgrade)
 
-Status: review
+Status: done
 
 **Epic:** Epic 13 — Request System · **FR:** P3-003 (G-3) · **Artery #3 (FE half)**
 **Depends on: 13-3a merged** (request_progress SSE) **+ 13-1b merged** (the static 想要清單 view this story upgrades). GATE-B (13-0's capability-honor note: FE consumption gated on the 13-3/13-4 BE) is SATISFIED once those land.
