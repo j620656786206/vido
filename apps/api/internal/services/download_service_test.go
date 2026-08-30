@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -93,25 +94,31 @@ func TestDownloadService_GetAllDownloads_ConfigError(t *testing.T) {
 	mockQB.AssertExpectations(t)
 }
 
-func TestDownloadService_MapToQBFilter(t *testing.T) {
+func TestDownloadService_StatusMatchesFilter(t *testing.T) {
 	tests := []struct {
-		input    string
-		expected qbittorrent.TorrentsFilter
+		status   qbittorrent.TorrentStatus
+		filter   string
+		expected bool
 	}{
-		{"all", qbittorrent.FilterAll},
-		{"downloading", qbittorrent.FilterDownloading},
-		{"paused", qbittorrent.FilterPaused},
-		{"completed", qbittorrent.FilterCompleted},
-		{"seeding", qbittorrent.FilterSeeding},
-		{"error", qbittorrent.TorrentsFilter("errored")},
-		{"invalid", qbittorrent.FilterAll},
-		{"", qbittorrent.FilterAll},
+		// "downloading" keeps qBittorrent's broad membership
+		{qbittorrent.StatusDownloading, "downloading", true},
+		{qbittorrent.StatusStalled, "downloading", true},
+		{qbittorrent.StatusQueued, "downloading", true},
+		{qbittorrent.StatusChecking, "downloading", true},
+		{qbittorrent.StatusPaused, "downloading", false},
+		{qbittorrent.StatusPaused, "paused", true},
+		{qbittorrent.StatusCompleted, "completed", true},
+		{qbittorrent.StatusSeeding, "seeding", true},
+		{qbittorrent.StatusError, "error", true},
+		{qbittorrent.StatusSeeding, "error", false},
+		// "all" matches everything
+		{qbittorrent.StatusPaused, "all", true},
+		{qbittorrent.StatusError, "all", true},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			result := mapToQBFilter(tt.input)
-			assert.Equal(t, tt.expected, result)
+		t.Run(string(tt.status)+"/"+tt.filter, func(t *testing.T) {
+			assert.Equal(t, tt.expected, statusMatchesFilter(tt.status, tt.filter))
 		})
 	}
 }
@@ -296,13 +303,14 @@ func TestDownloadService_GetAllDownloads_Success(t *testing.T) {
 	// WHEN: GetAllDownloads is called with filter
 	torrents, err := service.GetAllDownloads(context.Background(), "all", "added_on", "desc")
 
-	// THEN: returns mapped torrents
+	// THEN: returns mapped torrents, newest first (added_on desc is now sorted
+	// locally instead of delegated to qBittorrent)
 	require.NoError(t, err)
 	require.Len(t, torrents, 2)
-	assert.Equal(t, "a1", torrents[0].Hash)
-	assert.Equal(t, qbittorrent.StatusDownloading, torrents[0].Status)
-	assert.Equal(t, "a2", torrents[1].Hash)
-	assert.Equal(t, qbittorrent.StatusPaused, torrents[1].Status)
+	assert.Equal(t, "a2", torrents[0].Hash)
+	assert.Equal(t, qbittorrent.StatusPaused, torrents[0].Status)
+	assert.Equal(t, "a1", torrents[1].Hash)
+	assert.Equal(t, qbittorrent.StatusDownloading, torrents[1].Status)
 	mockQB.AssertExpectations(t)
 }
 
@@ -575,4 +583,120 @@ func TestDownloadService_GetAllDownloads_StatusSortDesc(t *testing.T) {
 	assert.Equal(t, qbittorrent.StatusPaused, torrents[1].Status)
 	assert.Equal(t, qbittorrent.StatusDownloading, torrents[2].Status)
 	mockQB.AssertExpectations(t)
+}
+
+// --- bugfix-f-downloads-activity-perf: shared torrent snapshot ---
+
+// setupCountingQBServer is setupMockQBServer plus a counter on the torrents
+// listing endpoint, to prove how many upstream fetches a scenario costs.
+func setupCountingQBServer(t *testing.T, torrentsJSON string) (*MockQBServiceForDownload, *int) {
+	t.Helper()
+	fetches := 0
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v2/auth/login", func(w http.ResponseWriter, r *http.Request) {
+		http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "Ok.")
+	})
+	mux.HandleFunc("/api/v2/torrents/info", func(w http.ResponseWriter, r *http.Request) {
+		fetches++
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, torrentsJSON)
+	})
+	mux.HandleFunc("/api/v2/app/version", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "v4.6.0")
+	})
+	mux.HandleFunc("/api/v2/torrents/pause", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	mockQB := new(MockQBServiceForDownload)
+	mockQB.On("GetConfig", mock.Anything).Return(&qbittorrent.Config{
+		Host:     server.URL,
+		Username: "admin",
+		Password: "password",
+	}, nil)
+	return mockQB, &fetches
+}
+
+func TestDownloadService_SnapshotSharedAcrossReads(t *testing.T) {
+	// GIVEN: a qBT server that counts listing fetches
+	torrentsJSON := `[
+		{"hash":"a1","name":"Movie A","state":"downloading","added_on":1704067200},
+		{"hash":"a2","name":"Movie B","state":"uploading","added_on":1704067300}
+	]`
+	mockQB, fetches := setupCountingQBServer(t, torrentsJSON)
+	service := newTestDownloadService(mockQB)
+
+	ctx := context.Background()
+
+	// WHEN: the Activity-page trio fires within one TTL window
+	_, err := service.GetAllDownloads(ctx, "all", "added_on", "desc")
+	require.NoError(t, err)
+	_, err = service.GetDownloadCounts(ctx)
+	require.NoError(t, err)
+	_, err = service.GetAllDownloads(ctx, "downloading", "name", "asc")
+	require.NoError(t, err)
+
+	// THEN: exactly one upstream fetch served all three reads
+	assert.Equal(t, 1, *fetches, "reads within the TTL must share one qBittorrent fetch")
+}
+
+func TestDownloadService_SnapshotExpiresAfterTTL(t *testing.T) {
+	mockQB, fetches := setupCountingQBServer(t, `[]`)
+	service := newTestDownloadService(mockQB)
+	service.snapTTL = 1 * time.Millisecond
+
+	ctx := context.Background()
+	_, err := service.GetAllDownloads(ctx, "all", "added_on", "desc")
+	require.NoError(t, err)
+	time.Sleep(5 * time.Millisecond)
+	_, err = service.GetAllDownloads(ctx, "all", "added_on", "desc")
+	require.NoError(t, err)
+
+	assert.Equal(t, 2, *fetches, "an expired snapshot must refetch")
+}
+
+func TestDownloadService_SnapshotInvalidatedByAction(t *testing.T) {
+	mockQB, fetches := setupCountingQBServer(t, `[{"hash":"a1","name":"A","state":"downloading","added_on":1704067200}]`)
+	service := newTestDownloadService(mockQB)
+
+	ctx := context.Background()
+	_, err := service.GetAllDownloads(ctx, "all", "added_on", "desc")
+	require.NoError(t, err)
+	require.Equal(t, 1, *fetches)
+
+	// WHEN: a mutating action succeeds
+	require.NoError(t, service.PauseDownload(ctx, "a1"))
+
+	// THEN: the next read refetches instead of serving the stale snapshot
+	_, err = service.GetAllDownloads(ctx, "all", "added_on", "desc")
+	require.NoError(t, err)
+	assert.Equal(t, 2, *fetches, "a pause must invalidate the snapshot")
+}
+
+func TestDownloadService_LocalFilterAndSort(t *testing.T) {
+	// GIVEN: a mixed list (snapshot is fetched once, unfiltered)
+	torrentsJSON := `[
+		{"hash":"a1","name":"Beta","state":"downloading","added_on":1704067200},
+		{"hash":"a2","name":"alpha","state":"stalledDL","added_on":1704067300},
+		{"hash":"a3","name":"Gamma","state":"pausedDL","added_on":1704067400},
+		{"hash":"a4","name":"delta","state":"queuedDL","added_on":1704067500}
+	]`
+	mockQB, fetches := setupCountingQBServer(t, torrentsJSON)
+	service := newTestDownloadService(mockQB)
+
+	// WHEN: filtering the broad "downloading" view sorted by name
+	torrents, err := service.GetAllDownloads(context.Background(), "downloading", "name", "asc")
+
+	// THEN: paused is excluded; stalled + queued stay; name sort is case-insensitive
+	require.NoError(t, err)
+	require.Len(t, torrents, 3)
+	assert.Equal(t, "alpha", torrents[0].Name)
+	assert.Equal(t, "Beta", torrents[1].Name)
+	assert.Equal(t, "delta", torrents[2].Name)
+	assert.Equal(t, 1, *fetches)
 }
