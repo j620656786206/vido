@@ -86,11 +86,11 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
   const effectiveCredits =
     data?.metadataSource === 'manual' && data.credits ? data.credits : credits.data;
   const douban = useDoubanRating(id, isMovie ? 'movie' : 'series', tmdbId > 0);
-  const doubanReview = useDoubanReviewSummary(
-    id,
-    isMovie ? 'movie' : 'series',
-    Boolean(douban.data?.doubanId)
-  );
+  // 短評摘要已停用(⚖️ Alexyu 2026-08-30,bugfix-douban-sec-gate-liveness):
+  // movie.douban.com 對匿名爬蟲 18/19 回 302 → sec.douban.com,每次開頁都是
+  // 一次註定失敗的爬蟲 + 骨架閃爍。停打 API、只留評分與外連;豆瓣通了以後
+  // 把 useDoubanReviewSummary 的呼叫接回來即可(hook 與後端端點都保留)。
+  const doubanReview = useDoubanReviewSummary(id, isMovie ? 'movie' : 'series', false);
   const seasons = useSeriesSeasons(id, !isMovie && tmdbId > 0);
   const recs = useRecommendations(tmdbId, isMovie ? 'movie' : 'tv', tmdbId > 0);
   const watch = useWatchProviders(tmdbId, isMovie ? 'movie' : 'tv', tmdbId > 0, WATCH_REGION);
