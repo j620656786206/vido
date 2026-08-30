@@ -21,6 +21,12 @@ import (
 	"github.com/vido/api/internal/subtitle/providers"
 )
 
+func TestMain(m *testing.M) {
+	os.Setenv("VIDO_OPENCC_BIN", "../subtitle/testdata/opencc-helper.sh")
+	os.Setenv("VIDO_OPENCC_CONFIG", "../subtitle/testdata/s2twp.json")
+	os.Exit(m.Run())
+}
+
 // --- Mock Provider for handler tests ---
 
 type handlerMockProvider struct {

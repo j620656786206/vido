@@ -7,10 +7,8 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
-	"sync"
+	"path/filepath"
 	"time"
-
-	"github.com/longbridgeapp/opencc"
 )
 
 // Supported OpenCC conversion profiles.
@@ -18,22 +16,13 @@ const (
 	ProfileS2TWP = "s2twp" // Simplified → Traditional (Taiwan standard + Taiwan phrases)
 )
 
-// Converter wraps OpenCC for Chinese variant conversion. Production can opt
-// into the official C++ helper with VIDO_OPENCC_BACKEND=cpp; the pure-Go
-// binding remains a migration fallback until parity and license gates pass.
-//
-// Converter is safe for concurrent use. The underlying opencc library performs
-// read-only dictionary lookups after initialization, and non-default profiles
-// are cached with a sync.Map to avoid per-call allocation.
+// Converter wraps the official C++ OpenCC CLI for Chinese variant conversion.
 type Converter struct {
-	cc        *opencc.OpenCC
 	available bool
-	cache     sync.Map // profile string → *opencc.OpenCC
 	helper    *openCCHelper
 }
 
-// openCCHelper invokes the official C++ OpenCC CLI. It is opt-in while the
-// migration is validated; production images can set VIDO_OPENCC_BACKEND=cpp.
+// openCCHelper invokes the official C++ OpenCC CLI.
 type openCCHelper struct {
 	path    string
 	config  string
@@ -41,39 +30,23 @@ type openCCHelper struct {
 }
 
 // NewConverter creates a Converter initialized with the s2twp profile.
-// Returns an error if OpenCC initialization fails, but the Converter is still
-// usable in degraded mode (IsAvailable returns false, Convert returns originals).
+// Returns an error if the helper is unavailable; callers can still use the
+// degraded converter, which returns original content with an error.
 func NewConverter() (*Converter, error) {
-	if os.Getenv("VIDO_OPENCC_BACKEND") == "cpp" {
-		path := os.Getenv("VIDO_OPENCC_BIN")
-		if path == "" {
-			path = "opencc"
-		}
-		resolved, err := exec.LookPath(path)
-		if err != nil {
-			return &Converter{available: false}, fmt.Errorf("opencc helper: %w", err)
-		}
-		config := os.Getenv("VIDO_OPENCC_CONFIG")
-		if config == "" {
-			config = "/usr/share/opencc/s2twp.json"
-		}
-		slog.Info("OpenCC C++ helper initialized", "profile", ProfileS2TWP, "binary", resolved, "config", config)
-		return &Converter{available: true, helper: &openCCHelper{path: resolved, config: config, timeout: 30 * time.Second}}, nil
+	path := os.Getenv("VIDO_OPENCC_BIN")
+	if path == "" {
+		path = "opencc"
 	}
-
-	cc, err := opencc.New(ProfileS2TWP)
+	resolved, err := exec.LookPath(path)
 	if err != nil {
-		slog.Warn("OpenCC initialization failed — converter will operate in degraded mode",
-			"profile", ProfileS2TWP,
-			"error", err,
-		)
-		return &Converter{available: false}, fmt.Errorf("opencc init: %w", err)
+		return &Converter{available: false}, fmt.Errorf("opencc helper: %w", err)
 	}
-
-	slog.Info("OpenCC converter initialized", "profile", ProfileS2TWP)
-	c := &Converter{cc: cc, available: true}
-	c.cache.Store(ProfileS2TWP, cc)
-	return c, nil
+	config := os.Getenv("VIDO_OPENCC_CONFIG")
+	if config == "" {
+		config = "/usr/share/opencc/s2twp.json"
+	}
+	slog.Info("OpenCC C++ helper initialized", "profile", ProfileS2TWP, "binary", resolved, "config", config)
+	return &Converter{available: true, helper: &openCCHelper{path: resolved, config: config, timeout: 30 * time.Second}}, nil
 }
 
 // IsAvailable returns true if OpenCC can perform conversions.
@@ -106,53 +79,33 @@ func (c *Converter) Convert(content []byte, profile string) ([]byte, error) {
 	hasBOM := len(stripped) < len(content)
 
 	input := string(stripped)
-	if c.helper != nil {
-		output, err := c.helper.convert(input, profile)
-		if err != nil {
-			return content, fmt.Errorf("opencc helper: %w", err)
-		}
-		if hasBOM {
-			return append(append([]byte{}, bom...), []byte(output)...), nil
-		}
-		return []byte(output), nil
+	if c.helper == nil {
+		return content, fmt.Errorf("opencc: helper not initialized")
 	}
 
-	// Look up or create the converter for this profile (cached)
-	cc, err := c.getOrCreateCC(profile)
+	output, err := c.helper.convert(input, profile)
 	if err != nil {
-		return content, fmt.Errorf("opencc: unsupported profile %q: %w", profile, err)
+		return content, fmt.Errorf("opencc helper: %w", err)
 	}
-
-	output, err := cc.Convert(input)
-	if err != nil {
-		slog.Warn("OpenCC conversion failed — returning original content",
-			"profile", profile,
-			"error", err,
-			"content_length", len(content),
-		)
-		return content, fmt.Errorf("opencc: conversion failed: %w", err)
-	}
-
-	// Pre-allocate result with BOM space if needed
 	if hasBOM {
-		result := make([]byte, 0, len(bom)+len(output))
-		result = append(result, bom...)
-		result = append(result, output...)
-		return result, nil
+		return append(append([]byte{}, bom...), []byte(output)...), nil
 	}
-
 	return []byte(output), nil
 }
 
 func (h *openCCHelper) convert(input, profile string) (string, error) {
+	config := h.config
 	if profile != ProfileS2TWP {
-		return "", fmt.Errorf("unsupported profile %q", profile)
+		config = filepath.Join(filepath.Dir(h.config), profile+".json")
+		if _, err := os.Stat(config); err != nil {
+			return "", fmt.Errorf("unsupported profile %q: %w", profile, err)
+		}
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), h.timeout)
 	defer cancel()
 	// OpenCC's CLI requires explicit input/output paths for streaming. The
 	// procfs devices keep the helper stateless and avoid temporary files.
-	cmd := exec.CommandContext(ctx, h.path, "-c", h.config, "-i", "/dev/stdin", "-o", "/dev/stdout")
+	cmd := exec.CommandContext(ctx, h.path, "-c", config, "-i", "/dev/stdin", "-o", "/dev/stdout")
 	cmd.Stdin = bytes.NewBufferString(input)
 	output, err := cmd.Output()
 	if ctx.Err() != nil {
@@ -165,21 +118,6 @@ func (h *openCCHelper) convert(input, profile string) (string, error) {
 		return "", err
 	}
 	return string(output), nil
-}
-
-// getOrCreateCC returns a cached OpenCC instance for the given profile,
-// creating and caching one if it doesn't exist yet.
-func (c *Converter) getOrCreateCC(profile string) (*opencc.OpenCC, error) {
-	if v, ok := c.cache.Load(profile); ok {
-		return v.(*opencc.OpenCC), nil
-	}
-	cc, err := opencc.New(profile)
-	if err != nil {
-		return nil, err
-	}
-	// Store-or-load: if another goroutine raced us, use theirs and discard ours
-	actual, _ := c.cache.LoadOrStore(profile, cc)
-	return actual.(*opencc.OpenCC), nil
 }
 
 // ConvertS2TWP is a convenience method for Simplified → Traditional (Taiwan phrases).
