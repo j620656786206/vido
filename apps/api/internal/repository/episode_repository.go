@@ -384,22 +384,22 @@ func (r *EpisodeRepository) Delete(ctx context.Context, id string) error {
 }
 
 // Upsert creates or updates an episode based on series_id, season_number, episode_number
-func (r *EpisodeRepository) Upsert(ctx context.Context, episode *models.Episode) error {
+func (r *EpisodeRepository) Upsert(ctx context.Context, episode *models.Episode) (bool, error) {
 	if episode == nil {
-		return fmt.Errorf("episode cannot be nil")
+		return false, fmt.Errorf("episode cannot be nil")
 	}
 
 	// Check if episode already exists
 	existing, err := r.FindBySeriesSeasonEpisode(ctx, episode.SeriesID, episode.SeasonNumber, episode.EpisodeNumber)
 	if err != nil {
 		if errors.Is(err, ErrEpisodeNotFound) {
-			return r.Create(ctx, episode)
+			return true, r.Create(ctx, episode)
 		}
-		return fmt.Errorf("failed to check existing episode: %w", err)
+		return false, fmt.Errorf("failed to check existing episode: %w", err)
 	}
 
 	// Episode exists - update with existing ID
 	episode.ID = existing.ID
 	episode.CreatedAt = existing.CreatedAt
-	return r.Update(ctx, episode)
+	return false, r.Update(ctx, episode)
 }

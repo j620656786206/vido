@@ -15,6 +15,8 @@ export interface ScanStatus {
   currentFile: string;
   percentDone: number;
   errorCount: number;
+  /** 掃描器真實回報的未比對數(無法判斷集數等);舊後端沒有這個欄位 */
+  filesUnmatched?: number;
   estimatedTime: string;
   lastScanAt: string;
   lastScanFiles: number;
@@ -38,6 +40,8 @@ export interface ScanProgressEvent {
   percentDone: number;
   errorCount: number;
   estimatedTime: string;
+  /** 掃描器真實回報的未比對數;SSE payload 的 files_unmatched */
+  filesUnmatched?: number;
 }
 
 interface ApiResponse<T> {

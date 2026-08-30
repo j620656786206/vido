@@ -288,7 +288,10 @@ type EpisodeRepositoryInterface interface {
 	Delete(ctx context.Context, id string) error
 
 	// Upsert creates or updates an episode based on series_id, season_number, episode_number
-	Upsert(ctx context.Context, episode *models.Episode) error
+	// Upsert reports whether it created a new row (true) or updated an
+	// existing one (false), so callers can count honestly (bugfix-scanner-
+	// counter-reports-phantom-creates).
+	Upsert(ctx context.Context, episode *models.Episode) (created bool, err error)
 }
 
 // SettingsRepositoryInterface defines the contract for application settings data access.

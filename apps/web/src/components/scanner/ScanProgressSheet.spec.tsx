@@ -9,6 +9,7 @@ const baseScanningState: ScanProgressState = {
   currentFile: 'test.mkv',
   filesFound: 847,
   filesProcessed: 524,
+  filesUnmatched: 323,
   errorCount: 3,
   estimatedTime: '1 分 42 秒',
   isComplete: false,

@@ -487,12 +487,13 @@ func (m *mockPQEpisodeRepo) UpdateEpisodeSubtitleStatus(_ context.Context, _ str
 	return nil
 }
 func (m *mockPQEpisodeRepo) Delete(_ context.Context, _ string) error { return nil }
-func (m *mockPQEpisodeRepo) Upsert(_ context.Context, ep *models.Episode) error {
+func (m *mockPQEpisodeRepo) Upsert(_ context.Context, ep *models.Episode) (bool, error) {
 	if m.err != nil {
-		return m.err
+		return false, m.err
 	}
+	_, existed := m.episodes[ep.ID]
 	m.episodes[ep.ID] = ep
-	return nil
+	return !existed, nil
 }
 
 var _ repository.EpisodeRepositoryInterface = (*mockPQEpisodeRepo)(nil)

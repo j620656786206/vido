@@ -15,6 +15,8 @@ export interface ScanProgressState {
   currentFile: string;
   filesFound: number;
   filesProcessed: number;
+  /** 真實的未比對數(後端 files_unmatched),不再用 found-processed 推估 */
+  filesUnmatched: number;
   errorCount: number;
   estimatedTime: string;
   isComplete: boolean;
@@ -40,6 +42,7 @@ const initialState: ScanProgressState = {
   currentFile: '',
   filesFound: 0,
   filesProcessed: 0,
+  filesUnmatched: 0,
   errorCount: 0,
   estimatedTime: '',
   isComplete: false,
@@ -68,6 +71,7 @@ function scanProgressReducer(
         filesProcessed: (action.payload as unknown as Record<string, unknown>).filesProcessed
           ? Number((action.payload as unknown as Record<string, unknown>).filesProcessed)
           : estimatedProcessed,
+        filesUnmatched: action.payload.filesUnmatched ?? state.filesUnmatched,
         errorCount: action.payload.errorCount,
         estimatedTime: action.payload.estimatedTime,
         isComplete: false,
@@ -85,6 +89,7 @@ function scanProgressReducer(
           percentDone: 100,
           filesFound: p.filesFound,
           filesProcessed: p.filesProcessed,
+          filesUnmatched: p.filesUnmatched ?? state.filesUnmatched,
           errorCount: p.errorCount,
           currentFile: '',
           estimatedTime: '',
@@ -100,6 +105,7 @@ function scanProgressReducer(
           currentFile: p.currentFile,
           filesFound: p.filesFound,
           filesProcessed: p.filesProcessed,
+          filesUnmatched: p.filesUnmatched ?? state.filesUnmatched,
           errorCount: p.errorCount,
           estimatedTime: p.estimatedTime,
           isComplete: false,
@@ -204,15 +210,21 @@ export function useScanProgress() {
       try {
         const event = JSON.parse(e.data);
         const raw = snakeToCamel<Record<string, unknown>>(event.data || event);
+        const found = (raw.filesFound as number) ?? 0;
+        const unmatched = (raw.filesUnmatched as number) ?? 0;
         dispatch({
           type: 'SSE_UPDATE',
           payload: {
-            filesFound: (raw.filesFound as number) ?? 0,
+            filesFound: found,
             currentFile: '',
             percentDone: 100,
             errorCount: (raw.errorCount as number) ?? 0,
             estimatedTime: '',
-          },
+            filesUnmatched: unmatched,
+            // 完成時的「比對成功」用真實數字:總數 - 未比對(掃描器如果沒回報
+            // files_unmatched 就退回舊的估算行為)
+            filesProcessed: Math.max(0, found - unmatched),
+          } as unknown as ScanProgressEvent,
         });
         dispatch({ type: 'SCAN_COMPLETE' });
       } catch {

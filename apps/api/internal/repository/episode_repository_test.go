@@ -662,9 +662,12 @@ func TestEpisodeUpsertCreate(t *testing.T) {
 		Title:         models.NewNullString("New Episode"),
 	}
 
-	err := repo.Upsert(ctx, episode)
+	created, err := repo.Upsert(ctx, episode)
 	if err != nil {
 		t.Fatalf("Failed to upsert episode: %v", err)
+	}
+	if !created {
+		t.Fatal("Upsert of a new episode must report created=true")
 	}
 
 	// Verify episode was created
@@ -711,9 +714,12 @@ func TestEpisodeUpsertUpdate(t *testing.T) {
 		Title:         models.NewNullString("Updated Title"),
 	}
 
-	err = repo.Upsert(ctx, updatedEpisode)
+	created, err := repo.Upsert(ctx, updatedEpisode)
 	if err != nil {
 		t.Fatalf("Failed to upsert episode: %v", err)
+	}
+	if created {
+		t.Fatal("Upsert of an existing episode must report created=false")
 	}
 
 	// Verify episode was updated with original ID
@@ -738,7 +744,7 @@ func TestEpisodeUpsertNil(t *testing.T) {
 	repo := NewEpisodeRepository(db)
 	ctx := context.Background()
 
-	err := repo.Upsert(ctx, nil)
+	_, err := repo.Upsert(ctx, nil)
 	if err == nil {
 		t.Fatal("Expected error for nil episode, got nil")
 	}
