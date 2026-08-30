@@ -54,7 +54,7 @@
 - **抽取內嵌字幕來翻譯** — 目前只做到偵測有哪些字幕軌，還沒把內容抽出來翻。這是字幕 pipeline 改版的主軸（優先序：內嵌 → 線上 → ASR）
 - **Request 系統** — 一鍵「想要」＋ Radarr/Sonarr 串接
 
-> ⚠️ **專案狀態**：積極開發中，設計為**單人使用**（無登入機制），目前主要在作者自己的 NAS 上運行。歡迎試用與回報問題，但還不建議用於關鍵用途。
+> ⚠️ **專案狀態**：積極開發中，設計為**單人使用**（無登入機制），目前主要在作者自己的 NAS 上運行。歡迎試用與[回報問題](#回報問題)，但還不建議用於關鍵用途。因為沒有登入機制，**請只在家用網路內使用**；遠端存取請走 VPN、Tailscale 或反向代理加驗證，不要把服務直接暴露到公開網路。
 
 ## 快速開始
 
@@ -65,6 +65,7 @@
 
 - [Synology DSM／Container Manager 安裝指南](docs/synology-installation-guide.zh-TW.md)
 - [QNAP QTS／Container Station 安裝指南](docs/qnap-installation-guide.zh-TW.md)
+- [Unraid 安裝指南](docs/unraid-installation-guide.zh-TW.md)（[English](docs/unraid-installation-guide.md)）
 
 ### 從原始碼啟動（開發者）
 
@@ -132,6 +133,21 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ## 開發
 
 開發環境設定、建置與測試指令請見 [docs/development.md](docs/development.md)。
+
+## 回報問題
+
+裝不起來、功能壞掉、字幕轉出來不對——都歡迎開 issue：
+
+**[→ 開一張 GitHub Issue](https://github.com/j620656786206/vido/issues/new/choose)**
+
+回報時請盡量附上（issue 表單會引導你填）：
+
+1. **執行環境** — NAS 平台（Unraid／Synology／QNAP／其他）與安裝方式
+2. **版本** — image tag（例如 `v0.1.0`、`latest`），或執行 `docker inspect vido --format '{{index .Config.Labels "org.opencontainers.image.revision"}}'` 取得確切 commit
+3. **重現步驟** — 做了什麼、預期看到什麼、實際看到什麼
+4. **Logs** — `docker logs vido --tail 100` 的輸出（貼上前請檢查裡面沒有 API key）
+
+不確定是不是 bug 也沒關係，先開再說。
 
 ## 授權
 

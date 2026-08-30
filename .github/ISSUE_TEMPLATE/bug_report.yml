@@ -1,0 +1,50 @@
+name: 🐛 Bug 回報 / Bug Report
+description: 裝不起來、功能壞掉、結果不符預期 / Something is broken or not working as expected
+labels: ['bug']
+body:
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 執行平台 / Platform
+      options:
+        - Unraid
+        - Synology
+        - QNAP
+        - Docker（其他環境 / other）
+        - 從原始碼執行 / From source
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 版本 / Version
+      description: >-
+        image tag（例如 `v0.1.0`、`latest`），或執行
+        `docker inspect vido --format '{{index .Config.Labels "org.opencontainers.image.revision"}}'`
+        取得確切 commit。
+      placeholder: v0.1.0
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 發生什麼事 / What happened
+      description: 實際看到什麼？預期看到什麼？ / What did you see, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 重現步驟 / Steps to reproduce
+      placeholder: |
+        1. 打開⋯⋯
+        2. 點⋯⋯
+        3. 看到⋯⋯
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: >-
+        `docker logs vido --tail 100` 的輸出。貼上前請檢查裡面沒有 API key。
+        / Output of `docker logs vido --tail 100`. Please strip any API keys before pasting.
+      render: text
