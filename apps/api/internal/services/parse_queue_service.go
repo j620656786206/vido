@@ -274,7 +274,7 @@ func (s *ParseQueueService) createTVEntryFromMatch(
 	}
 
 	episodeNumber := parseResult.Episode
-	if err := s.ingest.UpsertEpisode(ctx, EpisodeInput{
+	if _, err := s.ingest.UpsertEpisode(ctx, EpisodeInput{
 		SeriesID:      seriesID,
 		SeasonID:      seasonID,
 		SeasonNumber:  seasonNumber,

@@ -50,7 +50,7 @@ func (s *stubEpisodeRepo) UpdateEpisodeSubtitleStatus(context.Context, string, m
 	return nil
 }
 func (s *stubEpisodeRepo) Delete(context.Context, string) error          { return nil }
-func (s *stubEpisodeRepo) Upsert(context.Context, *models.Episode) error { return nil }
+func (s *stubEpisodeRepo) Upsert(context.Context, *models.Episode) (bool, error) { return true, nil }
 
 // stubSeasonProvider implements SeasonDetailsProvider.
 type stubSeasonProvider struct {

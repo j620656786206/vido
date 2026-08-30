@@ -161,7 +161,7 @@ export function ScanProgressCard({
           </span>{' '}
           · 未比對{' '}
           <span className="font-mono text-[var(--text-primary)]">
-            {Math.max(0, state.filesFound - state.filesProcessed).toLocaleString()}
+            {(state.filesUnmatched ?? 0).toLocaleString()}
           </span>{' '}
           · 錯誤{' '}
           <span className="font-mono text-[var(--text-primary)]">

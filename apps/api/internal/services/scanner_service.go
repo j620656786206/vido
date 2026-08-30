@@ -34,29 +34,31 @@ var videoExtensions = func() map[string]bool {
 
 // ScanProgress represents the current state of an active scan
 type ScanProgress struct {
-	FilesFound   int       `json:"files_found"`
-	FilesCreated int       `json:"files_created"`
-	FilesUpdated int       `json:"files_updated"`
-	FilesSkipped int       `json:"files_skipped"`
-	FilesRemoved int       `json:"files_removed"`
-	ErrorCount   int       `json:"error_count"`
-	CurrentFile  string    `json:"current_file"`
-	PercentDone  int       `json:"percent_done"`
-	IsActive     bool      `json:"is_active"`
-	StartedAt    time.Time `json:"started_at,omitempty"`
+	FilesFound     int       `json:"files_found"`
+	FilesCreated   int       `json:"files_created"`
+	FilesUpdated   int       `json:"files_updated"`
+	FilesSkipped   int       `json:"files_skipped"`
+	FilesRemoved   int       `json:"files_removed"`
+	FilesUnmatched int       `json:"files_unmatched"`
+	ErrorCount     int       `json:"error_count"`
+	CurrentFile    string    `json:"current_file"`
+	PercentDone    int       `json:"percent_done"`
+	IsActive       bool      `json:"is_active"`
+	StartedAt      time.Time `json:"started_at,omitempty"`
 }
 
 // ScanResult contains the outcome of a completed scan operation
 type ScanResult struct {
-	FilesFound   int       `json:"files_found"`
-	FilesCreated int       `json:"files_created"`
-	FilesUpdated int       `json:"files_updated"`
-	FilesSkipped int       `json:"files_skipped"`
-	FilesRemoved int       `json:"files_removed"`
-	ErrorCount   int       `json:"error_count"`
-	Duration     string    `json:"duration"`
-	StartedAt    time.Time `json:"started_at"`
-	CompletedAt  time.Time `json:"completed_at"`
+	FilesFound     int       `json:"files_found"`
+	FilesCreated   int       `json:"files_created"`
+	FilesUpdated   int       `json:"files_updated"`
+	FilesSkipped   int       `json:"files_skipped"`
+	FilesRemoved   int       `json:"files_removed"`
+	FilesUnmatched int       `json:"files_unmatched"`
+	ErrorCount     int       `json:"error_count"`
+	Duration       string    `json:"duration"`
+	StartedAt      time.Time `json:"started_at"`
+	CompletedAt    time.Time `json:"completed_at"`
 }
 
 // ScannerService handles recursive folder scanning and video file discovery
@@ -71,11 +73,11 @@ type ScannerService struct {
 	sseHub        *sse.Hub
 	logger        *slog.Logger
 
-	mu              sync.Mutex
-	isScanning      bool
-	cancelChan      chan struct{}
-	progress        ScanProgress
-	onScanComplete  func()
+	mu             sync.Mutex
+	isScanning     bool
+	cancelChan     chan struct{}
+	progress       ScanProgress
+	onScanComplete func()
 }
 
 // SetOnScanComplete sets a callback to be invoked after a successful scan.
@@ -271,11 +273,9 @@ func (s *ScannerService) StartScan(ctx context.Context) (*ScanResult, error) {
 		}
 	}
 
-	// Flush remaining pending movies
+	// Flush remaining pending movies (flushBatch accounts its own failure)
 	if len(pendingMovies) > 0 {
-		if err := s.flushBatch(ctx, &pendingMovies); err != nil {
-			s.logger.Error("failed to flush final batch", "error", err)
-		}
+		_ = s.flushBatch(ctx, &pendingMovies)
 	}
 
 	// Detect removed files (Story 7-2: incremental scan)
@@ -321,6 +321,7 @@ func (s *ScannerService) StartScan(ctx context.Context) (*ScanResult, error) {
 		"files_created", result.FilesCreated,
 		"files_updated", result.FilesUpdated,
 		"files_skipped", result.FilesSkipped,
+		"files_unmatched", result.FilesUnmatched,
 		"error_count", result.ErrorCount,
 		"duration", result.Duration,
 	)
@@ -517,16 +518,14 @@ func (s *ScannerService) processVideoFile(ctx context.Context, resolvedPath, sca
 
 	*pendingMovies = append(*pendingMovies, movie)
 
-	// Batch flush every 100 files
+	// Batch flush every 100 files. FilesCreated is counted inside flushBatch on
+	// actual insert success — counting at append time reported rows that a
+	// failed flush never wrote (bugfix-scanner-counter-reports-phantom-creates).
+	// flushBatch fully accounts its own failure (ErrorCount += batch size), so
+	// its error is not propagated — propagating would double-count this file.
 	if len(*pendingMovies) >= 100 {
-		if err := s.flushBatch(ctx, pendingMovies); err != nil {
-			return err
-		}
+		_ = s.flushBatch(ctx, pendingMovies)
 	}
-
-	s.mu.Lock()
-	s.progress.FilesCreated++
-	s.mu.Unlock()
 
 	return nil
 }
@@ -540,6 +539,21 @@ func (s *ScannerService) processVideoFile(ctx context.Context, resolvedPath, sca
 // A soft-delete would not do: FindByFilePath does not filter is_removed, so the next scan
 // would resurrect it.
 func (s *ScannerService) processTVFile(ctx context.Context, resolvedPath, scanRoot, libraryID string, parseResult *parser.ParseResult) error {
+	// A TV file whose episode number cannot be determined used to be upserted
+	// with episode 0, collapsing EVERY unparseable file of a series into one
+	// phantom row while FilesCreated++ claimed success for each — 411 of the
+	// NAS scan's "created" rows never existed. Count it honestly instead
+	// (bugfix-scanner-counter-reports-phantom-creates); the sibling entry
+	// bugfix-scanner-bracket-prefix-filenames-dropped tracks parsing them.
+	if parseResult == nil || parseResult.Episode <= 0 {
+		s.logger.Warn("SCANNER_UNMATCHED: cannot determine episode number, file not imported",
+			"file_path", resolvedPath)
+		s.mu.Lock()
+		s.progress.FilesUnmatched++
+		s.mu.Unlock()
+		return nil
+	}
+
 	if stale, err := s.movieRepo.FindByFilePath(ctx, resolvedPath); err != nil {
 		return fmt.Errorf("failed to check for a mis-filed movie row: %w", err)
 	} else if stale != nil {
@@ -550,26 +564,45 @@ func (s *ScannerService) processTVFile(ctx context.Context, resolvedPath, scanRo
 			"movie_id", stale.ID, "file_path", resolvedPath)
 	}
 
-	if _, err := s.ingestService.IngestEpisodeFile(ctx, resolvedPath, scanRoot, libraryID, parseResult); err != nil {
+	_, created, err := s.ingestService.IngestEpisodeFile(ctx, resolvedPath, scanRoot, libraryID, parseResult)
+	if err != nil {
 		return fmt.Errorf("failed to ingest episode: %w", err)
 	}
 
 	s.mu.Lock()
-	s.progress.FilesCreated++
+	if created {
+		s.progress.FilesCreated++
+	} else {
+		s.progress.FilesUpdated++
+	}
 	s.mu.Unlock()
 
 	return nil
 }
 
-// flushBatch inserts pending movies via BulkCreate and resets the slice
+// flushBatch inserts pending movies via BulkCreate and resets the slice. It
+// owns the progress accounting for the batch: FilesCreated counts rows that
+// were actually written, and a failed batch counts every one of its files into
+// ErrorCount (they were never created). Callers must NOT add their own counts
+// for a flushBatch outcome.
 func (s *ScannerService) flushBatch(ctx context.Context, pendingMovies *[]*models.Movie) error {
-	if len(*pendingMovies) == 0 {
+	n := len(*pendingMovies)
+	if n == 0 {
 		return nil
 	}
 	if err := s.movieRepo.BulkCreate(ctx, *pendingMovies); err != nil {
+		s.logger.Error("failed to bulk create movies — batch not written",
+			"count", n, "error", err)
+		s.mu.Lock()
+		s.progress.ErrorCount += n
+		s.mu.Unlock()
+		*pendingMovies = nil
 		return fmt.Errorf("failed to bulk create movies: %w", err)
 	}
-	s.logger.Info("batch inserted movies", "count", len(*pendingMovies))
+	s.logger.Info("batch inserted movies", "count", n)
+	s.mu.Lock()
+	s.progress.FilesCreated += n
+	s.mu.Unlock()
 	*pendingMovies = nil
 	return nil
 }
@@ -604,13 +637,14 @@ func (s *ScannerService) broadcastScanComplete(result *ScanResult) {
 		ID:   uuid.New().String(),
 		Type: sse.EventScanComplete,
 		Data: map[string]interface{}{
-			"files_found":   result.FilesFound,
-			"files_created": result.FilesCreated,
-			"files_updated": result.FilesUpdated,
-			"files_skipped": result.FilesSkipped,
-			"files_removed": result.FilesRemoved,
-			"error_count":   result.ErrorCount,
-			"duration":      result.Duration,
+			"files_found":     result.FilesFound,
+			"files_created":   result.FilesCreated,
+			"files_updated":   result.FilesUpdated,
+			"files_skipped":   result.FilesSkipped,
+			"files_removed":   result.FilesRemoved,
+			"files_unmatched": result.FilesUnmatched,
+			"error_count":     result.ErrorCount,
+			"duration":        result.Duration,
 		},
 	})
 }
@@ -680,15 +714,16 @@ func (s *ScannerService) buildResult(startedAt time.Time) *ScanResult {
 
 	completedAt := time.Now()
 	return &ScanResult{
-		FilesFound:   s.progress.FilesFound,
-		FilesCreated: s.progress.FilesCreated,
-		FilesUpdated: s.progress.FilesUpdated,
-		FilesSkipped: s.progress.FilesSkipped,
-		FilesRemoved: s.progress.FilesRemoved,
-		ErrorCount:   s.progress.ErrorCount,
-		Duration:     completedAt.Sub(startedAt).String(),
-		StartedAt:    startedAt,
-		CompletedAt:  completedAt,
+		FilesFound:     s.progress.FilesFound,
+		FilesCreated:   s.progress.FilesCreated,
+		FilesUpdated:   s.progress.FilesUpdated,
+		FilesSkipped:   s.progress.FilesSkipped,
+		FilesRemoved:   s.progress.FilesRemoved,
+		FilesUnmatched: s.progress.FilesUnmatched,
+		ErrorCount:     s.progress.ErrorCount,
+		Duration:       completedAt.Sub(startedAt).String(),
+		StartedAt:      startedAt,
+		CompletedAt:    completedAt,
 	}
 }
 

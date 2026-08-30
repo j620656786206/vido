@@ -283,6 +283,8 @@ const SCAN_STATE_ACTIVE: ScanProgressState = {
   currentFile: '[Leopard-Raws] Demon Slayer S03E01.mkv',
   filesFound: 847,
   filesProcessed: 524,
+  // 與舊版畫面推估值(847-524)一致,維持視覺基準像素不變
+  filesUnmatched: 323,
   errorCount: 3,
   estimatedTime: '1 分 42 秒',
   isComplete: false,
@@ -1657,6 +1659,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         isComplete: true,
         percentDone: 100,
         filesProcessed: 847,
+        filesUnmatched: 0, // 完成畫面原本顯示 0(847-847),維持像素不變
         errorCount: 0,
       },
       onCancel: noop,

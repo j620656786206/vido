@@ -257,7 +257,7 @@ func (s *MediaIngestService) UpsertSeason(ctx context.Context, seriesID string, 
 // UpsertEpisode writes the episode row. episodeRepo.Upsert keys on
 // (series_id, season_number, episode_number), so a re-scan of the same file is idempotent
 // and a re-encode that changes the filename updates in place rather than duplicating.
-func (s *MediaIngestService) UpsertEpisode(ctx context.Context, in EpisodeInput) error {
+func (s *MediaIngestService) UpsertEpisode(ctx context.Context, in EpisodeInput) (bool, error) {
 	episode := &models.Episode{
 		ID:             uuid.New().String(),
 		SeriesID:       in.SeriesID,
@@ -273,10 +273,11 @@ func (s *MediaIngestService) UpsertEpisode(ctx context.Context, in EpisodeInput)
 		episode.Title = models.NewNullString(in.Title)
 	}
 
-	if err := s.episodeRepo.Upsert(ctx, episode); err != nil {
-		return fmt.Errorf("upsert episode: %w", err)
+	created, err := s.episodeRepo.Upsert(ctx, episode)
+	if err != nil {
+		return false, fmt.Errorf("upsert episode: %w", err)
 	}
-	return nil
+	return created, nil
 }
 
 // IngestEpisodeFile is the whole series → season → episode chain for one scanned file.
@@ -284,7 +285,7 @@ func (s *MediaIngestService) IngestEpisodeFile(
 	ctx context.Context,
 	filePath, scanRoot, libraryID string,
 	parseResult *parser.ParseResult,
-) (seriesID string, err error) {
+) (seriesID string, created bool, err error) {
 	seriesDir := SeriesDirFor(filePath, scanRoot)
 
 	title := ""
@@ -306,23 +307,24 @@ func (s *MediaIngestService) IngestEpisodeFile(
 		LibraryID: libraryID,
 	})
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 
 	seasonID, err := s.UpsertSeason(ctx, seriesID, season)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 
-	if err := s.UpsertEpisode(ctx, EpisodeInput{
+	created, err = s.UpsertEpisode(ctx, EpisodeInput{
 		SeriesID:      seriesID,
 		SeasonID:      seasonID,
 		SeasonNumber:  season,
 		EpisodeNumber: episode,
 		FilePath:      filePath,
-	}); err != nil {
-		return "", err
+	})
+	if err != nil {
+		return "", false, err
 	}
 
-	return seriesID, nil
+	return seriesID, created, nil
 }
