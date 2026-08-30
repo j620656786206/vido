@@ -537,6 +537,13 @@ func main() {
 		subtitleProviders, subtitleScorer, subtitleConverter, subtitlePlacer,
 		sseHub, repos.Movies, repos.Series,
 	)
+	// Story 13-5 (artery #5): request completed → automatic subtitle search for
+	// the media that just landed, via the poller's OnRequestCompleted seam.
+	// Fires once per transition edge; the trigger itself skips media that
+	// already has a subtitle outcome, and its failures never touch the request.
+	requestSubtitleTrigger := subtitle.NewRequestCompletionTrigger(repos.Movies, repos.Series, subtitleEngine)
+	requestStatusPoller.OnRequestCompleted = requestSubtitleTrigger.OnRequestCompleted
+	slog.Info("Request-completion subtitle trigger wired (13-5)")
 	// aiGovernor was created before the parse-path AI service (sub-5-1 CR H2)
 	// — the same instance throttles the Whisper + Claude clients below.
 
