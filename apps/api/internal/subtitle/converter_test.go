@@ -14,7 +14,6 @@ func TestConverter_CPPHelperBackend(t *testing.T) {
 	dir := t.TempDir()
 	bin := dir + "/opencc"
 	require.NoError(t, os.WriteFile(bin, []byte("#!/bin/sh\ncat\n"), 0o755))
-	t.Setenv("VIDO_OPENCC_BACKEND", "cpp")
 	t.Setenv("VIDO_OPENCC_BIN", bin)
 	t.Setenv("VIDO_OPENCC_CONFIG", dir+"/s2twp.json")
 

@@ -79,35 +79,17 @@ func (c *Converter) Convert(content []byte, profile string) ([]byte, error) {
 	hasBOM := len(stripped) < len(content)
 
 	input := string(stripped)
-	if c.helper != nil {
-		output, err := c.helper.convert(input, profile)
-		if err != nil {
-			return content, fmt.Errorf("opencc helper: %w", err)
-		}
-		if hasBOM {
-			return append(append([]byte{}, bom...), []byte(output)...), nil
-		}
-		return []byte(output), nil
+	if c.helper == nil {
+		return content, fmt.Errorf("opencc: helper not initialized")
 	}
 
 	output, err := c.helper.convert(input, profile)
 	if err != nil {
-		slog.Warn("OpenCC conversion failed — returning original content",
-			"profile", profile,
-			"error", err,
-			"content_length", len(content),
-		)
-		return content, fmt.Errorf("opencc: conversion failed: %w", err)
+		return content, fmt.Errorf("opencc helper: %w", err)
 	}
-
-	// Pre-allocate result with BOM space if needed
 	if hasBOM {
-		result := make([]byte, 0, len(bom)+len(output))
-		result = append(result, bom...)
-		result = append(result, output...)
-		return result, nil
+		return append(append([]byte{}, bom...), []byte(output)...), nil
 	}
-
 	return []byte(output), nil
 }
 

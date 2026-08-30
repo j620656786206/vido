@@ -7,12 +7,14 @@ Vido 的字幕與豆瓣 metadata 簡繁轉換保留 `s2twp` profile 與既有介
 根目錄 Dockerfile 會在 multi-stage build 中編譯並打包固定版本的官方 OpenCC（目前 `ver.1.4.2`），正式映像預設使用 C++ helper：
 
 ```bash
-VIDO_OPENCC_BIN=/usr/bin/opencc \
+VIDO_OPENCC_BIN=/usr/local/bin/opencc \
 VIDO_OPENCC_CONFIG=/usr/share/opencc/s2twp.json \
   ./api
 ```
 
 helper 透過 stdin/stdout 傳遞內容，單次轉換逾時 30 秒；失敗時保留原文並回傳錯誤。未安裝 helper 時服務會以 degraded mode 啟動，不會偷偷改用另一套轉換器。
+
+本機開發（macOS）請先 `brew install opencc`，並依安裝路徑設定 `VIDO_OPENCC_BIN` 與 `VIDO_OPENCC_CONFIG`（Homebrew 的設定檔位於 `$(brew --prefix)/share/opencc/`）。
 
 映像建置使用 Docker Buildx，會依目標平台編譯 helper；不應在 NAS 上自行以 host binary 覆蓋 `/usr/local/bin/opencc`。
 
