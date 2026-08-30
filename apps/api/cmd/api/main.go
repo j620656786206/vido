@@ -123,6 +123,13 @@ func main() {
 	slog.SetDefault(multiHandler)
 	slog.Info("System log DB handler initialized")
 
+	// Database supervisor (bugfix-i-1): background liveness watch that captures
+	// evidence and recycles a wedged connection pool instead of leaving the
+	// process permanently unhealthy until a reinstall. Its Healthy() verdict
+	// also feeds the /api/v1 DatabaseGate (bugfix-i-3). Started with the other
+	// background loops near the end of main.
+	dbSupervisor := database.NewSupervisor(db)
+
 	// Initialize offline cache for graceful degradation (Story 3.12)
 	offlineCache := cache.NewOfflineCache(db.Conn())
 	if err := offlineCache.InitSchema(ctx); err != nil {
@@ -937,8 +944,13 @@ func main() {
 	// Register routes
 	router.GET("/health", handlers.HealthCheckHandler(db))
 
-	// API v1 routes with handler → service → repository architecture
-	apiV1 := router.Group("/api/v1")
+	// API v1 routes with handler → service → repository architecture.
+	// DatabaseGate (bugfix-i-3): while the supervisor reports the database
+	// down, every /api/v1 route fails fast with ONE uniform 503
+	// DATABASE_UNAVAILABLE instead of ten scattered per-handler failures. The
+	// root /health endpoint above stays outside the gate so probes and the
+	// frontend banner keep getting the honest detail.
+	apiV1 := router.Group("/api/v1", handlers.DatabaseGate(dbSupervisor.Healthy))
 	{
 		movieHandler.RegisterRoutes(apiV1)
 		seriesHandler.RegisterRoutes(apiV1)
@@ -1003,6 +1015,10 @@ func main() {
 	} else {
 		slog.Info("Retry scheduler started")
 	}
+
+	// Start database supervisor (bugfix-i-1 / bugfix-i-3)
+	dbSupervisorCtx, dbSupervisorCancel := context.WithCancel(context.Background())
+	go dbSupervisor.Start(dbSupervisorCtx)
 
 	// Start backup scheduler (Story 6.8)
 	schedulerCtx, schedulerCancel := context.WithCancel(context.Background())
@@ -1081,6 +1097,10 @@ func main() {
 	// Stop health monitoring goroutine
 	slog.Info("Stopping health monitoring...")
 	monitorCancel()
+
+	// Stop database supervisor (bugfix-i-1)
+	slog.Info("Stopping database supervisor...")
+	dbSupervisorCancel()
 
 	// Stop scan scheduler (Story 7.2)
 	slog.Info("Stopping scan scheduler...")

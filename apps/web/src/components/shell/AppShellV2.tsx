@@ -15,6 +15,7 @@ import { MobileTabBar } from './MobileTabBar';
 import { ThemeToggle } from './ThemeToggle';
 import { InstantSearchBar } from '../search/InstantSearchBar';
 import { ScanProgress } from '../scanner/ScanProgress';
+import { DatabaseUnavailableBanner } from './DatabaseUnavailableBanner';
 
 const COLLAPSE_KEY = 'vido:sidebar:collapsed';
 
@@ -138,6 +139,9 @@ export function AppShellV2({ children }: AppShellV2Props) {
 
       {/* Global overlay owned by the shell (AC #6) */}
       <ScanProgress />
+
+      {/* 資料庫斷線的全域單一訊息(bugfix-i-3)— 平時 render null */}
+      <DatabaseUnavailableBanner />
     </div>
   );
 }
