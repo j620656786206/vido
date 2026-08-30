@@ -76,6 +76,12 @@ type Config struct {
 	AIRatePerSec    float64
 	AIRunBudgetUSD  float64
 
+	// LogRetentionDays caps how long system_logs rows are kept
+	// (bugfix-system-logs-no-retention: 880k rows once grew a 1MB dataset into
+	// a 245MB database file). Rows older than this many days are pruned once at
+	// startup and again on the cache-sweep cadence. <= 0 disables pruning.
+	LogRetentionDays int
+
 	// ASR engine (Story 9R-9). ASRBaseURL swaps the transcription endpoint to a
 	// self-hosted OpenAI-compatible server (Speaches/WhisperLive/Subgen); empty
 	// = OpenAI Whisper. ASRModel is that engine's model id.
@@ -136,6 +142,8 @@ func Load() (*Config, error) {
 	cfg.AIMaxConcurrent = cfg.loadInt("AI_MAX_CONCURRENT", 3)
 	cfg.AIRatePerSec = cfg.loadFloat("AI_RATE_PER_SEC", 2.0)
 	cfg.AIRunBudgetUSD = cfg.loadFloat("AI_RUN_BUDGET_USD", 5.0)
+	// System-log retention (bugfix-system-logs-no-retention).
+	cfg.LogRetentionDays = cfg.loadInt("VIDO_LOG_RETENTION_DAYS", 14)
 	// ASR engine (9R-9): empty base URL = OpenAI Whisper default.
 	cfg.ASRBaseURL = cfg.loadString("ASR_BASE_URL", "")
 	cfg.ASRModel = cfg.loadString("ASR_MODEL", "")

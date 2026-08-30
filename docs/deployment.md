@@ -61,10 +61,11 @@ cp .env.example .env
 
 #### Database Variables
 
-| Variable         | Default              | Description                           |
-| ---------------- | -------------------- | ------------------------------------- |
-| `DB_PATH`        | `/vido-data/vido.db` | Database file path (inside container) |
-| `DB_WAL_ENABLED` | `true`               | Enable WAL mode                       |
+| Variable                  | Default              | Description                                                                          |
+| ------------------------- | -------------------- | ------------------------------------------------------------------------------------ |
+| `DB_PATH`                 | `/vido-data/vido.db` | Database file path (inside container)                                                |
+| `DB_WAL_ENABLED`          | `true`               | Enable WAL mode                                                                      |
+| `VIDO_LOG_RETENTION_DAYS` | `14`                 | Days to keep `system_logs` rows; pruned at startup and periodically (`<=0` disables) |
 
 #### Subtitle Generation Variables
 
