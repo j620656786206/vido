@@ -123,6 +123,23 @@ func main() {
 	slog.SetDefault(multiHandler)
 	slog.Info("System log DB handler initialized")
 
+	// bugfix-system-logs-no-retention: prune expired system_logs rows once at
+	// startup, then reclaim file space while nothing else contends the writer
+	// lock — before the HTTP listener and schedulers start is the only
+	// uncontended window for a VACUUM. Ongoing pruning rides the cache-sweep
+	// scheduler below.
+	if cfg.LogRetentionDays > 0 {
+		if removed, err := logRepo.DeleteOlderThan(ctx, cfg.LogRetentionDays); err != nil {
+			slog.Warn("Startup system_logs prune failed", "error", err)
+		} else if removed > 0 {
+			slog.Info("Startup system_logs prune complete",
+				"removed", removed, "retention_days", cfg.LogRetentionDays)
+		}
+	}
+	if _, err := db.ReclaimSpaceIfBloated(ctx); err != nil {
+		slog.Warn("Database space reclaim failed", "error", err)
+	}
+
 	// Initialize offline cache for graceful degradation (Story 3.12)
 	offlineCache := cache.NewOfflineCache(db.Conn())
 	if err := offlineCache.InitSchema(ctx); err != nil {
@@ -463,6 +480,16 @@ func main() {
 	}
 	if aiService != nil {
 		cacheSweepExtra = append(cacheSweepExtra, services.SweepFunc("ai_cache", aiService.ClearExpiredCache))
+	}
+	// system_logs retention rides the same sweep ticker
+	// (bugfix-system-logs-no-retention); the startup prune above handled the
+	// backlog, this keeps steady-state growth bounded.
+	if cfg.LogRetentionDays > 0 {
+		retentionDays := cfg.LogRetentionDays
+		cacheSweepExtra = append(cacheSweepExtra, services.SweepFunc("system_logs_retention",
+			func(ctx context.Context) (int64, error) {
+				return logRepo.DeleteOlderThan(ctx, retentionDays)
+			}))
 	}
 	cacheSweepScheduler := services.NewCacheSweepScheduler(repos.Cache, repos.Settings, cacheSweepExtra...)
 	slog.Info("Cache sweep scheduler initialized")
