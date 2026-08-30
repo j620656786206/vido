@@ -16,6 +16,9 @@ vi.mock('../search/InstantSearchBar', () => ({ InstantSearchBar: () => null }));
 vi.mock('../scanner/ScanProgress', () => ({
   ScanProgress: () => <div data-testid="scan-progress" />,
 }));
+vi.mock('./DatabaseUnavailableBanner', () => ({
+  DatabaseUnavailableBanner: () => null,
+}));
 vi.mock('../../hooks/useLibrary', () => ({
   useLibraryStats: () => ({ data: { movieCount: 1, tvCount: 1 } }),
 }));
