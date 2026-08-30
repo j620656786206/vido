@@ -343,6 +343,6 @@ Before deploying to production:
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/your-org/vido/issues)
+- **Issues**: [GitHub Issues](https://github.com/j620656786206/vido/issues)
 - **Documentation**: See `docs/` folder
 - **Architecture**: See `project-context.md`

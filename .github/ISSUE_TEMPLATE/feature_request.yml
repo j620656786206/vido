@@ -1,0 +1,16 @@
+name: ✨ 功能許願 / Feature Request
+description: 想要的新功能或改善 / A new feature or an improvement you'd like to see
+labels: ['enhancement']
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 想解決什麼問題 / What problem would this solve
+      description: 描述現在卡在哪、什麼事情做不到或很麻煩。 / Describe what you can't do today, or what feels painful.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: 期待的樣子 / What you'd like to happen
+      description: 有想法就寫，沒有也沒關係。 / Sketch your ideal behavior if you have one — optional.
