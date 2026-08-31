@@ -523,6 +523,22 @@ func main() {
 	requestStatusPoller.SetSelectionOwnershipChecker(requestService)
 	slog.Info("Request status poller initialized")
 
+	// Library type-change rebuild (bugfix-library-type-change-no-reclassify):
+	// changing a library's content type purges its rows and rescans — the
+	// automated delete-and-recreate Plex/Jellyfin make you do by hand.
+	if mp, ok := repos.Movies.(*repository.MovieRepository); ok {
+		if sp, ok2 := repos.Series.(*repository.SeriesRepository); ok2 {
+			mediaLibraryService.SetMediaPurgers(mp, sp)
+		}
+	}
+	mediaLibraryService.SetScanTrigger(func() {
+		go func() {
+			if _, err := scannerService.StartScan(context.Background()); err != nil {
+				slog.Error("Post-type-change rescan failed", "error", err)
+			}
+		}()
+	})
+
 	// Initialize subtitle engine components (Story 8.1-8.8)
 	subtitleConverter, _ := subtitle.NewConverter()
 	subtitleScorer := subtitle.NewScorer(subtitle.NewDefaultScorerConfig())

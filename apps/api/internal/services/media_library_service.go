@@ -51,6 +51,12 @@ type UpdateLibraryRequest struct {
 // MediaLibraryService implements MediaLibraryServiceInterface.
 type MediaLibraryService struct {
 	repo repository.MediaLibraryRepositoryInterface
+
+	// Type-change rebuild wiring (setter-injected; see SetMediaPurgers /
+	// SetScanTrigger).
+	moviePurger  libraryMediaPurger
+	seriesPurger libraryMediaPurger
+	scanTrigger  func()
 }
 
 // NewMediaLibraryService creates a new MediaLibraryService.
@@ -110,11 +116,61 @@ func (s *MediaLibraryService) CreateLibrary(ctx context.Context, req CreateLibra
 	return lib, nil
 }
 
+// libraryMediaPurger is the narrow port a media-row table exposes for the
+// type-change rebuild. Both MovieRepository and SeriesRepository satisfy it
+// (series deletion cascades seasons/episodes via FK).
+type libraryMediaPurger interface {
+	DeleteByLibraryID(ctx context.Context, libraryID string) (int64, error)
+}
+
+// SetMediaPurgers wires the movie/series purgers used by the content-type
+// rebuild. Setter (not constructor) because main.go builds this service before
+// the repos-consuming wiring settles — mirrors SetSeriesRepo precedent.
+func (s *MediaLibraryService) SetMediaPurgers(movies, series libraryMediaPurger) {
+	s.moviePurger = movies
+	s.seriesPurger = series
+}
+
+// SetScanTrigger wires an async full-scan trigger (the same code path as the
+// manual 掃描媒體庫 button). Fired after a type-change purge so the library is
+// rebuilt under its new type without a manual step.
+func (s *MediaLibraryService) SetScanTrigger(trigger func()) {
+	s.scanTrigger = trigger
+}
+
+// rebuildLibraryMedia purges every media row belonging to the library and, when
+// wired, kicks a rescan. Research note (2026-08-31): Plex forbids changing a
+// library's type outright — the official path is delete-and-recreate the
+// library; Jellyfin nominally allows it but community guidance is likewise to
+// recreate. Vido allows the change AND automates the rebuild: purge + rescan is
+// the delete-and-recreate, done for the user (⚖️ Alexyu 2026-08-31,內測實測
+// bugfix-library-type-change-no-reclassify).
+func (s *MediaLibraryService) rebuildLibraryMedia(ctx context.Context, libraryID string) {
+	if s.moviePurger == nil || s.seriesPurger == nil {
+		slog.Warn("Library rebuild skipped: media purgers not wired", "library_id", libraryID)
+		return
+	}
+	movies, err := s.moviePurger.DeleteByLibraryID(ctx, libraryID)
+	if err != nil {
+		slog.Error("Library rebuild: movie purge failed", "library_id", libraryID, "error", err)
+	}
+	series, err := s.seriesPurger.DeleteByLibraryID(ctx, libraryID)
+	if err != nil {
+		slog.Error("Library rebuild: series purge failed", "library_id", libraryID, "error", err)
+	}
+	slog.Info("Library media purged for type change",
+		"library_id", libraryID, "movies_removed", movies, "series_removed", series)
+	if s.scanTrigger != nil {
+		s.scanTrigger()
+	}
+}
+
 func (s *MediaLibraryService) UpdateLibrary(ctx context.Context, id string, req UpdateLibraryRequest) (*models.MediaLibrary, error) {
 	lib, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("get library for update: %w", err)
 	}
+	oldType := lib.ContentType
 
 	if req.Name != nil {
 		lib.Name = *req.Name
@@ -137,14 +193,26 @@ func (s *MediaLibraryService) UpdateLibrary(ctx context.Context, id string, req 
 		return nil, fmt.Errorf("update library: %w", err)
 	}
 
+	// Content type actually changed → existing rows were classified under the
+	// old type and are now all wrong. Rebuild: purge this library's rows and
+	// rescan under the new type.
+	if req.ContentType != nil && lib.ContentType != oldType {
+		s.rebuildLibraryMedia(ctx, lib.ID)
+	}
+
 	slog.Info("Library updated", "id", lib.ID, "name", lib.Name)
 	return lib, nil
 }
 
 func (s *MediaLibraryService) DeleteLibrary(ctx context.Context, id string, removeMedia bool) error {
-	if removeMedia {
+	if removeMedia && s.moviePurger != nil && s.seriesPurger != nil {
 		slog.Info("Deleting library with media removal", "id", id)
-		// TODO: remove associated movies/series records in Story 7b-5
+		if _, err := s.moviePurger.DeleteByLibraryID(ctx, id); err != nil {
+			slog.Error("Library delete: movie purge failed", "library_id", id, "error", err)
+		}
+		if _, err := s.seriesPurger.DeleteByLibraryID(ctx, id); err != nil {
+			slog.Error("Library delete: series purge failed", "library_id", id, "error", err)
+		}
 	}
 
 	if err := s.repo.Delete(ctx, id); err != nil {

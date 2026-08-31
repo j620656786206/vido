@@ -2782,5 +2782,46 @@
         "description": "Verify the setup wizard flow is not restarted and the application content or main navigation is visible instead"
       }
     ]
+  },
+  {
+    "id": "TC110",
+    "title": "Changing a library content type rebuilds and reclassifies its items",
+    "description": "Editing a media library and changing its content type must warn about the rebuild, then purge and rescan the library so existing items are reclassified under the new type - the sidebar movie and series counts change accordingly.",
+    "category": "Media Library Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/scanner"
+      },
+      {
+        "type": "action",
+        "description": "Note the current movie and series counts shown in the sidebar navigation"
+      },
+      {
+        "type": "action",
+        "description": "Open the action menu of the first media library card and choose the edit option"
+      },
+      {
+        "type": "action",
+        "description": "Change the content type selection in the edit dialog to the other type"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a warning appears in the dialog stating that changing the type rebuilds the library and rescans it"
+      },
+      {
+        "type": "action",
+        "description": "Save the dialog"
+      },
+      {
+        "type": "action",
+        "description": "Wait about ten seconds for the automatic rescan to finish, then reload the page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the sidebar movie and series counts have changed from the noted values, showing the library items were reclassified under the new type"
+      }
+    ]
   }
 ]

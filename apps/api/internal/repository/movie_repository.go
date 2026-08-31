@@ -1167,3 +1167,19 @@ func (r *MovieRepository) Upsert(ctx context.Context, movie *models.Movie) error
 	}
 	return r.Update(ctx, movie)
 }
+
+// DeleteByLibraryID hard-deletes every movie row belonging to a library.
+// Used by the library type-change rebuild (bugfix-library-type-change-no-
+// reclassify): changing a library's content type purges its rows and rescans,
+// the automated equivalent of Plex's delete-and-recreate guidance.
+func (r *MovieRepository) DeleteByLibraryID(ctx context.Context, libraryID string) (int64, error) {
+	result, err := r.db.ExecContext(ctx, `DELETE FROM movies WHERE library_id = ?`, libraryID)
+	if err != nil {
+		return 0, fmt.Errorf("delete movies by library: %w", err)
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("rows affected: %w", err)
+	}
+	return n, nil
+}
