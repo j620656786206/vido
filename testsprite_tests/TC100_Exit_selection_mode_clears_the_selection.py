@@ -40,32 +40,33 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Click the '媒體庫' (Media Library) link in the left sidebar to open the library page.
+        # -> Open the '媒體庫' (Media Library) page by clicking the '媒體庫' link in the left sidebar.
         # 媒體庫 link
         elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
         await elem.click(timeout=10000)
         
-        # -> Scroll to the bottom of the Media Library page and locate the pagination controls, specifically the 'Previous' ('上一頁') and 'Next' ('下一頁') buttons.
-        await page.mouse.wheel(0, 300)
+        # -> Click the '選取' button to enter selection mode on the Library page.
+        # 選取 button
+        elem = page.get_by_test_id('enter-selection-btn')
+        await elem.click(timeout=10000)
         
-        # -> Locate the pagination controls and the '上一頁' (Previous) button on the Media Library page.
-        await page.mouse.wheel(0, 300)
+        # -> Click the 'Unknown.Show.S01' media card to select it and observe the selection toolbar update.
+        # U 失敗 Unknown.Show.S01 link
+        elem = page.get_by_test_id('poster-v2-seed-sr-101')
+        await elem.click(timeout=10000)
         
-        # -> Scroll to the top of the library page and look for the '上一頁' (Previous) pagination control and the '下一頁' (Next) control.
-        await page.mouse.wheel(0, 300)
-        
-        # -> Open the Library page ('媒體庫') by navigating to /library, then look for the pagination control and the '上一頁' (Previous) button.
-        await page.goto("http://localhost:8090/library")
-        try:
-            await page.wait_for_load_state("domcontentloaded", timeout=5000)
-        except Exception:
-            pass
+        # -> Click the '取消' (Cancel) button in the selection toolbar to exit selection mode.
+        # 取消 button
+        elem = page.get_by_test_id('batch-cancel-btn')
+        await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
-        current_url = await page.evaluate("() => window.location.href")
+        
+        # --> Selection toolbar is hidden and no items remain selected after exiting selection mode.
+        await page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div[2]/div[1]/button[2]").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: passed
-        # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
-        assert current_url, 'Page should have loaded with a URL'
+        # Assert: The '選取' button is visible, indicating selection mode is not active.
+        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div[2]/div[1]/button[2]").nth(0)).to_be_visible(timeout=15000), "The '\u9078\u53d6' button is visible, indicating selection mode is not active."
         await asyncio.sleep(5)
 
     finally:

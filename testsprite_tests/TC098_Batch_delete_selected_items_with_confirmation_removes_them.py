@@ -40,47 +40,52 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Click the '媒體庫' link in the sidebar to open the Media Library page.
+        # -> Click the '媒體庫' link in the left sidebar to open the library view.
         # 媒體庫 link
         elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
         await elem.click(timeout=10000)
         
-        # -> Click the first media card titled 'Unknown.Show.S01' to open its detail view and then look for an 'Export' or '匯出' action and for visible 'Success'/'成功' feedback.
+        # -> Click the '選取' button to enter selection mode.
+        # 選取 button
+        elem = page.get_by_test_id('enter-selection-btn')
+        await elem.click(timeout=10000)
+        
+        # -> Select two media items by clicking the first two item cards so the header updates to show the selected count (e.g., '已選取 2 項').
         # U 失敗 Unknown.Show.S01 link
         elem = page.get_by_test_id('poster-v2-seed-sr-101')
         await elem.click(timeout=10000)
         
-        # -> Click the '在地化資訊' button to open any item action menu or panel and then search the page for '匯出' (Export) and '成功' (Success).
-        # 在地化資訊 button
-        elem = page.get_by_test_id('action-localize-nfo')
+        # -> Select two media items by clicking the first two item cards so the header updates to show the selected count (e.g., '已選取 2 項').
+        # 缺字幕 怪奇物語 2016 link
+        elem = page.get_by_test_id('poster-v2-seed-sr-002')
         await elem.click(timeout=10000)
         
-        # -> Close the '將資訊在地化為繁體中文' dialog by clicking the 'Close' button so the item's action menu and page content are accessible.
-        # Close button
-        elem = page.get_by_role('button', name='Close', exact=True)
+        # -> Click the '刪除選取項目' button to open the deletion confirmation dialog.
+        # 刪除選取項目 button
+        elem = page.get_by_test_id('batch-delete-btn')
         await elem.click(timeout=10000)
         
-        # -> Click the '管理字幕' (Manage Subtitles) button to open its menu or modal so the page can be searched for an '匯出' / 'Export' action and for '成功' / 'Success' feedback.
-        # 管理字幕 button
-        elem = page.get_by_test_id('action-manage-subtitle')
+        # -> Click the '刪除' button in the confirmation dialog to confirm deletion of the 2 selected items.
+        # 刪除 button
+        elem = page.get_by_test_id('confirm-action-btn')
         await elem.click(timeout=10000)
         
-        # -> Click the '關閉' button to close the '管理字幕' dialog so the item's action menu and page content can be inspected.
+        # -> Click the '關閉' button on the '操作完成' dialog to close it, then search the page for the text '已選取' to verify selection is cleared and the item count updated.
         # 關閉 button
-        elem = page.get_by_test_id('dialog-close')
+        elem = page.get_by_test_id('progress-close-btn')
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> The Export action is not visible on the media item or its action menus.
-        # Assert-outcome: failed
-        # Assert: Expected the Export action to be visible in the item's action menu.
-        await expect(page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/section/div[2]/div/div[2]/div[3]/button[3]").nth(0)).to_contain_text("Export", timeout=15000), "Expected the Export action to be visible in the item's action menu."
+        # --> The batch delete completed and the completion dialog showed '已完成 2 / 2'.
+        # Assert-outcome: passed
+        # Assert: Checks the page contains the completion dialog text '已完成 2 / 2'.
+        await expect(page.locator("xpath=/html/body/div").nth(0)).to_contain_text("\u5df2\u5b8c\u6210 2 / 2", timeout=15000), "Checks the page contains the completion dialog text '\u5df2\u5b8c\u6210 2 / 2'."
         
-        # --> No 'Success' feedback was shown after attempting to locate an Export action or running export-related dialogs.
-        # Assert-outcome: failed
-        # Assert: Expected a 'Success' message to be visible after triggering Export.
-        await expect(page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/section/div[2]/div/div[2]/div[1]/span[1]").nth(0)).to_contain_text("Success", timeout=15000), "Expected a 'Success' message to be visible after triggering Export."
+        # --> The two targeted items ('Unknown.Show.S01' and '怪奇物語') are no longer present and the library total shows 16 項.
+        # Assert-outcome: passed
+        # Assert: Verifies the library total element displays '16 項'.
+        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div[2]/div[1]/span").nth(0)).to_have_text("16\n \u9805", timeout=15000), "Verifies the library total element displays '16 \u9805'."
         await asyncio.sleep(5)
 
     finally:

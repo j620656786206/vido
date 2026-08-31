@@ -40,36 +40,44 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Click the '媒體庫' sidebar link to open the Media Library page
-        # 媒體庫 link
-        elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
-        await elem.click(timeout=10000)
+        # -> Navigate to the '媒體庫' (Library) page by opening http://localhost:8090/library.
+        await page.goto("http://localhost:8090/library")
+        try:
+            await page.wait_for_load_state("domcontentloaded", timeout=5000)
+        except Exception:
+            pass
         
-        # -> Open the first media item by clicking the poster labeled 'Unknown.Show.S01' to view its detail page.
+        # -> Open the poster card context menu for 'Unknown.Show.S01' by clicking the first media poster card.
         # U 失敗 Unknown.Show.S01 link
         elem = page.get_by_test_id('poster-v2-seed-sr-101')
         await elem.click(timeout=10000)
         
-        # -> Click the '管理字幕' (Manage Subtitles) button to open the Manage Subtitles dialog and trigger the auto-search.
+        # -> Click the '管理字幕' (Manage Subtitles) button to open the subtitle search dialog.
         # 管理字幕 button
         elem = page.get_by_test_id('action-manage-subtitle')
         await elem.click(timeout=10000)
         
-        # -> Click the '搜尋線上字幕（成功率低）' button to trigger the online subtitles search.
+        # -> Click the '搜尋線上字幕（成功率低）' button to open the subtitle search dialog.
         # 搜尋線上字幕（成功率低） button
         elem = page.get_by_test_id('toggle-fetch')
         await elem.click(timeout=10000)
         
+        # -> Type 'zzzzz-no-subtitles-exist-99999' into the subtitle search field and click the '搜尋' button
+        # 搜尋 button
+        elem = page.get_by_test_id('fetch-search')
+        await elem.click(timeout=10000)
+        
         # --> Assertions to verify final state
         
-        # --> Verify element with data-testid "subtitle-search-dialog" is visible
-        await page.locator("xpath=/html/body/div[3]").nth(0).scroll_into_view_if_needed()
-        # Assert: The subtitle search dialog is visible.
-        await expect(page.locator("xpath=/html/body/div[3]").nth(0)).to_be_visible(timeout=15000), "The subtitle search dialog is visible."
+        # --> The Manage Subtitles dialog titled '管理字幕 — Unknown.Show.S01' is visible.
+        # Assert-outcome: passed
+        # Assert: Dialog contains the title '管理字幕 — Unknown.Show.S01'.
+        await expect(page.locator("xpath=/html/body/div[3]").nth(0)).to_contain_text("\u7ba1\u7406\u5b57\u5e55 \u2014 Unknown.Show.S01", timeout=15000), "Dialog contains the title '\u7ba1\u7406\u5b57\u5e55 \u2014 Unknown.Show.S01'."
         
-        # --> Verify element with data-testid "subtitle-empty-state" is visible
-        # Assert: Verify the subtitle empty-state message is visible in the Manage Subtitles dialog.
-        await expect(page.locator("xpath=/html/body/div[3]").nth(0)).to_contain_text("\u5c1a\u7121\u7d50\u679c \u2014 \u7dda\u4e0a\u4f86\u6e90\u6210\u529f\u7387\u4f4e\uff0c\u5efa\u8b70\u6539\u7528\u751f\u6210\u5b57\u5e55", timeout=15000), "Verify the subtitle empty-state message is visible in the Manage Subtitles dialog."
+        # --> The subtitle search shows the empty-state message indicating no online results.
+        # Assert-outcome: passed
+        # Assert: Dialog contains the empty-state message for no search results.
+        await expect(page.locator("xpath=/html/body/div[3]").nth(0)).to_contain_text("\u5c1a\u7121\u7d50\u679c \u2014 \u7dda\u4e0a\u4f86\u6e90\u6210\u529f\u7387\u4f4e\uff0c\u5efa\u8b70\u6539\u7528\u751f\u6210\u5b57\u5e55", timeout=15000), "Dialog contains the empty-state message for no search results."
         await asyncio.sleep(5)
 
     finally:
