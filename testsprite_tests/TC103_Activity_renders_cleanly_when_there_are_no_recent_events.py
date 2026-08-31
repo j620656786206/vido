@@ -40,32 +40,17 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Click the '媒體庫' (Media Library) link in the left sidebar to open the library page.
-        # 媒體庫 link
-        elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
+        # -> Click the '活動' link (Activity) in the left sidebar to open the Activity page and verify it renders without an error.
+        # 活動 link
+        elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='活動', exact=True)
         await elem.click(timeout=10000)
         
-        # -> Scroll to the bottom of the Media Library page and locate the pagination controls, specifically the 'Previous' ('上一頁') and 'Next' ('下一頁') buttons.
-        await page.mouse.wheel(0, 300)
-        
-        # -> Locate the pagination controls and the '上一頁' (Previous) button on the Media Library page.
-        await page.mouse.wheel(0, 300)
-        
-        # -> Scroll to the top of the library page and look for the '上一頁' (Previous) pagination control and the '下一頁' (Next) control.
-        await page.mouse.wheel(0, 300)
-        
-        # -> Open the Library page ('媒體庫') by navigating to /library, then look for the pagination control and the '上一頁' (Previous) button.
-        await page.goto("http://localhost:8090/library")
-        try:
-            await page.wait_for_load_state("domcontentloaded", timeout=5000)
-        except Exception:
-            pass
-        
         # --> Assertions to verify final state
-        current_url = await page.evaluate("() => window.location.href")
-        # Assert-outcome: passed
-        # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
-        assert current_url, 'Page should have loaded with a URL'
+        
+        # --> Activity page shows an error banner ('無法載入，請稍後再試') instead of events or a defined empty state.
+        # Assert-outcome: failed
+        # Assert: Expected the '重試' button to not be visible on the Activity page.
+        await expect(page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/section/div[2]/button").nth(0)).not_to_be_visible(timeout=15000), "Expected the '\u91cd\u8a66' button to not be visible on the Activity page."
         await asyncio.sleep(5)
 
     finally:
