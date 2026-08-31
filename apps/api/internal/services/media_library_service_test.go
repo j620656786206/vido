@@ -155,3 +155,49 @@ func TestCreateLibrary_DefaultsOffWhenUnspecified(t *testing.T) {
 
 	assert.False(t, got.AutoSubtitle, "a request that never mentions the opt-in must produce an OFF library")
 }
+
+// ─── Library type-change rebuild (bugfix-library-type-change-no-reclassify) ──
+
+type fakePurger struct{ calls int }
+
+func (f *fakePurger) DeleteByLibraryID(_ context.Context, _ string) (int64, error) {
+	f.calls++
+	return 3, nil
+}
+
+func TestUpdateLibrary_TypeChangePurgesAndRescans(t *testing.T) {
+	lib := &models.MediaLibrary{ID: "lib-1", Name: "Shows", ContentType: models.ContentTypeMovie}
+	repo := &stubLibraryRepo{lib: lib}
+
+	svc := NewMediaLibraryService(repo)
+	movies, series := &fakePurger{}, &fakePurger{}
+	svc.SetMediaPurgers(movies, series)
+	scans := 0
+	svc.SetScanTrigger(func() { scans++ })
+
+	newType := "series"
+	_, err := svc.UpdateLibrary(context.Background(), "lib-1", UpdateLibraryRequest{ContentType: &newType})
+
+	require.NoError(t, err)
+	assert.Equal(t, 1, movies.calls, "movie rows must be purged on type change")
+	assert.Equal(t, 1, series.calls, "series rows must be purged on type change")
+	assert.Equal(t, 1, scans, "a rescan must be triggered on type change")
+}
+
+func TestUpdateLibrary_SameTypeDoesNotRebuild(t *testing.T) {
+	repo := &stubLibraryRepo{lib: &models.MediaLibrary{ID: "lib-1", Name: "Movies", ContentType: models.ContentTypeMovie}}
+
+	svc := NewMediaLibraryService(repo)
+	movies, series := &fakePurger{}, &fakePurger{}
+	svc.SetMediaPurgers(movies, series)
+	scans := 0
+	svc.SetScanTrigger(func() { scans++ })
+
+	sameType := "movie"
+	newName := "Films"
+	_, err := svc.UpdateLibrary(context.Background(), "lib-1", UpdateLibraryRequest{ContentType: &sameType, Name: &newName})
+
+	require.NoError(t, err)
+	assert.Equal(t, 0, movies.calls+series.calls, "no purge when the type did not change")
+	assert.Equal(t, 0, scans, "no rescan when the type did not change")
+}

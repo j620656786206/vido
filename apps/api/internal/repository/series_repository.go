@@ -1046,3 +1046,18 @@ func (r *SeriesRepository) Upsert(ctx context.Context, series *models.Series) er
 	}
 	return r.Update(ctx, series)
 }
+
+// DeleteByLibraryID hard-deletes every series row belonging to a library.
+// seasons and episodes cascade via their ON DELETE CASCADE foreign keys
+// (migrations 006/015). See MovieRepository.DeleteByLibraryID for why.
+func (r *SeriesRepository) DeleteByLibraryID(ctx context.Context, libraryID string) (int64, error) {
+	result, err := r.db.ExecContext(ctx, `DELETE FROM series WHERE library_id = ?`, libraryID)
+	if err != nil {
+		return 0, fmt.Errorf("delete series by library: %w", err)
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("rows affected: %w", err)
+	}
+	return n, nil
+}

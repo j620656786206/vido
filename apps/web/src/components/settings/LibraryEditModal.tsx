@@ -166,6 +166,17 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
               <option value="movie">電影</option>
               <option value="series">影集</option>
             </select>
+            {/* 類型變更 = 重建:後端會清掉此庫既有條目並自動重新掃描(Plex 的
+                delete-and-recreate,自動化版)。先講清楚,不讓儲存後的資料重建
+                變成驚嚇。 */}
+            {isEditMode && existingLibrary && contentType !== existingLibrary.contentType && (
+              <p
+                data-testid="library-type-rebuild-warning"
+                className="mt-2 rounded-md bg-[var(--warning-tint)] px-3 py-2 text-xs text-[var(--warning-text)]"
+              >
+                變更類型會重建此媒體庫:既有條目將被清除,並自動重新掃描歸類到新類型。
+              </p>
+            )}
           </div>
 
           {/* Paths section (edit mode or single path for create) */}
