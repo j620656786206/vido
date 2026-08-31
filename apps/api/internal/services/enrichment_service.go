@@ -387,9 +387,7 @@ func (s *EnrichmentService) enrichMovie(ctx context.Context, movie *models.Movie
 	// Step 1: Parse filename
 	parseResult := s.parserService.ParseFilenameWithContext(ctx, filename)
 	if parseResult == nil || parseResult.Status == parser.ParseStatusFailed {
-		movie.ParseStatus = models.ParseStatusFailed
-		movie.UpdatedAt = time.Now()
-		return s.movieRepo.UpdateEnrichedMetadata(ctx, movie)
+		return s.persistFailedWithLocalAnalysis(ctx, movie)
 	}
 
 	// If the parser couldn't extract a meaningful title, mark as failed
@@ -398,9 +396,7 @@ func (s *EnrichmentService) enrichMovie(ctx context.Context, movie *models.Movie
 		cleanedTitle = parseResult.Title
 	}
 	if cleanedTitle == "" {
-		movie.ParseStatus = models.ParseStatusFailed
-		movie.UpdatedAt = time.Now()
-		return s.movieRepo.UpdateEnrichedMetadata(ctx, movie)
+		return s.persistFailedWithLocalAnalysis(ctx, movie)
 	}
 
 	// Step 2: Determine media type
@@ -418,16 +414,12 @@ func (s *EnrichmentService) enrichMovie(ctx context.Context, movie *models.Movie
 
 	searchResult, _, err := s.metadataService.SearchMetadata(ctx, searchReq)
 	if err != nil {
-		movie.ParseStatus = models.ParseStatusFailed
-		movie.UpdatedAt = time.Now()
-		_ = s.movieRepo.UpdateEnrichedMetadata(ctx, movie)
+		_ = s.persistFailedWithLocalAnalysis(ctx, movie)
 		return fmt.Errorf("metadata search: %w", err)
 	}
 
 	if searchResult == nil || !searchResult.HasResults() {
-		movie.ParseStatus = models.ParseStatusFailed
-		movie.UpdatedAt = time.Now()
-		_ = s.movieRepo.UpdateEnrichedMetadata(ctx, movie)
+		_ = s.persistFailedWithLocalAnalysis(ctx, movie)
 		return fmt.Errorf("no metadata found for: %s", cleanedTitle)
 	}
 
@@ -455,15 +447,49 @@ func (s *EnrichmentService) enrichMovie(ctx context.Context, movie *models.Movie
 	return nil
 }
 
+// persistFailedWithLocalAnalysis marks the movie parse-failed but FIRST runs
+// every analysis that needs NO external service — ffprobe tech info, embedded
+// subtitle tracks and sidecar subtitle detection — then persists in one write.
+//
+// Before this helper, every failure exit returned early and starved the whole
+// local line: a NAS with no TMDB key had no tech badges, no subtitle-track
+// detection, and an existing .srt sitting right next to the movie was reported
+// as 尚無字幕 (2026-08-31, Alexyu 內測實測 — 「TMDB 變相必填」). Metadata keys
+// gate METADATA; they must not gate what the box can see with its own eyes.
+func (s *EnrichmentService) persistFailedWithLocalAnalysis(ctx context.Context, movie *models.Movie) error {
+	s.applyFFprobeTechInfo(ctx, movie)
+	movie.ParseStatus = models.ParseStatusFailed
+	movie.UpdatedAt = time.Now()
+	return s.movieRepo.UpdateEnrichedMetadata(ctx, movie)
+}
+
 // applyFFprobeTechInfo extracts technical info via FFprobe and applies it to the movie in-memory.
 // Does NOT write to DB — caller is responsible for persisting.
 // Skips if VideoCodec is already set (from NFO streamdetails).
 // Errors are logged but never propagate — FFprobe failure does not block enrichment.
 func (s *EnrichmentService) applyFFprobeTechInfo(ctx context.Context, movie *models.Movie) {
-	if s.ffprobeService == nil || !s.ffprobeService.IsAvailable() {
+	if !movie.FilePath.Valid || movie.FilePath.String == "" {
 		return
 	}
-	if !movie.FilePath.Valid || movie.FilePath.String == "" {
+
+	// Sidecar subtitle detection is a pure filesystem walk — it needs neither
+	// ffprobe nor any API key, so it must never be starved by either (the
+	// first Synology install had a .srt beside the movie and still showed
+	// 尚無字幕 because this lived after the probe).
+	writeSubs := func(embedded []SubtitleTrack) {
+		allSubs := MergeSubtitleTracks(embedded, DetectExternalSubtitles(movie.FilePath.String))
+		if len(allSubs) == 0 {
+			return
+		}
+		if subsJSON, err := json.Marshal(allSubs); err == nil {
+			movie.SubtitleTracks = models.NewNullString(string(subsJSON))
+		} else {
+			s.logger.Warn("failed to marshal subtitle tracks", "id", movie.ID, "error", err)
+		}
+	}
+
+	if s.ffprobeService == nil || !s.ffprobeService.IsAvailable() {
+		writeSubs(nil)
 		return
 	}
 	// AC #7: Skip if tech info already set (from NFO)
@@ -477,6 +503,7 @@ func (s *EnrichmentService) applyFFprobeTechInfo(ctx context.Context, movie *mod
 	if err != nil {
 		s.logger.Warn("ffprobe failed, skipping tech info",
 			"id", movie.ID, "file", movie.FilePath.String, "error", err)
+		writeSubs(nil) // sidecar detection still runs — it does not need the probe
 		return
 	}
 
@@ -498,17 +525,7 @@ func (s *EnrichmentService) applyFFprobeTechInfo(ctx context.Context, movie *mod
 	}
 
 	// Merge embedded + external subtitles (AC #9)
-	externalSubs := DetectExternalSubtitles(movie.FilePath.String)
-	allSubs := MergeSubtitleTracks(info.SubtitleTracks, externalSubs)
-	if len(allSubs) > 0 {
-		subsJSON, err := json.Marshal(allSubs)
-		if err == nil {
-			movie.SubtitleTracks = models.NewNullString(string(subsJSON))
-		} else {
-			s.logger.Warn("failed to marshal subtitle tracks",
-				"id", movie.ID, "error", err)
-		}
-	}
+	writeSubs(info.SubtitleTracks)
 }
 
 // tryFFprobeEnrichment is a convenience wrapper that applies FFprobe tech info
