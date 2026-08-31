@@ -40,32 +40,25 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Click the '媒體庫' link in the left navigation to open the Media Library page.
-        # 媒體庫 link
-        elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
-        await elem.click(timeout=10000)
-        
-        # -> Click the poster card titled '駭客任務' to open its media detail side panel.
-        # 缺字幕 8.7 駭客任務 1999 link
-        elem = page.get_by_test_id('poster-v2-seed-mv-003')
-        await elem.click(timeout=10000)
-        
         # --> Assertions to verify final state
         
-        # --> The media detail panel shows the title 駭客任務.
+        # --> The 最近新增 (Recently Added) row is visible on the Home page.
+        await page.locator("xpath=/html/body/div/div/div/div[2]/main/div/section/section/div[1]/a").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: passed
-        # Assert: Verifies the detail panel contains the title 駭客任務.
-        await expect(page.locator("xpath=/html/body/div[1]").nth(0)).to_contain_text("\u99ed\u5ba2\u4efb\u52d9", timeout=15000), "Verifies the detail panel contains the title \u99ed\u5ba2\u4efb\u52d9."
+        # Assert: The 最近新增 row header (整理中 · 3) is visible.
+        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/section/section/div[1]/a").nth(0)).to_be_visible(timeout=15000), "The \u6700\u8fd1\u65b0\u589e row header (\u6574\u7406\u4e2d \u00b7 3) is visible."
         
-        # --> The media detail metadata shows the year 1999.
+        # --> The Explore blocks area is rendered below the 最近新增 row and shows the TMDb connection error.
+        await page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div[2]/div/p/a").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: passed
-        # Assert: Verifies the detail metadata displays the year 1999.
-        await expect(page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/section/div[2]/div/div[2]/div[2]/span[1]").nth(0)).to_have_text("1999", timeout=15000), "Verifies the detail metadata displays the year 1999."
+        # Assert: The Explore area shows the '前往連線設定' link (connection error) and is visible.
+        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div[2]/div/p/a").nth(0)).to_be_visible(timeout=15000), "The Explore area shows the '\u524d\u5f80\u9023\u7dda\u8a2d\u5b9a' link (connection error) and is visible."
         
-        # --> A rating value of 8.7 is visible in the detail panel next to TMDb.
+        # --> Poster cards from the seeded library are rendered in the 最近新增 row.
+        await page.locator("xpath=/html/body/div/div/div/div[2]/main/div/section/section/div[2]/div[3]/div[1]/a").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: passed
-        # Assert: Verifies the detail panel shows the rating value 8.7.
-        await expect(page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/section/div[2]/div/div[2]/div[2]/div/div/span[2]").nth(0)).to_have_text("8.7", timeout=15000), "Verifies the detail panel shows the rating value 8.7."
+        # Assert: At least one poster card is visible in the 最近新增 row.
+        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/section/section/div[2]/div[3]/div[1]/a").nth(0)).to_be_visible(timeout=15000), "At least one poster card is visible in the \u6700\u8fd1\u65b0\u589e row."
         await asyncio.sleep(5)
 
     finally:

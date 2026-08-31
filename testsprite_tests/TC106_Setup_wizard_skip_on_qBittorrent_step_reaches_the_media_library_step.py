@@ -40,32 +40,32 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Click the '媒體庫' link in the left navigation to open the Media Library page.
-        # 媒體庫 link
-        elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
+        # -> Click the '下一步' (Next) button on the welcome wizard card to advance to the qBittorrent step.
+        # 下一步 button
+        elem = page.get_by_test_id('next-button')
         await elem.click(timeout=10000)
         
-        # -> Click the poster card titled '駭客任務' to open its media detail side panel.
-        # 缺字幕 8.7 駭客任務 1999 link
-        elem = page.get_by_test_id('poster-v2-seed-mv-003')
+        # -> Click the '跳過' (Skip) button on the qBittorrent connection step to advance to the media library step.
+        # 跳過 button
+        elem = page.get_by_test_id('skip-button')
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> The media detail panel shows the title 駭客任務.
+        # --> Setup wizard is visible and shows the step indicator '步驟 3 / 5'.
         # Assert-outcome: passed
-        # Assert: Verifies the detail panel contains the title 駭客任務.
-        await expect(page.locator("xpath=/html/body/div[1]").nth(0)).to_contain_text("\u99ed\u5ba2\u4efb\u52d9", timeout=15000), "Verifies the detail panel contains the title \u99ed\u5ba2\u4efb\u52d9."
+        # Assert: The wizard header displays the step indicator '步驟 3 / 5'.
+        await expect(page.locator("xpath=/html/body/div[1]").nth(0)).to_contain_text("\u6b65\u9a5f 3 / 5", timeout=15000), "The wizard header displays the step indicator '\u6b65\u9a5f 3 / 5'."
         
-        # --> The media detail metadata shows the year 1999.
+        # --> Media library step rendered: the folder path input and the '新增媒體庫' button are visible.
+        await page.locator("xpath=/html/body/div[1]/div/div/div/div[3]/div[1]/div/div[1]/input").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: passed
-        # Assert: Verifies the detail metadata displays the year 1999.
-        await expect(page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/section/div[2]/div/div[2]/div[2]/span[1]").nth(0)).to_have_text("1999", timeout=15000), "Verifies the detail metadata displays the year 1999."
-        
-        # --> A rating value of 8.7 is visible in the detail panel next to TMDb.
+        # Assert: The media folder path input is visible.
+        await expect(page.locator("xpath=/html/body/div[1]/div/div/div/div[3]/div[1]/div/div[1]/input").nth(0)).to_be_visible(timeout=15000), "The media folder path input is visible."
+        await page.locator("xpath=/html/body/div[1]/div/div/div/div[3]/button").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: passed
-        # Assert: Verifies the detail panel shows the rating value 8.7.
-        await expect(page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/section/div[2]/div/div[2]/div[2]/div/div/span[2]").nth(0)).to_have_text("8.7", timeout=15000), "Verifies the detail panel shows the rating value 8.7."
+        # Assert: The '新增媒體庫' (Add library) button is visible.
+        await expect(page.locator("xpath=/html/body/div[1]/div/div/div/div[3]/button").nth(0)).to_be_visible(timeout=15000), "The '\u65b0\u589e\u5a92\u9ad4\u5eab' (Add library) button is visible."
         await asyncio.sleep(5)
 
     finally:

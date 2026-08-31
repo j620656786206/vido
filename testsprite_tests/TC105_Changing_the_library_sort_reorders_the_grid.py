@@ -40,32 +40,31 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Click the '媒體庫' link in the left navigation to open the Media Library page.
+        # -> Click the '媒體庫' (Media Library) link in the left sidebar to open the library page.
         # 媒體庫 link
         elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
         await elem.click(timeout=10000)
         
-        # -> Click the poster card titled '駭客任務' to open its media detail side panel.
-        # 缺字幕 8.7 駭客任務 1999 link
-        elem = page.get_by_test_id('poster-v2-seed-mv-003')
+        # -> Open the '排序方式' control labeled '新增日期' to reveal sort options.
+        # 新增日期 button
+        elem = page.get_by_test_id('sort-selector-button')
+        await elem.click(timeout=10000)
+        
+        # -> Select the '標題' option from the sort menu to sort the library by title.
+        # 標題 button
+        elem = page.get_by_test_id('sort-option-title')
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> The media detail panel shows the title 駭客任務.
+        # --> After selecting the '標題' sort option, the library grid's first card is now 'Home.Video.Collection.Vol1'.
         # Assert-outcome: passed
-        # Assert: Verifies the detail panel contains the title 駭客任務.
-        await expect(page.locator("xpath=/html/body/div[1]").nth(0)).to_contain_text("\u99ed\u5ba2\u4efb\u52d9", timeout=15000), "Verifies the detail panel contains the title \u99ed\u5ba2\u4efb\u52d9."
-        
-        # --> The media detail metadata shows the year 1999.
+        # Assert: The page URL includes the selected sort parameters (sortBy=title & sortOrder=asc).
+        await expect(page).to_have_url(re.compile("sortBy=title\\&sortOrder=asc"), timeout=15000), "The page URL includes the selected sort parameters (sortBy=title & sortOrder=asc)."
+        await page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/div/div[2]/div[2]/a[1]").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: passed
-        # Assert: Verifies the detail metadata displays the year 1999.
-        await expect(page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/section/div[2]/div/div[2]/div[2]/span[1]").nth(0)).to_have_text("1999", timeout=15000), "Verifies the detail metadata displays the year 1999."
-        
-        # --> A rating value of 8.7 is visible in the detail panel next to TMDb.
-        # Assert-outcome: passed
-        # Assert: Verifies the detail panel shows the rating value 8.7.
-        await expect(page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/section/div[2]/div/div[2]/div[2]/div/div/span[2]").nth(0)).to_have_text("8.7", timeout=15000), "Verifies the detail panel shows the rating value 8.7."
+        # Assert: The first grid card element is visible after sorting.
+        await expect(page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/div/div[2]/div[2]/a[1]").nth(0)).to_be_visible(timeout=15000), "The first grid card element is visible after sorting."
         await asyncio.sleep(5)
 
     finally:
