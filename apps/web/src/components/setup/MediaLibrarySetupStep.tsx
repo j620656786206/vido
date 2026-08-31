@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { Plus, X } from 'lucide-react';
 import type { StepProps } from './SetupWizard';
+import { newLocalId } from '../../utils/uid';
 
 interface LibraryEntry {
   id: string;
@@ -11,7 +12,10 @@ interface LibraryEntry {
 
 export function MediaLibrarySetupStep({ data, onUpdate, onNext, onBack }: StepProps) {
   const defaultLibrary: LibraryEntry = {
-    id: globalThis.crypto.randomUUID(),
+    // newLocalId, NOT crypto.randomUUID: NAS installs run over http://<LAN-IP>
+    // (insecure origin) where randomUUID does not exist — the first Synology
+    // install crashed the wizard right here.
+    id: newLocalId(),
     path: '',
     contentType: 'movie',
   };
@@ -30,10 +34,7 @@ export function MediaLibrarySetupStep({ data, onUpdate, onNext, onBack }: StepPr
   };
 
   const addLibrary = () => {
-    updateLibraries([
-      ...libraries,
-      { id: globalThis.crypto.randomUUID(), path: '', contentType: 'movie' },
-    ]);
+    updateLibraries([...libraries, { id: newLocalId(), path: '', contentType: 'movie' }]);
   };
 
   const removeLibrary = (index: number) => {
