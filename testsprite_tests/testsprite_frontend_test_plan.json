@@ -2786,7 +2786,7 @@
   {
     "id": "TC110",
     "title": "Changing a library content type rebuilds and reclassifies its items",
-    "description": "Editing a media library and changing its content type must warn about the rebuild, then purge and rescan the library so existing items are reclassified under the new type - the sidebar movie and series counts change accordingly.",
+    "description": "Editing the SERIES media library and changing its content type to movie must warn about the rebuild, then purge and rescan so its items are reclassified as movies - the sidebar series count decreases and the movie count increases. (Movie-to-series is intentionally NOT the scenario: files without episode markers become honest unmatched, not series.)",
     "category": "Media Library Management",
     "priority": "High",
     "steps": [
@@ -2800,11 +2800,11 @@
       },
       {
         "type": "action",
-        "description": "Open the action menu of the first media library card and choose the edit option"
+        "description": "Open the action menu of the media library card whose type badge shows the series type and choose the edit option"
       },
       {
         "type": "action",
-        "description": "Change the content type selection in the edit dialog to the other type"
+        "description": "Change the content type selection in the edit dialog to the movie type"
       },
       {
         "type": "assertion",
@@ -2816,11 +2816,11 @@
       },
       {
         "type": "action",
-        "description": "Wait about ten seconds for the automatic rescan to finish, then reload the page"
+        "description": "Wait about fifteen seconds for the automatic rescan to finish, then reload the page"
       },
       {
         "type": "assertion",
-        "description": "Verify the sidebar movie and series counts have changed from the noted values, showing the library items were reclassified under the new type"
+        "description": "Verify the sidebar series count decreased and the movie count increased compared to the noted values, showing the library items were reclassified as movies"
       }
     ]
   }

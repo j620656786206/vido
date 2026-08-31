@@ -42,6 +42,11 @@
 - TC103:產品照設計運作(per-section fail-soft),但「未設定 qBT」顯示「無法載入,請稍後再試」文案誤導(立案 disc-activity-downloads-unconfigured-copy,P3)
 - TC013/TC095 計畫過期:匯出已移居設定頁、繼續觀看經 ⚖️ R3 裁定 unmount(立案 plan-drift-tc013-tc095)
 
+### 改類型=重建(TC110,2026-08-31 深夜追加)— 1/1 ✅
+
+- 真瀏覽器全程:編輯影集庫 → 重建警語 → 儲存 → 自動 purge+重掃 → 側欄 影集↓/電影↑(feat #363)
+- 首輪失敗為劇本方向錯誤(電影檔名無集數,語意上不可能歸類為影集;產品的 unmatched 處理正確),修正方向後通過
+
 ## 3️⃣ Coverage & Matching Metrics
 
 | 批次                       | 案數   | ✅     | ❌真bug | 📝計畫過期 | 🚧環境 |
