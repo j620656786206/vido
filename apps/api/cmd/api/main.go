@@ -15,6 +15,7 @@ import (
 	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/cache"
 	"github.com/vido/api/internal/config"
+	"github.com/vido/api/internal/crypto"
 	"github.com/vido/api/internal/database"
 	"github.com/vido/api/internal/database/migrations"
 	"github.com/vido/api/internal/events"
@@ -994,13 +995,43 @@ func main() {
 	// Register routes
 	router.GET("/health", handlers.HealthCheckHandler(db))
 
+	// Auth gate (V0.1.1). A single shared password (VIDO_AUTH_PASSWORD) puts a
+	// session in front of the whole API; unset keeps the API open for a LAN-only
+	// install. The cookie-signing secret is resolved once at startup (explicit
+	// secret → ENCRYPTION_KEY → a random secret persisted under the data dir).
+	sessionSecret, err := crypto.SessionSecret(cfg.SessionSecret, cfg.EncryptionKey, cfg.DataDir)
+	if err != nil {
+		slog.Error("Failed to derive session secret", "error", err)
+		os.Exit(1)
+	}
+	authenticator := handlers.NewAuthenticator(cfg.AuthPassword, sessionSecret)
+	authenticator.SetSecureCookie(cfg.SecureCookie)
+	authHandler := handlers.NewAuthHandler(authenticator)
+	if authenticator.Enabled() {
+		slog.Info("🔒 API authentication enabled (VIDO_AUTH_PASSWORD set)")
+	} else {
+		slog.Warn("⚠️  API authentication DISABLED — VIDO_AUTH_PASSWORD not set. " +
+			"Anyone who can reach this server has full control of it. Set VIDO_AUTH_PASSWORD, " +
+			"or keep the server strictly on a trusted LAN / behind a VPN.")
+	}
+
+	// Auth endpoints (login/logout/status) need neither the database nor an
+	// existing session, so they live on their own /api/v1 group OUTSIDE
+	// DatabaseGate — login must keep working during a DB outage so the user can
+	// still authenticate and see the honest banner.
+	authGroup := router.Group("/api/v1")
+	authHandler.RegisterRoutes(authGroup)
+
 	// API v1 routes with handler → service → repository architecture.
 	// DatabaseGate (bugfix-i-3): while the supervisor reports the database
 	// down, every /api/v1 route fails fast with ONE uniform 503
 	// DATABASE_UNAVAILABLE instead of ten scattered per-handler failures. The
 	// root /health endpoint above stays outside the gate so probes and the
 	// frontend banner keep getting the honest detail.
-	apiV1 := router.Group("/api/v1", handlers.DatabaseGate(dbSupervisor.Healthy))
+	// AuthGate (V0.1.1): when a password is set, every /api/v1 route requires a
+	// valid session cookie (the /api/v1/auth/* endpoints registered above are on
+	// their own gate-free group).
+	apiV1 := router.Group("/api/v1", handlers.DatabaseGate(dbSupervisor.Healthy), handlers.AuthGate(authenticator))
 	{
 		movieHandler.RegisterRoutes(apiV1)
 		seriesHandler.RegisterRoutes(apiV1)

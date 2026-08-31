@@ -2,12 +2,15 @@
 package crypto
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -86,6 +89,62 @@ func DeriveKeyFromMachineID() ([]byte, error) {
 // deriveKeyFromString derives a 32-byte key from an input string using PBKDF2.
 func deriveKeyFromString(input string) []byte {
 	return pbkdf2.Key([]byte(input), []byte(saltDefault), pbkdf2Iterations, KeySize, sha256.New)
+}
+
+// sessionSaltSuffix domain-separates the session-signing key from the
+// data-encryption key, so the two never coincide even when derived from the same
+// configured secret.
+const sessionSaltSuffix = "vido-session-v1"
+
+// sessionSecretFile is the name of the persisted random secret under the data dir.
+const sessionSecretFile = ".session_secret"
+
+// SessionSecret returns a stable 32-byte HMAC key for signing session cookies.
+// Priority:
+//  1. VIDO_SESSION_SECRET (explicit) — derived via PBKDF2, domain-separated.
+//  2. ENCRYPTION_KEY — reuses the operator's existing real secret, domain-separated.
+//  3. A random 32-byte secret persisted under dataDir (created on first run).
+//
+// It deliberately NEVER falls back to the machine-ID / hostname derivation used
+// for the data-encryption key: that path uses a public salt over guessable input
+// (a container with no /etc/machine-id and a pinned hostname yields a fully
+// predictable key), which would let an attacker reconstruct the signing key and
+// forge session tokens. Persisting a random secret keeps logins valid across
+// restarts without that risk.
+func SessionSecret(explicit, encryptionKey, dataDir string) ([]byte, error) {
+	if explicit != "" {
+		return deriveKeyFromString(explicit + "|" + sessionSaltSuffix), nil
+	}
+	if encryptionKey != "" {
+		return deriveKeyFromString(encryptionKey + "|" + sessionSaltSuffix), nil
+	}
+	return loadOrCreateSessionSecret(dataDir)
+}
+
+// loadOrCreateSessionSecret reads the persisted random secret, or generates and
+// persists a new one. If the data dir is not writable it still returns a valid
+// process-lifetime secret (logins reset on restart) rather than failing startup.
+func loadOrCreateSessionSecret(dataDir string) ([]byte, error) {
+	path := filepath.Join(dataDir, sessionSecretFile)
+	if existing, err := os.ReadFile(path); err == nil && len(existing) >= KeySize {
+		return existing[:KeySize], nil
+	}
+
+	secret := make([]byte, KeySize)
+	if _, err := rand.Read(secret); err != nil {
+		return nil, fmt.Errorf("generate session secret: %w", err)
+	}
+
+	if err := os.MkdirAll(dataDir, 0o700); err != nil {
+		slog.Warn("Could not create data dir for session secret; logins reset on restart",
+			"dir", dataDir, "error", err)
+		return secret, nil
+	}
+	if err := os.WriteFile(path, secret, 0o600); err != nil {
+		slog.Warn("Could not persist session secret; logins reset on restart",
+			"path", path, "error", err)
+	}
+	return secret, nil
 }
 
 // getMachineID returns a unique identifier for the current machine.

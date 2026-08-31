@@ -204,4 +204,15 @@
     Required="false"
     Mask="true"
   />
+  <Config
+    Name="Login Password"
+    Target="VIDO_AUTH_PASSWORD"
+    Default=""
+    Mode=""
+    Description="Single shared password that gates the WHOLE app (login required). STRONGLY recommended before sharing this instance or exposing it beyond a trusted LAN. Leave EMPTY to keep the old no-login behaviour (only safe on a private home network / behind a VPN). Without it, anyone who can reach the server has full control: read/change settings and API keys, download the database backup, add torrents."
+    Type="Variable"
+    Display="always"
+    Required="false"
+    Mask="true"
+  />
 </Container>

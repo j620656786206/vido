@@ -23,6 +23,9 @@ services:
       ASR_BASE_URL: ''
       ASR_MODEL: ''
       AI_RUN_BUDGET_USD: '5'
+      # Login password gating the whole app (V0.1.1). Set this before sharing the
+      # instance or exposing it beyond a trusted LAN. Empty = no login.
+      VIDO_AUTH_PASSWORD: ''
     healthcheck:
       test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:8080/health']
       interval: 30s

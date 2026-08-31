@@ -67,6 +67,10 @@ services:
       - AI_RUN_BUDGET_USD=${AI_RUN_BUDGET_USD:-5}
       # Encryption key for stored credentials (qBittorrent, DVR). Auto-derived if empty.
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+      # Login password gating the whole API + UI (V0.1.1). STRONGLY recommended
+      # before sharing this instance or exposing it beyond a trusted LAN. Empty =
+      # no login (only safe on a private home network / behind a VPN).
+      - VIDO_AUTH_PASSWORD=${VIDO_AUTH_PASSWORD:-}
     healthcheck:
       test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:8080/health']
       interval: 30s

@@ -53,6 +53,16 @@ type Config struct {
 	OpenAIAPIKey  string
 	EncryptionKey string
 
+	// Auth (V0.1.1 password gate). AuthPassword, when non-empty, turns on a
+	// single-shared-password session gate in front of the whole API; empty keeps
+	// the API open for a purely-LAN install. SessionSecret optionally pins the
+	// cookie-signing key — otherwise it is derived from ENCRYPTION_KEY, else a
+	// random secret persisted under DataDir. SecureCookie adds the Secure flag to
+	// the session cookie (turn on only behind HTTPS).
+	AuthPassword  string
+	SessionSecret string
+	SecureCookie  bool
+
 	// AI Provider configuration (Story 3.1)
 	AIProvider string // "gemini" or "claude"
 
@@ -149,6 +159,10 @@ func Load() (*Config, error) {
 	cfg.ASRModel = cfg.loadString("ASR_MODEL", "")
 	cfg.OpenAIAPIKey = cfg.loadString("OPENAI_API_KEY", "")
 	cfg.EncryptionKey = cfg.loadString("ENCRYPTION_KEY", "")
+	// Auth password gate (V0.1.1). Empty = auth disabled (LAN-only posture).
+	cfg.AuthPassword = cfg.loadString("VIDO_AUTH_PASSWORD", "")
+	cfg.SessionSecret = cfg.loadString("VIDO_SESSION_SECRET", "")
+	cfg.SecureCookie = cfg.loadBool("VIDO_SECURE_COOKIE", false)
 
 	// AI Provider configuration (Story 3.1) - defaults to "gemini" if not set
 	cfg.AIProvider = cfg.loadString("AI_PROVIDER", "gemini")
@@ -327,6 +341,12 @@ func (c *Config) LogConfigSources() {
 		"AI_PROVIDER_source", c.Sources["AI_PROVIDER"].String(),
 		"ENCRYPTION_KEY", maskSecret(c.EncryptionKey),
 		"ENCRYPTION_KEY_source", c.Sources["ENCRYPTION_KEY"].String(),
+		"VIDO_AUTH_PASSWORD", maskSecret(c.AuthPassword),
+		"VIDO_AUTH_PASSWORD_source", c.Sources["VIDO_AUTH_PASSWORD"].String(),
+		"VIDO_SESSION_SECRET", maskSecret(c.SessionSecret),
+		"VIDO_SESSION_SECRET_source", c.Sources["VIDO_SESSION_SECRET"].String(),
+		"VIDO_SECURE_COOKIE", c.SecureCookie,
+		"VIDO_SECURE_COOKIE_source", c.Sources["VIDO_SECURE_COOKIE"].String(),
 		"TMDB_DEFAULT_LANGUAGE", c.TMDbDefaultLanguage,
 		"TMDB_DEFAULT_LANGUAGE_source", c.Sources["TMDB_DEFAULT_LANGUAGE"].String(),
 		"TMDB_FALLBACK_LANGUAGES", strings.Join(c.TMDbFallbackLanguages, ","),
