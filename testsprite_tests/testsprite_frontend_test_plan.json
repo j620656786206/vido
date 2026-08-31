@@ -2662,5 +2662,125 @@
     "v4_status": "NEW",
     "v4_reason": "round3 candidate (2026-07-23) — high-priority coverage gap, env-safe (no TMDb/qBT/AI key)",
     "v4_action": "generate+run in testsprite-v2-round3"
+  },
+  {
+    "id": "TC106",
+    "title": "Setup wizard skip on qBittorrent step reaches the media library step",
+    "description": "On a fresh install the setup wizard is shown; pressing Skip on the qBittorrent step must land on the media library step and render its form (this exact path crashed the first Synology install).",
+    "category": "Setup Wizard",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /setup"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the setup wizard is visible showing a step indicator"
+      },
+      {
+        "type": "action",
+        "description": "Proceed to the next step from the welcome step"
+      },
+      {
+        "type": "action",
+        "description": "Press the skip control on the qBittorrent connection step"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the media library step renders with a folder path input and an add library control, with no error screen"
+      }
+    ]
+  },
+  {
+    "id": "TC107",
+    "title": "Setup wizard back and forward navigation preserves entered values",
+    "description": "Values typed into a wizard step survive going back one step and forward again.",
+    "category": "Setup Wizard",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /setup"
+      },
+      {
+        "type": "action",
+        "description": "Proceed to the next step from the welcome step"
+      },
+      {
+        "type": "action",
+        "description": "Press the skip control on the qBittorrent connection step"
+      },
+      {
+        "type": "action",
+        "description": "Type /tmp into the media library folder path input"
+      },
+      {
+        "type": "action",
+        "description": "Go back one step using the back control"
+      },
+      {
+        "type": "action",
+        "description": "Press the skip control to return to the media library step"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the media library folder path input still contains /tmp"
+      }
+    ]
+  },
+  {
+    "id": "TC108",
+    "title": "Setup wizard completes and lands on the app",
+    "description": "Walking the wizard to the end with a valid media folder completes setup and leaves the wizard.",
+    "category": "Setup Wizard",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /setup"
+      },
+      {
+        "type": "action",
+        "description": "Proceed to the next step from the welcome step"
+      },
+      {
+        "type": "action",
+        "description": "Press the skip control on the qBittorrent connection step"
+      },
+      {
+        "type": "action",
+        "description": "Type /tmp into the media library folder path input"
+      },
+      {
+        "type": "action",
+        "description": "Proceed through any remaining steps choosing skip where offered until the final step"
+      },
+      {
+        "type": "action",
+        "description": "Press the finish control on the final step"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the setup wizard is no longer shown and the application main navigation is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC109",
+    "title": "Completed setup does not show the wizard again",
+    "description": "After setup completion, visiting /setup does not re-enter the wizard; the app remains usable.",
+    "category": "Setup Wizard",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /setup"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the setup wizard flow is not restarted and the application content or main navigation is visible instead"
+      }
+    ]
   }
 ]

@@ -64,7 +64,9 @@ if [[ "$KEEP_DB" -eq 0 ]]; then
   if [[ "$FAILURE_FIXTURES" -eq 1 ]]; then
     SEED_FAILURE_ARG+=(--failure-fixtures)
   fi
-  (cd "$ROOT/apps/api" && go run ./cmd/seed --data-dir "$ENV_DIR/data" --media-root "$ENV_DIR/media" --reset "${SEED_FAILURE_ARG[@]}")
+  # ${arr[@]+…} guard: macOS bash 3.2 + `set -u` treats expanding an EMPTY
+  # array as an unbound variable and aborts the script.
+  (cd "$ROOT/apps/api" && go run ./cmd/seed --data-dir "$ENV_DIR/data" --media-root "$ENV_DIR/media" --reset ${SEED_FAILURE_ARG[@]+"${SEED_FAILURE_ARG[@]}"})
 else
   echo "==> Keeping existing database"
 fi

@@ -188,6 +188,26 @@ export default [
     },
   },
 
+  // Secure-context-only browser APIs are banned in app code: a NAS install is
+  // browsed over http://<LAN-IP> (an INSECURE origin) where crypto.randomUUID
+  // simply does not exist — the first real Synology install crashed the setup
+  // wizard on it (fixed in #358). Lint is the deterministic gate for the whole
+  // class; localhost dev and https test rigs can never catch it at runtime.
+  {
+    files: ['apps/web/src/**/*.{ts,tsx}'],
+    ignores: ['apps/web/src/utils/uid.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "MemberExpression[property.name='randomUUID']",
+          message:
+            'crypto.randomUUID 只存在於 secure context(https/localhost),NAS 用 http://<LAN-IP> 會直接 crash — 改用 utils/uid 的 newLocalId()。',
+        },
+      ],
+    },
+  },
+
   // Playwright test files - disable React hooks rules (Playwright's `use` is not a React hook)
   {
     files: ['tests/**/*.ts', 'tests/**/*.tsx'],
