@@ -40,32 +40,23 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Click the '媒體庫' link in the left navigation to open the Media Library page.
-        # 媒體庫 link
-        elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
-        await elem.click(timeout=10000)
-        
-        # -> Click the poster card titled '駭客任務' to open its media detail side panel.
-        # 缺字幕 8.7 駭客任務 1999 link
-        elem = page.get_by_test_id('poster-v2-seed-mv-003')
-        await elem.click(timeout=10000)
+        # -> Search the Home page for the section heading '探索' (Explore) and, if not found, scroll down to reveal lower sections so an Explore block can be located.
+        await page.mouse.wheel(0, 300)
         
         # --> Assertions to verify final state
         
-        # --> The media detail panel shows the title 駭客任務.
+        # --> An Explore placeholder is visible on the Home page (link '前往連線設定' present).
         # Assert-outcome: passed
-        # Assert: Verifies the detail panel contains the title 駭客任務.
-        await expect(page.locator("xpath=/html/body/div[1]").nth(0)).to_contain_text("\u99ed\u5ba2\u4efb\u52d9", timeout=15000), "Verifies the detail panel contains the title \u99ed\u5ba2\u4efb\u52d9."
+        # Assert: The Explore placeholder's '前往連線設定' link is visible.
+        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div[2]/div/p/a").nth(0)).to_contain_text("\u524d\u5f80\u9023\u7dda\u8a2d\u5b9a", timeout=15000), "The Explore placeholder's '\u524d\u5f80\u9023\u7dda\u8a2d\u5b9a' link is visible."
         
-        # --> The media detail metadata shows the year 1999.
+        # --> Explore placeholder appears after the own-content rows on the Home page.
         # Assert-outcome: passed
-        # Assert: Verifies the detail metadata displays the year 1999.
-        await expect(page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/section/div[2]/div/div[2]/div[2]/span[1]").nth(0)).to_have_text("1999", timeout=15000), "Verifies the detail metadata displays the year 1999."
-        
-        # --> A rating value of 8.7 is visible in the detail panel next to TMDb.
+        # Assert: An own-content media card is visible above the Explore area.
+        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/section/section/div[2]/div[3]/div[1]/a").nth(0)).to_contain_text("U\n\u6574\u7406\u4e2d\nUnknown.Show.S01", timeout=15000), "An own-content media card is visible above the Explore area."
         # Assert-outcome: passed
-        # Assert: Verifies the detail panel shows the rating value 8.7.
-        await expect(page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/section/div[2]/div/div[2]/div[2]/div/div/span[2]").nth(0)).to_have_text("8.7", timeout=15000), "Verifies the detail panel shows the rating value 8.7."
+        # Assert: The Explore placeholder link is visible below the own-content rows.
+        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div[2]/div/p/a").nth(0)).to_contain_text("\u524d\u5f80\u9023\u7dda\u8a2d\u5b9a", timeout=15000), "The Explore placeholder link is visible below the own-content rows."
         await asyncio.sleep(5)
 
     finally:

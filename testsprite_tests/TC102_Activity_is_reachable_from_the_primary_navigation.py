@@ -40,32 +40,21 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Click the '媒體庫' link in the left navigation to open the Media Library page.
-        # 媒體庫 link
-        elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
-        await elem.click(timeout=10000)
-        
-        # -> Click the poster card titled '駭客任務' to open its media detail side panel.
-        # 缺字幕 8.7 駭客任務 1999 link
-        elem = page.get_by_test_id('poster-v2-seed-mv-003')
+        # -> Click the '活動' (Activity) navigation item in the sidebar.
+        # 活動 link
+        elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='活動', exact=True)
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> The media detail panel shows the title 駭客任務.
+        # --> The browser navigated to the Activity route and the Activity UI is visible.
         # Assert-outcome: passed
-        # Assert: Verifies the detail panel contains the title 駭客任務.
-        await expect(page.locator("xpath=/html/body/div[1]").nth(0)).to_contain_text("\u99ed\u5ba2\u4efb\u52d9", timeout=15000), "Verifies the detail panel contains the title \u99ed\u5ba2\u4efb\u52d9."
-        
-        # --> The media detail metadata shows the year 1999.
+        # Assert: URL contains '/activity'.
+        await expect(page).to_have_url(re.compile("/activity"), timeout=15000), "URL contains '/activity'."
+        await page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/header/button").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: passed
-        # Assert: Verifies the detail metadata displays the year 1999.
-        await expect(page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/section/div[2]/div/div[2]/div[2]/span[1]").nth(0)).to_have_text("1999", timeout=15000), "Verifies the detail metadata displays the year 1999."
-        
-        # --> A rating value of 8.7 is visible in the detail panel next to TMDb.
-        # Assert-outcome: passed
-        # Assert: Verifies the detail panel shows the rating value 8.7.
-        await expect(page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/section/div[2]/div/div[2]/div[2]/div/div/span[2]").nth(0)).to_have_text("8.7", timeout=15000), "Verifies the detail panel shows the rating value 8.7."
+        # Assert: The Activity header button '批次生成字幕' is visible.
+        await expect(page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/header/button").nth(0)).to_be_visible(timeout=15000), "The Activity header button '\u6279\u6b21\u751f\u6210\u5b57\u5e55' is visible."
         await asyncio.sleep(5)
 
     finally:

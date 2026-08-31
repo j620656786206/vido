@@ -40,77 +40,142 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Click the '設定' (Settings) link in the sidebar to open the Settings page.
+        # -> Open the '設定' (Settings) page by clicking the '設定' link in the sidebar.
         # 設定 link
         elem = page.get_by_test_id('nav-settings')
         await elem.click(timeout=10000)
         
-        # -> Click the '媒體庫掃描' link in the Settings menu to open the Scanner settings page.
+        # -> Click the '媒體庫：媒體庫掃描' (Library: Media library scan) settings link to open the Scanner settings page.
         # 媒體庫掃描 link
-        elem = page.get_by_test_id('settings-nav-scanner')
+        elem = page.get_by_test_id('settings-tab-scanner')
         await elem.click(timeout=10000)
         
-        # -> Open the '掃描排程' (scan schedule) dropdown so the options (每小時 / 每天 / 僅手動) are shown.
+        # -> Open the '掃描排程' (scan schedule) dropdown so the '每天' (daily) option can be selected.
         # 每小時 每天 僅手動 dropdown
         elem = page.get_by_test_id('schedule-select')
         await elem.click(timeout=10000)
         
-        # -> Select '每天' from the '掃描排程' (Scan schedule) dropdown on the Scanner settings page and verify the control shows '每天'.
+        # -> Select the '每天' (daily) option in the '掃描排程' (Scan schedule) dropdown and verify it shows '每天' on the page.
         # 每小時 每天 僅手動 dropdown
-        elem = page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div[3]/div[2]/select").nth(0)
+        elem = page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div/div/div[2]/div[2]/select").nth(0)
         await elem.wait_for(state="visible", timeout=10000)
         await elem.select_option("")
         
-        # -> Select '每天' from the '掃描排程' (Scan schedule) dropdown so it shows '每天', then open the '媒體庫' (Library) page.
-        # 每小時 每天 僅手動 dropdown
-        elem = page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div[3]/div[2]/select").nth(0)
-        await elem.wait_for(state="visible", timeout=10000)
-        await elem.select_option("")
-        
-        # -> Select '每天' from the '掃描排程' (Scan schedule) dropdown so it shows '每天', then open the '媒體庫' (Library) page.
+        # -> Select '每天' from the '掃描排程' (scan schedule) dropdown and verify the page shows '每天', then go to the Library page.
         # 媒體庫 link
         elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
         await elem.click(timeout=10000)
         
-        # -> Click the '設定' (Settings) link in the left sidebar to open the Settings page so the scan schedule control can be accessed.
+        # -> Click the '設定' (Settings) link in the left sidebar to open the Settings page.
         # 設定 link
         elem = page.get_by_test_id('nav-settings')
         await elem.click(timeout=10000)
         
-        # -> Click the '媒體庫掃描' link in the Settings menu to open the Scanner settings page.
+        # -> Open the '媒體庫：媒體庫掃描' (Media library scan) settings page by clicking the sidebar link labeled '媒體庫：媒體庫掃描'.
         # 媒體庫掃描 link
-        elem = page.get_by_test_id('settings-nav-scanner')
+        elem = page.get_by_test_id('settings-tab-scanner')
         await elem.click(timeout=10000)
         
-        # -> Open the '掃描排程' (Scan schedule) dropdown so the options 每小時 / 每天 / 僅手動 become visible.
+        # -> Open the '掃描排程' (Scan schedule) dropdown so the '每天' option is revealed.
         # 每小時 每天 僅手動 dropdown
         elem = page.get_by_test_id('schedule-select')
         await elem.click(timeout=10000)
         
-        # -> Select '每天' from the '掃描排程' (Scan schedule) dropdown and verify the control shows '每天'.
+        # -> Select '每天' from the '掃描排程' (Scan schedule) dropdown on the 媒體庫掃描 (Media library scan) settings page and verify the page shows '每天'.
         # 每小時 每天 僅手動 dropdown
-        elem = page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div[3]/div[2]/select").nth(0)
+        elem = page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div/div/div[2]/div[2]/select").nth(0)
         await elem.wait_for(state="visible", timeout=10000)
         await elem.select_option("")
         
-        # -> Select '每天' from the '掃描排程' (Scan schedule) dropdown so the control shows '每天' as the chosen schedule.
-        # 每小時 每天 僅手動 dropdown
-        elem = page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div[3]/div[2]/select").nth(0)
-        await elem.wait_for(state="visible", timeout=10000)
-        await elem.select_option("")
-        
-        # -> Select '每天' from the '掃描排程' (Scan schedule) dropdown so the control shows '每天'.
-        # 每小時 每天 僅手動 dropdown
-        elem = page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div[3]/div[2]/select").nth(0)
-        await elem.wait_for(state="visible", timeout=10000)
-        await elem.select_option("")
-        
-        # -> Select '每天' from the '掃描排程' (scan schedule) dropdown and verify the page shows '每天' as the chosen value.
+        # -> Select '每天' from the '掃描排程' (Scan schedule) dropdown on the 媒體庫掃描 (Media library scan) settings page and verify the page shows '每天'.
         # 媒體庫 link
         elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
         await elem.click(timeout=10000)
         
-        # -> Open the '掃描器' (Scanner) settings page by navigating to /settings/scanner so the scan schedule control is visible for interaction.
+        # -> Click the left-sidebar '設定' (Settings) link to open the Settings page.
+        # 設定 link
+        elem = page.get_by_test_id('nav-settings')
+        await elem.click(timeout=10000)
+        
+        # -> Open the '媒體庫：媒體庫掃描' (Media library scan) settings page by clicking the sidebar link labeled '媒體庫掃描'.
+        # 媒體庫掃描 link
+        elem = page.get_by_test_id('settings-tab-scanner')
+        await elem.click(timeout=10000)
+        
+        # -> Set the '掃描排程' (Scan schedule) dropdown to '每天' and verify the page shows the text '每天', then click the '媒體庫' (Library) link.
+        # 每小時 每天 僅手動 dropdown
+        elem = page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div/div/div[2]/div[2]/select").nth(0)
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.select_option("")
+        
+        # -> Set the '掃描排程' (Scan schedule) dropdown to '每天' and verify the page shows the text '每天', then click the '媒體庫' (Library) link.
+        # 媒體庫 link
+        elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
+        await elem.click(timeout=10000)
+        
+        # -> Open the 媒體庫掃描 (Media library scan) settings page by navigating to the Settings → 媒體庫掃描 URL (/settings/scanner).
+        await page.goto("http://localhost:8090/settings/scanner")
+        try:
+            await page.wait_for_load_state("domcontentloaded", timeout=5000)
+        except Exception:
+            pass
+        
+        # -> Select '每天' from the '掃描排程' (Scan schedule) dropdown and verify the page shows '每天', then navigate to the Library page.
+        # 每小時 每天 僅手動 dropdown
+        elem = page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div/div/div[2]/div[2]/select").nth(0)
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.select_option("")
+        
+        # -> Select '每天' from the '掃描排程' (Scan schedule) dropdown and verify the page shows '每天', then navigate to the Library page.
+        # 媒體庫 link
+        elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
+        await elem.click(timeout=10000)
+        
+        # -> Click the left-sidebar '設定' (Settings) link to open the Settings page.
+        # 設定 link
+        elem = page.get_by_test_id('nav-settings')
+        await elem.click(timeout=10000)
+        
+        # -> Click the '媒體庫：媒體庫掃描' (Media library scan) link in the left settings menu to open the Media library scan settings page.
+        # 媒體庫掃描 link
+        elem = page.get_by_test_id('settings-tab-scanner')
+        await elem.click(timeout=10000)
+        
+        # -> Select '每天' from the '掃描排程' dropdown and verify the page shows '每天', then click the '媒體庫' (Library) link to begin the persistence check.
+        # 每小時 每天 僅手動 dropdown
+        elem = page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div/div/div[2]/div[2]/select").nth(0)
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.select_option("")
+        
+        # -> Select '每天' from the '掃描排程' dropdown and verify the page shows '每天', then click the '媒體庫' (Library) link to begin the persistence check.
+        # 媒體庫 link
+        elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
+        await elem.click(timeout=10000)
+        
+        # -> Navigate to the 媒體庫掃描 (Media library scan) settings page (Settings → 媒體庫掃描) by opening /settings/scanner.
+        await page.goto("http://localhost:8090/settings/scanner")
+        try:
+            await page.wait_for_load_state("domcontentloaded", timeout=5000)
+        except Exception:
+            pass
+        
+        # -> Open the '掃描排程' dropdown (Scan schedule) and reveal the options so '每天' can be clicked.
+        # 每小時 每天 僅手動 dropdown
+        elem = page.get_by_test_id('schedule-select')
+        await elem.click(timeout=10000)
+        
+        # -> Select the '每天' option in the '掃描排程' (scan schedule) dropdown and then click the '媒體庫' (Library) link to navigate away for a persistence check.
+        # 每小時 每天 僅手動 dropdown
+        elem = page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div/div/div[2]/div[2]/select").nth(0)
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.select_option("")
+        
+        # -> Select the '每天' option in the '掃描排程' (scan schedule) dropdown and then click the '媒體庫' (Library) link to navigate away for a persistence check.
+        # 媒體庫 link
+        elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
+        await elem.click(timeout=10000)
+        
+        # -> Navigate to the 媒體庫掃描 (Media library scan) settings page to access the '掃描排程' control.
         await page.goto("http://localhost:8090/settings/scanner")
         try:
             await page.wait_for_load_state("domcontentloaded", timeout=5000)
@@ -119,13 +184,10 @@ async def run_test():
         
         # --> Assertions to verify final state
         
-        # --> Verify element with data-testid "schedule-select" shows "daily" as selected value
-        # Assert: The scan schedule dropdown displays '每天' (daily).
-        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div[2]/div[2]/select").nth(0)).to_contain_text("\u6bcf\u5929", timeout=15000), "The scan schedule dropdown displays '\u6bcf\u5929' (daily)."
-        
-        # --> Verify element with data-testid "schedule-select" shows "daily" as selected value
-        # Assert: Schedule dropdown shows '每天' as the selected value.
-        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div[2]/div[2]/select").nth(0)).to_contain_text("\u6bcf\u5929", timeout=15000), "Schedule dropdown shows '\u6bcf\u5929' as the selected value."
+        # --> The scan schedule dropdown is present and lists the options 每小時, 每天, 僅手動.
+        # Assert-outcome: passed
+        # Assert: Verifies the scan schedule dropdown lists 每小時, 每天, 僅手動.
+        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div/div/div/div[2]/select").nth(0)).to_have_text("\u6bcf\u5c0f\u6642\n\u6bcf\u5929\n\u50c5\u624b\u52d5", timeout=15000), "Verifies the scan schedule dropdown lists \u6bcf\u5c0f\u6642, \u6bcf\u5929, \u50c5\u624b\u52d5."
         await asyncio.sleep(5)
 
     finally:

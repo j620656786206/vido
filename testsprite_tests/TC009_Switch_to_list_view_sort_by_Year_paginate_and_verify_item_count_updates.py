@@ -34,23 +34,31 @@ async def run_test():
 
         # Interact with the page elements to simulate user flow
         # -> navigate
-        await page.goto("http://192.168.50.52:8088")
+        await page.goto("http://localhost:8090")
         try:
             await page.wait_for_load_state("domcontentloaded", timeout=5000)
         except Exception:
             pass
         
-        # -> Click the '媒體庫' navigation link (interactive element index 12) to open the media library (/library).
-        # link "媒體庫"
-        elem = page.locator("xpath=/html/body/div/div/div/header/div/nav/a").nth(0)
-        await elem.wait_for(state="visible", timeout=10000)
-        await elem.click()
+        # -> Click the '媒體庫' link in the sidebar to open the media library page.
+        # 媒體庫 link
+        elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
+        await elem.click(timeout=10000)
         
-        # -> Click the '列表檢視' (list view) toggle at interactive element index 201 to switch to list view and reveal the media items table.
-        # button aria-label="列表檢視"
-        elem = page.locator("xpath=/html/body/div/div/div/main/div/div/div[2]/div[2]/div[2]/button[2]").nth(0)
-        await elem.wait_for(state="visible", timeout=10000)
-        await elem.click()
+        # -> Click the '列表檢視' (List view) button to switch the media library to list/table view.
+        # 列表檢視 button
+        elem = page.get_by_text('列表檢視', exact=True)
+        await elem.click(timeout=10000)
+        
+        # -> Check whether a '年份' (Year) column/header or a '年份' sort option exists by searching the page for '年份' and then opening the '排序方式' (sort) control.
+        # 新增日期 button
+        elem = page.get_by_test_id('sort-selector-button')
+        await elem.click(timeout=10000)
+        
+        # -> Select the '年份' option in the sort menu to sort the list by Year, then locate the pagination '下一頁' control.
+        # 年份 button
+        elem = page.get_by_test_id('sort-option-release_date')
+        await elem.click(timeout=10000)
         
         # --> Test passed — verified by AI agent
         frame = context.pages[-1]

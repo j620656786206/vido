@@ -33,36 +33,26 @@ async def run_test():
         page = await context.new_page()
 
         # Interact with the page elements to simulate user flow
-        # -> navigate
-        await page.goto("http://localhost:8090")
+        # -> Navigate to the Library page (open the 'Library' view) so the media grid can be used to open a media detail panel.
+        await page.goto("http://localhost:8090/library")
         try:
             await page.wait_for_load_state("domcontentloaded", timeout=5000)
         except Exception:
             pass
         
-        # -> Click the '媒體庫' (Library) link in the left sidebar to open the media library page.
-        # 媒體庫 link
-        elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
-        await elem.click(timeout=10000)
-        
-        # -> Click the 'Unknown.Show.S01' poster card to open the media detail side panel.
+        # -> Click the first media poster card 'Unknown.Show.S01' to open its media detail side panel.
         # U 整理中 Unknown.Show.S01 link
         elem = page.get_by_test_id('poster-v2-seed-sr-101')
         await elem.click(timeout=10000)
         
-        # -> Click the '管理字幕' (Manage Subtitles) button in the media detail panel to open the subtitle search dialog.
+        # -> Click the '管理字幕' (Manage Subtitles / Search Subtitles) button in the media detail panel.
         # 管理字幕 button
         elem = page.get_by_test_id('action-manage-subtitle')
         await elem.click(timeout=10000)
         
-        # -> Click the '搜尋線上字幕（成功率低）' button in the Manage Subtitles dialog to open the subtitle search dialog.
+        # -> Click the '搜尋線上字幕（成功率低）' (Search online subtitles) button in the Manage Subtitles dialog.
         # 搜尋線上字幕（成功率低） button
         elem = page.get_by_test_id('toggle-fetch')
-        await elem.click(timeout=10000)
-        
-        # -> Click the '搜尋' button in the Manage Subtitles dialog to open the subtitle search dialog.
-        # 搜尋 button
-        elem = page.get_by_test_id('fetch-search')
         await elem.click(timeout=10000)
         
         # --> Test passed — verified by AI agent

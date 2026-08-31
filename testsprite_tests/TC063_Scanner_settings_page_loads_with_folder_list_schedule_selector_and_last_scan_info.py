@@ -40,15 +40,12 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Click the '設定' (Settings) link in the sidebar to open the Settings page.
-        # 設定 link
-        elem = page.get_by_test_id('nav-settings')
-        await elem.click(timeout=10000)
-        
-        # -> Click the '媒體庫掃描' link in the Settings sidebar to open the Scanner settings page.
-        # 媒體庫掃描 link
-        elem = page.get_by_test_id('settings-nav-scanner')
-        await elem.click(timeout=10000)
+        # -> Open the Scanner settings page (Settings → Scanner) by navigating to /settings/scanner so the page can be inspected for the required sections.
+        await page.goto("http://localhost:8090/settings/scanner")
+        try:
+            await page.wait_for_load_state("domcontentloaded", timeout=5000)
+        except Exception:
+            pass
         
         # --> Test passed — verified by AI agent
         frame = context.pages[-1]

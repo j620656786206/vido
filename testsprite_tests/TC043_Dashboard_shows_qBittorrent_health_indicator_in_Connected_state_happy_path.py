@@ -33,17 +33,29 @@ async def run_test():
         page = await context.new_page()
 
         # Interact with the page elements to simulate user flow
-        # -> navigate
-        await page.goto("http://192.168.50.52:8088")
+        # -> Reload the root page (http://localhost:8090/) and wait for the dashboard to render so the qBittorrent connection health indicator and any 'connected' text can be inspected.
+        await page.goto("http://localhost:8090/")
         try:
             await page.wait_for_load_state("domcontentloaded", timeout=5000)
         except Exception:
             pass
         
-        # --> Test passed — verified by AI agent
-        frame = context.pages[-1]
-        current_url = await frame.evaluate("() => window.location.href")
-        assert current_url is not None, "Test completed successfully"
+        # --> Assertions to verify final state
+        
+        # --> qBittorrent connection health indicator is visible in the sidebar.
+        await page.locator("xpath=/html/body/div/div/div/div[1]/aside/div[2]/div[2]/span/span[5]").nth(0).scroll_into_view_if_needed()
+        # Assert-outcome: failed
+        # Assert: Expected qBittorrent connection health indicator to be visible.
+        await expect(page.locator("xpath=/html/body/div/div/div/div[1]/aside/div[2]/div[2]/span/span[5]").nth(0)).to_be_visible(timeout=15000), "Expected qBittorrent connection health indicator to be visible."
+        
+        # --> No connected qBittorrent state is shown; the page does not display the text 'connected' or a green connected indicator.
+        # Assert-outcome: failed
+        # Assert: Expected the qBittorrent indicator to show the text 'connected'.
+        await expect(page.locator("xpath=/html/body/div/div/div/div[1]/aside/div[2]/div[2]/span/span[5]").nth(0)).to_contain_text("connected", timeout=15000), "Expected the qBittorrent indicator to show the text 'connected'."
+        
+        # --> Test blocked by environment/access constraints during agent run
+        # Reason: TEST BLOCKED The test could not be run — the environment does not present a qBittorrent "connected" state to verify the connected-case. Observations: - The dashboard displays a qBittorrent health indicator with the visible text '未設定' (not configured / not connected). - No 'connected' text (e.g., '已連線' or similar) or green connected state indicator is visible on the page.
+        raise AssertionError("Test blocked during agent run: " + "TEST BLOCKED The test could not be run \u2014 the environment does not present a qBittorrent \"connected\" state to verify the connected-case. Observations: - The dashboard displays a qBittorrent health indicator with the visible text '\u672a\u8a2d\u5b9a' (not configured / not connected). - No 'connected' text (e.g., '\u5df2\u9023\u7dda' or similar) or green connected state indicator is visible on the page." + " — the exported script cannot reproduce a PASS in this environment.")
         await asyncio.sleep(5)
 
     finally:

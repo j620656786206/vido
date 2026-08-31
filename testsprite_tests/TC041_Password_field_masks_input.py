@@ -34,22 +34,46 @@ async def run_test():
 
         # Interact with the page elements to simulate user flow
         # -> navigate
-        await page.goto("http://192.168.50.52:8088")
+        await page.goto("http://localhost:8090")
         try:
             await page.wait_for_load_state("domcontentloaded", timeout=5000)
         except Exception:
             pass
         
-        # -> Click the '設定' (Settings) link (element [15]) to open the settings page and then locate the qBittorrent settings/password field.
-        # link "設定"
-        elem = page.locator("xpath=/html/body/div/div/div/header/div/nav/a[4]").nth(0)
-        await elem.wait_for(state="visible", timeout=10000)
-        await elem.click()
+        # -> Click the '設定' (Settings) link in the left sidebar to open the Settings page.
+        # 設定 link
+        elem = page.get_by_test_id('nav-settings')
+        await elem.click(timeout=10000)
         
-        # --> Test passed — verified by AI agent
-        frame = context.pages[-1]
-        current_url = await frame.evaluate("() => window.location.href")
-        assert current_url is not None, "Test completed successfully"
+        # -> Type 'secret-password' into the '密碼' (Password) field and verify the entered text is not visible anywhere on the page.
+        # •••••••• password field
+        elem = page.locator('[id="qb-password"]')
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("secret-password")
+        
+        # -> Open the '連線設定' (qBittorrent Connection) settings page so the qBittorrent password field can be tested.
+        await page.goto("http://localhost:8090/settings/qbittorrent")
+        try:
+            await page.wait_for_load_state("domcontentloaded", timeout=5000)
+        except Exception:
+            pass
+        
+        # -> Type 'secret-password' into the 密碼 (Password) field and then search the page for the literal text 'secret-password' to confirm it is not visible.
+        # •••••••• password field
+        elem = page.locator('[id="qb-password"]')
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("secret-password")
+        
+        # --> Assertions to verify final state
+        
+        # --> The Password field is visible and configured as a masked password input so the entered text is not shown.
+        await page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div/div/form/div[1]/div[3]/input").nth(0).scroll_into_view_if_needed()
+        # Assert-outcome: passed
+        # Assert: The password input element is visible on the page.
+        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div/div/form/div[1]/div[3]/input").nth(0)).to_be_visible(timeout=15000), "The password input element is visible on the page."
+        # Assert-outcome: passed
+        # Assert: The password input has type="password", so its content is masked.
+        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div/div/form/div[1]/div[3]/input").nth(0)).to_have_attribute("type", "password", timeout=15000), "The password input has type=\"password\", so its content is masked."
         await asyncio.sleep(5)
 
     finally:

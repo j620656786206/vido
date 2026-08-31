@@ -40,25 +40,26 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Type '駭客' into the header search box (placeholder '搜尋媒體庫...') and wait for the instant results dropdown to appear.
+        # -> Type '駭客' into the header search field labeled '搜尋媒體庫...' and wait for instant results to appear.
         # 搜尋 text field
         elem = page.get_by_test_id('instant-search-input')
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("\u99ed\u5ba2")
         
-        # -> Click the '駭客任務' result in the instant suggestions dropdown
+        # -> Click the '駭客任務' result in the search suggestions dropdown.
         # 駭客任務 The Matrix (1999) 已擁有 button
         elem = page.get_by_test_id('search-suggestion-item')
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> Verify the media detail page shows the title 駭客任務 and core metadata (year 1999 or genres)
-        # Assert: The media detail page displays the year 1999.
-        await expect(page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/section/div[2]/div/div[2]/div[2]/span[1]").nth(0)).to_have_text("1999", timeout=15000), "The media detail page displays the year 1999."
-        current_url = await page.evaluate("() => window.location.href")
-        # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
-        assert current_url, 'Page should have loaded with a URL'
+        # --> Searching for '駭客' and selecting the suggestion opened the media detail page, which shows the title 駭客任務 and core metadata.
+        # Assert-outcome: passed
+        # Assert: Landed on the media detail page URL for the selected result.
+        await expect(page).to_have_url(re.compile("/media/movie/seed\\-mv\\-003"), timeout=15000), "Landed on the media detail page URL for the selected result."
+        # Assert-outcome: passed
+        # Assert: The media detail page displays the Chinese title '駭客任務'.
+        await expect(page.locator("xpath=/html/body/div").nth(0)).to_contain_text("\u99ed\u5ba2\u4efb\u52d9", timeout=15000), "The media detail page displays the Chinese title '\u99ed\u5ba2\u4efb\u52d9'."
         await asyncio.sleep(5)
 
     finally:
