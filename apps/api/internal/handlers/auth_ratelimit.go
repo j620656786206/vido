@@ -49,7 +49,15 @@ func (l *loginLimiter) allow(ip string, now time.Time) (bool, time.Duration) {
 }
 
 // recordFailure counts a wrong password; the maxFailures-th one locks the IP.
-func (l *loginLimiter) recordFailure(ip string, now time.Time) {
+//
+// It returns what the CALLER has to tell the user, because the UI cannot work
+// either number out for itself: `remaining` is how many tries are left before
+// the lock, and `lockout` is non-zero exactly on the attempt that just tripped
+// it. Returning the lockout here (rather than leaving it to the next request's
+// allow() check) is what makes the response the user sees match the documented
+// rule — before this, the maxFailures-th wrong password still answered 401 and
+// the 429 only appeared on the try AFTER the one that locked them out.
+func (l *loginLimiter) recordFailure(ip string, now time.Time) (remaining int, lockout time.Duration) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
@@ -63,7 +71,9 @@ func (l *loginLimiter) recordFailure(ip string, now time.Time) {
 	if rec.failures >= l.maxFailures {
 		rec.lockedUntil = now.Add(l.lockout)
 		rec.failures = 0
+		return 0, l.lockout
 	}
+	return l.maxFailures - rec.failures, 0
 }
 
 // recordSuccess clears an IP's failure history on a good login.

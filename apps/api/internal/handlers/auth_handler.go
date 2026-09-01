@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -52,10 +53,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 	ip := c.ClientIP()
 	if ok, retryAfter := h.limiter.allow(ip, time.Now()); !ok {
-		c.Header("Retry-After", strconv.Itoa(int(retryAfter.Seconds())+1))
-		ErrorResponse(c, http.StatusTooManyRequests, "TOO_MANY_ATTEMPTS",
-			"嘗試次數過多",
-			"密碼錯誤太多次,請稍後再試。")
+		h.respondLocked(c, retryAfter)
 		return
 	}
 	var req LoginRequest
@@ -64,15 +62,42 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 	if !h.auth.checkPassword(req.Password) {
-		h.limiter.recordFailure(ip, time.Now())
+		remaining, lockout := h.limiter.recordFailure(ip, time.Now())
+		if lockout > 0 {
+			h.respondLocked(c, lockout)
+			return
+		}
+		// The countdown to the lock is a number the server is genuinely
+		// tracking, so it is safe to show — and showing it late (only once the
+		// user is two tries away) keeps it a warning rather than an invitation
+		// to guess.
+		suggestion := "請確認密碼後再試一次。"
+		if remaining <= 2 {
+			suggestion = fmt.Sprintf("還可以再試 %d 次,之後會鎖定 %d 秒。",
+				remaining, int(h.limiter.lockout.Seconds()))
+		}
 		ErrorResponse(c, http.StatusUnauthorized, "INVALID_CREDENTIALS",
-			"密碼錯誤",
-			"請確認密碼後再試一次。")
+			"密碼錯誤", suggestion)
 		return
 	}
 	h.limiter.recordSuccess(ip)
 	h.auth.setSessionCookie(c, h.auth.issueToken(time.Now()))
 	SuccessResponse(c, gin.H{"authEnabled": true, "authenticated": true})
+}
+
+// respondLocked answers a throttled login. Retry-After carries the wait in
+// SECONDS so the login screen can run a real countdown instead of asking the
+// user to guess how long "稍後" is; the suggestion repeats it in words for
+// anything that only reads the body.
+func (h *AuthHandler) respondLocked(c *gin.Context, retryAfter time.Duration) {
+	secs := int(retryAfter.Seconds())
+	if retryAfter%time.Second != 0 {
+		secs++ // never advertise a shorter wait than the server will enforce
+	}
+	c.Header("Retry-After", strconv.Itoa(secs))
+	ErrorResponse(c, http.StatusTooManyRequests, "TOO_MANY_ATTEMPTS",
+		"嘗試次數過多",
+		fmt.Sprintf("密碼連續錯誤 %d 次,請等 %d 秒後再試。", h.limiter.maxFailures, secs))
 }
 
 // Logout handles POST /api/v1/auth/logout by clearing the session cookie.

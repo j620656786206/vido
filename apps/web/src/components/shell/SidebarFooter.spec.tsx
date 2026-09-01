@@ -5,6 +5,11 @@ import { SidebarFooter } from './SidebarFooter';
 import { useStatusSummary } from '../../hooks/useStatusSummary';
 import type { StatusSummary } from '../../services/statusSummaryService';
 
+// LogoutButton (rendered by SidebarFooter) owns real router + query-client hooks;
+// this suite is about the shell chrome, so stub it out. Its own behaviour is
+// covered by LogoutButton.spec.tsx.
+vi.mock('./LogoutButton', () => ({ LogoutButton: () => null }));
+
 vi.mock('../../hooks/useStatusSummary', () => ({ useStatusSummary: vi.fn() }));
 // Render the Base UI tooltip wrapper as a passthrough (its trigger child is the dot).
 vi.mock('../ui/Tooltip', () => ({

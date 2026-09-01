@@ -18,10 +18,11 @@ interface MobileMoreSheetProps {
 export function MobileMoreSheet({ open, onOpenChange }: MobileMoreSheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title="更多">
-      {/* Ambient status strip at the top of the sheet (§6.3) */}
-      <SidebarFooter />
-
-      <div className="mt-2 space-y-1">
+      {/* Destinations FIRST. The sheet opens because someone asked "where else
+          can I go", and it used to answer with a theme switch, a disk bar and
+          five health dots before naming a single place. The ambient strip keeps
+          its slot, underneath, where a glanceable readout belongs. */}
+      <div className="space-y-1">
         {MORE_DESTS.map((d) => {
           const Icon = d.icon;
           return (
@@ -39,6 +40,13 @@ export function MobileMoreSheet({ open, onOpenChange }: MobileMoreSheetProps) {
             </Link>
           );
         })}
+      </div>
+
+      {/* Ambient status strip + 登出 (§6.3). No theme toggle here: the mobile
+          header already carries it, and ThemeToggle's contract is one instance
+          per breakpoint. */}
+      <div className="mt-2">
+        <SidebarFooter showThemeToggle={false} />
       </div>
     </Sheet>
   );

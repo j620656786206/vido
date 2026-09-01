@@ -19,6 +19,11 @@ vi.mock('../../hooks/useActivity', () => ({
 
 import { MobileTabBar } from './MobileTabBar';
 
+// LogoutButton (rendered by SidebarFooter) owns real router + query-client hooks;
+// this suite is about the shell chrome, so stub it out. Its own behaviour is
+// covered by LogoutButton.spec.tsx.
+vi.mock('./LogoutButton', () => ({ LogoutButton: () => null }));
+
 function renderBar(path = '/') {
   const rootRoute = createRootRoute({ component: () => React.createElement(MobileTabBar) });
   const mk = (p: string) =>

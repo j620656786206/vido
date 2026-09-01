@@ -54,6 +54,11 @@ typography:
     fontSize: '0.75rem'
     fontWeight: 500
     lineHeight: 1.4
+  chrome:
+    fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
+    fontSize: '0.6875rem'
+    fontWeight: 500
+    lineHeight: 1.4
   readout:
     fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace'
     fontSize: '0.8125rem'
@@ -211,6 +216,7 @@ Vido 會在使用者不在的時候，於別人的 NAS 上持續跑上好幾分�
 - **Title**（600, 18px, 1.4）：區段與卡片標題。
 - **Body**（400, 14px, 1.6）：預設值，而且是全 app 用量遙遙領先的尺寸。說明、列表列、表單標籤，幾乎所有東西。
 - **Label**（500, 12px, 1.4）：徽章、藥丸、metadata、表頭、次要註記。
+- **Chrome**（500, 11px, 1.4）：**只給殼層本身的標籤** —— 底部分頁列、側軌群組標題、側軌計數、環境狀態帶、副標「NAS 媒體庫」。這一階在 `home-v3-pen-prompt.md` 早已指定並實作了 11 處,卻一直沒進本文件,所以每個新殼層元件都要重新踩一次 detector 的 `design-system-font-size`。**它的界線很硬:11px 只用在「不是內容的東西」上。任何使用者要閱讀的字都不得低於 12px,任何可以被點擊的目的地或動作都是 14px。**（2026-09-01 critique 後補記；同時裁掉了 `InFlightBadge` 的 10px —— 那一階從來沒有授權來源。）
 - **Readout**（400, 13px, 等寬）：計數、進度數字、位元組大小、ID、檔案路徑——任何使用者可能跨列比較、或當成資料讀的東西。
 
 ### Named Rules

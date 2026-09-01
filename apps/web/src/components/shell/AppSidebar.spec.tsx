@@ -23,6 +23,11 @@ vi.mock('../../hooks/useActivity', () => ({
 
 import { AppSidebar } from './AppSidebar';
 
+// LogoutButton (rendered by SidebarFooter) owns real router + query-client hooks;
+// this suite is about the shell chrome, so stub it out. Its own behaviour is
+// covered by LogoutButton.spec.tsx.
+vi.mock('./LogoutButton', () => ({ LogoutButton: () => null }));
+
 function renderSidebar(opts: { collapsed?: boolean; onToggle?: () => void; path?: string } = {}) {
   const { collapsed = false, onToggle = () => {}, path = '/' } = opts;
   const rootRoute = createRootRoute({
