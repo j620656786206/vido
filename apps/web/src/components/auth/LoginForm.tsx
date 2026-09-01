@@ -196,17 +196,19 @@ export function LoginForm({ justLoggedOut = false }: LoginFormProps) {
         </button>
       </form>
 
-      {/* There is no account, no reset link, and nobody to ask. The recovery path
-          is a file on a machine the user owns — which this audience can act on
-          immediately, and would never guess from "密碼錯誤". */}
+      {/* There is no account and no reset link — the recovery path is a variable
+          on a machine the user owns, which they would never guess from "密碼錯誤".
+          One sentence: the question, the variable, the restart. Naming where the
+          variable lives (.env? compose?) is what made the first draft long, and
+          the person who set it already knows. */}
       <p
         id="password-help"
         data-testid="password-help"
         className="mt-4 border-t border-[var(--border-subtle)] pt-4 text-[11px] leading-relaxed text-[var(--text-muted)]"
       >
-        密碼是安裝時設在 docker-compose 或 .env 的{' '}
-        <code className="font-mono text-[var(--text-secondary)]">VIDO_AUTH_PASSWORD</code>
-        。忘記了就改那一行再重新啟動容器 —— 沒有帳號,也沒有重設信。
+        忘記密碼？改{' '}
+        <code className="font-mono text-[var(--text-secondary)]">VIDO_AUTH_PASSWORD</code>{' '}
+        再重啟容器。
       </p>
     </div>
   );

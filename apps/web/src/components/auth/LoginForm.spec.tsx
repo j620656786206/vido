@@ -68,7 +68,7 @@ describe('LoginForm', () => {
     renderForm();
     const help = screen.getByTestId('password-help');
     expect(help).toHaveTextContent('VIDO_AUTH_PASSWORD');
-    expect(help).toHaveTextContent('重新啟動容器');
+    expect(help).toHaveTextContent('重啟容器');
   });
 
   // The server sends `suggestion` alongside `message` on every auth failure.

@@ -121,9 +121,10 @@ export function LogoutButton({ variant = 'rail', className }: LogoutButtonProps)
         <DialogContent className="z-[80] max-w-sm" data-testid="logout-confirm">
           <DialogHeader>
             <DialogTitle>要登出嗎？</DialogTitle>
-            <DialogDescription>
-              下次進來要再輸入一次密碼。密碼是安裝時設定的,不是這裡能改的。
-            </DialogDescription>
+            {/* The only consequence worth stating. The second sentence this
+                replaced ("密碼不是這裡能改的") defended against a question
+                nobody asks inside a logout dialog. */}
+            <DialogDescription>下次進來要再輸入密碼。</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <button
