@@ -128,17 +128,51 @@ describe('LogoutButton', () => {
     expect(client.getQueryData(['movies'])).toBeUndefined();
   });
 
-  // The cookie clear is server-side and best-effort. If the API is down or
-  // restarting, the user must still end up at the login screen rather than being
-  // stranded in a shell whose every request 401s.
-  it('still navigates to /login when the logout request fails', async () => {
+  // Clearing the cookie is SERVER-side, so a failed request means the session is
+  // still live. Navigating anyway greeted the user with 已登出 and then let the
+  // root guard — which sees authenticated: true — bounce them straight back into
+  // the library. On a shared screen that is this button's exact failure mode,
+  // dressed as success.
+  it('does not claim success when the logout request fails', async () => {
     logoutMock.mockRejectedValue(new Error('network down'));
     renderButton();
 
     await logOut();
 
-    await waitFor(() =>
-      expect(navigateMock).toHaveBeenCalledWith({ to: '/login', search: { loggedOut: true } })
+    expect(await screen.findByTestId('logout-failed')).toHaveTextContent('你還在登入狀態');
+    expect(navigateMock).not.toHaveBeenCalled();
+    // Still on the dialog, so the user can retry without hunting for the button.
+    expect(screen.getByTestId('logout-confirm')).toBeInTheDocument();
+  });
+
+  it('clears the failure notice when the dialog is reopened', async () => {
+    logoutMock.mockRejectedValue(new Error('network down'));
+    renderButton();
+    await logOut();
+    await screen.findByTestId('logout-failed');
+
+    await userEvent.click(screen.getByTestId('logout-cancel'));
+    await userEvent.click(screen.getByTestId('logout-button'));
+
+    await screen.findByTestId('logout-confirm');
+    expect(screen.queryByTestId('logout-failed')).toBeNull();
+  });
+
+  // The dialog can be opened from inside the mobile 更多 sheet, which sits at
+  // z-[70]/z-[71]. Raising only the content leaves this dialog's own scrim under
+  // the sheet, so the sheet stays fully lit and nothing reads as blocked.
+  it('raises its scrim as well as its content above the sheet', async () => {
+    renderButton();
+    await userEvent.click(screen.getByTestId('logout-button'));
+
+    const content = await screen.findByTestId('logout-confirm');
+    expect(content.className).toContain('z-[80]');
+    // The overlay is Radix-owned, so assert on the class we hand it rather than
+    // on its markup, which the primitive is free to change.
+    const scrims = Array.from(document.querySelectorAll('div')).filter((el) =>
+      el.className.includes('bg-[var(--overlay-scrim)]')
     );
+    expect(scrims.length).toBeGreaterThan(0);
+    expect(scrims.some((el) => el.className.includes('z-[80]'))).toBe(true);
   });
 });

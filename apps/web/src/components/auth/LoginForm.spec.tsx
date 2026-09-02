@@ -84,9 +84,10 @@ describe('LoginForm', () => {
     renderForm();
     await submit('nope');
 
-    const status = await screen.findByRole('alert');
-    expect(status).toHaveTextContent('密碼錯誤');
-    expect(status).toHaveTextContent('還可以再試 2 次,之後會鎖定 60 秒。');
+    // The message is the live region; the suggestion sits beside it so a ticking
+    // countdown can be excluded from announcements without silencing the error.
+    expect(await screen.findByRole('alert')).toHaveTextContent('密碼錯誤');
+    expect(screen.getByText('還可以再試 2 次,之後會鎖定 60 秒。')).toBeInTheDocument();
   });
 
   it('returns focus to the field and selects the old value after a failure', async () => {
@@ -150,6 +151,45 @@ describe('LoginForm', () => {
     });
 
     await waitFor(() => expect(screen.getByRole('button', { name: '登入' })).toBeEnabled());
+  });
+
+  // Inside role="alert" the per-second countdown interrupted a screen reader 60
+  // times for one piece of news. The message announces; the seconds do not.
+  it('does not re-announce the countdown every second', async () => {
+    loginMock.mockRejectedValue(
+      new AuthError({
+        message: '嘗試次數過多',
+        code: 'TOO_MANY_ATTEMPTS',
+        suggestion: '密碼連續錯誤 5 次,請等 60 秒後再試。',
+        retryAfterSeconds: 30,
+      })
+    );
+    renderForm();
+    await submit('nope');
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('嘗試次數過多');
+    // The ticking line is present for sighted users but out of the live region.
+    const ticking = screen.getByText(/請等 \d+ 秒後再試。/);
+    expect(ticking).toHaveAttribute('aria-hidden', 'true');
+    expect(alert).not.toContainElement(ticking);
+  });
+
+  // A non-lockout failure keeps its suggestion readable — aria-hidden is only for
+  // the value that changes every second.
+  it('leaves an ordinary suggestion announceable', async () => {
+    loginMock.mockRejectedValue(
+      new AuthError({
+        message: '密碼錯誤',
+        code: 'INVALID_CREDENTIALS',
+        suggestion: '還可以再試 2 次,之後會鎖定 60 秒。',
+      })
+    );
+    renderForm();
+    await submit('nope');
+
+    const suggestion = await screen.findByText('還可以再試 2 次,之後會鎖定 60 秒。');
+    expect(suggestion).not.toHaveAttribute('aria-hidden', 'true');
   });
 
   it('acknowledges an intentional logout', () => {

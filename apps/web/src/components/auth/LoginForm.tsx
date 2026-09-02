@@ -168,13 +168,21 @@ export function LoginForm({ justLoggedOut = false }: LoginFormProps) {
         </div>
 
         {/* Reserved slot: the height is held whether or not there is an error, so
-            a failed submit never shifts the field or the button. */}
-        <div id="password-status" role="alert" className="min-h-[3.25rem] pt-2">
+            a failed submit never shifts the field or the button.
+
+            ⚠️ Only the MESSAGE is a live region. The countdown ticks once a
+            second, and inside role="alert" (assertive) that meant a screen-reader
+            user was interrupted 60 times in a row for one piece of news they
+            already had. The seconds line is aria-hidden and the fact is announced
+            once, politely, by the message above it. */}
+        <div id="password-status" className="min-h-[3.25rem] pt-2">
           {error && (
             <>
-              <p className="text-sm text-[var(--error-text)]">{error.message}</p>
+              <p role="alert" className="text-sm text-[var(--error-text)]">
+                {error.message}
+              </p>
               {error.suggestion && (
-                <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
+                <p aria-hidden={locked} className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
                   {locked ? `請等 ${secondsLeft} 秒後再試。` : error.suggestion}
                 </p>
               )}

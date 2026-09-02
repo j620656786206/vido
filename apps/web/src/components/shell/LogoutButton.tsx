@@ -49,18 +49,27 @@ export function LogoutButton({ variant = 'rail', className }: LogoutButtonProps)
   const { data: authStatus } = useAuthStatus();
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   // No password configured → no session to end.
   if (authStatus?.authEnabled !== true) return null;
 
   async function handleLogout() {
     setPending(true);
+    setFailed(false);
     try {
       await authService.logout();
     } catch {
-      // The cookie clear is server-side and best-effort; even if the request
-      // failed (offline, API restarting) we still drop local state and send the
-      // user to /login, where a stale cookie is re-checked against the server.
+      // ⚠️ Do NOT navigate on failure. Clearing the cookie is server-side, so a
+      // failed request means the session is STILL LIVE. The first draft sent the
+      // user to /login anyway and greeted them with 已登出 — but the root guard
+      // then saw `authenticated: true`, bounced them off /login, and dropped them
+      // back into the library with the session they had just been told was over.
+      // On a shared NAS screen that is the exact failure this button exists to
+      // prevent, dressed up as success. Say it did not work and stay put.
+      setPending(false);
+      setFailed(true);
+      return;
     }
     // Wipe every cached response, not just the auth key: the library, settings
     // and download queues in the cache belong to the session that just ended.
@@ -78,7 +87,10 @@ export function LogoutButton({ variant = 'rail', className }: LogoutButtonProps)
     variant === 'row' ? (
       <button
         type="button"
-        onClick={() => setConfirming(true)}
+        onClick={() => {
+          setFailed(false);
+          setConfirming(true);
+        }}
         disabled={pending}
         data-testid="logout-button"
         aria-label={label}
@@ -94,7 +106,10 @@ export function LogoutButton({ variant = 'rail', className }: LogoutButtonProps)
       <Tooltip content={label}>
         <button
           type="button"
-          onClick={() => setConfirming(true)}
+          onClick={() => {
+            setFailed(false);
+            setConfirming(true);
+          }}
           disabled={pending}
           data-testid="logout-button"
           aria-label={label}
@@ -112,13 +127,18 @@ export function LogoutButton({ variant = 'rail', className }: LogoutButtonProps)
     <>
       {trigger}
       <Dialog open={confirming} onOpenChange={(open) => !pending && setConfirming(open)}>
-        {/* z-[80]: this button also lives inside the mobile 更多 sheet, whose
-            backdrop is z-[70] and panel z-[71] (Sheet.tsx). At DialogContent's
-            default z-50 the dialog asking for a decision was rendered UNDER the
-            sheet's scrim — the dimmest thing on screen. Closing the sheet first
-            is NOT the fix: the sheet owns this component, so unmounting it takes
-            the dialog with it before it can ever paint. */}
-        <DialogContent className="z-[80] max-w-sm" data-testid="logout-confirm">
+        {/* z-[80] on BOTH layers: this button also lives inside the mobile 更多
+            sheet, whose backdrop is z-[70] and panel z-[71] (Sheet.tsx). Raising
+            only the content is half a fix — the dialog's own scrim stays at z-50,
+            under the sheet, so the sheet's destination list sits fully lit behind
+            the dialog and nothing reads as blocked. Closing the sheet first is NOT
+            the fix either: the sheet owns this component, so unmounting it takes
+            the dialog with it before it can paint. */}
+        <DialogContent
+          className="z-[80] max-w-sm"
+          overlayClassName="z-[80]"
+          data-testid="logout-confirm"
+        >
           <DialogHeader>
             <DialogTitle>要登出嗎？</DialogTitle>
             {/* The only consequence worth stating. The second sentence this
@@ -126,6 +146,15 @@ export function LogoutButton({ variant = 'rail', className }: LogoutButtonProps)
                 nobody asks inside a logout dialog. */}
             <DialogDescription>下次進來要再輸入密碼。</DialogDescription>
           </DialogHeader>
+          {failed && (
+            <p
+              role="alert"
+              data-testid="logout-failed"
+              className="rounded-[var(--radius-md)] bg-[var(--error-tint)] px-3 py-2 text-sm text-[var(--error-text)]"
+            >
+              登出失敗,連線可能中斷了。你還在登入狀態,請再試一次。
+            </p>
+          )}
           <DialogFooter>
             <button
               type="button"

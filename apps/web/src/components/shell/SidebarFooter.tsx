@@ -112,10 +112,14 @@ export function SidebarFooter({ collapsed = false, showThemeToggle = true }: Sid
         {/* Below the readouts and behind a rule: on the rail the logout glyph
             (bracket + arrow) is a near-twin of the collapse glyph at the top of
             the same 44px track, and it used to sit directly above a red health
-            dot that read as ITS status. The separator and the order fix both. */}
-        <div className="mt-1 w-6 border-t border-[var(--border-subtle)] pt-1.5">
-          <LogoutButton variant="rail" />
-        </div>
+            dot that read as ITS status. The separator and the order fix both.
+            ⚠️ The rule is its OWN element, not a wrapper. Wrapping the button in a
+            `w-6` divider made the 44px button lay out inside a 24px box on a 64px
+            rail — it centred ~10px off every other rail icon and its right edge
+            landed on the sidebar border. Width of the rule and width of the target
+            are two different measurements. */}
+        <div className="mt-1 w-6 border-t border-[var(--border-subtle)]" aria-hidden="true" />
+        <LogoutButton variant="rail" />
       </div>
     );
   }
