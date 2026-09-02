@@ -48,7 +48,7 @@ so that「翻出來不用改就能看」is a measured fact before anyone outside
 | 2   | 情境喜劇               | 雙關、笑點、快節奏短句           | 泰德拉索 Ted Lasso S01E01（英式俚語＋足球術語＋笑點）       | 外放特務組 Slow Horses S01E01（英式冷幽默） |
 | 3   | 劇情／專業術語         | 政治／產業術語、正式語域         | 紙牌屋 House of Cards S01E01（美國國會政治術語）            | 石油天王 Landman S01E01（油田術語＋德州腔） |
 | 4   | 科幻／奇幻自創名詞     | 自創名詞一致性（詞彙表壓力測試） | 沙丘：預言 Dune: Prophecy S01E01（Bene Gesserit 等既有繁中譯名可核對） | 基地 Foundation S01E01                 |
-| 5   | 長篇一致性             | 角色名前後統一、長時間語氣穩定   | 最後生還者 The Last of Us S01E01（81 分鐘，接近電影長度）   | 電影庫任一部英語電影（片單未附，Alexyu 自選） |
+| 5   | 長篇一致性（電影）     | 角色名前後統一、旁白＋對白語氣穩定 | 四海好傢伙 Goodfellas（1990，2h26；旁白密、人名多、黑幫俚語） | F1電影（2025 WEB-DL，字幕軌幾乎必有）；再不行用最後生還者 S01E01（81 分鐘） |
 
 **排除規則（片庫裡不能選的）**：所有陸劇／國漫（華語原音，route 會是 deliver／convert，不是 translate）、日本動畫（Overlord、北斗之拳、日本三國：日語原音）、韓劇（臥底廚師、今生是第一次、有本事換你來做啊）、戰酋 Chief of War（大量夏威夷語對白）、我們的星球 Our Planet（純旁白，沒有對話語域可測）。
 
@@ -129,7 +129,7 @@ sprint-status 本條 → `done`，並依裁定新增後續條目。
 | claude-haiku-4-5 | $1            | $5            | ≈ $0.21                   | ≈ $0.42 |
 | claude-sonnet-5  | $3            | $15           | ≈ $0.62                   | ≈ $1.24 |
 
-四集＋一部電影 × 兩模型 ≈ **US$5**；system block 有 `CachingCompleter` 快取，實付通常更低。
+四集＋一部 2.5h 電影 × 兩模型 ≈ **US$5.5**；system block 有 `CachingCompleter` 快取，實付通常更低。
 
 ---
 
