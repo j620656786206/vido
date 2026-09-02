@@ -489,6 +489,18 @@
     outline-offset: 2px;
   }
 
+  /* ⚠️ Load-bearing: Tailwind v4's `transition-colors` INCLUDES `outline-color`.
+   * Without a resting value, outline-color starts at `currentColor` and the ring
+   * fades in from the element's own text colour — measured at 1.04:1 against the
+   * button it sits on for the first frames, i.e. pressing Tab produced no
+   * visible focus for ~80ms on every `transition-colors` control in the app.
+   * Parking the token here as the resting value means the transition has
+   * nowhere to travel and the ring is correct on frame one. `prefers-reduced-
+   * motion` already clamped this path, so only ordinary users ever saw it. */
+  * {
+    outline-color: var(--focus-ring);
+  }
+
   /* Reduced motion, part 2 of 2 — the safety net for anything that did NOT go
    * through the motion tokens (third-party CSS, a stray literal duration).
    * The tokens in the unlayered block above are the real mechanism.

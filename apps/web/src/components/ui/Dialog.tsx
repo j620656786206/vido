@@ -34,12 +34,23 @@ function DialogOverlay({
 
 function DialogContent({
   className,
+  overlayClassName,
   children,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Content>) {
+}: React.ComponentProps<typeof DialogPrimitive.Content> & {
+  /**
+   * Extra classes for this dialog's own scrim. Needed because a dialog opened
+   * from INSIDE another layer must lift the whole pair: raising only the content
+   * leaves the scrim under the host layer, so the thing behind the dialog stays
+   * fully lit and the dialog reads as floating over a live UI rather than over a
+   * blocked one. Sheet.tsx sits at z-[70]/z-[71], so a dialog opened from a sheet
+   * passes both an overlay and a content z above that.
+   */
+  overlayClassName?: string;
+}) {
   return (
     <DialogPortal>
-      <DialogOverlay />
+      <DialogOverlay className={overlayClassName} />
       <DialogPrimitive.Content
         className={cn(
           /* `duration-[…]` is gone with them: it sets --tw-duration, which a

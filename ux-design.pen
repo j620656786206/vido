@@ -167217,6 +167217,1810 @@
       "fontFamily": "Noto Sans TC",
       "fontSize": 20,
       "fontWeight": "600"
+    },
+    {
+      "type": "text",
+      "id": "RQeUb",
+      "x": 17040,
+      "y": 47600,
+      "name": "M Flow Title",
+      "fill": "#222222",
+      "content": "登入閘門 — Password Gate",
+      "fontFamily": "DM Sans",
+      "fontSize": 24,
+      "fontWeight": "700"
+    },
+    {
+      "type": "text",
+      "id": "HTIDa",
+      "x": 17040,
+      "y": 47634,
+      "name": "M Flow Desc",
+      "fill": "#666666",
+      "content": "V0.1.1 共用密碼閘門：登入預設／錯誤／鎖定倒數、登出確認、驗證中等待面",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 14,
+      "fontWeight": "normal"
+    },
+    {
+      "type": "text",
+      "id": "oMIPx",
+      "x": 17040,
+      "y": 47690,
+      "name": "M1 caption",
+      "fill": "#888888",
+      "content": "M1 · 登入（預設・空密碼）",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 14,
+      "fontWeight": "600"
+    },
+    {
+      "type": "text",
+      "id": "adYJf",
+      "x": 18580,
+      "y": 47690,
+      "name": "M2 caption",
+      "fill": "#888888",
+      "content": "M2 · 登入（密碼錯誤・帶建議）",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 14,
+      "fontWeight": "600"
+    },
+    {
+      "type": "text",
+      "id": "DyUbz",
+      "x": 20120,
+      "y": 47690,
+      "name": "M3 caption",
+      "fill": "#888888",
+      "content": "M3 · 登入（鎖定倒數）",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 14,
+      "fontWeight": "600"
+    },
+    {
+      "type": "text",
+      "id": "wPGiH",
+      "x": 21660,
+      "y": 47690,
+      "name": "M4 caption",
+      "fill": "#888888",
+      "content": "M4 · 登出確認對話框",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 14,
+      "fontWeight": "600"
+    },
+    {
+      "type": "text",
+      "id": "Silh0",
+      "x": 23200,
+      "y": 47690,
+      "name": "M5 caption",
+      "fill": "#888888",
+      "content": "M5 · 驗證中等待面",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 14,
+      "fontWeight": "600"
+    },
+    {
+      "type": "text",
+      "id": "TR0BN",
+      "x": 17040,
+      "y": 48700,
+      "name": "M6 caption",
+      "fill": "#888888",
+      "content": "M6 · 登入（手機）",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 14,
+      "fontWeight": "600"
+    },
+    {
+      "type": "text",
+      "id": "xKPbk",
+      "x": 18580,
+      "y": 48700,
+      "name": "M7 caption",
+      "fill": "#888888",
+      "content": "M7 · 更多 sheet ＋ 登出（手機）",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 14,
+      "fontWeight": "600"
+    },
+    {
+      "type": "frame",
+      "id": "I6UAK",
+      "x": 17040,
+      "y": 47720,
+      "name": "M1-D",
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "#0c1512",
+      "layout": "vertical",
+      "padding": [
+        135,
+        0,
+        0,
+        0
+      ],
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "wS5vM",
+          "name": "Login Card",
+          "width": 384,
+          "fill": "#132320",
+          "cornerRadius": 12,
+          "stroke": "#274039",
+          "strokeWidth": 1,
+          "layout": "vertical",
+          "padding": 32,
+          "children": [
+            {
+              "type": "frame",
+              "id": "UWxHb",
+              "name": "Brand",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "YhmJn",
+                  "name": "Wordmark",
+                  "fill": "#e0be72",
+                  "content": "vido",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 24,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "bU7fW",
+                  "name": "Subtitle",
+                  "fill": "#a8b3ac",
+                  "content": "NAS 媒體庫",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "vKOIJ",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 24
+            },
+            {
+              "type": "text",
+              "id": "EQYfo",
+              "name": "Label",
+              "fill": "#a8b3ac",
+              "content": "密碼",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 14,
+              "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "m4iSNn",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 8
+            },
+            {
+              "type": "frame",
+              "id": "w81UJ",
+              "name": "Input",
+              "width": "fill_container",
+              "height": 44,
+              "fill": "#0c1512",
+              "cornerRadius": 8,
+              "stroke": "#274039",
+              "strokeWidth": 1,
+              "padding": [
+                0,
+                0,
+                0,
+                16
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "rwrsS",
+                  "name": "Placeholder",
+                  "fill": "#8fa096",
+                  "content": "輸入密碼",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "OfP3r",
+                  "name": "EyeBtn",
+                  "width": 44,
+                  "height": 44,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "J7ovM",
+                      "name": "EyeIcon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "eye",
+                      "library": "lucide",
+                      "fill": "#8fa096"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "z5JsAv",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 8
+            },
+            {
+              "type": "frame",
+              "id": "kRkJ7",
+              "name": "Error Slot",
+              "width": "fill_container",
+              "height": 52,
+              "layout": "vertical",
+              "gap": 2
+            },
+            {
+              "type": "frame",
+              "id": "qUqQp",
+              "name": "Submit",
+              "width": "fill_container",
+              "height": 44,
+              "fill": "#1b302b",
+              "cornerRadius": 8,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "pY7Ch",
+                  "name": "Btn Label",
+                  "fill": "#8fa096",
+                  "content": "登入",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "E5emhb",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 16
+            },
+            {
+              "type": "frame",
+              "id": "TA9Yx",
+              "name": "Divider",
+              "width": "fill_container",
+              "height": 1,
+              "fill": "#274039"
+            },
+            {
+              "type": "frame",
+              "id": "NtX5Z",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 16
+            },
+            {
+              "type": "frame",
+              "id": "J1NlV2",
+              "name": "Help",
+              "width": "fill_container",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "qTvYL",
+                  "name": "Help1",
+                  "fill": "#8fa096",
+                  "content": "忘記密碼？改",
+                  "lineHeight": 1.6,
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "JwNjv",
+                  "name": "EnvVar",
+                  "fill": "#a8b3ac",
+                  "content": "VIDO_AUTH_PASSWORD",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "Oe6pL",
+                  "name": "Help2",
+                  "fill": "#8fa096",
+                  "content": "再重啟容器。",
+                  "lineHeight": 1.6,
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "ihLvG",
+      "x": 18580,
+      "y": 47720,
+      "name": "M2-D",
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "#0c1512",
+      "layout": "vertical",
+      "padding": [
+        135,
+        0,
+        0,
+        0
+      ],
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "aGkfL",
+          "name": "Login Card",
+          "width": 384,
+          "fill": "#132320",
+          "cornerRadius": 12,
+          "stroke": "#274039",
+          "strokeWidth": 1,
+          "layout": "vertical",
+          "padding": 32,
+          "children": [
+            {
+              "type": "frame",
+              "id": "T0CQx",
+              "name": "Brand",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "z810bb",
+                  "name": "Wordmark",
+                  "fill": "#e0be72",
+                  "content": "vido",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 24,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "Gxkf6",
+                  "name": "Subtitle",
+                  "fill": "#a8b3ac",
+                  "content": "NAS 媒體庫",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "wWX4X",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 24
+            },
+            {
+              "type": "text",
+              "id": "mAQyu",
+              "name": "Label",
+              "fill": "#a8b3ac",
+              "content": "密碼",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 14,
+              "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "Z80pV7",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 8
+            },
+            {
+              "type": "frame",
+              "id": "ifLcr",
+              "name": "Input",
+              "width": "fill_container",
+              "height": 44,
+              "fill": "#0c1512",
+              "cornerRadius": 8,
+              "stroke": "#274039",
+              "strokeWidth": 1,
+              "padding": [
+                0,
+                0,
+                0,
+                16
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "To3Er",
+                  "name": "Value",
+                  "fill": "#eae4d6",
+                  "content": "•••••",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 20,
+                  "fontWeight": "normal",
+                  "letterSpacing": 2
+                },
+                {
+                  "type": "frame",
+                  "id": "lUJoJ",
+                  "name": "EyeBtn",
+                  "width": 44,
+                  "height": 44,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "VoPW3",
+                      "name": "EyeIcon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "eye",
+                      "library": "lucide",
+                      "fill": "#8fa096"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "aCOOr",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 8
+            },
+            {
+              "type": "frame",
+              "id": "P1I6A8",
+              "name": "Error Slot",
+              "width": "fill_container",
+              "height": 52,
+              "layout": "vertical",
+              "gap": 2,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "A7vj6h",
+                  "name": "Err Line1",
+                  "fill": "#e08a76",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "密碼錯誤",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "ANdXM",
+                  "name": "Err Line2",
+                  "fill": "#a8b3ac",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "還可以再試 2 次,之後會鎖定 60 秒。",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "rptRH",
+              "name": "Submit",
+              "width": "fill_container",
+              "height": 44,
+              "fill": "#c9a24b",
+              "cornerRadius": 8,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "P5qrVR",
+                  "name": "Btn Label",
+                  "fill": "#14161a",
+                  "content": "登入",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "v8J6W",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 16
+            },
+            {
+              "type": "frame",
+              "id": "sX09j",
+              "name": "Divider",
+              "width": "fill_container",
+              "height": 1,
+              "fill": "#274039"
+            },
+            {
+              "type": "frame",
+              "id": "y2flyl",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 16
+            },
+            {
+              "type": "frame",
+              "id": "pbTPL",
+              "name": "Help",
+              "width": "fill_container",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "sybCk",
+                  "name": "Help1",
+                  "fill": "#8fa096",
+                  "content": "忘記密碼？改",
+                  "lineHeight": 1.6,
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "HDgPa",
+                  "name": "EnvVar",
+                  "fill": "#a8b3ac",
+                  "content": "VIDO_AUTH_PASSWORD",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "GVm9O",
+                  "name": "Help2",
+                  "fill": "#8fa096",
+                  "content": "再重啟容器。",
+                  "lineHeight": 1.6,
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "bfIZd",
+      "x": 20120,
+      "y": 47720,
+      "name": "M3-D",
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "#0c1512",
+      "layout": "vertical",
+      "padding": [
+        135,
+        0,
+        0,
+        0
+      ],
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "D4X7I",
+          "name": "Login Card",
+          "width": 384,
+          "fill": "#132320",
+          "cornerRadius": 12,
+          "stroke": "#274039",
+          "strokeWidth": 1,
+          "layout": "vertical",
+          "padding": 32,
+          "children": [
+            {
+              "type": "frame",
+              "id": "lwvWe",
+              "name": "Brand",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "e6v5x",
+                  "name": "Wordmark",
+                  "fill": "#e0be72",
+                  "content": "vido",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 24,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "gBpUM",
+                  "name": "Subtitle",
+                  "fill": "#a8b3ac",
+                  "content": "NAS 媒體庫",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "KlOsg",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 24
+            },
+            {
+              "type": "text",
+              "id": "dUzS0",
+              "name": "Label",
+              "fill": "#a8b3ac",
+              "content": "密碼",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 14,
+              "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "HOKEh",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 8
+            },
+            {
+              "type": "frame",
+              "id": "s7RXU",
+              "name": "Input",
+              "width": "fill_container",
+              "height": 44,
+              "fill": "#0c1512",
+              "cornerRadius": 8,
+              "stroke": "#274039",
+              "strokeWidth": 1,
+              "padding": [
+                0,
+                0,
+                0,
+                16
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "tipC9",
+                  "name": "Placeholder",
+                  "fill": "#8fa096",
+                  "content": "輸入密碼",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "NCetf",
+                  "name": "EyeBtn",
+                  "width": 44,
+                  "height": 44,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "l0v1Z",
+                      "name": "EyeIcon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "eye",
+                      "library": "lucide",
+                      "fill": "#8fa096"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ei3mB",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 8
+            },
+            {
+              "type": "frame",
+              "id": "m1djGl",
+              "name": "Error Slot",
+              "width": "fill_container",
+              "height": 52,
+              "layout": "vertical",
+              "gap": 2,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "o4iYG",
+                  "name": "Err Line1",
+                  "fill": "#e08a76",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "嘗試次數過多",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "ZvU9i",
+                  "name": "Err Line2",
+                  "fill": "#a8b3ac",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "請等 43 秒後再試。",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ggwky",
+              "name": "Submit",
+              "width": "fill_container",
+              "height": 44,
+              "fill": "#1b302b",
+              "cornerRadius": 8,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "QdzFv",
+                  "name": "Btn Label",
+                  "fill": "#8fa096",
+                  "content": "還要等 43 秒",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "DUneW",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 16
+            },
+            {
+              "type": "frame",
+              "id": "byHTC",
+              "name": "Divider",
+              "width": "fill_container",
+              "height": 1,
+              "fill": "#274039"
+            },
+            {
+              "type": "frame",
+              "id": "D6xvP",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 16
+            },
+            {
+              "type": "frame",
+              "id": "J2LBT",
+              "name": "Help",
+              "width": "fill_container",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "NAWu5",
+                  "name": "Help1",
+                  "fill": "#8fa096",
+                  "content": "忘記密碼？改",
+                  "lineHeight": 1.6,
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "oKkjx",
+                  "name": "EnvVar",
+                  "fill": "#a8b3ac",
+                  "content": "VIDO_AUTH_PASSWORD",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "cYJFK",
+                  "name": "Help2",
+                  "fill": "#8fa096",
+                  "content": "再重啟容器。",
+                  "lineHeight": 1.6,
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "aJYv6",
+      "x": 21660,
+      "y": 47720,
+      "name": "M4-D",
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "#0c1512",
+      "layout": "none",
+      "children": [
+        {
+          "type": "rectangle",
+          "id": "W2tiav",
+          "x": 0,
+          "y": 0,
+          "name": "Shell Sidebar",
+          "fill": "#132320",
+          "width": 240,
+          "height": 900
+        },
+        {
+          "type": "rectangle",
+          "id": "FYhdU",
+          "x": 0,
+          "y": 0,
+          "name": "Mask",
+          "fill": "#000000b3",
+          "width": 1440,
+          "height": 900
+        },
+        {
+          "type": "frame",
+          "id": "dRYTr",
+          "x": 528,
+          "y": 365,
+          "name": "Logout Dialog",
+          "width": 384,
+          "fill": "#132320",
+          "cornerRadius": 16,
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#00000066",
+            "offset": {
+              "x": 0,
+              "y": 8
+            },
+            "blur": 24
+          },
+          "layout": "vertical",
+          "padding": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "dCn5m",
+              "name": "Header",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "f1oUsl",
+                  "name": "Title",
+                  "fill": "#eae4d6",
+                  "content": "要登出嗎？",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 18,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "icon",
+                  "id": "of54E",
+                  "name": "Close",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "x",
+                  "library": "lucide",
+                  "fill": "#8fa096"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "S8g54B",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 8
+            },
+            {
+              "type": "text",
+              "id": "bXatO",
+              "name": "Body",
+              "fill": "#a8b3ac",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "下次進來要再輸入密碼。",
+              "lineHeight": 1.5,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "DgzJx",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 24
+            },
+            {
+              "type": "frame",
+              "id": "qWm5t",
+              "name": "Btn Row",
+              "width": "fill_container",
+              "gap": 8,
+              "justifyContent": "end",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "f1SWW",
+                  "name": "Cancel Btn",
+                  "height": 44,
+                  "cornerRadius": 8,
+                  "stroke": "#274039",
+                  "strokeWidth": 1,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "OnwMr",
+                      "name": "Cancel Label",
+                      "fill": "#eae4d6",
+                      "content": "取消",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "n3GWg",
+                  "name": "Logout Btn",
+                  "height": 44,
+                  "fill": "#c9a24b",
+                  "cornerRadius": 8,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "eWa2s",
+                      "name": "Logout Label",
+                      "fill": "#14161a",
+                      "content": "登出",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "fMJFJ",
+      "x": 23200,
+      "y": 47720,
+      "name": "M5-D",
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "#0c1512",
+      "layout": "vertical",
+      "padding": [
+        135,
+        0,
+        0,
+        0
+      ],
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "text",
+          "id": "sC4DW",
+          "name": "Wordmark",
+          "fill": "#e0be72",
+          "content": "vido",
+          "fontFamily": "Noto Sans TC",
+          "fontSize": 24,
+          "fontWeight": "700"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "e2CuFg",
+      "x": 17040,
+      "y": 48730,
+      "name": "M6-M",
+      "clip": true,
+      "width": 390,
+      "height": 844,
+      "fill": "#0c1512",
+      "layout": "vertical",
+      "padding": [
+        127,
+        0,
+        0,
+        0
+      ],
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "RQx4v",
+          "name": "Login Card",
+          "width": 358,
+          "fill": "#132320",
+          "cornerRadius": 12,
+          "stroke": "#274039",
+          "strokeWidth": 1,
+          "layout": "vertical",
+          "padding": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "EWBYO",
+              "name": "Brand",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "ZsdE8",
+                  "name": "Wordmark",
+                  "fill": "#e0be72",
+                  "content": "vido",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 24,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "sfW93",
+                  "name": "Subtitle",
+                  "fill": "#a8b3ac",
+                  "content": "NAS 媒體庫",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "BOCoy",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 24
+            },
+            {
+              "type": "text",
+              "id": "EFwD0",
+              "name": "Label",
+              "fill": "#a8b3ac",
+              "content": "密碼",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 14,
+              "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "fb1Uf",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 8
+            },
+            {
+              "type": "frame",
+              "id": "AgJjW",
+              "name": "Input",
+              "width": "fill_container",
+              "height": 44,
+              "fill": "#0c1512",
+              "cornerRadius": 8,
+              "stroke": "#274039",
+              "strokeWidth": 1,
+              "padding": [
+                0,
+                0,
+                0,
+                16
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "WEwwu",
+                  "name": "Placeholder",
+                  "fill": "#8fa096",
+                  "content": "輸入密碼",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "T3dPt",
+                  "name": "EyeBtn",
+                  "width": 44,
+                  "height": 44,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "v96h7A",
+                      "name": "EyeIcon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "eye",
+                      "library": "lucide",
+                      "fill": "#8fa096"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "k9i42",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 8
+            },
+            {
+              "type": "frame",
+              "id": "SI26A",
+              "name": "Error Slot",
+              "width": "fill_container",
+              "height": 52,
+              "layout": "vertical",
+              "gap": 2
+            },
+            {
+              "type": "frame",
+              "id": "mhkgy",
+              "name": "Submit",
+              "width": "fill_container",
+              "height": 44,
+              "fill": "#1b302b",
+              "cornerRadius": 8,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "BEnhH",
+                  "name": "Btn Label",
+                  "fill": "#8fa096",
+                  "content": "登入",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "LT8r2",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 16
+            },
+            {
+              "type": "frame",
+              "id": "SL78U",
+              "name": "Divider",
+              "width": "fill_container",
+              "height": 1,
+              "fill": "#274039"
+            },
+            {
+              "type": "frame",
+              "id": "b8pGpJ",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 16
+            },
+            {
+              "type": "frame",
+              "id": "Kv4OW",
+              "name": "Help",
+              "width": "fill_container",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "vtIs5",
+                  "name": "Help1",
+                  "fill": "#8fa096",
+                  "content": "忘記密碼？改",
+                  "lineHeight": 1.6,
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "DkQ6f",
+                  "name": "EnvVar",
+                  "fill": "#a8b3ac",
+                  "content": "VIDO_AUTH_PASSWORD",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "TeB1k",
+                  "name": "Help2",
+                  "fill": "#8fa096",
+                  "content": "再重啟容器。",
+                  "lineHeight": 1.6,
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "YKYhH",
+      "x": 18580,
+      "y": 48730,
+      "name": "M7-M",
+      "clip": true,
+      "width": 390,
+      "height": 844,
+      "fill": "#0c1512",
+      "layout": "none",
+      "children": [
+        {
+          "type": "frame",
+          "id": "ilKS7",
+          "x": 0,
+          "y": 0,
+          "name": "Home TopBar",
+          "width": 390,
+          "height": 56,
+          "fill": "#132320",
+          "padding": [
+            0,
+            16
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "ScrYx",
+              "name": "Vido",
+              "fill": "#e0be72",
+              "content": "vido",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 18,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "F4Gj7S",
+              "name": "TopActions",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "o4RsDt",
+                  "name": "Moon",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "moon",
+                  "library": "lucide",
+                  "fill": "#8fa096"
+                },
+                {
+                  "type": "icon",
+                  "id": "Y7QG3z",
+                  "name": "Search",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "search",
+                  "library": "lucide",
+                  "fill": "#8fa096"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "YOAue",
+          "x": 0,
+          "y": 0,
+          "name": "Mask",
+          "fill": "#000000b3",
+          "width": 390,
+          "height": 844
+        },
+        {
+          "type": "frame",
+          "id": "lrfbP",
+          "x": 0,
+          "y": 554,
+          "name": "More Sheet",
+          "width": 390,
+          "fill": "#132320",
+          "cornerRadius": [
+            16,
+            16,
+            0,
+            0
+          ],
+          "stroke": "#274039",
+          "strokeWidth": {
+            "top": 1
+          },
+          "layout": "vertical",
+          "padding": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "XuoeJ",
+              "name": "Handle Row",
+              "width": "fill_container",
+              "justifyContent": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 2,
+                  "id": "cplAU",
+                  "name": "Handle",
+                  "fill": "#274039",
+                  "width": 40,
+                  "height": 4
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "rO8xo",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 8
+            },
+            {
+              "type": "text",
+              "id": "B5YFRd",
+              "name": "Sheet Title",
+              "fill": "#eae4d6",
+              "content": "更多",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 18,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "eAb8W",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 12
+            },
+            {
+              "type": "frame",
+              "id": "nGCXA",
+              "name": "探索",
+              "width": "fill_container",
+              "height": 44,
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "l9iTL",
+                  "name": "探索 Icon",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "compass",
+                  "library": "lucide",
+                  "fill": "#8fa096"
+                },
+                {
+                  "type": "text",
+                  "id": "hMddG",
+                  "name": "探索 Text",
+                  "fill": "#a8b3ac",
+                  "content": "探索",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "zQw9U",
+              "name": "設定",
+              "width": "fill_container",
+              "height": 44,
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "Ml7sw",
+                  "name": "設定 Icon",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "settings",
+                  "library": "lucide",
+                  "fill": "#8fa096"
+                },
+                {
+                  "type": "text",
+                  "id": "K7VGEG",
+                  "name": "設定 Text",
+                  "fill": "#a8b3ac",
+                  "content": "設定",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "eLjwv",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 8
+            },
+            {
+              "type": "frame",
+              "id": "XcCe7",
+              "name": "Divider",
+              "width": "fill_container",
+              "height": 1,
+              "fill": "#274039"
+            },
+            {
+              "type": "frame",
+              "id": "LOiR0",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 8
+            },
+            {
+              "type": "frame",
+              "id": "lrLWA",
+              "name": "Status Band",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "wHQgA",
+                  "name": "Status Row",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Se3K9",
+                      "name": "Storage Label",
+                      "fill": "#8fa096",
+                      "content": "儲存空間",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "avzzB",
+                      "name": "Storage Value",
+                      "fill": "#8fa096",
+                      "content": "0.8 / 1.0 TB",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "teZue",
+                  "name": "Progress",
+                  "width": "fill_container",
+                  "height": 6,
+                  "fill": "#1b302b",
+                  "cornerRadius": 3,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "C7Ayf",
+                      "name": "Used",
+                      "width": 286,
+                      "height": 6,
+                      "fill": "#c9a24b",
+                      "cornerRadius": 3
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "O0okyW",
+                  "name": "Dots",
+                  "width": "fill_container",
+                  "gap": 6,
+                  "justifyContent": "end",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "ydTRd",
+                      "name": "Dot1",
+                      "fill": "#c0392b",
+                      "width": 8,
+                      "height": 8,
+                      "stroke": "#c0392b1f",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "outer"
+                    },
+                    {
+                      "type": "ellipse",
+                      "id": "HDtrV",
+                      "name": "Dot2",
+                      "width": 8,
+                      "height": 8,
+                      "stroke": "#7a8980",
+                      "strokeWidth": 1
+                    },
+                    {
+                      "type": "ellipse",
+                      "id": "ybdKm",
+                      "name": "Dot3",
+                      "width": 8,
+                      "height": 8,
+                      "stroke": "#7a8980",
+                      "strokeWidth": 1
+                    },
+                    {
+                      "type": "ellipse",
+                      "id": "WVqvb",
+                      "name": "Dot4",
+                      "width": 8,
+                      "height": 8,
+                      "stroke": "#7a8980",
+                      "strokeWidth": 1
+                    },
+                    {
+                      "type": "ellipse",
+                      "id": "Js230",
+                      "name": "Dot5",
+                      "width": 8,
+                      "height": 8,
+                      "stroke": "#7a8980",
+                      "strokeWidth": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "qbcHr",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 8
+            },
+            {
+              "type": "frame",
+              "id": "S2TyvO",
+              "name": "Divider2",
+              "width": "fill_container",
+              "height": 1,
+              "fill": "#274039"
+            },
+            {
+              "type": "frame",
+              "id": "cin7v",
+              "name": "gap",
+              "width": "fill_container",
+              "height": 8
+            },
+            {
+              "type": "frame",
+              "id": "bXyWG",
+              "name": "登出",
+              "width": "fill_container",
+              "height": 44,
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "YoGoE",
+                  "name": "登出 Icon",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "log-out",
+                  "library": "lucide",
+                  "fill": "#8fa096"
+                },
+                {
+                  "type": "text",
+                  "id": "uMVOl",
+                  "name": "登出 Text",
+                  "fill": "#a8b3ac",
+                  "content": "登出",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "T5AA4",
+      "x": 24680,
+      "y": 47720,
+      "name": "M5 Note",
+      "fill": "#888888",
+      "textGrowth": "fixed-width",
+      "width": 300,
+      "content": "刻意沒有 spinner:這裡沒有任何可量測的進度,spinner 會宣稱有。wordmark 佔住位置,讓登入卡片是『落在它上面』而不是取代另一張圖。",
+      "lineHeight": 1.5,
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 12,
+      "fontWeight": "normal"
+    },
+    {
+      "type": "text",
+      "id": "KiwYR",
+      "layoutPosition": "absolute",
+      "x": 20120,
+      "y": 48660,
+      "name": "M3 Note",
+      "fill": "#888888",
+      "textGrowth": "fixed-width",
+      "width": 400,
+      "content": "43 這個數字來自後端 429 回應的 Retry-After header,每秒真實遞減。不是估算,也不是假進度。",
+      "lineHeight": 1.5,
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 12,
+      "fontWeight": "normal"
+    },
+    {
+      "type": "text",
+      "id": "wHGle",
+      "x": 21660,
+      "y": 48660,
+      "name": "M4 Note",
+      "fill": "#888888",
+      "textGrowth": "fixed-width",
+      "width": 400,
+      "content": "z-index 必須高於 bottom sheet(70/71),否則會被 sheet 的遮罩蓋成灰色。",
+      "lineHeight": 1.5,
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 12,
+      "fontWeight": "normal"
+    },
+    {
+      "type": "text",
+      "id": "JMo8N",
+      "x": 18580,
+      "y": 49610,
+      "name": "M7 Note",
+      "fill": "#888888",
+      "textGrowth": "fixed-width",
+      "width": 340,
+      "content": "此 sheet 不含主題切換(在頂欄)。順序刻意:導覽在上、狀態帶在中、登出在下。",
+      "lineHeight": 1.5,
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 12,
+      "fontWeight": "normal"
     }
   ],
   "variables": {

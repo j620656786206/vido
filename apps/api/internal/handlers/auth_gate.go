@@ -23,8 +23,16 @@ const authPublicPrefix = "/api/v1/auth/"
 
 // defaultSessionTTL is how long a login stays valid. Deliberately long — this is
 // a single shared password for a home NAS, not a multi-user portal, so forcing a
-// weekly re-type buys nothing when the password is the only secret. Rotating the
-// password (or VIDO_SESSION_SECRET) invalidates every outstanding token at once.
+// weekly re-type buys nothing when the password is the only secret.
+//
+// ⚠️ Tokens are signed with the SESSION SECRET, which is independent of the
+// password (VIDO_SESSION_SECRET, else ENCRYPTION_KEY, else a random secret
+// persisted under the data dir). So changing VIDO_AUTH_PASSWORD does NOT log
+// anyone out — every outstanding session stays valid for the rest of these 30
+// days. Only rotating VIDO_SESSION_SECRET (or deleting the persisted
+// .session_secret) invalidates them. If someone read the password over your
+// shoulder, changing it alone is not enough; rotate the session secret too.
+// Said plainly for the user in the login screen's help text.
 const defaultSessionTTL = 30 * 24 * time.Hour
 
 // Authenticator holds the single shared password and the key that signs session

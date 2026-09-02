@@ -273,6 +273,19 @@ SCREENS = {
     "B7UO8": ("flow-h-homepage-v3", "h4-d-v3"),
     "RvS6c": ("flow-h-homepage-v3", "h5-d-v3"),
     "zRyNS": ("flow-h-homepage-v3", "h6-d-v3"),
+    # flow-m-auth-gate — V0.1.1 shared-password gate (PR #365 + the 2026-09-01 critique
+    # fixes). The gate shipped with NO design coverage at all — 162 exported screens and
+    # not one of them was the first screen a self-hoster sees. M1/M2/M3 are one card in
+    # three states and their input/button sit at identical y, because the whole point is
+    # that a failed attempt moves nothing. M5 is the pre-auth wait: wordmark only, no
+    # spinner — nothing here has measurable progress.
+    "I6UAK": ("flow-m-auth-gate", "m1-d"),
+    "ihLvG": ("flow-m-auth-gate", "m2-d"),
+    "bfIZd": ("flow-m-auth-gate", "m3-d"),
+    "aJYv6": ("flow-m-auth-gate", "m4-d"),
+    "fMJFJ": ("flow-m-auth-gate", "m5-d"),
+    "e2CuFg": ("flow-m-auth-gate", "m6-m"),
+    "YKYhH": ("flow-m-auth-gate", "m7-m"),
 }
 
 

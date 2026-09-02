@@ -22,8 +22,64 @@ interface ApiResponse<T> {
   error?: {
     code: string;
     message: string;
+    suggestion?: string;
   };
 }
+
+/**
+ * A failed login, carrying everything the server already worked out.
+ *
+ * The plain `Error` this replaced kept only `message` ("密碼錯誤") and dropped
+ * the two things the user actually needs: the API's `suggestion` — which is
+ * where the server puts "還可以再試 2 次" — and the `Retry-After` header that
+ * says how long a lockout has to run. Both are real, measured numbers; the
+ * house rule against inventing readouts has a mirror image, which is that a
+ * readout the system DID measure has to reach the screen.
+ */
+export class AuthError extends Error {
+  readonly code: string;
+  readonly suggestion?: string;
+  /** Seconds left on a per-IP lockout, from the Retry-After header (429 only). */
+  readonly retryAfterSeconds?: number;
+
+  constructor(args: {
+    message: string;
+    code: string;
+    suggestion?: string;
+    retryAfterSeconds?: number;
+  }) {
+    super(args.message);
+    this.name = 'AuthError';
+    this.code = args.code;
+    this.suggestion = args.suggestion;
+    this.retryAfterSeconds = args.retryAfterSeconds;
+  }
+
+  /** True when this IP is locked out rather than merely wrong. */
+  get isLockedOut(): boolean {
+    return this.code === 'TOO_MANY_ATTEMPTS';
+  }
+}
+
+function parseRetryAfter(response: Response): number | undefined {
+  const raw = response.headers.get('Retry-After');
+  if (!raw) return undefined;
+  const seconds = Number.parseInt(raw, 10);
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
+}
+
+/**
+ * Ceiling on the status check specifically.
+ *
+ * `/auth/status` gates first paint — the route-level guard waits on it and the
+ * root component holds a bare wait surface while it is in flight. A dev server
+ * proxying to a backend that is not there does not refuse the connection, it
+ * HANGS, so without this the query never settles and the whole app sits on that
+ * wait surface forever. (Found by the visual-regression job, which boots Vite
+ * with no API behind it.) Login and logout are deliberately not capped: those
+ * are user-initiated, and a slow NAS answering late still beats a false failure.
+ */
+const STATUS_TIMEOUT_MS = 4000;
 
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -34,7 +90,12 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
   const data: ApiResponse<T> = await response.json();
 
   if (!response.ok || !data.success) {
-    throw new Error(data.error?.message || `API request failed: ${response.status}`);
+    throw new AuthError({
+      message: data.error?.message || `API request failed: ${response.status}`,
+      code: data.error?.code || 'UNKNOWN',
+      suggestion: data.error?.suggestion,
+      retryAfterSeconds: parseRetryAfter(response),
+    });
   }
 
   return snakeToCamel<T>(data.data);
@@ -42,7 +103,9 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
 
 export const authService = {
   async getStatus(): Promise<AuthStatus> {
-    return fetchApi<AuthStatus>('/auth/status');
+    return fetchApi<AuthStatus>('/auth/status', {
+      signal: AbortSignal.timeout(STATUS_TIMEOUT_MS),
+    });
   },
 
   async login(password: string): Promise<AuthStatus> {

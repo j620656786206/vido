@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -169,14 +170,22 @@ func TestLoginLimiter(t *testing.T) {
 	now := time.Now()
 	ip := "10.0.0.5"
 
-	// Two failures: still allowed.
-	lim.recordFailure(ip, now)
-	lim.recordFailure(ip, now)
+	// Two failures: still allowed, and each one reports how many tries are left
+	// so the caller can warn BEFORE the lock rather than explain it after.
+	if remaining, lockout := lim.recordFailure(ip, now); remaining != 2 || lockout != 0 {
+		t.Fatalf("first failure: got remaining=%d lockout=%v, want 2/0", remaining, lockout)
+	}
+	if remaining, lockout := lim.recordFailure(ip, now); remaining != 1 || lockout != 0 {
+		t.Fatalf("second failure: got remaining=%d lockout=%v, want 1/0", remaining, lockout)
+	}
 	if ok, _ := lim.allow(ip, now); !ok {
 		t.Fatal("still allowed before hitting maxFailures")
 	}
-	// Third failure trips the lockout.
-	lim.recordFailure(ip, now)
+	// Third failure trips the lockout, and says so on the spot — the attempt
+	// that locks you out is the one that has to tell you.
+	if remaining, lockout := lim.recordFailure(ip, now); remaining != 0 || lockout != time.Minute {
+		t.Fatalf("third failure: got remaining=%d lockout=%v, want 0/1m", remaining, lockout)
+	}
 	ok, retry := lim.allow(ip, now)
 	if ok {
 		t.Fatal("should be locked after maxFailures")
@@ -201,8 +210,8 @@ func TestAuthHandler_LoginLockout(t *testing.T) {
 	r := newAuthTestRouter(a)
 	wrong, _ := json.Marshal(LoginRequest{Password: "wrong"})
 
-	// Five wrong attempts (the default threshold) → all 401.
-	for i := 0; i < 5; i++ {
+	// The first four wrong attempts are plain 401s.
+	for i := 0; i < 4; i++ {
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewReader(wrong))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
@@ -211,14 +220,75 @@ func TestAuthHandler_LoginLockout(t *testing.T) {
 			t.Fatalf("attempt %d: expected 401, got %d", i+1, w.Code)
 		}
 	}
-	// Now locked out: even the CORRECT password gets 429.
-	good, _ := json.Marshal(LoginRequest{Password: "pw"})
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewReader(good))
+	// The FIFTH — the one that actually trips the documented "5 wrong tries"
+	// threshold — must answer 429 itself. It used to answer 401 identically to
+	// the first four, so the lock only became visible on a sixth attempt: the
+	// user was locked out by a response that gave no sign of it.
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewReader(wrong))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	if w.Code != http.StatusTooManyRequests {
+		t.Fatalf("fifth attempt: expected 429, got %d", w.Code)
+	}
+	if got := w.Header().Get("Retry-After"); got != "60" {
+		t.Fatalf("expected Retry-After 60 on the locking attempt, got %q", got)
+	}
+
+	// Now locked out: even the CORRECT password gets 429, still with the header.
+	good, _ := json.Marshal(LoginRequest{Password: "pw"})
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewReader(good))
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusTooManyRequests {
 		t.Fatalf("expected 429 after lockout, got %d", w.Code)
+	}
+	if w.Header().Get("Retry-After") == "" {
+		t.Fatal("a locked-out response must carry Retry-After — the UI counts down with it")
+	}
+}
+
+// The login screen renders `suggestion`, so it is the only channel that can
+// tell a user they are two tries from a lockout. Assert the words, not just the
+// status code.
+func TestAuthHandler_LoginSuggestionWarnsBeforeLockout(t *testing.T) {
+	a := testAuthenticator("pw")
+	r := newAuthTestRouter(a)
+	wrong, _ := json.Marshal(LoginRequest{Password: "wrong"})
+
+	suggestionAt := func(attempt int) string {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewReader(wrong))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		var resp struct {
+			Error struct {
+				Suggestion string `json:"suggestion"`
+			} `json:"error"`
+		}
+		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+			t.Fatalf("attempt %d: decode: %v", attempt, err)
+		}
+		return resp.Error.Suggestion
+	}
+
+	// Early failures stay generic — a countdown from the first wrong keypress
+	// would read as an invitation to guess.
+	if got := suggestionAt(1); got != "請確認密碼後再試一次。" {
+		t.Fatalf("attempt 1 suggestion = %q", got)
+	}
+	suggestionAt(2)
+	// Two tries left: now the warning is worth spending.
+	if got := suggestionAt(3); !strings.Contains(got, "還可以再試 2 次") {
+		t.Fatalf("attempt 3 suggestion = %q, want a remaining-tries warning", got)
+	}
+	if got := suggestionAt(4); !strings.Contains(got, "還可以再試 1 次") {
+		t.Fatalf("attempt 4 suggestion = %q, want a remaining-tries warning", got)
+	}
+	// The locking attempt says how long, not just that it happened.
+	if got := suggestionAt(5); !strings.Contains(got, "60 秒") {
+		t.Fatalf("attempt 5 suggestion = %q, want the wait in seconds", got)
 	}
 }
 

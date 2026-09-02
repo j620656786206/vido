@@ -14,11 +14,23 @@ export const authKeys = {
   status: () => [...authKeys.all, 'status'] as const,
 };
 
+/**
+ * A session can die under a tab that is sitting open — the 30-day cookie
+ * expires, or the session secret is rotated. There is no global 401 interceptor,
+ * so nothing else in the app would notice: the shell stays fully rendered while
+ * every request behind it fails, with no explanation. Re-checking the (public,
+ * cheap) status endpoint on focus and on a slow interval is what turns that
+ * silent dead end into a redirect to the login screen.
+ */
+const RECHECK_MS = 60 * 1000;
+
 export function useAuthStatus() {
   return useQuery<AuthStatus, Error>({
     queryKey: authKeys.status(),
     queryFn: () => authService.getStatus(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: RECHECK_MS,
+    refetchInterval: RECHECK_MS,
+    refetchOnWindowFocus: true,
     retry: 1,
   });
 }

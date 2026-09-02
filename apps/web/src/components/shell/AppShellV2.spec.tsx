@@ -31,6 +31,11 @@ vi.mock('../../hooks/useActivity', () => ({
 
 import { AppShellV2 } from './AppShellV2';
 
+// LogoutButton (rendered by SidebarFooter) owns real router + query-client hooks;
+// this suite is about the shell chrome, so stub it out. Its own behaviour is
+// covered by LogoutButton.spec.tsx.
+vi.mock('./LogoutButton', () => ({ LogoutButton: () => null }));
+
 function renderShell(path: string) {
   const rootRoute = createRootRoute({
     component: () => React.createElement(AppShellV2, null, React.createElement(Outlet)),

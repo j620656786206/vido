@@ -989,6 +989,12 @@ func main() {
 	corsConfig.AllowOrigins = cfg.CORSOrigins
 	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
 	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
+	// Retry-After is NOT one of the seven CORS-safelisted response headers, so a
+	// cross-origin frontend (VITE_API_BASE_URL pointed at another host) reads null
+	// unless it is exposed explicitly. The login screen counts a lockout down from
+	// this header; without it the button stays enabled and every submit 429s with
+	// no explanation — the one readout this endpoint exists to hand over.
+	corsConfig.ExposeHeaders = []string{"Retry-After"}
 	router.Use(cors.New(corsConfig))
 	slog.Info("CORS configured", "origins", cfg.CORSOrigins)
 

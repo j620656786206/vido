@@ -11,6 +11,7 @@
  */
 import { useStatusSummary } from '../../hooks/useStatusSummary';
 import { ThemeToggle } from './ThemeToggle';
+import { LogoutButton } from './LogoutButton';
 import type { ServiceConnectionStatus } from '../../services/serviceStatusService';
 import { Tooltip } from '../ui/Tooltip';
 import { cn } from '../../lib/utils';
@@ -53,9 +54,17 @@ function formatTB(bytes: number): string {
 
 interface SidebarFooterProps {
   collapsed?: boolean;
+  /**
+   * False in the mobile 更多 sheet. ThemeToggle's own contract says it is never
+   * rendered twice at one breakpoint — desktop puts it here, mobile puts it in
+   * the sticky header — but this component is reused by the sheet, which quietly
+   * broke that promise: at 390px the switch appeared in the header AND in the
+   * sheet. The sheet opts out instead of the rule being abandoned.
+   */
+  showThemeToggle?: boolean;
 }
 
-export function SidebarFooter({ collapsed = false }: SidebarFooterProps) {
+export function SidebarFooter({ collapsed = false, showThemeToggle = true }: SidebarFooterProps) {
   const { data } = useStatusSummary();
 
   const health = data?.serviceHealth;
@@ -98,8 +107,19 @@ export function SidebarFooter({ collapsed = false }: SidebarFooterProps) {
         {/* ⚖️「放到設定裡面有點太深了」— the theme switch sits with the ambient
             strip because both are shell-level state you glance at, never
             navigate to. Icon-only on the collapsed rail, like the nav items. */}
-        <ThemeToggle variant="rail" />
+        {showThemeToggle && <ThemeToggle variant="rail" />}
         {dots}
+        {/* Below the readouts and behind a rule: on the rail the logout glyph
+            (bracket + arrow) is a near-twin of the collapse glyph at the top of
+            the same 44px track, and it used to sit directly above a red health
+            dot that read as ITS status. The separator and the order fix both.
+            ⚠️ The rule is its OWN element, not a wrapper. Wrapping the button in a
+            `w-6` divider made the 44px button lay out inside a 24px box on a 64px
+            rail — it centred ~10px off every other rail icon and its right edge
+            landed on the sidebar border. Width of the rule and width of the target
+            are two different measurements. */}
+        <div className="mt-1 w-6 border-t border-[var(--border-subtle)]" aria-hidden="true" />
+        <LogoutButton variant="rail" />
       </div>
     );
   }
@@ -122,7 +142,7 @@ export function SidebarFooter({ collapsed = false }: SidebarFooterProps) {
       data-testid="sidebar-footer-status"
     >
       {/* ⚖️「放到設定裡面有點太深了」— see the collapsed branch above. */}
-      <ThemeToggle variant="row" className="-mx-0.5" />
+      {showThemeToggle && <ThemeToggle variant="row" className="-mx-0.5" />}
       {/* Disk headroom */}
       <div data-testid="status-disk">
         <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
@@ -158,6 +178,14 @@ export function SidebarFooter({ collapsed = false }: SidebarFooterProps) {
         <span className="ml-auto flex items-center gap-1.5" aria-label="服務狀態">
           {dots}
         </span>
+      </div>
+
+      {/* Below the ambient strip and behind its own rule. Everything above this
+          line is a readout you glance at; this is the one thing here that fires.
+          Same weight as a nav destination (14px / --text-secondary), because it
+          has more consequence than one, not less. */}
+      <div className="-mx-0.5 border-t border-[var(--border-subtle)] pt-2">
+        <LogoutButton variant="row" />
       </div>
     </div>
   );
