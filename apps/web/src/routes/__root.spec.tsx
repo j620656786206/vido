@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   createRootRoute,
@@ -166,6 +166,31 @@ describe('__root auth redirect', () => {
     expect(screen.queryByTestId('auth-loading')).toBeNull();
   });
 
+  // A status endpoint that never answers must not hold the product hostage. The
+  // wait surface has a hard ceiling from mount — and the ceiling must NOT be
+  // restarted when `isLoading` flaps, which is what a failing endpoint on a
+  // refetch interval does all day. The first version reset the timer on every
+  // flap and left the wordmark up forever.
+  it('renders the app anyway when auth status never resolves', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      useAuthStatusMock.mockReturnValue({ data: undefined, isLoading: true });
+      renderAt('/');
+      // The router mounts asynchronously, so wait for the surface rather than
+      // asserting on the first synchronous frame.
+      expect(await screen.findByTestId('auth-loading')).toBeInTheDocument();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2500);
+      });
+
+      expect(await screen.findByTestId('home-page')).toBeInTheDocument();
+      expect(screen.queryByTestId('auth-loading')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('takes an unauthenticated visitor to /login before the setup gate', async () => {
     // Even with setup still needed, login comes first.
     useSetupStatusMock.mockReturnValue({ data: { needsSetup: true }, isLoading: false });
@@ -218,5 +243,27 @@ describe('__root beforeLoad gate', () => {
   it('does not block the app when the status endpoint fails', async () => {
     ensureQueryDataMock.mockRejectedValue(new Error('network down'));
     await expect(run('/')).resolves.toBeUndefined();
+  });
+
+  // The router AWAITS beforeLoad, so an endpoint that never answers is a hang,
+  // not a slow start — nothing renders at all. The visual-regression job proved
+  // it in the worst way: it boots the Vite dev server with no API behind it and
+  // every screen went blank. The wait has to be bounded.
+  it('gives up and lets the app render when the status endpoint never answers', async () => {
+    vi.useFakeTimers();
+    try {
+      ensureQueryDataMock.mockReturnValue(new Promise(() => {}));
+      const settled = vi.fn();
+      const pending = run('/').then(settled);
+
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(settled).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(1500);
+      await pending;
+      expect(settled).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

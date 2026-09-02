@@ -68,6 +68,19 @@ function parseRetryAfter(response: Response): number | undefined {
   return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
 }
 
+/**
+ * Ceiling on the status check specifically.
+ *
+ * `/auth/status` gates first paint — the route-level guard waits on it and the
+ * root component holds a bare wait surface while it is in flight. A dev server
+ * proxying to a backend that is not there does not refuse the connection, it
+ * HANGS, so without this the query never settles and the whole app sits on that
+ * wait surface forever. (Found by the visual-regression job, which boots Vite
+ * with no API behind it.) Login and logout are deliberately not capped: those
+ * are user-initiated, and a slow NAS answering late still beats a false failure.
+ */
+const STATUS_TIMEOUT_MS = 4000;
+
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     headers: { 'Content-Type': 'application/json' },
@@ -90,7 +103,9 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
 
 export const authService = {
   async getStatus(): Promise<AuthStatus> {
-    return fetchApi<AuthStatus>('/auth/status');
+    return fetchApi<AuthStatus>('/auth/status', {
+      signal: AbortSignal.timeout(STATUS_TIMEOUT_MS),
+    });
   },
 
   async login(password: string): Promise<AuthStatus> {

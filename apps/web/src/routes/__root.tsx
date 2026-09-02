@@ -1,17 +1,24 @@
 import {
   createRootRoute,
-  isRedirect,
   Outlet,
   redirect,
   useNavigate,
   useLocation,
 } from '@tanstack/react-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { AppShellV2 } from '../components/shell';
 import { queryClient } from '../queryClient';
 import { useSetupStatus } from '../hooks/useSetupStatus';
 import { authKeys, useAuthStatus } from '../hooks/useAuthStatus';
 import { authService } from '../services/authService';
+
+/**
+ * How long the route-level gate may wait on /auth/status before giving up and
+ * letting the app render. The endpoint is public, in-memory, and served by the
+ * same process as the HTML — if the page loaded at all, this answers in
+ * milliseconds. The ceiling exists for the case where it answers never.
+ */
+const GATE_MAX_WAIT_MS = 2000;
 
 export const Route = createRootRoute({
   /**
@@ -29,23 +36,30 @@ export const Route = createRootRoute({
    */
   beforeLoad: async ({ location }) => {
     if (location.pathname === '/login') return;
-    try {
-      const status = await queryClient.ensureQueryData({
-        queryKey: authKeys.status(),
-        queryFn: () => authService.getStatus(),
-      });
-      if (status.authEnabled && !status.authenticated) {
-        throw redirect({ to: '/login' });
-      }
-    } catch (err) {
-      // A redirect is THROWN, not returned, so it lands here — re-throw it.
-      // Use the router's own predicate: the object it throws carries its target
-      // under `options`, so a hand-rolled `'to' in err` check silently swallows
-      // the redirect and the gate quietly stops working.
-      if (isRedirect(err)) throw err;
-      // Anything else means /auth/status itself is unreachable, and blocking the
-      // whole app on that would be worse than letting the React guard below
-      // handle it a beat later.
+    // ⚠️ The router awaits this, so nothing renders until it settles — which
+    // makes an unreachable /auth/status a hard hang, not a slow start. The
+    // visual-regression job proved it: it boots the Vite dev server with NO API
+    // behind it, and every screen went blank because the gate never resolved.
+    // Never let this wait unbounded. On timeout (or error) we fall through and
+    // the React guard below takes over — the same behaviour as before this gate
+    // existed, and if the status endpoint is unreachable then every gated call
+    // is failing anyway, so there is nothing left to protect.
+    const status = await Promise.race([
+      queryClient
+        .ensureQueryData({
+          queryKey: authKeys.status(),
+          queryFn: () => authService.getStatus(),
+          retry: false,
+        })
+        .catch(() => null),
+      new Promise<null>((resolve) => {
+        setTimeout(resolve, GATE_MAX_WAIT_MS, null);
+      }),
+    ]);
+    // Thrown, not returned — that is what aborts the match, so the home route's
+    // loader never runs and no gated endpoint is called before login.
+    if (status && status.authEnabled && !status.authenticated) {
+      throw redirect({ to: '/login' });
     }
   },
   component: RootComponent,
@@ -54,7 +68,23 @@ export const Route = createRootRoute({
 function RootComponent() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { data: authStatus, isLoading: authLoading } = useAuthStatus();
+  const { data: authStatus, isLoading: authStatusLoading } = useAuthStatus();
+
+  // The wait surface is allowed to hold the screen, but not to keep it. A stuck
+  // status check must degrade to "unknown", never to a blank product.
+  //
+  // ⚠️ ONE-SHOT, from mount, with no dependencies. The first version restarted
+  // the timer whenever `isLoading` went false — which sounds right and is
+  // exactly wrong: against a failing endpoint the query retries on an interval,
+  // so `isLoading` flaps true/false forever, the timer was reset on every flap,
+  // and the wordmark stayed on screen indefinitely. Verified against a Vite dev
+  // server with no API behind it, which is the shape the visual job runs.
+  const [waitedOut, setWaitedOut] = useState(false);
+  useEffect(() => {
+    const id = window.setTimeout(() => setWaitedOut(true), GATE_MAX_WAIT_MS);
+    return () => window.clearTimeout(id);
+  }, []);
+  const authLoading = authStatusLoading && !waitedOut;
 
   const needsLogin = authStatus?.authEnabled === true && authStatus.authenticated === false;
 
