@@ -49,3 +49,6 @@ playwright-report/
 
 # Auto-generated files
 **/routeTree.gen.ts
+
+# eval/ key.json are generated blind-eval answer keys (scripts write them raw)
+eval/**/*.json
