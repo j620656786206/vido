@@ -351,17 +351,25 @@ jobs:
           VIDO_PORT: 8080
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
 
-      # Serve the downloaded dist with the vite that `pnpm install` already put
-      # in node_modules. `npx serve` fetched serve@14 from the registry at test
-      # time and, when the registry was slow, never came up inside the wait —
-      # and the wait did not fail, so Playwright ran against a closed port
-      # (PR #373: 12 shard runs red with ERR_CONNECTION_REFUSED on :4200).
-      # The port is passed explicitly: vite.config.mts declares preview.port 4200
-      # but the CLI came up on the 4173 default in CI (first run of this step),
-      # so the flag is the contract. --strictPort turns a clash into a failure.
+      # The SPA is served by `serve` (SPA fallback for /api/* is what the UI
+      # specs' page.route mocks rely on — vite preview does not behave the same
+      # and lost 43 UI cases on PR #373). What was flaky was fetching serve@14
+      # from the registry inside the readiness window: PR #373 saw 12 shard runs
+      # red with ERR_CONNECTION_REFUSED on :4200 because npx had not finished
+      # downloading. So install it FIRST with retries, then wait up to 90s and
+      # fail loudly instead of letting Playwright run against a closed port.
+      - name: Install static server
+        run: |
+          for attempt in 1 2 3; do
+            npm install -g serve@14.2.6 && break
+            echo "npm install -g serve failed (attempt $attempt), retrying..."
+            sleep 10
+          done
+          serve --version
+
       - name: Start frontend (preview mode)
         run: |
-          (cd apps/web && pnpm exec vite preview --port 4200 --host localhost --strictPort) &
+          serve dist/apps/web -l 4200 --single &
           echo "Waiting for frontend to be ready..."
           for i in {1..90}; do
             if curl -s http://localhost:4200 > /dev/null 2>&1; then
