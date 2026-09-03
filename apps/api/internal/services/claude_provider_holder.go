@@ -98,6 +98,18 @@ func (h *ClaudeProviderHolder) Get(ctx context.Context) (ai.TextCompleter, error
 	return h.cached, nil
 }
 
+// EffectiveModel returns the model id the next Get will send: the override this
+// holder was built with, else the ai package default. It needs no key and no
+// ctx — the model in force is a property of the holder, not of the resolved
+// key — so the pipeline can call it while assembling every RunVersion
+// (sub-6-5 AC #1/#2) instead of snapshotting a possibly-empty string at boot.
+func (h *ClaudeProviderHolder) EffectiveModel() string {
+	if h.model != "" {
+		return h.model
+	}
+	return ai.DefaultClaudeModel
+}
+
 // IsConfigured reports whether a key resolves. This is what the subtitle
 // pipeline's FR23 capability gate reads (sub-1-6 AC #5), replacing the
 // startup-only cfg.HasClaudeKey.

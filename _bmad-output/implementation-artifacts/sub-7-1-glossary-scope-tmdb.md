@@ -14,7 +14,7 @@ eval-1「架構評估：`show_glossary` 從本機 `media_id` 改綁 TMDb ID」�
 
 ## Acceptance Criteria
 
-1. **migration 034（重建表）。** 新欄 `scope TEXT NOT NULL`（`tmdb:tv:<id>`／`tmdb:movie:<id>`／`local:<media_id>`）；unique `(scope, term_src COLLATE NOCASE, language)`；`media_id` 保留一版供稽核（下一 migration 移除，Rule 24 superseded-mechanism 註記）；**拿掉 `source` CHECK**，enum 改由 `models.GlossaryTerm.Validate` 驗證並擴成 `subtitle|metadata|manual|official_subtitle|community`；回填：series／movies 有 `tmdb_id` 者寫 `tmdb:*`，其餘 `local:`。`term_src` 寫入前 `TrimSpace`。
+1. **migration（下一個空號，重建表）。** 新欄 `scope TEXT NOT NULL`（`tmdb:tv:<id>`／`tmdb:movie:<id>`／`local:<media_id>`）；unique `(scope, term_src COLLATE NOCASE, language)`；`media_id` 保留一版供稽核（下一 migration 移除，Rule 24 superseded-mechanism 註記）；**拿掉 `source` CHECK**，enum 改由 `models.GlossaryTerm.Validate` 驗證並擴成 `subtitle|metadata|manual|official_subtitle|community`；回填：series／movies 有 `tmdb_id` 者寫 `tmdb:*`，其餘 `local:`。`term_src` 寫入前 `TrimSpace`。
 
 2. **`GlossaryScopeResolver`（services）。** `Resolve(ctx, mediaID) (scope string, err)`：查 movie／series（episode → series）的 `tmdb_id`；無效 → `local:<mediaID>`。**不快取**（比對可能晚於入庫）。四個消費者改先 resolve 再查 repo；repo 方法由 `ByMedia` 改為 `ByScope`（舊名保留一版委派）。
 
@@ -26,7 +26,7 @@ eval-1「架構評估：`show_glossary` 從本機 `media_id` 改綁 TMDb ID」�
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — migration 034 + model enum + repo ByScope（AC: #1）**
+- [ ] **Task 1 — migration（下一個空號）+ model enum + repo ByScope（AC: #1）**
 - [ ] **Task 2 — resolver + 四消費者接線（AC: #2）**
 - [ ] **Task 3 — 搬家邏輯（AC: #3）**
 - [ ] **Task 4 — FE 徽章（AC: #4）**

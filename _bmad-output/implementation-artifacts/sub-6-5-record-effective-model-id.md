@@ -1,6 +1,6 @@
 # Story 6.5: `subtitle_runs.model_id` 永遠記錄實際模型 —— 預設模型不再是空字串（後端）
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -26,9 +26,9 @@ eval-1 產品問題 5：用預設模型時 `subtitle_runs.model_id` 是空字串
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — accessor 與注入（AC: #1, #2）**
-- [ ] **Task 2 — migration（AC: #3）**（Rule 15：SELECT/scan 已含 `model_id`，只回填）
-- [ ] **Task 3 — 測試（AC: #4）**
+- [x] **Task 1 — accessor 與注入（AC: #1, #2）**
+- [x] **Task 2 — migration（AC: #3）**（Rule 15：SELECT/scan 已含 `model_id`，只回填）
+- [x] **Task 3 — 測試（AC: #4）**
 
 ## Dev Notes
 
@@ -47,10 +47,40 @@ eval-1 產品問題 5：用預設模型時 `subtitle_runs.model_id` 是空字串
 
 ### Agent Model Used
 
+Claude Fable 5.1（dev-story，2026-09-04）
+
 ### Completion Notes List
+
+- `ai.ClaudeProvider.Model()`：回傳實際送出的 model（override 或 `DefaultClaudeModel`）。`ClaudeProviderHolder.EffectiveModel()`：holder 的 override 或預設，不需 key／ctx——model 是 holder 的屬性不是 key 的屬性。
+- pipeline：`modelID` 由字串改為 `func() string`；新 option `WithModelSource(fn)`，`WithModelID(s)` 改為包常數（既有測試零改動）；`runVersion` 經 `currentModelID()` 讀取，未接線時仍回 ""。`main.go` 兩處（`WithModelID(modelID)`、啟動 log）改讀 `claudeHolder.EffectiveModel`，`cfg.GetClaudeModel()` 的 boot 快照移除。
+- migration 033 `backfill_subtitle_run_model_id`：`UPDATE subtitle_runs SET model_id='claude-haiku-4-5' WHERE model_id='' AND status='completed'`；failed／skipped 保留 "" 當誠實的 unknown；Down 為 no-op（回填後無法區分）。常數寫死在 migration，不讀 `ai.DefaultClaudeModel`——sub-6-8a 改預設後仍正確。
+- 測試：provider `Model()` 預設／override；holder `EffectiveModel` 預設／override 且與 `Get()` 建出的 client 一致；pipeline `RunVersion` 讀 source 即時反映變更、無 option 保持空；migration 033 只回填空的 completed 列、不動 failed 與已標 sonnet 的列、註冊順序。
+- ⚠️ story 編號註記：sub-6-10a 與 sub-7-1 的 story 檔原寫 migration 033／034——033 已被本 story 使用，兩檔改為「下一個空號」。
+- 🔗 AC Drift: NONE (checked: 'WithModelID|model_id|RunVersion' across _bmad-output/implementation-artifacts/*.md — sub-1-5b/sub-1-6 定義的 RunVersion 四欄與 cache key 語意不變，只是 ModelID 的來源從 env 快照改為 holder；REUSE not DRIFT)
+- 📎 Contract Stamps: FOUND (1 across 1 file — `ClaudeProviderHolder` `[@contract-v1]`（sub-2-1a）只加 `EffectiveModel` 一個 additive 方法，簽名與既有行為不變，不 bump；本 story 無 stamp)
+- 🎭 A11y Pre-Flight: N/A (100% backend — no apps/web/ files touched)
+- 🔌 Route Sync: N/A (no backend route touched)
+- 🎨 UX Verification: SKIPPED — no UI changes in this story
+- 全回歸：`pnpm nx test api` ✅、`pnpm nx test web` 255 files / 3125 tests ✅、`test:cleanup` 無殘留；`pnpm lint:all`：go vet／staticcheck 過，eslint 0 errors，prettier 唯一紅字為未追蹤本機檔。
 
 ### Discovery Triage
 
-- （dev 填）
+- N/A — no out-of-scope work discovered（story 編號註記屬文件修正，已在本 story 內處理）
+
+### Change Log
+
+| Date | Change |
+| --- | --- |
+| 2026-09-04 | Task 1 — `ClaudeProvider.Model()`、`ClaudeProviderHolder.EffectiveModel()`、`WithModelSource` + `currentModelID`、`main.go` 改讀 holder。 |
+| 2026-09-04 | Task 2 — migration 033 回填空 model_id 的 completed 列。 |
+| 2026-09-04 | Task 3 — 四組測試（ai／services／subtitle／migrations）。 |
 
 ### File List
+
+- `apps/api/internal/ai/claude.go`（modified）+ `claude_test.go`
+- `apps/api/internal/services/claude_provider_holder.go`（modified）+ `claude_provider_holder_test.go`
+- `apps/api/internal/subtitle/pipeline.go`、`segment_cache.go`（modified）+ `segment_cache_test.go`
+- `apps/api/cmd/api/main.go`（modified）
+- `apps/api/internal/database/migrations/033_backfill_subtitle_run_model_id.go`（new）+ `_test.go`
+- `_bmad-output/implementation-artifacts/sub-6-10a-candidate-identity-backend.md`、`sub-7-1-glossary-scope-tmdb.md`（migration 編號註記）
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`（status）

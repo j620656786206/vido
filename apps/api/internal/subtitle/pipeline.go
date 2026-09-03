@@ -268,10 +268,12 @@ type Pipeline struct {
 	// fed, nothing harvested. Deliberately NOT in requireItemPorts.
 	glossary GlossaryStore
 
-	// modelID is the model that produces the translations — a RunVersion field,
-	// so it is wiring-supplied (sub-1-6 reads it from config) rather than
-	// discovered at call time.
-	modelID string
+	// modelID is the model that produces the translations — a RunVersion field.
+	// sub-6-5: it is read through a source func at RunVersion assembly time
+	// rather than snapshotted at boot, because the boot-time env override was
+	// EMPTY on every default-model run and every run row recorded "" as the
+	// model. WithModelID wraps a constant for tests and legacy wiring.
+	modelID func() string
 
 	// runBudgetUSD is the per-item AI cost ceiling (sub-5-1 AC #3;
 	// AI_RUN_BUDGET_USD, 0 = unlimited) applied when ProcessItem's ctx carries
@@ -344,7 +346,24 @@ func WithGlossaryStore(store GlossaryStore) PipelineOption {
 // cache key and of every run row, so leaving it empty across a model change
 // would serve the previous model's translations back unnoticed.
 func WithModelID(modelID string) PipelineOption {
-	return func(p *Pipeline) { p.modelID = modelID }
+	return WithModelSource(func() string { return modelID })
+}
+
+// WithModelSource records WHERE to ask for the model id when a RunVersion is
+// assembled (sub-6-5 AC #2). Production wires the provider holder's
+// EffectiveModel so a model override — or a future per-run choice — reaches
+// every run row and cache key without a restart or a stale boot snapshot.
+func WithModelSource(source func() string) PipelineOption {
+	return func(p *Pipeline) { p.modelID = source }
+}
+
+// currentModelID is the RunVersion read of the model source; a pipeline built
+// without either option reports "" exactly as before.
+func (p *Pipeline) currentModelID() string {
+	if p.modelID == nil {
+		return ""
+	}
+	return p.modelID()
 }
 
 // WithRunBudgetUSD sets the per-item AI cost ceiling ProcessItem attaches when

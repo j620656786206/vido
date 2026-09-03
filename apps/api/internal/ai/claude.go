@@ -105,6 +105,14 @@ func WithClaudeGovernor(g *Governor) ClaudeProviderOption {
 // would silently reset the 9R-11 run-budget ceiling.
 func (c *ClaudeProvider) Governor() *Governor { return c.governor }
 
+// Model returns the model id this provider actually sends — the WithClaudeModel
+// override when one was given, otherwise DefaultClaudeModel. It is the single
+// truth every run row and cache key should record (sub-6-5): reading the env
+// override instead left `subtitle_runs.model_id` empty on every default-model
+// run, so a later change of the default would have matched the previous
+// model's cache entries.
+func (c *ClaudeProvider) Model() string { return c.model }
+
 func NewClaudeProvider(apiKey string, opts ...ClaudeProviderOption) *ClaudeProvider {
 	p := &ClaudeProvider{
 		apiKey:  apiKey,
