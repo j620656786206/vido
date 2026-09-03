@@ -89,12 +89,44 @@ func filterSDHLine(line string) (string, bool) {
 }
 
 // isWholeLineAnnotation reports whether the ENTIRE line is a bracketed sound
-// cue (`[door slams]`, `(sighs)`) or a music-mark-wrapped line (`♪ … ♪`).
+// cue (`[door slams]`, `(sighs)`), a music-mark-wrapped line (`♪ … ♪`), or a
+// line made of nothing but music marks (`♪`, `♪♪`, `#`).
 func isWholeLineAnnotation(s string) bool {
 	if isWrappedInBrackets(s, '[', ']') || isWrappedInBrackets(s, '(', ')') {
 		return true
 	}
-	return isMusicLine(s)
+	return isMusicLine(s) || isMusicOnly(s)
+}
+
+// isMusicOnly reports whether the line contains only music marks and spaces
+// (`♪`, `♪♪`, `♪ ♪`, `#`). isMusicLine needs a mark at BOTH ends and at least
+// two runes, so a bare `♪` — the commonest cue in an SDH track — slipped
+// through it, was sent to the LLM, paid for, and then rejected by the quality
+// gate as "echoed" (sub-6-4; eval-1 finding 8: ~40 such cues per model on
+// Lioness). A line with any non-mark, non-space character is left alone — the
+// AC #4 under-strip posture for `♪ lyrics` is unchanged.
+func isMusicOnly(s string) bool {
+	seenMark := false
+	for _, r := range s {
+		switch {
+		case r == ' ' || r == '\t':
+			continue
+		case isMusicMark(r):
+			seenMark = true
+		default:
+			return false
+		}
+	}
+	return seenMark
+}
+
+func isMusicMark(r rune) bool {
+	for _, mark := range musicMarks {
+		if r == mark {
+			return true
+		}
+	}
+	return false
 }
 
 // isWrappedInBrackets reports whether s opens with `open`, closes with `close`,
