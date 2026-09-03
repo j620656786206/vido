@@ -351,17 +351,26 @@ jobs:
           VIDO_PORT: 8080
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
 
+      # Serve the downloaded dist with the vite that `pnpm install` already put
+      # in node_modules. `npx serve` fetched serve@14 from the registry at test
+      # time and, when the registry was slow, never came up inside the wait —
+      # and the wait did not fail, so Playwright ran against a closed port
+      # (PR #373: 12 shard runs red with ERR_CONNECTION_REFUSED on :4200).
+      # vite.config.mts already pins preview to localhost:4200 and the outDir
+      # to dist/apps/web; --strictPort turns a port clash into a loud failure.
       - name: Start frontend (preview mode)
         run: |
-          npx serve dist/apps/web -l 4200 --single &
+          (cd apps/web && pnpm exec vite preview --strictPort) &
           echo "Waiting for frontend to be ready..."
-          for i in {1..30}; do
+          for i in {1..90}; do
             if curl -s http://localhost:4200 > /dev/null 2>&1; then
               echo "Frontend is ready!"
-              break
+              exit 0
             fi
             sleep 1
           done
+          echo "::error::Frontend never became ready on :4200 within 90s"
+          exit 1
 
       - name: Run E2E tests (shard ${{ matrix.shard }}/4)
         run: npx playwright test --shard=${{ matrix.shard }}/4 --project=chromium --project=webkit-core
