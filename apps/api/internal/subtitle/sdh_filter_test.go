@@ -26,6 +26,20 @@ func TestFilterSDH_Rules(t *testing.T) {
 		{"music note wrapped", "♪ dramatic music ♪", ""},
 		{"hash wrapped", "# dramatic music #", ""},
 
+		// Rule 2b (sub-6-4, eval-1 finding 8) — a line that is NOTHING but music
+		// marks is an annotation too. Lioness's SDH track had ~40 bare ♪ cues per
+		// model that were paid for and then rejected by the gate as "echoed".
+		{"lone music note", "♪", ""},
+		{"double music note", "♪♪", ""},
+		{"two notes with a space", "♪ ♪", ""},
+		{"lone hash", "#", ""},
+		{"note padded with spaces", "   ♪   ", ""},
+		{"mixed marks only", "♪ # ♪", ""},
+		{"note before lyrics keeps its line", "♪ lyrics", "♪ lyrics"},
+		{"note after lyrics keeps its line", "lyrics ♪", "lyrics ♪"},
+		{"note inside dialogue keeps its line", "a ♪ b", "a ♪ b"},
+		{"music-only line dropped, dialogue line kept", "♪\nHello there", "Hello there"},
+
 		// Rule 3 — leading ALL-CAPS speaker label is stripped, dialogue survives
 		{"speaker label", "JOHN: Hello", "Hello"},
 		{"speaker label in brackets", "[JOHN]: Hello", "Hello"},

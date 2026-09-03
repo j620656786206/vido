@@ -1,6 +1,6 @@
 # Story 6.4: `FilterSDH` 丟掉純音符 cue —— 不再把 ♪ 送給 LLM 付錢再被閘門退回（後端）
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -22,8 +22,8 @@ eval-1 發現 8：Lioness（SDH 軌）兩個模型各約 40 句「保留英文�
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — 規則（AC: #1, #2）**：`sdh_filter.go` `isMusicOnly(s)` + 接入 `isWholeLineAnnotation`；檔頭註解補 eval-1 引用
-- [ ] **Task 2 — 測試（AC: #3）**
+- [x] **Task 1 — 規則（AC: #1, #2）**：`sdh_filter.go` `isMusicOnly(s)` + 接入 `isWholeLineAnnotation`；檔頭註解補 eval-1 引用
+- [x] **Task 2 — 測試（AC: #3）**
 
 ## Dev Notes
 
@@ -42,10 +42,33 @@ eval-1 發現 8：Lioness（SDH 軌）兩個模型各約 40 句「保留英文�
 
 ### Agent Model Used
 
+Claude Fable 5.1（dev-story，2026-09-04）
+
 ### Completion Notes List
+
+- `isMusicOnly(s)`：整行只由 `musicMarks`（`♪`、`#`）與空白／tab 組成且至少一個記號 → annotation；接入 `isWholeLineAnnotation`。`isMusicLine`（頭尾同記號、≥2 runes）與 AC #4 的 under-strip 取捨（`♪ lyrics` 保留）完全不動。
+- 測試：`TestFilterSDH_Rules` 表加 10 列（`♪`／`♪♪`／`♪ ♪`／`#`／帶空白／混合記號 → 丟；`♪ lyrics`／`lyrics ♪`／`a ♪ b` → 留；多行 cue 只去音符行）。RED 先失敗、GREEN 後 `go test ./internal/subtitle` 全過。
+- 🔗 AC Drift: NONE (checked: 'isMusicLine|music mark|FilterSDH' across _bmad-output/implementation-artifacts/*.md — 3 hits; sub-1-4 AC #4 的「`♪…♪` 包住的行丟、單邊 `♪ lyrics` 留」兩條都仍成立，本 story 只新增「純記號行」這一類，REUSE not DRIFT)
+- 📎 Contract Stamps: NONE (no [@contract-v*] stamps in this story or upstream refs — sub-1-4 為 pre-Rule-20 implicit v0)
+- 🎭 A11y Pre-Flight: N/A (100% backend — no apps/web/ files touched)
+- 🔌 Route Sync: N/A (no backend route touched)
+- 🎨 UX Verification: SKIPPED — no UI changes in this story
+- 全回歸：`pnpm nx test api` ✅、`pnpm nx test web` 255 files / 3125 tests ✅、`test:cleanup` 無殘留；`pnpm lint:all`：go vet／staticcheck 過，eslint 0 errors（126 warnings 為 retro-11-AI1b 既有批次），prettier 唯一紅字是未追蹤的 `testsprite_tests/testsprite-mcp-test-report.html`（不在 repo）。
 
 ### Discovery Triage
 
-- （dev 填）
+- N/A — no out-of-scope work discovered
+
+### Change Log
+
+| Date | Change |
+| --- | --- |
+| 2026-09-04 | Task 1 — `sdh_filter.go` 加 `isMusicOnly`／`isMusicMark`，`isWholeLineAnnotation` 納入純音符行（eval-1 發現 8）。 |
+| 2026-09-04 | Task 2 — `sdh_filter_test.go` 規則表 +10 列（正反例與多行）。 |
 
 ### File List
+
+- `apps/api/internal/subtitle/sdh_filter.go`（modified）
+- `apps/api/internal/subtitle/sdh_filter_test.go`（modified）
+- `_bmad-output/implementation-artifacts/sub-6-4-sdh-music-only-cues.md`（this file）
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`（status）
