@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 
+	"github.com/vido/api/internal/ai/prompts"
 	"github.com/vido/api/internal/models"
 )
 
@@ -100,15 +102,43 @@ func (s *repoMediaStore) loadMovie(ctx context.Context, id string) (*MediaItem, 
 		// Movies carry no ShowKey: nothing shares their prompt prefix, so the
 		// D10 gate bypasses them entirely (sub-1-5b AC #5.1).
 		ShowKey: "",
-		Context: TranslateContext{
+		Context: withoutUntrustedIdentity(TranslateContext{
 			Title:         movie.Title,
 			OriginalTitle: movie.OriginalTitle.String,
 			Year:          yearOf(movie.ReleaseDate),
 			Genres:        movie.Genres,
 			Overview:      movie.Overview.String,
 			Countries:     countryCodes(movie.ProductionCountries),
-		},
+		}, movie.TMDbID.Valid, id, models.SubtitleRunMediaMovie),
 	}, nil
+}
+
+// withoutUntrustedIdentity blanks the identity fields (Title, OriginalTitle,
+// Year, Overview) when they cannot be trusted as show context (sub-6-7;
+// eval-1 finding 12): the row never matched TMDb — so every one of those
+// fields came from filename parsing — or the title itself is filename-shaped
+// even though a match exists. Genres and Countries are left as they are:
+// they are empty on an unmatched row anyway, and on a matched one they are
+// TMDb's, not the filename's. Blank fields make BuildMetadataSection render
+// nothing and MetadataHash equal the no-identity hash, so the cache key does
+// not carry the release name either.
+func withoutUntrustedIdentity(ctx TranslateContext, tmdbMatched bool, mediaID, mediaType string) TranslateContext {
+	reason := ""
+	switch {
+	case !tmdbMatched:
+		reason = "unmatched"
+	case prompts.LooksLikeFilename(ctx.Title):
+		reason = "filename-shaped"
+	default:
+		return ctx
+	}
+	slog.Info("metadata title skipped — not sent to the translation prompt",
+		"reason", reason, "media_id", mediaID, "media_type", mediaType)
+	ctx.Title = ""
+	ctx.OriginalTitle = ""
+	ctx.Year = 0
+	ctx.Overview = ""
+	return ctx
 }
 
 func (s *repoMediaStore) loadSeries(ctx context.Context, id string) (*MediaItem, error) {
@@ -202,13 +232,13 @@ func (s *repoMediaStore) SetSubtitleStatus(ctx context.Context, ref MediaRef, st
 }
 
 func seriesContext(series *models.Series) TranslateContext {
-	return TranslateContext{
+	return withoutUntrustedIdentity(TranslateContext{
 		Title:         series.Title,
 		OriginalTitle: series.OriginalTitle.String,
 		Year:          yearOf(series.FirstAirDate),
 		Genres:        series.Genres,
 		Overview:      series.Overview.String,
-	}
+	}, series.TMDbID.Valid, series.ID, models.SubtitleRunMediaSeries)
 }
 
 // yearOf extracts the year from an ISO date. An unparseable or empty date
