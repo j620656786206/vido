@@ -179,3 +179,48 @@ AC #4 套在全檔：Haiku 合併 ✅（0 分 3.6% ≤ 5%、2 分 71.8% ≥ 60%�
 - **處理速度**：Haiku 約片長的 11%，Sonnet 約 17%（一小時的片 Haiku 約 7m、Sonnet 約 10m）。處理時間 = 從排入到寫出字幕檔，含抽軌；同時有兩個 worker 在跑，所以是並行下的實測值。
 - 上表不含失敗重跑燒掉的錢（Peacemaker A $0.196、Landman B $0.468、Zootopia B $0.295，共 $0.96）。Peacemaker 的 Haiku 那次是失敗後重跑、有部分 segment cache 命中，時間偏短。
 - 兩輪帳單總計（含失敗）≈ **US$9.14**。
+
+## 翻譯時到底送了哪些 metadata 給 Claude？（2026-09-03 實查）
+
+**有送。**每次 run 的 `subtitle_runs.metadata_hash` 都非空，`buildSystemBlocks`（`apps/api/internal/subtitle/pipeline.go:937`）把 metadata 區塊接在系統提示詞之後，整段標記為 1 小時 prompt cache，全片共用。
+
+`BuildMetadataSection` 設計了 7 個欄位，但這 9 部實際只送出 3～4 個：
+
+| 欄位                 | 來源                              | 這 9 部的實況                                                                                                                                                 |
+| -------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Title                | `movies.title` / `series.title`   | ✅ 有（繁中片名）                                                                                                                                             |
+| Original title       | `original_title`                  | ✅ 有（英文原名）                                                                                                                                             |
+| Year                 | `release_date` / `first_air_date` | ✅ 有                                                                                                                                                         |
+| Overview             | `overview`                        | ✅ 有（48–184 字，Knives Out 除外）                                                                                                                           |
+| Genres               | `genres`                          | ❌ **9 部全是 `[]`**，掃描沒寫進去                                                                                                                            |
+| Production countries | `production_countries`            | ❌ 3 部電影全空；影集的 `seriesContext` 根本沒填這欄                                                                                                          |
+| Cast                 | —                                 | ❌ **管線從未賦值**。`TranslateContext.Cast` 只在 `pipeline.go:955` 被讀，`media_store.go` 的 movie/series 兩條路徑都沒寫入 → `MetadataCastLimit = 10` 是死碼 |
+
+集數層級的 `title` / `overview` **不會**送出：`loadEpisode` 直接套用 `seriesContext(series)`，所以同一部影集每一集拿到的 metadata 完全相同（這也是 prompt cache 能跨集命中的原因）。
+
+實際送進去的樣子（黑袍糾察隊 S01E01）：
+
+```
+## Media context — background only, do NOT translate or output this section:
+Use it to keep character names, register and setting consistent across the whole subtitle.
+- Title: 黑袍糾察隊
+- Original title: The Boys
+- Year: 2019
+- Overview: 在這世界裡，超級英雄成為超級明星後無惡不作。本片的主角是一群名叫黑袍糾察隊的私刑者…
+```
+
+**Wake Up Dead Man 是意外的對照組**：它的 TMDb 比對失敗，`movies.title` 存的是原始檔名、`original_title`／`overview`／`release_date` 全空，所以送出去的只有一行垃圾：
+
+```
+- Title: [bitsearch.to] Wake.Up.Dead.Man.A.Knives.Out.Mystery.2025.4K.HDR.DV.2160p.WEBDL Ita Eng x265-NAHOM.mkv
+```
+
+它仍是 9 部裡 Haiku 0 分率最低的一部（1.8%），Sonnet 也有 90.5% 2 分率。n=1、又是沒有自創名詞的英語對白片，不能據此說 metadata 沒用，但確實顯示現有這幾行 metadata 的邊際貢獻不大。
+
+### 翻譯結果有回饋到下一步嗎？有
+
+系統提示詞要求每批輸出 `===TERMS===` 尾段回報自訂譯名，`TranslateResult.HarvestedTerms` 先到先贏合併後寫入 `show_glossary`，下一次同片／同影集的 run 會由 `BuildGlossarySection` 注入。實測 **261 筆**，例如 `Task Force X => X特遣隊`、`Belle Reve => 貝爾裡夫`、`Vought Family => 沃特家族`。
+
+這正是 story AC #2 說的已知偏誤：Run A（Haiku）跑完才有詞彙表，Run B（Sonnet）吃到，`glossary_version` 因此 A 空 B 非空。
+
+`show_glossary.source` 的 CHECK 允許 `subtitle` / `metadata` / `manual`，但 261 筆**全部是 `subtitle`** —— 沒有任何一筆從 metadata 播種。演員／角色名本來最適合預先入表來穩住人名一致性，但因為 Cast 沒接，這條路目前是空的。

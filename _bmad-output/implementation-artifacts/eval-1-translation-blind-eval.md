@@ -261,6 +261,20 @@ python3 scripts/subtitle-blind-eval.py score eval/<slug>
 
 每小時片長成本：Haiku ≈ $0.18/hr、Sonnet ≈ $0.48/hr；處理速度約為片長的 11%（Haiku）／17%（Sonnet），兩 worker 並行實測。失敗重跑另燒 $0.96，兩輪總計 ≈ $9.14。
 
+**Metadata 注入實況（2026-09-03 實查，回應 Alexyu 提問）**
+
+- metadata **有**注入：每筆 run 的 `metadata_hash` 皆非空，`buildSystemBlocks`（`pipeline.go:937`）把它與詞彙表併成一個 system block、掛 1 小時 prompt cache。
+- 但 `BuildMetadataSection` 的 7 欄只實際送出 3～4 欄：Title / Original title / Year / Overview 有值；**Genres 9 部全是 `[]`**、**Production countries movies 全空且 `seriesContext` 未填此欄**、**Cast 從未被賦值**（`TranslateContext.Cast` 只在 `pipeline.go:955` 被讀，`media_store.go` 兩條 load 路徑都沒寫 → `MetadataCastLimit=10` 為死碼）。
+- 集數層級 title/overview 不送：`loadEpisode` 套用 `seriesContext(series)`，同影集各集 metadata 相同（也是 prompt cache 跨集命中的前提）。
+- 反饋迴路成立：`===TERMS===` → `HarvestedTerms` → `show_glossary`（實測 261 筆）→ 下次 run 由 `BuildGlossarySection` 注入。但 261 筆 `source` **全是 `subtitle`**，schema 允許的 `metadata` 播種從未發生。
+
+**新發現（供立案）**
+
+10. `TranslateContext.Cast` 在管線路徑永不賦值 → prompt 的 Cast 行是死碼；演員／角色名這個最能穩住人名一致性的訊號完全沒進 prompt。
+11. `genres` 掃描後為 `[]`、`production_countries` 為空，`seriesContext` 又漏填 Countries → metadata 區塊實際只剩片名＋年份＋一段簡介。
+12. TMDb 比對失敗的片（Wake Up Dead Man）會把**原始檔名當 Title 送進 prompt**（`- Title: [bitsearch.to] Wake.Up...NAHOM.mkv`），是雜訊而非上下文；應在 metadata 缺失時略過該行而不是送檔名。該片仍是 Haiku 0 分率最低的一部（1.8%），可視為 metadata 邊際貢獻的粗略對照（n=1）。
+13. `show_glossary` 從未由 metadata 播種（角色／演員名），這正是修人名一致性最直接的槓桿。
+
 **執行中發現的產品問題（不在本 story 修，供立案）**
 
 1. Unraid 模板把 `/media` 設 `Mode="ro"`，管線翻完才在 placer 寫檔失敗 → **先花錢後失敗**。pre-flight 應先檢查目標資料夾可寫。
