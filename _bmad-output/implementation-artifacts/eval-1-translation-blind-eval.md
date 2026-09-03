@@ -175,11 +175,11 @@ python3 scripts/subtitle-blind-eval.py score eval/<slug>
 
 ## Tasks
 
-- [ ] **T1** 填 AC #1 片單，逐部確認 route = `translate`（F15 清單，或 `POST /subtitles/generation-candidates/analyze` 後 `GET /subtitles/generation-candidates`）。
-- [ ] **T2** Run A ×5，複製 sidecar，記錄 `subtitle_runs` 三欄。
-- [ ] **T3** 切 `CLAUDE_MODEL=claude-sonnet-5` → Run B ×5，複製 sidecar，記錄；核對 prompt/glossary version。
-- [ ] **T4** `build` ×5，盲評 250 句，另記人名不一致／簡體漏網。
-- [ ] **T5** `score` ×5 + 合併，套 AC #4 決策表。
+- [x] **T1** 填 AC #1 片單，逐部確認 route = `translate`（F15 清單，或 `POST /subtitles/generation-candidates/analyze` 後 `GET /subtitles/generation-candidates`）。
+- [x] **T2** Run A ×5，複製 sidecar，記錄 `subtitle_runs` 三欄。
+- [x] **T3** 切 `CLAUDE_MODEL=claude-sonnet-5` → Run B ×5，複製 sidecar，記錄；核對 prompt/glossary version。
+- [x] **T4**（AI 代評）`build` ×5，盲評 250 句，另記人名不一致／簡體漏網。
+- [x] **T5**（AI 代評）`score` ×5 + 合併，套 AC #4 決策表。
 - [ ] **T6** 寫報告（AC #6），還原 `CLAUDE_MODEL`，sprint-status 更新＋依裁定立後續 story。
 
 ---
@@ -198,6 +198,53 @@ python3 scripts/subtitle-blind-eval.py score eval/<slug>
 ## Dev Agent Record
 
 （operator 執行後填：日期、片單、每步花費、偏離手冊之處。）
+
+**2026-09-03 執行紀錄（T1–T3 由 Claude 透過 SSH 在 NAS 代跑；T4–T6 待 Alexyu 評分）**
+
+- 工作目錄：NAS `/mnt/user/appdata/vido/eval/`，同步一份到 repo `eval/`（含 `README.md` 說明、`runs-all.txt` = `subtitle_runs` 完整快照）。手冊裡的 `/volume1/docker/...` 路徑是 Synology 風格，NAS 實際 DB 在 `/mnt/user/appdata/vido/vido.db`；主機沒有 ffprobe/python3，抽軌用 `docker exec Vido ffmpeg`。
+- **片單偏離（AC #1 首選 5 部只有 1 部合格）**：內嵌任何中文文字軌就走 deliver（`SelectCandidates` 中文優先），PGS 圖片字幕走 ASR。
+  - 1 The Boys S01E01 ✅ 照原案
+  - 2 Ted Lasso ❌ 繁中軌 → **Peacemaker S01E01**（Slow Horses 也有繁中軌）
+  - 3 House of Cards ❌ 六季全 PGS → **Landman S02E01**（片庫只有第二季）
+  - 4 Dune: Prophecy ❌ 六集全 PGS；Foundation ❌ 繁中軌 → **魔戒：力量之戒 S02E01**
+  - 5 Goodfellas ❌ 93 GB 4K remux，ffmpeg 抽軌超過 `defaultExtractTimeout` 10 分鐘而失敗（$0）；F1 有中文軌 → **Project Hail Mary（極限返航，1591 cues）**
+- **花費**：A（Haiku）有效 $1.079；B（Sonnet）有效 $2.816；兩次失敗另燒 $0.664；總計 **$4.56**（≤ US$6 上限）。每部 A/B：boys 0.223/0.539、peacemaker 0.213/0.534、landman 0.197/0.494、rings 0.118/0.329、hailmary 0.328/0.920。Sonnet 約為 Haiku 的 2.5–2.8×。
+- **版本核對**：`prompt_version` 兩邊皆 `m1-v2`。`glossary_version` A 幾乎全空（peacemaker 重跑那次除外）、B 全部非空且各不相同 → AC #2 的「已知偏誤」成立，B 的人名一致性要打折看。
+- **環境變更與復原**：`/media` 由 Alexyu 在 Unraid 改成 Read/Write；`CLAUDE_MODEL` 切換是用 `docker run` 依原 inspect 重建容器（腳本 `eval/recreate.sh`），Run B 後已重建回無 `CLAUDE_MODEL` 的狀態並驗證 key test 通過。四個目標資料夾（Peacemaker/Season01、Landman/Season02、Rings of Power/Season 2、GoodFellas）加了 `o+w`，**未還原**（見發現 2）。媒體夾內每部各留 `.zh-Hant.srt`（Sonnet）+ `.zh-Hant.srt.bak`（Haiku），A 檔案已先複製。
+- **管線抽樣觀察**：兩個模型都有 cue 在 quality gate 兩次重試後「保留英文原文」（echoed / simplified_leak），數量見 `eval/README.md`；rings 抽樣第 28 句 "He's something else." 兩邊都翻成「他是別的東西。」（0 分候選）。
+
+**2026-09-03 第二輪（加測四部有官方 zh-TW 參考字幕的片，Alexyu 裁定「直接跑 A」）**
+
+- 樣本：Shadow and Bone S01E01、Lioness S02E01、Zootopia 2、Wake Up Dead Man。挑選條件：有外掛 zh-TW 字幕（多為 Netflix／Apple 官方風格）＋內嵌英文文字軌＋無內嵌中文文字軌。全片庫掃描結果在 `eval/candidates.md`。
+- 花費：A $1.150、B $3.135、浪費 $0.295（Zootopia B 又是 15 秒 timeout）；第二輪 $4.58，**兩輪合計 ≈ $9.14**。
+- 新發現 7：**兩部 20 GB 檔同時排入，兩個 worker 同時 ffmpeg 抽軌互相搶 I/O，雙雙超過 10 分鐘上限失敗**；單獨跑 3.5 分鐘就好。Worker 並行度應對「抽軌」階段另設上限（或抽軌序列化、翻譯並行）。
+- 新發現 8：Lioness（SDH 軌）兩個模型各有約 40 句「保留英文」，實看幾乎全是純 `♪` 的音樂 cue → `FilterSDH` 沒把純音符 cue 濾掉，每句都白白送 LLM 再被閘門判 echoed。小修：SDH 過濾器加「只含 ♪／♫ 的 cue 直接丟掉」。
+- 產出：`eval/{shadowbone,lioness,zootopia2,knivesout3}/` 各有 sheet.csv / key.json / compare.csv / 參考字幕；容器已還原成預設 Haiku 並驗證。
+
+**2026-09-03 T4/T5（AI 代評，Alexyu 裁定選項 B：Claude 先評一份、人評另存對照）**
+
+- 評分者：9 個 Claude 子代理各評一份 50 句，看不到 key.json；結果在 `eval/<slug>/claude-judge/sheet.csv`，揭盲用 `eval/aggregate.py`。**注意：Claude 評 Claude，報告引用需標註「AI 評」，人評完成後以人評為準。**
+- 原五部合併：Haiku 0 分率 7.6% / 2 分率 53.2%（Landman 單片 0 分率 14%）→ ❌；Sonnet 2.8% / 75.2% → ✅。九部合併：Haiku 5.8% / 56.2% ❌；Sonnet 2.2% / 78.4% ✅。
+- 套 AC #4：**Haiku ❌、Sonnet ✅ 且 0 分率 ≤ Haiku 一半 → 預設改 `claude-sonnet-5`**（待人評確認後另開 bugfix story）。
+- 0 分對照 34 句：`eval/zeros-claude-judge.csv`（供 AC #6 第 5 點）。
+
+- 0 分句的型態：34 句裡多數不是「翻錯字」，而是**跨 cue 錯置／漏譯**——一句的內容被搬到相鄰 cue（例：knivesout3 #397 "I was a boxer" 翻成下一句的「在擂臺上殺死了一個人」；boys #514/#349 前半或主語掉到隔壁）。這是批次翻譯把 10 句當一段重排的副作用，兩個模型都有，Haiku 較多。修 prompt 時應鎖「逐 cue 對應、不得合併拆分」。
+
+**2026-09-03 T4/T5 v2（含前後文重評，以此為準）**
+
+- 第一版評分者只看單句，把合理的合併／拆句也判 0；重做一版給前後各 3 句上下文（`eval/build-ctx-sheet.py` → `claude-judge-ctx/`）。
+- 原五部合併：Haiku 0 分率 4.0% / 2 分率 53.2%（Landman 單片 0 分率 12%）→ ❌；Sonnet 0.4% / 86.0% → ✅。九部：Haiku 3.8% / 55.8% ❌；Sonnet 0.7% / 87.1% ✅。
+- **裁定不變：預設改 `claude-sonnet-5`**。Haiku 掛在「生硬」而非「翻錯」：四成句子是 1 分。
+- 剩下的 0 分（19 句，`eval/zeros-claude-judge-ctx.csv`）以 cue 時間位移為主，兩個模型都有、Haiku 較多；這是發現 9 的實證。另有一例兩邊皆錯：Life360（家人定位 app）被翻成「360 號公路」——沒有世界知識注入就會錯，屬 metadata/glossary 範圍外。
+
+**執行中發現的產品問題（不在本 story 修，供立案）**
+
+1. Unraid 模板把 `/media` 設 `Mode="ro"`，管線翻完才在 placer 寫檔失敗 → **先花錢後失敗**。pre-flight 應先檢查目標資料夾可寫。
+2. 容器 `PUID=1000/PGID=1000`，片庫資料夾多為 `nobody:users`（group 100）→ 同樣是翻完才 permission denied（燒了 $0.196）。同上，pre-flight 檢查可寫；或文件註明 PGID 應設 100。
+3. 大檔 remux（93 GB）抽字幕超過 10 分鐘硬上限 → 4K remux 片庫整批不能用。需可調 timeout 或改用不掃整檔的抽法。
+4. Claude 呼叫硬性 **15 秒 timeout**，Sonnet 5 一批 10 句偶爾超過 → 3 次重試全逾時後整支 run 失敗（cue 935/986，燒了 $0.468）。timeout 應隨模型／輸出長度放寬。
+5. 用預設模型時 `subtitle_runs.model_id` 是**空字串**（只有 env override 才寫入）→ 報告要靠 log 才知道 A 是 Haiku。
+6. `POST /settings/keys/test` 在 `CLAUDE_MODEL=claude-sonnet-5` 下回 `AI_INVALID_RESPONSE: Cannot parse AI response`（key 其實有效）→ 測試 prompt 的解析太脆。
 
 ## File List
 

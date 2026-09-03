@@ -1,0 +1,537 @@
+﻿[Script Info]
+Collisions: Normal
+PlayResX: 384
+PlayResY: 288
+ScaledBorderAndShadow: no
+ScriptType: v4.00+
+Synch Point: 1
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Microsoft YaHei,18,&H00FFFFFF,&Hf0000000,&H000d0500,&H00000000,0,0,0,0,100,100,0,0.00,1,2,1,2,5,5,5,1
+Style: Eng,Calibri,10,&H00027CCF,&H00000000,&H00000000,&H00000000,0,1,0,0,100,100,0,0.00,1,2,1,2,5,5,5,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+
+Dialogue: 0,0:01:19.78,0:01:21.95,Default,,0,0,0,,爸 是你吗\N{\rEng}Dad? Dad?
+Dialogue: 0,0:02:11.87,0:02:15.13,Default,,0,0,0,,不要…不要\N{\rEng}No! God, help me! No! No...
+Dialogue: 0,0:02:33.52,0:02:34.98,Default,,0,0,0,,去吧\N{\rEng}Go!
+Dialogue: 0,0:03:38.63,0:03:43.63,Default,,0,0,0,,{\an8\bord0\fs18\b1}特种部队：母狮\N第二季第一集
+Dialogue: 0,0:04:01.48,0:04:02.78,Default,,0,0,0,,该死\N{\rEng}Shit.
+Dialogue: 0,0:04:11.20,0:04:14.33,Default,,0,0,0,,-你在做什么 -我看起来在做什么\N{\rEng}- What are you doing? - Uh, what does it look like I'm doing?
+Dialogue: 0,0:04:14.41,0:04:17.29,Default,,0,0,0,,-生火 -我在帮你们做早餐\N{\rEng}- Starting a fire. - I'm making you breakfast.
+Dialogue: 0,0:04:18.08,0:04:21.42,Default,,0,0,0,,-你应该让爸做的 -我就想做\N{\rEng}- You should let Dad do that. - I felt like doing it.
+Dialogue: 0,0:04:21.50,0:04:24.13,Default,,0,0,0,,果然凡事都有第一次啊\N{\rEng}Uh, guess there's a first time for everything.
+Dialogue: 0,0:04:26.18,0:04:28.43,Default,,0,0,0,,-什么东西烧焦了 -我们的早餐\N{\rEng}-What's burning? -Our breakfast.
+Dialogue: 0,0:04:28.51,0:04:29.76,Default,,0,0,0,,她应该让爸做的\N{\rEng}She should let Dad do it.
+Dialogue: 0,0:04:29.85,0:04:32.01,Default,,0,0,0,,我已经说过了\N{\rEng}I've already made that point.
+Dialogue: 0,0:04:32.10,0:04:33.60,Default,,0,0,0,,我们一定要吃吗\N{\rEng}Do we have to eat it?
+Dialogue: 0,0:04:33.68,0:04:38.19,Default,,0,0,0,,圣诞节还很久 这样我们就有筹码了\N{\rEng}I mean, Christmas is a long way away, so we have all the leverage.
+Dialogue: 0,0:04:38.27,0:04:40.52,Default,,0,0,0,,-我听到了 -我就是故意让你听到的\N{\rEng}- I heard that. - Wasn't trying to keep it a secret.
+Dialogue: 0,0:04:41.07,0:04:42.57,Default,,0,0,0,,什么东西烧焦了\N{\rEng}What's burning?
+Dialogue: 0,0:04:42.65,0:04:47.24,Default,,0,0,0,,真是够了 我只是试着想做点贴心的事\N{\rEng}Oh, for crying out loud. I was trying to do something nice.
+Dialogue: 0,0:04:47.32,0:04:50.32,Default,,0,0,0,,亲爱的 你不会是想…你在试着做早餐吗\N{\rEng}Honey, you were not trying... You were trying to make breakfast?
+Dialogue: 0,0:04:50.41,0:04:52.79,Default,,0,0,0,,-对 -不 做你该做的事就好 宝贝\N{\rEng}-Yeah. -No, stay in your lane, baby.
+Dialogue: 0,0:04:52.87,0:04:53.83,Default,,0,0,0,,我该做什么事\N{\rEng}What is my lane?
+Dialogue: 0,0:04:53.91,0:04:55.87,Default,,0,0,0,,跟我上楼 我就告诉你\N{\rEng}You come upstairs, and I'll show you your lane.
+Dialogue: 0,0:04:55.96,0:04:58.67,Default,,0,0,0,,够了 你们知道我们都听到了吧\N{\rEng}Okay, you guys do know we can hear you, too, right?
+Dialogue: 0,0:04:58.75,0:05:00.21,Default,,0,0,0,,真恶心\N{\rEng}That is really gross.
+Dialogue: 0,0:05:00.29,0:05:01.38,Default,,0,0,0,,我有个主意\N{\rEng}Yeah. Yeah, yeah, yeah. I got an idea.
+Dialogue: 0,0:05:01.46,0:05:05.09,Default,,0,0,0,,-松饼宫殿 -松饼宫殿 太棒了\N{\rEng}-Waffle Palace. -Waffle Palace!
+Dialogue: 0,0:05:05.17,0:05:07.55,Default,,0,0,0,,-救得漂亮 -是啊 爸 那是个好主意\N{\rEng}-Nice save. -Yeah, Dad, that's a great idea.
+Dialogue: 0,0:05:07.63,0:05:11.68,Default,,0,0,0,,-我…对 -你竟然想煮早餐…你真可爱\N{\rEng}-I... Oh, yeah, breakfast. Tried to make us breakfast. At least that. -You're cute... honey.
+Dialogue: 0,0:05:11.76,0:05:14.64,Default,,0,0,0,,-我以前也做过早餐 -不 反对 法官大人\N{\rEng}-I've made breakfast before. -Uh, no. Objection, Your Honor.
+Dialogue: 0,0:05:14.72,0:05:16.93,Default,,0,0,0,,被告的主张并没有证据\N{\rEng}There is no evidence for the defendant's claim.
+Dialogue: 0,0:05:17.02,0:05:20.06,Default,,0,0,0,,你真讨厌 我明明就做过早餐\N{\rEng}You're such a dick. I've made breakfast before.
+Dialogue: 0,0:05:23.86,0:05:26.57,Default,,0,0,0,,如果你想吃松饼 你刚刚应该点松饼的\N{\rEng}Oh, hey. If you wanted waffles, you should have just ordered waffles.
+Dialogue: 0,0:05:27.19,0:05:29.41,Default,,0,0,0,,-你不要也来抢 -别人盘里的东西最好吃了\N{\rEng}-Okay. Not you too! -Everything tastes better off your plate.
+Dialogue: 0,0:05:29.49,0:05:32.20,Default,,0,0,0,,-真的比较好吃 -不是吧 你也这样\N{\rEng}-It does taste better. -See? You know this. -Oh, really? No.
+Dialogue: 0,0:05:32.28,0:05:34.74,Default,,0,0,0,,-不要全吃光 -对不起\N{\rEng}-Not the whole thing. -Stop.
+Dialogue: 0,0:05:34.83,0:05:37.37,Default,,0,0,0,,你盘子里明明有很多美式松饼\N{\rEng}You literally have a mountain full of pancakes.
+Dialogue: 0,0:05:37.45,0:05:38.91,Default,,0,0,0,,好吧\N{\rEng}All right.
+Dialogue: 0,0:05:39.79,0:05:42.83,Default,,0,0,0,,-那一定不好吃 -新的食物链出现 谢谢\N{\rEng}-That's gonna taste worse. Yeah. -Oh, fresh link. Thank you.
+Dialogue: 0,0:05:42.92,0:05:46.01,Default,,0,0,0,,你盘子里还有很多食物 你还去拿别人的\N{\rEng}Look how much food you still have left, and you're... oh, you're stealing.
+Dialogue: 0,0:05:46.09,0:05:48.34,Default,,0,0,0,,-对啊 我没有…-是四层食物链吗\N{\rEng}-Yeah, I know. -Was that four links?
+Dialogue: 0,0:05:48.42,0:05:51.76,Default,,0,0,0,,我要留一点明天吃\N{\rEng}I need to make, um, leftovers for tomorrow.
+Dialogue: 0,0:05:53.47,0:05:54.43,Default,,0,0,0,,你的美式松饼为何有洞\N{\rEng}Why are there holes in...
+Dialogue: 0,0:05:54.51,0:05:56.14,Default,,0,0,0,,-亲爱的 -等我一下\N{\rEng}-Honey? -One second.
+Dialogue: 0,0:05:56.22,0:06:00.19,Default,,0,0,0,,是由边境两侧的犯罪集团所为\N{\rEng}...acted out by cartels on both sides of the border,
+Dialogue: 0,0:06:00.27,0:06:02.40,Default,,0,0,0,,从来没有美国国会议员被挟持为人质\N{\rEng}though no U.S. Congress member has ever been held hostage.
+Dialogue: 0,0:06:02.48,0:06:03.73,Default,,0,0,0,,美国女议员被掳 家人遭杀害
+Dialogue: 0,0:06:03.81,0:06:07.23,Default,,0,0,0,,值得注意的是 赫南德兹议员一直在推动立法\N{\rEng}It is worth noting that Congresswoman Hernandez has been pushing legislation
+Dialogue: 0,0:06:07.32,0:06:10.57,Default,,0,0,0,,允许美国军队在国内部署\N{\rEng}that would allow U.S. military forces to be deployed on U.S.
+Dialogue: 0,0:06:10.65,0:06:13.57,Default,,0,0,0,,这将是本届政府 对德克萨斯 新墨西哥州\N{\rEng}soil, which would be a major escalation in the administration's war
+Dialogue: 0,0:06:13.66,0:06:16.41,Default,,0,0,0,,亚利桑那州和加利福尼亚边境\N{\rEng}against illegal immigration along the borders
+Dialogue: 0,0:06:16.49,0:06:20.50,Default,,0,0,0,,非法移民战争的重大升级\N{\rEng}of Texas, New Mexico, Arizona and California.
+Dialogue: 0,0:06:22.37,0:06:25.08,Default,,0,0,0,,德克萨斯 贝可斯
+Dialogue: 0,0:06:39.02,0:06:40.48,Default,,0,0,0,,犯罪现场 请勿跨越
+Dialogue: 0,0:06:42.31,0:06:44.52,Default,,0,0,0,,稍等 你需要出示警徽才能通过\N{\rEng}Hold on. You're gonna need a badge to get through.
+Dialogue: 0,0:06:47.11,0:06:48.82,Default,,0,0,0,,国务院官员不得进入犯罪现场\N{\rEng}State Department can't enter a crime scene.
+Dialogue: 0,0:06:48.90,0:06:50.07,Default,,0,0,0,,州警
+Dialogue: 0,0:06:50.15,0:06:52.99,Default,,0,0,0,,该死 我拿错了 等一下\N{\rEng}Shit. That's the wrong one. Hang on.
+Dialogue: 0,0:06:55.45,0:06:58.37,Default,,0,0,0,,-这个才对 -你隶属哪个办公室\N{\rEng}-There you go. -Where's your field office?
+Dialogue: 0,0:06:59.62,0:07:01.46,Default,,0,0,0,,-圣安东尼奥 -你上司是谁\N{\rEng}-San Antonio. -Who's your senior agent?
+Dialogue: 0,0:07:02.33,0:07:04.04,Default,,0,0,0,,杰森甘乃迪\N{\rEng}Jason Kennedy.
+Dialogue: 0,0:07:04.12,0:07:09.13,Default,,0,0,0,,你打给他吧 他会跟你解释的\N{\rEng}Give him a ring. I'm sure he'd love to talk to you.
+Dialogue: 0,0:07:10.46,0:07:12.42,Default,,0,0,0,,是杰森甘乃迪探员的办公室吗\N{\rEng}Agent Jason Kennedy's office?
+Dialogue: 0,0:07:13.51,0:07:15.76,Default,,0,0,0,,你们有位叫凯尔桑福德的探员吗\N{\rEng}Do you have an Agent Kyle Sanford?
+Dialogue: 0,0:07:18.31,0:07:21.18,Default,,0,0,0,,他来范霍恩做什么 现场归艾尔帕索管\N{\rEng}What's he doing in Van Horn? El Paso has the scene.
+Dialogue: 0,0:07:24.40,0:07:25.27,Default,,0,0,0,,了解\N{\rEng}Understood.
+Dialogue: 0,0:07:29.73,0:07:30.73,Default,,0,0,0,,抱歉\N{\rEng}Sorry.
+Dialogue: 0,0:07:30.82,0:07:33.07,Default,,0,0,0,,不必道歉 你的态度正确\N{\rEng}Ah, don't be sorry. You got the right attitude.
+Dialogue: 0,0:07:33.15,0:07:34.45,Default,,0,0,0,,别相信任何人\N{\rEng}Don't trust anybody.
+Dialogue: 0,0:07:38.99,0:07:39.83,Default,,0,0,0,,联调局证据应变小组
+Dialogue: 0,0:07:53.09,0:07:55.93,Default,,0,0,0,,我们距离现场有30哩远 阿伦\N{\rEng}We're about 30 miles north of where I can be any help, Alan.
+Dialogue: 0,0:07:56.01,0:07:57.60,Default,,0,0,0,,虽然我们鞭长莫及\N{\rEng}We are 30 miles north,
+Dialogue: 0,0:07:58.30,0:08:02.64,Default,,0,0,0,,但她不是 她全家都受到监控 而且她很聪明\N{\rEng}but she ain't. Whole family's on 360. And... smart lady... 
+Dialogue: 0,0:08:02.73,0:08:06.44,Default,,0,0,0,,她身上有追踪器 手机和追踪器都在同个地方\N{\rEng}she's got a tracker. Both the phone and the tracker are in the same place.
+Dialogue: 0,0:08:06.52,0:08:10.15,Default,,0,0,0,,她被关在欧希纳加一栋房子内 他们会趁天黑将她送往南边\N{\rEng}Holding her in a house in Ojinaga. Probably move her south when it gets dark.
+Dialogue: 0,0:08:10.23,0:08:12.94,Default,,0,0,0,,好 派人质救援小组去救她\N{\rEng}All right, well, send an HRT team to go get her.
+Dialogue: 0,0:08:13.03,0:08:16.20,Default,,0,0,0,,我无法派人质救援小组去墨西哥 你在那边不是有线人吗\N{\rEng}I can't send HRT into Mexico. Don't you have informants down there?
+Dialogue: 0,0:08:16.28,0:08:19.24,Default,,0,0,0,,我有线人 但没有突击队\N{\rEng}Yeah, I got informants, but I don't have a fucking strike team.
+Dialogue: 0,0:08:19.33,0:08:22.87,Default,,0,0,0,,好 那我只能联络 墨西哥的联邦警察 并祈祷有好结果\N{\rEng}Fine. I'll call Federal Police in Mexico and hope for the best.
+Dialogue: 0,0:08:22.95,0:08:24.71,Default,,0,0,0,,等着看结果如何吧\N{\rEng}See how that works out.
+Dialogue: 0,0:08:24.79,0:08:27.83,Default,,0,0,0,,好吧…让我打几通电话 看看能否做点什么\N{\rEng}All right, all right. Let me, uh, let me make a call, see what I can do.
+Dialogue: 0,0:08:27.92,0:08:29.08,Default,,0,0,0,,很好\N{\rEng}All right.
+Dialogue: 0,0:08:38.97,0:08:41.97,Default,,0,0,0,,长官 我不知道 你听了这些情报会想怎么做\N{\rEng}Sir, look, I don't know what you want to do with this info,
+Dialogue: 0,0:08:42.93,0:08:45.18,Default,,0,0,0,,但我们有议员的位置了\N{\rEng}but, uh, we got a location on the congresswoman.
+Dialogue: 0,0:08:46.35,0:08:47.81,Default,,0,0,0,,她身上有追踪器\N{\rEng}She's on a tracker.
+Dialogue: 0,0:08:48.35,0:08:50.65,Default,,0,0,0,,是 长官 我哪里都不会去\N{\rEng}Yes, sir. Not going anywhere.
+Dialogue: 0,0:09:03.41,0:09:04.79,Default,,0,0,0,,我正在看\N{\rEng}I'm watching it now.
+Dialogue: 0,0:09:06.33,0:09:09.79,Default,,0,0,0,,那要看情况 是中情局还是白宫\N{\rEng}That depends. Langley or the White House.
+Dialogue: 0,0:09:15.01,0:09:18.38,Default,,0,0,0,,-是哪个 -白宫\N{\rEng}-Which one is it? -The White House.
+Dialogue: 0,0:09:19.39,0:09:23.14,Default,,0,0,0,,-小心 -今天有抗议活动吗\N{\rEng}-Be careful. -Is there a protest today?
+Dialogue: 0,0:09:24.56,0:09:27.89,Default,,0,0,0,,-犯罪集团不会单凭自己那么做 -我知道\N{\rEng}-Cartel would never do that on their own. -I'm aware.
+Dialogue: 0,0:09:27.98,0:09:28.94,Default,,0,0,0,,这是个试探\N{\rEng}It's a probe.
+Dialogue: 0,0:09:32.23,0:09:34.73,Default,,0,0,0,,别这样 你有什么想法 能跟我分享吗\N{\rEng}Come on. Any thoughts you want to share with me?
+Dialogue: 0,0:09:36.57,0:09:40.07,Default,,0,0,0,,你在过去的路上 看看墨西哥的出口产品\N{\rEng}Take a look at Mexican exports on your drive over.
+Dialogue: 0,0:09:40.57,0:09:42.16,Default,,0,0,0,,尤其是油\N{\rEng}Particularly oil.
+Dialogue: 0,0:09:45.54,0:09:46.37,Default,,0,0,0,,我会的\N{\rEng}I'll do it.
+Dialogue: 0,0:09:48.54,0:09:50.79,Default,,0,0,0,,苦日子又要来临了\N{\rEng}It's gonna be one of those days.
+Dialogue: 0,0:10:11.69,0:10:14.02,Default,,0,0,0,,我们没有太多情报 能说明这这件事 拜伦\N{\rEng}We don't have much intel to shed light on this, Byron.
+Dialogue: 0,0:10:14.11,0:10:15.19,Default,,0,0,0,,你应该找凯尔来\N{\rEng}We should call in Kyle.
+Dialogue: 0,0:10:15.27,0:10:18.19,Default,,0,0,0,,我们通过话 他在现场\N{\rEng}We spoke. He's on the scene.
+Dialogue: 0,0:10:18.28,0:10:21.16,Default,,0,0,0,,议员身上有追踪器 他们把她拘留在边境另一端\N{\rEng}Congresswoman's wearing a tracker. They're holding her just across the border.
+Dialogue: 0,0:10:21.24,0:10:23.66,Default,,0,0,0,,他们会在天黑后 把她送往更内陆的地方\N{\rEng}They're gonna move her deeper in-country at night.
+Dialogue: 0,0:10:27.37,0:10:28.45,Default,,0,0,0,,我想他们不是等天黑\N{\rEng}I don't think they wait for night.
+Dialogue: 0,0:10:28.54,0:10:30.58,Default,,0,0,0,,而是在等我们的回应\N{\rEng}I think they're waiting to see what we're going to do.
+Dialogue: 0,0:10:30.66,0:10:32.33,Default,,0,0,0,,我自己也很想知道答案\N{\rEng}Curious about that myself.
+Dialogue: 0,0:10:32.42,0:10:35.88,Default,,0,0,0,,我安排了几个秘密探员准备 在他们运送她时进行拦截\N{\rEng}We have a few gray work guys standing by. Intercept when they move her.
+Dialogue: 0,0:10:36.46,0:10:40.51,Default,,0,0,0,,-就是我们在乌克兰用的那些人 -那会引起骚动\N{\rEng}-Same guys we used in Ukraine. -That won't be quiet.
+Dialogue: 0,0:10:40.59,0:10:43.76,Default,,0,0,0,,我想他们不怕骚动 他们只是不想派海豹部队\N{\rEng}Not sure they want quiet. They just don't want a SEAL Team.
+Dialogue: 0,0:10:43.84,0:10:46.18,Default,,0,0,0,,请进\N{\rEng}Step in, please.
+Dialogue: 0,0:10:49.93,0:10:50.85,Default,,0,0,0,,长官\N{\rEng}Sir,
+Dialogue: 0,0:10:50.94,0:10:54.02,Default,,0,0,0,,我们现在知道的就是 她被拘留在边境附近\N{\rEng}what we know now is they are holding her just across the border.
+Dialogue: 0,0:10:54.10,0:10:56.15,Default,,0,0,0,,我们安排了一组人准备破门救走她\N{\rEng}We have a unit in place to either take her at the house
+Dialogue: 0,0:10:56.23,0:10:57.73,Default,,0,0,0,,或在途中拦截\N{\rEng}or en route when they move her.
+Dialogue: 0,0:10:57.82,0:11:00.99,Default,,0,0,0,,-是哪个部队 -先遣小组 我们的人\N{\rEng}-What branch? -Forward detachment. Our guys.
+Dialogue: 0,0:11:01.07,0:11:02.40,Default,,0,0,0,,应该派海豹六队去\N{\rEng}We should send in DEVGRU.
+Dialogue: 0,0:11:02.49,0:11:05.32,Default,,0,0,0,,派他们过去需要12小时\N{\rEng}You are 12 hours from making that a reality.
+Dialogue: 0,0:11:05.41,0:11:07.08,Default,,0,0,0,,我的人已经在边境了\N{\rEng}My guys are standing by at the border now.
+Dialogue: 0,0:11:07.16,0:11:09.54,Default,,0,0,0,,不行…我们不能派军队过去\N{\rEng}No, no, we can't send uniforms over there.
+Dialogue: 0,0:11:09.62,0:11:12.67,Default,,0,0,0,,你认为她能安全回来的概率有多高\N{\rEng}What's your level of confidence that she can be returned safely?
+Dialogue: 0,0:11:12.75,0:11:14.50,Default,,0,0,0,,概率很高 长官\N{\rEng}It's high, sir.
+Dialogue: 0,0:11:14.58,0:11:16.38,Default,,0,0,0,,他们在墨西哥没有对手\N{\rEng}They do not have a tactical equal in Mexico.
+Dialogue: 0,0:11:16.46,0:11:18.80,Default,,0,0,0,,-在任何地方都没有对手 -这件事会闹多大\N{\rEng}-If they have one anywhere. -How messy is this gonna be?
+Dialogue: 0,0:11:18.88,0:11:20.34,Default,,0,0,0,,场面肯定不会太好看\N{\rEng}It's not gonna be clean.
+Dialogue: 0,0:11:25.30,0:11:29.01,Default,,0,0,0,,-你希望闹得很难看吗 -我要事情上电视\N{\rEng}-Do you want it to be messy? -I want it on television.
+Dialogue: 0,0:11:29.10,0:11:32.02,Default,,0,0,0,,等我们处理完后 就会把事情推给你们\N{\rEng}And when we are done with it, we kick this to you.
+Dialogue: 0,0:11:34.40,0:11:38.27,Default,,0,0,0,,我们与墨西哥的条约 不允许我们在那个区域内行动 长官\N{\rEng}Um, our treaty with Mexico doesn't allow us to operate in that space, ma'am.
+Dialogue: 0,0:11:38.36,0:11:41.69,Default,,0,0,0,,没有任何犯罪组织 会在墨西哥政府没有参与的情况下\N{\rEng}No criminal organization is gonna do something this reckless
+Dialogue: 0,0:11:41.78,0:11:43.78,Default,,0,0,0,,做出这样鲁莽的行为\N{\rEng}without the Mexican government being complicit.
+Dialogue: 0,0:11:43.86,0:11:46.74,Default,,0,0,0,,而墨西哥政府没有受到外部极大压力\N{\rEng}And the Mexican government would never be complicit
+Dialogue: 0,0:11:46.82,0:11:49.66,Default,,0,0,0,,是不可能参与其中的\N{\rEng}without extreme pressure from an outside force.
+Dialogue: 0,0:11:50.20,0:11:51.37,Default,,0,0,0,,你觉得是俄国吗\N{\rEng}You think Russia?
+Dialogue: 0,0:11:51.45,0:11:55.46,Default,,0,0,0,,这确实符合他们的秘密行动策略\N{\rEng}Well, it does fit their covert ops strategy,
+Dialogue: 0,0:11:55.54,0:11:59.88,Default,,0,0,0,,但他们没有足够的筹码能做这种事\N{\rEng}but they don't have the leverage to force something like this.
+Dialogue: 0,0:11:59.96,0:12:00.92,Default,,0,0,0,,是中国\N{\rEng}It's China.
+Dialogue: 0,0:12:02.26,0:12:06.47,Default,,0,0,0,,我们认为很有可能 你为何会有这个想法\N{\rEng}We think that's a likely possibility. Why do you think so?
+Dialogue: 0,0:12:06.55,0:12:08.30,Default,,0,0,0,,这对他们来说是个不寻常的举动\N{\rEng}It's an unusual move for them,
+Dialogue: 0,0:12:08.39,0:12:11.39,Default,,0,0,0,,但显然让总统处于非常不利的境地\N{\rEng}but it clearly puts the president in a very bad spot.
+Dialogue: 0,0:12:11.47,0:12:16.10,Default,,0,0,0,,在墨西哥境内的美国军事行动\N{\rEng}A U.S. military operation on Mexican soil?
+Dialogue: 0,0:12:16.19,0:12:19.94,Default,,0,0,0,,这是一场政治灾难 连他自己的政党都会反对他\N{\rEng}It's a political disaster. His own party's gonna turn on him.
+Dialogue: 0,0:12:20.02,0:12:21.94,Default,,0,0,0,,而在野党会毁了他\N{\rEng}The other side of the aisle, they will destroy him.
+Dialogue: 0,0:12:22.03,0:12:25.78,Default,,0,0,0,,这起事件类似越战 让我们把注意力从东方转移开\N{\rEng}Some form of Vietnam in this hemisphere shifts our focus from the East
+Dialogue: 0,0:12:25.86,0:12:28.87,Default,,0,0,0,,而且它耗尽我们资源的速度 比乌克兰还要快\N{\rEng}and it drains our resources even faster than Ukraine.
+Dialogue: 0,0:12:28.95,0:12:32.91,Default,,0,0,0,,现在中国是墨西哥 在原油 天然气和黄金方面的…\N{\rEng}Now, China is Mexico's number-one trade partner in crude oil 
+Dialogue: 0,0:12:33.00,0:12:35.92,Default,,0,0,0,,第一大贸易伙伴\N{\rEng}and natural gases as well as gold.
+Dialogue: 0,0:12:36.00,0:12:39.04,Default,,0,0,0,,因此 任何在 墨西哥土地上的军事回应\N{\rEng}So, any military response to this on Mexican soil
+Dialogue: 0,0:12:39.13,0:12:42.51,Default,,0,0,0,,都会使我们反对进军台湾的立场\N{\rEng}renders our opposition to a move into Taiwan
+Dialogue: 0,0:12:42.59,0:12:46.05,Default,,0,0,0,,在北约和联合国眼中显得虚伪\N{\rEng}as hypocritical to both NATO and the U.N.
+Dialogue: 0,0:12:46.13,0:12:49.18,Default,,0,0,0,,加上俄国现在是安理会主席 中国可以说是…\N{\rEng}And with Russia chairing the security council... China has free rein
+Dialogue: 0,0:12:49.26,0:12:52.81,Default,,0,0,0,,能够毫无顾忌地自由入侵台湾\N{\rEng}...for a Taiwanese invasion with little to no consequences.
+Dialogue: 0,0:12:57.81,0:13:00.02,Default,,0,0,0,,所以我们不能采取军事行动\N{\rEng}Certainly not militarily,
+Dialogue: 0,0:13:00.11,0:13:03.44,Default,,0,0,0,,而我们的经济关系太紧密 难以执行制裁\N{\rEng}and our economies are too linked for sanctions.
+Dialogue: 0,0:13:03.53,0:13:04.94,Default,,0,0,0,,我们也有同感\N{\rEng}We feel the same way about it.
+Dialogue: 0,0:13:05.03,0:13:07.45,Default,,0,0,0,,我们正增加中情局在墨西哥的部署\N{\rEng}We're increasing CIA presence in Mexico,
+Dialogue: 0,0:13:07.53,0:13:10.45,Default,,0,0,0,,尤其是在特别活动方面\N{\rEng}particularly Special Activities.
+Dialogue: 0,0:13:10.53,0:13:13.20,Default,,0,0,0,,我们也希望派你的团队过去\N{\rEng}We'd like to put your team in as well.
+Dialogue: 0,0:13:13.29,0:13:16.29,Default,,0,0,0,,派一 两位母狮到现场\N{\rEng}Get a Lioness on the ground. Or two.
+Dialogue: 0,0:13:16.87,0:13:20.50,Default,,0,0,0,,当然 这一切都是为了 要成功救出议员\N{\rEng}This all, of course, depends on a successful extraction.
+Dialogue: 0,0:13:20.58,0:13:23.25,Default,,0,0,0,,你多快能安排人手到位\N{\rEng}How soon do you think you can get somebody in place?
+Dialogue: 0,0:13:24.42,0:13:26.47,Default,,0,0,0,,首先 我要找到目标\N{\rEng}At first, I would need to find a mark.
+Dialogue: 0,0:13:26.55,0:13:30.34,Default,,0,0,0,,然后我还得调用情报人员或训练新人\N{\rEng}Then I need to pull an asset or build one.
+Dialogue: 0,0:13:30.43,0:13:33.72,Default,,0,0,0,,这不是…我需要时间\N{\rEng}This isn't... I-I need time.
+Dialogue: 0,0:13:33.81,0:13:34.93,Default,,0,0,0,,你需要多久时间\N{\rEng}How much time?
+Dialogue: 0,0:13:37.56,0:13:40.56,Default,,0,0,0,,-能给我三个月吗 -我能给你三周\N{\rEng}-Can I have three months? -You can have three weeks.
+Dialogue: 0,0:13:40.65,0:13:42.94,Default,,0,0,0,,11月就要选举了\N{\rEng}There is an election in November.
+Dialogue: 0,0:13:43.02,0:13:47.11,Default,,0,0,0,,我要在提名大会前搞定这件事\N{\rEng}I want trophies on the wall by the convention.
+Dialogue: 0,0:13:47.19,0:13:49.32,Default,,0,0,0,,-只许成功 -我的任务是什么\N{\rEng}-Big trophies. -What are my trophies?
+Dialogue: 0,0:13:49.41,0:13:52.74,Default,,0,0,0,,发生绑架的地区 是洛斯提格雷斯的领土\N{\rEng}Well, the area of the abduction is the territory of Los Tigres,
+Dialogue: 0,0:13:52.83,0:13:54.16,Default,,0,0,0,,-没错吧 -对\N{\rEng}-correct? -Correct.
+Dialogue: 0,0:13:54.24,0:13:55.74,Default,,0,0,0,,先从他们的领袖下手\N{\rEng}We'll start with their leader.
+Dialogue: 0,0:13:55.83,0:13:58.54,Default,,0,0,0,,找出他和墨西哥政府有关联的情报\N{\rEng}Find us intel connecting him to the Mexican government.
+Dialogue: 0,0:13:58.62,0:14:03.38,Default,,0,0,0,,母狮并不会收集情报 长官 我们的任务是打击高难度目标\N{\rEng}A Lioness isn't designed to gather intel, ma'am. We hit hard targets.
+Dialogue: 0,0:14:03.46,0:14:04.34,Default,,0,0,0,,好\N{\rEng}All right.
+Dialogue: 0,0:14:04.42,0:14:06.26,Default,,0,0,0,,在杀了那个人之后\N{\rEng}After you kill the guy,
+Dialogue: 0,0:14:06.34,0:14:10.72,Default,,0,0,0,,你能不能好心帮个忙 把他的手机…\N{\rEng}could you be so kind as to grab his fucking phones
+Dialogue: 0,0:14:10.80,0:14:15.47,Default,,0,0,0,,电脑和任何可能 有情报的东西都带走\N{\rEng}and computers and anything else that might have some fucking intelligence?
+Dialogue: 0,0:14:15.56,0:14:18.98,Default,,0,0,0,,-除了杀人 你们什么都不会吗 -交给我们 长官\N{\rEng}-You can't do anything but kill people? -We can do it, sir.
+Dialogue: 0,0:14:20.35,0:14:22.56,Default,,0,0,0,,-能给我三角洲部队吗 -不行 海豹部队也不行\N{\rEng}-Can I have a Delta team? -No Delta, no SEALs,
+Dialogue: 0,0:14:22.65,0:14:24.32,Default,,0,0,0,,你要多少秘密探员都可以\N{\rEng}you can have as many gray men as you like.
+Dialogue: 0,0:14:24.40,0:14:25.86,Default,,0,0,0,,-谢谢 -乔\N{\rEng}-Thank you. -Joe.
+Dialogue: 0,0:14:25.94,0:14:27.19,Default,,0,0,0,,谢谢\N{\rEng}Thank you, sir.
+Dialogue: 0,0:14:31.11,0:14:32.16,Default,,0,0,0,,谢谢 长官\N{\rEng}Thank you.
+Dialogue: 0,0:14:51.01,0:14:53.34,Default,,0,0,0,,-上头同意了 去救她吧 -先遣小组\N{\rEng}-You're green. Go get her. -A forward detachment?
+Dialogue: 0,0:14:53.43,0:14:56.51,Default,,0,0,0,,一群没用的人 气球破掉就想找掩护\N{\rEng}A bunch of guys so cooked they dive for cover when a balloon pops?
+Dialogue: 0,0:14:56.60,0:14:59.02,Default,,0,0,0,,他们不受任何约束 乔 这正是你需要的\N{\rEng}They fight outside the lines, Joe. That's what you'll need.
+Dialogue: 0,0:14:59.10,0:15:00.39,Default,,0,0,0,,我需要的是特战分遣队\N{\rEng}What I need is an SF ODA.
+Dialogue: 0,0:15:00.48,0:15:03.23,Default,,0,0,0,,一位母狮怎么能同时消灭目标和收集重要情报\N{\rEng}How is one Lioness supposed to eliminate the target and mine hard data?
+Dialogue: 0,0:15:03.31,0:15:05.73,Default,,0,0,0,,这要求太扯了 根本无法执行\N{\rEng}It's a ridiculous ask and it's impossible to execute.
+Dialogue: 0,0:15:05.81,0:15:07.07,Default,,0,0,0,,你有快速反应部队\N{\rEng}You have a QRF,
+Dialogue: 0,0:15:07.15,0:15:09.40,Default,,0,0,0,,我们会安排一支先遣小组听你指挥\N{\rEng}we will place a forward detachment under your command.
+Dialogue: 0,0:15:09.49,0:15:14.03,Default,,0,0,0,,母狮打击目标 快速反应部队接应 柳橙特遣队收集情报…\N{\rEng}Lioness hits the target, QRF retrieves the Lioness, TFO mines the intel.
+Dialogue: 0,0:15:14.11,0:15:16.78,Default,,0,0,0,,柳橙特遣队会与墨西哥军方发生枪战\N{\rEng}Then TFO gets into a gunfight with the Mexican military.
+Dialogue: 0,0:15:16.87,0:15:19.16,Default,,0,0,0,,那交给我来操心 你的任务是找到目标\N{\rEng}That's my problem. Your problem is a target.
+Dialogue: 0,0:15:19.25,0:15:22.87,Default,,0,0,0,,你先去跟德尔里奥的小组碰面 然后找到下手目标\N{\rEng}Meet up with the ground detachment in Del Rio and go find one.
+Dialogue: 0,0:15:25.84,0:15:28.38,Default,,0,0,0,,-你的装备在车上吗 -是的\N{\rEng}-You got your kit in the car? -Of course.
+Dialogue: 0,0:15:28.46,0:15:30.38,Default,,0,0,0,,-到兰利搭机吗 -到杜勒斯\N{\rEng}-Jet at Langley? -Dulles.
+Dialogue: 0,0:15:30.88,0:15:31.76,Default,,0,0,0,,你的组员呢\N{\rEng}Where's your team?
+Dialogue: 0,0:15:32.34,0:15:33.88,Default,,0,0,0,,四散各地 毕竟他们没工作\N{\rEng}Spread out. You know, they're off the clock.
+Dialogue: 0,0:15:33.97,0:15:37.30,Default,,0,0,0,,该上工了 要他们到布利斯堡集合 我们再讨论下一步\N{\rEng}Put them on, get them to Bliss. We'll work out of there.
+Dialogue: 0,0:15:38.10,0:15:39.52,Default,,0,0,0,,凡事小心\N{\rEng}Careful over there.
+Dialogue: 0,0:15:53.28,0:15:55.28,Default,,0,0,0,,
+Dialogue: 0,0:15:55.28,0:15:57.32,Default,,0,0,0,,现在开始做装饰太早了吧\N{\rEng}It's too early for decorations.
+Dialogue: 0,0:15:57.41,0:16:01.08,Default,,0,0,0,,所以我们用假树 这样能享受久一点\N{\rEng}Well, that's why we have an artificial one, so we can enjoy it longer.
+Dialogue: 0,0:16:01.16,0:16:06.04,Default,,0,0,0,,我们能不能等到…我不知道 至少等到万圣节过后再装饰\N{\rEng}Can we at least wait until, like, I don't know, Halloween is over?
+Dialogue: 0,0:16:06.12,0:16:07.92,Default,,0,0,0,,大卖场都开卖了 还等什么\N{\rEng}Walmart doesn't, so why should we?
+Dialogue: 0,0:16:08.00,0:16:10.75,Default,,0,0,0,,妈说要等她回来再做装饰\N{\rEng}Mom said not to do decorations till she got home.
+Dialogue: 0,0:16:10.84,0:16:12.75,Default,,0,0,0,,这些不是装饰品 是灯\N{\rEng}Well, these are not decorations, these are lights.
+Dialogue: 0,0:16:12.84,0:16:14.84,Default,,0,0,0,,-那还是装饰品啊 -不…\N{\rEng}-They're still decorations. -No, no, no.
+Dialogue: 0,0:16:14.92,0:16:15.92,Default,,0,0,0,,灯是发光的东西\N{\rEng}Lights are electric, which places them
+Dialogue: 0,0:16:16.01,0:16:19.30,Default,,0,0,0,,代表它是改善和提升居家生活的类别\N{\rEng}in the home improvement and enhancement category,
+Dialogue: 0,0:16:19.39,0:16:21.14,Default,,0,0,0,,所以属于我的职责范围\N{\rEng}which falls under my purview.
+Dialogue: 0,0:16:21.22,0:16:24.06,Default,,0,0,0,,把灯挂上是没问题的 但如果挂的是拐杖糖\N{\rEng}We can hang lights. Now, we start hanging candy canes,
+Dialogue: 0,0:16:24.14,0:16:25.23,Default,,0,0,0,,可能就会有大麻烦了\N{\rEng}we're gonna be in deep trouble.
+Dialogue: 0,0:16:31.32,0:16:33.36,Default,,0,0,0,,一切还好吗\N{\rEng}Hey. Everything all right?
+Dialogue: 0,0:16:33.44,0:16:35.57,Default,,0,0,0,,不太好 等我一下\N{\rEng}Not really. Hold on a second.
+Dialogue: 0,0:16:35.65,0:16:40.37,Default,,0,0,0,,机尾编号NM1139\N{\rEng}Tail number November-Mike-one-one-three-niner.
+Dialogue: 0,0:16:42.53,0:16:44.83,Default,,0,0,0,,出事了 我得出差几天\N{\rEng}Something happened. I'm gonna be a few days.
+Dialogue: 0,0:16:46.12,0:16:48.96,Default,,0,0,0,,-议员的事 -你知道我不能说的\N{\rEng}-Uh, the congresswoman? -You know I can't talk about that.
+Dialogue: 0,0:16:49.04,0:16:51.75,Default,,0,0,0,,是 我知道 亲爱的\N{\rEng}Yeah, no, I, uh, I know the drill, honey. 
+Dialogue: 0,0:16:51.84,0:16:53.17,Default,,0,0,0,,要等你回来装饰圣诞树吗\N{\rEng}Would you like us to wait on the tree?
+Dialogue: 0,0:16:53.25,0:16:54.63,Default,,0,0,0,,不 不用等我了\N{\rEng}No, don't wait for me.
+Dialogue: 0,0:16:55.71,0:16:57.22,Default,,0,0,0,,好 知道了\N{\rEng}Uh, okay. Got it.
+Dialogue: 0,0:16:59.13,0:17:00.43,Default,,0,0,0,,我爱你\N{\rEng}I love you.
+Dialogue: 0,0:17:02.14,0:17:05.10,Default,,0,0,0,,我也爱你 看来这次情况很糟\N{\rEng}I love you, too. This must be a bad one.
+Dialogue: 0,0:17:07.39,0:17:08.98,Default,,0,0,0,,替我亲一亲女儿们 好吗\N{\rEng}Kiss the girls for me, okay?
+Dialogue: 0,0:17:10.73,0:17:11.73,Default,,0,0,0,,我会的\N{\rEng}I will.
+Dialogue: 0,0:17:14.36,0:17:15.90,Default,,0,0,0,,我说真的\N{\rEng}I mean it.
+Dialogue: 0,0:17:15.98,0:17:18.74,Default,,0,0,0,,-好 我会的 -好 再见\N{\rEng}-Yeah, I'll do it. -Okay, bye.
+Dialogue: 0,0:17:23.37,0:17:25.33,Default,,0,0,0,,好 妈妈批准了 我们来装饰圣诞树吧\N{\rEng}All right, green light. Let's decorate the tree.
+Dialogue: 0,0:17:26.58,0:17:30.62,Default,,0,0,0,,查莉 你帮我拿那些装饰品 而你帮我挂灯 好吗\N{\rEng}Charlie, you grab the little ones. You help me with the lights, okay?
+Dialogue: 0,0:17:44.85,0:17:48.56,Default,,0,0,0,,德克萨斯 德尔里奥
+Dialogue: 0,0:17:51.14,0:17:55.57,Default,,0,0,0,,-我们有什么弹匣 -15个弹鼓 35个30发弹匣\N{\rEng}-What do we got for mags? -We have 15 of the drums, 35 of the .30.
+Dialogue: 0,0:18:13.38,0:18:16.67,Default,,0,0,0,,-我就知道 -很开心你来了\N{\rEng}-Of course. -Hey. Glad you made it.
+Dialogue: 0,0:18:16.75,0:18:19.72,Default,,0,0,0,,我看你干脆穿一件 上面写着你是中情局的上衣\N{\rEng}You might as well be wearing a T-shirt that says you're CIA on it.
+Dialogue: 0,0:18:19.80,0:18:22.84,Default,,0,0,0,,你那个包包里有休闲服吗\N{\rEng}You, uh, you got something festive in that bag you can throw on?
+Dialogue: 0,0:18:22.93,0:18:25.85,Default,,0,0,0,,有啊 我就从装备包里 拿一件夏日洋装出来\N{\rEng}Oh, sure, let me just look into my kit and get out a fucking sundress.
+Dialogue: 0,0:18:25.93,0:18:27.14,Default,,0,0,0,,少烦我 凯尔\N{\rEng}Fuck you, Kyle.
+Dialogue: 0,0:18:28.06,0:18:30.68,Default,,0,0,0,,别担心 那里有很多选择\N{\rEng}Don't worry, we got plenty of options for you there.
+Dialogue: 0,0:18:33.44,0:18:36.27,Default,,0,0,0,,-你在开玩笑吗 -那跟你眼珠颜色很搭\N{\rEng}-Are you fucking kidding me? -Matches your eyes.
+Dialogue: 0,0:18:36.36,0:18:40.11,Default,,0,0,0,,我倒想看看穿迷你裙怎么执行任务\N{\rEng}I'd love to see you do a snatch and grab in a fucking miniskirt.
+Dialogue: 0,0:18:40.19,0:18:41.53,Default,,0,0,0,,-我可以啊 -不可能的\N{\rEng}-I'll do it. -It's not happening.
+Dialogue: 0,0:18:41.61,0:18:43.07,Default,,0,0,0,,-别激我 -我不会穿的\N{\rEng}-Don't you dare me. -It's not happening.
+Dialogue: 0,0:18:43.16,0:18:46.78,Default,,0,0,0,,这只是为了通过边境 通过后 我们再找地方换装\N{\rEng}It's just to get us across the border. Once we're over, we'll gear up somewhere.
+Dialogue: 0,0:18:46.87,0:18:48.91,Default,,0,0,0,,我帮你准备了防弹衣 你应该是M号吧\N{\rEng}I grabbed you armor, figured you for a medium.
+Dialogue: 0,0:18:48.99,0:18:51.37,Default,,0,0,0,,我有自己的装备 好久不见 寇迪\N{\rEng}I have my own gear. It's long time, Cody.
+Dialogue: 0,0:18:51.46,0:18:53.00,Default,,0,0,0,,是啊 我休息了一阵子\N{\rEng}Yeah, it's been a minute.
+Dialogue: 0,0:18:53.08,0:18:55.33,Default,,0,0,0,,你这把年纪了 好像不适合这个任务吧\N{\rEng}Getting a little long in the tooth for this, aren't you?
+Dialogue: 0,0:18:55.42,0:18:58.55,Default,,0,0,0,,-你这么想 -是啊\N{\rEng}-You think? Yeah? -I do.
+Dialogue: 0,0:18:58.63,0:19:01.67,Default,,0,0,0,,乔 你应该听过姜是老的辣吧\N{\rEng}Well, you know what they say, Joe, beware the old soldier.
+Dialogue: 0,0:19:01.76,0:19:02.93,Default,,0,0,0,,年纪大的人更有经验\N{\rEng}He's old for a reason.
+Dialogue: 0,0:19:05.05,0:19:06.30,Default,,0,0,0,,他是崔塞 是A小队的\N{\rEng}That's Tracer, he's A Squad.
+Dialogue: 0,0:19:06.39,0:19:08.43,Default,,0,0,0,,他是迪恩 D小队\N{\rEng}That's Dean, he's D Squad.
+Dialogue: 0,0:19:08.51,0:19:12.14,Default,,0,0,0,,-枪战时 我该躲在谁后面 -随你挑\N{\rEng}-Who do I hide behind in the gunfight? -Uh, take your pick.
+Dialogue: 0,0:19:12.23,0:19:14.19,Default,,0,0,0,,大家都来自特种部队 都是追捕高手\N{\rEng}Everybody's from The Unit. We're all man hunters.
+Dialogue: 0,0:19:14.27,0:19:16.27,Default,,0,0,0,,兄弟们 把东西放上车 我们该上工了\N{\rEng}All right, boys, let's load up, let's go to work.
+Dialogue: 0,0:19:34.46,0:19:36.17,Default,,0,0,0,,该死\N{\rEng}Oh, fuck.
+Dialogue: 0,0:19:55.23,0:19:58.77,Default,,0,0,0,,欢迎莅临墨西哥
+Dialogue: 0,0:19:59.48,0:20:03.07,Default,,0,0,0,,来吧 你暂时假装是我女友\N{\rEng}Here we go. Just... be my girlfriend for a minute, all right?
+Dialogue: 0,0:20:03.15,0:20:05.65,Default,,0,0,0,,好 笑着看我\N{\rEng}Just look at me, smile and laugh.
+Dialogue: 0,0:20:06.20,0:20:07.11,Default,,0,0,0,,没问题\N{\rEng}You got it.
+Dialogue: 0,0:20:15.62,0:20:17.00,Default,,0,0,0,,你好吗\N{\rEng}How you doing?
+Dialogue: 0,0:20:17.67,0:20:19.08,Default,,0,0,0,,什么\N{\rEng}What's that?
+Dialogue: 0,0:20:20.04,0:20:22.21,Default,,0,0,0,,-他问什么 -我不知道…\N{\rEng}-What's he asking? -I don't know.
+Dialogue: 0,0:20:22.30,0:20:24.17,Default,,0,0,0,,我不知道 老兄 我听不懂\N{\rEng}I don't know... I don't know. I don't know, man. I don't know what that means.
+Dialogue: 0,0:20:24.26,0:20:26.22,Default,,0,0,0,,-我们听不懂 -抱歉 先生\N{\rEng}-We don't know, buddy. -Sorry, sir.
+Dialogue: 0,0:20:26.30,0:20:28.76,Default,,0,0,0,,-好 谢谢你 -谢谢\N{\rEng}-All right. Thank you. -Thank you.
+Dialogue: 0,0:21:04.05,0:21:06.67,Default,,0,0,0,,-老兄 有看到后面的急救包吗 -有 我拿给你\N{\rEng}-You got a mag bag back there? -Yeah. Driving with one.
+Dialogue: 0,0:21:08.51,0:21:10.72,Default,,0,0,0,,该死 不是这个 快放下去\N{\rEng}Oh, fuck, just the small one. Put that shit down.
+Dialogue: 0,0:21:10.80,0:21:12.85,Default,,0,0,0,,后面还有个小的 有看到吗\N{\rEng}A small one. You got a small one back there?
+Dialogue: 0,0:21:12.93,0:21:15.64,Default,,0,0,0,,凯尔 我们应该尽快靠边停 换上装备\N{\rEng}-No. -We should... Kyle, we should pull over and tac up as soon as we can.
+Dialogue: 0,0:21:15.72,0:21:17.31,Default,,0,0,0,,先出了市区再说\N{\rEng}Let's get out of town first.
+Dialogue: 0,0:21:44.34,0:21:46.34,Default,,0,0,0,,
+Dialogue: 0,0:21:46.34,0:21:49.26,Default,,0,0,0,,不…\N{\rEng}No, no, no. No. No, no. No, no. No...
+Dialogue: 0,0:22:01.35,0:22:03.85,Default,,0,0,0,,你们要把我带去哪里\N{\rEng}Where are we going?
+Dialogue: 0,0:22:35.72,0:22:39.60,Default,,0,0,0,,好 出现可疑车辆 有三个人\N{\rEng}All right, bogey. I count... one, two, three.
+Dialogue: 0,0:22:44.56,0:22:47.10,Default,,0,0,0,,如果他们开始吵起来 我要你介入\N{\rEng}If these guys get squirrely, I want you to get in there.
+Dialogue: 0,0:22:47.19,0:22:48.15,Default,,0,0,0,,没问题\N{\rEng}You got it.
+Dialogue: 0,0:22:51.03,0:22:54.11,Default,,0,0,0,,朋友们 我的车子出了点问题\N{\rEng}Amigos, we're having some car trouble.
+Dialogue: 0,0:22:54.20,0:22:56.70,Default,,0,0,0,,车坏了 水箱\N{\rEng}No bueno... the, uh, radiator.
+Dialogue: 0,0:22:59.74,0:23:02.33,Default,,0,0,0,,你们有工具吗 或许能帮我…\N{\rEng}You guys got tools? Maybe you can help us.
+Dialogue: 0,0:23:03.00,0:23:05.67,Default,,0,0,0,,下车 把他们的注意力引到右边\N{\rEng}God, fuck, get in there. Go in there. Take them right. Take their focus right.
+Dialogue: 0,0:23:06.92,0:23:08.17,Default,,0,0,0,,我想修车 我来度假的\N{\rEng}Just trying to... just trying to fix it. I'm just on vacation.
+Dialogue: 0,0:23:08.25,0:23:12.76,Default,,0,0,0,,宝贝 你在搞什么 快把车修好\N{\rEng}Babe, what the fuck? Just fix the fucking car.
+Dialogue: 0,0:23:12.84,0:23:15.34,Default,,0,0,0,,-宝贝 -我在请他们帮忙\N{\rEng}-Hey, babe, just... -Baby... -I'm just asking for help here.
+Dialogue: 0,0:23:16.01,0:23:17.47,Default,,0,0,0,,宝贝 那些是枪吗\N{\rEng}Babe, are those guns?
+Dialogue: 0,0:23:21.01,0:23:21.89,Default,,0,0,0,,宝贝\N{\rEng}Baby...
+Dialogue: 0,0:23:23.81,0:23:25.10,Default,,0,0,0,,是枪\N{\rEng}Those are guns!
+Dialogue: 0,0:23:30.86,0:23:32.61,Default,,0,0,0,,快上前…\N{\rEng}Let's move. Move, move.
+Dialogue: 0,0:23:54.88,0:23:58.55,Default,,0,0,0,,-弹鼓和子弹都带上了吗 -弹鼓装上了\N{\rEng}-Then you got drums and everything? -Drums are up.
+Dialogue: 0,0:23:58.64,0:24:01.10,Default,,0,0,0,,-我们的目标在移动 -在移动吗\N{\rEng}-Hey, our target's moving. -Target's moving?
+Dialogue: 0,0:24:01.18,0:24:02.14,Default,,0,0,0,,对\N{\rEng}Yeah.
+Dialogue: 0,0:24:02.22,0:24:04.81,Default,,0,0,0,,-你扮酒醉挺好笑的 -去你的 凯尔\N{\rEng}-You play a pretty mean drunk. -Fuck you, Kyle.
+Dialogue: 0,0:24:04.89,0:24:06.69,Default,,0,0,0,,你太多话了\N{\rEng}
+Dialogue: 0,0:24:14.23,0:24:15.82,Default,,0,0,0,,-你没问题吗 -是的\N{\rEng}Good?
+Dialogue: 0,0:24:16.36,0:24:17.95,Default,,0,0,0,,准备好了吗\N{\rEng}Ready?
+Dialogue: 0,0:24:49.77,0:24:51.52,Default,,0,0,0,,-你要拿步枪吗 -我拿手枪\N{\rEng}-Cody, you want your rifle? -No, I'm gonna run my pistol.
+Dialogue: 0,0:24:51.60,0:24:54.98,Default,,0,0,0,,那下面有个弹匣包 帮我把它放在这里\N{\rEng}There's a mag pouch on the bottom there, set it right.
+Dialogue: 0,0:24:56.44,0:24:57.65,Default,,0,0,0,,你负责把议员带上车\N{\rEng}You get the congresswoman in here,
+Dialogue: 0,0:24:57.74,0:25:00.03,Default,,0,0,0,,让她躲在脚踏处 以防撤离时出现危险\N{\rEng}you lay her on the floorboard in case the exfil gets hot.
+Dialogue: 0,0:25:00.11,0:25:00.99,Default,,0,0,0,,没问题\N{\rEng}-All right? -You got it.
+Dialogue: 0,0:25:01.07,0:25:03.07,Default,,0,0,0,,好 大家系上安全带\N{\rEng}All right, everybody strap in.
+Dialogue: 0,0:25:04.53,0:25:06.87,Default,,0,0,0,,不要拦腰撞那辆车 撞后面就好\N{\rEng}Don't T-bone this fucker, clip him in the rear.
+Dialogue: 0,0:25:06.95,0:25:11.25,Default,,0,0,0,,只有在车内才能射击头部 不要用后瞄准器\N{\rEng}Head shots only in the vehicle. Know your target.
+Dialogue: 0,0:25:16.59,0:25:19.34,Default,,0,0,0,,寇迪 跟我说这是防弹玻璃\N{\rEng}Cody, tell me this is bulletproof glass.
+Dialogue: 0,0:25:22.09,0:25:23.39,Default,,0,0,0,,-该死 -好 大家坐稳了\N{\rEng}-Fuck! -All right, everybody hold on.
+Dialogue: 0,0:25:25.93,0:25:26.77,Default,,0,0,0,,要来了 准备好\N{\rEng}Here we go. Brace.
+Dialogue: 0,0:25:46.79,0:25:48.45,Default,,0,0,0,,-你是议员吗 -对\N{\rEng}-Congresswoman? -Yeah.
+Dialogue: 0,0:25:48.54,0:25:49.41,Default,,0,0,0,,好 你待在这里\N{\rEng}All right, you stay there. Stay right there.
+Dialogue: 0,0:25:49.50,0:25:51.41,Default,,0,0,0,,先待在这里 有人会来接你\N{\rEng}Someone will come get you.
+Dialogue: 0,0:25:51.50,0:25:52.46,Default,,0,0,0,,好 你能过来了\N{\rEng}All right, you're clear.
+Dialogue: 0,0:25:57.63,0:25:58.96,Default,,0,0,0,,-你是赫南德兹议员 -是\N{\rEng}-Congresswoman Hernandez? -Yeah.
+Dialogue: 0,0:26:04.43,0:26:05.85,Default,,0,0,0,,-你能走路吗 -我不知道\N{\rEng}-Can you walk? -I don't know.
+Dialogue: 0,0:26:09.43,0:26:10.77,Default,,0,0,0,,走吧\N{\rEng}Let's go.
+Dialogue: 0,0:26:15.60,0:26:17.32,Default,,0,0,0,,-出发了吗 -都准备好了\N{\rEng}-We're up. -We're good.
+Dialogue: 0,0:26:33.25,0:26:34.62,Default,,0,0,0,,看着我\N{\rEng}Look at me.
+Dialogue: 0,0:26:36.92,0:26:38.42,Default,,0,0,0,,我现在帮你松绑\N{\rEng}I'm gonna cut you loose.
+Dialogue: 0,0:26:40.92,0:26:43.22,Default,,0,0,0,,为了安全起见 请躲在脚踏处\N{\rEng}For your safety, lay on the floorboard, please.
+Dialogue: 0,0:26:44.22,0:26:46.93,Default,,0,0,0,,呼叫鹰巢 这是老鹰一号 我们中头奖了\N{\rEng}Eagle's Nest, this is Eagle One. We are jackpot,
+Dialogue: 0,0:26:47.01,0:26:50.22,Default,,0,0,0,,正前往主要撤离地点 请替我开道\N{\rEng}en route to primary exfil location. Have a lane open for me.
+Dialogue: 0,0:26:50.31,0:26:53.48,Default,,0,0,0,,收到 老鹰一号 左车道已保持畅通 小心行驶\N{\rEng}Roger that, Eagle One. Left lane is held for exfil. Proceed with caution.
+Dialogue: 0,0:26:53.56,0:26:56.02,Default,,0,0,0,,-注意我们四周的动静 -收到 我们正在监控\N{\rEng}-Keep eyes on us. -Roger that. Have eyes on now.
+Dialogue: 0,0:27:10.08,0:27:11.58,Default,,0,0,0,,撑着点\N{\rEng}Hang in there.
+Dialogue: 0,0:27:12.29,0:27:15.33,Default,,0,0,0,,他们对我的家人做了什么\N{\rEng}My family. What did they do to my family?
+Dialogue: 0,0:27:16.67,0:27:18.04,Default,,0,0,0,,我们到基地再谈这个吧\N{\rEng}We'll talk about it at the base.
+Dialogue: 0,0:27:18.75,0:27:20.09,Default,,0,0,0,,告诉我\N{\rEng}Tell me.
+Dialogue: 0,0:27:20.17,0:27:22.13,Default,,0,0,0,,那是我的家人啊 告诉我\N{\rEng}It's my family, tell me!
+Dialogue: 0,0:27:24.05,0:27:25.05,Default,,0,0,0,,他们都被杀了\N{\rEng}They killed them.
+Dialogue: 0,0:27:28.97,0:27:30.64,Default,,0,0,0,,老鹰一号 确认现场已封锁\N{\rEng}Eagle One, you sure that scene was locked down?
+Dialogue: 0,0:27:30.72,0:27:33.81,Default,,0,0,0,,-对 现场已封锁 -绑匪都当场击毙\N{\rEng}-Yeah, scene is locked. -All bandits KIA?
+Dialogue: 0,0:27:33.89,0:27:34.81,Default,,0,0,0,,是的\N{\rEng}Roger that.
+Dialogue: 0,0:27:34.89,0:27:37.31,Default,,0,0,0,,好 老鹰一号 他们有人在空中监视\N{\rEng}Okay. Eagle One, they have eyes in the sky.
+Dialogue: 0,0:27:37.40,0:27:39.02,Default,,0,0,0,,警方封锁往贝尼托华雷斯的路\N{\rEng}Police are blocking off Benito Juarez.
+Dialogue: 0,0:27:39.10,0:27:40.98,Default,,0,0,0,,我们得替你找另一条到入境港的路\N{\rEng}We need to find you another way to the port of entry.
+Dialogue: 0,0:27:41.07,0:27:42.65,Default,,0,0,0,,-该死 -可恶\N{\rEng}-Fuck. -No, fuck that.
+Dialogue: 0,0:27:42.73,0:27:45.53,Default,,0,0,0,,我们得离开这城市 查看你的侦察器 有发现吗\N{\rEng}No, we gotta get out of the city. Check your ISR, dude. Do you have anything?
+Dialogue: 0,0:27:46.78,0:27:49.28,Default,,0,0,0,,-叫他们找别条路线 -没有发现\N{\rEng}-Tell 'em to find us another route. -Negative.
+Dialogue: 0,0:27:49.37,0:27:52.79,Default,,0,0,0,,帮我们找一条能到达河边的路 派边防直升机跟着我们\N{\rEng}Find us a road that meets the river, have a BP helo ride us parallel.
+Dialogue: 0,0:27:52.87,0:27:55.12,Default,,0,0,0,,好 给我们点时间搜寻替代路线\N{\rEng}All right, everyone, give us a minute to seek an alternate route.
+Dialogue: 0,0:27:55.21,0:27:57.54,Default,,0,0,0,,后方注意 敌人盯上我们了\N{\rEng}Heads up in the back. Enemy has eyes on.
+Dialogue: 0,0:28:14.35,0:28:17.23,Default,,0,0,0,,六点钟方向有敌人 距离150米 接近中\N{\rEng}Enemy vehc, six o'clock, 150 meters and closing.
+Dialogue: 0,0:28:27.70,0:28:29.57,Default,,0,0,0,,-乔 左边交给你 -好\N{\rEng}-Okay, Joe, you got left side. -Got it.
+Dialogue: 0,0:28:29.66,0:28:31.53,Default,,0,0,0,,不 你负责右边 乔 左边交给我\N{\rEng}And I'll take right side, Joe. I got nine o'clock at your right side.
+Dialogue: 0,0:28:31.62,0:28:34.04,Default,,0,0,0,,-有开火许可 -当然 快射啊\N{\rEng}-Permission to fire. -Yeah, fucking shoot him.
+Dialogue: 0,0:28:44.59,0:28:47.80,Default,,0,0,0,,鹰巢 我需要指示路线 还有撤离点位置 现在就要\N{\rEng}Eagle's Nest, I need a route and an extraction point fucking now!
+Dialogue: 0,0:28:47.88,0:28:49.01,Default,,0,0,0,,九点钟方向\N{\rEng}Nine o'clock!
+Dialogue: 0,0:28:56.31,0:28:57.56,Default,,0,0,0,,请重复…\N{\rEng}Say again. Say again.
+Dialogue: 0,0:28:57.64,0:29:01.02,Default,,0,0,0,,往北三公里后右转 有一条通往河边的蜿蜒土路\N{\rEng}Three kilos north, turn right. There's a dirt road that winds to the river.
+Dialogue: 0,0:29:01.10,0:29:02.61,Default,,0,0,0,,从道路到河岸有高度落差\N{\rEng}There's a drop-off from the road to the riverbank.
+Dialogue: 0,0:29:02.69,0:29:05.86,Default,,0,0,0,,-那有多高 -从空中无法判断 约六到八尺\N{\rEng}-How big's the drop-off? -Unclear from the air. Six or eight feet.
+Dialogue: 0,0:29:05.94,0:29:08.15,Default,,0,0,0,,往北三公里后右转会有一条土路\N{\rEng}Three klicks north, dirt road on the right,
+Dialogue: 0,0:29:08.24,0:29:09.99,Default,,0,0,0,,蜿蜒通往河边 有八尺的高度落差\N{\rEng}winds the river, drops off about eight feet.
+Dialogue: 0,0:29:10.07,0:29:13.03,Default,,0,0,0,,-八尺 -对 不是我选的 就是八尺\N{\rEng}-Eight feet? -Yeah. I didn't pick it. It's-it's eight feet.
+Dialogue: 0,0:29:13.12,0:29:15.37,Default,,0,0,0,,好 后面又来敌人了\N{\rEng}All right. In the back, fresh bags.
+Dialogue: 0,0:29:15.45,0:29:16.33,Default,,0,0,0,,重装子弹\N{\rEng}Reload.
+Dialogue: 0,0:29:22.58,0:29:24.54,Default,,0,0,0,,有两台可疑车辆正在接近\N{\rEng}I got two bogeys inbound.
+Dialogue: 0,0:29:30.84,0:29:31.97,Default,,0,0,0,,是四台\N{\rEng}Make that four!
+Dialogue: 0,0:29:35.56,0:29:38.23,Default,,0,0,0,,现在后面有很多人在追我们\N{\rEng}We have got a lot of fucking heat on our ass.
+Dialogue: 0,0:29:40.39,0:29:41.81,Default,,0,0,0,,又来了两台\N{\rEng}There's two more!
+Dialogue: 0,0:29:43.27,0:29:44.98,Default,,0,0,0,,寇迪 来接应我们\N{\rEng}Cody, get us out of here!
+Dialogue: 0,0:29:54.62,0:29:56.08,Default,,0,0,0,,乔 给我步枪 好吗\N{\rEng}Joe, pass me my rifle, would you?
+Dialogue: 0,0:29:56.91,0:29:58.91,Default,,0,0,0,,-你想在哪里解决他们 -路面上\N{\rEng}-Where you want to do this? -Look, we gotta do this on the pavement.
+Dialogue: 0,0:29:59.00,0:30:01.37,Default,,0,0,0,,否则开进土路后 这些悍马车就能从侧面包抄\N{\rEng}We get on the dirt, those Humvees are gonna move to flank us.
+Dialogue: 0,0:30:09.34,0:30:12.09,Default,,0,0,0,,-我们要在这里解决他们 -为何要停下来\N{\rEng}We're gonna intercept up here.
+Dialogue: 0,0:30:12.18,0:30:13.84,Default,,0,0,0,,我得跟你换位置\N{\rEng}We need to switch sides.
+Dialogue: 0,0:30:15.26,0:30:16.30,Default,,0,0,0,,动作快\N{\rEng}Now!
+Dialogue: 0,0:30:17.68,0:30:19.02,Default,,0,0,0,,-准备好了吗 -准备好了\N{\rEng}-All right, are we ready? -Ready.
+Dialogue: 0,0:30:19.10,0:30:23.10,Default,,0,0,0,,好 三 二 一 来吧\N{\rEng}All right, and three, two, one. Here we go.
+Dialogue: 0,0:30:59.76,0:31:01.43,Default,,0,0,0,,-装弹 -撑住\N{\rEng}-Load up! Load up! -Load up!
+Dialogue: 0,0:31:01.52,0:31:02.68,Default,,0,0,0,,好了\N{\rEng}Run!
+Dialogue: 0,0:31:03.39,0:31:05.35,Default,,0,0,0,,下车…\N{\rEng}We're off! We're up!
+Dialogue: 0,0:31:06.98,0:31:07.98,Default,,0,0,0,,我们快走\N{\rEng}Let's go!
+Dialogue: 0,0:31:22.66,0:31:24.21,Default,,0,0,0,,-该死 -大家没事吧\N{\rEng}-Fuck. -Anybody hit?
+Dialogue: 0,0:31:24.29,0:31:26.17,Default,,0,0,0,,-迪恩 崔塞 -没事\N{\rEng}-Dean, Tracer. We're up. -Good.
+Dialogue: 0,0:31:36.38,0:31:38.01,Default,,0,0,0,,-扶着方向盘 -好\N{\rEng}-Take the wheel. -Yep.
+Dialogue: 0,0:31:38.09,0:31:41.06,Default,,0,0,0,,老鹰一号 往北半公里就是河边 就在正前方\N{\rEng}Eagle One... Swap 'em out. river's a half klick to the north straight ahead of you.
+Dialogue: 0,0:31:41.14,0:31:44.68,Default,,0,0,0,,请注意 三点钟方向有军用车辆接近\N{\rEng}Be advised, military vehicles approaching from your three o'clock.
+Dialogue: 0,0:31:51.11,0:31:52.11,Default,,0,0,0,,这下一定会很惊险\N{\rEng}It's gonna be close.
+Dialogue: 0,0:31:52.19,0:31:54.78,Default,,0,0,0,,我们是从八尺高的地方直接落入河中 还是从八尺高的地方\N{\rEng}Is it eight feet and then river? Or is it eight feet
+Dialogue: 0,0:31:54.86,0:31:56.57,Default,,0,0,0,,先掉在河岸上 然后才落入河中\N{\rEng}and then riverbank and then river?
+Dialogue: 0,0:31:56.66,0:31:58.07,Default,,0,0,0,,-什么 -呼叫鹰巢\N{\rEng}-What? -Eagle's Nest.
+Dialogue: 0,0:31:58.16,0:32:00.87,Default,,0,0,0,,从八尺高的地方下去后 是河还是河岸\N{\rEng}The depression eight feet above the river itself or the riverbank?
+Dialogue: 0,0:32:00.95,0:32:03.37,Default,,0,0,0,,-直接就是河 老鹰一号 -水有多深\N{\rEng}-Directly above the river, Eagle One. -Depth?
+Dialogue: 0,0:32:03.45,0:32:05.71,Default,,0,0,0,,挺深的 犯罪集团 不会让移民从这里渡河\N{\rEng}Pretty deep. Cartel won't cross migrants here.
+Dialogue: 0,0:32:05.79,0:32:07.37,Default,,0,0,0,,东边有个更好的渡河位置\N{\rEng}There's a better place to cross to the east,
+Dialogue: 0,0:32:07.46,0:32:09.42,Default,,0,0,0,,但你需要往敌方车辆的方向开\N{\rEng}but you'll need to turn toward the approaching vehicles.
+Dialogue: 0,0:32:09.50,0:32:10.96,Default,,0,0,0,,往敌车方向开比较容易渡河\N{\rEng}Better crossing towards enemy vehcs.
+Dialogue: 0,0:32:11.04,0:32:12.80,Default,,0,0,0,,不需要轻松的路 水越深越好\N{\rEng}We don't want a better crossing. We want deep.
+Dialogue: 0,0:32:12.88,0:32:16.01,Default,,0,0,0,,我们要下水了 扔掉所有会让你变重的东西\N{\rEng}We're going in water. Dump everything that'll weigh you down. I need you on this side right now.
+Dialogue: 0,0:32:16.09,0:32:18.59,Default,,0,0,0,,扔掉弹匣 随身武器 把一切都扔了\N{\rEng}Dump mags, dump sidearms, dump everything.
+Dialogue: 0,0:32:22.01,0:32:25.56,Default,,0,0,0,,呼叫鹰巢 这是老鹰二号 我们需要空中支援\N{\rEng}Eagle's Nest, this is Eagle Two. We need some fucking air support down here!
+Dialogue: 0,0:32:25.64,0:32:27.23,Default,,0,0,0,,老鹰二号 有直升机接近中\N{\rEng}Eagle Two, a little bird is inbound.
+Dialogue: 0,0:32:27.31,0:32:29.98,Default,,0,0,0,,-预计到达时间 -朕看到了 两点钟方向\N{\rEng}-ETA?! -I got a visual, two o'clock.
+Dialogue: 0,0:32:37.86,0:32:39.32,Default,,0,0,0,,所有人戴上头套\N{\rEng}Everybody, face coverings all around.
+Dialogue: 0,0:32:39.41,0:32:41.53,Default,,0,0,0,,-我帮你系安全带 -保护脸部\N{\rEng}-I'm gonna strap you. -Cover your faces!
+Dialogue: 0,0:32:41.62,0:32:42.66,Default,,0,0,0,,-凯尔 -什么事\N{\rEng}-Kyle? -Yeah?
+Dialogue: 0,0:32:42.74,0:32:45.37,Default,,0,0,0,,如果我们能活下来 我发誓 我会杀了你\N{\rEng}If we get through this, I swear to fucking God I'm gonna kill you.
+Dialogue: 0,0:32:45.45,0:32:47.29,Default,,0,0,0,,我希望你能有那个机会\N{\rEng}I hope you get the chance.
+Dialogue: 0,0:32:50.88,0:32:52.17,Default,,0,0,0,,他们紧追在后 坐稳了\N{\rEng}In the back, hold on.
+Dialogue: 0,0:32:52.25,0:32:54.84,Default,,0,0,0,,-她系上安全带了吗 -五秒 系上了\N{\rEng}-Is she strapped in? -Five seconds. She is strapped in. I'm not strapped in.
+Dialogue: 0,0:32:54.92,0:32:56.34,Default,,0,0,0,,-要来了 扶稳 -给我五秒\N{\rEng}-Here we go. Oh, boy. -I need five seconds, Cody.
+Dialogue: 0,0:32:56.42,0:32:57.55,Default,,0,0,0,,我不知道要怎么给你五秒\N{\rEng}I don't think I can give it to you. I don't think I can slow down.
+Dialogue: 0,0:32:57.63,0:32:59.63,Default,,0,0,0,,-寇迪 这里不止八尺 -朕看到了\N{\rEng}-That's more than eight feet. -I'm aware.
+Dialogue: 0,0:32:59.72,0:33:02.26,Default,,0,0,0,,-寇迪 那比八尺还高 -我知道\N{\rEng}-Cody, it's bigger than eight feet! -I'm fucking aware.
+Dialogue: 0,0:33:02.35,0:33:03.72,Default,,0,0,0,,撑住\N{\rEng}Hang on!
+Dialogue: 0,0:33:16.53,0:33:18.20,Default,,0,0,0,,-可恶 -趴下\N{\rEng}-Shit! -Get down!
+Dialogue: 0,0:33:18.28,0:33:19.82,Default,,0,0,0,,找掩护\N{\rEng}Cover!
+Dialogue: 0,0:33:19.91,0:33:22.20,Default,,0,0,0,,-该死 趴下 -别起来\N{\rEng}-Fuck. Get down! -Stay down!
+Dialogue: 0,0:33:22.87,0:33:24.74,Default,,0,0,0,,低头…\N{\rEng}-Heads down! -Heads down.
+Dialogue: 0,0:33:56.90,0:33:59.69,Default,,0,0,0,,好了 所有人马上离开车子…\N{\rEng}All right, everybody, out of the vehicle. Get out of the fucking vehicle right now.
+Dialogue: 0,0:34:01.32,0:34:02.32,Default,,0,0,0,,-卡住了 -切开它\N{\rEng}-It's stuck! -Cut it!
+Dialogue: 0,0:34:02.82,0:34:04.20,Default,,0,0,0,,拉她出去\N{\rEng}Get out!
+Dialogue: 0,0:34:04.78,0:34:06.28,Default,,0,0,0,,来吧\N{\rEng}Come on.
+Dialogue: 0,0:34:07.41,0:34:10.41,Default,,0,0,0,,-寇迪 你踩得到地吗 -必须用游的\N{\rEng}-Cody, can you stand? -It's gonna be a swim.
+Dialogue: 0,0:34:11.29,0:34:14.46,Default,,0,0,0,,过来我这里 游过来 来我这里…\N{\rEng}Come with me. Come on. Come to me. Come to me.
+Dialogue: 0,0:34:15.29,0:34:16.80,Default,,0,0,0,,来 你做到了\N{\rEng}Come here. You're all right. We got you.
+Dialogue: 0,0:34:24.26,0:34:25.89,Default,,0,0,0,,开门\N{\rEng}Get it open!
+Dialogue: 0,0:34:25.97,0:34:26.93,Default,,0,0,0,,边境巡警
+Dialogue: 0,0:34:27.01,0:34:29.93,Default,,0,0,0,,凯尔 帮我把他拉出来 他死了\N{\rEng}Kyle, help me get him out of here. He's gone.
+Dialogue: 0,0:35:28.83,0:35:33.37,Default,,0,0,0,,在一连串惊人的事件中 美国执法部门成功救出\N{\rEng}In an incredible unfolding of events, U.S. law enforcement made a daring rescue
+Dialogue: 0,0:35:33.46,0:35:37.50,Default,,0,0,0,,赫南德兹议员 画面中护送她的是…\N{\rEng}of Congresswoman Hernandez, seen escorted by what
+Dialogue: 0,0:35:37.58,0:35:39.84,Default,,0,0,0,,联调局人质救援小组\N{\rEng}we are told was FBI's HRT team.
+Dialogue: 0,0:35:39.92,0:35:44.42,Default,,0,0,0,,-消息指出 联调局探员…-怎么了 发生什么事\N{\rEng}-Sources say FBI agents made... -What was that. What happened?
+Dialogue: 0,0:35:45.30,0:35:46.68,Default,,0,0,0,,没什么 我只是在看新闻\N{\rEng}Whatever, it's just the news, um...
+Dialogue: 0,0:35:46.76,0:35:48.35,Default,,0,0,0,,来吃晚餐吧 查莉 你想吃什么\N{\rEng}Let's start supper. Charlie, what do you want?
+Dialogue: 0,0:35:48.43,0:35:49.26,Default,,0,0,0,,冰淇淋\N{\rEng}Ice cream.
+Dialogue: 0,0:35:49.35,0:35:53.64,Default,,0,0,0,,冰淇淋 不行 冰淇淋是晚餐后的甜点\N{\rEng}Ice cream? No. Ice cream sounds like an after-dinner type deal.
+Dialogue: 0,0:35:53.73,0:35:55.27,Default,,0,0,0,,先想想正餐要吃什么\N{\rEng}Let's talk about the dinner part of the deal.
+Dialogue: 0,0:35:55.35,0:36:00.23,Default,,0,0,0,,我们可以跳过正餐 直接吃冰淇淋\N{\rEng}We skip the dinner part of the deal, and skip to the ice cream part of the meal.
+Dialogue: 0,0:36:00.32,0:36:03.15,Default,,0,0,0,,好了 别再讨价还价了\N{\rEng}Okay. Lot of deals going on there.
+Dialogue: 0,0:36:03.23,0:36:05.28,Default,,0,0,0,,饼干披萨
+Dialogue: 0,0:36:05.36,0:36:07.70,Default,,0,0,0,,被掳议员于墨西哥边境获救
+Dialogue: 0,0:36:32.56,0:36:34.56,Default,,0,0,0,,
+Dialogue: 0,0:36:34.56,0:36:35.56,Default,,0,0,0,,现在怎么办\N{\rEng}What now?
+Dialogue: 0,0:36:36.43,0:36:37.68,Default,,0,0,0,,什么怎么办\N{\rEng}What now what?
+Dialogue: 0,0:36:38.52,0:36:40.14,Default,,0,0,0,,你们接下来要怎么做\N{\rEng}What do you do next?
+Dialogue: 0,0:36:40.81,0:36:42.23,Default,,0,0,0,,我们现在要进攻\N{\rEng}Now we play offense.
+Dialogue: 0,0:36:45.07,0:36:46.19,Default,,0,0,0,,帮我个忙\N{\rEng}Do me a favor.
+Dialogue: 0,0:36:50.11,0:36:52.95,Default,,0,0,0,,-我会尽力 -我是民选官员\N{\rEng}-I'll try. -I'm an elected official.
+Dialogue: 0,0:36:53.03,0:36:56.29,Default,,0,0,0,,我应该保持冷静 只追求正义 别无其他\N{\rEng}I should remain unemotional, and seek justice and nothing else.
+Dialogue: 0,0:36:57.16,0:36:59.37,Default,,0,0,0,,但在这之前 我是一位妻子和母亲\N{\rEng}But I'm gonna be a wife and mother first.
+Dialogue: 0,0:37:02.75,0:37:05.75,Default,,0,0,0,,当你找到绑架我的人…\N{\rEng}When you find the people that did this to me...
+Dialogue: 0,0:37:07.38,0:37:09.59,Default,,0,0,0,,寻求正义要找另一个部门\N{\rEng}Justice is a different agency.
+Dialogue: 0,0:37:11.63,0:37:15.47,Default,,0,0,0,,我的部门不涉足法庭\N{\rEng}My agency... doesn't do courtrooms.
+Dialogue: 0,0:37:16.85,0:37:17.68,Default,,0,0,0,,很好\N{\rEng}Good.
+Dialogue: 0,0:37:20.64,0:37:21.48,Default,,0,0,0,,很好\N{\rEng}Good.
+Dialogue: 0,0:37:36.45,0:37:37.62,Default,,0,0,0,,你不是在开玩笑\N{\rEng}You weren't kidding.
+Dialogue: 0,0:37:40.58,0:37:43.17,Default,,0,0,0,,果然姜是老的辣\N{\rEng}Beware of the old soldier.
+Dialogue: 0,0:37:44.83,0:37:47.92,Default,,0,0,0,,是啊 我们还是有点用处的\N{\rEng}Yeah. We still have our uses.
+Dialogue: 0,0:37:50.71,0:37:51.72,Default,,0,0,0,,要来一根吗\N{\rEng}You want one?
+Dialogue: 0,0:37:53.72,0:37:56.80,Default,,0,0,0,,-我不抽烟 -好吧\N{\rEng}-I don't smoke. -Yeah.
+Dialogue: 0,0:37:58.43,0:37:59.43,Default,,0,0,0,,我也是\N{\rEng}Neither do I.
+Dialogue: 0,0:38:04.65,0:38:05.81,Default,,0,0,0,,我很遗憾迪恩死了\N{\rEng}I'm sorry about Dean.
+Dialogue: 0,0:38:08.53,0:38:11.15,Default,,0,0,0,,你知道吗\N{\rEng}You know, of all...
+Dialogue: 0,0:38:11.24,0:38:14.41,Default,,0,0,0,,我跟他一起出生入死那么多次\N{\rEng}the shit we got into...
+Dialogue: 0,0:38:14.49,0:38:17.20,Default,,0,0,0,,他没有中弹过\N{\rEng}...it weren't no bullet that got him.
+Dialogue: 0,0:38:17.28,0:38:20.50,Default,,0,0,0,,也没遇过土制炸弹 直升机坠毁事件\N{\rEng}Or IED or some fucking helo crash,
+Dialogue: 0,0:38:20.58,0:38:21.58,Default,,0,0,0,,或其他倒霉事\N{\rEng}or any of the other shit out there, nope.
+Dialogue: 0,0:38:21.66,0:38:26.38,Default,,0,0,0,,这次却因为 选择坐进大型休旅车后座送命\N{\rEng}It's just... chose to climb in the back of a Suburban.
+Dialogue: 0,0:38:29.71,0:38:32.34,Default,,0,0,0,,但这就是战争 不会有合理解释\N{\rEng}But that's war, you know? Can't make no sense of it.
+Dialogue: 0,0:38:32.42,0:38:33.93,Default,,0,0,0,,没有\N{\rEng}No.
+Dialogue: 0,0:38:35.76,0:38:39.22,Default,,0,0,0,,你会参与这次的任务吗\N{\rEng}Are you sticking around for this deal?
+Dialogue: 0,0:38:39.31,0:38:42.56,Default,,0,0,0,,通常只有在任务搞砸时 他们才会派我出马\N{\rEng}Yeah, they usually only send me in when the deal gets real fucked up.
+Dialogue: 0,0:38:43.69,0:38:48.06,Default,,0,0,0,,但如果是你搞砸任务\N{\rEng}But... if you fuck up the deal,
+Dialogue: 0,0:38:49.07,0:38:50.44,Default,,0,0,0,,我会马上赶到\N{\rEng}I'll come a-runnin'.
+Dialogue: 0,0:38:51.28,0:38:52.53,Default,,0,0,0,,有你加入我会很开心\N{\rEng}Be lucky to have you.
+Dialogue: 0,0:38:53.90,0:38:57.41,Default,,0,0,0,,至少你能减少那位肯尼带来的麻烦\N{\rEng}At least you can offset the level of fucking dipshit that comes with this Ken doll.
+Dialogue: 0,0:38:59.74,0:39:01.87,Default,,0,0,0,,对老间谍芭比手下留情啊\N{\rEng}Go easy on ol' spy Barbie, there.
+Dialogue: 0,0:39:04.21,0:39:05.92,Default,,0,0,0,,王八蛋\N{\rEng}Hey, motherfucker.
+Dialogue: 0,0:39:08.17,0:39:09.59,Default,,0,0,0,,天啊
+Dialogue: 0,0:39:11.30,0:39:14.42,Default,,0,0,0,,-我就让你这一拳 -你等着看吧\N{\rEng}-That was your one free shot. -I'll take my fucking chances.
+Dialogue: 0,0:39:16.59,0:39:17.43,Default,,0,0,0,,可恶\N{\rEng}Fuck!
+Dialogue: 0,0:39:17.51,0:39:20.60,Default,,0,0,0,,可恶 乔 该死\N{\rEng}Goddamn it, Joe. Shit.
+Dialogue: 0,0:39:22.06,0:39:23.81,Default,,0,0,0,,我有家人\N{\rEng}I have a fucking family.
+Dialogue: 0,0:39:25.52,0:39:28.48,Default,,0,0,0,,我们毫无计划在沙漠里自杀式乱闯 你差点害死我们\N{\rEng}We go kamikaze through the desert with no fucking plan. You almost got us killed!
+Dialogue: 0,0:39:28.56,0:39:31.94,Default,,0,0,0,,毫无计划 我们明明执行了计划 乔\N{\rEng}No fucking plan? We just executed the fucking plan, Joe!
+Dialogue: 0,0:39:32.03,0:39:33.11,Default,,0,0,0,,而且成功了\N{\rEng}And it worked.
+Dialogue: 0,0:39:33.19,0:39:35.57,Default,,0,0,0,,-她被救出了 -我们少了一个人\N{\rEng}-She's back. -And we're a man down.
+Dialogue: 0,0:39:35.65,0:39:39.53,Default,,0,0,0,,失去同伴是代价 这点我们都很清楚\N{\rEng}Man down is the price. And we all signed up to pay it.
+Dialogue: 0,0:39:42.08,0:39:44.37,Default,,0,0,0,,你上次参加枪战是什么时候\N{\rEng}When's the last time you were in a firefight?
+Dialogue: 0,0:39:46.25,0:39:48.75,Default,,0,0,0,,我不是说某个花瓶的保镖\N{\rEng}And I'm not talking about some bimbo's bodyguard.
+Dialogue: 0,0:39:48.83,0:39:51.04,Default,,0,0,0,,-去你的 -我是说真正的战争\N{\rEng}-Fuck you! -I mean a fucking battle.
+Dialogue: 0,0:39:52.34,0:39:53.42,Default,,0,0,0,,已经有一阵子了吧\N{\rEng}It's been a while, hasn't it?
+Dialogue: 0,0:39:55.01,0:39:58.80,Default,,0,0,0,,这样吧 我再让你打一拳\N{\rEng}I'll tell you what. I'll give you another one.
+Dialogue: 0,0:39:58.89,0:40:02.06,Default,,0,0,0,,你需要释放肾上腺素 朝这里打吧\N{\rEng}You need an adrenaline dump, fucking dump it right here.
+Dialogue: 0,0:40:02.81,0:40:04.81,Default,,0,0,0,,我们现在要携手合作\N{\rEng}We're working together now.
+Dialogue: 0,0:40:04.89,0:40:08.94,Default,,0,0,0,,如果你想冒险行事 你自己去吧\N{\rEng}You want to do some fucking cowboy shit, you do it on your own.
+Dialogue: 0,0:40:09.02,0:40:11.15,Default,,0,0,0,,不要把我的队员拖下水\N{\rEng}Never fucking do it with my team.
+Dialogue: 0,0:40:11.23,0:40:13.36,Default,,0,0,0,,你知道如果我是你的话 我会怎么做吗\N{\rEng}You know what I would be doing if I were you?
+Dialogue: 0,0:40:14.36,0:40:16.44,Default,,0,0,0,,你说 我很想听\N{\rEng}I ca... I can't wait to hear this.
+Dialogue: 0,0:40:16.99,0:40:19.32,Default,,0,0,0,,我会打给家人\N{\rEng}I'd be calling that family you got.
+Dialogue: 0,0:40:24.58,0:40:27.66,Default,,0,0,0,,你说得对 我确实该那么做\N{\rEng}You're right. That's exactly what I should be doing.
+Dialogue: 0,0:40:34.67,0:40:37.34,Default,,0,0,0,,这样应该够了 把它均匀摊开\N{\rEng}-That should be enough. -It's sticky. You just, like, spread it all...
+Dialogue: 0,0:40:38.01,0:40:40.26,Default,,0,0,0,,它没办法黏在锅子里 爸\N{\rEng}It's not sticking to the pan, Dad.
+Dialogue: 0,0:40:43.22,0:40:44.22,Default,,0,0,0,,他应该没放奶油
+Dialogue: 0,0:40:44.31,0:40:46.47,Default,,0,0,0,,-你没事吧 -是啊\N{\rEng}-You okay? -Yeah.
+Dialogue: 0,0:40:47.89,0:40:49.52,Default,,0,0,0,,今天工作很辛苦吧\N{\rEng}Rough day at the office, huh?
+Dialogue: 0,0:40:52.90,0:40:54.57,Default,,0,0,0,,可以这么说\N{\rEng}You can say that.
+Dialogue: 0,0:40:57.94,0:40:59.24,Default,,0,0,0,,女儿们在旁边吗\N{\rEng}Are the girls there?
+Dialogue: 0,0:40:59.32,0:41:01.45,Default,,0,0,0,,-我能跟她们说话吗 -可以…\N{\rEng}-Can I talk to them? -Yeah.
+Dialogue: 0,0:41:01.53,0:41:03.95,Default,,0,0,0,,-你要找哪一个 -开扩音吧\N{\rEng}Yeah, uh, which one?
+Dialogue: 0,0:41:04.03,0:41:07.29,Default,,0,0,0,,-你可能也要帮我弄 -都散开了\N{\rEng}-Just put me on speaker. -It's falling apart.
+Dialogue: 0,0:41:07.37,0:41:08.83,Default,,0,0,0,,宝贝们 是妈妈\N{\rEng}Girls, it's your mother.
+Dialogue: 0,0:41:08.91,0:41:11.29,Default,,0,0,0,,-你好 -你好 妈\N{\rEng}-Hi! -Hi, Mom.
+Dialogue: 0,0:41:14.04,0:41:15.21,Default,,0,0,0,,妈 你还好吗\N{\rEng}Mom, are you okay?
+Dialogue: 0,0:41:19.88,0:41:22.09,Default,,0,0,0,,宝贝 我没事\N{\rEng}Hi, baby. I'm fine.
+Dialogue: 0,0:41:22.72,0:41:26.35,Default,,0,0,0,,-我很好 -你确定吗\N{\rEng}-I'm good. -Are you sure?
+Dialogue: 0,0:41:27.27,0:41:30.48,Default,,0,0,0,,我很好\N{\rEng}I'm... I'm great,
+Dialogue: 0,0:41:30.56,0:41:33.06,Default,,0,0,0,,我很好 你好吗\N{\rEng}I'm great. How are you?
+Dialogue: 0,0:41:33.15,0:41:36.11,Default,,0,0,0,,-我们在做晚餐 -是吗 你们晚餐吃什么\N{\rEng}-We're making supper. -Oh, yeah, what's for supper?
+Dialogue: 0,0:41:36.19,0:41:39.28,Default,,0,0,0,,-饼干披萨 -那是什么\N{\rEng}-Pizookie. -A what?
+Dialogue: 0,0:41:39.82,0:41:42.57,Default,,0,0,0,,妈 就是用整包饼干面团\N{\rEng}Well, Mom, you take a whole batch of cookie dough
+Dialogue: 0,0:41:42.66,0:41:47.66,Default,,0,0,0,,铺平在铸铁锅里 然后就能做出披萨大小的饼干\N{\rEng}and you spread it out in an iron skillet. And it makes a cookie the size of a pizza.
+Dialogue: 0,0:41:47.74,0:41:49.91,Default,,0,0,0,,这就是饼干披萨\N{\rEng}A pizookie.
+Dialogue: 0,0:41:50.62,0:41:53.33,Default,,0,0,0,,听起来很健康呢\N{\rEng}That sounds... healthy.
+Dialogue: 0,0:41:53.42,0:41:58.00,Default,,0,0,0,,如果配冰淇淋吃就很健康 因为冰淇淋是用牛奶做的\N{\rEng}It is if you have ice cream with it. They make ice cream out of milk.
+Dialogue: 0,0:41:58.09,0:42:02.09,Default,,0,0,0,,-她们把你教得很好 亲爱的 -是啊 我知道\N{\rEng}-Boy, do they have you trained, baby. -Oh, yeah, I'm aware.
+Dialogue: 0,0:42:03.34,0:42:06.93,Default,,0,0,0,,-真希望我也能吃一点 -可以啊\N{\rEng}-I sure wish I could have some. -You can.
+Dialogue: 0,0:42:07.89,0:42:09.02,Default,,0,0,0,,你什么时候回家\N{\rEng}When are you coming home?
+Dialogue: 0,0:42:13.60,0:42:17.02,Default,,0,0,0,,很快 宝贝 我很快就回去\N{\rEng}Soon, baby. Soon.
+Dialogue: 0,0:42:21.74,0:42:22.78,Default,,0,0,0,,我爱你们\N{\rEng}I love you. Love you.
+Dialogue: 0,0:42:23.61,0:42:25.28,Default,,0,0,0,,-我也爱你 -爱你 妈\N{\rEng}-Love you, too. -Love you, Mom.
+Dialogue: 0,0:42:25.37,0:42:27.33,Default,,0,0,0,,再见\N{\rEng}Bye-bye.
+Dialogue: 0,0:43:44.23,0:43:46.24,Default,,0,0,0,,字幕翻译：罗惠婷
+
