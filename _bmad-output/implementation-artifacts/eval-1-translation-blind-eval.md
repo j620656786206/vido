@@ -311,7 +311,7 @@ python3 scripts/subtitle-blind-eval.py score eval/<slug>
 | P0-5 | 用預設模型時 `subtitle_runs.model_id` 也要寫入（現在是空字串，使用者不知道自己付的是哪個模型） | 產品問題 5 | 很小 |
 | P0-6 | `POST /settings/keys/test` 在 `CLAUDE_MODEL=claude-sonnet-5` 下回 `AI_INVALID_RESPONSE`（key 其實有效）→ 測試 prompt 解析放寬 | 產品問題 6 | 小 |
 | P0-7 | TMDb 比對失敗時略過 Title 行，不得把原始檔名（`[bitsearch.to] Wake.Up...mkv`）當片名送進 prompt | 發現 12 | 很小 |
-| P0-8 | 確認框顯示模型選擇 + 本集預估價錢 + 預估時間；**預設維持 Haiku**，Sonnet 由使用者自選（換預設 = 帳單 2.7×，BYOK 下必須是使用者的決定） | party-mode | 中 |
+| P0-8 | 確認框顯示模型選擇 + 本集預估價錢 + 預估時間；**預設改為 Sonnet**（評測任一版本都穩過、0 分率為 Haiku 的 1/3），Haiku 由使用者自選省錢（Alexyu 2026-09-03 裁定；確認框必須把兩者價差 2.7× 明示出來，讓省錢是使用者看得到的選擇） | party-mode → Alexyu 改裁 | 中 |
 | P0-9 | TMDb attribution：logo + 「This application uses TMDB and the TMDB APIs but is not endorsed…」（條款第 3 條；JustWatch 的有做在 `StreamingAvailability.tsx:179`，TMDb 的完全沒有） | party-mode 查證 | 很小 |
 
 ### P1 — A 路線：詞彙表「會累積、且第一天就有料」
