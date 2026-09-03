@@ -24,7 +24,7 @@ so that I can recognise what I am about to pay for — consent without recogniti
 
 ## Acceptance Criteria
 
-1. **持久化容器時長。** migration 033：`movies` 與 `episodes` 加 `duration_seconds INTEGER NULL`（Rule 15：repo INSERT/UPDATE/SELECT/scan 全同步；`enriched_metadata_update.go` 的 tech-info 寫入加欄）。`applyFFprobeTechInfo` 把 `info.DurationSeconds` 寫入 movie；episodes 若無 ffprobe 路徑，則在候選分析的路線探測（本來就對每個 episode 跑 ffprobe 取軌道）同時擷取時長並回寫，快取語意沿用 `routeCachePlan`。
+1. **持久化容器時長。** migration（下一個空號；033 已由 sub-6-5 使用）：`movies` 與 `episodes` 加 `duration_seconds INTEGER NULL`（Rule 15：repo INSERT/UPDATE/SELECT/scan 全同步；`enriched_metadata_update.go` 的 tech-info 寫入加欄）。`applyFFprobeTechInfo` 把 `info.DurationSeconds` 寫入 movie；episodes 若無 ffprobe 路徑，則在候選分析的路線探測（本來就對每個 episode 跑 ffprobe 取軌道）同時擷取時長並回寫，快取語意沿用 `routeCachePlan`。
 
 2. **估價改讀真實時長。** `runtimeMinutes()` 優先序：`duration_seconds/60`（容器）→ TMDb `runtime` → 45 分鐘 fallback；`RuntimeKnown=true` 於前兩者。additive 欄位 `runtime_source: "ffprobe"|"tmdb"|"fallback"`（sub-4-1 `[@contract-v1]` additive 不 bump，ack + Change Log）。
 
@@ -36,7 +36,7 @@ so that I can recognise what I am about to pay for — consent without recogniti
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — migration 033 + repo 同步（AC: #1）**
+- [ ] **Task 1 — migration（下一個空號）+ repo 同步（AC: #1）**
 - [ ] **Task 2 — ffprobe 時長寫入（movie 路徑 + episode 分析路徑）（AC: #1）**
 - [ ] **Task 3 — 估價優先序 + `runtime_source`（AC: #2）**
 - [ ] **Task 4 — `poster_path` / `tmdb_matched` / `display_title`（AC: #3, #4）+ Swagger + 契約 ack**

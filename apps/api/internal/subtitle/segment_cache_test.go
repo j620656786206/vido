@@ -478,3 +478,20 @@ func TestMergeCues_AnUncoveredCueIsAHardError(t *testing.T) {
 	require.NoError(t, checkTimestampInvariant(source, silent),
 		"the timestamp guard passes an untranslated cue — which is exactly why mergeCues must not")
 }
+
+// sub-6-5 AC #2: the model id is read from its source at RunVersion time, so a
+// holder rebuilt under a new override is reflected without a restart.
+func TestPipeline_RunVersion_ReadsModelSourceLive(t *testing.T) {
+	current := "claude-haiku-4-5"
+	p := NewPipeline(&fakeTranslator{}, &recordingConverter{}, nil,
+		WithModelSource(func() string { return current }))
+
+	assert.Equal(t, "claude-haiku-4-5", p.runVersion(richContext()).ModelID)
+	current = "claude-sonnet-5"
+	assert.Equal(t, "claude-sonnet-5", p.runVersion(richContext()).ModelID)
+}
+
+func TestPipeline_RunVersion_NoModelOptionStaysEmpty(t *testing.T) {
+	p := NewPipeline(&fakeTranslator{}, &recordingConverter{}, nil)
+	assert.Empty(t, p.runVersion(richContext()).ModelID)
+}

@@ -179,3 +179,22 @@ func TestServices_PlainProviderWithoutProbeStaysConfigured(t *testing.T) {
 	assert.True(t, NewTranslationService(plain, nil).IsConfigured())
 	assert.True(t, NewTerminologyCorrectionService(plain).IsConfigured())
 }
+
+// ─── sub-6-5: the model in force is a holder property, never "" ────────────
+
+func TestClaudeProviderHolder_EffectiveModel_DefaultWhenNoOverride(t *testing.T) {
+	h := holderWithKey(t, "sk-one")
+	assert.Equal(t, ai.DefaultClaudeModel, h.EffectiveModel())
+	assert.NotEmpty(t, h.EffectiveModel(), "a default-model run must never record an empty model id")
+}
+
+func TestClaudeProviderHolder_EffectiveModel_ReportsOverride(t *testing.T) {
+	h := NewClaudeProviderHolder(
+		NewKeyResolver(&fakeSecrets{}, EnvKeys{Claude: "sk-one"}, nil), "claude-sonnet-5", nil)
+	assert.Equal(t, "claude-sonnet-5", h.EffectiveModel())
+
+	// And the client it builds sends that same id — one truth, two readers.
+	p, err := h.Get(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, "claude-sonnet-5", p.(*ai.ClaudeProvider).Model())
+}

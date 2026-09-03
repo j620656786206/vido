@@ -860,3 +860,9 @@ func TestClaudeProvider_NonJSONSuccessNotRetried(t *testing.T) {
 		"a non-JSON 2xx is an invalid response, not a provider/connection error")
 	assert.Equal(t, int32(1), hits.Load(), "a non-JSON 2xx is permanent — it must NOT be retried")
 }
+
+// sub-6-5: Model() is the single truth for run rows and cache keys.
+func TestClaudeProvider_ModelAccessor(t *testing.T) {
+	assert.Equal(t, DefaultClaudeModel, NewClaudeProvider("k").Model())
+	assert.Equal(t, "claude-sonnet-5", NewClaudeProvider("k", WithClaudeModel("claude-sonnet-5")).Model())
+}

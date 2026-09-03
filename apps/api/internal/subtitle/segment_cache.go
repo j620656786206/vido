@@ -184,7 +184,7 @@ func (p *Pipeline) runVersion(tctx TranslateContext) models.RunVersion {
 		MetadataHash:    MetadataHash(tctx),
 		GlossaryVersion: GlossaryVersionHash(tctx.Glossary),
 		PromptVersion:   prompts.SubtitleTranslatorPromptVersion,
-		ModelID:         p.modelID,
+		ModelID:         p.currentModelID(),
 	}
 }
 

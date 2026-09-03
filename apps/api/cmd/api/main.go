@@ -676,7 +676,6 @@ func main() {
 			subtitle.NewExtractor(0, slog.Default()),
 			slog.Default(),
 		)
-		modelID := cfg.GetClaudeModel()
 		// sub-3-1: the ASR fallback port + the sweep's availability gate share
 		// one adapter over the SAME transcription service the manual Route-C
 		// dialog uses, so a no_text_source movie is recovered by exactly the
@@ -694,7 +693,10 @@ func main() {
 			// (回程) over the SAME show_glossary table the legacy path and the
 			// 9R-15 review REST already use.
 			subtitle.WithGlossaryStore(subtitle.NewGlossaryStoreRepository(repos.Glossary)),
-			subtitle.WithModelID(modelID),
+			// sub-6-5: the model id comes from the holder that actually sends
+			// the request, not from the env override — which was "" on every
+			// default-model run and left subtitle_runs.model_id empty.
+			subtitle.WithModelSource(claudeHolder.EffectiveModel),
 			// sub-5-1 AC #3: per-item AI cost ceiling for the FR12/pool path —
 			// a ctx already carrying a Budget (the sub-4-2 consent batch) keeps
 			// its shared ceiling; only budget-less entries get this envelope.
@@ -751,7 +753,7 @@ func main() {
 			subtitle.ComposeScanCallback(postScanEnrichment, autoGenerator.ScanCallback()),
 		)
 		slog.Info("Subtitle generation pipeline enabled",
-			"mode", cfg.SubtitlePipelineMode, "workers", subtitle.PipelineConcurrencyM1, "model", modelID,
+			"mode", cfg.SubtitlePipelineMode, "workers", subtitle.PipelineConcurrencyM1, "model", claudeHolder.EffectiveModel(),
 			// May be false on a keyless boot: the pool exists and idles behind the
 			// gate, and starts accepting work the moment a key is saved (sub-2-1a).
 			"translation_configured", subtitleCapabilityGate(),
