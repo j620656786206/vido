@@ -388,4 +388,13 @@ partial 的 8 部：Scorpion（13 有 → 79 要翻）、Supernatural（7 → 25
 - 同一 TMDb ID 有多份檔案（重複片、不同版本）會自然共用詞彙表 —— 這是想要的行為，但 UI 要標示。
 - 掃描時 TMDb 比對晚於檔案入庫 → 先寫 `local:` 再升級成 `tmdb:` 的搬移要有（或 resolver 每次查、不快取）。
 
-**工程量**：1 migration（含回填）+ 1 resolver + 4 個 call site + 測試 = **中**。UI 零改動。
+**A → B（共享）銜接檢查（Alexyu 2026-09-03 提問）**
+
+scope 設計本身對 B 是中性的（匯出格式就是 `{scope, term_src, term_zh, language, source, confirmed}`，傳輸方式檔案／repo／中央服務都不受影響；`local:*` 的條目天生不能分享，符合預期）。但有**兩件事必須在 A 的同一個 migration 裡一起做**，否則 B 會繼承痛點：
+
+1. **`source` 是 CHECK enum**（`'subtitle','metadata','manual'`，migration 028），SQLite 不能 ALTER CHECK → 要改就得重建表。B 需要 `official_subtitle`（加速器②挖出來的，信任度最高）和 `community`（匯入的）。**A 重建表時一次把 enum 放寬**，別讓 B 再重建一次。
+2. **`term_src` 沒有正規化**：unique index 沒有 `COLLATE NOCASE`，repo 也沒 `ToLower/TrimSpace` → `Demogorgon` 與 `demogorgon` 是兩筆。單機只是小髒，跨機器合併會變成牆上的重複條目。**A 就定好正規化規則**（至少 trim + 大小寫；unique index 加 `COLLATE NOCASE`）。
+
+B 才需要、A 可以不做的：`origin`／`author`（誰分享的）、`remote_id`（對應牆上的條目，用於更新／撤回）、`imported_at`；「N 人使用」需要匿名安裝 ID，與 glossary schema 無關。另一個 B 才會浮現的風險：使用者的 TMDb 比對錯了，詞彙表會發布到錯的劇 → **只發布 `confirmed=1` 或 `official_subtitle` 的條目**，LLM 自挖（`subtitle`）的一律不上牆。
+
+**工程量**：1 migration（加 scope + 回填 + 重建表放寬 enum + NOCASE index）+ 1 resolver + 4 個 call site + 測試 = **中**。UI 零改動。
