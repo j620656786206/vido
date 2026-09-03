@@ -1,0 +1,20 @@
+slug,idx,source,haiku,sonnet,haiku_score,sonnet_score,note
+boys,222,Address is 1420 63rd Street...,地址是 1420 63rd Street……,地址是63街1420號……,0,2,左：地址未翻譯
+knivesout3,397,I was a boxer,我…我…在擂臺上殺死了一個人。,是個拳擊手，,0,2,左顯示下一句，時序偏移
+knivesout3,1127,and we're gonna start…,我們要開始…,很好。呃，,2,0,左顯示前一句，時序偏移
+knivesout3,1557,No games.,沒有遊戲。,不要耍花招。,0,2,左直譯「沒有遊戲」翻錯
+landman,102,Tell me anyway.,不管怎樣先告訴我。,反正你都跟我說。,2,0,左邊變成陳述句
+landman,113,<i>♪ Knocks you out of your shoes ♪</i>,<i>♪ 把你擊出鞋外 ♪</i>,<i>♪ 讓你魂不守舍 ♪</i>,0,2,右邊成語直譯
+landman,124,"Well, he's fucking dead, Tommy.",現在他老婆 經營這家公司。,他他媽的死了，Tommy。,0,2,右邊時間錯位
+landman,472,<i>♪ I've got me more than a few ♪</i>,♪ I've got me more than a few ♪,<i>♪ 我擁有的不只一點點 ♪</i>,0,1,右邊未翻譯
+landman,503,Were you going to cheer for Tech?,不，我只是...,妳原本打算幫科技大學 啦啦隊嗎？,0,1,右邊時間錯位
+landman,815,the more complicated the dinner dishes become?,晚餐的盤子就變得越複雜？,晚餐的菜就變得越複雜？,0,2,左邊dishes譯成盤子
+landman,891,Huh? That I'm somehow so mentally compromised?,- 我從沒這樣說過。 - 你以為我會怎樣，嗯？,嗯？我心智就這樣受損了？,0,2,左邊時間錯位
+lioness,137,Whole family's on 360.,整個家族都在360號公路上。,整個家族都在360號公路上。,0,0,360是定位App非公路
+lioness,817,<i>- When are you coming home?</i> - [sniffling],你什麼時候回家？ [sniffling],妳什麼時候回家？,0,2,左側音效標籤未翻
+peacemaker,114,"- You only kill minorities, man! - (PEACEMAKER CHUCKLING)",我也殺死了相當多的白人！,-你只殺少數族群，老兄！ -（和平使者笑聲）,0,2,右側顯示下一句內容
+rings,236,He is no Man.,他一直在...偽裝成人類。,他不是人類。,0,2,右側時間錯位顯示下一句
+rings,301,[Waldreg] I'll take this one!,我要這個！,[Waldreg] 這個交給我！,0,2,左側翻錯，應為交給我
+shadowbone,86,"[man 3] Come on, let's go! Let's go now! Let's have it. Come on!",來啊，我們走！ 現在就走！來吧。加油！,[男子3] 來啊，上啊！ 上啊！打起來！加油！,0,2,左把let's go譯成離開
+shadowbone,96,"Shut it down, boys! Shut it down!",關掉，各位！關掉！,都給我住手，小子們！住手！,0,2,右「關掉」誤譯住手
+shadowbone,386,This is something else.,老闆，老闆。,這事沒那麼簡單。,0,2,左顯示下一句內容

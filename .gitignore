@@ -107,3 +107,10 @@ testsprite_tests/tmp/config.json
 output/
 artifacts/sbom/
 .claude/github-star-reminder.txt
+
+# eval/: full subtitle transcripts from the blind eval stay on the NAS (/mnt/user/appdata/vido/eval/),
+# never in this public repo. Scripts, key.json, aggregated scores and zero-score excerpts are tracked.
+eval/**/*.srt
+eval/**/*.ass
+eval/**/sheet*.csv
+eval/**/compare.csv

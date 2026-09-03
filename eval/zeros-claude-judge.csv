@@ -1,0 +1,35 @@
+slug,idx,source,haiku,sonnet,haiku_score,sonnet_score,note
+boys,66,lay some cable.,鋪設電纜。,「拉電纜」一下。,0,1,左直譯失俚語
+boys,279,Even if we could pay for a lawyer--,就算我們能請律師—— 而且這還是奢望——,就算我們請得起律師──,0,2,右多譯一句
+boys,349,the greatest superhero team,世界上最偉大的超級英雄隊伍,世上最偉大的,2,0,右漏譯主語
+boys,498,"at Invisible Force 2, and later, Translucent himself...",稍後還會有透明人本人...,《隱形力量2》，稍後 Translucent本人也會...,0,2,左漏譯片名
+boys,514,The bollocks people will believe,只要把人嚇得夠厲害， 他們就會相信任何鬼話。,只要你把人嚇得夠厲害,2,0,左漏譯前半
+boys,842,"""Just 'cause you fall on your ass doesn't mean",「摔個屁股墩,「就算你跌坐在地上，,0,2,左陸用語且漏譯
+hailmary,865,Who is Grace talking to? Question.,Grace 在跟誰講話？,葛雷斯在跟誰說話？疑問。,0,2,左漏譯「疑問」
+knivesout3,188,"I must protect our loved ones from its corrupting influence,",我必須保護我們所愛的人 不受其腐蝕的影響，,我必須不惜一切代價，,1,0,右漏譯翻錯
+knivesout3,397,I was a boxer,我…我…在擂臺上殺死了一個人。,是個拳擊手，,0,1,左內容錯置
+knivesout3,1127,and we're gonna start…,我們要開始…,很好。呃，,2,0,左內容錯置
+knivesout3,1186,No shame for you.,你沒什麼好羞愧的。,你還真不害臊。,2,0,右意思相反
+knivesout3,1557,No games.,沒有遊戲。,不要耍花招。,0,2,左直譯錯意
+landman,102,Tell me anyway.,不管怎樣先告訴我。,反正你都跟我說。,2,0,左邊翻錯意思
+landman,113,<i>♪ Knocks you out of your shoes ♪</i>,<i>♪ 把你擊出鞋外 ♪</i>,<i>♪ 讓你魂不守舍 ♪</i>,0,2,右邊直譯看不懂
+landman,124,"Well, he's fucking dead, Tommy.",現在他老婆 經營這家公司。,他他媽的死了，Tommy。,0,2,右邊內容錯行
+landman,472,<i>♪ I've got me more than a few ♪</i>,♪ I've got me more than a few ♪,<i>♪ 我擁有的不只一點點 ♪</i>,0,1,右邊未翻譯
+landman,503,Were you going to cheer for Tech?,不，我只是...,妳原本打算幫科技大學 啦啦隊嗎？,0,1,右邊內容錯行
+landman,815,the more complicated the dinner dishes become?,晚餐的盤子就變得越複雜？,晚餐的菜就變得越複雜？,0,2,左邊盤子譯錯
+landman,844,"When you're older, baby. Care to bless it?",等你們長大了，寶寶。 你要祝福一下嗎？,等你長大再說，寶貝。 要不要禱告一下？,0,2,右邊bless誤譯
+landman,891,Huh? That I'm somehow so mentally compromised?,- 我從沒這樣說過。 - 你以為我會怎樣，嗯？,嗯？我心智就這樣受損了？,0,1,左邊內容錯行
+lioness,371,[Joe] I'd love to see you do a snatch and grab,[Joe] 我很想看你穿著 一條該死的迷你裙,[Joe] 我很想看你 做突襲搶奪,0,1,右漏譯主句
+lioness,817,<i>- When are you coming home?</i> - [sniffling],你什麼時候回家？ [sniffling],妳什麼時候回家？,0,2,左音效未翻
+peacemaker,114,"- You only kill minorities, man! - (PEACEMAKER CHUCKLING)",我也殺死了相當多的白人！,-你只殺少數族群，老兄！ -（和平使者笑聲）,0,2,右邊翻成別句
+peacemaker,180,- while we're up here. - (CHUCKLES),-（笑聲） -（笑聲）,我們可是在這裡耶。 （笑）,0,1,左邊漏譯台詞
+peacemaker,289,You showed you were loyal.,你展現了自己的忠誠。,你證明瞭你很忠誠。,2,0,了誤轉成瞭
+peacemaker,320,"I'm not supposed to be giving a speech,",我不應該 發表演講，,我不應該講這種話,2,0,右邊意思偏掉
+peacemaker,581,- with respect. - Yeah? Heard plenty of stories,- 。 - 是嗎？我聽過很多故事,-你的戰友。 -是喔？我聽過不少故事，,0,1,右邊漏譯半句
+peacemaker,639,"Oh, I thought you meant friendly to me.",噢，我是說對我很友善。,喔，我是說牠對我友善。,0,0,應為我以為你是說
+rings,28,He's something else.,他是別的東西。,他是別的東西。,0,0,慣用語誤譯
+rings,30,- [in English] Get back! - [Dilly yelps],退後！ [Dilly yelps],[英語] 退後！ [Dilly 驚呼聲],0,2,右音效未翻
+rings,236,He is no Man.,他一直在...偽裝成人類。,他不是人類。,0,2,右側加料
+shadowbone,96,"Shut it down, boys! Shut it down!",關掉，各位！關掉！,都給我住手，小子們！住手！,0,2,右翻錯意思
+shadowbone,245,The Fold?,Fold？,黑暗裂隙？,0,2,右未翻譯
+shadowbone,386,This is something else.,老闆，老闆。,這事沒那麼簡單。,0,2,左完全翻錯
