@@ -392,9 +392,29 @@ partial 的 8 部：Scorpion（13 有 → 79 要翻）、Supernatural（7 → 25
 
 scope 設計本身對 B 是中性的（匯出格式就是 `{scope, term_src, term_zh, language, source, confirmed}`，傳輸方式檔案／repo／中央服務都不受影響；`local:*` 的條目天生不能分享，符合預期）。但有**兩件事必須在 A 的同一個 migration 裡一起做**，否則 B 會繼承痛點：
 
-1. **`source` 是 CHECK enum**（`'subtitle','metadata','manual'`，migration 028），SQLite 不能 ALTER CHECK → 要改就得重建表。B 需要 `official_subtitle`（加速器②挖出來的，信任度最高）和 `community`（匯入的）。**A 重建表時一次把 enum 放寬**，別讓 B 再重建一次。
+1. **`source` 是 CHECK enum**（`'subtitle','metadata','manual'`，migration 028），SQLite 不能 ALTER CHECK → 要改就得重建表。B 需要 `official_subtitle`（加速器②挖出來的，信任度最高）和 `community`（匯入的）。**A 重建表時直接拿掉 CHECK，enum 改由 Go model 驗證**（`models.GlossaryTerm.Validate` 已經在做同一件事）—— 之後任何新來源都不必再重建表。
 2. **`term_src` 沒有正規化**：unique index 沒有 `COLLATE NOCASE`，repo 也沒 `ToLower/TrimSpace` → `Demogorgon` 與 `demogorgon` 是兩筆。單機只是小髒，跨機器合併會變成牆上的重複條目。**A 就定好正規化規則**（至少 trim + 大小寫；unique index 加 `COLLATE NOCASE`）。
 
 B 才需要、A 可以不做的：`origin`／`author`（誰分享的）、`remote_id`（對應牆上的條目，用於更新／撤回）、`imported_at`；「N 人使用」需要匿名安裝 ID，與 glossary schema 無關。另一個 B 才會浮現的風險：使用者的 TMDb 比對錯了，詞彙表會發布到錯的劇 → **只發布 `confirmed=1` 或 `official_subtitle` 的條目**，LLM 自挖（`subtitle`）的一律不上牆。
 
-**工程量**：1 migration（加 scope + 回填 + 重建表放寬 enum + NOCASE index）+ 1 resolver + 4 個 call site + 測試 = **中**。UI 零改動。
+**彈性檢查：不走 A 也不走 B 的未來（Alexyu 2026-09-03 要求「保有彈性」）**
+
+這個設計刻意只鎖兩件事，其餘都留開：
+
+| 鎖住的 | 為什麼可以鎖 |
+| --- | --- |
+| 一列 = 一組「來源詞 → 譯詞」配對 | 這是詞彙表的定義；**風格規則**（P1-4b 的「超市→全聯」在地化程度）不是配對，**另開表**，不硬塞 |
+| 一列有一個字串 `scope` | 字串 + 命名空間前綴，新的 scope 種類是**加值**不是改表 |
+
+留開的（未來需求變了也不用重建表）：
+
+- **換掉或並存 TMDb**（IMDb／TVDB／自家 ID）：`scope` 是 `imdb:tt123` 也行，前綴就是命名空間；換 ID 來源 = 改 resolver 一個檔案。**這就是為什麼不做 `tmdb_id INTEGER` 欄** —— 那會把 TMDb 焊死。
+- **跨劇／全域詞庫**（電影系列 `tmdb:collection:*`、P1-4a 的 `global:zh-TW`、某個宇宙 `universe:mcu`）：新前綴 + resolver 回傳多個 scope 依優先序合併，表不動。
+- **多目標語言**（zh-HK、ja）：`language` 欄已在 unique key 裡。
+- **多使用者同一台 NAS**／**代管雲端版**：per-user 覆寫或 server-side 同步都是在 `scope` 外再包一層（`user:` 前綴或另一張 override 表），基表不動。
+- **新來源**（`community`、`official_subtitle`、將來的 `llm_review`）：CHECK 拿掉後只改 Go 常數。
+- **分享的傳輸方式**（檔案／repo／中央服務）：表裡不放任何傳輸細節（沒有 URL、沒有 sync 狀態），這些屬於 B 自己的表。
+
+**真正的單行道只有一條**：詞彙表的顆粒度是「影集」不是「集」。要改成每集不同譯名，才需要重想。目前沒有這個需求。
+
+**工程量**：1 migration（加 scope + 回填 + 重建表拿掉 CHECK + NOCASE index）+ 1 resolver + 4 個 call site + 測試 = **中**。UI 零改動。
