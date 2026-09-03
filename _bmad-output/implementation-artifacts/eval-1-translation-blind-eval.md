@@ -237,6 +237,13 @@ python3 scripts/subtitle-blind-eval.py score eval/<slug>
 - **裁定不變：預設改 `claude-sonnet-5`**。Haiku 掛在「生硬」而非「翻錯」：四成句子是 1 分。
 - 剩下的 0 分（19 句，`eval/zeros-claude-judge-ctx.csv`）以 cue 時間位移為主，兩個模型都有、Haiku 較多；這是發現 9 的實證。另有一例兩邊皆錯：Life360（家人定位 app）被翻成「360 號公路」——沒有世界知識注入就會錯，屬 metadata/glossary 範圍外。
 
+**2026-09-03 T4/T5 v3（全檔逐句 AI 評，10,304 句 × 2）**
+
+- Alexyu 要求對九部完整字幕逐句評分。`eval/build-full-sheets.py` → 38 份 × 300 句連續盲評表 → `eval/aggregate-full.py` 揭盲。彙總 `eval/full-scores.csv`，0 分 `eval/zeros-full.csv`。
+- 合併：Haiku 0 分率 3.6% / 2 分率 71.8%（最差單片 Peacemaker 6.5%）→ ✅；Sonnet 1.3% / 89.6% → ✅。單片 Haiku 在 Peacemaker、Landman、Lioness 三部 0 分率 > 5% ❌。
+- **與抽樣版裁定不同**：抽樣版 Haiku 2 分率 55.8% ❌，全檔版 71.8% ✅；0 分率兩版一致（3.8% / 3.6%）。差異來自 AI 評分者對「1 vs 2」的校準，不是翻譯本身。結論：**Haiku 是否過關對評分者敏感、恰在 60% 線附近；Sonnet 在任何一版都穩過且 0 分率為 Haiku 的 1/3。** 最終裁定留給人評（建議先評 Peacemaker / Landman 各 50 句校準）。
+- 0 分組成：翻錯 279、漏譯／留英文 85、時間位移 120（兩模型皆有，屬管線批次重排問題）。
+
 **執行中發現的產品問題（不在本 story 修，供立案）**
 
 1. Unraid 模板把 `/media` 設 `Mode="ro"`，管線翻完才在 placer 寫檔失敗 → **先花錢後失敗**。pre-flight 應先檢查目標資料夾可寫。

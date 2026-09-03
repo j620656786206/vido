@@ -1,0 +1,485 @@
+slug,idx,start,source,haiku,sonnet,haiku_score,sonnet_score,note
+boys,31,"00:02:19,431",BENJY: Homelander?,祖國人？,美國隊長？,1,0,Homelander譯成美國隊長
+boys,37,"00:02:34,446",ANCHOR: The Seven's Queen Maeve and Homelander,七人隊的皇后梅芙 和美國隊長,七人隊的皇后梅芙和美國隊長,0,0,Homelander譯成美國隊長
+boys,42,"00:02:42,496",-with some very lucky fans. -Nice to meet you.,-很高興認識你。 -謝謝，Jennifer。現在...,-跟幾位非常幸運的粉絲。 -很高興認識你。,0,2,右提前顯示下句
+boys,45,"00:02:47,209",everything in one. Bluetooth speakers.,是立體聲的， 你可以放在 客廳的各個地方，,差不多什麼都有了 藍牙喇叭,0,2,右提前顯示下句
+boys,46,"00:02:50,087","It's in stereo, so you can put it",隨便玩。,這是立體聲 你可以放在,0,2,右提前顯示下句
+boys,47,"00:02:51,714","all around your living room, have some fun with it.",你說你有 標準的機上盒，對吧？,客廳周圍 玩出點花樣,0,1,左顯示下句內容
+boys,48,"00:02:53,299","You said you have a standard cable box, right?",-嗯。 -好的，那我得幫你搞 一個音訊發射器，,你說你用的是 標準機上盒對吧？,0,2,左顯示下句內容
+boys,49,"00:02:55,217","-Uh-huh. -Okay, then I need to get you an audio transmitter,",aptX Low Latency。,-嗯哼 -好，那我得幫你弄一個 音訊發射器,0,2,右提前顯示下句
+boys,50,"00:02:57,970",aptX Low Latency.,這樣音訊延遲 會比較低，,aptX 低延遲的,0,2,右提前顯示下句
+boys,51,"00:02:59,471","It makes it so there's less audio lag,",而且有 標準的光纖輸入。,這樣可以減少 音訊延遲,0,2,右提前顯示下句
+boys,52,"00:03:01,140",and it's got a standard optical in.,我們再給你配一條 千兆 HDMI。,而且它有標準的 光纖輸入,0,2,右提前顯示下句
+boys,92,"00:04:42,408",Like Homelander?,像 Homelander 那樣？,像美國隊長那樣？,2,0,Homelander譯成美國隊長
+boys,100,"00:05:01,051","Well, excuse me for waiting.",好啦，對不起我有耐心等你。,那是你等太久了，怪我囉。,1,0,右主詞顛倒
+boys,110,"00:05:24,074",at your dad's place.,做那檔事。,在你爸家裡打炮。,0,2,右漏譯你爸家
+boys,154,"00:08:48,445",if not to save the world?,那一直是我唯一的願望。,那你們幹嘛做這一行？,0,2,右提前顯示下句
+boys,221,"00:11:55,549","DISPATCHER: Unit 44, code 20.",44 號單位，程式碼 20。,44號單位，代號20。,0,2,左code譯成程式碼
+boys,264,"00:13:26,681",-for damages while they're on the job. -Okay.,-為了賠償金 他們執勤時的賠償。 -好的。,-造成的損害 在他們執勤期間。 -好。,0,1,右語意不通
+boys,315,"00:15:43,026",just grossed shy,票房剛好突破,全球票房將近,0,2,左shy of譯反
+boys,338,"00:16:50,343",two-and-a-half points with Midwesterners,在中西部人口和,和保守派基督徒族群中 上升了兩點五個百分點,0,0,左漏中西部，右漏百分點
+boys,339,"00:16:51,928",and conservative Christians in 18 to 49.,18到49歲的保守基督徒中 上升了2.5個百分點。,年齡層是18到49歲,1,0,右漏保守基督徒與百分點
+boys,398,"00:20:30,188",from 380 miles up.,from 380 miles up.,清楚看到逃亡車的車牌。,0,0,左未翻譯，右漏380英里
+boys,403,"00:20:39,906","(chuckles) Yeah, well, not anymore you're not.",(笑聲) 對啦， 但你現在不行了。,（笑）嗯，反正 現在你不用那個了。,0,2,左翻錯意思
+boys,406,"00:20:47,956",from Gramercy Tavern.,來著。,把Miro給挖過來了。,0,1,右漏Miro
+boys,465,"00:23:31,661","I mean, Iowa's sweetheart, the Defender of Des Moines,",我是說，愛荷華州的寶貝， 德莫因的守護者，,我是說，愛荷華的甜心， 狼堤蟬士穆恩的守護者，,2,0,左地名亂碼
+boys,485,"00:24:30,219","in Yonkers last night, a young, single mother",一起家庭入侵案， 受害者是個年輕的單親媽媽,昨晚在Yonkers， 一名年輕的單親媽媽,1,0,左漏入室搶劫
+boys,538,"00:26:25,001",No? What do I look like?,那你看起來像什麼？,不像？那我看起來像什麼？,0,2,左人稱反了
+boys,540,"00:26:30,172","Well, it's all right there in black and white.",好吧，黑白分明。,嗯，白紙黑字都寫得清清楚楚。,0,2,左翻錯意思
+boys,541,"00:26:32,258","Okay. Uh, what exactly can I do for you?",好，那你到底要我幫什麼？,好吧，那你到底 能幫我什麼？,2,0,右主客反了
+boys,559,"00:27:13,215",and politicians on both sides.,但你聽不到主要原因,和兩黨政治人物撐起來的。,0,2,左為下一句
+boys,560,"00:27:16,010",But the main reason that you won't hear about it,是因為大眾根本不想知道。,但你聽不到這些的主要原因,0,2,右為下一句
+boys,561,"00:27:19,180",is 'cause the public don't want to know about it.,你看，人們喜歡那種 超級英雄給他們的舒適感。,是因為民眾根本不想知道。,0,2,右為下一句
+boys,562,"00:27:22,350","See, people love that cozy feeling that Supes give them.",某個黃金混蛋,你看，大家都愛超級英雄 帶給他們的那種安心感。,0,2,左為下一句
+boys,563,"00:27:26,103",Some golden cunt,從天而降 拯救世界,什麼金光閃閃的傢夥,0,1,右為下一句
+boys,564,"00:27:27,646",to swoop out of the sky and save the day,這樣你就不用 自己動手了。,從天而降拯救世界,0,2,左為下一句
+boys,565,"00:27:30,232",so you don't got to do it yourself.,但如果你知道他們 幹的一半爛事...,這樣你就不用自己動手了。,0,2,左為下一句
+boys,566,"00:27:32,818",But if you knew half the shit they get up to...,嗯...(咂舌),但如果你知道他們 背地裡幹的那些爛事…,0,2,右為下一句
+boys,568,"00:27:38,574",Fuckin' diabolical.,真他媽的天衣無縫。,他媽的太邪惡了,0,2,左翻錯意思
+boys,569,"00:27:40,659",But then... that's where I come in.,但後來呢… 我就派上用場了。,但這時候…,1,0,左漏主句
+boys,570,"00:27:44,830",Come in to... to do what?,派上用場去…去幹什麼？,就輪到我出場了,2,0,右為上一句
+boys,571,"00:27:47,708",Spank the bastards when they get out of line.,等那些混蛋越界時 狠狠教訓他們。,出場…做什麼？,2,0,左為上一句
+boys,572,"00:27:51,253",How do you spank a Supe?,怎麼教訓一個超級英雄？,他們一亂來，就修理他們一頓,2,0,左為上一句
+boys,573,"00:27:53,547","Come on, son.",來吧，小子。,要怎麼修理超級英雄？,2,0,左為上一句
+boys,574,"00:27:55,591","Uh, where?",呃，去哪裡？,走吧，孩子,2,0,左為上一句
+boys,575,"00:27:57,676",You'll love it.,你會愛上的。,呃，去哪裡？,2,0,左為上一句
+boys,576,"00:27:59,095","Uh, not likely.",呃，不太可能。,你會喜歡的,2,0,左為上一句
+boys,577,"00:28:00,304","Uh, listen.",呃，聽著。,呃，應該不會,2,0,左為上一句
+boys,664,"00:32:38,082",-What are these? -That's the police log,這是什麼？ 那天Robin被殺害時的警察紀錄。,-這些是什麼？ -那是案發當天的,1,0,漏譯警方紀錄
+boys,743,"00:35:42,099",of the merchandising.,商品授權。,我可以給你9.5個百分點。,0,1,漏譯9.5個百分點
+boys,770,"00:36:57,633",What's Homelander like?,Homelander 怎麼樣？,美國隊長人怎麼樣？,2,0,護國超人譯成美國隊長
+boys,779,"00:37:18,236","Anyway, so-so, what did you want to tell me?",反正啦，還好啦， 你想告訴我什麼？,對了對了， 妳想跟我說什麼？,0,2,so-so誤譯為還好啦
+boys,893,"00:43:04,833","Please, Homelander's fine.",拜託，叫我 Homelander 就好。,拜託，叫我美國隊長就好。,2,0,護國超人譯成美國隊長
+boys,904,"00:43:32,527",without bumping into a table of unlicensed Homelander shirts.,都會撞到擺著未授權Homelander衣服的攤子,一定會撞見一堆盜版美國隊長T恤的攤子,1,0,護國超人譯成美國隊長
+boys,953,"00:45:26,850","green latte, what the fuck. Or...",綠茶拿鐵， 我他媽的知道。或者……,隨便怎樣都好。要不然…,0,2,what the fuck誤譯
+boys,1030,"00:50:39,078",I know you can help. I got it.,我知道你可以幫忙。 我搞定了。,我知道你可以幫忙。 交給我吧。,0,2,右:我搞定了誤譯語意
+boys,1115,"00:55:08,055",Fucking spy?,fucking 間諜？,該死的間諜？,0,2,右:夾雜英文fucking
+hailmary,31,"00:05:20,150",Pilot detected.,偵測到駕駛員。,偵測到自動駕駛。,2,0,右:自動駕駛誤譯
+hailmary,32,"00:05:21,350","No, no, no, not the pilot.",不，不，不，不是駕駛員。,不不不，我不是要自動駕駛。,2,0,右:自動駕駛誤譯
+hailmary,64,"00:08:14,530",Try going.,試著往前走。,試著念念看。,0,1,左:往前走誤譯
+hailmary,78,"00:08:44,090","186,000 miles per second!","186,000 miles per second!","186,000 miles per second!",0,0,兩側未翻譯
+hailmary,88,"00:09:12,190",from the sun to Venus.,現在人們稱之為 Petrova線。,從太陽延伸到金星。,0,2,右:顯示下一句(偏移)
+hailmary,89,"00:09:14,870",And that is now known as the Petrova line.,就是這樣。,那就是現在 所謂的Petrova線。,0,2,右:顯示下一句(偏移)
+hailmary,117,"00:10:38,315","Well, I woke up Sunday morning with no way to hold my head and it didn't hurt.",我星期天早上醒來時頭昏昏的 一點都不疼。,嗯，我週日早上醒來， 沒東西可以撐著頭，但也不痛。,0,0,歌詞意思反了
+hailmary,123,"00:11:54,751",Half as lonesome as it sounds.,沒有什麼比得上 這種寂寞的感覺。,聽起來也就一半那麼孤單,2,0,右:歌詞不通
+hailmary,148,"00:13:40,190","Joke's on them because I don't even care, so...",笑話在他們身上，因為 我根本不在乎，所以……,反正笑到最後的是我， 因為我根本不在乎，所以……,0,2,左:成語直譯不通
+hailmary,266,"00:21:39,350",You don't know what doing a little space dust like?,你不知道漂浮在太空塵埃中 是什麼感覺？,你怎麼知道嗑點太空塵是什麼感覺？,0,2,右:漏掉嗑藥梗
+hailmary,320,"00:25:23,210",Carl. Strat said she was sending jets. I thought you meant like a PJ.,Carl。Strat 說她要派 戰鬥機來。我以為你是指偵察機。,Carl，Strat說她會派噴射機來，我以為你是說像PJ那種。,0,1,PJ誤譯成偵察機
+hailmary,381,"00:28:08,850",would you need that much astrophage?,你需要那麼多的蟲洞物質嗎？,你才需要那麼多太空菌？,0,1,蟲洞物質誤譯
+hailmary,396,"00:28:46,870",within the cluster of infected stars.,為什麼？,受感染星群的 範圍之內。,0,0,左偏移右殘句
+hailmary,397,"00:28:48,810",Why?,為什麼？告訴他。,為什麼？,0,2,提前出現告訴他
+hailmary,398,"00:28:49,830",Why? Tell him.,我們不知道。,為什麼？告訴他。,0,2,右顯示下句內容
+hailmary,399,"00:28:50,890",We don't know.,這就是為什麼我們 決定建造一艘太空船。,我們不知道。,0,2,右顯示下句內容
+hailmary,434,"00:30:20,170","For this to go wrong, it almost certainly won't work.",要讓這個計劃失敗， 幾乎是不可能的。,這件事很可能會失敗， 幾乎不可能成功。,0,2,右意思相反
+hailmary,456,"00:32:14,530","what looks like sneaking into the Kremlin,","what looks like sneaking into the Kremlin,","what looks like sneaking into the Kremlin,",0,0,未翻譯
+hailmary,523,"00:40:05,450","To begin your spacewalk, put on your ??? suit and proceed to the airlock.",要開始太空漫步，請穿上太空衣，然後前往氣閘室。,要開始出艙作業，請穿上您的???裝備，前往氣閘艙。,2,0,左殘留???
+hailmary,533,"00:42:44,670",We need equipment to analyze the astrophage at Tau Ceti.,我們需要裝置來分析 Tau Ceti 的異種物質。,我們需要裝置來分析泰亞星的太空菌。,0,2,異種物質誤譯
+hailmary,545,"00:44:20,950",Still Xenon.,還是氙氣。,還是氙石。,2,0,氙石誤譯
+hailmary,634,"01:04:41,840","do this. Your version of this is our thumbs up. No, that's thumbs down. We do the thumbs up.",做這個。你的版本就是我們的豎起大拇指。不對，那是豎中指。我們是豎起大拇指。,做這個動作。你們這個動作 相當於我們的大拇指向上。 不，那是大拇指向下。我們是大拇指向上。,0,1,拇指向下譯成中指
+hailmary,662,"01:07:39,010","And if I can't understand what he's saying, which is most of the",而且如果我聽不懂他說什麼——,而且如果我聽不懂他在說什麼，通常都聽不懂，,0,2,漏譯「通常都聽不懂」
+hailmary,665,"01:07:46,790","He's kind of growing on me. At least he's not growing in me,",他好像在我身上長出來了。至少他沒有在我身體裡長出來，,他漸漸讓我有點喜歡上他了，至少他沒有長在我體內，,0,2,growing on me直譯錯
+hailmary,713,"01:12:41,810",No understand. Word.,不懂。Word。,不懂。這個字。,0,2,Word未翻
+hailmary,778,"01:16:58,450",It's not a gene. You just need to find someone to be brave for.,那不是基因。你只需要 找到一個值得為之勇敢的人。,那不是基因 你只是還沒找到值得勇敢的物件,2,0,對象誤轉成物件
+hailmary,785,"01:17:34,130","Grace and Rocky, big science. How to kill astrophage together.",Grace和Rocky，大科學。怎樣一起殺死astrophage。,葛雷斯和洛基，大科學。一起想辦法殺死太空菌。,0,2,astrophage未翻
+hailmary,814,"01:18:25,190","Rocky, new to ball.",Rocky，球是新的。,洛基，第一次坐球。,0,2,new to ball語意錯
+hailmary,916,"01:22:16,890","We're going to orbit the planet where astrophage breeds,",我們要繞行那顆 天體的軌道，,我們要繞行 太空菌繁殖的那顆行星，,0,2,右漏譯太空菌繁殖
+hailmary,923,"01:22:37,990","150 million kilometers away,","150 million kilometers away,","150 million kilometers away,",0,0,未翻譯
+hailmary,924,"01:22:40,610",racing along at 162 kilometers per second.,racing along at 162 kilometers per second.,racing along at 162 kilometers per second.,0,0,未翻譯
+hailmary,932,"01:23:01,830","You're in the mental health Whoa, whoa, whoa, whoa!",你在心理健康 哎呀，哎呀，哎呀，哎呀！,你現在在精神病房 哇、哇、哇、哇！,0,1,右語意不通
+hailmary,943,"01:23:36,470",Hanging ten.,懸掛十個。,十趾站板。,0,1,左誤譯衝浪術語
+hailmary,946,"01:23:41,070","In three, Apollo trains him.",三年後，Apollo 訓練他。,第三集，阿波羅訓練他。,0,2,右「三」指第三集
+hailmary,947,"01:23:43,710","And in seven, he trains Apollo's kid.",七年後，他 訓練 Apollo 的小孩。,到了第七集， 他訓練阿波羅的兒子。,0,2,左「七」指第七集
+hailmary,1002,"01:27:04,770","Must be hard having to ask everybody to,",得跟每個人說，,一定很難吧，要一直 拜託大家去做,0,2,左漏譯「一定很難」
+hailmary,1042,"01:31:23,510",Yep.,有。,沒有。,2,0,右意思反了
+hailmary,1047,"01:32:15,370",I'm having a moment.,我在發呆。,我只是感觸良多。,0,2,右誤譯 moment
+hailmary,1058,"01:33:23,090",Need human word for Rocky mate.,需要用人類的詞彙來形容石頭夥伴。,需要人類的詞彙 來稱呼洛基的伴侶。,0,2,左Rocky譯成石頭
+hailmary,1077,"01:35:29,850","in the Petrova line,",在 Adrian 上，,有一整個活躍的生物圈，,0,2,右提前顯示Adrian
+hailmary,1079,"01:35:33,330","on Adrian, which means...",在 Adrian 上，這表示...,應該也有一整個活躍的生物圈，這意味著……,1,0,左漏譯Adrian
+hailmary,1091,"01:36:03,170",Life on Adrian is reason astrophage in balance.,Adrian 上的生命是原因 浮游生物處於平衡。,Adrian上的生命就是讓太空菌 維持平衡的理由。,0,2,右太空菌誤譯且語法亂
+hailmary,1092,"01:36:06,170",Life on Adrian makes astrophage die.,Adrian 上的生命 會導致浮游生物死亡。,Adrian上的生命 讓太空菌死掉。,0,2,左太空菌誤譯浮游生物
+hailmary,1100,"01:36:29,070",It'll be in the clouds where astrophage breathes. Check.,它會在浮游生物呼吸的 雲層裡。確認。,應該會在雲層裡， 太空菌在那裡呼吸。去查。,0,1,左太空菌誤譯浮游生物
+hailmary,1103,"01:36:37,130","If we get within five kilometers,","If we get within five kilometers,","If we get within five kilometers,",0,0,未翻譯
+hailmary,1111,"01:36:47,510","Oh yeah, yeah, five kilometers of chain, sure.","Oh yeah, yeah, five kilometers of chain, sure.","Oh yeah, yeah, five kilometers of chain, sure.",0,0,未翻譯
+hailmary,1145,"01:37:42,830",Grace rocky hit.,Grace 被岩石撞到。,葛雷斯洛基撞。,1,0,左語意不通
+hailmary,1146,"01:37:43,530",All Rocky plural. All Earth die.,所有岩石都來了。地球會死。,全部洛基。全部地球死。,0,1,左Rocky譯成岩石
+hailmary,1148,"01:37:49,530",Rocky has built Predator Collector.,岩石已經 造出獵食者收集器。,洛基已建造 掠食者收集器。,0,2,右Rocky譯成岩石
+hailmary,1149,"01:37:52,190",Rocky chain spooled and ready.,岩石鏈已經捲好準備好了。,洛基鏈條捲好準備好了。,0,1,左Rocky譯成岩石
+hailmary,1164,"01:38:20,130","What? We had enough astrophage to get here,",什麼？我們有足夠的蝕變物質 來到這裡，,什麼？我們的太空菌 足夠讓我們來到這裡，,0,2,左太空菌誤譯蝕變物質
+hailmary,1169,"01:38:29,490",at least a couple years.,也許再多個幾年 如果我省著吃的話。,兩年左右。,0,1,右顯示下一句內容
+hailmary,1170,"01:38:30,750",Maybe a couple more if I stretch it out.,如果我省著點用，也許還能再撐個幾天。,如果省著點吃， 或許能再撐久一點。,0,1,左年誤譯成天
+hailmary,1172,"01:38:35,890",Question?,問題。,這算問題？,2,0,左誤解Question標記
+hailmary,1180,"01:38:54,570",Listen. I got to meet you.,聽我說。我得見到你。,聽我說，我能見到你。,0,1,右誤解 got to
+hailmary,1191,"01:39:29,270",Grace?,萊倫？,葛雷斯?,0,2,右名字譯成萊倫
+hailmary,1197,"01:39:44,530",Grace?,萊倫？,葛雷斯?,0,2,右名字譯成萊倫
+hailmary,1198,"01:40:10,410","Grace? How much astrophage you need, question?",萊倫？你需要多少蟲洞菌，問題？,葛雷斯?你需要多少太空菌，問?,0,1,右名字譯成萊倫
+hailmary,1209,"01:41:34,730","Uh... I thought you made peace, question?",呃……我以為你們 已經和好了，問題？,呃……我以為你已經想通了，問?,0,2,右:和好 誤解 made peace
+hailmary,1307,"01:49:01,270",I don't think the risk is going to be a later.,我不認為風險會有後來的機會。,我覺得這風險 不會有下次了。,0,1,左:句意不通
+hailmary,1429,"02:06:26,290",to sleep a little?,我們找到掠食者了嗎？,稍微睡一下？,0,2,左:顯示下一句內容
+hailmary,1529,"02:15:52,430",How do you say goodbye back home?,你們家鄉怎麼說再見？,你們家鄉是怎麼說再見的？ 再見。,2,0,左多加了「再見」
+hailmary,1563,"02:26:16,770",I'm pretty sure they know that.,我很確定他們知道這點。,我相信他們知道那部電影。,2,0,左誤譯成知道電影
+hailmary,1572,"02:27:55,570",You shouldn't have.,你不應該這樣做。,你太客氣了。,0,2,右直譯，慣用語誤譯
+hailmary,1573,"02:28:03,130",That's a noogie. I'm coming!,那是頭部按摩。我來了！,這是拳頭禮！我來了！,0,1,noogie非頭部按摩
+knivesout3,114,"00:07:12,833","just what was on the end table, which is probably its own kind of sin.",就那個在邊桌上的東西， 這可能本身就是一種罪孽吧。,只知道邊桌上放了什麼， 這可能也算一種罪吧。,2,0,右句意翻錯
+knivesout3,151,"00:09:20,458",will send it tumbling to the ground from inside.,就會整個墜落到地面。,從裡面一推， 就能把它整個掀翻到地上。,0,2,右漏「從裡面」
+knivesout3,188,"00:11:17,291","I must protect our loved ones from its corrupting influence,",我必須保護我們所愛的人 不受其腐蝕的影響，,我必須不惜一切代價，,2,0,左漏主句只剩後句
+knivesout3,189,"00:11:22,208",at all costs.,不惜一切代價。,保護我們所愛的人 不受其腐蝕影響。,1,0,右重複前句漏不惜代價
+knivesout3,224,"00:14:31,541",by God in His mercy.,將她打倒。,慈悲的上帝擊倒的。,0,1,右漏「上帝」主詞
+knivesout3,307,"00:18:37,541",from the… liberal hive mind and… come here and…,從…自由派集體思維裡 然後…來到這裡…,然後…來到這裡…,1,0,左漏譯自由派集體思維
+knivesout3,361,"00:21:48,250",Of a father.,父親的身份。,剝奪他擁有父親的權利。,0,2,左「父親的身份」翻錯
+knivesout3,395,"00:23:35,250","us and each other, us and the world.",當我17歲時，,我們彼此之間，我們與世界之間的隔閡。,0,2,右提前顯示下句
+knivesout3,396,"00:23:39,333","When I was 17,",我是個拳擊手,我17歲的時候，,0,2,右提前顯示下句
+knivesout3,397,"00:23:41,458",I was a boxer,我…我…在擂臺上殺死了一個人。,是個拳擊手，,0,1,左提前顯示下句、漏拳擊手
+knivesout3,398,"00:23:43,083",and I… I… killed a man in the ring.,我築起了這麼多堵牆…,我……我在拳擊場上殺了一個人。,0,2,左提前顯示下句
+knivesout3,399,"00:23:47,458",I built up so many walls of…,憤怒、成癮、暴力。,我因此築起了好多道牆……,0,2,左提前顯示下句
+knivesout3,400,"00:23:50,041","of anger, addiction, violence.",(block continues),憤怒、成癮、暴力。,0,2,右未翻譯的殘留字串
+knivesout3,427,"00:25:10,666",I just texted the Monsignor.,我剛剛傳簡訊給蒙辛格。,我剛傳訊息給蒙席了。,0,2,右把Monsignor音譯成人名
+knivesout3,444,"00:25:47,166","Thanks, Doc.",謝謝，醫生。,謝了，博士。,2,0,左Doc是醫生非博士
+knivesout3,477,"00:28:08,375","No, Monsignor, I don't.",沒有，蒙西紐爾，我不喜歡。,是的，蒙席，我不喜歡。,0,2,右把Monsignor音譯成人名
+knivesout3,479,"00:28:11,583",Man needs to forgive and start living his life.,人需要寬恕自己 開始活出人生。,這個人需要被原諒， 重新開始生活。,1,0,右forgive翻成被原諒
+knivesout3,553,"00:32:46,500",I got pretty toasty.,我燒得相當厲害。,我喝得有點茫了。,0,2,右toasty是喝醉非發燒
+knivesout3,581,"00:34:34,458",Monsignor?,蒙席尼奧？,蒙席？,0,2,右把Monsignor音譯成人名
+knivesout3,593,"00:36:34,458",Wicks was pronounced dead on the scene.,Wicks 在現場被宣告死亡。,威克斯到場時已被宣告死亡。,2,0,右「到場時」翻錯
+knivesout3,662,"00:41:30,333",and its justified untold acts of violence and cruelty,還有其合理化的 無數暴力和殘忍行為,還有那些被合理化、 沒被說出口的暴力和殘忍行徑,1,0,untold譯成沒說出口
+knivesout3,690,"00:43:25,833",-Son. -I'm sorry.,兒子。 對不起。,-孩子。 -抱歉。,0,2,Son譯成兒子
+knivesout3,751,"00:46:38,916","you want ever to be a priest again, then you need to go through this with me.",你如果想再當神父， 就得跟我一起度過這個難關。,如果你還想得到赦免， 還想繼續當神父，,2,0,左漏譯跟我一起走
+knivesout3,756,"00:46:52,083",I need to know you understand the situation.,我需要知道 你理解現在的狀況。,我需要你understand現在的處境。,2,0,左留英文understand
+knivesout3,851,"00:52:21,833",In the detective Gideon Fell,在偵探小說中 Gideon Fell,在,2,0,右只剩一個「在」
+knivesout3,856,"00:52:37,708",before entering the closet.,他完成了佈道。,在進入衣櫃之前。,0,1,左顯示858講道內容
+knivesout3,861,"00:53:00,791","would have been hidden from the camera and the witnesses in the nave,",會被躲在攝影機和 教堂內信徒的視線之外,都會被攝影機 和中殿的目擊者擋住視線，,1,0,右譯成被攝影機擋住
+knivesout3,869,"00:53:28,291",outside the closet.,殺死的。,某人或某物殺死的。,0,2,左漏某人或某物
+knivesout3,893,"00:54:36,250",Rock of Gibraltar.,堅如磐石。,那可不是什麼難事。,2,0,右誤譯堅如磐石
+knivesout3,908,"00:55:28,166",-Throw them out. -Martha?,把它們丟出去。 Martha？,-把他們趕出去。 -瑪莎？,0,2,左:它們指人翻錯
+knivesout3,909,"00:55:30,458",Throw them out!,把它們丟出去！,把他們趕出去！,0,2,左:它們指人翻錯
+knivesout3,936,"00:57:06,583",who would have been the hero in that game…,誰本來會是那場比賽的英雄……,原本會是那場比賽的英雄……,0,2,右:who誤譯成疑問
+knivesout3,1013,"01:01:11,250","and I guess, wait",然後我想，等等,然後我想，就等著,0,2,右:wait誤譯為等等
+knivesout3,1025,"01:02:17,125","to the utility closet after the murder, but before the police searched it.",能進入雜物間，但在警察搜尋之前。,你是唯一有機會 單獨進出那間儲藏室的人。,0,1,左:主語漏、語意破碎
+knivesout3,1030,"01:02:35,458",just a little disillusionment.,只是稍微有些幻滅罷了。,讓他們少一點幻滅。,0,2,左:意思翻反
+knivesout3,1069,"01:04:43,333",Beaten.,被打敗了。,被毆打。,0,2,右:Beaten譯成打敗
+knivesout3,1121,"01:07:42,500",you'll answer them and we'll get to the bottom of who killed Monsignor Wicks,你們都要回答，我們會查出誰殺了 Monsignor Wicks,我跟該死的Benoit Blanc 會問你們幾個問題，,2,0,右:重複前句時間錯位
+knivesout3,1122,"01:07:45,750",and why and then…,還有為什麼，然後…,我們會查出到底是誰殺了Wicks蒙席，,2,0,左:顯示前句時間錯位
+knivesout3,1123,"01:07:48,791",That's it!,就這樣！,還有為什麼，然後……,2,0,左:顯示前句時間錯位
+knivesout3,1124,"01:07:50,291","Okay? Okay, so…",好嗎？好的，所以…,就這樣！,2,0,右:顯示前句時間錯位
+knivesout3,1125,"01:07:54,916","Thank you, Father Jud, that was",謝謝你，Jud 神父，那很,好嗎？好，那……,2,0,左:顯示前句時間錯位
+knivesout3,1126,"01:07:57,125","very good. Um,",不錯。嗯，,謝謝你，Jud神父，說得,2,0,右:顯示前句時間錯位
+knivesout3,1127,"01:07:58,375",and we're gonna start…,我們要開始…,很好。呃，,2,0,右:顯示前句時間錯位
+knivesout3,1128,"01:08:00,083",…with what happened that night right here in this very room.,…從那晚在這間房間裡發生的事開始。,那我們就從……,2,0,左:內容落到下句
+knivesout3,1129,"01:08:04,250",You mean the time Jud admitted to all of us that he killed a man.,你是說 Jud 承認他殺了一個人的時候嗎？,……那天晚上在這個房間裡發生的事開始說起。,2,0,左:顯示前句時間錯位
+knivesout3,1141,"01:08:39,958","-Oh. -And I say, good.",-喔。 -我說得好。,-喔。 -我倒覺得，很好。,0,2,右:I say good翻錯
+knivesout3,1178,"01:11:00,666","for Monsignor Jefferson Wicks, my client,",因為我的委託人 向他申請了AOP,給蒙席傑佛遜·威克斯，我的客戶，,0,1,右:顯示下句時間錯位
+knivesout3,1179,"01:11:04,458",because my client had filed an AOP with him.,在Brooklyn,因為我的客戶 向他提交了一份AOP。,0,2,右:顯示下句時間錯位
+knivesout3,1219,"01:13:23,708",where the end justifies the means.,目的是為了達成手段。,在這裡，目的可以正當化手段。,0,2,目的手段顛倒
+knivesout3,1233,"01:14:01,208","Well said, Doc.",說得好，醫生。,說得好，博士。,2,0,Doc是醫生非博士
+knivesout3,1339,"01:19:24,125","show up on cable news, even want a place in this thing…",甚至想在這事件中佔一席之地…,上有線新聞露臉， 甚至想在這件事裡分一杯羹……,0,1,漏譯有線新聞
+knivesout3,1341,"01:19:30,250",That's why he torched them all.,所以他才把他們全燒死了。,所以他才把他們全都燒了。,0,1,燒死誤譯
+knivesout3,1401,"01:23:21,541","Hello, Louise. It's Father Jud from Perpetual Fortitude.",妳好，Louise。我是Perpetual Fortitude的Jud神父。,哈囉，Louise，我是救我主聖堂的Jud神父。,2,0,教堂名亂譯
+knivesout3,1457,"01:25:50,166",that we ever say to each other.,(continuation of previous line),那會是我們之間說的最後一句話。,0,2,顯示英文佔位字
+knivesout3,1478,"01:27:30,375","Don't follow me, Blanc. I'm done.",別跟著我，Blanc。我完成了。,別跟著我，Blanc。我不幹了。,0,2,done=不幹了
+knivesout3,1564,"01:31:57,583",-I'm gonna be able to get-- -No!,—我會能夠得到— —不！,-我就能查出來-- -不行！,0,2,左：語句不通
+knivesout3,1565,"01:31:59,958",I found my killer and I'm bringing him in.,我找到殺我的人了，我要把他帶進來。,我已經找到兇手了，我要把他抓起來。,0,2,左：殺我的人 譯錯
+knivesout3,1591,"01:36:26,208","-He hath raised His Son. -Hey, Ritz.",-祂已經舉起了祂的兒子。 -嘿，Ritz。,-祂已讓聖子復活。 -嘿，Ritz。,0,2,右：raised譯成舉起
+knivesout3,1651,"01:40:47,916","Um, yeah, so, it records anytime there's motion",嗯，對，所以它會在偵測到動作時錄影 這段影片是四秒鐘之後的。,呃，對，只要有動靜它就會錄,0,2,右：含下一句內容
+knivesout3,1726,"01:48:02,500","Last night, that same sin rose in me and in a moment of",昨晚，同樣的罪惡在我心中升起 在恐懼和憤怒的那一刻，我——,昨晚，同樣的罪孽又在我心中湧起 在那一刻的,0,1,左：含下一句內容
+knivesout3,1727,"01:48:06,875","fear and rage, I--",我——,恐懼與憤怒中，我──,0,2,右：漏譯恐懼與憤怒
+knivesout3,1776,"01:50:39,000",as the mysterious thread found in the closet.,就像在衣櫃裡找到的 那條神秘線索。,跟衣櫃裡發現的 神秘線頭一模一樣。,0,2,左：thread譯成線索
+knivesout3,1891,"01:57:24,625",But who need it the most.,但誰最需要它。,但卻是最需要的人。,0,2,右句翻成問句，意思錯
+knivesout3,1950,"02:01:07,333","With defiant pride,",帶著挑釁的驕傲，,你帶著倔傲的驕傲，,1,0,主詞翻錯(你/我)
+knivesout3,2094,"02:10:45,541",for all you have endured.,原諒我為你所承受的一切。,原諒你所承受的一切,1,0,左「原諒你」主受詞錯
+knivesout3,2109,"02:11:47,375",Father…,父親…,神父…,0,2,神父誤譯為父親
+knivesout3,2157,"02:15:38,041","Owned with a ""P"". Whatever that means.","用 P 開頭的""owned""。不管那是什麼意思。",是「電」不是「電視」的電，管他是什麼意思,1,0,雙關改寫不通
+knivesout3,2172,"02:16:33,083","There is, uh… nothing I would rather not do.",呃…其實… 沒有什麼是我不想做的。,呃，其實 沒有什麼是我更不想做的事了,0,2,意思相反
+landman,19,"00:00:41,642",Who's the best litigation firm in Midland?,Midland最好的訴訟律師事務所是哪家？,米德蘭州最好的訴訟律師事務所是誰?,2,0,Midland是城市非州
+landman,94,"00:03:22,536",or those little skinny ones.,或那種細長的。,還有那種細長的都行。,2,0,意思反了：細菸變可以
+landman,122,"00:04:59,132",in our contract.,根本沒有控制權變更。,控制權變更條款。,0,1,右=下一句內容
+landman,123,"00:05:00,233",There's been no change in control.,他媽的，他死了，Tommy。,控制權並沒有改變。,0,2,右=下一句內容
+landman,124,"00:05:01,502","Well, he's fucking dead, Tommy.",現在他老婆 經營這家公司。,他他媽的死了，Tommy。,0,2,右=下一句內容
+landman,125,"00:05:02,736",And now his wife runs the company.,這就是「控制權變更」 的定義啊。,現在是他老婆在經營公司。,0,2,左=下一句內容
+landman,126,"00:05:04,271","That's the very definition of ""change in control.""",我經營公司。,這就是「控制權變更」的定義。,0,2,左=下一句內容
+landman,127,"00:05:06,574",I run the company.,她是老闆， 以前也是。,是我在經營公司。,0,2,右=下一句內容，漏譯
+landman,128,"00:05:07,908","She owns it, and she owned it before.",她在合夥協議裡有名字。,公司是她的，之前也是她的。,0,2,右=下一句內容
+landman,144,"00:05:39,973",from the fucking railroad commission?,你覺得Monty這輩子 申請過一次許可嗎？,申請許可證？,0,2,右=下一句內容
+landman,145,"00:05:41,842",You think Monty ever pulled a fucking permit in his life?,你跟Monty賺的每一分錢，,你以為Monty這輩子 申請過一次許可證嗎？,0,2,左=下一句內容，漏譯
+landman,146,"00:05:45,646","Every dime you ever made with Monty,",都是我 從地底下抽出來的。,你跟Monty賺的每一分錢，,0,2,右=下一句內容
+landman,147,"00:05:47,781",I pumped it out of the ground.,這點改變不了。,都是我從地底下抽出來的。,0,2,左=下一句內容
+landman,148,"00:05:49,182",And that don't change.,我已經在翻修井的工作上 投入了17口井。,這點永遠不會變。,0,2,左=下一句內容
+landman,210,"00:08:00,447",- first thing. - All right. Everyone's,- 首先。 - 好的。大家都,- 明天第一件事就辦。 - 好，大家都很好奇,0,2,first thing譯成「首先」
+landman,298,"00:12:12,699",where the other team doesn't know it's playing.,自己在玩。,對手根本不知道 自己正在被獵殺的遊戲。,0,1,左漏「對手不知道」
+landman,330,"00:13:53,566",Strong enough for you?,這樣夠狠嗎？,夠濃了嗎？,2,0,左誤譯為飲料濃度
+landman,419,"00:20:38,671","it's hard to say, but be conservative, 500.",很難預測，但保守估計，五百萬。,很難說，但保守估計，五百桶。,0,2,左500譯成五百萬
+landman,444,"00:21:46,238",<i>♪ It ain't like it was love anyways ♪</i>,<i>♪ 已經不像從前 反正愛也不愛 ♪</i>,<i>♪ 反正也不像是愛情 ♪</i>,0,2,右歌詞語意錯亂
+landman,445,"00:21:50,076",<i>♪ I won't have no trouble rounding up... ♪</i>,<i>♪ 我不會有麻煩 去圓起... ♪</i>,<i>♪ 我不會有麻煩把你們聚集起來... ♪</i>,0,1,右「圓起」不知所云
+landman,448,"00:21:55,915",Spot 'em from a mile away.,Spot 'em from a mile away.,老遠就能認出來。,0,2,左未翻譯
+landman,472,"00:22:46,466",<i>♪ I've got me more than a few ♪</i>,♪ I've got me more than a few ♪,<i>♪ 我擁有的不只一點點 ♪</i>,0,2,左未翻譯
+landman,486,"00:23:27,574",- Europe? - Midland.,歐洲？ Midland。,- 歐洲？ - 米德蘭州。,2,0,左Midland誤為州
+landman,502,"00:24:03,309",with the cheerleading corps.,妳本來是要為科技大學加油嗎？,加入啦啦隊了。,0,2,左顯示下一句內容
+landman,503,"00:24:06,078",Were you going to cheer for Tech?,不，我只是...,妳原本打算幫科技大學 啦啦隊嗎？,0,2,左顯示下一句內容
+landman,516,"00:24:30,803",against cheerleaders dating athletes.,這對妳來說是個問題？,說啦啦隊不能跟 運動員交往。,0,1,右顯示下一句、漏譯本句
+landman,517,"00:24:32,805",And that was an issue for you?,非常是。,那對妳來說是個問題？,0,2,右顯示下一句內容
+landman,518,"00:24:35,241",Very much.,嗯哼。,非常大的問題。,0,2,左顯示下一句、漏譯本句
+landman,519,"00:24:36,275",Uh-huh.,妳想讓我解釋一下 我對這件事的立場嗎？,嗯哼。,0,2,右顯示下一句內容
+landman,520,"00:24:40,847",Would you like me to explain my position on the subject?,我很樂意聽妳說說 妳的立場。,妳要我解釋一下 我在這件事上的立場嗎？,0,2,左顯示下一句內容
+landman,521,"00:24:43,282",I would be fascinated to hear your position on the subject.,嗯，大學試圖阻止 最漂亮的女生們,我很想聽聽 妳的立場。,0,2,左顯示下一句內容
+landman,522,"00:24:46,485","Well, it seems detrimental to, really, humanity in general",和運動員約會， 這對整個人類來說,嗯，我覺得這其實 對整個人類都很不利,0,2,左內容時序錯位
+landman,523,"00:24:50,322",that a university would try to keep the prettiest girls,似乎是有害的。,一所大學竟然想把 最漂亮的女生,0,2,左內容時序錯位
+landman,524,"00:24:53,092","from dating the tallest, most athletic boys",和最高、最運動型的男孩約會,不能跟最高 最會運動的男生約會,0,1,右漏譯「阻止」意思反轉
+landman,554,"00:26:08,601",Hybrid vigor.,混合活力。,混種優勢,0,2,左術語誤譯
+landman,560,"00:26:19,946","of quarterbacks and cheerleaders,",嬰兒工廠理論，,什麼四分衛跟啦啦隊長 配種生出優等寶寶,0,1,左漏譯四分衛啦啦隊
+landman,598,"00:27:41,694",and on the plaque right in front of you.,(no dialogue),妳面前的名牌上 也寫著。,0,2,左顯示(no dialogue)
+landman,687,"00:31:59,952",with some fucking mansion,我們根本買不起 也不需要的,買什麼該死的豪宅,0,2,左：提前顯示下句
+landman,703,"00:32:40,559",[sighs] And I'm all alone 'cause all you do is work.,你啦，整天只會工作。 我一定要開始喝酒。,[嘆氣] 我一個人孤零零的，因為你就只知道工作。,0,2,左：漏譯且提前下句
+landman,710,"00:34:00,239",Ain't set yet.,還沒好。,太陽還沒下山咧。,0,2,左：太陽下山譯成飯沒好
+landman,713,"00:34:12,318",[Denise] It had already set this time yesterday.,昨天這個時候早就好了。,太陽昨天這個時候就已經下山了。,0,2,左：太陽下山譯錯
+landman,726,"00:34:52,023",if you are going to be outside.,（無臺詞）,我需要你留在座位上。,0,1,左：顯示「無臺詞」佔位
+landman,772,"00:38:11,557",I heard that.,我聽說過。,我聽到了喔。,0,2,左：我聽到了譯成聽說過
+landman,778,"00:38:23,268","- Do you like my outfit? - [Tommy] Ainsley, you look",妳喜歡我的服裝嗎？ Tommy，妳看起來,- 你喜歡我這套嗎？ - Ainsley，你看起來,0,2,左：說話者寫錯成Tommy
+landman,780,"00:38:27,439",She's our little horny toad now.,她現在是我們的小角蜥了。,她現在是我們家的小花痴了。,2,0,右：吉祥物譯成花痴
+landman,815,"00:39:45,684",the more complicated the dinner dishes become?,晚餐的盤子就變得越複雜？,晚餐的菜就變得越複雜？,0,2,右：菜色譯成盤子
+landman,821,"00:39:59,397",and pick their asses and swing around on shit.,還有挑選我們的屁股 在東西上面蕩來蕩去。,抓屁股、盪來盪去。,0,2,左：抓屁股譯成挑選屁股
+landman,878,"00:42:16,367",should be committed to during the current arc of your cycle.,應該在你現在這個週期做。,不該在你現在這個週期的階段做決定。,0,0,左漏否定反義；右雙重否定
+landman,890,"00:42:52,738",during the week of this miracle unfolding?,是嗎？我在心智上 受到這麼大的影響？,就因為這個奇蹟 發生的那一週？,0,1,右：顯示下一句內容
+landman,891,"00:42:57,208",Huh? That I'm somehow so mentally compromised?,- 我從沒這樣說過。 - 你以為我會怎樣，嗯？,嗯？我心智就這樣受損了？,0,2,右：顯示下一句內容
+landman,916,"00:44:02,440",in that little tiny bra.,看起來真的很性感。,穿著那件小小的內衣,1,0,左：漏譯「很好看」主旨
+landman,924,"00:44:23,561",It's a gift.,這是份禮物。,這是天賦。,0,2,左：天賦譯成禮物
+landman,930,"00:44:52,858",You say that like I'm the one fucking cleaning it.,你說得好像 我是那個去他媽清理的人。,你說得好像是你在清理一樣。,1,0,右：主詞反了
+landman,936,"00:45:19,851",after you clean all this shit up.,(這行屬於[935]的延續),等你把這些鬼東西 清乾淨以後,0,1,右：顯示註解佔位文字
+lioness,39,"00:04:13,165","Uh, what does it look like I'm doing?",呃，你看起來像是在幹什麼？,呃，你看我像在幹嘛？,0,2,左：主詞錯
+lioness,66,"00:05:05,435",- [Charlie whoops] - [Kate] Nice save.,呃，太棒了。 好的。,- 太棒了！ - 說得好。,0,1,左：Nice save誤譯
+lioness,73,"00:05:17,708",- [laughs] - You're such a dick.,[笑聲] 你真是個混蛋。,- (笑) - 你這人真machiavellian...白目。,2,0,左：夾雜英文亂碼
+lioness,78,"00:05:27,022",- just ordered waffles. - Okay.,我剛點了鬆餅。 好的。,我剛點了鬆餅。 好。,0,0,剛點了誤譯
+lioness,83,"00:05:34,595",- [laughing] Stop. - [Kate] You literally have,停止。 凱特，你有一座,別鬧了 你根本,0,2,左：誤加凱特稱呼
+lioness,84,"00:05:36,205",a mountain full of pancakes.,煎餅山。,有一整座鬆餅山,0,1,右：斷句不成句
+lioness,89,"00:05:45,257","and you're... oh, you're stealing.",- 是啊，我知道。 - 那是四條香腸嗎？,你...你是在偷吃吧,0,2,左：時間偏移
+lioness,90,"00:05:46,868","- [Charlie] Yeah, I know. - [Kate] Was that four links?",我要留一些 明天吃剩飯。,-對啊，我知道 -那是四條香腸嗎？,0,2,左：時間偏移
+lioness,91,"00:05:48,913","[Charlie] I need to make, um, leftovers for tomorrow.",- 笑聲 - ♪ 陰森音樂 ♪,我要留一些 明天當剩菜吃,0,2,左：時間偏移
+lioness,92,"00:05:52,221",- [laughter] <i>- ♪ ominous music ♪</i>,- 為什麼會有洞... - Neal？親愛的？,-（笑聲） -♪ 陰森音樂 ♪,0,2,左：時間偏移
+lioness,93,"00:05:54,528",- Why are there holes in... - [Neal] Honey?,等一下。,-為什麼這裡有洞... -（尼爾）親愛的？,0,1,右：時間偏移
+lioness,94,"00:05:55,659",[Joe] One second.,電視新聞主播 ...毒梟在邊界 兩側所採取的行動,等一下,0,2,左：時間偏移
+lioness,95,"00:05:57,531",[TV newsman] <i>...acted out by cartels on both sides</i>,不過沒有任何一位 美國國會議員被綁架過。,（電視新聞主播）...邊境兩側的,0,1,右：時間偏移
+lioness,96,"00:05:59,141","<i>of the border,</i>",邊界之外，,販毒集團所為,0,0,左誤譯／右順序錯亂
+lioness,104,"00:06:14,635",<i>against illegal immigration along the borders</i>,<i>針對德克薩斯州、新墨西哥州</i>,<i>範圍涵蓋德州、新墨西哥州</i>,0,1,右：漏譯非法移民
+lioness,105,"00:06:16,680","<i>of Texas, New Mexico,</i>",<i>亞利桑那州和加州 邊境的戰爭</i>,<i>亞利桑那州和加州</i>,1,0,左：時間偏移
+lioness,106,"00:06:18,900",<i>Arizona and California.</i>,<i></i>,<i>邊境地帶</i>,0,1,左：空白
+lioness,135,"00:07:54,212","We're about 30 miles north of where I can be any help, Alan.",我們在北邊大約三十哩遠， Alan，我幫不了什麼忙。,"We're about 30 miles north of where I can be any help, Alan.",2,0,右：未翻譯
+lioness,136,"00:07:57,172","We are 30 miles north, but she ain't.",我們在北邊三十哩， 但她不是。,"We are 30 miles north, but she ain't.",2,0,左：未翻譯
+lioness,198,"00:10:55,219",We have a unit in place to either take her at the house,我們已經部署好一支部隊 可以在她被帶離房子時,我們已經部署了一支小隊，可以在屋內拿下她,0,2,左：屋內拿下誤譯
+lioness,257,"00:13:33,116",- I-I need time. - [Hollar] How much time?,我需要時間。,-我需要時間。 -要多久？,0,2,左：漏譯後半
+lioness,292,"00:15:02,814",the target and mine hard data?,這根本是無理要求 根本不可能執行。,又消滅目標又蒐集確切情資？,0,1,右：時間偏移
+lioness,293,"00:15:04,555",It's a ridiculous ask and it's impossible to execute.,你有QRF，我們會部署 一個前進分遣隊,這要求太荒謬了，根本無法執行。,0,2,右：時間偏移
+lioness,307,"00:15:34,846","Put them on, get them to Bliss.",讓他們穿上，帶他們去 Bliss。,叫他們回來，去 Bliss 跟你會合。,0,2,右：穿上誤譯
+lioness,315,"00:16:04,789","I don't know, Halloween is over?",我不知道，萬聖節不是過完了嗎？,我不知道，萬聖節結束就好？,0,1,左：語意反轉
+lioness,322,"00:16:19,891",which falls under my purview.,我們可以掛燈。,這歸我管。,0,2,右：時間偏移
+lioness,323,"00:16:21,806",We can hang lights.,現在我們開始掛 糖果杖，,我們可以掛燈，,0,2,右：時間偏移
+lioness,333,"00:16:38,084",November-Mike-one- one-three-niner.,November-Mike-one- one-three-niner.,November-Mike-一一三九。,0,1,右未翻譯
+lioness,363,"00:18:19,141",that says you're CIA on it.,你的包裡有什麼 節慶一點的東西可以換上嗎？,上面寫著你是中情局的算了,0,1,左為下句內容
+lioness,365,"00:18:21,926",in that bag you can throw on?,喔，好啊， 讓我翻一下我的裝備包。,"噢,當然,我看看我的裝備包",0,0,兩側皆為下句內容
+lioness,372,"00:18:38,856",in a fucking miniskirt.,去執行搶人質任務。,穿著他媽的迷你裙,0,1,左漏譯迷你裙
+lioness,459,"00:23:55,782",Then you got drums and everything?,那你還有鼓 和所有的東西？,那你們還有鼓 跟其他東西?,0,0,彈鼓誤譯為鼓
+lioness,460,"00:23:57,348",[Kyle] Drums are up.,鼓已經準備好了。,鼓已經備好了。,0,0,彈鼓誤譯為鼓
+lioness,479,"00:25:05,721","Don't T-bone this fucker, clip him in the rear.",別去撞他， 從後面夾擊。,別正面撞這混蛋， 從後面撞他。,0,2,右撞車指令翻錯
+lioness,501,"00:26:37,770",I'm gonna cut you loose.,我要放妳走。,我要把妳鬆開了。,0,2,右誤為放走
+lioness,531,"00:27:51,452",have a BP helo ride us parallel.,好的，各位， 給我們一分鐘 找替代路線。,讓邊防巡邏隊的直升機沿著我們平行飛。,0,2,右為下句內容
+lioness,532,"00:27:53,541","<i>All right, everyone, give us a minute</i>",後面的人注意。 敵軍已經發現我們。,<i>好，各位，給我們一分鐘</i>,0,2,左為534內容
+lioness,533,"00:27:54,760",<i>to seek an alternate route.</i>,（敵方車輛，六點鐘方向， 一百五十公尺，距離在縮小。）,<i>找替代路線。</i>,0,1,右為538內容
+lioness,534,"00:27:56,457",Heads up in the back. Enemy has eyes on.,好的，Joe，你守左邊。 Joe 收到。,後方注意。敵人發現我們了。,0,2,右為540內容
+lioness,535,"00:27:58,372",<i>♪ exciting music</i>,我守右邊，Joe。,<i>♪ 刺激的音樂</i>,0,2,右為541內容
+lioness,548,"00:28:58,475","[Eagle's Nest] <i>Three kilos north, turn right.</i>","<i>Three kilos north, turn right.</i>","<i>Three kilos north, turn right.</i>",0,0,兩側未翻譯
+lioness,553,"00:29:07,136","Three klicks north, dirt road on the right,","Three klicks north, dirt road on the right,","Three klicks north, dirt road on the right,",0,0,兩側未翻譯
+lioness,557,"00:29:14,753","- In the back, fresh bags. - Reload.",後面有新的背包。 裝填。,-後面有新彈匣。 -裝彈。,0,2,右彈匣袋誤為背包
+lioness,593,"00:31:41,073",<i>...river's a half klick to the north straight ahead of you.</i>,<i>...river's a half klick to the north straight ahead of you.</i>,<i>...river's a half klick to the north straight ahead of you.</i>,0,0,兩側未翻譯
+lioness,636,"00:33:03,546",- [Cody] I'm fucking aware. - [Kyle] Hang on!,[Cody] 我他媽的當然知道。 趴下！,- 我他媽知道啦。 - 撐住!,0,2,右抓穩誤為趴下
+lioness,681,"00:35:58,025",and skip to the ice cream part of the meal.,好吧。你們的交易還真不少。,直接跳到冰淇淋那部分。,0,1,右側提前顯示下一句
+lioness,682,"00:36:00,636",Okay. Lot of deals going on there.,<i>♪ 戲劇性音樂</i>,"好喔,還真會談條件。",0,2,右側顯示音樂非台詞
+lioness,684,"00:36:08,731",<i>♪</i>,現在怎麼辦？,<i>♪</i>,0,2,左側提前顯示下一句
+lioness,686,"00:36:34,888",What now?,你接下來要做什麼？,現在呢?,0,2,右側顯示後句內容
+lioness,687,"00:36:36,977",[Joe] What now what?,現在我們要主動出擊。,現在什麼?,0,1,左側顯示後句內容
+lioness,688,"00:36:38,718",What do you do next?,幫我一個忙。,你接下來要做什麼?,0,2,左側顯示後句內容
+lioness,716,"00:38:18,470","Or IED or some fucking helo crash,",也不是簡易爆炸裝置 或該死的直升機墜毀，,也不是simplified IED 還是什麼直升機墜毀,2,0,左側殘留英文垃圾字
+lioness,787,"00:41:06,551",It's falling apart.,一切都在瓦解。,快散掉了,0,2,右側誤解為抽象瓦解
+peacemaker,80,"00:02:58,113","Fine! Fuck it. Don't be trustworthy,",好啦！他媽的。 別相信我，,好吧！去他的。 不用講信用，,0,1,右:意思變成別相信我
+peacemaker,92,"00:03:21,703","- Get outta here, motherfucker! - You a fan?",- 滾出去，你這混蛋！ - 你是粉絲嗎？,-去你的，滾一邊去！ -你是我的粉絲？,0,1,左:少來了譯成滾出去
+peacemaker,111,"00:03:58,773",no matter how many people I have to kill to get it.,噢，和平使者！ 是的！,不管我得殺多少人 才能達到。,0,2,右:顯示下一句內容
+peacemaker,112,"00:04:00,737","- Oh, Peacemaker! - Yes!",你就是那個種族歧視的超級英雄！ 不是！,-喔，和平使者！ -對！,0,2,右:顯示下一句內容
+peacemaker,113,"00:04:03,378",- You're that racist superhero! - No!,你只殺少數族裔，老兄！ （和平使者笑著）,-你就是那個種族歧視的超級英雄！ -沒有！,0,2,左:顯示下一句內容
+peacemaker,114,"00:04:05,414","- You only kill minorities, man! - (PEACEMAKER CHUCKLING)",我也殺死了相當多的白人！,-你只殺少數族群，老兄！ -（和平使者笑聲）,0,2,右:顯示下一句內容
+peacemaker,115,"00:04:07,482",I killed a fair amount of white people too!,比例確實有點可疑， 我就只能說這樣。,我也殺了不少白人啊！,0,2,右:顯示下一句內容
+peacemaker,116,"00:04:09,084","The ratio is suspect, is all I have to say!",如果有人在犯罪… 是嗎？,我只是要說那個比例很可疑！,0,2,左:顯示下一句內容
+peacemaker,117,"00:04:11,220",- If somebody's committing a crime... - Yes?,…我應該控制他們的種族嗎？,-如果有人 正在犯罪⋯⋯ -然後呢？,0,2,右:顯示下一句內容
+peacemaker,118,"00:04:13,454",...am I supposed to control what their ethnicity is?,不是。但你需要 多看著白人一點。,⋯⋯我還要管 他是什麼種族嗎？,0,2,左:顯示下一句內容
+peacemaker,280,"00:13:12,693",and you thought we were just gonna let you go scot-free?,沒錯啊。我是為了你們殺了Rick Flag！,你以為我們就會這樣 放你自由？,0,2,左:顯示下一句內容
+peacemaker,281,"00:13:15,363",Yeah. I killed Rick Flag for you people!,沒人叫你殺Flag。,對啊，我可是為你們 殺了Rick Flag！,0,2,左:顯示下一句內容
+peacemaker,282,"00:13:18,100",No one ever told you to kill Flag.,Waller說不管我得做什麼， 都要確保Project Starfish的檔案,沒人叫你 去殺Flag。,0,2,右:顯示下一句內容
+peacemaker,283,"00:13:19,734",Waller said do whatever I had to do to make sure,不會外洩。,Waller說不惜一切代價,0,2,左:顯示下一句內容
+peacemaker,284,"00:13:21,736",those Project Starfish files didn't get out.,我做了唯一能做的選擇。 (瓶子碰撞聲),確保Starfish計畫的 檔案不會外流。,0,2,左:顯示下一句內容
+peacemaker,285,"00:13:23,304",- I made the only choice I could. - (BOTTLES CLINKING),有趣的是，對你來說， 「唯一的選擇」和「殺人」,-我只能做這個選擇。 -（瓶子碰撞聲）,0,2,左:顯示下一句內容
+peacemaker,345,"00:15:45,781",We still have that bomb in your head,我們腦子裡還有那顆炸彈,你腦子裡那顆炸彈 還在，,0,2,你腦譯成我們腦
+peacemaker,378,"00:17:25,814",- in his fuckin' garden. - Joe who?,- 幹活的傢夥。 - Joe誰？,在他媽花園裡種花的傢夥。 - Joe 誰啊？,0,1,左漏譯花園
+peacemaker,396,"00:18:08,890",chattin' up my fruity neighbors?,那傢夥在跟我講話！ 他真是個討厭的傢夥。,還要你去跟我那些死玻璃鄰居聊天？,0,2,右顯示下句
+peacemaker,397,"00:18:10,558",Guy was talking to me! He was being a total 'nad.,- 從監獄出來了。 - 不會吧？,是那傢夥先跟我講話的！ 他態度超差的,0,2,左顯示下句
+peacemaker,398,"00:18:13,965",- Got out of prison. - You don't say?,最近日子對我來說滿糟的，爸。我...,- 剛出獄啊？ - 是喔？,0,2,右顯示下句
+peacemaker,399,"00:18:16,664","It's been kind of a rough go for me lately, Dad. I was...",在醫院裡躺了大概五個月。,老爸，我最近過得很不順 我...,0,2,右時間偏移
+peacemaker,400,"00:18:20,170","laid out in the hospital for, like, five months.",有人槍殺我。 一棟建築物倒在我身上。,在醫院躺了差不多五個月,0,2,右時間偏移
+peacemaker,402,"00:18:28,479",Somebody shot me. A building fell on me.,你讓人槍殺你？,有人開槍打我 還有棟大樓塌下來壓我,0,2,右時間偏移
+peacemaker,494,"00:23:03,052",is confidential.,是的。,都是機密。,0,2,右無中生有「是的」
+peacemaker,511,"00:24:04,146",I never gave you a second thought,你在裡面的時候 我根本沒想過你,你關在裡面的時候,2,0,左漏譯主句且偏移
+peacemaker,532,"00:24:57,766",in full cosplay mode?,就出現了？,全副武裝角色扮演跑來？,0,1,右漏譯角色扮演
+peacemaker,548,"00:25:37,540",on a mission?,去執行任務？,一件鮮紅色上衣 配白色褲子，,2,0,左顯示下句
+peacemaker,549,"00:25:38,740",A bright red shirt and white pants,亮紅色襯衫 和白褲子,根本不適合 躲在暗處埋伏吧。,2,0,左時間偏移
+peacemaker,550,"00:25:40,542",aren't exactly conducive to lurking in the shadows.,根本不適合 躲在陰影裡。,人們看到這身戰袍， 心裡就會湧起恐懼。,2,0,左時間偏移
+peacemaker,552,"00:25:45,708",What people? The other people at the Village People tryouts?,什麼人？Village People選秀會上的其他人？,什麼人？ 還是崔村人選拔賽的那些人？,2,0,崔村人不知所云
+peacemaker,554,"00:25:49,484",Why is there a bald eagle in your car?,那是Eagly。 你們點餐都沒等我？,你車上幹嘛有隻禿鷹？,0,1,左顯示下句
+peacemaker,555,"00:25:52,020",That's Eagly. You guys ordered without me?,"""Eagly""是你的寵物鷹？ 是啊。",那是Eagly。 你們沒等我就先點餐了？,0,2,右顯示下句
+peacemaker,556,"00:25:55,126","-""Eagly"" is your pet eagle? - Yeah.",那你的狗是不是叫Doggy？ （約翰笑聲）,-「Eagly」是你養的寵物鷹？ -對啊。,0,2,右顯示下句
+peacemaker,557,"00:25:57,993",- Is your dog named Doggy? - (JOHN CHUCKLING),好啦。 你有個女兒叫Daughtery嗎？（笑聲）,-你的狗叫Doggy嗎？ -（JOHN輕笑）,0,2,左顯示下句
+peacemaker,558,"00:26:00,495",- All right. - Do you have a daughter named Daughtery? (CHUCKLES),你嫉妒人家有隻寵物鷹？,-好喔。 -那你女兒叫Daughtery嗎？（笑）,0,2,左時間偏移
+peacemaker,559,"00:26:03,565",Jealous of a guy's pet eagle much?,（哈考特笑聲） 嘿，甜心！,是在嫉妒人家養寵物鷹喔？,0,2,左時間偏移
+peacemaker,560,"00:26:05,968","- (HARCOURT CHUCKLING) - Hey, sweet-cheeks!",你能幫我快速點一下餐嗎？,-（HARCOURT輕笑） -嘿，甜心！,0,2,右顯示下句
+peacemaker,561,"00:26:08,870",Can you take my order real quick?,對不起—— 嗯，當然可以。 你要點什麼？,可以幫我點個餐嗎，很快就好？,0,2,左顯示下句
+peacemaker,584,"00:27:01,657",Why is that busboy staring at you?,那個巴菲為什麼一直盯著妳看？,那個服務生 幹嘛一直盯著你看？,0,2,巴菲不知所云
+peacemaker,592,"00:27:30,819",to the safety of American citizens.,(續上句),構成嚴重威脅。,0,2,右顯示標記非字幕
+peacemaker,597,"00:27:41,529","You want to have a dressing-getting-off contest right now, Dye-Beard?",妳現在想跟我比賽誰更容易沾上沙拉醬嗎，染鬍子？,你現在想跟我 比賽誰擦醬料擦得快嗎，染鬍子的？,0,2,弄掉譯成沾上
+peacemaker,618,"00:28:34,349",Why are you always trying to get me to set you up with my cousin then?,那你幹嘛一直想把我跟你表妹介紹認識？,那你幹嘛老是想撮合我 跟我表妹？,0,0,你我表妹搞反
+peacemaker,734,"00:33:48,198",<i>♪ Summertime girls ♪</i>,♪ Summertime girls ♪,<i>♪ 夏日女孩 ♪</i>,0,2,右側歌詞未翻譯
+peacemaker,735,"00:33:51,767",<i>♪ You make my whole world Go around ♪</i>,♪ You make my whole world Go around ♪,<i>♪ 你讓我整個世界都轉動起來 ♪</i>,0,2,左側歌詞未翻譯
+peacemaker,743,"00:34:17,325",made it stalkery. I just described it.,聽著，我對你沒有興趣 除了你為我們 戰鬥的能力。,讓它聽起來像跟蹤。 我只是在描述而已。,0,1,左側是744-745內容
+peacemaker,744,"00:34:20,565","Look, I have no interest in you",你長得帥並不代表 你不是個該死的殺人犯。,聽著，我對你沒興趣,0,2,右側是746內容
+peacemaker,745,"00:34:22,998",other than your ability to fight for us.,- 你覺得我帥？ - 天啊，拜託你滾遠一點。,除了你為我們作戰的能力之外。,0,2,左側是747內容
+peacemaker,746,"00:34:24,966",Just because you're handsome doesn't mean you're not a piece-of-shit murderer.,好吧，聽我說，我在監獄裡 待了四年，好嗎？,你長得帥 不代表你不是個渾蛋殺人犯。,0,2,右側是749-750內容
+peacemaker,747,"00:34:28,303","- You think I'm handsome? - Oh, my God, please fuck off.",我沒有跟任何人在一起—— 我很久沒有跟女人 在一起了。,-你覺得我長得帥？ -天啊，拜託你滾開。,0,2,右側是751-752內容
+peacemaker,750,"00:34:38,681","the last four years, okay?",我沒跟任何人在一起——我——我好久 沒跟女人在一起了。,都在坐牢，好嗎？,0,1,右側是751-752內容
+peacemaker,752,"00:34:43,251",with any woman in a long time.,（此行無對白）,跟任何女人在一起了。,0,1,右側無翻譯佔位
+peacemaker,755,"00:34:49,657","Genital-to-genital contact, no touching above here.",下半身接觸就好， 上面不要碰。,"Genital-to-genital contact, no touching above here.",2,0,左側未翻譯
+peacemaker,819,"00:37:58,146",'cause they weren't afraid to be women.,沒有這些,因為他們不怕裝成女人。,0,2,右側是820內容
+peacemaker,820,"00:38:00,351",None of this,自動調音、機器人乾磨擦 充斥的音樂廢話，,才沒有這種,0,1,左側是821內容
+peacemaker,821,"00:38:01,583","auto-tune, robots-dry-humping that passes for music bullshit,",對吧？(笑聲),自動調音、機器人乾巴巴磨蹭 就算音樂的鬼東西，,0,1,左側是822內容
+peacemaker,822,"00:38:04,553",right? (CHUCKLES),絕對不會。Quireboys？我小時候去看過他們。,對吧？（笑）,0,2,左側是823內容
+peacemaker,823,"00:38:09,927",No way. Quireboys? Went to see these guys when I was a kid.,天啊。每次他們來Evergreen演出,不會吧，Quireboys？我小時候 還去看過他們表演。,0,2,右側漏823、顯示824-825
+peacemaker,825,"00:38:15,563",when they came through Evergreen.,♪ (Quireboys的〈I DON'T LOVE YOU ANYMORE〉播放) ♪,Evergreen 演出我一定去。,0,2,右側是826內容
+peacemaker,826,"00:38:34,518","♪ (“I DON'T LOVE YOU ANYMORE"" BY QUIREBOYS PLAYING) ♪",<i>- ♪ 我今天早上去見她 ♪</i> - (跟唱),♪（QUIREBOYS 的 《I DON'T LOVE YOU ANYMORE》播放）♪,0,2,左側是827內容
+peacemaker,913,"00:44:30,439","<i>♪ Can't get enough Of your sweet, sweet lovin' ♪</i>",<i>♪ 我受不了 你甜蜜、甜蜜的愛 ♪</i>,<i>♪ 對你甜蜜蜜的愛 我永遠不夠 ♪</i>,0,1,左側「受不了」意思反了
+rings,56,"00:02:40,125","And should he ever, none of us are to treat with him again.",如果他再回來，我們都不能再跟他往來。,"And should he ever, none of us are to treat with him again.",2,0,左側整句未翻譯
+rings,234,"00:24:58,333",when I no longer see the lie behind your eyes.,現在，這個人是誰？,我才會相信你。,0,1,右側顯示下一句內容
+rings,235,"00:25:03,041","Now, who is this Man?",他不是人。,那麼，這個人是誰？,0,2,左側顯示下一句內容
+rings,236,"00:25:09,458",He is no Man.,他一直在...偽裝成人類。,他不是人類。,0,2,左側顯示下一句內容
+rings,237,"00:25:13,166",He has been... masquerading as one.,以美麗的形態出現， 來隱藏他真實的自我。,他一直……偽裝成人類。,0,2,右側提前顯示下一句
+rings,238,"00:25:19,458","Appearing in fair form, to hide his true self.",他是Sauron。,以美好的外形出現， 藏起他真正的自己。,0,2,左側提前顯示下一句
+rings,454,"00:45:35,166",Trusting you?,相信我？,相信你？,0,2,人稱顛倒
+rings,650,"01:03:31,833","Perfection does not exist only in Valinor, High King.",完美並非只存在於瓦林諾，陛下。,完美並不存在 只存在於瓦林諾，至高王。,2,0,語意矛盾
+rings,702,"01:11:08,791",- Nobody goes off-trail. - [Nori] <i>Nobody walks alone.</i>,沒有人能離開步道。 沒有人會獨自行走。,- Nobody goes off-trail. - [Nori] <i>Nobody walks alone.</i>,2,0,未翻譯
+shadowbone,8,"00:00:48,840","Alina, how can you do that in here?",Alina，妳在這裡怎麼做到的？,阿利娜，你怎麼可以在這裡吃這個？,1,0,左誤譯為吃東西
+shadowbone,9,"00:00:50,884",Bumps help with texture.,凹凸有助於紋理。,顆粒感有助於呈現質感。,1,0,左誤解bumps為顆粒
+shadowbone,96,"00:05:55,354","Shut it down, boys! Shut it down!",關掉，各位！關掉！,都給我住手，小子們！住手！,0,2,左「關掉」誤譯住手
+shadowbone,217,"00:12:20,614",A landscape of Ravka. The Fold. Oil on parchment.,拉夫卡的風景畫。 摺痕。油彩在羊皮紙上。,拉夫卡的風景畫。黑暗裂隙。 油彩繪於羊皮紙上。,0,2,左Fold譯成摺痕
+shadowbone,268,"00:15:54,703",No one is.,沒人像你。,沒人跟她一樣。,2,0,左人稱錯（她→你）
+shadowbone,271,"00:16:18,477","If we're going to survive a round trip through the Fold,",如果我們要活著往返穿過摺痕，,如果我們要活著 穿越黑暗裂隙來回一趟，,0,2,左Fold譯成摺痕
+shadowbone,371,"00:23:25,821",General Kirigan?,General Kirigan?,General Kirigan?,0,0,兩邊皆未翻譯
+shadowbone,386,"00:23:58,854",This is something else.,老闆，老闆。,這事沒那麼簡單。,0,2,右：內容偏移下一句
+shadowbone,387,"00:23:59,938","[man] Boss, boss.",我們截到了 Dreesen 的一封信。,[男子] 老大，老大。,0,2,左：內容偏移下一句
+shadowbone,388,"00:24:02,023",We intercepted a note from Dreesen.,是嗎？,我們攔截到Dreesen的一張紙條。,0,2,右：內容偏移
+shadowbone,389,"00:24:04,734","Did you, now?",是給 Orchid 老闆的。,是嗎？,0,2,右：內容偏移
+shadowbone,390,"00:24:05,694",It's for the owner of the Orchid.,他們說需要 一個心靈操縱者的服務。今晚。,是給蘭花酒吧老闆的。,0,2,右：內容偏移
+shadowbone,391,"00:24:07,279",Says they require the services of a Heartrender. Tonight.,心靈操縱者？為什麼？,說他們需要 一位心靈渲染者的服務，今晚就要。,0,2,左：內容偏移下一句
+shadowbone,392,"00:24:10,657",A Heartrender? Why?,沒說。 只說得在午夜前找到。,心靈渲染者？為什麼？,0,2,右：內容偏移
+shadowbone,433,"00:26:28,169",how about ten?,十塊錢怎麼樣？,10%如何？,0,2,左：10%誤譯為十塊錢
+shadowbone,441,"00:27:09,461",General Kirigan.,Kirigan 將軍。,General Kirigan.,2,0,右：未翻譯
+shadowbone,505,"00:31:49,198",Where's your general? Kirigan?,妳的將軍呢？Kirigan？,Where's your general? Kirigan?,2,0,右：未翻譯
+shadowbone,512,"00:32:22,065","Do not, I repeat, do not leave the skiff during the crossing.",不要，我再說一遍，過河時不要離開小船。,絕對不能，我再說一次， 穿越期間絕對不能離開雪橇。,0,2,左：穿越裂隙誤為過河
+shadowbone,533,"00:35:02,016",-Blow it out! What are you doing? -[creature growling],-開火！你在幹什麼？ -[怪物低吼],-把它吹熄！你在幹嘛？ -[怪物咆哮],0,2,右：吹熄誤譯為開火
+shadowbone,596,"00:40:25,172",bargains for what he can take.,會為了能奪取的東西去談判。,不會為自己能搶到的東西討價還價,1,0,右：雙重否定意思反了
+zootopia2,12,"00:00:47,417",-It's your word against yours. -Huh?,這是妳的話對妳的話。 什麼？,-這只是各說各話而已。 -啥？,1,0,右：笑點反了
+zootopia2,17,"00:00:59,958","and Nicholas Wilde, a small-time street fox,",和尼可拉斯·王爾德， 小有名氣的街頭狐狸，,以及尼可拉斯·王爾德， 一個街頭小混混狐狸，,0,2,右：small-time誤譯
+zootopia2,24,"00:01:20,458",<i>in the history of Zootopia.</i>,動物方城市史上第一隊,<i>動物方城市史上第一組 兔子狐狸搭檔。</i>,0,2,右：漏譯兔狐
+zootopia2,53,"00:02:40,458",Captains Hoggbottom and Truffler will lead.,Hoggbottom船長和Truffler船長會帶隊。,霍格博頓隊長 和Truffler隊長帶頭。,0,1,左：船長誤譯
+zootopia2,64,"00:03:04,125",they said they got it.,他們已經在現場， 還帶著他們的小寶寶！,他們說已經搞定了。,0,2,右：提前顯示下句
+zootopia2,115,"00:05:04,667",-Hurry! -I got this.,快點！ 我搞定了。,-快點！ -交給我,0,2,右：I got this誤譯
+zootopia2,161,"00:07:29,250",for our beloved weather wall inventor Ebenezer Lynxley.,-[笑聲] -[兩人] Zebros!,悼念我們敬愛的 天氣牆發明家埃比尼澤·林克斯利,0,1,右：錯放後句內容
+zootopia2,178,"00:08:25,208",is our most reliable source.,Nibbles Maplestick 是不是我們最可靠的訊息來源。,是不是可靠的線人。,1,0,右：漏譯主詞人名
+zootopia2,186,"00:08:39,875",It was us.,是我們逮捕的。,但更重要的是，,1,0,左：提前顯示下句
+zootopia2,187,"00:08:40,957","But more importantly,",但更重要的是，,我們可能有了重大發現。,2,0,左：提前顯示下句
+zootopia2,188,"00:08:42,207",I believe we may have made a significant discovery.,我認為我們可能發現了 一些重要的線索。,那臺失竊的貨車裡 有一箱走私進口的貨物，,1,0,右：提前顯示下句
+zootopia2,189,"00:08:45,208","The stolen van contained a smuggled crate from overseas,",那臺被偷的車裡有一個 來自海外的走私木箱，,動物烏托邦百年慶典的宣傳單，,2,0,右：提前顯示下句
+zootopia2,190,"00:08:48,417","pamphlets for the Zootennial,",動物方城市百年慶的傳單，,還有某種爬蟲類的皮。,1,0,左：提前顯示下句/漏傳單
+zootopia2,191,"00:08:49,792",and some type of reptile skin.,還有某種爬蟲類的皮膚。,我已經把樣本送去化驗了。,1,0,右：提前顯示下句
+zootopia2,192,"00:08:51,708",I've already sent samples for testing.,我已經送樣本去檢驗了。,-如果你們…… -需要被檢驗的是你們！,1,0,左：提前顯示下句
+zootopia2,193,"00:08:53,375",-And if you... -What needs testing is you!,-你們要接受檢驗的是... -需要檢驗的是你們倆！,你們兩個把半座城市都翻了！,1,0,左：提前顯示下句
+zootopia2,197,"00:09:03,167",<i>You're almost out. You're gonna be...</i>,你快要出來了。 你就要...,<i>你快要撐不住了。 你會...</i>,2,0,左：almost out誤譯
+zootopia2,199,"00:09:06,792",<i>Who's catching him?</i>,誰在抓他？,<i>誰去接住他？</i>,0,2,右：catching誤譯
+zootopia2,248,"00:11:07,708",this is your moment to shine.,歡迎來到《危機搭檔》工作坊，,這正是你們大展身手的機會。,0,2,左：提前顯示下句
+zootopia2,249,"00:11:12,333","Welcome to Partners in Crisis,",這是為即將分手的搭檔舉辦的課程。[笑聲],歡迎來到「危機搭檔」，,0,1,右：提前顯示下句
+zootopia2,250,"00:11:15,583",a workshop for duos heading for disaster. [chuckles],我是你們的治療師動物， Fuzzby醫生。,這是專為瀕臨破局的搭檔 開設的工作坊。[輕笑],0,1,左：提前顯示下句/漏工作坊
+zootopia2,251,"00:11:19,000","I'm your therapy animal, Dr. Fuzzby.",你們之所以在這裡，,我是你們的治療動物， Fuzzby醫生。,0,1,右：提前顯示下句/漏自介
+zootopia2,252,"00:11:21,917",And you are here,是因為不搭調的搭檔,你們會來到這裡，,0,2,右：提前顯示下句
+zootopia2,253,"00:11:23,000",because mismatched pairings often need a little more work,往往需要多下點功夫,是因為搭配不當的組合 通常需要多花點功夫，,0,1,左：漏譯主語
+zootopia2,261,"00:11:41,417","And we have two new ""apart-ners.""",我們還有兩對 新的「不搭檔」。,我們這裡還有兩位 新的「貌合神離」搭檔。,0,2,右：兩對誤譯
+zootopia2,269,"00:12:02,000",so us being here kinda seems like a huge misunderstanding.,注意她先開口了，,所以我們會在這裡 好像是個天大的誤會。,0,1,右：提前顯示下句
+zootopia2,270,"00:12:06,667","Notice how she answered first,",沒有讓她的搭檔說話，,注意她先回答，,0,2,右：提前顯示下句
+zootopia2,271,"00:12:08,333","did not allow her partner to speak,",似乎處於否認的狀態,不讓她的搭檔說話，,0,2,右：提前顯示下句
+zootopia2,272,"00:12:09,917",seems to be in a state of denial,當她壓抑不適時 會敲腳。,看起來是在否認事實，,0,2,右：提前顯示下句
+zootopia2,273,"00:12:11,292",and taps her foot when she's suppressing discomfort.,現在觀察她不適的根源 那種不協調的做作所代表。,而且在壓抑不安時 會用腳打拍子。,0,1,左：錯放後句/漏敲腳
+zootopia2,275,"00:12:14,583",And observe the source of her discomfort,哦！,再觀察她不安的根源，,0,2,左：錯放後句
+zootopia2,297,"00:13:03,958",if we are stuck in that room.,（接續上一行）,如果一直被關在那個房間裡。,0,1,右：佔位文字
+zootopia2,326,"00:14:03,875","-[grunts, gasping] Coconut! -[snarling]",-[呻吟、喘氣] 椰子！ -[咆哮],-[咕噥，喘氣] Coconut！ -[咆哮],2,0,右：Coconut未翻
+zootopia2,361,"00:15:31,833","<i>Tomorrow's weather is, again, everything.</i>",明天的天氣依舊是，什麼都有。,<i>明天的天氣， 一樣是永珍齊發。</i>,1,0,左:永珍齊發看不懂
+zootopia2,406,"00:17:48,542",Even if they had feet. [chuckles],聽著，我們已經 焦頭爛額了，蘿蔔，,就算牠們有腳也一樣。,0,2,左:顯示下一句內容
+zootopia2,407,"00:17:50,208","Look, we're already in the hot seat, Carrots,",而且披薩來了。我得走--,聽著，我們已經 惹上麻煩了，紅蘿蔔，,0,2,左:顯示下一句內容
+zootopia2,485,"00:20:53,667","not break and enter-- Oh, God!",我們本來就要進去了。沒錯。,不是叫我們闖空門吧⋯天啊！,0,2,左:顯示下一句內容
+zootopia2,486,"00:20:56,292","Oh, we were always going inside. Got it.",一致的意見就是你的意見。,[尼克] 反正我們本來就要進去，懂了。,0,2,右:顯示下一句內容
+zootopia2,487,"00:20:58,042",Same page means your page.,這叫做詐騙，親愛的。,所謂「達成共識」根本就是你說了算。,0,2,右:顯示下一句內容
+zootopia2,488,"00:20:59,667","It's called a hustle, sweetheart.",你在這裡換衣服。 我去開車。,這叫做「耍點手段」，親愛的。,0,2,左:顯示下一句內容
+zootopia2,575,"00:24:50,875","you choose to eat, bon appétit then.",決定吃東西的話， 祝你用餐愉快。,你打算吃點東西的話，,2,0,右:漏掉祝用餐愉快
+zootopia2,605,"00:25:44,125","-You're done. -Wait. No, no.",-你沒事了。 -等等。不，不。,-你完了。 -等等，不、不。,0,2,左:意思相反
+zootopia2,606,"00:25:45,333",You're both done.,你們兩個都沒事了。,你們兩個都完了。,0,2,右:意思相反
+zootopia2,677,"00:29:10,375",-Oi! -[Judy] Come on.,-哎！ -來吧，茱蒂。,-喂！ -[茱蒂] 快點。,0,2,說話者變受話者
+zootopia2,861,"00:37:44,167",I think I can handle a juggling seal.,我想我對付得了一隻雜耍海獅。,對付一隻耍雜技的海豹，小事一樁。,0,2,海豹譯成海獅 笑點失效
+zootopia2,909,"00:39:50,958","than sitting on a beach on Outback Island,",喝皮那可樂飲料,Outback Island的沙灘上,0,1,漏掉袋鼠島海灘
+zootopia2,935,"00:40:45,500",is how you two ever solved anything.,就是你們兩個 解決任何事的方式。,是你們兩個到底怎麼破過案的。,0,2,重複前句多餘
+zootopia2,959,"00:41:48,792",[Nibbles] Jesús!,[Nibbles] 天啊！,[Nibbles] 耶穌啊！,0,0,是叫人名Jesús
+zootopia2,988,"00:43:18,333",Metal cover.,金屬蓋子。,金屬封面。,0,2,封面誤譯蓋子
+zootopia2,993,"00:43:30,125",is probably right on the cover.,應該 就在蓋子上。,很可能 就在封面上。,0,2,封面誤譯蓋子
+zootopia2,997,"00:43:40,875",for the weather walls.,關於天氣牆的。,就是這個。,1,0,漏掉天氣牆
+zootopia2,1073,"00:47:05,875",Cannonball!,高空彈跳跳！,炸彈式跳水！,0,2,右譯成高空彈跳
+zootopia2,1086,"00:48:34,667",Yeah. Yes.,沒有。有。,嗯，還好。,0,2,右回答意思反了
+zootopia2,1104,"00:49:30,250","Trudy Cabbagepatch, leaving town. We're done.",Trudy Cabbagepatch 離開城鎮。我們完成了。,Trudy Cabbagepatch， 正要離開城鎮。我們沒戲唱了。,0,2,左「我們完成了」誤譯
+zootopia2,1114,"00:49:52,958","-Oh, Copenhoofen. -[Jürgen] <i>Ja, ist Copenhoofen.</i>","喔，哥本哈根。 Ja, ist Copenhoofen.",-喔，哥本哈根。 -對啦，是哥本哈根。,0,2,右半句未翻
+zootopia2,1139,"00:50:48,000",have to do with the reptiles leaving town?,有什麼關係？,跟爬蟲類離開這座城市 有什麼關係？,0,2,右漏掉爬蟲類離城
+zootopia2,1143,"00:50:59,458",before Hoggbottom and the ZPD figure out where we are?,才會發現我們在哪裡？,霍格博頓和動物警察 才會查出我們在哪裡？,0,1,右漏人名與警局
+zootopia2,1144,"00:51:01,917","If anything, we should be going faster.",如果有的話， 我們應該要走得更快。,真要說的話， 我們應該加快腳步才對。,0,2,左 If anything 誤譯
+zootopia2,1298,"00:59:42,917",Fur from whoever's helping the bunny and the snake.,不管誰在幫那隻兔子和蛇， 採集牠們的毛髮。,找出幫助那隻兔子和蛇的皮毛。,0,0,兩邊都誤解毛髮線索
+zootopia2,1304,"00:59:58,542",[Judy] Oh!,茱蒂！,喔！,0,2,右把說話者標籤譯成呼喚
+zootopia2,1327,"01:00:53,000",-Get with all my cat stuff. -Wow.,-去拿我所有的貓咪東西。 -哇。,-跟我所有的貓咪收藏在一起。 -哇。,0,1,左譯成去拿東西
+zootopia2,1340,"01:01:20,208","was going to be on display at the Gala,",我就寄了一封匿名信 給他的家人，要求看一下。,要在慶典上展示的時候,0,1,右顯示下一句內容
+zootopia2,1341,"01:01:22,208",I sent his family an anonymous letter asking to see it.,幸運的是，他們讓Pawbert 在郵件室工作，,我就寄了封匿名信給他家人， 要求要看那份日誌,0,2,左顯示下一句內容
+zootopia2,1342,"01:01:25,792","Luckily, they make Pawbert work in the mail room,",所以他第一個看到了。,幸好他們讓帕博特 負責處理郵件室的工作,0,2,右顯示下一句內容
+zootopia2,1343,"01:01:28,958",so he read it first.,我把他從海外偷運進來。,所以他先看到了信,0,2,左時間軸錯位
+zootopia2,1344,"01:01:31,042",I got him smuggled in from overseas.,在箱子裡待了七天。,我讓他從海外偷渡進來,0,2,左時間軸錯位
+zootopia2,1345,"01:01:33,667",Seven days in a crate.,但如果我能解決我家人的問題， 就值得了。,在木箱裡待了七天,0,2,左時間軸錯位
+zootopia2,1346,"01:01:35,917","But if I fix things for my family, it'll be worth it.",那我們也會幫你解決 搭檔的問題。,但如果能幫我家人解決問題， 一切都值得,0,2,右顯示下一句內容
+zootopia2,1347,"01:01:39,500",Then we'll fix things for your partner too.,嘿。,那我們也會幫你的搭檔 解決問題,0,2,左顯示下一句內容
+zootopia2,1364,"01:02:44,625",hide a secret for a snake?,他沒有。,要幫一條蛇藏秘密？,0,2,左時間軸錯位
+zootopia2,1365,"01:02:46,792",He didn't.,我…,他沒有,0,2,左時間軸錯位
+zootopia2,1366,"01:02:49,875",I...,那不是他的日記。,我……,0,2,左時間軸錯位
+zootopia2,1368,"01:02:53,708",It wasn't his journal.,動物方城市不是由哺乳動物創造的。,那不是他的日誌,0,2,右顯示後面句子
+zootopia2,1375,"01:03:18,667",<i>So she invented her weather walls</i>,所以她發明瞭 她的氣候牆,<i>所以她發明瞭</i>,1,0,右漏譯氣候牆
+zootopia2,1376,"01:03:21,542",<i>to help everyone.</i>,來幫助每個人。,<i>天氣牆</i>,2,0,左時間軸錯位
+zootopia2,1377,"01:03:29,125",<i>She just needed an investor.</i>,她只是需要一個投資者。,<i>來幫助大家</i>,2,0,左時間軸錯位
+zootopia2,1378,"01:03:32,542",<i>A partner.</i>,一個合夥人。,<i>她只是需要一個投資者</i>,2,0,右時間軸錯位
+zootopia2,1379,"01:03:35,458",<i>But when my great-grandfather</i>,但當我的曾祖父,<i>一個夥伴</i>,2,0,右時間軸錯位
+zootopia2,1380,"01:03:37,625",<i>saw what her idea could be worth...</i>,看到她的想法 可能值多少錢時……,<i>但當我的曾祖父</i>,2,0,左重複上一句
+zootopia2,1384,"01:04:03,042",<i>and framed Gary's great-grandmother.</i>,並嫁禍給Gary的高祖母。,<i>並嫁禍給 Gary 的曾祖母。</i>,0,2,左高祖母錯誤
+zootopia2,1446,"01:07:03,458",[Nibbles] Nicholas Wilde!,尼古拉·王爾德！,Nicholas Wilde!,1,0,左側未翻譯
+zootopia2,1479,"01:08:26,542","Like, uh...",就像，呃... 就像，你知道的，意思是不值得 她為此送死，因為...,就是，呃……,0,2,左側提前顯示下句
+zootopia2,1480,"01:08:28,625","like, you know, as in it isn't worth her dying for because...",因為像我這樣的獨居動物,就是說這案子不值得 她拿命去拚，因為……,0,2,左側顯示下句內容
+zootopia2,1481,"01:08:35,042",because solitary animals like me,沒有真正的朋友。,因為像我這樣的獨行動物,0,2,左側顯示下句內容
+zootopia2,1482,"01:08:37,542",don't have real friends.,而我...我... 我不想失去她。,沒有真正的朋友。,0,2,左側顯示下句內容
+zootopia2,1483,"01:08:41,207",And I... I... I don't want to lose her.,所以我就...,而我……我…… 我不想失去她。,0,2,左側顯示下句內容
+zootopia2,1484,"01:08:46,457","So, I just...",我不知道怎麼說。,所以我只是……,0,2,右側顯示下句內容
+zootopia2,1485,"01:08:49,375",I don't know how to say that.,你知道嗎，夥計？ 我認為你已經說出來了。,我不知道該怎麼說。,0,2,左側顯示下句內容
+zootopia2,1487,"01:08:53,250","You know what, bud? I think you just did.",等等，你怎麼辦到的？,你知道嗎，老兄？ 我覺得你剛剛就說出來了。,0,2,左側顯示下句內容
+zootopia2,1488,"01:08:57,000","Wait, how'd you do that?",嗯，我張開了雙臂，,等等，你怎麼做到的？,0,2,右側顯示下句內容
+zootopia2,1523,"01:10:19,417",in the history of Zootopia.,[輕笑] 嘿，Flash， Flash Hundred Yard Dash。,動物方城市史上最快的司機。,0,2,左側顯示後句內容
+zootopia2,1562,"01:11:56,625",They're gonna put her to sleep! Do it!,他們要把她 麻醉了！快做！,他們要對她安樂死！ 快點做！,0,2,安樂死誤譯為麻醉
+zootopia2,1603,"01:13:51,083",<i>Put them down.</i>,放下武器。,<i>把他們放下來。</i>,0,0,put down=解決掉，雙方皆誤
+zootopia2,1604,"01:13:52,042",-Sir. -Put them down. Now!,長官。 放下武器。現在！,-長官。 -把他們放下來，現在！,0,0,put down=解決掉，雙方皆誤
+zootopia2,1894,"01:28:09,125",[grunts] Zoogetherness. Huh?,[哼聲] Zoogetherness。嗯？,[咕噥] 團結一心，是吧？,0,1,右側未翻譯
+zootopia2,1957,"01:33:06,875",was a snake.,他們揭露了這座城市天氣牆的真正發明者,其實是一條蛇。,0,2,左側漏譯「是蛇」
+zootopia2,1958,"01:33:08,083",[Growley] <i>While the now disgraced Lynxley family</i>,是一隻蛇。,[Growley] <i>而如今名譽掃地的 林克斯利家族</i>,0,2,右側時間錯位
+zootopia2,1959,"01:33:10,208",were revealed to have stolen the original plans,[Growley] 如今名譽掃地的Lynxley家族,則被揭發竊取了 原始設計圖,0,2,右側錯位且漏竊取
+zootopia2,1961,"01:33:14,333",You have not heard the last of Milton Lyn...,Milton Lyn的故事還沒完...,你們還沒聽到 米爾頓·林克斯利的最終下場...,2,0,右側誤譯慣用語
