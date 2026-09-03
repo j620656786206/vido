@@ -356,11 +356,12 @@ jobs:
       # time and, when the registry was slow, never came up inside the wait —
       # and the wait did not fail, so Playwright ran against a closed port
       # (PR #373: 12 shard runs red with ERR_CONNECTION_REFUSED on :4200).
-      # vite.config.mts already pins preview to localhost:4200 and the outDir
-      # to dist/apps/web; --strictPort turns a port clash into a loud failure.
+      # The port is passed explicitly: vite.config.mts declares preview.port 4200
+      # but the CLI came up on the 4173 default in CI (first run of this step),
+      # so the flag is the contract. --strictPort turns a clash into a failure.
       - name: Start frontend (preview mode)
         run: |
-          (cd apps/web && pnpm exec vite preview --strictPort) &
+          (cd apps/web && pnpm exec vite preview --port 4200 --host localhost --strictPort) &
           echo "Waiting for frontend to be ready..."
           for i in {1..90}; do
             if curl -s http://localhost:4200 > /dev/null 2>&1; then
