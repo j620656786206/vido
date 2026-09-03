@@ -109,6 +109,56 @@ func (p *GeminiProvider) Name() ProviderName {
 	return ProviderGemini
 }
 
+// Ping implements Pinger for Gemini (sub-6-6 AC #2 — 同級化 with claude.go):
+// one generateContent call with maxOutputTokens=1 under governed+retry, judged
+// on the HTTP status only. 400/401/403 → ErrAIUnauthorized (Gemini reports a
+// bad key as 400 "API key not valid"), 404 → ErrAIModelNotFound, 429 →
+// ErrAIQuotaExceeded, timeout → ErrAITimeout, other 5xx → provider error.
+func (p *GeminiProvider) Ping(ctx context.Context) error {
+	body, err := json.Marshal(geminiRequest{
+		Contents:         []geminiContent{{Parts: []geminiPart{{Text: "hi"}}}},
+		GenerationConfig: geminiGenerationConfig{MaxOutputTokens: 1},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+	url := fmt.Sprintf("%s/models/%s:generateContent?key=%s", p.baseURL, p.model, p.apiKey)
+
+	_, err = governed(ctx, p.governor, "gemini.ping", func() (struct{}, error) {
+		return retryTransient(ctx, "gemini.ping", func() (struct{}, bool, error) {
+			attemptCtx, cancel := context.WithTimeout(ctx, p.timeout)
+			defer cancel()
+			httpReq, err := http.NewRequestWithContext(attemptCtx, http.MethodPost, url, bytes.NewReader(body))
+			if err != nil {
+				return struct{}{}, false, fmt.Errorf("failed to create request: %w", err)
+			}
+			httpReq.Header.Set("Content-Type", "application/json")
+			resp, err := p.httpClient.Do(httpReq)
+			if err != nil {
+				if attemptCtx.Err() == context.DeadlineExceeded {
+					return struct{}{}, true, ErrAITimeout
+				}
+				return struct{}{}, true, fmt.Errorf("%w: %v", ErrAIProviderError, err)
+			}
+			defer resp.Body.Close()
+			_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 64<<10))
+			switch {
+			case resp.StatusCode >= 200 && resp.StatusCode < 300:
+				return struct{}{}, false, nil
+			case resp.StatusCode == http.StatusBadRequest, resp.StatusCode == http.StatusUnauthorized, resp.StatusCode == http.StatusForbidden:
+				return struct{}{}, false, fmt.Errorf("%w: %w: status %d", ErrAIProviderError, ErrAIUnauthorized, resp.StatusCode)
+			case resp.StatusCode == http.StatusNotFound:
+				return struct{}{}, false, fmt.Errorf("%w: %w: status 404: model %q not found", ErrAIProviderError, ErrAIModelNotFound, p.model)
+			case resp.StatusCode == http.StatusTooManyRequests:
+				return struct{}{}, true, ErrAIQuotaExceeded
+			default:
+				return struct{}{}, isTransientStatus(resp.StatusCode), fmt.Errorf("%w: status %d", ErrAIProviderError, resp.StatusCode)
+			}
+		})
+	})
+	return err
+}
+
 // Parse sends a filename to Gemini for parsing.
 //
 // sub-5-1 AC #2: the call runs under the SAME resilience/metering stack as
@@ -287,6 +337,8 @@ type geminiPart struct {
 
 type geminiGenerationConfig struct {
 	ResponseMimeType string `json:"response_mime_type,omitempty"`
+	// MaxOutputTokens bounds the reply; Ping sets 1 so the probe costs nothing.
+	MaxOutputTokens int `json:"maxOutputTokens,omitempty"`
 }
 
 type geminiResponse struct {

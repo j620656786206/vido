@@ -300,3 +300,16 @@ func TestTestKey_409WhenNoTesterWired(t *testing.T) {
 	require.Equal(t, http.StatusConflict, w.Code)
 	assert.Equal(t, "AI_NOT_CONFIGURED", envelopeOf(t, w).Error.Code)
 }
+
+// ─── sub-6-6 AC #3: the 200 says which model was verified ───────────────────
+
+type fakeModelKeyTester struct{ fakeKeyTester }
+
+func (f *fakeModelKeyTester) EffectiveModel() string { return "claude-sonnet-5" }
+
+func TestTestKey_ValidKeyReportsModel(t *testing.T) {
+	h := NewKeySettingsHandler(&fakeKeySettings{state: configuredState()}, &fakeModelKeyTester{})
+	w := doKeyReq(t, h, http.MethodPost, "/api/v1/settings/keys/test", `{"claude":"sk-candidate"}`)
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), `"model":"claude-sonnet-5"`)
+}

@@ -1,6 +1,6 @@
 # Story 6.6: `POST /settings/keys/test` 以傳輸成功判定金鑰有效 —— Sonnet 下不再誤報 `AI_INVALID_RESPONSE`（後端）
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -24,9 +24,9 @@ eval-1 產品問題 6：`CLAUDE_MODEL=claude-sonnet-5` 下 `POST /settings/keys/
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — `Ping`（AC: #1, #2）**
-- [ ] **Task 2 — handler／Swagger／FE 顯示（AC: #3）**
-- [ ] **Task 3 — 測試（AC: #4）**
+- [x] **Task 1 — `Ping`（AC: #1, #2）**
+- [x] **Task 2 — handler／Swagger／FE 顯示（AC: #3）**
+- [x] **Task 3 — 測試（AC: #4）**
 
 ## Dev Notes
 
@@ -45,10 +45,36 @@ eval-1 產品問題 6：`CLAUDE_MODEL=claude-sonnet-5` 下 `POST /settings/keys/
 
 ### Agent Model Used
 
+Claude Fable 5.1（dev-story，2026-09-04）
+
 ### Completion Notes List
+
+- `ai.Pinger` 介面（`provider.go`）；`ClaudeProvider.Ping`：一次 `max_tokens=1` 的 Messages 呼叫走既有 `send`（governed→retry→classifyErr），只看傳輸結果——401/403 → `ErrAIUnauthorized`、404 → `ErrAIModelNotFound`、逾時 → `ErrAITimeout`、2xx 空 content = PASS。`GeminiProvider.Ping`：同級化，`maxOutputTokens=1` 的 generateContent，狀態碼對映（400/401/403 → unauthorized，Gemini 用 400 報壞 key）。
+- `ClaudeProviderHolder.TestKey` 改呼叫 `Ping`（resolved 與 candidate 兩路徑；`pingOf` 做 `ai.Pinger` 窄化，非 Pinger 的 completer 退回 CompleteText 路徑）；throwaway provider 仍共用 Governor。
+- handler 200 回 additive `model`（tester 實作 `EffectiveModel()` 時才附，測試 fake 不受影響）；Swagger 更新。**FE 顯示（AC #3 可選）本 story 不做**——`ApiKeysForm` 目前只顯示 valid/invalid，`model` 欄位留給 sub-6-8b 的設定頁工作一併消費。
+- 🔗 AC Drift: NONE (checked: 'TestKey|keys/test|CompleteText' across _bmad-output/implementation-artifacts/*.md — sub-2-1a AC 的「最小真實呼叫驗證 auth 路徑」語意保留，只是判定由回文改為傳輸；REUSE not DRIFT)
+- 📎 Contract Stamps: FOUND (1 across 1 file — `ClaudeProviderHolder` `[@contract-v1]`（sub-2-1a）：`TestKey` 簽名不變、錯誤 sentinel 集合不變，只是空回文不再算失敗；不 bump、Change Log 記)
+- 🎭 A11y Pre-Flight: N/A (100% backend — no apps/web/ files touched)
+- 🔌 Route Sync: `POST /api/v1/settings/keys/test` verified at `key_settings_handler.go` RegisterRoutes（既有路由，未新增）
+- 🎨 UX Verification: SKIPPED — no UI changes in this story
+- 全回歸：`pnpm nx test api` ✅、`pnpm nx test web` 255 files / 3125 tests ✅、`test:cleanup` 無殘留；`pnpm lint:all` go vet／staticcheck 過、eslint 0 errors、prettier 唯一紅字為未追蹤本機檔。
 
 ### Discovery Triage
 
-- （dev 填）
+- N/A — no out-of-scope work discovered
+
+### Change Log
+
+| Date | Change |
+| --- | --- |
+| 2026-09-04 | Task 1 — `ai.Pinger`、`ClaudeProvider.Ping`、`GeminiProvider.Ping`（+ `geminiGenerationConfig.MaxOutputTokens`）。 |
+| 2026-09-04 | Task 2 — holder `TestKey` → `Ping`；handler 200 additive `model`；Swagger。FE 顯示延至 sub-6-8b。 |
+| 2026-09-04 | Task 3 — claude Ping ×4（空 content／401／404／timeout）、gemini Ping ×4、holder ×2、handler model 欄位。 |
 
 ### File List
+
+- `apps/api/internal/ai/provider.go`、`claude.go`、`gemini.go`（modified）+ `claude_test.go`、`gemini_test.go`
+- `apps/api/internal/services/claude_provider_holder.go`（modified）+ `claude_provider_holder_test.go`
+- `apps/api/internal/handlers/key_settings_handler.go`（modified）+ `key_settings_handler_test.go`
+- `_bmad-output/implementation-artifacts/sub-6-6-key-test-transport-success.md`（this file）
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`（status）

@@ -149,9 +149,14 @@ func (h *ClaudeProviderHolder) CompleteTextWithUsage(ctx context.Context, req ai
 	return caching.CompleteTextWithUsage(ctx, req)
 }
 
-// TestKey validates a key by making the smallest real call the API allows
-// (max_tokens 1). `candidate` lets the settings page test a key BEFORE saving
-// it; empty means "test whatever currently resolves".
+// TestKey validates a key with the provider's Ping — the smallest real call
+// the API allows, judged on TRANSPORT alone (sub-6-6): 401/403 → unauthorized,
+// 404 → model not found, timeouts and 5xx → their sentinels, and a 2xx with an
+// empty reply is a PASS. It used to go through CompleteText, whose
+// empty-text = ErrAIInvalidResponse rule made a valid Sonnet 5 key fail as
+// "Cannot parse AI response" (eval-1 product problem 6). `candidate` lets the
+// settings page test a key BEFORE saving it; empty means "test whatever
+// currently resolves".
 //
 // The throwaway provider reuses this holder's options — so the shared Governor
 // still rate-limits the probe — but is never cached: a key being validated is
@@ -162,11 +167,26 @@ func (h *ClaudeProviderHolder) TestKey(ctx context.Context, candidate string) er
 		if err != nil {
 			return err
 		}
-		_, err = completer.CompleteText(ctx, "", "hi", 1)
-		return err
+		return pingOf(completer).Ping(ctx)
 	}
 
 	opts := append(append([]ai.ClaudeProviderOption(nil), h.opts...), ai.WithClaudeModel(h.EffectiveModel()))
-	_, err := ai.NewClaudeProvider(candidate, opts...).CompleteText(ctx, "", "hi", 1)
+	return ai.NewClaudeProvider(candidate, opts...).Ping(ctx)
+}
+
+// pingOf narrows a completer to its Pinger half. Get always yields
+// *ai.ClaudeProvider, which implements it; the fallback keeps a future
+// non-pinging completer from panicking and still exercises the auth path.
+func pingOf(c ai.TextCompleter) ai.Pinger {
+	if p, ok := c.(ai.Pinger); ok {
+		return p
+	}
+	return pingViaComplete{c}
+}
+
+type pingViaComplete struct{ c ai.TextCompleter }
+
+func (p pingViaComplete) Ping(ctx context.Context) error {
+	_, err := p.c.CompleteText(ctx, "", "hi", 1)
 	return err
 }

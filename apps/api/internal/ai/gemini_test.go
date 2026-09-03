@@ -573,3 +573,35 @@ func TestGeminiPricing_RowsMatchThePublishedRates(t *testing.T) {
 	assert.Equal(t, ModelPricing{InputPer1M: 0.30, OutputPer1M: 2.50}, defaultLLMPricing["gemini-2.5-flash"])
 	assert.Equal(t, ModelPricing{InputPer1M: 0.10, OutputPer1M: 0.40}, defaultLLMPricing["gemini-2.5-flash-lite"])
 }
+
+// ─── sub-6-6: Ping (同級化) ─────────────────────────────────────────────────
+
+func TestGeminiProvider_Ping(t *testing.T) {
+	cases := []struct {
+		name   string
+		status int
+		want   error
+	}{
+		{"200 with empty candidates is valid", 200, nil},
+		{"400 bad key", 400, ErrAIUnauthorized},
+		{"403", 403, ErrAIUnauthorized},
+		{"404 model", 404, ErrAIModelNotFound},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Contains(t, r.URL.Path, ":generateContent")
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tc.status)
+				_, _ = w.Write([]byte(`{"candidates":[]}`))
+			}))
+			defer srv.Close()
+			err := NewGeminiProvider("k", WithGeminiBaseURL(srv.URL)).Ping(context.Background())
+			if tc.want == nil {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorIs(t, err, tc.want)
+			}
+		})
+	}
+}

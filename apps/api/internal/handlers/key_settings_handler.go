@@ -133,12 +133,12 @@ func (h *KeySettingsHandler) SaveKeys(c *gin.Context) {
 
 // TestKey handles POST /api/v1/settings/keys/test.
 // @Summary Validate a Claude API key against the live API
-// @Description Makes the smallest real call the API allows (max_tokens 1) so the check exercises the exact auth path. Tests the body's key when supplied — letting the page verify BEFORE saving — otherwise the currently-resolved one.
+// @Description Makes the smallest real call the API allows (max_tokens 1) and judges the TRANSPORT result only — a 2xx with an empty reply is valid (sub-6-6). Tests the body's key when supplied — letting the page verify BEFORE saving — otherwise the currently-resolved one.
 // @Tags settings
 // @Accept json
 // @Produce json
 // @Param request body TestKeyRequest false "claude: key to test; omit to test the resolved key"
-// @Success 200 {object} APIResponse "{valid: true}"
+// @Success 200 {object} APIResponse "{valid: true, model: \"claude-sonnet-5\"}"
 // @Failure 400 {object} APIResponse "VALIDATION_INVALID_FORMAT — malformed body"
 // @Failure 409 {object} APIResponse "AI_NOT_CONFIGURED — nothing to test and no key supplied"
 // @Failure 502 {object} APIResponse "AI_PROVIDER_ERROR / AI_QUOTA_EXCEEDED / AI_TIMEOUT"
@@ -162,7 +162,14 @@ func (h *KeySettingsHandler) TestKey(c *gin.Context) {
 
 	err := h.tester.TestKey(c.Request.Context(), req.Claude)
 	if err == nil {
-		SuccessResponse(c, gin.H{"valid": true})
+		// sub-6-6 AC #3: say WHICH model the key was verified against, so the
+		// settings page can show「已驗證：claude-sonnet-5」. Additive; a tester
+		// without a model (test fakes) simply omits the field.
+		body := gin.H{"valid": true}
+		if m, ok := h.tester.(interface{ EffectiveModel() string }); ok {
+			body["model"] = m.EffectiveModel()
+		}
+		SuccessResponse(c, body)
 		return
 	}
 
