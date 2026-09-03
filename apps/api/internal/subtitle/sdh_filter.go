@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 // maxSpeakerLabelLen caps how long an ALL-CAPS leading label may be before it
@@ -23,8 +24,9 @@ var speakerLabelName = `[A-Z][A-Z0-9 .'&#-]{0,` + strconv.Itoa(maxSpeakerLabelLe
 var speakerLabelPattern = regexp.MustCompile(
 	`^(?:\[` + speakerLabelName + `\]|` + speakerLabelName + `):[ \t]*`)
 
-// musicMarks wrap a whole line of lyric/score annotation in SDH tracks.
-var musicMarks = []rune{'♪', '#'}
+// musicMarks wrap a whole line of lyric/score annotation in SDH tracks. ♫ and
+// ♬ (U+266B/U+266C) are as common as ♪ in real tracks (sub-6-4 CR M4).
+var musicMarks = []rune{'♪', '♫', '♬', '#'}
 
 // FilterSDH strips SDH (subtitles for the deaf and hard-of-hearing) annotations
 // from parsed cues, returning the survivors and the number of cues DROPPED
@@ -98,35 +100,28 @@ func isWholeLineAnnotation(s string) bool {
 	return isMusicLine(s) || isMusicOnly(s)
 }
 
-// isMusicOnly reports whether the line contains only music marks and spaces
-// (`♪`, `♪♪`, `♪ ♪`, `#`). isMusicLine needs a mark at BOTH ends and at least
-// two runes, so a bare `♪` — the commonest cue in an SDH track — slipped
-// through it, was sent to the LLM, paid for, and then rejected by the quality
-// gate as "echoed" (sub-6-4; eval-1 finding 8: ~40 such cues per model on
-// Lioness). A line with any non-mark, non-space character is left alone — the
-// AC #4 under-strip posture for `♪ lyrics` is unchanged.
+// isMusicOnly reports whether the line contains only music marks and
+// whitespace (`♪`, `♪♪`, `♪ ♪`, `#`). isMusicLine needs a mark at BOTH ends and
+// at least two runes, so a bare `♪` — the commonest cue in an SDH track —
+// slipped through it, was sent to the LLM, paid for, and then rejected by the
+// quality gate as "echoed" (sub-6-4; eval-1 finding 8: ~40 such cues per model
+// on Lioness). "Whitespace" is unicode.IsSpace plus the zero-width characters
+// tracks smuggle in (ZWSP / ZWNJ / BOM) — the same family filterSDHLine's
+// TrimSpace treats as nothing. A line with any other character is left alone,
+// so the sub-1-4 AC #4 under-strip posture for `♪ lyrics` is unchanged.
 func isMusicOnly(s string) bool {
 	seenMark := false
 	for _, r := range s {
 		switch {
-		case r == ' ' || r == '\t':
+		case unicode.IsSpace(r) || r == '\u200b' || r == '\u200c' || r == '\ufeff':
 			continue
-		case isMusicMark(r):
+		case strings.ContainsRune(string(musicMarks), r):
 			seenMark = true
 		default:
 			return false
 		}
 	}
 	return seenMark
-}
-
-func isMusicMark(r rune) bool {
-	for _, mark := range musicMarks {
-		if r == mark {
-			return true
-		}
-	}
-	return false
 }
 
 // isWrappedInBrackets reports whether s opens with `open`, closes with `close`,

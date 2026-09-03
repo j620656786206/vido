@@ -410,6 +410,28 @@ func TestSelectAndRoute_CueCountIsCountedAfterSDHFilter(t *testing.T) {
 	assert.Len(t, got.Track.Blocks, 3)
 }
 
+// sub-6-4: bare-♪ cues no longer count as dialogue, so an SDH track padded
+// with music-only cues must NOT out-rank a leaner clean track on raw length.
+// Before the fix track 2 (6 raw cues) beat track 7 (3 real lines).
+func TestSelectAndRoute_MusicOnlyCuesDoNotInflateCandidateRank(t *testing.T) {
+	prober := &fakeProber{info: &services.MediaTechInfo{SubtitleTracks: []services.SubtitleTrack{
+		embedded(2, "eng", "subrip"),
+		embedded(7, "eng", "subrip"),
+	}}}
+	ex := &fakeExtractor{contents: map[int]string{
+		2: srtOf("♪", "♪♪", "♫", "Only real line", "♪", "#"),
+		7: srtOf("One", "Two", "Three"),
+	}}
+	r, tmp := newTestRouter(t, prober, ex)
+
+	got, err := r.SelectAndRoute(context.Background(), "/media/m.mkv", tmp)
+
+	require.NoError(t, err)
+	require.NotNil(t, got.Track)
+	assert.Equal(t, 7, got.Track.StreamIndex)
+	assert.Len(t, got.Track.Blocks, 3)
+}
+
 func TestSelectAndRoute_TieBreaksOnLowestStreamIndex(t *testing.T) {
 	prober := &fakeProber{info: &services.MediaTechInfo{SubtitleTracks: []services.SubtitleTrack{
 		embedded(7, "eng", "subrip"),

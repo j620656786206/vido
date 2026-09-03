@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// ─── Per-rule table (AC #4) ────────────────────────────────────────────────
+// ─── Per-rule table (sub-1-4 AC #4; sub-6-4 rows marked) ───────────────────
 
 func TestFilterSDH_Rules(t *testing.T) {
 	tests := []struct {
@@ -29,16 +29,27 @@ func TestFilterSDH_Rules(t *testing.T) {
 		// Rule 2b (sub-6-4, eval-1 finding 8) — a line that is NOTHING but music
 		// marks is an annotation too. Lioness's SDH track had ~40 bare ♪ cues per
 		// model that were paid for and then rejected by the gate as "echoed".
+		// These four were RED before isMusicOnly existed:
 		{"lone music note", "♪", ""},
-		{"double music note", "♪♪", ""},
-		{"two notes with a space", "♪ ♪", ""},
 		{"lone hash", "#", ""},
 		{"note padded with spaces", "   ♪   ", ""},
+		{"music-only line dropped, dialogue line kept", "♪\nHello there", "Hello there"},
+		// sub-6-4 CR M4/H2 — other marks and non-ASCII whitespace (RED before fix):
+		{"lone beamed note", "♫", ""},
+		{"lone beamed sixteenth", "♬", ""},
+		{"notes separated by nbsp", "♪\u00a0#", ""},
+		{"note with zero-width space", "♪\u200b", ""},
+		{"note with ideographic space", "♪\u3000♪", ""},
+		{"note after a speaker label", "JOHN: ♪", ""},
+		{"note after a bracketed speaker label", "[JOHN]: ♪", ""},
+		// Regression guards (already green via isMusicLine, kept so a future
+		// isMusicOnly change cannot widen into these):
+		{"double music note", "♪♪", ""},
+		{"two notes with a space", "♪ ♪", ""},
 		{"mixed marks only", "♪ # ♪", ""},
-		{"note before lyrics keeps its line", "♪ lyrics", "♪ lyrics"},
 		{"note after lyrics keeps its line", "lyrics ♪", "lyrics ♪"},
 		{"note inside dialogue keeps its line", "a ♪ b", "a ♪ b"},
-		{"music-only line dropped, dialogue line kept", "♪\nHello there", "Hello there"},
+		{"hash inside dialogue keeps its line", "I'm his #1 fan", "I'm his #1 fan"},
 
 		// Rule 3 — leading ALL-CAPS speaker label is stripped, dialogue survives
 		{"speaker label", "JOHN: Hello", "Hello"},
@@ -142,12 +153,13 @@ func TestFilterSDH_AllSDH(t *testing.T) {
 		{Index: 1, Start: "00:00:01,000", End: "00:00:02,000", Text: "[door slams]"},
 		{Index: 2, Start: "00:00:03,000", End: "00:00:04,000", Text: "♪ theme ♪"},
 		{Index: 3, Start: "00:00:05,000", End: "00:00:06,000", Text: "(sighs)"},
+		{Index: 4, Start: "00:00:07,000", End: "00:00:08,000", Text: "♪"}, // sub-6-4
 	}
 
 	kept, removed := FilterSDH(in)
 
 	assert.Empty(t, kept)
-	assert.Equal(t, 3, removed)
+	assert.Equal(t, 4, removed)
 }
 
 func TestFilterSDH_BlankCueIsDropped(t *testing.T) {

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/vido/api/internal/ai"
 	"testing"
 	"time"
 
@@ -491,7 +492,12 @@ func TestPipeline_RunVersion_ReadsModelSourceLive(t *testing.T) {
 	assert.Equal(t, "claude-sonnet-5", p.runVersion(richContext()).ModelID)
 }
 
-func TestPipeline_RunVersion_NoModelOptionStaysEmpty(t *testing.T) {
+func TestPipeline_RunVersion_NoModelOptionFallsBackToDefault(t *testing.T) {
+	// sub-6-5 CR H2: "" is the one value that must never reach a run row or a
+	// cache key, whatever the wiring forgot.
 	p := NewPipeline(&fakeTranslator{}, &recordingConverter{}, nil)
-	assert.Empty(t, p.runVersion(richContext()).ModelID)
+	assert.Equal(t, ai.DefaultClaudeModel, p.runVersion(richContext()).ModelID)
+
+	empty := NewPipeline(&fakeTranslator{}, &recordingConverter{}, nil, WithModelSource(func() string { return "" }))
+	assert.Equal(t, ai.DefaultClaudeModel, empty.runVersion(richContext()).ModelID)
 }

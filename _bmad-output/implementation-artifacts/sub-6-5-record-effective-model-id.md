@@ -1,6 +1,6 @@
 # Story 6.5: `subtitle_runs.model_id` 永遠記錄實際模型 —— 預設模型不再是空字串（後端）
 
-Status: review
+Status: done
 
 ## Story
 
@@ -66,6 +66,7 @@ Claude Fable 5.1（dev-story，2026-09-04）
 ### Discovery Triage
 
 - N/A — no out-of-scope work discovered（story 編號註記屬文件修正，已在本 story 內處理）
+- CR M4 → AC #4(c) 明文 deferred to sub-6-8a（該 story 讓 model 可變時一併測 holder→pipeline 的傳遞）。
 
 ### Change Log
 
@@ -74,6 +75,7 @@ Claude Fable 5.1（dev-story，2026-09-04）
 | 2026-09-04 | Task 1 — `ClaudeProvider.Model()`、`ClaudeProviderHolder.EffectiveModel()`、`WithModelSource` + `currentModelID`、`main.go` 改讀 holder。 |
 | 2026-09-04 | Task 2 — migration 033 回填空 model_id 的 completed 列。 |
 | 2026-09-04 | Task 3 — 四組測試（ai／services／subtitle／migrations）。 |
+| 2026-09-04 | CR fixes — holder `Get`／`TestKey` **永遠**把 `WithClaudeModel(EffectiveModel())` 放最後（H1：opts 裡偷渡的 model 不能再與 run row 不一致）；`currentModelID()` 未接線或回空字串時退回 `ai.DefaultClaudeModel`（H2）；migration 033 doc 記錄 segment cache 無法回填的一次性 miss 成本（H3）；AC #4(c)「holder 重建記新 model」裁定為 **deferred to sub-6-8a**（M4：`h.model` 為 write-once，本 story 無可變更路徑）；AC #4(a)(b) 的端到端斷言已由既有 `process_item_test.go:451`（`final.ModelID == "claude-haiku-4-5"`）涵蓋（M5）；sub-6-8a story 的過期描述更新（M6）；migration 測試改名 `IsRegistered`、移除假 import、補 pending／running／skipped 三態（L7）；`EffectiveModel` 加 write-once／sub-6-8a 需上鎖的註解（L8）。 |
 
 ### File List
 
@@ -84,3 +86,20 @@ Claude Fable 5.1（dev-story，2026-09-04）
 - `apps/api/internal/database/migrations/033_backfill_subtitle_run_model_id.go`（new）+ `_test.go`
 - `_bmad-output/implementation-artifacts/sub-6-10a-candidate-identity-backend.md`、`sub-7-1-glossary-scope-tmdb.md`（migration 編號註記）
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`（status）
+
+## Senior Developer Review (AI)
+
+**Reviewer:** Claude Opus 5（adversarial CR，換模型慣例；impl by Fable 5.1） · **Date:** 2026-09-04 · **Outcome:** Changes Requested → all items resolved in-session (branch `fix/sub-6-4-5-7-code-review`) → **Approve**
+
+Mandatory checks: Rule 7 PASS（0 codes）· Rule 20 N/A（`ClaudeProviderHolder` v1 additive 不 bump，reviewer 同意）· Rule 25 N/A。
+
+### Action Items
+
+- [x] [H1] `EffectiveModel()` 與 client 實際 model 可能不一致 — `Get`／`TestKey` 一律最後追加 `WithClaudeModel(EffectiveModel())`，單一擁有者。
+- [x] [H2] 未接線仍可回 "" — `currentModelID()` 退回 `ai.DefaultClaudeModel`（含 source 回空字串）；測試 `NoModelOptionFallsBackToDefault`。
+- [x] [H3] migration 033 與 segment cache 脫鉤未記錄 — migration doc 明寫一次性 cache miss 成本與 TTL。
+- [x] [M4] AC #4(c) 不可實作 — 裁定 deferred to sub-6-8a，Change Log／Discovery Triage 記錄。
+- [x] [M5] 無端到端 model_id 斷言 — 既有 `process_item_test.go:451` 已涵蓋，Completion Notes 引用。
+- [x] [M6] sub-6-8a 描述過期 — 已更新為 `WithModelSource(claudeHolder.EffectiveModel)`。
+- [x] [L7] migration 測試名不符、假 import — 改名 `IsRegistered`、移除 `var _ *sql.DB`、補三個狀態反例。
+- [x] [L8] 無鎖讀取 — 註解記 write-once 與 sub-6-8a 義務。

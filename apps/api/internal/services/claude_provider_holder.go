@@ -86,10 +86,10 @@ func (h *ClaudeProviderHolder) Get(ctx context.Context) (ai.TextCompleter, error
 		return h.cached, nil
 	}
 
-	opts := h.opts
-	if h.model != "" {
-		opts = append(append([]ai.ClaudeProviderOption(nil), opts...), ai.WithClaudeModel(h.model))
-	}
+	// The model option is appended LAST and ALWAYS, so the client sends exactly
+	// EffectiveModel() — a WithClaudeModel smuggled in through the captured
+	// opts can no longer disagree with what the run rows record (sub-6-5 CR H1).
+	opts := append(append([]ai.ClaudeProviderOption(nil), h.opts...), ai.WithClaudeModel(h.EffectiveModel()))
 	h.cached = ai.NewClaudeProvider(key, opts...)
 	h.fingerprint = fingerprint
 
@@ -98,11 +98,17 @@ func (h *ClaudeProviderHolder) Get(ctx context.Context) (ai.TextCompleter, error
 	return h.cached, nil
 }
 
-// EffectiveModel returns the model id the next Get will send: the override this
-// holder was built with, else the ai package default. It needs no key and no
-// ctx — the model in force is a property of the holder, not of the resolved
-// key — so the pipeline can call it while assembling every RunVersion
-// (sub-6-5 AC #1/#2) instead of snapshotting a possibly-empty string at boot.
+// EffectiveModel returns the model id every client this holder builds sends:
+// the override this holder was built with, else the ai package default. Get
+// and TestKey both append exactly this value as the LAST provider option, so
+// there is one owner of "which model" (sub-6-5 CR H1). It needs no key and no
+// ctx — the model is a property of the holder, not of the resolved key — so
+// the pipeline can call it while assembling every RunVersion (sub-6-5 AC
+// #1/#2) instead of snapshotting a possibly-empty string at boot.
+//
+// h.model is write-once (constructor) today, so this read needs no mutex.
+// sub-6-8a makes the model per-run: that story must take h.mu here or move the
+// value behind an atomic — do not add a second unguarded reader.
 func (h *ClaudeProviderHolder) EffectiveModel() string {
 	if h.model != "" {
 		return h.model
@@ -160,10 +166,7 @@ func (h *ClaudeProviderHolder) TestKey(ctx context.Context, candidate string) er
 		return err
 	}
 
-	opts := h.opts
-	if h.model != "" {
-		opts = append(append([]ai.ClaudeProviderOption(nil), opts...), ai.WithClaudeModel(h.model))
-	}
+	opts := append(append([]ai.ClaudeProviderOption(nil), h.opts...), ai.WithClaudeModel(h.EffectiveModel()))
 	_, err := ai.NewClaudeProvider(candidate, opts...).CompleteText(ctx, "", "hi", 1)
 	return err
 }

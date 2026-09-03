@@ -12,7 +12,7 @@ so that the default gives me the quality eval-1 proved, and switching to a cheap
 
 eval-1 裁定（Alexyu 2026-09-03）：**預設改 `claude-sonnet-5`**（全檔評分 0 分率 1.3% vs Haiku 3.6%、2 分率 89.6% vs 71.8%，任何評分版本都穩過），**Haiku 由使用者自選省錢**，確認框必須明示 2.7× 價差（Sonnet ≈ $0.48/hr 片長、Haiku ≈ $0.18/hr）。
 
-現況：模型是**程序級**——`ClaudeProviderHolder` fingerprint `key|model`（`claude_provider_holder.go:80`）、pipeline `WithModelID` 在 boot 接線（`main.go:697`）、`GenerationBatchStartRequest` 只有 `scope/media_ids/budget_usd`（`generation_batch_handler.go:58`）。估價 `GenerationCandidate.EstimatedUSD` 單一數字（`generation_candidates.go:102`）。
+現況：模型是**程序級**——`ClaudeProviderHolder` fingerprint `key|model`（`claude_provider_holder.go:80`）、pipeline 的 model 來源是 `WithModelSource(claudeHolder.EffectiveModel)`（sub-6-5 起；`WithModelID` 只剩測試用的常數包裝）、`GenerationBatchStartRequest` 只有 `scope/media_ids/budget_usd`（`generation_batch_handler.go:58`）。估價 `GenerationCandidate.EstimatedUSD` 單一數字（`generation_candidates.go:102`）。
 
 **Depends on:** sub-6-5（effective model 單一真相）。**Consumed by:** sub-6-8b（前端）。
 

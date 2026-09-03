@@ -357,13 +357,18 @@ func WithModelSource(source func() string) PipelineOption {
 	return func(p *Pipeline) { p.modelID = source }
 }
 
-// currentModelID is the RunVersion read of the model source; a pipeline built
-// without either option reports "" exactly as before.
+// currentModelID is the RunVersion read of the model source. A pipeline built
+// without either option reports the ai package default rather than "" — the
+// empty string is exactly the value this story exists to keep out of run rows
+// and cache keys, so no construction path may produce it (sub-6-5 CR H2).
 func (p *Pipeline) currentModelID() string {
 	if p.modelID == nil {
-		return ""
+		return ai.DefaultClaudeModel
 	}
-	return p.modelID()
+	if id := p.modelID(); id != "" {
+		return id
+	}
+	return ai.DefaultClaudeModel
 }
 
 // WithRunBudgetUSD sets the per-item AI cost ceiling ProcessItem attaches when

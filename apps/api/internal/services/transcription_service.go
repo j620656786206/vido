@@ -1070,6 +1070,30 @@ func (s *TranscriptionService) glossaryMediaKey(ctx context.Context, mediaType, 
 	return episode.SeriesID
 }
 
+// withoutUntrustedIdentity is the services-side mirror of
+// subtitle/media_store.go withoutUntrustedIdentity (Rule 19 Mirror-Types,
+// sub-6-7 CR H1): the same prompts.UntrustedTitleReason rule, applied to
+// prompts.MediaMetadata. A filename-shaped title never goes out as
+// Title/OriginalTitle; on an UNMATCHED row Year/Overview go too. Keep the two
+// in sync at review time.
+func withoutUntrustedIdentity(md prompts.MediaMetadata, tmdbMatched bool, mediaID, mediaType string, logger *slog.Logger) prompts.MediaMetadata {
+	reason := prompts.UntrustedTitleReason(md.Title, tmdbMatched)
+	if reason == "" {
+		return md
+	}
+	if logger != nil {
+		logger.Debug("metadata title skipped — not sent to the translation prompt",
+			"reason", reason, "media_id", mediaID, "media_type", mediaType)
+	}
+	md.Title = ""
+	md.OriginalTitle = ""
+	if !tmdbMatched {
+		md.Year = 0
+		md.Overview = ""
+	}
+	return md
+}
+
 // mediaMetadataFor resolves the FR26 media context this run translates with
 // (Story 9R-8) — the same show-level facts the EXTRACT leg has fed into its
 // system blocks since sub-1-5a (subtitle/media_store.go loadMovie /
@@ -1111,14 +1135,14 @@ func (s *TranscriptionService) mediaMetadataFor(ctx context.Context, mediaType, 
 				"media_id", mediaID, "media_type", mediaType, "error", err)
 			return prompts.MediaMetadata{}
 		}
-		return prompts.MediaMetadata{
+		return withoutUntrustedIdentity(prompts.MediaMetadata{
 			Title:         movie.Title,
 			OriginalTitle: movie.OriginalTitle.String,
 			Year:          releaseYear(movie.ReleaseDate),
 			Genres:        movie.Genres,
 			Overview:      movie.Overview.String,
 			Countries:     productionCountryCodes(movie.ProductionCountries),
-		}
+		}, movie.TMDbID.Valid, mediaID, mediaType, s.logger)
 
 	case models.SubtitleRunMediaEpisode, models.SubtitleRunMediaSeries:
 		if s.seriesReader == nil {
@@ -1147,13 +1171,13 @@ func (s *TranscriptionService) mediaMetadataFor(ctx context.Context, mediaType, 
 		}
 		// Countries stay empty: the series table carries no production_countries
 		// column, exactly as seriesContext leaves it on the extract leg.
-		return prompts.MediaMetadata{
+		return withoutUntrustedIdentity(prompts.MediaMetadata{
 			Title:         series.Title,
 			OriginalTitle: series.OriginalTitle.String,
 			Year:          releaseYear(series.FirstAirDate),
 			Genres:        series.Genres,
 			Overview:      series.Overview.String,
-		}
+		}, series.TMDbID.Valid, mediaID, mediaType, s.logger)
 
 	default:
 		return prompts.MediaMetadata{}
