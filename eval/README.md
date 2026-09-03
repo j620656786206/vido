@@ -1,5 +1,7 @@
 # eval-1 盲測工作目錄（2026-09-03 產出）
 
+> **逐字稿不在 repo 裡。** 這個 repo 是公開的，各片的 `source*.srt`／`haiku.srt`／`sonnet.srt`／`reference-existing-zh-TW*.srt`、盲評表 `sheet*.csv` 與 `compare.csv` 是完整對白（含 Netflix 官方繁中），已從 git 移除並加進 `.gitignore`（2026-09-03）。原檔仍在 NAS `/mnt/user/appdata/vido/eval/`；要重跑 `aggregate*.py`／`build-*.py` 就從那裡拿。留在 repo 的是腳本、`key.json`（揭盲對照）、`full-scores.csv`（彙總數字）、`zeros-*.csv`（0 分句摘錄，供報告引用）。
+
 Story：`_bmad-output/implementation-artifacts/eval-1-translation-blind-eval.md`
 NAS 上的同一份在 `/mnt/user/appdata/vido/eval/`。
 
