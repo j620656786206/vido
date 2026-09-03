@@ -218,14 +218,15 @@ func TestMediaStore_UnwiredRepoFailsByName(t *testing.T) {
 	assert.Contains(t, err.Error(), "movie repository")
 }
 
-// ─── sub-6-7: an unmatched or filename-shaped title is not show context ─────
+// ─── sub-6-7: a filename-shaped title is not show context ───────────────────
 
-func TestMediaStore_UnmatchedMovieSendsNoIdentity(t *testing.T) {
+func TestMediaStore_UnmatchedMovieWithFilenameTitleSendsNoIdentity(t *testing.T) {
 	movies := &fakeMovieRepo{movie: &models.Movie{
 		ID:          "m-unmatched",
 		Title:       "[bitsearch.to] Wake.Up.Dead.Man.2025.2160p.WEB-DL.DV.HDR-NAHOM.mkv",
 		ReleaseDate: "2025-01-01",
 		Overview:    models.NewNullString("parsed-from-nothing"),
+		Genres:      []string{"Mystery"}, // CR M4: genres survive, so the hash is compared against a genres-only context
 		FilePath:    models.NewNullString("/media/wake.mkv"),
 		// TMDbID left invalid: the scanner never matched this file.
 	}}
@@ -237,17 +238,37 @@ func TestMediaStore_UnmatchedMovieSendsNoIdentity(t *testing.T) {
 	assert.Nil(t, item.TMDbID)
 	assert.Empty(t, item.Context.Title, "a release filename must never reach the prompt as the film's title")
 	assert.Empty(t, item.Context.OriginalTitle)
-	assert.Zero(t, item.Context.Year)
+	assert.Zero(t, item.Context.Year, "unmatched: the year came from the same filename parse")
 	assert.Empty(t, item.Context.Overview)
-	assert.Equal(t, MetadataHash(TranslateContext{}), MetadataHash(item.Context),
-		"the cache key must equal the no-metadata key — the release name is not part of the run identity")
+	assert.Equal(t, []string{"Mystery"}, item.Context.Genres)
+	assert.Equal(t, MetadataHash(TranslateContext{Genres: []string{"Mystery"}}), MetadataHash(item.Context),
+		"the cache key must not carry the release name — only the fields that were kept")
 }
 
-func TestMediaStore_MatchedMovieWithFilenameShapedTitleIsSkipped(t *testing.T) {
+func TestMediaStore_UnmatchedMovieWithCleanTitleKeepsIt(t *testing.T) {
+	// CR M4: the parser (or the metadata editor) produced a real title on a row
+	// TMDb never matched — that is context worth sending, not noise.
+	movies := &fakeMovieRepo{movie: &models.Movie{
+		ID: "m-clean", Title: "Wake Up Dead Man", ReleaseDate: "2025-01-01",
+		Overview: models.NewNullString("A detective returns."),
+		FilePath: models.NewNullString("/media/wake.mkv"),
+	}}
+	item, err := NewMediaStore(movies, nil, nil).
+		Load(context.Background(), MediaRef{ID: "m-clean", MediaType: models.SubtitleRunMediaMovie})
+	require.NoError(t, err)
+	assert.Equal(t, "Wake Up Dead Man", item.Context.Title)
+	assert.Equal(t, 2025, item.Context.Year)
+	assert.Equal(t, "A detective returns.", item.Context.Overview)
+}
+
+func TestMediaStore_MatchedMovieWithFilenameShapedTitleKeepsTMDbFields(t *testing.T) {
+	// CR H3: the row matched, so Year/Overview are TMDb's and stay; only the
+	// scraped title line is dropped.
 	movies := &fakeMovieRepo{movie: &models.Movie{
 		ID:          "m-shaped",
 		Title:       "Predator.Badlands.2025.2160p.MA.WEB-DL.DV.HDR.TYMBLE",
 		ReleaseDate: "2025-11-07",
+		Overview:    models.NewNullString("A young Predator…"),
 		Genres:      []string{"Action"},
 		TMDbID:      models.NewNullInt64(1),
 		FilePath:    models.NewNullString("/media/predator.mkv"),
@@ -258,8 +279,10 @@ func TestMediaStore_MatchedMovieWithFilenameShapedTitleIsSkipped(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Empty(t, item.Context.Title)
-	assert.Zero(t, item.Context.Year)
-	assert.Equal(t, []string{"Action"}, item.Context.Genres, "TMDb's own fields are kept — only the filename-shaped identity is dropped")
+	assert.Empty(t, item.Context.OriginalTitle)
+	assert.Equal(t, 2025, item.Context.Year)
+	assert.Equal(t, "A young Predator…", item.Context.Overview)
+	assert.Equal(t, []string{"Action"}, item.Context.Genres)
 }
 
 func TestMediaStore_MatchedMovieKeepsItsRealTitle(t *testing.T) {
@@ -274,7 +297,34 @@ func TestMediaStore_MatchedMovieKeepsItsRealTitle(t *testing.T) {
 	assert.Equal(t, 2024, item.Context.Year)
 }
 
-func TestMediaStore_UnmatchedSeriesSendsNoIdentity(t *testing.T) {
+func TestMediaStore_BracketTitledFilmIsNotAFilename(t *testing.T) {
+	movies := &fakeMovieRepo{movie: &models.Movie{
+		ID: "m-rec", Title: "[REC]", ReleaseDate: "2007-11-23",
+		TMDbID: models.NewNullInt64(8329), FilePath: models.NewNullString("/media/rec.mkv"),
+	}}
+	item, err := NewMediaStore(movies, nil, nil).
+		Load(context.Background(), MediaRef{ID: "m-rec", MediaType: models.SubtitleRunMediaMovie})
+	require.NoError(t, err)
+	assert.Equal(t, "[REC]", item.Context.Title, "CR H2: a bracket alone is not evidence of a filename")
+}
+
+func TestMediaStore_LoadSeriesAppliesTheSameRule(t *testing.T) {
+	// CR M8: the series row's own Load path (not only episode→series).
+	series := &fakeSeriesRepo{series: &models.Series{
+		ID: "s-shaped", Title: "Some.Show.S01.2160p.WEB-DL", FirstAirDate: "2024-01-01",
+		Overview: models.NewNullString("TMDb overview"), TMDbID: models.NewNullInt64(99),
+		FilePath: models.NewNullString("/media/show"),
+	}}
+	item, err := NewMediaStore(nil, series, nil).
+		Load(context.Background(), MediaRef{ID: "s-shaped", MediaType: models.SubtitleRunMediaSeries})
+	require.NoError(t, err)
+	assert.Equal(t, "s-shaped", item.ShowKey)
+	assert.Empty(t, item.Context.Title)
+	assert.Equal(t, 2024, item.Context.Year, "matched series keeps TMDb's year")
+	assert.Equal(t, "TMDb overview", item.Context.Overview)
+}
+
+func TestMediaStore_UnmatchedSeriesWithFilenameTitleSendsNoIdentity(t *testing.T) {
 	episodes := &fakeEpisodeRepo{episode: &models.Episode{
 		ID: "ep-1", SeriesID: "s-unmatched", FilePath: models.NewNullString("/media/s01e01.mkv"),
 	}}

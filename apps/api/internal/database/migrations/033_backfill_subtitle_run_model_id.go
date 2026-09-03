@@ -18,6 +18,12 @@ func init() {
 // the default changes. Failed/skipped rows carry no reusable output, so their
 // "" stays as an honest "unknown" rather than a guess.
 //
+// One-time cost this backfill does NOT undo (sub-6-5 CR H3): segment-cache
+// entries written by those runs were keyed with ModelID "" (segment_cache.go
+// segmentKey) and cannot be re-keyed, so a forced or metadata-changed re-run of
+// a pre-033 item misses the cache until its 30-day TTL expires. FindCompletedRun
+// (the normal skip path) still matches, because both sides now say haiku.
+//
 // "claude-haiku-4-5" is the only default that ever existed before this
 // migration (ai.DefaultClaudeModel from story 9R-1 through eval-1); the value
 // is spelled out here, not read from the ai package, so the backfill stays

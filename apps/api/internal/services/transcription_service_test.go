@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/vido/api/internal/ai"
+	"github.com/vido/api/internal/ai/prompts"
 	"github.com/vido/api/internal/models"
 )
 
@@ -335,4 +336,30 @@ func TestTranscriptionService_TranslateSRT_FailSoftNoDeps(t *testing.T) {
 	assert.FileExists(t, path)
 	// No glossary → prompt has no Glossary section (unchanged behavior).
 	assert.NotContains(t, completer.calls[0].UserPrompt, "Glossary")
+}
+
+// ─── sub-6-7 CR H1: the ASR leg mirrors media_store's identity rule ─────────
+
+func TestWithoutUntrustedIdentity_MirrorsMediaStoreRule(t *testing.T) {
+	md := func(title string) prompts.MediaMetadata {
+		return prompts.MediaMetadata{Title: title, OriginalTitle: "orig", Year: 2025, Overview: "ov", Genres: []string{"Drama"}}
+	}
+
+	// Unmatched + filename-shaped: identity AND year/overview go; genres stay.
+	got := withoutUntrustedIdentity(md("[bitsearch.to] Wake.Up.Dead.Man.2025.2160p.WEB-DL.mkv"), false, "m1", "movie", nil)
+	assert.Empty(t, got.Title)
+	assert.Empty(t, got.OriginalTitle)
+	assert.Zero(t, got.Year)
+	assert.Empty(t, got.Overview)
+	assert.Equal(t, []string{"Drama"}, got.Genres)
+
+	// Matched + filename-shaped: only the title line is dropped.
+	got = withoutUntrustedIdentity(md("Predator.Badlands.2025.2160p.WEB-DL"), true, "m2", "movie", nil)
+	assert.Empty(t, got.Title)
+	assert.Equal(t, 2025, got.Year)
+	assert.Equal(t, "ov", got.Overview)
+
+	// Clean titles pass through untouched, matched or not.
+	assert.Equal(t, md("Dune: Part Two"), withoutUntrustedIdentity(md("Dune: Part Two"), true, "m3", "movie", nil))
+	assert.Equal(t, md("Wake Up Dead Man"), withoutUntrustedIdentity(md("Wake Up Dead Man"), false, "m4", "movie", nil))
 }

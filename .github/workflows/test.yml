@@ -351,17 +351,35 @@ jobs:
           VIDO_PORT: 8080
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
 
+      # The SPA is served by `serve` (SPA fallback for /api/* is what the UI
+      # specs' page.route mocks rely on — vite preview does not behave the same
+      # and lost 43 UI cases on PR #373). What was flaky was fetching serve@14
+      # from the registry inside the readiness window: PR #373 saw 12 shard runs
+      # red with ERR_CONNECTION_REFUSED on :4200 because npx had not finished
+      # downloading. So install it FIRST with retries, then wait up to 90s and
+      # fail loudly instead of letting Playwright run against a closed port.
+      - name: Install static server
+        run: |
+          for attempt in 1 2 3; do
+            npm install -g serve@14.2.6 && break
+            echo "npm install -g serve failed (attempt $attempt), retrying..."
+            sleep 10
+          done
+          serve --version
+
       - name: Start frontend (preview mode)
         run: |
-          npx serve dist/apps/web -l 4200 --single &
+          serve dist/apps/web -l 4200 --single &
           echo "Waiting for frontend to be ready..."
-          for i in {1..30}; do
+          for i in {1..90}; do
             if curl -s http://localhost:4200 > /dev/null 2>&1; then
               echo "Frontend is ready!"
-              break
+              exit 0
             fi
             sleep 1
           done
+          echo "::error::Frontend never became ready on :4200 within 90s"
+          exit 1
 
       - name: Run E2E tests (shard ${{ matrix.shard }}/4)
         run: npx playwright test --shard=${{ matrix.shard }}/4 --project=chromium --project=webkit-core

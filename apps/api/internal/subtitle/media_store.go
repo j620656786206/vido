@@ -113,32 +113,32 @@ func (s *repoMediaStore) loadMovie(ctx context.Context, id string) (*MediaItem, 
 	}, nil
 }
 
-// withoutUntrustedIdentity blanks the identity fields (Title, OriginalTitle,
-// Year, Overview) when they cannot be trusted as show context (sub-6-7;
-// eval-1 finding 12): the row never matched TMDb — so every one of those
-// fields came from filename parsing — or the title itself is filename-shaped
-// even though a match exists. Genres and Countries are left as they are:
-// they are empty on an unmatched row anyway, and on a matched one they are
-// TMDb's, not the filename's. Blank fields make BuildMetadataSection render
-// nothing and MetadataHash equal the no-identity hash, so the cache key does
-// not carry the release name either.
-func withoutUntrustedIdentity(ctx TranslateContext, tmdbMatched bool, mediaID, mediaType string) TranslateContext {
-	reason := ""
-	switch {
-	case !tmdbMatched:
-		reason = "unmatched"
-	case prompts.LooksLikeFilename(ctx.Title):
-		reason = "filename-shaped"
-	default:
-		return ctx
+// withoutUntrustedIdentity applies prompts.UntrustedTitleReason — the ONE rule
+// both translation legs share (Rule 19 mirror with
+// services/transcription_service.go mediaMetadataFor) — to the identity fields
+// before they reach the prompt (sub-6-7; eval-1 finding 12). A filename-shaped
+// title never goes out as Title/OriginalTitle; on an UNMATCHED row Year and
+// Overview came from the same filename parse and go too. A matched row keeps
+// TMDb's Year/Overview, and an unmatched row with a clean (parsed or
+// hand-typed) title keeps everything. Genres/Countries are never touched.
+//
+// Logged at Debug: the handler's existence probe and the pipeline both Load
+// the same item, and a 24-episode unmatched season would otherwise write 48
+// identical INFO lines (sub-6-7 CR M7).
+func withoutUntrustedIdentity(tctx TranslateContext, tmdbMatched bool, mediaID, mediaType string) TranslateContext {
+	reason := prompts.UntrustedTitleReason(tctx.Title, tmdbMatched)
+	if reason == "" {
+		return tctx
 	}
-	slog.Info("metadata title skipped — not sent to the translation prompt",
+	slog.Debug("metadata title skipped — not sent to the translation prompt",
 		"reason", reason, "media_id", mediaID, "media_type", mediaType)
-	ctx.Title = ""
-	ctx.OriginalTitle = ""
-	ctx.Year = 0
-	ctx.Overview = ""
-	return ctx
+	tctx.Title = ""
+	tctx.OriginalTitle = ""
+	if !tmdbMatched {
+		tctx.Year = 0
+		tctx.Overview = ""
+	}
+	return tctx
 }
 
 func (s *repoMediaStore) loadSeries(ctx context.Context, id string) (*MediaItem, error) {

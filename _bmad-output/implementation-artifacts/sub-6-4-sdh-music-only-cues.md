@@ -1,6 +1,6 @@
 # Story 6.4: `FilterSDH` 丟掉純音符 cue —— 不再把 ♪ 送給 LLM 付錢再被閘門退回（後端）
 
-Status: review
+Status: done
 
 ## Story
 
@@ -28,7 +28,7 @@ eval-1 發現 8：Lioness（SDH 軌）兩個模型各約 40 句「保留英文�
 ## Dev Notes
 
 - 三行的修改，但要保守：不要順手把「開頭有音符」也丟掉——那是 AC #4 明文的 under-strip 取捨。
-- 純後端、無契約影響。
+- 純後端、無契約影響（CR H1 修正：router `betterCandidate` 以過濾後 cue 數排序，本 story 改變 SDH 軌的排名——這是**預期**行為，已加 router 測試鎖住）。
 
 ### Time-dependent visual coverage
 
@@ -57,7 +57,7 @@ Claude Fable 5.1（dev-story，2026-09-04）
 
 ### Discovery Triage
 
-- N/A — no out-of-scope work discovered
+- ① expand-scope-in-place — CR M4：`♫`／`♬`（U+266B／266C）不在 `musicMarks`，一併納入（Task 1 擴大、測試列新增）。
 
 ### Change Log
 
@@ -65,6 +65,7 @@ Claude Fable 5.1（dev-story，2026-09-04）
 | --- | --- |
 | 2026-09-04 | Task 1 — `sdh_filter.go` 加 `isMusicOnly`／`isMusicMark`，`isWholeLineAnnotation` 納入純音符行（eval-1 發現 8）。 |
 | 2026-09-04 | Task 2 — `sdh_filter_test.go` 規則表 +10 列（正反例與多行）。 |
+| 2026-09-04 | CR fixes — `isMusicOnly` 以 `unicode.IsSpace` + ZWSP/ZWNJ/BOM 判空白（H2）；`musicMarks` 加 ♫ ♬（M4）；`isMusicMark` 改 `strings.ContainsRune`（L7）；測試列標明 RED／regression guard（M3）、加 `JOHN: ♪`／`[JOHN]: ♪`／nbsp／ZWSP／全形空白／`#1 fan`（H2、M5）、`AllSDH` 加純 ♪ cue；`router_test.go` 加 `MusicOnlyCuesDoNotInflateCandidateRank`（H1）；doc 註解修正（L6、L8）。 |
 
 ### File List
 
@@ -72,3 +73,20 @@ Claude Fable 5.1（dev-story，2026-09-04）
 - `apps/api/internal/subtitle/sdh_filter_test.go`（modified）
 - `_bmad-output/implementation-artifacts/sub-6-4-sdh-music-only-cues.md`（this file）
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`（status）
+
+## Senior Developer Review (AI)
+
+**Reviewer:** Claude Opus 5（adversarial CR，換模型慣例；impl by Fable 5.1） · **Date:** 2026-09-04 · **Outcome:** Changes Requested → all items resolved in-session (branch `fix/sub-6-4-5-7-code-review`) → **Approve**
+
+Mandatory checks: Rule 7 PASS（0 codes）· Rule 20 N/A · Rule 25 N/A。
+
+### Action Items
+
+- [x] [H1] Router 排名受影響未測 — `router_test.go` 新增 `TestSelectAndRoute_MusicOnlyCuesDoNotInflateCandidateRank`；Dev Notes 改述。
+- [x] [H2] `isMusicOnly` 只認 ASCII 空白 — 改 `unicode.IsSpace` + U+200B/U+200C/U+FEFF；測試 nbsp／ZWSP／U+3000。
+- [x] [M3] 10 列中 6 列本來就綠 — 分成「RED 前四列」與「regression guards」兩段標明。
+- [x] [M4] `♫`／`♬` 漏網 — 加入 `musicMarks`，測試各一列；Discovery Triage 記 lane ①。
+- [x] [M5] 標籤剝除後的二次判定無測試 — 加 `JOHN: ♪`、`[JOHN]: ♪`。
+- [x] [L6] 註解不準 — 重寫 `isMusicOnly` doc，AC 引用改「sub-1-4 AC #4」。
+- [x] [L7] `isMusicMark` 重複 — 移除，改 `strings.ContainsRune(string(musicMarks), r)`。
+- [x] [L8] 測試表頭混用 — 改「Per-rule table (sub-1-4 AC #4; sub-6-4 rows marked)」。

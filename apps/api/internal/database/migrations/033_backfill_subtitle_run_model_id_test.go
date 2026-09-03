@@ -1,7 +1,6 @@
 package migrations
 
 import (
-	"database/sql"
 	"testing"
 	"time"
 
@@ -23,6 +22,9 @@ func TestMigration033_BackfillsOnlyEmptyCompletedRows(t *testing.T) {
 	}
 	insert("legacy-completed", "", "completed")
 	insert("legacy-failed", "", "failed")
+	insert("legacy-pending", "", "pending")
+	insert("legacy-running", "", "running")
+	insert("legacy-skipped", "", "skipped")
 	insert("sonnet-completed", "claude-sonnet-5", "completed")
 
 	tx, err := db.Begin()
@@ -37,11 +39,13 @@ func TestMigration033_BackfillsOnlyEmptyCompletedRows(t *testing.T) {
 		return m
 	}
 	require.Equal(t, legacyDefaultClaudeModel, modelOf("legacy-completed"), "empty completed row is backfilled")
-	require.Equal(t, "", modelOf("legacy-failed"), "failed rows keep their honest unknown")
+	for _, id := range []string{"legacy-failed", "legacy-pending", "legacy-running", "legacy-skipped"} {
+		require.Equal(t, "", modelOf(id), "%s keeps its honest unknown — only completed rows are resume/cache identity", id)
+	}
 	require.Equal(t, "claude-sonnet-5", modelOf("sonnet-completed"), "explicit models are never touched")
 }
 
-func TestMigration033_IsRegisteredInOrder(t *testing.T) {
+func TestMigration033_IsRegistered(t *testing.T) {
 	var found bool
 	for _, m := range GetAll() {
 		if m.Version() == 33 {
@@ -50,5 +54,4 @@ func TestMigration033_IsRegisteredInOrder(t *testing.T) {
 		}
 	}
 	require.True(t, found, "migration 33 must be registered")
-	var _ *sql.DB // keep the sql import honest for the helper signature above
 }

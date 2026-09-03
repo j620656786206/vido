@@ -1,6 +1,6 @@
 # Story 6.7: TMDb 未比對的片不得把檔名當 Title 送進 prompt（後端）
 
-Status: review
+Status: done
 
 ## Story
 
@@ -52,7 +52,7 @@ Claude Fable 5.1（dev-story，2026-09-04）
 - `media_store.go` `withoutUntrustedIdentity(ctx, tmdbMatched, id, type)`：`!TMDbID.Valid` 或 `LooksLikeFilename(Title)` → 清空 Title／OriginalTitle／Year／Overview，`slog.Info` 一次帶 reason；Genres／Countries 保留（未比對時本來就空，已比對時是 TMDb 的）。電影路徑與 `seriesContext` 都套用（集數經 series）。效果：`BuildMetadataSection` 回空、`MetadataHash` 等於無 metadata 的 hash。
 - 既有 fixture 修正：`TestMediaStore_LoadEpisodeUsesTheParentSeriesMetadata` 的 series fixture 補 `TMDbID`（它模擬的是已比對的影集；原 fixture 缺欄位只是省略，不是「未比對」語意）。
 - 🔗 AC Drift: NONE (checked: 'TranslateContext|MetadataHash|seriesContext' across _bmad-output/implementation-artifacts/*.md — sub-1-5b AC #3.1「同影集各集 MetadataHash 相同」仍成立（未比對影集各集都得到同一個空 identity）；欄位與簽名不變；REUSE not DRIFT)
-- 📎 Contract Stamps: FOUND (1 across 1 file — `TranslateContext` `[@contract-v1]`（sub-1-5b）：欄位、簽名、stubborn 政策皆不變，只是值的來源規則（未比對／檔名形狀 → 空），不 bump；Change Log 記錄)
+- 📎 Contract Stamps: FOUND (1 across 1 file — `TranslateContext` `[@contract-v1]`（sub-1-5b）：欄位與簽名不變；值的來源規則改變屬 usage-semantics 變更，依 Rule 20 兩個消費者 sub-1-5b／sub-1-6 皆 done（forward-only frozen），無 stale-mark 可欠；Change Log 記錄。CR L9 修正原「不算 usage semantics」的錯誤敘述)
 - 🎭 A11y Pre-Flight: N/A (100% backend — no apps/web/ files touched)
 - 🔌 Route Sync: N/A (no backend route touched)
 - 🎨 UX Verification: SKIPPED — no UI changes in this story
@@ -68,6 +68,7 @@ Claude Fable 5.1（dev-story，2026-09-04）
 | --- | --- |
 | 2026-09-04 | Task 1 — `prompts.LooksLikeFilename` + `media_store.withoutUntrustedIdentity`（電影與影集路徑）；`TranslateContext` v1 值來源規則變更（不 bump）。 |
 | 2026-09-04 | Task 2 — `LooksLikeFilename` 16 列表格測試；media_store 四條新測試（未比對電影／已比對但檔名形狀／正常片名保留／未比對影集）+ 既有 fixture 補 TMDbID。 |
+| 2026-09-04 | CR fixes — 規則改為 `prompts.UntrustedTitleReason`（兩條翻譯路徑共用，Rule 19 mirror）：**檔名形狀**才動 Title/OriginalTitle；未比對時才連 Year/Overview 一起清；未比對但片名乾淨（parser 或手動編輯）**保留**（H3、M4）。`transcription_service.go` `mediaMetadataFor` 兩臂套同一規則（H1）。`LooksLikeFilename`：`[` 開頭需再有點分年份才算（`[REC]` 不誤判，H2）；強 token（解析度／WEB-DL／BluRay／REMUX／x26x／HEVC／HDR10）有空白也算（M5）；移除 DV/DD/DTS/AAC 二字 token（M6）。log 改 Debug（M7）。測試：`[REC]`×3、spaced release、`Dun.DV.Two`、`Amélie.2001`、`2001: A Space Odyssey`、`M*A*S*H`、`Se7en`；media_store 加 loadSeries 路徑、未比對乾淨片名保留、已比對檔名形狀保留 Year/Overview、未比對含 genres 的 hash 斷言（M8）；services 加 `TestWithoutUntrustedIdentity_MirrorsMediaStoreRule`。參數改名 `tctx`（L10）；Rule 20 註記改述（L9）。 |
 
 ### File List
 
@@ -75,3 +76,22 @@ Claude Fable 5.1（dev-story，2026-09-04）
 - `apps/api/internal/subtitle/media_store.go`（modified）+ `media_store_test.go`（modified）
 - `_bmad-output/implementation-artifacts/sub-6-7-no-filename-as-title.md`（this file）
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`（status）
+
+## Senior Developer Review (AI)
+
+**Reviewer:** Claude Opus 5（adversarial CR，換模型慣例；impl by Fable 5.1） · **Date:** 2026-09-04 · **Outcome:** Changes Requested → all items resolved in-session (branch `fix/sub-6-4-5-7-code-review`) → **Approve**
+
+Mandatory checks: Rule 7 PASS（0 codes）· Rule 20 N/A（無 bump token；見 L9）· Rule 25 N/A · Rule 19 PASS（subtitle→prompts 既有邊；mirror 同步義務本輪補齊）。
+
+### Action Items
+
+- [x] [H1] ASR 路徑（`transcription_service.go` `mediaMetadataFor`）未修 — 兩臂套 `withoutUntrustedIdentity`（services 側 mirror），單元測試 `TestWithoutUntrustedIdentity_MirrorsMediaStoreRule`。
+- [x] [H2] `[REC]` 被誤判 — `[` 開頭需再有點分年份；測試 `[REC]`、`[REC] 2`、`[Rec]³ Génesis`。
+- [x] [H3] 已比對列過度清空 — 已比對只清 Title/OriginalTitle，保留 TMDb 的 Year/Overview；測試。
+- [x] [M4] 未比對一律清空會丟掉手動編輯 — 規則改為「檔名形狀才清」；未比對乾淨片名保留；含 genres 的 hash 斷言改為對 genres-only context。
+- [x] [M5] 有空白的 release 名漏網 — 強 token 不受空白限制；測試 spaced release。
+- [x] [M6] 二字 token 過度比對 — 移除 DV/DD/DTS/AAC；測試 `Dun.DV.Two`。
+- [x] [M7] 全域 slog Info 重複噴 — 改 Debug（media_store 無注入 logger 為 sub-1-6 CR L1 既定；services 側用注入 logger）。
+- [x] [M8] 測試缺口 — loadSeries 路徑、`[`-prefixed 真片名、spaced release、matched 保留欄位皆補。
+- [x] [L9] Rule 20 敘述錯誤 — Completion Notes 改述（usage-semantics 變更、消費者皆 done 故無 stale-mark）。
+- [x] [L10] 參數名遮蔽 `ctx` — 改 `tctx`。
