@@ -290,3 +290,102 @@ python3 scripts/subtitle-blind-eval.py score eval/<slug>
 - `scripts/README.md`（新增段落）
 - `_bmad-output/implementation-artifacts/eval-1-translation-blind-eval.md`（本檔）
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`（新條目）
+- `eval/scan-partial-zh.sh`（新增，2026-09-03 party-mode；在容器內量「同影集部分集有官方繁中」的比例）
+- `eval/partial-zh.csv`（上述掃描輸出）
+
+---
+
+## 後續 Backlog（2026-09-03 party-mode 裁定，待 Alexyu 審閱後逐項拆 story）
+
+> 討論脈絡：App 定位 BYOK、即將給少數朋友內測。裁定順序 = **先修「先花錢後失敗」的 bug → A 路線（讓詞彙表會累積、且第一天就有料）→ B 路線（分享）**。
+> 護城河結論：模型是大宗商品、路由（有中文軌就不翻）任何腳本都寫得出來；**唯一會累積、複製不走的是 per-show 詞彙表**，但它現在只開三成（261 筆全來自 LLM 自翻、metadata 播種從未發生、綁本機 id 無法跨機器對上）。
+
+### P0 — 朋友內測前必修（使用者的錢不能白燒；評測 $9.14 中 $0.96 = 10.5% 是翻完才失敗）
+
+| # | 事項 | 來源 | 大小 |
+| --- | --- | --- | --- |
+| P0-1 | pre-flight 加「目標資料夾可寫」檢查（ro mount、PUID/PGID 不符都在這裡擋），在確認框之前就亮紅燈 | 產品問題 1、2 | 小 |
+| P0-2 | Claude 呼叫 timeout 由寫死 15 秒改為隨模型／輸出長度放寬；三次逾時不得讓整支 run 死掉 | 產品問題 4 | 小 |
+| P0-3 | 抽軌 timeout 可調（10 分鐘寫死 → 4K remux 整批不能用）＋ 抽軌階段序列化或另設並行上限（兩個 worker 同時抽大檔互搶 I/O 雙雙失敗） | 產品問題 3、發現 7 | 小～中 |
+| P0-4 | `FilterSDH` 直接丟掉只含 ♪／♫ 的 cue（Lioness 每個模型約 40 句白送 LLM 再被閘門判 echoed） | 發現 8 | 很小 |
+| P0-5 | 用預設模型時 `subtitle_runs.model_id` 也要寫入（現在是空字串，使用者不知道自己付的是哪個模型） | 產品問題 5 | 很小 |
+| P0-6 | `POST /settings/keys/test` 在 `CLAUDE_MODEL=claude-sonnet-5` 下回 `AI_INVALID_RESPONSE`（key 其實有效）→ 測試 prompt 解析放寬 | 產品問題 6 | 小 |
+| P0-7 | TMDb 比對失敗時略過 Title 行，不得把原始檔名（`[bitsearch.to] Wake.Up...mkv`）當片名送進 prompt | 發現 12 | 很小 |
+| P0-8 | 確認框顯示模型選擇 + 本集預估價錢 + 預估時間；**預設維持 Haiku**，Sonnet 由使用者自選（換預設 = 帳單 2.7×，BYOK 下必須是使用者的決定） | party-mode | 中 |
+| P0-9 | TMDb attribution：logo + 「This application uses TMDB and the TMDB APIs but is not endorsed…」（條款第 3 條；JustWatch 的有做在 `StreamingAvailability.tsx:179`，TMDb 的完全沒有） | party-mode 查證 | 很小 |
+
+### P1 — A 路線：詞彙表「會累積、且第一天就有料」
+
+| # | 事項 | 來源 | 大小 |
+| --- | --- | --- | --- |
+| P1-1 | **`show_glossary` 改綁 TMDb ID**（架構評估見下一節）—— P1-2 以下全部以此為前提 | party-mode | 中 |
+| P1-2 | 修 `TranslateContext.Cast` 死碼（`pipeline.go:955` 只讀不寫）、`genres` / `production_countries` 補齊、`seriesContext` 補 Countries | 發現 10、11 | 小 |
+| P1-3 | TMDb 角色名／演員名在掃描當下播種 `show_glossary`（`source=metadata`，schema 已允許但從未發生）；TMDb 中文名可能是簡體或空 → OpenCC + fallback | 發現 13 | 中 |
+| P1-4 | **內建在地用語詞庫**（跨片、不需累積、出貨即生效）：(a) 查表型 —— 視頻→影片、質量→品質、信息→資訊；常見品牌／App（Life360 被翻成「360 號公路」）。(b) **OTT 風格在地化**（"the grocery store" → 全聯／家樂福／喜互惠 這類 Netflix／Apple TV 譯法）—— 這是 prompt 風格規則 + 範例，**不是查表**；且是口味決定（有人討厭美劇裡出現全聯），story 要含「在地化程度」開關的 UX 裁定 | Alexyu | 中 |
+| P1-5 | **加速器②：同影集內用官方繁中字幕對齊挖人名餵沒有字幕的集** —— 範圍只限「同影集／同系列」，不跨片。**量完了（見下節）：partial 影集只有 8/80 = 10%，但走翻譯的 190 集裡有 131 集（69%）落在這 8 部** → 值得做，但要以「集數覆蓋率」而非「影集比例」立論 | party-mode（Mary 修正後）+ `eval/partial-zh.csv` | 中～大 |
+| P1-6 | 成本收據：單次花費 + 本月累計 + 「略過 N 集省下約 $X」（讓使用者看到路由與 cache 在替他省錢） | Sally | 中 |
+| P1-7 | 內嵌預設 TMDb key（rate limit 按 key+IP，自架使用者互不排擠；條款 non-transferable 意味所有請求算 Alexyu 的使用；**商業化那天要另簽**），設定頁保留「用我自己的 key」 | Winston 查證 | 小 |
+| P1-8 | 模型品質等級由 Vido 集中評測、隨 App 發：200 句黃金樣本 + `model-ratings.json` + CI 自動跑（加一行 model id 就出分）；未評測模型顯示「可花約 $0.01 試跑 20 句」而非問號 | Murat | 中～大 |
+| P1-9 | prompt 鎖「逐 cue 對應、不得合併拆分」（全檔 484 個 0 分裡 120 個是時間位移，兩模型皆有） | 發現 9 | 中 |
+| P1-10 | 詞彙表 UI 顯示 `source`（自己加／系統學的／官方字幕／TMDb）—— schema 有欄位，UI 沒秀（What'Sub 的「自己加 / 改字記的」標籤） | Sally | 小 |
+
+### P2 — B 路線（A 做完再做；現在做會是一面空牆）
+
+| # | 事項 | 大小 |
+| --- | --- | --- |
+| P2-1 | 詞彙表匯出／匯入（檔案；先驗證「共享」有沒有人要） | 小 |
+| P2-2 | 英雄牆式公開詞彙表（參考 What'Sub，但**分享的是有標準答案的詞彙不是樣式**）：key = TMDb ID、卡片顯示「N 人使用 · M 人回報錯誤」而非愛心、同詞分歧攤開讓使用者選、官方字幕來源徽章、QR 推薦碼 | 大 |
+
+### 片庫實測：「同影集部分集有官方繁中」的比例（P1-5 的依據，2026-09-03 `eval/scan-partial-zh.sh` 在容器內跑）
+
+判定與 `SelectCandidates` 路由對齊：has_zh = 外掛 zh-TW／cht／tc 或內嵌 chi／zho 文字軌（deliver，$0）；translate = 無中文但有內嵌英文文字軌；asr = 其餘（PGS 或無字幕）。Vido 自產的 `.zh-Hant.srt` 不算。
+
+| | 影集數 | 集數 | has_zh | translate | asr |
+| --- | --- | --- | --- | --- | --- |
+| 全片庫 TV | 80 | 2523 | 620 | **190** | 1713 |
+| partial（has_zh>0 且 translate>0） | **8（10%）** | 335 | 61 | **131（= 全部 translate 的 69%）** | 143 |
+| 全集都有中文 | 30 | | | | |
+| 全集都要翻 | 4 | | | | |
+| 全集都走 ASR | 30 | | | | |
+| 電影 | 55 | | 30 | 3 | 22 |
+
+partial 的 8 部：Scorpion（13 有 → 79 要翻）、Supernatural（7 → 25）、Shadow and Bone（8 → 8）、Lioness（5 → 3）、牧神記（2 → 13）、Clevatess（3 → 1）、Chief of War（8 → 1）、See（15 → 1）。
+
+**解讀**
+
+- 用「影集比例」看是 10%，會被砍；用「要翻的集數覆蓋率」看是 69% —— **真正會花錢翻譯的集，七成有同影集的官方繁中可以挖**。P1-5 值得做，story 要以後者立論。
+- Scorpion 一部就佔 79 集：一個 13 集的官方詞彙表能餵 79 集，這是加速器②最好的示範案例，也適合當 P1-5 的驗收樣本。
+- 另一個沒討論過的事實：**走 translate 的只有 190/2523 = 7.5%，走 ASR 的有 1713 集（68%）**。多數是中文原音的動畫／陸劇（無字幕或硬字幕）—— 這群不需要翻譯，但意味著 ASR 路徑的成本與品質才是這個片庫的大宗；要不要另開 eval，Alexyu 裁定。
+
+### 待人評
+
+- Peacemaker / Landman 各 50 句人評校準（Haiku 抽樣版 ❌、全檔版 ✅，差在評分者對 1/2 分的校準）。Sonnet 任何版本都過。
+
+### 架構評估：`show_glossary` 從本機 `media_id` 改綁 TMDb ID（P1-1）
+
+**現況（2026-09-03 實查）**
+
+- `show_glossary.media_id TEXT NOT NULL`；unique `(media_id, term_src, language)`；index `media_id`；**沒有 FK、沒有 cascade**（migration 028）。
+- key 由 `glossaryKeyFor(ref, showKey)`（`process_item.go:801`）決定：集數／影集 → `series.ID`、電影 → `movie.ID`；`ShowKey` 在 `media_store.go:100/126/156` 三條 load 路徑填入。
+- **四個消費者**都吃 `mediaID string`：pipeline（`glossary_store.go:44`）、`glossary_service.go`（UI 列表／Update／ConfirmAll）、`nfo_localizer_service.go:97`、`transcription_service.go:245`。
+- HTTP 是 `/media/:id/glossary`（`glossary_handler.go:30`），route id 原樣往下傳；web `glossaryService.ts` 與 `ManageSubtitleDialogV2.tsx:17` 直接傳 series id。
+- `TMDbID` 在 movie／series／episode 都是 `NullInt64` → **可能為空**（Wake Up Dead Man 就比對失敗）。
+- segment cache 的 `GlossaryVersion` 是 hash 詞彙**內容**（`segment_cache.go:165`），不含 key → **換 key 不會讓 cache 失效**。
+- 沒有「重新比對 TMDb」流程（handlers／services 搜 rematch／override 無結果）。
+
+**建議：不要「把 media_id 換成 tmdb_id」，加一層 scope**
+
+1. 新欄 `scope TEXT NOT NULL`，值域：`tmdb:tv:<id>`、`tmdb:movie:<id>`、`local:<media_id>`（比對失敗的退路）。
+2. 新 unique index `(scope, term_src, language)`；`media_id` 欄保留一版供稽核，下一個 migration 再移除。
+3. 回填：series／movies 有 `tmdb_id` 者寫 `tmdb:*`，其餘寫 `local:<media_id>`。
+4. 新增 `GlossaryScopeResolver`（services 層）：`Resolve(ctx, mediaID) → scope`，查 movie／series 的 `tmdb_id`；四個消費者改先 resolve 再查 repo。
+5. **HTTP 與 web 不動**：`/media/:id/glossary` 照舊，handler 內部 resolve。
+6. 電影系列（鋒迴路轉 1／2／3）：TMDb `belongs_to_collection` → 之後可加 `tmdb:collection:<id>` 當第二層查詢，本階段不做。
+
+**風險**
+
+- 將來若做「手動重新比對 TMDb」，scope 必須跟著搬（現在沒有這條流程，做的時候一併處理）。
+- 同一 TMDb ID 有多份檔案（重複片、不同版本）會自然共用詞彙表 —— 這是想要的行為，但 UI 要標示。
+- 掃描時 TMDb 比對晚於檔案入庫 → 先寫 `local:` 再升級成 `tmdb:` 的搬移要有（或 resolver 每次查、不快取）。
+
+**工程量**：1 migration（含回填）+ 1 resolver + 4 個 call site + 測試 = **中**。UI 零改動。
