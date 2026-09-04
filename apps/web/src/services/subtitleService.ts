@@ -163,6 +163,59 @@ export interface GenerationBatchStartParams {
    * number the user confirmed is the ceiling that gets enforced).
    */
   budgetUsd?: number;
+  /**
+   * Translation model for THIS batch (sub-6-8a AC #4, additive on the sub-4-2
+   * `[@contract-v3]` envelope). Same WYSIWYG rule as `budgetUsd`: the consent
+   * flow sends the id whose price the user just read, so the quote and the
+   * charge can never come from different models. Absent = the deployment
+   * default. An id outside `GET /settings/models` is rejected with 400 at the
+   * boundary — never silently downgraded.
+   */
+  modelId?: string;
+}
+
+// --- Translation models (sub-6-8a AC #2 [@contract-v1], consumed by sub-6-8b) ---
+
+/** Coarse speed/quality band a picker may group by. */
+export type TranslationModelTier = 'fast' | 'balanced' | 'max';
+
+/**
+ * One selectable translation model, from `GET /api/v1/settings/models`.
+ *
+ * NOTE (Rule 18 boundary quirk): the wire also carries `input_per_1m` /
+ * `output_per_1m`, which survive snakeToCamel as `inputPer_1m` /
+ * `outputPer_1m` — the transform only upper-cases a letter after `_`, and `_1`
+ * is a digit. They are deliberately NOT declared here: this screen prices a
+ * batch from `estimatesByModel` (the backend's own cost model), never from
+ * per-token rates it would have to re-derive.
+ */
+export interface TranslationModelInfo {
+  id: string;
+  provider: string;
+  displayName: string;
+  tier: TranslationModelTier;
+  /**
+   * The deployment's pre-selected model — stamped from the server's EFFECTIVE
+   * model, so a `CLAUDE_MODEL` override drives it (not a hard-coded default).
+   */
+  isDefault: boolean;
+  /**
+   * MEASURED grade, present only for models Vido has blind-scored. Absent
+   * means 尚未評測 — the UI must say so, never imply parity.
+   */
+  qualityGrade?: string;
+  /** Provenance for the grade (which eval, which corpus). */
+  qualityNote?: string;
+}
+
+/**
+ * `GET /settings/models` body. `models` may legitimately be EMPTY (no AI key
+ * configured) — that is a 200, not an error, and the picker simply has nothing
+ * to offer.
+ */
+export interface TranslationModelList {
+  models: TranslationModelInfo[];
+  defaultModelId: string;
 }
 
 // --- Generation-candidates types (sub-4-3, consumes sub-4-1 read side) ---
@@ -221,9 +274,38 @@ export interface GenerationCandidateSummary {
   unwritableCount?: number;
 }
 
+/**
+ * What one model would cost for this sweep (sub-6-8a AC #3). `perCandidate`
+ * (keyed by media id) lets the picker re-price every visible row when the user
+ * switches model — without a second sweep and without the FE re-implementing
+ * the backend's cost model.
+ */
+export interface ModelEstimate {
+  totalUsd: number;
+  /**
+   * WRITABLE candidates only — the same set `totalUsd` sums, so the visible
+   * rows add up to the footer figure. An unwritable row is absent (the
+   * pipeline would refuse it before spending).
+   */
+  perCandidate?: Record<string, number>;
+}
+
 export interface GenerationCandidateResult {
   candidates: GenerationCandidate[];
   summary: GenerationCandidateSummary;
+  /**
+   * sub-6-8a AC #3 (additive): this sweep priced under every model the
+   * deployment can actually run, keyed by model id. Absent on a pre-sub-6-8a
+   * server — the picker then falls back to a single default-model row priced
+   * from `candidate.estimatedUsd`, which is what those servers quote.
+   *
+   * It lives on the RESULT, not on the snapshot, because it IS the quote: a
+   * cancelled or failed sweep clears `result` and these numbers vanish with
+   * it. A stale price is the one thing this screen must never show.
+   */
+  estimatesByModel?: Record<string, ModelEstimate>;
+  /** Wall-clock cost of the same choice, in whole minutes, keyed by model id. */
+  estimatedMinutesByModel?: Record<string, number>;
 }
 
 /** The GET state envelope. */
@@ -436,6 +518,17 @@ export const subtitleService = {
         items: data.items ?? [],
       },
     };
+  },
+
+  /**
+   * GET /settings/models — the translation models this deployment can run
+   * (sub-6-8a AC #2 `[@contract-v1]`). Lives here rather than in
+   * keySettingsService because its only consumer is the generation consent
+   * flow: the settings page and the confirm dialog ask the same question and
+   * must get the same answer.
+   */
+  async getModels(): Promise<TranslationModelList> {
+    return fetchApi<TranslationModelList>('/settings/models');
   },
 
   /** GET /subtitles/generation-batch/status — on-open recovery probe. */

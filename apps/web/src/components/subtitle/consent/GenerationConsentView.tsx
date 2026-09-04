@@ -12,7 +12,7 @@
  *     idle/cancelled/err → POST analyze (409 = join, not an error) → F14
  *   SSE ready → GET again for the result (events carry counts only) → F15
  *   zero listable candidates → F20 empty state
- *   開始產生 → F16/F19 confirm → onStartBatch(selected ids, budgetUsd)
+ *   開始產生 → F16/F19 confirm (model picker) → onStartBatch(ids, budgetUsd, modelId)
  *
  * budget_usd is WYSIWYG consent: the number on screen is ALWAYS sent — the
  * server-side env default is a fallback for the legacy dialog, never a hidden
@@ -26,8 +26,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '../../ui/Dialog';
 import { cn } from '../../../lib/utils';
-import { subtitleService, type GenerationCandidate } from '../../../services/subtitleService';
+import {
+  subtitleService,
+  type GenerationCandidate,
+  type GenerationCandidateResult,
+  type ModelEstimate,
+} from '../../../services/subtitleService';
 import { useGenerationCandidatesProgress } from '../../../hooks/useGenerationCandidatesProgress';
+import { useTranslationModels } from '../../../hooks/useTranslationModels';
 import { AnalysisProgressPanel } from './AnalysisProgressPanel';
 import { CandidateListPanel } from './CandidateListPanel';
 import { ConsentEmptyState } from './ConsentEmptyState';
@@ -38,6 +44,7 @@ import {
   groupOrder,
   isWritable,
   listableCandidates,
+  modelChoices,
   parseBudgetInput,
   selectableIds,
   type ConsentRouteFilter,
@@ -69,7 +76,13 @@ export interface GenerationConsentViewProps {
   forceAnalyze?: boolean;
   starting?: boolean;
   startError?: string | null;
-  onStartBatch: (mediaIds: string[], budgetUsd: number) => void;
+  /**
+   * sub-6-8b: `modelId` is the model whose price the user just read in the
+   * confirm dialog — sent with the batch so the quote and the charge can never
+   * come from different models. Empty string = the deployment default (no
+   * catalog, or a pre-sub-6-8a server).
+   */
+  onStartBatch: (mediaIds: string[], budgetUsd: number, modelId: string) => void;
   onClose: () => void;
 }
 
@@ -106,18 +119,43 @@ export function GenerationConsentView({
    * printing the false claim.
    */
   const [analyzedCount, setAnalyzedCount] = useState<number | undefined>(undefined);
+  /**
+   * sub-6-8b: this sweep priced under every runnable model, straight from the
+   * result. Absent on a pre-sub-6-8a server — the picker then offers the
+   * default model alone, priced from the row-level `estimatedUsd` those
+   * servers already quote.
+   */
+  const [estimatesByModel, setEstimatesByModel] = useState<
+    Record<string, ModelEstimate> | undefined
+  >(undefined);
+  const [estimatedMinutesByModel, setEstimatedMinutesByModel] = useState<
+    Record<string, number> | undefined
+  >(undefined);
+  /**
+   * The model the user picked, '' until the catalog answers. It is NOT reset
+   * when the sweep re-runs: a deliberate choice of Haiku must survive a
+   * re-analysis, or the flow would quietly bill Sonnet for the second attempt.
+   */
+  const [modelId, setModelId] = useState('');
 
   const analysis = useGenerationCandidatesProgress();
   const { startTracking: startAnalysisTracking, reset: resetAnalysis } = analysis;
 
   const seedList = useCallback(
-    (all: GenerationCandidate[]) => {
+    (result: GenerationCandidateResult) => {
+      const all = result.candidates;
       // 三序同源 (sub-5-3 AC #2): re-order the STATE itself into grouped
       // order, so display, submission (handleConfirm's filter walk) and the
       // F18 feasibleCount cumulative walk inherit ONE order with zero further
       // changes — a render-layer mapping would leave three orders to drift.
       const listable = groupOrder(listableCandidates(all));
       setCandidates(listable);
+      // sub-6-8b: the per-model quote is part of THIS result and is replaced
+      // wholesale with it — never merged with a previous sweep's. A price that
+      // outlived the sweep it was computed for is the one thing this screen
+      // must not show.
+      setEstimatesByModel(result.estimatesByModel);
+      setEstimatedMinutesByModel(result.estimatedMinutesByModel);
       if (listable.length === 0) {
         // The ONLY case that earns「所有影片都有繁中字幕了」: the analysis
         // returned records and every one was filtered out as already covered.
@@ -158,7 +196,7 @@ export function GenerationConsentView({
         }
         if (!forceAnalyze && snap.status === 'ready' && snap.result) {
           setAnalyzedCount(snap.total || snap.analyzed);
-          seedList(snap.result.candidates);
+          seedList(snap.result);
           return;
         }
         if (snap.status === 'analyzing') {
@@ -205,7 +243,7 @@ export function GenerationConsentView({
           if (cancelled) return;
           if (snap.status === 'ready' && snap.result) {
             setAnalyzedCount(snap.total || snap.analyzed);
-            seedList(snap.result.candidates);
+            seedList(snap.result);
           } else if (snap.status === 'cancelled') onClose();
           else if (snap.status === 'error') {
             setLoadError(snap.error || '分析失敗');
@@ -231,7 +269,7 @@ export function GenerationConsentView({
         .getGenerationCandidates()
         .then((snap) => {
           setAnalyzedCount(snap.total || snap.analyzed);
-          if (snap.result) seedList(snap.result.candidates);
+          if (snap.result) seedList(snap.result);
           else {
             // No result object at all — the analysis produced nothing to
             // classify, so this can never be the「everything is covered」case.
@@ -251,10 +289,42 @@ export function GenerationConsentView({
     }
   }, [analysisStatus, phase, seedList, analysis.progress.error, onClose]);
 
+  // Rule 5: the catalog is server state. Gated on `open` so a closed dialog
+  // costs no request.
+  const { data: models } = useTranslationModels({ enabled: open });
+
+  // Pre-select the deployment's default the first time the catalog answers,
+  // and only then — a later refetch must not overwrite the user's choice.
+  useEffect(() => {
+    if (!models || modelId !== '') return;
+    const fallback = models.models.find((m) => m.isDefault)?.id ?? models.models[0]?.id ?? '';
+    setModelId(models.defaultModelId || fallback);
+  }, [models, modelId]);
+
   const budgetUsd = parseBudgetInput(budgetText);
+  /**
+   * sub-6-8b AC #3: ONE price table feeds every money figure on these screens
+   * — the rows, the group subtotals, the F15 summary bar, the footer, the
+   * F16/F19 breakdown and the F18 over-budget verdict. Switching model moves
+   * all of them together or none of them.
+   */
+  const prices = estimatesByModel?.[modelId]?.perCandidate;
   const totals = useMemo(
-    () => computeTotals(candidates, selectedIds, budgetUsd),
-    [candidates, selectedIds, budgetUsd]
+    () => computeTotals(candidates, selectedIds, budgetUsd, prices),
+    [candidates, selectedIds, budgetUsd, prices]
+  );
+
+  const choices = useMemo(
+    () =>
+      models
+        ? modelChoices(candidates, selectedIds, {
+            models: models.models,
+            defaultModelId: models.defaultModelId,
+            estimatesByModel,
+            estimatedMinutesByModel,
+          })
+        : [],
+    [models, candidates, selectedIds, estimatesByModel, estimatedMinutesByModel]
   );
 
   // sub-6-1: ids the bulk actions may touch — listable AND writable. A row the
@@ -327,8 +397,11 @@ export function GenerationConsentView({
     const ids = candidates
       .filter((c) => selectedIds.has(c.mediaId) && isWritable(c))
       .map((c) => c.mediaId);
-    onStartBatch(ids, budgetUsd);
-  }, [budgetUsd, candidates, selectedIds, onStartBatch]);
+    // WYSIWYG consent extended to the model: send the id the priced rows were
+    // computed under. Sending nothing here would let the server's default
+    // charge a different rate than the one just confirmed.
+    onStartBatch(ids, budgetUsd, choices.some((c) => c.id === modelId) ? modelId : '');
+  }, [budgetUsd, candidates, selectedIds, onStartBatch, choices, modelId]);
 
   useEffect(() => {
     if (startError) setConfirmOpen(false);
@@ -389,6 +462,7 @@ export function GenerationConsentView({
               selectedIds={selectedIds}
               filter={filter}
               totals={totals}
+              prices={prices}
               budgetText={budgetText}
               budgetUsd={budgetUsd}
               starting={starting}
@@ -446,6 +520,9 @@ export function GenerationConsentView({
           totals={totals}
           budgetUsd={budgetUsd}
           confirming={starting}
+          modelChoices={choices}
+          selectedModelId={modelId}
+          onModelChange={setModelId}
           onConfirm={handleConfirm}
           onCancel={() => {
             // CR L8: no silent dismiss while a paid start is in flight.

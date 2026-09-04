@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   keySettingsService,
   type KeySettings,
+  type KeyTestResult,
   type KeyUpdates,
 } from '../services/keySettingsService';
 
@@ -51,9 +52,13 @@ export function useSaveKeys() {
   });
 }
 
-/** Probe a Claude key against the live provider. `undefined` tests the resolved one. */
+/**
+ * Probe a Claude key against the live provider. `undefined` tests the resolved
+ * one. Resolves with the verified model id (sub-6-6, additive) so the form can
+ * say WHICH model the key was good for, not just that it was good.
+ */
 export function useTestClaudeKey() {
-  return useMutation<void, Error, string | undefined>({
+  return useMutation<KeyTestResult, Error, string | undefined>({
     mutationFn: (candidate) => keySettingsService.testClaudeKey(candidate),
   });
 }

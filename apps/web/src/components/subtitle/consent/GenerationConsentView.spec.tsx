@@ -10,6 +10,7 @@ const h = vi.hoisted(() => ({
   },
   startTracking: vi.fn(),
   reset: vi.fn(),
+  models: undefined as unknown,
 }));
 
 vi.mock('../../../hooks/useGenerationCandidatesProgress', () => ({
@@ -26,13 +27,50 @@ vi.mock('../../../services/subtitleService', () => ({
     getGenerationCandidates: vi.fn(),
     startCandidateAnalysis: vi.fn(),
     cancelCandidateAnalysis: vi.fn(),
+    getModels: vi.fn(),
   },
 }));
 
+// The catalog is server state behind TanStack Query; stubbing the hook keeps
+// this file free of a QueryClientProvider (the hook itself is covered in
+// useTranslationModels.spec.ts).
+vi.mock('../../../hooks/useTranslationModels', () => ({
+  useTranslationModels: () => ({ data: h.models }),
+}));
+
 import { GenerationConsentView } from './GenerationConsentView';
-import { subtitleService, type CandidateAnalysisSnapshot } from '../../../services/subtitleService';
+import {
+  subtitleService,
+  type CandidateAnalysisSnapshot,
+  type TranslationModelList,
+} from '../../../services/subtitleService';
 
 const mocked = vi.mocked(subtitleService);
+
+/** sub-6-8b: the catalog the F16/F19 picker offers (backend display order). */
+const MODELS: TranslationModelList = {
+  defaultModelId: 'claude-sonnet-5',
+  models: [
+    {
+      id: 'claude-haiku-4-5',
+      provider: 'claude',
+      displayName: 'Claude Haiku 4.5',
+      tier: 'fast',
+      isDefault: false,
+      qualityGrade: 'B',
+      qualityNote: 'Vido 實測 2026-09',
+    },
+    {
+      id: 'claude-sonnet-5',
+      provider: 'claude',
+      displayName: 'Claude Sonnet 5',
+      tier: 'balanced',
+      isDefault: true,
+      qualityGrade: 'A',
+      qualityNote: 'Vido 實測 2026-09',
+    },
+  ],
+};
 
 const A = '0a54a9e2-3a67-4f3e-9f8e-a1c2d3e4f501';
 const B = '1b65baf3-4b78-4a4f-8a9f-b2d3e4f5a602';
@@ -82,6 +120,23 @@ const READY: CandidateAnalysisSnapshot = {
   },
 };
 
+/**
+ * The same sweep as READY, priced under both models (sub-6-8a AC #3). Haiku is
+ * ~2.5x cheaper here, which is the gap this whole story exists to surface.
+ */
+const READY_PRICED: CandidateAnalysisSnapshot = {
+  ...READY,
+  result: {
+    ...READY.result!,
+    estimatesByModel: {
+      'claude-sonnet-5': { totalUsd: 0.36, perCandidate: { [A]: 0.05, [EP]: 0.31 } },
+      'claude-haiku-4-5': { totalUsd: 0.14, perCandidate: { [A]: 0.02, [EP]: 0.12 } },
+    },
+    // Whole-sweep minutes over 166 + 52 = 218 runtime minutes.
+    estimatedMinutesByModel: { 'claude-sonnet-5': 37, 'claude-haiku-4-5': 24 },
+  },
+};
+
 function renderView(props: Partial<React.ComponentProps<typeof GenerationConsentView>> = {}) {
   const merged: React.ComponentProps<typeof GenerationConsentView> = {
     open: true,
@@ -96,6 +151,7 @@ function renderView(props: Partial<React.ComponentProps<typeof GenerationConsent
 describe('GenerationConsentView (sub-4-3 container)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    h.models = MODELS;
     h.analysisState.status = 'idle';
     h.analysisState.analyzed = 0;
     h.analysisState.total = 0;
@@ -196,7 +252,138 @@ describe('GenerationConsentView (sub-4-3 container)', () => {
     expect(screen.getByTestId('consent-confirm-total-usd')).toHaveTextContent('$0.36');
     fireEvent.click(screen.getByTestId('consent-confirm-start'));
 
-    expect(props.onStartBatch).toHaveBeenCalledWith([A, EP], 2.5);
+    // sub-6-8b: the model whose price was on screen travels with the batch.
+    expect(props.onStartBatch).toHaveBeenCalledWith([A, EP], 2.5, 'claude-sonnet-5');
+  });
+
+  // ─── sub-6-8b: per-run model selection ────────────────────────────────────
+
+  it('[P0 AC #1] the picker pre-selects is_default and prices every model for THIS batch', async () => {
+    mocked.getGenerationCandidates.mockResolvedValue(READY_PRICED);
+    renderView();
+
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('consent-start-btn'));
+
+    const sonnet = screen.getByTestId('consent-model-option-claude-sonnet-5');
+    const haiku = screen.getByTestId('consent-model-option-claude-haiku-4-5');
+    expect(sonnet).toHaveAttribute('data-selected', 'true');
+    expect(haiku).toHaveAttribute('data-selected', 'false');
+
+    // Default selection = the extract movie only ($0.05 Sonnet / $0.02 Haiku),
+    // NOT the whole sweep — the row prices what is actually about to run.
+    expect(screen.getByTestId('consent-model-usd-claude-sonnet-5')).toHaveTextContent('$0.05');
+    expect(screen.getByTestId('consent-model-usd-claude-haiku-4-5')).toHaveTextContent('$0.02');
+    expect(screen.getByTestId('consent-model-grade-claude-sonnet-5')).toHaveTextContent('品質 A');
+    expect(screen.getByTestId('consent-model-grade-claude-haiku-4-5')).toHaveTextContent('品質 B');
+    // 37 sweep-minutes x (166/218 selected runtime) = 28.
+    expect(screen.getByTestId('consent-model-minutes-claude-sonnet-5')).toHaveTextContent(
+      '約 28 分鐘'
+    );
+    expect(screen.getByTestId('consent-model-minutes-claude-haiku-4-5')).toHaveTextContent(
+      '約 18 分鐘'
+    );
+  });
+
+  it('[P0 AC #3] switching model re-prices the summary bar, the footer AND the confirm total together', async () => {
+    mocked.getGenerationCandidates.mockResolvedValue(READY_PRICED);
+    renderView();
+
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+    fireEvent.click(screen.getByLabelText('選取 怪奇物語 S04E07'));
+    fireEvent.click(screen.getByTestId('consent-start-btn'));
+
+    expect(screen.getByTestId('consent-summary-usd')).toHaveTextContent('$0.36');
+    expect(screen.getByTestId('consent-footer-usd')).toHaveTextContent('$0.36');
+    expect(screen.getByTestId('consent-confirm-total-usd')).toHaveTextContent('$0.36');
+
+    fireEvent.click(screen.getByLabelText(/Claude Haiku 4.5/));
+
+    // All three move, or the screen is lying to somebody.
+    expect(screen.getByTestId('consent-summary-usd')).toHaveTextContent('$0.14');
+    expect(screen.getByTestId('consent-footer-usd')).toHaveTextContent('$0.14');
+    expect(screen.getByTestId('consent-confirm-total-usd')).toHaveTextContent('$0.14');
+    // Per-row amounts follow too (抽取 movie: $0.05 -> $0.02).
+    expect(screen.getByTestId(`consent-row-usd-${A}`)).toHaveTextContent('$0.02');
+  });
+
+  it('[P0 AC #4] the cheaper choice states the gap in money, not just in grade', async () => {
+    mocked.getGenerationCandidates.mockResolvedValue(READY_PRICED);
+    renderView();
+
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+    fireEvent.click(screen.getByLabelText('選取 怪奇物語 S04E07'));
+    fireEvent.click(screen.getByTestId('consent-start-btn'));
+
+    expect(screen.getByTestId('consent-model-note-claude-sonnet-5')).toHaveTextContent(
+      'eval-1 實測品質最穩'
+    );
+    fireEvent.click(screen.getByLabelText(/Claude Haiku 4.5/));
+    expect(screen.getByTestId('consent-model-note-claude-haiku-4-5')).toHaveTextContent(
+      '比 Claude Sonnet 5 省 $0.22（61%）'
+    );
+  });
+
+  it('[P0 AC #3] the F18 budget verdict follows the chosen model, not the default', async () => {
+    mocked.getGenerationCandidates.mockResolvedValue(READY_PRICED);
+    renderView();
+
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+    fireEvent.click(screen.getByLabelText('選取 怪奇物語 S04E07'));
+    fireEvent.change(screen.getByTestId('consent-budget-input'), { target: { value: '0.20' } });
+    fireEvent.click(screen.getByTestId('consent-start-btn'));
+
+    // $0.36 under Sonnet blows the $0.20 ceiling…
+    expect(screen.getByTestId('consent-over-budget-banner')).toBeInTheDocument();
+    expect(screen.getByTestId('consent-confirm-start')).toHaveTextContent('仍要開始');
+
+    // …and $0.14 under Haiku does not. Same ceiling, different verdict.
+    fireEvent.click(screen.getByLabelText(/Claude Haiku 4.5/));
+    expect(screen.queryByTestId('consent-over-budget-banner')).not.toBeInTheDocument();
+    expect(screen.getByTestId('consent-confirm-start')).toHaveTextContent('確認並開始');
+  });
+
+  it('[P0 AC #2] the chosen model id rides the start payload', async () => {
+    mocked.getGenerationCandidates.mockResolvedValue(READY_PRICED);
+    const props = renderView();
+
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('consent-start-btn'));
+    fireEvent.click(screen.getByLabelText(/Claude Haiku 4.5/));
+    fireEvent.click(screen.getByTestId('consent-confirm-start'));
+
+    expect(props.onStartBatch).toHaveBeenCalledWith([A], 5, 'claude-haiku-4-5');
+  });
+
+  it('[P0 AC #2] a pre-sub-6-8a server (no estimates_by_model) offers the default model ALONE', async () => {
+    // Quoting Haiku at the default model rate would be a lie in a money field;
+    // the honest degrade is one row, priced from what the server did send.
+    mocked.getGenerationCandidates.mockResolvedValue(READY);
+    renderView();
+
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('consent-start-btn'));
+
+    expect(screen.getByTestId('consent-model-option-claude-sonnet-5')).toBeInTheDocument();
+    expect(screen.queryByTestId('consent-model-option-claude-haiku-4-5')).not.toBeInTheDocument();
+    // No estimated_minutes_by_model either — the time column stays absent
+    // rather than inventing a duration.
+    expect(screen.queryByTestId('consent-model-minutes-claude-sonnet-5')).not.toBeInTheDocument();
+  });
+
+  it('no catalog (no AI key configured) renders no picker and still starts', async () => {
+    h.models = { models: [], defaultModelId: '' };
+    mocked.getGenerationCandidates.mockResolvedValue(READY_PRICED);
+    const props = renderView();
+
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('consent-start-btn'));
+
+    expect(screen.queryByTestId('consent-model-picker')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('consent-confirm-start'));
+    // Empty model id = "use the deployment default", which is what the
+    // unpriced fallback quoted.
+    expect(props.onStartBatch).toHaveBeenCalledWith([A], 5, '');
   });
 
   it('SSE ready transition refetches the snapshot for the result', async () => {
@@ -303,6 +490,7 @@ describe('GenerationConsentView (sub-4-3 container)', () => {
 describe('GenerationConsentView budget prefill (sub-5-1 AC #6)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    h.models = MODELS;
     h.analysisState.status = 'idle';
     h.analysisState.analyzed = 0;
     h.analysisState.total = 0;
@@ -362,7 +550,7 @@ describe('GenerationConsentView budget prefill (sub-5-1 AC #6)', () => {
     fireEvent.click(screen.getByTestId('consent-start-btn'));
     fireEvent.click(screen.getByTestId('consent-confirm-start'));
 
-    expect(onStartBatch).toHaveBeenCalledWith([A], 3.75);
+    expect(onStartBatch).toHaveBeenCalledWith([A], 3.75, 'claude-sonnet-5');
   });
 });
 
@@ -431,6 +619,7 @@ describe('GenerationConsentView — grouped order (sub-5-3 AC #2)', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    h.models = MODELS;
     h.analysisState.status = 'idle';
   });
 
@@ -462,6 +651,7 @@ describe('GenerationConsentView — grouped order (sub-5-3 AC #2)', () => {
 describe('GenerationConsentView — error-phase 重試 (pre-existing fix, sub-5-3)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    h.models = MODELS;
     h.analysisState.status = 'idle';
   });
 

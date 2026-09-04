@@ -22,12 +22,14 @@ import type { GenerationCandidate } from '../../../services/subtitleService';
 import {
   applyRouteFilter,
   blockerLabel,
+  candidateUsd,
   computeTotals,
   groupCandidates,
   isWritable,
   selectableIds,
   type ConsentRouteFilter,
   type ConsentTotals,
+  type ModelPrices,
 } from './consentSelection';
 
 export interface CandidateListPanelProps {
@@ -37,6 +39,14 @@ export interface CandidateListPanelProps {
   filter: ConsentRouteFilter;
   /** The ONE totals value every money figure renders from. */
   totals: ConsentTotals;
+  /**
+   * sub-6-8b: per-row prices under the model the user picked in F16/F19.
+   * Absent = the backend's default-model quote (`estimatedUsd`) stands. This
+   * panel does not choose the model; it renders whatever the container's ONE
+   * selector priced, so the rows, the group subtotals, the summary bar and the
+   * footer always agree.
+   */
+  prices?: ModelPrices;
   /** Raw budget input text (controlled). */
   budgetText: string;
   /** parseBudgetInput(budgetText) — null = invalid (<=0 / not a number). */
@@ -67,10 +77,12 @@ function CandidateRow({
   candidate,
   checked,
   onToggle,
+  prices,
 }: {
   candidate: GenerationCandidate;
   checked: boolean;
   onToggle: (mediaId: string) => void;
+  prices?: ModelPrices;
 }) {
   const isExtract = candidate.route === 'extract';
   // sub-6-1: the backend's write probe refused this folder. The pipeline
@@ -133,8 +145,8 @@ function CandidateRow({
           )}
         >
           {candidate.runtimeKnown
-            ? usd(candidate.estimatedUsd)
-            : `≈ ${usd(candidate.estimatedUsd)}`}
+            ? usd(candidateUsd(candidate, prices))
+            : `≈ ${usd(candidateUsd(candidate, prices))}`}
         </span>
       </span>
     </li>
@@ -152,6 +164,7 @@ function GroupHeaderRow({
   items,
   selectedIds,
   onToggleGroup,
+  prices,
   season = false,
 }: {
   testid: string;
@@ -159,13 +172,14 @@ function GroupHeaderRow({
   items: GenerationCandidate[];
   selectedIds: ReadonlySet<string>;
   onToggleGroup: (mediaIds: string[], next: boolean) => void;
+  prices?: ModelPrices;
   season?: boolean;
 }) {
   // CR H1: the ONE totals engine (三處金額同源, extended to group scope) —
   // route counts AND the subtotal both come from computeTotals over this
   // group's items, never from a second hand-rolled sum. `null` ceiling: the
   // budget verdict is a whole-list concern the footer owns.
-  const groupTotals = computeTotals(items, selectedIds, null);
+  const groupTotals = computeTotals(items, selectedIds, null, prices);
   // sub-6-1 CR H3: "all" and the toggled ids span the SELECTABLE members —
   // an unwritable episode can never be ticked, so it must not keep the header
   // permanently indeterminate (which would make the group un-deselectable).
@@ -243,6 +257,7 @@ export function CandidateListPanel({
   selectedIds,
   filter,
   totals,
+  prices,
   budgetText,
   budgetUsd,
   starting = false,
@@ -393,6 +408,7 @@ export function CandidateListPanel({
                     candidate={c}
                     checked={selectedIds.has(c.mediaId)}
                     onToggle={onToggle}
+                    prices={prices}
                   />
                 ));
 
@@ -407,6 +423,7 @@ export function CandidateListPanel({
                 items={group.items}
                 selectedIds={selectedIds}
                 onToggleGroup={onToggleGroup}
+                prices={prices}
               />,
             ];
             if (group.showSeasonHeaders && group.seasons) {
@@ -420,6 +437,7 @@ export function CandidateListPanel({
                     items={season.items}
                     selectedIds={selectedIds}
                     onToggleGroup={onToggleGroup}
+                    prices={prices}
                     season
                   />,
                   ...rowsOf(season.items)
