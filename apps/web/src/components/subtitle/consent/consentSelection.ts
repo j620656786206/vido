@@ -306,6 +306,16 @@ export interface ModelChoiceInput {
   estimatedMinutesByModel?: Record<string, number>;
 }
 
+/**
+ * Measured grades, best first. CR L6: the first version took `grades.sort()[0]`,
+ * which only worked because the catalog happens to use A and B and 'A' < 'B'.
+ * A future grade whose letter sorts ahead of a genuinely better one would have
+ * handed the 「eval-1 實測品質最穩」 claim to the wrong model — the precise
+ * false claim this screen must never make. An UNRECOGNISED grade ranks nowhere
+ * and can never be "best": we do not know what it means.
+ */
+const GRADE_ORDER = ['A', 'B', 'C', 'D', 'F'];
+
 /** Sum the SELECTED, writable rows at one model's prices. */
 function sumSelected(
   candidates: GenerationCandidate[],
@@ -330,8 +340,12 @@ function sumSelected(
  *  - minutes = the sweep's `estimated_minutes_by_model` RESCALED by the share
  *    of runtime the user actually selected. The backend's estimate is
  *    `runtime × share(model)` for every non-skipped row, so the ratio of
- *    selected runtime to sweep runtime carries it exactly — no share constant
- *    is duplicated here, and if the backend recalibrates, this follows.
+ *    selected runtime to sweep runtime carries the model's time share through
+ *    without duplicating that constant here — if the backend recalibrates,
+ *    this follows. It is NOT exact to the minute (CR L7): the sweep figure
+ *    arrives already rounded, so rescaling and rounding again can land a
+ *    minute off a from-scratch computation. Acceptable for a display-only
+ *    「約 N 分鐘」; it would not be for a money field.
  *
  * Returns [] when there is nothing to choose between (no key configured, or
  * the catalog request failed) — the caller then renders no picker at all
@@ -367,8 +381,10 @@ export function modelChoices(
   }
   const runtimeShare = sweepRuntime > 0 ? selectedRuntime / sweepRuntime : 0;
 
-  const grades = rows.map((r) => r.qualityGrade).filter((g): g is string => !!g);
-  const bestGrade = grades.length > 0 ? [...grades].sort()[0] : undefined;
+  const bestGrade = rows
+    .map((r) => r.qualityGrade)
+    .filter((g): g is string => !!g && GRADE_ORDER.includes(g))
+    .sort((a, b) => GRADE_ORDER.indexOf(a) - GRADE_ORDER.indexOf(b))[0];
 
   const totalOf = (id: string) => sumSelected(candidates, selectedIds, quoted(id)?.perCandidate);
   const defaultRow = rows.find((r) => r.id === defaultModelId) ?? rows.find((r) => r.isDefault);

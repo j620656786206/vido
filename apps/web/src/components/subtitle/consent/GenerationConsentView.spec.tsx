@@ -11,6 +11,7 @@ const h = vi.hoisted(() => ({
   startTracking: vi.fn(),
   reset: vi.fn(),
   models: undefined as unknown,
+  modelsError: false,
 }));
 
 vi.mock('../../../hooks/useGenerationCandidatesProgress', () => ({
@@ -35,7 +36,7 @@ vi.mock('../../../services/subtitleService', () => ({
 // this file free of a QueryClientProvider (the hook itself is covered in
 // useTranslationModels.spec.ts).
 vi.mock('../../../hooks/useTranslationModels', () => ({
-  useTranslationModels: () => ({ data: h.models }),
+  useTranslationModels: () => ({ data: h.models, isError: h.modelsError }),
 }));
 
 import { GenerationConsentView } from './GenerationConsentView';
@@ -152,6 +153,7 @@ describe('GenerationConsentView (sub-4-3 container)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     h.models = MODELS;
+    h.modelsError = false;
     h.analysisState.status = 'idle';
     h.analysisState.analyzed = 0;
     h.analysisState.total = 0;
@@ -386,6 +388,66 @@ describe('GenerationConsentView (sub-4-3 container)', () => {
     expect(props.onStartBatch).toHaveBeenCalledWith([A], 5, '');
   });
 
+  it('[P0 CR H1] a catalog that loses the picked model re-prices AND re-sends together — never one without the other', async () => {
+    // The failure this guards: the catalog refetches without Haiku (a key was
+    // edited) while the dialog is open. The old code kept pricing from
+    // `modelId` but validated against `choices` at confirm time, so the screen
+    // showed Haiku's cheap total and the batch went out with an empty model id
+    // — billed at the server default. Quote and charge from different models is
+    // the one outcome this whole story exists to prevent.
+    mocked.getGenerationCandidates.mockResolvedValue(READY_PRICED);
+    const props = renderView();
+
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+    fireEvent.click(screen.getByLabelText('選取 怪奇物語 S04E07'));
+    fireEvent.click(screen.getByTestId('consent-start-btn'));
+    fireEvent.click(screen.getByLabelText(/Claude Haiku 4.5/));
+    expect(screen.getByTestId('consent-confirm-total-usd')).toHaveTextContent('$0.14');
+
+    // Catalog shrinks to Sonnet only, mid-dialog. Any interaction re-renders and
+    // picks up the new catalog — the budget field is the cheapest one to poke
+    // (a same-value change fires no event, so it must differ from the prefill).
+    h.models = { defaultModelId: 'claude-sonnet-5', models: [MODELS.models[1]] };
+    fireEvent.change(screen.getByTestId('consent-budget-input'), { target: { value: '6.00' } });
+
+    // The price snaps back to Sonnet's…
+    expect(screen.getByTestId('consent-confirm-total-usd')).toHaveTextContent('$0.36');
+    expect(screen.getByTestId('consent-summary-usd')).toHaveTextContent('$0.36');
+    // …the radiogroup still has a row checked (CR M3 — never zero) …
+    expect(screen.getByTestId('consent-model-option-claude-sonnet-5')).toHaveAttribute(
+      'data-selected',
+      'true'
+    );
+    // …and the id sent is the one just priced, not '' and not the vanished Haiku.
+    fireEvent.click(screen.getByTestId('consent-confirm-start'));
+    expect(props.onStartBatch).toHaveBeenCalledWith([A, EP], 6, 'claude-sonnet-5');
+  });
+
+  it('[CR M4] a FAILED catalog says so — it is not the same fact as「沒設金鑰」', async () => {
+    h.models = undefined;
+    h.modelsError = true;
+    mocked.getGenerationCandidates.mockResolvedValue(READY_PRICED);
+    renderView();
+
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('consent-start-btn'));
+
+    expect(screen.queryByTestId('consent-model-picker')).not.toBeInTheDocument();
+    expect(screen.getByTestId('consent-model-catalog-error')).toHaveTextContent('無法載入模型清單');
+  });
+
+  it('an empty catalog (no key) stays silent — nothing failed', async () => {
+    h.models = { models: [], defaultModelId: '' };
+    mocked.getGenerationCandidates.mockResolvedValue(READY_PRICED);
+    renderView();
+
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('consent-start-btn'));
+
+    expect(screen.queryByTestId('consent-model-picker')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('consent-model-catalog-error')).not.toBeInTheDocument();
+  });
+
   it('SSE ready transition refetches the snapshot for the result', async () => {
     mocked.getGenerationCandidates
       .mockResolvedValueOnce({ status: 'analyzing', analyzed: 1, total: 3 })
@@ -491,6 +553,7 @@ describe('GenerationConsentView budget prefill (sub-5-1 AC #6)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     h.models = MODELS;
+    h.modelsError = false;
     h.analysisState.status = 'idle';
     h.analysisState.analyzed = 0;
     h.analysisState.total = 0;
@@ -620,6 +683,7 @@ describe('GenerationConsentView — grouped order (sub-5-3 AC #2)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     h.models = MODELS;
+    h.modelsError = false;
     h.analysisState.status = 'idle';
   });
 
@@ -652,6 +716,7 @@ describe('GenerationConsentView — error-phase 重試 (pre-existing fix, sub-5-
   beforeEach(() => {
     vi.clearAllMocks();
     h.models = MODELS;
+    h.modelsError = false;
     h.analysisState.status = 'idle';
   });
 

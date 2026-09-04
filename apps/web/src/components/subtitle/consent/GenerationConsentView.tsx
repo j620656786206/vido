@@ -291,7 +291,7 @@ export function GenerationConsentView({
 
   // Rule 5: the catalog is server state. Gated on `open` so a closed dialog
   // costs no request.
-  const { data: models } = useTranslationModels({ enabled: open });
+  const { data: models, isError: modelsError } = useTranslationModels({ enabled: open });
 
   // Pre-select the deployment's default the first time the catalog answers,
   // and only then — a later refetch must not overwrite the user's choice.
@@ -302,17 +302,6 @@ export function GenerationConsentView({
   }, [models, modelId]);
 
   const budgetUsd = parseBudgetInput(budgetText);
-  /**
-   * sub-6-8b AC #3: ONE price table feeds every money figure on these screens
-   * — the rows, the group subtotals, the F15 summary bar, the footer, the
-   * F16/F19 breakdown and the F18 over-budget verdict. Switching model moves
-   * all of them together or none of them.
-   */
-  const prices = estimatesByModel?.[modelId]?.perCandidate;
-  const totals = useMemo(
-    () => computeTotals(candidates, selectedIds, budgetUsd, prices),
-    [candidates, selectedIds, budgetUsd, prices]
-  );
 
   const choices = useMemo(
     () =>
@@ -325,6 +314,39 @@ export function GenerationConsentView({
           })
         : [],
     [models, candidates, selectedIds, estimatesByModel, estimatedMinutesByModel]
+  );
+
+  /**
+   * CR H1/M3 — the ONE answer to「這個畫面現在在報哪個模型的價」.
+   *
+   * `modelId` is what the user last clicked, and it can go stale under the
+   * dialog: the catalog refetches without that model (a key was edited), or a
+   * forceAnalyze re-analysis quotes a narrower set. The first version read
+   * prices from `modelId` but validated against `choices` at confirm time, so
+   * the screen could keep showing Haiku's $1.70 while the batch went out with
+   * an empty model id and billed at the server's default — the exact
+   * quote/charge divergence this story exists to make impossible. It also left
+   * the radiogroup with NO row checked.
+   *
+   * So both now read this: still-offered id, else the row the picker would
+   * pre-select, else nothing (which means "the deployment default", the same
+   * thing the unpriced fallback quotes).
+   */
+  const effectiveModelId = useMemo(() => {
+    if (choices.some((c) => c.id === modelId)) return modelId;
+    return choices.find((c) => c.isDefault)?.id ?? choices[0]?.id ?? '';
+  }, [choices, modelId]);
+
+  /**
+   * sub-6-8b AC #3: ONE price table feeds every money figure on these screens
+   * — the rows, the group subtotals, the F15 summary bar, the footer, the
+   * F16/F19 breakdown and the F18 over-budget verdict. Switching model moves
+   * all of them together or none of them.
+   */
+  const prices = estimatesByModel?.[effectiveModelId]?.perCandidate;
+  const totals = useMemo(
+    () => computeTotals(candidates, selectedIds, budgetUsd, prices),
+    [candidates, selectedIds, budgetUsd, prices]
   );
 
   // sub-6-1: ids the bulk actions may touch — listable AND writable. A row the
@@ -400,8 +422,8 @@ export function GenerationConsentView({
     // WYSIWYG consent extended to the model: send the id the priced rows were
     // computed under. Sending nothing here would let the server's default
     // charge a different rate than the one just confirmed.
-    onStartBatch(ids, budgetUsd, choices.some((c) => c.id === modelId) ? modelId : '');
-  }, [budgetUsd, candidates, selectedIds, onStartBatch, choices, modelId]);
+    onStartBatch(ids, budgetUsd, effectiveModelId);
+  }, [budgetUsd, candidates, selectedIds, onStartBatch, effectiveModelId]);
 
   useEffect(() => {
     if (startError) setConfirmOpen(false);
@@ -521,8 +543,9 @@ export function GenerationConsentView({
           budgetUsd={budgetUsd}
           confirming={starting}
           modelChoices={choices}
-          selectedModelId={modelId}
+          selectedModelId={effectiveModelId}
           onModelChange={setModelId}
+          modelsError={modelsError}
           onConfirm={handleConfirm}
           onCancel={() => {
             // CR L8: no silent dismiss while a paid start is in flight.

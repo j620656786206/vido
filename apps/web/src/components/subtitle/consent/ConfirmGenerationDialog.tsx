@@ -46,6 +46,14 @@ export interface ConfirmGenerationDialogProps {
   modelChoices?: ModelChoice[];
   selectedModelId?: string;
   onModelChange?: (modelId: string) => void;
+  /**
+   * CR M4 (Rule 13): the catalog request FAILED, as opposed to legitimately
+   * returning an empty list. Both leave the picker absent, but they are not
+   * the same fact — one means「這台機器沒設 AI 金鑰」and the other means「我
+   * 沒問到，這批會照預設模型收費」. Silently rendering the same nothing for
+   * both hides a real backend error behind a plausible-looking screen.
+   */
+  modelsError?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -58,6 +66,7 @@ export function ConfirmGenerationDialog({
   modelChoices = [],
   selectedModelId = '',
   onModelChange,
+  modelsError = false,
   onConfirm,
   onCancel,
 }: ConfirmGenerationDialogProps) {
@@ -102,6 +111,15 @@ export function ConfirmGenerationDialog({
               onSelect={onModelChange}
               disabled={confirming}
             />
+          )}
+
+          {modelChoices.length === 0 && modelsError && (
+            <p
+              data-testid="consent-model-catalog-error"
+              className="text-[13px] text-[var(--warning-text)]"
+            >
+              無法載入模型清單，這批會用這台機器的預設模型計費。
+            </p>
           )}
 
           <div className="flex flex-col gap-2 text-[13px] text-[var(--text-secondary)]">

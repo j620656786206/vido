@@ -107,6 +107,15 @@ export function ModelPicker({ choices, selectedModelId, onSelect, disabled }: Mo
                 <span
                   data-testid={`consent-model-grade-${choice.id}`}
                   title={choice.qualityNote}
+                  // CR L8: `title` alone is a hover tooltip — unreachable by
+                  // keyboard, unreliable for screen readers, and meaningless on
+                  // the mobile sheet. The provenance is the whole reason the
+                  // grade is trustworthy, so it also goes in the accessible name.
+                  aria-label={
+                    choice.qualityGrade
+                      ? `品質 ${choice.qualityGrade}${choice.qualityNote ? `（${choice.qualityNote}）` : ''}`
+                      : '尚未評測'
+                  }
                   className={cn(
                     'rounded-[var(--radius-sm)] px-1.5 py-0.5',
                     gradeTint(choice.qualityGrade)

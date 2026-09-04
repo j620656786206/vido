@@ -391,19 +391,43 @@ const CONSENT_MODEL_CHOICES = [
   },
 ];
 
-const CONSENT_CONFIRM_TOTALS = {
-  candidateCount: 142,
-  selectableCount: 142,
-  unwritableCount: 0,
+/**
+ * Build a ConsentTotals fixture with the total DERIVED, never typed twice.
+ *
+ * CR M2: the first cut spread `CONSENT_CONFIRM_TOTALS` and overrode only the
+ * ASR figure and the total for the Haiku variant, leaving the extract figure at
+ * Sonnet's $0.18 — so the baked-in baseline showed 抽取 $0.18 + 語音辨識 $1.63
+ * summing to a 合計 of $1.70. A confirm screen whose breakdown does not add up
+ * is the exact bug this story exists to prevent, and it had been photographed
+ * into the visual baseline. Deriving the total makes that unrepresentable.
+ */
+function confirmTotals(parts: {
+  selectedCount: number;
+  selectedExtractCount: number;
+  selectedAsrCount: number;
+  selectedExtractUsd: number;
+  selectedAsrUsd: number;
+  overBudget?: boolean;
+  feasibleCount: number;
+}) {
+  return {
+    candidateCount: 142,
+    selectableCount: 142,
+    unwritableCount: 0,
+    overBudget: false,
+    ...parts,
+    selectedTotalUsd: Math.round((parts.selectedExtractUsd + parts.selectedAsrUsd) * 100) / 100,
+  };
+}
+
+const CONSENT_CONFIRM_TOTALS = confirmTotals({
   selectedCount: 18,
   selectedExtractCount: 6,
   selectedAsrCount: 12,
   selectedExtractUsd: 0.18,
   selectedAsrUsd: 4.32,
-  selectedTotalUsd: 4.5,
-  overBudget: false,
   feasibleCount: 18,
-};
+});
 
 // sub-4-3 consent-screen fixture data (F15/F18). UUID-string ids (9R-18);
 // amounts mirror the drawn third-round values (§5-sexies honest small fees).
@@ -4066,7 +4090,15 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     component: ConfirmGenerationDialog as ComponentType<Record<string, unknown>>,
     props: {
       open: true,
-      totals: { ...CONSENT_CONFIRM_TOTALS, selectedAsrUsd: 1.63, selectedTotalUsd: 1.7 },
+      // Both halves scaled to Haiku, so the breakdown still sums to the total.
+      totals: confirmTotals({
+        selectedCount: 18,
+        selectedExtractCount: 6,
+        selectedAsrCount: 12,
+        selectedExtractUsd: 0.07,
+        selectedAsrUsd: 1.63,
+        feasibleCount: 18,
+      }),
       budgetUsd: 5,
       modelChoices: CONSENT_MODEL_CHOICES,
       selectedModelId: 'claude-haiku-4-5',
@@ -4083,19 +4115,15 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     component: ConfirmGenerationDialog as ComponentType<Record<string, unknown>>,
     props: {
       open: true,
-      totals: {
-        candidateCount: 142,
-        selectableCount: 142,
-        unwritableCount: 0,
+      totals: confirmTotals({
         selectedCount: 96,
         selectedExtractCount: 0,
         selectedAsrCount: 96,
         selectedExtractUsd: 0,
         selectedAsrUsd: 9.72,
-        selectedTotalUsd: 9.72,
         overBudget: true,
         feasibleCount: 49,
-      },
+      }),
       budgetUsd: 5,
       modelChoices: [
         { ...CONSENT_MODEL_CHOICES[0], totalUsd: 25.8, minutes: 41 },
