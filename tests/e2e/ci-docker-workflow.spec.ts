@@ -8,6 +8,16 @@
  *
  * These tests run offline (no Docker/GitHub needed) — pure YAML validation.
  *
+ * 2026-09-05: the single `docker` job became a `build` matrix (one NATIVE
+ * runner per arch) plus a `merge` job. Several tests here had pinned the
+ * MECHANISM of the old shape — one step listing both platforms, a mandatory
+ * `setup-qemu-action`, `needs` being undefined — and those mechanisms are
+ * exactly what the split removes. They are rewritten below to assert the
+ * INTENT instead (both arches get built; nothing is published from a PR; the
+ * manifest is assembled from both legs), the same correction retro-m2-AI1
+ * made to the GHCR-login test. A test that pins how something is done blocks
+ * the fix for the thing it was protecting.
+ *
  * NOTE: These tests live in tests/e2e/ alongside other Playwright tests
  * but only perform filesystem I/O. The Playwright webServer (Go + Vite)
  * will start when running the full suite. To run these alone efficiently:
@@ -39,8 +49,13 @@ interface WorkflowStep {
 interface WorkflowJob {
   name: string;
   needs?: string[];
+  if?: string;
   'runs-on': string;
   'timeout-minutes'?: number;
+  strategy?: {
+    'fail-fast'?: boolean;
+    matrix?: { include?: Array<Record<string, string>> };
+  };
   steps: WorkflowStep[];
 }
 
@@ -61,6 +76,11 @@ interface GHAWorkflow {
 
 function findStepByAction(steps: WorkflowStep[], actionPrefix: string): WorkflowStep | undefined {
   return steps.find((s) => s.uses?.startsWith(actionPrefix));
+}
+
+/** Every step in the workflow, across all jobs — for whole-file invariants. */
+function allSteps(wf: GHAWorkflow): WorkflowStep[] {
+  return Object.values(wf.jobs).flatMap((j) => j.steps);
 }
 
 // -- Load and parse workflow YAML once --
@@ -120,22 +140,39 @@ test.describe('Trigger Configuration @ci @validation', () => {
 // =============================================================================
 test.describe('Multi-Platform Build @ci @validation', () => {
   test('[P1] builds for linux/amd64 and linux/arm64', () => {
-    // GIVEN: The docker job build-push step
-    const dockerJob = dockerWorkflow.jobs.docker;
-    const buildStep = findStepByAction(dockerJob.steps, 'docker/build-push-action');
-    // WHEN: Checking platforms configuration
-    const platforms = buildStep?.with?.platforms as string;
-    // THEN: Both amd64 and arm64 should be included
+    // GIVEN: The build matrix (one leg per architecture)
+    const legs = (dockerWorkflow.jobs.build.strategy?.matrix?.include ?? []) as Array<
+      Record<string, string>
+    >;
+    // WHEN: Taking the union of every leg's platform
+    const platforms = legs.map((l) => l.platform);
+    // THEN: Both arches must still be built — the split changed WHERE, not WHETHER
     expect(platforms).toContain('linux/amd64');
     expect(platforms).toContain('linux/arm64');
   });
 
-  test('[P1] QEMU action is configured for ARM64 emulation', () => {
-    // GIVEN: The docker job steps
-    const dockerJob = dockerWorkflow.jobs.docker;
-    const qemuStep = findStepByAction(dockerJob.steps, 'docker/setup-qemu-action');
-    // THEN: QEMU setup step should exist
-    expect(qemuStep).toBeDefined();
+  test('[P1] each arch builds on a NATIVE runner (no QEMU emulation)', () => {
+    // The whole point of the 2026-09-05 split. Measured before it: arm64
+    // `go build` 702s vs amd64 128s, arm64 total ~21min against a 30-min cap
+    // that it kept blowing. A stray setup-qemu-action would let a mistyped
+    // `platforms:` fall back to the slow emulated path SILENTLY rather than
+    // failing, so its absence is the invariant worth pinning.
+    expect(findStepByAction(allSteps(dockerWorkflow), 'docker/setup-qemu-action')).toBeUndefined();
+
+    const legs = (dockerWorkflow.jobs.build.strategy?.matrix?.include ?? []) as Array<
+      Record<string, string>
+    >;
+    for (const leg of legs) {
+      const nativeArm = leg.platform === 'linux/arm64' && leg.runner.endsWith('-arm');
+      const nativeAmd = leg.platform === 'linux/amd64' && !leg.runner.endsWith('-arm');
+      expect(nativeArm || nativeAmd, `${leg.platform} must run on a native runner`).toBe(true);
+    }
+  });
+
+  test('[P1] one leg failing does not cancel the other', () => {
+    // fail-fast would leave the surviving arch's registry cache half-written,
+    // so the next run rebuilds it cold — the slow path this split exists to end.
+    expect(dockerWorkflow.jobs.build.strategy?.['fail-fast']).toBe(false);
   });
 });
 
@@ -145,7 +182,7 @@ test.describe('Multi-Platform Build @ci @validation', () => {
 test.describe('GHCR Authentication @ci @validation', () => {
   test('[P1] uses GITHUB_TOKEN for GHCR login (no PAT required)', () => {
     // GIVEN: The docker job GHCR login step (may have multiple login steps)
-    const dockerJob = dockerWorkflow.jobs.docker;
+    const dockerJob = dockerWorkflow.jobs.build;
     const ghcrLoginStep = dockerJob.steps.find(
       (s: WorkflowStep) =>
         s.uses?.startsWith('docker/login-action') && s.with?.registry === 'ghcr.io'
@@ -166,7 +203,7 @@ test.describe('GHCR Authentication @ci @validation', () => {
   // publish invariant is pinned directly by the sibling test below.
   test('[P1] login runs unconditionally so cache-from can authenticate', () => {
     // GIVEN: The docker job GHCR login step
-    const dockerJob = dockerWorkflow.jobs.docker;
+    const dockerJob = dockerWorkflow.jobs.build;
     const ghcrLoginStep = dockerJob.steps.find(
       (s: WorkflowStep) =>
         s.uses?.startsWith('docker/login-action') && s.with?.registry === 'ghcr.io'
@@ -179,10 +216,15 @@ test.describe('GHCR Authentication @ci @validation', () => {
     // GIVEN: The build-push step
     // (the real safety invariant the removed login gate stood in for — and
     // one this suite never asserted directly until retro-m2-AI1)
-    const dockerJob = dockerWorkflow.jobs.docker;
-    const buildStep = findStepByAction(dockerJob.steps, 'docker/build-push-action');
-    // THEN: push must be gated on the event being anything but a PR
-    expect(String(buildStep?.with?.push)).toContain('pull_request');
+    const buildStep = findStepByAction(dockerWorkflow.jobs.build.steps, 'docker/build-push-action');
+    // THEN: the output mode must be gated on the event being anything but a PR.
+    // `push:` is gone — push-by-digest carries the push flag inside `outputs:`,
+    // and a PR gets type=cacheonly (builds everything, emits nothing).
+    const outputs = String(buildStep?.with?.outputs);
+    expect(outputs).toContain('pull_request');
+    expect(outputs).toContain('cacheonly');
+    // AND the job that applies the user-facing tags must not run on a PR at all
+    expect(String(dockerWorkflow.jobs.merge.if)).toContain("!= 'pull_request'");
   });
 });
 
@@ -192,8 +234,8 @@ test.describe('GHCR Authentication @ci @validation', () => {
 test.describe('Docker Metadata @ci @validation', () => {
   test('[P1] generates semver tags (version, major.minor, major)', () => {
     // GIVEN: The metadata step
-    const dockerJob = dockerWorkflow.jobs.docker;
-    const metaStep = findStepByAction(dockerJob.steps, 'docker/metadata-action');
+    // The merge job owns the published tag set (per-arch legs push by digest).
+    const metaStep = findStepByAction(dockerWorkflow.jobs.merge.steps, 'docker/metadata-action');
     const tags = metaStep?.with?.tags as string;
     // THEN: All three semver patterns should be present
     expect(tags).toContain('type=semver,pattern={{version}}');
@@ -203,8 +245,8 @@ test.describe('Docker Metadata @ci @validation', () => {
 
   test('[P1] generates branch ref and SHA tags', () => {
     // GIVEN: The metadata step
-    const dockerJob = dockerWorkflow.jobs.docker;
-    const metaStep = findStepByAction(dockerJob.steps, 'docker/metadata-action');
+    // The merge job owns the published tag set (per-arch legs push by digest).
+    const metaStep = findStepByAction(dockerWorkflow.jobs.merge.steps, 'docker/metadata-action');
     const tags = metaStep?.with?.tags as string;
     // THEN: Branch and SHA tags should be configured
     expect(tags).toContain('type=ref,event=branch');
@@ -213,8 +255,8 @@ test.describe('Docker Metadata @ci @validation', () => {
 
   test('[P1] applies OCI labels (title, description, vendor, license)', () => {
     // GIVEN: The metadata step
-    const dockerJob = dockerWorkflow.jobs.docker;
-    const metaStep = findStepByAction(dockerJob.steps, 'docker/metadata-action');
+    // The merge job owns the published tag set (per-arch legs push by digest).
+    const metaStep = findStepByAction(dockerWorkflow.jobs.merge.steps, 'docker/metadata-action');
     const labels = metaStep?.with?.labels as string;
     // THEN: Required OCI labels should be present
     expect(labels).toContain('org.opencontainers.image.title=Vido');
@@ -230,18 +272,25 @@ test.describe('Docker Metadata @ci @validation', () => {
 test.describe('Build Layer Caching @ci @validation', () => {
   test('[P1] uses GHCR registry cache (not GHA cache)', () => {
     // GIVEN: The build-push step
-    const dockerJob = dockerWorkflow.jobs.docker;
-    const buildStep = findStepByAction(dockerJob.steps, 'docker/build-push-action');
+    const buildStep = findStepByAction(dockerWorkflow.jobs.build.steps, 'docker/build-push-action');
     const cacheFrom = buildStep?.with?.['cache-from'] as string;
     // THEN: cache-from should use registry type
     expect(cacheFrom).toContain('type=registry');
     expect(cacheFrom).toContain('buildcache');
   });
 
+  test('[P1] cache is scoped PER ARCH so the two legs cannot clobber each other', () => {
+    // A registry cache ref is one manifest. Two jobs writing the same
+    // `:buildcache` tag overwrite each other (docker/buildx#1044), so one arch
+    // silently runs fully cold every time — no error, just "CI is slow again".
+    const buildStep = findStepByAction(dockerWorkflow.jobs.build.steps, 'docker/build-push-action');
+    expect(String(buildStep?.with?.['cache-from'])).toContain('buildcache-${{ matrix.arch }}');
+    expect(String(buildStep?.with?.['cache-to'])).toContain('matrix.arch');
+  });
+
   test('[P1] cache-to only writes on push events (not PRs)', () => {
     // GIVEN: The build-push step
-    const dockerJob = dockerWorkflow.jobs.docker;
-    const buildStep = findStepByAction(dockerJob.steps, 'docker/build-push-action');
+    const buildStep = findStepByAction(dockerWorkflow.jobs.build.steps, 'docker/build-push-action');
     const cacheTo = buildStep?.with?.['cache-to'] as string;
     // THEN: cache-to should be conditional on event type
     expect(cacheTo).toContain('pull_request');
@@ -253,11 +302,16 @@ test.describe('Build Layer Caching @ci @validation', () => {
 // AC6: Docker Build Verifies Compilation (test-go removed; Dockerfile handles it)
 // =============================================================================
 test.describe('Docker Build Standalone @ci @validation', () => {
-  test('[P1] docker job has no test-go dependency', () => {
-    // GIVEN: The docker job
-    const dockerJob = dockerWorkflow.jobs.docker;
-    // THEN: Docker job should not depend on test-go (unit tests run in Tests workflow)
-    expect(dockerJob.needs).toBeUndefined();
+  test('[P1] build jobs depend on nothing (unit tests run in the Tests workflow)', () => {
+    // GIVEN: The per-arch build job
+    // THEN: it must not wait on a test job — compilation IS the Dockerfile's job
+    expect(dockerWorkflow.jobs.build.needs).toBeUndefined();
+  });
+
+  test('[P1] the manifest is assembled from BOTH arch legs', () => {
+    // The one dependency that must exist: merging before both legs have pushed
+    // their digest would publish a half-populated manifest.
+    expect(dockerWorkflow.jobs.merge.needs).toContain('build');
   });
 
   test('[P1] test-go job does not exist in docker workflow', () => {
@@ -273,8 +327,7 @@ test.describe('Docker Build Standalone @ci @validation', () => {
 test.describe('Dockerfile Reuse @ci @validation', () => {
   test('[P1] build uses project root context (existing Dockerfile)', () => {
     // GIVEN: The build-push step
-    const dockerJob = dockerWorkflow.jobs.docker;
-    const buildStep = findStepByAction(dockerJob.steps, 'docker/build-push-action');
+    const buildStep = findStepByAction(dockerWorkflow.jobs.build.steps, 'docker/build-push-action');
     // THEN: Context should be project root
     expect(buildStep?.with?.context).toBe('.');
   });
@@ -286,18 +339,29 @@ test.describe('Dockerfile Reuse @ci @validation', () => {
 test.describe('Provenance & SBOM @ci @validation', () => {
   test('[P1] provenance attestation is enabled with mode=max', () => {
     // GIVEN: The build-push step
-    const dockerJob = dockerWorkflow.jobs.docker;
-    const buildStep = findStepByAction(dockerJob.steps, 'docker/build-push-action');
-    // THEN: Provenance should be mode=max
-    expect(buildStep?.with?.provenance).toBe('mode=max');
+    const buildStep = findStepByAction(dockerWorkflow.jobs.build.steps, 'docker/build-push-action');
+    // THEN: mode=max on published builds. It is an expression now — attestations
+    // are registry objects, so a PR (which pushes nothing) never had any.
+    expect(String(buildStep?.with?.provenance)).toContain('mode=max');
   });
 
   test('[P1] SBOM generation is enabled', () => {
     // GIVEN: The build-push step
-    const dockerJob = dockerWorkflow.jobs.docker;
-    const buildStep = findStepByAction(dockerJob.steps, 'docker/build-push-action');
-    // THEN: SBOM should be true
-    expect(buildStep?.with?.sbom).toBe(true);
+    const buildStep = findStepByAction(dockerWorkflow.jobs.build.steps, 'docker/build-push-action');
+    // THEN: enabled on published builds (expression, same reason as provenance)
+    expect(String(buildStep?.with?.sbom)).toContain("!= 'pull_request'");
+  });
+
+  test('[P1] the merge step preserves attestations and proves it', () => {
+    // `docker manifest create` silently drops the unknown/unknown attestation
+    // manifests; `imagetools create` carries them. The build stays green either
+    // way, so the workflow asserts the merged index afterwards rather than
+    // trusting it — and this test pins that the assertion exists.
+    const runSteps = dockerWorkflow.jobs.merge.steps.filter((st) => st.run);
+    const script = runSteps.map((st) => st.run).join('\n');
+    expect(script).toContain('imagetools create');
+    expect(script).not.toContain('docker manifest create');
+    expect(script).toContain('attestation-manifest');
   });
 
   test('[P1] id-token write permission for OIDC attestations', () => {
@@ -313,17 +377,19 @@ test.describe('Provenance & SBOM @ci @validation', () => {
 test.describe('Action Versions @ci @validation', () => {
   test('[P1] all actions use latest stable versions', () => {
     // GIVEN: The docker job steps with uses
-    const allSteps = [...dockerWorkflow.jobs.docker.steps];
-    const actionSteps = allSteps.filter((s) => s.uses);
+    const actionSteps = allSteps(dockerWorkflow).filter((s) => s.uses);
 
-    // Expected minimum versions (latest stable as of March 2026)
+    // Expected minimum versions (latest stable as of March 2026).
+    // docker/setup-qemu-action is deliberately absent — see the native-runner
+    // test in AC2; its presence is now a regression, not a requirement.
     const expectedVersions: Record<string, string> = {
       'actions/checkout': 'v4',
-      'docker/setup-qemu-action': 'v4',
       'docker/setup-buildx-action': 'v4',
       'docker/login-action': 'v4',
       'docker/metadata-action': 'v6',
       'docker/build-push-action': 'v7',
+      'actions/upload-artifact': 'v4',
+      'actions/download-artifact': 'v4',
     };
 
     for (const [action, version] of Object.entries(expectedVersions)) {
@@ -359,12 +425,14 @@ test.describe('Concurrency Control @ci @validation', () => {
 test.describe('Conditional Push Logic @ci @validation', () => {
   test('[P1] push is disabled for pull requests', () => {
     // GIVEN: The build-push step
-    const dockerJob = dockerWorkflow.jobs.docker;
-    const buildStep = findStepByAction(dockerJob.steps, 'docker/build-push-action');
-    // THEN: Push should be conditional (false for PRs)
-    const pushExpr = buildStep?.with?.push as string;
-    expect(pushExpr).toContain('pull_request');
-    expect(pushExpr).toContain("!= 'pull_request'");
+    const buildStep = findStepByAction(dockerWorkflow.jobs.build.steps, 'docker/build-push-action');
+    // THEN: the push flag now lives inside `outputs:` (push-by-digest), and a
+    // PR resolves to type=cacheonly — everything compiles, nothing is emitted.
+    const outputs = String(buildStep?.with?.outputs);
+    expect(outputs).toContain("!= 'pull_request'");
+    expect(outputs).toContain('cacheonly');
+    // AND cache-to must stay write-gated too, or a PR could poison the cache
+    expect(String(buildStep?.with?.['cache-to'])).toContain("!= 'pull_request'");
   });
 });
 

@@ -1,6 +1,18 @@
 # Vido Docker Build & Push to GHCR
 # Builds unified Docker image (Go API + React SPA) and pushes to GitHub Container Registry
 # Created: retro-8-D2-ci-docker-build-push-ghcr
+#
+# 2026-09-05 拆成「每個 arch 各跑自己的原生 runner」：
+# 原本一個 job 在 amd64 runner 上同時 build linux/amd64 + linux/arm64，
+# arm64 那半是靠 QEMU 模擬跑的，實測（run 33886412524）：
+#   go build      arm64 702s / amd64 128s
+#   nx build web  arm64 258s / amd64  38s
+#   整體          arm64 ~21min / amd64 ~2.8min
+# 30 分鐘的 timeout 因此被 arm64 撞掉過（run 33883528999 被 cancel）。
+# 現在 amd64 跑 ubuntu-24.04、arm64 跑 GitHub 原生 ARM runner
+# （ubuntu-24.04-arm，public repo 免費），兩邊並行、都不再有模擬層。
+# 兩個 arch 各自 push「無 tag、只有 digest」的 image，最後由 merge job
+# 用 imagetools 合成單一 multi-arch manifest，tag 組跟拆分前完全一樣。
 
 name: Docker
 
@@ -13,6 +25,12 @@ on:
   workflow_dispatch:
 
 # Cancel in-progress runs for the same branch/tag to avoid duplicate builds
+# 注意：publish 現在不再是單一 step。push-by-digest 的代價是每一次成功的
+# 非 PR 執行都會在 GHCR 留下 2 個沒人引用的 untagged version（各 arch 的
+# index，合成後就沒人指向它們）；被取消的 run 還會多留幾個。這是已知且
+# 接受的成本，不影響任何已發佈的 tag —— 但沒有自動清理，套件版本列表會
+# 隨時間變長。要清的話必須先走過每個保留 tag 的 index 保住被引用的 digest，
+# 不能無差別刪 untagged。
 concurrency:
   group: docker-${{ github.ref }}
   cancel-in-progress: true
@@ -22,28 +40,57 @@ permissions:
   packages: write
   id-token: write
 
+env:
+  # 兩個 job 都要用到，而且 per-arch build 只能給「不帶 tag 的 image 名稱」
+  # （push-by-digest 的要求），所以抽成 workflow 層變數
+  REGISTRY_IMAGE: ghcr.io/${{ github.repository }}
+
 jobs:
   # =============================================================================
-  # Docker Build + Push
+  # 每個 arch 一個原生 runner
   # (Go compilation is verified by the Dockerfile build stage;
   #  unit tests run in the separate Tests workflow)
   # =============================================================================
-  docker:
-    name: Build & Push Docker Image
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
+    # timeout-minutes 是「每個 job」的設定、不會被繼承：漏寫就會從 30 分鐘
+    # 悄悄變成 GitHub 預設的 360 分鐘。原生 build 冷 cache 約 8-12 分鐘，
+    # 25 分鐘留餘裕又能在 cache 壞掉時真的跳出來讓人發現。
+    timeout-minutes: 25
+    strategy:
+      # 一邊 npm registry 抽風不該連累另一邊：兩個 arch 各自回報成敗，
+      # 否則 arm64 build 到一半被 cancel，下一次它就是全冷 build。
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            arch: amd64
+            runner: ubuntu-24.04
+          # ubuntu-24.04-arm 是原生 ARM runner（public repo 免費、4 vCPU/16GB）。
+          # 沒有 ubuntu-latest-arm 這個 label；ubuntu-22.04-arm 2026-09-17
+          # 起進入淘汰期，所以固定用 24.04-arm，amd64 也對齊寫死 24.04。
+          - platform: linux/arm64
+            arch: arm64
+            runner: ubuntu-24.04-arm
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 這裡不 push 到 Docker Hub，只是為了「有帳號地拉 base image」：
+      # node:20-alpine / golang:1.25-alpine / alpine:3.21 / buildkit-syft-scanner
+      # 匿名拉會撞 rate limit。必須排在 setup-buildx 之前，連 buildkit
+      # builder image 的拉取也才是已登入狀態。兩個 arch job 都要各自登入。
       - name: Login to Docker Hub
         uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
+      # 這裡「刻意沒有」docker/setup-qemu-action：
+      # 每個 job 只 build 自己 runner 的原生 arch，不需要 binfmt 模擬。
+      # 留著它的話，platforms 萬一寫錯反而會安靜地退回 QEMU 慢速路徑
+      # （就是這次要修掉的 702s go build），而不是直接失敗讓人看到。
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -53,7 +100,7 @@ jobs:
       # needs an authenticated pull. Without this login every PR build ran
       # fully cold on both arches (`#18 ERROR: failed to fetch anonymous
       # token`) and slow-runner draws blew the 30-min cap. Image PUSH is still
-      # gated off for PRs by the build step's `push:` parameter below.
+      # gated off for PRs by the build step's `outputs:` parameter below.
       - name: Login to GHCR
         uses: docker/login-action@v4
         with:
@@ -61,11 +108,136 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # per-arch job 只消費 labels（labels 寫進每個 arch 的 image config），
+      # tags 輸出在這裡是用不到的 —— 真正的 tag 組在 merge job 才套用。
+      #
+      # ⚠️ 但 tags 規則「不能省」：metadata-action 的 version 輸出是從 tag 規則
+      # 推出來的，而 version 就是 org.opencontainers.image.version 這個 label。
+      # 省略 tags 會讓它退回預設規則，於是 v0.1.2 的發布 image 標成
+      # version=v0.1.2 而不是 0.1.2 —— 而 imagetools create 不會改寫 image
+      # config，merge job 補不回來。所以這一份必須跟 merge job 逐字相同。
+      - name: Extract Docker metadata (labels + version)
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY_IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=ref,event=branch
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=Vido
+            org.opencontainers.image.description=NAS Media Management Platform with Traditional Chinese metadata support
+            org.opencontainers.image.vendor=vido
+            # License is intentionally NOASSERTION until the OpenCC migration
+            # removes GPL transitive dependencies and SBOM review is complete.
+            org.opencontainers.image.licenses=NOASSERTION
+
+      - name: Build (and on non-PR events, push by digest)
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          # 單一平台：這一行就是「不再有 QEMU」的保證
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # 刻意「沒有」tags：image 名稱走 outputs 的 name= 屬性，這是官方
+          # distributed-build 範例唯一記載的 push-by-digest 寫法。用 tags: 餵
+          # 一個不帶 :tag 的名稱會被 docker 正規化成 :latest，雖然多半也能動，
+          # 但那是沒有文件背書的路徑，不值得賭。
+          # PR：type=cacheonly —— 整份 Dockerfile 照跑（兩個 arch 都真的編過、
+          #     COPY --from 全部驗過），但不輸出、不 push 任何東西。
+          #     push-by-digest 沒有「不 push」的模式，所以 PR 必須走另一條 outputs。
+          # 非 PR：push-by-digest，image 先以「無名稱、只有 digest」的形式進 GHCR，
+          #     等 merge job 才把 tag 掛上去 —— 避免半套的 :latest 被人拉到。
+          outputs: ${{ github.event_name != 'pull_request' && format('type=image,name={0},push-by-digest=true,name-canonical=true,oci-mediatypes=true,push=true', env.REGISTRY_IMAGE) || 'type=cacheonly' }}
+          # provenance/SBOM 只有 push 到 registry 才有意義（attestation 是
+          # registry 上的附加 manifest）。PR 本來就沒 push、也就從來沒產出過
+          # attestation，這裡明確關掉，順便省下 SBOM 掃描。
+          provenance: ${{ github.event_name != 'pull_request' && 'mode=max' || 'false' }}
+          sbom: ${{ github.event_name != 'pull_request' }}
+          # cache 一定要按 arch 分開：registry cache 一個 tag 只是「一份 manifest」，
+          # 兩個 job 同時寫同一個 :buildcache 會互相蓋掉（docker/buildx#1044，
+          # 2022 年至今未修），結果是每次跑都有一個 arch 全冷、而且不會報錯，
+          # 看起來只像「CI 偶爾很慢」。
+          # 第二行的舊 :buildcache 是過渡用的暖身來源（新 tag 一開始不存在），
+          # main 第一次綠燈之後就可以刪掉這一行。
+          cache-from: |
+            type=registry,ref=${{ env.REGISTRY_IMAGE }}:buildcache-${{ matrix.arch }}
+            type=registry,ref=${{ env.REGISTRY_IMAGE }}:buildcache
+          cache-to: ${{ github.event_name != 'pull_request' && format('type=registry,ref={0}:buildcache-{1},mode=max', env.REGISTRY_IMAGE, matrix.arch) || '' }}
+
+      # digest 檔案只是一個「檔名等於 sha256」的空檔，內容零位元組 ——
+      # 這個 repo 是 public，artifact 任何人都能下載，所以絕不能把 image
+      # 本身（type=docker tarball）當 artifact 傳，那等於公開私有 image 內容。
+      - name: Export digest
+        if: github.event_name != 'pull_request'
+        run: |
+          mkdir -p "${{ runner.temp }}/digests"
+          digest="${{ steps.build.outputs.digest }}"
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+
+      # 名稱要每個 arch 唯一：upload-artifact@v4 不允許同一個 run 內重名。
+      - name: Upload digest
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.arch }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # =============================================================================
+  # 把兩個 arch 的 digest 合成單一 multi-arch manifest，並套上完整 tag 組
+  # 整個 job 用 if 擋掉 PR：PR 不 push、就沒有 digest 可合，
+  # 也符合「PR 只驗證、不發布」。被 skip 的 job 在 PR 上顯示 Skipped，不會擋合併。
+  # =============================================================================
+  merge:
+    name: Merge & Push Manifest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    if: github.event_name != 'pull_request'
+    needs: [build]
+    steps:
+      # pattern + merge-multiple：只收 digests-*，避免把 build-push-action
+      # 自動上傳的 *.dockerbuild build record 也當成 digest 掃進來。
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      # 跟 build job 同樣的理由：setup-buildx 會拉 moby/buildkit builder image。
+      # 少了這一步，merge job 就是「兩個 arch 都已經 push 完、卻在最後一哩
+      # 撞 Docker Hub 匿名限額」——tag 停在舊 digest，而且沒有任何 rollback。
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      # tag 規則整組搬到這裡：DOCKER_METADATA_OUTPUT_JSON 只存在於執行
+      # metadata-action 的那個 job，build job 的結果傳不過來。
+      # 這一段跟拆分前逐字相同，動它就等於動使用者實際 docker pull 的 tag。
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ${{ env.REGISTRY_IMAGE }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -82,15 +254,49 @@ jobs:
             # removes GPL transitive dependencies and SBOM review is complete.
             org.opencontainers.image.licenses=NOASSERTION
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache
-          cache-to: ${{ github.event_name != 'pull_request' && format('type=registry,ref=ghcr.io/{0}:buildcache,mode=max', github.repository) || '' }}
-          provenance: mode=max
-          sbom: true
+      # 一定要用 buildx imagetools create，不能用 docker manifest create：
+      # 後者只搬 platform manifest，會把 provenance/SBOM 的 attestation
+      # manifest 靜靜丟掉（build 全綠、attestation 卻消失）。
+      - name: Create manifest list and push
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          set -euo pipefail
+
+          # tag 清單若是空的，imagetools 會「成功但沒打任何 tag」：
+          # 每個 job 都綠，:latest 卻停在舊 digest。寧可在這裡直接失敗。
+          mapfile -t TAGS < <(jq -r '.tags[]' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+          if [ "${#TAGS[@]}" -eq 0 ]; then
+            echo "::error::metadata-action produced no tags; refusing to create an untagged manifest"
+            exit 1
+          fi
+
+          # 檔名就是各 arch 的 index digest
+          SOURCES=()
+          for d in *; do SOURCES+=("${REGISTRY_IMAGE}@sha256:${d}"); done
+          if [ "${#SOURCES[@]}" -ne 2 ]; then
+            echo "::error::expected 2 per-arch digests, got ${#SOURCES[@]}"
+            exit 1
+          fi
+
+          ARGS=()
+          for t in "${TAGS[@]}"; do ARGS+=(-t "$t"); done
+          docker buildx imagetools create "${ARGS[@]}" "${SOURCES[@]}"
+
+      # 硬性檢查，而不是「相信它應該有搬過來」：attestation 掉了不會有任何
+      # 錯誤訊息，只會在幾個月後的供應鏈檢查時才發現。
+      #
+      # ⚠️ 這是「事後偵測」不是「事前把關」：它跑在 imagetools create 之後，
+      # 所以真的掉了 attestation 的話，:latest 已經被推出去了，這一步只能讓
+      # job 變紅讓人知道。改成先推暫時 tag 再驗，會在每次執行留下一個
+      # :verify-<run_id> 垃圾 tag，比它要解決的問題更煩，所以刻意不做。
+      # 拆分前的 :latest index 就是 4 個 manifest：amd64、arm64，加上兩個
+      # platform 為 unknown/unknown 的 attestation manifest（SBOM + provenance）。
+      - name: Verify merged manifest (2 arches + 2 attestations)
+        run: |
+          set -euo pipefail
+          RAW=$(docker buildx imagetools inspect --raw "${REGISTRY_IMAGE}:${{ steps.meta.outputs.version }}")
+          echo "$RAW" | jq -e '[.manifests[] | select(.platform.architecture != "unknown")] | length == 2' > /dev/null \
+            || { echo "::error::merged index does not contain exactly 2 platform manifests"; echo "$RAW"; exit 1; }
+          echo "$RAW" | jq -e '[.manifests[] | select(.annotations."vnd.docker.reference.type" == "attestation-manifest")] | length == 2' > /dev/null \
+            || { echo "::error::provenance/SBOM attestations missing from merged index"; echo "$RAW"; exit 1; }
+          docker buildx imagetools inspect "${REGISTRY_IMAGE}:${{ steps.meta.outputs.version }}"
