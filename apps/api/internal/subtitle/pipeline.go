@@ -143,6 +143,17 @@ type ProcessItemOptions struct {
 	// nothing on this path can produce a charge. `internal/cost_consent_test.go`
 	// still guards the library-wide paid sweep, which remains uncalled.
 	FreeOnly bool
+
+	// ModelID pins WHICH translation model this item runs on (sub-6-8a AC #4).
+	// Empty = the deployment's effective default, which is what every caller
+	// before this story passed by construction.
+	//
+	// It is the same value the user saw priced on the consent screen, so it
+	// must reach BOTH the provider (through the ctx, so the right client is
+	// built) and the RunVersion (so the run row and every segment-cache key
+	// record the model that actually did the work — a Haiku translation must
+	// never be served later to a Sonnet run, sub-6-8a AC #6).
+	ModelID string
 }
 
 // ProcessOutcome is what one item flow produced.
@@ -393,7 +404,14 @@ func WithModelSource(source func() string) PipelineOption {
 // without either option reports the ai package default rather than "" — the
 // empty string is exactly the value this story exists to keep out of run rows
 // and cache keys, so no construction path may produce it (sub-6-5 CR H2).
-func (p *Pipeline) currentModelID() string {
+func (p *Pipeline) currentModelID(ctx context.Context) string {
+	// A per-run choice wins over the deployment default (sub-6-8a). It rides
+	// the ctx, which ProcessItem sets from ProcessItemOptions.ModelID, so
+	// every RunVersion assembled under that item agrees with the client the
+	// holder hands out for the same ctx.
+	if id := ai.ModelIDFromContext(ctx); id != "" {
+		return id
+	}
 	if p.modelID == nil {
 		return ai.DefaultClaudeModel
 	}

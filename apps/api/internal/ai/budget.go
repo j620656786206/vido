@@ -84,6 +84,16 @@ func llmPricing(model string) ModelPricing {
 // the invoice disagrees with.
 func PricingFor(model string) ModelPricing { return llmPricing(model) }
 
+// HasPricing reports whether a model has a REAL row in the table, as opposed
+// to silently inheriting the Haiku-tier fallback. An estimator must be able to
+// tell the two apart: scaling a quote by a fallback price would quote an
+// unknown (possibly premium) model at the cheapest tier, and a quote that
+// surprises upward is worse than no quote.
+func HasPricing(model string) bool {
+	_, ok := defaultLLMPricing[model]
+	return ok
+}
+
 // HostedASRPerMinuteUSD is the per-audio-minute price of the hosted Whisper
 // API — the rate RecordASR bills at.
 //

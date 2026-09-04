@@ -49,7 +49,14 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 	// consistency, never the episode.
 	p.feedGlossary(ctx, ref, item)
 
-	version := p.runVersion(item.Context)
+	// sub-6-8a AC #4: the user's per-run model choice is pinned on the ctx
+	// BEFORE the version is computed, so the run row, every segment-cache key
+	// and the provider the holder builds all name the same model. Empty leaves
+	// the ctx untouched — the deployment default then applies exactly as it
+	// did before this story.
+	ctx = ai.WithModelID(ctx, opts.ModelID)
+
+	version := p.runVersion(ctx, item.Context)
 
 	// ── Step 1: pre-flight (AC #2) ──────────────────────────────────────────
 	// Deliberately BEFORE the run row: an early-exit must leave no provenance

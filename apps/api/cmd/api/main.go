@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -599,6 +600,13 @@ func main() {
 	}, slog.Default())
 	claudeHolder := services.NewClaudeProviderHolder(
 		keyResolver, cfg.GetClaudeModel(), slog.Default(), ai.WithClaudeGovernor(aiGovernor))
+	// sub-6-8a: which models this install can actually run — the priced
+	// catalog narrowed to providers whose key resolves. Gemini has no secret
+	// row (it is not in the resolver's closed key set), so its availability is
+	// read from the env value directly.
+	modelCatalog := services.NewModelCatalogService(keyResolver, func() bool {
+		return strings.TrimSpace(cfg.GeminiAPIKey) != ""
+	})
 
 	// Initialize ASR provider holder and transcription service (Story 9.2a;
 	// hot-reload by sub-5-2). Constructed UNCONDITIONALLY: the old
@@ -928,7 +936,7 @@ func main() {
 	}
 	generationBatchProcessor := services.NewGenerationBatchProcessor(
 		generationRunner, repos.Movies, repos.Episodes, sseHub, cfg.AIRunBudgetUSD, slog.Default())
-	generationBatchHandler := handlers.NewGenerationBatchHandler(generationBatchProcessor)
+	generationBatchHandler := handlers.NewGenerationBatchHandler(generationBatchProcessor, modelCatalog)
 
 	// Cost preview (story sub-4-1): what would generating subtitles cost, per
 	// item and in total, WITHOUT spending anything. Registered in every mode —
@@ -958,6 +966,9 @@ func main() {
 		slog.Default(),
 	)
 	generationCandidateService.SetSSEHub(sseHub)
+	// sub-6-8a AC #3: price the sweep under every model this install can run,
+	// not just the default.
+	generationCandidateService.SetModelCatalog(modelCatalog)
 	// sub-5-4: remember route verdicts against file identity (size + mtime), so
 	// a repeat sweep only ffprobes what is new or actually changed. Rides the
 	// existing cache_entries table — no migration, and the shared expiry sweep
@@ -977,7 +988,8 @@ func main() {
 	keySettingsService := services.NewKeySettingsService(keyResolver, secretsService, cfg.HasEncryptionKey())
 	keySettingsHandler := handlers.NewKeySettingsHandler(keySettingsService, claudeHolder)
 	subtitlePipelineHandler := handlers.NewSubtitlePipelineHandler(
-		subtitlePipelineQueue, subtitlePipelineMedia, subtitleCapabilityGate)
+		subtitlePipelineQueue, subtitlePipelineMedia, subtitleCapabilityGate, modelCatalog)
+	modelSettingsHandler := handlers.NewModelSettingsHandler(modelCatalog)
 	// Activity hub aggregate (UX Redesign D4-1 / ux3-2-1) — composes live scan +
 	// batch-subtitle + generation-batch + solo-transcription progress, pending-parse
 	// count, download counts, and recent parse events. Wired after the processors
@@ -1078,6 +1090,7 @@ func main() {
 		homeSummaryHandler.RegisterRoutes(apiV1)   // GET /api/v1/home-summary — Home v3 readout band (ux3-1-6)
 		backupHandler.RegisterRoutes(apiV1)        // Must be before settingsHandler to avoid /settings/:key conflict
 		exportHandler.RegisterRoutes(apiV1)        // Must be before settingsHandler to avoid /settings/:key conflict
+		modelSettingsHandler.RegisterRoutes(apiV1) // Must be before settingsHandler to avoid /settings/:key conflict (sub-6-8a)
 		settingsHandler.RegisterRoutes(apiV1)
 		setupHandler.RegisterRoutes(apiV1)
 		mediaHandler.RegisterRoutes(apiV1)

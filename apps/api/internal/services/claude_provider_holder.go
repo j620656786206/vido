@@ -36,11 +36,29 @@ type ClaudeProviderHolder struct {
 	logger   *slog.Logger
 
 	mu sync.Mutex
-	// cached is the live client; fingerprint is the "key|model" identity it was
-	// built from (the download_service.go:24-60 pattern).
-	cached      *ai.ClaudeProvider
-	fingerprint string
+	// clients is a bounded LRU of live clients keyed by their "key|model"
+	// fingerprint (the download_service.go:24-60 pattern, widened by sub-6-8a).
+	//
+	// It is a CACHE, not a registry: every entry is built from the same
+	// captured opts, so they all share one Governor — a new client must never
+	// mean a new budget pool (claude.go's note on WithClaudeGovernor). The
+	// bound exists because the fingerprint now contains a user-supplied model:
+	// without it, a caller looping over model ids would grow this map without
+	// limit (Rule 14). maxCachedClients is small on purpose — a deployment
+	// uses one or two models in practice, and evicting a client costs only the
+	// next call's construction.
+	clients []holderClient
 }
+
+// holderClient is one cached provider plus the fingerprint it was built from.
+type holderClient struct {
+	fingerprint string
+	provider    *ai.ClaudeProvider
+}
+
+// maxCachedClients bounds the LRU. Four covers "default + the model the user
+// picked + two they are comparing" with room to spare.
+const maxCachedClients = 4
 
 // Compile-time proof of both halves — the CachingCompleter assertion above is
 // the one that silently degrades if it ever stops holding.
@@ -65,10 +83,26 @@ func NewClaudeProviderHolder(resolver KeyResolver, model string, logger *slog.Lo
 	}
 }
 
-// Get returns the current client, rebuilding only when the resolved key or model
-// differs from the cached one. Returns ErrAINotConfigured when no key resolves —
-// consumers already switch on that sentinel and degrade fail-soft (NFR-R1).
+// Get returns the client for THIS call: the ctx's per-run model when the
+// caller pinned one (ai.WithModelID, sub-6-8a), otherwise the holder's
+// effective default. Rebuilds only when the resolved key or model differs from
+// what is cached. Returns ErrAINotConfigured when no key resolves — consumers
+// already switch on that sentinel and degrade fail-soft (NFR-R1).
 func (h *ClaudeProviderHolder) Get(ctx context.Context) (ai.TextCompleter, error) {
+	return h.GetFor(ctx, ai.ModelIDFromContext(ctx))
+}
+
+// GetFor is Get with the model named explicitly. An empty model means the
+// holder's effective default; an unknown one is rejected here rather than at
+// the provider, so a typo cannot reach the API as a 404 the user paid to
+// discover (sub-6-8a AC #5).
+func (h *ClaudeProviderHolder) GetFor(ctx context.Context, model string) (ai.TextCompleter, error) {
+	if model == "" {
+		model = h.EffectiveModel()
+	} else if !ai.IsSelectableModel(model) {
+		return nil, fmt.Errorf("%w: unsupported model %q", ai.ErrAIModelNotFound, model)
+	}
+
 	key, source, err := h.resolver.Get(ctx, KeyClaude)
 	if err != nil {
 		return nil, fmt.Errorf("resolve claude key: %w", err)
@@ -77,25 +111,38 @@ func (h *ClaudeProviderHolder) Get(ctx context.Context) (ai.TextCompleter, error
 		return nil, fmt.Errorf("%w: no Claude API key configured", ai.ErrAINotConfigured)
 	}
 
-	fingerprint := key + "|" + h.model
+	fingerprint := key + "|" + model
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	if h.cached != nil && h.fingerprint == fingerprint {
-		return h.cached, nil
+	for i, c := range h.clients {
+		if c.fingerprint != fingerprint {
+			continue
+		}
+		// Most-recently-used moves to the front, so the eviction below always
+		// drops the client nobody has asked for in the longest time.
+		h.clients = append(h.clients[:i], h.clients[i+1:]...)
+		h.clients = append([]holderClient{c}, h.clients...)
+		return c.provider, nil
 	}
 
 	// The model option is appended LAST and ALWAYS, so the client sends exactly
-	// EffectiveModel() — a WithClaudeModel smuggled in through the captured
-	// opts can no longer disagree with what the run rows record (sub-6-5 CR H1).
-	opts := append(append([]ai.ClaudeProviderOption(nil), h.opts...), ai.WithClaudeModel(h.EffectiveModel()))
-	h.cached = ai.NewClaudeProvider(key, opts...)
-	h.fingerprint = fingerprint
+	// the model this fingerprint names — a WithClaudeModel smuggled in through
+	// the captured opts can no longer disagree with what the run rows record
+	// (sub-6-5 CR H1). The captured opts also carry the shared Governor, so
+	// every client in this cache draws on ONE budget and rate pool.
+	opts := append(append([]ai.ClaudeProviderOption(nil), h.opts...), ai.WithClaudeModel(model))
+	provider := ai.NewClaudeProvider(key, opts...)
+	h.clients = append([]holderClient{{fingerprint: fingerprint, provider: provider}}, h.clients...)
+	if len(h.clients) > maxCachedClients {
+		h.clients = h.clients[:maxCachedClients]
+	}
 
 	// Deliberately does NOT log the key or any prefix of it (NFR-S1).
-	h.logger.Info("claude provider (re)built", "key_source", source, "model_override", h.model != "")
-	return h.cached, nil
+	h.logger.Info("claude provider (re)built",
+		"key_source", source, "model", model, "model_override", h.model != "", "cached_clients", len(h.clients))
+	return provider, nil
 }
 
 // EffectiveModel returns the model id every client this holder builds sends:
@@ -106,9 +153,10 @@ func (h *ClaudeProviderHolder) Get(ctx context.Context) (ai.TextCompleter, error
 // the pipeline can call it while assembling every RunVersion (sub-6-5 AC
 // #1/#2) instead of snapshotting a possibly-empty string at boot.
 //
-// h.model is write-once (constructor) today, so this read needs no mutex.
-// sub-6-8a makes the model per-run: that story must take h.mu here or move the
-// value behind an atomic — do not add a second unguarded reader.
+// h.model stays write-once (constructor), so this read needs no mutex —
+// sub-6-8a made the model per-RUN without making it mutable state: a per-run
+// choice rides the ctx (ai.WithModelID) and is resolved in GetFor, never by
+// writing here. Do not turn h.model into something a request can set.
 func (h *ClaudeProviderHolder) EffectiveModel() string {
 	if h.model != "" {
 		return h.model

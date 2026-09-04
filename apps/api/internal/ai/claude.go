@@ -28,7 +28,15 @@ const (
 	// non-deprecated alias: the previous default "claude-3-5-haiku-latest"
 	// (Haiku 3.5) was retired 2026-02-19 and returns 404 (9R-1).
 	// Override per-deployment via CLAUDE_MODEL.
-	DefaultClaudeModel = "claude-haiku-4-5"
+	//
+	// Sonnet since sub-6-8a, on eval-1's measured evidence rather than a guess:
+	// blind-scoring 10,304 real cues from the owner's library gave Sonnet 5 a
+	// 1.3% unusable rate and 89.6% good, against Haiku 4.5's 3.6% / 71.8%.
+	// Sonnet costs 2.7× more per hour of runtime ($0.48 vs $0.18), which is
+	// exactly why the choice is now per-run and priced on screen (AC #2/#3)
+	// rather than a config flip: the DEFAULT is the quality the evaluation
+	// justified, and saving money is the user's visible decision.
+	DefaultClaudeModel = "claude-sonnet-5"
 	// ClaudeAPIVersion is the required API version header. The SDK now sets this
 	// header itself (it pins the same value); the constant is retained because it
 	// is the documented expected value and the test suite asserts against it.

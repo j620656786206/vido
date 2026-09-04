@@ -67,6 +67,16 @@ type CandidateEpisodeFinder interface {
 	FindMissingZhHantSubtitle(ctx context.Context) ([]models.Episode, error)
 }
 
+// CandidateModelCatalog is the selectable-model source the quote prices
+// against (sub-6-8a AC #3). Narrow on purpose (Rule 11);
+// *ModelCatalogService satisfies it. nil degrades to "the ai package default
+// only" — a deployment whose keys cannot be read still gets one honest
+// number rather than none.
+type CandidateModelCatalog interface {
+	Available(ctx context.Context) []ai.ModelInfo
+	DefaultModel(ctx context.Context) string
+}
+
 // CandidateSeriesTitleResolver supplies the series title the F15 group headers
 // render (sub-5-3 AC #1). Narrow on purpose (Rule 11);
 // *repository.SeriesRepository satisfies it via FindByID; main.go injects it.
@@ -82,14 +92,77 @@ type CandidateSeriesTitleResolver interface {
 // estimate the user cannot see the assumption behind is not an estimate.
 const unknownRuntimeMinutes = 45.0
 
-// translationUSDPerMinute prices the LLM half.
+// translationUSDPerMinuteByModel prices the LLM half, per model, per minute of
+// RUNTIME (not of processing).
 //
-// It cannot be computed exactly before extraction — cost scales with cue count,
-// which is unknown until the track is parsed — so this is a per-minute average
-// calibrated against the M1 pilot's observed ~$0.03 for a feature-length item.
-// It is deliberately a named constant rather than a magic number so a future
-// story can recalibrate it from `subtitle_runs` usage data.
-const translationUSDPerMinute = 0.0004
+// Cost cannot be computed exactly before extraction — it scales with cue
+// count, which is unknown until the track is parsed — so these are averages.
+// They are MEASURED, not derived: eval-1 translated 12h20m of this library
+// (9 titles, 10,304 cues) twice and billed $2.229 on Haiku and $5.951 on
+// Sonnet, i.e. $0.18 and $0.48 per hour of runtime.
+//
+// ⚠️ This REPLACES a single 0.0004 constant that the M1 pilot calibrated from
+// one feature-length item at ~$0.03. Against eval-1's nine-title measurement
+// that figure under-quoted by roughly 7×: it would have promised $0.04 for a
+// 90-minute film that actually bills $0.27 on Haiku, or $0.72 on Sonnet. An
+// estimate the invoice contradicts by that margin is worse than no estimate,
+// and the whole point of the consent screen is that the number on it is the
+// number you pay. The old constant's own comment invited exactly this
+// recalibration once real usage data existed.
+var translationUSDPerMinuteByModel = map[string]float64{
+	"claude-haiku-4-5": 0.00301,
+	"claude-sonnet-5":  0.00804,
+}
+
+// translationCalibrationModel is the anchor an UNMEASURED model is priced
+// from: its measured rate scaled by the price ratio. Sonnet, deliberately —
+// quoting an unknown model at the cheaper anchor would under-promise, and a
+// quote that surprises upward is the failure mode this screen exists to
+// prevent.
+const translationCalibrationModel = "claude-sonnet-5"
+
+// translationRatePerMinute is the per-runtime-minute LLM cost of a model.
+// Measured models use their measured rate; anything else is the anchor scaled
+// by the blended (input+output) price ratio — the two prices move together
+// across every row of the pricing table, so a single blended ratio is as good
+// as a token-split one and needs no assumption about the input/output mix.
+func translationRatePerMinute(model string) float64 {
+	if rate, ok := translationUSDPerMinuteByModel[model]; ok {
+		return rate
+	}
+	anchorRate := translationUSDPerMinuteByModel[translationCalibrationModel]
+	if !ai.HasPricing(model) {
+		// No real price row: PricingFor would hand back the cheapest-tier
+		// fallback, and scaling by it would quote an unknown model BELOW the
+		// anchor. Quote the anchor instead — the estimate may be generous, but
+		// it can never surprise the user upward.
+		return anchorRate
+	}
+	anchor := blendedPer1M(ai.PricingFor(translationCalibrationModel))
+	priced := blendedPer1M(ai.PricingFor(model))
+	if anchor <= 0 || priced <= 0 {
+		return anchorRate
+	}
+	return anchorRate * priced / anchor
+}
+
+func blendedPer1M(p ai.ModelPricing) float64 { return p.InputPer1M + p.OutputPer1M }
+
+// Processing time as a fraction of runtime, measured in the same eval-1 run
+// (two workers in parallel): Haiku finished 12h20m of video in 1h24m, Sonnet
+// in 2h03m. An unmeasured model is quoted at the slower anchor, for the same
+// reason its price is.
+var translationTimeShareByModel = map[string]float64{
+	"claude-haiku-4-5": 0.11,
+	"claude-sonnet-5":  0.17,
+}
+
+func translationTimeShare(model string) float64 {
+	if share, ok := translationTimeShareByModel[model]; ok {
+		return share
+	}
+	return translationTimeShareByModel[translationCalibrationModel]
+}
 
 // GenerationCandidate is one row of the cost-preview screen.
 type GenerationCandidate struct {
@@ -150,10 +223,38 @@ type GenerationCandidateSummary struct {
 	UnwritableCount int `json:"unwritable_count"`
 }
 
+// ModelEstimate is what one model would cost for this sweep (sub-6-8a AC #3).
+// PerCandidate lets the client re-price every row when the user switches
+// model without re-running the sweep or re-implementing the cost model.
+type ModelEstimate struct {
+	TotalUSD float64 `json:"total_usd"`
+	// PerCandidate is keyed by media_id and covers the WRITABLE candidates —
+	// the same set TotalUSD sums, so a client can add the visible rows and
+	// land on the footer figure.
+	PerCandidate map[string]float64 `json:"per_candidate,omitempty"`
+}
+
 // GenerationCandidateResult is the whole preview payload.
 type GenerationCandidateResult struct {
 	Candidates []GenerationCandidate      `json:"candidates"`
 	Summary    GenerationCandidateSummary `json:"summary"`
+
+	// EstimatesByModel prices this sweep under every model the deployment can
+	// actually run (sub-6-8a AC #3), keyed by model id. Additive on the
+	// sub-4-1 AC #7 [@contract-v1] envelope — existing keys unchanged, so no
+	// bump (the default_budget_usd precedent).
+	//
+	// It lives on the RESULT rather than beside it on AnalysisSnapshot
+	// (which is where the story sketched it) because it IS the quote: a
+	// cancelled or failed sweep clears `result`, and these numbers must
+	// vanish with it. Kept at snapshot level they would be one more piece of
+	// state to invalidate by hand, and a stale price is the one thing this
+	// screen must never show.
+	EstimatesByModel map[string]ModelEstimate `json:"estimates_by_model,omitempty"`
+	// EstimatedMinutesByModel is the wall-clock cost of the same choice —
+	// eval-1 measured Sonnet taking half again as long as Haiku, which is a
+	// real part of "which model do I want" on a NAS that is also serving media.
+	EstimatedMinutesByModel map[string]float64 `json:"estimated_minutes_by_model,omitempty"`
 }
 
 // Analysis lifecycle states (story sub-4-1 AC #8).
@@ -212,6 +313,7 @@ type GenerationCandidateService struct {
 	episodes  CandidateEpisodeFinder
 	series    CandidateSeriesTitleResolver
 	predictor RoutePredictor
+	models    CandidateModelCatalog
 
 	// probeWritable is the sub-6-1 target-directory probe (fsprobe.ProbeWritable
 	// by default). Per-analysis results are memoised by directory, so a
@@ -293,6 +395,35 @@ var defaultWritableProbe = fsprobe.ProbeWritableContext
 // SetSSEHub wires live progress. Nil-safe: without a hub the sweep still runs
 // and the snapshot still updates, callers just have to poll for it.
 func (s *GenerationCandidateService) SetSSEHub(hub *sse.Hub) { s.sseHub = hub }
+
+// SetModelCatalog wires the per-model quote source (sub-6-8a). A setter rather
+// than a constructor parameter for the same reason SetSSEHub is one: the
+// catalog is optional, and every existing caller keeps compiling.
+func (s *GenerationCandidateService) SetModelCatalog(c CandidateModelCatalog) { s.models = c }
+
+// quoteModels answers "which models should this sweep price?" — the ones the
+// deployment can actually run, with the effective default first. An
+// unconfigured or unwired catalog yields just the ai default, so the existing
+// single-number contract never regresses to nothing.
+func (s *GenerationCandidateService) quoteModels(ctx context.Context) (defaultModel string, models []string) {
+	defaultModel = ai.DefaultClaudeModel
+	if s.models == nil {
+		return defaultModel, []string{defaultModel}
+	}
+	if id := s.models.DefaultModel(ctx); id != "" {
+		defaultModel = id
+	}
+	seen := map[string]struct{}{defaultModel: {}}
+	models = []string{defaultModel}
+	for _, m := range s.models.Available(ctx) {
+		if _, dup := seen[m.ID]; dup {
+			continue
+		}
+		seen[m.ID] = struct{}{}
+		models = append(models, m.ID)
+	}
+	return defaultModel, models
+}
 
 // SetRouteCache wires the sub-5-4 route cache. A setter rather than a
 // constructor parameter for the same reason SetSSEHub is one: the cache is
@@ -466,9 +597,18 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 	}
 
 	asrRate := ai.EstimatedASRPerMinuteUSD(s.selfHostedASR)
+	// sub-6-8a AC #3: the row-level EstimatedUSD stays the DEFAULT model's
+	// price (so a client that never learned about model choice is unchanged),
+	// and every selectable model gets its own total beside it.
+	defaultModel, quoteModels := s.quoteModels(ctx)
 	result := &GenerationCandidateResult{
-		Candidates: make([]GenerationCandidate, 0, len(rows)),
-		Summary:    GenerationCandidateSummary{SelfHostedASR: s.selfHostedASR},
+		Candidates:              make([]GenerationCandidate, 0, len(rows)),
+		Summary:                 GenerationCandidateSummary{SelfHostedASR: s.selfHostedASR},
+		EstimatesByModel:        make(map[string]ModelEstimate, len(quoteModels)),
+		EstimatedMinutesByModel: make(map[string]float64, len(quoteModels)),
+	}
+	for _, m := range quoteModels {
+		result.EstimatesByModel[m] = ModelEstimate{PerCandidate: map[string]float64{}}
 	}
 
 	// sub-5-4: one batched read for the whole sweep, decided BEFORE the loop.
@@ -553,7 +693,7 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 			Route:          route,
 			RuntimeMinutes: minutes,
 			RuntimeKnown:   known,
-			EstimatedUSD:   estimateUSD(route, minutes, asrRate),
+			EstimatedUSD:   estimateUSD(route, minutes, asrRate, defaultModel),
 			SeriesID:       row.seriesID,
 			SeriesTitle:    row.seriesTitle,
 			SeasonNumber:   row.seasonNumber,
@@ -566,6 +706,18 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 		result.Candidates = append(result.Candidates, c)
 		if c.Writable {
 			result.Summary.EstimatedTotalUSD += c.EstimatedUSD
+			// An unwritable row is excluded here for the same reason it is
+			// excluded from the headline total (sub-6-1): the pipeline would
+			// refuse it before spending, so quoting it would inflate every
+			// model's number by work that cannot happen.
+			for _, m := range quoteModels {
+				est := result.EstimatesByModel[m]
+				usd := estimateUSD(route, minutes, asrRate, m)
+				est.TotalUSD += usd
+				est.PerCandidate[c.MediaID] = usd
+				result.EstimatesByModel[m] = est
+				result.EstimatedMinutesByModel[m] += estimateMinutes(route, minutes, m)
+			}
 		} else {
 			result.Summary.UnwritableCount++
 		}
@@ -573,6 +725,11 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 
 	// Sub-cent noise in a float sum reads as a bug in a money field.
 	result.Summary.EstimatedTotalUSD = roundUSD(result.Summary.EstimatedTotalUSD)
+	for m, est := range result.EstimatesByModel {
+		est.TotalUSD = roundUSD(est.TotalUSD)
+		result.EstimatesByModel[m] = est
+		result.EstimatedMinutesByModel[m] = math.Round(result.EstimatedMinutesByModel[m])
+	}
 
 	s.logger.Info("generation candidate analysis complete",
 		"candidates", len(result.Candidates),
@@ -581,6 +738,8 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 		"skipped", result.Summary.SkippedCount,
 		"unwritable", result.Summary.UnwritableCount,
 		"estimated_total_usd", result.Summary.EstimatedTotalUSD,
+		"quote_model", defaultModel,
+		"quoted_models", len(quoteModels),
 		"self_hosted_asr", s.selfHostedASR,
 		// sub-5-4 AC #4: without these two numbers, "is the incremental path
 		// working?" can only be answered with a stopwatch — and they are the
@@ -718,12 +877,28 @@ func (s *GenerationCandidateService) storeRoute(ctx context.Context, key string,
 // extract leg pays only for translation. Note an extract item is therefore
 // rarely exactly $0 — labelling it "free" in the UI is a rounding decision the
 // client makes, not a claim this function makes.
-func estimateUSD(route RoutePrediction, minutes, asrRate float64) float64 {
+func estimateUSD(route RoutePrediction, minutes, asrRate float64, model string) float64 {
 	switch route {
 	case RouteASR:
-		return roundUSD(minutes*asrRate + minutes*translationUSDPerMinute)
+		// Only the translation half moves with the model — speech recognition
+		// is billed per audio minute by a different provider entirely.
+		return roundUSD(minutes*asrRate + minutes*translationRatePerMinute(model))
 	case RouteExtract:
-		return roundUSD(minutes * translationUSDPerMinute)
+		return roundUSD(minutes * translationRatePerMinute(model))
+	default:
+		return 0
+	}
+}
+
+// estimateMinutes is how long a route is expected to TAKE on a model, in
+// wall-clock minutes. A skipped item takes none; an ASR item pays the
+// transcription pass on top of translation, which eval-1 did not separate —
+// so the ASR leg is quoted at the same share, which is the honest floor
+// rather than a number nobody measured.
+func estimateMinutes(route RoutePrediction, minutes float64, model string) float64 {
+	switch route {
+	case RouteASR, RouteExtract:
+		return minutes * translationTimeShare(model)
 	default:
 		return 0
 	}
