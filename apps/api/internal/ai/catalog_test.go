@@ -54,7 +54,7 @@ func TestCatalog_ExcludesRetiredModelsButKeepsPricingThem(t *testing.T) {
 	assert.False(t, IsSelectableModel("gemini-2.0-flash"))
 
 	// …but a run recorded against it must still meter at the rate it was billed.
-	assert.Equal(t, ModelPricing{InputPer1M: 0.10, OutputPer1M: 0.40}, PricingFor("gemini-2.0-flash"))
+	assert.Equal(t, price("0.10", "0.40"), PricingFor("gemini-2.0-flash"))
 }
 
 func TestCatalog_CarriesPricesAndMeasuredGrades(t *testing.T) {

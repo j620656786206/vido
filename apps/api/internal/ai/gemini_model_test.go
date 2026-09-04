@@ -69,17 +69,17 @@ func TestFactoryFallsBackToDefaultWhenNoGeminiModelSet(t *testing.T) {
 func TestGeminiPricingRowsAreExplicit(t *testing.T) {
 	tests := []struct {
 		model  string
-		input  float64
-		output float64
+		input  string
+		output string
 		why    string
 	}{
-		{"gemini-2.5-flash-lite", 0.10, 0.40, "current default"},
-		{"gemini-2.5-flash", 0.30, 2.50, ""},
-		{"gemini-3.5-flash-lite", 0.30, 2.50, ""},
-		{"gemini-3.6-flash", 0.75, 3.75, "promotional rate through 2026-12-31"},
-		{"gemini-3.7-flash", 0.75, 3.75, "promotional rate through 2026-12-31"},
+		{"gemini-2.5-flash-lite", "0.10", "0.40", "current default"},
+		{"gemini-2.5-flash", "0.30", "2.50", ""},
+		{"gemini-3.5-flash-lite", "0.30", "2.50", ""},
+		{"gemini-3.6-flash", "0.75", "3.75", "promotional rate through 2026-12-31"},
+		{"gemini-3.7-flash", "0.75", "3.75", "promotional rate through 2026-12-31"},
 		{
-			model: "gemini-2.0-flash", input: 0.10, output: 0.40,
+			model: "gemini-2.0-flash", input: "0.10", output: "0.40",
 			why: "retired 2026-06-01 but kept: a deployment that pinned it must meter at its final published rate, not inherit the fallback",
 		},
 	}
@@ -88,7 +88,7 @@ func TestGeminiPricingRowsAreExplicit(t *testing.T) {
 		t.Run(tt.model, func(t *testing.T) {
 			got, ok := defaultLLMPricing[tt.model]
 			require.Truef(t, ok, "missing pricing row for %s (%s)", tt.model, tt.why)
-			assert.Equal(t, ModelPricing{InputPer1M: tt.input, OutputPer1M: tt.output}, got)
+			assert.Equal(t, price(tt.input, tt.output), got)
 			assert.NotEqual(t, fallbackLLMPricing, got, "must not resolve to the catch-all tier")
 		})
 	}
@@ -101,9 +101,9 @@ func TestFallbackTierIsNotCheaperThanAnyGeminiRow(t *testing.T) {
 		if len(model) < 6 || model[:6] != "gemini" {
 			continue
 		}
-		assert.LessOrEqualf(t, p.InputPer1M, fallbackLLMPricing.InputPer1M,
+		assert.Truef(t, p.InputPer1M.LessThanOrEqual(fallbackLLMPricing.InputPer1M),
 			"%s input rate exceeds the fallback, so an unknown model would under-count", model)
-		assert.LessOrEqualf(t, p.OutputPer1M, fallbackLLMPricing.OutputPer1M,
+		assert.Truef(t, p.OutputPer1M.LessThanOrEqual(fallbackLLMPricing.OutputPer1M),
 			"%s output rate exceeds the fallback, so an unknown model would under-count", model)
 	}
 }

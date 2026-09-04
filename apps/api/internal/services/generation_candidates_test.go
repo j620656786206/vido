@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -173,12 +174,13 @@ func TestAnalyze_UnknownRuntimeIsFlaggedAndPricedAtTheStatedDefault(t *testing.T
 // ─── AC #6: the money ─────────────────────────────────────────────────────
 
 func TestAnalyze_ASRCostsMoreThanExtractForTheSameRuntime(t *testing.T) {
-	asr := estimateUSD(RouteASR, 100, 0.006, ai.DefaultClaudeModel)
-	extract := estimateUSD(RouteExtract, 100, 0.006, ai.DefaultClaudeModel)
+	asrRate := decimal.RequireFromString("0.006")
+	asr := estimateUSD(RouteASR, 100, asrRate, ai.DefaultClaudeModel)
+	extract := estimateUSD(RouteExtract, 100, asrRate, ai.DefaultClaudeModel)
 
-	assert.Greater(t, asr, extract,
+	assert.True(t, asr.GreaterThan(extract),
 		"speech recognition is the paid class — if this ever inverts the screen is warning about the wrong thing")
-	assert.Greater(t, extract, 0.0,
+	assert.True(t, extract.IsPositive(),
 		"an extract item still pays for LLM translation; calling it exactly free would be a lie the invoice contradicts")
 }
 
@@ -756,7 +758,10 @@ func TestAnalyze_OnlyTheTranslationHalfMovesWithTheModel(t *testing.T) {
 	haiku := res.EstimatesByModel["claude-haiku-4-5"].TotalUSD
 
 	assert.Greater(t, sonnet, haiku)
-	assert.InDelta(t, sonnet-haiku, 100*(translationRatePerMinute("claude-sonnet-5")-translationRatePerMinute("claude-haiku-4-5")), 0.01,
+	rateGap := translationRatePerMinute("claude-sonnet-5").
+		Sub(translationRatePerMinute("claude-haiku-4-5")).
+		Mul(decimal.NewFromInt(100)).InexactFloat64()
+	assert.InDelta(t, sonnet-haiku, rateGap, 0.01,
 		"speech recognition is billed by a different provider per audio minute — switching translation model must not move it")
 	assert.Greater(t, haiku, asrOnly, "the ASR row still pays for translation on top")
 }
@@ -785,8 +790,10 @@ func TestAnalyze_WithoutACatalogStillQuotesTheDefault(t *testing.T) {
 }
 
 func TestTranslationRate_IsMeasuredForEvaluatedModelsAndScaledOtherwise(t *testing.T) {
-	haiku := translationRatePerMinute("claude-haiku-4-5")
-	sonnet := translationRatePerMinute("claude-sonnet-5")
+	// Rates are decimals now; compare as float64 at the assertion boundary so
+	// the eval-1 arithmetic in these comments stays readable.
+	haiku := translationRatePerMinute("claude-haiku-4-5").InexactFloat64()
+	sonnet := translationRatePerMinute("claude-sonnet-5").InexactFloat64()
 
 	// eval-1 billed $2.229 (Haiku) and $5.951 (Sonnet) for 12h20m = 740 min.
 	assert.InDelta(t, 2.229/740, haiku, 0.0001)
@@ -797,11 +804,11 @@ func TestTranslationRate_IsMeasuredForEvaluatedModelsAndScaledOtherwise(t *testi
 	assert.Greater(t, haiku*90, 0.20, "a 90-minute film on the cheap model really does cost more than a quarter")
 
 	// An unmeasured model is scaled from the SLOWER, dearer anchor.
-	opus := translationRatePerMinute("claude-opus-4-8")
+	opus := translationRatePerMinute("claude-opus-4-8").InexactFloat64()
 	assert.Greater(t, opus, sonnet, "Opus is priced above Sonnet, so its quote must be too")
 	assert.InDelta(t, sonnet*(5.0+25.0)/(3.0+15.0), opus, 0.0001)
 
-	unknown := translationRatePerMinute("some-future-model")
+	unknown := translationRatePerMinute("some-future-model").InexactFloat64()
 	assert.Equal(t, sonnet, unknown, "an unknown model quotes at the anchor rather than under-promising")
 	assert.Equal(t, 0.17, translationTimeShare("some-future-model"))
 }

@@ -12,6 +12,7 @@ import {
   isWritable,
   selectableIds,
 } from './consentSelection';
+import { usd } from '../../../lib/currency';
 import type { GenerationCandidate, TranslationModelInfo } from '../../../services/subtitleService';
 
 // Media-id fixture convention (9R-18 AC 7): UUID strings only.
@@ -343,6 +344,50 @@ describe('computeTotals under a chosen model', () => {
     // so the second never starts; at Haiku prices there is still room for it.
     expect(computeTotals(list, new Set([A, B]), 0.05).feasibleCount).toBe(1);
     expect(computeTotals(list, new Set([A, B]), 0.05, prices).feasibleCount).toBe(2);
+  });
+});
+
+describe('computeTotals — decimal arithmetic (tech-money-decimal-arithmetic)', () => {
+  it('the displayed breakdown always sums to the displayed total', () => {
+    // Two halves that each round UP while their float sum rounds DOWN: with
+    // `extractUsd + asrUsd` the screen prints 「$0.01 + $0.01 = $0.01」.
+    const list = [c(A, 'extract', 0.005), c(B, 'asr', 0.005)];
+    const t = computeTotals(list, new Set([A, B]), null);
+    expect(usd(t.selectedExtractUsd)).toBe('$0.01');
+    expect(usd(t.selectedAsrUsd)).toBe('$0.01');
+    expect(usd(t.selectedTotalUsd)).toBe('$0.02');
+  });
+
+  it('0.1 + 0.2 is 0.3 — not the number JS gives you', () => {
+    const list = [c(A, 'extract', 0.1), c(B, 'asr', 0.2)];
+    expect(computeTotals(list, new Set([A, B]), null).selectedTotalUsd).toBe(0.3);
+    expect(0.1 + 0.2).not.toBe(0.3);
+  });
+
+  it('does not raise a false over-budget alarm on drift alone', () => {
+    // CR H2: the first version of this test used a $0.79 ceiling, which
+    // 0.7999999999999999 clears by a mile — it passed identically on the old
+    // float code and proved nothing. THIS one discriminates.
+    //
+    // $0.10 + $0.20 is exactly $0.30, the ceiling. In native JS the sum is
+    // 0.30000000000000004, so `total > budget` reads TRUE: the user is shown
+    // the over-budget screen and a 仍要開始 button for a batch that costs
+    // precisely what they authorised.
+    const list = [c(A, 'extract', 0.1), c(B, 'asr', 0.2)];
+    const t = computeTotals(list, new Set([A, B]), 0.3);
+
+    expect(t.selectedTotalUsd).toBe(0.3);
+    expect(t.overBudget).toBe(false);
+    // Spelled out so the reason this test exists cannot rot into folklore.
+    expect(0.1 + 0.2 > 0.3).toBe(true);
+  });
+
+  it('stays exact across a library-sized selection', () => {
+    const many = Array.from({ length: 1200 }, (_, i) =>
+      c(`${i}`.padStart(8, '0') + '-0000-4000-8000-000000000000', 'extract', 0.01)
+    );
+    const t = computeTotals(many, new Set(many.map((x) => x.mediaId)), null);
+    expect(t.selectedTotalUsd).toBe(12);
   });
 });
 

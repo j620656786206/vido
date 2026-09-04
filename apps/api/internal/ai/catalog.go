@@ -110,12 +110,15 @@ func Catalog() []ModelInfo {
 			continue
 		}
 		out = append(out, ModelInfo{
-			ID:           id,
-			Provider:     meta.provider,
-			DisplayName:  meta.displayName,
-			Tier:         meta.tier,
-			InputPer1M:   pricing.InputPer1M,
-			OutputPer1M:  pricing.OutputPer1M,
+			ID:          id,
+			Provider:    meta.provider,
+			DisplayName: meta.displayName,
+			Tier:        meta.tier,
+			// The wire carries dollars as JSON numbers; this is the one
+			// narrowing hop, and it is display-only (the picker prices a batch
+			// from estimates_by_model, never from these rates).
+			InputPer1M:   pricing.InputPer1M.InexactFloat64(),
+			OutputPer1M:  pricing.OutputPer1M.InexactFloat64(),
 			QualityGrade: meta.qualityGrade,
 			QualityNote:  meta.qualityNote,
 		})

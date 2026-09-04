@@ -571,9 +571,9 @@ func TestGeminiProvider_Parse_MissingUsageMetadataWarnsAndMetersZero(t *testing.
 func TestGeminiPricing_RowsMatchThePublishedRates(t *testing.T) {
 	require.Contains(t, defaultLLMPricing, DefaultGeminiModel,
 		"DefaultGeminiModel must carry its own pricing row — falling into the Haiku-tier fallback fabricates numbers")
-	assert.Equal(t, ModelPricing{InputPer1M: 0.10, OutputPer1M: 0.40}, defaultLLMPricing["gemini-2.0-flash"])
-	assert.Equal(t, ModelPricing{InputPer1M: 0.30, OutputPer1M: 2.50}, defaultLLMPricing["gemini-2.5-flash"])
-	assert.Equal(t, ModelPricing{InputPer1M: 0.10, OutputPer1M: 0.40}, defaultLLMPricing["gemini-2.5-flash-lite"])
+	assert.Equal(t, price("0.10", "0.40"), defaultLLMPricing["gemini-2.0-flash"])
+	assert.Equal(t, price("0.30", "2.50"), defaultLLMPricing["gemini-2.5-flash"])
+	assert.Equal(t, price("0.10", "0.40"), defaultLLMPricing["gemini-2.5-flash-lite"])
 }
 
 // ─── sub-6-6: Ping (同級化) ─────────────────────────────────────────────────

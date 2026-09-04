@@ -7,7 +7,17 @@
  * from the SAME ConsentTotals value (三處金額同源; three independent sums are
  * banned by the story AC). Amounts come VERBATIM from the backend's
  * `estimated_usd` (§5-sexies: no "免費" rounding presentation).
+ *
+ * tech-money-decimal-arithmetic (Alexyu, 2026-09-04): NO money in this file is
+ * added, subtracted or compared with `+ - < >`. Those are IEEE-754 double
+ * operations, and `0.1 + 0.2 === 0.30000000000000004` is how a confirm screen
+ * ends up printing 「$0.01 + $0.01 = $0.01」, or how a $0.80 ceiling fails to
+ * trigger on a total that is exactly $0.80. Everything goes through
+ * `lib/currency`, which is decimal.js — the same arithmetic the Go backend
+ * does with shopspring/decimal, so the quote and the invoice are the same
+ * number rather than merely close.
  */
+import { addUsd, gtUsd, ltUsd, percentOfUsd, roundUsd, subUsd } from '../../../lib/currency';
 import type {
   GenerationCandidate,
   ModelEstimate,
@@ -107,7 +117,16 @@ export type ModelPrices = Readonly<Record<string, number>>;
  */
 export function candidateUsd(c: GenerationCandidate, prices?: ModelPrices): number {
   const priced = prices?.[c.mediaId];
-  return typeof priced === 'number' ? priced : c.estimatedUsd;
+  // Rounded to cents HERE, before it can enter any sum. Exact addition alone
+  // is not enough: a row worth 0.005 renders as $0.01, and two of them render
+  // a $0.01 total — the breakdown fails to add up even though the arithmetic
+  // was perfect, because the rounding happened at DISPLAY time instead. Round
+  // the atoms and every level above is consistent by construction: the row,
+  // the group subtotal, the two route halves and the grand total.
+  //
+  // In practice this is a no-op — estimateUSD already rounds every wire value
+  // to whole cents — which is exactly what a guard should be.
+  return roundUsd(typeof priced === 'number' ? priced : c.estimatedUsd);
 }
 
 export function computeTotals(
@@ -132,16 +151,18 @@ export function computeTotals(
     const rowUsd = candidateUsd(c, prices);
     if (c.route === 'extract') {
       extractCount++;
-      extractUsd += rowUsd;
+      extractUsd = addUsd(extractUsd, rowUsd);
     } else {
       asrCount++;
-      asrUsd += rowUsd;
+      asrUsd = addUsd(asrUsd, rowUsd);
     }
-    if (budgetUsd === null || cumulative < budgetUsd) feasibleCount++;
-    cumulative += rowUsd;
+    if (budgetUsd === null || ltUsd(cumulative, budgetUsd)) feasibleCount++;
+    cumulative = addUsd(cumulative, rowUsd);
   }
 
-  const totalUsd = extractUsd + asrUsd;
+  // The total is the two DISPLAYED halves added exactly — so the breakdown a
+  // user reads always sums to the total beside it.
+  const totalUsd = addUsd(extractUsd, asrUsd);
   return {
     candidateCount: candidates.length,
     selectableCount,
@@ -152,7 +173,7 @@ export function computeTotals(
     selectedExtractUsd: extractUsd,
     selectedAsrUsd: asrUsd,
     selectedTotalUsd: totalUsd,
-    overBudget: budgetUsd !== null && totalUsd > budgetUsd,
+    overBudget: budgetUsd !== null && gtUsd(totalUsd, budgetUsd),
     feasibleCount,
   };
 }
@@ -325,9 +346,9 @@ function sumSelected(
   let total = 0;
   for (const c of candidates) {
     if (!selectedIds.has(c.mediaId) || !isWritable(c)) continue;
-    total += candidateUsd(c, prices);
+    total = addUsd(total, candidateUsd(c, prices));
   }
-  return Math.round(total * 100) / 100;
+  return roundUsd(total);
 }
 
 /**
@@ -398,9 +419,14 @@ export function modelChoices(
 
     let deltaUsd: number | undefined;
     let deltaPercent: number | undefined;
-    if (defaultRow && m.id !== defaultRow.id && defaultTotal !== undefined && defaultTotal > 0) {
-      deltaUsd = Math.round((defaultTotal - totalUsd) * 100) / 100;
-      if (deltaUsd !== 0) deltaPercent = Math.round((Math.abs(deltaUsd) / defaultTotal) * 100);
+    if (
+      defaultRow &&
+      m.id !== defaultRow.id &&
+      defaultTotal !== undefined &&
+      gtUsd(defaultTotal, 0)
+    ) {
+      deltaUsd = roundUsd(subUsd(defaultTotal, totalUsd));
+      if (deltaUsd !== 0) deltaPercent = percentOfUsd(deltaUsd, defaultTotal);
     }
 
     return {
