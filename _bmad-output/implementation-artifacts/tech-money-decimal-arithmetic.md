@@ -1,6 +1,6 @@
 # Tech: 金額一律走十進位套件，前後端都是
 
-Status: in-progress
+Status: review
 
 **No ticket exists for this** — Alexyu 於 2026-09-04 在 sub-6-8b 的 /ship 過程中提出，
 並在我提出「用整數分就好」的替代方案後**重申要用套件**。這份規格記錄的是他的裁定，
@@ -66,17 +66,31 @@ Status: in-progress
 - `TestBudget_SubCentPerTokenCostIsNotRoundedAway` — Sonnet 一個 token 是
   `"0.000003"`，這正是整數分方案會歸零的那個數。
 
-## 待完成 — 前端
+## 已完成 — 前端
 
-5. `lib/currency.ts`：`usd()` 走 Decimal，並提供 `sumUsd` / `addUsd` /
-   `subUsd`，讓「金額算術」與「金額格式化」同源。
-6. `consentSelection.ts`：`computeTotals` / `sumSelected` / `modelChoices` 的
-   `deltaUsd` 全部改走上述 helper，不再有裸的 `Math.round(x*100)/100`。
-   **紅線：畫面上的分項加起來必須等於畫面上的合計。**
-7. gallery fixture 的 `confirmTotals` 改用同一組 helper。
+5. `lib/currency.ts` 走 decimal.js，提供 `usd` / `sumUsd` / `addUsd` / `subUsd`
+   / `gtUsd` / `ltUsd` / `percentOfUsd` / `roundUsd` —— 金額的算術與格式化同源。
+   12 個 spec。
+6. `consentSelection.ts` 的每一處金額運算改走那組 helper：`computeTotals` 的
+   兩段累加、可行數的走訪、上限判定、`sumSelected`、`modelChoices` 的價差與
+   百分比。檔案裡不再有任何裸的 `+ - < >` 用在錢上。
+7. gallery fixture 的 `confirmTotals` 改用 `addUsd`。
 
-> ⏸ 5–7 需要 sub-6-8b（PR #380）先合併：`consentSelection.ts` 兩邊都會大改。
-> `lib/currency.ts` 不在 #380 的變更範圍內，可以先做。
+### 寫測試才發現的第二層問題
+
+**精確加法本身不夠。** `computeTotals` 原本累加的是「未捨入的原始列值」，捨入發生
+在 `usd()` 顯示的那一刻。於是兩筆 0.005：
+
+```
+抽取 0.005 → 顯示 $0.01
+語音 0.005 → 顯示 $0.01
+合計 0.010 → 顯示 $0.01      ← 算術完全正確，畫面還是加不起來
+```
+
+修法是把捨入移到**進入加總之前**：`candidateUsd` 現在回傳已捨成分的值。這樣
+列、群組小計、兩段路線、總計每一層都由整數分構成，一致性是結構保證而不是巧合。
+實務上這是 no-op（`estimateUSD` 已經把每個 wire 值捨成整數分）—— 一個守衛本來
+就該長這樣。
 
 ## 已知未解 — wire 仍是 JSON float
 
@@ -104,5 +118,6 @@ Claude Opus 5 (1M context)
 - `apps/api/internal/ai/catalog.go`、`catalog_test.go`、`gemini_test.go`、`gemini_model_test.go`
 - `apps/api/internal/services/generation_candidates.go`、`generation_candidates_test.go`
 - `package.json`、`pnpm-lock.yaml`（+ decimal.js）
-- `apps/web/src/lib/currency.ts`、`currency.spec.ts`（待做）
-- `apps/web/src/components/subtitle/consent/consentSelection.ts`（待做，等 #380）
+- `apps/web/src/lib/currency.ts`、`currency.spec.ts`
+- `apps/web/src/components/subtitle/consent/consentSelection.ts`、`consentSelection.spec.ts`
+- `apps/web/src/routes/test/-gallery.fixtures.tsx`

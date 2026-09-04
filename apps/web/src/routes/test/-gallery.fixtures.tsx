@@ -177,6 +177,7 @@ import { CandidateListPanel } from '../../components/subtitle/consent/CandidateL
 import { ConsentEmptyState } from '../../components/subtitle/consent/ConsentEmptyState';
 import { ConfirmGenerationDialog } from '../../components/subtitle/consent/ConfirmGenerationDialog';
 import { computeTotals } from '../../components/subtitle/consent/consentSelection';
+import { addUsd } from '../../lib/currency';
 import type { GenerationCandidate } from '../../services/subtitleService';
 import { GenerationBatchPanelV2 } from '../../components/subtitle/GenerationBatchDialogV2';
 import { GenerationWorkspaceV2 } from '../../components/subtitle/GenerationWorkspaceV2';
@@ -416,7 +417,7 @@ function confirmTotals(parts: {
     unwritableCount: 0,
     overBudget: false,
     ...parts,
-    selectedTotalUsd: Math.round((parts.selectedExtractUsd + parts.selectedAsrUsd) * 100) / 100,
+    selectedTotalUsd: addUsd(parts.selectedExtractUsd, parts.selectedAsrUsd),
   };
 }
 

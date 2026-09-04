@@ -12,6 +12,7 @@ import {
   isWritable,
   selectableIds,
 } from './consentSelection';
+import { usd } from '../../../lib/currency';
 import type { GenerationCandidate, TranslationModelInfo } from '../../../services/subtitleService';
 
 // Media-id fixture convention (9R-18 AC 7): UUID strings only.
@@ -343,6 +344,41 @@ describe('computeTotals under a chosen model', () => {
     // so the second never starts; at Haiku prices there is still room for it.
     expect(computeTotals(list, new Set([A, B]), 0.05).feasibleCount).toBe(1);
     expect(computeTotals(list, new Set([A, B]), 0.05, prices).feasibleCount).toBe(2);
+  });
+});
+
+describe('computeTotals — decimal arithmetic (tech-money-decimal-arithmetic)', () => {
+  it('the displayed breakdown always sums to the displayed total', () => {
+    // Two halves that each round UP while their float sum rounds DOWN: with
+    // `extractUsd + asrUsd` the screen prints 「$0.01 + $0.01 = $0.01」.
+    const list = [c(A, 'extract', 0.005), c(B, 'asr', 0.005)];
+    const t = computeTotals(list, new Set([A, B]), null);
+    expect(usd(t.selectedExtractUsd)).toBe('$0.01');
+    expect(usd(t.selectedAsrUsd)).toBe('$0.01');
+    expect(usd(t.selectedTotalUsd)).toBe('$0.02');
+  });
+
+  it('0.1 + 0.2 is 0.3 — not the number JS gives you', () => {
+    const list = [c(A, 'extract', 0.1), c(B, 'asr', 0.2)];
+    expect(computeTotals(list, new Set([A, B]), null).selectedTotalUsd).toBe(0.3);
+    expect(0.1 + 0.2).not.toBe(0.3);
+  });
+
+  it('does not let float drift walk past the ceiling the user approved', () => {
+    // $0.10 + $0.70 is exactly $0.80. In float64 it is 0.7999999999999999, so
+    // `total > 0.80` reads false and the batch bills past what was consented.
+    const list = [c(A, 'extract', 0.1), c(B, 'asr', 0.7)];
+    const t = computeTotals(list, new Set([A, B]), 0.79);
+    expect(t.selectedTotalUsd).toBe(0.8);
+    expect(t.overBudget).toBe(true);
+  });
+
+  it('stays exact across a library-sized selection', () => {
+    const many = Array.from({ length: 1200 }, (_, i) =>
+      c(`${i}`.padStart(8, '0') + '-0000-4000-8000-000000000000', 'extract', 0.01)
+    );
+    const t = computeTotals(many, new Set(many.map((x) => x.mediaId)), null);
+    expect(t.selectedTotalUsd).toBe(12);
   });
 });
 
