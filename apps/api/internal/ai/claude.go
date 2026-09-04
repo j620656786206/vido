@@ -57,6 +57,7 @@ var (
 	_ Provider         = (*ClaudeProvider)(nil)
 	_ TextCompleter    = (*ClaudeProvider)(nil)
 	_ CachingCompleter = (*ClaudeProvider)(nil)
+	_ Pinger           = (*ClaudeProvider)(nil)
 )
 
 // ClaudeProviderOption is a functional option for configuring ClaudeProvider.
@@ -292,6 +293,24 @@ func (p *ClaudeProvider) send(ctx context.Context, params anthropic.MessageNewPa
 		b.RecordLLM(p.model, msg.Usage.InputTokens, msg.Usage.OutputTokens)
 	}
 	return msg, nil
+}
+
+// Ping implements Pinger: one max_tokens=1 Messages call through the same
+// governed/retry/classify path as every real request — so it is rate-limited
+// and, if the ctx carried a Budget, metered and budget-gated like any call.
+// The key-test handler's request ctx carries no Budget, so in practice the
+// probe is neither. The VERDICT is transport-only: 401/403 →
+// ErrAIUnauthorized, 404 → ErrAIModelNotFound, timeouts and 5xx → their
+// sentinels; a 2xx with an empty content array is a PASS.
+func (p *ClaudeProvider) Ping(ctx context.Context) error {
+	_, err := p.send(ctx, anthropic.MessageNewParams{
+		Model:     anthropic.Model(p.model),
+		MaxTokens: 1,
+		Messages: []anthropic.MessageParam{
+			anthropic.NewUserMessage(anthropic.NewTextBlock("hi")),
+		},
+	})
+	return err
 }
 
 // textFromMessage returns the text of the first text content block, or "".

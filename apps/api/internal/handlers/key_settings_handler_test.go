@@ -232,7 +232,7 @@ func TestTestKey_ErrorClassification(t *testing.T) {
 			name: "401 is an invalid key",
 			// Wrapped exactly as claude.go wraps it: BOTH sentinels.
 			err:      fmt.Errorf("%w: %w: status 401", ai.ErrAIProviderError, ai.ErrAIUnauthorized),
-			wantCode: "AI_PROVIDER_ERROR", wantHTTP: http.StatusBadGateway, wantMsg: "金鑰無效或已撤銷",
+			wantCode: "AI_UNAUTHORIZED", wantHTTP: http.StatusBadGateway, wantMsg: "金鑰無效或已撤銷",
 		},
 		{
 			name:     "429 means the key WORKS but is throttled",
@@ -254,7 +254,7 @@ func TestTestKey_ErrorClassification(t *testing.T) {
 			// Wrapped exactly as claude.go wraps it: BOTH sentinels (AC #3's
 			// sub-1-1 model diagnostic).
 			err:      fmt.Errorf("%w: %w: status 404: model %q not found", ai.ErrAIProviderError, ai.ErrAIModelNotFound, "bogus-model"),
-			wantCode: "AI_PROVIDER_ERROR", wantHTTP: http.StatusBadGateway, wantMsg: "金鑰可用，但設定的模型識別碼無效或已棄用",
+			wantCode: "AI_MODEL_NOT_FOUND", wantHTTP: http.StatusBadGateway, wantMsg: "金鑰可用，但設定的模型識別碼無效或已棄用",
 		},
 		{
 			name:     "anything else stays generic",
@@ -288,7 +288,7 @@ func TestTestKey_UnauthorizedBeatsGenericProviderError(t *testing.T) {
 
 	code, _, message, _ := classifyKeyTestError(err)
 
-	assert.Equal(t, "AI_PROVIDER_ERROR", code)
+	assert.Equal(t, "AI_UNAUTHORIZED", code)
 	assert.Equal(t, "金鑰無效或已撤銷", message)
 }
 
@@ -299,4 +299,17 @@ func TestTestKey_409WhenNoTesterWired(t *testing.T) {
 
 	require.Equal(t, http.StatusConflict, w.Code)
 	assert.Equal(t, "AI_NOT_CONFIGURED", envelopeOf(t, w).Error.Code)
+}
+
+// ─── sub-6-6 AC #3: the 200 says which model was verified ───────────────────
+
+type fakeModelKeyTester struct{ fakeKeyTester }
+
+func (f *fakeModelKeyTester) EffectiveModel() string { return "claude-sonnet-5" }
+
+func TestTestKey_ValidKeyReportsModel(t *testing.T) {
+	h := NewKeySettingsHandler(&fakeKeySettings{state: configuredState()}, &fakeModelKeyTester{})
+	w := doKeyReq(t, h, http.MethodPost, "/api/v1/settings/keys/test", `{"claude":"sk-candidate"}`)
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), `"model":"claude-sonnet-5"`)
 }

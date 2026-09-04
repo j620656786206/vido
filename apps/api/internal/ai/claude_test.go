@@ -866,3 +866,45 @@ func TestClaudeProvider_ModelAccessor(t *testing.T) {
 	assert.Equal(t, DefaultClaudeModel, NewClaudeProvider("k").Model())
 	assert.Equal(t, "claude-sonnet-5", NewClaudeProvider("k", WithClaudeModel("claude-sonnet-5")).Model())
 }
+
+// ─── sub-6-6: Ping judges transport only ────────────────────────────────────
+
+func pingServer(t *testing.T, status int, body string) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(status)
+		_, _ = w.Write([]byte(body))
+	}))
+}
+
+func TestClaudeProvider_Ping_EmptyContentIsValid(t *testing.T) {
+	// Sonnet 5 at max_tokens=1 routinely returns no text block; the key is fine.
+	srv := pingServer(t, 200, `{"id":"m","type":"message","role":"assistant","model":"claude-sonnet-5","content":[],"stop_reason":"max_tokens","usage":{"input_tokens":1,"output_tokens":0}}`)
+	defer srv.Close()
+	assert.NoError(t, NewClaudeProvider("k", WithClaudeBaseURL(srv.URL)).Ping(context.Background()))
+}
+
+func TestClaudeProvider_Ping_Unauthorized(t *testing.T) {
+	srv := pingServer(t, 401, `{"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"}}`)
+	defer srv.Close()
+	err := NewClaudeProvider("bad", WithClaudeBaseURL(srv.URL)).Ping(context.Background())
+	assert.ErrorIs(t, err, ErrAIUnauthorized)
+}
+
+func TestClaudeProvider_Ping_ModelNotFound(t *testing.T) {
+	srv := pingServer(t, 404, `{"type":"error","error":{"type":"not_found_error","message":"model: nope"}}`)
+	defer srv.Close()
+	err := NewClaudeProvider("k", WithClaudeBaseURL(srv.URL), WithClaudeModel("nope")).Ping(context.Background())
+	assert.ErrorIs(t, err, ErrAIModelNotFound)
+}
+
+func TestClaudeProvider_Ping_Timeout(t *testing.T) {
+	// TestMain already shrinks the retry backoff for the package.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(80 * time.Millisecond)
+	}))
+	defer srv.Close()
+	err := NewClaudeProvider("k", WithClaudeBaseURL(srv.URL), WithClaudeTimeout(20*time.Millisecond)).Ping(context.Background())
+	assert.ErrorIs(t, err, ErrAITimeout)
+}

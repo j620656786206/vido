@@ -46,6 +46,17 @@ type TextCompleter interface {
 	CompleteText(ctx context.Context, systemPrompt, userPrompt string, maxTokens int) (string, error)
 }
 
+// Pinger is the OPTIONAL probe a provider exposes for key validation
+// (sub-6-6). Ping makes the smallest real request the API allows and reports
+// ONLY the transport verdict — a 2xx is success even when the reply carries no
+// text. CompleteText's empty-text = ErrAIInvalidResponse rule is right for
+// callers that need words back and wrong for a probe: Sonnet 5 at max_tokens=1
+// routinely returns an empty text block, which made a valid key test as
+// "Cannot parse AI response" (eval-1 product problem 6).
+type Pinger interface {
+	Ping(ctx context.Context) error
+}
+
 // CachingCompleter is the OPTIONAL, additive counterpart to TextCompleter for
 // providers that support prompt caching and can report token usage to the
 // caller. It sits beside TextCompleter rather than extending it so the

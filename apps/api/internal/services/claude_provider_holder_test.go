@@ -3,6 +3,8 @@ package services
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -197,4 +199,29 @@ func TestClaudeProviderHolder_EffectiveModel_ReportsOverride(t *testing.T) {
 	p, err := h.Get(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, "claude-sonnet-5", p.(*ai.ClaudeProvider).Model())
+}
+
+// ─── sub-6-6: TestKey judges transport, not reply text ──────────────────────
+
+func TestClaudeProviderHolder_TestKey_EmptyReplyIsValid(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"m","type":"message","role":"assistant","model":"claude-sonnet-5","content":[],"stop_reason":"max_tokens","usage":{"input_tokens":1,"output_tokens":0}}`))
+	}))
+	defer srv.Close()
+
+	h := holderWithKey(t, "sk-one", ai.WithClaudeBaseURL(srv.URL))
+	require.NoError(t, h.TestKey(context.Background(), ""), "resolved key: an empty 2xx reply is a pass")
+	require.NoError(t, h.TestKey(context.Background(), "sk-candidate"), "candidate key: same rule")
+}
+
+func TestClaudeProviderHolder_TestKey_UnauthorizedStillFails(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(401)
+		_, _ = w.Write([]byte(`{"type":"error","error":{"type":"authentication_error","message":"bad"}}`))
+	}))
+	defer srv.Close()
+	h := holderWithKey(t, "sk-one", ai.WithClaudeBaseURL(srv.URL))
+	assert.ErrorIs(t, h.TestKey(context.Background(), "sk-bad"), ai.ErrAIUnauthorized)
 }

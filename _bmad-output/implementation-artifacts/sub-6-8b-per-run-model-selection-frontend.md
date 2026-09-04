@@ -44,6 +44,8 @@ sub-6-8a 的消費面。設計語彙來自 party-mode Sally 2026-09-03：
 
 ## Dev Notes
 
+- **Inherited from sub-6-6 (AC #3 FE half):** `POST /settings/keys/test` 200 now carries additive `model` (the verified model id). `ApiKeysForm` should render「已驗證：{model}」next to the valid state; codes `AI_UNAUTHORIZED` / `AI_MODEL_NOT_FOUND` are now distinct from `AI_PROVIDER_ERROR` if the form wants to branch.
+
 - `usd()` helper 已抽共用（`lib/currency`）。
 - `consentSelection.ts` 是三處金額的唯一 selector——模型維度加在這裡，不要在元件裡各算各的。
 - 時間顯示用「約 N 分鐘」，來源 `estimated_minutes_by_model`；未知 → 不顯示時間欄。
