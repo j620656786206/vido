@@ -900,13 +900,11 @@ func TestClaudeProvider_Ping_ModelNotFound(t *testing.T) {
 }
 
 func TestClaudeProvider_Ping_Timeout(t *testing.T) {
+	// TestMain already shrinks the retry backoff for the package.
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		time.Sleep(300 * time.Millisecond)
+		time.Sleep(80 * time.Millisecond)
 	}))
 	defer srv.Close()
-	prevBase, prevMax := retryBaseDelay, retryMaxDelay
-	retryBaseDelay, retryMaxDelay = 5*time.Millisecond, 10*time.Millisecond
-	t.Cleanup(func() { retryBaseDelay, retryMaxDelay = prevBase, prevMax })
-	err := NewClaudeProvider("k", WithClaudeBaseURL(srv.URL), WithClaudeTimeout(50*time.Millisecond)).Ping(context.Background())
+	err := NewClaudeProvider("k", WithClaudeBaseURL(srv.URL), WithClaudeTimeout(20*time.Millisecond)).Ping(context.Background())
 	assert.ErrorIs(t, err, ErrAITimeout)
 }

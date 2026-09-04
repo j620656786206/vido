@@ -25,12 +25,23 @@ type KeyTester interface {
 	TestKey(ctx context.Context, candidate string) error
 }
 
+// ModelReporter is the OPTIONAL companion a tester implements to say WHICH
+// model a key was verified against (sub-6-6 AC #3). Declared here (Rule 11)
+// with a compile-time proof that the production tester satisfies it, so a
+// rename on the holder cannot silently drop the `model` field from the API.
+type ModelReporter interface {
+	EffectiveModel() string
+}
+
 // KeySettingsHandler serves the FR25 provider-key settings triad (story
 // sub-2-1a AC #3), mirroring the shipped qBittorrent/DVR settings shape.
 type KeySettingsHandler struct {
 	settings KeySettingsReader
 	tester   KeyTester
 }
+
+// Compile-time proof for sub-6-6 AC #3 (see ModelReporter).
+var _ ModelReporter = (*services.ClaudeProviderHolder)(nil)
 
 // NewKeySettingsHandler creates the handler. tester may be nil (no Claude
 // support compiled/wired) — the test endpoint then answers 409 rather than
@@ -138,10 +149,10 @@ func (h *KeySettingsHandler) SaveKeys(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body TestKeyRequest false "claude: key to test; omit to test the resolved key"
-// @Success 200 {object} APIResponse "{valid: true, model: \"claude-sonnet-5\"}"
+// @Success 200 {object} APIResponse "{valid: true, model: 'claude-sonnet-5'}"
 // @Failure 400 {object} APIResponse "VALIDATION_INVALID_FORMAT — malformed body"
 // @Failure 409 {object} APIResponse "AI_NOT_CONFIGURED — nothing to test and no key supplied"
-// @Failure 502 {object} APIResponse "AI_PROVIDER_ERROR / AI_QUOTA_EXCEEDED / AI_TIMEOUT"
+// @Failure 502 {object} APIResponse "AI_UNAUTHORIZED / AI_MODEL_NOT_FOUND / AI_PROVIDER_ERROR / AI_QUOTA_EXCEEDED / AI_TIMEOUT"
 // @Router /api/v1/settings/keys/test [post]
 func (h *KeySettingsHandler) TestKey(c *gin.Context) {
 	var req TestKeyRequest
@@ -166,7 +177,7 @@ func (h *KeySettingsHandler) TestKey(c *gin.Context) {
 		// settings page can show「已驗證：claude-sonnet-5」. Additive; a tester
 		// without a model (test fakes) simply omits the field.
 		body := gin.H{"valid": true}
-		if m, ok := h.tester.(interface{ EffectiveModel() string }); ok {
+		if m, ok := h.tester.(ModelReporter); ok {
 			body["model"] = m.EffectiveModel()
 		}
 		SuccessResponse(c, body)
@@ -187,13 +198,15 @@ func classifyKeyTestError(err error) (code string, status int, message, suggesti
 		return "AI_NOT_CONFIGURED", http.StatusConflict,
 			"尚未設定翻譯服務金鑰", "請提供要測試的金鑰，或先儲存一組金鑰。"
 	case errors.Is(err, ai.ErrAIUnauthorized):
-		return "AI_PROVIDER_ERROR", http.StatusBadGateway,
+		// sub-6-6 CR H2: a distinct code so the client can tell「換把金鑰」
+		// apart from「服務有問題」without parsing zh-TW text. Message unchanged.
+		return "AI_UNAUTHORIZED", http.StatusBadGateway,
 			"金鑰無效或已撤銷", "請確認金鑰是否正確，或至 Anthropic Console 重新產生。"
 	case errors.Is(err, ai.ErrAIModelNotFound):
 		// AC #3 — the sub-1-1/9R-1 model diagnostic: a 404 means the key was
 		// ACCEPTED but the configured model id is deprecated or invalid. Saying
 		// "invalid key" or a generic failure here sends the user to the wrong knob.
-		return "AI_PROVIDER_ERROR", http.StatusBadGateway,
+		return "AI_MODEL_NOT_FOUND", http.StatusBadGateway,
 			"金鑰可用，但設定的模型識別碼無效或已棄用",
 			"請將 CLAUDE_MODEL 設為現行模型後重啟，或移除該環境變數改用預設模型。"
 	case errors.Is(err, ai.ErrAIQuotaExceeded):

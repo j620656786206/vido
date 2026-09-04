@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -580,27 +581,36 @@ func TestGeminiProvider_Ping(t *testing.T) {
 	cases := []struct {
 		name   string
 		status int
+		body   string
 		want   error
 	}{
-		{"200 with empty candidates is valid", 200, nil},
-		{"400 bad key", 400, ErrAIUnauthorized},
-		{"403", 403, ErrAIUnauthorized},
-		{"404 model", 404, ErrAIModelNotFound},
+		{"200 with empty candidates is valid", 200, `{"candidates":[]}`, nil},
+		{"400 API_KEY_INVALID → unauthorized", 400, `{"error":{"code":400,"status":"INVALID_ARGUMENT","details":[{"reason":"API_KEY_INVALID"}]}}`, ErrAIUnauthorized},
+		{"400 other INVALID_ARGUMENT → provider error, NOT unauthorized", 400, `{"error":{"code":400,"status":"INVALID_ARGUMENT","message":"Unknown name"}}`, ErrAIProviderError},
+		{"403", 403, `{}`, ErrAIUnauthorized},
+		{"404 model", 404, `{}`, ErrAIModelNotFound},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				assert.Contains(t, r.URL.Path, ":generateContent")
+				assert.Empty(t, r.URL.Query().Get("key"), "CR H7: the key must not travel in the URL")
+				assert.Equal(t, "k", r.Header.Get("x-goog-api-key"))
+				raw, _ := io.ReadAll(r.Body)
+				assert.Contains(t, string(raw), `"max_output_tokens":1`, "CR H3: the probe body is what Google sees")
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(tc.status)
-				_, _ = w.Write([]byte(`{"candidates":[]}`))
+				_, _ = w.Write([]byte(tc.body))
 			}))
 			defer srv.Close()
 			err := NewGeminiProvider("k", WithGeminiBaseURL(srv.URL)).Ping(context.Background())
 			if tc.want == nil {
 				assert.NoError(t, err)
-			} else {
-				assert.ErrorIs(t, err, tc.want)
+				return
+			}
+			assert.ErrorIs(t, err, tc.want)
+			if tc.want == ErrAIProviderError {
+				assert.NotErrorIs(t, err, ErrAIUnauthorized)
 			}
 		})
 	}

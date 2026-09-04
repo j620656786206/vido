@@ -167,26 +167,18 @@ func (h *ClaudeProviderHolder) TestKey(ctx context.Context, candidate string) er
 		if err != nil {
 			return err
 		}
-		return pingOf(completer).Ping(ctx)
+		pinger, ok := completer.(ai.Pinger)
+		if !ok {
+			// Unreachable today (Get always yields *ai.ClaudeProvider, which
+			// implements Pinger — see the compile-time proof in claude.go) and
+			// deliberately LOUD if that ever changes: falling back to
+			// CompleteText would silently re-introduce the empty-reply failure
+			// this method exists to remove (sub-6-6 CR H1).
+			return fmt.Errorf("claude provider does not implement ai.Pinger")
+		}
+		return pinger.Ping(ctx)
 	}
 
 	opts := append(append([]ai.ClaudeProviderOption(nil), h.opts...), ai.WithClaudeModel(h.EffectiveModel()))
 	return ai.NewClaudeProvider(candidate, opts...).Ping(ctx)
-}
-
-// pingOf narrows a completer to its Pinger half. Get always yields
-// *ai.ClaudeProvider, which implements it; the fallback keeps a future
-// non-pinging completer from panicking and still exercises the auth path.
-func pingOf(c ai.TextCompleter) ai.Pinger {
-	if p, ok := c.(ai.Pinger); ok {
-		return p
-	}
-	return pingViaComplete{c}
-}
-
-type pingViaComplete struct{ c ai.TextCompleter }
-
-func (p pingViaComplete) Ping(ctx context.Context) error {
-	_, err := p.c.CompleteText(ctx, "", "hi", 1)
-	return err
 }

@@ -232,7 +232,7 @@ func TestTestKey_ErrorClassification(t *testing.T) {
 			name: "401 is an invalid key",
 			// Wrapped exactly as claude.go wraps it: BOTH sentinels.
 			err:      fmt.Errorf("%w: %w: status 401", ai.ErrAIProviderError, ai.ErrAIUnauthorized),
-			wantCode: "AI_PROVIDER_ERROR", wantHTTP: http.StatusBadGateway, wantMsg: "金鑰無效或已撤銷",
+			wantCode: "AI_UNAUTHORIZED", wantHTTP: http.StatusBadGateway, wantMsg: "金鑰無效或已撤銷",
 		},
 		{
 			name:     "429 means the key WORKS but is throttled",
@@ -254,7 +254,7 @@ func TestTestKey_ErrorClassification(t *testing.T) {
 			// Wrapped exactly as claude.go wraps it: BOTH sentinels (AC #3's
 			// sub-1-1 model diagnostic).
 			err:      fmt.Errorf("%w: %w: status 404: model %q not found", ai.ErrAIProviderError, ai.ErrAIModelNotFound, "bogus-model"),
-			wantCode: "AI_PROVIDER_ERROR", wantHTTP: http.StatusBadGateway, wantMsg: "金鑰可用，但設定的模型識別碼無效或已棄用",
+			wantCode: "AI_MODEL_NOT_FOUND", wantHTTP: http.StatusBadGateway, wantMsg: "金鑰可用，但設定的模型識別碼無效或已棄用",
 		},
 		{
 			name:     "anything else stays generic",
@@ -288,7 +288,7 @@ func TestTestKey_UnauthorizedBeatsGenericProviderError(t *testing.T) {
 
 	code, _, message, _ := classifyKeyTestError(err)
 
-	assert.Equal(t, "AI_PROVIDER_ERROR", code)
+	assert.Equal(t, "AI_UNAUTHORIZED", code)
 	assert.Equal(t, "金鑰無效或已撤銷", message)
 }
 
