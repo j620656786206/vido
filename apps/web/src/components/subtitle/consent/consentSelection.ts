@@ -419,7 +419,12 @@ export function modelChoices(
 
     let deltaUsd: number | undefined;
     let deltaPercent: number | undefined;
-    if (defaultRow && m.id !== defaultRow.id && defaultTotal !== undefined && defaultTotal > 0) {
+    if (
+      defaultRow &&
+      m.id !== defaultRow.id &&
+      defaultTotal !== undefined &&
+      gtUsd(defaultTotal, 0)
+    ) {
       deltaUsd = roundUsd(subUsd(defaultTotal, totalUsd));
       if (deltaUsd !== 0) deltaPercent = percentOfUsd(deltaUsd, defaultTotal);
     }

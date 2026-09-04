@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"log/slog"
+	"math"
 	"sync"
 	"time"
 
@@ -179,6 +180,19 @@ func NewBudget(maxUSD float64) *Budget {
 	// The ceiling arrives as a float64 from config / the consent screen.
 	// NewFromFloat takes the SHORTEST decimal that round-trips that float, so
 	// a user who typed 5.00 gets exactly 5, not 4.99999999999999911182…
+	//
+	// ⚠️ CR H1: NewFromFloat PANICS on NaN/±Inf, and `strconv.ParseFloat`
+	// accepts the literal strings "NaN"/"Inf" without error — so a typo'd
+	// AI_RUN_BUDGET_USD used to be inert (a NaN ceiling silently never
+	// triggered) and would instead have taken the whole process down: this
+	// constructor runs inside WorkerPool's bare `go func`, which has no
+	// recover(), so gin's Recovery middleware never sees it. A misconfigured
+	// env var must not be able to kill the backend.
+	if math.IsNaN(maxUSD) || math.IsInf(maxUSD, 0) {
+		slog.Warn("AI_RUN_BUDGET_USD is not a finite number — running WITHOUT a ceiling",
+			"value", maxUSD)
+		return &Budget{}
+	}
 	return &Budget{maxUSD: decimal.NewFromFloat(maxUSD)}
 }
 
@@ -281,7 +295,13 @@ func (b *Budget) Spent() decimal.Decimal {
 
 // BudgetSnapshot is a point-in-time view of a run's metering.
 type BudgetSnapshot struct {
-	SpentUSD     float64
+	SpentUSD float64
+	// Spent is the same figure WITHOUT the float64 narrowing — for callers
+	// that subtract or compare it (CR M3: the per-item spend delta did
+	// `snap.SpentUSD - scope.spentUSDAtStart` in plain float64, which is the
+	// one money computation this codebase had already caught going slightly
+	// negative — hence the `if spent < 0` guard beside it).
+	Spent        decimal.Decimal
 	BudgetUSD    float64
 	InputTokens  int64
 	OutputTokens int64
@@ -298,7 +318,8 @@ func (b *Budget) Snapshot() BudgetSnapshot {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	return BudgetSnapshot{
-		SpentUSD: b.spentUSD.InexactFloat64(), BudgetUSD: b.maxUSD.InexactFloat64(),
+		SpentUSD: b.spentUSD.InexactFloat64(), Spent: b.spentUSD,
+		BudgetUSD:   b.maxUSD.InexactFloat64(),
 		InputTokens: b.inputTokens, OutputTokens: b.outputTokens, LLMCalls: b.llmCalls,
 		ASRSeconds: b.asrSeconds, ASRCalls: b.asrCalls,
 	}

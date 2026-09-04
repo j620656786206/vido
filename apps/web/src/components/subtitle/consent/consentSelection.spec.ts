@@ -364,13 +364,22 @@ describe('computeTotals — decimal arithmetic (tech-money-decimal-arithmetic)',
     expect(0.1 + 0.2).not.toBe(0.3);
   });
 
-  it('does not let float drift walk past the ceiling the user approved', () => {
-    // $0.10 + $0.70 is exactly $0.80. In float64 it is 0.7999999999999999, so
-    // `total > 0.80` reads false and the batch bills past what was consented.
-    const list = [c(A, 'extract', 0.1), c(B, 'asr', 0.7)];
-    const t = computeTotals(list, new Set([A, B]), 0.79);
-    expect(t.selectedTotalUsd).toBe(0.8);
-    expect(t.overBudget).toBe(true);
+  it('does not raise a false over-budget alarm on drift alone', () => {
+    // CR H2: the first version of this test used a $0.79 ceiling, which
+    // 0.7999999999999999 clears by a mile — it passed identically on the old
+    // float code and proved nothing. THIS one discriminates.
+    //
+    // $0.10 + $0.20 is exactly $0.30, the ceiling. In native JS the sum is
+    // 0.30000000000000004, so `total > budget` reads TRUE: the user is shown
+    // the over-budget screen and a 仍要開始 button for a batch that costs
+    // precisely what they authorised.
+    const list = [c(A, 'extract', 0.1), c(B, 'asr', 0.2)];
+    const t = computeTotals(list, new Set([A, B]), 0.3);
+
+    expect(t.selectedTotalUsd).toBe(0.3);
+    expect(t.overBudget).toBe(false);
+    // Spelled out so the reason this test exists cannot rot into folklore.
+    expect(0.1 + 0.2 > 0.3).toBe(true);
   });
 
   it('stays exact across a library-sized selection', () => {

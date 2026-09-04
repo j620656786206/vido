@@ -41,16 +41,34 @@ func TestBudget_SpendIsExactAcrossManyCalls(t *testing.T) {
 }
 
 func TestBudget_CeilingIsNotSkippedByFloatDrift(t *testing.T) {
-	// $0.10 + $0.70 = $0.80, which is exactly the ceiling. In float64 the sum
-	// is 0.7999999999999999, so `spent >= max` reads FALSE and the run bills
-	// one more call than the user consented to. That is real money, and it is
-	// the reason the ledger is decimal rather than "float64 is close enough".
-	b := NewBudget(0.80)
-	b.RecordLLM("gemini-2.5-flash-lite", 1_000_000, 0) // $0.10
-	b.RecordLLM("gemini-2.5-flash-lite", 7_000_000, 0) // $0.70
-	assert.Equal(t, "0.8", b.Spent().String())
+	// CR H2: the first version of this test used $0.10 + $0.70 against a $0.80
+	// ceiling and claimed float64 would miss it. It would NOT — for those
+	// rates the two roundings cancel and the old code landed on 0.80000000…04,
+	// bit-identical to the ceiling, so the test passed against the code it was
+	// supposed to indict. A test that cannot fail on the old implementation is
+	// not evidence of anything.
+	//
+	// These numbers were found by search and DO discriminate:
+	// gemini-3.6-flash bills $0.75/1M, so 300k + 300k tokens is exactly $0.45.
+	// The old `float64(tokens)/1e6*rate` accumulation gives
+	// 0.44999999999999995559 — strictly BELOW the ceiling, so `spent >= max`
+	// reads false and the run bills another call the user never approved.
+	b := NewBudget(0.45)
+	b.RecordLLM("gemini-3.6-flash", 300_000, 0)
+	b.RecordLLM("gemini-3.6-flash", 300_000, 0)
+
+	assert.Equal(t, "0.45", b.Spent().String(),
+		"two 300k-token calls at $0.75/1M are forty-five cents, exactly")
 	assert.True(t, b.Exceeded(),
-		"the ceiling was reached exactly — a run that continues here has spent more than was approved")
+		"the ceiling was reached exactly — a run that continues here spends more than was approved")
+
+	// The float64 arithmetic the old ledger used, spelled out, so the reason
+	// this test exists cannot rot into folklore.
+	var oldFloat float64
+	oldFloat += float64(300_000) / 1_000_000 * 0.75
+	oldFloat += float64(300_000) / 1_000_000 * 0.75
+	assert.Less(t, oldFloat, 0.45,
+		"if this ever stops being true the test above has lost its teeth")
 }
 
 func TestBudget_SubCentPerTokenCostIsNotRoundedAway(t *testing.T) {

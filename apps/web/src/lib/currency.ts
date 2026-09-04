@@ -22,10 +22,16 @@
  * ⚠️ The wire between them is still JSON, and `JSON.parse` yields doubles. That
  * is the one remaining lossy hop; see backlog-money-string-on-the-wire.
  */
-import Decimal from 'decimal.js';
+import DecimalJs from 'decimal.js';
 
-/** USD amounts carry 2 decimal places; nothing here should ever round further. */
-Decimal.set({ precision: 28, rounding: Decimal.ROUND_HALF_UP });
+/**
+ * CR L7: a CLONE, not `Decimal.set(...)`. Configuring the imported constructor
+ * mutates decimal.js's process-wide default, so any future unrelated consumer
+ * in this bundle would silently inherit this module's precision and rounding.
+ * Money's settings belong to money.
+ */
+const Decimal = DecimalJs.clone({ precision: 28, rounding: DecimalJs.ROUND_HALF_UP });
+type Decimal = InstanceType<typeof Decimal>;
 
 /** Parse a wire/`number` amount into an exact decimal. */
 function dec(v: number | string | Decimal): Decimal {
@@ -89,6 +95,20 @@ export function percentOfUsd(
     .times(100)
     .toDecimalPlaces(0, Decimal.ROUND_HALF_UP)
     .toNumber();
+}
+
+/**
+ * Fixed-decimal string at `places`, rounded half-up on the DECIMAL value.
+ * `(1.005).toFixed(2)` is "1.00" because it rounds the double; this is "1.01",
+ * which is what the amount was written as and what an invoice would say.
+ */
+export function fixedUsd(v: number | string | Decimal, places: number): string {
+  return dec(v).toFixed(places, Decimal.ROUND_HALF_UP);
+}
+
+/** Exact `a / b` — for magnitude folding (dollars → thousands), not for money splits. */
+export function divideUsd(a: number | string | Decimal, b: number | string | Decimal): number {
+  return dec(a).dividedBy(dec(b)).toNumber();
 }
 
 /** Round to whole cents, half-up — the presentation rule, applied exactly once. */

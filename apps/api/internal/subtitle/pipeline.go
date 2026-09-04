@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/shopspring/decimal"
 	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/ai/prompts"
 	"github.com/vido/api/internal/fsprobe"
@@ -546,7 +547,7 @@ type processScope struct {
 	// the per-run spend stamped at the terminal write (ux3-1-6) must be the
 	// delta from here, not the batch running total — otherwise every run row
 	// would misattribute its siblings' cost.
-	spentUSDAtStart float64
+	spentUSDAtStart decimal.Decimal
 }
 
 type processScopeKey struct{}

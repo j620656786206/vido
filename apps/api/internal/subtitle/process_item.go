@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/shopspring/decimal"
 	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/ai/prompts"
 	"github.com/vido/api/internal/models"
@@ -99,7 +100,7 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 	// A batch-shared Budget arrives with spend already on the meter; the
 	// per-run figure stamped at the terminal write is the delta from here.
 	if b := ai.BudgetFromContext(ctx); b != nil {
-		scope.spentUSDAtStart = b.SpentUSD()
+		scope.spentUSDAtStart = b.Spent()
 	}
 
 	// ── Step 2: run row + media status ──────────────────────────────────────
@@ -601,13 +602,20 @@ func (p *Pipeline) stampRunSpend(ctx context.Context, run *models.SubtitleRun) {
 		return
 	}
 	snap := b.Snapshot()
-	spent := snap.SpentUSD
+	// CR M3: the delta is computed in DECIMAL. Both operands used to be
+	// independently float64-narrowed snapshots of the same running total, and
+	// subtracting them could land a hair below zero — which is exactly why the
+	// clamp below existed. It stays as a semantic guard (a scope that somehow
+	// starts after it ends must not record a negative charge), not as a
+	// float-error mop.
+	delta := snap.Spent
 	if scope := processScopeFrom(ctx); scope != nil {
-		spent -= scope.spentUSDAtStart
-		if spent < 0 {
-			spent = 0
+		delta = delta.Sub(scope.spentUSDAtStart)
+		if delta.IsNegative() {
+			delta = decimal.Zero
 		}
 	}
+	spent := delta.InexactFloat64()
 	budget := snap.BudgetUSD
 	run.SpentUSD = &spent
 	run.BudgetUSD = &budget

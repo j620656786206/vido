@@ -708,6 +708,9 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 		}
 
 		minutes, known := row.runtimeMinutes()
+		// CR L6: computed ONCE — the summary total below reuses this instead of
+		// re-deriving the same decimal for every writable candidate.
+		defaultUSD := estimateUSD(route, minutes, asrRate, defaultModel)
 		c := GenerationCandidate{
 			MediaID:        row.id,
 			MediaType:      row.mediaType,
@@ -715,7 +718,7 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 			Route:          route,
 			RuntimeMinutes: minutes,
 			RuntimeKnown:   known,
-			EstimatedUSD:   estimateUSD(route, minutes, asrRate, defaultModel).InexactFloat64(),
+			EstimatedUSD:   defaultUSD.InexactFloat64(),
 			SeriesID:       row.seriesID,
 			SeriesTitle:    row.seriesTitle,
 			SeasonNumber:   row.seasonNumber,
@@ -727,7 +730,7 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 		c.Writable, c.Blocker, c.BlockerDir = writableOf(filepath.Dir(row.filePath))
 		result.Candidates = append(result.Candidates, c)
 		if c.Writable {
-			summaryTotal = summaryTotal.Add(estimateUSD(route, minutes, asrRate, defaultModel))
+			summaryTotal = summaryTotal.Add(defaultUSD)
 			// An unwritable row is excluded here for the same reason it is
 			// excluded from the headline total (sub-6-1): the pipeline would
 			// refuse it before spending, so quoting it would inflate every
