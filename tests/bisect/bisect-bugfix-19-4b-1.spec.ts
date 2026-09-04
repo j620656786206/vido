@@ -189,11 +189,8 @@ test.describe('@bisect-19-4b-1 max-update-depth probe', () => {
   test('Phase A + B — multi-fixture browse warnings + per-fixture isolation walk', async ({
     page,
   }) => {
-    // Multi-fixture render (~3 s settle for all 123) + 123 per-fixture nav × ~1.5 s
-    // settle each ⇒ ~3-5 min wall clock. 10 min budget covers worst case (slow Vite
-    // recompiles on dev mode after many sequential navigations) without parking CI
-    // for a runaway 20 minutes — escalate manually if the budget is hit, since a
-    // hang likely indicates a probe regression worth surfacing fast.
+    // Opening budget, enough to get through Phase A; Phase B re-derives it from
+    // the fixture count it actually discovered (see below).
     test.setTimeout(10 * 60 * 1000);
 
     // ---------- Phase A: multi-fixture browse mode (also discovers fixture ids) ----------
@@ -246,6 +243,24 @@ test.describe('@bisect-19-4b-1 max-update-depth probe', () => {
     fs.writeFileSync(OUT_PATH, JSON.stringify(partialPayload, null, 2) + '\n');
 
     expect(ids.length, 'gallery rendered at least one fixture section').toBeGreaterThan(0);
+
+    // The walk is one sequential navigation per fixture, so its wall clock is a
+    // FUNCTION of the gallery's size — and the old flat 10-minute budget was
+    // written when there were 123 fixtures. By 160 the gate was timing out on
+    // `main` itself while still reporting a clean signal (`multi=0 ·
+    // offenders=0/160` printed, THEN the timeout fired), which is the worst
+    // possible failure for a regression gate: red for a reason that has nothing
+    // to do with what it guards, every run, until everyone learns to ignore it.
+    // Derive the budget from the count instead, so adding a fixture never again
+    // means "the gate is broken". ~3.6 s/fixture measured in CI; 5 s each plus a
+    // 2-minute fixed head gives ~40% headroom, and the 20-minute ceiling still
+    // sits well inside the job's own 25-minute cap so a genuine hang is still
+    // surfaced fast rather than parking CI.
+    const walkBudgetMs = Math.min(
+      20 * 60 * 1000,
+      Math.max(10 * 60 * 1000, 120_000 + ids.length * 5_000)
+    );
+    test.setTimeout(walkBudgetMs);
 
     // ---------- Phase B: per-fixture walk ----------
     const results: IdResult[] = [];
