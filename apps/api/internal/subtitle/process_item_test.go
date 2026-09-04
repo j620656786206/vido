@@ -27,10 +27,16 @@ type spyRouter struct {
 	err      error
 	calls    int
 	order    *[]string
+	// onRoute (optional) sees the ctx ProcessItem hands the router — the
+	// sub-6-3 extract-wait notifier rides on it.
+	onRoute func(ctx context.Context)
 }
 
-func (r *spyRouter) SelectAndRoute(_ context.Context, _, _ string) (RouteDecision, error) {
+func (r *spyRouter) SelectAndRoute(ctx context.Context, _, _ string) (RouteDecision, error) {
 	r.calls++
+	if r.onRoute != nil {
+		r.onRoute(ctx)
+	}
 	if r.order != nil {
 		*r.order = append(*r.order, "route")
 	}
@@ -1194,4 +1200,44 @@ func TestProcessItem_UnwritableTargetStopsASRBeforeItStarts(t *testing.T) {
 
 	require.ErrorIs(t, err, ErrSubtitleTargetNotWritable)
 	assert.Empty(t, asr.calls, "speech recognition must not start against an unwritable target")
+}
+
+// ─── sub-6-3: extraction queue narration + wait-abort classification ───────
+
+func TestProcessItem_NarratesTheExtractionQueueOnTheProgressStream(t *testing.T) {
+	var messages []string
+	h := newItemHarness(t, translateDecision("Good morning."),
+		WithProgress(func(_ MediaRef, stage PipelineStage, message string) {
+			if stage == StageExtracting {
+				messages = append(messages, message)
+			}
+		}))
+	h.router.onRoute = func(ctx context.Context) {
+		notify := extractWaitNotifierFrom(ctx)
+		require.NotNil(t, notify, "ProcessItem must hand the router a ctx carrying the wait notifier")
+		notify(3)
+	}
+
+	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{
+		"extracting embedded subtitle track",
+		"waiting for the extraction slot (3 ahead)",
+	}, messages)
+}
+
+func TestProcessItem_WaitAbortIsRecordedAsCancelledNotAsAFileFailure(t *testing.T) {
+	h := newItemHarness(t, RouteDecision{})
+	h.router.err = fmt.Errorf("subtitle route: extract x: %w: m.mkv (queued behind 2): %w",
+		ErrSubtitleExtractWaitAborted, context.DeadlineExceeded)
+
+	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+	require.Error(t, err)
+
+	run := h.runs.updated[len(h.runs.updated)-1]
+	assert.Equal(t, models.SubtitleRunFailed, run.Status)
+	assert.True(t, strings.HasPrefix(run.ErrorMessage, CancelledRunPrefix),
+		"a deadline that fired while queued says nothing about the file — it must not count toward parking: %q", run.ErrorMessage)
+	assert.Contains(t, run.ErrorMessage, "SUBTITLE_EXTRACT_WAIT_ABORTED")
 }

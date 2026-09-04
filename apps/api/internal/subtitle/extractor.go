@@ -16,10 +16,21 @@ import (
 	"github.com/vido/api/internal/services"
 )
 
-// defaultExtractTimeout bounds a single ffmpeg demux pass. A 20 GB remux on a
-// DS920+ is minutes of pure I/O, so the ceiling is generous by design; callers
-// that know better pass their own.
+// defaultExtractTimeout is the configured floor of a single ffmpeg demux pass
+// when SUBTITLE_EXTRACT_TIMEOUT_SECONDS is unset (sub-6-3 AC #1). It is a
+// FLOOR, not the bound: the effective deadline is max(configured, file size ×
+// defaultPerGBTimeout), because a 93 GB remux is pure I/O for far longer than
+// ten minutes on a NAS spindle (eval-1 product problem 3 — Goodfellas timed
+// out on a constant that was tuned for 20 GB).
 const defaultExtractTimeout = 10 * time.Minute
+
+// defaultPerGBTimeout is the size-aware allowance: 30 s per GB of media, the
+// rate a DS920+-class NAS demuxes a remux at with headroom (93 GB → ~46 min).
+// Overridable per Extractor (WithPerGBTimeout) for tests and faster hardware.
+const defaultPerGBTimeout = 30 * time.Second
+
+// bytesPerGB is the decimal gigabyte ffmpeg users think in.
+const bytesPerGB = 1_000_000_000
 
 // stderrTailBytes caps how much ffmpeg stderr is carried into the wrapped error
 // message (Rule 13 — context without unbounded log lines).
@@ -131,17 +142,65 @@ func SelectCandidates(tracks []services.SubtitleTrack) []services.SubtitleTrack 
 
 // Extractor demuxes embedded text subtitle tracks into .srt files with ffmpeg.
 // Construction mirrors services.FFprobeService: availability is probed once at
-// startup and the instance is reused (Rule 14). There is deliberately NO
-// internal semaphore — the orchestrator's fixed concurrency of 2 (NFR-P3) is
-// the only bound, and a second one here would silently halve it.
+// startup and the instance is reused (Rule 14).
+//
+// Extraction is SERIALIZED process-wide through an ExtractGate (sub-6-3
+// AC #2). This reverses the original ruling that the orchestrator's fixed
+// concurrency of 2 (NFR-P3) was the only bound and that "a second one here
+// would silently halve it": eval-1 finding 7 measured two concurrent 20 GB
+// demuxes on the owner's NAS fighting over the same spindle, BOTH running past
+// the ceiling and failing, while either alone took 3.5 minutes. Translation is
+// not gated — only the ffmpeg subprocess is — so the two workers still
+// translate concurrently; only their disk reads take turns.
 type Extractor struct {
-	timeout   time.Duration
+	timeout      time.Duration
+	perGBTimeout time.Duration
+	gate         *ExtractGate
+	// fileSize answers "how big is this media file" for the size-aware
+	// deadline; os.Stat in production, injectable so a test can describe a
+	// 93 GB file without creating one.
+	fileSize  func(path string) (int64, error)
 	available bool
 	logger    *slog.Logger
 }
 
+// ExtractorOption configures one optional knob of NewExtractor.
+type ExtractorOption func(*Extractor)
+
+// WithExtractGate shares one process-wide gate across every Extractor
+// (Rule 14 — main.go builds it once). Without it each Extractor serializes
+// only against itself, which is still correct for a single instance.
+func WithExtractGate(g *ExtractGate) ExtractorOption {
+	return func(e *Extractor) {
+		if g != nil {
+			e.gate = g
+		}
+	}
+}
+
+// WithPerGBTimeout overrides the size-aware allowance per gigabyte. Non-positive
+// values are ignored.
+func WithPerGBTimeout(d time.Duration) ExtractorOption {
+	return func(e *Extractor) {
+		if d > 0 {
+			e.perGBTimeout = d
+		}
+	}
+}
+
+// withFileSize overrides the size lookup (tests).
+func withFileSize(fn func(path string) (int64, error)) ExtractorOption {
+	return func(e *Extractor) {
+		if fn != nil {
+			e.fileSize = fn
+		}
+	}
+}
+
 // NewExtractor creates an Extractor, checking for ffmpeg via exec.LookPath.
-func NewExtractor(timeout time.Duration, logger *slog.Logger) *Extractor {
+// timeout is the configured floor (SUBTITLE_EXTRACT_TIMEOUT_SECONDS); <= 0
+// means defaultExtractTimeout.
+func NewExtractor(timeout time.Duration, logger *slog.Logger, opts ...ExtractorOption) *Extractor {
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -150,8 +209,14 @@ func NewExtractor(timeout time.Duration, logger *slog.Logger) *Extractor {
 	}
 
 	e := &Extractor{
-		timeout: timeout,
-		logger:  logger.With("service", "subtitle_extractor"),
+		timeout:      timeout,
+		perGBTimeout: defaultPerGBTimeout,
+		gate:         NewExtractGate(),
+		fileSize:     statFileSize,
+		logger:       logger.With("service", "subtitle_extractor"),
+	}
+	for _, opt := range opts {
+		opt(e)
 	}
 
 	if _, err := exec.LookPath("ffmpeg"); err != nil {
@@ -159,7 +224,7 @@ func NewExtractor(timeout time.Duration, logger *slog.Logger) *Extractor {
 		e.available = false
 	} else {
 		e.available = true
-		e.logger.Info("ffmpeg available", "timeout", timeout)
+		e.logger.Info("ffmpeg available", "timeout", timeout, "per_gb_timeout", e.perGBTimeout)
 	}
 
 	return e
@@ -168,6 +233,32 @@ func NewExtractor(timeout time.Duration, logger *slog.Logger) *Extractor {
 // IsAvailable reports whether ffmpeg is installed and usable.
 func (e *Extractor) IsAvailable() bool {
 	return e.available
+}
+
+func statFileSize(path string) (int64, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return 0, err
+	}
+	return info.Size(), nil
+}
+
+// EffectiveTimeout is the deadline one ffmpeg pass over mediaPath gets
+// (sub-6-3 AC #1): max(configured floor, size × per-GB allowance). A file
+// whose size cannot be read gets the floor — the same bound as before this
+// story, never less. The size is returned alongside for the caller's log
+// line; 0 when unknown.
+func (e *Extractor) EffectiveTimeout(mediaPath string) (time.Duration, float64) {
+	size, err := e.fileSize(mediaPath)
+	if err != nil || size <= 0 {
+		return e.timeout, 0
+	}
+	gb := float64(size) / bytesPerGB
+	sized := time.Duration(gb * float64(e.perGBTimeout))
+	if sized > e.timeout {
+		return sized, gb
+	}
+	return e.timeout, gb
 }
 
 // Extract demuxes every requested stream index in ONE ffmpeg invocation (FR3 —
@@ -186,10 +277,39 @@ func (e *Extractor) Extract(ctx context.Context, mediaPath, tmpDir string, strea
 		return nil, fmt.Errorf("subtitle extract: no stream indexes supplied for %s", filepath.Base(mediaPath))
 	}
 
-	extractCtx, cancel := context.WithTimeout(ctx, e.timeout)
+	timeout, sizeGB := e.EffectiveTimeout(mediaPath)
+	base := filepath.Base(mediaPath)
+
+	// The gate wraps ONLY the ffmpeg subprocess — not the ffprobe that
+	// preceded this call (a header read) and not the deadline below, which
+	// must measure the demux, not the queue. The item flow's ctx may carry a
+	// notifier so the user sees「等待抽軌（前方 N 件）」rather than a stalled
+	// "extracting" bubble.
+	// A ctx that has ALREADY ended is a plain cancellation (the sub-1-4 CR M2
+	// shape), not a wait that was given up on — the gate is only asked once
+	// there is something to wait for.
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return nil, extractFailure(fmt.Sprintf("ffmpeg cancelled on %s", base), ctxErr, "")
+	}
+	release, err := e.gate.Acquire(ctx, extractWaitNotifierFrom(ctx))
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s (queued behind %d): %w",
+			ErrSubtitleExtractWaitAborted, base, e.gate.Waiting()+1, err)
+	}
+	defer release()
+
+	extractCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	args := buildExtractArgs(mediaPath, tmpDir, streamIndexes)
+
+	started := time.Now()
+	e.logger.Info("embedded subtitle extraction started",
+		"media", base,
+		"file_size_gb", fmt.Sprintf("%.1f", sizeGB),
+		"timeout_seconds", int(timeout.Seconds()),
+		"stream_indexes", streamIndexes,
+	)
 
 	//nolint:gosec // mediaPath comes from a trusted DB record; tmpDir is caller-owned
 	cmd := exec.CommandContext(extractCtx, "ffmpeg", args...)
@@ -201,16 +321,27 @@ func (e *Extractor) Extract(ctx context.Context, mediaPath, tmpDir string, strea
 		// (shutdown, user abort) — only a real deadline is a timeout.
 		if ctxErr := extractCtx.Err(); ctxErr != nil {
 			if errors.Is(ctxErr, context.DeadlineExceeded) {
+				// The deadline can also be the PARENT's (the free lane's
+				// per-item bound): report ours only when it was the one
+				// that fired, so the message never blames a knob that did
+				// not apply.
+				if ctx.Err() == nil {
+					return nil, extractFailure(
+						fmt.Sprintf("ffmpeg timed out after %s on %s (file %.1f GB, timeout %d s — raise SUBTITLE_EXTRACT_TIMEOUT_SECONDS for slow disks)",
+							timeout, base, sizeGB, int(timeout.Seconds())),
+						ctxErr, stderr.String())
+				}
 				return nil, extractFailure(
-					fmt.Sprintf("ffmpeg timed out after %s on %s", e.timeout, filepath.Base(mediaPath)),
+					fmt.Sprintf("ffmpeg stopped by the caller's deadline after %s on %s (file %.1f GB)",
+						time.Since(started).Round(time.Second), base, sizeGB),
 					ctxErr, stderr.String())
 			}
 			return nil, extractFailure(
-				fmt.Sprintf("ffmpeg cancelled on %s", filepath.Base(mediaPath)),
+				fmt.Sprintf("ffmpeg cancelled on %s", base),
 				ctxErr, stderr.String())
 		}
 		return nil, extractFailure(
-			fmt.Sprintf("ffmpeg exec on %s", filepath.Base(mediaPath)),
+			fmt.Sprintf("ffmpeg exec on %s", base),
 			err, stderr.String())
 	}
 
@@ -225,10 +356,13 @@ func (e *Extractor) Extract(ctx context.Context, mediaPath, tmpDir string, strea
 		outputs[idx] = out
 	}
 
-	e.logger.Debug("embedded subtitle tracks extracted",
-		"media", filepath.Base(mediaPath),
+	e.logger.Info("embedded subtitle tracks extracted",
+		"media", base,
 		"track_count", len(outputs),
 		"stream_indexes", streamIndexes,
+		"file_size_gb", fmt.Sprintf("%.1f", sizeGB),
+		"timeout_seconds", int(timeout.Seconds()),
+		"elapsed", time.Since(started).Round(time.Millisecond).String(),
 	)
 
 	return outputs, nil

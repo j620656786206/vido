@@ -50,11 +50,12 @@ func TestSSEProgressHook_TranslatesStageMessagesToZhTW(t *testing.T) {
 	}{
 		{StageProbing, "probing embedded subtitle tracks", "偵測內嵌字幕軌…"},
 		{StageExtracting, "extracting embedded subtitle track", "抽取內嵌字幕中…"},
+		{StageExtracting, "waiting for the extraction slot (2 ahead)", "等待抽軌（前方 2 件）"},
 		{StagePlacing, "placing subtitle file", "寫入字幕檔…"},
 		{StageComplete, "subtitle generated", "字幕已生成"},
 	}
 	for _, tc := range cases {
-		t.Run(string(tc.stage), func(t *testing.T) {
+		t.Run(string(tc.stage)+"/"+tc.raw, func(t *testing.T) {
 			hub := &fakeBroadcaster{}
 			NewSSEProgressHook(hub)(MediaRef{ID: "m1", MediaType: "movie"}, tc.stage, tc.raw)
 			assert.Equal(t, tc.want, hub.last(t)["message"],

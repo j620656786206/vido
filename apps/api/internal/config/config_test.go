@@ -1020,3 +1020,37 @@ func TestLoad_LogRetentionDays_DisabledByZero(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 0, cfg.LogRetentionDays)
 }
+
+// ─── sub-6-3 AC #1 / #4d: SUBTITLE_EXTRACT_TIMEOUT_SECONDS ──────────────────
+
+func TestLoad_SubtitleExtractTimeoutSeconds(t *testing.T) {
+	t.Run("default", func(t *testing.T) {
+		os.Clearenv()
+		cfg, err := Load()
+		require.NoError(t, err)
+		assert.Equal(t, 600, cfg.SubtitleExtractTimeoutSeconds)
+		assert.Equal(t, SourceDefault, cfg.Sources["SUBTITLE_EXTRACT_TIMEOUT_SECONDS"])
+	})
+	t.Run("override", func(t *testing.T) {
+		os.Clearenv()
+		t.Setenv("SUBTITLE_EXTRACT_TIMEOUT_SECONDS", "1800")
+		cfg, err := Load()
+		require.NoError(t, err)
+		assert.Equal(t, 1800, cfg.SubtitleExtractTimeoutSeconds)
+		assert.Equal(t, SourceEnvVar, cfg.Sources["SUBTITLE_EXTRACT_TIMEOUT_SECONDS"])
+	})
+	t.Run("non-positive falls back to the default", func(t *testing.T) {
+		os.Clearenv()
+		t.Setenv("SUBTITLE_EXTRACT_TIMEOUT_SECONDS", "0")
+		cfg, err := Load()
+		require.NoError(t, err)
+		assert.Equal(t, 600, cfg.SubtitleExtractTimeoutSeconds, "a zero bound would fail every extraction on entry")
+	})
+	t.Run("garbage falls back to the default", func(t *testing.T) {
+		os.Clearenv()
+		t.Setenv("SUBTITLE_EXTRACT_TIMEOUT_SECONDS", "ten minutes")
+		cfg, err := Load()
+		require.NoError(t, err)
+		assert.Equal(t, 600, cfg.SubtitleExtractTimeoutSeconds)
+	})
+}

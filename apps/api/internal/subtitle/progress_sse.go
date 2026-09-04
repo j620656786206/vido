@@ -16,6 +16,11 @@ import (
 // into a static "翻譯中…" with nothing failing anywhere.
 const translateChunkProgressFormat = "translating chunk %d/%d"
 
+// extractWaitProgressFormat is the `extracting` message while the item is
+// queued behind the process-wide ExtractGate (sub-6-3 AC #2): how many
+// extractions are ahead of it, holder included.
+const extractWaitProgressFormat = "waiting for the extraction slot (%d ahead)"
+
 // ProgressBroadcaster is the narrow port over *sse.Hub — one method, so the
 // bridge is testable without standing up a hub goroutine.
 type ProgressBroadcaster interface {
@@ -65,6 +70,10 @@ func zhTWStageMessage(stage PipelineStage, message string) string {
 	case StageProbing:
 		return "偵測內嵌字幕軌…"
 	case StageExtracting:
+		var ahead int
+		if n, err := fmt.Sscanf(message, extractWaitProgressFormat, &ahead); n == 1 && err == nil {
+			return fmt.Sprintf("等待抽軌（前方 %d 件）", ahead)
+		}
 		return "抽取內嵌字幕中…"
 	case StageTranslating:
 		var chunk, total int

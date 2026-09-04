@@ -1290,3 +1290,37 @@ func TestAutoExclusion_CancelledRowsStayExemptAfterReplacement(t *testing.T) {
 
 	assert.Equal(t, []string{"m1"}, h.item.refIDs())
 }
+
+// ─── sub-6-3: the item deadline covers the extractor's size-aware bound ────
+
+func TestAutoGenerator_ItemDeadlineFollowsTheExtractorBound(t *testing.T) {
+	bounds := map[string]time.Duration{
+		"/small.mkv":      10 * time.Minute, // the configured floor
+		"/goodfellas.mkv": 46 * time.Minute, // 93 GB × 30 s
+	}
+	h := newAutoHarness(t, WithAutoExtractTimeout(func(path string) (time.Duration, float64) {
+		return bounds[path], 0
+	}))
+
+	assert.Equal(t, AutoGenerationItemTimeout, h.gen.itemDeadlineFor("/small.mkv"),
+		"a 10-minute extraction keeps the 15-minute floor, exactly as before")
+	assert.Equal(t, 46*time.Minute+autoItemSlack, h.gen.itemDeadlineFor("/goodfellas.mkv"),
+		"a 46-minute extraction must not be killed by a 15-minute item deadline")
+	assert.Equal(t, AutoGenerationItemTimeout, h.gen.itemDeadlineFor(""),
+		"no path → the floor")
+
+	bare := newAutoHarness(t)
+	assert.Equal(t, AutoGenerationItemTimeout, bare.gen.itemDeadlineFor("/goodfellas.mkv"),
+		"without the extractor port the floor stands alone")
+}
+
+func TestAutoGenerator_CollectCarriesTheFilePath(t *testing.T) {
+	h := newAutoHarness(t)
+	h.movies.movies = []models.Movie{autoMovieIn("m1", "lib-1", models.SubtitleStatusNotSearched)}
+
+	items, err := h.gen.collect(context.Background(), autoEnabledSet("lib-1"))
+	require.NoError(t, err)
+	require.Len(t, items, 1)
+	assert.Equal(t, MediaRef{ID: "m1", MediaType: models.SubtitleRunMediaMovie}, items[0].ref)
+	assert.Equal(t, "/media/m1.mkv", items[0].path, "the size-aware deadline needs the path the enumeration already had")
+}

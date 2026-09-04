@@ -433,6 +433,12 @@ func main() {
 
 	// Initialize FFprobe service for video technical info extraction (Story 9c-3)
 	ffprobeService := services.NewFFprobeService(3, 10*time.Second, slog.Default())
+	// sub-6-3: ONE extraction gate for the whole process (Rule 14) — every
+	// Extractor below shares it, so two workers never demux the same disk at
+	// once — and the configured extraction floor; the per-file bound grows
+	// with size inside the Extractor.
+	subtitleExtractGate := subtitle.NewExtractGate()
+	subtitleExtractTimeout := time.Duration(cfg.SubtitleExtractTimeoutSeconds) * time.Second
 	slog.Info("FFprobe service initialized", "available", ffprobeService.IsAvailable())
 
 	// Initialize enrichment service for post-scan metadata enrichment
@@ -671,9 +677,11 @@ func main() {
 	// RUNTIME entry point: the endpoint's 409, the EnqueueMissing scan sweep, and
 	// the per-batch seam below.
 	if cfg.SubtitlePipelineEnabled() {
+		subtitleExtractor := subtitle.NewExtractor(subtitleExtractTimeout, slog.Default(),
+			subtitle.WithExtractGate(subtitleExtractGate))
 		subtitleRouter := subtitle.NewRouter(
 			ffprobeService,
-			subtitle.NewExtractor(0, slog.Default()),
+			subtitleExtractor,
 			slog.Default(),
 		)
 		// sub-3-1: the ASR fallback port + the sweep's availability gate share
@@ -748,6 +756,10 @@ func main() {
 			// consent, so the per-run budget moves down the list instead of
 			// re-extracting the same paid items on every scan.
 			subtitle.WithAutoDeferredRuns(repos.SubtitleRuns),
+			// sub-6-3: the free lane's per-item deadline follows the
+			// extractor's size-aware bound, or a 93 GB file would get a
+			// 46-minute ffmpeg deadline under a 15-minute item deadline.
+			subtitle.WithAutoExtractTimeout(subtitleExtractor.EffectiveTimeout),
 		)
 		scannerService.SetOnScanComplete(
 			subtitle.ComposeScanCallback(postScanEnrichment, autoGenerator.ScanCallback()),
@@ -762,6 +774,7 @@ func main() {
 			// 9R-10b: free lane only, per-library opt-in, default OFF.
 			"scan_auto_free_generation", true,
 			"scan_auto_item_timeout", subtitle.AutoGenerationItemTimeout,
+			"extract_timeout_floor", subtitleExtractTimeout,
 			"auto_max_per_run", subtitle.AutoGenerationMaxPerRun)
 	} else {
 		// ONE line, at wiring time — not one per scanned item (AC #5).
@@ -924,7 +937,9 @@ func main() {
 		// lookup per series per sweep, nil-safe fail-soft inside the service.
 		repos.Series,
 		routePredictorAdapter{router: subtitle.NewRouter(
-			ffprobeService, subtitle.NewExtractor(0, slog.Default()), slog.Default())},
+			ffprobeService,
+			subtitle.NewExtractor(subtitleExtractTimeout, slog.Default(), subtitle.WithExtractGate(subtitleExtractGate)),
+			slog.Default())},
 		ai.IsSelfHostedASRBaseURL(cfg.ASRBaseURL),
 		// sub-5-1 AC #5: the F15 prefill source — the envelope carries the
 		// operator's real default instead of a frontend constant.

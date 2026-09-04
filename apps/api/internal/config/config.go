@@ -78,6 +78,10 @@ type Config struct {
 	// "pipeline" (the M1 extract-and-translate generation pipeline). Read it
 	// through SubtitlePipelineEnabled(), never by comparing the string.
 	SubtitlePipelineMode string
+	// SubtitleExtractTimeoutSeconds is the configured FLOOR of one ffmpeg
+	// subtitle-extraction pass (sub-6-3); the effective bound grows with file
+	// size. Env: SUBTITLE_EXTRACT_TIMEOUT_SECONDS, default 600.
+	SubtitleExtractTimeoutSeconds int
 
 	// AI throttle + budget (Story 9R-11). AIMaxConcurrent/AIRatePerSec govern
 	// the shared Governor; AIRunBudgetUSD is the per-run cost ceiling
@@ -180,6 +184,14 @@ func Load() (*Config, error) {
 	cfg.FallbackDelayMs = cfg.loadInt("FALLBACK_DELAY_MS", 100)
 	cfg.CircuitBreakerFailureThreshold = cfg.loadInt("CIRCUIT_BREAKER_FAILURE_THRESHOLD", 5)
 	cfg.CircuitBreakerTimeoutSeconds = cfg.loadInt("CIRCUIT_BREAKER_TIMEOUT_SECONDS", 30)
+
+	// Embedded-subtitle extraction deadline floor in seconds (sub-6-3 AC #1).
+	// The effective per-file bound is max(this, 30 s × file size in GB) —
+	// see subtitle.Extractor.EffectiveTimeout. Non-positive = the 600 s default.
+	cfg.SubtitleExtractTimeoutSeconds = cfg.loadInt("SUBTITLE_EXTRACT_TIMEOUT_SECONDS", 600)
+	if cfg.SubtitleExtractTimeoutSeconds <= 0 {
+		cfg.SubtitleExtractTimeoutSeconds = 600
+	}
 
 	// Subtitle generation pipeline flag (D5, sub-1-6). Validated here so an
 	// unknown value fails the process at startup rather than silently keeping
