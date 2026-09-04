@@ -1,6 +1,6 @@
 # Story 6.8b: 確認框顯示模型選擇 + 價錢 + 時間（前端）
 
-Status: review
+Status: done
 
 **Depends on:** sub-6-8a (backend API must be ready) — `GET /settings/models`、`estimates_by_model`、`estimated_minutes_by_model`、batch `model_id`.
 
@@ -136,4 +136,6 @@ Claude Opus 5 (1M context)
 | 2026-09-04 | Task 2 — `subtitleService.getModels()`；`TranslationModelInfo`／`ModelEstimate` 型別；`GenerationBatchStartParams.modelId`；`useTranslationModels` hook（Rule 5，key `['settings','models']`）。 |
 | 2026-09-04 | Task 3 — `consentSelection` 加 `candidateUsd`／`computeTotals(prices)`／`modelChoices()`（估時依已勾片長比例換算）；新 `ModelPicker`；`ConfirmGenerationDialog` 掛入並改為 body 捲動；`CandidateListPanel` 逐列改讀該模型價；`GenerationConsentView` 持有 modelId 並串到三處金額與 batch payload。 |
 | 2026-09-04 | Task 1 — `.pen` F16/F19 桌面加「選擇翻譯模型」區塊；新增 f16-m-v2（x45wBO）／f19-m-v2（IMQO6）兩個 390x844 bottom sheet；F19 三處金額改成 Haiku 的 $9.72／49 部。MCP 唯讀 review：四個畫面文案逐字符合、僅背景 `sec-活動記錄` 有既有 partially clipped、桌面對話框 480x579 已垂直置中、手機 sheet 583／604 皆貼齊 844 底部。只 stage 真的變動的 4 張 PNG（其餘 169 張 re-render 噪音已 checkout）。 |
+| 2026-09-04 | CR fixes（Sonnet 5 adversarial 審 Opus 5，6 findings，全部在同一分支修）— H1 報價與送出的 model id 讀同一個 `effectiveModelId`（清單中途少掉所選模型時，畫面顯示 Haiku 價卻送空 id → 照伺服器預設計費；同因也讓 radiogroup 零選中，M3 一併解）；M2 gallery fixture 合計改為由分項導出（`f16-model-haiku` 的 $1.63+$0.18 被寫成合計 $1.70，且因 `maxDiffPixelRatio: 0.001`＝1,024px 容忍值而永遠不會被 CI 抓到，基線已強制重產）；M4 `useTranslationModels` 的 `isError` 現在顯示「無法載入模型清單，這批會用預設模型計費」，與「沒設金鑰」的空清單區分；L6 `bestGrade` 改用明確等級順序表（原本靠 `'A' < 'B'` 碰巧成立）；L8 品質出處進 `aria-label`（原本只有 `title`）；L7 估時註解改述為「換算、非精確」（後端已 round 過一次）。不修：無法寫入的列在非預設模型下顯示預設價（永不收費；要修只能憑空發明價或動既有基線）。 |
+| 2026-09-04 | CI 自癒 — `tests/bisect/bisect-bugfix-19-4b-1.spec.ts` 的 10 分鐘死預算改為依 fixture 數推算（`120s + N×5s`，夾 10–20 分）。**既有破口**：main 在 02:18/02:50/04:07/05:36 已連續四次同樣失敗（`offenders=0/160` 之後 timeout），本 PR 順手修掉。 |
 | 2026-09-04 | Task 4 — 12 個新 spec（selector／picker／容器）＋ 三個 gallery fixture 與 `-darwin` 基線；sub-6-6 FE 半邊（`已驗證：{model}`）。 |
