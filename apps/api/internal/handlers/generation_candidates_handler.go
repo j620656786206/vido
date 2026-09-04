@@ -85,6 +85,7 @@ func (h *GenerationCandidatesHandler) CancelAnalysis(c *gin.Context) {
 
 // ListCandidates godoc
 // @Summary      Get subtitle-generation candidates and their cost estimates
+// @Description Each candidate carries `writable` (sub-6-1: a real write probe of its folder) plus, when false, `blocker`=SUBTITLE_TARGET_NOT_WRITABLE and `blocker_dir`; the summary carries `unwritable_count` and excludes those estimates from `estimated_total_usd`.
 // @Description  Returns the current state of the cost analysis: its status, how far it has got, and — once ready — every candidate with its route (extract vs paid speech recognition) and USD estimate, plus the aggregate. Reading this never triggers work; POST /analyze does.
 // @Tags         subtitles
 // @Produce      json

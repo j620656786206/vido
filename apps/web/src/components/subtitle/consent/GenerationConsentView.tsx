@@ -36,8 +36,10 @@ import {
   computeTotals,
   defaultSelection,
   groupOrder,
+  isWritable,
   listableCandidates,
   parseBudgetInput,
+  selectableIds,
   type ConsentRouteFilter,
 } from './consentSelection';
 
@@ -127,7 +129,9 @@ export function GenerationConsentView({
         return;
       }
       const preselected = new Set(
-        (preselectedIds ?? []).filter((id) => listable.some((c) => c.mediaId === id))
+        (preselectedIds ?? []).filter((id) =>
+          listable.some((c) => c.mediaId === id && isWritable(c))
+        )
       );
       setSelectedIds(preselected.size > 0 ? preselected : defaultSelection(listable));
       setPhase('list');
@@ -253,32 +257,45 @@ export function GenerationConsentView({
     [candidates, selectedIds, budgetUsd]
   );
 
-  const handleToggle = useCallback((mediaId: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(mediaId)) next.delete(mediaId);
-      else next.add(mediaId);
-      return next;
-    });
-  }, []);
+  // sub-6-1: ids the bulk actions may touch — listable AND writable. A row the
+  // backend's write probe refused is never selectable (its checkbox is
+  // disabled in the panel), so 全選 / 整劇 must not sweep it in either.
+  const writableIdSet = useMemo(() => new Set(selectableIds(candidates)), [candidates]);
+
+  const handleToggle = useCallback(
+    (mediaId: string) => {
+      if (!writableIdSet.has(mediaId)) return; // sub-6-1: never selectable, whatever the DOM says
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(mediaId)) next.delete(mediaId);
+        else next.add(mediaId);
+        return next;
+      });
+    },
+    [writableIdSet]
+  );
 
   /** 整劇/整季 toggle (sub-5-3): set the group's ids to one target state. */
-  const handleToggleGroup = useCallback((mediaIds: string[], next: boolean) => {
-    setSelectedIds((prev) => {
-      const nextSet = new Set(prev);
-      for (const id of mediaIds) {
-        if (next) nextSet.add(id);
-        else nextSet.delete(id);
-      }
-      return nextSet;
-    });
-  }, []);
+  const handleToggleGroup = useCallback(
+    (mediaIds: string[], next: boolean) => {
+      mediaIds = mediaIds.filter((id) => writableIdSet.has(id));
+      setSelectedIds((prev) => {
+        const nextSet = new Set(prev);
+        for (const id of mediaIds) {
+          if (next) nextSet.add(id);
+          else nextSet.delete(id);
+        }
+        return nextSet;
+      });
+    },
+    [writableIdSet]
+  );
 
   const handleToggleAll = useCallback(() => {
     setSelectedIds((prev) =>
-      prev.size === candidates.length ? new Set() : new Set(candidates.map((c) => c.mediaId))
+      prev.size === writableIdSet.size ? new Set() : new Set(writableIdSet)
     );
-  }, [candidates]);
+  }, [writableIdSet]);
 
   const handleSelectAllExtract = useCallback(() => {
     setSelectedIds(defaultSelection(candidates));
@@ -307,7 +324,9 @@ export function GenerationConsentView({
     // success unmounts the whole consent view (status flips to running);
     // failure closes it via the startError effect below, surfacing the error
     // in the list panel.
-    const ids = candidates.filter((c) => selectedIds.has(c.mediaId)).map((c) => c.mediaId);
+    const ids = candidates
+      .filter((c) => selectedIds.has(c.mediaId) && isWritable(c))
+      .map((c) => c.mediaId);
     onStartBatch(ids, budgetUsd);
   }, [budgetUsd, candidates, selectedIds, onStartBatch]);
 

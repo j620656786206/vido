@@ -9,6 +9,7 @@ import (
 
 	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/ai/prompts"
+	"github.com/vido/api/internal/fsprobe"
 	"github.com/vido/api/internal/models"
 )
 
@@ -275,6 +276,12 @@ type Pipeline struct {
 	// model. WithModelID wraps a constant for tests and legacy wiring.
 	modelID func() string
 
+	// probeWritable is the sub-6-1 pre-flight over the media file's directory,
+	// run after routing (routing is $0: ffprobe + a local extract) and before
+	// any paid call or sidecar write. Defaults to fsprobe.ProbeWritableContext;
+	// tests inject a failing one.
+	probeWritable func(ctx context.Context, dir string) error
+
 	// runBudgetUSD is the per-item AI cost ceiling (sub-5-1 AC #3;
 	// AI_RUN_BUDGET_USD, 0 = unlimited) applied when ProcessItem's ctx carries
 	// no Budget already. Wiring-supplied like modelID.
@@ -371,6 +378,13 @@ func (p *Pipeline) currentModelID() string {
 	return ai.DefaultClaudeModel
 }
 
+// WithWritableProbe replaces the sub-6-1 target-directory probe. Production
+// keeps the default (fsprobe.ProbeWritable); tests inject a failing one to
+// prove the item flow spends nothing after a refusal.
+func WithWritableProbe(fn func(ctx context.Context, dir string) error) PipelineOption {
+	return func(p *Pipeline) { p.probeWritable = fn }
+}
+
 // WithRunBudgetUSD sets the per-item AI cost ceiling ProcessItem attaches when
 // its ctx carries no Budget (sub-5-1 AC #3, the WithModelID wiring precedent).
 // Without it the FR12/pool path's LLM translation spend was never metered and
@@ -411,10 +425,11 @@ func NewPipeline(translator ChunkTranslator, converter VariantConverter, logger 
 		logger = slog.Default()
 	}
 	p := &Pipeline{
-		translator: translator,
-		converter:  converter,
-		logger:     logger.With("component", "subtitle_pipeline"),
-		now:        time.Now,
+		translator:    translator,
+		probeWritable: fsprobe.ProbeWritableContext,
+		converter:     converter,
+		logger:        logger.With("component", "subtitle_pipeline"),
+		now:           time.Now,
 	}
 	for _, opt := range opts {
 		opt(p)

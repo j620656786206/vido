@@ -159,6 +159,33 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 		}
 	}
 
+	// ── Step 3a: pre-flight — can the placer write here? (sub-6-1 AC #1) ────
+	// A real write probe, not stat: on the NAS shares this ships to, mode bits
+	// say "writable" while the container's gid is not in the group, and a
+	// read-only mount reads the same. It sits AFTER routing, for the same
+	// reason the FreeOnly brake does — routing is free, and only routing knows
+	// whether anything will be written at all: RouteSkip writes nothing and
+	// must keep reaching its terminal `skipped` verdict on a read-only share
+	// (CR H2). Every other verdict ends in a sidecar, so a refusal here stops
+	// the paid legs (LLM, ASR) before their first call. eval-1 paid for two
+	// full translations this way.
+	//
+	// Repeat cost is bounded by the callers: the paid paths are user-triggered
+	// (sub-4-1 consent / FR12), and the free auto lane parks an item after
+	// autoFailureAttemptLimit failed runs (auto_generation.go), so a
+	// read-only library cannot append a row per scan forever (CR H1).
+	if decision.Kind != RouteSkip {
+		if err := p.probeWritable(ctx, filepath.Dir(item.FilePath)); err != nil {
+			out, ferr := p.failItem(ctx, ref, run, "pre-flight writable",
+				fmt.Errorf("%w: %v", ErrSubtitleTargetNotWritable, err))
+			// failItem parks the row at not_searched (its retry convention). A
+			// permission problem is not a subtitle-search outcome, so put the
+			// row back EXACTLY where Load found it — the FreeOnly brake posture.
+			p.restoreMediaStatus(ctx, ref, item)
+			return out, ferr
+		}
+	}
+
 	switch decision.Kind {
 	case RouteNoTextSource:
 		// sub-3-1: no longer an unconditional recordSkip — the ASR fallback
@@ -740,6 +767,23 @@ func (p *Pipeline) failItem(ctx context.Context, ref MediaRef, run *models.Subti
 	p.emitProgress(ref, StageFailed, err.Error())
 	p.logger.Error("subtitle pipeline failed", "media_id", ref.ID, "media_type", ref.MediaType, "stage", stage, "error", err)
 	return nil, err
+}
+
+// restoreMediaStatus puts the media row back where Load found it (status,
+// path, language) after a pre-flight refusal — the row was never a subtitle
+// search, so neither `failed`-style `not_searched` nor `not_found` would be
+// truthful. Mirrors deferPaidItem's restore. Cleanup-safe across cancellation.
+func (p *Pipeline) restoreMediaStatus(ctx context.Context, ref MediaRef, item *MediaItem) {
+	// Same fallback as deferPaidItem: an unknown/empty captured status leaves
+	// failItem's `not_searched` in place rather than writing a value the
+	// enum would reject (CR L9).
+	if item == nil || !item.SubtitleStatus.IsValid() {
+		return
+	}
+	if err := p.setMediaStatus(context.WithoutCancel(ctx), ref, item.SubtitleStatus, item.SubtitlePath, item.SubtitleLanguage); err != nil {
+		p.logger.Error("failed to restore media subtitle status after pre-flight refusal",
+			"media_id", ref.ID, "media_type", ref.MediaType, "error", err)
+	}
 }
 
 // maxErrorMessage bounds what lands in the error_message column: a wrapped

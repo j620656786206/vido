@@ -7,6 +7,8 @@ import {
   parseBudgetInput,
   groupCandidates,
   groupOrder,
+  isWritable,
+  selectableIds,
 } from './consentSelection';
 import type { GenerationCandidate } from '../../../services/subtitleService';
 
@@ -245,5 +247,41 @@ describe('groupOrder — 三序同源紅線 (display = submission = feasible wal
     const ordered = groupOrder(input);
     expect(ordered).toHaveLength(input.length);
     expect(new Set(ordered.map((c) => c.mediaId))).toEqual(new Set(input.map((c) => c.mediaId)));
+  });
+});
+
+describe('sub-6-1 writability', () => {
+  it('defaultSelection skips an extract row the backend marked unwritable', () => {
+    const list = [
+      c(A, 'extract', 0.02),
+      c(B, 'extract', 0.02, { writable: false, blocker: '唯讀' }),
+    ];
+    expect([...defaultSelection(list)]).toEqual([A]);
+  });
+
+  it('isWritable treats a missing field (old server) as writable', () => {
+    expect(isWritable(c(A, 'extract', 0.02))).toBe(true);
+    expect(isWritable(c(A, 'extract', 0.02, { writable: true }))).toBe(true);
+    expect(isWritable(c(A, 'extract', 0.02, { writable: false }))).toBe(false);
+  });
+
+  it('selectableIds excludes unwritable rows of every route', () => {
+    const list = [
+      c(A, 'extract', 0.02),
+      c(B, 'asr', 0.3, { writable: false }),
+      c(C, 'asr', 0.3),
+      c(D, 'extract', 0.02, { writable: false }),
+    ];
+    expect(selectableIds(list)).toEqual([A, C]);
+  });
+});
+
+describe('computeTotals selectable/unwritable counts (sub-6-1 CR M4)', () => {
+  it('counts writable rows as selectable and the rest as unwritable', () => {
+    const list = [c(A, 'extract', 0.02), c(B, 'asr', 0.3, { writable: false }), c(C, 'asr', 0.3)];
+    const t = computeTotals(list, new Set([A]), 5);
+    expect(t.candidateCount).toBe(3);
+    expect(t.selectableCount).toBe(2);
+    expect(t.unwritableCount).toBe(1);
   });
 });

@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"path/filepath"
 	"sort"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/vido/api/internal/ai"
+	"github.com/vido/api/internal/fsprobe"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/sse"
 )
@@ -101,6 +103,20 @@ type GenerationCandidate struct {
 	RuntimeKnown   bool    `json:"runtime_known"`
 	EstimatedUSD   float64 `json:"estimated_usd"`
 
+	// Writable / Blocker (sub-6-1 AC #4) — additive on the sub-4-1 AC #7
+	// [@contract-v1] envelope (existing keys unchanged — no bump, the
+	// default_budget_usd precedent). Writable is false when a real write probe
+	// of the media file's directory failed; Blocker carries the reason. The FE
+	// must not pre-select such a row and must keep it out of the total — the
+	// pipeline would refuse it before spending anyway (ProcessItem pre-flight),
+	// but the user should see that BEFORE consenting, not after.
+	Writable bool `json:"writable"`
+	// Blocker is the Rule 7 CODE (SUBTITLE_TARGET_NOT_WRITABLE) and BlockerDir
+	// the folder's base name — the zh-TW sentence is composed by the client,
+	// and an absolute NAS path never leaves the server (CR M6).
+	Blocker    string `json:"blocker,omitempty"`
+	BlockerDir string `json:"blocker_dir,omitempty"`
+
 	// Series identity (sub-5-3 AC #1) — episodes only; movies leave all four
 	// at their zero value. Additive on the sub-4-1 AC #7 [@contract-v1]
 	// envelope (existing keys unchanged — no bump, the default_budget_usd
@@ -129,6 +145,9 @@ type GenerationCandidateSummary struct {
 	// endpoint is self-hosted, so it can say so instead of showing a
 	// suspicious $0.00.
 	SelfHostedASR bool `json:"self_hosted_asr"`
+	// UnwritableCount (sub-6-1 AC #4, additive) — candidates listed with
+	// writable=false. Their estimate is NOT in EstimatedTotalUSD.
+	UnwritableCount int `json:"unwritable_count"`
 }
 
 // GenerationCandidateResult is the whole preview payload.
@@ -193,9 +212,14 @@ type GenerationCandidateService struct {
 	episodes  CandidateEpisodeFinder
 	series    CandidateSeriesTitleResolver
 	predictor RoutePredictor
-	sseHub    *sse.Hub
-	logger    *slog.Logger
-	now       func() time.Time
+
+	// probeWritable is the sub-6-1 target-directory probe (fsprobe.ProbeWritable
+	// by default). Per-analysis results are memoised by directory, so a
+	// 24-episode season costs one probe, not 24.
+	probeWritable func(ctx context.Context, dir string) error
+	sseHub        *sse.Hub
+	logger        *slog.Logger
+	now           func() time.Time
 
 	// selfHostedASR mirrors "ASR_BASE_URL points somewhere other than the paid
 	// API". Wired from config; see ai.EstimatedASRPerMinuteUSD.
@@ -253,9 +277,18 @@ func NewGenerationCandidateService(
 		defaultBudgetUSD: defaultBudgetUSD,
 		now:              time.Now,
 		fileIdentity:     osFileIdentity,
+		probeWritable:    defaultWritableProbe,
 		status:           AnalysisIdle,
 	}
 }
+
+// writableProbeTimeout bounds one directory probe during a consent sweep.
+const writableProbeTimeout = 3 * time.Second
+
+// defaultWritableProbe is what NewGenerationCandidateService installs; the
+// package tests replace it with a permissive probe in TestMain because their
+// fixture paths do not exist on disk.
+var defaultWritableProbe = fsprobe.ProbeWritableContext
 
 // SetSSEHub wires live progress. Nil-safe: without a hub the sweep still runs
 // and the snapshot still updates, callers just have to poll for it.
@@ -443,6 +476,31 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 	cached := s.readRouteCache(ctx, plans)
 	var cacheHits, probes int
 
+	// sub-6-1: one probe per distinct directory per sweep, each bounded by
+	// writableProbeTimeout so a hung mount cannot stall the whole preview
+	// (CR M7). The value is the blocker CODE; the FE composes the sentence.
+	writableCache := make(map[string]string)
+	writableOf := func(dir string) (writable bool, code, base string) {
+		if s.probeWritable == nil {
+			return true, "", ""
+		}
+		code, seen := writableCache[dir]
+		if !seen {
+			probeCtx, cancel := context.WithTimeout(ctx, writableProbeTimeout)
+			err := s.probeWritable(probeCtx, dir)
+			cancel()
+			if err != nil {
+				code = "SUBTITLE_TARGET_NOT_WRITABLE"
+				s.logger.Warn("consent list: target directory is not writable",
+					"dir", dir, "error", err)
+			}
+			writableCache[dir] = code
+		}
+		if code == "" {
+			return true, "", ""
+		}
+		return false, code, filepath.Base(dir)
+	}
 	for i, row := range rows {
 		if err := ctx.Err(); err != nil {
 			return nil, err
@@ -501,8 +559,16 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 			SeasonNumber:   row.seasonNumber,
 			EpisodeNumber:  row.episodeNumber,
 		}
+		// sub-6-1 AC #4: the same write probe the pipeline runs, done here so the
+		// consent list shows the blocker before a cent is committed. Memoised
+		// per directory for this sweep (Rule 14: bounded by distinct dirs).
+		c.Writable, c.Blocker, c.BlockerDir = writableOf(filepath.Dir(row.filePath))
 		result.Candidates = append(result.Candidates, c)
-		result.Summary.EstimatedTotalUSD += c.EstimatedUSD
+		if c.Writable {
+			result.Summary.EstimatedTotalUSD += c.EstimatedUSD
+		} else {
+			result.Summary.UnwritableCount++
+		}
 	}
 
 	// Sub-cent noise in a float sum reads as a bug in a money field.
@@ -513,6 +579,7 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 		"extract", result.Summary.ExtractCount,
 		"asr", result.Summary.ASRCount,
 		"skipped", result.Summary.SkippedCount,
+		"unwritable", result.Summary.UnwritableCount,
 		"estimated_total_usd", result.Summary.EstimatedTotalUSD,
 		"self_hosted_asr", s.selfHostedASR,
 		// sub-5-4 AC #4: without these two numbers, "is the incremental path

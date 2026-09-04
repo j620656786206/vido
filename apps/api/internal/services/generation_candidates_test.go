@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -623,4 +624,64 @@ func TestGenerationCandidate_MovieWireShapeOmitsSeriesKeys(t *testing.T) {
 	s := string(raw)
 	assert.NotContains(t, s, "series_id", "movie rows keep the pre-sub-5-3 shape minus nothing — series keys are omitempty")
 	assert.NotContains(t, s, "series_title")
+}
+
+// ─── sub-6-1 AC #4: writable probe on the consent list ─────────────────────
+
+// TestMain: fixture paths in this file do not exist on disk, so the real
+// fsprobe would mark every candidate unwritable. The sub-6-1 tests below
+// inject their own probe per service instance.
+func TestMain(m *testing.M) {
+	defaultWritableProbe = func(context.Context, string) error { return nil }
+	os.Exit(m.Run())
+}
+
+func TestAnalyze_UnwritableTargetIsFlaggedAndExcludedFromTotal(t *testing.T) {
+	movies := &stubMovieFinder{movies: []models.Movie{
+		movieRow("m1", "Dune", "/ro/dune.mkv", 166, ""),
+		movieRow("m2", "Heat", "/rw/heat.mkv", 170, ""),
+	}}
+	pred := &stubPredictor{probeRoute: RouteExtract}
+	svc := NewGenerationCandidateService(movies, nil, nil, pred, false, 0, nil)
+	svc.probeWritable = func(_ context.Context, dir string) error {
+		if dir == "/ro" {
+			return errors.New("permission denied")
+		}
+		return nil
+	}
+
+	res, err := svc.Analyze(context.Background(), nil)
+	require.NoError(t, err)
+	require.Len(t, res.Candidates, 2)
+
+	byID := map[string]GenerationCandidate{}
+	for _, c := range res.Candidates {
+		byID[c.MediaID] = c
+	}
+	assert.False(t, byID["m1"].Writable)
+	assert.Equal(t, "SUBTITLE_TARGET_NOT_WRITABLE", byID["m1"].Blocker, "a code, not prose — the FE composes the sentence")
+	assert.Equal(t, "ro", byID["m1"].BlockerDir, "base name only: an absolute NAS path never leaves the server")
+	assert.True(t, byID["m2"].Writable)
+	assert.Empty(t, byID["m2"].Blocker)
+	assert.Equal(t, 1, res.Summary.UnwritableCount)
+	assert.InDelta(t, byID["m2"].EstimatedUSD, res.Summary.EstimatedTotalUSD, 0.0001,
+		"an unwritable candidate's estimate must not be in the total the user consents to")
+}
+
+func TestAnalyze_ProbesEachDirectoryOnce(t *testing.T) {
+	episodes := &stubEpisodeFinder{episodes: []models.Episode{
+		episodeRow("e1", 1, 1, "/tv/show/s01/e1.mkv", 45),
+		episodeRow("e2", 1, 2, "/tv/show/s01/e2.mkv", 45),
+		episodeRow("e3", 1, 3, "/tv/show/s01/e3.mkv", 45),
+		episodeRow("e4", 2, 1, "/tv/show/s02/e1.mkv", 45),
+	}}
+	pred := &stubPredictor{probeRoute: RouteExtract}
+	svc := NewGenerationCandidateService(nil, episodes, nil, pred, false, 0, nil)
+	probes := map[string]int{}
+	svc.probeWritable = func(_ context.Context, dir string) error { probes[dir]++; return nil }
+
+	_, err := svc.Analyze(context.Background(), nil)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]int{"/tv/show/s01": 1, "/tv/show/s02": 1}, probes,
+		"a season shares one directory — one probe, not one per episode")
 }
