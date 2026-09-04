@@ -25,7 +25,24 @@ export function listableCandidates(candidates: GenerationCandidate[]): Generatio
 /** 準則④ (as amended by §5-sexies): default selection = the lowest-cost set —
  * every extract-route candidate; paid ASR is NEVER pre-selected. */
 export function defaultSelection(candidates: GenerationCandidate[]): Set<string> {
-  return new Set(candidates.filter((c) => c.route === 'extract').map((c) => c.mediaId));
+  return new Set(
+    candidates.filter((c) => c.route === 'extract' && isWritable(c)).map((c) => c.mediaId)
+  );
+}
+
+/**
+ * sub-6-1: a candidate whose folder failed the backend's write probe. The
+ * pipeline would refuse it before spending, so the UI never lets it into a
+ * selection — not by default, not by 全選, not by group toggle. `undefined`
+ * (pre-sub-6-1 server) reads as writable.
+ */
+export function isWritable(c: GenerationCandidate): boolean {
+  return c.writable !== false;
+}
+
+/** The ids a bulk action may touch: listable AND writable. */
+export function selectableIds(candidates: GenerationCandidate[]): string[] {
+  return candidates.filter(isWritable).map((c) => c.mediaId);
 }
 
 export function applyRouteFilter(

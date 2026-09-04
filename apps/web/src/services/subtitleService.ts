@@ -188,6 +188,15 @@ export interface GenerationCandidate {
   runtimeKnown: boolean;
   estimatedUsd: number;
   /**
+   * sub-6-1 (additive): false when the backend's real write probe of the media
+   * folder failed — the pipeline would refuse this row before spending, so it
+   * is never pre-selected, its checkbox is disabled and its estimate stays out
+   * of every total. `blocker` carries the zh-TW reason. Optional: a
+   * pre-sub-6-1 server omits both and the row is treated as writable.
+   */
+  writable?: boolean;
+  blocker?: string;
+  /**
    * Series identity (sub-5-3, additive on the sub-4-1 [@contract-v1] envelope)
    * — episodes only; absent/empty on movies and on pre-sub-5-3 servers.
    * Group by `seriesId`, NEVER by season: S00 specials are a legal season 0.
@@ -205,6 +214,8 @@ export interface GenerationCandidateSummary {
   skippedCount: number;
   estimatedTotalUsd: number;
   selfHostedAsr: boolean;
+  /** sub-6-1 (additive): rows listed with writable=false; absent on old servers. */
+  unwritableCount?: number;
 }
 
 export interface GenerationCandidateResult {

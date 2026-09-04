@@ -127,6 +127,24 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 		return p.failItem(ctx, ref, run, "mark media extracting", err)
 	}
 
+	// ── Step 2b: pre-flight — can the placer write here? (sub-6-1 AC #1) ────
+	// A real write probe, not stat: on the NAS shares this ships to, mode bits
+	// say "writable" while the container's gid is not in the group, and a
+	// read-only mount reads the same. Sits AFTER the run row so the refusal
+	// leaves a `failed` row with $0 spend (AC #3), and BEFORE routing so
+	// nothing — no ffprobe, no ffmpeg, no LLM — runs against a target the
+	// result could never be placed in. eval-1 paid for two full
+	// translations this way.
+	if err := p.probeWritable(filepath.Dir(item.FilePath)); err != nil {
+		out, ferr := p.failItem(ctx, ref, run, "pre-flight writable",
+			fmt.Errorf("%w: %v", ErrSubtitleTargetNotWritable, err))
+		// failItem parks the row at not_searched (its retry convention). A
+		// permission problem is not a subtitle-search outcome, so put the row
+		// back EXACTLY where it was found — the 9R-10b FreeOnly brake posture.
+		p.restoreMediaStatus(ctx, ref, item)
+		return out, ferr
+	}
+
 	// ── Step 3: route ───────────────────────────────────────────────────────
 	tmpDir, err := os.MkdirTemp("", "vido-subtitle-*")
 	if err != nil {
@@ -740,6 +758,20 @@ func (p *Pipeline) failItem(ctx context.Context, ref MediaRef, run *models.Subti
 	p.emitProgress(ref, StageFailed, err.Error())
 	p.logger.Error("subtitle pipeline failed", "media_id", ref.ID, "media_type", ref.MediaType, "stage", stage, "error", err)
 	return nil, err
+}
+
+// restoreMediaStatus puts the media row back where Load found it (status,
+// path, language) after a pre-flight refusal — the row was never a subtitle
+// search, so neither `failed`-style `not_searched` nor `not_found` would be
+// truthful. Mirrors deferPaidItem's restore. Cleanup-safe across cancellation.
+func (p *Pipeline) restoreMediaStatus(ctx context.Context, ref MediaRef, item *MediaItem) {
+	if item == nil || item.SubtitleStatus == "" {
+		return
+	}
+	if err := p.setMediaStatus(context.WithoutCancel(ctx), ref, item.SubtitleStatus, item.SubtitlePath, item.SubtitleLanguage); err != nil {
+		p.logger.Error("failed to restore media subtitle status after pre-flight refusal",
+			"media_id", ref.ID, "media_type", ref.MediaType, "error", err)
+	}
 }
 
 // maxErrorMessage bounds what lands in the error_message column: a wrapped

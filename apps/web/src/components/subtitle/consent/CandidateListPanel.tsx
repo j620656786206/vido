@@ -23,6 +23,8 @@ import {
   applyRouteFilter,
   computeTotals,
   groupCandidates,
+  isWritable,
+  selectableIds,
   type ConsentRouteFilter,
   type ConsentTotals,
 } from './consentSelection';
@@ -70,18 +72,27 @@ function CandidateRow({
   onToggle: (mediaId: string) => void;
 }) {
   const isExtract = candidate.route === 'extract';
+  // sub-6-1: the backend's write probe refused this folder. The pipeline
+  // would fail the item before spending anyway; here the user learns it
+  // BEFORE consenting, and cannot tick a row that can never be placed.
+  const writable = isWritable(candidate);
   return (
     <li
       data-testid={`consent-row-${candidate.mediaId}`}
       data-route={candidate.route}
-      className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3.5 py-3"
+      data-writable={writable ? 'true' : 'false'}
+      className={cn(
+        'flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3.5 py-3',
+        !writable && 'opacity-70'
+      )}
     >
       <input
         type="checkbox"
         aria-label={`選取 ${candidate.title}`}
         checked={checked}
+        disabled={!writable}
         onChange={() => onToggle(candidate.mediaId)}
-        className="h-4 w-4 shrink-0 accent-[var(--accent-primary)]"
+        className="h-4 w-4 shrink-0 accent-[var(--accent-primary)] disabled:cursor-not-allowed"
       />
       <span
         aria-hidden="true"
@@ -94,6 +105,15 @@ function CandidateRow({
         </span>
       </span>
       <span className="flex shrink-0 items-center gap-2">
+        {!writable && (
+          <span
+            data-testid={`consent-row-unwritable-${candidate.mediaId}`}
+            title={candidate.blocker}
+            className="rounded-[var(--radius-sm)] bg-[var(--error-tint)] px-2 py-0.5 text-xs text-[var(--error-text)]"
+          >
+            資料夾無法寫入
+          </span>
+        )}
         <span
           className={cn(
             'rounded-[var(--radius-sm)] px-2 py-0.5 text-[11px]',
@@ -240,7 +260,10 @@ export function CandidateListPanel({
   const groups = useMemo(() => groupCandidates(candidates), [candidates]);
   const extractTotal = candidates.filter((c) => c.route === 'extract').length;
   const asrTotal = candidates.length - extractTotal;
-  const allSelected = totals.selectedCount === candidates.length && candidates.length > 0;
+  // 全選 spans the SELECTABLE rows (sub-6-1: unwritable rows can never be
+  // ticked, so they are not part of "all").
+  const selectableCount = selectableIds(candidates).length;
+  const allSelected = totals.selectedCount === selectableCount && selectableCount > 0;
   const someSelected = totals.selectedCount > 0 && !allSelected;
   const overBudget = totals.overBudget;
   const budgetInvalid = budgetUsd === null;

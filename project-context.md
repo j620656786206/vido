@@ -293,7 +293,7 @@ TMDB_TIMEOUT, TMDB_NOT_FOUND, TMDB_RATE_LIMIT, TMDB_INVALID_YEAR_RANGE
 AI_TIMEOUT, AI_QUOTA_EXCEEDED, AI_UNAUTHORIZED, AI_MODEL_NOT_FOUND
 DB_NOT_FOUND, DB_QUERY_FAILED
 VALIDATION_REQUIRED_FIELD, VALIDATION_INVALID_FORMAT
-SUBTITLE_NOT_FOUND, SUBTITLE_DOWNLOAD_FAILED, SUBTITLE_CONVERT_FAILED, SUBTITLE_EXTRACT_FAILED, SUBTITLE_NO_TEXT_SOURCE, SUBTITLE_TRANSLATE_FAILED, SUBTITLE_TIMESTAMP_MISMATCH
+SUBTITLE_NOT_FOUND, SUBTITLE_DOWNLOAD_FAILED, SUBTITLE_CONVERT_FAILED, SUBTITLE_EXTRACT_FAILED, SUBTITLE_NO_TEXT_SOURCE, SUBTITLE_TRANSLATE_FAILED, SUBTITLE_TIMESTAMP_MISMATCH, SUBTITLE_TARGET_NOT_WRITABLE
 PLUGIN_INIT_FAILED, PLUGIN_HEALTH_CHECK_FAILED, PLUGIN_NOT_CONFIGURED
 SCANNER_PERMISSION_DENIED, SCANNER_PARSE_FAILED
 SSE_CONNECTION_FAILED
@@ -564,7 +564,7 @@ Go internal package import direction (apps/api/internal/):
 Allowed (single-direction layering, extends Rule 4):
   Handler  → Service    → Repository → Database
   Handler  → Subtitle   → Service              (subtitle uses services.TerminologyCorrectionServiceInterface)
-  *        → ai, models, sse, retry, cache  (leaf packages — see list below)
+  *        → ai, models, sse, retry, cache, fsprobe  (leaf packages — see list below)
 
   NOTE: Handler → Repository is FORBIDDEN by Rule 4. Rule 19 does not
   introduce an exception. Go through a service.
@@ -583,7 +583,7 @@ Known Cycle Points (verified 2026-04-13):
   "import cycle not allowed".
 
 Leaf packages (zero internal deps — always safe to import from anywhere):
-  ai, models, sse, retry, cache
+  ai, models, sse, retry, cache, fsprobe
 
 Verified 2026-04-13 via `go list -deps ./internal/<pkg>`. The list is
 enforced by boundaries_test.go::TestLeafPackagesHaveNoInternalDeps so it

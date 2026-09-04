@@ -349,3 +349,52 @@ describe('CandidateListPanel — series/season grouping (sub-5-3 AC #2)', () => 
     expect(document.querySelector('[data-testid^="consent-group-"]')).toBeNull();
   });
 });
+
+describe('sub-6-1 unwritable rows', () => {
+  const RO = '4e98edc6-7eab-4d7c-9dcb-e5a6b7c8d905';
+  const withUnwritable: GenerationCandidate[] = [
+    ...CANDIDATES,
+    {
+      mediaId: RO,
+      mediaType: 'movie',
+      title: '唯讀資料夾裡的電影',
+      route: 'extract',
+      runtimeMinutes: 100,
+      runtimeKnown: true,
+      estimatedUsd: 0.03,
+      writable: false,
+      blocker: '資料夾無法寫入：permission denied',
+    },
+  ];
+
+  it('disables the checkbox and shows the blocker badge', () => {
+    cleanup();
+    const selectedIds = new Set([A, B]);
+    renderPanel({
+      candidates: withUnwritable,
+      selectedIds,
+      totals: computeTotals(withUnwritable, selectedIds, 5),
+    });
+    const row = screen.getByTestId(`consent-row-${RO}`);
+    expect(row).toHaveAttribute('data-writable', 'false');
+    const box = row.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    expect(box).toBeDisabled();
+    const badge = screen.getByTestId(`consent-row-unwritable-${RO}`);
+    expect(badge).toHaveTextContent('資料夾無法寫入');
+    expect(badge).toHaveAttribute('title', '資料夾無法寫入：permission denied');
+  });
+
+  it('全選 counts only selectable rows as "all"', () => {
+    cleanup();
+    // Every writable row selected (A, B, EP, U) — the unwritable RO is not part of "all".
+    const selectedIds = new Set([A, B, EP, U]);
+    renderPanel({
+      candidates: withUnwritable,
+      selectedIds,
+      totals: computeTotals(withUnwritable, selectedIds, 5),
+    });
+    const all = screen.getByTestId('consent-select-all') as HTMLInputElement;
+    expect(all.checked).toBe(true);
+    expect(all.indeterminate).toBe(false);
+  });
+});

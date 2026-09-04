@@ -250,6 +250,21 @@ curl http://localhost:8080/nginx-health
 }
 ```
 
+## File Permissions (subtitle generation writes next to your media)
+
+The subtitle pipeline writes the generated `.zh-Hant.srt` **beside the video file**. Before it spends any AI credit it now runs a real write probe on that folder (a temporary `.vido-write-probe-*` file is created and removed). If the probe fails the item is recorded as `failed` with `SUBTITLE_TARGET_NOT_WRITABLE`, **nothing is charged**, and the consent list flags the row as「資料夾無法寫入」.
+
+Two configurations trip it in practice:
+
+- **Read-only media mount.** Unraid's default template maps `/media` with `Mode="ro"`; Synology/QNAP "read-only" shares do the same. Set the mapping to **Read/Write** (Unraid: edit the container → the `/media` path → Access Mode). Vido never deletes or rewrites your video files — it only adds subtitle sidecars (and `.bak` copies of ones it replaces).
+- **Container user not in the folder's group.** The image runs as `PUID`/`PGID` (default `1000`/`1000`). On Unraid, media folders are usually `nobody:users` (gid `100`), so either set `PGID=100` on the container or grant the folder's group write access. Mode bits that _look_ writable are not enough — the probe creates a real file, exactly as the placer will.
+
+Troubleshooting a `SUBTITLE_TARGET_NOT_WRITABLE`:
+
+1. `docker exec Vido touch "/media/<that folder>/.probe" && docker exec Vido rm "/media/<that folder>/.probe"` — reproduce the probe as the container user.
+2. Compare `docker exec Vido id` with `ls -ln` on the host folder.
+3. Fix the mount mode or `PGID`, restart the container, re-run the item from the activity page.
+
 ## Troubleshooting
 
 ### Container Won't Start

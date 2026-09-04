@@ -32,4 +32,11 @@ var (
 	// ErrSubtitleTimestampMismatch — the FR17 invariant broke: translated cue
 	// count or per-cue timings diverge from the source track. Consumer: sub-1-5a.
 	ErrSubtitleTimestampMismatch = errors.New("SUBTITLE_TIMESTAMP_MISMATCH: translated cue timestamps diverge from source")
+
+	// ErrSubtitleTargetNotWritable — the media file's directory refused a
+	// write probe, so the placer would fail AFTER the paid work. Raised by the
+	// sub-6-1 pre-flight before any ffprobe, extract or LLM call. Consumer:
+	// the item flow and the consent-list analysis (which reports it as
+	// `writable=false` on the candidate instead of failing).
+	ErrSubtitleTargetNotWritable = errors.New("SUBTITLE_TARGET_NOT_WRITABLE: target directory is not writable")
 )

@@ -31,6 +31,8 @@ so that「片長未知」never erases the one line that told me why this row cos
 
 ## Dev Notes
 
+- **Inherited from sub-6-1:** F15 rows now have an「資料夾無法寫入」state (disabled checkbox + error badge with the blocker as tooltip). The `.pen` F15-D/M update in AC #4 should include this state; the shipped idiom is the route badge in error tint.
+
 - 舊伺服器（無新欄位）→ 行為與今日相同（fallback 分支），不得壞。
 - Rule 21 header 已是 F15-D/M/F18 併列，不變。
 - 12px 底線（DESIGN.md）：首字佔位與「未匹配」標都 ≥ 12px。

@@ -61,7 +61,7 @@ func TestForbiddenImportEdges(t *testing.T) {
 // Executes `go list -deps` per package via the `go` binary that is, by
 // definition, running this test.
 func TestLeafPackagesHaveNoInternalDeps(t *testing.T) {
-	leaves := []string{"ai", "models", "sse", "retry", "cache"}
+	leaves := []string{"ai", "models", "sse", "retry", "cache", "fsprobe"}
 
 	for _, leaf := range leaves {
 		t.Run(leaf, func(t *testing.T) {
