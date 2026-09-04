@@ -22,7 +22,44 @@ func TestBudget_RecordLLM_CostAndTokens(t *testing.T) {
 func TestBudget_UnknownModelUsesFallback(t *testing.T) {
 	b := NewBudget(0)
 	b.RecordLLM("some-future-model", 1_000_000, 0)
-	assert.InDelta(t, fallbackLLMPricing.InputPer1M, b.SpentUSD(), 1e-9)
+	assert.InDelta(t, fallbackLLMPricing.InputPer1M.InexactFloat64(), b.SpentUSD(), 1e-9)
+}
+
+// ─── tech-money-decimal-arithmetic ────────────────────────────────────────
+
+func TestBudget_SpendIsExactAcrossManyCalls(t *testing.T) {
+	// gemini-2.5-flash-lite is $0.10 per 1M input tokens, so each of these
+	// calls costs exactly $0.10. In float64, 0.1+0.1+0.1 is
+	// 0.30000000000000004 — the canonical demonstration that binary doubles
+	// cannot hold a tenth. The ledger must hold the number the provider bills.
+	b := NewBudget(0)
+	for range 3 {
+		b.RecordLLM("gemini-2.5-flash-lite", 1_000_000, 0)
+	}
+	assert.Equal(t, "0.3", b.Spent().String(),
+		"three $0.10 calls are thirty cents, not 0.30000000000000004")
+}
+
+func TestBudget_CeilingIsNotSkippedByFloatDrift(t *testing.T) {
+	// $0.10 + $0.70 = $0.80, which is exactly the ceiling. In float64 the sum
+	// is 0.7999999999999999, so `spent >= max` reads FALSE and the run bills
+	// one more call than the user consented to. That is real money, and it is
+	// the reason the ledger is decimal rather than "float64 is close enough".
+	b := NewBudget(0.80)
+	b.RecordLLM("gemini-2.5-flash-lite", 1_000_000, 0) // $0.10
+	b.RecordLLM("gemini-2.5-flash-lite", 7_000_000, 0) // $0.70
+	assert.Equal(t, "0.8", b.Spent().String())
+	assert.True(t, b.Exceeded(),
+		"the ceiling was reached exactly — a run that continues here has spent more than was approved")
+}
+
+func TestBudget_SubCentPerTokenCostIsNotRoundedAway(t *testing.T) {
+	// A single token on Sonnet costs $0.000003. Anything that meters in whole
+	// cents records $0.00 for it, and a run made of a million such calls then
+	// reports having spent nothing at all.
+	b := NewBudget(0)
+	b.RecordLLM("claude-sonnet-5", 1, 0)
+	assert.Equal(t, "0.000003", b.Spent().String())
 }
 
 func TestBudget_RecordASR_ByMinutes(t *testing.T) {

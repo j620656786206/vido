@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/fsprobe"
 	"github.com/vido/api/internal/models"
@@ -109,9 +110,15 @@ const unknownRuntimeMinutes = 45.0
 // and the whole point of the consent screen is that the number on it is the
 // number you pay. The old constant's own comment invited exactly this
 // recalibration once real usage data existed.
-var translationUSDPerMinuteByModel = map[string]float64{
-	"claude-haiku-4-5": 0.00301,
-	"claude-sonnet-5":  0.00804,
+//
+// tech-money-decimal-arithmetic: decimal STRINGS, not float64 literals. These
+// rates are multiplied by runtime minutes for up to ~1,200 titles and the
+// results summed; starting from a value that is already ~1e-19 off the figure
+// eval-1 actually measured is a needless way to make the quote and the invoice
+// disagree.
+var translationUSDPerMinuteByModel = map[string]decimal.Decimal{
+	"claude-haiku-4-5": decimal.RequireFromString("0.00301"),
+	"claude-sonnet-5":  decimal.RequireFromString("0.00804"),
 }
 
 // translationCalibrationModel is the anchor an UNMEASURED model is priced
@@ -132,7 +139,7 @@ const translationCalibrationModel = "claude-sonnet-5"
 // by the blended (input+output) price ratio — the two prices move together
 // across every row of the pricing table, so a single blended ratio is as good
 // as a token-split one and needs no assumption about the input/output mix.
-func translationRatePerMinute(model string) float64 {
+func translationRatePerMinute(model string) decimal.Decimal {
 	if rate, ok := translationUSDPerMinuteByModel[model]; ok {
 		return rate
 	}
@@ -146,13 +153,16 @@ func translationRatePerMinute(model string) float64 {
 	}
 	anchor := blendedPer1M(ai.PricingFor(translationCalibrationModel))
 	priced := blendedPer1M(ai.PricingFor(model))
-	if anchor <= 0 || priced <= 0 {
+	if !anchor.IsPositive() || !priced.IsPositive() {
 		return anchorRate
 	}
-	return anchorRate * priced / anchor
+	// The only division in the estimator. `Div` rounds at
+	// decimal.DivisionPrecision (16 significant digits) — eleven orders of
+	// magnitude below the cent this figure is eventually rounded to.
+	return anchorRate.Mul(priced).Div(anchor)
 }
 
-func blendedPer1M(p ai.ModelPricing) float64 { return p.InputPer1M + p.OutputPer1M }
+func blendedPer1M(p ai.ModelPricing) decimal.Decimal { return p.InputPer1M.Add(p.OutputPer1M) }
 
 // Processing time as a fraction of runtime, measured in the same eval-1 run
 // (two workers in parallel): Haiku finished 12h20m of video in 1h24m, Sonnet
@@ -602,7 +612,7 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 		return nil, err
 	}
 
-	asrRate := ai.EstimatedASRPerMinuteUSD(s.selfHostedASR)
+	asrRate := ai.EstimatedASRPerMinute(s.selfHostedASR)
 	// sub-6-8a AC #3: the row-level EstimatedUSD stays the DEFAULT model's
 	// price (so a client that never learned about model choice is unchanged),
 	// and every selectable model gets its own total beside it.
@@ -613,6 +623,12 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 		EstimatesByModel:        make(map[string]ModelEstimate, len(quoteModels)),
 		EstimatedMinutesByModel: make(map[string]float64, len(quoteModels)),
 	}
+	// Running totals stay DECIMAL for the whole sweep and narrow to the wire's
+	// float64 exactly once, at the end. A float64 accumulator over ~1,200
+	// addends is the classic place where a screen's parts stop adding up to
+	// its own total.
+	summaryTotal := decimal.Zero
+	modelTotals := make(map[string]decimal.Decimal, len(quoteModels))
 	for _, m := range quoteModels {
 		result.EstimatesByModel[m] = ModelEstimate{PerCandidate: map[string]float64{}}
 	}
@@ -699,7 +715,7 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 			Route:          route,
 			RuntimeMinutes: minutes,
 			RuntimeKnown:   known,
-			EstimatedUSD:   estimateUSD(route, minutes, asrRate, defaultModel),
+			EstimatedUSD:   estimateUSD(route, minutes, asrRate, defaultModel).InexactFloat64(),
 			SeriesID:       row.seriesID,
 			SeriesTitle:    row.seriesTitle,
 			SeasonNumber:   row.seasonNumber,
@@ -711,7 +727,7 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 		c.Writable, c.Blocker, c.BlockerDir = writableOf(filepath.Dir(row.filePath))
 		result.Candidates = append(result.Candidates, c)
 		if c.Writable {
-			result.Summary.EstimatedTotalUSD += c.EstimatedUSD
+			summaryTotal = summaryTotal.Add(estimateUSD(route, minutes, asrRate, defaultModel))
 			// An unwritable row is excluded here for the same reason it is
 			// excluded from the headline total (sub-6-1): the pipeline would
 			// refuse it before spending, so quoting it would inflate every
@@ -719,8 +735,8 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 			for _, m := range quoteModels {
 				est := result.EstimatesByModel[m]
 				usd := estimateUSD(route, minutes, asrRate, m)
-				est.TotalUSD += usd
-				est.PerCandidate[c.MediaID] = usd
+				modelTotals[m] = modelTotals[m].Add(usd)
+				est.PerCandidate[c.MediaID] = usd.InexactFloat64()
 				result.EstimatesByModel[m] = est
 				result.EstimatedMinutesByModel[m] += estimateMinutes(route, minutes, m)
 			}
@@ -729,10 +745,12 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 		}
 	}
 
-	// Sub-cent noise in a float sum reads as a bug in a money field.
-	result.Summary.EstimatedTotalUSD = roundUSD(result.Summary.EstimatedTotalUSD)
+	// Every addend was already rounded to whole cents by estimateUSD, so these
+	// sums are exact and need no second rounding — the rows add up to the
+	// footer by construction, not by tolerance.
+	result.Summary.EstimatedTotalUSD = summaryTotal.InexactFloat64()
 	for m, est := range result.EstimatesByModel {
-		est.TotalUSD = roundUSD(est.TotalUSD)
+		est.TotalUSD = modelTotals[m].InexactFloat64()
 		result.EstimatesByModel[m] = est
 		result.EstimatedMinutesByModel[m] = math.Round(result.EstimatedMinutesByModel[m])
 	}
@@ -883,16 +901,17 @@ func (s *GenerationCandidateService) storeRoute(ctx context.Context, key string,
 // extract leg pays only for translation. Note an extract item is therefore
 // rarely exactly $0 — labelling it "free" in the UI is a rounding decision the
 // client makes, not a claim this function makes.
-func estimateUSD(route RoutePrediction, minutes, asrRate float64, model string) float64 {
+func estimateUSD(route RoutePrediction, minutes float64, asrRate decimal.Decimal, model string) decimal.Decimal {
+	mins := decimal.NewFromFloat(minutes)
 	switch route {
 	case RouteASR:
 		// Only the translation half moves with the model — speech recognition
 		// is billed per audio minute by a different provider entirely.
-		return roundUSD(minutes*asrRate + minutes*translationRatePerMinute(model))
+		return roundUSD(mins.Mul(asrRate).Add(mins.Mul(translationRatePerMinute(model))))
 	case RouteExtract:
-		return roundUSD(minutes * translationRatePerMinute(model))
+		return roundUSD(mins.Mul(translationRatePerMinute(model)))
 	default:
-		return 0
+		return decimal.Zero
 	}
 }
 
@@ -910,7 +929,11 @@ func estimateMinutes(route RoutePrediction, minutes float64, model string) float
 	}
 }
 
-func roundUSD(v float64) float64 { return math.Round(v*100) / 100 }
+// roundUSD rounds a decimal amount to whole cents, half away from zero — the
+// rule a person doing it by hand uses, and the one every invoice states. This
+// is a PRESENTATION decision applied to per-item prices; running totals are
+// accumulated from the already-rounded items, never re-rounded.
+func roundUSD(v decimal.Decimal) decimal.Decimal { return v.Round(2) }
 
 // candidateRow is the media-type-neutral shape the estimator works in, so the
 // movie and episode halves converge immediately after enumeration.
