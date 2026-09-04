@@ -31,10 +31,13 @@ import DecimalJs from 'decimal.js';
  * Money's settings belong to money.
  */
 const Decimal = DecimalJs.clone({ precision: 28, rounding: DecimalJs.ROUND_HALF_UP });
-type Decimal = InstanceType<typeof Decimal>;
+
+/** The clone's instance type. Named apart from the `Decimal` const because a
+ *  value and a type sharing a name is legal TS but trips eslint's no-redeclare. */
+type DecimalValue = InstanceType<typeof Decimal>;
 
 /** Parse a wire/`number` amount into an exact decimal. */
-function dec(v: number | string | Decimal): Decimal {
+function dec(v: number | string | DecimalValue): DecimalValue {
   // Number → Decimal goes via the number's SHORTEST round-tripping decimal
   // form, which is what a `0.53` on the wire was meant to be — not the
   // 0.5300000000000000266453525910037569701671600341796875 the double holds.
@@ -42,7 +45,7 @@ function dec(v: number | string | Decimal): Decimal {
 }
 
 /** Display form: `$4.50`. Rounds half-up to cents, the rule invoices state. */
-export function usd(v: number | string | Decimal): string {
+export function usd(v: number | string | DecimalValue): string {
   return `$${dec(v).toFixed(2, Decimal.ROUND_HALF_UP)}`;
 }
 
@@ -55,27 +58,39 @@ export function usd(v: number | string | Decimal): string {
  * breakdown does not add up to its own total is the failure this module
  * exists to prevent.
  */
-export function sumUsd(values: Array<number | string | Decimal>): number {
-  return values.reduce<Decimal>((acc, v) => acc.plus(dec(v)), new Decimal(0)).toNumber();
+export function sumUsd(values: Array<number | string | DecimalValue>): number {
+  return values.reduce<DecimalValue>((acc, v) => acc.plus(dec(v)), new Decimal(0)).toNumber();
 }
 
 /** Exact `a + b`. */
-export function addUsd(a: number | string | Decimal, b: number | string | Decimal): number {
+export function addUsd(
+  a: number | string | DecimalValue,
+  b: number | string | DecimalValue
+): number {
   return dec(a).plus(dec(b)).toNumber();
 }
 
 /** Exact `a - b`. */
-export function subUsd(a: number | string | Decimal, b: number | string | Decimal): number {
+export function subUsd(
+  a: number | string | DecimalValue,
+  b: number | string | DecimalValue
+): number {
   return dec(a).minus(dec(b)).toNumber();
 }
 
 /** Exact `a > b`, for a soft-ceiling verdict that must not hinge on 1e-17. */
-export function gtUsd(a: number | string | Decimal, b: number | string | Decimal): boolean {
+export function gtUsd(
+  a: number | string | DecimalValue,
+  b: number | string | DecimalValue
+): boolean {
   return dec(a).greaterThan(dec(b));
 }
 
 /** Exact `a < b`. */
-export function ltUsd(a: number | string | Decimal, b: number | string | Decimal): boolean {
+export function ltUsd(
+  a: number | string | DecimalValue,
+  b: number | string | DecimalValue
+): boolean {
   return dec(a).lessThan(dec(b));
 }
 
@@ -84,8 +99,8 @@ export function ltUsd(a: number | string | Decimal, b: number | string | Decimal
  * zero — "cheaper by ∞%" is not a thing to put on a screen.
  */
 export function percentOfUsd(
-  a: number | string | Decimal,
-  b: number | string | Decimal
+  a: number | string | DecimalValue,
+  b: number | string | DecimalValue
 ): number | undefined {
   const denom = dec(b);
   if (denom.isZero()) return undefined;
@@ -102,16 +117,19 @@ export function percentOfUsd(
  * `(1.005).toFixed(2)` is "1.00" because it rounds the double; this is "1.01",
  * which is what the amount was written as and what an invoice would say.
  */
-export function fixedUsd(v: number | string | Decimal, places: number): string {
+export function fixedUsd(v: number | string | DecimalValue, places: number): string {
   return dec(v).toFixed(places, Decimal.ROUND_HALF_UP);
 }
 
 /** Exact `a / b` — for magnitude folding (dollars → thousands), not for money splits. */
-export function divideUsd(a: number | string | Decimal, b: number | string | Decimal): number {
+export function divideUsd(
+  a: number | string | DecimalValue,
+  b: number | string | DecimalValue
+): number {
   return dec(a).dividedBy(dec(b)).toNumber();
 }
 
 /** Round to whole cents, half-up — the presentation rule, applied exactly once. */
-export function roundUsd(v: number | string | Decimal): number {
+export function roundUsd(v: number | string | DecimalValue): number {
   return dec(v).toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toNumber();
 }
