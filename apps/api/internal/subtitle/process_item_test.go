@@ -1336,3 +1336,55 @@ func (m *modelSpyTranslator) TranslateChunk(ctx context.Context, sys []ai.System
 	*m.seen = append(*m.seen, ai.ModelIDFromContext(ctx))
 	return m.inner.TranslateChunk(ctx, sys, contextBlocks, blocks)
 }
+
+func TestProcessItem_ExplicitModelChoiceDoesNotSkipOnAnUnattributableSidecar(t *testing.T) {
+	// CR M4: the user translated with Haiku, was unhappy, and picked Sonnet.
+	// The consent screen priced a real translation. Skipping on the Haiku
+	// sidecar would take their money question away silently — no spend, no
+	// better subtitle, and a success report.
+	h := newItemHarness(t, translateDecision("Good morning."))
+	require.NoError(t, os.WriteFile(ExpectedSidecarPath(h.mediaPath), []byte(oneCueSRT), 0o600))
+
+	out, err := h.pipeline.ProcessItem(context.Background(), h.ref,
+		ProcessItemOptions{ModelID: "claude-sonnet-5"})
+	require.NoError(t, err)
+
+	require.NotNil(t, out.Run, "an explicit model choice must actually run")
+	assert.Equal(t, "claude-sonnet-5", out.Run.ModelID)
+	assert.NotEmpty(t, h.trans.calls, "the chosen model must be given something to translate")
+}
+
+func TestProcessItem_ExplicitModelChoiceStillSkipsItsOwnCompletedRun(t *testing.T) {
+	// The flip side: asking for the SAME model that already produced the
+	// sidecar is satisfied, and must stay free. Otherwise every re-open of the
+	// consent screen would re-bill the library.
+	h := newItemHarness(t, translateDecision("Good morning."))
+	require.NoError(t, os.WriteFile(ExpectedSidecarPath(h.mediaPath), []byte(oneCueSRT), 0o600))
+
+	version := h.pipeline.runVersion(ai.WithModelID(context.Background(), "claude-haiku-4-5"), richContext())
+	h.runs.completed = &models.SubtitleRun{
+		ID: "run-prev", MediaID: h.ref.ID, MediaType: h.ref.MediaType, Status: models.SubtitleRunCompleted,
+		MetadataHash: version.MetadataHash, GlossaryVersion: version.GlossaryVersion,
+		PromptVersion: version.PromptVersion, ModelID: version.ModelID,
+	}
+
+	out, err := h.pipeline.ProcessItem(context.Background(), h.ref,
+		ProcessItemOptions{ModelID: "claude-haiku-4-5"})
+	require.NoError(t, err)
+
+	assert.Nil(t, out.Run, "the same model on the same version is already delivered — spending again would be theft")
+	assert.Empty(t, h.trans.calls)
+}
+
+func TestProcessItem_NoModelChoiceKeepsTheSidecarOnlyGate(t *testing.T) {
+	// A caller that names no model gets the pre-sub-6-8a behaviour verbatim:
+	// an acceptable sidecar is enough to early-exit, run row or not.
+	h := newItemHarness(t, translateDecision("Good morning."))
+	require.NoError(t, os.WriteFile(ExpectedSidecarPath(h.mediaPath), []byte(oneCueSRT), 0o600))
+
+	out, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+	require.NoError(t, err)
+
+	assert.Nil(t, out.Run)
+	assert.Empty(t, h.trans.calls)
+}

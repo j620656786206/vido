@@ -32,17 +32,18 @@ func TestCatalog_EveryPricedModelIsDescribed(t *testing.T) {
 	}
 }
 
-func TestCatalog_DefaultIsSonnetAndIsMarked(t *testing.T) {
+func TestCatalog_DefaultIsSonnetAndIsTheCallersToStamp(t *testing.T) {
 	assert.Equal(t, "claude-sonnet-5", DefaultClaudeModel,
 		"eval-1 ruled the default on measured quality (1.3% unusable vs Haiku's 3.6%)")
 
-	var defaults []string
+	// CR H1: this package must NOT decide which entry is "the default" — a
+	// deployment's CLAUDE_MODEL override is the truth, and stamping the
+	// constant here priced every quote at Sonnet for an operator whose runs
+	// billed Haiku.
 	for _, m := range Catalog() {
-		if m.IsDefault {
-			defaults = append(defaults, m.ID)
-		}
+		assert.False(t, m.IsDefault,
+			"%s: the catalog knows prices, not configuration — the caller stamps IsDefault", m.ID)
 	}
-	assert.Equal(t, []string{DefaultClaudeModel}, defaults, "exactly one model may be the default")
 }
 
 func TestCatalog_ExcludesRetiredModelsButKeepsPricingThem(t *testing.T) {

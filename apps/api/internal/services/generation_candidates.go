@@ -115,10 +115,16 @@ var translationUSDPerMinuteByModel = map[string]float64{
 }
 
 // translationCalibrationModel is the anchor an UNMEASURED model is priced
-// from: its measured rate scaled by the price ratio. Sonnet, deliberately —
-// quoting an unknown model at the cheaper anchor would under-promise, and a
-// quote that surprises upward is the failure mode this screen exists to
+// from: its measured rate scaled by that model's real price ratio. Sonnet,
+// deliberately — an unmeasured model is more likely to be a premium one, and
+// a quote that surprises upward is the failure mode this screen exists to
 // prevent.
+//
+// Note the scaling is PROPORTIONAL, so a genuinely cheaper model quotes
+// cheaper — that is correct, and it is the whole point of offering one. The
+// floor applies only to a model with NO price row at all (see
+// translationRatePerMinute), where the alternative would be scaling by a
+// fallback price that is a fiction.
 const translationCalibrationModel = "claude-sonnet-5"
 
 // translationRatePerMinute is the per-runtime-minute LLM cost of a model.

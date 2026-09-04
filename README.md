@@ -103,15 +103,15 @@ docker compose up -d
 
 字幕翻譯與語音辨識走的是雲端 API，**會依用量計費**。不設定這些變數時，其餘功能照常運作，只有 AI 相關的字幕功能會停用。
 
-| 變數                | 預設     | 說明                                                      |
-| ------------------- | -------- | --------------------------------------------------------- |
-| `AI_PROVIDER`       | `gemini` | 文字 AI 供應商，`gemini` 或 `claude`                      |
-| `GEMINI_API_KEY`    | —        | Gemini key（`AI_PROVIDER=gemini` 時使用）                 |
-| `CLAUDE_API_KEY`    | —        | Claude key（`AI_PROVIDER=claude` 時使用；字幕翻譯亦使用） |
-| `OPENAI_API_KEY`    | —        | Whisper 語音辨識用                                        |
-| `ASR_BASE_URL`      | —        | 指向自架的 OpenAI 相容 ASR 服務即可省下雲端費用           |
-| `ASR_MODEL`         | —        | 自架引擎的 model id                                       |
-| `AI_RUN_BUDGET_USD` | `5.0`    | 單次執行的費用上限，超過就中止並標記為暫停                |
+| 變數                | 預設     | 說明                                                                         |
+| ------------------- | -------- | ---------------------------------------------------------------------------- |
+| `AI_PROVIDER`       | `gemini` | 文字 AI 供應商，`gemini` 或 `claude`                                         |
+| `GEMINI_API_KEY`    | —        | Gemini key（`AI_PROVIDER=gemini` 時用於檔名解析；字幕翻譯目前僅支援 Claude） |
+| `CLAUDE_API_KEY`    | —        | Claude key（`AI_PROVIDER=claude` 時使用；字幕翻譯亦使用）                    |
+| `OPENAI_API_KEY`    | —        | Whisper 語音辨識用                                                           |
+| `ASR_BASE_URL`      | —        | 指向自架的 OpenAI 相容 ASR 服務即可省下雲端費用                              |
+| `ASR_MODEL`         | —        | 自架引擎的 model id                                                          |
+| `AI_RUN_BUDGET_USD` | `5.0`    | 單次執行的費用上限，超過就中止並標記為暫停                                   |
 
 > 💡 想完全避開雲端費用，可以把 `ASR_BASE_URL` 指到自架的 OpenAI 相容引擎（例如 Speaches、WhisperLive），語音辨識就會走本機。
 

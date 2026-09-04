@@ -18,7 +18,13 @@ type ModelInfo struct {
 	Tier        string  `json:"tier"`
 	InputPer1M  float64 `json:"input_per_1m"`
 	OutputPer1M float64 `json:"output_per_1m"`
-	IsDefault   bool    `json:"is_default"`
+	// IsDefault is set by the CALLER, not by this package: the deployment's
+	// default is whatever CLAUDE_MODEL resolves to (ClaudeProviderHolder's
+	// EffectiveModel), and DefaultClaudeModel is only the value it falls back
+	// to. Stamping it here would tell an operator who set CLAUDE_MODEL=haiku
+	// that Sonnet is their default and price every quote at Sonnet's rate
+	// while their runs actually billed Haiku (CR H1).
+	IsDefault bool `json:"is_default"`
 	// QualityGrade is a MEASURED grade, never a vendor claim: it is filled only
 	// for models Vido has actually blind-scored on its own library. Empty means
 	// "not evaluated yet" and the UI must say so rather than implying parity.
@@ -84,12 +90,13 @@ var modelMetadata = map[string]struct {
 	"gemini-2.0-flash": {provider: ProviderNameGemini, displayName: "Gemini 2.0 Flash (retired)", tier: TierFast, retired: true},
 }
 
-// Catalog returns every SELECTABLE model, cheapest first within a provider and
-// providers in a stable order, with IsDefault set on DefaultClaudeModel.
-// Retired models are excluded (see modelMetadata).
+// Catalog returns every model this package knows how to price, cheapest first
+// within a provider and providers in a stable order. Retired models are
+// excluded (see modelMetadata); IsDefault is left false for every entry.
 //
-// The caller decides which providers the user can actually reach — this
-// package knows prices and grades, not which keys are configured.
+// The caller decides which providers the user can actually reach and which
+// model is that deployment's default — this package knows prices and grades,
+// not configuration.
 func Catalog() []ModelInfo {
 	out := make([]ModelInfo, 0, len(modelMetadata))
 	for id, meta := range modelMetadata {
@@ -109,7 +116,6 @@ func Catalog() []ModelInfo {
 			Tier:         meta.tier,
 			InputPer1M:   pricing.InputPer1M,
 			OutputPer1M:  pricing.OutputPer1M,
-			IsDefault:    id == DefaultClaudeModel,
 			QualityGrade: meta.qualityGrade,
 			QualityNote:  meta.qualityNote,
 		})

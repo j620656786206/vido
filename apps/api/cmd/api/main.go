@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strings"
 	"syscall"
 	"time"
 
@@ -600,13 +599,11 @@ func main() {
 	}, slog.Default())
 	claudeHolder := services.NewClaudeProviderHolder(
 		keyResolver, cfg.GetClaudeModel(), slog.Default(), ai.WithClaudeGovernor(aiGovernor))
-	// sub-6-8a: which models this install can actually run — the priced
-	// catalog narrowed to providers whose key resolves. Gemini has no secret
-	// row (it is not in the resolver's closed key set), so its availability is
-	// read from the env value directly.
-	modelCatalog := services.NewModelCatalogService(keyResolver, func() bool {
-		return strings.TrimSpace(cfg.GeminiAPIKey) != ""
-	})
+	// sub-6-8a: which models this install can actually run, and which one an
+	// omitted model_id resolves to. The default comes from the HOLDER, not the
+	// ai package constant, so an operator's CLAUDE_MODEL override is what the
+	// settings list and every quote are built on (CR H1).
+	modelCatalog := services.NewModelCatalogService(keyResolver, claudeHolder.EffectiveModel)
 
 	// Initialize ASR provider holder and transcription service (Story 9.2a;
 	// hot-reload by sub-5-2). Constructed UNCONDITIONALLY: the old

@@ -57,8 +57,11 @@ type holderClient struct {
 }
 
 // maxCachedClients bounds the LRU. Four covers "default + the model the user
-// picked + two they are comparing" with room to spare.
-const maxCachedClients = 4
+// picked + two they are comparing" with room to spare. A var, not a const, so
+// the package tests can shrink it — the catalog carries only four Claude
+// models, too few to demonstrate eviction at the production bound (the
+// retryBaseDelay precedent).
+var maxCachedClients = 4
 
 // Compile-time proof of both halves — the CachingCompleter assertion above is
 // the one that silently degrades if it ever stops holding.
@@ -101,6 +104,15 @@ func (h *ClaudeProviderHolder) GetFor(ctx context.Context, model string) (ai.Tex
 		model = h.EffectiveModel()
 	} else if !ai.IsSelectableModel(model) {
 		return nil, fmt.Errorf("%w: unsupported model %q", ai.ErrAIModelNotFound, model)
+	} else if provider := ai.ProviderOf(model); provider != ai.ProviderNameClaude {
+		// A CLAUDE holder can only ever send to Anthropic. Without this the
+		// model id would be handed to WithClaudeModel verbatim and posted to
+		// api.anthropic.com, which answers 404 — a paid-looking failure the
+		// user only discovers after consenting (CR H2). The request boundary
+		// rejects these too; this is the invariant behind that check, so a
+		// future caller that skips validation still cannot get it wrong.
+		return nil, fmt.Errorf("%w: model %q is served by %s, not by this Claude provider",
+			ai.ErrAIModelNotFound, model, provider)
 	}
 
 	key, source, err := h.resolver.Get(ctx, KeyClaude)

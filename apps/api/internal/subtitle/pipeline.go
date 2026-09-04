@@ -721,6 +721,19 @@ func (p *Pipeline) preflightSkip(ctx context.Context, ref MediaRef, mediaPath st
 	// segment cache, so re-running costs only the English ones — which is the
 	// entire reason the run was allowed to complete instead of fail. A
 	// sidecar-only predicate would freeze that English for good.
+	// An EXPLICIT model choice is a request for THIS model's output, and the
+	// user was quoted a price for it (sub-6-8a CR M4). FindCompletedRun matches
+	// the whole version tuple INCLUDING the model, so a nil run here means the
+	// sidecar on disk cannot be attributed to this exact request — most often
+	// because the last run used a different model. Skipping would take the
+	// money question away silently: the consent screen priced a Sonnet
+	// translation and the item would no-op on a Haiku file, reporting success.
+	// A caller who did NOT name a model still gets the old sidecar-only gate.
+	if opts.ModelID != "" && run == nil {
+		p.logger.Info("subtitle pre-flight: explicit model choice with no matching completed run — re-running",
+			"media_id", ref.ID, "media_type", ref.MediaType, "model_id", opts.ModelID)
+		return false, "explicit model choice (" + opts.ModelID + ") not attributable to the existing sidecar — re-running"
+	}
 	if n := transientCuesOf(run); n > 0 {
 		p.logger.Info("subtitle pre-flight: partial delivery on disk — retrying its English cues",
 			"media_id", ref.ID, "media_type", ref.MediaType, "transient_cues", n, "run_id", run.ID)

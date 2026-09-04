@@ -8,49 +8,65 @@ import (
 
 // ModelCatalogService answers "which translation models can THIS deployment
 // actually run right now?" — the priced, non-retired catalog (ai.Catalog())
-// narrowed to the providers whose key resolves.
+// narrowed to what the subtitle pipeline can really dispatch to, and stamped
+// with this deployment's own default.
 //
-// The filter is not cosmetic: offering a Gemini model to a Claude-only
-// deployment would let a user consent to a price for a run that fails on its
-// first call, after the consent screen already told them what it would cost.
+// The filter is not cosmetic: offering a model the pipeline cannot reach would
+// let a user consent to a price for a run that fails on its first call, after
+// the consent screen already told them what it would cost.
 type ModelCatalogService struct {
 	resolver KeyResolver
-	// geminiConfigured reports whether a Gemini key is available.
+	// effectiveDefault reports the model an omitted model_id actually runs on.
 	//
-	// It is a func rather than another KeyResolver lookup because Gemini is
-	// NOT part of the resolver's closed key set (KeyClaude/KeyTMDb/KeyOpenAI):
-	// it has no secret row and no settings-page field, so its key can only
-	// come from GEMINI_API_KEY. main.go supplies that read. When Gemini gains
-	// a stored key, this becomes resolver.Has(ctx, KeyGemini) and the func
-	// goes away — tracked as backlog-gemini-key-in-resolver.
-	geminiConfigured func() bool
+	// It is NOT ai.DefaultClaudeModel: an operator who sets CLAUDE_MODEL is
+	// overriding that constant, and the holder's EffectiveModel is the single
+	// truth sub-6-5 established. Reading the constant here would tell such an
+	// operator that Sonnet is their default and quote every sweep at Sonnet's
+	// rate while their runs billed Haiku (CR H1). nil falls back to the
+	// package default.
+	effectiveDefault func() string
 }
 
-// NewModelCatalogService builds the catalog reader. geminiConfigured may be
-// nil, which reads as "no Gemini key" — the safe answer, since an unavailable
-// model that is hidden costs nothing while one that is offered costs a failed
-// run.
-func NewModelCatalogService(resolver KeyResolver, geminiConfigured func() bool) *ModelCatalogService {
-	return &ModelCatalogService{resolver: resolver, geminiConfigured: geminiConfigured}
+// NewModelCatalogService builds the catalog reader. effectiveDefault is
+// normally ClaudeProviderHolder.EffectiveModel.
+func NewModelCatalogService(resolver KeyResolver, effectiveDefault func() string) *ModelCatalogService {
+	return &ModelCatalogService{resolver: resolver, effectiveDefault: effectiveDefault}
 }
 
-// Available returns the models this deployment can run, in ai.Catalog order.
-func (s *ModelCatalogService) Available(ctx context.Context) []ai.ModelInfo {
-	claude := s.resolver != nil && s.resolver.Has(ctx, KeyClaude)
-	gemini := s.geminiConfigured != nil && s.geminiConfigured()
-
-	out := make([]ai.ModelInfo, 0, 8)
-	for _, m := range ai.Catalog() {
-		switch m.Provider {
-		case ai.ProviderNameClaude:
-			if claude {
-				out = append(out, m)
-			}
-		case ai.ProviderNameGemini:
-			if gemini {
-				out = append(out, m)
-			}
+// defaultModelID is this deployment's effective default, always non-empty.
+func (s *ModelCatalogService) defaultModelID() string {
+	if s.effectiveDefault != nil {
+		if id := s.effectiveDefault(); id != "" {
+			return id
 		}
+	}
+	return ai.DefaultClaudeModel
+}
+
+// Available returns the models this deployment can run, in ai.Catalog order,
+// with IsDefault stamped on the effective default.
+//
+// ⚠️ CLAUDE ONLY, deliberately (CR H2). The subtitle pipeline's translator is
+// the Claude holder and nothing else — main.go builds TranslationService with
+// it, and there is no per-model provider dispatch anywhere on the translation
+// path. Listing Gemini models because GEMINI_API_KEY happens to be set (which
+// the README still advertises for translation) would offer a choice whose only
+// possible outcome is a 404 from api.anthropic.com, charged after consent.
+// When translation learns to dispatch per provider, this grows a Gemini branch
+// — tracked as backlog-gemini-translation-dispatch.
+func (s *ModelCatalogService) Available(ctx context.Context) []ai.ModelInfo {
+	if s.resolver == nil || !s.resolver.Has(ctx, KeyClaude) {
+		return nil
+	}
+
+	defaultID := s.defaultModelID()
+	out := make([]ai.ModelInfo, 0, 4)
+	for _, m := range ai.Catalog() {
+		if m.Provider != ai.ProviderNameClaude {
+			continue
+		}
+		m.IsDefault = m.ID == defaultID
+		out = append(out, m)
 	}
 	return out
 }
@@ -74,10 +90,10 @@ func (s *ModelCatalogService) Supports(ctx context.Context, model string) bool {
 	return false
 }
 
-// DefaultModel returns the id the UI should pre-select: the deployment's
+// DefaultModel returns the id the UI should pre-select: this deployment's
 // effective default when it is actually available, otherwise the first
-// available model, otherwise "". A Claude-less deployment must not pre-select
-// a Claude model.
+// available model, otherwise "". A deployment with no usable key pre-selects
+// nothing.
 func (s *ModelCatalogService) DefaultModel(ctx context.Context) string {
 	available := s.Available(ctx)
 	for _, m := range available {
@@ -86,6 +102,10 @@ func (s *ModelCatalogService) DefaultModel(ctx context.Context) string {
 		}
 	}
 	if len(available) > 0 {
+		// CLAUDE_MODEL naming something outside the catalog (an alias, a
+		// preview id) is legal for the deployment default but cannot be
+		// pre-selected as a listed choice; fall back to a real entry rather
+		// than pointing the picker at an id it cannot render.
 		return available[0].ID
 	}
 	return ""

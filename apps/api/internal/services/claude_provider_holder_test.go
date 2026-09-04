@@ -275,14 +275,25 @@ func TestClaudeProviderHolder_GetForRejectsAnUnsupportedModel(t *testing.T) {
 		"a typo must fail here, not at the API after the user consented to a charge")
 }
 
+// shrinkClientCache lowers the LRU bound for one test: the catalog carries
+// only four Claude models, which cannot demonstrate eviction at the production
+// bound of four.
+func shrinkClientCache(t *testing.T, n int) {
+	t.Helper()
+	orig := maxCachedClients
+	maxCachedClients = n
+	t.Cleanup(func() { maxCachedClients = orig })
+}
+
 func TestClaudeProviderHolder_ClientCacheIsBounded(t *testing.T) {
+	shrinkClientCache(t, 2)
 	h := holderWithKey(t, "sk-one")
 	ctx := context.Background()
 
-	// Five distinct models through a four-slot cache: the least-recently-used
+	// Three distinct models through a two-slot cache: the least-recently-used
 	// one is evicted. Without the bound, a caller looping over model ids would
 	// grow this map forever (Rule 14).
-	models := []string{"claude-sonnet-5", "claude-haiku-4-5", "claude-opus-4-8", "claude-sonnet-4-6", "gemini-2.5-flash"}
+	models := []string{"claude-sonnet-5", "claude-haiku-4-5", "claude-opus-4-8"}
 	built := map[string]ai.TextCompleter{}
 	for _, m := range models {
 		p, err := h.GetFor(ctx, m)
@@ -306,26 +317,39 @@ func TestClaudeProviderHolder_ClientCacheIsBounded(t *testing.T) {
 }
 
 func TestClaudeProviderHolder_RecentUseKeepsAClientAlive(t *testing.T) {
+	shrinkClientCache(t, 2)
 	h := holderWithKey(t, "sk-one")
 	ctx := context.Background()
 
 	first, err := h.GetFor(ctx, "claude-sonnet-5")
 	require.NoError(t, err)
-	for _, m := range []string{"claude-haiku-4-5", "claude-opus-4-8"} {
-		_, err := h.GetFor(ctx, m)
-		require.NoError(t, err)
-	}
-	// Touch the first again, then push two more through: LRU order must have
+	_, err = h.GetFor(ctx, "claude-haiku-4-5")
+	require.NoError(t, err)
+
+	// Touch the first again, then push another through: LRU order must have
 	// moved it out of the eviction seat.
 	touched, err := h.GetFor(ctx, "claude-sonnet-5")
 	require.NoError(t, err)
 	assert.Same(t, first, touched)
 
-	for _, m := range []string{"claude-sonnet-4-6", "gemini-2.5-flash"} {
-		_, err := h.GetFor(ctx, m)
-		require.NoError(t, err)
-	}
+	_, err = h.GetFor(ctx, "claude-opus-4-8")
+	require.NoError(t, err)
+
 	still, err := h.GetFor(ctx, "claude-sonnet-5")
 	require.NoError(t, err)
 	assert.Same(t, first, still, "the model actually in use must survive an eviction round")
+}
+
+// TestClaudeProviderHolder_RefusesAModelServedByAnotherProvider locks CR H2.
+// Nothing on the translation path can dispatch to Gemini, so handing a Gemini
+// id to WithClaudeModel would post it to api.anthropic.com and get a 404 —
+// billed as a failed run the user already consented to.
+func TestClaudeProviderHolder_RefusesAModelServedByAnotherProvider(t *testing.T) {
+	h := holderWithKey(t, "sk-one")
+
+	_, err := h.GetFor(context.Background(), "gemini-2.5-flash")
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ai.ErrAIModelNotFound)
+	assert.Contains(t, err.Error(), "gemini")
 }
