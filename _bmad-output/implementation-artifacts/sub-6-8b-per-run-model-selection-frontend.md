@@ -37,7 +37,7 @@ sub-6-8a 的消費面。設計語彙來自 party-mode Sally 2026-09-03：
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — 設計（AC: #1）**：`.pen` F16/F19 更新 + 重出截圖 — **提示詞已備妥，等 Alexyu 在 Pencil 執行**（[[feedback_pen_inline_agent_workflow]]）
+- [ ] **Task 1 — 設計（AC: #1）**：`.pen` F16/F19 桌面更新 **＋ 新增 f16-m-v2／f19-m-v2 手機框** + 重出截圖 — **提示詞已備妥（`tmp/pencil-prompt-sub-6-8b.md`，不進版控），等 Alexyu 在 Pencil 執行**（[[feedback_pen_inline_agent_workflow]]）
 - [x] **Task 2 — service／型別／query（AC: #2）**
 - [x] **Task 3 — 元件與 selector（AC: #3, #4, #5）**
 - [x] **Task 4 — 測試與 fixtures（AC: #6）**
@@ -89,8 +89,10 @@ Claude Opus 5 (1M context)
 
 **其他：**
 
-- 確認框現在會長高（三列模型 + 明細），手機上可能超出視窗。改成 `max-h-[85vh]` +
+- 確認框現在會長高（模型列 + 明細），手機上會超出視窗。改成 `max-h-[85vh]` +
   body 捲動，標題列與按鈕列固定 —— 確認鍵被推出畫面等於死路。
+- 手機版改成 bottom sheet（見 Discovery Triage 第三條）。跑完 `-darwin` 視覺基線
+  重跑一次確認：桌面 1280x800 下**零 diff**，因為手機的改動全部在 `sm:` 斷點之前。
 - sub-6-6 交接的 FE 半邊一併做掉：`POST /settings/keys/test` 的 additive `model`
   現在顯示為「金鑰驗證成功 · 已驗證：{model}」；舊伺服器沒送就不宣稱。
 - 本機 `-darwin` 視覺基線已產生三張；`-linux` 依 CLAUDE.md 等 CI bootstrap PR。
@@ -101,10 +103,13 @@ Claude Opus 5 (1M context)
 
 - ① expand-scope-in-place — 確認框加了模型區塊後會超出手機視窗 → 同一檔改成 body 捲動。
 - ① expand-scope-in-place — sub-6-6 留下的 FE 半邊（`model` 顯示）→ 本 story 消費端一併做。
-- ③ backlog-with-carry-forward-link — `.pen` **沒有 F16-M／F19-M 手機框**（只有
-  F15-M-v2）。確認框在程式碼裡沒有手機分支（各寬度都是置中 `max-w-md` 對話框），
-  所以本輪不新造手機框；AC #1 的「含手機版」待 Alexyu 裁定是否要補
-  → `backlog-f16-f19-mobile-pen-frames`（owner: Sally）。
+- ① expand-scope-in-place — `.pen` 原本**沒有 F16-M／F19-M 手機框**，而且查證後發現
+  確認框在手機上是**壞的**：共用的 `DialogContent` 底層是 `w-full max-w-lg`，
+  `w-full` 在 fixed 元素上等於**視窗寬**，所以 390px 螢幕上這個「置中對話框」其實是
+  滿版貼邊、圓角壓在螢幕兩側。Alexyu 2026-09-04 裁定要補手機版 → 改成 **bottom
+  sheet**（沿用同一條流程上一步 F15-M `fdu4y` 已確立的手機語彙：把手、上圓角、貼底、
+  按鈕在拇指範圍內），並新增 f16-m-v2／f19-m-v2 兩個 390x844 frame。所有 class 都在
+  `sm:` 之前/之後分開，桌面渲染完全未動（既有視覺基線重跑後無 diff）。
 
 ### File List
 

@@ -15,6 +15,19 @@
  * bar and the action row stay put. Switching model here re-prices the F15
  * summary bar and footer behind the dialog too — one selector feeds all of
  * them, so they can never disagree about what this batch costs.
+ *
+ * MOBILE (sub-6-8b): a bottom sheet, not a centred dialog. The shared
+ * DialogContent base is `w-full max-w-lg`, and `w-full` on a fixed element is
+ * 100% of the VIEWPORT — so below 448px the "centred" dialog was already
+ * full-bleed, its rounded corners flush against both screen edges. Rather than
+ * paper over that with a side margin, this follows the sheet vocabulary F15-M
+ * (fdu4y) established for the very screen this dialog opens from: handle,
+ * top-rounded, pinned to the bottom, action row within thumb reach. Desktop is
+ * untouched — every change is behind `sm:`.
+ *
+ * ⚠️ The f16-m-v2 / f19-m-v2 frames are being drawn in the same story; their
+ * node ids join the `Design ref:` line above once they exist (Rule 21 rejects a
+ * screen name without one, and a made-up id is worse than a missing one).
  */
 import { Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '../../ui/Dialog';
@@ -63,13 +76,24 @@ export function ConfirmGenerationDialog({
       <DialogContent
         data-testid="consent-confirm-dialog"
         aria-describedby={undefined}
-        className="flex max-h-[85vh] max-w-md flex-col gap-0 overflow-hidden p-0"
+        className={cn(
+          'flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0',
+          // Mobile: bottom sheet (F16-M-v2 / F19-M-v2) — same geometry the
+          // consent list uses one step earlier in the same flow.
+          'bottom-0 left-0 right-0 top-auto w-full max-w-none translate-x-0 translate-y-0 rounded-b-none rounded-t-[var(--radius-xl)]',
+          'sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[var(--radius-xl)]'
+        )}
       >
-        <div className="flex h-14 shrink-0 items-center border-b border-[var(--border-subtle)] pl-6 pr-12">
+        {/* Mobile bottom-sheet drag handle (F15-M precedent, sm:hidden). */}
+        <div className="flex shrink-0 justify-center pb-1 pt-2 sm:hidden">
+          <span aria-hidden="true" className="h-1 w-9 rounded-full bg-[var(--bg-tertiary)]" />
+        </div>
+
+        <div className="flex h-14 shrink-0 items-center border-b border-[var(--border-subtle)] pl-4 pr-12 sm:pl-6">
           <DialogTitle className="text-base font-semibold">確認產生字幕</DialogTitle>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 sm:p-6">
           <p className="flex items-center gap-[3px] text-sm text-[var(--text-primary)]">
             即將為 <span className="font-mono tabular-nums">{totals.selectedCount}</span>
             部影片產生字幕
@@ -144,7 +168,7 @@ export function ConfirmGenerationDialog({
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-[var(--border-subtle)] px-6 py-3.5">
+        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-[var(--border-subtle)] px-4 py-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] sm:px-6 sm:pb-3.5">
           <button
             type="button"
             onClick={onCancel}
