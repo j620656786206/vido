@@ -163,11 +163,11 @@ jobs:
           # 兩個 job 同時寫同一個 :buildcache 會互相蓋掉（docker/buildx#1044，
           # 2022 年至今未修），結果是每次跑都有一個 arch 全冷、而且不會報錯，
           # 看起來只像「CI 偶爾很慢」。
-          # 第二行的舊 :buildcache 是過渡用的暖身來源（新 tag 一開始不存在），
-          # main 第一次綠燈之後就可以刪掉這一行。
-          cache-from: |
-            type=registry,ref=${{ env.REGISTRY_IMAGE }}:buildcache-${{ matrix.arch }}
-            type=registry,ref=${{ env.REGISTRY_IMAGE }}:buildcache
+          # 過渡期（2026-09-05）曾多讀一行舊的多架構 :buildcache 當暖身來源，
+          # 因為 per-arch 的 tag 第一次跑時還不存在。run 33903655095 已經
+          # 兩邊都 import 到 :buildcache-<arch> 也 export 回去了，暖身完成，
+          # 那一行已移除。舊的 :buildcache tag 從此沒有人寫，可以手動刪除。
+          cache-from: type=registry,ref=${{ env.REGISTRY_IMAGE }}:buildcache-${{ matrix.arch }}
           cache-to: ${{ github.event_name != 'pull_request' && format('type=registry,ref={0}:buildcache-{1},mode=max', env.REGISTRY_IMAGE, matrix.arch) || '' }}
 
       # digest 檔案只是一個「檔名等於 sha256」的空檔，內容零位元組 ——
