@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen F16-D-v2 (gmOt6) · F19-D-v2 (KThbY)
+// Design ref: ux-design.pen Screen F16-D-v2 (gmOt6) · F16-M-v2 (x45wBO) · F19-D-v2 (KThbY) · F19-M-v2 (IMQO6)
 /**
  * F16 金額確認 / F19 超出上限確認 (sub-4-3 AC #4) — the LAST gate before money
  * is spent. Breakdown figures come from the SAME ConsentTotals the list panel
@@ -24,10 +24,6 @@
  * (fdu4y) established for the very screen this dialog opens from: handle,
  * top-rounded, pinned to the bottom, action row within thumb reach. Desktop is
  * untouched — every change is behind `sm:`.
- *
- * ⚠️ The f16-m-v2 / f19-m-v2 frames are being drawn in the same story; their
- * node ids join the `Design ref:` line above once they exist (Rule 21 rejects a
- * screen name without one, and a made-up id is worse than a missing one).
  */
 import { Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '../../ui/Dialog';

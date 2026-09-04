@@ -1,6 +1,6 @@
 # Story 6.8b: 確認框顯示模型選擇 + 價錢 + 時間（前端）
 
-Status: in-progress
+Status: review
 
 **Depends on:** sub-6-8a (backend API must be ready) — `GET /settings/models`、`estimates_by_model`、`estimated_minutes_by_model`、batch `model_id`.
 
@@ -37,7 +37,7 @@ sub-6-8a 的消費面。設計語彙來自 party-mode Sally 2026-09-03：
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — 設計（AC: #1）**：`.pen` F16/F19 桌面更新 **＋ 新增 f16-m-v2／f19-m-v2 手機框** + 重出截圖 — **提示詞已備妥（`tmp/pencil-prompt-sub-6-8b.md`，不進版控），等 Alexyu 在 Pencil 執行**（[[feedback_pen_inline_agent_workflow]]）
+- [x] **Task 1 — 設計（AC: #1）**：`.pen` F16/F19 桌面更新 ＋ 新增 `f16-m-v2`（x45wBO）／`f19-m-v2`（IMQO6）手機框 + 截圖（[[feedback_pen_inline_agent_workflow]]：Alexyu 跑 inline agent、我 MCP 唯讀 review）
 - [x] **Task 2 — service／型別／query（AC: #2）**
 - [x] **Task 3 — 元件與 selector（AC: #3, #4, #5）**
 - [x] **Task 4 — 測試與 fixtures（AC: #6）**
@@ -124,7 +124,9 @@ Claude Opus 5 (1M context)
 - `apps/web/src/components/settings/ApiKeysForm.tsx`、`ApiKeysForm.spec.tsx`（modified）
 - `apps/web/src/routes/test/-gallery.fixtures.tsx`（modified）
 - `tests/visual/components.visual.spec.ts-snapshots/components/generation-consent/{f16-model-default,f16-model-haiku,f19-over-budget-haiku}/default-visual-darwin.png`（new）
-- `ux-design.pen`、`_bmad-output/screenshots/flow-f-subtitle-v2/`（Task 1，待 Alexyu 執行後補）
+- `ux-design.pen`（f16-d-v2／f19-d-v2 加模型區塊；新增 f16-m-v2 `x45wBO`／f19-m-v2 `IMQO6`）
+- `_bmad-output/screenshots/flow-f-subtitle-v2/{f16-d-v2,f19-d-v2,f16-m-v2,f19-m-v2}.png`
+- `scripts/export-pen-screenshots.py`（SCREENS 加兩個手機框）
 - `project-context.md`、`_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ### Change Log
@@ -133,4 +135,5 @@ Claude Opus 5 (1M context)
 | --- | --- |
 | 2026-09-04 | Task 2 — `subtitleService.getModels()`；`TranslationModelInfo`／`ModelEstimate` 型別；`GenerationBatchStartParams.modelId`；`useTranslationModels` hook（Rule 5，key `['settings','models']`）。 |
 | 2026-09-04 | Task 3 — `consentSelection` 加 `candidateUsd`／`computeTotals(prices)`／`modelChoices()`（估時依已勾片長比例換算）；新 `ModelPicker`；`ConfirmGenerationDialog` 掛入並改為 body 捲動；`CandidateListPanel` 逐列改讀該模型價；`GenerationConsentView` 持有 modelId 並串到三處金額與 batch payload。 |
+| 2026-09-04 | Task 1 — `.pen` F16/F19 桌面加「選擇翻譯模型」區塊；新增 f16-m-v2（x45wBO）／f19-m-v2（IMQO6）兩個 390x844 bottom sheet；F19 三處金額改成 Haiku 的 $9.72／49 部。MCP 唯讀 review：四個畫面文案逐字符合、僅背景 `sec-活動記錄` 有既有 partially clipped、桌面對話框 480x579 已垂直置中、手機 sheet 583／604 皆貼齊 844 底部。只 stage 真的變動的 4 張 PNG（其餘 169 張 re-render 噪音已 checkout）。 |
 | 2026-09-04 | Task 4 — 12 個新 spec（selector／picker／容器）＋ 三個 gallery fixture 與 `-darwin` 基線；sub-6-6 FE 半邊（`已驗證：{model}`）。 |
