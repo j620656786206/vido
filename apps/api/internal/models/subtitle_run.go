@@ -124,6 +124,13 @@ type SubtitleRun struct {
 	// latest-spend readout.
 	SpentUSD  *float64 `db:"spent_usd" json:"spent_usd,omitempty"`
 	BudgetUSD *float64 `db:"budget_usd" json:"budget_usd,omitempty"`
+	// StubbornCount is how many cues of a completed run shipped with their
+	// ENGLISH original — quality-gate stubborn (FR16, ≤5%) plus, since
+	// sub-6-2, the cues of a chunk whose request failed transiently through
+	// every retry (≤20% together). Stamped at the completed transition only;
+	// a failed/skipped run delivered nothing. NULL = recorded before
+	// migration 034 (absent is not 0 — pre-034 runs never counted).
+	StubbornCount *int `db:"stubborn_count" json:"stubborn_count,omitempty"`
 }
 
 // Validate checks the caller-supplied fields of a run before it is persisted.

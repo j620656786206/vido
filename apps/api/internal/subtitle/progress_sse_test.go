@@ -52,9 +52,13 @@ func TestSSEProgressHook_TranslatesStageMessagesToZhTW(t *testing.T) {
 		{StageExtracting, "extracting embedded subtitle track", "抽取內嵌字幕中…"},
 		{StagePlacing, "placing subtitle file", "寫入字幕檔…"},
 		{StageComplete, "subtitle generated", "字幕已生成"},
+		// sub-6-2 AC #4: the transport-retry narration keeps its numbers.
+		{StageTranslating, "chunk 7/60 timed out, retrying 2/3", "第 7/60 段逾時，重試 2/3"},
+		{StageTranslating, "chunk 7/60 failed transiently, retrying 3/3", "第 7/60 段暫時失敗，重試 3/3"},
+		{StageTranslating, "chunk 7/60 kept English after transport retries", "第 7/60 段暫時無法翻譯，保留英文繼續"},
 	}
 	for _, tc := range cases {
-		t.Run(string(tc.stage), func(t *testing.T) {
+		t.Run(string(tc.stage)+"/"+tc.raw, func(t *testing.T) {
 			hub := &fakeBroadcaster{}
 			NewSSEProgressHook(hub)(MediaRef{ID: "m1", MediaType: "movie"}, tc.stage, tc.raw)
 			assert.Equal(t, tc.want, hub.last(t)["message"],

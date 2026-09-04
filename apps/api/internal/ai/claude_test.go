@@ -44,8 +44,9 @@ func TestNewClaudeProvider(t *testing.T) {
 		assert.Equal(t, "test-api-key", p.apiKey)
 		assert.Equal(t, DefaultClaudeBaseURL, p.baseURL)
 		assert.Equal(t, DefaultClaudeModel, p.model)
-		assert.Equal(t, time.Duration(DefaultTimeoutSeconds)*time.Second, p.timeout)
+		assert.Zero(t, p.timeout, "no pinned timeout: each attempt derives its own from RequestTimeoutFor (sub-6-2)")
 		assert.NotNil(t, p.httpClient)
+		assert.Zero(t, p.httpClient.Timeout, "the per-attempt ctx is the ONLY deadline — a client Timeout would compete with it")
 	})
 
 	t.Run("custom configuration", func(t *testing.T) {

@@ -240,6 +240,11 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 	run.SourceLanguage = sourceLanguageOf(decision)
 	run.CacheEnabled = scope.cacheEnabled
 	run.CompletedAt = &completedAt
+	// Every cue that shipped in English (sub-6-2 AC #3): the union
+	// TranslateTrack noted for cache exclusion, which is 0 — not NULL — for
+	// a route with no LLM leg, because such a route delivered no English.
+	stubbornCount := len(scope.stubbornIndexes)
+	run.StubbornCount = &stubbornCount
 	p.stampRunSpend(ctx, run)
 	if err := p.runs.Update(ctx, run); err != nil {
 		// The sidecar IS on disk. Reverting the media row to `not_searched`
@@ -272,6 +277,7 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 		// harvested_terms = NEW terms this run wrote back (dedupes excluded).
 		"glossary_fed", len(item.Context.Glossary),
 		"harvested_terms", scope.harvestedTerms,
+		"stubborn_cues", stubbornCount,
 		"output_path", placed.SubtitlePath,
 	)
 

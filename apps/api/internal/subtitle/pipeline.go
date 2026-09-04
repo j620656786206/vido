@@ -2,6 +2,7 @@ package subtitle
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -22,6 +23,18 @@ const (
 	// stubbornCeilingDenominator expresses the stubborn-cue ceiling as 1/N of
 	// the track's cues: 20 → 5%.
 	stubbornCeilingDenominator = 20
+
+	// transientCeilingDenominator is the SECOND ceiling (sub-6-2 AC #3), over
+	// every English cue the track ships — quality-stubborn AND
+	// transport-stubborn together: 5 → 20%. A chunk whose request timed out
+	// (or hit 5xx/429) through every retry keeps its English and the run
+	// continues, so the cues already paid for are delivered and cached
+	// instead of thrown away with the whole run; but a track that is one-fifth
+	// English is not a subtitle, and the run is failed as soon as that is
+	// certain — not at the end, after every remaining chunk has been sent into
+	// the same outage. FR16's 5% quality ceiling is unchanged and still
+	// applies on its own to the quality-stubborn count.
+	transientCeilingDenominator = 5
 )
 
 // ChunkTranslator is the narrow port the pipeline needs from the services-side
@@ -73,7 +86,8 @@ type TranslateContext struct {
 type TranslateResult struct {
 	Blocks         []SubtitleBlock    // translated + gated + OpenCC'd; Index/Start/End byte-equal source
 	Usage          ai.CompletionUsage // aggregated across all chunks + retries
-	StubbornCues   int                // cues delivered with English fallback (see policy)
+	StubbornCues   int                // cues delivered with English fallback (see policy) — quality + transient
+	TransientCues  int                // the subset of StubbornCues whose chunk request failed transiently through every retry (sub-6-2)
 	HarvestedTerms map[string]string  // trailer yield, first-wins across chunks (sub-5-5)
 }
 
@@ -709,10 +723,20 @@ func (p *Pipeline) TranslateTrack(ctx context.Context, track *ExtractedTrack, tc
 	var harvested map[string]string
 
 	stubborn := 0
+	transient := 0
 
 	// Chunk numbering is derived once so the per-chunk observation can report
 	// "N of M" without the caller having to recompute the batching rule.
 	totalChunks := (len(source) + prompts.SubtitleTranslatorBatchSize - 1) / prompts.SubtitleTranslatorBatchSize
+
+	// The ceiling denominator is the DELIVERED track, not always `source`: with
+	// a warm segment cache, sub-1-5b hands this stage only the miss subset
+	// while the cache hits are already-accepted translations that still ship.
+	// Counting only the subset would make the ceiling tighten as the cache
+	// warms — a 20-cue episode with one flaky cue passes cold (1/20 = 5%) and
+	// fails at 18 hits (1/2 = 50%). See ceilingTotal's derivation on
+	// processScope.
+	delivered := ceilingTotal(ctx, len(source))
 
 	for start := 0; start < len(source); start += prompts.SubtitleTranslatorBatchSize {
 		end := min(start+prompts.SubtitleTranslatorBatchSize, len(source))
@@ -739,6 +763,11 @@ func (p *Pipeline) TranslateTrack(ctx context.Context, track *ExtractedTrack, tc
 		pending := chunk
 		var verdict GateVerdict
 
+		// AC #4: narrate the ai layer's transport retries on the progress
+		// stream. The observer is per chunk so the message can name it; the
+		// ai layer only knows an op label.
+		chunkCtx := ai.WithRetryObserver(ctx, p.retryNarrator(ctx, chunkNumber, totalChunks, track.StreamIndex))
+
 		for attempt := 0; ; attempt++ {
 			// D10: the item's very first LLM request warms the show's prompt
 			// prefix, and the entry only becomes readable once that response
@@ -750,7 +779,7 @@ func (p *Pipeline) TranslateTrack(ctx context.Context, track *ExtractedTrack, tc
 					ErrSubtitleTranslateFailed, err)
 			}
 
-			got, chunkTerms, chunkUsage, err := p.translator.TranslateChunk(ctx, sys, contextBlocks, promptBlocksOf(pending))
+			got, chunkTerms, chunkUsage, err := p.translator.TranslateChunk(chunkCtx, sys, contextBlocks, promptBlocksOf(pending))
 			// The gate is released as WARM only when the request actually
 			// returned. A failed first request never wrote the provider-side
 			// prefix, so marking the show warm would open the whole 50-minute
@@ -763,8 +792,47 @@ func (p *Pipeline) TranslateTrack(ctx context.Context, track *ExtractedTrack, tc
 			countRequest(ctx)
 			usage = addUsage(usage, chunkUsage)
 			if err != nil {
-				return nil, fmt.Errorf("%w: cues %d-%d: %w",
-					ErrSubtitleTranslateFailed, pending[0].Index, pending[len(pending)-1].Index, err)
+				if !isTransientExhausted(ctx, err) {
+					// Permanent: a rejected key, a retired model, the budget
+					// ceiling, a malformed body, a shutdown. Sending the next
+					// chunk would fail the same way — stop here (AC #3).
+					return nil, fmt.Errorf("%w: cues %d-%d: %w",
+						ErrSubtitleTranslateFailed, pending[0].Index, pending[len(pending)-1].Index, err)
+				}
+				// Transient, and the ai layer already spent its three attempts
+				// (D8: no second transport loop here). The cues still pending
+				// keep their English original and the track moves on (AC #3);
+				// noteStubbornCue keeps them out of the segment cache so the
+				// next run retries them for real.
+				for _, b := range pending {
+					transient++
+					noteStubbornCue(ctx, b.Index)
+				}
+				p.logger.Warn("subtitle chunk kept its English original after transport retries",
+					"chunk", chunkNumber,
+					"total_chunks", totalChunks,
+					"cue_range", fmt.Sprintf("%d-%d", pending[0].Index, pending[len(pending)-1].Index),
+					"cues", len(pending),
+					"stream_index", track.StreamIndex,
+					"error", err,
+				)
+				p.emitProgress(p.scopeRef(ctx), StageTranslating,
+					fmt.Sprintf(translateChunkEnglishFormat, chunkNumber, totalChunks))
+				// Fail as soon as the ceiling is CERTAIN to be breached: every
+				// further chunk would be sent into the same outage, and each
+				// costs three attempts of backoff before it too comes back
+				// English.
+				if (stubborn+transient)*transientCeilingDenominator > delivered {
+					return nil, transientCeilingError(stubborn+transient, delivered)
+				}
+				// A transient failure on a QUALITY retry (attempt > 0) lands
+				// here with the previous attempt's verdict still naming the
+				// pending cues as gate failures. They were just counted as
+				// transient; clearing the verdict keeps them out of the quality
+				// count too, or one cue would be stubborn twice and trip FR16's
+				// 5% ceiling for a transport fault.
+				verdict = GateVerdict{}
+				break
 			}
 
 			// Exactly once per chunk, on the response that first came back: a
@@ -814,18 +882,19 @@ func (p *Pipeline) TranslateTrack(ctx context.Context, track *ExtractedTrack, tc
 
 	// Stubborn-cue policy (NFR-R1 fail-soft, bounded): one flaky cue must not
 	// kill a 1000-cue episode, but a broken track must not ship half-English.
-	// stubborn*20 > total is the integer form of stubborn/total > 5%.
-	//
-	// The denominator is the DELIVERED track, which is not always `source`: with
-	// a warm segment cache, sub-1-5b hands this stage only the miss subset while
-	// the cache hits are already-accepted translations that still ship. Counting
-	// only the subset would make the ceiling tighten as the cache warms — a
-	// 20-cue episode with one flaky cue passes cold (1/20 = 5%) and fails at 18
-	// hits (1/2 = 50%). See ceilingTotal's derivation on processScope.
-	delivered := ceilingTotal(ctx, len(source))
+	// stubborn*20 > total is the integer form of stubborn/total > 5% — the
+	// FR16 quality ceiling, over the cues the GATE rejected. The transport
+	// ceiling (20%, over every English cue) was enforced inside the loop, at
+	// the first chunk that made it certain.
 	if stubborn*stubbornCeilingDenominator > delivered {
 		return nil, fmt.Errorf("%w: %d of %d cues still failed the quality gate after %d retries — over the %d%% ceiling",
 			ErrSubtitleTranslateFailed, stubborn, delivered, maxQualityRetries, 100/stubbornCeilingDenominator)
+	}
+	if (stubborn+transient)*transientCeilingDenominator > delivered {
+		// Reachable when the LAST cues to push it over were quality-stubborn
+		// rather than transient — the in-loop check only runs on the
+		// transient path.
+		return nil, transientCeilingError(stubborn+transient, delivered)
 	}
 
 	blocks := p.convertAndStitch(source, final)
@@ -833,7 +902,74 @@ func (p *Pipeline) TranslateTrack(ctx context.Context, track *ExtractedTrack, tc
 		return nil, err
 	}
 
-	return &TranslateResult{Blocks: blocks, Usage: usage, StubbornCues: stubborn, HarvestedTerms: harvested}, nil
+	return &TranslateResult{
+		Blocks:         blocks,
+		Usage:          usage,
+		StubbornCues:   stubborn + transient,
+		TransientCues:  transient,
+		HarvestedTerms: harvested,
+	}, nil
+}
+
+// isTransientExhausted reports whether a chunk error is the ai layer saying
+// "the provider was flaky for the whole retry window" (sub-6-2 AC #3) — the
+// ONE class the track degrades around rather than stops for. Everything else
+// stays fatal for the run:
+//   - permanent rejections (401/404/400, a malformed body) never carry
+//     ErrAIRetriesExhausted — retryTransient returns them at once;
+//   - the budget ceiling short-circuits in governed(), above the retry loop,
+//     so it never carries the sentinel either — and is excluded explicitly
+//     because a future wrap must not turn "stop spending" into "keep going";
+//   - a cancelled ctx (shutdown, per-item deadline) is the caller's decision,
+//     not the provider's weather, and the chunk-boundary check must see it.
+func isTransientExhausted(ctx context.Context, err error) bool {
+	if ctx.Err() != nil || errors.Is(err, ai.ErrBudgetExceeded) {
+		return false
+	}
+	return errors.Is(err, ai.ErrAIRetriesExhausted)
+}
+
+// transientCeilingError is the AC #3 verdict for a track that would ship more
+// than 1/transientCeilingDenominator English.
+func transientCeilingError(english, delivered int) error {
+	return fmt.Errorf("%w: %d of %d cues would ship in English after transport failures — over the %d%% ceiling",
+		ErrSubtitleTranslateFailed, english, delivered, 100/transientCeilingDenominator)
+}
+
+// scopeRef is the item's MediaRef when TranslateTrack runs inside the item
+// flow, and the zero ref for a direct caller — emitProgress is nil-safe and
+// direct callers wire no hook, so the zero ref never reaches a listener.
+func (p *Pipeline) scopeRef(ctx context.Context) MediaRef {
+	if scope := processScopeFrom(ctx); scope != nil {
+		return scope.ref
+	}
+	return MediaRef{}
+}
+
+// retryNarrator builds the per-chunk ai.RetryObserver (AC #4): one log line
+// with the cue range and attempt, and one progress message per transport
+// retry, worded by cause — a timeout reads「逾時」, any other transient fault
+// (429, 5xx, a reset connection)「暫時失敗」.
+func (p *Pipeline) retryNarrator(ctx context.Context, chunk, total, streamIndex int) ai.RetryObserver {
+	ref := p.scopeRef(ctx)
+	return func(n ai.RetryNotice) {
+		next := n.Attempt + 1
+		p.logger.Warn("subtitle chunk request failed transiently — retrying",
+			"chunk", chunk,
+			"total_chunks", total,
+			"attempt", n.Attempt,
+			"next_attempt", next,
+			"max_attempts", n.MaxAttempts,
+			"backoff", n.Delay.String(),
+			"stream_index", streamIndex,
+			"error", n.Err,
+		)
+		format := translateChunkRetryFormat
+		if errors.Is(n.Err, ai.ErrAITimeout) {
+			format = translateChunkTimeoutFormat
+		}
+		p.emitProgress(ref, StageTranslating, fmt.Sprintf(format, chunk, total, next, n.MaxAttempts))
+	}
 }
 
 // mergeChunkTerms folds one chunk's trailer terms into the accumulated map,

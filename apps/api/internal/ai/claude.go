@@ -43,8 +43,12 @@ type ClaudeProvider struct {
 	baseURL    string
 	model      string
 	httpClient *http.Client
-	timeout    time.Duration
-	governor   *Governor // 9R-11: shared throttle (nil = unthrottled)
+	// timeout is a FIXED per-attempt deadline when set (WithClaudeTimeout —
+	// tests, and a deployment that wants one number). Zero, the default, means
+	// every attempt derives its own deadline from RequestTimeoutFor(model,
+	// max_tokens) (sub-6-2 AC #1).
+	timeout  time.Duration
+	governor *Governor // 9R-11: shared throttle (nil = unthrottled)
 
 	// client is the official anthropic-sdk-go client, built ONCE in
 	// NewClaudeProvider after all options are applied (Rule 14 — never per
@@ -84,7 +88,8 @@ func WithClaudeHTTPClient(client *http.Client) ClaudeProviderOption {
 	}
 }
 
-// WithClaudeTimeout sets a custom timeout.
+// WithClaudeTimeout pins one fixed per-attempt timeout, replacing the
+// per-call RequestTimeoutFor derivation. Zero restores the derivation.
 func WithClaudeTimeout(timeout time.Duration) ClaudeProviderOption {
 	return func(p *ClaudeProvider) {
 		p.timeout = timeout
@@ -119,24 +124,23 @@ func NewClaudeProvider(apiKey string, opts ...ClaudeProviderOption) *ClaudeProvi
 		apiKey:  apiKey,
 		baseURL: DefaultClaudeBaseURL,
 		model:   DefaultClaudeModel,
-		timeout: DefaultTimeoutSeconds * time.Second,
 	}
 
 	for _, opt := range opts {
 		opt(p)
 	}
 
-	// A caller-supplied client (WithClaudeHTTPClient) may carry no Timeout of
-	// its own, so p.timeout must then be enforced per attempt via
-	// option.WithRequestTimeout — the hand-rolled client wrapped EVERY attempt
-	// in context.WithTimeout(ctx, p.timeout) regardless of which client was in
-	// use, and that semantic must survive the SDK migration.
-	customHTTPClient := p.httpClient != nil
-
+	// The deadline is the per-attempt ctx in send, and ONLY that (sub-6-2
+	// AC #1): the default client carries no Timeout and no
+	// option.WithRequestTimeout is stacked on it. Two competing deadlines was
+	// the D8 bug class this replaces — the shorter one always won silently,
+	// so a 60 s derivation would have been cut to the client's 15 s. Before
+	// the ctx deadline existed a caller-supplied client without a Timeout of
+	// its own needed WithRequestTimeout to keep the bound (CR M1); the ctx
+	// covers both clients now, and TestClaudeProvider_TimeoutEnforcedWithCustomHTTPClient
+	// still guards it.
 	if p.httpClient == nil {
-		p.httpClient = &http.Client{
-			Timeout: p.timeout,
-		}
+		p.httpClient = &http.Client{}
 	}
 
 	// Built AFTER options are applied — otherwise WithClaudeBaseURL is silently
@@ -149,19 +153,11 @@ func NewClaudeProvider(apiKey string, opts ...ClaudeProviderOption) *ClaudeProvi
 		// would sit BELOW the budget gate and a retry storm would bypass cost
 		// control entirely. Exactly one retry layer, and it is ours.
 		option.WithMaxRetries(0),
-		// The default http.Client above already carries Timeout: p.timeout, so
-		// the deadline is enforced there and WithRequestTimeout is NOT stacked
-		// on top — two competing deadlines is a bug waiting to happen. The
-		// custom-client branch below is the one place the request-timeout option
-		// is needed.
 		option.WithHTTPClient(p.httpClient),
 		// A 2xx body that is not JSON is permanent, exactly like a malformed
 		// JSON body (AC #4 trap) — without this guard the SDK's content-type
 		// rejection falls into the connection-error fallback and gets retried.
 		option.WithMiddleware(rejectNonJSONSuccess),
-	}
-	if customHTTPClient {
-		clientOpts = append(clientOpts, option.WithRequestTimeout(p.timeout))
 	}
 	p.client = anthropic.NewClient(clientOpts...)
 
@@ -216,10 +212,20 @@ func isDecodeErr(err error) bool {
 	return errors.As(err, &syntaxErr) || errors.As(err, &typeErr)
 }
 
+// attemptTimeout is the deadline one attempt gets: the pinned WithClaudeTimeout
+// when set, otherwise RequestTimeoutFor(model, max_tokens).
+func (p *ClaudeProvider) attemptTimeout(maxTokens int64) time.Duration {
+	if p.timeout > 0 {
+		return p.timeout
+	}
+	return RequestTimeoutFor(p.model, int(maxTokens))
+}
+
 // classifyErr maps an SDK error onto this package's sentinels and reports
 // whether the failure is worth retrying. SDK error types must never leak past
-// this function.
-func (p *ClaudeProvider) classifyErr(err error) (retryable bool, mapped error) {
+// this function. timeout is the deadline the failed attempt ran under — logged
+// with the model so a timeout line says what bound it actually hit (AC #4).
+func (p *ClaudeProvider) classifyErr(err error, timeout time.Duration) (retryable bool, mapped error) {
 	// A malformed 200 body. NOTE: with the SDK the decode happens INSIDE
 	// Messages.New, i.e. inside the retry loop — the hand-rolled client decoded
 	// outside it. Classifying this as retryable would turn one garbage response
@@ -257,7 +263,7 @@ func (p *ClaudeProvider) classifyErr(err error) (retryable bool, mapped error) {
 	}
 
 	if isTimeoutErr(err) {
-		slog.Warn("Claude API timeout", "timeout_seconds", p.timeout.Seconds())
+		slog.Warn("Claude API timeout", "model", p.model, "timeout_seconds", timeout.Seconds())
 		return true, ErrAITimeout
 	}
 
@@ -272,13 +278,21 @@ func (p *ClaudeProvider) classifyErr(err error) (retryable bool, mapped error) {
 //
 //	governed(...)              budget pre-check + rate token + concurrency slot, ONCE
 //	  └── retryTransient(...)  3 attempts, exponential backoff
-//	        └── Messages.New   SDK, retries DISABLED
+//	        └── Messages.New   SDK, retries DISABLED, one fresh deadline per attempt
+//
+// The deadline is per ATTEMPT (the gemini.go / whisper.go shape): a timeout on
+// attempt 1 must not eat the window of attempts 2 and 3. It is derived from
+// this request's max_tokens, so a 10-cue Sonnet chunk waits ~100 s while a
+// Ping waits 60 s (sub-6-2 AC #1).
 func (p *ClaudeProvider) send(ctx context.Context, params anthropic.MessageNewParams) (*anthropic.Message, error) {
+	timeout := p.attemptTimeout(params.MaxTokens)
 	msg, err := governed(ctx, p.governor, "claude.messages", func() (*anthropic.Message, error) {
 		return retryTransient(ctx, "claude.messages", func() (*anthropic.Message, bool, error) {
-			m, err := p.client.Messages.New(ctx, params)
+			attemptCtx, cancel := context.WithTimeout(ctx, timeout)
+			defer cancel()
+			m, err := p.client.Messages.New(attemptCtx, params)
 			if err != nil {
-				retryable, mapped := p.classifyErr(err)
+				retryable, mapped := p.classifyErr(err, timeout)
 				return nil, retryable, mapped
 			}
 			return m, false, nil
