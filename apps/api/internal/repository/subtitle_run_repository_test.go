@@ -48,17 +48,19 @@ func fullyPopulatedRun() *models.SubtitleRun {
 		OutputPath:      "/media/tv/show/S01E01.zh-Hant.srt",
 		CueCount:        842,
 		CacheEnabled:    true,
+		StubbornCount:   intPtr(7),
+		TransientCount:  intPtr(3),
 		ErrorMessage:    "",
 		StartedAt:       time.Now().Add(-2 * time.Minute).UTC().Truncate(time.Second),
 		CompletedAt:     &completed,
 	}
 }
 
-// TestSubtitleRunRepository_RoundTripsAllSixteenColumns is the Rule 15 DB Column
-// Sync guard: every column of migration 030 must survive INSERT → SELECT →
-// Scan. A column present in the table but missing from subtitleRunColumns reads
-// back as its zero value, which this test fails on.
-func TestSubtitleRunRepository_RoundTripsAllSixteenColumns(t *testing.T) {
+// TestSubtitleRunRepository_RoundTripsAllColumns is the Rule 15 DB Column
+// Sync guard: every column of migrations 030/032/034 (20 today) must survive
+// INSERT → SELECT → Scan. A column present in the table but missing from
+// subtitleRunColumns reads back as its zero value, which this test fails on.
+func TestSubtitleRunRepository_RoundTripsAllColumns(t *testing.T) {
 	repo := NewSubtitleRunRepository(setupSubtitleRunDB(t))
 	ctx := context.Background()
 
@@ -69,8 +71,8 @@ func TestSubtitleRunRepository_RoundTripsAllSixteenColumns(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, got)
 
-	// 16 columns, asserted one by one — a loop over a struct would hide which
-	// field was dropped.
+	// Asserted one by one — a loop over a struct would hide which field was
+	// dropped.
 	assert.Equal(t, want.ID, got.ID)                                           // 1
 	assert.Equal(t, want.MediaID, got.MediaID)                                 // 2
 	assert.Equal(t, want.MediaType, got.MediaType)                             // 3
@@ -89,6 +91,10 @@ func TestSubtitleRunRepository_RoundTripsAllSixteenColumns(t *testing.T) {
 	assert.WithinDuration(t, want.StartedAt, got.StartedAt, time.Second)       // 15
 	require.NotNil(t, got.CompletedAt, "completed_at must survive")            // 16
 	assert.WithinDuration(t, *want.CompletedAt, *got.CompletedAt, time.Second) //
+	require.NotNil(t, got.StubbornCount, "stubborn_count must survive")        // 19 (migration 034)
+	assert.Equal(t, *want.StubbornCount, *got.StubbornCount)                   //
+	require.NotNil(t, got.TransientCount, "transient_count must survive")      // 20 (migration 034)
+	assert.Equal(t, *want.TransientCount, *got.TransientCount)                 //
 
 	// The version tuple must reassemble from the persisted columns — this is
 	// what sub-1-5b hashes into the cue-grain cache key.
@@ -117,6 +123,8 @@ func TestSubtitleRunRepository_NullableColumnsRoundTripAsUnset(t *testing.T) {
 	assert.Equal(t, 0, got.CueCount)
 	assert.False(t, got.CacheEnabled, "cache_enabled is reserved for sub-1-5 and defaults false")
 	assert.Equal(t, "", got.ErrorMessage)
+	assert.Nil(t, got.StubbornCount, "an uncounted run reads NULL, never 0 (migration 034)")
+	assert.Nil(t, got.TransientCount, "an uncounted run reads NULL, never 0 (migration 034)")
 }
 
 // TestSubtitleRunRepository_ScanToleratesRawNulls covers rows written outside
@@ -521,3 +529,5 @@ func TestSubtitleRunRepository_RegisteredInBothConstructors(t *testing.T) {
 	assert.NotNil(t, NewRepositories(db).SubtitleRuns, "NewRepositories must wire SubtitleRuns")
 	assert.NotNil(t, NewRepositoriesWithCache(db).SubtitleRuns, "NewRepositoriesWithCache is what main.go calls — it must wire SubtitleRuns too")
 }
+
+func intPtr(n int) *int { return &n }

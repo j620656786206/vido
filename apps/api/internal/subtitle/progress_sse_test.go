@@ -53,6 +53,11 @@ func TestSSEProgressHook_TranslatesStageMessagesToZhTW(t *testing.T) {
 		{StageExtracting, "waiting for the extraction slot (2 ahead)", "等待抽軌（前方 2 件）"},
 		{StagePlacing, "placing subtitle file", "寫入字幕檔…"},
 		{StageComplete, "subtitle generated", "字幕已生成"},
+		// sub-6-2 AC #4: the transport-retry narration keeps its numbers.
+		{StageTranslating, "chunk 7/60 timed out, retrying 2/3", "第 7/60 段逾時，重試 2/3"},
+		{StageTranslating, "chunk 7/60 failed transiently, retrying 3/3", "第 7/60 段暫時失敗，重試 3/3"},
+		{StageTranslating, "chunk 7/60 kept English after transport retries", "第 7/60 段暫時無法翻譯，保留英文繼續"},
+		{StageComplete, "subtitle generated with 10 cues kept in English — queued for a retry", "字幕已生成（10 句暫留英文，將再排程翻譯）"},
 	}
 	for _, tc := range cases {
 		t.Run(string(tc.stage)+"/"+tc.raw, func(t *testing.T) {

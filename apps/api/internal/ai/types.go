@@ -27,6 +27,16 @@ var (
 	// generic provider error. Wrapped ALONGSIDE ErrAIProviderError, same pattern
 	// as ErrAIUnauthorized, so existing errors.Is checks keep working.
 	ErrAIModelNotFound = errors.New("AI_MODEL_NOT_FOUND: Configured model id rejected by provider")
+	// ErrAIRetriesExhausted marks a TRANSIENT failure (timeout, 429, 5xx,
+	// connection reset) that persisted through every retryTransient attempt.
+	// It is wrapped ALONGSIDE the last attempt's sentinel (ErrAITimeout,
+	// ErrAIQuotaExceeded, ErrAIProviderError), never instead of it, so existing
+	// errors.Is checks keep working. By construction it is the ONLY way a
+	// caller can tell "the provider was flaky for a whole retry window" apart
+	// from "the request is wrong" (401/404/budget return without it): the
+	// subtitle pipeline uses exactly that distinction to keep an English chunk
+	// and move on instead of failing the run (sub-6-2 AC #3).
+	ErrAIRetriesExhausted = errors.New("AI_RETRIES_EXHAUSTED: transient failure persisted through every retry")
 	// ErrBudgetExceeded is returned when a per-run AI cost/token budget ceiling
 	// is reached — the run stops spending rather than running away over a whole
 	// library (Story 9R-11). Uses the existing AI_ prefix (Rule 7, no new code).

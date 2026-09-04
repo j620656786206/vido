@@ -21,6 +21,19 @@ const translateChunkProgressFormat = "translating chunk %d/%d"
 // extractions are ahead of it, holder included.
 const extractWaitProgressFormat = "waiting for the extraction slot (%d ahead)"
 
+// The sub-6-2 AC #4 transport-retry narration, same Sscanf convention: the
+// chunk that timed out (or failed transiently), the attempt about to start,
+// and the attempt budget; then the verdict when the budget ran out.
+const (
+	translateChunkTimeoutFormat = "chunk %d/%d timed out, retrying %d/%d"
+	translateChunkRetryFormat   = "chunk %d/%d failed transiently, retrying %d/%d"
+	translateChunkEnglishFormat = "chunk %d/%d kept English after transport retries"
+	// completePartialFormat is the `complete` verdict of a partial delivery
+	// (sub-6-2 CR H2): the file is written and usable, N cues are English
+	// because the provider was unreachable, and the item stays queued.
+	completePartialFormat = "subtitle generated with %d cues kept in English — queued for a retry"
+)
+
 // ProgressBroadcaster is the narrow port over *sse.Hub — one method, so the
 // bridge is testable without standing up a hub goroutine.
 type ProgressBroadcaster interface {
@@ -76,9 +89,18 @@ func zhTWStageMessage(stage PipelineStage, message string) string {
 		}
 		return "抽取內嵌字幕中…"
 	case StageTranslating:
-		var chunk, total int
+		var chunk, total, next, max int
 		if n, err := fmt.Sscanf(message, translateChunkProgressFormat, &chunk, &total); n == 2 && err == nil {
 			return fmt.Sprintf("翻譯中（第 %d/%d 段）", chunk, total)
+		}
+		if n, err := fmt.Sscanf(message, translateChunkTimeoutFormat, &chunk, &total, &next, &max); n == 4 && err == nil {
+			return fmt.Sprintf("第 %d/%d 段逾時，重試 %d/%d", chunk, total, next, max)
+		}
+		if n, err := fmt.Sscanf(message, translateChunkRetryFormat, &chunk, &total, &next, &max); n == 4 && err == nil {
+			return fmt.Sprintf("第 %d/%d 段暫時失敗，重試 %d/%d", chunk, total, next, max)
+		}
+		if n, err := fmt.Sscanf(message, translateChunkEnglishFormat, &chunk, &total); n == 2 && err == nil {
+			return fmt.Sprintf("第 %d/%d 段暫時無法翻譯，保留英文繼續", chunk, total)
 		}
 		return "翻譯中…"
 	case StageConverting:
@@ -86,6 +108,10 @@ func zhTWStageMessage(stage PipelineStage, message string) string {
 	case StagePlacing:
 		return "寫入字幕檔…"
 	case StageComplete:
+		var english int
+		if n, err := fmt.Sscanf(message, completePartialFormat, &english); n == 1 && err == nil {
+			return fmt.Sprintf("字幕已生成（%d 句暫留英文，將再排程翻譯）", english)
+		}
 		return "字幕已生成"
 	case StageSkipped:
 		// The reason is machine-authored (a route verdict) and is the only thing
