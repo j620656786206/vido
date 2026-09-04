@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/ai/prompts"
@@ -22,9 +21,15 @@ const (
 
 // Translation constants
 const (
-	// TranslationTimeout is the max time per batch request.
-	TranslationTimeout = 60 * time.Second
 	// TranslationMaxTokens is the max response tokens per batch (10 blocks × ~100 chars).
+	//
+	// It is ALSO the input to the request deadline: the ai layer derives each
+	// attempt's timeout from the model family plus this figure
+	// (ai.RequestTimeoutFor, sub-6-2 AC #1/#2). This service deliberately
+	// wraps NO deadline of its own around a call — the 60 s TranslationTimeout
+	// it used to stack on top of the client's 15 s could never fire first, and
+	// two deadlines on one request is the D8 bug class where the shorter one
+	// wins silently. One bound, owned by the layer that knows the model.
 	TranslationMaxTokens = 4096
 )
 
@@ -319,14 +324,12 @@ func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, b
 		// Call Claude API
 		userPrompt := prompts.BuildSubtitleTranslatorPromptWithGlossary(promptBlocks, contextBlocks, promptGlossary)
 
-		batchCtx, batchCancel := context.WithTimeout(ctx, TranslationTimeout)
 		translated, err := s.provider.CompleteText(
-			batchCtx,
+			ctx,
 			systemPrompt,
 			userPrompt,
 			TranslationMaxTokens,
 		)
-		batchCancel()
 
 		if err != nil {
 			// 9R-16 AC 6c: the per-run budget sentinel must escape the
@@ -440,9 +443,7 @@ func (s *TranslationService) TranslateRequest(ctx context.Context, req Translati
 
 	userPrompt := prompts.BuildSubtitleTranslatorPromptWithGlossary(promptBlocks, nil, toPromptGlossary(req.Glossary))
 
-	batchCtx, cancel := context.WithTimeout(ctx, TranslationTimeout)
-	defer cancel()
-	translated, err := s.provider.CompleteText(batchCtx, prompts.SubtitleTranslatorSystemPrompt, userPrompt, TranslationMaxTokens)
+	translated, err := s.provider.CompleteText(ctx, prompts.SubtitleTranslatorSystemPrompt, userPrompt, TranslationMaxTokens)
 	if err != nil {
 		if ctx.Err() != nil {
 			return nil, fmt.Errorf("translation cancelled: %w", ctx.Err())
@@ -488,15 +489,12 @@ func (s *TranslationService) TranslateChunk(ctx context.Context, sys []ai.System
 	}
 	userPrompt := prompts.BuildSubtitleTranslatorPrompt(blocks, contextBlocks)
 
-	chunkCtx, cancel := context.WithTimeout(ctx, TranslationTimeout)
-	defer cancel()
-
 	// Claude implements CachingCompleter, so usage — including both cache
 	// dimensions — flows back to the caller. Gemini deliberately does not:
 	// it degrades to the plain text API with zero usage rather than blocking
 	// the multi-provider moat (the established degradation shape).
 	if caching, ok := s.provider.(ai.CachingCompleter); ok {
-		res, err := caching.CompleteTextWithUsage(chunkCtx, ai.CompletionRequest{
+		res, err := caching.CompleteTextWithUsage(ctx, ai.CompletionRequest{
 			System:     sys,
 			UserPrompt: userPrompt,
 			MaxTokens:  TranslationMaxTokens,
@@ -511,7 +509,7 @@ func (s *TranslationService) TranslateChunk(ctx context.Context, sys []ai.System
 	slog.Info("AI provider does not implement ai.CachingCompleter — translating without prompt caching or token usage",
 		"chunk_size", len(blocks),
 	)
-	text, err := s.provider.CompleteText(chunkCtx, flattenSystemBlocks(sys), userPrompt, TranslationMaxTokens)
+	text, err := s.provider.CompleteText(ctx, flattenSystemBlocks(sys), userPrompt, TranslationMaxTokens)
 	if err != nil {
 		return nil, nil, ai.CompletionUsage{}, fmt.Errorf("translate chunk [%d-%d]: %w", indices[0], indices[len(indices)-1], err)
 	}

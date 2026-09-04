@@ -44,8 +44,9 @@ func TestNewClaudeProvider(t *testing.T) {
 		assert.Equal(t, "test-api-key", p.apiKey)
 		assert.Equal(t, DefaultClaudeBaseURL, p.baseURL)
 		assert.Equal(t, DefaultClaudeModel, p.model)
-		assert.Equal(t, time.Duration(DefaultTimeoutSeconds)*time.Second, p.timeout)
+		assert.Zero(t, p.timeout, "no pinned timeout: each attempt derives its own from RequestTimeoutFor (sub-6-2)")
 		assert.NotNil(t, p.httpClient)
+		assert.Zero(t, p.httpClient.Timeout, "the per-attempt ctx is the ONLY deadline — a client Timeout would compete with it")
 	})
 
 	t.Run("custom configuration", func(t *testing.T) {
@@ -812,8 +813,9 @@ func TestClaudeProvider_CompleteTextWithUsage_CacheControlAndUsage(t *testing.T)
 // The hand-rolled doRequest wrapped EVERY attempt in
 // context.WithTimeout(ctx, p.timeout) regardless of which http.Client was in
 // use; the SDK build only carried the timeout on the default-built client, so
-// WithClaudeHTTPClient + WithClaudeTimeout silently lost the deadline. Guarded
-// via option.WithRequestTimeout on the custom-client branch.
+// WithClaudeHTTPClient + WithClaudeTimeout silently lost the deadline. Since
+// sub-6-2 the per-attempt ctx deadline in send is the ONE bound for both
+// clients — do NOT reintroduce option.WithRequestTimeout to "fix" this test.
 func TestClaudeProvider_TimeoutEnforcedWithCustomHTTPClient(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(200 * time.Millisecond)

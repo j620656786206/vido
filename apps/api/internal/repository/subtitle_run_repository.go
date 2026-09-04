@@ -66,26 +66,27 @@ func NewSubtitleRunRepository(db *sql.DB) *SubtitleRunRepository {
 var _ SubtitleRunRepositoryInterface = (*SubtitleRunRepository)(nil)
 
 // subtitleRunColumns keeps INSERT/UPDATE/SELECT/scan in sync (Rule 15 DB Column
-// Sync). All 18 columns — the 16 of migration 030 in table order, plus the two
-// spend columns of migration 032. The bugfix-20-1 precedent — series.seasons
+// Sync). All 20 columns — the 16 of migration 030 in table order, the two
+// spend columns of migration 032, and the two English-cue counts of
+// migration 034. The bugfix-20-1 precedent — series.seasons
 // was never added to the select list, so GetSeasons silently returned [] for
 // every series — is why this is one constant used everywhere rather than four
 // hand-written lists.
 const subtitleRunColumns = `id, media_id, media_type, tmdb_id, metadata_hash, glossary_version, ` +
 	`prompt_version, model_id, status, source_language, output_path, cue_count, ` +
-	`cache_enabled, error_message, started_at, completed_at, spent_usd, budget_usd`
+	`cache_enabled, error_message, started_at, completed_at, spent_usd, budget_usd, stubborn_count, transient_count`
 
-// subtitleRunInsertPlaceholders matches subtitleRunColumns 1:1 (18 values).
-const subtitleRunInsertPlaceholders = `?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?`
+// subtitleRunInsertPlaceholders matches subtitleRunColumns 1:1 (20 values).
+const subtitleRunInsertPlaceholders = `?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?`
 
 // subtitleRunUpdateAssignments covers every column except the id key, so an
 // Update can never leave a column stale.
 const subtitleRunUpdateAssignments = `media_id = ?, media_type = ?, tmdb_id = ?, metadata_hash = ?, ` +
 	`glossary_version = ?, prompt_version = ?, model_id = ?, status = ?, source_language = ?, ` +
 	`output_path = ?, cue_count = ?, cache_enabled = ?, error_message = ?, started_at = ?, completed_at = ?, ` +
-	`spent_usd = ?, budget_usd = ?`
+	`spent_usd = ?, budget_usd = ?, stubborn_count = ?, transient_count = ?`
 
-// subtitleRunValues returns the 16 column values in subtitleRunColumns order.
+// subtitleRunValues returns the 20 column values in subtitleRunColumns order.
 // Both time columns are normalized to UTC before storage: the driver stores a
 // time.Time as text, and FindCompletedRun / ListByStatus ORDER BY that text —
 // a local-time value ("… +0800 CST") would compare by wall-clock digits and
@@ -100,10 +101,11 @@ func subtitleRunValues(run *models.SubtitleRun) []any {
 		run.ID, run.MediaID, run.MediaType, run.TMDbID, run.MetadataHash, run.GlossaryVersion,
 		run.PromptVersion, run.ModelID, run.Status, run.SourceLanguage, run.OutputPath, run.CueCount,
 		run.CacheEnabled, run.ErrorMessage, run.StartedAt.UTC(), completedAt, run.SpentUSD, run.BudgetUSD,
+		run.StubbornCount, run.TransientCount,
 	}
 }
 
-// scanSubtitleRun reads all 18 columns in subtitleRunColumns order. The four
+// scanSubtitleRun reads all 20 columns in subtitleRunColumns order. The four
 // nullable TEXT/INTEGER columns go through sql.Null* so a row written by any
 // other path (e.g. a bare INSERT) still scans; the nullable columns modelled
 // as pointers stay pointers so "unset" survives the round trip.
@@ -116,6 +118,7 @@ func scanSubtitleRun(scanner interface{ Scan(dest ...any) error }) (models.Subti
 		&run.ID, &run.MediaID, &run.MediaType, &run.TMDbID, &run.MetadataHash, &run.GlossaryVersion,
 		&run.PromptVersion, &run.ModelID, &run.Status, &sourceLanguage, &outputPath, &cueCount,
 		&run.CacheEnabled, &errorMessage, &run.StartedAt, &run.CompletedAt, &run.SpentUSD, &run.BudgetUSD,
+		&run.StubbornCount, &run.TransientCount,
 	)
 	if err != nil {
 		return run, err
@@ -166,7 +169,7 @@ func (r *SubtitleRunRepository) Update(ctx context.Context, run *models.Subtitle
 	if run.Status == "" {
 		return &models.ValidationError{Field: "status", Message: "status is required to update a subtitle run"}
 	}
-	// Update overwrites all 15 non-id columns, so a sparsely-populated struct
+	// Update overwrites all 19 non-id columns, so a sparsely-populated struct
 	// would silently zero started_at and corrupt the ORDER BY started_at
 	// resume/listing semantics.
 	if run.StartedAt.IsZero() {

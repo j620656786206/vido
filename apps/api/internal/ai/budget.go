@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"sync"
+	"time"
 )
 
 // ModelPricing is the per-1M-token USD price for an LLM model (Story 9R-11
@@ -38,6 +39,29 @@ var defaultLLMPricing = map[string]ModelPricing{
 	"gemini-3.5-flash-lite": {InputPer1M: 0.30, OutputPer1M: 2.50},
 	"gemini-3.6-flash":      {InputPer1M: 0.75, OutputPer1M: 3.75},
 	"gemini-3.7-flash":      {InputPer1M: 0.75, OutputPer1M: 3.75},
+}
+
+// llmTimeoutBase is the per-family request-timeout base RequestTimeoutFor
+// (timeout.go) starts from — kept HERE, beside the pricing table, because both
+// are "what do we know about this model id" and a model added to one belongs
+// in the other (sub-6-2 AC #1). Matched by substring, first row wins; the
+// values are the observed p99 of a 10-cue chunk on each family, with headroom.
+// Vars (not consts) so the package test suite can shrink them the way it
+// shrinks the retry backoff.
+var llmTimeoutBase = []modelTimeoutRow{
+	{family: "haiku", base: 30 * time.Second},
+	{family: "sonnet", base: 60 * time.Second},
+	{family: "opus", base: 90 * time.Second},
+	{family: "gemini", base: 30 * time.Second},
+}
+
+// unknownModelTimeoutBase is the Sonnet-class base an unlisted model id gets.
+var unknownModelTimeoutBase = 60 * time.Second
+
+// modelTimeoutRow is one family → base pair of llmTimeoutBase.
+type modelTimeoutRow struct {
+	family string
+	base   time.Duration
 }
 
 // fallbackLLMPricing is used when the model id isn't in the table.

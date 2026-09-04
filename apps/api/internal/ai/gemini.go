@@ -24,8 +24,6 @@ const (
 	// $0.10/$0.40 per-1M rate the retired model had, so the bump is cost-neutral.
 	// Override per deployment with GEMINI_MODEL (mirrors CLAUDE_MODEL, story 9R-1).
 	DefaultGeminiModel = "gemini-2.5-flash-lite"
-	// DefaultTimeoutSeconds is the default timeout per NFR-I12.
-	DefaultTimeoutSeconds = 15
 )
 
 // GeminiProvider implements the Provider interface for Google's Gemini AI.
@@ -34,8 +32,12 @@ type GeminiProvider struct {
 	baseURL    string
 	model      string
 	httpClient *http.Client
-	timeout    time.Duration
-	governor   *Governor // sub-5-1: shared throttle (nil = unthrottled)
+	// timeout is a FIXED per-attempt deadline when set (WithGeminiTimeout).
+	// Zero, the default, derives each attempt's deadline from
+	// RequestTimeoutFor(model, max_output_tokens) (sub-6-2 AC #1, same rule as
+	// claude.go so the two providers cannot drift).
+	timeout  time.Duration
+	governor *Governor // sub-5-1: shared throttle (nil = unthrottled)
 }
 
 // Compile-time interface verification.
@@ -67,7 +69,8 @@ func WithGeminiHTTPClient(client *http.Client) GeminiProviderOption {
 	}
 }
 
-// WithGeminiTimeout sets a custom timeout.
+// WithGeminiTimeout pins one fixed per-attempt timeout, replacing the
+// per-call RequestTimeoutFor derivation. Zero restores the derivation.
 func WithGeminiTimeout(timeout time.Duration) GeminiProviderOption {
 	return func(p *GeminiProvider) {
 		p.timeout = timeout
@@ -90,20 +93,39 @@ func NewGeminiProvider(apiKey string, opts ...GeminiProviderOption) *GeminiProvi
 		apiKey:  apiKey,
 		baseURL: DefaultGeminiBaseURL,
 		model:   DefaultGeminiModel,
-		timeout: DefaultTimeoutSeconds * time.Second,
 	}
 
 	for _, opt := range opts {
 		opt(p)
 	}
 
+	// No client-level Timeout: the per-attempt ctx in Parse/Ping is the one
+	// deadline (sub-6-2 AC #1) — a second one on the client would silently win
+	// whenever it was the shorter, which is how the old 15 s constant kept
+	// biting after the ctx existed.
 	if p.httpClient == nil {
-		p.httpClient = &http.Client{
-			Timeout: p.timeout,
-		}
+		p.httpClient = &http.Client{}
 	}
 
 	return p
+}
+
+// attemptTimeout is the deadline one attempt gets: the pinned WithGeminiTimeout
+// when set, otherwise RequestTimeoutFor(model, maxOutputTokens).
+func (p *GeminiProvider) attemptTimeout(maxOutputTokens int) time.Duration {
+	if p.timeout > 0 {
+		return p.timeout
+	}
+	return RequestTimeoutFor(p.model, maxOutputTokens)
+}
+
+// probeTimeout is Ping's per-attempt deadline: the pinned WithGeminiTimeout
+// when set, otherwise the fixed ProbeRequestTimeout (claude.go parity).
+func (p *GeminiProvider) probeTimeout() time.Duration {
+	if p.timeout > 0 {
+		return p.timeout
+	}
+	return ProbeRequestTimeout
 }
 
 // Name returns the provider name.
@@ -138,10 +160,11 @@ func (p *GeminiProvider) Ping(ctx context.Context) error {
 		return fmt.Errorf("failed to marshal request: %w", err)
 	}
 	url := fmt.Sprintf("%s/models/%s:generateContent", p.baseURL, p.model)
+	timeout := p.probeTimeout()
 
 	_, err = governed(ctx, p.governor, "gemini.ping", func() (struct{}, error) {
 		return retryTransient(ctx, "gemini.ping", func() (struct{}, bool, error) {
-			attemptCtx, cancel := context.WithTimeout(ctx, p.timeout)
+			attemptCtx, cancel := context.WithTimeout(ctx, timeout)
 			defer cancel()
 			httpReq, err := http.NewRequestWithContext(attemptCtx, http.MethodPost, url, bytes.NewReader(body))
 			if err != nil {
@@ -226,16 +249,18 @@ func (p *GeminiProvider) Parse(ctx context.Context, req *ParseRequest) (*ParseRe
 		"model", p.model,
 		"filename", req.Filename,
 	)
+	// A parse sets no max_output_tokens, so the family base alone applies.
+	timeout := p.attemptTimeout(0)
 
 	geminiResp, err := governed(ctx, p.governor, "gemini.generate", func() (*geminiResponse, error) {
 		return retryTransient(ctx, "gemini.generate", func() (*geminiResponse, bool, error) {
 			// Per-attempt timeout (the whisper.go shape) — a timeout on attempt
 			// 1 must not consume the deadline of attempts 2 and 3. NOTE (CR
-			// M3): the NFR-I12 bound is therefore per-ATTEMPT; the worst-case
-			// logical call is 3×timeout + backoff, matching claude.go — which
-			// also retries 429/timeout/5xx with no outer deadline. That parity
-			// IS the AC (同級化); pinned by the 429-attempt-count test.
-			attemptCtx, cancel := context.WithTimeout(ctx, p.timeout)
+			// M3): the bound is therefore per-ATTEMPT; the worst-case logical
+			// call is 3×timeout + backoff, matching claude.go — which also
+			// retries 429/timeout/5xx with no outer deadline. That parity IS
+			// the AC (同級化); pinned by the 429-attempt-count test.
+			attemptCtx, cancel := context.WithTimeout(ctx, timeout)
 			defer cancel()
 
 			httpReq, err := http.NewRequestWithContext(attemptCtx, http.MethodPost, url, bytes.NewReader(body))
@@ -248,8 +273,9 @@ func (p *GeminiProvider) Parse(ctx context.Context, req *ParseRequest) (*ParseRe
 			if err != nil {
 				if attemptCtx.Err() == context.DeadlineExceeded {
 					slog.Warn("Gemini API timeout",
+						"model", p.model,
 						"filename", req.Filename,
-						"timeout_seconds", p.timeout.Seconds(),
+						"timeout_seconds", timeout.Seconds(),
 					)
 					return nil, true, ErrAITimeout
 				}
