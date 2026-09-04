@@ -683,9 +683,14 @@ export function GenerationBatchDialogV2({
    * The consent flow's confirmed start (sub-4-3 AC #4): explicit ids in list
    * order + the user-approved on-screen ceiling — ALWAYS scope=selected,
    * ALWAYS budget_usd (WYSIWYG consent; 9R-16 AC #1 [@contract-v3]).
+   *
+   * sub-6-8b extends the same rule to the model: an explicit `modelId` is the
+   * one whose price the user just read, so it travels with the batch. An empty
+   * string is omitted rather than sent — the server then uses its own default,
+   * which is exactly what the priced rows fell back to.
    */
   const handleStartConsented = useCallback(
-    async (mediaIds: string[], budgetUsd: number) => {
+    async (mediaIds: string[], budgetUsd: number, modelId: string) => {
       setStarting(true);
       setStartError(null);
       try {
@@ -693,6 +698,7 @@ export function GenerationBatchDialogV2({
           scope: 'selected',
           mediaIds,
           budgetUsd,
+          ...(modelId ? { modelId } : {}),
         });
         setRetryIds(undefined); // consumed — the next consent render starts clean
         if (outcome.conflict) {
@@ -789,7 +795,9 @@ export function GenerationBatchDialogV2({
         forceAnalyze={forceAnalyze || postTerminal}
         starting={starting}
         startError={startError}
-        onStartBatch={(mediaIds, budgetUsd) => void handleStartConsented(mediaIds, budgetUsd)}
+        onStartBatch={(mediaIds, budgetUsd, modelId) =>
+          void handleStartConsented(mediaIds, budgetUsd, modelId)
+        }
         onClose={handleClose}
       />
     );

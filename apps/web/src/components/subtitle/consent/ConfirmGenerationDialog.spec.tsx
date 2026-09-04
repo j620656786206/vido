@@ -1,7 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { ConfirmGenerationDialog } from './ConfirmGenerationDialog';
-import type { ConsentTotals } from './consentSelection';
+import {
+  ConfirmGenerationDialog,
+  type ConfirmGenerationDialogProps,
+} from './ConfirmGenerationDialog';
+import type { ConsentTotals, ModelChoice } from './consentSelection';
 
 const baseTotals: ConsentTotals = {
   candidateCount: 142,
@@ -15,7 +18,34 @@ const baseTotals: ConsentTotals = {
   feasibleCount: 18,
 };
 
-function renderDialog(totals: Partial<ConsentTotals> = {}, budgetUsd = 5) {
+const MODEL_CHOICES: ModelChoice[] = [
+  {
+    id: 'claude-sonnet-5',
+    displayName: 'Claude Sonnet 5',
+    isDefault: true,
+    qualityGrade: 'A',
+    isBestGrade: true,
+    totalUsd: 4.5,
+    minutes: 11,
+  },
+  {
+    id: 'claude-haiku-4-5',
+    displayName: 'Claude Haiku 4.5',
+    isDefault: false,
+    qualityGrade: 'B',
+    isBestGrade: false,
+    totalUsd: 1.7,
+    minutes: 9,
+    deltaUsd: 2.8,
+    deltaPercent: 62,
+  },
+];
+
+function renderDialog(
+  totals: Partial<ConsentTotals> = {},
+  budgetUsd = 5,
+  picker?: Partial<ConfirmGenerationDialogProps>
+) {
   const onConfirm = vi.fn();
   const onCancel = vi.fn();
   render(
@@ -25,6 +55,7 @@ function renderDialog(totals: Partial<ConsentTotals> = {}, budgetUsd = 5) {
       budgetUsd={budgetUsd}
       onConfirm={onConfirm}
       onCancel={onCancel}
+      {...picker}
     />
   );
   return { onConfirm, onCancel };
@@ -70,5 +101,39 @@ describe('ConfirmGenerationDialog (F16/F19)', () => {
     fireEvent.click(screen.getByTestId('consent-confirm-cancel'));
     expect(onCancel).toHaveBeenCalledOnce();
     expect(onConfirm).not.toHaveBeenCalled();
+  });
+});
+
+describe('ConfirmGenerationDialog — 翻譯模型 (sub-6-8b)', () => {
+  it('[P0 AC #1] renders the picker above the breakdown with the default pre-selected', () => {
+    const onModelChange = vi.fn();
+    renderDialog({}, 5, {
+      modelChoices: MODEL_CHOICES,
+      selectedModelId: 'claude-sonnet-5',
+      onModelChange,
+    });
+
+    expect(screen.getByTestId('consent-model-picker')).toBeInTheDocument();
+    expect(screen.getByTestId('consent-model-option-claude-sonnet-5')).toHaveAttribute(
+      'data-selected',
+      'true'
+    );
+    // The breakdown still renders the ONE totals value it was handed.
+    expect(screen.getByTestId('consent-confirm-total-usd')).toHaveTextContent('$4.50');
+  });
+
+  it('[AC #4] 仍要開始 / 確認並開始 wording is untouched by the model choice — inform, never nag', () => {
+    renderDialog({}, 5, {
+      modelChoices: MODEL_CHOICES,
+      selectedModelId: 'claude-haiku-4-5',
+      onModelChange: vi.fn(),
+    });
+    expect(screen.getByTestId('consent-confirm-start').textContent).toContain('確認並開始');
+  });
+
+  it('no catalog → no picker, and the dialog is otherwise unchanged', () => {
+    renderDialog();
+    expect(screen.queryByTestId('consent-model-picker')).not.toBeInTheDocument();
+    expect(screen.getByTestId('consent-confirm-total-usd')).toHaveTextContent('$4.50');
   });
 });

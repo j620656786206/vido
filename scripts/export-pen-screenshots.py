@@ -258,10 +258,15 @@ SCREENS = {
     "pwMzT": ("flow-f-subtitle-v2", "f15-d-v2"),
     "fdu4y": ("flow-f-subtitle-v2", "f15-m-v2"),
     "gmOt6": ("flow-f-subtitle-v2", "f16-d-v2"),
+    # sub-6-8b — 確認框加「選擇翻譯模型」；手機版是 bottom sheet（沿用 F15-M 語彙），
+    # 因為共用 DialogContent 的 `w-full` 在 fixed 元素上等於視窗寬，置中對話框在
+    # 390px 上其實是滿版貼邊的。
+    "x45wBO": ("flow-f-subtitle-v2", "f16-m-v2"),
     "I3Wb0p": ("flow-f-subtitle-v2", "f17-d-v2"),
     # prompt-cost-consent round 2 — over-budget states + empty state
     "zBik1": ("flow-f-subtitle-v2", "f18-d-v2"),
     "KThbY": ("flow-f-subtitle-v2", "f19-d-v2"),
+    "IMQO6": ("flow-f-subtitle-v2", "f19-m-v2"),
     "D7MOm": ("flow-f-subtitle-v2", "f20-d-v2"),
     # flow-h-homepage-v3 — home identity rework (home-v3-identity-brief.md: 讀數帶 4 格 +
     # 自家片庫靜態 hero + TMDb 尾巴濾已擁有; H7 = TMDb 降級態; H8 = 讀數帶金額顯示規則 spec).

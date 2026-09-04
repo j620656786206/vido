@@ -1,16 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import {
   applyRouteFilter,
+  candidateUsd,
   computeTotals,
   defaultSelection,
   listableCandidates,
+  modelChoices,
   parseBudgetInput,
   groupCandidates,
   groupOrder,
   isWritable,
   selectableIds,
 } from './consentSelection';
-import type { GenerationCandidate } from '../../../services/subtitleService';
+import type { GenerationCandidate, TranslationModelInfo } from '../../../services/subtitleService';
 
 // Media-id fixture convention (9R-18 AC 7): UUID strings only.
 const c = (
@@ -283,5 +285,154 @@ describe('computeTotals selectable/unwritable counts (sub-6-1 CR M4)', () => {
     expect(t.candidateCount).toBe(3);
     expect(t.selectableCount).toBe(2);
     expect(t.unwritableCount).toBe(1);
+  });
+});
+
+// ─── sub-6-8b: the model dimension ──────────────────────────────────────────
+
+const SONNET: TranslationModelInfo = {
+  id: 'claude-sonnet-5',
+  provider: 'claude',
+  displayName: 'Claude Sonnet 5',
+  tier: 'balanced',
+  isDefault: true,
+  qualityGrade: 'A',
+  qualityNote: 'Vido 實測 2026-09',
+};
+const HAIKU: TranslationModelInfo = {
+  id: 'claude-haiku-4-5',
+  provider: 'claude',
+  displayName: 'Claude Haiku 4.5',
+  tier: 'fast',
+  isDefault: false,
+  qualityGrade: 'B',
+  qualityNote: 'Vido 實測 2026-09',
+};
+
+describe('candidateUsd (the one row-price gate)', () => {
+  const row = c(A, 'extract', 0.05);
+
+  it('uses the chosen model price when the row has one', () => {
+    expect(candidateUsd(row, { [A]: 0.02 })).toBe(0.02);
+  });
+
+  it("falls back to the row's own estimate — a missing per-model price is never invented", () => {
+    expect(candidateUsd(row, { [B]: 0.02 })).toBe(0.05);
+    expect(candidateUsd(row, undefined)).toBe(0.05);
+  });
+});
+
+describe('computeTotals under a chosen model', () => {
+  const list = [c(A, 'extract', 0.05), c(B, 'asr', 0.31)];
+  const prices = { [A]: 0.02, [B]: 0.12 };
+
+  it('re-prices the route split and the total from the same table', () => {
+    const t = computeTotals(list, new Set([A, B]), null, prices);
+    expect(t.selectedExtractUsd).toBe(0.02);
+    expect(t.selectedAsrUsd).toBe(0.12);
+    expect(t.selectedTotalUsd).toBeCloseTo(0.14, 5);
+  });
+
+  it('re-decides the budget verdict — the ceiling is judged against what will ACTUALLY be spent', () => {
+    expect(computeTotals(list, new Set([A, B]), 0.2).overBudget).toBe(true);
+    expect(computeTotals(list, new Set([A, B]), 0.2, prices).overBudget).toBe(false);
+  });
+
+  it('re-walks the feasible count at the chosen prices', () => {
+    // At Sonnet prices the $0.05 ceiling is exactly used up by the first item,
+    // so the second never starts; at Haiku prices there is still room for it.
+    expect(computeTotals(list, new Set([A, B]), 0.05).feasibleCount).toBe(1);
+    expect(computeTotals(list, new Set([A, B]), 0.05, prices).feasibleCount).toBe(2);
+  });
+});
+
+describe('modelChoices', () => {
+  const list = [
+    c(A, 'extract', 0.05, { runtimeMinutes: 166 }),
+    c(B, 'asr', 0.31, { runtimeMinutes: 52 }),
+  ];
+  const input = {
+    models: [HAIKU, SONNET],
+    defaultModelId: 'claude-sonnet-5',
+    estimatesByModel: {
+      'claude-sonnet-5': { totalUsd: 0.36, perCandidate: { [A]: 0.05, [B]: 0.31 } },
+      'claude-haiku-4-5': { totalUsd: 0.14, perCandidate: { [A]: 0.02, [B]: 0.12 } },
+    },
+    estimatedMinutesByModel: { 'claude-sonnet-5': 37, 'claude-haiku-4-5': 24 },
+  };
+
+  it('prices the CURRENT selection, not the whole sweep', () => {
+    const rows = modelChoices(list, new Set([A]), input);
+    expect(rows.map((r) => [r.id, r.totalUsd])).toEqual([
+      ['claude-haiku-4-5', 0.02],
+      ['claude-sonnet-5', 0.05],
+    ]);
+  });
+
+  it('rescales the sweep minutes by the share of runtime actually selected', () => {
+    // 166 of 218 runtime minutes selected → 37 * 0.7615 = 28, 24 * 0.7615 = 18.
+    const rows = modelChoices(list, new Set([A]), input);
+    expect(rows.find((r) => r.id === 'claude-sonnet-5')?.minutes).toBe(28);
+    expect(rows.find((r) => r.id === 'claude-haiku-4-5')?.minutes).toBe(18);
+  });
+
+  it('omits the time when the server sent no minutes — no duration is invented', () => {
+    const rows = modelChoices(list, new Set([A]), {
+      ...input,
+      estimatedMinutesByModel: undefined,
+    });
+    expect(rows.every((r) => r.minutes === undefined)).toBe(true);
+  });
+
+  it('states the gap against the DEFAULT model, in both directions', () => {
+    const rows = modelChoices(list, new Set([A, B]), input);
+    const haiku = rows.find((r) => r.id === 'claude-haiku-4-5');
+    expect(haiku?.deltaUsd).toBeCloseTo(0.22, 5);
+    expect(haiku?.deltaPercent).toBe(61);
+    // The default row compares against nothing.
+    expect(rows.find((r) => r.id === 'claude-sonnet-5')?.deltaUsd).toBeUndefined();
+  });
+
+  it('marks only the top MEASURED grade as best — an ungraded model is not "equal"', () => {
+    const gemini: TranslationModelInfo = {
+      id: 'gemini-2.5-flash',
+      provider: 'gemini',
+      displayName: 'Gemini 2.5 Flash',
+      tier: 'balanced',
+      isDefault: false,
+    };
+    const rows = modelChoices(list, new Set([A]), {
+      ...input,
+      models: [gemini, HAIKU, SONNET],
+      estimatesByModel: {
+        ...input.estimatesByModel,
+        'gemini-2.5-flash': { totalUsd: 0.03, perCandidate: { [A]: 0.01, [B]: 0.02 } },
+      },
+    });
+    expect(rows.filter((r) => r.isBestGrade).map((r) => r.id)).toEqual(['claude-sonnet-5']);
+    expect(rows.find((r) => r.id === 'gemini-2.5-flash')?.qualityGrade).toBeUndefined();
+  });
+
+  it('a pre-sub-6-8a server (no per-model quote) offers the DEFAULT model alone', () => {
+    const rows = modelChoices(list, new Set([A]), {
+      models: [HAIKU, SONNET],
+      defaultModelId: 'claude-sonnet-5',
+    });
+    // Quoting Haiku at the default rate would be a lie in a money field.
+    expect(rows.map((r) => r.id)).toEqual(['claude-sonnet-5']);
+    expect(rows[0].totalUsd).toBe(0.05);
+  });
+
+  it('an empty catalog is no question at all', () => {
+    expect(modelChoices(list, new Set([A]), { models: [], defaultModelId: '' })).toEqual([]);
+  });
+
+  it('excludes unwritable rows from every model total (they can never be spent)', () => {
+    const withBlocked = [
+      c(A, 'extract', 0.05, { runtimeMinutes: 166 }),
+      c(D, 'asr', 0.9, { writable: false, runtimeMinutes: 90 }),
+    ];
+    const rows = modelChoices(withBlocked, new Set([A, D]), input);
+    expect(rows.find((r) => r.id === 'claude-sonnet-5')?.totalUsd).toBe(0.05);
   });
 });

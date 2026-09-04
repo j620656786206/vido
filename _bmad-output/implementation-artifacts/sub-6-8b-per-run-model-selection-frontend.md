@@ -1,6 +1,6 @@
 # Story 6.8b: 確認框顯示模型選擇 + 價錢 + 時間（前端）
 
-Status: ready-for-dev
+Status: done
 
 **Depends on:** sub-6-8a (backend API must be ready) — `GET /settings/models`、`estimates_by_model`、`estimated_minutes_by_model`、batch `model_id`.
 
@@ -37,10 +37,10 @@ sub-6-8a 的消費面。設計語彙來自 party-mode Sally 2026-09-03：
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — 設計（AC: #1）**：Sally 更新 `.pen` F16/F19（+ 手機）、重出截圖
-- [ ] **Task 2 — service／型別／query（AC: #2）**
-- [ ] **Task 3 — 元件與 selector（AC: #3, #4, #5）**
-- [ ] **Task 4 — 測試與 fixtures（AC: #6）**
+- [x] **Task 1 — 設計（AC: #1）**：`.pen` F16/F19 桌面更新 ＋ 新增 `f16-m-v2`（x45wBO）／`f19-m-v2`（IMQO6）手機框 + 截圖（[[feedback_pen_inline_agent_workflow]]：Alexyu 跑 inline agent、我 MCP 唯讀 review）
+- [x] **Task 2 — service／型別／query（AC: #2）**
+- [x] **Task 3 — 元件與 selector（AC: #3, #4, #5）**
+- [x] **Task 4 — 測試與 fixtures（AC: #6）**
 
 ## Dev Notes
 
@@ -64,10 +64,78 @@ sub-6-8a 的消費面。設計語彙來自 party-mode Sally 2026-09-03：
 
 ### Agent Model Used
 
+Claude Opus 5 (1M context)
+
 ### Completion Notes List
+
+**四點值得 Alexyu 過目的裁量（其餘依 AC 實作）：**
+
+1. **估時是「換算」出來的，不是後端直接給的。** 後端的 `estimated_minutes_by_model`
+   是**整輪掃描**的分鐘數，但確認框問的是「我勾的這幾部要跑多久」。後端的公式是
+   `片長 × 該模型的時間佔比`（`estimateMinutes`，extract／asr 同一佔比），所以
+   「已勾片長 ÷ 全部可寫入片長」這個比例可以精準換算過去 —— 前端因此**沒有**自己抄一份
+   佔比常數，後端改校準時這裡會跟著改。若後端沒送分鐘數，時間欄直接不顯示（不編造）。
+
+2. **舊伺服器只給一列，不是三列。** `estimates_by_model` 缺席時（pre-sub-6-8a），
+   只列出預設模型。把 Haiku 用預設模型的價錢列出來會是**金額欄位裡的謊**，而這整個
+   story 的目的正好相反。
+
+3. **「eval-1 實測品質最穩」只有真的握有最高評級的預設列才能講。** 操作者把
+   `CLAUDE_MODEL` 設成 haiku 時，預設列是 B 級 —— 那句話就會變成假的，所以改成
+   由 `isBestGrade` 決定，不是由 `isDefault` 決定。
+
+4. **價差雙向顯示。** AC #4 只寫「省 $X」，但目錄裡有比預設更貴的模型（Opus 4.8）。
+   選了貴的卻不講貴多少，跟藏起便宜選項是同一種隱瞞，所以也顯示「多 $X」。
+
+**其他：**
+
+- 確認框現在會長高（模型列 + 明細），手機上會超出視窗。改成 `max-h-[85vh]` +
+  body 捲動，標題列與按鈕列固定 —— 確認鍵被推出畫面等於死路。
+- 手機版改成 bottom sheet（見 Discovery Triage 第三條）。跑完 `-darwin` 視覺基線
+  重跑一次確認：桌面 1280x800 下**零 diff**，因為手機的改動全部在 `sm:` 斷點之前。
+- sub-6-6 交接的 FE 半邊一併做掉：`POST /settings/keys/test` 的 additive `model`
+  現在顯示為「金鑰驗證成功 · 已驗證：{model}」；舊伺服器沒送就不宣稱。
+- 本機 `-darwin` 視覺基線已產生三張；`-linux` 依 CLAUDE.md 等 CI bootstrap PR。
+  跑基線時發現 `retry-retry-notifications` 與 `glossary-panel-v2/seeded` 兩張
+  **既有** darwin 基線有 ~1000px 漂移（diff 落在字型描邊，與本 story 無關、未動）。
 
 ### Discovery Triage
 
-- （dev 填）
+- ① expand-scope-in-place — 確認框加了模型區塊後會超出手機視窗 → 同一檔改成 body 捲動。
+- ① expand-scope-in-place — sub-6-6 留下的 FE 半邊（`model` 顯示）→ 本 story 消費端一併做。
+- ① expand-scope-in-place — `.pen` 原本**沒有 F16-M／F19-M 手機框**，而且查證後發現
+  確認框在手機上是**壞的**：共用的 `DialogContent` 底層是 `w-full max-w-lg`，
+  `w-full` 在 fixed 元素上等於**視窗寬**，所以 390px 螢幕上這個「置中對話框」其實是
+  滿版貼邊、圓角壓在螢幕兩側。Alexyu 2026-09-04 裁定要補手機版 → 改成 **bottom
+  sheet**（沿用同一條流程上一步 F15-M `fdu4y` 已確立的手機語彙：把手、上圓角、貼底、
+  按鈕在拇指範圍內），並新增 f16-m-v2／f19-m-v2 兩個 390x844 frame。所有 class 都在
+  `sm:` 之前/之後分開，桌面渲染完全未動（既有視覺基線重跑後無 diff）。
 
 ### File List
+
+- `apps/web/src/components/subtitle/consent/ModelPicker.tsx`、`ModelPicker.spec.tsx`（new）
+- `apps/web/src/components/subtitle/consent/consentSelection.ts`、`consentSelection.spec.ts`（modified）
+- `apps/web/src/components/subtitle/consent/ConfirmGenerationDialog.tsx`、`ConfirmGenerationDialog.spec.tsx`（modified）
+- `apps/web/src/components/subtitle/consent/CandidateListPanel.tsx`（modified）
+- `apps/web/src/components/subtitle/consent/GenerationConsentView.tsx`、`GenerationConsentView.spec.tsx`（modified）
+- `apps/web/src/components/subtitle/GenerationBatchDialogV2.tsx`（modified）
+- `apps/web/src/hooks/useTranslationModels.ts`（new）
+- `apps/web/src/services/subtitleService.ts`、`keySettingsService.ts`、`apps/web/src/hooks/useKeySettings.ts`（modified）
+- `apps/web/src/components/settings/ApiKeysForm.tsx`、`ApiKeysForm.spec.tsx`（modified）
+- `apps/web/src/routes/test/-gallery.fixtures.tsx`（modified）
+- `tests/visual/components.visual.spec.ts-snapshots/components/generation-consent/{f16-model-default,f16-model-haiku,f19-over-budget-haiku}/default-visual-darwin.png`（new）
+- `ux-design.pen`（f16-d-v2／f19-d-v2 加模型區塊；新增 f16-m-v2 `x45wBO`／f19-m-v2 `IMQO6`）
+- `_bmad-output/screenshots/flow-f-subtitle-v2/{f16-d-v2,f19-d-v2,f16-m-v2,f19-m-v2}.png`
+- `scripts/export-pen-screenshots.py`（SCREENS 加兩個手機框）
+- `project-context.md`、`_bmad-output/implementation-artifacts/sprint-status.yaml`
+
+### Change Log
+
+| Date | Change |
+| --- | --- |
+| 2026-09-04 | Task 2 — `subtitleService.getModels()`；`TranslationModelInfo`／`ModelEstimate` 型別；`GenerationBatchStartParams.modelId`；`useTranslationModels` hook（Rule 5，key `['settings','models']`）。 |
+| 2026-09-04 | Task 3 — `consentSelection` 加 `candidateUsd`／`computeTotals(prices)`／`modelChoices()`（估時依已勾片長比例換算）；新 `ModelPicker`；`ConfirmGenerationDialog` 掛入並改為 body 捲動；`CandidateListPanel` 逐列改讀該模型價；`GenerationConsentView` 持有 modelId 並串到三處金額與 batch payload。 |
+| 2026-09-04 | Task 1 — `.pen` F16/F19 桌面加「選擇翻譯模型」區塊；新增 f16-m-v2（x45wBO）／f19-m-v2（IMQO6）兩個 390x844 bottom sheet；F19 三處金額改成 Haiku 的 $9.72／49 部。MCP 唯讀 review：四個畫面文案逐字符合、僅背景 `sec-活動記錄` 有既有 partially clipped、桌面對話框 480x579 已垂直置中、手機 sheet 583／604 皆貼齊 844 底部。只 stage 真的變動的 4 張 PNG（其餘 169 張 re-render 噪音已 checkout）。 |
+| 2026-09-04 | CR fixes（Sonnet 5 adversarial 審 Opus 5，6 findings，全部在同一分支修）— H1 報價與送出的 model id 讀同一個 `effectiveModelId`（清單中途少掉所選模型時，畫面顯示 Haiku 價卻送空 id → 照伺服器預設計費；同因也讓 radiogroup 零選中，M3 一併解）；M2 gallery fixture 合計改為由分項導出（`f16-model-haiku` 的 $1.63+$0.18 被寫成合計 $1.70，且因 `maxDiffPixelRatio: 0.001`＝1,024px 容忍值而永遠不會被 CI 抓到，基線已強制重產）；M4 `useTranslationModels` 的 `isError` 現在顯示「無法載入模型清單，這批會用預設模型計費」，與「沒設金鑰」的空清單區分；L6 `bestGrade` 改用明確等級順序表（原本靠 `'A' < 'B'` 碰巧成立）；L8 品質出處進 `aria-label`（原本只有 `title`）；L7 估時註解改述為「換算、非精確」（後端已 round 過一次）。不修：無法寫入的列在非預設模型下顯示預設價（永不收費；要修只能憑空發明價或動既有基線）。 |
+| 2026-09-04 | CI 自癒 — `tests/bisect/bisect-bugfix-19-4b-1.spec.ts` 的 10 分鐘死預算改為依 fixture 數推算（`120s + N×5s`，夾 10–20 分）。**既有破口**：main 在 02:18/02:50/04:07/05:36 已連續四次同樣失敗（`offenders=0/160` 之後 timeout），本 PR 順手修掉。 |
+| 2026-09-04 | Task 4 — 12 個新 spec（selector／picker／容器）＋ 三個 gallery fixture 與 `-darwin` 基線；sub-6-6 FE 半邊（`已驗證：{model}`）。 |

@@ -364,6 +364,71 @@ export interface GalleryFixture {
   seedStore?: () => void;
 }
 
+// sub-6-8b model-picker fixture data. Grades are the MEASURED eval-1 ones —
+// a fixture must not invent a grade the product would never show.
+const CONSENT_MODEL_CHOICES = [
+  {
+    id: 'claude-sonnet-5',
+    displayName: 'Claude Sonnet 5',
+    isDefault: true,
+    qualityGrade: 'A',
+    qualityNote: 'Vido 實測 2026-09（eval-1 盲測，10,304 句）',
+    isBestGrade: true,
+    totalUsd: 4.5,
+    minutes: 11,
+  },
+  {
+    id: 'claude-haiku-4-5',
+    displayName: 'Claude Haiku 4.5',
+    isDefault: false,
+    qualityGrade: 'B',
+    qualityNote: 'Vido 實測 2026-09（eval-1 盲測，10,304 句）',
+    isBestGrade: false,
+    totalUsd: 1.7,
+    minutes: 9,
+    deltaUsd: 2.8,
+    deltaPercent: 62,
+  },
+];
+
+/**
+ * Build a ConsentTotals fixture with the total DERIVED, never typed twice.
+ *
+ * CR M2: the first cut spread `CONSENT_CONFIRM_TOTALS` and overrode only the
+ * ASR figure and the total for the Haiku variant, leaving the extract figure at
+ * Sonnet's $0.18 — so the baked-in baseline showed 抽取 $0.18 + 語音辨識 $1.63
+ * summing to a 合計 of $1.70. A confirm screen whose breakdown does not add up
+ * is the exact bug this story exists to prevent, and it had been photographed
+ * into the visual baseline. Deriving the total makes that unrepresentable.
+ */
+function confirmTotals(parts: {
+  selectedCount: number;
+  selectedExtractCount: number;
+  selectedAsrCount: number;
+  selectedExtractUsd: number;
+  selectedAsrUsd: number;
+  overBudget?: boolean;
+  feasibleCount: number;
+}) {
+  return {
+    candidateCount: 142,
+    selectableCount: 142,
+    unwritableCount: 0,
+    overBudget: false,
+    ...parts,
+    selectedTotalUsd: Math.round((parts.selectedExtractUsd + parts.selectedAsrUsd) * 100) / 100,
+  };
+}
+
+const CONSENT_CONFIRM_TOTALS = confirmTotals({
+  selectedCount: 18,
+  selectedExtractCount: 6,
+  selectedAsrCount: 12,
+  selectedExtractUsd: 0.18,
+  selectedAsrUsd: 4.32,
+  feasibleCount: 18,
+});
+
 // sub-4-3 consent-screen fixture data (F15/F18). UUID-string ids (9R-18);
 // amounts mirror the drawn third-round values (§5-sexies honest small fees).
 const CONSENT_FIXTURE_CANDIDATES: GenerationCandidate[] = [
@@ -3992,6 +4057,86 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         feasibleCount: 18,
       },
       budgetUsd: 5,
+      onConfirm: noop,
+      onCancel: noop,
+    },
+    penNode: 'screen-section', // Screen F19-D-v2 (KThbY)
+    statesOnly: ['default'],
+  },
+  // sub-6-8b — the 翻譯模型 picker. Three fixtures because the thing under
+  // test is the DIFFERENCE the choice makes: the default row, the same batch
+  // with the cheap model chosen (price, grade, time and the 省 $X line all
+  // move), and the over-budget dialog under the cheap model.
+  {
+    id: 'generation-consent/f16-model-default',
+    label: 'subtitle/consent/ConfirmGenerationDialog (F16 + 翻譯模型 — 預設 Sonnet)',
+    component: ConfirmGenerationDialog as ComponentType<Record<string, unknown>>,
+    props: {
+      open: true,
+      totals: CONSENT_CONFIRM_TOTALS,
+      budgetUsd: 5,
+      modelChoices: CONSENT_MODEL_CHOICES,
+      selectedModelId: 'claude-sonnet-5',
+      onModelChange: noop,
+      onConfirm: noop,
+      onCancel: noop,
+    },
+    penNode: 'screen-section', // Screen F16-D-v2 (gmOt6)
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-consent/f16-model-haiku',
+    label: 'subtitle/consent/ConfirmGenerationDialog (F16 + 翻譯模型 — 選了 Haiku)',
+    component: ConfirmGenerationDialog as ComponentType<Record<string, unknown>>,
+    props: {
+      open: true,
+      // Both halves scaled to Haiku, so the breakdown still sums to the total.
+      totals: confirmTotals({
+        selectedCount: 18,
+        selectedExtractCount: 6,
+        selectedAsrCount: 12,
+        selectedExtractUsd: 0.07,
+        selectedAsrUsd: 1.63,
+        feasibleCount: 18,
+      }),
+      budgetUsd: 5,
+      modelChoices: CONSENT_MODEL_CHOICES,
+      selectedModelId: 'claude-haiku-4-5',
+      onModelChange: noop,
+      onConfirm: noop,
+      onCancel: noop,
+    },
+    penNode: 'screen-section', // Screen F16-D-v2 (gmOt6)
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-consent/f19-over-budget-haiku',
+    label: 'subtitle/consent/ConfirmGenerationDialog (F19 超出上限 + 翻譯模型)',
+    component: ConfirmGenerationDialog as ComponentType<Record<string, unknown>>,
+    props: {
+      open: true,
+      totals: confirmTotals({
+        selectedCount: 96,
+        selectedExtractCount: 0,
+        selectedAsrCount: 96,
+        selectedExtractUsd: 0,
+        selectedAsrUsd: 9.72,
+        overBudget: true,
+        feasibleCount: 49,
+      }),
+      budgetUsd: 5,
+      modelChoices: [
+        { ...CONSENT_MODEL_CHOICES[0], totalUsd: 25.8, minutes: 41 },
+        {
+          ...CONSENT_MODEL_CHOICES[1],
+          totalUsd: 9.72,
+          minutes: 27,
+          deltaUsd: 16.08,
+          deltaPercent: 62,
+        },
+      ],
+      selectedModelId: 'claude-haiku-4-5',
+      onModelChange: noop,
       onConfirm: noop,
       onCancel: noop,
     },

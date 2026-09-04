@@ -365,6 +365,43 @@ describe('ApiKeysForm — 測試 (AC #1, AC #5.5)', () => {
     expect(await screen.findByTestId('key-test-result-claude')).toHaveTextContent('金鑰驗證成功');
   });
 
+  it('[sub-6-6 FE half] names the model the probe actually reached', async () => {
+    // 「金鑰驗證成功」 alone leaves a real failure invisible: a valid key against
+    // a model this account cannot call. Naming the verified model separates them.
+    h.testMutate.mockImplementation(
+      (
+        _candidate,
+        opts: { onSuccess: (r: { valid: boolean; model?: string }) => void; onSettled: () => void }
+      ) => {
+        opts.onSuccess({ valid: true, model: 'claude-sonnet-5' });
+        opts.onSettled();
+      }
+    );
+    renderForm();
+
+    fireEvent.click(screen.getByTestId('key-test-claude'));
+
+    expect(await screen.findByTestId('key-test-result-claude')).toHaveTextContent(
+      '已驗證：claude-sonnet-5'
+    );
+  });
+
+  it('a pre-sub-6-6 server sends no model — the form claims nothing about one', async () => {
+    h.testMutate.mockImplementation(
+      (_candidate, opts: { onSuccess: (r: { valid: boolean }) => void; onSettled: () => void }) => {
+        opts.onSuccess({ valid: true });
+        opts.onSettled();
+      }
+    );
+    renderForm();
+
+    fireEvent.click(screen.getByTestId('key-test-claude'));
+
+    const result = await screen.findByTestId('key-test-result-claude');
+    expect(result).toHaveTextContent('金鑰驗證成功');
+    expect(result.textContent).not.toContain('已驗證');
+  });
+
   it('a 401-shaped response renders 金鑰無效 without throwing', async () => {
     h.testMutate.mockImplementation(
       (_candidate, opts: { onError: (e: Error) => void; onSettled: () => void }) => {

@@ -191,8 +191,19 @@ export function ApiKeysForm() {
     setTestingName(name);
     setTestResults((r) => ({ ...r, [name]: undefined }));
     testMutation.mutate(candidate === '' ? undefined : candidate, {
-      onSuccess: () =>
-        setTestResults((r) => ({ ...r, [name]: { ok: true, message: '金鑰驗證成功' } })),
+      // sub-6-6 (FE half, inherited by sub-6-8b): name the model the probe
+      // actually reached. A valid key against a model this account cannot call
+      // is a different failure with a different fix, and「金鑰驗證成功」alone
+      // hides which one you have. Pre-sub-6-6 servers omit it — no model, no
+      // claim.
+      onSuccess: (result) =>
+        setTestResults((r) => ({
+          ...r,
+          [name]: {
+            ok: true,
+            message: result?.model ? `金鑰驗證成功 · 已驗證：${result.model}` : '金鑰驗證成功',
+          },
+        })),
       // The backend already speaks zh-TW per Rule 3 (金鑰無效或已撤銷 / 連線逾時…),
       // and it distinguishes a bad key from a bad model id and from a quota
       // ceiling — re-writing those here would flatten three different next

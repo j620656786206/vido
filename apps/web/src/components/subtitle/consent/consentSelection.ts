@@ -8,7 +8,11 @@
  * banned by the story AC). Amounts come VERBATIM from the backend's
  * `estimated_usd` (§5-sexies: no "免費" rounding presentation).
  */
-import type { GenerationCandidate } from '../../../services/subtitleService';
+import type {
+  GenerationCandidate,
+  ModelEstimate,
+  TranslationModelInfo,
+} from '../../../services/subtitleService';
 
 /** F15 route filter chips. */
 export type ConsentRouteFilter = 'all' | 'extract' | 'asr';
@@ -87,10 +91,30 @@ export interface ConsentTotals {
   feasibleCount: number;
 }
 
+/**
+ * Per-media-id price under ONE chosen model (sub-6-8b AC #3) — the backend's
+ * `estimates_by_model[<id>].per_candidate`. Undefined, or a row missing from
+ * it, means "no per-model quote for this row": the row's own `estimatedUsd`
+ * (the server's DEFAULT-model price) stands.
+ */
+export type ModelPrices = Readonly<Record<string, number>>;
+
+/**
+ * The price of ONE row under the chosen model. Every money figure on these
+ * screens goes through here — the row, the group subtotal, the summary bar,
+ * the footer, the confirm dialog and the F18 feasibility walk — so switching
+ * model can never move four of them and leave the fifth behind.
+ */
+export function candidateUsd(c: GenerationCandidate, prices?: ModelPrices): number {
+  const priced = prices?.[c.mediaId];
+  return typeof priced === 'number' ? priced : c.estimatedUsd;
+}
+
 export function computeTotals(
   candidates: GenerationCandidate[],
   selectedIds: ReadonlySet<string>,
-  budgetUsd: number | null
+  budgetUsd: number | null,
+  prices?: ModelPrices
 ): ConsentTotals {
   let selectedCount = 0;
   let extractCount = 0;
@@ -105,15 +129,16 @@ export function computeTotals(
     if (isWritable(c)) selectableCount++;
     if (!selectedIds.has(c.mediaId)) continue;
     selectedCount++;
+    const rowUsd = candidateUsd(c, prices);
     if (c.route === 'extract') {
       extractCount++;
-      extractUsd += c.estimatedUsd;
+      extractUsd += rowUsd;
     } else {
       asrCount++;
-      asrUsd += c.estimatedUsd;
+      asrUsd += rowUsd;
     }
     if (budgetUsd === null || cumulative < budgetUsd) feasibleCount++;
-    cumulative += c.estimatedUsd;
+    cumulative += rowUsd;
   }
 
   const totalUsd = extractUsd + asrUsd;
@@ -244,4 +269,153 @@ export function groupCandidates(candidates: GenerationCandidate[]): CandidateGro
  */
 export function groupOrder(candidates: GenerationCandidate[]): GenerationCandidate[] {
   return groupCandidates(candidates).flatMap((g) => g.items);
+}
+
+// ─── sub-6-8b: the model choice ─────────────────────────────────────────────
+
+/** One row of the F16/F19 「選擇翻譯模型」 radio list. */
+export interface ModelChoice {
+  id: string;
+  displayName: string;
+  isDefault: boolean;
+  /** MEASURED grade; absent = 尚未評測 (never "equivalent"). */
+  qualityGrade?: string;
+  /** Provenance for the grade — which eval, which corpus. */
+  qualityNote?: string;
+  /** No graded row scores better. Drives the 「品質最穩」 copy without asserting it. */
+  isBestGrade: boolean;
+  /** THIS batch (the current selection) under this model. */
+  totalUsd: number;
+  /** 約 N 分鐘 for the current selection; undefined → the time column is hidden. */
+  minutes?: number;
+  /**
+   * vs the DEFAULT model: positive = cheaper, negative = dearer. Undefined on
+   * the default row itself and whenever the default is not quotable.
+   */
+  deltaUsd?: number;
+  /** |deltaUsd| as a whole percent of the default's total; undefined when 0. */
+  deltaPercent?: number;
+}
+
+export interface ModelChoiceInput {
+  /** `GET /settings/models` — display order is the backend's. */
+  models: TranslationModelInfo[];
+  defaultModelId: string;
+  /** Absent on a pre-sub-6-8a server → single default-model row (AC #2). */
+  estimatesByModel?: Record<string, ModelEstimate>;
+  estimatedMinutesByModel?: Record<string, number>;
+}
+
+/**
+ * Measured grades, best first. CR L6: the first version took `grades.sort()[0]`,
+ * which only worked because the catalog happens to use A and B and 'A' < 'B'.
+ * A future grade whose letter sorts ahead of a genuinely better one would have
+ * handed the 「eval-1 實測品質最穩」 claim to the wrong model — the precise
+ * false claim this screen must never make. An UNRECOGNISED grade ranks nowhere
+ * and can never be "best": we do not know what it means.
+ */
+const GRADE_ORDER = ['A', 'B', 'C', 'D', 'F'];
+
+/** Sum the SELECTED, writable rows at one model's prices. */
+function sumSelected(
+  candidates: GenerationCandidate[],
+  selectedIds: ReadonlySet<string>,
+  prices?: ModelPrices
+): number {
+  let total = 0;
+  for (const c of candidates) {
+    if (!selectedIds.has(c.mediaId) || !isWritable(c)) continue;
+    total += candidateUsd(c, prices);
+  }
+  return Math.round(total * 100) / 100;
+}
+
+/**
+ * Build the model rows for the CURRENT selection (sub-6-8b AC #1/#4).
+ *
+ * Every figure is derived from the backend's own numbers — the FE owns no
+ * rate table (sub-7-6's 「不得另寫一份費率」 red line):
+ *
+ *  - money   = the selected rows summed at `per_candidate` prices.
+ *  - minutes = the sweep's `estimated_minutes_by_model` RESCALED by the share
+ *    of runtime the user actually selected. The backend's estimate is
+ *    `runtime × share(model)` for every non-skipped row, so the ratio of
+ *    selected runtime to sweep runtime carries the model's time share through
+ *    without duplicating that constant here — if the backend recalibrates,
+ *    this follows. It is NOT exact to the minute (CR L7): the sweep figure
+ *    arrives already rounded, so rescaling and rounding again can land a
+ *    minute off a from-scratch computation. Acceptable for a display-only
+ *    「約 N 分鐘」; it would not be for a money field.
+ *
+ * Returns [] when there is nothing to choose between (no key configured, or
+ * the catalog request failed) — the caller then renders no picker at all
+ * rather than a one-option question.
+ */
+export function modelChoices(
+  candidates: GenerationCandidate[],
+  selectedIds: ReadonlySet<string>,
+  input: ModelChoiceInput
+): ModelChoice[] {
+  const { models, defaultModelId, estimatesByModel, estimatedMinutesByModel } = input;
+  if (models.length === 0) return [];
+
+  const quoted = (id: string) => estimatesByModel?.[id];
+  const anyQuote = models.some((m) => quoted(m.id) !== undefined);
+
+  // Pre-sub-6-8a server: only the default model has a price we can stand
+  // behind (it is what `estimated_usd` already quotes). Offering the others
+  // priced at the default's rate would be a lie in a money field.
+  const rows = anyQuote
+    ? models.filter((m) => quoted(m.id) !== undefined)
+    : models.filter((m) => m.id === defaultModelId || m.isDefault);
+  if (rows.length === 0) return [];
+
+  // Denominator for the minutes rescale: the same set the backend summed —
+  // every writable listable candidate, selected or not.
+  let sweepRuntime = 0;
+  let selectedRuntime = 0;
+  for (const c of candidates) {
+    if (!isWritable(c)) continue;
+    sweepRuntime += c.runtimeMinutes;
+    if (selectedIds.has(c.mediaId)) selectedRuntime += c.runtimeMinutes;
+  }
+  const runtimeShare = sweepRuntime > 0 ? selectedRuntime / sweepRuntime : 0;
+
+  const bestGrade = rows
+    .map((r) => r.qualityGrade)
+    .filter((g): g is string => !!g && GRADE_ORDER.includes(g))
+    .sort((a, b) => GRADE_ORDER.indexOf(a) - GRADE_ORDER.indexOf(b))[0];
+
+  const totalOf = (id: string) => sumSelected(candidates, selectedIds, quoted(id)?.perCandidate);
+  const defaultRow = rows.find((r) => r.id === defaultModelId) ?? rows.find((r) => r.isDefault);
+  const defaultTotal = defaultRow ? totalOf(defaultRow.id) : undefined;
+
+  return rows.map((m) => {
+    const totalUsd = totalOf(m.id);
+    const sweepMinutes = estimatedMinutesByModel?.[m.id];
+    const minutes =
+      typeof sweepMinutes === 'number' ? Math.round(sweepMinutes * runtimeShare) : undefined;
+
+    let deltaUsd: number | undefined;
+    let deltaPercent: number | undefined;
+    if (defaultRow && m.id !== defaultRow.id && defaultTotal !== undefined && defaultTotal > 0) {
+      deltaUsd = Math.round((defaultTotal - totalUsd) * 100) / 100;
+      if (deltaUsd !== 0) deltaPercent = Math.round((Math.abs(deltaUsd) / defaultTotal) * 100);
+    }
+
+    return {
+      id: m.id,
+      displayName: m.displayName,
+      // The row the deployment pre-selects — driven by the server's effective
+      // model, so a CLAUDE_MODEL override marks ITS model as the default here.
+      isDefault: m.id === defaultModelId || m.isDefault,
+      qualityGrade: m.qualityGrade,
+      qualityNote: m.qualityNote,
+      isBestGrade: !!m.qualityGrade && m.qualityGrade === bestGrade,
+      totalUsd,
+      minutes,
+      deltaUsd,
+      deltaPercent,
+    };
+  });
 }

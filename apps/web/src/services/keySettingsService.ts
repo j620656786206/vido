@@ -76,6 +76,13 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
 /** Partial update: only the named keys are touched. `''` DELETES a stored secret. */
 export type KeyUpdates = Partial<Record<KeyName, string>>;
 
+/** POST /settings/keys/test 200 body. `model` is additive since sub-6-6. */
+export interface KeyTestResult {
+  valid: boolean;
+  /** The model id the probe verified against; absent on a pre-sub-6-6 server. */
+  model?: string;
+}
+
 export const keySettingsService = {
   /** GET /api/v1/settings/keys — state only; values are never returned. */
   async getKeys(): Promise<KeySettings> {
@@ -103,9 +110,15 @@ export const keySettingsService = {
    * POST /api/v1/settings/keys/test — probes the live provider.
    * `candidate` lets the page verify BEFORE saving; omit it to test whatever
    * currently resolves. Only the Claude key has a probe endpoint today.
+   *
+   * sub-6-6 (additive): the 200 body now names the model the probe actually
+   * reached. That answers the question a bare 「金鑰驗證成功」 leaves open — a
+   * key can be valid while `CLAUDE_MODEL` points at a model this account
+   * cannot call, and the two failures need different fixes. Absent on a
+   * pre-sub-6-6 server.
    */
-  async testClaudeKey(candidate?: string): Promise<void> {
-    await fetchApi<{ valid: boolean }>('/settings/keys/test', {
+  async testClaudeKey(candidate?: string): Promise<KeyTestResult> {
+    return fetchApi<KeyTestResult>('/settings/keys/test', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ claude: candidate ?? '' }),
