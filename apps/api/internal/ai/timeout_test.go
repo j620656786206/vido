@@ -51,6 +51,41 @@ func TestRequestTimeoutFor_GrowsWithOutputTokensAndCaps(t *testing.T) {
 	assert.Equal(t, MaxRequestTimeout, RequestTimeoutFor("claude-haiku-4-5", 1_000_000))
 }
 
+func TestRequestTimeoutFor_EveryPricedModelHasAFamilyRow(t *testing.T) {
+	// The two tables are maintained together (AC #1). A model priced but not
+	// matched by any family row would silently get the unknown-model base.
+	for model := range defaultLLMPricing {
+		matched := false
+		for _, row := range llmTimeoutBase {
+			if baseTimeoutFor(model) == row.base && containsFamily(model, row.family) {
+				matched = true
+			}
+		}
+		assert.True(t, matched, "priced model %q has no llmTimeoutBase family row", model)
+	}
+}
+
+func containsFamily(model, family string) bool {
+	return len(model) >= len(family) && func() bool {
+		for i := 0; i+len(family) <= len(model); i++ {
+			if model[i:i+len(family)] == family {
+				return true
+			}
+		}
+		return false
+	}()
+}
+
+func TestRequestTimeoutFor_HugeMaxTokensNeverGoesNegative(t *testing.T) {
+	// CR L11: multiply-then-cap overflowed time.Duration into a negative
+	// deadline that expired on entry.
+	for _, n := range []int{1 << 40, 1 << 62, int(^uint(0) >> 1)} {
+		got := RequestTimeoutFor("claude-haiku-4-5", n)
+		assert.Equal(t, MaxRequestTimeout, got, "max_tokens=%d", n)
+		assert.Positive(t, got)
+	}
+}
+
 // shrinkTimeoutTable rebinds the family table for one test so the derivation
 // can be exercised in milliseconds — the same trick TestMain plays on the
 // retry backoff. It proves the per-attempt deadline IS the derived one, which
@@ -124,6 +159,26 @@ func TestClaudeProvider_DerivedTimeoutIsThePerAttemptDeadline(t *testing.T) {
 	})
 }
 
+// TestClaudeProvider_PingUsesTheProbeBoundNotTheFamilyDerivation (CR M6): a
+// key probe must not inherit a translation chunk's minute-scale deadline.
+func TestClaudeProvider_PingUsesTheProbeBoundNotTheFamilyDerivation(t *testing.T) {
+	shrinkTimeoutTable(t, 5*time.Millisecond)
+	srv := pingServer(t, 200, `{"id":"m","type":"message","role":"assistant","model":"x","content":[],"stop_reason":"end_turn","usage":{"input_tokens":1,"output_tokens":1}}`)
+	slow := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(40 * time.Millisecond)
+		srv.Config.Handler.ServeHTTP(w, r)
+	}))
+	defer srv.Close()
+	defer slow.Close()
+
+	p := NewClaudeProvider("k", WithClaudeBaseURL(slow.URL), WithClaudeModel("claude-haiku-4-5"))
+	assert.Equal(t, ProbeRequestTimeout, p.probeTimeout())
+	require.NoError(t, p.Ping(context.Background()), "a 40 ms probe under a 10 s bound passes even though the family table says 5 ms")
+
+	_, err := p.CompleteText(context.Background(), "", "hi", 1)
+	assert.ErrorIs(t, err, ErrAITimeout, "the same server IS too slow for the (shrunk) family derivation — the probe bound is separate")
+}
+
 func TestClaudeProvider_PinnedTimeoutOverridesDerivation(t *testing.T) {
 	shrinkTimeoutTable(t, time.Hour)
 	srv := okClaudeServer(t, 60*time.Millisecond, nil)
@@ -147,7 +202,8 @@ func TestGeminiProvider_DerivedTimeoutIsThePerAttemptDeadline(t *testing.T) {
 
 	p := NewGeminiProvider("k", WithGeminiBaseURL(srv.URL))
 	assert.Zero(t, p.httpClient.Timeout)
-	err := p.Ping(context.Background())
+	assert.Equal(t, ProbeRequestTimeout, p.probeTimeout(), "Ping runs under the probe bound (claude.go parity)")
+	_, err := p.Parse(context.Background(), &ParseRequest{Filename: "x.mkv"})
 
 	assert.ErrorIs(t, err, ErrAITimeout)
 	assert.ErrorIs(t, err, ErrAIRetriesExhausted)

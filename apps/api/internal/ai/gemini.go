@@ -119,6 +119,15 @@ func (p *GeminiProvider) attemptTimeout(maxOutputTokens int) time.Duration {
 	return RequestTimeoutFor(p.model, maxOutputTokens)
 }
 
+// probeTimeout is Ping's per-attempt deadline: the pinned WithGeminiTimeout
+// when set, otherwise the fixed ProbeRequestTimeout (claude.go parity).
+func (p *GeminiProvider) probeTimeout() time.Duration {
+	if p.timeout > 0 {
+		return p.timeout
+	}
+	return ProbeRequestTimeout
+}
+
 // Name returns the provider name.
 func (p *GeminiProvider) Name() ProviderName {
 	return ProviderGemini
@@ -151,7 +160,7 @@ func (p *GeminiProvider) Ping(ctx context.Context) error {
 		return fmt.Errorf("failed to marshal request: %w", err)
 	}
 	url := fmt.Sprintf("%s/models/%s:generateContent", p.baseURL, p.model)
-	timeout := p.attemptTimeout(1)
+	timeout := p.probeTimeout()
 
 	_, err = governed(ctx, p.governor, "gemini.ping", func() (struct{}, error) {
 		return retryTransient(ctx, "gemini.ping", func() (struct{}, bool, error) {

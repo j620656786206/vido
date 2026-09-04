@@ -1,6 +1,6 @@
 # Story 6.2: LLM 呼叫 timeout 隨模型與輸出長度放寬 —— 15 秒寫死不再殺整支 run（後端）
 
-Status: review
+Status: done
 
 ## Story
 
@@ -99,7 +99,8 @@ Claude Fable 5.1（dev-story，2026-09-04）
 | --- | --- |
 | 2026-09-04 | Task 1 — `ai/timeout.go`、`budget.go` 家族表、`claude.go`／`gemini.go` per-attempt ctx deadline、`TranslationTimeout` 移除。 |
 | 2026-09-04 | Task 2 — `ErrAIRetriesExhausted`、`WithRetryObserver`、`TranslateTrack` transient 降級 + 20% 天花板、SSE 三訊息、migration 034 `stubborn_count`。 |
-| 2026-09-04 | Task 3 — `timeout_test.go`、`pipeline_transient_test.go`、SSE 文案案例、034 測試、repo 19 欄 round-trip。 |
+| 2026-09-04 | Task 3 — `timeout_test.go`、`pipeline_transient_test.go`、SSE 文案案例、034 測試、repo round-trip。 |
+| 2026-09-04 | CR fixes（Opus 5 adversarial，13 findings，全部在同一分支修）— H1 wall-clock 熔斷 `maxConsecutiveTransientChunks=2`；H2 **partial delivery 可重跑**：migration 034 加 `transient_count`、completed 時 `TransientCount>0` → `restoreMediaStatus`（不標 `found`）+ SSE `complete` 帶「N 句暫留英文」、`preflightSkip` 讀 version-matched run 的 `transient_count` 放行重跑（只重送英文 cue，其餘 cache hit）；M3 兩個母體改 index set（品質重試途中逾時的 cue 留在 FR16 5% 池，union 給 20%）；M4 `ErrAIQuotaExceeded` 不降級；M5 `contextWindow` 跳過未翻譯 cue、往回找已翻譯的 5 句、全無則 nil；M6 `Ping` 走 `ProbeRequestTimeout`（10s）；M7 project-context Rule 7 清單補 `AI_RETRIES_EXHAUSTED`（連同既有漏列的四個）；M8 `ProcessItem` 層級測試（stamp 計數／partial 還原狀態／重跑只送英文／full delivery 仍 early-exit）、ASR 路線留 NULL 並把註解改誠實；L9 narrator 改每 attempt 建立、帶 `cue_range`；L10 provider.go／claude_test 註解、repo 測試改名、PRD NFR-I12 改為推導規則；L11 `maxTimeoutTokens` 先夾再乘；L12 `emitScopedProgress` 無 scope 不廣播；L13 由 `transient_count` 解決；SDK 10 分鐘 `WithRequestTimeout` 事實寫進 `MaxRequestTimeout`／claude.go 註解；新增 pricing 表每個 key 都命中家族表的測試。 |
 
 ### File List
 
@@ -108,5 +109,29 @@ Claude Fable 5.1（dev-story，2026-09-04）
 - `apps/api/internal/services/translation_service.go`（modified）
 - `apps/api/internal/subtitle/pipeline.go`、`process_item.go`、`progress_sse.go`（modified）+ `pipeline_transient_test.go`（new）、`progress_sse_test.go`
 - `apps/api/internal/models/subtitle_run.go`、`apps/api/internal/repository/subtitle_run_repository.go`（modified）+ `subtitle_run_repository_test.go`
-- `apps/api/internal/database/migrations/034_add_subtitle_run_stubborn_count.go`、`_test.go`（new）
-- `project-context.md`、`_bmad-output/implementation-artifacts/sub-6-2-llm-timeout-by-model.md`、`sprint-status.yaml`
+- `apps/api/internal/database/migrations/034_add_subtitle_run_stubborn_count.go`、`_test.go`（new；`stubborn_count` + `transient_count`）
+- `apps/api/internal/ai/provider.go`（comments）
+- `project-context.md`（mega-line + Rule 7 清單）、`_bmad-output/planning-artifacts/prd/non-functional-requirements.md`（NFR-I12）、`_bmad-output/implementation-artifacts/sub-6-2-llm-timeout-by-model.md`、`sprint-status.yaml`
+
+## Senior Developer Review (AI)
+
+**Reviewer:** Claude Opus 5（adversarial CR，換模型慣例；impl by Fable 5.1） · **Date:** 2026-09-04 · **Outcome:** Changes Requested → all 13 items resolved in-session on the same branch → **Approve**
+
+Mandatory checks: Rule 7 PASS（code-list update only，`AI_RETRIES_EXHAUSTED` 補進第 293 行清單，prefix 17 不變）· Rule 15 PASS（`subtitleRunColumns` 20 欄，全部 SELECT 走同一常數）· Rule 20 N/A（`TranslateResult` additive）· D8 PASS（一層 retry、一層 deadline；SDK 自帶的 10 分鐘 `WithRequestTimeout` 因 180s 上限永不生效，已寫入註解）。
+
+### Action Items
+
+- [x] [H1] 掛住的 provider 要燒 1.7 小時才放棄 — `maxConsecutiveTransientChunks=2` 熔斷；測試（兩個連死 → 只送 2 chunk；中間有成功 → 重置）。
+- [x] [H2] 降級後的英文 cue 被 P5 永久凍結 — **產品裁定（dev 代決，可逆）**：partial delivery 不標 `found`、`transient_count` 入庫、pre-flight 放行重跑；測試（完整雙輪流程）。
+- [x] [M3] `verdict` 清空讓 FR16 5% 可被繞過 — index set 雙母體；測試（1/10 品質重試逾時仍 fail 5%）。
+- [x] [M4] 429 也降級 — `ErrAIQuotaExceeded` 排除；測試。
+- [x] [M5] stubborn chunk 後整窗英文 context — `contextWindow` 只取已翻譯 cue；測試（窗口為 6-10 不是 16-20）。
+- [x] [M6] 金鑰測試最壞 3 分鐘 — `ProbeRequestTimeout` 10s；Claude／Gemini `Ping` 同級；測試。
+- [x] [M7] Rule 7 清單未更新 — 補齊。
+- [x] [M8] `stubborn_count` stamp 零覆蓋、ASR 路線 NULL 與註解矛盾 — `ProcessItem` 測試 ×3；ASR 留 NULL、model／migration 註解改為「NULL＝未計（034 前或 ASR 路線）」。
+- [x] [L9] AC #4 四欄位散落、narrator 無 `cue_range` — 每 attempt 建 narrator、帶 `cue_range`；`model`／`timeout_seconds` 在 provider 行（分工記錄在註解）。
+- [x] [L10] 過期註解／命名／PRD — 全部更新。
+- [x] [L11] `RequestTimeoutFor` 溢位 — 先夾再乘；測試。
+- [x] [L12] `emitProgress` 無 scope guard — `emitScopedProgress`。
+- [x] [L13] `TransientCues` write-only — `transient_count` 欄位承接。
+- Checked-OK 之外的兩點記錄：`whisper.go` 仍是 client Timeout + per-attempt ctx 同值雙層（無害，本 story 不動，見 PR body）；`ProviderConfig.TimeoutSeconds` 為死欄位（只改註解）。

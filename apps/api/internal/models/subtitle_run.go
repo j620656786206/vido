@@ -127,10 +127,20 @@ type SubtitleRun struct {
 	// StubbornCount is how many cues of a completed run shipped with their
 	// ENGLISH original — quality-gate stubborn (FR16, ≤5%) plus, since
 	// sub-6-2, the cues of a chunk whose request failed transiently through
-	// every retry (≤20% together). Stamped at the completed transition only;
-	// a failed/skipped run delivered nothing. NULL = recorded before
-	// migration 034 (absent is not 0 — pre-034 runs never counted).
-	StubbornCount *int `db:"stubborn_count" json:"stubborn_count,omitempty"`
+	// every retry (≤20% together). TransientCount is that second population
+	// on its own: the cues that are English because the provider was
+	// unreachable, not because the model could not translate them. A run
+	// with TransientCount > 0 is a PARTIAL delivery — the pre-flight lets the
+	// item run again (its translated cues are cached; only the English ones
+	// are re-sent) and the media row is left where the run found it rather
+	// than marked `found`.
+	//
+	// Both are stamped at the completed transition of the extract→translate
+	// routes only. NULL = not counted: a run recorded before migration 034,
+	// or the ASR route, whose keep-English tolerance lives inside the
+	// transcription service and is not measured here. Absent is not 0.
+	StubbornCount  *int `db:"stubborn_count" json:"stubborn_count,omitempty"`
+	TransientCount *int `db:"transient_count" json:"transient_count,omitempty"`
 }
 
 // Validate checks the caller-supplied fields of a run before it is persisted.

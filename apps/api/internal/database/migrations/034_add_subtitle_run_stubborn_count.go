@@ -9,26 +9,33 @@ func init() {
 }
 
 // addSubtitleRunStubbornCount records, per completed run, how many cues
-// shipped with their ENGLISH original (sub-6-2 AC #3): the quality-gate
-// stubborn cues FR16 always tolerated up to 5%, plus — new in sub-6-2 — the
-// cues of a chunk whose request failed transiently through every retry,
-// tolerated up to 20% in total so a provider hiccup at cue 935 no longer
-// discards the 935 cues already paid for.
+// shipped with their ENGLISH original (sub-6-2 AC #3): stubborn_count is the
+// quality-gate stubborn cues FR16 always tolerated up to 5% PLUS the cues of
+// a chunk whose request failed transiently through every retry (tolerated up
+// to 20% together, so a provider hiccup at cue 935 no longer discards the
+// 935 cues already paid for); transient_count is that second population on
+// its own. transient_count > 0 marks a PARTIAL delivery: the pre-flight lets
+// such an item run again (pipeline.go preflightSkip) instead of treating its
+// sidecar as final.
 //
-// NULLABLE on purpose (the migration-032 spent_usd shape): NULL means "run
-// predates this column", which is not the same as "0 English cues" — a
-// pre-034 completed run may well carry a handful of quality-stubborn lines
-// that nobody counted. Additive; Rule 15 keeps subtitleRunColumns in sync.
+// NULLABLE on purpose (the migration-032 spent_usd shape): NULL means "not
+// counted" — a run that predates this column, or the ASR route, which is
+// not the same as "0 English cues". Additive; Rule 15 keeps
+// subtitleRunColumns in sync.
 type addSubtitleRunStubbornCount struct {
 	migrationBase
 }
 
 func (m *addSubtitleRunStubbornCount) Up(tx *sql.Tx) error {
-	if columnExists(tx, "subtitle_runs", "stubborn_count") {
-		return nil
+	for _, column := range []string{"stubborn_count", "transient_count"} {
+		if columnExists(tx, "subtitle_runs", column) {
+			continue
+		}
+		if _, err := tx.Exec("ALTER TABLE subtitle_runs ADD COLUMN " + column + " INTEGER"); err != nil {
+			return err
+		}
 	}
-	_, err := tx.Exec("ALTER TABLE subtitle_runs ADD COLUMN stubborn_count INTEGER")
-	return err
+	return nil
 }
 
 func (m *addSubtitleRunStubbornCount) Down(tx *sql.Tx) error {

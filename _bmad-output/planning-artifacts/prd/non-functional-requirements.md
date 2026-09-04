@@ -151,7 +151,7 @@
 - **NFR-I9**: System must support multiple AI providers (Gemini, Claude) with provider abstraction layer
 - **NFR-I10**: AI parsing results must be cached for 30 days to reduce costs
 - **NFR-I11**: System must track per-user AI API usage and display cost estimates
-- **NFR-I12**: AI API calls must timeout after 15 seconds with fallback to manual search
+- **NFR-I12**: AI API calls must be bounded per attempt by a deadline derived from the model family and the requested output length (haiku 30 s / sonnet 60 s / opus 90 s base, +10 s per 1k output tokens, capped at 180 s; key probes 10 s — story sub-6-2 superseded the original fixed 15 s), with fallback to manual search
 
 **Wikipedia Integration:**
 

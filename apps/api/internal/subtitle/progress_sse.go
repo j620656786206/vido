@@ -23,6 +23,10 @@ const (
 	translateChunkTimeoutFormat = "chunk %d/%d timed out, retrying %d/%d"
 	translateChunkRetryFormat   = "chunk %d/%d failed transiently, retrying %d/%d"
 	translateChunkEnglishFormat = "chunk %d/%d kept English after transport retries"
+	// completePartialFormat is the `complete` verdict of a partial delivery
+	// (sub-6-2 CR H2): the file is written and usable, N cues are English
+	// because the provider was unreachable, and the item stays queued.
+	completePartialFormat = "subtitle generated with %d cues kept in English — queued for a retry"
 )
 
 // ProgressBroadcaster is the narrow port over *sse.Hub — one method, so the
@@ -95,6 +99,10 @@ func zhTWStageMessage(stage PipelineStage, message string) string {
 	case StagePlacing:
 		return "寫入字幕檔…"
 	case StageComplete:
+		var english int
+		if n, err := fmt.Sscanf(message, completePartialFormat, &english); n == 1 && err == nil {
+			return fmt.Sprintf("字幕已生成（%d 句暫留英文，將再排程翻譯）", english)
+		}
 		return "字幕已生成"
 	case StageSkipped:
 		// The reason is machine-authored (a route verdict) and is the only thing

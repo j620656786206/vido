@@ -23,7 +23,29 @@ const (
 	// MaxRequestTimeout caps the derivation so a runaway max_tokens cannot turn
 	// one hung connection into an unbounded wait — retryTransient still owns
 	// the three attempts above this.
+	//
+	// It is also why the anthropic SDK's own 10-minute non-streaming
+	// RequestTimeout (appended by Messages.New) can never compete with the
+	// per-attempt ctx deadline: the SDK only stacks its timeout when it would
+	// fire BEFORE the ctx deadline, and 180 s < 10 min always. Keep this cap
+	// — and any pinned WithClaudeTimeout — under 10 minutes, or the SDK's
+	// deadline silently wins (the D8 bug class this file exists to remove).
 	MaxRequestTimeout = 180 * time.Second
+
+	// ProbeRequestTimeout is the per-attempt deadline of a Ping: one
+	// max_tokens=1 request whose only job is to learn whether the key and
+	// model are accepted. It is a fixed short bound rather than the family
+	// derivation (CR M6): the key-test button has no server write timeout and
+	// no client abort, so the Sonnet-class 60 s base × 3 attempts would spin
+	// the settings page for three minutes on a black-holed network. 10 s × 3
+	// + backoff ≈ 33 s worst case.
+	ProbeRequestTimeout = 10 * time.Second
+
+	// maxTimeoutTokens bounds the linear term before it is multiplied (CR
+	// L11): past it the product would overflow time.Duration into a negative
+	// deadline that expires every attempt on entry. Far above any real
+	// max_tokens; the cap above wins long before this matters.
+	maxTimeoutTokens = 1_000_000
 )
 
 // RequestTimeoutFor returns the per-ATTEMPT deadline for one request to model
@@ -36,7 +58,7 @@ const (
 func RequestTimeoutFor(model string, maxTokens int) time.Duration {
 	timeout := baseTimeoutFor(model)
 	if maxTokens > 0 {
-		timeout += time.Duration(maxTokens) * timeoutPerThousandOutputTokens / 1000
+		timeout += time.Duration(min(maxTokens, maxTimeoutTokens)) * timeoutPerThousandOutputTokens / 1000
 	}
 	if timeout > MaxRequestTimeout {
 		timeout = MaxRequestTimeout

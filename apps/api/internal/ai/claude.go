@@ -131,14 +131,20 @@ func NewClaudeProvider(apiKey string, opts ...ClaudeProviderOption) *ClaudeProvi
 	}
 
 	// The deadline is the per-attempt ctx in send, and ONLY that (sub-6-2
-	// AC #1): the default client carries no Timeout and no
-	// option.WithRequestTimeout is stacked on it. Two competing deadlines was
-	// the D8 bug class this replaces — the shorter one always won silently,
-	// so a 60 s derivation would have been cut to the client's 15 s. Before
-	// the ctx deadline existed a caller-supplied client without a Timeout of
-	// its own needed WithRequestTimeout to keep the bound (CR M1); the ctx
-	// covers both clients now, and TestClaudeProvider_TimeoutEnforcedWithCustomHTTPClient
+	// AC #1): the default client carries no Timeout and this code stacks no
+	// option.WithRequestTimeout on it. Two competing deadlines was the D8 bug
+	// class this replaces — the shorter one always won silently, so a 60 s
+	// derivation would have been cut to the client's 15 s. Before the ctx
+	// deadline existed a caller-supplied client without a Timeout of its own
+	// needed WithRequestTimeout to keep the bound (CR M1); the ctx covers
+	// both clients now, and TestClaudeProvider_TimeoutEnforcedWithCustomHTTPClient
 	// still guards it.
+	//
+	// One deadline the SDK adds ITSELF: Messages.New appends a 10-minute
+	// non-streaming RequestTimeout, applied only when it would fire before
+	// the ctx deadline. MaxRequestTimeout (180 s) guarantees it never does —
+	// see the note there. A pinned WithClaudeTimeout over 10 minutes WOULD be
+	// silently cut to 10; do not set one.
 	if p.httpClient == nil {
 		p.httpClient = &http.Client{}
 	}
@@ -221,6 +227,15 @@ func (p *ClaudeProvider) attemptTimeout(maxTokens int64) time.Duration {
 	return RequestTimeoutFor(p.model, int(maxTokens))
 }
 
+// probeTimeout is Ping's per-attempt deadline: the pinned WithClaudeTimeout
+// when set, otherwise the fixed ProbeRequestTimeout.
+func (p *ClaudeProvider) probeTimeout() time.Duration {
+	if p.timeout > 0 {
+		return p.timeout
+	}
+	return ProbeRequestTimeout
+}
+
 // classifyErr maps an SDK error onto this package's sentinels and reports
 // whether the failure is worth retrying. SDK error types must never leak past
 // this function. timeout is the deadline the failed attempt ran under — logged
@@ -285,7 +300,13 @@ func (p *ClaudeProvider) classifyErr(err error, timeout time.Duration) (retryabl
 // this request's max_tokens, so a 10-cue Sonnet chunk waits ~100 s while a
 // Ping waits 60 s (sub-6-2 AC #1).
 func (p *ClaudeProvider) send(ctx context.Context, params anthropic.MessageNewParams) (*anthropic.Message, error) {
-	timeout := p.attemptTimeout(params.MaxTokens)
+	return p.sendWithin(ctx, params, p.attemptTimeout(params.MaxTokens))
+}
+
+// sendWithin is send with an explicit per-attempt deadline — the one seam
+// that lets Ping run the same governed/retry/classify path under its own
+// probe bound.
+func (p *ClaudeProvider) sendWithin(ctx context.Context, params anthropic.MessageNewParams, timeout time.Duration) (*anthropic.Message, error) {
 	msg, err := governed(ctx, p.governor, "claude.messages", func() (*anthropic.Message, error) {
 		return retryTransient(ctx, "claude.messages", func() (*anthropic.Message, bool, error) {
 			attemptCtx, cancel := context.WithTimeout(ctx, timeout)
@@ -315,15 +336,16 @@ func (p *ClaudeProvider) send(ctx context.Context, params anthropic.MessageNewPa
 // The key-test handler's request ctx carries no Budget, so in practice the
 // probe is neither. The VERDICT is transport-only: 401/403 →
 // ErrAIUnauthorized, 404 → ErrAIModelNotFound, timeouts and 5xx → their
-// sentinels; a 2xx with an empty content array is a PASS.
+// sentinels; a 2xx with an empty content array is a PASS. The deadline is
+// ProbeRequestTimeout, not the family derivation (sub-6-2 CR M6).
 func (p *ClaudeProvider) Ping(ctx context.Context) error {
-	_, err := p.send(ctx, anthropic.MessageNewParams{
+	_, err := p.sendWithin(ctx, anthropic.MessageNewParams{
 		Model:     anthropic.Model(p.model),
 		MaxTokens: 1,
 		Messages: []anthropic.MessageParam{
 			anthropic.NewUserMessage(anthropic.NewTextBlock("hi")),
 		},
-	})
+	}, p.probeTimeout())
 	return err
 }
 

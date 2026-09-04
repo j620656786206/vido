@@ -10,7 +10,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func TestMigration034_AddsNullableStubbornCount(t *testing.T) {
+func TestMigration034_AddsNullableEnglishCueCounts(t *testing.T) {
 	db := newFullyMigratedDB(t)
 	now := time.Now().UTC()
 
@@ -19,17 +19,20 @@ func TestMigration034_AddsNullableStubbornCount(t *testing.T) {
 	_, err := db.Exec(`INSERT INTO subtitle_runs (id, media_id, media_type, metadata_hash, glossary_version, prompt_version, model_id, status, cache_enabled, started_at)
 		VALUES ('legacy', 'm1', 'movie', 'h', 'g', 'p', 'model', 'completed', 0, ?)`, now)
 	require.NoError(t, err)
-	var legacy sql.NullInt64
-	require.NoError(t, db.QueryRow(`SELECT stubborn_count FROM subtitle_runs WHERE id = 'legacy'`).Scan(&legacy))
-	assert.False(t, legacy.Valid, "a row written before the column existed reads NULL, never 0")
+	var legacyStubborn, legacyTransient sql.NullInt64
+	require.NoError(t, db.QueryRow(`SELECT stubborn_count, transient_count FROM subtitle_runs WHERE id = 'legacy'`).Scan(&legacyStubborn, &legacyTransient))
+	assert.False(t, legacyStubborn.Valid, "a row written before the column existed reads NULL, never 0")
+	assert.False(t, legacyTransient.Valid, "a row written before the column existed reads NULL, never 0")
 
-	_, err = db.Exec(`INSERT INTO subtitle_runs (id, media_id, media_type, metadata_hash, glossary_version, prompt_version, model_id, status, cache_enabled, started_at, stubborn_count)
-		VALUES ('counted', 'm1', 'movie', 'h', 'g', 'p', 'model', 'completed', 0, ?, 12)`, now)
+	_, err = db.Exec(`INSERT INTO subtitle_runs (id, media_id, media_type, metadata_hash, glossary_version, prompt_version, model_id, status, cache_enabled, started_at, stubborn_count, transient_count)
+		VALUES ('counted', 'm1', 'movie', 'h', 'g', 'p', 'model', 'completed', 0, ?, 12, 10)`, now)
 	require.NoError(t, err)
-	var counted sql.NullInt64
-	require.NoError(t, db.QueryRow(`SELECT stubborn_count FROM subtitle_runs WHERE id = 'counted'`).Scan(&counted))
-	assert.True(t, counted.Valid)
-	assert.EqualValues(t, 12, counted.Int64)
+	var stubborn, transient sql.NullInt64
+	require.NoError(t, db.QueryRow(`SELECT stubborn_count, transient_count FROM subtitle_runs WHERE id = 'counted'`).Scan(&stubborn, &transient))
+	assert.True(t, stubborn.Valid)
+	assert.EqualValues(t, 12, stubborn.Int64)
+	assert.True(t, transient.Valid)
+	assert.EqualValues(t, 10, transient.Int64)
 }
 
 func TestMigration034_UpIsIdempotent(t *testing.T) {

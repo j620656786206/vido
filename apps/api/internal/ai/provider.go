@@ -33,7 +33,8 @@ func (p ProviderName) IsValid() bool {
 // This follows the Strategy pattern for provider switching.
 type Provider interface {
 	// Parse sends a filename to the AI for parsing and returns normalized results.
-	// The context should include a timeout of 15 seconds per NFR-I12.
+	// The provider bounds each attempt itself (RequestTimeoutFor, sub-6-2);
+	// the caller's ctx needs no deadline of its own.
 	Parse(ctx context.Context, req *ParseRequest) (*ParseResponse, error)
 
 	// Name returns the provider name for logging and caching purposes.
@@ -128,7 +129,9 @@ type CompletionResult struct {
 type ProviderConfig struct {
 	// APIKey is the authentication key for the provider.
 	APIKey string
-	// Timeout is the request timeout in seconds (default: 15s per NFR-I12).
+	// TimeoutSeconds pins a fixed per-attempt timeout; 0 (the default) lets
+	// the provider derive one per call from the model and max_tokens
+	// (RequestTimeoutFor, sub-6-2).
 	TimeoutSeconds int
 	// BaseURL is an optional custom base URL for the API.
 	BaseURL string

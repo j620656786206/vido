@@ -241,10 +241,15 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 	run.CacheEnabled = scope.cacheEnabled
 	run.CompletedAt = &completedAt
 	// Every cue that shipped in English (sub-6-2 AC #3): the union
-	// TranslateTrack noted for cache exclusion, which is 0 — not NULL — for
-	// a route with no LLM leg, because such a route delivered no English.
+	// TranslateTrack noted for cache exclusion, and the transport-failed
+	// subset on its own. Both are 0 — not NULL — for the deliver/convert
+	// routes, which have no LLM leg and delivered no English; the ASR route
+	// (transcribeFallback) leaves them NULL because its translate leg lives
+	// inside the transcription service and is not measured here.
 	stubbornCount := len(scope.stubbornIndexes)
+	transientCount := len(scope.transientIndexes)
 	run.StubbornCount = &stubbornCount
+	run.TransientCount = &transientCount
 	p.stampRunSpend(ctx, run)
 	if err := p.runs.Update(ctx, run); err != nil {
 		// The sidecar IS on disk. Reverting the media row to `not_searched`
@@ -254,11 +259,26 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 		return p.failItem(ctx, ref, run, "record provenance", err)
 	}
 
-	if err := p.setMediaStatus(ctx, ref, models.SubtitleStatusFound, placed.SubtitlePath, deliveredLanguage); err != nil {
-		return p.failItem(ctx, ref, run, "mark media found", err)
+	if transientCount > 0 {
+		// A PARTIAL delivery (CR H2): the sidecar is on disk and usable, but
+		// some of it is English only because the provider was unreachable.
+		// Marking the media row `found` (subtitle_language zh-Hant) would
+		// take the item out of every enumeration for good, and the P5
+		// sidecar predicate would then early-exit every manual run — the
+		// English would be frozen until someone noticed and forced it. So
+		// the row goes back where Load found it, exactly as a pre-flight
+		// refusal does: still a candidate, still shown on the consent list,
+		// and the pre-flight (preflightSkip) reads this run's transient_count
+		// and lets the retry through. The retry costs only the English cues:
+		// everything else is in the segment cache.
+		p.restoreMediaStatus(ctx, ref, item)
+		p.emitProgress(ref, StageComplete, fmt.Sprintf(completePartialFormat, transientCount))
+	} else {
+		if err := p.setMediaStatus(ctx, ref, models.SubtitleStatusFound, placed.SubtitlePath, deliveredLanguage); err != nil {
+			return p.failItem(ctx, ref, run, "mark media found", err)
+		}
+		p.emitProgress(ref, StageComplete, "subtitle generated")
 	}
-
-	p.emitProgress(ref, StageComplete, "subtitle generated")
 	// requests_sent disambiguates the two ways cache_enabled lands on false:
 	// requests_sent > 0 means the prompt prefix was sent and silently failed to
 	// cache (the AC #4.2 verdict), requests_sent == 0 means nothing was ever
@@ -278,6 +298,7 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 		"glossary_fed", len(item.Context.Glossary),
 		"harvested_terms", scope.harvestedTerms,
 		"stubborn_cues", stubbornCount,
+		"transient_cues", transientCount,
 		"output_path", placed.SubtitlePath,
 	)
 
