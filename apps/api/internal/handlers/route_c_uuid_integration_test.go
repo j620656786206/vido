@@ -129,7 +129,7 @@ func TestRouteC_UUIDMovie_FlowsThroughWholeChain(t *testing.T) {
 	// sub-4-2); deterministic stub runner.
 	runner := newIntegrationGenerationRunner()
 	processor := services.NewGenerationBatchProcessor(runner, movieRepo, episodeRepo, nil, 5, nil)
-	NewGenerationBatchHandler(processor).RegisterRoutes(api)
+	NewGenerationBatchHandler(processor, nil).RegisterRoutes(api)
 
 	// ── Leg 1: POST /movies/{uuid}/transcribe must NOT 400 ────────────────────
 	w := httptest.NewRecorder()

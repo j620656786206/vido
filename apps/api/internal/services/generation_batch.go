@@ -254,7 +254,7 @@ func (p *GenerationBatchProcessor) PreviewMissing(ctx context.Context) (movies, 
 // user input to be strictly > 0, so 0 can only mean absent — user input is
 // NEVER mapped onto ai.NewBudget's <=0 = unlimited semantic.
 // Errors: ErrGenerationBatchRunning (409), ErrGenerationSelectionInvalid (400).
-func (p *GenerationBatchProcessor) Start(ctx context.Context, scope string, mediaIDs []string, budgetUSD float64) (string, []GenerationBatchItem, error) {
+func (p *GenerationBatchProcessor) Start(ctx context.Context, scope string, mediaIDs []string, budgetUSD float64, modelID string) (string, []GenerationBatchItem, error) {
 	// Quick check — release the lock before DB queries (fetch-batch H1 fix).
 	p.mu.Lock()
 	if p.activeBatch != nil {
@@ -289,6 +289,12 @@ func (p *GenerationBatchProcessor) Start(ctx context.Context, scope string, medi
 	budget := ai.NewBudget(ceiling)
 	processCtx, processCancel := context.WithCancel(context.Background())
 	processCtx = ai.WithBudget(processCtx, budget)
+	// sub-6-8a AC #4: the model the user picked (and saw priced) rides the
+	// batch ctx exactly as the shared Budget does, so every item's provider,
+	// run row and segment-cache key name it without threading a parameter
+	// through the runner port. Empty leaves the ctx untouched = the
+	// deployment default.
+	processCtx = ai.WithModelID(processCtx, modelID)
 
 	p.activeBatch = &GenerationBatchProgress{
 		BatchID:    batchID,

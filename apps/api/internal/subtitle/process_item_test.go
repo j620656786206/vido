@@ -509,7 +509,7 @@ func TestProcessItem_ForceBypassesPreflightAndCacheReadsButStillWrites(t *testin
 	})
 	require.NoError(t, os.WriteFile(ExpectedSidecarPath(h.mediaPath), []byte(oneCueSRT), 0o600))
 
-	version := h.pipeline.runVersion(richContext())
+	version := h.pipeline.runVersion(context.Background(), richContext())
 	h.cache.entries[segmentKey(source[0].Text, version)] = "早安（舊快取）"
 
 	outcome, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{Force: true})
@@ -536,7 +536,7 @@ func TestProcessItem_CacheHitsNeverReachTheTranslator(t *testing.T) {
 		DetectedVariant: LangUndetermined,
 	})
 
-	version := h.pipeline.runVersion(richContext())
+	version := h.pipeline.runVersion(context.Background(), richContext())
 	h.cache.entries[segmentKey(source[1].Text, version)] = "這個軟體很好用"
 
 	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
@@ -566,7 +566,7 @@ func TestProcessItem_FullCacheHitSkipsTheLLMEntirely(t *testing.T) {
 		DetectedVariant: LangUndetermined,
 	})
 
-	version := h.pipeline.runVersion(richContext())
+	version := h.pipeline.runVersion(context.Background(), richContext())
 	for _, b := range source {
 		h.cache.entries[segmentKey(b.Text, version)] = "快取譯文"
 	}
@@ -625,7 +625,7 @@ func TestProcessItem_StubbornCeilingIsMeasuredAgainstTheDeliveredTrack(t *testin
 	})
 
 	// 18 of 20 cues are warm; 2 reach the LLM and one of those is stubborn.
-	version := h.pipeline.runVersion(richContext())
+	version := h.pipeline.runVersion(context.Background(), richContext())
 	for i := 0; i < 18; i++ {
 		h.cache.entries[segmentKey(source[i].Text, version)] = "快取譯文"
 	}
@@ -673,7 +673,7 @@ func TestProcessItem_StubbornCuesAreNeverCached(t *testing.T) {
 	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
 	require.NoError(t, err)
 
-	version := h.pipeline.runVersion(richContext())
+	version := h.pipeline.runVersion(context.Background(), richContext())
 	_, cached := h.cache.writes[segmentKey(source[1].Text, version)]
 	assert.False(t, cached, "the English fail-soft fallback must not be persisted as if it were a translation")
 
@@ -716,7 +716,7 @@ func TestProcessItem_RequestsSentDisambiguatesTheCacheVerdict(t *testing.T) {
 
 	t.Run("fully cached — nothing sent at all", func(t *testing.T) {
 		h := newItemHarness(t, decision)
-		version := h.pipeline.runVersion(richContext())
+		version := h.pipeline.runVersion(context.Background(), richContext())
 		for _, b := range source {
 			h.cache.entries[segmentKey(b.Text, version)] = "快取譯文"
 		}
@@ -1032,7 +1032,7 @@ func TestProcessItem_IntegrationWritesAllSixteenRunColumns(t *testing.T) {
 	assert.Equal(t, stored.ID, resumed.ID)
 
 	// And the translated cues really are in cache_entries under the versioned key.
-	version := p.runVersion(richContext())
+	version := p.runVersion(context.Background(), richContext())
 	key := segmentKey(source[0].Text, version)
 	values, err := cache.GetMany(context.Background(), []string{key})
 	require.NoError(t, err)
@@ -1244,4 +1244,147 @@ func TestProcessItem_WaitAbortIsRecordedAsCancelledNotAsAFileFailure(t *testing.
 	assert.True(t, strings.HasPrefix(run.ErrorMessage, CancelledRunPrefix),
 		"a deadline that fired while queued says nothing about the file — it must not count toward parking: %q", run.ErrorMessage)
 	assert.Contains(t, run.ErrorMessage, "SUBTITLE_EXTRACT_WAIT_ABORTED")
+}
+
+// ─── sub-6-8a AC #4/#6: the per-run model reaches the row and the cache ────
+
+func TestProcessItem_RecordsTheModelTheCallerChose(t *testing.T) {
+	h := newItemHarness(t, translateDecision("Good morning."))
+
+	_, err := h.pipeline.ProcessItem(context.Background(), h.ref,
+		ProcessItemOptions{ModelID: "claude-haiku-4-5"})
+	require.NoError(t, err)
+
+	require.NotEmpty(t, h.runs.created)
+	assert.Equal(t, "claude-haiku-4-5", h.runs.created[0].ModelID,
+		"the run row must name the model that did the work, not the deployment default")
+}
+
+func TestProcessItem_ChosenModelReachesTheProviderThroughTheContext(t *testing.T) {
+	h := newItemHarness(t, translateDecision("Good morning."))
+	var seen []string
+	inner := h.trans.fn
+	h.trans.fn = nil
+	h.pipeline.translator = &modelSpyTranslator{inner: &fakeTranslator{fn: inner}, seen: &seen}
+
+	_, err := h.pipeline.ProcessItem(context.Background(), h.ref,
+		ProcessItemOptions{ModelID: "claude-haiku-4-5"})
+	require.NoError(t, err)
+
+	require.NotEmpty(t, seen)
+	for _, got := range seen {
+		assert.Equal(t, "claude-haiku-4-5", got,
+			"the provider holder picks the client off the ctx — nothing in between passes a model parameter")
+	}
+}
+
+func TestProcessItem_NoChoiceLeavesTheDeploymentDefaultInPlace(t *testing.T) {
+	h := newItemHarness(t, translateDecision("Good morning."))
+	var seen []string
+	inner := h.trans.fn
+	h.trans.fn = nil
+	h.pipeline.translator = &modelSpyTranslator{inner: &fakeTranslator{fn: inner}, seen: &seen}
+
+	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+	require.NoError(t, err)
+
+	require.NotEmpty(t, seen)
+	assert.Empty(t, seen[0], "an unset choice must not pin anything — the holder then applies its own default")
+	assert.Equal(t, "claude-haiku-4-5", h.runs.created[0].ModelID,
+		"…and the run row records the pipeline's configured model source (WithModelID in this harness)")
+}
+
+func TestProcessItem_SwitchingModelDoesNotReuseTheOtherModelsTranslations(t *testing.T) {
+	// AC #6: the segment cache key carries the model, so a Haiku translation
+	// must never be served to a Sonnet run — the user paid for the better
+	// model and must get it.
+	source := cues("Good morning.", "See you later.")
+	decision := RouteDecision{
+		Kind:            RouteTranslate,
+		Track:           &ExtractedTrack{StreamIndex: 2, Language: "eng", Blocks: source},
+		DetectedVariant: LangUndetermined,
+	}
+	h := newItemHarness(t, decision)
+
+	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{ModelID: "claude-haiku-4-5"})
+	require.NoError(t, err)
+	firstCalls := len(h.trans.calls)
+	require.NotZero(t, firstCalls)
+
+	// Same item, same cues, different model: every cue must be re-translated.
+	h.trans.calls = nil
+	_, err = h.pipeline.ProcessItem(context.Background(), h.ref,
+		ProcessItemOptions{Force: true, ModelID: "claude-sonnet-5"})
+	require.NoError(t, err)
+
+	require.NotEmpty(t, h.trans.calls, "a model switch must not silently reuse the cheaper model's output")
+	var sent int
+	for _, c := range h.trans.calls {
+		sent += len(c.blocks)
+	}
+	assert.Equal(t, len(source), sent, "every cue is re-sent under the new model")
+}
+
+// modelSpyTranslator records the ctx-pinned model each chunk request ran
+// under — the value the provider holder would key its client on.
+type modelSpyTranslator struct {
+	inner *fakeTranslator
+	seen  *[]string
+}
+
+func (m *modelSpyTranslator) TranslateChunk(ctx context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, map[string]string, ai.CompletionUsage, error) {
+	*m.seen = append(*m.seen, ai.ModelIDFromContext(ctx))
+	return m.inner.TranslateChunk(ctx, sys, contextBlocks, blocks)
+}
+
+func TestProcessItem_ExplicitModelChoiceDoesNotSkipOnAnUnattributableSidecar(t *testing.T) {
+	// CR M4: the user translated with Haiku, was unhappy, and picked Sonnet.
+	// The consent screen priced a real translation. Skipping on the Haiku
+	// sidecar would take their money question away silently — no spend, no
+	// better subtitle, and a success report.
+	h := newItemHarness(t, translateDecision("Good morning."))
+	require.NoError(t, os.WriteFile(ExpectedSidecarPath(h.mediaPath), []byte(oneCueSRT), 0o600))
+
+	out, err := h.pipeline.ProcessItem(context.Background(), h.ref,
+		ProcessItemOptions{ModelID: "claude-sonnet-5"})
+	require.NoError(t, err)
+
+	require.NotNil(t, out.Run, "an explicit model choice must actually run")
+	assert.Equal(t, "claude-sonnet-5", out.Run.ModelID)
+	assert.NotEmpty(t, h.trans.calls, "the chosen model must be given something to translate")
+}
+
+func TestProcessItem_ExplicitModelChoiceStillSkipsItsOwnCompletedRun(t *testing.T) {
+	// The flip side: asking for the SAME model that already produced the
+	// sidecar is satisfied, and must stay free. Otherwise every re-open of the
+	// consent screen would re-bill the library.
+	h := newItemHarness(t, translateDecision("Good morning."))
+	require.NoError(t, os.WriteFile(ExpectedSidecarPath(h.mediaPath), []byte(oneCueSRT), 0o600))
+
+	version := h.pipeline.runVersion(ai.WithModelID(context.Background(), "claude-haiku-4-5"), richContext())
+	h.runs.completed = &models.SubtitleRun{
+		ID: "run-prev", MediaID: h.ref.ID, MediaType: h.ref.MediaType, Status: models.SubtitleRunCompleted,
+		MetadataHash: version.MetadataHash, GlossaryVersion: version.GlossaryVersion,
+		PromptVersion: version.PromptVersion, ModelID: version.ModelID,
+	}
+
+	out, err := h.pipeline.ProcessItem(context.Background(), h.ref,
+		ProcessItemOptions{ModelID: "claude-haiku-4-5"})
+	require.NoError(t, err)
+
+	assert.Nil(t, out.Run, "the same model on the same version is already delivered — spending again would be theft")
+	assert.Empty(t, h.trans.calls)
+}
+
+func TestProcessItem_NoModelChoiceKeepsTheSidecarOnlyGate(t *testing.T) {
+	// A caller that names no model gets the pre-sub-6-8a behaviour verbatim:
+	// an acceptable sidecar is enough to early-exit, run row or not.
+	h := newItemHarness(t, translateDecision("Good morning."))
+	require.NoError(t, os.WriteFile(ExpectedSidecarPath(h.mediaPath), []byte(oneCueSRT), 0o600))
+
+	out, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+	require.NoError(t, err)
+
+	assert.Nil(t, out.Run)
+	assert.Empty(t, h.trans.calls)
 }

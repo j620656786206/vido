@@ -252,7 +252,7 @@ func TestGenerationBatch_MissingScope_SequentialComplete(t *testing.T) {
 	}}
 	p, client := newTestGenerationProcessor(t, runner, finder, 5)
 
-	batchID, items, err := p.Start(context.Background(), "missing", nil, 0)
+	batchID, items, err := p.Start(context.Background(), "missing", nil, 0, "")
 	require.NoError(t, err)
 	assert.NotEmpty(t, batchID)
 	require.Len(t, items, 3)
@@ -277,7 +277,7 @@ func TestGenerationBatch_SSEPayloadFields(t *testing.T) {
 	finder := &fakeCandidateFinder{movies: []models.Movie{genMovie(uuidSeven, "Alpha", "/m/a.mkv")}}
 	p, client := newTestGenerationProcessor(t, runner, finder, 5)
 
-	_, _, err := p.Start(context.Background(), "missing", nil, 0)
+	_, _, err := p.Start(context.Background(), "missing", nil, 0, "")
 	require.NoError(t, err)
 	waitUntilIdle(t, p)
 
@@ -317,7 +317,7 @@ func TestGenerationBatch_PerItemFailContinue(t *testing.T) {
 	}}
 	p, client := newTestGenerationProcessor(t, runner, finder, 5)
 
-	_, _, err := p.Start(context.Background(), "missing", nil, 0)
+	_, _, err := p.Start(context.Background(), "missing", nil, 0, "")
 	require.NoError(t, err)
 	waitUntilIdle(t, p)
 
@@ -352,7 +352,7 @@ func TestGenerationBatch_CancelMidItem(t *testing.T) {
 	}}
 	p, client := newTestGenerationProcessor(t, runner, finder, 5)
 
-	_, _, err := p.Start(context.Background(), "missing", nil, 0)
+	_, _, err := p.Start(context.Background(), "missing", nil, 0, "")
 	require.NoError(t, err)
 	<-started
 	p.Cancel()
@@ -392,7 +392,7 @@ func TestGenerationBatch_BudgetCeiling_PreCheck(t *testing.T) {
 	}}
 	p, client := newTestGenerationProcessor(t, runner, finder, 1.0)
 
-	_, _, err := p.Start(context.Background(), "missing", nil, 0)
+	_, _, err := p.Start(context.Background(), "missing", nil, 0, "")
 	require.NoError(t, err)
 	waitUntilIdle(t, p)
 
@@ -425,7 +425,7 @@ func TestGenerationBatch_BudgetCeiling_MidItem(t *testing.T) {
 	}}
 	p, client := newTestGenerationProcessor(t, runner, finder, 5)
 
-	_, _, err := p.Start(context.Background(), "missing", nil, 0)
+	_, _, err := p.Start(context.Background(), "missing", nil, 0, "")
 	require.NoError(t, err)
 	waitUntilIdle(t, p)
 
@@ -454,11 +454,11 @@ func TestGenerationBatch_SingleFlight(t *testing.T) {
 	finder := &fakeCandidateFinder{movies: []models.Movie{genMovie(uuidA, "A", "/m/a.mkv")}}
 	p, _ := newTestGenerationProcessor(t, runner, finder, 5)
 
-	_, _, err := p.Start(context.Background(), "missing", nil, 0)
+	_, _, err := p.Start(context.Background(), "missing", nil, 0, "")
 	require.NoError(t, err)
 	<-started
 
-	_, _, err = p.Start(context.Background(), "missing", nil, 0)
+	_, _, err = p.Start(context.Background(), "missing", nil, 0, "")
 	assert.ErrorIs(t, err, ErrGenerationBatchRunning)
 
 	prog := p.GetProgress()
@@ -481,7 +481,7 @@ func TestGenerationBatch_SingleFlight(t *testing.T) {
 func TestGenerationBatch_EmptyMissingScope(t *testing.T) {
 	p, _ := newTestGenerationProcessor(t, &fakeGenerationRunner{available: true}, &fakeCandidateFinder{}, 5)
 
-	batchID, items, err := p.Start(context.Background(), "missing", nil, 0)
+	batchID, items, err := p.Start(context.Background(), "missing", nil, 0, "")
 	require.NoError(t, err)
 	assert.Empty(t, batchID)
 	assert.NotNil(t, items)
@@ -498,7 +498,7 @@ func TestGenerationBatch_SelectedScope(t *testing.T) {
 	finder := &fakeCandidateFinder{byID: map[string]*models.Movie{uuidSeven: &m7, uuidNine: &m9}}
 	p, _ := newTestGenerationProcessor(t, runner, finder, 5)
 
-	_, items, err := p.Start(context.Background(), "selected", []string{uuidNine, uuidSeven}, 0)
+	_, items, err := p.Start(context.Background(), "selected", []string{uuidNine, uuidSeven}, 0, "")
 	require.NoError(t, err)
 	require.Len(t, items, 2)
 	assert.Equal(t, uuidNine, items[0].MediaID)
@@ -517,12 +517,12 @@ func TestGenerationBatch_SelectedScope_InvalidIDRejected(t *testing.T) {
 	p, _ := newTestGenerationProcessor(t, &fakeGenerationRunner{available: true}, finder, 5)
 
 	// Unknown id (e.g. a series id)
-	_, _, err := p.Start(context.Background(), "selected", []string{uuidSeven, "9ff0c000-dead-4bee-8f00-000000000999"}, 0)
+	_, _, err := p.Start(context.Background(), "selected", []string{uuidSeven, "9ff0c000-dead-4bee-8f00-000000000999"}, 0, "")
 	assert.ErrorIs(t, err, ErrGenerationSelectionInvalid)
 	assert.False(t, p.IsRunning())
 
 	// Movie without a media file
-	_, _, err = p.Start(context.Background(), "selected", []string{uuidEight}, 0)
+	_, _, err = p.Start(context.Background(), "selected", []string{uuidEight}, 0, "")
 	assert.ErrorIs(t, err, ErrGenerationSelectionInvalid)
 	assert.False(t, p.IsRunning())
 }
@@ -584,7 +584,7 @@ func TestGenerationBatch_EnumerationError(t *testing.T) {
 	finder := &fakeCandidateFinder{findErr: errors.New("db locked")}
 	p, _ := newTestGenerationProcessor(t, &fakeGenerationRunner{available: true}, finder, 5)
 
-	_, _, err := p.Start(context.Background(), "missing", nil, 0)
+	_, _, err := p.Start(context.Background(), "missing", nil, 0, "")
 	require.Error(t, err)
 	assert.NotErrorIs(t, err, ErrGenerationBatchRunning)
 	assert.False(t, p.IsRunning())
@@ -601,7 +601,7 @@ func TestGenerationBatch_MissingScope_UUIDIDsEnumerated(t *testing.T) {
 	}}
 	p, _ := newTestGenerationProcessor(t, runner, finder, 5)
 
-	_, items, err := p.Start(context.Background(), "missing", nil, 0)
+	_, items, err := p.Start(context.Background(), "missing", nil, 0, "")
 	require.NoError(t, err)
 	require.Len(t, items, 2, "every UUID-keyed movie with a file enumerates; only the file-less row is skipped")
 	assert.Equal(t, uuidA, items[0].MediaID)
@@ -622,7 +622,7 @@ func TestGenerationBatch_SelectedScope_MixedMovieEpisode(t *testing.T) {
 	episodes := &fakeEpisodeFinder{byID: map[string]*models.Episode{uuidEight: &ep}}
 	p, _ := newTestGenerationProcessorWithEpisodes(t, runner, finder, episodes, 5)
 
-	_, items, err := p.Start(context.Background(), "selected", []string{uuidEight, uuidSeven}, 0)
+	_, items, err := p.Start(context.Background(), "selected", []string{uuidEight, uuidSeven}, 0, "")
 	require.NoError(t, err)
 	require.Len(t, items, 2)
 	assert.Equal(t, uuidEight, items[0].MediaID)
@@ -647,7 +647,7 @@ func TestGenerationBatch_SelectedScope_UnknownInBothTablesRejected(t *testing.T)
 	p, _ := newTestGenerationProcessorWithEpisodes(t, &fakeGenerationRunner{available: true}, finder, episodes, 5)
 
 	_, _, err := p.Start(context.Background(), "selected",
-		[]string{uuidSeven, "9ff0c000-dead-4bee-8f00-000000000999", uuidEight}, 0)
+		[]string{uuidSeven, "9ff0c000-dead-4bee-8f00-000000000999", uuidEight}, 0, "")
 	assert.ErrorIs(t, err, ErrGenerationSelectionInvalid)
 	assert.False(t, p.IsRunning(), "a rejected selection must not start a batch")
 }
@@ -659,7 +659,7 @@ func TestGenerationBatch_SelectedScope_EpisodeWithoutFileRejected(t *testing.T) 
 	episodes := &fakeEpisodeFinder{byID: map[string]*models.Episode{uuidNine: &noFile}}
 	p, _ := newTestGenerationProcessorWithEpisodes(t, &fakeGenerationRunner{available: true}, &fakeCandidateFinder{}, episodes, 5)
 
-	_, _, err := p.Start(context.Background(), "selected", []string{uuidNine}, 0)
+	_, _, err := p.Start(context.Background(), "selected", []string{uuidNine}, 0, "")
 	assert.ErrorIs(t, err, ErrGenerationSelectionInvalid)
 	assert.False(t, p.IsRunning())
 }
@@ -669,7 +669,7 @@ func TestGenerationBatch_SelectedScope_EpisodeWithoutFileRejected(t *testing.T) 
 func TestGenerationBatch_NilEpisodeFinder_MoviesOnly(t *testing.T) {
 	p, _ := newTestGenerationProcessor(t, &fakeGenerationRunner{available: true}, &fakeCandidateFinder{}, 5)
 
-	_, _, err := p.Start(context.Background(), "selected", []string{uuidEight}, 0)
+	_, _, err := p.Start(context.Background(), "selected", []string{uuidEight}, 0, "")
 	assert.ErrorIs(t, err, ErrGenerationSelectionInvalid)
 }
 
@@ -681,7 +681,7 @@ func TestGenerationBatch_MissingScope_MovieMediaType(t *testing.T) {
 	episodes := &fakeEpisodeFinder{byID: map[string]*models.Episode{}}
 	p, _ := newTestGenerationProcessorWithEpisodes(t, runner, finder, episodes, 5)
 
-	_, items, err := p.Start(context.Background(), "missing", nil, 0)
+	_, items, err := p.Start(context.Background(), "missing", nil, 0, "")
 	require.NoError(t, err)
 	require.Len(t, items, 1)
 	assert.Equal(t, models.SubtitleRunMediaMovie, items[0].MediaType)
@@ -708,7 +708,7 @@ func TestGenerationBatch_RequestedBudgetOverridesDefault(t *testing.T) {
 	finder := &fakeCandidateFinder{movies: []models.Movie{genMovie(uuidA, "A", "/m/a.mkv")}}
 	p, client := newTestGenerationProcessor(t, runner, finder, 5)
 
-	_, _, err := p.Start(context.Background(), "missing", nil, 2.5)
+	_, _, err := p.Start(context.Background(), "missing", nil, 2.5, "")
 	require.NoError(t, err)
 	<-started
 
@@ -742,7 +742,7 @@ func TestGenerationBatch_RequestedBudgetEnforced(t *testing.T) {
 	}}
 	p, client := newTestGenerationProcessor(t, runner, finder, 5)
 
-	_, _, err := p.Start(context.Background(), "missing", nil, 1.0)
+	_, _, err := p.Start(context.Background(), "missing", nil, 1.0, "")
 	require.NoError(t, err)
 	waitUntilIdle(t, p)
 
@@ -763,7 +763,7 @@ func TestGenerationBatch_SelectedScope_DBErrorIsNotSelectionInvalid(t *testing.T
 	finder := &fakeCandidateFinder{byIDErr: errors.New("database is locked")}
 	p, _ := newTestGenerationProcessor(t, &fakeGenerationRunner{available: true}, finder, 5)
 
-	_, _, err := p.Start(context.Background(), "selected", []string{uuidSeven}, 0)
+	_, _, err := p.Start(context.Background(), "selected", []string{uuidSeven}, 0, "")
 	require.Error(t, err)
 	assert.NotErrorIs(t, err, ErrGenerationSelectionInvalid,
 		"a transient DB error must not read as an invalid selection (400)")
@@ -772,7 +772,7 @@ func TestGenerationBatch_SelectedScope_DBErrorIsNotSelectionInvalid(t *testing.T
 	// Same classification on the episode leg.
 	episodes := &fakeEpisodeFinder{byIDErr: errors.New("database is locked")}
 	p2, _ := newTestGenerationProcessorWithEpisodes(t, &fakeGenerationRunner{available: true}, &fakeCandidateFinder{}, episodes, 5)
-	_, _, err = p2.Start(context.Background(), "selected", []string{uuidEight}, 0)
+	_, _, err = p2.Start(context.Background(), "selected", []string{uuidEight}, 0, "")
 	require.Error(t, err)
 	assert.NotErrorIs(t, err, ErrGenerationSelectionInvalid)
 }
@@ -793,7 +793,7 @@ func TestGenerationBatch_SkippedItemCountsAsFail(t *testing.T) {
 	}}
 	p, client := newTestGenerationProcessor(t, runner, finder, 5)
 
-	_, _, err := p.Start(context.Background(), "missing", nil, 0)
+	_, _, err := p.Start(context.Background(), "missing", nil, 0, "")
 	require.NoError(t, err)
 	waitUntilIdle(t, p)
 
@@ -805,4 +805,56 @@ func TestGenerationBatch_SkippedItemCountsAsFail(t *testing.T) {
 	assert.Equal(t, GenerationBatchStatusComplete, last["status"])
 	assert.Equal(t, 2, last["success_count"], "success means a subtitle exists — skips are not successes")
 	assert.Equal(t, 1, last["fail_count"])
+}
+
+// ─── sub-6-8a AC #4: the batch's model choice rides its ctx ────────────────
+
+func TestGenerationBatch_ChosenModelRidesTheBatchContext(t *testing.T) {
+	seen := make(chan string, 2)
+	runner := &fakeGenerationRunner{
+		available: true,
+		onCall: func(ctx context.Context, _ string) error {
+			seen <- ai.ModelIDFromContext(ctx)
+			return nil
+		},
+	}
+	finder := &fakeCandidateFinder{movies: []models.Movie{
+		genMovie(uuidA, "A", "/m/a.mkv"),
+		genMovie(uuidB, "B", "/m/b.mkv"),
+	}}
+	p, _ := newTestGenerationProcessor(t, runner, finder, 5)
+
+	_, _, err := p.Start(context.Background(), "missing", nil, 0, "claude-haiku-4-5")
+	require.NoError(t, err)
+	waitUntilIdle(t, p)
+
+	close(seen)
+	var got []string
+	for m := range seen {
+		got = append(got, m)
+	}
+	require.Len(t, got, 2)
+	for _, m := range got {
+		assert.Equal(t, "claude-haiku-4-5", m,
+			"every item of the batch runs the model the user consented to, exactly as they all share one Budget")
+	}
+}
+
+func TestGenerationBatch_NoModelChoiceLeavesTheContextAlone(t *testing.T) {
+	seen := make(chan string, 1)
+	runner := &fakeGenerationRunner{
+		available: true,
+		onCall: func(ctx context.Context, _ string) error {
+			seen <- ai.ModelIDFromContext(ctx)
+			return nil
+		},
+	}
+	finder := &fakeCandidateFinder{movies: []models.Movie{genMovie(uuidA, "A", "/m/a.mkv")}}
+	p, _ := newTestGenerationProcessor(t, runner, finder, 5)
+
+	_, _, err := p.Start(context.Background(), "missing", nil, 0, "")
+	require.NoError(t, err)
+	waitUntilIdle(t, p)
+
+	assert.Empty(t, <-seen, "an unset choice must not pin a model — the deployment default then applies")
 }

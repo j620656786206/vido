@@ -225,3 +225,131 @@ func TestClaudeProviderHolder_TestKey_UnauthorizedStillFails(t *testing.T) {
 	h := holderWithKey(t, "sk-one", ai.WithClaudeBaseURL(srv.URL))
 	assert.ErrorIs(t, h.TestKey(context.Background(), "sk-bad"), ai.ErrAIUnauthorized)
 }
+
+// ─── sub-6-8a AC #5: per-run model selection ───────────────────────────────
+
+func TestClaudeProviderHolder_GetForBuildsOneClientPerModelAndSharesTheGovernor(t *testing.T) {
+	governor := ai.NewGovernor(2, 2, 2)
+	h := holderWithKey(t, "sk-one", ai.WithClaudeGovernor(governor))
+	ctx := context.Background()
+
+	sonnet, err := h.GetFor(ctx, "claude-sonnet-5")
+	require.NoError(t, err)
+	haiku, err := h.GetFor(ctx, "claude-haiku-4-5")
+	require.NoError(t, err)
+
+	assert.NotSame(t, sonnet, haiku, "two models are two clients — one would send the wrong model id")
+	assert.Equal(t, "claude-sonnet-5", sonnet.(*ai.ClaudeProvider).Model())
+	assert.Equal(t, "claude-haiku-4-5", haiku.(*ai.ClaudeProvider).Model())
+
+	// The load-bearing half: a new client must NEVER mean a new budget pool,
+	// or switching model mid-batch would silently reset the run ceiling.
+	assert.Same(t, governor, sonnet.(*ai.ClaudeProvider).Governor())
+	assert.Same(t, governor, haiku.(*ai.ClaudeProvider).Governor())
+
+	again, err := h.GetFor(ctx, "claude-sonnet-5")
+	require.NoError(t, err)
+	assert.Same(t, sonnet, again, "a model already built is cached (Rule 14)")
+}
+
+func TestClaudeProviderHolder_GetReadsTheModelOffTheContext(t *testing.T) {
+	h := holderWithKey(t, "sk-one")
+
+	byDefault, err := h.Get(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, ai.DefaultClaudeModel, byDefault.(*ai.ClaudeProvider).Model())
+
+	pinned, err := h.Get(ai.WithModelID(context.Background(), "claude-haiku-4-5"))
+	require.NoError(t, err)
+	assert.Equal(t, "claude-haiku-4-5", pinned.(*ai.ClaudeProvider).Model(),
+		"the per-run choice must reach the client without any caller in between passing a parameter")
+}
+
+func TestClaudeProviderHolder_GetForRejectsAnUnsupportedModel(t *testing.T) {
+	h := holderWithKey(t, "sk-one")
+
+	_, err := h.GetFor(context.Background(), "gpt-4o")
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ai.ErrAIModelNotFound,
+		"a typo must fail here, not at the API after the user consented to a charge")
+}
+
+// shrinkClientCache lowers the LRU bound for one test: the catalog carries
+// only four Claude models, which cannot demonstrate eviction at the production
+// bound of four.
+func shrinkClientCache(t *testing.T, n int) {
+	t.Helper()
+	orig := maxCachedClients
+	maxCachedClients = n
+	t.Cleanup(func() { maxCachedClients = orig })
+}
+
+func TestClaudeProviderHolder_ClientCacheIsBounded(t *testing.T) {
+	shrinkClientCache(t, 2)
+	h := holderWithKey(t, "sk-one")
+	ctx := context.Background()
+
+	// Three distinct models through a two-slot cache: the least-recently-used
+	// one is evicted. Without the bound, a caller looping over model ids would
+	// grow this map forever (Rule 14).
+	models := []string{"claude-sonnet-5", "claude-haiku-4-5", "claude-opus-4-8"}
+	built := map[string]ai.TextCompleter{}
+	for _, m := range models {
+		p, err := h.GetFor(ctx, m)
+		require.NoError(t, err, m)
+		built[m] = p
+	}
+
+	h.mu.Lock()
+	cached := len(h.clients)
+	h.mu.Unlock()
+	assert.Equal(t, maxCachedClients, cached, "the cache must not grow past its bound")
+
+	// The oldest is gone (rebuilt = a different pointer); the newest is kept.
+	evicted, err := h.GetFor(ctx, models[0])
+	require.NoError(t, err)
+	assert.NotSame(t, built[models[0]], evicted, "the least-recently-used client is the one evicted")
+
+	kept, err := h.GetFor(ctx, models[len(models)-1])
+	require.NoError(t, err)
+	assert.Same(t, built[models[len(models)-1]], kept)
+}
+
+func TestClaudeProviderHolder_RecentUseKeepsAClientAlive(t *testing.T) {
+	shrinkClientCache(t, 2)
+	h := holderWithKey(t, "sk-one")
+	ctx := context.Background()
+
+	first, err := h.GetFor(ctx, "claude-sonnet-5")
+	require.NoError(t, err)
+	_, err = h.GetFor(ctx, "claude-haiku-4-5")
+	require.NoError(t, err)
+
+	// Touch the first again, then push another through: LRU order must have
+	// moved it out of the eviction seat.
+	touched, err := h.GetFor(ctx, "claude-sonnet-5")
+	require.NoError(t, err)
+	assert.Same(t, first, touched)
+
+	_, err = h.GetFor(ctx, "claude-opus-4-8")
+	require.NoError(t, err)
+
+	still, err := h.GetFor(ctx, "claude-sonnet-5")
+	require.NoError(t, err)
+	assert.Same(t, first, still, "the model actually in use must survive an eviction round")
+}
+
+// TestClaudeProviderHolder_RefusesAModelServedByAnotherProvider locks CR H2.
+// Nothing on the translation path can dispatch to Gemini, so handing a Gemini
+// id to WithClaudeModel would post it to api.anthropic.com and get a 404 —
+// billed as a failed run the user already consented to.
+func TestClaudeProviderHolder_RefusesAModelServedByAnotherProvider(t *testing.T) {
+	h := holderWithKey(t, "sk-one")
+
+	_, err := h.GetFor(context.Background(), "gemini-2.5-flash")
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ai.ErrAIModelNotFound)
+	assert.Contains(t, err.Error(), "gemini")
+}

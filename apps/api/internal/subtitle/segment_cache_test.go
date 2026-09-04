@@ -371,7 +371,7 @@ func TestPipeline_RunVersion(t *testing.T) {
 	p := NewPipeline(&fakeTranslator{}, &recordingConverter{}, nil, WithModelID("claude-haiku-4-5"))
 	tctx := richContext()
 
-	v := p.runVersion(tctx)
+	v := p.runVersion(context.Background(), tctx)
 	assert.Equal(t, MetadataHash(tctx), v.MetadataHash)
 	assert.Empty(t, v.GlossaryVersion, "M1 ships no glossary — the field is versioned now, populated in P2")
 	assert.Equal(t, prompts.SubtitleTranslatorPromptVersion, v.PromptVersion)
@@ -487,17 +487,17 @@ func TestPipeline_RunVersion_ReadsModelSourceLive(t *testing.T) {
 	p := NewPipeline(&fakeTranslator{}, &recordingConverter{}, nil,
 		WithModelSource(func() string { return current }))
 
-	assert.Equal(t, "claude-haiku-4-5", p.runVersion(richContext()).ModelID)
+	assert.Equal(t, "claude-haiku-4-5", p.runVersion(context.Background(), richContext()).ModelID)
 	current = "claude-sonnet-5"
-	assert.Equal(t, "claude-sonnet-5", p.runVersion(richContext()).ModelID)
+	assert.Equal(t, "claude-sonnet-5", p.runVersion(context.Background(), richContext()).ModelID)
 }
 
 func TestPipeline_RunVersion_NoModelOptionFallsBackToDefault(t *testing.T) {
 	// sub-6-5 CR H2: "" is the one value that must never reach a run row or a
 	// cache key, whatever the wiring forgot.
 	p := NewPipeline(&fakeTranslator{}, &recordingConverter{}, nil)
-	assert.Equal(t, ai.DefaultClaudeModel, p.runVersion(richContext()).ModelID)
+	assert.Equal(t, ai.DefaultClaudeModel, p.runVersion(context.Background(), richContext()).ModelID)
 
 	empty := NewPipeline(&fakeTranslator{}, &recordingConverter{}, nil, WithModelSource(func() string { return "" }))
-	assert.Equal(t, ai.DefaultClaudeModel, empty.runVersion(richContext()).ModelID)
+	assert.Equal(t, ai.DefaultClaudeModel, empty.runVersion(context.Background(), richContext()).ModelID)
 }

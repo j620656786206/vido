@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/models"
 )
 
@@ -172,8 +173,8 @@ func TestAnalyze_UnknownRuntimeIsFlaggedAndPricedAtTheStatedDefault(t *testing.T
 // ─── AC #6: the money ─────────────────────────────────────────────────────
 
 func TestAnalyze_ASRCostsMoreThanExtractForTheSameRuntime(t *testing.T) {
-	asr := estimateUSD(RouteASR, 100, 0.006)
-	extract := estimateUSD(RouteExtract, 100, 0.006)
+	asr := estimateUSD(RouteASR, 100, 0.006, ai.DefaultClaudeModel)
+	extract := estimateUSD(RouteExtract, 100, 0.006, ai.DefaultClaudeModel)
 
 	assert.Greater(t, asr, extract,
 		"speech recognition is the paid class — if this ever inverts the screen is warning about the wrong thing")
@@ -684,4 +685,123 @@ func TestAnalyze_ProbesEachDirectoryOnce(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, map[string]int{"/tv/show/s01": 1, "/tv/show/s02": 1}, probes,
 		"a season shares one directory — one probe, not one per episode")
+}
+
+// ─── sub-6-8a AC #3: the quote is per model ────────────────────────────────
+
+type stubCandidateCatalog struct {
+	models  []ai.ModelInfo
+	byDeflt string
+}
+
+func (s *stubCandidateCatalog) Available(context.Context) []ai.ModelInfo { return s.models }
+func (s *stubCandidateCatalog) DefaultModel(context.Context) string      { return s.byDeflt }
+
+func twoModelCatalog() *stubCandidateCatalog {
+	return &stubCandidateCatalog{
+		models: []ai.ModelInfo{
+			{ID: "claude-haiku-4-5", Provider: ai.ProviderNameClaude},
+			{ID: "claude-sonnet-5", Provider: ai.ProviderNameClaude},
+		},
+		byDeflt: "claude-sonnet-5",
+	}
+}
+
+func TestAnalyze_PricesEveryReachableModelAndKeepsTheRowsOnTheDefault(t *testing.T) {
+	movies := &stubMovieFinder{movies: []models.Movie{
+		movieRow("m1", "A", "/m/a.mkv", 120, ""),
+		movieRow("m2", "B", "/m/b.mkv", 60, ""),
+	}}
+	svc := NewGenerationCandidateService(movies, nil, nil, &stubPredictor{probeRoute: RouteExtract}, false, 0, nil)
+	svc.SetModelCatalog(twoModelCatalog())
+
+	res, err := svc.Analyze(context.Background(), nil)
+	require.NoError(t, err)
+
+	require.Contains(t, res.EstimatesByModel, "claude-sonnet-5")
+	require.Contains(t, res.EstimatesByModel, "claude-haiku-4-5")
+
+	sonnet := res.EstimatesByModel["claude-sonnet-5"]
+	haiku := res.EstimatesByModel["claude-haiku-4-5"]
+
+	assert.InDelta(t, sonnet.TotalUSD, res.Summary.EstimatedTotalUSD, 0.005,
+		"the headline total must be the DEFAULT model's price — an old client that never learned about model choice still reads a true number")
+
+	// eval-1 measured $0.48/hr on Sonnet against $0.18/hr on Haiku.
+	assert.InDelta(t, 2.67, sonnet.TotalUSD/haiku.TotalUSD, 0.15,
+		"the price gap the consent screen has to show is ~2.7×, not the 3× the rate card implies")
+
+	// Per-row prices let the client re-price without re-running the sweep.
+	require.Len(t, sonnet.PerCandidate, 2)
+	var sum float64
+	for _, usd := range haiku.PerCandidate {
+		sum += usd
+	}
+	assert.InDelta(t, sum, haiku.TotalUSD, 0.005, "the rows must add up to the footer, per model")
+
+	// A 120-minute film costs twice a 60-minute one on the same model.
+	assert.InDelta(t, 2.0, sonnet.PerCandidate["m1"]/sonnet.PerCandidate["m2"], 0.05)
+}
+
+func TestAnalyze_OnlyTheTranslationHalfMovesWithTheModel(t *testing.T) {
+	movies := &stubMovieFinder{movies: []models.Movie{movieRow("m1", "A", "/m/a.mkv", 100, "")}}
+	svc := NewGenerationCandidateService(movies, nil, nil, &stubPredictor{probeRoute: RouteASR}, false, 0, nil)
+	svc.SetModelCatalog(twoModelCatalog())
+
+	res, err := svc.Analyze(context.Background(), nil)
+	require.NoError(t, err)
+
+	asrOnly := 100 * ai.HostedASRPerMinuteUSD()
+	sonnet := res.EstimatesByModel["claude-sonnet-5"].TotalUSD
+	haiku := res.EstimatesByModel["claude-haiku-4-5"].TotalUSD
+
+	assert.Greater(t, sonnet, haiku)
+	assert.InDelta(t, sonnet-haiku, 100*(translationRatePerMinute("claude-sonnet-5")-translationRatePerMinute("claude-haiku-4-5")), 0.01,
+		"speech recognition is billed by a different provider per audio minute — switching translation model must not move it")
+	assert.Greater(t, haiku, asrOnly, "the ASR row still pays for translation on top")
+}
+
+func TestAnalyze_QuotesProcessingTimePerModel(t *testing.T) {
+	movies := &stubMovieFinder{movies: []models.Movie{movieRow("m1", "A", "/m/a.mkv", 100, "")}}
+	svc := NewGenerationCandidateService(movies, nil, nil, &stubPredictor{probeRoute: RouteExtract}, false, 0, nil)
+	svc.SetModelCatalog(twoModelCatalog())
+
+	res, err := svc.Analyze(context.Background(), nil)
+	require.NoError(t, err)
+
+	assert.EqualValues(t, 17, res.EstimatedMinutesByModel["claude-sonnet-5"], "eval-1: Sonnet takes ~17% of runtime")
+	assert.EqualValues(t, 11, res.EstimatedMinutesByModel["claude-haiku-4-5"], "…Haiku ~11%")
+}
+
+func TestAnalyze_WithoutACatalogStillQuotesTheDefault(t *testing.T) {
+	movies := &stubMovieFinder{movies: []models.Movie{movieRow("m1", "A", "/m/a.mkv", 90, "")}}
+	svc := NewGenerationCandidateService(movies, nil, nil, &stubPredictor{probeRoute: RouteExtract}, false, 0, nil)
+
+	res, err := svc.Analyze(context.Background(), nil)
+	require.NoError(t, err)
+
+	require.Len(t, res.EstimatesByModel, 1, "an unwired catalog must never leave the screen with no price at all")
+	assert.Contains(t, res.EstimatesByModel, ai.DefaultClaudeModel)
+}
+
+func TestTranslationRate_IsMeasuredForEvaluatedModelsAndScaledOtherwise(t *testing.T) {
+	haiku := translationRatePerMinute("claude-haiku-4-5")
+	sonnet := translationRatePerMinute("claude-sonnet-5")
+
+	// eval-1 billed $2.229 (Haiku) and $5.951 (Sonnet) for 12h20m = 740 min.
+	assert.InDelta(t, 2.229/740, haiku, 0.0001)
+	assert.InDelta(t, 5.951/740, sonnet, 0.0001)
+
+	// The old flat 0.0004 under-quoted a 90-minute film by ~7×; that is the
+	// bug this recalibration exists to remove.
+	assert.Greater(t, haiku*90, 0.20, "a 90-minute film on the cheap model really does cost more than a quarter")
+
+	// An unmeasured model is scaled from the SLOWER, dearer anchor.
+	opus := translationRatePerMinute("claude-opus-4-8")
+	assert.Greater(t, opus, sonnet, "Opus is priced above Sonnet, so its quote must be too")
+	assert.InDelta(t, sonnet*(5.0+25.0)/(3.0+15.0), opus, 0.0001)
+
+	unknown := translationRatePerMinute("some-future-model")
+	assert.Equal(t, sonnet, unknown, "an unknown model quotes at the anchor rather than under-promising")
+	assert.Equal(t, 0.17, translationTimeShare("some-future-model"))
 }

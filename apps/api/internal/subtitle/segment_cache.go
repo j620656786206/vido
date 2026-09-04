@@ -179,12 +179,12 @@ func GlossaryVersionHash(glossary []prompts.GlossaryEntry) string {
 // (empty from M1 until sub-5-5 wired the feed) hashes the pairs the prompt
 // actually carries, so a grown glossary re-keys the cache and re-translation
 // picks the new renderings up — the D4 "向前補一致性" mechanism.
-func (p *Pipeline) runVersion(tctx TranslateContext) models.RunVersion {
+func (p *Pipeline) runVersion(ctx context.Context, tctx TranslateContext) models.RunVersion {
 	return models.RunVersion{
 		MetadataHash:    MetadataHash(tctx),
 		GlossaryVersion: GlossaryVersionHash(tctx.Glossary),
 		PromptVersion:   prompts.SubtitleTranslatorPromptVersion,
-		ModelID:         p.currentModelID(),
+		ModelID:         p.currentModelID(ctx),
 	}
 }
 

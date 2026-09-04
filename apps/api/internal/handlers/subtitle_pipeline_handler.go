@@ -33,6 +33,9 @@ type SubtitleMediaLookup interface {
 type SubtitlePipelineHandler struct {
 	queue SubtitlePipelineQueue
 	media SubtitleMediaLookup
+	// models validates a requested model_id (sub-6-8a AC #4). nil = accept
+	// anything, the pre-story behaviour.
+	models ModelValidator
 	// configured is the FR23 capability gate (AC #5) — ONE predicate, wired
 	// from cfg.HasClaudeKey, shared verbatim with the worker pool's enqueue
 	// sweep and the batch seam.
@@ -41,8 +44,8 @@ type SubtitlePipelineHandler struct {
 
 // NewSubtitlePipelineHandler creates the handler. queue may be nil (legacy
 // mode); configured may be nil, which reads as "configured".
-func NewSubtitlePipelineHandler(queue SubtitlePipelineQueue, media SubtitleMediaLookup, configured func() bool) *SubtitlePipelineHandler {
-	return &SubtitlePipelineHandler{queue: queue, media: media, configured: configured}
+func NewSubtitlePipelineHandler(queue SubtitlePipelineQueue, media SubtitleMediaLookup, configured func() bool, models ModelValidator) *SubtitlePipelineHandler {
+	return &SubtitlePipelineHandler{queue: queue, media: media, configured: configured, models: models}
 }
 
 // RegisterRoutes registers the pipeline routes (Rule 10 — the group is already
@@ -62,6 +65,10 @@ type SubtitlePipelineRunRequest struct {
 	// Force is FR32's re-run switch: bypass the P5 pre-flight and the segment
 	// cache READS for this one item.
 	Force bool `json:"force"`
+	// ModelID pins the translation model for this one item (sub-6-8a AC #4).
+	// Optional; empty = the deployment's effective default. Must be one of
+	// GET /api/v1/settings/models.
+	ModelID string `json:"model_id"`
 }
 
 // SubtitlePipelineRunResponse is the 202 payload.
@@ -78,9 +85,9 @@ type SubtitlePipelineRunResponse struct {
 // @Tags subtitles
 // @Accept json
 // @Produce json
-// @Param request body SubtitlePipelineRunRequest true "media_id + media_type (movie|series|episode); force re-runs an item that already has a sidecar"
+// @Param request body SubtitlePipelineRunRequest true "media_id + media_type (movie|series|episode); force re-runs an item that already has a sidecar; model_id optional (must be one of GET /settings/models)"
 // @Success 202 {object} APIResponse "queued: {status: queued|already_queued, media_id}"
-// @Failure 400 {object} APIResponse "VALIDATION_INVALID_FORMAT — missing media_id or unknown media_type"
+// @Failure 400 {object} APIResponse "VALIDATION_INVALID_FORMAT — missing media_id, unknown media_type, or unsupported model_id"
 // @Failure 404 {object} APIResponse "DB_NOT_FOUND — no such media row"
 // @Failure 409 {object} APIResponse "AI_NOT_CONFIGURED — no translation key, or the pipeline is not enabled"
 // @Failure 500 {object} APIResponse "DB_QUERY_FAILED — the media lookup itself failed"
@@ -114,6 +121,12 @@ func (h *SubtitlePipelineHandler) RunPipeline(c *gin.Context) {
 		return
 	}
 
+	if h.models != nil && !h.models.Supports(c.Request.Context(), req.ModelID) {
+		BadRequestError(c, "VALIDATION_INVALID_FORMAT",
+			"不支援的模型：請從 GET /api/v1/settings/models 提供的清單中選擇，或省略 model_id 以使用預設模型")
+		return
+	}
+
 	ref := subtitle.MediaRef{ID: req.MediaID, MediaType: req.MediaType}
 
 	if h.media != nil {
@@ -135,7 +148,7 @@ func (h *SubtitlePipelineHandler) RunPipeline(c *gin.Context) {
 	// promise that the work is happening, so it is reserved for the genuine
 	// duplicate — a dropped or refused item must never wear it.
 	var status string
-	switch h.queue.EnqueueItem(ref, subtitle.ProcessItemOptions{Force: req.Force}) {
+	switch h.queue.EnqueueItem(ref, subtitle.ProcessItemOptions{Force: req.Force, ModelID: req.ModelID}) {
 	case subtitle.EnqueueAccepted:
 		status = "queued"
 	case subtitle.EnqueueDuplicate:

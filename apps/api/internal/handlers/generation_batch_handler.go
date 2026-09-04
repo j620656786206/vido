@@ -18,10 +18,18 @@ type GenerationBatchProcessorInterface interface {
 	// Start's budgetUSD is the user-approved ceiling; 0 = "not provided, use
 	// the configured default" (sub-4-2 AC #1 — the handler guarantees user
 	// input is strictly > 0, so 0 can only mean absent).
-	Start(ctx context.Context, scope string, mediaIDs []string, budgetUSD float64) (string, []services.GenerationBatchItem, error)
+	Start(ctx context.Context, scope string, mediaIDs []string, budgetUSD float64, modelID string) (string, []services.GenerationBatchItem, error)
 	GetProgress() *services.GenerationBatchProgress
 	Cancel()
 	PreviewMissing(ctx context.Context) (movies, includingEpisodes int, err error)
+}
+
+// ModelValidator answers "may this deployment run that model?" for the request
+// boundary (sub-6-8a AC #4). Narrow on purpose (Rule 11);
+// *services.ModelCatalogService satisfies it. nil = accept anything, which is
+// the pre-sub-6-8a behaviour for a handler wired without a catalog.
+type ModelValidator interface {
+	Supports(ctx context.Context, model string) bool
 }
 
 // GenerationBatchHandler handles the generation-batch API (Story 9R-16;
@@ -30,11 +38,13 @@ type GenerationBatchProcessorInterface interface {
 // since 9R-18 — FE consumer ux3-subtitle-v2-batch).
 type GenerationBatchHandler struct {
 	processor GenerationBatchProcessorInterface
+	models    ModelValidator
 }
 
-// NewGenerationBatchHandler creates a new GenerationBatchHandler.
-func NewGenerationBatchHandler(processor GenerationBatchProcessorInterface) *GenerationBatchHandler {
-	return &GenerationBatchHandler{processor: processor}
+// NewGenerationBatchHandler creates a new GenerationBatchHandler. models may
+// be nil (no catalog wired) — model_id is then accepted as given.
+func NewGenerationBatchHandler(processor GenerationBatchProcessorInterface, models ModelValidator) *GenerationBatchHandler {
+	return &GenerationBatchHandler{processor: processor, models: models}
 }
 
 // RegisterRoutes registers generation-batch routes on the given router group.
@@ -55,10 +65,17 @@ func (h *GenerationBatchHandler) RegisterRoutes(rg *gin.RouterGroup) {
 // optional, must be > 0 when present; absent falls back to AI_RUN_BUDGET_USD.
 // A pointer distinguishes "absent" from a literal 0 so a zero can be rejected
 // instead of silently meaning "unlimited".
+// model_id (sub-6-8a AC #4, additive on the [@contract-v3] envelope — no bump)
+// is the translation model the user picked and saw priced on the consent
+// screen. Optional; empty means the deployment's effective default. A model
+// this install cannot reach is a 400, refused BEFORE a batch id and a budget
+// ceiling exist — discovering it at the first API call would mean the user
+// consented to a quote for a run that could never happen.
 type GenerationBatchStartRequest struct {
 	Scope     string   `json:"scope" binding:"required,oneof=missing selected"`
 	MediaIDs  []string `json:"media_ids"`
 	BudgetUSD *float64 `json:"budget_usd"`
+	ModelID   string   `json:"model_id"`
 }
 
 // StartGenerationBatch handles POST /api/v1/subtitles/generation-batch.
@@ -67,10 +84,10 @@ type GenerationBatchStartRequest struct {
 // @Tags subtitles
 // @Accept json
 // @Produce json
-// @Param request body GenerationBatchStartRequest true "scope: missing|selected; media_ids required iff scope=selected; budget_usd optional (> 0)"
+// @Param request body GenerationBatchStartRequest true "scope: missing|selected; media_ids required iff scope=selected; budget_usd optional (> 0); model_id optional (must be one of GET /settings/models)"
 // @Success 202 {object} APIResponse "batch started: {batch_id, total_items, items:[{media_id,title,media_type}]}"
 // @Success 200 {object} APIResponse "scope=missing resolved to 0 items: {total_items:0, items:[]}"
-// @Failure 400 {object} APIResponse "validation failed (bad scope / missing media_ids / unknown id / budget_usd <= 0)"
+// @Failure 400 {object} APIResponse "validation failed (bad scope / missing media_ids / unknown id / budget_usd <= 0 / unsupported model_id)"
 // @Failure 409 {object} APIResponse "TRANSCRIPTION_BATCH_RUNNING — current progress in error body data"
 // @Failure 500 {object} APIResponse "TRANSCRIPTION_BATCH_START_FAILED"
 // @Failure 503 {object} APIResponse "TRANSCRIPTION_DISABLED"
@@ -120,8 +137,18 @@ func (h *GenerationBatchHandler) StartGenerationBatch(c *gin.Context) {
 		}
 		budgetUSD = *req.BudgetUSD
 	}
+	// sub-6-8a AC #4: an unreachable model is refused here, not at the first
+	// paid call. The message names the endpoint that lists the legal values
+	// rather than echoing the rejected id back as if it were a typo — a
+	// perfectly valid model becomes illegal the moment its provider's key is
+	// removed, and the client needs the current list, not a spelling hint.
+	if h.models != nil && !h.models.Supports(c.Request.Context(), req.ModelID) {
+		BadRequestError(c, "VALIDATION_INVALID_FORMAT",
+			"不支援的模型：請從 GET /api/v1/settings/models 提供的清單中選擇，或省略 model_id 以使用預設模型")
+		return
+	}
 
-	batchID, items, err := h.processor.Start(c.Request.Context(), req.Scope, req.MediaIDs, budgetUSD)
+	batchID, items, err := h.processor.Start(c.Request.Context(), req.Scope, req.MediaIDs, budgetUSD, req.ModelID)
 	if err != nil {
 		if errors.Is(err, services.ErrGenerationBatchRunning) {
 			// Mirror SUBTITLE_BATCH_RUNNING: progress rides the error body.

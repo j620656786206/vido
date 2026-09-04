@@ -73,12 +73,13 @@ Vido can generate a Traditional-Chinese (`zh-Hant`) subtitle for media that has
 no matching subtitle online, by extracting the embedded track and translating
 it. This is **off by default**:
 
-| Variable                           | Default  | Description                                                                                                       |
-| ---------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------- |
-| `VIDO_SUBTITLE_PIPELINE_MODE`      | `legacy` | `legacy` = subtitle search only (unchanged behaviour). `pipeline` = also generate subtitles.                      |
-| `CLAUDE_API_KEY`                   | (none)   | Translation provider key. Required when the mode is `pipeline`.                                                   |
-| `SUBTITLE_EXTRACT_TIMEOUT_SECONDS` | `600`    | Floor of one subtitle extraction (ffmpeg) in seconds. Small files use this.                                       |
-| `SUBTITLE_EXTRACT_PER_GB_SECONDS`  | `30`     | Seconds allowed per GB of media. Past ~20 GB this is the one in force — raise it for large remuxes on slow disks. |
+| Variable                           | Default           | Description                                                                                                        |
+| ---------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `VIDO_SUBTITLE_PIPELINE_MODE`      | `legacy`          | `legacy` = subtitle search only (unchanged behaviour). `pipeline` = also generate subtitles.                       |
+| `CLAUDE_API_KEY`                   | (none)            | Translation provider key. Required when the mode is `pipeline`.                                                    |
+| `CLAUDE_MODEL`                     | `claude-sonnet-5` | Deployment-wide default translation model. Users can pick a different one per run; this sets what they start from. |
+| `SUBTITLE_EXTRACT_TIMEOUT_SECONDS` | `600`             | Floor of one subtitle extraction (ffmpeg) in seconds. Small files use this.                                        |
+| `SUBTITLE_EXTRACT_PER_GB_SECONDS`  | `30`              | Seconds allowed per GB of media. Past ~20 GB this is the one in force — raise it for large remuxes on slow disks.  |
 
 Notes:
 
@@ -130,6 +131,16 @@ Notes:
   `OPENAI_API_KEY` unset — the request carries no `Authorization` header at all,
   and spend is recorded as `$0`. Set the key only if your engine sits behind an
   authenticating proxy. `OPENAI_API_KEY` is required only for the paid hosted API.
+- **Which model translates, and what it costs (sub-6-8a).** The default is
+  `claude-sonnet-5`, chosen on measurement rather than taste: blind-scoring
+  10,304 real cues from this library gave Sonnet 5 a 1.3% unusable rate and
+  89.6% good, against Haiku 4.5's 3.6% and 71.8%. Sonnet costs about $0.48 per
+  hour of runtime, Haiku about $0.18 — so the cheaper model is offered as a
+  visible, per-run choice instead of a config flip nobody sees. The consent
+  screen prices every model your keys can reach and shows the estimated
+  processing time (Sonnet takes roughly 17% of a title's runtime, Haiku 11%).
+  `GET /api/v1/settings/models` is the list; a run may name one with
+  `model_id`. `CLAUDE_MODEL` still sets the deployment-wide starting point.
 - **Extraction is bounded by file size (sub-6-3).** Pulling the subtitle track
   out of a large remux is pure disk I/O. Each ffmpeg pass gets
   `max(SUBTITLE_EXTRACT_TIMEOUT_SECONDS, SUBTITLE_EXTRACT_PER_GB_SECONDS × file size in GB)`

@@ -1,6 +1,6 @@
 # Story 6.8a: 每次產生可選模型 + 依模型估價；預設改 Sonnet（後端）
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -34,11 +34,11 @@ eval-1 裁定（Alexyu 2026-09-03）：**預設改 `claude-sonnet-5`**（全檔�
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — 預設與清單（AC: #1, #2）**
-- [ ] **Task 2 — 依模型估價（AC: #3）**
-- [ ] **Task 3 — 請求帶 model_id 與 pipeline 貫穿（AC: #4）**
-- [ ] **Task 4 — `GetFor` 與 ctx model（AC: #5, #6）**
-- [ ] **Task 5 — 測試（AC: #7）**
+- [x] **Task 1 — 預設與清單（AC: #1, #2）**
+- [x] **Task 2 — 依模型估價（AC: #3）**
+- [x] **Task 3 — 請求帶 model_id 與 pipeline 貫穿（AC: #4）**
+- [x] **Task 4 — `GetFor` 與 ctx model（AC: #5, #6）**
+- [x] **Task 5 — 測試（AC: #7）**
 
 （後端 5 task；前端另立 sub-6-8b。）
 
@@ -77,10 +77,77 @@ BYOK 下價差是每一次按下去的事，不是一次性設定。全域預設
 
 ### Agent Model Used
 
+Claude Opus 5（dev-story，2026-09-04）
+
+### Debug Log References
+
+- `go test ./...`（apps/api）全綠；`pnpm nx run api:lint`（go vet + staticcheck）綠；`prettier --check` 綠。
+
 ### Completion Notes List
+
+- **Task 1（AC #1/#2）**：`ai.DefaultClaudeModel` → `claude-sonnet-5`（註解寫入 eval-1 數字與「為什麼預設是品質、省錢是使用者的可見選擇」）。新 `ai/catalog.go`：`ModelInfo` `[@contract-v1]`、`modelMetadata`（display/tier/measured grade）、`Catalog()`、`ProviderOf`、`IsSelectableModel`。**兩張表同一組 key、一起維護**，`TestCatalog_EveryPricedModelIsDescribed` 是守門測試（沿用 sub-6-2 的 timeout 表手法）。`retired` 旗標：`gemini-2.0-flash` 保留定價列（舊 run 仍要按當時費率計帳）但**絕不出現在可選清單**（已被 Google 關閉，選了必 404）。`quality_grade` 只填實測的 sonnet=A／haiku=B，未評測**留空不填**（留空＝「還沒評」，不是「一樣好」）。新 `services.ModelCatalogService`（`Available`／`Supports`／`DefaultModel`）＋ `GET /api/v1/settings/models`（新 handler，**註冊順序必須在 settingsHandler 之前**，否則被 `/settings/:key` 吃掉）。
+- **Task 2（AC #3）**：**成本模型重新校準**（見下方「AC 偏離與重大裁定」）。`GenerationCandidateResult` additive `estimates_by_model`（`{model: {total_usd, per_candidate}}`）與 `estimated_minutes_by_model`（片長 × 17%／11%，eval-1 實測）。`EstimatedUSD`／`estimated_total_usd` 語意不變＝**預設模型**的估價（舊 FE 不壞）。unwritable 列一樣不計入任何模型的總額（sub-6-1 語意）。ASR 部分不隨模型變（不同供應商、按音檔分鐘計費），有測試釘住。
+- **Task 3（AC #4）**：`GenerationBatchStartRequest.ModelID`／`SubtitlePipelineRunRequest.ModelID`（均 optional，additive 不 bump）；兩處都在**動任何東西之前**用 `ModelValidator`（`ModelCatalogService.Supports`）驗證，不合法 → 400 `VALIDATION_INVALID_FORMAT`，訊息指向 `GET /settings/models` 而不是回嘴使用者拼錯（金鑰被移除時，本來合法的 model 會瞬間變不合法）。`ProcessItemOptions.ModelID` → `ai.WithModelID(ctx)` → `Pipeline.currentModelID(ctx)`（RunVersion＋segment cache key）。批次的選擇掛在 batch ctx 上（與共用 Budget 同一手法），所以 runner port 簽名不動。
+- **Task 4（AC #5/#6）**：`ai.WithModelID`／`ModelIDFromContext`（ctx value，理由寫在 `model_context.go`：否則 `ChunkTranslator`／`TranslateContext` 兩個 stamped 介面要為了一個沒人用的參數而 bump）。`ClaudeProviderHolder` 的單一 `cached` 改為**有界 LRU**（`maxCachedClients = 4`，`GetFor(ctx, model)`，`Get` 讀 ctx）；所有 client 共用**同一個 Governor**（測試用 `assert.Same` 釘住 —— 換 client 不能等於換預算池）。未知 model 在 holder 就擋（`ErrAIModelNotFound`），不讓它變成使用者付錢才發現的 404。`RecordLLM` 自然記到正確 model（provider 自己帶）。
+- **Task 5（AC #7）**：(a) 清單端點：有／無 Gemini key 的差異、keyless → 空陣列 200、未評測不吐 grade、`is_default`；(b) 估價：兩模型比值 ≈ 2.67×（eval-1 實測而非 3× 定價比）、逐列加總＝footer、ASR 部分不動、處理時間 17%／11%、無 catalog 仍報預設一個數字；(c) 批次帶 haiku → 每個 item 的 ctx 都是 haiku；ProcessItem 帶 model → run row 記該 model、chunk 請求的 ctx 帶該 model；(d) 兩個端點非法 model → 400 且**什麼都沒開始**；(e) `GetFor` LRU 上限、LRU 順序（用過的不會被踢）、Governor 同一實例、未知 model 被拒；(f) 換模型重跑不會命中舊模型的 segment cache；(g) 全回歸綠。
+
+#### AC 偏離與重大裁定（需 Alexyu 過目）
+
+> ⚠️ 以下四點在 CR 後仍成立，但第 3 點的描述已由 CR 修正（見 Senior Developer Review [H2]）：Gemini 的問題不只是「金鑰不在解析器裡」，而是**翻譯路徑根本沒有 Gemini 分派**，所以本輪直接把清單收斂成 Claude-only 並另立 `backlog-gemini-translation-dispatch`。
+
+1. **成本模型重新校準（超出 AC #3 字面）**。AC 說「用 `PricingFor(model)` × 既有 token 估算」，但既有估算是 `translationUSDPerMinute = 0.0004`（M1 pilot 單一影片校準）。對照 eval-1 的 12h20m 實測（Haiku $2.229／Sonnet $5.951），這個常數**低估約 7 倍** —— 90 分鐘的片會報 $0.04，實際 Haiku $0.27、Sonnet $0.72。只按比例縮放會讓兩個模型**都**錯 7 倍。既然整個 story 的目的是「按下去之前看到的金額就是你要付的金額」，我把它換成 eval-1 實測的 per-model 費率（haiku 0.00301／sonnet 0.00804 每分鐘片長），未實測但**有定價**的模型由 **Sonnet 錨點**按其真實混合定價比例縮放（便宜的模型就該報得便宜，那正是提供選項的意義）；**完全沒有定價列**的模型則直接報錨點價，而不是按那個虛構的 fallback 價縮放。原常數自己的註解就寫著「等有真實用量資料再校準」。
+2. **`estimates_by_model` 放在 `result` 而非 `AnalysisSnapshot`**。AC 寫在 snapshot 上，但那組數字**就是**這份報價：sweep 被取消／失敗時 `result` 會被清成 nil，報價必須跟著消失。掛在 snapshot 層要多一份手動失效邏輯，而「顯示過期價格」正是這個畫面最不能犯的錯。FE 讀 `snapshot.result.estimates_by_model`，一樣一跳。
+3. **Gemini 不在 `KeyResolver` 的封閉 key 集合裡**（只有 claude／tmdb／openai），AC #2 假設可以用 `KeyResolver.Has` 判定。改用注入的 env 判定（`GEMINI_API_KEY`），並立案 `backlog-gemini-key-in-resolver`。
+4. **`CLAUDE_MODEL` 在 `docs/deployment*.md` 根本沒有段落**（AC #1 假設有）。這次補上表格列與說明段。
+
+- 🔗 AC Drift: NONE against other stories (checked: 'EstimatedUSD|estimated_total_usd|ProcessItemOptions|Start\(' — sub-4-1 AC #7 additive、sub-4-2 `[@contract-v3]` additive、sub-6-5 effective-model 單一真相保留且擴充為 per-run；本 story 自身的四點偏離見上)
+- 📎 Contract Stamps: FOUND (sub-4-1 AC #7 `[@contract-v1]` additive ack；sub-4-2 `[@contract-v3]` additive ack；`ChunkTranslator`／`TranslateContext` `[@contract-v1]` **未動**，這正是走 ctx value 的理由；新 `ai.ModelInfo` 與 models 端點自帶 `[@contract-v1]`)
+- 🎭 A11y Pre-Flight: N/A（純後端）
+- 🔌 Route Sync: 新增 `GET /api/v1/settings/models`（Swagger 註解完整；`docs/swagger.json` 全庫已久未重生成，沿用現行慣例只維護註解）
+- 🎨 UX Verification: N/A（純後端；FE 為 sub-6-8b）
 
 ### Discovery Triage
 
-- （dev 填）
+- ① expand-scope-in-place — 估價常數低估 7 倍 → 依 eval-1 實測重新校準（見上 #1）。
+- ① expand-scope-in-place — `CLAUDE_MODEL` 無文件段落 → 補 `docs/deployment.md`。
+- ③ backlog-with-carry-forward-link — Gemini 不在 KeyResolver 封閉集合 → `backlog-gemini-key-in-resolver`。
+- ③ backlog-with-carry-forward-link — `docs/deployment.zh-TW.md` 仍不存在 → 既有 `backlog-deployment-doc-zh-tw-twin` RE-HIT。
+
+### Change Log
+
+| Date | Change |
+| --- | --- |
+| 2026-09-04 | Task 1 — 預設改 Sonnet；`ai/catalog.go`；`services.ModelCatalogService`；`GET /settings/models`。 |
+| 2026-09-04 | Task 2 — 成本模型 per-model 重新校準；`estimates_by_model`／`estimated_minutes_by_model`。 |
+| 2026-09-04 | Task 3 — 兩個端點的 `model_id` + 400 驗證；`ProcessItemOptions.ModelID`；batch ctx。 |
+| 2026-09-04 | Task 4 — `ai.WithModelID`；holder `GetFor` + 有界 LRU + 共用 Governor。 |
+| 2026-09-04 | Task 5 — 五個套件的測試；`docs/deployment.md`；project-context。 |
+| 2026-09-04 | CR fixes（Sonnet 5 adversarial，4 findings，全部在同一分支修）— 見下方 Senior Developer Review。 |
 
 ### File List
+
+- `apps/api/internal/ai/catalog.go`、`catalog_test.go`、`model_context.go`（new）
+- `apps/api/internal/ai/claude.go`、`budget.go`（modified）
+- `apps/api/internal/services/model_catalog.go`、`model_catalog_test.go`（new）
+- `apps/api/internal/services/claude_provider_holder.go`、`generation_candidates.go`、`generation_batch.go`（modified）+ 各自 `_test.go`
+- `apps/api/internal/handlers/model_settings_handler.go`、`model_settings_handler_test.go`（new）
+- `apps/api/internal/handlers/generation_batch_handler.go`、`subtitle_pipeline_handler.go`（modified）+ 各自 `_test.go`、`route_c_uuid_integration_test.go`
+- `apps/api/internal/subtitle/pipeline.go`、`process_item.go`、`segment_cache.go`（modified）+ `process_item_test.go`、`segment_cache_test.go`、`pipeline_transient_test.go`
+- `apps/api/cmd/api/main.go`（modified）
+- `docs/deployment.md`、`README.md`、`docs/development.md`、`project-context.md`、`_bmad-output/implementation-artifacts/sub-6-8a-per-run-model-selection-backend.md`、`sprint-status.yaml`
+
+## Senior Developer Review (AI)
+
+**Reviewer:** Claude Sonnet 5（adversarial CR，換模型慣例；impl by Opus 5） · **Date:** 2026-09-04 · **Outcome:** Changes Requested → 4 項全部在同一分支修完 → **Approve**
+
+（第一輪指派的 Fable 5.1 因月額度上限中斷，改由 Sonnet 5 執行；實作者是 Opus 5，換模型審查慣例維持。）
+
+Mandatory checks: Rule 10 route 順序 PASS（`/settings/models` 註冊在 settingsHandler 之前）· Rule 11 PASS · Rule 14 PASS（holder LRU 有界、共用 Governor，reviewer 逐項驗過鎖與 slice 語意）· Rule 19 PASS · Rule 20 PASS（三個 additive 信封均無既有 key 語意改變）。
+
+### Action Items
+
+- [x] [H1] **`CLAUDE_MODEL` 覆寫對新的報價／清單完全不可見** —— `ai.Catalog()` 用套件常數標 `is_default`，但實際跑起來的預設是 `claudeHolder.EffectiveModel()`。設了 `CLAUDE_MODEL=haiku` 的部署會看到「預設 Sonnet」、整份報價以 Sonnet 計價（貴 2.7 倍），而省略 `model_id` 的 run 實際上跑 Haiku；等 FE 照著 `default_model_id` 預選，反而會把操作者的省錢預設**偷偷升級成 Sonnet** —— 正是這個 story 要消滅的「silent config flip」，只是方向相反。修法：`ai.Catalog()` 不再標 `IsDefault`（改由呼叫端決定，理由寫進型別註解），`ModelCatalogService` 注入 `effectiveDefault func() string`（production ＝ holder 的 `EffectiveModel`）並用它標記與挑預設；`quoteModels` 因此也跟著跑在正確的模型上。測試：haiku 部署的 `DefaultModel`／`is_default`、覆寫成無法列出的 alias 時仍預選一個真的存在的項目。
+- [x] [H2] **Gemini 模型通得過驗證，但翻譯路徑只能送 Claude** —— `TranslationService` 是用 `claudeHolder` 建的，整條路徑沒有 per-model provider 分派；而 `IsSelectableModel` 不看 provider，所以 gemini id 會被 `WithClaudeModel` 送到 api.anthropic.com 拿 404，**而且是同意付錢之後**。（reviewer 還指出我自己的 LRU 測試就把 `gemini-2.5-flash` 餵進 Claude holder 並斷言 `NoError` —— 測試本身就在展示這個缺陷。）修法：(a) `ModelCatalogService.Available` 只列 Claude（註解寫明何時可以擴回去）；(b) `GetFor` 明確拒絕 `ai.ProviderOf(model) != claude`，作為「就算未來有人跳過邊界驗證也錯不了」的不變量；(c) README／development.md 拿掉「Gemini 可做字幕翻譯」的說法；(d) 立案 `backlog-gemini-translation-dispatch`。測試：清單只有 Claude、holder 拒絕 gemini。
+- [x] [H3→M] **「永不低於錨點」的說法不成立**（reviewer 標 M）—— 那個保證只對「完全沒有定價列」的模型成立；有定價但沒實測的模型是按比例縮放，比 Sonnet 便宜就會報得更便宜。這是**程式碼對、文字錯**：按真實定價比例縮放正是提供便宜選項的意義。修正 `translationCalibrationModel` 註解、story Completion Notes 與 project-context 的措辭，改成精確的說法。
+- [x] [M4] **明確指定模型時，舊 sidecar 會讓它整個 no-op** —— `preflightSkip` 只看「磁碟上有沒有可用的 zh-Hant sidecar」。使用者用 Haiku 翻完不滿意、改選 Sonnet 重送（沒帶 `force`），畫面報價了一次真實翻譯，實際上一毛沒花、字幕沒換、還回報成功。（我自己的 AC #6 測試得靠 `Force: true` 才繞得過這道閘門 —— 等於默認了這件事。）修法：`opts.ModelID != ""` 且沒有 version-matched completed run（`FindCompletedRun` 比對含 ModelID）→ **不 skip**，log 說明原因。沒指定模型的呼叫者行為完全不變。測試三條：換模型會真的跑、同模型同版本仍然免費 skip、沒指定模型維持原本的 sidecar-only 閘門。
+- Checked OK 值得留檔：LRU 的鎖與 slice 語意（MRU 搬移不會 alias、eviction 不會影響已回傳的 client、`TestKey` 也共用同一個 Governor）· 選定的模型確實抵達每一個付費呼叫（含 ASR fallback 內部的翻譯段）· `EstimatesByModel[default].TotalUSD` 結構上必然等於 `Summary.EstimatedTotalUSD` · 重新校準的算術與 eval-1 表格逐項吻合。

@@ -153,7 +153,7 @@ All environment variables are documented in [`.env.example`](../.env.example) at
 | `VIDO_MEDIA_DIRS`                                   | `/media`     | Comma-separated media library paths                                              |
 | `VIDO_DATA_DIR`                                     | `/vido-data` | Database and cache location                                                      |
 | `TMDB_API_KEY`                                      | —            | Metadata lookups                                                                 |
-| `AI_PROVIDER` + `GEMINI_API_KEY` / `CLAUDE_API_KEY` | `gemini`     | Filename parsing, subtitle translation                                           |
+| `AI_PROVIDER` + `GEMINI_API_KEY` / `CLAUDE_API_KEY` | `gemini`     | Filename parsing (either provider); subtitle translation is Claude-only          |
 | `OPENAI_API_KEY`                                    | —            | Whisper transcription (hosted API only; hot-reloadable from Settings → API Keys) |
 | `ASR_BASE_URL` / `ASR_MODEL`                        | —            | Point at a self-hosted OpenAI-compatible ASR engine — no API key needed          |
 | `AI_RUN_BUDGET_USD`                                 | `5`          | Spend ceiling per run                                                            |

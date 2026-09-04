@@ -143,6 +143,17 @@ type ProcessItemOptions struct {
 	// nothing on this path can produce a charge. `internal/cost_consent_test.go`
 	// still guards the library-wide paid sweep, which remains uncalled.
 	FreeOnly bool
+
+	// ModelID pins WHICH translation model this item runs on (sub-6-8a AC #4).
+	// Empty = the deployment's effective default, which is what every caller
+	// before this story passed by construction.
+	//
+	// It is the same value the user saw priced on the consent screen, so it
+	// must reach BOTH the provider (through the ctx, so the right client is
+	// built) and the RunVersion (so the run row and every segment-cache key
+	// record the model that actually did the work — a Haiku translation must
+	// never be served later to a Sonnet run, sub-6-8a AC #6).
+	ModelID string
 }
 
 // ProcessOutcome is what one item flow produced.
@@ -393,7 +404,14 @@ func WithModelSource(source func() string) PipelineOption {
 // without either option reports the ai package default rather than "" — the
 // empty string is exactly the value this story exists to keep out of run rows
 // and cache keys, so no construction path may produce it (sub-6-5 CR H2).
-func (p *Pipeline) currentModelID() string {
+func (p *Pipeline) currentModelID(ctx context.Context) string {
+	// A per-run choice wins over the deployment default (sub-6-8a). It rides
+	// the ctx, which ProcessItem sets from ProcessItemOptions.ModelID, so
+	// every RunVersion assembled under that item agrees with the client the
+	// holder hands out for the same ctx.
+	if id := ai.ModelIDFromContext(ctx); id != "" {
+		return id
+	}
 	if p.modelID == nil {
 		return ai.DefaultClaudeModel
 	}
@@ -703,6 +721,19 @@ func (p *Pipeline) preflightSkip(ctx context.Context, ref MediaRef, mediaPath st
 	// segment cache, so re-running costs only the English ones — which is the
 	// entire reason the run was allowed to complete instead of fail. A
 	// sidecar-only predicate would freeze that English for good.
+	// An EXPLICIT model choice is a request for THIS model's output, and the
+	// user was quoted a price for it (sub-6-8a CR M4). FindCompletedRun matches
+	// the whole version tuple INCLUDING the model, so a nil run here means the
+	// sidecar on disk cannot be attributed to this exact request — most often
+	// because the last run used a different model. Skipping would take the
+	// money question away silently: the consent screen priced a Sonnet
+	// translation and the item would no-op on a Haiku file, reporting success.
+	// A caller who did NOT name a model still gets the old sidecar-only gate.
+	if opts.ModelID != "" && run == nil {
+		p.logger.Info("subtitle pre-flight: explicit model choice with no matching completed run — re-running",
+			"media_id", ref.ID, "media_type", ref.MediaType, "model_id", opts.ModelID)
+		return false, "explicit model choice (" + opts.ModelID + ") not attributable to the existing sidecar — re-running"
+	}
 	if n := transientCuesOf(run); n > 0 {
 		p.logger.Info("subtitle pre-flight: partial delivery on disk — retrying its English cues",
 			"media_id", ref.ID, "media_type", ref.MediaType, "transient_cues", n, "run_id", run.ID)

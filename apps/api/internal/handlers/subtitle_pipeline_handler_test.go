@@ -84,7 +84,7 @@ const runMovieID = "3f1c9a54-0b2e-4d7a-9a11-6c5d4e3f2a10"
 
 func TestRunPipeline_QueuesAndReturns202(t *testing.T) {
 	queue := runningQueue()
-	h := NewSubtitlePipelineHandler(queue, foundMedia(), func() bool { return true })
+	h := NewSubtitlePipelineHandler(queue, foundMedia(), func() bool { return true }, nil)
 
 	w := postRun(t, h, `{"media_id":"`+runMovieID+`","media_type":"movie"}`)
 
@@ -104,7 +104,7 @@ func TestRunPipeline_QueuesAndReturns202(t *testing.T) {
 
 func TestRunPipeline_AlreadyQueuedIsStill202(t *testing.T) {
 	queue := &fakePipelineQueue{running: true, outcome: subtitle.EnqueueDuplicate}
-	h := NewSubtitlePipelineHandler(queue, foundMedia(), func() bool { return true })
+	h := NewSubtitlePipelineHandler(queue, foundMedia(), func() bool { return true }, nil)
 
 	w := postRun(t, h, `{"media_id":"`+runMovieID+`","media_type":"movie"}`)
 
@@ -119,7 +119,7 @@ func TestRunPipeline_AlreadyQueuedIsStill202(t *testing.T) {
 // fact discarded, and the caller would wait for SSE progress that never comes.
 func TestRunPipeline_QueueFullIs503NotAlreadyQueued(t *testing.T) {
 	queue := &fakePipelineQueue{running: true, outcome: subtitle.EnqueueQueueFull}
-	h := NewSubtitlePipelineHandler(queue, foundMedia(), func() bool { return true })
+	h := NewSubtitlePipelineHandler(queue, foundMedia(), func() bool { return true }, nil)
 
 	w := postRun(t, h, `{"media_id":"`+runMovieID+`","media_type":"movie"}`)
 
@@ -133,7 +133,7 @@ func TestRunPipeline_QueueFullIs503NotAlreadyQueued(t *testing.T) {
 // a shutdown; the enqueue outcome is the truth and must not read as a 202.
 func TestRunPipeline_PoolStoppedMidRequestIs409(t *testing.T) {
 	queue := &fakePipelineQueue{running: true, outcome: subtitle.EnqueueStopped}
-	h := NewSubtitlePipelineHandler(queue, foundMedia(), func() bool { return true })
+	h := NewSubtitlePipelineHandler(queue, foundMedia(), func() bool { return true }, nil)
 
 	w := postRun(t, h, `{"media_id":"`+runMovieID+`","media_type":"movie"}`)
 
@@ -143,7 +143,7 @@ func TestRunPipeline_PoolStoppedMidRequestIs409(t *testing.T) {
 
 func TestRunPipeline_ForceRidesThroughToTheQueue(t *testing.T) {
 	queue := runningQueue()
-	h := NewSubtitlePipelineHandler(queue, foundMedia(), func() bool { return true })
+	h := NewSubtitlePipelineHandler(queue, foundMedia(), func() bool { return true }, nil)
 
 	w := postRun(t, h, `{"media_id":"`+runMovieID+`","media_type":"movie","force":true}`)
 
@@ -154,7 +154,7 @@ func TestRunPipeline_ForceRidesThroughToTheQueue(t *testing.T) {
 
 func TestRunPipeline_RejectsUnknownMediaType(t *testing.T) {
 	queue := runningQueue()
-	h := NewSubtitlePipelineHandler(queue, foundMedia(), func() bool { return true })
+	h := NewSubtitlePipelineHandler(queue, foundMedia(), func() bool { return true }, nil)
 
 	// `tv` is the TMDB/request vocabulary; the pipeline's is movie|series|episode
 	// (sub-1-2 AC #1). Accepting it would enqueue an id that resolves to nothing.
@@ -166,7 +166,7 @@ func TestRunPipeline_RejectsUnknownMediaType(t *testing.T) {
 }
 
 func TestRunPipeline_RejectsMissingMediaID(t *testing.T) {
-	h := NewSubtitlePipelineHandler(runningQueue(), foundMedia(), func() bool { return true })
+	h := NewSubtitlePipelineHandler(runningQueue(), foundMedia(), func() bool { return true }, nil)
 
 	w := postRun(t, h, `{"media_type":"movie"}`)
 
@@ -177,7 +177,7 @@ func TestRunPipeline_RejectsMissingMediaID(t *testing.T) {
 func TestRunPipeline_404WhenTheItemDoesNotExist(t *testing.T) {
 	queue := runningQueue()
 	lookup := &fakeMediaLookup{err: subtitle.ErrMediaNotFound}
-	h := NewSubtitlePipelineHandler(queue, lookup, func() bool { return true })
+	h := NewSubtitlePipelineHandler(queue, lookup, func() bool { return true }, nil)
 
 	w := postRun(t, h, `{"media_id":"`+runMovieID+`","media_type":"movie"}`)
 
@@ -188,7 +188,7 @@ func TestRunPipeline_404WhenTheItemDoesNotExist(t *testing.T) {
 func TestRunPipeline_500OnLookupFailure(t *testing.T) {
 	queue := runningQueue()
 	lookup := &fakeMediaLookup{err: errors.New("database is locked")}
-	h := NewSubtitlePipelineHandler(queue, lookup, func() bool { return true })
+	h := NewSubtitlePipelineHandler(queue, lookup, func() bool { return true }, nil)
 
 	w := postRun(t, h, `{"media_id":"`+runMovieID+`","media_type":"movie"}`)
 
@@ -202,7 +202,7 @@ func TestRunPipeline_500OnLookupFailure(t *testing.T) {
 func TestRunPipeline_409AndNoEnqueueWhenTranslationKeyMissing(t *testing.T) {
 	queue := runningQueue()
 	lookup := foundMedia()
-	h := NewSubtitlePipelineHandler(queue, lookup, func() bool { return false })
+	h := NewSubtitlePipelineHandler(queue, lookup, func() bool { return false }, nil)
 
 	w := postRun(t, h, `{"media_id":"`+runMovieID+`","media_type":"movie"}`)
 
@@ -220,7 +220,7 @@ func TestRunPipeline_409WhenPipelineModeIsLegacy(t *testing.T) {
 	// Legacy mode leaves the pool nil in main.go, so the handler is constructed
 	// with a nil queue. The route still exists (stable API surface) and answers
 	// honestly instead of panicking.
-	h := NewSubtitlePipelineHandler(nil, foundMedia(), func() bool { return true })
+	h := NewSubtitlePipelineHandler(nil, foundMedia(), func() bool { return true }, nil)
 
 	w := postRun(t, h, `{"media_id":"`+runMovieID+`","media_type":"movie"}`)
 
@@ -231,7 +231,7 @@ func TestRunPipeline_409WhenPipelineModeIsLegacy(t *testing.T) {
 }
 
 func TestRunPipeline_409WhenPoolIsNotRunning(t *testing.T) {
-	h := NewSubtitlePipelineHandler(&fakePipelineQueue{running: false}, foundMedia(), func() bool { return true })
+	h := NewSubtitlePipelineHandler(&fakePipelineQueue{running: false}, foundMedia(), func() bool { return true }, nil)
 
 	w := postRun(t, h, `{"media_id":"`+runMovieID+`","media_type":"movie"}`)
 
@@ -243,7 +243,7 @@ func TestRunPipeline_AcceptsEveryPipelineMediaType(t *testing.T) {
 	for _, mediaType := range []string{"movie", "series", "episode"} {
 		t.Run(mediaType, func(t *testing.T) {
 			queue := runningQueue()
-			h := NewSubtitlePipelineHandler(queue, foundMedia(), func() bool { return true })
+			h := NewSubtitlePipelineHandler(queue, foundMedia(), func() bool { return true }, nil)
 
 			w := postRun(t, h, `{"media_id":"`+runMovieID+`","media_type":"`+mediaType+`"}`)
 
@@ -252,4 +252,30 @@ func TestRunPipeline_AcceptsEveryPipelineMediaType(t *testing.T) {
 			assert.Equal(t, mediaType, queue.calls[0].MediaType)
 		})
 	}
+}
+
+// ─── sub-6-8a AC #4: model_id on the FR12 single-item trigger ──────────────
+
+func TestRunPipeline_PassesTheChosenModelIntoTheQueuedOptions(t *testing.T) {
+	queue := runningQueue()
+	h := NewSubtitlePipelineHandler(queue, foundMedia(), func() bool { return true },
+		&stubModelValidator{allowed: []string{"claude-haiku-4-5"}})
+
+	w := postRun(t, h, `{"media_id":"`+runMovieID+`","media_type":"movie","model_id":"claude-haiku-4-5"}`)
+
+	require.Equal(t, http.StatusAccepted, w.Code)
+	require.Len(t, queue.opts, 1)
+	assert.Equal(t, "claude-haiku-4-5", queue.opts[0].ModelID,
+		"the pipeline must run the model the caller asked for, not the deployment default")
+}
+
+func TestRunPipeline_UnsupportedModelIsRejected(t *testing.T) {
+	queue := runningQueue()
+	h := NewSubtitlePipelineHandler(queue, foundMedia(), func() bool { return true },
+		&stubModelValidator{allowed: []string{"claude-haiku-4-5"}})
+
+	w := postRun(t, h, `{"media_id":"`+runMovieID+`","media_type":"movie","model_id":"gpt-4o"}`)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Empty(t, queue.calls, "nothing may be queued for a model this install cannot run")
 }

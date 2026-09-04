@@ -464,7 +464,7 @@ func TestProcessItem_TransientDeliveryStaysQueuedAndRetriesOnlyTheEnglish(t *tes
 	assert.Contains(t, h.progress, "complete")
 
 	// … and the translated cues are cached while the English ones are not.
-	version := h.pipeline.runVersion(richContext())
+	version := h.pipeline.runVersion(context.Background(), richContext())
 	assert.Equal(t, "早安", h.cache.writes[segmentKey(source[0].Text, version)])
 	_, cached := h.cache.writes[segmentKey(source[15].Text, version)]
 	assert.False(t, cached, "a transport-stubborn cue must not be frozen into the cache")
@@ -503,7 +503,7 @@ func TestProcessItem_PreflightStillSkipsAFullDelivery(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			h := newItemHarness(t, translateDecision("Good morning."))
 			require.NoError(t, os.WriteFile(ExpectedSidecarPath(h.mediaPath), []byte(oneCueSRT), 0o600))
-			version := h.pipeline.runVersion(richContext())
+			version := h.pipeline.runVersion(context.Background(), richContext())
 			h.runs.completed = &models.SubtitleRun{
 				ID: "run-prev", MediaID: h.ref.ID, MediaType: h.ref.MediaType, Status: models.SubtitleRunCompleted,
 				MetadataHash: version.MetadataHash, GlossaryVersion: version.GlossaryVersion,

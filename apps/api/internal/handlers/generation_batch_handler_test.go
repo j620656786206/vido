@@ -43,15 +43,17 @@ type mockGenerationProcessor struct {
 	startedScope  string
 	startedIDs    []string
 	startedBudget float64
+	startedModel  string
 	cancelCalled  bool
 }
 
 func (m *mockGenerationProcessor) IsAvailable() bool { return m.available }
 func (m *mockGenerationProcessor) IsRunning() bool   { return m.running }
-func (m *mockGenerationProcessor) Start(_ context.Context, scope string, mediaIDs []string, budgetUSD float64) (string, []services.GenerationBatchItem, error) {
+func (m *mockGenerationProcessor) Start(_ context.Context, scope string, mediaIDs []string, budgetUSD float64, modelID string) (string, []services.GenerationBatchItem, error) {
 	m.startedScope = scope
 	m.startedIDs = mediaIDs
 	m.startedBudget = budgetUSD
+	m.startedModel = modelID
 	if m.startErr != nil {
 		return "", nil, m.startErr
 	}
@@ -74,7 +76,7 @@ func setupGenerationBatchRouter(p GenerationBatchProcessorInterface) *gin.Engine
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	api := r.Group("/api/v1")
-	NewGenerationBatchHandler(p).RegisterRoutes(api)
+	NewGenerationBatchHandler(p, nil).RegisterRoutes(api)
 	return r
 }
 
@@ -383,4 +385,67 @@ func TestStartGenerationBatch_ItemsCarryMediaType(t *testing.T) {
 	assert.Equal(t, "movie", first["media_type"])
 	assert.Equal(t, genUUIDAlpha, first["media_id"])
 	assert.Equal(t, "episode", second["media_type"])
+}
+
+// ─── sub-6-8a AC #4: model_id on the batch request ─────────────────────────
+
+// stubModelValidator accepts exactly the ids it was given (plus the empty
+// "use the default" case), the way a real catalog narrows to configured
+// providers.
+type stubModelValidator struct{ allowed []string }
+
+func (s *stubModelValidator) Supports(_ context.Context, model string) bool {
+	if model == "" {
+		return true
+	}
+	for _, a := range s.allowed {
+		if a == model {
+			return true
+		}
+	}
+	return false
+}
+
+func setupGenBatchRouterWithModels(p GenerationBatchProcessorInterface, v ModelValidator) *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	NewGenerationBatchHandler(p, v).RegisterRoutes(r.Group("/api/v1"))
+	return r
+}
+
+func TestStartGenerationBatch_PassesTheChosenModelThrough(t *testing.T) {
+	mock := &mockGenerationProcessor{available: true, batchID: "b1", items: []services.GenerationBatchItem{{MediaID: "m1"}}}
+	r := setupGenBatchRouterWithModels(mock, &stubModelValidator{allowed: []string{"claude-haiku-4-5"}})
+
+	w, _ := doGenBatchJSON(t, r, http.MethodPost, "/api/v1/subtitles/generation-batch",
+		`{"scope":"missing","model_id":"claude-haiku-4-5"}`)
+
+	require.Equal(t, http.StatusAccepted, w.Code)
+	assert.Equal(t, "claude-haiku-4-5", mock.startedModel,
+		"the model the user saw priced must be the model the batch runs")
+}
+
+func TestStartGenerationBatch_AbsentModelMeansTheDefault(t *testing.T) {
+	mock := &mockGenerationProcessor{available: true, batchID: "b1", items: []services.GenerationBatchItem{{MediaID: "m1"}}}
+	r := setupGenBatchRouterWithModels(mock, &stubModelValidator{allowed: []string{"claude-haiku-4-5"}})
+
+	w, _ := doGenBatchJSON(t, r, http.MethodPost, "/api/v1/subtitles/generation-batch", `{"scope":"missing"}`)
+
+	require.Equal(t, http.StatusAccepted, w.Code)
+	assert.Empty(t, mock.startedModel, "omitting the field must not invent a choice")
+}
+
+func TestStartGenerationBatch_UnsupportedModelIsRejectedBeforeAnythingStarts(t *testing.T) {
+	mock := &mockGenerationProcessor{available: true, batchID: "b1", items: []services.GenerationBatchItem{{MediaID: "m1"}}}
+	r := setupGenBatchRouterWithModels(mock, &stubModelValidator{allowed: []string{"claude-haiku-4-5"}})
+
+	w, body := doGenBatchJSON(t, r, http.MethodPost, "/api/v1/subtitles/generation-batch",
+		`{"scope":"missing","model_id":"gemini-2.5-flash"}`)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	errObj := body["error"].(map[string]interface{})
+	assert.Equal(t, "VALIDATION_INVALID_FORMAT", errObj["code"])
+	assert.Contains(t, errObj["message"], "/settings/models",
+		"the message must point at the list of legal values — a model goes illegal the moment its key is removed")
+	assert.Empty(t, mock.startedScope, "no batch id and no budget ceiling may exist for a run that cannot happen")
 }
