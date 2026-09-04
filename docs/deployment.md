@@ -73,10 +73,12 @@ Vido can generate a Traditional-Chinese (`zh-Hant`) subtitle for media that has
 no matching subtitle online, by extracting the embedded track and translating
 it. This is **off by default**:
 
-| Variable                      | Default  | Description                                                                                  |
-| ----------------------------- | -------- | -------------------------------------------------------------------------------------------- |
-| `VIDO_SUBTITLE_PIPELINE_MODE` | `legacy` | `legacy` = subtitle search only (unchanged behaviour). `pipeline` = also generate subtitles. |
-| `CLAUDE_API_KEY`              | (none)   | Translation provider key. Required when the mode is `pipeline`.                              |
+| Variable                           | Default  | Description                                                                                                       |
+| ---------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------- |
+| `VIDO_SUBTITLE_PIPELINE_MODE`      | `legacy` | `legacy` = subtitle search only (unchanged behaviour). `pipeline` = also generate subtitles.                      |
+| `CLAUDE_API_KEY`                   | (none)   | Translation provider key. Required when the mode is `pipeline`.                                                   |
+| `SUBTITLE_EXTRACT_TIMEOUT_SECONDS` | `600`    | Floor of one subtitle extraction (ffmpeg) in seconds. Small files use this.                                       |
+| `SUBTITLE_EXTRACT_PER_GB_SECONDS`  | `30`     | Seconds allowed per GB of media. Past ~20 GB this is the one in force — raise it for large remuxes on slow disks. |
 
 Notes:
 
@@ -128,10 +130,27 @@ Notes:
   `OPENAI_API_KEY` unset — the request carries no `Authorization` header at all,
   and spend is recorded as `$0`. Set the key only if your engine sits behind an
   authenticating proxy. `OPENAI_API_KEY` is required only for the paid hosted API.
+- **Extraction is bounded by file size (sub-6-3).** Pulling the subtitle track
+  out of a large remux is pure disk I/O. Each ffmpeg pass gets
+  `max(SUBTITLE_EXTRACT_TIMEOUT_SECONDS, SUBTITLE_EXTRACT_PER_GB_SECONDS × file size in GB)`
+  — a 93 GB file gets about 46 minutes, a 4 GB file the 600 s floor.
+  **Which knob to raise:** past roughly 20 GB the per-GB term is the one in
+  force, so raising the floor alone changes nothing for a big file. The timeout
+  message names the file size, the bound it hit, and the variable that would
+  actually move it.
+- **Extractions take turns (sub-6-3).** Two workers demuxing two 20 GB files at
+  once fought over the same spindle and both timed out, where either alone took
+  3½ minutes — so only one extraction runs at a time process-wide, and the
+  progress stream shows 「等待抽軌（前方 N 件）」 while an item waits. Audio
+  extraction for speech recognition takes turns in the same queue (it is ffmpeg
+  on the same disk). Translation is **not** serialised: two items still
+  translate at once. One consequence worth knowing: the queue has no priority,
+  so a batch you start by hand can wait behind a large background extraction
+  that was already running.
 - Everything else in this section — including `ASR_BASE_URL`, `ASR_MODEL`,
-  `AI_RUN_BUDGET_USD` and `VIDO_SUBTITLE_PIPELINE_MODE` — has no settings-page
-  toggle yet; those are environment variables and a restart is required to
-  change them.
+  `AI_RUN_BUDGET_USD`, the two `SUBTITLE_EXTRACT_*` variables and
+  `VIDO_SUBTITLE_PIPELINE_MODE` — has no settings-page toggle yet; those are
+  environment variables and a restart is required to change them.
 
 ### Media Library Setup
 

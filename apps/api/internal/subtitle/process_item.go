@@ -139,7 +139,22 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 	}()
 
 	p.emitProgress(ref, StageExtracting, "extracting embedded subtitle track")
-	decision, err := p.router.SelectAndRoute(ctx, item.FilePath, tmpDir)
+	// sub-6-3 AC #2: extraction is serialized process-wide; when this item has
+	// to queue behind another ffmpeg the user sees how many are ahead instead
+	// of a stalled bubble. The notifier rides the ctx because the Extractor is
+	// built once and knows no MediaRef (see extract_gate.go).
+	// ahead == 0 is the gate saying "you are in" — put the ordinary message
+	// back, or the queue notice would sit on screen for the whole extraction
+	// that followed it (CR M2), which is the stalled bubble it exists to
+	// replace.
+	routeCtx := WithExtractWaitNotifier(ctx, func(ahead int) {
+		if ahead <= 0 {
+			p.emitProgress(ref, StageExtracting, "extracting embedded subtitle track")
+			return
+		}
+		p.emitProgress(ref, StageExtracting, fmt.Sprintf(extractWaitProgressFormat, ahead))
+	})
+	decision, err := p.router.SelectAndRoute(routeCtx, item.FilePath, tmpDir)
 	if err != nil {
 		return p.failItem(ctx, ref, run, "route", err)
 	}
@@ -774,7 +789,13 @@ func (p *Pipeline) failItem(ctx context.Context, ref MediaRef, run *models.Subti
 		// context.Canceled — ffprobe_service.go only special-cases the deadline.
 		// The item ctx itself tells the two apart (Canceled on shutdown,
 		// DeadlineExceeded on the per-item timeout).
-		if errors.Is(cause, context.Canceled) || errors.Is(ctx.Err(), context.Canceled) {
+		//
+		// A deadline that fired while the item was still QUEUED for the
+		// extraction slot (sub-6-3) is cancelled-class too: the file was never
+		// touched, so it must not count toward the free lane's three-strikes
+		// parking the way a deadline inside ffmpeg legitimately does.
+		if errors.Is(cause, context.Canceled) || errors.Is(ctx.Err(), context.Canceled) ||
+			errors.Is(cause, ErrSubtitleExtractWaitAborted) {
 			msg = CancelledRunPrefix + msg
 		}
 		run.ErrorMessage = truncateErrorMessage(msg)

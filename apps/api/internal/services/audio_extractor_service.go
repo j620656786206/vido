@@ -28,18 +28,45 @@ type AudioTrack struct {
 	Channels int    `json:"channels"`
 }
 
+// ExtractSlot is the narrow port over the process-wide extraction gate
+// (subtitle.ExtractGate). Audio extraction for speech recognition is ffmpeg
+// doing a FULL decode of the same file on the same disk as subtitle
+// extraction, so the two must take turns or they fight over one spindle
+// exactly the way two subtitle extractions did (eval-1 finding 7, sub-6-3
+// CR M3). services ↛ subtitle (Rule 19), so the concrete gate is injected
+// from main.go through this one method.
+type ExtractSlot interface {
+	// Acquire blocks until the slot is free and returns the release func.
+	Acquire(ctx context.Context) (release func(), err error)
+}
+
 // AudioExtractorService extracts audio tracks from video files using FFmpeg.
 // Follows FFprobeService pattern: semaphore for concurrency, timeout, graceful degradation.
 type AudioExtractorService struct {
 	semaphore chan struct{}
 	timeout   time.Duration
+	// slot is the shared disk gate (optional). nil = this service serializes
+	// only against itself, the pre-sub-6-3 behaviour.
+	slot      ExtractSlot
 	available bool
 	logger    *slog.Logger
 }
 
+// AudioExtractorOption configures one optional dependency.
+type AudioExtractorOption func(*AudioExtractorService)
+
+// WithAudioExtractSlot shares the process-wide extraction gate.
+func WithAudioExtractSlot(slot ExtractSlot) AudioExtractorOption {
+	return func(s *AudioExtractorService) {
+		if slot != nil {
+			s.slot = slot
+		}
+	}
+}
+
 // NewAudioExtractorService creates a new AudioExtractorService.
 // Checks if ffmpeg is available at startup via exec.LookPath (AC #4).
-func NewAudioExtractorService(maxConcurrent int, timeout time.Duration, logger *slog.Logger) *AudioExtractorService {
+func NewAudioExtractorService(maxConcurrent int, timeout time.Duration, logger *slog.Logger, opts ...AudioExtractorOption) *AudioExtractorService {
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -54,6 +81,9 @@ func NewAudioExtractorService(maxConcurrent int, timeout time.Duration, logger *
 		semaphore: make(chan struct{}, maxConcurrent),
 		timeout:   timeout,
 		logger:    logger.With("service", "audio_extractor"),
+	}
+	for _, opt := range opts {
+		opt(svc)
 	}
 
 	if _, err := exec.LookPath("ffmpeg"); err != nil {
@@ -132,6 +162,17 @@ func (s *AudioExtractorService) ExtractAudio(ctx context.Context, inputPath stri
 		defer func() { <-s.semaphore }()
 	case <-ctx.Done():
 		return "", ctx.Err()
+	}
+
+	// The shared disk gate goes around the ffmpeg pass ONLY, and outside the
+	// timeout below: queueing behind another extraction must not eat the
+	// budget this decode needs (sub-6-3).
+	if s.slot != nil {
+		release, err := s.slot.Acquire(ctx)
+		if err != nil {
+			return "", fmt.Errorf("audio extraction gave up waiting for the extraction slot: %w", err)
+		}
+		defer release()
 	}
 
 	extractCtx, cancel := context.WithTimeout(ctx, s.timeout)

@@ -1290,3 +1290,62 @@ func TestAutoExclusion_CancelledRowsStayExemptAfterReplacement(t *testing.T) {
 
 	assert.Equal(t, []string{"m1"}, h.item.refIDs())
 }
+
+// ─── sub-6-3: the item deadline covers the extractor's size-aware bound ────
+
+func TestAutoGenerator_ItemDeadlineFollowsTheExtractorBound(t *testing.T) {
+	bounds := map[string]time.Duration{
+		"/small.mkv":      10 * time.Minute, // the configured floor
+		"/goodfellas.mkv": 46 * time.Minute, // 93 GB × 30 s
+	}
+	h := newAutoHarness(t, WithAutoExtractTimeout(func(path string) time.Duration {
+		return bounds[path]
+	}))
+
+	assert.Equal(t, AutoGenerationItemTimeout, h.gen.itemDeadlineFor("/small.mkv"),
+		"a 10-minute extraction keeps the 15-minute floor, exactly as before")
+	assert.Equal(t, 46*time.Minute+autoItemSlack, h.gen.itemDeadlineFor("/goodfellas.mkv"),
+		"a 46-minute extraction must not be killed by a 15-minute item deadline")
+	assert.Equal(t, AutoGenerationItemTimeout, h.gen.itemDeadlineFor(""),
+		"no path → the floor")
+
+	bare := newAutoHarness(t)
+	assert.Equal(t, AutoGenerationItemTimeout, bare.gen.itemDeadlineFor("/goodfellas.mkv"),
+		"without the extractor port the floor stands alone")
+}
+
+func TestAutoGenerator_CollectCarriesTheFilePath(t *testing.T) {
+	h := newAutoHarness(t)
+	h.movies.movies = []models.Movie{autoMovieIn("m1", "lib-1", models.SubtitleStatusNotSearched)}
+
+	items, err := h.gen.collect(context.Background(), autoEnabledSet("lib-1"))
+	require.NoError(t, err)
+	require.Len(t, items, 1)
+	assert.Equal(t, MediaRef{ID: "m1", MediaType: models.SubtitleRunMediaMovie}, items[0].ref)
+	assert.Equal(t, "/media/m1.mkv", items[0].path, "the size-aware deadline needs the path the enumeration already had")
+}
+
+func TestAutoGenerator_QueueTimeoutIsNotCountedAsAFileFailure(t *testing.T) {
+	// sub-6-3 CR H1/L8: an item that ran out of budget waiting for the
+	// extraction slot says nothing about the FILE — failItem records it
+	// cancelled-class, so the round counters must agree and the round must
+	// keep going.
+	h := newAutoHarness(t)
+	h.movies.movies = []models.Movie{
+		autoMovieIn("m1", "lib-1", models.SubtitleStatusNotSearched),
+		autoMovieIn("m2", "lib-1", models.SubtitleStatusNotSearched),
+	}
+	h.policy.enabled = autoEnabledSet("lib-1")
+	waitAbort := fmt.Errorf("subtitle route: extract: %w: m1.mkv (queued behind 2 for 15m0s): %w",
+		ErrSubtitleExtractWaitAborted, context.DeadlineExceeded)
+	h.item.outcome = func(_ context.Context, ref MediaRef) (*ProcessOutcome, error) {
+		if ref.ID == "m1" {
+			return nil, waitAbort
+		}
+		return &ProcessOutcome{Kind: RouteDeliverDirect}, nil
+	}
+
+	h.gen.Run(context.Background())
+
+	assert.Len(t, h.item.recorded(), 2, "a queue timeout on item 1 must not strand item 2")
+}
