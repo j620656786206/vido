@@ -26,8 +26,21 @@ const defaultExtractTimeout = 10 * time.Minute
 
 // defaultPerGBTimeout is the size-aware allowance: 30 s per GB of media, the
 // rate a DS920+-class NAS demuxes a remux at with headroom (93 GB → ~46 min).
-// Overridable per Extractor (WithPerGBTimeout) for tests and faster hardware.
+// Operators override it with SUBTITLE_EXTRACT_PER_GB_SECONDS (WithPerGBTimeout).
 const defaultPerGBTimeout = 30 * time.Second
+
+// extractWaitDelay is how long ffmpeg gets to die after its deadline before
+// exec stops waiting on the stderr pipe. Without it a killed ffmpeg whose
+// grandchild still holds the pipe hangs Run() forever — which, now that
+// extraction is serialized, would strand the ONE gate slot for the life of the
+// process and silently stop every future extraction (CR M4).
+const extractWaitDelay = 10 * time.Second
+
+// extractQueueWarnAfter is how long an item may sit in the extraction queue
+// before the wait itself is worth a log line: with one slot and a size-aware
+// bound a legitimate holder can own it for the better part of an hour, so
+// silence here is indistinguishable from a stuck gate.
+const extractQueueWarnAfter = 5 * time.Minute
 
 // bytesPerGB is the decimal gigabyte ffmpeg users think in.
 const bytesPerGB = 1_000_000_000
@@ -243,22 +256,38 @@ func statFileSize(path string) (int64, error) {
 	return info.Size(), nil
 }
 
+// The two environment variables that decide an extraction deadline. Named here
+// so the timeout message and docs/deployment.md cannot drift apart.
+const (
+	extractFloorEnv = "SUBTITLE_EXTRACT_TIMEOUT_SECONDS"
+	extractPerGBEnv = "SUBTITLE_EXTRACT_PER_GB_SECONDS"
+)
+
 // EffectiveTimeout is the deadline one ffmpeg pass over mediaPath gets
 // (sub-6-3 AC #1): max(configured floor, size × per-GB allowance). A file
 // whose size cannot be read gets the floor — the same bound as before this
 // story, never less. The size is returned alongside for the caller's log
 // line; 0 when unknown.
 func (e *Extractor) EffectiveTimeout(mediaPath string) (time.Duration, float64) {
+	timeout, gb, _ := e.effectiveTimeout(mediaPath)
+	return timeout, gb
+}
+
+// effectiveTimeout also reports WHICH knob produced the bound, so a timeout
+// message can name the one an operator would actually have to change (CR M6):
+// telling someone to raise the floor when the size term already exceeds it is
+// advice that changes nothing.
+func (e *Extractor) effectiveTimeout(mediaPath string) (timeout time.Duration, sizeGB float64, knob string) {
 	size, err := e.fileSize(mediaPath)
 	if err != nil || size <= 0 {
-		return e.timeout, 0
+		return e.timeout, 0, extractFloorEnv
 	}
 	gb := float64(size) / bytesPerGB
 	sized := time.Duration(gb * float64(e.perGBTimeout))
 	if sized > e.timeout {
-		return sized, gb
+		return sized, gb, extractPerGBEnv
 	}
-	return e.timeout, gb
+	return e.timeout, gb, extractFloorEnv
 }
 
 // Extract demuxes every requested stream index in ONE ffmpeg invocation (FR3 —
@@ -277,26 +306,44 @@ func (e *Extractor) Extract(ctx context.Context, mediaPath, tmpDir string, strea
 		return nil, fmt.Errorf("subtitle extract: no stream indexes supplied for %s", filepath.Base(mediaPath))
 	}
 
-	timeout, sizeGB := e.EffectiveTimeout(mediaPath)
+	timeout, sizeGB, knob := e.effectiveTimeout(mediaPath)
 	base := filepath.Base(mediaPath)
 
-	// The gate wraps ONLY the ffmpeg subprocess — not the ffprobe that
-	// preceded this call (a header read) and not the deadline below, which
-	// must measure the demux, not the queue. The item flow's ctx may carry a
-	// notifier so the user sees「等待抽軌（前方 N 件）」rather than a stalled
-	// "extracting" bubble.
 	// A ctx that has ALREADY ended is a plain cancellation (the sub-1-4 CR M2
 	// shape), not a wait that was given up on — the gate is only asked once
 	// there is something to wait for.
 	if ctxErr := ctx.Err(); ctxErr != nil {
 		return nil, extractFailure(fmt.Sprintf("ffmpeg cancelled on %s", base), ctxErr, "")
 	}
-	release, err := e.gate.Acquire(ctx, extractWaitNotifierFrom(ctx))
+
+	// The gate wraps ONLY the ffmpeg subprocess — not the ffprobe that
+	// preceded this call (a header read) and not the deadline below, which
+	// must measure the demux, not the queue. The item flow's ctx may carry a
+	// notifier so the user sees「等待抽軌（前方 N 件）」rather than a stalled
+	// "extracting" bubble.
+	//
+	// queuedAhead remembers the depth the FIRST notice reported. Reading the
+	// live counter after the fact would count waiters that joined BEHIND this
+	// one and report a queue that was never in front of it (CR L7).
+	var queuedAhead int
+	notify := extractWaitNotifierFrom(ctx)
+	release, waited, err := e.gate.Acquire(ctx, func(ahead int) {
+		if ahead > 0 && queuedAhead == 0 {
+			queuedAhead = ahead
+		}
+		if notify != nil {
+			notify(ahead)
+		}
+	})
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s (queued behind %d): %w",
-			ErrSubtitleExtractWaitAborted, base, e.gate.Waiting()+1, err)
+		return nil, fmt.Errorf("%w: %s (queued behind %d for %s): %w",
+			ErrSubtitleExtractWaitAborted, base, queuedAhead, waited.Round(time.Second), err)
 	}
 	defer release()
+	if waited >= extractQueueWarnAfter {
+		e.logger.Warn("embedded subtitle extraction waited a long time for the slot",
+			"media", base, "queued_for", waited.Round(time.Second).String(), "was_behind", queuedAhead)
+	}
 
 	extractCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -308,6 +355,7 @@ func (e *Extractor) Extract(ctx context.Context, mediaPath, tmpDir string, strea
 		"media", base,
 		"file_size_gb", fmt.Sprintf("%.1f", sizeGB),
 		"timeout_seconds", int(timeout.Seconds()),
+		"queued_for", waited.Round(time.Second).String(),
 		"stream_indexes", streamIndexes,
 	)
 
@@ -315,6 +363,8 @@ func (e *Extractor) Extract(ctx context.Context, mediaPath, tmpDir string, strea
 	cmd := exec.CommandContext(extractCtx, "ffmpeg", args...)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
+	// Bound the post-kill wait on the stderr pipe (see extractWaitDelay).
+	cmd.WaitDelay = extractWaitDelay
 
 	if err := cmd.Run(); err != nil {
 		// extractCtx.Err() is also non-nil when the PARENT ctx was cancelled
@@ -327,14 +377,25 @@ func (e *Extractor) Extract(ctx context.Context, mediaPath, tmpDir string, strea
 				// not apply.
 				if ctx.Err() == nil {
 					return nil, extractFailure(
-						fmt.Sprintf("ffmpeg timed out after %s on %s (file %.1f GB, timeout %d s — raise SUBTITLE_EXTRACT_TIMEOUT_SECONDS for slow disks)",
-							timeout, base, sizeGB, int(timeout.Seconds())),
+						fmt.Sprintf("ffmpeg timed out after %s on %s (file %.1f GB, timeout %d s — raise %s for slow disks)",
+							timeout, base, sizeGB, int(timeout.Seconds()), knob),
 						ctxErr, stderr.String())
 				}
-				return nil, extractFailure(
-					fmt.Sprintf("ffmpeg stopped by the caller's deadline after %s on %s (file %.1f GB)",
-						time.Since(started).Round(time.Second), base, sizeGB),
+				failure := extractFailure(
+					fmt.Sprintf("ffmpeg stopped by the caller's deadline after %s on %s (file %.1f GB; %s of that budget went to waiting for the extraction slot)",
+						time.Since(started).Round(time.Second), base, sizeGB, waited.Round(time.Second)),
 					ctxErr, stderr.String())
+				if waited > 0 {
+					// The file never got its full extraction budget: part of it
+					// was spent queueing behind someone else's ffmpeg. Our own
+					// bound would have fired FIRST if the budget had been whole,
+					// so reaching here after a wait says nothing about THIS file
+					// (CR H1) — chain the wait-abort sentinel so the item flow
+					// records the run cancelled-class and the free lane never
+					// parks the file over it.
+					return nil, fmt.Errorf("%w: %w", ErrSubtitleExtractWaitAborted, failure)
+				}
+				return nil, failure
 			}
 			return nil, extractFailure(
 				fmt.Sprintf("ffmpeg cancelled on %s", base),
@@ -362,6 +423,7 @@ func (e *Extractor) Extract(ctx context.Context, mediaPath, tmpDir string, strea
 		"stream_indexes", streamIndexes,
 		"file_size_gb", fmt.Sprintf("%.1f", sizeGB),
 		"timeout_seconds", int(timeout.Seconds()),
+		"queued_for", waited.Round(time.Second).String(),
 		"elapsed", time.Since(started).Round(time.Millisecond).String(),
 	)
 

@@ -183,7 +183,7 @@ type AutoGenerator struct {
 	// extractTimeout answers "how long would the extractor allow this file"
 	// (sub-6-3) so the item deadline can cover a size-aware ffmpeg bound. A
 	// func, not an interface (Rule 11, narrow); nil = the floor alone.
-	extractTimeout func(path string) (time.Duration, float64)
+	extractTimeout func(path string) time.Duration
 
 	// lifetime is the parent of every round's ctx; Stop cancels it. Owned here
 	// rather than injected (D5) so main.go's wiring is one Stop() call.
@@ -286,9 +286,10 @@ func WithAutoItemTimeout(d time.Duration) AutoGeneratorOption {
 }
 
 // WithAutoExtractTimeout supplies the extractor's per-file deadline so the
-// item deadline can cover it (sub-6-3). Production wires
-// (*Extractor).EffectiveTimeout; nil keeps the floor alone.
-func WithAutoExtractTimeout(fn func(path string) (time.Duration, float64)) AutoGeneratorOption {
+// item deadline can cover it (sub-6-3). One question, one answer (Rule 11):
+// main.go adapts (*Extractor).EffectiveTimeout, whose second return exists for
+// log lines this caller has no use for. nil keeps the floor alone.
+func WithAutoExtractTimeout(fn func(path string) time.Duration) AutoGeneratorOption {
 	return func(g *AutoGenerator) { g.extractTimeout = fn }
 }
 
@@ -299,8 +300,7 @@ func (g *AutoGenerator) itemDeadlineFor(path string) time.Duration {
 	if g.extractTimeout == nil || path == "" {
 		return g.itemTimeout
 	}
-	bound, _ := g.extractTimeout(path)
-	if sized := bound + autoItemSlack; sized > g.itemTimeout {
+	if sized := g.extractTimeout(path) + autoItemSlack; sized > g.itemTimeout {
 		return sized
 	}
 	return g.itemTimeout
@@ -485,7 +485,7 @@ func (g *AutoGenerator) Run(ctx context.Context) {
 	g.logger.Info("subtitle auto-generation started",
 		"libraries", len(enabled), "considered", len(items), "max_per_run", g.maxPerRun)
 
-	var processed, deferredPaid, failed, remaining int
+	var processed, deferredPaid, failed, queued, remaining int
 	var cancelled bool
 	for i, it := range items {
 		ref := it.ref
@@ -517,6 +517,16 @@ func (g *AutoGenerator) Run(ctx context.Context) {
 			// Nothing after this point can start (the loop head would break on
 			// the same ctx); break here so `remaining` keeps counting THIS item.
 			cancelled = true
+		case errors.Is(err, ErrSubtitleExtractWaitAborted):
+			// The item ran out of budget while QUEUED behind another
+			// extraction, or lost so much of it there that its own ffmpeg
+			// bound never got to fire (sub-6-3 CR H1/L8). failItem already
+			// marked the row cancelled-class so it cannot park the file, and
+			// this counter must agree — it is not a failure of the FILE. The
+			// round continues: the next item may be small enough to finish.
+			queued++
+			g.logger.Info("subtitle auto-generation: item gave up waiting for the extraction slot",
+				"media_id", ref.ID, "media_type", ref.MediaType, "error", err)
 		case err != nil:
 			// Per-item failure is already recorded on the item's run row by the
 			// pipeline; stopping the round here would strand every later item
@@ -538,12 +548,13 @@ func (g *AutoGenerator) Run(ctx context.Context) {
 		g.logger.Warn("subtitle auto-generation cancelled",
 			"libraries", len(enabled), "considered", len(items),
 			"processed", processed, "deferred_paid", deferredPaid, "failed", failed,
-			"remaining", remaining)
+			"queue_timeouts", queued, "remaining", remaining)
 		return
 	}
 	g.logger.Info("subtitle auto-generation finished",
 		"libraries", len(enabled), "considered", len(items),
-		"processed", processed, "deferred_paid", deferredPaid, "failed", failed)
+		"processed", processed, "deferred_paid", deferredPaid, "failed", failed,
+		"queue_timeouts", queued)
 }
 
 // collect enumerates both media families and applies the three filters:

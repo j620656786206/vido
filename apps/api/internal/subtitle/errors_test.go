@@ -25,6 +25,8 @@ func subtitleSentinels() []struct {
 		{"no text source", ErrSubtitleNoTextSource, "SUBTITLE_NO_TEXT_SOURCE"},
 		{"translate failed", ErrSubtitleTranslateFailed, "SUBTITLE_TRANSLATE_FAILED"},
 		{"timestamp mismatch", ErrSubtitleTimestampMismatch, "SUBTITLE_TIMESTAMP_MISMATCH"},
+		{"target not writable", ErrSubtitleTargetNotWritable, "SUBTITLE_TARGET_NOT_WRITABLE"},
+		{"extract wait aborted", ErrSubtitleExtractWaitAborted, "SUBTITLE_EXTRACT_WAIT_ABORTED"},
 	}
 }
 

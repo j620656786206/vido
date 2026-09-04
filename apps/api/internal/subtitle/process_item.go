@@ -143,7 +143,15 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 	// to queue behind another ffmpeg the user sees how many are ahead instead
 	// of a stalled bubble. The notifier rides the ctx because the Extractor is
 	// built once and knows no MediaRef (see extract_gate.go).
+	// ahead == 0 is the gate saying "you are in" — put the ordinary message
+	// back, or the queue notice would sit on screen for the whole extraction
+	// that followed it (CR M2), which is the stalled bubble it exists to
+	// replace.
 	routeCtx := WithExtractWaitNotifier(ctx, func(ahead int) {
+		if ahead <= 0 {
+			p.emitProgress(ref, StageExtracting, "extracting embedded subtitle track")
+			return
+		}
 		p.emitProgress(ref, StageExtracting, fmt.Sprintf(extractWaitProgressFormat, ahead))
 	})
 	decision, err := p.router.SelectAndRoute(routeCtx, item.FilePath, tmpDir)

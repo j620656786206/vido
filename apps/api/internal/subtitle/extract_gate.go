@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 // ExtractGate serializes ffmpeg subtitle extraction process-wide (sub-6-3
@@ -30,25 +31,34 @@ func NewExtractGate() *ExtractGate {
 	return &ExtractGate{slot: make(chan struct{}, 1)}
 }
 
-// Acquire takes the slot, blocking while another extraction holds it. When
-// the slot is busy at entry, onWait (if non-nil) is called ONCE with the
-// number of extractions ahead of this one — the holder plus everyone already
-// queued — so the caller can say「等待抽軌（前方 N 件）」. A ctx that ends while
-// waiting returns ctx.Err() immediately; a nil gate is a no-op.
+// Acquire takes the slot, blocking while another extraction holds it, and
+// reports how long it had to wait. A nil gate is a no-op; a ctx that ends
+// while waiting returns ctx.Err() immediately.
 //
-// The returned release is idempotent and must be called exactly once the
-// subprocess has exited.
-func (g *ExtractGate) Acquire(ctx context.Context, onWait func(ahead int)) (release func(), err error) {
+// onWait (optional) is the queue narrator, and it is called at most TWICE:
+//   - once with ahead >= 1 when the slot is busy at entry — the holder plus
+//     everyone already queued, so the caller can say「等待抽軌（前方 N 件）」;
+//   - once with ahead == 0 the moment the slot is taken, so the caller can
+//     replace that message. Without the second call the queue notice would
+//     stay on screen for the whole extraction that followed it — the stalled
+//     bubble this narration exists to remove (CR M2). It also covers the
+//     race where the holder releases between the entry probe and the queue
+//     join: onWait(1) has already gone out even though nothing was waited
+//     for, and the 0 retracts it.
+//
+// The returned release is idempotent and must be called once the subprocess
+// has exited.
+func (g *ExtractGate) Acquire(ctx context.Context, onWait func(ahead int)) (release func(), waited time.Duration, err error) {
 	if g == nil {
-		return func() {}, nil
+		return func() {}, 0, nil
 	}
 	if err := ctx.Err(); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	select {
 	case g.slot <- struct{}{}:
-		return g.releaser(), nil
+		return g.releaser(), 0, nil
 	default:
 	}
 
@@ -60,11 +70,15 @@ func (g *ExtractGate) Acquire(ctx context.Context, onWait func(ahead int)) (rele
 		onWait(ahead)
 	}
 
+	start := time.Now()
 	select {
 	case g.slot <- struct{}{}:
-		return g.releaser(), nil
+		if onWait != nil {
+			onWait(0)
+		}
+		return g.releaser(), time.Since(start), nil
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return nil, time.Since(start), ctx.Err()
 	}
 }
 

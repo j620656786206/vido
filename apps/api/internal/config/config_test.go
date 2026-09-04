@@ -1054,3 +1054,30 @@ func TestLoad_SubtitleExtractTimeoutSeconds(t *testing.T) {
 		assert.Equal(t, 600, cfg.SubtitleExtractTimeoutSeconds)
 	})
 }
+
+func TestLoad_SubtitleExtractPerGBSeconds(t *testing.T) {
+	t.Run("default", func(t *testing.T) {
+		os.Clearenv()
+		cfg, err := Load()
+		require.NoError(t, err)
+		assert.Equal(t, 30, cfg.SubtitleExtractPerGBSeconds)
+		assert.Equal(t, SourceDefault, cfg.Sources["SUBTITLE_EXTRACT_PER_GB_SECONDS"])
+	})
+	t.Run("override", func(t *testing.T) {
+		os.Clearenv()
+		t.Setenv("SUBTITLE_EXTRACT_PER_GB_SECONDS", "90")
+		cfg, err := Load()
+		require.NoError(t, err)
+		assert.Equal(t, 90, cfg.SubtitleExtractPerGBSeconds)
+		assert.Equal(t, SourceEnvVar, cfg.Sources["SUBTITLE_EXTRACT_PER_GB_SECONDS"])
+	})
+	t.Run("non-positive and garbage fall back", func(t *testing.T) {
+		for _, raw := range []string{"0", "-5", "thirty"} {
+			os.Clearenv()
+			t.Setenv("SUBTITLE_EXTRACT_PER_GB_SECONDS", raw)
+			cfg, err := Load()
+			require.NoError(t, err)
+			assert.Equal(t, 30, cfg.SubtitleExtractPerGBSeconds, "raw=%q", raw)
+		}
+	})
+}

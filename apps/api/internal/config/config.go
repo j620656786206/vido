@@ -82,6 +82,11 @@ type Config struct {
 	// subtitle-extraction pass (sub-6-3); the effective bound grows with file
 	// size. Env: SUBTITLE_EXTRACT_TIMEOUT_SECONDS, default 600.
 	SubtitleExtractTimeoutSeconds int
+	// SubtitleExtractPerGBSeconds is the size-aware allowance per gigabyte of
+	// media. It is the knob that actually matters for large remuxes: past
+	// ~20 GB the size term exceeds the floor, so raising the floor alone does
+	// nothing. Env: SUBTITLE_EXTRACT_PER_GB_SECONDS, default 30.
+	SubtitleExtractPerGBSeconds int
 
 	// AI throttle + budget (Story 9R-11). AIMaxConcurrent/AIRatePerSec govern
 	// the shared Governor; AIRunBudgetUSD is the per-run cost ceiling
@@ -191,6 +196,10 @@ func Load() (*Config, error) {
 	cfg.SubtitleExtractTimeoutSeconds = cfg.loadInt("SUBTITLE_EXTRACT_TIMEOUT_SECONDS", 600)
 	if cfg.SubtitleExtractTimeoutSeconds <= 0 {
 		cfg.SubtitleExtractTimeoutSeconds = 600
+	}
+	cfg.SubtitleExtractPerGBSeconds = cfg.loadInt("SUBTITLE_EXTRACT_PER_GB_SECONDS", 30)
+	if cfg.SubtitleExtractPerGBSeconds <= 0 {
+		cfg.SubtitleExtractPerGBSeconds = 30
 	}
 
 	// Subtitle generation pipeline flag (D5, sub-1-6). Validated here so an

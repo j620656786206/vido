@@ -1215,7 +1215,8 @@ func TestProcessItem_NarratesTheExtractionQueueOnTheProgressStream(t *testing.T)
 	h.router.onRoute = func(ctx context.Context) {
 		notify := extractWaitNotifierFrom(ctx)
 		require.NotNil(t, notify, "ProcessItem must hand the router a ctx carrying the wait notifier")
-		notify(3)
+		notify(3) // queued behind three
+		notify(0) // …and let in
 	}
 
 	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
@@ -1224,6 +1225,9 @@ func TestProcessItem_NarratesTheExtractionQueueOnTheProgressStream(t *testing.T)
 	assert.Equal(t, []string{
 		"extracting embedded subtitle track",
 		"waiting for the extraction slot (3 ahead)",
+		// CR M2: the queue notice is RETRACTED once the slot is taken, or it
+		// would sit there for the whole extraction that follows it.
+		"extracting embedded subtitle track",
 	}, messages)
 }
 

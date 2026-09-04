@@ -3,7 +3,9 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -116,4 +118,59 @@ func TestAudioExtractorService_ListAudioTracks_NotAvailable(t *testing.T) {
 	svc := &AudioExtractorService{available: false}
 	_, err := svc.ListAudioTracks(context.Background(), "/test.mkv")
 	assert.ErrorIs(t, err, ErrFFmpegNotAvailable)
+}
+
+// ─── sub-6-3 CR M3: ASR audio extraction takes turns on the shared disk gate ─
+
+// fakeExtractSlot records how the shared gate was used.
+type fakeExtractSlot struct {
+	acquired atomic.Int32
+	released atomic.Int32
+	err      error
+}
+
+func (f *fakeExtractSlot) Acquire(ctx context.Context) (func(), error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	f.acquired.Add(1)
+	return func() { f.released.Add(1) }, nil
+}
+
+func TestAudioExtractorService_TakesTheSharedSlotAroundFFmpeg(t *testing.T) {
+	slot := &fakeExtractSlot{}
+	svc := NewAudioExtractorService(1, time.Second, nil, WithAudioExtractSlot(slot))
+	if !svc.IsAvailable() {
+		t.Skip("ffmpeg not installed — the extraction path cannot be driven here")
+	}
+
+	// A path that does not exist: ffmpeg fails fast, which is enough to prove
+	// the slot was taken around the call and given back afterwards.
+	_, err := svc.ExtractAudio(context.Background(), "/definitely/not/here.mkv", 0)
+	require.Error(t, err)
+
+	assert.EqualValues(t, 1, slot.acquired.Load(), "audio extraction is ffmpeg on the same disk — it must queue with subtitle extraction")
+	assert.EqualValues(t, 1, slot.released.Load(), "the slot is always given back, failure included")
+}
+
+func TestAudioExtractorService_SlotIsOptional(t *testing.T) {
+	svc := NewAudioExtractorService(1, time.Second, nil)
+	assert.Nil(t, svc.slot, "no gate injected = the pre-sub-6-3 behaviour, serialized against itself only")
+
+	assert.Nil(t, NewAudioExtractorService(1, time.Second, nil, WithAudioExtractSlot(nil)).slot,
+		"a nil injection is ignored rather than stored")
+}
+
+func TestAudioExtractorService_GiveUpWaitingIsReported(t *testing.T) {
+	slot := &fakeExtractSlot{err: context.Canceled}
+	svc := NewAudioExtractorService(1, time.Second, nil, WithAudioExtractSlot(slot))
+	if !svc.IsAvailable() {
+		t.Skip("ffmpeg not installed")
+	}
+
+	_, err := svc.ExtractAudio(context.Background(), "/definitely/not/here.mkv", 0)
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.Contains(t, err.Error(), "waiting for the extraction slot")
 }

@@ -1,6 +1,6 @@
 # Story 6.3: 抽軌 timeout 可調 + 抽軌階段序列化 —— 4K remux 片庫不再整批不能用（後端）
 
-Status: review
+Status: done
 
 ## Story
 
@@ -84,6 +84,7 @@ Claude Fable 5.1（dev-story，2026-09-04）
 | 2026-09-04 | Task 1 — config、`EffectiveTimeout`、`main.go` 接線、逾時訊息、slog。 |
 | 2026-09-04 | Task 2 — `extract_gate.go`、`Extractor` 注入、`WithExtractWaitNotifier` + SSE、`ErrSubtitleExtractWaitAborted`、auto lane size-aware item deadline。 |
 | 2026-09-04 | Task 3 — gate／extractor shim／config／process_item／auto／SSE 測試；`docs/deployment.md`。 |
+| 2026-09-04 | CR fixes（Opus 5 adversarial，10 findings，全部在同一分支修）— 見下方 Senior Developer Review。 |
 
 ### File List
 
@@ -91,4 +92,25 @@ Claude Fable 5.1（dev-story，2026-09-04）
 - `apps/api/internal/subtitle/extractor.go`、`errors.go`、`process_item.go`、`progress_sse.go`、`auto_generation.go`（modified）+ `process_item_test.go`、`progress_sse_test.go`、`auto_generation_test.go`
 - `apps/api/internal/config/config.go`（modified）+ `config_test.go`
 - `apps/api/cmd/api/main.go`（modified）
+- `apps/api/internal/services/audio_extractor_service.go`（modified，CR M3）+ `audio_extractor_service_test.go`
+- `apps/api/internal/subtitle/errors_test.go`（modified，CR L9）
 - `docs/deployment.md`、`project-context.md`、`_bmad-output/implementation-artifacts/sub-6-3-extract-timeout-and-serialization.md`、`sprint-status.yaml`
+
+## Senior Developer Review (AI)
+
+**Reviewer:** Claude Opus 5（adversarial CR，換模型慣例；impl by Fable 5.1） · **Date:** 2026-09-04 · **Outcome:** Changes Requested → 6 個真問題與 4 個小項全部在同一分支修完 → **Approve**
+
+Mandatory checks: Rule 7 PASS（code-list update only，`SUBTITLE_EXTRACT_WAIT_ABORTED` 已補進 project-context 第 296 行清單與 `errors_test.go` 的 wire-format 表，prefix 17 不變）· Rule 11 PASS（`WithAutoExtractTimeout` 收窄為 `func(string) time.Duration`）· Rule 14 PASS（gate 建一次）· Rule 19 PASS（`services.ExtractSlot` port 定義在 services，具體 gate 由 main.go 轉接，services 不 import subtitle）· Rule 20 N/A。
+
+### Action Items
+
+- [x] [H1] item deadline 被排隊時間吃掉 → 93 GB 檔仍會被判真失敗並三振停權。`Acquire` 回傳 `waited`；ffmpeg 被**呼叫端** deadline 殺死且本次曾排隊 → 額外鏈上 `ErrSubtitleExtractWaitAborted`（理由：預算完整時我們自己的 bound 一定先到，所以「呼叫端 deadline + 曾排隊」＝預算被搶走，與檔案無關）。測試涵蓋「曾排隊 → wait-abort」與「沒排隊 → 仍是檔案失敗」。
+- [x] [M2] 「等待抽軌」訊息只發一次、永不清除（拿到 slot 後整段抽軌都顯示排隊中），且 fast-path 競態會誤報。`Acquire` 進場時回呼 `onWait(0)`，`ProcessItem` 收到 0 就把訊息換回「抽取內嵌字幕中…」；`onWait` 契約寫進 doc comment，三條測試釘住。
+- [x] [M3] ASR 音軌抽取也是 ffmpeg、同一顆碟、未進閘門。新增 `services.ExtractSlot` 窄 port + `WithAudioExtractSlot`，`main.go` 用 `extractSlotAdapter` 轉接同一個 gate（Rule 19）。**它的 5 分鐘 timeout 仍非 size-aware** → 立案 `backlog-asr-audio-extract-size-aware-timeout`（審查者明示可選此路）。
+- [x] [M4] 沒設 `cmd.WaitDelay`：卡住的 ffmpeg 會永久佔住唯一 slot、讓整個 process 的抽軌靜默停擺。`cmd.WaitDelay = 10s`；另加「排隊超過 5 分鐘」的 `slog.Warn`，讓「gate 卡住」與「前面真的有大檔」在 log 裡分得開。
+- [x] [M5] 閘門無優先權：使用者按下去要付錢的 consent batch 會排在背景免費 lane 的 46 分鐘後面，且 batch 進度流不帶排隊敘述。**本輪只做文件化**（`docs/deployment.md` 明寫此排序），實作立案 `backlog-extract-gate-priority`（含「release 交棒給已被取消的 waiter」這個實作陷阱的提醒）。
+- [x] [M6] 逾時訊息叫人調的 knob 與文件相反、per-GB 沒有 env。新增 `SUBTITLE_EXTRACT_PER_GB_SECONDS`（預設 30，非正值／垃圾回預設）接上既有 `WithPerGBTimeout`；`effectiveTimeout` 回報**哪一個** knob 決定了 bound，訊息只點名那一個；`docs/deployment.md` 兩處改寫一致。
+- [x] [L7] `queued behind %d` 事後讀計數器會把排在自己後面的人算進去。改用第一則通知捕捉到的 `queuedAhead`。
+- [x] [L8] auto lane 回合統計把 wait-abort 算成 `failed`，與自己的註解打架。新增 `queue_timeouts` 計數與 `Info` 記錄，回合繼續；測試斷言第二個 item 不被牽連。
+- [x] [L9] 新 sentinel 未進 Rule 7 wire-format 鎖定測試 → `subtitleSentinels()` 補上 `SUBTITLE_EXTRACT_WAIT_ABORTED` 與既有漏列的 `SUBTITLE_TARGET_NOT_WRITABLE`。
+- [x] [L10] `WithAutoExtractTimeout` port 過寬 → 收窄為 `func(string) time.Duration`，`main.go` 一行 adapter。

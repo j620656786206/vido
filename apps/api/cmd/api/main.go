@@ -439,6 +439,11 @@ func main() {
 	// with size inside the Extractor.
 	subtitleExtractGate := subtitle.NewExtractGate()
 	subtitleExtractTimeout := time.Duration(cfg.SubtitleExtractTimeoutSeconds) * time.Second
+	subtitleExtractPerGB := time.Duration(cfg.SubtitleExtractPerGBSeconds) * time.Second
+	subtitleExtractorOpts := []subtitle.ExtractorOption{
+		subtitle.WithExtractGate(subtitleExtractGate),
+		subtitle.WithPerGBTimeout(subtitleExtractPerGB),
+	}
 	slog.Info("FFprobe service initialized", "available", ffprobeService.IsAvailable())
 
 	// Initialize enrichment service for post-scan metadata enrichment
@@ -571,7 +576,10 @@ func main() {
 	// — the same instance throttles the Whisper + Claude clients below.
 
 	// Initialize audio extractor service (Story 9.2a)
-	audioExtractorService := services.NewAudioExtractorService(1, 5*time.Minute, slog.Default())
+	// sub-6-3: ASR audio extraction is ffmpeg on the same disk, so it takes
+	// turns with subtitle extraction through the same gate.
+	audioExtractorService := services.NewAudioExtractorService(1, 5*time.Minute, slog.Default(),
+		services.WithAudioExtractSlot(extractSlotAdapter{gate: subtitleExtractGate}))
 	slog.Info("Audio extractor service initialized", "available", audioExtractorService.IsAvailable())
 
 	// ── Provider keys: resolver + hot-reloadable holders (sub-2-1a AC #1/#2,
@@ -677,8 +685,7 @@ func main() {
 	// RUNTIME entry point: the endpoint's 409, the EnqueueMissing scan sweep, and
 	// the per-batch seam below.
 	if cfg.SubtitlePipelineEnabled() {
-		subtitleExtractor := subtitle.NewExtractor(subtitleExtractTimeout, slog.Default(),
-			subtitle.WithExtractGate(subtitleExtractGate))
+		subtitleExtractor := subtitle.NewExtractor(subtitleExtractTimeout, slog.Default(), subtitleExtractorOpts...)
 		subtitleRouter := subtitle.NewRouter(
 			ffprobeService,
 			subtitleExtractor,
@@ -759,7 +766,10 @@ func main() {
 			// sub-6-3: the free lane's per-item deadline follows the
 			// extractor's size-aware bound, or a 93 GB file would get a
 			// 46-minute ffmpeg deadline under a 15-minute item deadline.
-			subtitle.WithAutoExtractTimeout(subtitleExtractor.EffectiveTimeout),
+			subtitle.WithAutoExtractTimeout(func(path string) time.Duration {
+				bound, _ := subtitleExtractor.EffectiveTimeout(path)
+				return bound
+			}),
 		)
 		scannerService.SetOnScanComplete(
 			subtitle.ComposeScanCallback(postScanEnrichment, autoGenerator.ScanCallback()),
@@ -775,6 +785,7 @@ func main() {
 			"scan_auto_free_generation", true,
 			"scan_auto_item_timeout", subtitle.AutoGenerationItemTimeout,
 			"extract_timeout_floor", subtitleExtractTimeout,
+			"extract_per_gb", subtitleExtractPerGB,
 			"auto_max_per_run", subtitle.AutoGenerationMaxPerRun)
 	} else {
 		// ONE line, at wiring time — not one per scanned item (AC #5).
@@ -938,7 +949,7 @@ func main() {
 		repos.Series,
 		routePredictorAdapter{router: subtitle.NewRouter(
 			ffprobeService,
-			subtitle.NewExtractor(subtitleExtractTimeout, slog.Default(), subtitle.WithExtractGate(subtitleExtractGate)),
+			subtitle.NewExtractor(subtitleExtractTimeout, slog.Default(), subtitleExtractorOpts...),
 			slog.Default())},
 		ai.IsSelfHostedASRBaseURL(cfg.ASRBaseURL),
 		// sub-5-1 AC #5: the F15 prefill source — the envelope carries the
@@ -1268,4 +1279,14 @@ func main() {
 
 	<-shutdownCtx.Done()
 	slog.Info("Server stopped gracefully")
+}
+
+// extractSlotAdapter narrows *subtitle.ExtractGate to the one method the
+// services-side audio extractor needs (Rule 19: services ↛ subtitle, so the
+// port lives there and the concrete gate is adapted here).
+type extractSlotAdapter struct{ gate *subtitle.ExtractGate }
+
+func (a extractSlotAdapter) Acquire(ctx context.Context) (func(), error) {
+	release, _, err := a.gate.Acquire(ctx, nil)
+	return release, err
 }
