@@ -10,6 +10,47 @@ These apply to **every** session, not just `/ship`.
 - **gh account is `j620656786206`.** Verify with `gh auth status` before any PR/CI op; if active account is `alexyu-tvbs`, run `gh auth switch --user j620656786206`.
 - **`-linux` visual baselines cannot be generated locally** (this machine is darwin; CI is ubuntu). Never run `test:visual:update` and commit `-linux.png` to fix a visual-regression failure — the CI `Visual Regression` workflow auto-opens a `chore(visual): bootstrap N missing -linux baselines` PR for that; merge it instead.
 
+### Commit messages and PR summaries: plain language first (ELI5)
+
+Alexyu is the only reviewer and the only user of this product. A commit or PR
+written in identifiers (`RequestTimeoutFor(model, maxTokens)` …) cannot be
+reviewed by him — he cannot tell what the change does, whether it was worth
+doing, or whether it is safe to merge. So **every** commit message and PR
+summary leads with plain language, in zh-TW, and keeps the technical account
+below it or in a PR comment. This applies to all sessions and all agents, not
+just `/ship`.
+
+**Commit message** — the conventional `<type>(<scope>):` prefix is still
+required; the summary after it states the OUTCOME in plain words, not the
+mechanism. Then a three-part body:
+
+```
+fix(sub-6-3): 排隊等抽軌的大檔不會再被誤判成「壞檔」而被永久跳過
+
+原本會怎樣：
+  使用者實際遇到的壞事，含真實數字（哪部片、燒掉多少錢、卡在第幾句）。
+改成怎樣：
+  現在會發生什麼；每一條都是可觀察的行為，不是函式名。
+怎麼確定：
+  跑了哪些測試／驗證了什麼。
+```
+
+**PR summary** — this order, no exceptions:
+
+1. 這個 PR 在解決什麼問題（含真實痛點與數字）
+2. 改成怎樣 / 你會看到的差別
+3. 我怎麼確定它有效（測試證據、CR 結果）
+4. 沒做的事（以及立案編號）
+5. `---` 之後才是技術細節，或改用 PR 留言（`gh pr comment`）承載
+
+**The test for "plain enough":** someone who has never read this codebase
+finishes the summary and can say what changed and why it matters to them.
+A sentence whose content is only identifiers fails. Keep identifiers for the
+technical section; name files and symbols there, not in the plain-language part.
+
+Write in zh-TW (the project's communication language); technical identifiers,
+env var names and code stay in their original form.
+
 ## Confirm Before Coding (no premature assumptions)
 
 Before implementing, **state and confirm** any of these you're relying on rather than guessing:
