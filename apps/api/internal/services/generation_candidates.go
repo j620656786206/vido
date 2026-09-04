@@ -110,8 +110,12 @@ type GenerationCandidate struct {
 	// must not pre-select such a row and must keep it out of the total — the
 	// pipeline would refuse it before spending anyway (ProcessItem pre-flight),
 	// but the user should see that BEFORE consenting, not after.
-	Writable bool   `json:"writable"`
-	Blocker  string `json:"blocker,omitempty"`
+	Writable bool `json:"writable"`
+	// Blocker is the Rule 7 CODE (SUBTITLE_TARGET_NOT_WRITABLE) and BlockerDir
+	// the folder's base name — the zh-TW sentence is composed by the client,
+	// and an absolute NAS path never leaves the server (CR M6).
+	Blocker    string `json:"blocker,omitempty"`
+	BlockerDir string `json:"blocker_dir,omitempty"`
 
 	// Series identity (sub-5-3 AC #1) — episodes only; movies leave all four
 	// at their zero value. Additive on the sub-4-1 AC #7 [@contract-v1]
@@ -212,7 +216,7 @@ type GenerationCandidateService struct {
 	// probeWritable is the sub-6-1 target-directory probe (fsprobe.ProbeWritable
 	// by default). Per-analysis results are memoised by directory, so a
 	// 24-episode season costs one probe, not 24.
-	probeWritable func(dir string) error
+	probeWritable func(ctx context.Context, dir string) error
 	sseHub        *sse.Hub
 	logger        *slog.Logger
 	now           func() time.Time
@@ -278,10 +282,13 @@ func NewGenerationCandidateService(
 	}
 }
 
+// writableProbeTimeout bounds one directory probe during a consent sweep.
+const writableProbeTimeout = 3 * time.Second
+
 // defaultWritableProbe is what NewGenerationCandidateService installs; the
 // package tests replace it with a permissive probe in TestMain because their
 // fixture paths do not exist on disk.
-var defaultWritableProbe = fsprobe.ProbeWritable
+var defaultWritableProbe = fsprobe.ProbeWritableContext
 
 // SetSSEHub wires live progress. Nil-safe: without a hub the sweep still runs
 // and the snapshot still updates, callers just have to poll for it.
@@ -469,22 +476,31 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 	cached := s.readRouteCache(ctx, plans)
 	var cacheHits, probes int
 
-	// sub-6-1: one probe per distinct directory per sweep.
+	// sub-6-1: one probe per distinct directory per sweep, each bounded by
+	// writableProbeTimeout so a hung mount cannot stall the whole preview
+	// (CR M7). The value is the blocker CODE; the FE composes the sentence.
 	writableCache := make(map[string]string)
-	writableOf := func(dir string) (bool, string) {
+	writableOf := func(dir string) (writable bool, code, base string) {
 		if s.probeWritable == nil {
-			return true, ""
+			return true, "", ""
 		}
-		blocker, seen := writableCache[dir]
+		code, seen := writableCache[dir]
 		if !seen {
-			if err := s.probeWritable(dir); err != nil {
-				blocker = "資料夾無法寫入：" + err.Error()
+			probeCtx, cancel := context.WithTimeout(ctx, writableProbeTimeout)
+			err := s.probeWritable(probeCtx, dir)
+			cancel()
+			if err != nil {
+				code = "SUBTITLE_TARGET_NOT_WRITABLE"
+				s.logger.Warn("consent list: target directory is not writable",
+					"dir", dir, "error", err)
 			}
-			writableCache[dir] = blocker
+			writableCache[dir] = code
 		}
-		return blocker == "", blocker
+		if code == "" {
+			return true, "", ""
+		}
+		return false, code, filepath.Base(dir)
 	}
-
 	for i, row := range rows {
 		if err := ctx.Err(); err != nil {
 			return nil, err
@@ -546,7 +562,7 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 		// sub-6-1 AC #4: the same write probe the pipeline runs, done here so the
 		// consent list shows the blocker before a cent is committed. Memoised
 		// per directory for this sweep (Rule 14: bounded by distinct dirs).
-		c.Writable, c.Blocker = writableOf(filepath.Dir(row.filePath))
+		c.Writable, c.Blocker, c.BlockerDir = writableOf(filepath.Dir(row.filePath))
 		result.Candidates = append(result.Candidates, c)
 		if c.Writable {
 			result.Summary.EstimatedTotalUSD += c.EstimatedUSD

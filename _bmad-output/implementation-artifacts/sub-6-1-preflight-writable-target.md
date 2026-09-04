@@ -1,6 +1,6 @@
 # Story 6.1: pre-flight 檢查目標資料夾可寫 —— 先驗證，再花錢（後端）
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -101,7 +101,7 @@ Claude Fable 5.1（dev-story，2026-09-04）
 - pipeline：`WithWritableProbe` option（預設 `fsprobe.ProbeWritable`）；`ProcessItem` Step 2b 在 run row 建立後、路由前探針；失敗 → `failItem`（run `failed`、$0、SSE `failed`）再 `restoreMediaStatus` 把 media row 放回 Load 時的狀態（FreeOnly brake 語意，AC #3）。錯誤碼 `SUBTITLE_TARGET_NOT_WRITABLE`（Rule 7 code-list update only，prefix 17 不變）。
 - 候選分析：`probeWritable` 欄位（`defaultWritableProbe` 變數，測試 `TestMain` 換成寬鬆版）；每次分析每個目錄探一次（map 快取）；`GenerationCandidate.Writable/Blocker` + `Summary.UnwritableCount`，unwritable 的估價不進 `EstimatedTotalUSD`。sub-4-1 AC #7 `[@contract-v1]` additive 不 bump（confirmed against `[@contract-v1]` (Story sub-4-1 AC #7)）。
 - FE：型別 optional（舊伺服器視為可寫）；`isWritable`／`selectableIds`；`defaultSelection`、全選、整劇／整季、`preselectedIds` 交集全部排除 unwritable；列：checkbox `disabled` + 「資料夾無法寫入」error 徽章（tooltip 帶 blocker）+ `data-writable`；全選的「全部」以可選列計。
-- 文件：`docs/deployment.md` 新增「File Permissions」段（ro mount、PGID 100、排錯三步）。**Rule 17 缺口**：`docs/deployment.zh-TW.md` 本來就不存在 → lane ③ `backlog-deployment-doc-zhtw-twin`。
+- 文件：`docs/deployment.md` 新增「File Permissions」段（ro mount、PGID 100、排錯三步）。**Rule 17 缺口**：`docs/deployment.zh-TW.md` 本來就不存在 → 既有 lane ③ 條目 `backlog-deployment-doc-zh-tw-twin` RE-HIT。
 - 🔗 AC Drift: NONE (checked: 'preflightSkip|failItem|estimated_total_usd|defaultSelection' across _bmad-output/implementation-artifacts/*.md — sub-1-5b AC #2 pre-flight（sidecar 閘門）不變、本 story 在其後加第二道；sub-4-3 AC #2「預設選取＝全部 extract」語意加上「且可寫」是收窄不是改變；REUSE not DRIFT)
 - 📎 Contract Stamps: FOUND (2 across 2 files — sub-4-1 AC #7 `[@contract-v1]` additive ack；sub-1-5b `ProcessItemOptions`／`ProcessOutcome` `[@contract-v1]` 未改)
 - 🎭 A11y Pre-Flight: PASS (2 components checked — CandidateListPanel／GenerationConsentView, 0 jsx-a11y warnings on touched files, 0 introduced by this story; disabled checkbox keeps its aria-label, badge text is real text not colour-only)
@@ -111,7 +111,7 @@ Claude Fable 5.1（dev-story，2026-09-04）
 
 ### Discovery Triage
 
-- ③ backlog-with-carry-forward-link — `docs/deployment.zh-TW.md` 不存在（Rule 17 既有缺口）→ `backlog-deployment-doc-zhtw-twin`（filed 2026-09-04）。
+- ③ backlog-with-carry-forward-link — `docs/deployment.zh-TW.md` 不存在（Rule 17 既有缺口）→ 既有條目 `backlog-deployment-doc-zh-tw-twin`（sub-1-6 2026-07-27 立案；本 story RE-HIT 註記，不另立重複條目 — CR 後修正）。
 - ① expand-scope-in-place — 探針改放 leaf 套件 `internal/fsprobe`（Dev Notes 已裁定，Task 1 路徑更新）。
 
 ### Change Log
@@ -123,6 +123,7 @@ Claude Fable 5.1（dev-story，2026-09-04）
 | 2026-09-04 | Task 3 — 候選分析 writable/blocker/unwritable_count + 每目錄一次探針；兩條測試 + `TestMain` 寬鬆探針。 |
 | 2026-09-04 | Task 4 — FE 型別、`isWritable`／`selectableIds`、bulk 選取排除、列徽章與 disabled；specs +5。 |
 | 2026-09-04 | Task 5 — `docs/deployment.md` File Permissions 段；zh-TW twin 缺口立案。 |
+| 2026-09-04 | CR fixes — 探針移到 **routing 之後**（routing 是 $0；`RouteSkip` 不探、維持免費終態，H2）；重複列成長由既有 `autoFailureAttemptLimit`／使用者觸發界定（H1，註解記錄）；`fsprobe.ProbeWritableContext` ctx 版，consent sweep 每目錄 3s（M7）；`Blocker` 改為 code + `BlockerDir`（base name），zh-TW 句子由 FE 組（M6）；handler Swagger 補 writable 欄位（M5，AC #2 的「handler envelope」在非同步 202 端點不適用，改為 Swagger + SSE 訊息，AC 文字保留原意）；`GroupHeaderRow` 以 selectable 成員算 all／some 與 toggled ids（H3）；`ConsentTotals.selectableCount`／`unwritableCount`，「已選 x / 可選 n（m 部資料夾無法寫入）」（M4、L9）；`handleToggle`／`handleConfirm` 過濾 unwritable（L10）；`restoreMediaStatus` 對齊 `deferPaidItem` 的 `IsValid` fallback（L9）；`selectableIds` doc；project-context mega-line 補 sub-6-1 entry + Rule 19 stamp（M8）；重複的 backlog 條目移除，改 RE-HIT 既有 `backlog-deployment-doc-zh-tw-twin`。新測試：RouteSkip 於唯讀資料夾仍 skipped、ASR 於唯讀資料夾不啟動、group header 含 unwritable 成員、totals 計數、fsprobe ctx。 |
 
 ### File List
 
@@ -133,3 +134,22 @@ Claude Fable 5.1（dev-story，2026-09-04）
 - `apps/web/src/services/subtitleService.ts`、`apps/web/src/components/subtitle/consent/{consentSelection.ts,CandidateListPanel.tsx,GenerationConsentView.tsx}`（modified）+ `consentSelection.spec.ts`、`CandidateListPanel.spec.tsx`
 - `docs/deployment.md`、`project-context.md`（modified）
 - `_bmad-output/implementation-artifacts/sub-6-1-preflight-writable-target.md`、`sub-6-10b-candidate-identity-frontend.md`（note）、`sprint-status.yaml`
+
+## Senior Developer Review (AI)
+
+**Reviewer:** Claude Opus 5（adversarial CR，換模型慣例；impl by Fable 5.1） · **Date:** 2026-09-04 · **Outcome:** Changes Requested → all items resolved in-session on the same branch → **Approve**
+
+Mandatory checks: Rule 7 PASS（code-list update only，prefix 17 不變）· Rule 20 N/A（sub-4-1 AC #7 additive ack 在 Completion Notes）· Rule 25 mega-line entry 補齊（M8）· Rule 19 leaf 清單 + boundaries_test 同步。
+
+### Action Items
+
+- [x] [H1] 探針在 run row 之後 → 唯讀片庫每次 sweep 追加 failed 列 — 保留 failed 列作審計（AC #3），重複成長由既有 `autoFailureAttemptLimit`（免費自動 lane 三次即停）與使用者觸發（付費路徑）界定；註解記錄。
+- [x] [H2] `RouteSkip` 在唯讀資料夾由免費終態變失敗 — 探針移到 `SelectAndRoute` 之後、`RouteSkip` 豁免；測試。
+- [x] [H3] 整劇／整季 header 因 unwritable 成員永遠 indeterminate — `selectableIds(items)` 算 all／some 與 ids；測試。
+- [x] [M4] 分母不一致 — `ConsentTotals.selectableCount`／`unwritableCount`，label 改用。
+- [x] [M5] handler envelope 缺 — Swagger 補 writable／blocker／unwritable_count；AC #2 的 zh-TW envelope 在 202 非同步端點無對應處，改由 SSE `failed` 訊息與 FE 徽章承擔（記錄）。
+- [x] [M6] blocker 帶絕對路徑 — code + base name。
+- [x] [M7] sweep 探針不可取消 — `ProbeWritableContext` + 每目錄 3s。
+- [x] [M8] mega-line 未補 — 補 sub-6-1 entry、Rule 19 stamp。
+- [x] [L9] 註解／dead code — `restoreMediaStatus` IsValid fallback、`selectableIds` doc、`unwritableCount` 顯示。
+- [x] [L10] `handleToggle`／`handleConfirm` 未守 — 皆過濾 `writableIdSet`。

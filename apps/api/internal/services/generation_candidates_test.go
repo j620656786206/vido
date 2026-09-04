@@ -632,7 +632,7 @@ func TestGenerationCandidate_MovieWireShapeOmitsSeriesKeys(t *testing.T) {
 // fsprobe would mark every candidate unwritable. The sub-6-1 tests below
 // inject their own probe per service instance.
 func TestMain(m *testing.M) {
-	defaultWritableProbe = func(string) error { return nil }
+	defaultWritableProbe = func(context.Context, string) error { return nil }
 	os.Exit(m.Run())
 }
 
@@ -643,7 +643,7 @@ func TestAnalyze_UnwritableTargetIsFlaggedAndExcludedFromTotal(t *testing.T) {
 	}}
 	pred := &stubPredictor{probeRoute: RouteExtract}
 	svc := NewGenerationCandidateService(movies, nil, nil, pred, false, 0, nil)
-	svc.probeWritable = func(dir string) error {
+	svc.probeWritable = func(_ context.Context, dir string) error {
 		if dir == "/ro" {
 			return errors.New("permission denied")
 		}
@@ -659,7 +659,8 @@ func TestAnalyze_UnwritableTargetIsFlaggedAndExcludedFromTotal(t *testing.T) {
 		byID[c.MediaID] = c
 	}
 	assert.False(t, byID["m1"].Writable)
-	assert.Contains(t, byID["m1"].Blocker, "permission denied")
+	assert.Equal(t, "SUBTITLE_TARGET_NOT_WRITABLE", byID["m1"].Blocker, "a code, not prose — the FE composes the sentence")
+	assert.Equal(t, "ro", byID["m1"].BlockerDir, "base name only: an absolute NAS path never leaves the server")
 	assert.True(t, byID["m2"].Writable)
 	assert.Empty(t, byID["m2"].Blocker)
 	assert.Equal(t, 1, res.Summary.UnwritableCount)
@@ -677,7 +678,7 @@ func TestAnalyze_ProbesEachDirectoryOnce(t *testing.T) {
 	pred := &stubPredictor{probeRoute: RouteExtract}
 	svc := NewGenerationCandidateService(nil, episodes, nil, pred, false, 0, nil)
 	probes := map[string]int{}
-	svc.probeWritable = func(dir string) error { probes[dir]++; return nil }
+	svc.probeWritable = func(_ context.Context, dir string) error { probes[dir]++; return nil }
 
 	_, err := svc.Analyze(context.Background(), nil)
 	require.NoError(t, err)

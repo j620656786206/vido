@@ -363,7 +363,8 @@ describe('sub-6-1 unwritable rows', () => {
       runtimeKnown: true,
       estimatedUsd: 0.03,
       writable: false,
-      blocker: '資料夾無法寫入：permission denied',
+      blocker: 'SUBTITLE_TARGET_NOT_WRITABLE',
+      blockerDir: 'ro-folder',
     },
   ];
 
@@ -381,7 +382,8 @@ describe('sub-6-1 unwritable rows', () => {
     expect(box).toBeDisabled();
     const badge = screen.getByTestId(`consent-row-unwritable-${RO}`);
     expect(badge).toHaveTextContent('資料夾無法寫入');
-    expect(badge).toHaveAttribute('title', '資料夾無法寫入：permission denied');
+    expect(badge).toHaveAttribute('title', '資料夾無法寫入：ro-folder');
+    expect(screen.getByTestId('consent-unwritable-count')).toHaveTextContent('1 部資料夾無法寫入');
   });
 
   it('全選 counts only selectable rows as "all"', () => {
@@ -396,5 +398,61 @@ describe('sub-6-1 unwritable rows', () => {
     const all = screen.getByTestId('consent-select-all') as HTMLInputElement;
     expect(all.checked).toBe(true);
     expect(all.indeterminate).toBe(false);
+  });
+});
+
+describe('sub-6-1 group header with an unwritable member (CR H3)', () => {
+  const S = '5fa9fed7-8fbc-4e8d-8edc-f6b7c8d9e011';
+  const E1 = '6ab0afe8-9acd-4f9e-9fed-a7c8d9e0f112';
+  const E2 = '7bc1b0f9-abde-4a0f-8afe-b8d9e0f1a213';
+  const season: GenerationCandidate[] = [
+    {
+      mediaId: E1,
+      mediaType: 'episode',
+      title: '劇 S01E01',
+      route: 'extract',
+      runtimeMinutes: 45,
+      runtimeKnown: true,
+      estimatedUsd: 0.02,
+      seriesId: S,
+      seriesTitle: '劇',
+      seasonNumber: 1,
+      episodeNumber: 1,
+    },
+    {
+      mediaId: E2,
+      mediaType: 'episode',
+      title: '劇 S01E02',
+      route: 'extract',
+      runtimeMinutes: 45,
+      runtimeKnown: true,
+      estimatedUsd: 0.02,
+      seriesId: S,
+      seriesTitle: '劇',
+      seasonNumber: 1,
+      episodeNumber: 2,
+      writable: false,
+      blocker: 'SUBTITLE_TARGET_NOT_WRITABLE',
+      blockerDir: 'S01',
+    },
+  ];
+
+  it('reaches "all" with only the selectable member selected and toggles only selectable ids', () => {
+    cleanup();
+    const selectedIds = new Set([E1]);
+    const onToggleGroup = vi.fn();
+    renderPanel({
+      candidates: season,
+      selectedIds,
+      totals: computeTotals(season, selectedIds, 5),
+      onToggleGroup,
+    });
+    const header = screen
+      .getByTestId(`consent-group-${S}`)
+      .querySelector('input[type="checkbox"]') as HTMLInputElement;
+    expect(header.checked).toBe(true);
+    expect(header.indeterminate).toBe(false);
+    fireEvent.click(header);
+    expect(onToggleGroup).toHaveBeenCalledWith([E1], false);
   });
 });

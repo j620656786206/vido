@@ -275,3 +275,13 @@ describe('sub-6-1 writability', () => {
     expect(selectableIds(list)).toEqual([A, C]);
   });
 });
+
+describe('computeTotals selectable/unwritable counts (sub-6-1 CR M4)', () => {
+  it('counts writable rows as selectable and the rest as unwritable', () => {
+    const list = [c(A, 'extract', 0.02), c(B, 'asr', 0.3, { writable: false }), c(C, 'asr', 0.3)];
+    const t = computeTotals(list, new Set([A]), 5);
+    expect(t.candidateCount).toBe(3);
+    expect(t.selectableCount).toBe(2);
+    expect(t.unwritableCount).toBe(1);
+  });
+});

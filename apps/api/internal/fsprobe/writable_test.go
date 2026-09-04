@@ -1,9 +1,11 @@
 package fsprobe
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -44,4 +46,21 @@ func TestProbeWritable_FileNotDir(t *testing.T) {
 
 func TestProbeWritable_Empty(t *testing.T) {
 	assert.ErrorIs(t, ProbeWritable(""), ErrNotWritable)
+}
+
+func TestProbeWritableContext_HonoursDeadline(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // already expired: the probe must not be allowed to "win"
+	err := ProbeWritableContext(ctx, t.TempDir())
+	// Either the fast probe completed before select observed ctx (nil) or the
+	// deadline path fired — both are legal; what must never happen is a hang.
+	if err != nil {
+		assert.ErrorIs(t, err, ErrNotWritable)
+	}
+}
+
+func TestProbeWritableContext_LiveCtxPassesThrough(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	assert.NoError(t, ProbeWritableContext(ctx, t.TempDir()))
 }

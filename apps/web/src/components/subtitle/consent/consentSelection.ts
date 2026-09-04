@@ -40,9 +40,17 @@ export function isWritable(c: GenerationCandidate): boolean {
   return c.writable !== false;
 }
 
-/** The ids a bulk action may touch: listable AND writable. */
+/**
+ * The ids a bulk action may touch. Callers pass an already-listable array
+ * (this module never re-derives listability), so this is the writable subset.
+ */
 export function selectableIds(candidates: GenerationCandidate[]): string[] {
   return candidates.filter(isWritable).map((c) => c.mediaId);
+}
+
+/** zh-TW copy for an unwritable row, composed from the code + folder name. */
+export function blockerLabel(c: GenerationCandidate): string {
+  return c.blockerDir ? `資料夾無法寫入：${c.blockerDir}` : '資料夾無法寫入';
 }
 
 export function applyRouteFilter(
@@ -56,6 +64,10 @@ export function applyRouteFilter(
 export interface ConsentTotals {
   /** Listable candidates (extract+asr). */
   candidateCount: number;
+  /** Listable AND writable — the only rows a selection may contain (sub-6-1). */
+  selectableCount: number;
+  /** Listable rows the backend's write probe refused. */
+  unwritableCount: number;
   selectedCount: number;
   selectedExtractCount: number;
   selectedAsrCount: number;
@@ -87,8 +99,10 @@ export function computeTotals(
   let asrUsd = 0;
   let feasibleCount = 0;
   let cumulative = 0;
+  let selectableCount = 0;
 
   for (const c of candidates) {
+    if (isWritable(c)) selectableCount++;
     if (!selectedIds.has(c.mediaId)) continue;
     selectedCount++;
     if (c.route === 'extract') {
@@ -105,6 +119,8 @@ export function computeTotals(
   const totalUsd = extractUsd + asrUsd;
   return {
     candidateCount: candidates.length,
+    selectableCount,
+    unwritableCount: candidates.length - selectableCount,
     selectedCount,
     selectedExtractCount: extractCount,
     selectedAsrCount: asrCount,

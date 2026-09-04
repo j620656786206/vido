@@ -277,9 +277,10 @@ type Pipeline struct {
 	modelID func() string
 
 	// probeWritable is the sub-6-1 pre-flight over the media file's directory,
-	// run after the run row exists and before any ffprobe/extract/LLM call.
-	// Defaults to fsprobe.ProbeWritable; tests inject a failing one.
-	probeWritable func(dir string) error
+	// run after routing (routing is $0: ffprobe + a local extract) and before
+	// any paid call or sidecar write. Defaults to fsprobe.ProbeWritableContext;
+	// tests inject a failing one.
+	probeWritable func(ctx context.Context, dir string) error
 
 	// runBudgetUSD is the per-item AI cost ceiling (sub-5-1 AC #3;
 	// AI_RUN_BUDGET_USD, 0 = unlimited) applied when ProcessItem's ctx carries
@@ -380,7 +381,7 @@ func (p *Pipeline) currentModelID() string {
 // WithWritableProbe replaces the sub-6-1 target-directory probe. Production
 // keeps the default (fsprobe.ProbeWritable); tests inject a failing one to
 // prove the item flow spends nothing after a refusal.
-func WithWritableProbe(fn func(dir string) error) PipelineOption {
+func WithWritableProbe(fn func(ctx context.Context, dir string) error) PipelineOption {
 	return func(p *Pipeline) { p.probeWritable = fn }
 }
 
@@ -425,7 +426,7 @@ func NewPipeline(translator ChunkTranslator, converter VariantConverter, logger 
 	}
 	p := &Pipeline{
 		translator:    translator,
-		probeWritable: fsprobe.ProbeWritable,
+		probeWritable: fsprobe.ProbeWritableContext,
 		converter:     converter,
 		logger:        logger.With("component", "subtitle_pipeline"),
 		now:           time.Now,

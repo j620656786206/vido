@@ -195,7 +195,10 @@ export interface GenerationCandidate {
    * pre-sub-6-1 server omits both and the row is treated as writable.
    */
   writable?: boolean;
+  /** Rule 7 code (SUBTITLE_TARGET_NOT_WRITABLE); the sentence is composed here. */
   blocker?: string;
+  /** Base name of the refused folder — never an absolute path. */
+  blockerDir?: string;
   /**
    * Series identity (sub-5-3, additive on the sub-4-1 [@contract-v1] envelope)
    * — episodes only; absent/empty on movies and on pre-sub-5-3 servers.

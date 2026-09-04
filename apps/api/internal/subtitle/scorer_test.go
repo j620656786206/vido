@@ -18,15 +18,15 @@ func TestScoreLanguage(t *testing.T) {
 	}{
 		{"zh-Hant", 1.0},
 		{"zh-TW", 1.0},
-		{"zh-tw", 1.0},  // case-insensitive
+		{"zh-tw", 1.0}, // case-insensitive
 		{"CHT", 1.0},
 		{"繁體", 1.0},
 		{"zh-Hans", 0.6},
 		{"zh-CN", 0.6},
-		{"zh-cn", 0.6},  // case-insensitive
+		{"zh-cn", 0.6}, // case-insensitive
 		{"CHS", 0.6},
 		{"簡體", 0.6},
-		{"zh", 0.4},     // ambiguous
+		{"zh", 0.4}, // ambiguous
 		{"en", 0.0},
 		{"ja", 0.0},
 		{"", 0.0},
@@ -43,10 +43,10 @@ func TestScoreLanguage(t *testing.T) {
 
 func TestScoreResolution(t *testing.T) {
 	tests := []struct {
-		name      string
-		mediaRes  string
-		subRes    string
-		expected  float64
+		name     string
+		mediaRes string
+		subRes   string
+		expected float64
 	}{
 		{"exact match 1080p", "1080p", "1080p", 1.0},
 		{"exact match normalized", "FHD", "1080p", 1.0},
@@ -156,28 +156,28 @@ func TestScorer_Score_CompositeScoring(t *testing.T) {
 
 	results := []providers.SubtitleResult{
 		{
-			ID:       "1",
-			Source:   "assrt",
-			Language: "zh-Hant",
+			ID:         "1",
+			Source:     "assrt",
+			Language:   "zh-Hant",
 			Resolution: "1080p",
-			Group:    "CHD",
-			Downloads: 1000,
+			Group:      "CHD",
+			Downloads:  1000,
 		},
 		{
-			ID:       "2",
-			Source:   "zimuku",
-			Language: "zh-Hans",
+			ID:         "2",
+			Source:     "zimuku",
+			Language:   "zh-Hans",
 			Resolution: "720p",
-			Group:    "UnknownGroup",
-			Downloads: 200,
+			Group:      "UnknownGroup",
+			Downloads:  200,
 		},
 		{
-			ID:       "3",
-			Source:   "opensubtitles",
-			Language: "en",
+			ID:         "3",
+			Source:     "opensubtitles",
+			Language:   "en",
 			Resolution: "1080p",
-			Group:    "",
-			Downloads: 5000,
+			Group:      "",
+			Downloads:  5000,
 		},
 	}
 

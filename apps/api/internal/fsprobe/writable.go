@@ -5,6 +5,7 @@
 package fsprobe
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -59,4 +60,22 @@ func ProbeWritable(dir string) error {
 		return fmt.Errorf("%w: %s: could not remove probe %s: %v", ErrNotWritable, dir, filepath.Base(name), removeErr)
 	}
 	return nil
+}
+
+// ProbeWritableContext is ProbeWritable bounded by ctx: a hung NFS/SMB mount
+// can block a create() for minutes, and neither the item flow's per-item
+// deadline nor the consent sweep's cancel could interrupt a plain syscall
+// (sub-6-1 CR M7). The probe runs on its own goroutine; when ctx ends first
+// the caller gets ErrNotWritable("timed out") and the goroutine is left to
+// finish or leak with the hung mount — the same posture as
+// subtitle/auto_generation.go's autoStatTimeout.
+func ProbeWritableContext(ctx context.Context, dir string) error {
+	done := make(chan error, 1)
+	go func() { done <- ProbeWritable(dir) }()
+	select {
+	case err := <-done:
+		return err
+	case <-ctx.Done():
+		return fmt.Errorf("%w: %s: probe timed out (%v)", ErrNotWritable, dir, ctx.Err())
+	}
 }

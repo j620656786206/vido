@@ -11,8 +11,8 @@ import (
 
 // Manager coordinates subtitle file placement with database updates.
 type Manager struct {
-	placer    *Placer
-	movieRepo repository.MovieRepositoryInterface
+	placer     *Placer
+	movieRepo  repository.MovieRepositoryInterface
 	seriesRepo repository.SeriesRepositoryInterface
 }
 

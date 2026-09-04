@@ -41,19 +41,19 @@ func NewDefaultScorerConfig() ScorerConfig {
 		WeightGroup:      DefaultWeightGroup,
 		WeightDownloads:  DefaultWeightDownloads,
 		ProviderTrust: map[string]float64{
-			"assrt":          0.8,
-			"opensubtitles":  0.7,
+			"assrt":         0.8,
+			"opensubtitles": 0.7,
 		},
 	}
 }
 
 // ScoreBreakdown shows the individual factor scores for debugging/UI display.
 type ScoreBreakdown struct {
-	Language   float64 `json:"language"`
-	Resolution float64 `json:"resolution"`
+	Language    float64 `json:"language"`
+	Resolution  float64 `json:"resolution"`
 	SourceTrust float64 `json:"source_trust"`
-	Group      float64 `json:"group"`
-	Downloads  float64 `json:"downloads"`
+	Group       float64 `json:"group"`
+	Downloads   float64 `json:"downloads"`
 }
 
 // ScoredResult wraps a SubtitleResult with its composite score and breakdown.
@@ -197,11 +197,11 @@ func (s *Scorer) scoreSourceTrust(providerName string) float64 {
 
 // knownFansubGroups is an initial set of known Chinese fansub groups.
 var knownFansubGroups = map[string]struct{}{
-	"CHD":    {}, "CMCT":     {}, "MySiLU":  {}, "FLTth":   {}, "HDChina": {},
-	"TTG":    {}, "TLF":      {}, "Wiki":    {}, "FRDS":    {}, "BMDru":   {},
-	"beAst":  {}, "HDHome":   {}, "PTer":    {}, "CHDWEB":  {}, "ADWeb":   {},
-	"YYeTs":  {}, "SubHD":    {}, "R3SUB":   {}, "SOFCJ":   {},
-	"幻櫻字幕組": {}, "天使動漫":    {}, "極影字幕社":  {}, "動漫國字幕組": {},
+	"CHD": {}, "CMCT": {}, "MySiLU": {}, "FLTth": {}, "HDChina": {},
+	"TTG": {}, "TLF": {}, "Wiki": {}, "FRDS": {}, "BMDru": {},
+	"beAst": {}, "HDHome": {}, "PTer": {}, "CHDWEB": {}, "ADWeb": {},
+	"YYeTs": {}, "SubHD": {}, "R3SUB": {}, "SOFCJ": {},
+	"幻櫻字幕組": {}, "天使動漫": {}, "極影字幕社": {}, "動漫國字幕組": {},
 	"Leopard-Raws": {}, "NC-Raws": {},
 }
 

@@ -21,8 +21,8 @@ const (
 
 // Detection thresholds.
 const (
-	traditionalThreshold = 0.70 // >70% traditional-unique → zh-Hant
-	simplifiedThreshold  = 0.30 // ≤30% traditional-unique → zh-Hans
+	traditionalThreshold = 0.70       // >70% traditional-unique → zh-Hant
+	simplifiedThreshold  = 0.30       // ≤30% traditional-unique → zh-Hans
 	maxDetectionBytes    = 100 * 1024 // Read at most 100KB for detection
 )
 

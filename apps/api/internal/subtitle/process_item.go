@@ -127,24 +127,6 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 		return p.failItem(ctx, ref, run, "mark media extracting", err)
 	}
 
-	// ── Step 2b: pre-flight — can the placer write here? (sub-6-1 AC #1) ────
-	// A real write probe, not stat: on the NAS shares this ships to, mode bits
-	// say "writable" while the container's gid is not in the group, and a
-	// read-only mount reads the same. Sits AFTER the run row so the refusal
-	// leaves a `failed` row with $0 spend (AC #3), and BEFORE routing so
-	// nothing — no ffprobe, no ffmpeg, no LLM — runs against a target the
-	// result could never be placed in. eval-1 paid for two full
-	// translations this way.
-	if err := p.probeWritable(filepath.Dir(item.FilePath)); err != nil {
-		out, ferr := p.failItem(ctx, ref, run, "pre-flight writable",
-			fmt.Errorf("%w: %v", ErrSubtitleTargetNotWritable, err))
-		// failItem parks the row at not_searched (its retry convention). A
-		// permission problem is not a subtitle-search outcome, so put the row
-		// back EXACTLY where it was found — the 9R-10b FreeOnly brake posture.
-		p.restoreMediaStatus(ctx, ref, item)
-		return out, ferr
-	}
-
 	// ── Step 3: route ───────────────────────────────────────────────────────
 	tmpDir, err := os.MkdirTemp("", "vido-subtitle-*")
 	if err != nil {
@@ -174,6 +156,33 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 			return p.deferPaidItem(ctx, ref, run, decision, item)
 		case RouteNoTextSource:
 			return p.deferPaidItem(ctx, ref, run, decision, item)
+		}
+	}
+
+	// ── Step 3a: pre-flight — can the placer write here? (sub-6-1 AC #1) ────
+	// A real write probe, not stat: on the NAS shares this ships to, mode bits
+	// say "writable" while the container's gid is not in the group, and a
+	// read-only mount reads the same. It sits AFTER routing, for the same
+	// reason the FreeOnly brake does — routing is free, and only routing knows
+	// whether anything will be written at all: RouteSkip writes nothing and
+	// must keep reaching its terminal `skipped` verdict on a read-only share
+	// (CR H2). Every other verdict ends in a sidecar, so a refusal here stops
+	// the paid legs (LLM, ASR) before their first call. eval-1 paid for two
+	// full translations this way.
+	//
+	// Repeat cost is bounded by the callers: the paid paths are user-triggered
+	// (sub-4-1 consent / FR12), and the free auto lane parks an item after
+	// autoFailureAttemptLimit failed runs (auto_generation.go), so a
+	// read-only library cannot append a row per scan forever (CR H1).
+	if decision.Kind != RouteSkip {
+		if err := p.probeWritable(ctx, filepath.Dir(item.FilePath)); err != nil {
+			out, ferr := p.failItem(ctx, ref, run, "pre-flight writable",
+				fmt.Errorf("%w: %v", ErrSubtitleTargetNotWritable, err))
+			// failItem parks the row at not_searched (its retry convention). A
+			// permission problem is not a subtitle-search outcome, so put the
+			// row back EXACTLY where Load found it — the FreeOnly brake posture.
+			p.restoreMediaStatus(ctx, ref, item)
+			return out, ferr
 		}
 	}
 
@@ -765,7 +774,10 @@ func (p *Pipeline) failItem(ctx context.Context, ref MediaRef, run *models.Subti
 // search, so neither `failed`-style `not_searched` nor `not_found` would be
 // truthful. Mirrors deferPaidItem's restore. Cleanup-safe across cancellation.
 func (p *Pipeline) restoreMediaStatus(ctx context.Context, ref MediaRef, item *MediaItem) {
-	if item == nil || item.SubtitleStatus == "" {
+	// Same fallback as deferPaidItem: an unknown/empty captured status leaves
+	// failItem's `not_searched` in place rather than writing a value the
+	// enum would reject (CR L9).
+	if item == nil || !item.SubtitleStatus.IsValid() {
 		return
 	}
 	if err := p.setMediaStatus(context.WithoutCancel(ctx), ref, item.SubtitleStatus, item.SubtitlePath, item.SubtitleLanguage); err != nil {

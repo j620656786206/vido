@@ -21,6 +21,7 @@ import { usd } from '../../../lib/currency';
 import type { GenerationCandidate } from '../../../services/subtitleService';
 import {
   applyRouteFilter,
+  blockerLabel,
   computeTotals,
   groupCandidates,
   isWritable,
@@ -108,7 +109,7 @@ function CandidateRow({
         {!writable && (
           <span
             data-testid={`consent-row-unwritable-${candidate.mediaId}`}
-            title={candidate.blocker}
+            title={blockerLabel(candidate)}
             className="rounded-[var(--radius-sm)] bg-[var(--error-tint)] px-2 py-0.5 text-xs text-[var(--error-text)]"
           >
             資料夾無法寫入
@@ -165,9 +166,12 @@ function GroupHeaderRow({
   // group's items, never from a second hand-rolled sum. `null` ceiling: the
   // budget verdict is a whole-list concern the footer owns.
   const groupTotals = computeTotals(items, selectedIds, null);
-  const all = items.length > 0 && groupTotals.selectedCount === items.length;
+  // sub-6-1 CR H3: "all" and the toggled ids span the SELECTABLE members —
+  // an unwritable episode can never be ticked, so it must not keep the header
+  // permanently indeterminate (which would make the group un-deselectable).
+  const ids = selectableIds(items);
+  const all = ids.length > 0 && groupTotals.selectedCount === ids.length;
   const some = groupTotals.selectedCount > 0 && !all;
-  const ids = items.map((i) => i.mediaId);
   return (
     <li
       data-testid={testid}
@@ -261,9 +265,8 @@ export function CandidateListPanel({
   const extractTotal = candidates.filter((c) => c.route === 'extract').length;
   const asrTotal = candidates.length - extractTotal;
   // 全選 spans the SELECTABLE rows (sub-6-1: unwritable rows can never be
-  // ticked, so they are not part of "all").
-  const selectableCount = selectableIds(candidates).length;
-  const allSelected = totals.selectedCount === selectableCount && selectableCount > 0;
+  // ticked, so they are not part of "all"); the denominator says so too.
+  const allSelected = totals.selectedCount === totals.selectableCount && totals.selectableCount > 0;
   const someSelected = totals.selectedCount > 0 && !allSelected;
   const overBudget = totals.overBudget;
   const budgetInvalid = budgetUsd === null;
@@ -343,8 +346,16 @@ export function CandidateListPanel({
             />
             已選
             <span className="font-mono tabular-nums">
-              {totals.selectedCount} / {totals.candidateCount}
+              {totals.selectedCount} / {totals.selectableCount}
             </span>
+            {totals.unwritableCount > 0 && (
+              <span
+                data-testid="consent-unwritable-count"
+                className="text-xs text-[var(--error-text)]"
+              >
+                （{totals.unwritableCount} 部資料夾無法寫入）
+              </span>
+            )}
           </label>
           <span className="flex-1" />
           <button

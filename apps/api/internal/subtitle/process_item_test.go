@@ -1145,7 +1145,7 @@ func TestProcessItem_TranslateLegBudgetCeilingFailsTheItem(t *testing.T) {
 
 func TestProcessItem_UnwritableTargetSpendsNothing(t *testing.T) {
 	h := newItemHarness(t, RouteDecision{Kind: RouteTranslate, Track: englishTrack("Hello", "World")},
-		WithWritableProbe(func(string) error { return errors.New("read-only file system") }))
+		WithWritableProbe(func(context.Context, string) error { return errors.New("read-only file system") }))
 	h.media.item.SubtitleStatus = models.SubtitleStatusNotFound
 	h.media.item.SubtitlePath = ""
 
@@ -1154,11 +1154,8 @@ func TestProcessItem_UnwritableTargetSpendsNothing(t *testing.T) {
 	require.ErrorIs(t, err, ErrSubtitleTargetNotWritable)
 	assert.Empty(t, h.trans.calls, "no LLM call may happen against a target the placer cannot write")
 	assert.Empty(t, h.placer.requests, "nothing is placed")
-	// The router (ffprobe + ffmpeg) must not have run either: the order log
-	// carries no "route" entry.
-	for _, step := range *h.order {
-		assert.NotContains(t, step, "route", "routing spends ffprobe/ffmpeg time before the placer could ever write")
-	}
+	// Routing (free: ffprobe + local extract) IS allowed to run — it is what
+	// tells a RouteSkip apart from a writing route (CR H2).
 	require.NotEmpty(t, h.runs.updated, "the run row is created pending and then updated to failed")
 	run := h.runs.updated[len(h.runs.updated)-1]
 	assert.Equal(t, models.SubtitleRunFailed, run.Status, "a failed run row is the audit trail (AC #3)")
@@ -1169,4 +1166,32 @@ func TestProcessItem_UnwritableTargetSpendsNothing(t *testing.T) {
 	// The media row goes back where Load found it — not_found, not not_searched.
 	last := h.media.writes[len(h.media.writes)-1]
 	assert.Equal(t, models.SubtitleStatusNotFound, last.status, "pre-flight refusal restores the original status (FreeOnly brake posture)")
+}
+
+func TestProcessItem_UnwritableTargetStillRecordsRouteSkip(t *testing.T) {
+	// CR H2: a file the router declines writes nothing, so a read-only share
+	// must not turn its free, terminal `skipped` verdict into a failure.
+	h := newItemHarness(t, RouteDecision{Kind: RouteSkip, Reason: "no usable track"},
+		WithWritableProbe(func(context.Context, string) error { return errors.New("read-only file system") }))
+
+	out, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+
+	require.NoError(t, err)
+	require.NotNil(t, out)
+	assert.Equal(t, RouteSkip, out.Kind)
+	assert.Empty(t, h.trans.calls)
+}
+
+func TestProcessItem_UnwritableTargetStopsASRBeforeItStarts(t *testing.T) {
+	// The ASR leg is paid too: a no_text_source file on a read-only share must
+	// be refused before transcription, not after.
+	asr := &fakeSpeechTranscriber{available: true}
+	h := newItemHarness(t, noTextDecision(),
+		WithWritableProbe(func(context.Context, string) error { return errors.New("permission denied") }),
+		WithSpeechTranscriber(asr))
+
+	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+
+	require.ErrorIs(t, err, ErrSubtitleTargetNotWritable)
+	assert.Empty(t, asr.calls, "speech recognition must not start against an unwritable target")
 }
