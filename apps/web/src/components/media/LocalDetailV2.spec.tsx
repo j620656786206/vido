@@ -316,4 +316,20 @@ describe('LocalDetailV2', () => {
     renderSeriesDetail();
     expect(await screen.findByTestId('stub-credits-cast')).toHaveTextContent('TMDbSeriesActor');
   });
+
+  // sub-6-9 — TMDB API Terms of Use §3. StreamingAvailability is stubbed to
+  // null in this file, which is exactly the point: the notice must not depend
+  // on that section rendering.
+  it('shows the TMDB attribution on a matched title', async () => {
+    h.local = movie({ data: { ...movie().data, tmdbId: 550 } });
+    renderDetail();
+    expect(await screen.findByTestId('tmdb-attribution')).toHaveTextContent('資料來源：');
+  });
+
+  it('omits the TMDB attribution for an unmatched local file (no TMDB data shown)', async () => {
+    h.local = movie(); // fixture default is tmdbId: 0
+    renderDetail();
+    await screen.findByTestId('local-detail-v2');
+    expect(screen.queryByTestId('tmdb-attribution')).not.toBeInTheDocument();
+  });
 });

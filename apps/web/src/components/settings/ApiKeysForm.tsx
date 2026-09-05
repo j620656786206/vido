@@ -21,6 +21,7 @@
 import { useState } from 'react';
 import { AlertTriangle, Loader2, Plug, Save, ShieldAlert, Trash2, Check } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { TmdbAttribution } from '../ui/TmdbAttribution';
 import { useKeySettings, useSaveKeys, useTestClaudeKey } from '../../hooks/useKeySettings';
 import {
   REASON_ENCRYPTION_KEY_MISSING,
@@ -515,6 +516,11 @@ export function ApiKeysForm() {
                       )}
                     </div>
                   )}
+
+                  {/* TMDB API Terms of Use §3 — the logo and the non-endorsement
+                      notice belong wherever TMDB data is used, and this row is
+                      where the operator accounts for that data source (sub-6-9). */}
+                  {row.name === 'tmdb' && <TmdbAttribution className="mt-4" />}
                 </div>
               );
             })}

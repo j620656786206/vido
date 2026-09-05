@@ -44,6 +44,7 @@ import { NfoLocalizeAction } from './NfoLocalizeAction';
 import { DetailHeroV2 } from './DetailHeroV2';
 import { DetailTechInfoV2 } from './DetailTechInfoV2';
 import { DetailSkeletonV2, DetailNotFoundV2 } from './DetailStatesV2';
+import { TmdbAttribution } from '../ui/TmdbAttribution';
 import { deriveLifecycleStatus, deriveSubtitleStatus } from '../../utils/libraryStatus';
 
 const WATCH_REGION = 'TW';
@@ -295,6 +296,12 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
             onRetry={() => recs.refetch()}
           />
         )}
+
+        {/* TMDB API Terms of Use §3 (sub-6-9). Gated on tmdbId because an
+            unmatched local file shows no TMDB data at all — attributing a
+            source we did not use would be its own kind of lie. Page footer
+            rather than inside StreamingAvailability: see TMDbDetailV2. */}
+        {tmdbId > 0 && <TmdbAttribution variant="inline" />}
       </div>
 
       {editorMetadata && (

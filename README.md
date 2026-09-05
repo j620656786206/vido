@@ -161,6 +161,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 ## 第三方服務與資料來源
 
-- **TMDB** — This product uses the TMDB API but is not endorsed or certified by TMDB.
+- **TMDB** — This application uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.
+  （本應用程式使用 TMDB 與 TMDB API，但未經 TMDB 認可、認證或核准。）此為 [TMDB API 條款](https://www.themoviedb.org/api-terms-of-use) §3 要求的原句，不得改寫；App 內同樣顯示於「設定 → API 金鑰」的 TMDB 欄位與各詳情頁頁尾（story sub-6-9）。
 - **豆瓣** — 繁中 metadata 的補充來源之一，透過解析公開網頁取得（HTML scraping，非官方 API）。網站改版時可能失效，屬 best-effort 的 fallback。
 - **Wikipedia** — metadata fallback 來源。
