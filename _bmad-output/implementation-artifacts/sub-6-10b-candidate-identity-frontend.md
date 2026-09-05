@@ -106,10 +106,19 @@ Claude Code on the web（2026-09-05）
   變更藏起來。CI 會產出 before/after 的 diff artifact，那正是你確認新版列長相的材料 ——
   也正好回答「要不要讓 Sally 進 `.pen`」。
 
+  **✅ 2026-09-05 更新：artifact 已產出，舊基準線已刪（`e49594b`）。**
+  PR #388 的 run 33977572563 上傳了
+  [visual-regression-diffs-pr-33977572563](https://github.com/j620656786206/vido/actions/runs/33977572563/artifacts/9973138846)
+  （25 檔 / 64 MB / 保存 14 天），三張的 `actual.png` 與 `diff.png` 都在裡面。留著舊基準線的
+  理由既已用完，就刪掉那三張 `-linux.png` —— 而且 bootstrap 的判定條件是
+  `missing > 0 且 pixel-diff == 0`，舊檔還在就永遠進不了那條分支。
+
   重烤步驟（確認圖沒問題之後）：
   1. `-darwin`：你的 Mac 上 `pnpm run test:visual:update`，只 stage 那三張。
-  2. `-linux`：刪掉那三張 `-linux.png` → Actions 上 dispatch `Visual Regression`（分支選本分支）
-     → CI 自動開 bootstrap PR（`--update-snapshots=missing` 只補缺失，所以必須先刪）→ 合併。
+  2. `-linux`：⛔ **卡在 dispatch** —— `POST /actions/workflows/visual-regression.yml/dispatches`
+     回 `403 Resource not accessible by integration`（與 #386 同）。需要你在 Actions 手動
+     dispatch `Visual Regression`、分支選 `claude/next-story-recommendation-i04f7j`，
+     CI 會自動開 bootstrap PR，合併後檢查轉綠。
 
 ### .pen inline-agent 提示詞（AC #4，交給你在 Pencil 跑）
 
@@ -127,6 +136,17 @@ Claude Code on the web（2026-09-05）
   不是放寬而是換到新契約。
 - 查證後**不成立**：`analyzing`／`empty`／`confirm` 等 fixture 不渲染 `CandidateListPanel`，
   不受本 story 影響（逐一核對 fixture 的 `component` 欄位）。
+
+- 🔧 **CI gate 缺陷 → `backlog-visual-gate-cannot-report-real-diff`（lane ③，雙向連結）**：
+  PR #388 的 `Visual Regression / PR` 顯示 **cancelled 而不是 ❌**。根因不是本 story ——
+  視覺套件單次要 ~9 分鐘（通過的 run 944 = 10m06s、945 = 10m04s），而
+  `playwright.config.ts:48` 在 CI 下是 `retries: 2` ⇒ 任何一次失敗都需要 ~29 分鐘，
+  但 `visual-regression.yml:156` 是 `timeout-minutes: 25`。run 946 實測：第 1 次 ✘ 9.0m、
+  重試 1 ✘ 9.9m、重試 2 撞上限被砍。**這個 gate 在最需要說話的時候只會說「cancelled」。**
+  本 story 是第一個真的踩到它的變更（此前的紅都是「缺基準線」那種快速失敗）。
+  **刻意不在本 PR 修**：與本 story 主題無關的 CI 設定，混進來會讓這個 PR 同時做兩件事。
+  建議 (a) `visual` project 加 `retries: 0`（同檔 `bisect` project L200-207 已有同理由先例）
+  或 (b) PR job `timeout-minutes` 25 → 40，另開 PR 由 Alexyu 裁定。
 
 ### File List
 
