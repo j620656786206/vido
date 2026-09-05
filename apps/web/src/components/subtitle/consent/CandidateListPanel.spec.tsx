@@ -82,10 +82,26 @@ describe('CandidateListPanel (F15/F18)', () => {
     expect(screen.getByTestId('consent-chip-extract').textContent).toContain('僅翻譯費');
   });
 
-  it('[P0] unknown-runtime rows prefix ≈ and explain the 45-minute fallback', () => {
+  it('[P0] unknown-runtime rows prefix ≈ on the amount and state the 45-minute assumption', () => {
     renderPanel();
     expect(screen.getByTestId(`consent-row-usd-${U}`).textContent).toBe('≈ $0.27');
-    expect(screen.getByText('片長未知，以 45 分鐘估算')).toBeInTheDocument();
+    // sub-6-10b AC #2: the fallback no longer REPLACES the route line — the
+    // two sit side by side, because 「為什麼這列要收錢」 is the sentence the
+    // 45-minute caveat used to erase.
+    const row = screen.getByTestId(`consent-row-${U}`);
+    expect(row.textContent).toContain('無文字字幕軌 → 語音辨識 + 翻譯');
+    expect(row.textContent).toContain('片長未知（估 45 分）');
+  });
+
+  it('[P0] Sally 裁定 1 — at most one ≈ per row, and it belongs to the amount', () => {
+    renderPanel();
+    // Two ≈ in one row meant two different things: the amount's ≈ says "this
+    // figure rests on an assumed length"; the runtime's said "we do not know".
+    // 45 minutes is an ASSUMPTION, not an approximate measurement, so it is
+    // stated as a fact with the assumption in brackets instead.
+    const row = screen.getByTestId(`consent-row-${U}`);
+    expect((row.textContent ?? '').match(/≈/g)).toHaveLength(1);
+    expect(screen.getByTestId(`consent-row-usd-${U}`).textContent).toContain('≈');
   });
 
   it('[P0 三處同源] summary bar, footer and detail line show the SAME total', () => {
@@ -454,5 +470,149 @@ describe('sub-6-1 group header with an unwritable member (CR H3)', () => {
     expect(header.indeterminate).toBe(false);
     fireEvent.click(header);
     expect(onToggleGroup).toHaveBeenCalledWith([E1], false);
+  });
+});
+
+// ─── sub-6-10b: row identity ───────────────────────────────────────────────
+//
+// The critique this closes was a screenshot of 2,399 identical grey squares
+// titled with release filenames. Every assertion below is about a row being
+// recognisable enough to consent to.
+
+describe('CandidateListPanel — row identity (sub-6-10b)', () => {
+  const M = '3d87dcb5-6d9a-4c6b-8cbf-d4f5a6b7c804';
+
+  function row(over: Partial<GenerationCandidate> = {}): GenerationCandidate {
+    return {
+      mediaId: M,
+      mediaType: 'movie',
+      title: '沙丘：第二部',
+      route: 'extract',
+      runtimeMinutes: 166,
+      runtimeKnown: true,
+      estimatedUsd: 0.05,
+      ...over,
+    };
+  }
+
+  function renderOne(over: Partial<GenerationCandidate> = {}) {
+    cleanup();
+    const candidates = [row(over)];
+    return renderPanel({
+      candidates,
+      selectedIds: new Set<string>(),
+      totals: computeTotals(candidates, new Set<string>(), 5),
+    });
+  }
+
+  it('AC #1 — renders the poster at w92, decorative and lazy', () => {
+    renderOne({ posterPath: '/dune.jpg' });
+    const img = screen.getByTestId(`consent-row-poster-${M}`) as HTMLImageElement;
+    expect(img.getAttribute('src')).toBe('https://image.tmdb.org/t/p/w92/dune.jpg');
+    // Decorative: the title is right beside it, so announcing it would make a
+    // screen reader read every row's name twice.
+    expect(img.getAttribute('alt')).toBe('');
+    expect(img.getAttribute('loading')).toBe('lazy');
+  });
+
+  it('AC #1 — no poster falls back to the title initial, never an empty square', () => {
+    renderOne();
+    expect(screen.queryByTestId(`consent-row-poster-${M}`)).toBeNull();
+    expect(screen.getByTestId(`consent-row-poster-fallback-${M}`).textContent).toBe('沙');
+  });
+
+  it('Sally 裁定 3 — the initial is drawn at the Title tier, not as muted small text', () => {
+    renderOne();
+    const fallback = screen.getByTestId(`consent-row-poster-fallback-${M}`);
+    // A DELIBERATE exception to DESIGN.md's Small-By-Default rule, locked here
+    // so nobody "fixes" it back: this is a graphic stand-in for a poster, not a
+    // text label. At 12px muted on --bg-tertiary it is grey-on-grey and cannot
+    // do its only job — telling row 47 apart from row 48.
+    expect(fallback).toHaveClass('text-lg', 'font-semibold', 'text-[var(--text-secondary)]');
+  });
+
+  it('AC #1 — a poster that fails to load degrades to the initial', () => {
+    renderOne({ posterPath: '/gone.jpg' });
+    fireEvent.error(screen.getByTestId(`consent-row-poster-${M}`));
+    expect(screen.queryByTestId(`consent-row-poster-${M}`)).toBeNull();
+    expect(screen.getByTestId(`consent-row-poster-fallback-${M}`).textContent).toBe('沙');
+  });
+
+  it('AC #2 — route and runtime sit side by side, in the shipped zh-TW form', () => {
+    renderOne({ runtimeSource: 'ffprobe' });
+    const text = screen.getByTestId(`consent-row-${M}`).textContent ?? '';
+    expect(text).toContain('內嵌英文字幕 → 翻譯');
+    // formatRuntime's form — the same one the PosterCard and detail page use.
+    expect(text).toContain('2 小時 46 分');
+  });
+
+  it('AC #2 — only runtime_source=fallback gets the ≈ marker', () => {
+    for (const source of ['ffprobe', 'tmdb'] as const) {
+      renderOne({ runtimeSource: source });
+      expect(screen.getByTestId(`consent-row-usd-${M}`).textContent).toBe('$0.05');
+    }
+    renderOne({ runtimeSource: 'fallback', runtimeKnown: false, runtimeMinutes: 45 });
+    expect(screen.getByTestId(`consent-row-usd-${M}`).textContent).toBe('≈ $0.05');
+    expect(screen.getByTestId(`consent-row-${M}`).textContent).toContain('片長未知（估 45 分）');
+  });
+
+  it('AC #2 — a pre-sub-6-10a server (no runtime_source) behaves exactly as before', () => {
+    renderOne({ runtimeKnown: false, runtimeMinutes: 45 });
+    expect(screen.getByTestId(`consent-row-usd-${M}`).textContent).toBe('≈ $0.05');
+    renderOne({ runtimeKnown: true });
+    expect(screen.getByTestId(`consent-row-usd-${M}`).textContent).toBe('$0.05');
+  });
+
+  it('AC #3 — an unmatched row is marked, titled by display_title, and keeps the filename on hover', () => {
+    renderOne({
+      title: '[bitsearch.to] Predator.Badlands.2025.2160p.WEB-DL',
+      displayTitle: 'Predator Badlands (2025)',
+      tmdbMatched: false,
+    });
+
+    expect(screen.getByText('Predator Badlands (2025)')).toBeInTheDocument();
+    expect(screen.queryByText('[bitsearch.to] Predator.Badlands.2025.2160p.WEB-DL')).toBeNull();
+
+    const badge = screen.getByTestId(`consent-row-unmatched-${M}`);
+    expect(badge.textContent).toBe('未匹配');
+    expect(badge).toHaveAttribute('title', 'TMDb 沒有比對到，片名由檔名解析');
+
+    // The raw filename is what the user will look for on disk — keep it reachable.
+    expect(screen.getByText('Predator Badlands (2025)')).toHaveAttribute(
+      'title',
+      '[bitsearch.to] Predator.Badlands.2025.2160p.WEB-DL'
+    );
+  });
+
+  it('Sally 裁定 2 — 未匹配 sits beside the title it doubts, and survives a long title', () => {
+    renderOne({
+      title: '[bitsearch.to] Predator.Badlands.2025.2160p.WEB-DL.DDP5.1.Atmos.H.265-FLUX',
+      displayTitle: 'Predator Badlands (2025)',
+      tmdbMatched: false,
+    });
+
+    const badge = screen.getByTestId(`consent-row-unmatched-${M}`);
+    const title = screen.getByText('Predator Badlands (2025)');
+    // Doubt belongs next to the thing being doubted. The right-hand cluster is
+    // state → kind → cost; 「未匹配」 is none of those, and half a row away it
+    // no longer reads as being ABOUT the title.
+    expect(title.parentElement).toBe(badge.parentElement);
+    // The title yields, the badge does not — otherwise a long filename pushes
+    // the one mark that explains it off the row.
+    expect(title).toHaveClass('truncate');
+    expect(badge).toHaveClass('shrink-0');
+  });
+
+  it('AC #3 — a matched row carries no 未匹配 mark, and an old server never gets one', () => {
+    renderOne({ tmdbMatched: true });
+    expect(screen.queryByTestId(`consent-row-unmatched-${M}`)).toBeNull();
+    // Field absent = "the server never told us", which is NOT "TMDb found nothing".
+    renderOne();
+    expect(screen.queryByTestId(`consent-row-unmatched-${M}`)).toBeNull();
+  });
+
+  it('AC #3 — the checkbox label follows the display title', () => {
+    renderOne({ displayTitle: 'Predator Badlands (2025)', tmdbMatched: false });
+    expect(screen.getByLabelText('選取 Predator Badlands (2025)')).toBeInTheDocument();
   });
 });
