@@ -14,10 +14,12 @@
  * list-order prefix-sum estimate (consentSelection.feasibleCount) and the copy
  * never promises the ceiling cannot be exceeded.
  */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { CircleAlert, Loader2 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { usd } from '../../../lib/currency';
+import { getImageUrl } from '../../../lib/image';
+import { formatRuntime } from '../../../lib/formatMedia';
 import type { GenerationCandidate } from '../../../services/subtitleService';
 import {
   applyRouteFilter,
@@ -68,9 +70,89 @@ export interface CandidateListPanelProps {
   onStartClick: () => void;
 }
 
+/** What the row should READ as — the backend's honest title, else what shipped before. */
+function displayTitleOf(c: GenerationCandidate): string {
+  return c.displayTitle || c.title;
+}
+
+/**
+ * Is this row's runtime a guess? (sub-6-10b AC #2)
+ *
+ * Prefer `runtimeSource` — it distinguishes "measured from the file" from
+ * "TMDb's editorial figure", which `runtimeKnown` cannot. A pre-sub-6-10a
+ * server sends no source, so fall back to the old flag and behave exactly as
+ * this panel did before.
+ */
+function isRuntimeApproximate(c: GenerationCandidate): boolean {
+  return c.runtimeSource ? c.runtimeSource === 'fallback' : !c.runtimeKnown;
+}
+
+/** The runtime half of the subtitle. Empty when there is nothing honest to say. */
+function runtimeLabel(c: GenerationCandidate): string {
+  const minutes = Math.round(c.runtimeMinutes);
+  if (minutes <= 0) return '';
+  if (isRuntimeApproximate(c)) return `≈ ${minutes} 分（片長未知）`;
+  // formatRuntime is the shipped zh-TW form ("1 小時 52 分") — the PosterCard
+  // and the detail page already say it that way, and a second runtime format
+  // in the same product is how two screens end up disagreeing about a film.
+  return formatRuntime(minutes);
+}
+
+/**
+ * Route AND runtime, side by side (sub-6-10b AC #2).
+ *
+ * Before this story the two were MUTUALLY EXCLUSIVE: an unknown runtime
+ * replaced the route line entirely, so 「片長未知，以 45 分鐘估算」 erased the
+ * one sentence that told the user WHY the row costs money. On the 2026-09-03
+ * production screenshot that was every single row.
+ */
 function routeSubtitle(c: GenerationCandidate): string {
-  if (!c.runtimeKnown) return '片長未知，以 45 分鐘估算';
-  return c.route === 'extract' ? '內嵌英文字幕 → 翻譯' : '無文字字幕軌 → 語音辨識 + 翻譯';
+  const route = c.route === 'extract' ? '內嵌英文字幕 → 翻譯' : '無文字字幕軌 → 語音辨識 + 翻譯';
+  const runtime = runtimeLabel(c);
+  return runtime ? `${route} · ${runtime}` : route;
+}
+
+/**
+ * The row's artwork (sub-6-10b AC #1).
+ *
+ * A grey rectangle is not an identity — 2,399 of them is what the critique
+ * screenshot showed. With no poster we draw the title's first character
+ * instead, which at least distinguishes one row from the next.
+ */
+function CandidatePoster({ candidate }: { candidate: GenerationCandidate }) {
+  const [failed, setFailed] = useState(false);
+  const url = getImageUrl(candidate.posterPath ?? null, 'w92');
+  const boxClass = 'h-[54px] w-[38px] shrink-0 rounded-[var(--radius-sm)]';
+
+  if (!url || failed) {
+    const initial = displayTitleOf(candidate).trim().charAt(0) || '？';
+    return (
+      <span
+        aria-hidden="true"
+        data-testid={`consent-row-poster-fallback-${candidate.mediaId}`}
+        className={cn(
+          boxClass,
+          // 12px floor (DESIGN.md) — the initial is text-xs, not smaller.
+          'flex items-center justify-center bg-[var(--bg-tertiary)] text-xs text-[var(--text-muted)]'
+        )}
+      >
+        {initial}
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={url}
+      // Decorative: the title sits right next to it, so announcing the poster
+      // would make a screen reader read every row's name twice.
+      alt=""
+      loading="lazy"
+      onError={() => setFailed(true)}
+      data-testid={`consent-row-poster-${candidate.mediaId}`}
+      className={cn(boxClass, 'bg-[var(--bg-tertiary)] object-cover')}
+    />
+  );
 }
 
 function CandidateRow({
@@ -89,6 +171,9 @@ function CandidateRow({
   // would fail the item before spending anyway; here the user learns it
   // BEFORE consenting, and cannot tick a row that can never be placed.
   const writable = isWritable(candidate);
+  // sub-6-10b AC #3. Strictly `=== false`: a pre-sub-6-10a server omits the
+  // field, and "the server never told us" is not "TMDb found nothing".
+  const unmatched = candidate.tmdbMatched === false;
   return (
     <li
       data-testid={`consent-row-${candidate.mediaId}`}
@@ -101,23 +186,37 @@ function CandidateRow({
     >
       <input
         type="checkbox"
-        aria-label={`選取 ${candidate.title}`}
+        aria-label={`選取 ${displayTitleOf(candidate)}`}
         checked={checked}
         disabled={!writable}
         onChange={() => onToggle(candidate.mediaId)}
         className="h-4 w-4 shrink-0 accent-[var(--accent-primary)] disabled:cursor-not-allowed"
       />
-      <span
-        aria-hidden="true"
-        className="h-[54px] w-[38px] shrink-0 rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)]"
-      />
+      <CandidatePoster candidate={candidate} />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm text-[var(--text-primary)]">{candidate.title}</span>
+        <span
+          className="block truncate text-sm text-[var(--text-primary)]"
+          // sub-6-10b AC #3: an unmatched row shows the parser's cleaned-up
+          // guess, so hovering must still reveal what the file is really
+          // called — that is the string the user will look for on disk.
+          title={unmatched ? candidate.title : undefined}
+        >
+          {displayTitleOf(candidate)}
+        </span>
         <span className="block truncate text-xs text-[var(--text-muted)]">
           {routeSubtitle(candidate)}
         </span>
       </span>
       <span className="flex shrink-0 items-center gap-2">
+        {unmatched && (
+          <span
+            data-testid={`consent-row-unmatched-${candidate.mediaId}`}
+            title="TMDb 沒有比對到，片名由檔名解析"
+            className="rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-2 py-0.5 text-xs text-[var(--text-muted)]"
+          >
+            未匹配
+          </span>
+        )}
         {!writable && (
           <span
             data-testid={`consent-row-unwritable-${candidate.mediaId}`}
@@ -144,9 +243,9 @@ function CandidateRow({
             isExtract ? 'text-[var(--success-text)]' : 'text-[var(--warning-text)]'
           )}
         >
-          {candidate.runtimeKnown
-            ? usd(candidateUsd(candidate, prices))
-            : `≈ ${usd(candidateUsd(candidate, prices))}`}
+          {isRuntimeApproximate(candidate)
+            ? `≈ ${usd(candidateUsd(candidate, prices))}`
+            : usd(candidateUsd(candidate, prices))}
         </span>
       </span>
     </li>
