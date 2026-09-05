@@ -12,13 +12,17 @@ so that「片長未知」never erases the one line that told me why this row cos
 
 ## Acceptance Criteria
 
-1. **封面。** `CandidateRow` 的佔位 span（`CandidateListPanel.tsx:86-89`）改為 `<img>`：`getImageUrl(posterPath,'w92')`（`lib/image.ts:19`）、`loading="lazy"`、`alt=""`（裝飾，標題已在旁）；無封面 → 維持既有灰底但**加一個 12px 片名首字**（不是空方塊）。
+1. **封面。** `CandidateRow` 的佔位 span（`CandidateListPanel.tsx:86-89`）改為 `<img>`：`getImageUrl(posterPath,'w92')`（`lib/image.ts:19`）、`loading="lazy"`、`alt=""`（裝飾，標題已在旁）；無封面 → 維持既有灰底但**加一個片名首字**（不是空方塊）。
+   ~~12px~~ → **Title 階 18px / 600 / `--text-secondary`**（Sally 裁定 3，2026-09-05）。
 
-2. **副標不再互斥。** `routeSubtitle`（`:58-61`）改為兩段並列：「內嵌英文字幕 → 翻譯 · 1h 52m」／「無文字字幕軌 → 語音辨識 + 翻譯 · ≈ 45 分（片長未知）」。`runtime_source=fallback` 時金額前保留 `≈`；`ffprobe`／`tmdb` 時不加。
+2. **副標不再互斥。** `routeSubtitle`（`:58-61`）改為兩段並列：「內嵌英文字幕 → 翻譯 · 2 小時 46 分」／「無文字字幕軌 → 語音辨識 + 翻譯 · 片長未知（估 45 分）」。`runtime_source=fallback` 時**金額**前保留 `≈`；`ffprobe`／`tmdb` 時不加。
+   ~~副標寫 `≈ 45 分（片長未知）`~~ → **`片長未知（估 45 分）`**（Sally 裁定 1，2026-09-05：一列之內 `≈` 只能有一個意思）。
 
-3. **未匹配標記。** `tmdb_matched=false` → 標題用 `display_title`，右側加中性灰標「未匹配」（tooltip：「TMDb 沒有比對到，片名由檔名解析」）；標題 hover 顯示原始檔名。
+3. **未匹配標記。** `tmdb_matched=false` → 標題用 `display_title`，加中性灰標「未匹配」（tooltip：「TMDb 沒有比對到，片名由檔名解析」）；標題 hover 顯示原始檔名。
+   ~~右側徽章區~~ → **身分欄內、緊接標題右側**（Sally 裁定 2，2026-09-05）。
 
 4. **設計同步。** F15-D／F15-M（`pwMzT`／`fdu4y`）的列規格更新：封面實圖、兩段副標、未匹配標；依 `CLAUDE.md` 流程重出 `flow-f-subtitle-v2/f15-*` 截圖同 commit。
+   核定稿與 Pencil 提示詞：**`sub-6-10b-f15-row-pen-prompt.md`**（Sally 2026-09-05）。
 
 5. **測試。** specs：三種 `runtime_source` 的副標與 `≈`；封面有／無；未匹配標與 tooltip；gallery fixtures 更新（`-darwin` 本機、`-linux` 等 CI）。
 
@@ -35,7 +39,9 @@ so that「片長未知」never erases the one line that told me why this row cos
 
 - 舊伺服器（無新欄位）→ 行為與今日相同（fallback 分支），不得壞。
 - Rule 21 header 已是 F15-D/M/F18 併列，不變。
-- 12px 底線（DESIGN.md）：首字佔位與「未匹配」標都 ≥ 12px。
+- 12px 底線（DESIGN.md）：「未匹配」標為 12px（Label 階）。首字佔位改為 18px（Title 階）——
+  這是對 DESIGN.md「預設小字」的**刻意例外**，理由見 Sally 裁定 3：它是海報的圖形替身，
+  不是文字標籤。用既有 Title 階而非自創 16px，避免多一個沒有授權來源的字級。
 
 ### Time-dependent visual coverage
 
@@ -69,6 +75,25 @@ Claude Code on the web（2026-09-05）
 3. **未匹配標用 `=== false` 判定。** 舊伺服器不送這個欄位，而「伺服器沒告訴我們」不等於
    「TMDb 找不到」—— 後者才該標。
 
+**⚖️ Sally 的三條設計裁定（2026-09-05，推翻已交付的實作，程式已跟改）**
+
+你問「要不要讓 Sally 進 `.pen`」，答案不是把程式碼抄進稿子，是讓她真的做判斷。她看完
+之後推翻了三處，程式與測試都已依裁定改過（核定稿：`sub-6-10b-f15-row-pen-prompt.md`）：
+
+1. **副標的 `≈` 拿掉** —— 原本一列裡有兩個 `≈` 指兩件不同的事：金額的 `≈` 是「這個數字
+   建立在假設的片長上」，副標的 `≈ 45 分` 是「不知道多長」。而且後者語意本身就錯：
+   **約略是量測的誤差，假設是沒有量測** —— 45 分鐘是假設，不是約略量到的。
+   改成 `片長未知（估 45 分）`：陳述事實，把假設放進括號。`≈` 每列最多一次，只有一個意思。
+
+2. **「未匹配」移到標題右邊** —— 右側徽章區講的是**這列會發生什麼**（能不能執行／哪條
+   路線／多少錢）；「未匹配」講的是**這列是什麼**（身分沒把握）。不同級的東西不並排，
+   而且懷疑要貼在被懷疑的東西旁邊 —— 隔半個列寬的灰標，讀者不會把它連回標題。
+   現在標題 `truncate`、徽章 `shrink-0`，檔名再長也擠不掉它。
+
+3. **首字放大到 Title 階（18px/600/`--text-secondary`）** —— 原本 12px `--text-muted`
+   放在 `--bg-tertiary` 上是灰底灰字，做不到它唯一的任務（讓第 47 列和第 48 列長得
+   不一樣）。這是對 DESIGN.md 小字規則的刻意例外，理由已寫進 spec 註記與測試。
+
 **⛔ 兩件需要你的機器**
 
 - **AC #4 `.pen` + 截圖**：這個沙盒沒有 Pencil.app。提示詞見下方「.pen inline-agent 提示詞」。
@@ -88,12 +113,12 @@ Claude Code on the web（2026-09-05）
 
 ### .pen inline-agent 提示詞（AC #4，交給你在 Pencil 跑）
 
-> 在 F15-D-v2（`pwMzT`）與 F15-M-v2（`fdu4y`）的候選列規格上，更新為：
-> （a）左側 38×54 的佔位方塊改為**實際海報縮圖**；無海報時仍是同尺寸灰底，但置中放**片名首字**（12px，`--text-muted`）。
-> （b）列的副標從單行改為**兩段並列**，中間以 `·` 分隔：前段是路線（`內嵌英文字幕 → 翻譯` 或 `無文字字幕軌 → 語音辨識 + 翻譯`），後段是片長（`2 小時 46 分`；片長未知時為 `≈ 45 分（片長未知）`）。
-> （c）標題右側、路線徽章左側，新增一個**中性灰標「未匹配」**（`--bg-tertiary` 底、`--text-muted` 字、12px），只在 TMDb 沒比對到時出現。
-> （d）一併補上 sub-6-1 已上線但設計稿沒有的「**資料夾無法寫入**」狀態：checkbox disabled、列 70% 透明度、右側 error tint 徽章。
-> 不新增任何設計 token，全部沿用現有列型。
+⛔ **已被取代。** 這一版提示詞（首字 12px `--text-muted`、副標 `≈ 45 分（片長未知）`、
+未匹配標放右側徽章區）在 2026-09-05 被 Sally 的三條裁定推翻。
+
+**現行版本：`sub-6-10b-f15-row-pen-prompt.md`** —— 內含裁定理由、核定後的列版式表、
+六項 Pencil Inline AI Agent 提示詞（多涵蓋 sub-5-3 的群組 header 與 F8 重試按鈕）、
+以及交付流程。跑 Pencil 時請用那一份，不要用上面這段。
 
 ### Discovery Triage
 
@@ -107,5 +132,6 @@ Claude Code on the web（2026-09-05）
 
 - `apps/web/src/components/subtitle/consent/CandidateListPanel.tsx`
 - `apps/web/src/components/subtitle/consent/CandidateListPanel.spec.tsx`
-- ⏳ `ux-design.pen` + `_bmad-output/screenshots/flow-f-subtitle-v2/f15-*`（待你在 Pencil 執行）
+- `_bmad-output/implementation-artifacts/sub-6-10b-f15-row-pen-prompt.md`（Sally 核定稿 + Pencil 提示詞）
+- ⏳ `ux-design.pen` + `_bmad-output/screenshots/flow-f-subtitle-v2/f15-*`、`f8-*`（待你在 Pencil 執行）
 - ⏳ 六張視覺基準線（待確認 diff 後重烤）

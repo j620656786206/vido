@@ -91,7 +91,10 @@ function isRuntimeApproximate(c: GenerationCandidate): boolean {
 function runtimeLabel(c: GenerationCandidate): string {
   const minutes = Math.round(c.runtimeMinutes);
   if (minutes <= 0) return '';
-  if (isRuntimeApproximate(c)) return `≈ ${minutes} 分（片長未知）`;
+  // Sally 裁定 1 (2026-09-05): NOT `≈` — 45 minutes is an ASSUMPTION, not an
+  // approximate measurement, and the amount's own ≈ already means "this figure
+  // rests on an assumed length". One ≈ per row, one meaning.
+  if (isRuntimeApproximate(c)) return `片長未知（估 ${minutes} 分）`;
   // formatRuntime is the shipped zh-TW form ("1 小時 52 分") — the PosterCard
   // and the detail page already say it that way, and a second runtime format
   // in the same product is how two screens end up disagreeing about a film.
@@ -132,8 +135,12 @@ function CandidatePoster({ candidate }: { candidate: GenerationCandidate }) {
         data-testid={`consent-row-poster-fallback-${candidate.mediaId}`}
         className={cn(
           boxClass,
-          // 12px floor (DESIGN.md) — the initial is text-xs, not smaller.
-          'flex items-center justify-center bg-[var(--bg-tertiary)] text-xs text-[var(--text-muted)]'
+          // Sally 裁定 3 (2026-09-05): Title tier (18px/600) on --text-secondary,
+          // a DELIBERATE exception to the Small-By-Default rule — this is a
+          // graphic stand-in for a poster, not a text label, and at 12px muted
+          // on --bg-tertiary it cannot do its only job (telling row 47 from
+          // row 48). An existing tier, so no unauthorised font size.
+          'flex items-center justify-center bg-[var(--bg-tertiary)] text-lg font-semibold text-[var(--text-secondary)]'
         )}
       >
         {initial}
@@ -194,29 +201,35 @@ function CandidateRow({
       />
       <CandidatePoster candidate={candidate} />
       <span className="min-w-0 flex-1">
-        <span
-          className="block truncate text-sm text-[var(--text-primary)]"
-          // sub-6-10b AC #3: an unmatched row shows the parser's cleaned-up
-          // guess, so hovering must still reveal what the file is really
-          // called — that is the string the user will look for on disk.
-          title={unmatched ? candidate.title : undefined}
-        >
-          {displayTitleOf(candidate)}
+        {/* Sally 裁定 2 (2026-09-05): the identity column carries the doubt
+            about the identity. The right-hand cluster is state → kind → cost;
+            「未匹配」 is none of those, and a grey badge half a row away does
+            not read as being ABOUT the title. */}
+        <span className="flex min-w-0 items-center gap-2">
+          <span
+            className="truncate text-sm text-[var(--text-primary)]"
+            // sub-6-10b AC #3: an unmatched row shows the parser's cleaned-up
+            // guess, so hovering must still reveal what the file is really
+            // called — that is the string the user will look for on disk.
+            title={unmatched ? candidate.title : undefined}
+          >
+            {displayTitleOf(candidate)}
+          </span>
+          {unmatched && (
+            <span
+              data-testid={`consent-row-unmatched-${candidate.mediaId}`}
+              title="TMDb 沒有比對到，片名由檔名解析"
+              className="shrink-0 rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-2 py-0.5 text-xs text-[var(--text-muted)]"
+            >
+              未匹配
+            </span>
+          )}
         </span>
         <span className="block truncate text-xs text-[var(--text-muted)]">
           {routeSubtitle(candidate)}
         </span>
       </span>
       <span className="flex shrink-0 items-center gap-2">
-        {unmatched && (
-          <span
-            data-testid={`consent-row-unmatched-${candidate.mediaId}`}
-            title="TMDb 沒有比對到，片名由檔名解析"
-            className="rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-2 py-0.5 text-xs text-[var(--text-muted)]"
-          >
-            未匹配
-          </span>
-        )}
         {!writable && (
           <span
             data-testid={`consent-row-unwritable-${candidate.mediaId}`}

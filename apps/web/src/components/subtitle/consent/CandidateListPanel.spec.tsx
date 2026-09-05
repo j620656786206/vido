@@ -82,7 +82,7 @@ describe('CandidateListPanel (F15/F18)', () => {
     expect(screen.getByTestId('consent-chip-extract').textContent).toContain('僅翻譯費');
   });
 
-  it('[P0] unknown-runtime rows prefix ≈ and explain the 45-minute fallback', () => {
+  it('[P0] unknown-runtime rows prefix ≈ on the amount and state the 45-minute assumption', () => {
     renderPanel();
     expect(screen.getByTestId(`consent-row-usd-${U}`).textContent).toBe('≈ $0.27');
     // sub-6-10b AC #2: the fallback no longer REPLACES the route line — the
@@ -90,7 +90,18 @@ describe('CandidateListPanel (F15/F18)', () => {
     // 45-minute caveat used to erase.
     const row = screen.getByTestId(`consent-row-${U}`);
     expect(row.textContent).toContain('無文字字幕軌 → 語音辨識 + 翻譯');
-    expect(row.textContent).toContain('≈ 45 分（片長未知）');
+    expect(row.textContent).toContain('片長未知（估 45 分）');
+  });
+
+  it('[P0] Sally 裁定 1 — at most one ≈ per row, and it belongs to the amount', () => {
+    renderPanel();
+    // Two ≈ in one row meant two different things: the amount's ≈ says "this
+    // figure rests on an assumed length"; the runtime's said "we do not know".
+    // 45 minutes is an ASSUMPTION, not an approximate measurement, so it is
+    // stated as a fact with the assumption in brackets instead.
+    const row = screen.getByTestId(`consent-row-${U}`);
+    expect((row.textContent ?? '').match(/≈/g)).toHaveLength(1);
+    expect(screen.getByTestId(`consent-row-usd-${U}`).textContent).toContain('≈');
   });
 
   it('[P0 三處同源] summary bar, footer and detail line show the SAME total', () => {
@@ -510,6 +521,16 @@ describe('CandidateListPanel — row identity (sub-6-10b)', () => {
     expect(screen.getByTestId(`consent-row-poster-fallback-${M}`).textContent).toBe('沙');
   });
 
+  it('Sally 裁定 3 — the initial is drawn at the Title tier, not as muted small text', () => {
+    renderOne();
+    const fallback = screen.getByTestId(`consent-row-poster-fallback-${M}`);
+    // A DELIBERATE exception to DESIGN.md's Small-By-Default rule, locked here
+    // so nobody "fixes" it back: this is a graphic stand-in for a poster, not a
+    // text label. At 12px muted on --bg-tertiary it is grey-on-grey and cannot
+    // do its only job — telling row 47 apart from row 48.
+    expect(fallback).toHaveClass('text-lg', 'font-semibold', 'text-[var(--text-secondary)]');
+  });
+
   it('AC #1 — a poster that fails to load degrades to the initial', () => {
     renderOne({ posterPath: '/gone.jpg' });
     fireEvent.error(screen.getByTestId(`consent-row-poster-${M}`));
@@ -532,7 +553,7 @@ describe('CandidateListPanel — row identity (sub-6-10b)', () => {
     }
     renderOne({ runtimeSource: 'fallback', runtimeKnown: false, runtimeMinutes: 45 });
     expect(screen.getByTestId(`consent-row-usd-${M}`).textContent).toBe('≈ $0.05');
-    expect(screen.getByTestId(`consent-row-${M}`).textContent).toContain('≈ 45 分（片長未知）');
+    expect(screen.getByTestId(`consent-row-${M}`).textContent).toContain('片長未知（估 45 分）');
   });
 
   it('AC #2 — a pre-sub-6-10a server (no runtime_source) behaves exactly as before', () => {
@@ -561,6 +582,25 @@ describe('CandidateListPanel — row identity (sub-6-10b)', () => {
       'title',
       '[bitsearch.to] Predator.Badlands.2025.2160p.WEB-DL'
     );
+  });
+
+  it('Sally 裁定 2 — 未匹配 sits beside the title it doubts, and survives a long title', () => {
+    renderOne({
+      title: '[bitsearch.to] Predator.Badlands.2025.2160p.WEB-DL.DDP5.1.Atmos.H.265-FLUX',
+      displayTitle: 'Predator Badlands (2025)',
+      tmdbMatched: false,
+    });
+
+    const badge = screen.getByTestId(`consent-row-unmatched-${M}`);
+    const title = screen.getByText('Predator Badlands (2025)');
+    // Doubt belongs next to the thing being doubted. The right-hand cluster is
+    // state → kind → cost; 「未匹配」 is none of those, and half a row away it
+    // no longer reads as being ABOUT the title.
+    expect(title.parentElement).toBe(badge.parentElement);
+    // The title yields, the badge does not — otherwise a long filename pushes
+    // the one mark that explains it off the row.
+    expect(title).toHaveClass('truncate');
+    expect(badge).toHaveClass('shrink-0');
   });
 
   it('AC #3 — a matched row carries no 未匹配 mark, and an old server never gets one', () => {
