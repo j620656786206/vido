@@ -523,3 +523,37 @@ describe('ApiKeysForm — load states', () => {
     expect(screen.getByTestId('key-state-tmdb')).toHaveTextContent('無法確認');
   });
 });
+
+describe('ApiKeysForm — TMDB attribution (sub-6-9, TMDB terms §3)', () => {
+  it('carries the §3 notice and logo inside the TMDB row', () => {
+    renderForm();
+
+    const attribution = screen.getByTestId('tmdb-attribution');
+    // Inside the TMDB row specifically — an attribution floating at the bottom
+    // of the page would not say WHICH data source it accounts for.
+    expect(screen.getByTestId('key-row-tmdb')).toContainElement(attribution);
+    expect(attribution).toHaveTextContent(
+      'This application uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.'
+    );
+    expect(attribution).toHaveTextContent(
+      '本應用程式使用 TMDB 與 TMDB API，但未經 TMDB 認可、認證或核准。'
+    );
+    expect(screen.getByAltText('TMDB')).toBeInTheDocument();
+  });
+
+  it('shows it once — not per key row', () => {
+    renderForm();
+
+    expect(screen.getAllByTestId('tmdb-attribution')).toHaveLength(1);
+    expect(screen.getByTestId('key-row-claude')).not.toContainElement(
+      screen.getByTestId('tmdb-attribution')
+    );
+  });
+
+  it('stays on screen when the key state cannot be read (compliance is not conditional)', () => {
+    h.query = { data: undefined, isLoading: false, isError: true, error: new Error('boom') };
+    renderForm();
+
+    expect(screen.getByTestId('tmdb-attribution')).toBeInTheDocument();
+  });
+});

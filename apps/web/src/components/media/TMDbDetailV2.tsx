@@ -25,6 +25,7 @@ import { TrailerSection } from './TrailerSection';
 import { DualRatingDisplay } from './DualRatingDisplay';
 import { DetailHeroV2 } from './DetailHeroV2';
 import { DetailSkeletonV2, DetailNotFoundV2 } from './DetailStatesV2';
+import { TmdbAttribution } from '../ui/TmdbAttribution';
 
 const WATCH_REGION = 'TW';
 
@@ -129,6 +130,13 @@ export function TMDbDetailV2({ type, tmdbId }: { type: 'movie' | 'tv'; tmdbId: n
             onRetry={() => recs.refetch()}
           />
         )}
+
+        {/* TMDB API Terms of Use §3 (sub-6-9). Page footer, NOT inside
+            StreamingAvailability: that section renders its JustWatch line only
+            in its populated branch, so riding it would drop the TMDB notice on
+            every title with no providers in this region — while the page above
+            is still built entirely out of TMDB data. */}
+        {tmdbId > 0 && <TmdbAttribution variant="inline" />}
       </div>
     </div>
   );
