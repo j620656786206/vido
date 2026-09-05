@@ -1,6 +1,6 @@
 # Story 6.10b: 候選列身分 —— 封面、片長並列、未匹配標記（前端）
 
-Status: review — 程式與測試交付（Task 1／2／4 的 spec 部分）；**Task 3（`.pen` + 截圖）與視覺基準線重烤需要你的機器**，見 Completion Notes
+Status: review — 五個 AC 全數交付。程式與測試（Task 1／2／4）、`.pen` + 截圖 + `-darwin` 基準線（Task 3，`6dc7852`）皆已完成。**唯一未結項：三張 `-linux` 基準線待 CI bootstrap PR 合併**（已於 2026-09-05 dispatch，run 950）。
 
 **Depends on:** sub-6-10a（`poster_path`、`runtime_source`、`tmdb_matched`、`display_title`）。
 
@@ -30,8 +30,8 @@ so that「片長未知」never erases the one line that told me why this row cos
 
 - [x] **Task 1 — 型別（AC: #1-#3）** — 四個 optional 欄位已於 sub-6-10a 的 PR #386 隨契約 ack 一併加入 `subtitleService.ts`，本 story 直接消費。
 - [x] **Task 2 — `CandidateRow` 改造（AC: #1, #2, #3）** — 封面 `<img>` + 首字 fallback、副標兩段並列、未匹配灰標 + tooltip + 標題 hover 顯示原始檔名。
-- [ ] **Task 3 — 設計更新 + 截圖（AC: #4）** — ⛔ **需要 Pencil.app**，不在這個沙盒能做。提示詞已備妥（見下）。
-- [x] **Task 4 — 測試（AC: #5 的 spec 部分）** — 9 個新測試 + 1 個既有測試改寫到新契約。⛔ **gallery fixture 的視覺基準線重烤需要你的機器與 CI**（見下）。
+- [x] **Task 3 — 設計更新 + 截圖（AC: #4）** — ✅ 2026-09-05（`6dc7852`，Alexyu 在有 Pencil.app 的機器上執行）。F15-D-v2／F15-M-v2 依核定稿更新（真實封面 + 無海報首字 18px、兩段副標、未匹配標貼片名右側、資料夾無法寫入列、群組 header），F9-D-v2 補「重試失敗項目」按鈕；截圖只 stage 設計真的改動的三張。以 Pencil MCP **逐節點**複審稿子 vs 程式碼，四項一致（首字字級／未匹配標 token 與位置／無法寫入列／右側徽章順序）。順手關掉 `backlog-f15-f8-group-retry-pen-annotation`。
+- [x] **Task 4 — 測試（AC: #5 的 spec 部分）** — 12 個新測試 + 2 個既有測試改寫到新契約。`-darwin` 三張已重烤（`6dc7852`）；**`-linux` 三張待 CI bootstrap PR**（見下）。
 
 ## Dev Notes
 
@@ -113,12 +113,32 @@ Claude Code on the web（2026-09-05）
   理由既已用完，就刪掉那三張 `-linux.png` —— 而且 bootstrap 的判定條件是
   `missing > 0 且 pixel-diff == 0`，舊檔還在就永遠進不了那條分支。
 
-  重烤步驟（確認圖沒問題之後）：
-  1. `-darwin`：你的 Mac 上 `pnpm run test:visual:update`，只 stage 那三張。
-  2. `-linux`：⛔ **卡在 dispatch** —— `POST /actions/workflows/visual-regression.yml/dispatches`
-     回 `403 Resource not accessible by integration`（與 #386 同）。需要你在 Actions 手動
-     dispatch `Visual Regression`、分支選 `claude/next-story-recommendation-i04f7j`，
-     CI 會自動開 bootstrap PR，合併後檢查轉綠。
+  重烤步驟：
+  1. `-darwin`：✅ 已於 `6dc7852` 重烤（Alexyu 的 Mac）。
+  2. `-linux`：✅ 已於 2026-09-05 17:11Z dispatch（run 950，`workflow_dispatch`）。
+     我這邊 `POST .../dispatches` 回 `403 Resource not accessible by integration`（與 #386 同），
+     所以這一步由 Alexyu 按。CI 的 Main job 分類為 `bootstrap_needed`（3 missing／0 pixel-diff／
+     0 other）後會跑 `test:visual:update-missing` 並自動開 bootstrap PR，合併後檢查轉綠。
+
+### 複審發現（Alexyu，Pencil MCP，2026-09-05）—— 四項全部立案、不在本 PR 修
+
+- ⚠️ **`backlog-f15-row-mobile-identity-collapse`（量測過的真實缺陷）** —— 在 390px 手機上，
+  本 story 想修好的那件事**沒有生效**。Sally 裁定 1「兩段永不互相取代」在 DOM 裡成立，在畫面上
+  不成立：身分欄是 `flex-1 min-w-0`、右側徽章區是 `shrink-0`，窄的時候身分欄被吃光，副標的
+  「· 片長」那半段**每一列都看不到**（最慘那列需要 303px 只拿到 115px，連路線都被切一半）。
+  列本身沒有水平溢位，純粹是 flex 擠壓。**不是本 story 造成的** —— 單獨的路線句（~172px）
+  在此之前就已經 > 131px 被截，本 story 把字變長只是讓它更明顯。**視覺回歸抓不到**，因為
+  consent fixture 的寬度是 900／720，沒有手機視窗。稿子的 F15-M-v2 已經畫出答案（金額移到
+  第一行、拿掉 route 徽章，身分欄因此拿到 256px），但程式碼**只有一種列排版**，沒有手機專屬版
+  —— 那是獨立一輪的工作，不是這個 PR 能順手補的。
+- `backlog-f18-pen-row-format-drift` —— F18-D-v2（`zBik1`）共用同一個 `CandidateRow`，稿子仍是
+  舊列型（副標還是被裁定 1 殺掉的「片長未知，以 45 分鐘估算」、海報 40×60 空灰塊、副標 13px）。
+  核定稿的六項提示詞漏開 F18。要不要讓 F18 採用 F15 的 38×54／12px 是設計決定，非機械對齊。
+- `backlog-f15-group-header-pen-code-drift` —— 程式碼的 `GroupHeaderRow` 畫兩顆 route 徽章
+  （sub-5-3 CR H1 補的）且 `showSeasonHeaders` 時是兩層縮排；稿子無徽章、單層合併標題。
+- `backlog-consent-row-title-tier-drift` —— 片名字級三邊各說各話：稿子 F15-D-v2 `15px/600`、
+  F15-M-v2 `14px/600`、核定表寫「Body 14px」、程式碼 `text-sm` = `14px/400`；`DESIGN.md:217`
+  的階梯沒有 15px。非本次弄壞（未改動的 F18 也是 15/600）。
 
 ### .pen inline-agent 提示詞（AC #4，交給你在 Pencil 跑）
 
