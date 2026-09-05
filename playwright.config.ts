@@ -153,6 +153,13 @@ export default defineConfig({
       // under tests/visual/ MUST NOT be swept into this project (would invalidate the
       // "feature-E2E count unchanged" guarantee 19-5 relies on).
       testMatch: ['**/*.visual.spec.ts'],
+      // retries: 0 — pixel comparison is deterministic, so a retry can never flip the
+      // verdict; it only multiplied the cost. Before 2026-09-06 the CI-wide `retries: 2`
+      // above turned every REAL diff into 3 × ~9 min = ~29 min, past the PR job's
+      // 25-min cap, so the gate reported `cancelled` instead of a readable ❌ (PR #388
+      // run 946; sprint-status `backlog-visual-gate-cannot-report-real-diff`, fix (a)).
+      // Same reasoning the `bisect` project below has pinned since CR 2026-05-19.
+      retries: 0,
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 800 },
@@ -185,11 +192,15 @@ export default defineConfig({
     // browser-agnostic; running ×5 browsers wastes ~15 min for zero signal gain (defence-in-depth
     // browser-agnostic skip kept inside the spec). Run via `pnpm run test:bisect` against
     // `nx serve web` (Vite dev mode — /test/gallery is gated behind `!import.meta.env.PROD`,
-    // story 19-4 CR M1 safety boundary, so prod-build CI cannot reach it). CI wiring:
-    // `.github/workflows/bisect-regression.yml` (separate from visual-regression for wall-clock
-    // + path-filter + signal-clarity reasons documented in the story Dev Notes). AC #2
-    // [@contract-v1] — silent rename / testMatch narrowing / webServer swap silently regresses
-    // coverage (same failure class as story 19-5 H2 path-filter dead-pattern).
+    // story 19-4 CR M1 safety boundary, so prod-build CI cannot reach it).
+    // 2026-09-06: NO LONGER WIRED INTO CI. `.github/workflows/bisect-regression.yml` was
+    // retired — it cost ~11 min on every main push and every dependency-touching PR (its
+    // path filter included package.json / pnpm-lock.yaml) to guard one already-fixed bug.
+    // The "Maximum update depth exceeded" assertion now lives inside the visual spec
+    // (tests/visual/components.visual.spec.ts, render-loop guard), which already mounts
+    // every fixture in isolation on every visual PR. This project remains a MANUAL
+    // diagnostic: it still writes the per-fixture offender-frame JSON that the visual
+    // guard does not.
     {
       name: 'bisect',
       testDir: path.resolve(__dirname, './tests/bisect'),
