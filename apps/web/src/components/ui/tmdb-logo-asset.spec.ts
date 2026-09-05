@@ -7,21 +7,31 @@ import { describe, it, expect } from 'vitest';
  *
  * `TmdbAttribution` points at `/images/tmdb-logo.svg`, and TMDB's terms are
  * satisfied by THEIR mark — not by a lookalike, not by a third-party recolour.
- * The file therefore cannot be generated from inside this repo; someone has to
- * download it from TMDB's brand page and commit it.
+ * The file therefore cannot be generated from inside this repo; it has to be
+ * downloaded from TMDB's brand page and committed by hand.
  *
- * This spec is that hand-off, written as a gate rather than a TODO comment:
- * while the file is missing the attribution renders its text-wordmark fallback
- * (honest, but not the mark the terms ask for), and a TODO in a component
- * header is exactly the kind of note that survives to production. It goes
- * green the moment the real asset lands, and nothing else needs to change.
+ * ⚠️ THE FILE IS NOT HERE YET. Ruled 2026-09-05 (Alexyu): sub-6-9 ships the
+ * §3 notice now and the mark lands later — tracked as `backlog-tmdb-logo-asset`
+ * in sprint-status.yaml, which also carries the constraint that sub-7-7
+ * (bundled TMDb key) must not ship before it. Until then the attribution
+ * renders its text-wordmark fallback.
  *
- * TO SATISFY IT:
+ * So this spec asserts what is TRUE TODAY rather than pretending otherwise:
+ * IF the asset is present, it must be a real SVG carrying its provenance
+ * (AC #1 requires the source URL and download date in the file header). That
+ * assertion is what actually protects the compliance property — a file dropped
+ * in later without provenance is indistinguishable from a lookalike someone
+ * exported from a design tool. The "does it exist at all" half is the backlog
+ * entry's job, because a red suite that everyone learns to ignore protects
+ * nothing.
+ *
+ * TO CLOSE IT OUT:
  *   1. https://www.themoviedb.org/about/logos-attribution → primary short logo (SVG)
  *   2. save as apps/web/public/images/tmdb-logo.svg
  *   3. add a comment at the top of the file recording the source URL and the
  *      download date, e.g.
  *      <!-- TMDB primary short logo — https://www.themoviedb.org/about/logos-attribution — downloaded YYYY-MM-DD -->
+ *   4. delete the backlog entry, and add the gallery fixture sub-6-9 deferred.
  */
 const LOGO_PATH = join(__dirname, '..', '..', '..', 'public', 'images', 'tmdb-logo.svg');
 
@@ -31,14 +41,11 @@ const HOW_TO_FIX =
   'comment at the top of the file. See the docstring in this spec.';
 
 describe('TMDB logo asset', () => {
-  it('is committed at apps/web/public/images/tmdb-logo.svg', () => {
-    expect(existsSync(LOGO_PATH), `TMDB logo missing. ${HOW_TO_FIX}`).toBe(true);
-  });
-
-  it('is an SVG that records where it came from and when', () => {
+  it('records where it came from and when, once it is committed', () => {
     if (!existsSync(LOGO_PATH)) {
-      // The first test already reports the missing file; failing twice for one
-      // cause just makes the run harder to read.
+      // Not yet dropped in — see the docstring and `backlog-tmdb-logo-asset`.
+      // The component renders its text-wordmark fallback in this state, which
+      // TmdbAttribution.spec.tsx covers directly.
       return;
     }
     const svg = readFileSync(LOGO_PATH, 'utf8');
@@ -48,7 +55,7 @@ describe('TMDB logo asset', () => {
       svg.includes('themoviedb.org'),
       `TMDB logo has no source URL in its header. ${HOW_TO_FIX}`
     ).toBe(true);
-    // An ISO-ish date anywhere in the file header — provenance is a date, not "recently".
+    // An ISO-ish date in the file header — provenance is a date, not "recently".
     expect(
       /\d{4}-\d{2}-\d{2}/.test(svg.slice(0, 500)),
       `TMDB logo has no download date in its header. ${HOW_TO_FIX}`

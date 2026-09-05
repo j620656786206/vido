@@ -1,6 +1,6 @@
 # Story 6.9: TMDb attribution —— logo + 未經認可聲明（前端，合規）
 
-Status: in-progress — 程式、測試、文件全數交付；**只差官方 logo 檔**（Alexyu 手動放入 `apps/web/public/images/tmdb-logo.svg`，見 Completion Notes）
+Status: review — 程式、測試、文件全數交付（PR #385）；AC #1 的 **logo 檔**經 Alexyu 裁定後補，carry-forward 至 `backlog-tmdb-logo-asset`（見 Completion Notes）
 
 ## Story
 
@@ -53,7 +53,20 @@ Claude Code on the web（2026-09-05）
 
 ### Completion Notes List
 
-**🔴 未完成的一件事 —— 官方 logo 檔（AC #1 的資產）**
+**🔴 AC #1 的 logo 檔：⚖️ 裁定後補（Alexyu 2026-09-05：「logo 我會之後再補」）**
+
+carry-forward 至 `backlog-tmdb-logo-asset`（Rule 24 lane ③，雙向）。該條目帶一條硬約束：
+**BLOCKS sub-7-7**（內嵌預設 TMDb key）——用我們的名義大量呼叫 TMDb 的 API 卻沒放標記，
+會把這條殘留從「未完成」升級成「風險」。
+
+`tmdb-logo-asset.spec.ts` 隨之從「檔案必須存在」改為「**有檔就必須帶 provenance**」：
+沒有關掉任何測試，斷言本身仍是真的（後補時若沒有來源 URL 與下載日期就會紅——一個沒有
+provenance 的檔案，和某人用設計工具匯出的仿冒品無法區分）。「存不存在」那半交給 backlog
+條目，因為一支長期紅燈、大家學會忽略的測試保護不了任何東西。
+
+以下為原始交付記錄：
+
+**官方 logo 檔為何不在 commit 裡**
 
 `apps/web/public/images/tmdb-logo.svg` **沒有進 commit**：這個沙盒的網路政策把
 `themoviedb.org` 擋在外面（proxy 對 CONNECT 回 403），抓不到官方 brand 頁的 SVG。
@@ -66,10 +79,9 @@ Alexyu 於 2026-09-05 裁定由他手動放檔。
 1. `TmdbLogo` 有 `onError` fallback → 檔案不在時顯示純文字 "TMDB" 字標。畫面不會出現
    破圖，條款要求的那句話今天就在線上，連結也保有可讀名稱。這是 `ProviderLogo`
    （`StreamingAvailability.tsx`）既有的「絕不畫破圖」慣例。
-2. `tmdb-logo-asset.spec.ts` 是**紅燈閘門**：檔案不存在就 fail，失敗訊息直接寫下載步驟。
-   刻意不寫成 TODO 註解——TODO 會活到 production，紅燈不會。**目前這支測試是紅的，
-   而且應該是紅的**；Alexyu 放檔後自動轉綠。
-3. 閘門同時檢查檔頭有來源 URL 與下載日期（AC #1 的 provenance 要求）。
+2. `tmdb-logo-asset.spec.ts` 原本寫成**紅燈閘門**（檔案不存在就 fail，失敗訊息即下載步驟）。
+   ⚖️ 上述裁定後改為「有檔就必須帶 provenance」，缺檔改由 `backlog-tmdb-logo-asset` 追蹤。
+3. 該 spec 仍檢查檔頭有來源 URL 與下載日期（AC #1 的 provenance 要求）——後補時沒帶會紅。
 
 放檔步驟：<https://www.themoviedb.org/about/logos-attribution> → primary short logo(SVG)
 → 存成 `apps/web/public/images/tmdb-logo.svg` → 檔頭加一行

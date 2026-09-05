@@ -14,10 +14,11 @@
  *    must not be "improved" by a future copy pass. The zh-TW line beside it is
  *    a reading aid FOR our user and carries no legal weight — which is why the
  *    English original stays on screen rather than being replaced by it.
- *  - THE MARK IS THE OFFICIAL FILE. `/images/tmdb-logo.svg` is TMDB's own
- *    asset, downloaded from their brand page — never a hand-drawn lookalike
- *    and never a recolour, both of which would breach the same brand terms
- *    this component exists to satisfy.
+ *  - THE MARK MUST BE THE OFFICIAL FILE. `/images/tmdb-logo.svg` is only ever
+ *    TMDB's own asset, downloaded from their brand page — never a hand-drawn
+ *    lookalike and never a recolour, both of which would breach the same brand
+ *    terms this component exists to satisfy. That is why the file is missing
+ *    rather than approximated (see `TmdbLogo` below).
  */
 import { useState } from 'react';
 import { cn } from '../../lib/utils';
@@ -40,8 +41,12 @@ export const TMDB_HOME_URL = 'https://www.themoviedb.org/';
  * The mark, with the codebase's never-a-broken-image rule applied (the same
  * idiom `ProviderLogo` uses one file over): if the SVG cannot be loaded, fall
  * back to a plain "TMDB" wordmark so the attribution still reads correctly and
- * the link keeps its accessible name. The fallback is load-bearing today —
- * the official asset is dropped in by hand (see `tmdb-logo-asset.spec.ts`).
+ * the link keeps its accessible name.
+ *
+ * ⚠️ This fallback is what SHIPS TODAY: `/images/tmdb-logo.svg` is not in the
+ * repo yet (it can only be downloaded from TMDB's brand page by hand — ruled
+ * 2026-09-05, tracked as `backlog-tmdb-logo-asset`, which also blocks sub-7-7).
+ * Dropping the file in is the whole fix; no code here changes.
  */
 function TmdbLogo({ className }: { className?: string }) {
   const [failed, setFailed] = useState(false);
