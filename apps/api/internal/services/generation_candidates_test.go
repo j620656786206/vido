@@ -497,10 +497,14 @@ func TestSnapshot_DefaultBudgetSerializesAsSnakeCase(t *testing.T) {
 // ─── sub-5-3 AC #1: candidates carry series identity (additive, no bump) ────
 
 // stubSeriesResolver counts lookups so the per-sweep memo is falsifiable.
+// sub-6-10a widened it with posters, because the memo now carries both — one
+// fake for one port, so a test cannot accidentally assert against a second
+// resolver that behaves differently.
 type stubSeriesResolver struct {
-	titles map[string]string
-	err    error
-	calls  int
+	titles  map[string]string
+	posters map[string]string
+	err     error
+	calls   int
 }
 
 func (f *stubSeriesResolver) FindByID(_ context.Context, id string) (*models.Series, error) {
@@ -512,7 +516,11 @@ func (f *stubSeriesResolver) FindByID(_ context.Context, id string) (*models.Ser
 	if !ok {
 		return nil, errors.New("series not found")
 	}
-	return &models.Series{ID: id, Title: title}, nil
+	series := &models.Series{ID: id, Title: title}
+	if poster, ok := f.posters[id]; ok {
+		series.PosterPath = models.NewNullString(poster)
+	}
+	return series, nil
 }
 
 func seriesEpisodeRow(id, seriesID string, season, ep int, path string) models.Episode {

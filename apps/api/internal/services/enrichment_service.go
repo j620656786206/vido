@@ -523,6 +523,21 @@ func (s *EnrichmentService) applyFFprobeTechInfo(ctx context.Context, movie *mod
 	if info.HDRFormat != "" {
 		movie.HDRFormat = models.NewNullString(info.HDRFormat)
 	}
+	// Container duration (sub-6-10a AC #1). ffprobe has always measured this;
+	// until migration 035 there was nowhere to put it, so the subtitle
+	// estimator priced from TMDb `runtime` alone and every unmatched title
+	// fell through to the 45-minute assumption.
+	//
+	// > 0 guards the same way the fields above do: ffprobe reports 0 for a
+	// container with no duration header, and storing that would turn "we
+	// don't know" into "this film is zero minutes long" — which prices as
+	// free. NOTE the early return above: a movie whose tech info came from an
+	// NFO never reaches this probe, so it keeps pricing from TMDb runtime.
+	// That is the pre-existing NFO fast path, not a regression, and the
+	// estimator's fallback chain covers it.
+	if info.DurationSeconds > 0 {
+		movie.DurationSeconds = models.NewNullInt64(int64(info.DurationSeconds))
+	}
 
 	// Merge embedded + external subtitles (AC #9)
 	writeSubs(info.SubtitleTracks)

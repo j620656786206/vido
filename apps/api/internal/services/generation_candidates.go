@@ -9,14 +9,17 @@ import (
 	"math"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 	"github.com/vido/api/internal/ai"
+	"github.com/vido/api/internal/ai/prompts"
 	"github.com/vido/api/internal/fsprobe"
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/parser"
 	"github.com/vido/api/internal/sse"
 )
 
@@ -54,6 +57,28 @@ type RoutePredictor interface {
 	Probe(ctx context.Context, mediaPath string) (RoutePrediction, error)
 }
 
+// RouteDurationPredictor is the OPTIONAL half of RoutePredictor: the same
+// probe, with the container duration ffprobe measured on the way past
+// (sub-6-10a AC #1).
+//
+// Optional rather than folded into RoutePredictor on purpose. Episodes carry
+// no tech-info columns, so the sweep probes every one of them and had no way
+// to keep the length it was already being told; widening the required port
+// instead would break every existing fake for a capability none of them are
+// testing. A predictor that does not implement this simply yields no
+// duration, and the estimate falls back exactly as it did before.
+type RouteDurationPredictor interface {
+	ProbeWithDuration(ctx context.Context, mediaPath string) (RoutePrediction, float64, error)
+}
+
+// CandidateEpisodeDurationWriter persists a measured episode duration
+// (sub-6-10a AC #1). Narrow on purpose (Rule 11); *repository.EpisodeRepository
+// satisfies it. nil means the sweep still prices from the number it just
+// measured — it simply will not remember it next time.
+type CandidateEpisodeDurationWriter interface {
+	UpdateDurationSeconds(ctx context.Context, id string, seconds int64) error
+}
+
 // ─── Enumeration ports ─────────────────────────────────────────────────────
 
 // CandidateMovieFinder / CandidateEpisodeFinder are the narrow enumeration
@@ -88,10 +113,32 @@ type CandidateSeriesTitleResolver interface {
 
 // ─── Cost model ────────────────────────────────────────────────────────────
 
-// unknownRuntimeMinutes is what an item with no measurable duration is priced
-// at. The UI states this assumption verbatim ("片長未知，以 45 分鐘估算") — an
-// estimate the user cannot see the assumption behind is not an estimate.
+// unknownRuntimeMinutes is the LAST resort of the three-step ladder in
+// candidateRow.runtimeMinutes: the container's own duration (migration 035),
+// then TMDb's editorial runtime, then this. The UI states the assumption
+// verbatim ("片長未知，以 45 分鐘估算") — an estimate the user cannot see the
+// assumption behind is not an estimate.
+//
+// ⚠️ Rule 24 superseded-mechanism (sub-6-10a): before migration 035 this was
+// the answer for EVERY episode and every unmatched movie, because TMDb runtime
+// was the only source and neither has one — 2,399 of 2,399 rows in the
+// 2026-09-03 production screenshot. It is now the residue: no probe has ever
+// measured the file AND no TMDb match exists. There must not be a second
+// meaning for it.
 const unknownRuntimeMinutes = 45.0
+
+// RuntimeSource names which rung of that ladder answered, so the UI can say
+// 「片長 1:52（實測）」instead of implying every number is equally solid.
+// Values are wire strings (sub-4-1 [@contract-v1], additive).
+const (
+	// RuntimeSourceFFprobe — measured from the container by ffprobe.
+	RuntimeSourceFFprobe = "ffprobe"
+	// RuntimeSourceTMDb — TMDb's editorial runtime. Usually right, but it is
+	// the published cut, not this file (an extended cut prices low).
+	RuntimeSourceTMDb = "tmdb"
+	// RuntimeSourceFallback — unknownRuntimeMinutes. Nothing measured it.
+	RuntimeSourceFallback = "fallback"
+)
 
 // translationUSDPerMinuteByModel prices the LLM half, per model, per minute of
 // RUNTIME (not of processing).
@@ -190,7 +237,37 @@ type GenerationCandidate struct {
 	// false when it fell back to unknownRuntimeMinutes.
 	RuntimeMinutes float64 `json:"runtime_minutes"`
 	RuntimeKnown   bool    `json:"runtime_known"`
-	EstimatedUSD   float64 `json:"estimated_usd"`
+	// RuntimeSource names which rung of the ladder answered — "ffprobe",
+	// "tmdb" or "fallback" (sub-6-10a AC #2). Additive on the sub-4-1 AC #7
+	// [@contract-v1] envelope, existing keys unchanged (the default_budget_usd
+	// precedent), so no bump. An old client that ignores it still reads
+	// RuntimeKnown, whose meaning is unchanged.
+	RuntimeSource string  `json:"runtime_source,omitempty"`
+	EstimatedUSD  float64 `json:"estimated_usd"`
+
+	// ─── Row identity (sub-6-10a AC #3, #4) ──────────────────────────────
+	// The consent list asks the user to authorise money against a list of
+	// rows. Before these fields every row was a grey square titled with a
+	// release filename — consent without recognition is not consent.
+	// All three are additive on the same [@contract-v1] envelope.
+
+	// PosterPath is the TMDb poster path (the FE composes the CDN URL, as it
+	// does everywhere else). An EPISODE carries its SERIES' poster — episodes
+	// have only a still, which is a frame grab, not an identity. Empty means
+	// no artwork; the FE draws an initial, never a broken image.
+	PosterPath string `json:"poster_path,omitempty"`
+	// TMDbMatched says whether this row's identity came from TMDb at all.
+	// False ⇒ Title is derived from the filename, so the UI must mark it as
+	// unverified rather than presenting a scene-release string as a film.
+	TMDbMatched bool `json:"tmdb_matched"`
+	// DisplayTitle is what the row should READ as: the TMDb title when
+	// matched, otherwise the filename parser's cleaned-up guess (name + year),
+	// falling back to the raw title only when even that fails.
+	//
+	// Title above is deliberately UNCHANGED in meaning — an older client keeps
+	// rendering exactly what it rendered before (sub-4-1 [@contract-v1]: add
+	// keys, never redefine them).
+	DisplayTitle string `json:"display_title,omitempty"`
 
 	// Writable / Blocker (sub-6-1 AC #4) — additive on the sub-4-1 AC #7
 	// [@contract-v1] envelope (existing keys unchanged — no bump, the
@@ -329,7 +406,10 @@ type GenerationCandidateService struct {
 	episodes  CandidateEpisodeFinder
 	series    CandidateSeriesTitleResolver
 	predictor RoutePredictor
-	models    CandidateModelCatalog
+	// episodeDurations persists what the route probe measured, so the next
+	// sweep reads it instead of re-probing. nil = measure-but-don't-remember.
+	episodeDurations CandidateEpisodeDurationWriter
+	models           CandidateModelCatalog
 
 	// probeWritable is the sub-6-1 target-directory probe (fsprobe.ProbeWritable
 	// by default). Per-analysis results are memoised by directory, so a
@@ -446,6 +526,14 @@ func (s *GenerationCandidateService) quoteModels(ctx context.Context) (defaultMo
 // optional infrastructure, and without it every existing caller keeps the
 // behaviour it already has.
 func (s *GenerationCandidateService) SetRouteCache(cache RouteCache) { s.routeCache = cache }
+
+// SetEpisodeDurationWriter installs the write-back for durations the route
+// probe measures (sub-6-10a AC #1). A setter, not a constructor argument, for
+// the SetRouteCache reason: it is optional, and a deployment without it still
+// produces the right quote — it just re-measures next sweep.
+func (s *GenerationCandidateService) SetEpisodeDurationWriter(w CandidateEpisodeDurationWriter) {
+	s.episodeDurations = w
+}
 
 // StartAnalysis kicks off the sweep and returns immediately.
 //
@@ -678,7 +766,17 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 			}
 		}
 		if !ok {
-			route, ok = s.classify(ctx, row)
+			var probedSeconds float64
+			route, ok, probedSeconds = s.classify(ctx, row)
+			// The probe just measured this file; keep the number rather than
+			// pricing it at the 45-minute assumption (sub-6-10a AC #1). Only
+			// when the row has none of its own — a stored duration is either
+			// the same measurement or a better one from enrichment.
+			if ok && probedSeconds > 0 && !row.durationSeconds.Valid {
+				rows[i].durationSeconds = models.NewNullInt64(int64(probedSeconds))
+				row.durationSeconds = rows[i].durationSeconds
+				s.rememberEpisodeDuration(ctx, row, int64(probedSeconds))
+			}
 			if plan.probeBound {
 				probes++
 			}
@@ -707,7 +805,7 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 			result.Summary.ExtractCount++
 		}
 
-		minutes, known := row.runtimeMinutes()
+		minutes, known, runtimeSource := row.runtimeMinutes()
 		// CR L6: computed ONCE — the summary total below reuses this instead of
 		// re-deriving the same decimal for every writable candidate.
 		defaultUSD := estimateUSD(route, minutes, asrRate, defaultModel)
@@ -718,6 +816,10 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 			Route:          route,
 			RuntimeMinutes: minutes,
 			RuntimeKnown:   known,
+			RuntimeSource:  runtimeSource,
+			PosterPath:     row.posterPath,
+			TMDbMatched:    row.tmdbMatched,
+			DisplayTitle:   candidateDisplayTitle(row.title, row.filePath, row.mediaType, row.tmdbMatched),
 			EstimatedUSD:   defaultUSD.InexactFloat64(),
 			SeriesID:       row.seriesID,
 			SeriesTitle:    row.seriesTitle,
@@ -946,6 +1048,15 @@ type candidateRow struct {
 	title     string
 	filePath  string
 	runtime   models.NullInt64
+	// durationSeconds is the container's measured length (migration 035). It
+	// outranks runtime — see runtimeMinutes.
+	durationSeconds models.NullInt64
+	// Row identity (sub-6-10a). posterPath is the movie's own or, for an
+	// episode, its SERIES' (resolved once per series in the same memo as the
+	// title). tmdbMatched drives both the UI's unverified mark and
+	// candidateDisplayTitle.
+	posterPath  string
+	tmdbMatched bool
 	// tracksJSON is the persisted scan-time probe result. Empty for episodes,
 	// which have no such column.
 	tracksJSON string
@@ -959,29 +1070,114 @@ type candidateRow struct {
 	episodeNumber int
 }
 
-// runtimeMinutes returns the metadata runtime and whether it was known.
-func (r candidateRow) runtimeMinutes() (float64, bool) {
-	if r.runtime.Valid && r.runtime.Int64 > 0 {
-		return float64(r.runtime.Int64), true
+// runtimeMinutes answers how long this item is, in minutes, and how we know.
+//
+// The order is deliberate (sub-6-10a AC #2). The container duration comes
+// FIRST because it describes THIS file: TMDb's runtime is the published cut,
+// so an extended edition, a two-part episode joined into one file, or a
+// mis-matched title all price wrong from it — and every unmatched file and
+// every episode has no TMDb runtime at all. Seconds are converted with no
+// rounding here; the caller prices in decimal.
+func (r candidateRow) runtimeMinutes() (minutes float64, known bool, source string) {
+	if r.durationSeconds.Valid && r.durationSeconds.Int64 > 0 {
+		return float64(r.durationSeconds.Int64) / 60.0, true, RuntimeSourceFFprobe
 	}
-	return unknownRuntimeMinutes, false
+	if r.runtime.Valid && r.runtime.Int64 > 0 {
+		return float64(r.runtime.Int64), true, RuntimeSourceTMDb
+	}
+	return unknownRuntimeMinutes, false, RuntimeSourceFallback
 }
 
-// resolveSeriesTitle answers the group-header label for one series. Rule 13
-// case 3 — deliberately degraded after logging: a nil resolver or a failed
-// lookup yields "" (the FE renders 未知影集 and still groups on the id), never
-// a failed sweep.
-func (s *GenerationCandidateService) resolveSeriesTitle(ctx context.Context, seriesID string) string {
+// seriesMeta is everything one series lookup has to yield, so a 20-season show
+// still costs ONE read per sweep (sub-5-3's memo, widened by sub-6-10a rather
+// than duplicated — a second lookup for the poster would double the query
+// count this memo exists to hold at one).
+type seriesMeta struct {
+	title      string
+	posterPath string
+}
+
+// resolveSeriesMeta answers the group-header label and the artwork for one
+// series. Rule 13 case 3 — deliberately degraded after logging: a nil resolver
+// or a failed lookup yields the zero value (the FE renders 未知影集 and an
+// initial, and still groups on the id), never a failed sweep.
+func (s *GenerationCandidateService) resolveSeriesMeta(ctx context.Context, seriesID string) seriesMeta {
 	if s.series == nil || seriesID == "" {
-		return ""
+		return seriesMeta{}
 	}
 	series, err := s.series.FindByID(ctx, seriesID)
 	if err != nil || series == nil {
-		s.logger.Debug("series title lookup failed — group header degrades to the id",
+		s.logger.Debug("series lookup failed — group header and poster degrade",
 			"series_id", seriesID, "error", err)
-		return ""
+		return seriesMeta{}
 	}
-	return series.Title
+	return seriesMeta{title: series.Title, posterPath: series.PosterPath.String}
+}
+
+// candidateDisplayTitle decides what a row should READ as (sub-6-10a AC #4).
+//
+// Three cases, in order:
+//   - MATCHED: TMDb's title, unchanged. It is the identity the user knows.
+//   - UNMATCHED but the title is not filename-shaped: keep it. The parser
+//     already produced a clean name, or the user typed one into the metadata
+//     editor — replacing that with another parse of the same filename would
+//     throw away the better answer (the sub-6-7 CR M4 reasoning, applied on
+//     the UI side of the same problem).
+//   - UNMATCHED and filename-shaped: re-parse the FILE NAME (not the stored
+//     title, which may carry a directory's worth of junk) into name + year.
+//
+// The filename-shaped test is `prompts.LooksLikeFilename` — the same rule
+// sub-6-7 uses to keep release names out of the prompt. One definition of
+// "this is a filename, not a title" for both, by construction.
+//
+// The parser is chosen by MEDIA TYPE. MovieParser gives up the moment a name
+// matches a TV pattern (movie_parser.go: "Skip if it looks like a TV show"),
+// so running it over an episode's filename returns nothing and the row keeps
+// its junk title — the exact defect this function exists to fix, just quieter.
+func candidateDisplayTitle(title, filePath, mediaType string, tmdbMatched bool) string {
+	if tmdbMatched || !prompts.LooksLikeFilename(title) {
+		return title
+	}
+
+	base := strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
+
+	if mediaType == models.SubtitleRunMediaEpisode {
+		parsed := parser.NewTVParser().Parse(base)
+		show := firstNonEmpty(parsed.CleanedTitle, parsed.Title)
+		if show == "" {
+			return title
+		}
+		// The SxxEyy label the row already carries is its within-season
+		// identity (episodeTitle built it from the DB's own numbers, which are
+		// more trustworthy than anything re-parsed out of a filename). Keep it,
+		// and put the cleaned show name in front of it.
+		if season, episode := parsed.Season, parsed.Episode; season > 0 || episode > 0 {
+			return fmt.Sprintf("%s S%02dE%02d", show, season, episode)
+		}
+		return show
+	}
+
+	parsed := parser.NewMovieParser().Parse(base)
+	name := firstNonEmpty(parsed.CleanedTitle, parsed.Title)
+	if name == "" {
+		// The parser could make nothing of it. The raw title is ugly but it is
+		// at least the string the user will see in their file manager — an
+		// empty row would be worse.
+		return title
+	}
+	if parsed.Year > 0 {
+		return fmt.Sprintf("%s (%d)", name, parsed.Year)
+	}
+	return name
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if trimmed := strings.TrimSpace(v); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
 }
 
 func (s *GenerationCandidateService) enumerate(ctx context.Context) ([]candidateRow, error) {
@@ -997,12 +1193,15 @@ func (s *GenerationCandidateService) enumerate(ctx context.Context) ([]candidate
 				continue
 			}
 			rows = append(rows, candidateRow{
-				id:         m.ID,
-				mediaType:  models.SubtitleRunMediaMovie,
-				title:      m.Title,
-				filePath:   m.FilePath.String,
-				runtime:    m.Runtime,
-				tracksJSON: m.SubtitleTracks.String,
+				id:              m.ID,
+				mediaType:       models.SubtitleRunMediaMovie,
+				title:           m.Title,
+				filePath:        m.FilePath.String,
+				runtime:         m.Runtime,
+				durationSeconds: m.DurationSeconds,
+				tracksJSON:      m.SubtitleTracks.String,
+				posterPath:      m.PosterPath.String,
+				tmdbMatched:     m.TMDbID.Valid && m.TMDbID.Int64 > 0,
 			})
 		}
 	}
@@ -1015,24 +1214,29 @@ func (s *GenerationCandidateService) enumerate(ctx context.Context) ([]candidate
 		// One title lookup per DISTINCT series per sweep (sub-5-3 AC #1) — a
 		// 20-season show must cost one read, not one per episode. The memo also
 		// caches failures ("" entry) so a broken series row is logged once.
-		seriesTitles := make(map[string]string)
+		seriesMetas := make(map[string]seriesMeta)
 		for _, e := range episodes {
 			if !e.FilePath.Valid || e.FilePath.String == "" {
 				continue
 			}
-			title, seen := seriesTitles[e.SeriesID]
+			meta, seen := seriesMetas[e.SeriesID]
 			if !seen {
-				title = s.resolveSeriesTitle(ctx, e.SeriesID)
-				seriesTitles[e.SeriesID] = title
+				meta = s.resolveSeriesMeta(ctx, e.SeriesID)
+				seriesMetas[e.SeriesID] = meta
 			}
 			rows = append(rows, candidateRow{
-				id:            e.ID,
-				mediaType:     models.SubtitleRunMediaEpisode,
-				title:         episodeTitle(e),
-				filePath:      e.FilePath.String,
-				runtime:       e.Runtime,
+				id:              e.ID,
+				mediaType:       models.SubtitleRunMediaEpisode,
+				title:           episodeTitle(e),
+				filePath:        e.FilePath.String,
+				runtime:         e.Runtime,
+				durationSeconds: e.DurationSeconds,
+				// An episode's own still is a frame grab, not an identity —
+				// the SERIES poster is what makes the row recognisable.
+				posterPath:    meta.posterPath,
+				tmdbMatched:   e.TMDbID.Valid && e.TMDbID.Int64 > 0,
 				seriesID:      e.SeriesID,
-				seriesTitle:   title,
+				seriesTitle:   meta.title,
 				seasonNumber:  e.SeasonNumber,
 				episodeNumber: e.EpisodeNumber,
 			})
@@ -1066,13 +1270,27 @@ func episodeTitle(e models.Episode) string {
 // probe-vs-not decision by running the same parsePersistedTracks check. If a
 // new probe-free source is added here, update planRouteCache in the same
 // change — see the mirror note there.
-func (s *GenerationCandidateService) classify(ctx context.Context, row candidateRow) (RoutePrediction, bool) {
+// It also returns the container duration when the probe measured one
+// (sub-6-10a AC #1); 0 means "no number from this call", which includes the
+// persisted-tracks path, a predictor that does not implement
+// RouteDurationPredictor, and a container with no duration header.
+func (s *GenerationCandidateService) classify(ctx context.Context, row candidateRow) (RoutePrediction, bool, float64) {
 	if s.predictor == nil {
-		return "", false
+		return "", false, 0
 	}
 
 	if tracks, ok := parsePersistedTracks(row.tracksJSON); ok {
-		return s.predictor.FromTracks(tracks), true
+		return s.predictor.FromTracks(tracks), true, 0
+	}
+
+	if withDuration, capable := s.predictor.(RouteDurationPredictor); capable {
+		route, seconds, err := withDuration.ProbeWithDuration(ctx, row.filePath)
+		if err != nil {
+			s.logger.Warn("route prediction failed — item omitted from the estimate",
+				"media_id", row.id, "media_type", row.mediaType, "file", row.filePath, "error", err)
+			return "", false, 0
+		}
+		return route, true, seconds
 	}
 
 	route, err := s.predictor.Probe(ctx, row.filePath)
@@ -1081,9 +1299,30 @@ func (s *GenerationCandidateService) classify(ctx context.Context, row candidate
 		// a file we could not read would be worse than omitting it.
 		s.logger.Warn("route prediction failed — item omitted from the estimate",
 			"media_id", row.id, "media_type", row.mediaType, "file", row.filePath, "error", err)
-		return "", false
+		return "", false, 0
 	}
-	return route, true
+	return route, true, 0
+}
+
+// rememberEpisodeDuration writes a freshly measured episode duration back, so
+// the next sweep reads it instead of re-probing (sub-6-10a AC #1).
+//
+// Movies are NOT written here: their duration belongs to the enrichment pass
+// that owns the rest of their tech info, and writing it from two places is how
+// a column ends up with two owners and no truth. Episodes have no such pass —
+// this probe is the only thing that ever measures them.
+//
+// Rule 13 case 3: a failed write is logged and dropped. The quote in front of
+// the user is already correct (the caller applied the measurement in memory);
+// losing the cache of it is not worth failing a 2,000-row sweep over.
+func (s *GenerationCandidateService) rememberEpisodeDuration(ctx context.Context, row candidateRow, seconds int64) {
+	if s.episodeDurations == nil || row.mediaType != models.SubtitleRunMediaEpisode || seconds <= 0 {
+		return
+	}
+	if err := s.episodeDurations.UpdateDurationSeconds(ctx, row.id, seconds); err != nil {
+		s.logger.Debug("episode duration write-back failed — the quote still used the measurement",
+			"media_id", row.id, "seconds", seconds, "error", err)
+	}
 }
 
 // parsePersistedTracks reads the scan-time `subtitle_tracks` JSON.

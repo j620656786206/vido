@@ -36,3 +36,15 @@ func (a routePredictorAdapter) Probe(ctx context.Context, mediaPath string) (ser
 	}
 	return services.RoutePrediction(p), nil
 }
+
+// ProbeWithDuration satisfies services.RouteDurationPredictor — the optional
+// half of the port (sub-6-10a AC #1). Same single probe, one more number out
+// of it, so an episode's real length reaches the estimate instead of the
+// 45-minute assumption.
+func (a routePredictorAdapter) ProbeWithDuration(ctx context.Context, mediaPath string) (services.RoutePrediction, float64, error) {
+	p, seconds, err := a.router.PredictRouteWithDuration(ctx, mediaPath)
+	if err != nil {
+		return "", 0, err
+	}
+	return services.RoutePrediction(p), seconds, nil
+}

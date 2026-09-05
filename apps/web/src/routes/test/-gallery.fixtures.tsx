@@ -29,6 +29,7 @@ import type { ComponentType } from 'react';
 
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
+import { TmdbAttribution } from '../../components/ui/TmdbAttribution';
 import {
   Card,
   CardHeader,
@@ -537,6 +538,26 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     component: Button as ComponentType<Record<string, unknown>>,
     props: { children: '主要按鈕' },
     penNode: 'otvKh', // + YDPhc (ButtonSecondary) — see drift-19-3-2026-05.md
+  },
+  {
+    // sub-6-9 — the TMDB §3 attribution. Baselined once the official mark
+    // landed (sub-6-10a's sibling backlog entry): before that the only thing
+    // a screenshot could capture was the text-wordmark fallback, which would
+    // have needed re-baselining the day the SVG arrived.
+    id: 'ui-tmdb-attribution',
+    label: 'ui/TmdbAttribution',
+    component: TmdbAttribution as ComponentType<Record<string, unknown>>,
+    props: {},
+    penNode: 'utility',
+    statesOnly: ['default'],
+  },
+  {
+    id: 'ui-tmdb-attribution-inline',
+    label: 'ui/TmdbAttribution (inline)',
+    component: TmdbAttribution as ComponentType<Record<string, unknown>>,
+    props: { variant: 'inline' },
+    penNode: 'utility',
+    statesOnly: ['default'],
   },
   {
     id: 'ui-badge',

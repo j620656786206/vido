@@ -273,6 +273,12 @@ type EpisodeRepositoryInterface interface {
 	// the movie half only; this is the Rule 24 lane ① expansion.
 	FindMissingZhHantSubtitle(ctx context.Context) ([]models.Episode, error)
 
+	// UpdateDurationSeconds records the container duration the candidate
+	// sweep's route probe measured (sub-6-10a AC #1, migration 035).
+	// Episodes have no enrichment pass of their own, so that probe is the
+	// only thing that ever measures them.
+	UpdateDurationSeconds(ctx context.Context, episodeID string, seconds int64) error
+
 	// CountMissingZhHantSubtitle counts episodes FindMissingZhHantSubtitle
 	// would return — the episode half of the generation-batch preview count.
 	// Needed by: sub-5-1 AC #7 (F17 toast including episodes).

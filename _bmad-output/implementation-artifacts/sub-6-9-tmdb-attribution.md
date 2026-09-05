@@ -1,6 +1,6 @@
 # Story 6.9: TMDb attribution —— logo + 未經認可聲明（前端，合規）
 
-Status: review — 程式、測試、文件全數交付（PR #385）；AC #1 的 **logo 檔**經 Alexyu 裁定後補，carry-forward 至 `backlog-tmdb-logo-asset`（見 Completion Notes）
+Status: review — **七條 AC 全數滿足**。程式／測試／文件隨 PR #385 合併；AC #1 的 logo 檔與 AC #5 延後的 gallery fixture 於同日隨 PR #386 補齊（`backlog-tmdb-logo-asset` 已 CLOSED）
 
 ## Story
 
@@ -26,9 +26,9 @@ party-mode 2026-09-03 查證：TMDB 條款第 3 條要求 logo 與「This applic
 
 ## Tasks / Subtasks
 
-- [x] **Task 1 — 資產與設定頁（AC: #1, #3, #4）** — `TmdbAttribution` 元件 + `ApiKeysForm` TMDB 列下方；⚠️ logo **檔案本身**待 Alexyu 放入（本沙盒的網路政策擋掉 themoviedb.org，見 Completion Notes）
+- [x] **Task 1 — 資產與設定頁（AC: #1, #3, #4）** — `TmdbAttribution` 元件 + `ApiKeysForm` TMDB 列下方；logo 檔由 Alexyu 於 2026-09-05 提供並落地（PR #386）
 - [x] **Task 2 — 詳情頁列（AC: #2）** — `TMDbDetailV2` 與 `LocalDetailV2` 頁尾（⚠️ 位置偏離 AC 字面，理由見下）
-- [x] **Task 3 — 測試與 fixtures（AC: #5）** — 10 個新測試；visual gallery fixture **未加**（理由見下）
+- [x] **Task 3 — 測試與 fixtures（AC: #5）** — 11 個新測試；visual gallery fixture 於 logo 落地時補上（`ui/TmdbAttribution` 兩個 variant，PR #386）
 
 ## Dev Notes
 
@@ -53,7 +53,20 @@ Claude Code on the web（2026-09-05）
 
 ### Completion Notes List
 
-**🔴 AC #1 的 logo 檔：⚖️ 裁定後補（Alexyu 2026-09-05：「logo 我會之後再補」）**
+**✅ AC #1 的 logo 檔：已於 2026-09-05 稍晚補齊（PR #386）**
+
+Alexyu 從 <https://www.themoviedb.org/about/logos-attribution> 下載並提供 SVG，已進 repo，
+檔頭帶來源 URL 與下載日期，資產閘門由「檔案不在就跳過」轉為**真的驗證 provenance 並通過**。
+AC #5 延後的 visual gallery fixture 一併補上（延後理由「唯一的視覺變數還沒進 repo」已消失）。
+⚖️ **變體選擇**：Alexyu 提供了官方的 long（13.8:1）／primary short（堆疊兩行，2.33:1）／
+alt short（單行橫式，7.7:1）三種。採 **alt short**，非 AC 字面的 primary short。理由是尺寸：
+本 story 的兩個位置都是**單行文字脈絡**（金鑰欄位下的說明段、詳情頁頁尾的「資料來源：」），
+不是品牌標頭；堆疊版在 16px 高度下每行字只剩約 7px 會糊掉，單行版的字高等於整體高度。
+設定頁 h-5（20px × 154px）、詳情頁 h-4（16px × 123px）。要換變體只需換檔 + 調一個 height class。
+
+以下為當時裁定「後補」的記錄：
+
+**🔴 原：AC #1 的 logo 檔 ⚖️ 裁定後補（Alexyu 2026-09-05：「logo 我會之後再補」）**
 
 carry-forward 至 `backlog-tmdb-logo-asset`（Rule 24 lane ③，雙向）。該條目帶一條硬約束：
 **BLOCKS sub-7-7**（內嵌預設 TMDb key）——用我們的名義大量呼叫 TMDb 的 API 卻沒放標記，
@@ -138,4 +151,5 @@ error 全在 `-gallery.fixtures.tsx` 等未觸及檔案）。
 - `apps/web/src/components/media/LocalDetailV2.tsx`
 - `apps/web/src/components/media/LocalDetailV2.spec.tsx`
 - `README.md`
-- ⏳ `apps/web/public/images/tmdb-logo.svg`（**待 Alexyu 放入**）
+- `apps/web/public/images/tmdb-logo.svg`（Alexyu 提供，2026-09-05，PR #386）
+- `apps/web/src/routes/test/-gallery.fixtures.tsx`（AC #5 的 gallery fixture，PR #386）

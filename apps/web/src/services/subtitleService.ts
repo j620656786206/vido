@@ -262,6 +262,34 @@ export interface GenerationCandidate {
   seriesTitle?: string;
   seasonNumber?: number;
   episodeNumber?: number;
+  /**
+   * Row identity (sub-6-10a, additive on the same [@contract-v1] envelope).
+   * All four are absent on a pre-sub-6-10a server, so every consumer must
+   * treat them as optional and fall back to what it rendered before.
+   *
+   * `runtimeSource` says which rung of the ladder produced `runtimeMinutes`:
+   * 'ffprobe' (measured from the file), 'tmdb' (the published cut) or
+   * 'fallback' (the 45-minute assumption — `runtimeKnown` is false).
+   */
+  runtimeSource?: 'ffprobe' | 'tmdb' | 'fallback';
+  /**
+   * TMDb poster path — compose the CDN URL as elsewhere. An EPISODE carries
+   * its SERIES' poster (its own still is a frame grab, not an identity).
+   * Empty/absent → draw an initial, never a broken image.
+   */
+  posterPath?: string;
+  /**
+   * false → this row's identity did not come from TMDb, so `title` is derived
+   * from the filename. The UI marks it unverified rather than presenting a
+   * scene-release string as a film.
+   */
+  tmdbMatched?: boolean;
+  /**
+   * What the row should READ as: the TMDb title when matched, otherwise the
+   * filename parser's cleaned-up guess. `title` keeps its old meaning, so an
+   * older client renders exactly what it rendered before.
+   */
+  displayTitle?: string;
 }
 
 export interface GenerationCandidateSummary {
