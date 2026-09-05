@@ -576,3 +576,5 @@ Linux baselines incrementally bootstrapped 2026-08-27 via runner ubuntu-24.04 (I
 Linux baselines incrementally bootstrapped 2026-08-30 via runner ubuntu-24.04 (ImageVersion: 20260823.283.1) — 1 fixtures: tests/visual/components.visual.spec.ts-snapshots/components/homepage-hero-banner/focus-visual-linux.png
 
 Linux baselines incrementally bootstrapped 2026-09-04 via runner ubuntu-24.04 (ImageVersion: 20260831.293.1) — 3 fixtures: tests/visual/components.visual.spec.ts-snapshots/components/generation-consent/f16-model-default/default-visual-linux.png tests/visual/components.visual.spec.ts-snapshots/components/generation-consent/f16-model-haiku/default-visual-linux.png tests/visual/components.visual.spec.ts-snapshots/components/generation-consent/f19-over-budget-haiku/default-visual-linux.png
+
+Linux baselines incrementally bootstrapped 2026-09-05 via runner ubuntu-24.04 (ImageVersion: 20260831.293.1) — 2 fixtures: tests/visual/components.visual.spec.ts-snapshots/components/ui-tmdb-attribution/default-visual-linux.png tests/visual/components.visual.spec.ts-snapshots/components/ui-tmdb-attribution-inline/default-visual-linux.png
