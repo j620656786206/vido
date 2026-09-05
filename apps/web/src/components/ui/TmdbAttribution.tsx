@@ -90,7 +90,12 @@ export function TmdbAttribution({ variant = 'full', className }: TmdbAttribution
       className="inline-flex items-center"
       data-testid="tmdb-attribution-link"
     >
-      <TmdbLogo className={variant === 'full' ? 'h-4' : 'h-3'} />
+      {/* Sized by HEIGHT only: the asset is TMDB's alt-short lockup (7.7:1),
+          and a width would need recomputing if the mark is ever swapped for
+          another official variant. h-5 / h-4 keep the wordmark's letters at
+          20px / 16px — legible beside the 12px text they sit with, which the
+          stacked primary-short mark would not be (two rows inside 16px). */}
+      <TmdbLogo className={variant === 'full' ? 'h-5' : 'h-4'} />
     </a>
   );
 

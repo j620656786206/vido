@@ -58,8 +58,11 @@ Claude Code on the web（2026-09-05）
 Alexyu 從 <https://www.themoviedb.org/about/logos-attribution> 下載並提供 SVG，已進 repo，
 檔頭帶來源 URL 與下載日期，資產閘門由「檔案不在就跳過」轉為**真的驗證 provenance 並通過**。
 AC #5 延後的 visual gallery fixture 一併補上（延後理由「唯一的視覺變數還沒進 repo」已消失）。
-⚠️ 落地的是**橫式長版 lockup**（13.8:1），非 AC 字面的 primary short logo —— 兩者皆官方素材，
-長版用於一行小字的資料來源標註更順；換短版只需換檔，程式碼零改動。
+⚖️ **變體選擇**：Alexyu 提供了官方的 long（13.8:1）／primary short（堆疊兩行，2.33:1）／
+alt short（單行橫式，7.7:1）三種。採 **alt short**，非 AC 字面的 primary short。理由是尺寸：
+本 story 的兩個位置都是**單行文字脈絡**（金鑰欄位下的說明段、詳情頁頁尾的「資料來源：」），
+不是品牌標頭；堆疊版在 16px 高度下每行字只剩約 7px 會糊掉，單行版的字高等於整體高度。
+設定頁 h-5（20px × 154px）、詳情頁 h-4（16px × 123px）。要換變體只需換檔 + 調一個 height class。
 
 以下為當時裁定「後補」的記錄：
 
