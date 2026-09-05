@@ -118,7 +118,14 @@ error 全在 `-gallery.fixtures.tsx` 等未觸及檔案）。
 - **既有 README 聲明用的是舊版條款字串**（見上，已於本 story 修正，不另立條目）。
 - **`.pen` 未動**：依 AC #3 與 party-mode 裁定，合規行不佔設計位；本 story 未新增 frame，
   故不觸發 CLAUDE.md 的截圖重產流程。
-- 未發現需新立 backlog 的缺口。
+- 🆕 **`backlog-tmdb-attribution-coverage-sweep`**（本 story 交付後自審發現）：本 story 依 party-mode
+  圈定只覆蓋設定頁與兩個詳情頁，但**圖書館格狀／列表頁、搜尋結果、首頁 TV 牆**同樣整片都是 TMDB
+  海報，那些路由上沒有任何聲明可及。需裁定覆蓋策略（全域頁尾 vs 現行的逐面放置）。
+- 查證後**不成立**的疑慮（記錄免重查）：(a) `MediaDetailPanel`（吃 `MovieDetails|TVShowDetails`，
+  是 TMDB 資料面）**沒有生產消費者** —— 只剩 gallery fixture 引用，v1 shell 已被 LocalDetailV2／
+  TMDbDetailV2 取代，故非缺口；(b) 兩個詳情元件不會同時掛載（`routes/media/$type.$id.tsx:77/80`
+  早退二選一），`data-testid="tmdb-attribution"` 不會在同一頁出現兩次；(c) 全 repo 已無舊版聲明
+  字串殘留（唯一命中是本檔引述它的那行）。
 
 ### File List
 
