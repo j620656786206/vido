@@ -13,6 +13,7 @@
 # Pipeline stages（全部平行，除了標明 needs 的）:
 #   lint:             ESLint + Prettier + go vet + staticcheck
 #   test-unit:        Vitest（apps/web）
+#   test-go:          go test ./...（apps/api）—— 2026-09-06 之前從沒在 CI 跑過
 #   build:            Go binary + 前端 production build（給 e2e 用）
 #   serve-smoke:      `nx serve api` 真的起得來、回得了 200（retro-10 AI6）
 #   test-e2e-sharded: Playwright 4 shards，needs: build
@@ -171,6 +172,34 @@ jobs:
           path: coverage/
           retention-days: 30
           if-no-files-found: ignore
+
+  # =============================================================================
+  # Go Tests — apps/api 有 318 個 *_test.go，但 2026-09-06 之前 CI 只跑
+  # go vet + staticcheck，從來沒跑過 go test（docker.yml 的註解以為 Tests
+  # workflow 有跑；沒有）。需要 ffmpeg 的少數整合案例自己會 t.Skip，
+  # runner 上沒裝也不會紅。本機冷跑 ~20s；不加 -race，先求有。
+  # =============================================================================
+  test-go:
+    name: Go Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: apps/api/go.sum
+
+      - name: Download Go dependencies
+        working-directory: apps/api
+        run: go mod download
+
+      - name: Run Go tests
+        working-directory: apps/api
+        run: go test ./...
 
   # =============================================================================
   # Serve Smoke Gate (runtime regression net for `nx serve api`)
