@@ -59,6 +59,7 @@ func setupEpisodeTestDB(t *testing.T) *sql.DB {
 			overview TEXT,
 			air_date TEXT,
 			runtime INTEGER,
+			duration_seconds INTEGER,
 			still_path TEXT,
 			vote_average REAL,
 			file_path TEXT,

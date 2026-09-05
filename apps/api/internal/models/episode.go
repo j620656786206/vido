@@ -16,12 +16,18 @@ type Episode struct {
 	EpisodeNumber int        `db:"episode_number" json:"episode_number"`
 
 	// Content fields
-	Title       NullString  `db:"title" json:"title,omitempty"`
-	Overview    NullString  `db:"overview" json:"overview,omitempty"`
-	AirDate     NullString  `db:"air_date" json:"air_date,omitempty"`
-	Runtime     NullInt64   `db:"runtime" json:"runtime,omitempty"`
-	StillPath   NullString  `db:"still_path" json:"still_path,omitempty"`
-	VoteAverage NullFloat64 `db:"vote_average" json:"vote_average,omitempty"`
+	Title    NullString `db:"title" json:"title,omitempty"`
+	Overview NullString `db:"overview" json:"overview,omitempty"`
+	AirDate  NullString `db:"air_date" json:"air_date,omitempty"`
+	Runtime  NullInt64  `db:"runtime" json:"runtime,omitempty"`
+	// DurationSeconds is the CONTAINER duration ffprobe measured (migration
+	// 035, sub-6-10a). Episodes carry no other tech-info column, so before
+	// this one every episode was priced at the 45-minute assumption. Written
+	// by the candidate sweep's route probe, which was already running ffprobe
+	// on each episode and discarding this number. NULL = never measured.
+	DurationSeconds NullInt64   `db:"duration_seconds" json:"duration_seconds,omitempty"`
+	StillPath       NullString  `db:"still_path" json:"still_path,omitempty"`
+	VoteAverage     NullFloat64 `db:"vote_average" json:"vote_average,omitempty"`
 
 	// File tracking
 	FilePath NullString `db:"file_path" json:"file_path,omitempty"`

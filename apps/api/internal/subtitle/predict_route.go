@@ -41,14 +41,31 @@ const (
 // A probe failure is returned, never swallowed: classifying an unreadable file
 // as PredictASR would quote the user for a paid route on a file we cannot read.
 func (r *Router) PredictRoute(ctx context.Context, mediaPath string) (RoutePrediction, error) {
+	route, _, err := r.PredictRouteWithDuration(ctx, mediaPath)
+	return route, err
+}
+
+// PredictRouteWithDuration is PredictRoute plus the container duration the
+// SAME probe already measured (sub-6-10a AC #1).
+//
+// It exists because episodes have no tech-info columns: the candidate sweep
+// probes each of them for tracks and then threw the duration away, so every
+// episode was priced at the 45-minute assumption while ffprobe had just
+// reported its real length. Returning it costs nothing — no second probe, no
+// second ffmpeg process — and PredictRoute above delegates here so there is
+// exactly one probe path, not two that can drift.
+//
+// The duration is 0 when the container has no duration header. Callers must
+// treat 0 as "unknown", never as a length.
+func (r *Router) PredictRouteWithDuration(ctx context.Context, mediaPath string) (RoutePrediction, float64, error) {
 	info, err := r.prober.Probe(ctx, mediaPath)
 	if err != nil {
-		return "", fmt.Errorf("predict route for %s: %w", mediaPath, err)
+		return "", 0, fmt.Errorf("predict route for %s: %w", mediaPath, err)
 	}
 	if info == nil {
-		return "", fmt.Errorf("predict route for %s: probe returned no tech info", mediaPath)
+		return "", 0, fmt.Errorf("predict route for %s: probe returned no tech info", mediaPath)
 	}
-	return PredictFromTracks(info.SubtitleTracks), nil
+	return PredictFromTracks(info.SubtitleTracks), info.DurationSeconds, nil
 }
 
 // PredictFromTracks is the pure classifier over an already-known track list.

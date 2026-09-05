@@ -971,6 +971,9 @@ func main() {
 	// existing cache_entries table — no migration, and the shared expiry sweep
 	// above already covers the new `subtitle_route` family.
 	generationCandidateService.SetRouteCache(services.NewRouteCacheRepository(repos.Cache))
+	// sub-6-10a AC #1: the sweep's route probe is the only thing that ever
+	// measures an episode's length — let it keep what it measured.
+	generationCandidateService.SetEpisodeDurationWriter(repos.Episodes)
 	generationCandidatesHandler := handlers.NewGenerationCandidatesHandler(generationCandidateService)
 	// FR12 manual trigger (sub-1-6 AC #4). The route is registered in EVERY
 	// mode so the API surface does not change shape with an env var; a nil

@@ -473,6 +473,12 @@ func (m *mockPQEpisodeRepo) FindMissingZhHantSubtitle(context.Context) ([]models
 	return nil, nil
 }
 
+// UpdateDurationSeconds satisfies the sub-6-10a addition to the interface.
+// The parse queue never measures durations, so this stub records nothing.
+func (m *mockPQEpisodeRepo) UpdateDurationSeconds(context.Context, string, int64) error {
+	return nil
+}
+
 func (m *mockPQEpisodeRepo) FindBySeriesSeasonEpisode(_ context.Context, seriesID string, season, episode int) (*models.Episode, error) {
 	for _, ep := range m.episodes {
 		if ep.SeriesID == seriesID && ep.SeasonNumber == season && ep.EpisodeNumber == episode {

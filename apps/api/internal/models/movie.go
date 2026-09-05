@@ -225,6 +225,13 @@ type Movie struct {
 	BackdropPath NullString `db:"backdrop_path" json:"backdrop_path,omitempty"`
 	Runtime      NullInt64  `db:"runtime" json:"runtime,omitempty"`
 
+	// DurationSeconds is the CONTAINER duration ffprobe measured (migration
+	// 035, sub-6-10a). Runtime above is TMDb's editorial figure and is absent
+	// for anything unmatched; this one comes from the file itself, so it is
+	// what the subtitle estimator prices from first. NULL = never measured
+	// (pre-035 row, or a failed probe) — never "zero length".
+	DurationSeconds NullInt64 `db:"duration_seconds" json:"duration_seconds,omitempty"`
+
 	// Metadata fields
 	OriginalLanguage NullString `db:"original_language" json:"original_language,omitempty"`
 	Status           NullString `db:"status" json:"status,omitempty"`

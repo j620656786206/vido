@@ -18,7 +18,7 @@ var ErrEpisodeNotFound = errors.New("episode not found")
 // read carries its per-episode subtitle status for the detail-page accordion.
 const episodeSelectColumns = `
 	id, series_id, season_id, tmdb_id, season_number, episode_number,
-	title, overview, air_date, runtime, still_path,
+	title, overview, air_date, runtime, duration_seconds, still_path,
 	vote_average, file_path, subtitle_status, subtitle_path, subtitle_language,
 	created_at, updated_at`
 
@@ -48,6 +48,7 @@ func scanEpisode(s interface{ Scan(...any) error }, episode *models.Episode) err
 		&episode.Overview,
 		&episode.AirDate,
 		&episode.Runtime,
+		&episode.DurationSeconds,
 		&episode.StillPath,
 		&episode.VoteAverage,
 		&episode.FilePath,
@@ -73,9 +74,9 @@ func (r *EpisodeRepository) Create(ctx context.Context, episode *models.Episode)
 	query := `
 		INSERT INTO episodes (
 			id, series_id, season_id, tmdb_id, season_number, episode_number,
-			title, overview, air_date, runtime, still_path,
+			title, overview, air_date, runtime, duration_seconds, still_path,
 			vote_average, file_path, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err := r.db.ExecContext(ctx, query,
@@ -89,6 +90,7 @@ func (r *EpisodeRepository) Create(ctx context.Context, episode *models.Episode)
 		episode.Overview,
 		episode.AirDate,
 		episode.Runtime,
+		episode.DurationSeconds,
 		episode.StillPath,
 		episode.VoteAverage,
 		episode.FilePath,
@@ -276,6 +278,7 @@ func (r *EpisodeRepository) Update(ctx context.Context, episode *models.Episode)
 			overview = ?,
 			air_date = ?,
 			runtime = ?,
+			duration_seconds = ?,
 			still_path = ?,
 			vote_average = ?,
 			file_path = ?,
@@ -293,6 +296,7 @@ func (r *EpisodeRepository) Update(ctx context.Context, episode *models.Episode)
 		episode.Overview,
 		episode.AirDate,
 		episode.Runtime,
+		episode.DurationSeconds,
 		episode.StillPath,
 		episode.VoteAverage,
 		episode.FilePath,
@@ -340,6 +344,46 @@ func (r *EpisodeRepository) UpdateEpisodeSubtitleStatus(ctx context.Context, epi
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update episode subtitle status: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("episode with id %s: %w", episodeID, ErrEpisodeNotFound)
+	}
+
+	return nil
+}
+
+// UpdateDurationSeconds records the container duration measured for one
+// episode (sub-6-10a AC #1, migration 035).
+//
+// A narrow single-column write, mirroring UpdateEpisodeSubtitleStatus above,
+// rather than a read-modify-write through Update(): the caller is the candidate
+// sweep, which holds up to a couple of thousand rows in flight and must not
+// stamp its own stale copy of a row's title or subtitle status over whatever
+// the scanner wrote a moment ago.
+//
+// `updated_at` is deliberately NOT touched: this is a measurement of a file
+// that did not change, and bumping the row's timestamp would tell every
+// "recently updated" surface that something happened to it.
+//
+// seconds must be positive — 0 means "the probe found no duration", and
+// storing that would turn "unknown" into "zero-length", which prices as free.
+func (r *EpisodeRepository) UpdateDurationSeconds(ctx context.Context, episodeID string, seconds int64) error {
+	if episodeID == "" {
+		return fmt.Errorf("episode id cannot be empty")
+	}
+	if seconds <= 0 {
+		return fmt.Errorf("episode %s: duration must be positive, got %d", episodeID, seconds)
+	}
+
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE episodes SET duration_seconds = ? WHERE id = ?`, seconds, episodeID)
+	if err != nil {
+		return fmt.Errorf("failed to update episode duration: %w", err)
 	}
 
 	rowsAffected, err := result.RowsAffected()

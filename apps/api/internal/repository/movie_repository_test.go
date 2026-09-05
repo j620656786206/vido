@@ -32,6 +32,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			poster_path TEXT,
 			backdrop_path TEXT,
 			runtime INTEGER,
+			duration_seconds INTEGER,
 			original_language TEXT,
 			status TEXT,
 			imdb_id TEXT,

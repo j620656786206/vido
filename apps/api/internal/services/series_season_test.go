@@ -34,6 +34,9 @@ func (s *stubEpisodeRepo) CountMissingZhHantSubtitle(context.Context) (int, erro
 func (s *stubEpisodeRepo) FindMissingZhHantSubtitle(context.Context) ([]models.Episode, error) {
 	return nil, nil
 }
+
+// UpdateDurationSeconds satisfies the sub-6-10a addition to the interface.
+func (s *stubEpisodeRepo) UpdateDurationSeconds(context.Context, string, int64) error { return nil }
 func (s *stubEpisodeRepo) Create(context.Context, *models.Episode) error             { return nil }
 func (s *stubEpisodeRepo) FindByID(context.Context, string) (*models.Episode, error) { return nil, nil }
 func (s *stubEpisodeRepo) FindBySeriesID(context.Context, string) ([]models.Episode, error) {

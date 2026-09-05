@@ -44,7 +44,7 @@ func (r *MovieRepository) Create(ctx context.Context, movie *models.Movie) error
 	query := `
 		INSERT INTO movies (
 			id, title, original_title, release_date, genres, rating,
-			overview, poster_path, backdrop_path, runtime, original_language,
+			overview, poster_path, backdrop_path, runtime, duration_seconds, original_language,
 			status, imdb_id, tmdb_id,
 			file_path, file_size, parse_status, metadata_source, library_id, vote_average, vote_count,
 			popularity,
@@ -52,7 +52,7 @@ func (r *MovieRepository) Create(ctx context.Context, movie *models.Movie) error
 			video_codec, video_resolution, audio_codec, audio_channels,
 			subtitle_tracks, hdr_format, production_countries, credits, spoken_languages,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err = r.db.ExecContext(ctx, query,
@@ -66,6 +66,7 @@ func (r *MovieRepository) Create(ctx context.Context, movie *models.Movie) error
 		movie.PosterPath,
 		movie.BackdropPath,
 		movie.Runtime,
+		movie.DurationSeconds,
 		movie.OriginalLanguage,
 		movie.Status,
 		movie.IMDbID,
@@ -194,6 +195,7 @@ func (r *MovieRepository) Update(ctx context.Context, movie *models.Movie) error
 			poster_path = ?,
 			backdrop_path = ?,
 			runtime = ?,
+			duration_seconds = ?,
 			original_language = ?,
 			status = ?,
 			imdb_id = ?,
@@ -235,6 +237,7 @@ func (r *MovieRepository) Update(ctx context.Context, movie *models.Movie) error
 		movie.PosterPath,
 		movie.BackdropPath,
 		movie.Runtime,
+		movie.DurationSeconds,
 		movie.OriginalLanguage,
 		movie.Status,
 		movie.IMDbID,
@@ -563,7 +566,7 @@ func (r *MovieRepository) GetStats(ctx context.Context) (*MediaStats, error) {
 // TestEveryReadPathReturnsEveryColumn guards this.
 const movieSelectColumns = `
 	id, title, original_title, release_date, genres, rating,
-	overview, poster_path, backdrop_path, runtime, original_language,
+	overview, poster_path, backdrop_path, runtime, duration_seconds, original_language,
 	status, imdb_id, tmdb_id,
 	file_path, file_size, parse_status, metadata_source, library_id,
 	subtitle_status, subtitle_path, subtitle_language, subtitle_last_searched, subtitle_search_score,
@@ -613,6 +616,7 @@ func scanMovie(scanner interface {
 		&movie.PosterPath,
 		&movie.BackdropPath,
 		&movie.Runtime,
+		&movie.DurationSeconds,
 		&movie.OriginalLanguage,
 		&movie.Status,
 		&movie.IMDbID,
@@ -714,7 +718,7 @@ func (r *MovieRepository) BulkCreate(ctx context.Context, movies []*models.Movie
 	query := `
 		INSERT INTO movies (
 			id, title, original_title, release_date, genres, rating,
-			overview, poster_path, backdrop_path, runtime, original_language,
+			overview, poster_path, backdrop_path, runtime, duration_seconds, original_language,
 			status, imdb_id, tmdb_id,
 			file_path, file_size, parse_status, metadata_source, library_id, vote_average, vote_count,
 			popularity,
@@ -722,7 +726,7 @@ func (r *MovieRepository) BulkCreate(ctx context.Context, movies []*models.Movie
 			video_codec, video_resolution, audio_codec, audio_channels,
 			subtitle_tracks, hdr_format, production_countries, credits, spoken_languages,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	stmt, err := tx.PrepareContext(ctx, query)
@@ -756,6 +760,7 @@ func (r *MovieRepository) BulkCreate(ctx context.Context, movies []*models.Movie
 			movie.PosterPath,
 			movie.BackdropPath,
 			movie.Runtime,
+			movie.DurationSeconds,
 			movie.OriginalLanguage,
 			movie.Status,
 			movie.IMDbID,
