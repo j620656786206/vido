@@ -61,6 +61,25 @@ func TestSupervisor_DeclaresUnhealthyAfterThreshold(t *testing.T) {
 	}
 }
 
+// Regression (2026-09-06, first CI run of `go test`): a recycle against a closed
+// handle used to race database/sql's cleaner goroutine and panic with "send on
+// closed channel" — the whole test binary died. The verdict must stay unhealthy
+// (nothing was recovered) and the process must stay alive.
+func TestSupervisor_RecoveryOnClosedHandleDoesNotPanic(t *testing.T) {
+	db := newSupervisorTestDB(t)
+	sup := NewSupervisor(db)
+	db.Close()
+
+	sup.healthy.Store(false)
+	for i := 0; i < 50; i++ { // widen the window the race used to need
+		sup.attemptRecovery(context.Background())
+	}
+
+	if sup.Healthy() {
+		t.Fatal("a closed handle must not be reported healthy")
+	}
+}
+
 func TestSupervisor_RecoversOnNextHealthyTick(t *testing.T) {
 	db := newSupervisorTestDB(t)
 	defer db.Close()

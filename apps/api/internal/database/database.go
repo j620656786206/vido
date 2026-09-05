@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"sync"
 
 	"github.com/vido/api/internal/config"
 	_ "modernc.org/sqlite"
@@ -12,6 +13,16 @@ import (
 type DB struct {
 	conn   *sql.DB
 	config *config.DatabaseConfig
+
+	// closeMu serialises Close against the supervisor's pool recycle
+	// (Supervisor.attemptRecovery). database/sql's SetConnMaxLifetime sends on
+	// the pool's cleaner channel, which Close closes — a recycle that lands
+	// between Close and the cleaner goroutine noticing panics the whole process
+	// with "send on closed channel". Reproduced 2026-09-06 by
+	// TestSupervisor_DeclaresUnhealthyAfterThreshold the first time CI ran
+	// `go test` (GOMAXPROCS=1 locally: ~1 in 300).
+	closeMu sync.Mutex
+	closed  bool
 }
 
 // New creates a new database instance with the given configuration
@@ -113,6 +124,14 @@ func (db *DB) Close() error {
 	if db.conn == nil {
 		return nil
 	}
+
+	// Taking closeMu here means a recycle already in flight finishes first,
+	// and one that starts afterwards sees `closed` and backs off. sql.DB.Close
+	// itself is idempotent, so a second Close (main.go defers one and also
+	// calls one explicitly) stays harmless.
+	db.closeMu.Lock()
+	defer db.closeMu.Unlock()
+	db.closed = true
 
 	if err := db.conn.Close(); err != nil {
 		return fmt.Errorf("failed to close database: %w", err)

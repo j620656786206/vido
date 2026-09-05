@@ -153,6 +153,17 @@ func (s *Supervisor) attemptRecovery(ctx context.Context) {
 	cfg := s.db.config
 	conn := s.db.conn
 
+	// A closed handle is shutdown, not an incident: there is no pool left to
+	// recycle, and SetConnMaxLifetime on a closed *sql.DB can panic the process
+	// (it sends on the cleaner channel that Close just closed). Hold closeMu for
+	// the whole recycle so Close cannot slip in between the lifetime pokes.
+	s.db.closeMu.Lock()
+	defer s.db.closeMu.Unlock()
+	if s.db.closed {
+		slog.Warn("Database handle already closed — skipping pool recycle")
+		return
+	}
+
 	// Expire everything: with a 1ns lifetime, every pooled connection is
 	// already expired the moment it is next requested, so the pool closes it
 	// and dials fresh. The short lifetime MUST stay in force through the
