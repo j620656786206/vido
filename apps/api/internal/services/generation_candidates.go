@@ -819,7 +819,7 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 			RuntimeSource:  runtimeSource,
 			PosterPath:     row.posterPath,
 			TMDbMatched:    row.tmdbMatched,
-			DisplayTitle:   candidateDisplayTitle(row.title, row.filePath, row.tmdbMatched),
+			DisplayTitle:   candidateDisplayTitle(row.title, row.filePath, row.mediaType, row.tmdbMatched),
 			EstimatedUSD:   defaultUSD.InexactFloat64(),
 			SeriesID:       row.seriesID,
 			SeriesTitle:    row.seriesTitle,
@@ -1129,17 +1129,36 @@ func (s *GenerationCandidateService) resolveSeriesMeta(ctx context.Context, seri
 // The filename-shaped test is `prompts.LooksLikeFilename` — the same rule
 // sub-6-7 uses to keep release names out of the prompt. One definition of
 // "this is a filename, not a title" for both, by construction.
-func candidateDisplayTitle(title, filePath string, tmdbMatched bool) string {
+//
+// The parser is chosen by MEDIA TYPE. MovieParser gives up the moment a name
+// matches a TV pattern (movie_parser.go: "Skip if it looks like a TV show"),
+// so running it over an episode's filename returns nothing and the row keeps
+// its junk title — the exact defect this function exists to fix, just quieter.
+func candidateDisplayTitle(title, filePath, mediaType string, tmdbMatched bool) string {
 	if tmdbMatched || !prompts.LooksLikeFilename(title) {
 		return title
 	}
 
 	base := strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
-	parsed := parser.NewMovieParser().Parse(base)
-	name := strings.TrimSpace(parsed.CleanedTitle)
-	if name == "" {
-		name = strings.TrimSpace(parsed.Title)
+
+	if mediaType == models.SubtitleRunMediaEpisode {
+		parsed := parser.NewTVParser().Parse(base)
+		show := firstNonEmpty(parsed.CleanedTitle, parsed.Title)
+		if show == "" {
+			return title
+		}
+		// The SxxEyy label the row already carries is its within-season
+		// identity (episodeTitle built it from the DB's own numbers, which are
+		// more trustworthy than anything re-parsed out of a filename). Keep it,
+		// and put the cleaned show name in front of it.
+		if season, episode := parsed.Season, parsed.Episode; season > 0 || episode > 0 {
+			return fmt.Sprintf("%s S%02dE%02d", show, season, episode)
+		}
+		return show
 	}
+
+	parsed := parser.NewMovieParser().Parse(base)
+	name := firstNonEmpty(parsed.CleanedTitle, parsed.Title)
 	if name == "" {
 		// The parser could make nothing of it. The raw title is ugly but it is
 		// at least the string the user will see in their file manager — an
@@ -1150,6 +1169,15 @@ func candidateDisplayTitle(title, filePath string, tmdbMatched bool) string {
 		return fmt.Sprintf("%s (%d)", name, parsed.Year)
 	}
 	return name
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if trimmed := strings.TrimSpace(v); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
 }
 
 func (s *GenerationCandidateService) enumerate(ctx context.Context) ([]candidateRow, error) {

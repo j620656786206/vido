@@ -295,11 +295,12 @@ func TestAnalyze_MissingSeriesRowDegradesToNoPosterNoTitle(t *testing.T) {
 
 func TestCandidateDisplayTitle(t *testing.T) {
 	cases := []struct {
-		name    string
-		title   string
-		path    string
-		matched bool
-		want    string
+		name      string
+		title     string
+		path      string
+		mediaType string
+		matched   bool
+		want      string
 	}{
 		{
 			name:  "matched row keeps the TMDb title untouched",
@@ -322,6 +323,16 @@ func TestCandidateDisplayTitle(t *testing.T) {
 			want: "My Home Movie",
 		},
 		{
+			// MovieParser gives up the moment a name looks TV-shaped, so an
+			// episode routed through it keeps its junk title — the defect this
+			// function exists to fix, just quieter. Episodes go to TVParser.
+			name:      "unmatched episode is re-read with the TV parser",
+			title:     "Show.Name.S01E03.1080p.WEB-DL S01E03",
+			path:      "/tv/Show.Name.S01E03.1080p.WEB-DL.mkv",
+			mediaType: models.SubtitleRunMediaEpisode,
+			want:      "Show Name S01E03",
+		},
+		{
 			name:  "unparseable filename falls back to the raw title",
 			title: "wat.wat.wat.2020.mkv", path: "",
 			want: "wat.wat.wat.2020.mkv",
@@ -330,7 +341,11 @@ func TestCandidateDisplayTitle(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := candidateDisplayTitle(tc.title, tc.path, tc.matched)
+			mediaType := tc.mediaType
+			if mediaType == "" {
+				mediaType = models.SubtitleRunMediaMovie
+			}
+			got := candidateDisplayTitle(tc.title, tc.path, mediaType, tc.matched)
 			if tc.name == "unmatched release name is re-read from the filename" {
 				// The parser's exact spacing is its own business; what this
 				// story promises is "no release tokens, and the year is kept".
