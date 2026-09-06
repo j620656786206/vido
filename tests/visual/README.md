@@ -54,8 +54,9 @@ VISUAL_BUCKETS=4 pnpm run test:visual -- --workers=4      # local: ~4× faster
 
 CI (`.github/workflows/visual-regression.yml`) runs the PR gate as **4 matrix shards** with
 `VISUAL_BUCKETS=4 --shard=i/4`, then a job literally named `PR` aggregates them — that name is
-the ruleset's required check, so do not rename it. The `Main` job stays single-bucket because
-its bootstrap branches parse one probe log. `retries: 0` is pinned on the `visual` project
+the ruleset's required check, so do not rename it. The `Main` job is not sharded (its bootstrap
+branches parse one probe log and commit PNGs from one checkout) — it runs the same 4 buckets
+with `--workers=4` on a single runner instead. `retries: 0` is pinned on the `visual` project
 (pixel comparison is deterministic; retries only tripled the cost of a real diff).
 
 The `visual` project is **not** part of `pnpm run test:e2e` (the feature-E2E scripts list their
