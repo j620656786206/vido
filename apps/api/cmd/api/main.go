@@ -621,6 +621,12 @@ func main() {
 	// 9R-10: wire the per-show glossary + OpenCC safety net + atomic placer
 	// into the Route C generation pipeline.
 	transcriptionService.SetGlossaryRepository(repos.Glossary)
+	// sub-7-1: every glossary consumer resolves the local media id to its
+	// scope (`tmdb:tv:<id>` / `tmdb:movie:<id>` / `local:<id>`) through ONE
+	// resolver, which also upgrades a `local:` drawer into the shared one the
+	// first time a match is seen. No cache — matching can land after the row.
+	glossaryScopes := services.NewGlossaryScopeResolver(repos.Series, repos.Movies, repos.Episodes, repos.Glossary, slog.Default())
+	transcriptionService.SetGlossaryScopeResolver(glossaryScopes)
 	if subtitleConverter != nil {
 		transcriptionService.SetOpenCCConverter(subtitleConverter)
 	}
@@ -712,7 +718,7 @@ func main() {
 			// sub-5-5: per-show glossary feed (去程) + auto-harvest write-back
 			// (回程) over the SAME show_glossary table the legacy path and the
 			// 9R-15 review REST already use.
-			subtitle.WithGlossaryStore(subtitle.NewGlossaryStoreRepository(repos.Glossary)),
+			subtitle.WithGlossaryStore(subtitle.NewGlossaryStoreRepository(repos.Glossary, glossaryScopes)),
 			// sub-6-5: the model id comes from the holder that actually sends
 			// the request, not from the env override — which was "" on every
 			// default-model run and left subtitle_runs.model_id empty.
@@ -867,11 +873,11 @@ func main() {
 		mediaLibraryService,
 		handlers.WithAutoSubtitleSupport(cfg.SubtitlePipelineEnabled),
 	)
-	exploreBlocksHandler := handlers.NewExploreBlocksHandler(exploreBlockService)                // Story 10.3
-	filterPresetsHandler := handlers.NewFilterPresetsHandler(filterPresetService)                // Story 11.4
-	requestHandler := handlers.NewRequestHandler(requestService)                                 // Story 13-1a
-	glossaryHandler := handlers.NewGlossaryHandler(services.NewGlossaryService(repos.Glossary))  // Story 9R-15
-	dvrSettingsHandler := handlers.NewDVRSettingsHandler(dvrSettingsService, "radarr", "sonarr") // Story 13-4a + 13-4b
+	exploreBlocksHandler := handlers.NewExploreBlocksHandler(exploreBlockService)                               // Story 10.3
+	filterPresetsHandler := handlers.NewFilterPresetsHandler(filterPresetService)                               // Story 11.4
+	requestHandler := handlers.NewRequestHandler(requestService)                                                // Story 13-1a
+	glossaryHandler := handlers.NewGlossaryHandler(services.NewGlossaryService(repos.Glossary, glossaryScopes)) // Story 9R-15 (+ sub-7-1 scope)
+	dvrSettingsHandler := handlers.NewDVRSettingsHandler(dvrSettingsService, "radarr", "sonarr")                // Story 13-4a + 13-4b
 	recentMediaHandler := handlers.NewRecentMediaHandler(movieService, seriesService)
 	logHandler := handlers.NewLogHandler(logService)
 	cacheHandler := handlers.NewCacheHandler(cacheStatsService, cacheCleanupService)
@@ -892,6 +898,9 @@ func main() {
 	// 9R-13: .nfo metadata localizer (movies) — additive zh-TW .nfo via the
 	// shared translation + glossary infra. nil when no translation provider.
 	nfoLocalizer := services.NewNFOLocalizerService(translationService, repos.Glossary, slog.Default())
+	if nfoLocalizer != nil {
+		nfoLocalizer.SetGlossaryScopeResolver(glossaryScopes)
+	}
 	if nfoLocalizer != nil {
 		// 9R-13a: episode enumeration behind ?include_episodes=true.
 		nfoLocalizer.SetEpisodeLister(repos.Episodes)

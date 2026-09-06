@@ -24,7 +24,10 @@ import (
 type NFOLocalizerService struct {
 	translation  *TranslationService
 	glossaryRepo repository.GlossaryRepositoryInterface
-	logger       *slog.Logger
+	// glossaryScopes turns the media id into the glossary scope (sub-7-1);
+	// nil keys the lookup under `local:<id>`.
+	glossaryScopes GlossaryScopeResolverInterface
+	logger         *slog.Logger
 
 	// episodes enumerates a series' episodes for the 9R-13a whole-show batch.
 	// Optional / nil-safe — unwired means `include_episodes` localizes the show
@@ -89,12 +92,26 @@ func (s *NFOLocalizerService) LocalizeMovieNFO(ctx context.Context, movie models
 	return writeAdditiveNFO(movie.FilePath.String, data)
 }
 
-// loadGlossary loads the per-show glossary as translation pairs (fail-soft).
+// SetGlossaryScopeResolver wires the media-id → scope resolver (sub-7-1 AC #2).
+func (s *NFOLocalizerService) SetGlossaryScopeResolver(r GlossaryScopeResolverInterface) {
+	s.glossaryScopes = r
+}
+
+// loadGlossary loads the per-show glossary as translation pairs (fail-soft:
+// a resolver or lookup failure localizes without a glossary).
 func (s *NFOLocalizerService) loadGlossary(ctx context.Context, mediaID string) []GlossaryPair {
 	if s.glossaryRepo == nil {
 		return nil
 	}
-	m, err := s.glossaryRepo.LookupByMedia(ctx, mediaID, false)
+	scope := localScopeFallback(mediaID)
+	if s.glossaryScopes != nil {
+		resolved, err := s.glossaryScopes.Resolve(ctx, mediaID)
+		if err != nil {
+			return nil
+		}
+		scope = resolved
+	}
+	m, err := s.glossaryRepo.LookupByScope(ctx, scope, false)
 	if err != nil || len(m) == 0 {
 		return nil
 	}
