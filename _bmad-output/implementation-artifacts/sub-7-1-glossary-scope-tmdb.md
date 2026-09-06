@@ -1,6 +1,6 @@
 # Story 7.1: `show_glossary` 改綁 TMDb ID（scope 層）—— 詞彙表跨機器對得上（後端）
 
-Status: review — 5 task 全數交付（migration 號碼是 **036**，story 寫「下一個空號」時 034/035 已被 sub-6-2／sub-6-10a 用掉）。
+Status: done（Alexyu 2026-09-06 裁定；PR #395 squash 6a4358bf，main 全綠）— 原 review 註記：5 task 全數交付（migration 號碼是 **036**，story 寫「下一個空號」時 034/035 已被 sub-6-2／sub-6-10a 用掉）。
 
 ## Story
 
