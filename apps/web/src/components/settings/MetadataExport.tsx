@@ -28,7 +28,7 @@ export function MetadataExport() {
     try {
       const result = await exportMutation.mutateAsync(format);
       if (result.status === 'completed') {
-        setMessage({ tone: 'ok', text: result.message });
+        setMessage({ tone: 'ok', text: result.message ?? '匯出完成' });
         if (result.exportId && result.format !== 'nfo') {
           setDownloadId(result.exportId);
         }

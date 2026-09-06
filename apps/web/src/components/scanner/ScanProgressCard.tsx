@@ -51,7 +51,7 @@ export function ScanProgressCard({
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [isAutoDismissing, setIsAutoDismissing] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const autoDismissTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const autoDismissTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const clearAutoDismiss = useCallback(() => {
     if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);

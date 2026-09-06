@@ -21,12 +21,17 @@ export function EmptyNoFolder() {
 
       <div className="flex items-center gap-3">
         <Link
-          to="/settings/libraries"
+          to="/setup"
           className="rounded-lg bg-[var(--accent-primary)] px-5 py-2.5 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)]"
           data-testid="empty-no-folder-libraries-btn"
         >
           設定媒體資料夾
         </Link>
+        {/* Both CTAs land on /setup for now: /settings/libraries does not exist
+            yet (multi-library PRD done, route not built) and the wizard's
+            媒體資料夾 step is where folders are configured today. Typecheck
+            caught the dead route on 2026-09-06 — retarget when the libraries
+            page lands. */}
         <Link
           to="/setup"
           className="rounded-lg border border-[var(--border-subtle)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--text-muted)] hover:text-[var(--text-primary)]"

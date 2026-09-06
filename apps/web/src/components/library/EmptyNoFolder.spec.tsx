@@ -29,10 +29,10 @@ describe('EmptyNoFolder (bugfix-10-5 Case B: qBT OK, no media folder)', () => {
     expect(screen.getByText('Vido 會掃描資料夾中的影片並自動匹配 TMDb 資訊')).toBeInTheDocument();
   });
 
-  it('renders primary CTA linking to /settings/libraries (AC #3)', () => {
+  it('renders primary CTA linking to /setup — the setup wizard 媒體資料夾 step, until a libraries settings page exists (AC #3)', () => {
     render(<EmptyNoFolder />);
     const link = screen.getByTestId('empty-no-folder-libraries-btn');
-    expect(link).toHaveAttribute('href', '/settings/libraries');
+    expect(link).toHaveAttribute('href', '/setup');
     expect(link).toHaveTextContent('設定媒體資料夾');
   });
 

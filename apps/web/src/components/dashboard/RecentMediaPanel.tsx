@@ -99,7 +99,11 @@ export function RecentMediaPanel({ className, hideWhenEmpty = false }: RecentMed
 
 function MediaCard({ media }: { media: RecentMedia }) {
   return (
-    <Link to="/media/$id" params={{ id: media.id }} className="group relative">
+    <Link
+      to="/media/$type/$id"
+      params={{ type: media.mediaType, id: media.id }}
+      className="group relative"
+    >
       <div className="aspect-[2/3] overflow-hidden rounded-lg bg-[var(--bg-tertiary)]">
         {media.posterUrl ? (
           <img

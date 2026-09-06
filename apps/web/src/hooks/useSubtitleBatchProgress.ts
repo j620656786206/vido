@@ -83,7 +83,7 @@ function isTerminal(status: BatchStatus): boolean {
 export function useSubtitleBatchProgress() {
   const [progress, dispatch] = useReducer(reducer, initialState);
   const eventSourceRef = useRef<EventSource | null>(null);
-  const sseReconnectRef = useRef<ReturnType<typeof setTimeout>>();
+  const sseReconnectRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const mountedRef = useRef(true);
   // Holds the latest connectSSE so the reconnect timer can call it without a
   // self-referential useCallback (which trips react-hooks/immutability).
