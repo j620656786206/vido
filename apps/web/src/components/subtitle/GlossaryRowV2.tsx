@@ -18,6 +18,14 @@ const SOURCE_BADGE: Record<GlossarySource, { label: string; className: string }>
   subtitle: { label: '字幕', className: 'bg-[var(--info-tint)] text-[var(--info-text)]' },
   metadata: { label: '中繼資料', className: 'bg-[var(--accent-tint)] text-[var(--accent-text)]' },
   manual: { label: '手動', className: 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]' },
+  // sub-7-1 AC #4 (P1-10 殘餘): the two provenances the shared drawer brings.
+  // 官方字幕 is the most trusted machine source, so it wears the success
+  // tint; 社群 came from someone else's install and reads as such.
+  official_subtitle: {
+    label: '官方字幕',
+    className: 'bg-[var(--success-tint)] text-[var(--success-text)]',
+  },
+  community: { label: '社群', className: 'bg-[var(--warning-tint)] text-[var(--warning-text)]' },
 };
 
 export interface GlossaryRowV2Props {
