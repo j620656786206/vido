@@ -33,11 +33,6 @@ func TestClient_GetMovieCreditsWithLanguage(t *testing.T) {
 	require.Len(t, result.Crew, 1)
 	assert.Equal(t, "Director", result.Crew[0].Job)
 
-	// The default-language wrapper forwards the client language.
-	_, err = client.GetMovieCredits(context.Background(), 550)
-	require.NoError(t, err)
-	assert.Equal(t, "zh-TW", gotLanguage)
-
 	// An explicit language overrides the client default.
 	_, err = client.GetMovieCreditsWithLanguage(context.Background(), 550, "en-US")
 	require.NoError(t, err)

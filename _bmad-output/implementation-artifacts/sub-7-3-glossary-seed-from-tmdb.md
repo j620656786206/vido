@@ -38,9 +38,9 @@ eval-1 發現 13：`show_glossary` 261 筆 `source` 全是 `subtitle`，schema �
   - [x] credits 抓失敗只 warn，row 照樣 enriched；沒有 TMDb id（Douban／Wikipedia 比對）完全不碰 seeder
   - [x] 冪等靠 repo 的 `InsertIfAbsent`（`ON CONFLICT … DO NOTHING`，NOCASE unique）；同一輪內另外以小寫 src 去重
 - [x] **Task 4 — 測試（AC: #6）**
-  - [x] (a)(b)(c)(d) `TestNormalizeSeedPair_Table` 35 例＋ `GenericTableIsExhaustive` 逐條驗證泛稱表；(b) 簡→繁在 `TestSeedFromCredits_ConvertsSimplifiedInOneOpenCCCall`（一部片一次 OpenCC）＋ 不在／失敗時原樣存
+  - [x] (a)(b)(c)(d) `TestNormalizeSeedPair_Table` 43 例＋ `GenericTableIsExhaustive` 逐條驗證泛稱表；(b) 簡→繁在 `TestSeedFromCredits_ConvertsSimplifiedInOneOpenCCCall`（一部片一次 OpenCC）＋ 不在／失敗時原樣存
   - [x] (e) `TestSeedFromCredits_RescanIsIdempotentAndNeverOverwritesUserTerms` 跑**真 repo**（sqlite + 全部 migration）：manual／confirmed 不動、重跑 Seeded=0
-  - [x] (f) `enrichment_glossary_seed_test.go` 11 條：NFO 路徑／搜尋路徑／影集路徑各驗「fetch → write → credits → seed」順序、credits **不**經 `UpdateEnrichedMetadata 偷渡、無 resolver 時 fallback scope、resolver 失敗 fallback、抓失敗仍 enriched、`manual` row 不覆寫 cast 但仍播種、`tmdb` 重比對換 cast、非 TMDb 來源不碰 seeder、沒接 seeder 行為不變
+  - [x] (f) `enrichment_glossary_seed_test.go` 14 條：NFO 路徑／搜尋路徑／影集路徑各驗「fetch → write → credits → seed」順序、credits **不**經 `UpdateEnrichedMetadata 偷渡、無 resolver 時 fallback scope、resolver 失敗 fallback、抓失敗仍 enriched、`manual` row 不覆寫 cast 但仍播種、`tmdb` 重比對換 cast、非 TMDb 來源（含**數字**豆瓣 id）不碰 seeder、NFO 沒 id 時不用 row 上舊的 tmdb_id、movie row 比成 TV 只存 cast 不播、resolver 失敗跳過不亂猜 scope、沒接 seeder 行為不變
   - [x] `repository/enriched_metadata_credits_test.go`：`UpdateCredits` 真 sqlite 來回（寫→讀回→`UpdateEnrichedMetadata` 不清掉→nil 清空→不存在的 id 報錯）
   - [x] `tmdb/credits_test.go`：兩個端點的路徑／language 參數／解析；`tmdb/cache_credits_test.go`：語言進 cache key、miss→hit、上游錯不進快取、client 未注入報錯
 
@@ -75,7 +75,9 @@ Claude Fable 5.1（claude-fable-5-1），2026-09-07
   - ✅ 修：第一版把 cast 用 `SetCredits` 放在 struct 上、指望 `UpdateEnrichedMetadata` 帶出去——但那支窄寫入器**刻意不寫 credits 欄**（9R-10b CR-249 B），所以 cast 從沒進 DB，10 條 enrichment 測試全靠 fake 收 in-memory struct 才綠。改成 repo 各加 `UpdateCredits`（只寫一欄）＋ 真 sqlite 來回測試釘住。
   - ✅ 修：「有 cast 就當使用者的」是用內容猜 provenance；改用 row 的 `metadata_source` 走 `ShouldOverwrite`，跟 title／poster 同一套。
   - ✅ 修：credits 繞過 cache 層每次重抓 → 語言進 key 的 cached getter；`CreditsClient()` 為 nil 時 main.go 補 warn。
+  - ✅ 修（第二輪）：(a) `applyMetadataToMovie/Series` 會把**任何**數字 provider id 存進 `tmdb_id`（豆瓣 subject id 也是數字）→ credits／播種改成只在 `searchResult.Source == tmdb` 才做；(b) NFO 路徑原本拿 row 上**既有**的 tmdb_id 抓 credits——重比對錯片時 tmdb_id 還留著，會種錯片的 cast → 改成只在**這一趟**真的比到 TMDb 才做；(c) movie row 被 parser 判成 TV：resolver 照表拼 `tmdb:movie:<tvid>`，會把影集的 cast 種進某部**電影**的共享抽屜 → cast 照存、播種跳過並 warn；(d) resolver 失敗時原本 fallback 自己拼 scope 先種——但 Resolve 同時是 local→tmdb 搬家、`MigrateScope` 不覆寫，先種會永久遮住使用者在未比對期間確認過的詞 → 改成跳過（下一次 resolve 再種）；(e) 三個 regex：`Agent 47`／`Android 18` 不再被當編號臨演（改錨定泛稱名詞）、括號改由內往外剝且殘留括號就拒絕（`Bob)` 不會變成永久垃圾列）、`Bruce Wayne/Batman` 無空白斜線也能拆。各補測試。
   - ❌ 不採（spec 如此）：「來源語言寫死 en-US、非英文片靜默沒播」——AC #2 明寫英文角色名，且整條翻譯管線本來就是 FR10 English→LLM（`router.go` 非英文軌直接 skip），非英文片沒有「第一集詞彙表」可言。
+  - ⏭ 不做（記錄）：「每部片播種成本」——Resolve 多 2～3 次讀＋一個 MigrateScope 交易、一次 opencc subprocess、20～40 個 autocommit insert；enrichment 每部片本來就有 LLM 檔名解析＋TMDb 搜尋（秒級），這些是毫秒級，且只對 pending 列跑。審查建議的「scope 已有 metadata 詞就整批跳過」會讓 TMDb 後來補的角色永遠進不來，語意不對；`InsertManyIfAbsent` 批次交易等 sub-7-5 一起（它會插更多）。
   - ⏭ 立案：「只有 enrichment pending 列會播種——既有已比對片庫（sub-7-1 乾跑的 133 tv／87 movie）與下載完成走 parse queue 建的列（`createMovieFromMatch` 直接 `success`）永遠不會被播種」——是產品缺口，不是本 story 的 AC；審查建議的長解是把播種掛在 `GlossaryScopeResolver` 第一次解到 `tmdb:` scope 的那一刻（順便涵蓋既有片庫的下一次字幕跑），這是換 seam 的架構決定，交 Alexyu 裁定，見 `backlog-glossary-seed-existing-library-and-parse-queue`。
 - 驗證：`go test ./...` 35 套件全綠；`nx lint api`（vet + staticcheck）乾淨；FE 零改動（sub-7-1 已能顯示「中繼資料」徽章）。
 

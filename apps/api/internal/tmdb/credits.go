@@ -17,7 +17,7 @@ import (
 //
 // NOTE: these are intentionally NOT part of ClientInterface (same reasoning as
 // SearchPeople): adding them there would force every ClientInterface mock to
-// grow four methods. Consumers depend on CreditsClientInterface instead —
+// grow two methods. Consumers depend on CreditsClientInterface instead —
 // CacheService adds a language-keyed cache in front of *Client.
 
 // CreditsClientInterface is the narrow surface the credits consumers depend
@@ -104,12 +104,6 @@ type TVAggregateCredits struct {
 	Crew []AggregateCrew `json:"crew"`
 }
 
-// GetMovieCredits retrieves a movie's cast and crew in the client's default
-// language.
-func (c *Client) GetMovieCredits(ctx context.Context, movieID int) (*MovieCredits, error) {
-	return c.GetMovieCreditsWithLanguage(ctx, movieID, c.language)
-}
-
 // GetMovieCreditsWithLanguage retrieves a movie's cast and crew
 // (GET /movie/{id}/credits) in a specific language.
 func (c *Client) GetMovieCreditsWithLanguage(ctx context.Context, movieID int, language string) (*MovieCredits, error) {
@@ -125,12 +119,6 @@ func (c *Client) GetMovieCreditsWithLanguage(ctx context.Context, movieID int, l
 		return nil, fmt.Errorf("failed to get movie credits: %w", err)
 	}
 	return &result, nil
-}
-
-// GetTVAggregateCredits retrieves a series' aggregated cast and crew in the
-// client's default language.
-func (c *Client) GetTVAggregateCredits(ctx context.Context, tvID int) (*TVAggregateCredits, error) {
-	return c.GetTVAggregateCreditsWithLanguage(ctx, tvID, c.language)
 }
 
 // GetTVAggregateCreditsWithLanguage retrieves a series' aggregated cast and

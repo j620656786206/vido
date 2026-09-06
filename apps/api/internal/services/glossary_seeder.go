@@ -427,15 +427,20 @@ var (
 	// glossarySeedParenthetical strips TMDb's role qualifiers: "(voice)",
 	// "(uncredited)", "(archive footage)", "(as Bob)" — ASCII or full-width
 	// parentheses, since zh-TW editors type either.
-	glossarySeedParenthetical = regexp.MustCompile(`\s*[(（][^)）]*[)）]`)
+	// Matches the INNERMOST group (no parenthesis inside) so stripQualifiers
+	// can peel nested ones from the inside out.
+	glossarySeedParenthetical = regexp.MustCompile(`\s*[(（][^()（）]*[)）]`)
 	// glossarySeedFileShape rejects anything that looks like it came off a
 	// filesystem rather than a cast list: extensions, path separators, SxxEyy
 	// tags, release-group tokens.
 	glossarySeedFileShape = regexp.MustCompile(`(?i)(\.(mkv|mp4|avi|mov|wmv|flv|ts|srt|ass|ssa|sub|nfo|jpg|jpeg|png)\b|[\\/]|\bS\d{1,2}E\d{1,3}\b|\b(1080p|2160p|720p|480p|x264|x265|h\.?264|h\.?265|hevc|bluray|web-?dl|webrip|hdtv)\b)`)
 	// glossarySeedNumberedRole rejects "Guard #2", "Thug 3" — an unnamed
-	// extra whose "name" is a counter.
-	glossarySeedNumberedRole = regexp.MustCompile(`(#\s*\d+|\s\d+)$`)
-	glossarySeedMultiRoleSep = " / "
+	// extra whose "name" is a counter. Anchored on a generic noun so that a
+	// real digit-suffixed name (Agent 47, Android 18, Johnny 5) survives.
+	glossarySeedNumberedRole = regexp.MustCompile(`(?i)(#\s*\d+$|^(?:guard|thug|goon|henchman|man|woman|boy|girl|kid|child|cop|police officer|officer|soldier|nurse|doctor|waiter|waitress|student|extra|reporter|customer|passenger|prisoner|inmate|villager|citizen|worker|employee|agent smith)\s*#?\s*\d+$)`)
+	// glossarySeedMultiRoleSep splits "Walter White / Heisenberg" and the
+	// unspaced "Bruce Wayne/Batman" alike — both spellings are common on TMDb.
+	glossarySeedMultiRoleSep = regexp.MustCompile(`\s*/\s*`)
 )
 
 // normalizeSeedPair applies the noise filters to one pair and returns the
@@ -445,17 +450,23 @@ var (
 // slash-joined src whose zh side has a different number of parts is rejected
 // rather than guessed.
 func normalizeSeedPair(p CastPair) (src, zh string, ok bool) {
-	src = strings.TrimSpace(glossarySeedParenthetical.ReplaceAllString(p.Src, ""))
-	zh = strings.TrimSpace(glossarySeedParenthetical.ReplaceAllString(p.Zh, ""))
+	src, ok = stripQualifiers(p.Src)
+	if !ok {
+		return "", "", false
+	}
+	zh, ok = stripQualifiers(p.Zh)
+	if !ok {
+		return "", "", false
+	}
 	if src == "" || zh == "" {
 		return "", "", false
 	}
 	// A multi-role credit: only seed when both sides agree on the count,
 	// and then seed the first role (the others are usually aliases the
 	// glossary would confuse with the primary name).
-	if strings.Contains(src, glossarySeedMultiRoleSep) || strings.Contains(zh, glossarySeedMultiRoleSep) {
-		sp := strings.Split(src, glossarySeedMultiRoleSep)
-		zp := strings.Split(zh, glossarySeedMultiRoleSep)
+	if strings.Contains(src, "/") || strings.Contains(zh, "/") {
+		sp := glossarySeedMultiRoleSep.Split(src, -1)
+		zp := glossarySeedMultiRoleSep.Split(zh, -1)
 		if len(sp) != len(zp) {
 			return "", "", false
 		}
@@ -500,6 +511,25 @@ func containsHan(s string) bool {
 		}
 	}
 	return false
+}
+
+// stripQualifiers removes every parenthetical, including nested ones, and
+// refuses a term that still carries an unbalanced parenthesis — "Bob)" or
+// "Bob (as Robert" would otherwise become a permanent junk glossary row that
+// no subtitle line ever matches and that the NOCASE index will not dedupe
+// against a later correct "Bob".
+func stripQualifiers(s string) (string, bool) {
+	for {
+		next := glossarySeedParenthetical.ReplaceAllString(s, "")
+		if next == s {
+			break
+		}
+		s = next
+	}
+	if strings.ContainsAny(s, "()（）") {
+		return "", false
+	}
+	return strings.TrimSpace(s), true
 }
 
 func hasASCIILetter(s string) bool {

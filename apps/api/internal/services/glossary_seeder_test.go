@@ -108,9 +108,15 @@ func TestNormalizeSeedPair_Table(t *testing.T) {
 		{"police officer", CastPair{"character", "Police Officer", "警察"}, false, "", ""},
 		{"numbered extra", CastPair{"character", "Guard #2", "警衛2"}, false, "", ""},
 		{"numbered extra no hash", CastPair{"character", "Thug 3", "惡棍3"}, false, "", ""},
+		{"numbered extra no space", CastPair{"character", "Thug3", "惡棍3"}, false, "", ""},
+		{"real name with digits kept", CastPair{"character", "Agent 47", "47號特工"}, true, "Agent 47", "47號特工"},
+		{"real name with digits kept 2", CastPair{"character", "Android 18", "人造人18號"}, true, "Android 18", "人造人18號"},
 		// parenthetical qualifiers are stripped, not fatal
 		{"voice qualifier stripped, full-width too", CastPair{"character", "Bob (voice)", "鮑伯（配音）"}, true, "Bob", "鮑伯"},
 		{"uncredited stripped both sides", CastPair{"character", "Bob (uncredited)", "鮑伯 (uncredited)"}, true, "Bob", "鮑伯"},
+		{"nested parentheses fully stripped", CastPair{"character", "Bob (voice (uncredited))", "鮑伯"}, true, "Bob", "鮑伯"},
+		{"unbalanced parenthesis rejected", CastPair{"character", "Bob (as Robert", "鮑伯"}, false, "", ""},
+		{"stray close paren rejected", CastPair{"character", "Bob)", "鮑伯"}, false, "", ""},
 		// length
 		{"too long", CastPair{"character", strings.Repeat("A", 41), "長"}, false, "", ""},
 		{"exactly 40 ok", CastPair{"character", strings.Repeat("A", 40), "長"}, true, strings.Repeat("A", 40), "長"},
@@ -127,6 +133,8 @@ func TestNormalizeSeedPair_Table(t *testing.T) {
 		// multi-role
 		{"multi role paired first", CastPair{"character", "Walter White / Heisenberg", "華特·懷特 / 海森堡"}, true, "Walter White", "華特·懷特"},
 		{"multi role count mismatch", CastPair{"character", "Walter White / Heisenberg", "華特·懷特"}, false, "", ""},
+		{"multi role unspaced slash", CastPair{"character", "Bruce Wayne/Batman", "布魯斯·韋恩/蝙蝠俠"}, true, "Bruce Wayne", "布魯斯·韋恩"},
+		{"multi role mixed spacing", CastPair{"character", "Bruce Wayne / Batman", "布魯斯·韋恩/蝙蝠俠"}, true, "Bruce Wayne", "布魯斯·韋恩"},
 		// actor names
 		{"actor translated", CastPair{"actor", "Bryan Cranston", "布萊恩·克蘭斯頓"}, true, "Bryan Cranston", "布萊恩·克蘭斯頓"},
 		{"actor untranslated", CastPair{"actor", "Bryan Cranston", "Bryan Cranston"}, false, "", ""},
