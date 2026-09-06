@@ -1,6 +1,6 @@
 # Story 6.10b: 候選列身分 —— 封面、片長並列、未匹配標記（前端）
 
-Status: review — 五個 AC 全數交付。程式與測試（Task 1／2／4）、`.pen` + 截圖 + `-darwin` 基準線（Task 3，`6dc7852`）皆已完成。**唯一未結項：三張 `-linux` 基準線待 CI bootstrap PR 合併**（已於 2026-09-05 dispatch，run 950）。
+Status: done（Alexyu 2026-09-06 裁定直接改 done，未走換模型 CR）— 原 review 註記： — 五個 AC 全數交付。程式與測試（Task 1／2／4）、`.pen` + 截圖 + `-darwin` 基準線（Task 3，`6dc7852`）皆已完成。**唯一未結項：三張 `-linux` 基準線待 CI bootstrap PR 合併**（已於 2026-09-05 dispatch，run 950）。
 
 **Depends on:** sub-6-10a（`poster_path`、`runtime_source`、`tmdb_matched`、`display_title`）。
 

@@ -1,6 +1,6 @@
 # Story 6.10a: 候選列身分 —— 封面、真實片長、未匹配標題（後端）
 
-Status: review — 5 task 全數交付（migration **035**，不是 story 寫的「033 已用」時的預期號碼）
+Status: done（Alexyu 2026-09-06 裁定直接改 done，未走換模型 CR）— 原 review 註記： — 5 task 全數交付（migration **035**，不是 story 寫的「033 已用」時的預期號碼）
 
 ## Story
 
