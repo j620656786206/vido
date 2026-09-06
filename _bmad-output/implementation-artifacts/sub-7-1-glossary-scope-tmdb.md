@@ -57,7 +57,7 @@ Claude Fable 5.1（claude-fable-5-1），2026-09-06
 ### Completion Notes List
 
 - **正式資料乾跑**（NAS `vido.db` 用 `.backup` 取一致快照後在本機跑 033→036）：261 列 → 259 列；220 列進 `tmdb:*`（133 tv / 87 movie）、39 列留 `local:`（一部沒比對到的電影 `b7def516…`）；被合併的 2 組正好是《火星任務》（tmdb:movie:687163）的 `Astrophage`／`astrophage`（留「蟲洞菌」）與 `xenonite`／`Xenonite`（留「氙石」）——eval-1 拿 Demogorgon 舉的例在真資料裡真的存在。乾跑用的 test 檔沒進 repo。
-- **裁量 1（偏離 Dev Notes 的「port 簽名改吃 scope」）**：`subtitle.GlossaryStore` 兩個方法**仍吃 pipeline 的 glossary key（本機 show id）**，改在 adapter 內先 resolve 再打 repo。理由：(a) pipeline 不需要知道 scope 是什麼；(b) harvest 寫入需要本機 id 填 `media_id` 稽核欄；(c) `subtitle` 不能 import `services`（反向已存在），所以 resolver 以 `subtitle.GlossaryScopeResolver` port 注入 adapter。效果等同 AC #2「四個消費者先 resolve 再查 repo」，pipeline 程式碼零改動。
+- **裁量 1（偏離 Dev Notes 的「port 簽名改吃 scope」）— ⚖️ Alexyu 2026-09-06 裁定採 A（adapter 內解 scope、port 不動）**：`subtitle.GlossaryStore` 兩個方法**仍吃 pipeline 的 glossary key（本機 show id）**，改在 adapter 內先 resolve 再打 repo。理由：(a) pipeline 不需要知道 scope 是什麼；(b) harvest 寫入需要本機 id 填 `media_id` 稽核欄；(c) `subtitle` 不能 import `services`（反向已存在），所以 resolver 以 `subtitle.GlossaryScopeResolver` port 注入 adapter。效果等同 AC #2「四個消費者先 resolve 再查 repo」，pipeline 程式碼零改動。
 - **裁量 2（AC #3 的「不覆寫」怎麼落地）**：搬家時，shared 抽屜已有同詞（NOCASE）的 local 列**留在 `local:` 不刪**，計入 `skipped` 並 log。不刪是因為那可能是使用者確認過的譯名；它從此不會被讀到（resolver 只回 tmdb），但資料還在，之後要做「分歧攤開」（B 路線）時有材料。
 - **裁量 3**：resolver 對 episode id 除了掃 `local:<series id>`，也掃 `local:<episode id>`——sub-5-5 之前的舊路徑曾用 episode id 當 key 寫過。
 - **裁量 4**：`media_id` 留 `NOT NULL`（每條寫入路徑都有本機 id）；`GlossaryTerm` 的 JSON 多一個 `scope` 欄（additive，web 端沒用）。
