@@ -2,7 +2,9 @@
 /**
  * F15 產生字幕．候選清單 (sub-4-3 AC #2/#3) — the core consent screen; F18 is
  * the same panel in its over-budget state; F15-M is the responsive variant
- * (the host dialog is already a mobile bottom sheet).
+ * (the host dialog is already a mobile bottom sheet, and since
+ * bugfix-f15-row-mobile-identity-collapse the ROW itself re-flows below 36rem
+ * of list width — see CandidateRow).
  *
  * Money honesty (§5-sexies 2026-08-11): every amount renders the backend's
  * `estimated_usd` VERBATIM through the shared usd() formatter — the extract
@@ -125,7 +127,13 @@ function routeSubtitle(c: GenerationCandidate): string {
 function CandidatePoster({ candidate }: { candidate: GenerationCandidate }) {
   const [failed, setFailed] = useState(false);
   const url = getImageUrl(candidate.posterPath ?? null, 'w92');
-  const boxClass = 'h-[54px] w-[38px] shrink-0 rounded-[var(--radius-sm)]';
+  // Column 2 across both grid rows: the row is a two-line grid (see
+  // CandidateRow) and the poster, like the checkbox, is centred across both
+  // lines in either layout. Explicit start/end, never *-span-*: Tailwind's span
+  // utilities are the grid-row/grid-column SHORTHANDS and would throw the cell
+  // back to auto-placement.
+  const boxClass =
+    'col-start-2 row-start-1 row-end-3 h-[54px] w-[38px] shrink-0 rounded-[var(--radius-sm)]';
 
   if (!url || failed) {
     const initial = displayTitleOf(candidate).trim().charAt(0) || '？';
@@ -187,7 +195,28 @@ function CandidateRow({
       data-route={candidate.route}
       data-writable={writable ? 'true' : 'false'}
       className={cn(
-        'flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3.5 py-3',
+        // A two-line GRID, not a flex row, so the SAME five nodes (checkbox ·
+        // poster · title line · state→kind→cost cluster · subtitle) lay out
+        // two ways depending on the width the row actually gets — a container
+        // query on the <ul>, not the viewport, so the drawn phone row also
+        // holds in a narrow desktop dialog and can be pinned by a 390px
+        // gallery fixture (bugfix-f15-row-mobile-identity-collapse):
+        //
+        //   list ≥ 36rem (F15-D-v2 pwMzT)
+        //     [☑][▣][title · 未匹配 ………………………][status · kind · cost]   ← cluster spans both lines
+        //     [ ][ ][route · runtime, one line…][                    ]
+        //   list < 36rem (F15-M-v2 fdu4y)
+        //     [☑][▣][title · 未匹配 ……][status · cost]   ← cluster moves onto the title line
+        //     [ ][ ][route · runtime, wrapping across both columns ……]
+        //
+        // Why: on a 390px phone the identity column was getting 115–131px of
+        // the 227–303px the subtitle needs, because the cluster is shrink-0 —
+        // 「· 片長」 was invisible on EVERY row, and the worst row lost half its
+        // route too. Moving the cost up beside the title and letting the
+        // subtitle take both columns (and wrap) gives it the full 256px the
+        // drawing shows. The kind badge (抽取／語音辨識) goes below 36rem: the
+        // amount's colour already says extract (green) vs ASR (amber).
+        'grid grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-x-3 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3.5 py-3',
         !writable && 'opacity-70'
       )}
     >
@@ -197,39 +226,47 @@ function CandidateRow({
         checked={checked}
         disabled={!writable}
         onChange={() => onToggle(candidate.mediaId)}
-        className="h-4 w-4 shrink-0 accent-[var(--accent-primary)] disabled:cursor-not-allowed"
+        className="col-start-1 row-start-1 row-end-3 h-4 w-4 shrink-0 accent-[var(--accent-primary)] disabled:cursor-not-allowed"
       />
       <CandidatePoster candidate={candidate} />
-      <span className="min-w-0 flex-1">
-        {/* Sally 裁定 2 (2026-09-05): the identity column carries the doubt
-            about the identity. The right-hand cluster is state → kind → cost;
-            「未匹配」 is none of those, and a grey badge half a row away does
-            not read as being ABOUT the title. */}
-        <span className="flex min-w-0 items-center gap-2">
+      {/* Sally 裁定 2 (2026-09-05): the identity column carries the doubt
+          about the identity. The right-hand cluster is state → kind → cost;
+          「未匹配」 is none of those, and a grey badge half a row away does
+          not read as being ABOUT the title. */}
+      <span className="col-start-3 row-start-1 flex min-w-0 items-center gap-2">
+        <span
+          className="truncate text-sm text-[var(--text-primary)]"
+          // sub-6-10b AC #3: an unmatched row shows the parser's cleaned-up
+          // guess, so hovering must still reveal what the file is really
+          // called — that is the string the user will look for on disk.
+          title={unmatched ? candidate.title : undefined}
+        >
+          {displayTitleOf(candidate)}
+        </span>
+        {unmatched && (
           <span
-            className="truncate text-sm text-[var(--text-primary)]"
-            // sub-6-10b AC #3: an unmatched row shows the parser's cleaned-up
-            // guess, so hovering must still reveal what the file is really
-            // called — that is the string the user will look for on disk.
-            title={unmatched ? candidate.title : undefined}
+            data-testid={`consent-row-unmatched-${candidate.mediaId}`}
+            title="TMDb 沒有比對到，片名由檔名解析"
+            className="shrink-0 rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-2 py-0.5 text-xs text-[var(--text-muted)]"
           >
-            {displayTitleOf(candidate)}
+            未匹配
           </span>
-          {unmatched && (
-            <span
-              data-testid={`consent-row-unmatched-${candidate.mediaId}`}
-              title="TMDb 沒有比對到，片名由檔名解析"
-              className="shrink-0 rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-2 py-0.5 text-xs text-[var(--text-muted)]"
-            >
-              未匹配
-            </span>
-          )}
-        </span>
-        <span className="block truncate text-xs text-[var(--text-muted)]">
-          {routeSubtitle(candidate)}
-        </span>
+        )}
       </span>
-      <span className="flex shrink-0 items-center gap-2">
+      {/* Subtitle: one truncated line beside the cluster on desktop; below
+          36rem it takes both columns and wraps — the drawn phone row has the
+          whole 256px, and a route sentence cut in half tells the user nothing
+          about why the row costs money. */}
+      <span
+        data-testid={`consent-row-subtitle-${candidate.mediaId}`}
+        className="col-start-3 row-start-2 block truncate text-xs text-[var(--text-muted)] @max-xl:col-end-5 @max-xl:whitespace-normal"
+      >
+        {routeSubtitle(candidate)}
+      </span>
+      <span
+        data-testid={`consent-row-cluster-${candidate.mediaId}`}
+        className="col-start-4 row-start-1 flex shrink-0 items-center gap-2 @xl:row-end-3"
+      >
         {!writable && (
           <span
             data-testid={`consent-row-unwritable-${candidate.mediaId}`}
@@ -240,8 +277,9 @@ function CandidateRow({
           </span>
         )}
         <span
+          data-testid={`consent-row-kind-${candidate.mediaId}`}
           className={cn(
-            'rounded-[var(--radius-sm)] px-2 py-0.5 text-[11px]',
+            'hidden rounded-[var(--radius-sm)] px-2 py-0.5 text-[11px] @xl:inline',
             isExtract
               ? 'bg-[var(--success-tint)] text-[var(--success-text)]'
               : 'bg-[var(--warning-tint)] text-[var(--warning-text)]'
@@ -509,7 +547,9 @@ export function CandidateListPanel({
             the groupOrder the container already re-sorted the candidates STATE
             into, so rows here render in submission (= feasible-walk) order;
             the chips only decide row VISIBILITY, never group membership. */}
-        <ul className="flex flex-col gap-2" data-testid="consent-candidate-list">
+        {/* @container: CandidateRow re-flows on THIS list's width (36rem), not
+            the viewport — see the row for why. */}
+        <ul className="flex flex-col gap-2 @container" data-testid="consent-candidate-list">
           {groups.flatMap((group) => {
             const rowsOf = (items: GenerationCandidate[]) =>
               items

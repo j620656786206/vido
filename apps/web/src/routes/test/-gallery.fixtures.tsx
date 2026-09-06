@@ -481,6 +481,54 @@ const CONSENT_FIXTURE_CANDIDATES: GenerationCandidate[] = [
   },
 ];
 
+// bugfix-f15-row-mobile-identity-collapse: the four rows F15-M-v2 (fdu4y)
+// draws — a plain extract row, a grouped episode, an unwritable folder and an
+// unmatched unknown-runtime file — so the 390px fixture shows every piece the
+// phone row has to fit (cost on the title line, no kind badge, wrapping subtitle).
+const CONSENT_MOBILE_SERIES_ID = 'c2d3e4f5-a6b7-4c8d-9e0f-1a2b3c4d5e6f';
+const CONSENT_MOBILE_CANDIDATES: GenerationCandidate[] = [
+  CONSENT_FIXTURE_CANDIDATES[0],
+  {
+    mediaId: '5a9d3e2b-6c7f-4d8e-9f0a-1b2c3d4e5f61',
+    mediaType: 'episode',
+    title: '怪奇物語 S04E07',
+    route: 'asr',
+    runtimeMinutes: 98,
+    runtimeKnown: true,
+    runtimeSource: 'measured',
+    estimatedUsd: 0.26,
+    seriesId: CONSENT_MOBILE_SERIES_ID,
+    seriesTitle: '怪奇物語',
+    seasonNumber: 4,
+    episodeNumber: 7,
+  },
+  {
+    mediaId: '5a9d3e2b-6c7f-4d8e-9f0a-1b2c3d4e5f62',
+    mediaType: 'movie',
+    title: '全面啟動',
+    route: 'asr',
+    runtimeMinutes: 148,
+    runtimeKnown: true,
+    runtimeSource: 'measured',
+    estimatedUsd: 0.31,
+    writable: false,
+    blocker: 'folder_not_writable',
+    blockerDir: '/media/movies/Inception (2010)',
+  },
+  {
+    mediaId: '5a9d3e2b-6c7f-4d8e-9f0a-1b2c3d4e5f63',
+    mediaType: 'movie',
+    title: 'Interstellar.2014.2160p.WEB-DL.DDP5.1-FLUX',
+    displayTitle: '星際效應',
+    tmdbMatched: false,
+    route: 'asr',
+    runtimeMinutes: 45,
+    runtimeKnown: false,
+    runtimeSource: 'fallback',
+    estimatedUsd: 0.24,
+  },
+];
+
 // sub-5-3: grouped F15 — one movie + a two-season series (incl. S00 特別篇).
 const CONSENT_GROUPED_SERIES_ID = 'b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e';
 const CONSENT_GROUPED_CANDIDATES: GenerationCandidate[] = [
@@ -3971,6 +4019,40 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     },
     width: 900,
     penNode: 'screen-section', // Screen F15-D-v2 (pwMzT) · F15-M-v2 (fdu4y)
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-consent/list-mobile',
+    label:
+      'subtitle/consent/CandidateListPanel (F15-M 手機寬 390 — 金額上移到片名列、路線徽章收起、副標換行)',
+    component: CandidateListPanel as ComponentType<Record<string, unknown>>,
+    props: {
+      candidates: CONSENT_MOBILE_CANDIDATES,
+      selectedIds: new Set([
+        '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51',
+        '5a9d3e2b-6c7f-4d8e-9f0a-1b2c3d4e5f61',
+      ]),
+      filter: 'all',
+      totals: computeTotals(
+        CONSENT_MOBILE_CANDIDATES,
+        new Set(['4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51', '5a9d3e2b-6c7f-4d8e-9f0a-1b2c3d4e5f61']),
+        5
+      ),
+      budgetText: '5.00',
+      budgetUsd: 5,
+      onToggle: noop,
+      onToggleGroup: noop,
+      onToggleAll: noop,
+      onSelectAllExtract: noop,
+      onClearSelection: noop,
+      onFilterChange: noop,
+      onBudgetTextChange: noop,
+      onStartClick: noop,
+    },
+    // 390 = the phone the drawing is for; the host sheet is w-full there and the
+    // body's p-6 leaves the list 342px — below the row's 36rem re-flow point.
+    width: 390,
+    penNode: 'screen-section', // Screen F15-M-v2 (fdu4y)
     statesOnly: ['default'],
   },
   {
