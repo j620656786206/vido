@@ -30,8 +30,9 @@ so that 我在按「開始產生」之前，知道每一部片為什麼要收錢
 
 - [x] Task 1 — 列改成 container-query 兩列 grid（AC #1–#4）
   - [x] 1.1 `<ul data-testid="consent-candidate-list">` 加 `@container`
-  - [x] 1.2 `CandidateRow`：`flex` → `grid grid-cols-[auto_auto_minmax(0,1fr)_auto]`；checkbox／封面 `row-start-1 row-end-3`；片名列 `col-start-3 row-start-1`；副標 `col-start-3 row-start-2 truncate @max-xl:col-end-5 @max-xl:whitespace-normal`；徽章群 `col-start-4 row-start-1 @xl:row-end-3`；路線徽章 `hidden @xl:inline`
+  - [x] 1.2 `CandidateRow`：外層 `<li>` 的 flex（checkbox · 封面 · 身分欄）**原封不動**；身分欄改成 `grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3`，並把徽章群收進來：片名列 `col-start-1 row-start-1`；副標 `col-start-1 row-start-2 truncate @max-xl:col-end-3 @max-xl:whitespace-normal`；徽章群 `col-start-2 row-start-1 @xl:row-end-3`；路線徽章 `hidden @xl:inline`
   - [x] 1.3 只用 `*-start-*`／`*-end-*` 長寫，不用 `*-span-*`（見 Dev Notes）
+  - [x] 1.4 第一版把整個 `<li>` 做成 grid，第一輪 CI 抓到桌面三張基準線各 ~1% diff；改成巢狀 grid 後本機量測 li 80px／封面 y=13／片名 y=22／副標 y=42，與舊版相同（見 Dev Notes）
 - [x] Task 2 — 390px fixture（AC #5）
   - [x] 2.1 `-gallery.fixtures.tsx` 新增 `CONSENT_MOBILE_CANDIDATES` 與 `generation-consent/list-mobile`
   - [x] 2.2 產 `-darwin` 基準線並肉眼比對 F15-M-v2
@@ -43,13 +44,15 @@ so that 我在按「開始產生」之前，知道每一部片為什麼要收錢
 
 - **為什麼是 container query 而不是 `sm:`**：專案其他地方都用 viewport 斷點（bottom sheet 本身就是 `sm:` 切的）。但這列要解的是「拿到的寬度不夠」，不是「螢幕多大」——桌面上把對話框縮到 640px 一樣會擠；而且視覺 harness 的 viewport 釘死 1280，`sm:` 版的手機列在 gallery 裡永遠拍不到，backlog 要求的「390px fixture 釘住它」在 `sm:` 之下做不到（除非改 19-4 的 harness 契約讓每個 fixture 帶自己的 viewport）。Tailwind v4 內建 container query（`@container` / `@xl:` / `@max-xl:`），這是 repo 第一次用；建置後的 CSS 已確認產出 `@container (min-width:36rem)` 與 `@container not (min-width:36rem)` 兩組規則。
 - **36rem 的來源**：桌面列最壞情況（未匹配長片名 + 資料夾無法寫入 + 路線徽章 + 金額）約需 620px 才完全不截；常見情況約 510px。取 Tailwind 的 `xl`（576px）：手機 bottom sheet（viewport − 48）在 viewport < 624 都走手機列；置中對話框（`calc(100vw-4rem)` − 48）在 viewport < 688 也走手機列——小平板直放拿到緊湊列型是合理的。
-- **`*-span-*` 陷阱（第一版基準線就踩到）**：Tailwind 的 `col-span-2`／`row-span-2` 是 `grid-column`／`grid-row` **簡寫**，會把旁邊 `col-start-3` 設的起點重設成 `span 2`，格子退回自動排列——第一張手機截圖的副標跑到第 1–2 欄。改用 `col-end-5`／`row-end-3` 長寫後正確。
-- **桌面逐像素不變的保證**：AC #2 用三個既有 fixture 對 `-darwin` 基準線驗過（0 diff）。grid 的 `items-center` + 兩列高度（20px 片名 + 16px 副標）與原本 flex 內兩個 block 疊起來相同；徽章群 `row-end-3` 跨兩列置中 = 原本 `items-center`。
+- **`*-span-*` 陷阱（第一版基準線就踩到）**：Tailwind 的 `col-span-2`／`row-span-2` 是 `grid-column`／`grid-row` **簡寫**，會把旁邊 `col-start-3` 設的起點重設成 `span 2`，格子退回自動排列——第一張手機截圖的副標跑到第 1–2 欄。改用 `col-end-3`／`row-end-3` 長寫後正確。
+- **桌面逐像素不變，是第二次才做到的**：第一版把整個 `<li>` 改成四欄 grid、封面跨兩列。本機視覺跑完我用錯字串（`Screenshot comparison failed`）去 grep，誤報 0 diff；**第一輪 CI 的 Linux shard 抓到 `list`／`grouped`／`over-budget` 各 5,469–6,189 px（~1%）差異**。量測後根因：封面 54px 比兩行文字 36px 高，Chromium 把多出來的高度分進文字那兩個 track（實測 track 變成 17/20/16/17，每列高 96 而非 80）；試過 `[1fr auto auto 1fr]` 也一樣。最後改成**巢狀 grid**：外層 flex 一字不動，只有身分欄變 grid、徽章群搬進身分欄裡；grid 裡沒有比兩行字更高的東西，列高回到 80、封面 y=13、片名 y=22、副標 y=42（Playwright 量測），三張桌面 fixture 對 `-darwin` 基準線用**正確的字串**（`pixels (ratio`）grep 確認 0 diff。
 - **手機 fixture 裡清單以外的東西**（chips、工具列、footer）仍是 viewport `sm:` 規則，在 1280 viewport 下被擠成桌面樣式（footer「已選 2 部 · 預估」直排就是這個）。那不是這個 fixture 的主題，也不是真機的樣子（真機 viewport < 640 走 `flex-col`）。若之後要讓整個面板都以 container 決定，是另一個 story。
 - **群組 header 在 342px** 也很擠（路線徽章 + 已選 n/N · 金額），設計稿的手機 header 沒有路線徽章——屬於 `backlog-f15-group-header-pen-code-drift`，本 story 不動。
 - Rule 7／10／20：N/A（無錯誤碼、無路由、無 wire contract）。Rule 23：N/A（無時間相依邏輯）。
 
 ### Discovery Triage（Rule 24）
+
+- ③ `backlog-visual-bootstrap-parser-misses-current-playwright-diff-wording` — 就是上一條踩到的坑：`apps/web/src/visual-harness/bootstrap-detection.mjs` 靠 `/Screenshot comparison failed/` 認「真的像素差異」，但 Playwright 1.58 印的是 `expect(locator).toHaveScreenshot(expected) failed` + `N pixels (ratio 0.01 of all image pixels) are different.`，本機與 CI log 裡都 grep 不到舊字串。後果：main push 若**同時**有缺基準線與真差異，parser 算出 pixel_diff=0 → `bootstrap_needed=true` → 走 incremental bootstrap 開 PR、`Fail job on real regression` 被跳過，真差異靜默放行。本 PR 合併後就是「缺 1 張 + 0 差異」的情境，沒踩到，但下一個同時發生的就會。CI gate-integrity，非本 story 範圍，立案。
 
 - ③ `bugfix-empty-library-cta-dead-link-settings-libraries` — 跑 `pnpm nx run web:typecheck` 時發現 `EmptyNoFolder.tsx:24`／`EmptyNoQBT.tsx:32` 的 `<Link to="/settings/libraries">` 指向**不存在的路由**（`routeTree.gen.ts` 的 settings 子路由沒有 `libraries`；multi-library 的 PRD 完成但路由未建）。兩個元件由 `LibraryBrowseV2.tsx:624-626` 在空片庫狀態真的掛出來，使用者按「前往設定」會到 not-found。非本 story 範圍（列排版），立案。
 - ③ `backlog-web-typecheck-red-and-not-in-ci` — `web:typecheck` 目前 **153 個錯誤**，而 CI（test.yml lint job）只跑 ESLint + Prettier，從不跑 typecheck，所以這些錯誤不會讓任何 PR 變紅。上面那條死連結就是這樣漏掉的。另含 `RecentMediaPanel.tsx:102` 的 `/media/$id`（已被 `RecentlyAddedRowV2` 取代的舊元件，未掛載，死碼）與 React 19 的 `useRef()` 無初始值錯誤等。
@@ -70,7 +73,7 @@ Claude Fable 5.1（claude-fable-5-1），2026-09-06
 
 ### Completion Notes
 
-- 桌面三個 consent fixture 對 `-darwin` 基準線 0 pixel diff（AC #2 驗證方式：本機 `VISUAL_BUCKETS=4 --workers=4` 跑全套視覺，只有本來就缺 `-darwin` 的 `ui-tmdb-attribution*`／`retry-retry-notifications` 報 missing，與本 story 無關，產出的暫存 PNG 未提交）。
+- 桌面三個 consent fixture 對 `-darwin` 基準線 0 pixel diff——**第二版（巢狀 grid）才成立**；第一版被第一輪 CI 抓到 ~1% diff，經過見 Dev Notes。驗證方式：本機 `VISUAL_BUCKETS=4 --workers=4` 跑全套視覺，以 `pixels (ratio` 為準的 grep 只剩 `glossary-panel-v2/seeded`（其 -darwin 基準線 2026-07-06 起就沒更新，本機字型漂移，CI 的 Linux shard 沒有這個失敗，與本 story 無關）；本來就缺 `-darwin` 的 `ui-tmdb-attribution*` 報 missing，產出的暫存 PNG 未提交。
 - 手機 fixture 截圖逐列對照 F15-M-v2：沙丘（金額在片名列右側、副標單行）、全面啟動（資料夾無法寫入 + 金額同列、副標兩行）、星際效應（未匹配貼片名、≈ $0.24、副標第二行「（估 45 分）」）、怪奇物語 S04E07（群組內）——與稿子一致；路線徽章在所有列都不出現。
 - 單元測試：consent + routes/test 141 passed；全套 web 3212 passed。ESLint 0 errors、Prettier 綠、建置產出的 CSS 含 container query 規則。
 - `-linux` 基準線：本 PR 的 `Visual Regression / PR` 會因 `generation-consent/list-mobile` 缺 `-linux` 而紅（verify-only 的正確語意）；合併後 main 的 incremental bootstrap 會自動開 `chore(visual): bootstrap 1 missing -linux baselines` PR，貼 `requires-manual-review`，請 Alexyu 肉眼確認後合併。
