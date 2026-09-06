@@ -36,10 +36,10 @@ describe('EmptyNoQBT (bugfix-10-5 Case A: qBT disconnected)', () => {
     expect(link).toHaveTextContent('連接 qBittorrent');
   });
 
-  it('renders secondary CTA linking to /setup — the setup wizard 媒體資料夾 step, until a libraries settings page exists (AC #2)', () => {
+  it('renders secondary CTA linking to /settings/scanner — where the media-library manager (7b-4) lives (AC #2)', () => {
     render(<EmptyNoQBT />);
     const link = screen.getByTestId('empty-no-qbt-folder-btn');
-    expect(link).toHaveAttribute('href', '/setup');
+    expect(link).toHaveAttribute('href', '/settings/scanner');
     expect(link).toHaveTextContent('已有檔案？設定資料夾');
   });
 
