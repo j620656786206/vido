@@ -25,6 +25,7 @@ so that 我在按「開始產生」之前，知道每一部片為什麼要收錢
 4. 同一個 DOM 服務兩種排法：金額、未匹配、資料夾無法寫入都只有一個節點，沒有「桌面一份、手機一份」的重複（sub-6-10b 的 `consent-row-usd-*` 等 testid 契約不變）。
 5. 新增 gallery fixture `generation-consent/list-mobile`（寬 390 = 設計稿的手機寬；body `p-6` 之後清單 342px，落在 36rem 之下），內容對齊 F15-M-v2 畫的四種列：一般抽取列、影集群組內的集數列、資料夾無法寫入列、未匹配＋片長未知列。提交 `-darwin` 基準線；`-linux` 由 main 的 incremental bootstrap 自動補（CLAUDE.md 規定不可在本機產）。
 6. Gates：`pnpm nx test web` 全綠、`pnpm nx lint web` 0 errors、`pnpm run format:check` 綠。零後端變更。
+7. （Alexyu 2026-09-06 追加，「ci typecheck 要修，合併在一起沒關係」）`pnpm nx run web:typecheck` 歸零，並加進 CI 的 lint job；期間發現的真 bug（空片庫 CTA 死路由）一併修掉。
 
 ## Tasks / Subtasks
 
@@ -39,6 +40,12 @@ so that 我在按「開始產生」之前，知道每一部片為什麼要收錢
 - [x] Task 3 — 測試（AC #1、#3、#4）
   - [x] 3.1 `CandidateListPanel.spec.tsx` 新增 describe「phone-width row」5 個測試
 - [x] Task 4 — Gates（AC #6）
+- [x] Task 5 — typecheck 歸零 + 接進 CI（AC #7）
+  - [x] 5.1 `-gallery.fixtures.tsx`（141／153 個錯誤）：`GalleryFixture.component` 改 `ComponentType<any>`（附理由與 eslint-disable），拿掉 166 個 `as ComponentType<Record<string, unknown>>` 轉型（其中 126 個本身就是 TS2352 錯誤）；5 個 request-row fixture 把「寫在前面卻被後面的 `...{}` spread 蓋掉」的 11 個死鍵改成實際生效的值（渲染完全相同）；TVShowInfo fixture 補齊 `TVShowDetails` 缺的 7 個欄位（該元件不渲染它們）；9R-10c EpisodeList fixture 補 `penNode: 'Z54xAd'`；本 story 自己的 `runtimeSource: 'measured'` 是不存在的值，改 `'ffprobe'`（typecheck 第一天就抓到我）
+  - [x] 5.2 React 19 的 `useRef<T>()` 要初始值：5 個計時器 ref 改 `useRef<… | undefined>(undefined)`（EmptyReadyForScan／ScanProgressCard／ScanProgressSheet／ScannerSettings／useScanProgress／useSubtitleBatchProgress）
+  - [x] 5.3 真 bug：`EmptyNoFolder`／`EmptyNoQBT` 的「設定媒體資料夾」連到不存在的 `/settings/libraries` → 改 `/setup`（設定精靈的媒體資料夾步驟就是今天設定資料夾的地方），spec 同步；`RecentMediaPanel` 的 `/media/$id` → `/media/$type/$id`；`MetadataExport` 的 `result.message` 在型別上可為空 → 補 `?? '匯出完成'`
+  - [x] 5.4 `test.yml` lint job 加 `Typecheck (web)` 步驟（`pnpm nx run web:typecheck --skip-nx-cache`），ESLint 之後、format 之前
+  - [x] 5.5 驗證：typecheck 0 錯誤；eslint 0；web 全套 3212 passed；視覺全套用正確字串 grep 0 diff（fixture 改動全是型別／metadata 層，不改渲染）
 
 ## Dev Notes
 
@@ -54,8 +61,11 @@ so that 我在按「開始產生」之前，知道每一部片為什麼要收錢
 
 - ③ `backlog-visual-bootstrap-parser-misses-current-playwright-diff-wording` — 就是上一條踩到的坑：`apps/web/src/visual-harness/bootstrap-detection.mjs` 靠 `/Screenshot comparison failed/` 認「真的像素差異」，但 Playwright 1.58 印的是 `expect(locator).toHaveScreenshot(expected) failed` + `N pixels (ratio 0.01 of all image pixels) are different.`，本機與 CI log 裡都 grep 不到舊字串。後果：main push 若**同時**有缺基準線與真差異，parser 算出 pixel_diff=0 → `bootstrap_needed=true` → 走 incremental bootstrap 開 PR、`Fail job on real regression` 被跳過，真差異靜默放行。本 PR 合併後就是「缺 1 張 + 0 差異」的情境，沒踩到，但下一個同時發生的就會。CI gate-integrity，非本 story 範圍，立案。
 
-- ③ `bugfix-empty-library-cta-dead-link-settings-libraries` — 跑 `pnpm nx run web:typecheck` 時發現 `EmptyNoFolder.tsx:24`／`EmptyNoQBT.tsx:32` 的 `<Link to="/settings/libraries">` 指向**不存在的路由**（`routeTree.gen.ts` 的 settings 子路由沒有 `libraries`；multi-library 的 PRD 完成但路由未建）。兩個元件由 `LibraryBrowseV2.tsx:624-626` 在空片庫狀態真的掛出來，使用者按「前往設定」會到 not-found。非本 story 範圍（列排版），立案。
-- ③ `backlog-web-typecheck-red-and-not-in-ci` — `web:typecheck` 目前 **153 個錯誤**，而 CI（test.yml lint job）只跑 ESLint + Prettier，從不跑 typecheck，所以這些錯誤不會讓任何 PR 變紅。上面那條死連結就是這樣漏掉的。另含 `RecentMediaPanel.tsx:102` 的 `/media/$id`（已被 `RecentlyAddedRowV2` 取代的舊元件，未掛載，死碼）與 React 19 的 `useRef()` 無初始值錯誤等。
+- ③→**併入本 story（Alexyu 裁定 2026-09-06）** `bugfix-empty-library-cta-dead-link-settings-libraries` — 跑 `pnpm nx run web:typecheck` 時發現 `EmptyNoFolder.tsx:24`／`EmptyNoQBT.tsx:32` 的 `<Link to="/settings/libraries">` 指向**不存在的路由**（`routeTree.gen.ts` 的 settings 子路由沒有 `libraries`；multi-library 的 PRD 完成但路由未建）。兩個元件由 `LibraryBrowseV2.tsx:624-626` 在空片庫狀態真的掛出來，使用者按「前往設定」會到 not-found。非本 story 範圍（列排版），立案。
+- ③→**併入本 story（Alexyu 裁定 2026-09-06，Task 5）** `backlog-web-typecheck-red-and-not-in-ci` — `web:typecheck` 當時 **153 個錯誤**，而 CI（test.yml lint job）只跑 ESLint + Prettier，從不跑 typecheck，所以這些錯誤不會讓任何 PR 變紅。上面那條死連結就是這樣漏掉的。另含 `RecentMediaPanel.tsx:102` 的 `/media/$id`（已被 `RecentlyAddedRowV2` 取代的舊元件，未掛載，死碼）與 React 19 的 `useRef()` 無初始值錯誤等。
+
+- ③ `backlog-visual-main-4-workers-flaky-media-detail-focus` — 為了替本 PR 補 `-linux` 基準線，對分支 `workflow_dispatch` 跑 Main job（run 34010222934）：verify-probe 4 桶全過（只缺 list-mobile），但接著的 `update-missing`（同一台 runner、同一份程式碼、幾分鐘後）在 `media-media-detail-panel/focus` 報 24,445 px（7%）差異——diff 圖是頂部 backdrop 帶 + 播放鈕的 focus 態，典型的時序抖動。同一 fixture 同一機器前後兩次不同結果 = flake，觸發條件是 #391 的 `--workers=4`（4 個 Chromium 搶 4 vCPU）。這次後果是 bootstrap step 失敗、沒開 PR（安全的失敗）；但它會讓 main 的 Main job 偶爾紅。#391 註解已寫「截圖不穩定先降 --workers」，這是第一筆觀察，先立案不動；再出現一次就降到 2。
+- 本 PR 的 `-linux` 基準線因此改走 **手動 artifact extraction**（README／bootstrap PR body 明文的 PR #11 先例）：拿 CI 在 PR #392 shard 1 對同一份程式碼渲染的 `default-actual.png`（ubuntu-24.04，ImageVersion 20260831.293.1）直接入庫，audit doc 追加一行註明來源。不是本機產的 `-linux`（CLAUDE.md 禁的是那個）。
 
 ### References
 
@@ -84,5 +94,8 @@ Claude Fable 5.1（claude-fable-5-1），2026-09-06
 - apps/web/src/components/subtitle/consent/CandidateListPanel.spec.tsx
 - apps/web/src/routes/test/-gallery.fixtures.tsx
 - tests/visual/components.visual.spec.ts-snapshots/components/generation-consent/list-mobile/default-visual-darwin.png
+- tests/visual/components.visual.spec.ts-snapshots/components/generation-consent/list-mobile/default-visual-linux.png（CI artifact，見 Discovery Triage）
+- _bmad-output/audit/visual-baseline-19-4.md
+- （Task 5）.github/workflows/test.yml、apps/web/src/components/library/{EmptyNoFolder,EmptyNoQBT}.tsx + .spec.tsx、EmptyReadyForScan.tsx、scanner/{ScanProgressCard,ScanProgressSheet}.tsx、settings/{ScannerSettings,MetadataExport}.tsx、dashboard/RecentMediaPanel.tsx、hooks/{useScanProgress,useSubtitleBatchProgress}.ts
 - _bmad-output/implementation-artifacts/bugfix-f15-row-mobile-identity-collapse.md
 - _bmad-output/implementation-artifacts/sprint-status.yaml
