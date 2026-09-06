@@ -70,26 +70,29 @@ func TestSeriesRepository_UpdateCredits_RoundTripsThroughSQLite(t *testing.T) {
 	assert.Error(t, repo.UpdateCredits(ctx, "", credits))
 }
 
-func TestGlossaryRepository_HasSourceInScope(t *testing.T) {
+func TestGlossaryRepository_SeedMarks(t *testing.T) {
 	db := setupGlossaryDB(t)
 	repo := NewGlossaryRepository(db)
 	ctx := context.Background()
 
-	has, err := repo.HasSourceInScope(ctx, "tmdb:tv:1396", models.GlossarySourceMetadata)
+	seeded, err := repo.IsScopeSeeded(ctx, "tmdb:tv:1396")
 	require.NoError(t, err)
-	assert.False(t, has, "empty drawer")
+	assert.False(t, seeded)
 
-	require.NoError(t, repo.Upsert(ctx, &models.GlossaryTerm{MediaID: "s1", Scope: "tmdb:tv:1396", TermSrc: "Walter White", TermZh: "老白", Source: models.GlossarySourceSubtitle}))
-	has, err = repo.HasSourceInScope(ctx, "tmdb:tv:1396", models.GlossarySourceMetadata)
+	require.NoError(t, repo.MarkScopeSeeded(ctx, "tmdb:tv:1396", 12))
+	seeded, err = repo.IsScopeSeeded(ctx, "tmdb:tv:1396")
 	require.NoError(t, err)
-	assert.False(t, has, "a subtitle-harvested term is not a seed")
+	assert.True(t, seeded)
 
-	require.NoError(t, repo.Upsert(ctx, &models.GlossaryTerm{MediaID: "s1", Scope: "tmdb:tv:1396", TermSrc: "Jesse", TermZh: "傑西", Source: models.GlossarySourceMetadata}))
-	has, err = repo.HasSourceInScope(ctx, "tmdb:tv:1396", models.GlossarySourceMetadata)
-	require.NoError(t, err)
-	assert.True(t, has)
+	// Re-marking updates in place (no unique violation).
+	require.NoError(t, repo.MarkScopeSeeded(ctx, "tmdb:tv:1396", 0))
+	var n int
+	require.NoError(t, db.QueryRow(`SELECT seeded FROM glossary_seed_marks WHERE scope = 'tmdb:tv:1396'`).Scan(&n))
+	assert.Equal(t, 0, n)
 
-	has, err = repo.HasSourceInScope(ctx, "tmdb:tv:1", models.GlossarySourceMetadata)
+	seeded, err = repo.IsScopeSeeded(ctx, "tmdb:tv:1")
 	require.NoError(t, err)
-	assert.False(t, has, "scope is exact, not a prefix")
+	assert.False(t, seeded, "exact scope, not a prefix")
+
+	assert.Error(t, repo.MarkScopeSeeded(ctx, "  ", 1))
 }

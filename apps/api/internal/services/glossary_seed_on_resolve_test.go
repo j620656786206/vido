@@ -49,6 +49,7 @@ func TestEnsureSeeded_SeedsOncePerScope(t *testing.T) {
 	assert.Equal(t, models.GlossarySourceMetadata, repo.terms[0].Source)
 	assert.Len(t, client.calls, 2)
 	assert.Equal(t, 1, repo.probes)
+	assert.Equal(t, map[string]int{"tmdb:tv:1396": 2}, repo.marks, "durably marked with the seeded count")
 
 	// Second resolve of the same scope: no probe, no fetch, no inserts.
 	seeder.EnsureSeeded(ctx, "tmdb:tv:1396", "series-1")
@@ -70,10 +71,10 @@ func TestEnsureSeeded_LocalScopeAndMalformedScopeAreNoops(t *testing.T) {
 }
 
 func TestEnsureSeeded_AlreadySeededDrawerIsNotFetchedAgain(t *testing.T) {
-	// A drawer that already has a metadata term (previous process, another
-	// machine's copy of the same show via sub-8-1 later) is settled on the
-	// first probe: one EXISTS, then never again.
-	repo := &fakeSeedInserter{terms: []*models.GlossaryTerm{{Scope: "tmdb:movie:550", TermSrc: "Tyler", TermZh: "泰勒", Source: models.GlossarySourceMetadata}}}
+	// A drawer with a seed mark (previous process) is settled on the first
+	// probe: one lookup, then never again — even when the user has since
+	// deleted every seeded term (the mark, not the terms, is the memory).
+	repo := &fakeSeedInserter{marks: map[string]int{"tmdb:movie:550": 12}}
 	seeder, client, _ := seedOnResolveFixture(t, repo)
 	seeder.EnsureSeeded(context.Background(), "tmdb:movie:550", "m1")
 	seeder.EnsureSeeded(context.Background(), "tmdb:movie:550", "m1")
@@ -119,6 +120,66 @@ func TestEnsureSeeded_NothingToSeedIsSettledForTheProcess(t *testing.T) {
 	*now = now.Add(48 * time.Hour)
 	seeder.EnsureSeeded(ctx, "tmdb:movie:11902", "m1")
 	assert.Len(t, client.calls, 2, "fetched exactly once")
+	assert.Equal(t, map[string]int{"tmdb:movie:11902": 0}, repo.marks, "marked with 0 so a restart does not re-fetch either")
+}
+
+func TestEnsureSeeded_CancelledCallerIsNotCountedAsAnAttempt(t *testing.T) {
+	// The user opened the glossary panel and navigated away mid-fetch (Gin
+	// cancels the request context). That must not lock the show out of
+	// seeding for an hour — its first subtitle run may be seconds away.
+	repo := &fakeSeedInserter{}
+	seeder, client, _ := seedOnResolveFixture(t, repo)
+	ctx, cancel := context.WithCancel(context.Background())
+	client.err = map[string]error{"zh-TW": context.Canceled}
+	cancel()
+	seeder.EnsureSeeded(ctx, "tmdb:tv:1396", "series-1")
+	assert.Len(t, client.calls, 1)
+	assert.Empty(t, repo.marks)
+
+	// The very next resolve (a live caller) seeds.
+	client.err = nil
+	seeder.EnsureSeeded(context.Background(), "tmdb:tv:1396", "series-1")
+	assert.Len(t, client.calls, 3)
+	assert.Len(t, repo.terms, 2)
+}
+
+func TestEnsureSeeded_FailedInsertsAreNotMarkedAndRetryLater(t *testing.T) {
+	// SQLite busy under a scan burst: the fetch worked, the inserts did not.
+	// Marking now would freeze the drawer half-empty for good.
+	repo := &fakeSeedInserter{}
+	seeder, client, now := seedOnResolveFixture(t, repo)
+	repo.err = errors.New("database is locked")
+	// IsScopeSeeded also fails with repo.err → that is the probe path; make
+	// the probe succeed but inserts fail by toggling around the calls.
+	repo.err = nil
+	insertFail := &insertFailingRepo{fakeSeedInserter: repo, fail: true}
+	seeder.repo = insertFail
+	ctx := context.Background()
+
+	seeder.EnsureSeeded(ctx, "tmdb:tv:1396", "series-1")
+	assert.Len(t, client.calls, 2)
+	assert.Empty(t, repo.marks, "not marked: inserts failed")
+
+	// After the back-off the pass re-runs and lands.
+	insertFail.fail = false
+	*now = now.Add(glossarySeedRetryAfter + time.Minute)
+	seeder.EnsureSeeded(ctx, "tmdb:tv:1396", "series-1")
+	assert.Len(t, repo.terms, 2)
+	assert.Equal(t, map[string]int{"tmdb:tv:1396": 2}, repo.marks)
+}
+
+// insertFailingRepo fails InsertIfAbsent while fail is true, everything else
+// delegates to the plain fake.
+type insertFailingRepo struct {
+	*fakeSeedInserter
+	fail bool
+}
+
+func (r *insertFailingRepo) InsertIfAbsent(ctx context.Context, term *models.GlossaryTerm) (bool, error) {
+	if r.fail {
+		return false, errors.New("database is locked")
+	}
+	return r.fakeSeedInserter.InsertIfAbsent(ctx, term)
 }
 
 func TestEnsureSeeded_ProbeErrorBacksOffToo(t *testing.T) {
@@ -158,10 +219,15 @@ func (l *lockedSeedRepo) InsertIfAbsent(ctx context.Context, term *models.Glossa
 	defer l.mu.Unlock()
 	return l.inner.InsertIfAbsent(ctx, term)
 }
-func (l *lockedSeedRepo) HasSourceInScope(ctx context.Context, scope, source string) (bool, error) {
+func (l *lockedSeedRepo) IsScopeSeeded(ctx context.Context, scope string) (bool, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	return l.inner.HasSourceInScope(ctx, scope, source)
+	return l.inner.IsScopeSeeded(ctx, scope)
+}
+func (l *lockedSeedRepo) MarkScopeSeeded(ctx context.Context, scope string, seeded int) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.inner.MarkScopeSeeded(ctx, scope, seeded)
 }
 func (l *lockedSeedRepo) probeCount() int {
 	l.mu.Lock()
@@ -266,7 +332,38 @@ func TestSeedOnFirstResolve_UserTermMigratesFirstAndWins(t *testing.T) {
 	_, err = r.Resolve(ctx, "e-of-matched")
 	require.NoError(t, err)
 	assert.Len(t, client.calls, 2)
-	has, err := repo.HasSourceInScope(ctx, scope, models.GlossarySourceMetadata)
+	marked, err := repo.IsScopeSeeded(ctx, scope)
 	require.NoError(t, err)
-	assert.True(t, has)
+	assert.True(t, marked)
+}
+
+// The user deletes every seeded term as junk; a restart (fresh seeder, empty
+// attempted map) must NOT plant them again — the mark outlives the terms.
+func TestSeedOnFirstResolve_DeletedSeedsStayDeletedAcrossRestart(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewGlossaryRepository(db)
+	ctx := context.Background()
+
+	first, client, _ := seedOnResolveFixture(t, repo)
+	r := newResolverFixture(repo)
+	r.SetSeeder(first)
+	_, err := r.Resolve(ctx, "m-matched")
+	require.NoError(t, err)
+	terms, err := repo.ListByScope(ctx, "tmdb:movie:27205")
+	require.NoError(t, err)
+	require.Len(t, terms, 2)
+	for _, tm := range terms {
+		require.NoError(t, repo.Delete(ctx, tm.ID))
+	}
+
+	// "Restart": a new seeder with no memory, same database.
+	second := NewGlossarySeeder(client, repo, &fakeSeedOpenCC{available: true}, slog.Default())
+	r2 := newResolverFixture(repo)
+	r2.SetSeeder(second)
+	_, err = r2.Resolve(ctx, "m-matched")
+	require.NoError(t, err)
+	terms, err = repo.ListByScope(ctx, "tmdb:movie:27205")
+	require.NoError(t, err)
+	assert.Empty(t, terms, "deleted seeds are not re-planted")
+	assert.Len(t, client.calls, 2, "and TMDb is not asked again")
 }

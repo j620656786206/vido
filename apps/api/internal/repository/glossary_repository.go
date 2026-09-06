@@ -34,10 +34,15 @@ type GlossaryRepositoryInterface interface {
 	InsertIfAbsent(ctx context.Context, term *models.GlossaryTerm) (bool, error)
 	// ListByScope returns all terms in a scope, term_src ascending.
 	ListByScope(ctx context.Context, scope string) ([]models.GlossaryTerm, error)
-	// HasSourceInScope reports whether ANY term of the given source exists in
-	// the scope — one indexed EXISTS; the "has this drawer been seeded from
-	// TMDb yet" question the seed-on-first-resolve seam asks.
-	HasSourceInScope(ctx context.Context, scope, source string) (bool, error)
+	// IsScopeSeeded reports whether the scope carries a seed mark — the
+	// durable "has this drawer been seeded from TMDb yet" answer the
+	// seed-on-first-resolve seam asks (one primary-key lookup). A mark, not
+	// EXISTS on live terms, so a user who deletes every seeded term keeps
+	// them deleted across restarts.
+	IsScopeSeeded(ctx context.Context, scope string) (bool, error)
+	// MarkScopeSeeded records that the scope was seeded (seeded = rows
+	// planted, may be 0 for a title with nothing translatable).
+	MarkScopeSeeded(ctx context.Context, scope string, seeded int) error
 	// LookupByScope returns a term_src→term_zh map for a scope — the shape the
 	// translation service injects into prompts (9R-7). Only CONFIRMED terms are
 	// returned when confirmedOnly is true.
@@ -261,19 +266,6 @@ func (r *GlossaryRepository) ConfirmAllByScope(ctx context.Context, scope string
 // MigrateScope — see the interface doc. One transaction: the UPDATE moves
 // only the rows that would not collide in `to`; whatever is left under `from`
 // afterwards is the skipped set.
-// HasSourceInScope implements GlossaryRepositoryInterface.
-func (r *GlossaryRepository) HasSourceInScope(ctx context.Context, scope, source string) (bool, error) {
-	var exists bool
-	err := r.db.QueryRowContext(ctx,
-		`SELECT EXISTS(SELECT 1 FROM show_glossary WHERE scope = ? AND source = ?)`,
-		strings.TrimSpace(scope), source,
-	).Scan(&exists)
-	if err != nil {
-		return false, fmt.Errorf("failed to check glossary source in scope: %w", err)
-	}
-	return exists, nil
-}
-
 func (r *GlossaryRepository) MigrateScope(ctx context.Context, from, to string) (int64, int64, error) {
 	from, to = strings.TrimSpace(from), strings.TrimSpace(to)
 	if from == "" || to == "" || from == to {
@@ -349,6 +341,35 @@ func affectedOrNotFound(res sql.Result, id string) error {
 	}
 	if affected == 0 {
 		return fmt.Errorf("glossary term %s: %w", id, ErrGlossaryTermNotFound)
+	}
+	return nil
+}
+
+// IsScopeSeeded implements GlossaryRepositoryInterface.
+func (r *GlossaryRepository) IsScopeSeeded(ctx context.Context, scope string) (bool, error) {
+	var exists bool
+	err := r.db.QueryRowContext(ctx,
+		`SELECT EXISTS(SELECT 1 FROM glossary_seed_marks WHERE scope = ?)`, strings.TrimSpace(scope),
+	).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to read glossary seed mark: %w", err)
+	}
+	return exists, nil
+}
+
+// MarkScopeSeeded implements GlossaryRepositoryInterface.
+func (r *GlossaryRepository) MarkScopeSeeded(ctx context.Context, scope string, seeded int) error {
+	scope = strings.TrimSpace(scope)
+	if scope == "" {
+		return &models.ValidationError{Field: "scope", Message: "scope is required"}
+	}
+	_, err := r.db.ExecContext(ctx,
+		`INSERT INTO glossary_seed_marks (scope, seeded, seeded_at) VALUES (?, ?, ?)
+		 ON CONFLICT(scope) DO UPDATE SET seeded = excluded.seeded, seeded_at = excluded.seeded_at`,
+		scope, seeded, time.Now().UTC(),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to write glossary seed mark: %w", err)
 	}
 	return nil
 }

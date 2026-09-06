@@ -73,22 +73,31 @@ func (f *fakeSeedOpenCC) ConvertS2TWP(content []byte) ([]byte, error) {
 }
 
 type fakeSeedInserter struct {
-	terms  []*models.GlossaryTerm
-	err    error
-	probes int // HasSourceInScope calls
+	terms   []*models.GlossaryTerm
+	err     error          // returned by every method
+	marks   map[string]int // scope → seeded count
+	probes  int            // IsScopeSeeded calls
+	markErr error
 }
 
-func (f *fakeSeedInserter) HasSourceInScope(_ context.Context, scope, source string) (bool, error) {
+func (f *fakeSeedInserter) IsScopeSeeded(_ context.Context, scope string) (bool, error) {
 	f.probes++
 	if f.err != nil {
 		return false, f.err
 	}
-	for _, t := range f.terms {
-		if t.Scope == scope && t.Source == source {
-			return true, nil
-		}
+	_, ok := f.marks[scope]
+	return ok, nil
+}
+
+func (f *fakeSeedInserter) MarkScopeSeeded(_ context.Context, scope string, seeded int) error {
+	if f.markErr != nil {
+		return f.markErr
 	}
-	return false, nil
+	if f.marks == nil {
+		f.marks = map[string]int{}
+	}
+	f.marks[scope] = seeded
+	return nil
 }
 
 func (f *fakeSeedInserter) InsertIfAbsent(_ context.Context, term *models.GlossaryTerm) (bool, error) {

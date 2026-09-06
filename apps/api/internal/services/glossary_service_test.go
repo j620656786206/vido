@@ -45,9 +45,8 @@ func (r *scopeRecordingRepo) Delete(context.Context, string) error { return nil 
 func (r *scopeRecordingRepo) MigrateScope(context.Context, string, string) (int64, int64, error) {
 	return 0, 0, nil
 }
-func (r *scopeRecordingRepo) HasSourceInScope(context.Context, string, string) (bool, error) {
-	return false, nil
-}
+func (r *scopeRecordingRepo) IsScopeSeeded(context.Context, string) (bool, error) { return false, nil }
+func (r *scopeRecordingRepo) MarkScopeSeeded(context.Context, string, int) error  { return nil }
 
 type fixedScopeResolver struct {
 	scope string

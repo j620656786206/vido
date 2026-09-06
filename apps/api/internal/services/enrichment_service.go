@@ -333,7 +333,7 @@ func (s *EnrichmentService) applyMetadataToSeries(series *models.Series, item me
 	if item.OriginalTitle != "" {
 		series.OriginalTitle = models.NewNullString(item.OriginalTitle)
 	}
-	if id := parseProviderID(item.ID); id > 0 {
+	if id := tmdbIDFromMatch(item, source, metadata.MediaTypeTV); id > 0 {
 		series.TMDbID = models.NewNullInt64(id)
 	}
 	// bugfix-d CR H1: the D2 format convergence covered movies only — series
@@ -401,10 +401,14 @@ func (s *EnrichmentService) matchedCredits(ctx context.Context, rowID, mediaType
 		return nil
 	}
 	credits, _, err := s.glossaryCredits.FetchCredits(ctx, mediaType, tmdbID.Int64)
-	if err != nil && credits == nil {
-		s.logger.Warn("TMDb credits fetch failed; row enriched without cast",
+	if err != nil {
+		if credits == nil {
+			s.logger.Warn("TMDb credits fetch failed; row enriched without cast",
+				"id", rowID, "media_type", mediaType, "tmdb_id", tmdbID.Int64, "error", err)
+			return nil
+		}
+		s.logger.Warn("TMDb source-language credits fetch failed; cast stored, glossary seeding left to the resolver",
 			"id", rowID, "media_type", mediaType, "tmdb_id", tmdbID.Int64, "error", err)
-		return nil
 	}
 	if credits != nil && !models.ShouldOverwrite(previous, incoming) {
 		s.logger.Debug("credits kept: current metadata source outranks the match",
@@ -871,9 +875,12 @@ func (s *EnrichmentService) applyMetadataToMovie(movie *models.Movie, item metad
 		movie.OriginalTitle = models.NewNullString(item.OriginalTitle)
 	}
 
-	// TMDb ID
-	tmdbID := parseProviderIDFromString(item.ID)
-	if tmdbID > 0 {
+	// TMDb ID — only from a TMDb MOVIE match. A Douban/Wikipedia id is numeric
+	// too and used to land here, which made the row resolve to some unrelated
+	// film's shared glossary drawer; a TV match on a movies-table row used to
+	// land a TV id here, which pointed the detail page (and the drawer) at
+	// whatever film shares that number. Neither is a TMDb movie id.
+	if tmdbID := tmdbIDFromMatch(item, source, metadata.MediaTypeMovie); tmdbID > 0 {
 		movie.TMDbID = models.NullInt64{NullInt64: sql.NullInt64{Int64: tmdbID, Valid: true}}
 	}
 
@@ -968,6 +975,28 @@ func (s *EnrichmentService) broadcastComplete(result *EnrichmentResult) {
 }
 
 // parseProviderIDFromString extracts numeric ID from a provider ID string.
+// tmdbIDFromMatch returns the TMDb id of a match, or 0 when the match is not
+// a TMDb result of the wanted kind. Every writer of `tmdb_id` goes through
+// this so the column only ever holds what its name says.
+func tmdbIDFromMatch(item metadata.MetadataItem, source models.MetadataSource, want metadata.MediaType) int64 {
+	if source != models.MetadataSourceTMDb {
+		return 0
+	}
+	if item.MediaType != "" && item.MediaType != want {
+		return 0
+	}
+	return parseProviderIDFromString(item.ID)
+}
+
+// nullTMDbID wraps tmdbIDFromMatch's answer: 0 is "no TMDb id", never a
+// valid zero.
+func nullTMDbID(id int64) models.NullInt64 {
+	if id <= 0 {
+		return models.NullInt64{}
+	}
+	return models.NewNullInt64(id)
+}
+
 func parseProviderIDFromString(id string) int64 {
 	var n int64
 	fmt.Sscanf(strings.TrimSpace(id), "%d", &n)
