@@ -1,6 +1,6 @@
 # Story 6.9: TMDb attribution —— logo + 未經認可聲明（前端，合規）
 
-Status: review — **七條 AC 全數滿足**。程式／測試／文件隨 PR #385 合併；AC #1 的 logo 檔與 AC #5 延後的 gallery fixture 於同日隨 PR #386 補齊（`backlog-tmdb-logo-asset` 已 CLOSED）
+Status: done（Alexyu 2026-09-06 裁定直接改 done，未走換模型 CR）— 原 review 註記： — **七條 AC 全數滿足**。程式／測試／文件隨 PR #385 合併；AC #1 的 logo 檔與 AC #5 延後的 gallery fixture 於同日隨 PR #386 補齊（`backlog-tmdb-logo-asset` 已 CLOSED）
 
 ## Story
 
