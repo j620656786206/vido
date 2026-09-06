@@ -501,7 +501,8 @@ jobs:
       # 解析 step。Node ESM parser 把 Playwright stdout 分類進三個 buckets:
       #   - missing-baseline: `A snapshot doesn't exist at <path>, writing actual.`
       #     for paths ending `-linux.png` under `tests/visual/components.visual.spec.ts-snapshots/`
-      #   - pixel-diff: `Screenshot comparison failed` header (one per failed stanza)
+      #   - pixel-diff: `Screenshot comparison failed` header (Playwright ≤ 1.4x) or the
+      #     `N pixels (ratio …) are different.` count line (≥ 1.5x, 2026-09-06 fix)
       #   - other: out-of-scope (e.g. -darwin missing on Linux runner) → human review
       # `bootstrap_needed` 設為 `true` 當且僅當 `missing > 0 && pixel-diff == 0 &&
       # other == 0`(保守原則:未知 pattern → other → bootstrap_needed=false → 人工)。

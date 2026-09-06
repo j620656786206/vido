@@ -8,12 +8,24 @@
  *     `Error: A snapshot doesn't exist at <path>, writing actual.` for `<path>`
  *     ending in `-linux.png` AND under the visual-harness snapshot dir
  *     → fixture is in scope for incremental bootstrap.
- *   - **pixel-diff** — Playwright emitted `Screenshot comparison failed`
- *     against an existing baseline → REAL regression; the workflow MUST NOT
+ *   - **pixel-diff** — Playwright reported a comparison against an EXISTING
+ *     baseline that differs → REAL regression; the workflow MUST NOT
  *     auto-bootstrap (would defeat the Rule 22 visual-regression gate).
+ *     Two generations of wording are recognised (2026-09-06):
+ *       ≤ 1.4x  `Error: Screenshot comparison failed`
+ *       ≥ 1.5x  `Error: expect(locator).toHaveScreenshot(expected) failed` followed
+ *               by `N pixels (ratio R of all image pixels) are different.` (or
+ *               `Expected an image WxH, received WxH` when the size changed).
+ *     The 1.5x count line is echoed again inside the dimmed "Call log" with a
+ *     leading `- `; those echoes are skipped so one comparison counts once.
  *   - **other** — any other failure class (missing snapshot for the wrong
  *     platform / outside scope, test infra error, etc.) → fail the job for
- *     human review.
+ *     human review. This INCLUDES every `Error:` stanza the parser could not
+ *     classify: if Playwright prints more `Error:` headers than we recognised,
+ *     the surplus lands here, so a future wording change can never turn a
+ *     real diff into a silent auto-bootstrap again (the 2026-09-06 near miss:
+ *     the parser only knew the ≤ 1.4x wording while the repo ran 1.58 —
+ *     `backlog-visual-bootstrap-parser-misses-current-playwright-diff-wording`).
  *
  * Output a `bootstrapNeeded` flag that is `true` ONLY if
  * `missingPaths.length > 0 && pixelDiffs.length === 0 && other.length === 0`.
@@ -35,12 +47,32 @@
 
 import * as fs from 'node:fs';
 
+// Playwright colours its reporter output even under CI (the tee'd probe log is
+// full of SGR sequences, e.g. `Error: \x1b[2mexpect(\x1b[22m…`). Strip them
+// before matching so no pattern below has to reason about escape codes.
+// eslint-disable-next-line no-control-regex
+const ANSI_RE = /\x1b\[[0-9;]*m/g;
+
 // Match Playwright's missing-baseline emission. Captured group is the absolute path.
 // Playwright emits this for EVERY missing snapshot during verify-only runs.
 const MISSING_RE = /A snapshot doesn't exist at (.+?), writing actual\./;
 
-// Match Playwright's pixel-diff failure header line. One match per failed comparison.
+// Pixel-diff, Playwright ≤ 1.4x: one header line per failed comparison.
 const PIXEL_DIFF_HEADER_RE = /Screenshot comparison failed/i;
+// Pixel-diff, Playwright ≥ 1.5x: the count line, once per failed comparison
+// (verbatim from 1.58: `      6362 pixels (ratio 0.01 of all image pixels) are different.`).
+const PIXEL_DIFF_COUNT_RE =
+  /^\s*\d+ pixels \(ratio [\d.]+ of all image pixels\) are different\.?\s*$/;
+// Pixel-diff, ≥ 1.5x, size changed: no pixel count is printed, only this.
+const IMAGE_SIZE_MISMATCH_RE =
+  /^\s*Expected an image \d+px by \d+px, received \d+px by \d+px\.?\s*$/;
+// The ≥ 1.5x reporter echoes the count line inside the dimmed call log with a
+// leading dash (`  - 6362 pixels (ratio …`); those are NOT separate comparisons.
+const CALL_LOG_ECHO_RE = /^\s*-\s/;
+// Every failed expectation opens with `Error: …` (missing, diff, or anything
+// else). Counting these lets the parser notice when it did not understand a
+// failure, instead of quietly treating it as "no diff".
+const ERROR_STANZA_RE = /^\s*Error: /;
 
 // Visual-harness snapshot dir — only files under this prefix are bootstrap-eligible.
 const VISUAL_SNAPSHOT_PREFIX = 'tests/visual/components.visual.spec.ts-snapshots/';
@@ -66,7 +98,11 @@ export function detectMissingBaselines(playwrightOutput) {
   }
 
   const lines = playwrightOutput.split('\n');
-  for (const line of lines) {
+  let errorStanzas = 0;
+  for (const rawLine of lines) {
+    const line = rawLine.replace(ANSI_RE, '');
+    if (ERROR_STANZA_RE.test(line)) errorStanzas++;
+
     // 1. Missing-baseline match first (more specific pattern; `writing actual.` is
     //    unique to Playwright's missing-snapshot path and would never appear in a
     //    pixel-diff stanza).
@@ -89,19 +125,33 @@ export function detectMissingBaselines(playwrightOutput) {
       continue;
     }
 
-    // 2. Pixel-diff failure header — count each stanza once.
-    //    Conservative: if Playwright ever changes the literal "Screenshot comparison
-    //    failed" wording, this branch silently misses real diffs → `bootstrapNeeded`
-    //    could mis-classify a diff scenario as `bootstrap-needed`. AC #4 spec case
-    //    (f) + (g) pin this exact wording so the spec catches such Playwright bumps
-    //    in CI before the workflow can mis-fire in production.
-    if (PIXEL_DIFF_HEADER_RE.test(line)) {
-      pixelDiffs.push(line);
+    // 2. Pixel-diff — count each comparison once, in either generation of wording.
+    //    The ≥ 1.5x count line is skipped when it is the dimmed call-log echo.
+    //    Spec cases (f)/(g) pin the ≤ 1.4x wording and (i)–(l) the 1.58 wording
+    //    verbatim; step 3 below is the safety net for the NEXT wording change.
+    if (
+      PIXEL_DIFF_HEADER_RE.test(line) ||
+      ((PIXEL_DIFF_COUNT_RE.test(line) || IMAGE_SIZE_MISMATCH_RE.test(line)) &&
+        !CALL_LOG_ECHO_RE.test(line))
+    ) {
+      pixelDiffs.push(line.trim());
       continue;
     }
 
-    // 3. Lines that match neither pattern are ignored (most of Playwright's output
-    //    is test-progress / banner / passing-test lines — not classifiable failures).
+    // Lines that match neither pattern are ignored (most of Playwright's output
+    // is test-progress / banner / passing-test lines — not classifiable failures).
+  }
+
+  // 3. Consistency guard: Playwright opened more `Error:` stanzas than we managed
+  //    to classify → something failed that this parser does not understand.
+  //    Park the surplus in `other` so bootstrapNeeded stays false and the
+  //    workflow's `Fail job on real regression` gate fires for a human.
+  const classified = missingPaths.length + pixelDiffs.length + other.length;
+  if (errorStanzas > classified) {
+    const surplus = errorStanzas - classified;
+    other.push(
+      `UNCLASSIFIED: ${surplus} \`Error:\` stanza(s) matched no known pattern — parser may not recognise this Playwright version's wording`
+    );
   }
 
   const bootstrapNeeded = missingPaths.length > 0 && pixelDiffs.length === 0 && other.length === 0;
