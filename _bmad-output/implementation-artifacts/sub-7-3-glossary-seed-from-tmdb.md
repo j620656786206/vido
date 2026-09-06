@@ -1,6 +1,6 @@
 # Story 7.3: 掃描當下用 TMDb 角色／演員名播種 `show_glossary`（後端）
 
-Status: review
+Status: done
 
 ## Story
 
