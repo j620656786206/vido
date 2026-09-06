@@ -98,6 +98,9 @@ func NewTMDbService(cfg TMDbConfig, cacheRepo repository.CacheRepositoryInterfac
 	// Watch providers (Story 12-4) bypass the language-fallback layer — the data
 	// is language-neutral — so the cache service talks to the raw client directly.
 	cacheService.SetProvidersClient(client)
+	// sub-7-3: credits are fetched per explicit language (the seeder pairs
+	// en-US with zh-TW) and cached with the language in the key.
+	cacheService.SetCreditsClient(client)
 
 	slog.Info("TMDb service initialized",
 		"default_language", cfg.DefaultLanguage,
@@ -125,6 +128,18 @@ func (s *TMDbService) VideosProvider() TMDbVideosProvider {
 // NewTMDbServiceWithCacheService (s.client is nil there).
 func (s *TMDbService) SearchClient() SearchTMDbClient {
 	if c, ok := s.client.(SearchTMDbClient); ok {
+		return c
+	}
+	return nil
+}
+
+// CreditsClient exposes the credits endpoints for the glossary seeder
+// (sub-7-3): the cache service's language-keyed getters, which sit on the
+// raw client (rate-limited) rather than the single-language fallback layer.
+// Returns nil when the cache layer is not the production *tmdb.CacheService
+// (test-only services built via NewTMDbServiceWithCacheService).
+func (s *TMDbService) CreditsClient() GlossaryCreditsClient {
+	if c, ok := s.cacheService.(GlossaryCreditsClient); ok {
 		return c
 	}
 	return nil

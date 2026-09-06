@@ -66,6 +66,11 @@ func (m *MockMovieRepository) UpdateEnrichedMetadata(ctx context.Context, movie 
 	return m.Called(ctx, movie).Error(0)
 }
 
+// UpdateCredits — the sub-7-3 credits-only writer, its own expectation.
+func (m *MockMovieRepository) UpdateCredits(ctx context.Context, id string, credits *models.Credits) error {
+	return m.Called(ctx, id, credits).Error(0)
+}
+
 // Single-intent writers (bugfix-wide-update-stale-copy-other-callers).
 func (m *MockMovieRepository) UpdateScanFileInfo(ctx context.Context, id string, fileSize int64, parseStatus models.ParseStatus) error {
 	return m.Called(ctx, id, fileSize, parseStatus).Error(0)
@@ -278,6 +283,11 @@ func (m *MockSeriesRepository) Update(ctx context.Context, series *models.Series
 // expectation so an accidental return to the wide writer fails loudly.
 func (m *MockSeriesRepository) UpdateEnrichedMetadata(ctx context.Context, series *models.Series) error {
 	return m.Called(ctx, series).Error(0)
+}
+
+// UpdateCredits — the sub-7-3 credits-only writer, its own expectation.
+func (m *MockSeriesRepository) UpdateCredits(ctx context.Context, id string, credits *models.Credits) error {
+	return m.Called(ctx, id, credits).Error(0)
 }
 
 // Single-intent writers (bugfix-wide-update-stale-copy-other-callers).

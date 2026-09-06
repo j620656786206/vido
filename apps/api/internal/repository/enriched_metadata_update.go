@@ -169,3 +169,43 @@ func requireOneRow(result sql.Result, kind, id string) error {
 	}
 	return nil
 }
+
+// UpdateCredits persists ONLY the credits column (sub-7-3). Enrichment now
+// fetches a matched title's cast from TMDb, and — by this file's discipline —
+// that is a column of its own rather than a widening of UpdateEnrichedMetadata:
+// the caller decides ownership (models.ShouldOverwrite against the row's
+// metadata_source) BEFORE calling, so a Metadata-Editor cast is never touched,
+// and a concurrent editor write cannot be reverted by the wide copy either.
+// A nil credits clears the column.
+func (r *MovieRepository) UpdateCredits(ctx context.Context, id string, credits *models.Credits) error {
+	return updateCreditsColumn(ctx, r.db, "movies", id, credits)
+}
+
+// UpdateCredits is the series counterpart of MovieRepository.UpdateCredits.
+func (r *SeriesRepository) UpdateCredits(ctx context.Context, id string, credits *models.Credits) error {
+	return updateCreditsColumn(ctx, r.db, "series", id, credits)
+}
+
+func updateCreditsColumn(ctx context.Context, db *sql.DB, table, id string, credits *models.Credits) error {
+	if id == "" {
+		return fmt.Errorf("%s id cannot be empty", table)
+	}
+	var value models.NullString
+	if credits != nil && (len(credits.Cast) > 0 || len(credits.Crew) > 0) {
+		// Serialise through the model so the column shape stays identical to
+		// what the Metadata Editor writes (Movie.SetCredits / Series.SetCredits).
+		var m models.Movie
+		if err := m.SetCredits(credits); err != nil {
+			return fmt.Errorf("failed to marshal credits: %w", err)
+		}
+		value = m.CreditsJSON
+	}
+	result, err := db.ExecContext(ctx,
+		`UPDATE `+table+` SET credits = ?, updated_at = ? WHERE id = ?`,
+		value, time.Now(), id,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update %s credits: %w", table, err)
+	}
+	return requireOneRow(result, table, id)
+}
