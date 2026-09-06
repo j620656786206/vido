@@ -139,3 +139,81 @@ describe('detectMissingBaselines', () => {
     expect(result.bootstrapNeeded).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Playwright 1.58 wording (2026-09-06). The repo ran 1.58 while the parser only
+// knew the ≤ 1.4x `Screenshot comparison failed` header: three real diffs on
+// PR #392's first CI round were invisible to it. Below is one of those stanzas
+// VERBATIM (SGR colour codes included — the tee'd probe log has them), so a
+// future Playwright bump that changes the wording again turns this red.
+// ---------------------------------------------------------------------------
+const PW158_DIFF_STANZA =
+  '    Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveScreenshot\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\n    Locator: locator(\'section[data-gallery-id="generation-consent/list"]\').locator(\'[data-gallery-state]\').first()\n      6362 pixels (ratio 0.01 of all image pixels) are different.\n\n      Snapshot: components/generation-consent/list/default.png\n\n    Call log:\n    \u001b[2m  - Expect "soft toHaveScreenshot(components/generation-consent/list/default.png)" with timeout 10000ms\u001b[22m\n    \u001b[2m    - verifying given screenshot expectation\u001b[22m\n    \u001b[2m  - waiting for locator(\'section[data-gallery-id="generation-consent/list"]\').locator(\'[data-gallery-state]\').first()\u001b[22m\n    \u001b[2m    - locator resolved to <div class="inline-block" data-gallery-state="default">…</div>\u001b[22m\n    \u001b[2m  - taking element screenshot\u001b[22m\n    \u001b[2m    - disabled all CSS animations\u001b[22m\n    \u001b[2m  - waiting for fonts to load...\u001b[22m\n    \u001b[2m  - fonts loaded\u001b[22m\n    \u001b[2m  - attempting scroll into view action\u001b[22m\n    \u001b[2m    - waiting for element to be stable\u001b[22m\n    \u001b[2m  - 6362 pixels (ratio 0.01 of all image pixels) are different.\u001b[22m\n    \u001b[2m  - waiting 100ms before taking screenshot\u001b[22m\n    \u001b[2m  - waiting for locator(\'section[data-gallery-id="generation-consent/list"]\').locator(\'[data-gallery-state]\').first()\u001b[22m\n    \u001b[2m    - locator resolved to <div class="inline-block" data-gallery-state="default">…</div>\u001b[22m\n    \u001b[2m  - taking element screenshot\u001b[22m\n    \u001b[2m    - disabled all CSS animations\u001b[22m\n    \u001b[2m  - waiting for fonts to load...\u001b[22m\n    \u001b[2m  - fonts loaded\u001b[22m\n    \u001b[2m  - attempting scroll into view action\u001b[22m\n    \u001b[2m    - waiting for element to be stable\u001b[22m\n    \u001b[2m  - captured a stable screenshot\u001b[22m\n    \u001b[2m  - 6362 pixels (ratio 0.01 of all image pixels) are different.\u001b[22m\n\n\n      292 |             await expect.soft(page).toHaveScreenshot([\'components\', id, `${state}.png`]);\n      293 |           } else {\n    > 294 |             await expect.soft(stateDiv).toHaveScreenshot([\'components\', id, `${state}.png`]);\n          |                                         ^\n      295 |           }\n      296 |         }\n      297 |       }\n        at /home/runner/work/vido/vido/tests/visual/components.visual.spec.ts:294:41\n\n    attachment #1: components/generation-consent/list/default (image/png) ──────────────────────────\n    Expected: tests/visual/components.visual.spec.ts-snapshots/components/generation-consent/list/default-visual-linux.png\n    Received: test-results/components.visual--visual--8935b-over-focus-open-bucket-4-4--visual/components/generation-consent/list/default-actual.png';
+
+const PW158_MISSING_LINE =
+  "    Error: A snapshot doesn't exist at /home/runner/work/vido/vido/tests/visual/components.visual.spec.ts-snapshots/components/generation-consent/list-mobile/default-visual-linux.png, writing actual.";
+
+const PW158_SIZE_MISMATCH_STANZA = [
+  '    Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveScreenshot\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed',
+  '',
+  '      Expected an image 480px by 835px, received 480px by 851px.',
+  '',
+  '    attachment #1: components/media-media-detail-panel/focus (image/png) ───',
+].join('\n');
+
+describe('detectMissingBaselines — Playwright ≥ 1.5x wording', () => {
+  it('(i) 1.58 pixel-diff stanza (verbatim, with ANSI) → 1 pixelDiff, bootstrapNeeded=false', () => {
+    const r = detectMissingBaselines(PW158_DIFF_STANZA);
+    expect(r.pixelDiffs).toHaveLength(1);
+    expect(r.pixelDiffs[0]).toMatch(
+      /^6362 pixels \(ratio 0\.01 of all image pixels\) are different\.$/
+    );
+    expect(r.missingPaths).toEqual([]);
+    expect(r.other).toEqual([]);
+    expect(r.bootstrapNeeded).toBe(false);
+  });
+
+  it('(j) 1.58: the dimmed call-log echoes of the count line are NOT extra diffs', () => {
+    const r = detectMissingBaselines(PW158_DIFF_STANZA);
+    // The stanza carries the count line three times (once real, twice as `- …` echoes).
+    expect(PW158_DIFF_STANZA.match(/pixels \(ratio/g)).toHaveLength(3);
+    expect(r.pixelDiffs).toHaveLength(1);
+  });
+
+  it('(k) 1.58: 1 missing -linux + 1 real diff → bootstrapNeeded=false (the 2026-09-06 near miss)', () => {
+    const r = detectMissingBaselines(PW158_MISSING_LINE + '\n' + PW158_DIFF_STANZA);
+    expect(r.missingPaths).toHaveLength(1);
+    expect(r.pixelDiffs).toHaveLength(1);
+    expect(r.bootstrapNeeded).toBe(false);
+  });
+
+  it('(l) 1.58: image size mismatch counts as a real diff', () => {
+    const r = detectMissingBaselines(PW158_SIZE_MISMATCH_STANZA);
+    expect(r.pixelDiffs).toHaveLength(1);
+    expect(r.bootstrapNeeded).toBe(false);
+  });
+
+  it('(m) an `Error:` stanza the parser does not recognise blocks auto-bootstrap', () => {
+    const unknown = [
+      PW158_MISSING_LINE,
+      '    Error: \u001b[31msome future Playwright wording we have never seen\u001b[39m',
+      '      1 sprocket (ratio 0.42 of all sprockets) is bent.',
+    ].join('\n');
+    const r = detectMissingBaselines(unknown);
+    expect(r.missingPaths).toHaveLength(1);
+    expect(r.pixelDiffs).toEqual([]);
+    expect(r.other).toHaveLength(1);
+    expect(r.other[0]).toMatch(/^UNCLASSIFIED: 1 `Error:` stanza/);
+    expect(r.bootstrapNeeded).toBe(false);
+  });
+
+  it('(n) ANSI codes around a missing-baseline line do not break the path capture', () => {
+    const coloured =
+      "    \u001b[31mError: A snapshot doesn't exist at /home/runner/work/vido/vido/tests/visual/components.visual.spec.ts-snapshots/components/x/default-visual-linux.png, writing actual.\u001b[39m";
+    const r = detectMissingBaselines(coloured);
+    expect(r.missingPaths).toEqual([
+      'tests/visual/components.visual.spec.ts-snapshots/components/x/default-visual-linux.png',
+    ]);
+    expect(r.bootstrapNeeded).toBe(true);
+  });
+});

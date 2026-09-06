@@ -196,13 +196,13 @@ test.describe('Empty Library 3-State Classifier @ui @library @bugfix-10-5', () =
     await expect(page.getByTestId('empty-no-folder')).toHaveCount(0);
     await expect(page.getByTestId('empty-ready-for-scan')).toHaveCount(0);
 
-    // AND: CTAs route correctly. The folder CTA lands on /setup (the wizard's
-    // 媒體資料夾 step) — /settings/libraries never existed; typecheck caught the
-    // dead route on 2026-09-06 (bugfix-f15-row-mobile-identity-collapse Task 5).
+    // AND: CTAs route correctly. The folder CTA lands on /settings/scanner, the
+    // page that hosts the media-library manager (7b-4) — /settings/libraries never
+    // existed; typecheck caught the dead route on 2026-09-06.
     const connectBtn = page.getByTestId('empty-no-qbt-connect-btn');
     const folderBtn = page.getByTestId('empty-no-qbt-folder-btn');
     await expect(connectBtn).toHaveAttribute('href', '/settings/qbittorrent');
-    await expect(folderBtn).toHaveAttribute('href', '/setup');
+    await expect(folderBtn).toHaveAttribute('href', '/settings/scanner');
     await expect(connectBtn).toHaveText('連接 qBittorrent');
     await expect(folderBtn).toHaveText('已有檔案？設定資料夾');
 
@@ -236,11 +236,11 @@ test.describe('Empty Library 3-State Classifier @ui @library @bugfix-10-5', () =
     await expect(page.getByTestId('empty-no-qbt')).toHaveCount(0);
     await expect(page.getByTestId('empty-ready-for-scan')).toHaveCount(0);
 
-    // AND: CTAs route correctly — both land on /setup until a libraries settings
-    // page exists (see EmptyNoFolder.tsx).
+    // AND: CTAs route correctly — the manager lives on /settings/scanner, the
+    // wizard stays the first-run alternative (see EmptyNoFolder.tsx).
     await expect(page.getByTestId('empty-no-folder-libraries-btn')).toHaveAttribute(
       'href',
-      '/setup'
+      '/settings/scanner'
     );
     await expect(page.getByTestId('empty-no-folder-wizard-btn')).toHaveAttribute('href', '/setup');
   });

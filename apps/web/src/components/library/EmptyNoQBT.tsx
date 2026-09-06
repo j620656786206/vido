@@ -28,9 +28,9 @@ export function EmptyNoQBT() {
         >
           連接 qBittorrent
         </Link>
-        {/* /settings/libraries does not exist yet — see EmptyNoFolder. */}
+        {/* The media-library manager lives on the 媒體庫掃描 settings page — see EmptyNoFolder. */}
         <Link
-          to="/setup"
+          to="/settings/scanner"
           className="rounded-lg border border-[var(--border-subtle)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--text-muted)] hover:text-[var(--text-primary)]"
           data-testid="empty-no-qbt-folder-btn"
         >

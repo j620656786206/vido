@@ -1,6 +1,6 @@
 ---
 name: Multi-Library Media Management (Route 2)
-description: Epic-level feature to replace single media_folder_path with multi-library system supporting per-folder content type assignment
+description: Multi-library (per-folder content type) is DONE as Epic 7b — API /api/v1/libraries, wizard step, and the settings manager which lives on /settings/scanner (there is no /settings/libraries route)
 type: project
 ---
 
@@ -28,3 +28,7 @@ type: project
 7. Code Review
 
 **Data model:** New tables `media_libraries` + `media_library_paths`, migration #020, deprecate `VIDO_MEDIA_DIRS` to fallback.
+
+**STATUS UPDATE 2026-09-06 (verified in code, this note supersedes the pipeline list above):**
+Epic 7b shipped all of Phase 1 — sprint-status `7b-2-library-crud-api` (REST `/api/v1/libraries`, `mediaLibrariesHandler.RegisterRoutes`), `7b-3-setup-wizard-multi-library`, `7b-4-settings-media-library-manager` (`LibraryCard` / `LibraryEditModal` / `MediaLibraryManager` under `apps/web/src/components/settings/`), `7b-5-scanner-library-integration` are all `done`. Migration `020_create_media_libraries.go` exists.
+**The manager is mounted inside `ScannerSettings.tsx` → route `/settings/scanner` (nav label 媒體庫掃描).** There is NO `/settings/libraries` route and never was; two empty-library CTAs linked to it for months (fixed 2026-09-06 in PR #392 then retargeted to `/settings/scanner`). If a link to "library settings" is needed, use `/settings/scanner`.

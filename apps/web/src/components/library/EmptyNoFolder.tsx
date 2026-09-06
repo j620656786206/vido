@@ -21,17 +21,17 @@ export function EmptyNoFolder() {
 
       <div className="flex items-center gap-3">
         <Link
-          to="/setup"
+          to="/settings/scanner"
           className="rounded-lg bg-[var(--accent-primary)] px-5 py-2.5 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)]"
           data-testid="empty-no-folder-libraries-btn"
         >
           設定媒體資料夾
         </Link>
-        {/* Both CTAs land on /setup for now: /settings/libraries does not exist
-            yet (multi-library PRD done, route not built) and the wizard's
-            媒體資料夾 step is where folders are configured today. Typecheck
-            caught the dead route on 2026-09-06 — retarget when the libraries
-            page lands. */}
+        {/* The media-library manager (Epic 7b-4: LibraryCard / EditModal /
+            DeleteConfirm) lives on the 媒體庫掃描 settings page — there never was
+            a /settings/libraries route. Typecheck caught the dead link on
+            2026-09-06 (bugfix-f15 Task 5); the wizard below stays as the
+            first-run alternative. */}
         <Link
           to="/setup"
           className="rounded-lg border border-[var(--border-subtle)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--text-muted)] hover:text-[var(--text-primary)]"
