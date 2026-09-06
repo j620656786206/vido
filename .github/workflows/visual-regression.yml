@@ -26,8 +26,15 @@
 #     pr       → 名字仍叫「PR」的彙整 job:ruleset 要求的 required check 就是
 #                這個名字,shard 改名不會動到它。changes 說「沒碰到」→ 直接綠;
 #                否則四路全綠才綠。
-#   Main job 維持單路(它不在任何人的等待路徑上,而且 bootstrap 分支要讀單一
-#   一份 probe log);要加速可以之後再給它 VISUAL_BUCKETS + --workers。
+#   Main job(2026-09-06 第二刀)不拆 job、改在同一台 runner 上開 4 個 worker:
+#   VISUAL_BUCKETS=4 讓 spec 變成 4 個 test,--workers=4 讓它們同時跑。
+#   為什麼不像 PR 側拆成 matrix:bootstrap 分支要讀「單一一份」probe log 再
+#   決定要不要 update-missing 並開 PR;拆成 4 個 job 就得先把 4 份 log 上傳、
+#   再開第五個 job 下載合併、還要再起一次 Vite 才能補圖。同一個 job 開 4 個
+#   worker 就沒有這些接線:log 還是一份(失敗 stanza 是所有 test 跑完後才
+#   序列化印出,parser 逐行比對不受 worker 交錯影響 —— 本機用 4 worker 的
+#   log 餵 bootstrap-detection.mjs 驗證過),update-missing 也只是多個 worker
+#   各寫各的 PNG。單路實測 552s,4 worker 預期 3 到 4 分。
 #
 # Runner 版本固定 (AC #5):
 #   `runs-on: ubuntu-24.04` 是版本化標籤,而非 `ubuntu-latest`。Linux 的字體
@@ -395,10 +402,9 @@ jobs:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04 # AC #5 — do NOT change to ubuntu-latest, see story 19-5 AC #5
     timeout-minutes: 40
-    # Main 維持單路:workflow 層的 VISUAL_BUCKETS=4 是給 pr-shard 用的,這裡
-    # 蓋回 1,verify-probe / update-missing 才是原本那一個 test、一份 log。
-    env:
-      VISUAL_BUCKETS: 1
+    # Main 也吃 workflow 層的 VISUAL_BUCKETS=4(4 個 test),配合下面三個
+    # playwright 呼叫的 --workers=4 在同一台 runner 上並行。runner 是 4 vCPU;
+    # 若之後觀察到截圖不穩定,先降 --workers 而不是動 VISUAL_BUCKETS。
     permissions:
       # `contents: write` + `pull-requests: write` 只有「首次 Linux 基準
       # 引導路徑」需要(peter-evans/create-pull-request 會 commit `-linux`
@@ -480,13 +486,16 @@ jobs:
       #   - bootstrap_needed=false 但 step 9 失敗 → 真的 pixel diff,job 必須失敗
       #     (`Fail job on real regression` step 在 bootstrap branches 之後做這個收尾)
       # `tee` 同時印到 console (CI log 可讀) 與 /tmp/visual-probe.log (parser 消費)。
+      # 等同 `pnpm run test:visual`(= playwright test --project=visual),
+      # 直接呼叫 playwright 是為了帶 --workers=4;npm script 本身不動,本機
+      # 照舊。
       - name: Run visual regression (verify-only freshness probe)
         id: verify-probe
         if: steps.check-linux.outputs.linux_baselines != '0'
         continue-on-error: true
         run: |
           set -o pipefail
-          pnpm run test:visual 2>&1 | tee /tmp/visual-probe.log
+          npx playwright test --project=visual --workers=4 2>&1 | tee /tmp/visual-probe.log
 
       # Story bugfix-19-9 AC #1 ([@contract-v3] on 19-5 AC #4) — verify-only log
       # 解析 step。Node ESM parser 把 Playwright stdout 分類進三個 buckets:
@@ -511,7 +520,8 @@ jobs:
         if: steps.check-linux.outputs.linux_baselines == '0'
         run: |
           set -euo pipefail
-          pnpm run test:visual:update
+          # = pnpm run test:visual:update, plus --workers=4 (see verify-probe)
+          npx playwright test --project=visual --update-snapshots --workers=4
           DATE_UTC=$(date -u +%Y-%m-%d)
           AUDIT_DOC=_bmad-output/audit/visual-baseline-19-4.md
           if [ ! -f "$AUDIT_DOC" ]; then
@@ -606,7 +616,8 @@ jobs:
         if: steps.check-linux.outputs.linux_baselines != '0' && steps.check-freshness.outputs.bootstrap_needed == 'true'
         run: |
           set -euo pipefail
-          pnpm run test:visual:update-missing
+          # = pnpm run test:visual:update-missing, plus --workers=4 (see verify-probe)
+          npx playwright test --project=visual --update-snapshots=missing --workers=4
           DATE_UTC=$(date -u +%Y-%m-%d)
           AUDIT_DOC=_bmad-output/audit/visual-baseline-19-4.md
           if [ ! -f "$AUDIT_DOC" ]; then
