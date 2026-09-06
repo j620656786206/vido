@@ -15,7 +15,13 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 // --- Types (camelCase frontend convention, transformed at API boundary) ---
 
-export type GlossarySource = 'subtitle' | 'metadata' | 'manual';
+/**
+ * Where a term came from. `official_subtitle` (aligned out of an official
+ * zh-Hant subtitle of the same show, sub-7-5) and `community` (imported from
+ * another install, sub-8-1) arrived with sub-7-1, which dropped the SQLite
+ * CHECK so the set is now closed by the Go model, not the schema.
+ */
+export type GlossarySource = 'subtitle' | 'metadata' | 'manual' | 'official_subtitle' | 'community';
 
 export interface GlossaryTerm {
   id: string;

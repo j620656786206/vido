@@ -128,8 +128,11 @@ type TranscriptionService struct {
 
 	// 9R-10 pipeline dependencies (all optional / nil-safe).
 	glossaryRepo repository.GlossaryRepositoryInterface // per-show glossary (9R-6/7)
-	opencc       OpenCCConverter                        // s2twp safety net
-	placer       SubtitlePlacer                         // atomic place + backup
+	// glossaryScopes turns the media id into the glossary scope (sub-7-1).
+	// nil = `local:<id>`, the pre-sub-7-1 key under its new name.
+	glossaryScopes GlossaryScopeResolverInterface
+	opencc         OpenCCConverter // s2twp safety net
+	placer         SubtitlePlacer  // atomic place + backup
 
 	// 9R-16 AC 12: generation-success writeback (optional / nil-safe).
 	subtitleWriter SubtitleStatusWriter
@@ -192,6 +195,28 @@ func (s *TranscriptionService) SetGlossaryRepository(repo repository.GlossaryRep
 	s.glossaryRepo = repo
 }
 
+// SetGlossaryScopeResolver wires the media-id → scope resolver (sub-7-1 AC #2).
+// Without it the service keys the glossary under `local:<media id>`.
+func (s *TranscriptionService) SetGlossaryScopeResolver(r GlossaryScopeResolverInterface) {
+	s.glossaryScopes = r
+}
+
+// glossaryScopeFor resolves mediaID to its scope, fail-soft to the local
+// drawer: a resolver error must never block generation (it is logged), and
+// the local key is exactly what this service used before sub-7-1.
+func (s *TranscriptionService) glossaryScopeFor(ctx context.Context, mediaID string) string {
+	if s.glossaryScopes == nil {
+		return localScopeFallback(mediaID)
+	}
+	scope, err := s.glossaryScopes.Resolve(ctx, mediaID)
+	if err != nil {
+		s.logger.Warn("glossary scope resolve failed — using the local drawer",
+			"media_id", mediaID, "error", err)
+		return localScopeFallback(mediaID)
+	}
+	return scope
+}
+
 // SetOpenCCConverter wires the Simplified→Traditional safety net (Story 9R-10).
 func (s *TranscriptionService) SetOpenCCConverter(c OpenCCConverter) {
 	s.opencc = c
@@ -242,10 +267,11 @@ func (s *TranscriptionService) loadGlossary(ctx context.Context, mediaID string)
 	if s.glossaryRepo == nil {
 		return nil
 	}
-	m, err := s.glossaryRepo.LookupByMedia(ctx, mediaID, false)
+	scope := s.glossaryScopeFor(ctx, mediaID)
+	m, err := s.glossaryRepo.LookupByScope(ctx, scope, false)
 	if err != nil {
 		s.logger.Warn("glossary lookup failed — translating without glossary",
-			"media_id", mediaID, "error", err)
+			"media_id", mediaID, "scope", scope, "error", err)
 		return nil
 	}
 	if len(m) == 0 {
@@ -1345,6 +1371,7 @@ func (s *TranscriptionService) harvestGlossaryTerms(ctx context.Context, mediaID
 	if s.glossaryRepo == nil || len(terms) == 0 {
 		return 0
 	}
+	scope := s.glossaryScopeFor(ctx, mediaID)
 	inserted := 0
 	for src, zh := range terms {
 		// CR sub-5-5 H2: s2twp the rendering before it becomes a MANDATORY
@@ -1357,6 +1384,7 @@ func (s *TranscriptionService) harvestGlossaryTerms(ctx context.Context, mediaID
 		}
 		ok, err := s.glossaryRepo.InsertIfAbsent(ctx, &models.GlossaryTerm{
 			MediaID: mediaID,
+			Scope:   scope,
 			TermSrc: src,
 			TermZh:  zh,
 			Source:  models.GlossarySourceSubtitle,

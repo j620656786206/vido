@@ -34,6 +34,9 @@ describe('GlossaryRowV2', () => {
     ['subtitle', '字幕'],
     ['metadata', '中繼資料'],
     ['manual', '手動'],
+    // sub-7-1 AC #4: the two provenances the shared TMDb drawer brings in.
+    ['official_subtitle', '官方字幕'],
+    ['community', '社群'],
   ] as const)('renders the %s source badge as %s', (source, label) => {
     render(
       <GlossaryRowV2 term={term({ source })} onConfirm={noop} onEdit={noop} onDelete={noop} />
