@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -218,13 +217,13 @@ func (s *ParseQueueService) createMovieFromMatch(
 	mediaID := uuid.New().String()
 
 	movie := &models.Movie{
-		ID:         mediaID,
-		Title:      bestMatch.Title,
-		TMDbID:     models.NullInt64{NullInt64: sql.NullInt64{Int64: parseProviderID(bestMatch.ID), Valid: bestMatch.ID != ""}},
-		PosterPath: models.NullString{NullString: sql.NullString{String: bestMatch.PosterURL, Valid: bestMatch.PosterURL != ""}},
-		Overview:   models.NullString{NullString: sql.NullString{String: bestMatch.Overview, Valid: bestMatch.Overview != ""}},
-		Genres:     bestMatch.Genres,
-		FilePath:   models.NewNullString(job.FilePath),
+		ID:             mediaID,
+		Title:          bestMatch.Title,
+		TMDbID:         nullTMDbID(tmdbIDFromMatch(bestMatch, searchResult.Source, metadata.MediaTypeMovie)),
+		PosterPath:     models.NullString{NullString: sql.NullString{String: bestMatch.PosterURL, Valid: bestMatch.PosterURL != ""}},
+		Overview:       models.NullString{NullString: sql.NullString{String: bestMatch.Overview, Valid: bestMatch.Overview != ""}},
+		Genres:         bestMatch.Genres,
+		FilePath:       models.NewNullString(job.FilePath),
 		ParseStatus:    models.ParseStatusSuccess,
 		MetadataSource: models.NewNullString(string(searchResult.Source)),
 	}
@@ -258,7 +257,7 @@ func (s *ParseQueueService) createTVEntryFromMatch(
 	// scanner cannot drift apart — the drift between two hand-rolled implementations is
 	// exactly what buried the TV pipeline in the first place.
 	seriesID, err := s.ingest.UpsertSeries(ctx, SeriesInput{
-		TMDbID:   parseProviderID(bestMatch.ID),
+		TMDbID:   tmdbIDFromMatch(bestMatch, searchResult.Source, metadata.MediaTypeTV),
 		Title:    bestMatch.Title,
 		Metadata: &bestMatch,
 		Source:   models.MetadataSource(searchResult.Source),
@@ -330,14 +329,6 @@ func (s *ParseQueueService) ListJobs(ctx context.Context, limit int) ([]*models.
 		limit = 50
 	}
 	return s.parseJobRepo.ListAll(ctx, limit)
-}
-
-// parseProviderID extracts an int64 from a provider ID string.
-func parseProviderID(id string) int64 {
-	// TMDb IDs are numeric strings
-	var n int64
-	fmt.Sscanf(strings.TrimSpace(id), "%d", &n)
-	return n
 }
 
 // Compile-time interface verification

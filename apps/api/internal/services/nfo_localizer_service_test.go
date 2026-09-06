@@ -54,7 +54,11 @@ func (g *glossaryReturningStub) ConfirmAllByScope(ctx context.Context, scope str
 func (g *glossaryReturningStub) MigrateScope(ctx context.Context, from, to string) (int64, int64, error) {
 	return 0, 0, nil
 }
-func (g *glossaryReturningStub) Delete(ctx context.Context, id string) error { return nil }
+func (g *glossaryReturningStub) IsScopeSeeded(context.Context, string) (bool, error) {
+	return false, nil
+}
+func (g *glossaryReturningStub) MarkScopeSeeded(context.Context, string, int) error { return nil }
+func (g *glossaryReturningStub) Delete(ctx context.Context, id string) error        { return nil }
 
 func newLocalizer(t *testing.T, completerResp string, terms map[string]string) *NFOLocalizerService {
 	t.Helper()

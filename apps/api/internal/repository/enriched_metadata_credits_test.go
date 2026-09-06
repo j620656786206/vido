@@ -69,3 +69,30 @@ func TestSeriesRepository_UpdateCredits_RoundTripsThroughSQLite(t *testing.T) {
 
 	assert.Error(t, repo.UpdateCredits(ctx, "", credits))
 }
+
+func TestGlossaryRepository_SeedMarks(t *testing.T) {
+	db := setupGlossaryDB(t)
+	repo := NewGlossaryRepository(db)
+	ctx := context.Background()
+
+	seeded, err := repo.IsScopeSeeded(ctx, "tmdb:tv:1396")
+	require.NoError(t, err)
+	assert.False(t, seeded)
+
+	require.NoError(t, repo.MarkScopeSeeded(ctx, "tmdb:tv:1396", 12))
+	seeded, err = repo.IsScopeSeeded(ctx, "tmdb:tv:1396")
+	require.NoError(t, err)
+	assert.True(t, seeded)
+
+	// Re-marking updates in place (no unique violation).
+	require.NoError(t, repo.MarkScopeSeeded(ctx, "tmdb:tv:1396", 0))
+	var n int
+	require.NoError(t, db.QueryRow(`SELECT seeded FROM glossary_seed_marks WHERE scope = 'tmdb:tv:1396'`).Scan(&n))
+	assert.Equal(t, 0, n)
+
+	seeded, err = repo.IsScopeSeeded(ctx, "tmdb:tv:1")
+	require.NoError(t, err)
+	assert.False(t, seeded, "exact scope, not a prefix")
+
+	assert.Error(t, repo.MarkScopeSeeded(ctx, "  ", 1))
+}

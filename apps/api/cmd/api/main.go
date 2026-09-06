@@ -627,17 +627,18 @@ func main() {
 	// first time a match is seen. No cache — matching can land after the row.
 	glossaryScopes := services.NewGlossaryScopeResolver(repos.Series, repos.Movies, repos.Episodes, repos.Glossary, slog.Default())
 	transcriptionService.SetGlossaryScopeResolver(glossaryScopes)
-	// sub-7-3: the moment enrichment matches a title to TMDb, its cast is
-	// fetched (en-US + zh-TW), stored on the row, and the translated names are
-	// planted into the show's glossary as `source=metadata` — so the first
-	// episode is no longer translated with an empty glossary. Same OpenCC
-	// converter as the subtitle safety net, so both agree on phrase choices.
-	// Enrichment only runs after a scan, which cannot start before this line.
+	// sub-7-3 + backlog-glossary-seed-existing-library-and-parse-queue: a
+	// show's glossary is seeded from its TMDb cast (en-US ↔ zh-TW, names as
+	// `source=metadata`) the FIRST time its shared scope is resolved — which
+	// happens before the first translation of any title, whether it was
+	// already in the library, arrived through the download parse queue, or
+	// was just matched by a scan (enrichment resolves once right after the
+	// match). Same OpenCC converter as the subtitle safety net, so both agree
+	// on phrase choices. Enrichment additionally stores the cast on the row.
 	if creditsClient := tmdbService.CreditsClient(); creditsClient != nil {
-		enrichmentService.SetGlossarySeeder(
-			services.NewGlossarySeeder(creditsClient, repos.Glossary, subtitleConverter, slog.Default()),
-			glossaryScopes,
-		)
+		glossarySeeder := services.NewGlossarySeeder(creditsClient, repos.Glossary, subtitleConverter, slog.Default())
+		glossaryScopes.SetSeeder(glossarySeeder)
+		enrichmentService.SetGlossarySeeder(glossarySeeder, glossaryScopes)
 	} else {
 		slog.Warn("glossary seeding from TMDb credits disabled: TMDb service exposes no credits client")
 	}

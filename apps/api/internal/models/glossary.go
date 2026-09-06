@@ -77,6 +77,26 @@ func GlossaryScopeLocal(mediaID string) string {
 	return GlossaryScopePrefixLocal + strings.TrimSpace(mediaID)
 }
 
+// ParseSharedGlossaryScope splits a shared scope back into the media kind
+// ("tv" / "movie") and TMDb id it was built from. ok=false for `local:` and
+// anything malformed.
+func ParseSharedGlossaryScope(scope string) (kind string, tmdbID int64, ok bool) {
+	var rest string
+	switch {
+	case strings.HasPrefix(scope, GlossaryScopePrefixTMDbTV):
+		kind, rest = "tv", strings.TrimPrefix(scope, GlossaryScopePrefixTMDbTV)
+	case strings.HasPrefix(scope, GlossaryScopePrefixTMDbMovie):
+		kind, rest = "movie", strings.TrimPrefix(scope, GlossaryScopePrefixTMDbMovie)
+	default:
+		return "", 0, false
+	}
+	id, err := strconv.ParseInt(rest, 10, 64)
+	if err != nil || id <= 0 {
+		return "", 0, false
+	}
+	return kind, id, true
+}
+
 // IsLocalGlossaryScope reports whether scope is a `local:` fallback — terms that
 // can never be shared because nothing outside this machine knows the key.
 func IsLocalGlossaryScope(scope string) bool {

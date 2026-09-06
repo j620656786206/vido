@@ -80,6 +80,7 @@ Claude Fable 5.1（claude-fable-5-1），2026-09-07
   - ⏭ 不做（記錄）：「每部片播種成本」——Resolve 多 2～3 次讀＋一個 MigrateScope 交易、一次 opencc subprocess、20～40 個 autocommit insert；enrichment 每部片本來就有 LLM 檔名解析＋TMDb 搜尋（秒級），這些是毫秒級，且只對 pending 列跑。審查建議的「scope 已有 metadata 詞就整批跳過」會讓 TMDb 後來補的角色永遠進不來，語意不對；`InsertManyIfAbsent` 批次交易等 sub-7-5 一起（它會插更多）。
   - ⏭ 立案：「只有 enrichment pending 列會播種——既有已比對片庫（sub-7-1 乾跑的 133 tv／87 movie）與下載完成走 parse queue 建的列（`createMovieFromMatch` 直接 `success`）永遠不會被播種」——是產品缺口，不是本 story 的 AC；審查建議的長解是把播種掛在 `GlossaryScopeResolver` 第一次解到 `tmdb:` scope 的那一刻（順便涵蓋既有片庫的下一次字幕跑），這是換 seam 的架構決定，交 Alexyu 裁定，見 `backlog-glossary-seed-existing-library-and-parse-queue`。
 - 驗證：`go test ./...` 35 套件全綠；`nx lint api`（vet + staticcheck）乾淨；FE 零改動（sub-7-1 已能顯示「中繼資料」徽章）。
+- **後續（2026-09-07 同日，`backlog-glossary-seed-existing-library-and-parse-queue` 採長解）**：播種 seam 從 enrichment 搬到 `GlossaryScopeResolver.Resolve`（`GlossarySeeder.EnsureSeeded`，搬家後才種）。enrichment 只留「存 cast 到 row」＋ 寫完 row 後 Resolve 一次；AC #1 的「掃描當下播種」效果不變，另外涵蓋既有片庫與下載路徑。
 
 ### Discovery Triage
 
