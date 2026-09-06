@@ -69,3 +69,27 @@ func TestSeriesRepository_UpdateCredits_RoundTripsThroughSQLite(t *testing.T) {
 
 	assert.Error(t, repo.UpdateCredits(ctx, "", credits))
 }
+
+func TestGlossaryRepository_HasSourceInScope(t *testing.T) {
+	db := setupGlossaryDB(t)
+	repo := NewGlossaryRepository(db)
+	ctx := context.Background()
+
+	has, err := repo.HasSourceInScope(ctx, "tmdb:tv:1396", models.GlossarySourceMetadata)
+	require.NoError(t, err)
+	assert.False(t, has, "empty drawer")
+
+	require.NoError(t, repo.Upsert(ctx, &models.GlossaryTerm{MediaID: "s1", Scope: "tmdb:tv:1396", TermSrc: "Walter White", TermZh: "老白", Source: models.GlossarySourceSubtitle}))
+	has, err = repo.HasSourceInScope(ctx, "tmdb:tv:1396", models.GlossarySourceMetadata)
+	require.NoError(t, err)
+	assert.False(t, has, "a subtitle-harvested term is not a seed")
+
+	require.NoError(t, repo.Upsert(ctx, &models.GlossaryTerm{MediaID: "s1", Scope: "tmdb:tv:1396", TermSrc: "Jesse", TermZh: "傑西", Source: models.GlossarySourceMetadata}))
+	has, err = repo.HasSourceInScope(ctx, "tmdb:tv:1396", models.GlossarySourceMetadata)
+	require.NoError(t, err)
+	assert.True(t, has)
+
+	has, err = repo.HasSourceInScope(ctx, "tmdb:tv:1", models.GlossarySourceMetadata)
+	require.NoError(t, err)
+	assert.False(t, has, "scope is exact, not a prefix")
+}

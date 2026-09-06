@@ -17,9 +17,11 @@ import (
 )
 
 // sub-7-3 AC #1 / #6(f): the two enrichment call points (movie, series) hand
-// the matched TMDb id to the seeder, store the credits in the SAME write as
-// the rest of the match, and seed the glossary only AFTER the row is written
-// (so the scope resolver sees tmdb_id).
+// the matched TMDb id to the credits fetcher, persist the cast through the
+// credits-only writer right after the row write, and then resolve the row's
+// glossary scope once — Resolve is where the drawer is seeded
+// (seed-on-first-resolve), so the resolver must be called AFTER the row is
+// written (it needs to see tmdb_id).
 
 type fakeGlossarySeeder struct {
 	credits   *models.Credits
@@ -50,13 +52,17 @@ func (f *fakeGlossarySeeder) SeedFromCredits(_ context.Context, scope, mediaID s
 }
 
 type fakeScopeResolver struct {
-	scope string
-	err   error
-	calls []string
+	scope  string
+	err    error
+	calls  []string
+	events *[]string
 }
 
 func (f *fakeScopeResolver) Resolve(_ context.Context, mediaID string) (string, error) {
 	f.calls = append(f.calls, mediaID)
+	if f.events != nil {
+		*f.events = append(*f.events, "resolve")
+	}
 	return f.scope, f.err
 }
 
@@ -115,7 +121,7 @@ func writeSeedTestNFO(t *testing.T, tmdbID string) *models.Movie {
 func TestEnrichMovie_NFOPath_PersistsCreditsAndSeedsAfterWrite(t *testing.T) {
 	var events []string
 	seeder := &fakeGlossarySeeder{credits: seedTestCredits, pairs: seedTestPairs, events: &events}
-	scopes := &fakeScopeResolver{scope: "tmdb:movie:10196"}
+	scopes := &fakeScopeResolver{scope: "tmdb:movie:10196", events: &events}
 	repo := &recordingMovieRepo{events: &events}
 	mockTMDb := &mockTMDbServiceForNFO{getMovieDetailsResp: &tmdb.MovieDetails{Movie: tmdb.Movie{ID: 10196, Title: "功夫"}}}
 
@@ -126,10 +132,10 @@ func TestEnrichMovie_NFOPath_PersistsCreditsAndSeedsAfterWrite(t *testing.T) {
 	require.NoError(t, svc.enrichMovie(context.Background(), movie))
 
 	assert.Equal(t, []string{"movie/10196"}, seeder.fetchArgs)
-	assert.Equal(t, []string{"tmdb:movie:10196|movie-1|1"}, seeder.seedArgs)
-	assert.Equal(t, []string{"movie-1"}, scopes.calls, "scope comes from the resolver, keyed by the LOCAL id")
-	assert.Equal(t, []string{"fetch", "write", "credits", "seed"}, events,
-		"row write first, then the credits-only writer, then seeding")
+	assert.Empty(t, seeder.seedArgs, "enrichment never seeds directly — the resolver does, on first sight of the scope")
+	assert.Equal(t, []string{"movie-1"}, scopes.calls, "the row's scope is resolved once, keyed by the LOCAL id")
+	assert.Equal(t, []string{"fetch", "write", "credits", "resolve"}, events,
+		"row write first, then the credits-only writer, then the resolve that seeds")
 
 	// The zh-TW cast goes through the narrow credits writer, never the wide copy.
 	assert.Equal(t, []string{"movie-1"}, repo.creditsWrites)
@@ -141,7 +147,7 @@ func TestEnrichMovie_NFOPath_PersistsCreditsAndSeedsAfterWrite(t *testing.T) {
 	assert.Equal(t, int64(10196), repo.updatedMovie.TMDbID.Int64)
 }
 
-func TestEnrichMovie_SearchPath_SeedsWithFallbackScopeWhenNoResolver(t *testing.T) {
+func TestEnrichMovie_SearchPath_PersistsCreditsEvenWithoutResolver(t *testing.T) {
 	seeder := &fakeGlossarySeeder{credits: seedTestCredits, pairs: seedTestPairs}
 	repo := &mockMovieRepoForNFO{}
 	parserSvc := &mockPQParserService{result: &parser.ParseResult{Status: parser.ParseStatusSuccess, MediaType: parser.MediaTypeMovie, CleanedTitle: "Fight Club", Year: 1999}}
@@ -156,7 +162,7 @@ func TestEnrichMovie_SearchPath_SeedsWithFallbackScopeWhenNoResolver(t *testing.
 	require.NoError(t, svc.enrichMovie(context.Background(), movie))
 
 	assert.Equal(t, []string{"movie/550"}, seeder.fetchArgs)
-	assert.Equal(t, []string{"tmdb:movie:550|movie-2|1"}, seeder.seedArgs, "no resolver → scope built from the tmdb id")
+	assert.Empty(t, seeder.seedArgs, "no resolver → nothing seeds (and nothing guesses a scope)")
 	assert.Equal(t, []string{"movie-2"}, repo.creditsWrites)
 	assert.Len(t, repo.lastCredits.Cast, 1)
 }
@@ -169,14 +175,14 @@ func TestEnrichMovie_SearchPath_TVMatchFetchesAggregateCredits(t *testing.T) {
 		Source: models.MetadataSourceTMDb,
 		Items:  []metadata.MetadataItem{{ID: "1396", Title: "Breaking Bad"}},
 	}}
+	scopes := &fakeScopeResolver{scope: "tmdb:movie:1396"}
 	svc := NewEnrichmentService(repo, parserSvc, metaSvc, nil, nil, nil, nil, nil)
-	svc.SetGlossarySeeder(seeder, nil)
+	svc.SetGlossarySeeder(seeder, scopes)
 
 	require.NoError(t, svc.enrichMovie(context.Background(), &models.Movie{ID: "movie-3", Title: "Breaking.Bad.S01E01.mkv"}))
 	assert.Equal(t, []string{"tv/1396"}, seeder.fetchArgs, "a TV match on a movie row still asks for the show's aggregate credits")
 	assert.Equal(t, []string{"movie-3"}, repo.creditsWrites, "the cast is stored on the row")
-	assert.Empty(t, seeder.seedArgs,
-		"but NOT seeded: the resolver keys the drawer on the TABLE, so this would land in tmdb:movie:1396 — some other film's shared drawer")
+	assert.Equal(t, []string{"movie-3"}, scopes.calls, "which drawer (if any) gets seeded is the resolver's call, not enrichment's")
 }
 
 func TestEnrichMovie_NumericNonTMDbIDNeverReachesTheSeeder(t *testing.T) {
@@ -204,8 +210,9 @@ func TestEnrichMovie_NFOWithoutIDsDoesNotSeedFromStaleTMDbID(t *testing.T) {
 	// carries no ids must not turn that stale id into the wrong show's cast.
 	seeder := &fakeGlossarySeeder{credits: seedTestCredits, pairs: seedTestPairs}
 	repo := &mockMovieRepoForNFO{}
+	scopes := &fakeScopeResolver{scope: "tmdb:movie:999"}
 	svc := NewEnrichmentService(repo, nil, nil, NewNFOReaderService(nil), &mockTMDbServiceForNFO{}, nil, nil, nil)
-	svc.SetGlossarySeeder(seeder, &fakeScopeResolver{scope: "tmdb:movie:999"})
+	svc.SetGlossarySeeder(seeder, scopes)
 
 	dir := t.TempDir()
 	videoPath := filepath.Join(dir, "Movie.mkv")
@@ -214,7 +221,7 @@ func TestEnrichMovie_NFOWithoutIDsDoesNotSeedFromStaleTMDbID(t *testing.T) {
 
 	require.NoError(t, svc.enrichMovie(context.Background(), movie))
 	assert.Empty(t, seeder.fetchArgs, "no TMDb match in THIS pass → no credits call")
-	assert.Empty(t, seeder.seedArgs)
+	assert.Empty(t, scopes.calls, "…and no resolve either — nothing new landed")
 	assert.Equal(t, models.ParseStatusSuccess, repo.updatedMovie.ParseStatus, "NFO data still applied")
 }
 
@@ -242,12 +249,14 @@ func TestEnrichMovie_CreditsFetchFailureStillEnrichesTheRow(t *testing.T) {
 	svc := NewEnrichmentService(repo, nil, nil, NewNFOReaderService(nil), mockTMDb, nil, nil, nil)
 	svc.SetGlossarySeeder(seeder, &fakeScopeResolver{scope: "tmdb:movie:10196"})
 
+	scopes := &fakeScopeResolver{scope: "tmdb:movie:10196"}
+	svc.SetGlossarySeeder(seeder, scopes)
 	require.NoError(t, svc.enrichMovie(context.Background(), writeSeedTestNFO(t, "10196")))
 	assert.Equal(t, []string{"movie/10196"}, seeder.fetchArgs)
-	assert.Empty(t, seeder.seedArgs, "nothing to seed")
 	require.NotNil(t, repo.updatedMovie, "the row is still written")
 	assert.Equal(t, models.ParseStatusSuccess, repo.updatedMovie.ParseStatus)
 	assert.Empty(t, repo.creditsWrites, "no credits stored")
+	assert.Equal(t, []string{"movie-1"}, scopes.calls, "the resolve still happens — the seeder retries the fetch on its own schedule")
 }
 
 func TestEnrichMovie_ManualSourceOutranksMatch_CreditsKeptButGlossaryStillSeeds(t *testing.T) {
@@ -261,15 +270,16 @@ func TestEnrichMovie_ManualSourceOutranksMatch_CreditsKeptButGlossaryStillSeeds(
 		Source: models.MetadataSourceTMDb,
 		Items:  []metadata.MetadataItem{{ID: "550", Title: "Fight Club"}},
 	}}
+	scopes := &fakeScopeResolver{scope: "tmdb:movie:550"}
 	svc := NewEnrichmentService(repo, parserSvc, metaSvc, nil, nil, nil, nil, nil)
-	svc.SetGlossarySeeder(seeder, &fakeScopeResolver{scope: "tmdb:movie:550"})
+	svc.SetGlossarySeeder(seeder, scopes)
 
 	movie := &models.Movie{ID: "movie-5", Title: "Fight.Club.mkv", MetadataSource: models.NewNullString(string(models.MetadataSourceManual))}
 	require.NoError(t, svc.enrichMovie(context.Background(), movie))
 
 	assert.Equal(t, []string{"movie/550"}, seeder.fetchArgs)
 	assert.Empty(t, repo.creditsWrites, "manual outranks tmdb: the user's cast stays")
-	assert.Equal(t, []string{"tmdb:movie:550|movie-5|1"}, seeder.seedArgs)
+	assert.Equal(t, []string{"movie-5"}, scopes.calls, "the glossary is still resolved (and seeded there): terms have their own provenance")
 }
 
 func TestEnrichMovie_RematchOverwritesEarlierTMDbCast(t *testing.T) {
@@ -294,11 +304,7 @@ func TestEnrichMovie_RematchOverwritesEarlierTMDbCast(t *testing.T) {
 	assert.Equal(t, "布萊恩·克蘭斯頓", repo.lastCredits.Cast[0].Name)
 }
 
-func TestEnrichMovie_ResolverErrorSkipsSeedingInsteadOfGuessingTheScope(t *testing.T) {
-	// Resolve is also the local→tmdb move, and MigrateScope never overwrites:
-	// seeding into a hand-built tmdb scope first would permanently shadow a
-	// term the user confirmed while the show was unmatched. Skip; the next
-	// resolve (next enrichment, or the first subtitle run) seeds.
+func TestEnrichMovie_ResolverErrorIsLoggedNotFatal(t *testing.T) {
 	seeder := &fakeGlossarySeeder{credits: seedTestCredits, pairs: seedTestPairs}
 	repo := &mockMovieRepoForNFO{}
 	mockTMDb := &mockTMDbServiceForNFO{getMovieDetailsResp: &tmdb.MovieDetails{Movie: tmdb.Movie{ID: 10196}}}
@@ -306,15 +312,14 @@ func TestEnrichMovie_ResolverErrorSkipsSeedingInsteadOfGuessingTheScope(t *testi
 	svc.SetGlossarySeeder(seeder, &fakeScopeResolver{err: errors.New("db locked")})
 
 	require.NoError(t, svc.enrichMovie(context.Background(), writeSeedTestNFO(t, "10196")))
-	assert.Equal(t, []string{"movie/10196"}, seeder.fetchArgs)
 	assert.Equal(t, []string{"movie-1"}, repo.creditsWrites, "the cast itself is still stored")
-	assert.Empty(t, seeder.seedArgs)
+	assert.Equal(t, models.ParseStatusSuccess, repo.updatedMovie.ParseStatus)
 }
 
 func TestEnrichSeries_PersistsCreditsAndSeedsAfterWrite(t *testing.T) {
 	var events []string
 	seeder := &fakeGlossarySeeder{credits: seedTestCredits, pairs: seedTestPairs, events: &events}
-	scopes := &fakeScopeResolver{scope: "tmdb:tv:1396"}
+	scopes := &fakeScopeResolver{scope: "tmdb:tv:1396", events: &events}
 	seriesRepo := &recordingSeriesRepo{events: &events}
 	parserSvc := &mockPQParserService{result: &parser.ParseResult{CleanedTitle: "Breaking Bad"}}
 	metaSvc := &mockPQMetadataService{searchResult: &metadata.SearchResult{
@@ -328,9 +333,9 @@ func TestEnrichSeries_PersistsCreditsAndSeedsAfterWrite(t *testing.T) {
 	require.NoError(t, svc.enrichSeries(context.Background(), &models.Series{ID: "series-1", Title: "Breaking Bad"}))
 
 	assert.Equal(t, []string{"tv/1396"}, seeder.fetchArgs)
-	assert.Equal(t, []string{"tmdb:tv:1396|series-1|1"}, seeder.seedArgs)
+	assert.Empty(t, seeder.seedArgs)
 	assert.Equal(t, []string{"series-1"}, scopes.calls)
-	assert.Equal(t, []string{"fetch", "write", "credits", "seed"}, events)
+	assert.Equal(t, []string{"fetch", "write", "credits", "resolve"}, events)
 	require.NotNil(t, seriesRepo.updated)
 	assert.Equal(t, []string{"series-1"}, seriesRepo.creditsWrites)
 	require.Len(t, seriesRepo.lastCredits.Cast, 1)
@@ -344,12 +349,13 @@ func TestEnrichSeries_NoMatchNeverCallsSeeder(t *testing.T) {
 	parserSvc := &mockPQParserService{result: &parser.ParseResult{CleanedTitle: "Nope"}}
 	metaSvc := &mockPQMetadataService{searchResult: &metadata.SearchResult{}}
 	svc := NewEnrichmentService(&mockMovieRepoForNFO{}, parserSvc, metaSvc, nil, nil, nil, nil, nil)
+	scopes := &fakeScopeResolver{}
 	svc.SetSeriesRepo(seriesRepo)
-	svc.SetGlossarySeeder(seeder, nil)
+	svc.SetGlossarySeeder(seeder, scopes)
 
 	require.NoError(t, svc.enrichSeries(context.Background(), &models.Series{ID: "series-2", Title: "Nope"}))
 	assert.Empty(t, seeder.fetchArgs)
-	assert.Empty(t, seeder.seedArgs)
+	assert.Empty(t, scopes.calls)
 	assert.Equal(t, models.ParseStatusFailed, seriesRepo.updated.ParseStatus)
 }
 

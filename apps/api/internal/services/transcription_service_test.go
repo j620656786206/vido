@@ -193,6 +193,9 @@ func (s *stubGlossaryRepo) LookupByScope(ctx context.Context, scope string, conf
 func (s *stubGlossaryRepo) MigrateScope(ctx context.Context, from, to string) (int64, int64, error) {
 	return 0, 0, nil
 }
+func (s *stubGlossaryRepo) HasSourceInScope(ctx context.Context, scope, source string) (bool, error) {
+	return false, nil
+}
 func (s *stubGlossaryRepo) Update(ctx context.Context, id, termZh string, confirmed bool) (time.Time, error) {
 	return time.Time{}, nil
 }

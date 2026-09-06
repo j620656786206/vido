@@ -34,6 +34,10 @@ type GlossaryRepositoryInterface interface {
 	InsertIfAbsent(ctx context.Context, term *models.GlossaryTerm) (bool, error)
 	// ListByScope returns all terms in a scope, term_src ascending.
 	ListByScope(ctx context.Context, scope string) ([]models.GlossaryTerm, error)
+	// HasSourceInScope reports whether ANY term of the given source exists in
+	// the scope — one indexed EXISTS; the "has this drawer been seeded from
+	// TMDb yet" question the seed-on-first-resolve seam asks.
+	HasSourceInScope(ctx context.Context, scope, source string) (bool, error)
 	// LookupByScope returns a term_src→term_zh map for a scope — the shape the
 	// translation service injects into prompts (9R-7). Only CONFIRMED terms are
 	// returned when confirmedOnly is true.
@@ -257,6 +261,19 @@ func (r *GlossaryRepository) ConfirmAllByScope(ctx context.Context, scope string
 // MigrateScope — see the interface doc. One transaction: the UPDATE moves
 // only the rows that would not collide in `to`; whatever is left under `from`
 // afterwards is the skipped set.
+// HasSourceInScope implements GlossaryRepositoryInterface.
+func (r *GlossaryRepository) HasSourceInScope(ctx context.Context, scope, source string) (bool, error) {
+	var exists bool
+	err := r.db.QueryRowContext(ctx,
+		`SELECT EXISTS(SELECT 1 FROM show_glossary WHERE scope = ? AND source = ?)`,
+		strings.TrimSpace(scope), source,
+	).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check glossary source in scope: %w", err)
+	}
+	return exists, nil
+}
+
 func (r *GlossaryRepository) MigrateScope(ctx context.Context, from, to string) (int64, int64, error) {
 	from, to = strings.TrimSpace(from), strings.TrimSpace(to)
 	if from == "" || to == "" || from == to {

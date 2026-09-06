@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
+	"time"
 	"unicode"
 	"unicode/utf8"
 
@@ -28,9 +30,18 @@ import (
 // come from.
 type GlossarySeeder struct {
 	credits GlossaryCreditsClient
-	repo    glossarySeedInserter
+	repo    glossarySeedRepo
 	opencc  OpenCCConverter // the official C++ OpenCC the subtitle pipeline uses; nil/unavailable = store as returned
 	logger  *slog.Logger
+	now     func() time.Time
+
+	// attempted remembers, per shared scope, until WHEN EnsureSeeded may skip
+	// the work. It is process-local on purpose: the durable answer is the
+	// `source=metadata` row itself (one indexed EXISTS); this map only stops a
+	// scope that yielded nothing (a Chinese-origin show, a TMDb outage) from
+	// being re-fetched on every Resolve.
+	mu        sync.Mutex
+	attempted map[string]time.Time
 }
 
 // GlossaryCreditsClient is the narrow TMDb surface the seeder needs — the
@@ -41,9 +52,11 @@ type GlossaryCreditsClient interface {
 	GetTVAggregateCreditsWithLanguage(ctx context.Context, tvID int, language string) (*tmdb.TVAggregateCredits, error)
 }
 
-// glossarySeedInserter is the one repository write the seeder performs.
-type glossarySeedInserter interface {
+// glossarySeedRepo is the repository surface the seeder needs: one write and
+// the "already seeded?" probe.
+type glossarySeedRepo interface {
 	InsertIfAbsent(ctx context.Context, term *models.GlossaryTerm) (bool, error)
+	HasSourceInScope(ctx context.Context, scope, source string) (bool, error)
 }
 
 // GlossarySeederInterface is what EnrichmentService depends on, so its tests
@@ -88,6 +101,14 @@ const (
 
 	// glossarySeedMaxTermRunes rejects anything that is not a name (AC #3).
 	glossarySeedMaxTermRunes = 40
+
+	// glossarySeedRetryAfter is how long EnsureSeeded waits before re-trying
+	// a scope whose TMDb fetch FAILED (outage, 429). A scope that was fetched
+	// fine but yielded nothing is not retried for the life of the process.
+	glossarySeedRetryAfter = time.Hour
+	// glossarySeedInFlight guards the window while one goroutine is seeding a
+	// scope: a concurrent Resolve of the same scope skips instead of racing.
+	glossarySeedInFlight = 5 * time.Minute
 )
 
 // NewGlossarySeeder wires the seeder. opencc is the same converter the
@@ -95,14 +116,79 @@ const (
 // glossary converted by a different OpenCC build than the subtitles would
 // disagree with them on phrase choices); nil is tolerated. A nil logger falls
 // back to slog.Default.
-func NewGlossarySeeder(credits GlossaryCreditsClient, repo glossarySeedInserter, opencc OpenCCConverter, logger *slog.Logger) *GlossarySeeder {
+func NewGlossarySeeder(credits GlossaryCreditsClient, repo glossarySeedRepo, opencc OpenCCConverter, logger *slog.Logger) *GlossarySeeder {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &GlossarySeeder{credits: credits, repo: repo, opencc: opencc, logger: logger.With("service", "glossary_seeder")}
+	return &GlossarySeeder{
+		credits:   credits,
+		repo:      repo,
+		opencc:    opencc,
+		logger:    logger.With("service", "glossary_seeder"),
+		now:       time.Now,
+		attempted: make(map[string]time.Time),
+	}
 }
 
 var _ GlossarySeederInterface = (*GlossarySeeder)(nil)
+var _ GlossaryScopeSeeder = (*GlossarySeeder)(nil)
+
+// EnsureSeeded implements GlossaryScopeSeeder: the seed-on-first-resolve seam
+// (backlog-glossary-seed-existing-library-and-parse-queue). It runs inside
+// GlossaryScopeResolver.Resolve, i.e. right before the first translation of
+// ANY title — a show the user already owned, one that arrived through the
+// download parse queue, one matched by a scan — and plants the TMDb cast
+// exactly once per shared drawer. Cheap on the steady state: one indexed
+// EXISTS (then a map hit for the rest of the process).
+func (s *GlossarySeeder) EnsureSeeded(ctx context.Context, scope, mediaID string) {
+	kind, tmdbID, ok := models.ParseSharedGlossaryScope(scope)
+	if !ok || s.repo == nil || s.credits == nil {
+		return
+	}
+	if !s.claim(scope) {
+		return
+	}
+	has, err := s.repo.HasSourceInScope(ctx, scope, models.GlossarySourceMetadata)
+	if err != nil {
+		s.logger.Warn("glossary seed probe failed", "scope", scope, "error", err)
+		s.release(scope, s.now().Add(glossarySeedRetryAfter))
+		return
+	}
+	if has {
+		s.release(scope, glossarySeedNever)
+		return
+	}
+	_, pairs, err := s.FetchCredits(ctx, kind, tmdbID)
+	if err != nil {
+		s.logger.Warn("glossary seed skipped: TMDb credits fetch failed; will retry later",
+			"scope", scope, "media_id", mediaID, "retry_after", glossarySeedRetryAfter, "error", err)
+		s.release(scope, s.now().Add(glossarySeedRetryAfter))
+		return
+	}
+	s.SeedFromCredits(ctx, scope, mediaID, pairs)
+	s.release(scope, glossarySeedNever)
+}
+
+// glossarySeedNever marks a scope as settled for the life of the process.
+var glossarySeedNever = time.Unix(1<<62, 0)
+
+// claim reserves a scope for seeding; false when another attempt is in flight
+// or the scope was settled / recently failed.
+func (s *GlossarySeeder) claim(scope string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if until, ok := s.attempted[scope]; ok && s.now().Before(until) {
+		return false
+	}
+	s.attempted[scope] = s.now().Add(glossarySeedInFlight)
+	return true
+}
+
+func (s *GlossarySeeder) release(scope string, until time.Time) {
+	s.mu.Lock()
+	s.attempted[scope] = until
+	s.mu.Unlock()
+}
 
 // FetchCredits implements GlossarySeederInterface.
 func (s *GlossarySeeder) FetchCredits(ctx context.Context, mediaType string, tmdbID int64) (*models.Credits, []CastPair, error) {

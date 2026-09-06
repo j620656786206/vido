@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -20,11 +21,24 @@ type fakeCreditsClient struct {
 	movie map[string]*tmdb.MovieCredits       // keyed by language
 	tv    map[string]*tmdb.TVAggregateCredits // keyed by language
 	err   map[string]error                    // keyed by language
+	mu    sync.Mutex
 	calls []string
 }
 
+func (f *fakeCreditsClient) record(call string) {
+	f.mu.Lock()
+	f.calls = append(f.calls, call)
+	f.mu.Unlock()
+}
+
+func (f *fakeCreditsClient) callsSnapshot() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]string(nil), f.calls...)
+}
+
 func (f *fakeCreditsClient) GetMovieCreditsWithLanguage(_ context.Context, id int, lang string) (*tmdb.MovieCredits, error) {
-	f.calls = append(f.calls, fmt.Sprintf("movie/%d?%s", id, lang))
+	f.record(fmt.Sprintf("movie/%d?%s", id, lang))
 	if err := f.err[lang]; err != nil {
 		return nil, err
 	}
@@ -32,7 +46,7 @@ func (f *fakeCreditsClient) GetMovieCreditsWithLanguage(_ context.Context, id in
 }
 
 func (f *fakeCreditsClient) GetTVAggregateCreditsWithLanguage(_ context.Context, id int, lang string) (*tmdb.TVAggregateCredits, error) {
-	f.calls = append(f.calls, fmt.Sprintf("tv/%d?%s", id, lang))
+	f.record(fmt.Sprintf("tv/%d?%s", id, lang))
 	if err := f.err[lang]; err != nil {
 		return nil, err
 	}
@@ -59,8 +73,22 @@ func (f *fakeSeedOpenCC) ConvertS2TWP(content []byte) ([]byte, error) {
 }
 
 type fakeSeedInserter struct {
-	terms []*models.GlossaryTerm
-	err   error
+	terms  []*models.GlossaryTerm
+	err    error
+	probes int // HasSourceInScope calls
+}
+
+func (f *fakeSeedInserter) HasSourceInScope(_ context.Context, scope, source string) (bool, error) {
+	f.probes++
+	if f.err != nil {
+		return false, f.err
+	}
+	for _, t := range f.terms {
+		if t.Scope == scope && t.Source == source {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (f *fakeSeedInserter) InsertIfAbsent(_ context.Context, term *models.GlossaryTerm) (bool, error) {

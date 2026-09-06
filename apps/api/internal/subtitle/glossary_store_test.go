@@ -43,6 +43,9 @@ func (c *captureGlossaryRepo) LookupByScope(_ context.Context, scope string, _ b
 func (c *captureGlossaryRepo) MigrateScope(context.Context, string, string) (int64, int64, error) {
 	return 0, 0, nil
 }
+func (c *captureGlossaryRepo) HasSourceInScope(context.Context, string, string) (bool, error) {
+	return false, nil
+}
 func (c *captureGlossaryRepo) Update(context.Context, string, string, bool) (time.Time, error) {
 	return time.Time{}, nil
 }

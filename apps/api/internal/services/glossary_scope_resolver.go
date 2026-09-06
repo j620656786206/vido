@@ -39,6 +39,16 @@ type glossaryScopeMover interface {
 	MigrateScope(ctx context.Context, from, to string) (moved, skipped int64, err error)
 }
 
+// GlossaryScopeSeeder is the seed-on-first-resolve hook
+// (backlog-glossary-seed-existing-library-and-parse-queue): called every time
+// Resolve answers with a SHARED scope, after the local→tmdb move, so the
+// user's own terms are in the drawer before any TMDb seed is. The
+// implementation (GlossarySeeder.EnsureSeeded) makes itself idempotent and
+// cheap; the resolver just guarantees the moment.
+type GlossaryScopeSeeder interface {
+	EnsureSeeded(ctx context.Context, scope, mediaID string)
+}
+
 // GlossaryScopeResolver resolves media ids to glossary scopes. It does NOT
 // cache: a TMDb match can land minutes after the file row did (scan writes
 // the row first, enrichment matches later), and a cached `local:` answer
@@ -49,6 +59,7 @@ type GlossaryScopeResolver struct {
 	movies   glossaryMovieFinder
 	episodes glossaryEpisodeFinder
 	mover    glossaryScopeMover
+	seeder   GlossaryScopeSeeder
 	logger   *slog.Logger
 }
 
@@ -69,6 +80,11 @@ func NewGlossaryScopeResolver(
 }
 
 var _ GlossaryScopeResolverInterface = (*GlossaryScopeResolver)(nil)
+
+// SetSeeder wires the seed-on-first-resolve hook. Optional: nil = no seeding.
+func (r *GlossaryScopeResolver) SetSeeder(seeder GlossaryScopeSeeder) {
+	r.seeder = seeder
+}
 
 // Resolve maps mediaID to its scope. Lookup order follows how the callers key
 // their glossaries: series first (the pipeline already hands episodes in as
@@ -98,6 +114,11 @@ func (r *GlossaryScopeResolver) Resolve(ctx context.Context, mediaID string) (st
 		// caller; sweep that drawer too when it differs from the show's.
 		if showID != id {
 			r.upgradeLocal(ctx, id, scope)
+		}
+		// Seed AFTER the move: MigrateScope never overwrites, so whatever the
+		// user confirmed while the show was unmatched must land first.
+		if r.seeder != nil {
+			r.seeder.EnsureSeeded(ctx, scope, showID)
 		}
 	}
 	return scope, nil
