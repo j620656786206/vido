@@ -308,7 +308,15 @@ export interface GalleryFixture {
   id: string;
   /** Human label shown above the card in the gallery (not screenshotted — outside the state divs). */
   label: string;
-  component: ComponentType<Record<string, unknown>>;
+  /**
+   * `any` on purpose (typecheck 2026-09-06): this is a registry of 160+ heterogeneous
+   * components rendered with untyped `props`; typing it as `ComponentType<Record<string,
+   * unknown>>` forced a `X as ComponentType<…>` cast on every entry, and 126 of those
+   * casts were TS2352 errors — the gallery never typechecked. The props are checked
+   * where they matter: by the component's own tests and by the visual baselines.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  component: ComponentType<any>;
   /** Props for every state. The same props are used for default/hover/focus/open (the state is applied by Playwright). */
   props?: Record<string, unknown>;
   /** `.pen` node id, or `'screen-section'` / `'utility'`. */
@@ -481,6 +489,54 @@ const CONSENT_FIXTURE_CANDIDATES: GenerationCandidate[] = [
   },
 ];
 
+// bugfix-f15-row-mobile-identity-collapse: the four rows F15-M-v2 (fdu4y)
+// draws — a plain extract row, a grouped episode, an unwritable folder and an
+// unmatched unknown-runtime file — so the 390px fixture shows every piece the
+// phone row has to fit (cost on the title line, no kind badge, wrapping subtitle).
+const CONSENT_MOBILE_SERIES_ID = 'c2d3e4f5-a6b7-4c8d-9e0f-1a2b3c4d5e6f';
+const CONSENT_MOBILE_CANDIDATES: GenerationCandidate[] = [
+  CONSENT_FIXTURE_CANDIDATES[0],
+  {
+    mediaId: '5a9d3e2b-6c7f-4d8e-9f0a-1b2c3d4e5f61',
+    mediaType: 'episode',
+    title: '怪奇物語 S04E07',
+    route: 'asr',
+    runtimeMinutes: 98,
+    runtimeKnown: true,
+    runtimeSource: 'ffprobe',
+    estimatedUsd: 0.26,
+    seriesId: CONSENT_MOBILE_SERIES_ID,
+    seriesTitle: '怪奇物語',
+    seasonNumber: 4,
+    episodeNumber: 7,
+  },
+  {
+    mediaId: '5a9d3e2b-6c7f-4d8e-9f0a-1b2c3d4e5f62',
+    mediaType: 'movie',
+    title: '全面啟動',
+    route: 'asr',
+    runtimeMinutes: 148,
+    runtimeKnown: true,
+    runtimeSource: 'ffprobe',
+    estimatedUsd: 0.31,
+    writable: false,
+    blocker: 'folder_not_writable',
+    blockerDir: '/media/movies/Inception (2010)',
+  },
+  {
+    mediaId: '5a9d3e2b-6c7f-4d8e-9f0a-1b2c3d4e5f63',
+    mediaType: 'movie',
+    title: 'Interstellar.2014.2160p.WEB-DL.DDP5.1-FLUX',
+    displayTitle: '星際效應',
+    tmdbMatched: false,
+    route: 'asr',
+    runtimeMinutes: 45,
+    runtimeKnown: false,
+    runtimeSource: 'fallback',
+    estimatedUsd: 0.24,
+  },
+];
+
 // sub-5-3: grouped F15 — one movie + a two-season series (incl. S00 特別篇).
 const CONSENT_GROUPED_SERIES_ID = 'b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e';
 const CONSENT_GROUPED_CANDIDATES: GenerationCandidate[] = [
@@ -535,7 +591,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'ui-button',
     label: 'ui/Button',
-    component: Button as ComponentType<Record<string, unknown>>,
+    component: Button,
     props: { children: '主要按鈕' },
     penNode: 'otvKh', // + YDPhc (ButtonSecondary) — see drift-19-3-2026-05.md
   },
@@ -546,7 +602,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     // have needed re-baselining the day the SVG arrived.
     id: 'ui-tmdb-attribution',
     label: 'ui/TmdbAttribution',
-    component: TmdbAttribution as ComponentType<Record<string, unknown>>,
+    component: TmdbAttribution,
     props: {},
     penNode: 'utility',
     statesOnly: ['default'],
@@ -554,7 +610,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'ui-tmdb-attribution-inline',
     label: 'ui/TmdbAttribution (inline)',
-    component: TmdbAttribution as ComponentType<Record<string, unknown>>,
+    component: TmdbAttribution,
     props: { variant: 'inline' },
     penNode: 'utility',
     statesOnly: ['default'],
@@ -562,7 +618,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'ui-badge',
     label: 'ui/Badge',
-    component: Badge as ComponentType<Record<string, unknown>>,
+    component: Badge,
     props: { children: '標籤' },
     penNode: 'utility',
     statesOnly: ['default'],
@@ -570,7 +626,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'ui-card',
     label: 'ui/Card',
-    component: Card as ComponentType<Record<string, unknown>>,
+    component: Card,
     props: {
       children: (
         <>
@@ -589,7 +645,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'ui-skeleton',
     label: 'ui/Skeleton',
-    component: Skeleton as ComponentType<Record<string, unknown>>,
+    component: Skeleton,
     props: { className: 'h-6 w-48' },
     penNode: 'utility',
     statesOnly: ['default'],
@@ -597,7 +653,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'ui-pagination',
     label: 'ui/Pagination',
-    component: Pagination as ComponentType<Record<string, unknown>>,
+    component: Pagination,
     props: { currentPage: 3, totalPages: 12, onPageChange: noop },
     penNode: 'utility',
   },
@@ -606,7 +662,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'media-poster-card',
     label: 'media/PosterCard',
-    component: PosterCard as ComponentType<Record<string, unknown>>,
+    component: PosterCard,
     // Non-numeric id ⇒ tmdbId 0 ⇒ useMovieDetails/useTVShowDetails stay disabled even on hover
     // (no network in the snapshot). Library-admin path: metadataSource set (bugfix-10-4 H2 regressor).
     props: {
@@ -627,7 +683,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'media-poster-card-skeleton',
     label: 'media/PosterCardSkeleton',
-    component: PosterCardSkeleton as ComponentType<Record<string, unknown>>,
+    component: PosterCardSkeleton,
     penNode: 'utility',
     statesOnly: ['default'],
     width: 200,
@@ -635,7 +691,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'media-color-placeholder',
     label: 'media/ColorPlaceholder',
-    component: ColorPlaceholder as ComponentType<Record<string, unknown>>,
+    component: ColorPlaceholder,
     props: { filename: '銀翼殺手 2049.mkv', height: 240 },
     penNode: 'utility',
     statesOnly: ['default'],
@@ -643,7 +699,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'media-availability-badge-owned',
     label: 'media/AvailabilityBadge (owned)',
-    component: AvailabilityBadge as ComponentType<Record<string, unknown>>,
+    component: AvailabilityBadge,
     props: { variant: 'owned' },
     penNode: 'screen-section',
     statesOnly: ['default'],
@@ -651,7 +707,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'media-availability-badge-requested',
     label: 'media/AvailabilityBadge (requested)',
-    component: AvailabilityBadge as ComponentType<Record<string, unknown>>,
+    component: AvailabilityBadge,
     props: { variant: 'requested' },
     penNode: 'screen-section',
     statesOnly: ['default'],
@@ -659,7 +715,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'media-metadata-source-badge',
     label: 'media/MetadataSourceBadge',
-    component: MetadataSourceBadge as ComponentType<Record<string, unknown>>,
+    component: MetadataSourceBadge,
     props: { source: 'tmdb', fetchDate: '2026-01-15' },
     penNode: 'screen-section',
     statesOnly: ['default'],
@@ -667,7 +723,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'media-tech-badge',
     label: 'media/TechBadge',
-    component: TechBadge as ComponentType<Record<string, unknown>>,
+    component: TechBadge,
     props: { label: 'H.265', category: 'video' },
     penNode: 'L9m19', // + 9iTW3/f84BM/cUjyv (TechBadge-Audio/Subtitle/HDR)
     statesOnly: ['default'],
@@ -675,7 +731,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'media-tech-badge-group',
     label: 'media/TechBadgeGroup',
-    component: TechBadgeGroup as ComponentType<Record<string, unknown>>,
+    component: TechBadgeGroup,
     props: {
       videoCodec: 'H.265',
       videoResolution: '3840x2160',
@@ -692,7 +748,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'degradation-degradation-badge',
     label: 'degradation/DegradationBadge',
-    component: DegradationBadge as ComponentType<Record<string, unknown>>,
+    component: DegradationBadge,
     props: { level: 'partial' },
     penNode: 'screen-section',
     statesOnly: ['default'],
@@ -702,14 +758,14 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'library-view-toggle',
     label: 'library/ViewToggle',
-    component: ViewToggle as ComponentType<Record<string, unknown>>,
+    component: ViewToggle,
     props: { view: 'grid', onViewChange: noop },
     penNode: 'screen-section',
   },
   {
     id: 'library-filter-chips',
     label: 'library/FilterChips',
-    component: FilterChips as ComponentType<Record<string, unknown>>,
+    component: FilterChips,
     props: {
       filters: { genres: ['動作', '科幻'], yearMin: 2010, yearMax: 2023, unmatched: true },
       onRemoveGenre: noop,
@@ -724,7 +780,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'library-sort-selector',
     label: 'library/SortSelector',
-    component: SortSelector as ComponentType<Record<string, unknown>>,
+    component: SortSelector,
     props: { sortBy: 'created_at', sortOrder: 'desc', onSortChange: noop },
     penNode: '955EZ', // Component/SortDropdown
     // 19-4b Task 0 Fix C: the dropdown panel `955EZ` itself is only visible when
@@ -736,7 +792,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'library-empty-no-qbt',
     label: 'library/EmptyNoQBT',
-    component: EmptyNoQBT as ComponentType<Record<string, unknown>>,
+    component: EmptyNoQBT,
     penNode: 'fSKuT', // Component/EmptyLibrary-NoQBT
     statesOnly: ['default'],
     width: 640,
@@ -744,7 +800,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'library-empty-no-folder',
     label: 'library/EmptyNoFolder',
-    component: EmptyNoFolder as ComponentType<Record<string, unknown>>,
+    component: EmptyNoFolder,
     penNode: 'U3SGxG', // Component/EmptyLibrary-NoFolder
     statesOnly: ['default'],
     width: 640,
@@ -752,7 +808,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'library-empty-ready-for-scan',
     label: 'library/EmptyReadyForScan',
-    component: EmptyReadyForScan as ComponentType<Record<string, unknown>>,
+    component: EmptyReadyForScan,
     penNode: 'mfKgm', // Component/EmptyLibrary-ReadyForScan
     statesOnly: ['default'],
     width: 640,
@@ -760,7 +816,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'library-empty-search-results',
     label: 'library/EmptySearchResults',
-    component: EmptySearchResults as ComponentType<Record<string, unknown>>,
+    component: EmptySearchResults,
     props: { query: '不存在的電影', onClear: noop },
     penNode: 'screen-section',
     statesOnly: ['default'],
@@ -771,7 +827,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'metadata-editor-genre-selector',
     label: 'metadata-editor/GenreSelector',
-    component: GenreSelector as ComponentType<Record<string, unknown>>,
+    component: GenreSelector,
     props: { selectedGenres: ['action', 'sci-fi'], onToggle: noop },
     penNode: 'L1NP6', // Component/GenreTag
     width: 560,
@@ -781,7 +837,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'search-search-bar',
     label: 'search/SearchBar',
-    component: SearchBar as ComponentType<Record<string, unknown>>,
+    component: SearchBar,
     props: { onSearch: noop, initialQuery: '銀翼殺手' },
     penNode: '6MxLT', // Component/SearchInput
     width: 480,
@@ -789,7 +845,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'search-media-type-tabs',
     label: 'search/MediaTypeTabs',
-    component: MediaTypeTabs as ComponentType<Record<string, unknown>>,
+    component: MediaTypeTabs,
     props: { activeType: 'movie', onTypeChange: noop, movieCount: 128, tvCount: 64 },
     penNode: 'TboA7', // + j98G4 (TabActive / TabInactive)
     width: 400,
@@ -801,7 +857,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'homepage-explore-block-skeleton',
     label: 'homepage/ExploreBlockSkeleton',
-    component: ExploreBlockSkeleton as ComponentType<Record<string, unknown>>,
+    component: ExploreBlockSkeleton,
     props: { count: 6 },
     penNode: 'utility',
     statesOnly: ['default'],
@@ -819,7 +875,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     // Radix `Root` re-export — the DialogContent is portaled to document.body.
     // The state-div screenshot may be empty; the portaled content paints under
     // the app shell providers but outside the per-fixture crop. Default-only.
-    component: Dialog as ComponentType<Record<string, unknown>>,
+    component: Dialog,
     props: {
       open: true,
       onOpenChange: noop,
@@ -840,7 +896,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'ui-highlight-text',
     label: 'ui/HighlightText',
-    component: HighlightText as ComponentType<Record<string, unknown>>,
+    component: HighlightText,
     props: { text: '銀翼殺手 2049', query: '銀翼' },
     penNode: 'utility',
     statesOnly: ['default'],
@@ -851,7 +907,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'ui/SidePanel',
     // `position: fixed inset-0` overlay — covers the viewport when isOpen=true.
     // Snapshot default only; hover/focus on a viewport-wide overlay is not useful.
-    component: SidePanel as ComponentType<Record<string, unknown>>,
+    component: SidePanel,
     props: {
       isOpen: true,
       onClose: noop,
@@ -866,7 +922,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'media-credits-section',
     label: 'media/CreditsSection',
-    component: CreditsSection as ComponentType<Record<string, unknown>>,
+    component: CreditsSection,
     props: {
       director: {
         id: 1,
@@ -894,7 +950,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     // Internal open/close state via useState — opt into `open` via openTrigger
     // (same pattern as library-sort-selector). Dropdown is absolutely-positioned
     // inline (not Radix portal), so it stays inside the state div.
-    component: DetailPanelMenu as ComponentType<Record<string, unknown>>,
+    component: DetailPanelMenu,
     props: { onReparse: noop, onExport: noop, onDelete: noop },
     penNode: 'screen-section',
     statesOnly: ['default', 'hover', 'focus', 'open'],
@@ -905,7 +961,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     id: 'media-fallback-failed',
     label: 'media/FallbackFailed',
     // Uses TanStack `Link` — gallery route shares the app's RouterProvider.
-    component: FallbackFailed as ComponentType<Record<string, unknown>>,
+    component: FallbackFailed,
     props: {
       title: '[Leopard-Raws] Kimi no Na wa (BD)',
       mediaType: 'movie',
@@ -922,7 +978,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'media-fallback-pending',
     label: 'media/FallbackPending',
-    component: FallbackPending as ComponentType<Record<string, unknown>>,
+    component: FallbackPending,
     props: { filename: '[Leopard-Raws] Kimi no Na wa (BD).mkv' },
     penNode: 'screen-section',
     statesOnly: ['default'],
@@ -931,7 +987,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'media-file-info',
     label: 'media/FileInfo',
-    component: FileInfo as ComponentType<Record<string, unknown>>,
+    component: FileInfo,
     props: {
       filePath: '/volume1/Movies/銀翼殺手 2049 (2017) 2160p.HDR.mkv',
       fileSize: 12_884_901_888,
@@ -945,7 +1001,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'media/MediaGrid',
     // Children id:0 keeps PosterCard's useMovieDetails/useTVShowDetails disabled
     // (no network on hover) — same pattern as the existing `media-poster-card` fixture.
-    component: MediaGrid as ComponentType<Record<string, unknown>>,
+    component: MediaGrid,
     props: {
       items: [
         {
@@ -989,7 +1045,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'media/TrailerEmbed',
     // Renders the "▶ 觀看預告片" button until clicked; iframe state (which would
     // load YouTube) is explicitly NOT captured.
-    component: TrailerEmbed as ComponentType<Record<string, unknown>>,
+    component: TrailerEmbed,
     props: { videoKey: 'dQw4w9WgXcQ', title: '銀翼殺手 2049' },
     penNode: 'screen-section',
     width: 360,
@@ -997,7 +1053,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'media-tv-show-info',
     label: 'media/TVShowInfo',
-    component: TVShowInfo as ComponentType<Record<string, unknown>>,
+    component: TVShowInfo,
     props: {
       show: {
         id: 0,
@@ -1024,6 +1080,15 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         ],
         inProduction: true,
         seasons: [],
+        // Present on the wire but not rendered by TVShowInfo — here only so the
+        // fixture actually satisfies TVShowDetails (typecheck 2026-09-06).
+        popularity: 0,
+        genreIds: [1],
+        originalLanguage: 'en',
+        originCountry: ['US'],
+        homepage: null,
+        languages: ['en'],
+        productionCountries: [],
       } satisfies TVShowDetails,
     },
     penNode: 'screen-section',
@@ -1035,7 +1100,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'degradation-placeholder-content',
     label: 'degradation/PlaceholderContent',
-    component: PlaceholderContent as ComponentType<Record<string, unknown>>,
+    component: PlaceholderContent,
     props: { field: 'overview' },
     penNode: 'utility',
     statesOnly: ['default'],
@@ -1044,7 +1109,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'degradation-service-health-banner',
     label: 'degradation/ServiceHealthBanner',
-    component: ServiceHealthBanner as ComponentType<Record<string, unknown>>,
+    component: ServiceHealthBanner,
     props: {
       level: 'partial',
       services: {
@@ -1090,7 +1155,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'degradation-unidentified-file-card',
     label: 'degradation/UnidentifiedFileCard',
-    component: UnidentifiedFileCard as ComponentType<Record<string, unknown>>,
+    component: UnidentifiedFileCard,
     props: {
       filename: 'Unknown.Movie.2024.1080p.WEB-DL.x264.mkv',
       attemptedSources: ['tmdb', 'douban', 'wikipedia'],
@@ -1107,7 +1172,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'dashboard-collapsible-section',
     label: 'dashboard/CollapsibleSection',
-    component: CollapsibleSection as ComponentType<Record<string, unknown>>,
+    component: CollapsibleSection,
     props: {
       title: '最近新增',
       defaultExpanded: true,
@@ -1121,7 +1186,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     id: 'dashboard-quick-search-bar',
     label: 'dashboard/QuickSearchBar',
     // useNavigate from @tanstack/react-router — provided by the app shell.
-    component: QuickSearchBar as ComponentType<Record<string, unknown>>,
+    component: QuickSearchBar,
     props: {},
     penNode: 'screen-section',
     width: 480,
@@ -1131,7 +1196,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'downloads-download-filter-tabs',
     label: 'downloads/DownloadFilterTabs',
-    component: DownloadFilterTabs as ComponentType<Record<string, unknown>>,
+    component: DownloadFilterTabs,
     props: {
       activeFilter: 'all',
       counts: { all: 10, downloading: 3, paused: 2, completed: 4, seeding: 1, error: 0 },
@@ -1143,7 +1208,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'downloads-download-item',
     label: 'downloads/DownloadItem',
-    component: DownloadItem as ComponentType<Record<string, unknown>>,
+    component: DownloadItem,
     props: {
       download: {
         hash: 'abc123def456',
@@ -1173,7 +1238,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'downloads/DownloadList',
     // DownloadDetails (which calls useDownloadDetails) only mounts on row-expand —
     // default expandedHash is null, so no network hooks fire on mount.
-    component: DownloadList as ComponentType<Record<string, unknown>>,
+    component: DownloadList,
     props: {
       downloads: [
         {
@@ -1222,7 +1287,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'downloads-download-parse-status-badge',
     label: 'downloads/DownloadParseStatusBadge',
-    component: DownloadParseStatusBadge as ComponentType<Record<string, unknown>>,
+    component: DownloadParseStatusBadge,
     props: { parseStatus: { status: 'completed', mediaId: 'media-123' } },
     penNode: 'screen-section',
     statesOnly: ['default'],
@@ -1231,7 +1296,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'downloads-parse-failed-actions',
     label: 'downloads/ParseFailedActions',
-    component: ParseFailedActions as ComponentType<Record<string, unknown>>,
+    component: ParseFailedActions,
     props: {
       torrentHash: 'abc123',
       errorMessage: '無法解析檔名',
@@ -1244,7 +1309,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'downloads-status-icon',
     label: 'downloads/StatusIcon',
-    component: StatusIcon as ComponentType<Record<string, unknown>>,
+    component: StatusIcon,
     props: { status: 'downloading' },
     penNode: 'utility',
     statesOnly: ['default'],
@@ -1256,7 +1321,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     id: 'library-batch-confirm-dialog',
     label: 'library/BatchConfirmDialog',
     // Plain fixed-overlay dialog (not Radix portal); renders inline when isOpen=true.
-    component: BatchConfirmDialog as ComponentType<Record<string, unknown>>,
+    component: BatchConfirmDialog,
     props: {
       isOpen: true,
       itemCount: 5,
@@ -1270,7 +1335,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'library-batch-progress',
     label: 'library/BatchProgress',
-    component: BatchProgress as ComponentType<Record<string, unknown>>,
+    component: BatchProgress,
     props: {
       isOpen: true,
       current: 5,
@@ -1286,7 +1351,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'library-library-search-bar',
     label: 'library/LibrarySearchBar',
-    component: LibrarySearchBar as ComponentType<Record<string, unknown>>,
+    component: LibrarySearchBar,
     props: { onSearch: noop, initialQuery: '鬼滅之刃', resultCount: 15 },
     penNode: 'screen-section',
     width: 480,
@@ -1295,7 +1360,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     id: 'library-library-table',
     label: 'library/LibraryTable',
     // Renders TanStack `Link`s — router context provided by app shell.
-    component: LibraryTable as ComponentType<Record<string, unknown>>,
+    component: LibraryTable,
     props: {
       items: [
         {
@@ -1346,7 +1411,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     // useManualSearch enabled when initial query length >= 2 (derived from parsedInfo.title
     // OR filename). Defense: empty parsedInfo.title + short filename gives derived query
     // length < 2 → useQuery stays disabled, no network. Adjusted from sub-agent draft.
-    component: ParseFailureCard as ComponentType<Record<string, unknown>>,
+    component: ParseFailureCard,
     props: {
       file: {
         id: 'file-123',
@@ -1378,7 +1443,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'library/PosterCardMenu',
     // No internal trigger button — rendered open via isOpen=true. Positioned absolute,
     // anchored by a width-constrained wrapper.
-    component: PosterCardMenu as ComponentType<Record<string, unknown>>,
+    component: PosterCardMenu,
     props: {
       onViewDetails: noop,
       onReparse: noop,
@@ -1395,7 +1460,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'library-selection-toolbar',
     label: 'library/SelectionToolbar',
-    component: SelectionToolbar as ComponentType<Record<string, unknown>>,
+    component: SelectionToolbar,
     props: {
       selectedCount: 3,
       onDelete: noop,
@@ -1413,7 +1478,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'library/SettingsGearDropdown',
     // Trigger button [data-testid="settings-gear-button"] toggles internal isOpen.
     // Opt into 'open' state via openTrigger to capture the dropdown panel.
-    component: SettingsGearDropdown as ComponentType<Record<string, unknown>>,
+    component: SettingsGearDropdown,
     props: {
       preferences: { density: 'medium', defaultSort: 'created_at', titleLanguage: 'zh-tw' },
       onPreferencesChange: noop,
@@ -1432,7 +1497,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     // should ideally be in Q-bucket. Defensive: tmdbId=0 ⇒ enabled=false ⇒ no network.
     // Renders the "找不到預告片" empty state deterministically. Re-bucket to Q in Task 3
     // if seeded video-key payload baseline is desired.
-    component: TrailerModal as ComponentType<Record<string, unknown>>,
+    component: TrailerModal,
     props: {
       open: true,
       onClose: noop,
@@ -1448,7 +1513,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'learning-learn-pattern-prompt',
     label: 'learning/LearnPatternPrompt',
-    component: LearnPatternPrompt as ComponentType<Record<string, unknown>>,
+    component: LearnPatternPrompt,
     props: {
       filename: '[SubsPlease] Frieren - 01 (1080p) [A1B2C3D4].mkv',
       extractedPattern: {
@@ -1471,7 +1536,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'manual-search-fallback-status-display',
     label: 'manual-search/FallbackStatusDisplay',
-    component: FallbackStatusDisplay as ComponentType<Record<string, unknown>>,
+    component: FallbackStatusDisplay,
     props: {
       status: {
         attempts: [
@@ -1489,7 +1554,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'manual-search-search-result-card',
     label: 'manual-search/SearchResultCard',
-    component: SearchResultCard as ComponentType<Record<string, unknown>>,
+    component: SearchResultCard,
     props: {
       item: {
         id: 'tmdb-550',
@@ -1510,7 +1575,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'manual-search-search-results-grid',
     label: 'manual-search/SearchResultsGrid',
-    component: SearchResultsGrid as ComponentType<Record<string, unknown>>,
+    component: SearchResultsGrid,
     props: {
       results: [
         {
@@ -1563,7 +1628,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'metadata-editor-cast-editor',
     label: 'metadata-editor/CastEditor',
-    component: CastEditor as ComponentType<Record<string, unknown>>,
+    component: CastEditor,
     props: {
       cast: ['布萊德彼特', '愛德華諾頓', '海倫娜寶漢卡特'],
       onAdd: noop,
@@ -1575,7 +1640,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'metadata-editor-poster-uploader',
     label: 'metadata-editor/PosterUploader',
-    component: PosterUploader as ComponentType<Record<string, unknown>>,
+    component: PosterUploader,
     props: {
       mediaId: 'media-001',
       onUpload: noop,
@@ -1594,7 +1659,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     // Fixed-position bottom-right container; toast items animate in (10ms setTimeout)
     // and auto-dismiss at 5s — Playwright disables animations, so the static rendered
     // frame is deterministic. Default-only — hover/focus on toasts is not meaningful.
-    component: NewMediaNotifications as ComponentType<Record<string, unknown>>,
+    component: NewMediaNotifications,
     props: {
       notifications: [
         {
@@ -1630,7 +1695,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'notifications-new-media-toast',
     label: 'notifications/NewMediaToast',
-    component: NewMediaToast as ComponentType<Record<string, unknown>>,
+    component: NewMediaToast,
     props: { title: '鬥陣俱樂部', mediaType: 'movie' },
     penNode: 'screen-section',
     statesOnly: ['default'],
@@ -1639,7 +1704,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'notifications-parse-complete-toast',
     label: 'notifications/ParseCompleteToast',
-    component: ParseCompleteToast as ComponentType<Record<string, unknown>>,
+    component: ParseCompleteToast,
     props: { title: '葬送的芙莉蓮 S01E01', mediaType: 'tv', status: 'success' },
     penNode: 'screen-section',
     statesOnly: ['default'],
@@ -1650,7 +1715,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'parse-error-details-panel',
     label: 'parse/ErrorDetailsPanel',
-    component: ErrorDetailsPanel as ComponentType<Record<string, unknown>>,
+    component: ErrorDetailsPanel,
     props: {
       steps: PARSE_STEPS_FAILED,
       filename: 'Demon.Slayer.S03E01.1080p.WEB-DL.x265.mkv',
@@ -1666,7 +1731,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'parse/LayeredProgressIndicator',
     // in_progress step renders animate-pulse "搜尋中..." — Playwright disables CSS
     // animations during screenshot, so the static frame is deterministic.
-    component: LayeredProgressIndicator as ComponentType<Record<string, unknown>>,
+    component: LayeredProgressIndicator,
     props: { steps: PARSE_STEPS_IN_PROGRESS, currentStep: 2, compact: false },
     penNode: 'screen-section',
     statesOnly: ['default'],
@@ -1675,7 +1740,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'parse-media-file-card',
     label: 'parse/MediaFileCard',
-    component: MediaFileCard as ComponentType<Record<string, unknown>>,
+    component: MediaFileCard,
     props: {
       file: {
         id: 'gallery-mfc-uuid-0001',
@@ -1697,7 +1762,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     id: 'parse-parse-status-badge',
     label: 'parse/ParseStatusBadge',
     // Pin to `success` (parsing would animate-spin even with Playwright anims disabled).
-    component: ParseStatusBadge as ComponentType<Record<string, unknown>>,
+    component: ParseStatusBadge,
     props: { status: 'success', size: 'md', showLabel: true },
     penNode: 'screen-section',
     statesOnly: ['default'],
@@ -1710,7 +1775,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     // CountdownTimer ticks every 1s via setInterval — inherently flaky. Pin targetTime
     // to a PAST ISO: initial secondsRemaining = 0, formatTimeRemaining(0) → '即將重試'
     // stable literal, every tick recomputes to the same 0. onComplete fires once into noop.
-    component: CountdownTimer as ComponentType<Record<string, unknown>>,
+    component: CountdownTimer,
     props: { targetTime: '2020-01-01T00:00:00.000Z', onComplete: noop, showIcon: true },
     penNode: 'screen-section',
     statesOnly: ['default'],
@@ -1721,7 +1786,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     id: 'scanner-scan-progress-card',
     label: 'scanner/ScanProgressCard',
     // useNavigate via app-shell RouterProvider; percentDone=62 pins the bar fill.
-    component: ScanProgressCard as ComponentType<Record<string, unknown>>,
+    component: ScanProgressCard,
     props: {
       state: SCAN_STATE_ACTIVE,
       onCancel: noop,
@@ -1738,7 +1803,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'scanner/ScanProgressCard (F17 掃描完成 — 缺字幕入口)',
     // sub-4-3 F17: completion toast with the missing-subtitle line + 產生字幕 →
     // link (prop-driven count from the frozen preview endpoint).
-    component: ScanProgressCard as ComponentType<Record<string, unknown>>,
+    component: ScanProgressCard,
     props: {
       state: {
         ...SCAN_STATE_ACTIVE,
@@ -1763,7 +1828,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     id: 'scanner-scan-progress-sheet',
     label: 'scanner/ScanProgressSheet',
     // Default expanded=false → captures the 64px collapsed mobile pill.
-    component: ScanProgressSheet as ComponentType<Record<string, unknown>>,
+    component: ScanProgressSheet,
     props: {
       state: SCAN_STATE_ACTIVE,
       onCancel: noop,
@@ -1782,7 +1847,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     // isLoading=true renders the deterministic skeleton grid (PosterCardSkeleton ×N).
     // Real results would trigger useMovieDetails / useTVShowDetails on PosterCard mount
     // → network → flake. Skeleton state is the safe baseline.
-    component: SearchResults as ComponentType<Record<string, unknown>>,
+    component: SearchResults,
     props: { isLoading: true, type: 'all', currentPage: 1, onPageChange: noop },
     penNode: 'screen-section',
     statesOnly: ['default'],
@@ -1794,7 +1859,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     id: 'settings-backup-table',
     label: 'settings/BackupTable',
     // Backup shape mirrors services/backupService — see BackupTable.spec.tsx.
-    component: BackupTable as ComponentType<Record<string, unknown>>,
+    component: BackupTable,
     props: {
       backups: [
         {
@@ -1840,7 +1905,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'settings-cache-type-card',
     label: 'settings/CacheTypeCard',
-    component: CacheTypeCard as ComponentType<Record<string, unknown>>,
+    component: CacheTypeCard,
     props: {
       cacheType: { type: 'ai', label: 'AI 解析快取', sizeBytes: 52428800, entryCount: 120 },
       onClear: noop,
@@ -1851,7 +1916,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'settings-connection-test-result',
     label: 'settings/ConnectionTestResult',
-    component: ConnectionTestResult as ComponentType<Record<string, unknown>>,
+    component: ConnectionTestResult,
     props: { success: true, message: '連線成功!', version: 'v4.5.2', apiVersion: '2.9.3' },
     penNode: 'screen-section',
     statesOnly: ['default'],
@@ -1862,7 +1927,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'settings/LogEntry',
     // SystemLog from services/logService — ERROR level + source + context + hint
     // exercises the full collapsed render (badge / message / source / ts).
-    component: LogEntry as ComponentType<Record<string, unknown>>,
+    component: LogEntry,
     props: {
       log: {
         id: 1,
@@ -1880,7 +1945,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'settings-log-filters',
     label: 'settings/LogFilters',
-    component: LogFilters as ComponentType<Record<string, unknown>>,
+    component: LogFilters,
     props: { level: 'ERROR', keyword: '', onLevelChange: noop, onKeywordChange: noop },
     penNode: 'screen-section',
     width: 640,
@@ -1889,7 +1954,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     id: 'settings-restore-confirm-dialog',
     label: 'settings/RestoreConfirmDialog',
     // NOT Radix-portal — plain fixed-position overlay, always renders when mounted.
-    component: RestoreConfirmDialog as ComponentType<Record<string, unknown>>,
+    component: RestoreConfirmDialog,
     props: {
       backup: {
         id: 'b1',
@@ -1910,7 +1975,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'settings-service-status-card',
     label: 'settings/ServiceStatusCard',
-    component: ServiceStatusCard as ComponentType<Record<string, unknown>>,
+    component: ServiceStatusCard,
     props: {
       service: {
         name: 'tmdb',
@@ -1930,7 +1995,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'settings-settings-placeholder',
     label: 'settings/SettingsPlaceholder',
-    component: SettingsPlaceholder as ComponentType<Record<string, unknown>>,
+    component: SettingsPlaceholder,
     props: { icon: Database, title: '快取管理', description: '管理快取資料,釋放儲存空間' },
     penNode: 'utility',
     statesOnly: ['default'],
@@ -1943,7 +2008,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'setup-api-keys-step',
     label: 'setup/ApiKeysStep',
-    component: ApiKeysStep as ComponentType<Record<string, unknown>>,
+    component: ApiKeysStep,
     props: {
       data: { tmdbApiKey: '', aiProvider: '', aiApiKey: '' },
       onUpdate: noop,
@@ -1959,7 +2024,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'setup-complete-step',
     label: 'setup/CompleteStep',
-    component: CompleteStep as ComponentType<Record<string, unknown>>,
+    component: CompleteStep,
     props: {
       data: {
         language: 'zh-TW',
@@ -1980,7 +2045,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'setup-media-folder-step',
     label: 'setup/MediaFolderStep',
-    component: MediaFolderStep as ComponentType<Record<string, unknown>>,
+    component: MediaFolderStep,
     props: {
       data: { mediaFolderPath: '/media/videos' },
       onUpdate: noop,
@@ -1997,7 +2062,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'setup/MediaLibrarySetupStep',
     // Mount useEffect calls onUpdate({ libraries: [...] }) when libraries is undefined.
     // Pre-seed with stable ids to short-circuit the effect (avoids onUpdate trigger).
-    component: MediaLibrarySetupStep as ComponentType<Record<string, unknown>>,
+    component: MediaLibrarySetupStep,
     props: {
       data: {
         libraries: [
@@ -2017,7 +2082,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'setup-qbittorrent-step',
     label: 'setup/QBittorrentStep',
-    component: QBittorrentStep as ComponentType<Record<string, unknown>>,
+    component: QBittorrentStep,
     props: {
       data: { qbtUrl: 'http://localhost:8080', qbtUsername: 'admin', qbtPassword: '' },
       onUpdate: noop,
@@ -2033,7 +2098,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'setup-step-progress',
     label: 'setup/StepProgress',
-    component: StepProgress as ComponentType<Record<string, unknown>>,
+    component: StepProgress,
     props: {
       steps: [
         { id: 'welcome', title: '歡迎' },
@@ -2051,7 +2116,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'setup-welcome-step',
     label: 'setup/WelcomeStep',
-    component: WelcomeStep as ComponentType<Record<string, unknown>>,
+    component: WelcomeStep,
     props: {
       data: { language: 'zh-TW' },
       onUpdate: noop,
@@ -2075,7 +2140,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'dashboard-download-panel',
     label: 'dashboard/DownloadPanel',
-    component: DownloadPanel as ComponentType<Record<string, unknown>>,
+    component: DownloadPanel,
     penNode: 'screen-section',
     width: 480,
     // Renders TanStack <Link to="/downloads"> etc. — pin route to satisfy match.
@@ -2123,7 +2188,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'dashboard-recent-media-panel',
     label: 'dashboard/RecentMediaPanel',
-    component: RecentMediaPanel as ComponentType<Record<string, unknown>>,
+    component: RecentMediaPanel,
     penNode: 'screen-section',
     width: 560,
     routePath: '/library',
@@ -2156,7 +2221,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'downloads-download-details',
     label: 'downloads/DownloadDetails',
-    component: DownloadDetails as ComponentType<Record<string, unknown>>,
+    component: DownloadDetails,
     props: { hash: 'abc123' },
     penNode: 'screen-section',
     width: 640,
@@ -2210,7 +2275,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     // OUTSIDE the state div crop. Task 4 / Sally review may flag for special
     // capture strategy. Same caveat as Task 2's ui-side-panel.
     label: 'health/ConnectionHistoryPanel',
-    component: ConnectionHistoryPanel as ComponentType<Record<string, unknown>>,
+    component: ConnectionHistoryPanel,
     props: { isOpen: true, onClose: noop },
     penNode: 'screen-section',
     statesOnly: ['default'],
@@ -2240,7 +2305,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'health-qb-status-indicator',
     label: 'health/QBStatusIndicator',
-    component: QBStatusIndicator as ComponentType<Record<string, unknown>>,
+    component: QBStatusIndicator,
     props: { onClick: noop },
     penNode: 'screen-section',
     seedQueries: [
@@ -2262,7 +2327,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'homepage-hero-banner',
     label: 'homepage/HeroBanner',
-    component: HeroBanner as ComponentType<Record<string, unknown>>,
+    component: HeroBanner,
     penNode: 'screen-section',
     width: 1200,
     // ux3-1-8: the hero reads the OWN library now (newest-with-backdrop from
@@ -2306,7 +2371,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'homepage-explore-block',
     label: 'homepage/ExploreBlock',
-    component: ExploreBlock as ComponentType<Record<string, unknown>>,
+    component: ExploreBlock,
     props: {
       block: {
         id: 'block-gallery-1',
@@ -2376,7 +2441,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'homepage-explore-blocks-list',
     label: 'homepage/ExploreBlocksList',
-    component: ExploreBlocksList as ComponentType<Record<string, unknown>>,
+    component: ExploreBlocksList,
     penNode: 'screen-section',
     width: 1200,
     seedQueries: [
@@ -2432,7 +2497,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'learning-learned-patterns-settings',
     label: 'learning/LearnedPatternsSettings',
-    component: LearnedPatternsSettings as ComponentType<Record<string, unknown>>,
+    component: LearnedPatternsSettings,
     penNode: 'screen-section',
     width: 720,
     seedQueries: [
@@ -2470,7 +2535,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'library-filter-panel',
     label: 'library/FilterPanel',
-    component: FilterPanel as ComponentType<Record<string, unknown>>,
+    component: FilterPanel,
     props: {
       filters: { genres: [], yearMin: undefined, yearMax: undefined } satisfies FilterValues,
       mediaType: 'all' as LibraryMediaType,
@@ -2495,7 +2560,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'library-library-grid',
     label: 'library/LibraryGrid',
-    component: LibraryGrid as ComponentType<Record<string, unknown>>,
+    component: LibraryGrid,
     props: {
       items: [
         {
@@ -2534,7 +2599,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'library-recently-added/recent',
     label: 'library/RecentlyAdded (recent — 新增 badge visible)',
-    component: RecentlyAdded as ComponentType<Record<string, unknown>>,
+    component: RecentlyAdded,
     penNode: 'screen-section',
     width: 1200,
     // 2026-05-15 is 3 days after createdAt 2026-05-12 → isWithin7Days = true → green badge renders.
@@ -2570,7 +2635,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'library-recently-added/stale',
     label: 'library/RecentlyAdded (stale — no badge)',
-    component: RecentlyAdded as ComponentType<Record<string, unknown>>,
+    component: RecentlyAdded,
     penNode: 'screen-section',
     width: 1200,
     // 2026-05-30 is 18 days after createdAt 2026-05-12 → isWithin7Days = false → no badge.
@@ -2610,7 +2675,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'manual-search/ManualSearchDialog',
     // Custom fixed-overlay dialog (NOT Radix portal). useManualSearch is gated by
     // params.query.length >= 2 → empty initialQuery disables the query (no network).
-    component: ManualSearchDialog as ComponentType<Record<string, unknown>>,
+    component: ManualSearchDialog,
     props: {
       isOpen: true,
       onClose: noop,
@@ -2636,7 +2701,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'media/MediaDetailPanel',
     // details is a direct prop. No libraryId → TrailerSection skipped →
     // useMediaTrailers never fires. No seedQueries required.
-    component: MediaDetailPanel as ComponentType<Record<string, unknown>>,
+    component: MediaDetailPanel,
     props: {
       type: 'movie',
       details: {
@@ -2705,7 +2770,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     id: 'metadata-editor-metadata-editor-dialog',
     label: 'metadata-editor/MetadataEditorDialog',
     // Custom fixed-overlay dialog (NOT Radix). Mutation-only — no seedQueries.
-    component: MetadataEditorDialog as ComponentType<Record<string, unknown>>,
+    component: MetadataEditorDialog,
     props: {
       isOpen: true,
       onClose: noop,
@@ -2736,7 +2801,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     // SSE-driven via useParseProgress (NOT React Query). With no backend the SSE
     // EventSource fails → progress=null → card renders the "連線中..." header only.
     // retryKeys.pending() seeded defensively in case child gating changes.
-    component: FloatingParseProgressCard as ComponentType<Record<string, unknown>>,
+    component: FloatingParseProgressCard,
     props: {
       taskId: 'gallery-parse-task',
       onClose: noop,
@@ -2763,7 +2828,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'parse/RetryQueueSection',
     // The canonical Task-3 seed example: usePendingRetries() → returns null on
     // empty/error/loading, so we MUST seed a non-empty items array.
-    component: RetryQueueSection as ComponentType<Record<string, unknown>>,
+    component: RetryQueueSection,
     props: { detailed: false },
     penNode: 'screen-section',
     width: 420,
@@ -2810,7 +2875,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     // Presentational — listed in Q-bucket per Task 1 inventory but takes only
     // notifications + onDismiss props (no useQuery). Auto-dismiss timer (5s)
     // will fire during snapshot — Task 4 may need timer freeze.
-    component: RetryNotifications as ComponentType<Record<string, unknown>>,
+    component: RetryNotifications,
     props: {
       notifications: [
         {
@@ -2834,7 +2899,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'retry-retry-queue-panel',
     label: 'retry/RetryQueuePanel',
-    component: RetryQueuePanel as ComponentType<Record<string, unknown>>,
+    component: RetryQueuePanel,
     penNode: 'screen-section',
     width: 720,
     seedQueries: [
@@ -2874,7 +2939,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     // mount → notifications[] empty → wrapper visually matches the panel-only
     // fixture. Kept for symmetry; Task 4 may dedupe.
     label: 'retry/RetryQueueWithNotifications',
-    component: RetryQueueWithNotifications as ComponentType<Record<string, unknown>>,
+    component: RetryQueueWithNotifications,
     penNode: 'screen-section',
     width: 720,
     seedQueries: [
@@ -2903,7 +2968,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'settings-backup-management',
     label: 'settings/BackupManagement',
-    component: BackupManagement as ComponentType<Record<string, unknown>>,
+    component: BackupManagement,
     penNode: 'screen-section',
     width: 720,
     seedQueries: [
@@ -2941,7 +3006,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'settings-backup-schedule-config',
     label: 'settings/BackupScheduleConfig',
-    component: BackupScheduleConfig as ComponentType<Record<string, unknown>>,
+    component: BackupScheduleConfig,
     penNode: 'screen-section',
     width: 640,
     seedQueries: [
@@ -2960,7 +3025,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'settings-cache-management',
     label: 'settings/CacheManagement',
-    component: CacheManagement as ComponentType<Record<string, unknown>>,
+    component: CacheManagement,
     penNode: 'screen-section',
     width: 720,
     seedQueries: [
@@ -2982,7 +3047,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     // Inline `fixed inset-0` overlay (NOT Radix portal). Mutation-only — no
     // seedQueries required.
     label: 'settings/ExploreBlockEditModal',
-    component: ExploreBlockEditModal as ComponentType<Record<string, unknown>>,
+    component: ExploreBlockEditModal,
     props: {
       block: {
         id: 'blk-fixture-1',
@@ -3005,7 +3070,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'settings-explore-blocks-settings',
     label: 'settings/ExploreBlocksSettings',
-    component: ExploreBlocksSettings as ComponentType<Record<string, unknown>>,
+    component: ExploreBlocksSettings,
     penNode: 'screen-section',
     width: 720,
     seedQueries: [
@@ -3036,7 +3101,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     // P-bucket reclassification candidate (mutation-only — no read query) but
     // kept here per Task 3 plan. No seedQueries.
     label: 'settings/LibraryCard',
-    component: LibraryCard as ComponentType<Record<string, unknown>>,
+    component: LibraryCard,
     props: {
       library: {
         id: 'lib-fixture-1',
@@ -3068,8 +3133,9 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         ],
       } satisfies MediaLibraryWithPaths,
       // 9R-10b-M4: `autoSubtitleSupported` became a REQUIRED prop of
-      // LibraryCard. The `as ComponentType<Record<string, unknown>>` cast below
-      // hides missing props from tsc, so this has to be kept in sync by hand —
+      // LibraryCard. Fixture props are untyped (`component: ComponentType<any>`,
+      // see GalleryFixture), so tsc cannot see a missing prop here and this has
+      // to be kept in sync by hand —
       // the same class of gap PR #250 CR M3 caught in this file. `true` keeps
       // the gallery on the shipped-default state; the fixture's
       // `autoSubtitle: false` means the status segment is absent either way,
@@ -3085,7 +3151,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     // Inline `fixed inset-0` overlay (NOT Radix portal). Reads
     // useMediaLibraries() → mediaLibraryKeys.all (aliased from useMediaLibrary).
     label: 'settings/LibraryEditModal',
-    component: LibraryEditModal as ComponentType<Record<string, unknown>>,
+    component: LibraryEditModal,
     props: {
       libraryId: 'lib-edit-fixture',
       onClose: noop,
@@ -3126,7 +3192,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'settings-logs-viewer',
     label: 'settings/LogsViewer',
-    component: LogsViewer as ComponentType<Record<string, unknown>>,
+    component: LogsViewer,
     penNode: 'screen-section',
     width: 960,
     seedQueries: [
@@ -3168,7 +3234,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'settings-media-library-manager',
     label: 'settings/MediaLibraryManager',
-    component: MediaLibraryManager as ComponentType<Record<string, unknown>>,
+    component: MediaLibraryManager,
     penNode: 'screen-section',
     width: 640,
     seedQueries: [
@@ -3206,14 +3272,14 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     id: 'settings-metadata-export',
     // P-bucket reclassification candidate (mutation-only). Pure form UI.
     label: 'settings/MetadataExport',
-    component: MetadataExport as ComponentType<Record<string, unknown>>,
+    component: MetadataExport,
     penNode: 'screen-section',
     width: 560,
   },
   {
     id: 'settings-qbittorrent-form',
     label: 'settings/QBittorrentForm',
-    component: QBittorrentForm as ComponentType<Record<string, unknown>>,
+    component: QBittorrentForm,
     penNode: 'screen-section',
     width: 640,
     seedQueries: [
@@ -3231,7 +3297,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'settings-scanner-settings',
     label: 'settings/ScannerSettings',
-    component: ScannerSettings as ComponentType<Record<string, unknown>>,
+    component: ScannerSettings,
     penNode: 'screen-section',
     width: 720,
     seedQueries: [
@@ -3288,7 +3354,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'settings-service-status-dashboard',
     label: 'settings/ServiceStatusDashboard',
-    component: ServiceStatusDashboard as ComponentType<Record<string, unknown>>,
+    component: ServiceStatusDashboard,
     penNode: 'screen-section',
     width: 720,
     seedQueries: [
@@ -3336,7 +3402,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     // `if (!open) return null`). useSubtitleSearch uses only useMutation — no
     // seedQueries needed.
     label: 'subtitle/SubtitleSearchDialog',
-    component: SubtitleSearchDialog as ComponentType<Record<string, unknown>>,
+    component: SubtitleSearchDialog,
     props: {
       mediaId: 'movie-1',
       mediaType: 'movie',
@@ -3355,7 +3421,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'subtitle-batch-subtitle-panel-idle',
     label: 'subtitle/BatchSubtitlePanel (idle)',
-    component: BatchSubtitlePanel as ComponentType<Record<string, unknown>>,
+    component: BatchSubtitlePanel,
     props: {
       status: 'idle',
       progress: {
@@ -3379,7 +3445,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'subtitle-batch-subtitle-panel-processing',
     label: 'subtitle/BatchSubtitlePanel (processing)',
-    component: BatchSubtitlePanel as ComponentType<Record<string, unknown>>,
+    component: BatchSubtitlePanel,
     props: {
       status: 'running',
       progress: {
@@ -3404,7 +3470,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'request-button/available',
     label: 'requests/RequestButton (可請求)',
-    component: RequestButton as ComponentType<Record<string, unknown>>,
+    component: RequestButton,
     props: {
       tmdbId: 550,
       mediaType: 'movie',
@@ -3418,7 +3484,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'request-button/requested',
     label: 'requests/RequestButton (已請求·處理中)',
-    component: RequestButton as ComponentType<Record<string, unknown>>,
+    component: RequestButton,
     props: {
       tmdbId: 550,
       mediaType: 'movie',
@@ -3433,7 +3499,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'request-button/owned',
     label: 'requests/RequestButton (已入庫)',
-    component: RequestButton as ComponentType<Record<string, unknown>>,
+    component: RequestButton,
     props: {
       tmdbId: 550,
       mediaType: 'movie',
@@ -3448,7 +3514,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'request-row/pending',
     label: 'requests/RequestRow (pending)',
-    component: RequestRow as ComponentType<Record<string, unknown>>,
+    component: RequestRow,
     props: {
       request: {
         id: 'fx-pending',
@@ -3463,7 +3529,6 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         errorMessage: null,
         requestedAt: '2026-06-28T10:00:00Z',
         updatedAt: '2026-06-28T10:00:00Z',
-        ...{ status: 'pending' },
       },
     },
     penNode: 'LkjRd', // Component/RequestRow-v2
@@ -3473,13 +3538,13 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'request-row/searching',
     label: 'requests/RequestRow (searching)',
-    component: RequestRow as ComponentType<Record<string, unknown>>,
+    component: RequestRow,
     props: {
       request: {
         id: 'fx-searching',
         tmdbId: 550,
         mediaType: 'movie',
-        title: '熊家餐館 S3',
+        title: '沙丘：第二部',
         status: 'searching',
         fulfilmentSource: null,
         externalId: null,
@@ -3488,7 +3553,6 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         errorMessage: null,
         requestedAt: '2026-06-28T10:00:00Z',
         updatedAt: '2026-06-28T10:00:00Z',
-        ...{ status: 'searching', title: '沙丘：第二部' },
       },
     },
     penNode: 'LkjRd', // Component/RequestRow-v2
@@ -3498,13 +3562,13 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'request-row/downloading',
     label: 'requests/RequestRow (downloading)',
-    component: RequestRow as ComponentType<Record<string, unknown>>,
+    component: RequestRow,
     props: {
       request: {
         id: 'fx-downloading',
         tmdbId: 550,
-        mediaType: 'movie',
-        title: '熊家餐館 S3',
+        mediaType: 'tv',
+        title: '幕府將軍 S1',
         status: 'downloading',
         fulfilmentSource: null,
         externalId: null,
@@ -3513,7 +3577,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         errorMessage: null,
         requestedAt: '2026-06-28T10:00:00Z',
         updatedAt: '2026-06-28T10:00:00Z',
-        ...{ status: 'downloading', title: '幕府將軍 S1', mediaType: 'tv', progress: 0.45 },
+        progress: 0.45,
       },
     },
     penNode: 'LkjRd', // Component/RequestRow-v2
@@ -3523,22 +3587,21 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'request-row/failed',
     label: 'requests/RequestRow (failed)',
-    component: RequestRow as ComponentType<Record<string, unknown>>,
+    component: RequestRow,
     props: {
       request: {
         id: 'fx-failed',
         tmdbId: 550,
         mediaType: 'movie',
-        title: '熊家餐館 S3',
+        title: '奧本海默',
         status: 'failed',
         fulfilmentSource: null,
         externalId: null,
         seasons: null,
         episodes: null,
-        errorMessage: null,
+        errorMessage: '找不到符合的種子',
         requestedAt: '2026-06-28T10:00:00Z',
         updatedAt: '2026-06-28T10:00:00Z',
-        ...{ status: 'failed', title: '奧本海默', errorMessage: '找不到符合的種子' },
       },
     },
     penNode: 'LkjRd', // Component/RequestRow-v2
@@ -3548,13 +3611,13 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'request-row/completed',
     label: 'requests/RequestRow (completed)',
-    component: RequestRow as ComponentType<Record<string, unknown>>,
+    component: RequestRow,
     props: {
       request: {
         id: 'fx-completed',
         tmdbId: 550,
         mediaType: 'movie',
-        title: '熊家餐館 S3',
+        title: '星際效應',
         status: 'completed',
         fulfilmentSource: null,
         externalId: null,
@@ -3563,7 +3626,6 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         errorMessage: null,
         requestedAt: '2026-06-28T10:00:00Z',
         updatedAt: '2026-06-28T10:00:00Z',
-        ...{ status: 'completed', title: '星際效應' },
       },
     },
     penNode: 'LkjRd', // Component/RequestRow-v2
@@ -3573,7 +3635,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'subtitle-batch-subtitle-panel-complete',
     label: 'subtitle/BatchSubtitlePanel (complete)',
-    component: BatchSubtitlePanel as ComponentType<Record<string, unknown>>,
+    component: BatchSubtitlePanel,
     props: {
       status: 'complete',
       progress: {
@@ -3603,7 +3665,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'generation-progress-v2/提取音訊',
     label: 'subtitle/GenerationProgressV2 (提取音訊)',
-    component: GenerationProgressV2 as ComponentType<Record<string, unknown>>,
+    component: GenerationProgressV2,
     props: { phase: 'extracting', message: '正在提取音訊軌' },
     penNode: 'XkGvG', // Component/GenerationProgress-v2
     statesOnly: ['default'],
@@ -3612,7 +3674,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'generation-progress-v2/轉錄中',
     label: 'subtitle/GenerationProgressV2 (轉錄中)',
-    component: GenerationProgressV2 as ComponentType<Record<string, unknown>>,
+    component: GenerationProgressV2,
     props: { phase: 'transcribing', message: '正在轉錄音訊（Whisper large-v3）— 12:34 / 45:10' },
     penNode: 'XkGvG',
     statesOnly: ['default'],
@@ -3621,7 +3683,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'generation-progress-v2/翻譯中',
     label: 'subtitle/GenerationProgressV2 (翻譯中)',
-    component: GenerationProgressV2 as ComponentType<Record<string, unknown>>,
+    component: GenerationProgressV2,
     props: { phase: 'translating', percentage: 62.5, message: '翻譯中（glossary-aware）' },
     penNode: 'XkGvG',
     statesOnly: ['default'],
@@ -3630,7 +3692,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'generation-progress-v2/完成',
     label: 'subtitle/GenerationProgressV2 (完成 — 簡轉繁/AI校正 atomically done)',
-    component: GenerationProgressV2 as ComponentType<Record<string, unknown>>,
+    component: GenerationProgressV2,
     props: { phase: 'complete', message: '字幕已生成' },
     penNode: 'XkGvG',
     statesOnly: ['default'],
@@ -3639,7 +3701,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'generation-progress-v2/失敗',
     label: 'subtitle/GenerationProgressV2 (失敗於翻譯中 + 重試)',
-    component: GenerationProgressV2 as ComponentType<Record<string, unknown>>,
+    component: GenerationProgressV2,
     props: {
       phase: 'failed',
       failedPhase: 'translating',
@@ -3653,7 +3715,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'generation-progress-v2/cost-slot',
     label: 'subtitle/GenerationProgressV2 (dormant cost slot lit — 9R-17 preview)',
-    component: GenerationProgressV2 as ComponentType<Record<string, unknown>>,
+    component: GenerationProgressV2,
     props: {
       phase: 'transcribing',
       message: '正在轉錄音訊',
@@ -3667,7 +3729,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'glossary-row-v2/unconfirmed',
     label: 'subtitle/GlossaryRowV2 (未確認 · 字幕來源)',
-    component: GlossaryRowV2 as ComponentType<Record<string, unknown>>,
+    component: GlossaryRowV2,
     props: {
       term: {
         id: 'fx-g1',
@@ -3691,7 +3753,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'glossary-row-v2/confirmed-metadata',
     label: 'subtitle/GlossaryRowV2 (已確認 · 中繼資料來源)',
-    component: GlossaryRowV2 as ComponentType<Record<string, unknown>>,
+    component: GlossaryRowV2,
     props: {
       term: {
         id: 'fx-g2',
@@ -3715,7 +3777,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'glossary-row-v2/manual',
     label: 'subtitle/GlossaryRowV2 (未確認 · 手動來源)',
-    component: GlossaryRowV2 as ComponentType<Record<string, unknown>>,
+    component: GlossaryRowV2,
     props: {
       term: {
         id: 'fx-g3',
@@ -3752,7 +3814,8 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'media-episode-list-subtitle-entry',
     label: 'media/EpisodeList (9R-10c · 管理字幕 entry)',
-    component: EpisodeList as ComponentType<Record<string, unknown>>,
+    component: EpisodeList,
+    penNode: 'Z54xAd', // J3-D
     props: {
       seasonNumber: 1,
       onManageSubtitle: noop,
@@ -3792,7 +3855,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'subtitle-manage-subtitle-dialog-v2',
     label: 'subtitle/ManageSubtitleDialogV2 (idle · with tracks)',
-    component: ManageSubtitleDialogV2 as ComponentType<Record<string, unknown>>,
+    component: ManageSubtitleDialogV2,
     props: {
       mediaId: 'movie-1',
       mediaType: 'movie',
@@ -3853,7 +3916,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'glossary-panel-v2/seeded',
     label: 'subtitle/GlossaryPanelV2 (seeded list — F6)',
-    component: GlossaryPanelV2 as ComponentType<Record<string, unknown>>,
+    component: GlossaryPanelV2,
     props: {
       mediaId: 'movie-glossary',
       mediaTitle: '怪奇物語',
@@ -3906,7 +3969,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'glossary-panel-v2/empty',
     label: 'subtitle/GlossaryPanelV2 (空狀態 尚無詞彙 — F7)',
-    component: GlossaryPanelV2 as ComponentType<Record<string, unknown>>,
+    component: GlossaryPanelV2,
     props: {
       mediaId: 'movie-glossary-empty',
       mediaTitle: '怪奇物語',
@@ -3936,7 +3999,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'generation-consent/analyzing',
     label: 'subtitle/consent/AnalysisProgressPanel (F14 分析中)',
-    component: AnalysisProgressPanel as ComponentType<Record<string, unknown>>,
+    component: AnalysisProgressPanel,
     props: { analyzed: 234, total: 1247, onCancel: noop },
     width: 720,
     penNode: 'screen-section', // Screen F14-D-v2 (nBT3M)
@@ -3945,7 +4008,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'generation-consent/list',
     label: 'subtitle/consent/CandidateListPanel (F15 候選清單 — default extract selection)',
-    component: CandidateListPanel as ComponentType<Record<string, unknown>>,
+    component: CandidateListPanel,
     props: {
       candidates: CONSENT_FIXTURE_CANDIDATES,
       selectedIds: new Set([
@@ -3974,9 +4037,43 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     statesOnly: ['default'],
   },
   {
+    id: 'generation-consent/list-mobile',
+    label:
+      'subtitle/consent/CandidateListPanel (F15-M 手機寬 390 — 金額上移到片名列、路線徽章收起、副標換行)',
+    component: CandidateListPanel,
+    props: {
+      candidates: CONSENT_MOBILE_CANDIDATES,
+      selectedIds: new Set([
+        '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51',
+        '5a9d3e2b-6c7f-4d8e-9f0a-1b2c3d4e5f61',
+      ]),
+      filter: 'all',
+      totals: computeTotals(
+        CONSENT_MOBILE_CANDIDATES,
+        new Set(['4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51', '5a9d3e2b-6c7f-4d8e-9f0a-1b2c3d4e5f61']),
+        5
+      ),
+      budgetText: '5.00',
+      budgetUsd: 5,
+      onToggle: noop,
+      onToggleGroup: noop,
+      onToggleAll: noop,
+      onSelectAllExtract: noop,
+      onClearSelection: noop,
+      onFilterChange: noop,
+      onBudgetTextChange: noop,
+      onStartClick: noop,
+    },
+    // 390 = the phone the drawing is for; the host sheet is w-full there and the
+    // body's p-6 leaves the list 342px — below the row's 36rem re-flow point.
+    width: 390,
+    penNode: 'screen-section', // Screen F15-M-v2 (fdu4y)
+    statesOnly: ['default'],
+  },
+  {
     id: 'generation-consent/grouped',
     label: 'subtitle/consent/CandidateListPanel (F15 series/season 群組 — sub-5-3)',
-    component: CandidateListPanel as ComponentType<Record<string, unknown>>,
+    component: CandidateListPanel,
     props: {
       candidates: CONSENT_GROUPED_CANDIDATES,
       selectedIds: CONSENT_GROUPED_SELECTED,
@@ -4003,7 +4100,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'generation-consent/over-budget',
     label: 'subtitle/consent/CandidateListPanel (F18 超出上限 — warning banner)',
-    component: CandidateListPanel as ComponentType<Record<string, unknown>>,
+    component: CandidateListPanel,
     props: {
       candidates: CONSENT_FIXTURE_CANDIDATES,
       selectedIds: new Set(CONSENT_FIXTURE_CANDIDATES.map((c) => c.mediaId)),
@@ -4031,7 +4128,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'generation-consent/empty',
     label: 'subtitle/consent/ConsentEmptyState (F20 空狀態)',
-    component: ConsentEmptyState as ComponentType<Record<string, unknown>>,
+    component: ConsentEmptyState,
     props: {},
     width: 720,
     penNode: 'screen-section', // Screen F20-D-v2 (D7MOm)
@@ -4040,7 +4137,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'generation-consent/confirm',
     label: 'subtitle/consent/ConfirmGenerationDialog (F16 金額確認)',
-    component: ConfirmGenerationDialog as ComponentType<Record<string, unknown>>,
+    component: ConfirmGenerationDialog,
     props: {
       open: true,
       totals: {
@@ -4064,7 +4161,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'generation-consent/confirm-over-budget',
     label: 'subtitle/consent/ConfirmGenerationDialog (F19 超出上限確認)',
-    component: ConfirmGenerationDialog as ComponentType<Record<string, unknown>>,
+    component: ConfirmGenerationDialog,
     props: {
       open: true,
       totals: {
@@ -4092,7 +4189,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'generation-consent/f16-model-default',
     label: 'subtitle/consent/ConfirmGenerationDialog (F16 + 翻譯模型 — 預設 Sonnet)',
-    component: ConfirmGenerationDialog as ComponentType<Record<string, unknown>>,
+    component: ConfirmGenerationDialog,
     props: {
       open: true,
       totals: CONSENT_CONFIRM_TOTALS,
@@ -4109,7 +4206,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'generation-consent/f16-model-haiku',
     label: 'subtitle/consent/ConfirmGenerationDialog (F16 + 翻譯模型 — 選了 Haiku)',
-    component: ConfirmGenerationDialog as ComponentType<Record<string, unknown>>,
+    component: ConfirmGenerationDialog,
     props: {
       open: true,
       // Both halves scaled to Haiku, so the breakdown still sums to the total.
@@ -4134,7 +4231,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'generation-consent/f19-over-budget-haiku',
     label: 'subtitle/consent/ConfirmGenerationDialog (F19 超出上限 + 翻譯模型)',
-    component: ConfirmGenerationDialog as ComponentType<Record<string, unknown>>,
+    component: ConfirmGenerationDialog,
     props: {
       open: true,
       totals: confirmTotals({
@@ -4168,7 +4265,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'generation-batch-dialog-v2/running',
     label: 'subtitle/GenerationBatchPanelV2 (running — F8 queue + cost + SSE chip)',
-    component: GenerationBatchPanelV2 as ComponentType<Record<string, unknown>>,
+    component: GenerationBatchPanelV2,
     props: {
       open: true,
       status: 'running',
@@ -4224,7 +4321,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'generation-batch-dialog-v2/budget_ceiling',
     label: 'subtitle/GenerationBatchPanelV2 (budget_ceiling — F9 banner + 下次繼續)',
-    component: GenerationBatchPanelV2 as ComponentType<Record<string, unknown>>,
+    component: GenerationBatchPanelV2,
     props: {
       open: true,
       status: 'budget_ceiling',
@@ -4271,7 +4368,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'generation-workspace-v2/running',
     label: 'subtitle/GenerationWorkspaceV2 (running — queue + live event log)',
-    component: GenerationWorkspaceV2 as ComponentType<Record<string, unknown>>,
+    component: GenerationWorkspaceV2,
     props: {
       mode: 'running',
       progress: {
@@ -4319,7 +4416,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'generation-workspace-v2/budget_ceiling',
     label: 'subtitle/GenerationWorkspaceV2 (budget_ceiling — F9-verbatim banner + 下次繼續)',
-    component: GenerationWorkspaceV2 as ComponentType<Record<string, unknown>>,
+    component: GenerationWorkspaceV2,
     props: {
       mode: 'budget_ceiling',
       progress: {
@@ -4353,7 +4450,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'generation-workspace-v2/idle',
     label: 'subtitle/GenerationWorkspaceV2 (idle — preview count + launcher)',
-    component: GenerationWorkspaceV2 as ComponentType<Record<string, unknown>>,
+    component: GenerationWorkspaceV2,
     props: {
       mode: 'idle',
       progress: {

@@ -40,7 +40,7 @@ export function ScanProgressSheet({
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const autoDismissTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const autoDismissTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const dragStartY = useRef<number | null>(null);
 
   const clearAutoDismiss = useCallback(() => {

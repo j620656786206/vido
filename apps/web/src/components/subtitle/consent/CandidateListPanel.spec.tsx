@@ -616,3 +616,74 @@ describe('CandidateListPanel — row identity (sub-6-10b)', () => {
     expect(screen.getByLabelText('選取 Predator Badlands (2025)')).toBeInTheDocument();
   });
 });
+
+describe('CandidateListPanel — phone-width row (bugfix-f15-row-mobile-identity-collapse)', () => {
+  const M = '4e98edc6-7eab-4d7c-9dc0-e5a6b7c8d905';
+
+  function renderOne(over: Partial<GenerationCandidate> = {}) {
+    cleanup();
+    const candidates: GenerationCandidate[] = [
+      {
+        mediaId: M,
+        mediaType: 'movie',
+        title: '星際效應',
+        route: 'asr',
+        runtimeMinutes: 45,
+        runtimeKnown: false,
+        estimatedUsd: 0.24,
+        ...over,
+      },
+    ];
+    return renderPanel({
+      candidates,
+      selectedIds: new Set<string>(),
+      totals: computeTotals(candidates, new Set<string>(), 5),
+    });
+  }
+
+  it('the row re-flows on the LIST width, not the viewport', () => {
+    renderOne();
+    // A container query: the drawn phone row must also hold in a narrow
+    // desktop dialog, and a 390px gallery fixture must be able to pin it
+    // under the harness's fixed 1280px viewport.
+    expect(screen.getByTestId('consent-candidate-list')).toHaveClass('@container');
+  });
+
+  it('below 36rem the cost cluster sits on the title line; above it spans both lines', () => {
+    renderOne();
+    const cluster = screen.getByTestId(`consent-row-cluster-${M}`);
+    expect(cluster).toHaveClass('row-start-1');
+    expect(cluster).toHaveClass('@xl:row-end-3');
+    // ONE cost node serves both layouts — no hidden duplicate that could drift.
+    expect(screen.getAllByTestId(`consent-row-usd-${M}`)).toHaveLength(1);
+  });
+
+  it('below 36rem the subtitle takes both columns and wraps instead of truncating', () => {
+    renderOne();
+    const subtitle = screen.getByTestId(`consent-row-subtitle-${M}`);
+    expect(subtitle).toHaveTextContent('無文字字幕軌 → 語音辨識 + 翻譯 · 片長未知（估 45 分）');
+    expect(subtitle).toHaveClass('truncate');
+    expect(subtitle).toHaveClass('@max-xl:col-end-3');
+    expect(subtitle).toHaveClass('@max-xl:whitespace-normal');
+  });
+
+  it('below 36rem the kind badge is gone — the amount colour already says the route', () => {
+    renderOne();
+    const kind = screen.getByTestId(`consent-row-kind-${M}`);
+    expect(kind).toHaveTextContent('語音辨識');
+    expect(kind).toHaveClass('hidden');
+    expect(kind).toHaveClass('@xl:inline');
+    // The unwritable state stays visible in both layouts (F15-M-v2 draws it
+    // beside the amount): it changes what the user may do, the kind does not.
+    renderOne({ writable: false, blocker: 'folder_not_writable' });
+    expect(screen.getByTestId(`consent-row-unwritable-${M}`)).not.toHaveClass('hidden');
+  });
+
+  it('the unmatched mark still sits beside the title in the phone layout', () => {
+    renderOne({ tmdbMatched: false, displayTitle: '星際效應', title: 'Interstellar.2014' });
+    const badge = screen.getByTestId(`consent-row-unmatched-${M}`);
+    const title = screen.getByText('星際效應');
+    expect(title.parentElement).toBe(badge.parentElement);
+    expect(title.parentElement).toHaveClass('row-start-1');
+  });
+});

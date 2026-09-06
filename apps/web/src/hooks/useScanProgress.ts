@@ -176,7 +176,7 @@ export function subscribeScanTracking(onRequest: () => void): () => void {
 export function useScanProgress() {
   const [state, dispatch] = useReducer(scanProgressReducer, initialState);
   const eventSourceRef = useRef<EventSource | null>(null);
-  const sseReconnectRef = useRef<ReturnType<typeof setTimeout>>();
+  const sseReconnectRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const mountedRef = useRef(true);
 
   const connectSSE = useCallback(() => {

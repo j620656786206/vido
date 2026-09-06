@@ -127,6 +127,12 @@ jobs:
       - name: Run ESLint
         run: pnpm run lint
 
+      # 2026-09-06：main 上曾累積 153 個 tsc 錯誤而 CI 從不跑 typecheck，其中兩個是
+      # 真 bug（空片庫畫面的按鈕連到不存在的路由）。歸零之後才加進來，從此擋住。
+      # 只查 apps/web（tsconfig.app.json，不含 spec）；Go 那邊 go vet 已經在管。
+      - name: Typecheck (web)
+        run: pnpm nx run web:typecheck --skip-nx-cache
+
       - name: Check formatting
         run: pnpm run format:check
 

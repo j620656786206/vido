@@ -46,7 +46,7 @@ export function ScannerSettings() {
     type: 'success' | 'warning' | 'error';
     message: string;
   } | null>(null);
-  const dismissTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Cleanup timer on unmount
   useEffect(() => {

@@ -13,7 +13,7 @@ export function EmptyReadyForScan() {
     type: NotificationKind;
     message: string;
   } | null>(null);
-  const dismissTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     return () => {
