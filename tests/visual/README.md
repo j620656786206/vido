@@ -46,7 +46,17 @@ epic-19-8 keys its component-vs-`.pen` sweep off `data-pen-node`. The full in-sc
 ```bash
 pnpm run test:visual          # verify against committed baselines (CI uses this — 19-5)
 pnpm run test:visual:update   # (re)generate baselines  ← see discipline below
+
+# 2026-09-06 — parallel walk. The spec splits the fixture list into N interleaved
+# buckets (one Playwright test each); N=1 is the default and identical to before.
+VISUAL_BUCKETS=4 pnpm run test:visual -- --workers=4      # local: ~4× faster
 ```
+
+CI (`.github/workflows/visual-regression.yml`) runs the PR gate as **4 matrix shards** with
+`VISUAL_BUCKETS=4 --shard=i/4`, then a job literally named `PR` aggregates them — that name is
+the ruleset's required check, so do not rename it. The `Main` job stays single-bucket because
+its bootstrap branches parse one probe log. `retries: 0` is pinned on the `visual` project
+(pixel comparison is deterministic; retries only tripled the cost of a real diff).
 
 The `visual` project is **not** part of `pnpm run test:e2e` (the feature-E2E scripts list their
 projects explicitly) — so the feature-E2E test count is unaffected.

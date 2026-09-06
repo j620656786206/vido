@@ -45,6 +45,22 @@
  * Snapshot tolerance, reduced-motion, viewport, dark colour scheme: configured on the
  * `visual` project + `expect.toHaveScreenshot` in `playwright.config.ts`.
  *
+ * **CI parallelism (2026-09-06 CI speed-up):** the fixture walk is inherently serial
+ * inside one test, so Playwright could not spread it across workers or shards — the
+ * PR gate took ~9 min for ~300 fixtures. `VISUAL_BUCKETS=N` now splits the manifest
+ * into N interleaved buckets (fixture k → bucket k % N), ONE `test()` per bucket, so
+ * `--shard=i/N` (CI matrix) or `--workers=N` (local) run them concurrently. Default 1 =
+ * exactly the old single test. Snapshot paths are explicit (`['components', id, state]`),
+ * so bucketing never renames a baseline.
+ *
+ * **Render-loop guard (folded in from the retired `bisect-regression.yml`, 2026-09-06):**
+ * React's "Maximum update depth exceeded" means a component re-triggers setState from
+ * an effect on every render (bugfix-19-4b-1's callback-prop-identity churn). The bisect
+ * spec caught that by walking every fixture in its own 11-minute CI workflow; this spec
+ * already mounts every fixture in isolation, so it listens for the warning here and
+ * fails the bucket if any fixture loops. `tests/bisect/` stays as a manual diagnostic
+ * (it also extracts offender component frames) — run `pnpm run test:bisect` by hand.
+ *
  * @tags @visual @story-19-4 @story-19-4b
  */
 import { test, expect, type Locator, type Page } from '@playwright/test';
@@ -52,6 +68,11 @@ import { withFixedClock } from './clock-mock';
 
 const FOCUSABLE =
   ':is(a[href], button, input, select, textarea, [tabindex]):not([tabindex="-1"]):not([disabled])';
+
+// See header § "CI parallelism". Anything unparsable / < 1 falls back to a single bucket.
+const VISUAL_BUCKETS = Math.max(1, Number.parseInt(process.env.VISUAL_BUCKETS ?? '1', 10) || 1);
+
+const RENDER_LOOP_RE = /Maximum update depth exceeded/;
 
 async function stubSetupStatus(page: Page) {
   // `__root.tsx` redirects to /setup when setup status reports needsSetup — pin it so the
@@ -81,169 +102,206 @@ test.describe('@visual @story-19-4 component visual baselines', () => {
     await abortTmdbImages(page);
   });
 
-  test('every gallery component matches its baseline (default / hover / focus / open)', async ({
-    page,
-  }) => {
-    // 19-4b Task 4: per-fixture navigation × ~123 fixtures × ~1-2s each blows past
-    // the default 60s test budget. Extend to 10 min — covers the full bulk-fill set
-    // with comfortable headroom. The visual project still runs serially (1 worker)
-    // so this does not increase the wallclock for parallel CI shards.
-    test.setTimeout(10 * 60 * 1000);
+  for (let bucket = 0; bucket < VISUAL_BUCKETS; bucket++) {
+    const bucketSuffix = VISUAL_BUCKETS === 1 ? '' : ` [bucket ${bucket + 1}/${VISUAL_BUCKETS}]`;
 
-    // 19-4b Task 4: discover fixture ids from the manifest endpoint (no components mounted).
-    await page.goto('/test/gallery?manifest=1');
-    await page.waitForSelector('[data-testid="component-gallery-manifest"]', { state: 'visible' });
-    // 19-9 AC #4: harvest each fixture's optional clockTime alongside its id so we can
-    // pin the in-page wall clock (Rule 23) BEFORE the per-fixture goto. Fixtures
-    // without clockTime fall through the helper-not-called branch — backward-compat.
-    const fixtures = await page.locator('li[data-gallery-id]').evaluateAll((els) =>
-      els
-        .map((el) => ({
-          id: el.getAttribute('data-gallery-id'),
-          clockTime: el.getAttribute('data-gallery-clock-time'),
-        }))
-        .filter(
-          (f): f is { id: string; clockTime: string | null } =>
-            typeof f.id === 'string' && f.id.length > 0
-        )
-    );
-    expect(fixtures.length, 'manifest returned at least one fixture id').toBeGreaterThan(0);
+    test(`every gallery component matches its baseline (default / hover / focus / open)${bucketSuffix}`, async ({
+      page,
+    }) => {
+      // 19-4b Task 4: per-fixture navigation × ~123 fixtures × ~1-2s each blows past
+      // the default 60s test budget. Extend to 10 min — covers the full bulk-fill set
+      // with comfortable headroom (a bucket only walks 1/N of it, so headroom grows with N).
+      test.setTimeout(10 * 60 * 1000);
 
-    for (const { id, clockTime } of fixtures) {
-      // 19-9 AC #4: Rule 23 clock-mock. Install BEFORE goto so `page.clock` init
-      // scripts run before any time-dependent JS in the fixture page evaluates.
-      if (clockTime) {
-        await withFixedClock(page, clockTime);
-      }
-      // 19-4b Task 4: per-fixture isolated page load — only one fixture is mounted,
-      // so `fixed inset-0` overlay components can no longer block neighbour fixtures.
-      // `waitUntil: 'domcontentloaded'` is faster than the default `'load'` — Vite
-      // continues fetching chunks past DOMContentLoaded for components with deep
-      // import graphs; we don't need them all loaded before our waitForSelector
-      // detects the gallery page render. 60s budget tolerates slow Vite recompiles
-      // after many sequential navigations within one test (~123 fixtures total).
-      await page.goto(`/test/gallery?fixture=${encodeURIComponent(id)}`, {
-        timeout: 60_000,
-        waitUntil: 'domcontentloaded',
+      // Render-loop guard — see header. Mirrors the bisect spec's collector: React emits
+      // the warning via console.error (no component stack), and a hard loop can also
+      // surface as an uncaught error, so listen on both channels.
+      const renderLoops: string[] = [];
+      let currentFixture = '(manifest)';
+      page.on('console', (msg) => {
+        if (RENDER_LOOP_RE.test(msg.text())) {
+          renderLoops.push(`${currentFixture}: ${msg.text().slice(0, 160)}`);
+        }
       });
-      // Park the pointer at the viewport origin: the mouse position persists across
-      // gotos, so the previous fixture's `hover` action leaves a stale pointer that
-      // can land on THIS fixture's content and contaminate its `default` shot with
-      // hover styling (bit media-media-grid after ux3-cutover-4 shifted the content
-      // column right by the sidebar width).
-      await page.mouse.move(0, 0);
-      await page.waitForSelector('[data-testid="component-gallery-page"]', {
+      page.on('pageerror', (err) => {
+        if (RENDER_LOOP_RE.test(`${err.message}\n${err.stack ?? ''}`)) {
+          renderLoops.push(`${currentFixture}: ${err.message.slice(0, 160)}`);
+        }
+      });
+
+      // 19-4b Task 4: discover fixture ids from the manifest endpoint (no components mounted).
+      await page.goto('/test/gallery?manifest=1');
+      await page.waitForSelector('[data-testid="component-gallery-manifest"]', {
         state: 'visible',
-        timeout: 30_000,
+      });
+      // 19-9 AC #4: harvest each fixture's optional clockTime alongside its id so we can
+      // pin the in-page wall clock (Rule 23) BEFORE the per-fixture goto. Fixtures
+      // without clockTime fall through the helper-not-called branch — backward-compat.
+      const allFixtures = await page.locator('li[data-gallery-id]').evaluateAll((els) =>
+        els
+          .map((el) => ({
+            id: el.getAttribute('data-gallery-id'),
+            clockTime: el.getAttribute('data-gallery-clock-time'),
+          }))
+          .filter(
+            (f): f is { id: string; clockTime: string | null } =>
+              typeof f.id === 'string' && f.id.length > 0
+          )
+      );
+      expect(allFixtures.length, 'manifest returned at least one fixture id').toBeGreaterThan(0);
+      // Interleaved split (k % N) rather than contiguous ranges: fixtures are grouped by
+      // component family in the manifest, so contiguous ranges would hand one bucket all the
+      // heavy dialog/overlay fixtures and another all the cheap badges.
+      const fixtures = allFixtures.filter((_, k) => k % VISUAL_BUCKETS === bucket);
+      test.info().annotations.push({
+        type: 'visual-bucket',
+        description: `bucket ${bucket + 1}/${VISUAL_BUCKETS}: ${fixtures.length} of ${allFixtures.length} fixtures`,
       });
 
-      const section = page.locator(`section[data-gallery-id="${id}"]`);
-      // The manifest is derived from the same `GALLERY_FIXTURES` array that the
-      // `?fixture=<id>` filter applies to, so the section is always rendered for
-      // any id surfaced by the manifest. Wait for visibility to ensure the section
-      // has committed before screenshotting; `waitForLoadState('networkidle')` is
-      // NOT usable — app-shell SSE / long-poll never reach idle.
-      await section.waitFor({ state: 'visible', timeout: 30_000 });
-      // Settle web fonts before screenshot — deterministic and short-lived.
-      await page.evaluate(() => document.fonts.ready);
-
-      const stateDivs = section.locator('[data-gallery-state]');
-      const stateCount = await stateDivs.count();
-
-      for (let j = 0; j < stateCount; j++) {
-        const stateDiv = stateDivs.nth(j);
-        const state = await stateDiv.getAttribute('data-gallery-state');
-        if (!state) {
-          test.info().annotations.push({
-            type: 'gallery-skip',
-            description: `${id}: state div[${j}] missing data-gallery-state`,
-          });
-          continue;
+      for (const { id, clockTime } of fixtures) {
+        currentFixture = id;
+        // 19-9 AC #4: Rule 23 clock-mock. Install BEFORE goto so `page.clock` init
+        // scripts run before any time-dependent JS in the fixture page evaluates.
+        if (clockTime) {
+          await withFixedClock(page, clockTime);
         }
+        // 19-4b Task 4: per-fixture isolated page load — only one fixture is mounted,
+        // so `fixed inset-0` overlay components can no longer block neighbour fixtures.
+        // `waitUntil: 'domcontentloaded'` is faster than the default `'load'` — Vite
+        // continues fetching chunks past DOMContentLoaded for components with deep
+        // import graphs; we don't need them all loaded before our waitForSelector
+        // detects the gallery page render. 60s budget tolerates slow Vite recompiles
+        // after many sequential navigations within one test (~123 fixtures total).
+        await page.goto(`/test/gallery?fixture=${encodeURIComponent(id)}`, {
+          timeout: 60_000,
+          waitUntil: 'domcontentloaded',
+        });
+        // Park the pointer at the viewport origin: the mouse position persists across
+        // gotos, so the previous fixture's `hover` action leaves a stale pointer that
+        // can land on THIS fixture's content and contaminate its `default` shot with
+        // hover styling (bit media-media-grid after ux3-cutover-4 shifted the content
+        // column right by the sidebar width).
+        await page.mouse.move(0, 0);
+        await page.waitForSelector('[data-testid="component-gallery-page"]', {
+          state: 'visible',
+          timeout: 30_000,
+        });
 
-        // Skip fixtures that rendered the error placeholder — an error state is not a valid baseline.
-        if ((await stateDiv.locator('[data-gallery-error]').count()) > 0) {
-          test.info().annotations.push({
-            type: 'gallery-skip',
-            description: `${id}:${state} (fixture error)`,
-          });
-          continue;
-        }
+        const section = page.locator(`section[data-gallery-id="${id}"]`);
+        // The manifest is derived from the same `GALLERY_FIXTURES` array that the
+        // `?fixture=<id>` filter applies to, so the section is always rendered for
+        // any id surfaced by the manifest. Wait for visibility to ensure the section
+        // has committed before screenshotting; `waitForLoadState('networkidle')` is
+        // NOT usable — app-shell SSE / long-poll never reach idle.
+        await section.waitFor({ state: 'visible', timeout: 30_000 });
+        // Settle web fonts before screenshot — deterministic and short-lived.
+        await page.evaluate(() => document.fonts.ready);
 
-        // 19-4b Task 4: detect overlay/portal fixtures whose visible content escapes
-        // the state-div (Radix `Dialog.Portal` → document.body; `position: fixed`
-        // children → removed from inline-block flow → state-div is 0×0). For those
-        // we capture a viewport screenshot so the overlay paint is still recorded.
-        const bbox = await stateDiv.boundingBox();
-        const isZeroSize = !bbox || bbox.width < 4 || bbox.height < 4;
+        const stateDivs = section.locator('[data-gallery-state]');
+        const stateCount = await stateDivs.count();
 
-        if (!isZeroSize) {
-          await stateDiv.scrollIntoViewIfNeeded();
-        }
-
-        if (state === 'hover' && !isZeroSize) {
-          await stateDiv.hover();
-        } else if (state === 'hover' && isZeroSize) {
-          // No flow content to hover — keep the default-state viewport screenshot.
-          test.info().annotations.push({
-            type: 'gallery-skip-interaction',
-            description: `${id}:hover skipped (zero-size state div — overlay/portal fixture)`,
-          });
-        } else if (state === 'focus') {
-          // 19-4b Task 0 Fix A: focus a hidden sentinel before the state div, then
-          // press Tab to enter it. Chromium flags the resulting focus as keyboard
-          // modality so `:focus-visible` rules paint correctly. Programmatic
-          // `locator.focus()` does not trigger `:focus-visible`.
-          // The gallery route ALWAYS renders the sentinel before each state-div,
-          // so the sentinel-missing branch was dead code (dropped in 19-4b Task 6
-          // CR fix). Zero-size fixtures fall through to the viewport screenshot.
-          const focusable: Locator = stateDiv.locator(FOCUSABLE).first();
-          if ((await focusable.count()) > 0 && !isZeroSize) {
-            const sentinel: Locator = stateDiv.locator(
-              'xpath=preceding-sibling::*[@data-gallery-sentinel="pre"][1]'
-            );
-            await sentinel.focus();
-            await page.keyboard.press('Tab');
-          } else if (!isZeroSize) {
-            // No focusable descendant — focus state is identical to default; still capture it.
-            await stateDiv.evaluate((el: HTMLElement) => el.scrollIntoView({ block: 'center' }));
+        for (let j = 0; j < stateCount; j++) {
+          const stateDiv = stateDivs.nth(j);
+          const state = await stateDiv.getAttribute('data-gallery-state');
+          if (!state) {
+            test.info().annotations.push({
+              type: 'gallery-skip',
+              description: `${id}: state div[${j}] missing data-gallery-state`,
+            });
+            continue;
           }
-          // Zero-size fixtures: focus state is captured as a viewport screenshot identical to default.
-        } else if (state === 'open' && !isZeroSize) {
-          // 19-4b Task 0 Fix C: click the fixture-declared trigger selector inside
-          // the state div to open the interactive sub-UI (dropdown / menu / modal).
-          // After click, wait for the most common popup role to be visible so the
-          // screenshot doesn't race the popup paint. .catch keeps the wait
-          // tolerant for openers whose popup doesn't expose a standard role.
-          const trigger = await stateDiv.getAttribute('data-gallery-open-trigger');
-          if (trigger) {
-            await stateDiv.locator(trigger).first().click();
-            await stateDiv
-              .locator(':is([role="listbox"], [role="menu"], [role="dialog"])')
-              .first()
-              .waitFor({ state: 'visible', timeout: 1000 })
-              .catch(() => {
-                /* no role-bearing popup — screenshot whatever opened */
-              });
-          }
-        }
 
-        // `expect.soft`: a failing comparison no longer aborts the fixture loop, so a
-        // single CI run reports EVERY diffing/missing baseline at once instead of
-        // hiding everything after the first hard failure (ux3-cutover-4 self-heal:
-        // 24 retired baselines were dripping out one abort at a time). The test
-        // still fails at the end if any soft expectation failed.
-        if (isZeroSize) {
-          // 19-4b Task 4: overlay/portal fixtures — capture viewport instead so the
-          // dialog/sidepanel paint is recorded. Page screenshot includes the app
-          // shell, but the overlay is the visually-dominant content (centered
-          // dialog box + dark backdrop). This is the documented capture strategy
-          // for the 12 `fixed inset-0` / Radix-portal fixtures (see story 19-4b).
-          await expect.soft(page).toHaveScreenshot(['components', id, `${state}.png`]);
-        } else {
-          await expect.soft(stateDiv).toHaveScreenshot(['components', id, `${state}.png`]);
+          // Skip fixtures that rendered the error placeholder — an error state is not a valid baseline.
+          if ((await stateDiv.locator('[data-gallery-error]').count()) > 0) {
+            test.info().annotations.push({
+              type: 'gallery-skip',
+              description: `${id}:${state} (fixture error)`,
+            });
+            continue;
+          }
+
+          // 19-4b Task 4: detect overlay/portal fixtures whose visible content escapes
+          // the state-div (Radix `Dialog.Portal` → document.body; `position: fixed`
+          // children → removed from inline-block flow → state-div is 0×0). For those
+          // we capture a viewport screenshot so the overlay paint is still recorded.
+          const bbox = await stateDiv.boundingBox();
+          const isZeroSize = !bbox || bbox.width < 4 || bbox.height < 4;
+
+          if (!isZeroSize) {
+            await stateDiv.scrollIntoViewIfNeeded();
+          }
+
+          if (state === 'hover' && !isZeroSize) {
+            await stateDiv.hover();
+          } else if (state === 'hover' && isZeroSize) {
+            // No flow content to hover — keep the default-state viewport screenshot.
+            test.info().annotations.push({
+              type: 'gallery-skip-interaction',
+              description: `${id}:hover skipped (zero-size state div — overlay/portal fixture)`,
+            });
+          } else if (state === 'focus') {
+            // 19-4b Task 0 Fix A: focus a hidden sentinel before the state div, then
+            // press Tab to enter it. Chromium flags the resulting focus as keyboard
+            // modality so `:focus-visible` rules paint correctly. Programmatic
+            // `locator.focus()` does not trigger `:focus-visible`.
+            // The gallery route ALWAYS renders the sentinel before each state-div,
+            // so the sentinel-missing branch was dead code (dropped in 19-4b Task 6
+            // CR fix). Zero-size fixtures fall through to the viewport screenshot.
+            const focusable: Locator = stateDiv.locator(FOCUSABLE).first();
+            if ((await focusable.count()) > 0 && !isZeroSize) {
+              const sentinel: Locator = stateDiv.locator(
+                'xpath=preceding-sibling::*[@data-gallery-sentinel="pre"][1]'
+              );
+              await sentinel.focus();
+              await page.keyboard.press('Tab');
+            } else if (!isZeroSize) {
+              // No focusable descendant — focus state is identical to default; still capture it.
+              await stateDiv.evaluate((el: HTMLElement) => el.scrollIntoView({ block: 'center' }));
+            }
+            // Zero-size fixtures: focus state is captured as a viewport screenshot identical to default.
+          } else if (state === 'open' && !isZeroSize) {
+            // 19-4b Task 0 Fix C: click the fixture-declared trigger selector inside
+            // the state div to open the interactive sub-UI (dropdown / menu / modal).
+            // After click, wait for the most common popup role to be visible so the
+            // screenshot doesn't race the popup paint. .catch keeps the wait
+            // tolerant for openers whose popup doesn't expose a standard role.
+            const trigger = await stateDiv.getAttribute('data-gallery-open-trigger');
+            if (trigger) {
+              await stateDiv.locator(trigger).first().click();
+              await stateDiv
+                .locator(':is([role="listbox"], [role="menu"], [role="dialog"])')
+                .first()
+                .waitFor({ state: 'visible', timeout: 1000 })
+                .catch(() => {
+                  /* no role-bearing popup — screenshot whatever opened */
+                });
+            }
+          }
+
+          // `expect.soft`: a failing comparison no longer aborts the fixture loop, so a
+          // single CI run reports EVERY diffing/missing baseline at once instead of
+          // hiding everything after the first hard failure (ux3-cutover-4 self-heal:
+          // 24 retired baselines were dripping out one abort at a time). The test
+          // still fails at the end if any soft expectation failed.
+          if (isZeroSize) {
+            // 19-4b Task 4: overlay/portal fixtures — capture viewport instead so the
+            // dialog/sidepanel paint is recorded. Page screenshot includes the app
+            // shell, but the overlay is the visually-dominant content (centered
+            // dialog box + dark backdrop). This is the documented capture strategy
+            // for the 12 `fixed inset-0` / Radix-portal fixtures (see story 19-4b).
+            await expect.soft(page).toHaveScreenshot(['components', id, `${state}.png`]);
+          } else {
+            await expect.soft(stateDiv).toHaveScreenshot(['components', id, `${state}.png`]);
+          }
         }
       }
-    }
-  });
+
+      // Hard (not soft) so a looping fixture fails the bucket even when every screenshot
+      // matched — a render loop that happens to settle before the shot is still a bug.
+      expect(
+        renderLoops,
+        'no fixture triggered a React render loop ("Maximum update depth exceeded")'
+      ).toEqual([]);
+    });
+  }
 });

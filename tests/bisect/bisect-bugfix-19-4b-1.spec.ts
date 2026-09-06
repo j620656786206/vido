@@ -25,8 +25,14 @@
  *
  * (The npm script invokes `playwright test --project=bisect`; the project's
  * config in `playwright.config.ts` pins testDir to `tests/bisect/` and
- * testMatch to `**\/bisect-*.spec.ts`. CI wiring:
- * `.github/workflows/bisect-regression.yml`.)
+ * testMatch to `**\/bisect-*.spec.ts`.)
+ *
+ * 2026-09-06: NO LONGER RUN IN CI. `.github/workflows/bisect-regression.yml` was retired
+ * (it cost ~11 min per main push / dependency PR to guard one already-fixed bug). The
+ * `Maximum update depth exceeded` assertion now lives in the visual spec's render-loop
+ * guard (`tests/visual/components.visual.spec.ts`), which mounts every fixture on every
+ * visual PR. Keep this spec as a MANUAL diagnostic — it still extracts offender component
+ * frames into the JSON report, which the visual guard does not.
  *
  * NOTE: a preview-mode (port 4201, prod build) probe is NOT supported because
  * `apps/web/src/routes/test/gallery.tsx:90-97` gates the route on
@@ -131,8 +137,8 @@ test.describe('@bisect-19-4b-1 max-update-depth probe', () => {
     );
     // Runs under the `bisect` Playwright project (Vite dev-mode webServer — `/test/gallery`
     // is gated behind `!import.meta.env.PROD` per story 19-4 CR M1). Does NOT run under the
-    // feature-E2E projects (chromium/firefox/mobile-*). CI wiring lives in
-    // `.github/workflows/bisect-regression.yml` (bugfix-19-4b-1-followup-bisect-spec-ci-coverage).
+    // feature-E2E projects (chromium/firefox/mobile-*). Formerly wired into CI by
+    // `.github/workflows/bisect-regression.yml` (retired 2026-09-06 — see file header).
     // Seed an in-page wrapper around console.error that captures `new Error().stack`
     // every time a Maximum-update-depth warning fires. React 18 emits the message
     // string only (no component stack arg), so we synthesise a JS stack on the call

@@ -16,6 +16,19 @@
 #   - Main job 跑同一個 verify-only 比對,並在「首次執行」時跑一次性的
 #     Linux baseline 引導分支(見下方「First-run bootstrap」)。
 #
+# 2026-09-06 PR 側拆成 4 路平行（PR 回饋從 ~10 分縮到 ~3.5 分）:
+#   單一 spec 走完 ~300 個 fixture 是串行的,run 33966001431 實測「Run visual
+#   regression」一步就 552s,而且 playwright.config.ts 的 CI retries: 2 讓任何
+#   一次真的像素差異要 3 × 9 分 ≈ 29 分,撞 25 分上限後只顯示 cancelled
+#   (sprint-status `backlog-visual-gate-cannot-report-real-diff`)。現在:
+#     changes  → dorny/paths-filter 判斷這個 PR 有沒有碰到渲染面(~10s)
+#     pr-shard → 4 個 job,各跑 VISUAL_BUCKETS=4 + --shard=i/4,每路 ~75 個 fixture
+#     pr       → 名字仍叫「PR」的彙整 job:ruleset 要求的 required check 就是
+#                這個名字,shard 改名不會動到它。changes 說「沒碰到」→ 直接綠;
+#                否則四路全綠才綠。
+#   Main job 維持單路(它不在任何人的等待路徑上,而且 bootstrap 分支要讀單一
+#   一份 probe log);要加速可以之後再給它 VISUAL_BUCKETS + --workers。
+#
 # Runner 版本固定 (AC #5):
 #   `runs-on: ubuntu-24.04` 是版本化標籤,而非 `ubuntu-latest`。Linux 的字體
 #   渲染 (fontconfig / freetype / DejaVu / Noto / Liberation glyphs) 是決定
@@ -145,21 +158,33 @@ on:
     # 元件路徑下的漂移。
   workflow_dispatch:
 
+# AC #7 concurrency,2026-09-06 搬到 workflow 層:PR 側現在是三個 job,job 層
+# 的 concurrency 若三個共用同一個 group 會互相取消,所以只能放這裡。
+#   - PR:同 PR 強制推送自動取消前一輪(group 綁 ref)。
+#   - main / dispatch:獨立 group、不取消 —— 同 main 連續 push 排隊,避免
+#     bootstrap PR 那一輪被砍。語意跟原本兩個 job 層的設定完全相同。
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('visual-regression-pr-{0}', github.ref) || 'visual-regression-main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   CI: true
+  # PR 側的平行度。改這個數字要同步改 pr-shard 的 matrix 與 --shard 分母。
+  VISUAL_BUCKETS: 4
 
 jobs:
-  pr:
-    name: PR
+  # ---------------------------------------------------------------------------
+  # PR 步驟 1/3:這個 PR 有沒有碰到渲染面?(~10s,不裝任何東西)
+  # ---------------------------------------------------------------------------
+  changes:
+    name: Detect visual-rendering changes
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-24.04 # AC #5 — do NOT change to ubuntu-latest, see story 19-5 AC #5
-    timeout-minutes: 25
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
     permissions:
       contents: read
-    # AC #7 — PR concurrency:同 PR 強制推送會自動取消前一輪。
-    concurrency:
-      group: visual-regression-${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: true
+    outputs:
+      visual: ${{ steps.filter.outputs.visual }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -178,7 +203,8 @@ jobs:
       #     bump(`pnpm update` 或 caret-range 解析到新 minor)只動 lockfile、
       #     不動 package.json → 視覺 PR 閘靜默跳過。這正是
       #     bugfix-19-4b-1-followup CR M1 指認、明文 carry-forward 到本 P3 的
-      #     已知缺口(bisect-regression.yml 早已含本路徑)。
+      #     已知缺口(當時的 bisect-regression.yml 早已含本路徑;該 workflow 已於
+      #     2026-09-06 退役,見 playwright.config.ts `bisect` project 註解)。
       #   - `apps/web/postcss.config.js`: Tailwind→CSS 的 transform pipeline
       #     (`@tailwindcss/postcss` + `autoprefixer`)。直接決定 render 後像素
       #     —— 移掉 autoprefixer 即改變輸出。
@@ -195,7 +221,8 @@ jobs:
       # 先例「放寬而非收緊,不需 Rule 20 contract bump」([@contract-v2] 保留;
       # 19-5 AC #1 downstream-ack grep 回 0 consumers,即使走嚴格路徑也只記
       # `no downstream consumers`)。audit class (a)「死路徑」掃描:0 命中 ——
-      # 本 filter + bisect-regression.yml filter 全部列出路徑經 P3 逐一驗證皆存在。
+      # 本 filter 全部列出路徑經 P3 逐一驗證皆存在(2026-06-02 時連同已退役的
+      # bisect-regression.yml filter 一起驗過)。
       - name: Detect visual-rendering changes
         id: filter
         uses: dorny/paths-filter@v3
@@ -216,9 +243,9 @@ jobs:
               - 'pnpm-lock.yaml'
               - '.github/workflows/visual-regression.yml'
 
-      # 不相關 PR 的快速通道:check 直接 ✅,後續步驟全跳過。
-      # `exit 0` 確保 job 回報 success(GitHub ruleset 對「skipped」的解讀
-      # 不一致,但「success」一律算通過)。
+      # 不相關 PR 的快速通道:pr-shard 整個 job 跳過,最後的「PR」彙整 job
+      # 看到 visual != 'true' 直接回報 success(GitHub ruleset 對「skipped」的
+      # 解讀不一致,但「success」一律算通過)。
       - name: Skip notice (no visual paths changed)
         if: steps.filter.outputs.visual == 'false'
         run: |
@@ -233,28 +260,45 @@ jobs:
           echo "  pnpm-lock.yaml"
           echo "  .github/workflows/visual-regression.yml"
 
+  # ---------------------------------------------------------------------------
+  # PR 步驟 2/3:四路平行跑視覺比對。每一路都自己起 Vite、自己裝 Chromium
+  # (~60s 固定成本),然後只走 1/4 的 fixture(~2.5 分)。
+  # ---------------------------------------------------------------------------
+  pr-shard:
+    name: Visual diff (shard ${{ matrix.shard }}/4)
+    needs: changes
+    if: needs.changes.outputs.visual == 'true'
+    runs-on: ubuntu-24.04 # AC #5 — do NOT change to ubuntu-latest, see story 19-5 AC #5
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    strategy:
+      # 一路紅了其他三路照跑完:審查者要一次看到「全部」差異,不是只看到第一個。
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Install pnpm
-        if: steps.filter.outputs.visual == 'true'
         uses: pnpm/action-setup@v4
         with:
           version: 9
 
       - name: Setup Node.js
-        if: steps.filter.outputs.visual == 'true'
         uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
           cache: 'pnpm'
 
       - name: Install Node dependencies
-        if: steps.filter.outputs.visual == 'true'
         run: pnpm install --frozen-lockfile
 
       # 只裝 Chromium —— 不裝 webkit/firefox(每次省約 1 GB / 約 30 秒;
       # `visual` Playwright project 本設計上就是 Chromium-only,見
       # playwright.config.ts L148–L162)。
       - name: Install Playwright Chromium
-        if: steps.filter.outputs.visual == 'true'
         run: npx playwright install --with-deps chromium
 
       # 啟用 Vite dev server (`nx serve web`),不是 `nx build` + `npx serve`。
@@ -267,7 +311,6 @@ jobs:
       # 用 `nx serve web`(Vite dev,`PROD=false`)跟本地 `playwright.config.ts`
       # webServer 的設定一致。背景啟動,迴圈等就緒。
       - name: Start frontend (Vite dev server)
-        if: steps.filter.outputs.visual == 'true'
         run: |
           npx nx serve web > /tmp/nx-serve.log 2>&1 &
           ready=0
@@ -290,30 +333,72 @@ jobs:
             exit 1
           fi
 
-      # AC #3 — 用 npm script(不用 `nx affected -t e2e:visual`)。這個
-      # script 會對著已提交基準呼叫 `playwright test --project=visual`。
-      # AC #2 — 純驗證,失敗時絕對不可自動更新基準。
-      - name: Run visual regression (verify-only)
-        if: steps.filter.outputs.visual == 'true'
-        run: pnpm run test:visual
+      # AC #3 — 同 `pnpm run test:visual`(= playwright test --project=visual),
+      # 多了 --shard:spec 依 VISUAL_BUCKETS 產生 4 個 test,--shard=i/4 讓每個
+      # job 剛好領到其中一個。AC #2 — 純驗證,失敗時絕對不可自動更新基準。
+      - name: Run visual regression (verify-only, shard ${{ matrix.shard }}/4)
+        run: npx playwright test --project=visual --shard=${{ matrix.shard }}/4
 
       # AC #2 — 上傳 Playwright 差異產物(actual.png、diff.png、traces),
-      # 給審查者除錯失敗的 PR 檢查用。only-when-visual 條件:不相關 PR 不會
-      # 產出 test-results/,連 artifact 步驟都省。
+      # 給審查者除錯失敗的 PR 檢查用。名稱含 shard,同一 run 內不能重名。
       - name: Upload diff artifacts
-        if: always() && steps.filter.outputs.visual == 'true'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: visual-regression-diffs-pr-${{ github.run_id }}
+          name: visual-regression-diffs-pr-${{ github.run_id }}-shard-${{ matrix.shard }}
           path: test-results/
           retention-days: 14
           if-no-files-found: ignore
+
+  # ---------------------------------------------------------------------------
+  # PR 步驟 3/3:彙整成一個叫「PR」的 check。
+  # Branch ruleset(main protection — required CI checks)要求的 context 名稱
+  # 就是 `PR`;它不認識 matrix 產生的「Visual diff (shard n/4)」。這個 job 不裝
+  # 任何東西,只看上游結果:
+  #   - changes 沒成功       → 紅(filter 本身壞了不能放行)
+  #   - 沒碰到渲染面         → 綠(pr-shard 整個被 skip)
+  #   - 碰到了、四路全綠     → 綠
+  #   - 任何一路紅 / 被取消  → 紅
+  # ---------------------------------------------------------------------------
+  pr:
+    name: PR
+    needs: [changes, pr-shard]
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Aggregate shard results
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          VISUAL_CHANGED: ${{ needs.changes.outputs.visual }}
+          SHARDS_RESULT: ${{ needs.pr-shard.result }}
+        run: |
+          echo "changes=$CHANGES_RESULT visual_changed=$VISUAL_CHANGED shards=$SHARDS_RESULT"
+          if [ "$CHANGES_RESULT" != "success" ]; then
+            echo "::error::Path-filter job did not succeed ($CHANGES_RESULT) — cannot decide whether visual diff was needed."
+            exit 1
+          fi
+          if [ "$VISUAL_CHANGED" != "true" ]; then
+            echo "::notice::No visual-rendering surfaces changed — visual diff skipped, check passes."
+            exit 0
+          fi
+          if [ "$SHARDS_RESULT" != "success" ]; then
+            echo "::error::One or more visual-diff shards did not succeed ($SHARDS_RESULT). Open the failed shard job for the fixture list and download its diff artifact."
+            exit 1
+          fi
+          echo "All 4 visual-diff shards passed."
 
   main:
     name: Main
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04 # AC #5 — do NOT change to ubuntu-latest, see story 19-5 AC #5
     timeout-minutes: 40
+    # Main 維持單路:workflow 層的 VISUAL_BUCKETS=4 是給 pr-shard 用的,這裡
+    # 蓋回 1,verify-probe / update-missing 才是原本那一個 test、一份 log。
+    env:
+      VISUAL_BUCKETS: 1
     permissions:
       # `contents: write` + `pull-requests: write` 只有「首次 Linux 基準
       # 引導路徑」需要(peter-evans/create-pull-request 會 commit `-linux`
@@ -321,11 +406,8 @@ jobs:
       # `{contents: read}`。
       contents: write
       pull-requests: write
-    # AC #7 — main concurrency:用獨立 group key,避免 PR 取消波及 main
-    # push;同 main 上連續 push 採排隊而不取消(`cancel-in-progress: false`)。
-    concurrency:
-      group: visual-regression-main
-      cancel-in-progress: false
+    # AC #7 — main concurrency 已搬到 workflow 層(見檔頭 `concurrency:`),
+    # 語意不變:獨立 group、不取消。
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
