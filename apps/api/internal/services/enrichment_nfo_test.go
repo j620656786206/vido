@@ -113,6 +113,8 @@ type mockMovieRepoForNFO struct {
 	mock.Mock
 	updatedMovie     *models.Movie
 	wideUpdatedMovie *models.Movie
+	creditsWrites    []string // sub-7-3: ids handed to the narrow UpdateCredits writer
+	lastCredits      *models.Credits
 }
 
 // Update records SEPARATELY from UpdateEnrichedMetadata. Enrichment must not use
@@ -121,6 +123,12 @@ type mockMovieRepoForNFO struct {
 // that regress invisibly.
 func (m *mockMovieRepoForNFO) Update(ctx context.Context, movie *models.Movie) error {
 	m.wideUpdatedMovie = movie
+	return nil
+}
+
+func (m *mockMovieRepoForNFO) UpdateCredits(_ context.Context, id string, credits *models.Credits) error {
+	m.creditsWrites = append(m.creditsWrites, id)
+	m.lastCredits = credits
 	return nil
 }
 

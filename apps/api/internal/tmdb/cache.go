@@ -113,6 +113,11 @@ type CacheService struct {
 	// SetProvidersClient — mirrors the SetContentFilter injection pattern so the
 	// existing NewCacheService callers (16 test sites) need no signature change.
 	providersClient ClientInterface
+	// creditsClient is the raw client used for the credits endpoints
+	// (sub-7-3). Credits are fetched in an EXPLICIT language and cached with
+	// the language in the key — the fallback layer, which picks one language,
+	// is bypassed on purpose.
+	creditsClient CreditsClientInterface
 }
 
 // CacheServiceInterface defines the contract for cached TMDb operations
@@ -181,6 +186,80 @@ func NewCacheService(client LanguageFallbackClientInterface, cache repository.Ca
 // mock ClientInterface here.
 func (s *CacheService) SetProvidersClient(c ClientInterface) {
 	s.providersClient = c
+}
+
+// SetCreditsClient injects the raw TMDb client used by the credits getters
+// (sub-7-3). Wired by NewTMDbService in production.
+func (s *CacheService) SetCreditsClient(c CreditsClientInterface) {
+	s.creditsClient = c
+}
+
+// GetMovieCreditsWithLanguage returns a movie's cast/crew in ONE explicit
+// language, cached at the default TTL under a language-keyed key
+// (tmdb:movie/{id}/credits:{lang}) — a cast list is effectively immutable, and
+// the glossary seeder asks for two languages per title.
+func (s *CacheService) GetMovieCreditsWithLanguage(ctx context.Context, movieID int, language string) (*MovieCredits, error) {
+	cacheKey := fmt.Sprintf("tmdb:movie/%d/credits:%s", movieID, language)
+	var cached MovieCredits
+	if s.cacheGet(ctx, cacheKey, &cached) {
+		return &cached, nil
+	}
+	if s.creditsClient == nil {
+		return nil, fmt.Errorf("credits client not initialized")
+	}
+	result, err := s.creditsClient.GetMovieCreditsWithLanguage(ctx, movieID, language)
+	if err != nil {
+		return nil, err
+	}
+	s.cachePut(ctx, cacheKey, result)
+	return result, nil
+}
+
+// GetTVAggregateCreditsWithLanguage is the series twin of
+// GetMovieCreditsWithLanguage (key tmdb:tv/{id}/aggregate_credits:{lang}).
+func (s *CacheService) GetTVAggregateCreditsWithLanguage(ctx context.Context, tvID int, language string) (*TVAggregateCredits, error) {
+	cacheKey := fmt.Sprintf("tmdb:tv/%d/aggregate_credits:%s", tvID, language)
+	var cached TVAggregateCredits
+	if s.cacheGet(ctx, cacheKey, &cached) {
+		return &cached, nil
+	}
+	if s.creditsClient == nil {
+		return nil, fmt.Errorf("credits client not initialized")
+	}
+	result, err := s.creditsClient.GetTVAggregateCreditsWithLanguage(ctx, tvID, language)
+	if err != nil {
+		return nil, err
+	}
+	s.cachePut(ctx, cacheKey, result)
+	return result, nil
+}
+
+// cacheGet decodes a cached JSON entry into out; false on miss or a stale
+// shape (which is logged and treated as a miss, like every getter here).
+func (s *CacheService) cacheGet(ctx context.Context, key string, out any) bool {
+	cached, err := s.cache.Get(ctx, key)
+	if err != nil || cached == nil {
+		slog.Debug("Cache miss", "key", key, "type", CacheTypeTMDb)
+		return false
+	}
+	if err := json.Unmarshal([]byte(cached.Value), out); err != nil {
+		slog.Warn("Failed to unmarshal cached data", "key", key, "error", err)
+		return false
+	}
+	slog.Debug("Cache hit", "key", key, "type", CacheTypeTMDb)
+	return true
+}
+
+// cachePut stores v under key at the default TTL; a cache write failure is a
+// warning, never an error for the caller.
+func (s *CacheService) cachePut(ctx context.Context, key string, v any) {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return
+	}
+	if err := s.cache.Set(ctx, key, string(data), CacheTypeTMDb, s.ttl); err != nil {
+		slog.Warn("Failed to cache TMDb response", "key", key, "error", err)
+	}
 }
 
 // SearchMovies searches for movies with caching

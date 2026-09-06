@@ -53,6 +53,12 @@ type EnrichmentService struct {
 	sseHub          *sse.Hub
 	logger          *slog.Logger
 
+	// sub-7-3: once a row is matched to TMDb, its cast is fetched, stored on
+	// the row, and planted into the show's glossary. Both are optional —
+	// nil = the pre-sub-7-3 behaviour (no credits, no seeding).
+	glossarySeeder GlossarySeederInterface
+	glossaryScopes GlossaryScopeResolverInterface
+
 	mu          sync.Mutex
 	isEnriching bool
 	cancelChan  chan struct{}
@@ -294,13 +300,19 @@ func (s *EnrichmentService) enrichSeries(ctx context.Context, series *models.Ser
 		return nil
 	}
 
+	previousSource := currentMetadataSource(series.MetadataSource)
 	s.applyMetadataToSeries(series, searchResult.Items[0], searchResult.Source)
 	series.ParseStatus = models.ParseStatusSuccess
 	series.UpdatedAt = time.Now()
+	// sub-7-3: cast from TMDb — persisted through its own writer right after
+	// the match lands, then planted into the show's glossary.
+	credits, glossaryPairs := s.matchedCredits(ctx, series.ID, "tv", series.TMDbID, previousSource, searchResult.Source)
 
 	if err := s.seriesRepo.UpdateEnrichedMetadata(ctx, series); err != nil {
 		return fmt.Errorf("update series: %w", err)
 	}
+	s.persistCredits(ctx, s.seriesRepo.UpdateCredits, series.ID, credits)
+	s.seedGlossary(ctx, series.ID, "tv", series.TMDbID, glossaryPairs)
 	return nil
 }
 
@@ -353,6 +365,88 @@ func (s *EnrichmentService) applyMetadataToSeries(series *models.Series, item me
 // keeps its historical movie-only behaviour.
 func (s *EnrichmentService) SetSeriesRepo(repo repository.SeriesRepositoryInterface) {
 	s.seriesRepo = repo
+}
+
+// SetGlossarySeeder enables the sub-7-3 cast step: after a TMDb match the
+// seeder fetches credits (persisted on the row through the credits-only
+// writer, so the detail page's cast section and the .nfo get them too) and
+// plants the translated names into the show's glossary. The resolver decides WHICH glossary drawer — it also
+// performs sub-7-1's local→tmdb upgrade the moment the match lands, which is
+// exactly this moment. A nil resolver falls back to building the tmdb scope
+// directly.
+func (s *EnrichmentService) SetGlossarySeeder(seeder GlossarySeederInterface, scopes GlossaryScopeResolverInterface) {
+	s.glossarySeeder = seeder
+	s.glossaryScopes = scopes
+}
+
+// matchedCredits asks the seeder for a matched title's credits. It returns
+// the credits to PERSIST (nil when the row's metadata_source outranks the
+// incoming source — a Metadata-Editor cast is the user's word, same rule as
+// title/poster: models.ShouldOverwrite) and the glossary pairs to seed. Any
+// fetch failure is logged and swallowed: TMDb credits gate the CAST, never
+// the enrichment — the row is still written with everything else it matched.
+func (s *EnrichmentService) matchedCredits(ctx context.Context, rowID, mediaType string, tmdbID models.NullInt64, previous, incoming models.MetadataSource) (*models.Credits, []CastPair) {
+	if s.glossarySeeder == nil || !tmdbID.Valid || tmdbID.Int64 <= 0 {
+		return nil, nil
+	}
+	credits, pairs, err := s.glossarySeeder.FetchCredits(ctx, mediaType, tmdbID.Int64)
+	if err != nil {
+		s.logger.Warn("TMDb credits fetch failed; row enriched without cast",
+			"id", rowID, "media_type", mediaType, "tmdb_id", tmdbID.Int64, "error", err)
+	}
+	if credits != nil && !models.ShouldOverwrite(previous, incoming) {
+		s.logger.Debug("credits kept: current metadata source outranks the match",
+			"id", rowID, "current_source", previous, "incoming_source", incoming)
+		credits = nil
+	}
+	return credits, pairs
+}
+
+// persistCredits writes the cast through the credits-only writer AFTER the
+// enrichment row write (the narrow-writer discipline of
+// repository/enriched_metadata_update.go: one column, one intent). A failure
+// here is a warning — the match itself already landed.
+func (s *EnrichmentService) persistCredits(ctx context.Context, write func(context.Context, string, *models.Credits) error, rowID string, credits *models.Credits) {
+	if credits == nil {
+		return
+	}
+	if err := write(ctx, rowID, credits); err != nil {
+		s.logger.Warn("credits write failed", "id", rowID, "error", err)
+	}
+}
+
+// currentMetadataSource reads the row's provenance before a match overwrites it.
+func currentMetadataSource(ns models.NullString) models.MetadataSource {
+	if ns.Valid {
+		return models.MetadataSource(ns.String)
+	}
+	return ""
+}
+
+// seedGlossary plants the pairs into the row's glossary drawer. Runs AFTER
+// the row is written so the resolver sees the new tmdb_id (and upgrades any
+// `local:` terms the show collected before it was matched).
+func (s *EnrichmentService) seedGlossary(ctx context.Context, rowID, mediaType string, tmdbID models.NullInt64, pairs []CastPair) {
+	if s.glossarySeeder == nil || len(pairs) == 0 || !tmdbID.Valid {
+		return
+	}
+	scope := ""
+	if s.glossaryScopes != nil {
+		resolved, err := s.glossaryScopes.Resolve(ctx, rowID)
+		if err != nil {
+			s.logger.Warn("glossary scope resolve failed; seeding into tmdb scope directly", "id", rowID, "error", err)
+		} else {
+			scope = resolved
+		}
+	}
+	if scope == "" {
+		if mediaType == "tv" {
+			scope = models.GlossaryScopeTV(tmdbID.Int64)
+		} else {
+			scope = models.GlossaryScopeMovie(tmdbID.Int64)
+		}
+	}
+	s.glossarySeeder.SeedFromCredits(ctx, scope, rowID, pairs)
 }
 
 // findUnenrichedMovies queries for movies with empty or pending parse_status.
@@ -425,7 +519,13 @@ func (s *EnrichmentService) enrichMovie(ctx context.Context, movie *models.Movie
 
 	// Step 4: Apply best match to movie record
 	best := searchResult.Items[0]
+	previousSource := currentMetadataSource(movie.MetadataSource)
 	s.applyMetadataToMovie(movie, best, searchResult.Source)
+
+	// Step 4b (sub-7-3): cast from TMDb — written through its own writer after
+	// the row write; the glossary is seeded after that so the scope resolver
+	// sees tmdb_id.
+	credits, glossaryPairs := s.matchedCredits(ctx, movie.ID, mediaType, movie.TMDbID, previousSource, searchResult.Source)
 
 	// Step 5: FFprobe technical info extraction (AC #7: skip if already set from NFO)
 	// Runs BEFORE DB update to consolidate into a single write
@@ -436,6 +536,8 @@ func (s *EnrichmentService) enrichMovie(ctx context.Context, movie *models.Movie
 	if err := s.movieRepo.UpdateEnrichedMetadata(ctx, movie); err != nil {
 		return fmt.Errorf("update movie: %w", err)
 	}
+	s.persistCredits(ctx, s.movieRepo.UpdateCredits, movie.ID, credits)
+	s.seedGlossary(ctx, movie.ID, mediaType, movie.TMDbID, glossaryPairs)
 
 	s.logger.Debug("movie enriched",
 		"id", movie.ID,
@@ -592,6 +694,11 @@ func (s *EnrichmentService) tryNFOEnrichment(ctx context.Context, movie *models.
 		}
 	}
 
+	// sub-7-3: an NFO that resolved to a TMDb id gets its cast too. The
+	// ShouldOverwrite gate above already settled that NFO may overwrite this
+	// row, so the credits check is the same answer restated.
+	credits, glossaryPairs := s.matchedCredits(ctx, movie.ID, "movie", movie.TMDbID, currentSource, models.MetadataSourceNFO)
+
 	// Set metadata source and parse status
 	movie.MetadataSource = models.NewNullString(string(models.MetadataSourceNFO))
 	movie.ParseStatus = models.ParseStatusSuccess
@@ -600,6 +707,8 @@ func (s *EnrichmentService) tryNFOEnrichment(ctx context.Context, movie *models.
 	if err := s.movieRepo.UpdateEnrichedMetadata(ctx, movie); err != nil {
 		return false, fmt.Errorf("update movie after NFO: %w", err)
 	}
+	s.persistCredits(ctx, s.movieRepo.UpdateCredits, movie.ID, credits)
+	s.seedGlossary(ctx, movie.ID, "movie", movie.TMDbID, glossaryPairs)
 
 	s.logger.Debug("movie enriched from NFO",
 		"id", movie.ID,

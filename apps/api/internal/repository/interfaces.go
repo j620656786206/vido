@@ -28,6 +28,9 @@ type MovieRepositoryInterface interface {
 	// UpdateEnrichedMetadata writes ONLY the columns EnrichmentService computes,
 	// leaving the subtitle-delivery columns untouched (enriched_metadata_update.go).
 	UpdateEnrichedMetadata(ctx context.Context, movie *models.Movie) error
+	// UpdateCredits writes ONLY the credits column (sub-7-3 TMDb cast); the
+	// caller settles ownership (models.ShouldOverwrite) before calling.
+	UpdateCredits(ctx context.Context, id string, credits *models.Credits) error
 	// Single-intent writers (bugfix-wide-update-stale-copy-other-callers):
 	// each persists exactly the columns its caller computes, so a scan-time
 	// pass holding a stale copy cannot revert a concurrent subtitle write.
@@ -145,6 +148,8 @@ type SeriesRepositoryInterface interface {
 	Update(ctx context.Context, series *models.Series) error
 	// UpdateEnrichedMetadata writes ONLY the columns EnrichmentService computes.
 	UpdateEnrichedMetadata(ctx context.Context, series *models.Series) error
+	// UpdateCredits writes ONLY the credits column (sub-7-3 TMDb cast).
+	UpdateCredits(ctx context.Context, id string, credits *models.Credits) error
 	// Single-intent writers (bugfix-wide-update-stale-copy-other-callers).
 	UpdateFileSize(ctx context.Context, id string, fileSize int64) error
 	UpdateParseStatus(ctx context.Context, id string, status models.ParseStatus) error
