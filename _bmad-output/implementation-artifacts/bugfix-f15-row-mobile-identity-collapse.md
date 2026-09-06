@@ -1,6 +1,6 @@
 # Story bugfix: 手機上候選清單的每一列，副標「路線 · 片長」被右側徽章擠到看不見
 
-Status: review
+Status: done
 
 ## Story
 
@@ -82,6 +82,8 @@ so that 我在按「開始產生」之前，知道每一部片為什麼要收錢
 Claude Fable 5.1（claude-fable-5-1），2026-09-06
 
 ### Completion Notes
+
+- ✅ **MERGED 2026-09-06 — PR #392 squash b1541aa7**（第四輪 CI 17/17 綠；合併後 main 的 Tests 3m15s／Visual 4m09s／Docker 1m41s 全綠，沒有 bootstrap PR）。
 
 - 桌面三個 consent fixture 對 `-darwin` 基準線 0 pixel diff——**第二版（巢狀 grid）才成立**；第一版被第一輪 CI 抓到 ~1% diff，經過見 Dev Notes。驗證方式：本機 `VISUAL_BUCKETS=4 --workers=4` 跑全套視覺，以 `pixels (ratio` 為準的 grep 只剩 `glossary-panel-v2/seeded`（其 -darwin 基準線 2026-07-06 起就沒更新，本機字型漂移，CI 的 Linux shard 沒有這個失敗，與本 story 無關）；本來就缺 `-darwin` 的 `ui-tmdb-attribution*` 報 missing，產出的暫存 PNG 未提交。
 - 手機 fixture 截圖逐列對照 F15-M-v2：沙丘（金額在片名列右側、副標單行）、全面啟動（資料夾無法寫入 + 金額同列、副標兩行）、星際效應（未匹配貼片名、≈ $0.24、副標第二行「（估 45 分）」）、怪奇物語 S04E07（群組內）——與稿子一致；路線徽章在所有列都不出現。
