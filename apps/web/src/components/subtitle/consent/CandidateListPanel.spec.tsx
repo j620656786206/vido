@@ -663,7 +663,7 @@ describe('CandidateListPanel — phone-width row (bugfix-f15-row-mobile-identity
     const subtitle = screen.getByTestId(`consent-row-subtitle-${M}`);
     expect(subtitle).toHaveTextContent('無文字字幕軌 → 語音辨識 + 翻譯 · 片長未知（估 45 分）');
     expect(subtitle).toHaveClass('truncate');
-    expect(subtitle).toHaveClass('@max-xl:col-end-5');
+    expect(subtitle).toHaveClass('@max-xl:col-end-3');
     expect(subtitle).toHaveClass('@max-xl:whitespace-normal');
   });
 
