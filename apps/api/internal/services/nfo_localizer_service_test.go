@@ -29,17 +29,17 @@ func sampleMovie(t *testing.T, dir string) models.Movie {
 	}
 }
 
-// glossaryReturningStub returns fixed terms for LookupByMedia.
+// glossaryReturningStub returns fixed terms for LookupByScope.
 type glossaryReturningStub struct{ terms map[string]string }
 
 func (g *glossaryReturningStub) Upsert(ctx context.Context, t *models.GlossaryTerm) error { return nil }
 func (g *glossaryReturningStub) InsertIfAbsent(ctx context.Context, t *models.GlossaryTerm) (bool, error) {
 	return false, nil
 }
-func (g *glossaryReturningStub) ListByMedia(ctx context.Context, mediaID string) ([]models.GlossaryTerm, error) {
+func (g *glossaryReturningStub) ListByScope(ctx context.Context, scope string) ([]models.GlossaryTerm, error) {
 	return nil, nil
 }
-func (g *glossaryReturningStub) LookupByMedia(ctx context.Context, mediaID string, confirmedOnly bool) (map[string]string, error) {
+func (g *glossaryReturningStub) LookupByScope(ctx context.Context, scope string, confirmedOnly bool) (map[string]string, error) {
 	return g.terms, nil
 }
 func (g *glossaryReturningStub) Update(ctx context.Context, id, termZh string, confirmed bool) (time.Time, error) {
@@ -48,8 +48,11 @@ func (g *glossaryReturningStub) Update(ctx context.Context, id, termZh string, c
 func (g *glossaryReturningStub) Confirm(ctx context.Context, id string) (time.Time, error) {
 	return time.Time{}, nil
 }
-func (g *glossaryReturningStub) ConfirmAll(ctx context.Context, mediaID string) (int64, error) {
+func (g *glossaryReturningStub) ConfirmAllByScope(ctx context.Context, scope string) (int64, error) {
 	return 0, nil
+}
+func (g *glossaryReturningStub) MigrateScope(ctx context.Context, from, to string) (int64, int64, error) {
+	return 0, 0, nil
 }
 func (g *glossaryReturningStub) Delete(ctx context.Context, id string) error { return nil }
 
@@ -354,7 +357,39 @@ func TestNFOLocalizer_Episode_GlossaryKeysOnTheParentSeries(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, spy.keys, 1)
-	assert.Equal(t, "series-1", spy.keys[0], "must be the SeriesID, never the episode id")
+	// No resolver wired → the SeriesID under its sub-7-1 name (local drawer).
+	assert.Equal(t, "local:series-1", spy.keys[0], "must be keyed by the SeriesID, never the episode id")
+}
+
+// sub-7-1 AC #5(d): with a resolver wired the localizer reads the RESOLVED
+// scope, and still keys the resolve on the SeriesID for an episode.
+func TestNFOLocalizer_Episode_ReadsGlossaryByResolvedScope(t *testing.T) {
+	_, episodePath := showTree(t)
+	spy := &glossaryKeySpy{}
+	svc := NewNFOLocalizerService(
+		NewTranslationService(&mockTranslationCompleter{response: "[1] 歡迎來到地獄口\n[2] 巴菲來到桑尼戴爾"}, nil),
+		spy, nil)
+	require.NotNil(t, svc)
+	resolver := &recordingResolver{scope: "tmdb:tv:95"}
+	svc.SetGlossaryScopeResolver(resolver)
+
+	_, err := svc.LocalizeEpisodeNFO(context.Background(), sampleEpisode(episodePath), "魔法奇兵")
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"series-1"}, resolver.asked, "the resolver is asked with the SeriesID")
+	assert.Equal(t, []string{"tmdb:tv:95"}, spy.keys, "the repository is read by the resolved scope")
+}
+
+// recordingResolver is a GlossaryScopeResolverInterface that answers one scope
+// and remembers what it was asked.
+type recordingResolver struct {
+	scope string
+	asked []string
+}
+
+func (r *recordingResolver) Resolve(_ context.Context, mediaID string) (string, error) {
+	r.asked = append(r.asked, mediaID)
+	return r.scope, nil
 }
 
 // A translation response that omits a key leaves that field alone.
@@ -402,8 +437,8 @@ type glossaryKeySpy struct {
 	keys []string
 }
 
-func (g *glossaryKeySpy) LookupByMedia(ctx context.Context, mediaID string, confirmedOnly bool) (map[string]string, error) {
-	g.keys = append(g.keys, mediaID)
+func (g *glossaryKeySpy) LookupByScope(ctx context.Context, scope string, confirmedOnly bool) (map[string]string, error) {
+	g.keys = append(g.keys, scope)
 	return nil, nil
 }
 
@@ -497,7 +532,7 @@ func TestNFOLocalizer_Batch_LoadsTheShowGlossaryOncePerRunNotPerEpisode(t *testi
 	assert.Len(t, spy.keys, 2,
 		"one glossary read for the show file + one for the whole episode loop — never one per episode")
 	for _, k := range spy.keys {
-		assert.Equal(t, "series-1", k)
+		assert.Equal(t, "local:series-1", k)
 	}
 }
 

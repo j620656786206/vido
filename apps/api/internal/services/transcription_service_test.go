@@ -160,11 +160,12 @@ func (f *fakePlacer) PlaceSubtitle(mediaFilePath string, data []byte, language, 
 }
 
 // stubGlossaryRepo implements repository.GlossaryRepositoryInterface with only
-// LookupByMedia and InsertIfAbsent meaningful.
+// LookupByScope and InsertIfAbsent meaningful.
 type stubGlossaryRepo struct {
 	terms         map[string]string
 	inserted      map[string]string
 	insertedTerms []models.GlossaryTerm
+	lookedUp      []string // scopes LookupByScope was asked for (sub-7-1)
 }
 
 func (s *stubGlossaryRepo) Upsert(ctx context.Context, t *models.GlossaryTerm) error { return nil }
@@ -182,11 +183,15 @@ func (s *stubGlossaryRepo) InsertIfAbsent(ctx context.Context, t *models.Glossar
 	s.insertedTerms = append(s.insertedTerms, *t)
 	return true, nil
 }
-func (s *stubGlossaryRepo) ListByMedia(ctx context.Context, mediaID string) ([]models.GlossaryTerm, error) {
+func (s *stubGlossaryRepo) ListByScope(ctx context.Context, scope string) ([]models.GlossaryTerm, error) {
 	return nil, nil
 }
-func (s *stubGlossaryRepo) LookupByMedia(ctx context.Context, mediaID string, confirmedOnly bool) (map[string]string, error) {
+func (s *stubGlossaryRepo) LookupByScope(ctx context.Context, scope string, confirmedOnly bool) (map[string]string, error) {
+	s.lookedUp = append(s.lookedUp, scope)
 	return s.terms, nil
+}
+func (s *stubGlossaryRepo) MigrateScope(ctx context.Context, from, to string) (int64, int64, error) {
+	return 0, 0, nil
 }
 func (s *stubGlossaryRepo) Update(ctx context.Context, id, termZh string, confirmed bool) (time.Time, error) {
 	return time.Time{}, nil
@@ -194,7 +199,7 @@ func (s *stubGlossaryRepo) Update(ctx context.Context, id, termZh string, confir
 func (s *stubGlossaryRepo) Confirm(ctx context.Context, id string) (time.Time, error) {
 	return time.Time{}, nil
 }
-func (s *stubGlossaryRepo) ConfirmAll(ctx context.Context, mediaID string) (int64, error) {
+func (s *stubGlossaryRepo) ConfirmAllByScope(ctx context.Context, scope string) (int64, error) {
 	return 0, nil
 }
 func (s *stubGlossaryRepo) Delete(ctx context.Context, id string) error { return nil }
@@ -224,6 +229,36 @@ func TestTranscriptionService_TranslateSRT_EpisodeGlossaryKeysOnSeries(t *testin
 	require.Len(t, repo.insertedTerms, 1)
 	assert.Equal(t, uuidC, repo.insertedTerms[0].MediaID,
 		"harvest must land under the SERIES id, not the episode's own id")
+}
+
+// sub-7-1 AC #5(d): the legacy path resolves the SERIES id to its scope for
+// both the feed read and the harvest write.
+func TestTranscriptionService_TranslateSRT_EpisodeGlossaryResolvesSeriesScope(t *testing.T) {
+	completer := &mockTranslationCompleter{
+		response: "[1] 魔王獸來了\n===TERMS===\nDemogorgon=>魔王獸",
+	}
+	repo := &stubGlossaryRepo{terms: map[string]string{"Vecna": "維克那"}}
+	episode := &models.Episode{ID: uuidB, SeriesID: uuidC}
+	resolver := &recordingResolver{scope: "tmdb:tv:66732"}
+
+	svc := NewTranscriptionService(nil, nil, nil, nil)
+	svc.SetTranslationService(NewTranslationService(completer, nil))
+	svc.SetPlacer(&fakePlacer{})
+	svc.SetGlossaryRepository(repo)
+	svc.SetGlossaryScopeResolver(resolver)
+	svc.SetEpisodeSubtitleStateReader(&fakeEpisodeStateReader{episode: episode})
+
+	srt := "1\n00:00:01,000 --> 00:00:03,000\nThe Demogorgon is coming\n"
+	_, _, err := svc.translateSRT(context.Background(), "job1", models.SubtitleRunMediaEpisode, uuidB, srt, "/media/Show.S01E01.mkv", "/media")
+	require.NoError(t, err)
+
+	for _, asked := range resolver.asked {
+		assert.Equal(t, uuidC, asked, "the resolver is always asked with the SERIES id")
+	}
+	assert.Equal(t, []string{"tmdb:tv:66732"}, repo.lookedUp, "the feed reads the resolved scope")
+	require.Len(t, repo.insertedTerms, 1)
+	assert.Equal(t, "tmdb:tv:66732", repo.insertedTerms[0].Scope, "the harvest writes into the resolved scope")
+	assert.Equal(t, uuidC, repo.insertedTerms[0].MediaID, "the series id stays as the audit column")
 }
 
 // TestTranscriptionService_TranslateSRT_HarvestedTermGetsOpenCC (CR sub-5-5
