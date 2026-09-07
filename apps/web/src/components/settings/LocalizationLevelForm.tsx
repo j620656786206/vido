@@ -109,7 +109,10 @@ export function LocalizationLevelForm() {
                   data-testid={`localization-option-${spec.id}`}
                   data-selected={checked ? 'true' : 'false'}
                   className={cn(
-                    'flex cursor-pointer gap-3 rounded-[var(--radius-sm)] border px-3 py-3 transition-colors',
+                    // Grid, not nested flex: jsx-a11y only looks two levels
+                    // deep for a label's text, so every text span is a DIRECT
+                    // child of the label and the radio sits in column one.
+                    'grid cursor-pointer grid-cols-[auto_1fr] gap-x-3 rounded-[var(--radius-sm)] border px-3 py-3 transition-colors',
                     checked
                       ? 'border-[var(--accent-primary)] bg-[var(--bg-tertiary)]'
                       : 'border-transparent hover:bg-[var(--bg-tertiary)]',
@@ -122,24 +125,22 @@ export function LocalizationLevelForm() {
                     value={spec.id}
                     checked={checked}
                     onChange={() => save.mutate(spec.id)}
-                    className="mt-1 h-4 w-4 shrink-0 accent-[var(--accent-primary)] disabled:cursor-not-allowed"
+                    className="col-start-1 row-start-1 mt-1 h-4 w-4 shrink-0 accent-[var(--accent-primary)] disabled:cursor-not-allowed"
                   />
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-2 text-sm font-medium text-[var(--text-primary)]">
-                      {spec.label}
-                      {checked && data?.source === 'settings' && (
-                        <Check
-                          className="h-3.5 w-3.5 text-[var(--success-text)]"
-                          aria-hidden="true"
-                        />
-                      )}
-                    </span>
-                    <span className="mt-0.5 block text-sm text-[var(--text-secondary)]">
-                      {spec.description}
-                    </span>
-                    <span className="mt-1 block text-xs text-[var(--text-muted)]">
-                      例：{spec.example}
-                    </span>
+                  <span className="col-start-2 row-start-1 flex items-center gap-2 text-sm font-medium text-[var(--text-primary)]">
+                    {spec.label}
+                    {checked && data?.source === 'settings' && (
+                      <Check
+                        className="h-3.5 w-3.5 text-[var(--success-text)]"
+                        aria-hidden="true"
+                      />
+                    )}
+                  </span>
+                  <span className="col-start-2 row-start-2 mt-0.5 text-sm text-[var(--text-secondary)]">
+                    {spec.description}
+                  </span>
+                  <span className="col-start-2 row-start-3 mt-1 text-xs text-[var(--text-muted)]">
+                    例：{spec.example}
                   </span>
                 </label>
               );
