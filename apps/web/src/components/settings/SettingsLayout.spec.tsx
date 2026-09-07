@@ -139,6 +139,7 @@ describe('SettingsLayout', () => {
         'keys',
         'status', // moved UP to sit with what it reports on
         'scanner',
+        'subtitle', // sub-7-4: AI subtitle taste lives with the library, next to the scan that feeds it
         'homepage',
         'cache',
         'logs',
@@ -158,8 +159,10 @@ describe('SettingsLayout', () => {
       // the ≤4 ceiling exactly and 尚未開放 shrinks to performance alone.
       // 外觀 is a group of one on purpose — a theme choice is not a settings
       // page's worth of options, and folding it into 連線 would put a display
-      // preference among service credentials.
-      expect(sizes).toEqual([1, 3, 2, 4, 1]);
+      // preference among service credentials. 媒體庫 grew to 3 with 字幕設定
+      // (sub-7-4) — the AI-subtitle taste dial sits with the library it
+      // shapes, not among credentials.
+      expect(sizes).toEqual([1, 3, 3, 4, 1]);
     });
 
     it('draws a divider between groups but never before the first', async () => {

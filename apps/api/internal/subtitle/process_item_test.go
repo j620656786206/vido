@@ -291,7 +291,10 @@ func TestProcessItem_HarvestedTermsGetOpenCC(t *testing.T) {
 
 	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
 	require.NoError(t, err)
-	assert.Equal(t, map[string]string{"The Software": "軟件"}, store.inserted,
+	// The fake converter passes 软件 through; the sub-7-4 lexicon (script
+	// first, then vocabulary) turns 軟件 into 軟體 before it becomes a
+	// MANDATORY glossary feed — the same order the subtitle itself gets.
+	assert.Equal(t, map[string]string{"The Software": "軟體"}, store.inserted,
 		"the rendering is converted before it becomes a MANDATORY glossary feed")
 }
 
@@ -319,8 +322,8 @@ func TestProcessItem_GlossaryLookupFailureFailsSoft(t *testing.T) {
 	require.NoError(t, err, "a glossary miss costs consistency, never the episode (Rule 13 case 3)")
 	require.NotNil(t, outcome.Run)
 	assert.Equal(t, models.SubtitleRunCompleted, outcome.Run.Status)
-	assert.Equal(t, "", h.runs.created[0].GlossaryVersion,
-		"empty feed hashes to \"\" — cache key and prompt content agree by construction")
+	assert.Equal(t, GlossaryVersionHash(nil), h.runs.created[0].GlossaryVersion,
+		"empty feed hashes the lexicon version alone — cache key and prompt content agree by construction")
 }
 
 func TestProcessItem_HarvestWriteFailureFailsSoft(t *testing.T) {
@@ -385,7 +388,7 @@ func TestProcessItem_VerdictBranches(t *testing.T) {
 			wantRun:     models.SubtitleRunCompleted,
 			wantStatus:  []models.SubtitleStatus{models.SubtitleStatusExtracting, models.SubtitleStatusFound},
 			wantPlaced:  true,
-			wantPayload: "這個軟件很好用", // s2twpFake converts 这→這 个→個 软→軟
+			wantPayload: "這個軟體很好用", // s2twpFake converts 这→這 个→個 软→軟; the sub-7-4 lexicon then turns 軟件 into 軟體
 			wantSource:  LangSimplified,
 		},
 		{
@@ -452,8 +455,8 @@ func TestProcessItem_RecordsTheVersionTuple(t *testing.T) {
 
 	final := h.runs.lastUpdate(t)
 	assert.Equal(t, MetadataHash(richContext()), final.MetadataHash)
-	assert.Empty(t, final.GlossaryVersion)
-	assert.Equal(t, prompts.SubtitleTranslatorPromptVersion, final.PromptVersion)
+	assert.Equal(t, GlossaryVersionHash(nil), final.GlossaryVersion)
+	assert.Equal(t, prompts.PromptVersionFor(prompts.DefaultLocalizationLevel), final.PromptVersion)
 	assert.Equal(t, "claude-haiku-4-5", final.ModelID)
 	require.NotNil(t, final.TMDbID)
 	assert.Equal(t, int64(1399), *final.TMDbID)
@@ -1013,8 +1016,8 @@ func TestProcessItem_IntegrationWritesAllSixteenRunColumns(t *testing.T) {
 	require.NotNil(t, stored.TMDbID)
 	assert.Equal(t, tmdbID, *stored.TMDbID)
 	assert.Equal(t, MetadataHash(richContext()), stored.MetadataHash)
-	assert.Empty(t, stored.GlossaryVersion)
-	assert.Equal(t, prompts.SubtitleTranslatorPromptVersion, stored.PromptVersion)
+	assert.Equal(t, GlossaryVersionHash(nil), stored.GlossaryVersion)
+	assert.Equal(t, prompts.PromptVersionFor(prompts.DefaultLocalizationLevel), stored.PromptVersion)
 	assert.Equal(t, "claude-haiku-4-5", stored.ModelID)
 	assert.Equal(t, models.SubtitleRunCompleted, stored.Status)
 	assert.Equal(t, "eng", stored.SourceLanguage)

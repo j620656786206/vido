@@ -18,7 +18,12 @@ import (
 // m1-v1 → m1-v2 (sub-5-5 AC #1): the system prompt gained the harvest-trailer
 // instruction section. The prompt's semantics changed, so the segment cache
 // re-keys the whole library by design — RunVersion exists for exactly this.
-const SubtitleTranslatorPromptVersion = "m1-v2"
+// m1-v2 → m1-v3 (sub-7-4): the invariant system text gained the localization
+// style section and the global lexicon terms section (localization.go /
+// lexicon.go), and the per-run version is now PromptVersionFor(level) — this
+// base, the lexicon version and the level joined — so any of the three
+// changing re-keys the cache.
+const SubtitleTranslatorPromptVersion = "m1-v3"
 
 // SubtitleTranslatorContextWindow is the number of previous blocks sent as
 // read-only context for each translation batch to maintain consistency (AC #2).

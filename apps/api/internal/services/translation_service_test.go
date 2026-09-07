@@ -790,7 +790,7 @@ func TestTranslateWithGlossaryHarvest_NoOptionsIsByteIdentical(t *testing.T) {
 		[]TranslationBlock{{Index: 1, Text: "Hello"}}, nil, nil)
 	require.NoError(t, err)
 	require.Len(t, mock.calls, 1)
-	assert.Equal(t, prompts.SubtitleTranslatorSystemPrompt, mock.calls[0].SystemPrompt)
+	assert.Equal(t, prompts.ComposeInvariantSystemPrompt(prompts.DefaultLocalizationLevel), mock.calls[0].SystemPrompt)
 }
 
 // TestTranslateWithGlossaryHarvest_ZeroMetadataIsByteIdentical guards the case
@@ -805,7 +805,7 @@ func TestTranslateWithGlossaryHarvest_ZeroMetadataIsByteIdentical(t *testing.T) 
 		WithMediaMetadata(prompts.MediaMetadata{}))
 	require.NoError(t, err)
 	require.Len(t, mock.calls, 1)
-	assert.Equal(t, prompts.SubtitleTranslatorSystemPrompt, mock.calls[0].SystemPrompt)
+	assert.Equal(t, prompts.ComposeInvariantSystemPrompt(prompts.DefaultLocalizationLevel), mock.calls[0].SystemPrompt)
 }
 
 func TestTranslateWithGlossary_ForwardsMediaMetadata(t *testing.T) {

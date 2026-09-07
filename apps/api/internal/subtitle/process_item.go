@@ -49,6 +49,12 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 	// (Rule 13 case 3, the 9R-10 loadGlossary posture): a glossary miss costs
 	// consistency, never the episode.
 	p.feedGlossary(ctx, ref, item)
+	// sub-7-4: the localization level is read ONCE here for the same reason —
+	// it rides PromptVersion, so the key and the prompt must agree — and is
+	// pinned on the ctx so the ASR fallback (a separate service, minutes
+	// later) translates under the SAME level the run row recorded.
+	p.feedLocalization(ctx, item)
+	ctx = prompts.ContextWithLocalizationLevel(ctx, item.Context.LocalizationLevel)
 
 	// sub-6-8a AC #4: the user's per-run model choice is pinned on the ctx
 	// BEFORE the version is computed, so the run row, every segment-cache key
@@ -356,7 +362,10 @@ func (p *Pipeline) deliverable(
 		if err != nil {
 			return nil, 0, fmt.Errorf("opencc s2twp on the routed track: %w", err)
 		}
-		return converted, len(source), nil
+		// sub-7-4: a converted mainland track is where mainland VOCABULARY
+		// shows up most (s2twp has no 质量→品質); the same Taiwan lexicon the
+		// translate route ships with applies here, under the same CN skip.
+		return []byte(lexiconFor(item.Context.Countries).Apply(string(converted))), len(source), nil
 
 	case RouteTranslate:
 		blocks, err := p.translateWithCache(ctx, ref, decision.Track, item.Context, version, opts)
@@ -458,7 +467,7 @@ func (p *Pipeline) translateWithCache(
 	// trailer yield back. Cache-hit cues sent no LLM request and yield nothing;
 	// that is the DEFINITION of opportunistic harvest, not a gap to fill.
 	if harvest != nil {
-		p.harvestTerms(ctx, ref, scope, harvest)
+		p.harvestTerms(ctx, ref, scope, harvest, tctx.Countries)
 	}
 	return merged, nil
 }
@@ -915,7 +924,8 @@ func glossaryKeyFor(ref MediaRef, showKey string) string {
 // AC #5 去程). Entries are sorted by Source so the rendered prompt — and
 // therefore the provider-side prompt cache — is deterministic for a given
 // glossary state. Nil-safe and fail-soft: no port or a failed lookup feeds
-// empty, which hashes to GlossaryVersion "" and keeps today's behavior.
+// empty, which hashes to the lexicon-only GlossaryVersion (sub-7-4) and keeps
+// today's behavior.
 func (p *Pipeline) feedGlossary(ctx context.Context, ref MediaRef, item *MediaItem) {
 	if p.glossary == nil {
 		return
@@ -938,13 +948,23 @@ func (p *Pipeline) feedGlossary(ctx context.Context, ref MediaRef, item *MediaIt
 	item.Context.Glossary = entries
 }
 
+// feedLocalization fills item.Context.LocalizationLevel from the settings-
+// backed source (sub-7-4 AC #3). No source = the default level.
+func (p *Pipeline) feedLocalization(ctx context.Context, item *MediaItem) {
+	if p.localization == nil {
+		item.Context.LocalizationLevel = prompts.DefaultLocalizationLevel
+		return
+	}
+	item.Context.LocalizationLevel = p.localization(ctx).Normalized()
+}
+
 // harvestTerms writes the translate stage's trailer yield back to the glossary
 // (sub-5-5 AC #4 回程), insert-if-absent only. Runs strictly AFTER the
 // translate stage succeeded — a failed or cancelled run harvests nothing,
 // because terms that never shipped with a subtitle would only pollute.
 // Fail-soft (Rule 13 case 3): the translation already succeeded; a lost
 // harvest is re-collected by some future run, never a failed item.
-func (p *Pipeline) harvestTerms(ctx context.Context, ref MediaRef, scope *processScope, terms map[string]string) {
+func (p *Pipeline) harvestTerms(ctx context.Context, ref MediaRef, scope *processScope, terms map[string]string, countries []string) {
 	if p.glossary == nil || len(terms) == 0 {
 		return
 	}
@@ -961,13 +981,18 @@ func (p *Pipeline) harvestTerms(ctx context.Context, ref MediaRef, scope *proces
 	// future cue containing it: a self-reinforcing poisoning loop that only a
 	// manual F6 correction could break. Fail-soft per value: on converter error
 	// keep the raw rendering (F6 review still covers it).
+	// sub-7-4: and the Taiwan lexicon after it — a harvested 智能手機 would
+	// otherwise be pinned as a MANDATORY per-show rendering (which the prompt
+	// says beats the global lexicon) that the post-processor then rewrites on
+	// every later episode: the glossary the user sees and the subtitles they
+	// read would disagree forever.
+	lexicon := lexiconFor(countries)
 	converted := make(map[string]string, len(terms))
 	for src, zh := range terms {
 		if out, err := p.converter.ConvertS2TWP([]byte(zh)); err == nil {
-			converted[src] = string(out)
-		} else {
-			converted[src] = zh
+			zh = string(out)
 		}
+		converted[src] = lexicon.Apply(zh)
 	}
 
 	inserted, err := p.glossary.InsertNew(ctx, key, converted)

@@ -16,7 +16,7 @@ import { describe, it, expect } from 'vitest';
  */
 const ROUTES_DIR = join(__dirname);
 
-const PAGES_WITH_A_CAPPED_FORM = ['connection.tsx', 'keys.tsx'];
+const PAGES_WITH_A_CAPPED_FORM = ['connection.tsx', 'keys.tsx', 'subtitle.tsx'];
 
 describe('J7-D — settings page headers span the layout column', () => {
   it.each(PAGES_WITH_A_CAPPED_FORM)('%s does not cap the page above its <h1>', (file) => {

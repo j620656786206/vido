@@ -426,8 +426,8 @@ func TestTranslateSRT_MetadataLookupFailureKeepsThePromptByteIdentical(t *testin
 	require.NoError(t, err, "a metadata miss must never fail the translation")
 	assert.FileExists(t, zhPath)
 
-	assert.Equal(t, prompts.SubtitleTranslatorSystemPrompt, mockProvider.lastSystemPrompt,
-		"no metadata must yield the pre-9R-8 prompt byte-for-byte")
+	assert.Equal(t, prompts.ComposeInvariantSystemPrompt(prompts.DefaultLocalizationLevel), mockProvider.lastSystemPrompt,
+		"no metadata must yield the invariant prefix byte-for-byte (sub-7-4: prompt + style + lexicon)")
 }
 
 func TestTranslateSRT_NoReaderWiredKeepsThePromptByteIdentical(t *testing.T) {
@@ -441,7 +441,7 @@ func TestTranslateSRT_NoReaderWiredKeepsThePromptByteIdentical(t *testing.T) {
 		"1\n00:00:01,000 --> 00:00:04,000\nHello world\n", filepath.Join(tmpDir, "movie.mkv"), tmpDir)
 	require.NoError(t, err)
 
-	assert.Equal(t, prompts.SubtitleTranslatorSystemPrompt, mockProvider.lastSystemPrompt)
+	assert.Equal(t, prompts.ComposeInvariantSystemPrompt(prompts.DefaultLocalizationLevel), mockProvider.lastSystemPrompt)
 }
 
 // TestSubtitleTranslatorPromptVersion_NotBumpedBy9R8 pins the deliberate
@@ -451,7 +451,9 @@ func TestTranslateSRT_NoReaderWiredKeepsThePromptByteIdentical(t *testing.T) {
 // the prompt version) to re-translate a library that gained nothing, while the
 // ASR leg — which has no segment cache at all — would gain nothing either.
 func TestSubtitleTranslatorPromptVersion_NotBumpedBy9R8(t *testing.T) {
-	assert.Equal(t, "m1-v2", prompts.SubtitleTranslatorPromptVersion)
+	// sub-7-4 bumped it to m1-v3 for its OWN prompt-surface change (style +
+	// lexicon sections); the 9R-8 non-bump decision stands unchanged.
+	assert.Equal(t, "m1-v3", prompts.SubtitleTranslatorPromptVersion)
 }
 
 // metadataSeriesReader is a SeriesMetadataReader serving one series row.
@@ -532,7 +534,7 @@ func TestTranslateSRT_EpisodeWithoutSeriesReaderStaysByteIdentical(t *testing.T)
 		"1\n00:00:01,000 --> 00:00:04,000\nHello world\n", filepath.Join(tmpDir, "s05e16.mkv"), tmpDir)
 	require.NoError(t, err)
 
-	assert.Equal(t, prompts.SubtitleTranslatorSystemPrompt, mockProvider.lastSystemPrompt)
+	assert.Equal(t, prompts.ComposeInvariantSystemPrompt(prompts.DefaultLocalizationLevel), mockProvider.lastSystemPrompt)
 }
 
 // TestTranslateSRT_UnresolvedParentSeriesSkipsTheSeriesLookup covers CR M4:
@@ -557,7 +559,7 @@ func TestTranslateSRT_UnresolvedParentSeriesSkipsTheSeriesLookup(t *testing.T) {
 
 	assert.Equal(t, 0, series.callCount,
 		"an unresolved parent must not be looked up under the episode's own id")
-	assert.Equal(t, prompts.SubtitleTranslatorSystemPrompt, mockProvider.lastSystemPrompt)
+	assert.Equal(t, prompts.ComposeInvariantSystemPrompt(prompts.DefaultLocalizationLevel), mockProvider.lastSystemPrompt)
 }
 
 // ─── 9R-8: the Rule 19 duplicates of subtitle/media_store.go helpers ─────────

@@ -1,0 +1,262 @@
+# 內建台灣用語詞庫（sub-7-4）。embed 進 binary；改這個檔 = 新版本，
+# `version` 要一起 bump（它進 PromptVersion 與 GlossaryVersion，快取才誠實）。
+#
+# 兩段，性質不同，不要混：
+#   replacements — 後處理「詞級」替換，跑在 OpenCC s2twp 之後。收 OpenCC 漏掉的、
+#                  或 LLM 直接用繁體字寫出來的大陸用語（OpenCC 只轉簡→繁，看不到）。
+#                  `except` 列出「含這個詞但不能換」的更長片語（電視頻道 ⊃ 視頻）。
+#                  比對時較長的 `from` 先做（打印機 → 印表機 先於 打印 → 列印）。
+#   terms        — 品牌／App／機構的固定譯法，注入 prompt 的全域 glossary 段。
+#                  target 是「台灣人怎麼講」：有慣用中文名就用（好市多），沒有就保留原名。
+#                  show 詞彙表的同名條目優先（sub-7-1 抽屜在後，覆蓋這裡）。
+#
+# 來源：教育部《兩岸常用詞典》兩岸用語對照；Netflix／Apple TV+ 台灣字幕慣例；
+# eval-1（2026-09-03）零分例（Life360 被翻成「360 號公路」）；party-mode 2026-09-03。
+version: zh-tw-lex-1
+
+replacements:
+  # ── 資訊／科技 ──────────────────────────────────────────────
+  - { from: 視頻, to: 影片, except: [電視頻道, 電視頻, 影視頻道, 影視頻, 視頻道] }
+  # 刻意不收 視訊→影片：OpenCC s2twp 會把 视频 轉成 視訊，但台灣的「視訊」是常用動詞
+  # （「等下視訊一下」），沒有詞邊界救不了它——寧可留 視訊 也不能把 video call 改成「影片一下」。
+  - { from: 軟件, to: 軟體 }
+  - { from: 硬件, to: 硬體 }
+  - { from: 網絡, to: 網路 }
+  - { from: 互聯網, to: 網際網路 }
+  - { from: 屏幕, to: 螢幕 }
+  - { from: 熒幕, to: 螢幕 }
+  - { from: 熒屏, to: 螢幕 }
+  - { from: 鼠標, to: 滑鼠 }
+  - { from: 打印機, to: 印表機 }
+  - { from: 打印, to: 列印 }
+  - { from: 硬盤, to: 硬碟 }
+  - { from: 光盤, to: 光碟 }
+  - { from: 磁盤, to: 磁碟 }
+  - { from: U盤, to: 隨身碟 }
+  - { from: 內存, to: 記憶體, except: [體內存, 內存有, 內存在, 內存放, 內存款, 內存量] }
+  - { from: 數據庫, to: 資料庫 }
+  # 刻意不收 數據→資料：台灣「手機數據」「數據機」「大數據」都活著，誤換比不換傷。
+  - { from: 服務器, to: 伺服器 }
+  - { from: 激光, to: 雷射 }
+  - { from: 芯片, to: 晶片 }
+  - { from: 短信, to: 簡訊 }
+  - { from: 郵箱, to: 信箱 }
+  - { from: 人工智能, to: 人工智慧 }
+  - { from: 智能手機, to: 智慧型手機 }
+  - { from: 智能家居, to: 智慧家庭 }
+  # 刻意不收 智能→智慧：「智能障礙」是台灣醫學／法律用語。
+  - { from: 攝像頭, to: 攝影機 }
+  - { from: 攝像機, to: 攝影機 }
+  - { from: 錄像, to: 錄影, except: [紀錄像, 記錄像, 收錄像] }
+  - { from: 博客, to: 部落格 }
+  - { from: 二維碼, to: QR Code }
+  - { from: 充電寶, to: 行動電源 }
+  - { from: 移動電源, to: 行動電源 }
+  - { from: 移動支付, to: 行動支付 }
+  - { from: 移動網絡, to: 行動網路 }
+  - { from: 移動網路, to: 行動網路 }
+  - { from: 登錄, to: 登入, except: [登錄有案, 登錄簿, 登錄證, 登錄在案] }
+  - { from: 信息, to: 資訊, except: [信息素] }
+  - {
+      from: 質量,
+      to: 品質,
+      except:
+        [
+          質量守恆,
+          質量數,
+          相對論質量,
+          靜止質量,
+          原子質量,
+          質量中心,
+          質量很大,
+          質量太大,
+          質量比,
+          質量單位,
+          質量與能量,
+          恆星質量,
+          太陽質量,
+          黑洞質量,
+          質量測量,
+        ],
+    } # 「品質」用法遠多於物理的「質量」（mass）；物理句型盡量列進 except
+  - { from: 概率, to: 機率 }
+  - { from: 幾率, to: 機率 }
+  - { from: 反饋, to: 回饋 }
+  # ── 交通／生活 ──────────────────────────────────────────────
+  - { from: 出租車, to: 計程車 }
+  - { from: 打車, to: 叫車 }
+  - { from: 公交車, to: 公車 }
+  - { from: 公交, to: 公車 }
+  - { from: 外賣, to: 外送 }
+  - { from: 小區, to: 社區, except: [小區域, 小區塊, 小區間, 小區段, 小區分] }
+  - { from: 衛生間, to: 洗手間 }
+  - { from: 空調, to: 冷氣 }
+  - { from: 塑料, to: 塑膠 }
+  - { from: 洗髮水, to: 洗髮精 }
+  - { from: 沐浴露, to: 沐浴乳 }
+  - { from: 創可貼, to: OK繃 }
+  - { from: 圓珠筆, to: 原子筆 }
+  - { from: 中介, to: 仲介 }
+  - { from: 保安, to: 警衛, except: [保安局, 公共保安, 保安處, 保安隊] }
+  - { from: 公安局, to: 警察局 }
+  # 刻意不收 公安→警察：「公安意外」「公共安全」的公安是 public safety。
+  - { from: 輸液, to: 打點滴 }
+  - { from: 初中, to: 國中 }
+  # ── 食物 ────────────────────────────────────────────────────
+  - { from: 土豆, to: 馬鈴薯 }
+  - { from: 西紅柿, to: 番茄 }
+  - { from: 酸奶, to: 優格 }
+  - { from: 奶酪, to: 起司 }
+  - { from: 三文魚, to: 鮭魚 }
+  - { from: 金槍魚, to: 鮪魚 }
+  - { from: 菠蘿, to: 鳳梨, except: [菠蘿麵包, 菠蘿包, 菠蘿油] }
+  - { from: 獼猴桃, to: 奇異果 }
+  - { from: 方便麵, to: 泡麵 }
+  - { from: 冰激凌, to: 冰淇淋 }
+  # ── 問候／口語 ──────────────────────────────────────────────
+  - { from: 早上好, to: 早安 }
+  - { from: 下午好, to: 午安 }
+  - { from: 晚上好, to: 晚安 }
+  - { from: 立馬, to: 馬上 }
+  # ── 航太／軍事 ──────────────────────────────────────────────
+  - { from: 航天飛機, to: 太空梭 }
+  - { from: 航天員, to: 太空人 }
+  - { from: 宇航員, to: 太空人 }
+  - { from: 航天, to: 太空 }
+  - { from: 導彈, to: 飛彈 }
+  # ── 人名／地名（大陸譯法 → 台灣譯法）───────────────────────
+  - { from: 奧巴馬, to: 歐巴馬 }
+  - { from: 特朗普, to: 川普 }
+  - { from: 普京, to: 普丁 }
+  - { from: 悉尼, to: 雪梨 }
+  - { from: 新西蘭, to: 紐西蘭 }
+  - { from: 硅谷, to: 矽谷 }
+  - { from: 硅, to: 矽 }
+  - { from: 沙特阿拉伯, to: 沙烏地阿拉伯 }
+  # 刻意不收 沙特→沙烏地：沙特也是 Sartre。
+  - { from: 迪拜, to: 杜拜 }
+  - { from: 卡塔爾, to: 卡達 }
+  - { from: 肯尼亞, to: 肯亞 }
+  - { from: 尼日利亞, to: 奈及利亞 }
+  - { from: 意大利, to: 義大利 }
+  - { from: 佛羅倫薩, to: 佛羅倫斯 }
+  # 刻意不收 朝鮮→北韓：北朝鮮、朝鮮薊、朝鮮半島……例外比本體多。
+  - { from: 得克薩斯, to: 德克薩斯 }
+  - { from: 得州, to: 德州 }
+  - { from: 弗吉尼亞, to: 維吉尼亞 }
+  - { from: 佐治亞, to: 喬治亞 }
+  - { from: 新澤西, to: 紐澤西 }
+  - { from: 馬薩諸塞, to: 麻薩諸塞 }
+  - { from: 俄勒岡, to: 奧勒岡 }
+  - { from: 密歇根, to: 密西根 }
+  - { from: 威斯康星, to: 威斯康辛 }
+  - { from: 伊利諾伊, to: 伊利諾 }
+  - { from: 康涅狄格, to: 康乃狄克 }
+  - { from: 特拉華, to: 德拉瓦 }
+
+terms:
+  # ── App／服務（eval-1 零分例：Life360 被翻成「360 號公路」）──
+  - { source: Life360, target: Life360 }
+  - { source: Venmo, target: Venmo }
+  - { source: Zelle, target: Zelle }
+  - { source: PayPal, target: PayPal }
+  - { source: Cash App, target: Cash App }
+  - { source: Apple Pay, target: Apple Pay }
+  - { source: Uber, target: Uber }
+  - { source: Uber Eats, target: Uber Eats }
+  - { source: Lyft, target: Lyft }
+  - { source: DoorDash, target: DoorDash }
+  - { source: Airbnb, target: Airbnb }
+  - { source: YouTube, target: YouTube }
+  - { source: Netflix, target: Netflix }
+  - { source: Spotify, target: Spotify }
+  - { source: Instagram, target: Instagram }
+  - { source: Facebook, target: Facebook }
+  - { source: TikTok, target: TikTok }
+  - { source: Snapchat, target: Snapchat }
+  - { source: Tinder, target: Tinder }
+  - { source: FaceTime, target: FaceTime }
+  - { source: iPhone, target: iPhone }
+  # ── 零售／餐飲（台灣有慣用中文名的用中文名）──────────────────
+  - { source: Costco, target: 好市多 }
+  - { source: Walmart, target: 沃爾瑪 }
+  - { source: 7-Eleven, target: 7-Eleven }
+  - { source: CVS, target: CVS 藥局 }
+  - { source: Walgreens, target: Walgreens 藥局 }
+  - { source: Home Depot, target: Home Depot }
+  - { source: IKEA, target: IKEA }
+  - { source: Starbucks, target: 星巴克 }
+  - { source: McDonald's, target: 麥當勞 }
+  - { source: Burger King, target: 漢堡王 }
+  - { source: KFC, target: 肯德基 }
+  - { source: Domino's, target: 達美樂 }
+  - { source: Pizza Hut, target: 必勝客 }
+  - { source: Taco Bell, target: Taco Bell }
+  - { source: In-N-Out, target: In-N-Out }
+  - { source: Chipotle, target: Chipotle }
+  - { source: Coca-Cola, target: 可口可樂 }
+  - { source: Pepsi, target: 百事可樂 }
+  - { source: Budweiser, target: 百威 }
+  - { source: Heineken, target: 海尼根 }
+  - { source: Red Bull, target: 紅牛 }
+  - { source: Doritos, target: 多力多滋 }
+  - { source: Pringles, target: 品客 }
+  # ── 汽車／精品 ──────────────────────────────────────────────
+  - { source: Tesla, target: 特斯拉 }
+  - { source: Toyota, target: 豐田 }
+  - { source: Honda, target: 本田 }
+  - { source: Mercedes, target: 賓士 }
+  - { source: Mercedes-Benz, target: 賓士 }
+  - { source: Porsche, target: 保時捷 }
+  - { source: Ferrari, target: 法拉利 }
+  - { source: Lamborghini, target: 藍寶堅尼 }
+  - { source: Rolex, target: 勞力士 }
+  - { source: Adidas, target: 愛迪達 }
+  - { source: Chanel, target: 香奈兒 }
+  - { source: Hermès, target: 愛馬仕 }
+  - { source: Louis Vuitton, target: LV }
+  # ── 日用品（商標當通稱用時，台灣講的是通稱）──────────────────
+  - { source: Band-Aid, target: OK繃 }
+  - { source: Kleenex, target: 面紙 }
+  - { source: Q-tip, target: 棉花棒 }
+  - { source: Post-it, target: 便利貼 }
+  - { source: Ziploc, target: 夾鏈袋 }
+  - { source: Tupperware, target: 保鮮盒 }
+  - { source: Jell-O, target: 果凍 }
+  - { source: Popsicle, target: 冰棒 }
+  - { source: Sharpie, target: 麥克筆 }
+  # ── 機構／制度 ──────────────────────────────────────────────
+  - { source: DMV, target: 監理站 }
+  - { source: IRS, target: 國稅局 }
+  - { source: FBI, target: FBI }
+  - { source: CIA, target: CIA }
+  - { source: DEA, target: 緝毒局 }
+  - { source: SWAT, target: 霹靂小組 }
+  - { source: NYPD, target: 紐約市警局 }
+  - { source: LAPD, target: 洛杉磯警局 }
+  - { source: Social Security, target: 社會安全保險 }
+  - { source: Medicare, target: 聯邦醫療保險 }
+  - { source: Medicaid, target: 醫療補助 }
+  - { source: 401(k), target: 401(k) 退休帳戶 }
+  - { source: ER, target: 急診室 }
+  - { source: ICU, target: 加護病房 }
+  - { source: CEO, target: 執行長 }
+  - { source: CFO, target: 財務長 }
+  - { source: HR, target: 人資 }
+  - { source: Ivy League, target: 常春藤名校 }
+  - { source: Harvard, target: 哈佛 }
+  - { source: Yale, target: 耶魯 }
+  - { source: MIT, target: 麻省理工 }
+  - { source: Stanford, target: 史丹佛 }
+  - { source: NASA, target: NASA }
+  - { source: Super Bowl, target: 超級盃 }
+  - { source: NBA, target: NBA }
+  - { source: NFL, target: NFL }
+  - { source: MLB, target: 大聯盟 }
+  - { source: World Series, target: 世界大賽 }
+  - { source: Grammy, target: 葛萊美獎 }
+  - { source: Oscar, target: 奧斯卡 }
+  - { source: Emmy, target: 艾美獎 }
+  - { source: Thanksgiving, target: 感恩節 }
+  - { source: Black Friday, target: 黑色星期五 }
+  - { source: Halloween, target: 萬聖節 }

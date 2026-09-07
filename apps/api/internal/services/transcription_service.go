@@ -131,8 +131,9 @@ type TranscriptionService struct {
 	// glossaryScopes turns the media id into the glossary scope (sub-7-1).
 	// nil = `local:<id>`, the pre-sub-7-1 key under its new name.
 	glossaryScopes GlossaryScopeResolverInterface
-	opencc         OpenCCConverter // s2twp safety net
-	placer         SubtitlePlacer  // atomic place + backup
+	opencc         OpenCCConverter                                     // s2twp safety net
+	localization   func(ctx context.Context) prompts.LocalizationLevel // sub-7-4 taste dial (optional)
+	placer         SubtitlePlacer                                      // atomic place + backup
 
 	// 9R-16 AC 12: generation-success writeback (optional / nil-safe).
 	subtitleWriter SubtitleStatusWriter
@@ -220,6 +221,25 @@ func (s *TranscriptionService) glossaryScopeFor(ctx context.Context, mediaID str
 // SetOpenCCConverter wires the Simplified→Traditional safety net (Story 9R-10).
 func (s *TranscriptionService) SetOpenCCConverter(c OpenCCConverter) {
 	s.opencc = c
+}
+
+// SetLocalizationLevelSource wires the sub-7-4 localization level (settings-
+// backed, read per run). nil = the default level.
+func (s *TranscriptionService) SetLocalizationLevelSource(source func(ctx context.Context) prompts.LocalizationLevel) {
+	s.localization = source
+}
+
+// localizationLevel prefers a level PINNED on the ctx (the pipeline's ASR
+// fallback pins the one its run row recorded) over a fresh settings read, so
+// a dial flipped mid-job cannot make the recorded provenance lie.
+func (s *TranscriptionService) localizationLevel(ctx context.Context) prompts.LocalizationLevel {
+	if pinned, ok := prompts.LocalizationLevelFromContext(ctx); ok {
+		return pinned
+	}
+	if s.localization == nil {
+		return prompts.DefaultLocalizationLevel
+	}
+	return s.localization(ctx).Normalized()
 }
 
 // SetPlacer wires atomic subtitle placement + backup (Story 9R-10).
@@ -1306,7 +1326,7 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 	// sub-5-5: the harvest variant also returns the trailer's term yield —
 	// written back below AFTER the translation has succeeded and placed.
 	translated, harvestedTerms, outcome, err := s.translationService.TranslateWithGlossaryHarvest(
-		ctx, blocks, glossary, progressFn, WithMediaMetadata(metadata))
+		ctx, blocks, glossary, progressFn, WithMediaMetadata(metadata), WithLocalizationLevel(s.localizationLevel(ctx)))
 	if err != nil {
 		return "", TranslationOutcome{}, fmt.Errorf("translate: %w", err)
 	}
@@ -1324,6 +1344,13 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 			s.logger.Warn("OpenCC safety-net conversion failed — keeping LLM output",
 				"media_id", mediaID, "error", cerr)
 		}
+	}
+	// sub-7-4 AC #2: the Taiwan lexicon after OpenCC (script first, then
+	// vocabulary). Every table entry is Chinese, so SRT indices and
+	// timestamps are untouchable by construction. Mainland-produced content
+	// keeps its own vocabulary (PRD rule).
+	if !prompts.IsMainlandContent(metadata.Countries) {
+		zhSRT = prompts.ZhTWLexicon().Apply(zhSRT)
 	}
 
 	// 9R-10: place the subtitle. Prefer the injected Placer (atomic write +
@@ -1347,7 +1374,7 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 	// disk — feed the harvested renderings back, insert-if-absent only (an
 	// existing term, whatever its source or confirmed state, is never touched).
 	// Fail-soft (Rule 13 case 3): a lost harvest is re-collected next run.
-	harvestedNew := s.harvestGlossaryTerms(ctx, glossaryKey, harvestedTerms)
+	harvestedNew := s.harvestGlossaryTerms(ctx, glossaryKey, harvestedTerms, metadata.Countries)
 
 	s.logger.Info("subtitle translation complete",
 		"job_id", jobID,
@@ -1367,7 +1394,7 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 // harvestGlossaryTerms writes the trailer yield insert-if-absent (sub-5-5,
 // legacy path). Returns how many terms were actually inserted. Nil-safe: no
 // glossary repo wired = nothing written, exactly the 9R-10 feed posture.
-func (s *TranscriptionService) harvestGlossaryTerms(ctx context.Context, mediaID string, terms map[string]string) int {
+func (s *TranscriptionService) harvestGlossaryTerms(ctx context.Context, mediaID string, terms map[string]string, countries []string) int {
 	if s.glossaryRepo == nil || len(terms) == 0 {
 		return 0
 	}
@@ -1381,6 +1408,12 @@ func (s *TranscriptionService) harvestGlossaryTerms(ctx context.Context, mediaID
 			if converted, cerr := s.opencc.ConvertS2TWP([]byte(zh)); cerr == nil {
 				zh = string(converted)
 			}
+		}
+		// sub-7-4: the Taiwan lexicon after OpenCC, same as the subtitle
+		// itself — see Pipeline.harvestTerms for why a harvested mainland
+		// rendering must not become a mandatory per-show entry.
+		if !prompts.IsMainlandContent(countries) {
+			zh = prompts.ZhTWLexicon().Apply(zh)
 		}
 		ok, err := s.glossaryRepo.InsertIfAbsent(ctx, &models.GlossaryTerm{
 			MediaID: mediaID,
