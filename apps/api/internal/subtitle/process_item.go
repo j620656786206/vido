@@ -49,6 +49,9 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 	// (Rule 13 case 3, the 9R-10 loadGlossary posture): a glossary miss costs
 	// consistency, never the episode.
 	p.feedGlossary(ctx, ref, item)
+	// sub-7-4: the localization level is read here for the same reason — it
+	// rides PromptVersion, so the key and the prompt must agree.
+	p.feedLocalization(ctx, item)
 
 	// sub-6-8a AC #4: the user's per-run model choice is pinned on the ctx
 	// BEFORE the version is computed, so the run row, every segment-cache key
@@ -936,6 +939,16 @@ func (p *Pipeline) feedGlossary(ctx context.Context, ref MediaRef, item *MediaIt
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Source < entries[j].Source })
 	item.Context.Glossary = entries
+}
+
+// feedLocalization fills item.Context.LocalizationLevel from the settings-
+// backed source (sub-7-4 AC #3). No source = the default level.
+func (p *Pipeline) feedLocalization(ctx context.Context, item *MediaItem) {
+	if p.localization == nil {
+		item.Context.LocalizationLevel = prompts.DefaultLocalizationLevel
+		return
+	}
+	item.Context.LocalizationLevel = p.localization(ctx).Normalized()
 }
 
 // harvestTerms writes the translate stage's trailer yield back to the glossary

@@ -78,6 +78,11 @@ type Config struct {
 	// "pipeline" (the M1 extract-and-translate generation pipeline). Read it
 	// through SubtitlePipelineEnabled(), never by comparing the string.
 	SubtitlePipelineMode string
+	// SubtitleLocalizationLevel is the sub-7-4 taste dial's ENV default
+	// (literal | standard | ott). A value saved in the settings table beats
+	// it (the API-key precedence). Env: SUBTITLE_LOCALIZATION_LEVEL,
+	// default "standard".
+	SubtitleLocalizationLevel string
 	// SubtitleExtractTimeoutSeconds is the configured FLOOR of one ffmpeg
 	// subtitle-extraction pass (sub-6-3); the effective bound grows with file
 	// size. Env: SUBTITLE_EXTRACT_TIMEOUT_SECONDS, default 600.
@@ -193,6 +198,10 @@ func Load() (*Config, error) {
 	// Embedded-subtitle extraction deadline floor in seconds (sub-6-3 AC #1).
 	// The effective per-file bound is max(this, 30 s × file size in GB) —
 	// see subtitle.Extractor.EffectiveTimeout. Non-positive = the 600 s default.
+	cfg.SubtitleLocalizationLevel = cfg.loadString("SUBTITLE_LOCALIZATION_LEVEL", "standard")
+	if _, err := validateLocalizationLevel(cfg.SubtitleLocalizationLevel); err != nil {
+		return nil, err
+	}
 	cfg.SubtitleExtractTimeoutSeconds = cfg.loadInt("SUBTITLE_EXTRACT_TIMEOUT_SECONDS", 600)
 	if cfg.SubtitleExtractTimeoutSeconds <= 0 {
 		cfg.SubtitleExtractTimeoutSeconds = 600
@@ -419,4 +428,18 @@ func (c *Config) GetPort() (int, error) {
 // GetAddress returns the full server address (e.g., ":3000")
 func (c *Config) GetAddress() string {
 	return ":" + c.Port
+}
+
+// validateLocalizationLevel mirrors prompts.ParseLocalizationLevel without
+// importing the prompts package into config (config must stay leaf).
+func validateLocalizationLevel(v string) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "", "standard":
+		return "standard", nil
+	case "literal":
+		return "literal", nil
+	case "ott":
+		return "ott", nil
+	}
+	return "", fmt.Errorf("SUBTITLE_LOCALIZATION_LEVEL=%q: want one of literal, standard, ott", v)
 }

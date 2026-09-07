@@ -251,9 +251,16 @@ func TestSubtitleTranslatorPromptVersion_PinsPromptText(t *testing.T) {
 		[]SubtitleTranslatorBlock{{Index: 2, Text: "Hello"}},
 		[]SubtitleTranslatorBlock{{Index: 1, Text: "Hi"}},
 	))
+	// sub-7-4 surfaces: the three localization style sections and the global
+	// lexicon terms section (pinned with a FIXED entry — the embedded YAML has
+	// its own version string for its content).
+	for _, level := range LocalizationLevels {
+		sb.WriteString(BuildLocalizationSection(level))
+	}
+	sb.WriteString(BuildLexiconTermsSection([]GlossaryEntry{{Source: "Life360", Target: "Life360"}}))
 	digest := fmt.Sprintf("%x", sha256.Sum256([]byte(sb.String())))
 
-	assert.Equal(t, "m1-v2", SubtitleTranslatorPromptVersion)
-	assert.Equal(t, "dd8e754fa4bf2abaea2cf148df69ce0c52c21b8b451adb309a098c682b70c7b8", digest,
+	assert.Equal(t, "m1-v3", SubtitleTranslatorPromptVersion)
+	assert.Equal(t, "6b07a8b684f3e4b5fb5c6f64574168e0c393577db2ea334466d3ac09c92729a3", digest,
 		"prompt text changed — bump SubtitleTranslatorPromptVersion and update this digest in the SAME edit (P11)")
 }

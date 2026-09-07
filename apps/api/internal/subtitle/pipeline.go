@@ -86,6 +86,12 @@ type TranslateContext struct {
 	Cast                 []string // capped at 10 by the builder
 	Countries            []string
 	Glossary             []prompts.GlossaryEntry // M1: always empty — field exists NOW (D4 versioning)
+	// LocalizationLevel is the sub-7-4 taste dial, ADDITIVE on v1 (the
+	// HarvestedTerms precedent — no bump): zero value = the default level, so
+	// every existing caller keeps its contract byte-for-byte. Fed by the
+	// pipeline from the settings-backed source right before the version is
+	// computed; it rides PromptVersion, never MetadataHash.
+	LocalizationLevel prompts.LocalizationLevel
 }
 
 // TranslateResult is the translate stage's output.
@@ -340,6 +346,9 @@ type Pipeline struct {
 
 	// now is the injected clock (D10's warm window is the only wall-clock read).
 	now func() time.Time
+
+	// localization is the settings-backed sub-7-4 level source (optional).
+	localization func(ctx context.Context) prompts.LocalizationLevel
 }
 
 // PipelineOption injects one item-flow port. Variadic on NewPipeline so
@@ -445,6 +454,13 @@ func WithProgress(fn func(ref MediaRef, stage PipelineStage, message string)) Pi
 // WithClock overrides the pipeline clock. Test-only in practice: the D10 warm
 // window is the sole wall-clock read, and a deterministic clock is what makes
 // "stale entry re-warms" assertable without sleeping.
+// WithLocalizationLevelSource wires the sub-7-4 taste dial. Read per item
+// right before the run version is computed, so a setting saved from the
+// settings page applies to the next item without a restart. nil = default.
+func WithLocalizationLevelSource(source func(ctx context.Context) prompts.LocalizationLevel) PipelineOption {
+	return func(p *Pipeline) { p.localization = source }
+}
+
 func WithClock(now func() time.Time) PipelineOption {
 	return func(p *Pipeline) {
 		if now != nil {
@@ -1004,7 +1020,7 @@ func (p *Pipeline) TranslateTrack(ctx context.Context, track *ExtractedTrack, tc
 		return nil, transientCeilingError(english, delivered)
 	}
 
-	blocks := p.convertAndStitch(source, final)
+	blocks := p.convertAndStitch(source, final, tctx)
 	if err := checkTimestampInvariant(routed, blocks); err != nil {
 		return nil, err
 	}
@@ -1186,12 +1202,21 @@ func (p *Pipeline) contextWindow(source []SubtitleBlock, start int, final map[in
 // by construction (FR11/FR17). It runs only once every chunk has cleared the
 // quality gate — converting earlier would repair a Simplified leak the gate
 // exists to catch (P4).
-func (p *Pipeline) convertAndStitch(source []SubtitleBlock, final map[int]string) []SubtitleBlock {
+func (p *Pipeline) convertAndStitch(source []SubtitleBlock, final map[int]string, tctx TranslateContext) []SubtitleBlock {
 	out := make([]SubtitleBlock, len(source))
 	copy(out, source)
 
 	failures := 0
 	var firstErr error
+
+	// sub-7-4 AC #2: the Taiwan lexicon rides the same final pass, AFTER
+	// OpenCC (which only fixes script) — 質量 written in Traditional by the
+	// model is invisible to s2twp and visible to this. Mainland-produced
+	// content keeps its own vocabulary (PRD rule), same as it skips OpenCC.
+	lexicon := prompts.ZhTWLexicon()
+	if prompts.IsMainlandContent(tctx.Countries) {
+		lexicon = nil
+	}
 
 	for i := range out {
 		text := textOf(source[i], final)
@@ -1211,7 +1236,7 @@ func (p *Pipeline) convertAndStitch(source []SubtitleBlock, final map[int]string
 		} else {
 			text = string(converted)
 		}
-		out[i].Text = text
+		out[i].Text = lexicon.Apply(text)
 	}
 
 	if failures > 0 {
@@ -1262,8 +1287,11 @@ func promptBlocksOf(blocks []SubtitleBlock) []prompts.SubtitleTranslatorBlock {
 // and records the verdict in subtitle_runs.cache_enabled. D4 explicitly bans
 // padding the prefix with filler to clear the threshold.
 func buildSystemBlocks(tctx TranslateContext) []ai.SystemBlock {
+	// block[0] is install-wide: the translator prompt + the localization
+	// style for the configured level + the global lexicon terms (sub-7-4).
+	// Nothing per-show lives in it, so every title shares the prefix.
 	blocks := []ai.SystemBlock{
-		{Text: prompts.SubtitleTranslatorSystemPrompt, CacheTTL: ai.CacheTTLNone},
+		{Text: prompts.ComposeInvariantSystemPrompt(tctx.LocalizationLevel), CacheTTL: ai.CacheTTLNone},
 	}
 
 	perShow := prompts.BuildMetadataSection(metadataOf(tctx)) + prompts.BuildGlossarySection(tctx.Glossary)

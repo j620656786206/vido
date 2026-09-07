@@ -319,8 +319,8 @@ func TestProcessItem_GlossaryLookupFailureFailsSoft(t *testing.T) {
 	require.NoError(t, err, "a glossary miss costs consistency, never the episode (Rule 13 case 3)")
 	require.NotNil(t, outcome.Run)
 	assert.Equal(t, models.SubtitleRunCompleted, outcome.Run.Status)
-	assert.Equal(t, "", h.runs.created[0].GlossaryVersion,
-		"empty feed hashes to \"\" — cache key and prompt content agree by construction")
+	assert.Equal(t, GlossaryVersionHash(nil), h.runs.created[0].GlossaryVersion,
+		"empty feed hashes the lexicon version alone — cache key and prompt content agree by construction")
 }
 
 func TestProcessItem_HarvestWriteFailureFailsSoft(t *testing.T) {
@@ -452,8 +452,8 @@ func TestProcessItem_RecordsTheVersionTuple(t *testing.T) {
 
 	final := h.runs.lastUpdate(t)
 	assert.Equal(t, MetadataHash(richContext()), final.MetadataHash)
-	assert.Empty(t, final.GlossaryVersion)
-	assert.Equal(t, prompts.SubtitleTranslatorPromptVersion, final.PromptVersion)
+	assert.Equal(t, GlossaryVersionHash(nil), final.GlossaryVersion)
+	assert.Equal(t, prompts.PromptVersionFor(prompts.DefaultLocalizationLevel), final.PromptVersion)
 	assert.Equal(t, "claude-haiku-4-5", final.ModelID)
 	require.NotNil(t, final.TMDbID)
 	assert.Equal(t, int64(1399), *final.TMDbID)
@@ -1013,8 +1013,8 @@ func TestProcessItem_IntegrationWritesAllSixteenRunColumns(t *testing.T) {
 	require.NotNil(t, stored.TMDbID)
 	assert.Equal(t, tmdbID, *stored.TMDbID)
 	assert.Equal(t, MetadataHash(richContext()), stored.MetadataHash)
-	assert.Empty(t, stored.GlossaryVersion)
-	assert.Equal(t, prompts.SubtitleTranslatorPromptVersion, stored.PromptVersion)
+	assert.Equal(t, GlossaryVersionHash(nil), stored.GlossaryVersion)
+	assert.Equal(t, prompts.PromptVersionFor(prompts.DefaultLocalizationLevel), stored.PromptVersion)
 	assert.Equal(t, "claude-haiku-4-5", stored.ModelID)
 	assert.Equal(t, models.SubtitleRunCompleted, stored.Status)
 	assert.Equal(t, "eng", stored.SourceLanguage)

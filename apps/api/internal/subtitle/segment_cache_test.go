@@ -110,11 +110,14 @@ func TestGlossaryVersionHash_Deterministic(t *testing.T) {
 		assert.NotEqual(t, GlossaryVersionHash(a), GlossaryVersionHash(d))
 	})
 
-	t.Run("empty glossary hashes to the empty string", func(t *testing.T) {
-		// Backward compatibility: existing M1 cache entries were written with
-		// GlossaryVersion "" — a show with no glossary must keep hitting them.
-		assert.Equal(t, "", GlossaryVersionHash(nil))
-		assert.Equal(t, "", GlossaryVersionHash([]prompts.GlossaryEntry{}))
+	t.Run("empty glossary hashes the lexicon version alone", func(t *testing.T) {
+		// sub-7-4: the built-in lexicon is part of what every prompt carries,
+		// so even a show with no glossary of its own has a non-empty, stable
+		// GlossaryVersion that changes when the lexicon does. (The M1-era ""
+		// compatibility was moot once the m1-v3 prompt bump re-keyed everything.)
+		assert.NotEmpty(t, GlossaryVersionHash(nil))
+		assert.Equal(t, GlossaryVersionHash(nil), GlossaryVersionHash([]prompts.GlossaryEntry{}))
+		assert.NotEqual(t, GlossaryVersionHash(nil), GlossaryVersionHash([]prompts.GlossaryEntry{{Source: "A", Target: "B"}}))
 	})
 
 	t.Run("field boundaries cannot be forged", func(t *testing.T) {
@@ -373,8 +376,8 @@ func TestPipeline_RunVersion(t *testing.T) {
 
 	v := p.runVersion(context.Background(), tctx)
 	assert.Equal(t, MetadataHash(tctx), v.MetadataHash)
-	assert.Empty(t, v.GlossaryVersion, "M1 ships no glossary — the field is versioned now, populated in P2")
-	assert.Equal(t, prompts.SubtitleTranslatorPromptVersion, v.PromptVersion)
+	assert.Equal(t, GlossaryVersionHash(nil), v.GlossaryVersion, "no show glossary → the lexicon-only digest (sub-7-4)")
+	assert.Equal(t, prompts.PromptVersionFor(prompts.DefaultLocalizationLevel), v.PromptVersion)
 	assert.Equal(t, "claude-haiku-4-5", v.ModelID)
 }
 

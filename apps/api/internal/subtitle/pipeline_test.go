@@ -604,7 +604,8 @@ func TestTranslateTrack_SystemBlocksAreStableFirstAndCacheBreakpointed(t *testin
 
 	sys := tr.calls[0].sys
 	require.Len(t, sys, 2)
-	assert.Equal(t, prompts.SubtitleTranslatorSystemPrompt, sys[0].Text, "the most stable block comes first")
+	assert.Equal(t, prompts.ComposeInvariantSystemPrompt(prompts.DefaultLocalizationLevel), sys[0].Text,
+		"the most stable block comes first: translator prompt + localization style + global lexicon (sub-7-4)")
 	assert.Contains(t, sys[1].Text, "怪奇物語")
 	assert.Contains(t, sys[1].Text, "Demogorgon → 魔王獸")
 	assert.Less(t, strings.Index(sys[1].Text, "Media context"), strings.Index(sys[1].Text, "Glossary"))
@@ -625,7 +626,7 @@ func TestTranslateTrack_ZeroContextEmitsOnlyTheStablePrompt(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, tr.calls[0].sys, 1, "no metadata and no glossary means no per-show block at all")
-	assert.Equal(t, prompts.SubtitleTranslatorSystemPrompt, tr.calls[0].sys[0].Text)
+	assert.Equal(t, prompts.ComposeInvariantSystemPrompt(prompts.DefaultLocalizationLevel), tr.calls[0].sys[0].Text)
 }
 
 // ─── Degradation + guards ──────────────────────────────────────────────────

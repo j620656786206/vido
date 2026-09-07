@@ -87,6 +87,12 @@ const SETTINGS_CATEGORIES: SettingsCategory[] = [
     group: 'library',
   },
   {
+    key: 'subtitle',
+    label: '字幕設定',
+    to: '/settings/subtitle',
+    group: 'library',
+  },
+  {
     key: 'homepage',
     label: '自訂首頁',
     to: '/settings/homepage',

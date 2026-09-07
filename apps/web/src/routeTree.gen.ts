@@ -23,6 +23,7 @@ import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as LibraryIndexRouteImport } from './routes/library/index'
 import { Route as TestManualSearchRouteImport } from './routes/test/manual-search'
 import { Route as TestGalleryRouteImport } from './routes/test/gallery'
+import { Route as SettingsSubtitleRouteImport } from './routes/settings/subtitle'
 import { Route as SettingsStatusRouteImport } from './routes/settings/status'
 import { Route as SettingsScannerRouteImport } from './routes/settings/scanner'
 import { Route as SettingsQbittorrentRouteImport } from './routes/settings/qbittorrent'
@@ -108,6 +109,11 @@ const TestGalleryRoute = TestGalleryRouteImport.update({
   id: '/test/gallery',
   path: '/test/gallery',
   getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsSubtitleRoute = SettingsSubtitleRouteImport.update({
+  id: '/subtitle',
+  path: '/subtitle',
+  getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsStatusRoute = SettingsStatusRouteImport.update({
   id: '/status',
@@ -210,6 +216,7 @@ export interface FileRoutesByFullPath {
   '/settings/qbittorrent': typeof SettingsQbittorrentRoute
   '/settings/scanner': typeof SettingsScannerRoute
   '/settings/status': typeof SettingsStatusRoute
+  '/settings/subtitle': typeof SettingsSubtitleRoute
   '/test/gallery': typeof TestGalleryRoute
   '/test/manual-search': typeof TestManualSearchRoute
   '/library/': typeof LibraryIndexRoute
@@ -239,6 +246,7 @@ export interface FileRoutesByTo {
   '/settings/qbittorrent': typeof SettingsQbittorrentRoute
   '/settings/scanner': typeof SettingsScannerRoute
   '/settings/status': typeof SettingsStatusRoute
+  '/settings/subtitle': typeof SettingsSubtitleRoute
   '/test/gallery': typeof TestGalleryRoute
   '/test/manual-search': typeof TestManualSearchRoute
   '/library': typeof LibraryIndexRoute
@@ -271,6 +279,7 @@ export interface FileRoutesById {
   '/settings/qbittorrent': typeof SettingsQbittorrentRoute
   '/settings/scanner': typeof SettingsScannerRoute
   '/settings/status': typeof SettingsStatusRoute
+  '/settings/subtitle': typeof SettingsSubtitleRoute
   '/test/gallery': typeof TestGalleryRoute
   '/test/manual-search': typeof TestManualSearchRoute
   '/library/': typeof LibraryIndexRoute
@@ -304,6 +313,7 @@ export interface FileRouteTypes {
     | '/settings/qbittorrent'
     | '/settings/scanner'
     | '/settings/status'
+    | '/settings/subtitle'
     | '/test/gallery'
     | '/test/manual-search'
     | '/library/'
@@ -333,6 +343,7 @@ export interface FileRouteTypes {
     | '/settings/qbittorrent'
     | '/settings/scanner'
     | '/settings/status'
+    | '/settings/subtitle'
     | '/test/gallery'
     | '/test/manual-search'
     | '/library'
@@ -364,6 +375,7 @@ export interface FileRouteTypes {
     | '/settings/qbittorrent'
     | '/settings/scanner'
     | '/settings/status'
+    | '/settings/subtitle'
     | '/test/gallery'
     | '/test/manual-search'
     | '/library/'
@@ -486,6 +498,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/test/gallery'
       preLoaderRoute: typeof TestGalleryRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/settings/subtitle': {
+      id: '/settings/subtitle'
+      path: '/subtitle'
+      fullPath: '/settings/subtitle'
+      preLoaderRoute: typeof SettingsSubtitleRouteImport
+      parentRoute: typeof SettingsRoute
     }
     '/settings/status': {
       id: '/settings/status'
@@ -623,6 +642,7 @@ interface SettingsRouteChildren {
   SettingsQbittorrentRoute: typeof SettingsQbittorrentRoute
   SettingsScannerRoute: typeof SettingsScannerRoute
   SettingsStatusRoute: typeof SettingsStatusRoute
+  SettingsSubtitleRoute: typeof SettingsSubtitleRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
@@ -639,6 +659,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsQbittorrentRoute: SettingsQbittorrentRoute,
   SettingsScannerRoute: SettingsScannerRoute,
   SettingsStatusRoute: SettingsStatusRoute,
+  SettingsSubtitleRoute: SettingsSubtitleRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }
 

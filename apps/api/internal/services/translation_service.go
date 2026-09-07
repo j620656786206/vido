@@ -59,6 +59,13 @@ type TranslateOption func(*translateConfig)
 
 type translateConfig struct {
 	metadata prompts.MediaMetadata
+	level    prompts.LocalizationLevel
+}
+
+// WithLocalizationLevel selects the sub-7-4 style section for this run. The
+// zero value is the default level.
+func WithLocalizationLevel(level prompts.LocalizationLevel) TranslateOption {
+	return func(cfg *translateConfig) { cfg.level = level }
 }
 
 // WithMediaMetadata attaches the FR26 show context (title, year, genres,
@@ -100,14 +107,16 @@ func newTranslateConfig(opts []TranslateOption) *translateConfig {
 // reach the model, so this is a structural difference rather than a behavioural
 // one, but the two legs should converge when the ASR path is folded into the
 // gated TranslateTrack (sprint-status `backlog-asr-leg-unify-gated-pipeline`).
-func composeSystemPrompt(md prompts.MediaMetadata) string {
+func composeSystemPrompt(md prompts.MediaMetadata, level prompts.LocalizationLevel) string {
+	// sub-7-4: the invariant prefix (translator prompt + localization style +
+	// global lexicon terms) is the same text the extract leg puts in
+	// block[0]; the per-show media context follows it.
+	invariant := prompts.ComposeInvariantSystemPrompt(level)
 	section := prompts.BuildMetadataSection(md)
 	if section == "" {
-		// Byte-identical to every pre-9R-8 call — the BuildMetadataSection
-		// zero-value contract (sub-1-5a) is what makes this safe.
-		return prompts.SubtitleTranslatorSystemPrompt
+		return invariant
 	}
-	return prompts.SubtitleTranslatorSystemPrompt + "\n\n" + section
+	return invariant + "\n\n" + section
 }
 
 // TranslationField is one arbitrary keyed piece of text to translate. Key is a
@@ -268,7 +277,8 @@ func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, b
 	}
 	promptGlossary := toPromptGlossary(glossary)
 	// 9R-8: composed ONCE — the media context is per-run, not per-batch.
-	systemPrompt := composeSystemPrompt(newTranslateConfig(opts).metadata)
+	cfg := newTranslateConfig(opts)
+	systemPrompt := composeSystemPrompt(cfg.metadata, cfg.level)
 
 	batchSize := prompts.SubtitleTranslatorBatchSize
 	contextWindow := prompts.SubtitleTranslatorContextWindow

@@ -1081,3 +1081,28 @@ func TestLoad_SubtitleExtractPerGBSeconds(t *testing.T) {
 		}
 	})
 }
+
+func TestLoad_SubtitleLocalizationLevel(t *testing.T) {
+	t.Run("default", func(t *testing.T) {
+		os.Clearenv()
+		cfg, err := Load()
+		require.NoError(t, err)
+		assert.Equal(t, "standard", cfg.SubtitleLocalizationLevel)
+		assert.Equal(t, SourceDefault, cfg.Sources["SUBTITLE_LOCALIZATION_LEVEL"])
+	})
+	t.Run("override", func(t *testing.T) {
+		os.Clearenv()
+		t.Setenv("SUBTITLE_LOCALIZATION_LEVEL", "ott")
+		cfg, err := Load()
+		require.NoError(t, err)
+		assert.Equal(t, "ott", cfg.SubtitleLocalizationLevel)
+		assert.Equal(t, SourceEnvVar, cfg.Sources["SUBTITLE_LOCALIZATION_LEVEL"])
+	})
+	t.Run("unknown level is a boot error, never a silent default", func(t *testing.T) {
+		os.Clearenv()
+		t.Setenv("SUBTITLE_LOCALIZATION_LEVEL", "netflix")
+		_, err := Load()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "SUBTITLE_LOCALIZATION_LEVEL")
+	})
+}

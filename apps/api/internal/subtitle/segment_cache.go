@@ -157,20 +157,21 @@ func segmentKey(cueText string, v models.RunVersion) string {
 // the translation prompt — not a DB snapshot, so cache key and prompt content
 // agree by construction (a failed lookup feeds empty and hashes empty).
 //
-// Empty glossary → "" — backward compatibility with every M1 cache entry,
-// which was written under GlossaryVersion "". Pairs are sorted on a COPY by
-// Source (MetadataHash's sortedCopy discipline: the prompt renders the
-// caller's order, a hash function must not reorder it) and joined with the
-// unforgeable fieldSep so "AB"+"" and "A"+"B" can never collide.
+// The built-in lexicon (sub-7-4 AC #2) is part of what the prompt carries —
+// its global terms section and its post-processing table — so its version is
+// folded in: an empty show glossary no longer hashes to "" (every M1-era
+// entry was already re-keyed by the m1-v3 prompt bump), it hashes the lexicon
+// version alone. Pairs are sorted on a COPY by Source (MetadataHash's
+// sortedCopy discipline: the prompt renders the caller's order, a hash
+// function must not reorder it) and joined with the unforgeable fieldSep so
+// "AB"+"" and "A"+"B" can never collide.
 func GlossaryVersionHash(glossary []prompts.GlossaryEntry) string {
-	if len(glossary) == 0 {
-		return ""
-	}
-	pairs := make([]string, 0, len(glossary))
+	pairs := make([]string, 0, len(glossary)+1)
 	for _, e := range glossary {
 		pairs = append(pairs, e.Source+fieldSep+e.Target)
 	}
 	sort.Strings(pairs)
+	pairs = append(pairs, "lexicon"+fieldSep+prompts.LexiconVersion())
 	sum := sha256.Sum256([]byte(strings.Join(pairs, fieldSep)))
 	return hex.EncodeToString(sum[:])
 }
@@ -183,7 +184,7 @@ func (p *Pipeline) runVersion(ctx context.Context, tctx TranslateContext) models
 	return models.RunVersion{
 		MetadataHash:    MetadataHash(tctx),
 		GlossaryVersion: GlossaryVersionHash(tctx.Glossary),
-		PromptVersion:   prompts.SubtitleTranslatorPromptVersion,
+		PromptVersion:   prompts.PromptVersionFor(tctx.LocalizationLevel),
 		ModelID:         p.currentModelID(ctx),
 	}
 }

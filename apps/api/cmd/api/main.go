@@ -645,6 +645,11 @@ func main() {
 	if subtitleConverter != nil {
 		transcriptionService.SetOpenCCConverter(subtitleConverter)
 	}
+	// sub-7-4: the localization dial (literal | standard | ott). Settings table
+	// beats the env default; read per run by BOTH translation legs so a save
+	// from the settings page applies to the next item without a restart.
+	localizationSettings := services.NewLocalizationSettingsService(repos.Settings, cfg.SubtitleLocalizationLevel, slog.Default())
+	transcriptionService.SetLocalizationLevelSource(localizationSettings.Level)
 	transcriptionService.SetPlacer(subtitlePlacerAdapter{subtitlePlacer})
 	slog.Info("Transcription service initialized",
 		"ffmpeg_available", audioExtractorService.IsAvailable(),
@@ -742,6 +747,7 @@ func main() {
 			// a ctx already carrying a Budget (the sub-4-2 consent batch) keeps
 			// its shared ceiling; only budget-less entries get this envelope.
 			subtitle.WithRunBudgetUSD(cfg.AIRunBudgetUSD),
+			subtitle.WithLocalizationLevelSource(localizationSettings.Level), // sub-7-4
 			subtitle.WithSpeechTranscriber(pipelineASR),
 			// AC #6: FR33/P8 progress. Same event type and payload shape the
 			// search path already broadcasts — sse/hub.go stays untouched.
@@ -892,6 +898,7 @@ func main() {
 	filterPresetsHandler := handlers.NewFilterPresetsHandler(filterPresetService)                               // Story 11.4
 	requestHandler := handlers.NewRequestHandler(requestService)                                                // Story 13-1a
 	glossaryHandler := handlers.NewGlossaryHandler(services.NewGlossaryService(repos.Glossary, glossaryScopes)) // Story 9R-15 (+ sub-7-1 scope)
+	localizationHandler := handlers.NewLocalizationHandler(localizationSettings)                                // sub-7-4 GET/PUT /subtitles/localization
 	dvrSettingsHandler := handlers.NewDVRSettingsHandler(dvrSettingsService, "radarr", "sonarr")                // Story 13-4a + 13-4b
 	recentMediaHandler := handlers.NewRecentMediaHandler(movieService, seriesService)
 	logHandler := handlers.NewLogHandler(logService)
@@ -1134,6 +1141,7 @@ func main() {
 		filterPresetsHandler.RegisterRoutes(apiV1)  // /api/v1/filter-presets CRUD (Story 11.4)
 		requestHandler.RegisterRoutes(apiV1)        // /api/v1/requests create+list (Story 13-1a, Epic 13)
 		glossaryHandler.RegisterRoutes(apiV1)       // /api/v1/media/:id/glossary CRUD (Story 9R-15)
+		localizationHandler.RegisterRoutes(apiV1)   // /api/v1/subtitles/localization (sub-7-4)
 		dvrSettingsHandler.RegisterRoutes(apiV1)    // /api/v1/settings/radarr triad + profiles/root-folders passthrough (Story 13-4a)
 		recentMediaHandler.RegisterRoutes(apiV1)
 		scannerHandler.RegisterRoutes(apiV1)
