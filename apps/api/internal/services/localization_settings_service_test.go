@@ -119,3 +119,36 @@ func readFileString(t *testing.T, path string) string {
 	require.NoError(t, err)
 	return string(b)
 }
+
+// CR round: a level pinned on the ctx by the pipeline (the one its run row
+// recorded) beats a fresh settings read — a dial flipped mid-job must not make
+// the recorded provenance lie.
+func TestTranslateSRT_PinnedContextLevelBeatsTheSource(t *testing.T) {
+	mockProvider := &translationIntegrationMock{response: "[1] 你好"}
+	svc := NewTranscriptionService(nil, nil, nil, nil)
+	svc.SetTranslationService(NewTranslationService(mockProvider, nil))
+	svc.SetLocalizationLevelSource(func(context.Context) prompts.LocalizationLevel { return prompts.LocalizationOTT })
+
+	ctx := prompts.ContextWithLocalizationLevel(context.Background(), prompts.LocalizationLiteral)
+	tmpDir := t.TempDir()
+	_, _, err := svc.translateSRT(ctx, "job-1", models.SubtitleRunMediaMovie, uuidA,
+		"1\n00:00:01,000 --> 00:00:04,000\nHello\n", filepath.Join(tmpDir, "movie.mkv"), tmpDir)
+	require.NoError(t, err)
+	assert.Contains(t, mockProvider.lastSystemPrompt, "## Localization style (literal)")
+}
+
+// CR round: a harvested rendering goes through the lexicon before it becomes
+// a per-show glossary row on the ASR leg too.
+func TestHarvestGlossaryTerms_AppliesTheLexicon(t *testing.T) {
+	repo := &stubGlossaryRepo{}
+	svc := NewTranscriptionService(nil, nil, nil, nil)
+	svc.SetGlossaryRepository(repo)
+	n := svc.harvestGlossaryTerms(context.Background(), "m1", map[string]string{"smartphone": "智能手機"}, []string{"US"})
+	assert.Equal(t, 1, n)
+	assert.Equal(t, "智慧型手機", repo.inserted["smartphone"])
+
+	cn := &stubGlossaryRepo{}
+	svc.SetGlossaryRepository(cn)
+	svc.harvestGlossaryTerms(context.Background(), "m2", map[string]string{"smartphone": "智能手機"}, []string{"CN"})
+	assert.Equal(t, "智能手機", cn.inserted["smartphone"], "CN content keeps its vocabulary")
+}

@@ -229,7 +229,13 @@ func (s *TranscriptionService) SetLocalizationLevelSource(source func(ctx contex
 	s.localization = source
 }
 
+// localizationLevel prefers a level PINNED on the ctx (the pipeline's ASR
+// fallback pins the one its run row recorded) over a fresh settings read, so
+// a dial flipped mid-job cannot make the recorded provenance lie.
 func (s *TranscriptionService) localizationLevel(ctx context.Context) prompts.LocalizationLevel {
+	if pinned, ok := prompts.LocalizationLevelFromContext(ctx); ok {
+		return pinned
+	}
 	if s.localization == nil {
 		return prompts.DefaultLocalizationLevel
 	}
@@ -1368,7 +1374,7 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 	// disk — feed the harvested renderings back, insert-if-absent only (an
 	// existing term, whatever its source or confirmed state, is never touched).
 	// Fail-soft (Rule 13 case 3): a lost harvest is re-collected next run.
-	harvestedNew := s.harvestGlossaryTerms(ctx, glossaryKey, harvestedTerms)
+	harvestedNew := s.harvestGlossaryTerms(ctx, glossaryKey, harvestedTerms, metadata.Countries)
 
 	s.logger.Info("subtitle translation complete",
 		"job_id", jobID,
@@ -1388,7 +1394,7 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 // harvestGlossaryTerms writes the trailer yield insert-if-absent (sub-5-5,
 // legacy path). Returns how many terms were actually inserted. Nil-safe: no
 // glossary repo wired = nothing written, exactly the 9R-10 feed posture.
-func (s *TranscriptionService) harvestGlossaryTerms(ctx context.Context, mediaID string, terms map[string]string) int {
+func (s *TranscriptionService) harvestGlossaryTerms(ctx context.Context, mediaID string, terms map[string]string, countries []string) int {
 	if s.glossaryRepo == nil || len(terms) == 0 {
 		return 0
 	}
@@ -1402,6 +1408,12 @@ func (s *TranscriptionService) harvestGlossaryTerms(ctx context.Context, mediaID
 			if converted, cerr := s.opencc.ConvertS2TWP([]byte(zh)); cerr == nil {
 				zh = string(converted)
 			}
+		}
+		// sub-7-4: the Taiwan lexicon after OpenCC, same as the subtitle
+		// itself — see Pipeline.harvestTerms for why a harvested mainland
+		// rendering must not become a mandatory per-show entry.
+		if !prompts.IsMainlandContent(countries) {
+			zh = prompts.ZhTWLexicon().Apply(zh)
 		}
 		ok, err := s.glossaryRepo.InsertIfAbsent(ctx, &models.GlossaryTerm{
 			MediaID: mediaID,

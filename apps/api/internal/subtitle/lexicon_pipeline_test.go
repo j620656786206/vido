@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/ai/prompts"
+	"github.com/vido/api/internal/models"
 )
 
 // sub-7-4 AC #2: the Taiwan lexicon rides the final pass after OpenCC — and
@@ -87,4 +88,46 @@ func TestRunVersion_ChangesWithLevelAndLexicon(t *testing.T) {
 	assert.NotEqual(t, va.PromptVersion, vb.PromptVersion)
 	assert.Equal(t, va.MetadataHash, vb.MetadataHash, "the level is NOT metadata")
 	assert.Equal(t, va.GlossaryVersion, vb.GlossaryVersion)
+}
+
+// CR round: a harvested rendering must go through the lexicon too, or the
+// per-show glossary (which the prompt says beats the global one) pins a
+// mainland term the post-processor then undoes on every later episode.
+func TestProcessItem_HarvestedTermsGoThroughTheLexicon(t *testing.T) {
+	store := &fakeGlossaryStore{}
+	h := newItemHarness(t, translateDecision("Good morning."), WithGlossaryStore(store))
+	h.trans.terms = func(int) map[string]string {
+		return map[string]string{"smartphone": "智能手機", "Vecna": "維克那"}
+	}
+	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+	require.NoError(t, err)
+	assert.Equal(t, "智慧型手機", store.inserted["smartphone"])
+	assert.Equal(t, "維克那", store.inserted["Vecna"])
+}
+
+func TestProcessItem_PinsTheLocalizationLevelOnTheContext(t *testing.T) {
+	h := newItemHarness(t, translateDecision("Good morning."),
+		WithLocalizationLevelSource(func(context.Context) prompts.LocalizationLevel { return prompts.LocalizationLiteral }))
+	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+	require.NoError(t, err)
+	require.NotEmpty(t, h.trans.calls)
+	seen, ok := prompts.LocalizationLevelFromContext(h.trans.calls[0].ctx)
+	assert.True(t, ok, "the level the run row recorded is pinned on the ctx for downstream services (the ASR fallback)")
+	assert.Equal(t, prompts.LocalizationLiteral, seen)
+}
+
+func TestDeliverable_ConvertThenDeliverAppliesTheLexicon(t *testing.T) {
+	// The converter fake passes text through; the lexicon must still land.
+	p := NewPipeline(&fakeTranslator{}, &recordingConverter{}, nil)
+	item := &MediaItem{Context: TranslateContext{Countries: []string{"US"}}}
+	decision := RouteDecision{Kind: RouteConvertThenDeliver, Track: trackOf(cues("這個軟件的質量很好")), DetectedVariant: "zh-Hans"}
+	out, n, err := p.deliverable(context.Background(), MediaRef{ID: "m", MediaType: "movie"}, decision, item, models.RunVersion{}, ProcessItemOptions{})
+	require.NoError(t, err)
+	assert.Equal(t, 1, n)
+	assert.Contains(t, string(out), "這個軟體的品質很好")
+
+	item.Context.Countries = []string{"CN"}
+	out, _, err = p.deliverable(context.Background(), MediaRef{ID: "m", MediaType: "movie"}, decision, item, models.RunVersion{}, ProcessItemOptions{})
+	require.NoError(t, err)
+	assert.Contains(t, string(out), "這個軟件的質量很好", "CN content keeps its vocabulary")
 }

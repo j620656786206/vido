@@ -1,6 +1,7 @@
 package prompts
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -76,19 +77,35 @@ func TestLexicon_Apply_Table(t *testing.T) {
 		{"我在看電視頻道", "我在看電視頻道"},
 		{"我在看視頻", "我在看影片"},
 		{"這個視頻在電視頻道上播", "這個影片在電視頻道上播"},
-		// OpenCC's own s2twp output for 视频 is 視訊; only the video-call sense keeps it
+		{"影視頻道很多", "影視頻道很多"},
+		// 視訊 is deliberately NOT in the table — it is the everyday verb for a video call
+		{"等下視訊一下", "等下視訊一下"},
 		{"我們來視訊通話吧", "我們來視訊通話吧"},
-		{"傳個視訊給我", "傳個影片給我"},
 		// longest first
 		{"打印機壞了，不能打印", "印表機壞了，不能列印"},
 		{"智能手機的人工智能", "智慧型手機的人工智慧"},
 		// exceptions
 		{"這是質量守恆定律", "這是質量守恆定律"},
 		{"這件衣服質量很好", "這件衣服品質很好"},
+		{"黑洞的質量很大", "黑洞的質量很大"},
 		{"信息素的作用", "信息素的作用"},
 		{"我收到一條信息", "我收到一條資訊"},
-		{"大數據時代的數據", "大數據時代的資料"},
-		{"朝鮮半島的朝鮮", "朝鮮半島的北韓"},
+		// CR round: live Taiwanese words / morphemes that share characters with a from
+		{"我手機的數據用完了", "我手機的數據用完了"},
+		{"數據機壞了", "數據機壞了"},
+		{"輕度智能障礙", "輕度智能障礙"},
+		{"這起公安意外", "這起公安意外"},
+		{"一個菠蘿麵包", "一個菠蘿麵包"},
+		{"沙特說他人即地獄", "沙特說他人即地獄"},
+		{"北朝鮮和朝鮮薊", "北朝鮮和朝鮮薊"},
+		{"他體內存有大量酒精", "他體內存有大量酒精"},
+		{"這是小區域的問題", "這是小區域的問題"},
+		{"這份紀錄像是被改過", "這份紀錄像是被改過"},
+		// …while the plain senses still convert
+		{"電腦內存不夠", "電腦記憶體不夠"},
+		{"我們小區的保安", "我們社區的警衛"},
+		{"監視錄像拍到了", "監視錄影拍到了"},
+		{"公安局在哪", "警察局在哪"},
 		// several occurrences, mixed
 		{"視頻、視頻、還是視頻", "影片、影片、還是影片"},
 		// Latin untouched
@@ -180,4 +197,13 @@ func TestComposeInvariantSystemPrompt_Order(t *testing.T) {
 	assert.Contains(t, sys, "- Costco → 好市多")
 	assert.Contains(t, sys, "A per-show glossary below overrides any entry here.")
 	assert.NotContains(t, sys, "## Media context", "nothing per-show in the invariant prefix")
+}
+
+func TestLocalizationLevelContext(t *testing.T) {
+	_, ok := LocalizationLevelFromContext(context.Background())
+	assert.False(t, ok)
+	ctx := ContextWithLocalizationLevel(context.Background(), "OTT")
+	got, ok := LocalizationLevelFromContext(ctx)
+	assert.True(t, ok)
+	assert.Equal(t, LocalizationOTT, got, "normalized on the way in")
 }

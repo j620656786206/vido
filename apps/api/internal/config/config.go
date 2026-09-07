@@ -443,3 +443,14 @@ func validateLocalizationLevel(v string) (string, error) {
 	}
 	return "", fmt.Errorf("SUBTITLE_LOCALIZATION_LEVEL=%q: want one of literal, standard, ott", v)
 }
+
+// SubtitleLocalizationLevelEnv returns the SUBTITLE_LOCALIZATION_LEVEL value
+// ONLY when the operator actually set it — "" when the default applied — so
+// the settings service can tell "came from env" apart from "nobody set
+// anything" (the settings page shows an env note for the former).
+func (c *Config) SubtitleLocalizationLevelEnv() string {
+	if c.Sources["SUBTITLE_LOCALIZATION_LEVEL"] != SourceEnvVar {
+		return ""
+	}
+	return c.SubtitleLocalizationLevel
+}

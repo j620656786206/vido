@@ -1,6 +1,7 @@
 package prompts
 
 import (
+	"context"
 	"fmt"
 	"strings"
 )
@@ -111,4 +112,23 @@ func ComposeInvariantSystemPrompt(level LocalizationLevel) string {
 	return SubtitleTranslatorSystemPrompt + "\n\n" +
 		BuildLocalizationSection(level) +
 		BuildLexiconTermsSection(ZhTWLexicon().Terms)
+}
+
+type localizationLevelKey struct{}
+
+// ContextWithLocalizationLevel pins the level a run was versioned under on
+// the ctx, so a later stage in another service (the ASR fallback) translates
+// under the same level instead of re-reading a dial the user may have flipped
+// in the meantime.
+func ContextWithLocalizationLevel(ctx context.Context, level LocalizationLevel) context.Context {
+	return context.WithValue(ctx, localizationLevelKey{}, level.Normalized())
+}
+
+// LocalizationLevelFromContext returns the pinned level, if any.
+func LocalizationLevelFromContext(ctx context.Context) (LocalizationLevel, bool) {
+	if ctx == nil {
+		return "", false
+	}
+	level, ok := ctx.Value(localizationLevelKey{}).(LocalizationLevel)
+	return level, ok
 }

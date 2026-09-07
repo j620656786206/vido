@@ -2,8 +2,6 @@ package services
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -64,7 +62,7 @@ func (s *LocalizationSettingsService) Resolve(ctx context.Context) LocalizationS
 				return LocalizationSettings{Level: level, Source: LocalizationSourceSettings}
 			}
 			s.logger.Warn("stored localization level is invalid; falling back", "value", raw, "error", perr)
-		case err != nil && !errors.Is(err, sql.ErrNoRows) && !isSettingNotFound(err):
+		case err != nil && !isSettingNotFound(err):
 			s.logger.Warn("localization level read failed; falling back", "error", err)
 		}
 	}
@@ -98,8 +96,9 @@ func (s *LocalizationSettingsService) Set(ctx context.Context, raw string) (Loca
 	return LocalizationSettings{Level: level, Source: LocalizationSourceSettings}, nil
 }
 
-// isSettingNotFound recognises the settings repository's own not-found wording
-// in case it does not wrap sql.ErrNoRows.
+// isSettingNotFound recognises the settings repository's not-found error: it
+// is a plain fmt.Errorf("setting with key %s not found") without %w
+// (settings_repository.go), so the wording is the only signal.
 func isSettingNotFound(err error) bool {
 	return err != nil && strings.Contains(strings.ToLower(err.Error()), "not found")
 }

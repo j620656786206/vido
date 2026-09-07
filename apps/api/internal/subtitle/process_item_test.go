@@ -291,7 +291,10 @@ func TestProcessItem_HarvestedTermsGetOpenCC(t *testing.T) {
 
 	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
 	require.NoError(t, err)
-	assert.Equal(t, map[string]string{"The Software": "軟件"}, store.inserted,
+	// The fake converter passes 软件 through; the sub-7-4 lexicon (script
+	// first, then vocabulary) turns 軟件 into 軟體 before it becomes a
+	// MANDATORY glossary feed — the same order the subtitle itself gets.
+	assert.Equal(t, map[string]string{"The Software": "軟體"}, store.inserted,
 		"the rendering is converted before it becomes a MANDATORY glossary feed")
 }
 
@@ -385,7 +388,7 @@ func TestProcessItem_VerdictBranches(t *testing.T) {
 			wantRun:     models.SubtitleRunCompleted,
 			wantStatus:  []models.SubtitleStatus{models.SubtitleStatusExtracting, models.SubtitleStatusFound},
 			wantPlaced:  true,
-			wantPayload: "這個軟件很好用", // s2twpFake converts 这→這 个→個 软→軟
+			wantPayload: "這個軟體很好用", // s2twpFake converts 这→這 个→個 软→軟; the sub-7-4 lexicon then turns 軟件 into 軟體
 			wantSource:  LangSimplified,
 		},
 		{

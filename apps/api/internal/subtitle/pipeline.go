@@ -451,9 +451,6 @@ func WithProgress(fn func(ref MediaRef, stage PipelineStage, message string)) Pi
 	return func(p *Pipeline) { p.progress = fn }
 }
 
-// WithClock overrides the pipeline clock. Test-only in practice: the D10 warm
-// window is the sole wall-clock read, and a deterministic clock is what makes
-// "stale entry re-warms" assertable without sleeping.
 // WithLocalizationLevelSource wires the sub-7-4 taste dial. Read per item
 // right before the run version is computed, so a setting saved from the
 // settings page applies to the next item without a restart. nil = default.
@@ -461,6 +458,9 @@ func WithLocalizationLevelSource(source func(ctx context.Context) prompts.Locali
 	return func(p *Pipeline) { p.localization = source }
 }
 
+// WithClock overrides the pipeline clock. Test-only in practice: the D10 warm
+// window is the sole wall-clock read, and a deterministic clock is what makes
+// "stale entry re-warms" assertable without sleeping.
 func WithClock(now func() time.Time) PipelineOption {
 	return func(p *Pipeline) {
 		if now != nil {
@@ -1212,11 +1212,9 @@ func (p *Pipeline) convertAndStitch(source []SubtitleBlock, final map[int]string
 	// sub-7-4 AC #2: the Taiwan lexicon rides the same final pass, AFTER
 	// OpenCC (which only fixes script) — 質量 written in Traditional by the
 	// model is invisible to s2twp and visible to this. Mainland-produced
-	// content keeps its own vocabulary (PRD rule), same as it skips OpenCC.
-	lexicon := prompts.ZhTWLexicon()
-	if prompts.IsMainlandContent(tctx.Countries) {
-		lexicon = nil
-	}
+	// content keeps its own vocabulary (PRD rule); s2twp still runs on it
+	// here as the leak safety net it has always been.
+	lexicon := lexiconFor(tctx.Countries)
 
 	for i := range out {
 		text := textOf(source[i], final)
@@ -1347,4 +1345,13 @@ func checkTimestampInvariant(source, translated []SubtitleBlock) error {
 		}
 	}
 	return nil
+}
+
+// lexiconFor is the one place the pipeline decides whether the Taiwan
+// lexicon applies to a title: nil for mainland-produced content.
+func lexiconFor(countries []string) *prompts.Lexicon {
+	if prompts.IsMainlandContent(countries) {
+		return nil
+	}
+	return prompts.ZhTWLexicon()
 }

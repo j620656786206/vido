@@ -648,7 +648,7 @@ func main() {
 	// sub-7-4: the localization dial (literal | standard | ott). Settings table
 	// beats the env default; read per run by BOTH translation legs so a save
 	// from the settings page applies to the next item without a restart.
-	localizationSettings := services.NewLocalizationSettingsService(repos.Settings, cfg.SubtitleLocalizationLevel, slog.Default())
+	localizationSettings := services.NewLocalizationSettingsService(repos.Settings, cfg.SubtitleLocalizationLevelEnv(), slog.Default())
 	transcriptionService.SetLocalizationLevelSource(localizationSettings.Level)
 	transcriptionService.SetPlacer(subtitlePlacerAdapter{subtitlePlacer})
 	slog.Info("Transcription service initialized",

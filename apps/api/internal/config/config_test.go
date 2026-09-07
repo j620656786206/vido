@@ -1106,3 +1106,15 @@ func TestLoad_SubtitleLocalizationLevel(t *testing.T) {
 		assert.Contains(t, err.Error(), "SUBTITLE_LOCALIZATION_LEVEL")
 	})
 }
+
+func TestSubtitleLocalizationLevelEnv_DistinguishesSetFromDefault(t *testing.T) {
+	os.Clearenv()
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.Equal(t, "", cfg.SubtitleLocalizationLevelEnv(), "nobody set it → the settings service must not report source=env")
+
+	t.Setenv("SUBTITLE_LOCALIZATION_LEVEL", "literal")
+	cfg, err = Load()
+	require.NoError(t, err)
+	assert.Equal(t, "literal", cfg.SubtitleLocalizationLevelEnv())
+}

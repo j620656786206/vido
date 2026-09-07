@@ -21,6 +21,7 @@ import (
 // ─── Fakes ─────────────────────────────────────────────────────────────────
 
 type translatorCall struct {
+	ctx           context.Context
 	sys           []ai.SystemBlock
 	contextBlocks []prompts.SubtitleTranslatorBlock
 	blocks        []prompts.SubtitleTranslatorBlock
@@ -47,8 +48,8 @@ type fakeTranslator struct {
 	terms func(call int) map[string]string
 }
 
-func (f *fakeTranslator) TranslateChunk(_ context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, map[string]string, ai.CompletionUsage, error) {
-	f.calls = append(f.calls, translatorCall{sys: sys, contextBlocks: contextBlocks, blocks: blocks})
+func (f *fakeTranslator) TranslateChunk(ctx context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, map[string]string, ai.CompletionUsage, error) {
+	f.calls = append(f.calls, translatorCall{ctx: ctx, sys: sys, contextBlocks: contextBlocks, blocks: blocks})
 	if f.order != nil {
 		*f.order = append(*f.order, "translate")
 	}

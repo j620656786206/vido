@@ -44,9 +44,9 @@ type Lexicon struct {
 	Terms        []GlossaryEntry `yaml:"terms"`
 }
 
-// GlossaryEntry's yaml tags live here so the prompts package does not have
-// to know about YAML anywhere else; the struct itself is declared with the
-// glossary builders.
+// GlossaryEntry (subtitle_translator.go) has no yaml tags: yaml.v3 matches its
+// lower-cased field names (source / target) to the file's keys, and
+// KnownFields(true) rejects anything else.
 
 var zhTWLexicon = mustLoadLexicon(zhTWLexiconYAML)
 
@@ -213,8 +213,12 @@ func BuildLexiconTermsSection(terms []GlossaryEntry) string {
 	return sb.String()
 }
 
-// IsMainlandContent is the PRD rule both legs share: content produced in
-// mainland China keeps its own vocabulary — no OpenCC, no lexicon rewrite.
+// IsMainlandContent is the lexicon's half of the PRD mainland rule: content
+// produced in mainland China keeps its own VOCABULARY, so the replacements
+// table is skipped. (Whether the SCRIPT is converted is the conversion
+// policy's call — engine.go ConvertNever for the search path; the two LLM
+// legs still run s2twp as a leak safety net. Three predicates today; see the
+// story's Discovery Triage.)
 func IsMainlandContent(countries []string) bool {
 	for _, c := range countries {
 		if strings.EqualFold(strings.TrimSpace(c), "CN") {
