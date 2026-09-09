@@ -1,6 +1,6 @@
 # Story 6.11: 同意清單可操作 —— 搜尋、排序、虛擬化、群組摺疊（前端）
 
-Status: review
+Status: done
 
 ## Story
 
