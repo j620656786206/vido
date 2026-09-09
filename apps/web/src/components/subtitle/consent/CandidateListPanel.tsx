@@ -37,13 +37,7 @@ import {
   type ConsentTotals,
   type ModelPrices,
 } from './consentSelection';
-import {
-  buildConsentRows,
-  CONSENT_SORTS,
-  sectionDefaultExpanded,
-  type ConsentRow,
-  type ConsentSort,
-} from './consentRows';
+import { buildConsentRows, CONSENT_SORTS, type ConsentRow, type ConsentSort } from './consentRows';
 
 /**
  * Rows below which the list renders WHOLE, with no virtualizer (sub-6-11 AC #3).
@@ -90,6 +84,15 @@ export interface CandidateListPanelProps {
    * 整劇/整季 group toggle (sub-5-3 AC #2) — operates on the group's ALL
    * listable items, NOT the filtered-visible subset: the route chips are a
    * view filter only, same semantics as 全選. `next` is the target state.
+   *
+   * KNOWN HAZARD, deferred to sub-6-12 (which owns 全選/群組 semantics over the
+   * visible set). With free-text search this reads worse than it did with three
+   * coarse chips: search 「S04E07」, see ONE episode under a 9-episode show's
+   * header, tick the header, and consent to all nine. The header's
+   * 「已選 x/n」 still prints the section's full n, which is the only thing
+   * telling the user the toggle is wider than the view. Do not "fix" it here —
+   * changing it would pre-empt sub-6-12's product decision and contradict
+   * sub-5-3's shipped, tested semantics.
    */
   onToggleGroup: (mediaIds: string[], next: boolean) => void;
   onToggleAll: () => void;
@@ -372,6 +375,7 @@ function GroupHeaderRow({
   testid,
   label,
   hint,
+  selectLabel,
   items,
   selectedIds,
   onToggleGroup,
@@ -385,6 +389,7 @@ function GroupHeaderRow({
   testid: string;
   label: string;
   hint?: string;
+  selectLabel: string;
   items: GenerationCandidate[];
   selectedIds: ReadonlySet<string>;
   onToggleGroup: (mediaIds: string[], next: boolean) => void;
@@ -431,7 +436,7 @@ function GroupHeaderRow({
           `indeterminate`) and risks desyncing from the real state. */}
       <input
         type="checkbox"
-        aria-label={season ? `選取${label}` : `選取整部 ${label}`}
+        aria-label={selectLabel}
         checked={all}
         ref={(el) => {
           if (el) el.indeterminate = some;
@@ -484,11 +489,17 @@ function GroupHeaderRow({
           </span>
         )}
       </span>
+      {/* CR: the denominator is the SELECTABLE count, the same set the route
+          badges and the header checkbox speak for. It used to be items.length,
+          so a 9-episode show with 2 unwritable folders rendered 「語音辨識 7」
+          next to 「已選 0/9」 — two counts of the same show, disagreeing, on the
+          one line a collapsed show gets. The unwritable rows are still counted,
+          once, by the toolbar's 「N 部資料夾無法寫入」. */}
       <span
         data-testid={`${testid}-selected`}
         className="shrink-0 font-mono text-xs tabular-nums text-[var(--text-muted)]"
       >
-        已選 {groupTotals.selectedCount}/{items.length} · {usd(groupTotals.selectedTotalUsd)}
+        已選 {groupTotals.selectedCount}/{ids.length} · {usd(groupTotals.selectedTotalUsd)}
       </span>
     </li>
   );
@@ -543,11 +554,11 @@ export function CandidateListPanel({
    * rescanned.
    */
   const [expandedOverride, setExpandedOverride] = useState<Record<string, boolean>>({});
-  const toggleSection = useCallback((sectionId: string) => {
-    setExpandedOverride((prev) => ({
-      ...prev,
-      [sectionId]: !(prev[sectionId] ?? sectionDefaultExpanded(sectionId)),
-    }));
+  // CR: invert the state the user can SEE, not the stored override. During a
+  // search every rendered section is force-open, so `!(override ?? default)`
+  // would record "expand" for a show the user just asked to collapse.
+  const toggleSection = useCallback((sectionId: string, expanded: boolean) => {
+    setExpandedOverride((prev) => ({ ...prev, [sectionId]: !expanded }));
   }, []);
 
   const searching = searchQuery.trim() !== '';
@@ -573,14 +584,23 @@ export function CandidateListPanel({
     getScrollElement: () => scrollRef.current,
     estimateSize: (i) => (rows[i]?.kind === 'section' ? ESTIMATED_SECTION_PX : ESTIMATED_ROW_PX),
     // Rows are NOT a fixed height (an unwritable badge, a wrapped subtitle on a
-    // phone), so every rendered row reports its real height back.
-    measureElement: (el) => el.getBoundingClientRect().height,
+    // phone), so every rendered row reports its real height back — via the
+    // library's OWN measureElement. CR: a hand-rolled
+    // `getBoundingClientRect().height` reads the TRANSFORMED box, and the host
+    // dialog opens with a `scale(0.96 → 1)` enter animation, so the first
+    // measurement pass would cache every visible row ~4% short and never
+    // re-fire (a transform does not change the layout box). The default
+    // prefers the ResizeObserver's borderBoxSize and falls back to
+    // offsetHeight, neither of which a transform touches.
     // The <ul>'s flex gap is invisible to measureElement; declaring it here is
     // what keeps the computed offsets and the drawn list from drifting 8px per
     // row apart.
     gap: LIST_GAP_PX,
     overscan: 8,
-    getItemKey: (i) => rows[i]?.key ?? i,
+    // Stable identity: an inline lambda invalidates getMeasurements on every
+    // render, which on 2,400 rows means re-deriving 2,400 offsets per keystroke
+    // in the budget field.
+    getItemKey: useCallback((i: number) => rows[i]?.key ?? i, [rows]),
   });
 
   // AC #3: a new filter, a new search or a new sort is a NEW LIST. Staying at
@@ -650,7 +670,7 @@ export function CandidateListPanel({
           above wherever the user was reading. Now the controls are a fixed
           block and ONLY the list scrolls — which is also what gives the
           virtualizer a scroll element it can measure. */}
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         <div className="flex shrink-0 flex-col gap-3 px-6 pb-3 pt-6">
           {/* Summary bar */}
           <p className="flex flex-wrap items-center gap-[3px] text-[13px] text-[var(--text-secondary)]">
@@ -785,7 +805,11 @@ export function CandidateListPanel({
         <div
           ref={scrollRef}
           data-testid="consent-list-scroll"
-          className="min-h-0 flex-1 overflow-y-auto px-6"
+          // CR: min-h floor + a scrollable body. On a short viewport (a laptop
+          // window ~450px tall, a phone in landscape) the fixed control block
+          // alone can exceed 85vh; without the floor the list clamped to 0 and
+          // the clipped controls had no way to scroll into view.
+          className="min-h-[10rem] flex-1 overflow-y-auto px-6"
         >
           {/* @container: CandidateRow re-flows on THIS list's width (36rem),
               not the viewport — see the row for why. */}
@@ -802,13 +826,14 @@ export function CandidateListPanel({
                   testid={row.testid}
                   label={row.label}
                   hint={row.hint}
+                  selectLabel={row.selectLabel}
                   items={row.items}
                   selectedIds={selectedIds}
                   onToggleGroup={onToggleGroup}
                   prices={prices}
                   season={row.season}
                   expanded={row.expanded}
-                  onToggleExpanded={() => toggleSection(row.sectionId)}
+                  onToggleExpanded={() => toggleSection(row.sectionId, row.expanded)}
                   rowRef={virtualized ? virtualizer.measureElement : undefined}
                   index={virtualized ? index : undefined}
                 />

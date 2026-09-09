@@ -117,6 +117,11 @@ export interface ConsentSectionRow {
   label: string;
   /** Hover copy that explains a label the header alone cannot ("未匹配"). */
   hint?: string;
+  /**
+   * Accessible name for the section's checkbox. 「選取整部 X」 is right for a
+   * show and wrong for a block of films, so each section kind says its own.
+   */
+  selectLabel: string;
   /** ALL the section's items — chips and search are VIEW filters, so the
    *  header's 已選 x/n and its subtotal always speak for the whole section. */
   items: GenerationCandidate[];
@@ -186,15 +191,35 @@ export interface BuildConsentRowsInput {
   prices?: ModelPrices;
 }
 
+/**
+ * CR: an explicit click OUTRANKS the search's auto-expand.
+ *
+ * The first version checked `searching` first, so during a search the
+ * disclosure was pinned open while still being clickable — and the click wrote
+ * `!(override ?? default)`, i.e. `!false === true` for a show. Clicking
+ * 「collapse」 therefore did nothing on screen AND recorded "expanded", so the
+ * show came back OPEN once the search was cleared: the exact opposite of what
+ * was asked. Reading the override first makes the auto-expand a DEFAULT rather
+ * than an override, which is what 「命中的群組自動展開」 means.
+ */
 function isExpanded(input: BuildConsentRowsInput, sectionId: string): boolean {
-  if (input.searching) return true;
-  return input.expandedOverride[sectionId] ?? sectionDefaultExpanded(sectionId);
+  const override = input.expandedOverride[sectionId];
+  if (override !== undefined) return override;
+  return input.searching || sectionDefaultExpanded(sectionId);
 }
 
-function movieSectionLabel(half: 'matched' | 'unmatched'): { label: string; hint: string } {
+function movieSectionLabel(half: 'matched' | 'unmatched'): {
+  label: string;
+  hint: string;
+  selectLabel: string;
+} {
   return half === 'matched'
-    ? { label: '已匹配', hint: '片名來自 TMDb' }
-    : { label: '未匹配', hint: 'TMDb 沒有比對到，片名由檔名解析' };
+    ? { label: '已匹配', hint: '片名來自 TMDb', selectLabel: '選取所有已匹配的電影' }
+    : {
+        label: '未匹配',
+        hint: 'TMDb 沒有比對到，片名由檔名解析',
+        selectLabel: '選取所有未匹配的電影',
+      };
 }
 
 /**
@@ -243,7 +268,7 @@ export function buildConsentRows(input: BuildConsentRowsInput): ConsentRow[] {
       }
       const sectionId = sectionIds.movies(group.movieSection);
       const expanded = isExpanded(input, sectionId);
-      const { label, hint } = movieSectionLabel(group.movieSection);
+      const { label, hint, selectLabel } = movieSectionLabel(group.movieSection);
       rows.push({
         kind: 'section',
         key: sectionId,
@@ -251,6 +276,7 @@ export function buildConsentRows(input: BuildConsentRowsInput): ConsentRow[] {
         testid: sectionTestids.movies(group.movieSection),
         label,
         hint,
+        selectLabel,
         items: group.items,
         season: false,
         expanded,
@@ -281,6 +307,7 @@ function pushSeriesRows(
     sectionId,
     testid: sectionTestids.series(seriesId),
     label: group.seriesTitle || '未知影集',
+    selectLabel: `選取整部 ${group.seriesTitle || '未知影集'}`,
     items: group.items,
     season: false,
     expanded,
@@ -301,6 +328,7 @@ function pushSeriesRows(
       sectionId: seasonId,
       testid: sectionTestids.season(seriesId, season.seasonNumber),
       label: seasonLabel(season.seasonNumber),
+      selectLabel: `選取${seasonLabel(season.seasonNumber)}`,
       items: season.items,
       season: true,
       expanded: seasonExpanded,

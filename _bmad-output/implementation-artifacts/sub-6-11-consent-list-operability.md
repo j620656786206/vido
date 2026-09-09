@@ -131,10 +131,46 @@ checkbox＋三角＋標題＋徽章＋`已選 3/9 · $0.78`，標題擠成兩行
 教的「看 size」在這種改動上是無效訊號。有效的驗證是跑 `export-pen-screenshots.py`
 再看圖 —— 那支腳本讀磁碟檔。全量重出會動到 ~153 張 PNG，只 stage 真的改到的兩張。
 
-**視覺基準。** 四張既有 darwin 基準（`list` / `list-mobile` / `grouped` / `over-budget`）
-因版面重構改變，已本機重生；對應的 `-linux` 已 `git rm`，讓 CI 的 bootstrap 走「缺少」
-那條路（`project_visual_baseline_intentional_change`）。三張新 fixture 的 `-linux`
-同樣缺少，一併由 bootstrap 產生。
+**視覺基準（實際走法與原計畫不同）。** darwin 基準本機重生；`-linux` 原本 `git rm` 掉
+想讓 CI bootstrap 補，**但 bootstrap 沒跑成**：它的門檻是「純缺少、無像素差異」，而同一輪
+裡有一個**與本 story 無關**的 fixture（`media-media-detail-panel/focus`，背景漸層帶 7% 差異，
+既有的 `disc-flaky-visual-media-detail-panel` 抖動）讓 `bootstrap_needed=false`，八張缺的
+一張都沒補。改走 `infra_visual_regression_genuine_diff_baseline` 的手動路徑：
+從 CI run 的 artifact 下載 `-actual.png`、逐張看過、存成 `-visual-linux.png` 提交
+（commit `b7abc42d`）。**沒有碰那個抖動的 fixture。**
+
+**Fixture 高度上限（新發現，已寫成 memory）。** `visual` project 的視窗是 1280x800；
+fixture 一旦高過 800，gallery 頁面自己會捲動、app shell 的 sticky header 壓在 fixture 頂端，
+落點在兩次 render 之間不重現 → CI 隨機 1% 差異。加了 44px 搜尋列之後
+`over-budget` 764→820、`f15-sorted-cost` 867、`list-mobile` 848→920 全部破線。
+修法：over-budget 5→4 列、sorted-cost 6→5 列、`list-mobile` 拆成
+`list-mobile`（列版式）+ `list-mobile-groups`（群組標頭），八張回到 479–779。
+見 `project_visual_fixture_viewport_ceiling`。
+
+**對抗式 CR（`/code-review high`，換模型）——六項，四項當場修：**
+
+1. **（MEDIUM，真 bug）搜尋中點收合會反向。** `isExpanded` 原本先看 `searching` 就回 true，
+   但收合鈕仍可點，而點擊寫的是 `!(override ?? default)` = `!false` = **true**。
+   使用者點「收起來」→ 畫面沒反應、狀態卻記成「展開」，搜尋清掉後那部劇是**開的**。
+   修法兩處：`isExpanded` 改成 override 優先（搜尋的自動展開降級為 default），
+   `toggleSection` 改成反轉**畫面上看得到的** `row.expanded`。
+2. **（LOW/MED）`measureElement` 讀到被 transform 縮放的高度。** 手寫的
+   `getBoundingClientRect().height` 讀的是視覺框，而 host dialog 開場動畫是
+   `scale(0.96→1)`；首次量測會把每一列記矮約 4%，而 transform 不改 layout box 所以
+   ResizeObserver 不會再觸發。改用套件預設（優先 `borderBoxSize`，退回 `offsetHeight`）。
+3. **（MEDIUM）矮視窗下清單會被壓成 0。** 固定控制區在 85vh 的短視窗（~450px 高的筆電視窗、
+   橫向手機）會吃掉全部空間。清單加 `min-h-[10rem]` 地板、body 加 `overflow-y-auto` 兜底。
+4. **（MEDIUM，不修，立案）群組勾選作用於搜尋隱藏的列。** 搜尋「S04E07」只看到一集，
+   勾標頭卻同意整部 9 集（$2.79）。**sub-6-12 明訂擁有全選/群組語意**，在這裡改會
+   越權且抵觸 sub-5-3 已測試的語意。已在 `onToggleGroup` 的註解寫明危害與立案歸屬。
+5. **（LOW）標頭兩個數字的分母不同。** 路線徽章數可選取的列、`已選 x/n` 的 n 數全部列 ——
+   9 集有 2 集資料夾不可寫時，同一行會並排「語音辨識 7」與「已選 0/9」。分母改成可選取數，
+   與徽章和標頭 checkbox 的 all 判定同源。
+6. **（LOW）電影段落的 aria-label 是「選取整部 已匹配」。** 段落是一堆電影不是一部，
+   改成「選取所有已匹配的電影」／「選取所有未匹配的電影」，影集與季維持原文案。
+
+另接受一項效能建議：`getItemKey` 包 `useCallback`（原本每次 render 都是新 closure，
+2,400 列時每次按鍵都重算 2,400 個 offset）。四項修正各自補了迴歸測試，測試數 +7。
 
 ### Discovery Triage
 

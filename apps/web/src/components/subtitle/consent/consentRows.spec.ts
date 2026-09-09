@@ -140,12 +140,21 @@ describe('collapse (sub-6-11 AC #4)', () => {
     expect(candidateKeys(rows)).toEqual(['m1', 'e1', 'e2']);
   });
 
-  it('a searching list opens every rendered section, override or not', () => {
+  it('a search opens a section the user has not touched', () => {
+    const rows = rowsOf(CANDIDATES, { searching: true });
+    expect(candidateKeys(rows)).toEqual(['m1', 'e1', 'e2']);
+  });
+
+  it('[CR] an explicit collapse OUTRANKS the search auto-expand', () => {
+    // The auto-expand is a DEFAULT, not an override. Before this fix the
+    // searching branch was checked first, so a show the user collapsed during a
+    // search stayed open on screen while recording "expanded" — and came back
+    // open once the search was cleared, the opposite of the click.
     const rows = rowsOf(CANDIDATES, {
       searching: true,
       expandedOverride: { [sectionIds.series(SRS)]: false },
     });
-    expect(candidateKeys(rows)).toEqual(['m1', 'e1', 'e2']);
+    expect(candidateKeys(rows)).toEqual(['m1']);
   });
 
   it('a season the user closed hides only that season', () => {
@@ -259,5 +268,34 @@ describe('sort is a projection (sub-6-11 AC #2)', () => {
     const before = groupOrder(ALL).map((c) => c.mediaId);
     sortForDisplay(ALL, 'cost-desc', order);
     expect(groupOrder(ALL).map((c) => c.mediaId)).toEqual(before);
+  });
+});
+
+describe('section accessible names (sub-6-11 CR)', () => {
+  it('a movie section is not 「整部」 — it is a block of films, not one film', () => {
+    const rows = buildConsentRows({
+      candidates: [
+        movie('m1', '沙丘', { tmdbMatched: true }),
+        movie('m2', 'Blah.2014.x265', { tmdbMatched: false }),
+      ],
+      visibleIds: new Set(['m1', 'm2']),
+      sort: 'group',
+      expandedOverride: {},
+      searching: false,
+    });
+    const labels = rows
+      .filter((r) => r.kind === 'section')
+      .map((r) => (r.kind === 'section' ? r.selectLabel : ''));
+    expect(labels).toEqual(['選取所有已匹配的電影', '選取所有未匹配的電影']);
+  });
+
+  it('a series keeps 「選取整部 X」 and a season keeps 「選取第 n 季」', () => {
+    const rows = rowsOf([episode('e1', 1, 1), episode('e2', 2, 1)], {
+      expandedOverride: { [sectionIds.series(SRS)]: true },
+    });
+    const labels = rows
+      .filter((r) => r.kind === 'section')
+      .map((r) => (r.kind === 'section' ? r.selectLabel : ''));
+    expect(labels).toEqual(['選取整部 怪奇物語', '選取第 1 季', '選取第 2 季']);
   });
 });

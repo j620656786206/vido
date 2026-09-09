@@ -970,3 +970,56 @@ describe('CandidateListPanel — 2,400 rows (sub-6-11 AC #3)', () => {
     expect(scroller.scrollTop).toBe(0);
   });
 });
+
+describe('CandidateListPanel — CR fixes (sub-6-11)', () => {
+  it('collapsing a show DURING a search actually collapses it', () => {
+    renderPanel({
+      candidates: GROUPED,
+      selectedIds: new Set(),
+      search: '怪奇',
+      searchQuery: '怪奇',
+    });
+    // The search forced it open…
+    expect(screen.getByTestId(`consent-row-${S1E1}`)).toBeInTheDocument();
+    // …and one click closes it, instead of silently recording the opposite.
+    fireEvent.click(screen.getByTestId(`consent-group-${SRS}-disclosure`));
+    expect(screen.queryByTestId(`consent-row-${S1E1}`)).toBeNull();
+    expect(screen.getByTestId(`consent-group-${SRS}`)).toHaveAttribute('data-expanded', 'false');
+  });
+
+  it('the header denominator counts the SAME rows the route badges do', () => {
+    // 2 of 3 episodes are writable → 「語音辨識 2」 must sit beside 「已選 0/2」,
+    // not beside 「已選 0/3」.
+    const mixed = [
+      seriesEp(S1E1, 1, 1),
+      seriesEp(S1E2, 1, 2),
+      seriesEp(S2E1, 2, 1, { writable: false, blocker: 'folder_not_writable' }),
+    ];
+    renderPanel({
+      candidates: mixed,
+      selectedIds: new Set(),
+      totals: computeTotals(mixed, new Set(), 5),
+    });
+    expect(screen.getByTestId(`consent-group-${SRS}-routes`)).toHaveTextContent('語音辨識 2');
+    expect(screen.getByTestId(`consent-group-${SRS}-selected`)).toHaveTextContent('已選 0/2');
+  });
+
+  it('a movie section checkbox is not announced as 「選取整部」', () => {
+    const split = [
+      { ...CANDIDATES[0], tmdbMatched: true },
+      { ...CANDIDATES[1], tmdbMatched: false },
+    ];
+    renderPanel({
+      candidates: split,
+      selectedIds: new Set(),
+      totals: computeTotals(split, new Set(), 5),
+    });
+    expect(screen.getByLabelText('選取所有已匹配的電影')).toBeInTheDocument();
+    expect(screen.getByLabelText('選取所有未匹配的電影')).toBeInTheDocument();
+  });
+
+  it('the list keeps a minimum height so a short dialog cannot collapse it to nothing', () => {
+    renderPanel();
+    expect(screen.getByTestId('consent-list-scroll').className).toContain('min-h-[10rem]');
+  });
+});
