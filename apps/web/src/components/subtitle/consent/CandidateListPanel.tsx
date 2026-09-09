@@ -16,8 +16,9 @@
  * list-order prefix-sum estimate (consentSelection.feasibleCount) and the copy
  * never promises the ceiling cannot be exceeded.
  */
-import { useMemo, useState } from 'react';
-import { CircleAlert, Loader2 } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { ArrowUpDown, ChevronRight, CircleAlert, Loader2, Search, X } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { usd } from '../../../lib/currency';
 import { getImageUrl } from '../../../lib/image';
@@ -25,16 +26,43 @@ import { formatRuntime } from '../../../lib/formatMedia';
 import type { GenerationCandidate } from '../../../services/subtitleService';
 import {
   applyRouteFilter,
+  applySearch,
   blockerLabel,
   candidateUsd,
   computeTotals,
-  groupCandidates,
+  displayTitleOf,
   isWritable,
   selectableIds,
   type ConsentRouteFilter,
   type ConsentTotals,
   type ModelPrices,
 } from './consentSelection';
+import {
+  buildConsentRows,
+  CONSENT_SORTS,
+  sectionDefaultExpanded,
+  type ConsentRow,
+  type ConsentSort,
+} from './consentRows';
+
+/**
+ * Rows below which the list renders WHOLE, with no virtualizer (sub-6-11 AC #3).
+ *
+ * Virtualization is not free: it takes the browser's own Ctrl-F, printing and
+ * "scroll to a row you just left" away from the user, and it re-measures on
+ * every resize. Under a hundred rows it buys nothing — the DOM was never the
+ * problem there — so the small library keeps the plain list it shipped with,
+ * and the 2,400-row library gets the window. Both paths render the SAME row
+ * components from the SAME ConsentRow array; only the slice differs.
+ */
+const VIRTUALIZE_FROM_ROWS = 80;
+
+/** Row-height seeds for the virtualizer. Real heights come from measureElement. */
+const ESTIMATED_SECTION_PX = 48;
+const ESTIMATED_ROW_PX = 86;
+/** The `gap-2` between list items, told to the virtualizer so its offsets agree
+ *  with what flexbox actually draws (measureElement reports height, not gap). */
+const LIST_GAP_PX = 8;
 
 export interface CandidateListPanelProps {
   /** Listable candidates (extract+asr, backend order = submission order). */
@@ -70,11 +98,20 @@ export interface CandidateListPanelProps {
   onFilterChange: (filter: ConsentRouteFilter) => void;
   onBudgetTextChange: (text: string) => void;
   onStartClick: () => void;
-}
-
-/** What the row should READ as — the backend's honest title, else what shipped before. */
-function displayTitleOf(c: GenerationCandidate): string {
-  return c.displayTitle || c.title;
+  /**
+   * sub-6-11 AC #1 — the two halves of the search box.
+   *
+   * `search` is what the user has typed THIS KEYSTROKE and is what the input
+   * renders; `searchQuery` is the same text after the container's 200ms
+   * debounce and is what the list actually filters by. Keeping them apart is
+   * what stops a 2,400-row list re-projecting on every character while still
+   * letting the caret behave like a normal text field.
+   */
+  search: string;
+  searchQuery: string;
+  sort: ConsentSort;
+  onSearchChange: (text: string) => void;
+  onSortChange: (sort: ConsentSort) => void;
 }
 
 /**
@@ -164,17 +201,28 @@ function CandidatePoster({ candidate }: { candidate: GenerationCandidate }) {
   );
 }
 
+/**
+ * What a virtualised row needs on its <li> so the virtualizer can find and
+ * measure it. Absent on the non-virtual path, where nothing measures anything.
+ */
+interface VirtualRowAttrs {
+  rowRef?: (el: HTMLElement | null) => void;
+  index?: number;
+}
+
 function CandidateRow({
   candidate,
   checked,
   onToggle,
   prices,
+  rowRef,
+  index,
 }: {
   candidate: GenerationCandidate;
   checked: boolean;
   onToggle: (mediaId: string) => void;
   prices?: ModelPrices;
-}) {
+} & VirtualRowAttrs) {
   const isExtract = candidate.route === 'extract';
   // sub-6-1: the backend's write probe refused this folder. The pipeline
   // would fail the item before spending anyway; here the user learns it
@@ -185,6 +233,8 @@ function CandidateRow({
   const unmatched = candidate.tmdbMatched === false;
   return (
     <li
+      ref={rowRef}
+      data-index={index}
       data-testid={`consent-row-${candidate.mediaId}`}
       data-route={candidate.route}
       data-writable={writable ? 'true' : 'false'}
@@ -311,27 +361,38 @@ function CandidateRow({
 }
 
 /**
- * Series / season header row (sub-5-3 AC #2). Selection state and the 已選
- * subtotal are computed over the group's ALL items (chips are a view filter);
- * amounts come verbatim from estimated_usd — no second totals engine.
+ * Section header row — a series, a season, or one half of the split movies
+ * block (sub-5-3 AC #2, extended by sub-6-11 AC #4).
+ *
+ * Selection state and the 已選 subtotal are computed over the section's ALL
+ * items (chips and search are view filters); amounts come verbatim from
+ * estimated_usd — no second totals engine.
  */
 function GroupHeaderRow({
   testid,
   label,
+  hint,
   items,
   selectedIds,
   onToggleGroup,
   prices,
   season = false,
+  expanded,
+  onToggleExpanded,
+  rowRef,
+  index,
 }: {
   testid: string;
   label: string;
+  hint?: string;
   items: GenerationCandidate[];
   selectedIds: ReadonlySet<string>;
   onToggleGroup: (mediaIds: string[], next: boolean) => void;
   prices?: ModelPrices;
   season?: boolean;
-}) {
+  expanded: boolean;
+  onToggleExpanded: () => void;
+} & VirtualRowAttrs) {
   // CR H1: the ONE totals engine (三處金額同源, extended to group scope) —
   // route counts AND the subtotal both come from computeTotals over this
   // group's items, never from a second hand-rolled sum. `null` ceiling: the
@@ -340,12 +401,23 @@ function GroupHeaderRow({
   // sub-6-1 CR H3: "all" and the toggled ids span the SELECTABLE members —
   // an unwritable episode can never be ticked, so it must not keep the header
   // permanently indeterminate (which would make the group un-deselectable).
-  const ids = selectableIds(items);
+  const ids = useMemo(() => selectableIds(items), [items]);
+  // sub-6-11 AC #4: the route composition is now the SECTION's, not the
+  // selection's, and it is ALWAYS on screen. A collapsed show is the only thing
+  // the user can see of it, and 「這部劇要花錢嗎」 has to be answerable BEFORE
+  // ticking — the old badges appeared only once something was already ticked,
+  // which answered the question after it stopped mattering. Still the same one
+  // engine (CR H1): this is computeTotals over the section's selectable ids,
+  // i.e. what ticking the header would cost, not a hand-rolled count.
+  const sectionTotals = computeTotals(items, new Set(ids), null, prices);
   const all = ids.length > 0 && groupTotals.selectedCount === ids.length;
   const some = groupTotals.selectedCount > 0 && !all;
   return (
     <li
+      ref={rowRef}
+      data-index={index}
       data-testid={testid}
+      data-expanded={expanded ? 'true' : 'false'}
       className={cn(
         'flex items-center gap-3 rounded-[var(--radius-lg)] px-3.5',
         season
@@ -367,30 +439,48 @@ function GroupHeaderRow({
         onChange={() => onToggleGroup(ids, !all)}
         className="h-4 w-4 shrink-0 accent-[var(--accent-primary)]"
       />
-      <span
-        className={cn(
-          'min-w-0 flex-1 truncate',
-          season
-            ? 'text-[13px] text-[var(--text-secondary)]'
-            : 'text-sm font-semibold text-[var(--text-primary)]'
-        )}
+      {/* Disclosure. A BUTTON, not a click handler on the row: the checkbox
+          lives in the same row, and a row-wide handler would make "tick this
+          show" and "open this show" the same gesture. The label is inside the
+          button so the whole name is a target, not just the 16px chevron. */}
+      <button
+        type="button"
+        data-testid={`${testid}-disclosure`}
+        aria-expanded={expanded}
+        onClick={onToggleExpanded}
+        title={hint}
+        className="flex min-h-[40px] min-w-0 flex-1 items-center gap-2 text-left"
       >
-        {label}
-      </span>
-      {/* Route composition of what is SELECTED here — the "will ticking this
-          cost me money?" signal, in the row vocabulary (抽取 / 語音辨識). */}
+        <ChevronRight
+          aria-hidden="true"
+          className={cn(
+            'h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform motion-reduce:transition-none',
+            expanded && 'rotate-90'
+          )}
+        />
+        <span
+          className={cn(
+            'min-w-0 truncate',
+            season
+              ? 'text-[13px] text-[var(--text-secondary)]'
+              : 'text-sm font-semibold text-[var(--text-primary)]'
+          )}
+        >
+          {label}
+        </span>
+      </button>
       <span
         data-testid={`${testid}-routes`}
         className="flex shrink-0 items-center gap-1.5 text-[11px]"
       >
-        {groupTotals.selectedExtractCount > 0 && (
+        {sectionTotals.selectedExtractCount > 0 && (
           <span className="rounded-[var(--radius-sm)] bg-[var(--success-tint)] px-1.5 py-0.5 text-[var(--success-text)]">
-            抽取 {groupTotals.selectedExtractCount}
+            抽取 {sectionTotals.selectedExtractCount}
           </span>
         )}
-        {groupTotals.selectedAsrCount > 0 && (
+        {sectionTotals.selectedAsrCount > 0 && (
           <span className="rounded-[var(--radius-sm)] bg-[var(--warning-tint)] px-1.5 py-0.5 text-[var(--warning-text)]">
-            語音辨識 {groupTotals.selectedAsrCount}
+            語音辨識 {sectionTotals.selectedAsrCount}
           </span>
         )}
       </span>
@@ -402,11 +492,6 @@ function GroupHeaderRow({
       </span>
     </li>
   );
-}
-
-/** S00 is the conventional specials season. */
-function seasonLabel(n: number): string {
-  return n === 0 ? '特別篇' : `第 ${n} 季`;
 }
 
 export function CandidateListPanel({
@@ -427,13 +512,94 @@ export function CandidateListPanel({
   onFilterChange,
   onBudgetTextChange,
   onStartClick,
+  search,
+  searchQuery,
+  sort,
+  onSearchChange,
+  onSortChange,
 }: CandidateListPanelProps) {
-  const visible = applyRouteFilter(candidates, filter);
-  // CR L2: grouping sorts every series bucket, and this panel re-renders on
-  // each budget-input keystroke — without the memo a 1,200-item library would
-  // regroup + rebuild the visibility set per character typed.
-  const visibleIds = useMemo(() => new Set(visible.map((c) => c.mediaId)), [visible]);
-  const groups = useMemo(() => groupCandidates(candidates), [candidates]);
+  /**
+   * The visible set = route chip ∘ search (sub-6-11 Dev Notes). Both are VIEW
+   * filters and multiply: 「需語音辨識」 plus 「沙丘」 means the ASR rows whose
+   * title says 沙丘, and neither one touches the selection, the totals or the
+   * submission order.
+   *
+   * CR L2 still applies, harder: this panel re-renders on every budget-input
+   * keystroke, so a 2,400-row library must not re-filter and re-group per
+   * character typed.
+   */
+  const visibleIds = useMemo(
+    () =>
+      new Set(applySearch(applyRouteFilter(candidates, filter), searchQuery).map((c) => c.mediaId)),
+    [candidates, filter, searchQuery]
+  );
+
+  /**
+   * Which sections the user has opened or closed by hand. Anything absent
+   * falls back to sectionDefaultExpanded (shows closed, movies and seasons
+   * open), and the whole map lives and dies with this panel — AC #5's
+   * 「記在 dialog 生命週期內」: reopening 產生字幕 starts from the defaults again
+   * rather than restoring a collapse state from a library that has since been
+   * rescanned.
+   */
+  const [expandedOverride, setExpandedOverride] = useState<Record<string, boolean>>({});
+  const toggleSection = useCallback((sectionId: string) => {
+    setExpandedOverride((prev) => ({
+      ...prev,
+      [sectionId]: !(prev[sectionId] ?? sectionDefaultExpanded(sectionId)),
+    }));
+  }, []);
+
+  const searching = searchQuery.trim() !== '';
+  const rows = useMemo(
+    () =>
+      buildConsentRows({
+        candidates,
+        visibleIds,
+        sort,
+        expandedOverride,
+        searching,
+        prices,
+      }),
+    [candidates, visibleIds, sort, expandedOverride, searching, prices]
+  );
+
+  // ── Virtualization (AC #3) ────────────────────────────────────────────────
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const virtualized = rows.length > VIRTUALIZE_FROM_ROWS;
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    enabled: virtualized,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: (i) => (rows[i]?.kind === 'section' ? ESTIMATED_SECTION_PX : ESTIMATED_ROW_PX),
+    // Rows are NOT a fixed height (an unwritable badge, a wrapped subtitle on a
+    // phone), so every rendered row reports its real height back.
+    measureElement: (el) => el.getBoundingClientRect().height,
+    // The <ul>'s flex gap is invisible to measureElement; declaring it here is
+    // what keeps the computed offsets and the drawn list from drifting 8px per
+    // row apart.
+    gap: LIST_GAP_PX,
+    overscan: 8,
+    getItemKey: (i) => rows[i]?.key ?? i,
+  });
+
+  // AC #3: a new filter, a new search or a new sort is a NEW LIST. Staying at
+  // scroll offset 14,000 in it means landing somewhere arbitrary — or, once the
+  // list is shorter than the offset, on an empty screen that looks like a bug.
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+  }, [filter, searchQuery, sort]);
+
+  const virtualItems = virtualized ? virtualizer.getVirtualItems() : [];
+  const padTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
+  const padBottom =
+    virtualItems.length > 0
+      ? virtualizer.getTotalSize() - virtualItems[virtualItems.length - 1].end
+      : 0;
+  const rendered: { row: ConsentRow; index: number }[] = virtualized
+    ? virtualItems.map((v) => ({ row: rows[v.index], index: v.index }))
+    : rows.map((row, index) => ({ row, index }));
+
   const extractTotal = candidates.filter((c) => c.route === 'extract').length;
   const asrTotal = candidates.length - extractTotal;
   // 全選 spans the SELECTABLE rows (sub-6-1: unwritable rows can never be
@@ -478,143 +644,217 @@ export function CandidateListPanel({
 
   return (
     <>
-      {/* Body */}
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-6 pb-3">
-        {/* Summary bar */}
-        <p className="flex flex-wrap items-center gap-[3px] text-[13px] text-[var(--text-secondary)]">
-          候選 <span className="font-mono tabular-nums">{totals.candidateCount}</span> 部 · 已選
-          <span className="font-mono tabular-nums">{totals.selectedCount}</span> 部 · 預估
-          <span
-            data-testid="consent-summary-usd"
-            className={cn(
-              'font-mono font-semibold tabular-nums',
-              overBudget ? 'text-[var(--warning-text)]' : 'text-[var(--text-primary)]'
-            )}
-          >
-            {usd(totals.selectedTotalUsd)}
-          </span>
-        </p>
-
-        {/* Route filter chips */}
-        <div className="flex flex-wrap items-center gap-2 overflow-x-auto">
-          {chip('all', '全部', candidates.length)}
-          {chip('extract', '可抽取內嵌', extractTotal, 'free')}
-          {chip('asr', '需語音辨識', asrTotal, 'paid')}
-        </div>
-
-        {/* Selection toolbar */}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <label className="flex min-h-[44px] items-center gap-2 text-[13px] text-[var(--text-secondary)]">
-            <input
-              type="checkbox"
-              data-testid="consent-select-all"
-              aria-label={allSelected ? '取消全選' : '全選'}
-              checked={allSelected}
-              ref={(el) => {
-                if (el) el.indeterminate = someSelected;
-              }}
-              onChange={onToggleAll}
-              className="h-4 w-4 accent-[var(--accent-primary)]"
-            />
-            已選
-            <span className="font-mono tabular-nums">
-              {totals.selectedCount} / {totals.selectableCount}
+      {/* Body. sub-6-11 AC #1: the controls no longer scroll away with the
+          list. Before this story the whole body was one scroller, so on a
+          2,400-row library the search box, the chips and 全選 were 40 screens
+          above wherever the user was reading. Now the controls are a fixed
+          block and ONLY the list scrolls — which is also what gives the
+          virtualizer a scroll element it can measure. */}
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex shrink-0 flex-col gap-3 px-6 pb-3 pt-6">
+          {/* Summary bar */}
+          <p className="flex flex-wrap items-center gap-[3px] text-[13px] text-[var(--text-secondary)]">
+            候選 <span className="font-mono tabular-nums">{totals.candidateCount}</span> 部 · 已選
+            <span className="font-mono tabular-nums">{totals.selectedCount}</span> 部 · 預估
+            <span
+              data-testid="consent-summary-usd"
+              className={cn(
+                'font-mono font-semibold tabular-nums',
+                overBudget ? 'text-[var(--warning-text)]' : 'text-[var(--text-primary)]'
+              )}
+            >
+              {usd(totals.selectedTotalUsd)}
             </span>
-            {totals.unwritableCount > 0 && (
-              <span
-                data-testid="consent-unwritable-count"
-                className="text-xs text-[var(--error-text)]"
+          </p>
+
+          {/* Search + sort (AC #1/#2/#5). One row at every width: on a phone the
+            sort control shrinks but stays beside the box, because stacking them
+            would cost a whole line of an 85vh sheet. */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex h-11 min-w-0 flex-1 items-center rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-3">
+              <Search
+                aria-hidden="true"
+                className="mr-2 h-4 w-4 shrink-0 text-[var(--text-muted)]"
+              />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="搜尋片名或影集"
+                aria-label="搜尋候選"
+                data-testid="consent-search-input"
+                className="min-w-0 flex-1 bg-transparent text-[13px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] [&::-webkit-search-cancel-button]:appearance-none"
+              />
+              {search !== '' && (
+                <button
+                  type="button"
+                  onClick={() => onSearchChange('')}
+                  aria-label="清除搜尋"
+                  data-testid="consent-search-clear"
+                  className="ml-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
+                >
+                  <X aria-hidden="true" className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            {/* One native <select> at both widths. On a phone the platform opens
+              it as its own picker sheet, which is AC #5's sheet — and a better
+              one than anything hand-rolled here would be. */}
+            <span className="flex h-11 shrink-0 items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] pl-2.5 pr-1">
+              <ArrowUpDown
+                aria-hidden="true"
+                className="h-4 w-4 shrink-0 text-[var(--text-muted)]"
+              />
+              <select
+                value={sort}
+                onChange={(e) => onSortChange(e.target.value as ConsentSort)}
+                aria-label="排序方式"
+                data-testid="consent-sort-select"
+                className="h-11 bg-transparent pr-1 text-[13px] text-[var(--text-primary)] outline-none"
               >
-                （{totals.unwritableCount} 部資料夾無法寫入）
+                {CONSENT_SORTS.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </span>
+          </div>
+
+          {/* Route filter chips */}
+          <div className="flex flex-wrap items-center gap-2 overflow-x-auto">
+            {chip('all', '全部', candidates.length)}
+            {chip('extract', '可抽取內嵌', extractTotal, 'free')}
+            {chip('asr', '需語音辨識', asrTotal, 'paid')}
+          </div>
+
+          {/* Selection toolbar */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <label className="flex min-h-[44px] items-center gap-2 text-[13px] text-[var(--text-secondary)]">
+              <input
+                type="checkbox"
+                data-testid="consent-select-all"
+                aria-label={allSelected ? '取消全選' : '全選'}
+                checked={allSelected}
+                ref={(el) => {
+                  if (el) el.indeterminate = someSelected;
+                }}
+                onChange={onToggleAll}
+                className="h-4 w-4 accent-[var(--accent-primary)]"
+              />
+              已選
+              <span className="font-mono tabular-nums">
+                {totals.selectedCount} / {totals.selectableCount}
               </span>
-            )}
-          </label>
-          <span className="flex-1" />
-          <button
-            type="button"
-            data-testid="consent-select-extract"
-            onClick={onSelectAllExtract}
-            className="flex min-h-[44px] items-center text-[13px] text-[var(--accent-text)] transition-colors hover:opacity-80"
-          >
-            <span className="sm:hidden">全部可抽取</span>
-            <span className="hidden sm:inline">選取全部可抽取（僅翻譯費）</span>
-          </button>
-          <button
-            type="button"
-            data-testid="consent-clear-selection"
-            onClick={onClearSelection}
-            className="flex min-h-[44px] items-center text-[13px] text-[var(--accent-text)] transition-colors hover:opacity-80"
-          >
-            <span className="sm:hidden">清除</span>
-            <span className="hidden sm:inline">清除選取</span>
-          </button>
+              {totals.unwritableCount > 0 && (
+                <span
+                  data-testid="consent-unwritable-count"
+                  className="text-xs text-[var(--error-text)]"
+                >
+                  （{totals.unwritableCount} 部資料夾無法寫入）
+                </span>
+              )}
+            </label>
+            <span className="flex-1" />
+            <button
+              type="button"
+              data-testid="consent-select-extract"
+              onClick={onSelectAllExtract}
+              className="flex min-h-[44px] items-center text-[13px] text-[var(--accent-text)] transition-colors hover:opacity-80"
+            >
+              <span className="sm:hidden">全部可抽取</span>
+              <span className="hidden sm:inline">選取全部可抽取（僅翻譯費）</span>
+            </button>
+            <button
+              type="button"
+              data-testid="consent-clear-selection"
+              onClick={onClearSelection}
+              className="flex min-h-[44px] items-center text-[13px] text-[var(--accent-text)] transition-colors hover:opacity-80"
+            >
+              <span className="sm:hidden">清除</span>
+              <span className="hidden sm:inline">清除選取</span>
+            </button>
+          </div>
         </div>
 
-        {/* Candidate list — grouped sections (sub-5-3 AC #2). Display order is
-            the groupOrder the container already re-sorted the candidates STATE
-            into, so rows here render in submission (= feasible-walk) order;
-            the chips only decide row VISIBILITY, never group membership. */}
-        {/* @container: CandidateRow re-flows on THIS list's width (36rem), not
-            the viewport — see the row for why. */}
-        <ul className="flex flex-col gap-2 @container" data-testid="consent-candidate-list">
-          {groups.flatMap((group) => {
-            const rowsOf = (items: GenerationCandidate[]) =>
-              items
-                .filter((c) => visibleIds.has(c.mediaId))
-                .map((c) => (
-                  <CandidateRow
-                    key={c.mediaId}
-                    candidate={c}
-                    checked={selectedIds.has(c.mediaId)}
-                    onToggle={onToggle}
-                    prices={prices}
-                  />
-                ));
+        {/* The list — the ONLY thing that scrolls (AC #1/#3). Its rows come
+            from buildConsentRows, a projection of the candidates STATE the
+            container already re-sorted into groupOrder: the chips, the search
+            box and the sort menu decide what is DRAWN and in what order it is
+            drawn, never what is submitted. */}
+        <div
+          ref={scrollRef}
+          data-testid="consent-list-scroll"
+          className="min-h-0 flex-1 overflow-y-auto px-6"
+        >
+          {/* @container: CandidateRow re-flows on THIS list's width (36rem),
+              not the viewport — see the row for why. */}
+          <ul
+            className="flex flex-col gap-2 @container"
+            data-testid="consent-candidate-list"
+            data-virtualized={virtualized ? 'true' : 'false'}
+            style={virtualized ? { paddingTop: padTop, paddingBottom: padBottom } : undefined}
+          >
+            {rendered.map(({ row, index }) =>
+              row.kind === 'section' ? (
+                <GroupHeaderRow
+                  key={row.key}
+                  testid={row.testid}
+                  label={row.label}
+                  hint={row.hint}
+                  items={row.items}
+                  selectedIds={selectedIds}
+                  onToggleGroup={onToggleGroup}
+                  prices={prices}
+                  season={row.season}
+                  expanded={row.expanded}
+                  onToggleExpanded={() => toggleSection(row.sectionId)}
+                  rowRef={virtualized ? virtualizer.measureElement : undefined}
+                  index={virtualized ? index : undefined}
+                />
+              ) : (
+                <CandidateRow
+                  key={row.key}
+                  candidate={row.candidate}
+                  checked={selectedIds.has(row.candidate.mediaId)}
+                  onToggle={onToggle}
+                  prices={prices}
+                  rowRef={virtualized ? virtualizer.measureElement : undefined}
+                  index={virtualized ? index : undefined}
+                />
+              )
+            )}
+          </ul>
 
-            if (group.kind === 'movies') return rowsOf(group.items);
-            if (!group.items.some((c) => visibleIds.has(c.mediaId))) return [];
+          {/* AC #1: a search that matched nothing has to SAY so and offer the
+              way back. An empty list under a full-looking screen reads as a
+              loading failure. */}
+          {rows.length === 0 && searching && (
+            <div
+              data-testid="consent-search-empty"
+              className="flex flex-col items-center gap-2 py-10 text-center"
+            >
+              <p className="text-sm text-[var(--text-secondary)]">沒有符合的候選</p>
+              <button
+                type="button"
+                onClick={() => onSearchChange('')}
+                data-testid="consent-search-empty-clear"
+                className="flex min-h-[44px] items-center text-[13px] text-[var(--accent-text)] transition-colors hover:opacity-80"
+              >
+                清除搜尋
+              </button>
+            </div>
+          )}
+        </div>
 
-            const nodes = [
-              <GroupHeaderRow
-                key={`series-${group.seriesId}`}
-                testid={`consent-group-${group.seriesId}`}
-                label={group.seriesTitle || '未知影集'}
-                items={group.items}
-                selectedIds={selectedIds}
-                onToggleGroup={onToggleGroup}
-                prices={prices}
-              />,
-            ];
-            if (group.showSeasonHeaders && group.seasons) {
-              for (const season of group.seasons) {
-                if (!season.items.some((c) => visibleIds.has(c.mediaId))) continue;
-                nodes.push(
-                  <GroupHeaderRow
-                    key={`season-${group.seriesId}-${season.seasonNumber}`}
-                    testid={`consent-season-${group.seriesId}-${season.seasonNumber}`}
-                    label={seasonLabel(season.seasonNumber)}
-                    items={season.items}
-                    selectedIds={selectedIds}
-                    onToggleGroup={onToggleGroup}
-                    prices={prices}
-                    season
-                  />,
-                  ...rowsOf(season.items)
-                );
-              }
-            } else {
-              nodes.push(...rowsOf(group.items));
-            }
-            return nodes;
-          })}
-        </ul>
-
-        <p className="text-xs text-[var(--text-muted)]">金額為預估值，實際費用依內容長度而定。</p>
-        {startError && (
-          <p data-testid="consent-start-error" className="text-sm text-[var(--error-text)]">
-            {startError}
-          </p>
-        )}
+        <div className="flex shrink-0 flex-col gap-1 px-6 pb-3 pt-3">
+          <p className="text-xs text-[var(--text-muted)]">金額為預估值，實際費用依內容長度而定。</p>
+          {startError && (
+            <p data-testid="consent-start-error" className="text-sm text-[var(--error-text)]">
+              {startError}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Over-budget banner (F18) — warning, NOT error: an informed choice. */}
@@ -639,6 +879,15 @@ export function CandidateListPanel({
               {totals.feasibleCount}
             </span>
             部後暫停，其餘保留在佇列，可提高上限或稍後續跑。
+            {/* sub-6-11 AC #2: once the list is sorted by anything but 群組,
+                the N counts down the SUBMISSION order, which is no longer the
+                order on screen. Saying so is cheaper than letting the user
+                believe the top N rows are the N that will run. */}
+            {sort !== 'group' && (
+              <span data-testid="consent-feasible-order-note" className="text-[var(--text-muted)]">
+                （依提交順序計算，不是目前的排序）
+              </span>
+            )}
           </p>
         </div>
       )}

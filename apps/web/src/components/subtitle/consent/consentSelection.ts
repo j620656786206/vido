@@ -62,6 +62,11 @@ export function selectableIds(candidates: GenerationCandidate[]): string[] {
   return candidates.filter(isWritable).map((c) => c.mediaId);
 }
 
+/** What a row should READ as — the backend's honest title, else what shipped before. */
+export function displayTitleOf(c: GenerationCandidate): string {
+  return c.displayTitle || c.title;
+}
+
 /** zh-TW copy for an unwritable row, composed from the code + folder name. */
 export function blockerLabel(c: GenerationCandidate): string {
   return c.blockerDir ? `資料夾無法寫入：${c.blockerDir}` : '資料夾無法寫入';
@@ -73,6 +78,61 @@ export function applyRouteFilter(
 ): GenerationCandidate[] {
   if (filter === 'all') return candidates;
   return candidates.filter((c) => c.route === filter);
+}
+
+// ─── sub-6-11 AC #1: search ─────────────────────────────────────────────────
+
+/**
+ * Fold a string into the form both sides of a search comparison use:
+ * case-insensitive and whitespace-insensitive.
+ *
+ * Whitespace is stripped rather than collapsed because the two strings being
+ * compared were produced by different machines — TMDb writes 「怪奇物語」, the
+ * filename parser writes 「怪奇 物語」 out of a dotted release name — and a user
+ * typing either one means the same show. CJK titles carry no word boundaries
+ * for a space to be significant at, and for latin titles the cost is only that
+ * 「the matrix」 also matches 「thematrix」.
+ */
+export function normalizeSearch(text: string): string {
+  return text.replace(/\s+/g, '').toLowerCase();
+}
+
+/**
+ * The haystack one row is searched by (sub-6-11 AC #1).
+ *
+ * THE WIRE CARRIES NO RAW FILENAME. The story's 「片名或檔名」 reads as three
+ * fields but `GenerationCandidate` has only these:
+ *
+ *  - `displayTitle` — what the row READS as (TMDb's title, or, for an unmatched
+ *    row, the filename parser's cleaned-up name — which IS the filename, minus
+ *    the release junk).
+ *  - `title`        — the stored title. On an unmatched row this is the raw,
+ *    ugly string the user sees in their file manager, so searching it is the
+ *    closest thing to searching the filename that exists here.
+ *  - `seriesTitle`  — an episode's own title is 「S04E07」 or 「片名 S04E07」 and
+ *    never contains the SHOW name, so without this, typing a show name would
+ *    match nothing in a library that is mostly TV.
+ *
+ * Adding a real `file_path` would be a backend change; this story is frontend
+ * only, and inventing a field the API does not send is worse than searching the
+ * three it does.
+ */
+export function candidateSearchText(c: GenerationCandidate): string {
+  return normalizeSearch(`${c.displayTitle ?? ''} ${c.title} ${c.seriesTitle ?? ''}`);
+}
+
+/**
+ * Narrow to rows matching the query. A VIEW filter, exactly like the route
+ * chips: it never changes the candidates state, the submission order or what a
+ * group header counts.
+ */
+export function applySearch(
+  candidates: GenerationCandidate[],
+  query: string
+): GenerationCandidate[] {
+  const needle = normalizeSearch(query);
+  if (needle === '') return candidates;
+  return candidates.filter((c) => candidateSearchText(c).includes(needle));
 }
 
 export interface ConsentTotals {
@@ -205,6 +265,12 @@ export interface CandidateSeasonSection {
  */
 export interface CandidateGroup {
   kind: 'movies' | 'series';
+  /**
+   * sub-6-11 AC #4: which half of the split movies block this is. Absent means
+   * the movies were NOT split — one flat, header-less section, the shipped
+   * pre-sub-6-11 rendering.
+   */
+  movieSection?: 'matched' | 'unmatched';
   /** series sections only. seriesTitle '' = backend lookup degraded (未知影集). */
   seriesId?: string;
   seriesTitle?: string;
@@ -215,8 +281,9 @@ export interface CandidateGroup {
 }
 
 /**
- * Group candidates for display: one flat movies section first (input order),
- * then one section per series ordered BY SERIES TITLE; within a series, season
+ * Group candidates for display: the movies first (input order, split into
+ * 已匹配 / 未匹配 by movieSections when both exist), then one section per
+ * series ordered BY SERIES TITLE; within a series, season
  * asc then episode asc (the backend's global (title,id) sort shuffles episodes
  * — episode_number exists on the wire precisely for this).
  *
@@ -228,6 +295,39 @@ export interface CandidateGroup {
  * Degraded (empty) titles sort LAST — an unlabelled 未知影集 block belongs at
  * the bottom, not ahead of every named show.
  */
+/**
+ * Split the movies block into 已匹配 / 未匹配 (sub-6-11 AC #4).
+ *
+ * ORDER — MATCHED FIRST (Alexyu 裁定 2026-09-09). This array is also the
+ * SUBMISSION order (see groupOrder), so whichever section leads is the one the
+ * budget ceiling spends on first, and money should go to the rows whose
+ * identity is settled rather than to the parser's guesses. The unmatched
+ * section sinks the way the untitled 未知影集 block already does — still
+ * present, still named by its own header, so it cannot be missed.
+ *
+ * The split only happens when there is something to separate. A library where
+ * every movie matched — and EVERY pre-sub-6-10a server, which sends no
+ * `tmdb_matched` at all — gets one unlabelled, header-less section: exactly the
+ * flat rendering that shipped.
+ */
+function movieSections(movies: GenerationCandidate[]): CandidateGroup[] {
+  if (movies.length === 0) return [];
+  // Strictly `=== false`: "the server never told us" is not "TMDb found
+  // nothing" — the same rule the row's 未匹配 badge follows.
+  const unmatched = movies.filter((c) => c.tmdbMatched === false);
+  if (unmatched.length === 0 || unmatched.length === movies.length) {
+    return [{ kind: 'movies', items: movies }];
+  }
+  return [
+    {
+      kind: 'movies',
+      movieSection: 'matched',
+      items: movies.filter((c) => c.tmdbMatched !== false),
+    },
+    { kind: 'movies', movieSection: 'unmatched', items: unmatched },
+  ];
+}
+
 export function groupCandidates(candidates: GenerationCandidate[]): CandidateGroup[] {
   const movies: GenerationCandidate[] = [];
   const bySeries = new Map<string, GenerationCandidate[]>();
@@ -243,7 +343,7 @@ export function groupCandidates(candidates: GenerationCandidate[]): CandidateGro
   }
 
   const groups: CandidateGroup[] = [];
-  if (movies.length > 0) groups.push({ kind: 'movies', items: movies });
+  groups.push(...movieSections(movies));
 
   const seriesSections: CandidateGroup[] = [];
   for (const [seriesId, items] of bySeries) {

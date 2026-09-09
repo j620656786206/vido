@@ -49,6 +49,14 @@ import {
   selectableIds,
   type ConsentRouteFilter,
 } from './consentSelection';
+import type { ConsentSort } from './consentRows';
+
+/**
+ * sub-6-11 AC #1: how long the list waits after the last keystroke before it
+ * re-projects. Short enough that the list feels live, long enough that typing
+ * 「星際效應」 re-filters once instead of four times.
+ */
+const SEARCH_DEBOUNCE_MS = 200;
 
 /** Fallback prefill when the snapshot carries no default_budget_usd (error
  * phase, or a pre-sub-5-1 server). Matches the AI_RUN_BUDGET_USD factory
@@ -99,6 +107,15 @@ export function GenerationConsentView({
   const [candidates, setCandidates] = useState<GenerationCandidate[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<ConsentRouteFilter>('all');
+  /**
+   * sub-6-11: the search box lives HERE, not in the panel, because sub-6-12's
+   * 全選 has to act on the same visible set the search produced — and 全選 is a
+   * container action. `searchText` is what the input shows; `searchQuery` is the
+   * debounced copy the list filters by.
+   */
+  const [searchText, setSearchText] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sort, setSort] = useState<ConsentSort>('group');
   const [budgetText, setBudgetText] = useState(DEFAULT_BUDGET_TEXT);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -137,6 +154,13 @@ export function GenerationConsentView({
    * re-analysis, or the flow would quietly bill Sonnet for the second attempt.
    */
   const [modelId, setModelId] = useState('');
+
+  // Debounce. Rule 23 untouched: this reads no clock, it only waits.
+  useEffect(() => {
+    if (searchText === searchQuery) return;
+    const timer = setTimeout(() => setSearchQuery(searchText), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchText, searchQuery]);
 
   const analysis = useGenerationCandidatesProgress();
   const { startTracking: startAnalysisTracking, reset: resetAnalysis } = analysis;
@@ -497,6 +521,11 @@ export function GenerationConsentView({
               onFilterChange={setFilter}
               onBudgetTextChange={setBudgetText}
               onStartClick={() => setConfirmOpen(true)}
+              search={searchText}
+              searchQuery={searchQuery}
+              sort={sort}
+              onSearchChange={setSearchText}
+              onSortChange={setSort}
             />
           )}
 

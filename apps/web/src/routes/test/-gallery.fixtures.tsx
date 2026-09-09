@@ -586,6 +586,53 @@ const CONSENT_GROUPED_SELECTED = new Set([
   '9a0bfe08-1acd-4f9e-9fed-a7c8d9e0f302',
 ]);
 
+// sub-6-11: the operability set — two MATCHED films, one UNMATCHED film (so the
+// movies block splits in two) and the two-season series (so there is something
+// to collapse and something for a search to hit). One dataset drives all three
+// new fixtures, so the three screenshots differ only by the state under test.
+const CONSENT_OPERABILITY_CANDIDATES: GenerationCandidate[] = [
+  { ...CONSENT_FIXTURE_CANDIDATES[0], tmdbMatched: true },
+  { ...CONSENT_FIXTURE_CANDIDATES[1], tmdbMatched: true },
+  {
+    mediaId: '7d1e9f04-2b3c-4d5e-8f90-a1b2c3d4e5f7',
+    mediaType: 'movie',
+    title: 'Interstellar.2014.2160p.BluRay.REMUX.HEVC.DTS-HD.MA.5.1-FraMeSToR',
+    displayTitle: 'Interstellar (2014)',
+    tmdbMatched: false,
+    route: 'asr',
+    runtimeMinutes: 169,
+    runtimeKnown: true,
+    estimatedUsd: 0.26,
+  },
+  ...CONSENT_GROUPED_CANDIDATES.slice(1),
+];
+const CONSENT_OPERABILITY_SELECTED = new Set([
+  '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51',
+  '9a0bfe08-1acd-4f9e-9fed-a7c8d9e0f302',
+]);
+const consentOperabilityProps = (overrides: Record<string, unknown>): Record<string, unknown> => ({
+  candidates: CONSENT_OPERABILITY_CANDIDATES,
+  selectedIds: CONSENT_OPERABILITY_SELECTED,
+  filter: 'all',
+  totals: computeTotals(CONSENT_OPERABILITY_CANDIDATES, CONSENT_OPERABILITY_SELECTED, 5),
+  budgetText: '5.00',
+  budgetUsd: 5,
+  onToggle: noop,
+  onToggleGroup: noop,
+  onToggleAll: noop,
+  onSelectAllExtract: noop,
+  onClearSelection: noop,
+  onFilterChange: noop,
+  onBudgetTextChange: noop,
+  onStartClick: noop,
+  search: '',
+  searchQuery: '',
+  sort: 'group',
+  onSearchChange: noop,
+  onSortChange: noop,
+  ...overrides,
+});
+
 export const GALLERY_FIXTURES: GalleryFixture[] = [
   // ----- ui/ -----
   {
@@ -4031,6 +4078,11 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       onFilterChange: noop,
       onBudgetTextChange: noop,
       onStartClick: noop,
+      search: '',
+      searchQuery: '',
+      sort: 'group',
+      onSearchChange: noop,
+      onSortChange: noop,
     },
     width: 900,
     penNode: 'screen-section', // Screen F15-D-v2 (pwMzT) · F15-M-v2 (fdu4y)
@@ -4063,6 +4115,11 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       onFilterChange: noop,
       onBudgetTextChange: noop,
       onStartClick: noop,
+      search: '',
+      searchQuery: '',
+      sort: 'group',
+      onSearchChange: noop,
+      onSortChange: noop,
     },
     // 390 = the phone the drawing is for; the host sheet is w-full there and the
     // body's p-6 leaves the list 342px — below the row's 36rem re-flow point.
@@ -4089,6 +4146,11 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       onFilterChange: noop,
       onBudgetTextChange: noop,
       onStartClick: noop,
+      search: '',
+      searchQuery: '',
+      sort: 'group',
+      onSearchChange: noop,
+      onSortChange: noop,
     },
     width: 900,
     // Design ref: ux-design.pen — no current screen frame; the series/season
@@ -4120,9 +4182,41 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       onFilterChange: noop,
       onBudgetTextChange: noop,
       onStartClick: noop,
+      search: '',
+      searchQuery: '',
+      sort: 'group',
+      onSearchChange: noop,
+      onSortChange: noop,
     },
     width: 900,
     penNode: 'screen-section', // Screen F18-D-v2 (zBik1)
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-consent/f15-collapsed',
+    label: 'subtitle/consent/CandidateListPanel (F15 可操作 — 影集預設收合、電影分已/未匹配)',
+    component: CandidateListPanel,
+    props: consentOperabilityProps({}),
+    width: 900,
+    penNode: 'screen-section', // Screen F15-D-v2 (pwMzT)
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-consent/f15-search-hit',
+    label: 'subtitle/consent/CandidateListPanel (F15 搜尋命中 — 命中的群組自動展開)',
+    component: CandidateListPanel,
+    props: consentOperabilityProps({ search: '怪奇', searchQuery: '怪奇' }),
+    width: 900,
+    penNode: 'screen-section', // Screen F15-D-v2 (pwMzT)
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-consent/f15-sorted-cost',
+    label: 'subtitle/consent/CandidateListPanel (F15 依金額高→低 — 平鋪、無群組標頭)',
+    component: CandidateListPanel,
+    props: consentOperabilityProps({ sort: 'cost-desc' }),
+    width: 900,
+    penNode: 'screen-section', // Screen F15-D-v2 (pwMzT)
     statesOnly: ['default'],
   },
   {

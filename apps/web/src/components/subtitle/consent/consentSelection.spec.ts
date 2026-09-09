@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   applyRouteFilter,
+  applySearch,
+  candidateSearchText,
+  normalizeSearch,
   candidateUsd,
   computeTotals,
   defaultSelection,
@@ -479,5 +482,60 @@ describe('modelChoices', () => {
     ];
     const rows = modelChoices(withBlocked, new Set([A, D]), input);
     expect(rows.find((r) => r.id === 'claude-sonnet-5')?.totalUsd).toBe(0.05);
+  });
+});
+
+describe('search (sub-6-11 AC #1)', () => {
+  const dune = c(A, 'extract', 0.05, { title: '沙丘：第二部', tmdbMatched: true });
+  const raw = c(B, 'asr', 0.26, {
+    title: 'Interstellar.2014.2160p.BluRay.x265-GRP',
+    displayTitle: 'Interstellar (2014)',
+    tmdbMatched: false,
+  });
+  const ep = c(C, 'asr', 0.31, {
+    mediaType: 'episode',
+    title: 'S04E07',
+    seriesId: 'srs-1',
+    seriesTitle: '怪奇物語',
+  });
+  const ALL = [dune, raw, ep];
+  const hits = (q: string) => applySearch(ALL, q).map((x) => x.mediaId);
+
+  it('an empty query is not a filter — every row stays', () => {
+    expect(hits('')).toEqual([A, B, C]);
+    expect(hits('   ')).toEqual([A, B, C]);
+  });
+
+  it('matches the title the row READS as', () => {
+    expect(hits('沙丘')).toEqual([A]);
+    expect(hits('interstellar')).toEqual([B]);
+  });
+
+  it('matches the raw stored title too — the closest thing to a filename the API sends', () => {
+    // No `file_path` exists on the wire; on an unmatched row `title` IS the
+    // release string the user sees in their file manager.
+    expect(hits('x265')).toEqual([B]);
+    expect(hits('2160p')).toEqual([B]);
+  });
+
+  it('matches an episode by its SHOW name, which its own title never contains', () => {
+    expect(ep.title).not.toContain('怪奇');
+    expect(hits('怪奇物語')).toEqual([C]);
+  });
+
+  it('ignores case and whitespace on both sides', () => {
+    expect(hits('INTER STELLAR')).toEqual([B]);
+    expect(normalizeSearch('  The  Matrix ')).toBe('thematrix');
+    expect(candidateSearchText(dune)).toContain('沙丘：第二部');
+  });
+
+  it('a query that matches nothing returns nothing (the empty-state trigger)', () => {
+    expect(hits('沒有這部片')).toEqual([]);
+  });
+
+  it('is a VIEW filter: the input array is never mutated or reordered', () => {
+    const before = ALL.map((x) => x.mediaId);
+    applySearch(ALL, '沙丘');
+    expect(ALL.map((x) => x.mediaId)).toEqual(before);
   });
 });
