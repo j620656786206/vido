@@ -1,6 +1,6 @@
 # Story 6.12: 同意畫面金錢陷阱 —— 全選範圍、錯誤位置、砍線、總額 ≈、字級（前端）
 
-Status: in-progress
+Status: ready-for-review
 
 ## Story
 
@@ -102,11 +102,17 @@ Claude Opus 5（1M context）
 不猜。三種狀態：`secret` →「你的金鑰」、`env` →「環境變數金鑰」、其餘 →「尚未設定金鑰」；
 自架 ASR →「語音辨識：自架（不另計費）」。清單沒有 ASR 列時整個 ASR 半句不出現。
 
-**AC #7 — 設計與測試。** `.pen` 依 `feedback_pen_inline_agent_workflow` 產出節點錨定提示詞
-`sub-6-12-f15-f18-money-traps-pen-prompt.md`（F15-D／F15-M 加來源行、F18-D 加砍線＋淡化＋
-橫幅字＋來源行、新增獨立規格畫面 `F18-SPEC-ERR` 講錯誤位置 ——
+**AC #7 — 設計與測試。** `.pen` 依 `feedback_pen_inline_agent_workflow` 走完整輪：
+Claude 產節點錨定提示詞 `sub-6-12-f15-f18-money-traps-pen-prompt.md` → Alexyu 跑 Pencil
+Inline AI Agent → Claude 以 MCP 複審。四張畫面全部落地（F15-D／F15-M 加來源行、
+F18-D 加砍線＋淡化＋橫幅字＋來源行、新增獨立規格畫面 `f18-spec-err` 講錯誤位置 ——
 依 `feedback_pencil_spec_standalone_screen` 不塞進 F18 正常狀態）。
-待 Alexyu 執行後由 Claude 以 MCP 複審、重出截圖。
+Inline agent 多做且**正確**的一件事：加了來源行後 F15 桌機對話框變高、底部被切 12px，
+它自行改為置中（F18 一併）—— 複審量過上下留白對稱（F15 各 19px、F18 各 41px）並追認。
+複審抓到一項沒落地：`start-error-wrap` 的 8px 上下留白（Alexyu 授權後由 Claude 直接
+MCP `Update` + AppleScript 存檔，並 grep 磁碟檔確認 `padding: [8, 24]` 真的落盤 ——
+這次改動前後等長，`feedback_verify_pen_saved_before_commit` 的「看 size」再次失效）。
+截圖全量重出 174 張，只 commit 真的改到的 4 張。
 測試 +53（consent 目錄 195 → 248），web 全套 3,339 全綠（261 檔），lint 0 error。
 視覺基準：11 張 darwin 重生、對應 `-linux` 已 `git rm` 走 CI bootstrap
 （`project_visual_baseline_intentional_change` 的功能分支流程）。
