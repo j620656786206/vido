@@ -150289,7 +150289,7 @@
           "type": "frame",
           "id": "DBPu5",
           "x": 240,
-          "y": 50,
+          "y": 19,
           "name": "gen-dialog",
           "width": 960,
           "fill": "$bg-secondary",
@@ -150377,30 +150377,52 @@
               "children": [
                 {
                   "type": "frame",
-                  "id": "njQZt",
-                  "name": "summary-bar",
-                  "gap": 6,
-                  "alignItems": "center",
+                  "id": "JVGKf",
+                  "name": "summary-block",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
                   "children": [
                     {
-                      "type": "text",
-                      "id": "v30eJ",
-                      "name": "summary-text",
-                      "fill": "$text-secondary",
-                      "content": "候選 142 部 · 已選 46 部 · 預估",
-                      "fontFamily": "Noto Sans TC",
-                      "fontSize": 13,
-                      "fontWeight": "normal"
+                      "type": "frame",
+                      "id": "njQZt",
+                      "name": "summary-bar",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "v30eJ",
+                          "name": "summary-text",
+                          "fill": "$text-secondary",
+                          "content": "候選 142 部 · 已選 46 部 · 預估",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "FDay3",
+                          "name": "summary-amount",
+                          "fill": "$text-primary",
+                          "content": "$1.84",
+                          "fontFamily": "JetBrains Mono",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
                     },
                     {
                       "type": "text",
-                      "id": "FDay3",
-                      "name": "summary-amount",
-                      "fill": "$text-primary",
-                      "content": "$1.84",
-                      "fontFamily": "JetBrains Mono",
-                      "fontSize": 13,
-                      "fontWeight": "600"
+                      "id": "y4LQ5",
+                      "name": "spend-source",
+                      "fill": "$text-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "使用：Claude（你的金鑰） · 語音辨識：OpenAI（你的金鑰）",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -153119,30 +153141,52 @@
               "children": [
                 {
                   "type": "frame",
-                  "id": "SsLlR",
-                  "name": "summary-bar",
-                  "gap": 6,
-                  "alignItems": "center",
+                  "id": "BIjus",
+                  "name": "summary-block",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
                   "children": [
                     {
-                      "type": "text",
-                      "id": "whWfg",
-                      "name": "summary-text",
-                      "fill": "$text-secondary",
-                      "content": "候選 142 部 · 已選 46 部 · 預估",
-                      "fontFamily": "Noto Sans TC",
-                      "fontSize": 12,
-                      "fontWeight": "normal"
+                      "type": "frame",
+                      "id": "SsLlR",
+                      "name": "summary-bar",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "whWfg",
+                          "name": "summary-text",
+                          "fill": "$text-secondary",
+                          "content": "候選 142 部 · 已選 46 部 · 預估",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "HCEWp",
+                          "name": "summary-amount",
+                          "fill": "$text-primary",
+                          "content": "$1.84",
+                          "fontFamily": "JetBrains Mono",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
                     },
                     {
                       "type": "text",
-                      "id": "HCEWp",
-                      "name": "summary-amount",
-                      "fill": "$text-primary",
-                      "content": "$1.84",
-                      "fontFamily": "JetBrains Mono",
+                      "id": "x7Dpd1",
+                      "name": "spend-source",
+                      "fill": "$text-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "使用：Claude（你的金鑰） · 語音辨識：OpenAI（你的金鑰）",
+                      "fontFamily": "Noto Sans TC",
                       "fontSize": 12,
-                      "fontWeight": "600"
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -155824,7 +155868,7 @@
           "type": "frame",
           "id": "ckLed",
           "x": 240,
-          "y": 50,
+          "y": 41,
           "name": "gen-dialog",
           "width": 960,
           "fill": "$bg-secondary",
@@ -155912,30 +155956,52 @@
               "children": [
                 {
                   "type": "frame",
-                  "id": "sfG9B",
-                  "name": "summary-bar",
-                  "gap": 6,
-                  "alignItems": "center",
+                  "id": "gVxSy",
+                  "name": "summary-block",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
                   "children": [
                     {
-                      "type": "text",
-                      "id": "v3zRNS",
-                      "name": "summary-text",
-                      "fill": "$text-secondary",
-                      "content": "候選 142 部 · 已選 96 部 · 預估",
-                      "fontFamily": "Noto Sans TC",
-                      "fontSize": 13,
-                      "fontWeight": "normal"
+                      "type": "frame",
+                      "id": "sfG9B",
+                      "name": "summary-bar",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "v3zRNS",
+                          "name": "summary-text",
+                          "fill": "$text-secondary",
+                          "content": "候選 142 部 · 已選 96 部 · 預估",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "h8P1C9",
+                          "name": "summary-amount",
+                          "fill": "$warning",
+                          "content": "$25.80",
+                          "fontFamily": "JetBrains Mono",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
                     },
                     {
                       "type": "text",
-                      "id": "h8P1C9",
-                      "name": "summary-amount",
-                      "fill": "$warning",
-                      "content": "$25.80",
-                      "fontFamily": "JetBrains Mono",
-                      "fontSize": 13,
-                      "fontWeight": "600"
+                      "id": "AGi0P",
+                      "name": "spend-source",
+                      "fill": "$text-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "使用：Claude（你的金鑰） · 語音辨識：OpenAI（你的金鑰）",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -156436,8 +156502,49 @@
                     },
                     {
                       "type": "frame",
+                      "id": "iQY76",
+                      "name": "budget-cut",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "padding": [
+                        4,
+                        0
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "mTXmS",
+                          "name": "rule-left",
+                          "fill": "$warning",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "type": "text",
+                          "id": "lQGAX",
+                          "name": "cut-label",
+                          "fill": "$warning",
+                          "content": "到此為止約 $5.00，之後的項目會暫停",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "RlUZZ",
+                          "name": "rule-right",
+                          "fill": "$warning",
+                          "width": "fill_container",
+                          "height": 1
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
                       "id": "t20SOB",
                       "name": "row-教父",
+                      "opacity": 0.6,
                       "width": "fill_container",
                       "cornerRadius": "$radius-md",
                       "stroke": "$border-subtle",
@@ -156547,6 +156654,7 @@
                       "type": "frame",
                       "id": "FPqBM",
                       "name": "row-星際效應",
+                      "opacity": 0.6,
                       "width": "fill_container",
                       "cornerRadius": "$radius-md",
                       "stroke": "$border-subtle",
@@ -156696,7 +156804,7 @@
                   "fill": "$text-primary",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "預估 $25.80 已超過上限 $5.00 —— 預計可完成約 18 部後暫停，其餘保留在佇列，可提高上限或稍後續跑。",
+                  "content": "預估 $25.80 已超過上限 $5.00 —— 預計可完成約 18 部後暫停（清單中已標示），其餘保留在佇列，可提高上限或稍後續跑。",
                   "lineHeight": 1.5,
                   "fontFamily": "Noto Sans TC",
                   "fontSize": 13,
@@ -171969,6 +172077,309 @@
       "fontFamily": "Noto Sans TC",
       "fontSize": 14,
       "fontWeight": "600"
+    },
+    {
+      "type": "text",
+      "id": "J2Ip18",
+      "x": 64670,
+      "y": -5791,
+      "name": "cap-F18-SPEC-ERR",
+      "fill": "#888888",
+      "content": "F18 規格 · 開始失敗時訊息的位置",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 14,
+      "fontWeight": "600"
+    },
+    {
+      "type": "frame",
+      "id": "VPT7l",
+      "x": 64670,
+      "y": -5746,
+      "name": "f18-spec-err",
+      "clip": true,
+      "width": 720,
+      "fill": "$bg-secondary",
+      "cornerRadius": "$radius-lg",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "phN4Y",
+          "name": "list-tail",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 6,
+          "padding": [
+            16,
+            24
+          ],
+          "children": [
+            {
+              "type": "text",
+              "id": "FmhIP",
+              "name": "tail-hint",
+              "fill": "$text-muted",
+              "content": "⋮ 候選清單（可捲動）",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "uVll5",
+              "name": "tail-note",
+              "fill": "$text-muted",
+              "content": "金額為預估值，實際費用依內容長度而定。",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "oQopG",
+          "name": "limit-warning",
+          "width": "fill_container",
+          "fill": "$warning-tint",
+          "gap": 8,
+          "padding": [
+            10,
+            24
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "wgeTt",
+              "name": "warn-icon",
+              "width": 16,
+              "height": 16,
+              "icon": "triangle-alert",
+              "library": "lucide",
+              "fill": "$warning"
+            },
+            {
+              "type": "text",
+              "id": "yvHC4",
+              "name": "warn-text",
+              "fill": "$text-primary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "預估 $25.80 已超過上限 $5.00 —— 預計可完成約 18 部後暫停（清單中已標示），其餘保留在佇列，可提高上限或稍後續跑。",
+              "lineHeight": 1.5,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "TBbai",
+          "name": "start-error-wrap",
+          "width": "fill_container",
+          "fill": "#00000000",
+          "padding": [
+            8,
+            24
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "C2mDb",
+              "name": "start-error",
+              "width": "fill_container",
+              "fill": "$error-tint",
+              "cornerRadius": "$radius-md",
+              "gap": 8,
+              "padding": [
+                10,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "bA4UX",
+                  "name": "err-icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "circle-alert",
+                  "library": "lucide",
+                  "fill": "$error"
+                },
+                {
+                  "type": "text",
+                  "id": "Wuju3",
+                  "name": "err-text",
+                  "fill": "$error-text",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "無法開始：伺服器沒有回應（502）。請稍後再試。",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "sTmub",
+          "name": "footer",
+          "width": "fill_container",
+          "fill": "$bg-secondary",
+          "stroke": "$border-subtle",
+          "strokeWidth": {
+            "top": 1
+          },
+          "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
+          "padding": [
+            14,
+            24
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "bIwP7",
+              "name": "ft-left",
+              "layout": "vertical",
+              "gap": 3,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "eAFT6",
+                  "name": "ft-selected",
+                  "gap": 6,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "PmGcP",
+                      "name": "ft-sel-text",
+                      "fill": "$text-primary",
+                      "content": "已選 96 部 · 預估",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "q2u5L",
+                      "name": "ft-sel-amount",
+                      "fill": "$warning",
+                      "content": "$25.80",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "G2D3JO",
+                  "name": "ft-breakdown",
+                  "fill": "$text-muted",
+                  "content": "抽取 0 部 $0.00 · 語音辨識 96 部 $25.80",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "gqeeE",
+              "name": "ft-budget",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "kwn1K",
+                  "name": "budget-row",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "T70gEH",
+                      "name": "budget-label",
+                      "fill": "$text-secondary",
+                      "content": "預算上限",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "r33uyv",
+                      "name": "budget-input",
+                      "width": 96,
+                      "height": 36,
+                      "fill": "$bg-primary",
+                      "cornerRadius": "$radius-md",
+                      "stroke": "$warning",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "sMax0",
+                          "name": "budget-value",
+                          "fill": "$text-primary",
+                          "content": "$5.00",
+                          "fontFamily": "JetBrains Mono",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "W30ju5",
+              "type": "ref",
+              "ref": "otvKh",
+              "name": "btn-start",
+              "height": 44,
+              "descendants": {
+                "DaLcd": {
+                  "content": "開始產生（將於上限暫停）",
+                  "fontFamily": "Noto Sans TC"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "dufQr",
+      "x": 65430,
+      "y": -5746,
+      "name": "spec-note",
+      "fill": "#888888",
+      "textGrowth": "fixed-width",
+      "width": 300,
+      "content": "順序固定：超支橫幅 → 失敗訊息 → 頁尾。三者都在捲動區之外，所以 2,400 列的片庫按下開始失敗時，訊息就在按鈕正上方，而不是四十個螢幕以下。失敗訊息帶 role=\"alert\"，會被螢幕閱讀器主動朗讀。",
+      "lineHeight": 1.6,
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 12,
+      "fontWeight": "normal"
     }
   ],
   "variables": {
