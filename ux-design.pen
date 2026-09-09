@@ -150406,6 +150406,69 @@
                 },
                 {
                   "type": "frame",
+                  "id": "UmqHL",
+                  "name": "search-sort-row",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "g6z5aY",
+                      "type": "ref",
+                      "ref": "6MxLT",
+                      "name": "search-input",
+                      "width": "fill_container",
+                      "height": 44,
+                      "descendants": {
+                        "iLI6G": {
+                          "content": "搜尋片名或影集",
+                          "fill": "$text-muted",
+                          "fontFamily": "Noto Sans TC"
+                        }
+                      }
+                    },
+                    {
+                      "id": "ky1ns",
+                      "type": "ref",
+                      "ref": "955EZ",
+                      "name": "sort-select",
+                      "height": 44,
+                      "descendants": {
+                        "iEyRL": {
+                          "type": "frame",
+                          "id": "i7zZpK",
+                          "name": "label-wrap",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "uDoKw",
+                              "name": "sort-icon",
+                              "width": 14,
+                              "height": 14,
+                              "icon": "arrow-up-down",
+                              "library": "lucide",
+                              "fill": "$text-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "lJppJ",
+                              "name": "label",
+                              "fill": "$text-secondary",
+                              "content": "群組",
+                              "fontFamily": "Noto Sans TC",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "NiXrE",
                   "name": "route-chips",
                   "gap": 8,
@@ -150572,6 +150635,93 @@
                   "layout": "vertical",
                   "gap": 8,
                   "children": [
+                    {
+                      "type": "frame",
+                      "id": "LupMK",
+                      "name": "movies-matched-header",
+                      "width": "fill_container",
+                      "fill": "$bg-tertiary",
+                      "cornerRadius": "$radius-md",
+                      "gap": 10,
+                      "padding": [
+                        8,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "nZUO5",
+                          "type": "ref",
+                          "ref": "NfHDL",
+                          "name": "cb-半選"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "Ok7F8",
+                          "name": "disclosure",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "chevron-down",
+                          "library": "lucide",
+                          "fill": "$text-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "DKr3p",
+                          "name": "group-title",
+                          "fill": "$text-primary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "已匹配",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "skBFs",
+                          "name": "right",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Jo8Lz",
+                              "name": "route-badge-asr",
+                              "fill": "$success-tint",
+                              "cornerRadius": "$radius-sm",
+                              "padding": [
+                                2,
+                                6
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "jThqD",
+                                  "name": "badge-lbl",
+                                  "fill": "$success",
+                                  "content": "抽取 2",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "y0GMzT",
+                              "name": "group-selected",
+                              "fill": "$text-muted",
+                              "content": "已選 1/3 · $0.05",
+                              "fontFamily": "JetBrains Mono",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
                     {
                       "type": "frame",
                       "id": "u4sSoJ",
@@ -150814,179 +150964,6 @@
                     },
                     {
                       "type": "frame",
-                      "id": "o7L2K",
-                      "name": "group-header-怪奇物語S4",
-                      "width": "fill_container",
-                      "fill": "$bg-tertiary",
-                      "cornerRadius": "$radius-md",
-                      "gap": 10,
-                      "padding": [
-                        8,
-                        12
-                      ],
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "id": "ALgnj",
-                          "type": "ref",
-                          "ref": "NfHDL",
-                          "name": "cb-半選"
-                        },
-                        {
-                          "type": "text",
-                          "id": "yQgKh",
-                          "name": "group-title",
-                          "fill": "$text-primary",
-                          "textGrowth": "fixed-width",
-                          "width": "fill_container",
-                          "content": "怪奇物語 · 第 4 季",
-                          "fontFamily": "Noto Sans TC",
-                          "fontSize": 14,
-                          "fontWeight": "600"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "rg04P",
-                          "name": "right",
-                          "gap": 10,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "i1GmG",
-                              "name": "group-selected",
-                              "fill": "$text-muted",
-                              "content": "已選 3/9 · $0.78",
-                              "fontFamily": "JetBrains Mono",
-                              "fontSize": 12,
-                              "fontWeight": "normal"
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "Jht9P",
-                      "name": "row-怪奇物語 S4E7",
-                      "width": "fill_container",
-                      "cornerRadius": "$radius-md",
-                      "stroke": "$border-subtle",
-                      "strokeWidth": 1,
-                      "strokeAlignment": "inner",
-                      "gap": 12,
-                      "padding": [
-                        10,
-                        12
-                      ],
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "id": "tVY8k",
-                          "type": "ref",
-                          "ref": "4EHFN",
-                          "name": "cb"
-                        },
-                        {
-                          "type": "rectangle",
-                          "cornerRadius": "$radius-sm",
-                          "id": "tRzQK",
-                          "name": "poster",
-                          "metadata": {
-                            "type": "unsplash",
-                            "username": "jpvalery",
-                            "link": "https://unsplash.com/@jpvalery",
-                            "author": "Jp Valery"
-                          },
-                          "fill": {
-                            "type": "image",
-                            "enabled": true,
-                            "url": "https://images.unsplash.com/photo-1531257114315-24a694751517?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3ODg2MjY2NzB8&ixlib=rb-4.1.0&q=80&w=1080",
-                            "mode": "fill"
-                          },
-                          "width": 38,
-                          "height": 54
-                        },
-                        {
-                          "type": "frame",
-                          "id": "RhEcg",
-                          "name": "textcol",
-                          "width": "fill_container",
-                          "layout": "vertical",
-                          "gap": 3,
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "b327a",
-                              "name": "title",
-                              "fill": "$text-primary",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container",
-                              "content": "怪奇物語 S4E7",
-                              "fontFamily": "Noto Sans TC",
-                              "fontSize": 15,
-                              "fontWeight": "600"
-                            },
-                            {
-                              "type": "text",
-                              "id": "KxRtV",
-                              "name": "sub",
-                              "fill": "$text-muted",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container",
-                              "content": "無文字字幕軌 → 語音辨識 + 翻譯 · 1 小時 38 分",
-                              "fontFamily": "Noto Sans TC",
-                              "fontSize": 12,
-                              "fontWeight": "normal"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "R1kI0H",
-                          "name": "right",
-                          "gap": 10,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "frame",
-                              "id": "w9oXL",
-                              "name": "route-badge",
-                              "fill": "$warning-tint",
-                              "cornerRadius": 100,
-                              "padding": [
-                                4,
-                                10
-                              ],
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "UpLI6",
-                                  "name": "badge-lbl",
-                                  "fill": "$warning",
-                                  "content": "語音辨識",
-                                  "fontFamily": "Noto Sans TC",
-                                  "fontSize": 11,
-                                  "fontWeight": "600"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "text",
-                              "id": "JC0DT",
-                              "name": "amount",
-                              "fill": "$warning",
-                              "content": "$0.26",
-                              "fontFamily": "JetBrains Mono",
-                              "fontSize": 13,
-                              "fontWeight": "600"
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
                       "id": "S3aO4",
                       "name": "row-全面啟動",
                       "opacity": 0.7,
@@ -151125,6 +151102,93 @@
                               "fontFamily": "JetBrains Mono",
                               "fontSize": 13,
                               "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Fmsn2",
+                      "name": "movies-unmatched-header",
+                      "width": "fill_container",
+                      "fill": "$bg-tertiary",
+                      "cornerRadius": "$radius-md",
+                      "gap": 10,
+                      "padding": [
+                        8,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "f5TEf",
+                          "type": "ref",
+                          "ref": "Wd9AL",
+                          "name": "cb-未選"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "keGQc",
+                          "name": "disclosure",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "chevron-down",
+                          "library": "lucide",
+                          "fill": "$text-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "EGhCw",
+                          "name": "group-title",
+                          "fill": "$text-primary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "未匹配",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "fION8",
+                          "name": "right",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "H38QvC",
+                              "name": "route-badge-asr",
+                              "fill": "$warning-tint",
+                              "cornerRadius": "$radius-sm",
+                              "padding": [
+                                2,
+                                6
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "dGtVy",
+                                  "name": "badge-lbl",
+                                  "fill": "$warning",
+                                  "content": "語音辨識 1",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "bjP6Y",
+                              "name": "group-selected",
+                              "fill": "$text-muted",
+                              "content": "已選 0/1 · $0.00",
+                              "fontFamily": "JetBrains Mono",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
                             }
                           ]
                         }
@@ -151284,6 +151348,216 @@
                           ]
                         }
                       ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "o7L2K",
+                      "name": "group-header-怪奇物語S4",
+                      "width": "fill_container",
+                      "fill": "$bg-tertiary",
+                      "cornerRadius": "$radius-md",
+                      "gap": 10,
+                      "padding": [
+                        8,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "ALgnj",
+                          "type": "ref",
+                          "ref": "NfHDL",
+                          "name": "cb-半選"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "u7dMde",
+                          "name": "disclosure",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "chevron-right",
+                          "library": "lucide",
+                          "fill": "$text-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "yQgKh",
+                          "name": "group-title",
+                          "fill": "$text-primary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "怪奇物語 · 第 4 季",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "rg04P",
+                          "name": "right",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Sfdxh",
+                              "name": "route-badge-asr",
+                              "fill": "$warning-tint",
+                              "cornerRadius": "$radius-sm",
+                              "padding": [
+                                2,
+                                6
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "iEIES",
+                                  "name": "badge-lbl",
+                                  "fill": "$warning",
+                                  "content": "語音辨識 9",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "i1GmG",
+                              "name": "group-selected",
+                              "fill": "$text-muted",
+                              "content": "已選 3/9 · $0.78",
+                              "fontFamily": "JetBrains Mono",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Jht9P",
+                      "x": 0,
+                      "y": 208,
+                      "name": "row-怪奇物語 S4E7",
+                      "enabled": false,
+                      "width": "fill_container(912)",
+                      "cornerRadius": "$radius-md",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 12,
+                      "padding": [
+                        10,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "tVY8k",
+                          "type": "ref",
+                          "ref": "4EHFN",
+                          "name": "cb"
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": "$radius-sm",
+                          "id": "tRzQK",
+                          "name": "poster",
+                          "metadata": {
+                            "type": "unsplash",
+                            "username": "jpvalery",
+                            "link": "https://unsplash.com/@jpvalery",
+                            "author": "Jp Valery"
+                          },
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "https://images.unsplash.com/photo-1531257114315-24a694751517?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3ODg2MjY2NzB8&ixlib=rb-4.1.0&q=80&w=1080",
+                            "mode": "fill"
+                          },
+                          "width": 38,
+                          "height": 54
+                        },
+                        {
+                          "type": "frame",
+                          "id": "RhEcg",
+                          "name": "textcol",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 3,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "b327a",
+                              "name": "title",
+                              "fill": "$text-primary",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "怪奇物語 S4E7",
+                              "fontFamily": "Noto Sans TC",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "KxRtV",
+                              "name": "sub",
+                              "fill": "$text-muted",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "無文字字幕軌 → 語音辨識 + 翻譯 · 1 小時 38 分",
+                              "fontFamily": "Noto Sans TC",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "R1kI0H",
+                          "name": "right",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "w9oXL",
+                              "name": "route-badge",
+                              "fill": "$warning-tint",
+                              "cornerRadius": 100,
+                              "padding": [
+                                4,
+                                10
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "UpLI6",
+                                  "name": "badge-lbl",
+                                  "fill": "$warning",
+                                  "content": "語音辨識",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 11,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "JC0DT",
+                              "name": "amount",
+                              "fill": "$warning",
+                              "content": "$0.26",
+                              "fontFamily": "JetBrains Mono",
+                              "fontSize": 13,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
                     }
                   ]
                 },
@@ -151302,7 +151576,7 @@
                   "id": "UF8ic",
                   "name": "group-note",
                   "fill": "$text-muted",
-                  "content": "群組 checkbox 為三態：未選／半選（部分選取）／全選。",
+                  "content": "群組 checkbox 為三態；影集預設收合，搜尋命中時自動展開。",
                   "fontFamily": "Noto Sans TC",
                   "fontSize": 12,
                   "fontWeight": "normal"
@@ -152874,6 +153148,70 @@
                 },
                 {
                   "type": "frame",
+                  "id": "NA5iH",
+                  "name": "search-sort-row",
+                  "width": "fill_container",
+                  "height": 44,
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "kQzJQ",
+                      "type": "ref",
+                      "ref": "6MxLT",
+                      "name": "search-input",
+                      "width": "fill_container",
+                      "height": 44,
+                      "descendants": {
+                        "iLI6G": {
+                          "content": "搜尋片名或影集",
+                          "fill": "$text-muted",
+                          "fontFamily": "Noto Sans TC"
+                        }
+                      }
+                    },
+                    {
+                      "id": "dTpL6",
+                      "type": "ref",
+                      "ref": "955EZ",
+                      "name": "sort-select",
+                      "height": 44,
+                      "descendants": {
+                        "iEyRL": {
+                          "type": "frame",
+                          "id": "ZZFlB",
+                          "name": "label-wrap",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "DhAd7",
+                              "name": "sort-icon",
+                              "width": 14,
+                              "height": 14,
+                              "icon": "arrow-up-down",
+                              "library": "lucide",
+                              "fill": "$text-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "v05oXD",
+                              "name": "label",
+                              "fill": "$text-secondary",
+                              "content": "群組",
+                              "fontFamily": "Noto Sans TC",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "dfupi",
                   "name": "chips-scroll",
                   "clip": true,
@@ -153170,159 +153508,6 @@
                 },
                 {
                   "type": "frame",
-                  "id": "zjghQ",
-                  "name": "group-header-怪奇物語S4",
-                  "width": "fill_container",
-                  "fill": "$bg-tertiary",
-                  "cornerRadius": "$radius-md",
-                  "gap": 10,
-                  "padding": [
-                    8,
-                    12
-                  ],
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "id": "U40HRZ",
-                      "type": "ref",
-                      "ref": "NfHDL",
-                      "name": "cb-半選"
-                    },
-                    {
-                      "type": "text",
-                      "id": "Vj22Z",
-                      "name": "group-title",
-                      "fill": "$text-primary",
-                      "textGrowth": "fixed-width",
-                      "width": "fill_container",
-                      "content": "怪奇物語 · 第 4 季",
-                      "fontFamily": "Noto Sans TC",
-                      "fontSize": 14,
-                      "fontWeight": "600"
-                    },
-                    {
-                      "type": "text",
-                      "id": "WV3d2",
-                      "name": "group-selected",
-                      "fill": "$text-muted",
-                      "content": "已選 3/9 · $0.78",
-                      "fontFamily": "JetBrains Mono",
-                      "fontSize": 12,
-                      "fontWeight": "normal"
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "m7KcM",
-                  "name": "row-怪奇物語 S4E7",
-                  "width": "fill_container",
-                  "cornerRadius": "$radius-md",
-                  "stroke": "$border-subtle",
-                  "strokeWidth": 1,
-                  "strokeAlignment": "inner",
-                  "gap": 10,
-                  "padding": [
-                    10,
-                    12
-                  ],
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "id": "l9Ldh",
-                      "type": "ref",
-                      "ref": "4EHFN",
-                      "name": "cb"
-                    },
-                    {
-                      "type": "rectangle",
-                      "cornerRadius": "$radius-sm",
-                      "id": "K6497",
-                      "name": "poster",
-                      "fill": {
-                        "type": "image",
-                        "enabled": true,
-                        "url": "https://images.unsplash.com/photo-1531257114315-24a694751517?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3ODg2MjY2NzB8&ixlib=rb-4.1.0&q=80&w=1080",
-                        "mode": "fill"
-                      },
-                      "width": 38,
-                      "height": 54
-                    },
-                    {
-                      "type": "frame",
-                      "id": "SSh5C",
-                      "name": "textcol",
-                      "width": "fill_container",
-                      "layout": "vertical",
-                      "gap": 4,
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "N6wk98",
-                          "name": "line1",
-                          "width": "fill_container",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "frame",
-                              "id": "I1Mmpt",
-                              "name": "ident",
-                              "width": "fill_container",
-                              "gap": 6,
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "jzp4b",
-                                  "name": "title",
-                                  "fill": "$text-primary",
-                                  "content": "怪奇物語 S4E7",
-                                  "fontFamily": "Noto Sans TC",
-                                  "fontSize": 14,
-                                  "fontWeight": "600"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "eNxAL",
-                              "name": "meta",
-                              "gap": 8,
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "KqvH1",
-                                  "name": "amount",
-                                  "fill": "$warning",
-                                  "content": "$0.26",
-                                  "fontFamily": "JetBrains Mono",
-                                  "fontSize": 12,
-                                  "fontWeight": "600"
-                                }
-                              ]
-                            }
-                          ]
-                        },
-                        {
-                          "type": "text",
-                          "id": "OaCVe",
-                          "name": "sub",
-                          "fill": "$text-muted",
-                          "textGrowth": "fixed-width",
-                          "width": "fill_container",
-                          "content": "無文字字幕軌 → 語音辨識 + 翻譯 · 1 小時 38 分",
-                          "fontFamily": "Noto Sans TC",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
                   "id": "eODso",
                   "name": "row-全面啟動",
                   "opacity": 0.7,
@@ -153589,6 +153774,196 @@
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "無文字字幕軌 → 語音辨識 + 翻譯 · 片長未知（估 45 分）",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "zjghQ",
+                  "name": "group-header-怪奇物語S4",
+                  "width": "fill_container",
+                  "fill": "$bg-tertiary",
+                  "cornerRadius": "$radius-md",
+                  "gap": 8,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "U40HRZ",
+                      "type": "ref",
+                      "ref": "NfHDL",
+                      "name": "cb-半選"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "OPqhZ",
+                      "name": "disclosure",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "chevron-right",
+                      "library": "lucide",
+                      "fill": "$text-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Vj22Z",
+                      "name": "group-title",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "怪奇物語 · 第 4 季",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "dYPUR",
+                      "name": "route-badge-asr",
+                      "fill": "$warning-tint",
+                      "cornerRadius": "$radius-sm",
+                      "padding": [
+                        2,
+                        6
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "W2O3XL",
+                          "name": "badge-lbl",
+                          "fill": "$warning",
+                          "content": "語音辨識 9",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "WV3d2",
+                      "name": "group-selected",
+                      "fill": "$text-muted",
+                      "content": "已選 3/9 · $0.78",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "m7KcM",
+                  "x": 16,
+                  "y": 146,
+                  "name": "row-怪奇物語 S4E7",
+                  "enabled": false,
+                  "width": "fill_container(358)",
+                  "cornerRadius": "$radius-md",
+                  "stroke": "$border-subtle",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "l9Ldh",
+                      "type": "ref",
+                      "ref": "4EHFN",
+                      "name": "cb"
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": "$radius-sm",
+                      "id": "K6497",
+                      "name": "poster",
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "https://images.unsplash.com/photo-1531257114315-24a694751517?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3ODg2MjY2NzB8&ixlib=rb-4.1.0&q=80&w=1080",
+                        "mode": "fill"
+                      },
+                      "width": 38,
+                      "height": 54
+                    },
+                    {
+                      "type": "frame",
+                      "id": "SSh5C",
+                      "name": "textcol",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "N6wk98",
+                          "name": "line1",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "I1Mmpt",
+                              "name": "ident",
+                              "width": "fill_container",
+                              "gap": 6,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "jzp4b",
+                                  "name": "title",
+                                  "fill": "$text-primary",
+                                  "content": "怪奇物語 S4E7",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "eNxAL",
+                              "name": "meta",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "KqvH1",
+                                  "name": "amount",
+                                  "fill": "$warning",
+                                  "content": "$0.26",
+                                  "fontFamily": "JetBrains Mono",
+                                  "fontSize": 12,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "OaCVe",
+                          "name": "sub",
+                          "fill": "$text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "無文字字幕軌 → 語音辨識 + 翻譯 · 1 小時 38 分",
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 12,
                           "fontWeight": "normal"

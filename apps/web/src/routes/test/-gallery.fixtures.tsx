@@ -489,10 +489,22 @@ const CONSENT_FIXTURE_CANDIDATES: GenerationCandidate[] = [
   },
 ];
 
+/** F18's rows. Four, not five — see the fixture for why. */
+const CONSENT_OVER_BUDGET_CANDIDATES = CONSENT_FIXTURE_CANDIDATES.slice(0, 4);
+
 // bugfix-f15-row-mobile-identity-collapse: the four rows F15-M-v2 (fdu4y)
 // draws — a plain extract row, a grouped episode, an unwritable folder and an
 // unmatched unknown-runtime file — so the 390px fixture shows every piece the
 // phone row has to fit (cost on the title line, no kind badge, wrapping subtitle).
+//
+// sub-6-11 SPLIT THESE FOUR ACROSS TWO FIXTURES. The search+sort row and the
+// movies 已匹配/未匹配 headers pushed the single fixture to 920px, and the
+// visual project's viewport is 1280x800: once the captured element is taller
+// than the viewport the gallery page itself scrolls, the app shell's sticky
+// header slides over the top of the fixture, and where it lands is not
+// reproducible between two runs (CI bootstrap 2026-09-09 measured a 1% diff
+// concentrated entirely in that overlap strip). Both halves below stay under
+// 800px, and between them they still draw all four row shapes.
 const CONSENT_MOBILE_SERIES_ID = 'c2d3e4f5-a6b7-4c8d-9e0f-1a2b3c4d5e6f';
 const CONSENT_MOBILE_CANDIDATES: GenerationCandidate[] = [
   CONSENT_FIXTURE_CANDIDATES[0],
@@ -536,6 +548,13 @@ const CONSENT_MOBILE_CANDIDATES: GenerationCandidate[] = [
     estimatedUsd: 0.24,
   },
 ];
+
+/** Rows 0+2: the plain extract row and the unwritable folder. No tmdb_matched on
+ *  either, so the movies block stays unsplit — a header-less list of row shapes. */
+const CONSENT_MOBILE_ROWS = [CONSENT_MOBILE_CANDIDATES[0], CONSENT_MOBILE_CANDIDATES[2]];
+/** Rows 1+3: the grouped episode (series header, collapsed) and the unmatched
+ *  unknown-runtime file (which splits the movies block, so both new headers draw). */
+const CONSENT_MOBILE_GROUPS = [CONSENT_MOBILE_CANDIDATES[1], CONSENT_MOBILE_CANDIDATES[3]];
 
 // sub-5-3: grouped F15 — one movie + a two-season series (incl. S00 特別篇).
 const CONSENT_GROUPED_SERIES_ID = 'b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e';
@@ -585,6 +604,53 @@ const CONSENT_GROUPED_SELECTED = new Set([
   '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51',
   '9a0bfe08-1acd-4f9e-9fed-a7c8d9e0f302',
 ]);
+
+// sub-6-11: the operability set — two MATCHED films, one UNMATCHED film (so the
+// movies block splits in two) and the two-season series (so there is something
+// to collapse and something for a search to hit). One dataset drives all three
+// new fixtures, so the three screenshots differ only by the state under test.
+const CONSENT_OPERABILITY_CANDIDATES: GenerationCandidate[] = [
+  { ...CONSENT_FIXTURE_CANDIDATES[0], tmdbMatched: true },
+  { ...CONSENT_FIXTURE_CANDIDATES[1], tmdbMatched: true },
+  {
+    mediaId: '7d1e9f04-2b3c-4d5e-8f90-a1b2c3d4e5f7',
+    mediaType: 'movie',
+    title: 'Interstellar.2014.2160p.BluRay.REMUX.HEVC.DTS-HD.MA.5.1-FraMeSToR',
+    displayTitle: 'Interstellar (2014)',
+    tmdbMatched: false,
+    route: 'asr',
+    runtimeMinutes: 169,
+    runtimeKnown: true,
+    estimatedUsd: 0.26,
+  },
+  ...CONSENT_GROUPED_CANDIDATES.slice(1),
+];
+const CONSENT_OPERABILITY_SELECTED = new Set([
+  '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51',
+  '9a0bfe08-1acd-4f9e-9fed-a7c8d9e0f302',
+]);
+const consentOperabilityProps = (overrides: Record<string, unknown>): Record<string, unknown> => ({
+  candidates: CONSENT_OPERABILITY_CANDIDATES,
+  selectedIds: CONSENT_OPERABILITY_SELECTED,
+  filter: 'all',
+  totals: computeTotals(CONSENT_OPERABILITY_CANDIDATES, CONSENT_OPERABILITY_SELECTED, 5),
+  budgetText: '5.00',
+  budgetUsd: 5,
+  onToggle: noop,
+  onToggleGroup: noop,
+  onToggleAll: noop,
+  onSelectAllExtract: noop,
+  onClearSelection: noop,
+  onFilterChange: noop,
+  onBudgetTextChange: noop,
+  onStartClick: noop,
+  search: '',
+  searchQuery: '',
+  sort: 'group',
+  onSearchChange: noop,
+  onSortChange: noop,
+  ...overrides,
+});
 
 export const GALLERY_FIXTURES: GalleryFixture[] = [
   // ----- ui/ -----
@@ -4031,6 +4097,11 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       onFilterChange: noop,
       onBudgetTextChange: noop,
       onStartClick: noop,
+      search: '',
+      searchQuery: '',
+      sort: 'group',
+      onSearchChange: noop,
+      onSortChange: noop,
     },
     width: 900,
     penNode: 'screen-section', // Screen F15-D-v2 (pwMzT) · F15-M-v2 (fdu4y)
@@ -4042,15 +4113,12 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       'subtitle/consent/CandidateListPanel (F15-M 手機寬 390 — 金額上移到片名列、路線徽章收起、副標換行)',
     component: CandidateListPanel,
     props: {
-      candidates: CONSENT_MOBILE_CANDIDATES,
-      selectedIds: new Set([
-        '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51',
-        '5a9d3e2b-6c7f-4d8e-9f0a-1b2c3d4e5f61',
-      ]),
+      candidates: CONSENT_MOBILE_ROWS,
+      selectedIds: new Set(['4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51']),
       filter: 'all',
       totals: computeTotals(
-        CONSENT_MOBILE_CANDIDATES,
-        new Set(['4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51', '5a9d3e2b-6c7f-4d8e-9f0a-1b2c3d4e5f61']),
+        CONSENT_MOBILE_ROWS,
+        new Set(['4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51']),
         5
       ),
       budgetText: '5.00',
@@ -4063,9 +4131,48 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       onFilterChange: noop,
       onBudgetTextChange: noop,
       onStartClick: noop,
+      search: '',
+      searchQuery: '',
+      sort: 'group',
+      onSearchChange: noop,
+      onSortChange: noop,
     },
     // 390 = the phone the drawing is for; the host sheet is w-full there and the
     // body's p-6 leaves the list 342px — below the row's 36rem re-flow point.
+    width: 390,
+    penNode: 'screen-section', // Screen F15-M-v2 (fdu4y)
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-consent/list-mobile-groups',
+    label:
+      'subtitle/consent/CandidateListPanel (F15-M 手機寬 390 — 影集收合標頭、電影已/未匹配分段)',
+    component: CandidateListPanel,
+    props: {
+      candidates: CONSENT_MOBILE_GROUPS,
+      selectedIds: new Set(['5a9d3e2b-6c7f-4d8e-9f0a-1b2c3d4e5f61']),
+      filter: 'all',
+      totals: computeTotals(
+        CONSENT_MOBILE_GROUPS,
+        new Set(['5a9d3e2b-6c7f-4d8e-9f0a-1b2c3d4e5f61']),
+        5
+      ),
+      budgetText: '5.00',
+      budgetUsd: 5,
+      onToggle: noop,
+      onToggleGroup: noop,
+      onToggleAll: noop,
+      onSelectAllExtract: noop,
+      onClearSelection: noop,
+      onFilterChange: noop,
+      onBudgetTextChange: noop,
+      onStartClick: noop,
+      search: '',
+      searchQuery: '',
+      sort: 'group',
+      onSearchChange: noop,
+      onSortChange: noop,
+    },
     width: 390,
     penNode: 'screen-section', // Screen F15-M-v2 (fdu4y)
     statesOnly: ['default'],
@@ -4089,6 +4196,11 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       onFilterChange: noop,
       onBudgetTextChange: noop,
       onStartClick: noop,
+      search: '',
+      searchQuery: '',
+      sort: 'group',
+      onSearchChange: noop,
+      onSortChange: noop,
     },
     width: 900,
     // Design ref: ux-design.pen — no current screen frame; the series/season
@@ -4102,12 +4214,17 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'subtitle/consent/CandidateListPanel (F18 超出上限 — warning banner)',
     component: CandidateListPanel,
     props: {
-      candidates: CONSENT_FIXTURE_CANDIDATES,
-      selectedIds: new Set(CONSENT_FIXTURE_CANDIDATES.map((c) => c.mediaId)),
+      // sub-6-11: four of the five rows. The search+sort row took this fixture
+      // past the 1280x800 capture viewport, and a fixture taller than the
+      // viewport scrolls the gallery page under its own sticky header, which
+      // does not land reproducibly (see CONSENT_MOBILE_ROWS). Four rows still
+      // blow the $0.30 ceiling and still stop the feasible walk at 3.
+      candidates: CONSENT_OVER_BUDGET_CANDIDATES,
+      selectedIds: new Set(CONSENT_OVER_BUDGET_CANDIDATES.map((c) => c.mediaId)),
       filter: 'all',
       totals: computeTotals(
-        CONSENT_FIXTURE_CANDIDATES,
-        new Set(CONSENT_FIXTURE_CANDIDATES.map((c) => c.mediaId)),
+        CONSENT_OVER_BUDGET_CANDIDATES,
+        new Set(CONSENT_OVER_BUDGET_CANDIDATES.map((c) => c.mediaId)),
         0.3
       ),
       budgetText: '0.30',
@@ -4120,9 +4237,50 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       onFilterChange: noop,
       onBudgetTextChange: noop,
       onStartClick: noop,
+      search: '',
+      searchQuery: '',
+      sort: 'group',
+      onSearchChange: noop,
+      onSortChange: noop,
     },
     width: 900,
     penNode: 'screen-section', // Screen F18-D-v2 (zBik1)
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-consent/f15-collapsed',
+    label: 'subtitle/consent/CandidateListPanel (F15 可操作 — 影集預設收合、電影分已/未匹配)',
+    component: CandidateListPanel,
+    props: consentOperabilityProps({}),
+    width: 900,
+    penNode: 'screen-section', // Screen F15-D-v2 (pwMzT)
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-consent/f15-search-hit',
+    label: 'subtitle/consent/CandidateListPanel (F15 搜尋命中 — 命中的群組自動展開)',
+    component: CandidateListPanel,
+    props: consentOperabilityProps({ search: '怪奇', searchQuery: '怪奇' }),
+    width: 900,
+    penNode: 'screen-section', // Screen F15-D-v2 (pwMzT)
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-consent/f15-sorted-cost',
+    label: 'subtitle/consent/CandidateListPanel (F15 依金額高→低 — 平鋪、無群組標頭)',
+    component: CandidateListPanel,
+    // Five of the six rows — same capture-viewport ceiling as over-budget.
+    props: consentOperabilityProps({
+      sort: 'cost-desc',
+      candidates: CONSENT_OPERABILITY_CANDIDATES.slice(0, 5),
+      totals: computeTotals(
+        CONSENT_OPERABILITY_CANDIDATES.slice(0, 5),
+        CONSENT_OPERABILITY_SELECTED,
+        5
+      ),
+    }),
+    width: 900,
+    penNode: 'screen-section', // Screen F15-D-v2 (pwMzT)
     statesOnly: ['default'],
   },
   {

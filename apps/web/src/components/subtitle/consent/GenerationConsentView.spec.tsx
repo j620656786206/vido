@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 
 const h = vi.hoisted(() => ({
   analysisState: {
@@ -731,5 +731,109 @@ describe('GenerationConsentView — error-phase 重試 (pre-existing fix, sub-5-
     fireEvent.click(screen.getByRole('button', { name: '重試' }));
 
     expect(await screen.findByTestId('consent-candidate-list')).toBeInTheDocument();
+  });
+});
+
+// ─── sub-6-11: search debounce and the sort/submission red line ─────────────
+
+describe('GenerationConsentView — search and sort (sub-6-11)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h.models = MODELS;
+    h.modelsError = false;
+    h.analysisState.status = 'idle';
+  });
+
+  it('AC #1 — the list re-filters 200ms after the last keystroke, not on each one', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      mocked.getGenerationCandidates.mockResolvedValue(READY);
+      renderView();
+      await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+
+      fireEvent.change(screen.getByTestId('consent-search-input'), {
+        target: { value: '沙丘' },
+      });
+      // Still the whole list: the debounce has not fired, so the episode row
+      // that does NOT match is deliberately still on screen.
+      expect(screen.getByTestId(`consent-row-${EP}`)).toBeInTheDocument();
+
+      await act(async () => {
+        vi.advanceTimersByTime(200);
+      });
+      expect(screen.queryByTestId(`consent-row-${EP}`)).toBeNull();
+      expect(screen.getByTestId(`consent-row-${A}`)).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('AC #1 — 清除搜尋 puts every row back', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      mocked.getGenerationCandidates.mockResolvedValue(READY);
+      renderView();
+      await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+
+      fireEvent.change(screen.getByTestId('consent-search-input'), {
+        target: { value: '不存在的片' },
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(200);
+      });
+      fireEvent.click(screen.getByTestId('consent-search-empty-clear'));
+      await act(async () => {
+        vi.advanceTimersByTime(200);
+      });
+      expect(screen.getByTestId(`consent-row-${EP}`)).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('AC #2 RED LINE — sorting the view does NOT change the submitted id order', async () => {
+    mocked.getGenerationCandidates.mockResolvedValue(READY);
+    const props = renderView();
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByLabelText('選取 怪奇物語 S04E07'));
+    // Put the dear episode ($0.31) at the TOP of the screen…
+    fireEvent.change(screen.getByTestId('consent-sort-select'), {
+      target: { value: 'cost-desc' },
+    });
+    const drawn = [...screen.getByTestId('consent-candidate-list').children].map((el) =>
+      el.getAttribute('data-testid')
+    );
+    expect(drawn).toEqual([`consent-row-${EP}`, `consent-row-${A}`]);
+
+    fireEvent.click(screen.getByTestId('consent-start-btn'));
+    fireEvent.click(screen.getByTestId('consent-confirm-start'));
+    // …and the batch still goes out in groupOrder. Display is a projection;
+    // the state array is what the pipeline and the budget ceiling walk.
+    expect(props.onStartBatch).toHaveBeenCalledWith([A, EP], 5, 'claude-sonnet-5');
+  });
+
+  it('AC #1 — search does not narrow what is SUBMITTED either', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      mocked.getGenerationCandidates.mockResolvedValue(READY);
+      const props = renderView();
+      await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+      fireEvent.click(screen.getByLabelText('選取 怪奇物語 S04E07'));
+      fireEvent.change(screen.getByTestId('consent-search-input'), {
+        target: { value: '沙丘' },
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(200);
+      });
+      // The episode is off screen but still ticked — a view filter must never
+      // silently drop something the user consented to.
+      expect(screen.queryByTestId(`consent-row-${EP}`)).toBeNull();
+      fireEvent.click(screen.getByTestId('consent-start-btn'));
+      fireEvent.click(screen.getByTestId('consent-confirm-start'));
+      expect(props.onStartBatch).toHaveBeenCalledWith([A, EP], 5, 'claude-sonnet-5');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

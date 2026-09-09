@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { CandidateListPanel, type CandidateListPanelProps } from './CandidateListPanel';
 import { computeTotals } from './consentSelection';
@@ -67,9 +67,26 @@ function renderPanel(overrides?: Partial<CandidateListPanelProps>) {
     onFilterChange: vi.fn(),
     onBudgetTextChange: vi.fn(),
     onStartClick: vi.fn(),
+    search: '',
+    searchQuery: '',
+    sort: 'group',
+    onSearchChange: vi.fn(),
+    onSortChange: vi.fn(),
     ...overrides,
   };
   return { props, ...render(<CandidateListPanel {...props} />) };
+}
+
+/**
+ * Open the series section. sub-6-11 AC #4 made shows COLLAPSED by default, so
+ * every assertion about an episode row or a season header has to open the show
+ * first — exactly what the user does.
+ */
+function expandSeries(seriesId = SRS) {
+  const disclosure = screen.queryByTestId(`consent-group-${seriesId}-disclosure`);
+  if (disclosure && disclosure.getAttribute('aria-expanded') === 'false') {
+    fireEvent.click(disclosure);
+  }
 }
 
 describe('CandidateListPanel (F15/F18)', () => {
@@ -226,7 +243,7 @@ describe('CandidateListPanel — series/season grouping (sub-5-3 AC #2)', () => 
     );
   });
 
-  it('[CR H1] the header reports the SELECTED route composition from computeTotals', () => {
+  it('[CR H1 · sub-6-11 AC #4] the header reports the SECTION route composition, and the subtotal the selection', () => {
     const mixed = [
       seriesEp(S1E1, 1, 1),
       seriesEp(S1E2, 1, 2, { route: 'extract', estimatedUsd: 0.04 }),
@@ -238,19 +255,23 @@ describe('CandidateListPanel — series/season grouping (sub-5-3 AC #2)', () => 
       totals: computeTotals(mixed, new Set([S1E1, S1E2]), 5),
     });
 
+    // 1 extract + 2 asr across the WHOLE show — not the 1+1 that is ticked.
     const routes = screen.getByTestId(`consent-group-${SRS}-routes`);
     expect(routes).toHaveTextContent('抽取 1');
-    expect(routes).toHaveTextContent('語音辨識 1');
+    expect(routes).toHaveTextContent('語音辨識 2');
     expect(screen.getByTestId(`consent-group-${SRS}-selected`)).toHaveTextContent(
       '已選 2/3 · $0.34'
     );
   });
 
-  it('[CR H1] a route badge is omitted when that route has nothing selected', () => {
+  it('[sub-6-11 AC #4] the route composition shows with NOTHING selected — that is when the user needs it', () => {
+    // Pre-sub-6-11 this row was blank until something was ticked, so 「這部劇
+    // 要花錢嗎」 could only be answered after the user had already ticked it.
     renderPanel({ candidates: GROUPED, selectedIds: new Set() });
     const routes = screen.getByTestId(`consent-group-${SRS}-routes`);
+    expect(routes).toHaveTextContent('語音辨識 3');
+    // GROUPED is 100% asr, so the extract badge is still correctly absent.
     expect(routes).not.toHaveTextContent('抽取');
-    expect(routes).not.toHaveTextContent('語音辨識');
   });
 
   it('[CR L5] a group whose every row is filtered out renders no header at all', () => {
@@ -267,6 +288,7 @@ describe('CandidateListPanel — series/season grouping (sub-5-3 AC #2)', () => 
 
   it('season headers appear only for a multi-season show, labelled 第 n 季', () => {
     renderPanel({ candidates: GROUPED, selectedIds: new Set() });
+    expandSeries();
     expect(screen.getByTestId(`consent-season-${SRS}-1`)).toHaveTextContent('第 1 季');
     expect(screen.getByTestId(`consent-season-${SRS}-2`)).toHaveTextContent('第 2 季');
 
@@ -277,6 +299,7 @@ describe('CandidateListPanel — series/season grouping (sub-5-3 AC #2)', () => 
       selectedIds: new Set(),
     });
     expect(screen.getByTestId(`consent-group-${SRS}`)).toBeInTheDocument();
+    expandSeries();
     expect(screen.queryByTestId(`consent-season-${SRS}-1`)).toBeNull();
   });
 
@@ -285,6 +308,7 @@ describe('CandidateListPanel — series/season grouping (sub-5-3 AC #2)', () => 
       candidates: [seriesEp(S1E1, 0, 1), seriesEp(S2E1, 1, 1)],
       selectedIds: new Set(),
     });
+    expandSeries();
     expect(screen.getByTestId(`consent-season-${SRS}-0`)).toHaveTextContent('特別篇');
   });
 
@@ -323,6 +347,7 @@ describe('CandidateListPanel — series/season grouping (sub-5-3 AC #2)', () => 
     const onToggleGroup = vi.fn();
     renderPanel({ candidates: GROUPED, selectedIds: new Set(), onToggleGroup });
 
+    expandSeries();
     fireEvent.click(screen.getByLabelText('選取第 1 季'));
     expect(onToggleGroup).toHaveBeenCalledWith([S1E1, S1E2], true);
   });
@@ -685,5 +710,316 @@ describe('CandidateListPanel — phone-width row (bugfix-f15-row-mobile-identity
     const title = screen.getByText('星際效應');
     expect(title.parentElement).toBe(badge.parentElement);
     expect(title.parentElement).toHaveClass('row-start-1');
+  });
+});
+
+// ─── sub-6-11: search, sort, virtualization, collapse ───────────────────────
+
+describe('CandidateListPanel — search (sub-6-11 AC #1)', () => {
+  it('typing reports up to the container; the panel itself filters on the DEBOUNCED copy', () => {
+    const onSearchChange = vi.fn();
+    // `search` is mid-keystroke, `searchQuery` is what the 200ms debounce has
+    // committed — so the list still shows everything while the user types.
+    renderPanel({ search: '沙', searchQuery: '', onSearchChange });
+    fireEvent.change(screen.getByTestId('consent-search-input'), { target: { value: '沙丘' } });
+    expect(onSearchChange).toHaveBeenCalledWith('沙丘');
+    expect(screen.getByTestId(`consent-row-${B}`)).toBeInTheDocument();
+  });
+
+  it('a committed query narrows the rows and leaves the totals alone', () => {
+    renderPanel({ search: '沙丘', searchQuery: '沙丘' });
+    expect(screen.getByTestId(`consent-row-${A}`)).toBeInTheDocument();
+    expect(screen.queryByTestId(`consent-row-${B}`)).toBeNull();
+    // The summary bar still counts the whole library — search is a VIEW filter.
+    expect(screen.getByTestId('consent-summary-usd')).toHaveTextContent('$0.09');
+    expect(screen.getByTestId('consent-chip-all')).toHaveTextContent('4');
+  });
+
+  it('search multiplies with the route chip rather than replacing it', () => {
+    renderPanel({ search: '電影', searchQuery: '電影', filter: 'extract' });
+    // 未知片長的電影 matches the text but is an ASR row, which the chip hides.
+    expect(screen.queryByTestId(`consent-row-${U}`)).toBeNull();
+    expect(screen.getByTestId('consent-search-empty')).toBeInTheDocument();
+  });
+
+  it('no hit shows 沒有符合的候選 and a way back out', () => {
+    const onSearchChange = vi.fn();
+    renderPanel({ search: '不存在的片', searchQuery: '不存在的片', onSearchChange });
+    expect(screen.getByTestId('consent-search-empty')).toHaveTextContent('沒有符合的候選');
+    fireEvent.click(screen.getByTestId('consent-search-empty-clear'));
+    expect(onSearchChange).toHaveBeenCalledWith('');
+  });
+
+  it('the clear button appears only once there is something to clear', () => {
+    const { rerender, props } = renderPanel({ search: '', searchQuery: '' });
+    expect(screen.queryByTestId('consent-search-clear')).toBeNull();
+    rerender(<CandidateListPanel {...props} search="沙" searchQuery="" />);
+    fireEvent.click(screen.getByTestId('consent-search-clear'));
+    expect(props.onSearchChange).toHaveBeenCalledWith('');
+  });
+
+  it('an empty list with NO search shows no empty state — nothing was searched for', () => {
+    renderPanel({
+      candidates: [],
+      selectedIds: new Set(),
+      totals: computeTotals([], new Set(), 5),
+    });
+    expect(screen.queryByTestId('consent-search-empty')).toBeNull();
+  });
+});
+
+describe('CandidateListPanel — sort (sub-6-11 AC #2)', () => {
+  it('the menu offers the five documented orders and reports a change', () => {
+    const onSortChange = vi.fn();
+    renderPanel({ onSortChange });
+    const select = screen.getByTestId('consent-sort-select') as HTMLSelectElement;
+    expect([...select.options].map((o) => o.value)).toEqual([
+      'group',
+      'cost-desc',
+      'cost-asc',
+      'title-asc',
+      'unmatched-first',
+    ]);
+    fireEvent.change(select, { target: { value: 'cost-desc' } });
+    expect(onSortChange).toHaveBeenCalledWith('cost-desc');
+  });
+
+  it('金額高→低 reorders the DRAWN rows and drops every group header', () => {
+    renderPanel({ candidates: GROUPED, selectedIds: new Set(), sort: 'cost-desc' });
+    expect(screen.queryByTestId(`consent-group-${SRS}`)).toBeNull();
+    const drawn = [...screen.getByTestId('consent-candidate-list').children].map((el) =>
+      el.getAttribute('data-testid')
+    );
+    // The three $0.30 episodes lead (tie broken by submission order); the
+    // $0.05 film that heads the grouped view sinks to the bottom.
+    expect(drawn).toEqual([
+      `consent-row-${S1E1}`,
+      `consent-row-${S1E2}`,
+      `consent-row-${S2E1}`,
+      `consent-row-${A}`,
+    ]);
+  });
+
+  it('the over-budget banner says the N is counted in SUBMISSION order once sorted', () => {
+    const all = new Set(CANDIDATES.map((x) => x.mediaId));
+    renderPanel({
+      selectedIds: all,
+      totals: computeTotals(CANDIDATES, all, 0.3),
+      budgetText: '0.30',
+      budgetUsd: 0.3,
+      sort: 'cost-desc',
+    });
+    expect(screen.getByTestId('consent-feasible-order-note')).toHaveTextContent('依提交順序');
+  });
+
+  it('the note is absent in the default 群組 order, where the two orders agree', () => {
+    const all = new Set(CANDIDATES.map((x) => x.mediaId));
+    renderPanel({
+      selectedIds: all,
+      totals: computeTotals(CANDIDATES, all, 0.3),
+      budgetText: '0.30',
+      budgetUsd: 0.3,
+    });
+    expect(screen.queryByTestId('consent-feasible-order-note')).toBeNull();
+  });
+});
+
+describe('CandidateListPanel — collapse (sub-6-11 AC #4)', () => {
+  it('a show is CLOSED on arrival: header yes, episodes no', () => {
+    renderPanel({ candidates: GROUPED, selectedIds: new Set() });
+    expect(screen.getByTestId(`consent-group-${SRS}`)).toHaveAttribute('data-expanded', 'false');
+    expect(screen.queryByTestId(`consent-row-${S1E1}`)).toBeNull();
+  });
+
+  it('the disclosure opens it, and opening is not the same gesture as ticking it', () => {
+    const onToggleGroup = vi.fn();
+    renderPanel({ candidates: GROUPED, selectedIds: new Set(), onToggleGroup });
+    fireEvent.click(screen.getByTestId(`consent-group-${SRS}-disclosure`));
+    expect(screen.getByTestId(`consent-row-${S1E1}`)).toBeInTheDocument();
+    expect(onToggleGroup).not.toHaveBeenCalled();
+  });
+
+  it('a search opens the show it hit, without the user touching the disclosure', () => {
+    renderPanel({
+      candidates: GROUPED,
+      selectedIds: new Set(),
+      search: '怪奇',
+      searchQuery: '怪奇',
+    });
+    expect(screen.getByTestId(`consent-row-${S1E1}`)).toBeInTheDocument();
+  });
+
+  it('a collapsed header still says what the show would cost, with nothing ticked', () => {
+    renderPanel({ candidates: GROUPED, selectedIds: new Set() });
+    expect(screen.getByTestId(`consent-group-${SRS}-routes`)).toHaveTextContent('語音辨識 3');
+    expect(screen.getByTestId(`consent-group-${SRS}-selected`)).toHaveTextContent('已選 0/3');
+  });
+
+  it('movies split into 已匹配 / 未匹配, matched first, both collapsible', () => {
+    const split = [
+      { ...CANDIDATES[0], tmdbMatched: true },
+      { ...CANDIDATES[1], tmdbMatched: false },
+    ];
+    renderPanel({
+      candidates: split,
+      selectedIds: new Set(),
+      totals: computeTotals(split, new Set(), 5),
+    });
+    const list = screen.getByTestId('consent-candidate-list');
+    const drawn = [...list.children].map((el) => el.getAttribute('data-testid'));
+    expect(drawn).toEqual([
+      'consent-movies-matched',
+      `consent-row-${A}`,
+      'consent-movies-unmatched',
+      `consent-row-${B}`,
+    ]);
+
+    fireEvent.click(screen.getByTestId('consent-movies-unmatched-disclosure'));
+    expect(screen.queryByTestId(`consent-row-${B}`)).toBeNull();
+    expect(screen.getByTestId(`consent-row-${A}`)).toBeInTheDocument();
+  });
+
+  it('an all-matched library keeps the flat, header-less list it shipped with', () => {
+    renderPanel({ candidates: CANDIDATES.map((x) => ({ ...x, tmdbMatched: true })) });
+    expect(screen.queryByTestId('consent-movies-matched')).toBeNull();
+  });
+});
+
+describe('CandidateListPanel — 2,400 rows (sub-6-11 AC #3)', () => {
+  const MANY: GenerationCandidate[] = Array.from({ length: 2400 }, (_, i) => ({
+    mediaId: `9f000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
+    mediaType: 'movie' as const,
+    title: `電影 ${i}`,
+    route: 'extract' as const,
+    runtimeMinutes: 100,
+    runtimeKnown: true,
+    estimatedUsd: 0.05,
+  }));
+
+  // jsdom lays nothing out — every box is 0×0, so the virtualizer would read
+  // the viewport as empty and this suite would pass for the wrong reason. Give
+  // the scroller a real 600px viewport and each row the height a browser
+  // reports; then the assertions are about the windowing, not about jsdom.
+  // The library measures the SCROLLER with offsetHeight and each ROW with the
+  // panel's own measureElement (getBoundingClientRect), so both are stubbed.
+  const HEIGHT_OF = (el: Element) => (el.tagName === 'LI' ? 86 : 600);
+  beforeEach(() => {
+    Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
+      configurable: true,
+      get(this: HTMLElement) {
+        return HEIGHT_OF(this);
+      },
+    });
+    Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
+      configurable: true,
+      get: () => 800,
+    });
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: Element
+    ) {
+      const height = HEIGHT_OF(this);
+      return {
+        height,
+        width: 800,
+        top: 0,
+        left: 0,
+        right: 800,
+        bottom: height,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      } as ReturnType<Element['getBoundingClientRect']>;
+    });
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    delete (HTMLElement.prototype as Partial<HTMLElement>).offsetHeight;
+    delete (HTMLElement.prototype as Partial<HTMLElement>).offsetWidth;
+  });
+
+  it('draws a WINDOW, not 2,400 rows', () => {
+    renderPanel({
+      candidates: MANY,
+      selectedIds: new Set(),
+      totals: computeTotals(MANY, new Set(), 5),
+    });
+    const list = screen.getByTestId('consent-candidate-list');
+    expect(list).toHaveAttribute('data-virtualized', 'true');
+    expect(list.children.length).toBeGreaterThan(0);
+    expect(list.children.length).toBeLessThan(100);
+  });
+
+  it('a small library is NOT virtualized — it keeps the plain list', () => {
+    renderPanel();
+    expect(screen.getByTestId('consent-candidate-list')).toHaveAttribute(
+      'data-virtualized',
+      'false'
+    );
+    expect(screen.getByTestId(`consent-row-${A}`)).toBeInTheDocument();
+  });
+
+  it('a new search, filter or sort returns the scroll to the top', () => {
+    const { rerender, props } = renderPanel({
+      candidates: MANY,
+      selectedIds: new Set(),
+      totals: computeTotals(MANY, new Set(), 5),
+    });
+    const scroller = screen.getByTestId('consent-list-scroll');
+    scroller.scrollTop = 14000;
+    rerender(<CandidateListPanel {...props} sort="cost-desc" />);
+    expect(scroller.scrollTop).toBe(0);
+  });
+});
+
+describe('CandidateListPanel — CR fixes (sub-6-11)', () => {
+  it('collapsing a show DURING a search actually collapses it', () => {
+    renderPanel({
+      candidates: GROUPED,
+      selectedIds: new Set(),
+      search: '怪奇',
+      searchQuery: '怪奇',
+    });
+    // The search forced it open…
+    expect(screen.getByTestId(`consent-row-${S1E1}`)).toBeInTheDocument();
+    // …and one click closes it, instead of silently recording the opposite.
+    fireEvent.click(screen.getByTestId(`consent-group-${SRS}-disclosure`));
+    expect(screen.queryByTestId(`consent-row-${S1E1}`)).toBeNull();
+    expect(screen.getByTestId(`consent-group-${SRS}`)).toHaveAttribute('data-expanded', 'false');
+  });
+
+  it('the header denominator counts the SAME rows the route badges do', () => {
+    // 2 of 3 episodes are writable → 「語音辨識 2」 must sit beside 「已選 0/2」,
+    // not beside 「已選 0/3」.
+    const mixed = [
+      seriesEp(S1E1, 1, 1),
+      seriesEp(S1E2, 1, 2),
+      seriesEp(S2E1, 2, 1, { writable: false, blocker: 'folder_not_writable' }),
+    ];
+    renderPanel({
+      candidates: mixed,
+      selectedIds: new Set(),
+      totals: computeTotals(mixed, new Set(), 5),
+    });
+    expect(screen.getByTestId(`consent-group-${SRS}-routes`)).toHaveTextContent('語音辨識 2');
+    expect(screen.getByTestId(`consent-group-${SRS}-selected`)).toHaveTextContent('已選 0/2');
+  });
+
+  it('a movie section checkbox is not announced as 「選取整部」', () => {
+    const split = [
+      { ...CANDIDATES[0], tmdbMatched: true },
+      { ...CANDIDATES[1], tmdbMatched: false },
+    ];
+    renderPanel({
+      candidates: split,
+      selectedIds: new Set(),
+      totals: computeTotals(split, new Set(), 5),
+    });
+    expect(screen.getByLabelText('選取所有已匹配的電影')).toBeInTheDocument();
+    expect(screen.getByLabelText('選取所有未匹配的電影')).toBeInTheDocument();
+  });
+
+  it('the list keeps a minimum height so a short dialog cannot collapse it to nothing', () => {
+    renderPanel();
+    expect(screen.getByTestId('consent-list-scroll').className).toContain('min-h-[10rem]');
   });
 });
