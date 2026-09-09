@@ -86,6 +86,30 @@ async function stubSetupStatus(page: Page) {
   );
 }
 
+/**
+ * The app shell's header is `sticky top-0 z-30` with a translucent, blurred
+ * background (`AppShellV2.tsx`). While it is sticky it FLOATS OVER whatever is
+ * beneath it, and that is a screenshot hazard for any fixture taller than the
+ * 1280x800 capture viewport: the gallery page has to scroll for such a fixture,
+ * the header rides down over its top edge, and where it lands is not
+ * reproducible between two runs. The result is a baseline that passes for weeks
+ * and then fails with a ~5% diff confined to a band at the very top of the
+ * image — `media-media-detail-panel` (834px tall) did exactly that on main at
+ * 72cec207, while the identical tree passed on the PR.
+ *
+ * `position: static` removes the float WITHOUT changing layout: a sticky
+ * element already occupies its normal-flow space, so nothing above or below it
+ * moves. Fixtures shorter than the viewport never scrolled and are therefore
+ * byte-identical; only the tall ones change, and they change to the rendering
+ * that was always intended.
+ *
+ * Scoped by the direct child chain (`shell > column > header`) so a FIXTURE
+ * that renders its own <header> — several do — is never touched.
+ */
+const UNSTICK_SHELL_HEADER_CSS = `
+  [data-testid='app-shell-v2'] > div > header { position: static !important; }
+`;
+
 async function abortTmdbImages(page: Page) {
   // 19-4b Task 4 (burn-in flake fix): the Task 3 Q-bucket fixtures (homepage-explore-block,
   // dashboard-recent-media-panel, homepage-hero-banner, ...) reference TMDB-hosted poster
@@ -186,6 +210,8 @@ test.describe('@visual @story-19-4 component visual baselines', () => {
           state: 'visible',
           timeout: 30_000,
         });
+        // Per navigation: an injected style tag does not survive a goto.
+        await page.addStyleTag({ content: UNSTICK_SHELL_HEADER_CSS });
 
         const section = page.locator(`section[data-gallery-id="${id}"]`);
         // The manifest is derived from the same `GALLERY_FIXTURES` array that the
