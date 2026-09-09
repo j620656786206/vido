@@ -1,6 +1,6 @@
 # Story 7.4: 內建台灣用語詞庫 + OTT 風格在地化程度（後端為主，設定頁一格）
 
-Status: review
+Status: done
 
 ## Story
 
