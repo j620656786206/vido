@@ -12,6 +12,8 @@ const h = vi.hoisted(() => ({
   reset: vi.fn(),
   models: undefined as unknown,
   modelsError: false,
+  /** sub-6-12 AC #6: what GET /settings/keys says about the two paid keys. */
+  keySettings: undefined as unknown,
 }));
 
 vi.mock('../../../hooks/useGenerationCandidatesProgress', () => ({
@@ -37,6 +39,12 @@ vi.mock('../../../services/subtitleService', () => ({
 // useTranslationModels.spec.ts).
 vi.mock('../../../hooks/useTranslationModels', () => ({
   useTranslationModels: () => ({ data: h.models, isError: h.modelsError }),
+}));
+
+// Same reason (sub-6-12 AC #6): key state is server state behind TanStack
+// Query, and the hook has its own coverage.
+vi.mock('../../../hooks/useKeySettings', () => ({
+  useKeySettings: () => ({ data: h.keySettings }),
 }));
 
 import { GenerationConsentView } from './GenerationConsentView';
@@ -158,6 +166,7 @@ describe('GenerationConsentView (sub-4-3 container)', () => {
     h.analysisState.analyzed = 0;
     h.analysisState.total = 0;
     h.analysisState.error = null;
+    h.keySettings = undefined;
   });
 
   it('[P0 AC #2] ready snapshot renders the list with the default extract-only selection; skip rows never render', async () => {
@@ -558,6 +567,7 @@ describe('GenerationConsentView budget prefill (sub-5-1 AC #6)', () => {
     h.analysisState.analyzed = 0;
     h.analysisState.total = 0;
     h.analysisState.error = null;
+    h.keySettings = undefined;
   });
 
   it('[P0] prefills the budget input from the snapshot default_budget_usd', async () => {
@@ -835,5 +845,101 @@ describe('GenerationConsentView — search and sort (sub-6-11)', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('GenerationConsentView — 全選 over the visible set (sub-6-12 AC #1)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h.models = MODELS;
+    h.modelsError = false;
+    h.keySettings = undefined;
+    mocked.startCandidateAnalysis.mockResolvedValue(undefined as never);
+  });
+
+  it('[P0] a filtered 全選 selects ONLY what the filter is showing', async () => {
+    mocked.getGenerationCandidates.mockResolvedValue(READY);
+    const props = renderView();
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+
+    // Default selection is the extract film. Filter to the paid route and tick
+    // the box: the shipped version swept the hidden extract row back in, which
+    // on the owner's library meant consenting to 2,399 rows off one click.
+    fireEvent.click(screen.getByTestId('consent-chip-asr'));
+    fireEvent.click(screen.getByTestId('consent-select-all'));
+    fireEvent.click(screen.getByTestId('consent-start-btn'));
+    fireEvent.click(screen.getByTestId('consent-confirm-start'));
+    expect(props.onStartBatch).toHaveBeenCalledWith([A, EP], 5, 'claude-sonnet-5');
+  });
+
+  it('[P0] un-ticking a filtered 全選 leaves the hidden selection alone', async () => {
+    mocked.getGenerationCandidates.mockResolvedValue(READY);
+    const props = renderView();
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('consent-chip-asr'));
+    fireEvent.click(screen.getByTestId('consent-select-all')); // adds the episode
+    fireEvent.click(screen.getByTestId('consent-select-all')); // removes it again
+    // 沙丘 was ticked before the filter went on and is still ticked after: a
+    // control that acts on the visible set must not reach past it either way.
+    fireEvent.click(screen.getByTestId('consent-start-btn'));
+    fireEvent.click(screen.getByTestId('consent-confirm-start'));
+    expect(props.onStartBatch).toHaveBeenCalledWith([A], 5, 'claude-sonnet-5');
+  });
+
+  it('the toolbar counts what the box owns, and still shows the whole library', async () => {
+    mocked.getGenerationCandidates.mockResolvedValue(READY);
+    renderView();
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+    expect(screen.getByTestId('consent-select-all-count')).toHaveTextContent('1 / 2');
+    fireEvent.click(screen.getByTestId('consent-chip-asr'));
+    // 沙丘 is ticked but hidden behind the 需語音辨識 chip, so the box owns one
+    // row and has ticked none of it; the library-wide 「已選 1 部」 stays in the
+    // summary bar.
+    expect(screen.getByTestId('consent-select-all-count')).toHaveTextContent(
+      '0 / 顯示 1（全部 2）'
+    );
+  });
+});
+
+describe('GenerationConsentView — 扣誰的錢 (sub-6-12 AC #6)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h.models = MODELS;
+    h.modelsError = false;
+    h.keySettings = undefined;
+    mocked.startCandidateAnalysis.mockResolvedValue(undefined as never);
+  });
+
+  it('reads the key source from the same settings the 金鑰設定 page renders', async () => {
+    h.keySettings = {
+      writable: true,
+      keys: [
+        { name: 'claude', configured: true, source: 'secret' },
+        { name: 'openai', configured: true, source: 'env' },
+      ],
+    };
+    mocked.getGenerationCandidates.mockResolvedValue(READY);
+    renderView();
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+    expect(screen.getByTestId('consent-spend-source')).toHaveTextContent(
+      '使用：Claude（你的金鑰） · 語音辨識：OpenAI（環境變數金鑰）'
+    );
+  });
+
+  it('takes self_hosted_asr from the sweep, not from key state', async () => {
+    h.keySettings = {
+      writable: true,
+      keys: [{ name: 'claude', configured: true, source: 'secret' }],
+    };
+    mocked.getGenerationCandidates.mockResolvedValue({
+      ...READY,
+      result: { ...READY.result!, summary: { ...READY.result!.summary, selfHostedAsr: true } },
+    });
+    renderView();
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+    expect(screen.getByTestId('consent-spend-source')).toHaveTextContent(
+      '語音辨識：自架（不另計費）'
+    );
   });
 });

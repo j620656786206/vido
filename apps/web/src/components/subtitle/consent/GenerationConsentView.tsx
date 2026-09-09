@@ -34,11 +34,14 @@ import {
 } from '../../../services/subtitleService';
 import { useGenerationCandidatesProgress } from '../../../hooks/useGenerationCandidatesProgress';
 import { useTranslationModels } from '../../../hooks/useTranslationModels';
+import { useKeySettings } from '../../../hooks/useKeySettings';
 import { AnalysisProgressPanel } from './AnalysisProgressPanel';
 import { CandidateListPanel } from './CandidateListPanel';
 import { ConsentEmptyState } from './ConsentEmptyState';
 import { ConfirmGenerationDialog } from './ConfirmGenerationDialog';
 import {
+  applyRouteFilter,
+  applySearch,
   computeTotals,
   defaultSelection,
   groupOrder,
@@ -47,6 +50,7 @@ import {
   modelChoices,
   parseBudgetInput,
   selectableIds,
+  visibleSelectableIds,
   type ConsentRouteFilter,
 } from './consentSelection';
 import type { ConsentSort } from './consentRows';
@@ -149,6 +153,12 @@ export function GenerationConsentView({
     Record<string, number> | undefined
   >(undefined);
   /**
+   * sub-6-12 AC #6: this deployment runs ASR on its own hardware, so no OpenAI
+   * key is charged for it. It is the sweep's OWN answer (`self_hosted_asr` on
+   * the result summary) rather than anything the FE infers from key state.
+   */
+  const [selfHostedAsr, setSelfHostedAsr] = useState(false);
+  /**
    * The model the user picked, '' until the catalog answers. It is NOT reset
    * when the sweep re-runs: a deliberate choice of Haiku must survive a
    * re-analysis, or the flow would quietly bill Sonnet for the second attempt.
@@ -180,6 +190,7 @@ export function GenerationConsentView({
       // must not show.
       setEstimatesByModel(result.estimatesByModel);
       setEstimatedMinutesByModel(result.estimatedMinutesByModel);
+      setSelfHostedAsr(result.summary.selfHostedAsr);
       if (listable.length === 0) {
         // The ONLY case that earns「所有影片都有繁中字幕了」: the analysis
         // returned records and every one was filtered out as already covered.
@@ -317,6 +328,13 @@ export function GenerationConsentView({
   // costs no request.
   const { data: models, isError: modelsError } = useTranslationModels({ enabled: open });
 
+  // sub-6-12 AC #6: WHOSE key this batch spends. Same `enabled: open` gating,
+  // and the same query the 金鑰設定 page reads — so the two screens can never
+  // disagree about whether a key is set.
+  const { data: keySettings } = useKeySettings({ enabled: open });
+  const keySourceOf = (name: 'claude' | 'openai') =>
+    keySettings?.keys.find((k) => k.name === name)?.source;
+
   // Pre-select the deployment's default the first time the catalog answers,
   // and only then — a later refetch must not overwrite the user's choice.
   useEffect(() => {
@@ -368,9 +386,27 @@ export function GenerationConsentView({
    * all of them together or none of them.
    */
   const prices = estimatesByModel?.[effectiveModelId]?.perCandidate;
+
+  /**
+   * The visible set = route chip ∘ search (sub-6-11 Dev Notes). Both are VIEW
+   * filters and multiply: 「需語音辨識」 plus 「沙丘」 means the ASR rows whose
+   * title says 沙丘, and neither one touches the selection, the money or the
+   * submission order.
+   *
+   * It moved up here from the panel in sub-6-12: 全選 and the 整劇 headers now
+   * SELECT this set, and the selection is container state. Computing it once
+   * here is what makes 「what the list draws」 and 「what 全選 ticks」 the same
+   * answer by construction rather than by two memos agreeing.
+   */
+  const visibleIds = useMemo(
+    () =>
+      new Set(applySearch(applyRouteFilter(candidates, filter), searchQuery).map((c) => c.mediaId)),
+    [candidates, filter, searchQuery]
+  );
+
   const totals = useMemo(
-    () => computeTotals(candidates, selectedIds, budgetUsd, prices),
-    [candidates, selectedIds, budgetUsd, prices]
+    () => computeTotals(candidates, selectedIds, budgetUsd, prices, visibleIds),
+    [candidates, selectedIds, budgetUsd, prices, visibleIds]
   );
 
   // sub-6-1: ids the bulk actions may touch — listable AND writable. A row the
@@ -407,11 +443,29 @@ export function GenerationConsentView({
     [writableIdSet]
   );
 
+  /**
+   * 全選 over the VISIBLE set (sub-6-12 AC #1).
+   *
+   * The shipped version toggled the whole list, so filtering to 需語音辨識 and
+   * ticking 全選 consented to the 2,399 hidden extract rows as well — the
+   * critique's「篩選＋全選＝金錢陷阱」. Two further consequences of acting on a
+   * subset, both deliberate: it only ADDS or REMOVES the visible ids (a
+   * selection made under a different filter survives), and 「all」 is judged on
+   * the visible ids alone, which is exactly what the checkbox's own tri-state
+   * shows.
+   */
   const handleToggleAll = useCallback(() => {
-    setSelectedIds((prev) =>
-      prev.size === writableIdSet.size ? new Set() : new Set(writableIdSet)
-    );
-  }, [writableIdSet]);
+    const ids = visibleSelectableIds(candidates, visibleIds);
+    setSelectedIds((prev) => {
+      const allSelected = ids.length > 0 && ids.every((id) => prev.has(id));
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (allSelected) next.delete(id);
+        else next.add(id);
+      }
+      return next;
+    });
+  }, [candidates, visibleIds]);
 
   const handleSelectAllExtract = useCallback(() => {
     setSelectedIds(defaultSelection(candidates));
@@ -513,6 +567,7 @@ export function GenerationConsentView({
               budgetUsd={budgetUsd}
               starting={starting}
               startError={startError}
+              visibleIds={visibleIds}
               onToggle={handleToggle}
               onToggleGroup={handleToggleGroup}
               onToggleAll={handleToggleAll}
@@ -526,6 +581,9 @@ export function GenerationConsentView({
               sort={sort}
               onSearchChange={setSearchText}
               onSortChange={setSort}
+              claudeKeySource={keySourceOf('claude')}
+              openaiKeySource={keySourceOf('openai')}
+              selfHostedAsr={selfHostedAsr}
             />
           )}
 

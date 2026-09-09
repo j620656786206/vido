@@ -30,7 +30,7 @@ import { Dialog, DialogContent, DialogTitle } from '../../ui/Dialog';
 import { cn } from '../../../lib/utils';
 import { usd } from '../../../lib/currency';
 import { ModelPicker } from './ModelPicker';
-import type { ConsentTotals, ModelChoice } from './consentSelection';
+import { usdWithEstimate, type ConsentTotals, type ModelChoice } from './consentSelection';
 
 export interface ConfirmGenerationDialogProps {
   open: boolean;
@@ -150,9 +150,21 @@ export function ConfirmGenerationDialog({
                   overBudget ? 'text-[var(--warning-text)]' : 'text-[var(--text-primary)]'
                 )}
               >
-                {usd(totals.selectedTotalUsd)}
+                {usdWithEstimate(totals.selectedTotalUsd, totals.hasEstimatedRows)}
               </span>
             </p>
+            {/* sub-6-12 AC #4: the `≈` on the line above, spelled out.
+                On the owner's 2026-09-03 library EVERY row was priced off the
+                45-minute assumption, and the confirm screen still printed a
+                flat 「$13.92」 — a number with two decimal places built out of
+                a guess. The marker says the total is soft; this line says how
+                soft, and how many rows made it that way. */}
+            {totals.hasEstimatedRows && (
+              <p data-testid="consent-confirm-estimated-note" className="text-xs">
+                其中 <span className="font-mono tabular-nums">{totals.estimatedRowCount}</span>{' '}
+                部片長未知，以 45 分鐘估算
+              </p>
+            )}
           </div>
 
           <div

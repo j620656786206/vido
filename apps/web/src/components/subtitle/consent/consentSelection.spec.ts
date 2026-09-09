@@ -13,7 +13,11 @@ import {
   groupCandidates,
   groupOrder,
   isWritable,
+  isRuntimeApproximate,
   selectableIds,
+  spendSourceLabel,
+  usdWithEstimate,
+  visibleSelectableIds,
 } from './consentSelection';
 import { usd } from '../../../lib/currency';
 import type { GenerationCandidate, TranslationModelInfo } from '../../../services/subtitleService';
@@ -537,5 +541,155 @@ describe('search (sub-6-11 AC #1)', () => {
     const before = ALL.map((x) => x.mediaId);
     applySearch(ALL, '沙丘');
     expect(ALL.map((x) => x.mediaId)).toEqual(before);
+  });
+});
+
+// ─── sub-6-12: what the bulk controls own, and what the totals admit ─────────
+
+describe('visibleSelectableIds (sub-6-12 AC #1)', () => {
+  const rows = [c(A, 'extract', 1), c(B, 'asr', 1), c(C, 'extract', 1, { writable: false })];
+
+  it('is the whole writable list when no view filter is running', () => {
+    expect(visibleSelectableIds(rows)).toEqual([A, B]);
+  });
+
+  it('intersects the visible set with the writable one — never widens either', () => {
+    expect(visibleSelectableIds(rows, new Set([B, C]))).toEqual([B]);
+  });
+
+  it('an empty visible set gives a bulk action nothing to do', () => {
+    expect(visibleSelectableIds(rows, new Set())).toEqual([]);
+  });
+});
+
+describe('computeTotals — the visible counts (sub-6-12 AC #1)', () => {
+  const rows = [c(A, 'extract', 1), c(B, 'asr', 1), c(C, 'asr', 1)];
+
+  it('mirrors the whole-list counts when nothing is filtered', () => {
+    const t = computeTotals(rows, new Set([A, B]), null);
+    expect(t.visibleSelectableCount).toBe(t.selectableCount);
+    expect(t.visibleSelectedCount).toBe(t.selectedCount);
+  });
+
+  it('narrows both halves to the visible rows, and leaves the MONEY alone', () => {
+    const t = computeTotals(rows, new Set([A, B]), null, undefined, new Set([B, C]));
+    expect(t.visibleSelectableCount).toBe(2);
+    expect(t.visibleSelectedCount).toBe(1);
+    // The critique's whole point: a view filter must never move a money figure.
+    expect(t.selectedCount).toBe(2);
+    expect(t.selectedTotalUsd).toBe(2);
+  });
+});
+
+describe('computeTotals — the cut line (sub-6-12 AC #3)', () => {
+  const four = [c(A, 'extract', 1), c(B, 'extract', 1), c(C, 'extract', 1), c(D, 'extract', 1)];
+  const all = new Set([A, B, C, D]);
+
+  it('cuts at feasibleCount + 1 and names every row that will be paused', () => {
+    const t = computeTotals(four, all, 2);
+    expect(t.feasibleCount).toBe(2);
+    expect(t.cutMediaId).toBe(C);
+    expect([...t.pausedIds]).toEqual([C, D]);
+  });
+
+  it('nothing is cut while the selection fits under the ceiling', () => {
+    const t = computeTotals(four, new Set([A]), 5);
+    expect(t.overBudget).toBe(false);
+    expect(t.cutMediaId).toBeNull();
+    expect(t.pausedIds.size).toBe(0);
+  });
+
+  it('a lone row dearer than the whole ceiling still runs — over budget, but uncut', () => {
+    // The backend checks BEFORE each paid call: the running total is $0 when
+    // this row starts, so it starts. Marking it 「暫停」 would be a lie.
+    const t = computeTotals([c(A, 'asr', 9)], new Set([A]), 2);
+    expect(t.overBudget).toBe(true);
+    expect(t.feasibleCount).toBe(1);
+    expect(t.cutMediaId).toBeNull();
+  });
+
+  it('no ceiling means no cut, whatever the total', () => {
+    const t = computeTotals(four, all, null);
+    expect(t.cutMediaId).toBeNull();
+    expect(t.feasibleCount).toBe(4);
+  });
+
+  it('the cut is an id, so it survives being drawn in another order', () => {
+    // Reversing the DISPLAY cannot move the ceiling: the walk is over the state
+    // array, and the divider is anchored to the film, not to a position.
+    const t = computeTotals(four, all, 2);
+    expect([...four].reverse().find((x) => x.mediaId === t.cutMediaId)?.mediaId).toBe(C);
+  });
+});
+
+describe('computeTotals — estimated runtimes (sub-6-12 AC #4)', () => {
+  it('counts only the SELECTED rows whose runtime is the 45-minute assumption', () => {
+    const rows = [
+      c(A, 'extract', 1, { runtimeSource: 'fallback' }),
+      c(B, 'extract', 1, { runtimeSource: 'ffprobe' }),
+      c(C, 'extract', 1, { runtimeSource: 'fallback' }),
+    ];
+    const t = computeTotals(rows, new Set([A, B]), null);
+    expect(t.hasEstimatedRows).toBe(true);
+    expect(t.estimatedRowCount).toBe(1);
+  });
+
+  it('an exact selection carries no marker', () => {
+    const rows = [c(A, 'extract', 1, { runtimeSource: 'tmdb' })];
+    expect(computeTotals(rows, new Set([A]), null).hasEstimatedRows).toBe(false);
+  });
+
+  it('a pre-sub-6-10a server falls back to runtime_known, exactly as the row does', () => {
+    const row = c(A, 'extract', 1, { runtimeKnown: false });
+    expect(isRuntimeApproximate(row)).toBe(true);
+    expect(computeTotals([row], new Set([A]), null).hasEstimatedRows).toBe(true);
+  });
+});
+
+describe('usdWithEstimate (sub-6-12 AC #4)', () => {
+  it('marks a soft total and leaves an exact one alone', () => {
+    expect(usdWithEstimate(13.92, true)).toBe('≈ $13.92');
+    expect(usdWithEstimate(13.92, false)).toBe('$13.92');
+  });
+});
+
+describe('spendSourceLabel (sub-6-12 AC #6)', () => {
+  it('names both providers and whose key each one spends', () => {
+    expect(
+      spendSourceLabel({
+        claudeSource: 'secret',
+        openaiSource: 'secret',
+        selfHostedAsr: false,
+        hasAsrCandidates: true,
+      })
+    ).toBe('使用：Claude（你的金鑰） · 語音辨識：OpenAI（你的金鑰）');
+  });
+
+  it('self-hosted ASR spends no key at all', () => {
+    expect(
+      spendSourceLabel({
+        claudeSource: 'env',
+        openaiSource: 'none',
+        selfHostedAsr: true,
+        hasAsrCandidates: true,
+      })
+    ).toBe('使用：Claude（環境變數金鑰） · 語音辨識：自架（不另計費）');
+  });
+
+  it('an unanswered settings query reads as 尚未設定, which is what a fresh NAS is', () => {
+    expect(spendSourceLabel({ selfHostedAsr: false, hasAsrCandidates: false })).toBe(
+      '使用：Claude（尚未設定金鑰）'
+    );
+  });
+
+  it('drops the ASR half when the sweep found no ASR rows to pay for', () => {
+    expect(
+      spendSourceLabel({
+        claudeSource: 'secret',
+        openaiSource: 'none',
+        selfHostedAsr: false,
+        hasAsrCandidates: false,
+      })
+    ).toBe('使用：Claude（你的金鑰）');
   });
 });

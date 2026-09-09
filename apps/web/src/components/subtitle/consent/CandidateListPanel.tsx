@@ -25,19 +25,21 @@ import { getImageUrl } from '../../../lib/image';
 import { formatRuntime } from '../../../lib/formatMedia';
 import type { GenerationCandidate } from '../../../services/subtitleService';
 import {
-  applyRouteFilter,
-  applySearch,
   blockerLabel,
   candidateUsd,
   computeTotals,
   displayTitleOf,
+  isRuntimeApproximate,
   isWritable,
-  selectableIds,
+  spendSourceLabel,
+  usdWithEstimate,
+  visibleSelectableIds,
   type ConsentRouteFilter,
   type ConsentTotals,
   type ModelPrices,
 } from './consentSelection';
 import { buildConsentRows, CONSENT_SORTS, type ConsentRow, type ConsentSort } from './consentRows';
+import type { KeySource } from '../../../services/keySettingsService';
 
 /**
  * Rows below which the list renders WHOLE, with no virtualizer (sub-6-11 AC #3).
@@ -54,6 +56,8 @@ const VIRTUALIZE_FROM_ROWS = 80;
 /** Row-height seeds for the virtualizer. Real heights come from measureElement. */
 const ESTIMATED_SECTION_PX = 48;
 const ESTIMATED_ROW_PX = 86;
+/** The sub-6-12 budget divider — a rule and one line of 12px text. */
+const ESTIMATED_CUT_PX = 24;
 /** The `gap-2` between list items, told to the virtualizer so its offsets agree
  *  with what flexbox actually draws (measureElement reports height, not gap). */
 const LIST_GAP_PX = 8;
@@ -79,20 +83,28 @@ export interface CandidateListPanelProps {
   budgetUsd: number | null;
   starting?: boolean;
   startError?: string | null;
+  /**
+   * The rows the route chip AND the search box are both letting through
+   * (sub-6-11 Dev Notes), computed ONCE by the container.
+   *
+   * It lives up there rather than here because since sub-6-12 it decides what
+   * the bulk controls SELECT, not merely what the list draws — and 全選 is a
+   * container action. One set, one meaning: the same ids feed the projection,
+   * the 顯示 n counts and every toggle.
+   */
+  visibleIds: ReadonlySet<string>;
   onToggle: (mediaId: string) => void;
   /**
-   * 整劇/整季 group toggle (sub-5-3 AC #2) — operates on the group's ALL
-   * listable items, NOT the filtered-visible subset: the route chips are a
-   * view filter only, same semantics as 全選. `next` is the target state.
+   * 整劇/整季 group toggle (sub-5-3 AC #2, re-scoped by sub-6-12 AC #1) — the
+   * header hands up the ids it is standing next to: this section's writable
+   * rows that the chips and the search are letting through. `next` is the
+   * target state.
    *
-   * KNOWN HAZARD, deferred to sub-6-12 (which owns 全選/群組 semantics over the
-   * visible set). With free-text search this reads worse than it did with three
-   * coarse chips: search 「S04E07」, see ONE episode under a 9-episode show's
-   * header, tick the header, and consent to all nine. The header's
-   * 「已選 x/n」 still prints the section's full n, which is the only thing
-   * telling the user the toggle is wider than the view. Do not "fix" it here —
-   * changing it would pre-empt sub-6-12's product decision and contradict
-   * sub-5-3's shipped, tested semantics.
+   * sub-6-11 shipped it over the section's ALL items and handed the hazard
+   * over on purpose: search 「S04E07」, see one episode under a nine-episode
+   * show, tick the header, consent to about $2.79 of episodes never displayed.
+   * Alexyu ruled on 2026-09-09 that the checkbox selects what the user can see,
+   * the same rule 全選 now follows.
    */
   onToggleGroup: (mediaIds: string[], next: boolean) => void;
   onToggleAll: () => void;
@@ -115,18 +127,16 @@ export interface CandidateListPanelProps {
   sort: ConsentSort;
   onSearchChange: (text: string) => void;
   onSortChange: (sort: ConsentSort) => void;
-}
-
-/**
- * Is this row's runtime a guess? (sub-6-10b AC #2)
- *
- * Prefer `runtimeSource` — it distinguishes "measured from the file" from
- * "TMDb's editorial figure", which `runtimeKnown` cannot. A pre-sub-6-10a
- * server sends no source, so fall back to the old flag and behave exactly as
- * this panel did before.
- */
-function isRuntimeApproximate(c: GenerationCandidate): boolean {
-  return c.runtimeSource ? c.runtimeSource === 'fallback' : !c.runtimeKnown;
+  /**
+   * sub-6-12 AC #6 —「扣誰的錢」. Where the Claude and cloud-ASR keys resolved
+   * from (the 金鑰設定 page's own `source`), and whether this deployment runs
+   * ASR on its own hardware (the sweep's `self_hosted_asr`). Undefined sources
+   * = the key settings request has not answered; the line then reads 尚未設定,
+   * which is what a fresh NAS actually is.
+   */
+  claudeKeySource?: KeySource;
+  openaiKeySource?: KeySource;
+  selfHostedAsr?: boolean;
 }
 
 /** The runtime half of the subtitle. Empty when there is nothing honest to say. */
@@ -218,6 +228,7 @@ function CandidateRow({
   checked,
   onToggle,
   prices,
+  paused,
   rowRef,
   index,
 }: {
@@ -225,6 +236,12 @@ function CandidateRow({
   checked: boolean;
   onToggle: (mediaId: string) => void;
   prices?: ModelPrices;
+  /**
+   * sub-6-12 AC #3: selected, but past the point where the ceiling stops
+   * paying — it stays in the queue rather than running. Dimmed, never
+   * disabled: the user can still untick it, and 「暫停」 is not 「拒絕」.
+   */
+  paused?: boolean;
 } & VirtualRowAttrs) {
   const isExtract = candidate.route === 'extract';
   // sub-6-1: the backend's write probe refused this folder. The pipeline
@@ -241,9 +258,11 @@ function CandidateRow({
       data-testid={`consent-row-${candidate.mediaId}`}
       data-route={candidate.route}
       data-writable={writable ? 'true' : 'false'}
+      data-paused={paused ? 'true' : undefined}
       className={cn(
         'flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3.5 py-3',
-        !writable && 'opacity-70'
+        !writable && 'opacity-70',
+        paused && 'opacity-60'
       )}
     >
       <input
@@ -338,7 +357,7 @@ function CandidateRow({
           <span
             data-testid={`consent-row-kind-${candidate.mediaId}`}
             className={cn(
-              'hidden rounded-[var(--radius-sm)] px-2 py-0.5 text-[11px] @xl:inline',
+              'hidden rounded-[var(--radius-sm)] px-2 py-0.5 text-xs @xl:inline',
               isExtract
                 ? 'bg-[var(--success-tint)] text-[var(--success-text)]'
                 : 'bg-[var(--warning-tint)] text-[var(--warning-text)]'
@@ -364,6 +383,37 @@ function CandidateRow({
 }
 
 /**
+ * The budget cut line (sub-6-12 AC #3).
+ *
+ * Before this story the F18 banner said 「預計可完成約 251 部後暫停」 and the
+ * list gave the reader no way to map 251 onto anything — the critique's
+ * 「砍線不可見」. Drawing it IN the list turns an abstract count into a place:
+ * everything above runs, everything below waits.
+ *
+ * It is `aria-hidden` because the same fact is already announced by the
+ * banner above the footer; a screen reader hitting a decorative rule between
+ * two rows would hear the ceiling twice.
+ */
+function BudgetCutRow({ budgetUsd, rowRef, index }: { budgetUsd: number } & VirtualRowAttrs) {
+  return (
+    <li
+      ref={rowRef}
+      data-index={index}
+      data-testid="consent-budget-cut"
+      aria-hidden="true"
+      className="flex items-center gap-3 py-1"
+    >
+      <span className="h-px flex-1 bg-[var(--warning)]" />
+      <span className="shrink-0 text-xs text-[var(--warning-text)]">
+        到此為止約 <span className="font-mono tabular-nums">{usd(budgetUsd)}</span>
+        ，之後的項目會暫停
+      </span>
+      <span className="h-px flex-1 bg-[var(--warning)]" />
+    </li>
+  );
+}
+
+/**
  * Section header row — a series, a season, or one half of the split movies
  * block (sub-5-3 AC #2, extended by sub-6-11 AC #4).
  *
@@ -376,8 +426,10 @@ function GroupHeaderRow({
   label,
   hint,
   selectLabel,
+  unit,
   items,
   selectedIds,
+  visibleIds,
   onToggleGroup,
   prices,
   season = false,
@@ -390,8 +442,11 @@ function GroupHeaderRow({
   label: string;
   hint?: string;
   selectLabel: string;
+  unit: '集' | '部';
   items: GenerationCandidate[];
   selectedIds: ReadonlySet<string>;
+  /** The rows the chips and the search box are letting through (sub-6-12). */
+  visibleIds: ReadonlySet<string>;
   onToggleGroup: (mediaIds: string[], next: boolean) => void;
   prices?: ModelPrices;
   season?: boolean;
@@ -402,21 +457,30 @@ function GroupHeaderRow({
   // route counts AND the subtotal both come from computeTotals over this
   // group's items, never from a second hand-rolled sum. `null` ceiling: the
   // budget verdict is a whole-list concern the footer owns.
-  const groupTotals = computeTotals(items, selectedIds, null, prices);
-  // sub-6-1 CR H3: "all" and the toggled ids span the SELECTABLE members —
-  // an unwritable episode can never be ticked, so it must not keep the header
-  // permanently indeterminate (which would make the group un-deselectable).
-  const ids = useMemo(() => selectableIds(items), [items]);
-  // sub-6-11 AC #4: the route composition is now the SECTION's, not the
-  // selection's, and it is ALWAYS on screen. A collapsed show is the only thing
-  // the user can see of it, and 「這部劇要花錢嗎」 has to be answerable BEFORE
+  const groupTotals = computeTotals(items, selectedIds, null, prices, visibleIds);
+  // sub-6-1 CR H3: the toggled ids span the SELECTABLE members — an unwritable
+  // episode can never be ticked, so it must not keep the header permanently
+  // indeterminate (which would make the group un-deselectable).
+  //
+  // sub-6-12 (Alexyu 裁定 2026-09-09): and only the VISIBLE ones. sub-6-11
+  // shipped this toggle over the whole section and handed the hazard over with
+  // a real number — search 「S04E07」, see one episode under a nine-episode
+  // show, tick the header, consent to $2.79 of episodes you cannot see. The
+  // checkbox now selects what the checkbox is next to.
+  const ids = useMemo(() => visibleSelectableIds(items, visibleIds), [items, visibleIds]);
+  // sub-6-11 AC #4: the route composition is what TICKING THIS HEADER would
+  // pull in, and it is ALWAYS on screen. A collapsed show is the only thing the
+  // user can see of it, and 「這部劇要花錢嗎」 has to be answerable BEFORE
   // ticking — the old badges appeared only once something was already ticked,
   // which answered the question after it stopped mattering. Still the same one
-  // engine (CR H1): this is computeTotals over the section's selectable ids,
-  // i.e. what ticking the header would cost, not a hand-rolled count.
+  // engine (CR H1): computeTotals over the ids the checkbox owns.
   const sectionTotals = computeTotals(items, new Set(ids), null, prices);
-  const all = ids.length > 0 && groupTotals.selectedCount === ids.length;
-  const some = groupTotals.selectedCount > 0 && !all;
+  const all = ids.length > 0 && groupTotals.visibleSelectedCount === ids.length;
+  const some = groupTotals.visibleSelectedCount > 0 && !all;
+  // A view filter is hiding part of this section, so the checkbox and the
+  // section's own counts no longer speak for the same set — and the header has
+  // to say which is which rather than let the reader assume.
+  const narrowed = groupTotals.visibleSelectableCount < groupTotals.selectableCount;
   return (
     <li
       ref={rowRef}
@@ -436,7 +500,7 @@ function GroupHeaderRow({
           `indeterminate`) and risks desyncing from the real state. */}
       <input
         type="checkbox"
-        aria-label={selectLabel}
+        aria-label={narrowed ? `選取顯示的 ${ids.length} ${unit}` : selectLabel}
         checked={all}
         ref={(el) => {
           if (el) el.indeterminate = some;
@@ -474,10 +538,7 @@ function GroupHeaderRow({
           {label}
         </span>
       </button>
-      <span
-        data-testid={`${testid}-routes`}
-        className="flex shrink-0 items-center gap-1.5 text-[11px]"
-      >
+      <span data-testid={`${testid}-routes`} className="flex shrink-0 items-center gap-1.5 text-xs">
         {sectionTotals.selectedExtractCount > 0 && (
           <span className="rounded-[var(--radius-sm)] bg-[var(--success-tint)] px-1.5 py-0.5 text-[var(--success-text)]">
             抽取 {sectionTotals.selectedExtractCount}
@@ -495,11 +556,19 @@ function GroupHeaderRow({
           next to 「已選 0/9」 — two counts of the same show, disagreeing, on the
           one line a collapsed show gets. The unwritable rows are still counted,
           once, by the toolbar's 「N 部資料夾無法寫入」. */}
+      {/* The header speaks for exactly the set its CHECKBOX owns: the whole
+          section normally, and only the visible rows once a chip or a search is
+          narrowing it — count and money together, so 「已選 0 · $1.55」 (a
+          subtotal built from four episodes that are off screen) can never
+          happen. The whole-list figures never move: they are in the summary bar
+          and the footer, which no view filter touches. */}
       <span
         data-testid={`${testid}-selected`}
         className="shrink-0 font-mono text-xs tabular-nums text-[var(--text-muted)]"
       >
-        已選 {groupTotals.selectedCount}/{ids.length} · {usd(groupTotals.selectedTotalUsd)}
+        {narrowed
+          ? `已選 ${groupTotals.visibleSelectedCount} / 顯示 ${groupTotals.visibleSelectableCount}（全部 ${groupTotals.selectableCount}） · ${usd(groupTotals.visibleSelectedTotalUsd)}`
+          : `已選 ${groupTotals.selectedCount}/${groupTotals.selectableCount} · ${usd(groupTotals.selectedTotalUsd)}`}
       </span>
     </li>
   );
@@ -515,6 +584,7 @@ export function CandidateListPanel({
   budgetUsd,
   starting = false,
   startError = null,
+  visibleIds,
   onToggle,
   onToggleGroup,
   onToggleAll,
@@ -528,23 +598,10 @@ export function CandidateListPanel({
   sort,
   onSearchChange,
   onSortChange,
+  claudeKeySource,
+  openaiKeySource,
+  selfHostedAsr = false,
 }: CandidateListPanelProps) {
-  /**
-   * The visible set = route chip ∘ search (sub-6-11 Dev Notes). Both are VIEW
-   * filters and multiply: 「需語音辨識」 plus 「沙丘」 means the ASR rows whose
-   * title says 沙丘, and neither one touches the selection, the totals or the
-   * submission order.
-   *
-   * CR L2 still applies, harder: this panel re-renders on every budget-input
-   * keystroke, so a 2,400-row library must not re-filter and re-group per
-   * character typed.
-   */
-  const visibleIds = useMemo(
-    () =>
-      new Set(applySearch(applyRouteFilter(candidates, filter), searchQuery).map((c) => c.mediaId)),
-    [candidates, filter, searchQuery]
-  );
-
   /**
    * Which sections the user has opened or closed by hand. Anything absent
    * falls back to sectionDefaultExpanded (shows closed, movies and seasons
@@ -562,6 +619,20 @@ export function CandidateListPanel({
   }, []);
 
   const searching = searchQuery.trim() !== '';
+
+  /**
+   * sub-6-12 AC #3: draw the cut line, and dim what falls past it, ONLY in the
+   * state the F18 banner also fires in.
+   *
+   * `cutMediaId` is truthful on its own — the ceiling refuses a row the moment
+   * the running total has reached it, which can happen on a selection whose
+   * total lands EXACTLY on the ceiling and is therefore not `overBudget`. The
+   * banner has never spoken in that case, and a divider appearing with no
+   * banner and no warning colour would read as a bug rather than a warning. One
+   * flag, so the banner, the divider and the dimming appear together or not at
+   * all.
+   */
+  const showCut = totals.overBudget && totals.cutMediaId !== null;
   const rows = useMemo(
     () =>
       buildConsentRows({
@@ -571,8 +642,9 @@ export function CandidateListPanel({
         expandedOverride,
         searching,
         prices,
+        cutMediaId: showCut ? totals.cutMediaId : null,
       }),
-    [candidates, visibleIds, sort, expandedOverride, searching, prices]
+    [candidates, visibleIds, sort, expandedOverride, searching, prices, showCut, totals.cutMediaId]
   );
 
   // ── Virtualization (AC #3) ────────────────────────────────────────────────
@@ -582,7 +654,12 @@ export function CandidateListPanel({
     count: rows.length,
     enabled: virtualized,
     getScrollElement: () => scrollRef.current,
-    estimateSize: (i) => (rows[i]?.kind === 'section' ? ESTIMATED_SECTION_PX : ESTIMATED_ROW_PX),
+    estimateSize: (i) =>
+      rows[i]?.kind === 'section'
+        ? ESTIMATED_SECTION_PX
+        : rows[i]?.kind === 'cut'
+          ? ESTIMATED_CUT_PX
+          : ESTIMATED_ROW_PX,
     // Rows are NOT a fixed height (an unwritable badge, a wrapped subtitle on a
     // phone), so every rendered row reports its real height back — via the
     // library's OWN measureElement. CR: a hand-rolled
@@ -622,10 +699,21 @@ export function CandidateListPanel({
 
   const extractTotal = candidates.filter((c) => c.route === 'extract').length;
   const asrTotal = candidates.length - extractTotal;
-  // 全選 spans the SELECTABLE rows (sub-6-1: unwritable rows can never be
-  // ticked, so they are not part of "all"); the denominator says so too.
-  const allSelected = totals.selectedCount === totals.selectableCount && totals.selectableCount > 0;
-  const someSelected = totals.selectedCount > 0 && !allSelected;
+  /**
+   * 全選 spans the rows that are SELECTABLE (sub-6-1: an unwritable row can
+   * never be ticked) AND VISIBLE (sub-6-12 AC #1).
+   *
+   * The critique's money trap: filter to 需語音辨識, tick 全選, and the 2,399
+   * hidden extract rows came along — a total that jumped by an order of
+   * magnitude from a control the user read as 「select these」. The box now
+   * selects what the box is looking at.
+   */
+  const allSelected =
+    totals.visibleSelectedCount === totals.visibleSelectableCount &&
+    totals.visibleSelectableCount > 0;
+  const someSelected = totals.visibleSelectedCount > 0 && !allSelected;
+  /** A chip or the search box is hiding part of the list. */
+  const narrowed = totals.visibleSelectableCount < totals.selectableCount;
   const overBudget = totals.overBudget;
   const budgetInvalid = budgetUsd === null;
 
@@ -650,12 +738,12 @@ export function CandidateListPanel({
       {label}
       <span className="font-mono font-semibold tabular-nums">{count}</span>
       {marker === 'free' && (
-        <span className="rounded-[var(--radius-sm)] bg-[var(--success-tint)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--success-text)]">
+        <span className="rounded-[var(--radius-sm)] bg-[var(--success-tint)] px-1.5 py-0.5 text-xs font-semibold text-[var(--success-text)]">
           僅翻譯費
         </span>
       )}
       {marker === 'paid' && (
-        <span className="rounded-[var(--radius-sm)] bg-[var(--warning-tint)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--warning-text)]">
+        <span className="rounded-[var(--radius-sm)] bg-[var(--warning-tint)] px-1.5 py-0.5 text-xs font-semibold text-[var(--warning-text)]">
           付費
         </span>
       )}
@@ -673,19 +761,32 @@ export function CandidateListPanel({
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         <div className="flex shrink-0 flex-col gap-3 px-6 pb-3 pt-6">
           {/* Summary bar */}
-          <p className="flex flex-wrap items-center gap-[3px] text-[13px] text-[var(--text-secondary)]">
-            候選 <span className="font-mono tabular-nums">{totals.candidateCount}</span> 部 · 已選
-            <span className="font-mono tabular-nums">{totals.selectedCount}</span> 部 · 預估
-            <span
-              data-testid="consent-summary-usd"
-              className={cn(
-                'font-mono font-semibold tabular-nums',
-                overBudget ? 'text-[var(--warning-text)]' : 'text-[var(--text-primary)]'
-              )}
-            >
-              {usd(totals.selectedTotalUsd)}
-            </span>
-          </p>
+          <div className="flex flex-col gap-0.5">
+            <p className="flex flex-wrap items-center gap-[3px] text-[13px] text-[var(--text-secondary)]">
+              候選 <span className="font-mono tabular-nums">{totals.candidateCount}</span> 部 · 已選
+              <span className="font-mono tabular-nums">{totals.selectedCount}</span> 部 · 預估
+              <span
+                data-testid="consent-summary-usd"
+                className={cn(
+                  'font-mono font-semibold tabular-nums',
+                  overBudget ? 'text-[var(--warning-text)]' : 'text-[var(--text-primary)]'
+                )}
+              >
+                {usdWithEstimate(totals.selectedTotalUsd, totals.hasEstimatedRows)}
+              </span>
+            </p>
+            {/* sub-6-12 AC #6 —「花錢的事先問」asked HOW MUCH and never asked
+                WHOSE key. This is the answer, on the one line that is already
+                about the money. */}
+            <p data-testid="consent-spend-source" className="text-xs text-[var(--text-muted)]">
+              {spendSourceLabel({
+                claudeSource: claudeKeySource,
+                openaiSource: openaiKeySource,
+                selfHostedAsr,
+                hasAsrCandidates: asrTotal > 0,
+              })}
+            </p>
+          </div>
 
           {/* Search + sort (AC #1/#2/#5). One row at every width: on a phone the
             sort control shrinks but stays beside the box, because stacking them
@@ -754,7 +855,18 @@ export function CandidateListPanel({
               <input
                 type="checkbox"
                 data-testid="consent-select-all"
-                aria-label={allSelected ? '取消全選' : '全選'}
+                // sub-6-12 AC #1: the name says the SCOPE, because that is the
+                // thing the shipped 「全選」 got wrong — it read as「these」and
+                // meant「all 2,399」.
+                aria-label={
+                  narrowed
+                    ? allSelected
+                      ? `取消選取顯示的 ${totals.visibleSelectableCount} 部`
+                      : `選取顯示的 ${totals.visibleSelectableCount} 部`
+                    : allSelected
+                      ? '取消全選'
+                      : '全選'
+                }
                 checked={allSelected}
                 ref={(el) => {
                   if (el) el.indeterminate = someSelected;
@@ -763,8 +875,15 @@ export function CandidateListPanel({
                 className="h-4 w-4 accent-[var(--accent-primary)]"
               />
               已選
-              <span className="font-mono tabular-nums">
-                {totals.selectedCount} / {totals.selectableCount}
+              {/* The numerator is what the CHECKBOX has ticked, so the pair
+                  always reads as one fraction. The library-wide count sits in
+                  the summary bar two lines above and is unaffected by any
+                  filter — 「已選 2 / 顯示 3」 with only one of the three shown
+                  rows ticked would be two different facts wearing one slash. */}
+              <span data-testid="consent-select-all-count" className="font-mono tabular-nums">
+                {narrowed
+                  ? `${totals.visibleSelectedCount} / 顯示 ${totals.visibleSelectableCount}（全部 ${totals.selectableCount}）`
+                  : `${totals.selectedCount} / ${totals.selectableCount}`}
               </span>
               {totals.unwritableCount > 0 && (
                 <span
@@ -827,13 +946,22 @@ export function CandidateListPanel({
                   label={row.label}
                   hint={row.hint}
                   selectLabel={row.selectLabel}
+                  unit={row.unit}
                   items={row.items}
                   selectedIds={selectedIds}
+                  visibleIds={visibleIds}
                   onToggleGroup={onToggleGroup}
                   prices={prices}
                   season={row.season}
                   expanded={row.expanded}
                   onToggleExpanded={() => toggleSection(row.sectionId, row.expanded)}
+                  rowRef={virtualized ? virtualizer.measureElement : undefined}
+                  index={virtualized ? index : undefined}
+                />
+              ) : row.kind === 'cut' ? (
+                <BudgetCutRow
+                  key={row.key}
+                  budgetUsd={budgetUsd ?? 0}
                   rowRef={virtualized ? virtualizer.measureElement : undefined}
                   index={virtualized ? index : undefined}
                 />
@@ -844,6 +972,7 @@ export function CandidateListPanel({
                   checked={selectedIds.has(row.candidate.mediaId)}
                   onToggle={onToggle}
                   prices={prices}
+                  paused={showCut && totals.pausedIds.has(row.candidate.mediaId)}
                   rowRef={virtualized ? virtualizer.measureElement : undefined}
                   index={virtualized ? index : undefined}
                 />
@@ -874,11 +1003,6 @@ export function CandidateListPanel({
 
         <div className="flex shrink-0 flex-col gap-1 px-6 pb-3 pt-3">
           <p className="text-xs text-[var(--text-muted)]">金額為預估值，實際費用依內容長度而定。</p>
-          {startError && (
-            <p data-testid="consent-start-error" className="text-sm text-[var(--error-text)]">
-              {startError}
-            </p>
-          )}
         </div>
       </div>
 
@@ -903,7 +1027,22 @@ export function CandidateListPanel({
             >
               {totals.feasibleCount}
             </span>
-            部後暫停，其餘保留在佇列，可提高上限或稍後續跑。
+            {/* One flex child, because the banner's `gap-[3px]` would otherwise
+                push the 、and 。away from the words they belong to — zh-TW
+                punctuation floating a space off its clause reads as a typo.
+                sub-6-12 AC #3: the parenthetical only claims the list shows the
+                cut when a divider was actually drawn; a selection whose one row
+                is dearer than the whole ceiling still runs, so there is nothing
+                to mark. */}
+            <span>
+              部後暫停
+              {showCut && (
+                <span data-testid="consent-feasible-marked" className="text-[var(--text-muted)]">
+                  （清單中已標示）
+                </span>
+              )}
+              ，其餘保留在佇列，可提高上限或稍後續跑。
+            </span>
             {/* sub-6-11 AC #2: once the list is sorted by anything but 群組,
                 the N counts down the SUBMISSION order, which is no longer the
                 order on screen. Saying so is cheaper than letting the user
@@ -915,6 +1054,23 @@ export function CandidateListPanel({
             )}
           </p>
         </div>
+      )}
+
+      {/* sub-6-12 AC #2: 開始 failed — say so WHERE THE BUTTON IS.
+          It used to be the last child of the scroll region, so on the owner's
+          2,400-row library a 502 from 開始產生 rendered roughly forty screens
+          below the button that had just failed: the user saw a spinner stop and
+          nothing else. Here it sits with the over-budget banner, directly above
+          the sticky footer, outside everything that scrolls. */}
+      {startError && (
+        <p
+          role="alert"
+          data-testid="consent-start-error"
+          className="mx-6 mb-2 flex items-center gap-2.5 rounded-[var(--radius-md)] bg-[var(--error-tint)] p-3 text-sm text-[var(--error-text)]"
+        >
+          <CircleAlert className="h-4 w-4 shrink-0" aria-hidden="true" />
+          {startError}
+        </p>
       )}
 
       {/* Sticky footer: 已選/預估 · 預算上限 · 開始產生 */}
@@ -929,7 +1085,7 @@ export function CandidateListPanel({
                 overBudget ? 'text-[var(--warning-text)]' : 'text-[var(--text-primary)]'
               )}
             >
-              {usd(totals.selectedTotalUsd)}
+              {usdWithEstimate(totals.selectedTotalUsd, totals.hasEstimatedRows)}
             </span>
           </p>
           <p
@@ -973,7 +1129,7 @@ export function CandidateListPanel({
               says it — the small hint would be a semantic duplicate (deleted
               from the drawn f18). It renders only in the normal state. */}
           {(budgetInvalid || !overBudget) && (
-            <span className="text-[11px] text-[var(--text-muted)]">
+            <span className="text-xs text-[var(--text-muted)]">
               {budgetInvalid ? '上限必須大於 0' : '達到上限會自動暫停，可稍後續跑'}
             </span>
           )}
