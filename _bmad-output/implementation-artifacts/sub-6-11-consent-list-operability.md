@@ -31,7 +31,7 @@ critique P1「2399 列不可操作」。現況：三個路線 chip 是唯一篩�
 - [x] **Task 1 — 搜尋與排序 state（container）＋ selector 擴充（AC: #1, #2）**
 - [x] **Task 2 — 虛擬化清單（AC: #3）**
 - [x] **Task 3 — 群組摺疊與永顯路線組成（AC: #4）**
-- [x] **Task 4 — 手機版（AC: #5）**；設計更新（AC: #6 `.pen`）提示詞已產出，**待 Alexyu 執行**
+- [x] **Task 4 — 手機版與設計更新（AC: #5, #6）**
 - [x] **Task 5 — 測試與 fixtures（AC: #6）**
 
 （全前端；後端不動。）
@@ -107,10 +107,29 @@ render 完全相同的 row 元件、吃同一份 `ConsentRow` 陣列，差別只
 面板 UI（16）＋ container（4）。gallery fixtures 新增
 `f15-collapsed` / `f15-search-hit` / `f15-sorted-cost`，darwin 視覺基準已產生。
 
-**AC #6 `.pen` —— 未完成，待 Alexyu。** 依 `feedback_pen_inline_agent_workflow`，
-`.pen` 由 Alexyu 跑 Pencil Inline AI Agent 執行、Claude 以 MCP 複審。節點錨定的提示詞
-（含 F15-D-v2 / F15-M-v2 兩段、確切 node ID、定稿字串、複審清單）已寫在
-`sub-6-11-f15-operability-pen-prompt.md`。截圖重出也在那份文件的最後一節。
+**AC #6 `.pen` —— 完成（兩輪）。** 第一輪由 Alexyu 跑 Pencil Inline AI Agent
+（提示詞 A/B 在 `sub-6-11-f15-operability-pen-prompt.md`），Claude 以 MCP 複審抓到兩個
+**提示詞本身的錯**：(1) 漏寫「影集區塊要搬到最後」，稿面把影集夾在兩段電影中間 ——
+而那個段落順序**就是送出順序**，等於在稿子上推翻「已匹配在前」的裁定；
+(2) `全面啟動` 被放進未匹配段，但它沒有「未匹配」徽章，它的問題是「資料夾無法寫入」。
+第二輪（提示詞 C）Alexyu 裁定由 Claude 直接以 MCP 執行（純 `Move` ×5 ＋ `Update` ×3，
+無設計判斷），**破例一次，`.pen` 分工原則不變**。
+
+兩張稿最終順序：桌機 `已匹配 → 沙丘 → 奧本海默 → 全面啟動 → 未匹配 → 星際效應 → 怪奇物語（收合）`；
+手機 `沙丘 → 全面啟動 → 星際效應 → 怪奇物語（收合）`（手機不畫電影分段標頭）。
+
+Alexyu 的兩處 deviation 已追認：排序 icon 因 Pencil 不准插進元件實例，改成
+label 外包一層框裝 icon＋文字（視覺相同）；未匹配標頭的 checkbox 從複製來的半選
+改成空選（`已選 0/1` 配半選會自相矛盾）。
+
+**手機群組標頭換行 —— 裁定維持兩行**（Alexyu 選、Claude 同意）：390px 塞不下
+checkbox＋三角＋標題＋徽章＋`已選 3/9 · $0.78`，標題擠成兩行。**不拿掉金額** ——
+收合起來那一行是使用者對該劇唯一看得到的東西，「要花多少錢」正是 AC #4 加這一行的理由。
+
+**存檔驗證的坑（寫進 prompt 文件）：** 第二輪改完檔案大小**完全沒變**
+（三處改字等長、搬動只是重排），所以 `feedback_verify_pen_saved_before_commit`
+教的「看 size」在這種改動上是無效訊號。有效的驗證是跑 `export-pen-screenshots.py`
+再看圖 —— 那支腳本讀磁碟檔。全量重出會動到 ~153 張 PNG，只 stage 真的改到的兩張。
 
 **視覺基準。** 四張既有 darwin 基準（`list` / `list-mobile` / `grouped` / `over-budget`）
 因版面重構改變，已本機重生；對應的 `-linux` 已 `git rm`，讓 CI 的 bootstrap 走「缺少」
@@ -139,3 +158,5 @@ render 完全相同的 row 元件、吃同一份 `ConsentRow` 陣列，差別只
 - `apps/web/src/routes/test/-gallery.fixtures.tsx`
 - `tests/visual/components.visual.spec.ts-snapshots/components/generation-consent/*`
 - `_bmad-output/implementation-artifacts/sub-6-11-f15-operability-pen-prompt.md`（新）
+- `ux-design.pen`（F15-D-v2 `pwMzT` / F15-M-v2 `fdu4y`）
+- `_bmad-output/screenshots/flow-f-subtitle-v2/f15-d-v2.png`、`f15-m-v2.png`
