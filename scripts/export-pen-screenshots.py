@@ -268,6 +268,8 @@ SCREENS = {
     "KThbY": ("flow-f-subtitle-v2", "f19-d-v2"),
     "IMQO6": ("flow-f-subtitle-v2", "f19-m-v2"),
     "D7MOm": ("flow-f-subtitle-v2", "f20-d-v2"),
+    # sub-6 policy screen — F21「依政策執行」確認屏：清單全收合、只確認總量
+    "x6my4T": ("flow-f-subtitle-v2", "f21-d-v2"),
     # sub-6-12 — 開始失敗時訊息落點的規格畫面（超支橫幅 → 失敗訊息 → 頁尾，皆在捲動區外）
     "VPT7l": ("flow-f-subtitle-v2", "f18-spec-err"),
     # flow-h-homepage-v3 — home identity rework (home-v3-identity-brief.md: 讀數帶 4 格 +
