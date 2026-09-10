@@ -173164,7 +173164,7 @@
               "type": "text",
               "id": "a5g9G",
               "name": "actionManual",
-              "fill": "$text-secondary",
+              "fill": "$accent-primary",
               "content": "批次生成字幕 →",
               "fontFamily": "Noto Sans TC",
               "fontSize": 13,
