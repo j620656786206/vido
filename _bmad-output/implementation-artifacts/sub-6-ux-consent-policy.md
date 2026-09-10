@@ -1,6 +1,6 @@
 # Story 6.UX: 「依政策執行」—— 同意是政策不是清單（UX 設計 story，Sally）
 
-Status: ready-for-review
+Status: done
 
 <!-- UX design story: deliverable = screens in ux-design.pen + screenshots, not code. -->
 
