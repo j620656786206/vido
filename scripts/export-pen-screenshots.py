@@ -272,6 +272,8 @@ SCREENS = {
     "x6my4T": ("flow-f-subtitle-v2", "f21-d-v2"),
     # sub-6 policy screen — F23「依政策執行」超限態：砍線落在看得見的列之間
     "zK1Oq": ("flow-f-subtitle-v2", "f23-d-v2"),
+    # sub-6 policy screen — F24「依政策執行」空態：候選全需語音辨識，政策無事可做
+    "KjOTM": ("flow-f-subtitle-v2", "f24-d-v2"),
     # sub-6-12 — 開始失敗時訊息落點的規格畫面（超支橫幅 → 失敗訊息 → 頁尾，皆在捲動區外）
     "VPT7l": ("flow-f-subtitle-v2", "f18-spec-err"),
     # flow-h-homepage-v3 — home identity rework (home-v3-identity-brief.md: 讀數帶 4 格 +

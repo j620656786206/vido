@@ -176411,6 +176411,701 @@
       "fontFamily": "Noto Sans TC",
       "fontSize": 14,
       "fontWeight": "600"
+    },
+    {
+      "type": "frame",
+      "id": "KjOTM",
+      "x": 74270,
+      "y": -5746,
+      "name": "f24-d-v2",
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "$bg-primary",
+      "layout": "none",
+      "children": [
+        {
+          "type": "frame",
+          "id": "RvsOg",
+          "x": 0,
+          "y": 0,
+          "name": "backdrop",
+          "clip": true,
+          "width": 1440,
+          "height": 900,
+          "fill": "$bg-primary",
+          "children": [
+            {
+              "id": "CKfUo",
+              "type": "ref",
+              "ref": "BDeUS",
+              "name": "sidebar",
+              "height": "fill_container",
+              "descendants": {
+                "wGp06": {
+                  "fill": "#00000000"
+                },
+                "wGp06/QyNdL": {
+                  "fill": "$text-secondary"
+                },
+                "wGp06/bsavg": {
+                  "fill": "$text-secondary",
+                  "fontWeight": "normal"
+                },
+                "bn9aO": {
+                  "fill": "$accent-tint"
+                },
+                "bn9aO/QyNdL": {
+                  "fill": "$accent-text"
+                },
+                "bn9aO/bsavg": {
+                  "fill": "$accent-text",
+                  "fontWeight": "600"
+                }
+              }
+            },
+            {
+              "type": "frame",
+              "id": "L6umS",
+              "name": "main",
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "$bg-primary",
+              "layout": "vertical",
+              "gap": 24,
+              "padding": [
+                32,
+                40
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "k1btpT",
+                  "name": "header",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "WVESY",
+                      "name": "pageTitle",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "活動",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 28,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "a0UhLB",
+                      "name": "pageSub",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "媒體庫的所有背景工作 — 掃描、字幕、解析與下載",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "H2l11",
+                  "name": "sec-進行中",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "JlqIp",
+                      "name": "secHead",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "GwJYQ",
+                          "name": "secTitle",
+                          "fill": "$text-primary",
+                          "content": "進行中",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 18,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "i8XYD",
+                          "name": "countChip",
+                          "fill": "$accent-tint",
+                          "cornerRadius": 100,
+                          "padding": [
+                            2,
+                            9
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "YHvaw",
+                              "name": "chipNum",
+                              "fill": "$accent-text",
+                              "content": "3",
+                              "fontFamily": "JetBrains Mono",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "hP7Rh",
+                      "type": "ref",
+                      "ref": "fF8nX",
+                      "name": "row-掃描",
+                      "width": "fill_container",
+                      "descendants": {
+                        "B5edWI": {
+                          "icon": "radar"
+                        },
+                        "xWxRJ": {
+                          "content": "掃描媒體庫"
+                        },
+                        "ko2Lf": {
+                          "content": "正在掃描 /media/movies — 已處理 1,234 / 5,000 個檔案"
+                        },
+                        "uCkPx": {
+                          "content": "62%",
+                          "fill": "$accent-text",
+                          "fontFamily": "JetBrains Mono"
+                        },
+                        "t0lyx": {
+                          "width": 670
+                        }
+                      }
+                    },
+                    {
+                      "id": "t9aYSJ",
+                      "type": "ref",
+                      "ref": "fF8nX",
+                      "name": "row-字幕",
+                      "width": "fill_container",
+                      "descendants": {
+                        "B5edWI": {
+                          "icon": "captions"
+                        },
+                        "xWxRJ": {
+                          "content": "批次字幕搜尋"
+                        },
+                        "ko2Lf": {
+                          "content": "為 30 部影片尋找繁體中文字幕"
+                        },
+                        "uCkPx": {
+                          "content": "12 / 30",
+                          "fill": "$text-secondary",
+                          "fontFamily": "JetBrains Mono"
+                        },
+                        "t0lyx": {
+                          "width": 432
+                        }
+                      }
+                    },
+                    {
+                      "id": "o5uQEi",
+                      "type": "ref",
+                      "ref": "fF8nX",
+                      "name": "row-AI",
+                      "width": "fill_container",
+                      "descendants": {
+                        "B5edWI": {
+                          "icon": "sparkles"
+                        },
+                        "xWxRJ": {
+                          "content": "AI 字幕校正"
+                        },
+                        "ko2Lf": {
+                          "content": "你的名字 · S1E3 — 簡轉繁 + 語意校正中"
+                        },
+                        "uCkPx": {
+                          "content": "校正中",
+                          "fill": "$accent-text",
+                          "fontFamily": "Noto Sans TC"
+                        },
+                        "t0lyx": {
+                          "width": 810
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Lk1by",
+                  "name": "sec-待處理",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "DfQvi",
+                      "name": "secHead",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "b4DwH",
+                          "name": "secTitle",
+                          "fill": "$text-primary",
+                          "content": "待處理",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 18,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "xi1Mt",
+                      "type": "ref",
+                      "ref": "fF8nX",
+                      "name": "row-待解析",
+                      "width": "fill_container",
+                      "descendants": {
+                        "B5edWI": {
+                          "icon": "file-search"
+                        },
+                        "xWxRJ": {
+                          "content": "待解析項目"
+                        },
+                        "ko2Lf": {
+                          "content": "8 個檔案無法自動比對中繼資料"
+                        },
+                        "uCkPx": {
+                          "content": "前往處理 →",
+                          "fill": "$accent-primary",
+                          "fontFamily": "Noto Sans TC"
+                        },
+                        "Yhrjo": {
+                          "enabled": false
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "nCCmH",
+                  "name": "sec-下載",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "mAqPm",
+                      "name": "secHead",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "kGqUD",
+                          "name": "secTitle",
+                          "fill": "$text-primary",
+                          "content": "下載",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 18,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "MW7Pu",
+                      "type": "ref",
+                      "ref": "fF8nX",
+                      "name": "row-下載中",
+                      "width": "fill_container",
+                      "descendants": {
+                        "B5edWI": {
+                          "icon": "download"
+                        },
+                        "xWxRJ": {
+                          "content": "下載中"
+                        },
+                        "ko2Lf": {
+                          "content": "3 個進行中 · 5 個排隊 · 12.4 MB/s"
+                        },
+                        "uCkPx": {
+                          "content": "開啟下載頁 →",
+                          "fill": "$accent-primary",
+                          "fontFamily": "Noto Sans TC"
+                        },
+                        "Yhrjo": {
+                          "enabled": false
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "K9JGC",
+                  "name": "sec-活動記錄",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "FgiyK",
+                      "name": "secHead",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Rjfrz",
+                          "name": "secTitle",
+                          "fill": "$text-primary",
+                          "content": "活動記錄",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 18,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "k3zXoU",
+                      "type": "ref",
+                      "ref": "fF8nX",
+                      "name": "row-字幕完成",
+                      "width": "fill_container",
+                      "descendants": {
+                        "EtPLt": {
+                          "fill": "$success-tint"
+                        },
+                        "B5edWI": {
+                          "icon": "circle-check",
+                          "fill": "$success"
+                        },
+                        "xWxRJ": {
+                          "content": "字幕已下載"
+                        },
+                        "ko2Lf": {
+                          "content": "蒼鷺 · 繁體中文"
+                        },
+                        "uCkPx": {
+                          "content": "2 分鐘前",
+                          "fill": "$text-muted",
+                          "fontFamily": "Noto Sans TC"
+                        },
+                        "Yhrjo": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "id": "ucAsH",
+                      "type": "ref",
+                      "ref": "fF8nX",
+                      "name": "row-掃描完成",
+                      "width": "fill_container",
+                      "descendants": {
+                        "EtPLt": {
+                          "fill": "$success-tint"
+                        },
+                        "B5edWI": {
+                          "icon": "circle-check",
+                          "fill": "$success"
+                        },
+                        "xWxRJ": {
+                          "content": "掃描完成"
+                        },
+                        "ko2Lf": {
+                          "content": "新增 12 部影片到媒體庫"
+                        },
+                        "uCkPx": {
+                          "content": "18 分鐘前",
+                          "fill": "$text-muted",
+                          "fontFamily": "Noto Sans TC"
+                        },
+                        "Yhrjo": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "id": "C26HOr",
+                      "type": "ref",
+                      "ref": "fF8nX",
+                      "name": "row-解析失敗",
+                      "width": "fill_container",
+                      "descendants": {
+                        "EtPLt": {
+                          "fill": "$error-tint"
+                        },
+                        "B5edWI": {
+                          "icon": "triangle-alert",
+                          "fill": "$error"
+                        },
+                        "xWxRJ": {
+                          "content": "解析失敗"
+                        },
+                        "ko2Lf": {
+                          "content": "The.Movie.2024.mkv — 找不到中繼資料"
+                        },
+                        "uCkPx": {
+                          "content": "1 小時前",
+                          "fill": "$text-muted",
+                          "fontFamily": "Noto Sans TC"
+                        },
+                        "Yhrjo": {
+                          "enabled": false
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "X2Kcc",
+          "x": 0,
+          "y": 0,
+          "name": "scrim",
+          "fill": "$overlay-scrim",
+          "width": 1440,
+          "height": 900
+        },
+        {
+          "type": "frame",
+          "id": "u3eyj",
+          "x": 240,
+          "y": 222,
+          "name": "gen-dialog",
+          "width": 960,
+          "fill": "$bg-secondary",
+          "cornerRadius": "$radius-lg",
+          "stroke": "$border-subtle",
+          "strokeWidth": 1,
+          "strokeAlignment": "inner",
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#00000080",
+            "offset": {
+              "x": 0,
+              "y": 16
+            },
+            "blur": 48
+          },
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "szDoC",
+              "name": "title-bar",
+              "width": "fill_container",
+              "height": 56,
+              "stroke": "$border-subtle",
+              "strokeWidth": {
+                "bottom": 1
+              },
+              "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
+              "padding": [
+                0,
+                12,
+                0,
+                24
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "N9OMeI",
+                  "name": "dialog-title",
+                  "fill": "$text-primary",
+                  "content": "依政策執行",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 16,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "gItvU",
+                  "name": "close-hit",
+                  "width": 44,
+                  "height": 44,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "koAah",
+                      "name": "close-x",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "x",
+                      "library": "lucide",
+                      "fill": "$text-secondary"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ORt8c",
+              "name": "body",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": [
+                16,
+                24
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "DrTP3",
+                  "name": "empty-state",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 16,
+                  "padding": [
+                    56,
+                    24
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "BSZ1i",
+                      "name": "empty-icon-wrap",
+                      "width": 56,
+                      "height": 56,
+                      "fill": "$bg-tertiary",
+                      "cornerRadius": 100,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "kOmHk",
+                          "name": "search-x",
+                          "width": 28,
+                          "height": 28,
+                          "icon": "search-x",
+                          "library": "lucide",
+                          "fill": "$text-muted"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "j3mAD",
+                      "name": "empty-title",
+                      "fill": "$text-primary",
+                      "content": "沒有可以自動處理的項目",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 16,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "b0VDNf",
+                      "name": "empty-body",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": 420,
+                      "content": "這次的 96 部候選全部都需要語音辨識 —— 政策只自動處理可抽取內嵌字幕的項目。",
+                      "textAlign": "center",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "bXwPP",
+                      "name": "empty-hint",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": 420,
+                      "content": "要處理它們，請改用「批次生成字幕」逐次同意。",
+                      "textAlign": "center",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "W7JzgJ",
+              "name": "footer",
+              "width": "fill_container",
+              "fill": "$bg-secondary",
+              "stroke": "$border-subtle",
+              "strokeWidth": {
+                "top": 1
+              },
+              "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
+              "padding": [
+                14,
+                24
+              ],
+              "justifyContent": "end",
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "zqirs",
+                  "type": "ref",
+                  "ref": "YDPhc",
+                  "name": "btn-close",
+                  "height": 44,
+                  "descendants": {
+                    "L9cIf": {
+                      "content": "關閉",
+                      "fontFamily": "Noto Sans TC"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "nkLkV",
+      "x": 74270,
+      "y": -5791,
+      "name": "cap-F24-D-v2",
+      "fill": "#888888",
+      "content": "F24 · 政策確認屏．無可抽取項目（桌機）",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 14,
+      "fontWeight": "600"
     }
   ],
   "variables": {
