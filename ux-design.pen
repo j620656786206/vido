@@ -1898,21 +1898,17 @@
                                     "type": "gradient",
                                     "gradientType": "linear",
                                     "enabled": true,
-                                    "rotation": 315,
+                                    "rotation": 135,
                                     "size": {
                                       "height": 1
                                     },
                                     "colors": [
                                       {
-                                        "color": "#4338CA",
+                                        "color": "#566024",
                                         "position": 0
                                       },
                                       {
-                                        "color": "#6D28D9",
-                                        "position": 0.5
-                                      },
-                                      {
-                                        "color": "#7C3AED",
+                                        "color": "#3c7231",
                                         "position": 1
                                       }
                                     ]
@@ -1936,7 +1932,7 @@
                                   "id": "ZFfu3",
                                   "name": "fb1hex",
                                   "fill": "$text-muted",
-                                  "content": "135° #4338CA → #6D28D9 → #7C3AED",
+                                  "content": "135° · hsl(h,45%,26%) → hsl(h+40,40%,32%)",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Canvas",
                                   "fontSize": "$Type/Label/Size",
@@ -1962,17 +1958,17 @@
                                     "type": "gradient",
                                     "gradientType": "linear",
                                     "enabled": true,
-                                    "rotation": 315,
+                                    "rotation": 135,
                                     "size": {
                                       "height": 1
                                     },
                                     "colors": [
                                       {
-                                        "color": "#4338CA",
+                                        "color": "#566024",
                                         "position": 0
                                       },
                                       {
-                                        "color": "#7C3AED",
+                                        "color": "#3c7231",
                                         "position": 1
                                       }
                                     ]
@@ -2023,7 +2019,7 @@
                                   "id": "ggK3B",
                                   "name": "fb2hex",
                                   "fill": "$text-muted",
-                                  "content": "circle #FFFFFF18 · text #FFFFFFCC",
+                                  "content": "同一道漸層 · 首字 text-on-scrim",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Canvas",
                                   "fontSize": "$Type/Label/Size",
@@ -19325,26 +19321,24 @@
                       "gap": "$Space/lg",
                       "children": [
                         {
-                          "type": "text",
-                          "id": "AHW4u",
+                          "type": "icon",
+                          "id": "c5Q6Az",
                           "name": "film-icon",
-                          "fill": "$text-muted",
-                          "content": "🎬",
-                          "lineHeight": "$Type/H1/Line",
-                          "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/H1/Size",
-                          "fontWeight": "normal"
+                          "width": 32,
+                          "height": 32,
+                          "icon": "clapperboard",
+                          "library": "lucide",
+                          "fill": "$text-muted"
                         },
                         {
-                          "type": "text",
-                          "id": "qFo1x",
+                          "type": "icon",
+                          "id": "I9GnMu",
                           "name": "folder-icon",
-                          "fill": "$text-muted",
-                          "content": "📁",
-                          "lineHeight": "$Type/H1/Line",
-                          "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/H1/Size",
-                          "fontWeight": "normal"
+                          "width": 32,
+                          "height": 32,
+                          "icon": "folder",
+                          "library": "lucide",
+                          "fill": "$text-muted"
                         }
                       ]
                     },
@@ -19466,15 +19460,14 @@
                       "fill": "#00000000",
                       "children": [
                         {
-                          "type": "text",
-                          "id": "z6voV",
+                          "type": "icon",
+                          "id": "jN3C1",
                           "name": "folder-icon",
-                          "fill": "$text-muted",
-                          "content": "📁",
-                          "lineHeight": "$Type/H1/Line",
-                          "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/H1/Size",
-                          "fontWeight": "normal"
+                          "width": 32,
+                          "height": 32,
+                          "icon": "folder",
+                          "library": "lucide",
+                          "fill": "$text-muted"
                         }
                       ]
                     },
@@ -19596,15 +19589,14 @@
                       "fill": "#00000000",
                       "children": [
                         {
-                          "type": "text",
-                          "id": "LjB6z",
+                          "type": "icon",
+                          "id": "qdxjE",
                           "name": "scan-icon",
-                          "fill": "$text-muted",
-                          "content": "🔎",
-                          "lineHeight": "$Type/H1/Line",
-                          "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/H1/Size",
-                          "fontWeight": "normal"
+                          "width": 32,
+                          "height": 32,
+                          "icon": "search",
+                          "library": "lucide",
+                          "fill": "$text-muted"
                         }
                       ]
                     },
@@ -20508,21 +20500,17 @@
                                 "type": "gradient",
                                 "gradientType": "linear",
                                 "enabled": true,
-                                "rotation": 315,
+                                "rotation": 135,
                                 "size": {
                                   "height": 1
                                 },
                                 "colors": [
                                   {
-                                    "color": "#4338CA",
+                                    "color": "#566024",
                                     "position": 0
                                   },
                                   {
-                                    "color": "#6D28D9",
-                                    "position": 0.5
-                                  },
-                                  {
-                                    "color": "#7C3AED",
+                                    "color": "#3c7231",
                                     "position": 1
                                   }
                                 ]
@@ -20546,7 +20534,7 @@
                               "id": "vsgXb",
                               "name": "fb1hex",
                               "fill": "$text-muted",
-                              "content": "135° #4338CA → #6D28D9 → #7C3AED",
+                              "content": "135° · hsl(h,45%,26%) → hsl(h+40,40%,32%)",
                               "lineHeight": "$Type/Label/Line",
                               "fontFamily": "$Type/Family/Canvas",
                               "fontSize": "$Type/Label/Size",
@@ -20572,17 +20560,17 @@
                                 "type": "gradient",
                                 "gradientType": "linear",
                                 "enabled": true,
-                                "rotation": 315,
+                                "rotation": 135,
                                 "size": {
                                   "height": 1
                                 },
                                 "colors": [
                                   {
-                                    "color": "#4338CA",
+                                    "color": "#566024",
                                     "position": 0
                                   },
                                   {
-                                    "color": "#7C3AED",
+                                    "color": "#3c7231",
                                     "position": 1
                                   }
                                 ]
@@ -20633,7 +20621,7 @@
                               "id": "JRLH3",
                               "name": "fb2hex",
                               "fill": "$text-muted",
-                              "content": "circle #FFFFFF18 · text #FFFFFFCC",
+                              "content": "同一道漸層 · 首字 text-on-scrim",
                               "lineHeight": "$Type/Label/Line",
                               "fontFamily": "$Type/Family/Canvas",
                               "fontSize": "$Type/Label/Size",
@@ -37423,7 +37411,7 @@
                           "fill": "$text-secondary",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "135° 線性漸層 #4338CA → #6D28D9 → #7C3AED(沿用 Screen 4e 設計 token)，高度同 backdrop 240。",
+                          "content": "135° 線性漸層，色相由片名雜湊（djb2）決定：hsl(h,45%,26%) → hsl(h+40,40%,32%)。亮度刻意壓暗（26%／32%），讓任何色相上的 text-on-scrim 首字都過 3:1，也讓它坐在夜行的底色裡而不是訊號藍時代的亮色。高度同 backdrop 240。",
                           "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Primary",
                           "fontSize": "$Type/Body/Size",
@@ -37447,7 +37435,7 @@
                           "fill": "$text-secondary",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "80×80 圓形，fill #FFFFFF18，水平垂直置中；內含片名首字，#FFFFFFCC,Noto Sans TC 36 / 700。圓圈置中於 backdrop 漸層上。",
+                          "content": "海報槽用同一道漸層（不是圓形、不是實色），2:3 滿版，內含片名首字，text-on-scrim，Noto Sans TC 36 / 700。與 PosterCard 的無海報 fallback 同一支 filenameToGradient()。",
                           "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Primary",
                           "fontSize": "$Type/Body/Size",
@@ -37471,7 +37459,7 @@
                           "fill": "$text-secondary",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "純 CSS 漸層 + 文字，無第二次網路請求 → 每次渲染像素一致 → 視覺回歸 baseline 穩定，根除 media-media-detail-panel 的 flaky 重拍。",
+                          "content": "純 CSS 漸層 + 文字，無第二次網路請求 → 每次渲染像素一致（色相由片名雜湊，不是亂數）→ 視覺回歸 baseline 穩定，根除 media-media-detail-panel 的 flaky 重拍。",
                           "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Primary",
                           "fontSize": "$Type/Body/Size",
@@ -37551,15 +37539,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#4338CA",
+                                "color": "#566024",
                                 "position": 0
                               },
                               {
-                                "color": "#6D28D9",
-                                "position": 0.5
-                              },
-                              {
-                                "color": "#7C3AED",
+                                "color": "#3c7231",
                                 "position": 1
                               }
                             ]
@@ -37601,9 +37585,27 @@
                               "y": 70,
                               "name": "initial-circle",
                               "width": 80,
-                              "height": 80,
-                              "fill": "$bg-tertiary",
-                              "cornerRadius": "$radius-pill",
+                              "height": 120,
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#566024",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#3c7231",
+                                    "position": 1
+                                  }
+                                ]
+                              },
+                              "cornerRadius": "$radius-lg",
                               "justifyContent": "center",
                               "alignItems": "center",
                               "children": [
@@ -37967,8 +37969,8 @@
                                   "y": 0,
                                   "descendants": {
                                     "DaLcd": {
-                                      "content": "播放",
-                                      "x": 86,
+                                      "content": "管理字幕",
+                                      "x": 72,
                                       "y": 8
                                     }
                                   }
@@ -37984,7 +37986,7 @@
                                   "y": 0,
                                   "descendants": {
                                     "L9cIf": {
-                                      "content": "加入清單",
+                                      "content": "修改資訊",
                                       "x": 72,
                                       "y": 8
                                     }
@@ -43751,15 +43753,11 @@
                         },
                         "colors": [
                           {
-                            "color": "#4338CA",
+                            "color": "#602c24",
                             "position": 0
                           },
                           {
-                            "color": "#6D28D9",
-                            "position": 0.5
-                          },
-                          {
-                            "color": "#7C3AED",
+                            "color": "#726531",
                             "position": 1
                           }
                         ]
@@ -44296,15 +44294,11 @@
                         },
                         "colors": [
                           {
-                            "color": "#4338CA",
+                            "color": "#602447",
                             "position": 0
                           },
                           {
-                            "color": "#6D28D9",
-                            "position": 0.5
-                          },
-                          {
-                            "color": "#7C3AED",
+                            "color": "#723631",
                             "position": 1
                           }
                         ]
@@ -45156,15 +45150,11 @@
                         },
                         "colors": [
                           {
-                            "color": "#4338CA",
+                            "color": "#566024",
                             "position": 0
                           },
                           {
-                            "color": "#6D28D9",
-                            "position": 0.5
-                          },
-                          {
-                            "color": "#7C3AED",
+                            "color": "#3c7231",
                             "position": 1
                           }
                         ]
@@ -45490,8 +45480,8 @@
                               "y": 0,
                               "descendants": {
                                 "DaLcd": {
-                                  "content": "播放",
-                                  "x": 70.5,
+                                  "content": "管理字幕",
+                                  "x": 56.5,
                                   "y": 8
                                 }
                               }
@@ -45507,7 +45497,7 @@
                               "y": 0,
                               "descendants": {
                                 "L9cIf": {
-                                  "content": "加入清單",
+                                  "content": "修改資訊",
                                   "x": 56.5,
                                   "y": 8
                                 }
