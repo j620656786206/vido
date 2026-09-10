@@ -13396,6 +13396,791 @@
               ]
             }
           ]
+        },
+        {
+          "type": "frame",
+          "id": "wrjOF",
+          "x": 17000,
+          "y": -9785,
+          "name": "Component Anatomy · 元件解剖",
+          "clip": true,
+          "width": 1600,
+          "fill": "$bg-primary",
+          "cornerRadius": "$radius-lg",
+          "layout": "vertical",
+          "gap": "$Space/xl",
+          "padding": "$Space/4xl",
+          "children": [
+            {
+              "type": "frame",
+              "id": "CKQea",
+              "name": "header",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": "$Space/sm",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "HGxWX",
+                  "name": "title",
+                  "fill": "$text-primary",
+                  "content": "Component Anatomy · 元件解剖",
+                  "fontFamily": "$Type/Family/Canvas",
+                  "fontSize": "$Type/Title/L/Size",
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "znktI",
+                  "name": "note",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "左邊是元件原樣，右邊是同一個 instance，只在「容器 frame」上疊了半透明色塊與外框，讓每一層的範圍看得出來。文字與圖示不上色。色相代表巢狀深度，不代表語意。",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Body/M/Size",
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "TXETL",
+              "name": "legend",
+              "width": "fill_container",
+              "gap": "$Space/lg",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "J2I4z",
+                  "name": "lg0",
+                  "gap": "$Space/sm",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": "$radius-sm",
+                      "id": "A6EeH",
+                      "name": "chip",
+                      "fill": "#FF5CA833",
+                      "width": 18,
+                      "height": 18,
+                      "stroke": "#FF5CA8AA",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner"
+                    },
+                    {
+                      "type": "text",
+                      "id": "b74W3R",
+                      "name": "t",
+                      "fill": "$text-secondary",
+                      "content": "第 1 層",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Body/S/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "NBg9L",
+                  "name": "lg1",
+                  "gap": "$Space/sm",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": "$radius-sm",
+                      "id": "U0vQi",
+                      "name": "chip",
+                      "fill": "#5CC8FF33",
+                      "width": 18,
+                      "height": 18,
+                      "stroke": "#5CC8FFAA",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner"
+                    },
+                    {
+                      "type": "text",
+                      "id": "SCLGY",
+                      "name": "t",
+                      "fill": "$text-secondary",
+                      "content": "第 2 層",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Body/S/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "kbjKI",
+                  "name": "lg2",
+                  "gap": "$Space/sm",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": "$radius-sm",
+                      "id": "vsmnT",
+                      "name": "chip",
+                      "fill": "#FFD25C33",
+                      "width": 18,
+                      "height": 18,
+                      "stroke": "#FFD25CAA",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner"
+                    },
+                    {
+                      "type": "text",
+                      "id": "alFwy",
+                      "name": "t",
+                      "fill": "$text-secondary",
+                      "content": "第 3 層",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Body/S/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "yA7HT",
+                  "name": "lg3",
+                  "gap": "$Space/sm",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": "$radius-sm",
+                      "id": "gwQwa",
+                      "name": "chip",
+                      "fill": "#7CFF9A33",
+                      "width": 18,
+                      "height": 18,
+                      "stroke": "#7CFF9AAA",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner"
+                    },
+                    {
+                      "type": "text",
+                      "id": "D1sdRO",
+                      "name": "t",
+                      "fill": "$text-secondary",
+                      "content": "第 4 層",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Body/S/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "phdfg",
+                  "name": "lg4",
+                  "gap": "$Space/sm",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": "$radius-sm",
+                      "id": "MHtFc",
+                      "name": "chip",
+                      "fill": "#C08CFF33",
+                      "width": 18,
+                      "height": 18,
+                      "stroke": "#C08CFFAA",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner"
+                    },
+                    {
+                      "type": "text",
+                      "id": "MWNs7",
+                      "name": "t",
+                      "fill": "$text-secondary",
+                      "content": "第 5 層",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Body/S/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "xTXK7",
+              "name": "row-otvKh",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": "$Space/md",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "SVwO3",
+                  "name": "rowLabel",
+                  "fill": "$text-secondary",
+                  "content": "ButtonPrimary — 控制項",
+                  "fontFamily": "$Type/Family/Canvas",
+                  "fontSize": "$Type/Heading/M/Size",
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "S93Ke3",
+                  "name": "pair",
+                  "gap": "$Space/4xl",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "EPduH",
+                      "name": "cell-plain",
+                      "layout": "vertical",
+                      "gap": "$Space/sm",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "OBREw",
+                          "name": "cap",
+                          "fill": "$text-muted",
+                          "content": "原樣",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Meta/M/Size",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "id": "Tb3Ed",
+                          "type": "ref",
+                          "ref": "otvKh"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "GElwv",
+                      "name": "cell-anat",
+                      "layout": "vertical",
+                      "gap": "$Space/sm",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "OkGJa",
+                          "name": "cap",
+                          "fill": "$text-muted",
+                          "content": "解剖",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Meta/M/Size",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "id": "M5x9kV",
+                          "type": "ref",
+                          "ref": "otvKh",
+                          "fill": "#FF5CA833",
+                          "stroke": "#FF5CA8AA",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "tocqH",
+              "name": "row-W5KQr",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": "$Space/md",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "HvS4r",
+                  "name": "rowLabel",
+                  "fill": "$text-secondary",
+                  "content": "SidebarNavItem — 導覽列",
+                  "fontFamily": "$Type/Family/Canvas",
+                  "fontSize": "$Type/Heading/M/Size",
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "MWzrR",
+                  "name": "pair",
+                  "gap": "$Space/4xl",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "r2QUW",
+                      "name": "cell-plain",
+                      "layout": "vertical",
+                      "gap": "$Space/sm",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Torfv",
+                          "name": "cap",
+                          "fill": "$text-muted",
+                          "content": "原樣",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Meta/M/Size",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "id": "h3JQF",
+                          "type": "ref",
+                          "ref": "W5KQr"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "qGr9O",
+                      "name": "cell-anat",
+                      "layout": "vertical",
+                      "gap": "$Space/sm",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "S2vBP",
+                          "name": "cap",
+                          "fill": "$text-muted",
+                          "content": "解剖",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Meta/M/Size",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "id": "phgOy",
+                          "type": "ref",
+                          "ref": "W5KQr",
+                          "fill": "#FF5CA833",
+                          "stroke": "#FF5CA8AA",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "descendants": {
+                            "H2EZ6k": {
+                              "fill": "#5CC8FF33",
+                              "stroke": "#5CC8FFAA",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "SFVOw",
+              "name": "row-L9m19",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": "$Space/md",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "JE5nl",
+                  "name": "rowLabel",
+                  "fill": "$text-secondary",
+                  "content": "TechBadge-Video — 徽章",
+                  "fontFamily": "$Type/Family/Canvas",
+                  "fontSize": "$Type/Heading/M/Size",
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "jFWRo",
+                  "name": "pair",
+                  "gap": "$Space/4xl",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "UYazt",
+                      "name": "cell-plain",
+                      "layout": "vertical",
+                      "gap": "$Space/sm",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "j8NqR",
+                          "name": "cap",
+                          "fill": "$text-muted",
+                          "content": "原樣",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Meta/M/Size",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "id": "MtvPW",
+                          "type": "ref",
+                          "ref": "L9m19"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "z9Qpc",
+                      "name": "cell-anat",
+                      "layout": "vertical",
+                      "gap": "$Space/sm",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "m0oAv",
+                          "name": "cap",
+                          "fill": "$text-muted",
+                          "content": "解剖",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Meta/M/Size",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "id": "IYGkL",
+                          "type": "ref",
+                          "ref": "L9m19",
+                          "fill": "#FF5CA833",
+                          "stroke": "#FF5CA8AA",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "gwk5m",
+              "name": "row-fF8nX",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": "$Space/md",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "HJFTg",
+                  "name": "rowLabel",
+                  "fill": "$text-secondary",
+                  "content": "ActivityRow-v2 — 列表列",
+                  "fontFamily": "$Type/Family/Canvas",
+                  "fontSize": "$Type/Heading/M/Size",
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "f8Guhx",
+                  "name": "pair",
+                  "gap": "$Space/4xl",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "oLTGu",
+                      "name": "cell-plain",
+                      "layout": "vertical",
+                      "gap": "$Space/sm",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "fAp1T",
+                          "name": "cap",
+                          "fill": "$text-muted",
+                          "content": "原樣",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Meta/M/Size",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "id": "mrBYw",
+                          "type": "ref",
+                          "ref": "fF8nX"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "LIKWS",
+                      "name": "cell-anat",
+                      "layout": "vertical",
+                      "gap": "$Space/sm",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "LLMoQ",
+                          "name": "cap",
+                          "fill": "$text-muted",
+                          "content": "解剖",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Meta/M/Size",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "id": "zZMI3",
+                          "type": "ref",
+                          "ref": "fF8nX",
+                          "fill": "#FF5CA833",
+                          "stroke": "#FF5CA8AA",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "descendants": {
+                            "PDBny": {
+                              "fill": "#5CC8FF33",
+                              "stroke": "#5CC8FFAA",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner"
+                            },
+                            "EtPLt": {
+                              "fill": "#FFD25C33",
+                              "stroke": "#FFD25CAA",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner"
+                            },
+                            "VonSw": {
+                              "fill": "#FFD25C33",
+                              "stroke": "#FFD25CAA",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner"
+                            },
+                            "tLXCT": {
+                              "fill": "#FFD25C33",
+                              "stroke": "#FFD25CAA",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner"
+                            },
+                            "Yhrjo": {
+                              "fill": "#5CC8FF33",
+                              "stroke": "#5CC8FFAA",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "yYVvv",
+              "name": "row-hD7Tw",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": "$Space/md",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Y4uu6",
+                  "name": "rowLabel",
+                  "fill": "$text-secondary",
+                  "content": "PosterCard-v2 — 卡片",
+                  "fontFamily": "$Type/Family/Canvas",
+                  "fontSize": "$Type/Heading/M/Size",
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "DiWKC",
+                  "name": "pair",
+                  "gap": "$Space/4xl",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "T33fdF",
+                      "name": "cell-plain",
+                      "layout": "vertical",
+                      "gap": "$Space/sm",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "C8mfn",
+                          "name": "cap",
+                          "fill": "$text-muted",
+                          "content": "原樣",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Meta/M/Size",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "id": "r41JHq",
+                          "type": "ref",
+                          "ref": "hD7Tw"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "N5S1p",
+                      "name": "cell-anat",
+                      "layout": "vertical",
+                      "gap": "$Space/sm",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "OFG2H",
+                          "name": "cap",
+                          "fill": "$text-muted",
+                          "content": "解剖",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Meta/M/Size",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "id": "b18UFp",
+                          "type": "ref",
+                          "ref": "hD7Tw",
+                          "fill": "#FF5CA833",
+                          "stroke": "#FF5CA8AA",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "descendants": {
+                            "hY3d3": {
+                              "fill": "#5CC8FF33",
+                              "stroke": "#5CC8FFAA",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner"
+                            },
+                            "I4I8B7": {
+                              "fill": "#FFD25C33",
+                              "stroke": "#FFD25CAA",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner"
+                            },
+                            "H6QPb6": {
+                              "fill": "#5CC8FF33",
+                              "stroke": "#5CC8FFAA",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner"
+                            },
+                            "hmHaI": {
+                              "fill": "#FFD25C33",
+                              "stroke": "#FFD25CAA",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "RfmJn",
+              "name": "row-fSKuT",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": "$Space/md",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "a2clRl",
+                  "name": "rowLabel",
+                  "fill": "$text-secondary",
+                  "content": "EmptyLibrary-NoQBT — 空狀態",
+                  "fontFamily": "$Type/Family/Canvas",
+                  "fontSize": "$Type/Heading/M/Size",
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "bFbbf",
+                  "name": "pair",
+                  "gap": "$Space/4xl",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "u1OqVQ",
+                      "name": "cell-plain",
+                      "layout": "vertical",
+                      "gap": "$Space/sm",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Poh9k",
+                          "name": "cap",
+                          "fill": "$text-muted",
+                          "content": "原樣",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Meta/M/Size",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "id": "SEriz",
+                          "type": "ref",
+                          "ref": "fSKuT"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Y7Lcd0",
+                      "name": "cell-anat",
+                      "layout": "vertical",
+                      "gap": "$Space/sm",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "VKUNH",
+                          "name": "cap",
+                          "fill": "$text-muted",
+                          "content": "解剖",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Meta/M/Size",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "id": "dRgaV",
+                          "type": "ref",
+                          "ref": "fSKuT",
+                          "fill": "#FF5CA833",
+                          "stroke": "#FF5CA8AA",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "descendants": {
+                            "oJnQS": {
+                              "fill": "#5CC8FF33",
+                              "stroke": "#5CC8FFAA",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner"
+                            },
+                            "t9cuG": {
+                              "fill": "#5CC8FF33",
+                              "stroke": "#5CC8FFAA",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner"
+                            },
+                            "m4Iiu": {
+                              "fill": "#FFD25C33",
+                              "stroke": "#FFD25CAA",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner"
+                            },
+                            "uM7Jz": {
+                              "fill": "#FFD25C33",
+                              "stroke": "#FFD25CAA",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         }
       ]
     },
