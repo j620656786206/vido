@@ -17,7 +17,9 @@ Alex 於 2026-06-05 確認並完成 rollout 的 `ux-design.pen` 畫布 IA 規範
 
 **3. 標題在上方、圖框名精簡、不重疊**（caption 放畫面上方會撞 Pencil 圖框名 chrome，要拉開 ~45px）。見 [[feedback_pencil_label_overlap]]。
 
-**區塊座標範本**（origin blockX, blockY；合併欄在 x=17040，各流程往下堆疊、間距 2600）：
+⚠️ **2026-09-10 作廢：下面這組座標範本（間距 2600）已不再適用。** 流程長高之後全部互相穿插，實測 34 組最外層群組重疊。現行規則見 `DESIGN.md` §怎麼新增一張設計稿 ▸ 畫布版面：全部靠左對齊 x=17000、垂直堆疊、群組間固定 2000px，順序 Design System → A → B → C → D → E → F → H → I → J → K → L → M（沒有 Flow G，它的稿已刪）。群組有可用的 x/y 位移屬性，搬整個流程用 `Update(groupId,{x,y})` 即可。
+
+**（以下為歷史紀錄）區塊座標範本**（origin blockX, blockY；合併欄在 x=17040，各流程往下堆疊、間距 2600）：
 - 流程標題 `(blockX, blockY)` DM Sans 24/700 `#222222`「中文 — English」；描述 `(blockX, blockY+34)` Noto Sans TC 14 `#666666`。
 - 桌面 frame `y=blockY+120`(h900)、caption `y=blockY+75`；欄 `x=blockX+col*1540`。
 - 手機 frame `y=blockY+1130`(h844)、caption `y=blockY+1085`；x 對齊同步驟桌面欄。

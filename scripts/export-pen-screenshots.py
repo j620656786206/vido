@@ -13,8 +13,10 @@ Note: Pen 1.2.5 removed the `get_screenshot` MCP tool (surface is now browser /
 execute / get_app_state / get_guidelines). Screens are exported via `execute` +
 `Export(...)` at scale 1 into a temp dir, then renamed into flow folders and
 downscaled with `sips -Z 400` to keep the historical 400px-long-edge thumbnail
-convention. A text-dense spec screen (flow-j-specs) is unreadable at that size —
-see backlog-pen-spec-screen-readable-export.
+convention. The two text-dense flows that document the design system itself
+(design-system, flow-j-specs) are exempt: they export at 2x and are constrained by
+WIDTH (>= 1400px, never below 1:1), because a long-edge cap makes a tall spec page
+narrower — the opposite of readable. See disc-2026-09-pen-screenshot-export-too-small.
 
 Layout convention (2026-06-05 A–J merged-block rework):
   Screens are named with flow codes `{Flow}{seq}-{D|M}` (desktop/mobile) on the
@@ -22,16 +24,21 @@ Layout convention (2026-06-05 A–J merged-block rework):
   See .claude/memory/project_pen_flow_layout_convention.md.
 """
 
+import hashlib
 import json
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PEN_FILE = os.path.join(PROJECT_ROOT, "ux-design.pen")
 OUT_DIR = os.path.join(PROJECT_ROOT, "_bmad-output", "screenshots")
+# Machine-readable dump of the .pen's variables, so CI (which cannot run
+# Pencil) can still check the design file for token drift.
+TOKEN_SNAPSHOT = Path(PROJECT_ROOT) / "_bmad-output" / "pen-tokens.json"
 # The app shipped as Pencil.app and was renamed to Pen.app (1.2.2, found at story
 # sub-1-7a). Probe both rather than hardcoding either — a hardcoded path turns the
 # next rename into "the export script is broken" instead of "the app moved".
@@ -39,6 +46,37 @@ MCP_BIN_CANDIDATES = (
     "/Applications/Pen.app/Contents/Resources/app.asar.unpacked/out/mcp-server-darwin-arm64",
     "/Applications/Pencil.app/Contents/Resources/app.asar.unpacked/out/mcp-server-darwin-arm64",
 )
+
+
+def png_width(path):
+    """Pixel width of a PNG, or None if sips cannot read it."""
+    out = subprocess.run(
+        ["sips", "-g", "pixelWidth", path], capture_output=True, text=True
+    )
+    if out.returncode != 0:
+        return None
+    for line in out.stdout.splitlines():
+        if "pixelWidth:" in line:
+            return int(line.split(":")[1].strip())
+    return None
+
+
+def resize_to_width(path, min_width):
+    """Constrain a 2x export by width, never rendering it below 1:1.
+
+    The image on disk is 2x the design's own size, so native width is width // 2.
+    Target is whichever is larger: the readable floor, or native width. A page
+    already at or under the target is left alone rather than upscaled.
+    """
+    doubled = png_width(path)
+    if doubled is None:
+        return None
+    target = max(min_width, doubled // 2)
+    if doubled <= target:
+        return None
+    return subprocess.run(
+        ["sips", "--resampleWidth", str(target), path], capture_output=True
+    )
 
 
 def resolve_mcp_bin():
@@ -51,32 +89,29 @@ def resolve_mcp_bin():
 
 MCP_BIN = resolve_mcp_bin()
 
+# Text-dense pages document the design system itself. At the 400px thumbnail size
+# their 12px labels are unreadable, so reviewing this repo's own design docs meant
+# re-exporting by hand every time (disc-2026-09-pen-screenshot-export-too-small).
+# These flows are exported at 2x and then constrained by WIDTH, never by long edge:
+# a spec page is 1240 wide and 3000+ tall, so a long-edge cap makes it NARROWER,
+# which is the opposite of what readability needs.
+READABLE_FLOWS = {"design-system", "flow-j-specs"}
+# Floor, not ceiling: a page wider than this keeps its native 1:1 width rather than
+# being shrunk below legibility.
+READABLE_MIN_WIDTH = 1400
+THUMBNAIL_LONG_EDGE = 400
+
 # Screen node ID -> (flow_folder, filename). Filename == canvas frame code (lowercased).
 SCREENS = {
     # Flow A — 瀏覽主流程 (browse: empty / loading / grid / list / sort / filter)
-    "4VILE": ("flow-a-browse", "a1-d"),
-    "OYqNo": ("flow-a-browse", "a1-m"),
-    "IpZhv": ("flow-a-browse", "a2-d"),
-    "RxdY5": ("flow-a-browse", "a2-m"),
-    "KNI8F": ("flow-a-browse", "a3-d"),
-    "GOL63": ("flow-a-browse", "a3-m"),
-    "LZ8Ds": ("flow-a-browse", "a4-d"),
-    "3aSCw": ("flow-a-browse", "a5-m"),
-    "oypj1": ("flow-a-browse", "a6-m"),
     # Flow B — 詳情與互動 (hover / context menus / detail panels / fallbacks / tech badges / image-load spec)
     "Qm662": ("flow-b-detail-interaction", "b1-d"),
     "auArc": ("flow-b-detail-interaction", "b2-d"),
     "1UHzI": ("flow-b-detail-interaction", "b2-m"),
-    "RgSxQ": ("flow-b-detail-interaction", "b3-d"),
-    "kcn1v": ("flow-b-detail-interaction", "b3-m"),
-    "407vK": ("flow-b-detail-interaction", "b4-d"),
     "7mdTJ": ("flow-b-detail-interaction", "b5-d"),
     "APfjC": ("flow-b-detail-interaction", "b5-m"),
-    "2ltBl": ("flow-b-detail-interaction", "b6-d"),
     "2m1Pv": ("flow-b-detail-interaction", "b6-m"),
-    "wQOkg": ("flow-b-detail-interaction", "b7-d"),
     "7UnDy": ("flow-b-detail-interaction", "b7-m"),
-    "vlL6O": ("flow-b-detail-interaction", "b8-d"),
     "6OR3z": ("flow-b-detail-interaction", "b8-m"),
     # B9 = disc-flaky-visual-media-detail-panel case (B) image-load fallback spec
     "Tn4Gz": ("flow-b-detail-interaction", "b9-d"),
@@ -91,10 +126,6 @@ SCREENS = {
     "2H4OM": ("flow-c-search-settings", "c4-m"),
     "uhAKd": ("flow-c-search-settings", "c5-d"),
     # Flow D — 下載管理 (downloads)
-    "rWvuG": ("flow-d-downloads", "d1-d"),
-    "cZd7j": ("flow-d-downloads", "d1-m"),
-    "3ULXd": ("flow-d-downloads", "d2-d"),
-    "tqHK9": ("flow-d-downloads", "d3-m"),
     # Flow E — 媒體庫掃描 (scanner settings / progress / complete toast / filtered-unmatched)
     "KvZSc": ("flow-e-scanner", "e1-d"),
     "uABWl": ("flow-e-scanner", "e1-m"),
@@ -108,33 +139,13 @@ SCREENS = {
     "hUVYm": ("flow-e-scanner", "e5-d"),
     "P0P82x": ("flow-e-scanner", "e5-m"),
     # Flow F — 字幕搜尋 / 批次 (subtitle search dialog / preview-download / batch progress)
-    "cOrOR": ("flow-f-subtitle", "f1-d"),
-    "GZ294": ("flow-f-subtitle", "f1-m"),
-    "wy5Nx": ("flow-f-subtitle", "f2-d"),
-    "ogQ6Y": ("flow-f-subtitle", "f2-m"),
-    "NXijD": ("flow-f-subtitle", "f3-d"),
-    "fUtqO": ("flow-f-subtitle", "f3-m"),
     # Flow G — AI 字幕增強 (correction / transcription progress / translation confirm)
-    "TIIRl": ("flow-g-ai-subtitle", "g1-d"),
-    "mgRJA": ("flow-g-ai-subtitle", "g1-m"),
-    "kzhNP": ("flow-g-ai-subtitle", "g2-d"),
-    "yNAHK": ("flow-g-ai-subtitle", "g2-m"),
-    "22bcv": ("flow-g-ai-subtitle", "g3-d"),
-    "8Wsez": ("flow-g-ai-subtitle", "g3-m"),
     # Flow H — 首頁 TV Wall (homepage / loading skeleton / block CRUD modal / exploreblock spec)
-    "sAaCR": ("flow-h-homepage", "h1-d"),
-    "g5LFD": ("flow-h-homepage", "h2-m"),
     "Paqlk": ("flow-h-homepage", "h3"),
-    "g6p38": ("flow-h-homepage", "h4-d"),
     "Y5XvRv": ("flow-h-homepage", "h5-d"),
     # Flow I — 進階搜尋 / 篩選 (filter chips / suggestions dropdown / save preset / filter sheet)
-    "NWxok": ("flow-i-advanced-search", "i1-d"),
-    "TMaw5": ("flow-i-advanced-search", "i2"),
-    "i74p2": ("flow-i-advanced-search", "i3"),
-    "pjKVZ": ("flow-i-advanced-search", "i4-m"),
     # Desktop filter rail redesign (v2 Design System) — replaces mobile bottom-sheet misuse on lg+
     "vpDLh": ("flow-i-advanced-search", "i5-d"),  # rail persistent (hero) — re-merged onto feat/ux3-2-1 (#89 .pen frames reconstructed post main-merge)
-    "VwTvy": ("flow-i-advanced-search", "i6-d"),  # rail collapsed + filtered no-results — re-merged
     "SgncH": ("flow-i-advanced-search", "i7-d"),  # rail states spec (genre loading / load-failed) — re-merged
     # Flow J — 設計決策 spec (PosterCard info-density & polish)
     "XlFIq": ("flow-j-specs", "j1-d"),
@@ -158,9 +169,17 @@ SCREENS = {
     "JBKis": ("flow-j-specs", "j7-d"),
     # sub-6 — J8 政策 vs 手動的分工表 + 三個未決（兩案並陳，尚未裁定）
     "pbB6P": ("flow-j-specs", "j8-d"),
+    # 會花錢的按鈕（金額即記號）— A 案裁定、六個狀態定稿文案、$0.00／範圍／≈ 的邊界規則
+    "Ls4GO": ("flow-j-specs", "j9-d"),
     # Design system reference docs (top of canvas, no flow code)
     "8SSzc": ("design-system", "design-system-reference"),
+    "xlrAO": ("design-system", "design-system-reference-light"),
+    "wrjOF": ("design-system", "component-anatomy"),
     "sJzat": ("design-system", "component-library"),
+    # 日巡 (Light) 證據畫面 — 同一份稿加 theme:{mode:"light"}，變數自動翻，用來證偽主題軸
+    "m3N3ng": ("design-system", "light-b3p-d"),
+    "zLqK2": ("design-system", "light-a2p-d"),
+    "DcK0l": ("design-system", "light-h1-d-v3"),
     # UX Redesign Phase 1b — Design Language v2 + Navigation Shell v2
     "V2Kez": ("design-system", "design-language-v2"),
     "CLo58": ("design-system", "navigation-shell-v2"),
@@ -187,11 +206,11 @@ SCREENS = {
     # (H4/H5/H6-D-v3) existed; see flow-h-homepage-v3 below.
     # flow-k-activity-v2 — Phase-3 ux3-2-1 (Activity hub v2: net-new D4-1 destination,
     # explain-why rows aggregating scan/subtitle/AI/parse + downloads-summary; four states)
-    "kMeWS": ("flow-k-activity-v2", "a1-d"),
-    "QIwY1": ("flow-k-activity-v2", "a2-m"),
-    "suCiI": ("flow-k-activity-v2", "a4-d"),
-    "DZnSv": ("flow-k-activity-v2", "a5-d"),
-    "M6ra92": ("flow-k-activity-v2", "a6-d"),
+    "kMeWS": ("flow-k-activity-v2", "k1-d"),
+    "QIwY1": ("flow-k-activity-v2", "k1-m"),
+    "suCiI": ("flow-k-activity-v2", "k2-d"),
+    "DZnSv": ("flow-k-activity-v2", "k3-d"),
+    "M6ra92": ("flow-k-activity-v2", "k4-d"),
     # flow-i-discover-v2 — Phase-3 ux3-3-1 (Discover v2: active power-filter tool; Epic 11
     # chips/presets/instant-search → v2; D3 no-dashboard boundary; reserves Epic 13 Requests;
     # 地區/串流平台 reserved-disabled per Rule-24; four states)
@@ -200,9 +219,9 @@ SCREENS = {
     "m0Zew": ("flow-i-discover-v2", "i3-d"),
     "m4fY7c": ("flow-i-discover-v2", "i4-d"),
     "kzzjc": ("flow-i-discover-v2", "i4-m"),
-    "nLrzc": ("flow-i-discover-v2", "i5-d"),
+    "nLrzc": ("flow-i-discover-v2", "i5-d-v2"),
     "YYEBd": ("flow-i-discover-v2", "i6-d"),
-    "S3qke": ("flow-i-discover-v2", "i7-d"),
+    "S3qke": ("flow-i-discover-v2", "i7-d-v2"),
     "KdnVw": ("flow-i-discover-v2", "i8-d"),
     # flow-d-downloads-v2 — Downloads deep-operation page (design-ahead spec: card actions,
     # batch select, pagination; six backend filter values; qBittorrent fail-soft; NZBGet inert
@@ -392,18 +411,24 @@ def main():
         # since Pen 1.2.5). Export writes <nodeId>.png per node into tmpdir.
         tmpdir = tempfile.mkdtemp(prefix="pen-export-")
         failed_chunks = 0
-        node_ids = list(SCREENS.keys())
         chunk_size = 20
-        for ci in range(0, len(node_ids), chunk_size):
-            chunk = node_ids[ci:ci + chunk_size]
-            js = f'Export({json.dumps(chunk)}, "png", {json.dumps(tmpdir)}, {{scale: 1}})'
-            resp = mcp_call(proc, ci + 10, "tools/call", {
-                "name": "execute",
-                "arguments": {"filePath": PEN_FILE, "input": js},
-            })
-            if not resp or resp.get("error"):
-                failed_chunks += 1
-                print(f"  FAIL: export chunk {ci // chunk_size + 1} - {resp.get('error') if resp else 'no response'}")
+        # Two passes: thumbnails at 1x, the text-dense doc pages at 2x so there is
+        # resolution left to spend after the width constraint below.
+        thumb_ids = [n for n, (f, _) in SCREENS.items() if f not in READABLE_FLOWS]
+        readable_ids = [n for n, (f, _) in SCREENS.items() if f in READABLE_FLOWS]
+        req_id = 10
+        for scale, node_ids in ((1, thumb_ids), (2, readable_ids)):
+            for ci in range(0, len(node_ids), chunk_size):
+                chunk = node_ids[ci:ci + chunk_size]
+                js = f'Export({json.dumps(chunk)}, "png", {json.dumps(tmpdir)}, {{scale: {scale}}})'
+                resp = mcp_call(proc, req_id, "tools/call", {
+                    "name": "execute",
+                    "arguments": {"filePath": PEN_FILE, "input": js},
+                })
+                req_id += 1
+                if not resp or resp.get("error"):
+                    failed_chunks += 1
+                    print(f"  FAIL: export chunk at {scale}x - {resp.get('error') if resp else 'no response'}")
 
         saved = 0
         for node_id, (flow_dir, filename) in SCREENS.items():
@@ -415,14 +440,78 @@ def main():
             shutil.move(src, dst)
             # A silent downscale failure would leave a full-size PNG behind and
             # still look like success, so the return code is checked.
-            sips = subprocess.run(["sips", "-Z", "400", dst], capture_output=True)
-            if sips.returncode != 0:
+            if flow_dir in READABLE_FLOWS:
+                sips = resize_to_width(dst, READABLE_MIN_WIDTH)
+            else:
+                sips = subprocess.run(
+                    ["sips", "-Z", str(THUMBNAIL_LONG_EDGE), dst], capture_output=True
+                )
+            if sips is not None and sips.returncode != 0:
                 print(f"  WARN: {flow_dir}/{filename}.png - sips downscale failed, PNG left at full size")
             print(f"  OK: {flow_dir}/{filename}.png ({os.path.getsize(dst) // 1024} KB)")
             saved += 1
         shutil.rmtree(tmpdir, ignore_errors=True)
 
         print(f"\nDone! Saved {saved}/{len(SCREENS)} screenshots to {OUT_DIR}")
+
+        # --- token snapshot -------------------------------------------------
+        # CI cannot run Pencil, so the .pen's variables are dumped here into a
+        # committed JSON file. check-design-tokens.py compares THAT against
+        # styles.css and DESIGN.md, which is how the design file finally joins
+        # the drift check (disc-2026-09-drift-checker-blind-to-pen-and-non-color).
+        # The .pen's own sha256 rides along so a stale snapshot is detectable:
+        # edit the design without re-running this script and the hash no longer
+        # matches, and CI says so.
+        js = """
+const v = GetVariables();
+let rawGap = 0, rawPad = 0, rawSize = 0, rawLine = 0, clipped = 0, masters = 0;
+Get((n, c) => {
+  if (c.problems) clipped++;
+  if (n.reusable) masters++;
+  if (typeof n.gap === "number") rawGap++;
+  if (n.padding !== undefined) {
+    const p = Array.isArray(n.padding) ? n.padding : [n.padding];
+    for (const x of p) if (typeof x === "number") rawPad++;
+  }
+  if (n.type === "text") {
+    if (typeof n.fontSize === "number") rawSize++;
+    if (typeof n.lineHeight === "number") rawLine++;
+  }
+  return undefined;
+});
+Print(JSON.stringify({ variables: v.variables, themes: v.themes,
+  raw: { gap: rawGap, padding: rawPad, fontSize: rawSize, lineHeight: rawLine },
+  counts: { clippingWarnings: clipped, masters: masters } }));
+"""
+        resp = mcp_call(proc, req_id + 500, "tools/call", {
+            "name": "execute", "arguments": {"filePath": PEN_FILE, "input": js},
+        })
+        payload = None
+        if resp and not resp.get("error"):
+            for block in resp.get("result", {}).get("content", []):
+                text = block.get("text", "")
+                start = text.find("{")
+                if start >= 0:
+                    try:
+                        payload = json.loads(text[start:text.rfind("}") + 1])
+                        break
+                    except json.JSONDecodeError:
+                        continue
+        if payload is None:
+            print("ERROR: could not read .pen variables - token snapshot NOT written")
+            sys.exit(1)
+        # 畫面數由 Python 端填，因為流程群組內部分層之後，設計稿那邊已經數不到
+        # 「深度 1 的 frame」了——SCREENS 才是唯一準確的來源。
+        payload["counts"]["exportedScreens"] = len(SCREENS)
+        payload["penSha256"] = hashlib.sha256(open(PEN_FILE, "rb").read()).hexdigest()
+        TOKEN_SNAPSHOT.parent.mkdir(parents=True, exist_ok=True)
+        TOKEN_SNAPSHOT.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        print(f"Token snapshot: {TOKEN_SNAPSHOT.name} "
+              f"({len(payload['variables'])} variables, "
+              f"{payload['counts']['clippingWarnings']} clipping warnings)")
 
         # A PARTIAL export must NOT look like success. The whole point of this
         # script is that the committed PNGs match the .pen; exiting 0 after

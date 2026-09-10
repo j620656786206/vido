@@ -141,6 +141,13 @@ jobs:
           git ls-files -s .husky/pre-commit | grep -q '^100755' \
             || { echo "ERROR: .husky/pre-commit is not 755 in git index"; exit 1; }
 
+      # 同一組色彩 token 寫在四個地方（styles.css / DESIGN.md / design-context-pack.md /
+      # .impeccable/design.json）。2026-09 之前它們漂移了半年沒人發現，設計稿因此整整
+      # 落後一套色盤，拿它開發的 Story 都拿到錯的畫面。這一步只比對、不覆寫——不一致
+      # 時要先判斷哪一邊才是對的設計，再修對應那一邊。
+      - name: Design token drift check
+        run: python3 scripts/check-design-tokens.py
+
   # =============================================================================
   # Unit Tests (Vitest) — 不再等 lint；lint 紅跟 unit 紅是兩件事，一起看比較快
   # =============================================================================

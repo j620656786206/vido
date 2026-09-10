@@ -69,22 +69,24 @@ For non-trivial features, work **architecture-first**: outline the design and va
 
 1. Run `python3 scripts/export-pen-screenshots.py` (requires Pencil.app running)
    - The script spawns its own Pencil MCP server in **stdio** mode (Pencil 1.1.61 removed the old `--http`/`--http-port` transport) — safe to run even when Pencil MCP is already active
-2. Screenshots are saved to `_bmad-output/screenshots/`, one folder per **user flow** (A–L merged-block convention, 2026-06-05 rework). Each flow folder holds both desktop (`-d`) and mobile (`-m`) screens; filenames are the canvas frame codes (e.g. `b3-d.png`, `b3-m.png`):
-   - `flow-a-browse/` — Empty / Loading / Grid / List / Sort / Filter
-   - `flow-b-detail-interaction/` — Hover / Context Menus / Detail (Movie/TV) / Fallbacks / Tech Badges / Image-load Fallback spec (B9)
+2. Screenshots are saved to `_bmad-output/screenshots/`, one folder per **user flow**. Each flow folder holds both desktop (`-d`) and mobile (`-m`) screens; filenames are the canvas frame codes (e.g. `b3p-d.png`, `b3p-m.png`):
+   - `flow-a-browse-v2/` — Browse: empty / loading / grid / list / no-results / error (A′ pilot series)
+   - `flow-b-detail-interaction/` — Hover / Context Menus / Detail menus / Fallbacks (mobile) / Image-load Fallback spec (B9)
+   - `flow-b-detail-v2/` — Detail v2: movie / TV / skeleton / not-found / 延伸區塊 (B′ series)
    - `flow-c-search-settings/` — Search+Filter / Batch Ops / Settings / Backup
-   - `flow-d-downloads/` — Download management
+   - `flow-d-downloads-v2/` — Download centre v2: list / batch select / card actions / skeleton / empty / fail-soft / table / mobile sheets
    - `flow-e-scanner/` — Scanner settings / Scan progress / Complete toast / Filtered-unmatched
-   - `flow-f-subtitle/` — Subtitle search dialog / Preview-download / Batch progress
-   - `flow-g-ai-subtitle/` — AI correction / Transcription progress / Translation confirm
-   - `flow-h-homepage/` — Homepage TV Wall / Loading skeleton / Block CRUD modal / ExploreBlock spec
-   - `flow-i-advanced-search/` — Filter chips / Suggestions dropdown / Save preset / Filter sheet
-   - `flow-j-specs/` — Design-decision spec screens (e.g. PosterCard info-density)
-   - `flow-*-v2/` — v2-redesign counterparts of the above (`flow-a-browse-v2`, `flow-b-detail-v2`, `flow-d-downloads-v2`, `flow-i-discover-v2`)
-   - `flow-h-homepage-v3/` — Home v3 identity rework: full desktop / TMDb-degraded / mobile / 金額顯示規則 spec / loading-skeleton / empty-library-first-run / own-content-failed. **Supersedes `flow-h-homepage-v2`, whose five frames were deleted from the `.pen` on 2026-08-26** once v3 had its own state frames.
+   - `flow-f-subtitle-v2/` — Manage subtitles / generation progress / glossary / batch / 生成工作區
+   - `flow-h-homepage/` — Block CRUD modal (H3) / ExploreBlock spec (H5) — the two screens v3 did not replace
+   - `flow-h-homepage-v3/` — Home v3 identity rework: full desktop / TMDb-degraded / mobile / 金額顯示規則 spec / loading-skeleton / empty-library-first-run / own-content-failed
+   - `flow-i-advanced-search/` — Filter rail persistent (I5) / rail states spec (I7)
+   - `flow-i-discover-v2/` — Discover v2: desktop / mobile / live suggestions / rail / save filter / skeleton / no-results / fail-soft
+   - `flow-j-specs/` — Design-decision spec screens (PosterCard density, subtitle badges, cost-bearing buttons…)
    - `flow-k-activity-v2/` — Activity hub v2 (net-new D4-1 destination)
    - `flow-l-requests-v2/` — Request System (Epic 13): 想要 button 3-state / season-episode tree / 5-status request list
-   - `design-system/` — Design System Reference + Component Library docs
+   - `flow-m-auth-gate/` — Login and password gate
+   - `design-system/` — Design System Reference (夜行/日巡) + Component Library + Component Anatomy + 三張日巡證據畫面
+   - ⚖️ **2026-09-10：39 張 v1 過時稿已從 `.pen` 移除**（Alexyu 裁定）。判準是「有明確後繼版本才刪」——Flow A/B/D/F/G/H/I 的 v1 稿有 A′／B′／`-v2`／`-v3` 接手，所以刪；Flow C、E、M 沒有後繼版本，仍是那些流程唯一的設計稿，**保留**。`flow-a-browse`、`flow-d-downloads`、`flow-f-subtitle`、`flow-g-ai-subtitle` 四個資料夾因此清空並刪除。
    - Canvas naming + block-layout convention: see `.claude/memory/project_pen_flow_layout_convention.md`
 3. If new screens are added to the .pen file, update the `SCREENS` dict in `scripts/export-pen-screenshots.py` (key = node ID, value = `(flow-folder, code)`)
 4. `git add` both the `.pen` file changes AND the updated screenshots, commit together

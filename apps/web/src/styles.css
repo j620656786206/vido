@@ -78,8 +78,16 @@
    * the same defect class: --warning as TEXT measures 4.31:1 worst case (on a
    * warning-tinted surface over --bg-tertiary) — sub-AA. #e8b04b (amber-400) is
    * what 10 call sites were already hardcoding; worst case 5.54:1. */
-  --warning-text: #e8b04b; /* warning body text (AA-safe on all surfaces) */
-  --warning-pressed: #d97706; /* warning button hover — mirrors --accent/--error-pressed */
+  --warning-text: #ff8d29; /* warning body text. ⚖️ 2026-09-10: was #e8b04b, hue 38.6° — only 2.9° from --accent-text (41.5°), ΔE 17.4, so 赭 and 泥金 read as one gold. Lightening 赭 (#d4763f, hue 22°) had drifted its hue 16° toward gold. Pulled back to hue 28°: ΔE to accent-text 43.0, worst surface 6.05, worst on warning-tint 5.19 — all AA. */
+  /* 赭的按下狀態。⚠️ 2026-09-10 修正：原本是 #d97706（Tailwind amber-600），
+   * 相對亮度 0.2796 **高於** --warning 的 0.2731——方向與 --accent-pressed
+   * (0.3877→0.2543) 與 --error-pressed (0.1431→0.1027) 相反，而且色相不是赭
+   * （B 通道 63→6，變成純琥珀）。
+   * 新值 #c26a36 的可行區間非常窄：--text-on-accent 要保持 ≥4.5 就不能低於
+   * L=0.2109，而它必須低於 --warning 的 0.2731。L=0.2204 落在這個帶子裡，
+   * 對 --text-on-accent 是 4.67:1。再暗一階就會掉進「兩種標籤都不過」的死區
+   * （L 0.1659–0.2109），那時才需要改用 --text-on-scrim，像硃砂那樣。 */
+  --warning-pressed: #c26a36;
   /* The tint PIGMENT follows the semantic: a cyan wash under 靛青 text would
    * be two hues telling one story. Re-measured, not inherited. */
   --info-tint: #1391b21f; /* info badge bg, 想要 pill */

@@ -16,6 +16,17 @@ landed_in_pen: 'design-system flow — Design Language v2 + Navigation Shell v2 
 
 # Vido Design Language v2 — Phase 1b
 
+> ⚠️ **色彩章節已於 2026-09-10 移除（PR #410）。** §2.2–2.5 原本是四張色表，記錄
+> 2026-06-13 當時的訊號藍配色。產品在 2026-08-25 換成「夜行」（墨綠＋泥金）、
+> 2026-08-26 新增「日巡」淺色主題，那些色值與對比度數字全部不成立。
+>
+> 一開始只加了這面橫幅，但橫幅擋得住「照文件做設計」，擋不住「把色碼複製走」——
+> 所以 30 個過期色碼連同表格一起刪掉了，只留結構決策。
+>
+> **現行權威來源**：`apps/web/src/styles.css`（真值）、`apps/web/src/styles-contrast.spec.ts`
+> （對比度守門）、`DESIGN.md`（設計系統文件）、`ux-design.pen`（設計稿變數，
+> 由 `scripts/check-design-tokens.py` 守門）。
+
 > **What this document is.** The reusable visual foundation ("畫面之母") for the
 > phased Vido redesign. It owns **visual tokens, typography, components, state
 > patterns, and accessibility** — the half of Phase 1 that the Nav/IA ADR
@@ -61,96 +72,28 @@ text token passes AA.
 **No forking.** `apps/web/src/styles.css` stays the single token file (ADR Foundation
 Assessment). v2 *adds* tokens and *corrects* values; it never forks a second palette.
 
-### 2.2 Text color scale (R5 fix)
+### 2.2 – 2.5 色彩 token 表（已移除）
 
-Measured WCAG contrast ratios (text-on-surface), three dark surfaces:
+⚖️ **2026-09-10 移除（PR #410）。** 這四小節原本是四張色表：文字色階、深底上的彩色文字、
+新增的語意 token、狀態→token 對照，合計 30 個色碼與整組對比度數字，全部是 2026-06-13
+的訊號藍配色。上面的橫幅擋得住「照這份文件做設計」，但擋不住「有人把色碼複製走」——
+一個 `status: complete` 的規格文件裡躺著 30 個過期色碼，遲早會被複製。
 
-| Token | Value | bg-primary `#1B2336` | bg-secondary `#24304A` | bg-tertiary `#2E3B56` | Verdict |
-|---|---|---|---|---|---|
-| `text-primary` | `#F2F2F2` | 14.00 | 11.75 | 10.00 | AA+++ all sizes |
-| `text-secondary` | `#B3B3B3` | 7.47 | 6.27 | 5.34 | **AA all sizes** |
-| `text-muted` **(was `#808080`)** | **→ `#A0AABE`** | 6.71 | 5.63 | 4.79 | **AA all sizes** (was 3.97 / 3.33 / 2.83 — failed) |
-| `text-disabled` **(new)** | `#6E7891` | 3.55 | 2.98 | 2.54 | **Intentionally sub-AA** — disabled/decorative only, never load-bearing text |
+**保留下來的是結構決策，那些至今仍成立：**
 
-**Decision (Alexyu, 2026-06-13): "both" remediation for R5 —**
+- **不分叉。** `apps/web/src/styles.css` 是唯一的 token 檔。v2 只**新增** token 與**修正**值，
+  從不開第二套色盤。
+- **每一個文字 token 都必須過 AA。** 這條後來長成 `styles-contrast.spec.ts`（142 個守門測試）。
+- **語意基色需要成對的 `-text` 階。** 飽和色當文字過不了 AA——這個發現後來成為
+  DESIGN.md 的「語意基色不可以當文字」裁定（2026-09-10）。
+- **底用 `*-tint`、字用 `*-text`，永遠成對。**
+- **`accent-subtle` 與 `accent-tint` 分開**：一個是選取態淡洗，一個是徽章底。
+- **`focus-ring` 與 `accent-primary` 同值但獨立命名**，好讓兩者日後能各自調整。
+- **一個狀態一個 token**，不允許同一個顏色在相鄰畫面有兩個意思。這條後來被
+  2026-09-10 的技術標籤中性化裁定再次執行了一遍。
 
-1. **Correct the value.** `--text-muted` becomes `#A0AABE` (passes AA ≥4.5:1 on all
-   three surfaces at any size). This is the single value change in v2.
-2. **Add a usage rule + a relief token.** `text-muted` is for **secondary metadata
-   at ≥14px**. Essential small text (captions, counts, helper text **<14px** that the
-   user must read) uses `text-secondary`. Genuinely de-emphasized, non-essential, or
-   disabled content uses the **new `text-disabled`** — which is *deliberately* below
-   AA and therefore must never carry information the user needs.
-
-> **Rule TC-1 (token-lint, N6):** no UI text uses `text-disabled` to render
-> information the user must read. `text-disabled` is for disabled-control labels,
-> placeholder-of-placeholder, and decorative-only strings.
-
-### 2.3 Colored text on dark (the second AA trap)
-
-Semantic hues are tuned for **fills, icons, and large/bold text** — several **fail AA
-as body-size text**. Measured:
-
-| Hue | As fill / large text | As body text (<18px) | Body-text-safe token |
-|---|---|---|---|
-| `accent-primary` `#3B82F6` | 4.26 / 3.58 / 3.04 — fills + ≥large only | **fails** | `accent-text` `#60A5FA` (6.16 / 5.17 / 4.40) |
-| `error` `#EF4444` | 4.16 / 3.50 / 2.97 — fills + ≥large only | **fails** | `error-text` `#F87171` (5.66 / 4.75 / 4.05) |
-| `success` `#22C55E` | 6.88 / 5.77 / 4.91 | AA | `success` (reuse) |
-| `warning` `#F59E0B` | 7.30 / 6.12 / 5.21 | AA | `warning` (reuse) |
-| `info` `#06B6D4` | 6.45 / 5.42 / 4.61 | AA | `info` (reuse) |
-
-> **Rule TC-2:** accent-colored or error-colored **body text** uses `accent-text` /
-> `error-text`. The base `accent-primary` / `error` hues are for fills, borders,
-> icons, badges, and ≥18px / bold headings. On `bg-tertiary`, colored body text is
-> marginal (≈4.0–4.4) — prefer it on `bg-primary` / `bg-secondary`, or bump weight.
-
-### 2.4 New semantic tokens (R3 fix)
-
-These give the 30+ hardcoded literals a single home. Added as `.pen` variables and to
-`styles.css`:
-
-| Token | Value | Purpose | Replaces literal |
-|---|---|---|---|
-| `accent-subtle` | `#3B82F626` (~15%) | Active nav-item wash, selected-row tint | sidebar `#3B82F624` |
-| `accent-tint` | `#3B82F61F` (~12%) | Accent badge / chip background | TechBadge `#3B82F618` |
-| `accent-text` | `#60A5FA` | Accent body text / active label (TC-2) | ad-hoc `#60A5FA` |
-| `success-tint` | `#22C55E1F` | Success badge bg, "已入庫" pill | `#22C55E18` |
-| `error-tint` | `#EF44441F` | Error badge bg, failed-state pill | `#EF444418` |
-| `error-text` | `#F87171` | Error body text (TC-2) | ad-hoc reds |
-| `warning-tint` | `#F59E0B1F` | Warning badge bg | `#F59E0B18` |
-| `info-tint` | `#06B6D41F` | Info badge bg | `#06B6D418` |
-| `text-on-accent` | `#FFFFFF` | Label/icon on accent fills (buttons, pills) | `#FFFFFF` literals |
-| `text-disabled` | `#6E7891` | Disabled/decorative text (§2.2) | misused `text-muted` |
-| `overlay-scrim` | `#000000B3` (70%) | Modal / bottom-sheet backdrop | `#000000B3`, `#000000AA` |
-| `focus-ring` | `#3B82F6` | Keyboard focus outline (= accent-primary, aliased for independent tuning) | `:focus-visible` literal |
-
-**Unchanged tokens** (validated, carried forward): all `bg-*`, `border-subtle`,
-`accent-primary/hover/pressed`, `success/error/warning/info` (as fills), `text-primary`,
-`text-secondary`, `text-inverse`, all `radius-*`, all `shadow-*`, all `gap-*`.
-
-### 2.5 Status → token mapping (N1 one truthful state machine)
-
-The lifecycle the brief mandates (`想要 → 下載中 x% → 整理中 → 已入庫 → 字幕狀態`)
-renders from one token mapping, identically on poster badge, detail page, and the
-Activity hub:
-
-| Lifecycle state | Surface (badge bg) | Text/icon | zh-TW label |
-|---|---|---|---|
-| 想要 / Requested | `info-tint` | `info` | 想要 |
-| 下載中 / Downloading | `accent-tint` | `accent-text` | 下載中 · {pct}% |
-| 整理中 / Organizing | `warning-tint` | `warning` | 整理中 |
-| 已入庫 / In library | `success-tint` | `success` | 已入庫 |
-| 失敗 / Failed | `error-tint` | `error-text` | 失敗 |
-| 搜尋中 / Searching *(added 13-0, Epic 13 requests)* | `warning-tint` | `warning` | 搜尋中 |
-| 字幕：有繁中 / 簡轉繁 / AI 校正中 / 缺字幕 | `success-tint` / `accent-tint` / `accent-tint` / `bg-tertiary` | matching | 繁中 / 簡轉繁 / AI 校正中 / 缺字幕 |
-
-> **Request pipeline mapping (13-0):** the `requests.status` enum renders through this
-> same table — `pending`→想要, `searching`→搜尋中 (13-0 addition: a transient
-> "system working" state, warning family like 整理中), `downloading`→下載中 · {pct}%,
-> `completed`→已入庫, `failed`→失敗. One state machine; no bespoke request palette.
-> FE consumption is GATE-B on the 13-3/13-4 backend.
-
----
+**現行色值請看**：`apps/web/src/styles.css`（真值）、`DESIGN.md` §Colors（設計系統文件）、
+設計稿的 Design System Reference 頁（33 個色票，含夜行與日巡）。
 
 ## 3. Type System
 

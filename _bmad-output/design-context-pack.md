@@ -11,7 +11,7 @@
 
 - **使用者**：自架媒體庫的中文（台灣）使用者，重視繁中介面、字幕品質、整齊的中繼資料。
 - **介面語言**：**繁體中文 zh-TW 為預設**（簡體一律以官方 C++ OpenCC helper 的 `s2twp` 轉繁；遷移期間保留 Go backend fallback）。
-- **平台**：響應式 Web App（桌面為主、手機可用）。深色主題 only（無淺色切換）。
+- **平台**：響應式 Web App（桌面為主、手機可用）。**雙主題**：夜行（Nightwalk，深色，預設）／日巡（Daywalk，淺色，opt-in）。
 
 ---
 
@@ -20,7 +20,7 @@
 | 項目 | 約束 |
 |------|------|
 | 前端 | React + TanStack Router、Tailwind CSS v4 |
-| 主題 | **深色主題 only**，色彩以 CSS 變數 token 表達（見 §3） |
+| 主題 | **夜行（深色，預設）＋ 日巡（淺色）**。`:root` 就是夜行；淺色寫在 `[data-theme='light']`，深色**不寫任何 attribute**。色彩以 CSS 變數 token 表達（見 §3） |
 | 語言/排版 | 繁中優先；**用全形標點「，。：」**，避免簡體殘留 |
 | 響應式 | Tailwind 預設斷點：`sm 640 / md 768 / lg 1024 / xl 1280`；手機需單欄可讀、不橫向溢出 |
 | 無障礙 | 深色底文字對比、觸控目標 ≥44px、可見焦點態、圖示/星等需文字替代（`aria-label`） |
@@ -35,13 +35,59 @@
 設計稿中**畫面內部 UI 的所有顏色/間距，都應對齊這些 token**。任何一次性硬編碼色值 = **design-system drift**，review 時要揪出。
 
 ### 色彩
+
+夜行（預設）／日巡（淺色）。**同一個 token 名稱、兩組值**；設計稿 `ux-design.pen` 的顏色變數名與這裡一字不差。
+
 ```
-背景      --bg-primary #1b2336   --bg-secondary #24304a   --bg-tertiary #2e3b56
-邊框      --border-subtle #374461
-主色      --accent-primary #3b82f6   --accent-hover #60a5fa   --accent-pressed #2563eb
-語意      --success #22c55e   --error #ef4444   --warning #f59e0b   --info #06b6d4
-文字      --text-primary #f2f2f2   --text-secondary #b3b3b3   --text-muted #808080   --text-inverse #1b2336
+token                    夜行 Nightwalk        日巡 Daywalk
+# 背景
+--bg-primary            #0c1512              #faf6ea    
+--bg-secondary          #132320              #f0e7d3    
+--bg-tertiary           #1b302b              #e5d9c3    ⚠️ 日巡的最深階，所有文字對比的最壞情況
+--border-subtle         #274039              #cdbe9b    
+# 主色 · 泥金＝品牌色，accent-text 同時是「正在跑」
+--accent-primary        #c9a24b              #886208    泥金
+--accent-hover          #e0be72              #725205    ⚠️ 日巡往「暗」走，不是變亮
+--accent-pressed        #a8853c              #5b4103    
+--accent-subtle         #c9a24b26            #c9a24b40  
+--accent-tint           #c9a24b1f            #c9a24b33  
+--accent-text           #e0be72              #654804    要被「讀」的金
+--focus-ring            #c9a24b              #886208    
+# 語意 · 青碧＝有答案了（完成／成功）
+--success               #6fbfa8              #0b7352    
+--success-tint          #6fbfa81f            #6fbfa833  
+--success-text          #8fd3be              #06583e    
+# 語意 · 赭＝要求了但沒發生
+--warning               #d4763f              #a6510c    
+--warning-pressed       #c26a36              #8b4208    
+--warning-tint          #d4763f1f            #d4763f33  
+--warning-text          #ff8d29              #7b3a06    
+# 語意 · 硃砂＝壞掉了
+--error                 #c0392b              #c0392b    唯一不隨主題翻轉
+--error-pressed         #9c3a2b              #9c3a2b    
+--error-tint            #c0392b1f            #c0392b33  
+--error-text            #e08a76              #87251b    
+# 語意 · 靛青＝純告知
+--info                  #1391b2              #0b657d    
+--info-tint             #1391b21f            #1391b233  
+--info-text             #5bc4dd              #075469    
+# 文字
+--text-primary          #eae4d6              #16231d    
+--text-secondary        #a8b3ac              #32493e    
+--text-muted            #8fa096              #41554c    
+--text-disabled         #5e6e66              #7a8980    
+--text-inverse          #0c1512              #faf6ea    ⚠️ 不等於「暗底」，日巡是紙色
+--text-on-accent        #14161a              #fdfaf2    
+--text-on-scrim         #faf6ea              #faf6ea    兩主題相同
+# 遮罩
+--overlay-scrim         #000000b3            #0c1512b3  
 ```
+
+**內文顏色規則**：`--success` / `--warning` / `--error` / `--info` / `--accent-primary` 全部是**填色**用的，當文字時五個裡有四個至少在一個主題不過 AA（最差 4.19 / 3.96 / 2.57 / 3.80 / 3.96）。**要被讀的文字一律用 `-text` 那一階。**
+
+**狀態詞彙**：泥金＝正在跑 · 青碧＝有答案了 · 赭＝你要求了但沒發生 · 硃砂＝壞了 · 靛青＝純告知 · 不出現＝你沒要求。
+
+**金錢不穿狀態色**：金額是事實不是狀態，一律 `--text-primary`（次要位置可用 secondary／muted），識別靠 `$` 符號。一格同時要說狀態與金額時，**狀態押在標籤與圖示上，數字保持中性**。會花錢的動作要在控制項上帶 `$` 記號＋預估金額，不靠顏色。
 
 ### 圓角 / 陰影
 ```
@@ -49,15 +95,41 @@
 --shadow-sm / md / lg / xl（深色用，黑色 30%→60% 遞增）
 ```
 
-### 間距（8pt 為主節奏）
+### 間距
+
+程式碼走 Tailwind 4px 基準（4 / 8 / 12 / 16 / 24 / 32）。設計稿的階梯較長，因為要描述已經畫出來的版面，變數名為 `Space/*`：
+
 ```
---gap-xs 4 / sm 8 / md 12 / lg 16 / xl 24 / 2xl 32
+2 hairline · 4 xs · 6 xs-plus · 8 sm · 10 sm-plus · 12 md · 14 md-plus · 16 lg
+20 lg-plus · 24 xl · 28 xl-plus · 32 2xl · 40 3xl · 48 4xl · 64 5xl · 80 6xl
 ```
 
-### 字型
-- **介面內文字**：`Noto Sans TC`（primary）。
-- **等寬/技術數值**：`JetBrains Mono`（檔名、編碼、解析度等技術徽章）。
-- **畫布大標題（流程標題註解）**：`DM Sans`（見 §5）。
+半階（6 / 10 / 14 / 28）對應 Tailwind 的 `.5` 級距，不是隨手畫的數字。**不要在設計稿裡寫階梯以外的數字。**
+
+### 字型與字級
+- **介面內文字**：`Noto Sans TC`（設計稿變數 `Type/Family/Primary`）。
+- **等寬/技術數值**：`JetBrains Mono`（`Type/Family/Mono`）——檔名、編碼、解析度、任何會被跨列比較的數字。
+- **畫布大標題（流程標題註解）**：`DM Sans`（`Type/Family/Canvas`，見 §5）。**只用於畫布註記，不是產品字體。**
+
+字級變數。**八階，全部偶數，每一階都帶配對行高**（`Type/*/Size` 與 `Type/*/Line` 成對使用，兩個都要設）：
+
+```
+角色         Size  Line(比例)  Tailwind     用途
+Display       36    1.111      text-4xl     詳情 hero 標題、海報首字
+Headline      30    1.200      text-3xl     頁面大標
+Title         24    1.333      text-2xl     區段大標
+Subtitle      20    1.400      text-xl      區塊標題
+Heading       18    1.556      text-lg      卡片／區段標題
+BodyLarge     16    1.500      text-base    大內文、次級標題
+Text          14    1.429      text-sm      預設內文＋按鈕標籤＋並排讀數
+Label         12    1.333      text-xs      標籤／徽章／殼層／純數字欄位（地板）
+```
+
+⚠️ **`.pen` 的 `lineHeight` 是比例不是 px。** 填 20 代表 20 倍行高。
+
+**沒有 11／13／15／10 這四階**（2026-09-10 廢除）。理由不是奇偶——是這幾個尺寸沒有 Tailwind 具名階，任意值 `text-[13px]` 只設字級、不帶配對行高，行框會落到瀏覽器預設 ≈1.2，對繁體中文太緊。
+
+**硬界線**：**12px 是地板，沒有例外。** 使用者要讀的字不得低於 12px；可點擊的目的地或動作一律 14px。等寬讀數與中文並排時用 14，純數字欄位用 12。
 
 ---
 
