@@ -156,6 +156,8 @@ SCREENS = {
     # Settings form-card width ruling (max-w-2xl -> max-w-3xl) — real-width math with
     # two stacked sidebars, why C4-D's fill_container ratio is a stale assumption.
     "JBKis": ("flow-j-specs", "j7-d"),
+    # sub-6 — J8 政策 vs 手動的分工表 + 三個未決（兩案並陳，尚未裁定）
+    "pbB6P": ("flow-j-specs", "j8-d"),
     # Design system reference docs (top of canvas, no flow code)
     "8SSzc": ("design-system", "design-system-reference"),
     "sJzat": ("design-system", "component-library"),
@@ -268,6 +270,24 @@ SCREENS = {
     "KThbY": ("flow-f-subtitle-v2", "f19-d-v2"),
     "IMQO6": ("flow-f-subtitle-v2", "f19-m-v2"),
     "D7MOm": ("flow-f-subtitle-v2", "f20-d-v2"),
+    # sub-6 policy screen — F21「依政策執行」確認屏：清單全收合、只確認總量
+    "x6my4T": ("flow-f-subtitle-v2", "f21-d-v2"),
+    # sub-6 policy screen — F23「依政策執行」超限態：砍線落在看得見的列之間
+    "zK1Oq": ("flow-f-subtitle-v2", "f23-d-v2"),
+    # sub-6 policy screen — F24「依政策執行」空態：候選全需語音辨識，政策無事可做
+    "KjOTM": ("flow-f-subtitle-v2", "f24-d-v2"),
+    # sub-6 policy screen — F25 設定頁「自動處理政策」卡（上限金額 + 翻譯模型）
+    "UYud2": ("flow-f-subtitle-v2", "f25-d-v2"),
+    # sub-6 policy screen — F22 桌機入口：「依政策執行」為主、「批次生成字幕」降為次但不得消失
+    "S25U3A": ("flow-f-subtitle-v2", "f22-d-v2"),
+    # sub-6 policy screen — F22 手機版入口：活動頁標題列下的兩顆按鈕
+    "Rxck3": ("flow-f-subtitle-v2", "f22-m-v2"),
+    # sub-6 policy screen — F21 手機版確認屏：清單全收合，headline 與「開始」同框
+    "V564k": ("flow-f-subtitle-v2", "f21-m-v2"),
+    # sub-6 policy screen — F26 政策未設定：主按鈕改說下一步（設定政策），不是停用態
+    "ePHJo": ("flow-f-subtitle-v2", "f26-d-v2"),
+    # sub-6 policy screen — F27 掃描完成卡的政策變體（F17 的動作列改為政策優先）
+    "U03low": ("flow-f-subtitle-v2", "f27-d-v2"),
     # sub-6-12 — 開始失敗時訊息落點的規格畫面（超支橫幅 → 失敗訊息 → 頁尾，皆在捲動區外）
     "VPT7l": ("flow-f-subtitle-v2", "f18-spec-err"),
     # flow-h-homepage-v3 — home identity rework (home-v3-identity-brief.md: 讀數帶 4 格 +
