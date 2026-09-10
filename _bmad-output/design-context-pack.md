@@ -107,16 +107,25 @@ token                    夜行 Nightwalk        日巡 Daywalk
 - **等寬/技術數值**：`JetBrains Mono`（`Type/Family/Mono`）——檔名、編碼、解析度、任何會被跨列比較的數字。
 - **畫布大標題（流程標題註解）**：`DM Sans`（`Type/Family/Canvas`，見 §5）。**只用於畫布註記，不是產品字體。**
 
-字級變數（`Type/*/Size`，px）：
+字級變數。**八階，全部偶數，每一階都帶配對行高**（`Type/*/Size` 與 `Type/*/Line` 成對使用，兩個都要設）：
 
 ```
-Display L 36 · Display M 32 · Title XL 28 · Title L 24 · Title M 22 · Title S 20
-Heading L 18 · Heading M 16 · Heading S 15
-Body L 14（預設內文）· Body M 13 · Body S 12（標籤）
-Meta M 11（殼層 chrome）· Meta S 10
+角色         Size  Line(比例)  Tailwind     用途
+Display       36    1.111      text-4xl     詳情 hero 標題、海報首字
+Headline      30    1.200      text-3xl     頁面大標
+Title         24    1.333      text-2xl     區段大標
+Subtitle      20    1.400      text-xl      區塊標題
+Heading       18    1.556      text-lg      卡片／區段標題
+BodyLarge     16    1.500      text-base    大內文、次級標題
+Text          14    1.429      text-sm      預設內文＋按鈕標籤＋並排讀數
+Label         12    1.333      text-xs      標籤／徽章／殼層／純數字欄位（地板）
 ```
 
-**硬界線**：11px 只給「不是內容的東西」（分頁列、側軌群組標題）。使用者要讀的字不得低於 12px；可點擊的目的地或動作是 14px。
+⚠️ **`.pen` 的 `lineHeight` 是比例不是 px。** 填 20 代表 20 倍行高。
+
+**沒有 11／13／15／10 這四階**（2026-09-10 廢除）。理由不是奇偶——是這幾個尺寸沒有 Tailwind 具名階，任意值 `text-[13px]` 只設字級、不帶配對行高，行框會落到瀏覽器預設 ≈1.2，對繁體中文太緊。
+
+**硬界線**：**12px 是地板，沒有例外。** 使用者要讀的字不得低於 12px；可點擊的目的地或動作一律 14px。等寬讀數與中文並排時用 14，純數字欄位用 12。
 
 ---
 

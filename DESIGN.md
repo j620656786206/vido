@@ -40,37 +40,62 @@ typography:
     fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
     fontSize: '2.25rem'
     fontWeight: 700
-    lineHeight: 1.1
+    lineHeight: 1.111
   headline:
+    fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
+    fontSize: '1.875rem'
+    fontWeight: 700
+    lineHeight: 1.2
+  title:
     fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
     fontSize: '1.5rem'
     fontWeight: 700
-    lineHeight: 1.25
-  title:
+    lineHeight: 1.333
+  subtitle:
+    fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
+    fontSize: '1.25rem'
+    fontWeight: 600
+    lineHeight: 1.4
+  heading:
     fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
     fontSize: '1.125rem'
     fontWeight: 600
-    lineHeight: 1.4
+    lineHeight: 1.556
+  body-large:
+    fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
+    fontSize: '1rem'
+    fontWeight: 400
+    lineHeight: 1.5
   body:
     fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
     fontSize: '0.875rem'
     fontWeight: 400
-    lineHeight: 1.6
+    lineHeight: 1.429
   label:
     fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
     fontSize: '0.75rem'
     fontWeight: 500
-    lineHeight: 1.4
-  chrome:
+    lineHeight: 1.333
+  button-solid:
     fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
-    fontSize: '0.6875rem'
+    fontSize: '0.875rem'
+    fontWeight: 600
+    lineHeight: 1.429
+  button-hollow:
+    fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
+    fontSize: '0.875rem'
     fontWeight: 500
-    lineHeight: 1.4
+    lineHeight: 1.429
   readout:
     fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace'
-    fontSize: '0.8125rem'
+    fontSize: '0.875rem'
     fontWeight: 400
-    lineHeight: 1.4
+    lineHeight: 1.429
+  readout-column:
+    fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace'
+    fontSize: '0.75rem'
+    fontWeight: 400
+    lineHeight: 1.333
 rounded:
   sm: '4px'
   md: '8px'
@@ -89,9 +114,9 @@ components:
     backgroundColor: '{colors.accent-primary}'
     textColor: '{colors.text-on-accent}'
     rounded: '{rounded.md}'
-    padding: '8px 16px'
+    padding: '8px 20px'
     height: '36px'
-    typography: '{typography.body}'
+    typography: '{typography.button-solid}'
   button-primary-hover:
     backgroundColor: '{colors.accent-hover}'
   button-primary-active:
@@ -100,26 +125,30 @@ components:
     backgroundColor: '{colors.bg-tertiary}'
     textColor: '{colors.text-primary}'
     rounded: '{rounded.md}'
-    padding: '8px 16px'
+    padding: '8px 20px'
     height: '36px'
+    typography: '{typography.button-hollow}'
   button-outline:
     backgroundColor: 'transparent'
     textColor: '{colors.text-primary}'
     rounded: '{rounded.md}'
-    padding: '8px 16px'
+    padding: '8px 20px'
     height: '36px'
+    typography: '{typography.button-hollow}'
   button-ghost:
     backgroundColor: 'transparent'
     textColor: '{colors.text-primary}'
     rounded: '{rounded.md}'
-    padding: '8px 16px'
+    padding: '8px 20px'
     height: '36px'
+    typography: '{typography.button-hollow}'
   button-destructive:
     backgroundColor: '{colors.error}'
     textColor: '{colors.text-on-scrim}'
     rounded: '{rounded.md}'
-    padding: '8px 16px'
+    padding: '8px 20px'
     height: '36px'
+    typography: '{typography.button-solid}'
   card:
     backgroundColor: '{colors.bg-secondary}'
     rounded: '{rounded.lg}'
@@ -254,35 +283,54 @@ CJK 一律走 Noto Sans TC。設計稿上的 DM Sans 只用於**畫布註記**�
 
 ### Hierarchy
 
-- **Display**（700, 36px, 1.1）：罕見。詳情頁 hero 標題與海報 placeholder 的首字——程式碼 6 次。**不是一般的標題層級。**
-- **Headline**（700, 24px, 1.25）：頁面標題（`設定`、`活動`）。一個畫面一個。
-- **Title**（600, 18px, 1.4）：區段與卡片標題。
-- **Body**（400, 14px, 1.6）：預設值，而且是全 app 用量遙遙領先的尺寸。說明、列表列、表單標籤，幾乎所有東西。
-- **Label**（500, 12px, 1.4）：徽章、藥丸、metadata、表頭、次要註記。
-- **Chrome**（500, 11px, 1.4）：**只給殼層本身的標籤** —— 底部分頁列、側軌群組標題、側軌計數、環境狀態帶。**它的界線很硬：11px 只用在「不是內容的東西」上。任何使用者要閱讀的字都不得低於 12px，任何可以被點擊的目的地或動作都是 14px。**
-- **Readout**（400, 13px, 等寬）：計數、進度數字、位元組大小、ID、檔案路徑——任何使用者可能跨列比較、或當成資料讀的東西。
+**八階，全部偶數，每一階都帶配對行高。** 行高不是可選的——它是這套系統最久的一個洞（2026-09-10 之前，設計稿 5134 個文字節點裡有 4902 個沒有設行高，全部吃字型預設）。
 
-### 設計稿與程式碼的字級對照
+| 角色           | px / 行高   | 字重 | Tailwind    | 用途                                                              |
+| -------------- | ----------- | ---- | ----------- | ----------------------------------------------------------------- |
+| **Display**    | 36 / 40     | 700  | `text-4xl`  | 詳情頁 hero 標題、海報 placeholder 首字。罕見，不是一般標題層級。 |
+| **Headline**   | 30 / 36     | 700  | `text-3xl`  | 頁面大標。一個畫面一個。                                          |
+| **Title**      | 24 / 32     | 700  | `text-2xl`  | 區段大標。                                                        |
+| **Subtitle**   | 20 / 28     | 600  | `text-xl`   | 區塊標題。                                                        |
+| **Heading**    | 18 / 28     | 600  | `text-lg`   | 卡片與區段標題。                                                  |
+| **Body Large** | 16 / 24     | 400  | `text-base` | 大內文、次級標題。                                                |
+| **Text**       | **14 / 20** | 400  | `text-sm`   | **預設內文**，也是按鈕標籤與並排讀數。全系統用量最大的一階。      |
+| **Label**      | **12 / 16** | 500  | `text-xs`   | 標籤、徽章、殼層 chrome、純數字欄位。**地板。**                   |
 
-設計稿 `ux-design.pen` 的字級變數以角色命名，與這裡的層級對應如下。**兩邊目前尚未完全重疊**，差異列在最後一列，是已知待收斂項而不是筆誤。
+**等寬**（JetBrains Mono）不是獨立的字級階，是同一階換字體：與中文並排、要被讀的讀數用 **Text（14）**；只做上下比較的純數字欄位用 **Label（12）**。
 
-| 設計稿變數            | px      | 程式碼對應              | 用途                                       |
-| --------------------- | ------- | ----------------------- | ------------------------------------------ |
-| `Type/Display/L/Size` | 36      | `text-4xl`              | Display                                    |
-| `Type/Display/M/Size` | 32      | 無                      | 設計稿專屬（spec 頁大標）                  |
-| `Type/Title/XL/Size`  | 28      | 無                      | 設計稿專屬（頁面大標）                     |
-| `Type/Title/L/Size`   | 24      | `text-2xl`              | Headline                                   |
-| `Type/Title/M/Size`   | 22      | 無                      | 設計稿專屬（手機頁標）                     |
-| `Type/Title/S/Size`   | 20      | `text-xl`               | 區塊標題                                   |
-| `Type/Heading/L/Size` | 18      | `text-lg`               | Title                                      |
-| `Type/Heading/M/Size` | 16      | `text-base`             | 次級標題                                   |
-| `Type/Heading/S/Size` | 15      | `text-[15px]`           | 卡片標題                                   |
-| `Type/Body/L/Size`    | 14      | `text-sm`               | Body                                       |
-| `Type/Body/M/Size`    | 13      | `text-[13px]`           | Readout／次要內文                          |
-| `Type/Body/S/Size`    | 12      | `text-xs`               | Label                                      |
-| `Type/Meta/M/Size`    | 11      | `text-[11px]`           | Chrome                                     |
-| —                     | 30 / 48 | `text-3xl` / `text-5xl` | **程式碼有、設計稿沒有**（各 5 次 / 1 次） |
-| —                     | 10      | `text-[10px]`           | **已廢除**，見下                           |
+### 為什麼沒有 11 / 13 / 15
+
+這三階在 2026-09-10 一併廢除（PR #410）。**理由不是「奇數不好看」**——那個說法站不住腳：字級本身不產生半像素（半像素來自行高與容器餘數），而且偶數也救不了行高，14 × 1.6 = 22.4 一樣是小數。
+
+真正的理由有兩個，都可驗證：
+
+1. **11 / 13 / 15 是唯三沒有 Tailwind 具名階的尺寸。** `text-sm` 是 14px **配 20px 行高**、`text-xs` 是 12 配 16——字級與行高一起給，且行高落在 4px 網格。但 `text-[13px]` 這類任意值**只設字級、不帶行高**，而 `styles.css` 全檔沒有宣告 base line-height。所以那 125 個站點（72 個 13px + 53 個 11px）的行框全部落到瀏覽器預設的 ≈1.2——**比這份文件給繁中訂的 1.4–1.6 更緊**。
+2. **決策成本。** 廢除前設計稿的用量是 13px 1583 次、12px 1370 次、14px 784 次——三階互相搶位，沒人知道該選哪個。拿掉 13，等於拿掉一次擲硬幣。
+
+另外 11px 有一個獨立理由：繁體中文一個字身塞 15–25 筆畫，11px 在 1x 會糊、2x 筆畫沾黏。**先前「Chrome 是殼層不是內容，所以可以 11px」的豁免已經取消**——底部分頁列標籤與側軌群組標題是手機上最主要的導覽，是使用者最需要讀清楚的字，不是裝飾。
+
+15px 則是因為它與 16px 差 6.7%，人眼看不出來。**一個看不出差別的階不該存在。**
+
+**地板是 12px，沒有例外。** 10px 同日廢除（它從來沒有授權來源）。
+
+### 設計稿的字級變數
+
+設計稿 `ux-design.pen` 用同一套角色名，每階兩個變數：
+
+```
+Type/Display/Size  36   Type/Display/Line  1.111
+Type/Headline/Size 30   Type/Headline/Line 1.200
+Type/Title/Size    24   Type/Title/Line    1.333
+Type/Subtitle/Size 20   Type/Subtitle/Line 1.400
+Type/Heading/Size  18   Type/Heading/Line  1.556
+Type/BodyLarge/Size 16  Type/BodyLarge/Line 1.500
+Type/Text/Size     14   Type/Text/Line     1.429
+Type/Label/Size    12   Type/Label/Line    1.333
+```
+
+⚠️ **`.pen` 的 `lineHeight` 是比例不是 px。** 填 20 代表 20 倍行高，不是 20px——實測會讓整份檔案的裁切警告從 150 暴增到 2164。
+
+**程式碼尚未跟上**：`apps/web` 還有 125 處 `text-[13px]`／`text-[11px]`、6 處 `text-[10px]`、4 處 `text-[15px]`，另有 5 處 `text-3xl`(30) 與 1 處 `text-5xl`(48)。48px 不在這張表裡，要嘛補一階要嘛改掉。追蹤於 `disc-2026-09-type-scale-even-migration`。
 
 ### Named Rules
 
@@ -302,9 +350,22 @@ App 是「固定左側軌 ＋ 流動內容欄」。左側軌展開 240px、收�
 
 內容頁以 `max-w-7xl`（1280px）容器搭配 `mx-auto` 置中，這是**頁面內容**的規則。**它不是「本身就有側欄的頁面」的規則。** 把「包含側欄的整塊」加上寬度限制再置中，會讓那個側欄脫離 App 側軌，在兩個導覽之間留下一道死掉的垂直空白；設定區在 1920px 下實地踩過這個坑——子導覽整整離開它該貼著的側軌 200px。**巢狀側欄的版型，根層不設限也不置中，寬度限制搬到內容格並且靠左對齊。**
 
-間距走 Tailwind 的 4px 基準：4 / 8 / 12 / 16 / 24 / 32。卡片內距 24px，輸入框 8px 垂直、12px 水平，列表列垂直 8–12px。行動裝置觸控目標維持最小 44px。
+間距走 **Tailwind 的完整預設階梯**：2 / 4 / 6 / 8 / 10 / 12 / 14 / 16 / 20 / 24 / 28 / 32 / 40 / 48 / 64 / 80（設計稿的 `Space/*` 一階不多一階不少）。**半階不是漂移，是這套系統真的在用的階**——程式碼實測用了 451 次（`gap-1.5` 212、`py-0.5` 112、`py-2.5` 100、`px-3.5`/`py-3.5` 27）。
 
-設計稿的間距階梯比這條長一截，因為它同時要描述已經畫出來的版面：2 / 4 / 6 / 8 / 10 / 12 / 14 / 16 / 20 / 24 / 28 / 32 / 40 / 48 / 64 / 80（`Space/*`）。半階（6、10、14、28）對應 Tailwind 的 `.5` 級距，不是隨手畫出來的數字。
+> 本文件在 2026-09-10 之前寫的是「4 / 8 / 12 / 16 / 24 / 32」。那是一個想像出來的子集，設計稿與程式碼**都沒有**遵守它——是文件錯，不是兩邊漂移。
+
+半階各有明確用途，不是隨手畫的：
+
+- **2px**：徽章的垂直內距（badge 規格本身就是 `2px 8px`）。
+- **6px**：徽章／藥丸裡圖示與文字的間隔。12px 文字配 4px 太黏、8px 太散。
+- **10px**：要湊出 32–36px 高度的 chip／pill 垂直內距。
+- **14px**：14px 文字的列內距，12 太緊、16 太鬆。
+- **20px**：**CJK 按鈕的水平內距**。拉丁字母左右自帶 side bearing，CJK 字身框直接貼到內距邊——同樣 16px，「立即掃描」看起來會比 `Scan Now` 擠。中文排版的通行補償約 0.25em，14px × 0.25 ≈ 4px，所以是 16 + 4。
+- **28px**：區段間距，24 太近、32 太遠。
+
+卡片內距 24px，輸入框 8px 垂直、12px 水平，列表列垂直 8–12px。行動裝置觸控目標最小 44px——⚠️ **這條目前是空頭支票**：設計稿的按鈕是 40px，程式碼的 `default` 是 36px，沒有任何尺寸做得到 44。兩邊都要補一個 `touch` 尺寸（見 `disc-2026-09-missing-component-masters`）。
+
+**真正缺的不是階，是選擇規則。** 實測 `Space/sm`(8) 用 1791 次、`Space/sm-plus`(10) 用 1044 次——用量同數量級，代表沒人知道什麼時候該選 10。按用途分組（Inset 容器內距／Stack 垂直堆疊／Inline 並排）並各自限縮是待辦項（`disc-2026-09-spacing-scale-grouping`）。
 
 ### Named Rules
 
