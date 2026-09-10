@@ -125,6 +125,15 @@ SCREENS = {
     "6UCtX": ("flow-c-search-settings", "c4-d"),
     "2H4OM": ("flow-c-search-settings", "c4-m"),
     "uhAKd": ("flow-c-search-settings", "c5-d"),
+    "B3qPq": ("flow-c-search-settings", "c6-d"),
+    "PWvEX": ("flow-c-search-settings", "c7-d"),
+    "wqcqY": ("flow-c-search-settings", "c8-d"),
+    "NR3zK": ("flow-c-search-settings", "c9-d"),
+    "wnmGh": ("flow-c-search-settings", "c10-d"),
+    "TrU8k": ("flow-c-search-settings", "c11-d"),
+    "K28SdR": ("flow-c-search-settings", "c12-d"),
+    "nwn6a": ("flow-c-search-settings", "c13-d"),
+    "aJSKl": ("flow-c-search-settings", "c14-d"),
     # Flow D — 下載管理 (downloads)
     # Flow E — 媒體庫掃描 (scanner settings / progress / complete toast / filtered-unmatched)
     "KvZSc": ("flow-e-scanner", "e1-d"),

@@ -73,7 +73,7 @@ For non-trivial features, work **architecture-first**: outline the design and va
    - `flow-a-browse-v2/` — Browse: empty / loading / grid / list / no-results / error (A′ pilot series)
    - `flow-b-detail-interaction/` — Hover / Context Menus / Detail menus / Fallbacks (mobile) / Image-load Fallback spec (B9)
    - `flow-b-detail-v2/` — Detail v2: movie / TV / skeleton / not-found / 延伸區塊 (B′ series)
-   - `flow-c-search-settings/` — Search+Filter / Batch Ops / Settings / Backup
+   - `flow-c-search-settings/` — 媒體庫搜尋＋篩選 / 批次操作 / 檢視偏好，以及**設定的 12 個分頁**（c4–c14：外觀・連線・金鑰・服務狀態・字幕・自訂首頁・快取・日誌・備份・匯出匯入・效能監控；媒體庫掃描在 `flow-e-scanner/e1-d`）。分頁列與分組順序以 `SettingsLayout.tsx` 的 `SETTINGS_CATEGORIES` 為準
    - `flow-d-downloads-v2/` — Download centre v2: list / batch select / card actions / skeleton / empty / fail-soft / table / mobile sheets
    - `flow-e-scanner/` — Scanner settings / Scan progress / Complete toast / Filtered-unmatched
    - `flow-f-subtitle-v2/` — Manage subtitles / generation progress / glossary / batch / 生成工作區
