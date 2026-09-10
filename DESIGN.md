@@ -580,7 +580,7 @@ App 是「固定左側軌 ＋ 流動內容欄」。左側軌展開 240px、收�
 
 ### Badges and Pills
 
-- **樣式：** 4px 圓角、12px 標籤字、2px／8px 內距。
+- **樣式：** 藥丸形（`radius-pill`）、12px 標籤字、4px／10px 內距、12px 圖示。⚖️ 2026-09-10 從 4px 改為藥丸——見 §Shapes：徽章是「一枚可以被拿掉的標記」，不是「一個可以被按下去的動作」。
 - **狀態變體**以語意 tint 為底、`*-text` 階為字——青碧、赭、硃砂、靛青。**底用 tint、字用 `*-text`，不要用飽和色當字。**
 - **中性變體：** `secondary` 用 `--bg-tertiary`；`outline` 是髮絲線邊框加次要文字色，**用於分類而非狀態**。
 
@@ -611,15 +611,23 @@ App 是「固定左側軌 ＋ 流動內容欄」。左側軌展開 240px、收�
 
 ### 設計稿的元件清冊
 
-`ux-design.pen` ▸ `Design System · 設計系統` ▸ `Components · 元件` 底下有 35 個母版，分五類。母版住在分類裡，Component Library 那頁放的是 instance。
+`ux-design.pen` ▸ `Design System · 設計系統` ▸ `Components · 元件` 底下有 **68 個母版**，分五類。母版住在分類裡，Component Library 那頁放的是 instance。
 
-| 分類                | 元件                                                                                                                                                                              |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 01 · 導覽與外框     | SidebarNavItem、SidebarGroupParent、SidebarGroupLabel、SidebarFooterStatus、MobileTabItem、HomeSidebar-v2                                                                         |
-| 02 · 基礎控件       | ButtonPrimary、ButtonSecondary、SearchInput、SortDropdown、FilterChip、GenreTag、Checkbox（含 Empty／Indeterminate／DisabledChecked／DisabledEmpty 四態）、TabActive、TabInactive |
-| 03 · 媒體卡片與標籤 | PosterCard、PosterCardHover、PosterCard-v2、TechBadge-Video／Audio／Subtitle／HDR                                                                                                 |
-| 04 · 列表與進度     | ActivityRow-v2、RequestRow-v2、DownloadCard-v2、GenerationProgress-v2、GlossaryRow-v2、GenQueueRow-v2                                                                             |
-| 05 · 空狀態         | EmptyLibrary-NoQBT、EmptyLibrary-NoFolder、EmptyLibrary-ReadyForScan                                                                                                              |
+⚖️ **2026-09-10 補了 30 個**（`disc-2026-09-missing-component-masters`）。在那之前是 38 個，而 DESIGN.md 自己規格化的元件有 14 個只有 3 個真的存在母版——元件庫空狀態區那顆 outline 按鈕是**手畫的**，因為沒有 ButtonOutline 可以 instance。
+
+| 分類                      | 元件                                                                                                                                                                                                                                                                                                                          |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 01 · 導覽與外框（9）      | SidebarNavItem、SidebarGroupParent、SidebarGroupLabel、SidebarFooterStatus、MobileTabItem、HomeSidebar-v2、**DialogFrame**、**BottomSheet**、**Pagination**                                                                                                                                                                   |
+| 02 · 基礎控件（34）       | ButtonPrimary／Secondary／**Outline**／**Ghost**／**Destructive**／**Touch**／**Disabled**、ButtonCost（含 Loading／Disabled）、SearchInput、**TextField**／**TextFieldFocus**、SortDropdown、FilterChip、GenreTag、Checkbox 五態、TabActive／TabInactive、**SwitchOn**／**SwitchOff**、**Tooltip**、**Text/\* 八階字級母版** |
+| 03 · 媒體卡片與標籤（12） | PosterCard、PosterCardHover、PosterCard-v2、TechBadge-Video／Audio／Subtitle／HDR、**StatusBadge-Running／Done／Asked／Fault／Note**                                                                                                                                                                                          |
+| 04 · 列表與進度（10）     | ActivityRow-v2、RequestRow-v2、DownloadCard-v2、GenerationProgress-v2、GlossaryRow-v2、GenQueueRow-v2、**ProgressBar**、**TableRow**、**Toast**、**Skeleton**                                                                                                                                                                 |
+| 05 · 空狀態（3）          | EmptyLibrary-NoQBT、EmptyLibrary-NoFolder、EmptyLibrary-ReadyForScan                                                                                                                                                                                                                                                          |
+
+**`Text/*` 是純文字母版，一階一個。** 新畫面的文字一律 instance 它們，不要新建 text node——那是「95.5% 的文字沒有行高」那個洞唯一補得起來的辦法：母版帶著 Size／Line／Weight 三個變數，instance 只換內容。
+
+**`ButtonTouch` 是 44px 的行動尺寸**，補上 §Responsive 那張空頭支票。桌機仍用 36px 的 `ButtonPrimary`。
+
+**`StatusBadge` 五態對應五個狀態詞**：Running 泥金＝正在跑、Done 青碧＝有答案了、Asked 赭＝要求了但沒發生、Fault 硃砂＝壞了、Note 靛青＝純告知。底用 `*-tint`、字與圖示用 `*-text`，永遠成對。
 
 **TechBadge 一律中性**（`--bg-tertiary` 底、`--text-secondary` 字），四個分類只靠文字與圖示區分。
 
@@ -650,3 +658,71 @@ App 是「固定左側軌 ＋ 流動內容欄」。左側軌展開 240px、收�
 - **Don't** 用 `filter: brightness()` 或 `hover:brightness-110` 做 hover 加亮。日巡的 `--accent-hover` 是往**暗**走的，加亮會走錯方向；一律吃 token。
 - **Don't** 假設 `--text-inverse` 等於「深色的地」。它在日巡是紙色——任何把它當「暗底」用的呼叫點在淺色主題會無聲翻錯。
 - **Don't** 引入 display 字體或第二種個性。一套人文無襯線加一套等寬，就是全部。
+
+## 怎麼新增一張設計稿（SOP）
+
+> 這一節在 2026-09-10 補上（`disc-2026-09-design-sop`）。在那之前沒有任何文件講「元件與 token 怎麼挑」——`design-context-pack.md` 是給 Pencil 內建 AI 的產品 primer，memory 的 flow-layout-convention 只講座標與命名。結果是每張新畫面都在重新發明一次選擇。
+
+按順序做完七步。**每一步都有一個「不准」，那才是這份 SOP 的重點。**
+
+### 1. 先決定殼層 — 只有一個答案
+
+**v2 側軌是唯一正典。** 程式碼 `routes/__root.tsx:173` 掛的是 `AppShellV2`，底下是 `AppSidebar` ＋ `MobileTabBar` ＋ `MobileMoreSheet`；**全專案沒有 TopBar 元件**。
+
+設計稿裡仍有 v1 頂欄的舊畫面（A1-D、B1-D、C1-D 那一批），它們是遺留，留著只為了對照歷史。**新畫面一律不得使用 v1 頂欄。**
+
+桌機用 `Component/HomeSidebar-v2`；手機用底部分頁列（`Component/MobileTabItem`）加 More sheet。
+
+### 2. 決定它落在哪個 Flow、叫什麼名字
+
+- **Flow group**：A 瀏覽／B 詳情與互動／C 搜尋・篩選・設定／D 下載管理／E 媒體庫掃描／F 字幕搜尋與批次／G AI 字幕增強／H 首頁／I 進階搜尋與探索／J 設計決策 Spec／L 想要與請求系統／M 登入與密碼閘。找不到歸屬就是這張稿的定位有問題，先想清楚再畫。
+- **圖框名稱**用短碼：`B3-D`（桌機）、`B3-M`（手機）、v2 改版加後綴 `B3-D-v2`。
+- **畫布可見標題**另開一個 text node：`B3 · 詳情面板・電影（桌面）`，Noto Sans TC 14／600／`#888888`，放在 frame **上方 45px**——貼太近會撞到 Pencil 自己的圖框名 chrome。
+- **位置**用 `FindEmptySpace({nodeId: 同流程最後一張})` 錨定，不要自己挑座標。
+- ⚠️ **不要沿用 memory 裡那個「各流程間距 2600」的座標範本**——流程長高之後早就互相穿插了，那個數字已經不成立（追蹤於 `disc-2026-09-pen-flow-inner-layers`）。
+
+### 3. 必須 instance 母版，不准手畫
+
+**任何在別的畫面出現過的東西，一律 `Copy` 母版或插 `ref`，不得重畫。** 手畫出來的東西不會跟著母版更新，就是漂移的來源——元件庫空狀態區那顆手畫的 outline 按鈕就是這樣來的。
+
+**沒有母版怎麼辦：先補母版，再畫畫面。** 順序反過來就永遠補不上（38 個母版裡只有 1 個行動專用，20 幾張手機稿各自手畫同一個 Sheet 外殼，就是順序反了的結果）。
+
+新母版一律命名 `Component/<名字>`，放進 `Components · 元件` 底下對應分類（01 導覽與外框／02 基礎控件／03 媒體卡片與標籤／04 列表與進度／05 空狀態），並在 Component Library 頁補一格。
+
+### 4. 顏色只准用 `$` 變數
+
+- **不准寫死 hex。** 唯一例外是畫布註記（流程標題、色票標籤那些不會被實作的東西）。
+- **`accent-primary` 給人按，`accent-text` 給人讀。** 換過來會無聲地破壞對比度。
+- **徽章底用 `*-tint`，字用 `*-text`，永遠成對。** 語意基色本身（success／warning／error／info／accent-primary）**不可以當文字**。
+- **壓在圖片或深色遮罩上的字用 `text-on-scrim`**，不要用 `text-primary`——後者會隨主題翻轉，日巡下變成黑字壓黑底（追蹤於 `disc-2026-09-text-on-artwork-flips-with-theme`）。
+- **金額一律中性色**，狀態押在標籤與圖示上。會花錢的控制項要帶預估金額。
+
+### 5. 字級選 `Type/*`，三個變數一起設
+
+每一個 text node 都要同時設 **`$Type/<角色>/Size`、`$Type/<角色>/Line`、`$Type/<角色>/Weight`** 三個。只設 Size 就是這套系統最久的那個洞（2026-09-10 之前 95.5% 的文字沒有行高）。
+
+**手機稿必須在 root frame 加 `theme:{bp:"mobile"}`**，標題四階才會降級。忘了加就會拿到桌機的 36px 大標。
+
+### 6. 間距選 `Space/*`，半階要寫理由
+
+整階是 4／8／12／16／24／32／40／48／64／80。**半階（`-plus`：6／10／14／20／28）不是「再細一點」的通用選項**——用它就要能講出為什麼整階不行，並寫進節點名或旁邊的註記。半階一旦隨手用，階梯就等於沒有階梯。
+
+### 7. 收工檢查清單
+
+按順序跑完，一項都不能跳：
+
+1. **存檔**（Pencil 的 MCP 讀的是記憶體不是磁碟）：AppleScript 點 File ▸ Save，然後確認 `git status --porcelain ux-design.pen` 出現 ` M`。
+2. **驗版面**：`Get((n,c)=>c.problems && ...)` 數全檔裁切警告。**基準值是 156**，超過就是新的破版，要修到回來為止。
+3. **驗日巡**：在 root frame 加 `theme:{mode:"light"}` 截一張，確認沒有黑字壓黑底或濁色。看完把屬性拿掉（除非這張本來就是日巡證據畫面）。
+4. **註冊截圖**：新畫面要加進 `scripts/export-pen-screenshots.py` 的 `SCREENS`（key = node ID，value = `(flow-folder, code)`）。加之前先數一次重複 key。
+5. **重產截圖**：`python3 scripts/export-pen-screenshots.py`。
+6. **只 commit 真改動的 PNG**：`git checkout` 掉沒有真的改變設計的那些——重產是非決定性的，全部 stage 會混進一堆 re-render 雜訊。判準是「改變的張數 == 預期被改到的畫面」，數字對不上就是有東西被誤傷。
+7. **跑 `python3 scripts/check-design-tokens.py`**，四份文件的色彩 token 要對得上。
+
+### 已知地雷
+
+- **`.pen` 的 `lineHeight` 是比例不是 px。** 填 20 代表 20 倍行高。
+- **新 `Insert` 的節點在存檔前不會被截圖畫出來**——bounds 正確、fill 正確，就是一片空白。存檔後再截。
+- **`Copy` 的 `descendants` 用名稱當 key 只對 reusable 元件有效。** 複製一般節點時名稱 key 會被靜默忽略，要 `Copy` 之後 `Get` 建一張「名稱 → 新 id」表再逐一 `Update`。
+- **色票／示範一定要有明確底色。** tint 是半透明的，沒有底板時會疊到不確定的背景，匯出看起來像實心色。
+- **`f24-d-v2` 的 `b4DwH` 是壞節點**（一個 text 與一個 frame 共用 id），所有批次腳本都要跳過。
