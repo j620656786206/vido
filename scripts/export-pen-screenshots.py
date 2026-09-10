@@ -276,6 +276,8 @@ SCREENS = {
     "KjOTM": ("flow-f-subtitle-v2", "f24-d-v2"),
     # sub-6 policy screen — F25 設定頁「自動處理政策」卡（上限金額 + 翻譯模型）
     "UYud2": ("flow-f-subtitle-v2", "f25-d-v2"),
+    # sub-6 policy screen — F22 手機版入口：活動頁標題列下的兩顆按鈕
+    "Rxck3": ("flow-f-subtitle-v2", "f22-m-v2"),
     # sub-6-12 — 開始失敗時訊息落點的規格畫面（超支橫幅 → 失敗訊息 → 頁尾，皆在捲動區外）
     "VPT7l": ("flow-f-subtitle-v2", "f18-spec-err"),
     # flow-h-homepage-v3 — home identity rework (home-v3-identity-brief.md: 讀數帶 4 格 +
