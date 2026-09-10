@@ -12714,7 +12714,7 @@
                   "y": -7005,
                   "name": "Component/TechBadge-Video",
                   "reusable": true,
-                  "fill": "$accent-tint",
+                  "fill": "$bg-tertiary",
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs-plus",
                   "padding": [
@@ -12731,13 +12731,13 @@
                       "height": 11,
                       "icon": "monitor",
                       "library": "lucide",
-                      "fill": "$accent-text"
+                      "fill": "$text-secondary"
                     },
                     {
                       "type": "text",
                       "id": "dhP6X",
                       "name": "label",
-                      "fill": "$accent-text",
+                      "fill": "$text-secondary",
                       "content": "H.265",
                       "lineHeight": "$Type/Label/Line",
                       "fontFamily": "$Type/Family/Mono",
@@ -12753,7 +12753,7 @@
                   "y": -7005,
                   "name": "Component/TechBadge-Audio",
                   "reusable": true,
-                  "fill": "$info-tint",
+                  "fill": "$bg-tertiary",
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs-plus",
                   "padding": [
@@ -12770,13 +12770,13 @@
                       "height": 11,
                       "icon": "volume-2",
                       "library": "lucide",
-                      "fill": "$info-text"
+                      "fill": "$text-secondary"
                     },
                     {
                       "type": "text",
                       "id": "Gz6PG",
                       "name": "label",
-                      "fill": "$info-text",
+                      "fill": "$text-secondary",
                       "content": "DTS",
                       "lineHeight": "$Type/Label/Line",
                       "fontFamily": "$Type/Family/Mono",
@@ -12792,7 +12792,7 @@
                   "y": -7005,
                   "name": "Component/TechBadge-Subtitle",
                   "reusable": true,
-                  "fill": "$success-tint",
+                  "fill": "$bg-tertiary",
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs-plus",
                   "padding": [
@@ -12809,13 +12809,13 @@
                       "height": 11,
                       "icon": "captions",
                       "library": "lucide",
-                      "fill": "$success-text"
+                      "fill": "$text-secondary"
                     },
                     {
                       "type": "text",
                       "id": "JDBR9",
                       "name": "label",
-                      "fill": "$success-text",
+                      "fill": "$text-secondary",
                       "content": "繁中",
                       "lineHeight": "$Type/Label/Line",
                       "fontFamily": "$Type/Family/Primary",
@@ -12831,7 +12831,7 @@
                   "y": -7005,
                   "name": "Component/TechBadge-HDR",
                   "reusable": true,
-                  "fill": "$warning-tint",
+                  "fill": "$bg-tertiary",
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs-plus",
                   "padding": [
@@ -12848,13 +12848,13 @@
                       "height": 11,
                       "icon": "sun",
                       "library": "lucide",
-                      "fill": "$warning-text"
+                      "fill": "$text-secondary"
                     },
                     {
                       "type": "text",
                       "id": "aaYwr",
                       "name": "label",
-                      "fill": "$warning-text",
+                      "fill": "$text-secondary",
                       "content": "HDR10",
                       "lineHeight": "$Type/Label/Line",
                       "fontFamily": "$Type/Family/Mono",

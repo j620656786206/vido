@@ -504,7 +504,11 @@ App 是「固定左側軌 ＋ 流動內容欄」。左側軌展開 240px、收�
 | 04 · 列表與進度     | ActivityRow-v2、RequestRow-v2、DownloadCard-v2、GenerationProgress-v2、GlossaryRow-v2、GenQueueRow-v2                                                                             |
 | 05 · 空狀態         | EmptyLibrary-NoQBT、EmptyLibrary-NoFolder、EmptyLibrary-ReadyForScan                                                                                                              |
 
-TechBadge 的四個分類對應程式碼 `TechBadge.tsx` 的語意：video → accent、audio → info、hdr → warning、subtitle → success。
+**TechBadge 一律中性**（`--bg-tertiary` 底、`--text-secondary` 字），四個分類只靠文字與圖示區分。
+
+> ⚖️ **2026-09-10 修正（Alexyu 裁定）**：這裡原本寫「video → accent、audio → info、hdr → warning、subtitle → success」，也就是**本文件親自把四個狀態色指派成一組媒體規格分類法**——而 §Colors 的固定詞彙規則明文禁止狀態色用於分類。後果在畫面上可見：海報左上角的青碧「繁中」徽章是分類（這個檔案有中文字幕軌），詳情面板的青碧「繁體中文字幕已就緒」是狀態（有答案了）——**同一個顏色在相鄰畫面有兩個意思**。
+>
+> 裁定：技術規格（H.265／DTS／HDR10／繁中）是這個檔案的**屬性**，不是「發生了什麼」，本來就不該穿狀態色。它們已經有文字，顏色沒有承載額外資訊。改成中性之後，使用者看到青碧就只有一個意思。設計稿四個母版已改；程式碼 `TechBadge.tsx:15-18` 仍是舊映射，追蹤於 `disc-2026-09-techbadge-uses-status-colors-as-taxonomy`。
 
 ## Do's and Don'ts
 
