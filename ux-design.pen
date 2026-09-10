@@ -163700,7 +163700,7 @@
             {
               "type": "frame",
               "id": "suCiI",
-              "x": 25670,
+              "x": 25490,
               "y": 31734,
               "name": "K2-D-v2 · 活動載入骨架（桌面）",
               "clip": true,
@@ -164134,7 +164134,7 @@
             {
               "type": "text",
               "id": "ITlO9",
-              "x": 25670,
+              "x": 25490,
               "y": 31694,
               "name": "cap-K2-D-v2",
               "fill": "$text-secondary",
@@ -164147,7 +164147,7 @@
             {
               "type": "frame",
               "id": "DZnSv",
-              "x": 27390,
+              "x": 27030,
               "y": 31734,
               "name": "K3-D-v2 · 活動空狀態（桌面）",
               "clip": true,
@@ -164359,7 +164359,7 @@
             {
               "type": "text",
               "id": "nO6Xf",
-              "x": 27390,
+              "x": 27030,
               "y": 31694,
               "name": "cap-K3-D-v2",
               "fill": "$text-secondary",
@@ -164372,7 +164372,7 @@
             {
               "type": "frame",
               "id": "M6ra92",
-              "x": 29110,
+              "x": 28570,
               "y": 31734,
               "name": "K4-D-v2 · 區塊載入失敗（桌面）",
               "clip": true,
@@ -164926,7 +164926,7 @@
             {
               "type": "text",
               "id": "i91rA",
-              "x": 29110,
+              "x": 28570,
               "y": 31694,
               "name": "cap-K4-D-v2",
               "fill": "$text-secondary",
@@ -164948,8 +164948,8 @@
             {
               "type": "frame",
               "id": "QIwY1",
-              "x": 30830,
-              "y": 31734,
+              "x": 23950,
+              "y": 32744,
               "name": "K1-M-v2 · 活動中心（手機）",
               "theme": {
                 "bp": "mobile"
@@ -165379,8 +165379,8 @@
             {
               "type": "text",
               "id": "p3HJi0",
-              "x": 30830,
-              "y": 31694,
+              "x": 23950,
+              "y": 32704,
               "name": "cap-K1-M-v2",
               "fill": "$text-secondary",
               "content": "K1-M · 活動中心（手機）",
