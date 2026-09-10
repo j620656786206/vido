@@ -174179,33 +174179,6 @@
                                   "fontFamily": "Noto Sans TC",
                                   "fontSize": 15,
                                   "fontWeight": "600"
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "K2W2Ra",
-                                  "x": 69,
-                                  "y": 0.5,
-                                  "name": "chip-unmatched",
-                                  "enabled": false,
-                                  "fill": "$bg-tertiary",
-                                  "cornerRadius": "$radius-sm",
-                                  "padding": [
-                                    2,
-                                    8
-                                  ],
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "text",
-                                      "id": "Q1ASt",
-                                      "name": "chip-lbl",
-                                      "fill": "$text-muted",
-                                      "content": "未匹配",
-                                      "fontFamily": "Noto Sans TC",
-                                      "fontSize": 12,
-                                      "fontWeight": "normal"
-                                    }
-                                  ]
                                 }
                               ]
                             },
@@ -174373,33 +174346,6 @@
                                   "fontFamily": "Noto Sans TC",
                                   "fontSize": 15,
                                   "fontWeight": "600"
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "o78Cq",
-                                  "x": 69,
-                                  "y": 0.5,
-                                  "name": "chip-unmatched",
-                                  "enabled": false,
-                                  "fill": "$bg-tertiary",
-                                  "cornerRadius": "$radius-sm",
-                                  "padding": [
-                                    2,
-                                    8
-                                  ],
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "text",
-                                      "id": "HYjpe",
-                                      "name": "chip-lbl",
-                                      "fill": "$text-muted",
-                                      "content": "未匹配",
-                                      "fontFamily": "Noto Sans TC",
-                                      "fontSize": 12,
-                                      "fontWeight": "normal"
-                                    }
-                                  ]
                                 }
                               ]
                             },
@@ -175541,7 +175487,7 @@
                                   "id": "xDiFm",
                                   "name": "badge-lbl",
                                   "fill": "$success",
-                                  "content": "抽取",
+                                  "content": "僅翻譯費",
                                   "fontFamily": "Noto Sans TC",
                                   "fontSize": 11,
                                   "fontWeight": "600"
@@ -175661,7 +175607,7 @@
                                   "id": "ZElg1",
                                   "name": "badge-lbl",
                                   "fill": "$success",
-                                  "content": "抽取",
+                                  "content": "僅翻譯費",
                                   "fontFamily": "Noto Sans TC",
                                   "fontSize": 11,
                                   "fontWeight": "600"
@@ -175781,7 +175727,7 @@
                                   "id": "dCeDc",
                                   "name": "badge-lbl",
                                   "fill": "$success",
-                                  "content": "抽取",
+                                  "content": "僅翻譯費",
                                   "fontFamily": "Noto Sans TC",
                                   "fontSize": 11,
                                   "fontWeight": "600"
@@ -175942,7 +175888,7 @@
                                   "id": "NwjB5",
                                   "name": "badge-lbl",
                                   "fill": "$success",
-                                  "content": "抽取",
+                                  "content": "僅翻譯費",
                                   "fontFamily": "Noto Sans TC",
                                   "fontSize": 11,
                                   "fontWeight": "600"
@@ -176063,7 +176009,7 @@
                                   "id": "MkJbY",
                                   "name": "badge-lbl",
                                   "fill": "$success",
-                                  "content": "抽取",
+                                  "content": "僅翻譯費",
                                   "fontFamily": "Noto Sans TC",
                                   "fontSize": 11,
                                   "fontWeight": "600"
@@ -176088,6 +176034,7 @@
                       "type": "frame",
                       "id": "dnCMH",
                       "name": "group-影集",
+                      "opacity": 0.6,
                       "width": "fill_container",
                       "fill": "$bg-tertiary",
                       "cornerRadius": "$radius-md",
