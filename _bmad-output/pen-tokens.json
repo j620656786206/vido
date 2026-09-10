@@ -4,7 +4,7 @@
     "exportedScreens": 151,
     "masters": 68
   },
-  "penSha256": "766e3ebfbd0e8dff34267fd90816fd70d8448195a9a651c5546ebe030b2372d2",
+  "penSha256": "ed628fb85299076e02e431f713a0baf80ad3c6e04eb6e98e76b536ceed9226ea",
   "raw": {
     "fontSize": 0,
     "gap": 0,
@@ -90,15 +90,27 @@
       "type": "number",
       "value": 6
     },
-    "Type/BodyLarge/Line": {
+    "Type/Body/Line": {
       "type": "number",
       "value": 1.625
     },
-    "Type/BodyLarge/Size": {
+    "Type/Body/Size": {
+      "type": "number",
+      "value": 14
+    },
+    "Type/Body/Weight": {
+      "type": "string",
+      "value": "400"
+    },
+    "Type/BodyLg/Line": {
+      "type": "number",
+      "value": 1.625
+    },
+    "Type/BodyLg/Size": {
       "type": "number",
       "value": 16
     },
-    "Type/BodyLarge/Weight": {
+    "Type/BodyLg/Weight": {
       "type": "string",
       "value": "400"
     },
@@ -139,23 +151,11 @@
       "type": "string",
       "value": "Noto Sans TC"
     },
-    "Type/Heading/Line": {
-      "type": "number",
-      "value": 1.5
-    },
-    "Type/Heading/Size": {
-      "type": "number",
-      "value": 18
-    },
-    "Type/Heading/Weight": {
-      "type": "string",
-      "value": "600"
-    },
-    "Type/Headline/Line": {
+    "Type/H1/Line": {
       "type": "number",
       "value": 1.25
     },
-    "Type/Headline/Size": {
+    "Type/H1/Size": {
       "type": "number",
       "value": [
         {
@@ -172,64 +172,15 @@
         }
       ]
     },
-    "Type/Headline/Weight": {
+    "Type/H1/Weight": {
       "type": "string",
       "value": "700"
     },
-    "Type/Label/Line": {
-      "type": "number",
-      "value": 1.5
-    },
-    "Type/Label/Size": {
-      "type": "number",
-      "value": 12
-    },
-    "Type/Label/Weight": {
-      "type": "string",
-      "value": "500"
-    },
-    "Type/Subtitle/Line": {
+    "Type/H2/Line": {
       "type": "number",
       "value": 1.375
     },
-    "Type/Subtitle/Size": {
-      "type": "number",
-      "value": [
-        {
-          "theme": {
-            "bp": "desktop"
-          },
-          "value": 20
-        },
-        {
-          "theme": {
-            "bp": "mobile"
-          },
-          "value": 18
-        }
-      ]
-    },
-    "Type/Subtitle/Weight": {
-      "type": "string",
-      "value": "600"
-    },
-    "Type/Text/Line": {
-      "type": "number",
-      "value": 1.625
-    },
-    "Type/Text/Size": {
-      "type": "number",
-      "value": 14
-    },
-    "Type/Text/Weight": {
-      "type": "string",
-      "value": "400"
-    },
-    "Type/Title/Line": {
-      "type": "number",
-      "value": 1.375
-    },
-    "Type/Title/Size": {
+    "Type/H2/Size": {
       "type": "number",
       "value": [
         {
@@ -246,9 +197,58 @@
         }
       ]
     },
-    "Type/Title/Weight": {
+    "Type/H2/Weight": {
       "type": "string",
       "value": "700"
+    },
+    "Type/H3/Line": {
+      "type": "number",
+      "value": 1.375
+    },
+    "Type/H3/Size": {
+      "type": "number",
+      "value": [
+        {
+          "theme": {
+            "bp": "desktop"
+          },
+          "value": 20
+        },
+        {
+          "theme": {
+            "bp": "mobile"
+          },
+          "value": 18
+        }
+      ]
+    },
+    "Type/H3/Weight": {
+      "type": "string",
+      "value": "600"
+    },
+    "Type/H4/Line": {
+      "type": "number",
+      "value": 1.5
+    },
+    "Type/H4/Size": {
+      "type": "number",
+      "value": 18
+    },
+    "Type/H4/Weight": {
+      "type": "string",
+      "value": "600"
+    },
+    "Type/Label/Line": {
+      "type": "number",
+      "value": 1.5
+    },
+    "Type/Label/Size": {
+      "type": "number",
+      "value": 12
+    },
+    "Type/Label/Weight": {
+      "type": "string",
+      "value": "500"
     },
     "accent-hover": {
       "type": "color",
@@ -804,7 +804,7 @@
           "theme": {
             "mode": "dark"
           },
-          "value": "#e8b04b"
+          "value": "#ff8d29"
         },
         {
           "theme": {

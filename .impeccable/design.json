@@ -348,7 +348,7 @@
       "refersTo": "badge-asked",
       "description": "系統裡最重要的一個標記：你要求了，而它沒有在發生。這是唯一能浮現「系統與使用者意願不一致」的方式。",
       "html": "<span class=\"ds-badge-asked\">伺服器未啟用</span>",
-      "css": ".ds-badge-asked{display:inline-flex;align-items:center;padding:2px 8px;border-radius:var(--radius-sm,4px);background:rgba(212,118,63,.12);color:var(--warning-text,#e8b04b);font-family:\"Noto Sans TC\",-apple-system,sans-serif;font-size:12px;font-weight:500;line-height:1.4}"
+      "css": ".ds-badge-asked{display:inline-flex;align-items:center;padding:2px 8px;border-radius:var(--radius-sm,4px);background:rgba(212,118,63,.12);color:var(--warning-text,#ff8d29);font-family:\"Noto Sans TC\",-apple-system,sans-serif;font-size:12px;font-weight:500;line-height:1.4}"
     },
     {
       "name": "Fault Badge",

@@ -61,7 +61,7 @@ token                    夜行 Nightwalk        日巡 Daywalk
 --warning               #d4763f              #a6510c    
 --warning-pressed       #c26a36              #8b4208    
 --warning-tint          #d4763f1f            #d4763f33  
---warning-text          #e8b04b              #7b3a06    
+--warning-text          #ff8d29              #7b3a06    
 # 語意 · 硃砂＝壞掉了
 --error                 #c0392b              #c0392b    唯一不隨主題翻轉
 --error-pressed         #9c3a2b              #9c3a2b    

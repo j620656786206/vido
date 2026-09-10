@@ -26,7 +26,7 @@ colors:
   error-tint: '#c0392b1f'
   error-text: '#e08a76'
   warning-tint: '#d4763f1f'
-  warning-text: '#e8b04b'
+  warning-text: '#ff8d29'
   warning-pressed: '#c26a36'
   info-tint: '#1391b21f'
   info-text: '#5bc4dd'
@@ -41,27 +41,27 @@ typography:
     fontSize: '2.25rem'
     fontWeight: 700
     lineHeight: 1.25
-  headline:
+  h1:
     fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
     fontSize: '1.875rem'
     fontWeight: 700
     lineHeight: 1.25
-  title:
+  h2:
     fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
     fontSize: '1.5rem'
     fontWeight: 700
     lineHeight: 1.375
-  subtitle:
+  h3:
     fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
     fontSize: '1.25rem'
     fontWeight: 600
     lineHeight: 1.375
-  heading:
+  h4:
     fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
     fontSize: '1.125rem'
     fontWeight: 600
     lineHeight: 1.5
-  body-large:
+  body-lg:
     fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
     fontSize: '1rem'
     fontWeight: 400
@@ -344,12 +344,12 @@ CJK 一律走 Noto Sans TC。設計稿上的 DM Sans 只用於**畫布註記**�
 | 角色           | 桌機 px / 行高         | 手機 px | 字重 | Tailwind    | 用途                                                              |
 | -------------- | ---------------------- | ------- | ---- | ----------- | ----------------------------------------------------------------- |
 | **Display**    | 36 / 1.25 (45)         | **30**  | 700  | `text-4xl`  | 詳情頁 hero 標題、海報 placeholder 首字。罕見，不是一般標題層級。 |
-| **Headline**   | 30 / 1.25 (37.5)       | **24**  | 700  | `text-3xl`  | 頁面大標。一個畫面一個。                                          |
-| **Title**      | 24 / 1.375 (33)        | **20**  | 700  | `text-2xl`  | 區段大標。                                                        |
-| **Subtitle**   | 20 / 1.375 (27.5)      | **18**  | 600  | `text-xl`   | 區塊標題。                                                        |
-| **Heading**    | 18 / 1.5 (27)          | 18      | 600  | `text-lg`   | 卡片與區段標題。                                                  |
+| **H1**         | 30 / 1.25 (37.5)       | **24**  | 700  | `text-3xl`  | 頁面大標。一個畫面一個。                                          |
+| **H2**         | 24 / 1.375 (33)        | **20**  | 700  | `text-2xl`  | 區段大標。                                                        |
+| **H3**         | 20 / 1.375 (27.5)      | **18**  | 600  | `text-xl`   | 區塊標題。                                                        |
+| **H4**         | 18 / 1.5 (27)          | 18      | 600  | `text-lg`   | 卡片與區段標題。                                                  |
 | **Body Large** | 16 / 1.625 (26)        | 16      | 400  | `text-base` | 大內文、次級標題。                                                |
-| **Text**       | **14 / 1.625 (22.75)** | 14      | 400  | `text-sm`   | **預設內文**，也是按鈕標籤與並排讀數。全系統用量最大的一階。      |
+| **Body**       | **14 / 1.625 (22.75)** | 14      | 400  | `text-sm`   | **預設內文**，也是按鈕標籤與並排讀數。全系統用量最大的一階。      |
 | **Label**      | **12 / 1.5 (18)**      | 12      | 500  | `text-xs`   | 標籤、徽章、殼層 chrome、純數字欄位。**地板。**                   |
 
 **行高是按角色訂的，不是按尺寸算的。** Label(12) 的 1.5 比 Text(14) 的 1.625 緊，不是筆誤——徽章與 chrome 是單行、掃一眼就過，把行框撐開只會讓元件變高而讀感不變；Text 是會排成整段被閱讀的字，繁中需要那個 1.625。
@@ -380,14 +380,19 @@ CJK 一律走 Noto Sans TC。設計稿上的 DM Sans 只用於**畫布註記**�
 ```
                        桌機  手機        行高（比例）
 Type/Display/Size       36    30    Type/Display/Line   1.25
-Type/Headline/Size      30    24    Type/Headline/Line  1.25
-Type/Title/Size         24    20    Type/Title/Line     1.375
-Type/Subtitle/Size      20    18    Type/Subtitle/Line  1.375
-Type/Heading/Size       18    18    Type/Heading/Line   1.5
-Type/BodyLarge/Size     16    16    Type/BodyLarge/Line 1.625
-Type/Text/Size          14    14    Type/Text/Line      1.625
+Type/H1/Size            30    24    Type/H1/Line        1.25
+Type/H2/Size            24    20    Type/H2/Line        1.375
+Type/H3/Size            20    18    Type/H3/Line        1.375
+Type/H4/Size            18    18    Type/H4/Line        1.5
+Type/BodyLg/Size        16    16    Type/BodyLg/Line    1.625
+Type/Body/Size          14    14    Type/Body/Line      1.625
 Type/Label/Size         12    12    Type/Label/Line     1.5
 ```
+
+⚖️ **2026-09-10 改名（Alexyu 裁定）。** 原本是 Display／Headline／Title／Subtitle／Heading／BodyLarge／Text／Label——
+Headline(30) > Title(24) > Subtitle(20) > Heading(18) 是四個近義詞，沒有母語者說得出誰比誰大；而 `BodyLarge` 暗示存在一個
+`Body`，但不存在，真正的內文叫 `Text`，於是「以 body 命名的 token」比「真正的 body」更大。
+改成 **H1–H4**（普世認知，不用學）＋ **Body(14) 是預設、BodyLg(16) 是變大的那個**。2689 個文字節點的引用已同步。
 
 **斷點是一個變數軸，不是第二套變數。** `.pen` 支援多軸主題，檔案裡現在有兩軸：`mode`（dark／light）與 `bp`（desktop／mobile）。同一個 `$Type/Title/Size` 在標了 `theme:{bp:"mobile"}` 的畫面上解析成 20，在沒標的畫面上解析成 24。**沒標的一律吃桌機值**，所以加這個軸不會動到任何既有畫面——這點與日巡那次一樣，加軸前已用暫時變數實測過四種組合。目前 56 張手機稿已全部標上 `bp:"mobile"`。
 

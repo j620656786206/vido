@@ -48,9 +48,8 @@ PEN_TOKENS = ROOT / "_bmad-output/pen-tokens.json"
 
 # frontmatter 的 typography 鍵 → 設計稿的角色名。
 TYPE_ROLES = {
-    "display": "Display", "headline": "Headline", "title": "Title",
-    "subtitle": "Subtitle", "heading": "Heading", "body-large": "BodyLarge",
-    "body": "Text", "label": "Label",
+    "display": "Display", "h1": "H1", "h2": "H2", "h3": "H3", "h4": "H4",
+    "body-lg": "BodyLg", "body": "Body", "label": "Label",
 }
 
 # 陰影用的中性色不屬於色盤，不納入比對。
