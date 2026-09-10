@@ -36175,7 +36175,7 @@
                 {
                   "type": "frame",
                   "id": "MZxvY",
-                  "name": "row",
+                  "name": "spec-row",
                   "width": "fill_container",
                   "gap": "$Space/3xl",
                   "children": [
@@ -102107,13 +102107,6 @@
               "fontFamily": "$Type/Family/Primary",
               "fontSize": "$Type/Body/Size",
               "fontWeight": "600"
-            },
-            {
-              "id": "LgxBP",
-              "type": "ref",
-              "ref": "fF8nX",
-              "x": 69070,
-              "y": -5921
             },
             {
               "type": "frame",

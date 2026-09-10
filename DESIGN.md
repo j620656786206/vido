@@ -750,7 +750,20 @@ App 是「固定左側軌 ＋ 流動內容欄」。左側軌展開 240px、收�
 
 **沒有母版怎麼辦：先補母版，再畫畫面。** 順序反過來就永遠補不上——2026-09-10 之前 38 個母版裡只有 1 個行動專用，20 幾張手機稿各自手畫同一個 Sheet 外殼，就是順序反了的結果。
 
-新母版一律命名 `Component/<名字>`，放進 `Components · 元件` 底下對應分類（01 導覽與外框／02 基礎控件／03 媒體卡片與標籤／04 列表與進度／05 空狀態），並在 Component Library 頁補一格。
+新母版一律放進 `Components · 元件` 底下對應分類（01 導覽與外框／02 基礎控件／03 媒體卡片與標籤／04 列表與進度／05 空狀態），並在 Component Library 頁補一格。
+
+**命名有兩個軸，用兩種分隔符號，不要混：**
+
+| 寫法                            | 意思                     | 例子                                                            |
+| ------------------------------- | ------------------------ | --------------------------------------------------------------- |
+| `Component/<名字>`              | 一個獨立元件             | `Component/SearchInput`、`Component/Pagination`                 |
+| `Component/<名字>/<狀態或變體>` | **同一個元件的不同狀態** | `Component/Checkbox/Indeterminate`、`Component/Button/Ghost`    |
+| `Component/<名字>-v2`           | **同一個位置的下一代**   | `Component/PosterCard-v2`（與 `PosterCard` 並存，不是它的狀態） |
+| `Text/<字級角色>`               | 純文字母版，一階一個     | `Text/H2`、`Text/Body`                                          |
+
+⚖️ 2026-09-10 從黏字命名改過來（`CheckboxDisabledChecked` → `Component/Checkbox/DisabledChecked`，33 個母版）。理由是黏字再加兩個狀態就會變成 `CheckboxDisabledIndeterminateReadonly`；斜線讓 Pencil 的圖層面板把同前綴收在一起，未來若支援 variant 也能無痛遷移。
+
+**變數命名**（82 個，全部符合）：顏色與圓角沿用 `styles.css` 的 CSS 變數名一字不差（`bg-primary`、`accent-tint`、`radius-md`）；程式碼沒有的階梯才用語意化群組名（`Space/lg-plus`、`Type/H2/Size`、`Type/Family/Mono`）。
 
 ### 4. 顏色只准用 `$` 變數
 
