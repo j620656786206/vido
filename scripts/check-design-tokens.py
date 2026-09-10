@@ -343,7 +343,7 @@ def main() -> int:
         problems += check_pen_raw_usage(snap)
         counts = snap.get("counts", {})
         pen_summary = (f"，設計稿 {len(snap.get('variables', {}))} 個變數、"
-                       f"{counts.get('rootScreens', '?')} 張畫面、"
+                       f"{counts.get('exportedScreens', '?')} 張畫面、"
                        f"{counts.get('masters', '?')} 個母版")
 
     if problems:

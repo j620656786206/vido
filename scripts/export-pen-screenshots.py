@@ -206,11 +206,11 @@ SCREENS = {
     # (H4/H5/H6-D-v3) existed; see flow-h-homepage-v3 below.
     # flow-k-activity-v2 — Phase-3 ux3-2-1 (Activity hub v2: net-new D4-1 destination,
     # explain-why rows aggregating scan/subtitle/AI/parse + downloads-summary; four states)
-    "kMeWS": ("flow-k-activity-v2", "a1-d"),
-    "QIwY1": ("flow-k-activity-v2", "a2-m"),
-    "suCiI": ("flow-k-activity-v2", "a4-d"),
-    "DZnSv": ("flow-k-activity-v2", "a5-d"),
-    "M6ra92": ("flow-k-activity-v2", "a6-d"),
+    "kMeWS": ("flow-k-activity-v2", "k1-d"),
+    "QIwY1": ("flow-k-activity-v2", "k1-m"),
+    "suCiI": ("flow-k-activity-v2", "k2-d"),
+    "DZnSv": ("flow-k-activity-v2", "k3-d"),
+    "M6ra92": ("flow-k-activity-v2", "k4-d"),
     # flow-i-discover-v2 — Phase-3 ux3-3-1 (Discover v2: active power-filter tool; Epic 11
     # chips/presets/instant-search → v2; D3 no-dashboard boundary; reserves Epic 13 Requests;
     # 地區/串流平台 reserved-disabled per Rule-24; four states)
@@ -219,9 +219,9 @@ SCREENS = {
     "m0Zew": ("flow-i-discover-v2", "i3-d"),
     "m4fY7c": ("flow-i-discover-v2", "i4-d"),
     "kzzjc": ("flow-i-discover-v2", "i4-m"),
-    "nLrzc": ("flow-i-discover-v2", "i5-d"),
+    "nLrzc": ("flow-i-discover-v2", "i5-d-v2"),
     "YYEBd": ("flow-i-discover-v2", "i6-d"),
-    "S3qke": ("flow-i-discover-v2", "i7-d"),
+    "S3qke": ("flow-i-discover-v2", "i7-d-v2"),
     "KdnVw": ("flow-i-discover-v2", "i8-d"),
     # flow-d-downloads-v2 — Downloads deep-operation page (design-ahead spec: card actions,
     # batch select, pagination; six backend filter values; qBittorrent fail-soft; NZBGet inert
@@ -464,7 +464,7 @@ def main():
         # matches, and CI says so.
         js = """
 const v = GetVariables();
-let rawGap = 0, rawPad = 0, rawSize = 0, rawLine = 0, clipped = 0, masters = 0, screens = 0;
+let rawGap = 0, rawPad = 0, rawSize = 0, rawLine = 0, clipped = 0, masters = 0;
 Get((n, c) => {
   if (c.problems) clipped++;
   if (n.reusable) masters++;
@@ -479,10 +479,9 @@ Get((n, c) => {
   }
   return undefined;
 });
-Get(document, (n, c) => { if (c.depth === 1 && n.type === "frame") screens++; if (c.depth >= 1) c.skipChildren(); return undefined; });
 Print(JSON.stringify({ variables: v.variables, themes: v.themes,
   raw: { gap: rawGap, padding: rawPad, fontSize: rawSize, lineHeight: rawLine },
-  counts: { clippingWarnings: clipped, masters: masters, rootScreens: screens } }));
+  counts: { clippingWarnings: clipped, masters: masters } }));
 """
         resp = mcp_call(proc, req_id + 500, "tools/call", {
             "name": "execute", "arguments": {"filePath": PEN_FILE, "input": js},
@@ -501,6 +500,9 @@ Print(JSON.stringify({ variables: v.variables, themes: v.themes,
         if payload is None:
             print("ERROR: could not read .pen variables - token snapshot NOT written")
             sys.exit(1)
+        # 畫面數由 Python 端填，因為流程群組內部分層之後，設計稿那邊已經數不到
+        # 「深度 1 的 frame」了——SCREENS 才是唯一準確的來源。
+        payload["counts"]["exportedScreens"] = len(SCREENS)
         payload["penSha256"] = hashlib.sha256(open(PEN_FILE, "rb").read()).hexdigest()
         TOKEN_SNAPSHOT.parent.mkdir(parents=True, exist_ok=True)
         TOKEN_SNAPSHOT.write_text(
