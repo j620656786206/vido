@@ -99,29 +99,14 @@ THUMBNAIL_LONG_EDGE = 400
 # Screen node ID -> (flow_folder, filename). Filename == canvas frame code (lowercased).
 SCREENS = {
     # Flow A — 瀏覽主流程 (browse: empty / loading / grid / list / sort / filter)
-    "4VILE": ("flow-a-browse", "a1-d"),
-    "OYqNo": ("flow-a-browse", "a1-m"),
-    "IpZhv": ("flow-a-browse", "a2-d"),
-    "RxdY5": ("flow-a-browse", "a2-m"),
-    "KNI8F": ("flow-a-browse", "a3-d"),
-    "GOL63": ("flow-a-browse", "a3-m"),
-    "LZ8Ds": ("flow-a-browse", "a4-d"),
-    "3aSCw": ("flow-a-browse", "a5-m"),
-    "oypj1": ("flow-a-browse", "a6-m"),
     # Flow B — 詳情與互動 (hover / context menus / detail panels / fallbacks / tech badges / image-load spec)
     "Qm662": ("flow-b-detail-interaction", "b1-d"),
     "auArc": ("flow-b-detail-interaction", "b2-d"),
     "1UHzI": ("flow-b-detail-interaction", "b2-m"),
-    "RgSxQ": ("flow-b-detail-interaction", "b3-d"),
-    "kcn1v": ("flow-b-detail-interaction", "b3-m"),
-    "407vK": ("flow-b-detail-interaction", "b4-d"),
     "7mdTJ": ("flow-b-detail-interaction", "b5-d"),
     "APfjC": ("flow-b-detail-interaction", "b5-m"),
-    "2ltBl": ("flow-b-detail-interaction", "b6-d"),
     "2m1Pv": ("flow-b-detail-interaction", "b6-m"),
-    "wQOkg": ("flow-b-detail-interaction", "b7-d"),
     "7UnDy": ("flow-b-detail-interaction", "b7-m"),
-    "vlL6O": ("flow-b-detail-interaction", "b8-d"),
     "6OR3z": ("flow-b-detail-interaction", "b8-m"),
     # B9 = disc-flaky-visual-media-detail-panel case (B) image-load fallback spec
     "Tn4Gz": ("flow-b-detail-interaction", "b9-d"),
@@ -136,10 +121,6 @@ SCREENS = {
     "2H4OM": ("flow-c-search-settings", "c4-m"),
     "uhAKd": ("flow-c-search-settings", "c5-d"),
     # Flow D — 下載管理 (downloads)
-    "rWvuG": ("flow-d-downloads", "d1-d"),
-    "cZd7j": ("flow-d-downloads", "d1-m"),
-    "3ULXd": ("flow-d-downloads", "d2-d"),
-    "tqHK9": ("flow-d-downloads", "d3-m"),
     # Flow E — 媒體庫掃描 (scanner settings / progress / complete toast / filtered-unmatched)
     "KvZSc": ("flow-e-scanner", "e1-d"),
     "uABWl": ("flow-e-scanner", "e1-m"),
@@ -153,33 +134,13 @@ SCREENS = {
     "hUVYm": ("flow-e-scanner", "e5-d"),
     "P0P82x": ("flow-e-scanner", "e5-m"),
     # Flow F — 字幕搜尋 / 批次 (subtitle search dialog / preview-download / batch progress)
-    "cOrOR": ("flow-f-subtitle", "f1-d"),
-    "GZ294": ("flow-f-subtitle", "f1-m"),
-    "wy5Nx": ("flow-f-subtitle", "f2-d"),
-    "ogQ6Y": ("flow-f-subtitle", "f2-m"),
-    "NXijD": ("flow-f-subtitle", "f3-d"),
-    "fUtqO": ("flow-f-subtitle", "f3-m"),
     # Flow G — AI 字幕增強 (correction / transcription progress / translation confirm)
-    "TIIRl": ("flow-g-ai-subtitle", "g1-d"),
-    "mgRJA": ("flow-g-ai-subtitle", "g1-m"),
-    "kzhNP": ("flow-g-ai-subtitle", "g2-d"),
-    "yNAHK": ("flow-g-ai-subtitle", "g2-m"),
-    "22bcv": ("flow-g-ai-subtitle", "g3-d"),
-    "8Wsez": ("flow-g-ai-subtitle", "g3-m"),
     # Flow H — 首頁 TV Wall (homepage / loading skeleton / block CRUD modal / exploreblock spec)
-    "sAaCR": ("flow-h-homepage", "h1-d"),
-    "g5LFD": ("flow-h-homepage", "h2-m"),
     "Paqlk": ("flow-h-homepage", "h3"),
-    "g6p38": ("flow-h-homepage", "h4-d"),
     "Y5XvRv": ("flow-h-homepage", "h5-d"),
     # Flow I — 進階搜尋 / 篩選 (filter chips / suggestions dropdown / save preset / filter sheet)
-    "NWxok": ("flow-i-advanced-search", "i1-d"),
-    "TMaw5": ("flow-i-advanced-search", "i2"),
-    "i74p2": ("flow-i-advanced-search", "i3"),
-    "pjKVZ": ("flow-i-advanced-search", "i4-m"),
     # Desktop filter rail redesign (v2 Design System) — replaces mobile bottom-sheet misuse on lg+
     "vpDLh": ("flow-i-advanced-search", "i5-d"),  # rail persistent (hero) — re-merged onto feat/ux3-2-1 (#89 .pen frames reconstructed post main-merge)
-    "VwTvy": ("flow-i-advanced-search", "i6-d"),  # rail collapsed + filtered no-results — re-merged
     "SgncH": ("flow-i-advanced-search", "i7-d"),  # rail states spec (genre loading / load-failed) — re-merged
     # Flow J — 設計決策 spec (PosterCard info-density & polish)
     "XlFIq": ("flow-j-specs", "j1-d"),

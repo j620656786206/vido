@@ -305,7 +305,7 @@ Vido 會在使用者不在的時候，於別人的 NAS 上持續跑上好幾分�
 
 ⚠️ **現況（2026-09-10）**：程式碼裡**沒有任何一顆付費按鈕帶金額**。`MediaDetailPanel.tsx:280-292` 只有免費的「搜尋字幕」；付費入口是「管理字幕」→「生成字幕」（`ManageSubtitleDialogV2.tsx:495-509`），說明列只講「約需數分鐘」，全檔零金額字串。而且**沒有單項估價端點**——`GET /api/v1/subtitles/generation-candidates` 是整庫掃描後的快照，所以單片路徑目前是 100% 無金額，不是偶發。`Button.tsx` 也還沒有對應的變體。追蹤於 `disc-2026-09-single-item-cost-estimate` 與 `disc-2026-09-no-cost-bearing-component`。
 
-⚠️ 本規則原先舉的例子（詳情面板三顆按鈕：搜尋字幕／AI 校正／轉錄英文音軌）出自舊畫面 `b3-d`；v2 的 `b3p-d` 字幕區只有一顆「管理字幕」，而「AI 校正」「轉錄中」在程式碼裡只是 SSE 進度階段字串。舉例已更新為實際的付費入口。
+⚠️ 本規則原先舉的例子（詳情面板三顆按鈕：搜尋字幕／AI 校正／轉錄英文音軌）出自 v1 的 `b3-d`，那張稿已於 2026-09-10 與其他 38 張 v1 過時稿一併從設計稿移除。現行的 `b3p-d` 字幕區只有一顆「管理字幕」，而「AI 校正」「轉錄中」在程式碼裡只是 SSE 進度階段字串。舉例已更新為實際的付費入口。
 
 **主題平價規則（The Theme Parity Rule）** 任何新的顏色 token 必須**同時**寫進兩個區塊，並在 `styles-contrast.spec.ts` 補上淺色的對應案例。只加一半會讓 parity 斷言直接失敗——這是刻意的。
 
@@ -712,7 +712,7 @@ App 是「固定左側軌 ＋ 流動內容欄」。左側軌展開 240px、收�
 按順序跑完，一項都不能跳：
 
 1. **存檔**（Pencil 的 MCP 讀的是記憶體不是磁碟）：AppleScript 點 File ▸ Save，然後確認 `git status --porcelain ux-design.pen` 出現 ` M`。
-2. **驗版面**：`Get((n,c)=>c.problems && ...)` 數全檔裁切警告。**基準值是 156**，超過就是新的破版，要修到回來為止。
+2. **驗版面**：`Get((n,c)=>c.problems && ...)` 數全檔裁切警告。**基準值是 116**（2026-09-10 移除 39 張 v1 過時稿後，從 156 降下來），超過就是新的破版，要修到回來為止。
 3. **驗日巡**：在 root frame 加 `theme:{mode:"light"}` 截一張，確認沒有黑字壓黑底或濁色。看完把屬性拿掉（除非這張本來就是日巡證據畫面）。
 4. **註冊截圖**：新畫面要加進 `scripts/export-pen-screenshots.py` 的 `SCREENS`（key = node ID，value = `(flow-folder, code)`）。加之前先數一次重複 key。
 5. **重產截圖**：`python3 scripts/export-pen-screenshots.py`。
