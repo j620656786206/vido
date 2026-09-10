@@ -24,16 +24,21 @@ Layout convention (2026-06-05 A–J merged-block rework):
   See .claude/memory/project_pen_flow_layout_convention.md.
 """
 
+import hashlib
 import json
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PEN_FILE = os.path.join(PROJECT_ROOT, "ux-design.pen")
 OUT_DIR = os.path.join(PROJECT_ROOT, "_bmad-output", "screenshots")
+# Machine-readable dump of the .pen's variables, so CI (which cannot run
+# Pencil) can still check the design file for token drift.
+TOKEN_SNAPSHOT = Path(PROJECT_ROOT) / "_bmad-output" / "pen-tokens.json"
 # The app shipped as Pencil.app and was renamed to Pen.app (1.2.2, found at story
 # sub-1-7a). Probe both rather than hardcoding either — a hardcoded path turns the
 # next rename into "the export script is broken" instead of "the app moved".
@@ -448,6 +453,63 @@ def main():
         shutil.rmtree(tmpdir, ignore_errors=True)
 
         print(f"\nDone! Saved {saved}/{len(SCREENS)} screenshots to {OUT_DIR}")
+
+        # --- token snapshot -------------------------------------------------
+        # CI cannot run Pencil, so the .pen's variables are dumped here into a
+        # committed JSON file. check-design-tokens.py compares THAT against
+        # styles.css and DESIGN.md, which is how the design file finally joins
+        # the drift check (disc-2026-09-drift-checker-blind-to-pen-and-non-color).
+        # The .pen's own sha256 rides along so a stale snapshot is detectable:
+        # edit the design without re-running this script and the hash no longer
+        # matches, and CI says so.
+        js = """
+const v = GetVariables();
+let rawGap = 0, rawPad = 0, rawSize = 0, rawLine = 0, clipped = 0, masters = 0, screens = 0;
+Get((n, c) => {
+  if (c.problems) clipped++;
+  if (n.reusable) masters++;
+  if (typeof n.gap === "number") rawGap++;
+  if (n.padding !== undefined) {
+    const p = Array.isArray(n.padding) ? n.padding : [n.padding];
+    for (const x of p) if (typeof x === "number") rawPad++;
+  }
+  if (n.type === "text") {
+    if (typeof n.fontSize === "number") rawSize++;
+    if (typeof n.lineHeight === "number") rawLine++;
+  }
+  return undefined;
+});
+Get(document, (n, c) => { if (c.depth === 1 && n.type === "frame") screens++; if (c.depth >= 1) c.skipChildren(); return undefined; });
+Print(JSON.stringify({ variables: v.variables, themes: v.themes,
+  raw: { gap: rawGap, padding: rawPad, fontSize: rawSize, lineHeight: rawLine },
+  counts: { clippingWarnings: clipped, masters: masters, rootScreens: screens } }));
+"""
+        resp = mcp_call(proc, req_id + 500, "tools/call", {
+            "name": "execute", "arguments": {"filePath": PEN_FILE, "input": js},
+        })
+        payload = None
+        if resp and not resp.get("error"):
+            for block in resp.get("result", {}).get("content", []):
+                text = block.get("text", "")
+                start = text.find("{")
+                if start >= 0:
+                    try:
+                        payload = json.loads(text[start:text.rfind("}") + 1])
+                        break
+                    except json.JSONDecodeError:
+                        continue
+        if payload is None:
+            print("ERROR: could not read .pen variables - token snapshot NOT written")
+            sys.exit(1)
+        payload["penSha256"] = hashlib.sha256(open(PEN_FILE, "rb").read()).hexdigest()
+        TOKEN_SNAPSHOT.parent.mkdir(parents=True, exist_ok=True)
+        TOKEN_SNAPSHOT.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        print(f"Token snapshot: {TOKEN_SNAPSHOT.name} "
+              f"({len(payload['variables'])} variables, "
+              f"{payload['counts']['clippingWarnings']} clipping warnings)")
 
         # A PARTIAL export must NOT look like success. The whole point of this
         # script is that the committed PNGs match the .pen; exiting 0 after

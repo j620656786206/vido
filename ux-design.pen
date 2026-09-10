@@ -116020,7 +116020,7 @@
                       "children": [
                         {
                           "type": "frame",
-                          "id": "DfQvi",
+                          "id": "o3K4I",
                           "name": "secHead",
                           "width": "fill_container",
                           "gap": "$Space/sm",
@@ -116028,12 +116028,13 @@
                           "children": [
                             {
                               "type": "text",
-                              "id": "b4DwH",
+                              "id": "YeL7u",
                               "name": "secTitle",
                               "fill": "$text-primary",
                               "content": "待處理",
-                              "fontFamily": "Noto Sans TC",
-                              "fontSize": 18,
+                              "lineHeight": "$Type/Heading/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Heading/Size",
                               "fontWeight": "700"
                             }
                           ]
@@ -165059,7 +165060,7 @@
       "type": "color",
       "value": [
         {
-          "value": "#d97706",
+          "value": "#c26a36",
           "theme": {
             "mode": "dark"
           }

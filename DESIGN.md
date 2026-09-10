@@ -40,62 +40,62 @@ typography:
     fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
     fontSize: '2.25rem'
     fontWeight: 700
-    lineHeight: 1.111
+    lineHeight: 1.25
   headline:
     fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
     fontSize: '1.875rem'
     fontWeight: 700
-    lineHeight: 1.2
+    lineHeight: 1.25
   title:
     fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
     fontSize: '1.5rem'
     fontWeight: 700
-    lineHeight: 1.333
+    lineHeight: 1.375
   subtitle:
     fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
     fontSize: '1.25rem'
     fontWeight: 600
-    lineHeight: 1.4
+    lineHeight: 1.375
   heading:
     fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
     fontSize: '1.125rem'
     fontWeight: 600
-    lineHeight: 1.556
+    lineHeight: 1.5
   body-large:
     fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
     fontSize: '1rem'
     fontWeight: 400
-    lineHeight: 1.5
+    lineHeight: 1.625
   body:
     fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
     fontSize: '0.875rem'
     fontWeight: 400
-    lineHeight: 1.429
+    lineHeight: 1.625
   label:
     fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
     fontSize: '0.75rem'
     fontWeight: 500
-    lineHeight: 1.333
+    lineHeight: 1.5
   button-solid:
     fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
     fontSize: '0.875rem'
     fontWeight: 600
-    lineHeight: 1.429
+    lineHeight: 1.625
   button-hollow:
     fontFamily: 'Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
     fontSize: '0.875rem'
     fontWeight: 500
-    lineHeight: 1.429
+    lineHeight: 1.625
   readout:
     fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace'
     fontSize: '0.875rem'
     fontWeight: 400
-    lineHeight: 1.429
+    lineHeight: 1.625
   readout-column:
     fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace'
     fontSize: '0.75rem'
     fontWeight: 400
-    lineHeight: 1.333
+    lineHeight: 1.5
 rounded:
   sm: '4px'
   md: '8px'
@@ -103,12 +103,23 @@ rounded:
   xl: '16px'
   pill: '999px'
 spacing:
+  none: '0px'
+  2xs: '2px'
   xs: '4px'
+  xs-plus: '6px'
   sm: '8px'
+  sm-plus: '10px'
   md: '12px'
+  md-plus: '14px'
   lg: '16px'
+  lg-plus: '20px'
   xl: '24px'
+  xl-plus: '28px'
   2xl: '32px'
+  3xl: '40px'
+  4xl: '48px'
+  5xl: '64px'
+  6xl: '80px'
 components:
   button-primary:
     backgroundColor: '{colors.accent-primary}'
@@ -193,7 +204,11 @@ components:
 
 > 章節標題與 frontmatter 的 token 名稱保持英文——DESIGN.md 規格靠精確標題解析，token 名稱等同程式碼識別碼。其餘內文為繁體中文，與 PRODUCT.md 一致。
 
-> **權威來源**：色彩與間距的真值在 `apps/web/src/styles.css`；對比度由 `apps/web/src/styles-contrast.spec.ts` 守門；動態由 `styles-motion.spec.ts` 守門。設計稿 `ux-design.pen` 的變數已於 2026-09-10 與本文件、與 styles.css 三方對齊，其顏色與圓角變數名與這裡的 token 名一字不差。
+> **權威來源**：色彩與間距的真值在 `apps/web/src/styles.css`；對比度由 `apps/web/src/styles-contrast.spec.ts` 守門；動態由 `styles-motion.spec.ts` 守門。設計稿 `ux-design.pen` 的顏色與圓角變數名與這裡的 token 名一字不差。
+>
+> ⚖️ **2026-09-10：設計稿正式進入守門範圍。** 在那之前這裡寫的是「已於某日三方對齊」——那是一次性的人工斷言，沒有任何機制維持它為真，而設計稿正是漂移了半年沒人發現的那一份。現在 `export-pen-screenshots.py` 每次都會把設計稿的變數 dump 成 `_bmad-output/pen-tokens.json`，`check-design-tokens.py` 比對那份快照（CI 讀不到 `.pen`，它是加密的、只有跑著的 Pencil.app 讀得到）。快照裡帶著 `.pen` 的 sha256，改了設計稿卻沒重跑匯出腳本，雜湊對不上，CI 直接紅。
+>
+> 守門範圍：**顏色**（夜行＋日巡，對 styles.css）、**圓角**（對 styles.css）、**間距階梯**（對本文件 frontmatter）、**字級與行高**（對本文件 frontmatter）、**裸數字**（gap／padding／fontSize／lineHeight 一個都不准不吃變數）。**上線第一次就抓到一個真的漂移**：設計稿的 `warning-pressed` 還是舊的 `#d97706`，比靜止的赭色更亮——正是 P0-4 裁定要修掉的那個「按下去變亮」的 bug，styles.css 與另外兩份文件早就改成 `#c26a36` 了，只有設計稿沒跟上。
 >
 > **漂移檢查**：同一組色彩 token 寫在四個地方（`styles.css`、本文件的 frontmatter、`_bmad-output/design-context-pack.md`、`.impeccable/design.json`）。`scripts/check-design-tokens.py` 會比對四份、不一致就讓 CI 紅（`Lint & Format Check` 的 `Design token drift check`）。**它刻意不自動覆寫**——不一致時要先判斷哪一邊才是對的設計，可能是文件過期，也可能是實作值該改。確定 `styles.css` 是想要的設計時，`--apply` 只會改本文件。
 
@@ -760,7 +775,7 @@ App 是「固定左側軌 ＋ 流動內容欄」。左側軌展開 240px、收�
 4. **註冊截圖**：新畫面要加進 `scripts/export-pen-screenshots.py` 的 `SCREENS`（key = node ID，value = `(flow-folder, code)`）。加之前先數一次重複 key。
 5. **重產截圖**：`python3 scripts/export-pen-screenshots.py`。
 6. **只 commit 真改動的 PNG**：`git checkout` 掉沒有真的改變設計的那些——重產是非決定性的，全部 stage 會混進一堆 re-render 雜訊。判準是「改變的張數 == 預期被改到的畫面」，數字對不上就是有東西被誤傷。
-7. **跑 `python3 scripts/check-design-tokens.py`**，四份文件的色彩 token 要對得上。
+7. **跑 `python3 scripts/check-design-tokens.py`**。它現在比對五份來源（styles.css、本文件、context-pack、design.json、**設計稿本身**），守門顏色、圓角、間距階梯、字級行高與裸數字。第 5 步的匯出腳本會順便更新 `_bmad-output/pen-tokens.json`——那份快照要跟 `.pen` 一起 commit，否則 CI 會判定過期。
 
 ### 已知地雷
 
