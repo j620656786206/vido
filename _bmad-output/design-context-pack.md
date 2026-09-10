@@ -39,30 +39,48 @@
 夜行（預設）／日巡（淺色）。**同一個 token 名稱、兩組值**；設計稿 `ux-design.pen` 的顏色變數名與這裡一字不差。
 
 ```
-                        夜行 Nightwalk        日巡 Daywalk
-背景  --bg-primary       #0c1512              #faf6ea
-      --bg-secondary     #132320              #f0e7d3
-      --bg-tertiary      #1b302b              #e5d9c3   ← 日巡的最深階，所有文字對比的最壞情況
-邊框  --border-subtle    #274039              #cdbe9b
-主色  --accent-primary   #c9a24b              #886208   泥金
-      --accent-hover     #e0be72              #725205   ⚠️ 日巡往「暗」走，不是變亮
-      --accent-pressed   #a8853c              #5b4103
-      --accent-subtle    #c9a24b26            #c9a24b40  active 導覽淡洗
-      --accent-tint      #c9a24b1f            #c9a24b33  徽章底
-      --accent-text      #e0be72              #654804    要被「讀」的金
-語意  --success          #6fbfa8              #0b7352    青碧＝正在發生
-      --warning          #d4763f              #a6510c    赭＝你要求了但沒發生
-      --error            #c0392b              #c0392b    硃砂，唯一不隨主題翻轉
-      --info             #1391b2              #0b657d    靛青＝純告知
-      *-tint / *-text    各語意都有             日巡 tint 的 alpha 會上升
-文字  --text-primary     #eae4d6              #16231d
-      --text-secondary   #a8b3ac              #32493e
-      --text-muted       #8fa096              #41554c
-      --text-disabled    #5e6e66              #7a8980   刻意非 AA，只給停用控制項
-      --text-inverse     #0c1512              #faf6ea   ⚠️ 不等於「暗底」，日巡是紙色
-      --text-on-accent   #14161a              #fdfaf2   金色填色上的字
-      --text-on-scrim    #faf6ea              #faf6ea   海報遮罩上的字，兩主題相同
-遮罩  --overlay-scrim    #000000b3            #0c1512b3
+token                    夜行 Nightwalk        日巡 Daywalk
+# 背景
+--bg-primary            #0c1512              #faf6ea    
+--bg-secondary          #132320              #f0e7d3    
+--bg-tertiary           #1b302b              #e5d9c3    ⚠️ 日巡的最深階，所有文字對比的最壞情況
+--border-subtle         #274039              #cdbe9b    
+# 主色
+--accent-primary        #c9a24b              #886208    泥金
+--accent-hover          #e0be72              #725205    ⚠️ 日巡往「暗」走，不是變亮
+--accent-pressed        #a8853c              #5b4103    
+--accent-subtle         #c9a24b26            #c9a24b40  
+--accent-tint           #c9a24b1f            #c9a24b33  
+--accent-text           #e0be72              #654804    要被「讀」的金
+--focus-ring            #c9a24b              #886208    
+# 語意 · 青碧＝正在發生
+--success               #6fbfa8              #0b7352    
+--success-tint          #6fbfa81f            #6fbfa833  
+--success-text          #8fd3be              #06583e    
+# 語意 · 赭＝要求了但沒發生
+--warning               #d4763f              #a6510c    
+--warning-pressed       #d97706              #8b4208    
+--warning-tint          #d4763f1f            #d4763f33  
+--warning-text          #e8b04b              #7b3a06    
+# 語意 · 硃砂＝壞掉了
+--error                 #c0392b              #c0392b    唯一不隨主題翻轉
+--error-pressed         #9c3a2b              #9c3a2b    
+--error-tint            #c0392b1f            #c0392b33  
+--error-text            #e08a76              #87251b    
+# 語意 · 靛青＝純告知
+--info                  #1391b2              #0b657d    
+--info-tint             #1391b21f            #1391b233  
+--info-text             #5bc4dd              #075469    
+# 文字
+--text-primary          #eae4d6              #16231d    
+--text-secondary        #a8b3ac              #32493e    
+--text-muted            #8fa096              #41554c    
+--text-disabled         #5e6e66              #7a8980    
+--text-inverse          #0c1512              #faf6ea    ⚠️ 不等於「暗底」，日巡是紙色
+--text-on-accent        #14161a              #fdfaf2    
+--text-on-scrim         #faf6ea              #faf6ea    兩主題相同
+# 遮罩
+--overlay-scrim         #000000b3            #0c1512b3  
 ```
 
 **內文顏色規則**：`--accent-primary` / `--error` 是拿來**填色與按**的，當內文字對比不足（最差 3.57 / 2.42）。要被讀的文字一律用 `--accent-text` / `--error-text`。

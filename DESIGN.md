@@ -165,6 +165,8 @@ components:
 > 章節標題與 frontmatter 的 token 名稱保持英文——DESIGN.md 規格靠精確標題解析，token 名稱等同程式碼識別碼。其餘內文為繁體中文，與 PRODUCT.md 一致。
 
 > **權威來源**：色彩與間距的真值在 `apps/web/src/styles.css`；對比度由 `apps/web/src/styles-contrast.spec.ts` 守門；動態由 `styles-motion.spec.ts` 守門。設計稿 `ux-design.pen` 的變數已於 2026-09-10 與本文件、與 styles.css 三方對齊，其顏色與圓角變數名與這裡的 token 名一字不差。
+>
+> **漂移檢查**：同一組色彩 token 寫在四個地方（`styles.css`、本文件的 frontmatter、`_bmad-output/design-context-pack.md`、`.impeccable/design.json`）。`scripts/check-design-tokens.py` 會比對四份、不一致就讓 CI 紅（`Lint & Format Check` 的 `Design token drift check`）。**它刻意不自動覆寫**——不一致時要先判斷哪一邊才是對的設計，可能是文件過期，也可能是實作值該改。確定 `styles.css` 是想要的設計時，`--apply` 只會改本文件。
 
 ## Overview
 
