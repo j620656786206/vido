@@ -827,7 +827,7 @@
                                   "id": "cPdJE",
                                   "name": "t3info",
                                   "fill": "$text-muted",
-                                  "content": "text-muted  #808080",
+                                  "content": "text-muted  #8FA096",
                                   "fontFamily": "$Type/Family/Canvas",
                                   "fontSize": "$Type/Body/S/Size",
                                   "fontWeight": "normal"
@@ -1046,7 +1046,7 @@
                       "id": "nENwe",
                       "name": "typoNote",
                       "fill": "$text-secondary",
-                      "content": "Font: Noto Sans TC (zh-TW body) / DM Sans (headings, UI)  |  Line height optimized for Traditional Chinese readability",
+                      "content": "介面內文：Noto Sans TC（含 CJK）／讀數：JetBrains Mono（等寬）。DM Sans 只用於畫布註記，不是產品字體。",
                       "fontFamily": "$Type/Family/Canvas",
                       "fontSize": "$Type/Body/L/Size",
                       "fontWeight": "normal"
@@ -1075,7 +1075,7 @@
                               "id": "bqeHC",
                               "name": "h1label",
                               "fill": "$text-muted",
-                              "content": "H1 — 32px / 700",
+                              "content": "Display — 36px / 700",
                               "fontFamily": "$Type/Family/Canvas",
                               "fontSize": "$Type/Body/S/Size",
                               "fontWeight": "normal"
@@ -1085,9 +1085,9 @@
                               "id": "8NhnS",
                               "name": "h1sample",
                               "fill": "$text-primary",
-                              "content": "頁面標題 Page Title",
-                              "fontFamily": "$Type/Family/Canvas",
-                              "fontSize": "$Type/Display/M/Size",
+                              "content": "頁面 hero 標題 Display",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Display/L/Size",
                               "fontWeight": "700"
                             }
                           ]
@@ -1105,7 +1105,7 @@
                               "id": "kWfz5",
                               "name": "h2label",
                               "fill": "$text-muted",
-                              "content": "H2 — 24px / 700",
+                              "content": "Headline — 24px / 700",
                               "fontFamily": "$Type/Family/Canvas",
                               "fontSize": "$Type/Body/S/Size",
                               "fontWeight": "normal"
@@ -1115,8 +1115,8 @@
                               "id": "63r15",
                               "name": "h2sample",
                               "fill": "$text-primary",
-                              "content": "章節標題 Section Heading",
-                              "fontFamily": "$Type/Family/Canvas",
+                              "content": "頁面標題 Headline",
+                              "fontFamily": "$Type/Family/Primary",
                               "fontSize": "$Type/Title/L/Size",
                               "fontWeight": "700"
                             }
@@ -1135,7 +1135,7 @@
                               "id": "Wv28B",
                               "name": "h3label",
                               "fill": "$text-muted",
-                              "content": "H3 — 20px / 600",
+                              "content": "Title — 18px / 600",
                               "fontFamily": "$Type/Family/Canvas",
                               "fontSize": "$Type/Body/S/Size",
                               "fontWeight": "normal"
@@ -1145,9 +1145,9 @@
                               "id": "Z6gfC",
                               "name": "h3sample",
                               "fill": "$text-primary",
-                              "content": "子章節標題 Subsection",
-                              "fontFamily": "$Type/Family/Canvas",
-                              "fontSize": "$Type/Title/S/Size",
+                              "content": "區段與卡片標題 Title",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Heading/L/Size",
                               "fontWeight": "600"
                             }
                           ]
@@ -1165,7 +1165,7 @@
                               "id": "Hv5aL",
                               "name": "bodylabel",
                               "fill": "$text-muted",
-                              "content": "Body — 16px / 400",
+                              "content": "Body — 14px / 400",
                               "fontFamily": "$Type/Family/Canvas",
                               "fontSize": "$Type/Body/S/Size",
                               "fontWeight": "normal"
@@ -1175,9 +1175,9 @@
                               "id": "36kln",
                               "name": "bodysample",
                               "fill": "$text-primary",
-                              "content": "預設內文。這是 Vido 媒體管理系統的內文樣式。",
-                              "fontFamily": "$Type/Family/Canvas",
-                              "fontSize": "$Type/Heading/M/Size",
+                              "content": "預設內文。這是 Vido 的內文樣式 Body",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/L/Size",
                               "fontWeight": "normal"
                             }
                           ]
@@ -1195,7 +1195,7 @@
                               "id": "o1RCc",
                               "name": "smlabel",
                               "fill": "$text-muted",
-                              "content": "Small — 14px / 400",
+                              "content": "Label — 12px / 500",
                               "fontFamily": "$Type/Family/Canvas",
                               "fontSize": "$Type/Body/S/Size",
                               "fontWeight": "normal"
@@ -1205,10 +1205,10 @@
                               "id": "g6M0J",
                               "name": "smsample",
                               "fill": "$text-secondary",
-                              "content": "元數據、次要資訊 — Metadata, secondary info",
-                              "fontFamily": "$Type/Family/Canvas",
-                              "fontSize": "$Type/Body/L/Size",
-                              "fontWeight": "normal"
+                              "content": "徽章、metadata、表頭 Label",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/S/Size",
+                              "fontWeight": "500"
                             }
                           ]
                         },
@@ -1225,7 +1225,7 @@
                               "id": "X1QmK",
                               "name": "caplabel",
                               "fill": "$text-muted",
-                              "content": "Caption — 12px / 400",
+                              "content": "Chrome — 11px / 500",
                               "fontFamily": "$Type/Family/Canvas",
                               "fontSize": "$Type/Body/S/Size",
                               "fontWeight": "normal"
@@ -1235,9 +1235,39 @@
                               "id": "f4dZ2",
                               "name": "capsample",
                               "fill": "$text-muted",
-                              "content": "時間戳記、標籤 — Timestamps, labels",
+                              "content": "只給殼層，不給內容 Chrome",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Meta/M/Size",
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "M9EpeB",
+                          "name": "readoutrow",
+                          "width": "fill_container",
+                          "gap": "$Space/xl",
+                          "alignItems": "end",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "mRZfu",
+                              "name": "readoutlabel",
+                              "fill": "$text-muted",
+                              "content": "Readout — 13px / 400 等寬",
                               "fontFamily": "$Type/Family/Canvas",
                               "fontSize": "$Type/Body/S/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "kubAd",
+                              "name": "readoutsample",
+                              "fill": "$text-primary",
+                              "content": "1,284 / 3,200 · 42% · 3.2 TB",
+                              "fontFamily": "$Type/Family/Mono",
+                              "fontSize": "$Type/Body/M/Size",
                               "fontWeight": "normal"
                             }
                           ]
@@ -1735,8 +1765,8 @@
                                   "height": "fit_content",
                                   "descendants": {
                                     "DaLcd": {
-                                      "x": 20,
-                                      "y": 10
+                                      "x": 16,
+                                      "y": 8
                                     }
                                   }
                                 },
@@ -1770,8 +1800,8 @@
                                   "height": "fit_content",
                                   "descendants": {
                                     "L9cIf": {
-                                      "x": 20,
-                                      "y": 10
+                                      "x": 16,
+                                      "y": 8
                                     }
                                   }
                                 },
@@ -11363,8 +11393,8 @@
                   "cornerRadius": "$radius-md",
                   "gap": "$Space/sm",
                   "padding": [
-                    "$Space/sm-plus",
-                    "$Space/lg-plus"
+                    "$Space/sm",
+                    "$Space/lg"
                   ],
                   "justifyContent": "center",
                   "alignItems": "center",
@@ -11376,8 +11406,8 @@
                       "fill": "$text-on-accent",
                       "content": "Button",
                       "fontFamily": "$Type/Family/Primary",
-                      "fontSize": "$Type/Body/M/Size",
-                      "fontWeight": "600"
+                      "fontSize": "$Type/Body/L/Size",
+                      "fontWeight": "500"
                     }
                   ]
                 },
@@ -11392,8 +11422,8 @@
                   "cornerRadius": "$radius-md",
                   "gap": "$Space/sm",
                   "padding": [
-                    "$Space/sm-plus",
-                    "$Space/lg-plus"
+                    "$Space/sm",
+                    "$Space/lg"
                   ],
                   "justifyContent": "center",
                   "alignItems": "center",
@@ -18098,12 +18128,12 @@
                       "width": "fit_content",
                       "height": "fit_content",
                       "x": 0,
-                      "y": 0.5,
+                      "y": 0,
                       "descendants": {
                         "DaLcd": {
                           "content": "連接 qBittorrent",
-                          "x": 20,
-                          "y": 10
+                          "x": 16,
+                          "y": 8
                         }
                       }
                     },
@@ -18114,13 +18144,13 @@
                       "name": "learnBtn",
                       "width": "fit_content",
                       "height": "fit_content",
-                      "x": 152,
+                      "x": 150,
                       "y": 0,
                       "descendants": {
                         "L9cIf": {
                           "content": "了解更多",
-                          "x": 20,
-                          "y": 10
+                          "x": 16,
+                          "y": 8
                         }
                       }
                     }
@@ -20591,8 +20621,8 @@
                           "descendants": {
                             "DaLcd": {
                               "content": "套用",
-                              "x": 71,
-                              "y": 10
+                              "x": 70.5,
+                              "y": 8
                             }
                           }
                         },
@@ -20609,7 +20639,7 @@
                             "L9cIf": {
                               "content": "重置",
                               "x": 70.5,
-                              "y": 10
+                              "y": 8
                             }
                           }
                         }
@@ -20884,8 +20914,8 @@
                       "descendants": {
                         "DaLcd": {
                           "content": "連接 qBittorrent",
-                          "x": 90,
-                          "y": 10
+                          "x": 87,
+                          "y": 8
                         }
                       }
                     },
@@ -20897,12 +20927,12 @@
                       "name": "learnBtn",
                       "height": "fit_content",
                       "x": 0,
-                      "y": 51,
+                      "y": 48,
                       "descendants": {
                         "L9cIf": {
                           "content": "了解更多",
                           "x": 112,
-                          "y": 10
+                          "y": 8
                         }
                       }
                     }
@@ -33706,8 +33736,8 @@
                           "descendants": {
                             "DaLcd": {
                               "content": "播放",
-                              "x": 86.5,
-                              "y": 10
+                              "x": 86,
+                              "y": 8
                             }
                           }
                         },
@@ -33724,7 +33754,7 @@
                             "L9cIf": {
                               "content": "加入清單",
                               "x": 72,
-                              "y": 10
+                              "y": 8
                             }
                           }
                         }
@@ -34391,8 +34421,8 @@
                           "descendants": {
                             "DaLcd": {
                               "content": "播放",
-                              "x": 71,
-                              "y": 10
+                              "x": 70.5,
+                              "y": 8
                             }
                           }
                         },
@@ -34409,7 +34439,7 @@
                             "L9cIf": {
                               "content": "加入清單",
                               "x": 56.5,
-                              "y": 10
+                              "y": 8
                             }
                           }
                         }
@@ -35826,7 +35856,7 @@
                             "L9cIf": {
                               "content": "加入清單",
                               "x": 178,
-                              "y": 10
+                              "y": 8
                             }
                           }
                         }
@@ -37970,8 +38000,8 @@
                               "descendants": {
                                 "DaLcd": {
                                   "content": "播放",
-                                  "x": 86.5,
-                                  "y": 10
+                                  "x": 86,
+                                  "y": 8
                                 }
                               }
                             },
@@ -37988,7 +38018,7 @@
                                 "L9cIf": {
                                   "content": "加入清單",
                                   "x": 72,
-                                  "y": 10
+                                  "y": 8
                                 }
                               }
                             }
@@ -41877,7 +41907,7 @@
                               "width": "fill_container",
                               "content": "[Leopard-Raws] Kimi no Na wa (BD).mkv",
                               "fontFamily": "$Type/Family/Mono",
-                              "fontSize": "$Type/Meta/S/Size",
+                              "fontSize": "$Type/Meta/M/Size",
                               "fontWeight": "normal"
                             }
                           ]
@@ -41907,7 +41937,7 @@
                               "fill": "$text-secondary",
                               "content": "/volume1/Movies/Anime/",
                               "fontFamily": "$Type/Family/Mono",
-                              "fontSize": "$Type/Meta/S/Size",
+                              "fontSize": "$Type/Meta/M/Size",
                               "fontWeight": "normal"
                             }
                           ]
@@ -41937,7 +41967,7 @@
                               "fill": "$text-secondary",
                               "content": "4.2 GB",
                               "fontFamily": "$Type/Family/Mono",
-                              "fontSize": "$Type/Meta/S/Size",
+                              "fontSize": "$Type/Meta/M/Size",
                               "fontWeight": "normal"
                             }
                           ]
@@ -41967,7 +41997,7 @@
                               "fill": "$text-secondary",
                               "content": "2026-03-28 14:32",
                               "fontFamily": "$Type/Family/Mono",
-                              "fontSize": "$Type/Meta/S/Size",
+                              "fontSize": "$Type/Meta/M/Size",
                               "fontWeight": "normal"
                             }
                           ]
@@ -41997,7 +42027,7 @@
                               "fill": "$warning",
                               "content": "比對失敗",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Meta/S/Size",
+                              "fontSize": "$Type/Meta/M/Size",
                               "fontWeight": "600"
                             }
                           ]
@@ -42397,7 +42427,7 @@
                           "fill": "$text-muted",
                           "content": "[Leopard-Raws] Kimi no Na wa.mkv",
                           "fontFamily": "$Type/Family/Mono",
-                          "fontSize": "$Type/Meta/S/Size",
+                          "fontSize": "$Type/Meta/M/Size",
                           "fontWeight": "normal"
                         }
                       ]
@@ -44294,8 +44324,8 @@
                               "descendants": {
                                 "DaLcd": {
                                   "content": "播放",
-                                  "x": 86.5,
-                                  "y": 10
+                                  "x": 86,
+                                  "y": 8
                                 }
                               }
                             },
@@ -44312,7 +44342,7 @@
                                 "L9cIf": {
                                   "content": "加入清單",
                                   "x": 72,
-                                  "y": 10
+                                  "y": 8
                                 }
                               }
                             }
@@ -45022,8 +45052,8 @@
                           "descendants": {
                             "DaLcd": {
                               "content": "播放",
-                              "x": 71,
-                              "y": 10
+                              "x": 70.5,
+                              "y": 8
                             }
                           }
                         },
@@ -45040,7 +45070,7 @@
                             "L9cIf": {
                               "content": "加入清單",
                               "x": 56.5,
-                              "y": 10
+                              "y": 8
                             }
                           }
                         }
@@ -51847,8 +51877,8 @@
                           "descendants": {
                             "DaLcd": {
                               "content": "套用",
-                              "x": 38.5,
-                              "y": 10
+                              "x": 38,
+                              "y": 8
                             }
                           }
                         },
@@ -51865,7 +51895,7 @@
                             "L9cIf": {
                               "content": "重置",
                               "x": 38,
-                              "y": 10
+                              "y": 8
                             }
                           }
                         }
@@ -52428,12 +52458,12 @@
                       "width": "fit_content",
                       "height": "fit_content",
                       "x": 0,
-                      "y": 0,
+                      "y": 2,
                       "descendants": {
                         "L9cIf": {
                           "content": "重新解析",
-                          "x": 20,
-                          "y": 10
+                          "x": 16,
+                          "y": 8
                         }
                       }
                     },
@@ -52444,13 +52474,13 @@
                       "name": "exportBtn",
                       "width": "fit_content",
                       "height": "fit_content",
-                      "x": 108,
-                      "y": 0,
+                      "x": 100,
+                      "y": 2,
                       "descendants": {
                         "L9cIf": {
                           "content": "匯出",
-                          "x": 20,
-                          "y": 10
+                          "x": 16,
+                          "y": 8
                         }
                       }
                     },
@@ -55200,7 +55230,7 @@
                     "L9cIf": {
                       "content": "重新解析",
                       "x": 29,
-                      "y": 10
+                      "y": 8
                     }
                   }
                 },
@@ -55217,7 +55247,7 @@
                     "L9cIf": {
                       "content": "匯出",
                       "x": 43,
-                      "y": 10
+                      "y": 8
                     }
                   }
                 },
@@ -62119,7 +62149,7 @@
                                       "fill": "$accent-text",
                                       "content": "↓",
                                       "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Meta/S/Size",
+                                      "fontSize": "$Type/Meta/M/Size",
                                       "fontWeight": "600"
                                     }
                                   ]
@@ -62183,7 +62213,7 @@
                               "fill": "$text-secondary",
                               "content": "75.2%",
                               "fontFamily": "$Type/Family/Mono",
-                              "fontSize": "$Type/Meta/S/Size",
+                              "fontSize": "$Type/Meta/M/Size",
                               "fontWeight": "normal"
                             }
                           ]
@@ -62240,7 +62270,7 @@
                                       "fill": "$success-text",
                                       "content": "✓",
                                       "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Meta/S/Size",
+                                      "fontSize": "$Type/Meta/M/Size",
                                       "fontWeight": "600"
                                     }
                                   ]
@@ -62304,7 +62334,7 @@
                               "fill": "$text-secondary",
                               "content": "100%",
                               "fontFamily": "$Type/Family/Mono",
-                              "fontSize": "$Type/Meta/S/Size",
+                              "fontSize": "$Type/Meta/M/Size",
                               "fontWeight": "normal"
                             }
                           ]
@@ -62361,7 +62391,7 @@
                                       "fill": "$warning-text",
                                       "content": "⏸",
                                       "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Meta/S/Size",
+                                      "fontSize": "$Type/Meta/M/Size",
                                       "fontWeight": "600"
                                     }
                                   ]
@@ -62425,7 +62455,7 @@
                               "fill": "$text-secondary",
                               "content": "42.1%",
                               "fontFamily": "$Type/Family/Mono",
-                              "fontSize": "$Type/Meta/S/Size",
+                              "fontSize": "$Type/Meta/M/Size",
                               "fontWeight": "normal"
                             }
                           ]
@@ -62482,7 +62512,7 @@
                                       "fill": "$error-text",
                                       "content": "✕",
                                       "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Meta/S/Size",
+                                      "fontSize": "$Type/Meta/M/Size",
                                       "fontWeight": "600"
                                     }
                                   ]
@@ -62563,7 +62593,7 @@
                                       "fill": "$success-text",
                                       "content": "✓",
                                       "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Meta/S/Size",
+                                      "fontSize": "$Type/Meta/M/Size",
                                       "fontWeight": "600"
                                     }
                                   ]
@@ -62627,7 +62657,7 @@
                               "fill": "$text-secondary",
                               "content": "100%",
                               "fontFamily": "$Type/Family/Mono",
-                              "fontSize": "$Type/Meta/S/Size",
+                              "fontSize": "$Type/Meta/M/Size",
                               "fontWeight": "normal"
                             }
                           ]
@@ -68494,7 +68524,7 @@
                                   "fill": "$text-muted",
                                   "content": "qB",
                                   "fontFamily": "$Type/Family/Mono",
-                                  "fontSize": "$Type/Meta/S/Size",
+                                  "fontSize": "$Type/Meta/M/Size",
                                   "fontWeight": "normal"
                                 }
                               ]
@@ -68783,7 +68813,7 @@
                                   "fill": "$text-muted",
                                   "content": "qB",
                                   "fontFamily": "$Type/Family/Mono",
-                                  "fontSize": "$Type/Meta/S/Size",
+                                  "fontSize": "$Type/Meta/M/Size",
                                   "fontWeight": "normal"
                                 }
                               ]
@@ -69073,7 +69103,7 @@
                                   "fill": "$text-muted",
                                   "content": "qB",
                                   "fontFamily": "$Type/Family/Mono",
-                                  "fontSize": "$Type/Meta/S/Size",
+                                  "fontSize": "$Type/Meta/M/Size",
                                   "fontWeight": "normal"
                                 }
                               ]
@@ -69362,7 +69392,7 @@
                                   "fill": "$text-muted",
                                   "content": "qB",
                                   "fontFamily": "$Type/Family/Mono",
-                                  "fontSize": "$Type/Meta/S/Size",
+                                  "fontSize": "$Type/Meta/M/Size",
                                   "fontWeight": "normal"
                                 }
                               ]
@@ -69651,7 +69681,7 @@
                                   "fill": "$text-muted",
                                   "content": "qB",
                                   "fontFamily": "$Type/Family/Mono",
-                                  "fontSize": "$Type/Meta/S/Size",
+                                  "fontSize": "$Type/Meta/M/Size",
                                   "fontWeight": "normal"
                                 }
                               ]
@@ -69940,7 +69970,7 @@
                                   "fill": "$text-muted",
                                   "content": "qB",
                                   "fontFamily": "$Type/Family/Mono",
-                                  "fontSize": "$Type/Meta/S/Size",
+                                  "fontSize": "$Type/Meta/M/Size",
                                   "fontWeight": "normal"
                                 }
                               ]
@@ -70229,7 +70259,7 @@
                                   "fill": "$text-muted",
                                   "content": "qB",
                                   "fontFamily": "$Type/Family/Mono",
-                                  "fontSize": "$Type/Meta/S/Size",
+                                  "fontSize": "$Type/Meta/M/Size",
                                   "fontWeight": "normal"
                                 }
                               ]
@@ -70495,7 +70525,7 @@
                                   "fill": "$text-muted",
                                   "content": "qB",
                                   "fontFamily": "$Type/Family/Mono",
-                                  "fontSize": "$Type/Meta/S/Size",
+                                  "fontSize": "$Type/Meta/M/Size",
                                   "fontWeight": "normal"
                                 }
                               ]
@@ -70761,7 +70791,7 @@
                                   "fill": "$text-muted",
                                   "content": "qB",
                                   "fontFamily": "$Type/Family/Mono",
-                                  "fontSize": "$Type/Meta/S/Size",
+                                  "fontSize": "$Type/Meta/M/Size",
                                   "fontWeight": "normal"
                                 }
                               ]
@@ -82356,7 +82386,7 @@
                                   "fill": "$warning",
                                   "content": "HI",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Meta/S/Size",
+                                  "fontSize": "$Type/Meta/M/Size",
                                   "fontWeight": "700"
                                 }
                               ]
@@ -82784,7 +82814,7 @@
                                   "fill": "$warning",
                                   "content": "HI",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Meta/S/Size",
+                                  "fontSize": "$Type/Meta/M/Size",
                                   "fontWeight": "700"
                                 }
                               ]
@@ -84016,7 +84046,7 @@
                                   "fill": "$warning",
                                   "content": "HI",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Meta/S/Size",
+                                  "fontSize": "$Type/Meta/M/Size",
                                   "fontWeight": "700"
                                 }
                               ]
@@ -84738,7 +84768,7 @@
                           "fill": "$accent-primary",
                           "content": "UTF-8",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Meta/S/Size",
+                          "fontSize": "$Type/Meta/M/Size",
                           "fontWeight": "600"
                         }
                       ]
@@ -85329,7 +85359,7 @@
                                       "fill": "$accent-primary",
                                       "content": "Assrt",
                                       "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Meta/S/Size",
+                                      "fontSize": "$Type/Meta/M/Size",
                                       "fontWeight": "600"
                                     }
                                   ]
@@ -85574,7 +85604,7 @@
                                       "fill": "$accent-primary",
                                       "content": "OpenSub",
                                       "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Meta/S/Size",
+                                      "fontSize": "$Type/Meta/M/Size",
                                       "fontWeight": "600"
                                     }
                                   ]
@@ -85779,7 +85809,7 @@
                                       "fill": "$accent-primary",
                                       "content": "Zimuku",
                                       "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Meta/S/Size",
+                                      "fontSize": "$Type/Meta/M/Size",
                                       "fontWeight": "600"
                                     }
                                   ]
@@ -87371,7 +87401,7 @@
                       "fill": "$text-muted",
                       "content": " ",
                       "fontFamily": "$Type/Family/Primary",
-                      "fontSize": "$Type/Meta/S/Size",
+                      "fontSize": "$Type/Meta/M/Size",
                       "fontWeight": "normal"
                     },
                     {
@@ -87421,7 +87451,7 @@
                       "fill": "$text-muted",
                       "content": " ",
                       "fontFamily": "$Type/Family/Primary",
-                      "fontSize": "$Type/Meta/S/Size",
+                      "fontSize": "$Type/Meta/M/Size",
                       "fontWeight": "normal"
                     },
                     {
@@ -130611,7 +130641,7 @@
                               "fill": "$text-muted",
                               "content": "原文",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Meta/S/Size",
+                              "fontSize": "$Type/Meta/M/Size",
                               "fontWeight": "500"
                             },
                             {
@@ -130651,7 +130681,7 @@
                               "fill": "$success",
                               "content": "校正",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Meta/S/Size",
+                              "fontSize": "$Type/Meta/M/Size",
                               "fontWeight": "500"
                             },
                             {
@@ -130712,7 +130742,7 @@
                               "fill": "$text-muted",
                               "content": "原文",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Meta/S/Size",
+                              "fontSize": "$Type/Meta/M/Size",
                               "fontWeight": "500"
                             },
                             {
@@ -130752,7 +130782,7 @@
                               "fill": "$success",
                               "content": "校正",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Meta/S/Size",
+                              "fontSize": "$Type/Meta/M/Size",
                               "fontWeight": "500"
                             },
                             {
@@ -130813,7 +130843,7 @@
                               "fill": "$text-muted",
                               "content": "原文",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Meta/S/Size",
+                              "fontSize": "$Type/Meta/M/Size",
                               "fontWeight": "500"
                             },
                             {
@@ -130853,7 +130883,7 @@
                               "fill": "$success",
                               "content": "校正",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Meta/S/Size",
+                              "fontSize": "$Type/Meta/M/Size",
                               "fontWeight": "500"
                             },
                             {
@@ -130914,7 +130944,7 @@
                               "fill": "$text-muted",
                               "content": "原文",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Meta/S/Size",
+                              "fontSize": "$Type/Meta/M/Size",
                               "fontWeight": "500"
                             },
                             {
@@ -130954,7 +130984,7 @@
                               "fill": "$success",
                               "content": "校正",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Meta/S/Size",
+                              "fontSize": "$Type/Meta/M/Size",
                               "fontWeight": "500"
                             },
                             {
@@ -131009,7 +131039,7 @@
                               "fill": "$text-muted",
                               "content": "原文",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Meta/S/Size",
+                              "fontSize": "$Type/Meta/M/Size",
                               "fontWeight": "500"
                             },
                             {
@@ -131049,7 +131079,7 @@
                               "fill": "$success",
                               "content": "校正",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Meta/S/Size",
+                              "fontSize": "$Type/Meta/M/Size",
                               "fontWeight": "500"
                             },
                             {
@@ -134779,7 +134809,7 @@
                       "fill": "$text-muted",
                       "content": "← 水平捲動 (overflow-x: auto, snap)",
                       "fontFamily": "$Type/Family/Canvas",
-                      "fontSize": "$Type/Meta/S/Size",
+                      "fontSize": "$Type/Meta/M/Size",
                       "fontWeight": "normal"
                     }
                   ]
@@ -149130,7 +149160,7 @@
                                   "fill": "$text-disabled",
                                   "content": "即將推出",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Meta/S/Size",
+                                  "fontSize": "$Type/Meta/M/Size",
                                   "fontWeight": "normal"
                                 }
                               ]
@@ -152044,7 +152074,7 @@
                               "fill": "$text-disabled",
                               "content": "即將推出",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Meta/S/Size",
+                              "fontSize": "$Type/Meta/M/Size",
                               "fontWeight": "normal"
                             }
                           ]
@@ -152877,7 +152907,7 @@
                               "fill": "$text-disabled",
                               "content": "即將推出",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Meta/S/Size",
+                              "fontSize": "$Type/Meta/M/Size",
                               "fontWeight": "normal"
                             }
                           ]
@@ -157060,7 +157090,7 @@
                                   "fill": "$text-disabled",
                                   "content": "即將推出",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Meta/S/Size",
+                                  "fontSize": "$Type/Meta/M/Size",
                                   "fontWeight": "500"
                                 }
                               ]
@@ -158776,7 +158806,7 @@
                                   "fill": "$text-disabled",
                                   "content": "即將推出",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Meta/S/Size",
+                                  "fontSize": "$Type/Meta/M/Size",
                                   "fontWeight": "500"
                                 }
                               ]
@@ -183617,10 +183647,6 @@
     "Type/Meta/M/Size": {
       "type": "number",
       "value": 11
-    },
-    "Type/Meta/S/Size": {
-      "type": "number",
-      "value": 10
     },
     "Space/hairline": {
       "type": "number",

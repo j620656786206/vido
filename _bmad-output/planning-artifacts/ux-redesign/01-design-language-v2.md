@@ -16,6 +16,17 @@ landed_in_pen: 'design-system flow — Design Language v2 + Navigation Shell v2 
 
 # Vido Design Language v2 — Phase 1b
 
+> ⚠️ **色彩章節已於 2026-09-10 被取代（PR #410）。** 本文件的 token 表仍記錄
+> 2026-06-13 當時的訊號藍配色（`bg-primary #1B2336`、`accent-primary #3B82F6`）。
+> 產品在 2026-08-25 換成「夜行」（墨綠＋泥金）、2026-08-26 新增「日巡」淺色主題，
+> 這裡的每一個色值與對比度數字都已不成立。
+>
+> **現行權威來源**：`apps/web/src/styles.css`（真值）、`apps/web/src/styles-contrast.spec.ts`
+> （對比度守門）、`DESIGN.md`（設計系統文件）、`ux-design.pen`（設計稿變數）。
+>
+> 本文件保留為 Phase 1b 的歷史記錄——它記載的**結構決策**（四態、語意 token 分層、
+> 元件清單）仍然有效，只有**色值**過期。不要從這裡複製色碼。
+
 > **What this document is.** The reusable visual foundation ("畫面之母") for the
 > phased Vido redesign. It owns **visual tokens, typography, components, state
 > patterns, and accessibility** — the half of Phase 1 that the Nav/IA ADR
