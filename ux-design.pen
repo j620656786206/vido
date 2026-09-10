@@ -2440,8 +2440,42 @@
                           "children": [
                             {
                               "type": "frame",
+                              "id": "FqvPn",
+                              "name": "sp-none",
+                              "width": "fill_container",
+                              "gap": "$Space/lg",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "ho9zl",
+                                  "name": "spLabel",
+                                  "fill": "$text-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": 110,
+                                  "content": "none — 0px",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Canvas",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "jkpzG",
+                                  "name": "spNote",
+                                  "fill": "$text-muted",
+                                  "content": "沒有間距也要用變數——gap 與 padding 一個裸數字都不准",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Canvas",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
                               "id": "r5H6h",
-                              "name": "sp-hairline",
+                              "name": "sp-2xs",
                               "width": "fill_container",
                               "gap": "$Space/lg",
                               "alignItems": "center",
@@ -2453,7 +2487,7 @@
                                   "fill": "$text-disabled",
                                   "textGrowth": "fixed-width",
                                   "width": 110,
-                                  "content": "hairline — 2px",
+                                  "content": "2xs — 2px",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Canvas",
                                   "fontSize": "$Type/Label/Size",
@@ -2473,7 +2507,7 @@
                                   "id": "a3Yxx4",
                                   "name": "spNote",
                                   "fill": "$text-disabled",
-                                  "content": "分隔線與 1–2px 微調",
+                                  "content": "徽章垂直內距",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Canvas",
                                   "fontSize": "$Type/Label/Size",
@@ -3023,7 +3057,7 @@
                               "fill": "$text-muted",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "暗色的是半階（-plus）——它們不是「將就」，各有明確用途（20px 是 CJK 按鈕的水平內距，中文字身框直接貼到內距邊，需要約 0.25em 補償）。另有 Space/none = 0：gap 與 padding 只能填 $Space/* 變數，一個裸數字都不准，連 0 都有變數。現有階都不合用時不要自己發明數字，送 UI/UX designer／CD／Agent 做設計裁決、PM 決定要不要動設計系統。",
+                              "content": "暗色的是半階（-plus）——不是「將就」，各有明確用途。挑哪一階不用猜：DESIGN.md §Layout 的〈間距選擇規則〉有三個角色（Inline 並排／Stack 垂直堆疊／Inset 容器內距）與一張 Inset 對照表。⚠️ 可按控制項的高度是寫死的（36／32／40／44／48），不是用內距算的——14px 文字行框是 22.75px，要湊 36 需要 6.6px 的內距，階梯上沒有這個數。",
                               "lineHeight": "$Type/Label/Line",
                               "fontFamily": "$Type/Family/Canvas",
                               "fontSize": "$Type/Label/Size",
@@ -6584,7 +6618,7 @@
                               "name": "meta",
                               "width": "fill_container",
                               "layout": "vertical",
-                              "gap": "$Space/hairline",
+                              "gap": "$Space/2xs",
                               "children": [
                                 {
                                   "type": "text",
@@ -6678,7 +6712,7 @@
                               "name": "meta",
                               "width": "fill_container",
                               "layout": "vertical",
-                              "gap": "$Space/hairline",
+                              "gap": "$Space/2xs",
                               "children": [
                                 {
                                   "type": "text",
@@ -6772,7 +6806,7 @@
                               "name": "meta",
                               "width": "fill_container",
                               "layout": "vertical",
-                              "gap": "$Space/hairline",
+                              "gap": "$Space/2xs",
                               "children": [
                                 {
                                   "type": "text",
@@ -6877,7 +6911,7 @@
                               "name": "meta",
                               "width": "fill_container",
                               "layout": "vertical",
-                              "gap": "$Space/hairline",
+                              "gap": "$Space/2xs",
                               "children": [
                                 {
                                   "type": "text",
@@ -8738,7 +8772,7 @@
                                       "fill": "$accent-primary",
                                       "cornerRadius": "$radius-lg",
                                       "padding": [
-                                        "$Space/hairline",
+                                        "$Space/2xs",
                                         "$Space/sm"
                                       ],
                                       "justifyContent": "center",
@@ -9179,7 +9213,7 @@
                                   "fill": "$accent-primary",
                                   "cornerRadius": "$radius-lg",
                                   "padding": [
-                                    "$Space/hairline",
+                                    "$Space/2xs",
                                     "$Space/sm"
                                   ],
                                   "justifyContent": "center",
@@ -9852,7 +9886,7 @@
                           "strokeAlignment": "inner",
                           "strokeLinejoin": "round",
                           "layout": "vertical",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "padding": [
                             "$Space/lg-plus",
                             "$Space/md"
@@ -10659,7 +10693,7 @@
                               "name": "grabberRow",
                               "width": "fill_container",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/none",
                                 "$Space/sm-plus",
                                 "$Space/none"
@@ -13739,7 +13773,7 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "layout": "vertical",
-                  "gap": "$Space/hairline",
+                  "gap": "$Space/2xs",
                   "padding": [
                     "$Space/lg-plus",
                     "$Space/md"
@@ -14572,7 +14606,7 @@
                                       "id": "I17uX",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -14635,7 +14669,7 @@
                                       "id": "igUIL",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -14698,7 +14732,7 @@
                                       "id": "bFrd9",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -14761,7 +14795,7 @@
                                       "id": "e2iIm6",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -14930,7 +14964,7 @@
                               "layout": "vertical",
                               "gap": "$Space/sm",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/none",
                                 "$Space/none",
                                 "$Space/none"
@@ -15093,7 +15127,7 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "layout": "vertical",
-                  "gap": "$Space/hairline",
+                  "gap": "$Space/2xs",
                   "padding": [
                     "$Space/lg-plus",
                     "$Space/md"
@@ -15667,7 +15701,7 @@
                               "stroke": "$border-subtle",
                               "strokeWidth": 1,
                               "strokeAlignment": "inner",
-                              "gap": "$Space/hairline",
+                              "gap": "$Space/2xs",
                               "padding": "$Space/xs",
                               "children": [
                                 {
@@ -22779,7 +22813,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "layout": "vertical",
-              "gap": "$Space/hairline",
+              "gap": "$Space/2xs",
               "padding": [
                 "$Space/lg-plus",
                 "$Space/md"
@@ -23350,7 +23384,7 @@
                           "stroke": "$border-subtle",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "padding": "$Space/xs",
                           "children": [
                             {
@@ -23783,7 +23817,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "layout": "vertical",
-              "gap": "$Space/hairline",
+              "gap": "$Space/2xs",
               "padding": [
                 "$Space/lg-plus",
                 "$Space/md"
@@ -24397,7 +24431,7 @@
                           "stroke": "$border-subtle",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "padding": "$Space/xs",
                           "children": [
                             {
@@ -24594,7 +24628,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "layout": "vertical",
-              "gap": "$Space/hairline",
+              "gap": "$Space/2xs",
               "padding": [
                 "$Space/lg-plus",
                 "$Space/md"
@@ -25168,7 +25202,7 @@
                           "stroke": "$border-subtle",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "padding": "$Space/xs",
                           "children": [
                             {
@@ -25745,7 +25779,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "layout": "vertical",
-              "gap": "$Space/hairline",
+              "gap": "$Space/2xs",
               "padding": [
                 "$Space/lg-plus",
                 "$Space/md"
@@ -26316,7 +26350,7 @@
                           "stroke": "$border-subtle",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "padding": "$Space/xs",
                           "children": [
                             {
@@ -26378,7 +26412,7 @@
                   "width": "fill_container",
                   "height": "fill_container",
                   "layout": "vertical",
-                  "gap": "$Space/hairline",
+                  "gap": "$Space/2xs",
                   "padding": [
                     "$Space/md",
                     "$Space/xl",
@@ -26461,7 +26495,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-sm",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/xs-plus"
                               ],
                               "alignItems": "center",
@@ -26486,7 +26520,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-sm",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/xs-plus"
                               ],
                               "alignItems": "center",
@@ -26631,7 +26665,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-sm",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/xs-plus"
                               ],
                               "alignItems": "center",
@@ -26656,7 +26690,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-sm",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/xs-plus"
                               ],
                               "alignItems": "center",
@@ -26801,7 +26835,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-sm",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/xs-plus"
                               ],
                               "alignItems": "center",
@@ -26826,7 +26860,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-sm",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/xs-plus"
                               ],
                               "alignItems": "center",
@@ -26971,7 +27005,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-sm",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/xs-plus"
                               ],
                               "alignItems": "center",
@@ -27116,7 +27150,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-sm",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/xs-plus"
                               ],
                               "alignItems": "center",
@@ -27261,7 +27295,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-sm",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/xs-plus"
                               ],
                               "alignItems": "center",
@@ -27286,7 +27320,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-sm",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/xs-plus"
                               ],
                               "alignItems": "center",
@@ -27431,7 +27465,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-sm",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/xs-plus"
                               ],
                               "alignItems": "center",
@@ -27576,7 +27610,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-sm",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/xs-plus"
                               ],
                               "alignItems": "center",
@@ -27691,7 +27725,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "layout": "vertical",
-              "gap": "$Space/hairline",
+              "gap": "$Space/2xs",
               "padding": [
                 "$Space/lg-plus",
                 "$Space/md"
@@ -28299,7 +28333,7 @@
                           "stroke": "$border-subtle",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "padding": "$Space/xs",
                           "children": [
                             {
@@ -28500,7 +28534,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "layout": "vertical",
-              "gap": "$Space/hairline",
+              "gap": "$Space/2xs",
               "padding": [
                 "$Space/lg-plus",
                 "$Space/md"
@@ -29114,7 +29148,7 @@
                           "stroke": "$border-subtle",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "padding": "$Space/xs",
                           "children": [
                             {
@@ -29364,7 +29398,7 @@
                   "type": "frame",
                   "id": "dr6Mu",
                   "name": "actions",
-                  "gap": "$Space/hairline",
+                  "gap": "$Space/2xs",
                   "alignItems": "center",
                   "children": [
                     {
@@ -29983,7 +30017,7 @@
                   "type": "frame",
                   "id": "q7XVtX",
                   "name": "actions",
-                  "gap": "$Space/hairline",
+                  "gap": "$Space/2xs",
                   "alignItems": "center",
                   "children": [
                     {
@@ -30511,7 +30545,7 @@
                   "type": "frame",
                   "id": "IaPud",
                   "name": "actions",
-                  "gap": "$Space/hairline",
+                  "gap": "$Space/2xs",
                   "alignItems": "center",
                   "children": [
                     {
@@ -32035,7 +32069,7 @@
                           "fill": "$accent-tint",
                           "cornerRadius": "$radius-pill",
                           "padding": [
-                            "$Space/hairline",
+                            "$Space/2xs",
                             "$Space/sm-plus"
                           ],
                           "alignItems": "center",
@@ -33147,7 +33181,7 @@
                           "fill": "$accent-tint",
                           "cornerRadius": "$radius-pill",
                           "padding": [
-                            "$Space/hairline",
+                            "$Space/2xs",
                             "$Space/sm-plus"
                           ],
                           "alignItems": "center",
@@ -33681,7 +33715,7 @@
                           "fill": "$accent-tint",
                           "cornerRadius": "$radius-pill",
                           "padding": [
-                            "$Space/hairline",
+                            "$Space/2xs",
                             "$Space/sm-plus"
                           ],
                           "alignItems": "center",
@@ -41425,7 +41459,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "layout": "vertical",
-              "gap": "$Space/hairline",
+              "gap": "$Space/2xs",
               "padding": [
                 "$Space/lg-plus",
                 "$Space/md"
@@ -42258,7 +42292,7 @@
                                   "id": "dJsF1",
                                   "name": "tt",
                                   "layout": "vertical",
-                                  "gap": "$Space/hairline",
+                                  "gap": "$Space/2xs",
                                   "children": [
                                     {
                                       "type": "text",
@@ -42321,7 +42355,7 @@
                                   "id": "d2psuf",
                                   "name": "tt",
                                   "layout": "vertical",
-                                  "gap": "$Space/hairline",
+                                  "gap": "$Space/2xs",
                                   "children": [
                                     {
                                       "type": "text",
@@ -42384,7 +42418,7 @@
                                   "id": "oFznz",
                                   "name": "tt",
                                   "layout": "vertical",
-                                  "gap": "$Space/hairline",
+                                  "gap": "$Space/2xs",
                                   "children": [
                                     {
                                       "type": "text",
@@ -42447,7 +42481,7 @@
                                   "id": "tNxNj",
                                   "name": "tt",
                                   "layout": "vertical",
-                                  "gap": "$Space/hairline",
+                                  "gap": "$Space/2xs",
                                   "children": [
                                     {
                                       "type": "text",
@@ -42616,7 +42650,7 @@
                           "layout": "vertical",
                           "gap": "$Space/sm",
                           "padding": [
-                            "$Space/hairline",
+                            "$Space/2xs",
                             "$Space/none",
                             "$Space/none",
                             "$Space/none"
@@ -42776,7 +42810,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "layout": "vertical",
-              "gap": "$Space/hairline",
+              "gap": "$Space/2xs",
               "padding": [
                 "$Space/lg-plus",
                 "$Space/md"
@@ -43696,7 +43730,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "layout": "vertical",
-              "gap": "$Space/hairline",
+              "gap": "$Space/2xs",
               "padding": [
                 "$Space/lg-plus",
                 "$Space/md"
@@ -44204,7 +44238,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "layout": "vertical",
-              "gap": "$Space/hairline",
+              "gap": "$Space/2xs",
               "padding": [
                 "$Space/lg-plus",
                 "$Space/md"
@@ -44703,7 +44737,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "layout": "vertical",
-              "gap": "$Space/hairline",
+              "gap": "$Space/2xs",
               "padding": [
                 "$Space/lg-plus",
                 "$Space/md"
@@ -46226,7 +46260,7 @@
                           "cornerRadius": "$radius-md",
                           "gap": "$Space/xs",
                           "padding": [
-                            "$Space/hairline",
+                            "$Space/2xs",
                             "$Space/sm"
                           ],
                           "alignItems": "center",
@@ -54054,7 +54088,7 @@
                               "cornerRadius": "$radius-sm",
                               "gap": "$Space/xs",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm"
                               ],
                               "alignItems": "center",
@@ -54178,7 +54212,7 @@
                               "cornerRadius": "$radius-sm",
                               "gap": "$Space/xs",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm"
                               ],
                               "alignItems": "center",
@@ -54302,7 +54336,7 @@
                               "cornerRadius": "$radius-sm",
                               "gap": "$Space/xs",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm"
                               ],
                               "alignItems": "center",
@@ -54426,7 +54460,7 @@
                               "cornerRadius": "$radius-sm",
                               "gap": "$Space/xs",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm"
                               ],
                               "alignItems": "center",
@@ -54550,7 +54584,7 @@
                               "cornerRadius": "$radius-sm",
                               "gap": "$Space/xs",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm"
                               ],
                               "alignItems": "center",
@@ -54674,7 +54708,7 @@
                               "cornerRadius": "$radius-sm",
                               "gap": "$Space/xs",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm"
                               ],
                               "alignItems": "center",
@@ -54792,7 +54826,7 @@
                               "cornerRadius": "$radius-sm",
                               "gap": "$Space/xs",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm"
                               ],
                               "alignItems": "center",
@@ -55423,7 +55457,7 @@
                       "id": "ctQHI",
                       "name": "titleWrap",
                       "layout": "vertical",
-                      "gap": "$Space/hairline",
+                      "gap": "$Space/2xs",
                       "children": [
                         {
                           "type": "text",
@@ -55771,7 +55805,7 @@
                           "stroke": "$border-subtle",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "padding": "$Space/xs",
                           "alignItems": "center",
                           "children": [
@@ -56352,7 +56386,7 @@
                       "name": "snBE",
                       "width": "fill_container",
                       "layout": "vertical",
-                      "gap": "$Space/hairline",
+                      "gap": "$Space/2xs",
                       "children": [
                         {
                           "type": "text",
@@ -56454,7 +56488,7 @@
                       "id": "hcG49",
                       "name": "titleWrap",
                       "layout": "vertical",
-                      "gap": "$Space/hairline",
+                      "gap": "$Space/2xs",
                       "children": [
                         {
                           "type": "text",
@@ -57514,7 +57548,7 @@
                   "name": "headerRow",
                   "width": "fill_container",
                   "layout": "vertical",
-                  "gap": "$Space/hairline",
+                  "gap": "$Space/2xs",
                   "children": [
                     {
                       "type": "text",
@@ -57625,7 +57659,7 @@
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "layout": "vertical",
-                      "gap": "$Space/hairline",
+                      "gap": "$Space/2xs",
                       "padding": "$Space/xs-plus",
                       "children": [
                         {
@@ -59896,7 +59930,7 @@
                   "name": "headerRow",
                   "width": "fill_container",
                   "layout": "vertical",
-                  "gap": "$Space/hairline",
+                  "gap": "$Space/2xs",
                   "children": [
                     {
                       "type": "text",
@@ -60244,7 +60278,7 @@
                           "stroke": "$border-subtle",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "padding": "$Space/xs",
                           "alignItems": "center",
                           "children": [
@@ -60794,7 +60828,7 @@
                               "fill": "$bg-tertiary",
                               "cornerRadius": "$radius-pill",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm"
                               ],
                               "alignItems": "center",
@@ -60916,7 +60950,7 @@
                           "name": "c-speed",
                           "width": 124,
                           "layout": "vertical",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "children": [
                             {
                               "type": "text",
@@ -61091,7 +61125,7 @@
                               "fill": "$bg-tertiary",
                               "cornerRadius": "$radius-pill",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm"
                               ],
                               "alignItems": "center",
@@ -61213,7 +61247,7 @@
                           "name": "c-speed",
                           "width": 124,
                           "layout": "vertical",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "children": [
                             {
                               "type": "text",
@@ -61389,7 +61423,7 @@
                               "fill": "$bg-tertiary",
                               "cornerRadius": "$radius-pill",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm"
                               ],
                               "alignItems": "center",
@@ -61511,7 +61545,7 @@
                           "name": "c-speed",
                           "width": 124,
                           "layout": "vertical",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "children": [
                             {
                               "type": "text",
@@ -61686,7 +61720,7 @@
                               "fill": "$bg-tertiary",
                               "cornerRadius": "$radius-pill",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm"
                               ],
                               "alignItems": "center",
@@ -61808,7 +61842,7 @@
                           "name": "c-speed",
                           "width": 124,
                           "layout": "vertical",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "children": [
                             {
                               "type": "text",
@@ -61983,7 +62017,7 @@
                               "fill": "$bg-tertiary",
                               "cornerRadius": "$radius-pill",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm"
                               ],
                               "alignItems": "center",
@@ -62105,7 +62139,7 @@
                           "name": "c-speed",
                           "width": 124,
                           "layout": "vertical",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "children": [
                             {
                               "type": "text",
@@ -62280,7 +62314,7 @@
                               "fill": "$bg-tertiary",
                               "cornerRadius": "$radius-pill",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm"
                               ],
                               "alignItems": "center",
@@ -62402,7 +62436,7 @@
                           "name": "c-speed",
                           "width": 124,
                           "layout": "vertical",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "children": [
                             {
                               "type": "text",
@@ -62577,7 +62611,7 @@
                               "fill": "$bg-tertiary",
                               "cornerRadius": "$radius-pill",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm"
                               ],
                               "alignItems": "center",
@@ -62699,7 +62733,7 @@
                           "name": "c-speed",
                           "width": 124,
                           "layout": "vertical",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "children": [
                             {
                               "type": "text",
@@ -62851,7 +62885,7 @@
                               "fill": "$bg-tertiary",
                               "cornerRadius": "$radius-pill",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm"
                               ],
                               "alignItems": "center",
@@ -62973,7 +63007,7 @@
                           "name": "c-speed",
                           "width": 124,
                           "layout": "vertical",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "children": [
                             {
                               "type": "text",
@@ -63125,7 +63159,7 @@
                               "fill": "$bg-tertiary",
                               "cornerRadius": "$radius-pill",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm"
                               ],
                               "alignItems": "center",
@@ -63247,7 +63281,7 @@
                           "name": "c-speed",
                           "width": 124,
                           "layout": "vertical",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "children": [
                             {
                               "type": "text",
@@ -64130,7 +64164,7 @@
                   "name": "actions",
                   "width": "fill_container",
                   "layout": "vertical",
-                  "gap": "$Space/hairline",
+                  "gap": "$Space/2xs",
                   "padding": [
                     "$Space/xs",
                     "$Space/sm"
@@ -64927,7 +64961,7 @@
                               "name": "cell-下載速度",
                               "width": "fill_container",
                               "layout": "vertical",
-                              "gap": "$Space/hairline",
+                              "gap": "$Space/2xs",
                               "children": [
                                 {
                                   "type": "text",
@@ -64961,7 +64995,7 @@
                               "name": "cell-上傳速度",
                               "width": "fill_container",
                               "layout": "vertical",
-                              "gap": "$Space/hairline",
+                              "gap": "$Space/2xs",
                               "children": [
                                 {
                                   "type": "text",
@@ -65004,7 +65038,7 @@
                               "name": "cell-進度",
                               "width": "fill_container",
                               "layout": "vertical",
-                              "gap": "$Space/hairline",
+                              "gap": "$Space/2xs",
                               "children": [
                                 {
                                   "type": "text",
@@ -65038,7 +65072,7 @@
                               "name": "cell-剩餘時間",
                               "width": "fill_container",
                               "layout": "vertical",
-                              "gap": "$Space/hairline",
+                              "gap": "$Space/2xs",
                               "children": [
                                 {
                                   "type": "text",
@@ -65081,7 +65115,7 @@
                               "name": "cell-來源",
                               "width": "fill_container",
                               "layout": "vertical",
-                              "gap": "$Space/hairline",
+                              "gap": "$Space/2xs",
                               "children": [
                                 {
                                   "type": "text",
@@ -65115,7 +65149,7 @@
                               "name": "cell-加入時間",
                               "width": "fill_container",
                               "layout": "vertical",
-                              "gap": "$Space/hairline",
+                              "gap": "$Space/2xs",
                               "children": [
                                 {
                                   "type": "text",
@@ -65151,7 +65185,7 @@
                           "name": "cell-Hash",
                           "width": "fill_container",
                           "layout": "vertical",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "children": [
                             {
                               "type": "text",
@@ -65185,7 +65219,7 @@
                           "name": "cell-儲存路徑",
                           "width": "fill_container",
                           "layout": "vertical",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "children": [
                             {
                               "type": "text",
@@ -65865,7 +65899,7 @@
                   "name": "actions",
                   "width": "fill_container",
                   "layout": "vertical",
-                  "gap": "$Space/hairline",
+                  "gap": "$Space/2xs",
                   "padding": [
                     "$Space/xs",
                     "$Space/sm"
@@ -74520,7 +74554,7 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "layout": "vertical",
-                  "gap": "$Space/hairline",
+                  "gap": "$Space/2xs",
                   "padding": [
                     "$Space/lg-plus",
                     "$Space/md"
@@ -75315,7 +75349,7 @@
                                       "id": "W78cRs",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -75378,7 +75412,7 @@
                                       "id": "tMtgU",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -75441,7 +75475,7 @@
                                       "id": "lGQMM",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -75504,7 +75538,7 @@
                                       "id": "uvn2r",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -75673,7 +75707,7 @@
                               "layout": "vertical",
                               "gap": "$Space/sm",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/none",
                                 "$Space/none",
                                 "$Space/none"
@@ -76419,7 +76453,7 @@
                           "type": "frame",
                           "id": "h43R3",
                           "name": "glos-cnt",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "alignItems": "center",
                           "children": [
                             {
@@ -76593,7 +76627,7 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "layout": "vertical",
-                  "gap": "$Space/hairline",
+                  "gap": "$Space/2xs",
                   "padding": [
                     "$Space/lg-plus",
                     "$Space/md"
@@ -77388,7 +77422,7 @@
                                       "id": "ZPscQ",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -77451,7 +77485,7 @@
                                       "id": "m7DLem",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -77514,7 +77548,7 @@
                                       "id": "a4m6Z",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -77577,7 +77611,7 @@
                                       "id": "rnaQ6",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -77746,7 +77780,7 @@
                               "layout": "vertical",
                               "gap": "$Space/sm",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/none",
                                 "$Space/none",
                                 "$Space/none"
@@ -78113,7 +78147,7 @@
                           "type": "frame",
                           "id": "PZp1h",
                           "name": "glos-cnt",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "alignItems": "center",
                           "children": [
                             {
@@ -78287,7 +78321,7 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "layout": "vertical",
-                  "gap": "$Space/hairline",
+                  "gap": "$Space/2xs",
                   "padding": [
                     "$Space/lg-plus",
                     "$Space/md"
@@ -79082,7 +79116,7 @@
                                       "id": "u64l1s",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -79145,7 +79179,7 @@
                                       "id": "ylVth",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -79208,7 +79242,7 @@
                                       "id": "d274O",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -79271,7 +79305,7 @@
                                       "id": "OIUmM",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -79440,7 +79474,7 @@
                               "layout": "vertical",
                               "gap": "$Space/sm",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/none",
                                 "$Space/none",
                                 "$Space/none"
@@ -79974,7 +80008,7 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "layout": "vertical",
-                  "gap": "$Space/hairline",
+                  "gap": "$Space/2xs",
                   "padding": [
                     "$Space/lg-plus",
                     "$Space/md"
@@ -80769,7 +80803,7 @@
                                       "id": "zNiaR",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -80832,7 +80866,7 @@
                                       "id": "XbAh0",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -80895,7 +80929,7 @@
                                       "id": "X8Xg7",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -80958,7 +80992,7 @@
                                       "id": "WEJIj",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -81127,7 +81161,7 @@
                               "layout": "vertical",
                               "gap": "$Space/sm",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/none",
                                 "$Space/none",
                                 "$Space/none"
@@ -81666,7 +81700,7 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "layout": "vertical",
-                  "gap": "$Space/hairline",
+                  "gap": "$Space/2xs",
                   "padding": [
                     "$Space/lg-plus",
                     "$Space/md"
@@ -82461,7 +82495,7 @@
                                       "id": "QAvJT",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -82524,7 +82558,7 @@
                                       "id": "iuKmp",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -82587,7 +82621,7 @@
                                       "id": "c1F3E",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -82650,7 +82684,7 @@
                                       "id": "bwLmm",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -82819,7 +82853,7 @@
                               "layout": "vertical",
                               "gap": "$Space/sm",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/none",
                                 "$Space/none",
                                 "$Space/none"
@@ -83310,7 +83344,7 @@
                           "type": "frame",
                           "id": "o9Og8",
                           "name": "glos-cnt",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "alignItems": "center",
                           "children": [
                             {
@@ -83485,7 +83519,7 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "layout": "vertical",
-                  "gap": "$Space/hairline",
+                  "gap": "$Space/2xs",
                   "padding": [
                     "$Space/lg-plus",
                     "$Space/md"
@@ -84280,7 +84314,7 @@
                                       "id": "M62Nns",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -84343,7 +84377,7 @@
                                       "id": "oeTob",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -84406,7 +84440,7 @@
                                       "id": "nzlgd",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -84469,7 +84503,7 @@
                                       "id": "o3IlS",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -84638,7 +84672,7 @@
                               "layout": "vertical",
                               "gap": "$Space/sm",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/none",
                                 "$Space/none",
                                 "$Space/none"
@@ -85223,7 +85257,7 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "layout": "vertical",
-                  "gap": "$Space/hairline",
+                  "gap": "$Space/2xs",
                   "padding": [
                     "$Space/lg-plus",
                     "$Space/md"
@@ -86018,7 +86052,7 @@
                                       "id": "IehHM",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -86081,7 +86115,7 @@
                                       "id": "IpvAn",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -86144,7 +86178,7 @@
                                       "id": "MIJAB",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -86207,7 +86241,7 @@
                                       "id": "DwfNb",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -86376,7 +86410,7 @@
                               "layout": "vertical",
                               "gap": "$Space/sm",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/none",
                                 "$Space/none",
                                 "$Space/none"
@@ -86837,7 +86871,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-pill",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm-plus"
                               ],
                               "alignItems": "center",
@@ -88123,7 +88157,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-pill",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm-plus"
                               ],
                               "alignItems": "center",
@@ -89358,7 +89392,7 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "layout": "vertical",
-                  "gap": "$Space/hairline",
+                  "gap": "$Space/2xs",
                   "padding": [
                     "$Space/lg-plus",
                     "$Space/md"
@@ -90153,7 +90187,7 @@
                                       "id": "UKcz1",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -90216,7 +90250,7 @@
                                       "id": "I601N",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -90279,7 +90313,7 @@
                                       "id": "kDuLH",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -90342,7 +90376,7 @@
                                       "id": "WlAfj",
                                       "name": "tt",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "text",
@@ -90511,7 +90545,7 @@
                               "layout": "vertical",
                               "gap": "$Space/sm",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/none",
                                 "$Space/none",
                                 "$Space/none"
@@ -91202,7 +91236,7 @@
                               "cornerRadius": "$radius-md",
                               "gap": "$Space/xs",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm"
                               ],
                               "alignItems": "center",
@@ -91682,7 +91716,7 @@
                           "name": "col-zhtw",
                           "width": "fill_container",
                           "layout": "vertical",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "children": [
                             {
                               "type": "text",
@@ -91754,7 +91788,7 @@
                           "name": "col-zhcn",
                           "width": "fill_container",
                           "layout": "vertical",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "children": [
                             {
                               "type": "text",
@@ -91875,7 +91909,7 @@
                           "name": "col-en",
                           "width": "fill_container",
                           "layout": "vertical",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "children": [
                             {
                               "type": "text",
@@ -91985,7 +92019,7 @@
                           "type": "frame",
                           "id": "Bz9hb",
                           "name": "glos-cnt",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "alignItems": "center",
                           "children": [
                             {
@@ -92313,7 +92347,7 @@
                               "cornerRadius": "$radius-md",
                               "gap": "$Space/xs",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm"
                               ],
                               "alignItems": "center",
@@ -93458,7 +93492,7 @@
                               "cornerRadius": "$radius-md",
                               "gap": "$Space/xs",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm"
                               ],
                               "alignItems": "center",
@@ -93787,7 +93821,7 @@
                   "padding": [
                     "$Space/none",
                     "$Space/none",
-                    "$Space/hairline",
+                    "$Space/2xs",
                     "$Space/none"
                   ],
                   "justifyContent": "center",
@@ -98720,7 +98754,7 @@
               "name": "topbar",
               "width": "fill_container",
               "layout": "vertical",
-              "gap": "$Space/hairline",
+              "gap": "$Space/2xs",
               "padding": [
                 "$Space/md",
                 "$Space/lg"
@@ -99951,7 +99985,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-pill",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm-plus"
                               ],
                               "alignItems": "center",
@@ -100628,7 +100662,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-pill",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm-plus"
                               ],
                               "alignItems": "center",
@@ -101074,7 +101108,7 @@
                       "name": "summary-block",
                       "width": "fill_container",
                       "layout": "vertical",
-                      "gap": "$Space/hairline",
+                      "gap": "$Space/2xs",
                       "children": [
                         {
                           "type": "frame",
@@ -101413,7 +101447,7 @@
                                   "fill": "$success-tint",
                                   "cornerRadius": "$radius-sm",
                                   "padding": [
-                                    "$Space/hairline",
+                                    "$Space/2xs",
                                     "$Space/xs-plus"
                                   ],
                                   "alignItems": "center",
@@ -101787,7 +101821,7 @@
                                   "fill": "$error-tint",
                                   "cornerRadius": "$radius-sm",
                                   "padding": [
-                                    "$Space/hairline",
+                                    "$Space/2xs",
                                     "$Space/sm"
                                   ],
                                   "alignItems": "center",
@@ -101901,7 +101935,7 @@
                                   "fill": "$warning-tint",
                                   "cornerRadius": "$radius-sm",
                                   "padding": [
-                                    "$Space/hairline",
+                                    "$Space/2xs",
                                     "$Space/xs-plus"
                                   ],
                                   "alignItems": "center",
@@ -102014,7 +102048,7 @@
                                       "fill": "$bg-tertiary",
                                       "cornerRadius": "$radius-sm",
                                       "padding": [
-                                        "$Space/hairline",
+                                        "$Space/2xs",
                                         "$Space/sm"
                                       ],
                                       "alignItems": "center",
@@ -102152,7 +102186,7 @@
                                   "fill": "$warning-tint",
                                   "cornerRadius": "$radius-sm",
                                   "padding": [
-                                    "$Space/hairline",
+                                    "$Space/2xs",
                                     "$Space/xs-plus"
                                   ],
                                   "alignItems": "center",
@@ -102633,7 +102667,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-pill",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm-plus"
                               ],
                               "alignItems": "center",
@@ -103225,7 +103259,7 @@
                                       "fill": "$success-tint",
                                       "cornerRadius": "$radius-sm",
                                       "padding": [
-                                        "$Space/hairline",
+                                        "$Space/2xs",
                                         "$Space/xs-plus"
                                       ],
                                       "children": [
@@ -103370,7 +103404,7 @@
                                       "fill": "$bg-tertiary",
                                       "cornerRadius": "$radius-sm",
                                       "padding": [
-                                        "$Space/hairline",
+                                        "$Space/2xs",
                                         "$Space/xs-plus"
                                       ],
                                       "children": [
@@ -103917,7 +103951,7 @@
                       "name": "summary-block",
                       "width": "fill_container",
                       "layout": "vertical",
-                      "gap": "$Space/hairline",
+                      "gap": "$Space/2xs",
                       "children": [
                         {
                           "type": "frame",
@@ -104419,7 +104453,7 @@
                                       "fill": "$error-tint",
                                       "cornerRadius": "$radius-sm",
                                       "padding": [
-                                        "$Space/hairline",
+                                        "$Space/2xs",
                                         "$Space/sm"
                                       ],
                                       "alignItems": "center",
@@ -104557,7 +104591,7 @@
                                       "fill": "$bg-tertiary",
                                       "cornerRadius": "$radius-sm",
                                       "padding": [
-                                        "$Space/hairline",
+                                        "$Space/2xs",
                                         "$Space/sm"
                                       ],
                                       "alignItems": "center",
@@ -104666,7 +104700,7 @@
                           "fill": "$warning-tint",
                           "cornerRadius": "$radius-sm",
                           "padding": [
-                            "$Space/hairline",
+                            "$Space/2xs",
                             "$Space/xs-plus"
                           ],
                           "alignItems": "center",
@@ -104838,7 +104872,7 @@
                       "name": "ft-selected",
                       "width": "fill_container",
                       "layout": "vertical",
-                      "gap": "$Space/hairline",
+                      "gap": "$Space/2xs",
                       "children": [
                         {
                           "type": "frame",
@@ -106338,7 +106372,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-pill",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm-plus"
                               ],
                               "alignItems": "center",
@@ -106784,7 +106818,7 @@
                       "name": "summary-block",
                       "width": "fill_container",
                       "layout": "vertical",
-                      "gap": "$Space/hairline",
+                      "gap": "$Space/2xs",
                       "children": [
                         {
                           "type": "frame",
@@ -107961,7 +107995,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-pill",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm-plus"
                               ],
                               "alignItems": "center",
@@ -108541,7 +108575,7 @@
                                       "fill": "$success-tint",
                                       "cornerRadius": "$radius-sm",
                                       "padding": [
-                                        "$Space/hairline",
+                                        "$Space/2xs",
                                         "$Space/xs-plus"
                                       ],
                                       "children": [
@@ -108671,7 +108705,7 @@
                                       "fill": "$bg-tertiary",
                                       "cornerRadius": "$radius-sm",
                                       "padding": [
-                                        "$Space/hairline",
+                                        "$Space/2xs",
                                         "$Space/xs-plus"
                                       ],
                                       "children": [
@@ -109114,7 +109148,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-pill",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm-plus"
                               ],
                               "alignItems": "center",
@@ -110063,7 +110097,7 @@
                                       "fill": "$success-tint",
                                       "cornerRadius": "$radius-sm",
                                       "padding": [
-                                        "$Space/hairline",
+                                        "$Space/2xs",
                                         "$Space/xs-plus"
                                       ],
                                       "children": [
@@ -110208,7 +110242,7 @@
                                       "fill": "$bg-tertiary",
                                       "cornerRadius": "$radius-sm",
                                       "padding": [
-                                        "$Space/hairline",
+                                        "$Space/2xs",
                                         "$Space/xs-plus"
                                       ],
                                       "children": [
@@ -110885,7 +110919,7 @@
                                       "fill": "$success-tint",
                                       "cornerRadius": "$radius-sm",
                                       "padding": [
-                                        "$Space/hairline",
+                                        "$Space/2xs",
                                         "$Space/xs-plus"
                                       ],
                                       "children": [
@@ -111015,7 +111049,7 @@
                                       "fill": "$bg-tertiary",
                                       "cornerRadius": "$radius-sm",
                                       "padding": [
-                                        "$Space/hairline",
+                                        "$Space/2xs",
                                         "$Space/xs-plus"
                                       ],
                                       "children": [
@@ -111840,7 +111874,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-pill",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm-plus"
                               ],
                               "alignItems": "center",
@@ -112638,7 +112672,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-pill",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm-plus"
                               ],
                               "alignItems": "center",
@@ -113244,7 +113278,7 @@
                                   "fill": "$success-tint",
                                   "cornerRadius": "$radius-sm",
                                   "padding": [
-                                    "$Space/hairline",
+                                    "$Space/2xs",
                                     "$Space/xs-plus"
                                   ],
                                   "alignItems": "center",
@@ -113334,7 +113368,7 @@
                                   "fill": "$success-tint",
                                   "cornerRadius": "$radius-sm",
                                   "padding": [
-                                    "$Space/hairline",
+                                    "$Space/2xs",
                                     "$Space/xs-plus"
                                   ],
                                   "alignItems": "center",
@@ -114097,7 +114131,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-pill",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm-plus"
                               ],
                               "alignItems": "center",
@@ -114703,7 +114737,7 @@
                                   "fill": "$success-tint",
                                   "cornerRadius": "$radius-sm",
                                   "padding": [
-                                    "$Space/hairline",
+                                    "$Space/2xs",
                                     "$Space/xs-plus"
                                   ],
                                   "alignItems": "center",
@@ -115457,7 +115491,7 @@
                                   "fill": "$success-tint",
                                   "cornerRadius": "$radius-sm",
                                   "padding": [
-                                    "$Space/hairline",
+                                    "$Space/2xs",
                                     "$Space/xs-plus"
                                   ],
                                   "alignItems": "center",
@@ -115876,7 +115910,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-pill",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm-plus"
                               ],
                               "alignItems": "center",
@@ -116634,7 +116668,7 @@
                           "fill": "$success-tint",
                           "cornerRadius": "$radius-sm",
                           "padding": [
-                            "$Space/hairline",
+                            "$Space/2xs",
                             "$Space/xs-plus"
                           ],
                           "alignItems": "center",
@@ -116704,7 +116738,7 @@
                           "fill": "$bg-tertiary",
                           "cornerRadius": "$radius-sm",
                           "padding": [
-                            "$Space/hairline",
+                            "$Space/2xs",
                             "$Space/xs-plus"
                           ],
                           "alignItems": "center",
@@ -116937,7 +116971,7 @@
                               "fill": "$accent-tint",
                               "cornerRadius": "$radius-pill",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm-plus"
                               ],
                               "alignItems": "center",
@@ -117711,7 +117745,7 @@
                           "fill": "$success-tint",
                           "cornerRadius": "$radius-sm",
                           "padding": [
-                            "$Space/hairline",
+                            "$Space/2xs",
                             "$Space/xs-plus"
                           ],
                           "alignItems": "center",
@@ -117792,7 +117826,7 @@
                           "fill": "$success-tint",
                           "cornerRadius": "$radius-sm",
                           "padding": [
-                            "$Space/hairline",
+                            "$Space/2xs",
                             "$Space/xs-plus"
                           ],
                           "alignItems": "center",
@@ -118206,7 +118240,7 @@
                       "name": "ft-selected",
                       "width": "fill_container",
                       "layout": "vertical",
-                      "gap": "$Space/hairline",
+                      "gap": "$Space/2xs",
                       "children": [
                         {
                           "type": "frame",
@@ -124745,7 +124779,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "layout": "vertical",
-              "gap": "$Space/hairline",
+              "gap": "$Space/2xs",
               "padding": [
                 "$Space/lg-plus",
                 "$Space/md"
@@ -125211,7 +125245,7 @@
                                   "fill": "$accent-primary",
                                   "cornerRadius": "$radius-lg",
                                   "padding": [
-                                    "$Space/hairline",
+                                    "$Space/2xs",
                                     "$Space/sm"
                                   ],
                                   "justifyContent": "center",
@@ -126137,7 +126171,7 @@
                               "stroke": "$border-subtle",
                               "strokeWidth": 1,
                               "strokeAlignment": "inner",
-                              "gap": "$Space/hairline",
+                              "gap": "$Space/2xs",
                               "padding": "$Space/xs",
                               "children": [
                                 {
@@ -127348,7 +127382,7 @@
                           "fill": "$accent-primary",
                           "cornerRadius": "$radius-lg",
                           "padding": [
-                            "$Space/hairline",
+                            "$Space/2xs",
                             "$Space/sm"
                           ],
                           "justifyContent": "center",
@@ -128918,7 +128952,7 @@
                               "fill": "$bg-secondary",
                               "cornerRadius": "$radius-sm",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/xs-plus"
                               ],
                               "children": [
@@ -130378,7 +130412,7 @@
                           "fill": "$accent-primary",
                           "cornerRadius": "$radius-lg",
                           "padding": [
-                            "$Space/hairline",
+                            "$Space/2xs",
                             "$Space/sm"
                           ],
                           "justifyContent": "center",
@@ -131903,7 +131937,7 @@
                           "fill": "$bg-secondary",
                           "cornerRadius": "$radius-sm",
                           "padding": [
-                            "$Space/hairline",
+                            "$Space/2xs",
                             "$Space/xs-plus"
                           ],
                           "children": [
@@ -132064,7 +132098,7 @@
                           "id": "f017wB",
                           "name": "text-col",
                           "layout": "vertical",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "children": [
                             {
                               "type": "text",
@@ -132118,7 +132152,7 @@
                           "id": "yinze",
                           "name": "text-col",
                           "layout": "vertical",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "children": [
                             {
                               "type": "text",
@@ -132206,7 +132240,7 @@
                           "id": "mG96s",
                           "name": "text-col",
                           "layout": "vertical",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "children": [
                             {
                               "type": "text",
@@ -132279,7 +132313,7 @@
                           "id": "GMdVS",
                           "name": "text-col",
                           "layout": "vertical",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "children": [
                             {
                               "type": "text",
@@ -132352,7 +132386,7 @@
                           "id": "cJ3iT",
                           "name": "text-col",
                           "layout": "vertical",
-                          "gap": "$Space/hairline",
+                          "gap": "$Space/2xs",
                           "children": [
                             {
                               "type": "text",
@@ -132672,7 +132706,7 @@
                               "fill": "$accent-primary",
                               "cornerRadius": "$radius-lg",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/sm"
                               ],
                               "justifyContent": "center",
@@ -132759,7 +132793,7 @@
                           "fill": "$bg-secondary",
                           "cornerRadius": "$radius-sm",
                           "padding": [
-                            "$Space/hairline",
+                            "$Space/2xs",
                             "$Space/xs-plus"
                           ],
                           "children": [
@@ -135593,7 +135627,7 @@
                           "fill": "$accent-primary",
                           "cornerRadius": "$radius-lg",
                           "padding": [
-                            "$Space/hairline",
+                            "$Space/2xs",
                             "$Space/sm"
                           ],
                           "justifyContent": "center",
@@ -137043,7 +137077,7 @@
                               "fill": "$bg-secondary",
                               "cornerRadius": "$radius-sm",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/xs-plus"
                               ],
                               "children": [
@@ -137383,7 +137417,7 @@
                           "fill": "$accent-primary",
                           "cornerRadius": "$radius-lg",
                           "padding": [
-                            "$Space/hairline",
+                            "$Space/2xs",
                             "$Space/sm"
                           ],
                           "justifyContent": "center",
@@ -138831,7 +138865,7 @@
                               "fill": "$bg-secondary",
                               "cornerRadius": "$radius-sm",
                               "padding": [
-                                "$Space/hairline",
+                                "$Space/2xs",
                                 "$Space/xs-plus"
                               ],
                               "children": [
@@ -145946,7 +145980,7 @@
                                       "name": "通知2",
                                       "width": "fill_container",
                                       "layout": "vertical",
-                                      "gap": "$Space/hairline",
+                                      "gap": "$Space/2xs",
                                       "children": [
                                         {
                                           "type": "frame",
@@ -146166,7 +146200,7 @@
                                   "name": "通知2",
                                   "width": "fill_container",
                                   "layout": "vertical",
-                                  "gap": "$Space/hairline",
+                                  "gap": "$Space/2xs",
                                   "children": [
                                     {
                                       "type": "frame",
@@ -150198,7 +150232,7 @@
                           "fill": "$accent-primary",
                           "cornerRadius": "$radius-lg",
                           "padding": [
-                            "$Space/hairline",
+                            "$Space/2xs",
                             "$Space/sm"
                           ],
                           "justifyContent": "center",
@@ -152803,7 +152837,7 @@
                                       "cornerRadius": "$radius-md",
                                       "gap": "$Space/xs",
                                       "padding": [
-                                        "$Space/hairline",
+                                        "$Space/2xs",
                                         "$Space/sm"
                                       ],
                                       "alignItems": "center",
@@ -153061,7 +153095,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "layout": "vertical",
-              "gap": "$Space/hairline",
+              "gap": "$Space/2xs",
               "padding": [
                 "$Space/lg-plus",
                 "$Space/md"
@@ -154354,7 +154388,7 @@
                       "name": "selection-tree",
                       "width": "fill_container",
                       "layout": "vertical",
-                      "gap": "$Space/hairline",
+                      "gap": "$Space/2xs",
                       "padding": [
                         "$Space/sm",
                         "$Space/md"
@@ -154592,7 +154626,7 @@
                                   "fill": "$success-tint",
                                   "cornerRadius": "$radius-pill",
                                   "padding": [
-                                    "$Space/hairline",
+                                    "$Space/2xs",
                                     "$Space/sm"
                                   ],
                                   "children": [
@@ -154672,7 +154706,7 @@
                                   "fill": "$success-tint",
                                   "cornerRadius": "$radius-pill",
                                   "padding": [
-                                    "$Space/hairline",
+                                    "$Space/2xs",
                                     "$Space/sm"
                                   ],
                                   "children": [
@@ -154752,7 +154786,7 @@
                                   "fill": "$info-tint",
                                   "cornerRadius": "$radius-pill",
                                   "padding": [
-                                    "$Space/hairline",
+                                    "$Space/2xs",
                                     "$Space/sm"
                                   ],
                                   "children": [
@@ -155374,7 +155408,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "layout": "vertical",
-              "gap": "$Space/hairline",
+              "gap": "$Space/2xs",
               "padding": [
                 "$Space/lg-plus",
                 "$Space/md"
@@ -156188,7 +156222,7 @@
                                   "id": "HGBQU",
                                   "name": "tt",
                                   "layout": "vertical",
-                                  "gap": "$Space/hairline",
+                                  "gap": "$Space/2xs",
                                   "children": [
                                     {
                                       "type": "text",
@@ -156251,7 +156285,7 @@
                                   "id": "OxN2m",
                                   "name": "tt",
                                   "layout": "vertical",
-                                  "gap": "$Space/hairline",
+                                  "gap": "$Space/2xs",
                                   "children": [
                                     {
                                       "type": "text",
@@ -156314,7 +156348,7 @@
                                   "id": "CeSSc",
                                   "name": "tt",
                                   "layout": "vertical",
-                                  "gap": "$Space/hairline",
+                                  "gap": "$Space/2xs",
                                   "children": [
                                     {
                                       "type": "text",
@@ -156377,7 +156411,7 @@
                                   "id": "P1j9aR",
                                   "name": "tt",
                                   "layout": "vertical",
-                                  "gap": "$Space/hairline",
+                                  "gap": "$Space/2xs",
                                   "children": [
                                     {
                                       "type": "text",
@@ -156546,7 +156580,7 @@
                           "layout": "vertical",
                           "gap": "$Space/sm",
                           "padding": [
-                            "$Space/hairline",
+                            "$Space/2xs",
                             "$Space/none",
                             "$Space/none",
                             "$Space/none"
@@ -156835,7 +156869,7 @@
                           "fill": "$accent-primary",
                           "cornerRadius": "$radius-lg",
                           "padding": [
-                            "$Space/hairline",
+                            "$Space/2xs",
                             "$Space/sm"
                           ],
                           "justifyContent": "center",
@@ -158872,7 +158906,7 @@
                           "fill": "$accent-primary",
                           "cornerRadius": "$radius-lg",
                           "padding": [
-                            "$Space/hairline",
+                            "$Space/2xs",
                             "$Space/sm"
                           ],
                           "justifyContent": "center",
@@ -160598,7 +160632,7 @@
                           "fill": "$accent-primary",
                           "cornerRadius": "$radius-lg",
                           "padding": [
-                            "$Space/hairline",
+                            "$Space/2xs",
                             "$Space/sm"
                           ],
                           "justifyContent": "center",
@@ -162945,7 +162979,7 @@
                   "width": "fill_container",
                   "height": 52,
                   "layout": "vertical",
-                  "gap": "$Space/hairline"
+                  "gap": "$Space/2xs"
                 },
                 {
                   "type": "frame",
@@ -163195,7 +163229,7 @@
                   "width": "fill_container",
                   "height": 52,
                   "layout": "vertical",
-                  "gap": "$Space/hairline",
+                  "gap": "$Space/2xs",
                   "children": [
                     {
                       "type": "text",
@@ -163472,7 +163506,7 @@
                   "width": "fill_container",
                   "height": 52,
                   "layout": "vertical",
-                  "gap": "$Space/hairline",
+                  "gap": "$Space/2xs",
                   "children": [
                     {
                       "type": "text",
@@ -163965,7 +163999,7 @@
                   "width": "fill_container",
                   "height": 52,
                   "layout": "vertical",
-                  "gap": "$Space/hairline"
+                  "gap": "$Space/2xs"
                 },
                 {
                   "type": "frame",
@@ -165135,10 +165169,6 @@
       "type": "string",
       "value": "DM Sans"
     },
-    "Space/hairline": {
-      "type": "number",
-      "value": 2
-    },
     "Space/xs": {
       "type": "number",
       "value": 4
@@ -165354,6 +165384,10 @@
     "Space/none": {
       "type": "number",
       "value": 0
+    },
+    "Space/2xs": {
+      "type": "number",
+      "value": 2
     }
   },
   "fileToken": "cecc96d9-72a0-4f28-938c-34bd8477093c"
