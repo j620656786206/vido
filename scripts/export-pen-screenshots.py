@@ -13,8 +13,10 @@ Note: Pen 1.2.5 removed the `get_screenshot` MCP tool (surface is now browser /
 execute / get_app_state / get_guidelines). Screens are exported via `execute` +
 `Export(...)` at scale 1 into a temp dir, then renamed into flow folders and
 downscaled with `sips -Z 400` to keep the historical 400px-long-edge thumbnail
-convention. A text-dense spec screen (flow-j-specs) is unreadable at that size —
-see backlog-pen-spec-screen-readable-export.
+convention. The two text-dense flows that document the design system itself
+(design-system, flow-j-specs) are exempt: they export at 2x and are constrained by
+WIDTH (>= 1400px, never below 1:1), because a long-edge cap makes a tall spec page
+narrower — the opposite of readable. See disc-2026-09-pen-screenshot-export-too-small.
 
 Layout convention (2026-06-05 A–J merged-block rework):
   Screens are named with flow codes `{Flow}{seq}-{D|M}` (desktop/mobile) on the
@@ -41,6 +43,37 @@ MCP_BIN_CANDIDATES = (
 )
 
 
+def png_width(path):
+    """Pixel width of a PNG, or None if sips cannot read it."""
+    out = subprocess.run(
+        ["sips", "-g", "pixelWidth", path], capture_output=True, text=True
+    )
+    if out.returncode != 0:
+        return None
+    for line in out.stdout.splitlines():
+        if "pixelWidth:" in line:
+            return int(line.split(":")[1].strip())
+    return None
+
+
+def resize_to_width(path, min_width):
+    """Constrain a 2x export by width, never rendering it below 1:1.
+
+    The image on disk is 2x the design's own size, so native width is width // 2.
+    Target is whichever is larger: the readable floor, or native width. A page
+    already at or under the target is left alone rather than upscaled.
+    """
+    doubled = png_width(path)
+    if doubled is None:
+        return None
+    target = max(min_width, doubled // 2)
+    if doubled <= target:
+        return None
+    return subprocess.run(
+        ["sips", "--resampleWidth", str(target), path], capture_output=True
+    )
+
+
 def resolve_mcp_bin():
     """First existing candidate, or None."""
     for candidate in MCP_BIN_CANDIDATES:
@@ -50,6 +83,18 @@ def resolve_mcp_bin():
 
 
 MCP_BIN = resolve_mcp_bin()
+
+# Text-dense pages document the design system itself. At the 400px thumbnail size
+# their 12px labels are unreadable, so reviewing this repo's own design docs meant
+# re-exporting by hand every time (disc-2026-09-pen-screenshot-export-too-small).
+# These flows are exported at 2x and then constrained by WIDTH, never by long edge:
+# a spec page is 1240 wide and 3000+ tall, so a long-edge cap makes it NARROWER,
+# which is the opposite of what readability needs.
+READABLE_FLOWS = {"design-system", "flow-j-specs"}
+# Floor, not ceiling: a page wider than this keeps its native 1:1 width rather than
+# being shrunk below legibility.
+READABLE_MIN_WIDTH = 1400
+THUMBNAIL_LONG_EDGE = 400
 
 # Screen node ID -> (flow_folder, filename). Filename == canvas frame code (lowercased).
 SCREENS = {
@@ -165,6 +210,10 @@ SCREENS = {
     "xlrAO": ("design-system", "design-system-reference-light"),
     "wrjOF": ("design-system", "component-anatomy"),
     "sJzat": ("design-system", "component-library"),
+    # 日巡 (Light) 證據畫面 — 同一份稿加 theme:{mode:"light"}，變數自動翻，用來證偽主題軸
+    "m3N3ng": ("design-system", "light-b3p-d"),
+    "zLqK2": ("design-system", "light-a2p-d"),
+    "DcK0l": ("design-system", "light-h1-d-v3"),
     # UX Redesign Phase 1b — Design Language v2 + Navigation Shell v2
     "V2Kez": ("design-system", "design-language-v2"),
     "CLo58": ("design-system", "navigation-shell-v2"),
@@ -396,18 +445,24 @@ def main():
         # since Pen 1.2.5). Export writes <nodeId>.png per node into tmpdir.
         tmpdir = tempfile.mkdtemp(prefix="pen-export-")
         failed_chunks = 0
-        node_ids = list(SCREENS.keys())
         chunk_size = 20
-        for ci in range(0, len(node_ids), chunk_size):
-            chunk = node_ids[ci:ci + chunk_size]
-            js = f'Export({json.dumps(chunk)}, "png", {json.dumps(tmpdir)}, {{scale: 1}})'
-            resp = mcp_call(proc, ci + 10, "tools/call", {
-                "name": "execute",
-                "arguments": {"filePath": PEN_FILE, "input": js},
-            })
-            if not resp or resp.get("error"):
-                failed_chunks += 1
-                print(f"  FAIL: export chunk {ci // chunk_size + 1} - {resp.get('error') if resp else 'no response'}")
+        # Two passes: thumbnails at 1x, the text-dense doc pages at 2x so there is
+        # resolution left to spend after the width constraint below.
+        thumb_ids = [n for n, (f, _) in SCREENS.items() if f not in READABLE_FLOWS]
+        readable_ids = [n for n, (f, _) in SCREENS.items() if f in READABLE_FLOWS]
+        req_id = 10
+        for scale, node_ids in ((1, thumb_ids), (2, readable_ids)):
+            for ci in range(0, len(node_ids), chunk_size):
+                chunk = node_ids[ci:ci + chunk_size]
+                js = f'Export({json.dumps(chunk)}, "png", {json.dumps(tmpdir)}, {{scale: {scale}}})'
+                resp = mcp_call(proc, req_id, "tools/call", {
+                    "name": "execute",
+                    "arguments": {"filePath": PEN_FILE, "input": js},
+                })
+                req_id += 1
+                if not resp or resp.get("error"):
+                    failed_chunks += 1
+                    print(f"  FAIL: export chunk at {scale}x - {resp.get('error') if resp else 'no response'}")
 
         saved = 0
         for node_id, (flow_dir, filename) in SCREENS.items():
@@ -419,8 +474,13 @@ def main():
             shutil.move(src, dst)
             # A silent downscale failure would leave a full-size PNG behind and
             # still look like success, so the return code is checked.
-            sips = subprocess.run(["sips", "-Z", "400", dst], capture_output=True)
-            if sips.returncode != 0:
+            if flow_dir in READABLE_FLOWS:
+                sips = resize_to_width(dst, READABLE_MIN_WIDTH)
+            else:
+                sips = subprocess.run(
+                    ["sips", "-Z", str(THUMBNAIL_LONG_EDGE), dst], capture_output=True
+                )
+            if sips is not None and sips.returncode != 0:
                 print(f"  WARN: {flow_dir}/{filename}.png - sips downscale failed, PNG left at full size")
             print(f"  OK: {flow_dir}/{filename}.png ({os.path.getsize(dst) // 1024} KB)")
             saved += 1
