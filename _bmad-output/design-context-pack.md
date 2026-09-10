@@ -11,7 +11,7 @@
 
 - **使用者**：自架媒體庫的中文（台灣）使用者，重視繁中介面、字幕品質、整齊的中繼資料。
 - **介面語言**：**繁體中文 zh-TW 為預設**（簡體一律以官方 C++ OpenCC helper 的 `s2twp` 轉繁；遷移期間保留 Go backend fallback）。
-- **平台**：響應式 Web App（桌面為主、手機可用）。深色主題 only（無淺色切換）。
+- **平台**：響應式 Web App（桌面為主、手機可用）。**雙主題**：夜行（Nightwalk，深色，預設）／日巡（Daywalk，淺色，opt-in）。
 
 ---
 
@@ -20,7 +20,7 @@
 | 項目 | 約束 |
 |------|------|
 | 前端 | React + TanStack Router、Tailwind CSS v4 |
-| 主題 | **深色主題 only**，色彩以 CSS 變數 token 表達（見 §3） |
+| 主題 | **夜行（深色，預設）＋ 日巡（淺色）**。`:root` 就是夜行；淺色寫在 `[data-theme='light']`，深色**不寫任何 attribute**。色彩以 CSS 變數 token 表達（見 §3） |
 | 語言/排版 | 繁中優先；**用全形標點「，。：」**，避免簡體殘留 |
 | 響應式 | Tailwind 預設斷點：`sm 640 / md 768 / lg 1024 / xl 1280`；手機需單欄可讀、不橫向溢出 |
 | 無障礙 | 深色底文字對比、觸控目標 ≥44px、可見焦點態、圖示/星等需文字替代（`aria-label`） |
@@ -35,13 +35,37 @@
 設計稿中**畫面內部 UI 的所有顏色/間距，都應對齊這些 token**。任何一次性硬編碼色值 = **design-system drift**，review 時要揪出。
 
 ### 色彩
+
+夜行（預設）／日巡（淺色）。**同一個 token 名稱、兩組值**；設計稿 `ux-design.pen` 的顏色變數名與這裡一字不差。
+
 ```
-背景      --bg-primary #1b2336   --bg-secondary #24304a   --bg-tertiary #2e3b56
-邊框      --border-subtle #374461
-主色      --accent-primary #3b82f6   --accent-hover #60a5fa   --accent-pressed #2563eb
-語意      --success #22c55e   --error #ef4444   --warning #f59e0b   --info #06b6d4
-文字      --text-primary #f2f2f2   --text-secondary #b3b3b3   --text-muted #808080   --text-inverse #1b2336
+                        夜行 Nightwalk        日巡 Daywalk
+背景  --bg-primary       #0c1512              #faf6ea
+      --bg-secondary     #132320              #f0e7d3
+      --bg-tertiary      #1b302b              #e5d9c3   ← 日巡的最深階，所有文字對比的最壞情況
+邊框  --border-subtle    #274039              #cdbe9b
+主色  --accent-primary   #c9a24b              #886208   泥金
+      --accent-hover     #e0be72              #725205   ⚠️ 日巡往「暗」走，不是變亮
+      --accent-pressed   #a8853c              #5b4103
+      --accent-subtle    #c9a24b26            #c9a24b40  active 導覽淡洗
+      --accent-tint      #c9a24b1f            #c9a24b33  徽章底
+      --accent-text      #e0be72              #654804    要被「讀」的金
+語意  --success          #6fbfa8              #0b7352    青碧＝正在發生
+      --warning          #d4763f              #a6510c    赭＝你要求了但沒發生
+      --error            #c0392b              #c0392b    硃砂，唯一不隨主題翻轉
+      --info             #1391b2              #0b657d    靛青＝純告知
+      *-tint / *-text    各語意都有             日巡 tint 的 alpha 會上升
+文字  --text-primary     #eae4d6              #16231d
+      --text-secondary   #a8b3ac              #32493e
+      --text-muted       #8fa096              #41554c
+      --text-disabled    #5e6e66              #7a8980   刻意非 AA，只給停用控制項
+      --text-inverse     #0c1512              #faf6ea   ⚠️ 不等於「暗底」，日巡是紙色
+      --text-on-accent   #14161a              #fdfaf2   金色填色上的字
+      --text-on-scrim    #faf6ea              #faf6ea   海報遮罩上的字，兩主題相同
+遮罩  --overlay-scrim    #000000b3            #0c1512b3
 ```
+
+**內文顏色規則**：`--accent-primary` / `--error` 是拿來**填色與按**的，當內文字對比不足（最差 3.57 / 2.42）。要被讀的文字一律用 `--accent-text` / `--error-text`。
 
 ### 圓角 / 陰影
 ```
@@ -49,15 +73,32 @@
 --shadow-sm / md / lg / xl（深色用，黑色 30%→60% 遞增）
 ```
 
-### 間距（8pt 為主節奏）
+### 間距
+
+程式碼走 Tailwind 4px 基準（4 / 8 / 12 / 16 / 24 / 32）。設計稿的階梯較長，因為要描述已經畫出來的版面，變數名為 `Space/*`：
+
 ```
---gap-xs 4 / sm 8 / md 12 / lg 16 / xl 24 / 2xl 32
+2 hairline · 4 xs · 6 xs-plus · 8 sm · 10 sm-plus · 12 md · 14 md-plus · 16 lg
+20 lg-plus · 24 xl · 28 xl-plus · 32 2xl · 40 3xl · 48 4xl · 64 5xl · 80 6xl
 ```
 
-### 字型
-- **介面內文字**：`Noto Sans TC`（primary）。
-- **等寬/技術數值**：`JetBrains Mono`（檔名、編碼、解析度等技術徽章）。
-- **畫布大標題（流程標題註解）**：`DM Sans`（見 §5）。
+半階（6 / 10 / 14 / 28）對應 Tailwind 的 `.5` 級距，不是隨手畫的數字。**不要在設計稿裡寫階梯以外的數字。**
+
+### 字型與字級
+- **介面內文字**：`Noto Sans TC`（設計稿變數 `Type/Family/Primary`）。
+- **等寬/技術數值**：`JetBrains Mono`（`Type/Family/Mono`）——檔名、編碼、解析度、任何會被跨列比較的數字。
+- **畫布大標題（流程標題註解）**：`DM Sans`（`Type/Family/Canvas`，見 §5）。**只用於畫布註記，不是產品字體。**
+
+字級變數（`Type/*/Size`，px）：
+
+```
+Display L 36 · Display M 32 · Title XL 28 · Title L 24 · Title M 22 · Title S 20
+Heading L 18 · Heading M 16 · Heading S 15
+Body L 14（預設內文）· Body M 13 · Body S 12（標籤）
+Meta M 11（殼層 chrome）· Meta S 10
+```
+
+**硬界線**：11px 只給「不是內容的東西」（分頁列、側軌群組標題）。使用者要讀的字不得低於 12px；可點擊的目的地或動作是 14px。
 
 ---
 

@@ -42,7 +42,7 @@
                       "fill": "$text-primary",
                       "content": "Design System Reference",
                       "fontFamily": "$Type/Family/Canvas",
-                      "fontSize": "$Type/Display/Size",
+                      "fontSize": "$Type/Display/M/Size",
                       "fontWeight": "700"
                     },
                     {
@@ -1087,7 +1087,7 @@
                               "fill": "$text-primary",
                               "content": "頁面標題 Page Title",
                               "fontFamily": "$Type/Family/Canvas",
-                              "fontSize": "$Type/Display/Size",
+                              "fontSize": "$Type/Display/M/Size",
                               "fontWeight": "700"
                             }
                           ]
@@ -3580,7 +3580,7 @@
                       "fill": "$text-primary",
                       "content": "Design Language v2",
                       "fontFamily": "$Type/Family/Canvas",
-                      "fontSize": "$Type/Display/Size",
+                      "fontSize": "$Type/Display/M/Size",
                       "fontWeight": "700"
                     },
                     {
@@ -5532,7 +5532,7 @@
                               "fill": "$text-primary",
                               "content": "頁面標題 Page Title",
                               "fontFamily": "$Type/Family/Canvas",
-                              "fontSize": "$Type/Display/Size",
+                              "fontSize": "$Type/Display/M/Size",
                               "fontWeight": "700"
                             }
                           ]
@@ -7503,7 +7503,7 @@
                       "fill": "$text-primary",
                       "content": "Navigation Shell v2",
                       "fontFamily": "$Type/Family/Canvas",
-                      "fontSize": "$Type/Display/Size",
+                      "fontSize": "$Type/Display/M/Size",
                       "fontWeight": "700"
                     },
                     {
@@ -13042,7 +13042,7 @@
                           "fill": "$text-muted",
                           "content": "🎬",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Display/Size",
+                          "fontSize": "$Type/Display/M/Size",
                           "fontWeight": "normal"
                         },
                         {
@@ -13052,7 +13052,7 @@
                           "fill": "$text-muted",
                           "content": "📁",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Display/Size",
+                          "fontSize": "$Type/Display/M/Size",
                           "fontWeight": "normal"
                         }
                       ]
@@ -13177,7 +13177,7 @@
                           "fill": "$text-muted",
                           "content": "📁",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Display/Size",
+                          "fontSize": "$Type/Display/M/Size",
                           "fontWeight": "normal"
                         }
                       ]
@@ -13302,7 +13302,7 @@
                           "fill": "$text-muted",
                           "content": "🔎",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Display/Size",
+                          "fontSize": "$Type/Display/M/Size",
                           "fontWeight": "normal"
                         }
                       ]
@@ -38873,7 +38873,7 @@
                           "fill": "#eae4d6cc",
                           "content": "未",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Display/Size",
+                          "fontSize": "$Type/Display/L/Size",
                           "fontWeight": "700"
                         }
                       ]
@@ -39748,7 +39748,7 @@
                           "fill": "#eae4d6cc",
                           "content": "未",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Display/Size",
+                          "fontSize": "$Type/Display/L/Size",
                           "fontWeight": "700"
                         }
                       ]
@@ -42348,7 +42348,7 @@
                               "fill": "#eae4d6cc",
                               "content": "你",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Display/Size",
+                              "fontSize": "$Type/Display/L/Size",
                               "fontWeight": "700"
                             }
                           ]
@@ -44345,7 +44345,7 @@
                               "fill": "$text-primary",
                               "content": "你的名字",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Display/Size",
+                              "fontSize": "$Type/Display/M/Size",
                               "fontWeight": "700"
                             },
                             {
@@ -47565,7 +47565,7 @@
                               "fill": "$text-primary",
                               "content": "進擊的巨人",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Display/Size",
+                              "fontSize": "$Type/Display/M/Size",
                               "fontWeight": "700"
                             },
                             {
@@ -86580,7 +86580,7 @@
                                   "fill": "$text-primary",
                                   "content": "你的名字",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Display/Size",
+                                  "fontSize": "$Type/Display/M/Size",
                                   "fontWeight": "700"
                                 },
                                 {
@@ -88591,7 +88591,7 @@
                                   "fill": "$text-primary",
                                   "content": "你的名字",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Display/Size",
+                                  "fontSize": "$Type/Display/M/Size",
                                   "fontWeight": "700"
                                 },
                                 {
@@ -90242,7 +90242,7 @@
                                   "fill": "$text-primary",
                                   "content": "你的名字",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Display/Size",
+                                  "fontSize": "$Type/Display/M/Size",
                                   "fontWeight": "700"
                                 },
                                 {
@@ -91881,7 +91881,7 @@
                                   "fill": "$text-primary",
                                   "content": "你的名字",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Display/Size",
+                                  "fontSize": "$Type/Display/M/Size",
                                   "fontWeight": "700"
                                 },
                                 {
@@ -93531,7 +93531,7 @@
                                   "fill": "$text-primary",
                                   "content": "你的名字",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Display/Size",
+                                  "fontSize": "$Type/Display/M/Size",
                                   "fontWeight": "700"
                                 },
                                 {
@@ -95298,7 +95298,7 @@
                                   "fill": "$text-primary",
                                   "content": "你的名字",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Display/Size",
+                                  "fontSize": "$Type/Display/M/Size",
                                   "fontWeight": "700"
                                 },
                                 {
@@ -96994,7 +96994,7 @@
                                   "fill": "$text-primary",
                                   "content": "你的名字",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Display/Size",
+                                  "fontSize": "$Type/Display/M/Size",
                                   "fontWeight": "700"
                                 },
                                 {
@@ -101022,7 +101022,7 @@
                                   "fill": "$text-primary",
                                   "content": "你的名字",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Display/Size",
+                                  "fontSize": "$Type/Display/M/Size",
                                   "fontWeight": "700"
                                 },
                                 {
@@ -120274,7 +120274,7 @@
                           "fill": "$text-muted",
                           "content": "💬",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Display/Size",
+                          "fontSize": "$Type/Display/M/Size",
                           "fontWeight": "normal"
                         }
                       ]
@@ -131979,7 +131979,7 @@
                       "fill": "$text-primary",
                       "content": "你的名字",
                       "fontFamily": "$Type/Family/Canvas",
-                      "fontSize": "$Type/Display/Size",
+                      "fontSize": "$Type/Display/M/Size",
                       "fontWeight": "700"
                     },
                     {
@@ -135815,7 +135815,7 @@
                               "fill": "$text-primary",
                               "content": "沙丘：第二部",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Display/Size",
+                              "fontSize": "$Type/Display/L/Size",
                               "fontWeight": "700"
                             },
                             {
@@ -136531,7 +136531,7 @@
                               "fill": "$text-primary",
                               "content": "沙丘：第二部",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Display/Size",
+                              "fontSize": "$Type/Display/L/Size",
                               "fontWeight": "700"
                             },
                             {
@@ -169567,7 +169567,7 @@
                                   "fill": "$text-primary",
                                   "content": "你的名字",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Display/Size",
+                                  "fontSize": "$Type/Display/M/Size",
                                   "fontWeight": "700"
                                 },
                                 {
@@ -170718,7 +170718,7 @@
                               "fill": "$text-primary",
                               "content": "進擊的巨人",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Display/Size",
+                              "fontSize": "$Type/Display/M/Size",
                               "fontWeight": "700"
                             },
                             {
@@ -172962,7 +172962,7 @@
                               "fill": "$text-primary",
                               "content": "你的名字",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Display/Size",
+                              "fontSize": "$Type/Display/M/Size",
                               "fontWeight": "700"
                             },
                             {
@@ -181970,10 +181970,6 @@
       "type": "string",
       "value": "DM Sans"
     },
-    "Type/Display/Size": {
-      "type": "number",
-      "value": 32
-    },
     "Type/Title/XL/Size": {
       "type": "number",
       "value": 28
@@ -182089,6 +182085,14 @@
     "Space/6xl": {
       "type": "number",
       "value": 80
+    },
+    "Type/Display/L/Size": {
+      "type": "number",
+      "value": 36
+    },
+    "Type/Display/M/Size": {
+      "type": "number",
+      "value": 32
     }
   },
   "fileToken": "cecc96d9-72a0-4f28-938c-34bd8477093c"
