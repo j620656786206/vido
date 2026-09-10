@@ -1,6 +1,6 @@
 # Story 6.12: 同意畫面金錢陷阱 —— 全選範圍、錯誤位置、砍線、總額 ≈、字級（前端）
 
-Status: ready-for-review
+Status: done
 
 ## Story
 
