@@ -4383,7 +4383,7 @@
                       "fill": "$text-secondary",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "每個文字 token 對 bg-primary 都過 WCAG AA。text-muted 由 #808080（3.97 ✗）調亮為 #8FA096（6.71 ✓）；新增 text-disabled 承接「刻意非 AA」的裝飾／停用層級——禁止承載必要資訊（Rule TC-1）。",
+                      "content": "量法同 apps/web/src/styles-contrast.spec.ts：對 bg-primary／secondary／tertiary 三個底色取最差值（text-primary 另含 accent-subtle 疊底），夜行與日巡再取更差的一邊。text-muted 由 #808080（2.83 ✗）調亮為 #8FA096（5.08 ✓）；text-disabled 是唯一刻意非 AA 的 token。",
                       "fontFamily": "$Type/Family/Primary",
                       "fontSize": "$Type/Body/M/Size",
                       "fontWeight": "normal"
@@ -4479,7 +4479,7 @@
                                   "id": "Nn4mr",
                                   "name": "bt",
                                   "fill": "$success",
-                                  "content": "AA ✓ 14.00",
+                                  "content": "AA ✓ 8.50",
                                   "fontFamily": "$Type/Family/Primary",
                                   "fontSize": "$Type/Body/S/Size",
                                   "fontWeight": "600"
@@ -4569,7 +4569,7 @@
                                   "id": "S4uza",
                                   "name": "bt",
                                   "fill": "$success",
-                                  "content": "AA ✓ 7.47",
+                                  "content": "AA ✓ 6.45",
                                   "fontFamily": "$Type/Family/Primary",
                                   "fontSize": "$Type/Body/S/Size",
                                   "fontWeight": "600"
@@ -4645,7 +4645,7 @@
                                   "id": "Lksfy",
                                   "name": "mold",
                                   "fill": "$text-disabled",
-                                  "content": "was #808080 · 3.97 ✗",
+                                  "content": "was #808080 · 2.83 ✗",
                                   "fontFamily": "$Type/Family/Mono",
                                   "fontSize": "$Type/Meta/M/Size",
                                   "fontWeight": "normal"
@@ -4669,7 +4669,7 @@
                                   "id": "U6HNn",
                                   "name": "bt",
                                   "fill": "$success",
-                                  "content": "AA ✓ 6.71",
+                                  "content": "AA ✓ 5.08",
                                   "fontFamily": "$Type/Family/Primary",
                                   "fontSize": "$Type/Body/S/Size",
                                   "fontWeight": "600"
@@ -4759,7 +4759,7 @@
                                   "id": "fDDQj",
                                   "name": "bt",
                                   "fill": "$warning",
-                                  "content": "非 AA・僅裝飾",
+                                  "content": "非 AA 2.59・僅裝飾",
                                   "fontFamily": "$Type/Family/Primary",
                                   "fontSize": "$Type/Body/S/Size",
                                   "fontWeight": "600"
@@ -4797,7 +4797,7 @@
                       "fill": "$text-secondary",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "強調色／錯誤色當『內文字（<18px）』對比不足（accent-primary 4.26、error 2.97 ✗）。內文字改用 accent-text／error-text；base 色保留給填色、圖示、≥大字／粗體。",
+                      "content": "強調色／錯誤色當『內文字（<18px）』對比不足：accent-primary 最差 3.57 ✗（日巡・自身 tint 疊 bg-tertiary）、error 最差 2.42 ✗（夜行・error-tint 疊 bg-tertiary）。內文字改用 accent-text（5.31 ✓）／error-text（5.02 ✓）；base 色保留給填色、圖示、≥大字／粗體。",
                       "fontFamily": "$Type/Family/Primary",
                       "fontSize": "$Type/Body/M/Size",
                       "fontWeight": "normal"
@@ -4877,7 +4877,7 @@
                                       "id": "Isri7",
                                       "name": "bdt",
                                       "fill": "$error-text",
-                                      "content": "✗ 4.26",
+                                      "content": "✗ 3.57",
                                       "fontFamily": "$Type/Family/Mono",
                                       "fontSize": "$Type/Meta/M/Size",
                                       "fontWeight": "500"
@@ -4933,7 +4933,7 @@
                                       "id": "T80LG",
                                       "name": "bdt",
                                       "fill": "$success",
-                                      "content": "✓ 6.16",
+                                      "content": "✓ 5.31",
                                       "fontFamily": "$Type/Family/Mono",
                                       "fontSize": "$Type/Meta/M/Size",
                                       "fontWeight": "500"
@@ -5012,7 +5012,7 @@
                                       "id": "KGINH",
                                       "name": "bdt",
                                       "fill": "$error-text",
-                                      "content": "✗ 2.97",
+                                      "content": "✗ 2.42",
                                       "fontFamily": "$Type/Family/Mono",
                                       "fontSize": "$Type/Meta/M/Size",
                                       "fontWeight": "500"
@@ -5068,7 +5068,7 @@
                                       "id": "V1ZTog",
                                       "name": "bdt",
                                       "fill": "$success",
-                                      "content": "✓ 5.66",
+                                      "content": "✓ 5.02",
                                       "fontFamily": "$Type/Family/Mono",
                                       "fontSize": "$Type/Meta/M/Size",
                                       "fontWeight": "500"
@@ -6246,7 +6246,7 @@
                               "fill": "$text-secondary",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "內文 ≥4.5:1；大字／粗體 ≥3:1。text-disabled 為唯一非 AA token，禁止承載必要資訊（TC-1）。",
+                              "content": "內文 ≥4.5:1；大字／粗體 ≥3:1。數字為兩個主題、所有合法底色的最差值，與 styles-contrast.spec.ts 同一套量法。text-disabled 為唯一非 AA token，禁止承載必要資訊（TC-1）。",
                               "fontFamily": "$Type/Family/Primary",
                               "fontSize": "$Type/Body/S/Size",
                               "fontWeight": "normal"
@@ -160381,7 +160381,7 @@
                       "fill": "$warning",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "原提案的 --accent 不存在於 styles.css。正確 token 是 --accent-text #e0be72，不是 --accent-primary #c9a24b：圖示是前景，而 #c9a24b 在 --bg-tertiary 上只有 3.04:1，WCAG 1.4.11 非文字門檻是 3.0 —— 劇集列不帶自身背景，任何 hover／抬升表面就會讓它掉下去。--accent-text 最差 4.40:1，其 token 註解本就寫明是 AA-safe 前景色。",
+                      "content": "原提案的 --accent 不存在於 styles.css。正確 token 是 --accent-text #e0be72，不是 --accent-primary #c9a24b：圖示是前景，而 #c9a24b 在 --bg-tertiary 上日巡只有 3.96:1，WCAG 1.4.11 非文字門檻是 3.0 —— 餘裕只剩 0.96，劇集列不帶自身背景，任何 hover／抬升表面就會讓它掉下去。--accent-text 最差 5.31:1，其 token 註解本就寫明是 AA-safe 前景色。",
                       "fontFamily": "$Type/Family/Canvas",
                       "fontSize": "$Type/Body/S/Size",
                       "fontWeight": "normal"
@@ -164624,7 +164624,7 @@
                   "fill": "$text-secondary",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "⑥ 停用的是「控制項」，不是「說明」——checkbox 與其標籤降 $text-disabled（3.55:1，WCAG 1.4.3 明文豁免停用元件）；\n   兩句說明維持 $text-secondary（7.47:1，AA 通過），因為那正是使用者決定要不要去改 env var 的依據，讀不清等於沒寫。",
+                  "content": "⑥ 停用的是「控制項」，不是「說明」——checkbox 與其標籤降 $text-disabled（最差 2.59:1，WCAG 1.4.3 明文豁免停用元件）；\n   兩句說明維持 $text-secondary（最差 6.45:1，AA 通過），因為那正是使用者決定要不要去改 env var 的依據，讀不清等於沒寫。",
                   "lineHeight": 1.5,
                   "fontFamily": "$Type/Family/Primary",
                   "fontSize": "$Type/Body/M/Size",
