@@ -92,7 +92,7 @@ export function ModelPicker({ choices, selectedModelId, onSelect, disabled }: Mo
                 <span className="min-w-0 flex-1 truncate text-[13px] text-[var(--text-primary)]">
                   {choice.displayName}
                   {choice.isDefault && (
-                    <span className="ml-1.5 text-[11px] text-[var(--text-muted)]">（預設）</span>
+                    <span className="ml-1.5 text-xs text-[var(--text-muted)]">（預設）</span>
                   )}
                 </span>
                 <span
@@ -103,7 +103,7 @@ export function ModelPicker({ choices, selectedModelId, onSelect, disabled }: Mo
                 </span>
               </span>
 
-              <span className="flex items-center gap-2 pl-[26px] text-[11px] text-[var(--text-secondary)]">
+              <span className="flex items-center gap-2 pl-[26px] text-xs text-[var(--text-secondary)]">
                 <span
                   data-testid={`consent-model-grade-${choice.id}`}
                   title={choice.qualityNote}
@@ -139,7 +139,7 @@ export function ModelPicker({ choices, selectedModelId, onSelect, disabled }: Mo
               {note !== '' && (
                 <span
                   data-testid={`consent-model-note-${choice.id}`}
-                  className="pl-[26px] text-[11px] text-[var(--text-muted)]"
+                  className="pl-[26px] text-xs text-[var(--text-muted)]"
                 >
                   {note}
                 </span>

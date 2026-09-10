@@ -299,3 +299,53 @@ describe('section accessible names (sub-6-11 CR)', () => {
     expect(labels).toEqual(['選取整部 怪奇物語', '選取第 1 季', '選取第 2 季']);
   });
 });
+
+describe('the budget cut row (sub-6-12 AC #3)', () => {
+  const films = [movie('m1', '甲片'), movie('m2', '乙片'), movie('m3', '丙片')];
+
+  it('is emitted immediately before the row the ceiling refuses', () => {
+    expect(keys(rowsOf(films, { cutMediaId: 'm3' }))).toEqual(['m1', 'm2', 'budget-cut', 'm3']);
+  });
+
+  it('travels with its row when a sort re-orders the display', () => {
+    // 金額高→低 puts 丙片 first; the divider has to go with it, because the
+    // ceiling is walked over the state array and 丙片 is still the row it stops
+    // at. A divider that stayed at position 3 would name a different film.
+    const priced = [
+      movie('m1', '甲片', { estimatedUsd: 1 }),
+      movie('m2', '乙片', { estimatedUsd: 2 }),
+      movie('m3', '丙片', { estimatedUsd: 9 }),
+    ];
+    expect(keys(rowsOf(priced, { cutMediaId: 'm3', sort: 'cost-desc' }))).toEqual([
+      'budget-cut',
+      'm3',
+      'm2',
+      'm1',
+    ]);
+  });
+
+  it('follows its row into a series section', () => {
+    const rows = rowsOf([episode('e1', 1, 1), episode('e2', 1, 2)], {
+      cutMediaId: 'e2',
+      expandedOverride: { [sectionIds.series(SRS)]: true },
+    });
+    expect(keys(rows)).toEqual([sectionIds.series(SRS), 'e1', 'budget-cut', 'e2']);
+  });
+
+  it('is absent when the cut row is not being displayed — no divider beats a misplaced one', () => {
+    const rows = buildConsentRows({
+      candidates: films,
+      visibleIds: new Set(['m1', 'm2']),
+      sort: 'group',
+      expandedOverride: {},
+      searching: true,
+      cutMediaId: 'm3',
+    });
+    expect(keys(rows)).toEqual(['m1', 'm2']);
+  });
+
+  it('no cut id means the shipped projection, unchanged', () => {
+    expect(keys(rowsOf(films))).toEqual(['m1', 'm2', 'm3']);
+    expect(keys(rowsOf(films, { cutMediaId: null }))).toEqual(['m1', 'm2', 'm3']);
+  });
+});

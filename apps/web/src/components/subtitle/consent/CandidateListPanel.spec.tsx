@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { CandidateListPanel, type CandidateListPanelProps } from './CandidateListPanel';
-import { computeTotals } from './consentSelection';
+import { applyRouteFilter, applySearch, computeTotals } from './consentSelection';
 import type { GenerationCandidate } from '../../../services/subtitleService';
 
 const A = '0a54a9e2-3a67-4f3e-9f8e-a1c2d3e4f501';
@@ -52,13 +52,23 @@ function renderPanel(overrides?: Partial<CandidateListPanelProps>) {
   const selectedIds = overrides?.selectedIds ?? new Set([A, B]);
   const budgetText = overrides?.budgetText ?? '5.00';
   const budgetUsd = overrides?.budgetUsd !== undefined ? overrides.budgetUsd : 5;
+  const candidates = overrides?.candidates ?? CANDIDATES;
+  const filter = overrides?.filter ?? 'all';
+  const searchQuery = overrides?.searchQuery ?? '';
+  // sub-6-12: the container owns the visible set now, so the harness composes
+  // it exactly as GenerationConsentView does — chip ∘ search, one memo, feeding
+  // both the projection and the totals.
+  const visibleIds =
+    overrides?.visibleIds ??
+    new Set(applySearch(applyRouteFilter(candidates, filter), searchQuery).map((c) => c.mediaId));
   const props: CandidateListPanelProps = {
-    candidates: CANDIDATES,
+    candidates,
     selectedIds,
-    filter: 'all',
-    totals: computeTotals(CANDIDATES, selectedIds, budgetUsd),
+    filter,
+    totals: computeTotals(candidates, selectedIds, budgetUsd, undefined, visibleIds),
     budgetText,
     budgetUsd,
+    visibleIds,
     onToggle: vi.fn(),
     onToggleGroup: vi.fn(),
     onToggleAll: vi.fn(),
@@ -68,7 +78,7 @@ function renderPanel(overrides?: Partial<CandidateListPanelProps>) {
     onBudgetTextChange: vi.fn(),
     onStartClick: vi.fn(),
     search: '',
-    searchQuery: '',
+    searchQuery,
     sort: 'group',
     onSearchChange: vi.fn(),
     onSortChange: vi.fn(),
@@ -352,7 +362,11 @@ describe('CandidateListPanel — series/season grouping (sub-5-3 AC #2)', () => 
     expect(onToggleGroup).toHaveBeenCalledWith([S1E1, S1E2], true);
   });
 
-  it('group toggle semantics ignore the route filter — chips are a VIEW filter only', () => {
+  // sub-6-12 AC #1 (Alexyu 裁定 2026-09-09) REPLACES the sub-5-3 semantics this
+  // test used to pin. The header used to sweep the section's every row while a
+  // chip or a search was showing one of them — the hazard sub-6-11 handed over
+  // with its price tag ($2.79 of episodes the user never saw).
+  it('a filtered group header selects only the rows the filter is SHOWING', () => {
     const onToggleGroup = vi.fn();
     const mixed = [
       seriesEp(S1E1, 1, 1),
@@ -366,11 +380,37 @@ describe('CandidateListPanel — series/season grouping (sub-5-3 AC #2)', () => 
       onToggleGroup,
     });
 
-    // Only asr rows are VISIBLE, but the header operates on ALL group items —
-    // the same semantics 全選 already ships.
     expect(screen.queryByTestId(`consent-row-${S1E2}`)).toBeNull();
-    fireEvent.click(screen.getByLabelText('選取整部 怪奇物語'));
-    expect(onToggleGroup).toHaveBeenCalledWith([S1E1, S1E2, S2E1], true);
+    // The name says the scope, so the promise is on screen before the click.
+    fireEvent.click(screen.getByLabelText('選取顯示的 2 集'));
+    expect(onToggleGroup).toHaveBeenCalledWith([S1E1, S2E1], true);
+  });
+
+  it('the header prints 顯示 n whenever a filter narrows what its checkbox owns', () => {
+    const mixed = [
+      seriesEp(S1E1, 1, 1),
+      seriesEp(S1E2, 1, 2, { route: 'extract' }),
+      seriesEp(S2E1, 2, 1),
+    ];
+    renderPanel({ candidates: mixed, selectedIds: new Set([S1E1]), filter: 'asr' });
+    expect(screen.getByTestId(`consent-group-${SRS}-selected`)).toHaveTextContent(
+      '已選 1 / 顯示 2（全部 3）'
+    );
+  });
+
+  it('a narrowed header counts AND prices the same rows — never one of each', () => {
+    // S1E2 is ticked and hidden by the chip. If the header kept the section's
+    // money it would read 「已選 1 … $0.60」 for one visible ticked episode at
+    // $0.30 — a subtotal built out of a row the user cannot see.
+    const mixed = [
+      seriesEp(S1E1, 1, 1),
+      seriesEp(S1E2, 1, 2, { route: 'extract' }),
+      seriesEp(S2E1, 2, 1),
+    ];
+    renderPanel({ candidates: mixed, selectedIds: new Set([S1E1, S1E2]), filter: 'asr' });
+    expect(screen.getByTestId(`consent-group-${SRS}-selected`)).toHaveTextContent(
+      '已選 1 / 顯示 2（全部 3） · $0.30'
+    );
   });
 
   it('a degraded (empty) series title renders 未知影集 and still groups', () => {
@@ -1021,5 +1061,248 @@ describe('CandidateListPanel — CR fixes (sub-6-11)', () => {
   it('the list keeps a minimum height so a short dialog cannot collapse it to nothing', () => {
     renderPanel();
     expect(screen.getByTestId('consent-list-scroll').className).toContain('min-h-[10rem]');
+  });
+});
+
+// ─── sub-6-12: the money traps ───────────────────────────────────────────────
+
+/** Four films whose prices make the ceiling land in a knowable place. */
+const M1 = 'c1000000-0000-4000-8000-000000000001';
+const M2 = 'c1000000-0000-4000-8000-000000000002';
+const M3 = 'c1000000-0000-4000-8000-000000000003';
+const M4 = 'c1000000-0000-4000-8000-000000000004';
+
+function movie(mediaId: string, title: string, over: Partial<GenerationCandidate> = {}) {
+  return {
+    mediaId,
+    mediaType: 'movie' as const,
+    title,
+    route: 'extract' as const,
+    runtimeMinutes: 120,
+    runtimeKnown: true,
+    estimatedUsd: 1,
+    ...over,
+  };
+}
+
+/** $1 each. A $2.50 ceiling pays for two and stops at the third. */
+const FOUR = [movie(M1, '甲片'), movie(M2, '乙片'), movie(M3, '丙片'), movie(M4, '丁片')];
+
+describe('CandidateListPanel — 全選 over the visible set (sub-6-12 AC #1)', () => {
+  it('the toolbar keeps the shipped 已選 x / n when nothing is filtered', () => {
+    renderPanel({ candidates: FOUR, selectedIds: new Set([M1]) });
+    expect(screen.getByTestId('consent-select-all-count')).toHaveTextContent('1 / 4');
+    expect(screen.getByLabelText('全選')).toBeInTheDocument();
+  });
+
+  it('a route chip narrows the denominator to 顯示 n and keeps 全部 N in view', () => {
+    const mixed = [
+      movie(M1, '甲片'),
+      movie(M2, '乙片'),
+      movie(M3, '丙片', { route: 'asr' }),
+      movie(M4, '丁片', { route: 'asr' }),
+    ];
+    renderPanel({ candidates: mixed, selectedIds: new Set([M3]), filter: 'asr' });
+    expect(screen.getByTestId('consent-select-all-count')).toHaveTextContent(
+      '1 / 顯示 2（全部 4）'
+    );
+  });
+
+  it('the checkbox reads "all" off the VISIBLE rows — the shipped one needed all 2,399', () => {
+    const mixed = [
+      movie(M1, '甲片'),
+      movie(M2, '乙片'),
+      movie(M3, '丙片', { route: 'asr' }),
+      movie(M4, '丁片', { route: 'asr' }),
+    ];
+    renderPanel({ candidates: mixed, selectedIds: new Set([M3, M4]), filter: 'asr' });
+    const box = screen.getByTestId('consent-select-all') as HTMLInputElement;
+    expect(box.checked).toBe(true);
+    expect(screen.getByLabelText('取消選取顯示的 2 部')).toBeInTheDocument();
+  });
+
+  it('a search narrows it too — the box names the rows it is standing next to', () => {
+    renderPanel({ candidates: FOUR, selectedIds: new Set(), searchQuery: '甲' });
+    expect(screen.getByLabelText('選取顯示的 1 部')).toBeInTheDocument();
+    expect(screen.getByTestId('consent-select-all-count')).toHaveTextContent(
+      '0 / 顯示 1（全部 4）'
+    );
+  });
+});
+
+describe('CandidateListPanel — start failure is where the button is (sub-6-12 AC #2)', () => {
+  it('announces the failure as an alert, outside everything that scrolls', () => {
+    renderPanel({ candidates: FOUR, startError: '無法開始：伺服器回應 502' });
+    const alert = screen.getByTestId('consent-start-error');
+    expect(alert).toHaveAttribute('role', 'alert');
+    expect(alert).toHaveTextContent('502');
+    // The whole point of the move: on a 2,400-row library the old position was
+    // roughly forty screens below the button that had just failed.
+    expect(screen.getByTestId('consent-list-scroll').contains(alert)).toBe(false);
+  });
+
+  it('sits with the over-budget banner, immediately above the sticky footer', () => {
+    renderPanel({
+      candidates: FOUR,
+      selectedIds: new Set([M1, M2, M3, M4]),
+      budgetUsd: 2.5,
+      budgetText: '2.50',
+      startError: '無法開始',
+    });
+    const alert = screen.getByTestId('consent-start-error');
+    const banner = screen.getByTestId('consent-over-budget-banner');
+    expect(alert.parentElement).toBe(banner.parentElement);
+    expect(alert.nextElementSibling?.contains(screen.getByTestId('consent-start-btn'))).toBe(true);
+  });
+
+  it('renders nothing at all when the start has not failed', () => {
+    renderPanel({ candidates: FOUR });
+    expect(screen.queryByTestId('consent-start-error')).toBeNull();
+  });
+});
+
+describe('CandidateListPanel — the budget cut line (sub-6-12 AC #3)', () => {
+  // $1 a row against a $2.00 ceiling. The backend checks BEFORE each paid call,
+  // so 甲 and 乙 run (the running total is still under the ceiling when each
+  // starts) and 丙 is the first one refused — feasibleCount + 1.
+  const overBudget = {
+    candidates: FOUR,
+    selectedIds: new Set([M1, M2, M3, M4]),
+    budgetUsd: 2,
+    budgetText: '2.00',
+  };
+
+  it('draws the divider before the FIRST row the ceiling refuses', () => {
+    renderPanel(overBudget);
+    const cut = screen.getByTestId('consent-budget-cut');
+    expect(cut).toHaveTextContent('到此為止約 $2.00');
+    expect(cut.nextElementSibling).toBe(screen.getByTestId(`consent-row-${M3}`));
+  });
+
+  it('dims every row past the divider and leaves the ones that will run alone', () => {
+    renderPanel(overBudget);
+    expect(screen.getByTestId(`consent-row-${M2}`)).not.toHaveAttribute('data-paused');
+    expect(screen.getByTestId(`consent-row-${M3}`)).toHaveAttribute('data-paused', 'true');
+    expect(screen.getByTestId(`consent-row-${M4}`)).toHaveAttribute('data-paused', 'true');
+    expect(screen.getByTestId(`consent-row-${M4}`).className).toContain('opacity-60');
+  });
+
+  it('the banner points at the divider only once one has been drawn', () => {
+    renderPanel(overBudget);
+    expect(screen.getByTestId('consent-feasible-marked')).toHaveTextContent('清單中已標示');
+  });
+
+  it('one row dearer than the whole ceiling still runs — so no divider, and no claim', () => {
+    // The backend checks BEFORE each paid call, so nothing gets cut here even
+    // though the estimate is over. Drawing a line would invent a pause.
+    renderPanel({
+      candidates: [movie(M1, '甲片', { estimatedUsd: 9 })],
+      selectedIds: new Set([M1]),
+      budgetUsd: 2.5,
+      budgetText: '2.50',
+    });
+    expect(screen.getByTestId('consent-over-budget-banner')).toBeInTheDocument();
+    expect(screen.queryByTestId('consent-budget-cut')).toBeNull();
+    expect(screen.queryByTestId('consent-feasible-marked')).toBeNull();
+  });
+
+  it('nothing is drawn while the selection is inside the ceiling', () => {
+    renderPanel({ candidates: FOUR, selectedIds: new Set([M1]), budgetUsd: 5, budgetText: '5.00' });
+    expect(screen.queryByTestId('consent-budget-cut')).toBeNull();
+  });
+
+  it('the divider travels with its ROW when the display order changes', () => {
+    // 金額低→高 sends 丙片 (the dearest) to the BOTTOM, while the ceiling is
+    // still walked in submission order — so the line has to travel with 丙片
+    // rather than stay at the third position on screen.
+    const priced = [
+      movie(M1, '甲片', { estimatedUsd: 1 }),
+      movie(M2, '乙片', { estimatedUsd: 1 }),
+      movie(M3, '丙片', { estimatedUsd: 3 }),
+      movie(M4, '丁片', { estimatedUsd: 2 }),
+    ];
+    renderPanel({
+      candidates: priced,
+      selectedIds: new Set([M1, M2, M3, M4]),
+      budgetUsd: 2,
+      budgetText: '2.00',
+      sort: 'cost-asc',
+    });
+    expect(screen.getByTestId('consent-budget-cut').nextElementSibling).toBe(
+      screen.getByTestId(`consent-row-${M3}`)
+    );
+  });
+});
+
+describe('CandidateListPanel — ≈ on the totals (sub-6-12 AC #4)', () => {
+  it('one assumed runtime marks the summary AND the footer', () => {
+    const withGuess = [movie(M1, '甲片'), movie(M2, '乙片', { runtimeSource: 'fallback' })];
+    renderPanel({ candidates: withGuess, selectedIds: new Set([M1, M2]) });
+    expect(screen.getByTestId('consent-summary-usd')).toHaveTextContent('≈ $2.00');
+    expect(screen.getByTestId('consent-footer-usd')).toHaveTextContent('≈ $2.00');
+  });
+
+  it('an assumed row that is NOT selected leaves the total exact', () => {
+    const withGuess = [movie(M1, '甲片'), movie(M2, '乙片', { runtimeSource: 'fallback' })];
+    renderPanel({ candidates: withGuess, selectedIds: new Set([M1]) });
+    expect(screen.getByTestId('consent-summary-usd').textContent).toBe('$1.00');
+  });
+
+  it('measured runtimes throughout get no marker', () => {
+    renderPanel({ candidates: FOUR, selectedIds: new Set([M1, M2]) });
+    expect(screen.getByTestId('consent-summary-usd').textContent).toBe('$2.00');
+  });
+});
+
+describe('CandidateListPanel — type floor (sub-6-12 AC #5)', () => {
+  it('no text in the panel is set below the 12px content floor', () => {
+    const { container } = renderPanel({
+      candidates: FOUR,
+      selectedIds: new Set([M1]),
+      startError: '無法開始',
+    });
+    const offenders = Array.from(container.querySelectorAll<HTMLElement>('[class]')).filter((el) =>
+      /text-\[(?:[0-9]|10|11)px\]/.test(el.className)
+    );
+    expect(offenders.map((el) => el.className)).toEqual([]);
+  });
+});
+
+describe('CandidateListPanel — 扣誰的錢 (sub-6-12 AC #6)', () => {
+  const asrMix = [movie(M1, '甲片'), movie(M2, '乙片', { route: 'asr' })];
+
+  it('names both providers when both keys are the user’s own', () => {
+    renderPanel({
+      candidates: asrMix,
+      claudeKeySource: 'secret',
+      openaiKeySource: 'secret',
+    });
+    expect(screen.getByTestId('consent-spend-source')).toHaveTextContent(
+      '使用：Claude（你的金鑰） · 語音辨識：OpenAI（你的金鑰）'
+    );
+  });
+
+  it('self-hosted ASR is charged to nobody, whatever the OpenAI key says', () => {
+    renderPanel({
+      candidates: asrMix,
+      claudeKeySource: 'secret',
+      openaiKeySource: 'secret',
+      selfHostedAsr: true,
+    });
+    expect(screen.getByTestId('consent-spend-source')).toHaveTextContent(
+      '語音辨識：自架（不另計費）'
+    );
+  });
+
+  it('an env-provided key says so, and an absent one is not dressed up as set', () => {
+    renderPanel({ candidates: asrMix, claudeKeySource: 'env' });
+    expect(screen.getByTestId('consent-spend-source')).toHaveTextContent(
+      '使用：Claude（環境變數金鑰） · 語音辨識：OpenAI（尚未設定金鑰）'
+    );
+  });
+
+  it('a library with no ASR rows drops the ASR half rather than raising a question', () => {
+    renderPanel({ candidates: FOUR, claudeKeySource: 'secret' });
+    expect(screen.getByTestId('consent-spend-source').textContent).toBe('使用：Claude（你的金鑰）');
   });
 });

@@ -8,6 +8,8 @@ import type { ConsentTotals, ModelChoice } from './consentSelection';
 
 const baseTotals: ConsentTotals = {
   candidateCount: 142,
+  selectableCount: 142,
+  unwritableCount: 0,
   selectedCount: 18,
   selectedExtractCount: 6,
   selectedAsrCount: 12,
@@ -16,6 +18,13 @@ const baseTotals: ConsentTotals = {
   selectedTotalUsd: 4.5,
   overBudget: false,
   feasibleCount: 18,
+  visibleSelectableCount: 142,
+  visibleSelectedCount: 18,
+  visibleSelectedTotalUsd: 4.5,
+  hasEstimatedRows: false,
+  estimatedRowCount: 0,
+  cutMediaId: null,
+  pausedIds: new Set<string>(),
 };
 
 const MODEL_CHOICES: ModelChoice[] = [
@@ -135,5 +144,43 @@ describe('ConfirmGenerationDialog — 翻譯模型 (sub-6-8b)', () => {
     renderDialog();
     expect(screen.queryByTestId('consent-model-picker')).not.toBeInTheDocument();
     expect(screen.getByTestId('consent-confirm-total-usd')).toHaveTextContent('$4.50');
+  });
+});
+
+describe('ConfirmGenerationDialog — a total built out of guesses (sub-6-12 AC #4)', () => {
+  const estimated: ConsentTotals = {
+    ...baseTotals,
+    hasEstimatedRows: true,
+    estimatedRowCount: 12,
+  };
+
+  it('marks the total and says how many rows made it soft', () => {
+    render(
+      <ConfirmGenerationDialog
+        open
+        totals={estimated}
+        budgetUsd={5}
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId('consent-confirm-total-usd')).toHaveTextContent('≈ $4.50');
+    expect(screen.getByTestId('consent-confirm-estimated-note')).toHaveTextContent(
+      '其中 12 部片長未知，以 45 分鐘估算'
+    );
+  });
+
+  it('says nothing when every selected runtime was measured', () => {
+    render(
+      <ConfirmGenerationDialog
+        open
+        totals={baseTotals}
+        budgetUsd={5}
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId('consent-confirm-total-usd').textContent).toBe('$4.50');
+    expect(screen.queryByTestId('consent-confirm-estimated-note')).toBeNull();
   });
 });

@@ -17,7 +17,8 @@
  * does with shopspring/decimal, so the quote and the invoice are the same
  * number rather than merely close.
  */
-import { addUsd, gtUsd, ltUsd, percentOfUsd, roundUsd, subUsd } from '../../../lib/currency';
+import { addUsd, gtUsd, ltUsd, percentOfUsd, roundUsd, subUsd, usd } from '../../../lib/currency';
+import type { KeySource } from '../../../services/keySettingsService';
 import type {
   GenerationCandidate,
   ModelEstimate,
@@ -55,11 +56,51 @@ export function isWritable(c: GenerationCandidate): boolean {
 }
 
 /**
+ * Is this row's runtime a GUESS? (sub-6-10b AC #2, moved here by sub-6-12)
+ *
+ * Prefer `runtimeSource` — it distinguishes "measured from the file" from
+ * "TMDb's editorial figure", which `runtimeKnown` cannot. A pre-sub-6-10a
+ * server sends no source, so fall back to the old flag and behave exactly as
+ * the row did before.
+ *
+ * It lives in this module because sub-6-12 AC #4 makes it a MONEY fact: the
+ * row's own `≈`, the summary total's `≈`, the footer's and the confirm
+ * dialog's all have to answer it the same way, and a second copy of this
+ * predicate in the panel is how a row would say 「約」 while the total beside
+ * it claimed to be exact.
+ */
+export function isRuntimeApproximate(c: GenerationCandidate): boolean {
+  return c.runtimeSource ? c.runtimeSource === 'fallback' : !c.runtimeKnown;
+}
+
+/**
  * The ids a bulk action may touch. Callers pass an already-listable array
  * (this module never re-derives listability), so this is the writable subset.
  */
 export function selectableIds(candidates: GenerationCandidate[]): string[] {
   return candidates.filter(isWritable).map((c) => c.mediaId);
+}
+
+/**
+ * The ids a bulk action may touch RIGHT NOW (sub-6-12 AC #1).
+ *
+ * 全選 and the 整劇/整季 headers select what the user can SEE. Before this
+ * story they swept the whole list: filter to 需語音辨識, tick 全選, and the
+ * 2,399 hidden extract rows came with it — the critique's「篩選＋全選＝金錢
+ * 陷阱」, and at group scope the same trap cost $2.79 for ticking a show whose
+ * one visible episode was the only one the user meant (sub-6-11 handed that
+ * one over deliberately).
+ *
+ * `visibleIds` absent = no view filter is running, so the visible set IS the
+ * whole list — which keeps every pre-sub-6-12 caller behaving as it did.
+ */
+export function visibleSelectableIds(
+  candidates: GenerationCandidate[],
+  visibleIds?: ReadonlySet<string>
+): string[] {
+  return candidates
+    .filter((c) => isWritable(c) && (visibleIds === undefined || visibleIds.has(c.mediaId)))
+    .map((c) => c.mediaId);
 }
 
 /** What a row should READ as — the backend's honest title, else what shipped before. */
@@ -159,6 +200,48 @@ export interface ConsentTotals {
    * promise (the copy says 預計/約).
    */
   feasibleCount: number;
+  /**
+   * sub-6-12 AC #1: the same three counts, restricted to what the view
+   * filters (route chip ∘ search) are letting through. `visibleIds` absent ⇒
+   * these equal `selectableCount` / `selectedCount`.
+   */
+  visibleSelectableCount: number;
+  visibleSelectedCount: number;
+  /**
+   * What the visible-and-selected rows cost. The 全選 checkbox and the group
+   * headers speak for the VISIBLE set, so when a filter is narrowing them their
+   * count and their money have to describe the same rows — a header reading
+   * 「已選 0 / 顯示 1 · $1.55」 (the section total, including four episodes off
+   * screen) looks like a bug. The whole-list truth never moves: the summary bar
+   * and the footer render `selectedTotalUsd` regardless of any view filter.
+   */
+  visibleSelectedTotalUsd: number;
+  /**
+   * sub-6-12 AC #4: at least one SELECTED row is priced off the 45-minute
+   * assumption, so every total computed from this value must render with `≈`.
+   * On the owner's 2026-09-03 production screenshot this was every single row
+   * while the total read a flat `$13.92`.
+   */
+  hasEstimatedRows: boolean;
+  /** How many selected rows that is — the F16 line names the number. */
+  estimatedRowCount: number;
+  /**
+   * sub-6-12 AC #3 — where the budget stops paying, as a MEDIA ID rather than
+   * an index.
+   *
+   * The list is sorted for the eye (sub-6-11) while the ceiling is walked in
+   * submission order, so an index into the display would point at the wrong
+   * film the moment the user picks 金額高→低. The id follows its row wherever
+   * that row is drawn, which is what「分隔列跟著提交順序的列走」means.
+   *
+   * `null` when nothing gets cut — including the case where the ONE selected
+   * row is dearer than the whole ceiling: it still runs (the backend checks
+   * BEFORE each call, not after), so there is no cut line to draw even though
+   * `overBudget` is true.
+   */
+  cutMediaId: string | null;
+  /** Selected rows at or beyond the cut — the ones that will be paused. */
+  pausedIds: ReadonlySet<string>;
 }
 
 /**
@@ -193,7 +276,14 @@ export function computeTotals(
   candidates: GenerationCandidate[],
   selectedIds: ReadonlySet<string>,
   budgetUsd: number | null,
-  prices?: ModelPrices
+  prices?: ModelPrices,
+  /**
+   * sub-6-12 AC #1: the rows the route chip and the search box are letting
+   * through. Absent = no view filter, so the visible set is the whole list.
+   * It NEVER changes a money figure — only the 「顯示 n」 counts the bulk
+   * controls speak for.
+   */
+  visibleIds?: ReadonlySet<string>
 ): ConsentTotals {
   let selectedCount = 0;
   let extractCount = 0;
@@ -203,12 +293,27 @@ export function computeTotals(
   let feasibleCount = 0;
   let cumulative = 0;
   let selectableCount = 0;
+  let visibleSelectableCount = 0;
+  let visibleSelectedCount = 0;
+  let visibleSelectedUsd = 0;
+  let estimatedRowCount = 0;
+  let cutMediaId: string | null = null;
+  const pausedIds = new Set<string>();
 
   for (const c of candidates) {
-    if (isWritable(c)) selectableCount++;
+    const visible = visibleIds === undefined || visibleIds.has(c.mediaId);
+    if (isWritable(c)) {
+      selectableCount++;
+      if (visible) visibleSelectableCount++;
+    }
     if (!selectedIds.has(c.mediaId)) continue;
     selectedCount++;
+    if (isRuntimeApproximate(c)) estimatedRowCount++;
     const rowUsd = candidateUsd(c, prices);
+    if (visible && isWritable(c)) {
+      visibleSelectedCount++;
+      visibleSelectedUsd = addUsd(visibleSelectedUsd, rowUsd);
+    }
     if (c.route === 'extract') {
       extractCount++;
       extractUsd = addUsd(extractUsd, rowUsd);
@@ -216,7 +321,15 @@ export function computeTotals(
       asrCount++;
       asrUsd = addUsd(asrUsd, rowUsd);
     }
-    if (budgetUsd === null || ltUsd(cumulative, budgetUsd)) feasibleCount++;
+    if (budgetUsd === null || ltUsd(cumulative, budgetUsd)) {
+      feasibleCount++;
+    } else {
+      // The FIRST row the ceiling refuses is where the divider goes; it and
+      // everything after it in submission order is what「之後的項目會暫停」
+      // names.
+      if (cutMediaId === null) cutMediaId = c.mediaId;
+      pausedIds.add(c.mediaId);
+    }
     cumulative = addUsd(cumulative, rowUsd);
   }
 
@@ -235,7 +348,59 @@ export function computeTotals(
     selectedTotalUsd: totalUsd,
     overBudget: budgetUsd !== null && gtUsd(totalUsd, budgetUsd),
     feasibleCount,
+    visibleSelectableCount,
+    visibleSelectedCount,
+    visibleSelectedTotalUsd: visibleSelectedUsd,
+    hasEstimatedRows: estimatedRowCount > 0,
+    estimatedRowCount,
+    cutMediaId,
+    pausedIds,
   };
+}
+
+/**
+ * A total, marked `≈` when the rows under it are priced off an assumed length
+ * (sub-6-12 AC #4).
+ *
+ * It lives beside computeTotals rather than in each component because 三處金額
+ * 同源 now covers the MARKER as well as the number: the summary bar, the
+ * footer and the F16/F19 confirm dialog must all say 「約」 or all say nothing.
+ * A screen where every row reads 「≈ $0.02」 and the total reads a flat
+ * 「$13.92」 is the false precision the critique's P2 named.
+ */
+export function usdWithEstimate(value: number, estimated: boolean): string {
+  return estimated ? `≈ ${usd(value)}` : usd(value);
+}
+
+/**
+ * 「扣誰的錢」 (sub-6-12 AC #6) — the one line that answers the project
+ * persona's red flag:「花錢的事先問」asked HOW MUCH and never asked WHOSE key.
+ *
+ * Both halves come from facts the app already holds — the key resolver's
+ * `source` (which is also what the 金鑰設定 page renders) and the sweep's own
+ * `self_hosted_asr` — so this never guesses. `undefined` sources mean the key
+ * settings request has not answered yet; it reads as 尚未設定, which is what a
+ * fresh NAS actually is.
+ */
+export function spendSourceLabel(input: {
+  claudeSource?: KeySource;
+  openaiSource?: KeySource;
+  /** The sweep's summary flag: ASR runs on the operator's own engine. */
+  selfHostedAsr: boolean;
+  /** The list has ASR-route rows at all — otherwise the ASR half is noise. */
+  hasAsrCandidates: boolean;
+}): string {
+  const word = (source?: KeySource) =>
+    source === 'secret' ? '你的金鑰' : source === 'env' ? '環境變數金鑰' : '尚未設定金鑰';
+  const parts = [`使用：Claude（${word(input.claudeSource)}）`];
+  if (input.hasAsrCandidates) {
+    parts.push(
+      input.selfHostedAsr
+        ? '語音辨識：自架（不另計費）'
+        : `語音辨識：OpenAI（${word(input.openaiSource)}）`
+    );
+  }
+  return parts.join(' · ');
 }
 
 /**

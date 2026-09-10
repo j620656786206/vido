@@ -122,8 +122,15 @@ export interface ConsentSectionRow {
    * show and wrong for a block of films, so each section kind says its own.
    */
   selectLabel: string;
-  /** ALL the section's items — chips and search are VIEW filters, so the
-   *  header's 已選 x/n and its subtotal always speak for the whole section. */
+  /**
+   * What ONE row of this section is called, for the sub-6-12 narrowed
+   * accessible name (「選取顯示的 3 集」 vs 「…3 部」).
+   */
+  unit: '集' | '部';
+  /** ALL the section's items. The 已選 x/n counts and the subtotal still speak
+   *  for the whole section (that IS what the show costs); since sub-6-12 the
+   *  CHECKBOX speaks for the visible subset instead, and the header prints
+   *  「顯示 n」 whenever the two differ. */
   items: GenerationCandidate[];
   /** Season sub-headers render indented and smaller. */
   season: boolean;
@@ -136,7 +143,23 @@ export interface ConsentCandidateRow {
   candidate: GenerationCandidate;
 }
 
-export type ConsentRow = ConsentSectionRow | ConsentCandidateRow;
+/**
+ * The budget cut line (sub-6-12 AC #3) — 「到此為止約 $上限」.
+ *
+ * It is a ROW, not an overlay, for two reasons: the list is virtualised, so
+ * anything drawn between two rows has to be an item the virtualizer can
+ * measure and offset; and the fact it states is positional — the reader needs
+ * it in the flow, at the boundary, not floating beside it.
+ */
+export interface ConsentCutRow {
+  kind: 'cut';
+  key: string;
+}
+
+export type ConsentRow = ConsentSectionRow | ConsentCandidateRow | ConsentCutRow;
+
+/** One cut line per list; a fixed key keeps the virtualizer's identity stable. */
+const CUT_ROW: ConsentCutRow = { kind: 'cut', key: 'budget-cut' };
 
 /** Section id for each kind of header. One vocabulary, one place. */
 export const sectionIds = {
@@ -189,6 +212,17 @@ export interface BuildConsentRowsInput {
    */
   searching: boolean;
   prices?: ModelPrices;
+  /**
+   * sub-6-12 AC #3: the first SELECTED row the ceiling will not pay for
+   * (`ConsentTotals.cutMediaId`). The cut line is emitted immediately before
+   * that row wherever it lands in the display order — so under 金額高→低 it
+   * travels with its film rather than staying at a position that no longer
+   * means anything. `null`/absent, or a row the view filters have hidden, ⇒
+   * no cut line: the dimmed rows and the F18 banner still carry the fact, and
+   * a divider drawn at an arbitrary place would be a worse lie than no
+   * divider.
+   */
+  cutMediaId?: string | null;
 }
 
 /**
@@ -230,7 +264,7 @@ function movieSectionLabel(half: 'matched' | 'unmatched'): {
  * film is noise, and worse, it reads as a hit.
  */
 export function buildConsentRows(input: BuildConsentRowsInput): ConsentRow[] {
-  const { candidates, visibleIds, sort, prices } = input;
+  const { candidates, visibleIds, sort, prices, cutMediaId } = input;
 
   const stateOrder = new Map(candidates.map((c, i) => [c.mediaId, i]));
   const visible = candidates.filter((c) => visibleIds.has(c.mediaId));
@@ -240,17 +274,19 @@ export function buildConsentRows(input: BuildConsentRowsInput): ConsentRow[] {
     // interleaves shows and films by definition. The row itself still says
     // which show an episode belongs to (its title carries SxxEyy), and
     // switching back to 群組 restores every header and every collapse state.
-    return sortForDisplay(visible, sort, stateOrder, prices).map((candidate) => ({
-      kind: 'candidate',
-      key: candidate.mediaId,
-      candidate,
-    }));
+    const flat: ConsentRow[] = [];
+    for (const candidate of sortForDisplay(visible, sort, stateOrder, prices)) {
+      if (candidate.mediaId === cutMediaId) flat.push(CUT_ROW);
+      flat.push({ kind: 'candidate', key: candidate.mediaId, candidate });
+    }
+    return flat;
   }
 
   const rows: ConsentRow[] = [];
   const pushRows = (items: GenerationCandidate[]) => {
     for (const c of items) {
       if (visibleIds.has(c.mediaId)) {
+        if (c.mediaId === cutMediaId) rows.push(CUT_ROW);
         rows.push({ kind: 'candidate', key: c.mediaId, candidate: c });
       }
     }
@@ -277,6 +313,7 @@ export function buildConsentRows(input: BuildConsentRowsInput): ConsentRow[] {
         label,
         hint,
         selectLabel,
+        unit: '部',
         items: group.items,
         season: false,
         expanded,
@@ -308,6 +345,7 @@ function pushSeriesRows(
     testid: sectionTestids.series(seriesId),
     label: group.seriesTitle || '未知影集',
     selectLabel: `選取整部 ${group.seriesTitle || '未知影集'}`,
+    unit: '集',
     items: group.items,
     season: false,
     expanded,
@@ -329,6 +367,7 @@ function pushSeriesRows(
       testid: sectionTestids.season(seriesId, season.seasonNumber),
       label: seasonLabel(season.seasonNumber),
       selectLabel: `選取${seasonLabel(season.seasonNumber)}`,
+      unit: '集',
       items: season.items,
       season: true,
       expanded: seasonExpanded,

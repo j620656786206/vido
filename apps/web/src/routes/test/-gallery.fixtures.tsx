@@ -177,7 +177,12 @@ import { AnalysisProgressPanel } from '../../components/subtitle/consent/Analysi
 import { CandidateListPanel } from '../../components/subtitle/consent/CandidateListPanel';
 import { ConsentEmptyState } from '../../components/subtitle/consent/ConsentEmptyState';
 import { ConfirmGenerationDialog } from '../../components/subtitle/consent/ConfirmGenerationDialog';
-import { computeTotals } from '../../components/subtitle/consent/consentSelection';
+import {
+  applyRouteFilter,
+  applySearch,
+  computeTotals,
+  type ConsentRouteFilter,
+} from '../../components/subtitle/consent/consentSelection';
 import { addUsd } from '../../lib/currency';
 import type { GenerationCandidate } from '../../services/subtitleService';
 import { GenerationBatchPanelV2 } from '../../components/subtitle/GenerationBatchDialogV2';
@@ -402,6 +407,23 @@ const CONSENT_MODEL_CHOICES = [
 ];
 
 /**
+ * The chip ∘ search projection the CONTAINER hands the panel (sub-6-12).
+ *
+ * The panel used to derive this itself; now the visible set decides what 全選
+ * and the group headers SELECT, so it is container state and every fixture has
+ * to compose it the same way GenerationConsentView does.
+ */
+function consentVisibleIds(
+  candidates: GenerationCandidate[],
+  filter: ConsentRouteFilter = 'all',
+  searchQuery = ''
+): Set<string> {
+  return new Set(
+    applySearch(applyRouteFilter(candidates, filter), searchQuery).map((c) => c.mediaId)
+  );
+}
+
+/**
  * Build a ConsentTotals fixture with the total DERIVED, never typed twice.
  *
  * CR M2: the first cut spread `CONSENT_CONFIRM_TOTALS` and overrode only the
@@ -424,6 +446,13 @@ function confirmTotals(parts: {
     candidateCount: 142,
     selectableCount: 142,
     unwritableCount: 0,
+    visibleSelectableCount: 142,
+    visibleSelectedCount: parts.selectedCount,
+    visibleSelectedTotalUsd: addUsd(parts.selectedExtractUsd, parts.selectedAsrUsd),
+    hasEstimatedRows: false,
+    estimatedRowCount: 0,
+    cutMediaId: null,
+    pausedIds: new Set<string>(),
     overBudget: false,
     ...parts,
     selectedTotalUsd: addUsd(parts.selectedExtractUsd, parts.selectedAsrUsd),
@@ -629,28 +658,47 @@ const CONSENT_OPERABILITY_SELECTED = new Set([
   '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51',
   '9a0bfe08-1acd-4f9e-9fed-a7c8d9e0f302',
 ]);
-const consentOperabilityProps = (overrides: Record<string, unknown>): Record<string, unknown> => ({
-  candidates: CONSENT_OPERABILITY_CANDIDATES,
-  selectedIds: CONSENT_OPERABILITY_SELECTED,
-  filter: 'all',
-  totals: computeTotals(CONSENT_OPERABILITY_CANDIDATES, CONSENT_OPERABILITY_SELECTED, 5),
-  budgetText: '5.00',
-  budgetUsd: 5,
-  onToggle: noop,
-  onToggleGroup: noop,
-  onToggleAll: noop,
-  onSelectAllExtract: noop,
-  onClearSelection: noop,
-  onFilterChange: noop,
-  onBudgetTextChange: noop,
-  onStartClick: noop,
-  search: '',
-  searchQuery: '',
-  sort: 'group',
-  onSearchChange: noop,
-  onSortChange: noop,
-  ...overrides,
-});
+const consentOperabilityProps = (overrides: Record<string, unknown>): Record<string, unknown> => {
+  // sub-6-12: visibleIds and totals are derived AFTER the overrides land, the
+  // way the container derives them — the search-hit fixture overrides
+  // searchQuery, and a visible set computed before that would describe a
+  // different screen from the one being photographed.
+  const merged = {
+    candidates: CONSENT_OPERABILITY_CANDIDATES,
+    selectedIds: CONSENT_OPERABILITY_SELECTED,
+    filter: 'all' as ConsentRouteFilter,
+    budgetText: '5.00',
+    budgetUsd: 5,
+    onToggle: noop,
+    onToggleGroup: noop,
+    onToggleAll: noop,
+    onSelectAllExtract: noop,
+    onClearSelection: noop,
+    onFilterChange: noop,
+    onBudgetTextChange: noop,
+    onStartClick: noop,
+    search: '',
+    searchQuery: '',
+    sort: 'group',
+    onSearchChange: noop,
+    onSortChange: noop,
+    ...overrides,
+  } as Record<string, unknown>;
+  const candidates = merged.candidates as GenerationCandidate[];
+  const selectedIds = merged.selectedIds as Set<string>;
+  const visibleIds = consentVisibleIds(
+    candidates,
+    merged.filter as ConsentRouteFilter,
+    merged.searchQuery as string
+  );
+  return {
+    ...merged,
+    visibleIds,
+    totals:
+      merged.totals ??
+      computeTotals(candidates, selectedIds, merged.budgetUsd as number, undefined, visibleIds),
+  };
+};
 
 export const GALLERY_FIXTURES: GalleryFixture[] = [
   // ----- ui/ -----
@@ -4082,6 +4130,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52',
       ]),
       filter: 'all',
+      visibleIds: consentVisibleIds(CONSENT_FIXTURE_CANDIDATES),
       totals: computeTotals(
         CONSENT_FIXTURE_CANDIDATES,
         new Set(['4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51', '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52']),
@@ -4116,6 +4165,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       candidates: CONSENT_MOBILE_ROWS,
       selectedIds: new Set(['4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51']),
       filter: 'all',
+      visibleIds: consentVisibleIds(CONSENT_MOBILE_ROWS),
       totals: computeTotals(
         CONSENT_MOBILE_ROWS,
         new Set(['4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51']),
@@ -4152,6 +4202,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       candidates: CONSENT_MOBILE_GROUPS,
       selectedIds: new Set(['5a9d3e2b-6c7f-4d8e-9f0a-1b2c3d4e5f61']),
       filter: 'all',
+      visibleIds: consentVisibleIds(CONSENT_MOBILE_GROUPS),
       totals: computeTotals(
         CONSENT_MOBILE_GROUPS,
         new Set(['5a9d3e2b-6c7f-4d8e-9f0a-1b2c3d4e5f61']),
@@ -4185,6 +4236,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       candidates: CONSENT_GROUPED_CANDIDATES,
       selectedIds: CONSENT_GROUPED_SELECTED,
       filter: 'all',
+      visibleIds: consentVisibleIds(CONSENT_GROUPED_CANDIDATES),
       totals: computeTotals(CONSENT_GROUPED_CANDIDATES, CONSENT_GROUPED_SELECTED, 5),
       budgetText: '5.00',
       budgetUsd: 5,
@@ -4222,6 +4274,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       candidates: CONSENT_OVER_BUDGET_CANDIDATES,
       selectedIds: new Set(CONSENT_OVER_BUDGET_CANDIDATES.map((c) => c.mediaId)),
       filter: 'all',
+      visibleIds: consentVisibleIds(CONSENT_OVER_BUDGET_CANDIDATES),
       totals: computeTotals(
         CONSENT_OVER_BUDGET_CANDIDATES,
         new Set(CONSENT_OVER_BUDGET_CANDIDATES.map((c) => c.mediaId)),
