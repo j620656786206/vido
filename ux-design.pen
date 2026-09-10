@@ -177106,6 +177106,336 @@
       "fontFamily": "Noto Sans TC",
       "fontSize": 14,
       "fontWeight": "600"
+    },
+    {
+      "type": "frame",
+      "id": "UYud2",
+      "x": 75870,
+      "y": -5746,
+      "name": "f25-d-v2",
+      "clip": true,
+      "width": 768,
+      "height": 470,
+      "fill": "$bg-secondary",
+      "cornerRadius": "$radius-lg",
+      "stroke": "$border-subtle",
+      "strokeWidth": 1,
+      "strokeAlignment": "inner",
+      "layout": "vertical",
+      "gap": 20,
+      "padding": 24,
+      "children": [
+        {
+          "type": "frame",
+          "id": "QIkc0",
+          "name": "card-head",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 6,
+          "children": [
+            {
+              "type": "text",
+              "id": "ZNnKl",
+              "name": "card-title",
+              "fill": "$text-primary",
+              "content": "自動處理政策",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 18,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "EBzD6",
+              "name": "card-desc",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "只自動處理可抽取（僅翻譯費）的項目；語音辨識仍需逐次同意。",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "MRf2h",
+          "name": "field-budget",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "k1OUH",
+              "name": "budget-label",
+              "fill": "$text-primary",
+              "content": "每次執行的上限金額",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 13,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "B4O6F1",
+              "name": "budget-input",
+              "width": 160,
+              "height": 40,
+              "fill": "$bg-primary",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$border-subtle",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "padding": [
+                0,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "A8EkQi",
+                  "name": "budget-value",
+                  "fill": "$text-primary",
+                  "content": "$5.00",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "CdO98",
+              "name": "budget-hint",
+              "fill": "$text-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "達到上限會自動暫停，其餘保留在佇列，可稍後續跑。",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "u93e1",
+          "name": "field-model",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "LrAHH",
+              "name": "model-label",
+              "fill": "$text-primary",
+              "content": "翻譯模型",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 13,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "XMUBV",
+              "name": "model-list",
+              "width": "fill_container",
+              "cornerRadius": "$radius-md",
+              "stroke": "$border-subtle",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 6,
+              "padding": 6,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "VxfLM",
+                  "name": "row-sonnet",
+                  "width": "fill_container",
+                  "fill": "$bg-tertiary",
+                  "cornerRadius": "$radius-sm",
+                  "gap": 10,
+                  "padding": [
+                    8,
+                    10
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "Hq0Rw",
+                      "type": "ref",
+                      "ref": "4EHFN",
+                      "name": "radio"
+                    },
+                    {
+                      "type": "text",
+                      "id": "OCTPC",
+                      "name": "name",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Claude Sonnet 4.5（預設）",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Wwtp3",
+                      "name": "grade",
+                      "fill": "$success-tint",
+                      "cornerRadius": "$radius-sm",
+                      "padding": [
+                        2,
+                        6
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "N0O5Cf",
+                          "name": "grade-lbl",
+                          "fill": "$success",
+                          "content": "品質 A",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "hSqNl",
+                      "name": "unit",
+                      "fill": "$text-secondary",
+                      "content": "每集約 $0.05",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Gigzf",
+                  "name": "row-haiku",
+                  "width": "fill_container",
+                  "cornerRadius": "$radius-sm",
+                  "gap": 10,
+                  "padding": [
+                    8,
+                    10
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "ywcZE",
+                      "type": "ref",
+                      "ref": "Wd9AL",
+                      "name": "radio"
+                    },
+                    {
+                      "type": "text",
+                      "id": "zbucc",
+                      "name": "name",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Claude Haiku 4.5",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "e3usgo",
+                      "name": "grade",
+                      "fill": "$bg-tertiary",
+                      "cornerRadius": "$radius-sm",
+                      "padding": [
+                        2,
+                        6
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "w59bt",
+                          "name": "grade-lbl",
+                          "fill": "$text-secondary",
+                          "content": "品質 B",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "IYPL0",
+                      "name": "unit",
+                      "fill": "$text-secondary",
+                      "content": "每集約 $0.02",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "curAC",
+              "name": "model-hint",
+              "fill": "$text-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "模型只影響翻譯費用與品質；抽取內嵌字幕本身不花錢。",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "M1cB6A",
+          "name": "card-foot",
+          "width": "fill_container",
+          "gap": 10,
+          "justifyContent": "end",
+          "children": [
+            {
+              "id": "QUtWn",
+              "type": "ref",
+              "ref": "otvKh",
+              "name": "btn-save",
+              "height": 40,
+              "descendants": {
+                "DaLcd": {
+                  "content": "儲存",
+                  "fontFamily": "Noto Sans TC"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "k8yq78",
+      "x": 75870,
+      "y": -5791,
+      "name": "cap-F25-D-v2",
+      "fill": "#888888",
+      "content": "F25 · 設定頁「自動處理政策」格",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 14,
+      "fontWeight": "600"
     }
   ],
   "variables": {
