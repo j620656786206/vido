@@ -9844,6 +9844,84 @@
                               "fontWeight": "normal"
                             }
                           ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Dq3ZZ",
+                          "name": "ButtonCost cell",
+                          "layout": "vertical",
+                          "gap": "$Space/sm",
+                          "children": [
+                            {
+                              "id": "lpWc5",
+                              "type": "ref",
+                              "ref": "qAERt",
+                              "name": "ButtonCost"
+                            },
+                            {
+                              "type": "text",
+                              "id": "ALuNF",
+                              "name": "ButtonCost cap",
+                              "fill": "$text-muted",
+                              "content": "ButtonCost",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "zP0Xk",
+                          "name": "ButtonCost-Loading cell",
+                          "layout": "vertical",
+                          "gap": "$Space/sm",
+                          "children": [
+                            {
+                              "id": "Tzse8",
+                              "type": "ref",
+                              "ref": "zhIx7",
+                              "name": "ButtonCost-Loading"
+                            },
+                            {
+                              "type": "text",
+                              "id": "RoPcd",
+                              "name": "ButtonCost-Loading cap",
+                              "fill": "$text-muted",
+                              "content": "ButtonCost-Loading",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "DkzCV",
+                          "name": "ButtonCost-Disabled cell",
+                          "layout": "vertical",
+                          "gap": "$Space/sm",
+                          "children": [
+                            {
+                              "id": "S879a",
+                              "type": "ref",
+                              "ref": "dqE4G",
+                              "name": "ButtonCost-Disabled"
+                            },
+                            {
+                              "type": "text",
+                              "id": "OZEKW",
+                              "name": "ButtonCost-Disabled cap",
+                              "fill": "$text-muted",
+                              "content": "ButtonCost-Disabled",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
                         }
                       ]
                     }
@@ -11858,7 +11936,7 @@
                   "y": -7271,
                   "name": "section-plate",
                   "fill": "#444444",
-                  "width": 1845,
+                  "width": 2401,
                   "height": 126,
                   "stroke": "#FFFFFF1A",
                   "strokeWidth": 1,
@@ -11939,8 +12017,122 @@
                 },
                 {
                   "type": "frame",
+                  "id": "qAERt",
+                  "x": 17327,
+                  "y": -7231,
+                  "name": "Component/ButtonCost",
+                  "reusable": true,
+                  "fill": "$accent-primary",
+                  "cornerRadius": "$radius-md",
+                  "gap": "$Space/sm",
+                  "padding": [
+                    "$Space/sm",
+                    "$Space/lg-plus"
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "StNiU",
+                      "name": "label",
+                      "fill": "$text-on-accent",
+                      "content": "生成字幕",
+                      "lineHeight": "$Type/Text/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Text/Size",
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "ASE9e",
+                      "name": "amount",
+                      "fill": "$text-on-accent",
+                      "content": "$0.42",
+                      "lineHeight": "$Type/Text/Line",
+                      "fontFamily": "$Type/Family/Mono",
+                      "fontSize": "$Type/Text/Size",
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "zhIx7",
+                  "x": 17530,
+                  "y": -7231,
+                  "name": "Component/ButtonCost-Loading",
+                  "reusable": true,
+                  "fill": "$accent-primary",
+                  "cornerRadius": "$radius-md",
+                  "gap": "$Space/sm",
+                  "padding": [
+                    "$Space/sm",
+                    "$Space/lg-plus"
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "iYSI7",
+                      "name": "label",
+                      "fill": "$text-on-accent",
+                      "content": "生成字幕",
+                      "lineHeight": "$Type/Text/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Text/Size",
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "JGzUy",
+                      "name": "amount-skeleton",
+                      "opacity": 0.25,
+                      "width": 40,
+                      "height": 12,
+                      "fill": "$text-on-accent",
+                      "cornerRadius": "$radius-sm"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "dqE4G",
+                  "x": 17733,
+                  "y": -7231,
+                  "name": "Component/ButtonCost-Disabled",
+                  "reusable": true,
+                  "fill": "$bg-tertiary",
+                  "cornerRadius": "$radius-md",
+                  "stroke": "$border-subtle",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "gap": "$Space/sm",
+                  "padding": [
+                    "$Space/sm",
+                    "$Space/lg-plus"
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "PUC2s",
+                      "name": "label",
+                      "fill": "$text-disabled",
+                      "content": "生成字幕",
+                      "lineHeight": "$Type/Text/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Text/Size",
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "6MxLT",
-                  "x": 17330,
+                  "x": 17886,
                   "y": -7231,
                   "name": "Component/SearchInput",
                   "reusable": true,
@@ -11983,7 +12175,7 @@
                 {
                   "type": "frame",
                   "id": "955EZ",
-                  "x": 17790,
+                  "x": 18346,
                   "y": -7231,
                   "name": "Component/SortDropdown",
                   "reusable": true,
@@ -12025,7 +12217,7 @@
                 {
                   "type": "frame",
                   "id": "jD7gF",
-                  "x": 17947,
+                  "x": 18503,
                   "y": -7231,
                   "name": "Component/FilterChip",
                   "reusable": true,
@@ -12064,7 +12256,7 @@
                 {
                   "type": "frame",
                   "id": "L1NP6",
-                  "x": 18088,
+                  "x": 18644,
                   "y": -7231,
                   "name": "Component/GenreTag",
                   "reusable": true,
@@ -12093,7 +12285,7 @@
                 {
                   "type": "frame",
                   "id": "4EHFN",
-                  "x": 18197,
+                  "x": 18753,
                   "y": -7231,
                   "name": "Component/Checkbox",
                   "reusable": true,
@@ -12119,7 +12311,7 @@
                 {
                   "type": "frame",
                   "id": "Wd9AL",
-                  "x": 18277,
+                  "x": 18833,
                   "y": -7231,
                   "name": "Component/CheckboxEmpty",
                   "reusable": true,
@@ -12133,7 +12325,7 @@
                 {
                   "type": "frame",
                   "id": "NfHDL",
-                  "x": 18357,
+                  "x": 18913,
                   "y": -7231,
                   "name": "Component/CheckboxIndeterminate",
                   "reusable": true,
@@ -12158,7 +12350,7 @@
                 {
                   "type": "frame",
                   "id": "Fn5MZ",
-                  "x": 18437,
+                  "x": 18993,
                   "y": -7231,
                   "name": "Component/CheckboxDisabledChecked",
                   "reusable": true,
@@ -12187,7 +12379,7 @@
                 {
                   "type": "frame",
                   "id": "VSXl5",
-                  "x": 18517,
+                  "x": 19073,
                   "y": -7231,
                   "name": "Component/CheckboxDisabledEmpty",
                   "reusable": true,
@@ -12202,7 +12394,7 @@
                 {
                   "type": "frame",
                   "id": "TboA7",
-                  "x": 18597,
+                  "x": 19153,
                   "y": -7231,
                   "name": "Component/TabActive",
                   "reusable": true,
@@ -12239,7 +12431,7 @@
                 {
                   "type": "frame",
                   "id": "j98G4",
-                  "x": 18731,
+                  "x": 19287,
                   "y": -7231,
                   "name": "Component/TabInactive",
                   "reusable": true,
@@ -91773,19 +91965,17 @@
                       "alignItems": "center",
                       "children": [
                         {
-                          "id": "NS2ae",
+                          "id": "MruTd",
                           "type": "ref",
-                          "ref": "otvKh",
+                          "ref": "qAERt",
                           "name": "btn-generate",
                           "padding": [
                             "$Space/md",
                             "$Space/xl"
                           ],
                           "descendants": {
-                            "DaLcd": {
-                              "content": "生成字幕",
-                              "fontFamily": "Noto Sans TC",
-                              "fontSize": 14
+                            "ASE9e": {
+                              "content": "$0.27"
                             }
                           }
                         },
@@ -93599,19 +93789,17 @@
                       "alignItems": "center",
                       "children": [
                         {
-                          "id": "e1lFt",
+                          "id": "N1qsH",
                           "type": "ref",
-                          "ref": "otvKh",
+                          "ref": "qAERt",
                           "name": "btn-generate",
                           "padding": [
                             "$Space/md-plus",
                             "$Space/2xl"
                           ],
                           "descendants": {
-                            "DaLcd": {
-                              "content": "生成字幕",
-                              "fontFamily": "Noto Sans TC",
-                              "fontSize": 15
+                            "ASE9e": {
+                              "content": "$0.04"
                             }
                           }
                         },
@@ -107469,9 +107657,9 @@
                       "alignItems": "center",
                       "children": [
                         {
-                          "id": "gZqpT",
+                          "id": "k0H8wR",
                           "type": "ref",
-                          "ref": "otvKh",
+                          "ref": "qAERt",
                           "name": "btn-generate",
                           "width": "fill_container",
                           "padding": [
@@ -107479,9 +107667,8 @@
                             "$Space/lg-plus"
                           ],
                           "descendants": {
-                            "DaLcd": {
-                              "content": "生成字幕",
-                              "fontFamily": "Noto Sans TC"
+                            "ASE9e": {
+                              "content": "$0.04"
                             }
                           }
                         },
@@ -173424,6 +173611,736 @@
           "fontFamily": "$Type/Family/Primary",
           "fontSize": "$Type/Text/Size",
           "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "V1jLKC",
+          "x": 26420,
+          "y": 24270,
+          "name": "Caption J9-D",
+          "fill": "#888888",
+          "content": "J9 · 會花錢的按鈕（金額即記號）",
+          "lineHeight": "$Type/Text/Line",
+          "fontFamily": "$Type/Family/Primary",
+          "fontSize": "$Type/Text/Size",
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "Ls4GO",
+          "x": 26420,
+          "y": 24300,
+          "name": "J9-D",
+          "width": 1240,
+          "fill": "$bg-primary",
+          "layout": "vertical",
+          "gap": "$Space/xl-plus",
+          "padding": "$Space/2xl",
+          "children": [
+            {
+              "type": "frame",
+              "id": "hxuLk",
+              "name": "sec-ruling",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": "$Space/md",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "aeMoj",
+                  "name": "sh",
+                  "fill": "$text-secondary",
+                  "content": "A · 裁定（⚖️ Alexyu 2026-09-10）",
+                  "lineHeight": "$Type/Text/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Text/Size",
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "ckcXo",
+                  "name": "note",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "會花錢的動作，控制項上一定帶預估金額。金額開頭的 $ 就是那個固定記號，不另加硬幣圖示。免費的動作不帶金額也不帶記號——沒有數字就是免費的訊號。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "OAvTa",
+                  "name": "note",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "記號之所以「固定」，是因為它跟按鈕能不能按綁在一起：只要按得下去，金額就一定在場。算不出金額時停用按鈕，把原因寫在說明列，而不是讓它退回成一顆看不出要錢的按鈕。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "SOwXf",
+                  "name": "note",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "因此沒有「記號平常不出現、異常才出現」的變體——那會讓同一個符號同時說「要花錢」和「不知道多少」，並且反向破壞免費訊號。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "P95JmF",
+              "name": "sec-states",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": "$Space/md",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "nDpas",
+                  "name": "sh",
+                  "fill": "$text-secondary",
+                  "content": "B · 六個狀態（定稿文案）",
+                  "lineHeight": "$Type/Text/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Text/Size",
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "nTRBo",
+                  "name": "state-list",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": "$Space/sm-plus",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "qmNUB",
+                      "name": "row-① ",
+                      "width": "fill_container",
+                      "fill": "$bg-secondary",
+                      "cornerRadius": "$radius-md",
+                      "gap": "$Space/lg",
+                      "padding": "$Space/md",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "mTgKs",
+                          "name": "cap",
+                          "width": 240,
+                          "layout": "vertical",
+                          "gap": "$Space/xs",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "lZYNe",
+                              "name": "t",
+                              "fill": "$text-primary",
+                              "content": "① 正常（片長實測）",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "zXfqq",
+                              "name": "c",
+                              "fill": "$text-muted",
+                              "content": "可點",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "baEAd",
+                          "name": "slot",
+                          "width": 220,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "MtNLb",
+                              "type": "ref",
+                              "ref": "qAERt",
+                              "name": "btn",
+                              "descendants": {
+                                "ASE9e": {
+                                  "content": "$0.42"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "wUl8Y",
+                          "name": "desc",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "語音辨識＋AI 翻譯，約需數分鐘",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "N068wV",
+                      "name": "row-② ",
+                      "width": "fill_container",
+                      "fill": "$bg-secondary",
+                      "cornerRadius": "$radius-md",
+                      "gap": "$Space/lg",
+                      "padding": "$Space/md",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "ElXzc",
+                          "name": "cap",
+                          "width": 240,
+                          "layout": "vertical",
+                          "gap": "$Space/xs",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "cQgdK",
+                              "name": "t",
+                              "fill": "$text-primary",
+                              "content": "② 片長未知（45 分假設）",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "M7mzl",
+                              "name": "c",
+                              "fill": "$text-muted",
+                              "content": "可點",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "DZV2t",
+                          "name": "slot",
+                          "width": 220,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "rR8q3",
+                              "type": "ref",
+                              "ref": "qAERt",
+                              "name": "btn",
+                              "descendants": {
+                                "ASE9e": {
+                                  "content": "≈ $0.42"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "RMBh5",
+                          "name": "desc",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "片長未知（估 45 分）——實際費用依內容長度而定",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "s6Cu2",
+                      "name": "row-③ ",
+                      "width": "fill_container",
+                      "fill": "$bg-secondary",
+                      "cornerRadius": "$radius-md",
+                      "gap": "$Space/lg",
+                      "padding": "$Space/md",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "S4k0tR",
+                          "name": "cap",
+                          "width": 240,
+                          "layout": "vertical",
+                          "gap": "$Space/xs",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "nCgwk",
+                              "name": "t",
+                              "fill": "$text-primary",
+                              "content": "③ 零花費（自架語音辨識）",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "F5s0n",
+                              "name": "c",
+                              "fill": "$text-muted",
+                              "content": "可點",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "I51qc",
+                          "name": "slot",
+                          "width": 220,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "OZTYp",
+                              "type": "ref",
+                              "ref": "qAERt",
+                              "name": "btn",
+                              "descendants": {
+                                "ASE9e": {
+                                  "content": "$0.00"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "EcNX4",
+                          "name": "desc",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "語音辨識：自架（不另計費）",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "D5Z4Qb",
+                      "name": "row-④ ",
+                      "width": "fill_container",
+                      "fill": "$bg-secondary",
+                      "cornerRadius": "$radius-md",
+                      "gap": "$Space/lg",
+                      "padding": "$Space/md",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "I9YAhV",
+                          "name": "cap",
+                          "width": 240,
+                          "layout": "vertical",
+                          "gap": "$Space/xs",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "CPcAh",
+                              "name": "t",
+                              "fill": "$text-primary",
+                              "content": "④ 估價還在路上",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "F4Ht9",
+                              "name": "c",
+                              "fill": "$text-muted",
+                              "content": "暫時不可點",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "JERJq",
+                          "name": "slot",
+                          "width": 220,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "rL6Qx",
+                              "type": "ref",
+                              "ref": "zhIx7",
+                              "name": "btn"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "bwxRk",
+                          "name": "desc",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "（說明列不變）金額位置放固定寬度骨架，按鈕不得跳寬",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "NkgOH",
+                      "name": "row-⑤ ",
+                      "width": "fill_container",
+                      "fill": "$bg-secondary",
+                      "cornerRadius": "$radius-md",
+                      "gap": "$Space/lg",
+                      "padding": "$Space/md",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "b3Gn3",
+                          "name": "cap",
+                          "width": 240,
+                          "layout": "vertical",
+                          "gap": "$Space/xs",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "F04CJ",
+                              "name": "t",
+                              "fill": "$text-primary",
+                              "content": "⑤ 估價失敗",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "we972",
+                              "name": "c",
+                              "fill": "$text-muted",
+                              "content": "不可點（停用）",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Gb9t7",
+                          "name": "slot",
+                          "width": 220,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "M41lZ5",
+                              "type": "ref",
+                              "ref": "dqE4G",
+                              "name": "btn"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "t5YKLU",
+                          "name": "desc",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "暫時算不出費用，因此先不開放。重新整理或稍後再試。",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "AvkHQ",
+                      "name": "row-⑥ ",
+                      "width": "fill_container",
+                      "fill": "$bg-secondary",
+                      "cornerRadius": "$radius-md",
+                      "gap": "$Space/lg",
+                      "padding": "$Space/md",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Kde5e",
+                          "name": "cap",
+                          "width": 240,
+                          "layout": "vertical",
+                          "gap": "$Space/xs",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "YNxxo",
+                              "name": "t",
+                              "fill": "$text-primary",
+                              "content": "⑥ 金鑰未設定",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "Hls5L",
+                              "name": "c",
+                              "fill": "$text-muted",
+                              "content": "不可點（降級）",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "EXtjx",
+                          "name": "slot",
+                          "width": 220,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "i4SW4K",
+                              "type": "ref",
+                              "ref": "dqE4G",
+                              "name": "btn"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "FO3tU",
+                          "name": "desc",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "生成字幕需要雲端語音辨識（ASR）金鑰。請至金鑰設定儲存後即可使用。",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "dScUf",
+                  "name": "note",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "免費的按鈕（搜尋字幕）永遠不帶金額、也不帶任何記號。它能成立的唯一前提，就是付費按鈕的數字從不缺席——這就是狀態 ⑤ 必須停用而不是降級的原因。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "r1Hft8",
+              "name": "sec-edges",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": "$Space/md",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Jdz0B",
+                  "name": "sh",
+                  "fill": "$text-secondary",
+                  "content": "C · 邊界情況",
+                  "lineHeight": "$Type/Text/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Text/Size",
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "hz4pt",
+                  "name": "note",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "金額為 $0.00 → 照樣寫 $0.00，不准寫「免費」（⚖️ §5-sexies 2026-08-11）。0 在這個產品裡是讀數不是省略；為什麼是 0，交給說明列講。注意 $0.00 只在語音辨識自架且翻譯也不計費時成立，自架 ASR ＋ Claude 翻譯仍是正數。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "j3lmQq",
+                  "name": "note",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "金額是範圍 → 按鈕上不畫範圍。系統不產生範圍（每列每模型都是單一數字）。不確定性由 ≈ 一個符號承載，模型差價由確認框的模型選擇器承載。若未來出現雙路線不確定，規則是報貴的那一端、加 ≈、絕不低估。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "YKD6z",
+                  "name": "note",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "≈ 只有一個意思：這個數字建立在假設的片長上。一列最多一個 ≈（⚖️ Sally 2026-09-05），說明列不再重複加。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "Q9GlUk",
+                  "name": "note",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "同意面一律兩位小數（$0.18／$0.00／$4.50）。首頁讀數帶那套精度折疊（$1.2／$12／$1.2k，見 H8 spec）只適用於已經花掉的錢，不得套用到任何同意面——在使用者按下去的那一刻把 $0.18 收成 $0.2，是在承諾的瞬間動了數字。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "QQQOR",
+              "name": "sec-status",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": "$Space/md",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Nfk24",
+                  "name": "sh",
+                  "fill": "$text-secondary",
+                  "content": "D · 現況與未完成（2026-09-10）",
+                  "lineHeight": "$Type/Text/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Text/Size",
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "T8apb",
+                  "name": "note",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "程式碼裡沒有任何一顆付費按鈕帶金額。付費入口是「管理字幕」→「生成字幕」（ManageSubtitleDialogV2.tsx:495-509），說明列只講「約需數分鐘」，全檔零金額字串。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "igqGt",
+                  "name": "note",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "沒有單項估價端點——GET /api/v1/subtitles/generation-candidates 是整庫掃描後的快照，所以單片路徑目前是 100% 無金額，不是偶發。補單項估價是讓這條規則成立的前提，追蹤於 disc-2026-09-single-item-cost-estimate。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "YQTZB",
+                  "name": "note",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "估價本身算不出「未知」：estimateUSD 沒有 error 回傳值，費率是編譯進二進位檔的常數，時長有三階梯（ffprobe 實測 → TMDb runtime → 45 分鐘假設）。2026-09-03 正式環境 2,399 列全部片長未知，但也全部有金額。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "QG6G5",
+                  "name": "note",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Button.tsx 還沒有對應變體，追蹤於 disc-2026-09-no-cost-bearing-component。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
         }
       ]
     },

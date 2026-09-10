@@ -158,6 +158,8 @@ SCREENS = {
     "JBKis": ("flow-j-specs", "j7-d"),
     # sub-6 — J8 政策 vs 手動的分工表 + 三個未決（兩案並陳，尚未裁定）
     "pbB6P": ("flow-j-specs", "j8-d"),
+    # 會花錢的按鈕（金額即記號）— A 案裁定、六個狀態定稿文案、$0.00／範圍／≈ 的邊界規則
+    "Ls4GO": ("flow-j-specs", "j9-d"),
     # Design system reference docs (top of canvas, no flow code)
     "8SSzc": ("design-system", "design-system-reference"),
     "xlrAO": ("design-system", "design-system-reference-light"),
