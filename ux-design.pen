@@ -12998,7 +12998,7 @@
                               "id": "uCkPx",
                               "name": "rowRightText",
                               "fill": "$text-secondary",
-                              "content": "0%",
+                              "content": "40%",
                               "lineHeight": "$Type/Text/Line",
                               "fontFamily": "$Type/Family/Mono",
                               "fontSize": "$Type/Text/Size",
@@ -13023,8 +13023,8 @@
                           "cornerRadius": "$radius-sm",
                           "id": "t0lyx",
                           "name": "progressFill",
-                          "fill": "$accent-primary",
-                          "width": 200,
+                          "fill": "$success",
+                          "width": 211,
                           "height": 6
                         }
                       ]
