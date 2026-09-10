@@ -156,6 +156,8 @@ SCREENS = {
     # Settings form-card width ruling (max-w-2xl -> max-w-3xl) — real-width math with
     # two stacked sidebars, why C4-D's fill_container ratio is a stale assumption.
     "JBKis": ("flow-j-specs", "j7-d"),
+    # sub-6 — J8 政策 vs 手動的分工表 + 三個未決（兩案並陳，尚未裁定）
+    "pbB6P": ("flow-j-specs", "j8-d"),
     # Design system reference docs (top of canvas, no flow code)
     "8SSzc": ("design-system", "design-system-reference"),
     "sJzat": ("design-system", "component-library"),

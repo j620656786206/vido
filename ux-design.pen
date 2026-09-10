@@ -178948,6 +178948,1141 @@
       "fontFamily": "Noto Sans TC",
       "fontSize": 14,
       "fontWeight": "600"
+    },
+    {
+      "type": "frame",
+      "id": "pbB6P",
+      "x": 25080,
+      "y": 24300,
+      "name": "J8-D",
+      "clip": true,
+      "width": 1240,
+      "fill": "$bg-secondary",
+      "cornerRadius": "$radius-lg",
+      "stroke": "$border-subtle",
+      "strokeWidth": 1,
+      "strokeAlignment": "inner",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": 32,
+      "children": [
+        {
+          "type": "frame",
+          "id": "z3C9W",
+          "name": "區塊A-標題",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 6,
+          "children": [
+            {
+              "type": "text",
+              "id": "g5D08J",
+              "name": "主標",
+              "fill": "$text-primary",
+              "content": "政策與手動流程的分工 —— 以及三個還沒裁的問題",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 22,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "Aulo9",
+              "name": "副標",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "sub-6-ux-consent-policy · brief 2026-09-03（Alexyu 2026-09-04 確認三個裁定）",
+              "lineHeight": 1.5,
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "AbhCg",
+          "name": "區塊B-分工表",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "BAuY0",
+              "name": "小標",
+              "fill": "$text-primary",
+              "content": "⚖️ 誰負責什麼",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 16,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "hg1j4",
+              "name": "表格",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "ueIXX",
+                  "name": "表頭",
+                  "width": "fill_container",
+                  "fill": "$bg-tertiary",
+                  "gap": 16,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "M1rnL",
+                      "name": "表頭欄-情境",
+                      "width": 240,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "AdfEK",
+                          "name": "欄名",
+                          "fill": "$text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "情境",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "b6gw6",
+                      "name": "表頭欄-走哪條路",
+                      "width": 200,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "lRS5r",
+                          "name": "欄名",
+                          "fill": "$text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "走哪條路",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "dovJ3",
+                      "name": "表頭欄-誰同意",
+                      "width": 380,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "F4eoWo",
+                          "name": "欄名",
+                          "fill": "$text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "誰同意",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hNpU2",
+                      "name": "表頭欄-畫面",
+                      "width": 284,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Kyhg5",
+                          "name": "欄名",
+                          "fill": "$text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "畫面",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "pC1hr",
+                  "name": "列1-掃到新片、有內嵌字幕",
+                  "width": "fill_container",
+                  "stroke": "$border-subtle",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "gap": 16,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "s9CU7b",
+                      "name": "欄1-情境",
+                      "width": 240,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "plynU",
+                          "name": "值",
+                          "fill": "$text-primary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "掃到新片、有內嵌字幕",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "rxeyN",
+                      "name": "欄2-走哪條路",
+                      "width": 200,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "AIvvJ",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "政策（抽取＋翻譯）",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "R9Lus",
+                      "name": "欄3-誰同意",
+                      "width": 380,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "qFh6n",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "規則（事前）＋按一次「依政策執行」",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Ffhhp",
+                      "name": "欄4-畫面",
+                      "width": 284,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "R7DE7d",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "F22 → F21",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "YsNu4",
+                  "name": "列2-掃到新片、沒有內嵌字幕",
+                  "width": "fill_container",
+                  "stroke": "$border-subtle",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "gap": 16,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "jm3ag",
+                      "name": "欄1-情境",
+                      "width": 240,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "fcfvH",
+                          "name": "值",
+                          "fill": "$text-primary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "掃到新片、沒有內嵌字幕",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "o9irRN",
+                      "name": "欄2-走哪條路",
+                      "width": 200,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "G784o",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "手動（語音辨識）",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "D427zA",
+                      "name": "欄3-誰同意",
+                      "width": 380,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "g2F7I0",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "逐項勾選、逐次同意",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "fPPik",
+                      "name": "欄4-畫面",
+                      "width": 284,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "X93nNd",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "F22 →（批次生成字幕）→ F15",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "p8G2Z",
+                  "name": "列3-只想處理某幾部",
+                  "width": "fill_container",
+                  "stroke": "$border-subtle",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "gap": 16,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "I3y0tN",
+                      "name": "欄1-情境",
+                      "width": 240,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "zeRYg",
+                          "name": "值",
+                          "fill": "$text-primary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "只想處理某幾部",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "h1p24j",
+                      "name": "欄2-走哪條路",
+                      "width": 200,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "X9os87",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "手動",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Hscl9",
+                      "name": "欄3-誰同意",
+                      "width": 380,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "fx6Pa",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "逐項勾選",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "oa2Px",
+                      "name": "欄4-畫面",
+                      "width": 284,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "XKx5I",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "媒體庫多選 → F15",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "kjeQT",
+                  "name": "列4-政策候選超過上限",
+                  "width": "fill_container",
+                  "stroke": "$border-subtle",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "gap": 16,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "xw9xx",
+                      "name": "欄1-情境",
+                      "width": 240,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "mS7Hl",
+                          "name": "值",
+                          "fill": "$text-primary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "政策候選超過上限",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "FW9CL",
+                      "name": "欄2-走哪條路",
+                      "width": 200,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "bBLdC",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "政策，跑到上限就暫停",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "N2uKv",
+                      "name": "欄3-誰同意",
+                      "width": 380,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Ml89T",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "同上，砍線在清單裡可見",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "jrzVN",
+                      "name": "欄4-畫面",
+                      "width": 284,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Yu2bD",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "F23",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "hEa5O",
+                  "name": "列5-沒有可抽取項目",
+                  "width": "fill_container",
+                  "stroke": "$border-subtle",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "gap": 16,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "kY4yX",
+                      "name": "欄1-情境",
+                      "width": 240,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "u7aUVJ",
+                          "name": "值",
+                          "fill": "$text-primary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "沒有可抽取項目",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "gGXDf",
+                      "name": "欄2-走哪條路",
+                      "width": 200,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "ITHqt",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "不執行",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "pKlPn",
+                      "name": "欄3-誰同意",
+                      "width": 380,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "wZLQc",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "—",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "q1Swt",
+                      "name": "欄4-畫面",
+                      "width": 284,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "xe7vM",
+                          "name": "值",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "F24",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "BbMY0",
+          "name": "區塊C-三個未決",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "DBEqX",
+              "name": "小標",
+              "fill": "$text-primary",
+              "content": "❓ 三個未決 —— 稿上採用的畫法是暫用，不是裁定",
+              "fontFamily": "Noto Sans TC",
+              "fontSize": 16,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "Po2TI",
+              "name": "未決a",
+              "width": "fill_container",
+              "fill": "$bg-primary",
+              "cornerRadius": "$radius-md",
+              "layout": "vertical",
+              "gap": 10,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "yRNBU",
+                  "name": "問題",
+                  "fill": "$text-primary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "(a) 政策上限與 AI_RUN_BUDGET_USD 是同一個數還是分開？",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "XL0qw",
+                  "name": "A 案",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Cuvfl",
+                      "name": "標籤",
+                      "width": 60,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "PHN0o",
+                          "name": "標籤文字",
+                          "fill": "$text-primary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "A 案",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "KyIEd",
+                      "name": "說明",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "同一個數。政策上限就是 AI_RUN_BUDGET_USD，設定頁那格是它的 UI。好處是全站只有一個上限、沒有兩個數字互相矛盾的可能；代價是手動批次也被同一個數綁住。",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "qzMUE",
+                  "name": "B 案",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "o0ZZA",
+                      "name": "標籤",
+                      "width": 60,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "HEmDM",
+                          "name": "標籤文字",
+                          "fill": "$text-primary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "B 案",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "mqc9s",
+                      "name": "說明",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "分開。政策有自己的上限，手動批次沿用 AI_RUN_BUDGET_USD。好處是「無人看管的自動花費」可以設得比「我盯著看的手動花費」更保守；代價是兩個數字、兩處說明，而且使用者要理解為什麼有兩個。",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "wkPMb",
+                  "name": "稿上暫用",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "稿上暫用：A 案（F21 頁尾寫「政策上限 $5.00」，與 F15 的「預算上限 $5.00」同值）。",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "FvRlz",
+              "name": "未決b",
+              "width": "fill_container",
+              "fill": "$bg-primary",
+              "cornerRadius": "$radius-md",
+              "layout": "vertical",
+              "gap": 10,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Sdyen",
+                  "name": "問題",
+                  "fill": "$text-primary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "(b)「已排除」是否持久化？",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "FuQJk",
+                  "name": "A 案",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "mZwjk",
+                      "name": "標籤",
+                      "width": 60,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "uih0r",
+                          "name": "標籤文字",
+                          "fill": "$text-primary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "A 案",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "PbgNo",
+                      "name": "說明",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "只在這次執行有效。下次按「依政策執行」時，被排除的項目會再出現。好處是沒有隱形狀態，畫面上看到的就是全部；代價是同一部片可能每次都要重新排除一次。",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "BcRn3",
+                  "name": "B 案",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "r1Pwin",
+                      "name": "標籤",
+                      "width": 60,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "qM1Os",
+                          "name": "標籤文字",
+                          "fill": "$text-primary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "B 案",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "FzcDp",
+                      "name": "說明",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "持久化。排除過的項目下次不再出現，設定頁要有一個「已排除清單」可以管理。好處是排除一次就永久有效；代價是多一份看不見的狀態，而「為什麼這部片沒被處理」變成一個要去別的地方查的問題。",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "uQl31",
+                  "name": "稿上暫用",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "稿上暫用：A 案（F21 的「已排除（2）」段就在同一個清單裡，沒有任何「永久」的字眼）。",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "pbEih",
+              "name": "未決c",
+              "width": "fill_container",
+              "fill": "$bg-primary",
+              "cornerRadius": "$radius-md",
+              "layout": "vertical",
+              "gap": 10,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "LKxOQ",
+                  "name": "問題",
+                  "fill": "$text-primary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "(c) 政策確認屏要不要顯示「上次執行花了多少」？",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "z3D9e",
+                  "name": "A 案",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "seygx",
+                      "name": "標籤",
+                      "width": 60,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "UyNwU",
+                          "name": "標籤文字",
+                          "fill": "$text-primary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "A 案",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "VKjKa",
+                      "name": "說明",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "顯示。頂部三行下方多一行「上次執行：3 天前 · 花了 $2.31」。好處是花費有連續性，使用者能建立「一次大概多少錢」的直覺；代價是需要後端保存執行歷史（今天沒有這個端點），而且 Rule 23 的時間讀數要額外處理。",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "nl6P9",
+                  "name": "B 案",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "w7D0IO",
+                      "name": "標籤",
+                      "width": 60,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "upt6T",
+                          "name": "標籤文字",
+                          "fill": "$text-primary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "B 案",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "gRAbb",
+                      "name": "說明",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "不顯示。確認屏只講這一次。好處是不需要新端點、畫面更短；代價是使用者每次都得重新猜「這樣算貴嗎」。",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "rZvRv",
+                  "name": "稿上暫用",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "稿上暫用：B 案（F21 沒有這一行）。",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "G5pdPO",
+          "name": "註腳",
+          "fill": "$text-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "裁定後請回填本頁，並在 F21/F23/F25 對應處落地；在裁定之前，任何一案都不得被當成既成事實引用。",
+          "lineHeight": 1.5,
+          "fontFamily": "Noto Sans TC",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "m2mK3",
+      "x": 25080,
+      "y": 24270,
+      "name": "Caption J8-D",
+      "fill": "#888888",
+      "content": "J8 · 政策與手動流程分工",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 14,
+      "fontWeight": "600"
     }
   ],
   "variables": {
