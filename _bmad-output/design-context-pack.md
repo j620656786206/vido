@@ -59,7 +59,7 @@ token                    夜行 Nightwalk        日巡 Daywalk
 --success-text          #8fd3be              #06583e    
 # 語意 · 赭＝要求了但沒發生
 --warning               #d4763f              #a6510c    
---warning-pressed       #d97706              #8b4208    
+--warning-pressed       #c26a36              #8b4208    
 --warning-tint          #d4763f1f            #d4763f33  
 --warning-text          #e8b04b              #7b3a06    
 # 語意 · 硃砂＝壞掉了
