@@ -45,7 +45,7 @@ token                    夜行 Nightwalk        日巡 Daywalk
 --bg-secondary          #132320              #f0e7d3    
 --bg-tertiary           #1b302b              #e5d9c3    ⚠️ 日巡的最深階，所有文字對比的最壞情況
 --border-subtle         #274039              #cdbe9b    
-# 主色
+# 主色 · 泥金＝品牌色，accent-text 同時是「正在跑」
 --accent-primary        #c9a24b              #886208    泥金
 --accent-hover          #e0be72              #725205    ⚠️ 日巡往「暗」走，不是變亮
 --accent-pressed        #a8853c              #5b4103    
@@ -53,7 +53,7 @@ token                    夜行 Nightwalk        日巡 Daywalk
 --accent-tint           #c9a24b1f            #c9a24b33  
 --accent-text           #e0be72              #654804    要被「讀」的金
 --focus-ring            #c9a24b              #886208    
-# 語意 · 青碧＝正在發生
+# 語意 · 青碧＝有答案了（完成／成功）
 --success               #6fbfa8              #0b7352    
 --success-tint          #6fbfa81f            #6fbfa833  
 --success-text          #8fd3be              #06583e    
@@ -83,7 +83,9 @@ token                    夜行 Nightwalk        日巡 Daywalk
 --overlay-scrim         #000000b3            #0c1512b3  
 ```
 
-**內文顏色規則**：`--accent-primary` / `--error` 是拿來**填色與按**的，當內文字對比不足（最差 3.57 / 2.42）。要被讀的文字一律用 `--accent-text` / `--error-text`。
+**內文顏色規則**：`--success` / `--warning` / `--error` / `--info` / `--accent-primary` 全部是**填色**用的，當文字時五個裡有四個至少在一個主題不過 AA（最差 4.19 / 3.96 / 2.57 / 3.80 / 3.96）。**要被讀的文字一律用 `-text` 那一階。**
+
+**狀態詞彙**：泥金＝正在跑 · 青碧＝有答案了 · 赭＝你要求了但沒發生 · 硃砂＝壞了 · 靛青＝純告知 · 不出現＝你沒要求。
 
 ### 圓角 / 陰影
 ```
