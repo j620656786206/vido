@@ -95,7 +95,11 @@ MCP_BIN = resolve_mcp_bin()
 # These flows are exported at 2x and then constrained by WIDTH, never by long edge:
 # a spec page is 1240 wide and 3000+ tall, so a long-edge cap makes it NARROWER,
 # which is the opposite of what readability needs.
-READABLE_FLOWS = {"design-system", "flow-j-specs"}
+# flow-c-search-settings joined 2026-09-11: the 24 settings screens are the most
+# text-dense surface in the app (form labels, key rows, log lines, backup tables).
+# At the 400px thumbnail cap a 14px label renders at ~3.9px — nobody, including
+# the person who drew them, can review the copy. Same reason as the two above.
+READABLE_FLOWS = {"design-system", "flow-j-specs", "flow-c-search-settings"}
 # Floor, not ceiling: a page wider than this keeps its native 1:1 width rather than
 # being shrunk below legibility.
 READABLE_MIN_WIDTH = 1400
