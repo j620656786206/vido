@@ -3023,7 +3023,7 @@
                               "fill": "$text-muted",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "暗色的是半階（-plus）。整階不夠用時才動它，而且要寫得出理由——半階一旦隨手用，階梯就等於沒有階梯。",
+                              "content": "暗色的是半階（-plus）——它們不是「將就」，各有明確用途（20px 是 CJK 按鈕的水平內距，中文字身框直接貼到內距邊，需要約 0.25em 補償）。另有 Space/none = 0：gap 與 padding 只能填 $Space/* 變數，一個裸數字都不准，連 0 都有變數。現有階都不合用時不要自己發明數字，送 UI/UX designer／CD／Agent 做設計裁決、PM 決定要不要動設計系統。",
                               "lineHeight": "$Type/Label/Line",
                               "fontFamily": "$Type/Family/Canvas",
                               "fontSize": "$Type/Label/Size",
@@ -10660,9 +10660,9 @@
                               "width": "fill_container",
                               "padding": [
                                 "$Space/hairline",
-                                0,
+                                "$Space/none",
                                 "$Space/sm-plus",
-                                0
+                                "$Space/none"
                               ],
                               "justifyContent": "center",
                               "children": [
@@ -14314,9 +14314,9 @@
                                   "gap": "$Space/md",
                                   "padding": [
                                     "$Space/xs-plus",
-                                    0,
-                                    0,
-                                    0
+                                    "$Space/none",
+                                    "$Space/none",
+                                    "$Space/none"
                                   ],
                                   "alignItems": "center",
                                   "children": [
@@ -14329,7 +14329,7 @@
                                       "cornerRadius": "$radius-md",
                                       "gap": "$Space/sm",
                                       "padding": [
-                                        0,
+                                        "$Space/none",
                                         "$Space/xl"
                                       ],
                                       "justifyContent": "center",
@@ -14367,7 +14367,7 @@
                                       "cornerRadius": "$radius-md",
                                       "gap": "$Space/sm",
                                       "padding": [
-                                        0,
+                                        "$Space/none",
                                         "$Space/lg-plus"
                                       ],
                                       "justifyContent": "center",
@@ -14405,7 +14405,7 @@
                                       "cornerRadius": "$radius-md",
                                       "gap": "$Space/sm",
                                       "padding": [
-                                        0,
+                                        "$Space/none",
                                         "$Space/lg-plus"
                                       ],
                                       "justifyContent": "center",
@@ -14931,9 +14931,9 @@
                               "gap": "$Space/sm",
                               "padding": [
                                 "$Space/hairline",
-                                0,
-                                0,
-                                0
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/none"
                               ],
                               "children": [
                                 {
@@ -15415,7 +15415,7 @@
                       "strokeAlignment": "inner",
                       "strokeLinejoin": "round",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/xl-plus"
                       ],
                       "justifyContent": "space_between",
@@ -15510,7 +15510,7 @@
                       "height": 56,
                       "fill": "$bg-primary",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/xl-plus"
                       ],
                       "justifyContent": "space_between",
@@ -16247,9 +16247,9 @@
                   "gap": "$Space/2xl",
                   "padding": [
                     "$Space/xl",
-                    0,
+                    "$Space/none",
                     "$Space/5xl",
-                    0
+                    "$Space/none"
                   ],
                   "alignItems": "center",
                   "children": [
@@ -16262,7 +16262,7 @@
                       "cornerRadius": "$radius-lg",
                       "padding": [
                         "$Space/lg",
-                        0
+                        "$Space/none"
                       ],
                       "alignItems": "center",
                       "children": [
@@ -16637,7 +16637,7 @@
                                   "fill": "$focus-ring",
                                   "cornerRadius": "$radius-md",
                                   "padding": [
-                                    0,
+                                    "$Space/none",
                                     "$Space/lg-plus"
                                   ],
                                   "justifyContent": "center",
@@ -17501,9 +17501,9 @@
                       "layout": "vertical",
                       "gap": "$Space/xs",
                       "padding": [
-                        0,
-                        0,
-                        0,
+                        "$Space/none",
+                        "$Space/none",
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "children": [
@@ -20014,7 +20014,7 @@
                           "height": 44,
                           "cornerRadius": "$radius-md",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md-plus"
                           ],
                           "justifyContent": "center",
@@ -20477,7 +20477,7 @@
                       "name": "gp-cn1",
                       "padding": [
                         "$Space/sm-plus",
-                        0
+                        "$Space/none"
                       ],
                       "children": [
                         {
@@ -20552,7 +20552,7 @@
                       "name": "gp-cn2",
                       "padding": [
                         "$Space/sm-plus",
-                        0
+                        "$Space/none"
                       ],
                       "children": [
                         {
@@ -20628,7 +20628,7 @@
                       "name": "gp-cn3",
                       "padding": [
                         "$Space/sm-plus",
-                        0
+                        "$Space/none"
                       ],
                       "children": [
                         {
@@ -20704,7 +20704,7 @@
                       "name": "gp-cn4",
                       "padding": [
                         "$Space/sm-plus",
-                        0
+                        "$Space/none"
                       ],
                       "children": [
                         {
@@ -20780,7 +20780,7 @@
                       "name": "gp-cn-ai",
                       "padding": [
                         "$Space/sm-plus",
-                        0
+                        "$Space/none"
                       ],
                       "children": [
                         {
@@ -20965,7 +20965,7 @@
                       "name": "gr-act-confirm",
                       "height": 44,
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/sm-plus"
                       ],
                       "justifyContent": "center",
@@ -20990,7 +20990,7 @@
                       "name": "gr-act-edit",
                       "height": 44,
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/sm-plus"
                       ],
                       "justifyContent": "center",
@@ -21015,7 +21015,7 @@
                       "name": "gr-act-delete",
                       "height": 44,
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/sm-plus"
                       ],
                       "justifyContent": "center",
@@ -21274,7 +21274,7 @@
                   "strokeAlignment": "inner",
                   "gap": "$Space/lg",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md"
                   ],
                   "alignItems": "center",
@@ -23101,7 +23101,7 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/xl-plus"
                   ],
                   "justifyContent": "space_between",
@@ -23193,7 +23193,7 @@
                   "height": 56,
                   "fill": "$bg-primary",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/xl-plus"
                   ],
                   "justifyContent": "space_between",
@@ -24105,7 +24105,7 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/xl-plus"
                   ],
                   "justifyContent": "space_between",
@@ -24203,7 +24203,7 @@
                   "height": 56,
                   "fill": "$bg-primary",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/xl-plus"
                   ],
                   "justifyContent": "space_between",
@@ -24916,7 +24916,7 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/xl-plus"
                   ],
                   "justifyContent": "space_between",
@@ -25011,7 +25011,7 @@
                   "height": 56,
                   "fill": "$bg-primary",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/xl-plus"
                   ],
                   "justifyContent": "space_between",
@@ -26067,7 +26067,7 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/xl-plus"
                   ],
                   "justifyContent": "space_between",
@@ -26159,7 +26159,7 @@
                   "height": 56,
                   "fill": "$bg-primary",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/xl-plus"
                   ],
                   "justifyContent": "space_between",
@@ -28013,7 +28013,7 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/xl-plus"
                   ],
                   "justifyContent": "space_between",
@@ -28105,7 +28105,7 @@
                   "height": 56,
                   "fill": "$bg-primary",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/xl-plus"
                   ],
                   "justifyContent": "space_between",
@@ -28426,7 +28426,7 @@
                       "cornerRadius": "$radius-md",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg-plus"
                       ],
                       "justifyContent": "center",
@@ -28822,7 +28822,7 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/xl-plus"
                   ],
                   "justifyContent": "space_between",
@@ -28920,7 +28920,7 @@
                   "height": 56,
                   "fill": "$bg-primary",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/xl-plus"
                   ],
                   "justifyContent": "space_between",
@@ -29266,7 +29266,7 @@
                       "cornerRadius": "$radius-md",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg-plus"
                       ],
                       "justifyContent": "center",
@@ -29343,7 +29343,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/lg"
               ],
               "justifyContent": "space_between",
@@ -29427,7 +29427,7 @@
               "fill": "$bg-primary",
               "gap": "$Space/sm",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/lg"
               ],
               "alignItems": "center",
@@ -29962,7 +29962,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/lg"
               ],
               "justifyContent": "space_between",
@@ -30049,7 +30049,7 @@
               "fill": "$bg-primary",
               "gap": "$Space/sm",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/lg"
               ],
               "alignItems": "center",
@@ -30250,7 +30250,7 @@
                   "cornerRadius": "$radius-md",
                   "gap": "$Space/sm",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/lg-plus"
                   ],
                   "justifyContent": "center",
@@ -30490,7 +30490,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/lg"
               ],
               "justifyContent": "space_between",
@@ -30574,7 +30574,7 @@
               "fill": "$bg-primary",
               "gap": "$Space/sm",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/lg"
               ],
               "alignItems": "center",
@@ -31305,7 +31305,7 @@
                               "cornerRadius": "$radius-md",
                               "gap": "$Space/xs-plus",
                               "padding": [
-                                0,
+                                "$Space/none",
                                 "$Space/md"
                               ],
                               "justifyContent": "center",
@@ -31343,7 +31343,7 @@
                               "cornerRadius": "$radius-md",
                               "gap": "$Space/xs-plus",
                               "padding": [
-                                0,
+                                "$Space/none",
                                 "$Space/md"
                               ],
                               "justifyContent": "center",
@@ -31371,7 +31371,7 @@
                               "cornerRadius": "$radius-md",
                               "gap": "$Space/xs-plus",
                               "padding": [
-                                0,
+                                "$Space/none",
                                 "$Space/md"
                               ],
                               "justifyContent": "center",
@@ -31399,7 +31399,7 @@
                               "cornerRadius": "$radius-md",
                               "gap": "$Space/xs-plus",
                               "padding": [
-                                0,
+                                "$Space/none",
                                 "$Space/md"
                               ],
                               "justifyContent": "center",
@@ -33596,7 +33596,7 @@
               "width": "fill_container",
               "height": 52,
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/lg"
               ],
               "justifyContent": "space_between",
@@ -34109,7 +34109,7 @@
                   "height": 60,
                   "fill": "$bg-primary",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/2xl"
                   ],
                   "justifyContent": "space_between",
@@ -34236,7 +34236,7 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/2xl"
                   ],
                   "alignItems": "end",
@@ -35166,7 +35166,7 @@
               "layout": "vertical",
               "padding": [
                 "$Space/xs-plus",
-                0
+                "$Space/none"
               ],
               "children": [
                 {
@@ -35397,7 +35397,7 @@
                       "height": 60,
                       "fill": "$bg-primary",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/2xl"
                       ],
                       "justifyContent": "space_between",
@@ -35480,7 +35480,7 @@
                       "strokeAlignment": "inner",
                       "strokeLinejoin": "round",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/2xl"
                       ],
                       "alignItems": "end",
@@ -36300,7 +36300,7 @@
               "layout": "vertical",
               "padding": [
                 "$Space/xs-plus",
-                0
+                "$Space/none"
               ],
               "children": [
                 {
@@ -36475,7 +36475,7 @@
               "height": 60,
               "fill": "$bg-primary",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/2xl"
               ],
               "justifyContent": "space_between",
@@ -36602,7 +36602,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/2xl"
               ],
               "alignItems": "end",
@@ -37654,9 +37654,9 @@
                   "width": "fill_container",
                   "padding": [
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/sm",
-                    0
+                    "$Space/none"
                   ],
                   "justifyContent": "center",
                   "children": [
@@ -37703,7 +37703,7 @@
                   "width": "fill_container",
                   "layout": "vertical",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/sm"
                   ],
                   "children": [
@@ -37853,7 +37853,7 @@
                       "name": "divider-wrap",
                       "width": "fill_container",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/md"
                       ],
                       "children": [
@@ -37925,7 +37925,7 @@
                       "cornerRadius": "$radius-lg",
                       "padding": [
                         "$Space/md-plus",
-                        0
+                        "$Space/none"
                       ],
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -37998,9 +37998,9 @@
                   "width": "fill_container",
                   "padding": [
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/sm",
-                    0
+                    "$Space/none"
                   ],
                   "justifyContent": "center",
                   "children": [
@@ -38137,7 +38137,7 @@
                       "name": "divider-wrap",
                       "width": "fill_container",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/md"
                       ],
                       "children": [
@@ -38209,7 +38209,7 @@
                       "cornerRadius": "$radius-lg",
                       "padding": [
                         "$Space/md-plus",
-                        0
+                        "$Space/none"
                       ],
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -38284,9 +38284,9 @@
                   "width": "fill_container",
                   "padding": [
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/sm",
-                    0
+                    "$Space/none"
                   ],
                   "justifyContent": "center",
                   "children": [
@@ -38829,9 +38829,9 @@
                   "width": "fill_container",
                   "padding": [
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/sm",
-                    0
+                    "$Space/none"
                   ],
                   "justifyContent": "center",
                   "children": [
@@ -40630,9 +40630,9 @@
                   "width": "fill_container",
                   "padding": [
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/sm",
-                    0
+                    "$Space/none"
                   ],
                   "justifyContent": "center",
                   "children": [
@@ -42000,9 +42000,9 @@
                               "gap": "$Space/md",
                               "padding": [
                                 "$Space/xs-plus",
-                                0,
-                                0,
-                                0
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/none"
                               ],
                               "alignItems": "center",
                               "children": [
@@ -42015,7 +42015,7 @@
                                   "cornerRadius": "$radius-md",
                                   "gap": "$Space/sm",
                                   "padding": [
-                                    0,
+                                    "$Space/none",
                                     "$Space/xl"
                                   ],
                                   "justifyContent": "center",
@@ -42053,7 +42053,7 @@
                                   "cornerRadius": "$radius-md",
                                   "gap": "$Space/sm",
                                   "padding": [
-                                    0,
+                                    "$Space/none",
                                     "$Space/lg-plus"
                                   ],
                                   "justifyContent": "center",
@@ -42091,7 +42091,7 @@
                                   "cornerRadius": "$radius-md",
                                   "gap": "$Space/sm",
                                   "padding": [
-                                    0,
+                                    "$Space/none",
                                     "$Space/lg-plus"
                                   ],
                                   "justifyContent": "center",
@@ -42617,9 +42617,9 @@
                           "gap": "$Space/sm",
                           "padding": [
                             "$Space/hairline",
-                            0,
-                            0,
-                            0
+                            "$Space/none",
+                            "$Space/none",
+                            "$Space/none"
                           ],
                           "children": [
                             {
@@ -43100,7 +43100,7 @@
                   "strokeLinejoin": "round",
                   "gap": "$Space/md",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/2xl"
                   ],
                   "alignItems": "center",
@@ -43618,7 +43618,7 @@
                               "cornerRadius": "$radius-md",
                               "gap": "$Space/xs-plus",
                               "padding": [
-                                0,
+                                "$Space/none",
                                 "$Space/md-plus"
                               ],
                               "justifyContent": "center",
@@ -44014,7 +44014,7 @@
                   "fill": "$bg-secondary",
                   "layout": "vertical",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/2xl",
                     "$Space/xl-plus",
                     "$Space/2xl"
@@ -44080,9 +44080,9 @@
                               "gap": "$Space/md",
                               "padding": [
                                 "$Space/sm",
-                                0,
-                                0,
-                                0
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/none"
                               ],
                               "children": [
                                 {
@@ -44527,7 +44527,7 @@
                   "strokeLinejoin": "round",
                   "gap": "$Space/md",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/2xl"
                   ],
                   "alignItems": "center",
@@ -44629,7 +44629,7 @@
                       "cornerRadius": "$radius-md",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg-plus"
                       ],
                       "justifyContent": "center",
@@ -45278,9 +45278,9 @@
                               "gap": "$Space/md",
                               "padding": [
                                 "$Space/xs-plus",
-                                0,
-                                0,
-                                0
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/none"
                               ],
                               "alignItems": "center",
                               "children": [
@@ -45293,7 +45293,7 @@
                                   "cornerRadius": "$radius-md",
                                   "gap": "$Space/sm",
                                   "padding": [
-                                    0,
+                                    "$Space/none",
                                     "$Space/xl"
                                   ],
                                   "justifyContent": "center",
@@ -45331,7 +45331,7 @@
                                   "cornerRadius": "$radius-md",
                                   "gap": "$Space/sm",
                                   "padding": [
-                                    0,
+                                    "$Space/none",
                                     "$Space/lg-plus"
                                   ],
                                   "justifyContent": "center",
@@ -45369,7 +45369,7 @@
                                   "cornerRadius": "$radius-md",
                                   "gap": "$Space/sm",
                                   "padding": [
-                                    0,
+                                    "$Space/none",
                                     "$Space/lg-plus"
                                   ],
                                   "justifyContent": "center",
@@ -45644,7 +45644,7 @@
                                   "height": 44,
                                   "cornerRadius": "$radius-md",
                                   "padding": [
-                                    0,
+                                    "$Space/none",
                                     "$Space/md-plus"
                                   ],
                                   "justifyContent": "center",
@@ -45782,7 +45782,7 @@
                                   "height": 44,
                                   "cornerRadius": "$radius-md",
                                   "padding": [
-                                    0,
+                                    "$Space/none",
                                     "$Space/md-plus"
                                   ],
                                   "justifyContent": "center",
@@ -45920,7 +45920,7 @@
                                   "height": 44,
                                   "cornerRadius": "$radius-md",
                                   "padding": [
-                                    0,
+                                    "$Space/none",
                                     "$Space/md-plus"
                                   ],
                                   "justifyContent": "center",
@@ -46622,7 +46622,7 @@
               "height": 60,
               "fill": "$bg-primary",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/2xl"
               ],
               "justifyContent": "space_between",
@@ -46685,7 +46685,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/2xl"
               ],
               "alignItems": "end",
@@ -48386,7 +48386,7 @@
               "height": 60,
               "fill": "$bg-primary",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/2xl"
               ],
               "justifyContent": "space_between",
@@ -48450,7 +48450,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/2xl"
               ],
               "justifyContent": "space_between",
@@ -49318,7 +49318,7 @@
                   "height": 60,
                   "fill": "$bg-primary",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/2xl"
                   ],
                   "justifyContent": "space_between",
@@ -49445,7 +49445,7 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/2xl"
                   ],
                   "alignItems": "end",
@@ -50375,7 +50375,7 @@
               "layout": "vertical",
               "padding": [
                 "$Space/sm",
-                0
+                "$Space/none"
               ],
               "children": [
                 {
@@ -50758,9 +50758,9 @@
                   "width": "fill_container",
                   "padding": [
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/sm",
-                    0
+                    "$Space/none"
                   ],
                   "justifyContent": "center",
                   "children": [
@@ -50821,7 +50821,7 @@
                   "height": "fill_container",
                   "layout": "vertical",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/lg-plus"
                   ],
                   "children": [
@@ -50839,7 +50839,7 @@
                       "gap": "$Space/md-plus",
                       "padding": [
                         "$Space/lg",
-                        0
+                        "$Space/none"
                       ],
                       "alignItems": "center",
                       "children": [
@@ -50889,7 +50889,7 @@
                                   "cornerRadius": "$radius-md",
                                   "padding": [
                                     "$Space/xs-plus",
-                                    0
+                                    "$Space/none"
                                   ],
                                   "justifyContent": "center",
                                   "alignItems": "center",
@@ -50916,7 +50916,7 @@
                                   "cornerRadius": "$radius-md",
                                   "padding": [
                                     "$Space/xs-plus",
-                                    0
+                                    "$Space/none"
                                   ],
                                   "justifyContent": "center",
                                   "alignItems": "center",
@@ -50942,7 +50942,7 @@
                                   "cornerRadius": "$radius-md",
                                   "padding": [
                                     "$Space/xs-plus",
-                                    0
+                                    "$Space/none"
                                   ],
                                   "justifyContent": "center",
                                   "alignItems": "center",
@@ -50980,7 +50980,7 @@
                       "gap": "$Space/md-plus",
                       "padding": [
                         "$Space/lg",
-                        0
+                        "$Space/none"
                       ],
                       "alignItems": "center",
                       "children": [
@@ -51036,7 +51036,7 @@
                       "gap": "$Space/md-plus",
                       "padding": [
                         "$Space/lg",
-                        0
+                        "$Space/none"
                       ],
                       "alignItems": "center",
                       "children": [
@@ -51087,7 +51087,7 @@
                                   "cornerRadius": "$radius-md",
                                   "padding": [
                                     "$Space/xs-plus",
-                                    0
+                                    "$Space/none"
                                   ],
                                   "justifyContent": "center",
                                   "alignItems": "center",
@@ -51113,7 +51113,7 @@
                                   "cornerRadius": "$radius-md",
                                   "padding": [
                                     "$Space/xs-plus",
-                                    0
+                                    "$Space/none"
                                   ],
                                   "justifyContent": "center",
                                   "alignItems": "center",
@@ -51166,7 +51166,7 @@
               "height": 52,
               "fill": "$bg-primary",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/lg"
               ],
               "justifyContent": "space_between",
@@ -51229,7 +51229,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/lg"
               ],
               "justifyContent": "space_between",
@@ -51745,7 +51745,7 @@
               "height": 60,
               "fill": "$bg-primary",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/2xl"
               ],
               "justifyContent": "space_between",
@@ -51872,7 +51872,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/2xl"
               ],
               "alignItems": "end",
@@ -51975,9 +51975,9 @@
                   "layout": "vertical",
                   "padding": [
                     "$Space/lg",
-                    0,
-                    0,
-                    0
+                    "$Space/none",
+                    "$Space/none",
+                    "$Space/none"
                   ],
                   "children": [
                     {
@@ -51988,7 +51988,7 @@
                       "layout": "vertical",
                       "gap": "$Space/xs",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/md"
                       ],
                       "children": [
@@ -52557,7 +52557,7 @@
               "height": 52,
               "fill": "$bg-primary",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/lg"
               ],
               "justifyContent": "space_between",
@@ -52619,7 +52619,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/lg"
               ],
               "justifyContent": "space_between",
@@ -52730,7 +52730,7 @@
               "fill": "$bg-primary",
               "gap": "$Space/sm",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/lg-plus"
               ],
               "alignItems": "center",
@@ -53262,7 +53262,7 @@
               "height": 60,
               "fill": "$bg-primary",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/2xl"
               ],
               "justifyContent": "space_between",
@@ -53389,7 +53389,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/2xl"
               ],
               "alignItems": "end",
@@ -53492,9 +53492,9 @@
                   "layout": "vertical",
                   "padding": [
                     "$Space/lg",
-                    0,
-                    0,
-                    0
+                    "$Space/none",
+                    "$Space/none",
+                    "$Space/none"
                   ],
                   "children": [
                     {
@@ -53505,7 +53505,7 @@
                       "layout": "vertical",
                       "gap": "$Space/xs",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/md"
                       ],
                       "children": [
@@ -55468,7 +55468,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "justifyContent": "center",
@@ -55507,7 +55507,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "justifyContent": "center",
@@ -55546,7 +55546,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "justifyContent": "center",
@@ -55585,7 +55585,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "justifyContent": "center",
@@ -55624,7 +55624,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "justifyContent": "center",
@@ -55663,7 +55663,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "justifyContent": "center",
@@ -55715,7 +55715,7 @@
                       "strokeAlignment": "inner",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "alignItems": "center",
@@ -56492,7 +56492,7 @@
                       "strokeAlignment": "inner",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "alignItems": "center",
@@ -56539,7 +56539,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "justifyContent": "center",
@@ -56578,7 +56578,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "justifyContent": "center",
@@ -56617,7 +56617,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "justifyContent": "center",
@@ -56656,7 +56656,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "justifyContent": "center",
@@ -56695,7 +56695,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "justifyContent": "center",
@@ -56734,7 +56734,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "justifyContent": "center",
@@ -56841,7 +56841,7 @@
                           "cornerRadius": "$radius-md",
                           "gap": "$Space/sm",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/lg"
                           ],
                           "justifyContent": "center",
@@ -56879,7 +56879,7 @@
                           "cornerRadius": "$radius-md",
                           "gap": "$Space/sm",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/lg"
                           ],
                           "justifyContent": "center",
@@ -56917,7 +56917,7 @@
                           "cornerRadius": "$radius-md",
                           "gap": "$Space/sm",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/lg"
                           ],
                           "justifyContent": "center",
@@ -57641,7 +57641,7 @@
                           "strokeAlignment": "outer",
                           "gap": "$Space/md",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md"
                           ],
                           "justifyContent": "space_between",
@@ -57700,7 +57700,7 @@
                           "cornerRadius": "$radius-sm",
                           "gap": "$Space/md",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md"
                           ],
                           "justifyContent": "space_between",
@@ -57756,7 +57756,7 @@
                           "cornerRadius": "$radius-sm",
                           "gap": "$Space/md",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md"
                           ],
                           "justifyContent": "space_between",
@@ -57982,7 +57982,7 @@
                               "fill": "$bg-tertiary",
                               "cornerRadius": "$radius-md",
                               "padding": [
-                                0,
+                                "$Space/none",
                                 "$Space/lg-plus"
                               ],
                               "justifyContent": "center",
@@ -58010,7 +58010,7 @@
                               "cornerRadius": "$radius-md",
                               "gap": "$Space/sm",
                               "padding": [
-                                0,
+                                "$Space/none",
                                 "$Space/lg-plus"
                               ],
                               "justifyContent": "center",
@@ -58666,7 +58666,7 @@
                       "fill": "$accent-primary",
                       "cornerRadius": "$radius-md",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg-plus"
                       ],
                       "justifyContent": "center",
@@ -58772,7 +58772,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/xs",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "alignItems": "center",
@@ -58810,7 +58810,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/xs",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "alignItems": "center",
@@ -58848,7 +58848,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/xs",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "alignItems": "center",
@@ -58886,7 +58886,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/xs",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "alignItems": "center",
@@ -58924,7 +58924,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/xs",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "alignItems": "center",
@@ -58962,7 +58962,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/xs",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "alignItems": "center",
@@ -59057,7 +59057,7 @@
                           "fill": "$accent-primary",
                           "cornerRadius": "$radius-md",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/lg-plus"
                           ],
                           "justifyContent": "center",
@@ -59087,7 +59087,7 @@
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/lg-plus"
                           ],
                           "justifyContent": "center",
@@ -59207,7 +59207,7 @@
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md-plus"
                   ],
                   "alignItems": "center",
@@ -59245,7 +59245,7 @@
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md-plus"
                   ],
                   "alignItems": "center",
@@ -59283,7 +59283,7 @@
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md-plus"
                   ],
                   "alignItems": "center",
@@ -59321,7 +59321,7 @@
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md-plus"
                   ],
                   "alignItems": "center",
@@ -59359,7 +59359,7 @@
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md-plus"
                   ],
                   "alignItems": "center",
@@ -59397,7 +59397,7 @@
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md-plus"
                   ],
                   "alignItems": "center",
@@ -59737,7 +59737,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/sm"
               ],
               "justifyContent": "space_between",
@@ -59939,7 +59939,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "justifyContent": "center",
@@ -59978,7 +59978,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "justifyContent": "center",
@@ -60017,7 +60017,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "justifyContent": "center",
@@ -60056,7 +60056,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "justifyContent": "center",
@@ -60095,7 +60095,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "justifyContent": "center",
@@ -60134,7 +60134,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "justifyContent": "center",
@@ -60375,7 +60375,7 @@
                           "cornerRadius": "$radius-md",
                           "gap": "$Space/sm",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md-plus"
                           ],
                           "justifyContent": "center",
@@ -60413,7 +60413,7 @@
                           "cornerRadius": "$radius-md",
                           "gap": "$Space/sm",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md-plus"
                           ],
                           "justifyContent": "center",
@@ -60451,7 +60451,7 @@
                           "cornerRadius": "$radius-md",
                           "gap": "$Space/sm",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md-plus"
                           ],
                           "justifyContent": "center",
@@ -60512,7 +60512,7 @@
                       "strokeLinejoin": "round",
                       "gap": "$Space/md",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "alignItems": "center",
@@ -63687,7 +63687,7 @@
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md-plus"
                   ],
                   "alignItems": "center",
@@ -63725,7 +63725,7 @@
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md-plus"
                   ],
                   "alignItems": "center",
@@ -63763,7 +63763,7 @@
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md-plus"
                   ],
                   "alignItems": "center",
@@ -63801,7 +63801,7 @@
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md-plus"
                   ],
                   "alignItems": "center",
@@ -63839,7 +63839,7 @@
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md-plus"
                   ],
                   "alignItems": "center",
@@ -63877,7 +63877,7 @@
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md-plus"
                   ],
                   "alignItems": "center",
@@ -64031,9 +64031,9 @@
               "layout": "vertical",
               "padding": [
                 "$Space/sm",
-                0,
+                "$Space/none",
                 "$Space/lg-plus",
-                0
+                "$Space/none"
               ],
               "children": [
                 {
@@ -64146,7 +64146,7 @@
                       "cornerRadius": "$radius-md",
                       "gap": "$Space/md",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/md"
                       ],
                       "alignItems": "center",
@@ -64184,7 +64184,7 @@
                       "cornerRadius": "$radius-md",
                       "gap": "$Space/md",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/md"
                       ],
                       "alignItems": "center",
@@ -64222,7 +64222,7 @@
                       "cornerRadius": "$radius-md",
                       "gap": "$Space/md",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/md"
                       ],
                       "alignItems": "center",
@@ -64268,7 +64268,7 @@
                       "cornerRadius": "$radius-md",
                       "gap": "$Space/md",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/md"
                       ],
                       "alignItems": "center",
@@ -64399,7 +64399,7 @@
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md-plus"
                   ],
                   "alignItems": "center",
@@ -64437,7 +64437,7 @@
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md-plus"
                   ],
                   "alignItems": "center",
@@ -64475,7 +64475,7 @@
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md-plus"
                   ],
                   "alignItems": "center",
@@ -64513,7 +64513,7 @@
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md-plus"
                   ],
                   "alignItems": "center",
@@ -64551,7 +64551,7 @@
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md-plus"
                   ],
                   "alignItems": "center",
@@ -64589,7 +64589,7 @@
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md-plus"
                   ],
                   "alignItems": "center",
@@ -64654,9 +64654,9 @@
               "layout": "vertical",
               "padding": [
                 "$Space/sm",
-                0,
-                0,
-                0
+                "$Space/none",
+                "$Space/none",
+                "$Space/none"
               ],
               "children": [
                 {
@@ -65419,7 +65419,7 @@
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md-plus"
                   ],
                   "alignItems": "center",
@@ -65457,7 +65457,7 @@
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md-plus"
                   ],
                   "alignItems": "center",
@@ -65495,7 +65495,7 @@
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md-plus"
                   ],
                   "alignItems": "center",
@@ -65533,7 +65533,7 @@
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md-plus"
                   ],
                   "alignItems": "center",
@@ -65571,7 +65571,7 @@
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md-plus"
                   ],
                   "alignItems": "center",
@@ -65609,7 +65609,7 @@
                   "cornerRadius": "$radius-pill",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md-plus"
                   ],
                   "alignItems": "center",
@@ -65763,9 +65763,9 @@
               "layout": "vertical",
               "padding": [
                 "$Space/sm",
-                0,
+                "$Space/none",
                 "$Space/lg-plus",
-                0
+                "$Space/none"
               ],
               "children": [
                 {
@@ -65881,7 +65881,7 @@
                       "cornerRadius": "$radius-md",
                       "gap": "$Space/md",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/md"
                       ],
                       "alignItems": "center",
@@ -65919,7 +65919,7 @@
                       "cornerRadius": "$radius-md",
                       "gap": "$Space/md",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/md"
                       ],
                       "alignItems": "center",
@@ -65960,7 +65960,7 @@
                       "cornerRadius": "$radius-md",
                       "gap": "$Space/md",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/md"
                       ],
                       "alignItems": "center",
@@ -66001,7 +66001,7 @@
                       "cornerRadius": "$radius-md",
                       "gap": "$Space/md",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/md"
                       ],
                       "alignItems": "center",
@@ -66067,7 +66067,7 @@
               "height": 60,
               "fill": "$bg-primary",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/2xl"
               ],
               "justifyContent": "space_between",
@@ -66194,7 +66194,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/2xl"
               ],
               "alignItems": "end",
@@ -66297,9 +66297,9 @@
                   "layout": "vertical",
                   "padding": [
                     "$Space/lg",
-                    0,
-                    0,
-                    0
+                    "$Space/none",
+                    "$Space/none",
+                    "$Space/none"
                   ],
                   "children": [
                     {
@@ -66310,7 +66310,7 @@
                       "layout": "vertical",
                       "gap": "$Space/xs",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/md"
                       ],
                       "children": [
@@ -66909,7 +66909,7 @@
                               "gap": "$Space/sm",
                               "padding": [
                                 "$Space/md-plus",
-                                0
+                                "$Space/none"
                               ],
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -66980,7 +66980,7 @@
                   "height": 60,
                   "fill": "$bg-primary",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/2xl"
                   ],
                   "justifyContent": "space_between",
@@ -67107,7 +67107,7 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/2xl"
                   ],
                   "alignItems": "end",
@@ -68406,7 +68406,7 @@
                   "height": 60,
                   "fill": "$bg-primary",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/2xl"
                   ],
                   "justifyContent": "space_between",
@@ -68533,7 +68533,7 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/2xl"
                   ],
                   "alignItems": "end",
@@ -69595,7 +69595,7 @@
               "height": 52,
               "fill": "$bg-primary",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/lg"
               ],
               "justifyContent": "space_between",
@@ -69657,7 +69657,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/lg"
               ],
               "justifyContent": "space_between",
@@ -69768,7 +69768,7 @@
               "fill": "$bg-primary",
               "gap": "$Space/sm",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/lg-plus"
               ],
               "alignItems": "center",
@@ -70228,7 +70228,7 @@
                       "gap": "$Space/sm",
                       "padding": [
                         "$Space/md-plus",
-                        0
+                        "$Space/none"
                       ],
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -70298,7 +70298,7 @@
                   "height": 52,
                   "fill": "$bg-primary",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/lg"
                   ],
                   "justifyContent": "space_between",
@@ -70360,7 +70360,7 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/lg"
                   ],
                   "justifyContent": "space_between",
@@ -71261,7 +71261,7 @@
                   "height": 52,
                   "fill": "$bg-primary",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/lg"
                   ],
                   "justifyContent": "space_between",
@@ -71323,7 +71323,7 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/lg"
                   ],
                   "justifyContent": "space_between",
@@ -72040,7 +72040,7 @@
               "height": 60,
               "fill": "$bg-primary",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/2xl"
               ],
               "justifyContent": "space_between",
@@ -72167,7 +72167,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/2xl"
               ],
               "alignItems": "end",
@@ -72845,7 +72845,7 @@
               "height": 52,
               "fill": "$bg-primary",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/lg"
               ],
               "justifyContent": "space_between",
@@ -72907,7 +72907,7 @@
               "strokeAlignment": "inner",
               "strokeLinejoin": "round",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/lg"
               ],
               "justifyContent": "space_between",
@@ -73835,9 +73835,9 @@
                   "layout": "vertical",
                   "gap": "$Space/xs-plus",
                   "padding": [
-                    0,
-                    0,
-                    0,
+                    "$Space/none",
+                    "$Space/none",
+                    "$Space/none",
                     "$Space/2xl"
                   ],
                   "children": [
@@ -73879,9 +73879,9 @@
               "gap": "$Space/md",
               "padding": [
                 "$Space/xs",
-                0,
-                0,
-                0
+                "$Space/none",
+                "$Space/none",
+                "$Space/none"
               ],
               "justifyContent": "end",
               "children": [
@@ -74267,7 +74267,7 @@
                   "gap": "$Space/sm-plus",
                   "padding": [
                     "$Space/md",
-                    0
+                    "$Space/none"
                   ],
                   "children": [
                     {
@@ -74299,9 +74299,9 @@
                   "layout": "vertical",
                   "gap": "$Space/xs-plus",
                   "padding": [
-                    0,
-                    0,
-                    0,
+                    "$Space/none",
+                    "$Space/none",
+                    "$Space/none",
                     "$Space/2xl"
                   ],
                   "children": [
@@ -74343,9 +74343,9 @@
               "gap": "$Space/sm-plus",
               "padding": [
                 "$Space/xs",
-                0,
-                0,
-                0
+                "$Space/none",
+                "$Space/none",
+                "$Space/none"
               ],
               "justifyContent": "space_between",
               "children": [
@@ -75095,9 +75095,9 @@
                                   "gap": "$Space/md",
                                   "padding": [
                                     "$Space/xs-plus",
-                                    0,
-                                    0,
-                                    0
+                                    "$Space/none",
+                                    "$Space/none",
+                                    "$Space/none"
                                   ],
                                   "alignItems": "center",
                                   "children": [
@@ -75110,7 +75110,7 @@
                                       "cornerRadius": "$radius-md",
                                       "gap": "$Space/sm",
                                       "padding": [
-                                        0,
+                                        "$Space/none",
                                         "$Space/xl"
                                       ],
                                       "justifyContent": "center",
@@ -75148,7 +75148,7 @@
                                       "cornerRadius": "$radius-md",
                                       "gap": "$Space/sm",
                                       "padding": [
-                                        0,
+                                        "$Space/none",
                                         "$Space/lg-plus"
                                       ],
                                       "justifyContent": "center",
@@ -75674,9 +75674,9 @@
                               "gap": "$Space/sm",
                               "padding": [
                                 "$Space/hairline",
-                                0,
-                                0,
-                                0
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/none"
                               ],
                               "children": [
                                 {
@@ -75841,9 +75841,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/xl"
                   ],
                   "justifyContent": "space_between",
@@ -76087,7 +76087,7 @@
                               "width": "fill_container",
                               "gap": "$Space/sm",
                               "padding": [
-                                0,
+                                "$Space/none",
                                 "$Space/md-plus"
                               ],
                               "alignItems": "center",
@@ -76108,7 +76108,7 @@
                                   "name": "cvt-action",
                                   "height": 44,
                                   "padding": [
-                                    0,
+                                    "$Space/none",
                                     "$Space/sm"
                                   ],
                                   "justifyContent": "center",
@@ -76389,7 +76389,7 @@
                       "height": 44,
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/xs"
                       ],
                       "alignItems": "center",
@@ -76502,7 +76502,7 @@
                       "name": "fetch-dormant",
                       "height": 44,
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/xs"
                       ],
                       "alignItems": "center",
@@ -77168,9 +77168,9 @@
                                   "gap": "$Space/md",
                                   "padding": [
                                     "$Space/xs-plus",
-                                    0,
-                                    0,
-                                    0
+                                    "$Space/none",
+                                    "$Space/none",
+                                    "$Space/none"
                                   ],
                                   "alignItems": "center",
                                   "children": [
@@ -77183,7 +77183,7 @@
                                       "cornerRadius": "$radius-md",
                                       "gap": "$Space/sm",
                                       "padding": [
-                                        0,
+                                        "$Space/none",
                                         "$Space/xl"
                                       ],
                                       "justifyContent": "center",
@@ -77221,7 +77221,7 @@
                                       "cornerRadius": "$radius-md",
                                       "gap": "$Space/sm",
                                       "padding": [
-                                        0,
+                                        "$Space/none",
                                         "$Space/lg-plus"
                                       ],
                                       "justifyContent": "center",
@@ -77747,9 +77747,9 @@
                               "gap": "$Space/sm",
                               "padding": [
                                 "$Space/hairline",
-                                0,
-                                0,
-                                0
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/none"
                               ],
                               "children": [
                                 {
@@ -77914,9 +77914,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/xl"
                   ],
                   "justifyContent": "space_between",
@@ -77997,9 +77997,9 @@
                       "gap": "$Space/sm",
                       "padding": [
                         "$Space/xl-plus",
-                        0,
+                        "$Space/none",
                         "$Space/sm",
-                        0
+                        "$Space/none"
                       ],
                       "alignItems": "center",
                       "children": [
@@ -78083,7 +78083,7 @@
                       "height": 44,
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/xs"
                       ],
                       "alignItems": "center",
@@ -78196,7 +78196,7 @@
                       "name": "fetch-dormant",
                       "height": 44,
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/xs"
                       ],
                       "alignItems": "center",
@@ -78862,9 +78862,9 @@
                                   "gap": "$Space/md",
                                   "padding": [
                                     "$Space/xs-plus",
-                                    0,
-                                    0,
-                                    0
+                                    "$Space/none",
+                                    "$Space/none",
+                                    "$Space/none"
                                   ],
                                   "alignItems": "center",
                                   "children": [
@@ -78877,7 +78877,7 @@
                                       "cornerRadius": "$radius-md",
                                       "gap": "$Space/sm",
                                       "padding": [
-                                        0,
+                                        "$Space/none",
                                         "$Space/xl"
                                       ],
                                       "justifyContent": "center",
@@ -78915,7 +78915,7 @@
                                       "cornerRadius": "$radius-md",
                                       "gap": "$Space/sm",
                                       "padding": [
-                                        0,
+                                        "$Space/none",
                                         "$Space/lg-plus"
                                       ],
                                       "justifyContent": "center",
@@ -79441,9 +79441,9 @@
                               "gap": "$Space/sm",
                               "padding": [
                                 "$Space/hairline",
-                                0,
-                                0,
-                                0
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/none"
                               ],
                               "children": [
                                 {
@@ -79608,9 +79608,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/xl"
                   ],
                   "justifyContent": "space_between",
@@ -79689,9 +79689,9 @@
                       "width": "fill_container",
                       "padding": [
                         "$Space/lg",
-                        0,
+                        "$Space/none",
                         "$Space/xs",
-                        0
+                        "$Space/none"
                       ],
                       "justifyContent": "center",
                       "children": [
@@ -80549,9 +80549,9 @@
                                   "gap": "$Space/md",
                                   "padding": [
                                     "$Space/xs-plus",
-                                    0,
-                                    0,
-                                    0
+                                    "$Space/none",
+                                    "$Space/none",
+                                    "$Space/none"
                                   ],
                                   "alignItems": "center",
                                   "children": [
@@ -80564,7 +80564,7 @@
                                       "cornerRadius": "$radius-md",
                                       "gap": "$Space/sm",
                                       "padding": [
-                                        0,
+                                        "$Space/none",
                                         "$Space/xl"
                                       ],
                                       "justifyContent": "center",
@@ -80602,7 +80602,7 @@
                                       "cornerRadius": "$radius-md",
                                       "gap": "$Space/sm",
                                       "padding": [
-                                        0,
+                                        "$Space/none",
                                         "$Space/lg-plus"
                                       ],
                                       "justifyContent": "center",
@@ -81128,9 +81128,9 @@
                               "gap": "$Space/sm",
                               "padding": [
                                 "$Space/hairline",
-                                0,
-                                0,
-                                0
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/none"
                               ],
                               "children": [
                                 {
@@ -81295,9 +81295,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/xl"
                   ],
                   "justifyContent": "space_between",
@@ -81376,9 +81376,9 @@
                       "width": "fill_container",
                       "padding": [
                         "$Space/lg",
-                        0,
+                        "$Space/none",
                         "$Space/xs",
-                        0
+                        "$Space/none"
                       ],
                       "justifyContent": "center",
                       "children": [
@@ -82241,9 +82241,9 @@
                                   "gap": "$Space/md",
                                   "padding": [
                                     "$Space/xs-plus",
-                                    0,
-                                    0,
-                                    0
+                                    "$Space/none",
+                                    "$Space/none",
+                                    "$Space/none"
                                   ],
                                   "alignItems": "center",
                                   "children": [
@@ -82256,7 +82256,7 @@
                                       "cornerRadius": "$radius-md",
                                       "gap": "$Space/sm",
                                       "padding": [
-                                        0,
+                                        "$Space/none",
                                         "$Space/xl"
                                       ],
                                       "justifyContent": "center",
@@ -82294,7 +82294,7 @@
                                       "cornerRadius": "$radius-md",
                                       "gap": "$Space/sm",
                                       "padding": [
-                                        0,
+                                        "$Space/none",
                                         "$Space/lg-plus"
                                       ],
                                       "justifyContent": "center",
@@ -82820,9 +82820,9 @@
                               "gap": "$Space/sm",
                               "padding": [
                                 "$Space/hairline",
-                                0,
-                                0,
-                                0
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/none"
                               ],
                               "children": [
                                 {
@@ -82987,9 +82987,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/xl"
                   ],
                   "justifyContent": "space_between",
@@ -83233,7 +83233,7 @@
                       "layout": "vertical",
                       "gap": "$Space/xs",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/xs"
                       ],
                       "children": [
@@ -83280,7 +83280,7 @@
                       "height": 44,
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/xs"
                       ],
                       "alignItems": "center",
@@ -83394,7 +83394,7 @@
                       "name": "fetch-dormant",
                       "height": 44,
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/xs"
                       ],
                       "alignItems": "center",
@@ -84060,9 +84060,9 @@
                                   "gap": "$Space/md",
                                   "padding": [
                                     "$Space/xs-plus",
-                                    0,
-                                    0,
-                                    0
+                                    "$Space/none",
+                                    "$Space/none",
+                                    "$Space/none"
                                   ],
                                   "alignItems": "center",
                                   "children": [
@@ -84075,7 +84075,7 @@
                                       "cornerRadius": "$radius-md",
                                       "gap": "$Space/sm",
                                       "padding": [
-                                        0,
+                                        "$Space/none",
                                         "$Space/xl"
                                       ],
                                       "justifyContent": "center",
@@ -84113,7 +84113,7 @@
                                       "cornerRadius": "$radius-md",
                                       "gap": "$Space/sm",
                                       "padding": [
-                                        0,
+                                        "$Space/none",
                                         "$Space/lg-plus"
                                       ],
                                       "justifyContent": "center",
@@ -84639,9 +84639,9 @@
                               "gap": "$Space/sm",
                               "padding": [
                                 "$Space/hairline",
-                                0,
-                                0,
-                                0
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/none"
                               ],
                               "children": [
                                 {
@@ -84806,9 +84806,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/xl"
                   ],
                   "justifyContent": "space_between",
@@ -85798,9 +85798,9 @@
                                   "gap": "$Space/md",
                                   "padding": [
                                     "$Space/xs-plus",
-                                    0,
-                                    0,
-                                    0
+                                    "$Space/none",
+                                    "$Space/none",
+                                    "$Space/none"
                                   ],
                                   "alignItems": "center",
                                   "children": [
@@ -85813,7 +85813,7 @@
                                       "cornerRadius": "$radius-md",
                                       "gap": "$Space/sm",
                                       "padding": [
-                                        0,
+                                        "$Space/none",
                                         "$Space/xl"
                                       ],
                                       "justifyContent": "center",
@@ -85851,7 +85851,7 @@
                                       "cornerRadius": "$radius-md",
                                       "gap": "$Space/sm",
                                       "padding": [
-                                        0,
+                                        "$Space/none",
                                         "$Space/lg-plus"
                                       ],
                                       "justifyContent": "center",
@@ -86377,9 +86377,9 @@
                               "gap": "$Space/sm",
                               "padding": [
                                 "$Space/hairline",
-                                0,
-                                0,
-                                0
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/none"
                               ],
                               "children": [
                                 {
@@ -86544,9 +86544,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/xl"
                   ],
                   "justifyContent": "space_between",
@@ -86618,7 +86618,7 @@
                       "gap": "$Space/md",
                       "padding": [
                         "$Space/4xl",
-                        0
+                        "$Space/none"
                       ],
                       "alignItems": "center",
                       "children": [
@@ -86660,9 +86660,9 @@
                           "name": "empty-action",
                           "padding": [
                             "$Space/sm",
-                            0,
-                            0,
-                            0
+                            "$Space/none",
+                            "$Space/none",
+                            "$Space/none"
                           ],
                           "children": [
                             {
@@ -87223,9 +87223,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/xl"
                   ],
                   "justifyContent": "space_between",
@@ -87304,7 +87304,7 @@
                           "cornerRadius": "$radius-sm",
                           "gap": "$Space/xs",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md"
                           ],
                           "alignItems": "center",
@@ -87342,7 +87342,7 @@
                           "cornerRadius": "$radius-sm",
                           "gap": "$Space/xs",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md"
                           ],
                           "alignItems": "center",
@@ -87686,9 +87686,9 @@
                               "name": "stepper-wrap",
                               "width": "fill_container",
                               "padding": [
-                                0,
-                                0,
-                                0,
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/none",
                                 "$Space/4xl"
                               ],
                               "children": [
@@ -88509,9 +88509,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/xl"
                   ],
                   "justifyContent": "space_between",
@@ -89933,9 +89933,9 @@
                                   "gap": "$Space/md",
                                   "padding": [
                                     "$Space/xs-plus",
-                                    0,
-                                    0,
-                                    0
+                                    "$Space/none",
+                                    "$Space/none",
+                                    "$Space/none"
                                   ],
                                   "alignItems": "center",
                                   "children": [
@@ -89948,7 +89948,7 @@
                                       "cornerRadius": "$radius-md",
                                       "gap": "$Space/sm",
                                       "padding": [
-                                        0,
+                                        "$Space/none",
                                         "$Space/xl"
                                       ],
                                       "justifyContent": "center",
@@ -89986,7 +89986,7 @@
                                       "cornerRadius": "$radius-md",
                                       "gap": "$Space/sm",
                                       "padding": [
-                                        0,
+                                        "$Space/none",
                                         "$Space/lg-plus"
                                       ],
                                       "justifyContent": "center",
@@ -90512,9 +90512,9 @@
                               "gap": "$Space/sm",
                               "padding": [
                                 "$Space/hairline",
-                                0,
-                                0,
-                                0
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/none"
                               ],
                               "children": [
                                 {
@@ -90679,9 +90679,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/xl"
                   ],
                   "justifyContent": "space_between",
@@ -91528,9 +91528,9 @@
                   "width": "fill_container",
                   "padding": [
                     "$Space/sm",
-                    0,
+                    "$Space/none",
                     "$Space/xs",
-                    0
+                    "$Space/none"
                   ],
                   "justifyContent": "center",
                   "children": [
@@ -91551,9 +91551,9 @@
                   "name": "sheet-header",
                   "width": "fill_container",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/xs",
-                    0,
+                    "$Space/none",
                     "$Space/lg"
                   ],
                   "justifyContent": "space_between",
@@ -91789,7 +91789,7 @@
                       "width": "fill_container",
                       "gap": "$Space/xs-plus",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/xs"
                       ],
                       "alignItems": "center",
@@ -91810,7 +91810,7 @@
                           "name": "cvt-action-m",
                           "height": 44,
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/xs-plus"
                           ],
                           "justifyContent": "center",
@@ -91912,9 +91912,9 @@
                       "gap": "$Space/xs-plus",
                       "padding": [
                         "$Space/xs",
-                        0,
-                        0,
-                        0
+                        "$Space/none",
+                        "$Space/none",
+                        "$Space/none"
                       ],
                       "alignItems": "center",
                       "children": [
@@ -91955,7 +91955,7 @@
                       "height": 44,
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/xs"
                       ],
                       "alignItems": "center",
@@ -92639,9 +92639,9 @@
                   "width": "fill_container",
                   "padding": [
                     "$Space/sm",
-                    0,
+                    "$Space/none",
                     "$Space/xs",
-                    0
+                    "$Space/none"
                   ],
                   "justifyContent": "center",
                   "children": [
@@ -92668,9 +92668,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/xs",
-                    0,
+                    "$Space/none",
                     "$Space/lg"
                   ],
                   "justifyContent": "space_between",
@@ -93785,10 +93785,10 @@
                   "name": "handle-wrap",
                   "width": "fill_container",
                   "padding": [
-                    0,
-                    0,
+                    "$Space/none",
+                    "$Space/none",
                     "$Space/hairline",
-                    0
+                    "$Space/none"
                   ],
                   "justifyContent": "center",
                   "children": [
@@ -94171,9 +94171,9 @@
                   "width": "fill_container",
                   "padding": [
                     "$Space/sm",
-                    0,
+                    "$Space/none",
                     "$Space/xs",
-                    0
+                    "$Space/none"
                   ],
                   "justifyContent": "center",
                   "children": [
@@ -94200,9 +94200,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/xs",
-                    0,
+                    "$Space/none",
                     "$Space/lg"
                   ],
                   "justifyContent": "space_between",
@@ -94283,7 +94283,7 @@
                           "cornerRadius": "$radius-sm",
                           "gap": "$Space/xs",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/sm-plus"
                           ],
                           "alignItems": "center",
@@ -94321,7 +94321,7 @@
                           "cornerRadius": "$radius-sm",
                           "gap": "$Space/xs",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/sm-plus"
                           ],
                           "alignItems": "center",
@@ -94426,7 +94426,7 @@
                   "layout": "vertical",
                   "gap": "$Space/sm",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/lg",
                     "$Space/sm",
                     "$Space/lg"
@@ -95487,7 +95487,7 @@
                   "height": "fill_container",
                   "gap": "$Space/lg",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/2xl",
                     "$Space/xl",
                     "$Space/2xl"
@@ -95733,7 +95733,7 @@
                           "strokeLinejoin": "round",
                           "gap": "$Space/sm-plus",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md-plus"
                           ],
                           "alignItems": "center",
@@ -95788,7 +95788,7 @@
                           "layout": "vertical",
                           "padding": [
                             "$Space/xs-plus",
-                            0
+                            "$Space/none"
                           ],
                           "children": [
                             {
@@ -96382,7 +96382,7 @@
                   "name": "cnv-override",
                   "height": 44,
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/sm"
                   ],
                   "justifyContent": "center",
@@ -97104,7 +97104,7 @@
                   "height": "fill_container",
                   "gap": "$Space/lg",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/2xl",
                     "$Space/xl",
                     "$Space/2xl"
@@ -97339,7 +97339,7 @@
                           "strokeLinejoin": "round",
                           "gap": "$Space/sm-plus",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md-plus"
                           ],
                           "alignItems": "center",
@@ -97394,7 +97394,7 @@
                           "layout": "vertical",
                           "padding": [
                             "$Space/xs-plus",
-                            0
+                            "$Space/none"
                           ],
                           "children": [
                             {
@@ -98819,7 +98819,7 @@
               "name": "card-wrap",
               "width": "fill_container",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/lg"
               ],
               "children": [
@@ -99074,7 +99074,7 @@
               "layout": "vertical",
               "gap": "$Space/sm-plus",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/lg"
               ],
               "children": [
@@ -99383,7 +99383,7 @@
               "layout": "vertical",
               "gap": "$Space/sm",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/lg"
               ],
               "children": [
@@ -100337,9 +100337,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/xl"
                   ],
                   "justifyContent": "space_between",
@@ -101014,9 +101014,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/xl"
                   ],
                   "justifyContent": "space_between",
@@ -102445,7 +102445,7 @@
                               "strokeWidth": 1,
                               "strokeAlignment": "inner",
                               "padding": [
-                                0,
+                                "$Space/none",
                                 "$Space/md"
                               ],
                               "alignItems": "center",
@@ -103019,9 +103019,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/xl"
                   ],
                   "justifyContent": "space_between",
@@ -103067,10 +103067,10 @@
                   "name": "body",
                   "width": "fill_container",
                   "layout": "vertical",
-                  "gap": 16,
+                  "gap": "$Space/lg",
                   "padding": [
-                    20,
-                    24
+                    "$Space/lg-plus",
+                    "$Space/xl"
                   ],
                   "children": [
                     {
@@ -103826,9 +103826,9 @@
                   "width": "fill_container",
                   "padding": [
                     "$Space/sm",
-                    0,
+                    "$Space/none",
                     "$Space/xs",
-                    0
+                    "$Space/none"
                   ],
                   "justifyContent": "center",
                   "children": [
@@ -103855,9 +103855,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/xs",
-                    0,
+                    "$Space/none",
                     "$Space/lg"
                   ],
                   "justifyContent": "space_between",
@@ -104213,7 +104213,7 @@
                   "layout": "vertical",
                   "gap": "$Space/xs",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/lg",
                     "$Space/sm",
                     "$Space/lg"
@@ -104915,7 +104915,7 @@
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md"
                           ],
                           "alignItems": "center",
@@ -104999,7 +104999,7 @@
                   "height": 60,
                   "fill": "$bg-primary",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/2xl"
                   ],
                   "justifyContent": "space_between",
@@ -105126,7 +105126,7 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/2xl"
                   ],
                   "alignItems": "end",
@@ -106724,9 +106724,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/xl"
                   ],
                   "justifyContent": "space_between",
@@ -107350,7 +107350,7 @@
                           "gap": "$Space/md",
                           "padding": [
                             "$Space/xs",
-                            0
+                            "$Space/none"
                           ],
                           "alignItems": "center",
                           "children": [
@@ -107771,7 +107771,7 @@
                               "strokeWidth": 1,
                               "strokeAlignment": "inner",
                               "padding": [
-                                0,
+                                "$Space/none",
                                 "$Space/md"
                               ],
                               "alignItems": "center",
@@ -108347,9 +108347,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/xl"
                   ],
                   "justifyContent": "space_between",
@@ -109500,9 +109500,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/xl"
                   ],
                   "justifyContent": "space_between",
@@ -109828,9 +109828,9 @@
                   "width": "fill_container",
                   "padding": [
                     "$Space/sm",
-                    0,
+                    "$Space/none",
                     "$Space/xs",
-                    0
+                    "$Space/none"
                   ],
                   "justifyContent": "center",
                   "children": [
@@ -109857,9 +109857,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/xs",
-                    0,
+                    "$Space/none",
                     "$Space/lg"
                   ],
                   "justifyContent": "space_between",
@@ -110662,9 +110662,9 @@
                   "width": "fill_container",
                   "padding": [
                     "$Space/sm",
-                    0,
+                    "$Space/none",
                     "$Space/xs",
-                    0
+                    "$Space/none"
                   ],
                   "justifyContent": "center",
                   "children": [
@@ -110691,9 +110691,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/xs",
-                    0,
+                    "$Space/none",
                     "$Space/lg"
                   ],
                   "justifyContent": "space_between",
@@ -111592,7 +111592,7 @@
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md"
                           ],
                           "alignItems": "center",
@@ -113024,9 +113024,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/xl"
                   ],
                   "justifyContent": "space_between",
@@ -113375,9 +113375,9 @@
                           "gap": "$Space/sm",
                           "padding": [
                             "$Space/sm",
-                            0,
-                            0,
-                            0
+                            "$Space/none",
+                            "$Space/none",
+                            "$Space/none"
                           ],
                           "alignItems": "center",
                           "children": [
@@ -113896,7 +113896,7 @@
                               "strokeWidth": 1,
                               "strokeAlignment": "inner",
                               "padding": [
-                                0,
+                                "$Space/none",
                                 "$Space/md"
                               ],
                               "alignItems": "center",
@@ -114483,9 +114483,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/xl"
                   ],
                   "justifyContent": "space_between",
@@ -115116,7 +115116,7 @@
                           "gap": "$Space/md",
                           "padding": [
                             "$Space/xs",
-                            0
+                            "$Space/none"
                           ],
                           "alignItems": "center",
                           "children": [
@@ -115523,7 +115523,7 @@
                   "width": "fill_container",
                   "fill": "#00000000",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/xl",
                     "$Space/md",
                     "$Space/xl"
@@ -115675,7 +115675,7 @@
                               "strokeWidth": 1,
                               "strokeAlignment": "inner",
                               "padding": [
-                                0,
+                                "$Space/none",
                                 "$Space/md"
                               ],
                               "alignItems": "center",
@@ -116261,9 +116261,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md",
-                    0,
+                    "$Space/none",
                     "$Space/xl"
                   ],
                   "justifyContent": "space_between",
@@ -116529,7 +116529,7 @@
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md"
                   ],
                   "alignItems": "center",
@@ -117457,9 +117457,9 @@
                   "width": "fill_container",
                   "padding": [
                     "$Space/sm",
-                    0,
+                    "$Space/none",
                     "$Space/xs",
-                    0
+                    "$Space/none"
                   ],
                   "justifyContent": "center",
                   "children": [
@@ -117486,9 +117486,9 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/xs",
-                    0,
+                    "$Space/none",
                     "$Space/lg"
                   ],
                   "justifyContent": "space_between",
@@ -117655,7 +117655,7 @@
                   "layout": "vertical",
                   "gap": "$Space/sm",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/lg",
                     "$Space/sm",
                     "$Space/lg"
@@ -117831,9 +117831,9 @@
                       "gap": "$Space/sm",
                       "padding": [
                         "$Space/sm",
-                        0,
-                        0,
-                        0
+                        "$Space/none",
+                        "$Space/none",
+                        "$Space/none"
                       ],
                       "alignItems": "center",
                       "children": [
@@ -118283,7 +118283,7 @@
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md"
                           ],
                           "alignItems": "center",
@@ -118467,7 +118467,7 @@
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/md"
                   ],
                   "alignItems": "center",
@@ -118525,7 +118525,7 @@
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/md"
                       ],
                       "justifyContent": "space_between",
@@ -118587,7 +118587,7 @@
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/md"
                       ],
                       "justifyContent": "space_between",
@@ -118658,7 +118658,7 @@
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/md"
                       ],
                       "justifyContent": "space_between",
@@ -118720,7 +118720,7 @@
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/md"
                       ],
                       "justifyContent": "space_between",
@@ -118925,9 +118925,9 @@
               "gap": "$Space/md",
               "padding": [
                 "$Space/sm",
-                0,
-                0,
-                0
+                "$Space/none",
+                "$Space/none",
+                "$Space/none"
               ],
               "justifyContent": "end",
               "children": [
@@ -119712,7 +119712,7 @@
                       "width": "fill_container",
                       "height": 140,
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/xl"
                       ],
                       "alignItems": "center",
@@ -120232,9 +120232,9 @@
               "gap": "$Space/2xl",
               "padding": [
                 "$Space/xl",
-                0,
+                "$Space/none",
                 "$Space/5xl",
-                0
+                "$Space/none"
               ],
               "alignItems": "center",
               "children": [
@@ -120247,7 +120247,7 @@
                   "cornerRadius": "$radius-lg",
                   "padding": [
                     "$Space/lg",
-                    0
+                    "$Space/none"
                   ],
                   "alignItems": "center",
                   "children": [
@@ -120622,7 +120622,7 @@
                               "fill": "$focus-ring",
                               "cornerRadius": "$radius-md",
                               "padding": [
-                                0,
+                                "$Space/none",
                                 "$Space/lg-plus"
                               ],
                               "justifyContent": "center",
@@ -120965,9 +120965,9 @@
               "gap": "$Space/2xl",
               "padding": [
                 "$Space/xl",
-                0,
+                "$Space/none",
                 "$Space/5xl",
-                0
+                "$Space/none"
               ],
               "alignItems": "center",
               "children": [
@@ -120980,7 +120980,7 @@
                   "cornerRadius": "$radius-lg",
                   "padding": [
                     "$Space/lg",
-                    0
+                    "$Space/none"
                   ],
                   "alignItems": "center",
                   "children": [
@@ -121355,7 +121355,7 @@
                               "fill": "$focus-ring",
                               "cornerRadius": "$radius-md",
                               "padding": [
-                                0,
+                                "$Space/none",
                                 "$Space/lg-plus"
                               ],
                               "justifyContent": "center",
@@ -121621,7 +121621,7 @@
                   "padding": [
                     "$Space/md",
                     "$Space/lg",
-                    0,
+                    "$Space/none",
                     "$Space/lg"
                   ],
                   "children": [
@@ -122105,7 +122105,7 @@
                       "name": "標題列",
                       "width": "fill_container",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "justifyContent": "space_between",
@@ -122156,9 +122156,9 @@
                       "width": "fill_container",
                       "gap": "$Space/md",
                       "padding": [
-                        0,
-                        0,
-                        0,
+                        "$Space/none",
+                        "$Space/none",
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "children": [
@@ -123089,9 +123089,9 @@
               "gap": "$Space/2xl",
               "padding": [
                 "$Space/xl",
-                0,
+                "$Space/none",
                 "$Space/5xl",
-                0
+                "$Space/none"
               ],
               "alignItems": "center",
               "children": [
@@ -123669,9 +123669,9 @@
               "gap": "$Space/2xl",
               "padding": [
                 "$Space/xl",
-                0,
+                "$Space/none",
                 "$Space/5xl",
-                0
+                "$Space/none"
               ],
               "alignItems": "center",
               "children": [
@@ -123684,7 +123684,7 @@
                   "cornerRadius": "$radius-lg",
                   "padding": [
                     "$Space/lg",
-                    0
+                    "$Space/none"
                   ],
                   "alignItems": "center",
                   "children": [
@@ -124174,9 +124174,9 @@
               "gap": "$Space/2xl",
               "padding": [
                 "$Space/xl",
-                0,
+                "$Space/none",
                 "$Space/5xl",
-                0
+                "$Space/none"
               ],
               "alignItems": "center",
               "children": [
@@ -124189,7 +124189,7 @@
                   "cornerRadius": "$radius-lg",
                   "padding": [
                     "$Space/lg",
-                    0
+                    "$Space/none"
                   ],
                   "alignItems": "center",
                   "children": [
@@ -124509,7 +124509,7 @@
                           "stroke": "#e08a764d",
                           "strokeWidth": 1,
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/lg-plus"
                           ],
                           "justifyContent": "center",
@@ -125067,7 +125067,7 @@
                   "strokeAlignment": "inner",
                   "strokeLinejoin": "round",
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/xl-plus"
                   ],
                   "justifyContent": "space_between",
@@ -126095,7 +126095,7 @@
                           "height": 52,
                           "fill": "$bg-primary",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/xl-plus"
                           ],
                           "justifyContent": "space_between",
@@ -126197,7 +126197,7 @@
                           "width": "fill_container",
                           "gap": "$Space/sm",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/xl-plus",
                             "$Space/sm",
                             "$Space/xl-plus"
@@ -129635,7 +129635,7 @@
               "width": "fill_container",
               "height": 56,
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/lg"
               ],
               "justifyContent": "space_between",
@@ -130197,10 +130197,10 @@
               },
               "strokeLinejoin": "round",
               "padding": [
-                0,
-                0,
+                "$Space/none",
+                "$Space/none",
                 "$Space/xl",
-                0
+                "$Space/none"
               ],
               "justifyContent": "space_around",
               "alignItems": "center",
@@ -133565,7 +133565,7 @@
                   "width": "fill_container",
                   "height": 56,
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/lg"
                   ],
                   "justifyContent": "space_between",
@@ -137124,9 +137124,9 @@
                       "gap": "$Space/xs-plus",
                       "padding": [
                         "$Space/sm",
-                        0,
-                        0,
-                        0
+                        "$Space/none",
+                        "$Space/none",
+                        "$Space/none"
                       ],
                       "alignItems": "center",
                       "children": [
@@ -137198,9 +137198,9 @@
                       "gap": "$Space/md",
                       "padding": [
                         "$Space/sm",
-                        0,
-                        0,
-                        0
+                        "$Space/none",
+                        "$Space/none",
+                        "$Space/none"
                       ],
                       "children": [
                         {
@@ -140570,7 +140570,7 @@
                       "gap": "$Space/xl-plus",
                       "padding": [
                         "$Space/xs-plus",
-                        0
+                        "$Space/none"
                       ],
                       "alignItems": "center",
                       "children": [
@@ -142624,7 +142624,7 @@
                           "width": 300,
                           "height": "fill_container",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md-plus"
                           ],
                           "alignItems": "center",
@@ -142649,7 +142649,7 @@
                           "width": 844,
                           "height": "fill_container",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md-plus"
                           ],
                           "alignItems": "center",
@@ -142691,7 +142691,7 @@
                           "width": 300,
                           "height": "fill_container",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md-plus"
                           ],
                           "alignItems": "center",
@@ -142716,7 +142716,7 @@
                           "width": 844,
                           "height": "fill_container",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md-plus"
                           ],
                           "alignItems": "center",
@@ -142758,7 +142758,7 @@
                           "width": 300,
                           "height": "fill_container",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md-plus"
                           ],
                           "alignItems": "center",
@@ -142783,7 +142783,7 @@
                           "width": 844,
                           "height": "fill_container",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md-plus"
                           ],
                           "alignItems": "center",
@@ -142825,7 +142825,7 @@
                           "width": 300,
                           "height": "fill_container",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md-plus"
                           ],
                           "alignItems": "center",
@@ -142850,7 +142850,7 @@
                           "width": 844,
                           "height": "fill_container",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md-plus"
                           ],
                           "alignItems": "center",
@@ -142892,7 +142892,7 @@
                           "width": 300,
                           "height": "fill_container",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md-plus"
                           ],
                           "alignItems": "center",
@@ -142917,7 +142917,7 @@
                           "width": 844,
                           "height": "fill_container",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md-plus"
                           ],
                           "alignItems": "center",
@@ -142959,7 +142959,7 @@
                           "width": 300,
                           "height": "fill_container",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md-plus"
                           ],
                           "alignItems": "center",
@@ -142984,7 +142984,7 @@
                           "width": 844,
                           "height": "fill_container",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md-plus"
                           ],
                           "alignItems": "center",
@@ -143493,7 +143493,7 @@
                   "gap": "$Space/md",
                   "padding": [
                     "$Space/sm",
-                    0
+                    "$Space/none"
                   ],
                   "children": [
                     {
@@ -143572,7 +143572,7 @@
                   "gap": "$Space/md",
                   "padding": [
                     "$Space/sm",
-                    0
+                    "$Space/none"
                   ],
                   "children": [
                     {
@@ -143651,7 +143651,7 @@
                   "gap": "$Space/md",
                   "padding": [
                     "$Space/sm",
-                    0
+                    "$Space/none"
                   ],
                   "children": [
                     {
@@ -143730,7 +143730,7 @@
                   "gap": "$Space/md",
                   "padding": [
                     "$Space/sm",
-                    0
+                    "$Space/none"
                   ],
                   "children": [
                     {
@@ -143809,7 +143809,7 @@
                   "gap": "$Space/md",
                   "padding": [
                     "$Space/sm",
-                    0
+                    "$Space/none"
                   ],
                   "children": [
                     {
@@ -143888,7 +143888,7 @@
                   "gap": "$Space/md",
                   "padding": [
                     "$Space/sm",
-                    0
+                    "$Space/none"
                   ],
                   "children": [
                     {
@@ -143967,7 +143967,7 @@
                   "gap": "$Space/md",
                   "padding": [
                     "$Space/sm",
-                    0
+                    "$Space/none"
                   ],
                   "children": [
                     {
@@ -144046,7 +144046,7 @@
                   "gap": "$Space/md",
                   "padding": [
                     "$Space/sm",
-                    0
+                    "$Space/none"
                   ],
                   "children": [
                     {
@@ -144125,7 +144125,7 @@
                   "gap": "$Space/md",
                   "padding": [
                     "$Space/sm",
-                    0
+                    "$Space/none"
                   ],
                   "children": [
                     {
@@ -144204,7 +144204,7 @@
                   "gap": "$Space/md",
                   "padding": [
                     "$Space/sm",
-                    0
+                    "$Space/none"
                   ],
                   "children": [
                     {
@@ -144283,7 +144283,7 @@
                   "gap": "$Space/md",
                   "padding": [
                     "$Space/sm",
-                    0
+                    "$Space/none"
                   ],
                   "children": [
                     {
@@ -146001,9 +146001,9 @@
                                   "layout": "vertical",
                                   "gap": "$Space/xs-plus",
                                   "padding": [
-                                    0,
-                                    0,
-                                    0,
+                                    "$Space/none",
+                                    "$Space/none",
+                                    "$Space/none",
                                     "$Space/2xl"
                                   ],
                                   "children": [
@@ -146107,7 +146107,7 @@
                               "gap": "$Space/sm-plus",
                               "padding": [
                                 "$Space/md",
-                                0
+                                "$Space/none"
                               ],
                               "children": [
                                 {
@@ -146229,9 +146229,9 @@
                               "layout": "vertical",
                               "gap": "$Space/xs-plus",
                               "padding": [
-                                0,
-                                0,
-                                0,
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/none",
                                 "$Space/2xl"
                               ],
                               "children": [
@@ -146869,7 +146869,7 @@
                               "fill": "#eae4d61a",
                               "cornerRadius": "$radius-md",
                               "padding": [
-                                0,
+                                "$Space/none",
                                 "$Space/lg-plus"
                               ],
                               "justifyContent": "center",
@@ -146896,7 +146896,7 @@
                               "fill": "$accent-primary",
                               "cornerRadius": "$radius-md",
                               "padding": [
-                                0,
+                                "$Space/none",
                                 "$Space/lg-plus"
                               ],
                               "justifyContent": "center",
@@ -147079,9 +147079,9 @@
                           "gap": "$Space/sm-plus",
                           "padding": [
                             "$Space/md",
-                            0,
-                            0,
-                            0
+                            "$Space/none",
+                            "$Space/none",
+                            "$Space/none"
                           ],
                           "children": [
                             {
@@ -147149,7 +147149,7 @@
                               "fill": "#eae4d61a",
                               "cornerRadius": "$radius-md",
                               "padding": [
-                                0,
+                                "$Space/none",
                                 "$Space/lg-plus"
                               ],
                               "justifyContent": "center",
@@ -147176,7 +147176,7 @@
                               "fill": "$accent-primary",
                               "cornerRadius": "$radius-md",
                               "padding": [
-                                0,
+                                "$Space/none",
                                 "$Space/lg-plus"
                               ],
                               "justifyContent": "center",
@@ -147239,7 +147239,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "alignItems": "center",
@@ -147276,7 +147276,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "alignItems": "center",
@@ -147313,7 +147313,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "alignItems": "center",
@@ -147350,7 +147350,7 @@
                       "cornerRadius": "$radius-pill",
                       "gap": "$Space/sm",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "alignItems": "center",
@@ -152476,9 +152476,9 @@
                                   "gap": "$Space/md",
                                   "padding": [
                                     "$Space/xs-plus",
-                                    0,
-                                    0,
-                                    0
+                                    "$Space/none",
+                                    "$Space/none",
+                                    "$Space/none"
                                   ],
                                   "alignItems": "center",
                                   "children": [
@@ -152491,7 +152491,7 @@
                                       "cornerRadius": "$radius-md",
                                       "gap": "$Space/sm",
                                       "padding": [
-                                        0,
+                                        "$Space/none",
                                         "$Space/xl"
                                       ],
                                       "justifyContent": "center",
@@ -153636,9 +153636,9 @@
                               "gap": "$Space/md",
                               "padding": [
                                 "$Space/xs-plus",
-                                0,
-                                0,
-                                0
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/none"
                               ],
                               "alignItems": "center",
                               "children": [
@@ -153651,7 +153651,7 @@
                                   "cornerRadius": "$radius-md",
                                   "gap": "$Space/sm",
                                   "padding": [
-                                    0,
+                                    "$Space/none",
                                     "$Space/xl"
                                   ],
                                   "justifyContent": "center",
@@ -153689,7 +153689,7 @@
                                   "cornerRadius": "$radius-md",
                                   "gap": "$Space/sm",
                                   "padding": [
-                                    0,
+                                    "$Space/none",
                                     "$Space/lg-plus"
                                   ],
                                   "justifyContent": "center",
@@ -154368,7 +154368,7 @@
                           "height": 44,
                           "gap": "$Space/md",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md"
                           ],
                           "alignItems": "center",
@@ -154455,7 +154455,7 @@
                           "height": 44,
                           "gap": "$Space/md",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md"
                           ],
                           "alignItems": "center",
@@ -154541,9 +154541,9 @@
                           "height": 44,
                           "gap": "$Space/md",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md",
-                            0,
+                            "$Space/none",
                             "$Space/4xl"
                           ],
                           "alignItems": "center",
@@ -154621,9 +154621,9 @@
                           "height": 44,
                           "gap": "$Space/md",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md",
-                            0,
+                            "$Space/none",
                             "$Space/4xl"
                           ],
                           "alignItems": "center",
@@ -154701,9 +154701,9 @@
                           "height": 44,
                           "gap": "$Space/md",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md",
-                            0,
+                            "$Space/none",
                             "$Space/4xl"
                           ],
                           "alignItems": "center",
@@ -154781,9 +154781,9 @@
                           "height": 44,
                           "gap": "$Space/md",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md",
-                            0,
+                            "$Space/none",
                             "$Space/4xl"
                           ],
                           "alignItems": "center",
@@ -154826,9 +154826,9 @@
                           "height": 44,
                           "gap": "$Space/md",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md",
-                            0,
+                            "$Space/none",
                             "$Space/4xl"
                           ],
                           "alignItems": "center",
@@ -154871,9 +154871,9 @@
                           "height": 44,
                           "gap": "$Space/md",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md",
-                            0,
+                            "$Space/none",
                             "$Space/4xl"
                           ],
                           "alignItems": "center",
@@ -154916,9 +154916,9 @@
                           "height": 36,
                           "gap": "$Space/xs",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md",
-                            0,
+                            "$Space/none",
                             "$Space/6xl"
                           ],
                           "alignItems": "center",
@@ -154966,7 +154966,7 @@
                           "height": 44,
                           "gap": "$Space/md",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md"
                           ],
                           "alignItems": "center",
@@ -155052,7 +155052,7 @@
                           "height": 44,
                           "gap": "$Space/md",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md"
                           ],
                           "alignItems": "center",
@@ -155138,7 +155138,7 @@
                           "height": 44,
                           "gap": "$Space/md",
                           "padding": [
-                            0,
+                            "$Space/none",
                             "$Space/md"
                           ],
                           "alignItems": "center",
@@ -155972,9 +155972,9 @@
                               "gap": "$Space/md",
                               "padding": [
                                 "$Space/xs-plus",
-                                0,
-                                0,
-                                0
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/none"
                               ],
                               "alignItems": "center",
                               "children": [
@@ -155987,7 +155987,7 @@
                                   "cornerRadius": "$radius-md",
                                   "gap": "$Space/sm",
                                   "padding": [
-                                    0,
+                                    "$Space/none",
                                     "$Space/xl"
                                   ],
                                   "justifyContent": "center",
@@ -156547,9 +156547,9 @@
                           "gap": "$Space/sm",
                           "padding": [
                             "$Space/hairline",
-                            0,
-                            0,
-                            0
+                            "$Space/none",
+                            "$Space/none",
+                            "$Space/none"
                           ],
                           "children": [
                             {
@@ -156718,7 +156718,7 @@
                   "name": "action",
                   "height": 44,
                   "padding": [
-                    0,
+                    "$Space/none",
                     "$Space/sm-plus"
                   ],
                   "justifyContent": "center",
@@ -162274,7 +162274,7 @@
               "width": "fill_container",
               "height": 56,
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/lg"
               ],
               "justifyContent": "space_between",
@@ -162565,10 +162565,10 @@
               },
               "strokeLinejoin": "round",
               "padding": [
-                0,
-                0,
+                "$Space/none",
+                "$Space/none",
                 "$Space/xl",
-                0
+                "$Space/none"
               ],
               "justifyContent": "space_around",
               "alignItems": "center",
@@ -162804,9 +162804,9 @@
           "layout": "vertical",
           "padding": [
             "$Space/6xl",
-            0,
-            0,
-            0
+            "$Space/none",
+            "$Space/none",
+            "$Space/none"
           ],
           "alignItems": "center",
           "children": [
@@ -162889,9 +162889,9 @@
                   "stroke": "$border-subtle",
                   "strokeWidth": 1,
                   "padding": [
-                    0,
-                    0,
-                    0,
+                    "$Space/none",
+                    "$Space/none",
+                    "$Space/none",
                     "$Space/lg"
                   ],
                   "justifyContent": "space_between",
@@ -163053,9 +163053,9 @@
           "layout": "vertical",
           "padding": [
             "$Space/6xl",
-            0,
-            0,
-            0
+            "$Space/none",
+            "$Space/none",
+            "$Space/none"
           ],
           "alignItems": "center",
           "children": [
@@ -163138,9 +163138,9 @@
                   "stroke": "$border-subtle",
                   "strokeWidth": 1,
                   "padding": [
-                    0,
-                    0,
-                    0,
+                    "$Space/none",
+                    "$Space/none",
+                    "$Space/none",
                     "$Space/lg"
                   ],
                   "justifyContent": "space_between",
@@ -163331,9 +163331,9 @@
           "layout": "vertical",
           "padding": [
             "$Space/6xl",
-            0,
-            0,
-            0
+            "$Space/none",
+            "$Space/none",
+            "$Space/none"
           ],
           "alignItems": "center",
           "children": [
@@ -163416,9 +163416,9 @@
                   "stroke": "$border-subtle",
                   "strokeWidth": 1,
                   "padding": [
-                    0,
-                    0,
-                    0,
+                    "$Space/none",
+                    "$Space/none",
+                    "$Space/none",
                     "$Space/lg"
                   ],
                   "justifyContent": "space_between",
@@ -163724,7 +163724,7 @@
                       "stroke": "$border-subtle",
                       "strokeWidth": 1,
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "justifyContent": "center",
@@ -163751,7 +163751,7 @@
                       "fill": "$focus-ring",
                       "cornerRadius": "$radius-md",
                       "padding": [
-                        0,
+                        "$Space/none",
                         "$Space/lg"
                       ],
                       "justifyContent": "center",
@@ -163789,9 +163789,9 @@
           "layout": "vertical",
           "padding": [
             "$Space/6xl",
-            0,
-            0,
-            0
+            "$Space/none",
+            "$Space/none",
+            "$Space/none"
           ],
           "alignItems": "center",
           "children": [
@@ -163824,9 +163824,9 @@
           "layout": "vertical",
           "padding": [
             "$Space/6xl",
-            0,
-            0,
-            0
+            "$Space/none",
+            "$Space/none",
+            "$Space/none"
           ],
           "alignItems": "center",
           "children": [
@@ -163909,9 +163909,9 @@
                   "stroke": "$border-subtle",
                   "strokeWidth": 1,
                   "padding": [
-                    0,
-                    0,
-                    0,
+                    "$Space/none",
+                    "$Space/none",
+                    "$Space/none",
                     "$Space/lg"
                   ],
                   "justifyContent": "space_between",
@@ -164085,7 +164085,7 @@
               "height": 56,
               "fill": "$bg-secondary",
               "padding": [
-                0,
+                "$Space/none",
                 "$Space/lg"
               ],
               "justifyContent": "space_between",
@@ -165350,6 +165350,10 @@
     "Type/Label/Weight": {
       "type": "string",
       "value": "500"
+    },
+    "Space/none": {
+      "type": "number",
+      "value": 0
     }
   },
   "fileToken": "cecc96d9-72a0-4f28-938c-34bd8477093c"
