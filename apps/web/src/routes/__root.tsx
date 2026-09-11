@@ -159,7 +159,18 @@ function RootComponent() {
             data-testid="auth-loading"
             className="flex min-h-screen items-start justify-center bg-[var(--bg-primary)] px-4 pt-[15vh]"
           >
-            <span className="text-2xl font-bold leading-none text-[var(--accent-text)]">vido</span>
+            {/* "Lands ON it" is a claim about PIXELS, and for a year it was false:
+                this surface put the wordmark at 15vh flat while LoginForm puts it at
+                15vh PLUS the card's own 24/32px padding, so the word slid down the
+                moment the answer arrived. Reproducing the card's column and padding
+                — same max-w-sm, same p-6 sm:p-8 — is what makes the sentence true.
+                M5-D carries the same fix as an invisible "Card Ghost" frame.
+                (Flow M PM/UX review 2026-09-11; each file looked correct alone.) */}
+            <div data-testid="auth-loading-column" className="w-full max-w-sm p-6 sm:p-8">
+              <span className="text-xl font-bold leading-none text-[var(--accent-text)] sm:text-2xl">
+                vido
+              </span>
+            </div>
           </div>
         ) : (
           <Outlet />

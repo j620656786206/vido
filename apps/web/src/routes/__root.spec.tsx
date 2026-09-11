@@ -157,6 +157,24 @@ describe('__root auth redirect', () => {
     expect(screen.queryByTestId('app-shell-v2')).toBeNull();
   });
 
+  // M5-D draws the wait-surface wordmark at exactly the position the login
+  // card's own wordmark will occupy, so the card LANDS ON it instead of the
+  // word sliding down when the answer arrives. That only holds if this surface
+  // reproduces the card's column and padding, not just its top offset.
+  // (Flow M PM/UX review 2026-09-11 — the two files each looked right alone.)
+  it('parks the wordmark where the login card will put it', async () => {
+    useAuthStatusMock.mockReturnValue({ data: undefined, isLoading: true });
+    renderAt('/');
+    const surface = await screen.findByTestId('auth-loading');
+    expect(surface.className).toContain('pt-[15vh]');
+    const column = surface.querySelector('[data-testid="auth-loading-column"]');
+    expect(column).not.toBeNull();
+    // Same column width and same inner padding as LoginForm's card.
+    expect(column!.className).toContain('max-w-sm');
+    expect(column!.className).toContain('p-6');
+    expect(column!.className).toContain('sm:p-8');
+  });
+
   // The login screen itself is exempt: it is already the bare route, so making
   // it wait would only add a frame of nothing in front of the form.
   it('renders the login screen immediately even while auth status is loading', async () => {

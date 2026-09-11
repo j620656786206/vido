@@ -245,6 +245,7 @@ import type { LogsResponse } from '../../services/logService';
 import type { MediaLibraryWithPaths } from '../../services/mediaLibraryService';
 import type { ScanStatus, ScheduleConfig } from '../../services/scannerService';
 import type { ServiceStatusResponse } from '../../services/serviceStatusService';
+import { LoginForm } from '../../components/auth/LoginForm';
 
 const noop = () => {};
 
@@ -4687,6 +4688,20 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     },
     penNode: 'screen-section', // Screen F13-D-v2 (F7ohe) idle panel
     width: 1200,
+    statesOnly: ['default'],
+  },
+  {
+    // dsr-12: the first screen anyone sees had zero visual coverage, which is how
+    // its card kept a shadow the card rule retired. `default` ONLY on purpose —
+    // the error/lockout states are the ones that read the wall clock, and keeping
+    // them out of the gallery is what preserves LoginForm's Time-bomb-exempt marker
+    // (Rule 23). Adding a `locked` state here would require withFixedClock().
+    id: 'auth-login-form',
+    label: 'auth/LoginForm',
+    component: LoginForm,
+    props: {},
+    penNode: 'screen-section', // Screen M1-D (I6UAK) — 預設空密碼態
+    width: 420,
     statesOnly: ['default'],
   },
 ];

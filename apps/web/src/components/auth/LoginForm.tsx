@@ -1,8 +1,14 @@
 // Time-bomb-exempt: the only wall-clock read is the lockout countdown, whose
 // deadline comes from the server's Retry-After header — it renders only after a
-// 429, a state no visual baseline captures (there is no login gallery fixture),
-// so ambient Date.now() can never reach a snapshot. (Sally, critique 2026-09-01)
-// Implements: <utility — no .pen counterpart>
+// 429, a state no visual baseline captures, so ambient Date.now() can never
+// reach a snapshot. (Sally, critique 2026-09-01)
+// dsr-12 2026-09-11: the `auth-login-form` gallery fixture now exists, but it is
+// `statesOnly: ['default']` — empty field, no error, no lockout — so the branch
+// that reads the clock is still unreachable from a baseline and this exemption
+// still holds. Adding an error/locked state to that fixture INVALIDATES it and
+// requires withFixedClock() plus ≥2 state baselines (Rule 23 AC #1d).
+// Design ref: ux-design.pen Screen M1-D (I6UAK) · M2-D (ihLvG) · M3-D (bfIZd) · M6-M (e2CuFg)
+// M1 預設空密碼、M2 密碼錯誤帶建議、M3 鎖定倒數、M6 手機。dsr-12 逐格對過。
 /**
  * The password gate (V0.1.1). This is the first — and for a failed login, the
  * only — screen a self-hoster sees, so it follows the same rule as every readout
@@ -97,14 +103,16 @@ export function LoginForm({ justLoggedOut = false }: LoginFormProps) {
 
   return (
     <div
-      className="w-full max-w-sm rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-6 shadow-[var(--shadow-md)] sm:p-8"
+      className="w-full max-w-sm rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-6 sm:p-8"
       data-testid="login-form"
     >
       {/* One wordmark for the whole product: lowercase, gold, with the same
           subtitle the sidebar carries three pixels away once you are inside. */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold leading-none text-[var(--accent-text)]">vido</h1>
-        <p className="mt-1 text-[11px] text-[var(--text-secondary)]">NAS 媒體庫</p>
+        <h1 className="text-xl font-bold leading-none text-[var(--accent-text)] sm:text-2xl">
+          vido
+        </h1>
+        <p className="mt-1 text-xs text-[var(--text-secondary)]">NAS 媒體庫</p>
       </div>
 
       {justLoggedOut && !error && (
@@ -178,11 +186,19 @@ export function LoginForm({ justLoggedOut = false }: LoginFormProps) {
         <div id="password-status" className="min-h-[3.25rem] pt-2">
           {error && (
             <>
-              <p role="alert" className="text-sm text-[var(--error-text)]">
+              {/* 固定詞彙（Alexyu 2026-09-11 裁定，Flow M 的 PM／UX review）：
+                  鎖定不是硃砂。沒有東西壞掉——你要求登入，伺服器決定讓你等一會兒，
+                  那是赭色「你要求了但沒發生」。密碼打錯才是硃砂。 */}
+              <p
+                role="alert"
+                className={
+                  locked ? 'text-sm text-[var(--warning-text)]' : 'text-sm text-[var(--error-text)]'
+                }
+              >
                 {error.message}
               </p>
               {error.suggestion && (
-                <p aria-hidden={locked} className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
+                <p aria-hidden={locked} className="mt-0.5 text-xs text-[var(--text-secondary)]">
                   {locked ? `請等 ${secondsLeft} 秒後再試。` : error.suggestion}
                 </p>
               )}
@@ -212,7 +228,7 @@ export function LoginForm({ justLoggedOut = false }: LoginFormProps) {
       <p
         id="password-help"
         data-testid="password-help"
-        className="mt-4 border-t border-[var(--border-subtle)] pt-4 text-[11px] leading-relaxed text-[var(--text-muted)]"
+        className="mt-4 border-t border-[var(--border-subtle)] pt-4 text-xs leading-relaxed text-[var(--text-muted)]"
       >
         忘記密碼？改{' '}
         <code className="font-mono text-[var(--text-secondary)]">VIDO_AUTH_PASSWORD</code>{' '}
