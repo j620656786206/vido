@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen 11 Backup Management Desktop (uhAKd)
+// Design ref: ux-design.pen Screen C5-D (uhAKd) · C5-M (gEQX4)
 import { Download, Trash2, ShieldCheck, RotateCcw } from 'lucide-react';
 import type { Backup, BackupStatus } from '../../services/backupService';
 import { backupService } from '../../services/backupService';

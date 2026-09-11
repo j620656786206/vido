@@ -1,4 +1,6 @@
-// Design ref: ux-design.pen — no current screen frame; setup feature postdates the .pen design (epic-19-8 sweep finding)
+// Design ref: ux-design.pen Screen N3-D (TyjL0) · N3-M (YyaqL)
+// ⚠️ 這一步的資料模型（每條路徑各自選類型）與 E5-D／LibraryCard 的「具名媒體庫＋多路徑」不一致，
+//    見 drift-e1-scanner-multi-library
 import { useEffect } from 'react';
 import { Plus, X } from 'lucide-react';
 import type { StepProps } from './SetupWizard';

@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen — no current screen frame; FR25 金鑰設定頁 is M1.5 net-new (story sub-2-1b) and rides the designed settings shell (Screen C4-D, 6UCtX) rather than adding a frame of its own
+// Design ref: ux-design.pen Screen C7-D (PWvEX) · C7-M (f8Fda)；未設定加密金鑰的唯讀態見 C21-D (AVUg2)，HTTP 明文警告見 C22-D (t6FA4)
 /**
  * 金鑰設定 — in-app provider API key configuration (Story sub-2-1b, FR25 /
  * architecture D9 NFR-S3).
@@ -420,7 +420,7 @@ export function ApiKeysForm() {
                        one sentence — a dialog would be heavier than the decision. */
                     <div
                       data-testid={`key-clear-confirm-${row.name}`}
-                      className="flex flex-col gap-2 rounded-md bg-[var(--warning-tint)] p-3 sm:flex-row sm:items-center"
+                      className="flex flex-col gap-2 rounded-md bg-[var(--bg-tertiary)] p-3 sm:flex-row sm:items-center"
                     >
                       <p className="flex-1 text-xs text-[var(--text-primary)]">
                         清除後將改用環境變數的金鑰；若環境變數也未設定，相關功能會停用。

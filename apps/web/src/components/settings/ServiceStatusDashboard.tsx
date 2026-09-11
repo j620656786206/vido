@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen — no current screen frame; 服務狀態 tab was never given a frame — rides the designed settings shell (Screen C4-D, 6UCtX)
+// Design ref: ux-design.pen Screen C8-D (wqcqY) · C8-M (qx8Ma)；載入骨架見 C15-D (XwdOH) · C15-M (wkUNt)，整頁載入失敗見 C16-D (uYGBU)
 import { useEffect, useRef, useState } from 'react';
 import { Bell, Loader2 } from 'lucide-react';
 import { useServiceStatuses, useTestServiceConnection } from '../../hooks/useServiceStatus';

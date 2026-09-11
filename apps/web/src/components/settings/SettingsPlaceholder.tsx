@@ -1,4 +1,5 @@
-// Implements: <utility — no .pen counterpart>
+// Design ref: ux-design.pen Screen C14-D (aJSKl) · C14-M (JUEUD)
+// 分頁列上「效能監控」是 aria-disabled，這兩張畫的是路由真的被打開時的樣子
 import type { LucideIcon } from 'lucide-react';
 
 interface SettingsPlaceholderProps {

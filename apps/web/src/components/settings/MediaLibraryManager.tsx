@@ -1,4 +1,6 @@
-// Design ref: ux-design.pen Screen E1-D (KvZSc) · E1-M (uABWl)
+// Design ref: ux-design.pen Screen J4-D (sPzZT)
+// ⚠️ E1-D (KvZSc)／E1-M (uABWl) 畫的是舊的扁平資料夾列，已被取代、不可依此實作（drift-e1-scanner-multi-library）。
+// 重畫 E1 等於重裁多媒體庫 IA，不在該單範圍內
 /**
  * Media Library Manager component for Settings page (Story 7b-4)
  * Replaces the env var display section in ScannerSettings.

@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen — no current screen frame; setup feature postdates the .pen design (epic-19-8 sweep finding)
+// Design ref: ux-design.pen Screen N2-D (CP7AX)
 import type { StepProps } from './SetupWizard';
 
 export function QBittorrentStep({ data, onUpdate, onNext, onBack, onSkip }: StepProps) {

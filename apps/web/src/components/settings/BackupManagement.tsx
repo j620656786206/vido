@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen 11 Backup Management Desktop (uhAKd)
+// Design ref: ux-design.pen Screen C5-D (uhAKd) · C5-M (gEQX4)；建立失敗見 C20-D (v2C4xr)
 import { useState } from 'react';
 import { AlertTriangle, Check, Loader2, Plus, XCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';

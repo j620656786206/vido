@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen — no current screen frame; setup feature postdates the .pen design (epic-19-8 sweep finding)
+// Design ref: ux-design.pen Screen N4-D (D990CP)
 import type { StepProps } from './SetupWizard';
 
 const AI_PROVIDERS = [

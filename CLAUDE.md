@@ -73,7 +73,7 @@ For non-trivial features, work **architecture-first**: outline the design and va
    - `flow-a-browse-v2/` — Browse: empty / loading / grid / list / no-results / error (A′ pilot series)
    - `flow-b-detail-interaction/` — Hover / Context Menus / Detail menus / Fallbacks (mobile) / Image-load Fallback spec (B9)
    - `flow-b-detail-v2/` — Detail v2: movie / TV / skeleton / not-found / 延伸區塊 (B′ series)
-   - `flow-c-search-settings/` — Search+Filter / Batch Ops / Settings / Backup
+   - `flow-c-search-settings/` — 媒體庫搜尋＋篩選 / 批次操作 / 檢視偏好，以及**設定的 12 個分頁**（c4–c14，另有 c15–c22 的載入／空／錯誤／確認狀態稿：外觀・連線・金鑰・服務狀態・字幕・自訂首頁・快取・日誌・備份・匯出匯入・效能監控；媒體庫掃描在 `flow-e-scanner/e1-d`）。分頁列與分組順序以 `SettingsLayout.tsx` 的 `SETTINGS_CATEGORIES` 為準
    - `flow-d-downloads-v2/` — Download centre v2: list / batch select / card actions / skeleton / empty / fail-soft / table / mobile sheets
    - `flow-e-scanner/` — Scanner settings / Scan progress / Complete toast / Filtered-unmatched
    - `flow-f-subtitle-v2/` — Manage subtitles / generation progress / glossary / batch / 生成工作區
@@ -85,6 +85,7 @@ For non-trivial features, work **architecture-first**: outline the design and va
    - `flow-k-activity-v2/` — Activity hub v2 (net-new D4-1 destination)
    - `flow-l-requests-v2/` — Request System (Epic 13): 想要 button 3-state / season-episode tree / 5-status request list
    - `flow-m-auth-gate/` — Login and password gate
+   - `flow-n-setup-wizard/` — 首次啟動精靈五步（歡迎・qBittorrent・媒體庫・API 金鑰・完成）；路由 `/setup`，實作在 `apps/web/src/components/setup/`
    - `design-system/` — Design System Reference (夜行/日巡) + Component Library + Component Anatomy + 三張日巡證據畫面
    - ⚖️ **2026-09-10：39 張 v1 過時稿已從 `.pen` 移除**（Alexyu 裁定）。判準是「有明確後繼版本才刪」——Flow A/B/D/F/G/H/I 的 v1 稿有 A′／B′／`-v2`／`-v3` 接手，所以刪；Flow C、E、M 沒有後繼版本，仍是那些流程唯一的設計稿，**保留**。`flow-a-browse`、`flow-d-downloads`、`flow-f-subtitle`、`flow-g-ai-subtitle` 四個資料夾因此清空並刪除。
    - Canvas naming + block-layout convention: see `.claude/memory/project_pen_flow_layout_convention.md`

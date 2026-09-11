@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen 11 Backup Management Desktop (uhAKd)
+// Design ref: ux-design.pen Screen C5-D (uhAKd) · C5-M (gEQX4)
 import { useState, useEffect } from 'react';
 import { Clock, Loader2 } from 'lucide-react';
 import { useBackupSchedule, useUpdateSchedule } from '../../hooks/useBackups';

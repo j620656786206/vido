@@ -95,7 +95,21 @@ MCP_BIN = resolve_mcp_bin()
 # These flows are exported at 2x and then constrained by WIDTH, never by long edge:
 # a spec page is 1240 wide and 3000+ tall, so a long-edge cap makes it NARROWER,
 # which is the opposite of what readability needs.
-READABLE_FLOWS = {"design-system", "flow-j-specs"}
+# flow-c-search-settings joined 2026-09-11: the 24 settings screens are the most
+# text-dense surface in the app (form labels, key rows, log lines, backup tables).
+# At the 400px thumbnail cap a 14px label renders at ~3.9px — nobody, including
+# the person who drew them, can review the copy. Same reason as the two above.
+# flow-e-scanner joined 2026-09-11: e1-d.png was 400x250, so the 14px labels
+# rendered at ~3.9px — nobody could read it, including the person who has to
+# rule on whether drift-e1-scanner-multi-library is worth redrawing. A screen
+# you cannot read is a screen you cannot retire.
+READABLE_FLOWS = {
+    "design-system",
+    "flow-j-specs",
+    "flow-c-search-settings",
+    "flow-n-setup-wizard",
+    "flow-e-scanner",
+}
 # Floor, not ceiling: a page wider than this keeps its native 1:1 width rather than
 # being shrunk below legibility.
 READABLE_MIN_WIDTH = 1400
@@ -125,6 +139,42 @@ SCREENS = {
     "6UCtX": ("flow-c-search-settings", "c4-d"),
     "2H4OM": ("flow-c-search-settings", "c4-m"),
     "uhAKd": ("flow-c-search-settings", "c5-d"),
+    "B3qPq": ("flow-c-search-settings", "c6-d"),
+    "PWvEX": ("flow-c-search-settings", "c7-d"),
+    "wqcqY": ("flow-c-search-settings", "c8-d"),
+    "NR3zK": ("flow-c-search-settings", "c9-d"),
+    "wnmGh": ("flow-c-search-settings", "c10-d"),
+    "TrU8k": ("flow-c-search-settings", "c11-d"),
+    "K28SdR": ("flow-c-search-settings", "c12-d"),
+    "nwn6a": ("flow-c-search-settings", "c13-d"),
+    "aJSKl": ("flow-c-search-settings", "c14-d"),
+    "gEQX4": ("flow-c-search-settings", "c5-m"),
+    "XpUjm": ("flow-c-search-settings", "c6-m"),
+    "f8Fda": ("flow-c-search-settings", "c7-m"),
+    "qx8Ma": ("flow-c-search-settings", "c8-m"),
+    "AWYm0": ("flow-c-search-settings", "c9-m"),
+    "ZjsVs": ("flow-c-search-settings", "c10-m"),
+    "aYEWP": ("flow-c-search-settings", "c11-m"),
+    "dOEbF": ("flow-c-search-settings", "c12-m"),
+    "Ytjrj": ("flow-c-search-settings", "c13-m"),
+    "JUEUD": ("flow-c-search-settings", "c14-m"),
+    "XwdOH": ("flow-c-search-settings", "c15-d"),
+    "uYGBU": ("flow-c-search-settings", "c16-d"),
+    "Gw61P": ("flow-c-search-settings", "c17-d"),
+    "dfwSb": ("flow-c-search-settings", "c18-d"),
+    "G8BYO": ("flow-c-search-settings", "c19-d"),
+    "v2C4xr": ("flow-c-search-settings", "c20-d"),
+    "AVUg2": ("flow-c-search-settings", "c21-d"),
+    "t6FA4": ("flow-c-search-settings", "c22-d"),
+    "wkUNt": ("flow-c-search-settings", "c15-m"),
+    "J186P": ("flow-c-search-settings", "c17-m"),
+    "gPZU6": ("flow-c-search-settings", "c19-m"),
+    "dzgq9": ("flow-n-setup-wizard", "n1-d"),
+    "CP7AX": ("flow-n-setup-wizard", "n2-d"),
+    "TyjL0": ("flow-n-setup-wizard", "n3-d"),
+    "D990CP": ("flow-n-setup-wizard", "n4-d"),
+    "CWh3E": ("flow-n-setup-wizard", "n5-d"),
+    "YyaqL": ("flow-n-setup-wizard", "n3-m"),
     # Flow D — 下載管理 (downloads)
     # Flow E — 媒體庫掃描 (scanner settings / progress / complete toast / filtered-unmatched)
     "KvZSc": ("flow-e-scanner", "e1-d"),

@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen — no current screen frame; setup feature postdates the .pen design (epic-19-8 sweep finding)
+// Design ref: ux-design.pen Screen N5-D (CWh3E)
 import { CheckCircle } from 'lucide-react';
 import type { StepProps } from './SetupWizard';
 
