@@ -99,7 +99,7 @@ MCP_BIN = resolve_mcp_bin()
 # text-dense surface in the app (form labels, key rows, log lines, backup tables).
 # At the 400px thumbnail cap a 14px label renders at ~3.9px — nobody, including
 # the person who drew them, can review the copy. Same reason as the two above.
-READABLE_FLOWS = {"design-system", "flow-j-specs", "flow-c-search-settings"}
+READABLE_FLOWS = {"design-system", "flow-j-specs", "flow-c-search-settings", "flow-n-setup-wizard"}
 # Floor, not ceiling: a page wider than this keeps its native 1:1 width rather than
 # being shrunk below legibility.
 READABLE_MIN_WIDTH = 1400
@@ -148,6 +148,23 @@ SCREENS = {
     "dOEbF": ("flow-c-search-settings", "c12-m"),
     "Ytjrj": ("flow-c-search-settings", "c13-m"),
     "JUEUD": ("flow-c-search-settings", "c14-m"),
+    "XwdOH": ("flow-c-search-settings", "c15-d"),
+    "uYGBU": ("flow-c-search-settings", "c16-d"),
+    "Gw61P": ("flow-c-search-settings", "c17-d"),
+    "dfwSb": ("flow-c-search-settings", "c18-d"),
+    "G8BYO": ("flow-c-search-settings", "c19-d"),
+    "v2C4xr": ("flow-c-search-settings", "c20-d"),
+    "AVUg2": ("flow-c-search-settings", "c21-d"),
+    "t6FA4": ("flow-c-search-settings", "c22-d"),
+    "wkUNt": ("flow-c-search-settings", "c15-m"),
+    "J186P": ("flow-c-search-settings", "c17-m"),
+    "gPZU6": ("flow-c-search-settings", "c19-m"),
+    "dzgq9": ("flow-n-setup-wizard", "n1-d"),
+    "CP7AX": ("flow-n-setup-wizard", "n2-d"),
+    "TyjL0": ("flow-n-setup-wizard", "n3-d"),
+    "D990CP": ("flow-n-setup-wizard", "n4-d"),
+    "CWh3E": ("flow-n-setup-wizard", "n5-d"),
+    "YyaqL": ("flow-n-setup-wizard", "n3-m"),
     # Flow D — 下載管理 (downloads)
     # Flow E — 媒體庫掃描 (scanner settings / progress / complete toast / filtered-unmatched)
     "KvZSc": ("flow-e-scanner", "e1-d"),
