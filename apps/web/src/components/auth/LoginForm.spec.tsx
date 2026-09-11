@@ -207,4 +207,38 @@ describe('LoginForm', () => {
     expect(button.className).toContain('disabled:bg-[var(--bg-tertiary)]');
     expect(button.className).toContain('min-h-[44px]');
   });
+
+  // ── dsr-12: the gate has to be the same card shape as the rest of the app ──
+  // The .pen Login Card node (M1-D I6UAK) carries fill + 1px stroke + 12px radius
+  // and an EMPTY `effects` array. DESIGN.md §Cards and Containers measured why:
+  // in 夜行 the shadow is worth 1.056:1 against the page, the hairline 1.660:1.
+  it('is a bordered card, not a floating one', () => {
+    renderForm();
+    const card = screen.getByTestId('login-form');
+    expect(card.className).toContain('border-[var(--border-subtle)]');
+    expect(card.className).toContain('rounded-[var(--radius-lg)]');
+    expect(card.className).not.toContain('shadow-');
+  });
+
+  // Every string on this screen must sit on a rung of the type scale. 11px is not
+  // a rung — $Type/Label/Size is 12, which is Tailwind's `text-xs`.
+  it('puts every label on the type scale instead of an 11px one-off', () => {
+    const { container } = renderForm();
+    const offScale = Array.from(container.querySelectorAll<HTMLElement>('*')).filter((el) =>
+      /text-\[\d+px\]/.test(el.className)
+    );
+    expect(offScale.map((el) => el.className)).toEqual([]);
+
+    expect(screen.getByText('NAS 媒體庫').className).toContain('text-xs');
+    expect(screen.getByTestId('password-help').className).toContain('text-xs');
+  });
+
+  // $Type/H2/Size is themed by breakpoint: 24 on desktop, 20 on mobile. A fixed
+  // text-2xl wordmark is 24 on a 390px phone, where M6-M draws it at 20.
+  it('steps the wordmark down on a phone', () => {
+    renderForm();
+    const wordmark = screen.getByText('vido');
+    expect(wordmark.className).toContain('text-xl');
+    expect(wordmark.className).toContain('sm:text-2xl');
+  });
 });

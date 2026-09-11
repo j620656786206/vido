@@ -109,6 +109,7 @@ READABLE_FLOWS = {
     "flow-c-search-settings",
     "flow-n-setup-wizard",
     "flow-e-scanner",
+    "flow-m-auth-gate",
 }
 # Floor, not ceiling: a page wider than this keeps its native 1:1 width rather than
 # being shrunk below legibility.

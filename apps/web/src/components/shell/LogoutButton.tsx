@@ -1,4 +1,5 @@
-// Implements: <utility — no .pen counterpart>
+// Design ref: ux-design.pen Screen M4-D (aJYv6) · M7-M (YKYhH)
+// M4 是登出確認對話框，M7 是手機「更多」sheet 裡它所在的那一列。
 /**
  * 登出 control for the V0.1.1 shared-password gate.
  *
