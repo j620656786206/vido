@@ -172,9 +172,9 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
             {isEditMode && existingLibrary && contentType !== existingLibrary.contentType && (
               <p
                 data-testid="library-type-rebuild-warning"
-                className="mt-2 rounded-md bg-[var(--warning-tint)] px-3 py-2 text-xs text-[var(--warning-text)]"
+                className="mt-2 rounded-md bg-[var(--bg-tertiary)] px-3 py-2 text-xs text-[var(--text-primary)]"
               >
-                變更類型會重建此媒體庫:既有條目將被清除,並自動重新掃描歸類到新類型。
+                變更類型會重建此媒體庫：既有條目將被清除，並自動重新掃描歸類到新類型。
               </p>
             )}
           </div>

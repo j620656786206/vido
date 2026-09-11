@@ -420,7 +420,7 @@ export function ApiKeysForm() {
                        one sentence — a dialog would be heavier than the decision. */
                     <div
                       data-testid={`key-clear-confirm-${row.name}`}
-                      className="flex flex-col gap-2 rounded-md bg-[var(--warning-tint)] p-3 sm:flex-row sm:items-center"
+                      className="flex flex-col gap-2 rounded-md bg-[var(--bg-tertiary)] p-3 sm:flex-row sm:items-center"
                     >
                       <p className="flex-1 text-xs text-[var(--text-primary)]">
                         清除後將改用環境變數的金鑰；若環境變數也未設定，相關功能會停用。
