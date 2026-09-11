@@ -202,7 +202,7 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`，BMAD dev agent（Amelia）2
 ### Debug Log References
 
 - `pnpm nx test web`（RED）：1 failed / 3343 passed —— 翻轉後的 `批次字幕搜尋` 斷言如預期變紅
-- `pnpm nx test web`（GREEN）：**3345 / 3345 passed**（+1 新守門測試）
+- `pnpm nx test web`（GREEN）：**3346 / 3346 passed**（+2 新測試：字階守門、空狀態 CTA 是出口）
 - `pnpm nx test api`：PASS
 - `pnpm run lint`：**0 errors**、127 warnings（與改動前同數）
 - `pnpm nx run web:typecheck --skip-nx-cache`：PASS
@@ -230,7 +230,8 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`，BMAD dev agent（Amelia）2
 
 - **Did this story discover any work outside its current scope?**
   - **YES**，一項，lane ③：
-    - **③ 空狀態的 CTA 是產品問題，不是對齊問題。** 稿寫「掃描媒體庫」，程式碼是「前往媒體庫」連到 `/library`。本 story **兩邊都不改**。已立案 **`disc-2026-09-activity-empty-cta-scan-or-navigate: backlog`**（雙向：該條目寫明由 dsr-10 立案）。
+    - **③→① 空狀態的 CTA。** 原本立案為待裁定（`disc-2026-09-activity-empty-cta-scan-or-navigate`），**Alexyu 當場裁定「一個出口」**，於是就地吸收：稿改成「前往媒體庫」，程式碼的 Radar 圖示改成 Library（雷達在一顆只導覽的按鈕上是在說謊），加一條測試守住。該條目同日改 `done`。
+    - **① K3-D 的側軌自相矛盾**（Alexyu 指示一併修）：底部「掃描中 · 佇列 5」、導覽列「下載 3」，但畫面中央寫「目前沒有進行中的活動」。`isEmpty()` 要求 `downloads.total === 0`，兩個讀數在這張稿上只能是 0。instance override 關掉，母版不動。
   - 實作中另外撿到三項，全部走 lane **① expand-scope-in-place**（就地吸收，由既有 AC 追蹤，不另開單）：
     - **① `Component/ActivityRow-v2` 的進度條是青碧。** 固定詞彙裡進行中＝泥金、完成＝青碧，程式碼用的是泥金。只修 Flow K 的 21 個 instance 做不到（得逐一 override），改母版才是唯一正解，代價是 Flow F 與 Design System 的 8 張稿一起更新。由 AC #2「稿要對上程式碼真的會渲染的樣子」追蹤。
     - **① K4-D 有三列幽靈 row 停在 y=-6443。** 畫面上看不到（frame `clip:true`），但任何文字讀取都會以為 進行中 那一區有內容——我自己在比對時就被騙過一次。刪除；健康態的那三列 K1-D 已有。由 AC #8 所屬的 K4 區塊修正追蹤。
@@ -267,6 +268,8 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`，BMAD dev agent（Amelia）2
 | 2026-09-11 | Task 5 — 6 處 `text-[13px]` 收斂（次要讀數 `text-xs`、CTA `text-sm`），加守門測試。 |
 | 2026-09-11 | Task 6 — 閘門：web 3345/3345、api PASS、lint 0 errors、typecheck PASS、token 一致、prettier 通過。 |
 | 2026-09-11 | 立案 1 筆：`disc-2026-09-activity-empty-cta-scan-or-navigate`（空狀態 CTA 是產品裁定，兩邊都沒動）。 |
+| 2026-09-11 | ⚖️ **Alexyu 當場裁定「一個出口」**，該條目同日結案：K3-D 的按鈕改成「前往媒體庫」；程式碼的圖示從 Radar（雷達＝掃描）換成 Library，因為雷達跟「前往」說的不是同一件事。加一條測試守住「它導覽、不觸發任何工作」。 |
+| 2026-09-11 | ⚖️ **Alexyu 指示一併修**：K3-D 的側軌自相矛盾——底部「掃描中 · 佇列 5」與導覽列「下載 3」，但畫面中央寫「目前沒有進行中的活動」。`isEmpty()` 要求 `downloads.total === 0`，那兩個讀數在這張稿上只能是 0。用 instance override 關掉，母版不動，其餘 57 張稿不受影響。 |
 
 ## 給 Alexyu 的一個問題（不阻塞開發）
 

@@ -7,7 +7,7 @@
  * a failed section degrades alone; the page never hard-fails, F3).
  */
 import { Link } from '@tanstack/react-router';
-import { AlertTriangle, RotateCw, CheckCheck, Radar } from 'lucide-react';
+import { AlertTriangle, RotateCw, CheckCheck, Library } from 'lucide-react';
 
 /** Skeleton matching the row shape — icon chip + two text bars + a right bar. */
 export function ActivitySkeleton({ count = 4 }: { count?: number }) {
@@ -56,7 +56,10 @@ export function ActivityEmpty() {
         data-testid="activity-empty-cta"
         className="inline-flex min-h-[44px] items-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-4 text-sm font-semibold text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-hover)]"
       >
-        <Radar className="h-4 w-4" aria-hidden="true" />
+        {/* ⚖️ Alexyu 2026-09-11（dsr-10）：這顆按鈕是「一個出口」，不是「一個開關」。
+            圖示原本是雷達（掃描），跟「前往媒體庫」這五個字說的不是同一件事——
+            一個看起來會啟動工作，一個只是導覽。改用側軌「媒體庫」同一個圖示。 */}
+        <Library className="h-4 w-4" aria-hidden="true" />
         前往媒體庫
       </Link>
     </div>

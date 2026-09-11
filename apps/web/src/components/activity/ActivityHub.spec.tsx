@@ -102,6 +102,21 @@ describe('ActivityHub (v2 Activity hub — four states + fail-soft)', () => {
     expect(await screen.findByTestId('activity-empty')).toBeInTheDocument();
   });
 
+  // ⚖️ Alexyu 2026-09-11（dsr-10 的產品裁定）：空狀態那顆按鈕是「一個出口」，不是
+  // 「一個開關」。沒有活動通常代表事情都做完了，這時最自然的下一步是去看成果，
+  // 而掃描的入口設定頁已經有了。所以它導覽，不觸發任何工作——圖示也必須跟著說同
+  // 一件事：雷達（掃描）換成書櫃（媒體庫）。
+  it('[dsr-10] the empty-state CTA is an exit, not a scan trigger', async () => {
+    mockUseActivity.mockReturnValue(result({ data: summary() }));
+    renderHub();
+    const cta = await screen.findByTestId('activity-empty-cta');
+    expect(cta).toHaveTextContent('前往媒體庫');
+    expect(cta).toHaveAttribute('href', '/library');
+    // 雷達圖示在「前往」按鈕上是在說謊。
+    expect(cta.querySelector('.lucide-radar')).toBeNull();
+    expect(cta.querySelector('.lucide-library')).not.toBeNull();
+  });
+
   it('[P1] Data — active jobs map kind→title with progress; pending + downloads + recent render', async () => {
     mockUseActivity.mockReturnValue(
       result({
