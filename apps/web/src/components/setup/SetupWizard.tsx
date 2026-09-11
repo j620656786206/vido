@@ -1,4 +1,4 @@
-// Implements: <utility — no .pen counterpart>
+// Design ref: ux-design.pen Screen N1-D (dzgq9) · N2-D (CP7AX) · N3-D (TyjL0) · N4-D (D990CP) · N5-D (CWh3E) · N3-M (YyaqL)
 import { useState, useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';

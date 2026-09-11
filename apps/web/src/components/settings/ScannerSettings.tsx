@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen E1-D (KvZSc) · E1-M (uABWl)
+// Design ref: ux-design.pen Screen E1-D (KvZSc) · E1-M (uABWl)——**僅掃描排程與「開始掃描」那半對得上**；同頁的「媒體資料夾」區塊已被 MediaLibraryManager 取代，見 drift-e1-scanner-multi-library。E1 的「掃描頻率」下拉前端未實作（後端 ScanScheduler 存在）
 /**
  * Scanner Settings component (Story 7.3)
  * Displays media folder paths, scan schedule, last scan info, and scan trigger button.

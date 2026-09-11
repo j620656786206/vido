@@ -1,4 +1,4 @@
-// Implements: <utility — no .pen counterpart>
+// Design ref: ux-design.pen Screen N1-D (dzgq9)…N5-D (CWh3E) 的 step-progress 區塊
 interface StepProgressProps {
   steps: { id: string; title: string }[];
   currentStep: number;

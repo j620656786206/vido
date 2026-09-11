@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen E1-D (KvZSc) · E1-M (uABWl) · J4-D (sPzZT) · J5-D (alrIw)
+// Design ref: ux-design.pen Screen J4-D (sPzZT) · J5-D (alrIw)；E1-D (KvZSc)／E1-M (uABWl) 畫的是舊的扁平資料夾列，**已被取代、不可依此實作**（drift-e1-scanner-multi-library）
 /**
  * Library Card component for displaying a media library in Settings (Story 7b-4)
  */

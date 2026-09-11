@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen — no current screen frame; FR25 金鑰設定頁 is M1.5 net-new (story sub-2-1b) and rides the designed settings shell (Screen C4-D, 6UCtX) rather than adding a frame of its own
+// Design ref: ux-design.pen Screen C7-D (PWvEX) · C7-M (f8Fda)；未設定加密金鑰的唯讀態見 C21-D (AVUg2)，HTTP 明文警告見 C22-D (t6FA4)
 /**
  * 金鑰設定 — in-app provider API key configuration (Story sub-2-1b, FR25 /
  * architecture D9 NFR-S3).

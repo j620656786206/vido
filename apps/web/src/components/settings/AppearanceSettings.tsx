@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen C6-D (B3qPq) · C6-M (XpUjm)
 /**
  * 外觀 — the theme control (日巡 light-theme story).
  *

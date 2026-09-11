@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen — no current screen frame; sub-7-4 在地化程度 is net-new and rides the designed settings shell (Screen C4-D, 6UCtX) like ApiKeysForm
+// Design ref: ux-design.pen Screen C9-D (NR3zK) · C9-M (AWYm0)
 /**
  * 在地化程度 — the sub-7-4 taste dial for AI subtitles.
  *

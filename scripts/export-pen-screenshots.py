@@ -99,7 +99,17 @@ MCP_BIN = resolve_mcp_bin()
 # text-dense surface in the app (form labels, key rows, log lines, backup tables).
 # At the 400px thumbnail cap a 14px label renders at ~3.9px — nobody, including
 # the person who drew them, can review the copy. Same reason as the two above.
-READABLE_FLOWS = {"design-system", "flow-j-specs", "flow-c-search-settings", "flow-n-setup-wizard"}
+# flow-e-scanner joined 2026-09-11: e1-d.png was 400x250, so the 14px labels
+# rendered at ~3.9px — nobody could read it, including the person who has to
+# rule on whether drift-e1-scanner-multi-library is worth redrawing. A screen
+# you cannot read is a screen you cannot retire.
+READABLE_FLOWS = {
+    "design-system",
+    "flow-j-specs",
+    "flow-c-search-settings",
+    "flow-n-setup-wizard",
+    "flow-e-scanner",
+}
 # Floor, not ceiling: a page wider than this keeps its native 1:1 width rather than
 # being shrunk below legibility.
 READABLE_MIN_WIDTH = 1400

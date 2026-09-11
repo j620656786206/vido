@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen 11 Backup Management Desktop (uhAKd)
+// Design ref: ux-design.pen Screen C19-D (G8BYO) · C19-M (gPZU6)
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import type { Backup } from '../../services/backupService';
 

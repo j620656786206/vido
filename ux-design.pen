@@ -54264,42 +54264,6 @@
                                       ]
                                     }
                                   ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "ruXBn",
-                                  "name": "restore-note",
-                                  "width": 1152,
-                                  "fill": "$warning-tint",
-                                  "cornerRadius": "$radius-md",
-                                  "gap": "$Space/sm",
-                                  "padding": "$Space/md",
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "icon",
-                                      "id": "OXSks",
-                                      "name": "i",
-                                      "width": 16,
-                                      "height": 16,
-                                      "icon": "triangle-alert",
-                                      "library": "lucide",
-                                      "fill": "$warning-text"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "gNpqE",
-                                      "name": "t",
-                                      "fill": "$warning-text",
-                                      "textGrowth": "fixed-width",
-                                      "width": 1080,
-                                      "content": "還原會覆蓋目前的資料庫，且無法復原。還原前系統會先自動建立一份備份。",
-                                      "lineHeight": "$Type/Label/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Label/Size",
-                                      "fontWeight": "$Type/Label/Weight"
-                                    }
-                                  ]
                                 }
                               ]
                             }
@@ -73802,42 +73766,6 @@
                                   ]
                                 }
                               ]
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "YSY8G",
-                          "name": "restore-note",
-                          "width": "fill_container",
-                          "fill": "$warning-tint",
-                          "cornerRadius": "$radius-md",
-                          "gap": "$Space/sm",
-                          "padding": "$Space/md",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "icon",
-                              "id": "H9t98F",
-                              "name": "i",
-                              "width": 14,
-                              "height": 14,
-                              "icon": "triangle-alert",
-                              "library": "lucide",
-                              "fill": "$warning-text"
-                            },
-                            {
-                              "type": "text",
-                              "id": "Oo5rw",
-                              "name": "t",
-                              "fill": "$warning-text",
-                              "textGrowth": "fixed-width",
-                              "width": 260,
-                              "content": "還原會覆蓋目前的資料庫，且無法復原。",
-                              "lineHeight": "$Type/Label/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Label/Size",
-                              "fontWeight": "$Type/Label/Weight"
                             }
                           ]
                         }

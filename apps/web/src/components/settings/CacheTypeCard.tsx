@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen — no current screen frame; 快取管理 tab was never given a frame — rides the designed settings shell (Screen C4-D, 6UCtX)
+// Design ref: ux-design.pen Screen C11-D (TrU8k) · C11-M (aYEWP)；確認態見 C18-D (dfwSb)
 import { useState } from 'react';
 import { Trash2, Loader2 } from 'lucide-react';
 import type { CacheTypeInfo } from '../../services/cacheService';

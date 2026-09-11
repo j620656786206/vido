@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen — no current screen frame; 系統日誌 tab was never given a frame — rides the designed settings shell (Screen C4-D, 6UCtX)
+// Design ref: ux-design.pen Screen C12-D (K28SdR) · C12-M (dOEbF)；篩到沒結果見 C17-D (Gw61P) · C17-M (J186P)
 import { useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { cn } from '../../lib/utils';

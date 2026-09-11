@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen C4-D (6UCtX) · C4-M (2H4OM)
+// Design ref: ux-design.pen Component/SettingsTabStrip（12 分頁橫向列）；任一設定分頁的殼層見 Screen C4-D (6UCtX) · C4-M (2H4OM)
 // ⚠️ The .pen still shows the RETIRED vertical rail. feat-settings-tabs-ia reshapes
 // this surface in code; the design file is brought back into line in the same story.
 import { useEffect, useRef } from 'react';
