@@ -16,8 +16,12 @@ describe('deriveLifecycleStatus', () => {
     expect(s?.className).toContain('--success-tint');
     expect(s?.steadyState).toBe(true);
   });
-  it('maps pending → 整理中 (warning) and failed → 失敗 (error), neither steady', () => {
+  // ⚖️ Alexyu 2026-09-11（dsr-11）：整理中改成泥金。赭色的定義是「你要求了，但它沒發生」，
+  // 而整理中就是正在發生；泥金才是「正在跑」。七月的「暫態處理中家族」被這條裁定取代。
+  it('maps pending → 整理中 (accent) and failed → 失敗 (error), neither steady', () => {
     expect(deriveLifecycleStatus(m('pending'))?.label).toBe('整理中');
+    expect(deriveLifecycleStatus(m('pending'))?.className).toContain('--accent-tint');
+    expect(deriveLifecycleStatus(m('pending'))?.className).not.toContain('--warning');
     expect(deriveLifecycleStatus(m('pending'))?.steadyState).toBeFalsy();
     expect(deriveLifecycleStatus(m('failed'))?.label).toBe('失敗');
     expect(deriveLifecycleStatus(m('failed'))?.className).toContain('--error-tint');

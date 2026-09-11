@@ -1,6 +1,6 @@
 # Story DSR.11: Flow L 請求系統——對齊 L1–L8，但不准刪掉超前的稿
 
-Status: blocked
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -35,8 +35,8 @@ so that 「搜尋中」不會用一個意思是「你要求了但它沒發生」
 
 | # | 項目 | 設計稿 | 程式碼 | 方向 |
 | --- | --- | --- | --- | --- |
-| 1 | `searching` 狀態色 | 赭（`--warning-tint`／`--warning-text`） | 同左 | ⚠️ **待裁定**——會推翻 13-0 的既有決定，見下 |
-| 2 | 狀態點的 token 形式 | — | 3 個用飽和色、2 個用 `*-text` | **碼→稿** |
+| 1 | `searching` 狀態色 | 赭 | 赭 | ✅ **已裁定→泥金**，兩邊都改完 |
+| 2 | 狀態點的 token 形式 | — | 3 個用飽和色、2 個用 `*-text` | ✅ **五個統一成飽和階** |
 | 3 | L4-M 的整條 meta 行（類型 · 日期） | **刻意隱藏**（`metaRow` `enabled:false`） | 不分斷點都渲染 | ⚠️ **待裁定**，見下 |
 | 4 | ~~L4-M 的日期全是同一天~~ | — | — | ❌ **SM 誤判，已撤銷**（那些節點在手機上根本不渲染） |
 | 5 | ~~L4-M 失敗列沒有錯誤訊息行~~ | — | — | ❌ **SM 誤判，已撤銷**（同上，meta 行整條隱藏） |
@@ -56,13 +56,13 @@ so that 「搜尋中」不會用一個意思是「你要求了但它沒發生」
 
 1. **Flow L 的稿要讀得到。** `READABLE_FLOWS` 加入 `"flow-l-requests-v2"`，重跑匯出，8 張改成 2x／最小寬 1400。**只 stage 這 8 張**。
 
-2. ⏸️ **`searching` 的顏色——本 story 不動，等 Alexyu 裁定。**
+2. ✅ **`searching` 改成泥金——⚖️ Alexyu 2026-09-11 裁定「改成金色」，已執行。**
 
    ⚠️ **dev-story 的 AC-drift 檢查發現這會推翻一個有記錄的設計決定。** `13-0-requests-design.md:111` 白紙黑字寫著：**「Decision: `searching`→`warning-tint`／「搜尋中」(transient-work family) — added to DL-v2 §2.5 + new §8 pipeline section」**，`13-1a:113` 又把它複述成契約。那個映射目前活在五個地方：兩張 story 檔、`.pen` 的 Design Language v2 §8 註解與色票、`RequestRow.tsx`、L1-D／L4-M、以及 Flow J 的 J3-D 規格稿。而且它有同族成員——`libraryStatus.ts:61` 的「整理中」用的是同一個 `TINT.warning`，那顆徽章出現在整個媒體庫。
 
-   換句話說，這不是 Flow L 的小改，是「赭色要不要涵蓋『暫態處理中』」這個跨全站的詞彙裁定。**dsr-11 把證據備齊、不自行翻案。**
+   換句話說，這不是 Flow L 的小改，是「赭色要不要涵蓋『暫態處理中』」這個跨全站的詞彙裁定。dsr-11 把證據備齊、沒有自行翻案，**Alexyu 裁定「改成金色」之後才動手**。
 
-   原本的推導保留在下方 Dev Notes 供裁定參考。裁定後若採「改成泥金」，範圍是：`RequestRow.tsx` 的 `STATUS_TOKENS.searching` 與 `DOT_BG.searching`、L1-D／L4-M 的藥丸、`.pen` DL-v2 §8 的註解與色票、J3-D、以及 `libraryStatus.ts` 的「整理中」。
+   **實際改動範圍（七處）**：`RequestRow.tsx` 的 `STATUS_TOKENS.searching` 與整組 `DOT_BG`、`libraryStatus.ts:61` 的「整理中」、`.pen` DL-v2 §8 的註解 (`J3o8xi`) 與五組色票、L1-D 五列、L4-M 五列、以及跟著裁定走的 `HeroBanner.spec.tsx` 斷言。J3-D 只有文字說明、沒有色票，不需要動。
 
    **支持改成泥金的一方**：DESIGN.md §固定詞彙 —— 赭＝「你要求了，但它**沒發生**」，泥金＝「正在跑（真的有工作在進行）」。「搜尋中」就是正在發生。同一節還寫著「**赭色的價值來自它零誤報，不是來自它涵蓋得廣**」，而「暫態處理中家族」正是「涵蓋得廣」。這一節是 2026-09-10／11 的裁定，比 13-0 晚兩個月。
 
@@ -70,7 +70,7 @@ so that 「搜尋中」不會用一個意思是「你要求了但它沒發生」
 
 2b. ⏸️ **L4-M 的 meta 行——本 story 不動，等裁定。** L4-M 五列的 `metaRow`（類型 · 日期）都是 `enabled:false`，手機上**整條不渲染**；`RequestRow.tsx` 沒有任何斷點條件，手機上照樣渲染。兩邊差一整行資訊。稿的選擇在 390px 上說得通（標題＋狀態藥丸＋百分比已經很擠），但沒有任何註記說明那是刻意的。
 
-3. ⏸️ **狀態點統一用飽和色——與第 2 條同批，一起等裁定。** 原因：`DOT_BG.searching` 的值取決於 searching 最後是赭還是泥金，拆開改會改兩次。原推導： `DOT_BG` 目前 `pending`/`searching`/`completed` 用 `--info`/`--warning`/`--success`（飽和），但 `downloading` 用 `--accent-text`、`failed` 用 `--error-text`（文字階）。依 DESIGN.md §兩種金規則「`--accent-primary` 給人按，`--accent-text` 給人讀」，一個實心圓點是填色不是文字。改成 `downloading: --accent-primary`、`failed: --error`。
+3. ✅ **狀態點統一用飽和階，已執行。** `DOT_BG` 目前 `pending`/`searching`/`completed` 用 `--info`/`--warning`/`--success`（飽和），但 `downloading` 用 `--accent-text`、`failed` 用 `--error-text`（文字階）。依 DESIGN.md §兩種金規則「`--accent-primary` 給人按，`--accent-text` 給人讀」，一個實心圓點是填色不是文字。改成 `downloading: --accent-primary`、`failed: --error`。
 
 4. ❌ **撤銷。** SM 建單時用 `Get` 收集文字，沒有沿著父節點檢查 `enabled`，於是把 L4-M 五列**已停用**的 meta 行讀成了「畫錯的假資料」。實際上那一整行在手機上不渲染，所以既沒有「類型欄全寫電影」也沒有「日期全同一天」的問題。真正的差異是 meta 行本身該不該在手機上出現——移到第 2b 條待裁定。
    📌 **教訓寫在這裡給後面的 dsr story**：從 `.pen` 讀畫面內容時，`enabled:false` 加在**父節點**上時子節點的 `enabled` 仍是 `undefined`。要判斷「使用者真的看得到什麼」，必須沿著 `ctx.parentCtx` 往上走一遍。
@@ -102,9 +102,14 @@ so that 「搜尋中」不會用一個意思是「你要求了但它沒發生」
   - [x] 跑匯出，只有 `flow-l-requests-v2/*.png` 這 8 張有 byte 差異
   - [x] 打開 l1-d-v2.png 與 l4-m-v2.png 確認讀得到字
 
-- [ ] **Task 2 — `searching` 的顏色（AC: #2, #3）** ⏸️ **BLOCKED，等 Alexyu 裁定**
-  - [ ] 裁定「改泥金」才執行：`RequestRow.tsx` 的 `STATUS_TOKENS.searching` 與 `DOT_BG`、L1-D／L4-M 藥丸、`.pen` DL-v2 §8、J3-D、`libraryStatus.ts` 的「整理中」
-  - [ ] 裁定「維持赭色」則改為把 13-0 的「暫態處理中家族」補進 DESIGN.md §固定詞彙，讓兩份正典不再打架
+- [x] **Task 2 — `searching` 改泥金（AC: #2, #3）** ⚖️ **Alexyu 裁定「改成金色」**
+  - [x] 先寫紅的測試（`RequestRow.spec.tsx` ＋ `libraryStatus.spec.ts`，2 紅）再改
+  - [x] `RequestRow.tsx`：`STATUS_TOKENS.searching` → `--accent-tint`／`--accent-text`
+  - [x] `DOT_BG` 五個統一成飽和階：`searching`／`downloading` → `--accent-primary`、`failed` → `--error`
+  - [x] `libraryStatus.ts:61` 的「整理中」→ `TINT.accent`（同族裁定，影響整個媒體庫的海報徽章）
+  - [x] `HeroBanner.spec.tsx` 的 `toContain('warning')` 斷言跟著改成 `accent`
+  - [x] `.pen` DL-v2 §8：註解重寫＋五組色票更新（順手修掉 downloading／failed 的圓點用文字階、completed 的標籤用飽和色）
+  - [x] L1-D 五列、L4-M 五列的藥丸同步；全畫布掃過，沒有任何 `LkjRd` instance 還帶 warning
 
 - [ ] **Task 3 — L4-M 的 meta 行（AC: #2b）** ⏸️ **BLOCKED，等 Alexyu 裁定**
   - [x] ~~對齊假資料~~ — SM 誤判，已撤銷（見 AC #4）
@@ -207,7 +212,8 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`，BMAD dev agent（Amelia）2
 ### Debug Log References
 
 - `pnpm nx test web`（RED）：2 failed —— 兩行新文案的斷言如預期找不到元素
-- `pnpm nx test web`（GREEN）：**3346 / 3346 passed**
+- `pnpm nx test web`（裁定前 GREEN）：3346 / 3346
+- `pnpm nx test web`（裁定後 RED 2 → GREEN）：**3347 / 3347 passed**（+1 新測試：searching 穿泥金）
 - `pnpm nx test api`：PASS
 - `pnpm run lint`：**0 errors**、127 warnings（與改動前同數）
 - `pnpm nx run web:typecheck --skip-nx-cache`：PASS
@@ -258,3 +264,5 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`，BMAD dev agent（Amelia）2
 | 2026-09-11 | Task 5 — 兩個檔頭補齊真正實作的畫面；2 處 `text-[13px]` → `text-xs`；L1-D 計數補「筆」。 |
 | 2026-09-11 | Task 6 — Flow L 群組加 `L Flow Note` 標明三處超前實作的稿不得刪；順手修掉 L4-M 底部分頁列的垂直裁切，Flow L 溢出 5 → 0。 |
 | 2026-09-11 | Task 7 — 閘門：web 3346/3346、api PASS、lint 0 errors、typecheck PASS、token 一致、prettier 通過。 |
+| 2026-09-11 | ⚖️ **Alexyu 裁定「改成金色」** → Task 2／3 解除阻塞並執行：`searching` 與同族的「整理中」從赭改泥金，`DOT_BG` 五個統一成飽和階，`.pen` DL-v2 §8 的註解與色票重寫，L1-D／L4-M 十列藥丸同步，`HeroBanner.spec.tsx` 斷言跟上。先紅 2 後綠 3347。 |
+| 2026-09-11 | 順手修掉裁定時撞見的三處同類問題：DL-v2 §8 的 downloading／failed 圓點用的是「給人讀」的文字階、completed 的標籤用飽和色當字（§Badges 明寫底用 tint、字用 `*-text`）。 |

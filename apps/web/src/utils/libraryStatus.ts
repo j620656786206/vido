@@ -58,7 +58,10 @@ export function deriveLifecycleStatus(media: Media | undefined): StatusDescripto
     case 'success':
       return { label: '已入庫', className: TINT.success, steadyState: true };
     case 'pending':
-      return { label: '整理中', className: TINT.warning };
+      // ⚖️ Alexyu 2026-09-11（dsr-11）：泥金，不是赭。赭色的意思是「你要求了，但它
+      //「沒發生」；整理中正在發生，那是泥金「正在跑」。七月 13-0 立的「暫態處理中家族」
+      // 被 2026-09-10／11 的固定詞彙裁定取代——赭色的價值來自零誤報，不是涵蓋得廣。
+      return { label: '整理中', className: TINT.accent };
     case 'failed':
       return { label: '失敗', className: TINT.error };
     default:

@@ -142,7 +142,9 @@ describe('HeroBanner (Home v3 own-library static hero — ux3-1-8)', () => {
     const badge = screen.getByTestId('hero-banner-subtitle-badge');
     expect(badge).toHaveTextContent('整理中');
     expect(badge).not.toHaveTextContent('已就緒');
-    expect(badge.className).toContain('warning');
+    // ⚖️ Alexyu 2026-09-11（dsr-11）：整理中改成泥金——它正在跑，赭色說的是「沒發生」。
+    expect(badge.className).toContain('accent');
+    expect(badge.className).not.toContain('warning');
     // The app's own in-flight work is the Activity hub's business, not a door
     // into the item — so this one stays a statement.
     expect(badge.tagName).toBe('SPAN');

@@ -84,4 +84,14 @@ describe('RequestRow', () => {
     expect(pill).toHaveAttribute('role', 'status');
     expect(pill).toHaveAttribute('aria-live', 'polite');
   });
+
+  // ⚖️ Alexyu 2026-09-11（dsr-11）：搜尋中改成泥金。赭色＝「你要求了，但它沒發生」，
+  // 而搜尋中正在發生。改完後 searching 與 downloading 同為泥金——兩者都是「正在跑」，
+  // 區別交給標籤與百分比，不靠顏色。七月 13-0 的「暫態處理中家族」被這條取代。
+  it('[dsr-11] searching wears 泥金, not 赭', () => {
+    render(<RequestRow request={row({ status: 'searching' })} />);
+    const pill = screen.getByTestId('request-status-searching');
+    expect(pill.className).toContain('--accent-tint');
+    expect(pill.className).not.toContain('--warning');
+  });
 });
