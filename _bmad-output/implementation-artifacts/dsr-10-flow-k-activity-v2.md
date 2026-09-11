@@ -1,6 +1,6 @@
 # Story DSR.10: Flow K 活動中心——程式碼與設計稿雙向對齊 K1–K4
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -270,6 +270,7 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`，BMAD dev agent（Amelia）2
 | 2026-09-11 | 立案 1 筆：`disc-2026-09-activity-empty-cta-scan-or-navigate`（空狀態 CTA 是產品裁定，兩邊都沒動）。 |
 | 2026-09-11 | ⚖️ **Alexyu 當場裁定「一個出口」**，該條目同日結案：K3-D 的按鈕改成「前往媒體庫」；程式碼的圖示從 Radar（雷達＝掃描）換成 Library，因為雷達跟「前往」說的不是同一件事。加一條測試守住「它導覽、不觸發任何工作」。 |
 | 2026-09-11 | ⚖️ **Alexyu 指示一併修**：K3-D 的側軌自相矛盾——底部「掃描中 · 佇列 5」與導覽列「下載 3」，但畫面中央寫「目前沒有進行中的活動」。`isEmpty()` 要求 `downloads.total === 0`，那兩個讀數在這張稿上只能是 0。用 instance override 關掉，母版不動，其餘 57 張稿不受影響。 |
+| 2026-09-11 | ✅ 收單 —— PR #416 合併進 main（commit dd67c290），CI 17 項全綠。E2E shard 2 曾因 `playwright install-deps` 卡住 20 分鐘被砍（零測試執行），重跑即綠，非程式碼問題。 |
 
 ## 給 Alexyu 的一個問題（不阻塞開發）
 
