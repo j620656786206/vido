@@ -1,6 +1,6 @@
 # Story DSR.12: Flow M 登入閘——程式碼追回 M1–M7 設計稿
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -230,3 +230,4 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`，BMAD dev agent（Amelia）2
 | 2026-09-11 | Task 5 — 新增 `auth-login-form` 視覺夾具（`default` 態）與 `-darwin` 基準線；同步把 `Time-bomb-exempt` 註解改成夾具存在之後仍然成立的版本。 |
 | 2026-09-11 | Task 6 — 全套閘門：web 3342/3342、api PASS、lint 0 errors、typecheck PASS、token 一致、prettier 通過。 |
 | 2026-09-11 | 立案 2 筆：`preexisting-fail-visual-darwin-three-stale-baselines`（既有、已用 stash 驗證）、`disc-2026-09-m1d-missing-autofocus-ring`（設計稿側）。 |
+| 2026-09-11 | ✅ 收單 —— PR #413 合併進 main（commit 7cd2bd10），CI 17 項全綠。含 PM／UX review 的六項修正與「鎖定改赭色」裁定。 |
