@@ -1,4 +1,5 @@
-// Design ref: ux-design.pen Screen N1-D (dzgq9)…N5-D (CWh3E) 的 step-progress 區塊
+// Design ref: ux-design.pen Screen N1-D (dzgq9) · N5-D (CWh3E)
+// 對應 N1–N5 五張稿上方的 step-progress 區塊
 interface StepProgressProps {
   steps: { id: string; title: string }[];
   currentStep: number;

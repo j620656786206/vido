@@ -1,4 +1,5 @@
-// Implements: <utility — DESIGN.md §Cards and Containers>
+// Implements: <utility — no .pen counterpart>
+// DESIGN.md §Cards and Containers
 // 2026-09-11：從 shadow-md 改成髮絲邊框。夜行下 shadow-md 疊在 --bg-primary 上只有
 // 1.056:1，而 --border-subtle 是 1.660:1（12 倍亮度差），且陰影是 4px 下偏移、卡片上緣
 // 沒有任何陰影像素。全 app 151 個卡片形狀容器本來就都用邊框，這支元件是唯一的例外。
