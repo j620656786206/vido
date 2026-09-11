@@ -1,4 +1,6 @@
-// Design ref: ux-design.pen Screen A1-D-v2 (kMeWS)
+// Design ref: ux-design.pen Screen K1-D-v2 (kMeWS) · K1-M-v2 (QIwY1)
+// 代號在「活動中心從 Flow A 獨立成 Flow K」那次重組時改過，節點 ID 沒變、名字變了；
+// 這一行原本寫 A1-D-v2，照它去翻會翻到瀏覽流程。（dsr-10）
 /**
  * Activity hub page (UX Redesign Phase 3 — ux3-2-3 / D4-1). The v2 destination that
  * unifies the previously-invisible background journeys: 進行中 (live scan / batch-subtitle
@@ -39,7 +41,10 @@ import { ActivitySkeleton, ActivityEmpty, ActivitySectionError } from './Activit
 
 const ACTIVE_META: Record<string, { icon: LucideIcon; title: string }> = {
   scan: { icon: Radar, title: '媒體庫掃描' },
-  subtitle_batch: { icon: Captions, title: '批次字幕' },
+  // dsr-10: 「批次字幕」跟下面的「批次生成」分不出來。後端這個 kind 走的是
+  // subtitle/batch.go，打 providers.SubtitleQuery、掃 NotSearched/NotFound —— 它是
+  // 去**搜尋**已經存在的字幕，不是生成。
+  subtitle_batch: { icon: Captions, title: '批次字幕搜尋' },
   // Story ux3-subtitle-v2-batch AC 4 — the 9R-16 generation-batch job row.
   generation_batch: { icon: Captions, title: '批次生成' },
   // disc-2026-07-transcription-active-jobs — a solo (non-batch) 生成字幕 click,
@@ -112,15 +117,13 @@ function ActiveSection({ section, onRetry }: { section: ActiveJobsSection; onRet
         const meta = ACTIVE_META[j.kind] ?? { icon: Activity, title: j.kind };
         const right =
           COUNTED_KINDS.has(j.kind) && j.total ? (
-            <span className="font-mono text-[13px] text-[var(--text-secondary)]">
+            <span className="font-mono text-xs text-[var(--text-secondary)]">
               {j.current ?? 0} / {j.total}
             </span>
           ) : NO_PERCENT_KINDS.has(j.kind) ? (
-            <span className="text-[13px] text-[var(--text-secondary)]">進行中</span>
+            <span className="text-xs text-[var(--text-secondary)]">進行中</span>
           ) : (
-            <span className="font-mono text-[13px] text-[var(--accent-text)]">
-              {j.percentDone}%
-            </span>
+            <span className="font-mono text-xs text-[var(--accent-text)]">{j.percentDone}%</span>
           );
         const row = (
           <ActivityRow
@@ -180,7 +183,7 @@ function PendingSectionView({
             to="/library"
             search={{ unmatched: true }}
             data-testid="activity-pending-cta"
-            className="flex items-center gap-1 text-[13px] font-medium text-[var(--accent-text)] hover:underline"
+            className="flex items-center gap-1 text-sm font-medium text-[var(--accent-text)] hover:underline"
           >
             前往處理
             <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -243,7 +246,7 @@ function DownloadsSectionView({
           <Link
             to="/downloads"
             data-testid="activity-downloads-cta"
-            className="flex items-center gap-1 text-[13px] font-medium text-[var(--accent-text)] hover:underline"
+            className="flex items-center gap-1 text-sm font-medium text-[var(--accent-text)] hover:underline"
           >
             開啟下載頁
             <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />

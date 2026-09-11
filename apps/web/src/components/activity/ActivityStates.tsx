@@ -1,12 +1,13 @@
-// Design ref: ux-design.pen Screen A4-D-v2 (suCiI)
+// Design ref: ux-design.pen Screen K2-D-v2 (suCiI) · K3-D-v2 (DZnSv) · K4-D-v2 (M6ra92)
+// 骨架 K2、空狀態 K3、區塊失敗 K4。原本寫 A4-D-v2，是 Flow K 獨立前的舊代號。（dsr-10）
 /**
  * Activity hub state components (UX Redesign Phase 3 — ux3-2-3, §7 / N4).
- * Loading skeleton (row-shaped, reduced-motion aware, A4-D-v2), calm empty state with a
- * next-step CTA (A5-D-v2), and a compact per-section fail-soft banner + 重試 (A6-D-v2 —
+ * Loading skeleton (row-shaped, reduced-motion aware, K2-D-v2), calm empty state with a
+ * next-step CTA (K3-D-v2), and a compact per-section fail-soft banner + 重試 (K4-D-v2 —
  * a failed section degrades alone; the page never hard-fails, F3).
  */
 import { Link } from '@tanstack/react-router';
-import { AlertTriangle, RotateCw, CheckCheck, Radar } from 'lucide-react';
+import { AlertTriangle, RotateCw, CheckCheck, Library } from 'lucide-react';
 
 /** Skeleton matching the row shape — icon chip + two text bars + a right bar. */
 export function ActivitySkeleton({ count = 4 }: { count?: number }) {
@@ -55,7 +56,10 @@ export function ActivityEmpty() {
         data-testid="activity-empty-cta"
         className="inline-flex min-h-[44px] items-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-4 text-sm font-semibold text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-hover)]"
       >
-        <Radar className="h-4 w-4" aria-hidden="true" />
+        {/* ⚖️ Alexyu 2026-09-11（dsr-10）：這顆按鈕是「一個出口」，不是「一個開關」。
+            圖示原本是雷達（掃描），跟「前往媒體庫」這五個字說的不是同一件事——
+            一個看起來會啟動工作，一個只是導覽。改用側軌「媒體庫」同一個圖示。 */}
+        <Library className="h-4 w-4" aria-hidden="true" />
         前往媒體庫
       </Link>
     </div>

@@ -58,7 +58,7 @@ export function ActivityRow({
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-sm font-semibold text-[var(--text-primary)]">{title}</h3>
-          {detail && <p className="truncate text-[13px] text-[var(--text-secondary)]">{detail}</p>}
+          {detail && <p className="truncate text-xs text-[var(--text-secondary)]">{detail}</p>}
         </div>
         {right != null && <div className="shrink-0 text-right">{right}</div>}
       </div>

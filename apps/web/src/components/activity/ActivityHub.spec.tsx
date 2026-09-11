@@ -102,6 +102,21 @@ describe('ActivityHub (v2 Activity hub — four states + fail-soft)', () => {
     expect(await screen.findByTestId('activity-empty')).toBeInTheDocument();
   });
 
+  // ⚖️ Alexyu 2026-09-11（dsr-10 的產品裁定）：空狀態那顆按鈕是「一個出口」，不是
+  // 「一個開關」。沒有活動通常代表事情都做完了，這時最自然的下一步是去看成果，
+  // 而掃描的入口設定頁已經有了。所以它導覽，不觸發任何工作——圖示也必須跟著說同
+  // 一件事：雷達（掃描）換成書櫃（媒體庫）。
+  it('[dsr-10] the empty-state CTA is an exit, not a scan trigger', async () => {
+    mockUseActivity.mockReturnValue(result({ data: summary() }));
+    renderHub();
+    const cta = await screen.findByTestId('activity-empty-cta');
+    expect(cta).toHaveTextContent('前往媒體庫');
+    expect(cta).toHaveAttribute('href', '/library');
+    // 雷達圖示在「前往」按鈕上是在說謊。
+    expect(cta.querySelector('.lucide-radar')).toBeNull();
+    expect(cta.querySelector('.lucide-library')).not.toBeNull();
+  });
+
   it('[P1] Data — active jobs map kind→title with progress; pending + downloads + recent render', async () => {
     mockUseActivity.mockReturnValue(
       result({
@@ -134,7 +149,9 @@ describe('ActivityHub (v2 Activity hub — four states + fail-soft)', () => {
 
     expect(await screen.findByTestId('activity-job-scan')).toHaveTextContent('媒體庫掃描');
     expect(screen.getByTestId('activity-job-scan')).toHaveTextContent('62%');
-    expect(screen.getByTestId('activity-job-subtitle_batch')).toHaveTextContent('批次字幕');
+    // dsr-10: 「批次字幕」跟 generation_batch 的「批次生成」分不出來。後端這個 kind 打的是
+    // providers.SubtitleQuery、掃的是 NotSearched/NotFound——它在**搜尋**現成字幕。
+    expect(screen.getByTestId('activity-job-subtitle_batch')).toHaveTextContent('批次字幕搜尋');
     expect(screen.getByTestId('activity-job-subtitle_batch')).toHaveTextContent('12 / 30');
     expect(screen.getByTestId('activity-pending-row')).toHaveTextContent('8 個項目待處理');
     expect(screen.getByTestId('activity-pending-cta')).toBeInTheDocument();
@@ -347,5 +364,42 @@ describe('ActivityHub (v2 Activity hub — four states + fail-soft)', () => {
     renderHub();
     const link = await screen.findByTestId('activity-generation-batch-link');
     expect(link).toHaveAttribute('href', expect.stringContaining('view=generation'));
+  });
+
+  // dsr-10: 13px 不在字階上（Label 12 / Body 14）。活動區本來有 6 處，改完之後
+  // 這條守著它不再長回來——次要讀數用 text-xs、可點的 CTA 用 text-sm。
+  it('keeps every activity label on the type scale', async () => {
+    mockUseActivity.mockReturnValue(
+      result({
+        data: summary({
+          activeJobs: {
+            status: 'ok',
+            jobs: [
+              { kind: 'scan', percentDone: 62, detail: '/media/movies', current: 1234 },
+              { kind: 'transcription', percentDone: 0, detail: '你的名字 · S1E3' },
+            ],
+          },
+          pending: { status: 'ok', parseCount: 8 },
+          downloads: { status: 'ok', downloading: 3, queued: 5, errored: 2, paused: 1, total: 11 },
+          recent: {
+            status: 'ok',
+            events: [
+              {
+                kind: 'parse',
+                result: 'completed',
+                detail: 'done.mkv',
+                at: '2026-06-15T10:00:00Z',
+              },
+            ],
+          },
+        }),
+      })
+    );
+    renderHub();
+    const root = await screen.findByTestId('activity-root');
+    const offScale = Array.from(root.querySelectorAll('*')).filter((el) =>
+      /text-\[\d+px\]/.test((el as HTMLElement).className)
+    );
+    expect(offScale.map((el) => (el as HTMLElement).className)).toEqual([]);
   });
 });
