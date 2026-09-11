@@ -111,6 +111,7 @@ READABLE_FLOWS = {
     "flow-e-scanner",
     "flow-m-auth-gate",
     "flow-k-activity-v2",
+    "flow-l-requests-v2",
 }
 # Floor, not ceiling: a page wider than this keeps its native 1:1 width rather than
 # being shrunk below legibility.

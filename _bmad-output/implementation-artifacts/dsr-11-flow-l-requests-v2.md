@@ -1,6 +1,6 @@
 # Story DSR.11: Flow L 請求系統——對齊 L1–L8，但不准刪掉超前的稿
 
-Status: ready-for-dev
+Status: blocked
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -35,11 +35,11 @@ so that 「搜尋中」不會用一個意思是「你要求了但它沒發生」
 
 | # | 項目 | 設計稿 | 程式碼 | 方向 |
 | --- | --- | --- | --- | --- |
-| 1 | `searching` 狀態色 | 赭（`--warning-tint`／`--warning-text`） | 同左 | **碼＋稿都要改** → 泥金 |
+| 1 | `searching` 狀態色 | 赭（`--warning-tint`／`--warning-text`） | 同左 | ⚠️ **待裁定**——會推翻 13-0 的既有決定，見下 |
 | 2 | 狀態點的 token 形式 | — | 3 個用飽和色、2 個用 `*-text` | **碼→稿** |
-| 3 | L4-M 的類型欄 | 五列全寫「電影」 | 由 `request.mediaType` 決定，不會錯 | **稿→碼** |
-| 4 | L4-M 的日期 | 五列全是 `2026-06-28` | 由 `request.createdAt` 決定 | **稿→碼** |
-| 5 | L4-M 失敗列 | 沒有錯誤訊息行 | failed 時渲染 `errorMessage` | **稿→碼** |
+| 3 | L4-M 的整條 meta 行（類型 · 日期） | **刻意隱藏**（`metaRow` `enabled:false`） | 不分斷點都渲染 | ⚠️ **待裁定**，見下 |
+| 4 | ~~L4-M 的日期全是同一天~~ | — | — | ❌ **SM 誤判，已撤銷**（那些節點在手機上根本不渲染） |
+| 5 | ~~L4-M 失敗列沒有錯誤訊息行~~ | — | — | ❌ **SM 誤判，已撤銷**（同上，meta 行整條隱藏） |
 | 6 | L1-D 的計數 | `5` | `5 筆` | **稿→碼** |
 | 7 | L6 空狀態說明行 | `從探索或詳情頁按「想要」開始追蹤` | 沒有這一行 | **碼→稿** |
 | 8 | L7 fail-soft 副行 | `請求服務暫時無法連線` | 沒有這一行 | **碼→稿** |
@@ -56,15 +56,24 @@ so that 「搜尋中」不會用一個意思是「你要求了但它沒發生」
 
 1. **Flow L 的稿要讀得到。** `READABLE_FLOWS` 加入 `"flow-l-requests-v2"`，重跑匯出，8 張改成 2x／最小寬 1400。**只 stage 這 8 張**。
 
-2. **`searching` 從赭改成泥金——兩邊都改。** 這是本 story 唯一需要同時動程式碼與設計稿的一條。
-   - 依據：DESIGN.md §固定詞彙 —— 赭＝**「你要求了，但它沒發生」**，泥金＝**「正在跑（真的有工作在進行）」**。「搜尋中」就是正在發生。DESIGN.md 對赭的註解寫著「**赭色的價值來自它零誤報**」，用在一個確實在跑的狀態上就是誤報。
-   - 改 `RequestRow.tsx` 的 `STATUS_TOKENS.searching`：`--warning-tint`／`--warning-text` → `--accent-tint`／`--accent-text`；`DOT_BG.searching`：`--warning` → `--accent-primary`。
-   - 改 L1-D (K7fiy)、L4-M (n7isVa) 的「搜尋中」藥丸同步換色。
-   - ⚠️ 改完之後 `searching` 與 `downloading` 同為泥金。**那是對的**，兩者都是「正在跑」；區別由標籤與 `downloading` 才有的百分比承擔，不靠顏色。**不要**為了讓它們不同而發明第六個顏色——DESIGN.md 明寫色相上已無處可放。
+2. ⏸️ **`searching` 的顏色——本 story 不動，等 Alexyu 裁定。**
 
-3. **狀態點統一用飽和色。** `DOT_BG` 目前 `pending`/`searching`/`completed` 用 `--info`/`--warning`/`--success`（飽和），但 `downloading` 用 `--accent-text`、`failed` 用 `--error-text`（文字階）。依 DESIGN.md §兩種金規則「`--accent-primary` 給人按，`--accent-text` 給人讀」，一個實心圓點是填色不是文字。改成 `downloading: --accent-primary`、`failed: --error`。
+   ⚠️ **dev-story 的 AC-drift 檢查發現這會推翻一個有記錄的設計決定。** `13-0-requests-design.md:111` 白紙黑字寫著：**「Decision: `searching`→`warning-tint`／「搜尋中」(transient-work family) — added to DL-v2 §2.5 + new §8 pipeline section」**，`13-1a:113` 又把它複述成契約。那個映射目前活在五個地方：兩張 story 檔、`.pen` 的 Design Language v2 §8 註解與色票、`RequestRow.tsx`、L1-D／L4-M、以及 Flow J 的 J3-D 規格稿。而且它有同族成員——`libraryStatus.ts:61` 的「整理中」用的是同一個 `TINT.warning`，那顆徽章出現在整個媒體庫。
 
-4. **L4-M 的假資料改成跟 L1-D 同一份。** 三件事：① 「熊家餐館 S3」與「幕府將軍 S1」的類型欄從「電影」改成「影集」（它們是影集，S3／S1 就寫在標題裡，而 L1-D 寫的就是「影集」）；② 五列的日期從全部 `2026-06-28` 改成 L1-D 的五個不同日期；③ 失敗列補上錯誤訊息行「找不到可用來源」，`--error-text`，對上 `RequestRow.tsx:80-82`。
+   換句話說，這不是 Flow L 的小改，是「赭色要不要涵蓋『暫態處理中』」這個跨全站的詞彙裁定。**dsr-11 把證據備齊、不自行翻案。**
+
+   原本的推導保留在下方 Dev Notes 供裁定參考。裁定後若採「改成泥金」，範圍是：`RequestRow.tsx` 的 `STATUS_TOKENS.searching` 與 `DOT_BG.searching`、L1-D／L4-M 的藥丸、`.pen` DL-v2 §8 的註解與色票、J3-D、以及 `libraryStatus.ts` 的「整理中」。
+
+   **支持改成泥金的一方**：DESIGN.md §固定詞彙 —— 赭＝「你要求了，但它**沒發生**」，泥金＝「正在跑（真的有工作在進行）」。「搜尋中」就是正在發生。同一節還寫著「**赭色的價值來自它零誤報，不是來自它涵蓋得廣**」，而「暫態處理中家族」正是「涵蓋得廣」。這一節是 2026-09-10／11 的裁定，比 13-0 晚兩個月。
+
+   **支持維持赭色的一方**：13-0 的理由是「暫態處理中」自成一族，與「整理中」同族——那是一套自洽的分類，只是沒有被寫進 DESIGN.md。而且改成泥金之後 `searching` 與 `downloading` 會同色（兩者都是「正在跑」），區別只剩標籤與百分比。
+
+2b. ⏸️ **L4-M 的 meta 行——本 story 不動，等裁定。** L4-M 五列的 `metaRow`（類型 · 日期）都是 `enabled:false`，手機上**整條不渲染**；`RequestRow.tsx` 沒有任何斷點條件，手機上照樣渲染。兩邊差一整行資訊。稿的選擇在 390px 上說得通（標題＋狀態藥丸＋百分比已經很擠），但沒有任何註記說明那是刻意的。
+
+3. ⏸️ **狀態點統一用飽和色——與第 2 條同批，一起等裁定。** 原因：`DOT_BG.searching` 的值取決於 searching 最後是赭還是泥金，拆開改會改兩次。原推導： `DOT_BG` 目前 `pending`/`searching`/`completed` 用 `--info`/`--warning`/`--success`（飽和），但 `downloading` 用 `--accent-text`、`failed` 用 `--error-text`（文字階）。依 DESIGN.md §兩種金規則「`--accent-primary` 給人按，`--accent-text` 給人讀」，一個實心圓點是填色不是文字。改成 `downloading: --accent-primary`、`failed: --error`。
+
+4. ❌ **撤銷。** SM 建單時用 `Get` 收集文字，沒有沿著父節點檢查 `enabled`，於是把 L4-M 五列**已停用**的 meta 行讀成了「畫錯的假資料」。實際上那一整行在手機上不渲染，所以既沒有「類型欄全寫電影」也沒有「日期全同一天」的問題。真正的差異是 meta 行本身該不該在手機上出現——移到第 2b 條待裁定。
+   📌 **教訓寫在這裡給後面的 dsr story**：從 `.pen` 讀畫面內容時，`enabled:false` 加在**父節點**上時子節點的 `enabled` 仍是 `undefined`。要判斷「使用者真的看得到什麼」，必須沿著 `ctx.parentCtx` 往上走一遍。
 
 5. **L1-D 的計數補「筆」。** 程式碼是 `<span class="font-mono">{n}</span> 筆`。稿只有數字。
 
@@ -88,43 +97,42 @@ so that 「搜尋中」不會用一個意思是「你要求了但它沒發生」
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — 先讓稿讀得到（AC: #1）**
-  - [ ] `READABLE_FLOWS` 加入 `"flow-l-requests-v2"`
-  - [ ] 跑匯出，只 stage `flow-l-requests-v2/*.png` 這 8 張，其餘 `git checkout`
-  - [ ] 打開 l1-d-v2.png 與 l4-m-v2.png 確認讀得到字
+- [x] **Task 1 — 先讓稿讀得到（AC: #1）**
+  - [x] `READABLE_FLOWS` 加入 `"flow-l-requests-v2"`
+  - [x] 跑匯出，只有 `flow-l-requests-v2/*.png` 這 8 張有 byte 差異
+  - [x] 打開 l1-d-v2.png 與 l4-m-v2.png 確認讀得到字
 
-- [ ] **Task 2 — `searching` 改泥金（AC: #2, #3）**
-  - [ ] 先改 `RequestRow.spec.tsx` 的斷言讓它變紅，再改 `STATUS_TOKENS` 與 `DOT_BG`
-  - [ ] L1-D (K7fiy)、L4-M (n7isVa) 的「搜尋中」藥丸同步換色
-  - [ ] 確認 `searching` 與 `downloading` 同色是刻意的，並在 `RequestRow.tsx` 留一行註解說明為什麼
+- [ ] **Task 2 — `searching` 的顏色（AC: #2, #3）** ⏸️ **BLOCKED，等 Alexyu 裁定**
+  - [ ] 裁定「改泥金」才執行：`RequestRow.tsx` 的 `STATUS_TOKENS.searching` 與 `DOT_BG`、L1-D／L4-M 藥丸、`.pen` DL-v2 §8、J3-D、`libraryStatus.ts` 的「整理中」
+  - [ ] 裁定「維持赭色」則改為把 13-0 的「暫態處理中家族」補進 DESIGN.md §固定詞彙，讓兩份正典不再打架
 
-- [ ] **Task 3 — L4-M 的假資料對齊 L1-D（AC: #4）**
-  - [ ] 兩列類型欄「電影」→「影集」
-  - [ ] 五列日期改成 L1-D 的 `2026-07-02` / `2026-07-01` / `2026-06-29` / `2026-06-25` / `2026-06-20`
-  - [ ] 失敗列補「找不到可用來源」，`--error-text`
-  - [ ] L1-D 計數補「筆」
+- [ ] **Task 3 — L4-M 的 meta 行（AC: #2b）** ⏸️ **BLOCKED，等 Alexyu 裁定**
+  - [x] ~~對齊假資料~~ — SM 誤判，已撤銷（見 AC #4）
+  - [ ] 裁定「手機不顯示」→ `RequestRow.tsx` 加斷點條件，並在 L4-M 加一則註記說明那是刻意的
+  - [ ] 裁定「手機也顯示」→ L4-M 五列的 `metaRow` 改回 `enabled:true`
 
-- [ ] **Task 4 — 兩行說明補進程式碼（AC: #6, #7）**
-  - [ ] 先改 `RequestsView.spec.tsx` 的斷言讓它變紅
-  - [ ] 空狀態補「從探索或詳情頁按「想要」開始追蹤」
-  - [ ] fail-soft 補「請求服務暫時無法連線」
+- [x] **Task 4 — 兩行說明補進程式碼（AC: #6, #7）**
+  - [x] 先改 `RequestsView.spec.tsx` 的斷言讓它變紅（2 紅）
+  - [x] 空狀態補「從探索或詳情頁按「想要」開始追蹤」
+  - [x] fail-soft 補「請求服務暫時無法連線」
 
-- [ ] **Task 5 — 檔頭與字級（AC: #8, #9）**
-  - [ ] 兩個檔頭補齊畫面清單
-  - [ ] `RequestButton.tsx` 2 處 `text-[13px]` → `text-xs`
-  - [ ] `npx eslint apps/web/src/components/requests/` → 0 errors
+- [x] **Task 5 — 檔頭與字級（AC: #5, #8, #9）**
+  - [x] 兩個檔頭補齊畫面清單
+  - [x] `RequestButton.tsx` 2 處 `text-[13px]` → `text-xs`
+  - [x] L1-D 的計數補「筆」
+  - [x] `npx eslint apps/web/src/components/requests/` → 0 errors
 
-- [ ] **Task 6 — 加註超前的稿（AC: #10）**
-  - [ ] Flow L 群組加一則 Note（照 M5 Note／M7 Note 的體例）：取消・重試對應 `13-7a`／`13-7b`，季集樹對應 `13-2b`，三者皆 `ready-for-dev`，**不是漂移、不得刪除**
-  - [ ] Flow L 溢出檢查必須 0
+- [x] **Task 6 — 加註超前的稿（AC: #10）**
+  - [x] Flow L 群組加了 `L Flow Note`：取消・重試對應 13-7a／13-7b，季集樹對應 13-2b，皆 ready-for-dev，不是漂移、不得刪
+  - [x] Flow L 溢出從 5 降到 **0**（順手修掉 L4-M 底部分頁列的垂直裁切，見 Discovery Triage ①）
 
-- [ ] **Task 7 — 收尾驗證（AC: #11, #12）**
-  - [ ] `pnpm run lint` → 0 errors
-  - [ ] `pnpm nx run web:typecheck --skip-nx-cache`
-  - [ ] `pnpm run format:check`
-  - [ ] `python3 scripts/check-design-tokens.py`
-  - [ ] `pnpm nx test web` 與 `pnpm nx test api`（⛔ 不用 `run_in_background`）
-  - [ ] 重跑匯出，確認只有 Flow L 的 8 張有 byte 差異
+- [x] **Task 7 — 收尾驗證（AC: #11, #12）**
+  - [x] `pnpm run lint` → 0 errors（127 warnings，與改動前同數）
+  - [x] `pnpm nx run web:typecheck --skip-nx-cache` → PASS
+  - [x] `pnpm run format:check` → 通過
+  - [x] `python3 scripts/check-design-tokens.py` → 一致
+  - [x] `pnpm nx test web` 3346/3346、`pnpm nx test api` PASS
+  - [x] 重跑匯出，只有 Flow L 的 8 張有 byte 差異
 
 ## Dev Notes
 
@@ -194,19 +202,59 @@ apps/api/internal/handlers/request_handler.go          ← 只讀，確認端點
 
 ### Agent Model Used
 
-（dev agent 填寫）
+Claude Opus 5 (1M context) — `claude-opus-5[1m]`，BMAD dev agent（Amelia）2026-09-11
 
 ### Debug Log References
 
+- `pnpm nx test web`（RED）：2 failed —— 兩行新文案的斷言如預期找不到元素
+- `pnpm nx test web`（GREEN）：**3346 / 3346 passed**
+- `pnpm nx test api`：PASS
+- `pnpm run lint`：**0 errors**、127 warnings（與改動前同數）
+- `pnpm nx run web:typecheck --skip-nx-cache`：PASS
+- `python3 scripts/check-design-tokens.py`：一致（188 畫面／72 母版／clipping 從 72 降到 **67**）
+- 匯出：188 張，**只有 Flow L 的 8 張**有 byte 差異
+
 ### Completion Notes List
+
+- 🔗 **AC Drift: FOUND（兩條，都擋下了）**
+  - **① `searching` 的顏色。** `13-0-requests-design.md:111` 記著「**Decision: `searching`→`warning-tint`／「搜尋中」(transient-work family) — added to DL-v2 §2.5 + new §8 pipeline section**」，`13-1a:113` 複述成契約。那個映射活在五處：兩張 story 檔、`.pen` DL-v2 §8 的註解 (`J3o8xi`) 與色票 (`R96BLI`/`Q6ac5`/`W4F63V`)、`RequestRow.tsx`、L1-D／L4-M、Flow J 的 J3-D。而且它有同族成員——`libraryStatus.ts:61` 的「整理中」用同一個 `TINT.warning`，那顆徽章出現在整個媒體庫。**這是跨全站的詞彙裁定，不是 Flow L 的小改**，因此 Task 2／3 停在這裡等 Alexyu。
+  - **② L4-M 的 meta 行。** 建單時判定是「畫錯的假資料」，實際是 `metaRow` 整條 `enabled:false`、手機上不渲染。程式碼沒有斷點條件，手機上照樣渲染。兩邊差一整行資訊，但哪一邊對沒有記錄可循，一併等裁定。
+- 📎 **Contract Stamps: NONE**（本 story 與引用的 `13-0`／`13-1a` 都沒有 `[@contract-v*]` 標記；`13-7a`／`13-7b` 有 STALE 標記但那屬它們自己的範圍）。
+- 🎭 **A11y Pre-Flight: PASS**（3 個 component：`RequestsView.tsx`／`RequestButton.tsx`／`RequestRow.tsx`，jsx-a11y warning 0，本 story 引入 0）。四類回歸項：沒有新增圖片、沒有新增 aria-modal、沒有新增自訂 widget；新增的兩行是純文字，掛在既有的 `role="alert"`／空狀態容器內，既有的 `aria-live="polite"` 與 `role="progressbar"` 原封不動。
+- ⚠️ **Pre-existing failure**：darwin 視覺那 3 個既有紅沿用 `preexisting-fail-visual-darwin-three-stale-baselines`，本 story 沒有新增視覺夾具。
+- ❌ **SM 誤判兩處，已在 AC 中撤銷並留下教訓**：從 `.pen` 讀內容時，`enabled:false` 加在**父節點**上時子節點的 `enabled` 仍是 `undefined`。要判斷使用者真的看得到什麼，必須沿 `ctx.parentCtx` 往上走。建單時沒走，於是把五列隱藏的 meta 行讀成了畫錯的假資料。**後面的 dsr story 請沿用這個檢查。**
+- 📝 **另外更正立案時的三處描述**（已同步回 sprint-status）：① 「RequestButton 有 raw shadow」是 grep 誤判——那是 token 形式，DESIGN.md §Buttons L632 明文規定 Primary 就帶 `--shadow-sm`；② 「6 檔只有 2 檔有標頭」不準，3 個 spec 豁免、3 個非 spec 全有，問題是列得不全；③ 「RequestRow 用 --warning-tint，要確認它落在『你要求了但沒發生』」——確認結果是**不落在**，那是 `searching`。
 
 ### Discovery Triage
 
 - **Did this story discover any work outside its current scope?**
   - **YES**，一項，lane ③：
     - **③ DESIGN.md 的 §Buttons 與 §Cards 互相矛盾。** §Buttons 說 Primary／Secondary 帶 `--shadow-sm`；§Cards 在 2026-09-11 改寫後說「陰影保留給真的浮在頁面之上的東西（Dialog／Sheet／Popover／Toast）」，按鈕不在清單裡。兩條都是現行正典，實作者無從判斷。屬 DESIGN.md 層級的裁定，**不在 Flow L 範圍**。**待立案：若 dev 執行時尚無此條目，開 `disc-2026-09-button-shadow-vs-card-rule: backlog` 並在此列回填 ID，同時在 `dsr-9-flow-j-specs-and-design-system` 的條目註明由它承接。**
+  - 實作中另外撿到一項，走 lane **① expand-scope-in-place**：
+    - **① L4-M 底部分頁列垂直裁切。** 五個分頁 62px 高，塞在 80px 高、下內距 24px 的列裡（可用高度 56px），五個標籤全部 `partially clipped`。下內距改 16px 即解。由 AC #10 的「Flow L 溢出必須 0」追蹤。
 - Reference: `project-context.md` Rule 24
 
 ### File List
 
-（dev agent 填寫）
+**修改（程式碼）：**
+- `apps/web/src/components/requests/RequestsView.tsx` — 補兩行說明（空狀態、fail-soft）＋ Rule 21 檔頭補齊四張稿
+- `apps/web/src/components/requests/RequestButton.tsx` — Rule 21 檔頭補 L8 ＋ 2 處字級
+- `apps/web/src/components/requests/RequestsView.spec.tsx` — 2 條新斷言
+
+**修改（設計與腳本）：**
+- `ux-design.pen` — L1-D 計數補「筆」；Flow L 群組新增 `L Flow Note`；L4-M 底部分頁列下內距 24→16（修掉 5 個垂直裁切）
+- `scripts/export-pen-screenshots.py` — `READABLE_FLOWS` 加入 `flow-l-requests-v2`
+- `_bmad-output/pen-tokens.json` — 快照同步（clipping 72 → 67）
+- `_bmad-output/screenshots/flow-l-requests-v2/*.png`（8 張）
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — 狀態流轉
+
+## Change Log
+
+| 日期 | 內容 |
+| --- | --- |
+| 2026-09-11 | Task 1 — `flow-l-requests-v2` 進 `READABLE_FLOWS`，8 張稿從 400px 改為 2x／最小寬 1400。 |
+| 2026-09-11 | **AC-drift 擋下兩條**：`searching` 的顏色會推翻 13-0 的記錄決定且牽動全站的「整理中」；L4-M 的 meta 行是刻意隱藏不是假資料錯誤。Task 2／3 改為 BLOCKED。 |
+| 2026-09-11 | Task 4 — 空狀態補「從探索或詳情頁按「想要」開始追蹤」、fail-soft 補「請求服務暫時無法連線」（先紅 2 後綠）。 |
+| 2026-09-11 | Task 5 — 兩個檔頭補齊真正實作的畫面；2 處 `text-[13px]` → `text-xs`；L1-D 計數補「筆」。 |
+| 2026-09-11 | Task 6 — Flow L 群組加 `L Flow Note` 標明三處超前實作的稿不得刪；順手修掉 L4-M 底部分頁列的垂直裁切，Flow L 溢出 5 → 0。 |
+| 2026-09-11 | Task 7 — 閘門：web 3346/3346、api PASS、lint 0 errors、typecheck PASS、token 一致、prettier 通過。 |
