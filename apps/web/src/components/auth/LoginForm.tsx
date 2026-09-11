@@ -186,7 +186,15 @@ export function LoginForm({ justLoggedOut = false }: LoginFormProps) {
         <div id="password-status" className="min-h-[3.25rem] pt-2">
           {error && (
             <>
-              <p role="alert" className="text-sm text-[var(--error-text)]">
+              {/* 固定詞彙（Alexyu 2026-09-11 裁定，Flow M 的 PM／UX review）：
+                  鎖定不是硃砂。沒有東西壞掉——你要求登入，伺服器決定讓你等一會兒，
+                  那是赭色「你要求了但沒發生」。密碼打錯才是硃砂。 */}
+              <p
+                role="alert"
+                className={
+                  locked ? 'text-sm text-[var(--warning-text)]' : 'text-sm text-[var(--error-text)]'
+                }
+              >
                 {error.message}
               </p>
               {error.suggestion && (

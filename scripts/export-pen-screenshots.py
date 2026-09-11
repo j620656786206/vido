@@ -383,6 +383,7 @@ SCREENS = {
     "fMJFJ": ("flow-m-auth-gate", "m5-d"),
     "e2CuFg": ("flow-m-auth-gate", "m6-m"),
     "YKYhH": ("flow-m-auth-gate", "m7-m"),
+    "I5j6Y": ("flow-m-auth-gate", "m8-m"),
 }
 
 

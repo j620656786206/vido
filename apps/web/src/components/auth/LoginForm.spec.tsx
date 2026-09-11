@@ -233,6 +233,34 @@ describe('LoginForm', () => {
     expect(screen.getByTestId('password-help').className).toContain('text-xs');
   });
 
+  // 固定詞彙 ruling (Alexyu 2026-09-11, PM/UX review of Flow M): a lockout is NOT
+  // 硃砂. Nothing is broken — you asked to log in, the server declined for a while.
+  // That is 赭: 「你要求了但沒發生」. A wrong password IS 硃砂.
+  it('paints a lockout in ochre and a wrong password in cinnabar', async () => {
+    loginMock.mockRejectedValue(
+      new AuthError({ message: '密碼錯誤', code: 'INVALID_CREDENTIALS' })
+    );
+    const { unmount } = renderForm();
+    await submit('nope');
+    expect((await screen.findByRole('alert')).className).toContain('text-[var(--error-text)]');
+    unmount();
+
+    loginMock.mockRejectedValue(
+      new AuthError({
+        message: '嘗試次數過多',
+        code: 'TOO_MANY_ATTEMPTS',
+        suggestion: '請等 43 秒後再試。',
+        retryAfterSeconds: 43,
+      })
+    );
+    renderForm();
+    await submit('nope');
+    const locked = await screen.findByRole('alert');
+    expect(locked).toHaveTextContent('嘗試次數過多');
+    expect(locked.className).toContain('text-[var(--warning-text)]');
+    expect(locked.className).not.toContain('text-[var(--error-text)]');
+  });
+
   // $Type/H2/Size is themed by breakpoint: 24 on desktop, 20 on mobile. A fixed
   // text-2xl wordmark is 24 on a 390px phone, where M6-M draws it at 20.
   it('steps the wordmark down on a phone', () => {
