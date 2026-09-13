@@ -16,10 +16,14 @@ import type { MediaRequest, RequestStatus } from '../../services/requestService'
 /** DL-v2 §2.5 status→token map — one state machine, no bespoke palette. */
 const STATUS_TOKENS: Record<RequestStatus, { label: string; pillBg: string; fg: string }> = {
   pending: { label: '想要', pillBg: 'bg-[var(--info-tint)]', fg: 'text-[var(--info-text)]' },
+  // ⚖️ Alexyu 2026-09-11（dsr-11）：泥金，不是赭。搜尋中是「正在跑」；赭色說的是
+  // 「你要求了，但它沒發生」。改完之後 searching 與 downloading 同為泥金——那是對的，
+  // 兩者都在跑，區別由標籤與 downloading 才有的百分比承擔，不靠顏色。DESIGN.md 明寫
+  // 色相上已無處可放第六個詞彙，所以不為了區分而發明新色。
   searching: {
     label: '搜尋中',
-    pillBg: 'bg-[var(--warning-tint)]',
-    fg: 'text-[var(--warning-text)]',
+    pillBg: 'bg-[var(--accent-tint)]',
+    fg: 'text-[var(--accent-text)]',
   },
   downloading: {
     label: '下載中',
@@ -34,12 +38,14 @@ const STATUS_TOKENS: Record<RequestStatus, { label: string; pillBg: string; fg: 
   failed: { label: '失敗', pillBg: 'bg-[var(--error-tint)]', fg: 'text-[var(--error-text)]' },
 };
 
+// 圓點是填色不是文字，所以五個都用飽和階。dsr-11 之前 downloading 用 --accent-text、
+// failed 用 --error-text，那是「給人讀」的那一階（DESIGN.md §兩種金規則）。
 const DOT_BG: Record<RequestStatus, string> = {
   pending: 'bg-[var(--info)]',
-  searching: 'bg-[var(--warning)]',
-  downloading: 'bg-[var(--accent-text)]',
+  searching: 'bg-[var(--accent-primary)]',
+  downloading: 'bg-[var(--accent-primary)]',
   completed: 'bg-[var(--success)]',
-  failed: 'bg-[var(--error-text)]',
+  failed: 'bg-[var(--error)]',
 };
 
 export interface RequestRowProps {

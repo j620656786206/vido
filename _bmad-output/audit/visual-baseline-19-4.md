@@ -588,3 +588,5 @@ Linux baselines incrementally bootstrapped 2026-09-09 via runner ubuntu-24.04 (I
 Linux baselines incrementally bootstrapped 2026-09-11 via runner ubuntu-24.04 (ImageVersion: 20260907.300.1) — 2 fixtures: tests/visual/components.visual.spec.ts-snapshots/components/ui-card/default-visual-linux.png tests/visual/components.visual.spec.ts-snapshots/components/settings-restore-confirm-dialog/default-visual-linux.png
 
 Linux baselines incrementally bootstrapped 2026-09-11 via runner ubuntu-24.04 (ImageVersion: 20260907.300.1) — 1 fixtures: tests/visual/components.visual.spec.ts-snapshots/components/auth-login-form/default-visual-linux.png
+
+Linux baselines incrementally bootstrapped 2026-09-13 via runner ubuntu-24.04 (ImageVersion: 20260907.300.1) — 3 fixtures: tests/visual/components.visual.spec.ts-snapshots/components/request-row/searching/default-visual-linux.png tests/visual/components.visual.spec.ts-snapshots/components/request-button/requested/default-visual-linux.png tests/visual/components.visual.spec.ts-snapshots/components/request-button/owned/default-visual-linux.png

@@ -75,6 +75,8 @@ describe('RequestsView (N4 states — design L1/L5/L6/L7)', () => {
 
     await waitFor(() => expect(screen.getByTestId('requests-empty')).toBeInTheDocument());
     expect(screen.getByText('尚無請求')).toBeInTheDocument();
+    // dsr-11: 「尚無請求」只說了發生什麼，沒說怎麼開始。L6-D 一直有這一行。
+    expect(screen.getByText('從探索或詳情頁按「想要」開始追蹤')).toBeInTheDocument();
     await user.click(screen.getByTestId('requests-go-explore'));
     expect(onExplore).toHaveBeenCalled();
   });
@@ -92,6 +94,8 @@ describe('RequestsView (N4 states — design L1/L5/L6/L7)', () => {
 
     await waitFor(() => expect(screen.getByTestId('requests-error')).toBeInTheDocument());
     expect(screen.getByText('無法載入請求狀態')).toBeInTheDocument();
+    // dsr-11: 主行說「發生了什麼」，副行說「為什麼」。L7-D 一直有這一行。
+    expect(screen.getByText('請求服務暫時無法連線')).toBeInTheDocument();
 
     await user.click(screen.getByTestId('requests-retry'));
     await waitFor(() => expect(screen.getAllByTestId('request-row')).toHaveLength(1));

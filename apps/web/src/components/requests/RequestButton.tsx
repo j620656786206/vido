@@ -1,4 +1,5 @@
-// Design ref: ux-design.pen Screen L2-D-v2 (VH3Tq)
+// Design ref: ux-design.pen Screen L2-D-v2 (VH3Tq) · L8-D-v2 (G0xib)
+// L2 是三態按鈕本身，L8 是它送出後那顆「已加入想要清單」toast 所在的詳情頁。（dsr-11）
 // Source: ux-design.pen (Pencil app)
 /**
  * The one-click 想要 button (Story 13-1b, Epic 13 G-1/P3-001) — three honest
@@ -89,7 +90,7 @@ export function RequestButton({
         role="status"
         aria-live="polite"
         className={cn(
-          'inline-flex items-center gap-1.5 rounded-full bg-[var(--success-tint)] px-4 py-2.5 text-[13px] font-semibold text-[var(--success-text)]',
+          'inline-flex items-center gap-1.5 rounded-full bg-[var(--success-tint)] px-4 py-2.5 text-xs font-semibold text-[var(--success-text)]',
           fullWidth && 'w-full justify-center',
           className
         )}
@@ -112,7 +113,7 @@ export function RequestButton({
           role="status"
           aria-live="polite"
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-full bg-[var(--info-tint)] px-4 py-2.5 text-[13px] font-semibold text-[var(--info-text)]',
+            'inline-flex items-center gap-1.5 rounded-full bg-[var(--info-tint)] px-4 py-2.5 text-xs font-semibold text-[var(--info-text)]',
             fullWidth && 'w-full justify-center',
             className
           )}

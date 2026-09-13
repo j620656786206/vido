@@ -1,4 +1,5 @@
-// Design ref: ux-design.pen Screen L1-D-v2 (K7fiy)
+// Design ref: ux-design.pen Screen L1-D-v2 (K7fiy) · L5-D-v2 (ER39x) · L6-D-v2 (x4CNb) · L7-D-v2 (oopme)
+// 這個檔案同時實作四張稿：清單、載入骨架、空狀態、fail-soft。原本只列了 L1。（dsr-11）
 // Source: ux-design.pen (Pencil app)
 /**
  * The Discover-hosted 想要清單 view (Story 13-1b AC #5) — the lit PH3-R2
@@ -52,6 +53,8 @@ export function RequestsView({ onExplore }: RequestsViewProps) {
         className="flex flex-col items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-6 py-10 text-center"
       >
         <p className="text-sm text-[var(--text-secondary)]">無法載入請求狀態</p>
+        {/* dsr-11: 主行說「發生了什麼」，這一行說「為什麼」。兩者不重複，L7-D 一直有。 */}
+        <p className="text-xs text-[var(--text-muted)]">請求服務暫時無法連線</p>
         <button
           type="button"
           data-testid="requests-retry"
@@ -75,6 +78,9 @@ export function RequestsView({ onExplore }: RequestsViewProps) {
         className="flex flex-col items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-6 py-12 text-center"
       >
         <p className="text-sm text-[var(--text-secondary)]">尚無請求</p>
+        {/* dsr-11: 「尚無請求」只說了發生什麼。L6-D 一直畫著這一行，它說的是怎麼開始
+            ——空狀態的職責是「永遠給出下一步」，少了它使用者只知道這裡是空的。 */}
+        <p className="text-xs text-[var(--text-muted)]">從探索或詳情頁按「想要」開始追蹤</p>
         <button
           type="button"
           data-testid="requests-go-explore"
