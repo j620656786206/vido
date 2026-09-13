@@ -1,6 +1,6 @@
 # Story DSR.11: Flow L 請求系統——對齊 L1–L8，但不准刪掉超前的稿
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -268,4 +268,5 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`，BMAD dev agent（Amelia）2
 | 2026-09-11 | Task 7 — 閘門：web 3346/3346、api PASS、lint 0 errors、typecheck PASS、token 一致、prettier 通過。 |
 | 2026-09-11 | ⚖️ **Alexyu 裁定「改成金色」** → Task 2／3 解除阻塞並執行：`searching` 與同族的「整理中」從赭改泥金，`DOT_BG` 五個統一成飽和階，`.pen` DL-v2 §8 的註解與色票重寫，L1-D／L4-M 十列藥丸同步，`HeroBanner.spec.tsx` 斷言跟上。先紅 2 後綠 3347。 |
 | 2026-09-11 | ⚖️ **Alexyu 裁定「手機也顯示」** → Task 3 解除阻塞：L4-M 五列的 meta 行打開並補上正確的類型與日期，程式碼零變更。 |
+| 2026-09-13 | ✅ 收單 —— PR #418 合併進 main（commit 81490f37），CI 17 項全綠。視覺基準走了功能分支的四步流程：本機重生 darwin、`git rm` 過期的 linux、對分支手動觸發 workflow、合併 bootstrap PR #419。 |
 | 2026-09-11 | 順手修掉裁定時撞見的三處同類問題：DL-v2 §8 的 downloading／failed 圓點用的是「給人讀」的文字階、completed 的標籤用飽和色當字（§Badges 明寫底用 tint、字用 `*-text`）。 |
