@@ -37,7 +37,7 @@ so that 「搜尋中」不會用一個意思是「你要求了但它沒發生」
 | --- | --- | --- | --- | --- |
 | 1 | `searching` 狀態色 | 赭 | 赭 | ✅ **已裁定→泥金**，兩邊都改完 |
 | 2 | 狀態點的 token 形式 | — | 3 個用飽和色、2 個用 `*-text` | ✅ **五個統一成飽和階** |
-| 3 | L4-M 的整條 meta 行（類型 · 日期） | **刻意隱藏**（`metaRow` `enabled:false`） | 不分斷點都渲染 | ⚠️ **待裁定**，見下 |
+| 3 | L4-M 的整條 meta 行（類型 · 日期） | 原本隱藏 | 不分斷點都渲染 | ✅ **已裁定→手機也顯示**，改稿 |
 | 4 | ~~L4-M 的日期全是同一天~~ | — | — | ❌ **SM 誤判，已撤銷**（那些節點在手機上根本不渲染） |
 | 5 | ~~L4-M 失敗列沒有錯誤訊息行~~ | — | — | ❌ **SM 誤判，已撤銷**（同上，meta 行整條隱藏） |
 | 6 | L1-D 的計數 | `5` | `5 筆` | **稿→碼** |
@@ -68,7 +68,7 @@ so that 「搜尋中」不會用一個意思是「你要求了但它沒發生」
 
    **支持維持赭色的一方**：13-0 的理由是「暫態處理中」自成一族，與「整理中」同族——那是一套自洽的分類，只是沒有被寫進 DESIGN.md。而且改成泥金之後 `searching` 與 `downloading` 會同色（兩者都是「正在跑」），區別只剩標籤與百分比。
 
-2b. ⏸️ **L4-M 的 meta 行——本 story 不動，等裁定。** L4-M 五列的 `metaRow`（類型 · 日期）都是 `enabled:false`，手機上**整條不渲染**；`RequestRow.tsx` 沒有任何斷點條件，手機上照樣渲染。兩邊差一整行資訊。稿的選擇在 390px 上說得通（標題＋狀態藥丸＋百分比已經很擠），但沒有任何註記說明那是刻意的。
+2b. ✅ **L4-M 的 meta 行打開——⚖️ Alexyu 2026-09-11 裁定「手機也顯示」，已執行（只改稿）。** L4-M 五列的 `metaRow`（類型 · 日期）都是 `enabled:false`，手機上**整條不渲染**；`RequestRow.tsx` 沒有任何斷點條件，手機上照樣渲染。兩邊差一整行資訊。稿的選擇在 390px 上說得通，但沒有任何註記說明那是刻意的，而且藏起來的那一行正是「這是電影還是影集、什麼時候要的」——請求清單裡最常被問的兩件事。裁定為**手機也顯示**：程式碼本來就對，只改設計稿。五列的 `metaRow` 從 `enabled:false` 打開，並補上與 L1-D 相同的類型與日期（原本只有母版預設值「電影 · 2026-06-28」，五列有四列是錯的）。打開後 390×844 仍然放得下五列，溢出 0。
 
 3. ✅ **狀態點統一用飽和階，已執行。** `DOT_BG` 目前 `pending`/`searching`/`completed` 用 `--info`/`--warning`/`--success`（飽和），但 `downloading` 用 `--accent-text`、`failed` 用 `--error-text`（文字階）。依 DESIGN.md §兩種金規則「`--accent-primary` 給人按，`--accent-text` 給人讀」，一個實心圓點是填色不是文字。改成 `downloading: --accent-primary`、`failed: --error`。
 
@@ -111,10 +111,12 @@ so that 「搜尋中」不會用一個意思是「你要求了但它沒發生」
   - [x] `.pen` DL-v2 §8：註解重寫＋五組色票更新（順手修掉 downloading／failed 的圓點用文字階、completed 的標籤用飽和色）
   - [x] L1-D 五列、L4-M 五列的藥丸同步；全畫布掃過，沒有任何 `LkjRd` instance 還帶 warning
 
-- [ ] **Task 3 — L4-M 的 meta 行（AC: #2b）** ⏸️ **BLOCKED，等 Alexyu 裁定**
+- [x] **Task 3 — L4-M 的 meta 行（AC: #2b）** ⚖️ **Alexyu 裁定「手機也顯示」**
   - [x] ~~對齊假資料~~ — SM 誤判，已撤銷（見 AC #4）
-  - [ ] 裁定「手機不顯示」→ `RequestRow.tsx` 加斷點條件，並在 L4-M 加一則註記說明那是刻意的
-  - [ ] 裁定「手機也顯示」→ L4-M 五列的 `metaRow` 改回 `enabled:true`
+  - [x] 五列的 `metaRow` 從 `enabled:false` 打開
+  - [x] 補上與 L1-D 相同的類型與日期（打開後才發現五列都吃母版預設值「電影 · 2026-06-28」，四列類型是錯的）
+  - [x] **程式碼零變更**——`RequestRow.tsx` 本來就不分斷點渲染，這次是稿去對碼
+  - [x] 打開後 390×844 仍放得下五列，L4-M 溢出 0
 
 - [x] **Task 4 — 兩行說明補進程式碼（AC: #6, #7）**
   - [x] 先改 `RequestsView.spec.tsx` 的斷言讓它變紅（2 紅）
@@ -265,4 +267,5 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`，BMAD dev agent（Amelia）2
 | 2026-09-11 | Task 6 — Flow L 群組加 `L Flow Note` 標明三處超前實作的稿不得刪；順手修掉 L4-M 底部分頁列的垂直裁切，Flow L 溢出 5 → 0。 |
 | 2026-09-11 | Task 7 — 閘門：web 3346/3346、api PASS、lint 0 errors、typecheck PASS、token 一致、prettier 通過。 |
 | 2026-09-11 | ⚖️ **Alexyu 裁定「改成金色」** → Task 2／3 解除阻塞並執行：`searching` 與同族的「整理中」從赭改泥金，`DOT_BG` 五個統一成飽和階，`.pen` DL-v2 §8 的註解與色票重寫，L1-D／L4-M 十列藥丸同步，`HeroBanner.spec.tsx` 斷言跟上。先紅 2 後綠 3347。 |
+| 2026-09-11 | ⚖️ **Alexyu 裁定「手機也顯示」** → Task 3 解除阻塞：L4-M 五列的 meta 行打開並補上正確的類型與日期，程式碼零變更。 |
 | 2026-09-11 | 順手修掉裁定時撞見的三處同類問題：DL-v2 §8 的 downloading／failed 圓點用的是「給人讀」的文字階、completed 的標籤用飽和色當字（§Badges 明寫底用 tint、字用 `*-text`）。 |
