@@ -285,6 +285,7 @@ SCREENS = {
     "T95wy": ("flow-d-downloads-v2", "d4-d-v2"),
     "dVPuY": ("flow-d-downloads-v2", "d5-d-v2"),
     "UNVRU": ("flow-d-downloads-v2", "d6-d-v2"),
+    "tQex7": ("flow-d-downloads-v2", "d11-d-v2"),  # 尚未設定 qBittorrent（disc-2026-09-downloads-not-configured-says-unreachable）
     "uMDjw": ("flow-d-downloads-v2", "d1-m-v2"),
     # v2.1 rework (Sally review): desktop List default + Table view + list toolbar;
     # mobile sheet-first actions + long-name split + detail sheet.

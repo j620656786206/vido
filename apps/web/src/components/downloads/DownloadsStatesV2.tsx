@@ -1,7 +1,8 @@
 // Design ref: ux-design.pen Screen D5-D-v2 (dVPuY)
-// (also renders D4-D-v2 skeleton (T95wy) + D6-D-v2 qBT-unreachable fail-soft (UNVRU))
+// (also renders D4-D-v2 skeleton (T95wy) + D6-D-v2 qBT-unreachable fail-soft (UNVRU)
+//  + D11-D-v2 qBT-not-configured (tQex7))
 import { Link } from '@tanstack/react-router';
-import { Inbox, WifiOff } from 'lucide-react';
+import { Inbox, Plug, WifiOff } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/Button';
 import type { FilterStatus } from '../../services/downloadService';
@@ -104,9 +105,9 @@ export function DownloadsEmptyV2({ filter }: { filter: FilterStatus }) {
 }
 
 /**
- * D6 — qBittorrent-unreachable per-section fail-soft. Covers BOTH "not configured" and "configured
- * but the poll errored": the shell + nav still render, the page never hard-fails, and the user gets
- * 重試 + 前往設定 (AC6). `onRetry` re-runs the query.
+ * D6 — qBittorrent is set up but the poll errored: per-section fail-soft. The shell + nav still
+ * render, the page never hard-fails, and the user gets 重試 + 前往設定 (AC6). `onRetry` re-runs the
+ * query. A qBittorrent that was never set up is not this card — see DownloadsQbtNotConfiguredV2.
  */
 export function DownloadsQbtErrorV2({
   onRetry,
@@ -135,6 +136,28 @@ export function DownloadsQbtErrorV2({
           <Link to="/settings/qbittorrent">前往設定</Link>
         </Button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * D11 — qBittorrent has never been set up. Nothing is broken and there is nothing to reconnect to,
+ * so no 硃砂 and no 重試 (it could never succeed) — just the one way forward. Before this card the
+ * page said「無法連線到 qBittorrent，請確認下載器已啟動」to people who had no downloader to start
+ * (disc-2026-09-downloads-not-configured-says-unreachable, Alexyu 2026-09-14).
+ */
+export function DownloadsQbtNotConfiguredV2() {
+  return (
+    <div
+      data-testid="downloads-qbt-not-configured-v2"
+      className="flex flex-col items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-7 py-12 text-center"
+    >
+      <Plug className="size-10 text-[var(--text-secondary)]" aria-hidden="true" />
+      <p className="text-base font-semibold text-[var(--text-primary)]">還沒有設定 qBittorrent</p>
+      <p className="text-sm text-[var(--text-secondary)]">設定好之後，下載進度會顯示在這裡。</p>
+      <Button asChild className="mt-1 h-11 px-5 font-semibold">
+        <Link to="/settings/qbittorrent">前往設定</Link>
+      </Button>
     </div>
   );
 }

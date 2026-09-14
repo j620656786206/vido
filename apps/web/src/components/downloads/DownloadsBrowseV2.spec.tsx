@@ -10,6 +10,8 @@ const h = vi.hoisted(() => ({
   pause: vi.fn(),
   resume: vi.fn(),
   remove: vi.fn(),
+  qbtConfig: { configured: true } as { configured: boolean } | undefined,
+  counts: undefined as Record<string, number> | undefined,
 }));
 
 vi.mock('@tanstack/react-router', () => ({
@@ -22,9 +24,7 @@ vi.mock('@tanstack/react-router', () => ({
 }));
 vi.mock('../../hooks/useDownloads', () => ({
   useDownloads: (...args: unknown[]) => h.useDownloads(...args),
-  useDownloadCounts: () => ({
-    data: { all: 2, downloading: 1, paused: 1, completed: 0, seeding: 0, error: 0 },
-  }),
+  useDownloadCounts: () => ({ data: h.counts }),
   usePageVisibility: () => true,
 }));
 vi.mock('../../hooks/useDownloadActions', () => ({
@@ -38,7 +38,7 @@ vi.mock('../../hooks/useDownloadProgress', () => ({
   useDownloadProgress: () => ({ startTracking: vi.fn(), stopTracking: vi.fn() }),
 }));
 vi.mock('../../hooks/useQBittorrent', () => ({
-  useQBittorrentConfig: () => ({ data: { configured: true } }),
+  useQBittorrentConfig: () => ({ data: h.qbtConfig }),
 }));
 
 import { DownloadsBrowseV2 } from './DownloadsBrowseV2';
@@ -74,6 +74,8 @@ const realMatchMedia = window.matchMedia;
 beforeEach(() => {
   vi.clearAllMocks();
   h.search = {};
+  h.qbtConfig = { configured: true };
+  h.counts = { all: 2, downloading: 1, paused: 1, completed: 0, seeding: 0, error: 0 };
   localStorage.clear();
   h.useDownloads.mockReturnValue({ data: PAGE, isLoading: false, error: null, refetch: vi.fn() });
 });
@@ -198,6 +200,26 @@ describe('DownloadsBrowseV2 — toolbar + states', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('無法連線到 qBittorrent');
     expect(screen.queryByRole('button', { name: '選取' })).toBeNull();
     expect(screen.queryByRole('combobox', { name: '排序方式' })).toBeNull();
+  });
+
+  it('qBittorrent never set up → the not-configured card, no 重試, no alert, chips say「—」', () => {
+    h.qbtConfig = { configured: false };
+    h.counts = undefined;
+    h.useDownloads.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    render(<DownloadsBrowseV2 />);
+    expect(screen.getByTestId('downloads-qbt-not-configured-v2')).toBeInTheDocument();
+    expect(screen.queryByTestId('downloads-qbt-error-v2')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByRole('button', { name: '重試' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '選取' })).toBeNull();
+    expect(screen.getByRole('tab', { name: /全部/ })).toHaveTextContent('全部—');
+    // no counts means no error chip either — not a made-up「錯誤 0」
+    expect(screen.queryByRole('tab', { name: /錯誤/ })).toBeNull();
   });
 
   it('table view (desktop) shows the task count where 選取 was — its checkboxes are always on', async () => {
