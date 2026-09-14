@@ -1,6 +1,6 @@
 # Story DSR.9: 設計系統與規格稿——先把陰影規則裁乾淨，後面九張才判得動
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -261,3 +261,4 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`，BMAD dev agent（Amelia）2
 | 2026-09-14 | Task 4 — `.pen` 的 Design Language v2 補 §9 抬升與陰影（原本完全沒有陰影規格）。 |
 | 2026-09-14 | Task 5 — J1–J9 逐張查裁定，九張都仍成立；J2-4 的 After 標籤「藍」→「金」（signal-blue 殘留），並補 dsr-11 同向的註記。 |
 | 2026-09-14 | Task 6 — 閘門：web 3354/3354、api PASS、lint 0 errors、typecheck PASS、token 一致、prettier 通過。 |
+| 2026-09-14 | ✅ 收單 —— PR #421 合併進 main（commit 5805b189），CI 17 項全綠。📌 **視覺回歸全數通過，包括 `ui-button` 與 `request-button` 的基準線**——拿掉 `--shadow-sm` 之後像素比對量不出差別，這是對「那道陰影幾乎不可觀測」的獨立佐證，不是我們自己的測量。 |
