@@ -7,7 +7,7 @@ interface StepProgressProps {
 
 export function StepProgress({ steps, currentStep }: StepProgressProps) {
   return (
-    <div className="mb-8 flex items-center justify-center gap-2" data-testid="step-progress">
+    <div className="flex items-center justify-center gap-2" data-testid="step-progress">
       {steps.map((step, index) => (
         <div key={step.id} className="flex items-center gap-2">
           <div

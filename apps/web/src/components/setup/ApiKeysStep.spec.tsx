@@ -23,30 +23,35 @@ describe('ApiKeysStep', () => {
     expect(screen.getByText(/設定 API 金鑰以啟用進階功能/)).toBeInTheDocument();
   });
 
-  it('renders TMDb key input', () => {
+  it('renders the TMDb key input under the N4-D label', () => {
     render(<ApiKeysStep {...makeProps()} />);
-    expect(screen.getByTestId('tmdb-key-input')).toBeInTheDocument();
+    expect(screen.getByLabelText('TMDb 金鑰')).toBe(screen.getByTestId('tmdb-key-input'));
   });
 
-  it('renders AI provider select', () => {
+  it('collects a Claude key — the only AI key the server can read back (dsr-13)', () => {
     render(<ApiKeysStep {...makeProps()} />);
-    expect(screen.getByTestId('ai-provider-select')).toBeInTheDocument();
+    expect(screen.getByLabelText('Claude 金鑰')).toBe(screen.getByTestId('claude-key-input'));
   });
 
-  it('does not show AI key input when no provider selected', () => {
+  it('offers no AI provider picker — a Gemini key typed here was stored where nothing read it', () => {
     render(<ApiKeysStep {...makeProps()} />);
-    expect(screen.queryByTestId('ai-key-input')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.queryByText('Google Gemini')).not.toBeInTheDocument();
   });
 
-  it('shows AI key input when AI provider is selected', () => {
-    render(<ApiKeysStep {...makeProps({ data: { aiProvider: 'gemini' } })} />);
-    expect(screen.getByTestId('ai-key-input')).toBeInTheDocument();
+  it('masks the Claude key', () => {
+    render(<ApiKeysStep {...makeProps()} />);
+    expect((screen.getByTestId('claude-key-input') as HTMLInputElement).type).toBe('password');
   });
 
-  it('AI key input has type password', () => {
-    render(<ApiKeysStep {...makeProps({ data: { aiProvider: 'claude' } })} />);
-    const input = screen.getByTestId('ai-key-input') as HTMLInputElement;
-    expect(input.type).toBe('password');
+  it('describes each key with a hint the input points at', () => {
+    render(<ApiKeysStep {...makeProps()} />);
+    expect(screen.getByTestId('tmdb-key-input')).toHaveAccessibleDescription(
+      '用於取得電影和影集的中文元資料'
+    );
+    expect(screen.getByTestId('claude-key-input')).toHaveAccessibleDescription(
+      '用於字幕翻譯與 AI 檔名解析'
+    );
   });
 
   it('calls onUpdate when TMDb key changes', () => {
@@ -56,11 +61,11 @@ describe('ApiKeysStep', () => {
     expect(onUpdate).toHaveBeenCalledWith({ tmdbApiKey: 'mykey123' });
   });
 
-  it('calls onUpdate when AI provider changes', () => {
+  it('calls onUpdate with claudeApiKey when the Claude key changes', () => {
     const onUpdate = vi.fn();
     render(<ApiKeysStep {...makeProps({ onUpdate })} />);
-    fireEvent.change(screen.getByTestId('ai-provider-select'), { target: { value: 'gemini' } });
-    expect(onUpdate).toHaveBeenCalledWith({ aiProvider: 'gemini' });
+    fireEvent.change(screen.getByTestId('claude-key-input'), { target: { value: 'sk-ant-1' } });
+    expect(onUpdate).toHaveBeenCalledWith({ claudeApiKey: 'sk-ant-1' });
   });
 
   it('shows skip warning when no keys entered', () => {
@@ -74,20 +79,24 @@ describe('ApiKeysStep', () => {
     expect(screen.queryByTestId('skip-warning')).not.toBeInTheDocument();
   });
 
-  it('hides skip warning when AI provider is selected', () => {
-    render(<ApiKeysStep {...makeProps({ data: { aiProvider: 'gemini' } })} />);
+  it('hides skip warning when a Claude key is entered', () => {
+    render(<ApiKeysStep {...makeProps({ data: { claudeApiKey: 'sk-ant-1' } })} />);
     expect(screen.queryByTestId('skip-warning')).not.toBeInTheDocument();
   });
 
-  it('shows skip button', () => {
+  it('keeps the skip warning out of the status palette (DESIGN.md 2026-09-11: 赭說的是現在的世界)', () => {
     render(<ApiKeysStep {...makeProps()} />);
-    expect(screen.getByTestId('skip-button')).toBeInTheDocument();
+    const warning = screen.getByTestId('skip-warning');
+    expect(warning.className).toContain('bg-[var(--bg-tertiary)]');
+    expect(warning.outerHTML).not.toMatch(/--warning/);
   });
 
-  it('lists all AI provider options', () => {
+  it('orders the buttons 上一步 · 跳過 · 下一步', () => {
     render(<ApiKeysStep {...makeProps()} />);
-    expect(screen.getByText('不使用 AI')).toBeInTheDocument();
-    expect(screen.getByText('Google Gemini')).toBeInTheDocument();
-    expect(screen.getByText('Anthropic Claude')).toBeInTheDocument();
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual([
+      '上一步',
+      '跳過',
+      '下一步',
+    ]);
   });
 });

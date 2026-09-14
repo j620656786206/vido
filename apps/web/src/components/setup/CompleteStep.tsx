@@ -1,63 +1,74 @@
 // Design ref: ux-design.pen Screen N5-D (CWh3E)
-import { CheckCircle } from 'lucide-react';
+import { CircleCheck } from 'lucide-react';
+import type { SetupLibraryEntry } from '../../services/setupService';
 import type { StepProps } from './SetupWizard';
+import { languageLabel } from './setupLanguages';
+import { StepNav } from './StepNav';
 
-export function CompleteStep({ data, onNext, onBack, isSubmitting }: StepProps) {
-  return (
-    <div data-testid="complete-step">
-      <div className="mb-6 flex flex-col items-center">
-        <CheckCircle className="mb-3 h-12 w-12 text-[var(--success-text)]" />
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">設定完成！</h2>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">以下是您的設定摘要。</p>
-      </div>
+const TYPE_LABELS: Record<SetupLibraryEntry['contentType'], string> = {
+  movie: '電影',
+  series: '影集',
+};
 
-      <div className="mb-6 space-y-3 rounded-lg border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/40 p-4">
-        <SummaryRow label="語言" value={data.language || 'zh-TW'} />
-        <SummaryRow label="qBittorrent" value={data.qbtUrl || '未設定'} muted={!data.qbtUrl} />
-        <SummaryRow
-          label="媒體資料夾"
-          value={data.mediaFolderPath || '未設定'}
-          muted={!data.mediaFolderPath}
-        />
-        <SummaryRow
-          label="TMDb API"
-          value={data.tmdbApiKey ? '已設定' : '未設定'}
-          muted={!data.tmdbApiKey}
-        />
-        <SummaryRow label="AI 服務" value={data.aiProvider || '未設定'} muted={!data.aiProvider} />
-      </div>
-
-      <div className="flex gap-3">
-        <button
-          type="button"
-          onClick={onBack}
-          disabled={isSubmitting}
-          className="rounded-lg border border-[var(--border-subtle)]/50 px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] disabled:opacity-50"
-          data-testid="back-button"
-        >
-          上一步
-        </button>
-        <button
-          type="button"
-          onClick={onNext}
-          disabled={isSubmitting}
-          className="flex-1 rounded-lg bg-[var(--success)] px-4 py-2.5 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--success)] disabled:opacity-50"
-          data-testid="finish-button"
-        >
-          {isSubmitting ? '儲存中...' : '完成設定'}
-        </button>
-      </div>
-    </div>
-  );
+/** 「2 個（電影・影集）」— how many libraries, and which kinds, each named once. */
+function librarySummary(libraries: SetupLibraryEntry[] | undefined): string | null {
+  const filled = (libraries ?? []).filter((lib) => lib.path.trim());
+  if (filled.length === 0) return null;
+  const kinds = (['movie', 'series'] as const)
+    .filter((type) => filled.some((lib) => lib.contentType === type))
+    .map((type) => TYPE_LABELS[type]);
+  return `${filled.length} 個（${kinds.join('・')}）`;
 }
 
-function SummaryRow({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
+export function CompleteStep({ data, onNext, onBack, isSubmitting }: StepProps) {
+  const libraries = librarySummary(data.libraries);
+  const rows = [
+    { label: '語言', value: languageLabel(data.language || 'zh-TW'), set: true },
+    { label: '媒體資料夾', value: libraries ?? '未設定', set: libraries !== null },
+    { label: 'qBittorrent', value: data.qbtUrl ? '已設定' : '未設定', set: !!data.qbtUrl },
+    { label: 'TMDb 金鑰', value: data.tmdbApiKey ? '已設定' : '未設定', set: !!data.tmdbApiKey },
+    {
+      label: 'Claude 金鑰',
+      value: data.claudeApiKey ? '已設定' : '未設定',
+      set: !!data.claudeApiKey,
+    },
+  ];
+
   return (
-    <div className="flex items-center justify-between text-sm">
-      <span className="text-[var(--text-secondary)]">{label}</span>
-      <span className={muted ? 'text-[var(--text-muted)]' : 'text-[var(--text-primary)]'}>
-        {value}
-      </span>
+    <div className="flex flex-col gap-4" data-testid="complete-step">
+      <div className="flex flex-col items-center gap-2">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--success-tint)]">
+          <CircleCheck className="size-6.5 text-[var(--success-text)]" aria-hidden="true" />
+        </div>
+        <h2 className="text-lg font-semibold text-[var(--text-primary)]">設定完成！</h2>
+        <p className="text-sm text-[var(--text-secondary)]">以下是您的設定摘要。</p>
+      </div>
+
+      <dl className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
+        {rows.map((row) => (
+          <div key={row.label} className="flex items-center gap-3 px-4 py-3 text-sm">
+            <dt className="w-24 shrink-0 text-[var(--text-secondary)] sm:w-40">{row.label}</dt>
+            <dd
+              className={`min-w-0 font-medium ${
+                row.set ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)]'
+              }`}
+            >
+              {row.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+
+      <p className="text-xs text-[var(--text-muted)]">未設定的項目之後都可以在「設定」裡補上。</p>
+
+      <StepNav
+        onNext={onNext}
+        onBack={onBack}
+        backDisabled={isSubmitting}
+        nextDisabled={isSubmitting}
+        nextLabel={isSubmitting ? '儲存中...' : '完成設定'}
+        nextTestId="finish-button"
+      />
     </div>
   );
 }

@@ -129,7 +129,6 @@ import { ServiceStatusCard } from '../../components/settings/ServiceStatusCard';
 import { SettingsPlaceholder } from '../../components/settings/SettingsPlaceholder';
 import { ApiKeysStep } from '../../components/setup/ApiKeysStep';
 import { CompleteStep } from '../../components/setup/CompleteStep';
-import { MediaFolderStep } from '../../components/setup/MediaFolderStep';
 import { MediaLibrarySetupStep } from '../../components/setup/MediaLibrarySetupStep';
 import { QBittorrentStep } from '../../components/setup/QBittorrentStep';
 import { StepProgress } from '../../components/setup/StepProgress';
@@ -2125,7 +2124,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'setup/ApiKeysStep',
     component: ApiKeysStep,
     props: {
-      data: { tmdbApiKey: '', aiProvider: '', aiApiKey: '' },
+      data: { tmdbApiKey: '', claudeApiKey: '' },
       onUpdate: noop,
       onNext: noop,
       onBack: noop,
@@ -2141,33 +2140,22 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'setup/CompleteStep',
     component: CompleteStep,
     props: {
+      // Mirrors N5-D (CWh3E): two libraries of different kinds, qBittorrent and
+      // TMDb set, Claude left empty — so both the 已設定 and 未設定 tones render.
       data: {
         language: 'zh-TW',
         qbtUrl: 'http://localhost:8080',
-        mediaFolderPath: '/media/videos',
+        libraries: [
+          { path: '/media/movies', contentType: 'movie' },
+          { path: '/media/tv', contentType: 'series' },
+        ],
         tmdbApiKey: 'set',
-        aiProvider: 'gemini',
       },
       onUpdate: noop,
       onNext: noop,
       onBack: noop,
       isFirst: false,
       isLast: true,
-      isSubmitting: false,
-    },
-    penNode: 'screen-section',
-  },
-  {
-    id: 'setup-media-folder-step',
-    label: 'setup/MediaFolderStep',
-    component: MediaFolderStep,
-    props: {
-      data: { mediaFolderPath: '/media/videos' },
-      onUpdate: noop,
-      onNext: noop,
-      onBack: noop,
-      isFirst: false,
-      isLast: false,
       isSubmitting: false,
     },
     penNode: 'screen-section',

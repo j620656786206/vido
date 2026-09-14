@@ -1,95 +1,45 @@
 // Design ref: ux-design.pen Screen N2-D (CP7AX)
 import type { StepProps } from './SetupWizard';
+import { StepNav } from './StepNav';
+import { WizardTextField } from './WizardTextField';
 
 export function QBittorrentStep({ data, onUpdate, onNext, onBack, onSkip }: StepProps) {
   return (
-    <div data-testid="qbittorrent-step">
-      <h2 className="mb-2 text-lg font-semibold text-[var(--text-primary)]">qBittorrent 連線</h2>
-      <p className="mb-6 text-sm text-[var(--text-secondary)]">
+    <div className="flex flex-col gap-4" data-testid="qbittorrent-step">
+      <h2 className="text-lg font-semibold text-[var(--text-primary)]">qBittorrent 連線</h2>
+      <p className="text-sm text-[var(--text-secondary)]">
         連接 qBittorrent 以監控下載進度。如果你尚未安裝，可以跳過此步驟。
       </p>
 
-      <div className="mb-4">
-        <label
-          htmlFor="qbt-url"
-          className="mb-2 block text-sm font-medium text-[var(--text-secondary)]"
-        >
-          WebUI 網址
-        </label>
-        <input
-          id="qbt-url"
-          type="text"
-          value={data.qbtUrl || ''}
-          onChange={(e) => onUpdate({ qbtUrl: e.target.value })}
-          placeholder="http://localhost:8080"
-          className="w-full rounded-lg border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/60 px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
-          data-testid="qbt-url-input"
-        />
-      </div>
+      {/* 主機位址 — the same word the settings page (QBittorrentForm) uses for
+          the same field. The wizard used to say「WebUI 網址」and the design
+          「伺服器位址」: three names for one setting. */}
+      <WizardTextField
+        id="qbt-url"
+        label="主機位址"
+        value={data.qbtUrl || ''}
+        onChange={(qbtUrl) => onUpdate({ qbtUrl })}
+        placeholder="http://localhost:8080"
+        testId="qbt-url-input"
+      />
+      <WizardTextField
+        id="qbt-username"
+        label="使用者名稱"
+        value={data.qbtUsername || ''}
+        onChange={(qbtUsername) => onUpdate({ qbtUsername })}
+        placeholder="admin"
+        testId="qbt-username-input"
+      />
+      <WizardTextField
+        id="qbt-password"
+        label="密碼"
+        type="password"
+        value={data.qbtPassword || ''}
+        onChange={(qbtPassword) => onUpdate({ qbtPassword })}
+        testId="qbt-password-input"
+      />
 
-      <div className="mb-4">
-        <label
-          htmlFor="qbt-username"
-          className="mb-2 block text-sm font-medium text-[var(--text-secondary)]"
-        >
-          使用者名稱
-        </label>
-        <input
-          id="qbt-username"
-          type="text"
-          value={data.qbtUsername || ''}
-          onChange={(e) => onUpdate({ qbtUsername: e.target.value })}
-          placeholder="admin"
-          className="w-full rounded-lg border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/60 px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
-          data-testid="qbt-username-input"
-        />
-      </div>
-
-      <div className="mb-6">
-        <label
-          htmlFor="qbt-password"
-          className="mb-2 block text-sm font-medium text-[var(--text-secondary)]"
-        >
-          密碼
-        </label>
-        <input
-          id="qbt-password"
-          type="password"
-          value={data.qbtPassword || ''}
-          onChange={(e) => onUpdate({ qbtPassword: e.target.value })}
-          className="w-full rounded-lg border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/60 px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
-          data-testid="qbt-password-input"
-        />
-      </div>
-
-      <div className="flex gap-3">
-        <button
-          type="button"
-          onClick={onBack}
-          className="rounded-lg border border-[var(--border-subtle)]/50 px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
-          data-testid="back-button"
-        >
-          上一步
-        </button>
-        <button
-          type="button"
-          onClick={onNext}
-          className="flex-1 rounded-lg bg-[var(--accent-primary)] px-4 py-2.5 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)]"
-          data-testid="next-button"
-        >
-          下一步
-        </button>
-        {onSkip && (
-          <button
-            type="button"
-            onClick={onSkip}
-            className="rounded-lg px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-            data-testid="skip-button"
-          >
-            跳過
-          </button>
-        )}
-      </div>
+      <StepNav onNext={onNext} onBack={onBack} onSkip={onSkip} />
     </div>
   );
 }

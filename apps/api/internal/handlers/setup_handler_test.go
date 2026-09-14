@@ -281,6 +281,17 @@ func TestSetupHandler_Complete(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 		},
 		{
+			name: "error - api keys given but no ENCRYPTION_KEY",
+			requestBody: models.SetupConfig{
+				Language:     "zh-TW",
+				ClaudeApiKey: "sk-ant-1",
+			},
+			setupMock: func(m *MockSetupService) {
+				m.On("CompleteSetup", mock.Anything, mock.AnythingOfType("models.SetupConfig")).Return(services.ErrKeysNotWritable)
+			},
+			expectedStatus: http.StatusConflict,
+		},
+		{
 			name:           "error - invalid JSON",
 			requestBody:    "not json",
 			setupMock:      func(m *MockSetupService) {},
@@ -344,6 +355,17 @@ func TestSetupHandler_ValidateStep(t *testing.T) {
 				m.On("ValidateStep", mock.Anything, "welcome", mock.AnythingOfType("map[string]interface {}")).Return(errors.New("language is required"))
 			},
 			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name: "error - api keys the server cannot store",
+			requestBody: ValidateStepRequest{
+				Step: "api-keys",
+				Data: map[string]interface{}{"claude_api_key": "sk-ant-1"},
+			},
+			setupMock: func(m *MockSetupService) {
+				m.On("ValidateStep", mock.Anything, "api-keys", mock.AnythingOfType("map[string]interface {}")).Return(services.ErrKeysNotWritable)
+			},
+			expectedStatus: http.StatusConflict,
 		},
 		{
 			name:           "error - missing step field",

@@ -22,6 +22,15 @@ type SetupService struct {
 	settingsRepo   repository.SettingsRepositoryInterface
 	secretsService secrets.SecretsServiceInterface
 	libraryService MediaLibraryServiceInterface
+	keyWriter      SetupKeyWriter
+}
+
+// SetupKeyWriter is the slice of KeySettingsService the wizard stores API keys
+// through, so the wizard and the settings page share ONE storage path: the same
+// secret names KeyResolver reads, and the same ENCRYPTION_KEY gate.
+type SetupKeyWriter interface {
+	Writable() bool
+	Save(ctx context.Context, updates map[KeyName]string) error
 }
 
 // NewSetupService creates a new SetupService.
@@ -35,6 +44,29 @@ func NewSetupService(settingsRepo repository.SettingsRepositoryInterface, secret
 // SetLibraryService sets the media library service for creating libraries during setup.
 func (s *SetupService) SetLibraryService(libraryService MediaLibraryServiceInterface) {
 	s.libraryService = libraryService
+}
+
+// SetKeyWriter wires API-key storage (dsr-13). Without one the wizard refuses
+// keys instead of dropping them.
+func (s *SetupService) SetKeyWriter(keyWriter SetupKeyWriter) {
+	s.keyWriter = keyWriter
+}
+
+func (s *SetupService) keysWritable() bool {
+	return s.keyWriter != nil && s.keyWriter.Writable()
+}
+
+// setupKeyUpdates collects the keys the wizard was given. Blank values are left
+// out rather than sent as "": to KeySettingsService an empty string means DELETE.
+func setupKeyUpdates(tmdbKey, claudeKey string) map[KeyName]string {
+	updates := map[KeyName]string{}
+	if strings.TrimSpace(tmdbKey) != "" {
+		updates[KeyTMDb] = tmdbKey
+	}
+	if strings.TrimSpace(claudeKey) != "" {
+		updates[KeyClaude] = claudeKey
+	}
+	return updates
 }
 
 // IsFirstRun checks if the setup wizard has been completed.
@@ -64,6 +96,13 @@ func (s *SetupService) CompleteSetup(ctx context.Context, config models.SetupCon
 	}
 	if !isFirst {
 		return ErrSetupAlreadyCompleted
+	}
+
+	// Refuse keys BEFORE writing anything: failing after the libraries were
+	// created would make the user's retry create them a second time.
+	keyUpdates := setupKeyUpdates(config.TMDbApiKey, config.ClaudeApiKey)
+	if len(keyUpdates) > 0 && !s.keysWritable() {
+		return ErrKeysNotWritable
 	}
 
 	// Save language
@@ -130,22 +169,16 @@ func (s *SetupService) CompleteSetup(ctx context.Context, config models.SetupCon
 		}
 	}
 
-	// Save API keys (optional, encrypted)
-	if config.TMDbApiKey != "" && s.secretsService != nil {
-		if err := s.secretsService.Store(ctx, "tmdb_api_key", config.TMDbApiKey); err != nil {
-			return fmt.Errorf("save tmdb_api_key: %w", err)
-		}
-	}
-
-	if config.AIProvider != "" {
-		if err := s.settingsRepo.SetString(ctx, "ai_provider", config.AIProvider); err != nil {
-			return fmt.Errorf("save ai_provider: %w", err)
-		}
-	}
-
-	if config.AIApiKey != "" && s.secretsService != nil {
-		if err := s.secretsService.Store(ctx, "ai_api_key", config.AIApiKey); err != nil {
-			return fmt.Errorf("save ai_api_key: %w", err)
+	// API keys go through KeySettingsService — the settings page's own path — so
+	// they land under the names KeyResolver reads and obey the same
+	// ENCRYPTION_KEY gate. Before dsr-13 the wizard wrote "tmdb_api_key" /
+	// "ai_api_key" / "ai_provider", names nothing ever read, so a key typed here
+	// was silently discarded while the summary said 已設定. Claude is the only AI
+	// key collected: the only text-AI key the resolver reads back from the secret
+	// store (Gemini is env-only).
+	if len(keyUpdates) > 0 {
+		if err := s.keyWriter.Save(ctx, keyUpdates); err != nil {
+			return fmt.Errorf("save api keys: %w", err)
 		}
 	}
 
@@ -158,7 +191,7 @@ func (s *SetupService) CompleteSetup(ctx context.Context, config models.SetupCon
 		"language", config.Language,
 		"has_qbt", config.QBTUrl != "",
 		"has_tmdb_key", config.TMDbApiKey != "",
-		"has_ai_key", config.AIApiKey != "",
+		"has_claude_key", config.ClaudeApiKey != "",
 	)
 
 	return nil
@@ -247,11 +280,16 @@ func (s *SetupService) validateMediaFolderStep(data map[string]interface{}) erro
 
 func (s *SetupService) validateApiKeysStep(data map[string]interface{}) error {
 	tmdbKey, _ := data["tmdb_api_key"].(string)
+	claudeKey, _ := data["claude_api_key"].(string)
 	if tmdbKey != "" {
 		// TMDb API keys are 32 character hex strings
 		if len(tmdbKey) < 16 {
 			return fmt.Errorf("invalid TMDb API key format")
 		}
+	}
+	// Say it on the step where the key was typed, not after 完成設定.
+	if len(setupKeyUpdates(tmdbKey, claudeKey)) > 0 && !s.keysWritable() {
+		return ErrKeysNotWritable
 	}
 	// API keys are optional - skip is allowed
 	return nil

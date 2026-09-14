@@ -31,6 +31,7 @@ party-mode 2026-09-03 查證：TMDb rate limit ≈ 50 req/s 且以 **key + IP** 
 ## Dev Notes
 
 - `backlog-tmdb-runtime-key-resolution`（TMDb client 目前 boot 時讀 env、改 key 要重啟）——本 story **順手 PROMOTE**：resolver 三層優先序落地時把 TMDb client 改成透過 holder（鏡射 `ClaudeProviderHolder`），否則「自填 key」仍要重啟，AC #3 的文案會說謊。Rule 24 lane ①，加 AC #7：「自填／清除 key 免重啟生效」。
+- 🔗 **耦合條款（dsr-13，2026-09-14）**：首次啟動精靈第 4 步的 TMDb 金鑰從 dsr-13 起存進 `tmdb.api_key`（`SecretNameTMDb`），與設定頁同一個名字。但 TMDb client 目前在 `main.go` 直接吃 `cfg.TMDbAPIKey`（env），從不經過 resolver，所以**精靈與設定頁存的 TMDb 金鑰連重啟都不會生效**——設定頁說明列「儲存後需重啟伺服器才會生效」這句現在也不成立。AC #7 驗收時把「精靈填的 TMDb 金鑰免重啟生效」一起驗，並回收那句說明列。
 - 安全：bundled key 只在 `sanitizeAttr` 之下 log；不進 `/health` 回應。
 
 ### Time-dependent visual coverage

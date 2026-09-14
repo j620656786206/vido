@@ -58,14 +58,14 @@ async def run_test():
         await expect(page.locator("xpath=/html/body/div[1]").nth(0)).to_contain_text("\u6b65\u9a5f 3 / 5", timeout=15000), "The wizard header displays the step indicator '\u6b65\u9a5f 3 / 5'."
         
         # --> Media library step rendered: the folder path input and the '新增媒體庫' button are visible.
-        await page.locator("xpath=/html/body/div[1]/div/div/div/div[3]/div[1]/div/div[1]/input").nth(0).scroll_into_view_if_needed()
+        await page.get_by_test_id("library-path-0").scroll_into_view_if_needed()
         # Assert-outcome: passed
         # Assert: The media folder path input is visible.
-        await expect(page.locator("xpath=/html/body/div[1]/div/div/div/div[3]/div[1]/div/div[1]/input").nth(0)).to_be_visible(timeout=15000), "The media folder path input is visible."
-        await page.locator("xpath=/html/body/div[1]/div/div/div/div[3]/button").nth(0).scroll_into_view_if_needed()
+        await expect(page.get_by_test_id("library-path-0")).to_be_visible(timeout=15000), "The media folder path input is visible."
+        await page.get_by_test_id("add-library-button").scroll_into_view_if_needed()
         # Assert-outcome: passed
         # Assert: The '新增媒體庫' (Add library) button is visible.
-        await expect(page.locator("xpath=/html/body/div[1]/div/div/div/div[3]/button").nth(0)).to_be_visible(timeout=15000), "The '\u65b0\u589e\u5a92\u9ad4\u5eab' (Add library) button is visible."
+        await expect(page.get_by_test_id("add-library-button")).to_be_visible(timeout=15000), "The '\u65b0\u589e\u5a92\u9ad4\u5eab' (Add library) button is visible."
         await asyncio.sleep(5)
 
     finally:

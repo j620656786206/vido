@@ -69,15 +69,17 @@ describe('setupService', () => {
           Promise.resolve({ success: true, data: { message: 'Setup completed successfully' } }),
       });
 
-      const config = { language: 'zh-TW', mediaFolderPath: '/media' };
+      const config = { language: 'zh-TW', claudeApiKey: 'sk-ant-1' };
       const result = await setupService.completeSetup(config);
 
       expect(result).toEqual({ message: 'Setup completed successfully' });
+      // claudeApiKey must reach Go as claude_api_key — the models.SetupConfig
+      // json tag. A mismatch would silently drop the key again (dsr-13).
       expect(mockFetch).toHaveBeenCalledWith(
         `${API_BASE}/setup/complete`,
         expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({ language: 'zh-TW', media_folder_path: '/media' }),
+          body: JSON.stringify({ language: 'zh-TW', claude_api_key: 'sk-ant-1' }),
         })
       );
     });
@@ -96,9 +98,9 @@ describe('setupService', () => {
           }),
       });
 
-      await expect(
-        setupService.completeSetup({ language: 'en', mediaFolderPath: '/m' })
-      ).rejects.toThrow('Setup wizard has already been completed');
+      await expect(setupService.completeSetup({ language: 'en' })).rejects.toThrow(
+        'Setup wizard has already been completed'
+      );
     });
   });
 

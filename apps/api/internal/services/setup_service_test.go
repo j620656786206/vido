@@ -194,8 +194,7 @@ func TestSetupService_CompleteSetup(t *testing.T) {
 				QBTPassword:     "secret",
 				MediaFolderPath: "/media/videos",
 				TMDbApiKey:      "abc123def456",
-				AIProvider:      "gemini",
-				AIApiKey:        "ai-key-123",
+				ClaudeApiKey:    "sk-ant-123",
 			},
 			setup: func(repo *MockSettingsRepo, sec *MockSecretsService) {
 				// IsFirstRun check
@@ -209,9 +208,10 @@ func TestSetupService_CompleteSetup(t *testing.T) {
 				sec.On("Store", mock.Anything, "qbt_password", "secret").Return(nil)
 				sec.On("Store", mock.Anything, "qbittorrent.password", "secret").Return(nil)
 				repo.On("SetString", mock.Anything, "media_folder_path", "/media/videos").Return(nil)
-				sec.On("Store", mock.Anything, "tmdb_api_key", "abc123def456").Return(nil)
-				repo.On("SetString", mock.Anything, "ai_provider", "gemini").Return(nil)
-				sec.On("Store", mock.Anything, "ai_api_key", "ai-key-123").Return(nil)
+				// Keys land under the names KeyResolver reads. Literal on purpose: a
+				// secret name is persisted data, so renaming one is a migration (dsr-13).
+				sec.On("Store", mock.Anything, "tmdb.api_key", "abc123def456").Return(nil)
+				sec.On("Store", mock.Anything, "claude.api_key", "sk-ant-123").Return(nil)
 				repo.On("SetBool", mock.Anything, "setup_completed", true).Return(nil)
 			},
 			wantErr: false,
@@ -278,6 +278,7 @@ func TestSetupService_CompleteSetup(t *testing.T) {
 			tt.setup(mockRepo, mockSecrets)
 
 			svc := NewSetupService(mockRepo, mockSecrets)
+			svc.SetKeyWriter(NewKeySettingsService(nil, mockSecrets, true))
 			err := svc.CompleteSetup(context.Background(), tt.config)
 
 			if tt.wantErr {
@@ -413,7 +414,7 @@ func TestSetupService_CompleteSetup_PartialFailures(t *testing.T) {
 			errMsg: "save media_folder_path",
 		},
 		{
-			name: "error - save tmdb_api_key fails",
+			name: "error - save tmdb api key fails",
 			config: SetupConfig{
 				Language:   "zh-TW",
 				TMDbApiKey: "key123",
@@ -421,37 +422,22 @@ func TestSetupService_CompleteSetup_PartialFailures(t *testing.T) {
 			setup: func(repo *MockSettingsRepo, sec *MockSecretsService) {
 				repo.On("GetBool", mock.Anything, "setup_completed").Return(false, errors.New("setting with key setup_completed not found"))
 				repo.On("SetString", mock.Anything, "language", "zh-TW").Return(nil)
-				sec.On("Store", mock.Anything, "tmdb_api_key", "key123").Return(errors.New("encryption error"))
+				sec.On("Store", mock.Anything, "tmdb.api_key", "key123").Return(errors.New("encryption error"))
 			},
-			errMsg: "save tmdb_api_key",
+			errMsg: "save api keys",
 		},
 		{
-			name: "error - save ai_provider fails",
+			name: "error - save claude api key fails",
 			config: SetupConfig{
-				Language:   "zh-TW",
-				AIProvider: "gemini",
+				Language:     "zh-TW",
+				ClaudeApiKey: "sk-ant-key",
 			},
 			setup: func(repo *MockSettingsRepo, sec *MockSecretsService) {
 				repo.On("GetBool", mock.Anything, "setup_completed").Return(false, errors.New("setting with key setup_completed not found"))
 				repo.On("SetString", mock.Anything, "language", "zh-TW").Return(nil)
-				repo.On("SetString", mock.Anything, "ai_provider", "gemini").Return(errors.New("db error"))
+				sec.On("Store", mock.Anything, "claude.api_key", "sk-ant-key").Return(errors.New("encryption error"))
 			},
-			errMsg: "save ai_provider",
-		},
-		{
-			name: "error - save ai_api_key fails",
-			config: SetupConfig{
-				Language:   "zh-TW",
-				AIProvider: "gemini",
-				AIApiKey:   "ai-key",
-			},
-			setup: func(repo *MockSettingsRepo, sec *MockSecretsService) {
-				repo.On("GetBool", mock.Anything, "setup_completed").Return(false, errors.New("setting with key setup_completed not found"))
-				repo.On("SetString", mock.Anything, "language", "zh-TW").Return(nil)
-				repo.On("SetString", mock.Anything, "ai_provider", "gemini").Return(nil)
-				sec.On("Store", mock.Anything, "ai_api_key", "ai-key").Return(errors.New("encryption error"))
-			},
-			errMsg: "save ai_api_key",
+			errMsg: "save api keys",
 		},
 		{
 			name: "success - qbt password skipped when no secrets service",
@@ -484,6 +470,7 @@ func TestSetupService_CompleteSetup_PartialFailures(t *testing.T) {
 				svc = NewSetupService(mockRepo, nil)
 			} else {
 				svc = NewSetupService(mockRepo, mockSecrets)
+				svc.SetKeyWriter(NewKeySettingsService(nil, mockSecrets, true))
 			}
 
 			err := svc.CompleteSetup(context.Background(), tt.config)
@@ -587,6 +574,7 @@ func TestSetupService_ValidateStep_EdgeCases(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := new(MockSettingsRepo)
 			svc := NewSetupService(mockRepo, nil)
+			svc.SetKeyWriter(NewKeySettingsService(nil, new(MockSecretsService), true))
 
 			err := svc.ValidateStep(context.Background(), tt.step, tt.data)
 
@@ -715,6 +703,7 @@ func TestSetupService_ValidateStep(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := new(MockSettingsRepo)
 			svc := NewSetupService(mockRepo, nil)
+			svc.SetKeyWriter(NewKeySettingsService(nil, new(MockSecretsService), true))
 
 			err := svc.ValidateStep(context.Background(), tt.step, tt.data)
 
@@ -728,4 +717,78 @@ func TestSetupService_ValidateStep(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestSetupService_KeysNotWritable: without an ENCRYPTION_KEY the settings page
+// refuses to store API keys (KeySettingsService.Save → ErrKeysNotWritable). The
+// wizard shares that path, so it must refuse too — and before writing anything,
+// or a retry would create the libraries twice (dsr-13).
+func TestSetupService_KeysNotWritable(t *testing.T) {
+	notFound := errors.New("setting with key setup_completed not found")
+	notWritable := func(sec *MockSecretsService) SetupKeyWriter {
+		return NewKeySettingsService(nil, sec, false)
+	}
+
+	t.Run("validate api-keys refuses a key it cannot store", func(t *testing.T) {
+		svc := NewSetupService(new(MockSettingsRepo), nil)
+		svc.SetKeyWriter(notWritable(new(MockSecretsService)))
+
+		err := svc.ValidateStep(context.Background(), "api-keys", map[string]interface{}{
+			"claude_api_key": "sk-ant-1",
+		})
+
+		assert.ErrorIs(t, err, ErrKeysNotWritable)
+	})
+
+	t.Run("validate api-keys still lets the user go on with no keys", func(t *testing.T) {
+		svc := NewSetupService(new(MockSettingsRepo), nil)
+		svc.SetKeyWriter(notWritable(new(MockSecretsService)))
+
+		require.NoError(t, svc.ValidateStep(context.Background(), "api-keys", map[string]interface{}{
+			"tmdb_api_key":   "",
+			"claude_api_key": "   ",
+		}))
+	})
+
+	t.Run("complete refuses before writing anything", func(t *testing.T) {
+		repo := new(MockSettingsRepo)
+		sec := new(MockSecretsService)
+		repo.On("GetBool", mock.Anything, "setup_completed").Return(false, notFound)
+		svc := NewSetupService(repo, sec)
+		svc.SetKeyWriter(notWritable(sec))
+
+		err := svc.CompleteSetup(context.Background(), SetupConfig{
+			Language:        "zh-TW",
+			MediaFolderPath: "/media",
+			TMDbApiKey:      "abcdef1234567890",
+		})
+
+		assert.ErrorIs(t, err, ErrKeysNotWritable)
+		repo.AssertNotCalled(t, "SetString", mock.Anything, mock.Anything, mock.Anything)
+		repo.AssertNotCalled(t, "SetBool", mock.Anything, mock.Anything, mock.Anything)
+		sec.AssertNotCalled(t, "Store", mock.Anything, mock.Anything, mock.Anything)
+	})
+
+	t.Run("complete with no key writer wired refuses keys instead of dropping them", func(t *testing.T) {
+		repo := new(MockSettingsRepo)
+		repo.On("GetBool", mock.Anything, "setup_completed").Return(false, notFound)
+		svc := NewSetupService(repo, nil)
+
+		err := svc.CompleteSetup(context.Background(), SetupConfig{Language: "zh-TW", ClaudeApiKey: "sk-ant-1"})
+
+		assert.ErrorIs(t, err, ErrKeysNotWritable)
+	})
+
+	t.Run("complete without keys is unaffected", func(t *testing.T) {
+		repo := new(MockSettingsRepo)
+		sec := new(MockSecretsService)
+		repo.On("GetBool", mock.Anything, "setup_completed").Return(false, notFound)
+		repo.On("SetString", mock.Anything, "language", "en").Return(nil)
+		repo.On("SetBool", mock.Anything, "setup_completed", true).Return(nil)
+		svc := NewSetupService(repo, sec)
+		svc.SetKeyWriter(notWritable(sec))
+
+		require.NoError(t, svc.CompleteSetup(context.Background(), SetupConfig{Language: "en", ClaudeApiKey: "   "}))
+		repo.AssertExpectations(t)
+	})
 }
