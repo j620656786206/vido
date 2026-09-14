@@ -1,6 +1,6 @@
 # Story DSR.13: Flow N 首次啟動精靈——程式碼追回 N1–N5 設計稿
 
-Status: review
+Status: done
 
 ## Story
 
