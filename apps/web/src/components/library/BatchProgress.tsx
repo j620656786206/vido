@@ -37,7 +37,7 @@ export function BatchProgress({
       role="dialog"
       aria-modal="true"
     >
-      <div className="mx-4 w-full max-w-sm rounded-xl bg-[var(--bg-secondary)] p-6 shadow-2xl">
+      <div className="mx-4 w-full max-w-sm rounded-xl bg-[var(--bg-secondary)] p-6 shadow-[var(--shadow-xl)]">
         <h3 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
           {isComplete ? '操作完成' : action}
         </h3>

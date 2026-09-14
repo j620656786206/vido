@@ -213,7 +213,7 @@ export function MetadataEditorDialog({
         className={cn(
           'fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2',
           'w-[90vw] max-w-2xl max-h-[85vh]',
-          'bg-[var(--bg-primary)] rounded-xl shadow-2xl',
+          'bg-[var(--bg-primary)] rounded-xl shadow-[var(--shadow-xl)]',
           'flex flex-col overflow-hidden'
         )}
         data-testid="metadata-editor-dialog"

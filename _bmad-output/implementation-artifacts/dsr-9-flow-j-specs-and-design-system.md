@@ -1,6 +1,6 @@
 # Story DSR.9: 設計系統與規格稿——先把陰影規則裁乾淨，後面九張才判得動
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -70,18 +70,18 @@ so that 後面每一張 dsr story 不用各自重新發明判準。
 
 ---
 
-1. ⏸️ **裁定一：按鈕到底有沒有陰影？** 兩個選項，兩邊都要改文件：
+1. ✅ **裁定一：按鈕到底有沒有陰影？** 兩個選項，兩邊都要改文件：
    - **(a) 按鈕保留 `--shadow-sm`** → §Cards 的白名單補上「有填色、可按的控制項」。程式碼零變更（`ui/Button.tsx` ×3、`RequestButton.tsx` ×2 目前就是這樣）。
    - **(b) 按鈕也拿掉陰影** → §Buttons 與 §Shadow Vocabulary 的 `--shadow-sm` 條目刪除，`ui/Button.tsx` 與 `RequestButton.tsx` 共 5 處拿掉，並重生視覺基準。
    - 📌 供參考：§Elevation 的開場白是「**這套系統近乎扁平，用色調分層而非陰影**」，而 §Tone-First Rule 說「只有當這個面真的浮在它所覆蓋的內容之上時，才加陰影」。一顆坐在表單裡的按鈕不浮。但 `--shadow-sm` 是 `0 1px 2px rgba(0,0,0,.3)`，在夜行下幾乎不可見，拿掉的視覺代價接近零、收益是規則少一個例外。
 
-2. ⏸️ **裁定二：海報磚要不要陰影？** `components/library/PosterCardV2.tsx:100` 的海報磚掛 `shadow-[var(--shadow-md)]`。
+2. ✅ **裁定二：海報磚要不要陰影？** `components/library/PosterCardV2.tsx:100` 的海報磚掛 `shadow-[var(--shadow-md)]`。
    - 它是**全 app 重複次數最多的元素**（每一格、每一頁）。
    - 同一個檔案第 95–98 行的註解自己寫著：「DESIGN.md 的 Tone-First Rule 把陰影配給真的浮起來的東西……把整格海報抬起來等於把預算花在重複最多的元素上」。註解在論證不該抬，程式碼卻有一道 `--shadow-md` 底陰影——註解講的是「hover 時不加碼」，不是「本來就沒有」。
    - 而 §Cards 現在說卡片無陰影，`--shadow-md` 的唯一指定用途（`Card` 元件）也已經被移除。
    - 📌 註解裡「11 uses app-wide」這個數字也過期了，實測是 46 raw ＋ 10 token ＝ **56**。
 
-3. ⏸️ **裁定三：raw 裸值要不要禁掉？** 42 個合法浮層用的是 Tailwind 裸值而不是 `--shadow-*` token。後果是**抬升沒有單一調校點**：日巡的陰影 2026 年被認真重做過（改墨色、兩層、總墨量 ≤15.4%），但那次重做只改到 token，42 個裸值完全沒跟上——它們在日巡下仍然是 Tailwind 預設的黑色陰影。
+3. ✅ **裁定三：raw 裸值要不要禁掉？** 42 個合法浮層用的是 Tailwind 裸值而不是 `--shadow-*` token。後果是**抬升沒有單一調校點**：日巡的陰影 2026 年被認真重做過（改墨色、兩層、總墨量 ≤15.4%），但那次重做只改到 token，42 個裸值完全沒跟上——它們在日巡下仍然是 Tailwind 預設的黑色陰影。
    - **(a) 收斂成 token** → 42 處換寫法，並加一條 ESLint 規則擋住新的裸值。工程量大但一次解決。
    - **(b) 明文允許裸值** → §Elevation 補一句，並說明日巡下的落差是已知且接受的。
    - 建議 **(a)**，理由是「日巡那半邊現在是壞的」不是風格問題。
@@ -99,37 +99,37 @@ so that 後面每一張 dsr story 不用各自重新發明判準。
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — 取得三個裁定（AC: #1, #2, #3）**
-  - [ ] 把三題連同證據一次呈給 Alexyu，不要邊做邊問
-  - [ ] 裁定寫進 `sprint-status.yaml` 與本 story 的 Change Log，註明日期
+- [x] **Task 1 — 取得三個裁定（AC: #1, #2, #3）**
+  - [x] 把三題連同證據一次呈給 Alexyu，不要邊做邊問
+  - [x] 裁定寫進 `sprint-status.yaml` 與本 story 的 Change Log，註明日期
 
-- [ ] **Task 2 — DESIGN.md 收斂（AC: #4）**
-  - [ ] §Shadow Vocabulary 的 `--shadow-md` 條目重寫
-  - [ ] §Cards 白名單與 §Buttons 對齊
-  - [ ] `--shadow-lg` 的「罕見」改成實測後的描述
-  - [ ] 每一處都附上量到的數字，不要只寫結論
+- [x] **Task 2 — DESIGN.md 收斂（AC: #4）**
+  - [x] §Shadow Vocabulary 的 `--shadow-md` 條目重寫
+  - [x] §Cards 白名單與 §Buttons 對齊
+  - [x] `--shadow-lg` 的「罕見」改成實測後的描述
+  - [x] 每一處都附上量到的數字，不要只寫結論
 
-- [ ] **Task 3 — 依裁定改程式碼（AC: #1, #2, #3）**
-  - [ ] 裁定一：`ui/Button.tsx` ×3、`RequestButton.tsx` ×2
-  - [ ] 裁定二：`PosterCardV2.tsx:100`，並把第 95–98 行那段過期的註解一起更新（「11 uses」→ 實測值）
-  - [ ] 裁定三 (a)：42 處裸值換 token ＋ 一條 ESLint 規則；(b) 則只補文件
-  - [ ] 四個真違規照 AC 的表修（`MediaDetailPanel` 與 `PosterCard` 屬 v1，確認 dsr-2 是否已接手，避免重工）
+- [x] **Task 3 — 依裁定改程式碼（AC: #1, #2, #3）**
+  - [x] 裁定一：`ui/Button.tsx` ×3、`RequestButton.tsx` ×2
+  - [x] 裁定二：`PosterCardV2.tsx:100`，並把第 95–98 行那段過期的註解一起更新（「11 uses」→ 實測值）
+  - [x] 裁定三 (a)：42 處裸值換 token ＋ 一條 ESLint 規則；(b) 則只補文件
+  - [x] 四個真違規照 AC 的表修（`MediaDetailPanel` 與 `PosterCard` 屬 v1，確認 dsr-2 是否已接手，避免重工）
 
-- [ ] **Task 4 — `.pen` 補 Elevation 段（AC: #5）**
-  - [ ] `Design Language v2 (V2Kez)` 新增一節，內容以裁定後的 DESIGN.md 為準
-  - [ ] 用 Pencil MCP，不要用 Read/Grep 碰 `.pen`
+- [x] **Task 4 — `.pen` 補 Elevation 段（AC: #5）**
+  - [x] `Design Language v2 (V2Kez)` 新增一節，內容以裁定後的 DESIGN.md 為準
+  - [x] 用 Pencil MCP，不要用 Read/Grep 碰 `.pen`
 
-- [ ] **Task 5 — J1–J9 逐張查裁定（AC: #6）**
-  - [ ] 九張各確認一次；不成立的加「⚠️ 已被 XXX 取代」而不是改內容
-  - [ ] J2 的 searching 顏色註記必補（dsr-11 已改成泥金）
+- [x] **Task 5 — J1–J9 逐張查裁定（AC: #6）**
+  - [x] 九張各確認一次；不成立的加「⚠️ 已被 XXX 取代」而不是改內容
+  - [x] J2 的 searching 顏色註記必補（dsr-11 已改成泥金）
 
-- [ ] **Task 6 — 收尾驗證（AC: #8）**
-  - [ ] `pnpm run lint` → 0 errors
-  - [ ] `pnpm nx run web:typecheck --skip-nx-cache`
-  - [ ] `pnpm run format:check`
-  - [ ] `python3 scripts/check-design-tokens.py`
-  - [ ] `pnpm nx test web` 與 `pnpm nx test api`（⛔ 不用 `run_in_background`）
-  - [ ] 視覺基準若有變動，走四步流程
+- [x] **Task 6 — 收尾驗證（AC: #8）**
+  - [x] `pnpm run lint` → 0 errors
+  - [x] `pnpm nx run web:typecheck --skip-nx-cache`
+  - [x] `pnpm run format:check`
+  - [x] `python3 scripts/check-design-tokens.py`
+  - [x] `pnpm nx test web` 與 `pnpm nx test api`（⛔ 不用 `run_in_background`）
+  - [x] 視覺基準若有變動，走四步流程
 
 ## Dev Notes
 
@@ -198,19 +198,66 @@ ux-design.pen（V2Kez 與 J1–J9）                  ← Task 4, 5，只能用 
 
 ### Agent Model Used
 
-（dev agent 填寫）
+Claude Opus 5 (1M context) — `claude-opus-5[1m]`，BMAD dev agent（Amelia）2026-09-14
 
 ### Debug Log References
 
+- `pnpm nx test web`：**3354 / 3354 passed**（+7 新規則的 spec）
+- `pnpm nx test api`：PASS
+- `pnpm run lint`：**0 errors**、128 warnings（改動前 127，+1 是新規則檔自己的 `no-var-requires` disable，與三個同門規則的 spec 同款）
+- `pnpm nx run web:typecheck --skip-nx-cache`：PASS
+- `python3 scripts/check-design-tokens.py`：一致（188 畫面／72 母版／clipping 67）
+- 匯出：188 張，**只有 2 張**有 byte 差異（`design-language-v2`、`j2-d`）
+
 ### Completion Notes List
+
+- ⚖️ **Alexyu 2026-09-14 三個裁定，全部照建議走**：按鈕拿掉陰影／海報磚拿掉陰影／裸值全面改 token。
+- 🔗 **AC Drift: FOUND（但這張就是來解它的）**。`dsr-11` 與 `dsr-12` 都撞到過 §Buttons 與 §Cards 的矛盾並把它路由到這裡；`dsr-12` 移除 `ui/Card.tsx` 的陰影時也留下了 §Shadow Vocabulary 的 `--shadow-md` 條目變成孤兒。本 story 一次收斂，沒有新的下游漂移。
+- 📎 **Contract Stamps: NONE**（DESIGN.md 不帶 `[@contract-v*]` 標記）。
+- 🎭 **A11y Pre-Flight: PASS**。觸到的元件只改 class 字串與註解，沒有新增圖片／aria-modal／非同步揭露內容／自訂 widget。⚠️ 陰影拿掉**不影響對比**——陰影從來不承擔文字對比，邊界由髮絲線與色階承擔，兩者都沒動。
+- **最終狀態**：裸值 **0**、token **47**（`xl` 32、`lg` 15）。`sm`／`md` 在程式碼中零使用，與新的 §Shadow Vocabulary 一致。
+- **普查更正**：立案寫「51 vs 12」。那個 grep 把 `shadow-[var(--shadow-sm)]` 裡的 `shadow-sm` 也算成裸值、也數到註解。重數後是 **46 vs 10**。更重要的是分類結果與假設相反——46 個裡**約 42 個位置本來就合法**，只是寫法錯。
+- **四個真違規全部移除**（不是轉 token）：`RecentMediaPanel.tsx:130` 按鈕、`MediaDetailPanel.tsx:141` 圖示容器與 `:159` `<img>` 海報、`PosterCard.tsx:152` 卡片 hover。後三者住在 v1 元件，dsr-2 之後不需要再處理陰影。
+- **新規則 `local/no-raw-shadow`** 接上 `eslint.config.mjs`，並附 7 條 spec（含「ring 與 drop-shadow 不管」「variant 前綴要抓得到」兩條邊界）。上線前用暫時檔實測會擋，測完刪除。
+- ✅ **J1–J9 逐張查過裁定是否仍成立**：九張都沒有引用被取代的陰影規則。J2-4 的「searching 顏色」裁定**與 dsr-11 同向**（它早就裁定 `--accent-text`），不是被取代——但那張的 After 標籤寫著「（藍）」而值是金色 `#e0be72`，是 signal-blue 時期的殘留，已改成「（金）」，並在裁定註記補一行說明 dsr-11 已把請求管線一併改齊。
+- ✅ **`.pen` 的 Design Language v2 補上 §9 抬升與陰影**。原本掃過整個 frame 一個提到陰影的文字節點都沒有——在 Pencil 裡畫圖的人沒有陰影規格可循，Flow M 的登入卡就是這樣掛上一道不該有的陰影的。
+- 📝 **踩到的坑**：`.pen` 的 text 節點要換行必須同時給 `textGrowth: "fixed-width"`，只給 `width` 會被忽略（節點讀回來 `width` 是 `undefined`）。三個新文字節點因此一開始溢出，補上之後 DL-v2 溢出 0。
 
 ### Discovery Triage
 
 - **Did this story discover any work outside its current scope?**
   - **YES**，一項，lane ③：
-    - **③ 日巡的陰影對 42 個裸值是失效的。** `styles.css:282-285` 那次重做（墨色、兩層、總墨量 ≤15.4%）只改到 token，裸值完全沒跟上，所以日巡下那 42 個地方仍是 Tailwind 預設的黑色陰影——正是 DESIGN.md 說「會讀成一塊瘀青」的那種。裁定三 (a) 會順帶解決；若裁定 (b)，這一項必須獨立立案。**待立案：裁定 (b) 時開 `disc-2026-09-daywalk-shadow-broken-on-raw-values: backlog` 並在此列回填 ID。**
+    - **③→① 日巡的陰影對 42 個裸值是失效的。** 裁定三選了 (a) 收斂成 token，**這一項因此就地解決**，不需要獨立立案。原文保留供追溯： `styles.css:282-285` 那次重做（墨色、兩層、總墨量 ≤15.4%）只改到 token，裸值完全沒跟上，所以日巡下那 42 個地方仍是 Tailwind 預設的黑色陰影——正是 DESIGN.md 說「會讀成一塊瘀青」的那種。裁定三 (a) 會順帶解決；若裁定 (b)，這一項必須獨立立案。**待立案：裁定 (b) 時開 `disc-2026-09-daywalk-shadow-broken-on-raw-values: backlog` 並在此列回填 ID。**
 - Reference: `project-context.md` Rule 24
 
 ### File List
 
-（dev agent 填寫）
+**新增：**
+- `apps/web/src/eslint-rules/no-raw-shadow.js` — 擋住裸值的規則
+- `apps/web/src/eslint-rules/no-raw-shadow.spec.ts` — 7 條 spec
+
+**修改（文件與設定）：**
+- `DESIGN.md` — §Shadow Vocabulary 重寫（三階＋三個裁定＋普查數字）、§Buttons 兩條改「無陰影」、§Cards 白名單補齊並註明無例外
+- `eslint.config.mjs` — 接上新規則
+
+**修改（程式碼，共 52 處）：**
+- 42 處裸值 → token（橫跨 33 檔）
+- 4 處真違規移除：`dashboard/RecentMediaPanel.tsx`、`media/MediaDetailPanel.tsx`（×2）、`media/PosterCard.tsx`
+- 6 處依裁定移除：`ui/Button.tsx`（×3）、`requests/RequestButton.tsx`（×1，底部 toast 的 `xl` 保留）、`library/PosterCardV2.tsx`（×1，同時更新那段過期的註解）
+
+**修改（設計）：**
+- `ux-design.pen` — `Design Language v2` 新增 §9 抬升與陰影；J2-D 的 After 標籤「藍」→「金」並補 dsr-11 註記
+- `_bmad-output/screenshots/design-system/design-language-v2.png`、`flow-j-specs/j2-d.png`
+- `_bmad-output/pen-tokens.json`、`sprint-status.yaml`
+
+## Change Log
+
+| 日期 | 內容 |
+| --- | --- |
+| 2026-09-14 | ⚖️ Alexyu 三個裁定全部照建議：按鈕無陰影／海報磚無陰影／裸值改 token。 |
+| 2026-09-14 | Task 2 — DESIGN.md 三處自相矛盾一次收斂，並把普查數字與裁定理由寫進 §Shadow Vocabulary。 |
+| 2026-09-14 | Task 3 — 42 處裸值改 token、4 處真違規移除、6 處依裁定移除。裸值歸零，token 47（xl 32／lg 15）。 |
+| 2026-09-14 | Task 3 — 新增 `local/no-raw-shadow` 並接上 eslint.config.mjs，附 7 條 spec；上線前用暫時檔實測會擋。 |
+| 2026-09-14 | Task 4 — `.pen` 的 Design Language v2 補 §9 抬升與陰影（原本完全沒有陰影規格）。 |
+| 2026-09-14 | Task 5 — J1–J9 逐張查裁定，九張都仍成立；J2-4 的 After 標籤「藍」→「金」（signal-blue 殘留），並補 dsr-11 同向的註記。 |
+| 2026-09-14 | Task 6 — 閘門：web 3354/3354、api PASS、lint 0 errors、typecheck PASS、token 一致、prettier 通過。 |

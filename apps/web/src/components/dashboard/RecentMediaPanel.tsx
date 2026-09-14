@@ -129,7 +129,7 @@ function MediaCard({ media }: { media: RecentMedia }) {
             ARTWORK, which is identical either way. Was black/50; token is 70%. */}
         <div className="absolute inset-0 flex items-center justify-center bg-[var(--overlay-scrim)] opacity-0 transition-opacity group-hover:opacity-100">
           <span
-            className="rounded-full bg-[var(--accent-primary)] p-2 text-[var(--text-on-accent)] shadow-lg"
+            className="rounded-full bg-[var(--accent-primary)] p-2 text-[var(--text-on-accent)]"
             aria-label={`查看 ${media.title} 詳情`}
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

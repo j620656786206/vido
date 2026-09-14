@@ -75,7 +75,7 @@ export function SidePanel({ isOpen, onClose, children, title, className }: SideP
           // Task 3.3: Width - full on mobile, 450px on desktop
           'w-full sm:w-[450px]',
           // Background and shadow
-          'bg-[var(--bg-primary)] shadow-2xl',
+          'bg-[var(--bg-primary)] shadow-[var(--shadow-xl)]',
           // Task 3.2: Slide-in animation from right (300ms)
           'transform transition-transform duration-[var(--motion-move)] ease-out',
           isOpen ? 'translate-x-0' : 'translate-x-full',

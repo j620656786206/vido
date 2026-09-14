@@ -12,7 +12,7 @@ const mediaTypeLabels: Record<string, string> = {
 
 export function NewMediaToast({ title, posterUrl, mediaType }: NewMediaToastProps) {
   return (
-    <div className="flex items-center gap-3 rounded-lg bg-[var(--bg-secondary)] p-3 shadow-lg">
+    <div className="flex items-center gap-3 rounded-lg bg-[var(--bg-secondary)] p-3 shadow-[var(--shadow-lg)]">
       {/* Poster thumbnail */}
       <div className="h-12 w-8 shrink-0 overflow-hidden rounded bg-[var(--bg-tertiary)]">
         {posterUrl ? (

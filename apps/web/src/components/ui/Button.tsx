@@ -14,13 +14,12 @@ const buttonVariants = cva(
            white: the token flips with the theme (ink in 夜行, paper in 日巡),
            so the same fill keeps a legible label in both. */
         default:
-          'bg-[var(--accent-primary)] text-[var(--text-on-accent)] shadow-[var(--shadow-sm)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-pressed)]',
-        destructive:
-          'bg-[var(--error)] text-[var(--text-on-scrim)] shadow-[var(--shadow-sm)] hover:bg-[var(--error)]/90',
+          'bg-[var(--accent-primary)] text-[var(--text-on-accent)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-pressed)]',
+        destructive: 'bg-[var(--error)] text-[var(--text-on-scrim)] hover:bg-[var(--error)]/90',
         outline:
           'border border-[var(--border-subtle)] bg-transparent text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]',
         secondary:
-          'bg-[var(--bg-tertiary)] text-[var(--text-primary)] shadow-[var(--shadow-sm)] hover:bg-[var(--bg-tertiary)]/80',
+          'bg-[var(--bg-tertiary)] text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]/80',
         ghost: 'text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]',
         link: 'text-[var(--accent-text)] underline-offset-4 hover:underline',
       },

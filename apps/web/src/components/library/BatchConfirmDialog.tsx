@@ -84,7 +84,7 @@ export function BatchConfirmDialog({
       />
       <div
         ref={dialogRef}
-        className="relative mx-4 w-full max-w-sm rounded-xl bg-[var(--bg-secondary)] p-6 shadow-2xl"
+        className="relative mx-4 w-full max-w-sm rounded-xl bg-[var(--bg-secondary)] p-6 shadow-[var(--shadow-xl)]"
       >
         {action === 'delete' && (
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--error)]/20">

@@ -65,7 +65,7 @@ export function BatchSubtitlePanel({
           if (!isProcessing) onClose();
         }}
       />
-      <div className="relative w-full rounded-t-2xl bg-[var(--bg-secondary)] shadow-2xl sm:mx-4 sm:max-w-md sm:rounded-xl">
+      <div className="relative w-full rounded-t-2xl bg-[var(--bg-secondary)] shadow-[var(--shadow-xl)] sm:mx-4 sm:max-w-md sm:rounded-xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-5 py-4">
           <h2

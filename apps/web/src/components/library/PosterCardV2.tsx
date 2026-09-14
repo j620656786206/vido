@@ -92,12 +92,16 @@ export function PosterCardV2({
           the users are on. `active:scale-100` looks like a press state and is a
           no-op, because 1 is where the card already sits. (v1 PosterCard has had
           active:scale-[0.98] since bugfix-10-4; this brings V2 in line.)
-          NO shadow escalation on hover, deliberately: DESIGN.md's Tone-First
-          Rule rations shadow to things that genuinely float (11 uses app-wide
-          against 525 tone steps), and lifting every poster in a grid would spend
-          that budget on the most repeated element in the app. */}
+          NO shadow at all, deliberately. ⚖️ Alexyu 2026-09-14 (dsr-9): the tile
+          used to carry a base --shadow-md while this very comment argued against
+          lifting "the most repeated element in the app" — the comment was right
+          and the code disagreed with it. A poster tile sits on the page; it does
+          not float over anything. Depth here is the tone step plus the hairline,
+          exactly like every other card since the 2026-09-11 §Cards rewrite.
+          (The old "11 uses app-wide" figure in this comment was stale: the real
+          census on 2026-09-14 was 46 raw + 10 token = 56 before dsr-9.) */}
       <div
-        className={`relative aspect-[2/3] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--bg-secondary)] shadow-[var(--shadow-md)] transition-transform duration-[var(--motion-touch)] ease-[var(--ease-settle)] group-hover/card:scale-[var(--motion-lift)] group-focus-visible/card:scale-[var(--motion-lift)] group-active/card:scale-[var(--motion-press)] ${
+        className={`relative aspect-[2/3] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--bg-secondary)] transition-transform duration-[var(--motion-touch)] ease-[var(--ease-settle)] group-hover/card:scale-[var(--motion-lift)] group-focus-visible/card:scale-[var(--motion-lift)] group-active/card:scale-[var(--motion-press)] ${
           selected ? 'ring-2 ring-[var(--accent-primary)]' : ''
         }`}
       >

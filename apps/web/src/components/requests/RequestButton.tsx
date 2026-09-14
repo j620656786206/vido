@@ -141,7 +141,7 @@ export function RequestButton({
         data-testid="request-button"
         onClick={handleRequest}
         className={cn(
-          'inline-flex h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-4 text-sm font-semibold text-[var(--text-on-accent)] shadow-[var(--shadow-sm)] transition-colors hover:bg-[var(--accent-hover)] active:bg-[var(--accent-pressed)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
+          'inline-flex h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-4 text-sm font-semibold text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-hover)] active:bg-[var(--accent-pressed)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
           fullWidth && 'w-full',
           className
         )}

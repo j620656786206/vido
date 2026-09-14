@@ -84,7 +84,7 @@ export function ScanProgressSheet({
   if (state.isComplete || state.isCancelled) {
     return (
       <div
-        className="w-full rounded-t-xl bg-[var(--bg-secondary)] p-4 shadow-xl"
+        className="w-full rounded-t-xl bg-[var(--bg-secondary)] p-4 shadow-[var(--shadow-xl)]"
         data-testid="scan-progress-sheet"
         role="status"
       >
@@ -171,7 +171,7 @@ export function ScanProgressSheet({
         onClick={() => setExpanded(true)}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className="flex h-16 w-full items-center gap-3 rounded-t-xl bg-[var(--bg-secondary)] px-4 shadow-xl"
+        className="flex h-16 w-full items-center gap-3 rounded-t-xl bg-[var(--bg-secondary)] px-4 shadow-[var(--shadow-xl)]"
         data-testid="scan-progress-sheet"
         aria-label="展開掃描進度"
       >
@@ -189,7 +189,7 @@ export function ScanProgressSheet({
   // Expanded state
   return (
     <div
-      className="w-full rounded-t-xl bg-[var(--bg-secondary)] shadow-xl"
+      className="w-full rounded-t-xl bg-[var(--bg-secondary)] shadow-[var(--shadow-xl)]"
       data-testid="scan-progress-sheet"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}

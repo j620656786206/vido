@@ -45,7 +45,7 @@ export function DetailPanelMenu({ onReparse, onExport, onDelete }: DetailPanelMe
 
       {isOpen && (
         <div
-          className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] py-1 shadow-xl"
+          className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] py-1 shadow-[var(--shadow-xl)]"
           role="menu"
           data-testid="detail-menu-dropdown"
         >

@@ -72,7 +72,7 @@ export function LibraryCard({ library, autoSubtitleSupported, onEdit }: LibraryC
             <MoreVertical className="h-4 w-4" />
           </button>
           {menuOpen && (
-            <div className="absolute right-0 z-10 mt-1 w-32 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-secondary)] py-1 shadow-lg">
+            <div className="absolute right-0 z-10 mt-1 w-32 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-secondary)] py-1 shadow-[var(--shadow-lg)]">
               <button
                 type="button"
                 onClick={() => {

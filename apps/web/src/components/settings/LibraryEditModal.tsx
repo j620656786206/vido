@@ -107,7 +107,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
        Was black/60; the token is 70%. */
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-scrim)]">
       <div
-        className="w-full max-w-md rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-6 shadow-xl"
+        className="w-full max-w-md rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-6 shadow-[var(--shadow-xl)]"
         data-testid="library-edit-modal"
       >
         <div className="mb-4 flex items-center justify-between">

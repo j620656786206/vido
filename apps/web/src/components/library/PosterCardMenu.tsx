@@ -162,7 +162,7 @@ export function PosterCardMenu({
     <div
       ref={menuRef}
       data-testid="poster-card-menu"
-      className="absolute right-0 top-8 z-30 min-w-[180px] rounded-lg bg-[var(--bg-secondary)] py-1 shadow-xl ring-1 ring-[var(--border-subtle)]"
+      className="absolute right-0 top-8 z-30 min-w-[180px] rounded-lg bg-[var(--bg-secondary)] py-1 shadow-[var(--shadow-xl)] ring-1 ring-[var(--border-subtle)]"
     >
       {menuItems.map((item, index) => (
         <div key={item.label}>

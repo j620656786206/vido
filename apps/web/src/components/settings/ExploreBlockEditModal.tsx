@@ -118,7 +118,7 @@ export function ExploreBlockEditModal({ block, onClose }: ExploreBlockEditModalP
       aria-labelledby="explore-block-modal-title"
     >
       <div
-        className="w-full max-w-md rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-6 shadow-xl"
+        className="w-full max-w-md rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-6 shadow-[var(--shadow-xl)]"
         data-testid="explore-block-edit-modal"
       >
         <div className="mb-4 flex items-center justify-between">

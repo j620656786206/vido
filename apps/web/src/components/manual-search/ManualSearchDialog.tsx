@@ -180,7 +180,7 @@ export function ManualSearchDialog({
         className={cn(
           'fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2',
           'w-[90vw] max-w-4xl max-h-[85vh]',
-          'bg-[var(--bg-primary)] rounded-xl shadow-2xl',
+          'bg-[var(--bg-primary)] rounded-xl shadow-[var(--shadow-xl)]',
           'flex flex-col overflow-hidden'
         )}
         data-testid="manual-search-dialog"
@@ -316,7 +316,7 @@ export function ManualSearchDialog({
           // already carried the token's own 70%.
           <div className="absolute inset-0 bg-[var(--overlay-scrim)] flex items-center justify-center">
             <div
-              className="bg-[var(--bg-secondary)] rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl"
+              className="bg-[var(--bg-secondary)] rounded-xl p-6 max-w-md w-full mx-4 shadow-[var(--shadow-xl)]"
               data-testid="confirmation-dialog"
             >
               <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">確認選擇</h3>
