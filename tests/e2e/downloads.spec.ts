@@ -67,7 +67,7 @@ test.describe('Downloads Page @downloads @ui', () => {
 
     // THEN: Empty state message is shown
     await expect(page.getByText('目前沒有下載任務')).toBeVisible();
-    await expect(page.getByText('在 qBittorrent 中新增種子後會自動顯示')).toBeVisible();
+    await expect(page.getByText('在 qBittorrent 新增種子後，下載進度會顯示在這裡。')).toBeVisible();
   });
 });
 
