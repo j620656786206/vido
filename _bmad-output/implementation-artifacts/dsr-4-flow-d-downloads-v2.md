@@ -1,6 +1,6 @@
 # Story DSR.4: Flow D 下載中心——程式碼追回 D1–D7 桌機設計稿
 
-Status: review
+Status: done
 
 ## Story
 
@@ -202,3 +202,4 @@ Claude Opus 5 (1M context)
 | 日期 | 內容 |
 | --- | --- |
 | 2026-09-14 | 建立並實作（dev＋乾淨 context agent 對抗式 CR：2 HIGH／3 MED 全處理，LOW 處理或立案）。範圍收斂成桌機，手機抽屜拆 dsr-4b。狀態 → review。 |
+| 2026-09-14 | PR #429 合併進 main（8cde34dc）。CI 17 項全綠；視覺基準 bootstrap PR #430（7 張 `-linux`，抽 4 張看過）。CI 第一輪 E2E 第 1 片紅燈：`tests/e2e/downloads.spec.ts` 還在找舊的空狀態文案，改測試後通過。狀態 → done。 |
