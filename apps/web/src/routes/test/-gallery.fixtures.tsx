@@ -87,12 +87,13 @@ import { ServiceHealthBanner } from '../../components/degradation/ServiceHealthB
 import { UnidentifiedFileCard } from '../../components/degradation/UnidentifiedFileCard';
 import { CollapsibleSection } from '../../components/dashboard/CollapsibleSection';
 import { QuickSearchBar } from '../../components/dashboard/QuickSearchBar';
-import { DownloadFilterTabs } from '../../components/downloads/DownloadFilterTabs';
-import { DownloadItem } from '../../components/downloads/DownloadItem';
-import { DownloadList } from '../../components/downloads/DownloadList';
-import { DownloadParseStatusBadge } from '../../components/downloads/DownloadParseStatusBadge';
-import { ParseFailedActions } from '../../components/downloads/ParseFailedActions';
 import { StatusIcon } from '../../components/downloads/StatusIcon';
+import { DownloadCardV2 } from '../../components/downloads/DownloadCardV2';
+import { DownloadsTableV2 } from '../../components/downloads/DownloadsTableV2';
+import {
+  DownloadsEmptyV2,
+  DownloadsQbtErrorV2,
+} from '../../components/downloads/DownloadsStatesV2';
 import { BatchConfirmDialog } from '../../components/library/BatchConfirmDialog';
 import { BatchProgress } from '../../components/library/BatchProgress';
 import { LibrarySearchBar } from '../../components/library/LibrarySearchBar';
@@ -148,7 +149,6 @@ import type { ScanProgressState } from '../../hooks/useScanProgress';
 
 import { DownloadPanel } from '../../components/dashboard/DownloadPanel';
 import { RecentMediaPanel } from '../../components/dashboard/RecentMediaPanel';
-import { DownloadDetails } from '../../components/downloads/DownloadDetails';
 import { ConnectionHistoryPanel } from '../../components/health/ConnectionHistoryPanel';
 import { QBStatusIndicator } from '../../components/health/QBStatusIndicator';
 import { HeroBanner } from '../../components/homepage/HeroBanner';
@@ -225,10 +225,7 @@ import type { FilterValues } from '../../components/library/FilterPanel';
 import type { OwnedMediaState } from '../../hooks/useOwnedMedia';
 import type { LibraryItem, LibraryMediaType } from '../../types/library';
 import type { Movie, MovieDetails, Credits } from '../../types/tmdb';
-import type {
-  PaginatedDownloads,
-  DownloadDetails as DownloadDetailsResponse,
-} from '../../services/downloadService';
+import type { PaginatedDownloads, Download } from '../../services/downloadService';
 import type { QBConfigResponse } from '../../services/qbittorrent';
 import type { ConnectionEvent, ServiceHealth } from '../../services/healthService';
 import type { RecentMedia } from '../../services/mediaService';
@@ -307,6 +304,28 @@ export type GalleryState = 'default' | 'hover' | 'focus' | 'open';
  * Memory-router pathnames a fixture can pin via `routePath` (19-4b Task 0 Fix B).
  */
 export type StubRoutePath = '/library' | '/downloads' | '/pending' | '/settings';
+
+/** A downloading torrent for the v2 download fixtures; each fixture overrides what it needs. */
+function downloadFixture(over: Partial<Download>): Download {
+  return {
+    hash: 'fx-download',
+    name: '沙丘：第二部 Dune: Part Two (2024) 2160p UHD',
+    size: 13_528_000_000,
+    progress: 0.5,
+    downloadSpeed: 12_390_000,
+    uploadSpeed: 1_180_000,
+    eta: 482,
+    status: 'downloading',
+    addedOn: '2026-09-01T10:00:00Z',
+    seeds: 24,
+    peers: 8,
+    downloaded: 0,
+    uploaded: 0,
+    ratio: 0,
+    savePath: '/downloads/movies',
+    ...over,
+  };
+}
 
 export interface GalleryFixture {
   /** Stable kebab id derived from the component's import path (e.g. `media/PosterCard` → `media-poster-card`). */
@@ -1307,118 +1326,154 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   },
 
   // ----- downloads/ (P-bucket additions) -----
+  // dsr-4: the v1 list (DownloadList / DownloadItem / DownloadFilterTabs / DownloadDetails) was
+  // retired with the v2 page; these are the v2 pieces the page is built from.
   {
-    id: 'downloads-download-filter-tabs',
-    label: 'downloads/DownloadFilterTabs',
-    component: DownloadFilterTabs,
+    id: 'downloads-download-card-v2/downloading',
+    label: 'downloads/DownloadCardV2 (downloading)',
+    component: DownloadCardV2,
     props: {
-      activeFilter: 'all',
-      counts: { all: 10, downloading: 3, paused: 2, completed: 4, seeding: 1, error: 0 },
-      onFilterChange: noop,
+      download: downloadFixture({ hash: 'fx-dl', progress: 0.624 }),
+      onPause: noop,
+      onResume: noop,
+      onRemove: noop,
     },
-    penNode: 'screen-section',
+    penNode: 'Mz428', // Component/DownloadCard-v2
+    statesOnly: ['default'],
     width: 720,
   },
   {
-    id: 'downloads-download-item',
-    label: 'downloads/DownloadItem',
-    component: DownloadItem,
+    id: 'downloads-download-card-v2/paused',
+    label: 'downloads/DownloadCardV2 (paused, select mode)',
+    component: DownloadCardV2,
     props: {
-      download: {
-        hash: 'abc123def456',
-        name: '[SubGroup] Movie Name (2024) [1080p]',
-        size: 4294967296,
-        progress: 0.85,
-        downloadSpeed: 10485760,
-        uploadSpeed: 524288,
-        eta: 600,
-        status: 'downloading',
-        addedOn: '2026-01-15T10:00:00Z',
-        seeds: 10,
-        peers: 5,
-        downloaded: 3650722201,
-        uploaded: 104857600,
-        ratio: 0.03,
-        savePath: '/downloads/movies',
-      },
-      expanded: false,
-      onToggleExpand: noop,
+      download: downloadFixture({
+        hash: 'fx-paused',
+        name: '奧本海默 Oppenheimer (2023) 1080p BluRay',
+        status: 'paused',
+        progress: 0.348,
+        downloadSpeed: 0,
+        uploadSpeed: 0,
+      }),
+      selectable: true,
+      selected: true,
+      onSelectChange: noop,
+      onPause: noop,
+      onResume: noop,
+      onRemove: noop,
     },
-    penNode: 'screen-section',
+    penNode: 'Mz428', // Component/DownloadCard-v2
+    statesOnly: ['default'],
     width: 720,
   },
   {
-    id: 'downloads-download-list',
-    label: 'downloads/DownloadList',
-    // DownloadDetails (which calls useDownloadDetails) only mounts on row-expand —
-    // default expandedHash is null, so no network hooks fire on mount.
-    component: DownloadList,
+    id: 'downloads-download-card-v2/error',
+    label: 'downloads/DownloadCardV2 (error)',
+    component: DownloadCardV2,
     props: {
-      downloads: [
-        {
-          hash: 'abc123',
-          name: 'Movie A [1080p]',
-          size: 4294967296,
-          progress: 0.85,
-          downloadSpeed: 10485760,
+      download: downloadFixture({
+        hash: 'fx-error',
+        name: '沙丘 Dune (2021) 2160p UHD BluRay Remux',
+        status: 'error',
+        progress: 0.342,
+        downloadSpeed: 0,
+        uploadSpeed: 0,
+      }),
+      onPause: noop,
+      onResume: noop,
+      onRemove: noop,
+    },
+    penNode: 'Mz428', // Component/DownloadCard-v2
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'downloads-download-card-v2/seeding',
+    label: 'downloads/DownloadCardV2 (seeding)',
+    component: DownloadCardV2,
+    props: {
+      download: downloadFixture({
+        hash: 'fx-seeding',
+        name: '教父 The Godfather (1972) 2160p Remux',
+        status: 'seeding',
+        progress: 1,
+        downloadSpeed: 0,
+        uploadSpeed: 1_288_490,
+      }),
+      onPause: noop,
+      onResume: noop,
+      onRemove: noop,
+    },
+    penNode: 'Mz428', // Component/DownloadCard-v2
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'downloads-downloads-table-v2',
+    label: 'downloads/DownloadsTableV2',
+    component: DownloadsTableV2,
+    props: {
+      items: [
+        downloadFixture({ hash: 'fx-t1', progress: 0.624 }),
+        downloadFixture({
+          hash: 'fx-t2',
+          name: '奧本海默 Oppenheimer (2023) 1080p BluRay',
+          status: 'paused',
+          progress: 0.348,
+          downloadSpeed: 0,
           uploadSpeed: 0,
-          eta: 600,
-          status: 'downloading',
-          addedOn: '2026-01-15T10:00:00Z',
-          seeds: 10,
-          peers: 5,
-          downloaded: 3650722201,
-          uploaded: 0,
-          ratio: 0,
-          savePath: '/downloads/movies',
-        },
-        {
-          hash: 'xyz789',
-          name: 'Series B S01',
-          size: 8589934592,
+        }),
+        downloadFixture({
+          hash: 'fx-t3',
+          name: '教父 The Godfather (1972) 2160p Remux',
+          status: 'completed',
           progress: 1,
           downloadSpeed: 0,
-          uploadSpeed: 262144,
-          eta: 8640000,
-          status: 'completed',
-          addedOn: '2026-01-14T10:00:00Z',
-          seeds: 20,
-          peers: 3,
-          downloaded: 8589934592,
-          uploaded: 1073741824,
-          ratio: 0.125,
-          savePath: '/downloads/series',
-        },
+          uploadSpeed: 0,
+        }),
+        downloadFixture({
+          hash: 'fx-t4',
+          name: '沙丘 Dune (2021) 2160p UHD BluRay Remux',
+          status: 'error',
+          progress: 0.342,
+          downloadSpeed: 0,
+          uploadSpeed: 0,
+        }),
       ],
-      sortField: 'added_on',
+      sortField: 'progress',
       sortOrder: 'desc',
-      onSortChange: noop,
-      onOrderChange: noop,
+      selected: new Set(['fx-t1']),
+      onSort: noop,
+      onSelectChange: noop,
+      onSelectAll: noop,
+      onClearAll: noop,
+      onPause: noop,
+      onResume: noop,
+      onRemove: noop,
     },
-    penNode: 'screen-section',
-    width: 720,
-  },
-  {
-    id: 'downloads-download-parse-status-badge',
-    label: 'downloads/DownloadParseStatusBadge',
-    component: DownloadParseStatusBadge,
-    props: { parseStatus: { status: 'completed', mediaId: 'media-123' } },
-    penNode: 'screen-section',
+    penNode: 'screen-section', // Screen D7-D-v2 (w3ipb)
     statesOnly: ['default'],
-    width: 160,
+    width: 1128,
   },
   {
-    id: 'downloads-parse-failed-actions',
-    label: 'downloads/ParseFailedActions',
-    component: ParseFailedActions,
-    props: {
-      torrentHash: 'abc123',
-      errorMessage: '無法解析檔名',
-      onRetry: noop,
-      onManualSearch: noop,
-    },
-    penNode: 'screen-section',
-    width: 320,
+    id: 'downloads-downloads-states-v2/empty',
+    label: 'downloads/DownloadsEmptyV2',
+    component: DownloadsEmptyV2,
+    props: { filter: 'all' },
+    penNode: 'screen-section', // Screen D5-D-v2 (dVPuY)
+    statesOnly: ['default'],
+    width: 720,
+    routePath: '/downloads',
+  },
+  {
+    id: 'downloads-downloads-states-v2/qbt-error',
+    label: 'downloads/DownloadsQbtErrorV2',
+    component: DownloadsQbtErrorV2,
+    props: { onRetry: noop },
+    penNode: 'screen-section', // Screen D6-D-v2 (UNVRU)
+    statesOnly: ['default'],
+    width: 720,
+    routePath: '/downloads',
   },
   {
     id: 'downloads-status-icon',
@@ -2319,57 +2374,6 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
             addedAt: '2026-02-10T09:00:00Z',
           },
         ] satisfies RecentMedia[],
-      },
-    ],
-  },
-
-  // ----- downloads/ (Task 3) -----
-  {
-    id: 'downloads-download-details',
-    label: 'downloads/DownloadDetails',
-    component: DownloadDetails,
-    props: { hash: 'abc123' },
-    penNode: 'screen-section',
-    width: 640,
-    seedQueries: [
-      {
-        queryKey: qbittorrentKeys.config(),
-        data: {
-          host: 'http://localhost:8080',
-          username: 'admin',
-          basePath: '',
-          configured: true,
-        } satisfies QBConfigResponse,
-      },
-      {
-        queryKey: downloadKeys.detail('abc123'),
-        data: {
-          hash: 'abc123',
-          name: 'Test Movie [1080p]',
-          size: 4294967296,
-          progress: 0.85,
-          downloadSpeed: 10485760,
-          uploadSpeed: 524288,
-          eta: 600,
-          status: 'downloading',
-          addedOn: '2026-01-15T10:00:00Z',
-          completedOn: '2026-01-15T18:00:00Z',
-          seeds: 10,
-          peers: 5,
-          downloaded: 3650722201,
-          uploaded: 104857600,
-          ratio: 0.03,
-          savePath: '/downloads/movies',
-          pieceSize: 4194304,
-          comment: 'Test comment',
-          createdBy: 'qBittorrent v4.5.2',
-          creationDate: '2026-01-10T08:00:00Z',
-          totalWasted: 1024,
-          timeElapsed: 3600,
-          seedingTime: 0,
-          avgDownSpeed: 8388608,
-          avgUpSpeed: 262144,
-        } satisfies DownloadDetailsResponse,
       },
     ],
   },

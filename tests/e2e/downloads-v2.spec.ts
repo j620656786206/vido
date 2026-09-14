@@ -93,8 +93,9 @@ test.describe('Downloads v2 deep page @downloads @ui @ux3-4-3', () => {
     await expect(browse.locator('[data-testid^="download-card-v2-"]').first()).toBeVisible();
     await expect(browse.locator('[data-testid^="download-status-"]').first()).toBeVisible();
     await expect(browse.getByRole('progressbar').first()).toBeVisible();
-    // legacy header is gone under v2
-    await expect(page.getByText('下載管理')).toHaveCount(0);
+    // legacy header is gone under v2 (asked by role: the v2 title「下載」+ subtitle「管理所有下載任務」
+    // read as「下載管理…」when their text is joined, so a plain getByText would find them)
+    await expect(page.getByRole('heading', { name: '下載管理' })).toHaveCount(0);
   });
 
   test('[P2] empty list renders the distinct no-downloads state + 前往探索 (AC6/D5)', async ({
@@ -179,7 +180,7 @@ test.describe('Downloads v2 actions + batch @downloads @ui @ux3-4-3', () => {
     await expect.poll(() => pauseHits.length).toBeGreaterThan(0);
   });
 
-  test('[P1] remove opens a confirm dialog; 連同檔案刪除 DELETEs with deleteFiles=true (AC3)', async ({
+  test('[P1] ⋯ menu → 連同檔案刪除 asks first, then DELETEs with deleteFiles=true (AC3)', async ({
     page,
   }) => {
     await stubQbtConfig(page, true);
@@ -209,9 +210,11 @@ test.describe('Downloads v2 actions + batch @downloads @ui @ux3-4-3', () => {
     const card = page.locator('[data-testid^="download-card-v2-"]').first();
     await expect(card).toBeVisible({ timeout: 15000 });
 
-    await card.getByRole('button', { name: /移除/ }).click();
+    // ⋯ menu → the one irreversible action asks first (D3-D-v2)
+    await card.getByRole('button', { name: /更多動作/ }).click();
+    await page.getByRole('menuitem', { name: '移除（連同檔案刪除）' }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
-    await page.getByRole('button', { name: '移除（連同檔案刪除）' }).click();
+    await page.getByRole('button', { name: '刪除檔案' }).click();
 
     await expect.poll(() => deleteHits.length).toBeGreaterThan(0);
     expect(deleteHits[0]).toContain('deleteFiles=true');
@@ -284,7 +287,7 @@ test.describe('Downloads v2 actions + batch @downloads @ui @ux3-4-3', () => {
     await expect(browse).toBeVisible({ timeout: 15000 });
 
     // switch to the desktop Table view (the toggle is lg-only; the E2E viewport is 1280px)
-    await browse.getByRole('button', { name: '表格' }).click();
+    await browse.getByRole('button', { name: '表格檢視' }).click();
     const table = page.getByTestId('downloads-table-v2');
     await expect(table).toBeVisible();
     await expect(page.locator('[data-testid^="downloads-table-row-"]')).toHaveCount(list.length);

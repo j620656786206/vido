@@ -15,7 +15,8 @@ const API_BASE_URL = process.env.API_URL || 'http://localhost:8080/api/v1';
 // Completion Detection Tests (AC1)
 // =============================================================================
 
-// [Downgraded to unit] parse status badges → DownloadParseStatusBadge.spec.tsx
+// [Downgraded to unit] parse status badges → removed in dsr-4 with the v1 download list (the
+// v2 page shows no parse status; tracked as disc-2026-09-downloads-v2-no-parse-status)
 
 // =============================================================================
 // Parse Status API Tests (AC1, AC2, AC3)
@@ -71,7 +72,8 @@ test.describe('Parse Status API @parse-trigger @story-4-5 @api', () => {
 // Duplicate Detection Tests (AC5)
 // =============================================================================
 
-// [Downgraded to unit] duplicate detection badges → DownloadParseStatusBadge.spec.tsx
+// [Downgraded to unit] duplicate detection badges → removed in dsr-4 with the v1 download list (the
+// v2 page shows no parse status; tracked as disc-2026-09-downloads-v2-no-parse-status)
 
 // =============================================================================
 // Parse Retry API Tests (AC3)

@@ -9,7 +9,7 @@
  * variants throughout (TC-2) — a base token as pill TEXT on its own tint is the sub-AA case those
  * twins exist to replace; CJK labels stay in the default Noto Sans TC (TY-1).
  */
-import type { TorrentStatus } from '../../services/downloadService';
+import type { Download, TorrentStatus } from '../../services/downloadService';
 
 export interface DownloadStatusDescriptor {
   label: string;
@@ -17,14 +17,13 @@ export interface DownloadStatusDescriptor {
   className: string;
 }
 
-// Token strings kept identical to libraryStatus.ts TINT so the two badge systems stay visually unified.
 const TINT = {
   success: 'bg-[var(--success-tint)] text-[var(--success-text)]',
   accent: 'bg-[var(--accent-tint)] text-[var(--accent-text)]',
-  warning: 'bg-[var(--warning-tint)] text-[var(--warning-text)]',
   error: 'bg-[var(--error-tint)] text-[var(--error-text)]',
   info: 'bg-[var(--info-tint)] text-[var(--info-text)]',
-  neutral: 'bg-[var(--bg-tertiary)] text-[var(--text-muted)]',
+  // Nothing is running and nothing went wrong.
+  neutral: 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]',
 } as const;
 
 // Total map over TorrentStatus (8 states — the 6 live filter values plus the transient
@@ -32,7 +31,9 @@ const TINT = {
 // compile error here, not a silently-unstyled pill.
 const STATUS_TOKENS: Record<TorrentStatus, DownloadStatusDescriptor> = {
   downloading: { label: '下載中', className: TINT.accent },
-  paused: { label: '已暫停', className: TINT.warning },
+  // Neutral, not 赭 (dsr-4, D1-D-v2). 赭 means「你要求了，但它沒發生」; a paused torrent is
+  // exactly what the user asked for.
+  paused: { label: '已暫停', className: TINT.neutral },
   seeding: { label: '做種', className: TINT.info },
   completed: { label: '已完成', className: TINT.success },
   stalled: { label: '停滯', className: TINT.neutral },
@@ -44,4 +45,31 @@ const STATUS_TOKENS: Record<TorrentStatus, DownloadStatusDescriptor> = {
 /** The one download status descriptor for a torrent's current state. Total — never returns null. */
 export function getDownloadStatus(status: TorrentStatus): DownloadStatusDescriptor {
   return STATUS_TOKENS[status];
+}
+
+export interface DownloadTone {
+  /** Progress-bar fill (a base token — a bar is not text). */
+  fill: string;
+  /** Percent text (the AA-safe `*-text` twin). */
+  text: string;
+}
+
+/**
+ * Progress bar + percent colour, shared by the card and the table (D1-D-v2 / D7-D-v2). Gold only
+ * while bytes are actually moving down; a paused or waiting torrent is neutral, not「正在跑」.
+ */
+export function getDownloadTone(download: Pick<Download, 'status' | 'progress'>): DownloadTone {
+  switch (download.status) {
+    case 'error':
+      return { fill: 'bg-[var(--error)]', text: 'text-[var(--error-text)]' };
+    case 'downloading':
+      return { fill: 'bg-[var(--accent-primary)]', text: 'text-[var(--accent-text)]' };
+    case 'seeding':
+    case 'checking':
+      return { fill: 'bg-[var(--info)]', text: 'text-[var(--info-text)]' };
+    default:
+      return download.progress >= 1 || download.status === 'completed'
+        ? { fill: 'bg-[var(--success)]', text: 'text-[var(--success-text)]' }
+        : { fill: 'bg-[var(--text-muted)]', text: 'text-[var(--text-secondary)]' };
+  }
 }

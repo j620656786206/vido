@@ -40,7 +40,10 @@ describe('DownloadsQbtErrorV2 (ux3-4-3 AC6 — fail-soft)', () => {
     render(<DownloadsQbtErrorV2 onRetry={onRetry} />);
 
     expect(screen.getByRole('alert')).toHaveTextContent('無法連線到 qBittorrent');
-    expect(screen.getByRole('link', { name: '前往設定' })).toHaveAttribute('href', '/settings');
+    expect(screen.getByRole('link', { name: '前往設定' })).toHaveAttribute(
+      'href',
+      '/settings/qbittorrent'
+    );
 
     await userEvent.click(screen.getByRole('button', { name: '重試' }));
     expect(onRetry).toHaveBeenCalledTimes(1);

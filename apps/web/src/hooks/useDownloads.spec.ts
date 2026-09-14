@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useDownloads, useDownloadDetails, useDownloadCounts, downloadKeys } from './useDownloads';
+import { useDownloads, useDownloadCounts, downloadKeys } from './useDownloads';
 import type { ReactNode } from 'react';
 import React from 'react';
 
@@ -9,13 +9,12 @@ import React from 'react';
 vi.mock('../services/downloadService', () => ({
   downloadService: {
     getDownloads: vi.fn(),
-    getDownloadDetails: vi.fn(),
     getDownloadCounts: vi.fn(),
   },
 }));
 
 // bugfix-10-2: mock useQBittorrentConfig so the new gate inside useDownloads /
-// useDownloadCounts / useDownloadDetails can be exercised. Default returns
+// useDownloadCounts can be exercised. Default returns
 // configured:true to keep existing happy-path tests green; gate-coverage tests
 // override with mockUseQBittorrentConfig.mockReturnValueOnce(...).
 vi.mock('./useQBittorrent', () => ({
@@ -26,7 +25,6 @@ vi.mock('./useQBittorrent', () => ({
 import { downloadService } from '../services/downloadService';
 import { useQBittorrentConfig } from './useQBittorrent';
 const mockGetDownloads = vi.mocked(downloadService.getDownloads);
-const mockGetDownloadDetails = vi.mocked(downloadService.getDownloadDetails);
 const mockGetDownloadCounts = vi.mocked(downloadService.getDownloadCounts);
 const mockUseQBittorrentConfig = vi.mocked(useQBittorrentConfig);
 
@@ -68,19 +66,6 @@ const mockDownloads = [
     savePath: '/downloads/movies',
   },
 ];
-
-const mockDetails = {
-  ...mockDownloads[0],
-  pieceSize: 4194304,
-  comment: 'Test',
-  createdBy: 'qBittorrent',
-  creationDate: '2026-01-10T08:00:00Z',
-  totalWasted: 0,
-  timeElapsed: 3600,
-  seedingTime: 0,
-  avgDownSpeed: 8388608,
-  avgUpSpeed: 262144,
-};
 
 const mockCounts = {
   all: 10,
@@ -206,37 +191,6 @@ describe('useDownloadCounts', () => {
   });
 });
 
-describe('useDownloadDetails', () => {
-  beforeEach(() => {
-    mockGetDownloadDetails.mockResolvedValue(mockDetails);
-    mockUseQBittorrentConfig.mockReturnValue(qbtConfigResult(true));
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it('[P1] returns download details (AC4)', async () => {
-    const { result } = renderHook(() => useDownloadDetails('abc123'), {
-      wrapper: createWrapper(),
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(result.current.data).toEqual(mockDetails);
-    expect(mockGetDownloadDetails).toHaveBeenCalledWith('abc123');
-  });
-
-  it('[P1] does not fetch when hash is empty', async () => {
-    const { result } = renderHook(() => useDownloadDetails(''), {
-      wrapper: createWrapper(),
-    });
-
-    expect(result.current.fetchStatus).toBe('idle');
-    expect(mockGetDownloadDetails).not.toHaveBeenCalled();
-  });
-});
-
 describe('useDownloads - error handling', () => {
   beforeEach(() => {
     mockUseQBittorrentConfig.mockReturnValue(qbtConfigResult(true));
@@ -287,7 +241,6 @@ describe('useDownloads - qBT config gate (bugfix-10-2)', () => {
   beforeEach(() => {
     mockGetDownloads.mockResolvedValue(mockPaginatedResponse);
     mockGetDownloadCounts.mockResolvedValue(mockCounts);
-    mockGetDownloadDetails.mockResolvedValue(mockDetails);
   });
 
   afterEach(() => {
@@ -333,20 +286,6 @@ describe('useDownloads - qBT config gate (bugfix-10-2)', () => {
     await waitFor(() => expect(result.current.fetchStatus).toBe('idle'));
     expect(mockGetDownloadCounts).not.toHaveBeenCalled();
   });
-
-  it('does NOT call getDownloadDetails when qBT is not configured', async () => {
-    mockUseQBittorrentConfig.mockReturnValue(qbtConfigResult(false));
-    const { result } = renderHook(() => useDownloadDetails('abc123'), { wrapper: createWrapper() });
-    await waitFor(() => expect(result.current.fetchStatus).toBe('idle'));
-    expect(mockGetDownloadDetails).not.toHaveBeenCalled();
-  });
-
-  it('does NOT call getDownloadDetails while qBT config is still loading', async () => {
-    mockUseQBittorrentConfig.mockReturnValue(qbtConfigResult(undefined, true));
-    const { result } = renderHook(() => useDownloadDetails('abc123'), { wrapper: createWrapper() });
-    await waitFor(() => expect(result.current.fetchStatus).toBe('idle'));
-    expect(mockGetDownloadDetails).not.toHaveBeenCalled();
-  });
 });
 
 describe('downloadKeys', () => {
@@ -362,7 +301,6 @@ describe('downloadKeys', () => {
       100,
     ]);
     expect(downloadKeys.counts()).toEqual(['downloads', 'counts']);
-    expect(downloadKeys.detail('abc123')).toEqual(['downloads', 'detail', 'abc123']);
   });
 
   it('[P2] generates unique keys per filter combination', () => {

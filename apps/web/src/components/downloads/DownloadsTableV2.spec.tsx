@@ -60,9 +60,19 @@ describe('DownloadsTableV2 (ux3-4-4 AC2/3/4/5)', () => {
     expect(screen.getByTestId('downloads-table-row-a')).toBeInTheDocument();
     expect(screen.getByTestId('download-status-a')).toHaveTextContent('下載中');
     // downloading row's speed cell is a Mono numeric
-    const speed = screen.getByText(/↓/);
-    expect(speed).toHaveClass('font-mono');
-    expect(speed).toHaveClass('tabular-nums');
+    const speed = within(screen.getByTestId('downloads-table-row-a')).getByText(/↓ 1\.4 MB\/s/);
+    expect(speed.closest('td')).toHaveClass('font-mono');
+    expect(speed.closest('td')).toHaveClass('tabular-nums');
+    // a completed row says "—" instead of a zero speed
+    expect(
+      within(screen.getByTestId('downloads-table-row-b')).getByText('↓ —')
+    ).toBeInTheDocument();
+  });
+
+  it('columns follow D7-D-v2: ☑ 名稱 狀態 進度 速度 ETA 大小 動作', () => {
+    renderTable();
+    const headers = screen.getAllByRole('columnheader').map((th) => th.textContent?.trim());
+    expect(headers).toEqual(['', '名稱', '狀態', '進度', '速度', 'ETA', '大小', '動作']);
   });
 
   it('sortable headers carry aria-sort; the active field shows its direction (AC3)', () => {
@@ -72,8 +82,10 @@ describe('DownloadsTableV2 (ux3-4-4 AC2/3/4/5)', () => {
       'ascending'
     );
     expect(screen.getByRole('columnheader', { name: /狀態/ })).toHaveAttribute('aria-sort', 'none');
-    // a non-sortable column (大小) exposes no aria-sort
-    expect(screen.getByRole('columnheader', { name: '大小' })).not.toHaveAttribute('aria-sort');
+    // columns the API cannot sort expose no aria-sort (and no sort button)
+    for (const name of ['速度', 'ETA', '大小']) {
+      expect(screen.getByRole('columnheader', { name })).not.toHaveAttribute('aria-sort');
+    }
   });
 
   it('clicking a sortable header calls onSort with the field (AC3)', async () => {
@@ -96,14 +108,15 @@ describe('DownloadsTableV2 (ux3-4-4 AC2/3/4/5)', () => {
     expect(onClearAll).toHaveBeenCalled();
   });
 
-  it('row actions reuse DownloadRowActions — pause + destructive remove (AC5)', async () => {
+  it('row actions reuse DownloadRowActions — pause + ⋯ → confirmed delete (AC5)', async () => {
     const { onPause, onRemove } = renderTable();
     const row = screen.getByTestId('downloads-table-row-a');
-    await userEvent.click(within(row).getByRole('button', { name: /暫停/ }));
+    await userEvent.click(within(row).getByRole('button', { name: /^暫停/ }));
     expect(onPause).toHaveBeenCalledWith('a');
 
-    await userEvent.click(within(row).getByRole('button', { name: /移除/ }));
-    await userEvent.click(await screen.findByRole('button', { name: '移除（連同檔案刪除）' }));
+    await userEvent.click(within(row).getByRole('button', { name: /更多動作/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: '移除（連同檔案刪除）' }));
+    await userEvent.click(await screen.findByRole('button', { name: '刪除檔案' }));
     expect(onRemove).toHaveBeenCalledWith('a', true);
   });
 });

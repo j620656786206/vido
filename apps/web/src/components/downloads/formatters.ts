@@ -3,6 +3,8 @@
  * Formatting utilities for download display (Story 4.2)
  */
 
+import type { Download } from '../../services/downloadService';
+
 export function formatSpeed(bytesPerSec: number): string {
   if (bytesPerSec <= 0) return '0 B/s';
   if (bytesPerSec >= 1073741824) {
@@ -55,13 +57,40 @@ export function formatProgress(progress: number): string {
   return `${(progress * 100).toFixed(1)}%`;
 }
 
-export function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('zh-TW', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+const DASH = '—';
+
+/** "5.05 GB / 8.10 GB" → "5.05 / 8.10 GB" when both sides share a unit (the dense table cell). */
+function compactSizePair(done: number, total: number): string {
+  const left = formatSize(done);
+  const right = formatSize(total);
+  const [leftValue, leftUnit] = left.split(' ');
+  return leftUnit === right.split(' ')[1] ? `${leftValue} / ${right}` : `${left} / ${right}`;
+}
+
+/**
+ * The card footer / table cells of D1-D-v2 and D7-D-v2. Every field is always present and says
+ * "—" when it does not apply, so rows line up and a missing number never reads as zero.
+ * ↓ and ETA only while downloading; ↑ while downloading or seeding; size is "done / total"
+ * until the torrent is complete.
+ */
+export function formatDownloadMeta(
+  d: Pick<Download, 'status' | 'downloadSpeed' | 'uploadSpeed' | 'eta' | 'size' | 'progress'>
+): { down: string; up: string; eta: string; size: string; sizeCompact: string } {
+  const moving = d.status === 'downloading';
+  const sharing = moving || d.status === 'seeding';
+  const complete = d.progress >= 1;
+  // Size 0 is qBittorrent still fetching a magnet's metadata — unknown, not empty.
+  const known = d.size > 0;
+  const done = Math.round(Math.min(d.progress, 1) * d.size);
+  return {
+    down: `↓ ${moving ? formatSpeed(d.downloadSpeed) : DASH}`,
+    up: `↑ ${sharing ? formatSpeed(d.uploadSpeed) : DASH}`,
+    eta: moving ? formatETA(d.eta) : DASH,
+    size: !known
+      ? DASH
+      : complete
+        ? formatSize(d.size)
+        : `${formatSize(done)} / ${formatSize(d.size)}`,
+    sizeCompact: !known ? DASH : complete ? formatSize(d.size) : compactSizePair(done, d.size),
+  };
 }
