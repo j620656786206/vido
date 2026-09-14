@@ -1,6 +1,6 @@
 # Story DSR.5: Flow E 媒體庫掃描——程式碼追回 E1–E5 設計稿
 
-Status: review
+Status: done
 
 ## Story
 
