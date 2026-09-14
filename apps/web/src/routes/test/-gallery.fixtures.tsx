@@ -1925,7 +1925,10 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         isComplete: true,
         percentDone: 100,
         filesProcessed: 847,
-        filesUnmatched: 0, // 完成畫面原本顯示 0(847-847),維持像素不變
+        filesUnmatched: 0,
+        // dsr-5: the toast prints what the scanner wrote (scan_complete payload).
+        filesCreated: 12,
+        filesUpdated: 835,
         errorCount: 0,
       },
       onCancel: noop,

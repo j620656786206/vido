@@ -3,6 +3,11 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { ScanProgressSheet } from './ScanProgressSheet';
 import type { ScanProgressState } from '../../hooks/useScanProgress';
 
+const mockNavigate = vi.fn();
+vi.mock('@tanstack/react-router', () => ({
+  useNavigate: () => mockNavigate,
+}));
+
 const baseScanningState: ScanProgressState = {
   isScanning: true,
   percentDone: 62,
@@ -78,10 +83,11 @@ describe('ScanProgressSheet', () => {
     // Expand
     fireEvent.click(screen.getByTestId('scan-progress-sheet'));
 
-    expect(screen.getByText('847')).toBeInTheDocument();
-    // 524 appears twice: 解析 and 比對 both show filesProcessed
-    expect(screen.getAllByText('524')).toHaveLength(2);
-    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.getByText('找到 847')).toBeInTheDocument();
+    expect(screen.getByText('解析 524')).toBeInTheDocument();
+    expect(screen.getByTestId('scan-error-stat')).toHaveTextContent('錯誤 3');
+    // dsr-5: no 比對 counter (it repeated 解析's number).
+    expect(screen.queryByText(/比對/)).not.toBeInTheDocument();
   });
 
   it('shows cancel button in expanded state', () => {
@@ -124,6 +130,37 @@ describe('ScanProgressSheet', () => {
 
     expect(screen.getByText('掃描完成')).toBeInTheDocument();
     expect(screen.getByText(/847 檔案/)).toBeInTheDocument();
+  });
+
+  it('shows the honest summary and one way in to what went wrong (dsr-5)', () => {
+    mockNavigate.mockReset();
+    render(
+      <ScanProgressSheet
+        state={{ ...completeState, filesCreated: 30, filesUpdated: 494 }}
+        onCancel={mockCancel}
+        onDismiss={mockDismiss}
+      />
+    );
+
+    const summary = screen.getByTestId('sheet-scan-summary');
+    expect(summary).toHaveTextContent('找到 847 檔案 · 新增 30 · 更新 494');
+    expect(summary).toHaveTextContent('無法匯入 323 · 錯誤 3');
+
+    fireEvent.click(screen.getByTestId('sheet-view-scan-problems-link'));
+    expect(mockDismiss).toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith({ to: '/settings/logs' });
+  });
+
+  it('has no problems link after a clean scan', () => {
+    render(
+      <ScanProgressSheet
+        state={{ ...completeState, errorCount: 0, filesUnmatched: 0 }}
+        onCancel={mockCancel}
+        onDismiss={mockDismiss}
+      />
+    );
+
+    expect(screen.queryByTestId('sheet-view-scan-problems-link')).not.toBeInTheDocument();
   });
 
   it('renders cancelled state', () => {

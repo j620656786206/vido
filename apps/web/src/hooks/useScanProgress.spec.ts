@@ -134,13 +134,23 @@ describe('useScanProgress (SSE-only, no polling)', () => {
 
     act(() => {
       es.emit('scan_complete', {
-        data: { filesFound: 200, errorCount: 1 },
+        data: {
+          filesFound: 200,
+          filesCreated: 150,
+          filesUpdated: 41,
+          filesUnmatched: 8,
+          errorCount: 1,
+        },
       });
     });
 
     expect(result.current.isScanning).toBe(false);
     expect(result.current.isComplete).toBe(true);
     expect(result.current.percentDone).toBe(100);
+    // dsr-5: the toast prints what the scanner wrote, straight from the payload.
+    expect(result.current.filesCreated).toBe(150);
+    expect(result.current.filesUpdated).toBe(41);
+    expect(result.current.filesUnmatched).toBe(8);
   });
 
   it('[P1] handles scan_cancelled SSE event', async () => {

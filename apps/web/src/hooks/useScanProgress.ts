@@ -17,6 +17,14 @@ export interface ScanProgressState {
   filesProcessed: number;
   /** 真實的未比對數(後端 files_unmatched),不再用 found-processed 推估 */
   filesUnmatched: number;
+  /**
+   * What the scanner actually wrote, from the scan_complete payload (dsr-5).
+   * undefined = not reported (still scanning, or a completion seen only through
+   * the polling fallback, whose status payload has no such counts) — the toast
+   * then omits them rather than printing a made-up zero.
+   */
+  filesCreated?: number;
+  filesUpdated?: number;
   errorCount: number;
   estimatedTime: string;
   isComplete: boolean;
@@ -72,6 +80,8 @@ function scanProgressReducer(
           ? Number((action.payload as unknown as Record<string, unknown>).filesProcessed)
           : estimatedProcessed,
         filesUnmatched: action.payload.filesUnmatched ?? state.filesUnmatched,
+        filesCreated: action.payload.filesCreated,
+        filesUpdated: action.payload.filesUpdated,
         errorCount: action.payload.errorCount,
         estimatedTime: action.payload.estimatedTime,
         isComplete: false,
@@ -90,6 +100,9 @@ function scanProgressReducer(
           filesFound: p.filesFound,
           filesProcessed: p.filesProcessed,
           filesUnmatched: p.filesUnmatched ?? state.filesUnmatched,
+          // The status endpoint does not report created/updated — unknown, not 0.
+          filesCreated: undefined,
+          filesUpdated: undefined,
           errorCount: p.errorCount,
           currentFile: '',
           estimatedTime: '',
@@ -221,6 +234,8 @@ export function useScanProgress() {
             errorCount: (raw.errorCount as number) ?? 0,
             estimatedTime: '',
             filesUnmatched: unmatched,
+            filesCreated: raw.filesCreated as number | undefined,
+            filesUpdated: raw.filesUpdated as number | undefined,
             // 完成時的「比對成功」用真實數字:總數 - 未比對(掃描器如果沒回報
             // files_unmatched 就退回舊的估算行為)
             filesProcessed: Math.max(0, found - unmatched),

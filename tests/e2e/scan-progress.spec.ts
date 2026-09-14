@@ -41,7 +41,7 @@
  * Real testids used (from ScanProgressCard.tsx):
  *   scan-progress-card · scan-progress-pill · scan-minimize-btn · scan-close-btn
  *   scan-cancel-btn · cancel-confirm-dialog · cancel-continue-btn ·
- *   cancel-confirm-btn · scan-dismiss-btn · view-unmatched-link · scan-progress-bar
+ *   cancel-confirm-btn · scan-dismiss-btn · view-scan-problems-link · scan-progress-bar
  *   (trigger: scan-trigger-button on /settings/scanner, label 掃描媒體庫)
  *
  * @tags @e2e @scanner @scan-progress @migrated-testsprite
@@ -315,7 +315,9 @@ test.describe('Scan Progress Card — SSE-driven @e2e @scanner @scan-progress', 
     const card = page.getByTestId('scan-progress-card');
     await expect(card).toContainText('掃描完成');
     await expect(card).toContainText('640');
-    await expect(page.getByTestId('view-unmatched-link')).toBeVisible();
+    // dsr-5: one honest link — files that could not be imported and errors both
+    // live in the system log. error_count: 2 above makes it appear.
+    await expect(page.getByTestId('view-scan-problems-link')).toBeVisible();
 
     // AND: the auto-dismiss affordance + manual dismiss are present.
     // NOT toBeVisible(): the bar now genuinely counts down (it was frozen while

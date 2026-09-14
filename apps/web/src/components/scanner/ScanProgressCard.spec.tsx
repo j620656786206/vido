@@ -72,10 +72,12 @@ describe('ScanProgressCard', () => {
 
     expect(screen.getByText('媒體庫掃描中')).toBeInTheDocument();
     expect(screen.getByText('62%')).toBeInTheDocument();
-    expect(screen.getByText('847')).toBeInTheDocument();
-    // 524 appears twice: 解析 and 比對 both show filesProcessed
-    expect(screen.getAllByText('524')).toHaveLength(2);
-    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.getByText('找到 847')).toBeInTheDocument();
+    expect(screen.getByText('解析 524')).toBeInTheDocument();
+    expect(screen.getByTestId('scan-error-stat')).toHaveTextContent('錯誤 3');
+    // dsr-5: no 比對 counter. The scanner never reports a matched count; the
+    // card used to print filesProcessed a second time under that label.
+    expect(screen.queryByText(/比對/)).not.toBeInTheDocument();
     expect(screen.getByTestId('scan-current-file')).toHaveTextContent('Demon Slayer');
     expect(screen.getByTestId('scan-eta')).toHaveTextContent('1 分 42 秒');
   });
@@ -208,8 +210,11 @@ describe('ScanProgressCard', () => {
     );
 
     expect(screen.getByText('掃描完成')).toBeInTheDocument();
-    expect(screen.getByTestId('view-unmatched-link')).toBeInTheDocument();
-    expect(screen.getByTestId('view-errors-link')).toBeInTheDocument();
+    // 新增／更新 are absent from this state (not reported) — omitted, not printed as 0.
+    expect(screen.getByTestId('scan-summary')).toHaveTextContent(
+      '找到 847 檔案 · 無法匯入 323 · 錯誤 3'
+    );
+    expect(screen.getByTestId('view-scan-problems-link')).toHaveTextContent('查看無法匯入與錯誤');
   });
 
   it('renders cancelled state', () => {
@@ -225,22 +230,32 @@ describe('ScanProgressCard', () => {
     expect(screen.getByText('掃描已取消')).toBeInTheDocument();
   });
 
-  it('navigates to unmatched filter when action link clicked', () => {
+  it('prints only what the scanner reported — 新增／更新 from scan_complete, no 比對成功 (dsr-5)', () => {
     render(
       <ScanProgressCard
-        state={completeState}
+        state={{
+          ...completeState,
+          filesFound: 1247,
+          filesCreated: 30,
+          filesUpdated: 1168,
+          filesUnmatched: 42,
+          errorCount: 7,
+        }}
         onCancel={mockCancel}
         onToggleMinimize={mockToggleMinimize}
         onDismiss={mockDismiss}
       />
     );
 
-    fireEvent.click(screen.getByTestId('view-unmatched-link'));
-    expect(mockDismiss).toHaveBeenCalled();
-    expect(mockNavigate).toHaveBeenCalledWith({ to: '/', search: { status: 'unmatched' } });
+    expect(screen.getByTestId('scan-summary')).toHaveTextContent(
+      '找到 1,247 檔案 · 新增 30 · 更新 1,168 · 無法匯入 42 · 錯誤 7'
+    );
+    // 比對成功 was found − unmatched (errors counted as successes); 未比對 counted
+    // files that were never imported, so no library filter could show them.
+    expect(screen.queryByText(/比對成功|未比對/)).not.toBeInTheDocument();
   });
 
-  it('navigates to error filter when view errors clicked', () => {
+  it('sends 查看無法匯入與錯誤 to the system log — where those files are recorded', () => {
     render(
       <ScanProgressCard
         state={completeState}
@@ -250,9 +265,22 @@ describe('ScanProgressCard', () => {
       />
     );
 
-    fireEvent.click(screen.getByTestId('view-errors-link'));
+    fireEvent.click(screen.getByTestId('view-scan-problems-link'));
     expect(mockDismiss).toHaveBeenCalled();
-    expect(mockNavigate).toHaveBeenCalledWith({ to: '/', search: { status: 'error' } });
+    expect(mockNavigate).toHaveBeenCalledWith({ to: '/settings/logs' });
+  });
+
+  it('keeps the link when files could not be imported even with zero errors', () => {
+    render(
+      <ScanProgressCard
+        state={{ ...completeState, errorCount: 0, filesUnmatched: 5 }}
+        onCancel={mockCancel}
+        onToggleMinimize={mockToggleMinimize}
+        onDismiss={mockDismiss}
+      />
+    );
+
+    expect(screen.getByTestId('view-scan-problems-link')).toBeInTheDocument();
   });
 
   it('calls onDismiss when dismiss button clicked on complete card', () => {
@@ -284,17 +312,17 @@ describe('ScanProgressCard', () => {
     expect(mockDismiss).toHaveBeenCalledTimes(1);
   });
 
-  it('hides view errors link when no errors', () => {
+  it('has no problems link after a clean scan', () => {
     render(
       <ScanProgressCard
-        state={{ ...completeState, errorCount: 0 }}
+        state={{ ...completeState, errorCount: 0, filesUnmatched: 0 }}
         onCancel={mockCancel}
         onToggleMinimize={mockToggleMinimize}
         onDismiss={mockDismiss}
       />
     );
 
-    expect(screen.queryByTestId('view-errors-link')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('view-scan-problems-link')).not.toBeInTheDocument();
   });
 
   it('shows auto-dismiss progress bar on completion', () => {
@@ -328,6 +356,27 @@ describe('ScanProgressCard', () => {
 
     // Should NOT have been dismissed because user is interacting
     expect(mockDismiss).not.toHaveBeenCalled();
+  });
+
+  it('resumes the countdown after the pointer leaves (dsr-5)', () => {
+    render(
+      <ScanProgressCard
+        state={completeState}
+        onCancel={mockCancel}
+        onToggleMinimize={mockToggleMinimize}
+        onDismiss={mockDismiss}
+      />
+    );
+
+    const card = screen.getByTestId('scan-progress-card');
+    fireEvent.mouseEnter(card);
+    vi.advanceTimersByTime(15000);
+    fireEvent.mouseLeave(card);
+    expect(mockDismiss).not.toHaveBeenCalled();
+
+    // Used to stay forever once pointed at: leaving never restarted the timer.
+    vi.advanceTimersByTime(10000);
+    expect(mockDismiss).toHaveBeenCalledTimes(1);
   });
 
   it('shows cancelling state on confirm button', () => {

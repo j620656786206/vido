@@ -1,6 +1,5 @@
-// Design ref: ux-design.pen Screen J4-D (sPzZT)
-// ⚠️ E1-D (KvZSc)／E1-M (uABWl) 畫的是舊的扁平資料夾列，已被取代、不可依此實作（drift-e1-scanner-multi-library）。
-// 重畫 E1 等於重裁多媒體庫 IA，不在該單範圍內
+// Design ref: ux-design.pen Screen E1-D (KvZSc) · E1-M (uABWl)
+// E1 原本畫的是多媒體庫改版前的扁平資料夾列；dsr-5 依已出貨的這個元件重畫，兩邊現在是同一份事實。
 /**
  * Media Library Manager component for Settings page (Story 7b-4)
  * Replaces the env var display section in ScannerSettings.
@@ -43,7 +42,7 @@ export function MediaLibraryManager() {
       <span className="text-sm font-medium text-[var(--text-secondary)]">媒體庫管理</span>
 
       {libraries.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-[var(--border-subtle)]/50 p-6 text-center text-sm text-[var(--text-muted)]">
+        <div className="rounded-lg border border-dashed border-[var(--border-subtle)] p-6 text-center text-sm text-[var(--text-muted)]">
           尚未設定任何媒體庫。請新增媒體庫以開始掃描。
         </div>
       ) : (
@@ -65,7 +64,7 @@ export function MediaLibraryManager() {
       <button
         type="button"
         onClick={() => setEditModal({ open: true })}
-        className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--border-subtle)]/50 py-2.5 text-sm text-[var(--text-secondary)] transition-colors hover:border-[var(--accent-primary)]/50 hover:text-[var(--accent-text)]"
+        className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
         data-testid="add-library-button"
       >
         <Plus className="h-4 w-4" />
