@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen H2 Scan Progress Desktop (wyuhF)
+// Design ref: ux-design.pen Screen E2-D (wyuhF) · E2-M (yezIo) · E3-D (szzaW) · E3-M (ZjoEI)
 /**
  * Responsive scan progress wrapper (Story 7.4, Task 5)
  * ≥768px → ScanProgressCard (floating bottom-right)
@@ -74,7 +74,7 @@ export function ScanProgress() {
     cancelScan.mutate();
   };
 
-  // Completion toast: top-center per H3 spec; progress card: bottom-right per H2 spec
+  // Completion toast: top-center per E3-D; progress card: bottom-right per E2-D
   const isComplete = scanProgress.isComplete || scanProgress.isCancelled;
 
   if (isDesktop) {

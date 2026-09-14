@@ -1,5 +1,4 @@
-// Design ref: ux-design.pen Screen J4-D (sPzZT) · J5-D (alrIw)
-// ⚠️ E1-D (KvZSc)／E1-M (uABWl) 畫的是舊的扁平資料夾列，已被取代、不可依此實作（drift-e1-scanner-multi-library）
+// Design ref: ux-design.pen Screen E1-D (KvZSc) · E1-M (uABWl) · J4-D (sPzZT) · J5-D (alrIw)
 /**
  * Library Card component for displaying a media library in Settings (Story 7b-4)
  */
@@ -50,7 +49,10 @@ export function LibraryCard({ library, autoSubtitleSupported, onEdit }: LibraryC
 
   return (
     <div
-      className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4"
+      // bg-primary, not bg-secondary: the card sits INSIDE the settings form card,
+      // which is already bg-secondary — same ground plus a border read as a
+      // box drawn on nothing (E1-D draws it one step darker, like its rows).
+      className="rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-4"
       data-testid={`library-card-${library.id}`}
     >
       {/* Header */}
@@ -58,7 +60,7 @@ export function LibraryCard({ library, autoSubtitleSupported, onEdit }: LibraryC
         <div className="flex items-center gap-2">
           <TypeIcon className="h-4 w-4 text-[var(--text-secondary)]" />
           <span className="text-sm font-medium text-[var(--text-primary)]">{library.name}</span>
-          <span className="rounded bg-[var(--bg-tertiary)] px-1.5 py-0.5 text-xs text-[var(--text-secondary)]">
+          <span className="rounded-full bg-[var(--bg-tertiary)] px-2 py-0.5 text-xs text-[var(--text-secondary)]">
             {typeLabel}
           </span>
         </div>
@@ -66,7 +68,9 @@ export function LibraryCard({ library, autoSubtitleSupported, onEdit }: LibraryC
           <button
             type="button"
             onClick={() => setMenuOpen(!menuOpen)}
-            className="rounded p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-secondary)]"
+            className="-m-3.5 rounded-[var(--radius-sm)] p-3.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-secondary)] sm:m-0 sm:p-1"
+            aria-label={`${library.name} 的操作`}
+            aria-expanded={menuOpen}
             data-testid="library-menu-button"
           >
             <MoreVertical className="h-4 w-4" />
@@ -79,7 +83,7 @@ export function LibraryCard({ library, autoSubtitleSupported, onEdit }: LibraryC
                   setMenuOpen(false);
                   onEdit();
                 }}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
+                className="flex min-h-11 w-full items-center gap-2 px-3 py-1.5 sm:min-h-0 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
               >
                 <Pencil className="h-3 w-3" /> 編輯
               </button>
@@ -89,7 +93,7 @@ export function LibraryCard({ library, autoSubtitleSupported, onEdit }: LibraryC
                   setMenuOpen(false);
                   setConfirmDelete(true);
                 }}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-[var(--error-text)] hover:bg-[var(--bg-tertiary)]"
+                className="flex min-h-11 w-full items-center gap-2 px-3 py-1.5 sm:min-h-0 text-sm text-[var(--error-text)] hover:bg-[var(--bg-tertiary)]"
               >
                 <Trash2 className="h-3 w-3" /> 刪除
               </button>

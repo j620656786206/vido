@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen H5 Scan Progress Mobile (yezIo)
+// Design ref: ux-design.pen Screen E2-M (yezIo) · E3-M (ZjoEI)
 /**
  * Mobile bottom sheet scan progress (Story 7.4, Task 4)
  * Peek state: 64px, full width. Expanded: half screen with drag handle.
@@ -6,18 +6,14 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import {
-  Loader,
-  File,
-  FileCheck,
-  Link,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  X,
-} from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { Loader, AlertTriangle, CheckCircle, XCircle, X } from 'lucide-react';
 import type { ScanProgressState } from '../../hooks/useScanProgress';
+import {
+  SCAN_PROBLEMS_DESTINATION,
+  ScanStats,
+  scanHadProblems,
+  scanSummaryParts,
+} from './ScanProgressCard';
 
 const AUTO_DISMISS_MS = 10000;
 
@@ -80,42 +76,58 @@ export function ScanProgressSheet({
     onCancel();
   };
 
-  // Completion/cancelled toast
+  // Completion/cancelled toast — E3-M: a floating card inset from the edges,
+  // just above the tab bar (the wrapper in ScanProgress lifts it clear; pb keeps
+  // it off the bar below 640px and off the screen edge above it).
   if (state.isComplete || state.isCancelled) {
+    const hadProblems = scanHadProblems(state);
+    const showMissing =
+      !state.isCancelled && missingSubtitleCount !== undefined && missingSubtitleCount > 0;
+    const parts = scanSummaryParts(state);
+    // Two lines on a phone: what was found and written / what went wrong.
+    const splitAt = parts.findIndex((part) => part.startsWith('無法匯入'));
+    const lines = splitAt > 0 ? [parts.slice(0, splitAt), parts.slice(splitAt)] : [parts];
     return (
-      <div
-        className="w-full rounded-t-xl bg-[var(--bg-secondary)] p-4 shadow-[var(--shadow-xl)]"
-        data-testid="scan-progress-sheet"
-        role="status"
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {state.isCancelled ? (
-              <XCircle className="h-5 w-5 text-[var(--text-secondary)]" />
-            ) : state.errorCount > 0 ? (
-              <AlertTriangle className="h-5 w-5 text-[var(--warning-text)]" />
-            ) : (
-              <CheckCircle className="h-5 w-5 text-[var(--success-text)]" />
-            )}
-            <span className="text-sm font-semibold text-[var(--text-primary)]">
-              {state.isCancelled ? '掃描已取消' : '掃描完成'}
-            </span>
+      <div className="px-4 pb-2 sm:pb-4">
+        <div
+          className="flex w-full flex-col gap-2.5 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-3.5 shadow-[var(--shadow-lg)]"
+          data-testid="scan-progress-sheet"
+          role="status"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {state.isCancelled ? (
+                <XCircle className="h-4 w-4 text-[var(--text-secondary)]" />
+              ) : hadProblems ? (
+                <AlertTriangle className="h-4 w-4 text-[var(--warning-text)]" />
+              ) : (
+                <CheckCircle className="h-4 w-4 text-[var(--success-text)]" />
+              )}
+              <span className="text-sm font-semibold text-[var(--text-primary)]">
+                {state.isCancelled ? '掃描已取消' : '掃描完成'}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={onDismiss}
+              className="-m-2 flex size-11 items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              aria-label="關閉"
+              data-testid="sheet-dismiss-btn"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onDismiss}
-            className="rounded p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-            aria-label="關閉"
-            data-testid="sheet-dismiss-btn"
+
+          <div
+            className="space-y-1 text-xs tabular-nums text-[var(--text-secondary)]"
+            data-testid="sheet-scan-summary"
           >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <p className="mt-2 text-xs text-[var(--text-secondary)]">
-          {state.filesFound.toLocaleString()} 檔案 · 錯誤 {state.errorCount}
-        </p>
-        {!state.isCancelled && missingSubtitleCount !== undefined && missingSubtitleCount > 0 && (
-          <div className="mt-2 flex items-center justify-between">
+            {lines.map((line) => (
+              <p key={line[0]}>{line.join(' · ')}</p>
+            ))}
+          </div>
+
+          {showMissing && (
             <p
               data-testid="scan-missing-subtitle-line"
               className="flex items-center gap-[3px] text-xs text-[var(--text-secondary)]"
@@ -125,39 +137,62 @@ export function ScanProgressSheet({
               </span>
               部影片缺繁中字幕
             </p>
-            <button
-              type="button"
-              onClick={() => {
-                onDismiss();
-                navigate({ to: '/library', search: { generate: true } });
-              }}
-              className="text-xs text-[var(--accent-text)] underline-offset-2 hover:underline"
-              data-testid="generate-subtitles-link"
-            >
-              產生字幕 →
-            </button>
-          </div>
-        )}
+          )}
 
-        {/* Auto-dismiss countdown.
-            ⚖️ Alexyu 2026-08-27: the bar, but deliberately NO pause-on-touch.
-            「當我按下掃描媒體庫之後，我不希望畫面一直停留在那個地方不動」— on a
-            phone the sheet must leave on its own, so the bar's job is to make
-            the leaving PREDICTABLE, not preventable. That is the opposite of
-            the desktop card, where hover pauses it: a phone has no hover, and
-            a touch-to-pause would trade「擋住你」for「留住門」when neither
-            should be given up. The door is kept instead by giving 產生字幕 a
-            permanent home on the homepage readout band.
-            No isAutoDismissing state needed: this whole return branch IS the
-            auto-dismissing state, so the bar mounts exactly when the timer at
-            :53 starts. Duration comes from the same constant for the same
-            reason as the desktop card — they must not drift. */}
-        <div className="mt-3 h-0.5 w-full overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
-          <div
-            className="h-full origin-left animate-countdown bg-[var(--text-muted)] motion-reduce:animate-none"
-            style={{ animationDuration: `${AUTO_DISMISS_MS}ms` }}
-            data-testid="sheet-auto-dismiss-bar"
-          />
+          {/* Same destination as the desktop card (dsr-5). The phone toast used
+              to offer 產生字幕 only, so what the summary had just counted as
+              failed had no way in. Links are 44px tall: a phone has to hit them. */}
+          {(hadProblems || showMissing) && (
+            <div className="-my-2 flex flex-wrap gap-x-4">
+              {hadProblems && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onDismiss();
+                    navigate(SCAN_PROBLEMS_DESTINATION);
+                  }}
+                  className="min-h-11 text-xs font-medium text-[var(--accent-text)] underline-offset-2 hover:underline"
+                  data-testid="sheet-view-scan-problems-link"
+                >
+                  查看無法匯入與錯誤
+                </button>
+              )}
+              {showMissing && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onDismiss();
+                    navigate({ to: '/library', search: { generate: true } });
+                  }}
+                  className="min-h-11 text-xs font-medium text-[var(--accent-text)] underline-offset-2 hover:underline"
+                  data-testid="generate-subtitles-link"
+                >
+                  產生字幕 →
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Auto-dismiss countdown.
+              ⚖️ Alexyu 2026-08-27: the bar, but deliberately NO pause-on-touch.
+              「當我按下掃描媒體庫之後，我不希望畫面一直停留在那個地方不動」— on a
+              phone the sheet must leave on its own, so the bar's job is to make
+              the leaving PREDICTABLE, not preventable. That is the opposite of
+              the desktop card, where hover pauses it: a phone has no hover, and
+              a touch-to-pause would trade「擋住你」for「留住門」when neither
+              should be given up. The door is kept instead by giving 產生字幕 a
+              permanent home on the homepage readout band.
+              No isAutoDismissing state needed: this whole return branch IS the
+              auto-dismissing state, so the bar mounts exactly when the timer
+              starts. Duration comes from the same constant for the same reason
+              as the desktop card — they must not drift. */}
+          <div className="h-0.5 w-full overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
+            <div
+              className="h-full origin-left animate-countdown bg-[var(--text-muted)] motion-reduce:animate-none"
+              style={{ animationDuration: `${AUTO_DISMISS_MS}ms` }}
+              data-testid="sheet-auto-dismiss-bar"
+            />
+          </div>
         </div>
       </div>
     );
@@ -171,7 +206,7 @@ export function ScanProgressSheet({
         onClick={() => setExpanded(true)}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className="flex h-16 w-full items-center gap-3 rounded-t-xl bg-[var(--bg-secondary)] px-4 shadow-[var(--shadow-xl)]"
+        className="flex h-16 w-full items-center gap-3 rounded-t-[var(--radius-xl)] bg-[var(--bg-primary)] px-4 shadow-[var(--shadow-xl)]"
         data-testid="scan-progress-sheet"
         aria-label="展開掃描進度"
       >
@@ -186,88 +221,53 @@ export function ScanProgressSheet({
     );
   }
 
-  // Expanded state
+  // Expanded state — E2-M
   return (
     <div
-      className="w-full rounded-t-xl bg-[var(--bg-secondary)] shadow-[var(--shadow-xl)]"
+      className="w-full rounded-t-[var(--radius-xl)] bg-[var(--bg-primary)] shadow-[var(--shadow-xl)]"
       data-testid="scan-progress-sheet"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       role="status"
     >
       {/* Drag handle */}
-      <div className="flex justify-center pb-2 pt-3">
+      <div className="flex justify-center pt-3">
         <div
-          className="h-1 w-10 rounded-full bg-[var(--bg-tertiary)]"
+          className="h-1 w-10 rounded-full bg-[var(--text-muted)]"
           data-testid="sheet-drag-handle"
         />
       </div>
 
-      <div className="px-4 pb-4">
-        {/* Header */}
-        <p className="mb-3 text-sm font-semibold text-[var(--text-primary)]">媒體庫掃描中</p>
+      <div className="flex flex-col gap-4 px-5 pb-6 pt-4">
+        <p className="text-base font-semibold text-[var(--text-primary)]">媒體庫掃描中</p>
 
-        {/* Progress bar */}
-        <div className="mb-3 flex items-center gap-3">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
+        {/* Progress bar + percent */}
+        <div className="flex flex-col gap-2">
+          <div className="h-1.5 w-full overflow-hidden rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)]">
             <div
-              className="h-full rounded-full bg-[var(--accent-primary)] transition-[width] duration-[var(--motion-move)]"
+              className="h-full rounded-[var(--radius-sm)] bg-[var(--accent-primary)] transition-[width] duration-[var(--motion-move)]"
               style={{ width: `${state.percentDone}%` }}
               data-testid="sheet-progress-bar"
             />
           </div>
-          <span className="min-w-[3ch] text-right font-mono text-sm text-[var(--text-primary)]">
+          <span className="font-mono text-sm font-semibold tabular-nums text-[var(--text-primary)]">
             {state.percentDone}%
           </span>
         </div>
 
-        {/* Stats — two rows for narrow viewport (4 counters per design H5) */}
-        <div className="mb-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-[var(--text-secondary)]">
-          <span className="flex items-center gap-1">
-            <File className="h-3.5 w-3.5" />
-            找到{' '}
-            <span className="font-mono text-[var(--text-primary)]">
-              {state.filesFound.toLocaleString()}
-            </span>
-          </span>
-          <span className="flex items-center gap-1">
-            <FileCheck className="h-3.5 w-3.5" />
-            解析{' '}
-            <span className="font-mono text-[var(--text-primary)]">
-              {state.filesProcessed.toLocaleString()}
-            </span>
-          </span>
-          <span className="flex items-center gap-1">
-            <Link className="h-3.5 w-3.5" />
-            比對{' '}
-            <span className="font-mono text-[var(--text-primary)]">
-              {state.filesProcessed.toLocaleString()}
-            </span>
-          </span>
-          <span className="flex items-center gap-1">
-            <AlertTriangle
-              className={cn('h-3.5 w-3.5', state.errorCount > 0 && 'text-[var(--error-text)]')}
-            />
-            錯誤{' '}
-            <span
-              className={cn(
-                'font-mono',
-                state.errorCount > 0 ? 'text-[var(--error-text)]' : 'text-[var(--text-primary)]'
-              )}
-            >
-              {state.errorCount}
-            </span>
-          </span>
-        </div>
+        {/* 找到 · 解析 · 錯誤 — no 比對 counter, see ScanProgressCard. */}
+        <ScanStats state={state} />
 
-        {/* ETA */}
         {state.estimatedTime && (
-          <p className="mb-3 text-xs text-[var(--text-muted)]">預估剩餘: {state.estimatedTime}</p>
+          <p className="text-xs text-[var(--text-muted)]">預估剩餘：{state.estimatedTime}</p>
         )}
 
         {/* Cancel */}
         {showCancelConfirm ? (
-          <div className="rounded-lg bg-[var(--bg-primary)] p-3" data-testid="sheet-cancel-confirm">
+          <div
+            className="rounded-[var(--radius-md)] bg-[var(--bg-secondary)] p-3"
+            data-testid="sheet-cancel-confirm"
+          >
             <p className="mb-3 text-sm text-[var(--text-secondary)]">
               確定要取消掃描嗎？已處理的結果會保留。
             </p>
@@ -275,7 +275,7 @@ export function ScanProgressSheet({
               <button
                 type="button"
                 onClick={() => setShowCancelConfirm(false)}
-                className="rounded-md px-3 py-1.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
+                className="min-h-11 rounded-[var(--radius-md)] px-3 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
               >
                 繼續掃描
               </button>
@@ -283,7 +283,7 @@ export function ScanProgressSheet({
                 type="button"
                 onClick={handleCancelConfirm}
                 disabled={isCancelling}
-                className="rounded-md bg-[var(--error)] px-3 py-1.5 text-sm text-[var(--text-on-scrim)] hover:bg-[var(--error-pressed)] disabled:opacity-50"
+                className="min-h-11 rounded-[var(--radius-md)] bg-[var(--error)] px-3 text-sm text-[var(--text-on-scrim)] hover:bg-[var(--error-pressed)] disabled:opacity-50"
                 data-testid="sheet-cancel-confirm-btn"
               >
                 {isCancelling ? '取消中...' : '取消掃描'}
@@ -295,7 +295,7 @@ export function ScanProgressSheet({
             <button
               type="button"
               onClick={() => setShowCancelConfirm(true)}
-              className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              className="min-h-11 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] active:bg-[var(--bg-tertiary)]"
               data-testid="sheet-cancel-btn"
             >
               取消掃描

@@ -42,6 +42,9 @@ export interface ScanProgressEvent {
   estimatedTime: string;
   /** 掃描器真實回報的未比對數;SSE payload 的 files_unmatched */
   filesUnmatched?: number;
+  /** Only on scan_complete: rows the scanner actually inserted / updated. */
+  filesCreated?: number;
+  filesUpdated?: number;
 }
 
 interface ApiResponse<T> {

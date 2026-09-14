@@ -1,6 +1,6 @@
 // Design ref: ux-design.pen Screen E1-D (KvZSc) · E1-M (uABWl)
-// ⚠️ 僅「掃描排程」與「開始掃描」那半對得上；同頁的「媒體資料夾」區塊已被 MediaLibraryManager 取代，
-//    見 drift-e1-scanner-multi-library。E1 的「掃描頻率」下拉前端未實作（後端 ScanScheduler 存在）
+// 媒體庫區塊由 MediaLibraryManager／LibraryCard 畫；E1 已在 dsr-5 依多媒體庫改版重畫（drift-e1 關閉）。
+// 掃描排程（每小時／每天／僅手動）前後端都有實作——原本這裡寫「前端未實作」是錯的。
 /**
  * Scanner Settings component (Story 7.3)
  * Displays media folder paths, scan schedule, last scan info, and scan trigger button.
@@ -126,7 +126,7 @@ export function ScannerSettings() {
       )}
 
       {/* Settings card */}
-      <div className="space-y-6 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-6">
+      <div className="space-y-4 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4 sm:space-y-6 sm:p-6">
         {/* Media Libraries (Story 7b-4) */}
         <MediaLibraryManager />
 
@@ -145,7 +145,7 @@ export function ScannerSettings() {
             value={schedule?.frequency ?? 'manual'}
             onChange={(e) => handleScheduleChange(e.target.value as ScheduleFrequency)}
             disabled={updateSchedule.isPending}
-            className="w-48 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:border-[var(--accent-hover)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-hover)]"
+            className="block w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:border-[var(--focus-ring)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] sm:w-50"
             data-testid="schedule-select"
           >
             {SCHEDULE_OPTIONS.map((opt) => (
@@ -162,7 +162,7 @@ export function ScannerSettings() {
         <div className="space-y-2">
           <span className="text-sm font-medium text-[var(--text-secondary)]">上次掃描</span>
           <p
-            className="font-mono text-sm text-[var(--text-secondary)]"
+            className="font-mono text-xs text-[var(--text-muted)] sm:text-sm"
             data-testid="last-scan-info"
           >
             {status
@@ -179,10 +179,12 @@ export function ScannerSettings() {
           onClick={handleScan}
           disabled={isScanning || triggerScan.isPending}
           className={cn(
-            'flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3.5 text-sm font-semibold transition-colors',
+            'flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-4 py-3.5 text-sm font-semibold text-[var(--text-on-accent)] transition-colors sm:text-base',
+            // Was a gold label on a half-transparent gold fill while scanning,
+            // and a hover that set the same colour it already had.
             isScanning || triggerScan.isPending
-              ? 'cursor-not-allowed bg-[var(--accent-primary)]/50 text-[var(--accent-text)]'
-              : 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] hover:bg-[var(--accent-primary)]'
+              ? 'cursor-not-allowed opacity-50'
+              : 'hover:bg-[var(--accent-hover)] active:bg-[var(--accent-pressed)]'
           )}
           data-testid="scan-trigger-button"
         >

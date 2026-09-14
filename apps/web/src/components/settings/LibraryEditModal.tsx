@@ -105,9 +105,9 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
     /* --overlay-scrim is the modal-backdrop token and stays DARK in both themes:
        a paper modal on paper ground needs the same boundary a dark one does.
        Was black/60; the token is 70%. */
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-scrim)]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-scrim)] p-5">
       <div
-        className="w-full max-w-md rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-6 shadow-[var(--shadow-xl)]"
+        className="w-full max-w-md rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4 shadow-[var(--shadow-xl)] sm:p-6"
         data-testid="library-edit-modal"
       >
         <div className="mb-4 flex items-center justify-between">
@@ -118,7 +118,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
             type="button"
             onClick={onClose}
             aria-label="關閉"
-            className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-secondary)]"
+            className="rounded-[var(--radius-sm)] p-1 text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
           >
             <X className="h-4 w-4" />
           </button>
@@ -134,7 +134,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
           <div>
             <label
               htmlFor="library-name-input"
-              className="mb-1 block text-sm font-medium text-[var(--text-secondary)]"
+              className="mb-2 block text-sm font-medium text-[var(--text-secondary)]"
             >
               名稱
             </label>
@@ -144,7 +144,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="我的電影"
-              className="w-full rounded-md border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/60 px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
+              className="w-full h-11 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3.5 sm:h-10 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--focus-ring)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
               data-testid="library-name-input"
             />
           </div>
@@ -152,7 +152,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
           <div>
             <label
               htmlFor="library-type-select"
-              className="mb-1 block text-sm font-medium text-[var(--text-secondary)]"
+              className="mb-2 block text-sm font-medium text-[var(--text-secondary)]"
             >
               類型
             </label>
@@ -160,7 +160,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
               id="library-type-select"
               value={contentType}
               onChange={(e) => setContentType(e.target.value as 'movie' | 'series')}
-              className="w-full rounded-md border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/60 px-3 py-2 text-sm text-[var(--text-primary)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
+              className="w-full h-11 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3.5 sm:h-10 text-sm text-[var(--text-primary)] focus:border-[var(--focus-ring)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
               data-testid="library-type-select"
             >
               <option value="movie">電影</option>
@@ -183,28 +183,30 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
           <div>
             <label
               htmlFor="library-path-input"
-              className="mb-1 block text-sm font-medium text-[var(--text-secondary)]"
+              className="mb-2 block text-sm font-medium text-[var(--text-secondary)]"
             >
               資料夾路徑
             </label>
 
             {isEditMode && existingLibrary?.paths && (
-              <div className="mb-2 space-y-1">
+              <div className="mb-2 space-y-2">
                 {existingLibrary.paths.map((p) => (
                   <div
                     key={p.id}
-                    className="flex items-center justify-between rounded-md bg-[var(--bg-secondary)] px-3 py-1.5"
+                    className="flex h-11 items-center justify-between rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-primary)] pl-3.5 pr-1.5"
                   >
-                    <span className="truncate font-mono text-xs text-[var(--text-secondary)]">
+                    <span className="truncate font-mono text-sm text-[var(--text-secondary)]">
                       {p.path}
                     </span>
+                    {/* Neutral, not 硃砂: taking a folder out of a library is an
+                        edit, not something broken (固定詞彙). */}
                     <button
                       type="button"
                       onClick={() => handleRemovePath(p.id)}
                       aria-label={`移除路徑 ${p.path}`}
-                      className="ml-2 rounded p-0.5 text-[var(--text-muted)] hover:text-[var(--error-text)]"
+                      className="ml-2 flex size-11 shrink-0 items-center justify-center sm:size-8 rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 ))}
@@ -218,7 +220,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
                 value={newPath}
                 onChange={(e) => setNewPath(e.target.value)}
                 placeholder="/media/movies"
-                className="flex-1 rounded-md border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/60 px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
+                className="flex-1 h-10 font-mono rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--focus-ring)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
                 data-testid="library-path-input"
               />
               {isEditMode && (
@@ -227,7 +229,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
                   onClick={handleAddPath}
                   disabled={!newPath.trim() || addPath.isPending}
                   aria-label="新增路徑"
-                  className="rounded-md bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] disabled:opacity-50"
+                  className="flex size-11 shrink-0 items-center justify-center sm:size-10 rounded-[var(--radius-md)] border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] disabled:opacity-50"
                 >
                   <Plus className="h-4 w-4" />
                 </button>
@@ -242,7 +244,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
               keep saying both halves — free work happens, paid work waits — and
               must never imply that scanning itself produces subtitles. */}
           <div
-            className="border-t border-[var(--border-subtle)]/50 pt-4"
+            className="border-t border-[var(--border-subtle)] pt-4"
             data-testid="library-auto-subtitle-field"
           >
             {/* The label WRAPS the input so the whole row is the hit area, and
@@ -301,7 +303,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
                 className="my-2 rounded-[var(--radius-sm)] bg-[var(--info-tint)] p-3"
                 data-testid="library-auto-subtitle-unsupported-notice"
               >
-                <p className="text-[13px] font-medium leading-relaxed text-[var(--text-primary)]">
+                <p className="text-sm font-medium leading-relaxed text-[var(--text-primary)]">
                   字幕生成管線尚未啟用，這個選項無法變更。
                 </p>
                 <p className="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">
@@ -329,10 +331,10 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
                 colour the design system itself marks as unreadable repeats the
                 hide-the-field mistake in a different costume. */}
             <div className="space-y-1.5 pl-[30px]">
-              <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+              <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
                 影片內建繁體中文字幕會直接沿用，簡體字幕自動轉成繁體。這些都在本機執行，不會產生費用。
               </p>
-              <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+              <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
                 需要 AI
                 翻譯或語音辨識的影片不會自動處理，它們會留在「產生字幕」清單裡，標好預估金額等你確認。
               </p>
@@ -340,11 +342,12 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
           </div>
         </div>
 
-        <div className="flex gap-3">
+        {/* E5-D: right-aligned at natural width; E5-M: the two split the row. */}
+        <div className="flex gap-3 sm:justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-[var(--border-subtle)]/50 px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
+            className="h-11 flex-1 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] sm:flex-none"
           >
             取消
           </button>
@@ -352,7 +355,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
             type="button"
             onClick={handleSave}
             disabled={!name.trim() || isSaving}
-            className="flex-1 rounded-lg bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-[var(--text-on-accent)] hover:bg-[var(--accent-pressed)] disabled:opacity-50"
+            className="h-11 flex-1 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-5 text-sm font-semibold text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-hover)] active:bg-[var(--accent-pressed)] disabled:opacity-50 sm:flex-none"
             data-testid="library-save-button"
           >
             {isSaving ? '儲存中...' : isEditMode ? '儲存變更' : '建立'}
