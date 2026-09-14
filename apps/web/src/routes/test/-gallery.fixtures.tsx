@@ -93,6 +93,7 @@ import { DownloadsTableV2 } from '../../components/downloads/DownloadsTableV2';
 import {
   DownloadsEmptyV2,
   DownloadsQbtErrorV2,
+  DownloadsQbtNotConfiguredV2,
 } from '../../components/downloads/DownloadsStatesV2';
 import { BatchConfirmDialog } from '../../components/library/BatchConfirmDialog';
 import { BatchProgress } from '../../components/library/BatchProgress';
@@ -1471,6 +1472,15 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     component: DownloadsQbtErrorV2,
     props: { onRetry: noop },
     penNode: 'screen-section', // Screen D6-D-v2 (UNVRU)
+    statesOnly: ['default'],
+    width: 720,
+    routePath: '/downloads',
+  },
+  {
+    id: 'downloads-downloads-states-v2/qbt-not-configured',
+    label: 'downloads/DownloadsQbtNotConfiguredV2',
+    component: DownloadsQbtNotConfiguredV2,
+    penNode: 'screen-section', // Screen D11-D-v2 (tQex7)
     statesOnly: ['default'],
     width: 720,
     routePath: '/downloads',

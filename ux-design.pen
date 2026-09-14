@@ -91562,6 +91562,402 @@
                   ]
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "tQex7",
+              "x": 27820,
+              "y": 22545,
+              "name": "D11-D-v2 · 尚未設定 qBittorrent",
+              "clip": true,
+              "width": 1440,
+              "height": 900,
+              "fill": "$bg-primary",
+              "children": [
+                {
+                  "id": "z2ji0",
+                  "type": "ref",
+                  "ref": "BDeUS",
+                  "name": "Sidebar",
+                  "descendants": {
+                    "wGp06": {
+                      "fill": "#00000000"
+                    },
+                    "wGp06/QyNdL": {
+                      "fill": "$text-secondary"
+                    },
+                    "wGp06/bsavg": {
+                      "fill": "$text-secondary",
+                      "fontWeight": "normal"
+                    },
+                    "WFdLB": {
+                      "fill": "$accent-tint"
+                    },
+                    "WFdLB/QyNdL": {
+                      "fill": "$accent-text"
+                    },
+                    "WFdLB/bsavg": {
+                      "fill": "$accent-text",
+                      "fontWeight": "600"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "g9vhKR",
+                  "name": "Content",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "fill": "$bg-primary",
+                  "layout": "vertical",
+                  "gap": "$Space/lg",
+                  "padding": [
+                    "$Space/xl",
+                    "$Space/2xl"
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "f8r0xz",
+                      "name": "header",
+                      "fill": "$text-primary",
+                      "content": "下載",
+                      "lineHeight": "$Type/H2/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/H2/Size",
+                      "fontWeight": "$Type/H2/Weight"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "m6aXq",
+                      "name": "FilterToolbar",
+                      "width": "fill_container",
+                      "gap": "$Space/sm",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "I0FElp",
+                          "name": "chip-全部",
+                          "height": 44,
+                          "fill": "$bg-tertiary",
+                          "cornerRadius": "$radius-pill",
+                          "gap": "$Space/xs",
+                          "padding": [
+                            "$Space/none",
+                            "$Space/lg"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "DAYX3",
+                              "name": "chipLabel",
+                              "fill": "$text-secondary",
+                              "content": "全部",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "CHIYY",
+                              "name": "chipCount",
+                              "fill": "$text-muted",
+                              "content": "—",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Mono",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "eXXFL",
+                          "name": "chip-下載中",
+                          "height": 44,
+                          "fill": "$bg-tertiary",
+                          "cornerRadius": "$radius-pill",
+                          "gap": "$Space/xs",
+                          "padding": [
+                            "$Space/none",
+                            "$Space/lg"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "uDaSq",
+                              "name": "chipLabel",
+                              "fill": "$text-secondary",
+                              "content": "下載中",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "Yg8lp",
+                              "name": "chipCount",
+                              "fill": "$text-muted",
+                              "content": "—",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Mono",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "cHXtI",
+                          "name": "chip-已暫停",
+                          "height": 44,
+                          "fill": "$bg-tertiary",
+                          "cornerRadius": "$radius-pill",
+                          "gap": "$Space/xs",
+                          "padding": [
+                            "$Space/none",
+                            "$Space/lg"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "ipbSV",
+                              "name": "chipLabel",
+                              "fill": "$text-secondary",
+                              "content": "已暫停",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "IImhe",
+                              "name": "chipCount",
+                              "fill": "$text-muted",
+                              "content": "—",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Mono",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "x8GA1h",
+                          "name": "chip-已完成",
+                          "height": 44,
+                          "fill": "$bg-tertiary",
+                          "cornerRadius": "$radius-pill",
+                          "gap": "$Space/xs",
+                          "padding": [
+                            "$Space/none",
+                            "$Space/lg"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "O2Onx",
+                              "name": "chipLabel",
+                              "fill": "$text-secondary",
+                              "content": "已完成",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "iJEbS",
+                              "name": "chipCount",
+                              "fill": "$text-muted",
+                              "content": "—",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Mono",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "vSscu",
+                          "name": "chip-做種",
+                          "height": 44,
+                          "fill": "$bg-tertiary",
+                          "cornerRadius": "$radius-pill",
+                          "gap": "$Space/xs",
+                          "padding": [
+                            "$Space/none",
+                            "$Space/lg"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "eqO1q",
+                              "name": "chipLabel",
+                              "fill": "$text-secondary",
+                              "content": "做種",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "uwbMm",
+                              "name": "chipCount",
+                              "fill": "$text-muted",
+                              "content": "—",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Mono",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "o1BY2",
+                          "name": "chip-錯誤",
+                          "height": 44,
+                          "fill": "$bg-tertiary",
+                          "cornerRadius": "$radius-pill",
+                          "gap": "$Space/xs",
+                          "padding": [
+                            "$Space/none",
+                            "$Space/lg"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "IiXM8",
+                              "name": "chipLabel",
+                              "fill": "$text-secondary",
+                              "content": "錯誤",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "OGkfI",
+                              "name": "chipCount",
+                              "fill": "$text-muted",
+                              "content": "—",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Mono",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "lcphs",
+                      "name": "NotConfiguredPanel",
+                      "width": "fill_container",
+                      "height": 320,
+                      "fill": "$bg-secondary",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": "$Space/md",
+                      "padding": "$Space/xl-plus",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "UHGxZ",
+                          "name": "plug",
+                          "width": 40,
+                          "height": 40,
+                          "icon": "plug",
+                          "library": "lucide",
+                          "fill": "$text-secondary"
+                        },
+                        {
+                          "type": "text",
+                          "id": "vw4yL",
+                          "name": "title",
+                          "fill": "$text-primary",
+                          "content": "還沒有設定 qBittorrent",
+                          "lineHeight": "$Type/BodyLg/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/BodyLg/Size",
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "iO83o",
+                          "name": "sub",
+                          "fill": "$text-secondary",
+                          "content": "設定好之後，下載進度會顯示在這裡。",
+                          "lineHeight": "$Type/Body/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Body/Size",
+                          "fontWeight": "$Type/Body/Weight"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "icFmI",
+                          "name": "btnRow",
+                          "gap": "$Space/md",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "GzzYc",
+                              "name": "btnSettings",
+                              "height": 44,
+                              "fill": "$accent-primary",
+                              "cornerRadius": "$radius-md",
+                              "stroke": "#00000000",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                "$Space/none",
+                                "$Space/lg-plus"
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "MGsMp",
+                                  "name": "settingsLabel",
+                                  "fill": "$text-on-accent",
+                                  "content": "前往設定",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
             }
           ]
         },

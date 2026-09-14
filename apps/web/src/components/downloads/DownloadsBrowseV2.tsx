@@ -40,6 +40,7 @@ import {
   DownloadsTableSkeletonV2,
   DownloadsEmptyV2,
   DownloadsQbtErrorV2,
+  DownloadsQbtNotConfiguredV2,
 } from './DownloadsStatesV2';
 
 const routeApi = getRouteApi('/downloads');
@@ -239,12 +240,14 @@ export function DownloadsBrowseV2() {
     clearSelection();
   };
 
-  const showQbtError = Boolean(error) || (configResolved && !isConfigured);
-  const listSelecting = selectMode && !showTable && !showQbtError;
+  // Never set up ≠ can't reach it: the first gets its own card with no 重試 (nothing to retry).
+  const notConfigured = configResolved && !isConfigured;
+  const qbtUnavailable = Boolean(error) || notConfigured;
+  const listSelecting = selectMode && !showTable && !qbtUnavailable;
   // Table checkboxes are persistent → the batch bar follows the selection; List follows select-mode
   // and takes the toolbar's place (D2-D-v2).
-  const showBatchBar = !showQbtError && (showTable ? selectedHashes.length > 0 : selectMode);
-  const showToolbar = !showQbtError && !listSelecting;
+  const showBatchBar = !qbtUnavailable && (showTable ? selectedHashes.length > 0 : selectMode);
+  const showToolbar = !qbtUnavailable && !listSelecting;
 
   const rangeStart = data ? (data.page - 1) * data.pageSize + 1 : 0;
   const rangeEnd = data ? Math.min(data.page * data.pageSize, data.totalItems) : 0;
@@ -272,9 +275,10 @@ export function DownloadsBrowseV2() {
       {/* Status-filter chips — 6 live values, counts in Mono */}
       <div className="flex flex-wrap gap-2" role="tablist" aria-label="下載狀態篩選">
         {FILTERS.map((f) => {
-          const count = counts?.[f.value] ?? 0;
+          // No counts (not set up, or still loading) reads「—」, not a confident 0.
+          const count = counts?.[f.value];
           const isActive = activeFilter === f.value;
-          if (f.value === 'error' && count === 0 && !isActive) return null;
+          if (f.value === 'error' && !count && !isActive) return null;
           return (
             <button
               key={f.value}
@@ -291,7 +295,7 @@ export function DownloadsBrowseV2() {
               )}
             >
               <span>{f.label}</span>
-              <span className="font-mono text-xs font-normal tabular-nums">{count}</span>
+              <span className="font-mono text-xs font-normal tabular-nums">{count ?? '—'}</span>
             </button>
           );
         })}
@@ -462,7 +466,9 @@ export function DownloadsBrowseV2() {
       )}
 
       <div id="downloads-list-v2" role="tabpanel">
-        {showQbtError ? (
+        {notConfigured ? (
+          <DownloadsQbtNotConfiguredV2 />
+        ) : qbtUnavailable ? (
           <DownloadsQbtErrorV2 onRetry={() => void refetch()} message={error?.message} />
         ) : !data || isLoading ? (
           showTable ? (

@@ -11,7 +11,12 @@ vi.mock('@tanstack/react-router', () => ({
   ),
 }));
 
-import { DownloadsSkeletonV2, DownloadsEmptyV2, DownloadsQbtErrorV2 } from './DownloadsStatesV2';
+import {
+  DownloadsSkeletonV2,
+  DownloadsEmptyV2,
+  DownloadsQbtErrorV2,
+  DownloadsQbtNotConfiguredV2,
+} from './DownloadsStatesV2';
 
 describe('DownloadsSkeletonV2 (ux3-4-3 AC6)', () => {
   it('renders an aria-busy card-shaped skeleton', () => {
@@ -52,5 +57,24 @@ describe('DownloadsQbtErrorV2 (ux3-4-3 AC6 — fail-soft)', () => {
   it('surfaces a backend message when provided', () => {
     render(<DownloadsQbtErrorV2 onRetry={vi.fn()} message="qBittorrent 認證失敗" />);
     expect(screen.getByText('qBittorrent 認證失敗')).toBeInTheDocument();
+  });
+});
+
+describe('DownloadsQbtNotConfiguredV2 (disc-2026-09-downloads-not-configured-says-unreachable)', () => {
+  it('says qBittorrent is not set up yet — not that it cannot be reached', () => {
+    render(<DownloadsQbtNotConfiguredV2 />);
+    const card = screen.getByTestId('downloads-qbt-not-configured-v2');
+    expect(card).toHaveTextContent('還沒有設定 qBittorrent');
+    expect(card).not.toHaveTextContent('無法連線');
+  });
+
+  it('offers only 前往設定 — there is nothing to retry — and is not announced as an error', () => {
+    render(<DownloadsQbtNotConfiguredV2 />);
+    expect(screen.getByRole('link', { name: '前往設定' })).toHaveAttribute(
+      'href',
+      '/settings/qbittorrent'
+    );
+    expect(screen.queryByRole('button', { name: '重試' })).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
