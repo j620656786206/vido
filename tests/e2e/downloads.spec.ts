@@ -76,7 +76,7 @@ test.describe('Downloads Page @downloads @ui', () => {
 // =============================================================================
 //
 // Browser-level guard for the AC#7 contract: when useQBittorrentConfig reports
-// configured !== true, the useDownloads / useDownloadCounts / useDownloadDetails
+// configured !== true, the useDownloads / useDownloadCounts
 // hooks MUST NOT issue any /api/v1/downloads* request. Unit-level coverage
 // already exists in apps/web/src/hooks/useDownloads.spec.ts; this E2E gives the
 // same invariant a deterministic browser proof so future regressions surface in

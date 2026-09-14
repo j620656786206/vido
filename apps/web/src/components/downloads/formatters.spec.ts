@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { formatSpeed, formatSize, formatETA, formatProgress, formatDate } from './formatters';
+import {
+  formatSpeed,
+  formatSize,
+  formatETA,
+  formatProgress,
+  formatDownloadMeta,
+} from './formatters';
 
 describe('formatSpeed', () => {
   it('formats zero', () => {
@@ -103,10 +109,56 @@ describe('formatProgress', () => {
   });
 });
 
-describe('formatDate', () => {
-  it('formats ISO date string', () => {
-    const result = formatDate('2026-01-15T10:30:00Z');
-    expect(result).toBeTruthy();
-    expect(typeof result).toBe('string');
+describe('formatDownloadMeta (dsr-4 card footer + table cells)', () => {
+  const GiB = 1024 ** 3;
+  const d = {
+    status: 'downloading' as const,
+    downloadSpeed: 1_048_576,
+    uploadSpeed: 1024,
+    eta: 600,
+    size: 4 * GiB,
+    progress: 0.5,
+  };
+
+  it('a downloading torrent shows every number, size as done / total', () => {
+    const m = formatDownloadMeta(d);
+    expect(m.down).toBe('↓ 1.0 MB/s');
+    expect(m.up).toBe('↑ 1.0 KB/s');
+    expect(m.eta).toBe(formatETA(600));
+    expect(m.size).toBe(`${formatSize(2 * GiB)} / ${formatSize(4 * GiB)}`);
+    // same unit on both sides → the dense cell drops the repeated unit
+    expect(m.sizeCompact).toBe(`${formatSize(2 * GiB).split(' ')[0]} / ${formatSize(4 * GiB)}`);
+  });
+
+  it('keeps both units when they differ', () => {
+    const m = formatDownloadMeta({ ...d, progress: 0.1 });
+    expect(m.sizeCompact).toBe(m.size);
+  });
+
+  it('seeding keeps ↑ but dashes ↓ and ETA', () => {
+    const m = formatDownloadMeta({ ...d, status: 'seeding', progress: 1 });
+    expect(m.down).toBe('↓ —');
+    expect(m.up).toBe('↑ 1.0 KB/s');
+    expect(m.eta).toBe('—');
+    expect(m.size).toBe(formatSize(4 * GiB));
+  });
+
+  it.each(['paused', 'stalled', 'queued', 'checking', 'error'] as const)(
+    'a %s torrent dashes every rate — a stale speed is not a speed',
+    (status) => {
+      const m = formatDownloadMeta({ ...d, status });
+      expect([m.down, m.up, m.eta]).toEqual(['↓ —', '↑ —', '—']);
+    }
+  );
+
+  it('an unknown size (magnet still fetching metadata) is「—」, not「0 B / 0 B」', () => {
+    const m = formatDownloadMeta({ ...d, size: 0, progress: 0 });
+    expect(m.size).toBe('—');
+    expect(m.sizeCompact).toBe('—');
+  });
+
+  it('never reports more done than the total', () => {
+    const m = formatDownloadMeta({ ...d, progress: 1.2 });
+    expect(m.size).toBe(formatSize(4 * GiB));
   });
 });

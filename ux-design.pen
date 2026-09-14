@@ -84135,7 +84135,7 @@
               "name": "D1-D-v2 · 桌面預設",
               "clip": true,
               "width": 1440,
-              "height": 1580,
+              "height": 1452,
               "fill": "$bg-primary",
               "children": [
                 {
@@ -84686,7 +84686,7 @@
                               "content": "已暫停"
                             },
                             "PXLDA": {
-                              "fill": "$text-disabled",
+                              "fill": "$text-muted",
                               "width": 208
                             },
                             "va0aG": {
@@ -84727,7 +84727,7 @@
                               "fill": "$info"
                             },
                             "fmhJf": {
-                              "fill": "$info",
+                              "fill": "$info-text",
                               "content": "做種"
                             },
                             "PXLDA": {
@@ -84735,7 +84735,7 @@
                               "width": 480
                             },
                             "va0aG": {
-                              "fill": "$info",
+                              "fill": "$info-text",
                               "content": "100%"
                             },
                             "vVmR0": {
@@ -84769,7 +84769,7 @@
                               "fill": "$success"
                             },
                             "fmhJf": {
-                              "fill": "$success",
+                              "fill": "$success-text",
                               "content": "已完成"
                             },
                             "PXLDA": {
@@ -84777,7 +84777,7 @@
                               "width": 480
                             },
                             "va0aG": {
-                              "fill": "$success",
+                              "fill": "$success-text",
                               "content": "100%"
                             },
                             "vVmR0": {
@@ -85051,104 +85051,6 @@
                                   "fill": "$text-secondary"
                                 }
                               ]
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "SHnRQ",
-                      "name": "specNote",
-                      "width": "fill_container",
-                      "fill": "$bg-secondary",
-                      "cornerRadius": "$radius-md",
-                      "stroke": "$border-subtle",
-                      "strokeWidth": 1,
-                      "strokeAlignment": "inner",
-                      "layout": "vertical",
-                      "gap": "$Space/sm",
-                      "padding": [
-                        "$Space/md",
-                        "$Space/lg"
-                      ],
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "BTt7c",
-                          "name": "snHdr",
-                          "gap": "$Space/xs",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "icon",
-                              "id": "x9Kyv",
-                              "name": "snIcon",
-                              "width": 14,
-                              "height": 14,
-                              "icon": "info",
-                              "library": "lucide",
-                              "fill": "$text-muted"
-                            },
-                            {
-                              "type": "text",
-                              "id": "QlN8Y",
-                              "name": "snTitle",
-                              "fill": "$text-muted",
-                              "content": "設計註記 · 目標態規格",
-                              "lineHeight": "$Type/Label/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Label/Size",
-                              "fontWeight": "600"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "text",
-                          "id": "xgY0G",
-                          "name": "snSSE",
-                          "fill": "$text-secondary",
-                          "textGrowth": "fixed-width",
-                          "width": "fill_container",
-                          "content": "進度 / 速度 / ETA 由 download SSE 事件即時推送（非輪詢）；採 lazy-SSE 連線（進入頁面才建立、離開即釋放）。",
-                          "lineHeight": "$Type/Label/Line",
-                          "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Label/Size",
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "DmDXx",
-                          "name": "snBE",
-                          "width": "fill_container",
-                          "layout": "vertical",
-                          "gap": "$Space/2xs",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "IAWES",
-                              "name": "snBEt",
-                              "fill": "$text-secondary",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container",
-                              "content": "卡片動作為淨新增後端，尚未接線（目標態規格）：",
-                              "lineHeight": "$Type/Label/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Label/Size",
-                              "fontWeight": "normal"
-                            },
-                            {
-                              "type": "text",
-                              "id": "P6bmx",
-                              "name": "snBEc",
-                              "fill": "$text-muted",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container",
-                              "content": "POST /downloads/:hash/pause · POST /downloads/:hash/resume · DELETE /downloads/:hash?deleteFiles",
-                              "lineHeight": "$Type/Label/Line",
-                              "fontFamily": "$Type/Family/Mono",
-                              "fontSize": "$Type/Label/Size",
-                              "fontWeight": "normal"
                             }
                           ]
                         }
@@ -85680,6 +85582,44 @@
                             },
                             {
                               "type": "frame",
+                              "id": "LmM5I",
+                              "name": "batchResume",
+                              "height": 44,
+                              "fill": "$bg-tertiary",
+                              "cornerRadius": "$radius-md",
+                              "gap": "$Space/sm",
+                              "padding": [
+                                "$Space/none",
+                                "$Space/lg"
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "p5Gzn",
+                                  "name": "i",
+                                  "width": 18,
+                                  "height": 18,
+                                  "icon": "play",
+                                  "library": "lucide",
+                                  "fill": "$text-secondary"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "cBAov",
+                                  "name": "l",
+                                  "fill": "$text-primary",
+                                  "content": "批次繼續",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
                               "id": "W665N",
                               "name": "batchRemove",
                               "height": 44,
@@ -85701,7 +85641,7 @@
                                   "height": 18,
                                   "icon": "trash-2",
                                   "library": "lucide",
-                                  "fill": "$error"
+                                  "fill": "$error-text"
                                 },
                                 {
                                   "type": "text",
@@ -85834,7 +85774,7 @@
                               "content": "已暫停"
                             },
                             "PXLDA": {
-                              "fill": "$text-disabled",
+                              "fill": "$text-muted",
                               "width": 208
                             },
                             "va0aG": {
@@ -85878,7 +85818,7 @@
                               "fill": "$info"
                             },
                             "fmhJf": {
-                              "fill": "$info",
+                              "fill": "$info-text",
                               "content": "做種"
                             },
                             "PXLDA": {
@@ -85886,7 +85826,7 @@
                               "width": 480
                             },
                             "va0aG": {
-                              "fill": "$info",
+                              "fill": "$info-text",
                               "content": "100%"
                             },
                             "vVmR0": {
@@ -85931,7 +85871,7 @@
                               "fill": "$success"
                             },
                             "fmhJf": {
-                              "fill": "$success",
+                              "fill": "$success-text",
                               "content": "已完成"
                             },
                             "PXLDA": {
@@ -85939,7 +85879,7 @@
                               "width": 480
                             },
                             "va0aG": {
-                              "fill": "$success",
+                              "fill": "$success-text",
                               "content": "100%"
                             },
                             "vVmR0": {
@@ -86446,17 +86386,6 @@
                                       "fontWeight": "500"
                                     }
                                   ]
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "bcxCZ",
-                                  "name": "sc",
-                                  "fill": "$text-muted",
-                                  "content": "Space",
-                                  "lineHeight": "$Type/Label/Line",
-                                  "fontFamily": "$Type/Family/Mono",
-                                  "fontSize": "$Type/Label/Size",
-                                  "fontWeight": "normal"
                                 }
                               ]
                             },
@@ -86547,7 +86476,7 @@
                                       "height": 18,
                                       "icon": "trash-2",
                                       "library": "lucide",
-                                      "fill": "$error"
+                                      "fill": "$error-text"
                                     },
                                     {
                                       "type": "text",
@@ -86561,17 +86490,6 @@
                                       "fontWeight": "500"
                                     }
                                   ]
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "piFKh",
-                                  "name": "sc",
-                                  "fill": "$text-muted",
-                                  "content": "⌫",
-                                  "lineHeight": "$Type/Label/Line",
-                                  "fontFamily": "$Type/Family/Mono",
-                                  "fontSize": "$Type/Label/Size",
-                                  "fontWeight": "normal"
                                 }
                               ]
                             }
@@ -86651,7 +86569,7 @@
                                   "name": "iconHolder",
                                   "width": 48,
                                   "height": 48,
-                                  "fill": "$error-tint",
+                                  "fill": "$bg-tertiary",
                                   "cornerRadius": "$radius-lg",
                                   "justifyContent": "center",
                                   "alignItems": "center",
@@ -86664,7 +86582,7 @@
                                       "height": 24,
                                       "icon": "triangle-alert",
                                       "library": "lucide",
-                                      "fill": "$error"
+                                      "fill": "$text-primary"
                                     }
                                   ]
                                 },
@@ -87788,7 +87706,7 @@
                           "height": 40,
                           "icon": "wifi-off",
                           "library": "lucide",
-                          "fill": "$error"
+                          "fill": "$error-text"
                         },
                         {
                           "type": "text",
@@ -88491,6 +88409,44 @@
                             },
                             {
                               "type": "frame",
+                              "id": "nxJQa",
+                              "name": "batchResume",
+                              "height": 40,
+                              "fill": "$bg-tertiary",
+                              "cornerRadius": "$radius-md",
+                              "gap": "$Space/sm",
+                              "padding": [
+                                "$Space/none",
+                                "$Space/md-plus"
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "gdqKm",
+                                  "name": "i",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "play",
+                                  "library": "lucide",
+                                  "fill": "$text-secondary"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "FJ9GT",
+                                  "name": "l",
+                                  "fill": "$text-primary",
+                                  "content": "批次繼續",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
                               "id": "QBMC8",
                               "name": "batchRemove",
                               "height": 40,
@@ -88512,7 +88468,7 @@
                                   "height": 16,
                                   "icon": "trash-2",
                                   "library": "lucide",
-                                  "fill": "$error"
+                                  "fill": "$error-text"
                                 },
                                 {
                                   "type": "text",
@@ -88691,16 +88647,6 @@
                                   "fontFamily": "$Type/Family/Primary",
                                   "fontSize": "$Type/Label/Size",
                                   "fontWeight": "600"
-                                },
-                                {
-                                  "type": "icon",
-                                  "id": "D3tK4",
-                                  "name": "s",
-                                  "width": 12,
-                                  "height": 12,
-                                  "icon": "chevrons-up-down",
-                                  "library": "lucide",
-                                  "fill": "$text-muted"
                                 }
                               ]
                             },
@@ -88722,16 +88668,6 @@
                                   "fontFamily": "$Type/Family/Primary",
                                   "fontSize": "$Type/Label/Size",
                                   "fontWeight": "600"
-                                },
-                                {
-                                  "type": "icon",
-                                  "id": "z2Cli",
-                                  "name": "s",
-                                  "width": 12,
-                                  "height": 12,
-                                  "icon": "chevrons-up-down",
-                                  "library": "lucide",
-                                  "fill": "$text-muted"
                                 }
                               ]
                             },
@@ -88753,16 +88689,6 @@
                                   "fontFamily": "$Type/Family/Primary",
                                   "fontSize": "$Type/Label/Size",
                                   "fontWeight": "600"
-                                },
-                                {
-                                  "type": "icon",
-                                  "id": "dMjm1",
-                                  "name": "s",
-                                  "width": 12,
-                                  "height": 12,
-                                  "icon": "chevrons-up-down",
-                                  "library": "lucide",
-                                  "fill": "$text-muted"
                                 }
                               ]
                             },
@@ -89830,7 +89756,7 @@
                                       "cornerRadius": "$radius-sm",
                                       "id": "YDWwE",
                                       "name": "fill",
-                                      "fill": "$text-disabled",
+                                      "fill": "$text-muted",
                                       "width": 53,
                                       "height": 5
                                     }
@@ -91388,7 +91314,7 @@
                                       "height": 18,
                                       "icon": "rotate-cw",
                                       "library": "lucide",
-                                      "fill": "$error"
+                                      "fill": "$error-text"
                                     }
                                   ]
                                 },
@@ -92086,7 +92012,7 @@
                           "content": "已暫停"
                         },
                         "PXLDA": {
-                          "fill": "$text-disabled",
+                          "fill": "$text-muted",
                           "width": 118
                         },
                         "va0aG": {
@@ -92753,7 +92679,7 @@
                           "cornerRadius": "$radius-pill",
                           "id": "hmhlF",
                           "name": "grabber",
-                          "fill": "$text-disabled",
+                          "fill": "$text-muted",
                           "width": 40,
                           "height": 4
                         }
@@ -93338,7 +93264,7 @@
                           "cornerRadius": "$radius-pill",
                           "id": "ZrhaS",
                           "name": "grabber",
-                          "fill": "$text-disabled",
+                          "fill": "$text-muted",
                           "width": 40,
                           "height": 4
                         }
@@ -94396,7 +94322,7 @@
                           "cornerRadius": "$radius-pill",
                           "id": "fcaAf",
                           "name": "grabber",
-                          "fill": "$text-disabled",
+                          "fill": "$text-muted",
                           "width": 40,
                           "height": 4
                         }

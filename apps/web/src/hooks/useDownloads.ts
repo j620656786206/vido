@@ -7,7 +7,6 @@ import { useSyncExternalStore } from 'react';
 import {
   downloadService,
   type PaginatedDownloads,
-  type DownloadDetails,
   type DownloadCounts,
   type FilterStatus,
   type SortField,
@@ -20,7 +19,6 @@ export const downloadKeys = {
   list: (filter: FilterStatus, sort: SortField, order: SortOrder, page: number, pageSize: number) =>
     [...downloadKeys.all, 'list', filter, sort, order, page, pageSize] as const,
   counts: () => [...downloadKeys.all, 'counts'] as const,
-  detail: (hash: string) => [...downloadKeys.all, 'detail', hash] as const,
 };
 
 /**
@@ -88,20 +86,5 @@ export function useDownloadCounts(enabled = true) {
     enabled: effectiveEnabled,
     refetchInterval: isVisible && effectiveEnabled ? 5000 : false,
     refetchOnWindowFocus: true,
-  });
-}
-
-/**
- * Hook for fetching download details (AC4)
- */
-export function useDownloadDetails(hash: string) {
-  const { data: qbtConfig } = useQBittorrentConfig();
-  const isConfigured = qbtConfig?.configured === true;
-
-  return useQuery<DownloadDetails, Error>({
-    queryKey: downloadKeys.detail(hash),
-    queryFn: () => downloadService.getDownloadDetails(hash),
-    // bugfix-10-2: skip polling until qBT config check confirms configured; prevents init-race 503 burst
-    enabled: !!hash && isConfigured,
   });
 }

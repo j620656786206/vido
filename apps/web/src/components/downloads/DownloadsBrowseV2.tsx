@@ -1,11 +1,24 @@
 // Design ref: ux-design.pen Screen D1-D-v2 (cK1KF)
+// (also renders D2-D-v2 batch select (tx6U1) + D7-D-v2 table view (w3ipb))
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { getRouteApi } from '@tanstack/react-router';
+import {
+  CheckCheck,
+  ChevronDown,
+  ListChecks,
+  Pause,
+  Play,
+  Rows3,
+  Table,
+  Trash2,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useDownloads, useDownloadCounts, usePageVisibility } from '../../hooks/useDownloads';
 import { useDownloadActions } from '../../hooks/useDownloadActions';
 import { useDownloadProgress } from '../../hooks/useDownloadProgress';
-import { useDownloadsView } from '../../hooks/useDownloadsView';
+import { useDownloadsView, type DownloadsView } from '../../hooks/useDownloadsView';
 import { useQBittorrentConfig } from '../../hooks/useQBittorrent';
 import type { FilterStatus, SortField, SortOrder } from '../../services/downloadService';
 import { Button } from '../ui/Button';
@@ -38,16 +51,38 @@ const FILTERS: { value: FilterStatus; label: string }[] = [
   { value: 'downloading', label: '下載中' },
   { value: 'paused', label: '已暫停' },
   { value: 'completed', label: '已完成' },
-  { value: 'seeding', label: '做種中' },
+  // Same word as the status pill, so the chip and the card name one state one way.
+  { value: 'seeding', label: '做種' },
   { value: 'error', label: '錯誤' },
 ];
 
-const SORT_FIELDS: { value: SortField; label: string }[] = [
-  { value: 'added_on', label: '加入時間' },
-  { value: 'name', label: '名稱' },
-  { value: 'progress', label: '進度' },
-  { value: 'status', label: '狀態' },
+// One control for field + direction (D1-D-v2 sortDropdown). The table's column headers drive the
+// same state, so every field/order pair they can produce has an option here.
+const SORT_OPTIONS: { field: SortField; order: SortOrder; label: string }[] = [
+  { field: 'added_on', order: 'desc', label: '加入時間（新到舊）' },
+  { field: 'added_on', order: 'asc', label: '加入時間（舊到新）' },
+  { field: 'name', order: 'asc', label: '名稱（A–Z）' },
+  { field: 'name', order: 'desc', label: '名稱（Z–A）' },
+  { field: 'progress', order: 'desc', label: '進度（多到少）' },
+  { field: 'progress', order: 'asc', label: '進度（少到多）' },
+  { field: 'status', order: 'asc', label: '狀態' },
+  { field: 'status', order: 'desc', label: '狀態（反向）' },
 ];
+
+const VIEWS: { value: DownloadsView; label: string; icon: LucideIcon }[] = [
+  { value: 'list', label: '清單檢視', icon: Rows3 },
+  { value: 'table', label: '表格檢視', icon: Table },
+];
+
+const OUTLINE_BUTTON =
+  'inline-flex h-11 shrink-0 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-4 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:size-[18px]';
+
+const BATCH_BUTTON =
+  'inline-flex h-11 items-center gap-2 rounded-[var(--radius-md)] px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:size-[18px]';
+const BATCH_NEUTRAL =
+  'bg-[var(--bg-tertiary)] text-[var(--text-primary)] hover:bg-[var(--border-subtle)] [&_svg]:text-[var(--text-secondary)]';
+const BATCH_DANGER =
+  'bg-[var(--error-tint)] text-[var(--error-text)] hover:bg-[var(--error-tint)]/70 [&_svg]:text-[var(--error-text)]';
 
 // Desktop breakpoint (Tailwind lg = 1024px). Table view is desktop-only (AC1) — mobile always renders
 // the card List even if a stale desktop preference says 'table'. Guarded so a missing matchMedia
@@ -115,7 +150,12 @@ export function DownloadsBrowseV2() {
 
   const items = useMemo(() => data?.items ?? [], [data]);
 
-  const handleFilterChange = (f: FilterStatus) =>
+  // Anything that swaps the rows out drops the selection outright; rows that leave on their own
+  // are filtered out by `selectedHashes` below.
+  const clearSelection = () => setSelected(new Set());
+
+  const handleFilterChange = (f: FilterStatus) => {
+    clearSelection();
     navigate({
       search: {
         filter: f === 'all' ? undefined : f,
@@ -123,7 +163,9 @@ export function DownloadsBrowseV2() {
       },
       replace: true,
     });
-  const handlePageChange = (p: number) =>
+  };
+  const handlePageChange = (p: number) => {
+    clearSelection();
     navigate({
       search: {
         filter: urlFilter,
@@ -132,19 +174,36 @@ export function DownloadsBrowseV2() {
       },
       replace: true,
     });
-  const handlePageSizeChange = (s: number) =>
+  };
+  const handlePageSizeChange = (s: number) => {
+    clearSelection();
     navigate({
       search: { filter: urlFilter, pageSize: s !== 100 ? s : undefined },
       replace: true,
     });
+  };
+  const handleViewChange = (next: DownloadsView) => {
+    if (next === view) return;
+    setSelectMode(false);
+    clearSelection();
+    setView(next);
+  };
 
   // Shared sort — the List sort control and the Table column headers both call this.
   const handleSort = (field: SortField) => {
+    clearSelection();
     if (field === sortField) setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'));
     else {
       setSortField(field);
       setSortOrder('desc');
     }
+  };
+  const handleSortOption = (value: string) => {
+    const option = SORT_OPTIONS.find((o) => `${o.field}:${o.order}` === value);
+    if (!option) return;
+    clearSelection();
+    setSortField(option.field);
+    setSortOrder(option.order);
   };
 
   // --- actions (AC3) ---
@@ -162,12 +221,17 @@ export function DownloadsBrowseV2() {
       return s;
     });
   const selectAll = () => setSelected(new Set(items.map((d) => d.hash)));
-  const clearSelection = () => setSelected(new Set());
   const exitSelection = () => {
     setSelectMode(false);
     clearSelection();
   };
-  const selectedHashes = useMemo(() => [...selected], [selected]);
+  // Only rows on screen count. A selected torrent can leave the page with no click here — it
+  // finishes under the 下載中 filter, another client removes it — and a batch delete must never
+  // reach a row the user can no longer see.
+  const selectedHashes = useMemo(
+    () => items.filter((d) => selected.has(d.hash)).map((d) => d.hash),
+    [items, selected]
+  );
   const batchPause = () => selectedHashes.length && actions.pause.mutate(selectedHashes);
   const batchResume = () => selectedHashes.length && actions.resume.mutate(selectedHashes);
   const batchRemove = (deleteFiles: boolean) => {
@@ -175,173 +239,225 @@ export function DownloadsBrowseV2() {
     clearSelection();
   };
 
-  // Table checkboxes are persistent → the batch bar follows the selection; List follows select-mode.
-  const showBatchBar = showTable ? selected.size > 0 : selectMode;
   const showQbtError = Boolean(error) || (configResolved && !isConfigured);
+  const listSelecting = selectMode && !showTable && !showQbtError;
+  // Table checkboxes are persistent → the batch bar follows the selection; List follows select-mode
+  // and takes the toolbar's place (D2-D-v2).
+  const showBatchBar = !showQbtError && (showTable ? selectedHashes.length > 0 : selectMode);
+  const showToolbar = !showQbtError && !listSelecting;
+
+  const rangeStart = data ? (data.page - 1) * data.pageSize + 1 : 0;
+  const rangeEnd = data ? Math.min(data.page * data.pageSize, data.totalItems) : 0;
 
   return (
     <div
       data-testid="downloads-browse-v2"
-      className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6"
+      className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 py-8 sm:px-8"
     >
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-[var(--text-primary)]">下載</h1>
-        <p className="text-sm text-[var(--text-secondary)]">即時監控 qBittorrent 下載狀態</p>
+      <header className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">下載</h1>
+          <p className="text-sm text-[var(--text-secondary)]">
+            {listSelecting ? '批次選取模式' : '管理所有下載任務'}
+          </p>
+        </div>
+        {listSelecting && (
+          <button type="button" onClick={exitSelection} className={OUTLINE_BUTTON}>
+            <X className="!size-4" aria-hidden="true" />
+            取消
+          </button>
+        )}
       </header>
 
-      {/* Status-filter toolbar — 6 live values, counts in Mono */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-wrap gap-2" role="tablist" aria-label="下載狀態篩選">
-          {FILTERS.map((f) => {
-            const count = counts?.[f.value] ?? 0;
-            const isActive = activeFilter === f.value;
-            if (f.value === 'error' && count === 0 && !isActive) return null;
-            return (
-              <button
-                key={f.value}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                aria-controls="downloads-list-v2"
-                onClick={() => handleFilterChange(f.value)}
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
-                  isActive
-                    ? 'border-transparent bg-[var(--accent-tint)] text-[var(--accent-text)]'
-                    : 'border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                )}
-              >
-                <span>{f.label}</span>
-                <span className="font-mono text-xs tabular-nums text-[var(--text-muted)]">
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* right-aligned list toolbar: sort + List|Table toggle + select toggle */}
-        <div className="ml-auto flex items-center gap-2">
-          <label className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)]">
-            <span className="sr-only sm:not-sr-only">排序</span>
-            <select
-              value={sortField}
-              onChange={(e) => setSortField(e.target.value as SortField)}
-              aria-label="排序欄位"
-              className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-2 py-1 text-sm text-[var(--text-primary)] focus:border-[var(--accent-primary)] focus:outline-none"
-            >
-              {SORT_FIELDS.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <Button
-            size="sm"
-            variant="outline"
-            aria-label={`排序方向：${sortOrder === 'desc' ? '遞減' : '遞增'}`}
-            onClick={() => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
-          >
-            {sortOrder === 'desc' ? '↓' : '↑'}
-          </Button>
-
-          {/* List | Table view toggle — desktop only (AC1) */}
-          <div
-            className="hidden items-center overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] lg:flex"
-            role="group"
-            aria-label="檢視方式"
-          >
+      {/* Status-filter chips — 6 live values, counts in Mono */}
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="下載狀態篩選">
+        {FILTERS.map((f) => {
+          const count = counts?.[f.value] ?? 0;
+          const isActive = activeFilter === f.value;
+          if (f.value === 'error' && count === 0 && !isActive) return null;
+          return (
             <button
+              key={f.value}
               type="button"
-              aria-pressed={view === 'list'}
-              onClick={() => setView('list')}
+              role="tab"
+              aria-selected={isActive}
+              aria-controls="downloads-list-v2"
+              onClick={() => handleFilterChange(f.value)}
               className={cn(
-                'px-3 py-1 text-sm',
-                view === 'list'
-                  ? 'bg-[var(--accent-tint)] text-[var(--accent-text)]'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                'inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm transition-colors',
+                isActive
+                  ? 'bg-[var(--accent-subtle)] font-semibold text-[var(--accent-text)]'
+                  : 'bg-[var(--bg-tertiary)] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               )}
             >
-              清單
+              <span>{f.label}</span>
+              <span className="font-mono text-xs font-normal tabular-nums">{count}</span>
             </button>
-            <button
-              type="button"
-              aria-pressed={view === 'table'}
-              onClick={() => setView('table')}
-              className={cn(
-                'px-3 py-1 text-sm',
-                view === 'table'
-                  ? 'bg-[var(--accent-tint)] text-[var(--accent-text)]'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              )}
-            >
-              表格
-            </button>
-          </div>
-
-          {/* select-mode toggle — List view only (Table has a persistent checkbox column) */}
-          {!showTable && (
-            <Button
-              size="sm"
-              variant={selectMode ? 'secondary' : 'outline'}
-              aria-pressed={selectMode}
-              onClick={() => (selectMode ? exitSelection() : setSelectMode(true))}
-            >
-              選取
-            </Button>
-          )}
-        </div>
+          );
+        })}
       </div>
+
+      {showToolbar && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {showTable ? (
+            <p className="text-sm text-[var(--text-secondary)]">
+              {data && (
+                <>
+                  共{' '}
+                  <span className="font-mono font-semibold tabular-nums text-[var(--text-primary)]">
+                    {data.totalItems}
+                  </span>{' '}
+                  筆任務
+                </>
+              )}
+            </p>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setSelectMode(true)}
+              disabled={items.length === 0}
+              className={OUTLINE_BUTTON}
+            >
+              <ListChecks aria-hidden="true" />
+              選取
+            </button>
+          )}
+
+          <div className="flex items-center gap-2">
+            <label className="relative flex h-11 items-center rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] pl-3 text-sm text-[var(--text-secondary)] focus-within:border-[var(--accent-primary)]">
+              <span aria-hidden="true">排序：</span>
+              <select
+                value={`${sortField}:${sortOrder}`}
+                onChange={(e) => handleSortOption(e.target.value)}
+                aria-label="排序方式"
+                className="h-full cursor-pointer appearance-none bg-transparent pr-9 text-sm text-[var(--text-secondary)] outline-none"
+              >
+                {SORT_OPTIONS.map((o) => (
+                  <option
+                    key={`${o.field}:${o.order}`}
+                    value={`${o.field}:${o.order}`}
+                    className="bg-[var(--bg-secondary)] text-[var(--text-primary)]"
+                  >
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                className="pointer-events-none absolute right-3 size-3.5 text-[var(--text-muted)]"
+                aria-hidden="true"
+              />
+            </label>
+
+            {/* List | Table view toggle — desktop only (AC1) */}
+            <div
+              role="group"
+              aria-label="檢視方式"
+              className="hidden items-center gap-0.5 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-1 lg:flex"
+            >
+              {VIEWS.map((v) => {
+                const isActive = view === v.value;
+                return (
+                  <button
+                    key={v.value}
+                    type="button"
+                    aria-label={v.label}
+                    title={v.label}
+                    aria-pressed={isActive}
+                    onClick={() => handleViewChange(v.value)}
+                    className={cn(
+                      'flex h-[38px] w-10 items-center justify-center rounded-[var(--radius-md)] transition-colors',
+                      isActive
+                        ? 'bg-[var(--accent-subtle)] text-[var(--accent-text)]'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                    )}
+                  >
+                    <v.icon className="size-4" aria-hidden="true" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* batch action bar (AC5) */}
       {showBatchBar && (
         <div
           data-testid="downloads-batch-bar"
-          className="flex flex-wrap items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-3"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--accent-primary)] bg-[var(--accent-tint)] px-4 py-2.5"
         >
-          <span className="text-sm text-[var(--text-secondary)]">
-            已選 <span className="font-mono tabular-nums">{selected.size}</span> 項
-          </span>
-          <Button size="sm" variant="outline" onClick={selectAll}>
-            全選
-          </Button>
-          <Button size="sm" variant="outline" disabled={!selected.size} onClick={batchPause}>
-            批次暫停
-          </Button>
-          <Button size="sm" variant="outline" disabled={!selected.size} onClick={batchResume}>
-            批次繼續
-          </Button>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button size="sm" variant="destructive" disabled={!selected.size}>
-                批次移除
-              </Button>
-            </DialogTrigger>
-            <DialogContent aria-describedby={undefined}>
-              <DialogHeader>
-                <DialogTitle>批次移除 {selected.size} 項下載</DialogTitle>
-                <DialogDescription>
-                  保留檔案只從 qBittorrent 移除任務；連同檔案刪除會一併刪除已下載的檔案，無法復原。
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline" onClick={() => batchRemove(false)}>
-                    移除（保留檔案）
-                  </Button>
-                </DialogClose>
-                <DialogClose asChild>
-                  <Button variant="destructive" onClick={() => batchRemove(true)}>
-                    移除（連同檔案刪除）
-                  </Button>
-                </DialogClose>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          <Button size="sm" variant="ghost" className="ml-auto" onClick={exitSelection}>
-            取消
-          </Button>
+          <p className="flex items-baseline gap-1 text-sm font-medium text-[var(--text-primary)]">
+            已選
+            <span className="font-mono text-base font-semibold tabular-nums text-[var(--accent-text)]">
+              {selectedHashes.length}
+            </span>
+            項
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" className={cn(BATCH_BUTTON, BATCH_NEUTRAL)} onClick={selectAll}>
+              <CheckCheck aria-hidden="true" />
+              全選
+            </button>
+            <button
+              type="button"
+              className={cn(BATCH_BUTTON, BATCH_NEUTRAL)}
+              disabled={!selectedHashes.length}
+              onClick={batchPause}
+            >
+              <Pause aria-hidden="true" />
+              批次暫停
+            </button>
+            <button
+              type="button"
+              className={cn(BATCH_BUTTON, BATCH_NEUTRAL)}
+              disabled={!selectedHashes.length}
+              onClick={batchResume}
+            >
+              <Play aria-hidden="true" />
+              批次繼續
+            </button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(BATCH_BUTTON, BATCH_DANGER)}
+                  disabled={!selectedHashes.length}
+                >
+                  <Trash2 aria-hidden="true" />
+                  批次移除
+                </button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>批次移除 {selectedHashes.length} 項下載</DialogTitle>
+                  <DialogDescription>
+                    保留檔案只從 qBittorrent
+                    移除任務；連同檔案刪除會一併刪除已下載的檔案，無法復原。
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button
+                      variant="outline"
+                      className="h-11 font-semibold"
+                      onClick={() => batchRemove(false)}
+                    >
+                      移除（保留檔案）
+                    </Button>
+                  </DialogClose>
+                  <DialogClose asChild>
+                    <Button
+                      variant="destructive"
+                      className="h-11 font-semibold"
+                      onClick={() => batchRemove(true)}
+                    >
+                      移除（連同檔案刪除）
+                    </Button>
+                  </DialogClose>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       )}
 
@@ -357,7 +473,7 @@ export function DownloadsBrowseV2() {
         ) : items.length === 0 ? (
           <DownloadsEmptyV2 filter={activeFilter} />
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-4">
             {showTable ? (
               <DownloadsTableV2
                 items={items}
@@ -378,7 +494,7 @@ export function DownloadsBrowseV2() {
                   key={d.hash}
                   download={d}
                   selectable={selectMode}
-                  selected={selected.has(d.hash)}
+                  selected={selectMode && selected.has(d.hash)}
                   onSelectChange={toggleSelect}
                   onPause={onPause}
                   onResume={onResume}
@@ -386,31 +502,36 @@ export function DownloadsBrowseV2() {
                 />
               ))
             )}
-            {data.totalPages > 1 && (
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                  <span>每頁</span>
-                  <select
-                    value={currentPageSize}
-                    onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                    aria-label="每頁筆數"
-                    className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-2 py-1 font-mono text-sm text-[var(--text-primary)] focus:border-[var(--accent-primary)] focus:outline-none"
-                  >
-                    {PAGE_SIZE_OPTIONS.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                  <span>筆</span>
-                </label>
-                <Pagination
-                  currentPage={data.page}
-                  totalPages={data.totalPages}
-                  onPageChange={handlePageChange}
-                />
+            <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-4 text-xs text-[var(--text-secondary)]">
+                <span data-testid="downloads-page-summary" className="font-mono tabular-nums">
+                  {rangeStart}–{rangeEnd} / {data.totalItems}
+                </span>
+                {data.totalItems > PAGE_SIZE_OPTIONS[0] && (
+                  <label className="flex items-center gap-2">
+                    <span>每頁</span>
+                    <select
+                      value={currentPageSize}
+                      onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                      aria-label="每頁筆數"
+                      className="h-11 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-2 font-mono text-xs text-[var(--text-primary)] focus:border-[var(--accent-primary)] focus:outline-none"
+                    >
+                      {PAGE_SIZE_OPTIONS.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                    <span>筆</span>
+                  </label>
+                )}
               </div>
-            )}
+              <Pagination
+                currentPage={data.page}
+                totalPages={data.totalPages}
+                onPageChange={handlePageChange}
+              />
+            </div>
           </div>
         )}
       </div>
