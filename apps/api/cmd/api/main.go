@@ -1017,6 +1017,9 @@ func main() {
 	// encryption key — without it the page renders read-only rather than
 	// accepting input that would fail at the storage layer (AC #4).
 	keySettingsService := services.NewKeySettingsService(keyResolver, secretsService, cfg.HasEncryptionKey())
+	// dsr-13: the setup wizard stores its TMDb / Claude keys through the same
+	// service, so both obey one set of secret names and one ENCRYPTION_KEY gate.
+	setupService.SetKeyWriter(keySettingsService)
 	keySettingsHandler := handlers.NewKeySettingsHandler(keySettingsService, claudeHolder)
 	subtitlePipelineHandler := handlers.NewSubtitlePipelineHandler(
 		subtitlePipelineQueue, subtitlePipelineMedia, subtitleCapabilityGate, modelCatalog)

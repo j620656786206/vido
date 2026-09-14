@@ -87,4 +87,18 @@ describe('QBittorrentStep', () => {
     );
     expect((screen.getByTestId('qbt-username-input') as HTMLInputElement).value).toBe('user1');
   });
+
+  it('names the address field 主機位址 — the same word the settings page uses', () => {
+    render(<QBittorrentStep {...makeProps()} />);
+    expect(screen.getByLabelText('主機位址')).toBe(screen.getByTestId('qbt-url-input'));
+  });
+
+  it('orders the buttons 上一步 · 跳過 · 下一步', () => {
+    render(<QBittorrentStep {...makeProps()} />);
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual([
+      '上一步',
+      '跳過',
+      '下一步',
+    ]);
+  });
 });

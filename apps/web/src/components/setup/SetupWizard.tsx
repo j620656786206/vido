@@ -27,13 +27,27 @@ interface WizardStep {
   title: string;
   component: React.ComponentType<StepProps>;
   optional?: boolean;
+  /** Fields 跳過 throws away — skipping a step means "don't set this up". */
+  clearOnSkip?: (keyof SetupConfig)[];
 }
 
 const WIZARD_STEPS: WizardStep[] = [
   { id: 'welcome', title: '歡迎', component: WelcomeStep },
-  { id: 'qbittorrent', title: 'qBittorrent', component: QBittorrentStep, optional: true },
+  {
+    id: 'qbittorrent',
+    title: 'qBittorrent',
+    component: QBittorrentStep,
+    optional: true,
+    clearOnSkip: ['qbtUrl', 'qbtUsername', 'qbtPassword'],
+  },
   { id: 'media-folder', title: '媒體庫', component: MediaLibrarySetupStep },
-  { id: 'api-keys', title: 'API 金鑰', component: ApiKeysStep, optional: true },
+  {
+    id: 'api-keys',
+    title: 'API 金鑰',
+    component: ApiKeysStep,
+    optional: true,
+    clearOnSkip: ['tmdbApiKey', 'claudeApiKey'],
+  },
   { id: 'complete', title: '完成', component: CompleteStep },
 ];
 
@@ -61,7 +75,12 @@ export function SetupWizard() {
       if (step.id === 'welcome') stepData.language = formData.language;
       if (step.id === 'qbittorrent') stepData.qbtUrl = formData.qbtUrl || '';
       if (step.id === 'media-folder') stepData.libraries = formData.libraries;
-      if (step.id === 'api-keys') stepData.tmdbApiKey = formData.tmdbApiKey || '';
+      if (step.id === 'api-keys') {
+        stepData.tmdbApiKey = formData.tmdbApiKey || '';
+        // Sent so the server can refuse a key it cannot store (no ENCRYPTION_KEY)
+        // here, on this step, instead of after 完成設定.
+        stepData.claudeApiKey = formData.claudeApiKey || '';
+      }
 
       await setupService.validateStep(step.id, stepData);
     } catch (err) {
@@ -83,6 +102,12 @@ export function SetupWizard() {
 
   const handleSkip = useCallback(() => {
     setError(null);
+    // Skipping never validates, so whatever was half-typed on this step must not
+    // ride along to 完成設定 and be reported 已設定.
+    const cleared = Object.fromEntries(
+      (WIZARD_STEPS[currentStep].clearOnSkip ?? []).map((field) => [field, undefined])
+    ) as Partial<SetupConfig>;
+    setFormData((prev) => ({ ...prev, ...cleared }));
     if (currentStep < WIZARD_STEPS.length - 1) {
       setCurrentStep((prev) => prev + 1);
     }
@@ -99,8 +124,7 @@ export function SetupWizard() {
         qbtPassword: formData.qbtPassword,
         libraries: formData.libraries as SetupConfig['libraries'],
         tmdbApiKey: formData.tmdbApiKey,
-        aiProvider: formData.aiProvider,
-        aiApiKey: formData.aiApiKey,
+        claudeApiKey: formData.claudeApiKey,
       });
 
       // Invalidate setup status query so root route knows setup is done
@@ -119,22 +143,33 @@ export function SetupWizard() {
   const StepComponent = step.component;
 
   return (
+    // No shadow: the card sits on an otherwise empty page, it does not float
+    // over anything (DESIGN.md §Shadow Vocabulary, 2026-09-14 — the login card
+    // lost its shadow for the same reason in dsr-12).
     <div
-      className="w-full max-w-lg rounded-2xl border border-[var(--border-subtle)]/50 bg-[var(--bg-primary)] p-8 shadow-[var(--shadow-xl)]"
+      className="flex w-full max-w-lg flex-col gap-6 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-8"
       data-testid="setup-wizard"
     >
-      <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Vido 設定精靈</h1>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+      {/* The product's one wordmark — the same「vido · NAS 媒體庫」the login
+          gate and the sidebar carry. */}
+      <div className="flex items-end justify-center gap-2">
+        <h1 className="text-xl font-bold leading-none text-[var(--accent-text)] sm:text-2xl">
+          vido
+        </h1>
+        <p className="text-xs leading-none text-[var(--text-muted)]">NAS 媒體庫</p>
+      </div>
+
+      <div>
+        <StepProgress steps={WIZARD_STEPS} currentStep={currentStep} />
+        {/* The dots carry progress for sighted users; this carries it in words. */}
+        <p className="sr-only">
           步驟 {currentStep + 1} / {WIZARD_STEPS.length}
         </p>
       </div>
 
-      <StepProgress steps={WIZARD_STEPS} currentStep={currentStep} />
-
       {error && (
         <div
-          className="mb-4 rounded-lg border border-[var(--error)]/30 bg-[var(--error)]/10 px-4 py-3 text-sm text-[var(--error-text)]"
+          className="rounded-lg border border-[var(--error)]/30 bg-[var(--error)]/10 px-4 py-3 text-sm text-[var(--error-text)]"
           role="alert"
           data-testid="setup-error"
         >

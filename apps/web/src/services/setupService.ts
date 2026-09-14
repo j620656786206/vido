@@ -20,11 +20,10 @@ export interface SetupConfig {
   qbtUrl?: string;
   qbtUsername?: string;
   qbtPassword?: string;
-  mediaFolderPath?: string; // Deprecated: use libraries
   libraries?: SetupLibraryEntry[];
   tmdbApiKey?: string;
-  aiProvider?: string;
-  aiApiKey?: string;
+  /** Stored as the `claude.api_key` secret — the name KeyResolver reads (dsr-13). */
+  claudeApiKey?: string;
 }
 
 export interface ValidateStepRequest {

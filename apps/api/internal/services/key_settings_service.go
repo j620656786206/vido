@@ -59,6 +59,12 @@ func NewKeySettingsService(resolver KeyResolver, secretsService secrets.SecretsS
 	}
 }
 
+// Writable reports whether Save can store keys (an ENCRYPTION_KEY is configured).
+// The setup wizard asks before it writes anything else (dsr-13).
+func (s *KeySettingsService) Writable() bool {
+	return s.writable
+}
+
 // List returns every key's state. Never returns a value.
 func (s *KeySettingsService) List(ctx context.Context) KeySettings {
 	out := KeySettings{Keys: make([]KeyState, 0, len(s.orderedIDs)), Writable: s.writable}

@@ -33,13 +33,14 @@ type SetupLibraryEntry struct {
 
 // SetupConfig holds all wizard settings collected during setup.
 type SetupConfig struct {
-	Language        string               `json:"language"`
-	QBTUrl          string               `json:"qbt_url,omitempty"`
-	QBTUsername     string               `json:"qbt_username,omitempty"`
-	QBTPassword     string               `json:"qbt_password,omitempty"`
-	MediaFolderPath string               `json:"media_folder_path,omitempty"` // Deprecated: use Libraries
-	Libraries       []SetupLibraryEntry  `json:"libraries,omitempty"`
-	TMDbApiKey      string               `json:"tmdb_api_key,omitempty"`
-	AIProvider      string               `json:"ai_provider,omitempty"`
-	AIApiKey        string               `json:"ai_api_key,omitempty"`
+	Language        string              `json:"language"`
+	QBTUrl          string              `json:"qbt_url,omitempty"`
+	QBTUsername     string              `json:"qbt_username,omitempty"`
+	QBTPassword     string              `json:"qbt_password,omitempty"`
+	MediaFolderPath string              `json:"media_folder_path,omitempty"` // Deprecated: use Libraries
+	Libraries       []SetupLibraryEntry `json:"libraries,omitempty"`
+	TMDbApiKey      string              `json:"tmdb_api_key,omitempty"`
+	// ClaudeApiKey is the only AI key the wizard collects — the only text-AI key
+	// KeyResolver can read back from the secret store (Gemini is env-only).
+	ClaudeApiKey string `json:"claude_api_key,omitempty"`
 }

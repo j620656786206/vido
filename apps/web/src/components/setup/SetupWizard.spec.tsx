@@ -156,7 +156,7 @@ describe('SetupWizard', () => {
     fireEvent.click(await screen.findByTestId('skip-button')); // → complete
 
     expect(await screen.findByText('設定完成！')).toBeInTheDocument();
-    expect(screen.getByText('zh-TW')).toBeInTheDocument();
+    expect(screen.getByText('繁體中文')).toBeInTheDocument();
   });
 
   it('submits setup on finish click', async () => {
@@ -209,5 +209,60 @@ describe('SetupWizard', () => {
     fireEvent.click(screen.getByTestId('next-button')); // → api-keys
 
     expect(await screen.findByTestId('skip-warning')).toBeInTheDocument();
+  });
+
+  it('sends a Claude key, not a provider + key pair the server never read (dsr-13)', async () => {
+    const { setupService } = await import('../../services/setupService');
+    renderWithProviders();
+
+    fireEvent.click(await screen.findByTestId('next-button')); // → qbt
+    fireEvent.click(await screen.findByTestId('skip-button')); // → media library
+    fireEvent.change(await screen.findByTestId('library-path-0'), { target: { value: '/media' } });
+    fireEvent.click(screen.getByTestId('next-button')); // → api-keys
+    fireEvent.change(await screen.findByTestId('claude-key-input'), {
+      target: { value: 'sk-ant-test' },
+    });
+    fireEvent.click(screen.getByTestId('next-button')); // → complete
+    fireEvent.click(await screen.findByTestId('finish-button'));
+
+    // The api-keys step sends the Claude key for validation too, so a server
+    // that cannot store keys (no ENCRYPTION_KEY) can refuse on this step.
+    expect(setupService.validateStep).toHaveBeenCalledWith('api-keys', {
+      tmdbApiKey: '',
+      claudeApiKey: 'sk-ant-test',
+    });
+    await waitFor(() => {
+      expect(setupService.completeSetup).toHaveBeenCalledWith(
+        expect.objectContaining({ claudeApiKey: 'sk-ant-test' })
+      );
+    });
+  });
+
+  it('跳過 throws away a half-typed key instead of submitting it unvalidated', async () => {
+    const { setupService } = await import('../../services/setupService');
+    renderWithProviders();
+
+    fireEvent.click(await screen.findByTestId('next-button')); // → qbt
+    fireEvent.click(await screen.findByTestId('skip-button')); // → media library
+    fireEvent.change(await screen.findByTestId('library-path-0'), { target: { value: '/media' } });
+    fireEvent.click(screen.getByTestId('next-button')); // → api-keys
+    fireEvent.change(await screen.findByTestId('tmdb-key-input'), {
+      target: { value: 'too-short' },
+    });
+    fireEvent.click(screen.getByTestId('skip-button')); // → complete
+
+    expect(await screen.findByTestId('complete-step')).toBeInTheDocument();
+    expect(screen.getAllByText('未設定')).toHaveLength(3); // qBittorrent · TMDb · Claude
+    fireEvent.click(screen.getByTestId('finish-button'));
+    await waitFor(() => {
+      expect(setupService.completeSetup).toHaveBeenCalledWith(
+        expect.objectContaining({ tmdbApiKey: undefined })
+      );
+    });
+  });
+
+  it('keeps the step count for screen readers now that the visible line is gone', async () => {
+    renderWithProviders();
+    expect(await screen.findByText('步驟 1 / 5')).toHaveClass('sr-only');
   });
 });

@@ -1,118 +1,63 @@
 // Design ref: ux-design.pen Screen N4-D (D990CP)
+import { AlertTriangle } from 'lucide-react';
 import type { StepProps } from './SetupWizard';
-
-const AI_PROVIDERS = [
-  { id: '', label: '不使用 AI' },
-  { id: 'gemini', label: 'Google Gemini' },
-  { id: 'claude', label: 'Anthropic Claude' },
-];
+import { StepNav } from './StepNav';
+import { WizardTextField } from './WizardTextField';
 
 export function ApiKeysStep({ data, onUpdate, onNext, onBack, onSkip }: StepProps) {
+  const nothingEntered = !data.tmdbApiKey && !data.claudeApiKey;
+
   return (
-    <div data-testid="api-keys-step">
-      <h2 className="mb-2 text-lg font-semibold text-[var(--text-primary)]">API 金鑰</h2>
-      <p className="mb-6 text-sm text-[var(--text-secondary)]">
+    <div className="flex flex-col gap-4" data-testid="api-keys-step">
+      <h2 className="text-lg font-semibold text-[var(--text-primary)]">API 金鑰</h2>
+      <p className="text-sm text-[var(--text-secondary)]">
         設定 API 金鑰以啟用進階功能。可以稍後在設定頁面新增。
       </p>
 
-      <div className="mb-4">
-        <label
-          htmlFor="tmdb-api-key"
-          className="mb-2 block text-sm font-medium text-[var(--text-secondary)]"
-        >
-          TMDb API 金鑰
-        </label>
-        <input
-          id="tmdb-api-key"
-          type="text"
-          value={data.tmdbApiKey || ''}
-          onChange={(e) => onUpdate({ tmdbApiKey: e.target.value })}
-          placeholder="輸入 TMDb API 金鑰..."
-          className="w-full rounded-lg border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/60 px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
-          data-testid="tmdb-key-input"
-        />
-        <p className="mt-1 text-xs text-[var(--text-muted)]">用於取得電影和影集的中文元資料</p>
-      </div>
+      <WizardTextField
+        id="tmdb-api-key"
+        label="TMDb 金鑰"
+        value={data.tmdbApiKey || ''}
+        onChange={(tmdbApiKey) => onUpdate({ tmdbApiKey })}
+        placeholder="輸入 TMDb API 金鑰..."
+        hint="用於取得電影和影集的中文元資料"
+        testId="tmdb-key-input"
+      />
 
-      <div className="mb-4">
-        <label
-          htmlFor="ai-provider"
-          className="mb-2 block text-sm font-medium text-[var(--text-secondary)]"
-        >
-          AI 提供者
-        </label>
-        <select
-          id="ai-provider"
-          value={data.aiProvider || ''}
-          onChange={(e) => onUpdate({ aiProvider: e.target.value })}
-          className="w-full rounded-lg border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/60 px-4 py-2.5 text-sm text-[var(--text-primary)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
-          data-testid="ai-provider-select"
-        >
-          {AI_PROVIDERS.map((provider) => (
-            <option key={provider.id} value={provider.id}>
-              {provider.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Claude only (Alexyu 2026-09-14, dsr-13). It is the one text-AI key the
+          running server reads back from the secret store — Gemini is env-only.
+          The wizard used to offer a provider picker and stored whatever was
+          typed under a name nothing read, then reported 已設定. */}
+      <WizardTextField
+        id="claude-api-key"
+        label="Claude 金鑰"
+        type="password"
+        value={data.claudeApiKey || ''}
+        onChange={(claudeApiKey) => onUpdate({ claudeApiKey })}
+        placeholder="輸入 Claude API 金鑰..."
+        hint="用於字幕翻譯與 AI 檔名解析"
+        testId="claude-key-input"
+      />
 
-      {data.aiProvider && (
-        <div className="mb-6">
-          <label
-            htmlFor="ai-api-key"
-            className="mb-2 block text-sm font-medium text-[var(--text-secondary)]"
-          >
-            AI API 金鑰
-          </label>
-          <input
-            id="ai-api-key"
-            type="password"
-            value={data.aiApiKey || ''}
-            onChange={(e) => onUpdate({ aiApiKey: e.target.value })}
-            placeholder="輸入 AI API 金鑰..."
-            className="w-full rounded-lg border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/60 px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
-            data-testid="ai-key-input"
-          />
-        </div>
-      )}
-
-      {!data.tmdbApiKey && !data.aiProvider && (
+      {nothingEntered && (
+        // A note about what skipping WOULD do, not about the world now — so no
+        // status colour (DESIGN.md 2026-09-11: 赭說的是「現在的世界」). Neutral
+        // ground, primary text, the warning glyph kept.
         <div
-          className="mb-6 rounded-lg bg-[var(--warning-tint)] px-4 py-3 text-sm text-[var(--warning-text)]"
+          className="flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] p-3"
           data-testid="skip-warning"
         >
-          跳過 API 金鑰設定將會限制部分功能，例如自動取得元資料和 AI 檔名解析。
+          <AlertTriangle
+            className="h-4 w-4 shrink-0 text-[var(--text-secondary)]"
+            aria-hidden="true"
+          />
+          <p className="text-xs text-[var(--text-primary)]">
+            跳過 API 金鑰設定將會限制部分功能，例如自動取得元資料和 AI 檔名解析。
+          </p>
         </div>
       )}
 
-      <div className="flex gap-3">
-        <button
-          type="button"
-          onClick={onBack}
-          className="rounded-lg border border-[var(--border-subtle)]/50 px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
-          data-testid="back-button"
-        >
-          上一步
-        </button>
-        <button
-          type="button"
-          onClick={onNext}
-          className="flex-1 rounded-lg bg-[var(--accent-primary)] px-4 py-2.5 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)]"
-          data-testid="next-button"
-        >
-          下一步
-        </button>
-        {onSkip && (
-          <button
-            type="button"
-            onClick={onSkip}
-            className="rounded-lg px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-            data-testid="skip-button"
-          >
-            跳過
-          </button>
-        )}
-      </div>
+      <StepNav onNext={onNext} onBack={onBack} onSkip={onSkip} />
     </div>
   );
 }

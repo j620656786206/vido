@@ -111,7 +111,7 @@ async def run_test():
         # --> The media library folder path input still contains '/tmp' after navigating back and forth in the wizard.
         # Assert-outcome: passed
         # Assert: Media library folder path input contains '/tmp'.
-        await expect(page.locator("xpath=/html/body/div[1]/div/div/div/div[3]/div[1]/div/div[1]/input").nth(0)).to_have_value("/tmp", timeout=15000), "Media library folder path input contains '/tmp'."
+        await expect(page.get_by_test_id("library-path-0")).to_have_value("/tmp", timeout=15000), "Media library folder path input contains '/tmp'."
         await asyncio.sleep(5)
 
     finally:
