@@ -80,7 +80,7 @@ export function SortSelector({ sortBy, sortOrder, onSortChange }: SortSelectorPr
       {isOpen && (
         <div
           data-testid="sort-dropdown"
-          className="absolute left-0 top-full z-30 mt-1 w-48 rounded-lg bg-[var(--bg-secondary)] py-1 shadow-xl ring-1 ring-[var(--border-subtle)]"
+          className="absolute left-0 top-full z-30 mt-1 w-48 rounded-lg bg-[var(--bg-secondary)] py-1 shadow-[var(--shadow-xl)] ring-1 ring-[var(--border-subtle)]"
           role="listbox"
           aria-label="排序選項"
         >

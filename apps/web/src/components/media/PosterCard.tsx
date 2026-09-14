@@ -156,7 +156,7 @@ export function PosterCard({
           'transition-all duration-[var(--motion-state)] ease-out',
           'transform-gpu',
           // Hover effects only on desktop (lg breakpoint) — disabled in selection mode
-          !selectable && 'lg:group-hover:scale-105 lg:group-hover:shadow-2xl',
+          !selectable && 'lg:group-hover:scale-105 lg:group-hover:',
           // Active state for touch feedback on mobile
           'active:scale-[0.98] active:opacity-90',
           // Selection mode styling

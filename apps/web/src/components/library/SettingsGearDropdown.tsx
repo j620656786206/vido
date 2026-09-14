@@ -73,7 +73,7 @@ export function SettingsGearDropdown({
       {isOpen && (
         <div
           data-testid="settings-dropdown"
-          className="absolute right-0 top-full z-30 mt-2 w-64 rounded-lg bg-[var(--bg-secondary)] p-4 shadow-xl ring-1 ring-[var(--border-subtle)]"
+          className="absolute right-0 top-full z-30 mt-2 w-64 rounded-lg bg-[var(--bg-secondary)] p-4 shadow-[var(--shadow-xl)] ring-1 ring-[var(--border-subtle)]"
         >
           {/* Poster Density */}
           <div className="mb-4">

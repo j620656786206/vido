@@ -178,7 +178,7 @@ export function SubtitleSearchDialog({
       />
       <div
         ref={dialogRef}
-        className="relative mx-4 w-full max-w-4xl max-h-[80vh] overflow-y-auto rounded-xl bg-[var(--bg-secondary)] shadow-2xl"
+        className="relative mx-4 w-full max-w-4xl max-h-[80vh] overflow-y-auto rounded-xl bg-[var(--bg-secondary)] shadow-[var(--shadow-xl)]"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-6 py-4">
@@ -384,7 +384,7 @@ export function SubtitleSearchDialog({
                               </button>
                               {/* Preview Popover */}
                               {previewOpen === result.id && previewDataMap[result.id] && (
-                                <div className="absolute right-0 top-8 z-10 w-80 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-3 shadow-xl">
+                                <div className="absolute right-0 top-8 z-10 w-80 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-3 shadow-[var(--shadow-xl)]">
                                   <p className="mb-2 text-xs font-medium text-[var(--text-secondary)]">
                                     字幕預覽
                                   </p>
@@ -454,7 +454,7 @@ export function SubtitleSearchDialog({
       {toast && (
         <div
           // Label on a solid --success fill, so it takes accent-fill ink, not page ink.
-          className="fixed bottom-6 right-6 z-[60] rounded-lg bg-[var(--success)] px-4 py-2 text-sm font-medium text-[var(--text-on-accent)] shadow-lg"
+          className="fixed bottom-6 right-6 z-[60] rounded-lg bg-[var(--success)] px-4 py-2 text-sm font-medium text-[var(--text-on-accent)] shadow-[var(--shadow-lg)]"
         >
           {toast}
         </div>

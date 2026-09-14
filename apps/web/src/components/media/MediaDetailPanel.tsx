@@ -139,7 +139,7 @@ export function MediaDetailPanel({
               // AC #2 — deterministic initial-letter fallback (B9 tokens) in the h-48 w-32 slot.
               // Outer `posterUrl &&` keeps case-A (null path) rendering nothing, as before.
               <div
-                className="flex h-48 w-32 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--bg-tertiary)] shadow-lg"
+                className="flex h-48 w-32 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--bg-tertiary)]"
                 data-testid="detail-poster-fallback"
                 role="img"
                 aria-label={`${title}（海報暫無法載入）`}
@@ -159,7 +159,7 @@ export function MediaDetailPanel({
               <img
                 src={posterUrl}
                 alt={title}
-                className="h-48 w-32 flex-shrink-0 rounded-lg object-cover shadow-lg"
+                className="h-48 w-32 flex-shrink-0 rounded-lg object-cover"
                 loading="lazy"
                 onError={() => setPosterError(true)}
                 data-testid="detail-poster"

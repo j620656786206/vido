@@ -23,7 +23,7 @@ export function RestoreConfirmDialog({
       className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-scrim)]"
       data-testid="restore-confirm-dialog"
     >
-      <div className="mx-4 w-full max-w-md rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-6 shadow-2xl">
+      <div className="mx-4 w-full max-w-md rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-6 shadow-[var(--shadow-xl)]">
         <div className="mb-4 flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--error-tint)]">
             <AlertTriangle className="h-5 w-5 text-[var(--error-text)]" />

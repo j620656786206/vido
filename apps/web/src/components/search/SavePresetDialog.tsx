@@ -89,7 +89,7 @@ export function SavePresetDialog({ filters, onClose }: SavePresetDialogProps) {
         onClick={onClose}
       />
       <div
-        className="relative mx-4 w-full max-w-md rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-6 shadow-xl"
+        className="relative mx-4 w-full max-w-md rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-6 shadow-[var(--shadow-xl)]"
         data-testid="save-preset-dialog"
       >
         {/* Header */}

@@ -103,7 +103,7 @@ export function ScanProgressCard({
       <button
         type="button"
         onClick={onToggleMinimize}
-        className="flex items-center gap-2 rounded-full bg-[var(--bg-secondary)] px-4 py-2 shadow-lg"
+        className="flex items-center gap-2 rounded-full bg-[var(--bg-secondary)] px-4 py-2 shadow-[var(--shadow-lg)]"
         data-testid="scan-progress-pill"
       >
         <Loader className="h-4 w-4 animate-spin text-[var(--accent-text)]" />
@@ -119,7 +119,7 @@ export function ScanProgressCard({
   if (state.isComplete || state.isCancelled) {
     return (
       <div
-        className="w-[480px] max-w-[calc(100vw-2rem)] rounded-lg bg-[var(--bg-secondary)] p-4 shadow-xl"
+        className="w-[480px] max-w-[calc(100vw-2rem)] rounded-lg bg-[var(--bg-secondary)] p-4 shadow-[var(--shadow-xl)]"
         data-testid="scan-progress-card"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -258,7 +258,7 @@ export function ScanProgressCard({
   // Active scanning state
   return (
     <div
-      className="w-[400px] rounded-xl bg-[var(--bg-secondary)] p-4 shadow-xl"
+      className="w-[400px] rounded-xl bg-[var(--bg-secondary)] p-4 shadow-[var(--shadow-xl)]"
       data-testid="scan-progress-card"
       role="status"
     >

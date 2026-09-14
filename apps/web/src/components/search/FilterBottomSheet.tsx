@@ -104,7 +104,7 @@ export function FilterBottomSheet({
         className={cn(
           'absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto',
           isV2 ? 'rounded-t-[var(--radius-xl)]' : 'rounded-t-2xl',
-          'bg-[var(--bg-primary)] shadow-2xl outline-none'
+          'bg-[var(--bg-primary)] shadow-[var(--shadow-xl)] outline-none'
         )}
         data-testid="filter-bottom-sheet"
       >

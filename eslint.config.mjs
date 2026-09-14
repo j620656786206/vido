@@ -20,6 +20,7 @@ import noHardcodedPalette from './apps/web/src/eslint-rules/no-hardcoded-palette
 import noEmojiInUi from './apps/web/src/eslint-rules/no-emoji-in-ui.js';
 import noBaseSemanticAsText from './apps/web/src/eslint-rules/no-base-semantic-as-text.js';
 import noHardcodedDuration from './apps/web/src/eslint-rules/no-hardcoded-duration.js';
+import noRawShadow from './apps/web/src/eslint-rules/no-raw-shadow.js';
 
 const localRules = {
   rules: {
@@ -29,6 +30,7 @@ const localRules = {
     ...noEmojiInUi.rules,
     ...noBaseSemanticAsText.rules,
     ...noHardcodedDuration.rules,
+    ...noRawShadow.rules,
   },
 };
 
@@ -306,6 +308,12 @@ export default [
       // stronger reason: --motion-* is the handle prefers-reduced-motion pulls.
       // A literal `duration-300` cannot be turned down by that override.
       'local/no-hardcoded-duration': 'error',
+      // The depth axis (dsr-9, 2026-09-14). Same shape as the two above: the
+      // light theme's shadow rework (ink, two layers, ≤15.4% total ink) landed
+      // on the --shadow-* tokens only, so a raw `shadow-lg` is a hardcoded
+      // black that paints a bruise on warm paper. 46 raw vs 10 token before
+      // this pass — the wrong dialect was winning 4.6 to 1.
+      'local/no-raw-shadow': 'error',
     },
   },
 

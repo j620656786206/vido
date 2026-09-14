@@ -195,7 +195,7 @@ export function ExploreBlock({ block, ownership, eager = true, onVisible }: Expl
               onClick={() => scroll('left')}
               aria-label="向左捲動"
               data-testid="explore-block-scroll-left"
-              className="absolute left-0 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] opacity-0 shadow-lg ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity duration-[var(--motion-state)] hover:bg-[var(--bg-tertiary)] focus-visible:opacity-100 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
+              className="absolute left-0 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] opacity-0 shadow-[var(--shadow-lg)] ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity duration-[var(--motion-state)] hover:bg-[var(--bg-tertiary)] focus-visible:opacity-100 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -205,7 +205,7 @@ export function ExploreBlock({ block, ownership, eager = true, onVisible }: Expl
               aria-label="向右捲動"
               data-testid="explore-block-scroll-right"
               className={cn(
-                'absolute right-0 top-1/2 z-10 hidden translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] shadow-lg ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity duration-[var(--motion-state)] hover:bg-[var(--bg-tertiary)] focus-visible:opacity-100 lg:block',
+                'absolute right-0 top-1/2 z-10 hidden translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] shadow-[var(--shadow-lg)] ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity duration-[var(--motion-state)] hover:bg-[var(--bg-tertiary)] focus-visible:opacity-100 lg:block',
                 canScrollRight ? 'opacity-70 hover:opacity-100' : 'pointer-events-none opacity-0'
               )}
             >

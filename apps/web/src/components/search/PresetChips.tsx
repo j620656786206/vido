@@ -133,7 +133,7 @@ export function PresetChips({ onApplyPreset, className }: PresetChipsProps) {
             className="absolute inset-0"
             onClick={() => setPendingDelete(null)}
           />
-          <div className="relative mx-4 w-full max-w-sm rounded-xl bg-[var(--bg-secondary)] p-6 shadow-2xl">
+          <div className="relative mx-4 w-full max-w-sm rounded-xl bg-[var(--bg-secondary)] p-6 shadow-[var(--shadow-xl)]">
             <h3
               id="preset-delete-title"
               className="mb-2 text-center text-lg font-semibold text-[var(--text-primary)]"

@@ -26,7 +26,7 @@ export function ParseCompleteToast({
 
   return (
     <div
-      className="flex items-center gap-3 rounded-lg bg-[var(--bg-secondary)] p-3 shadow-lg"
+      className="flex items-center gap-3 rounded-lg bg-[var(--bg-secondary)] p-3 shadow-[var(--shadow-lg)]"
       data-testid="parse-complete-toast"
     >
       {/* Poster thumbnail */}

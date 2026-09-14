@@ -120,7 +120,7 @@ export function SetupWizard() {
 
   return (
     <div
-      className="w-full max-w-lg rounded-2xl border border-[var(--border-subtle)]/50 bg-[var(--bg-primary)] p-8 shadow-2xl"
+      className="w-full max-w-lg rounded-2xl border border-[var(--border-subtle)]/50 bg-[var(--bg-primary)] p-8 shadow-[var(--shadow-xl)]"
       data-testid="setup-wizard"
     >
       <div className="mb-8 text-center">

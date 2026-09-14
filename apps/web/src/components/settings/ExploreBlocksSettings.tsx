@@ -208,7 +208,7 @@ export function ExploreBlocksSettings() {
           aria-modal="true"
           aria-labelledby="delete-confirm-title"
         >
-          <div className="w-full max-w-sm rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-6 shadow-xl">
+          <div className="w-full max-w-sm rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-6 shadow-[var(--shadow-xl)]">
             <h3
               id="delete-confirm-title"
               className="text-lg font-semibold text-[var(--text-primary)]"

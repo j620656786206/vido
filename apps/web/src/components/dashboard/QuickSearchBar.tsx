@@ -169,7 +169,7 @@ export function QuickSearchBar({ className }: QuickSearchBarProps) {
       {showDropdown && recentSearches.length > 0 && (
         <div
           ref={dropdownRef}
-          className="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] shadow-lg"
+          className="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] shadow-[var(--shadow-lg)]"
           data-testid="recent-searches-dropdown"
           role="listbox"
         >

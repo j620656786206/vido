@@ -93,7 +93,7 @@ export function SearchSuggestions({
       className={cn(
         'overflow-hidden bg-[var(--bg-secondary)]',
         floating
-          ? 'absolute left-0 right-0 top-full z-50 mt-2 rounded-xl border border-[var(--border-subtle)] shadow-xl'
+          ? 'absolute left-0 right-0 top-full z-50 mt-2 rounded-xl border border-[var(--border-subtle)] shadow-[var(--shadow-xl)]'
           : 'mt-3 flex-1 overflow-y-auto'
       )}
       data-testid="search-suggestions"
