@@ -2244,3 +2244,47 @@ func TestCreatePersistsLibraryID(t *testing.T) {
 		}
 	})
 }
+
+// TestMovieFindWithFileByTMDbID — dl-import-1: the library copy is a
+// non-removed row with a file; with duplicates, the newest wins.
+func TestMovieFindWithFileByTMDbID(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	create := func(id, filePath string) {
+		movie := &models.Movie{ID: id, Title: id, ReleaseDate: "1999-03-31", Genres: []string{}, TMDbID: models.NewNullInt64(603)}
+		if filePath != "" {
+			movie.FilePath = models.NewNullString(filePath)
+		}
+		if err := repo.Create(ctx, movie); err != nil {
+			t.Fatalf("create %s: %v", id, err)
+		}
+	}
+	create("removed", "/media/movies/old.mkv")
+	create("no-file", "")
+	create("older", "/media/movies/a.mkv")
+	create("newer", "/media/movies/b.mkv")
+	mustExec := func(q string, args ...interface{}) {
+		if _, err := db.ExecContext(ctx, q, args...); err != nil {
+			t.Fatalf("exec: %v", err)
+		}
+	}
+	mustExec(`UPDATE movies SET is_removed = 1, updated_at = '2026-09-15 00:00:00' WHERE id = 'removed'`)
+	mustExec(`UPDATE movies SET updated_at = '2026-09-10 00:00:00' WHERE id = 'older'`)
+	mustExec(`UPDATE movies SET updated_at = '2026-09-12 00:00:00' WHERE id = 'newer'`)
+
+	found, err := repo.FindWithFileByTMDbID(ctx, 603)
+	if err != nil {
+		t.Fatalf("FindWithFileByTMDbID: %v", err)
+	}
+	if found == nil || found.ID != "newer" {
+		t.Fatalf("expected the newest non-removed copy with a file, got %+v", found)
+	}
+
+	none, err := repo.FindWithFileByTMDbID(ctx, 999)
+	if err != nil || none != nil {
+		t.Fatalf("expected (nil, nil) for an unknown tmdb id, got %+v, %v", none, err)
+	}
+}

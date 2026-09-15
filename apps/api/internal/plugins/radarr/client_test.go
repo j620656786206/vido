@@ -347,3 +347,78 @@ func TestClient_Timeout(t *testing.T) {
 func TestClient_ImplementsDVRPlugin(t *testing.T) {
 	var _ plugins.DVRPlugin = (*Client)(nil)
 }
+
+func TestClient_GetImportHistory_ReadsAllEventsWithTMDbIDsAndPaths(t *testing.T) {
+	var eventTypes []string
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v3/movie", requireAPIKey(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `[{"id": 7, "tmdbId": 603, "title": "The Matrix"}]`)
+	}))
+	mux.HandleFunc("/api/v3/history", requireAPIKey(t, func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		eventTypes = append(eventTypes, q.Get("eventType"))
+		assert.Equal(t, "1000", q.Get("pageSize"))
+		assert.Equal(t, "date", q.Get("sortKey"))
+		assert.Equal(t, "descending", q.Get("sortDirection"))
+		assert.Empty(t, q.Get("includeMovie"), "the movie list replaces the per-record embed")
+		w.Header().Set("Content-Type", "application/json")
+		switch q.Get("eventType") {
+		case "1":
+			fmt.Fprint(w, `{"totalRecords":1,"records":[{"downloadId":"abcdef","eventType":"grabbed","date":"2026-09-01T08:00:00Z","movieId":7,"data":{}}]}`)
+		case "3":
+			fmt.Fprint(w, `{"totalRecords":1,"records":[{"downloadId":"ABCDEF","eventType":"downloadFolderImported","date":"2026-09-01T08:05:00Z","movieId":7,"data":{"importedPath":"/data/media/movies/The Matrix (1999)/The.Matrix.mkv","droppedPath":"/data/torrents/x.mkv"}}]}`)
+		default:
+			fmt.Fprint(w, `{"totalRecords":0,"records":[]}`)
+		}
+	}))
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	records, err := NewClient(testConfig(server.URL)).GetImportHistory(context.Background())
+
+	require.NoError(t, err)
+	assert.Equal(t, []string{"1", "3", "4", "9"}, eventTypes, "grabbed, imported, failed, ignored (MovieHistoryEventType)")
+	assert.Equal(t, []plugins.ImportHistoryRecord{
+		{DownloadID: "ABCDEF", EventType: plugins.HistoryEventGrabbed, Date: time.Date(2026, 9, 1, 8, 0, 0, 0, time.UTC), TMDbID: 603},
+		{DownloadID: "ABCDEF", EventType: plugins.HistoryEventImported, Date: time.Date(2026, 9, 1, 8, 5, 0, 0, time.UTC), TMDbID: 603,
+			ImportedPath: "/data/media/movies/The Matrix (1999)/The.Matrix.mkv"},
+	}, records)
+}
+
+func TestClient_GetImportHistory_Paginates(t *testing.T) {
+	served := map[string]int{}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v3/movie", func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, `[]`) })
+	mux.HandleFunc("/api/v3/history", func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		served[q.Get("eventType")+"/"+q.Get("page")]++
+		w.Header().Set("Content-Type", "application/json")
+		if q.Get("eventType") != "3" {
+			fmt.Fprint(w, `{"totalRecords":0,"records":[]}`)
+			return
+		}
+		fmt.Fprintf(w, `{"totalRecords":2,"records":[{"downloadId":"P%s","eventType":"downloadFolderImported"}]}`, q.Get("page"))
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	records, err := NewClient(testConfig(server.URL)).GetImportHistory(context.Background())
+
+	require.NoError(t, err)
+	assert.Len(t, records, 2)
+	assert.Equal(t, 1, served["3/2"], "the second page of imports is fetched")
+}
+
+func TestClient_GetImportHistory_AuthFailure(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer server.Close()
+
+	_, err := NewClient(testConfig(server.URL)).GetImportHistory(context.Background())
+
+	var pluginErr *plugins.PluginError
+	require.ErrorAs(t, err, &pluginErr)
+	assert.Equal(t, plugins.ErrCodeAuthFailed, pluginErr.Code)
+}

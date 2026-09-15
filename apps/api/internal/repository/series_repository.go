@@ -134,6 +134,24 @@ func (r *SeriesRepository) FindByTMDbID(ctx context.Context, tmdbID int64) (*mod
 	return &series, nil
 }
 
+// FindActiveByTMDbID returns the library series for a TMDb id that has not
+// been removed; with duplicates, the most recently updated wins. Returns
+// (nil, nil) when there is none (dl-import-1).
+func (r *SeriesRepository) FindActiveByTMDbID(ctx context.Context, tmdbID int64) (*models.Series, error) {
+	query := fmt.Sprintf(`SELECT %s FROM series
+		WHERE tmdb_id = ? AND (is_removed = 0 OR is_removed IS NULL)
+		ORDER BY updated_at DESC LIMIT 1`, seriesSelectColumns)
+
+	series, err := scanSeries(r.db.QueryRowContext(ctx, query, tmdbID))
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to find active series by tmdb_id: %w", err)
+	}
+	return &series, nil
+}
+
 // FindByIMDbID retrieves a series by its IMDb ID
 func (r *SeriesRepository) FindByIMDbID(ctx context.Context, imdbID string) (*models.Series, error) {
 	query := fmt.Sprintf(`SELECT %s FROM series WHERE imdb_id = ?`, seriesSelectColumns)

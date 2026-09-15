@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/qbittorrent"
+	"github.com/vido/api/internal/services"
 )
 
 // MockDownloadService mocks DownloadServiceInterface for handler tests.
@@ -1415,4 +1416,73 @@ func TestDownloadHandler_ResumeAndRemove_EmptyHash(t *testing.T) {
 			mockService.AssertNotCalled(t, tc.name)
 		})
 	}
+}
+
+// fakeImportStatusService records what the handler asked for (dl-import-1).
+type fakeImportStatusService struct {
+	gotHashes []string
+	statuses  map[string]*services.DownloadImportStatus
+}
+
+func (f *fakeImportStatusService) Resolve(_ context.Context, hashes []string) map[string]*services.DownloadImportStatus {
+	f.gotHashes = hashes
+	return f.statuses
+}
+
+func TestDownloadHandler_ListDownloads_ImportStatusForFinishedTorrentsOnly(t *testing.T) {
+	mockDLService := new(MockDownloadService)
+	addedOn := time.Date(2026, 9, 15, 10, 0, 0, 0, time.UTC)
+	torrents := []qbittorrent.Torrent{
+		{Hash: "done", Name: "Movie.mkv", Status: qbittorrent.StatusCompleted, Progress: 1, AddedOn: addedOn},
+		{Hash: "seed", Name: "Show.S01", Status: qbittorrent.StatusSeeding, Progress: 1, AddedOn: addedOn},
+		{Hash: "dl", Name: "Other.mkv", Status: qbittorrent.StatusDownloading, Progress: 0.4, AddedOn: addedOn},
+		// finished but now erroring (e.g. missing files): it may well have been imported
+		{Hash: "err", Name: "Gone.mkv", Status: qbittorrent.StatusError, Progress: 1, AddedOn: addedOn},
+	}
+	mockDLService.On("GetAllDownloads", mock.Anything, "all", "added_on", "desc").Return(torrents, nil)
+
+	fake := &fakeImportStatusService{statuses: map[string]*services.DownloadImportStatus{
+		"done": {State: services.ImportStateInLibrary, Source: "radarr", MediaType: "movie", MediaID: "movie-1"},
+	}}
+	handler := NewDownloadHandler(mockDLService)
+	handler.SetImportStatusService(fake)
+	router := setupDownloadRouter(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/downloads", nil)
+	router.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	assert.Equal(t, []string{"done", "seed", "err"}, fake.gotHashes, "fully downloaded torrents only, whatever their state now")
+
+	var response APIResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+	items := response.Data.(map[string]interface{})["items"].([]interface{})
+	require.Len(t, items, 4)
+
+	done := items[0].(map[string]interface{})
+	importStatus, ok := done["import_status"].(map[string]interface{})
+	require.True(t, ok, "wire shape: snake_case import_status object")
+	assert.Equal(t, "in_library", importStatus["state"])
+	assert.Equal(t, "radarr", importStatus["source"])
+	assert.Equal(t, "movie", importStatus["media_type"])
+	assert.Equal(t, "movie-1", importStatus["media_id"])
+	assert.NotContains(t, importStatus, "episodes_imported", "movie statuses carry no episode counts")
+
+	assert.Nil(t, items[1].(map[string]interface{})["import_status"], "unknown to *arr → absent, not a guess")
+	assert.Nil(t, items[2].(map[string]interface{})["import_status"])
+}
+
+func TestDownloadHandler_ListDownloads_WithoutImportStatusService_Unchanged(t *testing.T) {
+	mockDLService := new(MockDownloadService)
+	torrents := []qbittorrent.Torrent{{Hash: "done", Status: qbittorrent.StatusCompleted, Progress: 1}}
+	mockDLService.On("GetAllDownloads", mock.Anything, "all", "added_on", "desc").Return(torrents, nil)
+
+	router := setupDownloadRouter(NewDownloadHandler(mockDLService))
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/downloads", nil)
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.NotContains(t, w.Body.String(), "import_status")
 }

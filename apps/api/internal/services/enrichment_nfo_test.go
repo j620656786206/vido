@@ -162,6 +162,9 @@ func (m *mockMovieRepoForNFO) FindByTMDbID(ctx context.Context, tmdbID int64) (*
 func (m *mockMovieRepoForNFO) FindByIMDbID(ctx context.Context, imdbID string) (*models.Movie, error) {
 	return nil, nil
 }
+func (m *mockMovieRepoForNFO) FindWithFileByTMDbID(ctx context.Context, tmdbID int64) (*models.Movie, error) {
+	return nil, nil
+}
 func (m *mockMovieRepoForNFO) Delete(ctx context.Context, id string) error { return nil }
 func (m *mockMovieRepoForNFO) List(ctx context.Context, params repository.ListParams) ([]models.Movie, *repository.PaginationResult, error) {
 	return nil, nil, nil

@@ -1731,3 +1731,37 @@ func TestSeriesCreatePersistsLibraryID(t *testing.T) {
 		}
 	})
 }
+
+// TestSeriesFindActiveByTMDbID — dl-import-1: a removed series is not in the library.
+func TestSeriesFindActiveByTMDbID(t *testing.T) {
+	db := setupSeriesTestDB(t)
+	defer db.Close()
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	for _, id := range []string{"s-removed", "s-active"} {
+		series := &models.Series{ID: id, Title: id, FirstAirDate: "2011-04-17", Genres: []string{}, TMDbID: models.NewNullInt64(1399)}
+		if err := repo.Create(ctx, series); err != nil {
+			t.Fatalf("create %s: %v", id, err)
+		}
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE series SET is_removed = 1, updated_at = '2026-09-15 00:00:00' WHERE id = 's-removed'`); err != nil {
+		t.Fatalf("exec: %v", err)
+	}
+
+	found, err := repo.FindActiveByTMDbID(ctx, 1399)
+	if err != nil {
+		t.Fatalf("FindActiveByTMDbID: %v", err)
+	}
+	if found == nil || found.ID != "s-active" {
+		t.Fatalf("expected the active series, got %+v", found)
+	}
+
+	if _, err := db.ExecContext(ctx, `UPDATE series SET is_removed = 1 WHERE id = 's-active'`); err != nil {
+		t.Fatalf("exec: %v", err)
+	}
+	none, err := repo.FindActiveByTMDbID(ctx, 1399)
+	if err != nil || none != nil {
+		t.Fatalf("expected (nil, nil) once every copy is removed, got %+v, %v", none, err)
+	}
+}

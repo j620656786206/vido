@@ -1399,3 +1399,13 @@ func TestParseQueueService_ProcessNextJob_TVShow_SpecialsSeason0(t *testing.T) {
 		assert.Equal(t, 0, s.SeasonNumber)
 	}
 }
+
+// FindWithFileByTMDbID — dl-import-1 interface addition; not exercised by these tests.
+func (*mockPQMovieRepo) FindWithFileByTMDbID(ctx context.Context, tmdbID int64) (*models.Movie, error) {
+	return nil, nil
+}
+
+// FindActiveByTMDbID — dl-import-1 interface addition; not exercised by these tests.
+func (*mockPQSeriesRepo) FindActiveByTMDbID(ctx context.Context, tmdbID int64) (*models.Series, error) {
+	return nil, nil
+}

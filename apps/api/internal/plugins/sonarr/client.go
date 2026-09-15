@@ -70,8 +70,9 @@ type Client struct {
 
 // Compile-time interface verification.
 var (
-	_ plugins.DVRPlugin     = (*Client)(nil)
-	_ plugins.ProfileLister = (*Client)(nil)
+	_ plugins.DVRPlugin           = (*Client)(nil)
+	_ plugins.ProfileLister       = (*Client)(nil)
+	_ plugins.ImportHistoryReader = (*Client)(nil)
 )
 
 // NewClient creates a new Sonarr API client for the given config.
@@ -591,4 +592,116 @@ func truncate(s string, n int) string {
 		return s
 	}
 	return string(runes[:n]) + "…"
+}
+
+// History paging for GetImportHistory: sorted newest first, 1000 records a
+// page; the page cap bounds a pathological history, and hitting it drops the
+// OLDEST events with a visible warning (13-4a CR L1 parity).
+const (
+	historyPageSize = 1000
+	maxHistoryPages = 20
+)
+
+// Numeric GET /history eventType filters (EpisodeHistoryEventType): grabbed,
+// downloadFolderImported, downloadFailed, downloadIgnored.
+var historyEventFilters = []int{1, 3, 4, 7}
+
+type historyPage struct {
+	TotalRecords int             `json:"totalRecords"`
+	Records      []historyRecord `json:"records"`
+}
+
+// historyRecord is a Sonarr history event; includeEpisode embeds the episode
+// (season/episode numbers); data is a flat string map.
+type historyRecord struct {
+	DownloadID string            `json:"downloadId"`
+	EventType  string            `json:"eventType"`
+	Date       time.Time         `json:"date"`
+	SeriesID   int64             `json:"seriesId"`
+	Data       map[string]string `json:"data"`
+	Episode    *struct {
+		SeasonNumber  int `json:"seasonNumber"`
+		EpisodeNumber int `json:"episodeNumber"`
+	} `json:"episode"`
+}
+
+// libraryRef is the id → TMDb id slice of GET /series.
+type libraryRef struct {
+	ID     int64 `json:"id"`
+	TMDbID int64 `json:"tmdbId"`
+}
+
+func (r historyRecord) toImportHistory(tmdbByID map[int64]int64) plugins.ImportHistoryRecord {
+	item := plugins.ImportHistoryRecord{
+		DownloadID:   strings.ToUpper(r.DownloadID),
+		EventType:    r.EventType,
+		Date:         r.Date,
+		TMDbID:       tmdbByID[r.SeriesID],
+		ImportedPath: r.Data["importedPath"],
+	}
+	if r.Episode != nil {
+		item.SeasonNumber = r.Episode.SeasonNumber
+		item.EpisodeNumber = r.Episode.EpisodeNumber
+	}
+	return item
+}
+
+// GetImportHistory returns every grab, import, failure and ignore, each with
+// its TMDb id (plugins.ImportHistoryReader, dl-import-1). The series is
+// resolved through one GET /series per call: embedding it in every record
+// (includeSeries) triples the payload on a real install.
+func (c *Client) GetImportHistory(ctx context.Context) ([]plugins.ImportHistoryRecord, error) {
+	body, err := c.doRequest(ctx, http.MethodGet, c.buildURL("/series"), c.config.APIKey, nil)
+	if err != nil {
+		return nil, err
+	}
+	var refs []libraryRef
+	if err := json.Unmarshal(body, &refs); err != nil {
+		return nil, &plugins.PluginError{
+			Code:    plugins.ErrCodeConnectionFailed,
+			Message: "sonarr series list is not parseable",
+			Cause:   err,
+		}
+	}
+	tmdbByID := make(map[int64]int64, len(refs))
+	for _, ref := range refs {
+		tmdbByID[ref.ID] = ref.TMDbID
+	}
+
+	out := []plugins.ImportHistoryRecord{}
+	for _, eventType := range historyEventFilters {
+		collected, totalRecords, complete := 0, 0, false
+		for page := 1; page <= maxHistoryPages; page++ {
+			body, err := c.doRequest(ctx, http.MethodGet, c.buildURL(fmt.Sprintf(
+				"/history?page=%d&pageSize=%d&eventType=%d&sortKey=date&sortDirection=descending&includeEpisode=true",
+				page, historyPageSize, eventType)), c.config.APIKey, nil)
+			if err != nil {
+				return nil, err
+			}
+
+			var envelope historyPage
+			if err := json.Unmarshal(body, &envelope); err != nil {
+				return nil, &plugins.PluginError{
+					Code:    plugins.ErrCodeConnectionFailed,
+					Message: "sonarr history response is not parseable",
+					Cause:   err,
+				}
+			}
+			for _, rec := range envelope.Records {
+				out = append(out, rec.toImportHistory(tmdbByID))
+			}
+
+			collected += len(envelope.Records)
+			totalRecords = envelope.TotalRecords
+			if len(envelope.Records) == 0 || collected >= totalRecords {
+				complete = true
+				break
+			}
+		}
+		if !complete {
+			slog.Warn("Sonarr history truncated at page cap — oldest events dropped",
+				"event_type", eventType, "collected", collected, "total_records", totalRecords, "max_pages", maxHistoryPages)
+		}
+	}
+	return out, nil
 }

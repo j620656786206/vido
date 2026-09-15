@@ -356,3 +356,8 @@ func TestEnrichMovie_WithoutSeederIsUnchanged(t *testing.T) {
 	require.NoError(t, svc.enrichMovie(context.Background(), writeSeedTestNFO(t, "10196")))
 	assert.Empty(t, repo.creditsWrites)
 }
+
+// FindActiveByTMDbID — dl-import-1 interface addition; not exercised by these tests.
+func (*recordingSeriesRepo) FindActiveByTMDbID(ctx context.Context, tmdbID int64) (*models.Series, error) {
+	return nil, nil
+}

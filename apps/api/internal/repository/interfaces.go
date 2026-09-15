@@ -20,6 +20,9 @@ type MovieRepositoryInterface interface {
 	// FindByTMDbID retrieves a movie by its TMDb ID
 	FindByTMDbID(ctx context.Context, tmdbID int64) (*models.Movie, error)
 
+	// FindWithFileByTMDbID returns the non-removed copy with a file, or (nil, nil)
+	FindWithFileByTMDbID(ctx context.Context, tmdbID int64) (*models.Movie, error)
+
 	// FindByIMDbID retrieves a movie by its IMDb ID
 	FindByIMDbID(ctx context.Context, imdbID string) (*models.Movie, error)
 
@@ -137,6 +140,9 @@ type SeriesRepositoryInterface interface {
 
 	// FindByTMDbID retrieves a series by its TMDb ID
 	FindByTMDbID(ctx context.Context, tmdbID int64) (*models.Series, error)
+
+	// FindActiveByTMDbID returns the non-removed series, or (nil, nil)
+	FindActiveByTMDbID(ctx context.Context, tmdbID int64) (*models.Series, error)
 
 	// FindByIMDbID retrieves a series by its IMDb ID
 	FindByIMDbID(ctx context.Context, imdbID string) (*models.Series, error)

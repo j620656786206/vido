@@ -134,6 +134,25 @@ func (r *MovieRepository) FindByTMDbID(ctx context.Context, tmdbID int64) (*mode
 	return &movie, nil
 }
 
+// FindWithFileByTMDbID returns the library copy of a movie: not removed and
+// with a file. A re-scan can leave more than one row for a TMDb id (tmdb_id is
+// indexed, not unique); the most recently updated wins. Returns (nil, nil)
+// when Vido has no such copy (dl-import-1).
+func (r *MovieRepository) FindWithFileByTMDbID(ctx context.Context, tmdbID int64) (*models.Movie, error) {
+	query := fmt.Sprintf(`SELECT %s FROM movies
+		WHERE tmdb_id = ? AND %s AND file_path IS NOT NULL AND file_path != ''
+		ORDER BY updated_at DESC LIMIT 1`, movieSelectColumns, notRemoved)
+
+	movie, err := scanMovie(r.db.QueryRowContext(ctx, query, tmdbID))
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to find library movie by tmdb_id: %w", err)
+	}
+	return &movie, nil
+}
+
 // FindByIMDbID retrieves a movie by its IMDb ID
 func (r *MovieRepository) FindByIMDbID(ctx context.Context, imdbID string) (*models.Movie, error) {
 	query := fmt.Sprintf(`SELECT %s FROM movies WHERE imdb_id = ?`, movieSelectColumns)
