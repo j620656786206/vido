@@ -1,9 +1,10 @@
-// Design ref: ux-design.pen Screen D1-D-v2 (cK1KF) · D2-D-v2 (tx6U1)
+// Design ref: ux-design.pen Screen D1-D-v2 (cK1KF) · D2-D-v2 (tx6U1) · D12-D-v2 (tvp15)
 import { Magnet, Plus, Timer } from 'lucide-react';
 import type { Download } from '../../services/downloadService';
 import { cn } from '../../lib/utils';
 import { getDownloadStatus, getDownloadTone } from './downloadStatus';
 import { DownloadRowActions } from './DownloadRowActions';
+import { ImportStatusChip } from './ImportStatusChip';
 import { formatDownloadMeta, formatProgress } from './formatters';
 
 interface DownloadCardV2Props {
@@ -94,6 +95,7 @@ export function DownloadCardV2({
               NZBGet
               <span className="sr-only">（尚未支援）</span>
             </span>
+            {download.importStatus && <ImportStatusChip status={download.importStatus} />}
           </div>
         </div>
 

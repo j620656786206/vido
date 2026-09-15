@@ -256,6 +256,51 @@ test.describe('Downloads v2 actions + batch @downloads @ui @ux3-4-3', () => {
     await expect.poll(() => pauseHits.length).toBe(list.length);
   });
 
+  test('[P1] a finished torrent Sonarr/Radarr imported shows where it stands, and 已入庫 links to it (dl-import-2)', async ({
+    page,
+  }) => {
+    await stubQbtConfig(page, true);
+    const imported = {
+      ...presetDownloads.seeding,
+      import_status: {
+        state: 'in_library',
+        source: 'radarr',
+        media_type: 'movie',
+        media_id: 'movie-e2e',
+      },
+    };
+    const waiting = {
+      ...presetDownloads.downloading,
+      hash: 'waiting-hash',
+      status: 'completed',
+      progress: 1,
+      import_status: { state: 'awaiting_import', source: 'sonarr', media_type: 'tv' },
+    };
+    await page.route(`${ROUTE_API}/downloads*`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(paginated([imported, waiting])),
+      })
+    );
+    await stubCounts(page, 2);
+
+    await page.goto('/downloads');
+    const browse = page.getByTestId('downloads-browse-v2');
+    await expect(browse).toBeVisible({ timeout: 15000 });
+
+    const chips = page.getByTestId('download-import-status');
+    await expect(chips).toHaveCount(2);
+    const inLibrary = page.locator(
+      '[data-testid="download-import-status"][data-state="in_library"]'
+    );
+    await expect(inLibrary).toHaveText('已入庫');
+    await expect(inLibrary).toHaveAttribute('href', '/media/movie/movie-e2e');
+    await expect(
+      page.locator('[data-testid="download-import-status"][data-state="awaiting_import"]')
+    ).toContainText('等 Sonarr 匯入');
+  });
+
   test('[P2] Table view: 表格 toggle → dense sortable table + column sort + row action (ux3-4-4)', async ({
     page,
   }) => {

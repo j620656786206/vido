@@ -80,7 +80,10 @@ describe('useDownloadActions (ux3-4-3b AC3/AC5)', () => {
   it('remove drops the item + decrements totalItems and passes deleteFiles', async () => {
     const { result, read } = setup([
       item({ hash: 'a' }),
-      item({ hash: 'b', parseStatus: { status: 'completed' } }),
+      item({
+        hash: 'b',
+        importStatus: { state: 'in_library', source: 'radarr', mediaType: 'movie' },
+      }),
     ]);
     act(() => result.current.remove.mutate({ hashes: ['a'], deleteFiles: true }));
 
@@ -103,15 +106,19 @@ describe('useDownloadActions (ux3-4-3b AC3/AC5)', () => {
       new Error('boom')
     );
     const { result, read } = setup([
-      item({ hash: 'b', status: 'downloading', parseStatus: { status: 'completed' } }),
+      item({
+        hash: 'b',
+        status: 'downloading',
+        importStatus: { state: 'in_library', source: 'radarr', mediaType: 'movie' },
+      }),
     ]);
 
     act(() => result.current.pause.mutate(['b']));
     await waitFor(() => expect(result.current.pause.isError).toBe(true));
 
-    // rolled back to the pre-mutation snapshot (status restored, parseStatus intact)
+    // rolled back to the pre-mutation snapshot (status restored, importStatus intact)
     const b = read().items.find((i) => i.hash === 'b');
     expect(b?.status).toBe('downloading');
-    expect(b?.parseStatus?.status).toBe('completed');
+    expect(b?.importStatus?.state).toBe('in_library');
   });
 });

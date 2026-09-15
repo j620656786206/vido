@@ -52,11 +52,16 @@ const item = (over: Partial<Download> = {}): Download => ({
 const LIST_KEY = downloadKeys.list('all', 'added_on', 'desc', 1, 100);
 
 describe('applyDownloadSnapshot (ux3-4-3b AC4 — [@contract-v1] merge)', () => {
-  it('refreshes live fields by hash, PRESERVES parse_status, and drops removed torrents', () => {
+  it('refreshes live fields by hash, PRESERVES import_status, and drops removed torrents', () => {
     const qc = new QueryClient();
     qc.setQueryData<PaginatedDownloads>(LIST_KEY, {
       items: [
-        item({ hash: 'a', progress: 0.1, parseStatus: { status: 'completed' } }),
+        item({
+          hash: 'a',
+          progress: 1,
+          uploadSpeed: 100,
+          importStatus: { state: 'in_library', source: 'radarr', mediaType: 'movie' },
+        }),
         item({ hash: 'b', progress: 0.2 }),
       ],
       page: 1,
@@ -65,16 +70,69 @@ describe('applyDownloadSnapshot (ux3-4-3b AC4 — [@contract-v1] merge)', () => 
       totalPages: 1,
     });
 
-    // Snapshot: 'a' advanced to 0.9 (no parse_status on the wire), 'b' gone (removed).
-    applyDownloadSnapshot(qc, [item({ hash: 'a', progress: 0.9 })]);
+    // Snapshot: 'a' seeding faster (no import_status on the wire), 'b' gone (removed).
+    applyDownloadSnapshot(qc, [item({ hash: 'a', progress: 1, uploadSpeed: 900 })]);
 
     const data = qc.getQueryData<PaginatedDownloads>(LIST_KEY)!;
     expect(data.items).toHaveLength(1);
     const a = data.items[0];
     expect(a.hash).toBe('a');
-    expect(a.progress).toBe(0.9); // fresh live field
-    expect(a.parseStatus?.status).toBe('completed'); // preserved across the merge
+    expect(a.uploadSpeed).toBe(900); // fresh live field
+    expect(a.importStatus?.state).toBe('in_library'); // preserved across the merge
     expect(data.totalItems).toBe(1); // decremented for the removed 'b'
+  });
+});
+
+describe('applyDownloadSnapshot — import status (dl-import-2)', () => {
+  const seed = (items: Download[]) => {
+    const qc = new QueryClient();
+    qc.setQueryData<PaginatedDownloads>(LIST_KEY, {
+      items,
+      page: 1,
+      pageSize: 100,
+      totalItems: items.length,
+      totalPages: 1,
+    });
+    return qc;
+  };
+
+  it('a settled status needs no re-read', () => {
+    const qc = seed([
+      item({
+        hash: 'a',
+        progress: 1,
+        importStatus: { state: 'in_library', source: 'radarr', mediaType: 'movie' },
+      }),
+    ]);
+    expect(applyDownloadSnapshot(qc, [item({ hash: 'a', progress: 1 })])).toBe(false);
+  });
+
+  it('a torrent that just finished asks for a re-read (the snapshot cannot carry its status)', () => {
+    const qc = seed([item({ hash: 'a', progress: 0.99 })]);
+    expect(applyDownloadSnapshot(qc, [item({ hash: 'a', progress: 1 })])).toBe(true);
+  });
+
+  it('a finished torrent still awaiting import keeps asking', () => {
+    const qc = seed([
+      item({
+        hash: 'a',
+        progress: 1,
+        importStatus: { state: 'awaiting_import', source: 'sonarr', mediaType: 'tv' },
+      }),
+    ]);
+    expect(applyDownloadSnapshot(qc, [item({ hash: 'a', progress: 1 })])).toBe(true);
+  });
+
+  it('a torrent no longer fully downloaded (recheck) drops its import status', () => {
+    const qc = seed([
+      item({
+        hash: 'a',
+        progress: 1,
+        importStatus: { state: 'in_library', source: 'radarr', mediaType: 'movie' },
+      }),
+    ]);
+    applyDownloadSnapshot(qc, [item({ hash: 'a', progress: 0.4 })]);
+    expect(qc.getQueryData<PaginatedDownloads>(LIST_KEY)!.items[0].importStatus).toBeUndefined();
   });
 });
 

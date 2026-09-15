@@ -19,12 +19,26 @@ export type TorrentStatus =
 export type SortField = 'added_on' | 'name' | 'progress' | 'status';
 export type SortOrder = 'asc' | 'desc';
 
-export type ParseJobStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'skipped';
+/**
+ * dl-import-1 [@contract-v1]: where a finished download stands on its way into the library,
+ * read from Sonarr/Radarr's own import history and checked against the Vido library.
+ */
+export type ImportState =
+  | 'in_library'
+  | 'awaiting_scan'
+  | 'awaiting_import'
+  | 'import_failed'
+  | 'import_ignored';
 
-export interface DownloadParseStatus {
-  status: ParseJobStatus;
-  errorMessage?: string;
+export interface DownloadImportStatus {
+  state: ImportState;
+  source: 'radarr' | 'sonarr';
+  mediaType: 'movie' | 'tv';
+  /** The Vido movie/series id when Vido has the title — a link target. */
   mediaId?: string;
+  /** Sonarr, once imported: episodes the torrent imported, and how many of those Vido has. */
+  episodesImported?: number;
+  episodesInLibrary?: number;
 }
 
 export interface Download {
@@ -44,7 +58,8 @@ export interface Download {
   uploaded: number;
   ratio: number;
   savePath: string;
-  parseStatus?: DownloadParseStatus;
+  /** Absent when neither Sonarr nor Radarr knows the torrent, or neither is set up. */
+  importStatus?: DownloadImportStatus;
 }
 
 export interface DownloadDetails extends Download {
