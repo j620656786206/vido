@@ -46,6 +46,14 @@ func (m *MockMovieRepository) FindByTMDbID(ctx context.Context, tmdbID int64) (*
 	return args.Get(0).(*models.Movie), args.Error(1)
 }
 
+func (m *MockMovieRepository) FindWithFileByTMDbID(ctx context.Context, tmdbID int64) (*models.Movie, error) {
+	args := m.Called(ctx, tmdbID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Movie), args.Error(1)
+}
+
 func (m *MockMovieRepository) FindByIMDbID(ctx context.Context, imdbID string) (*models.Movie, error) {
 	args := m.Called(ctx, imdbID)
 	if args.Get(0) == nil {
@@ -252,6 +260,14 @@ func (m *MockSeriesRepository) FindByID(ctx context.Context, id string) (*models
 }
 
 func (m *MockSeriesRepository) FindByTMDbID(ctx context.Context, tmdbID int64) (*models.Series, error) {
+	args := m.Called(ctx, tmdbID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Series), args.Error(1)
+}
+
+func (m *MockSeriesRepository) FindActiveByTMDbID(ctx context.Context, tmdbID int64) (*models.Series, error) {
 	args := m.Called(ctx, tmdbID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)

@@ -42,8 +42,9 @@ type Client struct {
 
 // Compile-time interface verification.
 var (
-	_ plugins.DVRPlugin     = (*Client)(nil)
-	_ plugins.ProfileLister = (*Client)(nil)
+	_ plugins.DVRPlugin           = (*Client)(nil)
+	_ plugins.ProfileLister       = (*Client)(nil)
+	_ plugins.ImportHistoryReader = (*Client)(nil)
 )
 
 // NewClient creates a new Radarr API client for the given config.
@@ -328,4 +329,106 @@ func truncate(s string, n int) string {
 		return s
 	}
 	return string(runes[:n]) + "…"
+}
+
+// History paging for GetImportHistory: sorted newest first, 1000 records a
+// page; the page cap bounds a pathological history, and hitting it drops the
+// OLDEST events with a visible warning (13-4a CR L1 parity).
+const (
+	historyPageSize = 1000
+	maxHistoryPages = 20
+)
+
+// Numeric GET /history eventType filters (MovieHistoryEventType): grabbed,
+// downloadFolderImported, downloadFailed, downloadIgnored.
+var historyEventFilters = []int{1, 3, 4, 9}
+
+type historyPage struct {
+	TotalRecords int             `json:"totalRecords"`
+	Records      []historyRecord `json:"records"`
+}
+
+// historyRecord is a Radarr history event; data is a flat string map.
+type historyRecord struct {
+	DownloadID string            `json:"downloadId"`
+	EventType  string            `json:"eventType"`
+	Date       time.Time         `json:"date"`
+	MovieID    int64             `json:"movieId"`
+	Data       map[string]string `json:"data"`
+}
+
+// libraryRef is the id → TMDb id slice of GET /movie.
+type libraryRef struct {
+	ID     int64 `json:"id"`
+	TMDbID int64 `json:"tmdbId"`
+}
+
+func (r historyRecord) toImportHistory(tmdbByID map[int64]int64) plugins.ImportHistoryRecord {
+	return plugins.ImportHistoryRecord{
+		DownloadID:   strings.ToUpper(r.DownloadID),
+		EventType:    r.EventType,
+		Date:         r.Date,
+		TMDbID:       tmdbByID[r.MovieID],
+		ImportedPath: r.Data["importedPath"],
+	}
+}
+
+// GetImportHistory returns every grab, import, failure and ignore, each with
+// its TMDb id (plugins.ImportHistoryReader, dl-import-1). The movie is
+// resolved through one GET /movie per call: embedding it in every record
+// (includeMovie) triples the payload on a real install.
+func (c *Client) GetImportHistory(ctx context.Context) ([]plugins.ImportHistoryRecord, error) {
+	body, err := c.doRequest(ctx, http.MethodGet, c.buildURL("/movie"), c.config.APIKey, nil)
+	if err != nil {
+		return nil, err
+	}
+	var refs []libraryRef
+	if err := json.Unmarshal(body, &refs); err != nil {
+		return nil, &plugins.PluginError{
+			Code:    plugins.ErrCodeConnectionFailed,
+			Message: "radarr movie list is not parseable",
+			Cause:   err,
+		}
+	}
+	tmdbByID := make(map[int64]int64, len(refs))
+	for _, ref := range refs {
+		tmdbByID[ref.ID] = ref.TMDbID
+	}
+
+	out := []plugins.ImportHistoryRecord{}
+	for _, eventType := range historyEventFilters {
+		collected, totalRecords, complete := 0, 0, false
+		for page := 1; page <= maxHistoryPages; page++ {
+			body, err := c.doRequest(ctx, http.MethodGet, c.buildURL(fmt.Sprintf(
+				"/history?page=%d&pageSize=%d&eventType=%d&sortKey=date&sortDirection=descending",
+				page, historyPageSize, eventType)), c.config.APIKey, nil)
+			if err != nil {
+				return nil, err
+			}
+
+			var envelope historyPage
+			if err := json.Unmarshal(body, &envelope); err != nil {
+				return nil, &plugins.PluginError{
+					Code:    plugins.ErrCodeConnectionFailed,
+					Message: "radarr history response is not parseable",
+					Cause:   err,
+				}
+			}
+			for _, rec := range envelope.Records {
+				out = append(out, rec.toImportHistory(tmdbByID))
+			}
+
+			collected += len(envelope.Records)
+			totalRecords = envelope.TotalRecords
+			if len(envelope.Records) == 0 || collected >= totalRecords {
+				complete = true
+				break
+			}
+		}
+		if !complete {
+			slog.Warn("Radarr history truncated at page cap — oldest events dropped",
+				"event_type", eventType, "collected", collected, "total_records", totalRecords, "max_pages", maxHistoryPages)
+		}
+	}
+	return out, nil
 }

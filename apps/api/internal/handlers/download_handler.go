@@ -40,6 +40,10 @@ func qbtErrorToHTTPStatus(code string) int {
 type DownloadItem struct {
 	qbittorrent.Torrent
 	ParseStatus *DownloadParseStatus `json:"parse_status,omitempty"`
+	// ImportStatus says whether Sonarr/Radarr imported a finished download and
+	// whether Vido has it (dl-import-1 [@contract-v1]). Absent when neither
+	// plugin knows the torrent or neither is configured.
+	ImportStatus *services.DownloadImportStatus `json:"import_status,omitempty"`
 }
 
 // DownloadParseStatus represents the parse status for a download.
@@ -51,8 +55,9 @@ type DownloadParseStatus struct {
 
 // DownloadHandler handles HTTP requests for download monitoring.
 type DownloadHandler struct {
-	service       services.DownloadServiceInterface
-	parseQueueSvc services.ParseQueueServiceInterface
+	service         services.DownloadServiceInterface
+	parseQueueSvc   services.ParseQueueServiceInterface
+	importStatusSvc services.ImportStatusServiceInterface
 }
 
 // NewDownloadHandler creates a new DownloadHandler.
@@ -62,6 +67,12 @@ func NewDownloadHandler(service services.DownloadServiceInterface, parseQueueSvc
 		h.parseQueueSvc = parseQueueSvc[0]
 	}
 	return h
+}
+
+// SetImportStatusService enables the per-page import status (dl-import-1).
+// Optional: without it the list is served exactly as before.
+func (h *DownloadHandler) SetImportStatusService(svc services.ImportStatusServiceInterface) {
+	h.importStatusSvc = svc
 }
 
 // ListDownloads handles GET /api/v1/downloads
@@ -148,6 +159,27 @@ func (h *DownloadHandler) ListDownloads(c *gin.Context) {
 					Status:       job.Status,
 					ErrorMessage: job.ErrorMessage,
 					MediaID:      job.MediaID,
+				}
+			}
+		}
+	}
+
+	// Import status: one call for the whole page, fully downloaded torrents
+	// only — a torrent still downloading cannot have been imported yet. By
+	// progress, not status: a finished torrent can be queued, checking or in
+	// error (missing files) and still have been imported.
+	if h.importStatusSvc != nil {
+		finished := make([]string, 0, len(pageItems))
+		for _, item := range pageItems {
+			if item.Progress >= 1 {
+				finished = append(finished, item.Hash)
+			}
+		}
+		if len(finished) > 0 {
+			statuses := h.importStatusSvc.Resolve(c.Request.Context(), finished)
+			for i := range pageItems {
+				if status, ok := statuses[pageItems[i].Hash]; ok {
+					pageItems[i].ImportStatus = status
 				}
 			}
 		}

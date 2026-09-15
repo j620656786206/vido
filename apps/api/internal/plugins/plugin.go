@@ -5,7 +5,10 @@
 // Rule 20 bump + downstream stale-mark.
 package plugins
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // PluginConfig holds per-plugin connection configuration. The API key is
 // never serialized or logged — json:"-" is the guard (the slog masking
@@ -77,4 +80,34 @@ type RootFolder struct {
 type ProfileLister interface {
 	GetQualityProfiles(ctx context.Context) ([]QualityProfile, error)
 	GetRootFolders(ctx context.Context) ([]RootFolder, error)
+}
+
+// History event types the download import status reads (Radarr and Sonarr
+// share the names; the numeric filters differ for downloadIgnored).
+const (
+	HistoryEventGrabbed         = "grabbed"
+	HistoryEventImported        = "downloadFolderImported"
+	HistoryEventDownloadFailed  = "downloadFailed"
+	HistoryEventDownloadIgnored = "downloadIgnored"
+)
+
+// ImportHistoryRecord is one *arr history event tied to a download — its
+// grab, import, failure or ignore (dl-import-1). DownloadID is the torrent
+// hash as *arr stores it: upper-case.
+type ImportHistoryRecord struct {
+	DownloadID    string
+	EventType     string // HistoryEvent*
+	Date          time.Time
+	TMDbID        int64  // movie (Radarr) or series (Sonarr) TMDb id; 0 when *arr has none
+	SeasonNumber  int    // Sonarr only
+	EpisodeNumber int    // Sonarr only
+	ImportedPath  string // imports only: the file *arr put in the library (already renamed)
+}
+
+// ImportHistoryReader is the client-level extra behind the download import
+// status: every grab, import, failure and ignore in one call per plugin, so a
+// whole downloads page resolves against a single snapshot instead of one
+// request per torrent (not on DVRPlugin — the ProfileLister precedent).
+type ImportHistoryReader interface {
+	GetImportHistory(ctx context.Context) ([]ImportHistoryRecord, error)
 }
