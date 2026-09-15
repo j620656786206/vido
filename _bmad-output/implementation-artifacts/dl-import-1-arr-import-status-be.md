@@ -1,6 +1,6 @@
 # Story DL-IMPORT.1: 下載清單說得出「進媒體庫了沒」（後端）
 
-Status: review
+Status: done
 
 ## Story
 
@@ -124,3 +124,4 @@ Claude Opus 5 (1M context)
 | 日期 | 內容 |
 | --- | --- |
 | 2026-09-15 | 建立並實作；真實資料驗證；對抗式 CR 3H／7M 全處理（M7 增量抓取留作後續）後重跑驗證 154/155。狀態 → review。 |
+| 2026-09-15 | PR #436 合併進 main（7b580212）。CI 全綠，純後端沒有視覺變更。狀態 → done。 |

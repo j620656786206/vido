@@ -1,6 +1,6 @@
 # Story DL-IMPORT.2: 下載頁顯示「進媒體庫了沒」（前端＋設計稿）
 
-Status: review
+Status: done
 
 ## Story
 
@@ -102,3 +102,4 @@ Claude Opus 5 (1M context)
 | 日期 | 內容 |
 | --- | --- |
 | 2026-09-15 | 建立並實作；對抗式 CR 0H／5M 全修（M5 連設計稿一起改）。狀態 → review。 |
+| 2026-09-15 | PR #437 合併進 main（e7604a52）。CI 全綠（含 E2E 4 片、視覺 4 片）；視覺基準 bootstrap PR #438（2 張 `-linux`，兩張都看過）。狀態 → done。 |
