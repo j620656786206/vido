@@ -216,8 +216,8 @@ func TestBatchProcessor_Cancellation(t *testing.T) {
 	bp.Cancel()
 
 	// Wait a bit for cancellation to take effect
-	time.Sleep(100 * time.Millisecond)
-	assert.False(t, bp.IsRunning())
+	assert.Eventually(t, func() bool { return !bp.IsRunning() }, 5*time.Second, 10*time.Millisecond,
+		"batch should finish (a fixed sleep here flaked on a slow CI runner)")
 }
 
 // Invalid scope
@@ -285,8 +285,8 @@ func TestBatchProcessor_CNContentPolicy(t *testing.T) {
 	assert.Equal(t, 2, total)
 
 	// Wait for completion
-	time.Sleep(100 * time.Millisecond)
-	assert.False(t, bp.IsRunning())
+	assert.Eventually(t, func() bool { return !bp.IsRunning() }, 5*time.Second, 10*time.Millisecond,
+		"batch should finish (a fixed sleep here flaked on a slow CI runner)")
 }
 
 // --- TA 8-9: Additional Coverage Tests ---
@@ -423,8 +423,8 @@ func TestBatchProcessor_GetProgressDuringRun(t *testing.T) {
 	assert.NotEmpty(t, progress.BatchID)
 
 	// Wait for completion
-	time.Sleep(500 * time.Millisecond)
-	assert.False(t, bp.IsRunning())
+	assert.Eventually(t, func() bool { return !bp.IsRunning() }, 5*time.Second, 10*time.Millisecond,
+		"batch should finish (a fixed sleep here flaked on a slow CI runner)")
 	assert.Nil(t, bp.GetProgress(), "GetProgress should return nil after completion")
 }
 
@@ -728,8 +728,8 @@ func TestBatchProcessor_SeasonScope_CollectsEpisodes(t *testing.T) {
 	assert.Equal(t, 2, total)
 
 	// Wait for processing to complete (items will fail at placer due to missing media dir, but no panic)
-	time.Sleep(100 * time.Millisecond)
-	assert.False(t, bp.IsRunning())
+	assert.Eventually(t, func() bool { return !bp.IsRunning() }, 5*time.Second, 10*time.Millisecond,
+		"batch should finish (a fixed sleep here flaked on a slow CI runner)")
 }
 
 // Season scope with no eligible episodes returns empty
