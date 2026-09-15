@@ -200,6 +200,7 @@ import { LogsViewer } from '../../components/settings/LogsViewer';
 import { MediaLibraryManager } from '../../components/settings/MediaLibraryManager';
 import { MetadataExport } from '../../components/settings/MetadataExport';
 import { QBittorrentForm } from '../../components/settings/QBittorrentForm';
+import { ArrConnectionForm } from '../../components/settings/ArrConnectionForm';
 import { ScannerSettings } from '../../components/settings/ScannerSettings';
 import { ServiceStatusDashboard } from '../../components/settings/ServiceStatusDashboard';
 
@@ -208,6 +209,8 @@ import { ServiceStatusDashboard } from '../../components/settings/ServiceStatusD
 // `useLibrary`'s `libraryKeys`).
 import { downloadKeys } from '../../hooks/useDownloads';
 import { qbittorrentKeys } from '../../hooks/useQBittorrent';
+import { dvrSettingsKeys } from '../../hooks/useDvrSettings';
+import type { DvrConfig } from '../../services/dvrSettings';
 import { mediaKeys } from '../../hooks/useDashboardData';
 import { healthKeys } from '../../hooks/useConnectionHealth';
 import { exploreBlockKeys } from '../../hooks/useExploreBlocks';
@@ -3411,6 +3414,61 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
           basePath: '/qbittorrent',
           configured: true,
         } satisfies QBConfigResponse,
+      },
+    ],
+  },
+  {
+    id: 'settings-arr-connection-form/sonarr-connected',
+    label: 'settings/ArrConnectionForm (Sonarr, connected)',
+    component: ArrConnectionForm,
+    props: { plugin: 'sonarr' },
+    penNode: 'screen-section', // Screen C23-D (Qva0y)
+    statesOnly: ['default'],
+    width: 768,
+    seedQueries: [
+      {
+        queryKey: dvrSettingsKeys.config('sonarr'),
+        data: {
+          url: 'http://192.168.1.100:8989',
+          enabled: true,
+          qualityProfileId: 4,
+          rootFolderPath: '/data/media/tv',
+          hasApiKey: true,
+          health: { status: 'healthy', lastCheckedAt: '2026-09-15T00:00:00Z', message: '' },
+        } satisfies DvrConfig,
+      },
+      {
+        queryKey: dvrSettingsKeys.qualityProfiles('sonarr'),
+        data: [
+          { id: 4, name: 'HD-1080p' },
+          { id: 6, name: 'Ultra-HD' },
+        ],
+      },
+      {
+        queryKey: dvrSettingsKeys.rootFolders('sonarr'),
+        data: [{ id: 1, path: '/data/media/tv' }],
+      },
+    ],
+  },
+  {
+    id: 'settings-arr-connection-form/radarr-unconfigured',
+    label: 'settings/ArrConnectionForm (Radarr, never set up)',
+    component: ArrConnectionForm,
+    props: { plugin: 'radarr' },
+    penNode: 'screen-section', // Screen C23-D (Qva0y)
+    statesOnly: ['default'],
+    width: 768,
+    seedQueries: [
+      {
+        queryKey: dvrSettingsKeys.config('radarr'),
+        data: {
+          url: '',
+          enabled: false,
+          qualityProfileId: 0,
+          rootFolderPath: '',
+          hasApiKey: false,
+          health: { status: 'unconfigured', lastCheckedAt: null, message: 'plugin not configured' },
+        } satisfies DvrConfig,
       },
     ],
   },

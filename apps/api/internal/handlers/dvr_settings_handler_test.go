@@ -335,3 +335,59 @@ func TestDVRSettingsHandler_GetRootFolders(t *testing.T) {
 	require.Len(t, resp.Data.RootFolders, 1)
 	assert.Equal(t, "/movies", resp.Data.RootFolders[0].Path)
 }
+
+func TestDVRSettingsHandler_SaveConfig_TestFailedCarriesTheRootCause(t *testing.T) {
+	svc := &mockDVRSettingsService{
+		saveConfig: func(ctx context.Context, plugin string, input services.DVRConfigInput) error {
+			return &plugins.PluginError{
+				Code:    plugins.ErrCodeTestFailed,
+				Message: "radarr connection test failed — config not saved",
+				Cause:   &plugins.PluginError{Code: plugins.ErrCodeAuthFailed, Message: "radarr rejected the API key"},
+			}
+		},
+	}
+	router := setupDVRRouter(svc)
+
+	body := `{"url":"http://radarr:7878","api_key":"bad","enabled":true}`
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/settings/radarr", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusConflict, w.Code)
+	var resp struct {
+		Error struct {
+			Code       string `json:"code"`
+			CauseCode  string `json:"cause_code"`
+			Suggestion string `json:"suggestion"`
+		} `json:"error"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, "DVR_TEST_FAILED", resp.Error.Code, "the 409 contract code stays")
+	assert.Equal(t, "DVR_AUTH_FAILED", resp.Error.CauseCode)
+	assert.Equal(t, "radarr rejected the API key", resp.Error.Suggestion)
+}
+
+func TestDVRSettingsHandler_TestConnection_UnwrappedErrorIsItsOwnCause(t *testing.T) {
+	svc := &mockDVRSettingsService{
+		testConnection: func(ctx context.Context, plugin string, input *services.DVRConfigInput) error {
+			return &plugins.PluginError{Code: plugins.ErrCodeTestFailed, Message: "需要 Sonarr v4（偵測到 3.0.10）"}
+		},
+	}
+	router := setupDVRRouter(svc)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/settings/radarr/test", nil)
+	router.ServeHTTP(w, req)
+
+	var resp struct {
+		Error struct {
+			Code       string `json:"code"`
+			CauseCode  string `json:"cause_code"`
+			Suggestion string `json:"suggestion"`
+		} `json:"error"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, "DVR_TEST_FAILED", resp.Error.CauseCode)
+	assert.Equal(t, "需要 Sonarr v4（偵測到 3.0.10）", resp.Error.Suggestion)
+}
