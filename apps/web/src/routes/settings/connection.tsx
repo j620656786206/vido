@@ -1,5 +1,8 @@
+// Design ref: ux-design.pen Screen C4-D (6UCtX)
+// (also C23-D (Qva0y) — the Sonarr / Radarr cards further down the same page)
 import { createFileRoute } from '@tanstack/react-router';
 import { QBittorrentForm } from '../../components/settings/QBittorrentForm';
+import { ArrConnectionForm } from '../../components/settings/ArrConnectionForm';
 
 export const Route = createFileRoute('/settings/connection')({
   component: ConnectionSettingsPage,
@@ -8,16 +11,32 @@ export const Route = createFileRoute('/settings/connection')({
 function ConnectionSettingsPage() {
   return (
     <div>
-      {/* J7-D applies to the FORM CARD, not the page. Capping the whole page
+      {/* J7-D applies to the FORM CARDS, not the page. Capping the whole page
           narrowed the h1 too, so the heading jumped 160px between settings tabs
           and a deliberate rule read as a bug. Header spans the layout's column;
-          only the fields are held at 768px for scannability. */}
+          only the cards are held at 768px for scannability. */}
       <h1 className="mb-2 text-2xl font-bold text-[var(--text-primary)]">連線設定</h1>
       <p className="mb-6 text-sm text-[var(--text-secondary)]">
-        設定 qBittorrent 連線資訊，以便從 Vido 監控下載狀態。
+        設定 Vido 連到 qBittorrent、Sonarr 與 Radarr 的方式。
       </p>
-      <div className="max-w-3xl rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/50 p-6">
-        <QBittorrentForm />
+      <div className="flex flex-col gap-6">
+        <section
+          aria-labelledby="qbittorrent-card-title"
+          className="max-w-3xl rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4 md:p-8"
+        >
+          <header className="mb-6">
+            <h2
+              id="qbittorrent-card-title"
+              className="text-base font-semibold text-[var(--text-primary)] md:text-lg"
+            >
+              qBittorrent
+            </h2>
+            <p className="text-xs text-[var(--text-muted)]">下載器</p>
+          </header>
+          <QBittorrentForm />
+        </section>
+        <ArrConnectionForm plugin="sonarr" />
+        <ArrConnectionForm plugin="radarr" />
       </div>
     </div>
   );

@@ -186,7 +186,26 @@ func (h *DVRSettingsHandler) respondError(c *gin.Context, plugin string, err err
 			slog.Debug("DVR settings operation rejected",
 				"plugin", plugin, "code", pluginErr.Code, "error", err)
 		}
-		ErrorResponse(c, status, pluginErr.Code, message, err.Error())
+		// Walk to the innermost PluginError: a refused save is DVR_TEST_FAILED
+		// wrapping the real reason (auth, unreachable, Sonarr v3). The top-level
+		// code keeps its contract; cause_code + suggestion carry the reason.
+		root := pluginErr
+		for root.Cause != nil {
+			var next *plugins.PluginError
+			if !errors.As(root.Cause, &next) {
+				break
+			}
+			root = next
+		}
+		c.JSON(status, APIResponse{
+			Success: false,
+			Error: &APIError{
+				Code:       pluginErr.Code,
+				Message:    message,
+				Suggestion: root.Message,
+				CauseCode:  root.Code,
+			},
+		})
 		return
 	}
 

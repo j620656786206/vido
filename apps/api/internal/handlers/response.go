@@ -20,6 +20,10 @@ type APIError struct {
 	Code       string `json:"code"`
 	Message    string `json:"message"`
 	Suggestion string `json:"suggestion,omitempty"`
+	// CauseCode is the innermost typed cause when Code wraps another failure
+	// (e.g. DVR_TEST_FAILED around DVR_AUTH_FAILED), so a client can say why.
+	// Additive and omitted everywhere it is not set.
+	CauseCode string `json:"cause_code,omitempty"`
 }
 
 // PaginatedResponse wraps data with pagination info
