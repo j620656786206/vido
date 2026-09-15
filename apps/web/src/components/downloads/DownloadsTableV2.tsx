@@ -1,10 +1,11 @@
-// Design ref: ux-design.pen Screen D7-D-v2 (w3ipb)
+// Design ref: ux-design.pen Screen D7-D-v2 (w3ipb) · D12-D-v2 (tvp15)
 import { ArrowUp, ArrowDown, ChevronsUpDown } from 'lucide-react';
 import type { Download, SortField, SortOrder } from '../../services/downloadService';
 import { cn } from '../../lib/utils';
 import { getDownloadTone } from './downloadStatus';
 import { DownloadStatusPill } from './DownloadCardV2';
 import { DownloadRowActions } from './DownloadRowActions';
+import { ImportStatusChip } from './ImportStatusChip';
 import { formatDownloadMeta, formatProgress } from './formatters';
 
 interface DownloadsTableV2Props {
@@ -167,7 +168,12 @@ export function DownloadsTableV2({
                   </div>
                 </td>
                 <td className="px-3 py-1">
-                  <DownloadStatusPill download={d} />
+                  {/* Under the status pill, not in the name cell: the name keeps its width and every
+                      row's name starts in the same place (dl-import-2 CR). */}
+                  <div className="flex flex-col items-start gap-1">
+                    <DownloadStatusPill download={d} />
+                    {d.importStatus && <ImportStatusChip status={d.importStatus} variant="table" />}
+                  </div>
                 </td>
                 <td className="px-3 py-1">
                   <div className="flex items-center gap-2">

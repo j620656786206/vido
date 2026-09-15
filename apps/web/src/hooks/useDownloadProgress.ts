@@ -2,9 +2,9 @@
  * Lazy SSE download-progress hook (ux3-4-3b AC4) — mirrors useScanProgress.ts.
  *
  * `confirmed against [@contract-v1]` (ux3-4-2b): the `download_progress` event's `Data` is a bare,
- * snake_case `qbittorrent.Torrent[]` snapshot (NO `parse_status`, NOT the paginated envelope, the FULL
+ * snake_case `qbittorrent.Torrent[]` snapshot (NO `import_status`, NOT the paginated envelope, the FULL
  * unpaginated list). This hook reconciles those three deltas into the `useDownloads` cache:
- *   1. NO parse_status → MERGE (never replace): keep each cached item's `parseStatus`.
+ *   1. NO import_status → MERGE (never replace): keep each cached item's `importStatus` (dl-import-1).
  *   2. bare array → mapped into each cached page's `.items`.
  *   3. full list → refresh live fields (progress/speed/eta/status) of items present by hash, and DROP
  *      items no longer in the snapshot (removed torrents). New / re-sorted torrents are reconciled by
@@ -25,10 +25,21 @@ import { downloadKeys } from './useDownloads';
 import { snakeToCamel } from '../utils/caseTransform';
 
 const SSE_RECONNECT_MS = 10000;
+// How often an open page re-reads the list while an import status may be moving (the server refreshes
+// its Sonarr/Radarr snapshot about once a minute, so faster would only re-read the same answer).
+const IMPORT_STATUS_REFRESH_MS = 60000;
 
-// Merge a full snapshot into every cached downloads list page (see the three-delta contract above).
-export function applyDownloadSnapshot(queryClient: QueryClient, snapshot: Download[]): void {
+/**
+ * Merge a full snapshot into every cached downloads list page (see the three-delta contract above).
+ *
+ * Returns true when an item's import status may have moved on and only a list re-read can tell
+ * (dl-import-2): a torrent that just finished, or a finished one still awaiting import or scan.
+ * A torrent that is not fully downloaded (again — e.g. a recheck) drops its import status: this
+ * download has not been imported.
+ */
+export function applyDownloadSnapshot(queryClient: QueryClient, snapshot: Download[]): boolean {
   const byHash = new Map(snapshot.map((d) => [d.hash, d]));
+  let importStatusStale = false;
   const queries = queryClient.getQueryCache().findAll({ queryKey: [...downloadKeys.all, 'list'] });
 
   for (const q of queries) {
@@ -37,7 +48,18 @@ export function applyDownloadSnapshot(queryClient: QueryClient, snapshot: Downlo
 
     const items = old.items
       .filter((it) => byHash.has(it.hash)) // drop removed torrents
-      .map((it) => ({ ...(byHash.get(it.hash) as Download), parseStatus: it.parseStatus })); // fresh fields, keep parse_status
+      .map((it) => {
+        const fresh = byHash.get(it.hash) as Download; // fresh live fields
+        const finished = fresh.progress >= 1;
+        const state = it.importStatus?.state;
+        if (
+          finished &&
+          (it.progress < 1 || state === 'awaiting_import' || state === 'awaiting_scan')
+        ) {
+          importStatusStale = true;
+        }
+        return { ...fresh, importStatus: finished ? it.importStatus : undefined }; // keep import_status
+      });
 
     const removed = old.items.length - items.length;
     queryClient.setQueryData<PaginatedDownloads>(
@@ -47,12 +69,14 @@ export function applyDownloadSnapshot(queryClient: QueryClient, snapshot: Downlo
         : { ...old, items }
     );
   }
+  return importStatusStale;
 }
 
 export function useDownloadProgress() {
   const queryClient = useQueryClient();
   const esRef = useRef<EventSource | null>(null);
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const lastImportRefreshRef = useRef(0);
   const mountedRef = useRef(true);
   // Holds the latest connect() so the reconnect timer can call it without a self-reference (which the
   // linter flags as use-before-declare); assigned just after connect is defined.
@@ -69,7 +93,13 @@ export function useDownloadProgress() {
         const event = JSON.parse(e.data);
         // The SSE wire wraps the payload as the whole Event {id,type,data}; the snapshot is event.data.
         const snapshot = snakeToCamel<Download[]>(event.data ?? event);
-        if (Array.isArray(snapshot)) applyDownloadSnapshot(queryClient, snapshot);
+        if (Array.isArray(snapshot) && applyDownloadSnapshot(queryClient, snapshot)) {
+          const now = Date.now();
+          if (now - lastImportRefreshRef.current >= IMPORT_STATUS_REFRESH_MS) {
+            lastImportRefreshRef.current = now;
+            void queryClient.invalidateQueries({ queryKey: [...downloadKeys.all, 'list'] });
+          }
+        }
       } catch {
         // ignore malformed frames
       }

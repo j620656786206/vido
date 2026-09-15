@@ -1,6 +1,24 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+// TanStack <Link> → a plain anchor with the params filled in (the import status chip links out).
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({
+    to,
+    params,
+    children,
+    ...props
+  }: {
+    to: string;
+    params: Record<string, string>;
+    children: React.ReactNode;
+  }) => (
+    <a href={to.replace('$type', params.type).replace('$id', params.id)} {...props}>
+      {children}
+    </a>
+  ),
+}));
+
 import { DownloadsTableV2 } from './DownloadsTableV2';
 import type { Download, SortField, SortOrder } from '../../services/downloadService';
 
@@ -118,5 +136,45 @@ describe('DownloadsTableV2 (ux3-4-4 AC2/3/4/5)', () => {
     await userEvent.click(await screen.findByRole('menuitem', { name: '移除（連同檔案刪除）' }));
     await userEvent.click(await screen.findByRole('button', { name: '刪除檔案' }));
     expect(onRemove).toHaveBeenCalledWith('a', true);
+  });
+});
+
+describe('DownloadsTableV2 — import status (dl-import-2)', () => {
+  it('shows the short chip under the status pill', () => {
+    const rows = [
+      item({
+        hash: 'p',
+        name: 'Show.S01.mkv',
+        status: 'seeding',
+        progress: 1,
+        importStatus: {
+          state: 'awaiting_scan',
+          source: 'sonarr',
+          mediaType: 'tv',
+          mediaId: 's1',
+          episodesImported: 9,
+          episodesInLibrary: 6,
+        },
+      }),
+    ];
+    render(
+      <DownloadsTableV2
+        items={rows}
+        sortField="added_on"
+        sortOrder="desc"
+        onSort={vi.fn()}
+        selected={new Set()}
+        onSelectChange={vi.fn()}
+        onSelectAll={vi.fn()}
+        onClearAll={vi.fn()}
+      />
+    );
+    const chip = within(screen.getByTestId('downloads-table-row-p')).getByTestId(
+      'download-import-status'
+    );
+    expect(chip).toHaveTextContent('6/9 集');
+    // under the status pill, so the name keeps its column
+    expect(chip.closest('td')).toContainElement(screen.getByTestId('download-status-p'));
+    expect(chip).toHaveAttribute('href', '/media/tv/s1');
   });
 });

@@ -1403,6 +1403,12 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         progress: 1,
         downloadSpeed: 0,
         uploadSpeed: 1_288_490,
+        importStatus: {
+          state: 'in_library',
+          source: 'radarr',
+          mediaType: 'movie',
+          mediaId: 'fx-movie-godfather',
+        },
       }),
       onPause: noop,
       onResume: noop,
@@ -1411,6 +1417,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     penNode: 'Mz428', // Component/DownloadCard-v2
     statesOnly: ['default'],
     width: 720,
+    routePath: '/downloads', // the 已入庫 chip is a <Link>
   },
   {
     id: 'downloads-downloads-table-v2',
@@ -1434,6 +1441,12 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
           progress: 1,
           downloadSpeed: 0,
           uploadSpeed: 0,
+          importStatus: {
+            state: 'in_library',
+            source: 'radarr',
+            mediaType: 'movie',
+            mediaId: 'fx-movie-godfather',
+          },
         }),
         downloadFixture({
           hash: 'fx-t4',
@@ -1458,6 +1471,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     penNode: 'screen-section', // Screen D7-D-v2 (w3ipb)
     statesOnly: ['default'],
     width: 1128,
+    routePath: '/downloads', // the 已入庫 chip is a <Link>
   },
   {
     id: 'downloads-downloads-states-v2/empty',

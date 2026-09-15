@@ -1,6 +1,24 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+// TanStack <Link> → a plain anchor with the params filled in (the import status chip links out).
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({
+    to,
+    params,
+    children,
+    ...props
+  }: {
+    to: string;
+    params: Record<string, string>;
+    children: React.ReactNode;
+  }) => (
+    <a href={to.replace('$type', params.type).replace('$id', params.id)} {...props}>
+      {children}
+    </a>
+  ),
+}));
+
 import { DownloadCardV2 } from './DownloadCardV2';
 import type { Download } from '../../services/downloadService';
 
@@ -120,5 +138,33 @@ describe('DownloadCardV2 — actions + selection (ux3-4-3b AC3/AC5)', () => {
     expect(screen.getByTestId('download-card-v2-abc123')).toHaveClass(
       'border-[var(--accent-primary)]'
     );
+  });
+});
+
+describe('DownloadCardV2 — import status (dl-import-2)', () => {
+  it('a finished movie Vido has says 已入庫 and links to it', () => {
+    render(
+      <DownloadCardV2
+        download={{
+          ...base,
+          status: 'seeding',
+          progress: 1,
+          importStatus: {
+            state: 'in_library',
+            source: 'radarr',
+            mediaType: 'movie',
+            mediaId: 'm1',
+          },
+        }}
+      />
+    );
+    const chip = screen.getByTestId('download-import-status');
+    expect(chip).toHaveTextContent('已入庫');
+    expect(chip).toHaveAttribute('href', '/media/movie/m1');
+  });
+
+  it('no import status, no chip — a torrent Sonarr/Radarr never saw is not guessed at', () => {
+    render(<DownloadCardV2 download={{ ...base, status: 'completed', progress: 1 }} />);
+    expect(screen.queryByTestId('download-import-status')).toBeNull();
   });
 });

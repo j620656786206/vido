@@ -18672,6 +18672,45 @@
                                       "fontWeight": "$Type/Label/Weight"
                                     }
                                   ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "horJk",
+                                  "x": 0,
+                                  "y": 0,
+                                  "name": "importChip",
+                                  "enabled": false,
+                                  "fill": "$success-tint",
+                                  "cornerRadius": "$radius-pill",
+                                  "gap": "$Space/xs",
+                                  "padding": [
+                                    "$Space/xs",
+                                    "$Space/sm-plus"
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "weyoJ",
+                                      "name": "importIcon",
+                                      "width": 12,
+                                      "height": 12,
+                                      "icon": "library",
+                                      "library": "lucide",
+                                      "fill": "$success-text"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "pzD2T",
+                                      "name": "importLabel",
+                                      "fill": "$success-text",
+                                      "content": "已入庫",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "600"
+                                    }
+                                  ]
                                 }
                               ]
                             }
@@ -87600,6 +87639,18 @@
                             "TFYEw": {
                               "content": "教父 The Godfather (1972) 2160p Remux"
                             },
+                            "horJk": {
+                              "enabled": true,
+                              "fill": "$success-tint"
+                            },
+                            "weyoJ": {
+                              "icon": "library",
+                              "fill": "$success-text"
+                            },
+                            "pzD2T": {
+                              "content": "已入庫",
+                              "fill": "$success-text"
+                            },
                             "O3qIVu": {
                               "fill": "$info-tint"
                             },
@@ -87641,6 +87692,18 @@
                           "descendants": {
                             "TFYEw": {
                               "content": "怪奇物語 第四季 Stranger Things S04 1080p"
+                            },
+                            "horJk": {
+                              "enabled": true,
+                              "fill": "$info-tint"
+                            },
+                            "weyoJ": {
+                              "icon": "scan-search",
+                              "fill": "$info-text"
+                            },
+                            "pzD2T": {
+                              "content": "Vido 有 6/9 集",
+                              "fill": "$info-text"
                             },
                             "O3qIVu": {
                               "fill": "$success-tint"
@@ -88691,6 +88754,18 @@
                             "TFYEw": {
                               "content": "教父 The Godfather (1972) 2160p Remux"
                             },
+                            "horJk": {
+                              "enabled": true,
+                              "fill": "$success-tint"
+                            },
+                            "weyoJ": {
+                              "icon": "library",
+                              "fill": "$success-text"
+                            },
+                            "pzD2T": {
+                              "content": "已入庫",
+                              "fill": "$success-text"
+                            },
                             "O3qIVu": {
                               "fill": "$info-tint"
                             },
@@ -88743,6 +88818,18 @@
                             },
                             "TFYEw": {
                               "content": "怪奇物語 第四季 Stranger Things S04 1080p"
+                            },
+                            "horJk": {
+                              "enabled": true,
+                              "fill": "$info-tint"
+                            },
+                            "weyoJ": {
+                              "icon": "scan-search",
+                              "fill": "$info-text"
+                            },
+                            "pzD2T": {
+                              "content": "Vido 有 6/9 集",
+                              "fill": "$info-text"
                             },
                             "O3qIVu": {
                               "fill": "$success-tint"
@@ -92872,7 +92959,8 @@
                               "id": "ZQLIe",
                               "name": "c-status",
                               "width": 104,
-                              "alignItems": "center",
+                              "layout": "vertical",
+                              "gap": "$Space/2xs",
                               "children": [
                                 {
                                   "type": "frame",
@@ -92901,6 +92989,42 @@
                                       "name": "pl",
                                       "fill": "$info-text",
                                       "content": "做種",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "ztcJk",
+                                  "name": "importChip",
+                                  "fill": "$success-tint",
+                                  "cornerRadius": "$radius-pill",
+                                  "gap": "$Space/2xs",
+                                  "padding": [
+                                    "$Space/2xs",
+                                    "$Space/sm"
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "lfPyk",
+                                      "name": "i",
+                                      "width": 11,
+                                      "height": 11,
+                                      "icon": "library",
+                                      "library": "lucide",
+                                      "fill": "$success-text"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "Z7HwC",
+                                      "name": "t",
+                                      "fill": "$success-text",
+                                      "content": "已入庫",
                                       "lineHeight": "$Type/Label/Line",
                                       "fontFamily": "$Type/Family/Primary",
                                       "fontSize": "$Type/Label/Size",
@@ -93169,7 +93293,8 @@
                               "id": "YqeYK",
                               "name": "c-status",
                               "width": 104,
-                              "alignItems": "center",
+                              "layout": "vertical",
+                              "gap": "$Space/2xs",
                               "children": [
                                 {
                                   "type": "frame",
@@ -93198,6 +93323,42 @@
                                       "name": "pl",
                                       "fill": "$info-text",
                                       "content": "做種",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "jWcQM",
+                                  "name": "importChip",
+                                  "fill": "$info-tint",
+                                  "cornerRadius": "$radius-pill",
+                                  "gap": "$Space/2xs",
+                                  "padding": [
+                                    "$Space/2xs",
+                                    "$Space/sm"
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "g203Xk",
+                                      "name": "i",
+                                      "width": 11,
+                                      "height": 11,
+                                      "icon": "scan-search",
+                                      "library": "lucide",
+                                      "fill": "$info-text"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "F3CeKZ",
+                                      "name": "t",
+                                      "fill": "$info-text",
+                                      "content": "已匯入",
                                       "lineHeight": "$Type/Label/Line",
                                       "fontFamily": "$Type/Family/Primary",
                                       "fontSize": "$Type/Label/Size",
@@ -93466,7 +93627,8 @@
                               "id": "oU9I0",
                               "name": "c-status",
                               "width": 104,
-                              "alignItems": "center",
+                              "layout": "vertical",
+                              "gap": "$Space/2xs",
                               "children": [
                                 {
                                   "type": "frame",
@@ -93495,6 +93657,42 @@
                                       "name": "pl",
                                       "fill": "$success-text",
                                       "content": "已完成",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "V93Uu",
+                                  "name": "importChip",
+                                  "fill": "$info-tint",
+                                  "cornerRadius": "$radius-pill",
+                                  "gap": "$Space/2xs",
+                                  "padding": [
+                                    "$Space/2xs",
+                                    "$Space/sm"
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "Pfbfb",
+                                      "name": "i",
+                                      "width": 11,
+                                      "height": 11,
+                                      "icon": "scan-search",
+                                      "library": "lucide",
+                                      "fill": "$info-text"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "IwOxP",
+                                      "name": "t",
+                                      "fill": "$info-text",
+                                      "content": "6/9 集",
                                       "lineHeight": "$Type/Label/Line",
                                       "fontFamily": "$Type/Family/Primary",
                                       "fontSize": "$Type/Label/Size",
@@ -93740,7 +93938,8 @@
                               "id": "n13zIW",
                               "name": "c-status",
                               "width": 104,
-                              "alignItems": "center",
+                              "layout": "vertical",
+                              "gap": "$Space/2xs",
                               "children": [
                                 {
                                   "type": "frame",
@@ -93769,6 +93968,42 @@
                                       "name": "pl",
                                       "fill": "$success-text",
                                       "content": "已完成",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "w94EQw",
+                                  "name": "importChip",
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-pill",
+                                  "gap": "$Space/2xs",
+                                  "padding": [
+                                    "$Space/2xs",
+                                    "$Space/sm"
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "ZDGdl",
+                                      "name": "i",
+                                      "width": 11,
+                                      "height": 11,
+                                      "icon": "hourglass",
+                                      "library": "lucide",
+                                      "fill": "$text-secondary"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "gVwqO",
+                                      "name": "t",
+                                      "fill": "$text-secondary",
+                                      "content": "待匯入",
                                       "lineHeight": "$Type/Label/Line",
                                       "fontFamily": "$Type/Family/Primary",
                                       "fontSize": "$Type/Label/Size",
@@ -94838,6 +95073,684 @@
                   ]
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "tvp15",
+              "x": 29360,
+              "y": 22545,
+              "name": "D12-D-v2 · 入庫狀態規格",
+              "width": 1440,
+              "height": 900,
+              "fill": "$bg-primary",
+              "layout": "vertical",
+              "gap": "$Space/xl",
+              "padding": "$Space/2xl",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "KqNHP",
+                  "name": "header",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": "$Space/sm",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "zgejv",
+                      "name": "title",
+                      "fill": "$text-primary",
+                      "content": "入庫狀態",
+                      "lineHeight": "$Type/H2/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/H2/Size",
+                      "fontWeight": "$Type/H2/Weight"
+                    },
+                    {
+                      "type": "text",
+                      "id": "yNOdj",
+                      "name": "sub",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "下載完成（已完成／做種）的種子，對照 Sonarr／Radarr 的匯入紀錄和 Vido 媒體庫。Sonarr／Radarr 不認得的種子（書、音樂、手動加的）不顯示，不猜。",
+                      "lineHeight": "$Type/Body/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Body/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "qbdyA",
+                  "name": "states",
+                  "width": 1128,
+                  "fill": "$bg-secondary",
+                  "cornerRadius": "$radius-lg",
+                  "stroke": "$border-subtle",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Bvcto",
+                      "name": "row-已入庫",
+                      "width": "fill_container",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "gap": "$Space/xl",
+                      "padding": [
+                        "$Space/lg",
+                        "$Space/xl"
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "y5oSO",
+                          "name": "chips",
+                          "width": 260,
+                          "layout": "vertical",
+                          "gap": "$Space/sm",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "hsCb0",
+                              "name": "chip",
+                              "fill": "$success-tint",
+                              "cornerRadius": "$radius-pill",
+                              "gap": "$Space/xs",
+                              "padding": [
+                                "$Space/xs",
+                                "$Space/sm-plus"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "t2UXe",
+                                  "name": "i",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "library",
+                                  "library": "lucide",
+                                  "fill": "$success-text"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "cehHU",
+                                  "name": "t",
+                                  "fill": "$success-text",
+                                  "content": "已入庫",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "jlHKF",
+                              "name": "short",
+                              "fill": "$text-muted",
+                              "content": "表格：已入庫",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "h1ytA2",
+                          "name": "meaning",
+                          "fill": "$text-primary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Sonarr／Radarr 匯入了，Vido 也有檔案（影集：這個種子匯入的每一集都有）。點了進到詳情頁。",
+                          "lineHeight": "$Type/Body/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Body/Size",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "XpSoC",
+                          "name": "why",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": 240,
+                          "content": "青碧：有答案了",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "A2y41S",
+                      "name": "row-Radarr 已匯入 · Vido 還沒有",
+                      "width": "fill_container",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "gap": "$Space/xl",
+                      "padding": [
+                        "$Space/lg",
+                        "$Space/xl"
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Fq6mf",
+                          "name": "chips",
+                          "width": 260,
+                          "layout": "vertical",
+                          "gap": "$Space/sm",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "qDUms",
+                              "name": "chip",
+                              "fill": "$info-tint",
+                              "cornerRadius": "$radius-pill",
+                              "gap": "$Space/xs",
+                              "padding": [
+                                "$Space/xs",
+                                "$Space/sm-plus"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "WPz0V",
+                                  "name": "i",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "scan-search",
+                                  "library": "lucide",
+                                  "fill": "$info-text"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "E73TYd",
+                                  "name": "t",
+                                  "fill": "$info-text",
+                                  "content": "Radarr 已匯入 · Vido 還沒有",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "cntVq",
+                              "name": "short",
+                              "fill": "$text-muted",
+                              "content": "表格：已匯入",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "VPY5j",
+                          "name": "meaning",
+                          "fill": "$text-primary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "匯入了，但 Vido 媒體庫裡還沒有這個檔案。通常是還沒掃描；也可能 Radarr 的根資料夾不在 Vido 的媒體庫路徑裡。",
+                          "lineHeight": "$Type/Body/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Body/Size",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "AWzBl",
+                          "name": "why",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": 240,
+                          "content": "靛青：純告知，不是故障",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "rxmoH",
+                      "name": "row-Vido 有 6/9 集",
+                      "width": "fill_container",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "gap": "$Space/xl",
+                      "padding": [
+                        "$Space/lg",
+                        "$Space/xl"
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "DU3yu",
+                          "name": "chips",
+                          "width": 260,
+                          "layout": "vertical",
+                          "gap": "$Space/sm",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "YOrQ6",
+                              "name": "chip",
+                              "fill": "$info-tint",
+                              "cornerRadius": "$radius-pill",
+                              "gap": "$Space/xs",
+                              "padding": [
+                                "$Space/xs",
+                                "$Space/sm-plus"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "zVATd",
+                                  "name": "i",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "scan-search",
+                                  "library": "lucide",
+                                  "fill": "$info-text"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "M5BOdv",
+                                  "name": "t",
+                                  "fill": "$info-text",
+                                  "content": "Vido 有 6/9 集",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "GEmxk",
+                              "name": "short",
+                              "fill": "$text-muted",
+                              "content": "表格：6/9 集",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "Rewvw",
+                          "name": "meaning",
+                          "fill": "$text-primary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "影集季包：這個種子匯入了 9 集，Vido 目前有其中 6 集。Vido 有這部劇時點了進到詳情頁。",
+                          "lineHeight": "$Type/Body/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Body/Size",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "EpTdH",
+                          "name": "why",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": 240,
+                          "content": "靛青：純告知",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "D49zAP",
+                      "name": "row-等 Radarr 匯入",
+                      "width": "fill_container",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "gap": "$Space/xl",
+                      "padding": [
+                        "$Space/lg",
+                        "$Space/xl"
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "zWmXL",
+                          "name": "chips",
+                          "width": 260,
+                          "layout": "vertical",
+                          "gap": "$Space/sm",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "s4SkL",
+                              "name": "chip",
+                              "fill": "$bg-tertiary",
+                              "cornerRadius": "$radius-pill",
+                              "gap": "$Space/xs",
+                              "padding": [
+                                "$Space/xs",
+                                "$Space/sm-plus"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "LDQvJ",
+                                  "name": "i",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "hourglass",
+                                  "library": "lucide",
+                                  "fill": "$text-secondary"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "xK25q",
+                                  "name": "t",
+                                  "fill": "$text-secondary",
+                                  "content": "等 Radarr 匯入",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "J4FmA",
+                              "name": "short",
+                              "fill": "$text-muted",
+                              "content": "表格：待匯入",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "H2pYd",
+                          "name": "meaning",
+                          "fill": "$text-primary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "已經下載完，Sonarr／Radarr 還沒匯入。剛下載完的一兩分鐘都會是這樣。",
+                          "lineHeight": "$Type/Body/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Body/Size",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "QgXMq",
+                          "name": "why",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": 240,
+                          "content": "中性：正常的過渡，不給語意色",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "mDNtH",
+                      "name": "row-Sonarr 匯入失敗",
+                      "width": "fill_container",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "gap": "$Space/xl",
+                      "padding": [
+                        "$Space/lg",
+                        "$Space/xl"
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "X50V5",
+                          "name": "chips",
+                          "width": 260,
+                          "layout": "vertical",
+                          "gap": "$Space/sm",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "GgGqo",
+                              "name": "chip",
+                              "fill": "$warning-tint",
+                              "cornerRadius": "$radius-pill",
+                              "gap": "$Space/xs",
+                              "padding": [
+                                "$Space/xs",
+                                "$Space/sm-plus"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "RH87k",
+                                  "name": "i",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "circle-alert",
+                                  "library": "lucide",
+                                  "fill": "$warning-text"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "OAu0B",
+                                  "name": "t",
+                                  "fill": "$warning-text",
+                                  "content": "Sonarr 匯入失敗",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "Bh12Q",
+                              "name": "short",
+                              "fill": "$text-muted",
+                              "content": "表格：匯入失敗",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "CPBZ7",
+                          "name": "meaning",
+                          "fill": "$text-primary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Sonarr／Radarr 把這個下載標記為失敗，不會自己匯入。要到 Sonarr／Radarr 看原因。",
+                          "lineHeight": "$Type/Body/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Body/Size",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "evgPI",
+                          "name": "why",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": 240,
+                          "content": "赭：你要求了，但它沒發生",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ffsAk",
+                      "name": "row-已略過匯入",
+                      "width": "fill_container",
+                      "gap": "$Space/xl",
+                      "padding": [
+                        "$Space/lg",
+                        "$Space/xl"
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "T1w2l",
+                          "name": "chips",
+                          "width": 260,
+                          "layout": "vertical",
+                          "gap": "$Space/sm",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "XEAEu",
+                              "name": "chip",
+                              "fill": "$bg-tertiary",
+                              "cornerRadius": "$radius-pill",
+                              "gap": "$Space/xs",
+                              "padding": [
+                                "$Space/xs",
+                                "$Space/sm-plus"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "htyzq",
+                                  "name": "i",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "eye-off",
+                                  "library": "lucide",
+                                  "fill": "$text-secondary"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "VjmNa",
+                                  "name": "t",
+                                  "fill": "$text-secondary",
+                                  "content": "已略過匯入",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "dDkct",
+                              "name": "short",
+                              "fill": "$text-muted",
+                              "content": "表格：已略過",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "HlSsb",
+                          "name": "meaning",
+                          "fill": "$text-primary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "有人在 Sonarr／Radarr 叫它略過這個下載。",
+                          "lineHeight": "$Type/Body/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Body/Size",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "C2cgWh",
+                          "name": "why",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": 240,
+                          "content": "中性：使用者自己的選擇",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "B4vTYG",
+                  "name": "note",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": 1128,
+                  "content": "資料每分鐘更新一次；Sonarr／Radarr 連不上時沿用上一次讀到的紀錄（匯入不會「取消發生」，只會晚一點，不會錯）。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                }
+              ]
             }
           ]
         },
@@ -95364,6 +96277,42 @@
                                   "content": "BluRay"
                                 }
                               }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "N5Gpgp",
+                              "name": "importChip",
+                              "fill": "$bg-tertiary",
+                              "cornerRadius": "$radius-pill",
+                              "gap": "$Space/xs",
+                              "padding": [
+                                "$Space/xs",
+                                "$Space/sm-plus"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "e3zee",
+                                  "name": "i",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "hourglass",
+                                  "library": "lucide",
+                                  "fill": "$text-secondary"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "BUwLV",
+                                  "name": "t",
+                                  "fill": "$text-secondary",
+                                  "content": "等 Radarr 匯入",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "600"
+                                }
+                              ]
                             }
                           ]
                         },
