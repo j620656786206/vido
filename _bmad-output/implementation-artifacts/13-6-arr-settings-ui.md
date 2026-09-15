@@ -1,6 +1,6 @@
 # Story 13.6: 連線設定 — Sonarr／Radarr 連線卡片
 
-Status: review
+Status: done
 
 ## Story
 
@@ -107,3 +107,4 @@ Claude Opus 5 (1M context)
 | 日期 | 內容 |
 | --- | --- |
 | 2026-09-15 | 建立並實作（dev＋乾淨 context agent 對抗式 CR：1H／3M 全修，L 大多處理，後端金鑰問題另立）。狀態 → review。 |
+| 2026-09-15 | PR #434 合併進 main（6efe273f）。CI 全綠；視覺基準 bootstrap PR #435（5 張 `-linux`，抽 2 張看過）。CI 第一輪 Go Tests 紅燈是既有的固定 sleep 測試，同 PR 改成 Eventually。狀態 → done。 |
