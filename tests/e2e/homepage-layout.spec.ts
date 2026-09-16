@@ -507,7 +507,7 @@ test.describe('Home readout band — 需要注意 cell @ui @homepage @story-dsr-
 
       const m = await value.evaluate((el) => {
         const cell = el.closest('a') as HTMLElement;
-        const cs = getComputedStyle(cell);
+        const cs = window.getComputedStyle(cell);
         return {
           overflow: el.scrollWidth - el.clientWidth,
           valueW: el.getBoundingClientRect().width,
