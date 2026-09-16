@@ -1,6 +1,6 @@
 # Story DSR.2: Flow B 詳情頁——程式碼與設計稿雙向對齊（電影／影集詳情、狀態、延伸區塊）
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -558,6 +558,7 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`，BMAD dev agent（Amelia）2
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-16 | ✅ 收單 —— PR #444 合併進 main（commit 813c31d8），**CI 17 項全綠**。`-linux` 基準線：手動觸發 Visual Regression → bootstrap PR #445（8 張，只加圖）合回分支後視覺 4 個 shard 轉綠。 |
 | 2026-09-16 | 🔴 **對抗式 CR 回報 15 項，修 13 立 2**。最重要的是第 1 項：**TMDb 那一半其實沒修好**——handler 用型別斷言判斷 TMDb 錯誤，但錯誤被包過一層，所以真的 TMDb 404 全部變成 500，前端測試會綠只是因為 mock 了假的 404。改 `errors.As` 並補包過一層／兩層的測試。另外：背景重新整理失敗不再把整頁換掉、TMDb 片的「找不到」不再提媒體庫、「重試」有進行中狀態、四處不實的註解改掉、兩條看整個 innerHTML 的脆弱測試改成看單一元素、補影集 500 測試。 |
 | 2026-09-16 | ✅ **dev-story 完成 → review**（Amelia）。全套閘門綠：web 3429/3429、api PASS、lint 0 errors、typecheck、prettier、token 一致。最有感的三件：① **伺服器出錯不再說「找不到這部影片，可能已被移除」**——前後端一起改，順帶讓 dsr-1 的錯誤碼膠囊第一次真的出現；② **P0 技術徽章**改在真正會畫出來的 `DetailTechInfoV2`（原條目指的 `TechBadge.tsx` 是死碼）；③ **TMDb 圖片載入失敗不再是破圖**。設計稿改 12 張、刪 2 張；新增 4 個視覺夾具。途中一次假綠（同函式裡重複宣告 `credits`，局部 vitest 沒抓到、esbuild 才抓到）已記在 Debug Log。 |
 | 2026-09-16 | ⚖️ **AC #12 裁定 B**（Alexyu）：兩個「⋯」選單的稿留著，只拿掉「匯出中繼資料」；選單功能另立 `disc-2026-09-detail-and-poster-action-menus`，本張不做。`DetailPanelMenu.tsx` 檔頭因此不動（夾具專用的檔頭從 8 個變 7 個）。 |
