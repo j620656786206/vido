@@ -131,22 +131,26 @@ export function RecentlyAddedRowV2() {
         <h2 id="home-ra-title" className="text-lg font-semibold text-[var(--text-primary)]">
           最近新增
         </h2>
-        {/* 整理中 · N — exception-signal chip (hidden at 0), a door to the
-            Activity hub. ⚖️ R2 ruling (2026-08-26): parseStatus=pending is
-            QUEUED, not running — the same items' poster badges wear amber
-            整理中, and one screen may not dress one truth in two colours
-            (固定詞彙). The chip now matches the badge exactly: same word, same
-            amber. (R1 had briefly ruled it green; R2's contradiction finding
-            superseded that.) Count stays scoped to THIS row — /activity
-            pending.parse_count measures the capped parse-job QUEUE, which
-            live-diverges from item parseStatus (0 vs 3 on the seeded env). */}
+        {/* 整理中 · N — in-flight signal chip (hidden at 0), a door to the
+            Activity hub. ⚖️ The rule R2 (2026-08-26) actually set is 「one
+            screen may not dress one truth in two colours」 (固定詞彙) — the
+            chip must wear whatever the poster badges DIRECTLY BELOW IT wear.
+            R2 satisfied that with amber; ⚖️ dsr-11 (Alexyu 2026-09-11) then
+            moved the badge to GOLD — amber means 「你要求了，但它沒發生」,
+            and 整理中 is something that IS happening — but left this chip
+            behind, so for five days the same word sat in two colours 40px
+            apart. Gold here is not a new decision: it is libraryStatus.ts's
+            TINT.accent, read back by the spec so the two cannot diverge again.
+            Count stays scoped to THIS row — /activity pending.parse_count
+            measures the capped parse-job QUEUE, which live-diverges from item
+            parseStatus (0 vs 3 on the seeded env). */}
         {inProgress > 0 && (
           <Link
             to="/activity"
             data-testid="home-recent-progress"
             // after:-inset-y grows the TOUCH target to ≥44px without fattening
             // the visual pill (critique R3 P3 — measured 24px, N5 floor is 44).
-            className="relative flex items-center gap-1 rounded-[var(--radius-md)] bg-[var(--warning-tint)] px-2.5 py-1 text-xs font-medium text-[var(--warning-text)] transition-colors after:absolute after:-inset-x-1 after:-inset-y-2.5 after:content-[''] hover:bg-[var(--bg-tertiary)]"
+            className="relative flex items-center gap-1 rounded-[var(--radius-md)] bg-[var(--accent-tint)] px-2.5 py-1 text-xs font-medium text-[var(--accent-text)] transition-colors after:absolute after:-inset-x-1 after:-inset-y-2.5 after:content-[''] hover:bg-[var(--bg-tertiary)]"
           >
             整理中
             <span className="font-mono tabular-nums">· {inProgress}</span>

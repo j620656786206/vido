@@ -1,11 +1,18 @@
-// Design ref: ux-design.pen Screen H1-D-v3 (k2Otv)
-// Companion frames: H2-M-v3 (uGCAU) mobile 2×2 · H8-SPEC-v3 (iWUSV) 金額顯示規則
+// Design ref: ux-design.pen Screen H1-D-v3 (k2Otv) · H2-M-v3 (uGCAU) · H8-SPEC-v3 (iWUSV)
 /**
  * Home v3 readout band (ux3-1-7 / epic ux3-home-v3, home-v3-identity-brief §2).
  *
  * The Operate answer to「我不在的時候你做了什麼？」— four dense cells, three
  * seconds, every cell a door. A BAND, not dashboard cards: one row on desktop,
  * 2×2 on mobile, 11px labels over mono digits.
+ *
+ * ⚖️ The 11 is deliberate and ratified twice. dsr-7 first "corrected" it to the
+ * .pen's $Type/Label/Size (12) and was overruled (Alexyu 2026-09-16): 11px is
+ * what 44 other micro-labels across this app use, INCLUDING the poster badge
+ * 40px below this band (PosterCardV2). Moving one of them makes the odd one
+ * out, not a fix. Whether the design system should grow an 11px Micro rung is
+ * tracked as disc-2026-09-11px-micro-label-not-on-type-scale — until it does,
+ * do not "clean this up".
  *
  * Honesty rules (brief §2/§5, inherited from the site-wide 固定詞彙):
  *  - a cell whose backend source degraded shows its label with NO number
@@ -46,30 +53,59 @@ import type { AttentionCell } from '../../services/homeSummaryService';
 const BAND_SHELL =
   'grid grid-cols-2 divide-[var(--border-subtle)] rounded-[var(--radius-lg)] bg-[var(--bg-secondary)] py-1 max-md:[&>*:nth-child(-n+2)]:border-b max-md:[&>*:nth-child(odd)]:border-r max-md:[&>*]:border-[var(--border-subtle)] md:flex md:divide-x';
 
-/** One cell's box — everything except its content and its interaction. */
+/**
+ * One cell's box — everything except its content and its interaction.
+ *
+ * The height floor is NOT just the 44px touch target: below `lg` the 需要注意
+ * cell can render two lines (failures + spend), and every other cell in its row
+ * stretches to match. If only the live band knew that, the loading skeleton
+ * would be a line short and the band would grow on mount — the 54px / 0.0832
+ * CLS jump the skeleton branch exists to prevent. Putting the floor here means
+ * skeleton and band agree by construction, not by two hand-matched strings.
+ * The exact value is measured, not guessed: 84px is what a two-line cell comes
+ * out at, verified by the CLS test in homepage-layout.spec.ts.
+ */
 const CELL_BOX =
-  'flex min-h-[44px] flex-1 flex-col items-center justify-center px-3 py-2 text-center';
+  'flex min-h-[84px] flex-1 flex-col items-center justify-center px-3 py-2 text-center lg:min-h-[44px]';
 
-/** The attention cell's readout line, or null when the cell is unmeasurable. */
-function attentionText(cell: AttentionCell): { text: string; exception: boolean } {
+/**
+ * The attention cell's readout, as either ONE string or TWO halves.
+ *
+ * Only the failures-AND-spend case has halves worth breaking apart on a narrow
+ * cell (H8-SPEC-v3 / ux3-1-7 AC #3). That case returns `parts` and NO `text`:
+ * the joined desktop reading is assembled once, in the renderer, next to the
+ * separator that produces it — a second copy here could silently disagree with
+ * what is on screen and no assertion would notice.
+ */
+type AttentionReadout =
+  /** One line: `value` is the whole reading. */
+  | { exception: boolean; text: string; parts: null }
+  /** Two halves: the renderer owns how they are joined, so there is no second
+   *  copy of the joined string to fall out of sync with the DOM. */
+  | { exception: true; text: null; parts: { failures: string; spend: string } };
+
+function attentionText(cell: AttentionCell): AttentionReadout {
   const spend =
     cell.spentUsd !== undefined && cell.budgetUsd !== undefined
       ? `${formatUsdShort(cell.spentUsd)}/${formatUsdShort(cell.budgetUsd)}`
       : null;
 
   if (cell.failedCount > 0) {
-    return {
-      text: spend ? `${cell.failedCount} 部失敗 · ${spend}` : `${cell.failedCount} 部失敗`,
-      exception: true,
-    };
+    const failures = `${cell.failedCount} 部失敗`;
+    // H8-SPEC-v3: only the failures-AND-spend case earns a second line. With
+    // nothing above it (「若沒有失敗、只剩預算警示」) the amount rises to the
+    // first line and the cell stays one line at every width.
+    return spend
+      ? { exception: true, text: null, parts: { failures, spend } }
+      : { exception: true, text: failures, parts: null };
   }
   // Live-batch spend is current, actionable information even with 0 failures;
   // a LAST run's spend next to 一切正常 would just be noise (historical, not
   // an exception) — so only live_batch surfaces here.
   if (spend && cell.spendSource === 'live_batch') {
-    return { text: `一切正常 · ${spend}`, exception: false };
+    return { exception: false, text: `一切正常 · ${spend}`, parts: null };
   }
-  return { text: '一切正常', exception: false };
+  return { exception: false, text: '一切正常', parts: null };
 }
 
 interface ReadoutCellProps {
@@ -87,8 +123,17 @@ interface ReadoutCellProps {
   to: string;
   search?: Record<string, unknown>;
   ariaLabel: string;
-  /** null = unmeasurable (cell shows label only, no number). */
+  /** null = unmeasurable (cell shows label only, no number) — unless `valueParts` is set. */
   value: string | null;
+  /**
+   * A two-half readout, rendered as ONE DOM whose axis CSS picks: stacked while
+   * the cell is narrow, one line with a 「·」 once it is wide enough. Stacking
+   * holds until `lg`, NOT `md` — at `md` the band is already four cells across
+   * (≈155px of content each, and by then the digits are `text-lg`), which is
+   * marginally TIGHTER than the 2×2 phone cell this exists to escape. Measured
+   * at 390/768/1024/1280 in homepage-layout.spec.ts.
+   */
+  valueParts?: { failures: string; spend: string } | null;
   exception?: boolean;
   /**
    * Motion licence ③: work is happening RIGHT NOW behind this cell, so its
@@ -108,6 +153,7 @@ function ReadoutCell({
   search,
   ariaLabel,
   value,
+  valueParts,
   exception,
   live,
   testId,
@@ -139,15 +185,34 @@ function ReadoutCell({
           </span>
         )}
       </span>
-      {value !== null && (
+      {(value !== null || valueParts) && (
         <span
           data-testid={`${testId}-value`}
           className={cn(
             'font-mono text-base font-semibold tabular-nums sm:text-lg',
+            // Only a two-half readout needs a layout mode. The other three
+            // cells render a bare string and keep the markup they always had.
+            valueParts && 'flex flex-col items-center justify-center lg:flex-row',
             exception ? 'text-[var(--warning-text)]' : 'text-[var(--text-primary)]'
           )}
         >
-          {value}
+          {valueParts ? (
+            <>
+              <span data-testid={`${testId}-failures`}>{valueParts.failures}</span>
+              {/* Desktop-only punctuation: once the halves stack, a trailing
+                  「·」 would point at the line below it. */}
+              <span
+                data-testid={`${testId}-separator`}
+                aria-hidden="true"
+                className="hidden lg:inline"
+              >
+                &nbsp;·&nbsp;
+              </span>
+              <span data-testid={`${testId}-spend`}>{valueParts.spend}</span>
+            </>
+          ) : (
+            value
+          )}
         </span>
       )}
     </Link>
@@ -336,14 +401,22 @@ export function HomeReadoutBand() {
           icon={AlertTriangle}
           label="需要注意"
           to="/activity"
+          // The spend figure rides in the label too. It is the first layer of
+          // the thing this product sells (花費上限＋同意流程), and without it
+          // here a screen-reader user is the ONE audience that never hears the
+          // number — the aria-label replaces the cell's content, it does not
+          // supplement it.
           ariaLabel={
             attention.status === 'ok'
-              ? attention.failedCount > 0
-                ? `需要注意，${attention.failedCount} 部失敗待處理，前往活動中心`
-                : '需要注意，一切正常，前往活動中心'
+              ? attentionLine.parts
+                ? `需要注意，${attentionLine.parts.failures}待處理，已花費 ${attentionLine.parts.spend}，前往活動中心`
+                : attention.failedCount > 0
+                  ? `需要注意，${attention.failedCount} 部失敗待處理，前往活動中心`
+                  : `需要注意，${attentionLine.text}，前往活動中心`
               : '需要注意，狀態目前無法取得，前往活動中心'
           }
           value={attention.status === 'ok' ? attentionLine.text : null}
+          valueParts={attention.status === 'ok' ? attentionLine.parts : null}
           exception={attention.status === 'ok' && attentionLine.exception}
           testId="readout-attention"
         />

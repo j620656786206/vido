@@ -152174,7 +152174,7 @@
               "id": "Y5XvRv",
               "x": 17040,
               "y": 36785,
-              "name": "H5-D",
+              "name": "H9-SPEC · ExploreBlock 優化（bugfix-10-6）",
               "clip": true,
               "width": 1240,
               "fill": "$bg-secondary",
@@ -152196,7 +152196,7 @@
                       "id": "Q1WDtP",
                       "name": "hdrTitle",
                       "fill": "$text-primary",
-                      "content": "HP-5 · ExploreBlock Polish — bugfix-10-6",
+                      "content": "H9-SPEC · ExploreBlock 優化 — bugfix-10-6",
                       "lineHeight": "$Type/H1/Line",
                       "fontFamily": "$Type/Family/Canvas",
                       "fontSize": "$Type/H1/Size",
@@ -152376,11 +152376,11 @@
                                     },
                                     "colors": [
                                       {
-                                        "color": "#0c1512",
+                                        "color": "$bg-primary",
                                         "position": 0
                                       },
                                       {
-                                        "color": "#0c151200",
+                                        "color": "#00000000",
                                         "position": 1
                                       }
                                     ]
@@ -152642,11 +152642,11 @@
                                 },
                                 "colors": [
                                   {
-                                    "color": "#0c1512",
+                                    "color": "$bg-primary",
                                     "position": 0
                                   },
                                   {
-                                    "color": "#0c151200",
+                                    "color": "#00000000",
                                     "position": 1
                                   }
                                 ]
@@ -152671,11 +152671,11 @@
                                 },
                                 "colors": [
                                   {
-                                    "color": "#0c151200",
+                                    "color": "#00000000",
                                     "position": 0
                                   },
                                   {
-                                    "color": "#0c1512",
+                                    "color": "$bg-primary",
                                     "position": 1
                                   }
                                 ]
@@ -152789,7 +152789,7 @@
                       "fill": "$text-secondary",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "ExploreBlock.tsx ~L101-120 — bg-black/70 → bg-[var(--bg-secondary)]/95 backdrop-blur-sm ring-1 ring-[var(--border-subtle)]/70 text-[var(--text-primary)] shadow-lg ｜ 左右邊緣加 bg-gradient-to-r / bg-gradient-to-l from-[var(--bg-primary)] (~w-14) scrim ｜ 外層包 group/scroller，箭頭 opacity-0 lg:group-hover:opacity-100 transition-opacity ｜ 監聽 onScroll + ResizeObserver，記 scrollLeft / scrollWidth / clientWidth：左箭頭只在 scrollLeft > 0 時掛、右箭頭只在 scrollLeft + clientWidth < scrollWidth 時掛 ｜ 維持 hidden lg:block（觸控裝置不出現箭頭，靠原生捲動）",
+                      "content": "ExploreBlock.tsx（捲動箭頭）— bg-black/70 → bg-[var(--bg-secondary)]/95 backdrop-blur-sm ring-1 ring-[var(--border-subtle)]/70 text-[var(--text-primary)] shadow-[var(--shadow-lg)]（dsr-9 之後不得用裸 shadow-lg）｜ 左右邊緣加 bg-gradient-to-r / bg-gradient-to-l from-[var(--bg-primary)] (~w-14) scrim ｜ 外層包 group/scroller，箭頭 opacity-0 lg:group-hover:opacity-100 transition-opacity ｜ 監聽 onScroll + ResizeObserver，記 scrollLeft / scrollWidth / clientWidth：左箭頭只在 scrollLeft > 0 時掛、右箭頭只在 scrollLeft + clientWidth < scrollWidth 時掛 ｜ 維持 hidden lg:block（觸控裝置不出現箭頭，靠原生捲動）",
                       "lineHeight": "$Type/Label/Line",
                       "fontFamily": "$Type/Family/Canvas",
                       "fontSize": "$Type/Label/Size",
@@ -152918,7 +152918,7 @@
                           "fill": "$text-muted",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "↑ 沒有左右箭頭。訊息靠左、text-muted、上下 py-8。",
+                          "content": "↑ 沒有左右箭頭。訊息靠左、text-muted、上下 py-8。訊息有兩句，程式碼依原因選字：篩選後真的沒有東西 →「沒有符合條件的內容」（本圖）；有東西但整排都已在你的片庫 →「這排的作品你都已經擁有了」。兩句共用同一個版位與樣式。",
                           "lineHeight": "$Type/Label/Line",
                           "fontFamily": "$Type/Family/Canvas",
                           "fontSize": "$Type/Label/Size",
@@ -152935,7 +152935,7 @@
                   "fill": "$text-secondary",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "ExploreBlock.tsx ~L154-161 — items.length === 0 時：不掛 explore-block-scroll-left / explore-block-scroll-right 兩顆按鈕 ｜ 保留 explore-block-empty 訊息：text-[var(--text-muted)]、py-8、靠左 ｜ block 仍然 render（只有 isError 才整個 return null，維持現狀）",
+                  "content": "ExploreBlock.tsx（空狀態）— items.length === 0 時：不掛 explore-block-scroll-left / explore-block-scroll-right 兩顆按鈕 ｜ 保留 explore-block-empty 訊息：text-[var(--text-muted)]、py-8、靠左 ｜ block 仍然 render（只有 isError 才整個 return null，維持現狀）",
                   "lineHeight": "$Type/Label/Line",
                   "fontFamily": "$Type/Family/Canvas",
                   "fontSize": "$Type/Label/Size",
@@ -153340,9 +153340,9 @@
               "id": "OivWL",
               "x": 17040,
               "y": 36755,
-              "name": "H5 · ExploreBlock 優化（桌面）",
+              "name": "H9-SPEC · ExploreBlock 優化（桌面規格）",
               "fill": "#888888",
-              "content": "H5 · ExploreBlock 優化（桌面）",
+              "content": "H9-SPEC · ExploreBlock 優化（桌面規格）",
               "lineHeight": "$Type/Body/Line",
               "fontFamily": "$Type/Family/Primary",
               "fontSize": "$Type/Body/Size",
@@ -153550,13 +153550,13 @@
                                   "height": 16,
                                   "icon": "triangle-alert",
                                   "library": "lucide",
-                                  "fill": "$warning-text"
+                                  "fill": "$text-muted"
                                 },
                                 {
                                   "type": "text",
                                   "id": "V3Bale",
                                   "name": "標籤",
-                                  "fill": "$warning-text",
+                                  "fill": "$text-muted",
                                   "content": "需要注意",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Primary",
@@ -153569,8 +153569,8 @@
                               "type": "text",
                               "id": "XqtJj",
                               "name": "數字",
-                              "fill": "$text-primary",
-                              "content": "2 部失敗 · $1.20/$5.00",
+                              "fill": "$warning-text",
+                              "content": "2 部失敗 · $1.2/$5",
                               "lineHeight": "$Type/H3/Line",
                               "fontFamily": "$Type/Family/Mono",
                               "fontSize": "$Type/H3/Size",
@@ -153677,11 +153677,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 0
                               },
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 1
                               }
                             ]
@@ -153703,16 +153703,30 @@
                               "gap": "$Space/md",
                               "children": [
                                 {
-                                  "type": "text",
-                                  "id": "XTc4A",
-                                  "name": "最新入庫標籤",
-                                  "fill": "$text-muted",
-                                  "content": "最新入庫",
-                                  "lineHeight": "$Type/Label/Line",
-                                  "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Label/Size",
-                                  "fontWeight": "normal",
-                                  "letterSpacing": 2
+                                  "type": "frame",
+                                  "id": "Z1RmJ",
+                                  "name": "最新入庫藥丸",
+                                  "fill": "$overlay-scrim",
+                                  "cornerRadius": "$radius-sm",
+                                  "padding": [
+                                    "$Space/2xs",
+                                    "$Space/sm"
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "XTc4A",
+                                      "name": "最新入庫標籤",
+                                      "fill": "$text-on-scrim",
+                                      "content": "最新入庫",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal",
+                                      "letterSpacing": 2
+                                    }
+                                  ]
                                 },
                                 {
                                   "type": "text",
@@ -153729,7 +153743,13 @@
                                   "type": "frame",
                                   "id": "xxEXp",
                                   "name": "狀態列",
+                                  "fill": "$overlay-scrim",
+                                  "cornerRadius": "$radius-md",
                                   "gap": "$Space/md",
+                                  "padding": [
+                                    "$Space/xs",
+                                    "$Space/sm"
+                                  ],
                                   "alignItems": "center",
                                   "children": [
                                     {
@@ -153760,7 +153780,7 @@
                                       "type": "text",
                                       "id": "hieWV",
                                       "name": "年份類型",
-                                      "fill": "$text-secondary",
+                                      "fill": "$text-on-scrim",
                                       "content": "2024 · 電影",
                                       "lineHeight": "$Type/Body/Line",
                                       "fontFamily": "$Type/Family/Primary",
@@ -153773,7 +153793,7 @@
                                   "type": "frame",
                                   "id": "EwfRT",
                                   "name": "查看詳情按鈕",
-                                  "height": 40,
+                                  "height": 44,
                                   "fill": "$accent-primary",
                                   "cornerRadius": "$radius-md",
                                   "padding": [
@@ -153893,7 +153913,7 @@
                               "type": "frame",
                               "id": "vO5Zo",
                               "name": "整理中藥丸",
-                              "fill": "$warning-tint",
+                              "fill": "$accent-tint",
                               "cornerRadius": "$radius-pill",
                               "padding": [
                                 "$Space/xs",
@@ -153904,7 +153924,7 @@
                                   "type": "text",
                                   "id": "OMfpA",
                                   "name": "藥丸文字",
-                                  "fill": "$warning-text",
+                                  "fill": "$accent-text",
                                   "content": "整理中 · 3",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Primary",
@@ -153927,42 +153947,159 @@
                               "type": "ref",
                               "ref": "hD7Tw",
                               "name": "PosterCard 1",
-                              "width": 160
+                              "width": 160,
+                              "descendants": {
+                                "I4I8B7": {
+                                  "enabled": false
+                                },
+                                "niwYf": {
+                                  "fill": "$success"
+                                },
+                                "aCocg": {
+                                  "content": "繁中",
+                                  "fill": "$success-text"
+                                },
+                                "V1BIht": {
+                                  "content": "沙丘：第二部"
+                                },
+                                "J9foW": {
+                                  "content": "2024"
+                                },
+                                "g8xqm": {
+                                  "content": "166 分"
+                                }
+                              }
                             },
                             {
                               "id": "SLfzh",
                               "type": "ref",
                               "ref": "hD7Tw",
                               "name": "PosterCard 2",
-                              "width": 160
+                              "width": 160,
+                              "descendants": {
+                                "I4I8B7": {
+                                  "enabled": false
+                                },
+                                "niwYf": {
+                                  "fill": "$success"
+                                },
+                                "aCocg": {
+                                  "content": "繁中",
+                                  "fill": "$success-text"
+                                },
+                                "V1BIht": {
+                                  "content": "奧本海默"
+                                },
+                                "J9foW": {
+                                  "content": "2023"
+                                },
+                                "g8xqm": {
+                                  "content": "180 分"
+                                }
+                              }
                             },
                             {
                               "id": "fph4S",
                               "type": "ref",
                               "ref": "hD7Tw",
                               "name": "PosterCard 3",
-                              "width": 160
+                              "width": 160,
+                              "descendants": {
+                                "niwYf": {
+                                  "fill": "$accent-primary"
+                                },
+                                "aCocg": {
+                                  "content": "整理中",
+                                  "fill": "$accent-text"
+                                },
+                                "V1BIht": {
+                                  "content": "可憐的東西"
+                                },
+                                "J9foW": {
+                                  "content": "2023"
+                                },
+                                "g8xqm": {
+                                  "content": "141 分"
+                                }
+                              }
                             },
                             {
                               "id": "OPppD",
                               "type": "ref",
                               "ref": "hD7Tw",
                               "name": "PosterCard 4",
-                              "width": 160
+                              "width": 160,
+                              "descendants": {
+                                "I4I8B7": {
+                                  "enabled": false
+                                },
+                                "niwYf": {
+                                  "fill": "$success"
+                                },
+                                "aCocg": {
+                                  "content": "繁中",
+                                  "fill": "$success-text"
+                                },
+                                "V1BIht": {
+                                  "content": "蜘蛛人：穿越新宇宙"
+                                },
+                                "J9foW": {
+                                  "content": "2023"
+                                },
+                                "g8xqm": {
+                                  "content": "140 分"
+                                }
+                              }
                             },
                             {
                               "id": "G0u1Z",
                               "type": "ref",
                               "ref": "hD7Tw",
                               "name": "PosterCard 5",
-                              "width": 160
+                              "width": 160,
+                              "descendants": {
+                                "niwYf": {
+                                  "fill": "$accent-primary"
+                                },
+                                "aCocg": {
+                                  "content": "整理中",
+                                  "fill": "$accent-text"
+                                },
+                                "V1BIht": {
+                                  "content": "怪物"
+                                },
+                                "J9foW": {
+                                  "content": "2023"
+                                },
+                                "g8xqm": {
+                                  "content": "126 分"
+                                }
+                              }
                             },
                             {
                               "id": "oawTn",
                               "type": "ref",
                               "ref": "hD7Tw",
                               "name": "PosterCard 6",
-                              "width": 160
+                              "width": 160,
+                              "descendants": {
+                                "niwYf": {
+                                  "fill": "$accent-primary"
+                                },
+                                "aCocg": {
+                                  "content": "整理中",
+                                  "fill": "$accent-text"
+                                },
+                                "V1BIht": {
+                                  "content": "週處除三害"
+                                },
+                                "J9foW": {
+                                  "content": "2023"
+                                },
+                                "g8xqm": {
+                                  "content": "134 分"
+                                }
+                              }
                             }
                           ]
                         }
@@ -154023,6 +154160,15 @@
                               "descendants": {
                                 "I4I8B7": {
                                   "enabled": false
+                                },
+                                "V1BIht": {
+                                  "content": "腦筋急轉彎 2"
+                                },
+                                "J9foW": {
+                                  "content": "2024"
+                                },
+                                "g8xqm": {
+                                  "content": "96 分"
                                 }
                               }
                             },
@@ -154035,6 +154181,15 @@
                               "descendants": {
                                 "I4I8B7": {
                                   "enabled": false
+                                },
+                                "V1BIht": {
+                                  "content": "特技玩家"
+                                },
+                                "J9foW": {
+                                  "content": "2024"
+                                },
+                                "g8xqm": {
+                                  "content": "126 分"
                                 }
                               }
                             },
@@ -154047,6 +154202,15 @@
                               "descendants": {
                                 "I4I8B7": {
                                   "enabled": false
+                                },
+                                "V1BIht": {
+                                  "content": "猩球崛起：王國誕生"
+                                },
+                                "J9foW": {
+                                  "content": "2024"
+                                },
+                                "g8xqm": {
+                                  "content": "145 分"
                                 }
                               }
                             },
@@ -154059,6 +154223,15 @@
                               "descendants": {
                                 "I4I8B7": {
                                   "enabled": false
+                                },
+                                "V1BIht": {
+                                  "content": "哥吉拉大戰金剛：新帝國"
+                                },
+                                "J9foW": {
+                                  "content": "2024"
+                                },
+                                "g8xqm": {
+                                  "content": "115 分"
                                 }
                               }
                             },
@@ -154071,6 +154244,15 @@
                               "descendants": {
                                 "I4I8B7": {
                                   "enabled": false
+                                },
+                                "V1BIht": {
+                                  "content": "功夫熊貓4"
+                                },
+                                "J9foW": {
+                                  "content": "2024"
+                                },
+                                "g8xqm": {
+                                  "content": "94 分"
                                 }
                               }
                             },
@@ -154083,6 +154265,15 @@
                               "descendants": {
                                 "I4I8B7": {
                                   "enabled": false
+                                },
+                                "V1BIht": {
+                                  "content": "神鬼戰士II"
+                                },
+                                "J9foW": {
+                                  "content": "2024"
+                                },
+                                "g8xqm": {
+                                  "content": "148 分"
                                 }
                               }
                             }
@@ -154283,13 +154474,13 @@
                                   "height": 16,
                                   "icon": "triangle-alert",
                                   "library": "lucide",
-                                  "fill": "$warning-text"
+                                  "fill": "$text-muted"
                                 },
                                 {
                                   "type": "text",
                                   "id": "SGhuq",
                                   "name": "標籤",
-                                  "fill": "$warning-text",
+                                  "fill": "$text-muted",
                                   "content": "需要注意",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Primary",
@@ -154302,8 +154493,8 @@
                               "type": "text",
                               "id": "rK3eF",
                               "name": "數字",
-                              "fill": "$text-primary",
-                              "content": "2 部失敗 · $1.20/$5.00",
+                              "fill": "$warning-text",
+                              "content": "2 部失敗 · $1.2/$5",
                               "lineHeight": "$Type/H3/Line",
                               "fontFamily": "$Type/Family/Mono",
                               "fontSize": "$Type/H3/Size",
@@ -154410,11 +154601,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 0
                               },
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 1
                               }
                             ]
@@ -154436,16 +154627,30 @@
                               "gap": "$Space/md",
                               "children": [
                                 {
-                                  "type": "text",
-                                  "id": "d28I7v",
-                                  "name": "最新入庫標籤",
-                                  "fill": "$text-muted",
-                                  "content": "最新入庫",
-                                  "lineHeight": "$Type/Label/Line",
-                                  "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Label/Size",
-                                  "fontWeight": "normal",
-                                  "letterSpacing": 2
+                                  "type": "frame",
+                                  "id": "ElyV2",
+                                  "name": "最新入庫藥丸",
+                                  "fill": "$overlay-scrim",
+                                  "cornerRadius": "$radius-sm",
+                                  "padding": [
+                                    "$Space/2xs",
+                                    "$Space/sm"
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "d28I7v",
+                                      "name": "最新入庫標籤",
+                                      "fill": "$text-on-scrim",
+                                      "content": "最新入庫",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal",
+                                      "letterSpacing": 2
+                                    }
+                                  ]
                                 },
                                 {
                                   "type": "text",
@@ -154462,7 +154667,13 @@
                                   "type": "frame",
                                   "id": "t7BUW",
                                   "name": "狀態列",
+                                  "fill": "$overlay-scrim",
+                                  "cornerRadius": "$radius-md",
                                   "gap": "$Space/md",
+                                  "padding": [
+                                    "$Space/xs",
+                                    "$Space/sm"
+                                  ],
                                   "alignItems": "center",
                                   "children": [
                                     {
@@ -154493,7 +154704,7 @@
                                       "type": "text",
                                       "id": "UwbhT",
                                       "name": "年份類型",
-                                      "fill": "$text-secondary",
+                                      "fill": "$text-on-scrim",
                                       "content": "2024 · 電影",
                                       "lineHeight": "$Type/Body/Line",
                                       "fontFamily": "$Type/Family/Primary",
@@ -154506,7 +154717,7 @@
                                   "type": "frame",
                                   "id": "P9b3p",
                                   "name": "查看詳情按鈕",
-                                  "height": 40,
+                                  "height": 44,
                                   "fill": "$accent-primary",
                                   "cornerRadius": "$radius-md",
                                   "padding": [
@@ -154626,7 +154837,7 @@
                               "type": "frame",
                               "id": "NlPnj",
                               "name": "整理中藥丸",
-                              "fill": "$warning-tint",
+                              "fill": "$accent-tint",
                               "cornerRadius": "$radius-pill",
                               "padding": [
                                 "$Space/xs",
@@ -154637,7 +154848,7 @@
                                   "type": "text",
                                   "id": "r3SKdO",
                                   "name": "藥丸文字",
-                                  "fill": "$warning-text",
+                                  "fill": "$accent-text",
                                   "content": "整理中 · 3",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Primary",
@@ -154660,42 +154871,159 @@
                               "type": "ref",
                               "ref": "hD7Tw",
                               "name": "PosterCard 1",
-                              "width": 160
+                              "width": 160,
+                              "descendants": {
+                                "I4I8B7": {
+                                  "enabled": false
+                                },
+                                "niwYf": {
+                                  "fill": "$success"
+                                },
+                                "aCocg": {
+                                  "content": "繁中",
+                                  "fill": "$success-text"
+                                },
+                                "V1BIht": {
+                                  "content": "沙丘：第二部"
+                                },
+                                "J9foW": {
+                                  "content": "2024"
+                                },
+                                "g8xqm": {
+                                  "content": "166 分"
+                                }
+                              }
                             },
                             {
                               "id": "vJRF2",
                               "type": "ref",
                               "ref": "hD7Tw",
                               "name": "PosterCard 2",
-                              "width": 160
+                              "width": 160,
+                              "descendants": {
+                                "I4I8B7": {
+                                  "enabled": false
+                                },
+                                "niwYf": {
+                                  "fill": "$success"
+                                },
+                                "aCocg": {
+                                  "content": "繁中",
+                                  "fill": "$success-text"
+                                },
+                                "V1BIht": {
+                                  "content": "奧本海默"
+                                },
+                                "J9foW": {
+                                  "content": "2023"
+                                },
+                                "g8xqm": {
+                                  "content": "180 分"
+                                }
+                              }
                             },
                             {
                               "id": "hb6ZW",
                               "type": "ref",
                               "ref": "hD7Tw",
                               "name": "PosterCard 3",
-                              "width": 160
+                              "width": 160,
+                              "descendants": {
+                                "niwYf": {
+                                  "fill": "$accent-primary"
+                                },
+                                "aCocg": {
+                                  "content": "整理中",
+                                  "fill": "$accent-text"
+                                },
+                                "V1BIht": {
+                                  "content": "可憐的東西"
+                                },
+                                "J9foW": {
+                                  "content": "2023"
+                                },
+                                "g8xqm": {
+                                  "content": "141 分"
+                                }
+                              }
                             },
                             {
                               "id": "p3KKdX",
                               "type": "ref",
                               "ref": "hD7Tw",
                               "name": "PosterCard 4",
-                              "width": 160
+                              "width": 160,
+                              "descendants": {
+                                "I4I8B7": {
+                                  "enabled": false
+                                },
+                                "niwYf": {
+                                  "fill": "$success"
+                                },
+                                "aCocg": {
+                                  "content": "繁中",
+                                  "fill": "$success-text"
+                                },
+                                "V1BIht": {
+                                  "content": "蜘蛛人：穿越新宇宙"
+                                },
+                                "J9foW": {
+                                  "content": "2023"
+                                },
+                                "g8xqm": {
+                                  "content": "140 分"
+                                }
+                              }
                             },
                             {
                               "id": "bqU6r",
                               "type": "ref",
                               "ref": "hD7Tw",
                               "name": "PosterCard 5",
-                              "width": 160
+                              "width": 160,
+                              "descendants": {
+                                "niwYf": {
+                                  "fill": "$accent-primary"
+                                },
+                                "aCocg": {
+                                  "content": "整理中",
+                                  "fill": "$accent-text"
+                                },
+                                "V1BIht": {
+                                  "content": "怪物"
+                                },
+                                "J9foW": {
+                                  "content": "2023"
+                                },
+                                "g8xqm": {
+                                  "content": "126 分"
+                                }
+                              }
                             },
                             {
                               "id": "YOSfR",
                               "type": "ref",
                               "ref": "hD7Tw",
                               "name": "PosterCard 6",
-                              "width": 160
+                              "width": 160,
+                              "descendants": {
+                                "niwYf": {
+                                  "fill": "$accent-primary"
+                                },
+                                "aCocg": {
+                                  "content": "整理中",
+                                  "fill": "$accent-text"
+                                },
+                                "V1BIht": {
+                                  "content": "週處除三害"
+                                },
+                                "J9foW": {
+                                  "content": "2023"
+                                },
+                                "g8xqm": {
+                                  "content": "134 分"
+                                }
+                              }
                             }
                           ]
                         }
@@ -154720,7 +155048,7 @@
                           "id": "UMdF2",
                           "name": "降級訊息",
                           "fill": "$warning-text",
-                          "content": "探索內容目前無法載入（TMDb 未設定或無法連線）",
+                          "content": "探索區塊目前無法載入（TMDb 未設定或無法連線）",
                           "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Primary",
                           "fontSize": "$Type/Body/Size",
@@ -154738,6 +155066,19 @@
                           "fontWeight": "$Type/Body/Weight"
                         }
                       ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "J7uEOi",
+                      "name": "註記",
+                      "fill": "$text-muted",
+                      "textGrowth": "fixed-width",
+                      "width": 1152,
+                      "content": "降級文案有兩種，程式碼依失敗來源選字：整份區塊清單抓不到時說「探索區塊目前無法載入」（本稿畫的這一種）；清單拿到了但其中 N 個區塊的內容抓不到時說「N 個探索區塊的內容目前無法載入」。兩種都接同一句「（TMDb 未設定或無法連線）」與同一顆「前往連線設定」。",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
                     }
                   ]
                 }
@@ -155757,6 +156098,15 @@
                               "descendants": {
                                 "I4I8B7": {
                                   "enabled": false
+                                },
+                                "V1BIht": {
+                                  "content": "腦筋急轉彎 2"
+                                },
+                                "J9foW": {
+                                  "content": "2024"
+                                },
+                                "g8xqm": {
+                                  "content": "96 分"
                                 }
                               }
                             },
@@ -155769,6 +156119,15 @@
                               "descendants": {
                                 "I4I8B7": {
                                   "enabled": false
+                                },
+                                "V1BIht": {
+                                  "content": "特技玩家"
+                                },
+                                "J9foW": {
+                                  "content": "2024"
+                                },
+                                "g8xqm": {
+                                  "content": "126 分"
                                 }
                               }
                             },
@@ -155781,6 +156140,15 @@
                               "descendants": {
                                 "I4I8B7": {
                                   "enabled": false
+                                },
+                                "V1BIht": {
+                                  "content": "猩球崛起：王國誕生"
+                                },
+                                "J9foW": {
+                                  "content": "2024"
+                                },
+                                "g8xqm": {
+                                  "content": "145 分"
                                 }
                               }
                             },
@@ -155793,6 +156161,15 @@
                               "descendants": {
                                 "I4I8B7": {
                                   "enabled": false
+                                },
+                                "V1BIht": {
+                                  "content": "哥吉拉大戰金剛：新帝國"
+                                },
+                                "J9foW": {
+                                  "content": "2024"
+                                },
+                                "g8xqm": {
+                                  "content": "115 分"
                                 }
                               }
                             },
@@ -155805,6 +156182,15 @@
                               "descendants": {
                                 "I4I8B7": {
                                   "enabled": false
+                                },
+                                "V1BIht": {
+                                  "content": "功夫熊貓4"
+                                },
+                                "J9foW": {
+                                  "content": "2024"
+                                },
+                                "g8xqm": {
+                                  "content": "94 分"
                                 }
                               }
                             },
@@ -155817,6 +156203,15 @@
                               "descendants": {
                                 "I4I8B7": {
                                   "enabled": false
+                                },
+                                "V1BIht": {
+                                  "content": "神鬼戰士II"
+                                },
+                                "J9foW": {
+                                  "content": "2024"
+                                },
+                                "g8xqm": {
+                                  "content": "148 分"
                                 }
                               }
                             }
@@ -156043,13 +156438,13 @@
                                   "height": 16,
                                   "icon": "triangle-alert",
                                   "library": "lucide",
-                                  "fill": "$warning-text"
+                                  "fill": "$text-muted"
                                 },
                                 {
                                   "type": "text",
                                   "id": "ac05t",
                                   "name": "標籤",
-                                  "fill": "$warning-text",
+                                  "fill": "$text-muted",
                                   "content": "需要注意",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Primary",
@@ -156062,8 +156457,8 @@
                               "type": "text",
                               "id": "ovxT4",
                               "name": "數字",
-                              "fill": "$text-primary",
-                              "content": "2 部失敗 · $1.20/$5.00",
+                              "fill": "$warning-text",
+                              "content": "2 部失敗 · $1.2/$5",
                               "lineHeight": "$Type/H3/Line",
                               "fontFamily": "$Type/Family/Mono",
                               "fontSize": "$Type/H3/Size",
@@ -156168,7 +156563,7 @@
                           "name": "錯誤橫幅",
                           "width": "fill_container",
                           "fill": "$error-tint",
-                          "cornerRadius": "$radius-md",
+                          "cornerRadius": "$radius-lg",
                           "padding": [
                             "$Space/md",
                             "$Space/lg-plus"
@@ -156198,13 +156593,24 @@
                                   "id": "CJvcN",
                                   "name": "錯誤訊息",
                                   "fill": "$error-text",
-                                  "content": "無法載入，請稍後再試",
+                                  "content": "最近新增目前無法載入",
                                   "lineHeight": "$Type/Body/Line",
                                   "fontFamily": "$Type/Family/Primary",
                                   "fontSize": "$Type/Body/Size",
-                                  "fontWeight": "$Type/Body/Weight"
+                                  "fontWeight": "500"
                                 }
                               ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "p22ZEu",
+                              "name": "降級說明",
+                              "fill": "$text-secondary",
+                              "content": "這個區塊的資料暫時無法取得，其他首頁內容仍可使用。",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
                             },
                             {
                               "type": "frame",
@@ -156213,7 +156619,6 @@
                               "height": 44,
                               "cornerRadius": "$radius-md",
                               "stroke": "$error-text",
-                              "strokeWidth": 1,
                               "padding": [
                                 "$Space/none",
                                 "$Space/lg-plus"
@@ -156293,6 +156698,15 @@
                               "descendants": {
                                 "I4I8B7": {
                                   "enabled": false
+                                },
+                                "V1BIht": {
+                                  "content": "腦筋急轉彎 2"
+                                },
+                                "J9foW": {
+                                  "content": "2024"
+                                },
+                                "g8xqm": {
+                                  "content": "96 分"
                                 }
                               }
                             },
@@ -156305,6 +156719,15 @@
                               "descendants": {
                                 "I4I8B7": {
                                   "enabled": false
+                                },
+                                "V1BIht": {
+                                  "content": "特技玩家"
+                                },
+                                "J9foW": {
+                                  "content": "2024"
+                                },
+                                "g8xqm": {
+                                  "content": "126 分"
                                 }
                               }
                             },
@@ -156317,6 +156740,15 @@
                               "descendants": {
                                 "I4I8B7": {
                                   "enabled": false
+                                },
+                                "V1BIht": {
+                                  "content": "猩球崛起：王國誕生"
+                                },
+                                "J9foW": {
+                                  "content": "2024"
+                                },
+                                "g8xqm": {
+                                  "content": "145 分"
                                 }
                               }
                             },
@@ -156329,6 +156761,15 @@
                               "descendants": {
                                 "I4I8B7": {
                                   "enabled": false
+                                },
+                                "V1BIht": {
+                                  "content": "哥吉拉大戰金剛：新帝國"
+                                },
+                                "J9foW": {
+                                  "content": "2024"
+                                },
+                                "g8xqm": {
+                                  "content": "115 分"
                                 }
                               }
                             },
@@ -156341,6 +156782,15 @@
                               "descendants": {
                                 "I4I8B7": {
                                   "enabled": false
+                                },
+                                "V1BIht": {
+                                  "content": "功夫熊貓4"
+                                },
+                                "J9foW": {
+                                  "content": "2024"
+                                },
+                                "g8xqm": {
+                                  "content": "94 分"
                                 }
                               }
                             },
@@ -156353,6 +156803,15 @@
                               "descendants": {
                                 "I4I8B7": {
                                   "enabled": false
+                                },
+                                "V1BIht": {
+                                  "content": "神鬼戰士II"
+                                },
+                                "J9foW": {
+                                  "content": "2024"
+                                },
+                                "g8xqm": {
+                                  "content": "148 分"
                                 }
                               }
                             }
@@ -156457,7 +156916,7 @@
                                   "id": "tBEa0",
                                   "name": "門格 繁中字幕",
                                   "width": "fill_container",
-                                  "height": 64,
+                                  "height": 84,
                                   "layout": "vertical",
                                   "gap": "$Space/xs-plus",
                                   "justifyContent": "center",
@@ -156519,7 +156978,7 @@
                                   "id": "sEg9L",
                                   "name": "門格 今天處理",
                                   "width": "fill_container",
-                                  "height": 64,
+                                  "height": 84,
                                   "layout": "vertical",
                                   "gap": "$Space/xs-plus",
                                   "justifyContent": "center",
@@ -156590,7 +157049,7 @@
                                   "id": "JRM3i",
                                   "name": "門格 需要注意",
                                   "width": "fill_container",
-                                  "height": 64,
+                                  "height": 84,
                                   "layout": "vertical",
                                   "gap": "$Space/xs-plus",
                                   "justifyContent": "center",
@@ -156611,13 +157070,13 @@
                                           "height": 16,
                                           "icon": "triangle-alert",
                                           "library": "lucide",
-                                          "fill": "$warning-text"
+                                          "fill": "$text-muted"
                                         },
                                         {
                                           "type": "text",
                                           "id": "uWZja",
                                           "name": "標籤",
-                                          "fill": "$warning-text",
+                                          "fill": "$text-muted",
                                           "content": "需要注意",
                                           "lineHeight": "$Type/Label/Line",
                                           "fontFamily": "$Type/Family/Primary",
@@ -156629,9 +157088,20 @@
                                     {
                                       "type": "text",
                                       "id": "sJ87f",
-                                      "name": "數字",
-                                      "fill": "$text-primary",
-                                      "content": "2 部失敗 · $1.20",
+                                      "name": "第一行",
+                                      "fill": "$warning-text",
+                                      "content": "2 部失敗",
+                                      "lineHeight": "$Type/BodyLg/Line",
+                                      "fontFamily": "$Type/Family/Mono",
+                                      "fontSize": "$Type/BodyLg/Size",
+                                      "fontWeight": "$Type/BodyLg/Weight"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "EH1QL",
+                                      "name": "第二行",
+                                      "fill": "$warning-text",
+                                      "content": "$1.2/$5",
                                       "lineHeight": "$Type/BodyLg/Line",
                                       "fontFamily": "$Type/Family/Mono",
                                       "fontSize": "$Type/BodyLg/Size",
@@ -156652,7 +157122,7 @@
                                   "id": "wdhgJ",
                                   "name": "門格 進行中",
                                   "width": "fill_container",
-                                  "height": 64,
+                                  "height": 84,
                                   "layout": "vertical",
                                   "gap": "$Space/xs-plus",
                                   "justifyContent": "center",
@@ -156744,17 +157214,17 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 0
                               },
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 1
                               }
                             ]
                           },
                           "padding": [
-                            "$Space/6xl",
+                            "$Space/4xl",
                             "$Space/lg",
                             "$Space/lg-plus",
                             "$Space/lg"
@@ -156770,16 +157240,30 @@
                               "gap": "$Space/sm",
                               "children": [
                                 {
-                                  "type": "text",
-                                  "id": "d0Woug",
-                                  "name": "最新入庫標籤",
-                                  "fill": "$text-muted",
-                                  "content": "最新入庫",
-                                  "lineHeight": "$Type/Label/Line",
-                                  "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Label/Size",
-                                  "fontWeight": "normal",
-                                  "letterSpacing": 2
+                                  "type": "frame",
+                                  "id": "g84TN",
+                                  "name": "最新入庫藥丸",
+                                  "fill": "$overlay-scrim",
+                                  "cornerRadius": "$radius-sm",
+                                  "padding": [
+                                    "$Space/2xs",
+                                    "$Space/sm"
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "d0Woug",
+                                      "name": "最新入庫標籤",
+                                      "fill": "$text-on-scrim",
+                                      "content": "最新入庫",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal",
+                                      "letterSpacing": 2
+                                    }
+                                  ]
                                 },
                                 {
                                   "type": "text",
@@ -156796,7 +157280,13 @@
                                   "type": "frame",
                                   "id": "hyzDk",
                                   "name": "狀態列",
+                                  "fill": "$overlay-scrim",
+                                  "cornerRadius": "$radius-md",
                                   "gap": "$Space/sm-plus",
+                                  "padding": [
+                                    "$Space/xs",
+                                    "$Space/sm"
+                                  ],
                                   "alignItems": "center",
                                   "children": [
                                     {
@@ -156827,12 +157317,39 @@
                                       "type": "text",
                                       "id": "iGnuD",
                                       "name": "年份類型",
-                                      "fill": "$text-secondary",
+                                      "fill": "$text-on-scrim",
                                       "content": "2024 · 電影",
                                       "lineHeight": "$Type/Label/Line",
                                       "fontFamily": "$Type/Family/Primary",
                                       "fontSize": "$Type/Label/Size",
                                       "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "b3S5kj",
+                                  "name": "查看詳情按鈕",
+                                  "height": 44,
+                                  "fill": "$accent-primary",
+                                  "cornerRadius": "$radius-md",
+                                  "padding": [
+                                    "$Space/none",
+                                    "$Space/lg-plus"
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "CkjRf",
+                                      "name": "按鈕文字",
+                                      "fill": "$text-on-accent",
+                                      "content": "查看詳情",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "600"
                                     }
                                   ]
                                 }
@@ -156937,7 +157454,7 @@
                               "type": "frame",
                               "id": "mLFLN",
                               "name": "整理中藥丸",
-                              "fill": "$warning-tint",
+                              "fill": "$accent-tint",
                               "cornerRadius": "$radius-pill",
                               "padding": [
                                 "$Space/xs",
@@ -156948,7 +157465,7 @@
                                   "type": "text",
                                   "id": "RgNRs",
                                   "name": "藥丸文字",
-                                  "fill": "$warning-text",
+                                  "fill": "$accent-text",
                                   "content": "整理中 · 3",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Primary",
@@ -156982,6 +157499,25 @@
                               "descendants": {
                                 "hY3d3": {
                                   "height": 210
+                                },
+                                "I4I8B7": {
+                                  "enabled": false
+                                },
+                                "niwYf": {
+                                  "fill": "$success"
+                                },
+                                "aCocg": {
+                                  "content": "繁中",
+                                  "fill": "$success-text"
+                                },
+                                "V1BIht": {
+                                  "content": "沙丘：第二部"
+                                },
+                                "J9foW": {
+                                  "content": "2024"
+                                },
+                                "g8xqm": {
+                                  "content": "166 分"
                                 }
                               }
                             },
@@ -156994,6 +157530,25 @@
                               "descendants": {
                                 "hY3d3": {
                                   "height": 210
+                                },
+                                "I4I8B7": {
+                                  "enabled": false
+                                },
+                                "niwYf": {
+                                  "fill": "$success"
+                                },
+                                "aCocg": {
+                                  "content": "繁中",
+                                  "fill": "$success-text"
+                                },
+                                "V1BIht": {
+                                  "content": "奧本海默"
+                                },
+                                "J9foW": {
+                                  "content": "2023"
+                                },
+                                "g8xqm": {
+                                  "content": "180 分"
                                 }
                               }
                             },
@@ -157006,6 +157561,156 @@
                               "descendants": {
                                 "hY3d3": {
                                   "height": 210
+                                },
+                                "niwYf": {
+                                  "fill": "$accent-primary"
+                                },
+                                "aCocg": {
+                                  "content": "整理中",
+                                  "fill": "$accent-text"
+                                },
+                                "V1BIht": {
+                                  "content": "可憐的東西"
+                                },
+                                "J9foW": {
+                                  "content": "2023"
+                                },
+                                "g8xqm": {
+                                  "content": "141 分"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "tq7rm",
+                      "name": "TMDb 探索",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": "$Space/md",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Q3caD",
+                          "name": "標題列",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": "$Space/2xs",
+                          "padding": [
+                            "$Space/none",
+                            "$Space/lg"
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Wvhrs",
+                              "name": "標題",
+                              "fill": "$text-primary",
+                              "content": "熱門電影",
+                              "lineHeight": "$Type/H4/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/H4/Size",
+                              "fontWeight": "$Type/H4/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "oppky",
+                              "name": "過濾說明",
+                              "fill": "$text-muted",
+                              "content": "已擁有的作品不會出現在這裡",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "QSav2",
+                          "name": "橫向捲動列",
+                          "clip": true,
+                          "width": "fill_container",
+                          "gap": "$Space/md",
+                          "padding": [
+                            "$Space/none",
+                            "$Space/none",
+                            "$Space/none",
+                            "$Space/lg"
+                          ],
+                          "children": [
+                            {
+                              "id": "bWqo2",
+                              "type": "ref",
+                              "ref": "hD7Tw",
+                              "name": "PosterCard 1",
+                              "width": 140,
+                              "descendants": {
+                                "hY3d3": {
+                                  "height": 210
+                                },
+                                "I4I8B7": {
+                                  "enabled": false
+                                },
+                                "V1BIht": {
+                                  "content": "腦筋急轉彎 2"
+                                },
+                                "J9foW": {
+                                  "content": "2024"
+                                },
+                                "g8xqm": {
+                                  "content": "96 分"
+                                }
+                              }
+                            },
+                            {
+                              "id": "oAHm3",
+                              "type": "ref",
+                              "ref": "hD7Tw",
+                              "name": "PosterCard 2",
+                              "width": 140,
+                              "descendants": {
+                                "hY3d3": {
+                                  "height": 210
+                                },
+                                "I4I8B7": {
+                                  "enabled": false
+                                },
+                                "V1BIht": {
+                                  "content": "特技玩家"
+                                },
+                                "J9foW": {
+                                  "content": "2024"
+                                },
+                                "g8xqm": {
+                                  "content": "126 分"
+                                }
+                              }
+                            },
+                            {
+                              "id": "Mjw9Y",
+                              "type": "ref",
+                              "ref": "hD7Tw",
+                              "name": "PosterCard 3",
+                              "width": 140,
+                              "descendants": {
+                                "hY3d3": {
+                                  "height": 210
+                                },
+                                "I4I8B7": {
+                                  "enabled": false
+                                },
+                                "V1BIht": {
+                                  "content": "猩球崛起：王國誕生"
+                                },
+                                "J9foW": {
+                                  "content": "2024"
+                                },
+                                "g8xqm": {
+                                  "content": "145 分"
                                 }
                               }
                             }
@@ -157216,6 +157921,21 @@
               "fontFamily": "$Type/Family/Primary",
               "fontSize": "$Type/H3/Size",
               "fontWeight": "$Type/H3/Weight"
+            },
+            {
+              "type": "text",
+              "id": "KEbbI",
+              "x": 17040,
+              "y": 39716,
+              "name": "註記",
+              "fill": "$text-muted",
+              "textGrowth": "fixed-width",
+              "width": 390,
+              "content": "註：手機同樣渲染「TMDb 探索」區（HomeBrowseV2 的 <ExploreBlocksList /> 沒有任何斷點隱藏），它就接在「最近新增」下面、在這個 844px 視窗之外——本稿已含該區塊，捲動才看得到，外觀見 H1-D-v3。海報卡的徽章只在例外狀態出現：已入庫＋繁中是穩定態，程式碼不畫徽章（pickPosterBadge 回 null），所以這裡只有「整理中」那張有。",
+              "lineHeight": "$Type/Label/Line",
+              "fontFamily": "$Type/Family/Primary",
+              "fontSize": "$Type/Label/Size",
+              "fontWeight": "normal"
             }
           ]
         },
@@ -157277,7 +157997,7 @@
                       "fill": "$text-secondary",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "• 顯示精度隨金額大小折疊：小於 $10 顯示一位小數（$1.2）；$10–$999 顯示整數（$12、$123）；$1000 以上用 k 縮寫一位小數（$1.2k）。上限（分母）套同一規則。",
+                      "content": "• 顯示精度隨金額大小折疊：小於 $10 顯示一位小數（$1.2），末位為 0 時連小數點一起省略（$5.0 → $5）；$10–$999 顯示整數（$12、$123）；$1000 以上用 k 縮寫一位小數（$1.2k）。上限（分母）套同一規則。",
                       "lineHeight": "$Type/Body/Line",
                       "fontFamily": "$Type/Family/Primary",
                       "fontSize": "$Type/Body/Size",
@@ -157357,13 +158077,13 @@
                                   "height": 14,
                                   "icon": "triangle-alert",
                                   "library": "lucide",
-                                  "fill": "$warning-text"
+                                  "fill": "$text-muted"
                                 },
                                 {
                                   "type": "text",
                                   "id": "JnbhL",
                                   "name": "標籤",
-                                  "fill": "$warning-text",
+                                  "fill": "$text-muted",
                                   "content": "需要注意",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Primary",
@@ -157376,8 +158096,8 @@
                               "type": "text",
                               "id": "ODERd",
                               "name": "數字",
-                              "fill": "$text-primary",
-                              "content": "2 部失敗 · $1.20/$5.00",
+                              "fill": "$warning-text",
+                              "content": "2 部失敗 · $1.2/$5",
                               "lineHeight": "$Type/H3/Line",
                               "fontFamily": "$Type/Family/Mono",
                               "fontSize": "$Type/H3/Size",
@@ -157437,13 +158157,13 @@
                                   "height": 14,
                                   "icon": "triangle-alert",
                                   "library": "lucide",
-                                  "fill": "$warning-text"
+                                  "fill": "$text-muted"
                                 },
                                 {
                                   "type": "text",
                                   "id": "ObTQp",
                                   "name": "標籤",
-                                  "fill": "$warning-text",
+                                  "fill": "$text-muted",
                                   "content": "需要注意",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Primary",
@@ -157456,7 +158176,7 @@
                               "type": "text",
                               "id": "LAjbF",
                               "name": "數字",
-                              "fill": "$text-primary",
+                              "fill": "$warning-text",
                               "content": "2 部失敗 · $123/$500",
                               "lineHeight": "$Type/H3/Line",
                               "fontFamily": "$Type/Family/Mono",
@@ -157517,13 +158237,13 @@
                                   "height": 14,
                                   "icon": "triangle-alert",
                                   "library": "lucide",
-                                  "fill": "$warning-text"
+                                  "fill": "$text-muted"
                                 },
                                 {
                                   "type": "text",
                                   "id": "K4k0Av",
                                   "name": "標籤",
-                                  "fill": "$warning-text",
+                                  "fill": "$text-muted",
                                   "content": "需要注意",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Primary",
@@ -157536,7 +158256,7 @@
                               "type": "text",
                               "id": "qSw9O",
                               "name": "數字",
-                              "fill": "$text-primary",
+                              "fill": "$warning-text",
                               "content": "2 部失敗 · $1.2k/$5k",
                               "lineHeight": "$Type/H3/Line",
                               "fontFamily": "$Type/Family/Mono",
@@ -157632,8 +158352,8 @@
                               "type": "text",
                               "id": "g1pWK",
                               "name": "第二行",
-                              "fill": "$text-primary",
-                              "content": "$1.20/$5.00",
+                              "fill": "$warning-text",
+                              "content": "$1.2/$5",
                               "lineHeight": "$Type/BodyLg/Line",
                               "fontFamily": "$Type/Family/Mono",
                               "fontSize": "$Type/BodyLg/Size",
@@ -157719,7 +158439,7 @@
                               "type": "text",
                               "id": "JOcPY",
                               "name": "第二行",
-                              "fill": "$text-primary",
+                              "fill": "$warning-text",
                               "content": "$123/$500",
                               "lineHeight": "$Type/BodyLg/Line",
                               "fontFamily": "$Type/Family/Mono",
@@ -157806,7 +158526,7 @@
                               "type": "text",
                               "id": "OuyNB",
                               "name": "第二行",
-                              "fill": "$text-primary",
+                              "fill": "$warning-text",
                               "content": "$1.2k/$5k",
                               "lineHeight": "$Type/BodyLg/Line",
                               "fontFamily": "$Type/Family/Mono",

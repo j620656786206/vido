@@ -1,4 +1,9 @@
-// Design ref: ux-design.pen Screen HP-1 Homepage Desktop (sAaCR)
+// Design ref: ux-design.pen — no current screen frame; the trailer button this
+// modal opened lived on the v2 homepage hero (HP-1, node sAaCR), and BOTH were
+// removed in the 2026-08-26 v3 cutover — Home v3's hero offers 查看詳情 only.
+// The component is currently mounted nowhere but the visual gallery; whether it
+// is deleted or kept for Epic 17 playback is a product call tracked as
+// disc-2026-09-trailer-modal-unmounted (dsr-7 Discovery Triage).
 import { useEffect, useMemo, useRef } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';

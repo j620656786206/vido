@@ -52,3 +52,16 @@ playwright-report/
 
 # eval/ key.json are generated blind-eval answer keys (scripts write them raw)
 eval/**/*.json
+
+# Generated coverage reports. `apps/api/coverage/` is istanbul/nyc output (clover.xml,
+# an empty coverage-final.json, prettify.js) — i.e. a JS coverage reporter writing into
+# the GO app's directory, which is its own bug (see disc-2026-09-js-coverage-in-apps-api).
+# Ignoring it here stops it breaking `format:check`; it is deliberately NOT in .gitignore,
+# because that would change what git picks up rather than what prettier reads.
+apps/api/coverage/
+
+# TestSprite run reports are generated HTML. They ARE committed on purpose (see
+# `git log -- 'testsprite_tests/*.html'`), so they belong here, not in .gitignore —
+# there is even a `chore(testsprite): prettier-format generated HTML report` commit
+# in the history showing what happens when they are not ignored.
+testsprite_tests/*.html

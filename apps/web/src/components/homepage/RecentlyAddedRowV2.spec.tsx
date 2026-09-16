@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 import type { LibraryItem } from '../../types/library';
+import { pickPosterBadge } from '../../utils/libraryStatus';
 
 vi.mock('../../hooks/useLibrary', () => ({
   useRecentlyAdded: vi.fn(),
@@ -121,19 +122,42 @@ describe('RecentlyAddedRowV2 (own-content 最近新增 row — four states)', ()
     expect(screen.queryByTestId('home-recent-progress')).toBeNull();
   });
 
-  // ⚖️ R2 ruling: pending = QUEUED → amber, matching the poster badge exactly
-  // (one screen, one truth, one colour). Supersedes R1's brief green.
-  it('[P2] chip is a DOOR to /activity and wears the badge-matching amber', () => {
+  // ⚖️ R2 asked for one rule, not one colour: the chip must wear whatever the
+  // poster badges under it wear, because one screen may not dress one truth in
+  // two colours. R2 satisfied that with amber; dsr-11 (⚖️ Alexyu 2026-09-11)
+  // then moved the badge to gold (整理中 is HAPPENING — amber means asked-for
+  // but did NOT happen) and the chip was left behind. So this asserts the RULE,
+  // not the literal — it reads the badge's own className out of
+  // deriveLifecycleStatus, which makes the two physically unable to diverge
+  // again without this test going red.
+  it('[P2] chip is a DOOR to /activity and wears exactly the poster badge colour', () => {
     mockUseRecentlyAdded.mockReturnValue(
       result({ data: [movie('a', { parseStatus: 'pending' }), movie('b')] })
     );
     render(<RecentlyAddedRowV2 />);
     const chip = screen.getByTestId('home-recent-progress');
+    // Deliberately `pickPosterBadge`, NOT `deriveLifecycleStatus`: the cards in
+    // this very row render the former (PosterCardV2), and it applies a priority
+    // ladder on top. Asserting the lower-level helper would stay green if that
+    // ladder were reordered and the badge under the chip changed colour.
+    const badge = pickPosterBadge({
+      parseStatus: 'pending',
+      subtitleTracks: undefined,
+      subtitleStatus: undefined,
+      subtitleLanguage: undefined,
+    });
+
     expect(chip).toHaveAttribute('href', '/activity');
     expect(chip).toHaveTextContent('整理中');
-    expect(chip.className).toContain('bg-[var(--warning-tint)]');
-    expect(chip.className).toContain('text-[var(--warning-text)]');
+    // Same word on the same screen ⇒ same tint AND same text token as the badge.
+    expect(badge?.label).toBe('整理中');
+    for (const cls of (badge?.className ?? '').split(' ')) {
+      expect(chip.className).toContain(cls);
+    }
+    // Gold is 正在跑; amber is 你要求了但沒發生. This row is the former.
+    expect(chip.className).toContain('bg-[var(--accent-tint)]');
+    expect(chip.className).toContain('text-[var(--accent-text)]');
+    expect(chip.className).not.toContain('warning');
     expect(chip.className).not.toContain('success');
-    expect(chip.className).not.toContain('accent');
   });
 });
