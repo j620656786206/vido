@@ -1,6 +1,6 @@
 # Story DSR.1: Flow A 瀏覽 v2——程式碼與設計稿雙向對齊（桌機 A1p–A8p）
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -293,6 +293,7 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`，BMAD dev agent（Amelia）2
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-16 | ✅ 收單 —— PR #442 合併進 main（commit 2adc3974），**CI 17 項一次全綠**，視覺基準零變動。 |
 | 2026-09-16 | 🔴 **對抗式 CR 回報 14 項，修 12 記 2**。最難堪的是前三項——這個 commit 犯了它自己在罵的錯：我在檔頭引用了一張**沒立的單子**，還把三個同樣沒有掛載點的檔案指向**活的**畫面（把壞指標換成假指標）。另外：安慰的句子被漆成警報紅、半開年份標籤一個字串兩個意思、「部」的裁定被同畫面的「項目」打臉、標題階層變成 h3→h1 倒序、以及**新增的程式碼原本沒有任何測試碰得到**（補了 3 條穿過容器的測試）。收尾前加了一道自檢：所有 `disc-2026-09-*` 引用都必須在 sprint-status 找得到條目。 |
 | 2026-09-16 | ✅ Task 7 閘門全綠：web **3403/3403**、api PASS、lint 0 errors、typecheck PASS、prettier PASS、token 一致。匯出 32 個檔案變動（母版改動的預期擴散）。 |
 | 2026-09-16 | Task 4／6 — 三個狀態母版與程式碼比出 **10 項差異，修 3 延 7**。刪掉 Hover 的 `play-btn`（全 app 沒有任何可達的播放按鈕）、停用徽章打勾（程式碼的徽章沒有圖示，而打勾在「整理中」上等於說「做完了」）、徽章底改不透明。**徽章位置試過改成右上又還原**：母版的 `poster-image` 是絕對定位排版，貼右的節點在比母版窄的 instance 上會被切出卡片——設計稿放左上是因為這個限制，不是畫錯。A1p-D 的文案對齊 `EmptyNoFolder` 並加上三態註記。 |
