@@ -196,6 +196,24 @@ describe('tmdbService', () => {
       expect(calledUrl).not.toContain('/tmdb/search/');
     });
   });
+  // dsr-2 AC #8: keep the HTTP status on TMDb detail failures too.
+  describe('error status', () => {
+    it('rejects getMovieDetails with the HTTP status and code', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        json: () =>
+          Promise.resolve({
+            success: false,
+            error: { code: 'TMDB_NOT_FOUND', message: 'not found' },
+          }),
+      });
+      await expect(tmdbService.getMovieDetails(1)).rejects.toMatchObject({
+        status: 404,
+        code: 'TMDB_NOT_FOUND',
+      });
+    });
+  });
 });
 
 describe('getImageUrl', () => {

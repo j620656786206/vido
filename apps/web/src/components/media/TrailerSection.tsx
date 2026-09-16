@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen — no current screen frame; Epic 12 detail-page trailer section postdates the .pen design
+// Design ref: ux-design.pen Screen B8p-D (UH0sk)
 import type { ReactNode } from 'react';
 import { useMediaVideos } from '../../hooks/useMediaDetails';
 import { pickBestTrailer, pickTmdbVideoFallbackUrl } from '../../lib/trailers';

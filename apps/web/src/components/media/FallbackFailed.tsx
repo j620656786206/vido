@@ -1,4 +1,7 @@
-// Design ref: ux-design.pen Screen 4d Detail Fallback Desktop (Failed) (2ltBl)
+// Design ref: ux-design.pen Screen B6-M (2m1Pv)
+// Test-only today (visual gallery; the v2 detail page does not render it) — B6-M has
+// no live implementer, so this pointer is honest. Revival: dsr-2b-flow-b-no-metadata-states.
+// Old reference was the deleted desktop frame 4d (2ltBl).
 import { Link } from '@tanstack/react-router';
 import { SearchX, File, Folder, HardDrive, Clock3, CircleAlert, Search } from 'lucide-react';
 

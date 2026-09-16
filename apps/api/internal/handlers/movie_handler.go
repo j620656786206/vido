@@ -2,7 +2,10 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"log/slog"
+	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -98,8 +101,16 @@ func (h *MovieHandler) GetByID(c *gin.Context) {
 
 	movie, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
+		// Only a genuinely missing row is a 404 (dsr-2 AC #8). Anything else — a
+		// locked or failing database — is a 500, so the detail page can say "could
+		// not load" instead of telling the user the item was removed.
+		if errors.Is(err, sql.ErrNoRows) {
+			NotFoundError(c, "Movie")
+			return
+		}
 		slog.Error("Failed to get movie", "error", err, "movie_id", id)
-		NotFoundError(c, "Movie")
+		ErrorResponse(c, http.StatusInternalServerError, "DB_QUERY_FAILED",
+			"Failed to load movie", "Please try again later.")
 		return
 	}
 

@@ -21962,11 +21962,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512F2",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -22008,37 +22008,88 @@
                               "children": [
                                 {
                                   "type": "frame",
-                                  "id": "KotvC",
-                                  "name": "statusbadge",
-                                  "fill": "$success-tint",
-                                  "cornerRadius": "$radius-pill",
+                                  "id": "qUQnK",
+                                  "name": "badges",
                                   "gap": "$Space/xs-plus",
-                                  "padding": [
-                                    "$Space/xs",
-                                    "$Space/sm-plus"
-                                  ],
                                   "alignItems": "center",
                                   "children": [
                                     {
-                                      "type": "icon",
-                                      "id": "HvdGG",
-                                      "name": "i",
-                                      "width": 12,
-                                      "height": 12,
-                                      "icon": "check",
-                                      "library": "lucide",
-                                      "fill": "$success"
+                                      "type": "frame",
+                                      "id": "KotvC",
+                                      "name": "statusbadge",
+                                      "fill": "$success-tint",
+                                      "cornerRadius": "$radius-pill",
+                                      "gap": "$Space/xs-plus",
+                                      "padding": [
+                                        "$Space/xs",
+                                        "$Space/sm-plus"
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "HvdGG",
+                                          "x": 10,
+                                          "y": 7,
+                                          "name": "i",
+                                          "enabled": false,
+                                          "width": 12,
+                                          "height": 12,
+                                          "icon": "check",
+                                          "library": "lucide",
+                                          "fill": "$success"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "yW7Ug",
+                                          "name": "l",
+                                          "fill": "$success-text",
+                                          "content": "已入庫",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "500"
+                                        }
+                                      ]
                                     },
                                     {
-                                      "type": "text",
-                                      "id": "yW7Ug",
-                                      "name": "l",
-                                      "fill": "$success-text",
-                                      "content": "已入庫 · 繁中字幕",
-                                      "lineHeight": "$Type/Label/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Label/Size",
-                                      "fontWeight": "600"
+                                      "type": "frame",
+                                      "id": "ajgvZ",
+                                      "name": "statusbadge-subtitle",
+                                      "fill": "$success-tint",
+                                      "cornerRadius": "$radius-pill",
+                                      "gap": "$Space/xs-plus",
+                                      "padding": [
+                                        "$Space/xs",
+                                        "$Space/sm-plus"
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "Gx8l5",
+                                          "x": 10,
+                                          "y": 7,
+                                          "name": "i",
+                                          "enabled": false,
+                                          "width": 12,
+                                          "height": 12,
+                                          "icon": "check",
+                                          "library": "lucide",
+                                          "fill": "$success"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "SifBO",
+                                          "name": "l",
+                                          "fill": "$success-text",
+                                          "content": "繁中",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "500"
+                                        }
+                                      ]
                                     }
                                   ]
                                 },
@@ -22682,7 +22733,7 @@
                                   "id": "J6BcH",
                                   "name": "tbb",
                                   "fill": "$bg-tertiary",
-                                  "cornerRadius": "$radius-md",
+                                  "cornerRadius": "$radius-pill",
                                   "padding": [
                                     "$Space/xs",
                                     "$Space/sm-plus"
@@ -22707,7 +22758,7 @@
                                   "id": "w3GObS",
                                   "name": "tbb",
                                   "fill": "$bg-tertiary",
-                                  "cornerRadius": "$radius-md",
+                                  "cornerRadius": "$radius-pill",
                                   "padding": [
                                     "$Space/xs",
                                     "$Space/sm-plus"
@@ -22732,7 +22783,7 @@
                                   "id": "d1NloM",
                                   "name": "tbb",
                                   "fill": "$bg-tertiary",
-                                  "cornerRadius": "$radius-md",
+                                  "cornerRadius": "$radius-pill",
                                   "padding": [
                                     "$Space/xs",
                                     "$Space/sm-plus"
@@ -22757,7 +22808,7 @@
                                   "id": "gSbRm",
                                   "name": "tbb",
                                   "fill": "$bg-tertiary",
-                                  "cornerRadius": "$radius-md",
+                                  "cornerRadius": "$radius-pill",
                                   "padding": [
                                     "$Space/xs",
                                     "$Space/sm-plus"
@@ -22855,7 +22906,7 @@
                                       "fill": "$text-primary",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
-                                      "content": "繁中（繁體）· English",
+                                      "content": "繁中 · 英文",
                                       "lineHeight": "$Type/Body/Line",
                                       "fontFamily": "$Type/Family/Mono",
                                       "fontSize": "$Type/Body/Size",
@@ -35543,41 +35594,6 @@
                       ]
                     },
                     {
-                      "type": "frame",
-                      "id": "ibsHt",
-                      "name": "item-export",
-                      "width": "fill_container",
-                      "gap": "$Space/sm-plus",
-                      "padding": [
-                        "$Space/sm",
-                        "$Space/md-plus"
-                      ],
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "icon",
-                          "id": "HZazk",
-                          "name": "mi3icon",
-                          "width": 16,
-                          "height": 16,
-                          "icon": "download",
-                          "library": "lucide",
-                          "fill": "$text-muted"
-                        },
-                        {
-                          "type": "text",
-                          "id": "SEDGA",
-                          "name": "mi3label",
-                          "fill": "$text-primary",
-                          "content": "匯出中繼資料",
-                          "lineHeight": "$Type/Body/Line",
-                          "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Body/Size",
-                          "fontWeight": "$Type/Body/Weight"
-                        }
-                      ]
-                    },
-                    {
                       "type": "rectangle",
                       "id": "duoVI",
                       "name": "divider",
@@ -36026,11 +36042,11 @@
                                 },
                                 "colors": [
                                   {
-                                    "color": "#0c151200",
+                                    "color": "#00000000",
                                     "position": 0
                                   },
                                   {
-                                    "color": "#0c1512F2",
+                                    "color": "$bg-primary",
                                     "position": 1
                                   }
                                 ]
@@ -36072,37 +36088,88 @@
                                   "children": [
                                     {
                                       "type": "frame",
-                                      "id": "MfMkC",
-                                      "name": "statusbadge",
-                                      "fill": "$success-tint",
-                                      "cornerRadius": "$radius-pill",
+                                      "id": "BEgKk",
+                                      "name": "badges",
                                       "gap": "$Space/xs-plus",
-                                      "padding": [
-                                        "$Space/xs",
-                                        "$Space/sm-plus"
-                                      ],
                                       "alignItems": "center",
                                       "children": [
                                         {
-                                          "type": "icon",
-                                          "id": "E6Zxzy",
-                                          "name": "i",
-                                          "width": 12,
-                                          "height": 12,
-                                          "icon": "check",
-                                          "library": "lucide",
-                                          "fill": "$success"
+                                          "type": "frame",
+                                          "id": "MfMkC",
+                                          "name": "statusbadge",
+                                          "fill": "$success-tint",
+                                          "cornerRadius": "$radius-pill",
+                                          "gap": "$Space/xs-plus",
+                                          "padding": [
+                                            "$Space/xs",
+                                            "$Space/sm-plus"
+                                          ],
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "E6Zxzy",
+                                              "x": 10,
+                                              "y": 7,
+                                              "name": "i",
+                                              "enabled": false,
+                                              "width": 12,
+                                              "height": 12,
+                                              "icon": "check",
+                                              "library": "lucide",
+                                              "fill": "$success"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "vGqzA",
+                                              "name": "l",
+                                              "fill": "$success-text",
+                                              "content": "已入庫",
+                                              "lineHeight": "$Type/Label/Line",
+                                              "fontFamily": "$Type/Family/Primary",
+                                              "fontSize": "$Type/Label/Size",
+                                              "fontWeight": "500"
+                                            }
+                                          ]
                                         },
                                         {
-                                          "type": "text",
-                                          "id": "vGqzA",
-                                          "name": "l",
-                                          "fill": "$success-text",
-                                          "content": "已入庫 · 繁中字幕",
-                                          "lineHeight": "$Type/Label/Line",
-                                          "fontFamily": "$Type/Family/Primary",
-                                          "fontSize": "$Type/Label/Size",
-                                          "fontWeight": "600"
+                                          "type": "frame",
+                                          "id": "Xw8vc",
+                                          "name": "statusbadge-subtitle",
+                                          "fill": "$success-tint",
+                                          "cornerRadius": "$radius-pill",
+                                          "gap": "$Space/xs-plus",
+                                          "padding": [
+                                            "$Space/xs",
+                                            "$Space/sm-plus"
+                                          ],
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "K7TZ8g",
+                                              "x": 10,
+                                              "y": 7,
+                                              "name": "i",
+                                              "enabled": false,
+                                              "width": 12,
+                                              "height": 12,
+                                              "icon": "check",
+                                              "library": "lucide",
+                                              "fill": "$success"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "pnSta",
+                                              "name": "l",
+                                              "fill": "$success-text",
+                                              "content": "繁中",
+                                              "lineHeight": "$Type/Label/Line",
+                                              "fontFamily": "$Type/Family/Primary",
+                                              "fontSize": "$Type/Label/Size",
+                                              "fontWeight": "500"
+                                            }
+                                          ]
                                         }
                                       ]
                                     },
@@ -36769,7 +36836,7 @@
                                       "id": "VOHYx",
                                       "name": "tbb",
                                       "fill": "$bg-tertiary",
-                                      "cornerRadius": "$radius-md",
+                                      "cornerRadius": "$radius-pill",
                                       "padding": [
                                         "$Space/xs",
                                         "$Space/sm-plus"
@@ -36794,7 +36861,7 @@
                                       "id": "TAXBm",
                                       "name": "tbb",
                                       "fill": "$bg-tertiary",
-                                      "cornerRadius": "$radius-md",
+                                      "cornerRadius": "$radius-pill",
                                       "padding": [
                                         "$Space/xs",
                                         "$Space/sm-plus"
@@ -36819,7 +36886,7 @@
                                       "id": "HDrNA",
                                       "name": "tbb",
                                       "fill": "$bg-tertiary",
-                                      "cornerRadius": "$radius-md",
+                                      "cornerRadius": "$radius-pill",
                                       "padding": [
                                         "$Space/xs",
                                         "$Space/sm-plus"
@@ -36844,7 +36911,7 @@
                                       "id": "yqWuX",
                                       "name": "tbb",
                                       "fill": "$bg-tertiary",
-                                      "cornerRadius": "$radius-md",
+                                      "cornerRadius": "$radius-pill",
                                       "padding": [
                                         "$Space/xs",
                                         "$Space/sm-plus"
@@ -36942,7 +37009,7 @@
                                           "fill": "$text-primary",
                                           "textGrowth": "fixed-width",
                                           "width": "fill_container",
-                                          "content": "繁中（繁體）· English",
+                                          "content": "繁中 · 英文",
                                           "lineHeight": "$Type/Body/Line",
                                           "fontFamily": "$Type/Family/Mono",
                                           "fontSize": "$Type/Body/Size",
@@ -37086,41 +37153,6 @@
                           "name": "dmi1label",
                           "fill": "$text-primary",
                           "content": "重新解析",
-                          "lineHeight": "$Type/Body/Line",
-                          "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Body/Size",
-                          "fontWeight": "$Type/Body/Weight"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "DYejI",
-                      "name": "item-export",
-                      "width": "fill_container",
-                      "gap": "$Space/sm-plus",
-                      "padding": [
-                        "$Space/sm",
-                        "$Space/md-plus"
-                      ],
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "icon",
-                          "id": "5pe1v",
-                          "name": "dmi2icon",
-                          "width": 16,
-                          "height": 16,
-                          "icon": "download",
-                          "library": "lucide",
-                          "fill": "$text-muted"
-                        },
-                        {
-                          "type": "text",
-                          "id": "ohU0V",
-                          "name": "dmi2label",
-                          "fill": "$text-primary",
-                          "content": "匯出中繼資料",
                           "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Primary",
                           "fontSize": "$Type/Body/Size",
@@ -38268,7 +38300,7 @@
               "name": "B9-D",
               "clip": true,
               "width": 1040,
-              "height": 1160,
+              "height": 961,
               "fill": "$bg-primary",
               "layout": "vertical",
               "gap": "$Space/xl",
@@ -38281,7 +38313,7 @@
                   "fill": "$text-primary",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Spec — MediaDetailPanel 圖片載入 Fallback (case B)",
+                  "content": "Spec — DetailHeroV2 圖片載入 Fallback (case B)",
                   "lineHeight": "$Type/H2/Line",
                   "fontFamily": "$Type/Family/Canvas",
                   "fontSize": "$Type/H2/Size",
@@ -38416,7 +38448,7 @@
                           "fill": "$text-secondary",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "完全沒有 metadata(解析中 / 解析失敗)是 case A，使用 FallbackPending / FallbackFailed(Screen 4d / 4e / 5b / 5c)，不是這張。本 spec 只處理「有 metadata、僅圖檔載入失敗」。",
+                          "content": "完全沒有 metadata（解析中／解析失敗）是 case A，見 B6-M／B7-M（v2 版面待 dsr-2b 重畫），不是這張。本 spec 只處理「有 metadata、僅圖檔載入失敗」。",
                           "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Primary",
                           "fontSize": "$Type/Body/Size",
@@ -38428,7 +38460,7 @@
                           "fill": "$text-muted",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "實作對應：disc-flaky-visual-media-detail-panel — poster + backdrop <img> 加 onError → 切換此 fallback。",
+                          "content": "實作對應：DetailHeroV2 — backdrop 與 poster <img> 的 onError 記下「失敗的網址」→ 切換此 fallback；換一部片（網址不同）就重新載入，不會沿用上一部的失敗（dsr-2）。右側示意只示範背景與海報兩個 fallback 槽，hero 其餘版面以 B3p-D 為準。",
                           "lineHeight": "$Type/Label/Line",
                           "fontFamily": "$Type/Family/Primary",
                           "fontSize": "$Type/Label/Size",
@@ -38881,224 +38913,6 @@
                                   "fontFamily": "$Type/Family/Primary",
                                   "fontSize": "$Type/Body/Size",
                                   "fontWeight": "$Type/Body/Weight"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "gd8Cf",
-                              "name": "actions",
-                              "width": "fill_container",
-                              "gap": "$Space/md",
-                              "children": [
-                                {
-                                  "id": "w0uk3",
-                                  "type": "ref",
-                                  "ref": "otvKh",
-                                  "width": "fill_container",
-                                  "name": "playBtn",
-                                  "height": "fit_content",
-                                  "x": 0,
-                                  "y": 0,
-                                  "descendants": {
-                                    "DaLcd": {
-                                      "content": "管理字幕",
-                                      "x": 72,
-                                      "y": 8
-                                    }
-                                  }
-                                },
-                                {
-                                  "id": "dF14N",
-                                  "type": "ref",
-                                  "ref": "YDPhc",
-                                  "width": "fill_container",
-                                  "name": "addListBtn",
-                                  "height": "fit_content",
-                                  "x": 212,
-                                  "y": 0,
-                                  "descendants": {
-                                    "L9cIf": {
-                                      "content": "修改資訊",
-                                      "x": 72,
-                                      "y": 8
-                                    }
-                                  }
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "YArqI",
-                              "name": "subtitle-section",
-                              "width": "fill_container",
-                              "layout": "vertical",
-                              "gap": "$Space/sm",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "T0d3nm",
-                                  "name": "sub-sec-label",
-                                  "fill": "$text-muted",
-                                  "content": "字幕",
-                                  "lineHeight": "$Type/Body/Line",
-                                  "fontFamily": "$Type/Family/Canvas",
-                                  "fontSize": "$Type/Body/Size",
-                                  "fontWeight": "600"
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "MJJV8",
-                                  "name": "sub-status-row",
-                                  "width": "fill_container",
-                                  "gap": "$Space/sm",
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "icon",
-                                      "id": "yyufS",
-                                      "name": "subStatusIco",
-                                      "width": 14,
-                                      "height": 14,
-                                      "icon": "circle-check",
-                                      "library": "lucide",
-                                      "fill": "$success"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "y6d6kO",
-                                      "name": "subStatusTxt",
-                                      "fill": "$success-text",
-                                      "content": "繁體中文字幕已就緒",
-                                      "lineHeight": "$Type/Body/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Body/Size",
-                                      "fontWeight": "$Type/Body/Weight"
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "OpEG2",
-                                  "name": "sub-buttons",
-                                  "width": "fill_container",
-                                  "gap": "$Space/sm",
-                                  "children": [
-                                    {
-                                      "type": "frame",
-                                      "id": "IxEF1",
-                                      "name": "search-sub-btn",
-                                      "width": "fill_container",
-                                      "height": 34,
-                                      "fill": "$bg-tertiary",
-                                      "cornerRadius": "$radius-md",
-                                      "stroke": "$border-subtle",
-                                      "strokeWidth": 1,
-                                      "strokeAlignment": "inner",
-                                      "gap": "$Space/xs-plus",
-                                      "justifyContent": "center",
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "icon",
-                                          "id": "I5nXm",
-                                          "name": "subSearchI",
-                                          "width": 14,
-                                          "height": 14,
-                                          "icon": "captions",
-                                          "library": "lucide",
-                                          "fill": "$accent-primary"
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "A6wa5",
-                                          "name": "subSearchT",
-                                          "fill": "$text-primary",
-                                          "content": "搜尋字幕",
-                                          "lineHeight": "$Type/Label/Line",
-                                          "fontFamily": "$Type/Family/Primary",
-                                          "fontSize": "$Type/Label/Size",
-                                          "fontWeight": "$Type/Label/Weight"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "ZE7eR",
-                                      "name": "ai-correct-btn",
-                                      "width": "fill_container",
-                                      "height": 34,
-                                      "fill": "$bg-tertiary",
-                                      "cornerRadius": "$radius-md",
-                                      "stroke": "$border-subtle",
-                                      "strokeWidth": 1,
-                                      "strokeAlignment": "inner",
-                                      "gap": "$Space/xs-plus",
-                                      "justifyContent": "center",
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "icon",
-                                          "id": "mKfYw",
-                                          "name": "aiCorrI",
-                                          "width": 14,
-                                          "height": 14,
-                                          "icon": "sparkles",
-                                          "library": "lucide",
-                                          "fill": "$accent-primary"
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "f7YnpW",
-                                          "name": "aiCorrT",
-                                          "fill": "$text-primary",
-                                          "content": "AI 校正",
-                                          "lineHeight": "$Type/Label/Line",
-                                          "fontFamily": "$Type/Family/Primary",
-                                          "fontSize": "$Type/Label/Size",
-                                          "fontWeight": "$Type/Label/Weight"
-                                        }
-                                      ]
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "bo834",
-                                  "name": "transcribe-btn",
-                                  "width": "fill_container",
-                                  "height": 34,
-                                  "fill": "$bg-tertiary",
-                                  "cornerRadius": "$radius-md",
-                                  "stroke": "$border-subtle",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
-                                  "gap": "$Space/xs-plus",
-                                  "justifyContent": "center",
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "icon",
-                                      "id": "jmFsI",
-                                      "name": "transI",
-                                      "width": 14,
-                                      "height": 14,
-                                      "icon": "mic",
-                                      "library": "lucide",
-                                      "fill": "$accent-primary"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "ctIHp",
-                                      "name": "transT",
-                                      "fill": "$text-primary",
-                                      "content": "轉錄英文音軌",
-                                      "lineHeight": "$Type/Label/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Label/Size",
-                                      "fontWeight": "$Type/Label/Weight"
-                                    }
-                                  ]
                                 }
                               ]
                             },
@@ -39679,11 +39493,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512F2",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -39725,37 +39539,88 @@
                               "children": [
                                 {
                                   "type": "frame",
-                                  "id": "ySRMb",
-                                  "name": "statusbadge",
-                                  "fill": "$success-tint",
-                                  "cornerRadius": "$radius-pill",
+                                  "id": "Y9IEe8",
+                                  "name": "badges",
                                   "gap": "$Space/xs-plus",
-                                  "padding": [
-                                    "$Space/xs",
-                                    "$Space/sm-plus"
-                                  ],
                                   "alignItems": "center",
                                   "children": [
                                     {
-                                      "type": "icon",
-                                      "id": "Yu7FF",
-                                      "name": "i",
-                                      "width": 12,
-                                      "height": 12,
-                                      "icon": "check",
-                                      "library": "lucide",
-                                      "fill": "$success"
+                                      "type": "frame",
+                                      "id": "ySRMb",
+                                      "name": "statusbadge",
+                                      "fill": "$success-tint",
+                                      "cornerRadius": "$radius-pill",
+                                      "gap": "$Space/xs-plus",
+                                      "padding": [
+                                        "$Space/xs",
+                                        "$Space/sm-plus"
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "Yu7FF",
+                                          "x": 10,
+                                          "y": 7,
+                                          "name": "i",
+                                          "enabled": false,
+                                          "width": 12,
+                                          "height": 12,
+                                          "icon": "check",
+                                          "library": "lucide",
+                                          "fill": "$success"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "Z9Ge4f",
+                                          "name": "l",
+                                          "fill": "$success-text",
+                                          "content": "已入庫",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "500"
+                                        }
+                                      ]
                                     },
                                     {
-                                      "type": "text",
-                                      "id": "Z9Ge4f",
-                                      "name": "l",
-                                      "fill": "$success-text",
-                                      "content": "已入庫 · 繁中字幕",
-                                      "lineHeight": "$Type/Label/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Label/Size",
-                                      "fontWeight": "600"
+                                      "type": "frame",
+                                      "id": "UXRv6",
+                                      "name": "statusbadge-subtitle",
+                                      "fill": "$success-tint",
+                                      "cornerRadius": "$radius-pill",
+                                      "gap": "$Space/xs-plus",
+                                      "padding": [
+                                        "$Space/xs",
+                                        "$Space/sm-plus"
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "E3gBM",
+                                          "x": 10,
+                                          "y": 7,
+                                          "name": "i",
+                                          "enabled": false,
+                                          "width": 12,
+                                          "height": 12,
+                                          "icon": "check",
+                                          "library": "lucide",
+                                          "fill": "$success"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "oyDJv",
+                                          "name": "l",
+                                          "fill": "$success-text",
+                                          "content": "繁中",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "500"
+                                        }
+                                      ]
                                     }
                                   ]
                                 },
@@ -40399,7 +40264,7 @@
                                   "id": "PgOwQ",
                                   "name": "tbb",
                                   "fill": "$bg-tertiary",
-                                  "cornerRadius": "$radius-md",
+                                  "cornerRadius": "$radius-pill",
                                   "padding": [
                                     "$Space/xs",
                                     "$Space/sm-plus"
@@ -40424,7 +40289,7 @@
                                   "id": "XawbQ",
                                   "name": "tbb",
                                   "fill": "$bg-tertiary",
-                                  "cornerRadius": "$radius-md",
+                                  "cornerRadius": "$radius-pill",
                                   "padding": [
                                     "$Space/xs",
                                     "$Space/sm-plus"
@@ -40449,7 +40314,7 @@
                                   "id": "CjrKz",
                                   "name": "tbb",
                                   "fill": "$bg-tertiary",
-                                  "cornerRadius": "$radius-md",
+                                  "cornerRadius": "$radius-pill",
                                   "padding": [
                                     "$Space/xs",
                                     "$Space/sm-plus"
@@ -40474,7 +40339,7 @@
                                   "id": "J9e5lX",
                                   "name": "tbb",
                                   "fill": "$bg-tertiary",
-                                  "cornerRadius": "$radius-md",
+                                  "cornerRadius": "$radius-pill",
                                   "padding": [
                                     "$Space/xs",
                                     "$Space/sm-plus"
@@ -40572,7 +40437,7 @@
                                       "fill": "$text-primary",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
-                                      "content": "繁中（繁體）· English",
+                                      "content": "繁中 · 英文",
                                       "lineHeight": "$Type/Body/Line",
                                       "fontFamily": "$Type/Family/Mono",
                                       "fontSize": "$Type/Body/Size",
@@ -41286,7 +41151,7 @@
                               "id": "cV13h",
                               "name": "sh",
                               "fill": "$text-primary",
-                              "content": "相似推薦",
+                              "content": "相關推薦",
                               "lineHeight": "$Type/H3/Line",
                               "fontFamily": "$Type/Family/Primary",
                               "fontSize": "$Type/H3/Size",
@@ -41503,103 +41368,28 @@
                               "fontWeight": "700"
                             },
                             {
-                              "type": "frame",
-                              "id": "n2tzT7",
-                              "name": "db-unavail",
+                              "type": "text",
+                              "id": "xXnhs",
+                              "name": "link",
+                              "fill": "$accent-text",
+                              "content": "查看豆瓣頁面",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "kGQs2",
+                              "name": "註記",
+                              "fill": "$text-muted",
+                              "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "fill": "$bg-secondary",
-                              "cornerRadius": "$radius-md",
-                              "stroke": "$border-subtle",
-                              "strokeWidth": 1,
-                              "strokeAlignment": "inner",
-                              "gap": "$Space/md-plus",
-                              "padding": [
-                                "$Space/lg",
-                                "$Space/lg-plus"
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "icon",
-                                  "id": "DzWRY",
-                                  "name": "i",
-                                  "width": 22,
-                                  "height": 22,
-                                  "icon": "cloud-off",
-                                  "library": "lucide",
-                                  "fill": "$text-muted"
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "A6gIB",
-                                  "name": "t",
-                                  "width": "fill_container",
-                                  "layout": "vertical",
-                                  "gap": "$Space/xs",
-                                  "children": [
-                                    {
-                                      "type": "text",
-                                      "id": "lef2w",
-                                      "name": "a",
-                                      "fill": "$text-secondary",
-                                      "content": "豆瓣資料暫時無法取得",
-                                      "lineHeight": "$Type/Body/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Body/Size",
-                                      "fontWeight": "600"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "uAYZS",
-                                      "name": "b",
-                                      "fill": "$text-muted",
-                                      "content": "此區塊獨立失敗，不影響頁面其他內容（F3 per-section fail-soft；DOUBAN_RATE_LIMITED）。",
-                                      "lineHeight": "$Type/Label/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Label/Size",
-                                      "fontWeight": "normal"
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "jDemr",
-                                  "name": "retry",
-                                  "height": 40,
-                                  "fill": "$bg-tertiary",
-                                  "cornerRadius": "$radius-md",
-                                  "gap": "$Space/xs-plus",
-                                  "padding": [
-                                    "$Space/none",
-                                    "$Space/md-plus"
-                                  ],
-                                  "justifyContent": "center",
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "icon",
-                                      "id": "sHvsV",
-                                      "name": "i",
-                                      "width": 14,
-                                      "height": 14,
-                                      "icon": "refresh-cw",
-                                      "library": "lucide",
-                                      "fill": "$text-primary"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "n7U3ua",
-                                      "name": "l",
-                                      "fill": "$text-primary",
-                                      "content": "重試",
-                                      "lineHeight": "$Type/Body/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Body/Size",
-                                      "fontWeight": "600"
-                                    }
-                                  ]
-                                }
-                              ]
+                              "content": "註：豆瓣短評已停抓（⚖️ 2026-08-30，匿名爬蟲被豆瓣安全頁擋下）；本區只留外連，評分在 hero 的 meta 列。沒有豆瓣 ID 時整區不顯示。dsr-2。",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
                             }
                           ]
                         }
@@ -42609,6 +42399,20 @@
                               "fontWeight": "600"
                             }
                           ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "AfmJ2",
+                          "name": "載入失敗註記",
+                          "fill": "$text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": 460,
+                          "content": "註：本稿只在「真的找不到」（伺服器回 404）時出現；還沒入庫的 TMDb 片或網址格式錯誤時，說明改成「這個連結可能已失效。」（它們從來不在媒體庫裡）。伺服器出錯、逾時等其他失敗改顯示「載入失敗」變體（DetailLoadErrorV2）：同樣的返回鍵與置中版面，圖示改硃砂警示三角，標題「無法載入這部影片」；媒體庫裡的片說「詳情資料查詢失敗，你的檔案沒有受影響。」，TMDb 上的片說「詳情資料暫時無法取得，請稍後再試。」（兩句都是中性灰）；有錯誤碼時顯示等寬膠囊（例如 DB_QUERY_FAILED）；按鈕「重試」（重試中顯示「重試中…」並停用）＋「返回媒體庫」。已經載入過的頁面背景重新整理失敗時不換頁。dsr-2 AC #8。",
+                          "lineHeight": "$Type/Body/Line",
+                          "textAlign": "center",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Body/Size",
+                          "fontWeight": "$Type/Body/Weight"
                         }
                       ]
                     }
@@ -43025,11 +42829,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512F2",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -43071,37 +42875,88 @@
                               "children": [
                                 {
                                   "type": "frame",
-                                  "id": "O3Bow",
-                                  "name": "statusbadge",
-                                  "fill": "$success-tint",
-                                  "cornerRadius": "$radius-pill",
+                                  "id": "mr7R0",
+                                  "name": "badges",
                                   "gap": "$Space/xs-plus",
-                                  "padding": [
-                                    "$Space/xs",
-                                    "$Space/sm-plus"
-                                  ],
                                   "alignItems": "center",
                                   "children": [
                                     {
-                                      "type": "icon",
-                                      "id": "RwDHs",
-                                      "name": "i",
-                                      "width": 12,
-                                      "height": 12,
-                                      "icon": "check",
-                                      "library": "lucide",
-                                      "fill": "$success"
+                                      "type": "frame",
+                                      "id": "O3Bow",
+                                      "name": "statusbadge",
+                                      "fill": "$success-tint",
+                                      "cornerRadius": "$radius-pill",
+                                      "gap": "$Space/xs-plus",
+                                      "padding": [
+                                        "$Space/xs",
+                                        "$Space/sm-plus"
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "RwDHs",
+                                          "x": 10,
+                                          "y": 7,
+                                          "name": "i",
+                                          "enabled": false,
+                                          "width": 12,
+                                          "height": 12,
+                                          "icon": "check",
+                                          "library": "lucide",
+                                          "fill": "$success"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "hw3PN",
+                                          "name": "l",
+                                          "fill": "$success-text",
+                                          "content": "已入庫",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "500"
+                                        }
+                                      ]
                                     },
                                     {
-                                      "type": "text",
-                                      "id": "hw3PN",
-                                      "name": "l",
-                                      "fill": "$success-text",
-                                      "content": "已入庫 · 4 季全 · 繁中",
-                                      "lineHeight": "$Type/Label/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Label/Size",
-                                      "fontWeight": "600"
+                                      "type": "frame",
+                                      "id": "r7hVZo",
+                                      "name": "statusbadge-subtitle",
+                                      "fill": "$success-tint",
+                                      "cornerRadius": "$radius-pill",
+                                      "gap": "$Space/xs-plus",
+                                      "padding": [
+                                        "$Space/xs",
+                                        "$Space/sm-plus"
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "DuqMp",
+                                          "x": 10,
+                                          "y": 7,
+                                          "name": "i",
+                                          "enabled": false,
+                                          "width": 12,
+                                          "height": 12,
+                                          "icon": "check",
+                                          "library": "lucide",
+                                          "fill": "$success"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "Fq1Ay",
+                                          "name": "l",
+                                          "fill": "$success-text",
+                                          "content": "繁中",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "500"
+                                        }
+                                      ]
                                     }
                                   ]
                                 },
@@ -43394,6 +43249,8 @@
                       "gap": "$Space/lg-plus",
                       "padding": [
                         "$Space/xl",
+                        "$Space/2xl",
+                        "$Space/none",
                         "$Space/2xl"
                       ],
                       "children": [
@@ -43452,51 +43309,11 @@
                                   "id": "jTi5j",
                                   "name": "sh",
                                   "fill": "$text-primary",
-                                  "content": "分集",
+                                  "content": "季與劇集",
                                   "lineHeight": "$Type/H3/Line",
                                   "fontFamily": "$Type/Family/Primary",
                                   "fontSize": "$Type/H3/Size",
                                   "fontWeight": "700"
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "t8KW7T",
-                                  "name": "seasel",
-                                  "height": 40,
-                                  "fill": "$bg-secondary",
-                                  "cornerRadius": "$radius-md",
-                                  "stroke": "$border-subtle",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
-                                  "gap": "$Space/xs-plus",
-                                  "padding": [
-                                    "$Space/sm",
-                                    "$Space/md"
-                                  ],
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "text",
-                                      "id": "QR4t9",
-                                      "name": "l",
-                                      "fill": "$text-primary",
-                                      "content": "第 1 季",
-                                      "lineHeight": "$Type/Body/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Body/Size",
-                                      "fontWeight": "600"
-                                    },
-                                    {
-                                      "type": "icon",
-                                      "id": "nURKb",
-                                      "name": "c",
-                                      "width": 14,
-                                      "height": 14,
-                                      "icon": "chevron-down",
-                                      "library": "lucide",
-                                      "fill": "$text-secondary"
-                                    }
-                                  ]
                                 }
                               ]
                             },
@@ -43510,137 +43327,326 @@
                               "children": [
                                 {
                                   "type": "frame",
-                                  "id": "t4tTRq",
-                                  "name": "ep",
+                                  "id": "d1dyE",
+                                  "name": "season-expanded",
+                                  "clip": true,
                                   "width": "fill_container",
+                                  "fill": "$bg-secondary",
                                   "cornerRadius": "$radius-md",
-                                  "gap": "$Space/md-plus",
-                                  "padding": "$Space/sm",
-                                  "alignItems": "center",
+                                  "stroke": "$border-subtle",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
                                   "children": [
                                     {
                                       "type": "frame",
-                                      "id": "kceer",
-                                      "name": "th",
-                                      "clip": true,
-                                      "width": 120,
-                                      "height": 68,
-                                      "fill": {
-                                        "type": "image",
-                                        "enabled": true,
-                                        "url": "images/generated-1772689683926.png",
-                                        "mode": "fill"
-                                      },
-                                      "cornerRadius": "$radius-md",
-                                      "layout": "none",
+                                      "id": "dDjJ6",
+                                      "name": "season-header",
+                                      "width": "fill_container",
+                                      "gap": "$Space/md",
+                                      "padding": [
+                                        "$Space/md",
+                                        "$Space/lg"
+                                      ],
+                                      "alignItems": "center",
                                       "children": [
                                         {
                                           "type": "frame",
-                                          "id": "A14Ql",
-                                          "x": 48,
-                                          "y": 22,
-                                          "name": "pl",
-                                          "width": 24,
-                                          "height": 24,
-                                          "fill": "$overlay-scrim",
-                                          "cornerRadius": "$radius-pill",
+                                          "id": "sEt6P",
+                                          "name": "season-poster",
+                                          "width": 56,
+                                          "height": 84,
+                                          "fill": {
+                                            "type": "image",
+                                            "enabled": true,
+                                            "url": "images/generated-1772689683926.png",
+                                            "mode": "fill"
+                                          },
+                                          "cornerRadius": "$radius-sm"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "KiDFL",
+                                          "name": "season-meta",
+                                          "width": "fill_container",
+                                          "layout": "vertical",
+                                          "gap": "$Space/xs",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "GplKP",
+                                              "name": "name",
+                                              "fill": "$text-primary",
+                                              "content": "第 1 季",
+                                              "lineHeight": "$Type/BodyLg/Line",
+                                              "fontFamily": "$Type/Family/Primary",
+                                              "fontSize": "$Type/BodyLg/Size",
+                                              "fontWeight": "600"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "BuHAw",
+                                              "name": "sub",
+                                              "fill": "$text-secondary",
+                                              "content": "25 集 · 2013-04-07",
+                                              "lineHeight": "$Type/Label/Line",
+                                              "fontFamily": "$Type/Family/Primary",
+                                              "fontSize": "$Type/Label/Size",
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "icon",
+                                          "id": "DEn1G",
+                                          "name": "chevron",
+                                          "width": 20,
+                                          "height": 20,
+                                          "icon": "chevron-up",
+                                          "library": "lucide",
+                                          "fill": "$text-secondary"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "id": "xIzyi",
+                                      "name": "divider",
+                                      "fill": "$border-subtle",
+                                      "width": "fill_container",
+                                      "height": 1
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "j2WLI",
+                                      "name": "episode-row",
+                                      "width": "fill_container",
+                                      "gap": "$Space/lg",
+                                      "padding": [
+                                        "$Space/sm",
+                                        "$Space/lg"
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "A14Aef",
+                                          "name": "title-line",
+                                          "width": "fill_container",
+                                          "gap": "$Space/sm",
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "pg5fe",
+                                              "name": "code",
+                                              "fill": "$text-muted",
+                                              "content": "S01E01",
+                                              "lineHeight": "$Type/Label/Line",
+                                              "fontFamily": "$Type/Family/Mono",
+                                              "fontSize": "$Type/Label/Size",
+                                              "fontWeight": "normal"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "I1ayw4",
+                                              "name": "title",
+                                              "fill": "$text-primary",
+                                              "content": "致兩千年後的你 ―進攻之日―",
+                                              "lineHeight": "$Type/Body/Line",
+                                              "fontFamily": "$Type/Family/Primary",
+                                              "fontSize": "$Type/Body/Size",
+                                              "fontWeight": "500"
+                                            },
+                                            {
+                                              "type": "icon",
+                                              "id": "EwSQC",
+                                              "name": "subtitle-status",
+                                              "width": 16,
+                                              "height": 16,
+                                              "icon": "circle-check",
+                                              "library": "lucide",
+                                              "fill": "$success-text"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "PCmq7",
+                                          "name": "btn-subtitle",
+                                          "height": 44,
+                                          "cornerRadius": "$radius-md",
+                                          "padding": [
+                                            "$Space/none",
+                                            "$Space/md"
+                                          ],
                                           "justifyContent": "center",
                                           "alignItems": "center",
                                           "children": [
                                             {
-                                              "type": "icon",
-                                              "id": "C6KUkF",
-                                              "name": "i",
-                                              "width": 12,
-                                              "height": 12,
-                                              "icon": "play",
-                                              "library": "lucide",
-                                              "fill": "$text-primary"
+                                              "type": "text",
+                                              "id": "bNLue",
+                                              "name": "subtitle-label",
+                                              "fill": "$text-secondary",
+                                              "content": "管理字幕",
+                                              "lineHeight": "$Type/Body/Line",
+                                              "fontFamily": "$Type/Family/Primary",
+                                              "fontSize": "$Type/Body/Size",
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "Q64JJM",
+                                          "name": "episode-meta",
+                                          "gap": "$Space/md",
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "RtNwL",
+                                              "name": "date",
+                                              "fill": "$text-secondary",
+                                              "content": "2013-04-07",
+                                              "lineHeight": "$Type/Label/Line",
+                                              "fontFamily": "$Type/Family/Primary",
+                                              "fontSize": "$Type/Label/Size",
+                                              "fontWeight": "normal"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "aqcLf",
+                                              "name": "runtime",
+                                              "fill": "$text-secondary",
+                                              "content": "24 分",
+                                              "lineHeight": "$Type/Label/Line",
+                                              "fontFamily": "$Type/Family/Primary",
+                                              "fontSize": "$Type/Label/Size",
+                                              "fontWeight": "normal"
                                             }
                                           ]
                                         }
                                       ]
                                     },
                                     {
-                                      "type": "frame",
-                                      "id": "ot2ln",
-                                      "name": "inf",
+                                      "type": "rectangle",
+                                      "id": "Zlo84",
+                                      "name": "divider",
+                                      "fill": "$border-subtle",
                                       "width": "fill_container",
-                                      "layout": "vertical",
-                                      "gap": "$Space/xs",
+                                      "height": 1
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "SF910",
+                                      "name": "episode-row",
+                                      "width": "fill_container",
+                                      "gap": "$Space/lg",
+                                      "padding": [
+                                        "$Space/sm",
+                                        "$Space/lg"
+                                      ],
+                                      "alignItems": "center",
                                       "children": [
                                         {
-                                          "type": "text",
-                                          "id": "tPVQp",
-                                          "name": "t",
-                                          "fill": "$text-primary",
-                                          "content": "1. 致兩千年後的你 ―進攻之日―",
-                                          "lineHeight": "$Type/Body/Line",
-                                          "fontFamily": "$Type/Family/Primary",
-                                          "fontSize": "$Type/Body/Size",
-                                          "fontWeight": "600"
+                                          "type": "frame",
+                                          "id": "fpxB9",
+                                          "name": "title-line",
+                                          "width": "fill_container",
+                                          "gap": "$Space/sm",
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "oawWf",
+                                              "name": "code",
+                                              "fill": "$text-muted",
+                                              "content": "S01E02",
+                                              "lineHeight": "$Type/Label/Line",
+                                              "fontFamily": "$Type/Family/Mono",
+                                              "fontSize": "$Type/Label/Size",
+                                              "fontWeight": "normal"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "o0c2a1",
+                                              "name": "title",
+                                              "fill": "$text-primary",
+                                              "content": "那一天 ―人類的崛起―",
+                                              "lineHeight": "$Type/Body/Line",
+                                              "fontFamily": "$Type/Family/Primary",
+                                              "fontSize": "$Type/Body/Size",
+                                              "fontWeight": "500"
+                                            },
+                                            {
+                                              "type": "icon",
+                                              "id": "WFy9m",
+                                              "name": "subtitle-status",
+                                              "width": 16,
+                                              "height": 16,
+                                              "icon": "circle-check",
+                                              "library": "lucide",
+                                              "fill": "$success-text"
+                                            }
+                                          ]
                                         },
                                         {
-                                          "type": "text",
-                                          "id": "z2qwv",
-                                          "name": "d",
-                                          "fill": "$text-secondary",
-                                          "content": "2013-04-07 · 24 分",
-                                          "lineHeight": "$Type/Label/Line",
-                                          "fontFamily": "$Type/Family/Mono",
-                                          "fontSize": "$Type/Label/Size",
-                                          "fontWeight": "normal"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "Uj2bq",
-                                      "name": "btn-subtitle",
-                                      "height": 44,
-                                      "cornerRadius": "$radius-md",
-                                      "padding": [
-                                        "$Space/none",
-                                        "$Space/md-plus"
-                                      ],
-                                      "justifyContent": "center",
-                                      "alignItems": "center",
-                                      "children": [
+                                          "type": "frame",
+                                          "id": "C2bfc3",
+                                          "name": "btn-subtitle",
+                                          "height": 44,
+                                          "cornerRadius": "$radius-md",
+                                          "padding": [
+                                            "$Space/none",
+                                            "$Space/md"
+                                          ],
+                                          "justifyContent": "center",
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "o3VV0",
+                                              "name": "subtitle-label",
+                                              "fill": "$text-secondary",
+                                              "content": "管理字幕",
+                                              "lineHeight": "$Type/Body/Line",
+                                              "fontFamily": "$Type/Family/Primary",
+                                              "fontSize": "$Type/Body/Size",
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
                                         {
-                                          "type": "text",
-                                          "id": "CFSFm",
-                                          "name": "subtitle-label",
-                                          "fill": "$text-secondary",
-                                          "content": "管理字幕",
-                                          "lineHeight": "$Type/Body/Line",
-                                          "fontFamily": "$Type/Family/Primary",
-                                          "fontSize": "$Type/Body/Size",
-                                          "fontWeight": "$Type/Body/Weight"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "u1PO8",
-                                      "name": "st",
-                                      "fill": "$success-tint",
-                                      "cornerRadius": "$radius-pill",
-                                      "padding": [
-                                        "$Space/xs",
-                                        "$Space/sm-plus"
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "AK0KY",
-                                          "name": "l",
-                                          "fill": "$success-text",
-                                          "content": "繁中",
-                                          "lineHeight": "$Type/Label/Line",
-                                          "fontFamily": "$Type/Family/Primary",
-                                          "fontSize": "$Type/Label/Size",
-                                          "fontWeight": "600"
+                                          "type": "frame",
+                                          "id": "gRt69",
+                                          "name": "episode-meta",
+                                          "gap": "$Space/md",
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "SZnWV",
+                                              "name": "date",
+                                              "fill": "$text-secondary",
+                                              "content": "2013-04-14",
+                                              "lineHeight": "$Type/Label/Line",
+                                              "fontFamily": "$Type/Family/Primary",
+                                              "fontSize": "$Type/Label/Size",
+                                              "fontWeight": "normal"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "Tr5dv",
+                                              "name": "runtime",
+                                              "fill": "$text-secondary",
+                                              "content": "24 分",
+                                              "lineHeight": "$Type/Label/Line",
+                                              "fontFamily": "$Type/Family/Primary",
+                                              "fontSize": "$Type/Label/Size",
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
                                         }
                                       ]
                                     }
@@ -43648,296 +43654,86 @@
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "v5pjv",
-                                  "name": "ep",
+                                  "id": "hUQbi",
+                                  "name": "season-collapsed",
+                                  "clip": true,
                                   "width": "fill_container",
+                                  "fill": "$bg-secondary",
                                   "cornerRadius": "$radius-md",
-                                  "gap": "$Space/md-plus",
-                                  "padding": "$Space/sm",
-                                  "alignItems": "center",
+                                  "stroke": "$border-subtle",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
                                   "children": [
                                     {
                                       "type": "frame",
-                                      "id": "AnAZd",
-                                      "name": "th",
-                                      "clip": true,
-                                      "width": 120,
-                                      "height": 68,
-                                      "fill": {
-                                        "type": "image",
-                                        "enabled": true,
-                                        "url": "images/generated-1772689683926.png",
-                                        "mode": "fill"
-                                      },
-                                      "cornerRadius": "$radius-md",
-                                      "layout": "none",
+                                      "id": "VFRMy",
+                                      "name": "season-header",
+                                      "width": "fill_container",
+                                      "gap": "$Space/md",
+                                      "padding": [
+                                        "$Space/md",
+                                        "$Space/lg"
+                                      ],
+                                      "alignItems": "center",
                                       "children": [
                                         {
                                           "type": "frame",
-                                          "id": "b903eH",
-                                          "x": 48,
-                                          "y": 22,
-                                          "name": "pl",
-                                          "width": 24,
-                                          "height": 24,
-                                          "fill": "$overlay-scrim",
-                                          "cornerRadius": "$radius-pill",
-                                          "justifyContent": "center",
-                                          "alignItems": "center",
-                                          "children": [
-                                            {
-                                              "type": "icon",
-                                              "id": "Jvxt3",
-                                              "name": "i",
-                                              "width": 12,
-                                              "height": 12,
-                                              "icon": "play",
-                                              "library": "lucide",
-                                              "fill": "$text-primary"
-                                            }
-                                          ]
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "LNaDa",
-                                      "name": "inf",
-                                      "width": "fill_container",
-                                      "layout": "vertical",
-                                      "gap": "$Space/xs",
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "ipvmW",
-                                          "name": "t",
-                                          "fill": "$text-primary",
-                                          "content": "2. 那一天 ―人類的崛起―",
-                                          "lineHeight": "$Type/Body/Line",
-                                          "fontFamily": "$Type/Family/Primary",
-                                          "fontSize": "$Type/Body/Size",
-                                          "fontWeight": "600"
+                                          "id": "xqIvy",
+                                          "name": "season-poster",
+                                          "width": 56,
+                                          "height": 84,
+                                          "fill": {
+                                            "type": "image",
+                                            "enabled": true,
+                                            "url": "images/generated-1772689683926.png",
+                                            "mode": "fill"
+                                          },
+                                          "cornerRadius": "$radius-sm"
                                         },
-                                        {
-                                          "type": "text",
-                                          "id": "OHSuS",
-                                          "name": "d",
-                                          "fill": "$text-secondary",
-                                          "content": "2013-04-14 · 24 分",
-                                          "lineHeight": "$Type/Label/Line",
-                                          "fontFamily": "$Type/Family/Mono",
-                                          "fontSize": "$Type/Label/Size",
-                                          "fontWeight": "normal"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "A5Sm6G",
-                                      "name": "btn-subtitle",
-                                      "height": 44,
-                                      "cornerRadius": "$radius-md",
-                                      "padding": [
-                                        "$Space/none",
-                                        "$Space/md-plus"
-                                      ],
-                                      "justifyContent": "center",
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "zLvLX",
-                                          "name": "subtitle-label",
-                                          "fill": "$text-secondary",
-                                          "content": "管理字幕",
-                                          "lineHeight": "$Type/Body/Line",
-                                          "fontFamily": "$Type/Family/Primary",
-                                          "fontSize": "$Type/Body/Size",
-                                          "fontWeight": "$Type/Body/Weight"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "mM3DM",
-                                      "name": "st",
-                                      "fill": "$success-tint",
-                                      "cornerRadius": "$radius-pill",
-                                      "padding": [
-                                        "$Space/xs",
-                                        "$Space/sm-plus"
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "a7B8VW",
-                                          "name": "l",
-                                          "fill": "$success-text",
-                                          "content": "繁中",
-                                          "lineHeight": "$Type/Label/Line",
-                                          "fontFamily": "$Type/Family/Primary",
-                                          "fontSize": "$Type/Label/Size",
-                                          "fontWeight": "600"
-                                        }
-                                      ]
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "YdwGD",
-                                  "name": "ep",
-                                  "width": "fill_container",
-                                  "cornerRadius": "$radius-md",
-                                  "gap": "$Space/md-plus",
-                                  "padding": "$Space/sm",
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "frame",
-                                      "id": "TkJKI",
-                                      "name": "th",
-                                      "clip": true,
-                                      "width": 120,
-                                      "height": 68,
-                                      "fill": {
-                                        "type": "image",
-                                        "enabled": true,
-                                        "url": "images/generated-1772689683926.png",
-                                        "mode": "fill"
-                                      },
-                                      "cornerRadius": "$radius-md",
-                                      "layout": "none",
-                                      "children": [
                                         {
                                           "type": "frame",
-                                          "id": "DGUD2",
-                                          "x": 48,
-                                          "y": 22,
-                                          "name": "pl",
-                                          "width": 24,
-                                          "height": 24,
-                                          "fill": "$overlay-scrim",
-                                          "cornerRadius": "$radius-pill",
-                                          "justifyContent": "center",
-                                          "alignItems": "center",
+                                          "id": "zDpXz",
+                                          "name": "season-meta",
+                                          "width": "fill_container",
+                                          "layout": "vertical",
+                                          "gap": "$Space/xs",
                                           "children": [
                                             {
-                                              "type": "icon",
-                                              "id": "NFqgD",
-                                              "name": "i",
-                                              "width": 12,
-                                              "height": 12,
-                                              "icon": "play",
-                                              "library": "lucide",
-                                              "fill": "$text-primary"
+                                              "type": "text",
+                                              "id": "odFUr",
+                                              "name": "name",
+                                              "fill": "$text-primary",
+                                              "content": "第 2 季",
+                                              "lineHeight": "$Type/BodyLg/Line",
+                                              "fontFamily": "$Type/Family/Primary",
+                                              "fontSize": "$Type/BodyLg/Size",
+                                              "fontWeight": "600"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "UYCn5",
+                                              "name": "sub",
+                                              "fill": "$text-secondary",
+                                              "content": "12 集 · 2017-04-01",
+                                              "lineHeight": "$Type/Label/Line",
+                                              "fontFamily": "$Type/Family/Primary",
+                                              "fontSize": "$Type/Label/Size",
+                                              "fontWeight": "normal"
                                             }
                                           ]
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "fSdvC",
-                                      "name": "inf",
-                                      "width": "fill_container",
-                                      "layout": "vertical",
-                                      "gap": "$Space/xs",
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "pDcHX",
-                                          "name": "t",
-                                          "fill": "$text-primary",
-                                          "content": "3. 解散後的黎明 ―人類的再起―",
-                                          "lineHeight": "$Type/Body/Line",
-                                          "fontFamily": "$Type/Family/Primary",
-                                          "fontSize": "$Type/Body/Size",
-                                          "fontWeight": "600"
                                         },
                                         {
-                                          "type": "text",
-                                          "id": "KCiU0",
-                                          "name": "d",
-                                          "fill": "$text-secondary",
-                                          "content": "2013-04-21 · 24 分",
-                                          "lineHeight": "$Type/Label/Line",
-                                          "fontFamily": "$Type/Family/Mono",
-                                          "fontSize": "$Type/Label/Size",
-                                          "fontWeight": "normal"
+                                          "type": "icon",
+                                          "id": "iE8NV",
+                                          "name": "chevron",
+                                          "width": 20,
+                                          "height": 20,
+                                          "icon": "chevron-down",
+                                          "library": "lucide",
+                                          "fill": "$text-secondary"
                                         }
                                       ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "JIvv3",
-                                      "name": "btn-subtitle",
-                                      "height": 44,
-                                      "cornerRadius": "$radius-md",
-                                      "padding": [
-                                        "$Space/none",
-                                        "$Space/md-plus"
-                                      ],
-                                      "justifyContent": "center",
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "umnnf",
-                                          "name": "subtitle-label",
-                                          "fill": "$text-secondary",
-                                          "content": "管理字幕",
-                                          "lineHeight": "$Type/Body/Line",
-                                          "fontFamily": "$Type/Family/Primary",
-                                          "fontSize": "$Type/Body/Size",
-                                          "fontWeight": "$Type/Body/Weight"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "sRfon",
-                                      "name": "st",
-                                      "fill": "$success-tint",
-                                      "cornerRadius": "$radius-pill",
-                                      "padding": [
-                                        "$Space/xs",
-                                        "$Space/sm-plus"
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "i0MRqo",
-                                          "name": "l",
-                                          "fill": "$success-text",
-                                          "content": "繁中",
-                                          "lineHeight": "$Type/Label/Line",
-                                          "fontFamily": "$Type/Family/Primary",
-                                          "fontSize": "$Type/Label/Size",
-                                          "fontWeight": "600"
-                                        }
-                                      ]
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "M1hNOH",
-                                  "name": "all-wrap",
-                                  "padding": "$Space/sm",
-                                  "children": [
-                                    {
-                                      "type": "text",
-                                      "id": "L108tN",
-                                      "name": "all",
-                                      "fill": "$accent-text",
-                                      "content": "查看全部 25 集 →",
-                                      "lineHeight": "$Type/Body/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Body/Size",
-                                      "fontWeight": "600"
                                     }
                                   ]
                                 }
@@ -43958,7 +43754,7 @@
               "y": 13912,
               "name": "B9 · 圖片載入 Fallback・Spec（桌面）",
               "fill": "#888888",
-              "content": "B9 · 圖片載入 Fallback・Spec（桌面）",
+              "content": "B9 · 圖片載入 Fallback・Spec（hero，桌面與手機共用）",
               "lineHeight": "$Type/Body/Line",
               "fontFamily": "$Type/Family/Primary",
               "fontSize": "$Type/Body/Size",
@@ -44003,7 +43799,7 @@
                   "type": "frame",
                   "id": "wQcxW",
                   "x": 0,
-                  "y": 413,
+                  "y": 467,
                   "name": "context-sheet",
                   "width": 390,
                   "fill": "$bg-primary",
@@ -44182,41 +43978,6 @@
                         },
                         {
                           "type": "frame",
-                          "id": "4kOSv",
-                          "name": "item-export",
-                          "width": "fill_container",
-                          "gap": "$Space/md-plus",
-                          "padding": [
-                            "$Space/md-plus",
-                            "$Space/md"
-                          ],
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "icon",
-                              "id": "blOpU",
-                              "name": "i3icon",
-                              "width": 20,
-                              "height": 20,
-                              "icon": "download",
-                              "library": "lucide",
-                              "fill": "$text-muted"
-                            },
-                            {
-                              "type": "text",
-                              "id": "Vk127",
-                              "name": "i3label",
-                              "fill": "$text-primary",
-                              "content": "匯出中繼資料",
-                              "lineHeight": "$Type/BodyLg/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/BodyLg/Size",
-                              "fontWeight": "$Type/BodyLg/Weight"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
                           "id": "vCF8V",
                           "name": "divider-wrap",
                           "width": "fill_container",
@@ -44347,7 +44108,7 @@
                   "type": "frame",
                   "id": "y5WYJ",
                   "x": 0,
-                  "y": 509,
+                  "y": 563,
                   "name": "detail-ctx-sheet",
                   "width": 390,
                   "fill": "$bg-primary",
@@ -44457,41 +44218,6 @@
                               "name": "i1label",
                               "fill": "$text-primary",
                               "content": "重新解析",
-                              "lineHeight": "$Type/BodyLg/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/BodyLg/Size",
-                              "fontWeight": "$Type/BodyLg/Weight"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "0moMV",
-                          "name": "item-export",
-                          "width": "fill_container",
-                          "gap": "$Space/md-plus",
-                          "padding": [
-                            "$Space/md-plus",
-                            "$Space/md"
-                          ],
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "icon",
-                              "id": "qtqeS",
-                              "name": "i2icon",
-                              "width": 20,
-                              "height": 20,
-                              "icon": "download",
-                              "library": "lucide",
-                              "fill": "$text-muted"
-                            },
-                            {
-                              "type": "text",
-                              "id": "FPihz",
-                              "name": "i2label",
-                              "fill": "$text-primary",
-                              "content": "匯出中繼資料",
                               "lineHeight": "$Type/BodyLg/Line",
                               "fontFamily": "$Type/Family/Primary",
                               "fontSize": "$Type/BodyLg/Size",
@@ -45470,1156 +45196,6 @@
               ]
             },
             {
-              "type": "frame",
-              "id": "6OR3z",
-              "x": 19000,
-              "y": 15317,
-              "name": "B8-M",
-              "theme": {
-                "bp": "mobile"
-              },
-              "clip": true,
-              "width": 390,
-              "height": 844,
-              "fill": "$bg-primary",
-              "layout": "none",
-              "children": [
-                {
-                  "type": "rectangle",
-                  "id": "rq8UL",
-                  "x": 0,
-                  "y": 0,
-                  "name": "dimmed-overlay",
-                  "opacity": 0.5,
-                  "fill": "$overlay-scrim",
-                  "width": 390,
-                  "height": 844
-                },
-                {
-                  "type": "frame",
-                  "id": "M8N41",
-                  "x": 0,
-                  "y": 164,
-                  "name": "bottom-sheet",
-                  "clip": true,
-                  "width": 390,
-                  "height": 680,
-                  "fill": "$bg-primary",
-                  "cornerRadius": [
-                    "$radius-xl",
-                    "$radius-xl",
-                    0,
-                    0
-                  ],
-                  "layout": "vertical",
-                  "children": [
-                    {
-                      "type": "frame",
-                      "id": "SLvOL",
-                      "name": "backdrop",
-                      "clip": true,
-                      "width": "fill_container",
-                      "height": 180,
-                      "layout": "none",
-                      "children": [
-                        {
-                          "type": "rectangle",
-                          "id": "XPU7r",
-                          "x": 0,
-                          "y": 0,
-                          "name": "bd-img",
-                          "fill": {
-                            "type": "gradient",
-                            "gradientType": "linear",
-                            "enabled": true,
-                            "rotation": 135,
-                            "size": {
-                              "height": 1
-                            },
-                            "colors": [
-                              {
-                                "color": "#1E3A5F",
-                                "position": 0
-                              },
-                              {
-                                "color": "#2D1B69",
-                                "position": 1
-                              }
-                            ]
-                          },
-                          "width": 390,
-                          "height": 180
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "YY6eM",
-                      "name": "panel-content",
-                      "width": "fill_container",
-                      "height": "fill_container",
-                      "layout": "vertical",
-                      "gap": "$Space/md-plus",
-                      "padding": [
-                        "$Space/lg",
-                        "$Space/lg-plus"
-                      ],
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "M6cjm",
-                          "name": "title",
-                          "fill": "$text-primary",
-                          "content": "你的名字",
-                          "lineHeight": "$Type/H2/Line",
-                          "fontFamily": "$Type/Family/Canvas",
-                          "fontSize": "$Type/H2/Size",
-                          "fontWeight": "$Type/H2/Weight"
-                        },
-                        {
-                          "type": "text",
-                          "id": "Zswgv",
-                          "name": "orig-title",
-                          "fill": "$text-secondary",
-                          "content": "Your Name (君の名は。)",
-                          "lineHeight": "$Type/Label/Line",
-                          "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Label/Size",
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "3rh0Z",
-                          "name": "meta-row",
-                          "gap": "$Space/sm",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "icon",
-                              "id": "hRJvA",
-                              "name": "star",
-                              "width": 14,
-                              "height": 14,
-                              "icon": "star",
-                              "library": "lucide",
-                              "fill": "$warning"
-                            },
-                            {
-                              "type": "text",
-                              "id": "W3G05",
-                              "name": "rating",
-                              "fill": "$text-primary",
-                              "content": "8.4",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Mono",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "600"
-                            },
-                            {
-                              "type": "text",
-                              "id": "8orWt",
-                              "name": "d1",
-                              "fill": "$text-muted",
-                              "content": "·",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "$Type/Body/Weight"
-                            },
-                            {
-                              "type": "text",
-                              "id": "14oD1",
-                              "name": "dur",
-                              "fill": "$text-secondary",
-                              "content": "107 分",
-                              "lineHeight": "$Type/Label/Line",
-                              "fontFamily": "$Type/Family/Mono",
-                              "fontSize": "$Type/Label/Size",
-                              "fontWeight": "normal"
-                            },
-                            {
-                              "type": "text",
-                              "id": "o3j79",
-                              "name": "d2",
-                              "fill": "$text-muted",
-                              "content": "·",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "$Type/Body/Weight"
-                            },
-                            {
-                              "type": "text",
-                              "id": "gMAUY",
-                              "name": "year",
-                              "fill": "$text-secondary",
-                              "content": "2016",
-                              "lineHeight": "$Type/Label/Line",
-                              "fontFamily": "$Type/Family/Mono",
-                              "fontSize": "$Type/Label/Size",
-                              "fontWeight": "normal"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "ZT4jq",
-                          "name": "tech-badges",
-                          "width": "fill_container",
-                          "height": 60,
-                          "layout": "vertical",
-                          "gap": "$Space/xs-plus",
-                          "children": [
-                            {
-                              "type": "frame",
-                              "id": "fhJoX",
-                              "name": "tb-row1",
-                              "width": "fill_container",
-                              "gap": "$Space/xs-plus",
-                              "children": [
-                                {
-                                  "id": "5aA7t",
-                                  "type": "ref",
-                                  "ref": "L9m19",
-                                  "name": "badge-codec",
-                                  "x": 0,
-                                  "y": 0,
-                                  "width": "fit_content",
-                                  "height": "fit_content",
-                                  "descendants": {
-                                    "BMzOc": {
-                                      "x": 10,
-                                      "y": 7.5
-                                    },
-                                    "dhP6X": {
-                                      "content": "H.265",
-                                      "x": 27,
-                                      "y": 4
-                                    }
-                                  }
-                                },
-                                {
-                                  "id": "EyLsc",
-                                  "type": "ref",
-                                  "ref": "L9m19",
-                                  "name": "badge-res",
-                                  "x": 80,
-                                  "y": 0,
-                                  "width": "fit_content",
-                                  "height": "fit_content",
-                                  "descendants": {
-                                    "BMzOc": {
-                                      "x": 10,
-                                      "y": 7.5
-                                    },
-                                    "dhP6X": {
-                                      "content": "4K",
-                                      "x": 27,
-                                      "y": 4
-                                    }
-                                  }
-                                },
-                                {
-                                  "id": "xPHA8",
-                                  "type": "ref",
-                                  "ref": "cUjyv",
-                                  "name": "badge-hdr",
-                                  "x": 138,
-                                  "y": 0,
-                                  "width": "fit_content",
-                                  "height": "fit_content",
-                                  "descendants": {
-                                    "j7Xkd": {
-                                      "x": 10,
-                                      "y": 7.5
-                                    },
-                                    "aaYwr": {
-                                      "content": "HDR10",
-                                      "x": 27,
-                                      "y": 4
-                                    }
-                                  }
-                                },
-                                {
-                                  "id": "zhVmm",
-                                  "type": "ref",
-                                  "ref": "9iTW3",
-                                  "name": "badge-audio",
-                                  "x": 218,
-                                  "y": 0,
-                                  "width": "fit_content",
-                                  "height": "fit_content",
-                                  "descendants": {
-                                    "5A11D": {
-                                      "x": 10,
-                                      "y": 7.5
-                                    },
-                                    "Gz6PG": {
-                                      "content": "DTS 5.1",
-                                      "x": 27,
-                                      "y": 4
-                                    }
-                                  }
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "d5dc7",
-                              "name": "tb-row2",
-                              "width": "fill_container",
-                              "gap": "$Space/xs-plus",
-                              "children": [
-                                {
-                                  "id": "46FUy",
-                                  "type": "ref",
-                                  "ref": "f84BM",
-                                  "name": "badge-sub-zht",
-                                  "x": 0,
-                                  "y": 0,
-                                  "width": "fit_content",
-                                  "height": "fit_content",
-                                  "descendants": {
-                                    "CSnqR": {
-                                      "x": 10,
-                                      "y": 7.5
-                                    },
-                                    "JDBR9": {
-                                      "content": "繁中",
-                                      "x": 27,
-                                      "y": 4
-                                    }
-                                  }
-                                },
-                                {
-                                  "id": "cwGLp",
-                                  "type": "ref",
-                                  "ref": "f84BM",
-                                  "name": "badge-sub-en",
-                                  "x": 68,
-                                  "y": 0,
-                                  "width": "fit_content",
-                                  "height": "fit_content",
-                                  "descendants": {
-                                    "CSnqR": {
-                                      "x": 10,
-                                      "y": 7.5
-                                    },
-                                    "JDBR9": {
-                                      "content": "英文",
-                                      "x": 27,
-                                      "y": 4
-                                    }
-                                  }
-                                }
-                              ]
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "rH7ca",
-                          "name": "genre-tags",
-                          "width": "fill_container",
-                          "gap": "$Space/xs-plus",
-                          "children": [
-                            {
-                              "id": "MRJGx",
-                              "type": "ref",
-                              "ref": "L1NP6",
-                              "name": "gt1",
-                              "x": 0,
-                              "y": 0,
-                              "width": "fit_content",
-                              "height": "fit_content",
-                              "descendants": {
-                                "nuZxI": {
-                                  "content": "動畫",
-                                  "x": 12,
-                                  "y": 4
-                                }
-                              }
-                            },
-                            {
-                              "id": "FOgXZ",
-                              "type": "ref",
-                              "ref": "L1NP6",
-                              "name": "gt2",
-                              "x": 55,
-                              "y": 0,
-                              "width": "fit_content",
-                              "height": "fit_content",
-                              "descendants": {
-                                "nuZxI": {
-                                  "content": "愛情",
-                                  "x": 12,
-                                  "y": 4
-                                }
-                              }
-                            }
-                          ]
-                        },
-                        {
-                          "type": "rectangle",
-                          "id": "pxBWD",
-                          "name": "divider",
-                          "fill": "$border-subtle",
-                          "width": "fill_container",
-                          "height": 1
-                        },
-                        {
-                          "type": "frame",
-                          "id": "3slxW",
-                          "name": "synopsis",
-                          "width": "fill_container",
-                          "layout": "vertical",
-                          "gap": "$Space/xs-plus",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "r3D98",
-                              "name": "label",
-                              "fill": "$text-primary",
-                              "content": "劇情簡介",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "600"
-                            },
-                            {
-                              "type": "text",
-                              "id": "cchLw",
-                              "name": "text",
-                              "fill": "$text-secondary",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container",
-                              "content": "住在飛驒山區鄉下的女高中生宮水三葉，嚮往東京的都市生活...",
-                              "lineHeight": "$Type/Label/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Label/Size",
-                              "fontWeight": "normal"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "rectangle",
-                          "id": "Douko",
-                          "name": "divider2",
-                          "fill": "$border-subtle",
-                          "width": "fill_container",
-                          "height": 1
-                        },
-                        {
-                          "type": "frame",
-                          "id": "d5j7o",
-                          "name": "file-info",
-                          "width": "fill_container",
-                          "layout": "vertical",
-                          "gap": "$Space/sm",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "DJUMI",
-                              "name": "title",
-                              "fill": "$text-primary",
-                              "content": "檔案資訊",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "600"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "mYqxn",
-                              "name": "source-row",
-                              "width": "fill_container",
-                              "justifyContent": "space_between",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "AKXPG",
-                                  "name": "sl",
-                                  "fill": "$text-muted",
-                                  "content": "來源",
-                                  "lineHeight": "$Type/Label/Line",
-                                  "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Label/Size",
-                                  "fontWeight": "normal"
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "7rg4T",
-                                  "name": "sv",
-                                  "fill": "$text-secondary",
-                                  "content": "NFO",
-                                  "lineHeight": "$Type/Label/Line",
-                                  "fontFamily": "$Type/Family/Mono",
-                                  "fontSize": "$Type/Label/Size",
-                                  "fontWeight": "$Type/Label/Weight"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "jvdWH",
-                              "name": "size-row",
-                              "width": "fill_container",
-                              "justifyContent": "space_between",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "Atgpr",
-                                  "name": "sl",
-                                  "fill": "$text-muted",
-                                  "content": "檔案大小",
-                                  "lineHeight": "$Type/Label/Line",
-                                  "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Label/Size",
-                                  "fontWeight": "normal"
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "1F52L",
-                                  "name": "sv",
-                                  "fill": "$text-secondary",
-                                  "content": "12.4 GB",
-                                  "lineHeight": "$Type/Label/Line",
-                                  "fontFamily": "$Type/Family/Mono",
-                                  "fontSize": "$Type/Label/Size",
-                                  "fontWeight": "normal"
-                                }
-                              ]
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "jH6rM",
-              "x": 19490,
-              "y": 15317,
-              "name": "B9-M",
-              "theme": {
-                "bp": "mobile"
-              },
-              "clip": true,
-              "width": 390,
-              "height": 844,
-              "fill": "$bg-primary",
-              "layout": "none",
-              "children": [
-                {
-                  "type": "rectangle",
-                  "id": "vSUsy",
-                  "x": 0,
-                  "y": 0,
-                  "name": "dimmed-overlay",
-                  "opacity": 0.5,
-                  "fill": "$overlay-scrim",
-                  "width": 390,
-                  "height": 844
-                },
-                {
-                  "type": "frame",
-                  "id": "FnMHe",
-                  "x": 0,
-                  "y": 134,
-                  "name": "bottom-sheet",
-                  "clip": true,
-                  "width": 390,
-                  "height": 710,
-                  "fill": "$bg-primary",
-                  "cornerRadius": [
-                    "$radius-xl",
-                    "$radius-xl",
-                    0,
-                    0
-                  ],
-                  "layout": "vertical",
-                  "children": [
-                    {
-                      "type": "frame",
-                      "id": "WcutP",
-                      "name": "dragHandle",
-                      "width": "fill_container",
-                      "padding": [
-                        "$Space/md",
-                        "$Space/none",
-                        "$Space/sm",
-                        "$Space/none"
-                      ],
-                      "justifyContent": "center",
-                      "children": [
-                        {
-                          "type": "rectangle",
-                          "cornerRadius": "$radius-sm",
-                          "id": "sag0X",
-                          "name": "handleBar",
-                          "fill": "$text-muted",
-                          "width": 40,
-                          "height": 4
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "Kc4b2",
-                      "name": "sheet-backdrop",
-                      "clip": true,
-                      "width": "fill_container",
-                      "height": 200,
-                      "fill": {
-                        "type": "gradient",
-                        "gradientType": "linear",
-                        "enabled": true,
-                        "rotation": 135,
-                        "size": {
-                          "height": 1
-                        },
-                        "colors": [
-                          {
-                            "color": "#566024",
-                            "position": 0
-                          },
-                          {
-                            "color": "#3c7231",
-                            "position": 1
-                          }
-                        ]
-                      },
-                      "layout": "none",
-                      "children": [
-                        {
-                          "type": "rectangle",
-                          "id": "nhkrQ",
-                          "x": 0,
-                          "y": 0,
-                          "name": "gradient-overlay",
-                          "fill": {
-                            "type": "gradient",
-                            "gradientType": "linear",
-                            "enabled": true,
-                            "rotation": 0,
-                            "size": {
-                              "height": 1
-                            },
-                            "colors": [
-                              {
-                                "color": "#0c151200",
-                                "position": 0.3
-                              },
-                              {
-                                "color": "#0c1512FF",
-                                "position": 1
-                              }
-                            ]
-                          },
-                          "width": 390,
-                          "height": 200
-                        },
-                        {
-                          "type": "frame",
-                          "id": "enOR4",
-                          "x": 163,
-                          "y": 60,
-                          "name": "initial-circle",
-                          "width": 64,
-                          "height": 64,
-                          "fill": "$bg-tertiary",
-                          "cornerRadius": "$radius-pill",
-                          "justifyContent": "center",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "vK7vi",
-                              "layoutPosition": "absolute",
-                              "x": 14,
-                              "y": 10,
-                              "name": "pLetter",
-                              "fill": "$text-on-scrim",
-                              "content": "你",
-                              "lineHeight": "$Type/H1/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/H1/Size",
-                              "fontWeight": "$Type/H1/Weight"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "s2isI",
-                          "x": 342,
-                          "y": 16,
-                          "name": "menu-btn",
-                          "width": 32,
-                          "height": 32,
-                          "fill": "$overlay-scrim",
-                          "cornerRadius": "$radius-pill",
-                          "justifyContent": "center",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "icon",
-                              "id": "kJFcL",
-                              "name": "pMenuI",
-                              "width": 18,
-                              "height": 18,
-                              "icon": "ellipsis",
-                              "library": "lucide",
-                              "fill": "$text-primary"
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "J8Ueo",
-                      "name": "sheet-content",
-                      "width": "fill_container",
-                      "layout": "vertical",
-                      "gap": "$Space/lg",
-                      "padding": [
-                        "$Space/lg",
-                        "$Space/lg-plus"
-                      ],
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "TYmz2",
-                          "name": "shTitle",
-                          "fill": "$text-primary",
-                          "content": "你的名字",
-                          "lineHeight": "$Type/H2/Line",
-                          "fontFamily": "$Type/Family/Canvas",
-                          "fontSize": "$Type/H2/Size",
-                          "fontWeight": "$Type/H2/Weight"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "PLzSv",
-                          "name": "shMeta",
-                          "gap": "$Space/sm-plus",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "icon",
-                              "id": "lNzAR",
-                              "name": "shStar",
-                              "width": 14,
-                              "height": 14,
-                              "icon": "star",
-                              "library": "lucide",
-                              "fill": "$warning"
-                            },
-                            {
-                              "type": "text",
-                              "id": "XmZve",
-                              "name": "shRating",
-                              "fill": "$text-primary",
-                              "content": "8.4",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Mono",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "600"
-                            },
-                            {
-                              "type": "text",
-                              "id": "cTvYE",
-                              "name": "shDot",
-                              "fill": "$text-muted",
-                              "content": "·",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "$Type/Body/Weight"
-                            },
-                            {
-                              "type": "text",
-                              "id": "r96VU",
-                              "name": "shDuration",
-                              "fill": "$text-secondary",
-                              "content": "107 分",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Mono",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "$Type/Body/Weight"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "V2sGp",
-                          "name": "shGenres",
-                          "gap": "$Space/sm",
-                          "children": [
-                            {
-                              "id": "L7mJZD",
-                              "type": "ref",
-                              "ref": "L1NP6",
-                              "name": "shg1",
-                              "width": "fit_content",
-                              "height": "fit_content",
-                              "x": 0,
-                              "y": 0,
-                              "descendants": {
-                                "nuZxI": {
-                                  "content": "動畫",
-                                  "x": 12,
-                                  "y": 4
-                                }
-                              }
-                            },
-                            {
-                              "id": "MMyjb",
-                              "type": "ref",
-                              "ref": "L1NP6",
-                              "name": "shg2",
-                              "width": "fit_content",
-                              "height": "fit_content",
-                              "x": 57,
-                              "y": 0,
-                              "descendants": {
-                                "nuZxI": {
-                                  "content": "愛情",
-                                  "x": 12,
-                                  "y": 4
-                                }
-                              }
-                            },
-                            {
-                              "id": "dK2rH",
-                              "type": "ref",
-                              "ref": "L1NP6",
-                              "name": "shg3",
-                              "width": "fit_content",
-                              "height": "fit_content",
-                              "x": 114,
-                              "y": 0,
-                              "descendants": {
-                                "nuZxI": {
-                                  "content": "奇幻",
-                                  "x": 12,
-                                  "y": 4
-                                }
-                              }
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "KIbIo",
-                          "name": "shCredits",
-                          "width": "fill_container",
-                          "layout": "vertical",
-                          "gap": "$Space/xs-plus",
-                          "children": [
-                            {
-                              "type": "frame",
-                              "id": "aZfnc",
-                              "name": "shDirRow",
-                              "gap": "$Space/sm",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "KQd0x",
-                                  "name": "shDirLabel",
-                                  "fill": "$text-muted",
-                                  "content": "導演",
-                                  "lineHeight": "$Type/Body/Line",
-                                  "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Body/Size",
-                                  "fontWeight": "500"
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "bFNLH",
-                                  "name": "shDirName",
-                                  "fill": "$text-primary",
-                                  "content": "新海誠",
-                                  "lineHeight": "$Type/Body/Line",
-                                  "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Body/Size",
-                                  "fontWeight": "$Type/Body/Weight"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "vNKNf",
-                              "name": "shCastRow",
-                              "gap": "$Space/sm",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "TJXec",
-                                  "name": "shCastLabel",
-                                  "fill": "$text-muted",
-                                  "content": "主演",
-                                  "lineHeight": "$Type/Body/Line",
-                                  "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Body/Size",
-                                  "fontWeight": "500"
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "Df3bv",
-                                  "name": "shCastNames",
-                                  "fill": "$text-primary",
-                                  "content": "神木隆之介、上白石萌音",
-                                  "lineHeight": "$Type/Body/Line",
-                                  "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Body/Size",
-                                  "fontWeight": "$Type/Body/Weight"
-                                }
-                              ]
-                            }
-                          ]
-                        },
-                        {
-                          "type": "text",
-                          "id": "VUWuM",
-                          "name": "shSynopsis",
-                          "fill": "$text-secondary",
-                          "textGrowth": "fixed-width",
-                          "width": "fill_container",
-                          "content": "住在飛驒山區鄉下的女高中生宮水三葉，嚮往東京的都市生活。某天起，她開始做著自己變成東京男高中生的夢...",
-                          "lineHeight": "$Type/Body/Line",
-                          "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Body/Size",
-                          "fontWeight": "$Type/Body/Weight"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "G3fR4D",
-                          "name": "shActions",
-                          "width": "fill_container",
-                          "gap": "$Space/md",
-                          "children": [
-                            {
-                              "id": "LtMFB",
-                              "type": "ref",
-                              "ref": "otvKh",
-                              "width": "fill_container",
-                              "name": "shPlayBtn",
-                              "height": "fit_content",
-                              "x": 0,
-                              "y": 0,
-                              "descendants": {
-                                "DaLcd": {
-                                  "content": "管理字幕",
-                                  "x": 56.5,
-                                  "y": 8
-                                }
-                              }
-                            },
-                            {
-                              "id": "qgQWv",
-                              "type": "ref",
-                              "ref": "YDPhc",
-                              "width": "fill_container",
-                              "name": "shAddBtn",
-                              "height": "fit_content",
-                              "x": 181,
-                              "y": 0,
-                              "descendants": {
-                                "L9cIf": {
-                                  "content": "修改資訊",
-                                  "x": 56.5,
-                                  "y": 8
-                                }
-                              }
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "p7qbCT",
-                          "name": "m-subtitle-section",
-                          "width": "fill_container",
-                          "layout": "vertical",
-                          "gap": "$Space/sm",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "qTNRN",
-                              "name": "m-sub-label",
-                              "fill": "$text-muted",
-                              "content": "字幕",
-                              "lineHeight": "$Type/Label/Line",
-                              "fontFamily": "$Type/Family/Canvas",
-                              "fontSize": "$Type/Label/Size",
-                              "fontWeight": "600"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "n6YEc",
-                              "name": "m-sub-status",
-                              "width": "fill_container",
-                              "gap": "$Space/xs-plus",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "icon",
-                                  "id": "SDaLU",
-                                  "name": "mSubStatusI",
-                                  "width": 14,
-                                  "height": 14,
-                                  "icon": "circle-check",
-                                  "library": "lucide",
-                                  "fill": "$success"
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "cpPJ2",
-                                  "name": "mSubStatusT",
-                                  "fill": "$success-text",
-                                  "content": "繁體中文字幕已就緒",
-                                  "lineHeight": "$Type/Label/Line",
-                                  "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Label/Size",
-                                  "fontWeight": "normal"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "aDyx9",
-                              "name": "m-sub-btns",
-                              "width": "fill_container",
-                              "gap": "$Space/sm",
-                              "children": [
-                                {
-                                  "type": "frame",
-                                  "id": "BB3IB",
-                                  "name": "m-search-btn",
-                                  "width": "fill_container",
-                                  "height": 36,
-                                  "fill": "$bg-tertiary",
-                                  "cornerRadius": "$radius-md",
-                                  "stroke": "$border-subtle",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
-                                  "gap": "$Space/xs-plus",
-                                  "justifyContent": "center",
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "icon",
-                                      "id": "PCoXq",
-                                      "name": "mSearchI",
-                                      "width": 14,
-                                      "height": 14,
-                                      "icon": "captions",
-                                      "library": "lucide",
-                                      "fill": "$accent-primary"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "C2Lmk",
-                                      "name": "mSearchT",
-                                      "fill": "$text-primary",
-                                      "content": "搜尋字幕",
-                                      "lineHeight": "$Type/Label/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Label/Size",
-                                      "fontWeight": "$Type/Label/Weight"
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "loyDF",
-                                  "name": "m-ai-btn",
-                                  "width": "fill_container",
-                                  "height": 36,
-                                  "fill": "$bg-tertiary",
-                                  "cornerRadius": "$radius-md",
-                                  "stroke": "$border-subtle",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
-                                  "gap": "$Space/xs-plus",
-                                  "justifyContent": "center",
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "icon",
-                                      "id": "b0NujW",
-                                      "name": "mAiI",
-                                      "width": 14,
-                                      "height": 14,
-                                      "icon": "sparkles",
-                                      "library": "lucide",
-                                      "fill": "$accent-primary"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "KLZ8g",
-                                      "name": "mAiT",
-                                      "fill": "$text-primary",
-                                      "content": "AI 校正",
-                                      "lineHeight": "$Type/Label/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Label/Size",
-                                      "fontWeight": "$Type/Label/Weight"
-                                    }
-                                  ]
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "XvE6g",
-                              "name": "m-trans-btn",
-                              "width": "fill_container",
-                              "height": 36,
-                              "fill": "$bg-tertiary",
-                              "cornerRadius": "$radius-md",
-                              "stroke": "$border-subtle",
-                              "strokeWidth": 1,
-                              "strokeAlignment": "inner",
-                              "gap": "$Space/xs-plus",
-                              "justifyContent": "center",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "icon",
-                                  "id": "YiTTQ",
-                                  "name": "mTransI",
-                                  "width": 14,
-                                  "height": 14,
-                                  "icon": "mic",
-                                  "library": "lucide",
-                                  "fill": "$accent-primary"
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "jYif0",
-                                  "name": "mTransT",
-                                  "fill": "$text-primary",
-                                  "content": "轉錄英文音軌",
-                                  "lineHeight": "$Type/Label/Line",
-                                  "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Label/Size",
-                                  "fontWeight": "$Type/Label/Weight"
-                                }
-                              ]
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            },
-            {
               "type": "text",
               "id": "YcQre",
               "x": 17040,
@@ -46673,21 +45249,8 @@
             },
             {
               "type": "text",
-              "id": "GeJ9L",
-              "x": 19000,
-              "y": 15272,
-              "name": "B8 · 詳情＋技術標籤（手機）",
-              "fill": "#888888",
-              "content": "B8 · 詳情＋技術標籤（手機）",
-              "lineHeight": "$Type/Body/Line",
-              "fontFamily": "$Type/Family/Primary",
-              "fontSize": "$Type/Body/Size",
-              "fontWeight": "600"
-            },
-            {
-              "type": "text",
               "id": "R7vNPa",
-              "x": 19980,
+              "x": 19000,
               "y": 15272,
               "name": "cap-B3p-M",
               "fill": "#888888",
@@ -46700,7 +45263,7 @@
             {
               "type": "frame",
               "id": "SzNRb",
-              "x": 19980,
+              "x": 19000,
               "y": 15317,
               "name": "B3p-M",
               "theme": {
@@ -46769,15 +45332,11 @@
                         },
                         "colors": [
                           {
-                            "color": "#0c151200",
+                            "color": "#00000000",
                             "position": 0
                           },
                           {
-                            "color": "#0c1512B3",
-                            "position": 0.5
-                          },
-                          {
-                            "color": "#0c1512F5",
+                            "color": "$bg-primary",
                             "position": 1
                           }
                         ]
@@ -46793,37 +45352,88 @@
                       "children": [
                         {
                           "type": "frame",
-                          "id": "gSWUK",
-                          "name": "stb",
-                          "fill": "$success-tint",
-                          "cornerRadius": "$radius-pill",
+                          "id": "JDtne",
+                          "name": "badges",
                           "gap": "$Space/xs-plus",
-                          "padding": [
-                            "$Space/xs",
-                            "$Space/sm-plus"
-                          ],
                           "alignItems": "center",
                           "children": [
                             {
-                              "type": "icon",
-                              "id": "mpcR0",
-                              "name": "i",
-                              "width": 11,
-                              "height": 11,
-                              "icon": "check",
-                              "library": "lucide",
-                              "fill": "$success"
+                              "type": "frame",
+                              "id": "gSWUK",
+                              "name": "stb",
+                              "fill": "$success-tint",
+                              "cornerRadius": "$radius-pill",
+                              "gap": "$Space/xs-plus",
+                              "padding": [
+                                "$Space/xs",
+                                "$Space/sm-plus"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "mpcR0",
+                                  "x": 10,
+                                  "y": 7.5,
+                                  "name": "i",
+                                  "enabled": false,
+                                  "width": 11,
+                                  "height": 11,
+                                  "icon": "check",
+                                  "library": "lucide",
+                                  "fill": "$success"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "MqnJw",
+                                  "name": "l",
+                                  "fill": "$success-text",
+                                  "content": "已入庫",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "500"
+                                }
+                              ]
                             },
                             {
-                              "type": "text",
-                              "id": "MqnJw",
-                              "name": "l",
-                              "fill": "$success-text",
-                              "content": "已入庫 · 繁中字幕",
-                              "lineHeight": "$Type/Label/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Label/Size",
-                              "fontWeight": "600"
+                              "type": "frame",
+                              "id": "DRzhN",
+                              "name": "stb-subtitle",
+                              "fill": "$success-tint",
+                              "cornerRadius": "$radius-pill",
+                              "gap": "$Space/xs-plus",
+                              "padding": [
+                                "$Space/xs",
+                                "$Space/sm-plus"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "dZSdm",
+                                  "x": 10,
+                                  "y": 7.5,
+                                  "name": "i",
+                                  "enabled": false,
+                                  "width": 11,
+                                  "height": 11,
+                                  "icon": "check",
+                                  "library": "lucide",
+                                  "fill": "$success"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "nDtqt",
+                                  "name": "l",
+                                  "fill": "$success-text",
+                                  "content": "繁中",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "500"
+                                }
+                              ]
                             }
                           ]
                         },
@@ -46831,7 +45441,7 @@
                           "type": "text",
                           "id": "O7JHGE",
                           "name": "title",
-                          "fill": "$text-on-scrim",
+                          "fill": "$text-primary",
                           "content": "你的名字",
                           "lineHeight": "$Type/H2/Line",
                           "fontFamily": "$Type/Family/Primary",
@@ -46842,7 +45452,7 @@
                           "type": "text",
                           "id": "s35iNc",
                           "name": "orig",
-                          "fill": "$text-on-scrim",
+                          "fill": "$text-secondary",
                           "content": "君の名は。 · Your Name",
                           "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Primary",
@@ -46860,7 +45470,7 @@
                               "type": "text",
                               "id": "KaDYi",
                               "name": "m",
-                              "fill": "$text-on-scrim",
+                              "fill": "$text-secondary",
                               "content": "2016",
                               "lineHeight": "$Type/Label/Line",
                               "fontFamily": "$Type/Family/Mono",
@@ -46871,7 +45481,7 @@
                               "type": "text",
                               "id": "RT9Xd",
                               "name": "d",
-                              "fill": "$text-on-scrim",
+                              "fill": "$text-muted",
                               "content": "·",
                               "lineHeight": "$Type/Label/Line",
                               "fontFamily": "$Type/Family/Primary",
@@ -46882,7 +45492,7 @@
                               "type": "text",
                               "id": "FGjd9",
                               "name": "m",
-                              "fill": "$text-on-scrim",
+                              "fill": "$text-secondary",
                               "content": "107 分",
                               "lineHeight": "$Type/Label/Line",
                               "fontFamily": "$Type/Family/Mono",
@@ -46893,7 +45503,7 @@
                               "type": "text",
                               "id": "l0PDD5",
                               "name": "d",
-                              "fill": "$text-on-scrim",
+                              "fill": "$text-muted",
                               "content": "·",
                               "lineHeight": "$Type/Label/Line",
                               "fontFamily": "$Type/Family/Primary",
@@ -46904,7 +45514,7 @@
                               "type": "text",
                               "id": "jvy6K",
                               "name": "m",
-                              "fill": "$text-on-scrim",
+                              "fill": "$text-secondary",
                               "content": "動畫 / 愛情",
                               "lineHeight": "$Type/Label/Line",
                               "fontFamily": "$Type/Family/Primary",
@@ -46938,7 +45548,7 @@
                                   "type": "text",
                                   "id": "m3NhUw",
                                   "name": "r",
-                                  "fill": "$text-on-scrim",
+                                  "fill": "$text-primary",
                                   "content": "8.4",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Mono",
@@ -47208,7 +45818,7 @@
                               "id": "eRnTs",
                               "name": "tb",
                               "fill": "$bg-tertiary",
-                              "cornerRadius": "$radius-md",
+                              "cornerRadius": "$radius-pill",
                               "padding": [
                                 "$Space/xs",
                                 "$Space/sm-plus"
@@ -47233,7 +45843,7 @@
                               "id": "B9dlP",
                               "name": "tb",
                               "fill": "$bg-tertiary",
-                              "cornerRadius": "$radius-md",
+                              "cornerRadius": "$radius-pill",
                               "padding": [
                                 "$Space/xs",
                                 "$Space/sm-plus"
@@ -47258,7 +45868,7 @@
                               "id": "w85zMi",
                               "name": "tb",
                               "fill": "$bg-tertiary",
-                              "cornerRadius": "$radius-md",
+                              "cornerRadius": "$radius-pill",
                               "padding": [
                                 "$Space/xs",
                                 "$Space/sm-plus"
@@ -47285,19 +45895,6 @@
                   ]
                 }
               ]
-            },
-            {
-              "type": "text",
-              "id": "c7pk5f",
-              "x": 19490,
-              "y": 15272,
-              "name": "B9 · 圖片載入 Fallback・Spec（手機）",
-              "fill": "#888888",
-              "content": "B9 · 圖片載入 Fallback・Spec（手機）",
-              "lineHeight": "$Type/Body/Line",
-              "fontFamily": "$Type/Family/Primary",
-              "fontSize": "$Type/Body/Size",
-              "fontWeight": "600"
             }
           ]
         }

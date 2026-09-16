@@ -1,4 +1,7 @@
-// Design ref: ux-design.pen Screen 4 Detail Panel Desktop (RgSxQ)
+// Design ref: ux-design.pen — no current screen frame; re-exported by the barrel but
+// rendered ONLY by the visual gallery — no production mount. Its old reference
+// pointed at the deleted v1 panel (RgSxQ).
+// Delete-or-keep: disc-2026-09-unmounted-v1-components.
 /**
  * CastEditor Component (Story 3.8 - AC1)
  * Add/remove cast members with input field

@@ -85,9 +85,11 @@ export const HANS = new Set(['zh-hans', 'zh-cn']);
 /**
  * Lowercased embedded-track language tags. `null` when `subtitleTracks` is
  * absent or a non-JSON legacy value (can't classify → unknown); an empty array
- * when the field parses but lists no tracks.
+ * when the field parses but lists no tracks. Exported (dsr-2) so the detail
+ * page's 字幕軌 fact row reads tracks through the same parser as the badges —
+ * do NOT write a second one.
  */
-function trackLangs(media: Media): string[] | null {
+export function trackLangs(media: Pick<Media, 'subtitleTracks'>): string[] | null {
   if (media.subtitleTracks === undefined) return null;
 
   let tracks: SubtitleTrack[] = [];

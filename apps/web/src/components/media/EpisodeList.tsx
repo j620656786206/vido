@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen B4p-D (N2fmG6) + Screen J3-D (Z54xAd)
 /**
  * EpisodeList (Story 12-2)
  *
@@ -166,7 +166,8 @@ function SubtitleStatusIcon({ episode }: { episode: MergedEpisode }) {
 
 function formatRuntime(runtime?: number): string | null {
   if (!runtime || runtime <= 0) return null;
-  return `${runtime} 分鐘`;
+  // 分, not 分鐘: B4p-D writes 「24 分」 and the movie meta row says 「107 分」 (dsr-2).
+  return `${runtime} 分`;
 }
 
 /** Loading skeleton shown while a season's episodes are being fetched (AC #4, Task 7.5). */

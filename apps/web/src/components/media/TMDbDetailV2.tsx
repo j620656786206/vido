@@ -1,4 +1,4 @@
-// Implements: Component/Detail-Movie-v2 (uRGu2)
+// Design ref: ux-design.pen Screen B3p-D (uRGu2) + Screen L8-D-v2 (G0xib)
 /**
  * v2 detail for TMDb-numeric items (UX Redesign Phase 2 — UX2-3, AC #8). These
  * are discover/homepage items with no local DB row — so no tech-info, Douban,
@@ -24,7 +24,8 @@ import { StreamingAvailability } from './StreamingAvailability';
 import { TrailerSection } from './TrailerSection';
 import { DualRatingDisplay } from './DualRatingDisplay';
 import { DetailHeroV2 } from './DetailHeroV2';
-import { DetailSkeletonV2, DetailNotFoundV2 } from './DetailStatesV2';
+import { DetailSkeletonV2, DetailNotFoundV2, DetailLoadErrorV2 } from './DetailStatesV2';
+import { isNotFoundError } from '../../lib/apiError';
 import { TmdbAttribution } from '../ui/TmdbAttribution';
 
 const WATCH_REGION = 'TW';
@@ -50,7 +51,22 @@ export function TMDbDetailV2({ type, tmdbId }: { type: 'movie' | 'tv'; tmdbId: n
   const onBack = () => navigate({ to: '/library' });
 
   if (detailsQuery.isLoading) return <DetailSkeletonV2 />;
-  if (detailsQuery.isError || !data) return <DetailNotFoundV2 onBack={onBack} />;
+  // dsr-2 AC #8: a timeout or TMDb outage is a failed load, not a missing title —
+  // and only when nothing is cached (a failed background refetch keeps the page).
+  // Neither state mentions the library: this title was never in it.
+  if (!data) {
+    if (detailsQuery.isError && !isNotFoundError(detailsQuery.error)) {
+      return (
+        <DetailLoadErrorV2
+          onBack={onBack}
+          onRetry={() => detailsQuery.refetch()}
+          retrying={detailsQuery.isFetching}
+          code={(detailsQuery.error as { code?: string } | null)?.code}
+        />
+      );
+    }
+    return <DetailNotFoundV2 onBack={onBack} inLibrary={false} />;
+  }
 
   const title = isMovie ? movieDetails.data!.title : tvDetails.data!.name;
   const originalTitle = isMovie ? movieDetails.data!.originalTitle : tvDetails.data!.originalName;
@@ -107,6 +123,12 @@ export function TMDbDetailV2({ type, tmdbId }: { type: 'movie' | 'tv'; tmdbId: n
           </section>
         )}
 
+        {/* Cast right after the overview, then the B8p-D extension order — same as the
+            library detail page this header points at (B3p-D, dsr-2 AC #9). */}
+        {creditsQuery.data && (
+          <CreditsSection director={director} cast={creditsQuery.data.cast?.slice(0, 8)} />
+        )}
+
         {tmdbId > 0 && <TrailerSection tmdbId={tmdbId} type={type} title={title} />}
 
         {tmdbId > 0 && (
@@ -116,10 +138,6 @@ export function TMDbDetailV2({ type, tmdbId }: { type: 'movie' | 'tv'; tmdbId: n
             isError={watch.isError}
             onRetry={() => watch.refetch()}
           />
-        )}
-
-        {creditsQuery.data && (
-          <CreditsSection director={director} cast={creditsQuery.data.cast?.slice(0, 8)} />
         )}
 
         {tmdbId > 0 && (

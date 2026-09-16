@@ -9,6 +9,7 @@ import type {
   UnifiedSearchResult,
 } from '../types/tmdb';
 import { snakeToCamel } from '../utils/caseTransform';
+import { ApiError } from '../lib/apiError';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
@@ -48,15 +49,25 @@ export { getImageUrl } from '../lib/image';
 async function fetchApi<T>(endpoint: string): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`);
 
+  // ApiError keeps the status so the TMDb detail page can tell 404 from a failed
+  // load (dsr-2 AC #8).
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error?.message || `API request failed: ${response.status}`);
+    throw new ApiError(
+      errorData.error?.message || `API request failed: ${response.status}`,
+      response.status,
+      errorData.error?.code
+    );
   }
 
   const data: ApiResponse<T> = await response.json();
 
   if (!data.success) {
-    throw new Error(data.error?.message || 'API request failed');
+    throw new ApiError(
+      data.error?.message || 'API request failed',
+      response.status,
+      data.error?.code
+    );
   }
 
   return snakeToCamel<T>(data.data);

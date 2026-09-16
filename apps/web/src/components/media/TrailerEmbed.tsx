@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen 4 Detail Panel Desktop (RgSxQ)
+// Design ref: ux-design.pen Screen B8p-D (UH0sk)
 import { useState } from 'react';
 
 const YOUTUBE_EMBED_BASE = 'https://www.youtube-nocookie.com/embed/';

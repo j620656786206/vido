@@ -1,6 +1,7 @@
 import { createFileRoute, notFound, useNavigate } from '@tanstack/react-router';
 import { LocalDetailV2 } from '../../components/media/LocalDetailV2';
 import { TMDbDetailV2 } from '../../components/media/TMDbDetailV2';
+import { DetailNotFoundV2 } from '../../components/media/DetailStatesV2';
 
 const validMediaTypes = ['movie', 'tv'] as const;
 type ValidMediaType = (typeof validMediaTypes)[number];
@@ -42,26 +43,13 @@ export const Route = createFileRoute('/media/$type/$id')({
   component: MediaDetailRoute,
 });
 
+// dsr-2 AC #8: the route-level 404 (bad type / empty id) and the component-level
+// not-found (missing row) used to say two different things for the same event —
+// 「404 · 找不到該媒體內容」 here, 「找不到這部影片」 there. One sentence now.
 function NotFoundComponent() {
   const navigate = useNavigate();
-
-  return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="text-center">
-        {/* Page-ground heading — ink, not paper: it sits on --bg-primary. */}
-        <h1 className="mb-4 text-4xl font-bold text-[var(--text-primary)]">404</h1>
-        <p className="mb-6 text-[var(--text-secondary)]">找不到該媒體內容</p>
-        <button
-          onClick={() => navigate({ to: '/library' })}
-          // Label on a solid --accent-primary fill: the on-accent token flips with
-          // the theme, a literal white cannot.
-          className="rounded-lg bg-[var(--accent-primary)] px-4 py-2 text-[var(--text-on-accent)] hover:bg-[var(--accent-pressed)]"
-        >
-          返回媒體庫
-        </button>
-      </div>
-    </div>
-  );
+  // inLibrary={false}: a malformed type/id never pointed at a library item.
+  return <DetailNotFoundV2 onBack={() => navigate({ to: '/library' })} inLibrary={false} />;
 }
 
 // ux3-cutover-3: legacy LocalDetailView/TMDbDetailView removed — the v2 detail

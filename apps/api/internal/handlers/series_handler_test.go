@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -210,9 +211,20 @@ func TestSeriesHandler_GetByID(t *testing.T) {
 			name:     "not found",
 			seriesID: "nonexistent",
 			setupMock: func(m *MockSeriesService) {
-				m.On("GetByID", mock.Anything, "nonexistent").Return(nil, errors.New("not found"))
+				m.On("GetByID", mock.Anything, "nonexistent").Return(nil, fmt.Errorf("series with id nonexistent not found: %w", sql.ErrNoRows))
 			},
 			expectedStatus: http.StatusNotFound,
+		},
+		{
+			// dsr-2 AC #8: only a genuine missing row is a 404. A database failure used
+			// to come back as 404 too, so the detail page told the user the item had
+			// been removed when the server had merely failed to read it.
+			name:     "database failure is a 500, not a 404",
+			seriesID: "series-123",
+			setupMock: func(m *MockSeriesService) {
+				m.On("GetByID", mock.Anything, "series-123").Return(nil, errors.New("failed to find series: database is locked"))
+			},
+			expectedStatus: http.StatusInternalServerError,
 		},
 	}
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { ApiError } from '../../lib/apiError';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createRootRoute,
@@ -15,6 +16,7 @@ const h = vi.hoisted(() => ({
   localSeries: undefined as Record<string, unknown> | undefined,
   movieCredits: { data: undefined } as { data: unknown },
   tvCredits: { data: undefined } as { data: unknown },
+  douban: { data: null, isLoading: false } as { data: unknown; isLoading: boolean },
 }));
 
 vi.mock('../../hooks/useMediaDetails', async (importOriginal) => ({
@@ -40,17 +42,20 @@ vi.mock('../../hooks/useMediaDetails', async (importOriginal) => ({
   }),
 }));
 vi.mock('../../hooks/useDoubanRating', () => ({
-  useDoubanRating: () => ({ data: null, isLoading: false }),
+  useDoubanRating: () => h.douban,
 }));
 vi.mock('../../hooks/useDoubanReviewSummary', () => ({
   useDoubanReviewSummary: () => ({ data: null, isLoading: false, isError: false }),
 }));
 // Stub the heavy / self-fetching section + dialog children.
-vi.mock('./TrailerSection', () => ({ TrailerSection: () => null }));
-vi.mock('./StreamingAvailability', () => ({ StreamingAvailability: () => null }));
-vi.mock('./RelatedContent', () => ({ RelatedContent: () => null }));
-vi.mock('./SeasonAccordion', () => ({ SeasonAccordion: () => null }));
-vi.mock('./DoubanSection', () => ({ DoubanSection: () => null }));
+// Each stub leaves a marker so the section ORDER can be asserted (dsr-2 AC #9).
+vi.mock('./TrailerSection', () => ({ TrailerSection: () => <div data-testid="stub-trailer" /> }));
+vi.mock('./StreamingAvailability', () => ({
+  StreamingAvailability: () => <div data-testid="stub-streaming" />,
+}));
+vi.mock('./RelatedContent', () => ({ RelatedContent: () => <div data-testid="stub-related" /> }));
+vi.mock('./SeasonAccordion', () => ({ SeasonAccordion: () => <div data-testid="stub-seasons" /> }));
+vi.mock('./DoubanSection', () => ({ DoubanSection: () => <div data-testid="stub-douban" /> }));
 vi.mock('./CreditsSection', () => ({
   CreditsSection: ({ cast }: { cast?: Array<{ name: string }> }) => (
     <div data-testid="stub-credits-cast">{(cast ?? []).map((c) => c.name).join(',')}</div>
@@ -189,6 +194,7 @@ function renderSeriesDetail(
 
 describe('LocalDetailV2', () => {
   beforeEach(() => {
+    h.douban = { data: null, isLoading: false };
     h.local = movie();
     h.localSeries = undefined;
     h.movieCredits = { data: undefined };
@@ -260,15 +266,70 @@ describe('LocalDetailV2', () => {
     expect(screen.getByTestId('action-edit-metadata')).toBeInTheDocument();
   });
 
-  it('shows the skeleton while loading and not-found on error', async () => {
+  it('shows the skeleton while loading and not-found on a 404', async () => {
     h.local = movie({ data: undefined, isLoading: true });
     const { unmount } = renderDetail();
     expect(await screen.findByTestId('detail-skeleton')).toBeInTheDocument();
     unmount();
 
-    h.local = movie({ data: undefined, isLoading: false, isError: true });
+    h.local = movie({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new ApiError('Movie not found', 404, 'DB_NOT_FOUND'),
+    });
     renderDetail();
     expect(await screen.findByTestId('detail-not-found')).toBeInTheDocument();
+    expect(screen.queryByTestId('detail-load-error')).not.toBeInTheDocument();
+  });
+
+  // Review #2: React Query keeps cached data when a BACKGROUND refetch fails (e.g. the
+  // refetch after subtitle generation hits a locked DB). The loaded page — and any
+  // open dialog — must stay; only a load with nothing to show takes over the page.
+  it('keeps the loaded page when a background refetch fails', async () => {
+    h.local = movie({
+      isError: true,
+      error: new ApiError('Failed to load movie', 500, 'DB_QUERY_FAILED'),
+    });
+    renderDetail();
+    expect(await screen.findByTestId('local-detail-v2')).toBeInTheDocument();
+    expect(screen.queryByTestId('detail-load-error')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('detail-not-found')).not.toBeInTheDocument();
+  });
+
+  it('series: a failed load shows the load error and retries the SERIES query', async () => {
+    const refetch = vi.fn();
+    h.localSeries = series({
+      data: undefined,
+      isError: true,
+      error: new ApiError('Failed to load series', 500, 'DB_QUERY_FAILED'),
+      refetch,
+    });
+    renderSeriesDetail();
+    await screen.findByTestId('detail-load-error');
+    fireEvent.click(screen.getByTestId('detail-load-error-retry'));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(h.local.refetch).not.toHaveBeenCalled();
+  });
+
+  // dsr-2 AC #8: a server failure used to read 「找不到這部影片，可能已被移除」.
+  it('shows a load error — not not-found — when the request fails for any other reason', async () => {
+    const refetch = vi.fn();
+    h.local = movie({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new ApiError('Failed to load movie', 500, 'DB_QUERY_FAILED'),
+      refetch,
+    });
+    renderDetail();
+    const panel = await screen.findByTestId('detail-load-error');
+    expect(screen.queryByTestId('detail-not-found')).not.toBeInTheDocument();
+    // A library item: the files on disk were never touched, so say so.
+    expect(panel).toHaveTextContent('你的檔案沒有受影響');
+    expect(screen.getByTestId('detail-load-error-code')).toHaveTextContent('DB_QUERY_FAILED');
+    fireEvent.click(screen.getByTestId('detail-load-error-retry'));
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 
   // disc-2026-07-credits-spoken-languages-persist: the cast display prefers the persisted
@@ -331,5 +392,43 @@ describe('LocalDetailV2', () => {
     renderDetail();
     await screen.findByTestId('local-detail-v2');
     expect(screen.queryByTestId('tmdb-attribution')).not.toBeInTheDocument();
+  });
+
+  // dsr-2 AC #9: section order follows B3p-D / B4p-D / B8p-D (and ux2-3 AC #4).
+  describe('section order', () => {
+    function order(ids: string[]) {
+      const nodes = ids.map((id) => screen.getByTestId(id));
+      for (let i = 1; i < nodes.length; i++) {
+        // DOCUMENT_POSITION_FOLLOWING (4): nodes[i] comes after nodes[i - 1].
+        expect(nodes[i - 1].compareDocumentPosition(nodes[i]) & 4).toBe(4);
+      }
+    }
+
+    it('movie: 簡介 → 演員 → 檔案資訊 → 預告片 → 觀看平台 → 相關推薦 → 豆瓣', async () => {
+      h.local = movie({ data: { ...movie().data, tmdbId: 27205 } });
+      h.movieCredits = { data: { cast: [{ id: 1, name: '神木隆之介' }], crew: [] } };
+      h.douban = { data: { doubanId: '26683290' }, isLoading: false };
+      renderDetail();
+      await screen.findByTestId('local-detail-v2');
+      order([
+        'detail-overview',
+        'stub-credits-cast',
+        'detail-tech-info',
+        'stub-trailer',
+        'stub-streaming',
+        'stub-related',
+        'stub-douban',
+      ]);
+    });
+
+    it('series: 簡介 → 季與劇集 → 檔案資訊 → 演員 (tech info stays above cast)', async () => {
+      h.localSeries = series({
+        data: { ...series().data, tmdbId: 1429, overview: '人類與巨人。', videoCodec: 'HEVC' },
+      });
+      h.tvCredits = { data: { cast: [{ id: 1, name: '梶裕貴' }], crew: [] } };
+      renderSeriesDetail();
+      await screen.findByTestId('local-detail-v2');
+      order(['detail-overview', 'stub-seasons', 'detail-tech-info', 'stub-credits-cast']);
+    });
   });
 });

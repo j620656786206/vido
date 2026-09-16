@@ -119,6 +119,13 @@ READABLE_FLOWS = {
     # toolbar chips, the result count and both empty/error paragraphs were the
     # whole point of the comparison and none of them could be read.
     "flow-a-browse-v2",
+    # flow-b-detail-v2 + flow-b-detail-interaction joined 2026-09-16 (dsr-2): the
+    # detail comparison hinges on section headings, tech-badge labels, the file-fact
+    # rows and the not-found sentence, and at 400px every one of them rendered as a
+    # grey smear. The interaction folder carries the B9-D image-fallback spec, whose
+    # whole content is paragraphs of prose.
+    "flow-b-detail-v2",
+    "flow-b-detail-interaction",
 }
 # Floor, not ceiling: a page wider than this keeps its native 1:1 width rather than
 # being shrunk below legibility.
@@ -136,10 +143,9 @@ SCREENS = {
     "APfjC": ("flow-b-detail-interaction", "b5-m"),
     "2m1Pv": ("flow-b-detail-interaction", "b6-m"),
     "7UnDy": ("flow-b-detail-interaction", "b7-m"),
-    "6OR3z": ("flow-b-detail-interaction", "b8-m"),
-    # B9 = disc-flaky-visual-media-detail-panel case (B) image-load fallback spec
+    # B9 = image-load fallback spec (case B). dsr-2 re-pointed it at the LIVE DetailHeroV2
+    # (it specified the unmounted MediaDetailPanel) and dropped the v1 mobile twins b8-m/b9-m.
     "Tn4Gz": ("flow-b-detail-interaction", "b9-d"),
-    "jH6rM": ("flow-b-detail-interaction", "b9-m"),
     # Flow C — 搜尋 / 篩選 / 設定 (search-filter / batch ops / settings / backup)
     "rsAxf": ("flow-c-search-settings", "c1-d"),
     "dcf67": ("flow-c-search-settings", "c2-d"),

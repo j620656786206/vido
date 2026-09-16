@@ -32,6 +32,13 @@ describe('CreditsSection', () => {
     expect(container.firstChild).toBeNull();
   });
 
+  // dsr-2 AC #9: B3p-D gives the block a section heading; 導演／演員陣容 stay as h3.
+  it('renders the 演員 / 製作 section heading above the h3 groups', () => {
+    render(<CreditsSection director={mockDirector} cast={mockCast} />);
+    expect(screen.getByRole('heading', { level: 2, name: '演員 / 製作' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: '導演' })).toBeInTheDocument();
+  });
+
   describe('Director', () => {
     it('should render director when provided', () => {
       render(<CreditsSection director={mockDirector} />);

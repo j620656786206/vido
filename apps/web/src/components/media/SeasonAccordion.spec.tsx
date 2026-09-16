@@ -125,6 +125,9 @@ describe('SeasonAccordion', () => {
     );
 
     expect(screen.getByTestId('season-accordion-error')).toBeInTheDocument();
+    expect(screen.getByTestId('season-accordion-error')).toHaveTextContent(
+      '無法載入季列表，請稍後再試。'
+    );
     expect(screen.getByRole('alert')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '重試' }));
     expect(onRetry).toHaveBeenCalledTimes(1);

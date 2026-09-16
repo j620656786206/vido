@@ -558,6 +558,39 @@ describe('libraryService', () => {
   });
 
   describe('getMovieById', () => {
+    // dsr-2 AC #8: the detail page must tell 404 (removed) from 5xx (failed to load),
+    // so the service keeps the HTTP status and the Rule-7 code instead of a bare Error.
+    it('[P0] rejects with the HTTP status and code so a 404 is distinguishable from a 500', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        json: () =>
+          Promise.resolve({
+            success: false,
+            error: { code: 'DB_NOT_FOUND', message: 'Movie not found' },
+          }),
+      });
+      await expect(libraryService.getMovieById('gone')).rejects.toMatchObject({
+        message: 'Movie not found',
+        status: 404,
+        code: 'DB_NOT_FOUND',
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: () =>
+          Promise.resolve({
+            success: false,
+            error: { code: 'DB_QUERY_FAILED', message: 'Failed to load movie' },
+          }),
+      });
+      await expect(libraryService.getMovieById('locked')).rejects.toMatchObject({
+        status: 500,
+        code: 'DB_QUERY_FAILED',
+      });
+    });
+
     it('[P0] calls GET /movies/:id with correct UUID', async () => {
       const mockMovie = {
         id: '0ce73c75-a742-4fc0-955a-4d915a7ee465',
