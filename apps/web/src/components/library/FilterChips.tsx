@@ -1,7 +1,7 @@
 // Implements: Component/FilterChip (jD7gF)
 // Source: ux-design.pen (Pencil app)
 import { X } from 'lucide-react';
-import type { FilterValues } from './FilterPanel';
+import { yearFilterLabel, type FilterValues } from './FilterPanel';
 
 interface FilterChipsProps {
   filters: FilterValues;
@@ -65,7 +65,7 @@ export function FilterChips({
 
       {hasYearRange ? (
         <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)]">
-          {filters.yearMin}–{filters.yearMax} 年
+          {yearFilterLabel(filters)}
           <button
             onClick={removeYearRange}
             className="ml-0.5 rounded-full p-0.5 hover:bg-[var(--accent-primary)]/30"
@@ -78,7 +78,7 @@ export function FilterChips({
         <>
           {filters.yearMin !== undefined && (
             <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)]">
-              {filters.yearMin} 年起
+              {yearFilterLabel({ yearMin: filters.yearMin })}
               <button
                 onClick={onRemoveYearMin}
                 className="ml-0.5 rounded-full p-0.5 hover:bg-[var(--accent-primary)]/30"
@@ -91,7 +91,7 @@ export function FilterChips({
 
           {filters.yearMax !== undefined && (
             <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)]">
-              至 {filters.yearMax} 年
+              {yearFilterLabel({ yearMax: filters.yearMax })}
               <button
                 onClick={onRemoveYearMax}
                 className="ml-0.5 rounded-full p-0.5 hover:bg-[var(--accent-primary)]/30"

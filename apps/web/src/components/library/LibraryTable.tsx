@@ -1,4 +1,9 @@
-// Design ref: ux-design.pen Screen 6 List View Desktop (LZ8Ds)
+// Design ref: ux-design.pen — no current screen frame; this v1 table is imported ONLY
+// by the visual gallery (routes/test/-gallery.fixtures.tsx) — there is no production mount. Its old
+// reference pointed at the deleted v1 grid frame (KNI8F); pointing it at the
+// LIVE A3p-D/A4p-D instead would be a fresh false claim, because those frames
+// are implemented by LibraryBrowseV2 + PosterCardV2 + LibraryListRowV2.
+// Delete-or-keep: disc-2026-09-unmounted-v1-components.
 import { Link } from '@tanstack/react-router';
 import { ArrowUp, ArrowDown, Check } from 'lucide-react';
 import { cn } from '../../lib/utils';

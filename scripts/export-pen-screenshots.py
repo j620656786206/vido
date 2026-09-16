@@ -114,6 +114,11 @@ READABLE_FLOWS = {
     "flow-l-requests-v2",
     "flow-h-homepage-v3",
     "flow-h-homepage",
+    # flow-a-browse-v2 joined 2026-09-16 (dsr-1): at the 400px thumbnail cap the
+    # 10 browse frames rendered ~1440px-wide screens down to unreadable — the
+    # toolbar chips, the result count and both empty/error paragraphs were the
+    # whole point of the comparison and none of them could be read.
+    "flow-a-browse-v2",
 }
 # Floor, not ceiling: a page wider than this keeps its native 1:1 width rather than
 # being shrunk below legibility.

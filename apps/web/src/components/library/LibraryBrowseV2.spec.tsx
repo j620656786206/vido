@@ -113,7 +113,10 @@ describe('LibraryBrowseV2', () => {
     h.infinite = infinite({ items: [movie('a', '電影甲'), movie('b', '電影乙')], totalItems: 2 });
     renderBrowse();
     expect(await screen.findByTestId('library-grid-v2')).toBeInTheDocument();
-    expect(screen.getByTestId('library-result-count')).toHaveTextContent('2 項');
+    // ⚖️ Alexyu 2026-09-16 (dsr-1 AC #7): 「部」, not 「項」 — the homepage readout
+    // band already counts in 部, and one product should not have two words for it.
+    expect(screen.getByTestId('library-result-count')).toHaveTextContent('2 部');
+    expect(screen.getByTestId('library-page-title')).toHaveTextContent('媒體庫');
     expect(screen.getByTestId('poster-v2-a')).toBeInTheDocument();
   });
 
@@ -188,6 +191,45 @@ describe('LibraryBrowseV2 — desktop filter rail (ux3-0-7)', () => {
     // 2 genres + 1 decade range = 3 (type=全部 not counted)
     expect(await screen.findByTestId('library-rail-active-count')).toHaveTextContent('3');
   });
+
+  // The leaf component's own spec feeds it a hand-written label array, which cannot
+  // catch a PRODUCER bug. This is the only test that exercises the real wiring:
+  // filters → activeFilterLabels → the sentence the user reads.
+  it('[P1] no-result names the type and the live filters, spelled like the chips', async () => {
+    h.infinite = infinite({ items: [], totalItems: 0 });
+    renderBrowse('/library?genres=動作,科幻&yearMin=2020&yearMax=2029', 'movie');
+    expect(await screen.findByTestId('library-no-result')).toHaveTextContent(
+      '沒有電影符合目前的篩選條件（動作、科幻、2020–2029 年）。試著調整或清除篩選。'
+    );
+    // The year facet is spelled by the SAME helper the chip row above it uses, so
+    // the sentence and the chip can never say it two ways.
+    expect(screen.getByTestId('library-page-title')).toHaveTextContent('電影');
+  });
+
+  it('[P2] a half-open year bound reads as a direction, not a bare year', async () => {
+    h.infinite = infinite({ items: [], totalItems: 0 });
+    renderBrowse('/library?yearMin=2010', 'tv');
+    // 「2010 年」 alone would mean both 「from」 and 「until」 depending on which
+    // bound was set — two opposite readings of one string.
+    expect(await screen.findByTestId('library-no-result')).toHaveTextContent(
+      '沒有影集符合目前的篩選條件（2010 年起）。試著調整或清除篩選。'
+    );
+  });
+
+  it('[P2] the count is absent while loading and while errored (A2p-D / A8p-D)', async () => {
+    h.infinite = infinite({ isLoading: true });
+    const { unmount } = renderBrowse();
+    expect(await screen.findByTestId('library-page-title')).toBeInTheDocument();
+    expect(screen.queryByTestId('library-result-count')).not.toBeInTheDocument();
+    unmount();
+
+    h.infinite = infinite({ isError: true, error: { code: 'DB_QUERY_FAILED' } });
+    renderBrowse();
+    expect(await screen.findByTestId('library-error')).toBeInTheDocument();
+    expect(screen.queryByTestId('library-result-count')).not.toBeInTheDocument();
+    // …but the title stays: A8p-D keeps 「電影」 above the error card.
+    expect(screen.getByTestId('library-page-title')).toBeInTheDocument();
+  });
 });
 
 // ux3-cutover-2: v2 selection mode + batch ops (legacy-shell deletion gate)
@@ -206,7 +248,10 @@ describe('LibraryBrowseV2 — selection mode (ux3-cutover-2)', () => {
     renderBrowse();
     await userEvent.click(await screen.findByTestId('enter-selection-btn'));
     expect(screen.getByTestId('selection-toolbar')).toBeInTheDocument();
-    expect(screen.queryByTestId('library-result-count')).not.toBeInTheDocument();
+    // dsr-1 AC #7 moved the count out of the toolbar and into the page header, so it
+    // now SURVIVES selection mode — you keep knowing how many there are in total
+    // while 已選取 N 項 counts what you picked. (It used to vanish with the toolbar.)
+    expect(screen.getByTestId('library-result-count')).toBeInTheDocument();
 
     await userEvent.click(screen.getByTestId('poster-v2-a'));
     expect(screen.getByTestId('selected-count')).toHaveTextContent('已選取 1 項');

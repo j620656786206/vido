@@ -1,4 +1,7 @@
-// Design ref: ux-design.pen Screen 1 Library Grid Desktop (KNI8F)
+// Design ref: ux-design.pen — no current screen frame; mounted only by the
+// dev-only /test/manual-search route (and the visual gallery) — no production
+// mount. Its old reference pointed at the deleted v1 grid frame (KNI8F).
+// Delete-or-keep: disc-2026-09-unmounted-v1-components.
 /**
  * ParseFailureCard Component (Story 3.7 - Task 7)
  * Displays a media file that failed automatic parsing with manual search option

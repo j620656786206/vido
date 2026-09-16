@@ -38,6 +38,7 @@ import { LibraryListRowV2 } from './LibraryListRowV2';
 import { LibraryFilterSheetV2 } from './LibraryFilterSheetV2';
 import { LibraryFilterRail } from './LibraryFilterRail';
 import { LibraryGridSkeletonV2, LibraryNoResultV2, LibraryErrorV2 } from './LibraryStatesV2';
+import { yearFilterLabel } from './FilterPanel';
 import { EmptyNoQBT } from './EmptyNoQBT';
 import { EmptyNoFolder } from './EmptyNoFolder';
 import { EmptyReadyForScan } from './EmptyReadyForScan';
@@ -56,6 +57,19 @@ const routeApi = getRouteApi('/library');
 const VIEW_STORAGE_KEY = 'vido:library:view';
 const SORT_STORAGE_KEY = 'vido:library:sort';
 const RAIL_STORAGE_KEY = 'vido:library:rail-collapsed';
+
+/**
+ * A3p-D 頁首標題.
+ *
+ * ⚠️ NOT yet the single source: `shell/navModel.ts` says 媒體庫/電影/影集 and
+ * `FilterPanel.tsx`'s type selector says 全部/電影/影集 — three maps, two answers
+ * for `all`. Consolidating them is disc-2026-09-media-type-label-four-maps.
+ */
+const TYPE_TITLE: Record<LibraryMediaType, string> = {
+  all: '媒體庫',
+  movie: '電影',
+  tv: '影集',
+};
 const DEFAULT_SORT = { sortBy: 'created_at' as SortField, sortOrder: 'desc' as SortOrder };
 
 function getStoredView(): ViewMode {
@@ -169,6 +183,19 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
     filters.genres.length +
     (filters.yearMin !== undefined || filters.yearMax !== undefined ? 1 : 0) +
     (filters.unmatched === true ? 1 : 0);
+
+  // Human labels for the same facets, in chip order — A7p-D names them in the
+  // no-result line so you do not have to go looking for what excluded everything.
+  // Same `filters` object as the count above AND the same `yearFilterLabel` the
+  // chips use, so neither the number nor the wording can drift from the chip row
+  // sitting directly above the sentence.
+  const activeFilterLabels = useMemo(() => {
+    const labels = [...filters.genres];
+    const year = yearFilterLabel(filters);
+    if (year) labels.push(year);
+    if (filters.unmatched === true) labels.push('未匹配');
+    return labels;
+  }, [filters]);
 
   const {
     items,
@@ -469,6 +496,37 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
 
   return (
     <div className="px-4 py-6 sm:px-6">
+      {/* A3p-D 頁首 — the screen says WHERE YOU ARE and HOW MUCH IS HERE in one
+            line. ⚖️ Alexyu 2026-09-16 (dsr-1 AC #7): the count belongs beside the
+            title, counted in 部 — 「電影 1,284 部」 reads as a sentence, and the
+            homepage readout band already counts in 部. It used to sit in the
+            toolbar in 項, which (a) said it twice in the product's two voices and
+            (b) VANISHED in selection mode, exactly when 已選取 N 項 makes the
+            total worth keeping on screen.
+            ⚠️ A3p-D draws this INSIDE the top app bar, on the omnisearch row. Here
+            it is the first thing in the content column instead, so it scrolls away
+            with the page rather than staying pinned. Moving it into AppShellV2
+            needs a pageTitle slot on the shell — a bigger change than this story,
+            tracked as disc-2026-09-library-header-not-in-shell-bar.
+            The count is hidden while loading/errored, matching A2p-D and A8p-D
+            (which show the title with no number) and A1p-D (which shows 「電影 0 部」). */}
+      <div className="mb-4 flex items-baseline gap-3">
+        <h1
+          data-testid="library-page-title"
+          className="text-xl font-semibold text-[var(--text-primary)]"
+        >
+          {TYPE_TITLE[currentType]}
+        </h1>
+        {!isLoading && !isError && (
+          <span
+            data-testid="library-result-count"
+            className="font-mono text-xs tabular-nums text-[var(--text-secondary)]"
+          >
+            {totalItems.toLocaleString()} 部
+          </span>
+        )}
+      </div>
+
       <div className="lg:flex lg:gap-6">
         {/* Desktop filter rail (lg+ only); hidden when collapsed. <lg uses the sheet. */}
         {!railCollapsed && (
@@ -585,17 +643,13 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
                 </div>
               )}
 
-              <span
-                data-testid="library-result-count"
-                className="ml-auto font-mono text-xs tabular-nums text-[var(--text-secondary)]"
-              >
-                {totalItems.toLocaleString()} 項
-              </span>
               <button
                 type="button"
                 onClick={enterSelectionMode}
+                // The count used to live here with ml-auto; it moved to the page
+                // header (dsr-1 AC #7), so this button now carries the right edge.
                 data-testid="enter-selection-btn"
-                className="flex min-h-[44px] items-center gap-2 rounded-[var(--radius-md)] bg-[var(--bg-secondary)] px-3 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
+                className="ml-auto flex min-h-[44px] items-center gap-2 rounded-[var(--radius-md)] bg-[var(--bg-secondary)] px-3 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
               >
                 <CheckSquare className="h-4 w-4" aria-hidden="true" />
                 選取
@@ -611,7 +665,11 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
             <LibraryGridSkeletonV2 />
           ) : isEmpty ? (
             hasActiveFilters ? (
-              <LibraryNoResultV2 onClearFilters={clearFilters} />
+              <LibraryNoResultV2
+                onClearFilters={clearFilters}
+                mediaType={currentType}
+                activeFilters={activeFilterLabels}
+              />
             ) : (
               (() => {
                 const state = classifyEmptyState({
