@@ -1,4 +1,7 @@
-// Design ref: ux-design.pen Screen HP-5 ExploreBlock Polish (Y5XvRv)
+// Design ref: ux-design.pen Screen H9-SPEC (Y5XvRv)
+// The bugfix-10-6 polish contract (scroll-arrow contrast, no arrows on an empty
+// block). Renamed from HP-5/H5-D by dsr-7 AC #15 — 「H5-D」 collided with the
+// unrelated H5-D-v3 (空片庫・首跑).
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { useExploreBlockContent } from '../../hooks/useExploreBlocks';

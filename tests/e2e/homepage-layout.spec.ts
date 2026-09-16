@@ -463,6 +463,103 @@ test.describe('Homepage responsive hero height @ui @homepage @story-10-5', () =>
 // AC #2 — Intersection-Observer lazy-load (network-level proof)
 // =============================================================================
 
+// =============================================================================
+// dsr-7 — the 需要注意 readout cell across the widths jsdom cannot see.
+//
+// The component spec can only assert class STRINGS: jsdom applies no Tailwind
+// and has no breakpoints, so every one of those assertions passes whether or
+// not the layout actually works. These are the two questions only a browser
+// answers: does the reading fit, and does the band change height on mount.
+//
+// The worst case is pinned deliberately — $9.9k/$99k is the widest pair the
+// H8-SPEC-v3 folding rule can ever produce.
+// =============================================================================
+
+const mockHomeSummaryWorstCase = {
+  coverage: { status: 'ok', covered: 42, total: 55 },
+  processed_today: { status: 'ok', count: 3 },
+  attention: {
+    status: 'ok',
+    failed_count: 2,
+    spent_usd: 9900,
+    budget_usd: 99000,
+    spend_source: 'live_batch',
+  },
+  in_flight: { status: 'ok', count: 2 },
+};
+
+test.describe('Home readout band — 需要注意 cell @ui @homepage @story-dsr-7', () => {
+  // 390 = the 2×2 phone grid. 768/1024 = the band is already four cells across,
+  // and 768 is the width the first implementation got wrong: it handed the row
+  // layout back at `md`, where a cell is NARROWER than the phone case it was
+  // built to escape (and the digits are `text-lg` by then, not `text-base`).
+  for (const width of [390, 768, 1024, 1280]) {
+    test(`[P0] the failures + spend reading fits at ${width}px`, async ({ page }) => {
+      await stubHomepageBaseline(page);
+      await page.route(`${ROUTE_API}/home-summary`, (route: Route) =>
+        route.fulfill(jsonOk(mockHomeSummaryWorstCase))
+      );
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/');
+
+      const value = page.getByTestId('readout-attention-value');
+      await expect(value).toBeVisible();
+
+      const m = await value.evaluate((el) => {
+        const cell = el.closest('a') as HTMLElement;
+        const cs = window.getComputedStyle(cell);
+        return {
+          overflow: el.scrollWidth - el.clientWidth,
+          valueW: el.getBoundingClientRect().width,
+          contentW:
+            cell.getBoundingClientRect().width -
+            parseFloat(cs.paddingLeft) -
+            parseFloat(cs.paddingRight),
+          text: el.textContent,
+        };
+      });
+
+      expect(m.text).toContain('2 部失敗');
+      expect(m.text).toContain('$9.9k/$99k');
+      // Nothing is clipped, and the reading sits inside the cell's content box
+      // rather than bleeding over its padding into the divider.
+      expect(m.overflow).toBe(0);
+      expect(m.valueW).toBeLessThanOrEqual(m.contentW);
+    });
+  }
+
+  test('[P0] the band does not change height when the readout arrives (CLS)', async ({ page }) => {
+    await stubHomepageBaseline(page);
+    let release: () => void = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route(`${ROUTE_API}/home-summary`, async (route: Route) => {
+      await held;
+      await route.fulfill(jsonOk(mockHomeSummaryWorstCase));
+    });
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.goto('/');
+
+    const skeleton = page.getByTestId('home-readout-skeleton');
+    await expect(skeleton).toBeVisible();
+    const before = await skeleton.evaluate((el) => el.getBoundingClientRect().height);
+
+    release();
+    const band = page.getByTestId('readout-attention-value');
+    await expect(band).toBeVisible();
+    const after = await page
+      .locator('[aria-label="媒體庫讀數"]')
+      .evaluate((el) => el.getBoundingClientRect().height);
+
+    // The skeleton exists ONLY to hold this height. A two-line 需要注意 cell is
+    // exactly the case that used to make it a line short (measured: 160 → 168,
+    // i.e. a whole line). Sub-pixel is not a jump — 11px labels round to .5 —
+    // so the bar is "less than a pixel", not bit-equality.
+    expect(Math.abs(after - before)).toBeLessThan(1);
+  });
+});
+
 test.describe('Homepage lazy-load @ui @homepage @story-10-5', () => {
   test('[P0] AC #2 — below-the-fold block content is NOT fetched until scrolled into view', async ({
     page,

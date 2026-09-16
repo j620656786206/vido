@@ -1,4 +1,8 @@
-// Design ref: ux-design.pen Screen HP-1 Homepage Desktop (sAaCR)
+// Design ref: ux-design.pen Screen H1-D-v3 (k2Otv) · H7-D-v3 (EoCQ4)
+// BOTH ids live on the line above on purpose: that is the line
+// `local/implements-pen-node-id` validates. A node id parked in free-text prose
+// underneath is exactly how the old HP-1 reference here went on pointing at a
+// deleted frame for three weeks after the 2026-08-26 v3 cutover (dsr-7 AC #14).
 import { useCallback, useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQueries } from '@tanstack/react-query';

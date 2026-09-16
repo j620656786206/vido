@@ -112,6 +112,8 @@ READABLE_FLOWS = {
     "flow-m-auth-gate",
     "flow-k-activity-v2",
     "flow-l-requests-v2",
+    "flow-h-homepage-v3",
+    "flow-h-homepage",
 }
 # Floor, not ceiling: a page wider than this keeps its native 1:1 width rather than
 # being shrunk below legibility.
@@ -197,7 +199,7 @@ SCREENS = {
     # Flow G — AI 字幕增強 (correction / transcription progress / translation confirm)
     # Flow H — 首頁 TV Wall (homepage / loading skeleton / block CRUD modal / exploreblock spec)
     "Paqlk": ("flow-h-homepage", "h3"),
-    "Y5XvRv": ("flow-h-homepage", "h5-d"),
+    "Y5XvRv": ("flow-h-homepage", "h9-spec"),
     # Flow I — 進階搜尋 / 篩選 (filter chips / suggestions dropdown / save preset / filter sheet)
     # Desktop filter rail redesign (v2 Design System) — replaces mobile bottom-sheet misuse on lg+
     "vpDLh": ("flow-i-advanced-search", "i5-d"),  # rail persistent (hero) — re-merged onto feat/ux3-2-1 (#89 .pen frames reconstructed post main-merge)

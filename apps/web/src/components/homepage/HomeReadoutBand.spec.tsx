@@ -359,4 +359,108 @@ describe('HomeReadoutBand (Home v3 讀數帶 — ux3-1-7)', () => {
       }
     );
   });
+  // ⚖️ AC #13 WITHDRAWN (Alexyu 2026-09-16): the labels stay 11px. What still
+  // matters is that the skeleton borrows the SAME size as the real label — it
+  // paints real text transparent so its height is derived rather than guessed,
+  // and if the two ever drift the band changes height on mount.
+  it('[P2] the skeleton label is the same size as the real label', () => {
+    mockUseHomeSummary.mockReturnValue(result({ data: summary() }));
+    const { rerender } = render(<HomeReadoutBand />);
+    const live = screen.getByText('繁中字幕').className.match(/text-\[\d+px\]|text-(xs|sm|base)/);
+
+    mockUseHomeSummary.mockReturnValue(result({ isLoading: true }));
+    rerender(<HomeReadoutBand />);
+    const skeletonLabel = screen
+      .getByTestId('home-readout-skeleton')
+      .querySelector('span')!
+      .getAttribute('class')!
+      .match(/text-\[\d+px\]|text-(xs|sm|base)/);
+
+    expect(live).not.toBeNull();
+    expect(skeletonLabel?.[0]).toBe(live?.[0]);
+  });
+
+  // ⚖️ dsr-7 AC #8 (Alexyu 2026-09-16) — and this was never new scope: ux3-1-7
+  // AC #3 already said 「mobile: 2×2 grid … the 需要注意 cell breaks to two
+  // lines (第一行 N 部失敗 / 第二行金額) per H8-SPEC-v3」. It shipped without it.
+  // ONE DOM, CSS picks the axis — so there is a single source of copy rather
+  // than a per-breakpoint fork. What CHANGES with width is the rendered
+  // reading: below `lg` the halves stack and the 「·」 is display:none. (The DOM
+  // `textContent` stays constant, but that is a property of textContent
+  // ignoring CSS, not a claim about what anyone sees.)
+  it('[P1] phones break the 需要注意 cell onto two lines; desktop keeps one', () => {
+    mockUseHomeSummary.mockReturnValue(result({ data: summary() }));
+    render(<HomeReadoutBand />);
+    const value = screen.getByTestId('readout-attention-value');
+
+    // ⚠️ jsdom applies no Tailwind and has no breakpoints, so everything below
+    // is a check that the RIGHT CLASSES ARE REQUESTED — not that the layout
+    // works. Whether the reading actually fits, and whether the band changes
+    // height on mount, are answered in a real browser by
+    // `tests/e2e/homepage-layout.spec.ts` (@story-dsr-7) at 390/768/1024/1280.
+    expect(value).toHaveTextContent('2 部失敗 · $1.2/$5');
+    expect(value.className.split(' ')).toEqual(
+      expect.arrayContaining(['flex', 'flex-col', 'lg:flex-row'])
+    );
+
+    // The 「·」 is wide-layout punctuation: once the halves stack it would be a
+    // dangling separator pointing at the line below it.
+    const sep = screen.getByTestId('readout-attention-separator');
+    expect(sep.className.split(' ')).toEqual(expect.arrayContaining(['hidden', 'lg:inline']));
+    expect(screen.getByTestId('readout-attention-failures')).toHaveTextContent('2 部失敗');
+    expect(screen.getByTestId('readout-attention-spend')).toHaveTextContent('$1.2/$5');
+
+    // #8 — the spend is the first layer of the product's moat; a screen reader
+    // must hear it too. The aria-label REPLACES the cell's content, so if the
+    // amount is not in here, one whole audience never gets it.
+    expect(screen.getByTestId('readout-attention')).toHaveAttribute(
+      'aria-label',
+      '需要注意，2 部失敗待處理，已花費 $1.2/$5，前往活動中心'
+    );
+  });
+
+  // H8-SPEC-v3: 「若沒有失敗、只剩預算警示，金額升到第一行」 — with no failure
+  // line above it the amount has no reason to sit on a second one.
+  it('[P2] with no failures the cell stays a single line at every width', () => {
+    mockUseHomeSummary.mockReturnValue(
+      result({
+        data: summary({
+          attention: {
+            status: 'ok',
+            failedCount: 0,
+            spentUsd: 1.2,
+            budgetUsd: 5,
+            spendSource: 'live_batch',
+          },
+        }),
+      })
+    );
+    render(<HomeReadoutBand />);
+    const value = screen.getByTestId('readout-attention-value');
+    expect(value).toHaveTextContent('一切正常 · $1.2/$5');
+    expect(screen.queryByTestId('readout-attention-separator')).toBeNull();
+    expect(screen.queryByTestId('readout-attention-failures')).toBeNull();
+    // A one-line readout must not carry the stacking layout — the other three
+    // cells share this code path, and an unconditional class would silently
+    // hand all of them a layout mode they have no use for.
+    expect(value.className).not.toContain('flex-col');
+    expect(screen.getByTestId('readout-coverage-value').className).not.toContain('flex-col');
+  });
+
+  // Failures with no measured spend: nothing to move to a second line.
+  it('[P2] failures without a spend readout stay a single line', () => {
+    mockUseHomeSummary.mockReturnValue(
+      result({ data: summary({ attention: { status: 'ok', failedCount: 2 } }) })
+    );
+    render(<HomeReadoutBand />);
+    const value = screen.getByTestId('readout-attention-value');
+    expect(value).toHaveTextContent(/^2 部失敗$/);
+    expect(screen.queryByTestId('readout-attention-separator')).toBeNull();
+    expect(value.className).not.toContain('flex-col');
+    // No spend measured ⇒ nothing to announce beyond the failure count.
+    expect(screen.getByTestId('readout-attention')).toHaveAttribute(
+      'aria-label',
+      '需要注意，2 部失敗待處理，前往活動中心'
+    );
+  });
 });

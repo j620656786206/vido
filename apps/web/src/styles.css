@@ -73,7 +73,7 @@
    * were already hardcoding as text-red-300, so the intent was there all along.
    * Same precedent as --text-muted, raised for the same reason a release ago. */
   --error-text: #e08a76; /* error body text (TC-2 AA-safe on all surfaces) */
-  --warning-tint: #d4763f1f; /* warning badge bg, 整理中 pill */
+  --warning-tint: #d4763f1f; /* warning badge bg (NOT 整理中 — that moved to --accent-tint, dsr-11) */
   /* (2026-08-25, refactor-token-debt-warning) Third slice, third confirmation of
    * the same defect class: --warning as TEXT measures 4.31:1 worst case (on a
    * warning-tinted surface over --bg-tertiary) — sub-AA. #e8b04b (amber-400) is
