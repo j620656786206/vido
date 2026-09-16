@@ -1,6 +1,6 @@
 # Story DSR.7: Flow H 首頁 v3——程式碼與設計稿雙向對齊 H1–H8
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -427,6 +427,7 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`，BMAD dev agent（Amelia）2
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-16 | ✅ 收單 —— PR #440 合併進 main（commit b16c7f10），CI 17 項全綠。**視覺基準零變動**，沒有開 bootstrap PR，與建單時的預測一致。中途 `Lint & Format Check` 紅過一次：新測試裡丟進瀏覽器跑的那段用了 `getComputedStyle`，eslint 當成 Node 程式碼看 → 改 `window.getComputedStyle`，同 PR 修掉。 |
 | 2026-09-16 | ⚖️ **Alexyu 裁定：標籤改回 11px**，AC #13 撤銷（全站 44 處在用 11px，含藥丸下方 40px 那顆徽章）。字階守門測試移除，改成守「骨架標籤與真標籤同尺寸」。立案 `disc-2026-09-11px-micro-label-not-on-type-scale`。 |
 | 2026-09-16 | 🔴 **對抗式 CR（/ship）回報 18 項，修掉 14 項**。最重的三項：① 斷點設在 `md` 等於在**比手機更窄**的地方換回一行（768px 一格 ≈155px < 390px 的 ≈154px，且字級已升到 `text-lg`）——改 `lg`；② 載入骨架不再等高，資料到了會跳 8px——高度下限移到 `CELL_BOX`（84px 是量出來的）；③ 唯一的行為改動**沒有任何自動化覆蓋**（jsdom 不套 Tailwind）——補 5 條真實瀏覽器測試進 `homepage-layout.spec.ts`，CI 的 e2e 不帶 grep 所以會跑到。另修：aria-label 補金額（螢幕閱讀器原本完全聽不到）、`.gitignore` 還原改用 `.prettierignore`、節點 ID 放回被 lint 驗證的那一行、藥丸測試改斷言 `pickPosterBadge`、兩條「拿掉功能也會綠」的測試改成有鑑別力。 |
 | 2026-09-16 | ✅ Task 8 閘門全綠：web **3401/3401**、api PASS、lint 0 errors、typecheck PASS、prettier PASS、token 五份一致。匯出 192 張只有 10 個檔案變動，全在 Flow H。 |
