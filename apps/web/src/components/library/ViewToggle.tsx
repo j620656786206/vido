@@ -1,4 +1,8 @@
-// Design ref: ux-design.pen Screen 1 Library Grid Desktop (KNI8F)
+// Design ref: ux-design.pen Screen A3p-D (LcHBs) · A4p-D (b1H71g)
+// Two frames on purpose: the toggle IS the difference between them.
+// (Was 「Screen 1 Library Grid Desktop」 (KNI8F) — that v1 frame was deleted with
+// the 39 superseded screens on 2026-09-10, so the reference pointed at nothing.
+// dsr-1 AC #2.)
 import { LayoutGrid, List } from 'lucide-react';
 import { cn } from '../../lib/utils';
 

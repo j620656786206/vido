@@ -1,4 +1,6 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen A4p-D (b1H71g)
+// One row of that screen's list view. (Was still carrying the 19-8 `pending`
+// placeholder, which Rule 21 says no components/ file should have after 19-8.)
 /**
  * v2 Browse list row (UX Redesign Phase 2 — UX2-2, AC #5, `b1H71g`).
  * Thumbnail + title + meta (year · runtime/seasons · genre) + tech badges

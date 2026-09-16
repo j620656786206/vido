@@ -1,5 +1,8 @@
 // Clock-mocked: gallery fixture library-recently-added uses page.clock.setFixedTime
-// Design ref: ux-design.pen Screen 1 Library Grid Desktop (KNI8F)
+// Design ref: ux-design.pen — no current screen frame; this component has NO
+// mount anywhere (the homepage uses homepage/RecentlyAddedRowV2 instead; the only
+// reference left is the visual gallery). Its old reference pointed at the deleted
+// v1 grid frame. Delete-or-keep: disc-2026-09-unmounted-v1-components.
 import { Link } from '@tanstack/react-router';
 import { PosterCard } from '../media/PosterCard';
 import { PosterCardSkeleton } from '../media/PosterCardSkeleton';

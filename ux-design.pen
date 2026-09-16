@@ -17186,7 +17186,7 @@
                           "x": 8,
                           "y": 8,
                           "name": "status-badge",
-                          "fill": "$overlay-scrim",
+                          "fill": "$bg-secondary",
                           "cornerRadius": "$radius-pill",
                           "gap": "$Space/xs",
                           "padding": [
@@ -17198,7 +17198,10 @@
                             {
                               "type": "icon",
                               "id": "niwYf",
+                              "x": 8,
+                              "y": 7.5,
                               "name": "badge-dot",
+                              "enabled": false,
                               "width": 11,
                               "height": 11,
                               "icon": "check",
@@ -17682,7 +17685,7 @@
                           "x": 8,
                           "y": 8,
                           "name": "status-badge",
-                          "fill": "$overlay-scrim",
+                          "fill": "$bg-secondary",
                           "cornerRadius": "$radius-pill",
                           "gap": "$Space/xs",
                           "padding": [
@@ -17694,7 +17697,10 @@
                             {
                               "type": "icon",
                               "id": "bf78H",
+                              "x": 8,
+                              "y": 7.5,
                               "name": "badge-dot",
+                              "enabled": false,
                               "width": 11,
                               "height": 11,
                               "icon": "check",
@@ -17736,31 +17742,6 @@
                               "icon": "check",
                               "library": "lucide",
                               "fill": "$text-on-accent"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "fTCLX",
-                          "x": 86,
-                          "y": 96,
-                          "name": "play-btn",
-                          "width": 48,
-                          "height": 48,
-                          "fill": "$text-on-scrim",
-                          "cornerRadius": "$radius-pill",
-                          "justifyContent": "center",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "icon",
-                              "id": "TiWWx",
-                              "name": "play-icon",
-                              "width": 24,
-                              "height": 24,
-                              "icon": "play",
-                              "library": "lucide",
-                              "fill": "$text-inverse"
                             }
                           ]
                         },
@@ -26764,7 +26745,7 @@
                           "id": "qkoFv",
                           "name": "title",
                           "fill": "$text-primary",
-                          "content": "片庫還是空的",
+                          "content": "指定一個媒體資料夾即可開始",
                           "lineHeight": "$Type/H3/Line",
                           "fontFamily": "$Type/Family/Primary",
                           "fontSize": "$Type/H3/Size",
@@ -26777,7 +26758,7 @@
                           "fill": "$text-secondary",
                           "textGrowth": "fixed-width",
                           "width": 460,
-                          "content": "設定媒體資料夾後，掃描會自動辨識並整理你的電影與影集，補上繁中標題與海報。",
+                          "content": "會掃描資料夾中的影片並自動匹配 TMDb 資訊",
                           "lineHeight": "$Type/Body/Line",
                           "textAlign": "center",
                           "fontFamily": "$Type/Family/Primary",
@@ -26810,13 +26791,27 @@
                               "id": "j57MjA",
                               "name": "cta-link",
                               "fill": "$accent-text",
-                              "content": "或先了解掃描設定 →",
+                              "content": "開啟設定精靈",
                               "lineHeight": "$Type/Body/Line",
                               "fontFamily": "$Type/Family/Primary",
                               "fontSize": "$Type/Body/Size",
                               "fontWeight": "$Type/Body/Weight"
                             }
                           ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "r8d9s",
+                          "name": "三態註記",
+                          "fill": "$text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": 460,
+                          "content": "註：空媒體庫在程式碼裡有三種，由容器分類、文案各不相同——本稿畫的是 ① 還沒指定媒體資料夾（EmptyNoFolder，全新使用者一定先遇到）。另外兩種：② 資料夾設好了但還沒接 qBittorrent →「連接 qBittorrent 開始下載」＋「已有檔案？設定資料夾」（EmptyNoQBT）；③ 都設好了、等第一筆媒體 →「準備好了，等待第一筆媒體」＋「下載完成或掃描到檔案後會自動出現在這裡」＋「掃描中…」（EmptyReadyForScan）。要不要各給一張稿是版面決定，立案 disc-2026-09-library-empty-three-states-one-frame。",
+                          "lineHeight": "$Type/Body/Line",
+                          "textAlign": "center",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Body/Size",
+                          "fontWeight": "$Type/Body/Weight"
                         }
                       ]
                     }

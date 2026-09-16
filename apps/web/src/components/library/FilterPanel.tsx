@@ -11,6 +11,23 @@ export interface FilterValues {
   unmatched?: boolean;
 }
 
+/**
+ * The ONE spelling of the year facet.
+ *
+ * It is rendered twice on the same screen — as a chip in the toolbar and inside
+ * the no-result sentence below it — and the two used to disagree (`2010–2019 年`
+ * vs `2010–2019`, and a half-open bound came out as a bare `2010 年` that meant
+ * 「from」 and 「until」 depending on which bound was set). Returns null when no
+ * year bound is active.
+ */
+export function yearFilterLabel(filters: Pick<FilterValues, 'yearMin' | 'yearMax'>): string | null {
+  const { yearMin, yearMax } = filters;
+  if (yearMin !== undefined && yearMax !== undefined) return `${yearMin}–${yearMax} 年`;
+  if (yearMin !== undefined) return `${yearMin} 年起`;
+  if (yearMax !== undefined) return `至 ${yearMax} 年`;
+  return null;
+}
+
 const DECADE_OPTIONS = [
   { label: '2020s', min: 2020, max: 2029 },
   { label: '2010s', min: 2010, max: 2019 },

@@ -1,4 +1,6 @@
-// Design ref: ux-design.pen Screen I5-D (YEqii)
+// Design ref: ux-design.pen Screen I5-D (vpDLh)
+// Same screen, new node: I5-D was reconstructed after a .pen merge and YEqii — the
+// id this file carried — no longer exists. dsr-1 AC #2.
 /**
  * ux3-0-7: the desktop (lg+) library filter rail. A second-level sidebar inside the
  * content area (bg-primary + right hairline — distinct from the bg-secondary nav shell)
