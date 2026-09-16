@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen B4p-D (N2fmG6)
 /**
  * SeasonAccordion (Story 12-2)
  *
@@ -187,7 +187,7 @@ export function SeasonAccordion({
           className="flex flex-col items-center gap-3 rounded-lg border border-[var(--border-subtle)] px-4 py-6 text-center"
           data-testid="season-accordion-error"
         >
-          <p className="text-sm text-[var(--text-secondary)]">無法載入季列表,請稍後再試。</p>
+          <p className="text-sm text-[var(--text-secondary)]">無法載入季列表，請稍後再試。</p>
           {onRetry && (
             <button
               type="button"

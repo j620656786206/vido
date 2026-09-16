@@ -255,17 +255,20 @@ test.describe('Media Detail - Error Handling @e2e @media-detail', () => {
     // WHEN: Using invalid type parameter
     await page.goto('/media/invalid/12345');
 
-    // THEN: Should show 404 page
+    // THEN: Should show the v2 not-found state — the same one a missing row shows
+    // (dsr-2 AC #8 unified the route-level 「404 · 找不到該媒體內容」 into it).
     await page.waitForLoadState('networkidle');
-    await expect(page.getByText('404')).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText('找不到該媒體內容')).toBeVisible();
+    const notFound = page.getByTestId('detail-not-found');
+    await expect(notFound).toBeVisible({ timeout: 15000 });
+    await expect(notFound.getByText('找不到這部影片')).toBeVisible();
   });
 
   test('[P1] should show error for non-existent UUID', async ({ page }) => {
     // GIVEN: A UUID that doesn't exist in the database
 
     // WHEN: Navigating to a non-existent movie
-    // Note: react-query retries 3x with exponential backoff before isError=true
+    // Note: react-query retries once (queryClient.ts retry: 1) before isError=true —
+    // even for a 404 (disc-2026-09-detail-404-still-retried)
     await page.goto('/media/movie/00000000-0000-0000-0000-000000000000');
 
     // THEN: v2 DetailNotFoundV2 renders after query retries exhaust (ux3-cutover-3)
@@ -279,8 +282,12 @@ test.describe('Media Detail - Error Handling @e2e @media-detail', () => {
     await page.goto('/media/invalid/12345');
     await page.waitForLoadState('networkidle');
 
-    // WHEN: User clicks the back to library button
-    const backButton = page.getByRole('button', { name: '返回媒體庫' });
+    // WHEN: User clicks the back to library button. Scoped to the not-found panel:
+    // DetailNotFoundV2 also has an icon back button with the same accessible name
+    // (aria-label), which would make an unscoped role query a strict-mode violation.
+    const backButton = page
+      .getByTestId('detail-not-found')
+      .getByRole('button', { name: '返回媒體庫' });
     await expect(backButton).toBeVisible({ timeout: 15000 });
 
     // THEN: Should navigate to library page

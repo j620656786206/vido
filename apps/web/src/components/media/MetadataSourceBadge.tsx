@@ -1,4 +1,7 @@
-// Design ref: ux-design.pen Screen 4 Detail Panel Desktop (RgSxQ)
+// Design ref: ux-design.pen — no current screen frame; only the v1 MediaDetailPanel and
+// the visual gallery render this badge — no production mount. Its old reference
+// pointed at the deleted v1 panel (RgSxQ).
+// Delete-or-keep: disc-2026-09-unmounted-v1-components.
 export type MetadataSource = 'tmdb' | 'douban' | 'wikipedia' | 'ai' | 'manual';
 
 interface SourceConfig {

@@ -16,7 +16,8 @@ const region: WatchProviderRegion = {
 describe('StreamingAvailability', () => {
   it('renders the section heading', () => {
     render(<StreamingAvailability region={region} />);
-    expect(screen.getByText('可在哪裡觀看')).toBeInTheDocument();
+    // dsr-2 AC #9: B8p-D heading.
+    expect(screen.getByRole('heading', { name: '觀看平台' })).toBeInTheDocument();
   });
 
   it('renders flatrate / rent / buy group labels and provider logos', () => {
@@ -72,6 +73,8 @@ describe('StreamingAvailability', () => {
     render(<StreamingAvailability isError onRetry={onRetry} />);
     const alert = screen.getByTestId('streaming-availability-error');
     expect(alert).toHaveAttribute('role', 'alert');
+    // Full-width comma in a Chinese sentence (dsr-2 AC #9).
+    expect(alert).toHaveTextContent('無法載入串流資訊，請稍後再試。');
     fireEvent.click(screen.getByText('重試'));
     expect(onRetry).toHaveBeenCalledTimes(1);
   });

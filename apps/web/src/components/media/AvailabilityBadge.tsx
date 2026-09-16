@@ -1,4 +1,7 @@
-// Design ref: ux-design.pen Screen 4 Detail Panel Desktop (RgSxQ)
+// Design ref: ux-design.pen — no current screen frame; neither poster-corner badge
+// (「已有」／「已請求」) is drawn anywhere in the .pen (searched 2026-09-16 — the only
+// 「已請求」 text is a row pill inside L3-D-v2's season picker, a different element).
+// Its old reference pointed at the deleted v1 detail panel (RgSxQ).
 import { cn } from '../../lib/utils';
 
 export type AvailabilityBadgeVariant = 'owned' | 'requested';

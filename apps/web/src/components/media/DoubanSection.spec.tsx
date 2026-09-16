@@ -25,6 +25,9 @@ describe('DoubanSection', () => {
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     expect(link).toHaveTextContent('查看豆瓣頁面');
+    // dsr-2 AC #9: short reviews are switched off (2026-08-30), so the heading must
+    // not promise 評論.
+    expect(screen.getByRole('heading', { name: '豆瓣' })).toBeInTheDocument();
   });
 
   it('omits the entire section when no doubanId is known (AC #4)', () => {

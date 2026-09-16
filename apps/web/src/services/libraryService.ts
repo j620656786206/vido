@@ -18,21 +18,32 @@ import type {
   RecommendationsResponse,
   WatchProvidersResponse,
 } from '../types/library';
+import { ApiError } from '../lib/apiError';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
 
+  // ApiError, not a bare Error: callers need the status (404 vs 5xx on the detail
+  // page, dsr-2 AC #8) and the Rule-7 code (LibraryErrorV2's code pill).
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error?.message || `API request failed: ${response.status}`);
+    throw new ApiError(
+      errorData.error?.message || `API request failed: ${response.status}`,
+      response.status,
+      errorData.error?.code
+    );
   }
 
   const data: ApiResponse<T> = await response.json();
 
   if (!data.success) {
-    throw new Error(data.error?.message || 'API request failed');
+    throw new ApiError(
+      data.error?.message || 'API request failed',
+      response.status,
+      data.error?.code
+    );
   }
 
   return snakeToCamel<T>(data.data);

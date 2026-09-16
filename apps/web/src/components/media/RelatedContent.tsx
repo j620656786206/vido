@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen — no current screen frame; Epic 12 detail-page recommendations section postdates the .pen design
+// Design ref: ux-design.pen Screen B8p-D (UH0sk)
 // Tiles reuse PosterCard (Component/PosterCard RusTY), which carries its own .pen link.
 import { PosterCard } from './PosterCard';
 import { PosterCardSkeleton } from './PosterCardSkeleton';
@@ -63,7 +63,7 @@ export function RelatedContent({ items, isLoading, isError, onRetry }: RelatedCo
           className="flex flex-col items-center gap-3 rounded-lg border border-[var(--border-subtle)] px-4 py-6 text-center"
           data-testid="related-content-error"
         >
-          <p className="text-sm text-[var(--text-secondary)]">無法載入相關推薦,請稍後再試。</p>
+          <p className="text-sm text-[var(--text-secondary)]">無法載入相關推薦，請稍後再試。</p>
           {onRetry && (
             <button
               type="button"

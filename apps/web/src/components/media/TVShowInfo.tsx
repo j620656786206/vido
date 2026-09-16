@@ -1,4 +1,7 @@
-// Design ref: ux-design.pen Screen 4b Detail Panel Desktop (TV Series) (407vK)
+// Design ref: ux-design.pen — no current screen frame; imported ONLY by the visual
+// gallery (and a test-local harness) — no production mount. Its old reference
+// pointed at the deleted v1 TV panel (407vK).
+// Delete-or-keep: disc-2026-09-unmounted-v1-components.
 import type { TVShowDetails } from '../../types/tmdb';
 import { cn } from '../../lib/utils';
 

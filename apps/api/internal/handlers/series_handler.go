@@ -111,8 +111,16 @@ func (h *SeriesHandler) GetByID(c *gin.Context) {
 
 	series, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
+		// Only a genuinely missing row is a 404 (dsr-2 AC #8). Anything else — a
+		// locked or failing database — is a 500, so the detail page can say "could
+		// not load" instead of telling the user the item was removed.
+		if errors.Is(err, sql.ErrNoRows) {
+			NotFoundError(c, "Series")
+			return
+		}
 		slog.Error("Failed to get series", "error", err, "series_id", id)
-		NotFoundError(c, "Series")
+		ErrorResponse(c, http.StatusInternalServerError, "DB_QUERY_FAILED",
+			"Failed to load series", "Please try again later.")
 		return
 	}
 

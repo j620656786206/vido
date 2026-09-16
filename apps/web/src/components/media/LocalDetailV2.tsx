@@ -43,7 +43,8 @@ import { ManageSubtitleDialogV2 } from '../subtitle/ManageSubtitleDialogV2';
 import { NfoLocalizeAction } from './NfoLocalizeAction';
 import { DetailHeroV2 } from './DetailHeroV2';
 import { DetailTechInfoV2 } from './DetailTechInfoV2';
-import { DetailSkeletonV2, DetailNotFoundV2 } from './DetailStatesV2';
+import { DetailSkeletonV2, DetailNotFoundV2, DetailLoadErrorV2 } from './DetailStatesV2';
+import { isNotFoundError } from '../../lib/apiError';
 import { TmdbAttribution } from '../ui/TmdbAttribution';
 import { deriveLifecycleStatus, deriveSubtitleStatus } from '../../utils/libraryStatus';
 
@@ -69,6 +70,7 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
   const data = isMovie ? localMovie.data : localSeries.data;
   const isLoading = isMovie ? localMovie.isLoading : localSeries.isLoading;
   const isError = isMovie ? localMovie.isError : localSeries.isError;
+  const loadError = isMovie ? localMovie.error : localSeries.error;
 
   // §9b CN-subtitle policy source (movies only; series has no production_countries).
   // Flatten to the comma-joined ISO string ManageSubtitleDialogV2 expects, mirroring
@@ -130,7 +132,26 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
   }, [data, isMovie, id, effectiveCredits, localMovie.data, localSeries.data]);
 
   if (isLoading) return <DetailSkeletonV2 />;
-  if (isError || !data) return <DetailNotFoundV2 onBack={onBack} />;
+  // dsr-2 AC #8: only a real 404 means "removed"; any other failure is a failed load —
+  // the item (and its files) may be perfectly fine. Only when there is NOTHING to
+  // show: React Query keeps cached data when a background refetch fails (e.g. the
+  // refetch after subtitle generation hits a locked DB), and the loaded page — plus
+  // any open dialog — must survive that.
+  if (!data) {
+    if (isError && !isNotFoundError(loadError)) {
+      const query = isMovie ? localMovie : localSeries;
+      return (
+        <DetailLoadErrorV2
+          onBack={onBack}
+          onRetry={() => query.refetch()}
+          retrying={query.isFetching}
+          code={(loadError as { code?: string } | null)?.code}
+          reassureFiles
+        />
+      );
+    }
+    return <DetailNotFoundV2 onBack={onBack} />;
+  }
 
   const date = isMovie ? localMovie.data?.releaseDate : localSeries.data?.firstAirDate;
   const year = date?.slice(0, 4);
@@ -218,6 +239,22 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
     </>
   );
 
+  const techInfoBlock = (
+    <DetailTechInfoV2
+      videoResolution={data.videoResolution}
+      videoCodec={data.videoCodec}
+      audioCodec={data.audioCodec}
+      audioChannels={data.audioChannels}
+      hdrFormat={data.hdrFormat}
+      subtitleTracks={data.subtitleTracks}
+      fileSize={data.fileSize}
+      filePath={filePath}
+    />
+  );
+  const creditsBlock = effectiveCredits ? (
+    <CreditsSection director={director} cast={effectiveCredits.cast?.slice(0, 8)} />
+  ) : null;
+
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]" data-testid="local-detail-v2">
       <DetailHeroV2
@@ -253,19 +290,18 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
           />
         )}
 
-        <DetailTechInfoV2
-          videoResolution={data.videoResolution}
-          videoCodec={data.videoCodec}
-          audioCodec={data.audioCodec}
-          audioChannels={data.audioChannels}
-          hdrFormat={data.hdrFormat}
-          subtitleTracks={data.subtitleTracks}
-          fileSize={data.fileSize}
-          filePath={filePath}
-        />
-
-        {effectiveCredits && (
-          <CreditsSection director={director} cast={effectiveCredits.cast?.slice(0, 8)} />
+        {/* Movie: cast before file facts (B3p-D, ux2-3 AC #4). Series keeps file facts
+            above cast — the season list already sits between overview and both. */}
+        {isMovie ? (
+          <>
+            {creditsBlock}
+            {techInfoBlock}
+          </>
+        ) : (
+          <>
+            {techInfoBlock}
+            {creditsBlock}
+          </>
         )}
 
         {tmdbId > 0 && <TrailerSection tmdbId={tmdbId} type={type} title={data.title} />}
@@ -279,21 +315,22 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
           />
         )}
 
-        {douban.data?.doubanId && (
-          <DoubanSection
-            doubanId={douban.data.doubanId}
-            summary={doubanReview.data}
-            isLoading={doubanReview.isLoading}
-            isError={doubanReview.isError}
-          />
-        )}
-
+        {/* 相關推薦 before 豆瓣 (B8p-D, ux2-3 AC #4). */}
         {tmdbId > 0 && (
           <RelatedContent
             items={recs.data?.results ?? []}
             isLoading={recs.isLoading}
             isError={recs.isError}
             onRetry={() => recs.refetch()}
+          />
+        )}
+
+        {douban.data?.doubanId && (
+          <DoubanSection
+            doubanId={douban.data.doubanId}
+            summary={doubanReview.data}
+            isLoading={doubanReview.isLoading}
+            isError={doubanReview.isError}
           />
         )}
 

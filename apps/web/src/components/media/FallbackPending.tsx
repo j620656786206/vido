@@ -1,4 +1,7 @@
-// Design ref: ux-design.pen Screen 4e Detail Fallback Desktop (Pending) (wQOkg)
+// Design ref: ux-design.pen Screen B7-M (7UnDy)
+// Test-only today (visual gallery; the v2 detail page does not render it) — B7-M has
+// no live implementer, so this pointer is honest. Revival: dsr-2b-flow-b-no-metadata-states.
+// Old reference was the deleted desktop frame 4e (wQOkg).
 import { Loader2 } from 'lucide-react';
 
 interface FallbackPendingProps {

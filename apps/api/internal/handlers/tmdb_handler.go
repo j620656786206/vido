@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -780,7 +781,8 @@ func (h *TMDbHandler) RegisterRoutes(rg *gin.RouterGroup) {
 // alerts stay accurate (Story 10-1a code-review M2). The HTTP response
 // mirrors handleTMDbError so AC #5's ApiResponse<T> envelope is preserved.
 func handleValidationError(c *gin.Context, err error, operation string, attrs ...any) {
-	if tmdbErr, ok := err.(*tmdb.TMDbError); ok {
+	var tmdbErr *tmdb.TMDbError
+	if errors.As(err, &tmdbErr) {
 		logAttrs := append([]any{
 			"error_code", tmdbErr.Code,
 			"error", tmdbErr.Message,
@@ -800,8 +802,12 @@ func handleValidationError(c *gin.Context, err error, operation string, attrs ..
 
 // handleTMDbError handles TMDb-specific errors and returns appropriate HTTP responses
 func handleTMDbError(c *gin.Context, err error, operation string, attrs ...any) {
-	// Check if it's a TMDb-specific error
-	if tmdbErr, ok := err.(*tmdb.TMDbError); ok {
+	// Check if it's a TMDb-specific error. errors.As, not a type assertion: the TMDb
+	// client wraps its typed errors (`fmt.Errorf("failed to get movie details: %w",
+	// err)`), and a bare assertion never matched — every real TMDb 404/429/502 left
+	// here as a 500 (dsr-2 AC #8; the detail page could not tell "gone" from "down").
+	var tmdbErr *tmdb.TMDbError
+	if errors.As(err, &tmdbErr) {
 		logAttrs := append([]any{
 			"error_code", tmdbErr.Code,
 			"error", tmdbErr.Message,

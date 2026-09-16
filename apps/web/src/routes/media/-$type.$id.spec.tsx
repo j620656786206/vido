@@ -56,6 +56,7 @@ import { classifyId } from './$type.$id';
 import { TMDbDetailV2 } from '../../components/media/TMDbDetailV2';
 import { useOwnedMedia, type OwnedMediaState } from '../../hooks/useOwnedMedia';
 import { libraryService } from '../../services/libraryService';
+import { ApiError } from '../../lib/apiError';
 
 // Mock the tmdb service
 vi.mock('../../services/tmdb', () => ({
@@ -555,6 +556,17 @@ describe('TMDbDetailV2 (bugfix-10-1 ACs ported from the deleted TMDbDetailView �
       expect(screen.getByText('動作')).toBeInTheDocument();
     });
 
+    // dsr-2 AC #9: cast follows the overview, ahead of the B8p-D extension sections.
+    it('orders sections: 簡介 → 演員 / 製作 → 觀看平台', async () => {
+      renderTMDbView('movie', 123);
+
+      const heading = await screen.findByRole('heading', { name: '觀看平台' });
+      const overview = screen.getByTestId('detail-overview');
+      const credits = await screen.findByTestId('credits-section');
+      expect(overview.compareDocumentPosition(credits) & 4).toBe(4);
+      expect(credits.compareDocumentPosition(heading) & 4).toBe(4);
+    });
+
     it('renders overview from TMDb data', async () => {
       renderTMDbView('movie', 123);
 
@@ -564,24 +576,42 @@ describe('TMDbDetailV2 (bugfix-10-1 ACs ported from the deleted TMDbDetailView �
     });
   });
 
-  describe('AC #5 — error path renders the v2 not-found state', () => {
-    it('renders DetailNotFoundV2 when TMDb fetch errors (movie)', async () => {
-      vi.mocked(tmdbService.getMovieDetails).mockRejectedValueOnce(new Error('TMDB_TIMEOUT'));
+  // dsr-2 AC #8 (drift from bugfix-10-1 Task 5.4, which asserted a timeout renders
+  // not-found): only a real 404 is "not found"; a timeout is a failed load.
+  describe('AC #5 — error path: 404 → not-found, anything else → load error', () => {
+    it('renders DetailNotFoundV2 when TMDb says 404 (movie)', async () => {
+      vi.mocked(tmdbService.getMovieDetails).mockRejectedValueOnce(
+        new ApiError('not found', 404, 'TMDB_NOT_FOUND')
+      );
       renderTMDbView('movie', 999);
 
       await waitFor(() => {
         expect(screen.getByTestId('detail-not-found')).toBeInTheDocument();
       });
       expect(screen.getByText('找不到這部影片')).toBeInTheDocument();
+      // Not a library item — the not-found sentence must not blame the library.
+      expect(screen.getByTestId('detail-not-found')).not.toHaveTextContent('媒體庫移除');
       expect(screen.queryByTestId('tmdb-detail-v2')).not.toBeInTheDocument();
     });
 
-    it('renders DetailNotFoundV2 when TMDb fetch errors (tv)', async () => {
+    it('renders DetailLoadErrorV2 when TMDb times out (movie) — no file reassurance', async () => {
+      vi.mocked(tmdbService.getMovieDetails).mockRejectedValueOnce(new Error('TMDB_TIMEOUT'));
+      renderTMDbView('movie', 999);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('detail-load-error')).toBeInTheDocument();
+      });
+      expect(screen.queryByTestId('detail-not-found')).not.toBeInTheDocument();
+      // Not a library item — "your files are fine" would mislead.
+      expect(screen.queryByText(/你的檔案沒有受影響/)).not.toBeInTheDocument();
+    });
+
+    it('renders DetailLoadErrorV2 when TMDb times out (tv)', async () => {
       vi.mocked(tmdbService.getTVShowDetails).mockRejectedValueOnce(new Error('TMDB_TIMEOUT'));
       renderTMDbView('tv', 999);
 
       await waitFor(() => {
-        expect(screen.getByTestId('detail-not-found')).toBeInTheDocument();
+        expect(screen.getByTestId('detail-load-error')).toBeInTheDocument();
       });
     });
   });

@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen — no current screen frame; Epic 12 detail-page streaming-availability section postdates the .pen design
+// Design ref: ux-design.pen Screen B8p-D (UH0sk)
 import { getImageUrl } from '../../lib/image';
 import type { WatchProvider, WatchProviderRegion } from '../../types/library';
 
@@ -27,7 +27,7 @@ const GROUPS: {
 function Heading() {
   return (
     <h2 id={HEADING_ID} className="text-lg font-semibold text-[var(--text-primary)]">
-      可在哪裡觀看
+      觀看平台
     </h2>
   );
 }
@@ -71,7 +71,7 @@ function ProviderGroup({ label, providers }: { label: string; providers: WatchPr
 }
 
 /**
- * StreamingAvailability renders the "可在哪裡觀看" section on a media detail page
+ * StreamingAvailability renders the "觀看平台" section on a media detail page
  * (Story 12-4). It is fail-soft (Rule 27 Pillar 3): a load error or empty result
  * NEVER throws or breaks the rest of the page — it shows a quiet retry affordance
  * or a muted empty-state. Provider logos come from TMDB (JustWatch-sourced), which
@@ -113,7 +113,7 @@ export function StreamingAvailability({
           className="flex flex-col items-center gap-3 rounded-lg border border-[var(--border-subtle)] px-4 py-6 text-center"
           data-testid="streaming-availability-error"
         >
-          <p className="text-sm text-[var(--text-secondary)]">無法載入串流資訊,請稍後再試。</p>
+          <p className="text-sm text-[var(--text-secondary)]">無法載入串流資訊，請稍後再試。</p>
           {onRetry && (
             <button
               type="button"

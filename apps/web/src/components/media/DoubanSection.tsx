@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen — no current screen frame; Epic 12 detail-page Douban review section postdates the .pen design
+// Design ref: ux-design.pen Screen B8p-D (UH0sk)
 import type { ReactNode } from 'react';
 import type { DoubanReviewSummary } from '../../types/library';
 
@@ -26,7 +26,7 @@ function SectionShell({ children }: { children: ReactNode }) {
       data-testid="douban-section"
     >
       <h2 id={HEADING_ID} className="text-lg font-semibold text-[var(--text-primary)]">
-        豆瓣評論
+        豆瓣
       </h2>
       {children}
     </section>
@@ -50,7 +50,10 @@ function StarRating({ rating }: { rating: number }) {
 }
 
 /**
- * DoubanSection renders the "豆瓣評論" section on a media detail page (Story 12-6):
+ * DoubanSection renders the "豆瓣" section on a media detail page (Story 12-6).
+ * Heading was 「豆瓣評論」 until dsr-2: short-review scraping is switched off
+ * (⚖️ 2026-08-30, bugfix-douban-sec-gate-liveness), so a heading promising
+ * reviews over a lone link was a promise the page never kept. Original scope:
  * a direct link to the title's Douban subject page (AC #1) plus a short summary of
  * Douban user short comments (短評, AC #2). Fail-soft (Rule 27 Pillar 3): it NEVER
  * throws — when the review scrape fails / is empty the review block is omitted while

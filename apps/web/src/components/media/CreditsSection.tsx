@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen 4 Detail Panel Desktop (RgSxQ)
+// Design ref: ux-design.pen Screen B3p-D (uRGu2)
 import { getImageUrl } from '../../lib/image';
 import type { CastMember, CrewMember, Creator } from '../../types/tmdb';
 import { cn } from '../../lib/utils';
@@ -24,6 +24,9 @@ export function CreditsSection({ director, cast, createdBy, className }: Credits
 
   return (
     <div className={cn('mt-6', className)} data-testid="credits-section">
+      {/* Section heading (B3p-D, dsr-2 AC #9) — every other detail section has an h2;
+          without one the credits' h3s hung under whatever h2 came before them. */}
+      <h2 className="mb-3 text-lg font-semibold text-[var(--text-primary)]">演員 / 製作</h2>
       {/* Task 5.2: Director (for movies) or Created by (for TV) */}
       {director && (
         <div className="mb-4">

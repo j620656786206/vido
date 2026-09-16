@@ -41,6 +41,9 @@ import { Skeleton } from '../../components/ui/Skeleton';
 import { Pagination } from '../../components/ui/Pagination';
 import { PosterCard } from '../../components/media/PosterCard';
 import { EpisodeList } from '../../components/media/EpisodeList';
+import { DetailHeroV2 } from '../../components/media/DetailHeroV2';
+import { DetailTechInfoV2 } from '../../components/media/DetailTechInfoV2';
+import { DetailNotFoundV2, DetailLoadErrorV2 } from '../../components/media/DetailStatesV2';
 import { RequestButton } from '../../components/requests/RequestButton';
 import { RequestRow } from '../../components/requests/RequestRow';
 import { PosterCardSkeleton } from '../../components/media/PosterCardSkeleton';
@@ -1080,6 +1083,80 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     penNode: 'screen-section',
     statesOnly: ['default'],
     width: 480,
+  },
+  // dsr-2 AC #14 — the LIVE v2 detail page had zero pixel coverage. Every image path
+  // is null on purpose: the hero then renders its filename-hash gradient (the same
+  // branch an image load failure falls back to), so these never touch the network —
+  // see backlog-flaky-visual-media-detail-panel-backdrop for why that matters.
+  {
+    id: 'media-detail-hero-v2',
+    label: 'media/DetailHeroV2 (B3p-D · image fallback)',
+    component: DetailHeroV2,
+    props: {
+      title: '你的名字',
+      originalTitle: '君の名は。',
+      backdropPath: null,
+      posterPath: null,
+      badges: [
+        { label: '已入庫', className: 'bg-[var(--success-tint)] text-[var(--success-text)]' },
+        { label: '繁中', className: 'bg-[var(--success-tint)] text-[var(--success-text)]' },
+      ],
+      meta: (
+        <>
+          <span className="font-mono">2016</span>
+          <span className="font-mono">107 分</span>
+          <span>動畫 / 愛情 / 奇幻</span>
+        </>
+      ),
+      actions: (
+        <button
+          type="button"
+          className="min-h-[44px] rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-4 text-sm font-medium text-[var(--text-on-accent)]"
+        >
+          管理字幕
+        </button>
+      ),
+      onBack: noop,
+    },
+    penNode: 'screen-section',
+    statesOnly: ['default'],
+    width: 960,
+  },
+  {
+    id: 'media-detail-tech-info-v2',
+    label: 'media/DetailTechInfoV2 (B3p-D · 檔案資訊)',
+    component: DetailTechInfoV2,
+    props: {
+      videoResolution: '2160p',
+      videoCodec: 'HEVC',
+      audioCodec: 'TrueHD',
+      audioChannels: 8,
+      hdrFormat: 'HDR10',
+      subtitleTracks: JSON.stringify([{ language: 'zh-Hant' }, { language: 'eng' }]),
+      fileSize: 9_040_000_000,
+      filePath: '/media/movies/你的名字 (2016)/your.name.2016.2160p.mkv',
+    },
+    penNode: 'screen-section',
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'media-detail-not-found-v2',
+    label: 'media/DetailNotFoundV2 (B6p-D)',
+    component: DetailNotFoundV2,
+    props: { onBack: noop },
+    penNode: 'screen-section',
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'media-detail-load-error-v2',
+    label: 'media/DetailLoadErrorV2 (B6p-D 註記 · 載入失敗)',
+    component: DetailLoadErrorV2,
+    props: { onBack: noop, onRetry: noop, code: 'DB_QUERY_FAILED', reassureFiles: true },
+    penNode: 'screen-section',
+    statesOnly: ['default'],
+    width: 720,
   },
   {
     id: 'media-detail-panel-menu',

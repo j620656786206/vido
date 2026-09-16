@@ -1,4 +1,9 @@
-// Design ref: ux-design.pen Screen B3-D Detail Panel (RgSxQ) + B9-D image-load fallback (Tn4Gz)
+// Design ref: ux-design.pen — no current screen frame; this v1 side panel is imported ONLY
+// by the visual gallery and a test-local harness (routes/media/-$type.$id.spec.tsx) —
+// there is no production mount (the detail route renders
+// LocalDetailV2 / TMDbDetailV2). Its old references were the deleted v1 panel
+// (RgSxQ) and B9-D (Tn4Gz); B9-D now specifies the LIVE DetailHeroV2, so pointing
+// here would be a false claim. Delete-or-keep: disc-2026-09-unmounted-v1-components.
 import { useState, useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getImageUrl } from '../../lib/image';

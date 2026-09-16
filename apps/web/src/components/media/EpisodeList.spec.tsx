@@ -39,7 +39,9 @@ describe('EpisodeList', () => {
     expect(screen.getByText('S01E01')).toBeInTheDocument();
     expect(screen.getByText('第一集')).toBeInTheDocument();
     expect(screen.getByText('2024-01-05')).toBeInTheDocument();
-    expect(screen.getAllByText('24 分鐘').length).toBeGreaterThan(0);
+    // dsr-2 AC #9: 分, not 分鐘 — B4p-D writes 「24 分」, and the movie meta row says 「107 分」.
+    expect(screen.getAllByText('24 分').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/分鐘/)).not.toBeInTheDocument();
     expect(screen.getByText('S01E03')).toBeInTheDocument();
   });
 

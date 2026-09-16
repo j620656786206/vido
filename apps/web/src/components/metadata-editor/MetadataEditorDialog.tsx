@@ -1,5 +1,7 @@
 // Time-bomb-exempt: new Date().getFullYear() is a fallback default for the year field; gallery fixture always passes initialData.year so the path is unreachable in baseline render (Sally)
-// Design ref: ux-design.pen Screen 4 Detail Panel Desktop (RgSxQ)
+// Design ref: ux-design.pen — no current screen frame; the 修改資訊 dialog has never
+// been drawn (searched 「編輯媒體資訊」 2026-09-16). Its old reference pointed at the
+// deleted v1 detail panel (RgSxQ). Design gap: disc-2026-09-metadata-editor-no-design.
 /**
  * MetadataEditorDialog Component (Story 3.8 - AC1, AC4)
  * Dialog for manually editing metadata of movies and series

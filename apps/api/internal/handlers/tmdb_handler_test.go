@@ -374,6 +374,39 @@ func TestTMDbHandler_GetMovieDetails(t *testing.T) {
 	}
 }
 
+// dsr-2 AC #8 (adversarial review #1): the TMDb client WRAPS its typed errors
+// (`fmt.Errorf("failed to get movie details: %w", err)`), and the old type
+// assertion in handleTMDbError never matched a wrapped error — so a real TMDb
+// 404 left the API as a 500 TMDB_INTERNAL_ERROR and the detail page showed
+// 「無法載入」 with a retry that could never succeed. errors.As unwraps it.
+func TestTMDbHandler_WrappedTMDbError_KeepsItsStatus(t *testing.T) {
+	cases := []struct {
+		name       string
+		err        error
+		wantStatus int
+		wantCode   string
+	}{
+		{"wrapped not-found → 404", fmt.Errorf("failed to get movie details: %w", tmdb.NewNotFoundError(424242)), http.StatusNotFound, tmdb.ErrCodeNotFound},
+		{"doubly wrapped not-found → 404", fmt.Errorf("svc: %w", fmt.Errorf("client: %w", tmdb.NewNotFoundError(424242))), http.StatusNotFound, tmdb.ErrCodeNotFound},
+		{"plain error stays 500", errors.New("boom"), http.StatusInternalServerError, "TMDB_INTERNAL_ERROR"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			mock := &MockTMDbService{GetMovieDetailsError: tc.err}
+			router := setupTMDbRouter(NewTMDbHandler(mock))
+
+			rec := httptest.NewRecorder()
+			router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/movies/424242", nil))
+
+			require.Equal(t, tc.wantStatus, rec.Code)
+			var body APIResponse
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+			require.NotNil(t, body.Error)
+			assert.Equal(t, tc.wantCode, body.Error.Code)
+		})
+	}
+}
+
 func TestTMDbHandler_GetTVShowDetails(t *testing.T) {
 	tests := []struct {
 		name         string

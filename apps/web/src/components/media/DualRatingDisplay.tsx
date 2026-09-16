@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen 4 Detail Panel Desktop (RgSxQ)
+// Design ref: ux-design.pen Screen B3p-D (uRGu2)
 // Story 12-1 — dual rating section; Douban rating postdates the .pen design.
 import { Star } from 'lucide-react';
 import { formatVoteCount } from '../../utils/formatVoteCount';

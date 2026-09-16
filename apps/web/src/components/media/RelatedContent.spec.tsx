@@ -83,6 +83,7 @@ describe('RelatedContent', () => {
     render(<RelatedContent items={[]} isError onRetry={onRetry} />);
     const alert = screen.getByRole('alert');
     expect(alert).toBeInTheDocument();
+    expect(alert).toHaveTextContent('無法載入相關推薦，請稍後再試。');
     fireEvent.click(screen.getByRole('button', { name: '重試' }));
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
