@@ -63,6 +63,17 @@ import { EmptySearchResults } from '../../components/library/EmptySearchResults'
 import { GenreSelector } from '../../components/metadata-editor/GenreSelector';
 import { SearchBar } from '../../components/search/SearchBar';
 import { MediaTypeTabs } from '../../components/search/MediaTypeTabs';
+import {
+  DiscoverSectionErrorV2,
+  DiscoverNoResultV2,
+} from '../../components/search/DiscoverStatesV2';
+import { DiscoverFilterRail } from '../../components/search/DiscoverFilterRail';
+import {
+  activeFilterChips,
+  buildFacetCountParams,
+  type DiscoverFilters,
+} from '../../lib/discoverFilters';
+import { facetCountKeys } from '../../hooks/useDiscoverFacetCounts';
 import { ExploreBlockSkeleton } from '../../components/homepage/ExploreBlockSkeleton';
 
 // ===== 19-4b Task 2 P-bucket additions (63 components, 17 subfolders) =====
@@ -724,6 +735,16 @@ const consentOperabilityProps = (overrides: Record<string, unknown>): Record<str
       merged.totals ??
       computeTotals(candidates, selectedIds, merged.budgetUsd as number, undefined, visibleIds),
   };
+};
+
+// dsr-8 AC #11 — Discover fixtures share one filter selection so the rail's seeded
+// facet-count query key and the no-result echo labels are derived, not hand-typed.
+const DISCOVER_FIXTURE_FILTERS: DiscoverFilters = {
+  genre: [878],
+  platform: [8],
+  sortBy: 'popularity',
+  yearGte: 2020,
+  yearLte: 2025,
 };
 
 export const GALLERY_FIXTURES: GalleryFixture[] = [
@@ -2117,6 +2138,58 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   },
 
   // ----- search/ (P-bucket additions) -----
+  // dsr-8 AC #11 — the Discover states and rail had zero pixel coverage.
+  {
+    id: 'search-discover-section-error-v2',
+    label: 'search/DiscoverSectionErrorV2 (I8-D-v2 · code pill)',
+    component: DiscoverSectionErrorV2,
+    props: {
+      message: '影集結果暫時無法載入，其他結果不受影響',
+      code: 'TMDB_TIMEOUT',
+      onRetry: noop,
+    },
+    penNode: 'screen-section',
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'search-discover-no-result-v2',
+    label: 'search/DiscoverNoResultV2 (I7-D-v2)',
+    component: DiscoverNoResultV2,
+    props: {
+      activeLabels: activeFilterChips(DISCOVER_FIXTURE_FILTERS).map((c) => c.label),
+      onClearFilters: noop,
+    },
+    penNode: 'screen-section',
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'search-discover-filter-rail-unavailable',
+    label: 'search/DiscoverFilterRail (I8-D-v2 · 暫時無法計算)',
+    component: DiscoverFilterRail,
+    props: {
+      filters: DISCOVER_FIXTURE_FILTERS,
+      activeCount: 3,
+      totalResults: 0,
+      isCounting: false,
+      countUnavailable: true,
+      onChange: noop,
+      onClearAll: noop,
+      onCollapse: noop,
+    },
+    // useDiscoverFacetCounts reads this key; seeding it (fresh for 5 min, partial:false
+    // → no repoll, debounce starts on the same params) keeps the fixture off the network.
+    seedQueries: [
+      {
+        queryKey: facetCountKeys.for(buildFacetCountParams(DISCOVER_FIXTURE_FILTERS).toString()),
+        data: { counts: {}, partial: false },
+      },
+    ],
+    penNode: 'screen-section',
+    statesOnly: ['default'],
+    width: 300,
+  },
   {
     id: 'search-search-results',
     label: 'search/SearchResults',

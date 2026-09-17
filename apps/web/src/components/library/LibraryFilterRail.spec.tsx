@@ -57,4 +57,12 @@ describe('LibraryFilterRail', () => {
     await userEvent.click(screen.getByTestId('library-rail-clear-all'));
     expect(onClear).toHaveBeenCalledTimes(1);
   });
+
+  // dsr-8 AC #6 (shared rail shell): h1 媒體庫 → h2 篩選 → h3 sections in the rail.
+  it('uses a gapless heading ladder: rail h2, sections h3, no h4', () => {
+    renderRail();
+    expect(screen.getByRole('heading', { level: 2, name: '篩選' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: '類型' })).toBeInTheDocument();
+    expect(screen.queryAllByRole('heading', { level: 4 })).toHaveLength(0);
+  });
 });

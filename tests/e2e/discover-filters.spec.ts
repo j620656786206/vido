@@ -160,7 +160,7 @@ test.describe('Discover Filters — Desktop @e2e @discover', () => {
 
     // THEN: a removable chip appears and the URL carries the filter
     await expect(page).toHaveURL(GENRE_16);
-    await expect(page.getByTestId('filter-chip-genre-16')).toHaveText(/類型: 動畫/);
+    await expect(page.getByTestId('filter-chip-genre-16')).toHaveText(/類型：動畫/);
 
     // AND: the discover endpoint was re-queried with the genre param
     await expect.poll(() => requested.some((u) => /[?&]genre=16(&|$)/.test(u))).toBe(true);
@@ -198,7 +198,7 @@ test.describe('Discover Filters — Desktop @e2e @discover', () => {
     await expect(page.getByTestId('filter-chip-genre-16')).toBeVisible();
 
     // WHEN: the user clicks the chip's remove button
-    await page.getByRole('button', { name: '移除類型: 動畫篩選' }).click();
+    await page.getByRole('button', { name: '移除類型：動畫篩選' }).click();
 
     // THEN: the chip disappears and the param leaves the URL
     await expect(page.getByTestId('filter-chip-genre-16')).toHaveCount(0);
@@ -228,8 +228,8 @@ test.describe('Discover Filters — Desktop @e2e @discover', () => {
     await page.goto('/discover?genre=16&region=JP');
 
     // THEN: chips reflect the URL state and the sidebar marks the genre selected
-    await expect(page.getByTestId('filter-chip-genre-16')).toHaveText(/類型: 動畫/);
-    await expect(page.getByTestId('filter-chip-region')).toHaveText(/地區: 日本/);
+    await expect(page.getByTestId('filter-chip-genre-16')).toHaveText(/類型：動畫/);
+    await expect(page.getByTestId('filter-chip-region')).toHaveText(/地區：日本/);
     await expect(page.getByTestId('filter-genre-16')).toHaveAttribute('aria-pressed', 'true');
   });
 });
@@ -256,7 +256,7 @@ test.describe('Discover v2 rail — Desktop @e2e @discover @ux3-3-2', () => {
 
     // THEN: it applies instantly (URL + re-query) and the demoted chip-bar summary reflects it
     await expect(page).toHaveURL(GENRE_16);
-    await expect(page.getByTestId('filter-chip-genre-16')).toHaveText(/類型: 動畫/);
+    await expect(page.getByTestId('filter-chip-genre-16')).toHaveText(/類型：動畫/);
     await expect.poll(() => requested.some((u) => /[?&]genre=16(&|$)/.test(u))).toBe(true);
   });
 
@@ -344,7 +344,7 @@ test.describe('Discover Filters — Mobile bottom sheet @e2e @discover', () => {
 
     // THEN: the sheet closes, the chip appears and the URL carries the filter
     await expect(page.getByTestId('filter-bottom-sheet')).toHaveCount(0);
-    await expect(page.getByTestId('filter-chip-genre-16')).toHaveText(/類型: 動畫/);
+    await expect(page.getByTestId('filter-chip-genre-16')).toHaveText(/類型：動畫/);
     await expect(page).toHaveURL(GENRE_16);
   });
 });

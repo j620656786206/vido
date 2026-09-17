@@ -1,5 +1,5 @@
 // Implements: Component/FilterChip (jD7gF)
-// Design ref: ux-design.pen Screen AS-1 Advanced Filter Chips Desktop (rsAxf)
+// Design ref: ux-design.pen Screen I1-D-v2 (fxCVk)
 // Source: ux-design.pen (Pencil app)
 import { Plus, X } from 'lucide-react';
 import { cn } from '../../lib/utils';

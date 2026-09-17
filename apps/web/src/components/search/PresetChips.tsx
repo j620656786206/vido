@@ -1,5 +1,5 @@
-// Design ref: ux-design.pen Screen AS-1 - Advanced Search Filter Desktop (NWxok)
-// Source: ux-design.pen (Pencil app) — presetBar (dPbq2)
+// Design ref: ux-design.pen Screen I1-D-v2 (fxCVk)
+// Source: ux-design.pen (Pencil app)
 import { useEffect, useRef, useState } from 'react';
 import {
   parseFiltersFromSearch,
@@ -87,7 +87,7 @@ export function PresetChips({ onApplyPreset, className }: PresetChipsProps) {
         className={`flex flex-wrap items-center gap-2 ${className ?? ''}`}
         data-testid="preset-chips"
       >
-        <span className="text-xs text-[var(--text-muted)]">快速篩選:</span>
+        <span className="text-xs text-[var(--text-muted)]">快速篩選：</span>
         {presets.map((preset) => (
           <button
             key={preset.id}
@@ -161,7 +161,7 @@ export function PresetChips({ onApplyPreset, className }: PresetChipsProps) {
                 // both themes, but the label that rides it is not.
                 className="flex-1 rounded-lg bg-[var(--error)] px-4 py-2 text-sm font-medium text-[var(--text-on-scrim)] hover:bg-[var(--error-pressed)] disabled:opacity-50"
               >
-                {deletePreset.isPending ? '刪除中...' : '刪除'}
+                {deletePreset.isPending ? '刪除中…' : '刪除'}
               </button>
             </div>
           </div>

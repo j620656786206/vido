@@ -1,6 +1,6 @@
-// Design ref: ux-design.pen Screen AS-4 Filter Bottom Sheet Mobile (oypj1)
+// Design ref: ux-design.pen Screen I4-M-v2 (kzzjc)
 // Source: ux-design.pen (Pencil app)
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { cn } from '../../lib/utils';
 import { FilterPanel } from './FilterPanel';
 import { type DiscoverFilters, type DiscoverMediaType } from '../../lib/discoverFilters';
@@ -39,12 +39,25 @@ export function FilterBottomSheet({
   const isV2 = variant === 'v2';
   const [draft, setDraft] = useState<DiscoverFilters>(filters);
   const sheetRef = useRef<HTMLDivElement>(null);
+  // Names the dialog from its visible heading (dsr-8 AC #8) — it was a nameless dialog.
+  const titleId = useId();
 
   // Live result count for the DRAFT (not the committed filters) — re-queries as
   // the user edits, gated to only run while the sheet is open (AC #6).
-  const { totalResults, isLoading: isCounting } = useDiscoverResults(draft, mediaType, 1, {
+  const {
+    totalResults,
+    isLoading: isCounting,
+    moviesQuery,
+    tvQuery,
+  } = useDiscoverResults(draft, mediaType, 1, {
     enabled: isOpen,
   });
+  // dsr-8 AC #4: a needed query failed → no count (it would be a fallback 0 or half of
+  // one). Checks mediaType because the sheet shares the page's cache, so a query this
+  // tab does not use can still be sitting in an error state.
+  const countUnavailable =
+    (mediaType !== 'tv' && Boolean(moviesQuery?.isError) && !moviesQuery?.data) ||
+    (mediaType !== 'movie' && Boolean(tvQuery?.isError) && !tvQuery?.data);
 
   // Reset the draft to the committed filters each time the sheet opens.
   useEffect(() => {
@@ -84,16 +97,18 @@ export function FilterBottomSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] lg:hidden" role="dialog" aria-modal="true">
+    <div
+      className="fixed inset-0 z-[60] lg:hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+    >
       {/* Backdrop */}
       <button
         type="button"
         aria-label="關閉篩選"
         onClick={onClose}
-        className={cn(
-          'absolute inset-0 backdrop-blur-sm',
-          isV2 ? 'bg-[var(--overlay-scrim)]' : 'bg-[var(--overlay-scrim)]'
-        )}
+        className="absolute inset-0 bg-[var(--overlay-scrim)] backdrop-blur-sm"
         data-testid="filter-sheet-backdrop"
       />
 
@@ -115,7 +130,9 @@ export function FilterBottomSheet({
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 pb-3">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">篩選條件</h2>
+          <h2 id={titleId} className="text-lg font-semibold text-[var(--text-primary)]">
+            篩選條件
+          </h2>
           <button
             onClick={handleClear}
             data-testid="filter-sheet-clear"
@@ -139,7 +156,7 @@ export function FilterBottomSheet({
             // token flips with the theme (ink on 夜行's gold, paper on 日巡's).
             className="w-full rounded-lg bg-[var(--accent-primary)] py-3 text-sm font-semibold text-[var(--text-on-accent)] transition-opacity hover:opacity-90"
           >
-            套用篩選{isCounting ? '' : `（${totalResults} 部結果）`}
+            套用篩選{isCounting || countUnavailable ? '' : `（${totalResults} 部結果）`}
           </button>
         </div>
       </div>

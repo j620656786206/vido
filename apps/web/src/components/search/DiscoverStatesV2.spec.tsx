@@ -17,11 +17,11 @@ describe('DiscoverStatesV2', () => {
   it('no-result is distinct from empty: echoes active filters + wires clear (I7)', () => {
     const onClear = vi.fn();
     render(
-      <DiscoverNoResultV2 activeLabels={['類型: 動作', '年份: 2020 起']} onClearFilters={onClear} />
+      <DiscoverNoResultV2 activeLabels={['類型：動作', '年份：2020 起']} onClearFilters={onClear} />
     );
     expect(screen.getByText('找不到相符的結果')).toBeInTheDocument();
     expect(screen.getByTestId('discover-no-result-echo')).toHaveTextContent(
-      '類型: 動作 · 年份: 2020 起'
+      '類型：動作 · 年份：2020 起'
     );
     fireEvent.click(screen.getByTestId('discover-no-result-clear'));
     expect(onClear).toHaveBeenCalledTimes(1);
@@ -42,8 +42,30 @@ describe('DiscoverStatesV2', () => {
       />
     );
     expect(screen.getByText(/電影結果暫時無法載入/)).toBeInTheDocument();
-    expect(screen.getByText(/TMDB_TIMEOUT/)).toBeInTheDocument();
+    // dsr-8 AC #3: the code is its own mono pill (the A8p-D / DetailLoadErrorV2 shape),
+    // never a 「（CODE）」 parenthetical hanging off the sentence.
+    expect(screen.getByTestId('discover-section-error-code')).toHaveTextContent('TMDB_TIMEOUT');
+    expect(screen.getByTestId('discover-section-error')).not.toHaveTextContent('（');
+    expect(screen.getByText('電影結果暫時無法載入，其他結果不受影響').textContent).not.toContain(
+      'TMDB_TIMEOUT'
+    );
     fireEvent.click(screen.getByTestId('discover-section-error-retry'));
     expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it('per-section error without a code renders no pill', () => {
+    render(<DiscoverSectionErrorV2 onRetry={vi.fn()} />);
+    expect(screen.queryByTestId('discover-section-error-code')).toBeNull();
+  });
+
+  // TanStack v5 keeps isError true while a retry runs — the banner must show it.
+  it('per-section error shows the retry in flight and blocks double-submits', () => {
+    const onRetry = vi.fn();
+    render(<DiscoverSectionErrorV2 onRetry={onRetry} retrying />);
+    const retry = screen.getByTestId('discover-section-error-retry');
+    expect(retry).toBeDisabled();
+    expect(retry).toHaveTextContent('重試中…');
+    fireEvent.click(retry);
+    expect(onRetry).not.toHaveBeenCalled();
   });
 });

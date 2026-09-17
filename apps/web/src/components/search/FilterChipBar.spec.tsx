@@ -21,8 +21,8 @@ describe('FilterChipBar', () => {
         onClearAll={vi.fn()}
       />
     );
-    expect(screen.getByText('類型: 動畫')).toBeInTheDocument();
-    expect(screen.getByText('地區: 日本')).toBeInTheDocument();
+    expect(screen.getByText('類型：動畫')).toBeInTheDocument();
+    expect(screen.getByText('地區：日本')).toBeInTheDocument();
   });
 
   it('removing a chip emits the next filter state (AC #2)', () => {
@@ -34,7 +34,7 @@ describe('FilterChipBar', () => {
         onClearAll={vi.fn()}
       />
     );
-    fireEvent.click(screen.getByLabelText('移除類型: 動畫篩選'));
+    fireEvent.click(screen.getByLabelText('移除類型：動畫篩選'));
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ genre: [28] }));
   });
 

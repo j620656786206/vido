@@ -252,4 +252,92 @@ describe('DiscoverBrowseV2', () => {
     expect(screen.getByTestId('media-grid')).toHaveTextContent('1 items');
     expect(screen.queryByTestId('discover-grid-skeleton')).toBeNull();
   });
+
+  // dsr-8 AC #2 / #4: a failed TMDb query must never print a count it could not compute.
+  describe('when a TMDb section fails', () => {
+    it('partial failure says 影集 (not 節目), and the rail + tabs show no half-count', async () => {
+      h.discover = discover({
+        moviesQuery: query({
+          data: { results: [{ id: 1, voteCount: 1 }], totalResults: 340, totalPages: 1 },
+        }),
+        tvQuery: query({ isError: true, error: { code: 'TMDB_TIMEOUT' } }),
+        totalResults: 340,
+      });
+      renderBrowse();
+      expect(await screen.findByTestId('discover-section-error')).toHaveTextContent(
+        '影集結果暫時無法載入，其他結果不受影響'
+      );
+      expect(screen.getByTestId('discover-section-error')).not.toHaveTextContent('節目');
+      const count = screen.getByTestId('discover-rail-count');
+      expect(count).toHaveTextContent('暫時無法計算');
+      expect(count).not.toHaveTextContent('340');
+      // 全部 would otherwise read 340 — movies only; 電影 goes quiet with it.
+      expect(screen.getByRole('tab', { name: '全部' })).toHaveTextContent(/^全部$/);
+      expect(screen.getByRole('tab', { name: '電影' })).toHaveTextContent(/^電影$/);
+    });
+
+    it("a healthy section refreshing does not turn the failed section's retry into 重試中…", async () => {
+      // e.g. the movie query refetches on window focus while TV is still down.
+      h.discover = discover({
+        isFetching: true,
+        moviesQuery: query({
+          isFetching: true,
+          data: { results: [{ id: 1, voteCount: 1 }], totalResults: 340, totalPages: 1 },
+        }),
+        tvQuery: query({ isError: true, isFetching: false, error: { code: 'TMDB_TIMEOUT' } }),
+      });
+      renderBrowse();
+      const retry = await screen.findByTestId('discover-section-error-retry');
+      expect(retry).toBeEnabled();
+      expect(retry).toHaveTextContent(/^重試$/);
+    });
+
+    it('partial failure with an empty healthy section does not say the filters matched nothing', async () => {
+      h.filterState = filterState({ genre: [28], platform: [], sortBy: 'popularity' });
+      h.discover = discover({
+        moviesQuery: query({ data: { results: [], totalResults: 0, totalPages: 1 } }),
+        tvQuery: query({ isError: true, error: { code: 'TMDB_TIMEOUT' } }),
+      });
+      renderBrowse();
+      expect(await screen.findByTestId('discover-section-error')).toHaveTextContent(
+        '影集結果暫時無法載入'
+      );
+      expect(screen.queryByTestId('discover-no-result')).toBeNull();
+    });
+
+    it('on the 影集 tab the pill shows the TV error, not an old movie error still in cache', async () => {
+      h.discover = discover({
+        moviesQuery: query({ isError: true, error: { code: 'TMDB_TIMEOUT' } }),
+        tvQuery: query({ isError: true, error: { code: 'TMDB_RATE_LIMIT' } }),
+      });
+      renderBrowse('/discover?type=tv');
+      expect(await screen.findByTestId('discover-section-error-code')).toHaveTextContent(
+        'TMDB_RATE_LIMIT'
+      );
+    });
+
+    it('all sections failing: the rail says 暫時無法計算, never 符合 0 部', async () => {
+      h.discover = discover({
+        moviesQuery: query({ isError: true, error: { code: 'TMDB_TIMEOUT' } }),
+        tvQuery: query({ isError: true, error: { code: 'TMDB_TIMEOUT' } }),
+        totalResults: 0,
+      });
+      renderBrowse();
+      const count = await screen.findByTestId('discover-rail-count');
+      expect(count).toHaveTextContent('暫時無法計算');
+      expect(count).not.toHaveTextContent('符合');
+    });
+
+    it('a failure in a section the current tab does not use does not blank the count', async () => {
+      h.discover = discover({
+        moviesQuery: query({
+          data: { results: [{ id: 1, voteCount: 1 }], totalResults: 340, totalPages: 1 },
+        }),
+        tvQuery: query({ isError: true, error: { code: 'TMDB_TIMEOUT' } }),
+        totalResults: 340,
+      });
+      renderBrowse('/discover?type=movie');
+      expect(await screen.findByTestId('discover-rail-count')).toHaveTextContent('符合 340 部');
+    });
+  });
 });

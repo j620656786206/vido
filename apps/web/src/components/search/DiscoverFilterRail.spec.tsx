@@ -51,6 +51,19 @@ describe('DiscoverFilterRail', () => {
     expect(screen.getByTestId('discover-rail-count')).toHaveTextContent('符合 412 部');
   });
 
+  // dsr-8 AC #4: when the results query failed there is no number to show.
+  it('says 暫時無法計算 instead of a count it could not compute', () => {
+    renderRail({ totalResults: 0, countUnavailable: true });
+    const count = screen.getByTestId('discover-rail-count');
+    expect(count).toHaveTextContent('暫時無法計算');
+    expect(count).not.toHaveTextContent('符合');
+  });
+
+  it('計算中… still wins while a retry is in flight', () => {
+    renderRail({ countUnavailable: true, isCounting: true });
+    expect(screen.getByTestId('discover-rail-count')).toHaveTextContent('計算中…');
+  });
+
   it('shows a counting placeholder while the total computes', () => {
     renderRail({ isCounting: true });
     expect(screen.getByTestId('discover-rail-count')).toHaveTextContent('計算中…');
@@ -72,5 +85,14 @@ describe('DiscoverFilterRail', () => {
     const { onChange } = renderRail();
     fireEvent.click(screen.getByTestId('filter-genre-16'));
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ genre: [16] }));
+  });
+
+  // dsr-8 AC #6: h1 探索 → h2 篩選 → h3 sections. With the rail title promoted to h2,
+  // h4 sections would just move the skipped level down one.
+  it('uses a gapless heading ladder: rail h2, sections h3, no h4', () => {
+    renderRail();
+    expect(screen.getByRole('heading', { level: 2, name: '篩選' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: '類型' })).toBeInTheDocument();
+    expect(screen.queryAllByRole('heading', { level: 4 })).toHaveLength(0);
   });
 });

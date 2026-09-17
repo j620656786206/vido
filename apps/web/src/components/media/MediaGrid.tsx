@@ -1,4 +1,6 @@
-// Design ref: ux-design.pen Screen 1 Library Grid Desktop (KNI8F)
+// Design ref: ux-design.pen Screen I1-D-v2 (fxCVk)
+// The live results grid of /discover (and /search). Cards are still the v1 PosterCard,
+// not the PosterCard-v2 the frame draws — see disc-2026-09-related-content-card-v1-vs-v2.
 import { PosterCard } from './PosterCard';
 import { PosterCardSkeleton } from './PosterCardSkeleton';
 import type { Movie, TVShow } from '../../types/tmdb';

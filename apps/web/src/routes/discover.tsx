@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen AS-1 Advanced Filter Chips Desktop (rsAxf)
+// Design ref: ux-design.pen Screen I1-D-v2 (fxCVk)
 import { createFileRoute } from '@tanstack/react-router';
 import type { MediaTypeFilter } from '../components/search/MediaTypeTabs';
 import { DiscoverBrowseV2 } from '../components/search/DiscoverBrowseV2';

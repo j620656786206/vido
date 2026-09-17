@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen I1-D-v2 (fxCVk)
+// Design ref: ux-design.pen Screen I1-D-v2 (fxCVk) + Screen I4-D-v2 (m4fY7c) + Screen I2-M-v2 (hi6WD)
 /**
  * ux3-3-2: the v2 Discover experience — rendered by the /discover route (sole
  * render since ux3-cutover-3). Restyle + refine of the already-instant discover: a persistent
@@ -90,6 +90,10 @@ export function DiscoverBrowseV2() {
   const moviesErr = wantMovies && moviesQuery.isError && !moviesQuery.data;
   const tvErr = wantTV && tvQuery.isError && !tvQuery.data;
   const allErr = (!wantMovies || moviesErr) && (!wantTV || tvErr);
+  // dsr-8 AC #4: any needed section failed → the total is a fallback 0 or half a count.
+  const countUnavailable = moviesErr || tvErr;
+  // Only a failed section's refetch is a retry — a healthy section refreshing is not.
+  const retrying = (moviesErr && moviesQuery.isFetching) || (tvErr && tvQuery.isFetching);
 
   const movieResults = wantMovies ? (moviesQuery.data?.results ?? []) : [];
   const tvResults = wantTV ? (tvQuery.data?.results ?? []) : [];
@@ -133,14 +137,16 @@ export function DiscoverBrowseV2() {
     if (allErr) {
       return {
         message: 'TMDB 服務暫時無法連線，請稍後再試',
-        code: errCode(moviesQuery.error ?? tvQuery.error),
+        // Not `moviesQuery.error ?? …`: on the 影集 tab the disabled movie query can
+        // still hold an old error, and its code would label this failure.
+        code: errCode(moviesErr ? moviesQuery.error : tvQuery.error),
         onRetry: () => {
           if (wantMovies) moviesQuery.refetch();
           if (wantTV) tvQuery.refetch();
         },
       };
     }
-    const failedLabel = moviesErr ? '電影' : '節目';
+    const failedLabel = moviesErr ? '電影' : '影集';
     return {
       message: `${failedLabel}結果暫時無法載入，其他結果不受影響`,
       code: errCode(moviesErr ? moviesQuery.error : tvQuery.error),
@@ -171,6 +177,7 @@ export function DiscoverBrowseV2() {
               // refetch, so reflect isFetching (not isLoading, which only flips on a
               // cold first load) to show 計算中… while the new total is computing.
               isCounting={isFetching}
+              countUnavailable={countUnavailable}
               onChange={setFilters}
               onClearAll={clearAll}
               onCollapse={() => setRailCollapsed(true)}
@@ -179,13 +186,15 @@ export function DiscoverBrowseV2() {
         )}
 
         <div className="min-w-0 lg:flex-1">
-          {/* Toolbar: type tabs + filter triggers + inert Requests entry (PH3-R2) */}
+          {/* Toolbar: type tabs + filter triggers + the 想要清單 entry (live since 13-1b) */}
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <MediaTypeTabs
               activeType={currentType}
               onTypeChange={handleTypeChange}
-              movieCount={moviesQuery.data?.totalResults}
-              tvCount={tvQuery.data?.totalResults}
+              // No counts at all while a section is down: 全部 would sum only the half that
+              // answered (dsr-8 AC #4).
+              movieCount={countUnavailable ? undefined : moviesQuery.data?.totalResults}
+              tvCount={countUnavailable ? undefined : tvQuery.data?.totalResults}
             />
             {/* Mobile (<lg): open the bottom sheet */}
             <button
@@ -257,6 +266,7 @@ export function DiscoverBrowseV2() {
                   message={sectionError.message}
                   code={sectionError.code}
                   onRetry={sectionError.onRetry}
+                  retrying={retrying}
                 />
               )}
 
@@ -275,7 +285,9 @@ export function DiscoverBrowseV2() {
                     />
                   )}
                 </>
-              ) : (
+              ) : countUnavailable ? null : (
+                // Not while a section is down: the banner already says half is missing,
+                // so "no match — clear your filters" would blame the filters.
                 <DiscoverNoResultV2 activeLabels={activeLabels} onClearFilters={clearAll} />
               )}
             </>

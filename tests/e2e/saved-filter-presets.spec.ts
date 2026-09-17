@@ -147,7 +147,7 @@ test.describe('Saved Filter Presets — Desktop @e2e @discover @preset', () => {
     await expect(page.getByTestId('preset-chips')).toContainText('我的動畫');
 
     // AND: filters are cleared away
-    await page.getByRole('button', { name: '移除類型: 動畫篩選' }).click();
+    await page.getByRole('button', { name: '移除類型：動畫篩選' }).click();
     await expect(page).not.toHaveURL(/genre=16/);
 
     // WHEN: the user clicks the saved preset chip

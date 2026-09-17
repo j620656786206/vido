@@ -41,18 +41,22 @@ export function FilterRailShell({
   // already renders rather than repeating the string.
   const headingId = useId();
 
+  // top-14 / 3.5rem: pinned directly under AppShellV2's h-14 (56px) header. top-16 left a
+  // permanent 8px slot that page content scrolled through (dsr-8 AC #6).
   return (
     <aside
       data-testid={testId}
       aria-labelledby={headingId}
-      className="sticky top-16 flex h-[calc(100vh-4rem)] w-[264px] flex-shrink-0 flex-col border-r border-[var(--border-subtle)]"
+      className="sticky top-14 flex h-[calc(100vh-3.5rem)] w-[264px] flex-shrink-0 flex-col border-r border-[var(--border-subtle)]"
     >
       {/* Rail header */}
       <div className="flex items-center justify-between px-5 pb-3 pt-5">
         <div className="flex items-center gap-2">
-          <h3 id={headingId} className="text-[15px] font-bold text-[var(--text-primary)]">
+          {/* h2 on BodyLg 16 (dsr-8 AC #6): the page h1 sits above the rail, so an h3
+              skipped a level; 15px was on no step of the type scale. */}
+          <h2 id={headingId} className="text-base font-bold text-[var(--text-primary)]">
             篩選
-          </h3>
+          </h2>
           {activeCount > 0 && (
             <span
               data-testid={activeCountTestId}

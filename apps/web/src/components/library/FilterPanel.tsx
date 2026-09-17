@@ -185,6 +185,12 @@ export function FilterPanel({
     onClear();
   }, [onClear]);
 
+  // In the rail (instant) the panel sits under FilterRailShell's h2 「篩選」, so its
+  // sections are h3 (dsr-8 AC #6). Standalone it renders its own h3 「篩選條件」 and
+  // sections stay h4 — unchanged; that sheet's order is still off (h2 → h4 → h3), see
+  // disc-2026-08-rails-a11y-landmarks-and-unreachable-disabled.
+  const SectionHeading = instant ? 'h3' : 'h4';
+
   return (
     <div className="flex h-full flex-col" data-testid="filter-panel">
       {!instant && (
@@ -193,9 +199,9 @@ export function FilterPanel({
 
       {/* Type Section */}
       <div className="mb-4">
-        <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
+        <SectionHeading className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
           類型
-        </h4>
+        </SectionHeading>
         <div className="flex flex-wrap gap-1.5">
           {(['all', 'movie', 'tv'] as const).map((t) => (
             <button
@@ -218,9 +224,9 @@ export function FilterPanel({
 
       {/* Genre Section — fail-soft: loading skeleton / error+retry / chips */}
       <div className="mb-4">
-        <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
+        <SectionHeading className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
           類別
-        </h4>
+        </SectionHeading>
         {genresLoading ? (
           <div
             className="flex flex-wrap gap-1.5"
@@ -281,9 +287,9 @@ export function FilterPanel({
 
       {/* Status Section */}
       <div className="mb-4">
-        <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
+        <SectionHeading className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
           狀態
-        </h4>
+        </SectionHeading>
         <div className="flex flex-wrap gap-1.5">
           <button
             onClick={handleUnmatchedToggle}
@@ -303,9 +309,9 @@ export function FilterPanel({
 
       {/* Year Section — Decade Chips */}
       <div className="mb-4">
-        <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
+        <SectionHeading className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
           年份
-        </h4>
+        </SectionHeading>
         <div className="flex flex-wrap gap-1.5">
           {DECADE_OPTIONS.map((decade) => (
             <button

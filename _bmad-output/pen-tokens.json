@@ -1,10 +1,10 @@
 {
   "counts": {
-    "clippingWarnings": 70,
+    "clippingWarnings": 69,
     "exportedScreens": 190,
     "masters": 73
   },
-  "penSha256": "68c5674fd4409a4f65f1ab54d3054e3c6eedf30b9869129d3d05878194479078",
+  "penSha256": "bb59330d4b0943cf807246261bb79fb813017dea81c11644036881869f45effd",
   "raw": {
     "fontSize": 0,
     "gap": 0,

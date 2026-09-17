@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen AS-3 - Save Filter Preset Modal (i74p2)
+// Design ref: ux-design.pen Screen I5-D-v2 (nLrzc)
 // Source: ux-design.pen (Pencil app)
 import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
@@ -184,7 +184,7 @@ export function SavePresetDialog({ filters, onClose }: SavePresetDialogProps) {
             // the on-accent token carries both states.
             className="rounded-lg bg-[var(--accent-primary)] px-5 py-2 text-sm font-semibold text-[var(--text-on-accent)] hover:bg-[var(--accent-pressed)] disabled:opacity-50"
           >
-            {isSaving ? '儲存中...' : '儲存'}
+            {isSaving ? '儲存中…' : '儲存'}
           </button>
         </div>
       </div>

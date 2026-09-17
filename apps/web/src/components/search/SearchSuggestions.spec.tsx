@@ -138,6 +138,13 @@ describe('SearchSuggestions', () => {
     expect(listbox).not.toContainElement(person);
   });
 
+  // dsr-8 AC #5: the whole request failed — not "no results for your words".
+  it('shows an error row — not 找不到 — when the request failed', () => {
+    renderSuggestions({ result: undefined, isError: true, query: '你的名字' });
+    expect(screen.getByTestId('search-suggestions-error')).toHaveTextContent('搜尋暫時無法使用');
+    expect(screen.queryByTestId('search-suggestions-empty')).toBeNull();
+  });
+
   it('shows the loading state', () => {
     renderSuggestions({ isLoading: true, result: undefined });
     expect(screen.getByTestId('search-suggestions-loading')).toBeInTheDocument();
