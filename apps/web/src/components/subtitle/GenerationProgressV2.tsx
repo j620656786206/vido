@@ -4,7 +4,7 @@
  * Route C generation stepper (ux3-subtitle-v2 AC 3, Component Library sJzat row
  * luza9). Renders the FROZEN stage list 提取音訊 → 轉錄中 → 翻譯中 → 簡轉繁 →
  * AI校正 → 完成 (fixture vocabulary — renaming breaks fixture↔baseline mapping)
- * plus the failed-at-stage state with 重試.
+ * plus the failed-at-stage panel.
  *
  * Wire-phase mapping (transcription_service.go): `extracting`→提取音訊,
  * `transcribing`→轉錄中, `translating` (+percentage 0–100)→翻譯中, `complete`→完成.
@@ -18,15 +18,15 @@
  * Cost/quota slot (9R-17 dormant): optional `costUsedText`/`costLimitText` props;
  * renders NOTHING when absent — no BE cost surface exists today, do not invent.
  *
- * 重試 spends money again, so it is a `ButtonCost` (story dsr-6a AC #5): the
- * caller must hand over the amount WITH the handler — a paid retry without a
- * price is not expressible in this component's props.
+ * 重試 is NOT here: F4-D-v2 puts it in the dialog footer next to 稍後再試
+ * (story dsr-6b AC #6), so the paid button and its price belong to the dialog.
  */
-import { useId, type ReactNode } from 'react';
 import { Check, LoaderCircle, X, CircleAlert } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { ButtonCost, type ButtonCostState } from '../ui/ButtonCost';
-import type { GenerationPhase } from '../../hooks/useGenerationProgress';
+import {
+  GENERATION_FAILED_FALLBACK,
+  type GenerationPhase,
+} from '../../hooks/useGenerationProgress';
 
 /** FROZEN stage names (design handoff + AC 3) — also the gallery fixture vocabulary. */
 export const GENERATION_STAGES = [
@@ -46,10 +46,10 @@ const PHASE_INDEX: Record<ActivePhase, number> = {
   translating: 2,
 };
 
-interface GenerationProgressV2BaseProps {
+export interface GenerationProgressV2Props {
   /** Current pipeline phase (from useGenerationProgress; 'idle' renders 提取音訊 as active-waiting). */
   phase: GenerationPhase;
-  /** Stage that was live when the failure arrived — labels 失敗於{stage}. */
+  /** Stage that was live when the failure arrived — names the panel's {stage}失敗. */
   failedPhase?: ActivePhase | null;
   /** translation_progress percentage (0–100 float). Mono numerals. */
   percentage?: number | null;
@@ -62,21 +62,17 @@ interface GenerationProgressV2BaseProps {
   costLimitText?: string;
 }
 
-/** 重試 is paid: the handler and its price travel together, or neither is given. */
-type RetryProps =
-  | { onRetry?: undefined; retryCost?: undefined; retryNote?: undefined; retryBusy?: undefined }
-  | {
-      /** Renders the 重試 action in the failed state. */
-      onRetry: () => void;
-      /** The amount on 重試 (dsr-6a) — the same estimate as 生成字幕. */
-      retryCost: ButtonCostState;
-      /** Why 重試 is blocked, or what its ≈ means; rendered under the panel. */
-      retryNote?: ReactNode;
-      /** The retry request is in flight — keep the price, refuse a second click. */
-      retryBusy?: boolean;
-    };
+/** F4-D-v2 `pjXCe`: the failure named with the stepper's own words. */
+const FAILED_STAGE_TEXT: Record<ActivePhase, string> = {
+  extracting: '提取音訊失敗',
+  transcribing: '轉錄失敗',
+  translating: '翻譯失敗',
+};
 
-export type GenerationProgressV2Props = GenerationProgressV2BaseProps & RetryProps;
+/** A detail that STARTS in CJK is a sentence written for people (the D6 family's
+ *  「字幕生成失敗：…」「已略過：…」). A Go error that merely carries a Chinese file
+ *  path — `ffprobe timeout: /media/電影/…` — is still machine text. */
+const STARTS_CJK_RE = /^[\u3000-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af\uff00-\uffef]/;
 
 type StepState = 'done' | 'active' | 'pending' | 'failed';
 
@@ -135,15 +131,10 @@ export function GenerationProgressV2({
   error,
   costUsedText,
   costLimitText,
-  onRetry,
-  retryCost,
-  retryNote,
-  retryBusy = false,
 }: GenerationProgressV2Props) {
-  const retryNoteId = useId();
   const states = stepStates(phase, failedPhase);
-  const failedStageName =
-    phase === 'failed' ? GENERATION_STAGES[PHASE_INDEX[failedPhase ?? 'extracting']] : null;
+  const failedText = FAILED_STAGE_TEXT[failedPhase ?? 'extracting'];
+  const failedDetail = error && error !== GENERATION_FAILED_FALLBACK ? error : null;
   const pctText =
     percentage !== null && percentage !== undefined ? `${Math.round(percentage)}%` : null;
 
@@ -166,7 +157,8 @@ export function GenerationProgressV2({
                   aria-hidden="true"
                   className={cn(
                     'hidden sm:block',
-                    'mt-[10px] h-0.5 w-5 sm:w-7',
+                    // Connector is desktop-only (hidden below sm) — XkGvG `ITuZl` 26×2.
+                    'mt-[10px] h-0.5 sm:w-[26px]',
                     states[i - 1] === 'done' ? 'bg-[var(--success)]' : 'bg-[var(--border-subtle)]'
                   )}
                 />
@@ -174,12 +166,13 @@ export function GenerationProgressV2({
               <span
                 data-testid={`gen-stage-${stage}`}
                 data-state={state}
-                className="flex w-full flex-row items-center gap-2.5 sm:w-[72px] sm:flex-col sm:gap-1"
+                className="flex w-full flex-row items-center gap-2.5 sm:w-[72px] sm:flex-col sm:gap-1.5"
               >
                 <StepMark state={state} />
                 <span
                   className={cn(
-                    'text-[13px] sm:text-xs',
+                    // Mobile label stays 13px — the mobile sheet is dsr-6f. Desktop: Label 12 / 1.5.
+                    'text-[13px] sm:text-xs sm:leading-normal',
                     state === 'active' && 'font-semibold text-[var(--accent-text)]',
                     state === 'failed' && 'font-semibold text-[var(--error-text)]',
                     state === 'done' && 'text-[var(--text-secondary)]',
@@ -203,46 +196,35 @@ export function GenerationProgressV2({
       {message && phase !== 'failed' && (
         <p
           data-testid="gen-stage-message"
-          className="text-center text-[13px] text-[var(--text-secondary)]"
+          className="text-center text-sm text-[var(--text-secondary)]"
         >
           {message}
         </p>
       )}
 
-      {/* Failed panel: 失敗於{stage} + server error + 重試 (F4-D-v2 U8rRtv). */}
+      {/* Failed panel (F4-D-v2 vgChD): {stage}失敗 + the server's error on its own line.
+          重試 lives in the dialog footer (dg5rH), not here. */}
       {phase === 'failed' && (
         <div
           data-testid="gen-failed-panel"
-          className="flex flex-col gap-2 rounded-[var(--radius-md)] bg-[var(--error-tint)] p-3"
+          className="flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--error-tint)] p-3"
         >
-          <div className="flex items-center gap-2">
-            <CircleAlert className="h-4 w-4 shrink-0 text-[var(--error-text)]" aria-hidden="true" />
-            <p className="flex-1 text-[13px] text-[var(--error-text)]">
-              失敗於{failedStageName}
-              {error ? `：${error}` : ''}
-            </p>
-            {/* No price, no paid button — even if a caller slips past the types. */}
-            {onRetry && retryCost && (
-              <ButtonCost
-                label="重試"
-                cost={retryCost}
-                busy={retryBusy}
-                onClick={onRetry}
-                data-testid="gen-retry"
-                aria-describedby={retryNote ? retryNoteId : undefined}
-                className="shrink-0"
-              />
+          <CircleAlert className="h-4 w-4 shrink-0 text-[var(--error-text)]" aria-hidden="true" />
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <p className="text-sm text-[var(--error-text)]">{failedText}</p>
+            {failedDetail && (
+              <span
+                data-testid="gen-failed-detail"
+                className={cn(
+                  'text-xs text-[var(--error-text)]',
+                  // A Go error string is machine text: verbatim, Mono, wraps anywhere.
+                  !STARTS_CJK_RE.test(failedDetail) && 'break-all font-mono'
+                )}
+              >
+                {failedDetail}
+              </span>
             )}
           </div>
-          {onRetry && retryNote && (
-            <p
-              id={retryNoteId}
-              data-testid="gen-retry-note"
-              className="text-right text-xs text-[var(--text-secondary)]"
-            >
-              {retryNote}
-            </p>
-          )}
         </div>
       )}
 

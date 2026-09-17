@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen F1-D-v2 (r1EY9) + Screen F2-D-v2 (S9Rbrq) + Screen F1-M-v2 (JkdfH)
+// Design ref: ux-design.pen Screen F1-D-v2 (r1EY9) + Screen F2-D-v2 (S9Rbrq) + Screen F1-M-v2 (JkdfH) + Screen F3-D-v2 (JbXai) + Screen F4-D-v2 (U8rRtv) + Screen F5-D-v2 (f6ZxY)
 /**
  * 管理字幕 dialog v2 (ux3-subtitle-v2 AC 1/2/5 — generation-centric per ADR
  * adr-subtitle-route-c-generation D1). Screens: F1-D-v2 r1EY9 / F1-M-v2 JkdfH
@@ -14,8 +14,10 @@
  *   [@contract-v1]); series keep the CTA DISABLED and point at the episode list
  *   (there is no series-level generate — J3-D ruling: generation is per episode).
  * - EPISODE mode takes a SEPARATE glossaryMediaId (the SERIES id). The glossary
- *   is per-show and /media/:id/glossary uses the route id verbatim, so passing
- *   the episode id would strand terms in rows no other episode can see.
+ *   is per-show. Since sub-7-1 the backend resolves an episode id to its
+ *   series' scope, but the frontend caches by the id it was handed — so the
+ *   entry's count AND the panel must both use the series id, or the count goes
+ *   stale after an edit (dsr-6b).
  * - 503 TRANSCRIPTION_DISABLED → 語音辨識尚未設定 warning panel + 前往設定
  *   (γ-ratified ASR copy, sub-2-2d — the 503 gate is FFmpeg+ASR, never the
  *   translation key; dialog never hard-fails); 409 → attach to the running
@@ -35,8 +37,10 @@
  *   chips, NO score-breakdown rows, NO Zimuku (9R-14 removed it).
  * - CN policy (§9b, note v16pVI): a 簡中 track on CN content shows the policy
  *   line 陸劇保留簡體字幕（對白一致） — policy-correct, NOT a defect. The design's
- *   轉為繁中/仍要轉換 actions are NOT rendered: no backend endpoint converts an
- *   existing local track today (capability honor — see Discovery Triage).
+ *   轉為繁中/仍要轉換 actions are NOT rendered: POST /api/v1/subtitles/convert
+ *   exists but only converts a sidecar {name}.{lang}.srt|ass for movie/series —
+ *   not embedded tracks, not episodes — and no client wires it yet
+ *   (disc-2026-09-dialog-track-convert-not-wired).
  * - No cancel control for a running job: the backend exposes no cancel route;
  *   closing the dialog only stops watching (job continues server-side).
  */
@@ -56,8 +60,8 @@ import {
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '../ui/Dialog';
 import { cn } from '../../lib/utils';
-// Canonical zh-script sets (deriveSubtitleStatus semantics, AC 1a) — single source.
-import { HANT, HANS } from '../../utils/libraryStatus';
+// Shared subtitle-language labels (the detail page uses the same function, dsr-6b).
+import { subtitleLangLabel, type SubtitleLangFamily } from '../../utils/libraryStatus';
 import { transcriptionService } from '../../services/transcriptionService';
 import type { SubtitleSearchResult } from '../../services/subtitleService';
 import { useGenerationProgress } from '../../hooks/useGenerationProgress';
@@ -80,31 +84,18 @@ interface TrackRow {
   isHans: boolean;
 }
 
+const PILL_CLASS: Record<SubtitleLangFamily, string> = {
+  hant: 'bg-[var(--success-tint)] text-[var(--success-text)]',
+  hans: 'bg-[var(--info-tint)] text-[var(--info-text)]',
+  en: 'bg-[var(--bg-primary)] text-[var(--text-secondary)]',
+  other: 'bg-[var(--bg-primary)] text-[var(--text-secondary)]',
+};
+
+/** Pill for one track. The label comes from the SHARED subtitleLangLabel, so this
+ *  dialog and the detail page name a track identically (dsr-6b AC #3). */
 function languageDescriptor(lang: string): { label: string; pillClass: string; isHans: boolean } {
-  const l = lang.toLowerCase();
-  if (HANT.has(l))
-    return {
-      label: '繁中',
-      pillClass: 'bg-[var(--success-tint)] text-[var(--success-text)]',
-      isHans: false,
-    };
-  if (HANS.has(l))
-    return {
-      label: '簡中',
-      pillClass: 'bg-[var(--info-tint)] text-[var(--info-text)]',
-      isHans: true,
-    };
-  if (l === 'en' || l.startsWith('en-'))
-    return {
-      label: '英文',
-      pillClass: 'bg-[var(--bg-primary)] text-[var(--text-secondary)]',
-      isHans: false,
-    };
-  return {
-    label: lang || '未知',
-    pillClass: 'bg-[var(--bg-primary)] text-[var(--text-secondary)]',
-    isHans: false,
-  };
+  const { label, family } = subtitleLangLabel(lang);
+  return { label, pillClass: PILL_CLASS[family], isHans: family === 'hans' };
 }
 
 /** Rows from the embedded-tracks JSON + the authoritative engine result (ux3-0-2 semantics). */
@@ -117,7 +108,16 @@ function buildTrackRows(
 
   if (subtitleStatus === 'found' && subtitleLanguage) {
     const d = languageDescriptor(subtitleLanguage);
+    // `found` cannot tell a generated subtitle from a downloaded one, so the
+    // source stays the neutral 字幕引擎 (design note on F1, dsr-6b).
     rows.push({ key: 'engine', source: '字幕引擎', ...d });
+  } else if (subtitleStatus === 'untranslated') {
+    // The English SRT a run already produced — the reason a re-run is
+    // translate-only. Without this row the dialog said 尚無字幕 right above
+    // 「僅需翻譯…」(dsr-6b 🔴 #3). An `untranslated` row can only come from
+    // generation, so its source is 已生成.
+    const d = languageDescriptor(subtitleLanguage || 'en');
+    rows.push({ key: 'engine', source: '已生成', ...d });
   }
 
   if (subtitleTracks) {
@@ -158,7 +158,8 @@ export interface ManageSubtitleDialogV2Props {
   subtitleTracks?: string;
   subtitleStatus?: string;
   subtitleLanguage?: string;
-  /** ISO 3166-1 codes; contains "CN" → §9b policy display (no local-detail source today). */
+  /** ISO 3166-1 codes; contains "CN" → §9b policy display. Movies pass it
+   *  (LocalDetailV2); series/episodes have no production_countries. */
   productionCountry?: string;
   /** True while the parent detail query loads — renders the F10 skeleton. */
   isLoading?: boolean;
@@ -166,6 +167,10 @@ export interface ManageSubtitleDialogV2Props {
   onOpenChange: (open: boolean) => void;
   /** Fired on transcription_complete (AC 6 — parent invalidates detail + library caches). */
   onGenerationComplete?: () => void;
+  /** Fired ONCE each time a run enters `failed` (dsr-6b AC #6) — the parent
+   *  refetches so a kept English SRT shows under 現有字幕. May be a new function
+   *  on every render; it is read through a ref, never an effect dependency. */
+  onGenerationFailed?: () => void;
   /** Fired when a dormant-fetch download succeeds (parity with the v1 dialog). */
   onDownloadSuccess?: () => void;
 }
@@ -186,6 +191,7 @@ export function ManageSubtitleDialogV2({
   open,
   onOpenChange,
   onGenerationComplete,
+  onGenerationFailed,
   onDownloadSuccess,
 }: ManageSubtitleDialogV2Props) {
   const navigate = useNavigate();
@@ -225,6 +231,7 @@ export function ManageSubtitleDialogV2({
   });
   const helperId = useId();
   const triggerRetryNoteId = useId();
+  const retryNoteId = useId();
 
   const refreshEstimate = useCallback(() => {
     if (!estimateMediaType) return;
@@ -239,6 +246,21 @@ export function ManageSubtitleDialogV2({
   useEffect(() => {
     if (runPhase === 'failed' || runPhase === 'complete') refreshEstimate();
   }, [runPhase, refreshEstimate]);
+
+  // dsr-6b AC #6 — tell the parent once per entry into `failed`. The callback
+  // is read through a ref: SeasonAccordion passes a fresh inline arrow every
+  // render, and as an effect dependency that would refetch → re-render → new
+  // arrow → effect → refetch forever.
+  const onGenerationFailedRef = useRef(onGenerationFailed);
+  useEffect(() => {
+    onGenerationFailedRef.current = onGenerationFailed;
+  });
+  const previousPhaseRef = useRef(runPhase);
+  useEffect(() => {
+    const previous = previousPhaseRef.current;
+    previousPhaseRef.current = runPhase;
+    if (runPhase === 'failed' && previous !== 'failed') onGenerationFailedRef.current?.();
+  }, [runPhase]);
 
   // The row's subtitle state decides full vs translate-only. When it changes
   // under an open dialog (a parent refetch after a download, another job
@@ -328,6 +350,69 @@ export function ManageSubtitleDialogV2({
 
   const tracks = buildTrackRows(subtitleTracks, subtitleStatus, subtitleLanguage);
   const inProgressView = genView === 'progress';
+  const runIsLive = runPhase !== 'complete' && runPhase !== 'failed';
+  const runFailed = inProgressView && runPhase === 'failed';
+
+  // F4 footer hint: a blocking reason / ≈ first, then the translate-only resume.
+  // The resume line is only said once the failure has been RE-priced: until then
+  // `estimate.data` is the pre-failure answer, and a run that failed because its
+  // English SRT vanished would claim a resume that is no longer true (dsr-6b CR L2).
+  const failedHint: RetryNote | null =
+    costView.retryNote ??
+    (estimate.data?.plan === 'translate_only' && !estimate.isFetching
+      ? { text: '已保留轉錄結果，重試只需翻譯', settingsLink: false }
+      : null);
+
+  /** 現有字幕. On the idle view an empty list is the F2 缺字幕 state; under a
+   *  failed run an empty list renders nothing at all. */
+  const renderTracksSection = (showEmptyState: boolean) => {
+    if (tracks.length === 0) {
+      return showEmptyState ? (
+        <section
+          data-testid="subtitle-empty-state"
+          className="flex flex-col items-center gap-2 pb-2 pt-7"
+        >
+          <CaptionsOff className="h-9 w-9 text-[var(--text-muted)]" aria-hidden="true" />
+          <p className="text-base font-semibold text-[var(--text-primary)]">尚無字幕</p>
+          <p className="text-xs text-[var(--text-muted)]">此影片目前沒有任何字幕軌</p>
+        </section>
+      ) : null;
+    }
+    return (
+      <section data-testid="subtitle-tracks-section" className="flex flex-col gap-2.5">
+        <h3 className="text-sm font-semibold text-[var(--text-secondary)]">現有字幕</h3>
+        {tracks.map((track) => (
+          <div key={track.key} className="flex flex-col gap-1">
+            <div
+              data-testid={`subtitle-track-${track.key}`}
+              className="flex items-center gap-3 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-3.5 py-3"
+            >
+              <span
+                className={cn(
+                  // 11px stays until disc-2026-09-11px-micro-label-not-on-type-scale is ruled.
+                  'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium',
+                  track.pillClass
+                )}
+              >
+                {track.label}
+              </span>
+              <span className="text-xs text-[var(--text-secondary)]">{track.source}</span>
+            </div>
+            {/* §9b CN policy: 簡中 on CN content is policy-correct, NOT a defect. */}
+            {track.isHans && isCNContent && (
+              <div
+                data-testid={`cn-policy-note-${track.key}`}
+                className="flex items-center gap-2 px-3.5 text-xs text-[var(--text-muted)]"
+              >
+                <Info className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                陸劇保留簡體字幕（對白一致）
+              </div>
+            )}
+          </div>
+        ))}
+      </section>
+    );
+  };
   const dialogTitle = inProgressView ? `生成字幕 — ${mediaTitle}` : `管理字幕 — ${mediaTitle}`;
 
   const handleFetchSearch = useCallback(() => {
@@ -385,17 +470,20 @@ export function ManageSubtitleDialogV2({
           'flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0',
           // Mobile: bottom sheet (F1-M-v2 JkdfH). Desktop: centered dialog (F1-D-v2 r1EY9).
           'bottom-0 left-0 right-0 top-auto w-full max-w-none translate-x-0 translate-y-0 rounded-b-none rounded-t-[var(--radius-xl)]',
-          'sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-[calc(100vw-4rem)] sm:max-w-3xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[var(--radius-lg)]'
+          // Desktop F1-D-v2 gD99f / F3-D-v2 wIihe: 880 wide, 1px hairline. The
+          // hairline is sm-only — the mobile bottom sheet is dsr-6f.
+          'sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-[calc(100vw-4rem)] sm:max-w-[880px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[var(--radius-lg)] sm:border sm:border-[var(--border-subtle)]'
         )}
       >
         {/* Header */}
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--border-subtle)] pl-6 pr-12">
-          <div className="flex min-w-0 items-center gap-2">
+          <div className="flex min-w-0 items-center gap-1.5">
             <DialogTitle className="truncate text-base font-semibold">{dialogTitle}</DialogTitle>
             {mediaCode && (
               <span
                 data-testid="dialog-title-code"
-                className="shrink-0 rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-2 py-0.5 font-mono text-xs text-[var(--text-secondary)]"
+                // tO72N / Dey4O: plain Mono BodyLg 16/600, not a chip.
+                className="shrink-0 font-mono text-base font-semibold text-[var(--text-primary)]"
               >
                 {mediaCode}
               </span>
@@ -403,7 +491,7 @@ export function ManageSubtitleDialogV2({
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-6">
+        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-6 py-5">
           {isLoading ? (
             /* F10-D-v2 (olDlj) 載入骨架 — animation respects prefers-reduced-motion. */
             <div
@@ -428,21 +516,20 @@ export function ManageSubtitleDialogV2({
                 percentage={generation.progress.percentage}
                 message={generation.progress.message}
                 error={generation.progress.error}
-                onRetry={startGeneration}
-                retryCost={costView.cost}
-                retryBusy={trigger.isPending}
-                retryNote={renderRetryNote(costView.retryNote, 'retry-goto-settings')}
               />
-              <div className="flex justify-center">
-                <span className="flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--info-tint)] px-2 py-1 text-[11px] text-[var(--info-text)]">
-                  <Radio className="h-3 w-3" aria-hidden="true" />
-                  即時更新（SSE）
-                </span>
-              </div>
+              {/* The stream is closed once a run ends — F4 draws no live chip. */}
+              {runIsLive && (
+                <div className="flex justify-center">
+                  <span className="flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--info-tint)] px-2 py-1 text-[11px] text-[var(--info-text)]">
+                    <Radio className="h-3 w-3" aria-hidden="true" />
+                    即時更新（SSE）
+                  </span>
+                </div>
+              )}
               {generation.progress.phase === 'complete' && (
                 <p
                   data-testid="generation-complete-note"
-                  className="text-center text-[13px] text-[var(--text-secondary)]"
+                  className="text-center text-sm text-[var(--text-secondary)]"
                 >
                   {/* sub-2-2b AC #3: an en-only completion (no zh path — key
                       unconfigured or translate failed non-fatally) must not
@@ -462,54 +549,14 @@ export function ManageSubtitleDialogV2({
                       : '已生成英文字幕；尚未翻譯'}
                 </p>
               )}
+              {/* F4-D-v2 c6TLrS: what is already on disk after a failure — the
+                  parent refetches on failure, so a kept English SRT appears. */}
+              {runPhase === 'failed' && renderTracksSection(false)}
             </>
           ) : (
             <>
               {/* 現有字幕 (F1) or 缺字幕 empty state (F2-D-v2 S9Rbrq) */}
-              {tracks.length > 0 ? (
-                <section data-testid="subtitle-tracks-section" className="flex flex-col gap-2.5">
-                  <h3 className="text-[13px] font-semibold text-[var(--text-secondary)]">
-                    現有字幕
-                  </h3>
-                  {tracks.map((track) => (
-                    <div key={track.key} className="flex flex-col gap-1">
-                      <div
-                        data-testid={`subtitle-track-${track.key}`}
-                        className="flex items-center gap-3 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-3.5 py-3"
-                      >
-                        <span
-                          className={cn(
-                            'shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-medium',
-                            track.pillClass
-                          )}
-                        >
-                          {track.label}
-                        </span>
-                        <span className="text-xs text-[var(--text-secondary)]">{track.source}</span>
-                      </div>
-                      {/* §9b CN policy: 簡中 on CN content is policy-correct, NOT a defect. */}
-                      {track.isHans && isCNContent && (
-                        <div
-                          data-testid={`cn-policy-note-${track.key}`}
-                          className="flex items-center gap-2 px-3.5 text-xs text-[var(--text-muted)]"
-                        >
-                          <Info className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                          陸劇保留簡體字幕（對白一致）
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </section>
-              ) : (
-                <section
-                  data-testid="subtitle-empty-state"
-                  className="flex flex-col items-center gap-2 pb-2 pt-7"
-                >
-                  <CaptionsOff className="h-9 w-9 text-[var(--text-muted)]" aria-hidden="true" />
-                  <p className="text-[15px] font-semibold text-[var(--text-primary)]">尚無字幕</p>
-                  <p className="text-xs text-[var(--text-muted)]">此影片目前沒有任何字幕軌</p>
-                </section>
-              )}
+              {renderTracksSection(true)}
 
               {/* Generate section — the ONLY primary action (or its 尚未設定/error stand-ins). */}
               {genView === 'notConfigured' ? (
@@ -561,7 +608,7 @@ export function ManageSubtitleDialogV2({
                       className="h-4 w-4 shrink-0 text-[var(--error-text)]"
                       aria-hidden="true"
                     />
-                    <p className="flex-1 text-[13px] text-[var(--error-text)]">
+                    <p className="flex-1 text-sm text-[var(--error-text)]">
                       無法開始生成{triggerError ? `：${triggerError}` : ''}
                     </p>
                     {/* dsr-6a: a retry spends money again — same price, same rules. */}
@@ -645,9 +692,10 @@ export function ManageSubtitleDialogV2({
                   className="h-4 w-4 shrink-0 text-[var(--text-secondary)]"
                   aria-hidden="true"
                 />
-                <span className="text-[13px] text-[var(--text-secondary)]">名詞對照表</span>
-                <span className="text-[13px] text-[var(--text-secondary)]">
-                  （<span className="font-mono tabular-nums">{glossaryCount}</span> 條）
+                <span className="text-sm text-[var(--text-secondary)]">名詞對照表</span>
+                {/* h43R3: 「（」「8」「條）」 — no spaces inside the brackets. */}
+                <span className="inline-flex items-baseline gap-0.5 text-sm text-[var(--text-secondary)]">
+                  （<span className="font-mono tabular-nums">{glossaryCount}</span>條）
                 </span>
                 <span className="flex-1" />
                 <ChevronRight
@@ -660,7 +708,7 @@ export function ManageSubtitleDialogV2({
               {fetchOpen && (
                 <section data-testid="fetch-section" className="flex flex-col gap-2.5">
                   <div className="flex items-center gap-3">
-                    <h3 className="text-[13px] font-semibold text-[var(--text-secondary)]">
+                    <h3 className="text-sm font-semibold text-[var(--text-secondary)]">
                       線上字幕搜尋
                     </h3>
                     <button
@@ -674,7 +722,7 @@ export function ManageSubtitleDialogV2({
                     </button>
                   </div>
                   {onlineSearch.searchError && (
-                    <p className="text-[13px] text-[var(--error-text)]">
+                    <p className="text-sm text-[var(--error-text)]">
                       搜尋失敗：{onlineSearch.searchError.message}
                     </p>
                   )}
@@ -730,8 +778,9 @@ export function ManageSubtitleDialogV2({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex shrink-0 items-center justify-between border-t border-[var(--border-subtle)] px-6 py-3">
+        {/* Footer — F1 idle: 搜尋線上字幕 + 關閉; F3 running (H2VIe): hint + 關閉;
+            F4 failed (dg5rH): hint + 稍後再試 + 重試. */}
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-[var(--border-subtle)] px-6 py-3">
           {/* Red line 2: the search endpoints bind `oneof=movie series`, so an
               episode would 400. Capability honor — don't draw a dead control. */}
           {!inProgressView && !isLoading && !isEpisode ? (
@@ -743,27 +792,51 @@ export function ManageSubtitleDialogV2({
             >
               搜尋線上字幕（成功率低）
             </button>
+          ) : runFailed ? (
+            failedHint ? (
+              <p
+                id={retryNoteId}
+                data-testid="gen-retry-note"
+                className="min-w-0 basis-full text-xs text-[var(--text-secondary)] sm:basis-auto sm:flex-1"
+              >
+                {renderRetryNote(failedHint, 'retry-goto-settings')}
+              </p>
+            ) : (
+              <span />
+            )
           ) : (
-            <span className="text-xs text-[var(--text-muted)]">
-              {inProgressView &&
-              generation.progress.phase !== 'complete' &&
-              generation.progress.phase !== 'failed'
-                ? '關閉後生成會在背景繼續'
-                : ''}
+            <span className="text-xs text-[var(--text-secondary)]">
+              {inProgressView && runIsLive ? '關閉後生成會在背景繼續' : ''}
             </span>
           )}
-          <button
-            type="button"
-            onClick={() => handleOpenChange(false)}
-            data-testid="dialog-close"
-            className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)]"
-          >
-            關閉
-          </button>
+          {/* ml-auto: when the failed-run hint wraps to its own row on a phone,
+              the buttons stay right-aligned on the row below. */}
+          <div className="ml-auto flex shrink-0 items-center gap-3">
+            <button
+              type="button"
+              onClick={() => handleOpenChange(false)}
+              data-testid="dialog-close"
+              className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)]"
+            >
+              {/* F4 RLbWb: after a failure the same close reads 稍後再試. */}
+              {runFailed ? '稍後再試' : '關閉'}
+            </button>
+            {runFailed && (
+              /* F4 Bfuec — a retry spends money again (dsr-6a): same price, same rules. */
+              <ButtonCost
+                label="重試"
+                cost={costView.cost}
+                busy={trigger.isPending}
+                onClick={startGeneration}
+                data-testid="gen-retry"
+                aria-describedby={failedHint ? retryNoteId : undefined}
+              />
+            )}
+          </div>
         </div>
 
         <GlossaryPanelV2
-          mediaId={mediaId}
+          mediaId={glossaryMediaId ?? mediaId}
           mediaTitle={mediaTitle}
           open={glossaryOpen}
           onOpenChange={setGlossaryOpen}

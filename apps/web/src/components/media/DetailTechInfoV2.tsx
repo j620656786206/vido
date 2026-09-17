@@ -12,7 +12,7 @@
  * badge; here the tracks are stated as a fact row instead of a second, differently
  * coloured status pill.
  */
-import { HANS, HANT, trackLangs } from '../../utils/libraryStatus';
+import { subtitleLangLabel, trackLangs } from '../../utils/libraryStatus';
 
 interface DetailTechInfoV2Props {
   videoResolution?: string;
@@ -34,17 +34,12 @@ function formatSize(bytes?: number): string | null {
 
 /**
  * One track tag → display label. ffprobe hands us raw ISO 639-2 tags (`chi`, `eng`,
- * `und`) and sidecar suffixes as-is. Script classification follows the SHARED
- * HANT/HANS sets (libraryStatus.ts) so this row agrees with every other subtitle
- * surface — which means a bare `zh` reads 繁中 there and here. `chi`/`zho` are not in
- * either set, so they stay raw rather than inventing a script the file never stated.
+ * `und`) and sidecar suffixes as-is. The mapping is the SHARED `subtitleLangLabel`
+ * (libraryStatus.ts, dsr-6b) so this row and the 管理字幕 dialog name a track the
+ * same way — a bare `zh` reads 繁中 in both, and `chi`/`zho` stay raw.
  */
 function trackLabel(lang: string): string {
-  if (HANT.has(lang)) return '繁中';
-  if (HANS.has(lang)) return '簡中';
-  if (lang === 'en' || lang === 'eng' || lang.startsWith('en-')) return '英文';
-  if (lang === '' || lang === 'und') return '未標示';
-  return lang;
+  return subtitleLangLabel(lang).label;
 }
 
 function subtitleTrackSummary(subtitleTracks?: string): string | null {

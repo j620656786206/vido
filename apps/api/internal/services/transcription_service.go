@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -607,7 +608,7 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 			"job_id":   jobID,
 			"media_id": mediaID,
 			"phase":    "extracting",
-			"message":  "Extracting audio track from media file",
+			"message":  transcriptionStageMessage("extracting"),
 		})
 
 		// List audio tracks and select English track
@@ -642,7 +643,7 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 			"job_id":   jobID,
 			"media_id": mediaID,
 			"phase":    "transcribing",
-			"message":  "Transcribing audio with Whisper API",
+			"message":  transcriptionStageMessage("transcribing"),
 		})
 
 		srtContent, err = s.transcribeAudio(ctx, audioPath, WhisperLanguageFromTrack(selectedTrack.Language))
@@ -822,6 +823,32 @@ func (s *TranscriptionService) tryTranslateOnlyResume(ctx context.Context, jobID
 	return string(content), path, true
 }
 
+// transcriptionStageMessage is the user-facing progress line for one
+// transcription_* phase (story dsr-6b AC #9). The dialog, the batch dialog and
+// the generation workspace render `message` verbatim under the stepper, so it
+// is zh-TW like the D6 family's zhTWStageMessage — it used to be English
+// ("Transcribing audio with Whisper API"). The words match the stepper's stage
+// names (提取音訊／轉錄中／翻譯中). Clients branch on `phase`, never on this text.
+func transcriptionStageMessage(phase string) string {
+	switch phase {
+	case "extracting":
+		return "正在提取音訊"
+	case "transcribing":
+		return "正在轉錄音訊"
+	case "translating":
+		return "正在翻譯成繁體中文"
+	default:
+		return ""
+	}
+}
+
+// translationProgressMessage is the translating line with its percentage. It
+// rounds half UP (math.Round) to agree with the stepper's JS Math.round — %.0f
+// rounds half to even and would print 62% beside a 63% at 62.5.
+func translationProgressMessage(pct float64) string {
+	return fmt.Sprintf("正在翻譯成繁體中文（%d%%）", int(math.Round(pct)))
+}
+
 // translationEnabled reports whether a run's translate leg will actually run.
 // It is the ONE answer shared by the run (translateAndPersist) and the
 // single-item estimate (story dsr-6a AC #3): if the two ever disagreed, the
@@ -861,7 +888,7 @@ func (s *TranscriptionService) translateAndPersist(ctx context.Context, jobID st
 			"media_id":   mediaID,
 			"phase":      "translating",
 			"percentage": 0,
-			"message":    "Translating subtitles to Traditional Chinese",
+			"message":    transcriptionStageMessage("translating"),
 		})
 
 		zhPath, tOutcome, err := s.translateSRT(ctx, jobID, mediaType, mediaID, srtContent, filePath, mediaDir)
@@ -1298,7 +1325,7 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 			"media_id":   mediaID,
 			"phase":      "translating",
 			"percentage": pct,
-			"message":    fmt.Sprintf("Translating subtitles: %.0f%%", pct),
+			"message":    translationProgressMessage(pct),
 		})
 	}
 

@@ -47,7 +47,11 @@ function SeasonAccordionItem({ season, seriesId, seriesTitle }: SeasonAccordionI
   // 9R-10c: EpisodeList is presentational, so the per-episode dialog state
   // lives here — this is also the level that already knows the seriesId, which
   // is the GLOSSARY key (the dialog's mediaId stays the episode row id).
-  const [subtitleEpisode, setSubtitleEpisode] = useState<MergedEpisode | null>(null);
+  // dsr-6b AC #6: remember WHICH episode is open, not a copy of it — after a
+  // failed run the query refetches, and the dialog must see the fresh
+  // subtitle state (a kept English SRT → untranslated), not the snapshot taken
+  // when it opened. The snapshot is only the fallback if the row vanishes.
+  const [openedEpisode, setOpenedEpisode] = useState<MergedEpisode | null>(null);
 
   // Lazy fetch: query stays disabled until the season is expanded (AC #3).
   const { data, isLoading, isError, refetch } = useSeasonEpisodes(
@@ -55,6 +59,10 @@ function SeasonAccordionItem({ season, seriesId, seriesTitle }: SeasonAccordionI
     season.seasonNumber,
     isExpanded
   );
+
+  const subtitleEpisode = openedEpisode
+    ? (data?.episodes.find((ep) => ep.episodeId === openedEpisode.episodeId) ?? openedEpisode)
+    : null;
 
   const posterUrl = getImageUrl(season.posterPath ?? null, 'w92');
   const contentId = `season-${season.seasonNumber}-content`;
@@ -114,7 +122,7 @@ function SeasonAccordionItem({ season, seriesId, seriesTitle }: SeasonAccordionI
             isLoading={isLoading}
             isError={isError}
             onRetry={() => refetch()}
-            onManageSubtitle={setSubtitleEpisode}
+            onManageSubtitle={setOpenedEpisode}
           />
         </div>
       )}
@@ -125,7 +133,8 @@ function SeasonAccordionItem({ season, seriesId, seriesTitle }: SeasonAccordionI
           track data and probing each one would turn a season expand into a disk
           storm (red line 3); the authoritative subtitleStatus wins anyway.
           onGenerationComplete uses THIS query's own refetch — narrower than
-          invalidating by key, and it needs no QueryClient of its own. */}
+          invalidating by key, and it needs no QueryClient of its own. A failed
+          run refetches too (dsr-6b), so a kept English SRT shows in the dialog. */}
       {subtitleEpisode && canManageEpisodeSubtitle(subtitleEpisode) && (
         <ManageSubtitleDialogV2
           mediaId={subtitleEpisode.episodeId}
@@ -137,8 +146,9 @@ function SeasonAccordionItem({ season, seriesId, seriesTitle }: SeasonAccordionI
           subtitleStatus={subtitleEpisode.subtitleStatus}
           subtitleLanguage={subtitleEpisode.subtitleLanguage}
           open={true}
-          onOpenChange={(next) => !next && setSubtitleEpisode(null)}
+          onOpenChange={(next) => !next && setOpenedEpisode(null)}
           onGenerationComplete={() => refetch()}
+          onGenerationFailed={() => refetch()}
         />
       )}
     </div>

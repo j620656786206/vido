@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { deriveLifecycleStatus, deriveSubtitleStatus, pickPosterBadge } from './libraryStatus';
+import {
+  deriveLifecycleStatus,
+  deriveSubtitleStatus,
+  pickPosterBadge,
+  subtitleLangLabel,
+} from './libraryStatus';
 
 type Media = {
   parseStatus: string;
@@ -300,5 +305,33 @@ describe('deriveSubtitleStatus — 未翻譯 (sub-2-2b AC #2)', () => {
   it('is an exception (non-steady): pickPosterBadge surfaces it on the grid', () => {
     const badge = pickPosterBadge(m('success', { subtitleStatus: 'untranslated' }));
     expect(badge?.label).toBe('未翻譯');
+  });
+});
+
+// dsr-6b AC #3 — one mapping for subtitle-language labels, shared by the detail
+// page's 檔案資訊 row and the 管理字幕 dialog's track pills.
+describe('subtitleLangLabel', () => {
+  it('classifies scripts with the shared HANT/HANS sets, case-insensitively', () => {
+    expect(subtitleLangLabel('zh-Hant')).toEqual({ label: '繁中', family: 'hant' });
+    expect(subtitleLangLabel('zh-tw')).toEqual({ label: '繁中', family: 'hant' });
+    expect(subtitleLangLabel('zh')).toEqual({ label: '繁中', family: 'hant' });
+    expect(subtitleLangLabel('zh-CN')).toEqual({ label: '簡中', family: 'hans' });
+    expect(subtitleLangLabel('zh-Hans')).toEqual({ label: '簡中', family: 'hans' });
+  });
+
+  it('reads English from en, en-*, and the ISO 639-2 eng tag', () => {
+    expect(subtitleLangLabel('en')).toEqual({ label: '英文', family: 'en' });
+    expect(subtitleLangLabel('en-US')).toEqual({ label: '英文', family: 'en' });
+    expect(subtitleLangLabel('eng')).toEqual({ label: '英文', family: 'en' });
+  });
+
+  it('says 未標示 for an empty or und tag', () => {
+    expect(subtitleLangLabel('')).toEqual({ label: '未標示', family: 'other' });
+    expect(subtitleLangLabel('und')).toEqual({ label: '未標示', family: 'other' });
+  });
+
+  it('keeps anything else as the file stated it — chi/zho never invent a script', () => {
+    expect(subtitleLangLabel('chi')).toEqual({ label: 'chi', family: 'other' });
+    expect(subtitleLangLabel('JPN')).toEqual({ label: 'JPN', family: 'other' });
   });
 });

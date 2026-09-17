@@ -7,6 +7,15 @@ import type { SeasonSummary, SeasonEpisodesResponse } from '../../types/library'
 // tested without a QueryClientProvider. The mock records the `enabled` arg so we
 // can assert lazy-load gating (AC #3).
 const useSeasonEpisodesMock = vi.fn();
+// dsr-6b: record what the 管理字幕 dialog is handed, without its query stack.
+const dialogProps = vi.fn();
+vi.mock('../subtitle/ManageSubtitleDialogV2', () => ({
+  ManageSubtitleDialogV2: (props: Record<string, unknown>) => {
+    dialogProps(props);
+    return <div data-testid="manage-subtitle-dialog-stub" />;
+  },
+}));
+
 vi.mock('../../hooks/useMediaDetails', () => ({
   useSeasonEpisodes: (seriesId: string, seasonNumber: number, enabled: boolean) =>
     useSeasonEpisodesMock(seriesId, seasonNumber, enabled),
@@ -39,6 +48,52 @@ describe('SeasonAccordion', () => {
   beforeEach(() => {
     useSeasonEpisodesMock.mockReset();
     useSeasonEpisodesMock.mockReturnValue(stubQuery());
+  });
+
+  // dsr-6b AC #6 — the dialog must see the episode as it is NOW, not as it was
+  // when the dialog opened: after a failed run the parent refetches, and the
+  // kept English SRT (subtitle_status=untranslated) has to reach the dialog.
+  it('hands the open subtitle dialog the refetched episode, not the snapshot from when it opened', () => {
+    const episode = {
+      episodeNumber: 1,
+      name: '第一集',
+      hasLocalFile: true,
+      episodeId: 'ep-1',
+      filePath: '/tv/s01e01.mkv',
+      subtitleStatus: 'not_found',
+    };
+    useSeasonEpisodesMock.mockReturnValue(
+      stubQuery({ data: { season: seasons[0], episodes: [episode] } })
+    );
+    const { rerender } = render(
+      <SeasonAccordion seasons={seasons} seriesTitle="進擊的巨人" seriesId="s1" tmdbId={123} />
+    );
+    fireEvent.click(screen.getByTestId('season-header-1'));
+    fireEvent.click(screen.getByTestId('episode-manage-subtitle'));
+    expect(dialogProps).toHaveBeenLastCalledWith(
+      expect.objectContaining({ mediaId: 'ep-1', subtitleStatus: 'not_found' })
+    );
+
+    // The refetch after a failed run: same episode, new subtitle state.
+    useSeasonEpisodesMock.mockReturnValue(
+      stubQuery({
+        data: {
+          season: seasons[0],
+          episodes: [{ ...episode, subtitleStatus: 'untranslated', subtitleLanguage: 'en' }],
+        },
+      })
+    );
+    rerender(
+      <SeasonAccordion seasons={seasons} seriesTitle="進擊的巨人" seriesId="s1" tmdbId={123} />
+    );
+    expect(dialogProps).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        mediaId: 'ep-1',
+        subtitleStatus: 'untranslated',
+        subtitleLanguage: 'en',
+        onGenerationFailed: expect.any(Function),
+      })
+    );
   });
 
   it('renders nothing when tmdbId <= 0 (AC #1)', () => {

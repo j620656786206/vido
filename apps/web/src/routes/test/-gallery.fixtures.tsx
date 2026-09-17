@@ -4100,7 +4100,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     id: 'generation-progress-v2/提取音訊',
     label: 'subtitle/GenerationProgressV2 (提取音訊)',
     component: GenerationProgressV2,
-    props: { phase: 'extracting', message: '正在提取音訊軌' },
+    props: { phase: 'extracting', message: '正在提取音訊' },
     penNode: 'XkGvG', // Component/GenerationProgress-v2
     statesOnly: ['default'],
     width: 720,
@@ -4109,7 +4109,8 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     id: 'generation-progress-v2/轉錄中',
     label: 'subtitle/GenerationProgressV2 (轉錄中)',
     component: GenerationProgressV2,
-    props: { phase: 'transcribing', message: '正在轉錄音訊（Whisper large-v3）— 12:34 / 45:10' },
+    // dsr-6b: the real zh-TW SSE line — no elapsed time or model name (the wire has neither).
+    props: { phase: 'transcribing', message: '正在轉錄音訊' },
     penNode: 'XkGvG',
     statesOnly: ['default'],
     width: 720,
@@ -4118,7 +4119,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     id: 'generation-progress-v2/翻譯中',
     label: 'subtitle/GenerationProgressV2 (翻譯中)',
     component: GenerationProgressV2,
-    props: { phase: 'translating', percentage: 62.5, message: '翻譯中（glossary-aware）' },
+    props: { phase: 'translating', percentage: 62.5, message: '正在翻譯成繁體中文（63%）' },
     penNode: 'XkGvG',
     statesOnly: ['default'],
     width: 720,
@@ -4134,15 +4135,14 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   },
   {
     id: 'generation-progress-v2/失敗',
-    label: 'subtitle/GenerationProgressV2 (失敗於翻譯中 + 重試)',
+    label: 'subtitle/GenerationProgressV2 (翻譯失敗 + 伺服器原始錯誤)',
     component: GenerationProgressV2,
     props: {
       phase: 'failed',
       failedPhase: 'translating',
-      error: 'AI 服務逾時，已保留轉錄結果',
-      onRetry: noop,
-      // dsr-6a: 重試 is paid — the kept English SRT makes it translate-only (F4-D-v2).
-      retryCost: { status: 'ready', usd: 0.39, approximate: false },
+      // dsr-6b: F4-D-v2 — 重試 moved to the dialog footer; the panel shows the
+      // stage failure plus the server's machine error on a Mono line.
+      error: 'translate: context deadline exceeded',
     },
     penNode: 'XkGvG',
     statesOnly: ['default'],
@@ -4363,6 +4363,49 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
           },
         ] satisfies GlossaryTerm[],
       },
+    ],
+    penNode: 'screen-section', // Screen F1-D-v2 (r1EY9)
+    statesOnly: ['default'],
+  },
+  {
+    // dsr-6b AC #10 — an `untranslated` item: the generated English SRT is listed
+    // (it used to say 尚無字幕) and the price is translation-only. A DIFFERENT
+    // media id — the gallery shares the app's query cache, so reusing movie-1
+    // would overwrite the fixture above's $0.42.
+    id: 'subtitle-manage-subtitle-dialog-v2-untranslated',
+    label: 'subtitle/ManageSubtitleDialogV2 (untranslated · 已生成英文字幕)',
+    component: ManageSubtitleDialogV2,
+    props: {
+      mediaId: 'movie-untranslated-1',
+      mediaType: 'movie',
+      mediaTitle: '怪奇物語',
+      mediaFilePath: '/media/movies/Stranger.Things.S04E07.mkv',
+      mediaResolution: '1080p',
+      subtitleStatus: 'untranslated',
+      subtitleLanguage: 'en',
+      open: true,
+      onOpenChange: noop,
+      onGenerationComplete: noop,
+      onDownloadSuccess: noop,
+    },
+    seedQueries: [
+      {
+        queryKey: transcriptionEstimateKeys.item('movie', 'movie-untranslated-1'),
+        data: {
+          mediaId: 'movie-untranslated-1',
+          mediaType: 'movie',
+          plan: 'translate_only',
+          asrAvailable: true,
+          selfHostedAsr: false,
+          translationConfigured: true,
+          modelId: 'claude-sonnet-5',
+          runtimeMinutes: 30,
+          runtimeKnown: true,
+          runtimeSource: 'ffprobe',
+          estimatedUsd: 0.24,
+        } satisfies TranscriptionEstimate,
+      },
+      { queryKey: glossaryKeys.list('movie-untranslated-1'), data: [] satisfies GlossaryTerm[] },
     ],
     penNode: 'screen-section', // Screen F1-D-v2 (r1EY9)
     statesOnly: ['default'],

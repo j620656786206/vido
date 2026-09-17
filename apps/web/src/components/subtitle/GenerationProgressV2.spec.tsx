@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import { GenerationProgressV2, GENERATION_STAGES } from './GenerationProgressV2';
 
 describe('GenerationProgressV2', () => {
@@ -40,73 +40,65 @@ describe('GenerationProgressV2', () => {
     }
   });
 
-  it('renders 失敗於{stage} + server error + 重試 in the failed state', () => {
-    const onRetry = vi.fn();
-    render(
-      <GenerationProgressV2
-        phase="failed"
-        failedPhase="translating"
-        error="AI 服務逾時"
-        onRetry={onRetry}
-        retryCost={{ status: 'ready', usd: 0.39, approximate: false }}
-      />
-    );
+  // dsr-6b AC #6 — the failed panel names the stage the way the stepper does, and
+  // 重試 lives in the dialog footer now (F4-D-v2 dg5rH), not in this panel.
+  it('names the failed stage with the stepper vocabulary and has no retry of its own', () => {
+    render(<GenerationProgressV2 phase="failed" failedPhase="translating" />);
 
     expect(screen.getByTestId('gen-stage-翻譯中')).toHaveAttribute('data-state', 'failed');
-    expect(screen.getByTestId('gen-failed-panel')).toHaveTextContent('失敗於翻譯中：AI 服務逾時');
-
-    fireEvent.click(screen.getByTestId('gen-retry'));
-    expect(onRetry).toHaveBeenCalledTimes(1);
+    const panel = screen.getByTestId('gen-failed-panel');
+    expect(panel.querySelector('p')?.textContent).toBe('翻譯失敗');
+    expect(screen.queryByTestId('gen-retry')).toBeNull();
   });
 
-  // dsr-6a AC #5 — 重試 spends money again, so it carries the amount.
-  it('重試 carries the amount (a retry is a paid action)', () => {
+  it.each([
+    ['extracting', '提取音訊失敗'],
+    ['transcribing', '轉錄失敗'],
+    ['translating', '翻譯失敗'],
+  ] as const)('failed at %s → %s', (failedPhase, text) => {
+    render(<GenerationProgressV2 phase="failed" failedPhase={failedPhase} />);
+    expect(screen.getByTestId('gen-failed-panel').querySelector('p')?.textContent).toBe(text);
+  });
+
+  it('shows a machine error verbatim on its own Mono line', () => {
     render(
       <GenerationProgressV2
         phase="failed"
         failedPhase="translating"
-        onRetry={vi.fn()}
-        retryCost={{ status: 'ready', usd: 0.39, approximate: false }}
+        error="translate: context deadline exceeded"
       />
     );
-    expect(screen.getByTestId('gen-retry-amount').textContent).toBe('$0.39');
-    expect(screen.queryByTestId('gen-retry-note')).toBeNull();
+    const detail = screen.getByTestId('gen-failed-detail');
+    expect(detail.textContent).toBe('translate: context deadline exceeded');
+    expect(detail.className).toContain('font-mono');
+    expect(detail.className).toContain('break-all');
   });
 
-  it('a 重試 in flight cannot be pressed twice', () => {
-    const onRetry = vi.fn();
-    render(
-      <GenerationProgressV2
-        phase="failed"
-        failedPhase="translating"
-        onRetry={onRetry}
-        retryCost={{ status: 'ready', usd: 0.39, approximate: false }}
-        retryBusy
-      />
-    );
-    const retry = screen.getByTestId('gen-retry');
-    expect(retry).toHaveAttribute('aria-busy', 'true');
-    fireEvent.click(retry);
-    expect(onRetry).not.toHaveBeenCalled();
-  });
-
-  it('a blocked 重試 says why, linked to the button', () => {
-    const onRetry = vi.fn();
+  // /ship CR L1 — a machine error that merely CONTAINS a CJK file path is still
+  // machine text; only a sentence that starts in CJK is written for people.
+  it('keeps a machine error Mono even when it carries a Chinese file path', () => {
     render(
       <GenerationProgressV2
         phase="failed"
         failedPhase="extracting"
-        onRetry={onRetry}
-        retryCost={{ status: 'unavailable' }}
-        retryNote="暫時算不出費用，因此先不開放。重新整理或稍後再試。"
+        error="ffprobe timeout: /media/電影/沙丘.2160p.WEB-DL.mkv"
       />
     );
-    const retry = screen.getByTestId('gen-retry');
-    expect(retry).toBeDisabled();
-    expect(screen.getByTestId('gen-retry-note')).toHaveTextContent('暫時算不出費用');
-    expect(retry).toHaveAccessibleDescription('暫時算不出費用，因此先不開放。重新整理或稍後再試。');
-    fireEvent.click(retry);
-    expect(onRetry).not.toHaveBeenCalled();
+    expect(screen.getByTestId('gen-failed-detail').className).toContain('font-mono');
+  });
+
+  it('shows a Chinese error in the normal typeface, not Mono', () => {
+    render(
+      <GenerationProgressV2 phase="failed" failedPhase="translating" error="字幕生成失敗：逾時" />
+    );
+    const detail = screen.getByTestId('gen-failed-detail');
+    expect(detail.textContent).toBe('字幕生成失敗：逾時');
+    expect(detail.className).not.toContain('font-mono');
+  });
+
+  it.each([[''], ['生成失敗']])('hides the detail line when the error is %j', (error) => {
+    render(<GenerationProgressV2 phase="failed" failedPhase="extracting" error={error} />);
+    expect(screen.queryByTestId('gen-failed-detail')).toBeNull();
   });
 
   it('renders the server-supplied message verbatim (Rule 23 — no local clock text)', () => {
@@ -162,12 +154,16 @@ describe('GenerationProgressV2', () => {
       expect(stage.className).toContain('gap-2.5');
       expect(stage.className).toContain('sm:w-[72px]');
       expect(stage.className).toContain('sm:flex-col');
-      expect(stage.className).toContain('sm:gap-1');
+      // dsr-6b: XkGvG column gap 6 — exact token, `toContain('sm:gap-1')` would
+      // also match sm:gap-1.5 and prove nothing.
+      expect(stage.className.split(' ')).toContain('sm:gap-1.5');
+      expect(stage.className.split(' ')).not.toContain('sm:gap-1');
 
-      // Label 13px on mobile, back to text-xs on desktop.
+      // Label 13px on mobile (dsr-6f owns it), Label 12 / 1.5 on desktop.
       const label = screen.getByText('翻譯中');
-      expect(label.className).toContain('text-[13px]');
-      expect(label.className).toContain('sm:text-xs');
+      expect(label.className.split(' ')).toEqual(
+        expect.arrayContaining(['text-[13px]', 'sm:text-xs', 'sm:leading-normal'])
+      );
 
       // Mono pct right-aligned via the ml-auto spacer on mobile only.
       const pct = screen.getByText('63%');
@@ -186,6 +182,9 @@ describe('GenerationProgressV2', () => {
       for (const connector of connectors) {
         expect(connector.className).toContain('hidden');
         expect(connector.className).toContain('sm:block');
+        // dsr-6b: XkGvG connector 26×2; the mobile-only w-5 was dead code.
+        expect(connector.className.split(' ')).toContain('sm:w-[26px]');
+        expect(connector.className.split(' ')).not.toContain('w-5');
       }
     });
 
