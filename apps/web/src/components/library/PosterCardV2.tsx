@@ -17,6 +17,7 @@ import { getImageUrl } from '../../lib/image';
 import { filenameToGradient } from '../media/ColorPlaceholder';
 import { pickPosterBadge } from '../../utils/libraryStatus';
 import type { LibraryMovie, LibrarySeries } from '../../types/library';
+import { fallbackInitial } from '../../utils/fallbackInitial';
 
 interface PosterCardV2Props {
   id: string;
@@ -37,16 +38,6 @@ interface PosterCardV2Props {
   selectable?: boolean;
   selected?: boolean;
   onSelect?: (e: React.MouseEvent) => void;
-}
-
-/**
- * First LETTER or CJK char for the no-poster tile —「[FanSub] 未知電影」used
- * to render a giant「[」(critique R3 minor). Falls back to the raw first char
- * when the title is all symbols.
- */
-function fallbackInitial(title: string): string {
-  const m = title.match(/[\p{L}\p{N}]/u);
-  return m ? m[0] : title.slice(0, 1) || '?';
 }
 
 export function PosterCardV2({

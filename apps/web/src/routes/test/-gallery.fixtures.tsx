@@ -90,8 +90,9 @@ import { HighlightText } from '../../components/ui/HighlightText';
 import { SidePanel } from '../../components/ui/SidePanel';
 import { CreditsSection } from '../../components/media/CreditsSection';
 import { DetailPanelMenu } from '../../components/media/DetailPanelMenu';
-import { FallbackFailed } from '../../components/media/FallbackFailed';
-import { FallbackPending } from '../../components/media/FallbackPending';
+import { DetailNoMetadataV2 } from '../../components/media/DetailNoMetadataV2';
+import { ManualMatchDialogV2 } from '../../components/media/ManualMatchDialogV2';
+import { metadataKeys } from '../../hooks/useManualSearch';
 import { FileInfo } from '../../components/media/FileInfo';
 import { MediaGrid } from '../../components/media/MediaGrid';
 import { TrailerEmbed } from '../../components/media/TrailerEmbed';
@@ -1179,6 +1180,95 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     statesOnly: ['default'],
     width: 720,
   },
+  // dsr-2b-b: the no-metadata states (B10p-D / B11p-D) — they replace the v1
+  // FallbackFailed / FallbackPending drawers, whose fixtures are gone with them.
+  {
+    id: 'media-detail-no-metadata-failed-v2',
+    label: 'media/DetailNoMetadataV2 (B10p-D · 比對失敗)',
+    component: DetailNoMetadataV2,
+    props: {
+      variant: 'failed',
+      mediaType: 'movie',
+      onManualMatch: noop,
+      onRematch: noop,
+      rematching: false,
+    },
+    penNode: 'screen-section',
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'media-detail-no-metadata-pending-v2',
+    label: 'media/DetailNoMetadataV2 (B11p-D · 資料整理中)',
+    component: DetailNoMetadataV2,
+    props: {
+      variant: 'pending',
+      mediaType: 'movie',
+      onManualMatch: noop,
+      onRematch: noop,
+      rematching: false,
+    },
+    penNode: 'screen-section',
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'media-manual-match-dialog-v2',
+    label: 'media/ManualMatchDialogV2 (B12p-D · 手動選片)',
+    // Radix Dialog.Portal (ui-dialog / manage-subtitle precedent): the state div is
+    // zero-size and the visual spec captures the viewport. The search result is
+    // seeded under the exact key the dialog builds (TMDb + movie), so it paints
+    // with no loading flash and no network; no poster URLs → name-hash tiles.
+    component: ManualMatchDialogV2,
+    props: {
+      open: true,
+      onOpenChange: noop,
+      mediaId: 'gallery-media-uuid-0001',
+      mediaType: 'movie',
+      initialQuery: 'Kimi no Na wa',
+    },
+    seedQueries: [
+      {
+        queryKey: metadataKeys.manualSearch({
+          query: 'Kimi no Na wa',
+          mediaType: 'movie',
+          source: 'tmdb',
+        }),
+        data: {
+          results: [
+            {
+              id: 'tmdb-372058',
+              source: 'tmdb',
+              title: '君の名は。',
+              titleZhTw: '你的名字',
+              year: 2016,
+              mediaType: 'movie',
+            },
+            {
+              id: 'tmdb-568160',
+              source: 'tmdb',
+              title: '天気の子',
+              titleZhTw: '天氣之子',
+              year: 2019,
+              mediaType: 'movie',
+            },
+            {
+              id: 'tmdb-198375',
+              source: 'tmdb',
+              title: '言の葉の庭',
+              titleZhTw: '言葉之庭',
+              year: 2013,
+              mediaType: 'movie',
+            },
+          ],
+          totalCount: 3,
+          searchedSources: ['tmdb'],
+        },
+      },
+    ],
+    penNode: 'screen-section',
+    statesOnly: ['default'],
+  },
   {
     id: 'media-detail-panel-menu',
     label: 'media/DetailPanelMenu',
@@ -1191,33 +1281,6 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     statesOnly: ['default', 'hover', 'focus', 'open'],
     openTrigger: '[data-testid="detail-menu-trigger"]',
     width: 240,
-  },
-  {
-    id: 'media-fallback-failed',
-    label: 'media/FallbackFailed',
-    // Uses TanStack `Link` — gallery route shares the app's RouterProvider.
-    component: FallbackFailed,
-    props: {
-      title: '[Leopard-Raws] Kimi no Na wa (BD)',
-      mediaType: 'movie',
-      filePath: '/volume1/Movies/Anime/[Leopard-Raws] Kimi no Na wa (BD).mkv',
-      fileSize: 4509715660,
-      createdAt: '2026-03-28T14:32:00Z',
-      parseStatus: 'failed',
-      onEditClick: noop,
-    },
-    penNode: 'screen-section',
-    statesOnly: ['default'],
-    width: 480,
-  },
-  {
-    id: 'media-fallback-pending',
-    label: 'media/FallbackPending',
-    component: FallbackPending,
-    props: { filename: '[Leopard-Raws] Kimi no Na wa (BD).mkv' },
-    penNode: 'screen-section',
-    statesOnly: ['default'],
-    width: 480,
   },
   {
     id: 'media-file-info',
@@ -1854,7 +1917,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         id: 'tmdb-550',
         source: 'tmdb',
         title: 'Fight Club',
-        titleZhTW: '鬥陣俱樂部',
+        titleZhTw: '鬥陣俱樂部',
         year: 1999,
         mediaType: 'movie',
         overview: '一個失眠的上班族與一個肥皂商人成立了一個地下搏擊俱樂部……',
@@ -1876,7 +1939,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
           id: 'tmdb-550',
           source: 'tmdb',
           title: 'Fight Club',
-          titleZhTW: '鬥陣俱樂部',
+          titleZhTw: '鬥陣俱樂部',
           year: 1999,
           mediaType: 'movie',
           rating: 8.4,
@@ -1885,7 +1948,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
           id: 'douban-1291546',
           source: 'douban',
           title: '霸王別姬',
-          titleZhTW: '霸王別姬',
+          titleZhTw: '霸王別姬',
           year: 1993,
           mediaType: 'movie',
           rating: 9.6,
@@ -1894,7 +1957,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
           id: 'tmdb-1396',
           source: 'tmdb',
           title: 'Breaking Bad',
-          titleZhTW: '絕命毒師',
+          titleZhTw: '絕命毒師',
           year: 2008,
           mediaType: 'tv',
           rating: 8.9,
@@ -1903,7 +1966,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
           id: 'wikipedia-frieren',
           source: 'wikipedia',
           title: 'Frieren: Beyond Journey’s End',
-          titleZhTW: '葬送的芙莉蓮',
+          titleZhTw: '葬送的芙莉蓮',
           year: 2023,
           mediaType: 'tv',
           rating: 9.1,

@@ -90,4 +90,17 @@ describe('DetailHeroV2', () => {
     render(<DetailHeroV2 title="X" posterPath={null} backdropPath={null} onBack={() => {}} />);
     expect(screen.getByTestId('detail-poster-tile').className).not.toMatch(/shadow-/);
   });
+
+  // dsr-2b-b AC #6: an unmatched item's title is its raw file name.
+  it('the fallback initial skips a leading bracket', () => {
+    render(
+      <DetailHeroV2
+        title="[FanSub] 未知電影"
+        posterPath={null}
+        backdropPath={null}
+        onBack={() => {}}
+      />
+    );
+    expect(screen.getByTestId('detail-poster-fallback')).toHaveTextContent(/^F$/);
+  });
 });

@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen H7 Filtered Library Desktop (QTqcC)
+// Design ref: ux-design.pen — no current screen frame; v1 manual search, mounted only on the dev page /test/manual-search (QTqcC is E4-D, the library unmatched filter, not this dialog) — the v2 dialog is media/ManualMatchDialogV2, retirement tracked in disc-2026-09-unmounted-v1-components
 /**
  * SearchResultCard Component (Story 3.7 - AC2)
  * Individual search result card with poster, title, year, and source badge
@@ -125,9 +125,9 @@ export function SearchResultCard({ item, isSelected, onSelect }: SearchResultCar
       {/* Title and year */}
       <div className="mt-2 px-1">
         <h3 className="truncate text-sm font-medium text-[var(--text-primary)]">
-          {item.titleZhTW || item.title}
+          {item.titleZhTw || item.title}
         </h3>
-        {item.titleZhTW && item.titleZhTW !== item.title && (
+        {item.titleZhTw && item.titleZhTw !== item.title && (
           <p className="truncate text-xs text-[var(--text-secondary)]">{item.title}</p>
         )}
         <div className="flex items-center gap-2 mt-1">

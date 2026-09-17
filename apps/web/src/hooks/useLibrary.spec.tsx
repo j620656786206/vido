@@ -17,6 +17,7 @@ import {
   useBatchExport,
 } from './useLibrary';
 import { libraryService } from '../services/libraryService';
+import { detailKeys } from './useMediaDetails';
 import type {
   LibraryListResponse,
   LibraryStats,
@@ -349,10 +350,18 @@ describe('useReparseItem', () => {
     vi.clearAllMocks();
   });
 
+  function wrapperWith(queryClient: QueryClient) {
+    return ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+  }
+
   it('calls reparseMovie for movie type', async () => {
     vi.mocked(libraryService.reparseMovie).mockResolvedValue({
       id: 'movie-1',
-      status: 'reparse_queued',
+      parseStatus: 'success',
+      title: '鬥陣俱樂部',
+      tmdbId: 550,
     });
 
     const { result } = renderHook(() => useReparseItem(), {
@@ -368,7 +377,9 @@ describe('useReparseItem', () => {
   it('calls reparseSeries for series type', async () => {
     vi.mocked(libraryService.reparseSeries).mockResolvedValue({
       id: 'series-1',
-      status: 'reparse_queued',
+      parseStatus: 'failed',
+      title: 'x',
+      tmdbId: 0,
     });
 
     const { result } = renderHook(() => useReparseItem(), {
@@ -379,6 +390,26 @@ describe('useReparseItem', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(libraryService.reparseSeries).toHaveBeenCalledWith('series-1');
+  });
+
+  // dsr-2b-b AC #3: the detail page and the library must show what the re-match
+  // left — before this the hook invalidated nothing.
+  it('refreshes that item’s detail query and the library lists', async () => {
+    vi.mocked(libraryService.reparseSeries).mockResolvedValue({
+      id: 'series-1',
+      parseStatus: 'success',
+      title: '絕命毒師',
+      tmdbId: 1396,
+    });
+    const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+
+    const { result } = renderHook(() => useReparseItem(), { wrapper: wrapperWith(queryClient) });
+    result.current.mutate({ type: 'series', id: 'series-1' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: detailKeys.localSeries('series-1') });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: libraryKeys.all });
   });
 });
 

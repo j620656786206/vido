@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { libraryService } from '../services/libraryService';
+import { detailKeys } from './useMediaDetails';
 import type { LibraryListParams, BatchResult } from '../types/library';
 
 export const libraryKeys = {
@@ -100,9 +101,18 @@ export function useDeleteLibraryItem() {
 }
 
 export function useReparseItem() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ type, id }: { type: 'movie' | 'series'; id: string }) => {
       return type === 'movie' ? libraryService.reparseMovie(id) : libraryService.reparseSeries(id);
+    },
+    // dsr-2b-b AC #3: show what the re-match left — the detail page swaps its
+    // no-metadata block for the real page, and posters lose their 失敗 badge.
+    onSuccess: (_result, { type, id }) => {
+      queryClient.invalidateQueries({
+        queryKey: type === 'movie' ? detailKeys.localMovie(id) : detailKeys.localSeries(id),
+      });
+      queryClient.invalidateQueries({ queryKey: libraryKeys.all });
     },
   });
 }

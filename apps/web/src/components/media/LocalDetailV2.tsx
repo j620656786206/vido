@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen B3p-D (uRGu2) + Screen B4p-D (N2fmG6) + Screen B3p-M (SzNRb)
+// Design ref: ux-design.pen Screen B3p-D (uRGu2) + Screen B4p-D (N2fmG6) + Screen B3p-M (SzNRb) + Screen B10p-D (p3qEc) + Screen B11p-D (V56cx)
 /**
  * v2 library detail page (UX Redesign Phase 2 — UX2-3). The pilot's most
  * satisfying surface (perfect zh-TW metadata) made the most capable. Backdrop
@@ -27,7 +27,7 @@ import {
   useRecommendations,
   useWatchProviders,
 } from '../../hooks/useMediaDetails';
-import { libraryKeys } from '../../hooks/useLibrary';
+import { libraryKeys, useReparseItem } from '../../hooks/useLibrary';
 import { useDoubanRating } from '../../hooks/useDoubanRating';
 import { useDoubanReviewSummary } from '../../hooks/useDoubanReviewSummary';
 import { CreditsSection } from './CreditsSection';
@@ -43,6 +43,9 @@ import { ManageSubtitleDialogV2 } from '../subtitle/ManageSubtitleDialogV2';
 import { NfoLocalizeAction } from './NfoLocalizeAction';
 import { DetailHeroV2 } from './DetailHeroV2';
 import { DetailTechInfoV2 } from './DetailTechInfoV2';
+import { DetailNoMetadataV2, type NoMetadataVariant } from './DetailNoMetadataV2';
+import { ManualMatchDialogV2 } from './ManualMatchDialogV2';
+import { cleanFilenameForSearch } from '../../utils/cleanFilenameForSearch';
 import { DetailSkeletonV2, DetailNotFoundV2, DetailLoadErrorV2 } from './DetailStatesV2';
 import { isNotFoundError } from '../../lib/apiError';
 import { TmdbAttribution } from '../ui/TmdbAttribution';
@@ -64,6 +67,8 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
   const [editorOpen, setEditorOpen] = useState(false);
   const [subtitleOpen, setSubtitleOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [matchOpen, setMatchOpen] = useState(false);
+  const reparse = useReparseItem();
 
   const localMovie = useLocalMovieDetails(isMovie ? id : '');
   const localSeries = useLocalSeriesDetails(!isMovie ? id : '');
@@ -166,6 +171,26 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
   const filePath = data.filePath;
   const editorMetadata = buildEditorMetadata();
 
+  // dsr-2b-b AC #2 / #3: read from parseStatus, never from tmdbId — a Douban/NFO
+  // match or a manual edit has no tmdb id and IS matched. '' (API-created rows,
+  // usually already matched) is not "pending" either.
+  const noMetadata: NoMetadataVariant | null =
+    data.parseStatus === 'failed' ? 'failed' : data.parseStatus === 'pending' ? 'pending' : null;
+  const mediaKind = isMovie ? 'movie' : 'series';
+  // Only a re-match for THIS item speaks here (the hook instance survives
+  // navigation between detail pages).
+  const ownRematch = reparse.variables?.id === id;
+  // Only once the page itself reads failed: between the re-match answering and the
+  // detail refetch landing, a pending block would otherwise say "still not found"
+  // under 「資料還在整理」.
+  const lastRematch =
+    noMetadata === 'failed' &&
+    ownRematch &&
+    !reparse.isPending &&
+    reparse.data?.parseStatus === 'failed'
+      ? 'still-failed'
+      : null;
+
   const copyPath = () => {
     if (!filePath) return;
     navigator.clipboard?.writeText(filePath).then(() => {
@@ -181,7 +206,13 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
           type="button"
           onClick={() => setSubtitleOpen(true)}
           data-testid="action-manage-subtitle"
-          className={`${actionBasis} justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-4 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)]`}
+          // One solid accent per screen: with a no-metadata block the primary
+          // action is 手動選片 / 立即比對 (dsr-2b-b B10p-D / B11p-D).
+          className={
+            noMetadata
+              ? `${actionBasis} justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--bg-secondary)] px-4 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-tertiary)]`
+              : `${actionBasis} justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-4 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)]`
+          }
         >
           <Subtitles className="h-4 w-4" aria-hidden="true" />
           管理字幕
@@ -199,12 +230,16 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
       {/* 9R-13b: order-2 on mobile so the two rows read
           「管理字幕｜在地化資訊」/「修改資訊｜複製路徑」 per the B3p-M design;
           sm:order-3 restores the desktop order of B3p-D / B4p-D. */}
-      <NfoLocalizeAction
-        mediaType={type}
-        id={id}
-        hasFilePath={Boolean(filePath)}
-        className={`${actionBasis} order-2 justify-center sm:order-3`}
-      />
+      {/* dsr-2b-b AC #5: without metadata the "title" is the file name, and
+          localizing would translate it into the NFO. */}
+      {!noMetadata && (
+        <NfoLocalizeAction
+          mediaType={type}
+          id={id}
+          hasFilePath={Boolean(filePath)}
+          className={`${actionBasis} order-2 justify-center sm:order-3`}
+        />
+      )}
       {filePath && (
         <button
           type="button"
@@ -269,6 +304,18 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
       />
 
       <div className="mx-auto max-w-5xl space-y-8 px-4 pb-16 pt-8 sm:px-8">
+        {noMetadata && (
+          <DetailNoMetadataV2
+            variant={noMetadata}
+            mediaType={mediaKind}
+            onManualMatch={() => setMatchOpen(true)}
+            onRematch={() => reparse.mutate({ type: mediaKind, id })}
+            rematching={ownRematch && reparse.isPending}
+            lastRematch={lastRematch}
+            rematchError={ownRematch && !reparse.isPending ? reparse.error : null}
+          />
+        )}
+
         {data.overview && (
           <section data-testid="detail-overview">
             <h2 className="mb-2 text-lg font-semibold text-[var(--text-primary)]">簡介</h2>
@@ -349,6 +396,20 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
           mediaType={isMovie ? 'movie' : 'series'}
           initialData={editorMetadata}
           onSuccess={() => (isMovie ? localMovie.refetch() : localSeries.refetch())}
+        />
+      )}
+
+      {noMetadata && (
+        <ManualMatchDialogV2
+          open={matchOpen}
+          onOpenChange={setMatchOpen}
+          mediaId={id}
+          mediaType={mediaKind}
+          // Movies: the file's own name — after an edit or a wrong match the title is
+          // no longer what the file is called. Series: the title — a series
+          // file_path is its FOLDER (the library root in a flat layout), and the
+          // backend's own series re-match uses the title for the same reason.
+          initialQuery={cleanFilenameForSearch(isMovie ? filePath || data.title : data.title)}
         />
       )}
 

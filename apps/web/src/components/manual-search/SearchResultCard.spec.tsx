@@ -12,7 +12,7 @@ const mockItem: ManualSearchResultItem = {
   id: 'tmdb-85937',
   source: 'tmdb',
   title: 'Demon Slayer: Kimetsu no Yaiba',
-  titleZhTW: '鬼滅之刃',
+  titleZhTw: '鬼滅之刃',
   year: 2019,
   mediaType: 'tv',
   overview: 'It is the Taisho Period in Japan...',
@@ -95,8 +95,8 @@ describe('SearchResultCard', () => {
     expect(screen.getByText('🎬')).toBeInTheDocument();
   });
 
-  it('uses title when titleZhTW is not available', () => {
-    const itemWithoutZhTW = { ...mockItem, titleZhTW: undefined };
+  it('uses title when titleZhTw is not available', () => {
+    const itemWithoutZhTW = { ...mockItem, titleZhTw: undefined };
     render(<SearchResultCard {...defaultProps} item={itemWithoutZhTW} />);
 
     expect(screen.getByText('Demon Slayer: Kimetsu no Yaiba')).toBeInTheDocument();
