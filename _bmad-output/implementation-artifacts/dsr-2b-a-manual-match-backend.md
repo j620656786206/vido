@@ -1,6 +1,6 @@
 # Story DSR.2b-a：沒認出來的片救得回來——「手動選片」真的寫進去、「重新比對」真的會跑（後端）
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -328,6 +328,7 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`，BMAD dev agent（Amelia）2
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-17 | ✅ 收單 —— PR #450 合併進 main（commit 451e2abf），**CI 13 項全綠**（含 4 個 e2e shard）。純後端，沒有視覺基準線變動。`dsr-2b-b` 可以開工。 |
 | 2026-09-17 | 🔍 **/ship 對抗式 CR**：0 HIGH／2 MED／6 LOW，修 7、附案 1（見上表）。最重要的兩條：① 失敗路徑的「使用者是否接手」檢查放錯位置，probe 期間的存檔還是會被蓋掉；② manual 片的「重新分析檔案」在有 ffmpeg 的正式環境其實什麼都沒做，原本的完成註記寫錯了（已更正）。修完後 api 全綠、lint 0 errors、e2e API 17/17（重建後端再跑一次）。 |
 | 2026-09-17 | ✅ **dev-story 完成 → review**（Amelia）。api 全綠、web 3461/3461、lint 0 errors、e2e API 17/17（真後端＋真 TMDb）。最有感的三件：① **「套用」真的寫進去了**——選 `tmdb-550` 之後資料列就是鬥陣俱樂部、有海報、有演員、狀態成功，而且記成你親手選的；② **「重新比對」真的會跑**，用檔名重新解析，60 秒內回來，沒找到也老實說 `failed`；③ **你填的或你選的，自動比對不再蓋掉**——連批次比對跑到一半你剛好存檔的情況都擋住。另外修改資訊存檔會清掉「失敗」，並用 migration 038 修好已經卡住的片。一條 sub-7-3 的舊測試斷言的正是被修掉的 bug，已改寫並記在 AC Drift。 |
 | 2026-09-17 | 🔍 **建單後對抗驗證**（fresh-context 驗證代理，只讀）：本張相關 5 項 CRITICAL、6 項 SHOULD FIX，**全部併入**。最重要的三項：① 原本對 manual 片的重新比對回 409——但批次重新解析會把 manual 片打回 pending，詳情頁會一直顯示「立即比對」而永遠 409（改成「只重新分析檔案＋設回 success」，並加 migration 修好已經卡住的片，不再新增錯誤碼）；② 「不蓋 manual」原本只看批次一開始的舊副本，批次跑到一半使用者編輯還是會被蓋（改成寫入前重讀，並加一條「快照之後才改成 manual」的測試）；③ 逾時根本不會變成 error，照原寫法會回 200 failed 而且 mock 測試照樣綠（改用 `ctx.Err()`、要求真逾時測試）。另外：單筆操作不准搶 `isEnriching`（會讓取消 panic、吃掉掃描後的比對）；影集輸入不能用檔名；manual 片也要重新分析檔案；`:313` 與 Validate 測試漏列；不跑 `swag init`；e2e helper 對 409 重試。 |
