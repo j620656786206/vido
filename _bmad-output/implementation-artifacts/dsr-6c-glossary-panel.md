@@ -1,6 +1,6 @@
 # Story DSR.6c：名詞對照表對齊設計稿，順手修掉「存失敗不講」「Esc 關掉整個面板」「打中文按 Enter 送出半個字」
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -418,6 +418,7 @@ Claude Opus 5 (1M context) — Amelia（dev-story），2026-09-17
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-17 | ✅ 收單 —— PR #461 合併進 main（commit 3d47a23f），**CI 17 項全綠**（含 4 個 e2e shard 與 4 個視覺 shard）。`-linux` 基準線：手動觸發 Visual Regression → bootstrap PR #462（6 張 linux）合回分支後轉綠；看過其中兩張：名詞面板的來源標籤是中性藥丸、「未確認」赭色、「刪除」紅字，「官方字幕」列也是中性。 |
 | 2026-09-17 | 🔍 **/ship 對抗式 CR**：0 HIGH／1 MED／8 LOW，修 7、交代 1、不修 1。最重要：存檔或新增還在跑的時候按 Esc／取消，原本會先把打的字清掉、之後才跳失敗——現在會等它跑完；忙碌中的按鈕改用 aria-disabled，焦點不會掉到頁面上導致 Esc 關掉整個面板。另外：重複詞提示跟著目前的列表走、舊的一次開啟裡的失敗不報到新的一次、錯誤框改成黏在內容區頂端而不是把正在編輯的列捲走、每次打開才重設（關閉動畫不跳）。 |
 | 2026-09-17 | ✅ **dev-story 完成 → review**（Amelia）。web 3636/3636、api PASS、lint 0 errors、typecheck、token 一致。修掉三個真的問題：新增／編輯／確認／刪除失敗時畫面不說（編輯失敗還會吃掉打的字）、編輯時按 Esc 關掉整個面板、注音按 Enter 選字就送出；另外擋下「新增已存在的詞會默默覆寫」。對齊：面板 880＋框、按鈕無圖示、刪除改文字、字級收成 14、來源徽章全中性藥丸（未確認留赭）。設計稿：母版與 F6 改色、已確認列恢復編輯、新畫面 `F6-SPEC-STATES` 七種狀態、規格條補成五種；Flow H 以下畫布下移 743 恢復 2000 間距。新立 1 張單（Flow C 畫布重疊，既有）。 |
 | 2026-09-17 | 🔍 **建單後對抗驗證**（fresh-context 驗證代理，只讀；抽查約 45 個行號、全部 .pen 節點存在、`nDSEd` 只在 F6-D／F6-M／`Fx24g` 被 instance）：1 項 CRITICAL、10 項 SHOULD FIX、11 項 NIT，**全部併入**。最重要：① Esc 的標記原本只放輸入框——焦點在「儲存」「取消」按鈕上按 Esc 仍會關掉整個面板，改成標在新增表單容器與編輯中的列上；② `onEdit` 契約定死成回傳 Promise、面板用 `mutateAsync`（per-call callback 會被丟掉，列可能卡在編輯模式），並處理既有 spec 的型別；③ 拿掉泥金覆寫時要保留「中繼資料」文字（覆寫同時帶著標籤）；④ `Component/Skeleton` 本身就是三條，原本會畫成九條；⑤ 刪除確認對話框在列裡用 className 對齊 `DialogFrame`；⑥ 面板的圓角與框只加在 `sm:`；⑦ 徽章內距改成 DESIGN.md 的 4／10；⑧ 元件庫說明變長會把整排格子推出畫面，先設固定寬；⑨ 新畫面讓 Flow F 與 H 的間距跌破 2000，要整批重排；⑩ 編輯失敗的錯誤框可能在捲動區外，要捲進畫面。另外：組字中的 Esc、darwin 重生前確認沒跑後端、無障礙名稱撞名、busy 測試做法、重複的「新增詞彙」。 |
