@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/vido/api/internal/metadata"
@@ -132,6 +134,10 @@ var (
 type SelectedMetadataItem struct {
 	ID     string `json:"id"`
 	Source string `json:"source"`
+	// MediaType is the picked RESULT's type ("movie" or "tv"), as manual search
+	// returns it. Required since dsr-2b-a: TMDb movie and TV ids are two
+	// numbering systems, so the id alone does not say which work was picked.
+	MediaType string `json:"media_type"`
 }
 
 // ApplyMetadataRequest represents a request to apply metadata to a media item (Story 3.7)
@@ -142,7 +148,11 @@ type ApplyMetadataRequest struct {
 	LearnPattern bool                 `json:"learn_pattern,omitempty"` // Optional: trigger learning system (Story 3.9)
 }
 
-// Validate validates the apply metadata request
+// Validate validates the apply metadata request.
+//
+// [@contract-v1] (story dsr-2b-a AC #1): only a TMDb result can be applied, its
+// id must be tmdb-<positive integer>, selected_item.media_type is required and
+// must agree with the library item (movie↔movie, series↔tv).
 func (r *ApplyMetadataRequest) Validate() error {
 	if r.MediaID == "" {
 		return ErrApplyMetadataMediaIDRequired
@@ -153,20 +163,57 @@ func (r *ApplyMetadataRequest) Validate() error {
 	if r.SelectedItem.Source == "" {
 		return ErrApplyMetadataSelectedItemRequired
 	}
+	if r.SelectedItem.MediaType == "" {
+		return ErrApplyMetadataSelectedTypeRequired
+	}
 	// Default media type to movie
 	if r.MediaType == "" {
 		r.MediaType = "movie"
 	}
+	if r.MediaType != "movie" && r.MediaType != "series" {
+		return ErrApplyMetadataInvalidMediaType
+	}
+	if r.SelectedItem.Source != string(models.MetadataSourceTMDb) {
+		return ErrApplyMetadataUnsupportedSource
+	}
+	if _, ok := r.tmdbID(); !ok {
+		return ErrApplyMetadataInvalidItemID
+	}
+	wantResultType := "movie"
+	if r.MediaType == "series" {
+		wantResultType = "tv"
+	}
+	if r.SelectedItem.MediaType != wantResultType {
+		return ErrApplyMetadataTypeMismatch
+	}
 	return nil
 }
 
-// ApplyMetadataResponse represents the response from applying metadata
+// tmdbID parses the manual-search result id format "tmdb-<id>"
+// (TestMetadataService_ManualSearch_ResultIDFormat pins that format).
+func (r *ApplyMetadataRequest) tmdbID() (int, bool) {
+	raw, found := strings.CutPrefix(r.SelectedItem.ID, "tmdb-")
+	if !found {
+		return 0, false
+	}
+	id, err := strconv.Atoi(raw)
+	if err != nil || id <= 0 {
+		return 0, false
+	}
+	return id, true
+}
+
+// ApplyMetadataResponse represents the response from applying metadata.
+// [@contract-v1] (story dsr-2b-a AC #1): title / tmdb_id / parse_status are read
+// back from the row after the write.
 type ApplyMetadataResponse struct {
-	Success   bool                  `json:"success"`
-	MediaID   string                `json:"media_id"`
-	MediaType string                `json:"media_type"`
-	Title     string                `json:"title"`
-	Source    models.MetadataSource `json:"source"`
+	Success     bool                  `json:"success"`
+	MediaID     string                `json:"media_id"`
+	MediaType   string                `json:"media_type"`
+	Title       string                `json:"title"`
+	Source      models.MetadataSource `json:"source"`
+	TMDbID      int64                 `json:"tmdb_id"`
+	ParseStatus models.ParseStatus    `json:"parse_status"`
 }
 
 // Apply metadata errors
@@ -175,7 +222,28 @@ var (
 	ErrApplyMetadataSelectedItemRequired = errors.New("selectedItem with id and source is required")
 	ErrApplyMetadataNotFound             = errors.New("media item not found")
 	ErrApplyMetadataFailed               = errors.New("failed to apply metadata")
+	// dsr-2b-a AC #1 — all map to 400 APPLY_METADATA_INVALID_REQUEST.
+	ErrApplyMetadataSelectedTypeRequired = errors.New("selectedItem.media_type is required ('movie' or 'tv')")
+	ErrApplyMetadataInvalidMediaType     = errors.New("media_type must be 'movie' or 'series'")
+	ErrApplyMetadataUnsupportedSource    = errors.New("only TMDb results can be applied")
+	ErrApplyMetadataInvalidItemID        = errors.New("selectedItem.id must look like tmdb-<number>")
+	ErrApplyMetadataTypeMismatch         = errors.New("the selected result's type does not match the media item (movie needs a movie result, series needs a tv result)")
 )
+
+// IsApplyMetadataInvalidRequest reports whether err is a request the caller
+// must fix (400), as opposed to a failure on our side.
+func IsApplyMetadataInvalidRequest(err error) bool {
+	for _, target := range []error{
+		ErrApplyMetadataMediaIDRequired, ErrApplyMetadataSelectedItemRequired,
+		ErrApplyMetadataSelectedTypeRequired, ErrApplyMetadataInvalidMediaType,
+		ErrApplyMetadataUnsupportedSource, ErrApplyMetadataInvalidItemID, ErrApplyMetadataTypeMismatch,
+	} {
+		if errors.Is(err, target) {
+			return true
+		}
+	}
+	return false
+}
 
 // UpdateMetadataRequest represents a request to manually update metadata (Story 3.8)
 type UpdateMetadataRequest struct {
@@ -297,12 +365,6 @@ type MetadataServiceInterface interface {
 	UploadPoster(ctx context.Context, req *UploadPosterRequest) (*UploadPosterResponse, error)
 }
 
-// MediaUpdater is an interface for updating media metadata
-type MediaUpdater interface {
-	UpdateMetadataSource(ctx context.Context, mediaID string, source models.MetadataSource) error
-	GetByID(ctx context.Context, id string) (title string, exists bool, err error)
-}
-
 // MetadataEditor is an interface for full metadata editing (Story 3.8)
 type MetadataEditor interface {
 	UpdateMetadata(ctx context.Context, req *UpdateMetadataRequest) (*UpdateMetadataResponse, error)
@@ -320,8 +382,7 @@ type MetadataService struct {
 	orchestrator     *metadata.Orchestrator
 	tmdbProvider     *metadata.TMDbProvider
 	doubanProvider   *metadata.DoubanProvider // Story 12-1: shared with DoubanRatingService (single rate limiter)
-	movieUpdater     MediaUpdater
-	seriesUpdater    MediaUpdater
+	matchApplier     MatchApplier // dsr-2b-a: writes a user-picked TMDb match (the enrichment service)
 	movieEditor      MetadataEditor
 	seriesEditor     MetadataEditor
 	posterUploader   PosterUploader
@@ -677,100 +738,61 @@ func (s *MetadataService) sortResultsByRelevance(results []ManualSearchResultIte
 	}
 }
 
-// SetMediaUpdaters sets the media updaters for movies and series
-// This allows the service to update metadata source when applying metadata
-func (s *MetadataService) SetMediaUpdaters(movieUpdater, seriesUpdater MediaUpdater) {
-	s.movieUpdater = movieUpdater
-	s.seriesUpdater = seriesUpdater
-	slog.Info("Media updaters configured for metadata service")
+// SetMatchApplier wires the component that writes a user-picked TMDb match onto
+// a library row (dsr-2b-a AC #1). Setter-injected: the enrichment service is
+// built after this one and itself depends on it.
+func (s *MetadataService) SetMatchApplier(applier MatchApplier) {
+	s.matchApplier = applier
+	slog.Info("Match applier configured for metadata service")
 }
 
-// ApplyMetadata applies selected metadata to a media item (Story 3.7 - AC3)
-// This method:
-// - Validates the media exists
-// - Updates the metadata source field
-// - Returns the updated media information
+// ApplyMetadata applies a user-selected manual-search result to a library item
+// (Story 3.7 AC3; dsr-2b-a AC #1).
+//
+// Until dsr-2b-a this answered success without writing anything: production
+// never wired its updaters, so every call took a nil branch that returned the
+// title "Unknown". It now validates the pick, hands the TMDb id to the applier
+// (which fetches details and writes the row as metadata_source=manual) and
+// returns what was actually written. No applier → an error, never a silent
+// success.
 func (s *MetadataService) ApplyMetadata(ctx context.Context, req *ApplyMetadataRequest) (*ApplyMetadataResponse, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-
-	// Determine source from selected item
-	source := models.MetadataSource(req.SelectedItem.Source)
-
-	// Get the appropriate updater based on media type
-	var updater MediaUpdater
-	switch req.MediaType {
-	case "movie":
-		updater = s.movieUpdater
-	case "series":
-		updater = s.seriesUpdater
-	default:
-		// Default to movie for backwards compatibility
-		updater = s.movieUpdater
+	if s.matchApplier == nil {
+		slog.Error("apply metadata called but no match applier is wired", "media_id", req.MediaID)
+		return nil, ErrApplyMetadataFailed
 	}
 
-	var title string
-	if updater != nil {
-		// Check if media exists
-		t, exists, err := updater.GetByID(ctx, req.MediaID)
-		if err != nil {
-			slog.Error("Failed to get media",
-				"media_id", req.MediaID,
-				"media_type", req.MediaType,
-				"error", err,
-			)
-			return nil, ErrApplyMetadataFailed
-		}
-		if !exists {
-			slog.Debug("Media not found",
-				"media_id", req.MediaID,
-				"media_type", req.MediaType,
-			)
+	tmdbID, _ := req.tmdbID() // Validate guarantees it parses
+	kind := MediaKindMovie
+	if req.MediaType == "series" {
+		kind = MediaKindSeries
+	}
+
+	item, err := s.matchApplier.ApplyTMDbMatch(ctx, kind, req.MediaID, tmdbID)
+	if err != nil {
+		if errors.Is(err, ErrEnrichItemNotFound) {
 			return nil, ErrApplyMetadataNotFound
 		}
-		title = t
-
-		// Update metadata source
-		if err := updater.UpdateMetadataSource(ctx, req.MediaID, source); err != nil {
-			slog.Error("Failed to update metadata source",
-				"media_id", req.MediaID,
-				"source", source,
-				"error", err,
-			)
-			return nil, ErrApplyMetadataFailed
-		}
-	} else {
-		// If no updater is configured, we can't verify or update
-		// This is for testing or when updaters are not yet configured
-		slog.Warn("No media updater configured, skipping database update",
-			"media_id", req.MediaID,
-			"media_type", req.MediaType,
-		)
-		title = "Unknown" // Placeholder for testing
+		return nil, err
 	}
 
-	slog.Info("Metadata applied successfully",
-		"media_id", req.MediaID,
-		"media_type", req.MediaType,
-		"source", source,
-		"learn_pattern", req.LearnPattern,
-	)
-
-	// TODO: If learnPattern is true, trigger learning system (Story 3.9)
+	// TODO: If learnPattern is true, trigger learning system (Story 3.9) —
+	// disc-2026-09-learn-pattern-never-pins-id.
 	if req.LearnPattern {
-		slog.Debug("Learning pattern requested, will be implemented in Story 3.9",
-			"media_id", req.MediaID,
-			"selected_item", req.SelectedItem.ID,
-		)
+		slog.Debug("learn_pattern requested but not implemented (Story 3.9)",
+			"media_id", req.MediaID, "selected_item", req.SelectedItem.ID)
 	}
 
 	return &ApplyMetadataResponse{
-		Success:   true,
-		MediaID:   req.MediaID,
-		MediaType: req.MediaType,
-		Title:     title,
-		Source:    source,
+		Success:     true,
+		MediaID:     req.MediaID,
+		MediaType:   req.MediaType,
+		Title:       item.Title,
+		Source:      models.MetadataSourceTMDb,
+		TMDbID:      item.TMDbID,
+		ParseStatus: item.ParseStatus,
 	}, nil
 }
 

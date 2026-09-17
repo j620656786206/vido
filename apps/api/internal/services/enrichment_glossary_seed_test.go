@@ -250,10 +250,12 @@ func TestEnrichMovie_CreditsFetchFailureStillEnrichesTheRow(t *testing.T) {
 	assert.Equal(t, []string{"movie-1"}, scopes.calls, "the resolve still happens — the seeder retries the fetch on its own schedule")
 }
 
-func TestEnrichMovie_ManualSourceOutranksMatch_CreditsKeptButGlossaryStillSeeds(t *testing.T) {
-	// Ownership follows metadata_source, exactly like title/poster: a row the
-	// user edited (source=manual) keeps its cast; the glossary is still seeded
-	// because glossary terms have their own provenance and never overwrite.
+func TestEnrichMovie_ManualSource_NeverSearched_GlossaryStillResolves(t *testing.T) {
+	// dsr-2b-a AC #4 (supersedes sub-7-3's "manual row is still matched, only
+	// its cast is kept"): a row the user owns (source=manual) is not searched
+	// at all — before this, the match overwrote the user's title and poster
+	// and only the cast survived. The glossary scope is still resolved:
+	// glossary terms have their own provenance and never overwrite.
 	seeder := &fakeGlossarySeeder{credits: seedTestCredits, pairs: seedTestPairs}
 	repo := &mockMovieRepoForNFO{}
 	parserSvc := &mockPQParserService{result: &parser.ParseResult{Status: parser.ParseStatusSuccess, MediaType: parser.MediaTypeMovie, CleanedTitle: "Fight Club"}}
@@ -265,12 +267,15 @@ func TestEnrichMovie_ManualSourceOutranksMatch_CreditsKeptButGlossaryStillSeeds(
 	svc := NewEnrichmentService(repo, parserSvc, metaSvc, nil, nil, nil, nil, nil)
 	svc.SetGlossarySeeder(seeder, scopes)
 
-	movie := &models.Movie{ID: "movie-5", Title: "Fight.Club.mkv", MetadataSource: models.NewNullString(string(models.MetadataSourceManual))}
+	movie := &models.Movie{ID: "movie-5", Title: "我填的片名", MetadataSource: models.NewNullString(string(models.MetadataSourceManual)), ParseStatus: models.ParseStatusPending}
 	require.NoError(t, svc.enrichMovie(context.Background(), movie))
 
-	assert.Equal(t, []string{"movie/550"}, seeder.fetchArgs)
-	assert.Empty(t, repo.creditsWrites, "manual outranks tmdb: the user's cast stays")
-	assert.Equal(t, []string{"movie-5"}, scopes.calls, "the glossary is still resolved (and seeded there): terms have their own provenance")
+	assert.Empty(t, seeder.fetchArgs, "no match, so no credits fetch")
+	assert.Empty(t, repo.creditsWrites, "the user's cast stays")
+	require.NotNil(t, repo.updatedMovie)
+	assert.Equal(t, "我填的片名", repo.updatedMovie.Title, "the match must not overwrite the user's title")
+	assert.Equal(t, models.ParseStatusSuccess, repo.updatedMovie.ParseStatus)
+	assert.Equal(t, []string{"movie-5"}, scopes.calls, "the glossary is still resolved: terms have their own provenance")
 }
 
 func TestEnrichMovie_RematchOverwritesEarlierTMDbCast(t *testing.T) {

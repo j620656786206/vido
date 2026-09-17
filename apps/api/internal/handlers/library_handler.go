@@ -1,10 +1,13 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"log/slog"
+	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vido/api/internal/services"
@@ -13,11 +16,26 @@ import (
 // LibraryHandler handles HTTP requests for library operations.
 type LibraryHandler struct {
 	service services.LibraryServiceInterface
+
+	// dsr-2b-a AC #2: single-item re-match. Setter-injected (enrichment is built
+	// earlier in main.go than this handler's service graph needs).
+	enricher       services.ItemEnricherInterface
+	reparseTimeout time.Duration
 }
+
+// defaultReparseTimeout bounds a synchronous re-match. The common path (regex
+// parse + cached TMDb) is fast; the worst case (AI parse + several TMDb calls +
+// AI keyword retry) is not, and the user is waiting on a button.
+const defaultReparseTimeout = 60 * time.Second
 
 // NewLibraryHandler creates a new LibraryHandler with the given service.
 func NewLibraryHandler(service services.LibraryServiceInterface) *LibraryHandler {
-	return &LibraryHandler{service: service}
+	return &LibraryHandler{service: service, reparseTimeout: defaultReparseTimeout}
+}
+
+// SetItemEnricher wires single-item re-match (dsr-2b-a AC #2).
+func (h *LibraryHandler) SetItemEnricher(enricher services.ItemEnricherInterface) {
+	h.enricher = enricher
 }
 
 // ListLibrary handles GET /api/v1/library
@@ -155,46 +173,89 @@ func (h *LibraryHandler) DeleteSeries(c *gin.Context) {
 }
 
 // ReparseMovie handles POST /api/v1/library/movies/:id/reparse
+// @Summary Re-match one movie now
+// @Description Runs enrichment for this movie synchronously (60s cap), parsing its file name, and returns the row it left.
+// @Description "Ran but still no match" is a 200 with parse_status "failed". A movie whose metadata the user set (metadata_source=manual) is not searched: its local file facts are refreshed and it returns "success".
+// @Tags library
+// @Produce json
+// @Param id path string true "Movie ID"
+// @Success 200 {object} APIResponse{data=services.EnrichedItem}
+// @Failure 404 {object} APIResponse{error=APIError} "DB_NOT_FOUND"
+// @Failure 409 {object} APIResponse{error=APIError} "ENRICHMENT_ALREADY_RUNNING"
+// @Failure 500 {object} APIResponse{error=APIError} "DB_QUERY_FAILED"
+// @Failure 504 {object} APIResponse{error=APIError} "METADATA_TIMEOUT"
+// @Router /api/v1/library/movies/{id}/reparse [post]
 func (h *LibraryHandler) ReparseMovie(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
-		BadRequestError(c, "VALIDATION_REQUIRED_FIELD", "Movie ID is required")
-		return
-	}
-
-	// Verify the movie exists
-	movie, err := h.service.GetMovieByID(c.Request.Context(), id)
-	if err != nil {
-		NotFoundError(c, "Movie")
-		return
-	}
-
-	// TODO: Trigger re-parse via metadata service (Story 5.6)
-	SuccessResponse(c, map[string]interface{}{
-		"id":     movie.ID,
-		"status": "reparse_queued",
-	})
+	h.reparse(c, services.MediaKindMovie, "Movie")
 }
 
 // ReparseSeries handles POST /api/v1/library/series/:id/reparse
+// @Summary Re-match one series now
+// @Description Runs enrichment for this series synchronously (60s cap) using its title, and returns the row it left.
+// @Description "Ran but still no match" is a 200 with parse_status "failed". A series whose metadata the user set is not searched and returns "success".
+// @Tags library
+// @Produce json
+// @Param id path string true "Series ID"
+// @Success 200 {object} APIResponse{data=services.EnrichedItem}
+// @Failure 404 {object} APIResponse{error=APIError} "DB_NOT_FOUND"
+// @Failure 409 {object} APIResponse{error=APIError} "ENRICHMENT_ALREADY_RUNNING"
+// @Failure 500 {object} APIResponse{error=APIError} "DB_QUERY_FAILED"
+// @Failure 504 {object} APIResponse{error=APIError} "METADATA_TIMEOUT"
+// @Router /api/v1/library/series/{id}/reparse [post]
 func (h *LibraryHandler) ReparseSeries(c *gin.Context) {
+	h.reparse(c, services.MediaKindSeries, "Series")
+}
+
+// reparse is the shared body of the two re-match endpoints (dsr-2b-a AC #2).
+// Before dsr-2b-a both were stubs answering {status:"reparse_queued"} while
+// nothing was queued anywhere.
+func (h *LibraryHandler) reparse(c *gin.Context, kind services.MediaKind, resource string) {
 	id := c.Param("id")
 	if id == "" {
-		BadRequestError(c, "VALIDATION_REQUIRED_FIELD", "Series ID is required")
+		BadRequestError(c, "VALIDATION_REQUIRED_FIELD", resource+" ID is required")
+		return
+	}
+	if h.enricher == nil {
+		InternalServerError(c, "Enrichment service not configured")
 		return
 	}
 
-	series, err := h.service.GetSeriesByID(c.Request.Context(), id)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.reparseTimeout)
+	defer cancel()
+
+	item, err := h.enricher.EnrichOne(ctx, kind, id)
 	if err != nil {
-		NotFoundError(c, "Series")
+		switch {
+		// Deadline first: an expired context also fails the row write, and
+		// that is a timeout, not a storage fault.
+		case errors.Is(err, context.DeadlineExceeded):
+			ErrorResponse(c, http.StatusGatewayTimeout, "METADATA_TIMEOUT",
+				"Matching took too long and was stopped",
+				"Please try again later")
+		case errors.Is(err, services.ErrEnrichItemNotFound):
+			NotFoundError(c, resource)
+		case errors.Is(err, services.ErrEnrichmentAlreadyRunning):
+			// Pre-Rule-7 legacy literal, reused as-is (dsr-2b-a AC #6).
+			ErrorResponse(c, http.StatusConflict, "ENRICHMENT_ALREADY_RUNNING",
+				"The library is being matched right now",
+				"Try again when the current matching pass finishes")
+		case errors.Is(err, services.ErrEnrichPersist):
+			slog.Error("Re-match could not read or write the row", "kind", kind, "id", id, "error", err)
+			ErrorResponse(c, http.StatusInternalServerError, "DB_QUERY_FAILED",
+				"The re-match result could not be saved",
+				"Please try again later")
+		case errors.Is(err, context.Canceled):
+			// The client went away mid-match; nobody reads this response.
+			slog.Info("Re-match cancelled by the client", "kind", kind, "id", id)
+			InternalServerError(c, "Re-match was cancelled")
+		default:
+			slog.Error("Re-match failed", "kind", kind, "id", id, "error", err)
+			InternalServerError(c, "Re-match failed")
+		}
 		return
 	}
 
-	// TODO: Trigger re-parse via metadata service (Story 5.6)
-	SuccessResponse(c, map[string]interface{}{
-		"id":     series.ID,
-		"status": "reparse_queued",
-	})
+	SuccessResponse(c, item)
 }
 
 // ExportMovie handles POST /api/v1/library/movies/:id/export

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -16,6 +17,7 @@ import (
 	"github.com/vido/api/internal/metadata"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/services"
+	"github.com/vido/api/internal/tmdb"
 )
 
 // mockMetadataService implements services.MetadataServiceInterface for testing
@@ -905,11 +907,13 @@ func TestMetadataHandler_ApplyMetadata_MovieSuccess(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	expectedResponse := &services.ApplyMetadataResponse{
-		Success:   true,
-		MediaID:   "test-movie-id",
-		MediaType: "movie",
-		Title:     "Fight Club",
-		Source:    models.MetadataSourceTMDb,
+		Success:     true,
+		MediaID:     "test-movie-id",
+		MediaType:   "movie",
+		Title:       "Fight Club",
+		Source:      models.MetadataSourceTMDb,
+		TMDbID:      550,
+		ParseStatus: models.ParseStatusSuccess,
 	}
 
 	service := &mockMetadataService{
@@ -918,6 +922,7 @@ func TestMetadataHandler_ApplyMetadata_MovieSuccess(t *testing.T) {
 			assert.Equal(t, "movie", req.MediaType)
 			assert.Equal(t, "tmdb-550", req.SelectedItem.ID)
 			assert.Equal(t, "tmdb", req.SelectedItem.Source)
+			assert.Equal(t, "movie", req.SelectedItem.MediaType)
 			return expectedResponse, nil
 		},
 	}
@@ -931,7 +936,8 @@ func TestMetadataHandler_ApplyMetadata_MovieSuccess(t *testing.T) {
 		"media_type": "movie",
 		"selected_item": {
 			"id": "tmdb-550",
-			"source": "tmdb"
+			"source": "tmdb",
+			"media_type": "movie"
 		}
 	}`
 	c.Request = httptest.NewRequest("POST", "/api/v1/metadata/apply", strings.NewReader(body))
@@ -950,6 +956,8 @@ func TestMetadataHandler_ApplyMetadata_MovieSuccess(t *testing.T) {
 	assert.Equal(t, "test-movie-id", data["media_id"])
 	assert.Equal(t, "Fight Club", data["title"])
 	assert.Equal(t, "tmdb", data["source"])
+	assert.Equal(t, float64(550), data["tmdb_id"])
+	assert.Equal(t, "success", data["parse_status"])
 }
 
 // [P1] Tests apply metadata missing mediaId returns error
@@ -965,7 +973,8 @@ func TestMetadataHandler_ApplyMetadata_MissingMediaId(t *testing.T) {
 		"media_type": "movie",
 		"selected_item": {
 			"id": "tmdb-550",
-			"source": "tmdb"
+			"source": "tmdb",
+			"media_type": "movie"
 		}
 	}`
 	c.Request = httptest.NewRequest("POST", "/api/v1/metadata/apply", strings.NewReader(body))
@@ -1042,7 +1051,8 @@ func TestMetadataHandler_ApplyMetadata_MediaNotFound(t *testing.T) {
 		"media_type": "movie",
 		"selected_item": {
 			"id": "tmdb-550",
-			"source": "tmdb"
+			"source": "tmdb",
+			"media_type": "movie"
 		}
 	}`
 	c.Request = httptest.NewRequest("POST", "/api/v1/metadata/apply", strings.NewReader(body))
@@ -1088,7 +1098,8 @@ func TestMetadataHandler_ApplyMetadata_WithLearnPattern(t *testing.T) {
 		"media_type": "movie",
 		"selected_item": {
 			"id": "tmdb-550",
-			"source": "tmdb"
+			"source": "tmdb",
+			"media_type": "movie"
 		},
 		"learn_pattern": true
 	}`
@@ -1154,7 +1165,8 @@ func TestMetadataHandler_ApplyMetadata_SeriesSuccess(t *testing.T) {
 		"media_type": "series",
 		"selected_item": {
 			"id": "tmdb-1396",
-			"source": "tmdb"
+			"source": "tmdb",
+			"media_type": "tv"
 		}
 	}`
 	c.Request = httptest.NewRequest("POST", "/api/v1/metadata/apply", strings.NewReader(body))
@@ -1171,6 +1183,75 @@ func TestMetadataHandler_ApplyMetadata_SeriesSuccess(t *testing.T) {
 	assert.True(t, response["success"].(bool))
 	data := response["data"].(map[string]interface{})
 	assert.Equal(t, "series", data["media_type"])
+}
+
+// dsr-2b-a AC #1: every failure leaves with its own status and code — Rule 16,
+// assert the code, not just success:false.
+func applyAndDecode(t *testing.T, service *mockMetadataService, body string) (int, map[string]interface{}) {
+	t.Helper()
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("POST", "/api/v1/metadata/apply", strings.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	NewMetadataHandler(service).ApplyMetadata(c)
+	var response map[string]interface{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+	return w.Code, response
+}
+
+const validApplyBody = `{"media_id":"m-1","media_type":"movie","selected_item":{"id":"tmdb-550","source":"tmdb","media_type":"movie"}}`
+
+func errorCode(response map[string]interface{}) string {
+	errData, _ := response["error"].(map[string]interface{})
+	code, _ := errData["code"].(string)
+	return code
+}
+
+func TestMetadataHandler_ApplyMetadata_MissingSelectedResultType(t *testing.T) {
+	called := false
+	service := &mockMetadataService{applyMetadataFunc: func(context.Context, *services.ApplyMetadataRequest) (*services.ApplyMetadataResponse, error) {
+		called = true
+		return nil, nil
+	}}
+
+	status, response := applyAndDecode(t, service, `{"media_id":"m-1","media_type":"movie","selected_item":{"id":"tmdb-550","source":"tmdb"}}`)
+
+	assert.Equal(t, http.StatusBadRequest, status)
+	assert.Equal(t, "APPLY_METADATA_INVALID_REQUEST", errorCode(response))
+	assert.False(t, called)
+}
+
+func TestMetadataHandler_ApplyMetadata_ErrorMapping(t *testing.T) {
+	cases := map[string]struct {
+		err    error
+		status int
+		code   string
+	}{
+		"type mismatch":         {services.ErrApplyMetadataTypeMismatch, http.StatusBadRequest, "APPLY_METADATA_INVALID_REQUEST"},
+		"douban result":         {services.ErrApplyMetadataUnsupportedSource, http.StatusBadRequest, "APPLY_METADATA_INVALID_REQUEST"},
+		"batch running":         {services.ErrEnrichmentAlreadyRunning, http.StatusConflict, "ENRICHMENT_ALREADY_RUNNING"},
+		"tmdb 404 wrapped once": {fmt.Errorf("failed to get movie details: %w", tmdb.NewNotFoundError(550)), http.StatusNotFound, "TMDB_NOT_FOUND"},
+		"tmdb 404 wrapped twice": {fmt.Errorf("cache: %w", fmt.Errorf("client: %w", tmdb.NewNotFoundError(550))),
+			http.StatusNotFound, "TMDB_NOT_FOUND"},
+		"tmdb timeout":  {fmt.Errorf("failed to get movie details: %w", tmdb.NewTimeoutError(nil)), http.StatusGatewayTimeout, "TMDB_TIMEOUT"},
+		"write failed":  {fmt.Errorf("%w: update movie: disk I/O error", services.ErrEnrichPersist), http.StatusInternalServerError, "DB_QUERY_FAILED"},
+		"not wired":     {services.ErrApplyMetadataFailed, http.StatusInternalServerError, "APPLY_METADATA_FAILED"},
+		"missing media": {services.ErrApplyMetadataNotFound, http.StatusNotFound, "APPLY_METADATA_NOT_FOUND"},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			service := &mockMetadataService{applyMetadataFunc: func(context.Context, *services.ApplyMetadataRequest) (*services.ApplyMetadataResponse, error) {
+				return nil, tc.err
+			}}
+
+			status, response := applyAndDecode(t, service, validApplyBody)
+
+			assert.Equal(t, tc.status, status)
+			assert.Equal(t, tc.code, errorCode(response))
+			assert.False(t, response["success"].(bool))
+		})
+	}
 }
 
 // =============================================================================

@@ -13,6 +13,10 @@
 import { test, expect } from '../support/fixtures';
 import { seedMovie, seedSeries, deleteMovies, deleteSeries } from '../support/helpers/seed-helpers';
 
+// The library API serializes rows in snake_case; the helper's Movie type is
+// camelCase, so read the fields a contract is about by their wire names.
+const wire = (row: unknown) => row as Record<string, unknown>;
+
 // =============================================================================
 // Manual Search API Tests (AC1, AC4)
 // =============================================================================
@@ -227,14 +231,12 @@ test.describe('Manual Search API @api @metadata', () => {
 // =============================================================================
 
 test.describe('Apply Metadata API @api @metadata', () => {
-  // Story 20-2: these were skipped "until we have proper test data seeding", but
-  // the real blocker was different — cmd/api/main.go never calls
-  // `SetMediaUpdaters`, so in the running backend `movieUpdater`/`seriesUpdater`
-  // are nil and ApplyMetadata takes the no-op branch (returns success, title
-  // "Unknown", no DB write). We still seed a REAL media row so `media_id` is
-  // genuine and the test stays correct once updaters get wired; for now these
-  // assert the request/response ENVELOPE contract (routing, binding, shape),
-  // not the DB-mutation path.
+  // dsr-2b-a: until this story apply was a silent no-op in the running backend
+  // (the service's updaters were never wired — it answered success with the
+  // title "Unknown" and wrote nothing), so these tests could only check the
+  // envelope. Apply now writes the picked TMDb match onto the row, so the
+  // happy paths READ THE ROW BACK. They call real TMDb (CI's e2e backend has
+  // TMDB_API_KEY).
   const movieIds: string[] = [];
   const seriesIds: string[] = [];
 
@@ -243,123 +245,141 @@ test.describe('Apply Metadata API @api @metadata', () => {
     await deleteSeries(api, ...seriesIds.splice(0));
   });
 
-  test('[P1] POST /metadata/apply - should apply metadata to movie (AC3)', async ({ api }) => {
-    // GIVEN: A movie exists and we have selected metadata
-    const movie = await seedMovie(api, { tmdbId: 550 });
+  test('[P1] POST /metadata/apply - writes the picked movie match onto the row (AC3, dsr-2b-a AC #1)', async ({
+    api,
+  }) => {
+    // GIVEN: An unmatched movie
+    const movie = await seedMovie(api, { title: `[E2E] fc ${Date.now()}.mkv` });
     movieIds.push(movie.id);
 
-    const applyRequest = {
+    // WHEN: Applying the TMDb result the user picked
+    const response = await api.applyMetadata({
       media_id: movie.id,
-      media_type: 'movie' as const,
-      selected_item: {
-        id: 'tmdb-550',
-        source: 'tmdb',
-      },
-    };
+      media_type: 'movie',
+      selected_item: { id: 'tmdb-550', source: 'tmdb', media_type: 'movie' },
+    });
 
-    // WHEN: Applying the metadata
-    const response = await api.applyMetadata(applyRequest);
-
-    // THEN: Should return success with the request echoed back
+    // THEN: The response carries what was written…
     expect(response.success).toBe(true);
-    expect(response.data).toBeDefined();
     expect(response.data!.media_id).toBe(movie.id);
     expect(response.data!.source).toBe('tmdb');
+    expect(response.data!.tmdb_id).toBe(550);
+    expect(response.data!.parse_status).toBe('success');
+    expect(response.data!.title).not.toBe('Unknown');
+
+    // …and the row really holds it.
+    const row = wire((await api.getMovie(movie.id)).data);
+    expect(row.tmdb_id).toBe(550);
+    expect(row.parse_status).toBe('success');
+    expect(row.metadata_source).toBe('manual');
+    expect(row.title).toBe(response.data!.title);
   });
 
-  test('[P1] POST /metadata/apply - should apply metadata to series', async ({ api }) => {
-    // GIVEN: A series exists and we have selected metadata
-    const series = await seedSeries(api, { tmdbId: 1396 });
+  test('[P1] POST /metadata/apply - writes the picked series match onto the row', async ({
+    api,
+  }) => {
+    const series = await seedSeries(api, { title: `[E2E] bb ${Date.now()}` });
     seriesIds.push(series.id);
 
-    const applyRequest = {
+    const response = await api.applyMetadata({
       media_id: series.id,
-      media_type: 'series' as const,
-      selected_item: {
-        id: 'tmdb-1396',
-        source: 'tmdb',
-      },
-    };
+      media_type: 'series',
+      selected_item: { id: 'tmdb-1396', source: 'tmdb', media_type: 'tv' },
+    });
 
-    // WHEN: Applying the metadata
-    const response = await api.applyMetadata(applyRequest);
-
-    // THEN: Should return success
     expect(response.success).toBe(true);
-    expect(response.data).toBeDefined();
     expect(response.data!.media_type).toBe('series');
+    expect(response.data!.tmdb_id).toBe(1396);
+    const row = wire((await api.getSeries(series.id)).data);
+    expect(row.tmdb_id).toBe(1396);
+    expect(row.parse_status).toBe('success');
   });
 
   test('[P1] POST /metadata/apply - should return error for missing media_id', async ({ api }) => {
-    // GIVEN: A request without media_id
-    const applyRequest = {
+    const response = await api.applyMetadata({
       media_id: '',
-      media_type: 'movie' as const,
-      selected_item: {
-        id: 'tmdb-550',
-        source: 'tmdb',
-      },
-    };
+      media_type: 'movie',
+      selected_item: { id: 'tmdb-550', source: 'tmdb', media_type: 'movie' },
+    });
 
-    // WHEN: Applying the metadata
-    const response = await api.applyMetadata(applyRequest);
-
-    // THEN: Should return error
     expect(response.success).toBe(false);
-    expect(response.error).toBeDefined();
     expect(response.error!.code).toBe('APPLY_METADATA_INVALID_REQUEST');
   });
 
-  test.skip('[P1] POST /metadata/apply - should return error for non-existent media', async ({
+  test('[P1] POST /metadata/apply - rejects a TV result for a movie (dsr-2b-a AC #1)', async ({
     api,
   }) => {
-    // SKIP (Story 20-2, precise root cause): NOT_FOUND is only returned when a
-    // media updater is configured (metadata_service.go ApplyMetadata, the
-    // `updater != nil` branch). cmd/api/main.go never calls `SetMediaUpdaters`,
-    // so the running backend takes the nil/no-op branch and returns success
-    // regardless of whether the media exists — this assertion can't hold in CI.
-    // Enable once main.go wires SetMediaUpdaters (tracked in sprint-status).
+    // tmdb-550 exists on BOTH sides and is a different work on each.
+    const movie = await seedMovie(api, { title: `[E2E] mismatch ${Date.now()}.mkv` });
+    movieIds.push(movie.id);
 
-    // GIVEN: A request for non-existent media
-    const applyRequest = {
-      media_id: 'nonexistent-media-id-12345',
-      media_type: 'movie' as const,
-      selected_item: {
-        id: 'tmdb-550',
-        source: 'tmdb',
-      },
-    };
+    const response = await api.applyMetadata({
+      media_id: movie.id,
+      media_type: 'movie',
+      selected_item: { id: 'tmdb-550', source: 'tmdb', media_type: 'tv' },
+    });
 
-    // WHEN: Applying the metadata
-    const response = await api.applyMetadata(applyRequest);
-
-    // THEN: Should return not found error
     expect(response.success).toBe(false);
-    expect(response.error).toBeDefined();
+    expect(response.error!.code).toBe('APPLY_METADATA_INVALID_REQUEST');
+    expect(wire((await api.getMovie(movie.id)).data).tmdb_id).toBeFalsy();
+  });
+
+  test('[P1] POST /metadata/apply - should return error for non-existent media', async ({
+    api,
+  }) => {
+    // Un-skipped by dsr-2b-a: the nil-updater branch that answered success for
+    // any id is gone (was wire-set-media-updaters-test-harness).
+    const response = await api.applyMetadata({
+      media_id: 'nonexistent-media-id-12345',
+      media_type: 'movie',
+      selected_item: { id: 'tmdb-550', source: 'tmdb', media_type: 'movie' },
+    });
+
+    expect(response.success).toBe(false);
     expect(response.error!.code).toBe('APPLY_METADATA_NOT_FOUND');
   });
 
   test('[P2] POST /metadata/apply - should accept learnPattern flag for Story 3.9', async ({
     api,
   }) => {
-    // GIVEN: A valid apply request with learnPattern flag, against a real movie
-    const movie = await seedMovie(api, { tmdbId: 550 });
+    const movie = await seedMovie(api, { title: `[E2E] learn ${Date.now()}.mkv` });
     movieIds.push(movie.id);
 
-    const applyRequest = {
+    const response = await api.applyMetadata({
       media_id: movie.id,
-      media_type: 'movie' as const,
-      selected_item: {
-        id: 'tmdb-550',
-        source: 'tmdb',
-      },
+      media_type: 'movie',
+      selected_item: { id: 'tmdb-550', source: 'tmdb', media_type: 'movie' },
       learn_pattern: true,
-    };
+    });
 
-    // WHEN: Applying the metadata with learn pattern
-    const response = await api.applyMetadata(applyRequest);
-
-    // THEN: Should succeed (learning is triggered in background)
+    // learn_pattern is accepted but still does nothing (Story 3.9 TODO).
     expect(response.success).toBe(true);
+  });
+});
+
+// =============================================================================
+// Single-item re-match (dsr-2b-a AC #2)
+// =============================================================================
+
+test.describe('Library re-match API @api @metadata @dsr-2b-a', () => {
+  const movieIds: string[] = [];
+
+  test.afterEach(async ({ api }) => {
+    await deleteMovies(api, ...movieIds.splice(0));
+  });
+
+  test('[P1] POST /library/movies/:id/reparse - ran but found nothing is a 200 carrying failed', async ({
+    api,
+  }) => {
+    // This is also how dsr-2b-b seeds a "match failed" item for its detail-page e2e.
+    const movie = await seedMovie(api, { title: `zzqx-e2e-nonsense-${Date.now()}` });
+    movieIds.push(movie.id);
+
+    const response = await api.reparseMovie(movie.id);
+
+    expect(response.success).toBe(true);
+    expect(response.data!.id).toBe(movie.id);
+    expect(response.data!.parse_status).toBe('failed');
+    expect(wire((await api.getMovie(movie.id)).data).parse_status).toBe('failed');
   });
 });
