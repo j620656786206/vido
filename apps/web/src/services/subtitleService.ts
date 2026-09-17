@@ -144,6 +144,35 @@ export interface GenerationBatchItem {
   title: string;
   /** movie|episode — additive since sub-4-2 ([@contract-v3]). */
   mediaType: GenerationMediaType;
+  /**
+   * The show an episode belongs to; `''` for movies and whenever the series
+   * lookup degrades. Additive since dsr-6d-a AC #7 ([@contract-v1]) — `title`
+   * itself stays "S04E07 第七章", compose the two for display.
+   */
+  seriesTitle: string;
+}
+
+/** One queue entry's state (dsr-6d-a AC #1 [@contract-v1]). */
+export type GenerationBatchItemStatus =
+  | 'queued'
+  | 'running'
+  | 'done'
+  | 'failed'
+  | 'paused'
+  | 'cancelled';
+
+/**
+ * Why an item failed; `''` for every other status (dsr-6d-a AC #1). `skipped`:
+ * nothing usable to generate from (pipeline skip, or generation not
+ * configured); `busy_elsewhere`: the media was already being processed. All
+ * three still count in `failCount`.
+ */
+export type GenerationBatchItemReason = '' | 'skipped' | 'busy_elsewhere' | 'error';
+
+/** A queue entry plus its state — every key is always present. */
+export interface GenerationBatchItemState extends GenerationBatchItem {
+  status: GenerationBatchItemStatus;
+  reason: GenerationBatchItemReason;
 }
 
 export interface GenerationBatchStartParams {
@@ -369,6 +398,14 @@ export interface GenerationBatchStartResult {
   batchId: string | null;
   totalItems: number;
   items: GenerationBatchItem[];
+  /**
+   * The started batch's own snapshot — real ceiling and the queue with
+   * per-item status (dsr-6d-a AC #5 [@contract-v1]), so the dialog need not
+   * wait for the first SSE event, which may already be gone. `null` on the
+   * empty-scope 200, from a server before dsr-6d-a, or if the batch was
+   * dismissed or replaced within milliseconds.
+   */
+  progress: GenerationBatchProgress | null;
 }
 
 export type GenerationBatchStatus =
@@ -378,7 +415,16 @@ export type GenerationBatchStatus =
   | 'error'
   | 'budget_ceiling';
 
-/** Progress snapshot — mirrors the `generation_batch_progress` SSE payload (11 keys). */
+/**
+ * Progress snapshot — the shape of GET …/status `progress` and `last`, the 409
+ * body, the 202 `progress`, and the `generation_batch_progress` SSE payload.
+ *
+ * `items` (dsr-6d-a AC #1) is the whole queue with each entry's state. The
+ * status probe, 409 and 202 always carry it; the SSE event carries it only on
+ * the terminal broadcast and sends `null` while running, together with an
+ * SSE-only `changed_item` key — the one entry whose state just changed —
+ * which is not part of this type (dsr-6d-a AC #2).
+ */
 export interface GenerationBatchProgress {
   batchId: string;
   totalItems: number;
@@ -392,16 +438,27 @@ export interface GenerationBatchProgress {
   status: GenerationBatchStatus;
   spentUsd: number;
   budgetUsd: number;
+  items: GenerationBatchItemState[] | null;
 }
 
 /**
- * GET /subtitles/generation-batch/status response. NOTE (fetch-batch parity):
- * after ANY terminal state this probe returns `{running: false, progress: null}`
- * — terminal snapshots (incl. budget_ceiling counts) arrive only via SSE.
+ * GET /subtitles/generation-batch/status response. `progress` is null when no
+ * batch runs. `last` (dsr-6d-a AC #3 [@contract-v1]) is the most recent
+ * terminal snapshot — kept in server memory until the next batch starts or
+ * `dismissGenerationBatch()`, lost on restart, always null while running — so
+ * a lost terminal SSE event or a page left and reopened can still show how
+ * the batch ended (e.g. budget_ceiling with its paused items).
  */
 export interface GenerationBatchStatusResponse {
   running: boolean;
   progress?: GenerationBatchProgress | null;
+  last?: GenerationBatchProgress | null;
+}
+
+/** POST /subtitles/generation-batch/dismiss (dsr-6d-a AC #6 [@contract-v1]). */
+export interface GenerationBatchDismissResult {
+  dismissed: boolean;
+  running: boolean;
 }
 
 export interface GenerationBatchCancelResult {
@@ -537,6 +594,7 @@ export const subtitleService = {
       batchId?: string;
       totalItems: number;
       items: GenerationBatchItem[];
+      progress?: GenerationBatchProgress | null;
     }>((json as ApiResponse<unknown>).data);
     return {
       conflict: false,
@@ -544,6 +602,7 @@ export const subtitleService = {
         batchId: data.batchId ?? null,
         totalItems: data.totalItems,
         items: data.items ?? [],
+        progress: data.progress ?? null,
       },
     };
   },
@@ -567,6 +626,16 @@ export const subtitleService = {
   /** POST /subtitles/generation-batch/cancel — idempotent; queued items never start. */
   async cancelGenerationBatch(): Promise<GenerationBatchCancelResult> {
     return fetchApi<GenerationBatchCancelResult>('/subtitles/generation-batch/cancel', {
+      method: 'POST',
+    });
+  },
+
+  /**
+   * POST /subtitles/generation-batch/dismiss — forget the last terminal
+   * snapshot (dsr-6d-a AC #6). Idempotent; clears nothing while a batch runs.
+   */
+  async dismissGenerationBatch(): Promise<GenerationBatchDismissResult> {
+    return fetchApi<GenerationBatchDismissResult>('/subtitles/generation-batch/dismiss', {
       method: 'POST',
     });
   },

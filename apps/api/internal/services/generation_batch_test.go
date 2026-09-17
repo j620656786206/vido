@@ -272,6 +272,7 @@ func TestGenerationBatch_MissingScope_SequentialComplete(t *testing.T) {
 }
 
 // AC 9 [@contract-v2]: exact SSE payload keys; current_media_id is a UUID STRING.
+// dsr-6d-a AC #2 adds items + changed_item (additive — the 11 original keys stay).
 func TestGenerationBatch_SSEPayloadFields(t *testing.T) {
 	runner := &fakeGenerationRunner{available: true}
 	finder := &fakeCandidateFinder{movies: []models.Movie{genMovie(uuidSeven, "Alpha", "/m/a.mkv")}}
@@ -286,7 +287,7 @@ func TestGenerationBatch_SSEPayloadFields(t *testing.T) {
 	wantKeys := []string{
 		"batch_id", "total_items", "current_index", "current_media_id",
 		"current_item", "success_count", "fail_count", "paused_count",
-		"status", "spent_usd", "budget_usd",
+		"status", "spent_usd", "budget_usd", "items", "changed_item",
 	}
 	for _, ev := range events {
 		assert.Len(t, ev, len(wantKeys))

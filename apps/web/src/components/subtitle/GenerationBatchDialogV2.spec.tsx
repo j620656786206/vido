@@ -129,11 +129,11 @@ const M5 = '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e55';
 const E9 = '8fa9fed7-8fbc-4e8d-8edc-f6b7c8d9e006';
 
 const ITEMS: GenerationBatchItem[] = [
-  { mediaId: M1, title: '沙丘：第二部', mediaType: 'movie' },
-  { mediaId: M2, title: '奧本海默', mediaType: 'movie' },
-  { mediaId: M3, title: '怪奇物語 S04E07', mediaType: 'episode' },
-  { mediaId: M4, title: '星際效應', mediaType: 'movie' },
-  { mediaId: M5, title: '全面啟動', mediaType: 'movie' },
+  { mediaId: M1, title: '沙丘：第二部', mediaType: 'movie', seriesTitle: '' },
+  { mediaId: M2, title: '奧本海默', mediaType: 'movie', seriesTitle: '' },
+  { mediaId: M3, title: '怪奇物語 S04E07', mediaType: 'episode', seriesTitle: '' },
+  { mediaId: M4, title: '星際效應', mediaType: 'movie', seriesTitle: '' },
+  { mediaId: M5, title: '全面啟動', mediaType: 'movie', seriesTitle: '' },
 ];
 
 function progressOf(p: Partial<GenerationBatchProgressState>): GenerationBatchProgressState {
@@ -149,6 +149,9 @@ function progressOf(p: Partial<GenerationBatchProgressState>): GenerationBatchPr
     status: 'running',
     spentUsd: 0.42,
     budgetUsd: 5,
+    // dsr-6d-a: the queue rides the snapshot; the SSE event leaves it null
+    // while running, so the hook state defaults to null too.
+    items: null,
     ...p,
   };
 }
@@ -429,7 +432,7 @@ describe('GenerationBatchDialogV2 (container)', () => {
   it('[P0 AC #4] consented start sends scope=selected + mixed media_ids + budget_usd and seeds tracking', async () => {
     mocked.startGenerationBatch.mockResolvedValue({
       conflict: false,
-      result: { batchId: 'gb-9', totalItems: 2, items: ITEMS.slice(0, 2) },
+      result: { batchId: 'gb-9', totalItems: 2, items: ITEMS.slice(0, 2), progress: null },
     });
 
     renderDialog({ selectedMediaIds: [M1, E9] });
@@ -520,7 +523,7 @@ describe('GenerationBatchDialogV2 (container)', () => {
   async function startBatchWithItems(rerender: () => void) {
     mocked.startGenerationBatch.mockResolvedValue({
       conflict: false,
-      result: { batchId: 'gb-race', totalItems: 5, items: ITEMS },
+      result: { batchId: 'gb-race', totalItems: 5, items: ITEMS, progress: null },
     });
     fireEvent.click(await screen.findByTestId('consent-stub-start'));
     await waitFor(() => expect(h.batchStartTracking).toHaveBeenCalled());
@@ -703,7 +706,7 @@ describe('GenerationBatchDialogV2 — retry/resume preselection (sub-5-3 AC #3/#
   async function startOwnedBatch(rerender: () => void) {
     mocked.startGenerationBatch.mockResolvedValue({
       conflict: false,
-      result: { batchId: 'gb-53', totalItems: 5, items: ITEMS },
+      result: { batchId: 'gb-53', totalItems: 5, items: ITEMS, progress: null },
     });
     fireEvent.click(await screen.findByTestId('consent-stub-start'));
     await waitFor(() => expect(h.batchStartTracking).toHaveBeenCalled());
@@ -769,7 +772,7 @@ describe('GenerationBatchDialogV2 — retry/resume preselection (sub-5-3 AC #3/#
     // Consent starts again — retryIds are consumed by the start.
     mocked.startGenerationBatch.mockResolvedValue({
       conflict: false,
-      result: { batchId: 'gb-54', totalItems: 1, items: [ITEMS[4]] },
+      result: { batchId: 'gb-54', totalItems: 1, items: [ITEMS[4]], progress: null },
     });
     fireEvent.click(await screen.findByTestId('consent-stub-start'));
     await waitFor(() => expect(mocked.startGenerationBatch).toHaveBeenCalledTimes(2));

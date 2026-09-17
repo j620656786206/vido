@@ -119,6 +119,9 @@ describe('useGenerationBatchProgress (lazy SSE, double-nested envelope)', () => 
       status: 'running',
       spentUsd: 0.42,
       budgetUsd: 5,
+      // dsr-6d-a: the queue rides the snapshot endpoints; a running SSE event
+      // sends items:null and a single changed_item instead.
+      items: null,
     });
   });
 

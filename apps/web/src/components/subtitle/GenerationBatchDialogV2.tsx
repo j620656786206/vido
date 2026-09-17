@@ -415,8 +415,10 @@ export function GenerationBatchPanelV2({
               ))}
             </ul>
           ) : (
-            // 409/recover-attach fallback: the status probe has no items[] —
-            // render the in-flight item card from the progress snapshot.
+            // Pre-dsr-6d-a attach fallback: render the in-flight item card
+            // from the progress snapshot. The status probe and the 409 body do
+            // carry items[] since dsr-6d-a AC #1 — dsr-6d-b replaces this path
+            // with progress.items.
             progress.currentItem && (
               <ul className="flex flex-col gap-2" data-testid="gen-batch-item-list">
                 <QueueRow
@@ -426,6 +428,9 @@ export function GenerationBatchPanelV2({
                     // Attach-degraded card: the status probe carries no
                     // media_type — cosmetic placeholder only.
                     mediaType: 'movie',
+                    // Type-only (dsr-6d-a added the field): this card renders
+                    // the title alone; dsr-6d-b replaces the fallback.
+                    seriesTitle: '',
                   }}
                   // Terminal semantics must hold here too (AC 2): the batch
                   // status is authoritative — budget_ceiling pauses the

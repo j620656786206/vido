@@ -1,6 +1,9 @@
 package sse
 
 import (
+	"bytes"
+	"log/slog"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -204,4 +207,42 @@ func TestHub_Close(t *testing.T) {
 func TestEventRequestProgress_Value(t *testing.T) {
 	// Story 13-3a AC #4 [@contract-v1] — the request pipeline event type.
 	assert.Equal(t, EventType("request_progress"), EventRequestProgress)
+}
+
+// A dropped event is logged by TYPE and SIZE, never by payload: the
+// generation-batch terminal event carries the whole queue (thousands of items
+// on a select-all — dsr-6d-a AC #2), and one dropped event must not write a
+// multi-hundred-KB log line.
+func TestHub_DroppedBroadcastLogsTypeAndSizeNotThePayload(t *testing.T) {
+	var buf bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	// A hub whose Run loop is not started: the buffer fills and the next
+	// Broadcast takes the drop path.
+	h := &Hub{
+		clients:    make(map[string]*Client),
+		broadcast:  make(chan Event, 1),
+		register:   make(chan *Client, 1),
+		unregister: make(chan *Client, 1),
+		done:       make(chan struct{}),
+	}
+
+	queue := make([]map[string]string, 0, 200)
+	for i := 0; i < 200; i++ {
+		queue = append(queue, map[string]string{"media_id": "0a54a9e2-3a67-4f3e-9f8e-a1c2d3e4f501", "title": "怪奇物語 S04E07"})
+	}
+	event := Event{Type: EventGenerationBatchProgress, Data: map[string]interface{}{"status": "complete", "items": queue}}
+
+	h.Broadcast(event) // fills the buffer
+	h.Broadcast(event) // dropped
+
+	logged := buf.String()
+	require.Contains(t, logged, "SSE broadcast channel full")
+	assert.Contains(t, logged, "event_type=generation_batch_progress")
+	assert.Contains(t, logged, "payload_bytes=")
+	assert.NotContains(t, logged, "怪奇物語", "the payload itself must never reach the log")
+	assert.Less(t, len(logged), 500, "one short line, not the queue")
+	assert.Equal(t, 1, strings.Count(logged, "SSE broadcast channel full"))
 }

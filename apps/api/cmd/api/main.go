@@ -997,6 +997,9 @@ func main() {
 	}
 	generationBatchProcessor := services.NewGenerationBatchProcessor(
 		generationRunner, repos.Movies, repos.Episodes, sseHub, cfg.AIRunBudgetUSD, slog.Default())
+	// dsr-6d-a AC #7: queue rows name the show an episode belongs to (one
+	// memoized lookup per series per batch; a failed lookup degrades to "").
+	generationBatchProcessor.SetSeriesTitleResolver(repos.Series)
 	generationBatchHandler := handlers.NewGenerationBatchHandler(generationBatchProcessor, modelCatalog)
 
 	// Cost preview (story sub-4-1): what would generating subtitles cost, per
