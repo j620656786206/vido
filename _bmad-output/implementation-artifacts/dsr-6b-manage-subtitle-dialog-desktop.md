@@ -1,6 +1,6 @@
 # Story DSR.6b：「管理字幕」對話框（桌機）對齊設計稿，順手修掉三個真的 bug
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -352,6 +352,7 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`，BMAD dev agent（Amelia）2
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-17 | ✅ 收單 —— PR #458 合併進 main（commit 60a8abb4），**CI 17 項全綠**（含 4 個 e2e shard 與 4 個視覺 shard）。`-linux` 基準線：手動觸發 Visual Regression → bootstrap PR #459（10 張 linux）合回分支後轉綠；看過其中三張：失敗畫面是「翻譯失敗」＋原始錯誤一行、只差翻譯的片列出「英文　已生成」與「生成字幕 $0.24」、翻譯中顯示「正在翻譯成繁體中文（63%）」。 |
 | 2026-09-17 | 🔍 **/ship 對抗式 CR**：0 HIGH／2 MED／7 LOW，修 7、立案 1、不修 1。最重要的兩條：① 重試搬到 footer 時，dsr-6a 的三條保護測試被刪掉——已對 footer 的按鈕補回；② 手機上失敗畫面的 footer 會把提示擠成好幾行——提示在手機上改成獨佔一列。另外：帶中文檔名的機器錯誤仍用等寬字、重新估價回來前不說「已保留轉錄結果」、關掉對話框後不會再開出沒人關的 SSE 連線。 |
 | 2026-09-17 | ✅ **dev-story 完成 → review**（Amelia）。api PASS、web 3576/3576、lint 0 errors、typecheck、prettier、token 一致；視覺比對只剩三張既有紅。修掉三個真的問題：分集名詞對照表的條數不更新、生成進度下方是英文、只差翻譯的片說「尚無字幕」；另外分集對話框現在看得到失敗後保留的英文字幕。對話框、生成進度、生成失敗對齊設計稿：外框 880、集數純文字、字級收斂（11px 凍結）、重試搬到 footer 配「稍後再試」、失敗時顯示現有字幕與伺服器原始錯誤。設計稿拿掉系統給不了的已用時間／模型名／用量，F4、F5、F1 文案與過期註記更新。順手修翻譯百分比四捨六入五成雙造成的 62%／63% 不一致。 |
 | 2026-09-17 | 🔍 **建單後對抗驗證**（fresh-context 驗證代理，只讀；抽查 16 個以上行號、全部 .pen 節點存在）：4 項 CRITICAL、13 項 SHOULD FIX，**全部併入**。最重要的四項：① 🔴 #1 原本說「分集加的詞會消失」——錯的，sub-7-1 之後後端會把分集解析到劇的範圍，真正的問題是**條數不會更新**（改寫描述，修法不變）；② F3 的「45%」在母版裡，照原本「移除」會連動 F8 兩張與元件庫——改成只在 F3 的 instance 上覆寫隱藏；③ 新的 `onGenerationFailed` 若放進 effect 依賴，`SeasonAccordion` 每次 render 傳新函式會無限重抓——改成 ref＋只在進入 failed 時觸發；④ 分集對話框拿的是開啟當下的快照，失敗後重抓也看不到新的軌道——`SeasonAccordion` 改成存 id、每次讀最新資料。另外：F3 footer 稿也要改 `space_between`、「已生成」不能用泥金、`subtitleLangLabel` 要先轉小寫、dsr-6a 測試名稱寫錯一個、手機 13px 不動、兩處線上搜尋區 13px 補進來、後端文案抽成函式才測得到、F4 範例錯誤前綴要是 translate、新文字節點要綁變數、失敗第二行與沒軌道時的規則、新夾具要用不同 media id、外框只加在 `sm:`、`dsr-6d` 條目的字級數量更正。 |
