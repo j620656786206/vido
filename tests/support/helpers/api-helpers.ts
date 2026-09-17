@@ -369,6 +369,12 @@ export interface ApiHelpers {
   // dsr-2b-a: single-item re-match (retries while a batch enrichment holds the library)
   reparseMovie: (id: string) => Promise<ApiResponse<ReparseResponse>>;
   reparseSeries: (id: string) => Promise<ApiResponse<ReparseResponse>>;
+  // Batch re-parse only sets parse_status=pending and runs nothing — which is
+  // exactly how dsr-2b-b's e2e seeds a "資料整理中" item.
+  batchReparse: (
+    ids: string[],
+    type: 'movie' | 'series'
+  ) => Promise<ApiResponse<{ success_count: number; failed_count: number }>>;
 
   // Metadata Editor (Story 3-8)
   updateMetadata: (
@@ -524,6 +530,12 @@ export function apiHelpers(request: APIRequestContext): ApiHelpers {
     reparseMovie: async (id) => reparseWithRetry(`/library/movies/${id}/reparse`),
 
     reparseSeries: async (id) => reparseWithRetry(`/library/series/${id}/reparse`),
+
+    batchReparse: async (ids, type) =>
+      post<{ success_count: number; failed_count: number }>('/library/batch/reparse', {
+        ids,
+        type,
+      }),
 
     // Metadata Editor (Story 3-8)
     updateMetadata: async (id, updateRequest) =>

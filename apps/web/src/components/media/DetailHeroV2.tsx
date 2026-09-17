@@ -10,6 +10,7 @@ import { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { getImageUrl } from '../../lib/image';
 import { filenameToGradient } from './ColorPlaceholder';
+import { fallbackInitial } from '../../utils/fallbackInitial';
 import type { StatusDescriptor } from '../../utils/libraryStatus';
 
 interface DetailHeroV2Props {
@@ -107,7 +108,9 @@ export function DetailHeroV2({
                 style={{ backgroundImage: `linear-gradient(135deg, ${from}, ${to})` }}
                 aria-hidden="true"
               >
-                {title.slice(0, 1)}
+                {/* dsr-2b-b AC #6: an unmatched item's title is its file name —
+                    「[Leopard-Raws] …」 — so skip to the first real letter. */}
+                {fallbackInitial(title)}
               </div>
             )}
           </div>

@@ -147,8 +147,6 @@ SCREENS = {
     "1UHzI": ("flow-b-detail-interaction", "b2-m"),
     "7mdTJ": ("flow-b-detail-interaction", "b5-d"),
     "APfjC": ("flow-b-detail-interaction", "b5-m"),
-    "2m1Pv": ("flow-b-detail-interaction", "b6-m"),
-    "7UnDy": ("flow-b-detail-interaction", "b7-m"),
     # B9 = image-load fallback spec (case B). dsr-2 re-pointed it at the LIVE DetailHeroV2
     # (it specified the unmounted MediaDetailPanel) and dropped the v1 mobile twins b8-m/b9-m.
     "Tn4Gz": ("flow-b-detail-interaction", "b9-d"),
@@ -275,6 +273,14 @@ SCREENS = {
     "Tqy3E": ("flow-b-detail-v2", "b7p-d"),
     "UH0sk": ("flow-b-detail-v2", "b8p-d"),
     "SzNRb": ("flow-b-detail-v2", "b3p-m"),
+    # dsr-2b-b (2026-09-17): the no-metadata states and the manual-match dialog
+    # replace the v1 drawer mocks B6-M / B7-M (deleted).
+    "p3qEc": ("flow-b-detail-v2", "b10p-d"),
+    "H2MRl": ("flow-b-detail-v2", "b10p-m"),
+    "V56cx": ("flow-b-detail-v2", "b11p-d"),
+    "idN42": ("flow-b-detail-v2", "b11p-m"),
+    "GnBxR": ("flow-b-detail-v2", "b12p-d"),
+    "xb6fV": ("flow-b-detail-v2", "b12p-m"),
     # flow-h-homepage-v2 — RETIRED 2026-08-26. The five v2 homepage frames were
     # deleted from ux-design.pen once Home v3 shipped AND its own state frames
     # (H4/H5/H6-D-v3) existed; see flow-h-homepage-v3 below.

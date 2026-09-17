@@ -22,6 +22,18 @@ import { ApiError } from '../lib/apiError';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
+/**
+ * What a single-item re-match left on the row — confirmed against [@contract-v1]
+ * (Story dsr-2b-a AC #2). A 200 is always success or failed: "ran but found
+ * nothing" is a result, not an error.
+ */
+export interface ReparseResult {
+  id: string;
+  parseStatus: 'success' | 'failed';
+  title: string;
+  tmdbId: number;
+}
+
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
 
@@ -107,16 +119,12 @@ export const libraryService = {
     }
   },
 
-  async reparseMovie(id: string): Promise<{ id: string; status: string }> {
-    return fetchApi<{ id: string; status: string }>(`/library/movies/${id}/reparse`, {
-      method: 'POST',
-    });
+  async reparseMovie(id: string): Promise<ReparseResult> {
+    return fetchApi<ReparseResult>(`/library/movies/${id}/reparse`, { method: 'POST' });
   },
 
-  async reparseSeries(id: string): Promise<{ id: string; status: string }> {
-    return fetchApi<{ id: string; status: string }>(`/library/series/${id}/reparse`, {
-      method: 'POST',
-    });
+  async reparseSeries(id: string): Promise<ReparseResult> {
+    return fetchApi<ReparseResult>(`/library/series/${id}/reparse`, { method: 'POST' });
   },
 
   async exportMovie(id: string): Promise<unknown> {

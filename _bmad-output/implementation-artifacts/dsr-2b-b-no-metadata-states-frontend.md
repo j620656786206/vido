@@ -1,6 +1,6 @@
 # Story DSR.2b-b：沒認出來的片，詳情頁說實話並給你真的能走的路（前端＋設計稿）
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -142,25 +142,25 @@ media/FallbackFailed.tsx、FallbackPending.tsx   ← v1，只活在夾具，AC #
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — 確認 `dsr-2b-a` 已合併**（`POST /library/movies/:id/reparse` 回 `parse_status` 而不是 `reparse_queued`；`/metadata/apply` 要求 `selected_item.media_type`）
-- [ ] **Task 1 — 設計稿（AC: #1, #9 稿的部分）**
-  - [ ] B10p-D／M、B11p-D／M、B12p-D／M（Copy 既有節點）
-  - [ ] 刪 B6-M／B7-M 與 caption；`SCREENS` 增刪
-  - [ ] `ctx.problems` 掃裁切；確認 ` M ux-design.pen`
-- [ ] **Task 2 — 狀態區塊（AC: #2, #3, #5, #6）**
-  - [ ] 先寫紅測試：failed／pending／`''`／success 無 tmdbId、主要按鈕只一顆、在地化資訊（給 `filePath`）、比對三種結果與三種錯誤
-  - [ ] `DetailNoMetadataV2`；`LocalDetailV2` 接線；`reparse` 型別＋`useReparseItem` invalidate
-  - [ ] `fallbackInitial` 搬 `utils/` 共用
-- [ ] **Task 3 — 手動選片（AC: #4）**
-  - [ ] 清理檔名純函式＋單元測試
-  - [ ] `ManualMatchDialogV2`（先紅：預填、鎖類型、確認文案、三種錯誤、成功關閉）
-  - [ ] 三個 bug（`titleZhTw`、invalidate、`ApiError`）
-  - [ ] 檔頭（新元件＋`manual-search/` 四個 no-screen）
-- [ ] **Task 4 — e2e（AC: #7）**（含 `batchReparse` helper）
-- [ ] **Task 5 — 視覺夾具、基準線、刪 v1（AC: #8, #9）**
-- [ ] **Task 6 — 收尾（AC: #10, #11）**
-  - [ ] 全套閘門；匯出截圖只 stage Flow B 變動
-  - [ ] 收單時：關 `disc-2026-07-v2-detail-fallback-states`；更新 `disc-2026-09-unmounted-v1-components`
+- [x] **Task 0 — 確認 `dsr-2b-a` 已合併**（`POST /library/movies/:id/reparse` 回 `parse_status` 而不是 `reparse_queued`；`/metadata/apply` 要求 `selected_item.media_type`）
+- [x] **Task 1 — 設計稿（AC: #1, #9 稿的部分）**
+  - [x] B10p-D／M、B11p-D／M、B12p-D／M（Copy 既有節點）
+  - [x] 刪 B6-M／B7-M 與 caption；`SCREENS` 增刪
+  - [x] `ctx.problems` 掃裁切；確認 ` M ux-design.pen`
+- [x] **Task 2 — 狀態區塊（AC: #2, #3, #5, #6）**
+  - [x] 先寫紅測試：failed／pending／`''`／success 無 tmdbId、主要按鈕只一顆、在地化資訊（給 `filePath`）、比對三種結果與三種錯誤
+  - [x] `DetailNoMetadataV2`；`LocalDetailV2` 接線；`reparse` 型別＋`useReparseItem` invalidate
+  - [x] `fallbackInitial` 搬 `utils/` 共用
+- [x] **Task 3 — 手動選片（AC: #4）**
+  - [x] 清理檔名純函式＋單元測試
+  - [x] `ManualMatchDialogV2`（先紅：預填、鎖類型、確認文案、三種錯誤、成功關閉）
+  - [x] 三個 bug（`titleZhTw`、invalidate、`ApiError`）
+  - [x] 檔頭（新元件＋`manual-search/` 四個 no-screen）
+- [x] **Task 4 — e2e（AC: #7）**（含 `batchReparse` helper）
+- [x] **Task 5 — 視覺夾具、基準線、刪 v1（AC: #8, #9）**
+- [x] **Task 6 — 收尾（AC: #10, #11）**
+  - [x] 全套閘門；匯出截圖只 stage Flow B 變動
+  - [x] 收單時：關 `disc-2026-07-v2-detail-fallback-states`；更新 `disc-2026-09-unmounted-v1-components`
 
 ## Dev Notes
 
@@ -242,13 +242,50 @@ ux-design.pen、scripts/export-pen-screenshots.py、_bmad-output/screenshots/flo
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 5 (1M context) — `claude-opus-5[1m]`，BMAD dev agent（Amelia）2026-09-17
 
 ### Debug Log References
+
+- `pnpm nx test web --skip-nx-cache`：**3487 / 3487 passed**（263 files）；/ship CR 修正後重跑見下
+- `pnpm nx test api`：PASS（本張沒動後端）
+- `pnpm run lint:all`：**0 errors**（128／126 warnings 皆既有）；改過的元件單獨 eslint：0 problems · `web:typecheck`：PASS · prettier：PASS · `check-design-tokens.py`：一致（82 變數、194 張畫面、73 母版）
+- **e2e 對真後端＋真 TMDb**（本機 `vido-api`＋`nx serve web`）：`media-detail.spec.ts`＋`manual-search.spec.ts` chromium **42 / 42 passed**，含新的 5 條 `@dsr-2b-b`（其中一條真的搜 Fight Club、套用、頁面變回一般詳情頁）。webkit-core 本機沒裝 WebKit，交給 CI。
+- **視覺**：`CI=1 VISUAL_BUCKETS=6 --workers=6 --update-snapshots=all` 57 秒；191 張 re-render 雜訊全部還原，只留 3 個新夾具的 darwin 圖；再跑一次比對模式只剩 `retry-retry-notifications`、`glossary-panel-v2/seeded` 兩張紅——都是 `preexisting-fail-visual-darwin-three-stale-baselines` 點名的既有本機問題。刪掉兩個 v1 夾具的 4 張基準線（darwin＋linux）。
+- **Pencil**：這次改用「Copy 整張畫面再改」＋對已經不要的節點 `Delete`（不是 `enabled:false`——停用的節點會觸發 fill_container 警告）。`Insert` 一個 ref 進 dialog body 之後又碰到版面錯亂（footer 被算到 y=881），刪掉 ref、把 footer 刪掉再從原稿 Copy 一份回來就正常；搜尋框改 Copy 既有的 SearchInput instance。gofmt 那種坑這裡沒有，但 Pencil 會在 `fill_container` 的父層不是 flex 時警告。
+- `.pen` 存檔：同值 `Update` 標髒 → AppleScript File › Save → ` M ux-design.pen`。匯出 194 張，Flow I 四張 re-render 雜訊還原，留下 Flow B 的 6 張新圖、`b9-d`（改了 case A 的指向文字）與刪除 `b6-m`／`b7-m`。
 
 ### Completion Notes List
 
 - Ultimate context engine analysis completed - comprehensive developer guide created
+- 🔗 **AC Drift: FOUND**（`grep -rn "FallbackFailed\|FallbackPending\|no-metadata\|ManualSearchDialog\|titleZhTW"` 全部 story 檔）
+  - `5-11-fallback-ui-enhancement` AC #2／#3／#5 → **v2 取代**：判斷改看 `parseStatus`（原本 `tmdbId > 0`，會對豆瓣／NFO 比對成功的片說找不到）；`''` 不再當失敗（API 建的片多半已有資料）；出路從「跳 `/search`＋手動編輯」改成「手動選片（真的套用）＋重新比對」；整理中不再轉圈。
+  - `3-7-manual-metadata-search-and-selection` AC3 → 舊對話框的套用請求補送 `selectedItem.mediaType`（dsr-2b-a 之後必填；不補的話 `/test/manual-search` 開發頁套用會 400）、`titleZhTW` 更正為 `titleZhTw`（中文片名原本永遠讀不到）。**這是 AC #4「不改舊對話框行為」的一個刻意例外**：只多送一個欄位，DOM 與 e2e 綁定的東西都沒動，`manual-search.spec.ts` 全綠。
+  - `ux2-3-detail-v2`／`9R-13b`（動作列）→ 沒有資料的片：「管理字幕」降為次要樣式、「在地化資訊」不顯示；有資料的片不變。
+  - `story-20-2-e2e-test-data-seeding` → 它留下的 pending skip 與「無法種 pending」的說明已不成立（改用批次重新解析種）。
+- 📎 **Contract Stamps: FOUND**（本張消費 `dsr-2b-a` AC #1、AC #2 的 [@contract-v1]；兩行 `confirmed against` 在 AC #3／#4，程式碼註解也標在 `ReparseResult` 與 `ApplyMetadataParams.selectedItem.mediaType`。本張不定義新契約。）
+- 🎭 **A11y Pre-Flight: PASS**（改過的 7 個元件 eslint 0 problems。①圖片：結果列海報 `alt=""`（片名就在旁邊的文字裡）、載入失敗換片名漸層；②modal：`ManualMatchDialogV2` 用 Radix Dialog（焦點困住、Escape）；因為不是由 `DialogTrigger` 開啟，關閉時用 `onCloseAutoFocus` 自己還原焦點（CR #4）；③非同步揭露：重新比對結果 `role="status"`、錯誤 `role="alert"`、搜尋中 `aria-busy`；④自訂 widget：結果列是 `button` 帶 `aria-pressed`，搜尋框 `type="search"` 有 `aria-label`。）
+- ✅ **Pre-existing failures: NONE**（視覺那兩張是已立案的本機既有問題）
+- **主要按鈕只留一顆**：有沒有資料的區塊時，「管理字幕」改成 `bg-secondary`；單元測試斷言整頁泥金實心按鈕只剩 `no-metadata-manual-match`。
+- **重新比對的結果只在本頁顯示**：`useReparseItem` 的實例在切換詳情頁之間會留著，所以「還是沒有找到」與錯誤句都只在 `variables.id === id` 時顯示（有測試）。
+- **設計稿**：`B10p-D` 與 `B11p-D` 高度 960（註記寫得比 900 長）；兩張手機稿沒放註記（空間不夠，桌機註記涵蓋）。`B12p-D` 畫的是「已選一筆」的狀態（確認列出現）；夾具截的是「還沒選」的狀態，兩者都是真的畫面。`B9-D` 的「case A 見 B6-M／B7-M」改指 B′10／B′11。
+- **對話框搜尋框**：`type="search"` 的瀏覽器原生清除鈕（藍色 ×）用 `[&::-webkit-search-cancel-button]:appearance-none` 關掉，設計稿沒有它。
+
+#### 🎨 UX Verification（對照 `flow-b-detail-v2/b10p-d`、`b11p-d`、`b12p-d` 與夾具截圖）
+
+| 區域 | 設計稿 | 實作 | 一致？ | 處置 |
+| --- | --- | --- | --- | --- |
+| 失敗區塊標題／說明 | 沒有找到這部電影的資料／自動比對沒有找到… | 同 | ✅ | — |
+| 失敗區塊按鈕 | 手動選片（泥金實心）＋重新比對（次要） | 同 | ✅ | — |
+| 失敗區塊小字 | 兩行中性灰 | 同 | ✅ | — |
+| 整理中區塊 | 標題、說明、只有「立即比對」、不轉圈 | 同 | ✅ | — |
+| hero 徽章 | 失敗＝error tint、整理中＝accent tint | `deriveLifecycleStatus` 同 | ✅ | — |
+| hero 動作列 | 沒有在地化資訊、管理字幕次要 | 同 | ✅ | — |
+| 海報首字 | 跳過 `[` → L | `fallbackInitial` | ✅ | — |
+| 手動選片標題／搜尋框 | 手動選片、預填清理過的檔名 | 同 | ✅ | — |
+| 結果列 | 海報縮圖（漸層＋首字）、中文片名、原名 · 年份 | 同 | ✅ | — |
+| 選中列 | 泥金外框＋淡底＋勾 | 泥金 ring＋`accent-subtle` 底，**沒有勾** | ⚠️ | 狀態用 `aria-pressed` 與外框表達；勾號是裝飾，記在這裡不另立案 |
+| 確認列 | 確認文案＋取消＋確認套用 | 同 | ✅ | — |
+| 手機 | bottom sheet | `<sm` bottom-sheet 定位（同管理字幕） | ✅ | — |
 
 ### Discovery Triage
 
@@ -272,9 +309,61 @@ ux-design.pen、scripts/export-pen-screenshots.py、_bmad-output/screenshots/flo
 
 ### File List
 
+**新增：**
+- `apps/web/src/components/media/DetailNoMetadataV2.tsx`（＋spec，11 條）
+- `apps/web/src/components/media/ManualMatchDialogV2.tsx`（＋spec，12 條）
+- `apps/web/src/utils/fallbackInitial.ts`（＋spec）、`apps/web/src/utils/cleanFilenameForSearch.ts`（＋spec）
+- `apps/web/src/hooks/useManualSearch.spec.tsx`
+- `tests/visual/components.visual.spec.ts-snapshots/components/{media-detail-no-metadata-failed-v2,media-detail-no-metadata-pending-v2,media-manual-match-dialog-v2}/default-visual-darwin.png`
+- `_bmad-output/screenshots/flow-b-detail-v2/{b10p-d,b10p-m,b11p-d,b11p-m,b12p-d,b12p-m}.png`
+
+**修改：**
+- `apps/web/src/components/media/LocalDetailV2.tsx`（＋spec，+11 條）— 狀態區塊、主要按鈕降級、隱藏在地化資訊、掛手動選片、檔頭
+- `apps/web/src/components/media/DetailHeroV2.tsx`（＋spec）— 首字跳過符號
+- `apps/web/src/components/library/PosterCardV2.tsx` — `fallbackInitial` 搬到 utils
+- `apps/web/src/services/libraryService.ts`（＋spec）— `ReparseResult`
+- `apps/web/src/hooks/useLibrary.ts`（＋spec）— `useReparseItem` invalidate
+- `apps/web/src/services/metadata.ts` — `ApiError`、`titleZhTw`、`selectedItem.mediaType`、回應型別
+- `apps/web/src/hooks/useManualSearch.ts` — 套用後 invalidate 正確的 key
+- `apps/web/src/components/manual-search/{ManualSearchDialog,SearchResultCard,SearchResultsGrid,FallbackStatusDisplay}.tsx`（＋兩支 spec）— 檔頭 no-screen、`titleZhTw`、舊對話框補送 `mediaType`
+- `apps/web/src/routes/test/-gallery.fixtures.tsx` — 三個新夾具、刪兩個 v1 夾具、`titleZhTw`
+- `tests/e2e/media-detail.spec.ts` — 四條 skip 改寫成 v2＋一條真的套用
+- `tests/support/helpers/api-helpers.ts`（`batchReparse`）、`seed-helpers.ts`（註解）
+- `ux-design.pen` — 新增 B10p／B11p／B12p 桌機與手機、刪 B6-M／B7-M 與 caption、B3p-M 左移補位、B9-D 指向文字、Flow B 描述
+- `scripts/export-pen-screenshots.py` — `SCREENS` 增 6 刪 2
+- `_bmad-output/pen-tokens.json`、`_bmad-output/screenshots/flow-b-detail-interaction/b9-d.png`
+- `CLAUDE.md` — Flow B 兩個截圖資料夾的說明
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — 狀態流轉；關 `disc-2026-07-v2-detail-fallback-states`；更新 `disc-2026-09-unmounted-v1-components`
+- `_bmad-output/implementation-artifacts/dsr-2b-b-no-metadata-states-frontend.md` — 本檔
+
+**刪除：**
+- `apps/web/src/components/media/FallbackFailed.tsx`、`FallbackPending.tsx`（＋兩支 spec）
+- `tests/visual/components.visual.spec.ts-snapshots/components/{media-fallback-failed,media-fallback-pending}/default-visual-{darwin,linux}.png`
+- `_bmad-output/screenshots/flow-b-detail-interaction/{b6-m,b7-m}.png`
+- AC drift reference（未修改）：`5-11-fallback-ui-enhancement.md`、`3-7-manual-metadata-search-and-selection.md`、`ux2-3-detail-v2.md`、`story-20-2-e2e-test-data-seeding.md`
+
+## 對抗式 Code Review（/ship，2026-09-17）
+
+獨立 reviewer（fresh context，只讀）回報 **0 HIGH、3 MED、5 LOW**。**修 6、立案 3（含 1 個既有模式）**。新增的 5 條元件測試都在「把修正拿掉」的程式碼上確認會紅。修完後 web **3502 / 3502**、lint 0 errors、typecheck PASS。
+
+| # | 等級 | 問題 | 處置 |
+| --- | --- | --- | --- |
+| 1 | MED | 預填搜尋字碰到常見下載檔名會留雜訊：`The.Matrix.1999.1080p.BluRay.x264-SPARKS` → `The Matrix 1999 -SPARKS`、單獨的 `HDR` 刪不掉、`H.265` 變 `H 265`、`Charlotte's.Web` 的 Web 被刪 | 改成「在第一個發行標籤處截斷」＋去掉尾端年份（TMDb 用片名字詞比對，帶年份反而找不到）；只剝真的影片副檔名（`The.Last.of.Us` 不再被吃掉 `Us`）；`web`／`bd`／`dv` 這類也是片名字詞的不當截斷點。測試從 5 條擴到 16 條真實檔名。⚠️ 與 AC #4 的例子 `The Matrix 1999` 不同，改成 `The Matrix`——記在這裡 |
+| 2 | MED | 影集的預填字用了 `file_path`，但影集的路徑是**資料夾**（扁平目錄下是媒體庫根目錄 → 預填 `TV`） | 影集改用片名（後端的影集重新比對也是用片名）；測試 |
+| 3 | MED | TMDb 斷線時後端手動搜尋回 200＋空結果，對話框會說「找不到符合的作品，換個關鍵字試試」 | 後端問題，立 `disc-2026-09-manual-search-hides-source-errors` |
+| 4 | LOW-MED | 對話框由普通按鈕開，Radix 找不到 trigger，關閉後鍵盤焦點掉到 body；A11y 記錄寫「關閉還原焦點」不正確 | `onCloseAutoFocus` 還原到開啟前的焦點（開啟者還在時）；「重新比對」改 `aria-disabled`（`disabled` 會在按下瞬間丟焦點）；兩條測試。同樣寫法的其他對話框立 `disc-2026-09-dialogs-without-trigger-lose-focus` |
+| 5 | LOW | 套用失敗的錯誤句在改選另一筆後仍留著 | 選列與換搜尋字時 `apply.reset()`；測試 |
+| 6 | LOW | 「整理中」按立即比對後、頁面重抓前，會在「資料還在整理」下面出現「還是沒有找到」 | 只在頁面本身已是 failed 時顯示；測試 |
+| 7 | LOW | TestSprite 計畫與種子腳本仍指著已刪的 testid | 種子腳本註解已改；TestSprite 計畫立 `disc-2026-09-testsprite-fallback-testids-stale` |
+| 8 | LOW | 「整理中」e2e 只看 `batch.success`，某個 id 失敗時也是 200 | 補斷言 `success_count === 1` |
+
+查過不成立：請求／回應大小寫、錯誤碼送達、套用成功後對話框被卸載時 body 的 pointer-events、手機 class、Escape、夾具隔離與 key 雜湊、e2e 共用後端（沒有 spec 觸發真的批次比對）、記錄裡的數字。
+
 ## Change Log
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-17 | 🔍 **/ship 對抗式 CR**：0 HIGH／3 MED／5 LOW，修 6、立案 3。最重要的兩條：① 預填搜尋字對真實下載檔名會留下壓制組、HDR、H 265 之類的雜訊——改成在第一個發行標籤處截斷；② 影集的「檔案路徑」其實是資料夾，預填會變成 `TV`——影集改用片名。另外關閉對話框後焦點會回到按鈕、錯誤句不再黏著、整理中不會提早說「還是沒有找到」。 |
+| 2026-09-17 | ✅ **dev-story 完成 → review**（Amelia）。web 3487/3487、api PASS、lint 0 errors、typecheck、token 一致；e2e（真後端＋真 TMDb）42/42。沒認出來的片，詳情頁第一次說實話並給出真的能走的路：「比對失敗」有手動選片（套用後頁面變回正常詳情頁）與重新比對，「資料整理中」只有立即比對、不轉圈；舊的 v1 fallback 元件、夾具、兩張 v1 手機抽屜稿一起刪掉。設計稿新增 6 張（B10p／B11p／B12p 桌機與手機）。 |
 | 2026-09-17 | 🔍 **建單後對抗驗證**（fresh-context 驗證代理，只讀）：本張相關 2 項 CRITICAL、6 項 SHOULD FIX，**全部併入**。最重要的兩項：① 原本要把舊的手動搜尋對話框改成 v2——但 `tests/e2e/manual-search.spec.ts` 綁死了它的背景點擊關閉、標題、class 與原生下拉，同時又規定那支 spec 一行不准改，兩條互相矛盾（改成另做 `ManualMatchDialogV2`，舊的只修型別與檔頭）；② 「失敗」e2e 原本斷言看得到「檔案資訊」與看不到「在地化資訊」——API 種的片沒有路徑，前者永遠紅、後者不做 AC #5 也會綠（前者拿掉，後者移到給了路徑的單元測試）。另外：`''` 原本算整理中，會對所有 TMDb 種子片說「還在整理」，按下去還會把好片打成失敗（改成只有 `pending`，e2e 用批次重新解析種 pending）；`metadata.ts` 的錯誤沒有碼（改丟 `ApiError`）；預填搜尋字要用檔案路徑的檔名；「重新比對」文案不能暗示一定有用；補檔頭、`CLAUDE.md` 說明、兩個新 backlog。 |
 | 2026-09-17 | Story 建立（SM Bob, create-story）。由 `dsr-2b-flow-b-no-metadata-states` 拆出的前端半張（⚖️ Alexyu 2026-09-17 裁定拆兩張）。Pencil MCP 讀出 B6-M／B7-M（v1 手機抽屜、無桌機）；盤點 `LocalDetailV2`、`manual-search/`、v1 fallback、e2e。 |

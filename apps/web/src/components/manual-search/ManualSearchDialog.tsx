@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen H7 Filtered Library Desktop (QTqcC)
+// Design ref: ux-design.pen — no current screen frame; v1 manual search, mounted only on the dev page /test/manual-search (QTqcC is E4-D, the library unmatched filter, not this dialog) — the v2 dialog is media/ManualMatchDialogV2, retirement tracked in disc-2026-09-unmounted-v1-components
 /**
  * ManualSearchDialog Component (Story 3.7 - AC1, AC2, AC4)
  * Dialog for manual metadata search and selection
@@ -107,6 +107,7 @@ export function ManualSearchDialog({
         selectedItem: {
           id: selectedItem.id,
           source: selectedItem.source,
+          mediaType: selectedItem.mediaType,
         },
         learnPattern: true,
       });
@@ -330,8 +331,8 @@ export function ManualSearchDialog({
                 )}
                 <div>
                   <p className="text-[var(--text-primary)] font-medium">{selectedItem.title}</p>
-                  {selectedItem.titleZhTW && selectedItem.titleZhTW !== selectedItem.title && (
-                    <p className="text-[var(--text-secondary)] text-sm">{selectedItem.titleZhTW}</p>
+                  {selectedItem.titleZhTw && selectedItem.titleZhTw !== selectedItem.title && (
+                    <p className="text-[var(--text-secondary)] text-sm">{selectedItem.titleZhTw}</p>
                   )}
                   <p className="text-[var(--text-muted)] text-sm">
                     {selectedItem.year} · {selectedItem.source.toUpperCase()}

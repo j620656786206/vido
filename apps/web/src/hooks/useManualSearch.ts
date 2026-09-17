@@ -10,6 +10,8 @@ import {
   type ApplyMetadataParams,
   type ApplyMetadataResponse,
 } from '../services/metadata';
+import { detailKeys } from './useMediaDetails';
+import { libraryKeys } from './useLibrary';
 
 // Query keys following project conventions
 export const metadataKeys = {
@@ -41,10 +43,17 @@ export function useApplyMetadata() {
 
   return useMutation<ApplyMetadataResponse, Error, ApplyMetadataParams>({
     mutationFn: (params) => metadataService.applyMetadata(params),
-    onSuccess: (data, variables) => {
-      // Invalidate media queries to refresh UI
-      queryClient.invalidateQueries({ queryKey: ['media', variables.mediaId] });
-      queryClient.invalidateQueries({ queryKey: ['library'] });
+    onSuccess: (_data, variables) => {
+      // dsr-2b-b AC #4: the keys the detail page and the library actually read.
+      // This used to invalidate ['media', id], which nothing reads, so an applied
+      // match did not show until a reload.
+      queryClient.invalidateQueries({
+        queryKey:
+          variables.mediaType === 'series'
+            ? detailKeys.localSeries(variables.mediaId)
+            : detailKeys.localMovie(variables.mediaId),
+      });
+      queryClient.invalidateQueries({ queryKey: libraryKeys.all });
     },
   });
 }

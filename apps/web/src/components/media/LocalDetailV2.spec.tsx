@@ -17,6 +17,30 @@ const h = vi.hoisted(() => ({
   movieCredits: { data: undefined } as { data: unknown },
   tvCredits: { data: undefined } as { data: unknown },
   douban: { data: null, isLoading: false } as { data: unknown; isLoading: boolean },
+  reparse: {} as Record<string, unknown>,
+}));
+
+// dsr-2b-b: the re-match mutation is the container's; stub it so the no-metadata
+// block's states can be driven directly.
+vi.mock('../../hooks/useLibrary', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../hooks/useLibrary')>()),
+  useReparseItem: () => h.reparse,
+}));
+vi.mock('./ManualMatchDialogV2', () => ({
+  ManualMatchDialogV2: ({
+    open,
+    mediaType,
+    initialQuery,
+  }: {
+    open: boolean;
+    mediaType: string;
+    initialQuery: string;
+  }) =>
+    open ? (
+      <div data-testid="stub-manual-match" data-media-type={mediaType}>
+        {initialQuery}
+      </div>
+    ) : null,
 }));
 
 vi.mock('../../hooks/useMediaDetails', async (importOriginal) => ({
@@ -199,6 +223,167 @@ describe('LocalDetailV2', () => {
     h.localSeries = undefined;
     h.movieCredits = { data: undefined };
     h.tvCredits = { data: undefined };
+    h.reparse = {
+      mutate: vi.fn(),
+      isPending: false,
+      data: undefined,
+      variables: undefined,
+      error: null,
+    };
+  });
+
+  // dsr-2b-b AC #2 / #3 / #5: the state is read from parseStatus, never from
+  // tmdbId — a Douban/NFO match or a manual edit has no tmdb id and IS matched.
+  describe('no metadata', () => {
+    const withStatus = (parseStatus: string, extra: Record<string, unknown> = {}) =>
+      movie({ data: { ...movie().data, parseStatus, overview: undefined, ...extra } });
+
+    it('failed → the 比對失敗 block, first thing under the hero', async () => {
+      h.local = withStatus('failed', { title: '[Leopard-Raws] Kimi no Na wa (BD).mkv' });
+      renderDetail();
+      const block = await screen.findByTestId('detail-no-metadata');
+      expect(block).toHaveAttribute('data-variant', 'failed');
+      expect(block).toHaveTextContent('沒有找到這部電影的資料');
+      const body = block.parentElement!;
+      expect(body.firstElementChild).toBe(block);
+    });
+
+    it('pending → the 資料整理中 block', async () => {
+      h.local = withStatus('pending');
+      renderDetail();
+      expect(await screen.findByTestId('detail-no-metadata')).toHaveAttribute(
+        'data-variant',
+        'pending'
+      );
+    });
+
+    it.each([
+      ['empty status (API-created, usually already matched)', ''],
+      ['success without a TMDb id (Douban / NFO / manual)', 'success'],
+    ])('%s → no block', async (_label, status) => {
+      h.local = withStatus(status, { tmdbId: 0 });
+      renderDetail();
+      await screen.findByTestId('local-detail-v2');
+      expect(screen.queryByTestId('detail-no-metadata')).not.toBeInTheDocument();
+    });
+
+    it('hides 在地化資訊 (it would translate the file name into the NFO) and demotes 管理字幕', async () => {
+      h.local = withStatus('failed'); // filePath present — the action would otherwise render
+      renderDetail();
+      await screen.findByTestId('detail-no-metadata');
+      expect(screen.queryByTestId('action-localize-nfo')).not.toBeInTheDocument();
+      expect(screen.getByTestId('action-manage-subtitle').className).not.toMatch(
+        /--accent-primary/
+      );
+      const solid = Array.from(document.querySelectorAll('button')).filter((b) =>
+        /bg-\[var\(--accent-primary\)\]/.test(b.className)
+      );
+      expect(solid.map((b) => b.getAttribute('data-testid'))).toEqual(['no-metadata-manual-match']);
+    });
+
+    it('a matched item keeps 在地化資訊 and the primary 管理字幕', async () => {
+      renderDetail();
+      await screen.findByTestId('local-detail-v2');
+      expect(screen.getByTestId('action-localize-nfo')).toBeInTheDocument();
+      expect(screen.getByTestId('action-manage-subtitle').className).toMatch(/--accent-primary/);
+    });
+
+    it('手動選片 opens the dialog, locked to this item, prefilled from the FILE name', async () => {
+      h.local = withStatus('failed', {
+        title: '使用者改過的片名',
+        filePath: '/volume1/Movies/[Leopard-Raws] Kimi no Na wa (BD).mkv',
+      });
+      renderDetail();
+      fireEvent.click(await screen.findByTestId('no-metadata-manual-match'));
+      const dialog = await screen.findByTestId('stub-manual-match');
+      expect(dialog).toHaveAttribute('data-media-type', 'movie');
+      expect(dialog).toHaveTextContent(/^Kimi no Na wa$/);
+    });
+
+    it('a series is prefilled from its title — its file path is a folder, maybe the library root', async () => {
+      h.localSeries = series({
+        data: {
+          ...series().data,
+          parseStatus: 'failed',
+          title: 'The Last of Us',
+          filePath: '/volume1/TV',
+        },
+      });
+      renderSeriesDetail();
+      fireEvent.click(await screen.findByTestId('no-metadata-manual-match'));
+      const dialog = await screen.findByTestId('stub-manual-match');
+      expect(dialog).toHaveAttribute('data-media-type', 'series');
+      expect(dialog).toHaveTextContent(/^The Last of Us$/);
+    });
+
+    it('a pending item whose re-match just came back failed does not yet say "still not found"', async () => {
+      // The refetch has not landed: the page still reads pending.
+      h.local = withStatus('pending');
+      h.reparse = {
+        mutate: vi.fn(),
+        isPending: false,
+        data: { id: 'abc', parseStatus: 'failed', title: 'x', tmdbId: 0 },
+        variables: { type: 'movie', id: 'abc' },
+        error: null,
+      };
+      renderDetail();
+      expect(await screen.findByTestId('detail-no-metadata')).toHaveAttribute(
+        'data-variant',
+        'pending'
+      );
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    });
+
+    it('without a file path the prefill falls back to the title', async () => {
+      h.local = withStatus('failed', { title: 'zzqx.nonsense.1080p', filePath: undefined });
+      renderDetail();
+      fireEvent.click(await screen.findByTestId('no-metadata-manual-match'));
+      expect(await screen.findByTestId('stub-manual-match')).toHaveTextContent(/^zzqx nonsense$/);
+    });
+
+    it('re-match runs for THIS item and reports "still not found"', async () => {
+      h.local = withStatus('failed');
+      const mutate = vi.fn();
+      h.reparse = {
+        mutate,
+        isPending: false,
+        data: { id: 'abc', parseStatus: 'failed', title: 'x', tmdbId: 0 },
+        variables: { type: 'movie', id: 'abc' },
+        error: null,
+      };
+      renderDetail();
+      fireEvent.click(await screen.findByTestId('no-metadata-rematch'));
+      expect(mutate).toHaveBeenCalledWith({ type: 'movie', id: 'abc' });
+      expect(screen.getByRole('status')).toHaveTextContent('重新比對完成，還是沒有找到。');
+    });
+
+    it('a re-match result for ANOTHER item says nothing here', async () => {
+      h.local = withStatus('failed');
+      h.reparse = {
+        mutate: vi.fn(),
+        isPending: false,
+        data: { id: 'other', parseStatus: 'failed', title: 'x', tmdbId: 0 },
+        variables: { type: 'movie', id: 'other' },
+        error: new ApiError('busy', 409, 'ENRICHMENT_ALREADY_RUNNING'),
+      };
+      renderDetail();
+      await screen.findByTestId('detail-no-metadata');
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('while the re-match runs the block shows it', async () => {
+      h.local = withStatus('pending');
+      h.reparse = {
+        mutate: vi.fn(),
+        isPending: true,
+        data: undefined,
+        variables: { type: 'movie', id: 'abc' },
+        error: null,
+      };
+      renderDetail();
+      expect(await screen.findByTestId('no-metadata-rematch')).toHaveTextContent('比對中…');
+    });
   });
 
   it('renders the hero, overview and tech-info for a library item', async () => {

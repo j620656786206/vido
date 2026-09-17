@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen H7 Filtered Library Desktop (QTqcC)
+// Design ref: ux-design.pen — no current screen frame; v1 manual search, mounted only on the dev page /test/manual-search (QTqcC is E4-D, the library unmatched filter, not this dialog) — the v2 dialog is media/ManualMatchDialogV2, retirement tracked in disc-2026-09-unmounted-v1-components
 /**
  * SearchResultsGrid Component (Story 3.7 - AC2)
  * Grid display for manual search results

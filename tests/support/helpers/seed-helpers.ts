@@ -33,7 +33,7 @@ function uniqueTitle(prefix: string): string {
 export interface SeedMovieOptions {
   title?: string;
   releaseDate?: string;
-  /** Omit (or 0) to create a NO-METADATA movie — renders the ColorPlaceholder + FallbackFailed path. */
+  /** Omit (or 0) for a movie with no TMDb id. Its parse_status is '' (no no-metadata block); use api.reparseMovie / api.batchReparse to reach failed / pending (dsr-2b-b). */
   tmdbId?: number;
   posterPath?: string;
   genres?: string[];

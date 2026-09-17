@@ -9,9 +9,8 @@
  *
  * Story 20-2: every test now SEEDS the row it needs via the API and cleans up
  * afterwards, instead of `test.skip(!movie, 'No movies available')`. On the
- * fresh, empty CI DB the old pattern silently self-skipped → false green. The
- * only remaining skip is the `pending` fallback (the create endpoint can't set
- * `parse_status` — see the comment there).
+ * fresh, empty CI DB the old pattern silently self-skipped → false green.
+ * dsr-2b-b re-armed the last skips (the no-metadata states).
  *
  * Prerequisites:
  * - Frontend running on port 4200: npx nx serve web
@@ -164,83 +163,106 @@ test.describe('Media Detail - Navigation @e2e @media-detail', () => {
 // Fallback UI Tests (Story 5-11)
 // =============================================================================
 
-test.describe('Media Detail - Fallback UI @e2e @media-detail @story-5-11', () => {
+test.describe('Media Detail - no metadata @e2e @media-detail @dsr-2b-b', () => {
+  // dsr-2b-b: the v1 fallback panel (Story 5-11) never made it into the v2 detail
+  // page; these four tests waited on it as honest skips. They now cover the v2
+  // states, read from parse_status (never tmdb_id):
+  //   - failed  → seeded by a real single re-match of a nonsense title (dsr-2b-a)
+  //   - pending → seeded by a batch re-parse, which sets pending and runs nothing
   const movieIds: string[] = [];
 
   test.afterEach(async ({ api }) => {
     await deleteMovies(api, ...movieIds.splice(0));
   });
 
-  // A movie created via POST /movies with no tmdb_id → tmdb_id=0, parse_status=''
-  // → hasMetadata=false, not 'pending' → ColorPlaceholder + FallbackFailed render
-  // (see routes/media/$type.$id.tsx). No poster_path → ColorPlaceholder.
-  async function seedNoMetadataMovie(api: Parameters<typeof seedMovie>[0]) {
-    const movie = await seedMovie(api, { title: `E2E 無資料電影 ${Date.now()}` });
+  async function seedFailedMovie(api: Parameters<typeof seedMovie>[0]) {
+    const movie = await seedMovie(api, { title: `[E2E] zzqx nonsense ${Date.now()}` });
     movieIds.push(movie.id);
+    const rematch = await api.reparseMovie(movie.id);
+    expect(rematch.data?.parse_status, JSON.stringify(rematch.error)).toBe('failed');
     return movie;
   }
 
-  // ux3-cutover-3: LocalDetailV2 does NOT port the Story 5-11 fallback UX
-  // (color placeholder testid / FallbackFailed panel / 搜尋中繼資料+手動編輯 CTAs) —
-  // filed as disc-2026-07-v2-detail-fallback-states in sprint-status. Skipped
-  // honestly (not deleted): they re-arm when the v2 fallback states land.
-  test.skip('[P0] should display color placeholder for media without poster', async ({
+  test('[P0] a movie without a poster shows the gradient tile, initial skipping the bracket', async ({
     page,
     api,
   }) => {
-    // GIVEN: A movie without TMDB metadata (tmdb_id = 0) and no poster
-    const movie = await seedNoMetadataMovie(api);
-
-    // WHEN: Navigate to the detail page
-    await page.goto(`/media/movie/${movie.id}`);
-    await page.waitForLoadState('networkidle');
-
-    // THEN: Color placeholder should be rendered (not the Film icon placeholder)
-    await expect(page.getByTestId('color-placeholder')).toBeAttached({ timeout: 15000 });
-  });
-
-  test.skip('[P0] should display failed state with file info and CTAs', async ({ page, api }) => {
-    // GIVEN: A movie with empty/failed parse status (no metadata)
-    const movie = await seedNoMetadataMovie(api);
-
-    // WHEN: Navigate to the detail page
-    await page.goto(`/media/movie/${movie.id}`);
-    await page.waitForLoadState('networkidle');
-
-    // THEN: Failed state UI should be visible
-    await expect(page.getByTestId('fallback-failed')).toBeAttached({ timeout: 15000 });
-    await expect(page.getByText('我們找不到這部電影的資料')).toBeVisible();
-    await expect(page.getByText('檔案資訊')).toBeVisible();
-
-    // AND: CTA buttons should be present
-    await expect(page.getByTestId('cta-search-metadata')).toBeVisible();
-    await expect(page.getByTestId('cta-manual-edit')).toBeVisible();
-  });
-
-  // The 'pending' fallback requires parse_status='pending', which the create
-  // endpoint (CreateMovieRequest) cannot set — only the scanner/parse_queue
-  // pipeline produces that state. Seeding a 'pending' movie needs either a new
-  // create field or the Tier-2 test-only seed endpoint. Tracked as
-  // sprint-status `story-20-4-season-accordion-e2e` follow-up (parse-status
-  // seeding). Kept skipped honestly rather than self-skipping at runtime.
-  test.skip('[P1] should display pending state with spinner — needs parse_status seeding', () => {
-    // Intentionally empty: see comment above.
-  });
-
-  test.skip('[P1] search metadata CTA should navigate to search page', async ({ page, api }) => {
-    // GIVEN: A no-metadata movie on its (failed-state) detail page
-    const movie = await seedNoMetadataMovie(api);
+    const movie = await seedMovie(api, { title: `[E2E] 無資料電影 ${Date.now()}` });
+    movieIds.push(movie.id);
 
     await page.goto(`/media/movie/${movie.id}`);
-    await page.waitForLoadState('networkidle');
 
-    // WHEN: Click the search metadata button
-    const searchBtn = page.getByTestId('cta-search-metadata');
-    await expect(searchBtn).toBeVisible({ timeout: 15000 });
-    await searchBtn.click();
+    const tile = page.getByTestId('detail-poster-fallback');
+    await expect(tile).toBeVisible({ timeout: 15000 });
+    await expect(tile).toHaveText('E');
+  });
 
-    // THEN: Should navigate to search page with query parameter
-    await expect(page).toHaveURL(/\/search\?q=.+/, { timeout: 10000 });
+  test('[P0] a movie whose match failed shows the 比對失敗 block and its two ways back', async ({
+    page,
+    api,
+  }) => {
+    const movie = await seedFailedMovie(api);
+
+    await page.goto(`/media/movie/${movie.id}`);
+
+    const block = page.locator('[data-testid="detail-no-metadata"][data-variant="failed"]');
+    await expect(block).toBeVisible({ timeout: 15000 });
+    await expect(block.getByRole('heading', { name: '沒有找到這部電影的資料' })).toBeVisible();
+    await expect(page.getByTestId('no-metadata-manual-match')).toBeVisible();
+    await expect(page.getByTestId('no-metadata-rematch')).toBeVisible();
+  });
+
+  test('[P1] a pending movie shows 資料整理中 with 立即比對 and nothing spinning', async ({
+    page,
+    api,
+  }) => {
+    const movie = await seedMovie(api, { title: `[E2E] pending ${Date.now()}` });
+    movieIds.push(movie.id);
+    const batch = await api.batchReparse([movie.id], 'movie');
+    expect(batch.success, JSON.stringify(batch.error)).toBe(true);
+    // BatchReparse answers 200 even when an id failed; make sure this one was set.
+    expect(batch.data?.success_count).toBe(1);
+
+    await page.goto(`/media/movie/${movie.id}`);
+
+    const block = page.locator('[data-testid="detail-no-metadata"][data-variant="pending"]');
+    await expect(block).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('no-metadata-rematch')).toHaveText('立即比對');
+    await expect(page.locator('.animate-spin')).toHaveCount(0);
+  });
+
+  test('[P1] 手動選片 opens the locked dialog prefilled with the cleaned file name', async ({
+    page,
+    api,
+  }) => {
+    const movie = await seedFailedMovie(api);
+
+    await page.goto(`/media/movie/${movie.id}`);
+    await page.getByTestId('no-metadata-manual-match').click();
+
+    const dialog = page.getByTestId('manual-match-dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('searchbox')).toHaveValue(/^zzqx nonsense \d+$/);
+    await expect(dialog.getByRole('combobox')).toHaveCount(0);
+    await expect(dialog.getByRole('button', { name: '影集' })).toHaveCount(0);
+  });
+
+  test('[P1] picking and applying a TMDb match turns the page into a normal detail page', async ({
+    page,
+    api,
+  }) => {
+    const movie = await seedFailedMovie(api);
+
+    await page.goto(`/media/movie/${movie.id}`);
+    await page.getByTestId('no-metadata-manual-match').click();
+    const dialog = page.getByTestId('manual-match-dialog');
+    await dialog.getByRole('searchbox').fill('Fight Club');
+    await dialog.getByTestId('manual-match-result').first().click({ timeout: 15000 });
+    await dialog.getByTestId('manual-match-apply').click();
+
+    await expect(dialog).toBeHidden({ timeout: 15000 });
+    await expect(page.getByTestId('detail-no-metadata')).toHaveCount(0, { timeout: 15000 });
+    await expect(page.getByTestId('detail-hero-v2')).not.toContainText('zzqx');
   });
 });
 

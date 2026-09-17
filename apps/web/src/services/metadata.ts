@@ -3,6 +3,7 @@
  */
 
 import { snakeToCamel, camelToSnake } from '../utils/caseTransform';
+import { ApiError } from '../lib/apiError';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
@@ -18,7 +19,9 @@ export interface ManualSearchResultItem {
   id: string;
   source: 'tmdb' | 'douban' | 'wikipedia';
   title: string;
-  titleZhTW?: string;
+  // `title_zh_tw` on the wire; snakeToCamel makes it `titleZhTw`. This was typed
+  // `titleZhTW` (capital W), so every real result's Chinese title read as undefined.
+  titleZhTw?: string;
   year?: number;
   mediaType: 'movie' | 'tv';
   overview?: string;
@@ -40,6 +43,8 @@ export interface ApplyMetadataParams {
   selectedItem: {
     id: string;
     source: string;
+    /** The picked result's type — required, confirmed against [@contract-v1] (Story dsr-2b-a AC #1). */
+    mediaType: 'movie' | 'tv';
   };
   learnPattern?: boolean;
 }
@@ -50,6 +55,8 @@ export interface ApplyMetadataResponse {
   mediaType: string;
   title: string;
   source: string;
+  tmdbId: number;
+  parseStatus: string;
 }
 
 // Types for update metadata (Story 3.8 - AC2)
@@ -98,15 +105,26 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     ...options,
   });
 
+  // ApiError (dsr-2b-b AC #4): the manual-match dialog needs the status and the
+  // Rule-7 code to say something true — 409 while the library is being matched,
+  // 404 when TMDb has no such work — instead of printing an English message.
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error?.message || `API request failed: ${response.status}`);
+    throw new ApiError(
+      errorData.error?.message || `API request failed: ${response.status}`,
+      response.status,
+      errorData.error?.code
+    );
   }
 
   const data: ApiResponse<T> = await response.json();
 
   if (!data.success) {
-    throw new Error(data.error?.message || 'API request failed');
+    throw new ApiError(
+      data.error?.message || 'API request failed',
+      response.status,
+      data.error?.code
+    );
   }
 
   return snakeToCamel<T>(data.data);

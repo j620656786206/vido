@@ -167,21 +167,29 @@ describe('libraryService', () => {
 
   describe('reparseMovie', () => {
     it('calls POST /library/movies/:id/reparse', async () => {
-      mockFetch.mockResolvedValue(mockSuccessResponse({ id: 'movie-1', status: 'reparse_queued' }));
+      // dsr-2b-a AC #2 [@contract-v1]: the re-match runs and returns the row it left.
+      mockFetch.mockResolvedValue(
+        mockSuccessResponse({ id: 'movie-1', parse_status: 'failed', title: 'zzqx', tmdb_id: 0 })
+      );
 
       const result = await libraryService.reparseMovie('movie-1');
 
       expect(mockFetch).toHaveBeenCalledWith(`${API_BASE}/library/movies/movie-1/reparse`, {
         method: 'POST',
       });
-      expect(result).toEqual({ id: 'movie-1', status: 'reparse_queued' });
+      expect(result).toEqual({ id: 'movie-1', parseStatus: 'failed', title: 'zzqx', tmdbId: 0 });
     });
   });
 
   describe('reparseSeries', () => {
     it('calls POST /library/series/:id/reparse', async () => {
       mockFetch.mockResolvedValue(
-        mockSuccessResponse({ id: 'series-1', status: 'reparse_queued' })
+        mockSuccessResponse({
+          id: 'series-1',
+          parse_status: 'success',
+          title: '絕命毒師',
+          tmdb_id: 1396,
+        })
       );
 
       const result = await libraryService.reparseSeries('series-1');
@@ -189,7 +197,12 @@ describe('libraryService', () => {
       expect(mockFetch).toHaveBeenCalledWith(`${API_BASE}/library/series/series-1/reparse`, {
         method: 'POST',
       });
-      expect(result).toEqual({ id: 'series-1', status: 'reparse_queued' });
+      expect(result).toEqual({
+        id: 'series-1',
+        parseStatus: 'success',
+        title: '絕命毒師',
+        tmdbId: 1396,
+      });
     });
   });
 
