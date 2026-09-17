@@ -195,9 +195,9 @@ describe.each(ALL_THEMES)('styles.css [%s] — token contrast gate', (theme) => 
     );
   });
 
-  // --accent-hover is written as a TEXT colour at six live sites (ActivityHub,
-  // SidebarGroupParent, GlossaryRowV2, BatchSubtitleDialog). Nothing gated it
-  // in either theme.
+  // --accent-hover was written as a TEXT colour at six live sites when this gate
+  // landed (ActivityHub, SidebarGroupParent, GlossaryRowV2, BatchSubtitleDialog;
+  // GlossaryRowV2 no longer does). Nothing gated it in either theme.
   describe('--accent-hover as text', () => {
     it.each(SURFACES)('--accent-hover on --%s is ≥4.5:1', (surface) => {
       const r = at(tk('accent-hover'), tk(surface));
@@ -209,12 +209,12 @@ describe.each(ALL_THEMES)('styles.css [%s] — token contrast gate', (theme) => 
   });
 
   // --text-on-accent is the label that sits on a SOLID semantic fill. Ungated
-  // until now, which is how GlossaryRowV2.tsx:185 shipped at 3.33:1.
+  // until now, which is how GlossaryRowV2's delete-confirm 「刪除」 button shipped at 3.33:1.
   //
   // --error and --error-pressed are not here: 硃砂 does not invert, so its
   // label does not either — every cinnabar fill now carries --text-on-scrim
   // (5.03:1 / 6.36:1 in BOTH themes), asserted in its own block below. That
-  // closes GlossaryRowV2.tsx:185, which shipped at 3.33:1 in dark.
+  // closes GlossaryRowV2's delete-confirm 「刪除」 button, which shipped at 3.33:1 in dark.
   describe('--text-on-accent carries every solid fill it lands on', () => {
     const SOLIDS = [
       'accent-primary',
@@ -259,7 +259,7 @@ describe.each(ALL_THEMES)('styles.css [%s] — token contrast gate', (theme) => 
 
   // 硃砂 is the one pigment that survives inversion unchanged, so a label on
   // it must not invert either. --text-on-accent measures 3.33 / 2.63 here in
-  // dark, which is how GlossaryRowV2.tsx:185 shipped broken.
+  // dark, which is how GlossaryRowV2's delete-confirm 「刪除」 button shipped broken.
   describe('--text-on-scrim carries the cinnabar fills', () => {
     it.each(['error', 'error-pressed'] as const)('--text-on-scrim on --%s is ≥4.5:1', (solid) => {
       const r = at(tk('text-on-scrim'), tk(solid));

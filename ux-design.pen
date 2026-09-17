@@ -12060,7 +12060,9 @@
                               "id": "lb5mu",
                               "name": "cell-glossary-cap",
                               "fill": "$text-muted",
-                              "content": "GlossaryRow-v2 · 名詞對照表列(原文↔繁中＋來源徽章×3：字幕/中繼資料/手動＋未確認＋確認/編輯/刪除)",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "GlossaryRow-v2 · 名詞對照表列(原文↔繁中＋來源徽章×5：字幕/中繼資料/手動/官方字幕/社群（中性藥丸）＋未確認＋確認/編輯/刪除（刪除是文字，不是圖示）)",
                               "lineHeight": "$Type/Label/Line",
                               "fontFamily": "$Type/Family/Primary",
                               "fontSize": "$Type/Label/Size",
@@ -19426,18 +19428,18 @@
                       "type": "frame",
                       "id": "WyY3x",
                       "name": "gr-badge",
-                      "fill": "$info-tint",
-                      "cornerRadius": "$radius-sm",
+                      "fill": "$bg-tertiary",
+                      "cornerRadius": "$radius-pill",
                       "padding": [
                         "$Space/xs",
-                        "$Space/sm"
+                        "$Space/sm-plus"
                       ],
                       "children": [
                         {
                           "type": "text",
                           "id": "z5Xrd",
                           "name": "gr-badge-lb",
-                          "fill": "$info-text",
+                          "fill": "$text-secondary",
                           "content": "字幕",
                           "lineHeight": "$Type/Label/Line",
                           "fontFamily": "$Type/Family/Primary",
@@ -19451,10 +19453,10 @@
                       "id": "R353jw",
                       "name": "gr-unconf",
                       "fill": "$warning-tint",
-                      "cornerRadius": "$radius-sm",
+                      "cornerRadius": "$radius-pill",
                       "padding": [
                         "$Space/xs",
-                        "$Space/sm"
+                        "$Space/sm-plus"
                       ],
                       "children": [
                         {
@@ -121544,6 +121546,7 @@
                   "x": 280,
                   "y": 200,
                   "name": "glossary-dialog",
+                  "theme": {},
                   "width": 880,
                   "fill": "$bg-secondary",
                   "cornerRadius": "$radius-lg",
@@ -121712,7 +121715,7 @@
                                   "enabled": false
                                 },
                                 "SIp0F": {
-                                  "enabled": false
+                                  "enabled": true
                                 }
                               }
                             },
@@ -121737,7 +121740,7 @@
                                   "enabled": false
                                 },
                                 "SIp0F": {
-                                  "enabled": false
+                                  "enabled": true
                                 }
                               }
                             },
@@ -121756,11 +121759,11 @@
                                   "content": "霍金斯鎮"
                                 },
                                 "WyY3x": {
-                                  "fill": "$accent-tint"
+                                  "fill": "$bg-tertiary"
                                 },
                                 "z5Xrd": {
                                   "content": "中繼資料",
-                                  "fill": "$accent-text"
+                                  "fill": "$text-secondary"
                                 },
                                 "R353jw": {
                                   "enabled": false
@@ -121769,7 +121772,7 @@
                                   "enabled": false
                                 },
                                 "SIp0F": {
-                                  "enabled": false
+                                  "enabled": true
                                 }
                               }
                             },
@@ -121811,50 +121814,21 @@
                               }
                             },
                             {
-                              "id": "T8nYpg",
+                              "id": "r8PoZ4",
                               "type": "ref",
                               "ref": "nDSEd",
                               "name": "row-Eleven",
                               "width": "fill_container",
+                              "enabled": true,
                               "descendants": {
                                 "rCEl1": {
                                   "content": "Eleven"
                                 },
                                 "H6m5F2": {
-                                  "type": "frame",
-                                  "id": "eyc3W",
-                                  "name": "gr-zh-mixed",
-                                  "gap": 2,
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "text",
-                                      "id": "SKJdo",
-                                      "name": "zh-num",
-                                      "fill": "$text-primary",
-                                      "content": "11",
-                                      "fontFamily": "JetBrains Mono",
-                                      "fontSize": 13,
-                                      "fontWeight": "normal"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "ak18t",
-                                      "name": "zh-suffix",
-                                      "fill": "$text-primary",
-                                      "content": "號",
-                                      "fontFamily": "Noto Sans TC",
-                                      "fontSize": 13,
-                                      "fontWeight": "normal"
-                                    }
-                                  ]
-                                },
-                                "WyY3x": {
-                                  "fill": "$accent-tint"
+                                  "content": "11 號"
                                 },
                                 "z5Xrd": {
-                                  "content": "中繼資料",
-                                  "fill": "$accent-text"
+                                  "content": "中繼資料"
                                 }
                               }
                             }
@@ -121896,7 +121870,7 @@
                           "id": "qxyjt",
                           "name": "count-total",
                           "fill": "$text-secondary",
-                          "content": "12",
+                          "content": "6",
                           "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Mono",
                           "fontSize": "$Type/Body/Size",
@@ -121918,7 +121892,7 @@
                           "id": "eFK5e",
                           "name": "count-unconfirmed",
                           "fill": "$text-secondary",
-                          "content": "6",
+                          "content": "3",
                           "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Mono",
                           "fontSize": "$Type/Body/Size",
@@ -147859,11 +147833,11 @@
                               "content": "霍普"
                             },
                             "WyY3x": {
-                              "fill": "$accent-tint"
+                              "fill": "$bg-tertiary"
                             },
                             "z5Xrd": {
                               "content": "中繼資料",
-                              "fill": "$accent-text"
+                              "fill": "$text-secondary"
                             },
                             "SIp0F": {
                               "enabled": false
@@ -154627,18 +154601,18 @@
                       "type": "frame",
                       "id": "k8X8FN",
                       "name": "badge-字幕",
-                      "fill": "$info-tint",
-                      "cornerRadius": "$radius-sm",
+                      "fill": "$bg-tertiary",
+                      "cornerRadius": "$radius-pill",
                       "padding": [
                         "$Space/xs",
-                        "$Space/sm"
+                        "$Space/sm-plus"
                       ],
                       "children": [
                         {
                           "type": "text",
                           "id": "MlTG1",
                           "name": "badge-字幕-lb",
-                          "fill": "$info-text",
+                          "fill": "$text-secondary",
                           "content": "字幕",
                           "lineHeight": "$Type/Label/Line",
                           "fontFamily": "$Type/Family/Primary",
@@ -154651,18 +154625,18 @@
                       "type": "frame",
                       "id": "L2XAH",
                       "name": "badge-中繼資料",
-                      "fill": "$success-tint",
-                      "cornerRadius": "$radius-sm",
+                      "fill": "$bg-tertiary",
+                      "cornerRadius": "$radius-pill",
                       "padding": [
                         "$Space/xs",
-                        "$Space/sm"
+                        "$Space/sm-plus"
                       ],
                       "children": [
                         {
                           "type": "text",
                           "id": "dWcJa",
                           "name": "badge-中繼資料-lb",
-                          "fill": "$success-text",
+                          "fill": "$text-secondary",
                           "content": "中繼資料",
                           "lineHeight": "$Type/Label/Line",
                           "fontFamily": "$Type/Family/Primary",
@@ -154676,10 +154650,10 @@
                       "id": "Ot9AS",
                       "name": "badge-手動",
                       "fill": "$bg-tertiary",
-                      "cornerRadius": "$radius-sm",
+                      "cornerRadius": "$radius-pill",
                       "padding": [
                         "$Space/xs",
-                        "$Space/sm"
+                        "$Space/sm-plus"
                       ],
                       "children": [
                         {
@@ -154694,6 +154668,86 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "OREEO",
+                      "name": "badge-官方字幕",
+                      "fill": "$bg-tertiary",
+                      "cornerRadius": "$radius-pill",
+                      "padding": [
+                        "$Space/xs",
+                        "$Space/sm-plus"
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "h7ijP",
+                          "name": "badge-官方字幕-lb",
+                          "fill": "$text-secondary",
+                          "content": "官方字幕",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "J9PuH9",
+                      "name": "badge-社群",
+                      "fill": "$bg-tertiary",
+                      "cornerRadius": "$radius-pill",
+                      "padding": [
+                        "$Space/xs",
+                        "$Space/sm-plus"
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "a46SqU",
+                          "name": "badge-社群-lb",
+                          "fill": "$text-secondary",
+                          "content": "社群",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "n8RtWT",
+                      "name": "badge-sep",
+                      "width": 1,
+                      "height": 16,
+                      "fill": "$border-subtle"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "VlBJn",
+                      "name": "badge-未確認",
+                      "fill": "$warning-tint",
+                      "cornerRadius": "$radius-pill",
+                      "padding": [
+                        "$Space/xs",
+                        "$Space/sm-plus"
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "phu0I",
+                          "name": "badge-未確認-lb",
+                          "fill": "$warning-text",
+                          "content": "未確認",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "normal"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -154702,7 +154756,9 @@
                   "id": "D9y6PK",
                   "name": "badge-variants-caption",
                   "fill": "$text-muted",
-                  "content": "來源徽章三變體：字幕/中繼資料/手動",
+                  "textGrowth": "fixed-width",
+                  "width": 480,
+                  "content": "來源徽章五種：字幕／中繼資料／手動／官方字幕／社群。一律中性（$bg-tertiary 底、$text-secondary 字、藥丸），只靠文字區分——來源是屬性，不是狀態（DESIGN.md:300、TechBadge 裁定 2026-09-10）。顏色只留給『未確認』＝赭：未確認的詞已經被拿去翻譯（confirmedOnly=false，sub-5-5），使用者還沒看過。",
                   "lineHeight": "$Type/Label/Line",
                   "fontFamily": "$Type/Family/Primary",
                   "fontSize": "$Type/Label/Size",
@@ -155172,6 +155228,522 @@
               "fontFamily": "$Type/Family/Primary",
               "fontSize": "$Type/Label/Size",
               "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "jGabE",
+              "x": 21800,
+              "y": 34348,
+              "name": "cap-F6-SPEC-STATES",
+              "fill": "#888888",
+              "content": "F6 · 名詞對照表・狀態規格（桌面）",
+              "lineHeight": "$Type/Body/Line",
+              "fontFamily": "$Type/Family/Primary",
+              "fontSize": "$Type/Body/Size",
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "n3vIR",
+              "x": 21800,
+              "y": 34393,
+              "name": "F6-SPEC-STATES",
+              "theme": {},
+              "clip": true,
+              "width": 880,
+              "fill": "$bg-secondary",
+              "cornerRadius": "$radius-lg",
+              "layout": "vertical",
+              "gap": "$Space/xl",
+              "padding": [
+                "$Space/lg-plus",
+                "$Space/xl"
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "VIg0m",
+                  "name": "state-loading",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": "$Space/sm",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "wy0Cy",
+                      "name": "state-loading-label",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "① 載入中",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "id": "Q3VAL",
+                      "type": "ref",
+                      "ref": "m0kOOB",
+                      "name": "loading-skeleton",
+                      "width": "fill_container",
+                      "descendants": {
+                        "JGgiL": {
+                          "width": "fill_container",
+                          "height": 54,
+                          "cornerRadius": "$radius-md"
+                        },
+                        "YKfdF": {
+                          "width": "fill_container",
+                          "height": 54,
+                          "cornerRadius": "$radius-md"
+                        },
+                        "w2wmH": {
+                          "width": "fill_container",
+                          "height": 54,
+                          "cornerRadius": "$radius-md"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Atdzn",
+                  "name": "state-load-error",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": "$Space/sm",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "wn1Qx",
+                      "name": "state-load-error-label",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "② 載入失敗——有已載入的列表時，這個框放在列表上方，列表不消失",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "nF8vf",
+                      "name": "load-error",
+                      "width": "fill_container",
+                      "fill": "$error-tint",
+                      "cornerRadius": "$radius-md",
+                      "gap": "$Space/sm",
+                      "padding": "$Space/md",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "W878fE",
+                          "name": "load-error-icon",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "circle-alert",
+                          "library": "lucide",
+                          "fill": "$error-text"
+                        },
+                        {
+                          "type": "text",
+                          "id": "TQf8m",
+                          "name": "load-error-text",
+                          "fill": "$error-text",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "名詞對照表載入失敗",
+                          "lineHeight": "$Type/Body/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Body/Size",
+                          "fontWeight": "$Type/Body/Weight"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "K92Zs",
+                          "name": "load-error-retry",
+                          "height": 44,
+                          "padding": [
+                            "$Space/none",
+                            "$Space/md"
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "bHQn4",
+                              "name": "load-error-retry-lb",
+                              "fill": "$accent-text",
+                              "content": "重試",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ZTGa6",
+                  "name": "state-write-error",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": "$Space/sm",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "vsb4Q",
+                      "name": "state-write-error-label",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "③ 寫入失敗（新）——新增／編輯／確認／全部確認／刪除失敗時出現在工具列下方；下一次操作開始時消失",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "AbdL2",
+                      "name": "write-error",
+                      "width": "fill_container",
+                      "fill": "$error-tint",
+                      "cornerRadius": "$radius-md",
+                      "gap": "$Space/sm",
+                      "padding": "$Space/md",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "wqk7k",
+                          "name": "write-error-icon",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "circle-alert",
+                          "library": "lucide",
+                          "fill": "$error-text"
+                        },
+                        {
+                          "type": "text",
+                          "id": "flCr2",
+                          "name": "write-error-text",
+                          "fill": "$error-text",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "「Demogorgon」的新譯名沒有存到，請再試一次",
+                          "lineHeight": "$Type/Body/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Body/Size",
+                          "fontWeight": "$Type/Body/Weight"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "O8wPcN",
+                  "name": "state-add-form",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": "$Space/sm",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "MdR1q",
+                      "name": "state-add-form-label",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "④ 新增表單＋重複的詞",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "EMxfW",
+                      "name": "add-form",
+                      "width": "fill_container",
+                      "fill": "$bg-secondary",
+                      "cornerRadius": "$radius-md",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": "$Space/sm",
+                      "padding": [
+                        "$Space/sm",
+                        "$Space/md-plus"
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "Kob58",
+                          "type": "ref",
+                          "ref": "aaiLz",
+                          "name": "add-src",
+                          "width": 160,
+                          "descendants": {
+                            "tCQdc": {
+                              "content": "原文（例：Demogorgon）",
+                              "fontFamily": "$Type/Family/Mono"
+                            }
+                          }
+                        },
+                        {
+                          "id": "e3jVi",
+                          "type": "ref",
+                          "ref": "aaiLz",
+                          "name": "add-zh",
+                          "width": 160,
+                          "descendants": {
+                            "tCQdc": {
+                              "content": "譯名（例：魔王獸）"
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "b3paM",
+                          "name": "add-spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "type": "frame",
+                          "id": "kjYwh",
+                          "name": "add-submit",
+                          "height": 44,
+                          "padding": [
+                            "$Space/none",
+                            "$Space/sm-plus"
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "HCwDx",
+                              "name": "add-submit-lb",
+                              "fill": "$accent-text",
+                              "content": "新增",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "aPd59",
+                          "name": "add-cancel",
+                          "height": 44,
+                          "padding": [
+                            "$Space/none",
+                            "$Space/sm-plus"
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "QdDl5",
+                              "name": "add-cancel-lb",
+                              "fill": "$text-secondary",
+                              "content": "取消",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "F6iMRb",
+                      "name": "add-duplicate",
+                      "fill": "$warning-text",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "「Demogorgon」已經在表裡了（→ 魔王獸）。要改譯名，請按那一列的「編輯」。",
+                      "lineHeight": "$Type/Body/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Body/Size",
+                      "fontWeight": "$Type/Body/Weight"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "yeSVF",
+                  "name": "state-editing",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": "$Space/sm",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "rcLnl",
+                      "name": "state-editing-label",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "⑤ 編輯中",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "id": "l78Hq",
+                      "type": "ref",
+                      "ref": "nDSEd",
+                      "name": "row-editing",
+                      "width": "fill_container",
+                      "descendants": {
+                        "rCEl1": {
+                          "content": "Demogorgon"
+                        },
+                        "H6m5F2": {
+                          "id": "C3MxD",
+                          "type": "ref",
+                          "ref": "rGYSZ",
+                          "name": "edit-input",
+                          "width": 128,
+                          "descendants": {
+                            "a4pze5": {
+                              "content": "魔神獸"
+                            }
+                          }
+                        },
+                        "u9HLj": {
+                          "content": "儲存"
+                        },
+                        "KfDYP": {
+                          "content": "取消"
+                        },
+                        "Q11NpX": {
+                          "enabled": false
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "LaSSL",
+                  "name": "state-delete-confirm",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": "$Space/sm",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "XsHDq",
+                      "name": "state-delete-confirm-label",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "⑥ 刪除確認",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "id": "H1OMp",
+                      "type": "ref",
+                      "ref": "m6KMPr",
+                      "name": "delete-confirm",
+                      "descendants": {
+                        "CsRIQ": {
+                          "content": "刪除詞彙"
+                        },
+                        "lFEZd": {
+                          "content": "確定要刪除「Demogorgon → 魔王獸」嗎？此操作無法復原。"
+                        },
+                        "InAqu": {
+                          "enabled": false
+                        },
+                        "NiyZh": {
+                          "id": "s0XgCq",
+                          "type": "ref",
+                          "ref": "YDPhc",
+                          "name": "cancel",
+                          "height": 44,
+                          "descendants": {
+                            "L9cIf": {
+                              "content": "取消"
+                            }
+                          }
+                        },
+                        "A3pjr": {
+                          "id": "c373lX",
+                          "type": "ref",
+                          "ref": "GhcG4",
+                          "name": "confirm-delete",
+                          "height": 44,
+                          "descendants": {
+                            "b8Stc": {
+                              "content": "刪除"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "dv0ob",
+                  "name": "state-keyboard",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": "$Space/sm",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "XG2jp",
+                      "name": "state-keyboard-label",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "⑦ 鍵盤規則",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Pvktf",
+                      "name": "keyboard-rules",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Enter：送出（輸入法組字中的 Enter 只選字，不送出）。Esc：焦點在新增表單或正在編輯的那一列裡（包括輸入框與「新增／儲存／取消」按鈕）時，取消新增或編輯，不關閉面板；輸入法組字中的 Esc 只取消組字。其他時候 Esc 才關閉面板。",
+                      "lineHeight": "$Type/Body/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Body/Size",
+                      "fontWeight": "$Type/Body/Weight"
+                    }
+                  ]
+                }
+              ]
             }
           ]
         }
@@ -155188,7 +155760,7 @@
           "type": "text",
           "id": "b0X61",
           "x": 17040,
-          "y": 36665,
+          "y": 37408,
           "name": "H Flow Title",
           "fill": "#222222",
           "content": "首頁 — Homepage",
@@ -155201,7 +155773,7 @@
           "type": "text",
           "id": "r8FsQ2",
           "x": 17040,
-          "y": 36707,
+          "y": 37450,
           "name": "H Flow Desc",
           "fill": "#666666",
           "content": "桌面 + 手機 + Block 編輯 Modal / 載入骨架 / ExploreBlock 優化",
@@ -155214,7 +155786,7 @@
           "type": "group",
           "id": "Jg60w",
           "x": 0,
-          "y": 0,
+          "y": 743,
           "name": "H · 桌面 Desktop",
           "children": [
             {
@@ -160499,7 +161071,7 @@
           "type": "group",
           "id": "m6O4q",
           "x": 0,
-          "y": 0,
+          "y": 743,
           "name": "H · 手機 Mobile",
           "children": [
             {
@@ -161587,7 +162159,7 @@
           "type": "group",
           "id": "q5lOmQ",
           "x": 0,
-          "y": 0,
+          "y": 743,
           "name": "H · 規格 Spec",
           "children": [
             {
@@ -162224,7 +162796,7 @@
           "type": "text",
           "id": "dqWme",
           "x": 17040,
-          "y": 42486,
+          "y": 43229,
           "name": "I Flow Title",
           "fill": "#222222",
           "content": "進階搜尋與探索 — Discover & Advanced Search",
@@ -162237,7 +162809,7 @@
           "type": "text",
           "id": "R4QdxK",
           "x": 17040,
-          "y": 42528,
+          "y": 43271,
           "name": "I Flow Desc",
           "fill": "#666666",
           "content": "桌面 + 手機並列｜探索頁 v2 · 即時搜尋建議 · 篩選 rail（常駐／收合）· 手機篩選 Sheet · 載入骨架 · 無結果 · 區段 fail-soft。",
@@ -162250,7 +162822,7 @@
           "type": "group",
           "id": "vWdb4",
           "x": 0,
-          "y": 0,
+          "y": 743,
           "name": "I · 桌面 Desktop",
           "children": [
             {
@@ -173663,7 +174235,7 @@
           "type": "group",
           "id": "GJPx8",
           "x": 0,
-          "y": 0,
+          "y": 743,
           "name": "I · 手機 Mobile",
           "children": [
             {
@@ -175465,7 +176037,7 @@
           "type": "group",
           "id": "F8Mrs7",
           "x": 0,
-          "y": 0,
+          "y": 743,
           "name": "I · 規格 Spec",
           "children": [
             {
@@ -176280,7 +176852,7 @@
           "type": "frame",
           "id": "XlFIq",
           "x": 18140,
-          "y": 47510,
+          "y": 48253,
           "name": "J1-D",
           "clip": true,
           "width": 1240,
@@ -177153,7 +177725,7 @@
           "type": "text",
           "id": "CzjQz",
           "x": 17040,
-          "y": 47390,
+          "y": 48133,
           "name": "J Flow Title",
           "fill": "#222222",
           "content": "設計決策 Spec — Design Decision Specs",
@@ -177166,7 +177738,7 @@
           "type": "text",
           "id": "IE54D",
           "x": 17040,
-          "y": 47432,
+          "y": 48175,
           "name": "J Flow Desc",
           "fill": "#666666",
           "content": "不是畫面，是裁決紀錄：PosterCard 資訊密度、字幕狀態徽章、會花錢的按鈕等九張規格單。",
@@ -177179,7 +177751,7 @@
           "type": "text",
           "id": "OamWB",
           "x": 18140,
-          "y": 47480,
+          "y": 48223,
           "name": "J1 · PosterCard 資訊密度與優化",
           "fill": "#888888",
           "content": "J1 · PosterCard 資訊密度與優化",
@@ -177192,7 +177764,7 @@
           "type": "text",
           "id": "cFBCj",
           "x": 19480,
-          "y": 47465,
+          "y": 48208,
           "name": "J2 · 字幕狀態徽章規格（桌面）",
           "fill": "#888888",
           "content": "J2 · 字幕狀態徽章規格（桌面）",
@@ -177205,7 +177777,7 @@
           "type": "frame",
           "id": "ZpQaw",
           "x": 19480,
-          "y": 47510,
+          "y": 48253,
           "name": "J2-D",
           "clip": true,
           "width": 1240,
@@ -180265,7 +180837,7 @@
           "type": "frame",
           "id": "Z54xAd",
           "x": 17040,
-          "y": 47510,
+          "y": 48253,
           "name": "J3-D",
           "width": 1000,
           "fill": "$bg-secondary",
@@ -181288,7 +181860,7 @@
           "type": "text",
           "id": "b6UOEN",
           "x": 20820,
-          "y": 47480,
+          "y": 48223,
           "name": "Caption J4-D",
           "fill": "#888888",
           "content": "J4 · 入庫自動生成 · 免費／付費界線規格",
@@ -181301,7 +181873,7 @@
           "type": "frame",
           "id": "sPzZT",
           "x": 20820,
-          "y": 47510,
+          "y": 48253,
           "name": "J4-D",
           "width": 1240,
           "fill": "$bg-secondary",
@@ -182082,7 +182654,7 @@
           "type": "text",
           "id": "t186uB",
           "x": 22160,
-          "y": 47480,
+          "y": 48223,
           "name": "Caption J5-D",
           "fill": "#888888",
           "content": "J5 · 入庫自動生成 · 部署未啟用狀態規格",
@@ -182095,7 +182667,7 @@
           "type": "frame",
           "id": "alrIw",
           "x": 22160,
-          "y": 47510,
+          "y": 48253,
           "name": "J5-D",
           "width": 1240,
           "fill": "$bg-secondary",
@@ -183610,7 +184182,7 @@
           "type": "text",
           "id": "I7d3Hz",
           "x": 23500,
-          "y": 47480,
+          "y": 48223,
           "name": "Caption J6-D",
           "fill": "#888888",
           "content": "J6 · .nfo 在地化 · 確認與結果規格",
@@ -183623,7 +184195,7 @@
           "type": "frame",
           "id": "zMYsL",
           "x": 23500,
-          "y": 47510,
+          "y": 48253,
           "name": "J6-D",
           "width": 1240,
           "fill": "$bg-primary",
@@ -184314,7 +184886,7 @@
           "type": "text",
           "id": "N4g3Y",
           "x": 24840,
-          "y": 47480,
+          "y": 48223,
           "name": "Caption J7-D",
           "fill": "#888888",
           "content": "J7 · 設定頁表單卡片寬度裁定",
@@ -184327,7 +184899,7 @@
           "type": "frame",
           "id": "JBKis",
           "x": 24840,
-          "y": 47510,
+          "y": 48253,
           "name": "J7-D",
           "width": 1240,
           "fill": "$bg-secondary",
@@ -185009,7 +185581,7 @@
           "type": "frame",
           "id": "pbB6P",
           "x": 26180,
-          "y": 47510,
+          "y": 48253,
           "name": "J8-D",
           "clip": true,
           "width": 1240,
@@ -186139,7 +186711,7 @@
           "type": "text",
           "id": "m2mK3",
           "x": 26180,
-          "y": 47480,
+          "y": 48223,
           "name": "Caption J8-D",
           "fill": "#888888",
           "content": "J8 · 政策與手動流程分工",
@@ -186152,7 +186724,7 @@
           "type": "text",
           "id": "V1jLKC",
           "x": 27520,
-          "y": 47480,
+          "y": 48223,
           "name": "Caption J9-D",
           "fill": "#888888",
           "content": "J9 · 會花錢的按鈕（金額即記號）",
@@ -186165,7 +186737,7 @@
           "type": "frame",
           "id": "Ls4GO",
           "x": 27520,
-          "y": 47510,
+          "y": 48253,
           "name": "J9-D",
           "width": 1240,
           "fill": "$bg-primary",
@@ -186904,7 +187476,7 @@
           "type": "text",
           "id": "iYZ9O",
           "x": 17040,
-          "y": 57248,
+          "y": 57991,
           "name": "flow-l-requests-v2 · Flow Title",
           "fill": "#222222",
           "content": "請求系統 — Requests",
@@ -186917,7 +187489,7 @@
           "type": "text",
           "id": "qjskY",
           "x": 17040,
-          "y": 57290,
+          "y": 58033,
           "name": "flow-l-requests-v2 · Flow Desc",
           "fill": "#666666",
           "content": "一鍵請求電影／影集 · 季/集粒度選擇 · 狀態追蹤（Overseerr 取代方案；清單位於探索頁內，非新側欄目的地）。Rule 24 capability-honor：五態（pending/searching/downloading/completed/failed）為目標狀態，前端消費 GATE-B 於 13-3/13-4 後端；L5 骨架 shimmer 尊重 prefers-reduced-motion。",
@@ -186930,7 +187502,7 @@
           "type": "group",
           "id": "SySH0",
           "x": 0,
-          "y": 0,
+          "y": 743,
           "name": "L · 桌面 Desktop",
           "children": [
             {
@@ -199191,7 +199763,7 @@
           "type": "group",
           "id": "axqPz",
           "x": 0,
-          "y": 0,
+          "y": 743,
           "name": "L · 手機 Mobile",
           "children": [
             {
@@ -199643,7 +200215,7 @@
           "type": "text",
           "id": "vli0W",
           "x": 17040,
-          "y": 59360,
+          "y": 60103,
           "name": "L Flow Note",
           "fill": "#888888",
           "content": "⛔ 稿超前實作，不是漂移，不得刪：L1／L4 每列的「取消」與失敗列的「重試」對應 13-7a／13-7b（皆 ready-for-dev）；L3 整張「選擇要請求的內容」季集樹對應 13-2b（ready-for-dev）。後端目前只有 GET /requests、POST /requests、GET /requests/tv/:tmdb_id/coverage，沒有 DELETE 也沒有 retry——那是因為那三張單子還沒開跑。13-0 一次畫完整個 Epic 13 是刻意的：設計先行、實作分批。做設計稿對齊的人請先查 sprint-status 再下結論。",
@@ -199665,7 +200237,7 @@
           "type": "text",
           "id": "RQeUb",
           "x": 17040,
-          "y": 61512,
+          "y": 62255,
           "name": "M Flow Title",
           "fill": "#222222",
           "content": "登入閘門 — Password Gate",
@@ -199678,7 +200250,7 @@
           "type": "text",
           "id": "HTIDa",
           "x": 17040,
-          "y": 61554,
+          "y": 62297,
           "name": "M Flow Desc",
           "fill": "#666666",
           "content": "V0.1.1 共用密碼閘門：登入預設／錯誤／鎖定倒數、登出確認、驗證中等待面",
@@ -199691,7 +200263,7 @@
           "type": "group",
           "id": "bjfWD",
           "x": 0,
-          "y": 0,
+          "y": 743,
           "name": "M · 桌面 Desktop",
           "children": [
             {
@@ -200838,7 +201410,7 @@
           "type": "group",
           "id": "C3r5zq",
           "x": 0,
-          "y": 0,
+          "y": 743,
           "name": "M · 手機 Mobile",
           "children": [
             {
@@ -201735,7 +202307,7 @@
           "type": "text",
           "id": "JEnrO",
           "x": 17040,
-          "y": 52724,
+          "y": 53467,
           "name": "K Flow Title",
           "fill": "#222222",
           "content": "活動中心 — Activity Hub",
@@ -201748,7 +202320,7 @@
           "type": "text",
           "id": "CpCn6",
           "x": 17040,
-          "y": 52766,
+          "y": 53509,
           "name": "K Flow Desc",
           "fill": "#666666",
           "content": "v2 新增的目的地：掃描、字幕、下載三條產線的即時狀態集中在一頁。",
@@ -201761,7 +202333,7 @@
           "type": "group",
           "id": "qpIBN",
           "x": 0,
-          "y": 0,
+          "y": 743,
           "name": "K · 桌面 Desktop",
           "children": [
             {
@@ -203510,7 +204082,7 @@
           "type": "group",
           "id": "zoYe1",
           "x": 0,
-          "y": 0,
+          "y": 743,
           "name": "K · 手機 Mobile",
           "children": [
             {
@@ -204195,7 +204767,7 @@
           "type": "text",
           "id": "M2qqmu",
           "x": 17040,
-          "y": 65672,
+          "y": 66415,
           "name": "N Flow Title",
           "fill": "#222222",
           "content": "首次啟動精靈 — First-run Setup",
@@ -204208,7 +204780,7 @@
           "type": "text",
           "id": "BKqOD",
           "x": 17040,
-          "y": 65714,
+          "y": 66457,
           "name": "N Flow Desc",
           "fill": "#666666",
           "content": "裝好之後看到的第一個畫面：五步（歡迎 · qBittorrent · 媒體庫 · API 金鑰 · 完成）。qBittorrent 與 API 金鑰可跳過；媒體庫至少要一個。路由 /setup，實作在 apps/web/src/components/setup/。",
@@ -204221,7 +204793,7 @@
           "type": "group",
           "id": "XBRn1",
           "x": 0,
-          "y": 0,
+          "y": 743,
           "name": "N · 桌面 Desktop",
           "children": [
             {
@@ -206526,7 +207098,7 @@
           "type": "group",
           "id": "eYWUL",
           "x": 0,
-          "y": 0,
+          "y": 743,
           "name": "N · 手機 Mobile",
           "children": [
             {

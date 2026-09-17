@@ -4234,6 +4234,32 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     statesOnly: ['default'],
     width: 720,
   },
+  {
+    // dsr-6c ruling ①: every source wears the same neutral pill — this one used to
+    // be jade (a trust scale), so it pins "five sources look alike".
+    id: 'glossary-row-v2/official-subtitle',
+    label: 'subtitle/GlossaryRowV2 (已確認 · 官方字幕來源)',
+    component: GlossaryRowV2,
+    props: {
+      term: {
+        id: 'fx-g4',
+        mediaId: '42',
+        termSrc: 'Mind Flayer',
+        termZh: '奪心魔',
+        language: 'zh-Hant',
+        source: 'official_subtitle',
+        confirmed: true,
+        createdAt: '2026-07-01T00:00:00Z',
+        updatedAt: '2026-07-01T00:00:00Z',
+      },
+      onConfirm: noop,
+      onEdit: noop,
+      onDelete: noop,
+    },
+    penNode: 'nDSEd',
+    statesOnly: ['default'],
+    width: 720,
+  },
 
   // ----- subtitle/ v2 dialogs (Sally UX gate 2026-07-05 — REQUIRED fixtures) -----
   // Both are Radix `Dialog.Portal` renders (ui-dialog precedent): the state div is
