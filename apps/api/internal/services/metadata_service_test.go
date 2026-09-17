@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -733,216 +734,203 @@ func TestMetadataService_ManualSearch_NoResults(t *testing.T) {
 }
 
 // =============================================================================
-// Apply Metadata Tests (Story 3.7 - AC3)
+// Apply Metadata Tests (Story 3.7 - AC3; dsr-2b-a AC #1)
 // =============================================================================
 
-// mockMediaUpdater implements MediaUpdater for testing
-type mockMediaUpdater struct {
-	updateMetadataSourceFunc func(ctx context.Context, mediaID string, source models.MetadataSource) error
-	getByIDFunc              func(ctx context.Context, id string) (title string, exists bool, err error)
+// Before dsr-2b-a the service needed MediaUpdaters that production never
+// wired, so every apply took a nil branch and answered success with the title
+// "Unknown" — nothing was written. The applier is now the enrichment service
+// (it knows how to turn a TMDb id into a written row); these tests pin the
+// request contract and how the service hands off to it.
+
+type mockMatchApplier struct {
+	kind   MediaKind
+	id     string
+	tmdbID int
+	calls  int
+	item   *EnrichedItem
+	err    error
 }
 
-func (m *mockMediaUpdater) UpdateMetadataSource(ctx context.Context, mediaID string, source models.MetadataSource) error {
-	if m.updateMetadataSourceFunc != nil {
-		return m.updateMetadataSourceFunc(ctx, mediaID, source)
-	}
-	return nil
+func (m *mockMatchApplier) ApplyTMDbMatch(_ context.Context, kind MediaKind, id string, tmdbID int) (*EnrichedItem, error) {
+	m.calls++
+	m.kind, m.id, m.tmdbID = kind, id, tmdbID
+	return m.item, m.err
 }
 
-func (m *mockMediaUpdater) GetByID(ctx context.Context, id string) (title string, exists bool, err error) {
-	if m.getByIDFunc != nil {
-		return m.getByIDFunc(ctx, id)
+func validApplyRequest() *ApplyMetadataRequest {
+	return &ApplyMetadataRequest{
+		MediaID:      "test-id",
+		MediaType:    "movie",
+		SelectedItem: SelectedMetadataItem{ID: "tmdb-550", Source: "tmdb", MediaType: "movie"},
 	}
-	return "Test Title", true, nil
+}
+
+func newApplyService(applier MatchApplier) *MetadataService {
+	service := NewMetadataService(MetadataServiceConfig{}, &mockTMDbSearcher{})
+	if applier != nil {
+		service.SetMatchApplier(applier)
+	}
+	return service
 }
 
 // [P1] Tests ApplyMetadataRequest validation - missing mediaId
 func TestApplyMetadataRequest_Validate_MissingMediaId(t *testing.T) {
-	req := &ApplyMetadataRequest{
-		MediaID: "",
-		SelectedItem: SelectedMetadataItem{
-			ID:     "tmdb-550",
-			Source: "tmdb",
-		},
-	}
+	req := validApplyRequest()
+	req.MediaID = ""
 
 	err := req.Validate()
-	assert.Error(t, err)
 	assert.Equal(t, ErrApplyMetadataMediaIDRequired, err)
 }
 
 // [P1] Tests ApplyMetadataRequest validation - missing selectedItem id
 func TestApplyMetadataRequest_Validate_MissingSelectedItemId(t *testing.T) {
-	req := &ApplyMetadataRequest{
-		MediaID: "test-id",
-		SelectedItem: SelectedMetadataItem{
-			ID:     "",
-			Source: "tmdb",
-		},
-	}
+	req := validApplyRequest()
+	req.SelectedItem.ID = ""
 
 	err := req.Validate()
-	assert.Error(t, err)
 	assert.Equal(t, ErrApplyMetadataSelectedItemRequired, err)
 }
 
 // [P1] Tests ApplyMetadataRequest validation - missing selectedItem source
 func TestApplyMetadataRequest_Validate_MissingSelectedItemSource(t *testing.T) {
-	req := &ApplyMetadataRequest{
-		MediaID: "test-id",
-		SelectedItem: SelectedMetadataItem{
-			ID:     "tmdb-550",
-			Source: "",
-		},
-	}
+	req := validApplyRequest()
+	req.SelectedItem.Source = ""
 
 	err := req.Validate()
-	assert.Error(t, err)
 	assert.Equal(t, ErrApplyMetadataSelectedItemRequired, err)
 }
 
 // [P1] Tests ApplyMetadataRequest validation - valid request defaults mediaType
 func TestApplyMetadataRequest_Validate_DefaultsMediaType(t *testing.T) {
-	req := &ApplyMetadataRequest{
-		MediaID: "test-id",
-		SelectedItem: SelectedMetadataItem{
-			ID:     "tmdb-550",
-			Source: "tmdb",
-		},
-	}
+	req := validApplyRequest()
+	req.MediaType = ""
 
 	err := req.Validate()
 	assert.NoError(t, err)
 	assert.Equal(t, "movie", req.MediaType)
 }
 
-// [P1] Tests ApplyMetadata with mock updater
-func TestMetadataService_ApplyMetadata_Success(t *testing.T) {
-	cfg := MetadataServiceConfig{}
-	mockTMDb := &mockTMDbSearcher{}
-	service := NewMetadataService(cfg, mockTMDb)
-
-	mockUpdater := &mockMediaUpdater{
-		getByIDFunc: func(ctx context.Context, id string) (string, bool, error) {
-			return "Fight Club", true, nil
-		},
-		updateMetadataSourceFunc: func(ctx context.Context, mediaID string, source models.MetadataSource) error {
-			assert.Equal(t, "test-id", mediaID)
-			assert.Equal(t, models.MetadataSourceTMDb, source)
-			return nil
-		},
+// dsr-2b-a AC #1: movie and TV ids are two numbering systems — tmdb-550 is a
+// different work on each side — so the picked result must say which it is,
+// and it must agree with the library item.
+func TestApplyMetadataRequest_Validate_RejectsWhatCannotBeAppliedSafely(t *testing.T) {
+	cases := map[string]struct {
+		mutate func(*ApplyMetadataRequest)
+		want   error
+	}{
+		"selected type missing":     {func(r *ApplyMetadataRequest) { r.SelectedItem.MediaType = "" }, ErrApplyMetadataSelectedTypeRequired},
+		"unknown library type":      {func(r *ApplyMetadataRequest) { r.MediaType = "episode" }, ErrApplyMetadataInvalidMediaType},
+		"douban result":             {func(r *ApplyMetadataRequest) { r.SelectedItem.Source = "douban"; r.SelectedItem.ID = "douban-1292052" }, ErrApplyMetadataUnsupportedSource},
+		"id without prefix":         {func(r *ApplyMetadataRequest) { r.SelectedItem.ID = "550" }, ErrApplyMetadataInvalidItemID},
+		"non-numeric id":            {func(r *ApplyMetadataRequest) { r.SelectedItem.ID = "tmdb-abc" }, ErrApplyMetadataInvalidItemID},
+		"zero id":                   {func(r *ApplyMetadataRequest) { r.SelectedItem.ID = "tmdb-0" }, ErrApplyMetadataInvalidItemID},
+		"movie item, tv result":     {func(r *ApplyMetadataRequest) { r.SelectedItem.MediaType = "tv" }, ErrApplyMetadataTypeMismatch},
+		"series item, movie result": {func(r *ApplyMetadataRequest) { r.MediaType = "series" }, ErrApplyMetadataTypeMismatch},
 	}
-	service.SetMediaUpdaters(mockUpdater, mockUpdater)
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			req := validApplyRequest()
+			tc.mutate(req)
+			err := req.Validate()
+			assert.ErrorIs(t, err, tc.want)
+			assert.True(t, IsApplyMetadataInvalidRequest(err), "maps to 400 APPLY_METADATA_INVALID_REQUEST")
+		})
+	}
+}
 
-	result, err := service.ApplyMetadata(context.Background(), &ApplyMetadataRequest{
-		MediaID:   "test-id",
-		MediaType: "movie",
-		SelectedItem: SelectedMetadataItem{
-			ID:     "tmdb-550",
-			Source: "tmdb",
-		},
-	})
+// [P1] A movie match is handed to the applier with the parsed TMDb id, and the
+// response carries what was actually written.
+func TestMetadataService_ApplyMetadata_Success(t *testing.T) {
+	applier := &mockMatchApplier{item: &EnrichedItem{ID: "test-id", ParseStatus: models.ParseStatusSuccess, Title: "鬥陣俱樂部", TMDbID: 550}}
+	service := newApplyService(applier)
+
+	result, err := service.ApplyMetadata(context.Background(), validApplyRequest())
 
 	require.NoError(t, err)
-	require.NotNil(t, result)
-	assert.True(t, result.Success)
-	assert.Equal(t, "test-id", result.MediaID)
-	assert.Equal(t, "Fight Club", result.Title)
-	assert.Equal(t, models.MetadataSourceTMDb, result.Source)
+	assert.Equal(t, MediaKindMovie, applier.kind)
+	assert.Equal(t, "test-id", applier.id)
+	assert.Equal(t, 550, applier.tmdbID)
+	assert.Equal(t, &ApplyMetadataResponse{
+		Success: true, MediaID: "test-id", MediaType: "movie", Title: "鬥陣俱樂部",
+		Source: models.MetadataSourceTMDb, TMDbID: 550, ParseStatus: models.ParseStatusSuccess,
+	}, result)
+}
+
+func TestMetadataService_ApplyMetadata_SeriesUsesTheSeriesKind(t *testing.T) {
+	applier := &mockMatchApplier{item: &EnrichedItem{ID: "s-1", ParseStatus: models.ParseStatusSuccess, Title: "絕命毒師", TMDbID: 1396}}
+	service := newApplyService(applier)
+	req := validApplyRequest()
+	req.MediaID, req.MediaType = "s-1", "series"
+	req.SelectedItem = SelectedMetadataItem{ID: "tmdb-1396", Source: "tmdb", MediaType: "tv"}
+
+	result, err := service.ApplyMetadata(context.Background(), req)
+
+	require.NoError(t, err)
+	assert.Equal(t, MediaKindSeries, applier.kind)
+	assert.Equal(t, 1396, applier.tmdbID)
+	assert.Equal(t, "series", result.MediaType)
 }
 
 // [P1] Tests ApplyMetadata media not found
 func TestMetadataService_ApplyMetadata_NotFound(t *testing.T) {
-	cfg := MetadataServiceConfig{}
-	mockTMDb := &mockTMDbSearcher{}
-	service := NewMetadataService(cfg, mockTMDb)
+	service := newApplyService(&mockMatchApplier{err: ErrEnrichItemNotFound})
 
-	mockUpdater := &mockMediaUpdater{
-		getByIDFunc: func(ctx context.Context, id string) (string, bool, error) {
-			return "", false, nil
-		},
-	}
-	service.SetMediaUpdaters(mockUpdater, mockUpdater)
+	result, err := service.ApplyMetadata(context.Background(), validApplyRequest())
 
-	result, err := service.ApplyMetadata(context.Background(), &ApplyMetadataRequest{
-		MediaID:   "nonexistent-id",
-		MediaType: "movie",
-		SelectedItem: SelectedMetadataItem{
-			ID:     "tmdb-550",
-			Source: "tmdb",
-		},
-	})
-
-	assert.Error(t, err)
 	assert.Equal(t, ErrApplyMetadataNotFound, err)
 	assert.Nil(t, result)
 }
 
-// [P1] Tests ApplyMetadata validation error
+// [P1] Tests ApplyMetadata validation error — the applier is never reached
 func TestMetadataService_ApplyMetadata_ValidationError(t *testing.T) {
-	cfg := MetadataServiceConfig{}
-	mockTMDb := &mockTMDbSearcher{}
-	service := NewMetadataService(cfg, mockTMDb)
+	applier := &mockMatchApplier{}
+	service := newApplyService(applier)
+	req := validApplyRequest()
+	req.MediaID = ""
 
-	result, err := service.ApplyMetadata(context.Background(), &ApplyMetadataRequest{
-		MediaID: "", // Missing required field
-		SelectedItem: SelectedMetadataItem{
-			ID:     "tmdb-550",
-			Source: "tmdb",
-		},
-	})
+	result, err := service.ApplyMetadata(context.Background(), req)
 
-	assert.Error(t, err)
 	assert.Equal(t, ErrApplyMetadataMediaIDRequired, err)
+	assert.Nil(t, result)
+	assert.Zero(t, applier.calls)
+}
+
+// [P2] learn_pattern is accepted and changes nothing (still a TODO — Story 3.9)
+func TestMetadataService_ApplyMetadata_WithLearnPattern(t *testing.T) {
+	applier := &mockMatchApplier{item: &EnrichedItem{ID: "test-id", ParseStatus: models.ParseStatusSuccess, Title: "x", TMDbID: 550}}
+	service := newApplyService(applier)
+	req := validApplyRequest()
+	req.LearnPattern = true
+
+	result, err := service.ApplyMetadata(context.Background(), req)
+
+	require.NoError(t, err)
+	assert.True(t, result.Success)
+	assert.Equal(t, 1, applier.calls)
+}
+
+// [P2] No applier wired is a failure, never a silent success (dsr-2b-a AC #1)
+func TestMetadataService_ApplyMetadata_NoApplierIsAnError(t *testing.T) {
+	service := newApplyService(nil)
+
+	result, err := service.ApplyMetadata(context.Background(), validApplyRequest())
+
+	assert.ErrorIs(t, err, ErrApplyMetadataFailed)
 	assert.Nil(t, result)
 }
 
-// [P2] Tests ApplyMetadata with learnPattern flag
-func TestMetadataService_ApplyMetadata_WithLearnPattern(t *testing.T) {
-	cfg := MetadataServiceConfig{}
-	mockTMDb := &mockTMDbSearcher{}
-	service := NewMetadataService(cfg, mockTMDb)
-
-	mockUpdater := &mockMediaUpdater{
-		getByIDFunc: func(ctx context.Context, id string) (string, bool, error) {
-			return "Test Movie", true, nil
-		},
+// Applier errors the handler maps to their own status codes pass through intact.
+func TestMetadataService_ApplyMetadata_PassesThroughMappableErrors(t *testing.T) {
+	for name, applierErr := range map[string]error{
+		"batch running":    ErrEnrichmentAlreadyRunning,
+		"write failed":     ErrEnrichPersist,
+		"tmdb 404 wrapped": fmt.Errorf("failed to get movie details: %w", tmdb.NewNotFoundError(550)),
+	} {
+		t.Run(name, func(t *testing.T) {
+			service := newApplyService(&mockMatchApplier{err: applierErr})
+			_, err := service.ApplyMetadata(context.Background(), validApplyRequest())
+			assert.ErrorIs(t, err, applierErr)
+		})
 	}
-	service.SetMediaUpdaters(mockUpdater, mockUpdater)
-
-	result, err := service.ApplyMetadata(context.Background(), &ApplyMetadataRequest{
-		MediaID:   "test-id",
-		MediaType: "movie",
-		SelectedItem: SelectedMetadataItem{
-			ID:     "tmdb-550",
-			Source: "tmdb",
-		},
-		LearnPattern: true,
-	})
-
-	require.NoError(t, err)
-	require.NotNil(t, result)
-	assert.True(t, result.Success)
-}
-
-// [P2] Tests ApplyMetadata without updater configured
-func TestMetadataService_ApplyMetadata_NoUpdater(t *testing.T) {
-	cfg := MetadataServiceConfig{}
-	mockTMDb := &mockTMDbSearcher{}
-	service := NewMetadataService(cfg, mockTMDb)
-	// No updater configured
-
-	result, err := service.ApplyMetadata(context.Background(), &ApplyMetadataRequest{
-		MediaID:   "test-id",
-		MediaType: "movie",
-		SelectedItem: SelectedMetadataItem{
-			ID:     "tmdb-550",
-			Source: "tmdb",
-		},
-	})
-
-	require.NoError(t, err)
-	require.NotNil(t, result)
-	assert.True(t, result.Success)
-	assert.Equal(t, "Unknown", result.Title) // Placeholder when no updater
 }

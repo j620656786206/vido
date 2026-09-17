@@ -169,7 +169,17 @@ func (s *EnrichmentService) StartEnrichment(ctx context.Context) (*EnrichmentRes
 		s.progress.CurrentTitle = movie.Title
 		s.mu.Unlock()
 
-		if err := s.enrichMovie(ctx, movie); err != nil {
+		if fresh := s.freshMovie(ctx, movie.ID); fresh != nil && !isUnenriched(fresh.ParseStatus) {
+			// dsr-2b-a: handled since this batch loaded its rows (a single
+			// re-match or a user-picked match). Re-parsing it now would parse its
+			// NEW title, not the filename, and could replace a correct match.
+			s.logger.Debug("enrichment skipped: row already handled since the batch started",
+				"id", movie.ID, "status", fresh.ParseStatus)
+			s.mu.Lock()
+			s.progress.Skipped++
+			s.progress.Processed++
+			s.mu.Unlock()
+		} else if err := s.enrichMovie(ctx, movie); err != nil {
 			s.logger.Warn("enrichment failed for movie",
 				"id", movie.ID,
 				"title", movie.Title,
@@ -223,7 +233,14 @@ func (s *EnrichmentService) StartEnrichment(ctx context.Context) (*EnrichmentRes
 				s.progress.CurrentTitle = series.Title
 				s.mu.Unlock()
 
-				if err := s.enrichSeries(ctx, series); err != nil {
+				if fresh := s.freshSeries(ctx, series.ID); fresh != nil && !isUnenriched(fresh.ParseStatus) {
+					s.logger.Debug("enrichment skipped: series already handled since the batch started",
+						"id", series.ID, "status", fresh.ParseStatus)
+					s.mu.Lock()
+					s.progress.Skipped++
+					s.progress.Processed++
+					s.mu.Unlock()
+				} else if err := s.enrichSeries(ctx, series); err != nil {
 					s.logger.Warn("enrichment failed for series",
 						"id", series.ID, "title", series.Title, "error", err)
 					s.mu.Lock()
@@ -276,8 +293,19 @@ func (s *EnrichmentService) findUnenrichedSeries(ctx context.Context) ([]models.
 // row, because EnrichmentService had no seriesRepo. That is why every episode looked like
 // a movie wearing its show's poster.
 func (s *EnrichmentService) enrichSeries(ctx context.Context, series *models.Series) error {
+	// dsr-2b-a AC #4: work from the row as it is NOW (a batch loaded it long
+	// ago), and never search over metadata the user owns.
+	if fresh := s.freshSeries(ctx, series.ID); fresh != nil {
+		*series = *fresh
+	}
+	if isManualSource(series.MetadataSource) {
+		return s.refreshManualSeries(ctx, series)
+	}
+
 	title := series.Title
-	if parseResult := s.parserService.ParseFilename(title); parseResult != nil && parseResult.CleanedTitle != "" {
+	// With ctx: the AI parse underneath must be cancellable, or a single
+	// re-match's deadline (dsr-2b-a AC #2) means nothing for series.
+	if parseResult := s.parserService.ParseFilenameWithContext(ctx, title); parseResult != nil && parseResult.CleanedTitle != "" {
 		title = parseResult.CleanedTitle
 	}
 
@@ -286,17 +314,25 @@ func (s *EnrichmentService) enrichSeries(ctx context.Context, series *models.Ser
 		MediaType: "tv",
 	})
 	if err != nil {
+		if s.userTookOverSeries(ctx, series.ID) {
+			return nil
+		}
 		series.ParseStatus = models.ParseStatusFailed
 		series.UpdatedAt = time.Now()
-		_ = s.seriesRepo.UpdateEnrichedMetadata(ctx, series)
+		if updateErr := s.seriesRepo.UpdateEnrichedMetadata(ctx, series); updateErr != nil {
+			return fmt.Errorf("%w: update series after search error: %w", ErrEnrichPersist, updateErr)
+		}
 		return fmt.Errorf("metadata search failed: %w", err)
 	}
 
 	if searchResult == nil || !searchResult.HasResults() {
+		if s.userTookOverSeries(ctx, series.ID) {
+			return nil
+		}
 		series.ParseStatus = models.ParseStatusFailed
 		series.UpdatedAt = time.Now()
 		if updateErr := s.seriesRepo.UpdateEnrichedMetadata(ctx, series); updateErr != nil {
-			return fmt.Errorf("update series after no match: %w", updateErr)
+			return fmt.Errorf("%w: update series after no match: %w", ErrEnrichPersist, updateErr)
 		}
 		return nil
 	}
@@ -312,12 +348,10 @@ func (s *EnrichmentService) enrichSeries(ctx context.Context, series *models.Ser
 		credits = s.matchedCredits(ctx, series.ID, "tv", series.TMDbID, previousSource, searchResult.Source)
 	}
 
-	if err := s.seriesRepo.UpdateEnrichedMetadata(ctx, series); err != nil {
-		return fmt.Errorf("update series: %w", err)
+	if s.userTookOverSeries(ctx, series.ID) {
+		return nil
 	}
-	s.persistCredits(ctx, s.seriesRepo.UpdateCredits, series.ID, credits)
-	s.touchGlossaryScope(ctx, series.ID)
-	return nil
+	return s.persistSeriesMatch(ctx, series, credits)
 }
 
 // applyMetadataToSeries copies a metadata match onto the series row.
@@ -470,7 +504,26 @@ func (s *EnrichmentService) findUnenrichedMovies(ctx context.Context) ([]models.
 
 // enrichMovie processes a single movie: NFO sidecar → parse filename → search TMDB → update record.
 func (s *EnrichmentService) enrichMovie(ctx context.Context, movie *models.Movie) error {
-	filename := movie.Title
+	return s.enrichMovieFrom(ctx, movie, "")
+}
+
+// enrichMovieFrom is enrichMovie with an explicit parse input. The batch passes
+// "" (parse the title, which for a scanner row IS the filename); a single
+// re-match passes the file's base name (dsr-2b-a AC #2).
+func (s *EnrichmentService) enrichMovieFrom(ctx context.Context, movie *models.Movie, parseInput string) error {
+	// dsr-2b-a AC #4: work from the row as it is NOW (a batch loaded it long
+	// ago), and never search over metadata the user owns.
+	if fresh := s.freshMovie(ctx, movie.ID); fresh != nil {
+		*movie = *fresh
+	}
+	if isManualSource(movie.MetadataSource) {
+		return s.refreshManualMovie(ctx, movie)
+	}
+
+	filename := parseInput
+	if filename == "" {
+		filename = movie.Title
+	}
 
 	// Step 0: NFO sidecar detection — runs BEFORE filename parsing
 	if s.nfoReader != nil && movie.FilePath.Valid && movie.FilePath.String != "" {
@@ -512,12 +565,16 @@ func (s *EnrichmentService) enrichMovie(ctx context.Context, movie *models.Movie
 
 	searchResult, _, err := s.metadataService.SearchMetadata(ctx, searchReq)
 	if err != nil {
-		_ = s.persistFailedWithLocalAnalysis(ctx, movie)
+		if perr := s.persistFailedWithLocalAnalysis(ctx, movie); perr != nil {
+			return perr
+		}
 		return fmt.Errorf("metadata search: %w", err)
 	}
 
 	if searchResult == nil || !searchResult.HasResults() {
-		_ = s.persistFailedWithLocalAnalysis(ctx, movie)
+		if perr := s.persistFailedWithLocalAnalysis(ctx, movie); perr != nil {
+			return perr
+		}
 		return fmt.Errorf("no metadata found for: %s", cleanedTitle)
 	}
 
@@ -540,13 +597,14 @@ func (s *EnrichmentService) enrichMovie(ctx context.Context, movie *models.Movie
 	// Runs BEFORE DB update to consolidate into a single write
 	s.applyFFprobeTechInfo(ctx, movie)
 
-	// Step 6: Update DB (single write with metadata + tech info)
-	movie.UpdatedAt = time.Now()
-	if err := s.movieRepo.UpdateEnrichedMetadata(ctx, movie); err != nil {
-		return fmt.Errorf("update movie: %w", err)
+	// Step 6: Update DB (single write with metadata + tech info) — unless the
+	// user saved this row while it was being searched (dsr-2b-a AC #4).
+	if s.userTookOverMovie(ctx, movie.ID) {
+		return nil
 	}
-	s.persistCredits(ctx, s.movieRepo.UpdateCredits, movie.ID, credits)
-	s.touchGlossaryScope(ctx, movie.ID)
+	if err := s.persistMovieMatch(ctx, movie, credits, true); err != nil {
+		return err
+	}
 
 	s.logger.Debug("movie enriched",
 		"id", movie.ID,
@@ -569,9 +627,18 @@ func (s *EnrichmentService) enrichMovie(ctx context.Context, movie *models.Movie
 // gate METADATA; they must not gate what the box can see with its own eyes.
 func (s *EnrichmentService) persistFailedWithLocalAnalysis(ctx context.Context, movie *models.Movie) error {
 	s.applyFFprobeTechInfo(ctx, movie)
+	// dsr-2b-a AC #4: a stale "failed" must not land over a user save made
+	// while this row was being searched — checked AFTER the probe, which on a
+	// NAS disk that has to spin up can take seconds, right before the write.
+	if s.userTookOverMovie(ctx, movie.ID) {
+		return nil
+	}
 	movie.ParseStatus = models.ParseStatusFailed
 	movie.UpdatedAt = time.Now()
-	return s.movieRepo.UpdateEnrichedMetadata(ctx, movie)
+	if err := s.movieRepo.UpdateEnrichedMetadata(ctx, movie); err != nil {
+		return fmt.Errorf("%w: persist failed movie: %w", ErrEnrichPersist, err)
+	}
+	return nil
 }
 
 // applyFFprobeTechInfo extracts technical info via FFprobe and applies it to the movie in-memory.
@@ -719,14 +786,12 @@ func (s *EnrichmentService) tryNFOEnrichment(ctx context.Context, movie *models.
 	// Set metadata source and parse status
 	movie.MetadataSource = models.NewNullString(string(models.MetadataSourceNFO))
 	movie.ParseStatus = models.ParseStatusSuccess
-	movie.UpdatedAt = time.Now()
 
-	if err := s.movieRepo.UpdateEnrichedMetadata(ctx, movie); err != nil {
-		return false, fmt.Errorf("update movie after NFO: %w", err)
+	if s.userTookOverMovie(ctx, movie.ID) {
+		return true, nil // handled: the user's save stands
 	}
-	s.persistCredits(ctx, s.movieRepo.UpdateCredits, movie.ID, credits)
-	if matchedTMDb {
-		s.touchGlossaryScope(ctx, movie.ID)
+	if err := s.persistMovieMatch(ctx, movie, credits, matchedTMDb); err != nil {
+		return false, fmt.Errorf("after NFO: %w", err)
 	}
 
 	s.logger.Debug("movie enriched from NFO",

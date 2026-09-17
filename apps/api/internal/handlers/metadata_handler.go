@@ -1,12 +1,15 @@
 package handlers
 
 import (
+	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vido/api/internal/metadata"
 	"github.com/vido/api/internal/services"
+	"github.com/vido/api/internal/tmdb"
 )
 
 // MetadataHandler handles HTTP requests for metadata operations.
@@ -198,6 +201,8 @@ type ApplyMetadataRequestBody struct {
 	SelectedItem struct {
 		ID     string `json:"id"`
 		Source string `json:"source"`
+		// MediaType of the picked result: "movie" or "tv" (dsr-2b-a AC #1).
+		MediaType string `json:"media_type"`
 	} `json:"selected_item"`
 	LearnPattern bool `json:"learn_pattern,omitempty"`
 }
@@ -209,11 +214,15 @@ type ApplyMetadataRequestBody struct {
 // @Tags metadata
 // @Accept json
 // @Produce json
+// @Description dsr-2b-a: only TMDb results; selected_item.media_type ("movie"|"tv") is required and must match media_type.
+// @Description The match is written as the user's choice (metadata_source=manual, parse_status=success).
 // @Param request body ApplyMetadataRequestBody true "Apply metadata request"
 // @Success 200 {object} APIResponse{data=services.ApplyMetadataResponse}
-// @Failure 400 {object} APIResponse{error=APIError}
-// @Failure 404 {object} APIResponse{error=APIError}
-// @Failure 500 {object} APIResponse{error=APIError}
+// @Failure 400 {object} APIResponse{error=APIError} "APPLY_METADATA_INVALID_REQUEST"
+// @Failure 404 {object} APIResponse{error=APIError} "APPLY_METADATA_NOT_FOUND or TMDB_NOT_FOUND"
+// @Failure 409 {object} APIResponse{error=APIError} "ENRICHMENT_ALREADY_RUNNING"
+// @Failure 500 {object} APIResponse{error=APIError} "APPLY_METADATA_FAILED or DB_QUERY_FAILED"
+// @Failure 504 {object} APIResponse{error=APIError} "TMDB_TIMEOUT"
 // @Router /api/v1/metadata/apply [post]
 func (h *MetadataHandler) ApplyMetadata(c *gin.Context) {
 	var req ApplyMetadataRequestBody
@@ -239,6 +248,13 @@ func (h *MetadataHandler) ApplyMetadata(c *gin.Context) {
 		return
 	}
 
+	if req.SelectedItem.MediaType == "" {
+		ErrorResponse(c, http.StatusBadRequest, "APPLY_METADATA_INVALID_REQUEST",
+			services.ErrApplyMetadataSelectedTypeRequired.Error(),
+			"Send the media_type the search result came back with")
+		return
+	}
+
 	// Apply defaults
 	if req.MediaType == "" {
 		req.MediaType = "movie"
@@ -248,23 +264,47 @@ func (h *MetadataHandler) ApplyMetadata(c *gin.Context) {
 		MediaID:   req.MediaID,
 		MediaType: req.MediaType,
 		SelectedItem: services.SelectedMetadataItem{
-			ID:     req.SelectedItem.ID,
-			Source: req.SelectedItem.Source,
+			ID:        req.SelectedItem.ID,
+			Source:    req.SelectedItem.Source,
+			MediaType: req.SelectedItem.MediaType,
 		},
 		LearnPattern: req.LearnPattern,
 	}
 
 	result, err := h.service.ApplyMetadata(c.Request.Context(), serviceReq)
 	if err != nil {
-		if err == services.ErrApplyMetadataNotFound {
+		// APPLY_METADATA_* and ENRICHMENT_ALREADY_RUNNING are pre-Rule-7 legacy
+		// literals, reused as-is (dsr-2b-a AC #6); TMDB_* and DB_* are canonical.
+		var tmdbErr *tmdb.TMDbError
+		switch {
+		case errors.Is(err, services.ErrApplyMetadataNotFound):
 			ErrorResponse(c, http.StatusNotFound, "APPLY_METADATA_NOT_FOUND",
 				"Media item not found",
 				"Please verify the media ID is correct")
-			return
+		case services.IsApplyMetadataInvalidRequest(err):
+			ErrorResponse(c, http.StatusBadRequest, "APPLY_METADATA_INVALID_REQUEST",
+				err.Error(),
+				"Pick a TMDb result of the same type as the media item")
+		case errors.Is(err, services.ErrEnrichmentAlreadyRunning):
+			ErrorResponse(c, http.StatusConflict, "ENRICHMENT_ALREADY_RUNNING",
+				"The library is being matched right now",
+				"Try again when the current matching pass finishes")
+		case errors.As(err, &tmdbErr):
+			// errors.As, not a type assertion: the TMDb client wraps its typed
+			// errors (dsr-2 CR #1).
+			slog.Error("Apply metadata: TMDb lookup failed", "media_id", req.MediaID, "error", err)
+			ErrorResponse(c, tmdbErr.StatusCode, tmdbErr.Code, tmdbErr.Message, tmdbErr.Suggestion)
+		case errors.Is(err, services.ErrEnrichPersist):
+			slog.Error("Apply metadata: write failed", "media_id", req.MediaID, "error", err)
+			ErrorResponse(c, http.StatusInternalServerError, "DB_QUERY_FAILED",
+				"The match could not be saved",
+				"Please try again later")
+		default:
+			slog.Error("Apply metadata failed", "media_id", req.MediaID, "error", err)
+			ErrorResponse(c, http.StatusInternalServerError, "APPLY_METADATA_FAILED",
+				"Failed to apply metadata",
+				"Please try again later")
 		}
-		ErrorResponse(c, http.StatusInternalServerError, "APPLY_METADATA_FAILED",
-			err.Error(),
-			"Please try again later")
 		return
 	}
 

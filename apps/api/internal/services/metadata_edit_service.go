@@ -149,6 +149,9 @@ func (s *MetadataEditService) updateMovieMetadata(ctx context.Context, req *Upda
 
 	// Set metadata source to manual
 	movie.MetadataSource = models.NewNullString(string(models.MetadataSourceManual))
+	// dsr-2b-a AC #3: the user just gave this item its metadata, so it is no
+	// longer 失敗/整理中 — and source=manual keeps auto-enrichment off it.
+	movie.ParseStatus = models.ParseStatusSuccess
 
 	// Update timestamp
 	now := time.Now()
@@ -241,6 +244,8 @@ func (s *MetadataEditService) updateSeriesMetadata(ctx context.Context, req *Upd
 
 	// Set metadata source to manual
 	series.MetadataSource = models.NewNullString(string(models.MetadataSourceManual))
+	// dsr-2b-a AC #3 — see updateMovieMetadata.
+	series.ParseStatus = models.ParseStatusSuccess
 
 	// Update timestamp
 	now := time.Now()

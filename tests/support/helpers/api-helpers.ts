@@ -228,6 +228,8 @@ export interface ApplyMetadataRequest {
   selected_item: {
     id: string;
     source: string;
+    // dsr-2b-a AC #1 [@contract-v1]: the picked result's type — required.
+    media_type: 'movie' | 'tv';
   };
   learn_pattern?: boolean;
 }
@@ -238,6 +240,16 @@ export interface ApplyMetadataResponse {
   media_type: string;
   title: string;
   source: string;
+  tmdb_id: number;
+  parse_status: string;
+}
+
+// dsr-2b-a AC #2 [@contract-v1]: what a single-item re-match left on the row.
+export interface ReparseResponse {
+  id: string;
+  parse_status: 'success' | 'failed';
+  title: string;
+  tmdb_id: number;
 }
 
 // =============================================================================
@@ -354,6 +366,9 @@ export interface ApiHelpers {
   // Metadata (Story 3-7)
   manualSearch: (request: ManualSearchRequest) => Promise<ApiResponse<ManualSearchResponse>>;
   applyMetadata: (request: ApplyMetadataRequest) => Promise<ApiResponse<ApplyMetadataResponse>>;
+  // dsr-2b-a: single-item re-match (retries while a batch enrichment holds the library)
+  reparseMovie: (id: string) => Promise<ApiResponse<ReparseResponse>>;
+  reparseSeries: (id: string) => Promise<ApiResponse<ReparseResponse>>;
 
   // Metadata Editor (Story 3-8)
   updateMetadata: (
@@ -423,6 +438,16 @@ export function apiHelpers(request: APIRequestContext): ApiHelpers {
       },
     });
     return response.json();
+  };
+
+  // e2e runs chromium and webkit-core projects in parallel against ONE backend;
+  // a batch enrichment started by another spec answers 409 — wait it out.
+  const reparseWithRetry = async (endpoint: string): Promise<ApiResponse<ReparseResponse>> => {
+    for (let attempt = 0; ; attempt++) {
+      const result = await post<ReparseResponse>(endpoint);
+      if (result.error?.code !== 'ENRICHMENT_ALREADY_RUNNING' || attempt >= 9) return result;
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
   };
 
   const del = async (endpoint: string): Promise<APIResponse> => {
@@ -495,6 +520,10 @@ export function apiHelpers(request: APIRequestContext): ApiHelpers {
 
     applyMetadata: async (applyRequest) =>
       post<ApplyMetadataResponse>('/metadata/apply', applyRequest),
+
+    reparseMovie: async (id) => reparseWithRetry(`/library/movies/${id}/reparse`),
+
+    reparseSeries: async (id) => reparseWithRetry(`/library/series/${id}/reparse`),
 
     // Metadata Editor (Story 3-8)
     updateMetadata: async (id, updateRequest) =>

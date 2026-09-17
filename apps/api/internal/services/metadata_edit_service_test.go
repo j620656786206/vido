@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/vido/api/internal/images"
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/repository"
 )
 
 // mockMovieMetadataRepository implements MovieMetadataRepository for testing
@@ -522,4 +523,54 @@ func TestMetadataEditService_UpdateSeriesMetadata_WithDirectorAndCast(t *testing
 	require.Len(t, credits.Cast, 2)
 	assert.Equal(t, "Bryan Cranston", credits.Cast[0].Name)
 	assert.Equal(t, "Aaron Paul", credits.Cast[1].Name)
+}
+
+// dsr-2b-a AC #3: a save from 修改資訊 means the item now has metadata — the
+// user typed its title and year. Before this the row kept parse_status=failed
+// and the detail page went on saying 失敗 about data the user had just fixed.
+func TestMetadataEditService_UpdateMetadata_ClearsFailedStatus(t *testing.T) {
+	for _, mediaType := range []string{"movie", "series"} {
+		t.Run(mediaType, func(t *testing.T) {
+			movieRepo := newMockMovieRepo()
+			seriesRepo := newMockSeriesRepo()
+			movieRepo.movies["x-1"] = &models.Movie{ID: "x-1", Title: "[Raws] x.mkv", ParseStatus: models.ParseStatusFailed}
+			seriesRepo.series["x-1"] = &models.Series{ID: "x-1", Title: "x s01", ParseStatus: models.ParseStatusFailed}
+			service := NewMetadataEditService(movieRepo, seriesRepo, nil)
+
+			_, err := service.UpdateMetadata(context.Background(), &UpdateMetadataRequest{
+				ID: "x-1", MediaType: mediaType, Title: "你的名字", Year: 2016,
+			})
+			require.NoError(t, err)
+
+			if mediaType == "movie" {
+				assert.Equal(t, models.ParseStatusSuccess, movieRepo.movies["x-1"].ParseStatus)
+			} else {
+				assert.Equal(t, models.ParseStatusSuccess, seriesRepo.series["x-1"].ParseStatus)
+			}
+		})
+	}
+}
+
+// Same, over the real schema: the wide writer must actually carry the status.
+func TestMetadataEditService_UpdateMetadata_ClearsFailedStatus_ReadBack(t *testing.T) {
+	db := setupTestDB(t)
+	movies := repository.NewMovieRepository(db)
+	series := repository.NewSeriesRepository(db)
+	ctx := context.Background()
+	require.NoError(t, movies.Create(ctx, &models.Movie{ID: "m-edit", Title: "[Raws] x.mkv", ParseStatus: models.ParseStatusFailed}))
+	require.NoError(t, series.Create(ctx, &models.Series{ID: "s-edit", Title: "x s01", ParseStatus: models.ParseStatusPending}))
+	service := NewMetadataEditService(movies, series, nil)
+
+	_, err := service.UpdateMetadata(ctx, &UpdateMetadataRequest{ID: "m-edit", MediaType: "movie", Title: "你的名字", Year: 2016})
+	require.NoError(t, err)
+	_, err = service.UpdateMetadata(ctx, &UpdateMetadataRequest{ID: "s-edit", MediaType: "series", Title: "絕命毒師", Year: 2008})
+	require.NoError(t, err)
+
+	m, err := movies.FindByID(ctx, "m-edit")
+	require.NoError(t, err)
+	assert.Equal(t, models.ParseStatusSuccess, m.ParseStatus)
+	assert.Equal(t, string(models.MetadataSourceManual), m.MetadataSource.String)
+	s, err := series.FindByID(ctx, "s-edit")
+	require.NoError(t, err)
+	assert.Equal(t, models.ParseStatusSuccess, s.ParseStatus)
 }

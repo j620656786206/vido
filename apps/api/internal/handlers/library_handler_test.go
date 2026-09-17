@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -328,34 +329,124 @@ func TestLibraryHandler_DeleteSeries(t *testing.T) {
 	mockService.AssertExpectations(t)
 }
 
-func TestLibraryHandler_ReparseMovie(t *testing.T) {
-	mockService := new(MockLibraryService)
-	handler := NewLibraryHandler(mockService)
+// dsr-2b-a AC #2: single-item re-match runs enrichment for that item and
+// returns the row it left — it used to confirm the item existed and answer
+// "reparse_queued" while nothing was queued anywhere.
+type fakeItemEnricher struct {
+	kind  services.MediaKind
+	id    string
+	item  *services.EnrichedItem
+	err   error
+	block bool // wait for the deadline, like a hung TMDb lookup
+}
+
+func (f *fakeItemEnricher) EnrichOne(ctx context.Context, kind services.MediaKind, id string) (*services.EnrichedItem, error) {
+	f.kind, f.id = kind, id
+	if f.block {
+		<-ctx.Done()
+		return nil, fmt.Errorf("re-match %s: %w", id, ctx.Err())
+	}
+	return f.item, f.err
+}
+
+func reparse(t *testing.T, handler *LibraryHandler, path string) (int, map[string]interface{}) {
+	t.Helper()
 	router := setupLibraryTestRouter(handler)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", path, nil)
+	router.ServeHTTP(w, req)
+	var body map[string]interface{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	return w.Code, body
+}
 
-	t.Run("success", func(t *testing.T) {
-		mockService.On("GetMovieByID", mock.Anything, "movie-123").
-			Return(&models.Movie{ID: "movie-123", Title: "Test"}, nil).Once()
+func TestLibraryHandler_ReparseMovie(t *testing.T) {
+	t.Run("success returns the row the re-match left", func(t *testing.T) {
+		enricher := &fakeItemEnricher{item: &services.EnrichedItem{ID: "movie-123", ParseStatus: models.ParseStatusSuccess, Title: "鬥陣俱樂部", TMDbID: 550}}
+		handler := NewLibraryHandler(new(MockLibraryService))
+		handler.SetItemEnricher(enricher)
 
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("POST", "/api/v1/library/movies/movie-123/reparse", nil)
-		router.ServeHTTP(w, req)
+		status, body := reparse(t, handler, "/api/v1/library/movies/movie-123/reparse")
 
-		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, http.StatusOK, status)
+		assert.Equal(t, services.MediaKindMovie, enricher.kind)
+		assert.Equal(t, "movie-123", enricher.id)
+		data := body["data"].(map[string]interface{})
+		assert.Equal(t, "movie-123", data["id"])
+		assert.Equal(t, "success", data["parse_status"])
+		assert.Equal(t, "鬥陣俱樂部", data["title"])
+		assert.Equal(t, float64(550), data["tmdb_id"])
+		assert.NotContains(t, data, "status", "the old reparse_queued shape is gone")
 	})
 
-	t.Run("not found", func(t *testing.T) {
-		mockService.On("GetMovieByID", mock.Anything, "missing").
-			Return(nil, errors.New("not found")).Once()
+	t.Run("still no match is a 200 carrying failed", func(t *testing.T) {
+		handler := NewLibraryHandler(new(MockLibraryService))
+		handler.SetItemEnricher(&fakeItemEnricher{item: &services.EnrichedItem{ID: "m", ParseStatus: models.ParseStatusFailed, Title: "zzqx"}})
 
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("POST", "/api/v1/library/movies/missing/reparse", nil)
-		router.ServeHTTP(w, req)
+		status, body := reparse(t, handler, "/api/v1/library/movies/m/reparse")
 
-		assert.Equal(t, http.StatusNotFound, w.Code)
+		assert.Equal(t, http.StatusOK, status)
+		assert.Equal(t, "failed", body["data"].(map[string]interface{})["parse_status"])
 	})
 
-	mockService.AssertExpectations(t)
+	errCases := map[string]struct {
+		err    error
+		status int
+		code   string
+	}{
+		"not found":     {services.ErrEnrichItemNotFound, http.StatusNotFound, "DB_NOT_FOUND"},
+		"batch running": {services.ErrEnrichmentAlreadyRunning, http.StatusConflict, "ENRICHMENT_ALREADY_RUNNING"},
+		"write failed":  {fmt.Errorf("%w: update movie: database is locked", services.ErrEnrichPersist), http.StatusInternalServerError, "DB_QUERY_FAILED"},
+		// Not a storage fault — must not be labelled one (CR #5).
+		"client went away": {fmt.Errorf("re-match m: %w", context.Canceled), http.StatusInternalServerError, "INTERNAL_ERROR"},
+		"not configured":   {errors.New("series enrichment not configured"), http.StatusInternalServerError, "INTERNAL_ERROR"},
+	}
+	for name, tc := range errCases {
+		t.Run(name, func(t *testing.T) {
+			handler := NewLibraryHandler(new(MockLibraryService))
+			handler.SetItemEnricher(&fakeItemEnricher{err: tc.err})
+
+			status, body := reparse(t, handler, "/api/v1/library/movies/m/reparse")
+
+			assert.Equal(t, tc.status, status)
+			assert.Equal(t, tc.code, body["error"].(map[string]interface{})["code"])
+		})
+	}
+
+	t.Run("deadline is a 504 METADATA_TIMEOUT", func(t *testing.T) {
+		handler := NewLibraryHandler(new(MockLibraryService))
+		handler.SetItemEnricher(&fakeItemEnricher{block: true})
+		handler.reparseTimeout = 20 * time.Millisecond
+
+		status, body := reparse(t, handler, "/api/v1/library/movies/m/reparse")
+
+		assert.Equal(t, http.StatusGatewayTimeout, status)
+		assert.Equal(t, "METADATA_TIMEOUT", body["error"].(map[string]interface{})["code"])
+	})
+
+	t.Run("no enricher wired is a 500, not a fake success", func(t *testing.T) {
+		status, body := reparse(t, NewLibraryHandler(new(MockLibraryService)), "/api/v1/library/movies/m/reparse")
+
+		assert.Equal(t, http.StatusInternalServerError, status)
+		assert.False(t, body["success"].(bool))
+		assert.Equal(t, "INTERNAL_ERROR", body["error"].(map[string]interface{})["code"])
+	})
+}
+
+func TestLibraryHandler_ReparseSeries(t *testing.T) {
+	enricher := &fakeItemEnricher{item: &services.EnrichedItem{ID: "s-1", ParseStatus: models.ParseStatusSuccess, Title: "絕命毒師", TMDbID: 1396}}
+	handler := NewLibraryHandler(new(MockLibraryService))
+	handler.SetItemEnricher(enricher)
+
+	status, body := reparse(t, handler, "/api/v1/library/series/s-1/reparse")
+
+	assert.Equal(t, http.StatusOK, status)
+	assert.Equal(t, services.MediaKindSeries, enricher.kind)
+	assert.Equal(t, "絕命毒師", body["data"].(map[string]interface{})["title"])
+}
+
+func TestLibraryHandler_Reparse_DefaultTimeoutIsSixtySeconds(t *testing.T) {
+	assert.Equal(t, 60*time.Second, NewLibraryHandler(new(MockLibraryService)).reparseTimeout)
 }
 
 func TestLibraryHandler_ExportMovie(t *testing.T) {

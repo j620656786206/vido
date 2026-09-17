@@ -642,6 +642,12 @@ func main() {
 	} else {
 		slog.Warn("glossary seeding from TMDb credits disabled: TMDb service exposes no credits client")
 	}
+	// dsr-2b-a AC #1/#5: POST /metadata/apply writes a user-picked TMDb match
+	// through enrichment (details → row → cast → glossary scope). Wired AFTER the
+	// seeder so an applied match stores its cast, and OUTSIDE the credits-client
+	// branch so applying still works without one. Before this the service's
+	// updaters were never wired and every apply was a silent no-op.
+	metadataService.SetMatchApplier(enrichmentService)
 	if subtitleConverter != nil {
 		transcriptionService.SetOpenCCConverter(subtitleConverter)
 	}
@@ -888,6 +894,9 @@ func main() {
 	searchService := services.NewSearchService(searchClient, libraryService)
 	searchHandler := handlers.NewSearchHandler(searchService)
 	libraryHandler := handlers.NewLibraryHandler(libraryService)
+	// dsr-2b-a AC #2/#5: single-item re-match (POST /library/{movies,series}/:id/reparse)
+	// actually runs enrichment for that item — it was a TODO stub.
+	libraryHandler.SetItemEnricher(enrichmentService)
 	// 補審 M4: the opt-in checkbox is only offered where the trigger that
 	// honours it is actually built — the `if cfg.SubtitlePipelineEnabled()`
 	// block above. The default mode is `legacy`, where it would be a promise
