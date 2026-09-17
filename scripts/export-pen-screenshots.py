@@ -391,6 +391,8 @@ SCREENS = {
     "U03low": ("flow-f-subtitle-v2", "f27-d-v2"),
     # sub-6-12 — 開始失敗時訊息落點的規格畫面（超支橫幅 → 失敗訊息 → 頁尾，皆在捲動區外）
     "VPT7l": ("flow-f-subtitle-v2", "f18-spec-err"),
+    # dsr-6c: glossary panel state spec (loading / load error / write error / add form + duplicate / editing / delete confirm / keyboard)
+    "n3vIR": ("flow-f-subtitle-v2", "f6-spec-states"),
     # flow-h-homepage-v3 — home identity rework (home-v3-identity-brief.md: 讀數帶 4 格 +
     # 自家片庫靜態 hero + TMDb 尾巴濾已擁有; H7 = TMDb 降級態; H8 = 讀數帶金額顯示規則 spec).
     # Superseded flow-h-homepage-v2, whose five frames were deleted 2026-08-26.

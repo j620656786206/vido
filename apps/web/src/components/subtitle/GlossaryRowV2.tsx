@@ -2,37 +2,42 @@
 // Source: ux-design.pen (Pencil app)
 /**
  * One glossary pair row (ux3-subtitle-v2 AC 4, Component Library cell Fx24g):
- * `term_src ↔ term_zh`, source badge（字幕/中繼資料/手動）, unconfirmed visually
- * distinct（未確認 warning badge + confirm action）, row actions edit/confirm/
- * delete. The destructive delete is gated behind a Radix Dialog confirm (AC 7).
+ * `term_src ↔ term_zh`, source badge（字幕/中繼資料/手動/官方字幕/社群 — one
+ * neutral pill for all five, dsr-6c）, unconfirmed visually distinct（未確認
+ * warning badge + confirm action）, row actions edit/confirm/delete — delete is
+ * a text button (nDSEd Q11NpX), gated behind a Radix Dialog confirm (AC 7).
  * term_src is Latin-ish source text → Mono; term_zh is zh-TW → Noto (DL-v2 font
  * split). Only `term_zh`/`confirmed` are editable (PUT contract).
  */
-import { useState } from 'react';
-import { ArrowRight, Trash2 } from 'lucide-react';
+import { useState, type KeyboardEvent } from 'react';
+import { ArrowRight } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogFooter } from '../ui/Dialog';
-import { cn } from '../../lib/utils';
 import type { GlossaryTerm, GlossarySource } from '../../services/glossaryService';
+import { isImeComposing } from '../../utils/keyboard';
 
-const SOURCE_BADGE: Record<GlossarySource, { label: string; className: string }> = {
-  subtitle: { label: '字幕', className: 'bg-[var(--info-tint)] text-[var(--info-text)]' },
-  metadata: { label: '中繼資料', className: 'bg-[var(--accent-tint)] text-[var(--accent-text)]' },
-  manual: { label: '手動', className: 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]' },
+// A source is a property of the term, not something that happened, so it never
+// wears a state colour (DESIGN.md:300; TechBadge ruling 2026-09-10; dsr-6c).
+// The label alone tells the five apart.
+const SOURCE_LABEL: Record<GlossarySource, string> = {
+  subtitle: '字幕',
+  metadata: '中繼資料',
+  manual: '手動',
   // sub-7-1 AC #4 (P1-10 殘餘): the two provenances the shared drawer brings.
-  // 官方字幕 is the most trusted machine source, so it wears the success
-  // tint; 社群 came from someone else's install and reads as such.
-  official_subtitle: {
-    label: '官方字幕',
-    className: 'bg-[var(--success-tint)] text-[var(--success-text)]',
-  },
-  community: { label: '社群', className: 'bg-[var(--warning-tint)] text-[var(--warning-text)]' },
+  official_subtitle: '官方字幕',
+  community: '社群',
 };
+
+const BADGE_SHAPE = 'shrink-0 rounded-full px-2.5 py-1 text-[11px]';
 
 export interface GlossaryRowV2Props {
   term: GlossaryTerm;
   onConfirm: (termId: string) => void;
-  /** PUT {term_zh, confirmed} — zh text is the only editable field. */
-  onEdit: (termId: string, termZh: string) => void;
+  /**
+   * PUT {term_zh, confirmed} — zh text is the only editable field. Resolves when
+   * the save landed; rejects when it did not, and the row then stays in edit
+   * mode with the typed text (dsr-6c AC #5).
+   */
+  onEdit: (termId: string, termZh: string) => Promise<void>;
   onDelete: (termId: string) => void;
   /** Disables actions while a mutation is in flight. */
   busy?: boolean;
@@ -48,23 +53,53 @@ export function GlossaryRowV2({
   const [editing, setEditing] = useState(false);
   const [draftZh, setDraftZh] = useState(term.termZh);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  // True while this row's own save is on its way. 取消 and Esc wait for it:
+  // cancelling would throw away the text that a failed save must hand back.
+  const [saving, setSaving] = useState(false);
 
-  const badge = SOURCE_BADGE[term.source] ?? SOURCE_BADGE.manual;
+  const sourceLabel = SOURCE_LABEL[term.source] ?? SOURCE_LABEL.manual;
 
-  const saveEdit = () => {
-    const next = draftZh.trim();
-    if (next && next !== term.termZh) onEdit(term.id, next);
+  const cancelEdit = () => {
+    if (saving) return;
+    setDraftZh(term.termZh);
     setEditing(false);
+  };
+
+  const saveEdit = async () => {
+    if (busy || saving) return;
+    const next = draftZh.trim();
+    if (!next || next === term.termZh) {
+      setEditing(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      await onEdit(term.id, next);
+      setEditing(false);
+    } catch {
+      // The save did not land: stay in edit mode so the typed text survives.
+      // The panel shows why (glossary-write-error).
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Esc from anywhere in the editor (input, 儲存, 取消) cancels the edit. The
+  // panel's onEscapeKeyDown keeps that same Esc from closing the whole panel
+  // (data-glossary-inline-editor below). An Enter or Esc that only picks or
+  // drops an input-method candidate is ignored.
+  const onEditorKeyDown = (e: KeyboardEvent<HTMLElement>) => {
+    if (isImeComposing(e)) return;
+    if (e.key === 'Escape') cancelEdit();
   };
 
   return (
     <div
       data-testid={`glossary-row-${term.id}`}
+      data-glossary-inline-editor={editing ? '' : undefined}
       className="flex min-h-[54px] items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3.5 py-1.5"
     >
-      <span className="shrink-0 font-mono text-[13px] text-[var(--text-primary)]">
-        {term.termSrc}
-      </span>
+      <span className="shrink-0 font-mono text-sm text-[var(--text-primary)]">{term.termSrc}</span>
       <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
       {editing ? (
         <input
@@ -72,37 +107,35 @@ export function GlossaryRowV2({
           value={draftZh}
           onChange={(e) => setDraftZh(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') saveEdit();
-            if (e.key === 'Escape') {
-              setDraftZh(term.termZh);
-              setEditing(false);
+            if (e.key === 'Enter' && !isImeComposing(e)) {
+              void saveEdit();
+              return;
             }
+            onEditorKeyDown(e);
           }}
           aria-label={`編輯 ${term.termSrc} 的譯名`}
           data-testid={`glossary-edit-input-${term.id}`}
           /* eslint-disable-next-line jsx-a11y/no-autofocus -- edit mode is user-initiated; focus follows the action */
           autoFocus
-          className="w-32 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 py-1 text-[13px] text-[var(--text-primary)] focus:border-[var(--accent-primary)] focus:outline-none"
+          className="w-32 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 py-2 text-sm text-[var(--text-primary)] focus:border-[var(--accent-primary)] focus:outline-none"
         />
       ) : (
-        <span className="truncate text-[13px] text-[var(--text-primary)]">{term.termZh}</span>
+        <span className="truncate text-sm text-[var(--text-primary)]">{term.termZh}</span>
       )}
 
       <span className="min-w-0 flex-1" />
 
       <span
-        className={cn(
-          'shrink-0 rounded-[var(--radius-sm)] px-2 py-0.5 text-[11px]',
-          badge.className
-        )}
+        data-testid={`glossary-source-${term.id}`}
+        className={`${BADGE_SHAPE} bg-[var(--bg-tertiary)] text-[var(--text-secondary)]`}
       >
-        {badge.label}
+        {sourceLabel}
       </span>
 
       {!term.confirmed && (
         <span
           data-testid={`glossary-unconfirmed-${term.id}`}
-          className="shrink-0 rounded-[var(--radius-sm)] bg-[var(--warning-tint)] px-2 py-0.5 text-[11px] text-[var(--warning-text)]"
+          className={`${BADGE_SHAPE} bg-[var(--warning-tint)] text-[var(--warning-text)]`}
         >
           未確認
         </span>
@@ -112,20 +145,24 @@ export function GlossaryRowV2({
         <>
           <button
             type="button"
-            onClick={saveEdit}
-            disabled={busy}
+            onClick={() => void saveEdit()}
+            onKeyDown={onEditorKeyDown}
+            // aria-disabled, not disabled: a button that turns disabled under
+            // focus drops focus to <body>, and an Esc from there would close
+            // the whole panel mid-save. saveEdit ignores clicks while busy.
+            aria-disabled={busy || saving}
             data-testid={`glossary-save-${term.id}`}
-            className="flex min-h-[44px] shrink-0 items-center px-2.5 text-[13px] font-semibold text-[var(--accent-text)] hover:underline disabled:opacity-50"
+            className="flex min-h-[44px] shrink-0 items-center px-2.5 text-sm font-semibold text-[var(--accent-text)] hover:underline aria-disabled:opacity-50"
           >
             儲存
           </button>
           <button
             type="button"
-            onClick={() => {
-              setDraftZh(term.termZh);
-              setEditing(false);
-            }}
-            className="flex min-h-[44px] shrink-0 items-center px-2.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            onClick={cancelEdit}
+            onKeyDown={onEditorKeyDown}
+            aria-disabled={saving}
+            data-testid={`glossary-cancel-${term.id}`}
+            className="flex min-h-[44px] shrink-0 items-center px-2.5 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] aria-disabled:opacity-50"
           >
             取消
           </button>
@@ -137,8 +174,9 @@ export function GlossaryRowV2({
               type="button"
               onClick={() => onConfirm(term.id)}
               disabled={busy}
+              aria-label={`確認 ${term.termSrc}`}
               data-testid={`glossary-confirm-${term.id}`}
-              className="flex min-h-[44px] shrink-0 items-center px-2.5 text-[13px] font-semibold text-[var(--accent-text)] hover:underline disabled:opacity-50"
+              className="flex min-h-[44px] shrink-0 items-center px-2.5 text-sm font-semibold text-[var(--accent-text)] hover:underline disabled:opacity-50"
             >
               確認
             </button>
@@ -150,8 +188,9 @@ export function GlossaryRowV2({
               setEditing(true);
             }}
             disabled={busy}
+            aria-label={`編輯 ${term.termSrc}`}
             data-testid={`glossary-edit-${term.id}`}
-            className="flex min-h-[44px] shrink-0 items-center px-2.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-50"
+            className="flex min-h-[44px] shrink-0 items-center px-2.5 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-50"
           >
             編輯
           </button>
@@ -161,25 +200,30 @@ export function GlossaryRowV2({
             disabled={busy}
             aria-label={`刪除 ${term.termSrc}`}
             data-testid={`glossary-delete-${term.id}`}
-            className="flex min-h-[44px] w-9 shrink-0 items-center justify-center text-[var(--text-muted)] hover:text-[var(--error-text)] disabled:opacity-50"
+            className="flex min-h-[44px] shrink-0 items-center px-2.5 text-sm text-[var(--error-text)] hover:underline disabled:opacity-50"
           >
-            <Trash2 className="h-4 w-4" aria-hidden="true" />
+            刪除
           </button>
         </>
       )}
 
-      {/* Destructive confirm — Radix Dialog (AC 7). */}
+      {/* Destructive confirm — Radix Dialog (AC 7), shaped like Component/DialogFrame (m6KMPr). */}
       <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
-        <DialogContent data-testid={`glossary-delete-dialog-${term.id}`}>
-          <DialogTitle>刪除詞彙</DialogTitle>
-          <DialogDescription>
-            確定要刪除「{term.termSrc} → {term.termZh}」嗎？此操作無法復原。
-          </DialogDescription>
+        <DialogContent
+          data-testid={`glossary-delete-dialog-${term.id}`}
+          className="flex max-w-[480px] flex-col gap-4 rounded-[var(--radius-lg)]"
+        >
+          <div className="flex flex-col gap-1">
+            <DialogTitle className="text-xl">刪除詞彙</DialogTitle>
+            <DialogDescription>
+              確定要刪除「{term.termSrc} → {term.termZh}」嗎？此操作無法復原。
+            </DialogDescription>
+          </div>
           <DialogFooter>
             <button
               type="button"
               onClick={() => setConfirmDeleteOpen(false)}
-              className="flex min-h-[44px] items-center justify-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-4 text-sm text-[var(--text-primary)]"
+              className="flex min-h-[44px] items-center justify-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-medium text-[var(--text-primary)]"
             >
               取消
             </button>
@@ -190,7 +234,7 @@ export function GlossaryRowV2({
                 onDelete(term.id);
               }}
               data-testid={`glossary-delete-confirm-${term.id}`}
-              className="flex min-h-[44px] items-center justify-center rounded-[var(--radius-md)] bg-[var(--error)] px-4 text-sm font-medium text-[var(--text-on-scrim)]"
+              className="flex min-h-[44px] items-center justify-center rounded-[var(--radius-md)] bg-[var(--error)] px-5 text-sm font-semibold text-[var(--text-on-scrim)]"
             >
               刪除
             </button>
