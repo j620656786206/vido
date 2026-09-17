@@ -1,6 +1,6 @@
 # Story DSR.6d-a：批次生成的後端把「整個佇列」和「最後的結果」記住——離開頁面再回來看得到，失敗不會被當成完成
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -327,6 +327,7 @@ Claude Opus 5 (1M context) — Amelia（dev-story），2026-09-18
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-18 | ✅ 收單 —— PR #464 合併進 main（commit b8541d4e），**CI 17 項全綠**（含 4 個 e2e shard 與 4 個視覺 shard）。本張沒有畫面改動，視覺基準零變動、沒有 bootstrap PR。過程中 GitHub API 幾度連不上（`gh pr create`／`gh pr checks` 都重試過），推送本身一次就成功。 |
 | 2026-09-18 | 🔍 **/ship 對抗式 CR**：2 HIGH／7 MED／8 LOW，修 11、交代 3、不修 1。最重要：① 重入保護（過期 batchID 的 finish／markItem）完全沒測試，突變全綠——補了兩條，現在拿掉保護就會紅；② `seriesTitle`／`items`／`progress` 變必填後，spec 那一側多了 11 個 TypeScript 錯誤而 CI 看不到（spec 的 tsconfig 有 3,115 個既有錯誤不進 CI）——全部補齊，hook 的狀態型別也加上 `items` 保持兩邊可互相指派。另外：SSE hub 丟事件時不再把整包 payload 寫進 log（終態事件現在帶整份佇列）、完工 log 讀不到計數時說實話、`finish` 不在持鎖時寫 log、單飛第二段補測試。 |
 | 2026-09-18 | ✅ **dev-story 完成 → review**（Amelia）。api PASS（含本機 `-race`）、web 3651/3651、lint 0 errors、typecheck。後端現在直接說出每一部片怎麼結束的（完成／失敗＋原因／預算暫停／取消），批次結束後狀態查詢還留著最後結果（可 dismiss），開始的回應帶當下進度，背景 panic 變成 `error` 終態而不是讓 API 掛掉，分集帶劇名；SSE 執行中只送變動的那一部。前端只加型別與 `dismissGenerationBatch`（外加對話框一個型別欄位）。 |
 | 2026-09-17 | 🔍 **建單後對抗驗證**（fresh-context 驗證代理，只讀；抽查約 40 個行號、本機 `go test -race` services／handlers 皆乾淨）：2 項 CRITICAL、10 項 SHOULD FIX、11 項 NIT，**全部併入**。最重要：① 佇列原本在背景 goroutine 才填，202 可能拿到空佇列 → 改在 `Start` 同一段臨界區填好；② 前端 `startGenerationBatch` 逐欄組結果，只加型別的話 `progress` 永遠拿不到 → 服務要帶出來；③ status 與 202 原本分兩次上鎖讀取會讀到不一致 → `Snapshot()`／`SnapshotFor(batchID)`；④ 終態轉換改由 `finish` 統一做並訂出「計數＝各狀態數量」的不變式；⑤ recover 若遇到持鎖 panic 會卡死 → 所有持鎖區段用 defer；⑥ 不改成序列化 struct（會讓 SSE 測試全部逾時、NaN 上限會編碼失敗）；⑦ 全選 2,400 部時每次廣播帶整個佇列約 400 KB → SSE 執行中只送 `changed_item`、劇名查詢必須快取；⑧ legacy 的未設定與管線略過同一個原因 `skipped`；⑨ 用既有的 `CandidateSeriesTitleResolver`＋setter，不改建構子；⑩ 補 Rule 20 契約紀錄與要改的過期註解清單、不要跑 `swag init`、本機 `-race` 輸出貼進紀錄。 |
