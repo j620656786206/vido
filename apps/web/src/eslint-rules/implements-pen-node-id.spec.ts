@@ -58,6 +58,10 @@ ruleTester.run('implements-pen-node-id', rule, {
     {
       code: '// Design ref: ux-design.pen — no current screen frame; setup feature postdates the .pen design (epic-19-8 sweep finding)\nexport const x = 1;\n',
     },
+    // slash-namespaced master names (2026-09-10 disc-2026-09-component-variant-naming; dsr-6a)
+    {
+      code: '// Implements: Component/ButtonCost/Default (qAERt) + Component/ButtonCost/Loading (zhIx7) + Component/ButtonCost/Disabled (dqE4G)\nexport const x = 1;\n',
+    },
     // header may sit below other leading comments / above imports
     {
       code: '/* eslint-disable */\n// Implements: Component/Foo (abc123)\nimport { y } from "z";\nexport const x = y;\n',
@@ -71,6 +75,15 @@ ruleTester.run('implements-pen-node-id', rule, {
     // (d) no header at all
     {
       code: 'export const x = 1;\n',
+      errors: [{ messageId: 'missing' }],
+    },
+    // slash only BETWEEN name segments: an empty segment is malformed (dsr-6a)
+    {
+      code: '// Implements: Component//ButtonCost (qAERt)\nexport const x = 1;\n',
+      errors: [{ messageId: 'missing' }],
+    },
+    {
+      code: '// Implements: Component/ButtonCost/ (qAERt)\nexport const x = 1;\n',
       errors: [{ messageId: 'missing' }],
     },
     // (e) malformed: no `Component/` prefix

@@ -114736,7 +114736,7 @@
                               ],
                               "descendants": {
                                 "ASE9e": {
-                                  "content": "$0.04"
+                                  "content": "$0.67"
                                 }
                               }
                             },
@@ -114745,7 +114745,7 @@
                               "id": "TXYYF",
                               "name": "gen-sub",
                               "fill": "$text-muted",
-                              "content": "抽取內嵌字幕＋AI 翻譯，約需數分鐘",
+                              "content": "語音辨識＋AI 翻譯，約需數分鐘",
                               "lineHeight": "$Type/Label/Line",
                               "fontFamily": "$Type/Family/Primary",
                               "fontSize": "$Type/Label/Size",
@@ -118348,18 +118348,21 @@
                           }
                         },
                         {
-                          "id": "iNhNz",
+                          "id": "Bfuec",
                           "type": "ref",
-                          "ref": "otvKh",
+                          "ref": "qAERt",
                           "name": "btn-retry",
+                          "enabled": true,
                           "padding": [
                             "$Space/md",
                             "$Space/xl"
                           ],
                           "descendants": {
-                            "DaLcd": {
-                              "content": "重試",
-                              "fontFamily": "Noto Sans TC"
+                            "StNiU": {
+                              "content": "重試"
+                            },
+                            "ASE9e": {
+                              "content": "$0.39"
                             }
                           }
                         }
@@ -145951,7 +145954,7 @@
                               ],
                               "descendants": {
                                 "ASE9e": {
-                                  "content": "$0.04"
+                                  "content": "$0.27"
                                 }
                               }
                             },
@@ -145960,7 +145963,7 @@
                               "id": "qR6hi",
                               "name": "gen-sub",
                               "fill": "$text-muted",
-                              "content": "抽取內嵌字幕＋AI 翻譯，約需數分鐘",
+                              "content": "語音辨識＋AI 翻譯，約需數分鐘",
                               "lineHeight": "$Type/Label/Line",
                               "fontFamily": "$Type/Family/Primary",
                               "fontSize": "$Type/Label/Size",
@@ -186874,6 +186877,19 @@
                   "fontFamily": "$Type/Family/Primary",
                   "fontSize": "$Type/Label/Size",
                   "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "aQWCS",
+                  "name": "note",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "建單補充（SM 2026-09-17，dsr-6a）：B 沒畫到的三種情況——① 自架語音辨識＋沒有翻譯金鑰 → 按鈕 $0.00，說明列「語音辨識：自架（不另計費）。僅能產生英文字幕——尚未設定翻譯金鑰」；② 只差翻譯但沒有翻譯金鑰 → 停用，說明列「尚未設定翻譯金鑰」＋前往設定（按下去什麼都不會產生，不能給一顆能按的 $0.00）；③ 影片檔讀不到 → 停用，說明列「讀不到影片檔案，因此先不開放。請確認檔案還在，或重新掃描媒體庫。」。說明列優先順序較高（只差翻譯、未設定翻譯金鑰）時，按鈕上的 ≈ 不另加說明。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
                 }
               ]
             },
@@ -186890,7 +186906,7 @@
                   "id": "Nfk24",
                   "name": "sh",
                   "fill": "$text-secondary",
-                  "content": "D · 現況與未完成（2026-09-10）",
+                  "content": "D · 現況（2026-09-17）",
                   "lineHeight": "$Type/Body/Line",
                   "fontFamily": "$Type/Family/Primary",
                   "fontSize": "$Type/Body/Size",
@@ -186903,7 +186919,7 @@
                   "fill": "$text-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "程式碼裡沒有任何一顆付費按鈕帶金額。付費入口是「管理字幕」→「生成字幕」（ManageSubtitleDialogV2.tsx:495-509），說明列只講「約需數分鐘」，全檔零金額字串。",
+                  "content": "付費入口「管理字幕」→「生成字幕」與兩顆「重試」（觸發失敗、生成失敗）都帶金額，共用 components/ui/ButtonCost.tsx（對應本頁三個母版）；說明列照 B 的六個狀態與 C 的建單補充切換（dsr-6a）。",
                   "lineHeight": "$Type/Label/Line",
                   "fontFamily": "$Type/Family/Primary",
                   "fontSize": "$Type/Label/Size",
@@ -186916,7 +186932,7 @@
                   "fill": "$text-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "沒有單項估價端點——GET /api/v1/subtitles/generation-candidates 是整庫掃描後的快照，所以單片路徑目前是 100% 無金額，不是偶發。補單項估價是讓這條規則成立的前提，追蹤於 disc-2026-09-single-item-cost-estimate。",
+                  "content": "單片估價端點：GET /api/v1/{movies|episodes}/:id/transcribe/estimate。它估的是按鈕真的會做的事——語音辨識＋AI 翻譯；已經有英文字幕、只差翻譯的片只算翻譯費——而不是候選清單的抽取／語音辨識路線（⚖️ 2026-08-06 裁定 A）。模型用實際會扣錢的那一個；片長依序：已存的實測值 → 現場 ffprobe → TMDb → 45 分假設。",
                   "lineHeight": "$Type/Label/Line",
                   "fontFamily": "$Type/Family/Primary",
                   "fontSize": "$Type/Label/Size",
@@ -186942,7 +186958,7 @@
                   "fill": "$text-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Button.tsx 還沒有對應變體，追蹤於 disc-2026-09-no-cost-bearing-component。",
+                  "content": "金鑰未設定（⑥）在按下之前就停用，不再等伺服器回 503 才知道。批次同意流程（F15／F16）的金額不受影響。",
                   "lineHeight": "$Type/Label/Line",
                   "fontFamily": "$Type/Family/Primary",
                   "fontSize": "$Type/Label/Size",

@@ -37,10 +37,13 @@
 'use strict';
 
 // `// Implements: Component/Foo (abc123)` optionally `+ Component/Bar (def456)` ...
-// {Name} allows letters/digits/`-` (e.g. `TechBadge-Video`); {nodeId} is letters/digits only
-// (real .pen node IDs — `RusTY`, `MQbvp`, `U3SGxG` — never contain `-`). See AC #1.
+// {Name} allows letters/digits/`-` (e.g. `TechBadge-Video`), and `/` BETWEEN segments for the
+// slash-namespaced masters the .pen has used since 2026-09-10 (e.g. `ButtonCost/Default`,
+// disc-2026-09-component-variant-naming; dsr-6a) — never an empty or trailing segment.
+// {nodeId} is letters/digits only (real .pen node IDs — `RusTY`, `MQbvp`, `U3SGxG` — never
+// contain `-`). See AC #1.
 const COMPONENT_MARKER_RE =
-  /^Implements:\s*Component\/[A-Za-z0-9-]+\s*\([A-Za-z0-9]+\)(\s*\+\s*Component\/[A-Za-z0-9-]+\s*\([A-Za-z0-9]+\))*$/;
+  /^Implements:\s*Component\/[A-Za-z0-9-]+(?:\/[A-Za-z0-9-]+)*\s*\([A-Za-z0-9]+\)(\s*\+\s*Component\/[A-Za-z0-9-]+(?:\/[A-Za-z0-9-]+)*\s*\([A-Za-z0-9]+\))*$/;
 // `// Implements: <utility — no .pen counterpart>` (accept em-dash or hyphen)
 const UTILITY_EXEMPTION_RE = /^Implements:\s*<utility\s*[—–-]\s*no \.pen counterpart>$/;
 // `// Implements: <route-only>`

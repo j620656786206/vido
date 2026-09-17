@@ -928,6 +928,28 @@ func main() {
 	// (POST /episodes/:id/transcribe). Passing it is what mounts that route.
 	transcriptionHandler := handlers.NewTranscriptionHandler(movieService, repos.Episodes, transcriptionService)
 
+	// sub-4-1 route predictor, hoisted to a variable (dsr-6a) so the candidate
+	// sweep and the single-item estimate share ONE adapter and, through it, the
+	// shared ffprobeService concurrency limit.
+	routePredictor := routePredictorAdapter{router: subtitle.NewRouter(
+		ffprobeService,
+		subtitle.NewExtractor(subtitleExtractTimeout, slog.Default(), subtitleExtractorOpts...),
+		slog.Default())}
+
+	// dsr-6a AC #2/#3: the price on the 管理字幕 dialog's paid buttons. It shares
+	// the run's own plan checks (TranscriptionService), bills the model the run
+	// will bill (the holder's EffectiveModel — not the catalog pre-selection),
+	// and uses the same self-hosted ASR answer as the candidate sweep below.
+	transcriptionEstimateService := services.NewTranscriptionEstimateService(
+		transcriptionService,
+		claudeHolder.EffectiveModel,
+		ai.IsSelfHostedASRBaseURL(cfg.ASRBaseURL),
+		slog.Default(),
+	)
+	transcriptionEstimateService.SetDurationProber(routePredictor)
+	transcriptionEstimateService.SetEpisodeDurationWriter(repos.Episodes)
+	transcriptionHandler.SetEstimator(transcriptionEstimateService)
+
 	// 9R-13: .nfo metadata localizer (movies) — additive zh-TW .nfo via the
 	// shared translation + glossary infra. nil when no translation provider.
 	nfoLocalizer := services.NewNFOLocalizerService(translationService, repos.Glossary, slog.Default())
@@ -982,10 +1004,10 @@ func main() {
 	// it only reads and probes, so it is safe on a legacy install and lets the
 	// UI answer "why is this costly?" before the pipeline is ever enabled.
 	//
-	// A prediction-only Router is built here rather than reusing the one inside
-	// the pipeline-mode block above: NewRouter is stateless and cheap, and
-	// PredictRoute never touches the extractor, so sharing scope would buy
-	// nothing and couple this endpoint to the feature flag.
+	// It uses the prediction-only Router built above as `routePredictor` rather
+	// than the one inside the pipeline-mode block: NewRouter is stateless and
+	// cheap, and PredictRoute never touches the extractor, so sharing scope
+	// would buy nothing and couple this endpoint to the feature flag.
 	// The self-hosted flag comes from ASR_BASE_URL via the SAME predicate the
 	// Whisper client's metering uses (sub-5-1 CR M1) — a self-hosted endpoint
 	// has no per-minute price, and quote vs invoice must come from one answer.
@@ -994,10 +1016,7 @@ func main() {
 		// sub-5-3 AC #1: the F15 group headers' series titles — one memoized
 		// lookup per series per sweep, nil-safe fail-soft inside the service.
 		repos.Series,
-		routePredictorAdapter{router: subtitle.NewRouter(
-			ffprobeService,
-			subtitle.NewExtractor(subtitleExtractTimeout, slog.Default(), subtitleExtractorOpts...),
-			slog.Default())},
+		routePredictor,
 		ai.IsSelfHostedASRBaseURL(cfg.ASRBaseURL),
 		// sub-5-1 AC #5: the F15 prefill source — the envelope carries the
 		// operator's real default instead of a frontend constant.

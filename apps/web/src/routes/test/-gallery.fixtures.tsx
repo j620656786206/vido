@@ -28,6 +28,7 @@
 import type { ComponentType } from 'react';
 
 import { Button } from '../../components/ui/Button';
+import { ButtonCost } from '../../components/ui/ButtonCost';
 import { Badge } from '../../components/ui/Badge';
 import { TmdbAttribution } from '../../components/ui/TmdbAttribution';
 import {
@@ -203,6 +204,8 @@ import type { GenerationCandidate } from '../../services/subtitleService';
 import { GenerationBatchPanelV2 } from '../../components/subtitle/GenerationBatchDialogV2';
 import { GenerationWorkspaceV2 } from '../../components/subtitle/GenerationWorkspaceV2';
 import { glossaryKeys } from '../../hooks/useGlossary';
+import { transcriptionEstimateKeys } from '../../hooks/useTranscriptionEstimate';
+import type { TranscriptionEstimate } from '../../services/transcriptionService';
 import type { GlossaryTerm } from '../../services/glossaryService';
 import { BackupManagement } from '../../components/settings/BackupManagement';
 import { BackupScheduleConfig } from '../../components/settings/BackupScheduleConfig';
@@ -263,6 +266,22 @@ import type { ServiceStatusResponse } from '../../services/serviceStatusService'
 import { LoginForm } from '../../components/auth/LoginForm';
 
 const noop = () => {};
+
+/**
+ * dsr-6a — the three ButtonCost looks (plus ≈) stacked, mirroring J9-D's
+ * state column: ① ready, ② ≈ assumed runtime, ④ loading skeleton,
+ * ⑤/⑥ unavailable. Static — no network, no clock.
+ */
+function ButtonCostStates() {
+  return (
+    <div className="flex flex-col items-start gap-3">
+      <ButtonCost label="生成字幕" cost={{ status: 'ready', usd: 0.42, approximate: false }} />
+      <ButtonCost label="生成字幕" cost={{ status: 'ready', usd: 0.42, approximate: true }} />
+      <ButtonCost label="生成字幕" cost={{ status: 'loading' }} />
+      <ButtonCost label="生成字幕" cost={{ status: 'unavailable' }} />
+    </div>
+  );
+}
 
 /**
  * Fixture timestamps that render a STABLE relative label.
@@ -756,6 +775,16 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     component: Button,
     props: { children: '主要按鈕' },
     penNode: 'otvKh', // + YDPhc (ButtonSecondary) — see drift-19-3-2026-05.md
+  },
+  {
+    // dsr-6a AC #8 — the paid-action button (J9-D). Four looks in one frame.
+    id: 'ui-button-cost',
+    label: 'ui/ButtonCost (ready · ≈ · loading · unavailable)',
+    component: ButtonCostStates,
+    props: {},
+    penNode: 'qAERt', // + zhIx7 (Loading) + dqE4G (Disabled)
+    statesOnly: ['default'],
+    width: 320,
   },
   {
     // sub-6-9 — the TMDB §3 attribution. Baselined once the official mark
@@ -4112,6 +4141,8 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       failedPhase: 'translating',
       error: 'AI 服務逾時，已保留轉錄結果',
       onRetry: noop,
+      // dsr-6a: 重試 is paid — the kept English SRT makes it translate-only (F4-D-v2).
+      retryCost: { status: 'ready', usd: 0.39, approximate: false },
     },
     penNode: 'XkGvG',
     statesOnly: ['default'],
@@ -4276,6 +4307,24 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       onDownloadSuccess: noop,
     },
     seedQueries: [
+      {
+        // dsr-6a AC #8 — the price on 生成字幕. Seeded so the frame never asks a
+        // backend (the visual CI has none): the button must read 「生成字幕 $0.42」.
+        queryKey: transcriptionEstimateKeys.item('movie', 'movie-1'),
+        data: {
+          mediaId: 'movie-1',
+          mediaType: 'movie',
+          plan: 'full',
+          asrAvailable: true,
+          selfHostedAsr: false,
+          translationConfigured: true,
+          modelId: 'claude-sonnet-5',
+          runtimeMinutes: 30,
+          runtimeKnown: true,
+          runtimeSource: 'ffprobe',
+          estimatedUsd: 0.42,
+        } satisfies TranscriptionEstimate,
+      },
       {
         queryKey: glossaryKeys.list('movie-1'),
         data: [

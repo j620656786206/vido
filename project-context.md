@@ -744,6 +744,8 @@ element MUST include a header comment referencing its .pen node ID:
 
 Where:
   {Name}        = the .pen reusable-component name (e.g., PosterCardHover)
+                  — may contain `/` between segments (the .pen uses slash-namespaced
+                  masters since 2026-09-10, e.g. ButtonCost/Default; dsr-6a)
   {pen-node-id} = the unique Pencil node identifier (e.g., MQbvp)
 
 Lookup: query .pen via Pencil MCP `get_editor_state` — every reusable

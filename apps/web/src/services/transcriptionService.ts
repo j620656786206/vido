@@ -23,6 +23,7 @@
  * CTA disabled and point at the episode list (capability honor).
  */
 import type { ApiResponse } from '../types/tmdb';
+import { ApiError } from '../lib/apiError';
 import { snakeToCamel } from '../utils/caseTransform';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
@@ -62,6 +63,29 @@ async function parseTranscribeResponse(response: Response): Promise<TranscribeOu
   return { status: 'started', result: snakeToCamel<TranscribeStarted>(envelope.data) };
 }
 
+/**
+ * The price of a click on 生成字幕 (story dsr-6a AC #2 [@contract-v1]).
+ *
+ * confirmed against [@contract-v1] (Story dsr-6a AC #2). It prices what the
+ * trigger above will ACTUALLY do — speech recognition + translation, or
+ * translation only when an untranslated English SRT can be resumed — never the
+ * batch consent list's extract route.
+ */
+export interface TranscriptionEstimate {
+  mediaId: string;
+  mediaType: 'movie' | 'episode';
+  plan: 'full' | 'translate_only';
+  asrAvailable: boolean;
+  selfHostedAsr: boolean;
+  translationConfigured: boolean;
+  /** The model the translation leg bills; '' when no translation runs. */
+  modelId: string;
+  runtimeMinutes: number;
+  runtimeKnown: boolean;
+  runtimeSource: 'ffprobe' | 'tmdb' | 'fallback';
+  estimatedUsd: number;
+}
+
 export const transcriptionService = {
   async startTranscription(movieId: string): Promise<TranscribeOutcome> {
     const response = await fetch(`${API_BASE_URL}/movies/${movieId}/transcribe?translate=true`, {
@@ -81,5 +105,34 @@ export const transcriptionService = {
       method: 'POST',
     });
     return parseTranscribeResponse(response);
+  },
+
+  /**
+   * GET /{movies|episodes}/{id}/transcribe/estimate (story dsr-6a AC #5).
+   *
+   * Throws ApiError so the dialog can tell 「讀不到影片檔案」 (400
+   * VALIDATION_REQUIRED_FIELD) from a transient failure. `signal` lets TanStack
+   * Query cancel an estimate that is still queued behind the server's ffprobe
+   * limit when the dialog closes.
+   */
+  async getTranscriptionEstimate(
+    mediaType: 'movie' | 'episode',
+    id: string,
+    signal?: AbortSignal
+  ): Promise<TranscriptionEstimate> {
+    const collection = mediaType === 'episode' ? 'episodes' : 'movies';
+    const response = await fetch(`${API_BASE_URL}/${collection}/${id}/transcribe/estimate`, {
+      signal,
+    });
+    const json = await response.json().catch(() => ({}) as Record<string, unknown>);
+    const envelope = json as ApiResponse<unknown>;
+    if (!response.ok || !envelope.success) {
+      throw new ApiError(
+        envelope.error?.message || `API request failed: ${response.status}`,
+        response.status,
+        envelope.error?.code
+      );
+    }
+    return snakeToCamel<TranscriptionEstimate>(envelope.data);
   },
 };
