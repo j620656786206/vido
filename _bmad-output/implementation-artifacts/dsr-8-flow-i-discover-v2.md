@@ -1,6 +1,6 @@
 # Story DSR.8: Flow I 探索與進階搜尋——程式碼與設計稿雙向對齊
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -413,6 +413,7 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`，BMAD dev agent（Amelia）2
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-17 | ✅ 收單 —— PR #447 合併進 main（commit f235122b），**CI 17 項全綠**。`-linux` 基準線：手動觸發 Visual Regression → bootstrap PR #448（3 張，只加圖）合回分支後視覺 4 個 shard 轉綠。 |
 | 2026-09-17 | 🔍 **/ship 對抗式 CR**：0 HIGH／1 MED／6 LOW 全修（詳見 Completion Notes）。最重要的一條：部分失敗而成功那一側剛好沒結果時，搜尋頁與探索頁都會在「影集暫時無法載入」下面接一句「找不到／清除篩選」，等於又怪使用者——兩頁一起修。另更正 AC #3 對 TanStack 重試狀態的前提。 |
 | 2026-09-17 | ✅ **dev-story 完成 → review**（Amelia）。web 3451/3451、api PASS、lint 0 errors、typecheck、prettier、token 一致。最有感的三件：① TMDb 斷線時**不再寫「符合 0 部」**（篩選軌、手機套用鈕、分頁計數都不再印算不出來的數字）；② `/search` 與頂欄搜尋在整個請求失敗時**不再說「找不到結果」**；③ 探索頁的錯誤代碼改成跟其他頁一樣的獨立膠囊。探索與媒體庫的篩選軌標題層級改成 h1→h2→h3。設計稿四條篩選軌照程式碼重建。途中踩到 Pencil `Insert` 新建 frame 會位移的問題（改用 Copy）已記在 Debug Log。 |
 | 2026-09-16 | ⚖️ **AC #12 裁定 A**（Alexyu）：探索頁不做「媒體庫結果」區。I8-D-v2 拿掉那一區、改畫程式碼真的會出現的部分失敗（電影照常、影集失敗）；程式碼不動；ux3-3-2 AC #8「local results still render」正式撤銷。 |
