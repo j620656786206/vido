@@ -1,6 +1,6 @@
 # Story DSR.6a：按下去會花錢的「生成字幕」，按鈕上先寫多少錢（後端估價＋前端按鈕＋設計稿）
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -443,6 +443,7 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`，BMAD dev agent（Amelia）2
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-17 | ✅ 收單 —— PR #455 合併進 main（commit 7340763b），**CI 17 項全綠**（含 4 個 e2e shard 與 4 個視覺 shard）。`-linux` 基準線：手動觸發 Visual Regression → bootstrap PR #456（3 張 linux）合回分支後轉綠；看過其中兩張，對話框是「生成字幕 $0.42」、不是骨架。 |
 | 2026-09-17 | 🔍 **/ship 對抗式 CR**：0 HIGH／1 MED／9 LOW，修 7、立案 2、不修 2。最重要的一條：在同一個對話框裡下載線上字幕之後，按鈕還留著「只翻譯」的便宜價，按下去卻會跑完整語音辨識——現在下載成功、或片子的字幕狀態一變，就立刻重新估價。另外：讀不到檔案時不再讓舊價錢留著；兩顆重試在只能產生英文時也寫出原因；失敗面板的重試不能連點；按鈕在各狀態之間不再變寬。 |
 | 2026-09-17 | ✅ **dev-story 完成 → review**（Amelia）。api PASS、web 3545/3545、lint 0 errors、typecheck、prettier、token 一致；視覺比對只剩三張既有紅。管理字幕的「生成字幕」和兩顆「重試」第一次在按下去之前就寫出要花多少錢：後端新增單片估價（估的是這顆按鈕真的會做的事），前端新增 `ButtonCost`（有價錢／估價中／停用三種樣子），算不出價或沒有語音辨識金鑰時按鈕停用並寫出原因。設計稿 F2-D-v2／F1-M-v2 改回語音辨識路線、F4-D-v2 重試帶金額、J9-D 補上現況與三種補充情況。 |
 | 2026-09-17 | 🔍 **建單後對抗驗證**（fresh-context 驗證代理，只讀，抽查約 30 個行號全對）：4 項 CRITICAL、16 項 SHOULD FIX，**全部併入**。最重要的四項：① 照原本的 staging 規則會漏 commit `pen-tokens.json`，CI 的 token 檢查必紅（補進 AC #1）；② 估價查詢設 `staleTime: 0` 會讓視覺夾具在沒有後端的 CI 上重抓失敗，截圖時好時壞（改成預設 staleTime＋關閉時移除快取＋「先看資料再看錯誤」）；③ 「只差翻譯但沒有翻譯金鑰」會出現一顆能按、`$0.00`、按了什麼都不會產生的按鈕（改成停用）；④ 兩顆重試停用時沒有地方寫原因（按鈕下方補一句）。另外：金額改成呼叫既有 `estimateUSD`／`roundUSD` 組出來、`estimated_usd` 定為 JSON number、「有沒有翻譯」抽成一個方法兩處共用、handler 用 setter 注入（不動 16 個建構子呼叫點）、`routePredictorAdapter` 提成變數、模型測試改用 Haiku（用目錄外 id 測不出差別）、`usdWithEstimate` 必須 re-export、ESLint regex 改嚴格版、讀不到檔案的專用句子、`DESIGN.md:324` 母版舊名、sub-4-1 AC #7 契約 ack、`aria-describedby`、影集查詢一般錯誤回 500、補 Pencil 子節點 id。 |
