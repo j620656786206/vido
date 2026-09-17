@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen 7 Search + Filter Desktop (rsAxf)
+// Design ref: ux-design.pen — no current screen frame; /search（TMDb 搜尋結果頁）沒有設計稿，見 disc-2026-09-search-page-no-design
 import { MediaGrid, type MediaItem } from '../media/MediaGrid';
 import { Pagination } from '../ui/Pagination';
 import type { MovieSearchResponse, TVShowSearchResponse } from '../../types/tmdb';
@@ -11,7 +11,21 @@ interface SearchResultsProps {
   currentPage: number;
   onPageChange: (page: number) => void;
   className?: string;
+  /** dsr-8 AC #5: every query the current tab needs failed and has nothing to show. */
+  isError?: boolean;
+  /** One side failed while the other answered (type=all only). */
+  failedSide?: 'movie' | 'tv';
+  /** Rule-7 code of the failure, shown as a mono pill. */
+  errorCode?: string;
+  /** Refetch only the failed query/queries. */
+  onRetry?: () => void;
+  retrying?: boolean;
 }
+
+const retryClass =
+  'min-h-[44px] rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-3 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-secondary)] disabled:cursor-wait disabled:opacity-70';
+const codePillClass =
+  'rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-2 py-0.5 font-mono text-[11px] text-[var(--text-muted)]';
 
 export function SearchResults({
   movies,
@@ -21,7 +35,46 @@ export function SearchResults({
   currentPage,
   onPageChange,
   className,
+  isError = false,
+  failedSide,
+  errorCode,
+  onRetry,
+  retrying = false,
 }: SearchResultsProps) {
+  // dsr-8 AC #5: the whole search failed — say so, never 「找不到符合的結果」 (that
+  // blames the user's words for a server fault).
+  if (isError) {
+    return (
+      <div className={className}>
+        <div
+          role="alert"
+          data-testid="search-error"
+          className="flex flex-col items-center gap-3 rounded-[var(--radius-lg)] bg-[var(--error-tint)] px-6 py-12 text-center"
+        >
+          <p className="text-sm font-medium text-[var(--error-text)]">
+            搜尋暫時無法使用，請稍後再試
+          </p>
+          {errorCode ? (
+            <span data-testid="search-error-code" className={codePillClass}>
+              {errorCode}
+            </span>
+          ) : null}
+          {onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              disabled={retrying}
+              data-testid="search-error-retry"
+              className={retryClass}
+            >
+              {retrying ? '重試中…' : '重試'}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   // Filter results based on type
   const movieResults = type === 'all' || type === 'movie' ? movies?.results || [] : [];
   const tvResults = type === 'all' || type === 'tv' ? tvShows?.results || [] : [];
@@ -65,19 +118,47 @@ export function SearchResults({
 
   return (
     <div className={className}>
-      {/* Results count */}
-      {!isLoading && hasResults && (
+      {/* One side failed: keep the good results, say which side is missing. */}
+      {failedSide && (
+        <div
+          role="alert"
+          data-testid="search-partial-error"
+          className="mb-4 flex flex-wrap items-center gap-3 rounded-[var(--radius-md)] bg-[var(--error-tint)] px-4 py-3 text-sm"
+        >
+          <span className="text-[var(--error-text)]">
+            {failedSide === 'movie' ? '電影' : '影集'}結果暫時無法載入，其他結果不受影響
+          </span>
+          {errorCode ? <span className={codePillClass}>{errorCode}</span> : null}
+          {onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              disabled={retrying}
+              data-testid="search-partial-error-retry"
+              className={`ml-auto ${retryClass}`}
+            >
+              {retrying ? '重試中…' : '重試'}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Results count — not while a side is missing: it would count only half. */}
+      {!isLoading && hasResults && !failedSide && (
         <div className="mb-4 text-sm text-[var(--text-secondary)]">找到 {totalResults} 個結果</div>
       )}
 
-      {/* Grid results */}
-      <MediaGrid
-        items={sortedItems}
-        movies={sortedMovies}
-        tvShows={sortedTvShows}
-        isLoading={isLoading}
-        emptyMessage="找不到符合的結果，請嘗試使用不同的關鍵字搜尋"
-      />
+      {/* Grid results — no "try other keywords" when the empty half is only the half
+          that answered: the banner above already says the other half is missing. */}
+      {!(failedSide && !isLoading && !hasResults) && (
+        <MediaGrid
+          items={sortedItems}
+          movies={sortedMovies}
+          tvShows={sortedTvShows}
+          isLoading={isLoading}
+          emptyMessage="找不到符合的結果，請嘗試使用不同的關鍵字搜尋"
+        />
+      )}
 
       {/* Pagination */}
       {!isLoading && hasResults && totalPages > 1 && (

@@ -46,4 +46,17 @@ describe('FilterRailShell', () => {
     renderRail(0);
     expect(screen.queryByTestId('test-rail-active-count')).toBeNull();
   });
+
+  // dsr-8 AC #6: the page's h1 sits above the rail, so the rail title is an h2 — an
+  // h3 skipped a level on both /discover and /library.
+  it('titles the rail with an h2 on the design size, pinned under the 56px header', () => {
+    renderRail();
+    const heading = screen.getByRole('heading', { level: 2, name: '篩選' });
+    expect(heading.className).toContain('text-base');
+    expect(heading.className).not.toContain('text-[15px]');
+    const rail = screen.getByTestId('test-filter-rail');
+    // AppShellV2's header is h-14 (56px); top-16 left a permanent 8px slot.
+    expect(rail.className).toContain('top-14');
+    expect(rail.className).toContain('h-[calc(100vh-3.5rem)]');
+  });
 });

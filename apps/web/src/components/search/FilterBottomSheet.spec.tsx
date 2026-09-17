@@ -131,4 +131,57 @@ describe('FilterBottomSheet', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  // dsr-8 AC #4: a failed count query must not read 「套用篩選（0 部結果）」.
+  it('drops the count from the apply button when the needed query failed', () => {
+    mockUseDiscoverResults.mockImplementation((() => ({
+      moviesQuery: { isError: true, data: undefined } as never,
+      tvQuery: { isError: false, data: { totalResults: 12 } } as never,
+      isLoading: false,
+      totalResults: 12,
+    })) as never);
+    render(
+      <FilterBottomSheet
+        isOpen
+        onClose={vi.fn()}
+        filters={baseFilters}
+        onApply={vi.fn()}
+        mediaType="all"
+      />
+    );
+    expect(screen.getByTestId('filter-sheet-apply')).toHaveTextContent(/^套用篩選$/);
+  });
+
+  it('keeps the count when only a query the current tab does not need failed', () => {
+    mockUseDiscoverResults.mockImplementation((() => ({
+      moviesQuery: { isError: true, data: undefined } as never,
+      tvQuery: { isError: false, data: { totalResults: 12 } } as never,
+      isLoading: false,
+      totalResults: 12,
+    })) as never);
+    render(
+      <FilterBottomSheet
+        isOpen
+        onClose={vi.fn()}
+        filters={baseFilters}
+        onApply={vi.fn()}
+        mediaType="tv"
+      />
+    );
+    expect(screen.getByTestId('filter-sheet-apply')).toHaveTextContent('套用篩選（12 部結果）');
+  });
+
+  // dsr-8 AC #8: the dialog was nameless — AT announced "dialog" and nothing else.
+  it('names the dialog from its 篩選條件 heading', () => {
+    render(
+      <FilterBottomSheet
+        isOpen
+        onClose={vi.fn()}
+        filters={baseFilters}
+        onApply={vi.fn()}
+        mediaType="all"
+      />
+    );
+    expect(screen.getByRole('dialog', { name: '篩選條件' })).toBeInTheDocument();
+  });
 });

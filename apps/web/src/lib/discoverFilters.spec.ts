@@ -82,11 +82,11 @@ describe('activeFilterChips', () => {
     };
     const chips = activeFilterChips(filters);
     expect(chips.map((c) => c.label)).toEqual([
-      '類型: 動畫',
-      '年份: 2022-2024',
-      '地區: 日本',
-      '評分: 7+',
-      '平台: Netflix',
+      '類型：動畫',
+      '年份：2022-2024',
+      '地區：日本',
+      '評分：7+',
+      '平台：Netflix',
     ]);
   });
 
@@ -107,7 +107,7 @@ describe('activeFilterChips', () => {
       sortBy: 'popularity',
       yearGte: 2020,
     });
-    expect(chips[0].label).toBe('年份: 2020 起');
+    expect(chips[0].label).toBe('年份：2020 起');
   });
 
   it('does not treat sort as an active filter', () => {

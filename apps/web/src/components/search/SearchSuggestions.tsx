@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen AS-2 - Search Suggestions Dropdown (TMaw5)
+// Design ref: ux-design.pen Screen I3-D-v2 (m0Zew)
 // Source: ux-design.pen (Pencil app)
 import { User } from 'lucide-react';
 import type { Movie, Person, TVShow, UnifiedSearchResult } from '../../types/tmdb';
@@ -58,6 +58,12 @@ function yearOf(date: string | undefined): string | null {
 interface SearchSuggestionsProps {
   result?: UnifiedSearchResult;
   isLoading: boolean;
+  /**
+   * dsr-8 AC #5: the whole request failed (API down, network, 5xx). A TMDb-only outage
+   * does NOT arrive here — the backend returns 200 with empty TMDb sections on purpose
+   * (testsprite TC092); see disc-2026-09-instant-search-tmdb-outage-silent.
+   */
+  isError?: boolean;
   query: string;
   /** Flat index (over movies+TV) of the keyboard-highlighted row, or -1. */
   activeIndex: number;
@@ -73,6 +79,7 @@ interface SearchSuggestionsProps {
 export function SearchSuggestions({
   result,
   isLoading,
+  isError = false,
   query,
   activeIndex,
   onSelect,
@@ -107,7 +114,17 @@ export function SearchSuggestions({
         </div>
       )}
 
-      {!isLoading && !hasResults && (
+      {!isLoading && isError && !hasResults && (
+        <div
+          role="alert"
+          className="px-4 py-6 text-center text-sm text-[var(--error-text)]"
+          data-testid="search-suggestions-error"
+        >
+          搜尋暫時無法使用
+        </div>
+      )}
+
+      {!isLoading && !isError && !hasResults && (
         <div
           className="px-4 py-6 text-center text-sm text-[var(--text-muted)]"
           data-testid="search-suggestions-empty"

@@ -30,9 +30,9 @@ describe('SavePresetDialog', () => {
     expect(screen.getByText('儲存篩選條件')).toBeInTheDocument();
     expect(screen.getByTestId('preset-name-input')).toBeInTheDocument();
     const preview = screen.getByTestId('save-preset-preview');
-    expect(preview).toHaveTextContent('類型: 動畫');
-    expect(preview).toHaveTextContent('年份: 2023-2024');
-    expect(preview).toHaveTextContent('評分: 7+');
+    expect(preview).toHaveTextContent('類型：動畫');
+    expect(preview).toHaveTextContent('年份：2023-2024');
+    expect(preview).toHaveTextContent('評分：7+');
   });
 
   it('disables save when the name is empty', () => {
@@ -96,5 +96,12 @@ describe('SavePresetDialog', () => {
     fireEvent.click(screen.getByTestId('save-preset-cancel'));
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(mutateAsync).not.toHaveBeenCalled();
+  });
+
+  // dsr-8 AC #7: full-width ellipsis on the in-flight label.
+  it('shows 儲存中… (not 儲存中...) while saving', () => {
+    isPending = true;
+    render(<SavePresetDialog filters={filters} onClose={vi.fn()} />);
+    expect(screen.getByTestId('save-preset-confirm')).toHaveTextContent('儲存中…');
   });
 });

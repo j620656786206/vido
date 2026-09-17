@@ -126,6 +126,12 @@ READABLE_FLOWS = {
     # whole content is paragraphs of prose.
     "flow-b-detail-v2",
     "flow-b-detail-interaction",
+    # flow-i-discover-v2 + flow-i-advanced-search joined 2026-09-17 (dsr-8): the rail's
+    # option labels and counts, the save-preset dialog copy, the suggestion sections and
+    # the fail-soft banner are the whole comparison, and at 400px none of them could be
+    # read. The advanced-search folder holds the rail-states spec, which is prose.
+    "flow-i-discover-v2",
+    "flow-i-advanced-search",
 }
 # Floor, not ceiling: a page wider than this keeps its native 1:1 width rather than
 # being shrunk below legibility.

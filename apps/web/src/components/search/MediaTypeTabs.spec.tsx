@@ -66,4 +66,12 @@ describe('MediaTypeTabs', () => {
     expect(screen.getByRole('tab', { name: /電影/ })).toHaveAttribute('aria-selected', 'false');
     expect(screen.getByRole('tab', { name: /影集/ })).toHaveAttribute('aria-selected', 'true');
   });
+
+  // dsr-8 AC #8: aria-controls pointed at tabpanel ids that exist nowhere on the page.
+  it('does not reference tab panels that do not exist', () => {
+    render(<MediaTypeTabs activeType="all" onTypeChange={vi.fn()} />);
+    for (const tab of screen.getAllByRole('tab')) {
+      expect(tab).not.toHaveAttribute('aria-controls');
+    }
+  });
 });

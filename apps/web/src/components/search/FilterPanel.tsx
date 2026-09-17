@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen AS-1 Advanced Filter Chips Desktop (rsAxf)
+// Design ref: ux-design.pen Screen I1-D-v2 (fxCVk) + Screen I4-M-v2 (kzzjc)
 // Source: ux-design.pen (Pencil app)
 import { useEffect, useRef, useState } from 'react';
 import { Check } from 'lucide-react';
@@ -49,6 +49,8 @@ const chipClass = (active: boolean, deadEnd = false) =>
     deadEnd && 'opacity-70'
   );
 
+// Section titles are h3: they sit under the rail's h2 「篩選」 and the sheet's h2 「篩選條件」
+// (dsr-8 AC #6). They were h4, which skipped a level in both hosts.
 const sectionLabelClass =
   'mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]';
 
@@ -196,7 +198,7 @@ export function FilterPanel({
     <div className={cn('flex flex-col gap-5', className)} data-testid="filter-panel">
       {/* Genre (類型) — Task 3.2 */}
       <section>
-        <h4 className={sectionLabelClass}>類型</h4>
+        <h3 className={sectionLabelClass}>類型</h3>
         <div className="flex flex-wrap gap-1.5">
           {GENRE_FILTER_OPTIONS.map((genre) => {
             const active = filters.genre.includes(genre.id);
@@ -220,7 +222,7 @@ export function FilterPanel({
 
       {/* Region (地區) — Task 3.4 */}
       <section>
-        <h4 className={sectionLabelClass}>地區</h4>
+        <h3 className={sectionLabelClass}>地區</h3>
         <div className="flex flex-wrap gap-1.5">
           {REGION_OPTIONS.map((region) => {
             const active = filters.region === region.code;
@@ -244,7 +246,7 @@ export function FilterPanel({
 
       {/* Year range (年份範圍) — Task 3.3 */}
       <section>
-        <h4 className={sectionLabelClass}>年份範圍</h4>
+        <h3 className={sectionLabelClass}>年份範圍</h3>
         <div className="flex items-center gap-2">
           <input
             type="number"
@@ -272,7 +274,7 @@ export function FilterPanel({
 
       {/* Minimum rating (最低評分) — Task 3.5 */}
       <section>
-        <h4 className={sectionLabelClass}>最低評分</h4>
+        <h3 className={sectionLabelClass}>最低評分</h3>
         <div className="flex flex-wrap gap-1.5">
           {RATING_OPTIONS.map((value) => {
             const active = filters.ratingGte === value;
@@ -294,7 +296,7 @@ export function FilterPanel({
 
       {/* Platform (平台) — Task 3.6 */}
       <section>
-        <h4 className={sectionLabelClass}>平台</h4>
+        <h3 className={sectionLabelClass}>平台</h3>
         <div className="flex flex-wrap gap-1.5">
           {PLATFORM_OPTIONS.map((platform) => {
             const active = filters.platform.includes(platform.id);
@@ -318,7 +320,7 @@ export function FilterPanel({
 
       {/* Sort (排序方式) — Task 3.7 */}
       <section>
-        <h4 className={sectionLabelClass}>排序方式</h4>
+        <h3 className={sectionLabelClass}>排序方式</h3>
         <select
           value={filters.sortBy}
           onChange={(e) => onChange({ ...filters, sortBy: e.target.value as SortKey })}

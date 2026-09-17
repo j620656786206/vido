@@ -125,6 +125,19 @@ describe('InstantSearchBar', () => {
     expect(screen.getByTestId('search-suggestions')).toBeInTheDocument();
   });
 
+  // dsr-8 AC #5: a rejected unified search reaches the dropdown as an error row.
+  it('passes a failed request through to the dropdown as an error, not an empty result', async () => {
+    vi.mocked(tmdbService.unifiedSearch).mockRejectedValue(new Error('network down'));
+    setup();
+    const input = await screen.findByTestId('instant-search-input');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '你的名字' } });
+    expect(await screen.findByTestId('search-suggestions-error')).toHaveTextContent(
+      '搜尋暫時無法使用'
+    );
+    expect(screen.queryByTestId('search-suggestions-empty')).toBeNull();
+  });
+
   it('does not search for queries shorter than 2 characters', async () => {
     setup();
     const input = await screen.findByTestId('instant-search-input');

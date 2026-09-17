@@ -45,7 +45,7 @@ describe('PresetChips', () => {
 
   it('renders a chip per saved preset above the filter area (AC #2)', () => {
     render(<PresetChips onApplyPreset={vi.fn()} />);
-    expect(screen.getByText('快速篩選:')).toBeInTheDocument();
+    expect(screen.getByText('快速篩選：')).toBeInTheDocument();
     expect(screen.getByTestId('preset-chip-p1')).toHaveTextContent('2024年後韓劇');
     expect(screen.getByTestId('preset-chip-p2')).toHaveTextContent('高評分動畫');
   });
@@ -148,5 +148,14 @@ describe('PresetChips', () => {
     expect(onApplyPreset).toHaveBeenCalledWith(
       expect.objectContaining({ genre: [], platform: [], sortBy: 'popularity' })
     );
+  });
+
+  // dsr-8 AC #7: in-flight labels use the full-width ellipsis, like 計算中… on the same page.
+  it('shows 刪除中… (not 刪除中...) while the delete is in flight', () => {
+    deletePending = true;
+    render(<PresetChips onApplyPreset={vi.fn()} />);
+    fireEvent.contextMenu(screen.getByTestId('preset-chip-p2'));
+    expect(screen.getByTestId('preset-delete-dialog')).toHaveTextContent('刪除中…');
+    expect(screen.getByTestId('preset-delete-dialog')).not.toHaveTextContent('刪除中...');
   });
 });

@@ -125,7 +125,7 @@ export function serializeFilters(filters: DiscoverFilters): DiscoverSearch {
 export interface FilterChipDescriptor {
   /** Stable React key. */
   key: string;
-  /** Display label, e.g. "類型: 動畫". */
+  /** Display label, e.g. "類型：動畫". */
   label: string;
   /** The filter object after this chip is removed. */
   next: DiscoverFilters;
@@ -138,7 +138,7 @@ export function activeFilterChips(filters: DiscoverFilters): FilterChipDescripto
   for (const id of filters.genre) {
     chips.push({
       key: `genre-${id}`,
-      label: `類型: ${GENRE_MAP[id] ?? id}`,
+      label: `類型：${GENRE_MAP[id] ?? id}`,
       next: { ...filters, genre: filters.genre.filter((g) => g !== id) },
     });
   }
@@ -146,11 +146,11 @@ export function activeFilterChips(filters: DiscoverFilters): FilterChipDescripto
   if (filters.yearGte !== undefined || filters.yearLte !== undefined) {
     let label: string;
     if (filters.yearGte !== undefined && filters.yearLte !== undefined) {
-      label = `年份: ${filters.yearGte}-${filters.yearLte}`;
+      label = `年份：${filters.yearGte}-${filters.yearLte}`;
     } else if (filters.yearGte !== undefined) {
-      label = `年份: ${filters.yearGte} 起`;
+      label = `年份：${filters.yearGte} 起`;
     } else {
-      label = `年份: 至 ${filters.yearLte}`;
+      label = `年份：至 ${filters.yearLte}`;
     }
     chips.push({
       key: 'year',
@@ -163,7 +163,7 @@ export function activeFilterChips(filters: DiscoverFilters): FilterChipDescripto
     const region = REGION_OPTIONS.find((o) => o.code === filters.region);
     chips.push({
       key: 'region',
-      label: `地區: ${region ? region.label : filters.region}`,
+      label: `地區：${region ? region.label : filters.region}`,
       next: { ...filters, region: undefined },
     });
   }
@@ -171,7 +171,7 @@ export function activeFilterChips(filters: DiscoverFilters): FilterChipDescripto
   if (filters.ratingGte !== undefined) {
     chips.push({
       key: 'rating',
-      label: `評分: ${filters.ratingGte}+`,
+      label: `評分：${filters.ratingGte}+`,
       next: { ...filters, ratingGte: undefined },
     });
   }
@@ -180,7 +180,7 @@ export function activeFilterChips(filters: DiscoverFilters): FilterChipDescripto
     const platform = PLATFORM_OPTIONS.find((o) => o.id === id);
     chips.push({
       key: `platform-${id}`,
-      label: `平台: ${platform ? platform.label : id}`,
+      label: `平台：${platform ? platform.label : id}`,
       next: { ...filters, platform: filters.platform.filter((p) => p !== id) },
     });
   }

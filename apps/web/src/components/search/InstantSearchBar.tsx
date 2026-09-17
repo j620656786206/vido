@@ -1,5 +1,5 @@
 // Implements: Component/SearchInput (6MxLT)
-// Design ref: ux-design.pen Screen AS-2 - Search Suggestions Dropdown (TMaw5)
+// Design ref: ux-design.pen Screen I3-D-v2 (m0Zew)
 // Source: ux-design.pen (Pencil app)
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
@@ -49,7 +49,7 @@ export function InstantSearchBar({
   // 300ms client-side debounce — the server is never asked to debounce.
   const [debouncedQuery] = useDebounce(value.trim(), 300);
 
-  const { data, isLoading } = useInstantSearch(debouncedQuery);
+  const { data, isLoading, isError } = useInstantSearch(debouncedQuery);
 
   const navigable = buildNavigableItems(data);
   const open = focused && debouncedQuery.length >= MIN_QUERY_LENGTH;
@@ -184,6 +184,9 @@ export function InstantSearchBar({
         <SearchSuggestions
           result={data}
           isLoading={isLoading}
+          // Only when there is nothing to show — keepPreviousData can still hold the last
+          // good result while a newer query failed.
+          isError={isError && !data}
           query={debouncedQuery}
           activeIndex={activeIndex}
           onSelect={goToItem}

@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen I6-D-v2 (YYEBd)
+// Design ref: ux-design.pen Screen I6-D-v2 (YYEBd) + Screen I7-D-v2 (S3qke) + Screen I8-D-v2 (KdnVw)
 /**
  * ux3-3-2 (AC #8): the v2 Discover non-default states — match ux3-3-1 frames
  * I6 (loading skeleton), I7 (no-result, distinct from empty, with active-filter
@@ -74,10 +74,13 @@ export function DiscoverSectionErrorV2({
   message = 'TMDB 服務暫時無法連線，其他結果不受影響',
   code,
   onRetry,
+  retrying = false,
 }: {
   message?: string;
   code?: string;
   onRetry: () => void;
+  /** A retry is in flight (TanStack v5 keeps isError true meanwhile). */
+  retrying?: boolean;
 }) {
   return (
     <div
@@ -86,19 +89,26 @@ export function DiscoverSectionErrorV2({
       className="mb-4 flex flex-wrap items-center gap-3 rounded-[var(--radius-md)] bg-[var(--error-tint)] px-4 py-3 text-sm"
     >
       <AlertTriangle className="h-5 w-5 shrink-0 text-[var(--error-text)]" aria-hidden="true" />
-      <span className="text-[var(--error-text)]">
-        {message}
-        {code ? (
-          <span className="ml-1 font-mono text-[11px] text-[var(--text-muted)]">（{code}）</span>
-        ) : null}
-      </span>
+      <span className="text-[var(--error-text)]">{message}</span>
+      {/* dsr-8 AC #3: the code is its own mono pill — the same shape as LibraryErrorV2
+          (A8p-D) and DetailLoadErrorV2 — not a 「（CODE）」 parenthetical hanging off
+          the sentence, which reads as an afterthought rather than a thing to report. */}
+      {code ? (
+        <span
+          data-testid="discover-section-error-code"
+          className="rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-2 py-0.5 font-mono text-[11px] text-[var(--text-muted)]"
+        >
+          {code}
+        </span>
+      ) : null}
       <button
         type="button"
         onClick={onRetry}
+        disabled={retrying}
         data-testid="discover-section-error-retry"
-        className="ml-auto min-h-[44px] rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-3 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-secondary)]"
+        className="ml-auto min-h-[44px] rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-3 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-secondary)] disabled:cursor-wait disabled:opacity-70"
       >
-        重試
+        {retrying ? '重試中…' : '重試'}
       </button>
     </div>
   );

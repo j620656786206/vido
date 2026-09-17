@@ -25,6 +25,11 @@ interface DiscoverFilterRailProps {
   totalResults: number;
   /** True while that total is still (re)computing (any query fetching). */
   isCounting: boolean;
+  /**
+   * dsr-8 AC #4: a query the current tab needs FAILED, so `totalResults` is not a
+   * count — it is a fallback 0, or half of one. Show that it cannot be computed.
+   */
+  countUnavailable?: boolean;
   /** Instant-apply change handler (numeric inputs debounced inside FilterPanel). */
   onChange: (next: DiscoverFilters) => void;
   onClearAll: () => void;
@@ -36,6 +41,7 @@ export function DiscoverFilterRail({
   activeCount,
   totalResults,
   isCounting,
+  countUnavailable = false,
   onChange,
   onClearAll,
   onCollapse,
@@ -61,7 +67,11 @@ export function DiscoverFilterRail({
             className="mb-2 font-mono text-xs tabular-nums text-[var(--text-secondary)]"
             aria-live="polite"
           >
-            {isCounting ? '計算中…' : `符合 ${totalResults.toLocaleString()} 部`}
+            {isCounting
+              ? '計算中…'
+              : countUnavailable
+                ? '暫時無法計算'
+                : `符合 ${totalResults.toLocaleString()} 部`}
           </p>
           {activeCount > 0 && (
             <button

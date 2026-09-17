@@ -34,6 +34,34 @@ function SearchPage() {
 
   const isLoading = moviesQuery.isLoading || tvQuery.isLoading;
 
+  // dsr-8 AC #5: a failed search is not an empty one. Only the queries the current tab
+  // needs count, and only when they have nothing to show (a failed background refetch
+  // keeps its cached data — dsr-2 CR #2).
+  const wantMovies = currentType !== 'tv';
+  const wantTV = currentType !== 'movie';
+  const moviesErr = wantMovies && moviesQuery.isError && !moviesQuery.data;
+  const tvErr = wantTV && tvQuery.isError && !tvQuery.data;
+  const allErr = (moviesErr || tvErr) && (!wantMovies || moviesErr) && (!wantTV || tvErr);
+  const failedSide: 'movie' | 'tv' | undefined = allErr
+    ? undefined
+    : moviesErr
+      ? 'movie'
+      : tvErr
+        ? 'tv'
+        : undefined;
+  const errorCode = (
+    (moviesErr ? moviesQuery.error : tvErr ? tvQuery.error : null) as { code?: string } | null
+  )?.code;
+  const retryFailed = () => {
+    if (moviesErr) moviesQuery.refetch();
+    if (tvErr) tvQuery.refetch();
+  };
+  // Only a failed query's refetch is a retry — a healthy side refreshing is not.
+  const retrying = (moviesErr && moviesQuery.isFetching) || (tvErr && tvQuery.isFetching);
+  // Tab counts ignore the current tab: both queries always run here, and 全部 sums both.
+  const countUnavailable =
+    (moviesQuery.isError && !moviesQuery.data) || (tvQuery.isError && !tvQuery.data);
+
   const handleSearch = (newQuery: string) => {
     navigate({ search: { q: newQuery, page: 1, type: currentType } });
   };
@@ -66,8 +94,9 @@ function SearchPage() {
             <MediaTypeTabs
               activeType={currentType}
               onTypeChange={handleTypeChange}
-              movieCount={moviesQuery.data?.totalResults}
-              tvCount={tvQuery.data?.totalResults}
+              // No counts while a side is down: 全部 would sum only the half that answered.
+              movieCount={countUnavailable ? undefined : moviesQuery.data?.totalResults}
+              tvCount={countUnavailable ? undefined : tvQuery.data?.totalResults}
               className="mb-6"
             />
             <SearchResults
@@ -77,6 +106,11 @@ function SearchPage() {
               type={currentType}
               currentPage={currentPage}
               onPageChange={handlePageChange}
+              isError={allErr}
+              failedSide={failedSide}
+              errorCode={errorCode}
+              onRetry={retryFailed}
+              retrying={retrying}
             />
           </>
         )}
