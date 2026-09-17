@@ -78,6 +78,16 @@ describe('useGenerationProgress (lazy SSE, double-nested envelope)', () => {
     expect(renderHook(() => useGenerationProgress()).result.current.progress.phase).toBe('idle');
   });
 
+  // /ship CR L7 (dsr-6b) — 稍後再試 can unmount the dialog while a retry POST is
+  // still in flight; its onSuccess then calls startTracking on a dead hook.
+  it('does not open a stream after the hook has unmounted', () => {
+    const { result, unmount } = renderHook(() => useGenerationProgress());
+    const { startTracking } = result.current;
+    unmount();
+    act(() => startTracking(MOVIE_UUID));
+    expect(MockEventSource.instances).toHaveLength(0);
+  });
+
   it('[P0] opens EventSource only after startTracking and enters extracting', () => {
     const { result } = renderHook(() => useGenerationProgress());
 

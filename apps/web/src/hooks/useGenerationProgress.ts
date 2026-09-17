@@ -67,9 +67,13 @@ interface GenerationEventPayload {
   englishKeptBlocks?: number;
 }
 
+/** The `error` a failed event gets when it carries neither error nor message.
+ *  Exported so the failed panel can tell "no detail" from a real error (dsr-6b). */
+export const GENERATION_FAILED_FALLBACK = '生成失敗';
+
 export interface GenerationProgressState {
   phase: GenerationPhase;
-  /** The phase that was live when `transcription_failed` arrived (失敗於{stage}). */
+  /** The phase that was live when `transcription_failed` arrived (names the panel's {stage}失敗). */
   failedPhase: 'extracting' | 'transcribing' | 'translating' | null;
   /** translation_progress only (0–100 float). */
   percentage: number | null;
@@ -153,7 +157,7 @@ function reducer(state: GenerationProgressState, action: Action): GenerationProg
         percentage: null,
         message: action.payload.message ?? state.message,
         jobId: action.payload.jobId ?? state.jobId,
-        error: action.payload.error ?? action.payload.message ?? '生成失敗',
+        error: action.payload.error ?? action.payload.message ?? GENERATION_FAILED_FALLBACK,
       };
     case 'RESET':
       return initialState;
@@ -332,6 +336,9 @@ export function useGenerationProgress(options?: UseGenerationProgressOptions) {
    */
   const startTracking = useCallback(
     (mediaId: string) => {
+      // A retry's POST can resolve after 稍後再試 unmounted the dialog (dsr-6b CR
+      // L7): opening a stream then would leak an EventSource nobody closes.
+      if (!mountedRef.current) return;
       mediaIdRef.current = mediaId;
       d6PipelineSeenRef.current = false;
       dispatch({ type: 'START' });

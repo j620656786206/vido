@@ -112616,7 +112616,7 @@
                                   "type": "text",
                                   "id": "dYrRl",
                                   "name": "src-zhtw",
-                                  "fill": "$accent-text",
+                                  "fill": "$text-secondary",
                                   "content": "已生成",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Primary",
@@ -112909,7 +112909,7 @@
                               "fill": "$text-muted",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "⚙ 條件文案規格（sub-2-2c 定稿）——助語與完成句依狀態切換，CTA 永遠可按",
+                              "content": "⚙ 條件文案規格（sub-2-2c 定稿）——助語與完成句依狀態切換；CTA 可不可按由估價決定（J9-D、dsr-6a）：有金額才可按",
                               "lineHeight": "$Type/Label/Line",
                               "fontFamily": "$Type/Family/Primary",
                               "fontSize": "$Type/Label/Size",
@@ -112935,7 +112935,7 @@
                               "fill": "$text-secondary",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "助語・翻譯金鑰未設定：僅能產生英文字幕——尚未設定翻譯金鑰　＋〔前往設定〕文字連結 → /settings/keys（訊號＝GET /settings/keys 的 claude.configured）",
+                              "content": "助語・翻譯金鑰未設定：僅能產生英文字幕——尚未設定翻譯金鑰　＋〔前往設定〕文字連結 → /settings/keys（訊號＝估價回應的 translation_configured）",
                               "lineHeight": "$Type/Label/Line",
                               "fontFamily": "$Type/Family/Primary",
                               "fontSize": "$Type/Label/Size",
@@ -116415,7 +116415,12 @@
                               "id": "NmhL0",
                               "type": "ref",
                               "ref": "XkGvG",
-                              "name": "stepper"
+                              "name": "stepper",
+                              "descendants": {
+                                "fVBQF": {
+                                  "enabled": false
+                                }
+                              }
                             }
                           ]
                         },
@@ -116433,110 +116438,11 @@
                               "id": "OQ2vp",
                               "name": "sd-l1",
                               "fill": "$text-secondary",
-                              "content": "正在轉錄音訊（Whisper large-v3）—",
+                              "content": "正在轉錄音訊",
                               "lineHeight": "$Type/Body/Line",
                               "fontFamily": "$Type/Family/Primary",
                               "fontSize": "$Type/Body/Size",
                               "fontWeight": "$Type/Body/Weight"
-                            },
-                            {
-                              "type": "text",
-                              "id": "hPtxV",
-                              "name": "sd-n1",
-                              "fill": "$text-primary",
-                              "content": "12:34",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Mono",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "$Type/Body/Weight"
-                            },
-                            {
-                              "type": "text",
-                              "id": "UPwEX",
-                              "name": "sd-sl",
-                              "fill": "$text-muted",
-                              "content": "/",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Mono",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "$Type/Body/Weight"
-                            },
-                            {
-                              "type": "text",
-                              "id": "qqbWm",
-                              "name": "sd-n2",
-                              "fill": "$text-secondary",
-                              "content": "45:10",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Mono",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "$Type/Body/Weight"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "Gi18m",
-                          "name": "cost-line",
-                          "width": "fill_container",
-                          "gap": "$Space/xs",
-                          "justifyContent": "center",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "SP6kK",
-                              "name": "cost-l1",
-                              "fill": "$text-secondary",
-                              "content": "本次用量：",
-                              "lineHeight": "$Type/Label/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Label/Size",
-                              "fontWeight": "normal"
-                            },
-                            {
-                              "type": "text",
-                              "id": "Eva59",
-                              "name": "cost-n1",
-                              "fill": "$text-primary",
-                              "content": "$0.42",
-                              "lineHeight": "$Type/Label/Line",
-                              "fontFamily": "$Type/Family/Mono",
-                              "fontSize": "$Type/Label/Size",
-                              "fontWeight": "600"
-                            },
-                            {
-                              "type": "text",
-                              "id": "TDP7T",
-                              "name": "cost-sl",
-                              "fill": "$text-muted",
-                              "content": "/",
-                              "lineHeight": "$Type/Label/Line",
-                              "fontFamily": "$Type/Family/Mono",
-                              "fontSize": "$Type/Label/Size",
-                              "fontWeight": "normal"
-                            },
-                            {
-                              "type": "text",
-                              "id": "xVprP",
-                              "name": "cost-l2",
-                              "fill": "$text-secondary",
-                              "content": "上限",
-                              "lineHeight": "$Type/Label/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Label/Size",
-                              "fontWeight": "normal"
-                            },
-                            {
-                              "type": "text",
-                              "id": "Hg7C0",
-                              "name": "cost-n2",
-                              "fill": "$text-secondary",
-                              "content": "$5.00",
-                              "lineHeight": "$Type/Label/Line",
-                              "fontFamily": "$Type/Family/Mono",
-                              "fontSize": "$Type/Label/Size",
-                              "fontWeight": "normal"
                             }
                           ]
                         },
@@ -116603,7 +116509,7 @@
                         "$Space/md",
                         "$Space/xl"
                       ],
-                      "justifyContent": "end",
+                      "justifyContent": "space_between",
                       "alignItems": "center",
                       "children": [
                         {
@@ -118215,15 +118121,36 @@
                               "fill": "$error"
                             },
                             {
-                              "type": "text",
-                              "id": "pjXCe",
-                              "name": "err-lb",
-                              "fill": "$error-text",
-                              "content": "翻譯失敗：AI 服務逾時，已保留轉錄結果，可直接重試翻譯",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "$Type/Body/Weight"
+                              "type": "frame",
+                              "id": "qvqDA",
+                              "name": "err-text",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": "$Space/xs",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "pjXCe",
+                                  "name": "err-lb",
+                                  "fill": "$error-text",
+                                  "content": "翻譯失敗",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "J1iHn",
+                                  "name": "err-detail",
+                                  "fill": "$error-text",
+                                  "content": "translate: context deadline exceeded",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Mono",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                }
+                              ]
                             }
                           ]
                         },
@@ -118328,43 +118255,63 @@
                         "$Space/md",
                         "$Space/xl"
                       ],
-                      "justifyContent": "end",
+                      "justifyContent": "space_between",
                       "alignItems": "center",
                       "children": [
                         {
-                          "id": "RLbWb",
-                          "type": "ref",
-                          "ref": "YDPhc",
-                          "name": "btn-later",
-                          "padding": [
-                            "$Space/md",
-                            "$Space/lg-plus"
-                          ],
-                          "descendants": {
-                            "L9cIf": {
-                              "content": "稍後再試",
-                              "fontFamily": "Noto Sans TC"
-                            }
-                          }
+                          "type": "text",
+                          "id": "Wg9GC",
+                          "name": "footer-hint",
+                          "fill": "$text-secondary",
+                          "content": "已保留轉錄結果，重試只需翻譯",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "normal"
                         },
                         {
-                          "id": "Bfuec",
-                          "type": "ref",
-                          "ref": "qAERt",
-                          "name": "btn-retry",
-                          "enabled": true,
-                          "padding": [
-                            "$Space/md",
-                            "$Space/xl"
-                          ],
-                          "descendants": {
-                            "StNiU": {
-                              "content": "重試"
+                          "type": "frame",
+                          "id": "GVULq",
+                          "name": "footer-actions",
+                          "gap": "$Space/md",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "RLbWb",
+                              "type": "ref",
+                              "ref": "YDPhc",
+                              "name": "btn-later",
+                              "padding": [
+                                "$Space/md",
+                                "$Space/lg-plus"
+                              ],
+                              "descendants": {
+                                "L9cIf": {
+                                  "content": "稍後再試",
+                                  "fontFamily": "Noto Sans TC"
+                                }
+                              }
                             },
-                            "ASE9e": {
-                              "content": "$0.39"
+                            {
+                              "id": "Bfuec",
+                              "type": "ref",
+                              "ref": "qAERt",
+                              "name": "btn-retry",
+                              "enabled": true,
+                              "padding": [
+                                "$Space/md",
+                                "$Space/xl"
+                              ],
+                              "descendants": {
+                                "StNiU": {
+                                  "content": "重試"
+                                },
+                                "ASE9e": {
+                                  "content": "$0.39"
+                                }
+                              }
                             }
-                          }
+                          ]
                         }
                       ]
                     }
@@ -119958,7 +119905,7 @@
                               "height": 20,
                               "icon": "settings",
                               "library": "lucide",
-                              "fill": "$warning"
+                              "fill": "$warning-text"
                             },
                             {
                               "type": "frame",
@@ -119984,7 +119931,7 @@
                                   "id": "dDOH6",
                                   "name": "wp-sub",
                                   "fill": "$text-secondary",
-                                  "content": "生成字幕需要雲端語音辨識（ASR）金鑰。請至金鑰設定儲存，並重啟伺服器後再試。",
+                                  "content": "生成字幕需要雲端語音辨識（ASR）金鑰。請至金鑰設定儲存後即可使用。",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Primary",
                                   "fontSize": "$Type/Label/Size",
@@ -120037,7 +119984,7 @@
                               "id": "LMH8J",
                               "name": "note-m1-env",
                               "fill": "$text-muted",
-                              "content": "M1.5：ASR 金鑰可於 /settings/keys 儲存（雲端 ASR 列）；WhisperClient 於開機建構，儲存後需重啟（main.go:505）——與 Claude 金鑰的熱重載不同",
+                              "content": "ASR 金鑰熱重載（sub-5-2），儲存即生效。dsr-6a 之後這個面板只在『估價與按下之間金鑰被刪』的競態才出現；平常 J9-D ⑥ 會先停用按鈕。",
                               "lineHeight": "$Type/Label/Line",
                               "fontFamily": "$Type/Family/Primary",
                               "fontSize": "$Type/Label/Size",
@@ -120053,17 +120000,6 @@
                               "fontFamily": "$Type/Family/Primary",
                               "fontSize": "$Type/Label/Size",
                               "fontWeight": "normal"
-                            },
-                            {
-                              "type": "text",
-                              "id": "iQb2i",
-                              "name": "link-deploy-docs",
-                              "fill": "$accent-text",
-                              "content": "查看部署說明",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "500"
                             }
                           ]
                         },
@@ -154513,7 +154449,7 @@
                   "fill": "$warning-text",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "⚠️ BE gaps（設計為目標狀態，尚未上線）",
+                  "content": "BE 能力（2026-09-17）",
                   "lineHeight": "$Type/Body/Line",
                   "fontFamily": "$Type/Family/Primary",
                   "fontSize": "$Type/Body/Size",
@@ -154526,46 +154462,7 @@
                   "fill": "$warning-text",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "① 生成管線＋階段 SSE = 9R-10",
-                  "lineHeight": "$Type/Label/Line",
-                  "fontFamily": "$Type/Family/Primary",
-                  "fontSize": "$Type/Label/Size",
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "H3iYZ",
-                  "name": "note-be-2",
-                  "fill": "$warning-text",
-                  "textGrowth": "fixed-width",
-                  "width": "fill_container",
-                  "content": "② glossary HTTP API = 9R-15",
-                  "lineHeight": "$Type/Label/Line",
-                  "fontFamily": "$Type/Family/Primary",
-                  "fontSize": "$Type/Label/Size",
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "tHJDu",
-                  "name": "note-be-3",
-                  "fill": "$warning-text",
-                  "textGrowth": "fixed-width",
-                  "width": "fill_container",
-                  "content": "③ 批次生成 = 9R-10+11",
-                  "lineHeight": "$Type/Label/Line",
-                  "fontFamily": "$Type/Family/Primary",
-                  "fontSize": "$Type/Label/Size",
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "FWlt9",
-                  "name": "note-be-4",
-                  "fill": "$warning-text",
-                  "textGrowth": "fixed-width",
-                  "width": "fill_container",
-                  "content": "④ 影集觸發 = 9R-10（現況僅電影）",
+                  "content": "生成管線與階段 SSE、名詞庫 API、批次生成、影集觸發皆已上線。",
                   "lineHeight": "$Type/Label/Line",
                   "fontFamily": "$Type/Family/Primary",
                   "fontSize": "$Type/Label/Size",
@@ -154694,6 +154591,19 @@
                       ]
                     }
                   ]
+                },
+                {
+                  "type": "text",
+                  "id": "D7tuf",
+                  "name": "note-track-source",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "軌道來源（dsr-6b）：subtitle_status=found 時分不出是生成還是線上下載，程式碼的來源文字是「字幕引擎」；untranslated 一定是生成的 →「已生成」（$text-secondary，不用泥金）。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "600"
                 }
               ]
             },
@@ -154836,7 +154746,7 @@
                   "fill": "$warning-text",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "· 無「暫停／續傳」—— 後端任何地方都沒有 pause 端點。\n· 取消 = 整批（POST …/generation-batch/cancel）；無單項取消、無單部轉錄取消、無部分取消。\n· 無單項重試（失敗只計數、迴圈續跑）。\n· 影集不支援（9R-10a 未 merge；批次恆為電影）。\n· 成本只來自批次 SSE spent_usd／budget_usd —— 無 HTTP 成本／用量端點（9R-17 backlog）；預算為 env-only（AI_RUN_BUDGET_USD，預設 $5），不畫可編輯的預算控制。\n· 無歷史／無終態重探；status 探測終態後回 {running:false, progress:null}。\n· 右欄是事件日誌，非逐字稿（SSE 不送逐字內容）。\n· 單部任務載入時可見性 gated on disc-2026-07-transcription-active-jobs（active_jobs 無 transcription kind）。",
+                  "content": "· 無「暫停／續傳」—— 後端任何地方都沒有 pause 端點。\n· 取消 = 整批（POST …/generation-batch/cancel）；無單項取消、無單部轉錄取消、無部分取消。\n· 無單項重試（失敗只計數、迴圈續跑）。\n· 分集可單獨觸發；批次可混電影與分集（scope=selected）。\n· 花費讀數來自批次 SSE spent_usd／budget_usd；單片估價端點已上線（GET …/transcribe/estimate，dsr-6a），實際用量端點仍無（9R-17）；批次請求可帶 budget_usd，預設值讀 AI_RUN_BUDGET_USD（$5）。\n· 無歷史／無終態重探；status 探測終態後回 {running:false, progress:null}。\n· 右欄是事件日誌，非逐字稿（SSE 不送逐字內容）。\n· 單部任務的可見性已由 active_jobs 提供（disc-2026-07-transcription-active-jobs 已合併）。",
                   "lineHeight": "$Type/Label/Line",
                   "fontFamily": "$Type/Family/Primary",
                   "fontSize": "$Type/Label/Size",
@@ -154901,6 +154811,19 @@
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
                   "content": "此 F3 生成進度 dialog 內應加一個小連結「前往生成工作區」，讓單部任務可『彈出』到工作區觀看（dialog＝啟動器/瞬時、工作區＝離得開回得來的觀看場所）。F3 屬 Epic 6 已上線 frame，本輪保持 byte 不變，故以此註記表達，不直接改動 dialog。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "QARsD",
+                  "name": "note-f3-capability",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "進度說明只能顯示 SSE 給得出的內容：階段文字與翻譯百分比。已用／總時間、模型名、本次用量目前沒有資料來源（9R-17）。（dsr-6b 2026-09-17）",
                   "lineHeight": "$Type/Label/Line",
                   "fontFamily": "$Type/Family/Primary",
                   "fontSize": "$Type/Label/Size",

@@ -82,6 +82,27 @@ interface SubtitleTrack {
 export const HANT = new Set(['zh-hant', 'zh-tw', 'zh', 'zh-hk']);
 export const HANS = new Set(['zh-hans', 'zh-cn']);
 
+export type SubtitleLangFamily = 'hant' | 'hans' | 'en' | 'other';
+
+/**
+ * One subtitle-language tag → its display label (story dsr-6b AC #3).
+ *
+ * The ONE mapping for every surface that names a track's language — the detail
+ * page's 檔案資訊 row and the 管理字幕 dialog's pills used to carry two copies
+ * that disagreed (`eng`/`und` shown raw in the dialog). Case-insensitive: the
+ * dialog receives raw values such as the `zh-Hant` the pipeline writes. Anything
+ * unrecognised stays exactly as the file stated it — `chi`/`zho` are in neither
+ * script set, so no script is invented for them.
+ */
+export function subtitleLangLabel(lang: string): { label: string; family: SubtitleLangFamily } {
+  const l = lang.toLowerCase();
+  if (HANT.has(l)) return { label: '繁中', family: 'hant' };
+  if (HANS.has(l)) return { label: '簡中', family: 'hans' };
+  if (l === 'en' || l === 'eng' || l.startsWith('en-')) return { label: '英文', family: 'en' };
+  if (l === '' || l === 'und') return { label: '未標示', family: 'other' };
+  return { label: lang, family: 'other' };
+}
+
 /**
  * Lowercased embedded-track language tags. `null` when `subtitleTracks` is
  * absent or a non-JSON legacy value (can't classify → unknown); an empty array

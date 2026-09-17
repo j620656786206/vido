@@ -31,6 +31,8 @@ const h = vi.hoisted(() => ({
   // with the SERIES id while the transcribe target stays the episode id.
   // Captured so the two ids are assertable as DIFFERENT at the dialog seam.
   glossaryQueriedId: undefined as string | undefined,
+  // dsr-6b AC #4: the id the glossary PANEL was handed (must match the count's id).
+  glossaryPanelId: undefined as string | undefined,
   fetchHook: {
     search: vi.fn(),
     isSearching: false,
@@ -80,8 +82,12 @@ vi.mock('../../services/transcriptionService', () => ({
 }));
 
 vi.mock('./GlossaryPanelV2', () => ({
-  GlossaryPanelV2: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="glossary-panel-stub" /> : null,
+  GlossaryPanelV2: ({ open, mediaId }: { open: boolean; mediaId: string }) =>
+    // Record the id only once the panel is actually OPEN, so a test that never
+    // opens it cannot pass on the closed render's props.
+    open && (h.glossaryPanelId = mediaId) && open ? (
+      <div data-testid="glossary-panel-stub" />
+    ) : null,
 }));
 
 import { ManageSubtitleDialogV2 } from './ManageSubtitleDialogV2';
@@ -153,7 +159,11 @@ function StatusSwitchDialog(props: React.ComponentProps<typeof ManageSubtitleDia
 
 function renderDialog(
   props: DialogProps = {},
-  options: { controlled?: boolean; statusSwitch?: boolean } = {}
+  options: {
+    controlled?: boolean;
+    statusSwitch?: boolean;
+    wrapper?: (p: React.ComponentProps<typeof ManageSubtitleDialogV2>) => React.ReactElement;
+  } = {}
 ) {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -176,7 +186,9 @@ function renderDialog(
   const rootRoute = createRootRoute({
     component: () => (
       <QueryClientProvider client={queryClient}>
-        {options.controlled ? (
+        {options.wrapper ? (
+          <options.wrapper {...merged} />
+        ) : options.controlled ? (
           <ControlledDialog {...merged} />
         ) : options.statusSwitch ? (
           <StatusSwitchDialog {...merged} />
@@ -598,10 +610,11 @@ describe('ManageSubtitleDialogV2 — episode mode (9R-10c)', () => {
     mockedTrigger.mockReset();
   });
 
-  // RED LINE 1. /media/:id/glossary takes the route id VERBATIM — it will not
-  // resolve an episode id to its series. Sending the episode id would strand
-  // terms in rows no other episode can ever see (the frontend twin of the bug
-  // CR sub-5-5 H1 fixed in the pipeline). The two ids MUST differ here.
+  // RED LINE 1. The glossary is per-SHOW. Since sub-7-1 the backend resolves an
+  // episode id to its series' scope, so terms are not stranded — but the
+  // frontend caches by the id it was given: the entry's count and the panel
+  // must use the SAME (series) id, or the count goes stale after an edit
+  // (dsr-6b 🔴 #1). The trigger still takes the EPISODE id.
   it('queries the glossary with the SERIES id while triggering with the EPISODE id', async () => {
     mockedEpisodeTrigger.mockResolvedValue({
       status: 'started',
@@ -618,6 +631,16 @@ describe('ManageSubtitleDialogV2 — episode mode (9R-10c)', () => {
     expect(mockedEpisodeTrigger).not.toHaveBeenCalledWith(SERIES_UUID);
     // …and the MOVIE route is never touched for an episode.
     expect(mockedTrigger).not.toHaveBeenCalled();
+  });
+
+  it('hands the glossary PANEL the series id too, so the count updates after an edit (dsr-6b)', async () => {
+    h.glossaryPanelId = undefined;
+    renderEpisodeDialog();
+    await findPricedGenerate();
+    expect(h.glossaryPanelId).toBeUndefined();
+    fireEvent.click(screen.getByTestId('open-glossary'));
+    expect(h.glossaryPanelId).toBe(SERIES_UUID);
+    expect(h.glossaryPanelId).not.toBe(EPISODE_UUID);
   });
 
   it('falls back to mediaId for the glossary when glossaryMediaId is omitted (movie/series unchanged)', async () => {
@@ -639,9 +662,19 @@ describe('ManageSubtitleDialogV2 — episode mode (9R-10c)', () => {
     expect(await screen.findByTestId('toggle-fetch')).toBeInTheDocument();
   });
 
-  it('renders the SxxExx code chip so the dialog says WHICH episode it acts on', async () => {
+  it('renders the SxxExx code so the dialog says WHICH episode it acts on', async () => {
     renderEpisodeDialog();
     expect(await screen.findByTestId('dialog-title-code')).toHaveTextContent('S04E07');
+  });
+
+  // dsr-6b AC #2 — F1 tO72N / F3 Dey4O: plain Mono BodyLg 16/600 text, not a chip.
+  it('draws the episode code as plain Mono text, not a chip', async () => {
+    renderEpisodeDialog();
+    const code = await screen.findByTestId('dialog-title-code');
+    expect(code.className.split(' ')).toEqual(
+      expect.arrayContaining(['font-mono', 'text-base', 'font-semibold'])
+    );
+    expect(code.className).not.toMatch(/\bbg-|\bpx-|\bpy-|rounded/);
   });
 
   it('enables the CTA (an episode has a generate route, unlike a series)', async () => {
@@ -671,6 +704,285 @@ describe('ManageSubtitleDialogV2 — episode mode (9R-10c)', () => {
 });
 
 // ── dsr-6a — the price on the paid buttons (J9-D) ─────────────────────────
+
+// ── dsr-6b — dialog alignment (F1–F5) ────────────────────────────────────────
+
+describe('ManageSubtitleDialogV2 — tracks and glossary entry (dsr-6b)', () => {
+  it('an untranslated item lists its generated English subtitle instead of 尚無字幕', async () => {
+    mockedEstimate.mockResolvedValue(readyEstimate({ plan: 'translate_only', estimatedUsd: 0.24 }));
+    renderDialog({
+      subtitleStatus: 'untranslated',
+      subtitleLanguage: 'en',
+      subtitleTracks: undefined,
+    });
+
+    const row = await screen.findByTestId('subtitle-track-engine');
+    expect(row).toHaveTextContent('英文');
+    expect(row).toHaveTextContent('已生成');
+    expect(screen.queryByTestId('subtitle-empty-state')).toBeNull();
+  });
+
+  it('keeps 字幕引擎 as the source of a found subtitle (generation vs download is unknowable)', async () => {
+    renderDialog({
+      subtitleStatus: 'found',
+      subtitleLanguage: 'zh-Hant',
+      subtitleTracks: undefined,
+    });
+    const row = await screen.findByTestId('subtitle-track-engine');
+    expect(row).toHaveTextContent('繁中');
+    expect(row).toHaveTextContent('字幕引擎');
+  });
+
+  it('names eng / und tracks the way the detail page does', async () => {
+    renderDialog({
+      subtitleTracks: JSON.stringify([{ language: 'eng' }, { language: 'und' }, { language: '' }]),
+    });
+    expect(await screen.findByTestId('subtitle-track-track-0')).toHaveTextContent('英文');
+    expect(screen.getByTestId('subtitle-track-track-1')).toHaveTextContent('未標示');
+    expect(screen.getByTestId('subtitle-track-track-2')).toHaveTextContent('未標示');
+    expect(screen.queryByText('未知')).toBeNull();
+  });
+
+  it('writes the glossary count as （3條） with no inner spaces', async () => {
+    renderDialog();
+    const entry = await screen.findByTestId('open-glossary');
+    expect(entry.textContent).toContain('（3條）');
+  });
+});
+
+describe('ManageSubtitleDialogV2 — progress and failure (dsr-6b)', () => {
+  /** Starts a run that fails at translating. `afterFail` is what the estimate
+   *  answers once the failure re-prices (dsr-6a) — set BEFORE the failure lands. */
+  async function startFailedRun(afterFail = readyEstimate()) {
+    mockedTrigger.mockResolvedValue({ status: 'started', result: { jobId: 'j', message: 'ok' } });
+    mockedEstimate.mockResolvedValue(readyEstimate());
+    const view = renderDialog();
+    const cta = await findPricedGenerate();
+    mockedEstimate.mockResolvedValue(afterFail);
+    h.genState.phase = 'failed';
+    h.genState.failedPhase = 'translating';
+    fireEvent.click(cta);
+    await screen.findByTestId('gen-failed-panel');
+    return view;
+  }
+
+  it('shows the 即時更新（SSE） chip only while a run is live', async () => {
+    mockedTrigger.mockResolvedValue({ status: 'started', result: { jobId: 'j', message: 'ok' } });
+    h.genState.phase = 'transcribing';
+    renderDialog();
+    fireEvent.click(await findPricedGenerate());
+    expect(await screen.findByText('即時更新（SSE）')).toBeInTheDocument();
+  });
+
+  it('hides the SSE chip once the run has failed (F4 has none)', async () => {
+    await startFailedRun();
+    expect(screen.queryByText('即時更新（SSE）')).toBeNull();
+  });
+
+  it('F4 footer: 稍後再試 closes the dialog and 重試 carries the price', async () => {
+    const onOpenChange = vi.fn();
+    mockedTrigger.mockResolvedValue({ status: 'started', result: { jobId: 'j', message: 'ok' } });
+    renderDialog({ onOpenChange });
+    const cta = await findPricedGenerate();
+    h.genState.phase = 'failed';
+    h.genState.failedPhase = 'translating';
+    fireEvent.click(cta);
+    await screen.findByTestId('gen-failed-panel');
+
+    const later = screen.getByTestId('dialog-close');
+    expect(later.textContent).toBe('稍後再試');
+    const retry = await screen.findByTestId('gen-retry');
+    expect(screen.getByTestId('gen-retry-amount').textContent).toBe('$0.42');
+    // Both live in the footer, not inside the failed panel.
+    expect(screen.getByTestId('gen-failed-panel').contains(retry)).toBe(false);
+
+    fireEvent.click(later);
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('the idle and running footers still say 關閉', async () => {
+    mockedTrigger.mockResolvedValue({ status: 'started', result: { jobId: 'j', message: 'ok' } });
+    renderDialog();
+    const cta = await findPricedGenerate();
+    expect(screen.getByTestId('dialog-close').textContent).toBe('關閉');
+
+    h.genState.phase = 'transcribing';
+    fireEvent.click(cta);
+    await screen.findByTestId('generation-progress-v2');
+    expect(screen.getByTestId('dialog-close').textContent).toBe('關閉');
+    expect(screen.getByText('關閉後生成會在背景繼續')).toBeInTheDocument();
+    expect(screen.queryByTestId('gen-retry')).toBeNull();
+  });
+
+  // /ship CR M1 — dsr-6a's retry guarantees, now asserted on the FOOTER button.
+  it('footer 重試 starts the run again', async () => {
+    await startFailedRun();
+    const retry = await screen.findByTestId('gen-retry');
+    await waitFor(() => expect(retry).toBeEnabled());
+    fireEvent.click(retry);
+    await waitFor(() => expect(mockedTrigger).toHaveBeenCalledTimes(2));
+  });
+
+  it('footer 重試 in flight keeps its price and cannot be pressed twice', async () => {
+    await startFailedRun();
+    const retry = await screen.findByTestId('gen-retry');
+    await waitFor(() => expect(retry).toBeEnabled());
+    mockedTrigger.mockReturnValue(new Promise(() => {}));
+    fireEvent.click(retry);
+    await waitFor(() => expect(retry).toHaveAttribute('aria-busy', 'true'));
+    fireEvent.click(retry);
+    expect(mockedTrigger).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId('gen-retry-amount').textContent).toBe('$0.42');
+  });
+
+  it('a blocked footer 重試 is described by its reason', async () => {
+    await startFailedRun(
+      readyEstimate({ plan: 'translate_only', translationConfigured: false, estimatedUsd: 0 })
+    );
+    const retry = await screen.findByTestId('gen-retry');
+    await waitFor(() => expect(retry).toBeDisabled());
+    expect(retry).toHaveAccessibleDescription(/尚未設定翻譯金鑰/);
+  });
+
+  it('does not claim 已保留轉錄結果 while the failure is still being re-priced', async () => {
+    // The previous answer was a translate-only resume; the re-price has not landed.
+    mockedTrigger.mockResolvedValue({ status: 'started', result: { jobId: 'j', message: 'ok' } });
+    mockedEstimate.mockResolvedValue(readyEstimate({ plan: 'translate_only', estimatedUsd: 0.24 }));
+    renderDialog({ subtitleStatus: 'untranslated' });
+    const cta = await findPricedGenerate();
+    mockedEstimate.mockReturnValue(new Promise(() => {}));
+    h.genState.phase = 'failed';
+    h.genState.failedPhase = 'translating';
+    fireEvent.click(cta);
+    await screen.findByTestId('gen-failed-panel');
+    await waitFor(() => expect(mockedEstimate).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText('已保留轉錄結果，重試只需翻譯')).toBeNull();
+  });
+
+  // /ship CR M2 — on a phone the footer cannot fit hint + two buttons on one line.
+  it('the failed-run hint takes its own row below sm', async () => {
+    await startFailedRun(readyEstimate({ plan: 'translate_only', estimatedUsd: 0.24 }));
+    const note = await screen.findByTestId('gen-retry-note');
+    expect(note.className.split(' ')).toEqual(
+      expect.arrayContaining(['basis-full', 'sm:basis-auto'])
+    );
+    expect(note.parentElement?.className.split(' ')).toContain('flex-wrap');
+  });
+
+  it('footer hint on failure: translate-only resume → 已保留轉錄結果，重試只需翻譯', async () => {
+    await startFailedRun(readyEstimate({ plan: 'translate_only', estimatedUsd: 0.24 }));
+    // entering `failed` re-prices (dsr-6a); wait for the translate-only answer
+    await waitFor(() => expect(screen.getByTestId('gen-retry-amount').textContent).toBe('$0.24'));
+    const note = screen.getByTestId('gen-retry-note');
+    expect(note.textContent).toBe('已保留轉錄結果，重試只需翻譯');
+    expect(screen.getByTestId('gen-retry')).toHaveAccessibleDescription(
+      '已保留轉錄結果，重試只需翻譯'
+    );
+  });
+
+  it('footer hint on failure: a blocking reason wins over the resume line and links to settings', async () => {
+    await startFailedRun(
+      readyEstimate({
+        plan: 'translate_only',
+        asrAvailable: true,
+        translationConfigured: false,
+        estimatedUsd: 0,
+      })
+    );
+    // translate-only + no translation key → blocked with a settings link; the
+    // blocking reason must win over 「已保留轉錄結果…」.
+    const note = await screen.findByText(/尚未設定翻譯金鑰/);
+    expect(note.closest('[data-testid="gen-retry-note"]')).not.toBeNull();
+    expect(screen.getByTestId('gen-retry-note').textContent).not.toContain('已保留轉錄結果');
+    expect(screen.getByTestId('retry-goto-settings')).toBeInTheDocument();
+    expect(screen.getByTestId('gen-retry')).toBeDisabled();
+  });
+
+  it('no hint element at all when there is nothing to say', async () => {
+    await startFailedRun();
+    await waitFor(() => expect(screen.getByTestId('gen-retry-amount').textContent).toBe('$0.42'));
+    expect(screen.queryByTestId('gen-retry-note')).toBeNull();
+  });
+
+  it('shows the existing subtitles under a failed run, and hides the section when there are none', async () => {
+    await startFailedRun();
+    expect(screen.getByTestId('subtitle-tracks-section')).toBeInTheDocument();
+    expect(screen.queryByTestId('subtitle-empty-state')).toBeNull();
+  });
+
+  it('a failed run with no tracks shows no 現有字幕 section and no 尚無字幕', async () => {
+    mockedTrigger.mockResolvedValue({ status: 'started', result: { jobId: 'j', message: 'ok' } });
+    renderDialog({ subtitleTracks: undefined });
+    const cta = await findPricedGenerate();
+    h.genState.phase = 'failed';
+    h.genState.failedPhase = 'extracting';
+    fireEvent.click(cta);
+    await screen.findByTestId('gen-failed-panel');
+    expect(screen.queryByTestId('subtitle-tracks-section')).toBeNull();
+    expect(screen.queryByTestId('subtitle-empty-state')).toBeNull();
+  });
+
+  it('asks the parent to refetch ONCE on failure, even with a new callback on every render', async () => {
+    const spy = vi.fn();
+    mockedTrigger.mockResolvedValue({ status: 'started', result: { jobId: 'j', message: 'ok' } });
+    // A parent that passes an inline arrow (SeasonAccordion does) and re-renders.
+    function UnstableParent(props: React.ComponentProps<typeof ManageSubtitleDialogV2>) {
+      const [n, setN] = React.useState(0);
+      return (
+        <>
+          <button type="button" data-testid="rerender" onClick={() => setN(n + 1)}>
+            {n}
+          </button>
+          <ManageSubtitleDialogV2 {...props} onGenerationFailed={() => spy()} />
+        </>
+      );
+    }
+    renderDialog({}, { wrapper: UnstableParent });
+    const cta = await findPricedGenerate();
+    h.genState.phase = 'failed';
+    h.genState.failedPhase = 'translating';
+    fireEvent.click(cta);
+    await screen.findByTestId('gen-failed-panel');
+    await waitFor(() => expect(spy).toHaveBeenCalledTimes(1));
+
+    for (let i = 0; i < 3; i++) fireEvent.click(screen.getByTestId('rerender'));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('fires again when a retried run fails again, and never on mount', async () => {
+    const spy = vi.fn();
+    mockedTrigger.mockResolvedValue({ status: 'started', result: { jobId: 'j', message: 'ok' } });
+    function Parent(props: React.ComponentProps<typeof ManageSubtitleDialogV2>) {
+      const [n, setN] = React.useState(0);
+      return (
+        <>
+          <button type="button" data-testid="rerender" onClick={() => setN(n + 1)}>
+            {n}
+          </button>
+          <ManageSubtitleDialogV2 {...props} onGenerationFailed={spy} />
+        </>
+      );
+    }
+    renderDialog({}, { wrapper: Parent });
+    const cta = await findPricedGenerate();
+    expect(spy).not.toHaveBeenCalled();
+
+    h.genState.phase = 'failed';
+    h.genState.failedPhase = 'translating';
+    fireEvent.click(cta);
+    await waitFor(() => expect(spy).toHaveBeenCalledTimes(1));
+
+    // Retry → the hook restarts (extracting) → the run fails again.
+    h.genState.phase = 'extracting';
+    fireEvent.click(await screen.findByTestId('gen-retry'));
+    await waitFor(() => expect(mockedTrigger).toHaveBeenCalledTimes(2));
+    fireEvent.click(screen.getByTestId('rerender'));
+    h.genState.phase = 'failed';
+    fireEvent.click(screen.getByTestId('rerender'));
+    await waitFor(() => expect(spy).toHaveBeenCalledTimes(2));
+  });
+});
 
 describe('ManageSubtitleDialogV2 — cost on paid buttons (dsr-6a)', () => {
   it('① shows the amount verbatim on 生成字幕, described by the helper line', async () => {

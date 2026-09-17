@@ -427,6 +427,7 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
           open={subtitleOpen}
           onOpenChange={setSubtitleOpen}
           onGenerationComplete={onGenerationComplete}
+          onGenerationFailed={onGenerationComplete}
           onDownloadSuccess={() => (isMovie ? localMovie.refetch() : localSeries.refetch())}
         />
       )}

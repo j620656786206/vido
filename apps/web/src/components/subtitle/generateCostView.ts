@@ -32,8 +32,9 @@ export interface RetryNote {
 export interface GenerateCostView {
   cost: ButtonCostState;
   helper: GenerateHelper;
-  /** The retry panels have no helper line of their own: this is what they
-   *  render under 重試 — the block reason, or the ≈ explanation. null = nothing. */
+  /** What the retry surfaces say beside 重試 (the start-error panel, and the
+   *  failed-run footer hint since dsr-6b) — the block reason, the ≈ explanation or
+   *  the English-only line. null = nothing. */
   retryNote: RetryNote | null;
 }
 
@@ -136,7 +137,7 @@ export function deriveGenerateCostView(input: {
   if (!data.translationConfigured) {
     // Degraded ≠ blocked (sub-2-2d): an English subtitle beats none. With
     // self-hosted ASR the amount is $0.00, and a zero must say why (SM supplement ①)
-    // — on the retry panels too, which have no helper line of their own.
+    // — on the retry surfaces too (start-error panel, failed-run footer hint).
     const text = data.selfHostedAsr
       ? `${SELF_HOSTED_PREFIX}${ENGLISH_ONLY_LINE}`
       : ENGLISH_ONLY_LINE;
