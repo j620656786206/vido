@@ -1,6 +1,6 @@
 # Story DSR.2b-b：沒認出來的片，詳情頁說實話並給你真的能走的路（前端＋設計稿）
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -363,6 +363,7 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`，BMAD dev agent（Amelia）2
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-17 | ✅ 收單 —— PR #452 合併進 main（commit b4faf515），**CI 17 項全綠**（含 4 個 e2e shard 與 4 個視覺 shard）。`-linux` 基準線：手動觸發 Visual Regression → bootstrap PR #453（3 張，只加圖）合回分支後轉綠。 |
 | 2026-09-17 | 🔍 **/ship 對抗式 CR**：0 HIGH／3 MED／5 LOW，修 6、立案 3。最重要的兩條：① 預填搜尋字對真實下載檔名會留下壓制組、HDR、H 265 之類的雜訊——改成在第一個發行標籤處截斷；② 影集的「檔案路徑」其實是資料夾，預填會變成 `TV`——影集改用片名。另外關閉對話框後焦點會回到按鈕、錯誤句不再黏著、整理中不會提早說「還是沒有找到」。 |
 | 2026-09-17 | ✅ **dev-story 完成 → review**（Amelia）。web 3487/3487、api PASS、lint 0 errors、typecheck、token 一致；e2e（真後端＋真 TMDb）42/42。沒認出來的片，詳情頁第一次說實話並給出真的能走的路：「比對失敗」有手動選片（套用後頁面變回正常詳情頁）與重新比對，「資料整理中」只有立即比對、不轉圈；舊的 v1 fallback 元件、夾具、兩張 v1 手機抽屜稿一起刪掉。設計稿新增 6 張（B10p／B11p／B12p 桌機與手機）。 |
 | 2026-09-17 | 🔍 **建單後對抗驗證**（fresh-context 驗證代理，只讀）：本張相關 2 項 CRITICAL、6 項 SHOULD FIX，**全部併入**。最重要的兩項：① 原本要把舊的手動搜尋對話框改成 v2——但 `tests/e2e/manual-search.spec.ts` 綁死了它的背景點擊關閉、標題、class 與原生下拉，同時又規定那支 spec 一行不准改，兩條互相矛盾（改成另做 `ManualMatchDialogV2`，舊的只修型別與檔頭）；② 「失敗」e2e 原本斷言看得到「檔案資訊」與看不到「在地化資訊」——API 種的片沒有路徑，前者永遠紅、後者不做 AC #5 也會綠（前者拿掉，後者移到給了路徑的單元測試）。另外：`''` 原本算整理中，會對所有 TMDb 種子片說「還在整理」，按下去還會把好片打成失敗（改成只有 `pending`，e2e 用批次重新解析種 pending）；`metadata.ts` 的錯誤沒有碼（改丟 `ApiError`）；預填搜尋字要用檔案路徑的檔名；「重新比對」文案不能暗示一定有用；補檔頭、`CLAUDE.md` 說明、兩個新 backlog。 |
