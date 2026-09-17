@@ -20,13 +20,14 @@ const progress = (
   status: 'running',
   spentUsd: 0.42,
   budgetUsd: 5,
+  items: null,
   ...over,
 });
 
 const items: GenerationBatchItem[] = [
-  { mediaId: 'm0', title: '沙丘：第二部' },
-  { mediaId: 'm12', title: '奧本海默' },
-  { mediaId: 'm20', title: '花月殺手' },
+  { mediaId: 'm0', title: '沙丘：第二部', mediaType: 'movie', seriesTitle: '' },
+  { mediaId: 'm12', title: '奧本海默', mediaType: 'movie', seriesTitle: '' },
+  { mediaId: 'm20', title: '花月殺手', mediaType: 'movie', seriesTitle: '' },
 ];
 
 const feed: FeedRow[] = [

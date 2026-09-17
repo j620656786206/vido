@@ -18,7 +18,11 @@
  */
 import { useCallback, useEffect, useReducer, useRef } from 'react';
 import { snakeToCamel } from '../utils/caseTransform';
-import type { GenerationBatchProgress, GenerationBatchStatus } from '../services/subtitleService';
+import type {
+  GenerationBatchItemState,
+  GenerationBatchProgress,
+  GenerationBatchStatus,
+} from '../services/subtitleService';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 const SSE_RECONNECT_MS = 10000;
@@ -39,6 +43,13 @@ export interface GenerationBatchProgressState {
   status: GenerationBatchHookStatus;
   spentUsd: number;
   budgetUsd: number;
+  /**
+   * The queue with each entry's state (dsr-6d-a AC #1). The SSE event sends it
+   * only on the terminal broadcast — while running it carries a single
+   * changed_item instead — so this stays null until a consumer seeds it from
+   * the 202 / status probe (dsr-6d-b / dsr-6d-c).
+   */
+  items: GenerationBatchItemState[] | null;
 }
 
 const initialState: GenerationBatchProgressState = {
@@ -53,6 +64,7 @@ const initialState: GenerationBatchProgressState = {
   status: 'idle',
   spentUsd: 0,
   budgetUsd: 0,
+  items: null,
 };
 
 type Action =

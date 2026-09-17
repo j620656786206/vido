@@ -260,7 +260,70 @@ describe('subtitleService', () => {
             { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51', title: '沙丘：第二部' },
             { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52', title: '奧本海默' },
           ],
+          // A server from before dsr-6d-a sends no progress — the result says so explicitly.
+          progress: null,
         },
+      });
+    });
+
+    it('carries the 202 progress snapshot with per-item states (dsr-6d-a AC #5)', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 202,
+        json: () =>
+          Promise.resolve({
+            success: true,
+            data: {
+              batch_id: 'gb-3',
+              total_items: 1,
+              items: [
+                {
+                  media_id: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e58',
+                  title: 'S04E07 第七章',
+                  media_type: 'episode',
+                  series_title: '怪奇物語',
+                },
+              ],
+              progress: {
+                batch_id: 'gb-3',
+                total_items: 1,
+                current_index: 1,
+                current_media_id: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e58',
+                current_item: 'S04E07 第七章',
+                success_count: 0,
+                fail_count: 0,
+                paused_count: 0,
+                status: 'running',
+                spent_usd: 0,
+                budget_usd: 5,
+                items: [
+                  {
+                    media_id: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e58',
+                    title: 'S04E07 第七章',
+                    media_type: 'episode',
+                    series_title: '怪奇物語',
+                    status: 'running',
+                    reason: '',
+                  },
+                ],
+              },
+            },
+          }),
+      });
+
+      const outcome = await subtitleService.startGenerationBatch({ scope: 'missing' });
+
+      expect(outcome.conflict).toBe(false);
+      if (outcome.conflict) return;
+      expect(outcome.result.items[0].seriesTitle).toBe('怪奇物語');
+      expect(outcome.result.progress?.budgetUsd).toBe(5);
+      expect(outcome.result.progress?.items?.[0]).toEqual({
+        mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e58',
+        title: 'S04E07 第七章',
+        mediaType: 'episode',
+        seriesTitle: '怪奇物語',
+        status: 'running',
+        reason: '',
       });
     });
 
@@ -296,7 +359,7 @@ describe('subtitleService', () => {
 
       expect(outcome).toEqual({
         conflict: false,
-        result: { batchId: null, totalItems: 0, items: [] },
+        result: { batchId: null, totalItems: 0, items: [], progress: null },
       });
     });
 
@@ -396,6 +459,61 @@ describe('subtitleService', () => {
       expect(result.progress?.spentUsd).toBe(0.1);
     });
 
+    it('parses last — the terminal snapshot kept after a batch ends (dsr-6d-a AC #3)', async () => {
+      mockFetch.mockResolvedValueOnce(
+        mockSuccessResponse({
+          running: false,
+          progress: null,
+          last: {
+            batch_id: 'gb-9',
+            total_items: 2,
+            current_index: 2,
+            current_media_id: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52',
+            current_item: 'B',
+            success_count: 1,
+            fail_count: 0,
+            paused_count: 1,
+            status: 'budget_ceiling',
+            spent_usd: 5.03,
+            budget_usd: 5,
+            items: [
+              {
+                media_id: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51',
+                title: 'A',
+                media_type: 'movie',
+                series_title: '',
+                status: 'done',
+                reason: '',
+              },
+              {
+                media_id: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52',
+                title: 'S01E02',
+                media_type: 'episode',
+                series_title: '黑鏡',
+                status: 'paused',
+                reason: '',
+              },
+            ],
+          },
+        })
+      );
+
+      const result = await subtitleService.getGenerationBatchStatus();
+
+      expect(result.running).toBe(false);
+      expect(result.progress).toBeNull();
+      expect(result.last?.status).toBe('budget_ceiling');
+      expect(result.last?.pausedCount).toBe(1);
+      expect(result.last?.items?.[1]).toEqual({
+        mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52',
+        title: 'S01E02',
+        mediaType: 'episode',
+        seriesTitle: '黑鏡',
+        status: 'paused',
+        reason: '',
+      });
+    });
+
     it('handles the idle / post-terminal response (progress null)', async () => {
       mockFetch.mockResolvedValueOnce(mockSuccessResponse({ running: false, progress: null }));
 
@@ -415,6 +533,19 @@ describe('subtitleService', () => {
       expect(url).toContain('/subtitles/generation-batch/cancel');
       expect(options.method).toBe('POST');
       expect(result).toEqual({ cancelled: true, running: false });
+    });
+  });
+
+  describe('dismissGenerationBatch', () => {
+    it('POSTs to the dismiss endpoint and returns { dismissed, running } (dsr-6d-a AC #6)', async () => {
+      mockFetch.mockResolvedValueOnce(mockSuccessResponse({ dismissed: true, running: false }));
+
+      const result = await subtitleService.dismissGenerationBatch();
+
+      const [url, options] = mockFetch.mock.calls[0];
+      expect(url).toContain('/subtitles/generation-batch/dismiss');
+      expect(options.method).toBe('POST');
+      expect(result).toEqual({ dismissed: true, running: false });
     });
   });
 

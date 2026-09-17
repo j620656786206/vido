@@ -32,9 +32,12 @@ const (
 	// 13-1a request resource + ephemeral `progress`; stamped [@contract-v1] (FE 13-3b acks).
 	EventRequestProgress EventType = "request_progress"
 	// EventGenerationBatchProgress carries Route C generation-batch progress
-	// (Story 9R-16 AC 9, [@contract-v1] — FE ux3-subtitle-v2-batch acks). Payload keys:
+	// (Story 9R-16 AC 9, [@contract-v2] — FE ux3-subtitle-v2-batch acks). Payload keys:
 	// batch_id, total_items, current_index, current_media_id, current_item,
-	// success_count, fail_count, paused_count, status, spent_usd, budget_usd;
+	// success_count, fail_count, paused_count, status, spent_usd, budget_usd,
+	// plus items and changed_item (dsr-6d-a AC #2 [@contract-v1], additive):
+	// running events carry the one queue entry whose state changed and a null
+	// items; the terminal event carries the whole queue and a null changed_item.
 	// status ∈ running|complete|cancelled|error|budget_ceiling. Per-item STAGE
 	// detail is NOT duplicated here — FE joins the transcription_* events by
 	// current_media_id.
@@ -162,8 +165,13 @@ func (h *Hub) Broadcast(event Event) {
 	select {
 	case h.broadcast <- event:
 	default:
+		// Log WHAT was dropped, never the payload: a generation-batch terminal
+		// event carries the whole queue (thousands of items on a select-all,
+		// dsr-6d-a AC #2), and a dropped-event log line must not become a
+		// multi-hundred-KB write. The per-client drop below already does this.
 		data, _ := json.Marshal(event)
-		slog.Warn("SSE broadcast channel full, dropping event", "event", string(data))
+		slog.Warn("SSE broadcast channel full, dropping event",
+			"event_type", string(event.Type), "payload_bytes", len(data))
 	}
 }
 

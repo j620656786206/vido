@@ -36,6 +36,9 @@ type mockGenerationProcessor struct {
 	items         []services.GenerationBatchItem
 	startErr      error
 	progress      *services.GenerationBatchProgress
+	last          *services.GenerationBatchProgress
+	snapshotFor   map[string]*services.GenerationBatchProgress
+	dismissed     bool
 	preview       int
 	previewInclEp int
 	prevErr       error
@@ -45,6 +48,8 @@ type mockGenerationProcessor struct {
 	startedBudget float64
 	startedModel  string
 	cancelCalled  bool
+	dismissCalled bool
+	snapshotForID string
 }
 
 func (m *mockGenerationProcessor) IsAvailable() bool { return m.available }
@@ -61,6 +66,17 @@ func (m *mockGenerationProcessor) Start(_ context.Context, scope string, mediaID
 }
 func (m *mockGenerationProcessor) GetProgress() *services.GenerationBatchProgress { return m.progress }
 func (m *mockGenerationProcessor) Cancel()                                        { m.cancelCalled = true }
+func (m *mockGenerationProcessor) Snapshot() (*services.GenerationBatchProgress, *services.GenerationBatchProgress) {
+	return m.progress, m.last
+}
+func (m *mockGenerationProcessor) SnapshotFor(batchID string) *services.GenerationBatchProgress {
+	m.snapshotForID = batchID
+	return m.snapshotFor[batchID]
+}
+func (m *mockGenerationProcessor) DismissLast() (bool, bool) {
+	m.dismissCalled = true
+	return m.dismissed, m.running
+}
 func (m *mockGenerationProcessor) PreviewMissing(_ context.Context) (int, int, error) {
 	if m.prevErr != nil {
 		return 0, 0, m.prevErr
@@ -160,6 +176,7 @@ func TestStartGenerationBatch_Running409WithProgress(t *testing.T) {
 	require.True(t, ok, "409 must carry progress in data")
 	assert.Equal(t, "b-1", data["batch_id"])
 	assert.Equal(t, float64(38), data["total_items"])
+	assert.Contains(t, data, "items", "dsr-6d-a AC #3: the 409 progress carries the queue too")
 }
 
 func TestStartGenerationBatch_InvalidSelection400(t *testing.T) {
@@ -203,6 +220,67 @@ func TestStartGenerationBatch_Accepted202(t *testing.T) {
 	assert.Equal(t, "missing", p.startedScope)
 }
 
+// dsr-6d-a AC #5: the 202 carries the batch's own progress snapshot.
+func TestStartGenerationBatch_Accepted202CarriesProgress(t *testing.T) {
+	queue := []services.GenerationBatchItemState{
+		{GenerationBatchItem: services.GenerationBatchItem{MediaID: genUUIDAlpha, Title: "S04E07 第七章", MediaType: "episode", SeriesTitle: "怪奇物語"}, Status: services.GenerationBatchItemRunning},
+		{GenerationBatchItem: services.GenerationBatchItem{MediaID: genUUIDBravo, Title: "Bravo", MediaType: "movie"}, Status: services.GenerationBatchItemQueued},
+	}
+	p := &mockGenerationProcessor{
+		available: true,
+		batchID:   "batch-abc",
+		items: []services.GenerationBatchItem{
+			{MediaID: genUUIDAlpha, Title: "S04E07 第七章", MediaType: "episode", SeriesTitle: "怪奇物語"},
+			{MediaID: genUUIDBravo, Title: "Bravo", MediaType: "movie"},
+		},
+		snapshotFor: map[string]*services.GenerationBatchProgress{
+			"batch-abc": {BatchID: "batch-abc", TotalItems: 2, Status: services.GenerationBatchStatusRunning, BudgetUSD: 5, Items: queue},
+		},
+	}
+	r := setupGenerationBatchRouter(p)
+	w, resp := doGenBatchJSON(t, r, "POST", "/api/v1/subtitles/generation-batch", `{"scope":"missing"}`)
+	require.Equal(t, http.StatusAccepted, w.Code)
+	assert.Equal(t, "batch-abc", p.snapshotForID, "the snapshot is taken for THIS batch id")
+
+	data := resp["data"].(map[string]interface{})
+	assert.ElementsMatch(t, []string{"batch_id", "total_items", "items", "progress"}, keysOf(data))
+	first := data["items"].([]interface{})[0].(map[string]interface{})
+	assert.Equal(t, "怪奇物語", first["series_title"])
+
+	prog := data["progress"].(map[string]interface{})
+	assert.Equal(t, 5.0, prog["budget_usd"])
+	progItems := prog["items"].([]interface{})
+	require.Len(t, progItems, 2, "progress.items has one entry per total_items")
+	head := progItems[0].(map[string]interface{})
+	assert.ElementsMatch(t, []string{"media_id", "title", "media_type", "series_title", "status", "reason"}, keysOf(head))
+	assert.Equal(t, "running", head["status"])
+	assert.Equal(t, "", head["reason"])
+	assert.Equal(t, "", progItems[1].(map[string]interface{})["series_title"], "series_title is always present")
+}
+
+// A batch dismissed or replaced within milliseconds: progress is null, not missing.
+func TestStartGenerationBatch_Accepted202ProgressCanBeNull(t *testing.T) {
+	p := &mockGenerationProcessor{
+		available: true,
+		batchID:   "batch-gone",
+		items:     []services.GenerationBatchItem{{MediaID: genUUIDAlpha, Title: "Alpha"}},
+	}
+	r := setupGenerationBatchRouter(p)
+	w, resp := doGenBatchJSON(t, r, "POST", "/api/v1/subtitles/generation-batch", `{"scope":"missing"}`)
+	require.Equal(t, http.StatusAccepted, w.Code)
+	data := resp["data"].(map[string]interface{})
+	assert.Contains(t, data, "progress")
+	assert.Nil(t, data["progress"])
+}
+
+func keysOf(m map[string]interface{}) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	return out
+}
+
 func TestStartGenerationBatch_SelectedForwardsIDs(t *testing.T) {
 	p := &mockGenerationProcessor{
 		available: true,
@@ -230,6 +308,7 @@ func TestStartGenerationBatch_EmptyMissingScope200(t *testing.T) {
 	items, ok := data["items"].([]interface{})
 	require.True(t, ok, "items must serialize as [], not null")
 	assert.Empty(t, items)
+	assert.NotContains(t, data, "progress", "nothing started, so there is no progress (dsr-6d-a AC #5)")
 }
 
 // ─── GET /status ────────────────────────────────────────────────────────────
@@ -239,8 +318,37 @@ func TestGetGenerationBatchStatus_Idle(t *testing.T) {
 	w, resp := doGenBatchJSON(t, r, "GET", "/api/v1/subtitles/generation-batch/status", "")
 	assert.Equal(t, http.StatusOK, w.Code)
 	data := resp["data"].(map[string]interface{})
+	assert.ElementsMatch(t, []string{"running", "progress", "last"}, keysOf(data), "dsr-6d-a AC #3 key set")
 	assert.Equal(t, false, data["running"])
 	assert.Nil(t, data["progress"])
+	assert.Nil(t, data["last"])
+}
+
+// dsr-6d-a AC #3: after a terminal the probe still says what happened.
+func TestGetGenerationBatchStatus_IdleWithLastResult(t *testing.T) {
+	p := &mockGenerationProcessor{
+		available: true,
+		last: &services.GenerationBatchProgress{
+			BatchID: "b-9", TotalItems: 2, SuccessCount: 1, PausedCount: 1,
+			Status: services.GenerationBatchStatusBudgetCeiling, SpentUSD: 5.03, BudgetUSD: 5,
+			Items: []services.GenerationBatchItemState{
+				{GenerationBatchItem: services.GenerationBatchItem{MediaID: genUUIDAlpha, Title: "A", MediaType: "movie"}, Status: services.GenerationBatchItemDone},
+				{GenerationBatchItem: services.GenerationBatchItem{MediaID: genUUIDBravo, Title: "B", MediaType: "movie"}, Status: services.GenerationBatchItemPaused},
+			},
+		},
+	}
+	r := setupGenerationBatchRouter(p)
+	w, resp := doGenBatchJSON(t, r, "GET", "/api/v1/subtitles/generation-batch/status", "")
+	assert.Equal(t, http.StatusOK, w.Code)
+	data := resp["data"].(map[string]interface{})
+	assert.Equal(t, false, data["running"])
+	assert.Nil(t, data["progress"])
+	last := data["last"].(map[string]interface{})
+	assert.Equal(t, "budget_ceiling", last["status"])
+	assert.Equal(t, 5.03, last["spent_usd"], "spend can exceed the soft cap and is reported as is")
+	items := last["items"].([]interface{})
+	require.Len(t, items, 2)
+	assert.Equal(t, "paused", items[1].(map[string]interface{})["status"])
 }
 
 func TestGetGenerationBatchStatus_Running(t *testing.T) {
@@ -262,6 +370,7 @@ func TestGetGenerationBatchStatus_Running(t *testing.T) {
 	assert.Equal(t, genUUIDAlpha, prog["current_media_id"], "current_media_id is the UUID string (9R-18)")
 	assert.Equal(t, 0.42, prog["spent_usd"])
 	assert.Equal(t, 5.0, prog["budget_usd"])
+	assert.Nil(t, data["last"], "last is null while a batch runs")
 }
 
 // ─── POST /cancel ───────────────────────────────────────────────────────────
@@ -285,6 +394,30 @@ func TestCancelGenerationBatch_Running(t *testing.T) {
 	data := resp["data"].(map[string]interface{})
 	assert.Equal(t, true, data["cancelled"])
 	assert.True(t, p.cancelCalled)
+}
+
+// ─── POST /dismiss (dsr-6d-a AC #6) ─────────────────────────────────────────
+
+func TestDismissGenerationBatch_ClearsTheLastResult(t *testing.T) {
+	p := &mockGenerationProcessor{available: true, dismissed: true}
+	r := setupGenerationBatchRouter(p)
+	w, resp := doGenBatchJSON(t, r, "POST", "/api/v1/subtitles/generation-batch/dismiss", "")
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.True(t, p.dismissCalled)
+	data := resp["data"].(map[string]interface{})
+	assert.ElementsMatch(t, []string{"dismissed", "running"}, keysOf(data))
+	assert.Equal(t, true, data["dismissed"])
+	assert.Equal(t, false, data["running"])
+}
+
+func TestDismissGenerationBatch_WhileRunningClearsNothing(t *testing.T) {
+	p := &mockGenerationProcessor{available: true, running: true}
+	r := setupGenerationBatchRouter(p)
+	w, resp := doGenBatchJSON(t, r, "POST", "/api/v1/subtitles/generation-batch/dismiss", "")
+	assert.Equal(t, http.StatusOK, w.Code)
+	data := resp["data"].(map[string]interface{})
+	assert.Equal(t, false, data["dismissed"])
+	assert.Equal(t, true, data["running"])
 }
 
 // ─── GET /preview ───────────────────────────────────────────────────────────

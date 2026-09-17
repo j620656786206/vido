@@ -20,6 +20,15 @@ type GenerationBatchProcessorInterface interface {
 	// input is strictly > 0, so 0 can only mean absent).
 	Start(ctx context.Context, scope string, mediaIDs []string, budgetUSD float64, modelID string) (string, []services.GenerationBatchItem, error)
 	GetProgress() *services.GenerationBatchProgress
+	// Snapshot reads the running batch and the last terminal snapshot under
+	// one lock (dsr-6d-a AC #3).
+	Snapshot() (progress, last *services.GenerationBatchProgress)
+	// SnapshotFor returns the batch with this id — running, else the last
+	// terminal snapshot — or nil (dsr-6d-a AC #5).
+	SnapshotFor(batchID string) *services.GenerationBatchProgress
+	// DismissLast forgets the last terminal snapshot; clears nothing while a
+	// batch runs (dsr-6d-a AC #6).
+	DismissLast() (dismissed, running bool)
 	Cancel()
 	PreviewMissing(ctx context.Context) (movies, includingEpisodes int, err error)
 }
@@ -54,6 +63,7 @@ func (h *GenerationBatchHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		gb.POST("", h.StartGenerationBatch)
 		gb.GET("/status", h.GetGenerationBatchStatus)
 		gb.POST("/cancel", h.CancelGenerationBatch)
+		gb.POST("/dismiss", h.DismissGenerationBatch)
 		gb.GET("/preview", h.PreviewGenerationBatch)
 	}
 }
@@ -85,7 +95,7 @@ type GenerationBatchStartRequest struct {
 // @Accept json
 // @Produce json
 // @Param request body GenerationBatchStartRequest true "scope: missing|selected; media_ids required iff scope=selected; budget_usd optional (> 0); model_id optional (must be one of GET /settings/models)"
-// @Success 202 {object} APIResponse "batch started: {batch_id, total_items, items:[{media_id,title,media_type}]}"
+// @Success 202 {object} APIResponse "batch started: {batch_id, total_items, items:[{media_id,title,media_type,series_title}], progress} — progress is this batch's snapshot (queue with per-item status); null only if the batch was dismissed or replaced within milliseconds"
 // @Success 200 {object} APIResponse "scope=missing resolved to 0 items: {total_items:0, items:[]}"
 // @Failure 400 {object} APIResponse "validation failed (bad scope / missing media_ids / unknown id / budget_usd <= 0 / unsupported model_id)"
 // @Failure 409 {object} APIResponse "TRANSCRIPTION_BATCH_RUNNING — current progress in error body data"
@@ -190,22 +200,27 @@ func (h *GenerationBatchHandler) StartGenerationBatch(c *gin.Context) {
 			"batch_id":    batchID,
 			"total_items": len(items),
 			"items":       items,
+			// dsr-6d-a AC #5: the batch's own snapshot, so the client starts
+			// from the real ceiling and queue instead of waiting for the first
+			// SSE event (which may already be gone — the hub has no replay).
+			"progress": h.processor.SnapshotFor(batchID),
 		},
 	})
 }
 
 // GetGenerationBatchStatus handles GET /api/v1/subtitles/generation-batch/status.
 // @Summary Get generation-batch status
-// @Description Recovery probe: returns whether a generation batch is running and its progress (null when idle).
+// @Description Recovery probe: whether a generation batch is running and its progress (null when idle, queue with per-item status when running), plus last — the most recent terminal snapshot (null while running, after dismiss, or when none is kept; in memory only, lost on restart).
 // @Tags subtitles
 // @Produce json
-// @Success 200 {object} APIResponse "{running, progress|null}"
+// @Success 200 {object} APIResponse "{running, progress|null, last|null}"
 // @Router /api/v1/subtitles/generation-batch/status [get]
 func (h *GenerationBatchHandler) GetGenerationBatchStatus(c *gin.Context) {
-	progress := h.processor.GetProgress()
+	progress, last := h.processor.Snapshot()
 	SuccessResponse(c, map[string]interface{}{
 		"running":  progress != nil,
 		"progress": progress,
+		"last":     last,
 	})
 }
 
@@ -229,6 +244,21 @@ func (h *GenerationBatchHandler) CancelGenerationBatch(c *gin.Context) {
 	SuccessResponse(c, map[string]interface{}{
 		"cancelled": true,
 		"running":   h.processor.IsRunning(),
+	})
+}
+
+// DismissGenerationBatch handles POST /api/v1/subtitles/generation-batch/dismiss.
+// @Summary Forget the last generation-batch result
+// @Description Clears the last terminal snapshot that GET .../status reports (dsr-6d-a AC #6 [@contract-v1]) — e.g. after the user closed the budget-ceiling summary. Idempotent; while a batch runs nothing is cleared and running=true.
+// @Tags subtitles
+// @Produce json
+// @Success 200 {object} APIResponse "{dismissed, running}"
+// @Router /api/v1/subtitles/generation-batch/dismiss [post]
+func (h *GenerationBatchHandler) DismissGenerationBatch(c *gin.Context) {
+	dismissed, running := h.processor.DismissLast()
+	SuccessResponse(c, map[string]interface{}{
+		"dismissed": dismissed,
+		"running":   running,
 	})
 }
 
