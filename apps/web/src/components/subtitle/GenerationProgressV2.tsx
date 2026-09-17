@@ -17,9 +17,15 @@
  *
  * Cost/quota slot (9R-17 dormant): optional `costUsedText`/`costLimitText` props;
  * renders NOTHING when absent — no BE cost surface exists today, do not invent.
+ *
+ * 重試 spends money again, so it is a `ButtonCost` (story dsr-6a AC #5): the
+ * caller must hand over the amount WITH the handler — a paid retry without a
+ * price is not expressible in this component's props.
  */
-import { Check, LoaderCircle, X, CircleAlert, RotateCcw } from 'lucide-react';
+import { useId, type ReactNode } from 'react';
+import { Check, LoaderCircle, X, CircleAlert } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { ButtonCost, type ButtonCostState } from '../ui/ButtonCost';
 import type { GenerationPhase } from '../../hooks/useGenerationProgress';
 
 /** FROZEN stage names (design handoff + AC 3) — also the gallery fixture vocabulary. */
@@ -40,7 +46,7 @@ const PHASE_INDEX: Record<ActivePhase, number> = {
   translating: 2,
 };
 
-export interface GenerationProgressV2Props {
+interface GenerationProgressV2BaseProps {
   /** Current pipeline phase (from useGenerationProgress; 'idle' renders 提取音訊 as active-waiting). */
   phase: GenerationPhase;
   /** Stage that was live when the failure arrived — labels 失敗於{stage}. */
@@ -54,9 +60,23 @@ export interface GenerationProgressV2Props {
   /** Optional cost slot (9R-17 dormant): both must be present to render the line. */
   costUsedText?: string;
   costLimitText?: string;
-  /** Renders the 重試 action in the failed state. */
-  onRetry?: () => void;
 }
+
+/** 重試 is paid: the handler and its price travel together, or neither is given. */
+type RetryProps =
+  | { onRetry?: undefined; retryCost?: undefined; retryNote?: undefined; retryBusy?: undefined }
+  | {
+      /** Renders the 重試 action in the failed state. */
+      onRetry: () => void;
+      /** The amount on 重試 (dsr-6a) — the same estimate as 生成字幕. */
+      retryCost: ButtonCostState;
+      /** Why 重試 is blocked, or what its ≈ means; rendered under the panel. */
+      retryNote?: ReactNode;
+      /** The retry request is in flight — keep the price, refuse a second click. */
+      retryBusy?: boolean;
+    };
+
+export type GenerationProgressV2Props = GenerationProgressV2BaseProps & RetryProps;
 
 type StepState = 'done' | 'active' | 'pending' | 'failed';
 
@@ -116,7 +136,11 @@ export function GenerationProgressV2({
   costUsedText,
   costLimitText,
   onRetry,
+  retryCost,
+  retryNote,
+  retryBusy = false,
 }: GenerationProgressV2Props) {
+  const retryNoteId = useId();
   const states = stepStates(phase, failedPhase);
   const failedStageName =
     phase === 'failed' ? GENERATION_STAGES[PHASE_INDEX[failedPhase ?? 'extracting']] : null;
@@ -189,23 +213,35 @@ export function GenerationProgressV2({
       {phase === 'failed' && (
         <div
           data-testid="gen-failed-panel"
-          className="flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--error-tint)] p-3"
+          className="flex flex-col gap-2 rounded-[var(--radius-md)] bg-[var(--error-tint)] p-3"
         >
-          <CircleAlert className="h-4 w-4 shrink-0 text-[var(--error-text)]" aria-hidden="true" />
-          <p className="flex-1 text-[13px] text-[var(--error-text)]">
-            失敗於{failedStageName}
-            {error ? `：${error}` : ''}
-          </p>
-          {onRetry && (
-            <button
-              type="button"
-              onClick={onRetry}
-              data-testid="gen-retry"
-              className="flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-4 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)]"
+          <div className="flex items-center gap-2">
+            <CircleAlert className="h-4 w-4 shrink-0 text-[var(--error-text)]" aria-hidden="true" />
+            <p className="flex-1 text-[13px] text-[var(--error-text)]">
+              失敗於{failedStageName}
+              {error ? `：${error}` : ''}
+            </p>
+            {/* No price, no paid button — even if a caller slips past the types. */}
+            {onRetry && retryCost && (
+              <ButtonCost
+                label="重試"
+                cost={retryCost}
+                busy={retryBusy}
+                onClick={onRetry}
+                data-testid="gen-retry"
+                aria-describedby={retryNote ? retryNoteId : undefined}
+                className="shrink-0"
+              />
+            )}
+          </div>
+          {onRetry && retryNote && (
+            <p
+              id={retryNoteId}
+              data-testid="gen-retry-note"
+              className="text-right text-xs text-[var(--text-secondary)]"
             >
-              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-              重試
-            </button>
+              {retryNote}
+            </p>
           )}
         </div>
       )}

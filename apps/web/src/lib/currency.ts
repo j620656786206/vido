@@ -50,6 +50,18 @@ export function usd(v: number | string | DecimalValue): string {
 }
 
 /**
+ * An amount marked `≈` when it is priced off an assumed length (sub-6-12 AC #4).
+ *
+ * `≈` has exactly one meaning on this product's consent surfaces — "this number
+ * rests on an assumed runtime" — and one row carries at most one (⚖️ Sally
+ * 2026-09-05). Moved here from consentSelection by dsr-6a so the batch totals
+ * and the single-item cost button share the marker rule, not two copies of it.
+ */
+export function usdWithEstimate(value: number, estimated: boolean): string {
+  return estimated ? `≈ ${usd(value)}` : usd(value);
+}
+
+/**
  * Exact sum of USD amounts.
  *
  * Use this instead of `reduce((a, b) => a + b, 0)` anywhere a total is shown

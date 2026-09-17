@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen F1-D-v2 (r1EY9)
+// Design ref: ux-design.pen Screen F1-D-v2 (r1EY9) + Screen F2-D-v2 (S9Rbrq) + Screen F1-M-v2 (JkdfH)
 /**
  * 管理字幕 dialog v2 (ux3-subtitle-v2 AC 1/2/5 — generation-centric per ADR
  * adr-subtitle-route-c-generation D1). Screens: F1-D-v2 r1EY9 / F1-M-v2 JkdfH
@@ -24,6 +24,13 @@
  *   2026-08-05): the helper line states the en-only truth + 前往設定 while the
  *   CTA stays enabled; the row lands `untranslated` and a re-run resumes
  *   translate-only (sub-2-2a).
+ * - Every paid button — 生成字幕 and both 重試 — carries its estimated amount
+ *   (story dsr-6a, DESIGN.md「會花錢的動作要有記號」, J9-D). The price comes from
+ *   GET …/transcribe/estimate, which prices what THIS trigger does (speech
+ *   recognition + translation, or translation only on resume). No price → no
+ *   clickable button: loading shows a skeleton, a failed estimate or a missing
+ *   ASR key disables it with the reason. The states and lines live in ONE pure
+ *   function (generateCostView) shared by all three buttons.
  * - Fetch is demoted to a dormant secondary 搜尋線上字幕（成功率低） — NO source
  *   chips, NO score-breakdown rows, NO Zimuku (9R-14 removed it).
  * - CN policy (§9b, note v16pVI): a 簡中 track on CN content shows the policy
@@ -33,8 +40,8 @@
  * - No cancel control for a running job: the backend exposes no cancel route;
  *   closing the dialog only stops watching (job continues server-side).
  */
-import { useCallback, useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import {
   BookOpen,
@@ -55,10 +62,15 @@ import { transcriptionService } from '../../services/transcriptionService';
 import type { SubtitleSearchResult } from '../../services/subtitleService';
 import { useGenerationProgress } from '../../hooks/useGenerationProgress';
 import { useGlossaryTerms } from '../../hooks/useGlossary';
-import { useKeySettings } from '../../hooks/useKeySettings';
+import {
+  transcriptionEstimateKeys,
+  useTranscriptionEstimate,
+} from '../../hooks/useTranscriptionEstimate';
 import { useSubtitleSearch } from '../../hooks/useSubtitleSearch';
+import { ButtonCost } from '../ui/ButtonCost';
 import { GenerationProgressV2 } from './GenerationProgressV2';
 import { GlossaryPanelV2 } from './GlossaryPanelV2';
+import { deriveGenerateCostView, type RetryNote } from './generateCostView';
 
 interface TrackRow {
   key: string;
@@ -196,14 +208,49 @@ export function ManageSubtitleDialogV2({
   const glossary = useGlossaryTerms(glossaryMediaId ?? mediaId, open);
   const glossaryCount = glossary.data?.length ?? 0;
 
-  // sub-2-2d AC #2 — the degraded-CTA pre-flight (β Task 4's deferral, γ's
-  // ratified copy). Open-gated so a closed dialog costs no request. The signal
-  // is GET /settings/keys' claude.configured (2-1a CR L1: never branch on an
-  // error code). Loading/error keep the DEFAULT line — fail-soft, never flash
-  // the degraded warning on an unresolved query.
-  const keySettings = useKeySettings({ enabled: open });
-  const translationDegraded =
-    keySettings.data?.keys.find((k) => k.name === 'claude')?.configured === false;
+  // dsr-6a AC #5 — the price on the paid buttons. The estimate replaces the
+  // sub-2-2d GET /settings/keys pre-flight: it carries the run's own
+  // translate check, so the degraded line and the amount can never come from
+  // two different answers. Open-gated; a series has no generate route and
+  // never asks.
+  const queryClient = useQueryClient();
+  const estimateMediaType = isMovie ? 'movie' : isEpisode ? 'episode' : null;
+  const estimate = useTranscriptionEstimate(estimateMediaType, mediaId, {
+    enabled: open && canGenerate,
+  });
+  const costView = deriveGenerateCostView({
+    mediaType,
+    subtitleStatus,
+    estimate: { data: estimate.data, isError: estimate.isError, error: estimate.error },
+  });
+  const helperId = useId();
+  const triggerRetryNoteId = useId();
+
+  const refreshEstimate = useCallback(() => {
+    if (!estimateMediaType) return;
+    void queryClient.invalidateQueries({
+      queryKey: transcriptionEstimateKeys.item(estimateMediaType, mediaId),
+    });
+  }, [queryClient, estimateMediaType, mediaId]);
+
+  // A run that failed may already have left the English SRT behind — the retry
+  // is then translate-only and cheaper. Re-price whenever a run ends.
+  const runPhase = generation.progress.phase;
+  useEffect(() => {
+    if (runPhase === 'failed' || runPhase === 'complete') refreshEstimate();
+  }, [runPhase, refreshEstimate]);
+
+  // The row's subtitle state decides full vs translate-only. When it changes
+  // under an open dialog (a parent refetch after a download, another job
+  // finishing), the quote on screen may now be for the wrong run — and the
+  // one direction that matters is a cheap resume quote surviving into a full
+  // run. The first render is skipped: the query itself just fetched.
+  const lastStatusRef = useRef(subtitleStatus);
+  useEffect(() => {
+    if (lastStatusRef.current === subtitleStatus) return;
+    lastStatusRef.current = subtitleStatus;
+    refreshEstimate();
+  }, [subtitleStatus, refreshEstimate]);
 
   // Dormant fetch section (reuses the Epic 8 hook; results WITHOUT chips/scores).
   // Named onlineSearch — `fetch` would shadow window.fetch inside this component.
@@ -226,6 +273,7 @@ export function ManageSubtitleDialogV2({
     onError: (error) => {
       setTriggerError(error instanceof Error ? error.message : '生成字幕失敗');
       setGenView('triggerError');
+      refreshEstimate();
     },
   });
 
@@ -243,11 +291,40 @@ export function ManageSubtitleDialogV2({
         setTriggerError(null);
         setFetchOpen(false);
         setGlossaryOpen(false); // don't resurrect the glossary panel on reopen
+        // dsr-6a: every open re-estimates — a price is a promise made at the
+        // moment of the click, not five minutes earlier.
+        if (estimateMediaType) {
+          queryClient.removeQueries({
+            queryKey: transcriptionEstimateKeys.item(estimateMediaType, mediaId),
+          });
+        }
       }
       onOpenChange(next);
     },
-    [generation, onOpenChange]
+    [generation, onOpenChange, queryClient, estimateMediaType, mediaId]
   );
+
+  const goToKeySettings = useCallback(() => navigate({ to: '/settings/keys' }), [navigate]);
+
+  const renderRetryNote = (note: RetryNote | null, linkTestId: string) =>
+    note ? (
+      <>
+        {note.text}
+        {note.settingsLink && (
+          <>
+            {' '}
+            <button
+              type="button"
+              onClick={goToKeySettings}
+              data-testid={linkTestId}
+              className="underline transition-colors hover:text-[var(--text-primary)]"
+            >
+              前往設定
+            </button>
+          </>
+        )}
+      </>
+    ) : null;
 
   const tracks = buildTrackRows(subtitleTracks, subtitleStatus, subtitleLanguage);
   const inProgressView = genView === 'progress';
@@ -277,7 +354,14 @@ export function ManageSubtitleDialogV2({
           convertToTraditional: !isCNContent, // §9b default: CN content keeps simplified
           score: result.score,
         },
-        { onSuccess: () => onDownloadSuccess?.() }
+        {
+          onSuccess: () => {
+            // A placed subtitle ends any translate-only resume — re-price now
+            // rather than waiting for the parent's refetch to reach us.
+            refreshEstimate();
+            onDownloadSuccess?.();
+          },
+        }
       );
     },
     [
@@ -288,6 +372,7 @@ export function ManageSubtitleDialogV2({
       mediaResolution,
       isCNContent,
       onDownloadSuccess,
+      refreshEstimate,
     ]
   );
 
@@ -344,6 +429,9 @@ export function ManageSubtitleDialogV2({
                 message={generation.progress.message}
                 error={generation.progress.error}
                 onRetry={startGeneration}
+                retryCost={costView.cost}
+                retryBusy={trigger.isPending}
+                retryNote={renderRetryNote(costView.retryNote, 'retry-goto-settings')}
               />
               <div className="flex justify-center">
                 <span className="flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--info-tint)] px-2 py-1 text-[11px] text-[var(--info-text)]">
@@ -466,23 +554,36 @@ export function ManageSubtitleDialogV2({
               ) : genView === 'triggerError' ? (
                 <div
                   data-testid="generation-trigger-error"
-                  className="flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--error-tint)] p-3"
+                  className="flex flex-col gap-2 rounded-[var(--radius-md)] bg-[var(--error-tint)] p-3"
                 >
-                  <CircleAlert
-                    className="h-4 w-4 shrink-0 text-[var(--error-text)]"
-                    aria-hidden="true"
-                  />
-                  <p className="flex-1 text-[13px] text-[var(--error-text)]">
-                    無法開始生成{triggerError ? `：${triggerError}` : ''}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={startGeneration}
-                    data-testid="generation-trigger-retry"
-                    className="flex min-h-[44px] shrink-0 items-center px-3 text-[13px] font-semibold text-[var(--accent-text)]"
-                  >
-                    重試
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <CircleAlert
+                      className="h-4 w-4 shrink-0 text-[var(--error-text)]"
+                      aria-hidden="true"
+                    />
+                    <p className="flex-1 text-[13px] text-[var(--error-text)]">
+                      無法開始生成{triggerError ? `：${triggerError}` : ''}
+                    </p>
+                    {/* dsr-6a: a retry spends money again — same price, same rules. */}
+                    <ButtonCost
+                      label="重試"
+                      cost={costView.cost}
+                      busy={trigger.isPending}
+                      onClick={startGeneration}
+                      data-testid="generation-trigger-retry"
+                      aria-describedby={costView.retryNote ? triggerRetryNoteId : undefined}
+                      className="shrink-0"
+                    />
+                  </div>
+                  {costView.retryNote && (
+                    <p
+                      id={triggerRetryNoteId}
+                      data-testid="generation-trigger-retry-note"
+                      className="text-right text-xs text-[var(--text-secondary)]"
+                    >
+                      {renderRetryNote(costView.retryNote, 'trigger-retry-goto-settings')}
+                    </p>
+                  )}
                 </div>
               ) : (
                 <section
@@ -492,53 +593,42 @@ export function ManageSubtitleDialogV2({
                     tracks.length === 0 && 'flex-col justify-center gap-2.5'
                   )}
                 >
-                  <button
-                    type="button"
+                  {/* dsr-6a: the ONLY primary action carries its price (J9-D). */}
+                  <ButtonCost
+                    label="生成字幕"
+                    cost={costView.cost}
+                    busy={trigger.isPending}
                     onClick={startGeneration}
-                    disabled={!canGenerate || trigger.isPending}
                     data-testid="action-generate-subtitle"
-                    className="flex min-h-[44px] items-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-6 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {trigger.isPending && (
-                      <Loader2
-                        className="h-4 w-4 animate-spin motion-reduce:animate-none"
-                        aria-hidden="true"
-                      />
+                    aria-describedby={helperId}
+                  />
+                  <p
+                    id={helperId}
+                    data-testid="generation-helper"
+                    data-tone={costView.helper.tone}
+                    className={cn(
+                      'text-xs',
+                      costView.helper.tone === 'secondary'
+                        ? 'text-[var(--text-secondary)]'
+                        : 'text-[var(--text-muted)]'
                     )}
-                    生成字幕
-                  </button>
-                  <p data-testid="generation-helper" className="text-xs text-[var(--text-muted)]">
-                    {!canGenerate ? (
-                      /* J3-D ruling: there is no series-level generate — a
-                         series is a container. The old 影集字幕生成即將推出
-                         became a lie once sub-4-2/sub-5-3 shipped episode
-                         batching, so the copy points at the real entry. */
-                      '請於下方分集清單逐集生成'
-                    ) : isEpisode && subtitleStatus === 'untranslated' ? (
-                      /* Design string (F1 note-untranslated): this run resumes
-                         translate-only, so it skips the expensive ASR leg. */
-                      '僅需翻譯，不再重跑語音辨識——這次很快也很便宜'
-                    ) : translationDegraded ? (
-                      /* Degraded ≠ blocked: the truth up front, the CTA stays
-                         live — an English subtitle beats no subtitle, and the
-                         row will land `untranslated` for a translate-only
-                         resume once the key exists (sub-2-2a). */
+                  >
+                    {/* Lines and their precedence: generateCostView (J9-D six
+                        states + the SM supplement). Verb ruled 2026-08-06: this
+                        button calls the transcribe (ASR) endpoint — 語音辨識. */}
+                    {costView.helper.text}
+                    {costView.helper.settingsLink && (
                       <>
-                        僅能產生英文字幕——尚未設定翻譯金鑰{' '}
+                        {' '}
                         <button
                           type="button"
-                          onClick={() => navigate({ to: '/settings/keys' })}
+                          onClick={goToKeySettings}
                           data-testid="helper-goto-settings"
                           className="underline transition-colors hover:text-[var(--text-primary)]"
                         >
                           前往設定
                         </button>
                       </>
-                    ) : (
-                      /* Verb ruled 2026-08-06 (party mode): this button calls the
-                         transcribe (ASR) endpoint — 語音辨識, matching F5's
-                         vocabulary; 抽取 belongs to the D2 pipeline's screens. */
-                      '語音辨識＋AI 翻譯，約需數分鐘'
                     )}
                   </p>
                 </section>

@@ -31,15 +31,6 @@ const h = vi.hoisted(() => ({
   // with the SERIES id while the transcribe target stays the episode id.
   // Captured so the two ids are assertable as DIFFERENT at the dialog seam.
   glossaryQueriedId: undefined as string | undefined,
-  keySettings: {
-    data: undefined as
-      | { keys: { name: string; configured: boolean }[]; writable: boolean }
-      | undefined,
-    isLoading: false,
-    isError: false,
-    error: null as Error | null,
-  },
-  keySettingsLastOptions: undefined as { enabled?: boolean } | undefined,
   fetchHook: {
     search: vi.fn(),
     isSearching: false,
@@ -80,15 +71,11 @@ vi.mock('../../hooks/useSubtitleSearch', () => ({
 }));
 
 vi.mock('../../services/transcriptionService', () => ({
-  transcriptionService: { startTranscription: vi.fn(), startEpisodeTranscription: vi.fn() },
-}));
-
-vi.mock('../../hooks/useKeySettings', () => ({
-  // CR sub-2-2d M1: capture the options so the open-gating contract
-  // ({ enabled: open }) is assertable at the DIALOG seam, not just hook-level.
-  useKeySettings: (options?: { enabled?: boolean }) => {
-    h.keySettingsLastOptions = options;
-    return h.keySettings;
+  transcriptionService: {
+    startTranscription: vi.fn(),
+    startEpisodeTranscription: vi.fn(),
+    // dsr-6a: the price on the paid buttons (GET …/transcribe/estimate).
+    getTranscriptionEstimate: vi.fn(),
   },
 }));
 
@@ -98,10 +85,38 @@ vi.mock('./GlossaryPanelV2', () => ({
 }));
 
 import { ManageSubtitleDialogV2 } from './ManageSubtitleDialogV2';
-import { transcriptionService } from '../../services/transcriptionService';
+import {
+  transcriptionService,
+  type TranscriptionEstimate,
+} from '../../services/transcriptionService';
+import { ApiError } from '../../lib/apiError';
 
 const mockedTrigger = vi.mocked(transcriptionService.startTranscription);
 const mockedEpisodeTrigger = vi.mocked(transcriptionService.startEpisodeTranscription);
+const mockedEstimate = vi.mocked(transcriptionService.getTranscriptionEstimate);
+
+function readyEstimate(overrides: Partial<TranscriptionEstimate> = {}): TranscriptionEstimate {
+  return {
+    mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e5f',
+    mediaType: 'movie',
+    plan: 'full',
+    asrAvailable: true,
+    selfHostedAsr: false,
+    translationConfigured: true,
+    modelId: 'claude-sonnet-5',
+    runtimeMinutes: 30,
+    runtimeKnown: true,
+    runtimeSource: 'ffprobe',
+    estimatedUsd: 0.42,
+    ...overrides,
+  };
+}
+
+/** The CTA is a skeleton until the estimate lands — wait for its amount first. */
+async function findPricedGenerate() {
+  await screen.findByTestId('action-generate-subtitle-amount');
+  return screen.getByTestId('action-generate-subtitle');
+}
 
 type DialogProps = Partial<React.ComponentProps<typeof ManageSubtitleDialogV2>>;
 
@@ -109,9 +124,44 @@ type DialogProps = Partial<React.ComponentProps<typeof ManageSubtitleDialogV2>>;
 // mirror the prod creation path (uuid.New().String()); do NOT invent numeric ids.
 const MOVIE_UUID = '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e5f';
 
-function renderDialog(props: DialogProps = {}) {
+/** Owns `open` like a real parent does, with a way to open the dialog again. */
+function ControlledDialog(props: React.ComponentProps<typeof ManageSubtitleDialogV2>) {
+  const [open, setOpen] = React.useState(true);
+  return (
+    <>
+      <button type="button" data-testid="reopen" onClick={() => setOpen(true)}>
+        reopen
+      </button>
+      <ManageSubtitleDialogV2 {...props} open={open} onOpenChange={setOpen} />
+    </>
+  );
+}
+
+/** Lets a test change `subtitleStatus` under an open dialog, as a parent refetch would. */
+function StatusSwitchDialog(props: React.ComponentProps<typeof ManageSubtitleDialogV2>) {
+  const [status, setStatus] = React.useState(props.subtitleStatus);
+  return (
+    <>
+      <ManageSubtitleDialogV2 {...props} subtitleStatus={status} />
+      {/* Portalled dialog content sits beside this; the button stays reachable. */}
+      <button type="button" data-testid="mark-found" onClick={() => setStatus('found')}>
+        mark found
+      </button>
+    </>
+  );
+}
+
+function renderDialog(
+  props: DialogProps = {},
+  options: { controlled?: boolean; statusSwitch?: boolean } = {}
+) {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    defaultOptions: {
+      // The controlled harness runs with production's 5-minute staleTime, so a
+      // reopen proves the dialog DROPS the price rather than it merely going stale.
+      queries: { retry: false, ...(options.controlled ? { staleTime: 5 * 60 * 1000 } : {}) },
+      mutations: { retry: false },
+    },
   });
   const merged: React.ComponentProps<typeof ManageSubtitleDialogV2> = {
     mediaId: MOVIE_UUID,
@@ -126,7 +176,13 @@ function renderDialog(props: DialogProps = {}) {
   const rootRoute = createRootRoute({
     component: () => (
       <QueryClientProvider client={queryClient}>
-        <ManageSubtitleDialogV2 {...merged} />
+        {options.controlled ? (
+          <ControlledDialog {...merged} />
+        ) : options.statusSwitch ? (
+          <StatusSwitchDialog {...merged} />
+        ) : (
+          <ManageSubtitleDialogV2 {...merged} />
+        )}
       </QueryClientProvider>
     ),
   });
@@ -167,17 +223,8 @@ beforeEach(() => {
   h.fetchHook.results = [];
   h.fetchHook.searchError = null;
   h.fetchHook.isSearching = false;
-  h.keySettingsLastOptions = undefined;
-  // Default: translation key configured → the normal helper line.
-  h.keySettings = {
-    data: {
-      writable: true,
-      keys: [{ name: 'claude', configured: true }],
-    },
-    isLoading: false,
-    isError: false,
-    error: null,
-  };
+  // Default: a measured-runtime movie, translation configured → ① $0.42.
+  mockedEstimate.mockResolvedValue(readyEstimate());
 });
 
 describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
@@ -191,7 +238,7 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
     expect(screen.getByTestId('subtitle-tracks-section')).toBeInTheDocument();
     expect(screen.getByText('繁中')).toBeInTheDocument();
     expect(screen.getByText('英文')).toBeInTheDocument();
-    expect(screen.getByTestId('action-generate-subtitle')).toHaveTextContent('生成字幕');
+    expect(await findPricedGenerate()).toHaveTextContent('生成字幕');
     expect(screen.getByTestId('open-glossary')).toHaveTextContent('名詞對照表');
     expect(screen.getByTestId('open-glossary')).toHaveTextContent('3');
     // Dormant fetch: a footer text-link only — NO source chips, NO Zimuku.
@@ -221,50 +268,62 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
     expect(screen.queryByTestId('generation-trigger-error')).not.toBeInTheDocument();
   });
 
-  // sub-2-2d AC #2 — the degraded CTA helper (β Task 4's deferred implementation).
+  // sub-2-2d AC #2 — the degraded CTA helper; since dsr-6a the signal is the
+  // estimate's translationConfigured (the run's own check), not /settings/keys.
   it('helper・default (key configured): 語音辨識＋AI 翻譯，約需數分鐘 — the ruled verb', async () => {
     renderDialog();
-    const helper = await screen.findByTestId('generation-helper');
+    await findPricedGenerate();
+    const helper = screen.getByTestId('generation-helper');
     expect(helper).toHaveTextContent('語音辨識＋AI 翻譯，約需數分鐘');
     expect(screen.queryByTestId('helper-goto-settings')).toBeNull();
   });
 
   it('helper・degraded (key unconfigured): states the en-only truth + 前往設定, CTA stays ENABLED', async () => {
-    h.keySettings.data = { writable: true, keys: [{ name: 'claude', configured: false }] };
+    mockedEstimate.mockResolvedValue(
+      readyEstimate({ translationConfigured: false, modelId: '', estimatedUsd: 0.18 })
+    );
     renderDialog();
 
-    const helper = await screen.findByTestId('generation-helper');
+    const cta = await findPricedGenerate();
+    const helper = screen.getByTestId('generation-helper');
     expect(helper).toHaveTextContent('僅能產生英文字幕——尚未設定翻譯金鑰');
     expect(screen.getByTestId('helper-goto-settings')).toBeInTheDocument();
-    // Degraded ≠ blocked (the party-mode asymmetry): the CTA must stay live.
-    expect(screen.getByTestId('action-generate-subtitle')).toBeEnabled();
+    // Degraded ≠ blocked (the party-mode asymmetry): the CTA must stay live —
+    // and it charges only the speech-recognition half.
+    expect(cta).toBeEnabled();
+    expect(screen.getByTestId('action-generate-subtitle-amount').textContent).toBe('$0.18');
   });
 
-  it('helper・loading/error: the default line — never flash the degraded warning on an unresolved query', async () => {
-    h.keySettings = { data: undefined, isLoading: true, isError: false, error: null };
+  it('helper・loading: the default line and a skeleton — never a clickable button without a price', async () => {
+    mockedEstimate.mockReturnValue(new Promise(() => {}));
     renderDialog();
 
-    const helper = await screen.findByTestId('generation-helper');
-    expect(helper).toHaveTextContent('語音辨識＋AI 翻譯，約需數分鐘');
+    const cta = await screen.findByTestId('action-generate-subtitle');
+    expect(screen.getByTestId('generation-helper')).toHaveTextContent(
+      '語音辨識＋AI 翻譯，約需數分鐘'
+    );
     expect(screen.queryByTestId('helper-goto-settings')).toBeNull();
+    expect(cta).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByTestId('action-generate-subtitle-amount-skeleton')).toBeInTheDocument();
+    fireEvent.click(cta);
+    expect(mockedTrigger).not.toHaveBeenCalled();
   });
 
-  // CR sub-2-2d M1: the open-gating contract at the dialog seam — a closed
-  // dialog must not fetch the key state. (RouterProvider renders async, so
-  // each phase waits for the captured options rather than asserting sync.)
-  it('passes { enabled: open } to useKeySettings — closed dialog costs no request', async () => {
-    h.keySettingsLastOptions = undefined;
+  // The open-gating contract at the dialog seam — a closed dialog must not
+  // fetch the estimate (it may probe the file on the server).
+  it('a closed dialog does not ask for the estimate; an open one does, for THIS movie', async () => {
     const first = renderDialog({ open: false });
-    await waitFor(() => expect(h.keySettingsLastOptions).toEqual({ enabled: false }));
+    await waitFor(() => expect(first.router.state.status).toBe('idle'));
+    expect(mockedEstimate).not.toHaveBeenCalled();
     first.unmount();
 
-    h.keySettingsLastOptions = undefined;
     renderDialog({ open: true });
-    await waitFor(() => expect(h.keySettingsLastOptions).toEqual({ enabled: true }));
+    await findPricedGenerate();
+    expect(mockedEstimate).toHaveBeenCalledWith('movie', MOVIE_UUID, expect.anything());
   });
 
   it('helper link navigates to /settings/keys', async () => {
-    h.keySettings.data = { writable: true, keys: [{ name: 'claude', configured: false }] };
+    mockedEstimate.mockResolvedValue(readyEstimate({ translationConfigured: false }));
     const { router } = renderDialog();
 
     fireEvent.click(await screen.findByTestId('helper-goto-settings'));
@@ -276,6 +335,9 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
 
     const cta = await screen.findByTestId('action-generate-subtitle');
     expect(cta).toBeDisabled();
+    // dsr-6a: a series has no generate route, so no price is asked for or shown.
+    expect(mockedEstimate).not.toHaveBeenCalled();
+    expect(cta.textContent).not.toMatch(/\$/);
     // 9R-10c AC #5: the old 影集字幕生成即將推出 became a lie once sub-4-2 /
     // sub-5-3 shipped episode batching — a series CAN be generated, just not
     // at series level. J3-D rules the copy points at the real entry instead.
@@ -293,7 +355,7 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
     });
     renderDialog();
 
-    fireEvent.click(await screen.findByTestId('action-generate-subtitle'));
+    fireEvent.click(await findPricedGenerate());
 
     await waitFor(() => expect(mockedTrigger).toHaveBeenCalledWith(MOVIE_UUID));
     await waitFor(() => expect(h.startTracking).toHaveBeenCalledWith(MOVIE_UUID));
@@ -306,7 +368,7 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
     mockedTrigger.mockResolvedValue({ status: 'disabled' });
     renderDialog();
 
-    fireEvent.click(await screen.findByTestId('action-generate-subtitle'));
+    fireEvent.click(await findPricedGenerate());
 
     expect(await screen.findByTestId('generation-not-configured')).toBeInTheDocument();
     // sub-2-2d AC #1 — γ's ratified copy: the panel names ASR, not a vague
@@ -330,7 +392,7 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
     mockedTrigger.mockResolvedValue({ status: 'disabled' });
     const { router } = renderDialog();
 
-    fireEvent.click(await screen.findByTestId('action-generate-subtitle'));
+    fireEvent.click(await findPricedGenerate());
     const goToSettings = await screen.findByTestId('go-to-settings');
     fireEvent.click(goToSettings);
 
@@ -341,7 +403,7 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
     mockedTrigger.mockResolvedValue({ status: 'inProgress' });
     renderDialog();
 
-    fireEvent.click(await screen.findByTestId('action-generate-subtitle'));
+    fireEvent.click(await findPricedGenerate());
 
     await waitFor(() => expect(h.startTracking).toHaveBeenCalledWith(MOVIE_UUID));
     expect(screen.getByTestId('generation-progress-v2')).toBeInTheDocument();
@@ -356,11 +418,14 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
     });
     renderDialog();
 
-    fireEvent.click(await screen.findByTestId('action-generate-subtitle'));
+    fireEvent.click(await findPricedGenerate());
 
     const panel = await screen.findByTestId('generation-trigger-error');
     expect(panel).toHaveTextContent('無法開始生成：找不到電影');
 
+    // dsr-6a: 重試 spends money again — it carries the (re-fetched) price.
+    await screen.findByTestId('generation-trigger-retry-amount');
+    expect(screen.getByTestId('generation-trigger-retry-amount').textContent).toBe('$0.42');
     fireEvent.click(screen.getByTestId('generation-trigger-retry'));
     await waitFor(() => expect(mockedTrigger).toHaveBeenCalledTimes(2));
   });
@@ -451,7 +516,7 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
     h.genState.zhSrtPath = '/media/m.zh-Hant.srt';
     renderDialog();
 
-    fireEvent.click(await screen.findByTestId('action-generate-subtitle'));
+    fireEvent.click(await findPricedGenerate());
 
     const note = await screen.findByTestId('generation-complete-note');
     expect(note).toHaveTextContent('字幕已生成完成');
@@ -463,7 +528,7 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
     h.genState.zhSrtPath = null;
     renderDialog();
 
-    fireEvent.click(await screen.findByTestId('action-generate-subtitle'));
+    fireEvent.click(await findPricedGenerate());
 
     const note = await screen.findByTestId('generation-complete-note');
     expect(note).toHaveTextContent('已生成英文字幕；尚未翻譯');
@@ -480,7 +545,7 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
     h.genState.englishKeptBlocks = 5;
     renderDialog();
 
-    fireEvent.click(await screen.findByTestId('action-generate-subtitle'));
+    fireEvent.click(await findPricedGenerate());
 
     const note = await screen.findByTestId('generation-complete-note');
     expect(note).toHaveTextContent('部分翻譯失敗');
@@ -544,7 +609,7 @@ describe('ManageSubtitleDialogV2 — episode mode (9R-10c)', () => {
     });
     renderEpisodeDialog();
 
-    fireEvent.click(await screen.findByTestId('action-generate-subtitle'));
+    fireEvent.click(await findPricedGenerate());
     await waitFor(() => expect(mockedEpisodeTrigger).toHaveBeenCalledWith(EPISODE_UUID));
 
     expect(h.glossaryQueriedId).toBe(SERIES_UUID);
@@ -580,13 +645,18 @@ describe('ManageSubtitleDialogV2 — episode mode (9R-10c)', () => {
   });
 
   it('enables the CTA (an episode has a generate route, unlike a series)', async () => {
+    mockedEstimate.mockResolvedValue(
+      readyEstimate({ mediaId: EPISODE_UUID, mediaType: 'episode' })
+    );
     renderEpisodeDialog();
-    expect(await screen.findByTestId('action-generate-subtitle')).not.toBeDisabled();
+    expect(await findPricedGenerate()).not.toBeDisabled();
+    expect(mockedEstimate).toHaveBeenCalledWith('episode', EPISODE_UUID, expect.anything());
   });
 
   // Design string (F1 note-untranslated): a resume skips the expensive ASR leg,
   // so the user is told this run is cheap rather than being left to guess.
-  it('shows the cheap-resume helper when the episode is untranslated', async () => {
+  it('shows the cheap-resume helper when the episode is untranslated (from props while the price loads)', async () => {
+    mockedEstimate.mockReturnValue(new Promise(() => {}));
     renderEpisodeDialog({ subtitleStatus: 'untranslated' });
     expect(await screen.findByTestId('generation-helper')).toHaveTextContent(
       '僅需翻譯，不再重跑語音辨識'
@@ -595,6 +665,212 @@ describe('ManageSubtitleDialogV2 — episode mode (9R-10c)', () => {
 
   it('shows the default helper for other episode statuses', async () => {
     renderEpisodeDialog({ subtitleStatus: 'not_found' });
-    expect(await screen.findByTestId('generation-helper')).toHaveTextContent('語音辨識＋AI 翻譯');
+    await findPricedGenerate();
+    expect(screen.getByTestId('generation-helper')).toHaveTextContent('語音辨識＋AI 翻譯');
+  });
+});
+
+// ── dsr-6a — the price on the paid buttons (J9-D) ─────────────────────────
+
+describe('ManageSubtitleDialogV2 — cost on paid buttons (dsr-6a)', () => {
+  it('① shows the amount verbatim on 生成字幕, described by the helper line', async () => {
+    renderDialog();
+    const cta = await findPricedGenerate();
+    expect(screen.getByTestId('action-generate-subtitle-amount').textContent).toBe('$0.42');
+    expect(cta).toHaveAccessibleDescription('語音辨識＋AI 翻譯，約需數分鐘');
+  });
+
+  it('② assumed runtime: ≈ on the amount and the 片長未知 line', async () => {
+    mockedEstimate.mockResolvedValue(
+      readyEstimate({ runtimeSource: 'fallback', runtimeKnown: false, runtimeMinutes: 45 })
+    );
+    renderDialog();
+    await findPricedGenerate();
+    expect(screen.getByTestId('action-generate-subtitle-amount').textContent).toBe('≈ $0.42');
+    expect(screen.getByTestId('generation-helper')).toHaveTextContent(
+      '片長未知（估 45 分）——實際費用依內容長度而定'
+    );
+  });
+
+  it('③ self-hosted ASR with no translation key: $0.00 explained, never 「免費」', async () => {
+    mockedEstimate.mockResolvedValue(
+      readyEstimate({
+        selfHostedAsr: true,
+        translationConfigured: false,
+        modelId: '',
+        estimatedUsd: 0,
+      })
+    );
+    renderDialog();
+    await findPricedGenerate();
+    expect(screen.getByTestId('action-generate-subtitle-amount').textContent).toBe('$0.00');
+    expect(screen.getByTestId('generation-helper')).toHaveTextContent(
+      '語音辨識：自架（不另計費）。僅能產生英文字幕——尚未設定翻譯金鑰'
+    );
+    expect(screen.queryByText(/免費/)).toBeNull();
+  });
+
+  it('⑤ estimate failed: disabled, no amount, the reason in the secondary tone', async () => {
+    mockedEstimate.mockRejectedValue(new ApiError('boom', 500, 'INTERNAL_ERROR'));
+    renderDialog();
+    const helper = await screen.findByText('暫時算不出費用，因此先不開放。重新整理或稍後再試。');
+    const cta = screen.getByTestId('action-generate-subtitle');
+    expect(cta).toBeDisabled();
+    expect(cta.textContent).not.toMatch(/\$/);
+    expect(helper).toHaveAttribute('data-tone', 'secondary');
+    fireEvent.click(cta);
+    expect(mockedTrigger).not.toHaveBeenCalled();
+  });
+
+  it('the video file cannot be read: disabled with its own reason', async () => {
+    mockedEstimate.mockRejectedValue(
+      new ApiError('Movie file not accessible', 400, 'VALIDATION_REQUIRED_FIELD')
+    );
+    renderDialog();
+    expect(
+      await screen.findByText('讀不到影片檔案，因此先不開放。請確認檔案還在，或重新掃描媒體庫。')
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('action-generate-subtitle')).toBeDisabled();
+  });
+
+  it('⑥ no ASR key: disabled BEFORE the click, with 前往設定', async () => {
+    mockedEstimate.mockResolvedValue(readyEstimate({ asrAvailable: false }));
+    const { router } = renderDialog();
+    expect(
+      await screen.findByText('生成字幕需要雲端語音辨識（ASR）金鑰。請至金鑰設定儲存後即可使用。', {
+        exact: false,
+      })
+    ).toBeInTheDocument();
+    const cta = screen.getByTestId('action-generate-subtitle');
+    expect(cta).toBeDisabled();
+    fireEvent.click(cta);
+    expect(mockedTrigger).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('helper-goto-settings'));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/settings/keys'));
+  });
+
+  it('translate-only without a translation key: disabled — the click would produce nothing', async () => {
+    mockedEstimate.mockResolvedValue(
+      readyEstimate({ plan: 'translate_only', translationConfigured: false, estimatedUsd: 0 })
+    );
+    renderDialog({ subtitleStatus: 'untranslated' });
+    expect(await screen.findByText('尚未設定翻譯金鑰', { exact: false })).toBeInTheDocument();
+    expect(screen.getByTestId('action-generate-subtitle')).toBeDisabled();
+  });
+
+  it('a MOVIE that can resume translate-only gets the cheap line too', async () => {
+    mockedEstimate.mockResolvedValue(readyEstimate({ plan: 'translate_only', estimatedUsd: 0.24 }));
+    renderDialog({ subtitleStatus: 'untranslated' });
+    await findPricedGenerate();
+    expect(screen.getByTestId('action-generate-subtitle-amount').textContent).toBe('$0.24');
+    expect(screen.getByTestId('generation-helper')).toHaveTextContent(
+      '僅需翻譯，不再重跑語音辨識——這次很快也很便宜'
+    );
+  });
+
+  it('the failed-run 重試 carries the price, re-fetched when the run fails', async () => {
+    mockedTrigger.mockResolvedValue({ status: 'started', result: { jobId: 'j', message: 'ok' } });
+    renderDialog();
+    const cta = await findPricedGenerate();
+    expect(mockedEstimate).toHaveBeenCalledTimes(1);
+
+    // The SSE stream reports the run failed by the time the view re-renders —
+    // and the run left its English SRT behind, so the retry is translate-only.
+    mockedEstimate.mockResolvedValue(readyEstimate({ plan: 'translate_only', estimatedUsd: 0.24 }));
+    h.genState.phase = 'failed';
+    h.genState.failedPhase = 'translating';
+    fireEvent.click(cta);
+    expect(await screen.findByTestId('gen-failed-panel')).toBeInTheDocument();
+    // Entering `failed` re-prices, and 重試 shows the NEW price.
+    await waitFor(() => expect(screen.getByTestId('gen-retry-amount').textContent).toBe('$0.24'));
+  });
+
+  it('re-prices when the subtitle status changes under an open dialog (e.g. a downloaded subtitle ends a resume)', async () => {
+    mockedEstimate.mockResolvedValue(readyEstimate({ plan: 'translate_only', estimatedUsd: 0.24 }));
+    renderDialog({ subtitleStatus: 'untranslated' }, { statusSwitch: true });
+    await findPricedGenerate();
+    expect(screen.getByTestId('action-generate-subtitle-amount').textContent).toBe('$0.24');
+
+    // The parent refetched after a download: the row is `found` now, so the next
+    // click is a FULL run — the cheap translate-only quote must not survive.
+    mockedEstimate.mockResolvedValue(readyEstimate({ estimatedUsd: 0.42 }));
+    fireEvent.click(screen.getByTestId('mark-found'));
+    await waitFor(() =>
+      expect(screen.getByTestId('action-generate-subtitle-amount').textContent).toBe('$0.42')
+    );
+  });
+
+  it('a successful online download re-prices at once', async () => {
+    h.fetchHook.results = [
+      {
+        id: 's1',
+        source: 'assrt',
+        filename: 'a.zh.srt',
+        language: 'zh-TW',
+        downloadUrl: '',
+        downloads: 1,
+        group: '',
+        resolution: '1080p',
+        format: 'srt',
+        score: 0.5,
+        scoreBreakdown: { language: 1, resolution: 1, sourceTrust: 1, group: 1, downloads: 1 },
+      },
+    ];
+    h.fetchHook.download.mockImplementation((_params: unknown, opts?: { onSuccess?: () => void }) =>
+      opts?.onSuccess?.()
+    );
+    renderDialog();
+    await findPricedGenerate();
+    expect(mockedEstimate).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByTestId('toggle-fetch'));
+    fireEvent.click(screen.getByTestId('fetch-download-s1'));
+    await waitFor(() => expect(mockedEstimate).toHaveBeenCalledTimes(2));
+  });
+
+  it('a blocked retry says why under the button', async () => {
+    mockedTrigger.mockRejectedValueOnce(new Error('找不到電影'));
+    renderDialog();
+    const cta = await findPricedGenerate();
+
+    // The trigger error re-prices; by then the ASR key has been removed.
+    mockedEstimate.mockResolvedValue(readyEstimate({ asrAvailable: false }));
+    fireEvent.click(cta);
+    await screen.findByTestId('generation-trigger-error');
+    const note = await screen.findByTestId('generation-trigger-retry-note');
+    expect(note).toHaveTextContent('生成字幕需要雲端語音辨識（ASR）金鑰');
+    expect(screen.getByTestId('generation-trigger-retry')).toBeDisabled();
+    expect(screen.getByTestId('generation-trigger-retry')).toHaveAccessibleDescription(
+      /生成字幕需要雲端語音辨識/
+    );
+  });
+
+  it('closing the dialog drops the cached price, so the next open re-estimates', async () => {
+    renderDialog({}, { controlled: true });
+    await findPricedGenerate();
+    expect(mockedEstimate).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByTestId('dialog-close'));
+    await waitFor(() => expect(screen.queryByTestId('manage-subtitle-dialog-v2')).toBeNull());
+
+    // A reopen within the global 5-minute staleTime would otherwise reuse the
+    // old number — the price must be the one current at the moment of the click.
+    mockedEstimate.mockResolvedValue(readyEstimate({ estimatedUsd: 0.5 }));
+    fireEvent.click(screen.getByTestId('reopen'));
+    await waitFor(() => expect(mockedEstimate).toHaveBeenCalledTimes(2));
+    expect((await screen.findByTestId('action-generate-subtitle-amount')).textContent).toBe(
+      '$0.50'
+    );
+  });
+
+  it('while the trigger is in flight the button keeps its price and cannot be pressed twice', async () => {
+    mockedTrigger.mockReturnValue(new Promise(() => {}));
+    renderDialog();
+    const cta = await findPricedGenerate();
+    fireEvent.click(cta);
+    await waitFor(() => expect(cta).toHaveAttribute('aria-busy', 'true'));
+    expect(cta).toBeDisabled();
+    expect(screen.getByTestId('action-generate-subtitle-amount').textContent).toBe('$0.42');
+    expect(cta.querySelector('.animate-spin')).toBeNull();
   });
 });

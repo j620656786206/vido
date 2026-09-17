@@ -17,7 +17,15 @@
  * does with shopspring/decimal, so the quote and the invoice are the same
  * number rather than merely close.
  */
-import { addUsd, gtUsd, ltUsd, percentOfUsd, roundUsd, subUsd, usd } from '../../../lib/currency';
+import {
+  addUsd,
+  gtUsd,
+  ltUsd,
+  percentOfUsd,
+  roundUsd,
+  subUsd,
+  usdWithEstimate,
+} from '../../../lib/currency';
 import type { KeySource } from '../../../services/keySettingsService';
 import type {
   GenerationCandidate,
@@ -360,17 +368,13 @@ export function computeTotals(
 
 /**
  * A total, marked `≈` when the rows under it are priced off an assumed length
- * (sub-6-12 AC #4).
- *
- * It lives beside computeTotals rather than in each component because 三處金額
- * 同源 now covers the MARKER as well as the number: the summary bar, the
- * footer and the F16/F19 confirm dialog must all say 「約」 or all say nothing.
- * A screen where every row reads 「≈ $0.02」 and the total reads a flat
- * 「$13.92」 is the false precision the critique's P2 named.
+ * (sub-6-12 AC #4). The function itself moved to `lib/currency` in dsr-6a so the
+ * single-item cost button (`ui/ButtonCost`) renders its amount through the same
+ * marker rule; it is re-exported here so every consent surface keeps importing
+ * it from beside computeTotals — 三處金額同源 covers the MARKER as well as the
+ * number.
  */
-export function usdWithEstimate(value: number, estimated: boolean): string {
-  return estimated ? `≈ ${usd(value)}` : usd(value);
-}
+export { usdWithEstimate };
 
 /**
  * 「扣誰的錢」 (sub-6-12 AC #6) — the one line that answers the project

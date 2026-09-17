@@ -48,6 +48,7 @@ describe('GenerationProgressV2', () => {
         failedPhase="translating"
         error="AI 服務逾時"
         onRetry={onRetry}
+        retryCost={{ status: 'ready', usd: 0.39, approximate: false }}
       />
     );
 
@@ -56,6 +57,56 @@ describe('GenerationProgressV2', () => {
 
     fireEvent.click(screen.getByTestId('gen-retry'));
     expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  // dsr-6a AC #5 — 重試 spends money again, so it carries the amount.
+  it('重試 carries the amount (a retry is a paid action)', () => {
+    render(
+      <GenerationProgressV2
+        phase="failed"
+        failedPhase="translating"
+        onRetry={vi.fn()}
+        retryCost={{ status: 'ready', usd: 0.39, approximate: false }}
+      />
+    );
+    expect(screen.getByTestId('gen-retry-amount').textContent).toBe('$0.39');
+    expect(screen.queryByTestId('gen-retry-note')).toBeNull();
+  });
+
+  it('a 重試 in flight cannot be pressed twice', () => {
+    const onRetry = vi.fn();
+    render(
+      <GenerationProgressV2
+        phase="failed"
+        failedPhase="translating"
+        onRetry={onRetry}
+        retryCost={{ status: 'ready', usd: 0.39, approximate: false }}
+        retryBusy
+      />
+    );
+    const retry = screen.getByTestId('gen-retry');
+    expect(retry).toHaveAttribute('aria-busy', 'true');
+    fireEvent.click(retry);
+    expect(onRetry).not.toHaveBeenCalled();
+  });
+
+  it('a blocked 重試 says why, linked to the button', () => {
+    const onRetry = vi.fn();
+    render(
+      <GenerationProgressV2
+        phase="failed"
+        failedPhase="extracting"
+        onRetry={onRetry}
+        retryCost={{ status: 'unavailable' }}
+        retryNote="暫時算不出費用，因此先不開放。重新整理或稍後再試。"
+      />
+    );
+    const retry = screen.getByTestId('gen-retry');
+    expect(retry).toBeDisabled();
+    expect(screen.getByTestId('gen-retry-note')).toHaveTextContent('暫時算不出費用');
+    expect(retry).toHaveAccessibleDescription('暫時算不出費用，因此先不開放。重新整理或稍後再試。');
+    fireEvent.click(retry);
+    expect(onRetry).not.toHaveBeenCalled();
   });
 
   it('renders the server-supplied message verbatim (Rule 23 — no local clock text)', () => {

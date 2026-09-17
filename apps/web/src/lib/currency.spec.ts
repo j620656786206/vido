@@ -1,5 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { usd, sumUsd, addUsd, subUsd, gtUsd, ltUsd, percentOfUsd, roundUsd } from './currency';
+import {
+  usd,
+  sumUsd,
+  addUsd,
+  subUsd,
+  gtUsd,
+  ltUsd,
+  percentOfUsd,
+  roundUsd,
+  usdWithEstimate,
+} from './currency';
 
 describe('usd (display)', () => {
   it('renders two decimal places verbatim', () => {
@@ -94,5 +104,13 @@ describe('roundUsd', () => {
     expect(roundUsd(0.005)).toBe(0.01);
     expect(roundUsd(1.004)).toBe(1);
     expect(roundUsd(2.345)).toBe(2.35);
+  });
+});
+
+describe('usdWithEstimate (sub-6-12 AC #4; moved here by dsr-6a)', () => {
+  it('marks an amount priced off an assumed length with ≈, and nothing else', () => {
+    expect(usdWithEstimate(0.42, true)).toBe('≈ $0.42');
+    expect(usdWithEstimate(0.42, false)).toBe('$0.42');
+    expect(usdWithEstimate(0, false)).toBe('$0.00');
   });
 });

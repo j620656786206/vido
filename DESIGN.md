@@ -321,9 +321,9 @@ Vido 會在使用者不在的時候，於別人的 NAS 上持續跑上好幾分�
 
 **按鈕上不畫金額範圍。** 系統不產生範圍（每列每模型都是單一數字，`min_usd`/`max_usd` 前後端皆不存在）；不確定性由 `≈` 承載，模型差價由確認框的模型選擇器承載。
 
-六個狀態的定稿文案與可點性見設計稿 `J9-D · 會花錢的按鈕（金額即記號）`，母版是 `Component/ButtonCost` / `-Loading` / `-Disabled`。
+六個狀態的定稿文案與可點性見設計稿 `J9-D · 會花錢的按鈕（金額即記號）`，母版是 `Component/ButtonCost/Default` / `Component/ButtonCost/Loading` / `Component/ButtonCost/Disabled`。
 
-⚠️ **現況（2026-09-10）**：程式碼裡**沒有任何一顆付費按鈕帶金額**。`MediaDetailPanel.tsx:280-292` 只有免費的「搜尋字幕」；付費入口是「管理字幕」→「生成字幕」（`ManageSubtitleDialogV2.tsx:495-509`），說明列只講「約需數分鐘」，全檔零金額字串。而且**沒有單項估價端點**——`GET /api/v1/subtitles/generation-candidates` 是整庫掃描後的快照，所以單片路徑目前是 100% 無金額，不是偶發。`Button.tsx` 也還沒有對應的變體。追蹤於 `disc-2026-09-single-item-cost-estimate` 與 `disc-2026-09-no-cost-bearing-component`。
+**現況（2026-09-17，dsr-6a）**：付費入口「管理字幕」→「生成字幕」與兩顆「重試」（觸發失敗、生成失敗）都帶金額，共用 `components/ui/ButtonCost.tsx`；按鈕狀態與說明列由 `components/subtitle/generateCostView.ts` 這一個純函式決定（J9-D 六個狀態＋§C 的建單補充）。金額來自單片估價端點 `GET /api/v1/{movies|episodes}/:id/transcribe/estimate`——它估的是這顆按鈕**真的會做的事**（語音辨識＋AI 翻譯；已有英文字幕、只差翻譯的片只算翻譯費），不是候選清單的抽取／語音辨識路線（⚖️ 2026-08-06 裁定 A）；模型用實際會扣錢的那一個，片長依序是已存的實測值 → 現場 ffprobe → TMDb → 45 分假設。金鑰未設定（⑥）在按下之前就停用。批次同意流程（F15／F16）的金額來源不變。
 
 ⚠️ 本規則原先舉的例子（詳情面板三顆按鈕：搜尋字幕／AI 校正／轉錄英文音軌）出自 v1 的 `b3-d`，那張稿已於 2026-09-10 與其他 38 張 v1 過時稿一併從設計稿移除。現行的 `b3p-d` 字幕區只有一顆「管理字幕」，而「AI 校正」「轉錄中」在程式碼裡只是 SSE 進度階段字串。舉例已更新為實際的付費入口。
 

@@ -49,6 +49,15 @@ type TranscriptionHandler struct {
 	movieService         TranscriptionMovieGetter
 	episodeService       TranscriptionEpisodeGetter
 	transcriptionService TranscriptionServiceInterface
+	// estimator prices the single-item run (story dsr-6a). nil = the estimate
+	// routes are not mounted.
+	estimator TranscriptionEstimator
+}
+
+// TranscriptionEstimator prices what a click on 生成字幕 would start (story
+// dsr-6a AC #2). *services.TranscriptionEstimateService satisfies it.
+type TranscriptionEstimator interface {
+	Estimate(ctx context.Context, target services.TranscriptionEstimateTarget) services.TranscriptionEstimate
 }
 
 // NewTranscriptionHandler creates a new TranscriptionHandler. episodeService
@@ -62,6 +71,15 @@ func NewTranscriptionHandler(movieService TranscriptionMovieGetter, episodeServi
 	}
 }
 
+// SetEstimator wires the single-item price (story dsr-6a AC #2). A setter, not a
+// constructor parameter, so the handler's many existing call sites and fakes
+// stay valid; call it BEFORE RegisterRoutes — an unwired estimator leaves the
+// estimate routes unmounted (404), the same capability honor the episode route
+// uses.
+func (h *TranscriptionHandler) SetEstimator(e TranscriptionEstimator) {
+	h.estimator = e
+}
+
 // RegisterRoutes registers transcription routes on the given router group.
 //
 // The per-episode route (story 9R-10a) is mounted ONLY when an episode getter
@@ -72,6 +90,12 @@ func (h *TranscriptionHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	rg.POST("/movies/:id/transcribe", h.TranscribeMovie)
 	if h.episodeService != nil {
 		rg.POST("/episodes/:id/transcribe", h.TranscribeEpisode)
+	}
+	if h.estimator != nil {
+		rg.GET("/movies/:id/transcribe/estimate", h.EstimateMovie)
+		if h.episodeService != nil {
+			rg.GET("/episodes/:id/transcribe/estimate", h.EstimateEpisode)
+		}
 	}
 }
 
@@ -104,23 +128,8 @@ func (h *TranscriptionHandler) TranscribeMovie(c *gin.Context) {
 		return
 	}
 
-	// Fetch movie
-	movie, err := h.movieService.GetByID(c.Request.Context(), id)
-	if err != nil {
-		slog.Error("Failed to get movie for transcription", "id", id, "error", err)
-		NotFoundError(c, "Movie")
-		return
-	}
-
-	// Validate file_path exists
-	if !movie.FilePath.Valid || movie.FilePath.String == "" {
-		BadRequestError(c, "VALIDATION_REQUIRED_FIELD", "Movie has no file path — scan the media library first")
-		return
-	}
-
-	// Validate file is accessible on disk (AC #1, task 4.3)
-	if _, err := os.Stat(movie.FilePath.String); err != nil {
-		BadRequestError(c, "VALIDATION_REQUIRED_FIELD", "Movie file not accessible — check if the file exists on disk")
+	movie, ok := h.lookupMovieFile(c, id)
+	if !ok {
 		return
 	}
 
@@ -200,32 +209,8 @@ func (h *TranscriptionHandler) TranscribeEpisode(c *gin.Context) {
 		return
 	}
 
-	// CR M1/L2: classify the lookup failure. A blanket 404 told a user whose
-	// SQLite was locked that the episode does not exist — sending them to hunt
-	// for a file that never moved. Only the not-found sentinel (and the
-	// interface-permitted nil,nil) is a 404; anything else is infrastructure.
-	episode, err := h.episodeService.FindByID(c.Request.Context(), id)
-	switch {
-	case errors.Is(err, repository.ErrEpisodeNotFound), err == nil && episode == nil:
-		// A stale id from a bookmark or a re-scanned library is routine, not an
-		// incident — Warn, not Error (the movie route's Error level here is
-		// deliberately left alone: story red line 2).
-		slog.Warn("Episode not found for transcription", "episode_id", id)
-		NotFoundError(c, "Episode")
-		return
-	case err != nil:
-		slog.Error("Failed to look up episode for transcription", "episode_id", id, "error", err)
-		InternalServerError(c, "Failed to look up episode")
-		return
-	}
-
-	if !episode.FilePath.Valid || episode.FilePath.String == "" {
-		BadRequestError(c, "VALIDATION_REQUIRED_FIELD", "這一集沒有媒體檔案路徑——請先掃描媒體庫")
-		return
-	}
-
-	if _, err := os.Stat(episode.FilePath.String); err != nil {
-		BadRequestError(c, "VALIDATION_REQUIRED_FIELD", "找不到這一集的媒體檔案——請確認檔案仍在磁碟上")
+	episode, ok := h.lookupEpisodeFile(c, id)
+	if !ok {
 		return
 	}
 
@@ -265,5 +250,131 @@ func (h *TranscriptionHandler) TranscribeEpisode(c *gin.Context) {
 			"job_id":  jobID,
 			"message": "Transcription started. Listen to SSE events for progress.",
 		},
+	})
+}
+
+// lookupMovieFile resolves the movie and checks its file is on disk, writing the
+// error response itself (ok=false means the response is already written).
+// Shared by the trigger and the estimate so the two answer a missing file with
+// the same status and the same words.
+func (h *TranscriptionHandler) lookupMovieFile(c *gin.Context, id string) (*models.Movie, bool) {
+	movie, err := h.movieService.GetByID(c.Request.Context(), id)
+	if err != nil {
+		slog.Error("Failed to get movie for transcription", "id", id, "error", err)
+		NotFoundError(c, "Movie")
+		return nil, false
+	}
+
+	// Validate file_path exists
+	if !movie.FilePath.Valid || movie.FilePath.String == "" {
+		BadRequestError(c, "VALIDATION_REQUIRED_FIELD", "Movie has no file path — scan the media library first")
+		return nil, false
+	}
+
+	// Validate file is accessible on disk (AC #1, task 4.3)
+	if _, err := os.Stat(movie.FilePath.String); err != nil {
+		BadRequestError(c, "VALIDATION_REQUIRED_FIELD", "Movie file not accessible — check if the file exists on disk")
+		return nil, false
+	}
+	return movie, true
+}
+
+// lookupEpisodeFile is the episode counterpart of lookupMovieFile.
+func (h *TranscriptionHandler) lookupEpisodeFile(c *gin.Context, id string) (*models.Episode, bool) {
+	// CR M1/L2: classify the lookup failure. A blanket 404 told a user whose
+	// SQLite was locked that the episode does not exist — sending them to hunt
+	// for a file that never moved. Only the not-found sentinel (and the
+	// interface-permitted nil,nil) is a 404; anything else is infrastructure.
+	episode, err := h.episodeService.FindByID(c.Request.Context(), id)
+	switch {
+	case errors.Is(err, repository.ErrEpisodeNotFound), err == nil && episode == nil:
+		// A stale id from a bookmark or a re-scanned library is routine, not an
+		// incident — Warn, not Error (the movie route's Error level here is
+		// deliberately left alone: story red line 2).
+		slog.Warn("Episode not found for transcription", "episode_id", id)
+		NotFoundError(c, "Episode")
+		return nil, false
+	case err != nil:
+		slog.Error("Failed to look up episode for transcription", "episode_id", id, "error", err)
+		InternalServerError(c, "Failed to look up episode")
+		return nil, false
+	}
+
+	if !episode.FilePath.Valid || episode.FilePath.String == "" {
+		BadRequestError(c, "VALIDATION_REQUIRED_FIELD", "這一集沒有媒體檔案路徑——請先掃描媒體庫")
+		return nil, false
+	}
+
+	if _, err := os.Stat(episode.FilePath.String); err != nil {
+		BadRequestError(c, "VALIDATION_REQUIRED_FIELD", "找不到這一集的媒體檔案——請確認檔案仍在磁碟上")
+		return nil, false
+	}
+	return episode, true
+}
+
+// EstimateMovie prices a click on 生成字幕 for one movie.
+//
+// @Summary      Estimate the cost of generating subtitles for one movie
+// @Description  Prices what POST /movies/{id}/transcribe?translate=true would actually do — speech recognition + translation, or translation only when an untranslated English SRT can be resumed — so the 管理字幕 dialog can show the amount on the button before anything is spent (story dsr-6a). Spends nothing and starts no job. It is NOT gated on speech-recognition availability: asr_available=false still returns the price, and the client disables the button. A movie with no stored duration is probed with ffprobe (bounded by the shared ffprobe limit), then falls back to the TMDb runtime and finally a stated 45-minute assumption (runtime_source=fallback).
+// @Tags         subtitles
+// @Produce      json
+// @Param        id path string true "Movie ID (UUID)"
+// @Success      200 {object} APIResponse "data: {media_id, media_type, plan: full|translate_only, asr_available, self_hosted_asr, translation_configured, model_id, runtime_minutes, runtime_known, runtime_source: ffprobe|tmdb|fallback, estimated_usd}"
+// @Failure      400 {object} APIResponse "VALIDATION_REQUIRED_FIELD — the movie has no file path, or the file is not on disk"
+// @Failure      404 {object} APIResponse "DB_NOT_FOUND — no such movie"
+// @Router       /api/v1/movies/{id}/transcribe/estimate [get]
+func (h *TranscriptionHandler) EstimateMovie(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		BadRequestError(c, "VALIDATION_INVALID_FORMAT", "Invalid movie ID")
+		return
+	}
+	movie, ok := h.lookupMovieFile(c, id)
+	if !ok {
+		return
+	}
+	c.JSON(http.StatusOK, APIResponse{
+		Success: true,
+		Data: h.estimator.Estimate(c.Request.Context(), services.TranscriptionEstimateTarget{
+			MediaID:         id,
+			MediaType:       models.SubtitleRunMediaMovie,
+			FilePath:        movie.FilePath.String,
+			DurationSeconds: movie.DurationSeconds,
+			Runtime:         movie.Runtime,
+		}),
+	})
+}
+
+// EstimateEpisode prices a click on 生成字幕 for one episode.
+//
+// @Summary      Estimate the cost of generating subtitles for one episode
+// @Description  The episode counterpart of the movie estimate (story dsr-6a): prices what POST /episodes/{id}/transcribe would actually do. Episodes rarely have a stored duration, so this usually probes the file with ffprobe and remembers the measured length for next time. Spends nothing and starts no job.
+// @Tags         subtitles
+// @Produce      json
+// @Param        id path string true "Episode ID (UUID)"
+// @Success      200 {object} APIResponse "data: same shape as the movie estimate, media_type=episode"
+// @Failure      400 {object} APIResponse "VALIDATION_REQUIRED_FIELD — the episode has no file path, or the file is not on disk"
+// @Failure      404 {object} APIResponse "DB_NOT_FOUND — no such episode"
+// @Failure      500 {object} APIResponse "INTERNAL_ERROR — the episode lookup itself failed"
+// @Router       /api/v1/episodes/{id}/transcribe/estimate [get]
+func (h *TranscriptionHandler) EstimateEpisode(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		BadRequestError(c, "VALIDATION_INVALID_FORMAT", "影集單集 ID 無效")
+		return
+	}
+	episode, ok := h.lookupEpisodeFile(c, id)
+	if !ok {
+		return
+	}
+	c.JSON(http.StatusOK, APIResponse{
+		Success: true,
+		Data: h.estimator.Estimate(c.Request.Context(), services.TranscriptionEstimateTarget{
+			MediaID:         id,
+			MediaType:       models.SubtitleRunMediaEpisode,
+			FilePath:        episode.FilePath.String,
+			DurationSeconds: episode.DurationSeconds,
+			Runtime:         episode.Runtime,
+		}),
 	})
 }

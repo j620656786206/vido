@@ -822,6 +822,14 @@ func (s *TranscriptionService) tryTranslateOnlyResume(ctx context.Context, jobID
 	return string(content), path, true
 }
 
+// translationEnabled reports whether a run's translate leg will actually run.
+// It is the ONE answer shared by the run (translateAndPersist) and the
+// single-item estimate (story dsr-6a AC #3): if the two ever disagreed, the
+// dialog would quote a translation the run then skips, or the reverse.
+func (s *TranscriptionService) translationEnabled() bool {
+	return s.translationService != nil && s.translationService.IsConfigured()
+}
+
 // translateAndPersist runs the optional translate phase and the generation
 // writeback. Returns the zh-Hant path ("" when no translation happened).
 // Error semantics (ruled in 9R-16 AC 6c/12, extended by sub-2-2a AC #2):
@@ -847,7 +855,7 @@ func (s *TranscriptionService) tryTranslateOnlyResume(ctx context.Context, jobID
 func (s *TranscriptionService) translateAndPersist(ctx context.Context, jobID string, mediaType string, mediaID string, srtContent, srtPath, filePath, mediaDir string, translate bool) (string, TranslationOutcome, error) {
 	var zhSRTPath string
 	var outcome TranslationOutcome
-	if translate && s.translationService != nil && s.translationService.IsConfigured() {
+	if translate && s.translationEnabled() {
 		s.broadcastEvent(EventTranscriptionTranslating, map[string]interface{}{
 			"job_id":     jobID,
 			"media_id":   mediaID,
