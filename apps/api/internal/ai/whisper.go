@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+	"unicode/utf8"
 )
 
 const (
@@ -447,6 +448,12 @@ func (c *WhisperClient) postTranscription(ctx context.Context, audio []byte, fil
 
 			resp, err := c.httpClient.Do(req)
 			if err != nil {
+				// The CALLER's ctx ending (a run's phase budget, a cancelled
+				// batch) must stay visible through the sentinel, or the run
+				// cannot tell "our deadline" from "the provider was slow".
+				if ctxErr := ctx.Err(); ctxErr != nil {
+					return "", false, fmt.Errorf("%w: %w", ErrWhisperTimeout, ctxErr)
+				}
 				if attemptCtx.Err() == context.DeadlineExceeded {
 					return "", true, ErrWhisperTimeout
 				}
@@ -556,7 +563,13 @@ func SplitAudioChunks(ctx context.Context, audioPath string) ([]string, int, err
 				os.Remove(c)
 			}
 			os.Remove(chunkPath)
-			return nil, 0, fmt.Errorf("ffmpeg chunk split at %ds: %w — %s", start, err, string(output))
+			// A deadline kills ffmpeg with SIGKILL: "signal: killed" is the
+			// symptom, the run deadline is the cause — say so, and carry the
+			// ctx error so callers can tell a timeout from a broken ffmpeg.
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				return nil, 0, fmt.Errorf("ffmpeg chunk split at %ds stopped by the run deadline: %w", start, ctxErr)
+			}
+			return nil, 0, fmt.Errorf("ffmpeg chunk split at %ds: %w — %s", start, err, stderrTail(output, 3, 300))
 		}
 
 		// Defensive: never hand an oversized chunk to the API (the 413 class).
@@ -572,6 +585,38 @@ func SplitAudioChunks(ctx context.Context, audioPath string) ([]string, int, err
 	}
 
 	return chunks, chunkSeconds, nil
+}
+
+// WAVDuration is the length in seconds of a WAV file, read from its header —
+// the media length a transcription run sizes its post-extraction budget from
+// (disc-2026-09-transcription-run-5min-hard-timeout).
+func WAVDuration(path string) (float64, error) {
+	d, _, err := parseWAVInfo(path)
+	return d, err
+}
+
+// stderrTail keeps the last few lines of an ffmpeg CombinedOutput for an error
+// string: the banner and stream mapping above them are noise that used to
+// reach the screen thirty lines at a time.
+func stderrTail(output []byte, lines, maxBytes int) string {
+	text := strings.TrimSpace(string(output))
+	if text == "" {
+		return ""
+	}
+	// ffmpeg's progress line is \r-separated; treat it as lines too.
+	parts := strings.FieldsFunc(text, func(r rune) bool { return r == '\n' || r == '\r' })
+	if len(parts) > lines {
+		parts = parts[len(parts)-lines:]
+	}
+	tail := strings.Join(parts, " | ")
+	if len(tail) > maxBytes {
+		cut := tail[len(tail)-maxBytes:]
+		for len(cut) > 0 && !utf8.RuneStart(cut[0]) {
+			cut = cut[1:] // never start inside a multi-byte rune
+		}
+		tail = "…" + cut
+	}
+	return tail
 }
 
 // execCommandContext wraps exec.CommandContext to allow testing

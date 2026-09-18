@@ -577,9 +577,12 @@ func main() {
 
 	// Initialize audio extractor service (Story 9.2a)
 	// sub-6-3: ASR audio extraction is ffmpeg on the same disk, so it takes
-	// turns with subtitle extraction through the same gate.
-	audioExtractorService := services.NewAudioExtractorService(1, 5*time.Minute, slog.Default(),
-		services.WithAudioExtractSlot(extractSlotAdapter{gate: subtitleExtractGate}))
+	// turns with subtitle extraction through the same gate — and, since
+	// disc-2026-09-transcription-run-5min-hard-timeout, gets the same
+	// size-aware bound (a 66.8 GB remux needed 4:55 of the old fixed 5 min).
+	audioExtractorService := services.NewAudioExtractorService(1, subtitleExtractTimeout, slog.Default(),
+		services.WithAudioExtractSlot(extractSlotAdapter{gate: subtitleExtractGate}),
+		services.WithAudioExtractPerGB(subtitleExtractPerGB))
 	slog.Info("Audio extractor service initialized", "available", audioExtractorService.IsAvailable())
 
 	// ── Provider keys: resolver + hot-reloadable holders (sub-2-1a AC #1/#2,
@@ -618,6 +621,15 @@ func main() {
 		keyResolver, cfg.ASRBaseURL, cfg.ASRModel, slog.Default(), ai.WithWhisperGovernor(aiGovernor))
 	transcriptionService := services.NewTranscriptionService(audioExtractorService, asrHolder, sseHub, slog.Default())
 	transcriptionService.SetRunBudgetUSD(cfg.AIRunBudgetUSD)
+	// disc-2026-09-transcription-run-5min-hard-timeout: the post-extraction
+	// phase is budgeted by media length, not a fixed 5 minutes.
+	transcriptionService.SetRunBudget(
+		time.Duration(cfg.TranscriptionRunTimeoutSeconds)*time.Second,
+		time.Duration(cfg.TranscriptionSecondsPerMediaMinute)*time.Second)
+	slog.Info("Transcription run budgets",
+		"extract_floor", subtitleExtractTimeout, "extract_per_gb", subtitleExtractPerGB,
+		"run_floor", time.Duration(cfg.TranscriptionRunTimeoutSeconds)*time.Second,
+		"run_per_media_minute", time.Duration(cfg.TranscriptionSecondsPerMediaMinute)*time.Second)
 	// 9R-10: wire the per-show glossary + OpenCC safety net + atomic placer
 	// into the Route C generation pipeline.
 	transcriptionService.SetGlossaryRepository(repos.Glossary)

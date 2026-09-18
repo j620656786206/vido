@@ -127,8 +127,17 @@ type TranscriptionService struct {
 	translationService *TranslationService
 	sseHub             *sse.Hub
 	logger             *slog.Logger
-	timeout            time.Duration
-	runBudgetUSD       float64 // 9R-11: per-run AI cost ceiling (0 = unlimited)
+	// runFloor / runPerMediaMinute bound the phase AFTER audio extraction
+	// (chunk split → ASR → translate → writeback): max(floor, media minutes ×
+	// per-minute allowance), the media length read from the WAV just
+	// extracted. The extraction itself is bounded by file size inside
+	// AudioExtractorService. There is deliberately NO whole-run deadline any
+	// more (disc-2026-09-transcription-run-5min-hard-timeout): the old fixed
+	// 5 minutes killed a 157-minute film after 4:55 of audio extraction, with
+	// $0 of speech recognition done.
+	runFloor          time.Duration
+	runPerMediaMinute time.Duration
+	runBudgetUSD      float64 // 9R-11: per-run AI cost ceiling (0 = unlimited)
 
 	// 9R-10 pipeline dependencies (all optional / nil-safe).
 	glossaryRepo repository.GlossaryRepositoryInterface // per-show glossary (9R-6/7)
@@ -173,12 +182,13 @@ func NewTranscriptionService(
 		logger = slog.Default()
 	}
 	return &TranscriptionService{
-		audioExtractor: audioExtractor,
-		asr:            asr,
-		sseHub:         sseHub,
-		logger:         logger.With("service", "transcription"),
-		timeout:        5 * time.Minute,
-		inProgress:     make(map[string]*soloTranscriptionJob),
+		audioExtractor:    audioExtractor,
+		asr:               asr,
+		sseHub:            sseHub,
+		logger:            logger.With("service", "transcription"),
+		runFloor:          defaultRunFloor,
+		runPerMediaMinute: defaultRunPerMediaMinute,
+		inProgress:        make(map[string]*soloTranscriptionJob),
 	}
 }
 
@@ -186,6 +196,90 @@ func NewTranscriptionService(
 // Kept as a setter to avoid changing the constructor signature (backward compatible).
 func (s *TranscriptionService) SetTranslationService(ts *TranslationService) {
 	s.translationService = ts
+}
+
+// The two environment variables behind the post-extraction phase budget.
+// Named here so the timeout message and docs/deployment.md cannot drift.
+const (
+	transcriptionFloorEnv     = "TRANSCRIPTION_RUN_TIMEOUT_SECONDS"
+	transcriptionPerMinuteEnv = "TRANSCRIPTION_SECONDS_PER_MEDIA_MINUTE"
+
+	defaultRunFloor          = 10 * time.Minute
+	defaultRunPerMediaMinute = 30 * time.Second
+)
+
+// SetRunBudget sets the floor and the per-media-minute allowance of the
+// post-extraction phase (TRANSCRIPTION_RUN_TIMEOUT_SECONDS /
+// TRANSCRIPTION_SECONDS_PER_MEDIA_MINUTE). Non-positive values keep the
+// defaults.
+func (s *TranscriptionService) SetRunBudget(floor, perMediaMinute time.Duration) {
+	if floor > 0 {
+		s.runFloor = floor
+	}
+	if perMediaMinute > 0 {
+		s.runPerMediaMinute = perMediaMinute
+	}
+}
+
+// runPhaseBudget is the deadline the chunk-split → ASR → translate → writeback
+// phase gets for mediaSeconds of media: max(floor, minutes × perMediaMinute).
+// Speech recognition and translation cost time in proportion to LENGTH (16
+// Whisper chunks and ~27 minutes of translation for a 157-minute film), so a
+// constant is wrong at both ends. Unknown length (≤ 0) or a non-positive
+// allowance → the floor. The second value names the knob that decided, so a
+// timeout can point at the setting that would actually help.
+func runPhaseBudget(floor, perMediaMinute time.Duration, mediaSeconds float64) (time.Duration, string) {
+	if mediaSeconds <= 0 || perMediaMinute <= 0 {
+		return floor, transcriptionFloorEnv
+	}
+	sized := time.Duration(mediaSeconds / 60 * float64(perMediaMinute))
+	if sized > floor {
+		return sized, transcriptionPerMinuteEnv
+	}
+	return floor, transcriptionFloorEnv
+}
+
+// srtSpanSeconds is the end time of the LAST cue in srt, in seconds — the media
+// length a translate-only resume has to hand (no WAV was extracted). 0 when
+// the text carries no parsable timing line.
+func srtSpanSeconds(srt string) float64 {
+	lines := strings.Split(srt, "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		_, end, ok := strings.Cut(lines[i], "-->")
+		if !ok {
+			continue
+		}
+		var h, m, sec, ms int
+		if _, err := fmt.Sscanf(strings.TrimSpace(end), "%d:%d:%d,%d", &h, &m, &sec, &ms); err != nil {
+			continue // a cue whose TEXT contains "-->" — keep looking for a timing line
+		}
+		return float64(h*3600+m*60+sec) + float64(ms)/1000
+	}
+	return 0
+}
+
+// phaseTimeoutError turns a deadline hit inside the budgeted phase into the
+// ONE line failJob will send: which phase, how long it ran, the media length,
+// the budget and the knob that would raise it. Our knob is named only when
+// OUR deadline fired — a caller that cancelled or timed out (a batch item's
+// bound, shutdown) gets the plain truth instead. Any other error passes
+// through untouched.
+func phaseTimeoutError(parent, phase context.Context, step string, started time.Time, mediaSeconds float64, budget time.Duration, knob string, err error) error {
+	if err == nil || phase.Err() == nil {
+		return err // not a deadline of ours: the error stands on its own
+	}
+	// The phase deadline HAS fired, so whatever came back is its consequence —
+	// including a provider's own sentinel (Whisper answers a dead ctx with a
+	// bare ErrWhisperTimeout that wraps no ctx error — CR H1). The original
+	// text rides along for the log; the sentence in front is what the screen
+	// shows.
+	elapsed := time.Since(started).Round(time.Second)
+	if parent.Err() != nil {
+		return fmt.Errorf("transcription stopped by the caller's deadline after %s in %s (media %.0f min): %w (%v)",
+			elapsed, step, mediaSeconds/60, parent.Err(), err)
+	}
+	return fmt.Errorf("transcription run timed out after %s in %s (media %.0f min, budget %d s — raise %s): %w (%v)",
+		elapsed, step, mediaSeconds/60, int(budget.Seconds()), knob, context.DeadlineExceeded, err)
 }
 
 // SetRunBudgetUSD sets the per-run AI cost ceiling (Story 9R-11). A run that
@@ -361,13 +455,15 @@ func (s *TranscriptionService) StartTranscription(ctx context.Context, mediaID s
 		return "", err
 	}
 
-	// Run transcription pipeline in background goroutine with timeout.
-	// Deliberately detached from the request ctx (context.Background()) so the
-	// job outlives the HTTP request. Fire-and-forget: the pipeline error is
-	// intentionally discarded here — every failure path already reports via
-	// failJob SSE (9R-16 AC 6a ruling; sync callers use RunTranscription).
+	// Run transcription pipeline in a background goroutine. Deliberately
+	// detached from the request ctx (context.Background()) so the job outlives
+	// the HTTP request. No whole-run deadline: extraction is bounded by file
+	// size inside the extractor, everything after it by media length inside
+	// runPipeline. Fire-and-forget: the pipeline error is intentionally
+	// discarded here — every failure path already reports via failJob SSE
+	// (9R-16 AC 6a ruling; sync callers use RunTranscription).
 	go func() {
-		pipelineCtx, pipelineCancel := context.WithTimeout(context.Background(), s.timeout)
+		pipelineCtx, pipelineCancel := context.WithCancel(context.Background())
 		defer pipelineCancel()
 		_ = s.runPipeline(pipelineCtx, jobID, cfg.mediaType, mediaID, filePath, mediaDir, cfg.translate)
 	}()
@@ -378,9 +474,10 @@ func (s *TranscriptionService) StartTranscription(ctx context.Context, mediaID s
 // RunTranscription is the SYNCHRONOUS pipeline entry (Story 9R-16 AC 6a): it
 // shares the same per-media single-flight map as StartTranscription, runs the
 // pipeline inline, and RETURNS the pipeline error (the async path reports via
-// failJob SSE only). ⚠️ The timeout derives from the CALLER's ctx — NOT the
-// async path's context.Background() detach — so a batch's shared ai.Budget
-// (a ctx value) and cancel propagation flow through.
+// failJob SSE only). ⚠️ The ctx is the CALLER's — NOT the async path's
+// context.Background() detach — so a batch's shared ai.Budget (a ctx value)
+// and cancel propagation flow through; the per-phase deadlines are added
+// inside runPipeline on top of it.
 func (s *TranscriptionService) RunTranscription(ctx context.Context, mediaID string, filePath string, mediaDir string, opts ...TranscriptionOption) error {
 	cfg := newTranscriptionConfig(opts)
 
@@ -401,7 +498,7 @@ func (s *TranscriptionService) RunTranscription(ctx context.Context, mediaID str
 		return err
 	}
 
-	pipelineCtx, pipelineCancel := context.WithTimeout(ctx, s.timeout)
+	pipelineCtx, pipelineCancel := context.WithCancel(ctx)
 	defer pipelineCancel()
 	return s.runPipeline(pipelineCtx, jobID, cfg.mediaType, mediaID, filePath, mediaDir, cfg.translate)
 }
@@ -617,6 +714,15 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 	// resume point). Failure to resume degrades to a full run, never errors.
 	srtContent, srtPath, resumed := s.tryTranslateOnlyResume(ctx, jobID, mediaType, mediaID, translate)
 
+	// The length of media this run is about — from the WAV once extracted, or
+	// from the resumed SRT's last cue. It sizes the post-extraction budget.
+	var mediaSeconds float64
+	if resumed {
+		mediaSeconds = srtSpanSeconds(srtContent)
+	}
+	var audioPath string
+	var selectedTrack AudioTrack
+
 	if !resumed {
 		// CR sub-2-2a M2 fallback guard: the entry gate admits ASR-less runs
 		// that are resume-eligible; if the resume then degrades to a full run
@@ -643,7 +749,7 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 			return fmt.Errorf("list audio tracks: %w", err)
 		}
 
-		selectedTrack, err := SelectEnglishTrack(tracks)
+		selectedTrack, err = SelectEnglishTrack(tracks)
 		if err != nil {
 			s.failJob(jobID, mediaID, fmt.Sprintf("select audio track: %v", err))
 			return fmt.Errorf("select audio track: %w", err)
@@ -655,14 +761,37 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 			"language", selectedTrack.Language,
 		)
 
-		// Extract audio to temp WAV
-		audioPath, err := s.audioExtractor.ExtractAudio(ctx, filePath, selectedTrack.Index)
+		// Extract audio to temp WAV. Bounded by FILE SIZE inside the extractor
+		// (SUBTITLE_EXTRACT_* — its message names the knob if it fires).
+		extractBudget, fileGB := s.audioExtractor.EffectiveTimeout(filePath)
+		s.logger.Info("audio extraction budget",
+			"job_id", jobID, "media_id", mediaID, "file_gb", fmt.Sprintf("%.1f", fileGB), "extract_budget", extractBudget.Round(time.Second))
+		audioPath, err = s.audioExtractor.ExtractAudio(ctx, filePath, selectedTrack.Index)
 		if err != nil {
 			s.failJob(jobID, mediaID, fmt.Sprintf("extract audio: %v", err))
 			return fmt.Errorf("extract audio: %w", err)
 		}
 		defer os.Remove(audioPath)
+		if d, derr := ai.WAVDuration(audioPath); derr == nil {
+			mediaSeconds = d
+		} else {
+			s.logger.Warn("could not read extracted audio length — using the floor budget", "job_id", jobID, "error", derr)
+		}
+	}
 
+	// Everything from here on costs time in proportion to media LENGTH.
+	timeBudget, knob := runPhaseBudget(s.runFloor, s.runPerMediaMinute, mediaSeconds)
+	s.logger.Info("transcription run budget",
+		"job_id", jobID, "media_id", mediaID, "media_minutes", fmt.Sprintf("%.1f", mediaSeconds/60),
+		"run_budget", timeBudget.Round(time.Second), "decided_by", knob, "resumed", resumed)
+	phaseCtx, cancelPhase := context.WithTimeout(ctx, timeBudget)
+	defer cancelPhase()
+	phaseStarted := time.Now()
+	explain := func(step string, err error) error {
+		return phaseTimeoutError(ctx, phaseCtx, step, phaseStarted, mediaSeconds, timeBudget, knob, err)
+	}
+
+	if !resumed {
 		// Phase 2: Transcribe
 		s.broadcastEvent(EventTranscriptionProgress, map[string]interface{}{
 			"job_id":   jobID,
@@ -672,8 +801,10 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 			"message":  transcriptionStageMessage("transcribing"),
 		})
 
-		srtContent, err = s.transcribeAudio(ctx, audioPath, WhisperLanguageFromTrack(selectedTrack.Language))
+		var err error
+		srtContent, err = s.transcribeAudio(phaseCtx, audioPath, WhisperLanguageFromTrack(selectedTrack.Language))
 		if err != nil {
+			err = explain("transcribing", err)
 			s.failJob(jobID, mediaID, fmt.Sprintf("transcribe: %v", err))
 			return fmt.Errorf("transcribe: %w", err)
 		}
@@ -690,8 +821,9 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 
 	// Phase 3.5: Translate to Traditional Chinese (Story 9-2b) + persist the
 	// generation verdict (9R-16 AC 12; en-only → untranslated per sub-2-2a).
-	zhSRTPath, outcome, err := s.translateAndPersist(ctx, jobID, mediaType, mediaID, srtContent, srtPath, filePath, mediaDir, translate)
+	zhSRTPath, outcome, err := s.translateAndPersist(phaseCtx, jobID, mediaType, mediaID, srtContent, srtPath, filePath, mediaDir, translate)
 	if err != nil {
+		err = explain("translating", err)
 		s.failJob(jobID, mediaID, err.Error())
 		return err
 	}
@@ -936,6 +1068,22 @@ func (s *TranscriptionService) translateAndPersist(ctx context.Context, jobID st
 				if werr := s.writeSubtitleStatus(ctx, mediaType, mediaID,
 					models.SubtitleStatusUntranslated, srtPath, "en"); werr != nil {
 					s.logger.Warn("untranslated writeback before budget pause failed",
+						"job_id", jobID, "media_id", mediaID, "media_type", mediaType, "error", werr)
+				}
+				return "", TranslationOutcome{}, fmt.Errorf("translate: %w", err)
+			}
+			// The phase budget (or the caller) ended the run mid-translation:
+			// the English SRT is on disk and translation is missing — exactly
+			// what `untranslated` states. Write it on a ctx that is NOT the dead
+			// one (CR M2), the same resume enabler as the budget branch above;
+			// without it the next click re-pays the whole ASR. Then propagate,
+			// so the run reports the timeout instead of a silent 轉錄完成.
+			if ctx.Err() != nil {
+				writeCtx, cancelWrite := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+				defer cancelWrite()
+				if werr := s.writeSubtitleStatus(writeCtx, mediaType, mediaID,
+					models.SubtitleStatusUntranslated, srtPath, "en"); werr != nil {
+					s.logger.Warn("untranslated writeback after translation deadline failed",
 						"job_id", jobID, "media_id", mediaID, "media_type", mediaType, "error", werr)
 				}
 				return "", TranslationOutcome{}, fmt.Errorf("translate: %w", err)

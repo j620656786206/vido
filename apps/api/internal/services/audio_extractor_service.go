@@ -44,7 +44,14 @@ type ExtractSlot interface {
 // Follows FFprobeService pattern: semaphore for concurrency, timeout, graceful degradation.
 type AudioExtractorService struct {
 	semaphore chan struct{}
-	timeout   time.Duration
+	// timeout is the configured FLOOR of one extraction; the effective bound
+	// grows with file size (SizedFFmpegTimeout) — a 66.8 GB remux needed 4:55
+	// of the old fixed 5 minutes on the NAS.
+	timeout      time.Duration
+	perGBTimeout time.Duration
+	// fileSize answers "how big is this file" for the size-aware bound; a
+	// func, not an interface (Rule 11). Tests override it.
+	fileSize func(path string) (int64, error)
 	// slot is the shared disk gate (optional). nil = this service serializes
 	// only against itself, the pre-sub-6-3 behaviour.
 	slot      ExtractSlot
@@ -64,6 +71,38 @@ func WithAudioExtractSlot(slot ExtractSlot) AudioExtractorOption {
 	}
 }
 
+// WithAudioExtractPerGB overrides the size-aware allowance per gigabyte
+// (SUBTITLE_EXTRACT_PER_GB_SECONDS — the same knob as subtitle extraction,
+// same disk, same kind of full-file ffmpeg read). Non-positive values are
+// ignored.
+func WithAudioExtractPerGB(d time.Duration) AudioExtractorOption {
+	return func(s *AudioExtractorService) {
+		if d > 0 {
+			s.perGBTimeout = d
+		}
+	}
+}
+
+// withAudioFileSize overrides the size lookup (tests).
+func withAudioFileSize(fn func(path string) (int64, error)) AudioExtractorOption {
+	return func(s *AudioExtractorService) {
+		if fn != nil {
+			s.fileSize = fn
+		}
+	}
+}
+
+// defaultAudioExtractPerGB mirrors the subtitle extractor's default.
+const defaultAudioExtractPerGB = 30 * time.Second
+
+func statAudioFileSize(path string) (int64, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return 0, err
+	}
+	return info.Size(), nil
+}
+
 // NewAudioExtractorService creates a new AudioExtractorService.
 // Checks if ffmpeg is available at startup via exec.LookPath (AC #4).
 func NewAudioExtractorService(maxConcurrent int, timeout time.Duration, logger *slog.Logger, opts ...AudioExtractorOption) *AudioExtractorService {
@@ -78,9 +117,11 @@ func NewAudioExtractorService(maxConcurrent int, timeout time.Duration, logger *
 	}
 
 	svc := &AudioExtractorService{
-		semaphore: make(chan struct{}, maxConcurrent),
-		timeout:   timeout,
-		logger:    logger.With("service", "audio_extractor"),
+		semaphore:    make(chan struct{}, maxConcurrent),
+		timeout:      timeout,
+		perGBTimeout: defaultAudioExtractPerGB,
+		fileSize:     statAudioFileSize,
+		logger:       logger.With("service", "audio_extractor"),
 	}
 	for _, opt := range opts {
 		opt(svc)
@@ -91,7 +132,7 @@ func NewAudioExtractorService(maxConcurrent int, timeout time.Duration, logger *
 		svc.available = false
 	} else {
 		svc.available = true
-		svc.logger.Info("ffmpeg available", "max_concurrent", maxConcurrent, "timeout", timeout)
+		svc.logger.Info("ffmpeg available", "max_concurrent", maxConcurrent, "timeout", timeout, "per_gb_timeout", svc.perGBTimeout)
 	}
 
 	return svc
@@ -175,8 +216,10 @@ func (s *AudioExtractorService) ExtractAudio(ctx context.Context, inputPath stri
 		defer release()
 	}
 
-	extractCtx, cancel := context.WithTimeout(ctx, s.timeout)
+	timeout, sizeGB, knob := s.effectiveTimeout(inputPath)
+	extractCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
+	started := time.Now()
 
 	// Create temp file for output
 	tmpFile, err := os.CreateTemp("", "vido-audio-*.wav")
@@ -199,10 +242,29 @@ func (s *AudioExtractorService) ExtractAudio(ctx context.Context, inputPath stri
 		outputPath,
 	)
 
+	// Bound the post-kill wait on the stderr pipe: a killed ffmpeg whose
+	// grandchild still holds the pipe would hang CombinedOutput forever and
+	// strand the shared extraction slot for the life of the process (the
+	// subtitle extractor's extractWaitDelay, CR M3).
+	cmd.WaitDelay = 10 * time.Second
+
 	if output, err := cmd.CombinedOutput(); err != nil {
 		os.Remove(outputPath)
-		if extractCtx.Err() == context.DeadlineExceeded {
-			return "", ErrAudioExtractionTimeout
+		elapsed := time.Since(started).Round(time.Second)
+		// The CALLER went away (a cancelled batch, a shutdown, or its own
+		// bound): say so, never blame a knob that did not apply. Not an
+		// Error-level log either — nothing broke.
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return "", fmt.Errorf("%w: ffmpeg stopped by the caller after %s on %s (file %.1f GB): %w",
+				ErrAudioExtractionTimeout, elapsed, filepath.Base(inputPath), sizeGB, ctxErr)
+		}
+		if errors.Is(extractCtx.Err(), context.DeadlineExceeded) {
+			// OUR size-aware bound fired: one line naming the knob an operator
+			// would actually have to raise. It reaches the screen through the
+			// transcription_failed event.
+			return "", fmt.Errorf("%w: ffmpeg timed out after %s on %s (file %.1f GB, timeout %d s — raise %s for slow disks): %w",
+				ErrAudioExtractionTimeout, elapsed, filepath.Base(inputPath),
+				sizeGB, int(timeout.Seconds()), knob, context.DeadlineExceeded)
 		}
 		s.logger.Error("ffmpeg extraction failed",
 			"error", err,
@@ -255,4 +317,28 @@ func parseAudioStreams(output []byte) ([]AudioTrack, error) {
 	}
 
 	return tracks, nil
+}
+
+// EffectiveTimeout is the deadline one ffmpeg pass over inputPath gets:
+// max(configured floor, size × per-GB allowance) — the subtitle extractor's
+// rule (sub-6-3 AC #1), now shared by the ASR audio extraction. A file whose
+// size cannot be read gets the floor. The size in GB rides along for log
+// lines; 0 when unknown.
+func (s *AudioExtractorService) EffectiveTimeout(inputPath string) (time.Duration, float64) {
+	timeout, gb, _ := s.effectiveTimeout(inputPath)
+	return timeout, gb
+}
+
+func (s *AudioExtractorService) effectiveTimeout(inputPath string) (timeout time.Duration, sizeGB float64, knob string) {
+	fileSize := s.fileSize
+	if fileSize == nil {
+		fileSize = statAudioFileSize // a bare-struct service (tests) still works
+	}
+	size, err := fileSize(inputPath)
+	if err != nil || size <= 0 {
+		timeout, knob = sizedFFmpegTimeoutKnob(s.timeout, s.perGBTimeout, 0)
+		return timeout, 0, knob
+	}
+	timeout, knob = sizedFFmpegTimeoutKnob(s.timeout, s.perGBTimeout, size)
+	return timeout, float64(size) / BytesPerGB, knob
 }

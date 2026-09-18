@@ -1118,3 +1118,38 @@ func TestSubtitleLocalizationLevelEnv_DistinguishesSetFromDefault(t *testing.T) 
 	require.NoError(t, err)
 	assert.Equal(t, "literal", cfg.SubtitleLocalizationLevelEnv())
 }
+
+// ─── disc-2026-09-transcription-run-5min-hard-timeout: the post-extraction budget ─
+
+func TestLoad_TranscriptionRunBudget(t *testing.T) {
+	t.Run("defaults", func(t *testing.T) {
+		os.Clearenv()
+		cfg, err := Load()
+		require.NoError(t, err)
+		assert.Equal(t, 600, cfg.TranscriptionRunTimeoutSeconds)
+		assert.Equal(t, 30, cfg.TranscriptionSecondsPerMediaMinute)
+		assert.Equal(t, SourceDefault, cfg.Sources["TRANSCRIPTION_RUN_TIMEOUT_SECONDS"])
+		assert.Equal(t, SourceDefault, cfg.Sources["TRANSCRIPTION_SECONDS_PER_MEDIA_MINUTE"])
+	})
+	t.Run("override", func(t *testing.T) {
+		os.Clearenv()
+		t.Setenv("TRANSCRIPTION_RUN_TIMEOUT_SECONDS", "1200")
+		t.Setenv("TRANSCRIPTION_SECONDS_PER_MEDIA_MINUTE", "45")
+		cfg, err := Load()
+		require.NoError(t, err)
+		assert.Equal(t, 1200, cfg.TranscriptionRunTimeoutSeconds)
+		assert.Equal(t, 45, cfg.TranscriptionSecondsPerMediaMinute)
+		assert.Equal(t, SourceEnvVar, cfg.Sources["TRANSCRIPTION_RUN_TIMEOUT_SECONDS"])
+	})
+	t.Run("non-positive and garbage fall back", func(t *testing.T) {
+		for _, raw := range []string{"0", "-5", "ten"} {
+			os.Clearenv()
+			t.Setenv("TRANSCRIPTION_RUN_TIMEOUT_SECONDS", raw)
+			t.Setenv("TRANSCRIPTION_SECONDS_PER_MEDIA_MINUTE", raw)
+			cfg, err := Load()
+			require.NoError(t, err)
+			assert.Equal(t, 600, cfg.TranscriptionRunTimeoutSeconds, "raw=%q", raw)
+			assert.Equal(t, 30, cfg.TranscriptionSecondsPerMediaMinute, "raw=%q", raw)
+		}
+	})
+}
