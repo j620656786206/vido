@@ -200,6 +200,7 @@ Claude Fable 5.1 — dev-story (Amelia)，2026-09-18，branch `fix/transcription
   - 切段錯誤帶整份 ffmpeg 輸出、砍掉時不包 `DeadlineExceeded` → **AC #3**
 - **② spawn-blocking-story**：無。
 - **③ backlog-with-carry-forward-link**
+  - `disc-2026-09-generation-resume-from-checkpoint`（**新立，P2**，⚖️ Alexyu 2026-09-18 真機驗證後指示）：金額上限中途擋下時，語音辨識的段與翻譯的批都要能從斷點續跑。現況查證：辨識結果只在記憶體、翻譯這條線沒有逐句快取（`translation_service.go:98`），最差白花 $3.6。條目內含架構思考（翻譯接既有 `SegmentCache`；辨識新 `asr_chunks` 表只存文字不存 WAV；一律進 `/vido-data` SQLite；暫存失敗只 Warn 不擋付費工作；估價要扣已有的段）。
   - `failJob` 的 `message` 是英文（`"Transcription failed: " + err`，Rule 3 邊界缺口）→ 既有的前端對照已擋在畫面前，**不另立**；記錄於 AC #7。
 - Reference: `project-context.md` Rule 24
 
