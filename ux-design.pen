@@ -128371,7 +128371,7 @@
                                 {
                                   "type": "icon",
                                   "id": "rDZQj",
-                                  "name": "Terminal Icon",
+                                  "name": "Activity Icon",
                                   "width": 14,
                                   "height": 14,
                                   "icon": "activity",
@@ -128399,7 +128399,7 @@
                                 {
                                   "type": "text",
                                   "id": "rAWiU",
-                                  "name": "Autoscroll Label",
+                                  "name": "Scope Label",
                                   "fill": "$text-muted",
                                   "content": "自開啟本頁起累積",
                                   "lineHeight": "$Type/Label/Line",
@@ -128441,7 +128441,7 @@
                                       "height": 16,
                                       "icon": "check",
                                       "library": "lucide",
-                                      "fill": "$success"
+                                      "fill": "$success-text"
                                     },
                                     {
                                       "type": "text",
@@ -128505,7 +128505,7 @@
                                       "height": 16,
                                       "icon": "check",
                                       "library": "lucide",
-                                      "fill": "$success"
+                                      "fill": "$success-text"
                                     },
                                     {
                                       "type": "text",
@@ -128567,16 +128567,16 @@
                                       "name": "evt-ic",
                                       "width": 16,
                                       "height": 16,
-                                      "icon": "audio-lines",
+                                      "icon": "check",
                                       "library": "lucide",
-                                      "fill": "$accent-text"
+                                      "fill": "$text-muted"
                                     },
                                     {
                                       "type": "text",
                                       "id": "BrZkZ",
                                       "name": "evt-stage",
-                                      "fill": "$accent-text",
-                                      "content": "提取音訊完成",
+                                      "fill": "$text-secondary",
+                                      "content": "提取音訊",
                                       "lineHeight": "$Type/Body/Line",
                                       "fontFamily": "$Type/Family/Primary",
                                       "fontSize": "$Type/Body/Size",
@@ -128615,147 +128615,8 @@
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "u4njFq",
-                                  "name": "evt-4",
-                                  "width": "fill_container",
-                                  "gap": "$Space/sm",
-                                  "padding": [
-                                    "$Space/sm",
-                                    "$Space/md-plus"
-                                  ],
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "icon",
-                                      "id": "mZoge",
-                                      "name": "evt-ic",
-                                      "width": 16,
-                                      "height": 16,
-                                      "icon": "circle-dollar-sign",
-                                      "library": "lucide",
-                                      "fill": "$text-muted"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "oUvRU",
-                                      "name": "evt-stage",
-                                      "fill": "$text-secondary",
-                                      "content": "本次用量",
-                                      "lineHeight": "$Type/Body/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Body/Size",
-                                      "fontWeight": "600"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "y7jt8F",
-                                      "name": "evt-dot",
-                                      "fill": "$text-muted",
-                                      "content": "·",
-                                      "lineHeight": "$Type/Body/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Body/Size",
-                                      "fontWeight": "$Type/Body/Weight"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "nnWAb",
-                                      "name": "evt-item",
-                                      "fill": "$text-secondary",
-                                      "content": "本批次",
-                                      "lineHeight": "$Type/Body/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Body/Size",
-                                      "fontWeight": "$Type/Body/Weight"
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "FZ82I",
-                                      "name": "evt-sp",
-                                      "width": "fill_container",
-                                      "height": 1
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "pvyHj",
-                                      "name": "evt-trail",
-                                      "fill": "$text-secondary",
-                                      "content": "$0.42",
-                                      "lineHeight": "$Type/Body/Line",
-                                      "fontFamily": "$Type/Family/Mono",
-                                      "fontSize": "$Type/Body/Size",
-                                      "fontWeight": "$Type/Body/Weight"
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "E7Me1",
-                                  "name": "evt-5",
-                                  "width": "fill_container",
-                                  "gap": "$Space/sm",
-                                  "padding": [
-                                    "$Space/sm",
-                                    "$Space/md-plus"
-                                  ],
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "icon",
-                                      "id": "NNrvQ",
-                                      "name": "evt-ic",
-                                      "width": 16,
-                                      "height": 16,
-                                      "icon": "hourglass",
-                                      "library": "lucide",
-                                      "fill": "$text-muted"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "L7zsC2",
-                                      "name": "evt-stage",
-                                      "fill": "$text-muted",
-                                      "content": "排入佇列",
-                                      "lineHeight": "$Type/Body/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Body/Size",
-                                      "fontWeight": "600"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "IoyKc",
-                                      "name": "evt-dot",
-                                      "fill": "$text-muted",
-                                      "content": "·",
-                                      "lineHeight": "$Type/Body/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Body/Size",
-                                      "fontWeight": "$Type/Body/Weight"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "rapF4",
-                                      "name": "evt-item",
-                                      "fill": "$text-secondary",
-                                      "content": "花月殺手",
-                                      "lineHeight": "$Type/Body/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Body/Size",
-                                      "fontWeight": "$Type/Body/Weight"
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "Z1yGo",
-                                      "name": "evt-sp",
-                                      "width": "fill_container",
-                                      "height": 1
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
                                   "id": "YtpPW",
-                                  "name": "evt-6",
+                                  "name": "evt-4",
                                   "width": "fill_container",
                                   "gap": "$Space/sm",
                                   "padding": [
@@ -128813,17 +128674,6 @@
                                       "name": "evt-sp",
                                       "width": "fill_container",
                                       "height": 1
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "ldYQz",
-                                      "name": "evt-trail",
-                                      "fill": "$accent-text",
-                                      "content": "45%",
-                                      "lineHeight": "$Type/Body/Line",
-                                      "fontFamily": "$Type/Family/Mono",
-                                      "fontSize": "$Type/Body/Size",
-                                      "fontWeight": "$Type/Body/Weight"
                                     }
                                   ]
                                 }
@@ -128868,7 +128718,7 @@
                                       "height": 12,
                                       "icon": "radio",
                                       "library": "lucide",
-                                      "fill": "$info"
+                                      "fill": "$info-text"
                                     },
                                     {
                                       "type": "text",
@@ -129665,7 +129515,7 @@
                                 {
                                   "type": "icon",
                                   "id": "nNXwM",
-                                  "name": "Terminal Icon",
+                                  "name": "Activity Icon",
                                   "width": 14,
                                   "height": 14,
                                   "icon": "activity",
@@ -129693,7 +129543,7 @@
                                 {
                                   "type": "text",
                                   "id": "phX01",
-                                  "name": "Autoscroll Label",
+                                  "name": "Scope Label",
                                   "fill": "$text-muted",
                                   "content": "自開啟本頁起累積",
                                   "lineHeight": "$Type/Label/Line",
@@ -129735,7 +129585,7 @@
                                       "height": 16,
                                       "icon": "check",
                                       "library": "lucide",
-                                      "fill": "$success"
+                                      "fill": "$success-text"
                                     },
                                     {
                                       "type": "text",
@@ -129799,7 +129649,7 @@
                                       "height": 16,
                                       "icon": "check",
                                       "library": "lucide",
-                                      "fill": "$success"
+                                      "fill": "$success-text"
                                     },
                                     {
                                       "type": "text",
@@ -129861,16 +129711,16 @@
                                       "name": "evt-ic",
                                       "width": 16,
                                       "height": 16,
-                                      "icon": "audio-lines",
+                                      "icon": "check",
                                       "library": "lucide",
-                                      "fill": "$accent-text"
+                                      "fill": "$text-muted"
                                     },
                                     {
                                       "type": "text",
                                       "id": "B05Gu",
                                       "name": "evt-stage",
-                                      "fill": "$accent-text",
-                                      "content": "提取音訊完成",
+                                      "fill": "$text-secondary",
+                                      "content": "提取音訊",
                                       "lineHeight": "$Type/Body/Line",
                                       "fontFamily": "$Type/Family/Primary",
                                       "fontSize": "$Type/Body/Size",
@@ -129909,147 +129759,8 @@
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "CjZRX",
-                                  "name": "evt-4",
-                                  "width": "fill_container",
-                                  "gap": "$Space/sm",
-                                  "padding": [
-                                    "$Space/sm",
-                                    "$Space/md-plus"
-                                  ],
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "icon",
-                                      "id": "lTLHJ",
-                                      "name": "evt-ic",
-                                      "width": 16,
-                                      "height": 16,
-                                      "icon": "circle-dollar-sign",
-                                      "library": "lucide",
-                                      "fill": "$text-muted"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "SrERq",
-                                      "name": "evt-stage",
-                                      "fill": "$text-secondary",
-                                      "content": "本次用量",
-                                      "lineHeight": "$Type/Body/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Body/Size",
-                                      "fontWeight": "600"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "jZv9m",
-                                      "name": "evt-dot",
-                                      "fill": "$text-muted",
-                                      "content": "·",
-                                      "lineHeight": "$Type/Body/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Body/Size",
-                                      "fontWeight": "$Type/Body/Weight"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "s1cheb",
-                                      "name": "evt-item",
-                                      "fill": "$text-secondary",
-                                      "content": "本批次",
-                                      "lineHeight": "$Type/Body/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Body/Size",
-                                      "fontWeight": "$Type/Body/Weight"
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "q6Cggl",
-                                      "name": "evt-sp",
-                                      "width": "fill_container",
-                                      "height": 1
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "yCmqg",
-                                      "name": "evt-trail",
-                                      "fill": "$text-secondary",
-                                      "content": "$0.42",
-                                      "lineHeight": "$Type/Body/Line",
-                                      "fontFamily": "$Type/Family/Mono",
-                                      "fontSize": "$Type/Body/Size",
-                                      "fontWeight": "$Type/Body/Weight"
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "T0Mk6",
-                                  "name": "evt-5",
-                                  "width": "fill_container",
-                                  "gap": "$Space/sm",
-                                  "padding": [
-                                    "$Space/sm",
-                                    "$Space/md-plus"
-                                  ],
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "icon",
-                                      "id": "I7QYc8",
-                                      "name": "evt-ic",
-                                      "width": 16,
-                                      "height": 16,
-                                      "icon": "hourglass",
-                                      "library": "lucide",
-                                      "fill": "$text-muted"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "g8tpS",
-                                      "name": "evt-stage",
-                                      "fill": "$text-muted",
-                                      "content": "排入佇列",
-                                      "lineHeight": "$Type/Body/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Body/Size",
-                                      "fontWeight": "600"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "DbILf",
-                                      "name": "evt-dot",
-                                      "fill": "$text-muted",
-                                      "content": "·",
-                                      "lineHeight": "$Type/Body/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Body/Size",
-                                      "fontWeight": "$Type/Body/Weight"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "Urp5F",
-                                      "name": "evt-item",
-                                      "fill": "$text-secondary",
-                                      "content": "花月殺手",
-                                      "lineHeight": "$Type/Body/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Body/Size",
-                                      "fontWeight": "$Type/Body/Weight"
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "q2WdE1",
-                                      "name": "evt-sp",
-                                      "width": "fill_container",
-                                      "height": 1
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
                                   "id": "PdlIv",
-                                  "name": "evt-6",
+                                  "name": "evt-4",
                                   "width": "fill_container",
                                   "gap": "$Space/sm",
                                   "padding": [
@@ -130064,15 +129775,15 @@
                                       "name": "evt-ic",
                                       "width": 16,
                                       "height": 16,
-                                      "icon": "loader-circle",
+                                      "icon": "check",
                                       "library": "lucide",
-                                      "fill": "$accent-text"
+                                      "fill": "$text-muted"
                                     },
                                     {
                                       "type": "text",
                                       "id": "QsSzV",
                                       "name": "evt-stage",
-                                      "fill": "$accent-text",
+                                      "fill": "$text-secondary",
                                       "content": "轉錄中",
                                       "lineHeight": "$Type/Body/Line",
                                       "fontFamily": "$Type/Family/Primary",
@@ -130107,24 +129818,13 @@
                                       "name": "evt-sp",
                                       "width": "fill_container",
                                       "height": 1
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "jiXW1",
-                                      "name": "evt-trail",
-                                      "fill": "$accent-text",
-                                      "content": "45%",
-                                      "lineHeight": "$Type/Body/Line",
-                                      "fontFamily": "$Type/Family/Mono",
-                                      "fontSize": "$Type/Body/Size",
-                                      "fontWeight": "$Type/Body/Weight"
                                     }
                                   ]
                                 },
                                 {
                                   "type": "frame",
                                   "id": "eEbpz",
-                                  "name": "evt-7",
+                                  "name": "evt-5",
                                   "width": "fill_container",
                                   "gap": "$Space/sm",
                                   "padding": [
@@ -130246,7 +129946,7 @@
                                           "height": 12,
                                           "icon": "radio",
                                           "library": "lucide",
-                                          "fill": "$info"
+                                          "fill": "$info-text"
                                         },
                                         {
                                           "type": "text",
@@ -154827,7 +154527,7 @@
                   "fill": "$warning-text",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "complete / cancelled / error 三個終態沿用此版面，只換 token（success / muted / error-tint）與文案（全部完成 / 已取消 / 批次發生錯誤）；不另畫 frame。",
+                  "content": "complete / cancelled / error 三個終態沿用此版面，只換 token（success / muted / error-tint）與文案（全部完成 / 已取消 / 批次發生錯誤）；不另畫 frame。右欄紀錄底部的第二行「已停止（達預算上限）」只在預算上限出現；其餘終態由紀錄最後一列（批次完成／批次已取消／批次發生錯誤）說明。",
                   "lineHeight": "$Type/Label/Line",
                   "fontFamily": "$Type/Family/Primary",
                   "fontSize": "$Type/Label/Size",
@@ -155662,6 +155362,1197 @@
                   ]
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "tT3JX",
+              "x": 22780,
+              "y": 34393,
+              "name": "F11-SPEC-LOG",
+              "clip": true,
+              "width": 880,
+              "fill": "$bg-secondary",
+              "cornerRadius": "$radius-lg",
+              "layout": "vertical",
+              "gap": "$Space/lg",
+              "padding": [
+                "$Space/lg-plus",
+                "$Space/xl"
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "VMUYs",
+                  "name": "spec-intro",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "右欄「即時活動」只會出現下面十種列。每一列＝圖示 16 · 階段字（Body 600）· 「·」· 項目（Body 次要色）· 撐開 · 尾端（Mono，可選）。同一部片同一個階段只佔一列，翻譯百分比原地更新；批次裡每一部的結果只看批次事件（changed_item），不看單部的轉錄事件。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "H9CcNv",
+                  "name": "spec-entry",
+                  "width": "fill_container",
+                  "gap": "$Space/lg",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "nblRw",
+                      "name": "row-box",
+                      "width": 400,
+                      "fill": "$bg-primary",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "yV9bN",
+                          "name": "evt",
+                          "width": "fill_container",
+                          "gap": "$Space/sm",
+                          "padding": [
+                            "$Space/sm",
+                            "$Space/md-plus"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "F6pOwI",
+                              "name": "evt-ic",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "loader-circle",
+                              "library": "lucide",
+                              "fill": "$accent-text"
+                            },
+                            {
+                              "type": "text",
+                              "id": "m73Cr",
+                              "name": "evt-stage",
+                              "fill": "$accent-text",
+                              "content": "翻譯中",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "xR7Yz",
+                              "name": "evt-dot",
+                              "fill": "$text-muted",
+                              "content": "·",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "qWQRV",
+                              "name": "evt-item",
+                              "fill": "$text-secondary",
+                              "content": "奧本海默",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "hTZ9p",
+                              "name": "evt-sp",
+                              "width": "fill_container",
+                              "height": 1
+                            },
+                            {
+                              "type": "text",
+                              "id": "y09QMj",
+                              "name": "evt-trail",
+                              "fill": "$accent-text",
+                              "content": "45%",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Mono",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "YlQOZ",
+                      "name": "spec-note",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "① 階段・進行中｜某一部進入新階段。transcription_extracting → 提取音訊、transcription_progress → 轉錄中、translation_progress → 翻譯中（只有它有 %，原地更新）；本批次成員的 subtitle_progress：extracting → 抽取字幕、translating → 翻譯中（無 %）。",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "XNIQ8",
+                  "name": "spec-entry",
+                  "width": "fill_container",
+                  "gap": "$Space/lg",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "xuwKT",
+                      "name": "row-box",
+                      "width": 400,
+                      "fill": "$bg-primary",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "uVdF0",
+                          "name": "evt",
+                          "width": "fill_container",
+                          "gap": "$Space/sm",
+                          "padding": [
+                            "$Space/sm",
+                            "$Space/md-plus"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "rt4YU",
+                              "name": "evt-ic",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "check",
+                              "library": "lucide",
+                              "fill": "$text-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "tcDUc",
+                              "name": "evt-stage",
+                              "fill": "$text-secondary",
+                              "content": "提取音訊",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "H2EopH",
+                              "name": "evt-dot",
+                              "fill": "$text-muted",
+                              "content": "·",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "lKTCJ",
+                              "name": "evt-item",
+                              "fill": "$text-secondary",
+                              "content": "奧本海默",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Vx8qp",
+                              "name": "evt-sp",
+                              "width": "fill_container",
+                              "height": 1
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "w0x0CW",
+                      "name": "spec-note",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "② 階段・已過｜同一部進入下一階段、有了結果、批次結束，或連線重開之後，前一列降成靜止、中性，拿掉 %。",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "U3Z6PJ",
+                  "name": "spec-entry",
+                  "width": "fill_container",
+                  "gap": "$Space/lg",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "jhL59",
+                      "name": "row-box",
+                      "width": 400,
+                      "fill": "$bg-primary",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "KqYs0",
+                          "name": "evt",
+                          "width": "fill_container",
+                          "gap": "$Space/sm",
+                          "padding": [
+                            "$Space/sm",
+                            "$Space/md-plus"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "EBN2t",
+                              "name": "evt-ic",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "check",
+                              "library": "lucide",
+                              "fill": "$success-text"
+                            },
+                            {
+                              "type": "text",
+                              "id": "Qds60",
+                              "name": "evt-stage",
+                              "fill": "$success-text",
+                              "content": "完成",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "gKFIt",
+                              "name": "evt-dot",
+                              "fill": "$text-muted",
+                              "content": "·",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "ApTxF",
+                              "name": "evt-item",
+                              "fill": "$text-secondary",
+                              "content": "沙丘：第二部",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "y6Zo29",
+                              "name": "evt-sp",
+                              "width": "fill_container",
+                              "height": 1
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "I2AWJl",
+                      "name": "spec-note",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "③ 完成｜批次成員：changed_item = done；單部：transcription_complete。不宣稱「繁中」。",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "dNQa0",
+                  "name": "spec-entry",
+                  "width": "fill_container",
+                  "gap": "$Space/lg",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Yn4Z4",
+                      "name": "row-box",
+                      "width": 400,
+                      "fill": "$bg-primary",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "stf9c",
+                          "name": "evt",
+                          "width": "fill_container",
+                          "gap": "$Space/sm",
+                          "padding": [
+                            "$Space/sm",
+                            "$Space/md-plus"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "r38GQ",
+                              "name": "evt-ic",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "triangle-alert",
+                              "library": "lucide",
+                              "fill": "$error-text"
+                            },
+                            {
+                              "type": "text",
+                              "id": "q3gyb",
+                              "name": "evt-stage",
+                              "fill": "$error-text",
+                              "content": "失敗",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "SXR7z",
+                              "name": "evt-dot",
+                              "fill": "$text-muted",
+                              "content": "·",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "ft0Nk",
+                              "name": "evt-item",
+                              "fill": "$text-secondary",
+                              "content": "花月殺手",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "xpUlw",
+                              "name": "evt-dot",
+                              "fill": "$text-muted",
+                              "content": "·",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "Ti6lM",
+                              "name": "evt-item",
+                              "fill": "$text-secondary",
+                              "content": "這部正在別處處理",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "b8nqiD",
+                              "name": "evt-sp",
+                              "width": "fill_container",
+                              "height": 1
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "I2WeeC",
+                      "name": "spec-note",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "④ 失敗｜批次成員：changed_item = failed，原因來自 reason；單部：transcription_failed，原因轉成中文。後端原字串不上畫面。",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "xPTom",
+                  "name": "spec-entry",
+                  "width": "fill_container",
+                  "gap": "$Space/lg",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "P7LB9z",
+                      "name": "row-box",
+                      "width": 400,
+                      "fill": "$bg-primary",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "cu3CY",
+                          "name": "evt",
+                          "width": "fill_container",
+                          "gap": "$Space/sm",
+                          "padding": [
+                            "$Space/sm",
+                            "$Space/md-plus"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "CL367",
+                              "name": "evt-ic",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "circle-alert",
+                              "library": "lucide",
+                              "fill": "$warning-text"
+                            },
+                            {
+                              "type": "text",
+                              "id": "Z8vfp",
+                              "name": "evt-stage",
+                              "fill": "$warning-text",
+                              "content": "已停止",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "qlPCe",
+                              "name": "evt-dot",
+                              "fill": "$text-muted",
+                              "content": "·",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "bVg7L",
+                              "name": "evt-item",
+                              "fill": "$text-secondary",
+                              "content": "芭比",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "eMGG9",
+                              "name": "evt-dot",
+                              "fill": "$text-muted",
+                              "content": "·",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "XCzdu",
+                              "name": "evt-item",
+                              "fill": "$text-secondary",
+                              "content": "已達預算上限",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "tmAst",
+                              "name": "evt-sp",
+                              "width": "fill_container",
+                              "height": 1
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "I4V8GW",
+                      "name": "spec-note",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "⑤ 已停止（單部）｜詳情頁單獨生成時碰到預算上限：你要求了但沒發生，赭色，不算失敗。",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "qwV2R",
+                  "name": "spec-entry",
+                  "width": "fill_container",
+                  "gap": "$Space/lg",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "mdjTS",
+                      "name": "row-box",
+                      "width": 400,
+                      "fill": "$bg-primary",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "J8tFS",
+                          "name": "evt",
+                          "width": "fill_container",
+                          "gap": "$Space/sm",
+                          "padding": [
+                            "$Space/sm",
+                            "$Space/md-plus"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "H9yLlN",
+                              "name": "evt-ic",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "check",
+                              "library": "lucide",
+                              "fill": "$success-text"
+                            },
+                            {
+                              "type": "text",
+                              "id": "VkJ6o",
+                              "name": "evt-stage",
+                              "fill": "$success-text",
+                              "content": "批次完成",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "L96nU",
+                              "name": "evt-dot",
+                              "fill": "$text-muted",
+                              "content": "·",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "ikN1W",
+                              "name": "evt-item",
+                              "fill": "$text-secondary",
+                              "content": "本批次",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "oMcgE",
+                              "name": "evt-sp",
+                              "width": "fill_container",
+                              "height": 1
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "nQNki",
+                      "name": "spec-note",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "⑥ 批次完成｜整批結束且沒有失敗。",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ExLsz",
+                  "name": "spec-entry",
+                  "width": "fill_container",
+                  "gap": "$Space/lg",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "GynkT",
+                      "name": "row-box",
+                      "width": 400,
+                      "fill": "$bg-primary",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "ww6US",
+                          "name": "evt",
+                          "width": "fill_container",
+                          "gap": "$Space/sm",
+                          "padding": [
+                            "$Space/sm",
+                            "$Space/md-plus"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "yQqZD",
+                              "name": "evt-ic",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "check",
+                              "library": "lucide",
+                              "fill": "$text-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "mP3WB",
+                              "name": "evt-stage",
+                              "fill": "$text-secondary",
+                              "content": "批次完成",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "jCXCN",
+                              "name": "evt-dot",
+                              "fill": "$text-muted",
+                              "content": "·",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "wDbvL",
+                              "name": "evt-item",
+                              "fill": "$text-secondary",
+                              "content": "本批次",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "oeBeL",
+                              "name": "evt-dot",
+                              "fill": "$text-muted",
+                              "content": "·",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "HLoqU",
+                              "name": "evt-item",
+                              "fill": "$text-secondary",
+                              "content": "完成 1 部、失敗 2 部",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "upAfz",
+                              "name": "evt-sp",
+                              "width": "fill_container",
+                              "height": 1
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "iIrWE",
+                      "name": "spec-note",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "⑦ 批次完成（有失敗）｜有失敗就不給綠；數字與左欄總結逐字一致。",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "OtFWC",
+                  "name": "spec-entry",
+                  "width": "fill_container",
+                  "gap": "$Space/lg",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "rD83M",
+                      "name": "row-box",
+                      "width": 400,
+                      "fill": "$bg-primary",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "c9wqO",
+                          "name": "evt",
+                          "width": "fill_container",
+                          "gap": "$Space/sm",
+                          "padding": [
+                            "$Space/sm",
+                            "$Space/md-plus"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "B7ujF",
+                              "name": "evt-ic",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "circle-pause",
+                              "library": "lucide",
+                              "fill": "$text-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "KwR3i",
+                              "name": "evt-stage",
+                              "fill": "$text-secondary",
+                              "content": "批次已取消",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "a0R4zu",
+                              "name": "evt-dot",
+                              "fill": "$text-muted",
+                              "content": "·",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "t3dnc",
+                              "name": "evt-item",
+                              "fill": "$text-secondary",
+                              "content": "本批次",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "IlGw9",
+                              "name": "evt-dot",
+                              "fill": "$text-muted",
+                              "content": "·",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "GqcQm",
+                              "name": "evt-item",
+                              "fill": "$text-secondary",
+                              "content": "完成 3 部",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "y3Vk5E",
+                              "name": "evt-sp",
+                              "width": "fill_container",
+                              "height": 1
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "eWNdZ",
+                      "name": "spec-note",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "⑧ 批次已取消",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "CMO2w",
+                  "name": "spec-entry",
+                  "width": "fill_container",
+                  "gap": "$Space/lg",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "l6JIaK",
+                      "name": "row-box",
+                      "width": 400,
+                      "fill": "$bg-primary",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "N8CRGs",
+                          "name": "evt",
+                          "width": "fill_container",
+                          "gap": "$Space/sm",
+                          "padding": [
+                            "$Space/sm",
+                            "$Space/md-plus"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "lCRqO",
+                              "name": "evt-ic",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "circle-alert",
+                              "library": "lucide",
+                              "fill": "$error-text"
+                            },
+                            {
+                              "type": "text",
+                              "id": "enS3i",
+                              "name": "evt-stage",
+                              "fill": "$error-text",
+                              "content": "批次發生錯誤",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "yWk6B",
+                              "name": "evt-dot",
+                              "fill": "$text-muted",
+                              "content": "·",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "o9rpl",
+                              "name": "evt-item",
+                              "fill": "$text-secondary",
+                              "content": "本批次",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ZxWgx",
+                              "name": "evt-sp",
+                              "width": "fill_container",
+                              "height": 1
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "mXBRv",
+                      "name": "spec-note",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "⑨ 批次發生錯誤",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "o8b2v5",
+                  "name": "spec-entry",
+                  "width": "fill_container",
+                  "gap": "$Space/lg",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "um4C5",
+                      "name": "row-box",
+                      "width": 400,
+                      "fill": "$bg-primary",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "xDrkE",
+                          "name": "evt",
+                          "width": "fill_container",
+                          "gap": "$Space/sm",
+                          "padding": [
+                            "$Space/sm",
+                            "$Space/md-plus"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "I8X46n",
+                              "name": "evt-ic",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "circle-alert",
+                              "library": "lucide",
+                              "fill": "$warning-text"
+                            },
+                            {
+                              "type": "text",
+                              "id": "g8A0G",
+                              "name": "evt-stage",
+                              "fill": "$warning-text",
+                              "content": "已達預算上限",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "nCD0h",
+                              "name": "evt-dot",
+                              "fill": "$text-muted",
+                              "content": "·",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "EETWE",
+                              "name": "evt-item",
+                              "fill": "$text-secondary",
+                              "content": "本批次",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "qbAm1",
+                              "name": "evt-sp",
+                              "width": "fill_container",
+                              "height": 1
+                            },
+                            {
+                              "type": "text",
+                              "id": "ee6sr",
+                              "name": "evt-trail",
+                              "fill": "$text-primary",
+                              "content": "$5.00",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Mono",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "UajNg",
+                      "name": "spec-note",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "⑩ 已達預算上限｜批次層提示用赭色；金額是事實，用主要文字色。",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "MOyan",
+                  "name": "spec-omitted",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "不產生的列：排入佇列（SSE 沒有排隊事件，佇列在左欄）、本次用量（左欄統計列已經顯示，而且只在每部結束時才更新）、提取音訊完成（改用②）。subtitle_progress 的 probing／placing／converting 不出列；不是本批次成員的 subtitle_progress（字幕搜尋、手動下載、掃描後自動生成）一律丟掉。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "HEgN0",
+                  "name": "spec-a11y",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "播報：清單本身不設 aria-live；另有一個一直掛著的 sr-only 區，只唸③–⑩，階段與百分比不唸。沒有時間戳。最新的在最下面；使用者停在底部時自動捲到底。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "a6OES",
+              "x": 22780,
+              "y": 34348,
+              "name": "cap-F11-SPEC-LOG",
+              "fill": "#888888",
+              "content": "F11 · 即時活動・事件種類（桌面）",
+              "lineHeight": "$Type/Body/Line",
+              "fontFamily": "$Type/Family/Primary",
+              "fontSize": "$Type/Body/Size",
+              "fontWeight": "600"
             }
           ]
         }
