@@ -266,6 +266,22 @@ import type { ServiceStatusResponse } from '../../services/serviceStatusService'
 import { LoginForm } from '../../components/auth/LoginForm';
 
 const noop = () => {};
+const asyncNoop = () => Promise.resolve();
+
+// dsr-6d-c-1 workspace fixture queue — ONE source so the three workspace fixtures
+// cannot drift apart, and so the counts always agree with the rendered rows (the
+// old fixtures said 38 total / 26 paused while rendering 3 rows, all of them 完成).
+const WS_FX_IDS = ['ws-m0', 'ws-m12', 'ws-m20'] as const;
+const WS_FX_ITEMS = [
+  { mediaId: WS_FX_IDS[0], title: '沙丘：第二部', mediaType: 'movie', seriesTitle: '' },
+  { mediaId: WS_FX_IDS[1], title: '奧本海默', mediaType: 'movie', seriesTitle: '' },
+  { mediaId: WS_FX_IDS[2], title: 'S04E07 第七章', mediaType: 'episode', seriesTitle: '怪奇物語' },
+];
+const wsFxItem = (i: number, status: string, reason = '') => ({
+  ...WS_FX_ITEMS[i],
+  status,
+  reason,
+});
 
 /**
  * dsr-6a — the three ButtonCost looks (plus ≈) stacked, mirroring J9-D's
@@ -5074,84 +5090,119 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   // --- ux3-ai-2 generation workspace (Screen F11-D-v2 l8FsB / F12-D-v2 iH98f) ---
   {
     id: 'generation-workspace-v2/running',
-    label: 'subtitle/GenerationWorkspaceV2 (running — queue + live event log)',
+    label: 'subtitle/GenerationWorkspaceV2 (running — F11 queue + live event log)',
     component: GenerationWorkspaceV2,
+    width: 1200,
     props: {
       mode: 'running',
       progress: {
         batchId: 'b1',
-        totalItems: 38,
-        currentIndex: 12,
-        currentMediaId: 'm12',
+        totalItems: 3,
+        currentIndex: 2,
+        currentMediaId: WS_FX_IDS[1],
         currentItem: '奧本海默',
-        successCount: 12,
+        successCount: 1,
         failCount: 0,
         pausedCount: 0,
         status: 'running',
         spentUsd: 0.42,
         budgetUsd: 5,
+        // dsr-6d-c-1: the queue is the BACKEND's, and the counts agree with it.
+        items: [wsFxItem(0, 'done'), wsFxItem(1, 'running'), wsFxItem(2, 'queued')],
       },
-      items: [
-        { mediaId: 'm0', title: '沙丘：第二部' },
-        { mediaId: 'm12', title: '奧本海默' },
-        { mediaId: 'm20', title: '花月殺手' },
-      ],
       activeItemProgress: {
         phase: 'transcribing',
         failedPhase: null,
         percentage: null,
-        message: '轉錄音訊中…',
-        jobId: null,
+        message: '正在轉錄音訊',
+        jobId: 'job-fx',
         error: null,
         srtPath: null,
         zhSrtPath: null,
+        partial: false,
+        englishKeptBlocks: null,
       },
       feed: [
-        { seq: 1, tone: 'done', stage: '完成', mediaId: 'm0', message: '沙丘：第二部' },
-        { seq: 2, tone: 'active', stage: '轉錄中', mediaId: 'm12', trail: '45%' },
-        { seq: 3, tone: 'info', stage: '本次用量', message: '本批次', trail: '$0.42' },
+        { seq: 1, tone: 'done', stage: '完成', mediaId: WS_FX_IDS[0], message: '沙丘：第二部' },
+        { seq: 2, tone: 'active', stage: '轉錄中', mediaId: WS_FX_IDS[1], trail: '45%' },
+        { seq: 3, tone: 'info', stage: '本次用量', mediaId: '', trail: '$0.42' },
       ],
       onLaunch: noop,
-      onConfirmCancelAll: noop,
+      onConfirmCancelAll: asyncNoop,
       onResume: noop,
       onRetryData: noop,
     },
     penNode: 'screen-section', // Screen F11-D-v2 (l8FsB)
-    width: 1200,
     statesOnly: ['default'],
   },
   {
     id: 'generation-workspace-v2/budget_ceiling',
-    label: 'subtitle/GenerationWorkspaceV2 (budget_ceiling — F9-verbatim banner + 下次繼續)',
+    label: 'subtitle/GenerationWorkspaceV2 (budget_ceiling — F12 banner + 關閉/下次繼續)',
     component: GenerationWorkspaceV2,
+    width: 1200,
     props: {
       mode: 'budget_ceiling',
       progress: {
         batchId: 'b1',
-        totalItems: 38,
-        currentIndex: 12,
-        currentMediaId: 'm12',
+        totalItems: 3,
+        currentIndex: 2,
+        currentMediaId: WS_FX_IDS[1],
         currentItem: '奧本海默',
-        successCount: 12,
+        successCount: 1,
         failCount: 0,
-        pausedCount: 26,
+        pausedCount: 2,
         status: 'budget_ceiling',
         spentUsd: 5,
         budgetUsd: 5,
+        items: [wsFxItem(0, 'done'), wsFxItem(1, 'paused'), wsFxItem(2, 'paused')],
       },
-      items: [
-        { mediaId: 'm0', title: '沙丘：第二部' },
-        { mediaId: 'm12', title: '奧本海默' },
-        { mediaId: 'm20', title: '花月殺手' },
-      ],
-      feed: [{ seq: 1, tone: 'info', stage: '已達本次預算上限', message: '本批次' }],
+      feed: [{ seq: 1, tone: 'info', stage: '已達預算上限', mediaId: '', trail: '$5.00' }],
       onLaunch: noop,
-      onConfirmCancelAll: noop,
+      onConfirmCancelAll: asyncNoop,
       onResume: noop,
       onRetryData: noop,
+      onDismiss: asyncNoop,
     },
     penNode: 'screen-section', // Screen F12-D-v2 (iH98f)
+    statesOnly: ['default'],
+  },
+  {
+    // dsr-6d-c-1: the ONLY state that draws failure rows WITH their reason — and
+    // the only one that proves 完成 is not claimed when a run had failures.
+    id: 'generation-workspace-v2/complete-with-failures',
+    label: 'subtitle/GenerationWorkspaceV2 (complete with failures — reasons + 關閉)',
+    component: GenerationWorkspaceV2,
     width: 1200,
+    props: {
+      mode: 'complete',
+      progress: {
+        batchId: 'b2',
+        totalItems: 3,
+        currentIndex: 3,
+        currentMediaId: '',
+        currentItem: '',
+        successCount: 1,
+        failCount: 2,
+        pausedCount: 0,
+        status: 'complete',
+        spentUsd: 1.8,
+        budgetUsd: 5,
+        items: [
+          wsFxItem(0, 'done'),
+          wsFxItem(1, 'failed', 'busy_elsewhere'),
+          wsFxItem(2, 'failed', 'skipped'),
+        ],
+      },
+      feed: [
+        { seq: 1, tone: 'done', stage: '完成', mediaId: WS_FX_IDS[0], message: '沙丘：第二部' },
+      ],
+      onLaunch: noop,
+      onConfirmCancelAll: asyncNoop,
+      onResume: noop,
+      onRetryData: noop,
+      onDismiss: asyncNoop,
+    },
+    penNode: 'screen-section', // Screen F12-D-v2 (iH98f) — terminal variant
     statesOnly: ['default'],
   },
   {
@@ -5172,12 +5223,12 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         status: 'idle',
         spentUsd: 0,
         budgetUsd: 0,
+        items: null,
       },
-      items: [],
       feed: [],
       previewCount: 38,
       onLaunch: noop,
-      onConfirmCancelAll: noop,
+      onConfirmCancelAll: asyncNoop,
       onResume: noop,
       onRetryData: noop,
     },

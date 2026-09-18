@@ -10,11 +10,12 @@ import type { GenerationBatchHookStatus } from '../../hooks/useGenerationBatchPr
  * The workspace's top-level render mode.
  *  - `loading`   — the on-mount status probe is still in flight.
  *  - `idle`      — no batch running, no single jobs → calm empty + preview + launcher.
- *  - `running`   — batch running AND its `items[]` are known (started this session,
- *                  cached by the launcher) → full queue.
- *  - `attach`    — batch running but `items[]` unknown (attached cold; the status
- *                  probe carries none — disc-2026-07-generation-batch-status-items,
- *                  backlog) → degraded: counters + in-flight card only, honest note.
+ *  - `running`   — batch running AND the BACKEND's `progress.items[]` is known
+ *                  (dsr-6d-c-1: from the status probe / SSE, no longer the
+ *                  launcher's 202 cache) → full queue.
+ *  - `attach`    — batch running but no queue at all: a pre-dsr-6d-a server, or the
+ *                  moments before the first snapshot lands → degraded: counters +
+ *                  in-flight card only, honest note.
  *  - `single`    — no batch, but detail-triggered single jobs are in flight → queue
  *                  of single-job rows (opportunistic; AC 5).
  *  - terminals   — `budget_ceiling` (F9-verbatim) / `complete` / `cancelled` / `error`.
@@ -36,7 +37,7 @@ export function deriveWorkspaceMode(input: {
   /** True while the on-mount getGenerationBatchStatus() probe has not resolved. */
   probing: boolean;
   batchStatus: GenerationBatchHookStatus;
-  /** Whether the batch's enumerated `items[]` are available (start-cache hit). */
+  /** Whether the BACKEND's queue (`progress.items[]`) is available (dsr-6d-c-1). */
   hasItems: boolean;
   /** Count of in-flight detail-triggered single jobs (useGenerationJobsFeed.singleJobs). */
   singleJobCount: number;

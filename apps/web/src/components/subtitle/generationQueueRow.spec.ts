@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { queueRowLabel, queueRowTitle, type QueueRowView } from './generationQueueRow';
+import {
+  queueRowLabel,
+  queueRowTitle,
+  queueRowBadge,
+  queueRowSubStatus,
+  type QueueRowView,
+} from './generationQueueRow';
 import { GENERATION_STAGES } from './GenerationProgressV2';
 
 const view = (over: Partial<QueueRowView> = {}): QueueRowView => ({
@@ -121,5 +127,43 @@ describe('queueRowTitle (dsr-6d-b AC #2 — 劇名 + 集數標題)', () => {
 
   it('a whitespace-only series title is not a prefix', () => {
     expect(queueRowTitle({ title: '奧本海默', seriesTitle: '   ' })).toBe('奧本海默');
+  });
+});
+
+describe('queueRowBadge / queueRowSubStatus (dsr-6d-c-1 — one vocabulary, two lengths)', () => {
+  it.each([
+    ['done', '完成'],
+    ['failed', '失敗'],
+    ['paused', '已暫停'],
+    ['cancelled', '已取消'],
+    ['queued', '排隊中'],
+  ] as const)('badge for %s is %s', (status, text) => {
+    expect(queueRowBadge(view({ status }), '轉錄中')).toBe(text);
+  });
+
+  it('a running badge shows the CURRENT stage', () => {
+    expect(queueRowBadge(view({ status: 'running' }), '翻譯中')).toBe('翻譯中');
+  });
+
+  it('[P0] a cancelled row never claims 未處理 — the in-flight item may already be paid for', () => {
+    const text = queueRowSubStatus(view({ status: 'cancelled' }), '已取消');
+    expect(text).toBe('已取消');
+    expect(text).not.toContain('未處理');
+  });
+
+  it('[P0] a done row never claims 繁中 — a run can keep English blocks or 簡體', () => {
+    const text = queueRowSubStatus(view({ status: 'done' }), '完成');
+    expect(text).toBe('已完成，字幕已寫入檔案');
+    expect(text).not.toContain('繁中');
+  });
+
+  it('[P0] a failed row carries the REASON, not a generic sentence', () => {
+    const v = view({ status: 'failed', reason: 'busy_elsewhere' });
+    expect(queueRowSubStatus(v, queueRowLabel(v).text)).toBe('這部正在別處處理');
+  });
+
+  it('a running row appends the ellipsis to the stage; a queued row explains the wait', () => {
+    expect(queueRowSubStatus(view({ status: 'running' }), '轉錄中')).toBe('轉錄中…');
+    expect(queueRowSubStatus(view({ status: 'queued' }), '排隊中')).toBe('等待前面項目完成');
   });
 });
