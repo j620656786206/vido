@@ -42,8 +42,9 @@ const extractWaitDelay = 10 * time.Second
 // silence here is indistinguishable from a stuck gate.
 const extractQueueWarnAfter = 5 * time.Minute
 
-// bytesPerGB is the decimal gigabyte ffmpeg users think in.
-const bytesPerGB = 1_000_000_000
+// bytesPerGB is the decimal gigabyte ffmpeg users think in (the shared
+// services.BytesPerGB — the ASR audio extractor counts in the same unit).
+const bytesPerGB = services.BytesPerGB
 
 // stderrTailBytes caps how much ffmpeg stderr is carried into the wrapped error
 // message (Rule 13 — context without unbounded log lines).
@@ -256,11 +257,12 @@ func statFileSize(path string) (int64, error) {
 	return info.Size(), nil
 }
 
-// The two environment variables that decide an extraction deadline. Named here
-// so the timeout message and docs/deployment.md cannot drift apart.
+// The two environment variables that decide an extraction deadline. Shared
+// with the ASR audio extractor (services.SizedFFmpegTimeout) so the timeout
+// messages and docs/deployment.md cannot drift apart.
 const (
-	extractFloorEnv = "SUBTITLE_EXTRACT_TIMEOUT_SECONDS"
-	extractPerGBEnv = "SUBTITLE_EXTRACT_PER_GB_SECONDS"
+	extractFloorEnv = services.FFmpegTimeoutFloorEnv
+	extractPerGBEnv = services.FFmpegTimeoutPerGBEnv
 )
 
 // EffectiveTimeout is the deadline one ffmpeg pass over mediaPath gets
@@ -283,7 +285,8 @@ func (e *Extractor) effectiveTimeout(mediaPath string) (timeout time.Duration, s
 		return e.timeout, 0, extractFloorEnv
 	}
 	gb := float64(size) / bytesPerGB
-	sized := time.Duration(gb * float64(e.perGBTimeout))
+	// One formula for every full-file ffmpeg read (services.SizedFFmpegTimeout).
+	sized := services.SizedFFmpegTimeout(e.timeout, e.perGBTimeout, size)
 	if sized > e.timeout {
 		return sized, gb, extractPerGBEnv
 	}

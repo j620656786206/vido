@@ -73,13 +73,15 @@ Vido can generate a Traditional-Chinese (`zh-Hant`) subtitle for media that has
 no matching subtitle online, by extracting the embedded track and translating
 it. This is **off by default**:
 
-| Variable                           | Default           | Description                                                                                                        |
-| ---------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `VIDO_SUBTITLE_PIPELINE_MODE`      | `legacy`          | `legacy` = subtitle search only (unchanged behaviour). `pipeline` = also generate subtitles.                       |
-| `CLAUDE_API_KEY`                   | (none)            | Translation provider key. Required when the mode is `pipeline`.                                                    |
-| `CLAUDE_MODEL`                     | `claude-sonnet-5` | Deployment-wide default translation model. Users can pick a different one per run; this sets what they start from. |
-| `SUBTITLE_EXTRACT_TIMEOUT_SECONDS` | `600`             | Floor of one subtitle extraction (ffmpeg) in seconds. Small files use this.                                        |
-| `SUBTITLE_EXTRACT_PER_GB_SECONDS`  | `30`              | Seconds allowed per GB of media. Past ~20 GB this is the one in force — raise it for large remuxes on slow disks.  |
+| Variable                                 | Default           | Description                                                                                                                                     |
+| ---------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VIDO_SUBTITLE_PIPELINE_MODE`            | `legacy`          | `legacy` = subtitle search only (unchanged behaviour). `pipeline` = also generate subtitles.                                                    |
+| `CLAUDE_API_KEY`                         | (none)            | Translation provider key. Required when the mode is `pipeline`.                                                                                 |
+| `CLAUDE_MODEL`                           | `claude-sonnet-5` | Deployment-wide default translation model. Users can pick a different one per run; this sets what they start from.                              |
+| `SUBTITLE_EXTRACT_TIMEOUT_SECONDS`       | `600`             | Floor of one subtitle extraction (ffmpeg) in seconds. Small files use this.                                                                     |
+| `SUBTITLE_EXTRACT_PER_GB_SECONDS`        | `30`              | Seconds allowed per GB of media. Past ~20 GB this is the one in force — raise it for large remuxes on slow disks.                               |
+| `TRANSCRIPTION_RUN_TIMEOUT_SECONDS`      | `600`             | Floor of the part of a speech-recognition run that follows audio extraction (chunk split, recognition, translation, writeback).                 |
+| `TRANSCRIPTION_SECONDS_PER_MEDIA_MINUTE` | `30`              | Seconds allowed per minute of media for that same part. Past 20 minutes of media this is the one in force — a 157-minute film gets ~78 minutes. |
 
 Notes:
 
@@ -149,6 +151,18 @@ Notes:
   force, so raising the floor alone changes nothing for a big file. The timeout
   message names the file size, the bound it hit, and the variable that would
   actually move it.
+- **A speech-recognition run is bounded per phase, not as a whole**
+  (disc-2026-09-transcription-run-5min-hard-timeout). Pulling the audio out of
+  the file follows the two `SUBTITLE_EXTRACT_*` bounds above (same disk, same
+  kind of full-file ffmpeg read — a 66.8 GB remux needed 4:55 for this alone).
+  Everything after it — chunk split, recognition, translation, writeback — gets
+  `max(TRANSCRIPTION_RUN_TIMEOUT_SECONDS, TRANSCRIPTION_SECONDS_PER_MEDIA_MINUTE × media minutes)`,
+  the media length read from the audio just extracted. There is no whole-run
+  deadline any more: the old fixed 5 minutes killed a 157-minute film before
+  recognition even started. When one of these bounds fires, the failure is a
+  single line that names the phase, the media length, the budget it hit and the
+  variable to raise; a run stopped by the caller (a cancelled batch, shutdown)
+  says so instead of blaming a setting.
 - **Extractions take turns (sub-6-3).** Two workers demuxing two 20 GB files at
   once fought over the same spindle and both timed out, where either alone took
   3½ minutes — so only one extraction runs at a time process-wide, and the

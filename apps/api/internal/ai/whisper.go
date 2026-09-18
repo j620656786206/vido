@@ -556,7 +556,13 @@ func SplitAudioChunks(ctx context.Context, audioPath string) ([]string, int, err
 				os.Remove(c)
 			}
 			os.Remove(chunkPath)
-			return nil, 0, fmt.Errorf("ffmpeg chunk split at %ds: %w — %s", start, err, string(output))
+			// A deadline kills ffmpeg with SIGKILL: "signal: killed" is the
+			// symptom, the run deadline is the cause — say so, and carry the
+			// ctx error so callers can tell a timeout from a broken ffmpeg.
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				return nil, 0, fmt.Errorf("ffmpeg chunk split at %ds stopped by the run deadline: %w", start, ctxErr)
+			}
+			return nil, 0, fmt.Errorf("ffmpeg chunk split at %ds: %w — %s", start, err, stderrTail(output, 3, 300))
 		}
 
 		// Defensive: never hand an oversized chunk to the API (the 413 class).
@@ -572,6 +578,33 @@ func SplitAudioChunks(ctx context.Context, audioPath string) ([]string, int, err
 	}
 
 	return chunks, chunkSeconds, nil
+}
+
+// WAVDuration is the length in seconds of a WAV file, read from its header —
+// the media length a transcription run sizes its post-extraction budget from
+// (disc-2026-09-transcription-run-5min-hard-timeout).
+func WAVDuration(path string) (float64, error) {
+	d, _, err := parseWAVInfo(path)
+	return d, err
+}
+
+// stderrTail keeps the last few lines of an ffmpeg CombinedOutput for an error
+// string: the banner and stream mapping above them are noise that used to
+// reach the screen thirty lines at a time.
+func stderrTail(output []byte, lines, maxBytes int) string {
+	text := strings.TrimSpace(string(output))
+	if text == "" {
+		return ""
+	}
+	parts := strings.Split(text, "\n")
+	if len(parts) > lines {
+		parts = parts[len(parts)-lines:]
+	}
+	tail := strings.Join(parts, " | ")
+	if len(tail) > maxBytes {
+		tail = "…" + tail[len(tail)-maxBytes:]
+	}
+	return tail
 }
 
 // execCommandContext wraps exec.CommandContext to allow testing

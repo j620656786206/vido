@@ -17,6 +17,17 @@ describe('failureCopy', () => {
     ['transcription unavailable and resume not possible', '語音辨識未設定', false],
     ['transcribe: transcribe chunk 2/9: AI_UNAUTHORIZED: invalid key', 'API 金鑰無效', false],
     ['transcribe: AI_TIMEOUT: provider did not answer', '處理逾時', false],
+    // The backend's one-line run-deadline sentence (disc-2026-09-transcription-run-5min-hard-timeout).
+    [
+      'transcribe: transcription run timed out after 45m2s in transcribing (media 157 min, budget 4712 s — raise TRANSCRIPTION_SECONDS_PER_MEDIA_MINUTE): context deadline exceeded',
+      '處理逾時',
+      false,
+    ],
+    [
+      'extract audio: audio extraction timed out: ffmpeg timed out after 33m24s on Movie.mkv (file 66.8 GB, timeout 2004 s — raise SUBTITLE_EXTRACT_PER_GB_SECONDS for slow disks): context deadline exceeded',
+      '處理逾時',
+      false,
+    ],
     ['transcribe: whisper: API error: status 401 — {"error":"invalid key"}', 'API 金鑰無效', false],
     ['transcribe: whisper: OpenAI API key not configured', '語音辨識未設定', false],
     ['transcribe: whisper: request timed out', '處理逾時', false],

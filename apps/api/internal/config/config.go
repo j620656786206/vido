@@ -92,6 +92,16 @@ type Config struct {
 	// ~20 GB the size term exceeds the floor, so raising the floor alone does
 	// nothing. Env: SUBTITLE_EXTRACT_PER_GB_SECONDS, default 30.
 	SubtitleExtractPerGBSeconds int
+	// TranscriptionRunTimeoutSeconds is the FLOOR of the part of a generation
+	// run that follows audio extraction (chunk split, speech recognition,
+	// translation, writeback). Env: TRANSCRIPTION_RUN_TIMEOUT_SECONDS,
+	// default 600. The extraction itself follows SUBTITLE_EXTRACT_*.
+	TranscriptionRunTimeoutSeconds int
+	// TranscriptionSecondsPerMediaMinute grows that budget with media LENGTH:
+	// max(floor, minutes × this). A 157-minute film gets ~78 minutes at the
+	// default; it needed ~35–50. Env: TRANSCRIPTION_SECONDS_PER_MEDIA_MINUTE,
+	// default 30.
+	TranscriptionSecondsPerMediaMinute int
 
 	// AI throttle + budget (Story 9R-11). AIMaxConcurrent/AIRatePerSec govern
 	// the shared Governor; AIRunBudgetUSD is the per-run cost ceiling
@@ -209,6 +219,14 @@ func Load() (*Config, error) {
 	cfg.SubtitleExtractPerGBSeconds = cfg.loadInt("SUBTITLE_EXTRACT_PER_GB_SECONDS", 30)
 	if cfg.SubtitleExtractPerGBSeconds <= 0 {
 		cfg.SubtitleExtractPerGBSeconds = 30
+	}
+	cfg.TranscriptionRunTimeoutSeconds = cfg.loadInt("TRANSCRIPTION_RUN_TIMEOUT_SECONDS", 600)
+	if cfg.TranscriptionRunTimeoutSeconds <= 0 {
+		cfg.TranscriptionRunTimeoutSeconds = 600
+	}
+	cfg.TranscriptionSecondsPerMediaMinute = cfg.loadInt("TRANSCRIPTION_SECONDS_PER_MEDIA_MINUTE", 30)
+	if cfg.TranscriptionSecondsPerMediaMinute <= 0 {
+		cfg.TranscriptionSecondsPerMediaMinute = 30
 	}
 
 	// Subtitle generation pipeline flag (D5, sub-1-6). Validated here so an
