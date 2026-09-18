@@ -16,8 +16,13 @@ const h = vi.hoisted(() => ({
     status: 'idle' as string,
     spentUsd: 0,
     budgetUsd: 0,
+    // dsr-6d-b: null keeps the fallback (deriveRowStates) path covered —
+    // items-first tests override it explicitly.
+    items: null as GenerationBatchItemState[] | null,
   },
   batchStartTracking: vi.fn(),
+  batchAttachSnapshot: vi.fn(),
+  batchEpoch: 0,
   batchReset: vi.fn(),
   itemState: {
     phase: 'idle' as string,
@@ -38,6 +43,8 @@ vi.mock('../../hooks/useGenerationBatchProgress', () => ({
     progress: h.batchState,
     status: h.batchState.status,
     startTracking: h.batchStartTracking,
+    attachSnapshot: h.batchAttachSnapshot,
+    connectionEpoch: h.batchEpoch,
     reset: h.batchReset,
   }),
 }));
@@ -55,6 +62,7 @@ vi.mock('../../services/subtitleService', () => ({
     startGenerationBatch: vi.fn(),
     getGenerationBatchStatus: vi.fn(),
     cancelGenerationBatch: vi.fn(),
+    dismissGenerationBatch: vi.fn(),
     previewGenerationBatch: vi.fn(),
     getGenerationCandidates: vi.fn(),
     startCandidateAnalysis: vi.fn(),
@@ -114,7 +122,11 @@ import {
   remainingIds,
   type GenerationBatchPanelV2Props,
 } from './GenerationBatchDialogV2';
-import { subtitleService, type GenerationBatchItem } from '../../services/subtitleService';
+import {
+  subtitleService,
+  type GenerationBatchItem,
+  type GenerationBatchItemState,
+} from '../../services/subtitleService';
 import type { GenerationBatchProgressState } from '../../hooks/useGenerationBatchProgress';
 
 const mocked = vi.mocked(subtitleService);
@@ -226,7 +238,7 @@ function renderPanel(props: Partial<GenerationBatchPanelV2Props> = {}) {
     status: 'running',
     progress: progressOf({ status: 'running' }),
     items: [],
-    onConfirmCancelAll: vi.fn(),
+    onConfirmCancelAll: vi.fn().mockResolvedValue(undefined),
     onResume: vi.fn(),
     onClose: vi.fn(),
     ...props,
@@ -253,7 +265,7 @@ describe('GenerationBatchPanelV2', () => {
     expect(screen.getByText('產生字幕')).toBeInTheDocument();
     expect(screen.getByTestId('gen-batch-counter')).toHaveTextContent('2 / 5');
     expect(screen.getByTestId('gen-batch-item-list').children).toHaveLength(5);
-    expect(screen.getByTestId(`gen-batch-row-${M3}`)).toHaveAttribute('data-state', 'active');
+    expect(screen.getByTestId(`gen-batch-row-${M3}`)).toHaveAttribute('data-state', 'running');
     expect(screen.getByTestId(`gen-batch-row-${M1}`)).toHaveTextContent('完成');
     expect(screen.getByTestId(`gen-batch-row-${M5}`)).toHaveTextContent('排隊中');
     expect(screen.getByTestId('generation-progress-v2')).toBeInTheDocument();
@@ -269,7 +281,7 @@ describe('GenerationBatchPanelV2', () => {
     expect(screen.getByText(/範圍：已選項目（/)).toBeInTheDocument();
   });
 
-  it('全部取消 uses an inline confirm before cancelling', () => {
+  it('全部取消 uses an inline confirm before cancelling', async () => {
     const props = renderPanel({ status: 'running', progress: progressOf({}), items: ITEMS });
 
     fireEvent.click(screen.getByTestId('gen-batch-cancel-all'));
@@ -278,6 +290,47 @@ describe('GenerationBatchPanelV2', () => {
 
     fireEvent.click(screen.getByTestId('gen-batch-cancel-confirm-btn'));
     expect(props.onConfirmCancelAll).toHaveBeenCalledOnce();
+    // 🔴 #12 / M7: an ACCEPTED cancel is not a FINISHED cancel — the server
+    // still has to stop the in-flight job. The confirm row stays up (取消中…)
+    // so the focused control never vanishes and the panel tells no lies.
+    await waitFor(() => expect(screen.getByText('取消中…')).toBeInTheDocument());
+    expect(screen.getByTestId('gen-batch-cancel-confirm')).toBeInTheDocument();
+  });
+
+  it('[P0] M7 the 取消中… row only clears when the batch actually reports a terminal status', async () => {
+    const onConfirmCancelAll = vi.fn().mockResolvedValue(undefined);
+    const { rerender } = render(
+      <GenerationBatchPanelV2
+        open
+        status="running"
+        progress={progressOf({ status: 'running' })}
+        items={ITEMS}
+        onConfirmCancelAll={onConfirmCancelAll}
+        onResume={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('gen-batch-cancel-all'));
+    fireEvent.click(screen.getByTestId('gen-batch-cancel-confirm-btn'));
+    await waitFor(() => expect(screen.getByText('取消中…')).toBeInTheDocument());
+
+    // The terminal `cancelled` event lands → confirm row goes, 關閉 takes focus.
+    rerender(
+      <GenerationBatchPanelV2
+        open
+        status="cancelled"
+        progress={progressOf({ status: 'cancelled', successCount: 2 })}
+        items={ITEMS}
+        onConfirmCancelAll={onConfirmCancelAll}
+        onResume={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+    await waitFor(() =>
+      expect(screen.queryByTestId('gen-batch-cancel-confirm')).not.toBeInTheDocument()
+    );
+    await waitFor(() => expect(screen.getByTestId('gen-batch-close-btn')).toHaveFocus());
   });
 
   it('budget_ceiling renders the F9 banner, paused rows, 關閉 + 下次繼續', () => {
@@ -340,7 +393,7 @@ describe('GenerationBatchPanelV2', () => {
       items: [],
     });
 
-    expect(screen.getByTestId(`gen-batch-row-${M3}`)).toHaveAttribute('data-state', 'active');
+    expect(screen.getByTestId(`gen-batch-row-${M3}`)).toHaveAttribute('data-state', 'running');
     expect(screen.getByTestId(`gen-batch-row-${M3}`)).toHaveTextContent('怪奇物語 S04E07');
   });
 
@@ -388,8 +441,13 @@ describe('GenerationBatchDialogV2 (container)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     h.batchState.status = 'idle';
+    h.batchState.batchId = '';
     h.batchState.currentMediaId = null;
     h.batchState.pausedCount = 0;
+    h.batchState.successCount = 0;
+    h.batchState.failCount = 0;
+    h.batchState.items = null;
+    h.batchEpoch = 0;
     h.itemState.phase = 'idle';
     mocked.getGenerationBatchStatus.mockResolvedValue({ running: false, progress: null });
   });
@@ -484,6 +542,23 @@ describe('GenerationBatchDialogV2 (container)', () => {
     renderDialog();
 
     await waitFor(() => expect(h.itemStartTracking).toHaveBeenCalledWith(E9));
+  });
+
+  it('[P0] 🔴 #5 a cancel request that FAILS surfaces the alert instead of being swallowed', async () => {
+    h.batchState.status = 'running';
+    h.batchState.currentMediaId = M3;
+    h.batchState.currentItem = '怪奇物語 S04E07';
+    mocked.cancelGenerationBatch.mockRejectedValue(new Error('network'));
+
+    renderDialog();
+
+    fireEvent.click(screen.getByTestId('gen-batch-cancel-all'));
+    fireEvent.click(screen.getByTestId('gen-batch-cancel-confirm-btn'));
+
+    expect(await screen.findByTestId('gen-batch-cancel-error')).toHaveTextContent(
+      '取消失敗，批次仍在進行。請再試一次。'
+    );
+    expect(screen.getByTestId('gen-batch-cancel-confirm')).toBeInTheDocument();
   });
 
   it('cancel calls the cancel endpoint (terminal arrives via SSE)', async () => {
@@ -586,6 +661,8 @@ describe('GenerationBatchDialogV2 (container)', () => {
 
     expect(h.batchReset).toHaveBeenCalled();
     expect(mocked.startGenerationBatch).not.toHaveBeenCalled();
+    // Let the on-open status probe settle inside act().
+    await waitFor(() => expect(mocked.getGenerationBatchStatus).toHaveBeenCalled());
   });
 
   it('[CR H2] after a batch terminal the next consent render forces a re-analysis (stale snapshot ban)', async () => {
@@ -682,9 +759,14 @@ describe('GenerationBatchDialogV2 — retry/resume preselection (sub-5-3 AC #3/#
   beforeEach(() => {
     vi.clearAllMocks();
     h.batchState.status = 'idle';
+    h.batchState.batchId = '';
     h.batchState.currentMediaId = null;
     h.batchState.pausedCount = 0;
     h.batchState.totalItems = 0;
+    h.batchState.successCount = 0;
+    h.batchState.failCount = 0;
+    h.batchState.items = null;
+    h.batchEpoch = 0;
     h.itemState.phase = 'idle';
     mocked.getGenerationBatchStatus.mockResolvedValue({ running: false, progress: null });
   });
@@ -790,5 +872,978 @@ describe('GenerationBatchDialogV2 — retry/resume preselection (sub-5-3 AC #3/#
     rerender();
     const stub = await screen.findByTestId('consent-view-stub');
     expect(stub.getAttribute('data-preselected')).toBe('');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// dsr-6d-b — the rows say what the BACKEND says (items[] first)
+// ---------------------------------------------------------------------------
+
+const state = (
+  mediaId: string,
+  title: string,
+  status: GenerationBatchItemState['status'],
+  reason: GenerationBatchItemState['reason'] = '',
+  seriesTitle = ''
+): GenerationBatchItemState => ({
+  mediaId,
+  title,
+  mediaType: seriesTitle ? 'episode' : 'movie',
+  seriesTitle,
+  status,
+  reason,
+});
+
+describe('GenerationBatchPanelV2 — rows from progress.items (dsr-6d-b AC #2/#3)', () => {
+  it('[P0] 🔴 #1 an item the pipeline REFUSED renders 失敗 with its reason — it used to render 完成', () => {
+    renderPanel({
+      status: 'running',
+      progress: progressOf({
+        currentMediaId: M5,
+        successCount: 2,
+        failCount: 1,
+        items: [
+          state(M1, '沙丘：第二部', 'done'),
+          state(M2, '奧本海默', 'done'),
+          state(M3, '怪奇物語 S04E07', 'failed', 'busy_elsewhere'),
+          state(M4, '星際效應', 'failed', 'skipped'),
+          state(M5, '全面啟動', 'running'),
+        ],
+      }),
+      items: [], // no 202 items[] at all — the queue comes from the snapshot
+    });
+
+    const busy = screen.getByTestId(`gen-batch-row-${M3}`);
+    expect(busy).toHaveAttribute('data-state', 'failed');
+    expect(busy).toHaveTextContent('這部正在別處處理');
+    expect(busy).not.toHaveTextContent('完成');
+
+    const skipped = screen.getByTestId(`gen-batch-row-${M4}`);
+    expect(skipped).toHaveTextContent('沒有可用的字幕來源');
+    expect(skipped).not.toHaveTextContent('已略過');
+
+    expect(screen.getByTestId(`gen-batch-row-${M5}`)).toHaveAttribute('data-state', 'running');
+  });
+
+  it('[P0] 🔴 #9 a failed row draws NO stepper (it is not being worked on)', () => {
+    renderPanel({
+      status: 'running',
+      progress: progressOf({
+        currentMediaId: M2,
+        items: [state(M1, '沙丘：第二部', 'failed', 'error'), state(M2, '奧本海默', 'running')],
+      }),
+      items: [],
+      activeItemProgress: {
+        phase: 'transcribing',
+        failedPhase: null,
+        percentage: null,
+        message: '',
+        jobId: null,
+        error: null,
+        srtPath: null,
+        zhSrtPath: null,
+        partial: false,
+      } as never,
+    });
+
+    expect(screen.getByTestId(`gen-batch-row-${M1}`)).toHaveTextContent('生成失敗');
+    // exactly one stepper — the running row's
+    expect(screen.getAllByTestId('generation-progress-v2')).toHaveLength(1);
+    expect(screen.getByTestId(`gen-batch-row-${M2}`)).toHaveTextContent('轉錄中');
+  });
+
+  it('[P0] a running row with no per-item event yet says 處理中, never a stage it cannot know', () => {
+    renderPanel({
+      status: 'running',
+      progress: progressOf({ currentMediaId: M1, items: [state(M1, '沙丘：第二部', 'running')] }),
+      items: [],
+    });
+    expect(screen.getByTestId(`gen-batch-row-${M1}`)).toHaveTextContent('處理中');
+  });
+
+  it('[P0] an episode row shows 劇名 + 集數標題; a movie shows neither a prefix nor "undefined"', () => {
+    renderPanel({
+      status: 'complete',
+      progress: progressOf({
+        status: 'complete',
+        successCount: 2,
+        items: [
+          state(M3, 'S04E07 第七章', 'done', '', '怪奇物語'),
+          state(M1, '沙丘：第二部', 'done'),
+        ],
+      }),
+      items: [],
+    });
+
+    expect(screen.getByTestId(`gen-batch-row-${M3}`)).toHaveTextContent('怪奇物語 S04E07 第七章');
+    const movie = screen.getByTestId(`gen-batch-row-${M1}`);
+    expect(movie).toHaveTextContent('沙丘：第二部');
+    expect(movie).not.toHaveTextContent('undefined');
+  });
+
+  it('[P0] budget_ceiling + cancelled rows come straight from the snapshot', () => {
+    renderPanel({
+      status: 'budget_ceiling',
+      progress: progressOf({
+        status: 'budget_ceiling',
+        successCount: 1,
+        pausedCount: 2,
+        spentUsd: 5,
+        items: [
+          state(M1, '沙丘：第二部', 'done'),
+          state(M2, '奧本海默', 'paused'),
+          state(M3, '怪奇物語 S04E07', 'paused'),
+        ],
+      }),
+      items: [],
+    });
+
+    expect(screen.getByTestId(`gen-batch-row-${M2}`)).toHaveAttribute('data-state', 'paused');
+    expect(screen.getByTestId(`gen-batch-row-${M3}`)).toHaveTextContent('已暫停 — 下次繼續');
+  });
+
+  it('[P0] progress.items WINS over a stale 202 items[] prop', () => {
+    renderPanel({
+      status: 'complete',
+      progress: progressOf({
+        status: 'complete',
+        successCount: 1,
+        failCount: 1,
+        items: [state(M1, '沙丘：第二部', 'done'), state(M2, '奧本海默', 'failed', 'error')],
+      }),
+      items: ITEMS, // five stale rows from the start-202
+    });
+
+    expect(screen.getByTestId('gen-batch-item-list').children).toHaveLength(2);
+    expect(screen.getByTestId(`gen-batch-row-${M2}`)).toHaveTextContent('生成失敗');
+  });
+});
+
+describe('GenerationBatchPanelV2 — the batch verdict + honest colour (dsr-6d-b AC #3/#4)', () => {
+  it('[P0] complete with NO failures: 全部完成（N 部）in success text', () => {
+    renderPanel({
+      status: 'complete',
+      progress: progressOf({ status: 'complete', successCount: 5, failCount: 0 }),
+      items: ITEMS,
+    });
+    const summary = screen.getByTestId('gen-batch-summary');
+    expect(summary).toHaveTextContent('全部完成（5 部）');
+    expect(summary.className).toContain('success-text');
+  });
+
+  it('[P0] complete WITH failures is neutral — green would claim an outcome that is not good', () => {
+    renderPanel({
+      status: 'complete',
+      progress: progressOf({ status: 'complete', successCount: 2, failCount: 3 }),
+      items: ITEMS,
+    });
+    const summary = screen.getByTestId('gen-batch-summary');
+    expect(summary).toHaveTextContent('完成 2 部、失敗 3 部');
+    expect(summary.className).not.toContain('success');
+    expect(summary.className).not.toContain('error');
+  });
+
+  it('[P0] cancelled says how much survived', () => {
+    renderPanel({
+      status: 'cancelled',
+      progress: progressOf({ status: 'cancelled', successCount: 2 }),
+      items: ITEMS,
+    });
+    expect(screen.getByTestId('gen-batch-summary')).toHaveTextContent('已取消：完成 2 部');
+  });
+
+  it('[P0] M4 the verdict IS announced, and exactly once — through the always-mounted live region', () => {
+    renderPanel({
+      status: 'complete',
+      progress: progressOf({ status: 'complete', successCount: 5 }),
+      items: ITEMS,
+    });
+    // The announcer is the sr-only region that exists for the panel's whole
+    // life (a live region mounted together with its text is not spoken).
+    const live = screen.getByTestId('gen-batch-status-live');
+    expect(live).toHaveAttribute('aria-live', 'polite');
+    expect(live).toHaveTextContent('全部完成（5 部）');
+    // …and the VISIBLE line must not be a second live region, or AT says it twice.
+    expect(screen.getByTestId('gen-batch-summary')).not.toHaveAttribute('aria-live');
+  });
+
+  it('[P0] M4 a cancelled batch is announced too', () => {
+    renderPanel({
+      status: 'cancelled',
+      progress: progressOf({ status: 'cancelled', successCount: 2 }),
+      items: ITEMS,
+    });
+    expect(screen.getByTestId('gen-batch-status-live')).toHaveTextContent('已取消：完成 2 部');
+  });
+
+  it('[P1] budget_ceiling keeps its sr-only announcement and shows no verdict line', () => {
+    renderPanel({
+      status: 'budget_ceiling',
+      progress: progressOf({ status: 'budget_ceiling', successCount: 2, pausedCount: 3 }),
+      items: ITEMS,
+    });
+    expect(screen.getByTestId('gen-batch-status-live')).toHaveTextContent('已達本次預算上限');
+    expect(screen.queryByTestId('gen-batch-summary')).toBeNull();
+  });
+
+  it.each([
+    ['running', 0, 'bg-[var(--accent-primary)]'],
+    ['complete', 0, 'bg-[var(--success)]'],
+    ['complete', 2, 'bg-[var(--text-muted)]'],
+    ['cancelled', 0, 'bg-[var(--text-muted)]'],
+    ['budget_ceiling', 0, 'bg-[var(--text-muted)]'],
+    ['error', 0, 'bg-[var(--error)]'],
+  ] as const)(
+    '[P0] 🔴 #7 progress bar at %s (failCount %i) is %s — never bg-tertiary (an invisible bar)',
+    (status, failCount, expected) => {
+      renderPanel({
+        status,
+        progress: progressOf({ status, failCount, successCount: 2 }),
+        items: ITEMS,
+      });
+      const bar = screen.getByTestId('gen-batch-progress-bar');
+      expect(bar.className).toContain(expected);
+      expect(bar.className).not.toContain('bg-[var(--bg-tertiary)]');
+      if (status !== 'running') expect(bar.className).not.toContain('accent-primary');
+    }
+  );
+
+  it('[P0] 🔴 #8 確定取消 and 重試失敗項目 are NEUTRAL secondaries, not 硃砂', () => {
+    renderPanel({ status: 'running', progress: progressOf({}), items: ITEMS });
+    fireEvent.click(screen.getByTestId('gen-batch-cancel-all'));
+    const confirmBtn = screen.getByTestId('gen-batch-cancel-confirm-btn');
+    expect(confirmBtn.className).toContain('bg-[var(--bg-tertiary)]');
+    expect(confirmBtn.className).not.toContain('error');
+
+    renderPanel({
+      status: 'complete',
+      progress: progressOf({ status: 'complete', failCount: 1 }),
+      items: ITEMS,
+      failedIds: new Set([M2]),
+      onRetryFailed: vi.fn(),
+    });
+    const retry = screen.getByTestId('gen-batch-retry-failed-btn');
+    expect(retry.className).toContain('bg-[var(--bg-tertiary)]');
+    expect(retry.className).not.toContain('error');
+  });
+});
+
+describe('GenerationBatchPanelV2 — cancel that can fail + focus (dsr-6d-b AC #6)', () => {
+  it('[P0] 🔴 #5 a failed cancel SAYS SO and keeps the confirm row (the batch is still running)', async () => {
+    const onConfirmCancelAll = vi.fn().mockRejectedValue(new Error('network'));
+    renderPanel({
+      status: 'running',
+      progress: progressOf({}),
+      items: ITEMS,
+      onConfirmCancelAll,
+    });
+
+    fireEvent.click(screen.getByTestId('gen-batch-cancel-all'));
+    fireEvent.click(screen.getByTestId('gen-batch-cancel-confirm-btn'));
+
+    const alert = await screen.findByTestId('gen-batch-cancel-error');
+    expect(alert).toHaveAttribute('role', 'alert');
+    expect(alert).toHaveTextContent('取消失敗，批次仍在進行。請再試一次。');
+    expect(screen.getByTestId('gen-batch-cancel-confirm')).toBeInTheDocument();
+  });
+
+  it('[P0] while the cancel is in flight the button says 取消中… and is aria-disabled (never disabled)', async () => {
+    let release: () => void = () => {};
+    const onConfirmCancelAll = vi.fn(
+      () =>
+        new Promise<void>((res) => {
+          release = res;
+        })
+    );
+    renderPanel({
+      status: 'running',
+      progress: progressOf({}),
+      items: ITEMS,
+      onConfirmCancelAll,
+    });
+
+    fireEvent.click(screen.getByTestId('gen-batch-cancel-all'));
+    fireEvent.click(screen.getByTestId('gen-batch-cancel-confirm-btn'));
+
+    const btn = await screen.findByText('取消中…');
+    expect(btn).toHaveAttribute('aria-disabled', 'true');
+    expect(btn).not.toHaveAttribute('disabled');
+
+    // A second click while busy must not fire a second request.
+    fireEvent.click(btn);
+    expect(onConfirmCancelAll).toHaveBeenCalledTimes(1);
+
+    release();
+    // Still 取消中… after the request resolves — the batch has not reported a
+    // terminal status yet, and claiming otherwise is the lie M7 is about.
+    await waitFor(() => expect(onConfirmCancelAll).toHaveBeenCalledTimes(1));
+    expect(screen.getByTestId('gen-batch-cancel-confirm')).toBeInTheDocument();
+  });
+
+  it('[P0] M3 the failure alert does NOT survive 繼續生成 — a new confirm row starts clean', async () => {
+    const onConfirmCancelAll = vi.fn().mockRejectedValue(new Error('network'));
+    renderPanel({
+      status: 'running',
+      progress: progressOf({}),
+      items: ITEMS,
+      onConfirmCancelAll,
+    });
+
+    fireEvent.click(screen.getByTestId('gen-batch-cancel-all'));
+    fireEvent.click(screen.getByTestId('gen-batch-cancel-confirm-btn'));
+    await screen.findByTestId('gen-batch-cancel-error');
+
+    fireEvent.click(screen.getByText('繼續生成'));
+    fireEvent.click(screen.getByTestId('gen-batch-cancel-all'));
+
+    expect(screen.getByTestId('gen-batch-cancel-confirm')).toBeInTheDocument();
+    expect(screen.queryByTestId('gen-batch-cancel-error')).toBeNull();
+  });
+
+  it('[P0] 🔴 #12 focus follows the confirm row instead of falling to <body>', async () => {
+    renderPanel({ status: 'running', progress: progressOf({}), items: ITEMS });
+
+    fireEvent.click(screen.getByTestId('gen-batch-cancel-all'));
+    await waitFor(() => expect(screen.getByText('繼續生成')).toHaveFocus());
+
+    fireEvent.click(screen.getByText('繼續生成'));
+    await waitFor(() => expect(screen.getByTestId('gen-batch-cancel-all')).toHaveFocus());
+    expect(document.body).not.toHaveFocus();
+  });
+});
+
+describe('GenerationBatchPanelV2 — 再產生字幕 (dsr-6d-b AC #5)', () => {
+  it('[P0] a terminal with nothing to retry still offers a way back to the consent flow', () => {
+    const onRestart = vi.fn();
+    renderPanel({
+      status: 'complete',
+      progress: progressOf({ status: 'complete', successCount: 5 }),
+      items: ITEMS,
+      onRestart,
+    });
+    fireEvent.click(screen.getByTestId('gen-batch-restart-btn'));
+    expect(onRestart).toHaveBeenCalledOnce();
+  });
+
+  it('[P1] 重試失敗項目 takes precedence — the two never appear together', () => {
+    renderPanel({
+      status: 'complete',
+      progress: progressOf({ status: 'complete', failCount: 1 }),
+      items: ITEMS,
+      failedIds: new Set([M2]),
+      onRetryFailed: vi.fn(),
+      onRestart: vi.fn(),
+    });
+    expect(screen.getByTestId('gen-batch-retry-failed-btn')).toBeInTheDocument();
+    expect(screen.queryByTestId('gen-batch-restart-btn')).toBeNull();
+  });
+
+  it('[P1] never at budget_ceiling — 下次繼續 owns recovery there', () => {
+    renderPanel({
+      status: 'budget_ceiling',
+      progress: progressOf({ status: 'budget_ceiling', pausedCount: 2 }),
+      items: ITEMS,
+      onRestart: vi.fn(),
+    });
+    expect(screen.queryByTestId('gen-batch-restart-btn')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// dsr-6d-b container — the on-open probe, `last`, 409, reconnect, caches
+// ---------------------------------------------------------------------------
+
+describe('GenerationBatchDialogV2 — probe / last / reconnect (dsr-6d-b AC #5)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h.batchState.status = 'idle';
+    h.batchState.batchId = '';
+    h.batchState.currentMediaId = null;
+    h.batchState.currentItem = '';
+    h.batchState.totalItems = 0;
+    h.batchState.successCount = 0;
+    h.batchState.failCount = 0;
+    h.batchState.pausedCount = 0;
+    h.batchState.items = null;
+    h.batchEpoch = 0;
+    h.itemState.phase = 'idle';
+    mocked.getGenerationBatchStatus.mockResolvedValue({ running: false, progress: null });
+  });
+
+  function renderOpenable(initialOpen = true) {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+    const remove = vi.spyOn(queryClient, 'removeQueries');
+    let open = initialOpen;
+    const makeUi = () => (
+      <QueryClientProvider client={queryClient}>
+        <GenerationBatchDialogV2 open={open} onOpenChange={vi.fn()} />
+      </QueryClientProvider>
+    );
+    const view = render(makeUi());
+    return {
+      queryClient,
+      invalidate,
+      remove,
+      rerender: () => view.rerender(makeUi()),
+      setOpen: (next: boolean) => {
+        open = next;
+        view.rerender(makeUi());
+      },
+    };
+  }
+
+  const LAST = {
+    batchId: 'gb-last',
+    totalItems: 2,
+    currentIndex: 2,
+    currentMediaId: M2,
+    currentItem: '奧本海默',
+    successCount: 1,
+    failCount: 1,
+    pausedCount: 0,
+    status: 'complete' as const,
+    spentUsd: 1.2,
+    budgetUsd: 5,
+    items: [state(M1, '沙丘：第二部', 'done'), state(M2, '奧本海默', 'failed', 'error')],
+  };
+
+  it('[P0] path 1 — a RUNNING batch is tracked (stream attached)', async () => {
+    const snapshot = progressOf({ status: 'running' });
+    mocked.getGenerationBatchStatus.mockResolvedValue({ running: true, progress: snapshot });
+
+    renderOpenable();
+
+    await waitFor(() => expect(h.batchStartTracking).toHaveBeenCalledWith(snapshot));
+    expect(h.batchAttachSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('[P0] path 2 — a finished batch is ATTACHED, not tracked (no stream, terminal status kept)', async () => {
+    mocked.getGenerationBatchStatus.mockResolvedValue({ running: false, last: LAST });
+
+    renderOpenable();
+
+    await waitFor(() => expect(h.batchAttachSnapshot).toHaveBeenCalledWith(LAST));
+    expect(h.batchStartTracking).not.toHaveBeenCalled();
+  });
+
+  it('[P0] path 3 — nothing running and nothing remembered → the consent flow', async () => {
+    mocked.getGenerationBatchStatus.mockResolvedValue({
+      running: false,
+      progress: null,
+      last: null,
+    });
+
+    renderOpenable();
+
+    expect(await screen.findByTestId('consent-view-stub')).toBeInTheDocument();
+    expect(h.batchAttachSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('[P0] 🚨 the SAME last batch is shown ONCE — reopening goes back to the consent flow', async () => {
+    mocked.getGenerationBatchStatus.mockResolvedValue({ running: false, last: LAST });
+    const { setOpen } = renderOpenable();
+
+    await waitFor(() => expect(h.batchAttachSnapshot).toHaveBeenCalledTimes(1));
+
+    // Close (the hook resets to idle) and reopen.
+    setOpen(false);
+    h.batchState.status = 'idle';
+    setOpen(true);
+
+    expect(await screen.findByTestId('consent-view-stub')).toBeInTheDocument();
+    expect(h.batchAttachSnapshot).toHaveBeenCalledTimes(1);
+  });
+
+  it('[P0] 再產生字幕 returns to the consent flow and starts NOTHING', async () => {
+    mocked.getGenerationBatchStatus.mockResolvedValue({ running: false, last: LAST });
+    h.batchState.status = 'complete';
+    h.batchState.batchId = 'gb-last';
+    h.batchState.successCount = 2;
+    h.batchState.items = [state(M1, '沙丘：第二部', 'done'), state(M2, '奧本海默', 'done')];
+    const { rerender } = renderOpenable();
+
+    fireEvent.click(await screen.findByTestId('gen-batch-restart-btn'));
+    expect(h.batchReset).toHaveBeenCalled();
+    expect(mocked.startGenerationBatch).not.toHaveBeenCalled();
+
+    h.batchState.status = 'idle';
+    rerender();
+    expect(await screen.findByTestId('consent-view-stub')).toBeInTheDocument();
+  });
+
+  it('[P0] 🔴 #4 a 409 with an EMPTY body re-reads status instead of pinning the panel at 0 / 0', async () => {
+    mocked.startGenerationBatch.mockResolvedValue({
+      conflict: true,
+      progress: null as never,
+    });
+    mocked.getGenerationBatchStatus
+      .mockResolvedValueOnce({ running: false, progress: null })
+      .mockResolvedValueOnce({ running: false, last: LAST });
+
+    renderOpenable();
+    fireEvent.click(await screen.findByTestId('consent-stub-start'));
+
+    await waitFor(() => expect(mocked.getGenerationBatchStatus).toHaveBeenCalledTimes(2));
+    expect(h.batchStartTracking).not.toHaveBeenCalled();
+    await waitFor(() => expect(h.batchAttachSnapshot).toHaveBeenCalledWith(LAST));
+  });
+
+  it('[P0] a reconnect (connectionEpoch tick) re-reads status — the cure for a lost terminal event', async () => {
+    const running = progressOf({ status: 'running' });
+    mocked.getGenerationBatchStatus.mockResolvedValue({ running: true, progress: running });
+    h.batchState.status = 'running';
+    h.batchState.currentItem = '怪奇物語 S04E07';
+    const { rerender } = renderOpenable();
+    await waitFor(() => expect(mocked.getGenerationBatchStatus).toHaveBeenCalledTimes(1));
+
+    // The stream dropped and came back; meanwhile the batch finished.
+    mocked.getGenerationBatchStatus.mockResolvedValue({ running: false, last: LAST });
+    h.batchEpoch = 1;
+    rerender();
+
+    await waitFor(() => expect(h.batchAttachSnapshot).toHaveBeenCalledWith(LAST));
+  });
+
+  it('[P0] the 202 snapshot seeds the panel (queue + real ceiling), no SSE event needed', async () => {
+    const started = progressOf({
+      batchId: 'gb-202',
+      totalItems: 2,
+      status: 'running',
+      items: [state(M1, '沙丘：第二部', 'running'), state(M2, '奧本海默', 'queued')],
+    });
+    mocked.startGenerationBatch.mockResolvedValue({
+      conflict: false,
+      result: { batchId: 'gb-202', totalItems: 2, items: ITEMS.slice(0, 2), progress: started },
+    });
+
+    renderOpenable();
+    fireEvent.click(await screen.findByTestId('consent-stub-start'));
+
+    await waitFor(() => expect(h.batchStartTracking).toHaveBeenCalledWith(started));
+  });
+
+  it('[P0] an empty scope (200, batch_id null) stays in the consent flow and says why', async () => {
+    mocked.startGenerationBatch.mockResolvedValue({
+      conflict: false,
+      result: { batchId: null, totalItems: 0, items: [], progress: null },
+    });
+
+    renderOpenable();
+    fireEvent.click(await screen.findByTestId('consent-stub-start'));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('consent-stub-error')).toHaveTextContent('沒有可以生成的項目')
+    );
+    expect(h.batchStartTracking).not.toHaveBeenCalled();
+  });
+});
+
+describe('GenerationBatchDialogV2 — terminal caches (dsr-6d-b AC #6)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h.batchState.status = 'idle';
+    h.batchState.batchId = '';
+    h.batchState.currentMediaId = null;
+    h.batchState.currentItem = '';
+    h.batchState.items = null;
+    h.batchEpoch = 0;
+    h.itemState.phase = 'idle';
+    mocked.getGenerationBatchStatus.mockResolvedValue({ running: false, progress: null });
+  });
+
+  function renderTerminal() {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+    const remove = vi.spyOn(queryClient, 'removeQueries');
+    const makeUi = () => (
+      <QueryClientProvider client={queryClient}>
+        <GenerationBatchDialogV2 open onOpenChange={vi.fn()} />
+      </QueryClientProvider>
+    );
+    const view = render(makeUi());
+    return { invalidate, remove, rerender: () => view.rerender(makeUi()) };
+  }
+
+  const keysOf = (invalidate: ReturnType<typeof vi.spyOn>) =>
+    invalidate.mock.calls.map((c) => JSON.stringify((c[0] as { queryKey: unknown }).queryKey));
+
+  it('[P0] 🔴 #11 a terminal refreshes library, preview, DETAILS, ACTIVITY and the per-title quote', async () => {
+    h.batchState.status = 'complete';
+    h.batchState.batchId = 'gb-t1';
+    const { invalidate } = renderTerminal();
+
+    await waitFor(() => expect(invalidate).toHaveBeenCalled());
+    const keys = keysOf(invalidate);
+    expect(keys).toContain(JSON.stringify(['library']));
+    expect(keys).toContain(JSON.stringify(['subtitles', 'generation-batch', 'preview']));
+    expect(keys).toContain(JSON.stringify(['details']));
+    expect(keys).toContain(JSON.stringify(['activity']));
+    expect(keys).toContain(JSON.stringify(['subtitles', 'transcription-estimate']));
+  });
+
+  it('[P0] 🔴 #6 the cached queue is removed ON TERMINAL (the file header promise)', async () => {
+    h.batchState.status = 'complete';
+    h.batchState.batchId = 'gb-t2';
+    const { remove } = renderTerminal();
+
+    await waitFor(() =>
+      expect(
+        remove.mock.calls.some(
+          (c) =>
+            JSON.stringify((c[0] as { queryKey: unknown }).queryKey) ===
+            JSON.stringify(['subtitles', 'generation-batch', 'items'])
+        )
+      ).toBe(true)
+    );
+  });
+
+  it('[P0] 🚨 the same terminal batch invalidates ONCE — reopening it must not re-sweep the library', async () => {
+    h.batchState.status = 'complete';
+    h.batchState.batchId = 'gb-t3';
+    const { invalidate, rerender } = renderTerminal();
+
+    await waitFor(() => expect(invalidate).toHaveBeenCalled());
+    const first = invalidate.mock.calls.length;
+    expect(first).toBeGreaterThan(0);
+
+    // Close (hook back to idle), then reopen — the probe re-attaches the SAME
+    // `last` snapshot, so the terminal effect fires again with the same id.
+    h.batchState.status = 'idle';
+    rerender();
+    h.batchState.status = 'complete';
+    rerender();
+    await waitFor(() => expect(screen.getByTestId('gen-batch-close-btn')).toBeInTheDocument());
+
+    expect(invalidate.mock.calls.length).toBe(first);
+  });
+
+  it('[P1] a DIFFERENT terminal batch does invalidate again', async () => {
+    h.batchState.status = 'complete';
+    h.batchState.batchId = 'gb-t4';
+    const { invalidate, rerender } = renderTerminal();
+
+    await waitFor(() => expect(invalidate).toHaveBeenCalled());
+    const first = invalidate.mock.calls.length;
+
+    h.batchState.status = 'running';
+    rerender();
+    h.batchState.status = 'complete';
+    h.batchState.batchId = 'gb-t5';
+    rerender();
+
+    await waitFor(() => expect(invalidate.mock.calls.length).toBeGreaterThan(first));
+  });
+});
+
+describe('GenerationBatchDialogV2 — items-first kills the two lies (dsr-6d-b 🔴 #1/#2)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h.batchState.status = 'idle';
+    h.batchState.batchId = '';
+    h.batchState.currentMediaId = null;
+    h.batchState.currentItem = '';
+    h.batchState.successCount = 0;
+    h.batchState.failCount = 0;
+    h.batchState.items = null;
+    h.batchEpoch = 0;
+    h.itemState.phase = 'idle';
+    mocked.getGenerationBatchStatus.mockResolvedValue({ running: false, progress: null });
+  });
+
+  function renderPlain() {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const makeUi = () => (
+      <QueryClientProvider client={queryClient}>
+        <GenerationBatchDialogV2 open onOpenChange={vi.fn()} />
+      </QueryClientProvider>
+    );
+    const view = render(makeUi());
+    return { rerender: () => view.rerender(makeUi()) };
+  }
+
+  it('[P0] 🔴 #1 an item refused with busy_elsewhere is retryable — the button EXISTS again', async () => {
+    h.batchState.status = 'complete';
+    h.batchState.batchId = 'gb-busy';
+    h.batchState.successCount = 1;
+    h.batchState.failCount = 1;
+    h.batchState.items = [
+      state(M1, '沙丘：第二部', 'done'),
+      state(M2, '奧本海默', 'failed', 'busy_elsewhere'),
+    ];
+
+    const { rerender } = renderPlain();
+
+    const retry = await screen.findByTestId('gen-batch-retry-failed-btn');
+    fireEvent.click(retry);
+    h.batchState.status = 'idle';
+    rerender();
+
+    const stub = await screen.findByTestId('consent-view-stub');
+    expect(stub.getAttribute('data-preselected')).toBe(M2);
+  });
+
+  it('[P0] 🔴 #2 a per-item failure never bleeds onto the NEXT item once the backend owns the queue', async () => {
+    h.batchState.status = 'running';
+    h.batchState.batchId = 'gb-race2';
+    h.batchState.currentMediaId = M2;
+    h.batchState.items = [
+      state(M1, '沙丘：第二部', 'failed', 'error'),
+      state(M2, '奧本海默', 'running'),
+    ];
+    // The per-item stream still reports `failed` — it belongs to M1, and the
+    // stale phase used to get recorded against M2 on the next render.
+    h.itemState.phase = 'failed';
+
+    renderPlain();
+
+    await waitFor(() =>
+      expect(screen.getByTestId(`gen-batch-row-${M2}`)).toHaveAttribute('data-state', 'running')
+    );
+    expect(screen.getByTestId(`gen-batch-row-${M2}`)).not.toHaveTextContent('失敗');
+    expect(screen.getByTestId(`gen-batch-row-${M1}`)).toHaveTextContent('生成失敗');
+  });
+
+  it('[P0] 下次繼續 preselects the unfinished rows straight from the backend queue', async () => {
+    h.batchState.status = 'budget_ceiling';
+    h.batchState.batchId = 'gb-ceil';
+    h.batchState.pausedCount = 2;
+    h.batchState.items = [
+      state(M1, '沙丘：第二部', 'done'),
+      state(M2, '奧本海默', 'failed', 'error'),
+      state(M3, '怪奇物語 S04E07', 'paused'),
+      state(M4, '星際效應', 'paused'),
+    ];
+
+    const { rerender } = renderPlain();
+
+    fireEvent.click(await screen.findByTestId('gen-batch-resume-btn'));
+    h.batchState.status = 'idle';
+    rerender();
+
+    const stub = await screen.findByTestId('consent-view-stub');
+    expect(stub.getAttribute('data-preselected')).toBe([M2, M3, M4].join(','));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Honest behaviours that had NO test before (dsr-6d-b AC #7/#8)
+// ---------------------------------------------------------------------------
+
+describe('GenerationBatchPanelV2 — claims that must stay true', () => {
+  it('[P0] the 即時更新（SSE）chip claims a LIVE stream — present while running', () => {
+    renderPanel({ status: 'running', progress: progressOf({}), items: ITEMS });
+    expect(screen.getByTestId('gen-batch-sse-chip')).toBeInTheDocument();
+  });
+
+  it.each(['complete', 'cancelled', 'error', 'budget_ceiling'] as const)(
+    '[P0] the SSE chip is GONE at %s — the stream is closed, the badge must not say otherwise',
+    (status) => {
+      renderPanel({ status, progress: progressOf({ status }), items: ITEMS });
+      expect(screen.queryByTestId('gen-batch-sse-chip')).toBeNull();
+    }
+  );
+
+  // ⚠️ 「執行中點外面不關」 is NOT covered here on purpose: Radix's
+  // DismissableLayer does not dispatch its outside-pointer event under jsdom,
+  // so a negative assertion would pass whatever the code did (the exact
+  // vacuous-test trap dsr-6d-b's CR called out). It is covered in a real
+  // browser by tests/e2e/batch-subtitle.spec.ts instead.
+  it('[P0] Escape stays gated while running (the same guard, in a form jsdom CAN observe)', () => {
+    const props = renderPanel({ status: 'running', progress: progressOf({}), items: ITEMS });
+    fireEvent.keyDown(screen.getByTestId('generation-batch-dialog-v2'), { key: 'Escape' });
+    expect(props.onClose).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// dsr-6d-b CR — the dead ends the adversarial review found
+// ---------------------------------------------------------------------------
+
+describe('GenerationBatchDialogV2 — CR regressions (no dead ends)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h.batchState.status = 'idle';
+    h.batchState.batchId = '';
+    h.batchState.currentMediaId = null;
+    h.batchState.currentItem = '';
+    h.batchState.totalItems = 0;
+    h.batchState.successCount = 0;
+    h.batchState.failCount = 0;
+    h.batchState.pausedCount = 0;
+    h.batchState.items = null;
+    h.batchEpoch = 0;
+    h.itemState.phase = 'idle';
+    mocked.getGenerationBatchStatus.mockResolvedValue({ running: false, progress: null });
+  });
+
+  function renderCr() {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const makeUi = () => (
+      <QueryClientProvider client={queryClient}>
+        <GenerationBatchDialogV2 open onOpenChange={vi.fn()} />
+      </QueryClientProvider>
+    );
+    const view = render(makeUi());
+    return { rerender: () => view.rerender(makeUi()) };
+  }
+
+  it('[P0] H1 a batch that ALREADY FINISHED by the time the 202 is read is attached, never painted as running', async () => {
+    // One title the pipeline refuses outright: Start() returns, the goroutine
+    // fails + finishes, and SnapshotFor() hands back a TERMINAL snapshot. The
+    // terminal SSE event was broadcast before we ever opened the stream.
+    const finished = progressOf({
+      batchId: 'gb-instant',
+      totalItems: 1,
+      status: 'complete',
+      successCount: 0,
+      failCount: 1,
+      items: [state(M1, '沙丘：第二部', 'failed', 'busy_elsewhere')],
+    });
+    mocked.startGenerationBatch.mockResolvedValue({
+      conflict: false,
+      result: { batchId: 'gb-instant', totalItems: 1, items: [ITEMS[0]], progress: finished },
+    });
+
+    renderCr();
+    fireEvent.click(await screen.findByTestId('consent-stub-start'));
+
+    await waitFor(() => expect(h.batchAttachSnapshot).toHaveBeenCalledWith(finished));
+    // startTracking would have forced status:'running' AND opened a stream for
+    // a batch that is already over — the 進行中 dead end.
+    expect(h.batchStartTracking).not.toHaveBeenCalled();
+  });
+
+  it('[P1] H1 a genuinely running 202 snapshot still goes through startTracking (stream opens)', async () => {
+    const running = progressOf({
+      batchId: 'gb-live',
+      status: 'running',
+      items: [state(M1, '沙丘：第二部', 'running')],
+    });
+    mocked.startGenerationBatch.mockResolvedValue({
+      conflict: false,
+      result: { batchId: 'gb-live', totalItems: 1, items: [ITEMS[0]], progress: running },
+    });
+
+    renderCr();
+    fireEvent.click(await screen.findByTestId('consent-stub-start'));
+
+    await waitFor(() => expect(h.batchStartTracking).toHaveBeenCalledWith(running));
+    expect(h.batchAttachSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('[P0] H2 a batch you WATCHED finish is not replayed on the next open — a new selection survives', async () => {
+    // Watch batch A complete with a failure while the dialog is open.
+    h.batchState.status = 'complete';
+    h.batchState.batchId = 'gb-A';
+    h.batchState.successCount = 1;
+    h.batchState.failCount = 1;
+    h.batchState.items = [
+      state(M1, '沙丘：第二部', 'done'),
+      state(M2, '奧本海默', 'failed', 'error'),
+    ];
+    // The server still remembers it (`last` is kept until the next batch).
+    mocked.getGenerationBatchStatus.mockResolvedValue({
+      running: false,
+      last: { ...progressOf({ batchId: 'gb-A', status: 'complete' }), items: h.batchState.items },
+    });
+
+    const { rerender } = renderCr();
+    await screen.findByTestId('gen-batch-close-btn');
+
+    // Close → the hook resets → reopen (same mount, as ActivityHub does).
+    h.batchState.status = 'idle';
+    h.batchState.batchId = '';
+    h.batchState.items = null;
+    rerender();
+
+    // The consent flow appears — NOT yesterday's completion screen, and
+    // therefore no 重試失敗項目 to hijack preselectedIds.
+    const stub = await screen.findByTestId('consent-view-stub');
+    expect(stub.getAttribute('data-preselected')).toBe('');
+    expect(h.batchAttachSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('[P0] M5 re-attaching a terminal still forces a fresh candidate analysis (CR H2 must not regress)', async () => {
+    h.batchState.status = 'complete';
+    h.batchState.batchId = 'gb-M5';
+    const { rerender } = renderCr();
+    await screen.findByTestId('gen-batch-close-btn');
+
+    // Same batch reaches the effect a second time (reopen → `last` re-attached).
+    h.batchState.status = 'idle';
+    rerender();
+    h.batchState.status = 'complete';
+    rerender();
+    await screen.findByTestId('gen-batch-close-btn');
+
+    // …and the consent flow that follows must still re-analyze: the completed
+    // items are still listed in the stale snapshot with the wrong quotes.
+    h.batchState.status = 'idle';
+    rerender();
+    const stub = await screen.findByTestId('consent-view-stub');
+    expect(stub.getAttribute('data-force-analyze')).toBe('true');
+  });
+
+  it('[P0] M8 a 409 whose re-read finds nothing says so instead of silently doing nothing', async () => {
+    mocked.startGenerationBatch.mockResolvedValue({ conflict: true, progress: null });
+    mocked.getGenerationBatchStatus.mockResolvedValue({
+      running: false,
+      progress: null,
+      last: null,
+    });
+
+    renderCr();
+    fireEvent.click(await screen.findByTestId('consent-stub-start'));
+
+    await waitFor(() => expect(mocked.getGenerationBatchStatus).toHaveBeenCalledTimes(2));
+    expect(await screen.findByTestId('consent-stub-error')).toHaveTextContent(
+      '剛才那個批次已經結束了'
+    );
+  });
+
+  it('[P1] M8 …and the message is cleared once the re-read DOES find the batch', async () => {
+    const running = progressOf({ status: 'running' });
+    mocked.startGenerationBatch.mockResolvedValue({ conflict: true, progress: null });
+    mocked.getGenerationBatchStatus
+      .mockResolvedValueOnce({ running: false, progress: null })
+      .mockResolvedValue({ running: true, progress: running });
+
+    renderCr();
+    fireEvent.click(await screen.findByTestId('consent-stub-start'));
+
+    await waitFor(() => expect(h.batchStartTracking).toHaveBeenCalledWith(running));
+    expect(screen.queryByTestId('consent-stub-error')).toBeNull();
+  });
+
+  it('[P0] L9 an idempotent cancel on an already-finished batch re-reads status instead of hanging on 取消中…', async () => {
+    h.batchState.status = 'running';
+    h.batchState.batchId = 'gb-late';
+    h.batchState.currentMediaId = M3;
+    h.batchState.currentItem = '怪奇物語 S04E07';
+    // The server answers 200 {cancelled:false, running:false}: nothing to
+    // cancel, because the batch ended and we missed the terminal event.
+    mocked.cancelGenerationBatch.mockResolvedValue({ cancelled: false, running: false });
+    mocked.getGenerationBatchStatus
+      .mockResolvedValueOnce({ running: false, progress: null })
+      .mockResolvedValue({
+        running: false,
+        last: progressOf({ batchId: 'gb-late', status: 'complete', successCount: 4 }),
+      });
+
+    renderCr();
+    fireEvent.click(screen.getByTestId('gen-batch-cancel-all'));
+    fireEvent.click(screen.getByTestId('gen-batch-cancel-confirm-btn'));
+
+    await waitFor(() => expect(mocked.getGenerationBatchStatus).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(h.batchAttachSnapshot).toHaveBeenCalled());
   });
 });

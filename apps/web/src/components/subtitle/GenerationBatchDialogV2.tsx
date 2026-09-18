@@ -30,12 +30,16 @@
  * Rule 23: zero wall-clock reads — progress/cost/counts are all SSE-supplied.
  * Media ids are UUID STRINGS end-to-end (9R-18; movie OR episode row ids).
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Check, CircleAlert, CirclePause, Radio } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '../ui/Dialog';
 import { cn } from '../../lib/utils';
-import { subtitleService, type GenerationBatchItem } from '../../services/subtitleService';
+import {
+  subtitleService,
+  type GenerationBatchItem,
+  type GenerationBatchItemState,
+} from '../../services/subtitleService';
 import {
   useGenerationBatchProgress,
   type GenerationBatchProgressState,
@@ -46,7 +50,11 @@ import {
 } from '../../hooks/useGenerationProgress';
 import { GenerationProgressV2 } from './GenerationProgressV2';
 import { GenerationConsentView } from './consent/GenerationConsentView';
+import { queueRowLabel, queueRowTitle } from './generationQueueRow';
 import { libraryKeys } from '../../hooks/useLibrary';
+import { detailKeys } from '../../hooks/useMediaDetails';
+import { activityKeys } from '../../hooks/useActivity';
+import { transcriptionEstimateKeys } from '../../hooks/useTranscriptionEstimate';
 import { usd } from '../../lib/currency';
 
 export const generationBatchPreviewKey = ['subtitles', 'generation-batch', 'preview'] as const;
@@ -65,6 +73,12 @@ export const generationBatchItemsKey = ['subtitles', 'generation-batch', 'items'
 
 type RowState = 'done' | 'failed' | 'active' | 'queued' | 'paused' | 'stopped';
 
+/**
+ * FALLBACK ONLY (dsr-6d-b): used when no `progress.items[]` snapshot is
+ * available — a pre-dsr-6d-a server, or the moments before the first snapshot
+ * lands. It can only GUESS from counters and an index, which is exactly how a
+ * refused item used to render 完成. `dsr-6d-c` re-evaluates removing it.
+ */
 export function deriveRowStates(
   items: GenerationBatchItem[],
   progress: GenerationBatchProgressState,
@@ -129,54 +143,52 @@ export function remainingIds(
 // Presentational bits
 // ---------------------------------------------------------------------------
 
-function RowStageLabel({ state }: { state: RowState }) {
-  switch (state) {
-    case 'done':
-      return (
-        <span className="flex shrink-0 items-center gap-1.5 text-xs text-[var(--success-text)]">
-          <Check className="h-4 w-4" aria-hidden="true" />
-          完成
-        </span>
-      );
-    case 'failed':
-      return (
-        <span className="flex shrink-0 items-center gap-1.5 text-xs text-[var(--error-text)]">
-          <CircleAlert className="h-4 w-4" aria-hidden="true" />
-          失敗
-        </span>
-      );
-    case 'active':
-      return (
-        <span className="shrink-0 text-xs font-semibold text-[var(--accent-text)]">轉錄中</span>
-      );
-    case 'paused':
-      return (
-        <span className="flex shrink-0 items-center gap-1.5 text-xs text-[var(--text-muted)]">
-          <CirclePause className="h-3.5 w-3.5" aria-hidden="true" />
-          已暫停 — 下次繼續
-        </span>
-      );
-    case 'stopped':
-      return <span className="shrink-0 text-xs text-[var(--text-muted)]">已取消</span>;
-    default:
-      return <span className="shrink-0 text-xs text-[var(--text-muted)]">排隊中</span>;
-  }
+/**
+ * Fallback vocabulary → the backend's, so ONE renderer draws both paths. The
+ * fallback knows no failure reason, so it lands on the generic 生成失敗.
+ */
+const FALLBACK_STATUS: Record<RowState, GenerationBatchItemState['status']> = {
+  done: 'done',
+  failed: 'failed',
+  active: 'running',
+  queued: 'queued',
+  paused: 'paused',
+  stopped: 'cancelled',
+};
+
+function RowStageLabel({
+  view,
+  phase,
+}: {
+  view: { status: GenerationBatchItemState['status']; reason: GenerationBatchItemState['reason'] };
+  phase?: GenerationProgressState['phase'] | null;
+}) {
+  const label = queueRowLabel(view, phase);
+  return (
+    <span className={cn('flex shrink-0 items-center gap-1.5 text-xs', label.className)}>
+      {label.icon === 'check' && <Check className="h-4 w-4" aria-hidden="true" />}
+      {label.icon === 'alert' && <CircleAlert className="h-4 w-4" aria-hidden="true" />}
+      {label.icon === 'pause' && <CirclePause className="h-3.5 w-3.5" aria-hidden="true" />}
+      {label.text}
+    </span>
+  );
 }
 
 function QueueRow({
   item,
-  state,
   activeItemProgress,
 }: {
-  item: GenerationBatchItem;
-  state: RowState;
+  item: GenerationBatchItemState;
   activeItemProgress?: GenerationProgressState | null;
 }) {
-  const showStepper = state === 'active';
+  // The stepper is the claim "this is being worked on right now" — only a
+  // running row may make it. A failed row used to draw 提取音訊中 underneath
+  // its own 失敗 label (dsr-6d-b 🔴 #9).
+  const showStepper = item.status === 'running';
   return (
     <li
       data-testid={`gen-batch-row-${item.mediaId}`}
-      data-state={state}
+      data-state={item.status}
       className={cn(
         'flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-4 py-3.5'
       )}
@@ -187,13 +199,17 @@ function QueueRow({
           className="h-[54px] w-[38px] shrink-0 rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)]"
         />
         <span className="min-w-0 flex-1 truncate text-sm text-[var(--text-primary)]">
-          {item.title}
+          {queueRowTitle(item)}
         </span>
-        <RowStageLabel state={state} />
+        <RowStageLabel
+          view={{ status: item.status, reason: item.reason }}
+          phase={activeItemProgress?.phase}
+        />
       </div>
       {showStepper && (
-        <div className="sm:pl-[52px]">
+        <div className="sm:pl-12">
           <GenerationProgressV2
+            align="start"
             phase={
               activeItemProgress && activeItemProgress.phase !== 'failed'
                 ? activeItemProgress.phase
@@ -227,7 +243,12 @@ export interface GenerationBatchPanelV2Props {
   failedIds?: ReadonlySet<string>;
   /** Per-item stage detail for the active row (joined on current_media_id). */
   activeItemProgress?: GenerationProgressState | null;
-  onConfirmCancelAll: () => void;
+  /**
+   * Resolves when the cancel request succeeded; REJECTS when it failed — the
+   * panel keeps the confirm row up and says so (dsr-6d-b 🔴 #5: a swallowed
+   * error used to look exactly like a successful cancel).
+   */
+  onConfirmCancelAll: () => Promise<void>;
   /** 下次繼續 — back to the consent list to re-select/confirm (sub-4-3). */
   onResume: () => void;
   /**
@@ -237,6 +258,13 @@ export interface GenerationBatchPanelV2Props {
    * remains the F16 confirm.
    */
   onRetryFailed?: () => void;
+  /**
+   * 再產生字幕 — the ONLY way out of a terminal panel that has no failed rows
+   * to retry. Without it, a `last` snapshot attached on open would pin the
+   * dialog to yesterday's result forever (the backend keeps `last` until the
+   * next batch starts or the workspace dismisses it).
+   */
+  onRestart?: () => void;
   onClose: () => void;
 }
 
@@ -252,31 +280,138 @@ export function GenerationBatchPanelV2({
   onConfirmCancelAll,
   onResume,
   onRetryFailed,
+  onRestart,
   onClose,
 }: GenerationBatchPanelV2Props) {
   const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelFailed, setCancelFailed] = useState(false);
+
+  const cancelAllRef = useRef<HTMLButtonElement | null>(null);
+  const keepGoingRef = useRef<HTMLButtonElement | null>(null);
+  const closeRef = useRef<HTMLButtonElement | null>(null);
+  /** Where focus must land once that control exists (🔴 #12 — it fell to <body>). */
+  const pendingFocusRef = useRef<'keepGoing' | 'cancelAll' | 'close' | null>(null);
 
   const isRunning = status === 'running';
   const isBudgetCeiling = status === 'budget_ceiling';
   const isTerminal = status === 'complete' || status === 'cancelled' || status === 'error';
 
   useEffect(() => {
-    if (!isRunning) setConfirmingCancel(false);
+    if (!isRunning) {
+      setConfirmingCancel(false);
+      setCancelFailed(false);
+      setCancelling(false);
+    }
   }, [isRunning]);
+
+  // Runs after EVERY render: the control we want focused (關閉 after a
+  // successful cancel) may not exist until the terminal event lands.
+  useEffect(() => {
+    const target = pendingFocusRef.current;
+    if (!target) return;
+    const el =
+      target === 'keepGoing'
+        ? keepGoingRef.current
+        : target === 'cancelAll'
+          ? cancelAllRef.current
+          : closeRef.current;
+    if (el) {
+      el.focus();
+      pendingFocusRef.current = null;
+    }
+  });
 
   const processed = progress.successCount + progress.failCount;
   const pct = progress.totalItems > 0 ? (processed / progress.totalItems) * 100 : 0;
-  const rowStates = deriveRowStates(items, progress, failedIds);
 
+  /**
+   * Row source, in a fixed priority (dsr-6d-b AC #2):
+   *  1. `progress.items` — the backend's own queue, status and reason per item;
+   *  2. the 202 `items[]` prop through deriveRowStates — the legacy GUESS;
+   *  3. nothing but an in-flight title — one honest degraded card.
+   */
+  const backendQueue = progress.items && progress.items.length > 0 ? progress.items : null;
+  const fallbackStates = backendQueue ? null : deriveRowStates(items, progress, failedIds);
+  const rows: GenerationBatchItemState[] = backendQueue
+    ? backendQueue
+    : items.map((it, i) => ({
+        ...it,
+        status: FALLBACK_STATUS[fallbackStates![i]],
+        reason: '' as const,
+      }));
+
+  const handleConfirmCancel = async () => {
+    if (cancelling) return;
+    setCancelFailed(false);
+    setCancelling(true);
+    try {
+      await onConfirmCancelAll();
+      // Accepted — but NOT over: the server still has to stop the in-flight
+      // ffmpeg/ASR job, which takes seconds. We deliberately keep the confirm
+      // row (and 取消中…) up until the batch reports a terminal status, so the
+      // focused button never vanishes into <body> and the panel never pretends
+      // the batch already stopped. The !isRunning effect above clears both.
+      pendingFocusRef.current = 'close';
+    } catch {
+      // Keep the confirm row up: the batch is still running, and the alert
+      // below is the only thing telling the user that.
+      setCancelFailed(true);
+      setCancelling(false);
+      pendingFocusRef.current = null;
+    }
+  };
+
+  /**
+   * One sentence for the whole batch (🔴 #10). Green is "there is an answer and
+   * it is the good one" — a run with failures does not qualify, so it stays
+   * neutral. Rendered VISIBLY with aria-live, which is why the sr-only line
+   * goes quiet for these statuses (no double announcement).
+   */
+  const summary: { text: string; className: string } | null =
+    status === 'complete'
+      ? progress.failCount > 0
+        ? {
+            text: `完成 ${progress.successCount} 部、失敗 ${progress.failCount} 部`,
+            className: 'text-[var(--text-secondary)]',
+          }
+        : {
+            text: `全部完成（${progress.successCount} 部）`,
+            className: 'text-[var(--success-text)]',
+          }
+      : status === 'cancelled'
+        ? {
+            text: `已取消：完成 ${progress.successCount} 部`,
+            className: 'text-[var(--text-secondary)]',
+          }
+        : null;
+
+  /**
+   * ONE announcer: the sr-only region below is mounted for the panel's whole
+   * life, so a screen reader registers it up front and speaks the text when it
+   * changes. The visible verdict line is deliberately inert (no aria-live) —
+   * a live region injected together with its own content is the canonical
+   * case AT does NOT announce, and two regions would say it twice.
+   */
   const statusAnnouncement = isBudgetCeiling
     ? `已達本次預算上限（${usd(progress.budgetUsd)}）— 已完成${processed}部，剩餘${progress.pausedCount}部下次繼續`
-    : status === 'complete'
-      ? '批次生成完成'
-      : status === 'cancelled'
-        ? '批次已取消'
+    : status === 'error'
+      ? '批次發生錯誤'
+      : (summary?.text ?? '');
+
+  /**
+   * The bar is not text (downloads precedent): 泥金 means RUNNING, so a
+   * finished batch must stop glowing (dsr-4:78). Never --bg-tertiary — that is
+   * the track's own colour, i.e. an invisible bar.
+   */
+  const barColor =
+    status === 'running'
+      ? 'bg-[var(--accent-primary)]'
+      : status === 'complete' && progress.failCount === 0
+        ? 'bg-[var(--success)]'
         : status === 'error'
-          ? '批次發生錯誤'
-          : '';
+          ? 'bg-[var(--error)]'
+          : 'bg-[var(--text-muted)]';
 
   return (
     <Dialog
@@ -302,7 +437,7 @@ export function GenerationBatchPanelV2({
           'flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0',
           // Mobile: bottom sheet (F8-M-v2 H717g). Desktop: centered dialog (F8-D-v2 i9Nun1).
           'bottom-0 left-0 right-0 top-auto w-full max-w-none translate-x-0 translate-y-0 rounded-b-none rounded-t-[var(--radius-xl)]',
-          'sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-[calc(100vw-4rem)] sm:max-w-3xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[var(--radius-lg)]'
+          'sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-[calc(100vw-4rem)] sm:max-w-[880px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[var(--radius-lg)] sm:border sm:border-[var(--border-subtle)]'
         )}
       >
         {/* Mobile bottom-sheet drag handle (F8-M-v2 H717g handle `k46gFw`:
@@ -321,7 +456,7 @@ export function GenerationBatchPanelV2({
         </div>
 
         {/* Body */}
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-5">
           {/* Status transitions announced to AT (AC 7). */}
           <p aria-live="polite" className="sr-only" data-testid="gen-batch-status-live">
             {statusAnnouncement}
@@ -329,7 +464,7 @@ export function GenerationBatchPanelV2({
 
           {/* ---------- Scope line (batch always starts from a consented
               explicit selection since sub-4-3) ---------- */}
-          <p className="flex items-center gap-[3px] text-[13px] text-[var(--text-secondary)]">
+          <p className="flex items-center gap-1 text-sm text-[var(--text-secondary)]">
             範圍：已選項目（
             <span className="font-mono tabular-nums">{progress.totalItems}</span> 部）
           </p>
@@ -344,7 +479,7 @@ export function GenerationBatchPanelV2({
                 className="h-4 w-4 shrink-0 text-[var(--warning-text)]"
                 aria-hidden="true"
               />
-              <p className="flex flex-wrap items-center gap-[3px] text-[13px] text-[var(--text-primary)]">
+              <p className="flex flex-wrap items-center gap-1 text-sm text-[var(--text-primary)]">
                 已達本次預算上限（
                 <span className="font-mono font-semibold tabular-nums">
                   {usd(progress.budgetUsd)}
@@ -367,17 +502,23 @@ export function GenerationBatchPanelV2({
                 className="h-4 w-4 shrink-0 text-[var(--error-text)]"
                 aria-hidden="true"
               />
-              <p className="text-[13px] text-[var(--error-text)]">
-                批次發生錯誤，已完成的字幕會保留
-              </p>
+              <p className="text-sm text-[var(--error-text)]">批次發生錯誤，已完成的字幕會保留</p>
             </div>
+          )}
+
+          {/* One-line verdict for the whole batch — the VISIBLE aria-live
+              source (the sr-only line stays empty for these statuses). */}
+          {summary && (
+            <p data-testid="gen-batch-summary" className={cn('text-sm', summary.className)}>
+              {summary.text}
+            </p>
           )}
 
           {/* ---------- Overall progress (running + terminal) ---------- */}
           {
             <div className="flex flex-col gap-2">
-              <div className="flex items-baseline gap-2.5">
-                <span className="text-[13px] text-[var(--text-secondary)]">已完成</span>
+              <div className="flex items-center gap-2.5">
+                <span className="text-sm text-[var(--text-secondary)]">已完成</span>
                 <span
                   data-testid="gen-batch-counter"
                   className="font-mono text-xl font-semibold tabular-nums text-[var(--text-primary)]"
@@ -395,7 +536,10 @@ export function GenerationBatchPanelV2({
               >
                 <div
                   data-testid="gen-batch-progress-bar"
-                  className="h-full rounded-[var(--radius-sm)] bg-[var(--accent-primary)] transition-all duration-[var(--motion-move)]"
+                  className={cn(
+                    'h-full rounded-[var(--radius-sm)] transition-all duration-[var(--motion-move)]',
+                    barColor
+                  )}
                   style={{ width: `${pct}%` }}
                 />
               </div>
@@ -403,22 +547,22 @@ export function GenerationBatchPanelV2({
           }
 
           {/* ---------- Queue rows ---------- */}
-          {items.length > 0 ? (
+          {rows.length > 0 ? (
             <ul className="flex flex-col gap-2" data-testid="gen-batch-item-list">
-              {items.map((item, i) => (
+              {rows.map((item) => (
                 <QueueRow
                   key={item.mediaId}
                   item={item}
-                  state={rowStates[i]}
-                  activeItemProgress={activeItemProgress}
+                  // Per-item stage detail belongs to the in-flight row ONLY.
+                  activeItemProgress={
+                    item.mediaId === progress.currentMediaId ? activeItemProgress : null
+                  }
                 />
               ))}
             </ul>
           ) : (
-            // Pre-dsr-6d-a attach fallback: render the in-flight item card
-            // from the progress snapshot. The status probe and the 409 body do
-            // carry items[] since dsr-6d-a AC #1 — dsr-6d-b replaces this path
-            // with progress.items.
+            // Nothing enumerable at all (a pre-dsr-6d-a server on the 409 path):
+            // one honest card for the item we know is in flight.
             progress.currentItem && (
               <ul className="flex flex-col gap-2" data-testid="gen-batch-item-list">
                 <QueueRow
@@ -426,19 +570,14 @@ export function GenerationBatchPanelV2({
                     mediaId: progress.currentMediaId ?? '',
                     title: progress.currentItem,
                     // Attach-degraded card: the status probe carries no
-                    // media_type — cosmetic placeholder only.
+                    // media_type/series — cosmetic placeholders only.
                     mediaType: 'movie',
-                    // Type-only (dsr-6d-a added the field): this card renders
-                    // the title alone; dsr-6d-b replaces the fallback.
                     seriesTitle: '',
-                  }}
-                  // Terminal semantics must hold here too (AC 2): the batch
-                  // status is authoritative — budget_ceiling pauses the
-                  // in-flight item (已暫停, never 已取消/失敗), complete
-                  // resolves it via the failure record.
-                  state={
-                    isRunning
-                      ? 'active'
+                    // Terminal semantics must hold here too (AC 2): the batch
+                    // status is authoritative — budget_ceiling pauses the
+                    // in-flight item (已暫停, never 已取消/失敗).
+                    status: isRunning
+                      ? 'running'
                       : isBudgetCeiling
                         ? 'paused'
                         : status === 'complete'
@@ -446,8 +585,9 @@ export function GenerationBatchPanelV2({
                             failedIds.has(progress.currentMediaId)
                             ? 'failed'
                             : 'done'
-                          : 'stopped'
-                  }
+                          : 'cancelled',
+                    reason: '',
+                  }}
                   activeItemProgress={activeItemProgress}
                 />
               </ul>
@@ -459,7 +599,7 @@ export function GenerationBatchPanelV2({
             <div className="flex items-center gap-2">
               <p
                 data-testid="gen-batch-cost-line"
-                className="flex items-center gap-[3px] text-[13px] text-[var(--text-secondary)]"
+                className="flex items-center gap-1 text-sm text-[var(--text-secondary)]"
               >
                 本次用量：
                 <span className="font-mono font-semibold tabular-nums text-[var(--text-primary)]">
@@ -488,7 +628,11 @@ export function GenerationBatchPanelV2({
             (!confirmingCancel ? (
               <button
                 type="button"
-                onClick={() => setConfirmingCancel(true)}
+                ref={cancelAllRef}
+                onClick={() => {
+                  setConfirmingCancel(true);
+                  pendingFocusRef.current = 'keepGoing';
+                }}
                 data-testid="gen-batch-cancel-all"
                 className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)]"
               >
@@ -499,26 +643,48 @@ export function GenerationBatchPanelV2({
                 data-testid="gen-batch-cancel-confirm"
                 className="flex flex-wrap items-center gap-3"
               >
-                <span className="text-[13px] text-[var(--text-secondary)]">
+                <span className="text-sm text-[var(--text-secondary)]">
                   確定要取消整個批次嗎？已完成的字幕會保留。
                 </span>
+                {cancelFailed && (
+                  <span
+                    role="alert"
+                    data-testid="gen-batch-cancel-error"
+                    className="text-sm text-[var(--error-text)]"
+                  >
+                    取消失敗，批次仍在進行。請再試一次。
+                  </span>
+                )}
                 <button
                   type="button"
-                  onClick={() => setConfirmingCancel(false)}
+                  ref={keepGoingRef}
+                  onClick={() => {
+                    setConfirmingCancel(false);
+                    // Drop the previous attempt's alert — otherwise reopening
+                    // the confirm row re-announces a failure nobody retried.
+                    setCancelFailed(false);
+                    pendingFocusRef.current = 'cancelAll';
+                  }}
                   className="flex min-h-[44px] items-center rounded-[var(--radius-md)] px-4 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
                 >
                   繼續生成
                 </button>
+                {/* Neutral Secondary, not 硃砂: cancelling a batch keeps every
+                    subtitle already produced — nothing here is unrecoverable
+                    (DESIGN.md:300 — a state colour makes a claim about state). */}
                 <button
                   type="button"
-                  onClick={() => {
-                    setConfirmingCancel(false);
-                    onConfirmCancelAll();
-                  }}
+                  // aria-disabled, not disabled: a disabled button drops focus
+                  // to <body> mid-request and breaks Escape handling (dsr-6c).
+                  aria-disabled={cancelling || undefined}
+                  onClick={() => void handleConfirmCancel()}
                   data-testid="gen-batch-cancel-confirm-btn"
-                  className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--error-tint)] px-4 text-sm text-[var(--error-text)] transition-colors hover:opacity-80"
+                  className={cn(
+                    'flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-4 text-sm text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)]',
+                    cancelling && 'opacity-60'
+                  )}
                 >
-                  確定取消
+                  {cancelling ? '取消中…' : '確定取消'}
                 </button>
               </div>
             ))}
@@ -526,6 +692,7 @@ export function GenerationBatchPanelV2({
           {(isTerminal || isBudgetCeiling) && (
             <button
               type="button"
+              ref={closeRef}
               onClick={onClose}
               data-testid="gen-batch-close-btn"
               className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)]"
@@ -543,9 +710,24 @@ export function GenerationBatchPanelV2({
               type="button"
               onClick={onRetryFailed}
               data-testid="gen-batch-retry-failed-btn"
-              className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--error-tint)] px-5 text-sm font-medium text-[var(--error-text)] transition-colors hover:opacity-80"
+              // Neutral, not 硃砂: retrying is RECOVERY, the opposite of the
+              // destructive act a red button claims (DESIGN.md:296/300).
+              className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)]"
             >
               重試失敗項目
+            </button>
+          )}
+
+          {/* The way out of an attached `last` result with nothing to retry —
+              without it the dialog can never reach the consent flow again. */}
+          {isTerminal && !onRetryFailed && onRestart && (
+            <button
+              type="button"
+              onClick={onRestart}
+              data-testid="gen-batch-restart-btn"
+              className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)]"
+            >
+              再產生字幕
             </button>
           )}
 
@@ -554,7 +736,7 @@ export function GenerationBatchPanelV2({
               type="button"
               onClick={onResume}
               data-testid="gen-batch-resume-btn"
-              className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-6 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)]"
+              className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-5 text-sm font-semibold text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)]"
             >
               下次繼續
             </button>
@@ -614,9 +796,26 @@ export function GenerationBatchDialogV2({
   // items still listed, quotes wrong) — the next consent render re-analyzes.
   const [postTerminal, setPostTerminal] = useState(false);
 
+  // Re-run the status probe on demand (409 with an empty body).
+  const [reprobeTick, setReprobeTick] = useState(0);
+  /**
+   * The `last` terminal snapshot we have already shown. The backend keeps
+   * `last` until the next batch starts or the workspace dismisses it, so
+   * attaching it unconditionally would pin 產生字幕 to a finished batch for
+   * ever — the user could never start a new one.
+   */
+  const seenLastBatchIdRef = useRef<string | null>(null);
+  /** Terminal batches whose cache invalidation already ran (once per batch). */
+  const handledTerminalRef = useRef<string | null>(null);
+
   const batch = useGenerationBatchProgress();
   const perItem = useGenerationProgress();
-  const { startTracking: startBatchTracking, reset: resetBatch } = batch;
+  const {
+    startTracking: startBatchTracking,
+    attachSnapshot,
+    reset: resetBatch,
+    connectionEpoch,
+  } = batch;
   const { startTracking: startItemTracking, reset: resetItem } = perItem;
 
   const isIdle = batch.status === 'idle';
@@ -634,7 +833,20 @@ export function GenerationBatchDialogV2({
       .getGenerationBatchStatus()
       .then((s) => {
         if (cancelled) return;
-        if (s.running && s.progress) startBatchTracking(s.progress);
+        if (s.running && s.progress) {
+          setStartError(null);
+          startBatchTracking(s.progress);
+          return;
+        }
+        // Not running: the most recent terminal snapshot still explains how the
+        // batch ended (budget ceiling, failures) even if its SSE event was lost
+        // or the dialog was closed. Shown ONCE per batch — see the ref's note.
+        const last = s.last;
+        if (last?.batchId && seenLastBatchIdRef.current !== last.batchId) {
+          setStartError(null);
+          seenLastBatchIdRef.current = last.batchId;
+          attachSnapshot(last);
+        }
       })
       .catch(() => {
         // Best-effort recovery — a failed probe just leaves the consent flow up.
@@ -645,7 +857,10 @@ export function GenerationBatchDialogV2({
     return () => {
       cancelled = true;
     };
-  }, [open, startBatchTracking]);
+    // connectionEpoch: an SSE gap may have swallowed the terminal event, so a
+    // backoff reconnect re-reads status — the only cure for a view stuck on
+    // 進行中 (9R-16 CR L1).
+  }, [open, reprobeTick, connectionEpoch, startBatchTracking, attachSnapshot]);
 
   // Per-item join: track the in-flight item's per-item streams (BOTH families
   // since sub-4-3 AC #8) on current_media_id; reconnects per item.
@@ -661,7 +876,11 @@ export function GenerationBatchDialogV2({
   // status is the interrupted in-flight item (9R-16 CR caveat), and the
   // paused/cancelled row branches override it at render time regardless.
   const perItemPhase = perItem.progress.phase;
+  const hasBackendQueue = (batch.progress.items?.length ?? 0) > 0;
   useEffect(() => {
+    // With a backend queue the per-item stream is NOT a source of truth for
+    // which row failed — items[].status is (dsr-6d-b 🔴 #1/#2).
+    if (hasBackendQueue) return;
     if (perItemPhase === 'failed' && batch.status === 'running' && currentMediaId != null) {
       setFailedIds((prev) => {
         if (prev.has(currentMediaId)) return prev;
@@ -670,19 +889,42 @@ export function GenerationBatchDialogV2({
         return next;
       });
     }
-  }, [perItemPhase, batch.status, currentMediaId]);
+  }, [hasBackendQueue, perItemPhase, batch.status, currentMediaId]);
 
   // Terminal: stop watching the per-item stream; completed items wrote back
   // subtitle_status → refresh library badges/counts, the F17 toast count and
   // the (now stale) candidate snapshot for the next consent round.
   const batchStatus = batch.status;
+  const batchId = batch.progress.batchId;
   useEffect(() => {
     if (batchStatus === 'idle' || batchStatus === 'running') return;
     resetItem();
-    setPostTerminal(true); // CR H2: next consent render must re-analyze
+    // CR H2: the candidate snapshot is stale after ANY terminal — including a
+    // re-attached `last` — so this must NOT sit behind the once-per-batch
+    // guard (handleClose resets it, and the next open would otherwise re-quote
+    // items the batch already finished).
+    setPostTerminal(true);
+    // Watching a batch finish COUNTS as having seen its result: without this,
+    // reopening the dialog would re-attach the same `last` snapshot and its
+    // 重試失敗項目 would hijack a brand-new library selection (preselectedIds
+    // prefers retryIds).
+    seenLastBatchIdRef.current = batchId;
+    // ONCE per batch: with `last` attached on open, the refresh below would
+    // otherwise sweep library/detail/activity every time the dialog opens.
+    if (handledTerminalRef.current === batchId) return;
+    handledTerminalRef.current = batchId;
     void queryClient.invalidateQueries({ queryKey: libraryKeys.all });
     void queryClient.invalidateQueries({ queryKey: generationBatchPreviewKey });
-  }, [batchStatus, resetItem, queryClient]);
+    // Completed items wrote subtitle_status back: the open detail page still
+    // says 缺字幕, the activity row is stale, and the per-title quote changed.
+    void queryClient.invalidateQueries({ queryKey: detailKeys.all });
+    void queryClient.invalidateQueries({ queryKey: activityKeys.all });
+    void queryClient.invalidateQueries({ queryKey: transcriptionEstimateKeys.all });
+    // The header promise: the cached queue is cleared ON TERMINAL (not on
+    // close — a closed dialog does not stop the batch, and the workspace is
+    // still drawing that queue).
+    queryClient.removeQueries({ queryKey: generationBatchItemsKey });
+  }, [batchStatus, batchId, resetItem, queryClient]);
 
   /**
    * The consent flow's confirmed start (sub-4-3 AC #4): explicit ids in list
@@ -713,17 +955,48 @@ export function GenerationBatchDialogV2({
           setItems([]);
           setFailedIds(new Set());
           queryClient.removeQueries({ queryKey: generationBatchItemsKey });
-          startBatchTracking(outcome.progress);
+          if (outcome.progress) {
+            startBatchTracking(outcome.progress);
+          } else {
+            // The batch ended between the 409 and the read (the server sends
+            // its live snapshot, which may already be gone). Seeding an empty
+            // snapshot would pin the panel at 0 / 0 「進行中」 for ever — ask
+            // status instead, which answers running / last / nothing. The
+            // message stands only if that re-read finds nothing either (the
+            // probe clears it as soon as it attaches something).
+            setStartError('剛才那個批次已經結束了，請再按一次開始');
+            setReprobeTick((n) => n + 1);
+          }
+        } else if (outcome.result.batchId == null) {
+          // Empty scope 200: nothing to do is not an error, but it is also not
+          // a batch — stay in the consent flow and say so.
+          setStartError('沒有可以生成的項目');
         } else {
           setItems(outcome.result.items);
           setFailedIds(new Set());
           // Cache items[] so the ux3-ai-2 workspace can render the full queue
           // for this session's batch (the status probe carries none).
           queryClient.setQueryData(generationBatchItemsKey, outcome.result.items);
-          startBatchTracking({
-            batchId: outcome.result.batchId ?? '',
-            totalItems: outcome.result.totalItems,
-          });
+          // dsr-6d-a AC #5: the 202 carries the started batch's own snapshot
+          // (real ceiling + the queue), so the first paint needs no SSE event
+          // — which may already have been broadcast and missed.
+          const started = outcome.result.progress;
+          if (started && started.status !== 'running') {
+            // A batch short enough to finish before we read the response (one
+            // title the pipeline refuses outright — the very case this story
+            // exists for). startTracking would force `status: 'running'` and
+            // open a stream for a batch that is already over, leaving the panel
+            // glowing 進行中 with a 全部取消 that can never do anything.
+            attachSnapshot(started);
+          } else {
+            // Without a snapshot we fall back to the 202 items[] + deriveRowStates.
+            startBatchTracking(
+              started ?? {
+                batchId: outcome.result.batchId,
+                totalItems: outcome.result.totalItems,
+              }
+            );
+          }
         }
       } catch (err) {
         setStartError(err instanceof Error ? err.message : '批次生成啟動失敗');
@@ -739,23 +1012,36 @@ export function GenerationBatchDialogV2({
   // re-confirm), never an un-consented auto-restart. sub-5-3 AC #4: the
   // unfinished rows are PRESELECTED — the user's consented picks must not
   // silently fall back to the extract-only default.
+  const backendQueue = batch.progress.items;
   const handleResume = useCallback(() => {
-    const remaining = remainingIds(items, batch.progress, failedIds);
+    const remaining =
+      backendQueue && backendQueue.length > 0
+        ? backendQueue
+            .filter(
+              (it) => it.status === 'failed' || it.status === 'paused' || it.status === 'cancelled'
+            )
+            .map((it) => it.mediaId)
+        : remainingIds(items, batch.progress, failedIds);
     setRetryIds(remaining.length > 0 ? remaining : undefined);
     resetBatch();
     setItems([]);
     setFailedIds(new Set());
-  }, [items, batch.progress, failedIds, resetBatch]);
+  }, [backendQueue, items, batch.progress, failedIds, resetBatch]);
 
   // 重試失敗項目 (sub-5-3 AC #3) — same mechanism, failed rows only. Consent
   // is structural: this NEVER calls startGenerationBatch — the only start
   // path stays the F16 confirm inside GenerationConsentView.
-  // CR L1: memoized — a fresh array every render defeated handleRetryFailed's
-  // own useCallback (the bugfix-19-4b-1 unstable-callback-prop class) and
-  // re-walked every row on each SSE tick.
+  // CR L1: memoized so handleRetryFailed's own useCallback is not defeated by
+  // a fresh array every render (the bugfix-19-4b-1 unstable-callback-prop
+  // class). ⚠️ `batch.progress` is a NEW object on every SSE tick, so this
+  // still recomputes per tick — cheap for the items-first branch (one filter),
+  // and the deriveRowStates branch only runs on servers with no items[].
   const failedRows = useMemo(
-    () => failedRowIds(items, batch.progress, failedIds),
-    [items, batch.progress, failedIds]
+    () =>
+      backendQueue && backendQueue.length > 0
+        ? backendQueue.filter((it) => it.status === 'failed').map((it) => it.mediaId)
+        : failedRowIds(items, batch.progress, failedIds),
+    [backendQueue, items, batch.progress, failedIds]
   );
   const handleRetryFailed = useCallback(() => {
     setRetryIds(failedRows);
@@ -764,14 +1050,31 @@ export function GenerationBatchDialogV2({
     setFailedIds(new Set());
   }, [failedRows, resetBatch]);
 
+  /**
+   * The terminal `cancelled` SSE event flips the status — no manual change.
+   * A failure is RETHROWN on purpose: the panel needs it to keep the confirm
+   * row up and say the batch is still running (dsr-6d-b 🔴 #5).
+   */
   const handleConfirmCancelAll = useCallback(async () => {
-    try {
-      await subtitleService.cancelGenerationBatch();
-      // The terminal `cancelled` SSE event flips the status — no manual change.
-    } catch {
-      // Best-effort cancel — leave the panel as-is on failure.
+    const result = await subtitleService.cancelGenerationBatch();
+    if (!result.cancelled && !result.running) {
+      // Nothing to cancel — the batch had already finished and we missed the
+      // terminal event. Re-read status so the panel shows how it actually
+      // ended instead of sitting in 取消中… for ever.
+      setReprobeTick((n) => n + 1);
     }
   }, []);
+
+  /**
+   * 再產生字幕 — leave an attached terminal result and go back to the consent
+   * flow. Like 下次繼續/重試失敗項目 it starts NOTHING; only the F16 confirm can.
+   */
+  const handleRestart = useCallback(() => {
+    setRetryIds(undefined);
+    resetBatch();
+    setItems([]);
+    setFailedIds(new Set());
+  }, [resetBatch]);
 
   const handleClose = useCallback(() => {
     // Closing only stops WATCHING — a running batch continues server-side.
@@ -816,9 +1119,10 @@ export function GenerationBatchDialogV2({
       items={items}
       failedIds={failedIds}
       activeItemProgress={perItem.progress}
-      onConfirmCancelAll={() => void handleConfirmCancelAll()}
+      onConfirmCancelAll={handleConfirmCancelAll}
       onResume={handleResume}
       onRetryFailed={failedRows.length > 0 ? handleRetryFailed : undefined}
+      onRestart={handleRestart}
       onClose={handleClose}
     />
   );

@@ -485,7 +485,12 @@ export interface GenerationBatchPreviewResult {
  */
 export type StartGenerationBatchOutcome =
   | { conflict: false; result: GenerationBatchStartResult }
-  | { conflict: true; progress: GenerationBatchProgress };
+  /**
+   * `progress` is NULLABLE: the 409 body carries `GetProgress()`, which is nil
+   * when the batch ended between the conflict and the read (dsr-6d-b 🔴 #4).
+   * Seeding that as a running snapshot pins the dialog at 0 / 0 「進行中」.
+   */
+  | { conflict: true; progress: GenerationBatchProgress | null };
 
 // --- Service ---
 
@@ -565,7 +570,8 @@ export const subtitleService = {
    * POST /subtitles/generation-batch. 202 → started ({batch_id, total_items,
    * items[]}); empty missing scope → 200 {total_items: 0, items: []} (batchId
    * null); 409 TRANSCRIPTION_BATCH_RUNNING → in-progress snapshot from the
-   * error body (never throws on conflict). Other non-2xx throw.
+   * error body, possibly `null` — see StartGenerationBatchOutcome; never
+   * throws on conflict). Other non-2xx throw.
    */
   async startGenerationBatch(
     params: GenerationBatchStartParams
@@ -581,7 +587,8 @@ export const subtitleService = {
     if (response.status === 409) {
       return {
         conflict: true,
-        progress: snakeToCamel<GenerationBatchProgress>((json as ApiResponse<unknown>).data),
+        progress:
+          snakeToCamel<GenerationBatchProgress | null>((json as ApiResponse<unknown>).data) ?? null,
       };
     }
 
