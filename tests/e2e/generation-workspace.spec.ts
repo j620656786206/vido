@@ -10,7 +10,9 @@ import { test, expect, type Page, type Route } from '@playwright/test';
  *  - a RUNNING batch draws real rows from the backend's `progress.items[]`;
  *  - a FINISHED batch still draws its queue — from the status probe's `last` —
  *    which is the regression dsr-6d-b introduced by removing the items cache;
- *  - a refused item says WHY, instead of being drawn as 完成.
+ *  - a refused item says WHY, instead of being drawn as 完成;
+ *  - (dsr-6d-c-2) the live log keeps one row per film per stage, names the film,
+ *    and drops `subtitle_progress` that is not this batch's (search / download).
  */
 const ROUTE_API = '**/api/v1';
 
@@ -78,6 +80,10 @@ async function stubCommon(page: Page) {
     route.fulfill(jsonOk({ total_items: 2, total_items_including_episodes: 7 }))
   );
 }
+
+/** One SSE frame in the hub's wire shape: the whole Event struct as `data:`. */
+const sseFrame = (type: string, data: unknown) =>
+  `event: ${type}\ndata: ${JSON.stringify({ type, data })}\n\n`;
 
 test.describe('Generation Workspace @ui @generation-workspace', () => {
   test('[P0] a RUNNING batch draws the backend queue, and a refused item says WHY', async ({
@@ -150,5 +156,62 @@ test.describe('Generation Workspace @ui @generation-workspace', () => {
     await expect(idle).toContainText('目前沒有進行中的生成');
     // sub-5-1 AC #7: 7 (incl. episodes), not the movies-only 2.
     await expect(idle).toContainText('7');
+  });
+
+  test('[P0] the live log: one row per film per stage, the film named, foreign events dropped', async ({
+    page,
+  }) => {
+    await stubCommon(page);
+    await page.route(`${ROUTE_API}/subtitles/generation-batch/status`, (route: Route) =>
+      route.fulfill(jsonOk({ running: true, progress: snapshot(), last: null }))
+    );
+    const running = '9ff0c000-dead-4bee-8f00-000000000999';
+    const frames = [
+      sseFrame('generation_batch_progress', {
+        ...snapshot(),
+        items: null,
+        changed_item: ITEMS[2],
+      }),
+      sseFrame('transcription_extracting', { media_id: running, phase: 'extracting', title: '' }),
+      ...[10, 20, 30].map((pct) =>
+        sseFrame('translation_progress', {
+          media_id: running,
+          phase: 'translating',
+          percentage: pct,
+          title: '',
+        })
+      ),
+      // The subtitle SEARCH engine reuses this event name, in English. Not ours.
+      sseFrame('subtitle_progress', {
+        media_id: '1a2b3c4d-0000-4000-8000-00000000abcd',
+        media_type: 'movie',
+        stage: 'searching',
+        message: 'Searching subtitle providers...',
+      }),
+    ].join('');
+    // The log's own EventSource connects first (on mount, before the status probe
+    // answers). It gets the frames; every later connection is refused. A fulfilled
+    // body ENDS the stream — a real SSE never does — and a replay on reconnect
+    // would log the same events twice.
+    let served = 0;
+    await page.route(`${ROUTE_API}/events`, (route: Route) => {
+      served += 1;
+      if (served > 1) return route.abort();
+      return route.fulfill({
+        status: 200,
+        headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' },
+        body: frames,
+      });
+    });
+
+    await page.goto('/activity?view=generation');
+
+    const log = page.getByTestId('workspace-event-log');
+    const translating = log.getByTestId('workspace-feed-row').filter({ hasText: '翻譯中' });
+    await expect(translating).toHaveCount(1);
+    await expect(translating).toContainText('30%');
+    await expect(translating).toContainText('正在處理的電影');
+    await expect(log).not.toContainText('Searching');
+    await expect(log).not.toContainText(running);
   });
 });

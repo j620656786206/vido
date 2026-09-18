@@ -90,9 +90,12 @@ type SubtitlePlacer interface {
 // sub-3-2 CR): every payload's `media_id` is the MEDIA row id — a movie id, or
 // an episode id since the pipeline's ASR fallback leg went media-type-aware.
 // Always a UUID STRING, never numeric (the 9R-18 clause, unchanged).
-// Consumers: slice-1 useGenerationProgress + the ux3-subtitle-v2-batch branch —
-// both filter strictly by their own tracked media id, so foreign-media events
-// pass through unobserved by design.
+// dsr-6d-c-2 (additive widening, no bump — the sub-5-1 / sub-6-8a precedent):
+// every payload also carries `title` — the solo run's resolved title, or ""
+// for a batch/pipeline run and for an unresolved lookup (see eventTitle).
+// Consumers: useGenerationProgress (per-item stepper) filters strictly by its
+// own tracked media id; useGenerationJobsFeed (the generation workspace's live
+// log, ux3-ai-2) listens UNFILTERED and is the reason `title` exists.
 const (
 	EventTranscriptionExtracting  sse.EventType = "transcription_extracting"
 	EventTranscriptionProgress    sse.EventType = "transcription_progress"
@@ -509,6 +512,27 @@ func (s *TranscriptionService) ActivityProgress() (active bool, percentDone, cur
 	return current > 0, 0, current, 0, currentItem
 }
 
+// eventTitle is the `title` every transcription_* payload carries (story
+// dsr-6d-c-2): the generation workspace's live log listens to these events
+// unfiltered and had no way to say WHICH film an event was about. It reads the
+// title resolved once at acquire time — a map read under the lock, never a DB
+// query, so the per-chunk translation frames stay cheap.
+//
+// "" when there is nothing honest to send:
+//   - a batch/pipeline run (Solo=false) resolves no title on purpose — its
+//     titles reach the client through the batch's changed_item;
+//   - resolveActivityTitle fell back to the raw media id — a UUID is not a title;
+//   - the job is not (or no longer) in flight.
+func (s *TranscriptionService) eventTitle(mediaID string) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	job, ok := s.inProgress[mediaID]
+	if !ok || !job.Solo || job.Title == mediaID {
+		return ""
+	}
+	return job.Title
+}
+
 // TranscriptionOption configures optional transcription behavior.
 type TranscriptionOption func(*transcriptionConfig)
 
@@ -607,6 +631,7 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 		s.broadcastEvent(EventTranscriptionExtracting, map[string]interface{}{
 			"job_id":   jobID,
 			"media_id": mediaID,
+			"title":    s.eventTitle(mediaID),
 			"phase":    "extracting",
 			"message":  transcriptionStageMessage("extracting"),
 		})
@@ -642,6 +667,7 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 		s.broadcastEvent(EventTranscriptionProgress, map[string]interface{}{
 			"job_id":   jobID,
 			"media_id": mediaID,
+			"title":    s.eventTitle(mediaID),
 			"phase":    "transcribing",
 			"message":  transcriptionStageMessage("transcribing"),
 		})
@@ -682,6 +708,7 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 
 	// Phase 4: Complete.
 	completeData := buildCompleteData(jobID, mediaID, srtPath, zhSRTPath, duration, resumed, outcome)
+	completeData["title"] = s.eventTitle(mediaID)
 	s.broadcastEvent(EventTranscriptionComplete, completeData)
 	return nil
 }
@@ -886,6 +913,7 @@ func (s *TranscriptionService) translateAndPersist(ctx context.Context, jobID st
 		s.broadcastEvent(EventTranscriptionTranslating, map[string]interface{}{
 			"job_id":     jobID,
 			"media_id":   mediaID,
+			"title":      s.eventTitle(mediaID),
 			"phase":      "translating",
 			"percentage": 0,
 			"message":    transcriptionStageMessage("translating"),
@@ -1323,6 +1351,7 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 		s.broadcastEvent(EventTranscriptionTranslating, map[string]interface{}{
 			"job_id":     jobID,
 			"media_id":   mediaID,
+			"title":      s.eventTitle(mediaID),
 			"phase":      "translating",
 			"percentage": pct,
 			"message":    translationProgressMessage(pct),
@@ -1571,6 +1600,7 @@ func (s *TranscriptionService) failJob(jobID string, mediaID string, errMsg stri
 	s.broadcastEvent(EventTranscriptionFailed, map[string]interface{}{
 		"job_id":   jobID,
 		"media_id": mediaID,
+		"title":    s.eventTitle(mediaID),
 		"phase":    "failed",
 		"error":    errMsg,
 		"message":  "Transcription failed: " + errMsg,

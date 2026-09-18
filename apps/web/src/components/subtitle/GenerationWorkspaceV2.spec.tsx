@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { GenerationWorkspaceV2, type GenerationWorkspaceV2Props } from './GenerationWorkspaceV2';
 import type { GenerationBatchProgressState } from '../../hooks/useGenerationBatchProgress';
@@ -46,8 +46,17 @@ const progress = (
 });
 
 const feed: FeedRow[] = [
-  { seq: 1, tone: 'done', stage: '完成', mediaId: 'm0', message: '沙丘：第二部' },
-  { seq: 2, tone: 'active', stage: '轉錄中', mediaId: 'm12', trail: '45%' },
+  { seq: 1, kind: 'done', mediaId: 'm0', title: '沙丘：第二部', seriesTitle: '' },
+  {
+    seq: 2,
+    kind: 'stage',
+    mediaId: 'm12',
+    title: '奧本海默',
+    seriesTitle: '',
+    stage: 'translating',
+    live: true,
+    percentage: 45,
+  },
 ];
 
 function props(over: Partial<GenerationWorkspaceV2Props> = {}): GenerationWorkspaceV2Props {
@@ -55,6 +64,7 @@ function props(over: Partial<GenerationWorkspaceV2Props> = {}): GenerationWorksp
     mode: 'running',
     progress: progress(),
     feed,
+    feedConnected: true,
     onLaunch: vi.fn(),
     onConfirmCancelAll: vi.fn().mockResolvedValue(undefined),
     onResume: vi.fn(),
@@ -132,7 +142,10 @@ describe('GenerationWorkspaceV2 (ux3-ai-2 — state matrix)', () => {
     );
     expect(screen.getByTestId('workspace-attach')).toBeInTheDocument();
     expect(screen.getByText(/佇列明細自本頁開啟起顯示/)).toBeInTheDocument();
-    expect(screen.getByText('奧本海默')).toBeInTheDocument();
+    // Scoped: the live log names the same film now (dsr-6d-c-2).
+    expect(
+      within(screen.getByTestId('workspace-attach')).getByText('奧本海默')
+    ).toBeInTheDocument();
     expect(screen.queryByTestId('workspace-queue-row-m0')).not.toBeInTheDocument();
   });
 
@@ -143,7 +156,13 @@ describe('GenerationWorkspaceV2 (ux3-ai-2 — state matrix)', () => {
           mode: 'single',
           progress: progress({ items: null }),
           singleJobs: {
-            s1: { mediaId: 's1', phase: 'transcribing', message: '媽的多重宇宙', percentage: null },
+            s1: {
+              mediaId: 's1',
+              phase: 'transcribing',
+              title: '媽的多重宇宙',
+              message: '正在轉錄音訊',
+              percentage: null,
+            },
           },
         })}
       />
@@ -152,7 +171,7 @@ describe('GenerationWorkspaceV2 (ux3-ai-2 — state matrix)', () => {
     expect(screen.getByTestId('workspace-queue-row-s1')).toHaveAttribute('data-state', 'running');
   });
 
-  it('single: a job with no message shows 處理中的項目 — NEVER a raw UUID', () => {
+  it('single: a job with no title shows 處理中的項目 — NEVER a raw UUID', () => {
     const uuid = '9ff0c000-dead-4bee-8f00-000000000999';
     render(
       <GenerationWorkspaceV2
@@ -160,7 +179,13 @@ describe('GenerationWorkspaceV2 (ux3-ai-2 — state matrix)', () => {
           mode: 'single',
           progress: progress({ items: null }),
           singleJobs: {
-            [uuid]: { mediaId: uuid, phase: 'transcribing', message: '', percentage: null },
+            [uuid]: {
+              mediaId: uuid,
+              phase: 'transcribing',
+              title: '',
+              message: '',
+              percentage: null,
+            },
           },
         })}
       />
@@ -179,18 +204,16 @@ describe('GenerationWorkspaceV2 (ux3-ai-2 — state matrix)', () => {
     expect(screen.getByTestId('generation-workspace')).toBeInTheDocument();
   });
 
-  it('event log: renders feed rows, aria-live, and the honest footer', () => {
+  it('event log: renders feed rows and the honest footer; the LIST itself is not a live region', () => {
     render(<GenerationWorkspaceV2 {...props()} />);
     const log = screen.getByTestId('workspace-event-log');
     expect(log).toHaveTextContent('即時活動');
     expect(log).toHaveTextContent('自開啟本頁起累積');
     expect(log).toHaveTextContent('僅狀態事件，不含逐字內容');
     expect(screen.getAllByTestId('workspace-feed-row')).toHaveLength(2);
-    expect(screen.getByText('45%').className).toContain('font-mono');
-    expect(screen.getByRole('list', { name: '生成事件日誌' })).toHaveAttribute(
-      'aria-live',
-      'polite'
-    );
+    expect(within(log).getByText('45%').className).toContain('font-mono');
+    // dsr-6d-c-2 🔴 #8: every percentage used to be read aloud.
+    expect(screen.getByRole('list', { name: '生成事件日誌' })).not.toHaveAttribute('aria-live');
   });
 });
 
@@ -332,7 +355,8 @@ describe('GenerationWorkspaceV2 — terminal honesty (dsr-6d-c-1 AC #4/#5)', () 
       const view = render(
         <GenerationWorkspaceV2 {...props({ mode, progress: progress({ status: mode }) })} />
       );
-      // The overall strip's chip must be gone; only the event-log pane's remains.
+      // The overall strip's chip must be gone; only the event-log pane's remains
+      // (its stream is still open — dsr-6d-c-2 judges it by `feedConnected`).
       expect(view.container.querySelectorAll('[data-testid="workspace-sse-chip"]')).toHaveLength(1);
       view.unmount();
     }
@@ -432,7 +456,13 @@ describe('GenerationWorkspaceV2 — the way out of a finished batch (dsr-6d-c-1 
           mode: 'single',
           progress: progress({ status: 'idle', totalItems: 0, items: null }),
           singleJobs: {
-            s1: { mediaId: 's1', phase: 'transcribing', message: '媽的多重宇宙', percentage: null },
+            s1: {
+              mediaId: 's1',
+              phase: 'transcribing',
+              title: '媽的多重宇宙',
+              message: '正在轉錄音訊',
+              percentage: null,
+            },
           },
         })}
       />
@@ -515,5 +545,298 @@ describe('GenerationWorkspaceV2 — cancel can fail (dsr-6d-c-1 AC #4)', () => {
 
     release();
     await waitFor(() => expect(onConfirmCancelAll).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe('GenerationWorkspaceV2 — the live log tells the truth (dsr-6d-c-2)', () => {
+  const log = () => screen.getByTestId('workspace-event-log');
+  const rows = () => within(log()).getAllByTestId('workspace-feed-row');
+
+  it('[P0] the pane header carries the activity glyph; every row has a glyph and the · separator', () => {
+    render(<GenerationWorkspaceV2 {...props()} />);
+    expect(within(log()).getByTestId('workspace-log-header-icon')).toBeInTheDocument();
+    for (const row of rows()) {
+      expect(row.querySelector('svg')).not.toBeNull();
+      expect(row).toHaveTextContent('·');
+    }
+  });
+
+  it('[P0] each row names the film, and a stage row keeps its percentage only while live', () => {
+    render(
+      <GenerationWorkspaceV2
+        {...props({
+          feed: [
+            {
+              seq: 1,
+              kind: 'stage',
+              mediaId: 'e7',
+              title: 'S04E07 第七章',
+              seriesTitle: '怪奇物語',
+              stage: 'transcribing',
+              live: false,
+              percentage: null,
+            },
+            {
+              seq: 2,
+              kind: 'stage',
+              mediaId: 'e7',
+              title: 'S04E07 第七章',
+              seriesTitle: '怪奇物語',
+              stage: 'translating',
+              live: true,
+              percentage: 45,
+            },
+          ],
+        })}
+      />
+    );
+    const [past, live] = rows();
+    expect(past).toHaveTextContent('轉錄中');
+    expect(past).toHaveTextContent('怪奇物語 S04E07 第七章');
+    expect(past.querySelector('.animate-spin')).toBeNull();
+    expect(live).toHaveTextContent('翻譯中');
+    expect(live).toHaveTextContent('45%');
+    expect(live.querySelector('.animate-spin')).not.toBeNull();
+  });
+
+  it('[P0] an unknown title says 處理中的項目 — never a UUID', () => {
+    render(
+      <GenerationWorkspaceV2
+        {...props({
+          feed: [{ seq: 1, kind: 'done', mediaId: '3d87dcb5-uuid', title: '', seriesTitle: '' }],
+        })}
+      />
+    );
+    expect(rows()[0]).toHaveTextContent('處理中的項目');
+    expect(log()).not.toHaveTextContent('3d87dcb5');
+  });
+
+  it('[P0] 🔴 #13 a failure speaks Chinese — the raw backend string (and its server path) never reaches the page', () => {
+    const raw = 'save SRT: open /mnt/media/Movies/Dune.en.srt: permission denied';
+    const { container } = render(
+      <GenerationWorkspaceV2
+        {...props({
+          feed: [
+            {
+              seq: 1,
+              kind: 'failed',
+              mediaId: 'm1',
+              title: '沙丘',
+              seriesTitle: '',
+              reason: null,
+              error: raw,
+            },
+            {
+              seq: 2,
+              kind: 'failed',
+              mediaId: 'm2',
+              title: '芭比',
+              seriesTitle: '',
+              reason: null,
+              error: 'select audio track: no audio track found in media file',
+            },
+            {
+              seq: 3,
+              kind: 'failed',
+              mediaId: 'm3',
+              title: '花月殺手',
+              seriesTitle: '',
+              reason: 'busy_elsewhere',
+              error: null,
+            },
+          ],
+        })}
+      />
+    );
+    const [a, b, c] = rows();
+    expect(a).toHaveTextContent('失敗');
+    expect(a).toHaveTextContent('生成失敗');
+    expect(b).toHaveTextContent('找不到可用的音軌');
+    expect(c).toHaveTextContent('這部正在別處處理');
+    expect(container.innerHTML).not.toContain('/mnt/media');
+    expect(container.innerHTML).not.toContain('no audio track');
+  });
+
+  it('[P0] a single job stopped by the budget is 已停止 (ochre), not 失敗', () => {
+    render(
+      <GenerationWorkspaceV2
+        {...props({
+          feed: [
+            {
+              seq: 1,
+              kind: 'failed',
+              mediaId: 'm1',
+              title: '芭比',
+              seriesTitle: '',
+              reason: null,
+              error: 'translate: AI_BUDGET_EXCEEDED: ceiling',
+            },
+          ],
+        })}
+      />
+    );
+    const row = rows()[0];
+    expect(row).toHaveTextContent('已停止');
+    expect(row).toHaveTextContent('已達預算上限');
+    expect(row).not.toHaveTextContent('失敗');
+    expect(row.innerHTML).toContain('--warning-text');
+  });
+
+  it('[P0] batch rows say 本批次; the budget amount is neutral text-primary', () => {
+    render(
+      <GenerationWorkspaceV2
+        {...props({
+          mode: 'budget_ceiling',
+          progress: progress({ status: 'budget_ceiling' }),
+          feed: [
+            {
+              seq: 1,
+              kind: 'batch',
+              batchId: 'b1',
+              status: 'budget_ceiling',
+              successCount: 1,
+              failCount: 0,
+              budgetUsd: 5,
+            },
+          ],
+        })}
+      />
+    );
+    const row = rows()[0];
+    expect(row).toHaveTextContent('已達預算上限');
+    expect(row).toHaveTextContent('本批次');
+    const money = within(row).getByText('$5.00');
+    expect(money.className).toContain('text-[var(--text-primary)]');
+  });
+
+  it('[P0] a finished batch with failures is not green; the numbers match the verdict line', () => {
+    render(
+      <GenerationWorkspaceV2
+        {...props({
+          mode: 'complete',
+          progress: progress({ status: 'complete', successCount: 1, failCount: 2 }),
+          feed: [
+            {
+              seq: 1,
+              kind: 'batch',
+              batchId: 'b1',
+              status: 'complete',
+              successCount: 1,
+              failCount: 2,
+              budgetUsd: 5,
+            },
+          ],
+        })}
+      />
+    );
+    const row = rows()[0];
+    expect(row).toHaveTextContent('批次完成');
+    expect(row).toHaveTextContent('完成 1 部、失敗 2 部');
+    expect(row.innerHTML).not.toContain('--success-text');
+  });
+
+  it('[P0] 🔴 #14 the log chip shows only while the jobs stream is connected', () => {
+    const { rerender } = render(<GenerationWorkspaceV2 {...props({ feedConnected: false })} />);
+    expect(within(log()).queryByTestId('workspace-sse-chip')).not.toBeInTheDocument();
+    rerender(<GenerationWorkspaceV2 {...props({ feedConnected: true })} />);
+    expect(within(log()).getByTestId('workspace-sse-chip')).toBeInTheDocument();
+  });
+
+  it('[P1] feedConnected defaults to false — unknown is not "connected"', () => {
+    const p = props();
+    delete (p as Partial<GenerationWorkspaceV2Props>).feedConnected;
+    render(<GenerationWorkspaceV2 {...p} />);
+    expect(within(log()).queryByTestId('workspace-sse-chip')).not.toBeInTheDocument();
+  });
+
+  it('[P0] F12: the second footer line only at the budget ceiling', () => {
+    const { rerender } = render(
+      <GenerationWorkspaceV2
+        {...props({ mode: 'budget_ceiling', progress: progress({ status: 'budget_ceiling' }) })}
+      />
+    );
+    expect(within(log()).getByText('已停止（達預算上限）')).toBeInTheDocument();
+    rerender(
+      <GenerationWorkspaceV2
+        {...props({ mode: 'complete', progress: progress({ status: 'complete' }) })}
+      />
+    );
+    expect(within(log()).queryByText('已停止（達預算上限）')).not.toBeInTheDocument();
+  });
+
+  it('[P0] 🔴 #8 the screen reader hears results and batch rows only — and from ONE region that survives the mode switch', () => {
+    const stage: FeedRow = {
+      seq: 1,
+      kind: 'stage',
+      mediaId: 'm1',
+      title: '奧本海默',
+      seriesTitle: '',
+      stage: 'translating',
+      live: true,
+      percentage: 45,
+    };
+    const { rerender } = render(<GenerationWorkspaceV2 {...props({ feed: [stage] })} />);
+    const region = screen.getByTestId('workspace-log-announcer');
+    expect(region).toHaveAttribute('aria-live', 'polite');
+    expect(region).toHaveTextContent(''); // a stage row is not announced
+
+    const done: FeedRow = {
+      seq: 2,
+      kind: 'done',
+      mediaId: 'm1',
+      title: '奧本海默',
+      seriesTitle: '',
+    };
+    const batch: FeedRow = {
+      seq: 3,
+      kind: 'batch',
+      batchId: 'b1',
+      status: 'complete',
+      successCount: 1,
+      failCount: 0,
+      budgetUsd: 5,
+    };
+    rerender(
+      <GenerationWorkspaceV2
+        {...props({
+          mode: 'complete',
+          progress: progress({ status: 'complete' }),
+          feed: [{ ...stage, live: false, percentage: null }, done, batch],
+        })}
+      />
+    );
+    // Same DOM node: a region mounted together with its text is never read out.
+    expect(screen.getByTestId('workspace-log-announcer')).toBe(region);
+    expect(region).toHaveTextContent('批次完成');
+    expect(document.querySelectorAll('[aria-live]')).toHaveLength(1);
+  });
+
+  it('[P1] it follows the newest row only while the reader is already at the bottom', () => {
+    const many = (n: number): FeedRow[] =>
+      Array.from({ length: n }, (_, i) => ({
+        seq: i + 1,
+        kind: 'done' as const,
+        mediaId: `m${i}`,
+        title: `片${i}`,
+        seriesTitle: '',
+      }));
+    const { rerender } = render(<GenerationWorkspaceV2 {...props({ feed: many(3) })} />);
+    const list = screen.getByRole('list', { name: '生成事件日誌' });
+    Object.defineProperty(list, 'scrollHeight', { configurable: true, value: 1000 });
+    Object.defineProperty(list, 'clientHeight', { configurable: true, value: 300 });
+
+    // At the bottom → a new row pulls the view down.
+    list.scrollTop = 700;
+    list.dispatchEvent(new Event('scroll'));
+    Object.defineProperty(list, 'scrollHeight', { configurable: true, value: 1040 });
+    rerender(<GenerationWorkspaceV2 {...props({ feed: many(4) })} />);
+    expect(list.scrollTop).toBe(1040);
+
+    // Scrolled up to read → left alone.
+    list.scrollTop = 100;
+    list.dispatchEvent(new Event('scroll'));
+    Object.defineProperty(list, 'scrollHeight', { configurable: true, value: 1080 });
+    rerender(<GenerationWorkspaceV2 {...props({ feed: many(5) })} />);
+    expect(list.scrollTop).toBe(100);
   });
 });
