@@ -1,6 +1,6 @@
 # Story disc-2026-09-transcription-run-5min-hard-timeout：長片的 AI 字幕生成不再被 5 分鐘砍掉——每一段依片長與檔案大小給時間，逾時時說得出是哪一段、該調哪個設定
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -97,7 +97,7 @@ so that generation works on the films I actually own, instead of dying at exactl
   - [x] 實作
 - [x] **Task 4 — 文件（AC: #4）**
 - [x] **Task 5 — 收尾（AC: #5, #7, #8）**：全套閘門、mutation check、Completion Notes
-- [ ] **Task 6 — 真機驗證（AC: #6）**：NAS 隔離容器重跑同一部片，記錄耗時與花費，清理
+- [x] **Task 6 — 真機驗證（AC: #6）**：NAS 隔離容器重跑同一部片，記錄耗時與花費，清理
 
 ## Dev Notes
 
@@ -180,6 +180,16 @@ Claude Fable 5.1 — dev-story (Amelia)，2026-09-18，branch `fix/transcription
 - **對抗式 mutation check（7 項修法逐一拿掉，全部有牙）**：WAV 時長換常數 → 1 紅；stderr tail 換全文 → 1 紅；run 逾時的「caller vs 我們」分辨 → 1 紅（第一版測試沒抓到，見 Debug Log）；抽音訊逾時的分辨 → 1 紅；切段的 ctx 包裝 → 1 紅；phase budget 退回只看 floor → 2 紅；後端 `title` 的 Solo 守衛（前一張）不在本張範圍。
 - 🎭 **A11y Pre-Flight: N/A**（前端只改一條 spec，沒有元件變動）。
 - **Pre-existing failures**：無。`pnpm nx test api` 全綠、`pnpm nx test web` 270 檔／3870 條全綠、`lint:all` 0 errors（warning 數與改動前相同）、`format:check` 綠。
+- ✅ **Task 6 真機驗證（2026-09-18，NAS 隔離容器 `vido-timeout-test`，正式 image ＋ `GOOS=linux GOARCH=amd64 CGO_ENABLED=0` 交叉編譯的二進位以 `-v …:/usr/local/bin/api:ro` 覆蓋；同一部片 `ceb9fec6`，157 min／66.8 GB；正式 Vido 全程未動，跑完 `docker rm -f`＋`rm -rf`，正式片庫資料夾 0 個 srt）**：
+
+  | 時間 | 步驟 | 耗時 | 預算（log） |
+  | --- | --- | --- | --- |
+  | 20:52:24 → 20:57:44 | 抽音訊（66.8 GB） | **5 分 20 秒**——已超過舊的 5 分鐘上限，舊程式在這裡就會死 | `extract_budget=33m24s`（`file_gb=66.8`） |
+  | 20:57:44 → 21:04:44 | 切 16 段＋Whisper 16 次 | 7 分 0 秒（每段 22–34 秒） | `run_budget=1h18m32s decided_by=TRANSCRIPTION_SECONDS_PER_MEDIA_MINUTE media_minutes=157.1` |
+  | 21:04:44 → 21:20:42 | 翻譯 191 次 LLM 呼叫（619k in／57k out tokens） | 15 分 58 秒 | 同上 |
+  | 合計 | `transcription complete` `duration=28m18s` | **28 分 18 秒** | 用掉預算的 36% |
+
+  花費 `spent_usd=3.65`（ASR 16 × $0.06 ＝ $0.94 ＋ 翻譯 ≈ $2.71；上限 $5）。產出：`.en.srt` 1,910 句、`.zh-Hant.srt` 1,910 句（首句「天啊。」，末句 02:30:00 的 ♪♪），DB 寫回 `found / zh-Hant`。142 行含 ≥4 個拉丁字母（專有名詞、♪ 與零星保留英文），不是部分翻譯——log 沒有 `partial`。**估計值對照**：建單估「35–50 分鐘、≈ $3」→ 實際 28 分 18 秒、$3.65；預設 30 s／分鐘給了 2.8 倍的餘裕。
 - ⚠️ **沒修、記錄於此**：`ListAudioTracks` 的 `ffprobe timeout: <path>`（`audio_extractor_service.go:126`）在 caller 取消時也會這樣寫，而且帶伺服器路徑——本張的 AC #3 只涵蓋我們自己的兩段上限；這條走的是 30 秒的 ffprobe 探測，觸發機率低，交代到 `disc-2026-09-single-job-title-missing` 同批的「錯誤字串邊界」時一起看。
 
 ### Discovery Triage
@@ -216,4 +226,5 @@ Claude Fable 5.1 — dev-story (Amelia)，2026-09-18，branch `fix/transcription
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-18 | 🚧 **REVIEW**（dev-story, Amelia；branch `fix/transcription-run-timeout`）。Task 1–6 全數完成。閘門：api 全綠、web 3870/3870、lint 0 errors、format 綠。7 項 mutation check 全部有牙（一條假測試在 mutation 時抓到並改掉）。**真機驗證通過**：同一部 157 min／66.8 GB 的片，抽音訊 5:20（超過舊上限）→ 辨識 7:00 → 翻譯 15:58 → 合計 28:18、$3.65，兩份字幕各 1,910 句、DB `found/zh-Hant`。 |
 | 2026-09-18 | Story 建立（SM Bob, create-story；main `76154955`）。由 `dsr-6d-c-2` 建單時立的 disc 升格：NAS 隔離容器實測《火盃的考驗》（157 min／66.8 GB）——抽音訊 4:55，整個 run 在 5:00 整被砍、$0 花費、語音辨識沒開始；片庫 25/55 部超過 20 GB。⚖️ 裁定：拿掉整體 5 分鐘，改成「抽音訊依檔案大小（共用 `SUBTITLE_EXTRACT_*`）」＋「切段／辨識／翻譯依片長（新 `TRANSCRIPTION_RUN_TIMEOUT_SECONDS` 600、`TRANSCRIPTION_SECONDS_PER_MEDIA_MINUTE` 30）」，時長取自抽出的 WAV；逾時一行點名該調的 env，ffmpeg 全文不再進錯誤字串；真機重跑同一部片是 done 的門檻。 |
