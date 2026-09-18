@@ -251,7 +251,7 @@ func srtSpanSeconds(srt string) float64 {
 		}
 		var h, m, sec, ms int
 		if _, err := fmt.Sscanf(strings.TrimSpace(end), "%d:%d:%d,%d", &h, &m, &sec, &ms); err != nil {
-			return 0
+			continue // a cue whose TEXT contains "-->" — keep looking for a timing line
 		}
 		return float64(h*3600+m*60+sec) + float64(ms)/1000
 	}
@@ -265,19 +265,21 @@ func srtSpanSeconds(srt string) float64 {
 // bound, shutdown) gets the plain truth instead. Any other error passes
 // through untouched.
 func phaseTimeoutError(parent, phase context.Context, step string, started time.Time, mediaSeconds float64, budget time.Duration, knob string, err error) error {
-	if err == nil || !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, context.Canceled) {
-		return err
+	if err == nil || phase.Err() == nil {
+		return err // not a deadline of ours: the error stands on its own
 	}
-	if phase.Err() == nil {
-		return err // some inner deadline (a provider's own) — not ours to explain
-	}
+	// The phase deadline HAS fired, so whatever came back is its consequence —
+	// including a provider's own sentinel (Whisper answers a dead ctx with a
+	// bare ErrWhisperTimeout that wraps no ctx error — CR H1). The original
+	// text rides along for the log; the sentence in front is what the screen
+	// shows.
 	elapsed := time.Since(started).Round(time.Second)
 	if parent.Err() != nil {
-		return fmt.Errorf("transcription stopped by the caller's deadline after %s in %s (media %.0f min): %w",
-			elapsed, step, mediaSeconds/60, parent.Err())
+		return fmt.Errorf("transcription stopped by the caller's deadline after %s in %s (media %.0f min): %w (%v)",
+			elapsed, step, mediaSeconds/60, parent.Err(), err)
 	}
-	return fmt.Errorf("transcription run timed out after %s in %s (media %.0f min, budget %d s — raise %s): %w",
-		elapsed, step, mediaSeconds/60, int(budget.Seconds()), knob, context.DeadlineExceeded)
+	return fmt.Errorf("transcription run timed out after %s in %s (media %.0f min, budget %d s — raise %s): %w (%v)",
+		elapsed, step, mediaSeconds/60, int(budget.Seconds()), knob, context.DeadlineExceeded, err)
 }
 
 // SetRunBudgetUSD sets the per-run AI cost ceiling (Story 9R-11). A run that
@@ -1066,6 +1068,22 @@ func (s *TranscriptionService) translateAndPersist(ctx context.Context, jobID st
 				if werr := s.writeSubtitleStatus(ctx, mediaType, mediaID,
 					models.SubtitleStatusUntranslated, srtPath, "en"); werr != nil {
 					s.logger.Warn("untranslated writeback before budget pause failed",
+						"job_id", jobID, "media_id", mediaID, "media_type", mediaType, "error", werr)
+				}
+				return "", TranslationOutcome{}, fmt.Errorf("translate: %w", err)
+			}
+			// The phase budget (or the caller) ended the run mid-translation:
+			// the English SRT is on disk and translation is missing — exactly
+			// what `untranslated` states. Write it on a ctx that is NOT the dead
+			// one (CR M2), the same resume enabler as the budget branch above;
+			// without it the next click re-pays the whole ASR. Then propagate,
+			// so the run reports the timeout instead of a silent 轉錄完成.
+			if ctx.Err() != nil {
+				writeCtx, cancelWrite := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+				defer cancelWrite()
+				if werr := s.writeSubtitleStatus(writeCtx, mediaType, mediaID,
+					models.SubtitleStatusUntranslated, srtPath, "en"); werr != nil {
+					s.logger.Warn("untranslated writeback after translation deadline failed",
 						"job_id", jobID, "media_id", mediaID, "media_type", mediaType, "error", werr)
 				}
 				return "", TranslationOutcome{}, fmt.Errorf("translate: %w", err)

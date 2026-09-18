@@ -242,21 +242,29 @@ func (s *AudioExtractorService) ExtractAudio(ctx context.Context, inputPath stri
 		outputPath,
 	)
 
+	// Bound the post-kill wait on the stderr pipe: a killed ffmpeg whose
+	// grandchild still holds the pipe would hang CombinedOutput forever and
+	// strand the shared extraction slot for the life of the process (the
+	// subtitle extractor's extractWaitDelay, CR M3).
+	cmd.WaitDelay = 10 * time.Second
+
 	if output, err := cmd.CombinedOutput(); err != nil {
 		os.Remove(outputPath)
+		elapsed := time.Since(started).Round(time.Second)
+		// The CALLER went away (a cancelled batch, a shutdown, or its own
+		// bound): say so, never blame a knob that did not apply. Not an
+		// Error-level log either — nothing broke.
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return "", fmt.Errorf("%w: ffmpeg stopped by the caller after %s on %s (file %.1f GB): %w",
+				ErrAudioExtractionTimeout, elapsed, filepath.Base(inputPath), sizeGB, ctxErr)
+		}
 		if errors.Is(extractCtx.Err(), context.DeadlineExceeded) {
-			// The deadline can also be the CALLER's (a batch item's bound):
-			// name our knob only when OUR bound fired, so the message never
-			// blames a setting that did not apply. One line — it reaches the
-			// screen through the transcription_failed event.
-			if ctx.Err() == nil {
-				return "", fmt.Errorf("%w: ffmpeg timed out after %s on %s (file %.1f GB, timeout %d s — raise %s for slow disks): %w",
-					ErrAudioExtractionTimeout, time.Since(started).Round(time.Second), filepath.Base(inputPath),
-					sizeGB, int(timeout.Seconds()), knob, context.DeadlineExceeded)
-			}
-			return "", fmt.Errorf("%w: ffmpeg stopped by the caller's deadline after %s on %s (file %.1f GB): %w",
-				ErrAudioExtractionTimeout, time.Since(started).Round(time.Second), filepath.Base(inputPath),
-				sizeGB, context.DeadlineExceeded)
+			// OUR size-aware bound fired: one line naming the knob an operator
+			// would actually have to raise. It reaches the screen through the
+			// transcription_failed event.
+			return "", fmt.Errorf("%w: ffmpeg timed out after %s on %s (file %.1f GB, timeout %d s — raise %s for slow disks): %w",
+				ErrAudioExtractionTimeout, elapsed, filepath.Base(inputPath),
+				sizeGB, int(timeout.Seconds()), knob, context.DeadlineExceeded)
 		}
 		s.logger.Error("ffmpeg extraction failed",
 			"error", err,
@@ -322,7 +330,11 @@ func (s *AudioExtractorService) EffectiveTimeout(inputPath string) (time.Duratio
 }
 
 func (s *AudioExtractorService) effectiveTimeout(inputPath string) (timeout time.Duration, sizeGB float64, knob string) {
-	size, err := s.fileSize(inputPath)
+	fileSize := s.fileSize
+	if fileSize == nil {
+		fileSize = statAudioFileSize // a bare-struct service (tests) still works
+	}
+	size, err := fileSize(inputPath)
 	if err != nil || size <= 0 {
 		timeout, knob = sizedFFmpegTimeoutKnob(s.timeout, s.perGBTimeout, 0)
 		return timeout, 0, knob

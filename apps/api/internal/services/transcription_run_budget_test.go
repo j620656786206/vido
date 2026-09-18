@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/vido/api/internal/ai"
+	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/sse"
 )
 
@@ -59,6 +60,35 @@ func TestSRTSpanSeconds(t *testing.T) {
 	assert.Zero(t, srtSpanSeconds(""), "no cues → unknown")
 	assert.Zero(t, srtSpanSeconds("1\nno timing line here\n"), "no arrow → unknown")
 	assert.Zero(t, srtSpanSeconds("1\n00:00:01,000 --> garbage\n"), "unparsable end → unknown")
+	// CRLF files (Windows-authored SRTs) and a cue whose TEXT contains an arrow.
+	assert.InDelta(t, 4, srtSpanSeconds("1\r\n00:00:01,000 --> 00:00:04,000\r\nHello\r\n"), 0.001)
+	assert.InDelta(t, 4, srtSpanSeconds("1\n00:00:01,000 --> 00:00:04,000\nNext --> please\n"), 0.001,
+		"a text line with an arrow is skipped, not mistaken for the end")
+}
+
+// CR H1: a provider's bare sentinel (no ctx error wrapped) after OUR deadline
+// fired is still explained as our timeout — the deadline is the cause.
+func TestPhaseTimeoutError(t *testing.T) {
+	parent := context.Background()
+	phase, cancel := context.WithTimeout(parent, time.Nanosecond)
+	defer cancel()
+	<-phase.Done()
+	bare := errors.New("whisper: request timed out")
+
+	err := phaseTimeoutError(parent, phase, "transcribing", time.Now(), 9425, 4712*time.Second, transcriptionPerMinuteEnv, bare)
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.Contains(t, err.Error(), "timed out")
+	assert.Contains(t, err.Error(), "transcribing")
+	assert.Contains(t, err.Error(), transcriptionPerMinuteEnv)
+	assert.Contains(t, err.Error(), "whisper: request timed out", "the original text rides along")
+
+	live, cancelLive := context.WithCancel(parent)
+	defer cancelLive()
+	assert.Same(t, bare, phaseTimeoutError(parent, live, "transcribing", time.Now(), 0, 0, "", bare),
+		"no deadline of ours fired → the error stands on its own")
+	assert.NoError(t, phaseTimeoutError(parent, phase, "x", time.Now(), 0, 0, "", nil))
 }
 
 // writeHeaderOnlyWAV writes a WAV whose header CLAIMS durationSeconds of
@@ -245,14 +275,47 @@ func TestRunTranscription_TimeoutIsOneLineNamingTheKnob(t *testing.T) {
 	})
 }
 
-// A run start logs both budgets and what they were derived from — the line an
-// operator reads on the NAS when a long film takes a while.
-func TestRunTranscription_StopsAtTheCallerDeadlineWhenNoBudgetApplies(t *testing.T) {
-	// Sanity: the fixed 5-minute field is gone. A service with no SetRunBudget
-	// call still has a sane floor (the config default), not zero.
+// The fixed 5-minute field is gone. A service with no SetRunBudget call still
+// has a sane floor (the config default), not zero.
+func TestNewTranscriptionService_DefaultRunBudget(t *testing.T) {
 	svc := NewTranscriptionService(nil, nil, nil, nil)
 	got, _ := runPhaseBudget(svc.runFloor, svc.runPerMediaMinute, 0)
 	assert.Equal(t, 10*time.Minute, got, "default floor = TRANSCRIPTION_RUN_TIMEOUT_SECONDS 600")
 	assert.Equal(t, 30*time.Second, svc.runPerMediaMinute)
-	assert.True(t, errors.Is(context.DeadlineExceeded, context.DeadlineExceeded))
+	svc.SetRunBudget(0, 0)
+	assert.Equal(t, 10*time.Minute, svc.runFloor, "non-positive values keep the defaults")
+}
+
+// blockingCompleter never answers — the translation runs until the ctx ends.
+type blockingCompleter struct{}
+
+func (blockingCompleter) CompleteText(ctx context.Context, _, _ string, _ int) (string, error) {
+	<-ctx.Done()
+	return "", ctx.Err()
+}
+
+// CR M2: a phase deadline during TRANSLATION must still record `untranslated`
+// + the EN path (the resume enabler), on a ctx that is not the dead one —
+// otherwise the next click re-pays the whole ASR.
+func TestRunTranscription_TranslationDeadlineStillWritesUntranslated(t *testing.T) {
+	tmp := t.TempDir()
+	enPath := filepath.Join(tmp, "Movie.en.srt")
+	require.NoError(t, os.WriteFile(enPath, []byte(genTestSRT), 0644))
+	writer := &fakeSubtitleWriter{}
+	reader := &fakeStateReader{movie: untranslatedMovie(uuidD, enPath)}
+	svc := resumeService(t, blockingCompleter{}, writer, reader)
+	svc.SetRunBudget(100*time.Millisecond, time.Millisecond) // the 4-second SRT → the floor
+
+	err := svc.RunTranscription(context.Background(), uuidD, filepath.Join(tmp, "Movie.mkv"), tmp, WithTranslation())
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.Contains(t, err.Error(), "timed out")
+	assert.Contains(t, err.Error(), "translating")
+	assert.Contains(t, err.Error(), transcriptionFloorEnv)
+	calls := writer.snapshot()
+	require.NotEmpty(t, calls, "the verdict must be written even though the phase ctx is dead")
+	last := calls[len(calls)-1]
+	assert.Equal(t, models.SubtitleStatusUntranslated, last.Status)
+	assert.Equal(t, enPath, last.Path)
 }

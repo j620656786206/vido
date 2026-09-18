@@ -3,9 +3,13 @@ package ai
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
+	"time"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -77,6 +81,12 @@ func TestSplitAudioChunks_DeadlineIsReportedAsTheRunDeadline(t *testing.T) {
 
 func TestStderrTail(t *testing.T) {
 	assert.Equal(t, "", stderrTail(nil, 3, 300))
+	// ffmpeg's progress line is \r-separated — each update is its own "line".
+	assert.Equal(t, "size=1kB time=00:00:02 | size=2kB time=00:00:04 | Conversion failed!",
+		stderrTail([]byte("banner\nsize=1kB time=00:00:02\rsize=2kB time=00:00:04\rConversion failed!\n"), 3, 300))
+	// A cut never starts inside a multi-byte rune.
+	cjk := stderrTail([]byte(strings.Repeat("字", 100)), 3, 10)
+	assert.True(t, utf8.ValidString(cjk), cjk)
 	assert.Equal(t, "c | d | e", stderrTail([]byte("a\nb\nc\nd\ne\n"), 3, 300))
 	long := strings.Repeat("x", 500)
 	got := stderrTail([]byte(long), 3, 100)
@@ -90,4 +100,32 @@ func TestWAVDuration(t *testing.T) {
 	assert.InDelta(t, float64(26*1024*1024)/32000, d, 0.01)
 	_, err = WAVDuration("/definitely/missing.wav")
 	assert.Error(t, err)
+}
+
+// CR H1: the run's phase deadline ending a Whisper request must stay visible
+// through the sentinel — a bare ErrWhisperTimeout let runPipeline mistake our
+// deadline for the provider being slow.
+func TestWhisperClient_CallerContextEndingIsWrapped(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Never answer in time; the client's ctx decides. Bounded so srv.Close
+		// (which waits for handlers) cannot hang if the connection lingers.
+		select {
+		case <-r.Context().Done():
+		case <-time.After(2 * time.Second):
+		}
+	}))
+	defer srv.Close()
+	f, err := os.CreateTemp(t.TempDir(), "*.wav")
+	require.NoError(t, err)
+	writeWAVWithChunks(t, f, 32000, 32000, false) // one second of audio, well under the limit
+
+	c := NewWhisperClient("test-key", WithWhisperBaseURL(srv.URL), WithWhisperTimeout(time.Minute))
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	_, err = c.TranscribeWithLanguage(ctx, f.Name(), "en")
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrWhisperTimeout)
+	assert.ErrorIs(t, err, context.DeadlineExceeded, "the caller's deadline must be visible: %v", err)
 }

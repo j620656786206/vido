@@ -190,6 +190,22 @@ Claude Fable 5.1 — dev-story (Amelia)，2026-09-18，branch `fix/transcription
   | 合計 | `transcription complete` `duration=28m18s` | **28 分 18 秒** | 用掉預算的 36% |
 
   花費 `spent_usd=3.65`（ASR 16 × $0.06 ＝ $0.94 ＋ 翻譯 ≈ $2.71；上限 $5）。產出：`.en.srt` 1,910 句、`.zh-Hant.srt` 1,910 句（首句「天啊。」，末句 02:30:00 的 ♪♪），DB 寫回 `found / zh-Hant`。142 行含 ≥4 個拉丁字母（專有名詞、♪ 與零星保留英文），不是部分翻譯——log 沒有 `partial`。**估計值對照**：建單估「35–50 分鐘、≈ $3」→ 實際 28 分 18 秒、$3.65；預設 30 s／分鐘給了 2.8 倍的餘裕。
+**🔍 /ship 對抗式 CR（2026-09-18，fresh-context 代理，只讀）**——1 HIGH／3 MEDIUM／5 LOW，**修 8、記錄 1**。
+
+| 等級 | 問題 | 處置 |
+| --- | --- | --- |
+| **H1** | **Whisper client 把我們的 deadline 吞掉**：請求中 ctx 到期時回裸的 `ErrWhisperTimeout`（沒包 ctx error），`phaseTimeoutError` 因此原樣放行——最常見的逾時點（第 N 段辨識中）反而**不會**出現 AC #3 那一行。測試沒抓到是因為 `slowASR` 直接回 `ctx.Err()`，真的 client 沒走過。 | 修兩邊：`phaseTimeoutError` 改以「phase deadline 已到」為觸發（回來的任何錯誤都是它的後果，原文附在句尾）；`whisper.go` 在 caller ctx 結束時 `%w` 包 `ctx.Err()`。新增 `TestPhaseTimeoutError`（裸 sentinel）＋ `TestWhisperClient_CallerContextEndingIsWrapped`（真 client ＋ httptest 不回應的伺服器） |
+| **M2** | 翻譯階段逾時時 `translateAndPersist` 把它當一般翻譯失敗吞掉，靠後面的 DB 寫入在死 ctx 上失敗才浮出訊息——而且 **`untranslated` 沒寫進 DB**，下次會重付整套語音辨識（sub-2-2a 的頭號 bug 換觸發點） | 修：`ctx.Err() != nil` 時比照 budget 分支，用 `context.WithoutCancel`＋10 s 寫 `untranslated`＋EN 路徑後再往上丟。新增 `TestRunTranscription_TranslationDeadlineStillWritesUntranslated`（blocking completer） |
+| **M3** | solo 路徑拿掉外層 deadline 後，被砍的 ffmpeg 若有孫程序握著 stderr pipe，`CombinedOutput` 永遠不回來，共用抽取 slot 被永久佔住 | 修：`cmd.WaitDelay = 10 * time.Second`（`subtitle.Extractor` 的 `extractWaitDelay` 先例）。排隊等待的警示 log **沒加**（既有行為，另案） |
+| **M4** | 抽音訊時 caller **取消**（批次取消／關機）仍回 `signal: killed` 並打 `logger.Error` | 修：先看 `ctx.Err()` → `stopped by the caller`，不點名 env、不 Error log。新增子測試 |
+| L5 | bare struct 建的 `AudioExtractorService`（10 個測試檔）`fileSize` 為 nil 會 panic | 修：`effectiveTimeout` 補 nil 守衛 |
+| L6 | 一條測試名不符實、含恆真斷言 | 修：改名 `TestNewTranscriptionService_DefaultRunBudget`，刪恆真行，改測 `SetRunBudget(0,0)` 保留預設 |
+| L7 | `stderrTail` 只以 `\n` 切行（ffmpeg 進度列是 `\r`）；byte 切片可能切在 rune 中間 | 修：`FieldsFunc` 同時切 `\n`／`\r`；`utf8.RuneStart` 對齊。補測試 |
+| L8 | `srtSpanSeconds` 最後一個含 `-->` 的行若是字幕正文就直接回 0 | 修：`continue`。補 CRLF 與正文含箭頭兩條測試 |
+| L9 | AC #2「加進啟動 log」沒做 | 修：`main.go` 在 `SetRunBudget` 後 `slog.Info("Transcription run budgets", …)` 印四個 knob |
+
+CR 後 mutation check（5 項新修法逐一拿掉）：每一項 1 紅。CR 後 api 全綠、web 3870/3870、lint 0 errors。
+
 - ⚠️ **沒修、記錄於此**：`ListAudioTracks` 的 `ffprobe timeout: <path>`（`audio_extractor_service.go:126`）在 caller 取消時也會這樣寫，而且帶伺服器路徑——本張的 AC #3 只涵蓋我們自己的兩段上限；這條走的是 30 秒的 ffprobe 探測，觸發機率低，交代到 `disc-2026-09-single-job-title-missing` 同批的「錯誤字串邊界」時一起看。
 
 ### Discovery Triage
@@ -227,5 +243,6 @@ Claude Fable 5.1 — dev-story (Amelia)，2026-09-18，branch `fix/transcription
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-18 | 🔍 **/ship 對抗式 CR**：1 HIGH／3 MEDIUM／5 LOW，修 8、記錄 1（見 Completion Notes 表）。H1 = Whisper client 吞掉我們的 deadline，最常見的逾時點反而沒有那一行句子 → `phaseTimeoutError` 改以 deadline 已到為準＋client 包 ctx error；M2 = 翻譯逾時沒寫 `untranslated`、下次重付整套辨識 → 用 `WithoutCancel` 寫回。CR 後 api 全綠、web 3870/3870。 |
 | 2026-09-18 | 🚧 **REVIEW**（dev-story, Amelia；branch `fix/transcription-run-timeout`）。Task 1–6 全數完成。閘門：api 全綠、web 3870/3870、lint 0 errors、format 綠。7 項 mutation check 全部有牙（一條假測試在 mutation 時抓到並改掉）。**真機驗證通過**：同一部 157 min／66.8 GB 的片，抽音訊 5:20（超過舊上限）→ 辨識 7:00 → 翻譯 15:58 → 合計 28:18、$3.65，兩份字幕各 1,910 句、DB `found/zh-Hant`。 |
 | 2026-09-18 | Story 建立（SM Bob, create-story；main `76154955`）。由 `dsr-6d-c-2` 建單時立的 disc 升格：NAS 隔離容器實測《火盃的考驗》（157 min／66.8 GB）——抽音訊 4:55，整個 run 在 5:00 整被砍、$0 花費、語音辨識沒開始；片庫 25/55 部超過 20 GB。⚖️ 裁定：拿掉整體 5 分鐘，改成「抽音訊依檔案大小（共用 `SUBTITLE_EXTRACT_*`）」＋「切段／辨識／翻譯依片長（新 `TRANSCRIPTION_RUN_TIMEOUT_SECONDS` 600、`TRANSCRIPTION_SECONDS_PER_MEDIA_MINUTE` 30）」，時長取自抽出的 WAV；逾時一行點名該調的 env，ffmpeg 全文不再進錯誤字串；真機重跑同一部片是 done 的門檻。 |

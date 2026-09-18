@@ -123,6 +123,20 @@ func TestAudioExtractorService_TimeoutMessageNamesTheKnob(t *testing.T) {
 		assert.Contains(t, err.Error(), "93.0 GB")
 	})
 
+	t.Run("the caller cancelled (a cancelled batch, a shutdown)", func(t *testing.T) {
+		svc := NewAudioExtractorService(1, time.Minute, nil)
+		ctx, cancel := context.WithCancel(context.Background())
+		go func() { time.Sleep(60 * time.Millisecond); cancel() }()
+		_, err := svc.ExtractAudio(ctx, media, 1)
+
+		require.Error(t, err)
+		assert.ErrorIs(t, err, context.Canceled)
+		assert.ErrorIs(t, err, ErrAudioExtractionTimeout)
+		assert.Contains(t, err.Error(), "stopped by the caller")
+		assert.NotContains(t, err.Error(), "signal: killed")
+		assert.NotContains(t, err.Error(), "SUBTITLE_EXTRACT_")
+	})
+
 	t.Run("the caller's deadline", func(t *testing.T) {
 		svc := NewAudioExtractorService(1, time.Minute, nil)
 		ctx, cancel := context.WithTimeout(context.Background(), 40*time.Millisecond)
@@ -132,6 +146,6 @@ func TestAudioExtractorService_TimeoutMessageNamesTheKnob(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorIs(t, err, context.DeadlineExceeded)
 		assert.NotContains(t, err.Error(), "SUBTITLE_EXTRACT_", "our knob did not fire — do not blame it")
-		assert.Contains(t, err.Error(), "caller's deadline")
+		assert.Contains(t, err.Error(), "stopped by the caller")
 	})
 }

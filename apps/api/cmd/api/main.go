@@ -626,6 +626,10 @@ func main() {
 	transcriptionService.SetRunBudget(
 		time.Duration(cfg.TranscriptionRunTimeoutSeconds)*time.Second,
 		time.Duration(cfg.TranscriptionSecondsPerMediaMinute)*time.Second)
+	slog.Info("Transcription run budgets",
+		"extract_floor", subtitleExtractTimeout, "extract_per_gb", subtitleExtractPerGB,
+		"run_floor", time.Duration(cfg.TranscriptionRunTimeoutSeconds)*time.Second,
+		"run_per_media_minute", time.Duration(cfg.TranscriptionSecondsPerMediaMinute)*time.Second)
 	// 9R-10: wire the per-show glossary + OpenCC safety net + atomic placer
 	// into the Route C generation pipeline.
 	transcriptionService.SetGlossaryRepository(repos.Glossary)

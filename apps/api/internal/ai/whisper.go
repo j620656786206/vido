@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+	"unicode/utf8"
 )
 
 const (
@@ -447,6 +448,12 @@ func (c *WhisperClient) postTranscription(ctx context.Context, audio []byte, fil
 
 			resp, err := c.httpClient.Do(req)
 			if err != nil {
+				// The CALLER's ctx ending (a run's phase budget, a cancelled
+				// batch) must stay visible through the sentinel, or the run
+				// cannot tell "our deadline" from "the provider was slow".
+				if ctxErr := ctx.Err(); ctxErr != nil {
+					return "", false, fmt.Errorf("%w: %w", ErrWhisperTimeout, ctxErr)
+				}
 				if attemptCtx.Err() == context.DeadlineExceeded {
 					return "", true, ErrWhisperTimeout
 				}
@@ -596,13 +603,18 @@ func stderrTail(output []byte, lines, maxBytes int) string {
 	if text == "" {
 		return ""
 	}
-	parts := strings.Split(text, "\n")
+	// ffmpeg's progress line is \r-separated; treat it as lines too.
+	parts := strings.FieldsFunc(text, func(r rune) bool { return r == '\n' || r == '\r' })
 	if len(parts) > lines {
 		parts = parts[len(parts)-lines:]
 	}
 	tail := strings.Join(parts, " | ")
 	if len(tail) > maxBytes {
-		tail = "…" + tail[len(tail)-maxBytes:]
+		cut := tail[len(tail)-maxBytes:]
+		for len(cut) > 0 && !utf8.RuneStart(cut[0]) {
+			cut = cut[1:] // never start inside a multi-byte rune
+		}
+		tail = "…" + cut
 	}
 	return tail
 }
