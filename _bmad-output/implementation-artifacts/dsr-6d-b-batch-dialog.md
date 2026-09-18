@@ -1,6 +1,6 @@
 # Story DSR.6d-b：批次生成對話框改看後端給的真相——失敗不再顯示成「完成」，關掉再開也接得回去
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -403,6 +403,7 @@ CR 後 mutation check：把上面每一條修法拿掉，**13 條測試變紅**�
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-18 | ✅ **DONE** —— PR #466 合併進 main（commit `df4c3a93`）。CI 全綠：Lint、Unit、Go、4 個 E2E shard、3 個 Build、Serve Smoke、4 個視覺 shard。視覺第一輪 4 個 shard 紅,查證是**純粹缺 `-linux` 基準、零像素差異**（四行都是 `A snapshot doesn't exist at …-visual-linux.png`）,手動對分支觸發 Visual Regression workflow → bootstrap PR #467（4 張 PNG ＋ 一行稽核紀錄,無原始碼）→ 合進分支 → 第二輪全綠。本機 e2e 那 2 條 `model_id` 紅在 CI 是綠的,證實只是本機 `AI_PROVIDER` 的環境副作用。 |
 | 2026-09-18 | 🔍 **/ship 對抗式 CR**（fresh-context 代理，只讀）：2 HIGH／6 MEDIUM／8 LOW，修 12、交代 3。最重要：① 202 的快照也可能是終態，`startTracking` 會把它畫成永遠在跑（連取消鈕都在說謊）→ 改走 `attachSnapshot`；② 看著批次跑完那次沒有記進 `seenLastBatchIdRef`，下次開啟會重播舊結果並吃掉使用者剛選的片；③ 總結那行的 `aria-live` 和內容一起掛載，螢幕報讀根本不唸 → 改由一直掛著的 sr-only 區域播報；④ 取消成功後立刻收確認列，但批次要幾秒後才終止，焦點掉到 `<body>` → 改成維持「取消中…」到真的終態；⑤ AC #5 要求的 409 可空型別漏改（測試靠 `as never` 才過）。web 3739/3739，13 條 mutation check 全部有牙。 |
 | 2026-09-18 | 🚧 **REVIEW**（dev-story, Amelia）。Task 1–8 全數完成。設計稿改完後做 Step 9 截圖比對時發現 F9 的數字與列數自相矛盾（3 列完成但橫幅寫已完成 2），以列為準改成 `3 / 5`／已完成 3／剩餘 2，夾具跟著改。閘門：lint 0 errors、typecheck ✅、design-tokens ✅、web 3729/3729、api ✅；e2e `@batch-subtitle` 本機 5/7（2 條紅是 `AI_PROVIDER` 造成的 `model_id`，乾淨工作樹同樣紅）。四項修法做過 mutation check，拿掉就變紅。 |
 | 2026-09-18 | 🔍 **建單後對抗驗證**（fresh-context 驗證代理，只讀；抽查 60＋條，含 Pencil 節點逐一比對）：9 項 CRITICAL、28 項 SHOULD FIX、多項 NIT，**全部併入**。最重要：① 無條件接上 `last` 會把對話框永遠鎖在上一次的終態畫面（`last` 只有 dsr-6d-c 的 dismiss 會清）→ 同一個 `batchId` 只接一次，並在終態補一顆「再產生字幕」回同意流程；② 終態 effect 會因此在每次開啟都觸發 → 加上「同一個 batchId 只處理一次」；③ 原本寫「關閉時也清 items 快取」會害工作區在批次還在跑時失去佇列 → 只在終態清，並交代 dsr-6d-c 改讀 `last.items`；④ 少了 Rule 20 的上游契約 ack（補 5 條）；⑤ hook 的 `vi.mock` 工廠沒補 `attachSnapshot` 會讓 15 支測試全紅；⑥ 新檔少了 Rule 21 檔頭會讓 lint 紅；⑦ e2e 的 grep 標籤寫錯會「0 個測試卻回報成功」；⑧ 原本要改寫的 5＋3 條測試其實是退回路徑唯一的覆蓋 → 改成保留並新增 items-first 測試。設計面：F9 標題／範圍後綴的節點 id 補上、範圍是兩顆 chip 不是分段控制、三顆完成勾都要改 16、改數字時整張稿的數字要一起對齊、`fVBQF` 覆寫的 JSON 形狀逐字寫明、手機稿的同一個問題交給 dsr-6f。 |
