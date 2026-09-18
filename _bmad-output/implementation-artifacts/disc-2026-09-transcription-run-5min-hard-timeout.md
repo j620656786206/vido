@@ -1,6 +1,6 @@
 # Story disc-2026-09-transcription-run-5min-hard-timeout：長片的 AI 字幕生成不再被 5 分鐘砍掉——每一段依片長與檔案大小給時間，逾時時說得出是哪一段、該調哪個設定
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -243,6 +243,7 @@ CR 後 mutation check（5 項新修法逐一拿掉）：每一項 1 紅。CR 後
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-18 | ✅ **DONE** —— PR #475 合併進 main（commit `803b7555`）。CI **17 pass / 0 fail**：Lint、Unit、Go、4 個 E2E shard、3 個 Build、Serve Smoke、4 個視覺 shard（無畫面改動，第一輪即綠）。 |
 | 2026-09-18 | 🔍 **/ship 對抗式 CR**：1 HIGH／3 MEDIUM／5 LOW，修 8、記錄 1（見 Completion Notes 表）。H1 = Whisper client 吞掉我們的 deadline，最常見的逾時點反而沒有那一行句子 → `phaseTimeoutError` 改以 deadline 已到為準＋client 包 ctx error；M2 = 翻譯逾時沒寫 `untranslated`、下次重付整套辨識 → 用 `WithoutCancel` 寫回。CR 後 api 全綠、web 3870/3870。 |
 | 2026-09-18 | 🚧 **REVIEW**（dev-story, Amelia；branch `fix/transcription-run-timeout`）。Task 1–6 全數完成。閘門：api 全綠、web 3870/3870、lint 0 errors、format 綠。7 項 mutation check 全部有牙（一條假測試在 mutation 時抓到並改掉）。**真機驗證通過**：同一部 157 min／66.8 GB 的片，抽音訊 5:20（超過舊上限）→ 辨識 7:00 → 翻譯 15:58 → 合計 28:18、$3.65，兩份字幕各 1,910 句、DB `found/zh-Hant`。 |
 | 2026-09-18 | Story 建立（SM Bob, create-story；main `76154955`）。由 `dsr-6d-c-2` 建單時立的 disc 升格：NAS 隔離容器實測《火盃的考驗》（157 min／66.8 GB）——抽音訊 4:55，整個 run 在 5:00 整被砍、$0 花費、語音辨識沒開始；片庫 25/55 部超過 20 GB。⚖️ 裁定：拿掉整體 5 分鐘，改成「抽音訊依檔案大小（共用 `SUBTITLE_EXTRACT_*`）」＋「切段／辨識／翻譯依片長（新 `TRANSCRIPTION_RUN_TIMEOUT_SECONDS` 600、`TRANSCRIPTION_SECONDS_PER_MEDIA_MINUTE` 30）」，時長取自抽出的 WAV；逾時一行點名該調的 env，ffmpeg 全文不再進錯誤字串；真機重跑同一部片是 done 的門檻。 |
