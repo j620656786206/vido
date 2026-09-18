@@ -621,6 +621,10 @@ func main() {
 		keyResolver, cfg.ASRBaseURL, cfg.ASRModel, slog.Default(), ai.WithWhisperGovernor(aiGovernor))
 	transcriptionService := services.NewTranscriptionService(audioExtractorService, asrHolder, sseHub, slog.Default())
 	transcriptionService.SetRunBudgetUSD(cfg.AIRunBudgetUSD)
+	// disc-2026-09-generation-resume-b: paid-for ASR chunk transcripts survive
+	// an interrupted run (money ceiling, deadline, restart) in cache_entries,
+	// so the next run pays only for the chunks it never got to.
+	transcriptionService.SetASRChunkStore(services.NewASRChunkStore(repos.Cache))
 	// disc-2026-09-transcription-run-5min-hard-timeout: the post-extraction
 	// phase is budgeted by media length, not a fixed 5 minutes.
 	transcriptionService.SetRunBudget(
@@ -1012,6 +1016,9 @@ func main() {
 	// dsr-6d-a AC #7: queue rows name the show an episode belongs to (one
 	// memoized lookup per series per batch; a failed lookup degrades to "").
 	generationBatchProcessor.SetSeriesTitleResolver(repos.Series)
+	// disc-2026-09-generation-resume-b ruling 9: a batch finishes the films an
+	// earlier batch left half-done before spending on new ones.
+	generationBatchProcessor.SetResumeProgressFinder(transcriptionService)
 	generationBatchHandler := handlers.NewGenerationBatchHandler(generationBatchProcessor, modelCatalog)
 
 	// Cost preview (story sub-4-1): what would generating subtitles cost, per

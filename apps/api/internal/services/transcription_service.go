@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -122,8 +124,12 @@ type TranscriptionResult struct {
 
 // TranscriptionService orchestrates the audio extraction → Whisper transcription pipeline.
 type TranscriptionService struct {
-	audioExtractor     *AudioExtractorService
-	asr                ai.ASRProvider
+	audioExtractor *AudioExtractorService
+	asr            ai.ASRProvider
+	// chunkStore keeps each paid-for ASR chunk transcript until the run's
+	// .en.srt is written, so an interrupted run resumes at the first
+	// un-transcribed chunk (disc-2026-09-generation-resume-b). nil = off.
+	chunkStore         ASRChunkStore
 	translationService *TranslationService
 	sseHub             *sse.Hub
 	logger             *slog.Logger
@@ -190,6 +196,13 @@ func NewTranscriptionService(
 		runPerMediaMinute: defaultRunPerMediaMinute,
 		inProgress:        make(map[string]*soloTranscriptionJob),
 	}
+}
+
+// SetASRChunkStore wires the paid-for chunk transcript store
+// (disc-2026-09-generation-resume-b). Wiring only — call it during startup.
+// nil (the default) transcribes every chunk on every run, as before.
+func (s *TranscriptionService) SetASRChunkStore(store ASRChunkStore) {
+	s.chunkStore = store
 }
 
 // SetTranslationService sets the translation service for post-transcription translation.
@@ -802,7 +815,11 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 		})
 
 		var err error
-		srtContent, err = s.transcribeAudio(phaseCtx, audioPath, WhisperLanguageFromTrack(selectedTrack.Language))
+		lang := WhisperLanguageFromTrack(selectedTrack.Language)
+		// Paid-for chunks are stored as they come back and reused next time;
+		// nil when no store is wired or the source file cannot be identified.
+		scope := s.chunkScope(mediaID, filePath, selectedTrack.Index, lang)
+		srtContent, err = s.transcribeAudio(phaseCtx, audioPath, lang, scope)
 		if err != nil {
 			err = explain("transcribing", err)
 			s.failJob(jobID, mediaID, fmt.Sprintf("transcribe: %v", err))
@@ -817,6 +834,9 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 			s.failJob(jobID, mediaID, fmt.Sprintf("save SRT: %v", err))
 			return fmt.Errorf("save SRT: %w", err)
 		}
+		// The English SRT is the durable result now — the stored chunks have
+		// served their purpose (ruling 6).
+		s.clearChunkCache(ctx, scope)
 	}
 
 	// Phase 3.5: Translate to Traditional Chinese (Story 9-2b) + persist the
@@ -1199,61 +1219,256 @@ func WhisperLanguageFromTrack(trackLang string) string {
 	return ""
 }
 
+// asrChunkScope carries the identity of the film a transcribeAudio call is
+// for, so paid-for chunk transcripts can be stored and reused
+// (disc-2026-09-generation-resume-b). nil = no store wired, or the source
+// file could not be stat'ed: the run transcribes everything, as before.
+type asrChunkScope struct {
+	identity ASRChunkIdentity // Start/ChunkSeconds are filled per chunk
+	// keys are the chunk keys this run looked up or wrote, so a success can
+	// clear them even when the manifest write failed.
+	keys []string
+	// manifest is read ONCE with the chunks and kept current in memory, so a
+	// stored chunk costs one write, never a read-modify-write round trip.
+	manifest asrManifest
+}
+
+func (sc *asrChunkScope) manifestKey() string {
+	id := sc.identity
+	return asrManifestKey(id.MediaID, id.FileSize, id.FileMTime, id.Endpoint)
+}
+
+// chunkScope builds the scope for one run, or nil when the store cannot be
+// used (no store; the source file cannot be identified — Warn, never fail).
+func (s *TranscriptionService) chunkScope(mediaID, filePath string, trackIndex int, lang string) *asrChunkScope {
+	if s.chunkStore == nil {
+		return nil
+	}
+	size, mtime, err := osFileIdentity(filePath)
+	if err != nil {
+		s.logger.Warn("asr chunk cache: cannot identify the source file — transcribing without the cache",
+			"media_id", mediaID, "error", err)
+		return nil
+	}
+	return &asrChunkScope{identity: ASRChunkIdentity{
+		MediaID:    mediaID,
+		FileSize:   size,
+		FileMTime:  mtime,
+		TrackIndex: trackIndex,
+		Lang:       lang,
+		Endpoint:   asrEndpointOf(s.asr),
+	}}
+}
+
 // transcribeAudio handles chunking and multi-part transcription for large files (AC #7).
 // lang is the ISO-639-1 hint derived from the selected audio track ("" = auto-detect).
-func (s *TranscriptionService) transcribeAudio(ctx context.Context, audioPath, lang string) (string, error) {
+//
+// With a scope, every chunk already in the ASR chunk store is served from it
+// (no engine call, $0) and every chunk the engine answers is stored at once,
+// so a run stopped at chunk 9 of 16 — the batch money ceiling, a deadline, a
+// restart — resumes from chunk 9 instead of paying for 1–8 again. A short file
+// takes the same path as ONE chunk (start=0, grid 0), so the semantics do not
+// depend on the file size.
+func (s *TranscriptionService) transcribeAudio(ctx context.Context, audioPath, lang string, scope *asrChunkScope) (string, error) {
 	needsChunk, err := ai.NeedsChunking(audioPath)
 	if err != nil {
 		return "", fmt.Errorf("check chunking: %w", err)
 	}
 
-	if !needsChunk {
-		filtered, unfiltered, err := s.transcribeOne(ctx, audioPath, lang)
+	chunks := []string{audioPath}
+	chunkSeconds := 0
+	if needsChunk {
+		s.logger.Info("audio exceeds 25MB, splitting into chunks")
+		chunks, chunkSeconds, err = ai.SplitAudioChunks(ctx, audioPath)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("split chunks: %w", err)
 		}
-		return s.guardAgainstEmptyTranscript(filtered, unfiltered), nil
-	}
-
-	// Split and transcribe chunks
-	s.logger.Info("audio exceeds 25MB, splitting into chunks")
-	chunks, chunkSeconds, err := ai.SplitAudioChunks(ctx, audioPath)
-	if err != nil {
-		return "", fmt.Errorf("split chunks: %w", err)
-	}
-
-	// Cleanup chunk files (skip first if it's the original)
-	defer func() {
-		for _, chunk := range chunks {
-			if chunk != audioPath {
-				os.Remove(chunk)
+		// Cleanup chunk files (skip first if it's the original)
+		defer func() {
+			for _, chunk := range chunks {
+				if chunk != audioPath {
+					os.Remove(chunk)
+				}
 			}
-		}
-	}()
+		}()
+	}
 
-	var srtChunks []string
+	stored := s.loadStoredChunks(ctx, scope, len(chunks), chunkSeconds)
+
+	srtChunks := make([]string, 0, len(chunks))
 	// 9R-5: kept alongside so the whole-FILE guard below has something to fall
 	// back to. Each chunk is its own API call, which is why hallucination
 	// filtering is automatically per-chunk and automatically happens before the
 	// merge — no change to SplitAudioChunks/MergeSRTChunks was needed.
-	var unfilteredChunks []string
+	unfilteredChunks := make([]string, 0, len(chunks))
 	for i, chunkPath := range chunks {
-		s.logger.Info("transcribing chunk",
-			"chunk", i+1,
-			"total", len(chunks),
-		)
+		if v, ok := stored[i]; ok {
+			srtChunks = append(srtChunks, v.Filtered)
+			unfilteredChunks = append(unfilteredChunks, v.Unfiltered)
+			continue
+		}
+		if needsChunk {
+			s.logger.Info("transcribing chunk",
+				"chunk", i+1,
+				"total", len(chunks),
+			)
+		}
 		filtered, unfiltered, err := s.transcribeOne(ctx, chunkPath, lang)
 		if err != nil {
-			return "", fmt.Errorf("transcribe chunk %d/%d: %w", i+1, len(chunks), err)
+			if needsChunk {
+				return "", fmt.Errorf("transcribe chunk %d/%d: %w", i+1, len(chunks), err)
+			}
+			return "", err
 		}
 		srtChunks = append(srtChunks, filtered)
 		unfilteredChunks = append(unfilteredChunks, unfiltered)
+		s.storeChunk(ctx, scope, i, chunkSeconds, asrChunkValue{Filtered: filtered, Unfiltered: unfiltered})
 	}
 
+	if !needsChunk {
+		return s.guardAgainstEmptyTranscript(srtChunks[0], unfilteredChunks[0]), nil
+	}
 	return s.guardAgainstEmptyTranscript(
 		ai.MergeSRTChunks(srtChunks, chunkSeconds),
 		ai.MergeSRTChunks(unfilteredChunks, chunkSeconds),
 	), nil
+}
+
+// loadStoredChunks is the ONE batched read per run: it asks for exactly this
+// film's keys (16 chunks + the manifest for a 157-minute film), however many
+// other films' chunks the table holds. A read failure or an unreadable entry
+// is a miss, never an error.
+func (s *TranscriptionService) loadStoredChunks(ctx context.Context, scope *asrChunkScope, total, chunkSeconds int) map[int]asrChunkValue {
+	if scope == nil {
+		return nil
+	}
+	scope.manifest = asrManifest{Track: scope.identity.TrackIndex, Lang: scope.identity.Lang, ChunkSeconds: chunkSeconds}
+	keys := make([]string, total)
+	for i := range keys {
+		id := scope.identity
+		id.Start, id.ChunkSeconds = i*chunkSeconds, chunkSeconds
+		keys[i] = asrChunkKey(id)
+	}
+	scope.keys = keys
+	manifestKey := scope.manifestKey()
+	values, err := s.chunkStore.GetMany(ctx, append(append([]string(nil), keys...), manifestKey))
+	if err != nil {
+		s.logger.Warn("asr chunk cache: read failed — transcribing every chunk",
+			"media_id", scope.identity.MediaID, "error", err)
+		return nil
+	}
+	if m, ok := decodeASRManifest(values[manifestKey]); ok && m.ChunkSeconds == chunkSeconds &&
+		m.Track == scope.identity.TrackIndex && m.Lang == scope.identity.Lang {
+		scope.manifest = m
+	}
+	stored := make(map[int]asrChunkValue, len(values))
+	for i, key := range keys {
+		if raw, ok := values[key]; ok {
+			if v, ok := decodeASRChunkValue(raw); ok {
+				stored[i] = v
+			}
+		}
+	}
+	s.logger.Info("asr chunk cache", "media_id", scope.identity.MediaID, "hits", len(stored), "total", total)
+	return stored
+}
+
+// storeChunk records one paid-for chunk and updates the film's manifest. Both
+// writes are best-effort (Warn): the transcript is already in hand, and a
+// cache that cannot be written must not fail the run that paid for it.
+func (s *TranscriptionService) storeChunk(ctx context.Context, scope *asrChunkScope, index, chunkSeconds int, v asrChunkValue) {
+	if scope == nil {
+		return
+	}
+	raw, err := json.Marshal(v)
+	if err != nil {
+		s.logger.Warn("asr chunk cache: encode failed", "media_id", scope.identity.MediaID, "chunk", index+1, "error", err)
+		return
+	}
+	if err := s.chunkStore.Set(ctx, scope.keys[index], string(raw), asrChunkTTL); err != nil {
+		s.logger.Warn("asr chunk cache: write failed — the chunk will be transcribed again next time",
+			"media_id", scope.identity.MediaID, "chunk", index+1, "error", err)
+		return
+	}
+	// The manifest names what is stored; the in-memory copy was seeded from
+	// the earlier run's list, so a resumed run appends rather than replaces.
+	start := index * chunkSeconds
+	if !slices.Contains(scope.manifest.Done, start) {
+		scope.manifest.Done = append(scope.manifest.Done, start)
+	}
+	raw, err = json.Marshal(scope.manifest)
+	if err != nil {
+		return
+	}
+	if err := s.chunkStore.Set(ctx, scope.manifestKey(), string(raw), asrChunkTTL); err != nil {
+		s.logger.Warn("asr chunk cache: manifest write failed", "media_id", scope.identity.MediaID, "error", err)
+	}
+}
+
+func (s *TranscriptionService) readManifest(ctx context.Context, scope *asrChunkScope) (asrManifest, bool) {
+	key := scope.manifestKey()
+	values, err := s.chunkStore.GetMany(ctx, []string{key})
+	if err != nil {
+		return asrManifest{}, false
+	}
+	return decodeASRManifest(values[key])
+}
+
+// clearChunkCache removes a film's chunks and manifest once its .en.srt is on
+// disk (ruling 6). Best-effort: a failed delete is Warn-only and the 30-day
+// TTL is the second sweep.
+func (s *TranscriptionService) clearChunkCache(ctx context.Context, scope *asrChunkScope) {
+	if scope == nil {
+		return
+	}
+	keys := map[string]struct{}{}
+	for _, k := range scope.keys {
+		keys[k] = struct{}{}
+	}
+	if m, ok := s.readManifest(ctx, scope); ok {
+		for _, start := range m.Done {
+			id := scope.identity
+			id.TrackIndex, id.Lang, id.Start, id.ChunkSeconds = m.Track, m.Lang, start, m.ChunkSeconds
+			keys[asrChunkKey(id)] = struct{}{}
+		}
+	}
+	keys[scope.manifestKey()] = struct{}{}
+	failed := 0
+	for k := range keys {
+		if err := s.chunkStore.Delete(ctx, k); err != nil {
+			failed++
+		}
+	}
+	if failed > 0 {
+		s.logger.Warn("asr chunk cache: cleanup incomplete — the 30-day TTL will finish it",
+			"media_id", scope.identity.MediaID, "failed", failed, "total", len(keys))
+	}
+}
+
+// HasResumeProgress answers the generation batch's ordering question
+// (ruling 9): does this film hold paid-for work an earlier run did not finish?
+// True when its ASR chunk manifest exists (a run stopped mid-transcription) or
+// its row is `untranslated` with the English SRT present (a run stopped before
+// translating). One cache read plus the existing row read; any failure is
+// "no progress" — the ordering degrades, the batch never does.
+func (s *TranscriptionService) HasResumeProgress(ctx context.Context, mediaType, mediaID, filePath string) bool {
+	if s.canResumeTranslateOnly(ctx, mediaType, mediaID) {
+		return true
+	}
+	if s.chunkStore == nil {
+		return false
+	}
+	size, mtime, err := osFileIdentity(filePath)
+	if err != nil {
+		return false
+	}
+	key := asrManifestKey(mediaID, size, mtime, asrEndpointOf(s.asr))
+	values, err := s.chunkStore.GetMany(ctx, []string{key})
+	if err != nil {
+		return false
+	}
+	_, ok := decodeASRManifest(values[key])
+	return ok
 }
 
 // transcribeOne returns both the hallucination-filtered SRT and the unfiltered

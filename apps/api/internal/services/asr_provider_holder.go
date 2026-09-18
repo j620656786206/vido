@@ -51,6 +51,20 @@ type ASRProviderHolder struct {
 // transcription pipeline expects a provider.
 var _ ai.ASRProvider = (*ASRProviderHolder)(nil)
 
+// EndpointFingerprint names the engine — `baseURL|model`, the hosted default
+// model when none is configured — and NEVER the key. It is key material for
+// the ASR chunk store (disc-2026-09-generation-resume-b): a stored transcript
+// is only reused by the same engine, while a rotated key must not invalidate
+// paid-for work. The private `fingerprint` below carries the key and must
+// never be used for this.
+func (h *ASRProviderHolder) EndpointFingerprint() string {
+	model := h.model
+	if model == "" {
+		model = ai.WhisperModel
+	}
+	return h.baseURL + "|" + model
+}
+
 // NewASRProviderHolder builds the holder. `baseURL` and `model` may be empty
 // (the ai package's hosted defaults apply); logger may be nil. `opts` are
 // captured ONCE and replayed on every rebuild — which is how the shared Governor
