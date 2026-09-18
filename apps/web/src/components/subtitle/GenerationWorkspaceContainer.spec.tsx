@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { GenerationBatchItemState } from '../../services/subtitleService';
 
@@ -33,6 +33,9 @@ const h = vi.hoisted(() => ({
   itemReset: vi.fn(),
   jobsStart: vi.fn(),
   jobsStop: vi.fn(),
+  jobsSeed: vi.fn(),
+  jobsEnd: vi.fn(),
+  jobsConnected: true,
   singleJobs: {} as Record<string, unknown>,
   visible: true,
 }));
@@ -71,8 +74,11 @@ vi.mock('../../hooks/useGenerationJobsFeed', () => ({
   useGenerationJobsFeed: () => ({
     feed: [],
     singleJobs: h.singleJobs,
+    connected: h.jobsConnected,
     startTracking: h.jobsStart,
     stop: h.jobsStop,
+    seedBatch: h.jobsSeed,
+    endBatch: h.jobsEnd,
   }),
 }));
 
@@ -162,6 +168,7 @@ beforeEach(() => {
   h.batchState.items = null;
   h.batchEpoch = 0;
   h.singleJobs = {};
+  h.jobsConnected = true;
   h.visible = true;
   mocked.getGenerationBatchStatus.mockResolvedValue({ running: false, progress: null, last: null });
   mocked.previewGenerationBatch.mockResolvedValue({ totalItems: 12 });
@@ -454,5 +461,130 @@ describe('GenerationWorkspace — the idle count (dsr-6d-c-1 🔴 #17)', () => {
 
     const idle = await screen.findByTestId('workspace-idle');
     await waitFor(() => expect(idle).toHaveTextContent('12'));
+  });
+});
+
+describe('GenerationWorkspace — the live log wiring (dsr-6d-c-2 AC #4)', () => {
+  it('[P0] a RUNNING batch tells the log which films are in it (a mid-batch attach knows the titles)', async () => {
+    mocked.getGenerationBatchStatus.mockResolvedValue({
+      running: true,
+      progress: RUNNING_SNAPSHOT,
+      last: null,
+    });
+
+    renderWorkspace();
+
+    await waitFor(() => expect(h.jobsSeed).toHaveBeenCalledWith('gb-1', RUNNING_SNAPSHOT.items));
+  });
+
+  it('[P0] a probe ignored by the CR H3 guard does not seed the log either', async () => {
+    let resolveProbe: (v: unknown) => void = () => {};
+    mocked.getGenerationBatchStatus.mockReturnValue(
+      new Promise((res) => {
+        resolveProbe = res as (v: unknown) => void;
+      }) as never
+    );
+    h.batchState.status = 'complete';
+    h.batchState.batchId = 'gb-1';
+    renderWorkspace();
+    await waitFor(() => expect(mocked.getGenerationBatchStatus).toHaveBeenCalled());
+
+    resolveProbe({ running: true, progress: RUNNING_SNAPSHOT, last: null });
+
+    await waitFor(() => expect(screen.getByTestId('generation-workspace')).toBeInTheDocument());
+    expect(h.jobsSeed).not.toHaveBeenCalled();
+  });
+
+  it('[P1] a FINISHED batch (`last`) has no running members to seed', async () => {
+    mocked.getGenerationBatchStatus.mockResolvedValue({ running: false, last: LAST_SNAPSHOT });
+
+    renderWorkspace();
+
+    await waitFor(() => expect(h.batchAttachSnapshot).toHaveBeenCalled());
+    expect(h.jobsSeed).not.toHaveBeenCalled();
+  });
+
+  it('[P0] a single job row shows the backend title — never the stage sentence', async () => {
+    h.singleJobs = {
+      m9: {
+        mediaId: 'm9',
+        phase: 'transcribing',
+        title: '芭比',
+        message: '正在轉錄音訊',
+        percentage: null,
+      },
+    };
+
+    renderWorkspace();
+
+    const row = await screen.findByTestId('workspace-queue-row-m9');
+    // The row's NAME — the stepper under it may still show the stage sentence.
+    expect(row.querySelector('.font-semibold.text-base')).toHaveTextContent(/^芭比$/);
+  });
+
+  it('[P0] an untitled single job says 處理中的項目 — not the stage sentence, not a UUID', async () => {
+    h.singleJobs = {
+      'uuid-9': {
+        mediaId: 'uuid-9',
+        phase: 'transcribing',
+        title: '',
+        message: '正在轉錄音訊',
+        percentage: null,
+      },
+    };
+
+    renderWorkspace();
+
+    const single = await screen.findByTestId('workspace-single');
+    expect(single).toHaveTextContent('處理中的項目');
+    expect(single).not.toHaveTextContent('uuid-9');
+  });
+
+  it('[P0] 🔴 #14 the log chip follows the jobs stream, not the batch', async () => {
+    mocked.getGenerationBatchStatus.mockResolvedValue({ running: false, last: LAST_SNAPSHOT });
+    h.batchState.status = 'complete';
+    h.batchState.batchId = 'gb-done';
+    h.jobsConnected = false;
+
+    const { rerender } = renderWorkspace();
+    const log = await screen.findByTestId('workspace-event-log');
+    expect(within(log).queryByTestId('workspace-sse-chip')).not.toBeInTheDocument();
+
+    h.jobsConnected = true;
+    rerender();
+    expect(
+      within(screen.getByTestId('workspace-event-log')).getByTestId('workspace-sse-chip')
+    ).toBeInTheDocument();
+  });
+
+  it('[P0] CR H1 a probe that finds NO batch running ends the log membership (a missed terminal)', async () => {
+    mocked.getGenerationBatchStatus.mockResolvedValue({ running: false, last: LAST_SNAPSHOT });
+
+    renderWorkspace();
+
+    await waitFor(() => expect(h.jobsEnd).toHaveBeenCalled());
+  });
+
+  it('[P0] CR H1 the batch hook reaching a terminal ends the log membership too', async () => {
+    h.batchState.status = 'budget_ceiling';
+    h.batchState.batchId = 'gb-1';
+
+    renderWorkspace();
+
+    await waitFor(() => expect(h.jobsEnd).toHaveBeenCalled());
+  });
+
+  it('[P1] a RUNNING probe does not end the membership it just seeded', async () => {
+    mocked.getGenerationBatchStatus.mockResolvedValue({
+      running: true,
+      progress: RUNNING_SNAPSHOT,
+      last: null,
+    });
+    h.batchState.status = 'running';
+
+    renderWorkspace();
+
+    await waitFor(() => expect(h.jobsSeed).toHaveBeenCalled());
+    expect(h.jobsEnd).not.toHaveBeenCalled();
   });
 });

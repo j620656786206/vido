@@ -282,6 +282,18 @@ const wsFxItem = (i: number, status: string, reason = '') => ({
   status,
   reason,
 });
+/**
+ * dsr-6d-c-2 — one live-log row for fixture film `i`, in the hook's own shape
+ * (`FeedRow`). The fixtures only draw rows useGenerationJobsFeed can actually
+ * produce: the old ones drew 本次用量 / 已達預算上限 $5.00 rows it never makes.
+ */
+const wsFxFeed = (seq: number, i: number, row: Record<string, unknown>) => ({
+  seq,
+  mediaId: WS_FX_ITEMS[i].mediaId,
+  title: WS_FX_ITEMS[i].title,
+  seriesTitle: WS_FX_ITEMS[i].seriesTitle,
+  ...row,
+});
 
 /**
  * dsr-6a — the three ButtonCost looks (plus ≈) stacked, mirroring J9-D's
@@ -5122,11 +5134,25 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         partial: false,
         englishKeptBlocks: null,
       },
+      // Same film, same stage as the queue on the left (轉錄中, no percentage).
       feed: [
-        { seq: 1, tone: 'done', stage: '完成', mediaId: WS_FX_IDS[0], message: '沙丘：第二部' },
-        { seq: 2, tone: 'active', stage: '轉錄中', mediaId: WS_FX_IDS[1], trail: '45%' },
-        { seq: 3, tone: 'info', stage: '本次用量', mediaId: '', trail: '$0.42' },
+        wsFxFeed(1, 0, { kind: 'done' }),
+        wsFxFeed(2, 1, {
+          kind: 'stage',
+          stage: 'extracting',
+          state: 'passed',
+          pipeline: false,
+          percentage: null,
+        }),
+        wsFxFeed(3, 1, {
+          kind: 'stage',
+          stage: 'transcribing',
+          state: 'live',
+          pipeline: false,
+          percentage: null,
+        }),
       ],
+      feedConnected: true,
       onLaunch: noop,
       onConfirmCancelAll: asyncNoop,
       onResume: noop,
@@ -5156,7 +5182,33 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         budgetUsd: 5,
         items: [wsFxItem(0, 'done'), wsFxItem(1, 'paused'), wsFxItem(2, 'paused')],
       },
-      feed: [{ seq: 1, tone: 'info', stage: '已達預算上限', mediaId: '', trail: '$5.00' }],
+      feed: [
+        wsFxFeed(1, 0, { kind: 'done' }),
+        wsFxFeed(2, 1, {
+          kind: 'stage',
+          stage: 'extracting',
+          state: 'passed',
+          pipeline: false,
+          percentage: null,
+        }),
+        wsFxFeed(3, 1, {
+          kind: 'stage',
+          stage: 'transcribing',
+          state: 'stopped',
+          pipeline: false,
+          percentage: null,
+        }),
+        {
+          seq: 4,
+          kind: 'batch',
+          batchId: 'b1',
+          status: 'budget_ceiling',
+          successCount: 1,
+          failCount: 0,
+          budgetUsd: 5,
+        },
+      ],
+      feedConnected: true,
       onLaunch: noop,
       onConfirmCancelAll: asyncNoop,
       onResume: noop,
@@ -5193,9 +5245,22 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
           wsFxItem(2, 'failed', 'skipped'),
         ],
       },
+      // The log names the SAME reasons as the queue rows beside it.
       feed: [
-        { seq: 1, tone: 'done', stage: '完成', mediaId: WS_FX_IDS[0], message: '沙丘：第二部' },
+        wsFxFeed(1, 0, { kind: 'done' }),
+        wsFxFeed(2, 1, { kind: 'failed', reason: 'busy_elsewhere', error: null }),
+        wsFxFeed(3, 2, { kind: 'failed', reason: 'skipped', error: null }),
+        {
+          seq: 4,
+          kind: 'batch',
+          batchId: 'b2',
+          status: 'complete',
+          successCount: 1,
+          failCount: 2,
+          budgetUsd: 5,
+        },
       ],
+      feedConnected: true,
       onLaunch: noop,
       onConfirmCancelAll: asyncNoop,
       onResume: noop,

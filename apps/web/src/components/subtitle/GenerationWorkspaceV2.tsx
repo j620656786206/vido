@@ -13,6 +13,10 @@
  * budget non-editable. The right pane is an EVENT LOG (not a transcript — SSE
  * carries no transcript content) with NO timestamps (Rule 23-clean).
  *
+ * dsr-6d-c-2: the right pane records what happened (useGenerationJobsFeed) and
+ * draws it through generationEventCopy — one row per film per stage, film names,
+ * Chinese failure reasons, and a single live region that reads results only.
+ *
  * dsr-6d-c-1: the queue is the BACKEND's (`progress.items[]` — dsr-6d-a AC #1),
  * never a guess. Row words come from the ONE shared vocabulary in
  * generationQueueRow.ts, so this page and the dialog can never say opposite things
@@ -20,11 +24,21 @@
  * `last` (the dialog removes its own items[] cache on terminal), and 關閉 is the
  * only caller of dismiss — i.e. "I have seen this result, forget it".
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ComponentRef,
+} from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  Activity,
   Check,
   CircleAlert,
+  CircleDashed,
+  CirclePause,
   Hourglass,
   LoaderCircle,
   Pause,
@@ -57,9 +71,9 @@ import {
 import {
   useGenerationJobsFeed,
   type FeedRow,
-  type FeedTone,
   type SingleJobState,
 } from '../../hooks/useGenerationJobsFeed';
+import { feedRowView, type FeedGlyph } from './generationEventCopy';
 import { usePageVisibility } from '../../hooks/useDownloads';
 import { libraryKeys } from '../../hooks/useLibrary';
 import { detailKeys } from '../../hooks/useMediaDetails';
@@ -67,13 +81,6 @@ import { activityKeys } from '../../hooks/useActivity';
 import { transcriptionEstimateKeys } from '../../hooks/useTranscriptionEstimate';
 import { deriveWorkspaceMode, modeShowsFeed, type WorkspaceMode } from './generationWorkspace';
 import { usd } from '../../lib/currency';
-
-const FEED_TONE_CLASS: Record<FeedTone, string> = {
-  active: 'text-[var(--accent-text)]',
-  done: 'text-[var(--success-text)]',
-  failed: 'text-[var(--error-text)]',
-  info: 'text-[var(--text-secondary)]',
-};
 
 // --- Presentational pieces ---------------------------------------------------
 
@@ -307,56 +314,145 @@ function QueueRow({
   );
 }
 
-/** Live event log (AC 4) — session-scoped, order-only, no timestamps. */
-function EventLogPane({ feed }: { feed: FeedRow[] }) {
+const FEED_GLYPH: Record<FeedGlyph, typeof Check> = {
+  loader: LoaderCircle,
+  check: Check,
+  'triangle-alert': TriangleAlert,
+  'circle-alert': CircleAlert,
+  'circle-pause': CirclePause,
+  'circle-dashed': CircleDashed,
+};
+
+/** One log row (F11 `evt-N`): glyph 16 · stage · `·` · film … trailing value. */
+function FeedRowItem({ row }: { row: FeedRow }) {
+  const v = feedRowView(row);
+  const Glyph = FEED_GLYPH[v.glyph];
+  return (
+    <li data-testid="workspace-feed-row" className="flex items-center gap-2 px-3.5 py-2">
+      <Glyph
+        className={cn(
+          'h-4 w-4 shrink-0',
+          v.glyphClass,
+          v.spin && 'animate-spin motion-reduce:animate-none'
+        )}
+        aria-hidden="true"
+      />
+      <span className={cn('shrink-0 text-sm font-semibold', v.stageClass)}>{v.stage}</span>
+      {v.srState && <span className="sr-only">{v.srState}</span>}
+      {v.parts.map((part, i) => (
+        <span
+          key={i}
+          className={cn(
+            'flex items-center gap-2 text-sm text-[var(--text-secondary)]',
+            // The film name may truncate; the reason after it stays whole.
+            i === 0 ? 'min-w-0 shrink' : 'shrink-0'
+          )}
+        >
+          <span aria-hidden="true" className="text-[var(--text-muted)]">
+            ·
+          </span>
+          <span className={cn(i === 0 && 'truncate')}>{part}</span>
+        </span>
+      ))}
+      {v.trail && (
+        <span className={cn('ml-auto shrink-0 font-mono text-sm tabular-nums', v.trailClass)}>
+          {v.trail}
+        </span>
+      )}
+    </li>
+  );
+}
+
+/**
+ * Live event log (F11 `DUvwI` / F12 `LTW74`) — session-scoped, order-only, no
+ * timestamps. The list is NOT a live region (it used to read every translation
+ * percentage aloud); one always-mounted sr-only region reads result and batch
+ * rows only. It lives here, outside anything that remounts on a mode change,
+ * because a region mounted together with its text is never read (dsr-6d-b M4).
+ */
+function EventLogPane({
+  feed,
+  connected,
+  budgetStopped,
+}: {
+  feed: FeedRow[];
+  /** The jobs stream is open — NOT "the batch is running" (it outlives the batch). */
+  connected: boolean;
+  budgetStopped: boolean;
+}) {
+  const listRef = useRef<ComponentRef<'ol'> | null>(null);
+  /** The reader was at the bottom before the last change — keep following. */
+  const pinnedRef = useRef(true);
+
+  const announcement = (() => {
+    for (let i = feed.length - 1; i >= 0; i -= 1) {
+      const text = feedRowView(feed[i]).announce;
+      if (text) return { seq: feed[i].seq, text };
+    }
+    return null;
+  })();
+
+  // Newest is at the bottom: follow it, unless the reader scrolled up to read.
+  const lastSeq = feed.length > 0 ? feed[feed.length - 1].seq : 0;
+  useLayoutEffect(() => {
+    const el = listRef.current;
+    if (el && pinnedRef.current) el.scrollTop = el.scrollHeight;
+  }, [lastSeq]);
+
   return (
     <aside
       data-testid="workspace-event-log"
-      className="flex w-full flex-col overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-primary)] lg:w-[400px]"
+      // Capped to the viewport (below the 56px sticky app header) so the LIST
+      // scrolls and can follow the newest row; unbounded, the pane grew with its
+      // rows and the whole page scrolled instead (CR H3).
+      className="flex w-full flex-col overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-primary)] lg:sticky lg:top-[4.5rem] lg:max-h-[calc(100vh-6rem)] lg:w-[400px]"
     >
-      <div className="flex items-center gap-2.5 border-b border-[var(--border-subtle)] px-3.5 py-2.5">
+      <div className="flex h-11 shrink-0 items-center gap-2.5 border-b border-[var(--border-subtle)] px-3.5">
+        <Activity
+          data-testid="workspace-log-header-icon"
+          className="h-3.5 w-3.5 shrink-0 text-[var(--text-secondary)]"
+          aria-hidden="true"
+        />
         <span className="text-sm font-semibold text-[var(--text-primary)]">即時活動</span>
         <span className="ml-auto text-xs text-[var(--text-muted)]">自開啟本頁起累積</span>
       </div>
       <ol
-        aria-live="polite"
+        ref={listRef}
         aria-label="生成事件日誌"
-        className="flex-1 space-y-0.5 overflow-y-auto px-1.5 py-1.5"
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          // Within one row (≈39px) of the bottom counts as "at the bottom".
+          pinnedRef.current = el.scrollHeight - el.scrollTop - el.clientHeight <= 40;
+        }}
+        className="min-h-0 flex-1 overflow-y-auto py-1.5"
       >
         {feed.map((row) => (
-          <li
-            key={row.seq}
-            data-testid="workspace-feed-row"
-            className="flex items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5"
-          >
-            <span className={cn('text-xs font-semibold', FEED_TONE_CLASS[row.tone])}>
-              {row.stage}
-            </span>
-            {row.message && (
-              <span className="min-w-0 flex-1 truncate text-xs text-[var(--text-secondary)]">
-                {row.message}
-              </span>
-            )}
-            {row.trail && (
-              <span
-                className={cn(
-                  'ml-auto shrink-0 font-mono text-xs tabular-nums',
-                  FEED_TONE_CLASS[row.tone]
-                )}
-              >
-                {row.trail}
-              </span>
-            )}
-          </li>
+          <FeedRowItem key={row.seq} row={row} />
         ))}
       </ol>
-      <div className="flex items-center gap-2 border-t border-[var(--border-subtle)] px-3.5 py-2.5">
-        {/* dsr-6d-c-2 owns this pane. Its chip is honest as-is: the jobs feed keeps
-            its own EventSource open past the batch terminal. */}
-        <SseChip />
-        <span className="ml-auto text-[11px] text-[var(--text-muted)]">
-          僅狀態事件，不含逐字內容
-        </span>
+      <p data-testid="workspace-log-announcer" aria-live="polite" className="sr-only">
+        {/* Keyed by row: a second 批次完成 after the first is a NEW node, so it is
+            read again — replacing identical text would be silent (CR M7). */}
+        {announcement && <span key={announcement.seq}>{announcement.text}</span>}
+      </p>
+      <div className="flex flex-col gap-2 border-t border-[var(--border-subtle)] px-3.5 py-2.5">
+        <div className="flex items-center gap-2">
+          {connected && <SseChip />}
+          <span className="ml-auto text-[11px] text-[var(--text-muted)]">
+            僅狀態事件，不含逐字內容
+          </span>
+        </div>
+        {budgetStopped && (
+          <div className="flex items-center justify-end gap-1.5">
+            <CirclePause
+              className="h-[13px] w-[13px] shrink-0 text-[var(--warning-text)]"
+              aria-hidden="true"
+            />
+            <span className="text-xs font-medium text-[var(--warning-text)]">
+              已停止（達預算上限）
+            </span>
+          </div>
+        )}
       </div>
     </aside>
   );
@@ -437,6 +533,11 @@ export interface GenerationWorkspaceV2Props {
   /** In-flight detail-triggered single jobs (single mode). */
   singleJobs?: Record<string, SingleJobState>;
   feed: FeedRow[];
+  /**
+   * The live log's own stream is open (useGenerationJobsFeed `connected`).
+   * Defaults to false: not knowing is not a reason to claim 即時更新.
+   */
+  feedConnected?: boolean;
   /** 缺字幕 preview count for the idle launcher. */
   previewCount?: number;
   /** Data-source failure (activity/preview down) → fail-soft banner. */
@@ -456,6 +557,7 @@ export function GenerationWorkspaceV2({
   activeItemProgress = null,
   singleJobs = {},
   feed,
+  feedConnected = false,
   previewCount,
   dataError = false,
   onLaunch,
@@ -464,7 +566,9 @@ export function GenerationWorkspaceV2({
   onRetryData,
   onDismiss,
 }: GenerationWorkspaceV2Props) {
-  const showFeed = modeShowsFeed(mode);
+  // A single job's result retires its entry and the page falls back to idle —
+  // keep the log that recorded it on screen (CR M5).
+  const showFeed = modeShowsFeed(mode) || (mode === 'idle' && feed.length > 0);
   const isTerminal = mode === 'complete' || mode === 'cancelled' || mode === 'error';
   const singleList = Object.values(singleJobs);
   const rows = progress.items ?? [];
@@ -651,11 +755,11 @@ export function GenerationWorkspaceV2({
                     key={job.mediaId}
                     item={{
                       mediaId: job.mediaId,
-                      // The SSE payload carries no media TITLE for a single job and
-                      // /api/v1/activity's ActiveJob has no mediaId to join on
-                      // (disc-2026-09-single-job-title-missing) — so we show the
-                      // server's own sentence, never a raw UUID.
-                      title: job.message || '處理中的項目',
+                      // dsr-6d-c-2 AC #8: transcription_* now carries the title the
+                      // backend resolved for this run ('' when it could not). The
+                      // message is a stage sentence (正在轉錄音訊), never a title —
+                      // and a raw UUID never is either.
+                      title: job.title || '處理中的項目',
                       mediaType: 'movie',
                       seriesTitle: '',
                       status: 'running',
@@ -680,7 +784,13 @@ export function GenerationWorkspaceV2({
           )}
         </div>
 
-        {showFeed && <EventLogPane feed={feed} />}
+        {showFeed && (
+          <EventLogPane
+            feed={feed}
+            connected={feedConnected}
+            budgetStopped={mode === 'budget_ceiling'}
+          />
+        )}
       </div>
 
       {/* Footer bar (F12 `v9WuzZ`) — the way OUT of a finished batch. */}
@@ -839,6 +949,7 @@ export function GenerationWorkspace({ active, onLaunch }: GenerationWorkspacePro
   const activeItem = useGenerationProgress();
   const { startTracking: startBatchTracking, attachSnapshot, connectionEpoch } = batch;
   const { startTracking: startItemTracking } = activeItem;
+  const { seedBatch: seedFeedBatch, endBatch: endFeedBatch } = jobs;
 
   /**
    * The terminal result the USER has explicitly closed (關閉 → dismiss). It is
@@ -902,8 +1013,14 @@ export function GenerationWorkspace({ active, onLaunch }: GenerationWorkspacePro
       // another event for this batch — 進行中 for ever (CR H3).
       if (terminalBatchIdsRef.current.has(probeData.progress.batchId)) return;
       startBatchTracking(probeData.progress);
+      // The log must know which films are this batch's, or a mid-batch attach
+      // logs the running one as an untitled single job.
+      seedFeedBatch(probeData.progress.batchId, probeData.progress.items ?? []);
       return;
     }
+    // Nothing runs: whatever the log still counts as the batch's is left over
+    // from a terminal it never saw (tab hidden, reconnect gap) — CR H1.
+    endFeedBatch();
     const last = probeData.last;
     if (last?.batchId && dismissedLastBatchIdRef.current !== last.batchId) {
       attachSnapshot(last);
@@ -918,6 +1035,12 @@ export function GenerationWorkspace({ active, onLaunch }: GenerationWorkspacePro
   useEffect(() => {
     if (live && batchStatus === 'running' && currentMediaId) startItemTracking(currentMediaId);
   }, [live, batchStatus, currentMediaId, startItemTracking]);
+
+  // The batch hook saw the terminal (its own stream) — end the log's membership
+  // too, in case the log's stream missed that frame (CR H1).
+  useEffect(() => {
+    if (batchStatus !== 'idle' && batchStatus !== 'running') endFeedBatch();
+  }, [batchStatus, endFeedBatch]);
 
   // Terminal: the finished items wrote subtitle_status back. Refresh what is now
   // stale — ONCE per batch, so re-attaching `last` on a later visit is free.
@@ -971,6 +1094,7 @@ export function GenerationWorkspace({ active, onLaunch }: GenerationWorkspacePro
       activeItemProgress={activeItem.progress}
       singleJobs={jobs.singleJobs}
       feed={jobs.feed}
+      feedConnected={jobs.connected}
       // sub-5-1 AC #7: the movies-only total_items is NOT what the consent list
       // will show — prefer the episode-inclusive count, fall back for old servers.
       previewCount={previewQuery.data?.totalItemsIncludingEpisodes ?? previewQuery.data?.totalItems}
