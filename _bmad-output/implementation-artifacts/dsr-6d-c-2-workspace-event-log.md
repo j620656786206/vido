@@ -1,6 +1,6 @@
 # Story DSR.6d-c-2：生成工作區右欄「即時活動」說真話——每一部片都會出現、看得到是哪一部、失敗講中文、翻譯進度不再一個百分比一列
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -476,6 +476,7 @@ CR 後 mutation check（10 項新修法逐一拿掉）：每一項至少 1 條�
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-18 | ✅ **DONE** —— PR #472 合併進 main（commit `82a73cce`）。CI **17 pass / 0 fail**：Lint、Unit、Go、4 個 E2E shard、3 個 Build、Serve Smoke、4 個視覺 shard。視覺第一輪 3 個 shard 紅，查證是**純粹缺 `-linux` 基準、零像素差異**，手動觸發 Visual Regression workflow → bootstrap PR #473（3 張 PNG ＋ 稽核文件 2 行，無原始碼；`budget_ceiling` 那張看過，已是 CR 之後的虛線圓圈）→ 合進分支 → 第二輪全綠。 |
 | 2026-09-18 | 🔍 **/ship 對抗式 CR**：3 HIGH／5 MEDIUM／6 LOW，修 13、交代 1、不修 1（見 Completion Notes 表）。最重的三條：批次終態沒收到時成員永遠不清（H1）、被打斷的步驟也打勾（H2，設計稿同步加 ②b「中斷」列）、自動捲到底在真頁面不會發生（H3，右欄限高＋真瀏覽器 e2e）。web 3868/3868、api、lint、typecheck、design-tokens、e2e `@generation-workspace` chromium 5/5。 |
 | 2026-09-18 | 🚧 **REVIEW**（dev-story, Amelia）。Task 1–8 全數完成。閘門：lint 0 errors（warning 條目與改動前逐條相同）、typecheck、design-tokens、format、**web 3843/3843**、api 全綠、e2e `@generation-workspace` chromium 4/4。11 項修法 mutation check 全部有牙。`transcription_*` 加 `title`（`[@contract-v2]` 加寬不升版）。設計稿改 F11／F12 紀錄＋新規格畫面 `F11-SPEC-LOG`。視覺三張重生、三張 `-linux` 已 `git rm`。 |
 | 2026-09-18 | Story 建立（SM Bob, create-story；main `ff16deef`）。`dsr-6d-c` 的第二半、`dsr-6d` 的最後一塊。兩個唯讀稽核代理（設計稿節點／後端 SSE 事件）＋ SM 自讀程式碼，找到 **25 條**：最有感的是**翻譯每 10 句就新增一列、而且沒有一列說得出是哪一部**；最容易做錯的是**預算用完時後端先送單部失敗、後送批次暫停**，紀錄只要還相信前者，左右兩欄就對同一部講相反的話——中心規則定為「批次成員的終態只看 `changed_item`」。`subtitle_progress` 有三個發送者、兩個是英文且不是生成，接上前必須先做成員過濾。設計稿有三種列系統給不出來（排入佇列、提取音訊完成、本次用量），而系統必須產生的五種列稿上沒畫 → 新規格畫面 `F11-SPEC-LOG`。唯一的後端改動是讓 `transcription_*` 帶上後端早就算好的片名（`[@contract-v2]` 加寬不升版），同時根治 `disc-2026-09-single-job-title-missing`。八項 SM 裁定；新立三張 disc（含一個可能很常見的 **5 分鐘整體逾時**）。 |
