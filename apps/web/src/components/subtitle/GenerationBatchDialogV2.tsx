@@ -67,6 +67,14 @@ export const generationBatchPreviewKey = ['subtitles', 'generation-batch', 'prev
  */
 export const generationBatchItemsKey = ['subtitles', 'generation-batch', 'items'] as const;
 
+/**
+ * Query key for the on-open status probe. EXPORTED (dsr-6d-c-1) because the
+ * workspace watches the same endpoint: while it was an inline literal here,
+ * nothing in the app could invalidate it, so starting a batch from this dialog
+ * left a workspace open underneath showing 0 / 0 until its 5-minute cache expired.
+ */
+export const generationBatchStatusKey = ['subtitles', 'generation-batch', 'status'] as const;
+
 // ---------------------------------------------------------------------------
 // Row-state derivation (batch event is AUTHORITATIVE — 9R-16 CR caveat)
 // ---------------------------------------------------------------------------
@@ -924,6 +932,8 @@ export function GenerationBatchDialogV2({
     // close — a closed dialog does not stop the batch, and the workspace is
     // still drawing that queue).
     queryClient.removeQueries({ queryKey: generationBatchItemsKey });
+    // …and the workspace must learn it ended (it reads `last` from this probe).
+    void queryClient.invalidateQueries({ queryKey: generationBatchStatusKey });
   }, [batchStatus, batchId, resetItem, queryClient]);
 
   /**
@@ -977,6 +987,8 @@ export function GenerationBatchDialogV2({
           // Cache items[] so the ux3-ai-2 workspace can render the full queue
           // for this session's batch (the status probe carries none).
           queryClient.setQueryData(generationBatchItemsKey, outcome.result.items);
+          // A workspace open underneath must learn a batch just started.
+          void queryClient.invalidateQueries({ queryKey: generationBatchStatusKey });
           // dsr-6d-a AC #5: the 202 carries the started batch's own snapshot
           // (real ceiling + the queue), so the first paint needs no SSE event
           // — which may already have been broadcast and missed.

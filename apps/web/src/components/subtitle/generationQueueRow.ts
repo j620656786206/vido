@@ -92,6 +92,56 @@ export function queueRowLabel(view: QueueRowView, phase?: GenerationPhase | null
 }
 
 /**
+ * Short word for a status BADGE (the workspace's `aw4Qr` → `OLg1J`). The badge
+ * is the label; the sentence is `queueRowSubStatus`. Kept here, not in the
+ * component, so the dialog and the workspace can never drift apart on the words
+ * (dsr-6d-c-1 建單裁定 #2).
+ */
+export function queueRowBadge(view: QueueRowView, stage: string): string {
+  switch (view.status) {
+    case 'done':
+      return '完成';
+    case 'failed':
+      return '失敗';
+    case 'running':
+      return stage;
+    case 'paused':
+      return '已暫停';
+    case 'cancelled':
+      return '已取消';
+    default:
+      return '排隊中';
+  }
+}
+
+/**
+ * The explanatory line under a row's title (`lUZol`). A FAILED row shows the
+ * backend's reason — that is the whole point of the items[] contract.
+ *
+ * ⚠️ Two sentences deliberately UNDERCLAIM:
+ *  - `cancelled` does NOT say 未處理. `finish()` marks the in-flight item
+ *    cancelled too, and that item may already have been paid for.
+ *  - `done` does NOT say 繁中. A run can deliver a partial translation
+ *    (`englishKeptBlocks`) or keep 簡體 under the CN policy.
+ */
+export function queueRowSubStatus(view: QueueRowView, labelText: string): string {
+  switch (view.status) {
+    case 'done':
+      return '已完成，字幕已寫入檔案';
+    case 'failed':
+      return labelText;
+    case 'running':
+      return `${labelText}…`;
+    case 'paused':
+      return '已暫停 — 下次繼續';
+    case 'cancelled':
+      return '已取消';
+    default:
+      return '等待前面項目完成';
+  }
+}
+
+/**
  * The row's visible name. An episode's `title` is just "S04E07 第七章", so the
  * show it belongs to is prefixed when the backend supplied one (dsr-6d-a AC
  * #7). `seriesTitle` is read defensively — e2e mocks and older visual fixtures

@@ -17,8 +17,12 @@ vi.mock('../subtitle/GenerationBatchDialogV2', () => ({
   GenerationBatchDialogV2: ({ open }: { open: boolean }) =>
     open ? <div data-testid="generation-batch-dialog-stub" /> : null,
   // keys imported by the workspace — harmless literals for the stub graph.
+  // (generationBatchItemsKey / deriveRowStates are no longer imported by the
+  //  workspace since dsr-6d-c-1, but the dialog still exports them for its own
+  //  fallback path; keeping them here costs nothing and cannot go stale.)
   generationBatchPreviewKey: ['subtitles', 'generation-batch', 'preview'],
   generationBatchItemsKey: ['subtitles', 'generation-batch', 'items'],
+  generationBatchStatusKey: ['subtitles', 'generation-batch', 'status'],
   deriveRowStates: () => [],
 }));
 

@@ -16,13 +16,13 @@ describe('deriveWorkspaceMode (ux3-ai-2 AC 2/3 state matrix)', () => {
     expect(deriveWorkspaceMode({ ...base, singleJobCount: 2 })).toBe('single');
   });
 
-  it('running batch WITH items → running (full queue)', () => {
+  it('running batch WITH the backend queue → running (full queue)', () => {
     expect(deriveWorkspaceMode({ ...base, batchStatus: 'running', hasItems: true })).toBe(
       'running'
     );
   });
 
-  it('running batch WITHOUT items → attach (degraded, no fake queue)', () => {
+  it('running batch with NO backend queue → attach (degraded, no fake queue)', () => {
     expect(deriveWorkspaceMode({ ...base, batchStatus: 'running', hasItems: false })).toBe(
       'attach'
     );
@@ -35,7 +35,7 @@ describe('deriveWorkspaceMode (ux3-ai-2 AC 2/3 state matrix)', () => {
     }
   );
 
-  it('a running batch takes precedence over stray single jobs (batch owns the queue)', () => {
+  it('a running batch with a queue takes precedence over stray single jobs', () => {
     expect(
       deriveWorkspaceMode({ ...base, batchStatus: 'running', hasItems: true, singleJobCount: 3 })
     ).toBe('running');
