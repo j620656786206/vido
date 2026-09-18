@@ -37,6 +37,7 @@ import {
   Activity,
   Check,
   CircleAlert,
+  CircleDashed,
   CirclePause,
   Hourglass,
   LoaderCircle,
@@ -319,6 +320,7 @@ const FEED_GLYPH: Record<FeedGlyph, typeof Check> = {
   'triangle-alert': TriangleAlert,
   'circle-alert': CircleAlert,
   'circle-pause': CirclePause,
+  'circle-dashed': CircleDashed,
 };
 
 /** One log row (F11 `evt-N`): glyph 16 · stage · `·` · film … trailing value. */
@@ -336,6 +338,7 @@ function FeedRowItem({ row }: { row: FeedRow }) {
         aria-hidden="true"
       />
       <span className={cn('shrink-0 text-sm font-semibold', v.stageClass)}>{v.stage}</span>
+      {v.srState && <span className="sr-only">{v.srState}</span>}
       {v.parts.map((part, i) => (
         <span
           key={i}
@@ -381,12 +384,12 @@ function EventLogPane({
   /** The reader was at the bottom before the last change — keep following. */
   const pinnedRef = useRef(true);
 
-  const announce = (() => {
+  const announcement = (() => {
     for (let i = feed.length - 1; i >= 0; i -= 1) {
       const text = feedRowView(feed[i]).announce;
-      if (text) return text;
+      if (text) return { seq: feed[i].seq, text };
     }
-    return '';
+    return null;
   })();
 
   // Newest is at the bottom: follow it, unless the reader scrolled up to read.
@@ -399,7 +402,10 @@ function EventLogPane({
   return (
     <aside
       data-testid="workspace-event-log"
-      className="flex w-full flex-col overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-primary)] lg:w-[400px]"
+      // Capped to the viewport (below the 56px sticky app header) so the LIST
+      // scrolls and can follow the newest row; unbounded, the pane grew with its
+      // rows and the whole page scrolled instead (CR H3).
+      className="flex w-full flex-col overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-primary)] lg:sticky lg:top-[4.5rem] lg:max-h-[calc(100vh-6rem)] lg:w-[400px]"
     >
       <div className="flex h-11 shrink-0 items-center gap-2.5 border-b border-[var(--border-subtle)] px-3.5">
         <Activity
@@ -418,14 +424,16 @@ function EventLogPane({
           // Within one row (≈39px) of the bottom counts as "at the bottom".
           pinnedRef.current = el.scrollHeight - el.scrollTop - el.clientHeight <= 40;
         }}
-        className="flex-1 overflow-y-auto py-1.5"
+        className="min-h-0 flex-1 overflow-y-auto py-1.5"
       >
         {feed.map((row) => (
           <FeedRowItem key={row.seq} row={row} />
         ))}
       </ol>
       <p data-testid="workspace-log-announcer" aria-live="polite" className="sr-only">
-        {announce}
+        {/* Keyed by row: a second 批次完成 after the first is a NEW node, so it is
+            read again — replacing identical text would be silent (CR M7). */}
+        {announcement && <span key={announcement.seq}>{announcement.text}</span>}
       </p>
       <div className="flex flex-col gap-2 border-t border-[var(--border-subtle)] px-3.5 py-2.5">
         <div className="flex items-center gap-2">
@@ -558,7 +566,9 @@ export function GenerationWorkspaceV2({
   onRetryData,
   onDismiss,
 }: GenerationWorkspaceV2Props) {
-  const showFeed = modeShowsFeed(mode);
+  // A single job's result retires its entry and the page falls back to idle —
+  // keep the log that recorded it on screen (CR M5).
+  const showFeed = modeShowsFeed(mode) || (mode === 'idle' && feed.length > 0);
   const isTerminal = mode === 'complete' || mode === 'cancelled' || mode === 'error';
   const singleList = Object.values(singleJobs);
   const rows = progress.items ?? [];
@@ -939,7 +949,7 @@ export function GenerationWorkspace({ active, onLaunch }: GenerationWorkspacePro
   const activeItem = useGenerationProgress();
   const { startTracking: startBatchTracking, attachSnapshot, connectionEpoch } = batch;
   const { startTracking: startItemTracking } = activeItem;
-  const { seedBatch: seedFeedBatch } = jobs;
+  const { seedBatch: seedFeedBatch, endBatch: endFeedBatch } = jobs;
 
   /**
    * The terminal result the USER has explicitly closed (關閉 → dismiss). It is
@@ -1008,6 +1018,9 @@ export function GenerationWorkspace({ active, onLaunch }: GenerationWorkspacePro
       seedFeedBatch(probeData.progress.batchId, probeData.progress.items ?? []);
       return;
     }
+    // Nothing runs: whatever the log still counts as the batch's is left over
+    // from a terminal it never saw (tab hidden, reconnect gap) — CR H1.
+    endFeedBatch();
     const last = probeData.last;
     if (last?.batchId && dismissedLastBatchIdRef.current !== last.batchId) {
       attachSnapshot(last);
@@ -1022,6 +1035,12 @@ export function GenerationWorkspace({ active, onLaunch }: GenerationWorkspacePro
   useEffect(() => {
     if (live && batchStatus === 'running' && currentMediaId) startItemTracking(currentMediaId);
   }, [live, batchStatus, currentMediaId, startItemTracking]);
+
+  // The batch hook saw the terminal (its own stream) — end the log's membership
+  // too, in case the log's stream missed that frame (CR H1).
+  useEffect(() => {
+    if (batchStatus !== 'idle' && batchStatus !== 'running') endFeedBatch();
+  }, [batchStatus, endFeedBatch]);
 
   // Terminal: the finished items wrote subtitle_status back. Refresh what is now
   // stale — ONCE per batch, so re-attaching `last` on a later visit is free.

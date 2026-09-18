@@ -167,7 +167,7 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
     expect(result.current.feed[0]).toMatchObject({
       kind: 'stage',
       stage: 'translating',
-      live: true,
+      state: 'live',
       percentage: 100,
       title: '沙丘：第二部',
     });
@@ -186,17 +186,17 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
       });
     });
     const [extract, transcribe, translate] = result.current.feed;
-    expect(extract).toMatchObject({ kind: 'stage', stage: 'extracting', live: false });
+    expect(extract).toMatchObject({ kind: 'stage', stage: 'extracting', state: 'passed' });
     expect(transcribe).toMatchObject({
       kind: 'stage',
       stage: 'transcribing',
-      live: false,
+      state: 'passed',
       percentage: null,
     });
     expect(translate).toMatchObject({
       kind: 'stage',
       stage: 'translating',
-      live: true,
+      state: 'live',
       percentage: 40,
     });
   });
@@ -221,7 +221,7 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
     );
     expect(result.current.singleJobs['m1']).toBeUndefined();
     expect(result.current.feed.map((r) => r.kind)).toEqual(['stage', 'done']);
-    expect(result.current.feed[0]).toMatchObject({ live: false });
+    expect(result.current.feed[0]).toMatchObject({ state: 'passed' });
     expect(result.current.feed[1]).toMatchObject({
       kind: 'done',
       mediaId: 'm1',
@@ -331,7 +331,7 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
       es.emit('transcription_complete', { media_id: 'm1', phase: 'complete', title: '' });
     });
     expect(rowsFor(result.current.feed, 'm1').map((r) => r.kind)).toEqual(['stage']);
-    expect(rowsFor(result.current.feed, 'm1')[0]).toMatchObject({ live: false });
+    expect(rowsFor(result.current.feed, 'm1')[0]).toMatchObject({ state: 'passed' });
     act(() => es.emit('generation_batch_progress', running(item('m1', 'A', 'done'))));
     expect(rowsFor(result.current.feed, 'm1').map((r) => r.kind)).toEqual(['stage', 'done']);
   });
@@ -355,7 +355,10 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
       es.emit('generation_batch_progress', terminal('budget_ceiling'));
     });
     expect(result.current.feed.some((r) => r.kind === 'failed')).toBe(false);
-    expect(rowsFor(result.current.feed, 'm2')[0]).toMatchObject({ live: false, percentage: null });
+    expect(rowsFor(result.current.feed, 'm2')[0]).toMatchObject({
+      state: 'stopped',
+      percentage: null,
+    });
     expect(result.current.feed.at(-1)).toMatchObject({
       kind: 'batch',
       status: 'budget_ceiling',
@@ -471,9 +474,10 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
     act(() => {
       es.emit('generation_batch_progress', running(item('m1', 'A', 'running')));
       es.emit('generation_batch_progress', terminal('complete'));
-      es.emit('transcription_progress', { media_id: 'm1', phase: 'transcribing', title: 'A' });
+      // title '' — so it is the ended membership, not a solo title, that decides.
+      es.emit('transcription_progress', { media_id: 'm1', phase: 'transcribing', title: '' });
     });
-    expect(result.current.singleJobs['m1']).toBeDefined();
+    expect(result.current.singleJobs['m1']).toMatchObject({ mediaId: 'm1', phase: 'transcribing' });
   });
 
   // --- 🔴 #1, #2: subtitle_progress --------------------------------------
@@ -502,8 +506,8 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
       });
     });
     expect(rowsFor(result.current.feed, 'm1')).toMatchObject([
-      { kind: 'stage', stage: 'track', live: false },
-      { kind: 'stage', stage: 'translating', live: true, percentage: null },
+      { kind: 'stage', stage: 'track', state: 'passed' },
+      { kind: 'stage', stage: 'translating', state: 'live', percentage: null },
     ]);
   });
 
@@ -551,6 +555,43 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
   });
 
   it('a (re)opened stream demotes every row that was still live — the gap may have swallowed its end', () => {
+    vi.useFakeTimers();
+    try {
+      const { result, es } = connected();
+      act(() =>
+        es.emit('translation_progress', {
+          media_id: 'm1',
+          phase: 'translating',
+          percentage: 30,
+          title: 'A',
+        })
+      );
+      // The REAL path: error → 10s backoff → a NEW EventSource, which must be
+      // wired again (listeners + onopen) for the next frames to land.
+      act(() => es.fail());
+      expect(result.current.connected).toBe(false);
+      act(() => vi.advanceTimersByTime(10000));
+      expect(MockEventSource.instances).toHaveLength(2);
+      const reopened = MockEventSource.instances[1];
+      act(() => reopened.open());
+      expect(result.current.connected).toBe(true);
+      expect(result.current.feed[0]).toMatchObject({ state: 'stopped', percentage: null });
+      act(() =>
+        reopened.emit('translation_progress', {
+          media_id: 'm1',
+          phase: 'translating',
+          percentage: 50,
+          title: 'A',
+        })
+      );
+      expect(result.current.feed).toHaveLength(2);
+      expect(result.current.feed[1]).toMatchObject({ state: 'live', percentage: 50 });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a manual stop/start (tab hidden then shown) also leaves nothing claiming to run', () => {
     const { result, es } = connected();
     act(() =>
       es.emit('translation_progress', {
@@ -562,7 +603,7 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
     );
     act(() => es.fail());
     act(() => es.open());
-    expect(result.current.feed[0]).toMatchObject({ live: false, percentage: null });
+    expect(result.current.feed[0]).toMatchObject({ state: 'stopped', percentage: null });
     // The next frame for the same stage opens a NEW live row: the gap stays visible.
     act(() =>
       es.emit('translation_progress', {
@@ -573,7 +614,7 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
       })
     );
     expect(result.current.feed).toHaveLength(2);
-    expect(result.current.feed[1]).toMatchObject({ live: true, percentage: 50 });
+    expect(result.current.feed[1]).toMatchObject({ state: 'live', percentage: 50 });
   });
 
   // --- 🔴 #17: the terminal queue is never converted ----------------------
@@ -585,5 +626,218 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
     for (const input of camel.inputs) {
       expect(input).not.toHaveProperty('items');
     }
+  });
+
+  // --- /ship CR fixes -----------------------------------------------------
+
+  it('CR H2: a step that ends by FAILURE is stopped, not passed (no tick claiming it finished)', () => {
+    const { result, es } = connected();
+    act(() => {
+      es.emit('transcription_progress', { media_id: 'm1', phase: 'transcribing', title: 'A' });
+      es.emit('transcription_failed', {
+        media_id: 'm1',
+        phase: 'failed',
+        title: 'A',
+        error: 'transcribe: whisper: request timed out',
+      });
+    });
+    expect(result.current.feed[0]).toMatchObject({ kind: 'stage', state: 'stopped' });
+  });
+
+  it('CR H2: the batch ending on the budget leaves the running step stopped; the steps before it passed', () => {
+    const { result, es } = connected();
+    act(() => {
+      es.emit('generation_batch_progress', running(item('m2', 'B', 'running')));
+      es.emit('transcription_extracting', { media_id: 'm2', phase: 'extracting', title: '' });
+      es.emit('transcription_progress', { media_id: 'm2', phase: 'transcribing', title: '' });
+      es.emit('generation_batch_progress', terminal('budget_ceiling'));
+    });
+    expect(rowsFor(result.current.feed, 'm2')).toMatchObject([
+      { stage: 'extracting', state: 'passed' },
+      { stage: 'transcribing', state: 'stopped' },
+    ]);
+  });
+
+  it('CR H1: endBatch() ends a membership whose terminal this stream never saw', () => {
+    const { result, es } = connected();
+    act(() => {
+      es.emit('generation_batch_progress', running(item('m1', 'A', 'running')));
+      es.emit('transcription_progress', { media_id: 'm1', phase: 'transcribing', title: '' });
+    });
+    act(() => result.current.endBatch());
+    expect(rowsFor(result.current.feed, 'm1')[0]).toMatchObject({ state: 'stopped' });
+    // The same film run later from its detail page is a single job again.
+    act(() =>
+      es.emit('transcription_extracting', { media_id: 'm1', phase: 'extracting', title: '' })
+    );
+    expect(result.current.singleJobs['m1']).toMatchObject({ phase: 'extracting' });
+    act(() => es.emit('transcription_complete', { media_id: 'm1', phase: 'complete', title: '' }));
+    expect(result.current.feed.at(-1)).toMatchObject({ kind: 'done', mediaId: 'm1' });
+  });
+
+  it('CR H1: seedBatch() REPLACES membership — the previous batch film is no longer a member', () => {
+    const { result, es } = connected();
+    const seed = (id: string, status: 'running' | 'queued') => ({
+      mediaId: id,
+      title: id,
+      mediaType: 'movie',
+      seriesTitle: '',
+      status,
+      reason: '' as const,
+    });
+    act(() => result.current.seedBatch('b1', [seed('x', 'running')]));
+    act(() => result.current.seedBatch('b2', [seed('y', 'running')]));
+    act(() =>
+      es.emit('transcription_progress', { media_id: 'x', phase: 'transcribing', title: '' })
+    );
+    expect(result.current.singleJobs['x']).toMatchObject({ mediaId: 'x' });
+  });
+
+  it('CR M4: only the RUNNING film is a member — a queued film run from its detail page is a single job', () => {
+    const { result, es } = connected();
+    act(() =>
+      result.current.seedBatch('b1', [
+        {
+          mediaId: 'q1',
+          title: '排隊中',
+          mediaType: 'movie',
+          seriesTitle: '',
+          status: 'queued',
+          reason: '',
+        },
+      ])
+    );
+    act(() => {
+      es.emit('transcription_extracting', { media_id: 'q1', phase: 'extracting', title: '' });
+      es.emit('transcription_failed', {
+        media_id: 'q1',
+        phase: 'failed',
+        title: '',
+        error: 'select audio track: no audio track found in media file',
+      });
+    });
+    expect(result.current.feed.at(-1)).toMatchObject({
+      kind: 'failed',
+      mediaId: 'q1',
+      reason: null,
+    });
+  });
+
+  it('CR M4: a solo run already on the film keeps its own result when the batch reaches it (busy_elsewhere)', () => {
+    const { result, es } = connected();
+    act(() => {
+      es.emit('transcription_progress', { media_id: 'm3', phase: 'transcribing', title: '芭比' });
+      es.emit('generation_batch_progress', running(item('m3', '芭比', 'running')));
+      es.emit('generation_batch_progress', running(item('m3', '芭比', 'failed', 'busy_elsewhere')));
+    });
+    // The batch's refusal is logged…
+    expect(result.current.feed.at(-1)).toMatchObject({ kind: 'failed', reason: 'busy_elsewhere' });
+    // …but the solo run is untouched: still in flight, still live.
+    expect(result.current.singleJobs['m3']).toMatchObject({ title: '芭比' });
+    expect(rowsFor(result.current.feed, 'm3')[0]).toMatchObject({ kind: 'stage', state: 'live' });
+    act(() =>
+      es.emit('transcription_complete', { media_id: 'm3', phase: 'complete', title: '芭比' })
+    );
+    expect(result.current.feed.at(-1)).toMatchObject({ kind: 'done', mediaId: 'm3' });
+    expect(result.current.singleJobs['m3']).toBeUndefined();
+  });
+
+  it('CR M4: an event carrying a backend title is a solo run even for the batch member id', () => {
+    const { result, es } = connected();
+    act(() => {
+      es.emit('generation_batch_progress', running(item('m1', 'A', 'running')));
+      es.emit('transcription_complete', { media_id: 'm1', phase: 'complete', title: '沙丘' });
+    });
+    expect(result.current.feed.at(-1)).toMatchObject({ kind: 'done', title: '沙丘' });
+  });
+
+  it('CR M8: a search-engine subtitle_progress terminal does not end a transcription step', () => {
+    const { result, es } = connected();
+    act(() => {
+      es.emit('generation_batch_progress', running(item('m1', 'A', 'running')));
+      es.emit('transcription_progress', { media_id: 'm1', phase: 'transcribing', title: '' });
+      es.emit('subtitle_progress', {
+        media_id: 'm1',
+        media_type: 'movie',
+        stage: 'complete',
+        message: 'Subtitle found and placed!',
+      });
+    });
+    expect(rowsFor(result.current.feed, 'm1')[0]).toMatchObject({ state: 'live' });
+  });
+
+  it('a pipeline failure ends the pipeline step as stopped', () => {
+    const { result, es } = connected();
+    act(() => {
+      es.emit('generation_batch_progress', running(item('m1', 'A', 'running')));
+      es.emit('subtitle_progress', {
+        media_id: 'm1',
+        media_type: 'movie',
+        stage: 'extracting',
+        message: '',
+      });
+      es.emit('subtitle_progress', {
+        media_id: 'm1',
+        media_type: 'movie',
+        stage: 'failed',
+        message: '',
+      });
+    });
+    expect(rowsFor(result.current.feed, 'm1')[0]).toMatchObject({
+      stage: 'track',
+      state: 'stopped',
+    });
+  });
+
+  it('the same result is not logged twice when the run first looked like a single job', () => {
+    const { result, es } = connected();
+    act(() => {
+      // changed_item: running was lost — the run looks like an untitled single job
+      es.emit('transcription_progress', { media_id: 'm1', phase: 'transcribing', title: '' });
+      es.emit('transcription_complete', { media_id: 'm1', phase: 'complete', title: '' });
+      es.emit('generation_batch_progress', running(item('m1', 'A', 'done')));
+    });
+    expect(rowsFor(result.current.feed, 'm1').filter((r) => r.kind === 'done')).toHaveLength(1);
+    // …and the late batch word still names the film.
+    expect(rowsFor(result.current.feed, 'm1').at(-1)).toMatchObject({ title: 'A' });
+  });
+
+  it('a result that arrives after endBatch() still settles the film step', () => {
+    const { result, es } = connected();
+    act(() => {
+      es.emit('generation_batch_progress', running(item('m1', 'A', 'running')));
+      es.emit('transcription_progress', { media_id: 'm1', phase: 'transcribing', title: '' });
+    });
+    act(() => result.current.endBatch());
+    act(() =>
+      es.emit('transcription_progress', { media_id: 'm1', phase: 'translating', title: '' })
+    );
+    act(() => es.emit('generation_batch_progress', running(item('m1', 'A', 'done'))));
+    expect(result.current.feed.some((r) => r.kind === 'stage' && r.state === 'live')).toBe(false);
+  });
+
+  it('CR M4: a titled progress event is the solo run, not the batch member with the same id', () => {
+    const { result, es } = connected();
+    act(() => {
+      es.emit('generation_batch_progress', running(item('m1', 'A', 'running')));
+      es.emit('transcription_progress', { media_id: 'm1', phase: 'transcribing', title: '沙丘' });
+    });
+    expect(result.current.singleJobs['m1']).toMatchObject({ title: '沙丘', phase: 'transcribing' });
+  });
+
+  it('CR M4: the batch reaching a film an UNTITLED solo run already holds does not adopt it', () => {
+    const { result, es } = connected();
+    act(() => {
+      es.emit('transcription_progress', { media_id: 'm3', phase: 'transcribing', title: '' });
+      es.emit('generation_batch_progress', running(item('m3', '芭比', 'running')));
+      // The solo run moves on before the batch reports its refusal.
+      es.emit('translation_progress', {
+        media_id: 'm3',
+        phase: 'translating',
+        percentage: 10,
+        title: '',
+      });
+    });
+    expect(result.current.singleJobs['m3']).toMatchObject({ phase: 'translating', percentage: 10 });
   });
 });

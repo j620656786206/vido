@@ -398,6 +398,28 @@ Claude Opus 5 (1M context) — dev-story (Amelia)，2026-09-18，branch `feat/ds
   | 預算列 | `circle-alert` `$warning-text`、「本批次」、`$5.00` `$text-primary` | 同 | ✅ |
   | 底部 F11／F12 | `[10,14]` gap 8；F12 第二行靠右 `circle-pause` 13＋Label 500 `$warning-text` | `px-3.5 py-2.5`、`flex-col gap-2`；`justify-end gap-1.5`、`h-[13px]`、`text-xs font-medium` warning-text | ✅ |
   | 11px | 稿上 Label 12 | 膠囊字與「僅狀態事件…」維持 `text-[11px]`（凍結，`disc-2026-09-11px-micro-label-not-on-type-scale`） | ⚠️ 刻意 |
+**🔍 /ship 對抗式 CR（2026-09-18，fresh-context 代理，只讀；在 scratchpad 寫情境測試直接跑真的 hook 與一份照抄版面的頁面查證）**——3 HIGH／5 MEDIUM／6 LOW，**修 13、交代 1（重開既有 disc）、不修 1**。
+
+| 等級 | 問題 | 處置 |
+| --- | --- | --- |
+| **H1** | 批次終態事件沒收到（切走分頁、重連空窗、hub 丟事件），那批的片永遠被當「成員」——之後從詳情頁重跑同一部，它的事件被吃掉、`singleJobs` 空、結果列不見。 | 修：新增 `endBatch()`，探測回「沒在跑」與批次 hook 進入終態時各呼叫一次；`seedBatch` 改成**取代**整份成員 |
+| **H2** | 被打斷的步驟（失敗、預算／取消、重連）也打勾——「✓ 轉錄中」等於宣稱做完了；`budget_ceiling` 基準圖就畫著被預算擋下的那一步打勾。 | 修：列狀態從 `live: boolean` 改成 `live／passed／stopped`；只有「進了下一步或整部完成」才 `passed`（勾），其餘 `stopped` 用 `circle-dashed`。**設計稿同步**：F12 `W3rn55` 改 `circle-dashed`、規格畫面新增 ②b 列（`gSBY2`）＝十一種列 |
+| **H3** | 自動捲到底在真的頁面上不會發生：右欄沒有高度上限，跟著內容長高，捲的是整頁；單元測試是在 jsdom 塞假 `scrollHeight` 才過。 | 修：右欄 `lg:sticky lg:top-[4.5rem] lg:max-h-[calc(100vh-6rem)]`＋清單 `min-h-0`；新增 e2e：40 列時清單自己捲、停在底部、捲頁後最新一列在視窗內（拿掉上限 → e2e 紅） |
+| **M4** | 「成員」太寬：`seedBatch` 把排隊中的片也算進去；已經在跑單部的片被批次碰到時被收編。 | 修：成員＝批次**正在跑**的那一部；帶後端 `title` 的事件一律是單部；已有單部在跑的片，批次的 `running` 不收編、`busy_elsewhere` 不刪它的單部 |
+| **M5** | 單部任務的結果列在真的頁面上看不到：寫結果的同一刻 `singleJobs` 清空 → 模式變 `idle` → 右欄卸載。 | 修：`idle` 但這次開頁有紀錄時保留右欄 |
+| **M6** | `SEED` 在全選 2,400 部時 O(n²)（實測約 400 ms／次）。 | 修：只收 `running`、一次建表、`backfill` 單次掃描 |
+| **M7** | 報讀區遇到一模一樣的句子（第二個「批次完成」）不會再唸。 | 修：以列的 `seq` 當 key，每次都是新節點 |
+| **M8** | 字幕搜尋引擎同名的 `subtitle_progress` 終態會把成員正在轉錄的那一列降級。 | 修：列記 `pipeline`，D6 終態只結束 pipeline 自己開的步驟 |
+| L10 | 報讀分不出進行中／已過（差別只在隱藏的圖示與顏色）。 | 修：每列 sr-only「（進行中）／（這一步已完成）／（已中斷）」 |
+| L12 | Whisper 的 `status 401`、`API key not configured` 落到「生成失敗」。 | 修：對照表補兩條 |
+| L13 | 後端測試沒測到 `!job.Solo`。 | 修：補一筆有片名的非 solo job（拿掉判斷 → 紅） |
+| L14 | 重連測試沒走真的重連路徑；一條斷言只用 `toBeDefined()`。 | 修：假計時器跑 10 秒 backoff、在**新的** `EventSource` 上 `open()`；斷言改 `toMatchObject` |
+| L9 | 開頁那一刻（探測還沒回來）收到的取消會顯示成紅色失敗；`changed_item: running` 被丟時同一部出兩列完成。 | 後半修（結果去重：同一部最後一列已是「完成」就不再寫）；前半**不修**——探測回來前沒有任何資料能分辨它是批次的片，記錄於此 |
+| L11 | `disc-2026-09-single-job-title-missing` 標 done 太早：pipeline 模式的詳情頁生成走 `RunTranscription`（`solo=false`）→ `title` 是 `""`；pipeline 模式有內嵌字幕的單部生成在工作區完全不出現。 | 交代：該 disc **改回 backlog**，註明 legacy 模式已修、pipeline 模式那一半仍在 |
+
+CR 後 mutation check（10 項新修法逐一拿掉）：每一項至少 1 條紅；其中兩項（帶 `title` 的階段事件、未帶片名的單部被收編）第一輪沒被抓到，補了兩條測試後才變紅。
+
+- ⚠️ **對已合併測試的兩處輸入改動**：`GenerationWorkspaceV2.spec.tsx` 的 idle 測試明寫 `feed: []`（M5 之後 idle＋有紀錄會顯示右欄，原測試沿用了共用的非空夾具）；斷言不變。
 - **Pre-existing failures**：無。`pnpm nx test web` 270 檔／3843 條全綠；`pnpm nx test api` 全綠。
 
 ### Discovery Triage
@@ -454,5 +476,6 @@ Claude Opus 5 (1M context) — dev-story (Amelia)，2026-09-18，branch `feat/ds
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-18 | 🔍 **/ship 對抗式 CR**：3 HIGH／5 MEDIUM／6 LOW，修 13、交代 1、不修 1（見 Completion Notes 表）。最重的三條：批次終態沒收到時成員永遠不清（H1）、被打斷的步驟也打勾（H2，設計稿同步加 ②b「中斷」列）、自動捲到底在真頁面不會發生（H3，右欄限高＋真瀏覽器 e2e）。web 3868/3868、api、lint、typecheck、design-tokens、e2e `@generation-workspace` chromium 5/5。 |
 | 2026-09-18 | 🚧 **REVIEW**（dev-story, Amelia）。Task 1–8 全數完成。閘門：lint 0 errors（warning 條目與改動前逐條相同）、typecheck、design-tokens、format、**web 3843/3843**、api 全綠、e2e `@generation-workspace` chromium 4/4。11 項修法 mutation check 全部有牙。`transcription_*` 加 `title`（`[@contract-v2]` 加寬不升版）。設計稿改 F11／F12 紀錄＋新規格畫面 `F11-SPEC-LOG`。視覺三張重生、三張 `-linux` 已 `git rm`。 |
 | 2026-09-18 | Story 建立（SM Bob, create-story；main `ff16deef`）。`dsr-6d-c` 的第二半、`dsr-6d` 的最後一塊。兩個唯讀稽核代理（設計稿節點／後端 SSE 事件）＋ SM 自讀程式碼，找到 **25 條**：最有感的是**翻譯每 10 句就新增一列、而且沒有一列說得出是哪一部**；最容易做錯的是**預算用完時後端先送單部失敗、後送批次暫停**，紀錄只要還相信前者，左右兩欄就對同一部講相反的話——中心規則定為「批次成員的終態只看 `changed_item`」。`subtitle_progress` 有三個發送者、兩個是英文且不是生成，接上前必須先做成員過濾。設計稿有三種列系統給不出來（排入佇列、提取音訊完成、本次用量），而系統必須產生的五種列稿上沒畫 → 新規格畫面 `F11-SPEC-LOG`。唯一的後端改動是讓 `transcription_*` 帶上後端早就算好的片名（`[@contract-v2]` 加寬不升版），同時根治 `disc-2026-09-single-job-title-missing`。八項 SM 裁定；新立三張 disc（含一個可能很常見的 **5 分鐘整體逾時**）。 |

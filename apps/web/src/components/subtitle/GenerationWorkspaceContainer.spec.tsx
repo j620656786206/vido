@@ -34,6 +34,7 @@ const h = vi.hoisted(() => ({
   jobsStart: vi.fn(),
   jobsStop: vi.fn(),
   jobsSeed: vi.fn(),
+  jobsEnd: vi.fn(),
   jobsConnected: true,
   singleJobs: {} as Record<string, unknown>,
   visible: true,
@@ -77,6 +78,7 @@ vi.mock('../../hooks/useGenerationJobsFeed', () => ({
     startTracking: h.jobsStart,
     stop: h.jobsStop,
     seedBatch: h.jobsSeed,
+    endBatch: h.jobsEnd,
   }),
 }));
 
@@ -553,5 +555,36 @@ describe('GenerationWorkspace — the live log wiring (dsr-6d-c-2 AC #4)', () =>
     expect(
       within(screen.getByTestId('workspace-event-log')).getByTestId('workspace-sse-chip')
     ).toBeInTheDocument();
+  });
+
+  it('[P0] CR H1 a probe that finds NO batch running ends the log membership (a missed terminal)', async () => {
+    mocked.getGenerationBatchStatus.mockResolvedValue({ running: false, last: LAST_SNAPSHOT });
+
+    renderWorkspace();
+
+    await waitFor(() => expect(h.jobsEnd).toHaveBeenCalled());
+  });
+
+  it('[P0] CR H1 the batch hook reaching a terminal ends the log membership too', async () => {
+    h.batchState.status = 'budget_ceiling';
+    h.batchState.batchId = 'gb-1';
+
+    renderWorkspace();
+
+    await waitFor(() => expect(h.jobsEnd).toHaveBeenCalled());
+  });
+
+  it('[P1] a RUNNING probe does not end the membership it just seeded', async () => {
+    mocked.getGenerationBatchStatus.mockResolvedValue({
+      running: true,
+      progress: RUNNING_SNAPSHOT,
+      last: null,
+    });
+    h.batchState.status = 'running';
+
+    renderWorkspace();
+
+    await waitFor(() => expect(h.jobsSeed).toHaveBeenCalled());
+    expect(h.jobsEnd).not.toHaveBeenCalled();
   });
 });

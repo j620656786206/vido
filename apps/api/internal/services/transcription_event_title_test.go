@@ -110,10 +110,15 @@ func TestEventTitle(t *testing.T) {
 	require.NoError(t, err)
 	_, err = svc.acquireJob("batch-1", "", false)
 	require.NoError(t, err)
+	// A non-solo job that somehow carries a title still sends none: only a solo
+	// run's title is a promise that the event is not a batch item's.
+	_, err = svc.acquireJob("batch-titled", "某片名", false)
+	require.NoError(t, err)
 
 	assert.Equal(t, "沙丘：第二部", svc.eventTitle("solo-1"))
 	assert.Equal(t, "", svc.eventTitle("solo-fallback"), "a raw media id is never a title")
 	assert.Equal(t, "", svc.eventTitle("batch-1"), "batch titles travel through changed_item")
+	assert.Equal(t, "", svc.eventTitle("batch-titled"), "only a solo run's title is sent")
 	assert.Equal(t, "", svc.eventTitle("not-running"))
 }
 

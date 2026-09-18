@@ -5137,8 +5137,20 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       // Same film, same stage as the queue on the left (轉錄中, no percentage).
       feed: [
         wsFxFeed(1, 0, { kind: 'done' }),
-        wsFxFeed(2, 1, { kind: 'stage', stage: 'extracting', live: false, percentage: null }),
-        wsFxFeed(3, 1, { kind: 'stage', stage: 'transcribing', live: true, percentage: null }),
+        wsFxFeed(2, 1, {
+          kind: 'stage',
+          stage: 'extracting',
+          state: 'passed',
+          pipeline: false,
+          percentage: null,
+        }),
+        wsFxFeed(3, 1, {
+          kind: 'stage',
+          stage: 'transcribing',
+          state: 'live',
+          pipeline: false,
+          percentage: null,
+        }),
       ],
       feedConnected: true,
       onLaunch: noop,
@@ -5172,8 +5184,20 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       },
       feed: [
         wsFxFeed(1, 0, { kind: 'done' }),
-        wsFxFeed(2, 1, { kind: 'stage', stage: 'extracting', live: false, percentage: null }),
-        wsFxFeed(3, 1, { kind: 'stage', stage: 'transcribing', live: false, percentage: null }),
+        wsFxFeed(2, 1, {
+          kind: 'stage',
+          stage: 'extracting',
+          state: 'passed',
+          pipeline: false,
+          percentage: null,
+        }),
+        wsFxFeed(3, 1, {
+          kind: 'stage',
+          stage: 'transcribing',
+          state: 'stopped',
+          pipeline: false,
+          percentage: null,
+        }),
         {
           seq: 4,
           kind: 'batch',

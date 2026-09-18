@@ -17,6 +17,8 @@ describe('failureCopy', () => {
     ['transcription unavailable and resume not possible', '語音辨識未設定', false],
     ['transcribe: transcribe chunk 2/9: AI_UNAUTHORIZED: invalid key', 'API 金鑰無效', false],
     ['transcribe: AI_TIMEOUT: provider did not answer', '處理逾時', false],
+    ['transcribe: whisper: API error: status 401 — {"error":"invalid key"}', 'API 金鑰無效', false],
+    ['transcribe: whisper: OpenAI API key not configured', '語音辨識未設定', false],
     ['transcribe: whisper: request timed out', '處理逾時', false],
     ['extract audio: context deadline exceeded', '處理逾時', false],
   ])('%s → %s', (error, text, budget) => {
@@ -58,7 +60,8 @@ describe('feedRowView', () => {
       kind: 'stage',
       ...film,
       stage: 'translating',
-      live: true,
+      state: 'live',
+      pipeline: false,
       percentage: 45,
     });
     expect(v).toMatchObject({
@@ -76,13 +79,21 @@ describe('feedRowView', () => {
         kind: 'stage',
         ...film,
         stage: 'transcribing',
-        live: true,
+        state: 'live',
+        pipeline: false,
         percentage: null,
       }).trail
     ).toBeNull();
     expect(
-      feedRowView({ seq: 1, kind: 'stage', ...film, stage: 'track', live: true, percentage: null })
-        .stage
+      feedRowView({
+        seq: 1,
+        kind: 'stage',
+        ...film,
+        stage: 'track',
+        state: 'live',
+        pipeline: false,
+        percentage: null,
+      }).stage
     ).toBe('抽取字幕');
   });
 
@@ -92,7 +103,8 @@ describe('feedRowView', () => {
       kind: 'stage',
       ...film,
       stage: 'extracting',
-      live: false,
+      state: 'passed',
+      pipeline: false,
       percentage: null,
     });
     expect(v).toMatchObject({
@@ -209,7 +221,8 @@ describe('feedRowView', () => {
         kind: 'stage',
         ...film,
         stage: 'translating',
-        live: true,
+        state: 'live',
+        pipeline: false,
         percentage: 1,
       }),
       feedRowView({ seq: 1, kind: 'done', ...film }),
@@ -223,5 +236,36 @@ describe('feedRowView', () => {
         expect(cls).not.toMatch(/--(success|warning|error|info|accent-primary)\)/);
       }
     }
+  });
+
+  it('CR H2: a step that did not finish is never a tick', () => {
+    const v = feedRowView({
+      seq: 1,
+      kind: 'stage',
+      ...film,
+      stage: 'transcribing',
+      state: 'stopped',
+      percentage: null,
+      pipeline: false,
+    });
+    expect(v).toMatchObject({ glyph: 'circle-dashed', spin: false, trail: null, announce: null });
+    expect(v.glyphClass).toContain('--text-muted');
+  });
+
+  it('CR L10: a stage row says its state in words for screen readers', () => {
+    const stage = (state: 'live' | 'passed' | 'stopped') =>
+      feedRowView({
+        seq: 1,
+        kind: 'stage',
+        ...film,
+        stage: 'transcribing',
+        state,
+        percentage: null,
+        pipeline: false,
+      }).srState;
+    expect(stage('live')).toBe('（進行中）');
+    expect(stage('passed')).toBe('（這一步已完成）');
+    expect(stage('stopped')).toBe('（已中斷）');
+    expect(feedRowView({ seq: 1, kind: 'done', ...film }).srState).toBeNull();
   });
 });

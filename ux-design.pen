@@ -1,5 +1,5 @@
 {
-  "version": "2.17",
+  "version": "2.18",
   "children": [
     {
       "type": "group",
@@ -47516,7 +47516,7 @@
                           "ref": "otvKh",
                           "name": "nm-apply",
                           "x": 520,
-                          "y": 16,
+                          "y": 12,
                           "width": "fit_content",
                           "height": "fit_content",
                           "descendants": {
@@ -121546,7 +121546,6 @@
                   "x": 280,
                   "y": 200,
                   "name": "glossary-dialog",
-                  "theme": {},
                   "width": 880,
                   "fill": "$bg-secondary",
                   "cornerRadius": "$radius-lg",
@@ -129775,7 +129774,7 @@
                                       "name": "evt-ic",
                                       "width": 16,
                                       "height": 16,
-                                      "icon": "check",
+                                      "icon": "circle-dashed",
                                       "library": "lucide",
                                       "fill": "$text-muted"
                                     },
@@ -154866,7 +154865,6 @@
               "x": 21800,
               "y": 34393,
               "name": "F6-SPEC-STATES",
-              "theme": {},
               "clip": true,
               "width": 880,
               "fill": "$bg-secondary",
@@ -155387,7 +155385,7 @@
                   "fill": "$text-secondary",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "右欄「即時活動」只會出現下面十種列。每一列＝圖示 16 · 階段字（Body 600）· 「·」· 項目（Body 次要色）· 撐開 · 尾端（Mono，可選）。同一部片同一個階段只佔一列，翻譯百分比原地更新；批次裡每一部的結果只看批次事件（changed_item），不看單部的轉錄事件。",
+                  "content": "右欄「即時活動」只會出現下面十一種列。每一列＝圖示 16 · 階段字（Body 600）· 「·」· 項目（Body 次要色）· 撐開 · 尾端（Mono，可選）。同一部片同一個階段只佔一列，翻譯百分比原地更新；批次裡每一部的結果只看批次事件（changed_item），不看單部的轉錄事件。",
                   "lineHeight": "$Type/Label/Line",
                   "fontFamily": "$Type/Family/Primary",
                   "fontSize": "$Type/Label/Size",
@@ -155598,7 +155596,108 @@
                       "fill": "$text-secondary",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "② 階段・已過｜同一部進入下一階段、有了結果、批次結束，或連線重開之後，前一列降成靜止、中性，拿掉 %。",
+                      "content": "② 階段・已過｜同一部進入下一階段，或整部完成：前一列降成靜止、中性並打勾，拿掉 %。",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "gSBY2",
+                  "name": "spec-entry",
+                  "width": "fill_container",
+                  "gap": "$Space/lg",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "sl53z",
+                      "name": "row-box",
+                      "width": 400,
+                      "fill": "$bg-primary",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "wQ1yn",
+                          "name": "evt",
+                          "width": "fill_container",
+                          "gap": "$Space/sm",
+                          "padding": [
+                            "$Space/sm",
+                            "$Space/md-plus"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "BQbyU",
+                              "name": "evt-ic",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "circle-dashed",
+                              "library": "lucide",
+                              "fill": "$text-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "K152Qp",
+                              "name": "evt-stage",
+                              "fill": "$text-secondary",
+                              "content": "轉錄中",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "BPZYk",
+                              "name": "evt-dot",
+                              "fill": "$text-muted",
+                              "content": "·",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "JWwuO",
+                              "name": "evt-item",
+                              "fill": "$text-secondary",
+                              "content": "奧本海默",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "m9t7Dv",
+                              "name": "evt-sp",
+                              "width": "fill_container",
+                              "height": 1
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "Z8ORy",
+                      "name": "spec-note",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "②b 階段・中斷｜那一步沒有做完，或我們看不到它了：失敗、批次結束（預算上限／取消／錯誤）、連線中斷後重新連上。不打勾——勾代表做完了。",
                       "lineHeight": "$Type/Label/Line",
                       "fontFamily": "$Type/Family/Primary",
                       "fontSize": "$Type/Label/Size",
@@ -156533,7 +156632,7 @@
                   "fill": "$text-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "播報：清單本身不設 aria-live；另有一個一直掛著的 sr-only 區，只唸③–⑩，階段與百分比不唸。沒有時間戳。最新的在最下面；使用者停在底部時自動捲到底。",
+                  "content": "播報：清單本身不設 aria-live；另有一個一直掛著的 sr-only 區，只唸③–⑩，階段與百分比不唸。沒有時間戳。最新的在最下面；使用者停在底部時自動捲到底。 每一列的階段狀態另有給螢幕報讀的文字（進行中／這一步已完成／已中斷）。一次性的單部任務結束後，工作區回到閒置時紀錄仍留在畫面上。",
                   "lineHeight": "$Type/Label/Line",
                   "fontFamily": "$Type/Family/Primary",
                   "fontSize": "$Type/Label/Size",

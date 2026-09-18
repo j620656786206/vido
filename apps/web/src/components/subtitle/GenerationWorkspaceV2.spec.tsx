@@ -54,7 +54,8 @@ const feed: FeedRow[] = [
     title: '奧本海默',
     seriesTitle: '',
     stage: 'translating',
-    live: true,
+    state: 'live',
+    pipeline: false,
     percentage: 45,
   },
 ];
@@ -83,6 +84,8 @@ describe('GenerationWorkspaceV2 (ux3-ai-2 — state matrix)', () => {
           previewCount: 38,
           onLaunch,
           progress: progress({ items: null }),
+          // Nothing logged this visit (dsr-6d-c-2 CR M5 keeps a non-empty log on idle).
+          feed: [],
         })}
       />
     );
@@ -573,7 +576,8 @@ describe('GenerationWorkspaceV2 — the live log tells the truth (dsr-6d-c-2)', 
               title: 'S04E07 第七章',
               seriesTitle: '怪奇物語',
               stage: 'transcribing',
-              live: false,
+              state: 'passed',
+              pipeline: false,
               percentage: null,
             },
             {
@@ -583,7 +587,8 @@ describe('GenerationWorkspaceV2 — the live log tells the truth (dsr-6d-c-2)', 
               title: 'S04E07 第七章',
               seriesTitle: '怪奇物語',
               stage: 'translating',
-              live: true,
+              state: 'live',
+              pipeline: false,
               percentage: 45,
             },
           ],
@@ -772,7 +777,8 @@ describe('GenerationWorkspaceV2 — the live log tells the truth (dsr-6d-c-2)', 
       title: '奧本海默',
       seriesTitle: '',
       stage: 'translating',
-      live: true,
+      state: 'live',
+      pipeline: false,
       percentage: 45,
     };
     const { rerender } = render(<GenerationWorkspaceV2 {...props({ feed: [stage] })} />);
@@ -801,7 +807,7 @@ describe('GenerationWorkspaceV2 — the live log tells the truth (dsr-6d-c-2)', 
         {...props({
           mode: 'complete',
           progress: progress({ status: 'complete' }),
-          feed: [{ ...stage, live: false, percentage: null }, done, batch],
+          feed: [{ ...stage, state: 'passed', pipeline: false, percentage: null }, done, batch],
         })}
       />
     );
@@ -838,5 +844,71 @@ describe('GenerationWorkspaceV2 — the live log tells the truth (dsr-6d-c-2)', 
     Object.defineProperty(list, 'scrollHeight', { configurable: true, value: 1080 });
     rerender(<GenerationWorkspaceV2 {...props({ feed: many(5) })} />);
     expect(list.scrollTop).toBe(100);
+  });
+
+  it('CR M5: a single job that just finished keeps its log on screen when the page falls back to idle', () => {
+    render(
+      <GenerationWorkspaceV2
+        {...props({
+          mode: 'idle',
+          progress: progress({ status: 'idle', items: null }),
+          feed: [{ seq: 1, kind: 'done', mediaId: 'm9', title: '芭比', seriesTitle: '' }],
+        })}
+      />
+    );
+    expect(screen.getByTestId('workspace-idle')).toBeInTheDocument();
+    expect(within(log()).getByText('芭比')).toBeInTheDocument();
+  });
+
+  it('[P1] idle with nothing logged still has no log pane', () => {
+    render(
+      <GenerationWorkspaceV2
+        {...props({ mode: 'idle', progress: progress({ status: 'idle', items: null }), feed: [] })}
+      />
+    );
+    expect(screen.queryByTestId('workspace-event-log')).not.toBeInTheDocument();
+  });
+
+  it('CR M7: a second identical result is a NEW node in the live region, so it is read again', () => {
+    const batch = (seq: number): FeedRow => ({
+      seq,
+      kind: 'batch',
+      batchId: `b${seq}`,
+      status: 'complete',
+      successCount: 1,
+      failCount: 0,
+      budgetUsd: 5,
+    });
+    const { rerender } = render(<GenerationWorkspaceV2 {...props({ feed: [batch(1)] })} />);
+    const first = screen.getByTestId('workspace-log-announcer').firstElementChild;
+    expect(first).toHaveTextContent('批次完成');
+    rerender(<GenerationWorkspaceV2 {...props({ feed: [batch(1), batch(2)] })} />);
+    const second = screen.getByTestId('workspace-log-announcer').firstElementChild;
+    expect(second).toHaveTextContent('批次完成');
+    expect(second).not.toBe(first);
+  });
+
+  it('CR L10: the row state is readable, not only coloured', () => {
+    render(
+      <GenerationWorkspaceV2
+        {...props({
+          feed: [
+            {
+              seq: 1,
+              kind: 'stage',
+              mediaId: 'm1',
+              title: '奧本海默',
+              seriesTitle: '',
+              stage: 'transcribing',
+              state: 'stopped',
+              percentage: null,
+              pipeline: false,
+            },
+          ],
+        })}
+      />
+    );
+    expect(rows()[0]).toHaveTextContent('（已中斷）');
+    expect(rows()[0].querySelector('.animate-spin')).toBeNull();
   });
 });

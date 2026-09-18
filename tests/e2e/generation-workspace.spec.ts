@@ -214,4 +214,66 @@ test.describe('Generation Workspace @ui @generation-workspace', () => {
     await expect(log).not.toContainText('Searching');
     await expect(log).not.toContainText(running);
   });
+
+  test('[P1] a long log scrolls inside its pane and follows the newest row (CR H3)', async ({
+    page,
+  }) => {
+    await stubCommon(page);
+    await page.route(`${ROUTE_API}/subtitles/generation-batch/status`, (route: Route) =>
+      route.fulfill(jsonOk({ running: true, progress: snapshot(), last: null }))
+    );
+    // 40 films finishing → 40 result rows: far more than one screen.
+    const films = Array.from({ length: 40 }, (_, i) => ({
+      media_id: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
+      title: `第 ${i + 1} 部`,
+      media_type: 'movie',
+      series_title: '',
+      reason: '',
+    }));
+    const frames = films
+      .flatMap((film) => [
+        sseFrame('generation_batch_progress', {
+          ...snapshot(),
+          items: null,
+          changed_item: { ...film, status: 'running' },
+        }),
+        sseFrame('generation_batch_progress', {
+          ...snapshot(),
+          items: null,
+          changed_item: { ...film, status: 'done' },
+        }),
+      ])
+      .join('');
+    let served = 0;
+    await page.route(`${ROUTE_API}/events`, (route: Route) => {
+      served += 1;
+      if (served > 1) return route.abort();
+      return route.fulfill({
+        status: 200,
+        headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' },
+        body: frames,
+      });
+    });
+
+    await page.goto('/activity?view=generation');
+
+    const log = page.getByTestId('workspace-event-log');
+    await expect(log.getByTestId('workspace-feed-row')).toHaveCount(40);
+    const list = log.getByRole('list', { name: '生成事件日誌' });
+    // The LIST scrolls (the pane is capped), and it is parked on the newest row.
+    await expect
+      .poll(() =>
+        list.evaluate((el) => ({
+          scrolls: el.scrollHeight > el.clientHeight,
+          atBottom: el.scrollTop + el.clientHeight >= el.scrollHeight - 2,
+        }))
+      )
+      .toEqual({ scrolls: true, atBottom: true });
+    const newest = log.getByTestId('workspace-feed-row').last();
+    await expect(newest).toContainText('第 40 部');
+    // Scrolling the PAGE parks the pane under the app header (sticky, capped to the
+    // viewport): the newest row is then on screen without touching the list.
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(newest).toBeInViewport();
+  });
 });

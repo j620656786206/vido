@@ -38,8 +38,12 @@ const TABLE: ReadonlyArray<{ match: readonly string[]; copy: FailureCopy }> = [
   { match: ['AI_BUDGET_EXCEEDED'], copy: { text: '已達預算上限', budget: true } },
   { match: ['no audio track found'], copy: { text: '找不到可用的音軌', budget: false } },
   { match: ['ffmpeg not available'], copy: { text: '伺服器缺少 ffmpeg', budget: false } },
-  { match: ['transcription unavailable'], copy: { text: '語音辨識未設定', budget: false } },
-  { match: ['AI_UNAUTHORIZED'], copy: { text: 'API 金鑰無效', budget: false } },
+  {
+    match: ['transcription unavailable', 'API key not configured'],
+    copy: { text: '語音辨識未設定', budget: false },
+  },
+  // The LLM side says AI_UNAUTHORIZED; the Whisper side says `status 401`.
+  { match: ['AI_UNAUTHORIZED', 'status 401'], copy: { text: 'API 金鑰無效', budget: false } },
   {
     match: ['AI_TIMEOUT', 'timed out', 'deadline exceeded'],
     copy: { text: '處理逾時', budget: false },
@@ -56,7 +60,13 @@ export function failureCopy(error: string | null | undefined): FailureCopy {
   return FALLBACK;
 }
 
-export type FeedGlyph = 'loader' | 'check' | 'triangle-alert' | 'circle-alert' | 'circle-pause';
+export type FeedGlyph =
+  | 'loader'
+  | 'check'
+  | 'circle-dashed'
+  | 'triangle-alert'
+  | 'circle-alert'
+  | 'circle-pause';
 
 export interface FeedRowView {
   glyph: FeedGlyph;
@@ -72,6 +82,11 @@ export interface FeedRowView {
   trailClass: string;
   /** What the log's live region reads for this row; null = not announced. */
   announce: string | null;
+  /**
+   * A stage row's state in words, for screen readers only — the glyph and the
+   * colour that carry it are hidden from them (CR L10).
+   */
+  srState: string | null;
 }
 
 const ACCENT = 'text-[var(--accent-text)]';
@@ -99,16 +114,16 @@ function filmName(row: { title: string; seriesTitle: string }): string {
 }
 
 function view(
-  v: Omit<FeedRowView, 'trail' | 'trailClass' | 'spin'> & Partial<FeedRowView>
+  v: Omit<FeedRowView, 'trail' | 'trailClass' | 'spin' | 'srState'> & Partial<FeedRowView>
 ): FeedRowView {
-  return { spin: false, trail: null, trailClass: SECONDARY, ...v };
+  return { spin: false, trail: null, trailClass: SECONDARY, srState: null, ...v };
 }
 
 export function feedRowView(row: FeedRow): FeedRowView {
   switch (row.kind) {
     case 'stage': {
       const name = filmName(row);
-      if (!row.live) {
+      if (row.state === 'passed') {
         return view({
           glyph: 'check',
           glyphClass: MUTED,
@@ -116,6 +131,20 @@ export function feedRowView(row: FeedRow): FeedRowView {
           stageClass: SECONDARY,
           parts: [name],
           announce: null,
+          srState: '（這一步已完成）',
+        });
+      }
+      if (row.state === 'stopped') {
+        // Not a tick: the step did not finish, or we lost sight of it (a failure,
+        // the batch ending, a stream gap). A tick here would claim it was done.
+        return view({
+          glyph: 'circle-dashed',
+          glyphClass: MUTED,
+          stage: STAGE_WORD[row.stage],
+          stageClass: SECONDARY,
+          parts: [name],
+          announce: null,
+          srState: '（已中斷）',
         });
       }
       return view({
@@ -128,6 +157,7 @@ export function feedRowView(row: FeedRow): FeedRowView {
         trail: row.stage === 'translating' && row.percentage !== null ? `${row.percentage}%` : null,
         trailClass: ACCENT,
         announce: null,
+        srState: '（進行中）',
       });
     }
     case 'done': {
