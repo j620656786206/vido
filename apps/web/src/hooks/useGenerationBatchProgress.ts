@@ -16,7 +16,7 @@
  *
  * Rule 23: zero wall-clock reads — progress/cost are all SSE-supplied.
  */
-import { useCallback, useEffect, useReducer, useRef } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { snakeToCamel } from '../utils/caseTransform';
 import type {
   GenerationBatchItemState,
@@ -67,10 +67,46 @@ const initialState: GenerationBatchProgressState = {
   items: null,
 };
 
+/**
+ * The SSE payload = the snapshot shape PLUS the running-only `changed_item`
+ * (dsr-6d-a AC #2): while a batch runs the event sends `items: null` and the
+ * ONE entry whose state just changed, so a 2,400-item select-all does not ship
+ * the whole queue on every tick.
+ */
+interface GenerationBatchSsePayload extends GenerationBatchProgress {
+  changedItem?: GenerationBatchItemState | null;
+}
+
 type Action =
   | { type: 'START'; payload: Partial<GenerationBatchProgressState> }
-  | { type: 'SSE_UPDATE'; payload: GenerationBatchProgress }
+  | { type: 'ATTACH'; payload: GenerationBatchProgress }
+  | { type: 'SSE_UPDATE'; payload: GenerationBatchSsePayload }
   | { type: 'RESET' };
+
+/**
+ * Queue merge rules (dsr-6d-b AC #5), in priority order:
+ *  1. a whole `items` array (the terminal broadcast) replaces what we had;
+ *  2. otherwise a `changed_item` REPLACES the matching entry in place — an id
+ *     we do not know is dropped, never appended (the queue's membership comes
+ *     from the 202/status snapshot, not from the stream);
+ *  3. with no queue seeded yet (`null`) a changed_item is ignored entirely —
+ *     a one-row queue invented from a single event would be a lie about scope.
+ */
+function mergeItems(
+  current: GenerationBatchItemState[] | null,
+  p: GenerationBatchSsePayload
+): GenerationBatchItemState[] | null {
+  if (p.items) return p.items;
+  const changed = p.changedItem;
+  if (!changed || current === null) return current;
+  let found = false;
+  const next = current.map((it) => {
+    if (it.mediaId !== changed.mediaId) return it;
+    found = true;
+    return changed;
+  });
+  return found ? next : current;
+}
 
 function reducer(
   state: GenerationBatchProgressState,
@@ -79,6 +115,27 @@ function reducer(
   switch (action.type) {
     case 'START':
       return { ...initialState, ...action.payload, status: 'running' };
+    case 'ATTACH': {
+      // Seed a snapshot we are NOT streaming (the `last` terminal result, or a
+      // 409 body): the snapshot's own status stands — unlike START, which
+      // forces `running` because it is opening a stream.
+      const p = action.payload;
+      return {
+        ...initialState,
+        batchId: p.batchId ?? '',
+        totalItems: p.totalItems ?? 0,
+        currentIndex: p.currentIndex ?? 0,
+        currentMediaId: p.currentMediaId || null,
+        currentItem: p.currentItem ?? '',
+        successCount: p.successCount ?? 0,
+        failCount: p.failCount ?? 0,
+        pausedCount: p.pausedCount ?? 0,
+        status: p.status ?? 'idle',
+        spentUsd: p.spentUsd ?? 0,
+        budgetUsd: p.budgetUsd ?? 0,
+        items: p.items ?? null,
+      };
+    }
     case 'SSE_UPDATE': {
       const p = action.payload;
       return {
@@ -94,6 +151,7 @@ function reducer(
         status: p.status ?? 'running',
         spentUsd: p.spentUsd ?? state.spentUsd,
         budgetUsd: p.budgetUsd ?? state.budgetUsd,
+        items: mergeItems(state.items, p),
       };
     }
     case 'RESET':
@@ -114,6 +172,13 @@ function isTerminal(status: GenerationBatchHookStatus): boolean {
 
 export function useGenerationBatchProgress() {
   const [progress, dispatch] = useReducer(reducer, initialState);
+  /**
+   * Bumped once per BACKOFF reconnect (never for the first connect). A dropped
+   * terminal event would otherwise leave the UI stuck on 進行中 forever — the
+   * consumer watches this and re-reads GET …/status, which answers with
+   * `{running:false, last}` (9R-16 CR L1).
+   */
+  const [connectionEpoch, setConnectionEpoch] = useState(0);
   const esRef = useRef<EventSource | null>(null);
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const mountedRef = useRef(true);
@@ -146,7 +211,7 @@ export function useGenerationBatchProgress() {
       try {
         const parsed = JSON.parse(e.data);
         // data: line = full Event struct {id,type,data} → payload is parsed.data.
-        const payload = snakeToCamel<GenerationBatchProgress>(parsed.data ?? parsed);
+        const payload = snakeToCamel<GenerationBatchSsePayload>(parsed.data ?? parsed);
         dispatch({ type: 'SSE_UPDATE', payload });
         if (isTerminal(payload.status)) closeSSE();
       } catch {
@@ -159,7 +224,12 @@ export function useGenerationBatchProgress() {
       es.close();
       if (reconnectRef.current) clearTimeout(reconnectRef.current);
       reconnectRef.current = setTimeout(() => {
-        if (mountedRef.current) connectRef.current();
+        if (!mountedRef.current) return;
+        // A gap in the stream may have swallowed the terminal event — tell the
+        // consumer to re-read status. Bumped HERE (the actual reconnect), not
+        // in startTracking's first connect.
+        setConnectionEpoch((n) => n + 1);
+        connectRef.current();
       }, SSE_RECONNECT_MS);
     };
   }, [closeSSE]);
@@ -190,11 +260,29 @@ export function useGenerationBatchProgress() {
     [connect]
   );
 
+  /**
+   * Seed a snapshot WITHOUT opening a stream — for the `last` terminal result
+   * (GET …/status) and any other already-finished snapshot. `startTracking`
+   * cannot do this job: it forces `status: 'running'` and opens an
+   * EventSource, which would paint a finished batch as in-flight and leave a
+   * connection nobody closes (dsr-6d-b AC #5).
+   */
+  const attachSnapshot = useCallback((snapshot: GenerationBatchProgress) => {
+    dispatch({ type: 'ATTACH', payload: snapshot });
+  }, []);
+
   /** Tear down the stream and return to idle (e.g. when the dialog closes). */
   const reset = useCallback(() => {
     closeSSE();
     dispatch({ type: 'RESET' });
   }, [closeSSE]);
 
-  return { progress, status: progress.status, startTracking, reset };
+  return {
+    progress,
+    status: progress.status,
+    startTracking,
+    attachSnapshot,
+    reset,
+    connectionEpoch,
+  };
 }

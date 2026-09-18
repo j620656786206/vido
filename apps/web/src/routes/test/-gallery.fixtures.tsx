@@ -436,6 +436,36 @@ export interface GalleryFixture {
   seedStore?: () => void;
 }
 
+// dsr-6d-b batch-dialog fixture queue. ONE source for every batch state so the
+// four fixtures cannot drift apart; media ids are UUID strings (9R-18), and the
+// episode row carries seriesTitle so the 劇名 + 集數 composition gets a baseline.
+const BATCH_FX_IDS = [
+  '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51',
+  '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52',
+  '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e53',
+  '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e54',
+  '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e55',
+] as const;
+
+const BATCH_FX_ITEMS = [
+  { mediaId: BATCH_FX_IDS[0], title: '沙丘：第二部', mediaType: 'movie', seriesTitle: '' },
+  { mediaId: BATCH_FX_IDS[1], title: '奧本海默', mediaType: 'movie', seriesTitle: '' },
+  { mediaId: BATCH_FX_IDS[2], title: '星際效應', mediaType: 'movie', seriesTitle: '' },
+  {
+    mediaId: BATCH_FX_IDS[3],
+    title: 'S04E07 第七章',
+    mediaType: 'episode',
+    seriesTitle: '怪奇物語',
+  },
+  { mediaId: BATCH_FX_IDS[4], title: '蜘蛛人：無家日', mediaType: 'movie', seriesTitle: '' },
+];
+
+const batchFxItem = (i: number, status: string, reason = '') => ({
+  ...BATCH_FX_ITEMS[i],
+  status,
+  reason,
+});
+
 // sub-6-8b model-picker fixture data. Grades are the MEASURED eval-1 ones —
 // a fixture must not invent a grade the product would never show.
 const CONSENT_MODEL_CHOICES = [
@@ -4893,7 +4923,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         batchId: 'gb-fx-1',
         totalItems: 5,
         currentIndex: 3,
-        currentMediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e53',
+        currentMediaId: BATCH_FX_IDS[2],
         currentItem: '星際效應',
         successCount: 2,
         failCount: 0,
@@ -4901,26 +4931,16 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         status: 'running',
         spentUsd: 0.42,
         budgetUsd: 5,
+        // dsr-6d-b: the row states come from the BACKEND queue, not a guess.
+        items: [
+          batchFxItem(0, 'done'),
+          batchFxItem(1, 'done'),
+          batchFxItem(2, 'running'),
+          batchFxItem(3, 'queued'),
+          batchFxItem(4, 'queued'),
+        ],
       },
-      items: [
-        {
-          mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51',
-          title: '沙丘：第二部',
-          mediaType: 'movie',
-        },
-        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52', title: '奧本海默', mediaType: 'movie' },
-        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e53', title: '星際效應', mediaType: 'movie' },
-        {
-          mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e54',
-          title: '怪奇物語 S04E07',
-          mediaType: 'episode',
-        },
-        {
-          mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e55',
-          title: '蜘蛛人：無家日',
-          mediaType: 'movie',
-        },
-      ],
+      items: BATCH_FX_ITEMS,
       activeItemProgress: {
         phase: 'transcribing',
         failedPhase: null,
@@ -4948,40 +4968,107 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       progress: {
         batchId: 'gb-fx-1',
         totalItems: 5,
-        currentIndex: 3,
-        currentMediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e54',
-        currentItem: '全面啟動',
+        currentIndex: 4,
+        currentMediaId: BATCH_FX_IDS[3],
+        currentItem: '怪奇物語 S04E07 第七章',
         successCount: 3,
         failCount: 0,
         pausedCount: 2,
         status: 'budget_ceiling',
         spentUsd: 5,
         budgetUsd: 5,
+        items: [
+          batchFxItem(0, 'done'),
+          batchFxItem(1, 'done'),
+          batchFxItem(2, 'done'),
+          batchFxItem(3, 'paused'),
+          batchFxItem(4, 'paused'),
+        ],
       },
-      items: [
-        {
-          mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51',
-          title: '沙丘：第二部',
-          mediaType: 'movie',
-        },
-        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52', title: '奧本海默', mediaType: 'movie' },
-        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e53', title: '星際效應', mediaType: 'movie' },
-        {
-          mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e54',
-          title: '怪奇物語 S04E07',
-          mediaType: 'episode',
-        },
-        {
-          mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e55',
-          title: '蜘蛛人：無家日',
-          mediaType: 'movie',
-        },
-      ],
+      items: BATCH_FX_ITEMS,
       onConfirmCancelAll: noop,
       onResume: noop,
       onClose: noop,
     },
     penNode: 'screen-section', // Screen F9-D-v2 (JMqPg)
+    statesOnly: ['default'],
+  },
+  {
+    // dsr-6d-b: the ONLY state that draws failure rows, the failure reasons and
+    // 重試失敗項目 — none of it had a baseline before.
+    id: 'generation-batch-dialog-v2/complete-with-failures',
+    label: 'subtitle/GenerationBatchPanelV2 (complete with failures — reasons + 重試失敗項目)',
+    component: GenerationBatchPanelV2,
+    props: {
+      open: true,
+      status: 'complete',
+      progress: {
+        batchId: 'gb-fx-2',
+        totalItems: 5,
+        currentIndex: 5,
+        currentMediaId: '',
+        currentItem: '',
+        successCount: 3,
+        failCount: 2,
+        pausedCount: 0,
+        status: 'complete',
+        spentUsd: 3.1,
+        budgetUsd: 5,
+        items: [
+          batchFxItem(0, 'done'),
+          batchFxItem(1, 'failed', 'busy_elsewhere'),
+          batchFxItem(2, 'done'),
+          batchFxItem(3, 'failed', 'skipped'),
+          batchFxItem(4, 'done'),
+        ],
+      },
+      items: BATCH_FX_ITEMS,
+      onConfirmCancelAll: noop,
+      onResume: noop,
+      onRetryFailed: noop,
+      onClose: noop,
+    },
+    penNode: 'screen-section', // Screen F8-D-v2 (i9Nun1) — terminal variant
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-batch-dialog-v2/error',
+    label: 'subtitle/GenerationBatchPanelV2 (error — banner + 再產生字幕)',
+    component: GenerationBatchPanelV2,
+    props: {
+      open: true,
+      status: 'error',
+      progress: {
+        batchId: 'gb-fx-3',
+        totalItems: 5,
+        currentIndex: 2,
+        currentMediaId: BATCH_FX_IDS[1],
+        currentItem: '奧本海默',
+        // No `failed` row on purpose: the container derives onRetryFailed from
+        // items[].status, so a fixture WITH one could never render 再產生字幕.
+        // This is the real shape of a crashed batch — finish(error) marks every
+        // unstarted/in-flight entry cancelled (generation_batch.go finish()).
+        successCount: 1,
+        failCount: 0,
+        pausedCount: 0,
+        status: 'error',
+        spentUsd: 0.88,
+        budgetUsd: 5,
+        items: [
+          batchFxItem(0, 'done'),
+          batchFxItem(1, 'cancelled'),
+          batchFxItem(2, 'cancelled'),
+          batchFxItem(3, 'cancelled'),
+          batchFxItem(4, 'cancelled'),
+        ],
+      },
+      items: BATCH_FX_ITEMS,
+      onConfirmCancelAll: noop,
+      onResume: noop,
+      onRestart: noop,
+      onClose: noop,
+    },
+    penNode: 'screen-section', // Screen F8-D-v2 (i9Nun1) — error variant
     statesOnly: ['default'],
   },
   // --- ux3-ai-2 generation workspace (Screen F11-D-v2 l8FsB / F12-D-v2 iH98f) ---

@@ -60,6 +60,12 @@ export interface GenerationProgressV2Props {
   /** Optional cost slot (9R-17 dormant): both must be present to render the line. */
   costUsedText?: string;
   costLimitText?: string;
+  /**
+   * Desktop horizontal alignment of the stage row. Default 'center' is the
+   * standalone dialog (F3/F4) — unchanged. 'start' is the batch queue row
+   * (F8-D-v2), where the stepper sits under the poster's left edge.
+   */
+  align?: 'center' | 'start';
 }
 
 /** F4-D-v2 `pjXCe`: the failure named with the stepper's own words. */
@@ -131,6 +137,7 @@ export function GenerationProgressV2({
   error,
   costUsedText,
   costLimitText,
+  align = 'center',
 }: GenerationProgressV2Props) {
   const states = stepStates(phase, failedPhase);
   const failedText = FAILED_STAGE_TEXT[failedPhase ?? 'extracting'];
@@ -145,7 +152,10 @@ export function GenerationProgressV2({
           Desktop (sm+) keeps the original horizontal stepper — every sm: class computes
           IDENTICALLY to the pre-fix desktop DOM (zero darwin-baseline diff). */}
       <ol
-        className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-center sm:gap-0"
+        className={cn(
+          'flex flex-col gap-1.5 sm:flex-row sm:items-start sm:gap-0',
+          align === 'start' ? 'sm:justify-start' : 'sm:justify-center'
+        )}
         aria-label="字幕生成進度"
       >
         {GENERATION_STAGES.map((stage, i) => {

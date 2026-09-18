@@ -113,13 +113,47 @@ const qbtConnected = {
   configured: true,
 };
 
+const startedBatchItems = [
+  {
+    media_id: '5c2a9d3e-1f4b-4a8c-9d2e-3f5a7b9c1d63',
+    title: '駭客任務',
+    media_type: 'movie',
+    series_title: '',
+  },
+  {
+    media_id: '8e4b2c6a-7d1f-4e3a-b5c9-2a6d8f0e4b57',
+    title: '星際效應',
+    media_type: 'movie',
+    series_title: '',
+  },
+];
+
+/**
+ * 202 body since dsr-6d-a: the enumerated queue PLUS the started batch's own
+ * snapshot, so the dialog paints the queue without waiting for an SSE event.
+ */
 const startedBatch = {
   batch_id: 'gb-e2e-1',
   total_items: 2,
-  items: [
-    { media_id: '5c2a9d3e-1f4b-4a8c-9d2e-3f5a7b9c1d63', title: '駭客任務', media_type: 'movie' },
-    { media_id: '8e4b2c6a-7d1f-4e3a-b5c9-2a6d8f0e4b57', title: '星際效應', media_type: 'movie' },
-  ],
+  items: startedBatchItems,
+  progress: {
+    batch_id: 'gb-e2e-1',
+    total_items: 2,
+    current_index: 1,
+    current_media_id: '5c2a9d3e-1f4b-4a8c-9d2e-3f5a7b9c1d63',
+    current_item: '駭客任務',
+    success_count: 0,
+    fail_count: 0,
+    paused_count: 0,
+    status: 'running',
+    spent_usd: 0,
+    budget_usd: 5,
+    items: startedBatchItems.map((it, i) => ({
+      ...it,
+      status: i === 0 ? 'running' : 'queued',
+      reason: '',
+    })),
+  },
 };
 
 // sub-4-3: a READY candidates snapshot (both library movies, extract route,
@@ -207,7 +241,9 @@ async function stubPopulatedLibrary(page: Page) {
   // Generation-batch dialog on-open calls (9R-16): the recovery status probe
   // (nothing running) + the 缺字幕 preview count.
   await page.route(`${ROUTE_API}/subtitles/generation-batch/status`, (route: Route) =>
-    route.fulfill(jsonOk({ running: false, progress: null }))
+    // dsr-6d-a: `last` is the remembered terminal snapshot — null here means the
+    // dialog opens straight into the consent flow.
+    route.fulfill(jsonOk({ running: false, progress: null, last: null }))
   );
   await page.route(`${ROUTE_API}/subtitles/generation-batch/preview*`, (route: Route) =>
     route.fulfill(jsonOk({ total_items: 2 }))
@@ -308,6 +344,12 @@ test.describe('Batch Subtitle Generation UI @ui @batch-subtitle @ux3-subtitle-v2
       page.getByTestId('gen-batch-row-8e4b2c6a-7d1f-4e3a-b5c9-2a6d8f0e4b57')
     ).toBeVisible();
 
+    // AND: clicking OUTSIDE does NOT close a running batch (dsr-6d-b AC #7 —
+    // only a real browser dispatches Radix's outside-pointer event, so this
+    // assertion cannot live in the jsdom spec).
+    await page.mouse.click(5, 5);
+    await expect(page.getByTestId('generation-batch-dialog-v2')).toBeVisible();
+
     // AND: the wire body is snake_case — CONSENTED ids in list order + the
     // WYSIWYG on-screen ceiling (Rule 18 + 9R-16 AC#1 [@contract-v3])
     expect(captured).not.toBeNull();
@@ -365,18 +407,47 @@ test.describe('Batch Subtitle Generation UI @ui @batch-subtitle @ux3-subtitle-v2
             code: 'TRANSCRIPTION_BATCH_RUNNING',
             message: '已有一個字幕生成批次正在執行',
           },
+          // dsr-6d-a: the 409 body carries the running batch's OWN queue, so
+          // the panel renders real rows instead of the degraded single card.
+          // Counts and items[] must agree — the backend's snapshot always does.
           data: {
             batch_id: 'gb-existing',
-            total_items: 38,
-            current_index: 12,
+            total_items: 3,
+            current_index: 3,
             current_media_id: '9ff0c000-dead-4bee-8f00-000000000999',
             current_item: '正在處理的電影',
-            success_count: 11,
+            success_count: 1,
             fail_count: 1,
             paused_count: 0,
             status: 'running',
             spent_usd: 0.42,
             budget_usd: 5,
+            items: [
+              {
+                media_id: '7aa1c000-0000-4bee-8f00-000000000001',
+                title: '已完成的電影',
+                media_type: 'movie',
+                series_title: '',
+                status: 'done',
+                reason: '',
+              },
+              {
+                media_id: '7aa1c000-0000-4bee-8f00-000000000002',
+                title: '別處在處理的電影',
+                media_type: 'movie',
+                series_title: '',
+                status: 'failed',
+                reason: 'busy_elsewhere',
+              },
+              {
+                media_id: '9ff0c000-dead-4bee-8f00-000000000999',
+                title: '正在處理的電影',
+                media_type: 'movie',
+                series_title: '',
+                status: 'running',
+                reason: '',
+              },
+            ],
           },
         }),
       })
@@ -387,14 +458,18 @@ test.describe('Batch Subtitle Generation UI @ui @batch-subtitle @ux3-subtitle-v2
     await confirmAndStart(page);
 
     // THEN: the panel attaches to the running batch (processed = success + fail)
-    await expect(page.getByTestId('gen-batch-counter')).toHaveText('12 / 38');
-    // The status probe has no items[] — the in-flight fallback card renders.
+    await expect(page.getByTestId('gen-batch-counter')).toHaveText('2 / 3');
+    // dsr-6d-b: the row now comes from the 409 body's items[].
     await expect(
       page.getByTestId('gen-batch-row-9ff0c000-dead-4bee-8f00-000000000999')
     ).toBeVisible();
     await expect(
       page.getByTestId('gen-batch-row-9ff0c000-dead-4bee-8f00-000000000999')
     ).toContainText('正在處理的電影');
+    // dsr-6d-b: the refused row says WHY, instead of being drawn as 完成.
+    await expect(
+      page.getByTestId('gen-batch-row-7aa1c000-0000-4bee-8f00-000000000002')
+    ).toContainText('這部正在別處處理');
     await expect(page.getByTestId('consent-start-error')).toHaveCount(0);
   });
 
