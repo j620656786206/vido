@@ -1,6 +1,6 @@
 # Story DSR.6d-c-1：生成工作區的佇列改看後端給的真相——批次一結束不再整區空白，切走分頁再回來也不會卡在「進行中」
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -402,6 +402,7 @@ CR 後 mutation check：把上面每一條修法拿掉，**9 條測試變紅**�
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-18 | ✅ **DONE** —— PR #469 合併進 main（commit `5dcaaadd`）。CI **17 pass / 0 fail**：Lint、Unit、Go、4 個 E2E shard、3 個 Build、Serve Smoke、4 個視覺 shard。視覺第一輪 4 個 shard 紅，查證是**純粹缺 `-linux` 基準、零像素差異**（四行都是 `A snapshot doesn't exist at …-visual-linux.png`），手動觸發 Visual Regression workflow → bootstrap PR #470（4 張 PNG ＋ 一行稽核紀錄，無原始碼）→ 合進分支 → 第二輪全綠。新增的 e2e `@generation-workspace` 在 CI 的 firefox／webkit 上也綠了，證實本機那兩個 project 失敗只是**沒安裝瀏覽器**（`Executable doesn't exist at …/firefox-1509/…`）。 |
 | 2026-09-18 | 🚧 **REVIEW**。Task 1–8 全數完成。閘門：lint 0 errors、typecheck、design-tokens、**web 3771/3771（+32）**、api 全綠、**新增 e2e `@generation-workspace` 真瀏覽器 3/3 綠**。8 項修法做過 mutation check（拿掉 → 22 條紅）。視覺：三張重生、新增 `complete-with-failures`、過期 `-linux` 已 `git rm`。新立 `disc-2026-09-single-job-title-missing`。 |
 | 2026-09-18 | Task 2–7（AC #2–#9）：佇列 items-first、狀態探測三條路＋`last`、`dismiss` 第一個呼叫端、status key 匯出＋對話框 invalidate、逐部訂閱跟著換片、取消兩段式確認、終態五組 invalidate、母版 `GenQueueRow-v2` 實作、金額轉中性、SSE 膠囊誠實、缺字幕數含分集、夾具與基準線。 |
 | 2026-09-18 | Task 1（AC #1）設計稿：F12 列與數字轉中性（Q1 裁定）、四處 `$warning`→`$warning-text`、刪 `ZMYbU`「全部取消」與過期註記 `DP53I`、改寫 `K5gn5g`／`B5D2a5`、45% 依 dsr-6d-b F8 先例關掉（而非改文案）。裁切 0／0，母版未動。 |
