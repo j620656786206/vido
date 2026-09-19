@@ -1,6 +1,6 @@
 # Story disc-2026-09-generation-resume-b-asr-chunk-store：語音辨識到一半被預算擋下，下次只辨識沒做過的段——每段辨識完就存文字，音訊不存
 
-Status: in-progress
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -73,7 +73,7 @@ so that the $0.48 already paid for chunks 1–8 is not paid again, and a 4K remu
 - [x] **Task 3 — `transcribeAudio` 走快取＋成功後清理（AC: #3, #4）**：紅測試（8/16 被擋→再跑呼叫 8 次、位元相同、身分變則 miss、讀寫失敗、壞 JSON、unfiltered 退路、短檔、規模）→ 實作
 - [x] **Task 4 — 批次先跑有進度的片（AC: #6）**：紅測試（順序、穩定、nil port、查詢次數）→ `ResumeProgressFinder`＋`sort.SliceStable`＋`main.go` 接線
 - [x] **Task 5 — 收尾（AC: #7, #8）**：全套閘門；mutation check（拿掉 `GetMany`／拿掉 `Set`／key 少一欄／成功後不刪——各至少一紅）
-- [ ] **Task 6 — 真機驗證（AC: #5）**
+- [x] **Task 6 — 真機驗證（AC: #5）**
 
 ## Dev Notes
 
@@ -142,7 +142,17 @@ Claude Fable 5.1（Dev Amelia，2026-09-18）
 - **`transcribeAudio` 多一個 `*asrChunkScope` 參數**（nil ＝ 舊行為）：`runPipeline` 由 `mediaID`＋`osFileIdentity(filePath)`＋`selectedTrack.Index`＋lang＋`asrEndpointOf(s.asr)` 建 scope；`osFileIdentity` 失敗 → Warn、scope=nil、全部辨識。
 - **端點指紋退路**：ASR provider 沒實作 `EndpointFingerprint()`（測試 fake、直接注入的 `*ai.WhisperClient`）→ 用 `"|" + ai.WhisperModel`，與 holder 的 hosted 預設同值。
 - 沒動：DB `subtitle_status`、SSE／202／status 形狀、governor／budget、`subtitle` 套件、migration（AC #7）。
-- Task 6 真機驗證見下方 Change Log（待跑）。
+- ✅ **Task 6 真機驗證（2026-09-18 23:12 → 2026-09-19 13:19，NAS 隔離容器 `vido-resume-test`：正式 image ＋ 交叉編譯二進位覆蓋 `/usr/local/bin/api`，DB 副本、scratch symlink；同一部片 `ceb9fec6`，157 min／66.8 GB；正式 Vido 全程未動、跑完 `docker rm -f`＋`rm -rf`、正式片庫資料夾 0 個 srt）**：
+
+  | 回合 | 設定 | 結果 |
+  | --- | --- | --- |
+  | 1 | `AI_RUN_BUDGET_USD=0.30` | 抽音訊 9:20 → `hits=0 total=16` → 第 1–5 段各 $0.06（`run_spent_usd=0.3`）→ 第 6 段 `AI budget exhausted — skipping call` → `transcription failed … AI_BUDGET_EXCEEDED`。**`cache_entries` 6 列**：5 段（15–24 KB／段，`{"filtered":…,"unfiltered":…}`）＋ manifest `{"track":1,"lang":"en","chunk_seconds":600,"done":[0,600,1200,1800,2400]}`。 |
+  | 2a | `AI_RUN_BUDGET_USD=5.0` | `hits=5 total=16`、從第 6 段開始 → OpenAI 回 **429 `insufficient_quota`**（帳號沒額度）→ run 失敗、$0、**6 列原封不動**（失敗不清暫存 ✅）。 |
+  | 2b | 同上（儲值後） | 家裡網路斷線：`lookup api.openai.com … i/o timeout` → run 失敗、$0、6 列仍在。 |
+  | 2c | 同上（網路恢復） | **`hits=5 total=16`、`asr_calls=11`、`asr_seconds=6425`**（＝11 × 600 − 尾段）、`spent_usd=3.13`（辨識 $0.66 ＋ 翻譯 $2.47）；`.en.srt` 寫出後 **`asr_chunk` 列 ＝ 0**（翻譯還在跑時查已是 0）；`.en.srt`／`.zh-Hant.srt` 各 2,014 句；`transcription complete` `duration≈25m38s`。 |
+
+  結論：AC #5 的三個數字（`hits=5/16`、`asr_calls=11`、成功後列數 0）全部命中；兩次意外中斷（沒額度、斷網）額外證明「失敗不清暫存」。
+- 真機順帶看到（非本單）：2c 翻譯階段 Claude 有一批（20–30）逾時 3 次 → 31 句保留英文 → row 記 `untranslated`（既有的 partial 語意，`backlog-translate-budget-partial-progress`／story A 範圍）。
 
 ### Discovery Triage
 
@@ -150,6 +160,7 @@ Claude Fable 5.1（Dev Amelia，2026-09-18）
 - **① expand-scope-in-place**：`ASRProviderHolder` 沒有排除金鑰的端點 accessor → AC #1；manifest（為 story C 準備）→ AC #2。
 - **② spawn-blocking-story**：無。
 - **③ backlog-with-carry-forward-link**：`disc-2026-09-generation-resume-c-estimate-deduction`（sprint 條目）；`disc-2026-09-generation-resume-a-translation-cache`（同時建單）。
+- **③（dev 真機驗證時新增）**：`disc-2026-09-asr-quota-429-treated-as-transient`——OpenAI 429 `insufficient_quota`（沒額度）被當成暫時性錯誤重試 3 次，還被 `DetailedTranscriber` 誤判成「引擎不支援 verbose_json」而關掉幻覺過濾；`disc-2026-09-asr-base-url-assumed-free`——`ASR_BASE_URL` 有設就記 $0，接 Groq（$0.04/hr，OpenAI 相容）這類**付費**相容端點時預算完全失效；順帶：Groq 換過去每部片辨識 $0.94 → $0.10。
 - Reference: `project-context.md` Rule 24
 
 ### File List
@@ -170,6 +181,7 @@ Claude Fable 5.1（Dev Amelia，2026-09-18）
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-19 | 🚧 **REVIEW**（Dev Amelia）。Task 6 真機驗證通過：$0.30 回合存 5 段＋manifest；$5 回合 `hits=5/16`、`asr_calls=11`、$3.13、成功後列數 0；中途兩次外部中斷（OpenAI 沒額度、家裡斷網）暫存都沒掉。NAS 清理完畢、正式 Vido 未動。兩條新 disc 立案（429 沒額度被當暫時性錯誤；`ASR_BASE_URL` 一律記 $0）。 |
 | 2026-09-18 | Dev Amelia：Task 1–5 完成（紅測試→實作→mutation 六刀全殺→全套閘門綠）。Task 6 真機驗證待跑。 |
 | 2026-09-18 | ⚖️ Alexyu 追問「幾百幾千部卡在半路」：查證預算是每批一個信封、missing 順序是字母序、selected 照使用者順序——每次換選片就會累積半成品且永遠做不完。補裁定 9／AC #6：批次先跑有進度的片。 |
 | 2026-09-18 | Story 建立（SM Bob, create-story；main `ef224134`）。拆三張的第二張。裁定：存段的文字不存音訊（續跑重抽 5 分鐘換小 NAS 不用放 600 MB）；key 排除金鑰；沿用 `osFileIdentity`；一份 manifest 給估價用；成功後刪；快取失敗只 Warn；不改 DB 狀態、不動預算。 |
