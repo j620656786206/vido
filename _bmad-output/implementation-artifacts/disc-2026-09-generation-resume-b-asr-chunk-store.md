@@ -152,6 +152,7 @@ Claude Fable 5.1（Dev Amelia，2026-09-18）
   | 2c | 同上（網路恢復） | **`hits=5 total=16`、`asr_calls=11`、`asr_seconds=6425`**（＝11 × 600 − 尾段）、`spent_usd=3.13`（辨識 $0.66 ＋ 翻譯 $2.47）；`.en.srt` 寫出後 **`asr_chunk` 列 ＝ 0**（翻譯還在跑時查已是 0）；`.en.srt`／`.zh-Hant.srt` 各 2,014 句；`transcription complete` `duration≈25m38s`。 |
 
   結論：AC #5 的三個數字（`hits=5/16`、`asr_calls=11`、成功後列數 0）全部命中；兩次意外中斷（沒額度、斷網）額外證明「失敗不清暫存」。
+- **AC #6 實測毫秒**（/ship 前補，暫時性測試、未入庫）：檔案型 SQLite、1,000 部片（每 10 部一份 manifest、每 25 部 `untranslated`＋SRT 在）→ `HasResumeProgress` 1,000 次 **39 ms（39 µs／部）**；202 回應前的排序成本可忽略。
 - 真機順帶看到（非本單）：2c 翻譯階段 Claude 有一批（20–30）逾時 3 次 → 31 句保留英文 → row 記 `untranslated`（既有的 partial 語意，`backlog-translate-budget-partial-progress`／story A 範圍）。
 
 ### Discovery Triage
