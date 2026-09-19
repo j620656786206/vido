@@ -11,6 +11,8 @@ import (
 
 	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/ai/prompts"
+	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/segkey"
 	"github.com/vido/api/internal/sse"
 )
 
@@ -60,6 +62,11 @@ type TranslateOption func(*translateConfig)
 type translateConfig struct {
 	metadata prompts.MediaMetadata
 	level    prompts.LocalizationLevel
+	// store + version are the resume seam
+	// (disc-2026-09-generation-resume-a-translation-cache). nil store = the
+	// pre-story behaviour, byte for byte.
+	store   SegmentStore
+	version models.RunVersion
 }
 
 // WithLocalizationLevel selects the sub-7-4 style section for this run. The
@@ -74,6 +81,22 @@ func WithLocalizationLevel(level prompts.LocalizationLevel) TranslateOption {
 // renders nothing — see composeSystemPrompt.
 func WithMediaMetadata(md prompts.MediaMetadata) TranslateOption {
 	return func(cfg *translateConfig) { cfg.metadata = md }
+}
+
+// WithSegmentCache makes this translation resumable: every cue already
+// translated under this exact RunVersion is served from the store instead of
+// the model, and every batch the model answers is written back at once
+// (disc-2026-09-generation-resume-a-translation-cache AC #4).
+//
+// The version is what makes a hit SAFE to serve — change the metadata, the
+// glossary, the prompt or the model and the key changes, so the cue is
+// re-translated rather than answered with a rendering that no longer matches
+// what was asked. A nil store leaves every existing caller untouched.
+func WithSegmentCache(store SegmentStore, version models.RunVersion) TranslateOption {
+	return func(cfg *translateConfig) {
+		cfg.store = store
+		cfg.version = version
+	}
 }
 
 func newTranslateConfig(opts []TranslateOption) *translateConfig {
@@ -95,9 +118,11 @@ func newTranslateConfig(opts []TranslateOption) *translateConfig {
 //   - this composes the already-shipped BuildMetadataSection at the call site
 //     and edits NO text in prompts/subtitle_translator.go, so the P11 pin digest
 //     is unchanged;
-//   - this (ASR) leg has no segment cache at all — splitCachedCues is
-//     pipeline-only — while a bump WOULD re-key the extract leg's whole library
-//     (RunVersion embeds the prompt version) to re-translate for zero gain.
+//   - a bump WOULD re-key BOTH legs' whole cached library (RunVersion embeds
+//     the prompt version) to re-translate for zero gain. Since
+//     disc-2026-09-generation-resume-a this leg has the same per-cue segment
+//     cache the extract leg has, keyed by the same function
+//     (`internal/segkey`), so the cost of a needless bump is now doubled.
 //
 // TestSubtitleTranslatorPromptVersion_NotBumpedBy9R8 pins the decision.
 //
@@ -152,6 +177,14 @@ func toPromptGlossary(pairs []GlossaryPair) []prompts.GlossaryEntry {
 	return out
 }
 
+// modelNamer is the OPTIONAL seam a provider implements to say which model it
+// would actually dispatch to (`*ClaudeProviderHolder` does). The
+// ai.DetailedTranscriber precedent: a provider without it is not an error, it
+// simply falls through to the deployment default.
+type modelNamer interface {
+	EffectiveModel() string
+}
+
 // TranslationService uses Claude API to translate English subtitles to Traditional Chinese.
 type TranslationService struct {
 	provider ai.TextCompleter
@@ -191,6 +224,33 @@ func (s *TranslationService) IsConfigured() bool {
 		return probe.IsConfigured(context.Background())
 	}
 	return true
+}
+
+// EffectiveModelID names the model this run's translations will be attributed
+// to — the ModelID half of models.RunVersion, and therefore part of every
+// segment-cache key (disc-2026-09-generation-resume-a AC #3).
+//
+// It is never empty, and that is the point: if the default-model runs keyed on
+// "" while the same model picked explicitly keyed on its id, the two
+// populations would never share a cached cue and every hit rate would silently
+// halve. Three sources, most specific first:
+//  1. the model the user picked for this run (ai.WithModelID on the ctx);
+//  2. the model the provider would actually dispatch to (a holder honouring
+//     CLAUDE_MODEL knows this; a plain client does not implement the seam);
+//  3. the deployment default — the same fallback the extract leg's
+//     currentModelID uses.
+func (s *TranslationService) EffectiveModelID(ctx context.Context) string {
+	if id := ai.ModelIDFromContext(ctx); id != "" {
+		return id
+	}
+	if s != nil && s.provider != nil {
+		if namer, ok := s.provider.(modelNamer); ok {
+			if id := namer.EffectiveModel(); id != "" {
+				return id
+			}
+		}
+	}
+	return ai.DefaultClaudeModel
 }
 
 // Translate translates subtitle blocks from English to Traditional Chinese.
@@ -266,6 +326,55 @@ func (s *TranslationService) TranslateWithGlossary(ctx context.Context, blocks [
 	return translated, outcome, err
 }
 
+// splitCachedBlocks is the ONE batched read that decides what this run has to
+// pay for (disc-2026-09-generation-resume-a AC #4).
+//
+// Hits are written straight into `result`, so they serve double duty: they are
+// the finished translation AND the context the first fresh batch reads. Misses
+// come back as SOURCE POSITIONS in source order, which is what lets the batch
+// loop keep `result`, the progress count and the cache keys aligned without a
+// second lookup table.
+//
+// Every failure here is a miss, never an error: a cache that cannot be read
+// costs tokens, and failing a paid run over it would be strictly worse than
+// paying again (Rule 13 case 3).
+func (s *TranslationService) splitCachedBlocks(ctx context.Context, blocks, result []TranslationBlock, cfg *translateConfig) ([]string, []int) {
+	pending := make([]int, 0, len(blocks))
+	if cfg.store == nil {
+		for i := range blocks {
+			pending = append(pending, i)
+		}
+		return nil, pending
+	}
+
+	keys := make([]string, len(blocks))
+	for i, b := range blocks {
+		keys[i] = segkey.SegmentKey(b.Text, cfg.version)
+	}
+
+	values, err := cfg.store.GetMany(ctx, keys)
+	if err != nil {
+		slog.Warn("segment cache read failed — translating every cue",
+			"cue_count", len(blocks), "error", err)
+		for i := range blocks {
+			pending = append(pending, i)
+		}
+		return keys, pending
+	}
+
+	hits := 0
+	for i := range blocks {
+		if text, ok := values[keys[i]]; ok {
+			result[i].Text = text
+			hits++
+			continue
+		}
+		pending = append(pending, i)
+	}
+	slog.Info("segment cache", "hits", hits, "total", len(blocks), "to_translate", len(pending))
+	return keys, pending
+}
+
 // TranslateWithGlossaryHarvest is TranslateWithGlossary plus the sub-5-5 AC #3
 // harvest return: the proper-noun renderings the model reported in each batch's
 // trailer, merged across batches with the FIRST occurrence winning (the model's
@@ -294,27 +403,50 @@ func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, b
 	englishKept := 0
 	var harvested map[string]string
 
-	for batchStart := 0; batchStart < totalBlocks; batchStart += batchSize {
+	// disc-2026-09-generation-resume-a: one batched read decides which cues an
+	// earlier run already paid for. `pending` is the source positions that
+	// still need the model, in source order; with no store it is simply every
+	// position, which keeps the pre-story path byte-identical.
+	keys, pending := s.splitCachedBlocks(ctx, blocks, result, cfg)
+	processedBlocks = totalBlocks - len(pending)
+	if processedBlocks > 0 && progressFn != nil {
+		// The first frame already reflects what the earlier run finished —
+		// a resumed run that reported 0% would look like it lost the work.
+		progressFn(float64(processedBlocks) / float64(totalBlocks) * 100)
+	}
+	writeFailures := 0
+
+	for batchStart := 0; batchStart < len(pending); batchStart += batchSize {
 		// Check context cancellation
 		if err := ctx.Err(); err != nil {
 			return nil, nil, TranslationOutcome{}, fmt.Errorf("translation cancelled: %w", err)
 		}
 
 		batchEnd := batchStart + batchSize
-		if batchEnd > totalBlocks {
-			batchEnd = totalBlocks
+		if batchEnd > len(pending) {
+			batchEnd = len(pending)
 		}
 
-		batch := blocks[batchStart:batchEnd]
+		// The batch's SOURCE positions: with a cache these skip the hits, so a
+		// batch is always ten cues the model has not been paid for yet.
+		batchAt := pending[batchStart:batchEnd]
+		batch := make([]TranslationBlock, len(batchAt))
+		for i, at := range batchAt {
+			batch[i] = blocks[at]
+		}
 
-		// Build context from previous translated blocks (AC #2)
+		// Build context from previous translated blocks (AC #2).
+		// Taken from `result` at the SOURCE positions before this batch, so a
+		// resumed run reads the cached translations rather than the English
+		// they replaced — otherwise the first fresh batch after a resume would
+		// see English context and drift in register and proper nouns.
 		var contextBlocks []prompts.SubtitleTranslatorBlock
-		if batchStart > 0 {
-			contextStart := batchStart - contextWindow
+		if first := batchAt[0]; first > 0 {
+			contextStart := first - contextWindow
 			if contextStart < 0 {
 				contextStart = 0
 			}
-			for i := contextStart; i < batchStart; i++ {
+			for i := contextStart; i < first; i++ {
 				contextBlocks = append(contextBlocks, prompts.SubtitleTranslatorBlock{
 					Index: result[i].Index,
 					Text:  result[i].Text, // Use translated text as context
@@ -346,7 +478,9 @@ func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, b
 			// keep-English tolerance — remaining batches would all fail the
 			// same way, and the caller needs the sentinel to pause the batch.
 			if errors.Is(err, ai.ErrBudgetExceeded) {
-				return nil, nil, TranslationOutcome{}, fmt.Errorf("translation stopped at block %d: %w", batchStart, err)
+				// The batches already written to the cache above ARE the
+				// progress: the next run reads them back and starts here.
+				return nil, nil, TranslationOutcome{}, fmt.Errorf("translation stopped at block %d: %w", batchAt[0], err)
 			}
 
 			// AC #5: on error, keep English text for failed blocks
@@ -379,12 +513,29 @@ func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, b
 		harvested = mergeHarvestedTerms(harvested, batchTerms)
 
 		for i, b := range batch {
-			resultIdx := batchStart + i
+			resultIdx := batchAt[i]
 			if text, ok := translations[b.Index]; ok {
 				result[resultIdx].Text = text
+				// Written the moment it arrives, not at the end of the track:
+				// the run may never reach the end, and what is not written
+				// here is what the next run pays for again. The model's RAW
+				// output is stored — OpenCC and the Taiwan lexicon run over
+				// the whole assembled SRT afterwards, so a hit goes through
+				// exactly the same post-processing as a fresh translation.
+				if cfg.store != nil {
+					if err := cfg.store.Set(ctx, keys[resultIdx], text, segkey.TTL); err != nil {
+						writeFailures++
+						if writeFailures == 1 {
+							slog.Warn("segment cache write failed — the next run pays for these cues again",
+								"cue_index", b.Index, "error", err)
+						}
+					}
+				}
 			} else {
 				// bugfix-j: a response missing this block keeps English — that
-				// is a partial outcome, not a silent nothing.
+				// is a partial outcome, not a silent nothing. It is also NOT
+				// cached: storing the English would make every later run serve
+				// it back as though it had been translated.
 				englishKept++
 			}
 		}
@@ -399,6 +550,10 @@ func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, b
 			"translated", len(translations),
 			"total", len(batch),
 		)
+	}
+
+	if writeFailures > 0 {
+		slog.Warn("segment cache writes failed", "failed_cues", writeFailures, "translated_cues", len(pending))
 	}
 
 	outcome := TranslationOutcome{EnglishKeptBlocks: englishKept, TotalBlocks: totalBlocks}

@@ -2,17 +2,13 @@ package subtitle
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
-	"sort"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/vido/api/internal/ai/prompts"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
+	"github.com/vido/api/internal/segkey"
 )
 
 // ─── Storage port ──────────────────────────────────────────────────────────
@@ -39,27 +35,23 @@ type SegmentCache interface {
 	Set(ctx context.Context, key, value string, ttl time.Duration) error
 }
 
+// The key family's definition lives in internal/segkey so the
+// speech-recognition leg can share it byte-for-byte — Rule 19 forbids
+// `services` importing this package, and a second copy of a hash function
+// drifts silently (disc-2026-09-generation-resume-a-translation-cache AC #1).
+// These aliases keep this package's call sites and tests unchanged.
 const (
 	// segmentCacheType tags the tier so ClearByType can evict just this family.
-	segmentCacheType = "subtitle_segment"
+	segmentCacheType = segkey.Type
 
 	// segmentCacheTTL follows the AD #4 AI-parsing precedent. Version-bumped
 	// keys orphan stale entries anyway, so the TTL is a floor on storage growth
 	// rather than a correctness lever.
-	segmentCacheTTL = 30 * 24 * time.Hour
+	segmentCacheTTL = segkey.TTL
 
 	// segmentKeyPrefix namespaces the key family and versions the key FORMAT
 	// (as opposed to RunVersion, which versions the key's INPUTS).
-	segmentKeyPrefix = "subseg:v1:"
-
-	// fieldSep separates fields inside a canonical serialization. \x1f is the
-	// ASCII unit separator: it cannot occur in TMDb metadata or subtitle text,
-	// so "AB"+""+sep and "A"+"B"+sep can never hash alike.
-	fieldSep = "\x1f"
-
-	// payloadSep separates the cue text from the version tuple. A distinct byte
-	// keeps the two halves un-forgeable against each other.
-	payloadSep = "\x00"
+	segmentKeyPrefix = segkey.Prefix
 )
 
 // segmentCacheRepository adapts repository.CacheRepositoryInterface to
@@ -110,26 +102,15 @@ func (r *segmentCacheRepository) Set(ctx context.Context, key, value string, ttl
 // order and is rendered in that order, so a reordering is a genuinely different
 // prompt. The glossary is excluded: it has its own RunVersion field.
 func MetadataHash(tctx TranslateContext) string {
-	fields := []string{
-		tctx.Title,
-		tctx.OriginalTitle,
-		strconv.Itoa(tctx.Year),
-		strings.Join(sortedCopy(tctx.Genres), ","),
-		tctx.Overview,
-		strings.Join(tctx.Cast, ","),
-		strings.Join(sortedCopy(tctx.Countries), ","),
-	}
-	sum := sha256.Sum256([]byte(strings.Join(fields, fieldSep)))
-	return hex.EncodeToString(sum[:])
-}
-
-// sortedCopy sorts without touching the caller's slice — the prompt renders the
-// ORIGINAL order, and silently reordering a caller's metadata from a hash
-// function would be an invisible side effect.
-func sortedCopy(values []string) []string {
-	out := append([]string(nil), values...)
-	sort.Strings(out)
-	return out
+	return segkey.MetadataHash(prompts.MediaMetadata{
+		Title:         tctx.Title,
+		OriginalTitle: tctx.OriginalTitle,
+		Year:          tctx.Year,
+		Genres:        tctx.Genres,
+		Overview:      tctx.Overview,
+		Cast:          tctx.Cast,
+		Countries:     tctx.Countries,
+	})
 }
 
 // segmentKey is the cue-grain cache key: content hash + the full RunVersion
@@ -144,12 +125,7 @@ func sortedCopy(values []string) []string {
 // the named silent-failure trap: changing the prompt and re-running would serve
 // the previous translation back, so two pilot variants would look identical.
 func segmentKey(cueText string, v models.RunVersion) string {
-	payload := cueText + payloadSep + strings.Join([]string{
-		v.MetadataHash, v.GlossaryVersion, v.PromptVersion, v.ModelID,
-	}, fieldSep)
-
-	sum := sha256.Sum256([]byte(payload))
-	return segmentKeyPrefix + hex.EncodeToString(sum[:])
+	return segkey.SegmentKey(cueText, v)
 }
 
 // GlossaryVersionHash is the GlossaryVersion half of models.RunVersion
@@ -166,14 +142,7 @@ func segmentKey(cueText string, v models.RunVersion) string {
 // function must not reorder it) and joined with the unforgeable fieldSep so
 // "AB"+"" and "A"+"B" can never collide.
 func GlossaryVersionHash(glossary []prompts.GlossaryEntry) string {
-	pairs := make([]string, 0, len(glossary)+1)
-	for _, e := range glossary {
-		pairs = append(pairs, e.Source+fieldSep+e.Target)
-	}
-	sort.Strings(pairs)
-	pairs = append(pairs, "lexicon"+fieldSep+prompts.LexiconVersion())
-	sum := sha256.Sum256([]byte(strings.Join(pairs, fieldSep)))
-	return hex.EncodeToString(sum[:])
+	return segkey.GlossaryVersionHash(glossary)
 }
 
 // runVersion assembles the tuple this run is identified by. GlossaryVersion

@@ -625,6 +625,11 @@ func main() {
 	// an interrupted run (money ceiling, deadline, restart) in cache_entries,
 	// so the next run pays only for the chunks it never got to.
 	transcriptionService.SetASRChunkStore(services.NewASRChunkStore(repos.Cache))
+	// disc-2026-09-generation-resume-a: paid-for TRANSLATED cues survive an
+	// interrupted run in the same cache_entries table the extract leg uses, so
+	// the next run translates only what is missing. Wired unconditionally —
+	// legacy mode had no cache of any kind before this.
+	transcriptionService.SetSegmentStore(services.NewSegmentStore(repos.Cache))
 	// disc-2026-09-transcription-run-5min-hard-timeout: the post-extraction
 	// phase is budgeted by media length, not a fixed 5 minutes.
 	transcriptionService.SetRunBudget(

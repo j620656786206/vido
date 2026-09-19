@@ -107,6 +107,52 @@ func TestLeafPackagesHaveNoInternalDeps(t *testing.T) {
 	}
 }
 
+// TestSegkeyDependsOnlyOnLeaves pins internal/segkey one level above the leaf
+// packages (project-context.md Rule 19).
+//
+// segkey exists so BOTH translation legs share one definition of a
+// segment-cache key: `subtitle` (embedded tracks) and `services` (speech
+// recognition), which may not import `subtitle`. That only works while segkey
+// itself stays importable from everywhere — the moment it grows an import of
+// `services`, `subtitle` or anything heavier, one of the two legs stops
+// compiling, and the tempting "fix" is a second copy of the hash function.
+// A second copy drifts silently: no error, just a cache that stops hitting.
+//
+// It is NOT on the leaf list (it imports models and ai/prompts, both of which
+// are themselves dependency-free), so this test names exactly what it may use.
+func TestSegkeyDependsOnlyOnLeaves(t *testing.T) {
+	allowed := map[string]bool{
+		importPathPrefix + "segkey":     true,
+		importPathPrefix + "models":     true,
+		importPathPrefix + "ai/prompts": true,
+	}
+
+	cmd := exec.Command("go", "list", "-deps", "-f", "{{if not .Standard}}{{.ImportPath}}{{end}}", "./segkey")
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("go list -deps ./segkey failed: %v\nstderr: %s", err, stderr.String())
+	}
+
+	var bad []string
+	for _, line := range strings.Split(string(out), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || !strings.HasPrefix(line, importPathPrefix) || allowed[line] {
+			continue
+		}
+		bad = append(bad, line)
+	}
+	if len(bad) > 0 {
+		t.Errorf(
+			"internal/segkey must stay importable from BOTH services and subtitle, "+
+				"so it may only depend on models and ai/prompts — it now also imports %v. "+
+				"Move the new dependency out, or Rule 19's shared-key arrangement breaks.",
+			bad,
+		)
+	}
+}
+
 // TestScanImports_DetectsViolation proves that the real enforcement helper
 // (scanImports) actually flags bad imports in production files AND correctly
 // ignores external test packages. Without this, the production TestXxx tests

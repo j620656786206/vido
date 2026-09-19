@@ -21,6 +21,7 @@ import (
 	"github.com/vido/api/internal/ai/prompts"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
+	"github.com/vido/api/internal/segkey"
 	"github.com/vido/api/internal/sse"
 )
 
@@ -129,7 +130,11 @@ type TranscriptionService struct {
 	// chunkStore keeps each paid-for ASR chunk transcript until the run's
 	// .en.srt is written, so an interrupted run resumes at the first
 	// un-transcribed chunk (disc-2026-09-generation-resume-b). nil = off.
-	chunkStore         ASRChunkStore
+	chunkStore ASRChunkStore
+	// segmentStore keeps each paid-for TRANSLATED cue, so a run stopped by the
+	// money ceiling resumes at the first untranslated cue instead of paying for
+	// the finished ones again (disc-2026-09-generation-resume-a). nil = off.
+	segmentStore       SegmentStore
 	translationService *TranslationService
 	sseHub             *sse.Hub
 	logger             *slog.Logger
@@ -203,6 +208,13 @@ func NewTranscriptionService(
 // nil (the default) transcribes every chunk on every run, as before.
 func (s *TranscriptionService) SetASRChunkStore(store ASRChunkStore) {
 	s.chunkStore = store
+}
+
+// SetSegmentStore wires the per-cue translation cache
+// (disc-2026-09-generation-resume-a). Wiring only — call it during startup.
+// nil (the default) re-translates every cue on every run, as before.
+func (s *TranscriptionService) SetSegmentStore(store SegmentStore) {
+	s.segmentStore = store
 }
 
 // SetTranslationService sets the translation service for post-transcription translation.
@@ -1522,6 +1534,29 @@ func countSRTCues(srt string) int {
 	return strings.Count(srt, " --> ")
 }
 
+// translationRunVersion is the tuple every cached cue is keyed by
+// (disc-2026-09-generation-resume-a AC #3).
+//
+// It is built from exactly what THIS run feeds the model — the show metadata,
+// the glossary pairs, the prompt style and the model id — so a cached cue can
+// only ever be served back to a run that would have asked the model the same
+// question. Change any of them and the key changes, which re-translates rather
+// than serving a rendering that no longer matches the request.
+//
+// The hashes come from `internal/segkey`, the extract leg's own key functions,
+// so the two legs' entries are ONE cache family rather than two that drift.
+func (s *TranscriptionService) translationRunVersion(ctx context.Context, metadata prompts.MediaMetadata, glossary []GlossaryPair, level prompts.LocalizationLevel) models.RunVersion {
+	return models.RunVersion{
+		MetadataHash:    segkey.MetadataHash(metadata),
+		GlossaryVersion: segkey.GlossaryVersionHash(toPromptGlossary(glossary)),
+		PromptVersion:   prompts.PromptVersionFor(level),
+		// Never empty — see TranslationService.EffectiveModelID. A nil
+		// translation service cannot reach here (translateSRT is only called
+		// with one), but the method is nil-safe anyway.
+		ModelID: s.translationService.EffectiveModelID(ctx),
+	}
+}
+
 // glossaryMediaKey resolves which glossary a run feeds from and harvests into
 // (CR sub-5-5 H1). The glossary is per-SHOW: an episode run must use its
 // PARENT SERIES id — the key the F6 review panel and the pipeline path already
@@ -1742,6 +1777,8 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 	// per item and brings the 9R-11 run budget ceiling forward accordingly.
 	// Rendered once here purely so an operator can tie a budget trip (or a
 	// proper-noun drift complaint) to whether context was actually applied.
+	level := s.localizationLevel(ctx)
+	version := s.translationRunVersion(ctx, metadata, glossary, level)
 	metadataChars := len(prompts.BuildMetadataSection(metadata))
 	s.logger.Info("translating with media context",
 		"media_id", mediaID,
@@ -1753,7 +1790,9 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 	// sub-5-5: the harvest variant also returns the trailer's term yield —
 	// written back below AFTER the translation has succeeded and placed.
 	translated, harvestedTerms, outcome, err := s.translationService.TranslateWithGlossaryHarvest(
-		ctx, blocks, glossary, progressFn, WithMediaMetadata(metadata), WithLocalizationLevel(s.localizationLevel(ctx)))
+		ctx, blocks, glossary, progressFn,
+		WithMediaMetadata(metadata), WithLocalizationLevel(level),
+		WithSegmentCache(s.segmentStore, version))
 	if err != nil {
 		return "", TranslationOutcome{}, fmt.Errorf("translate: %w", err)
 	}
