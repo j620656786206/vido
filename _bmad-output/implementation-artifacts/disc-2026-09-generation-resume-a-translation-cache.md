@@ -80,7 +80,7 @@ so that the $1.70 already spent on the first 1,200 is not spent again — and th
 - [x] **Task 4 — 分 hit／miss、逐批寫（AC: #4, #5）**：先寫紅測試（120 批被擋→再跑只呼叫 71 次；讀失敗；寫失敗；換模型；OpenCC；nil store 位元相同）→ 實作
 - [x] **Task 5 — 規模門檻與註解（AC: #5）**：200k 列 `GetMany` < 100 ms；2M 列一次性實測記錄；改 `translation_service.go:84-106` 註解
 - [x] **Task 6 — 收尾（AC: #7, #8, #9）**：全套閘門；mutation check；`backlog-translate-budget-partial-progress` 補記
-- [ ] **Task 7 — 真機驗證（AC: #6）**
+- [x] **Task 7 — 真機驗證（AC: #6）**
 
 ## Dev Notes
 
@@ -165,6 +165,18 @@ Claude Opus 5（Dev Amelia，2026-09-19）
 - **存模型原始輸出（pre-OpenCC）**：OpenCC＋台灣詞彙表是對整份組好的 SRT 跑的，命中句照樣會經過同一道處理（`TestTranslateSRT_CachedCuesStillGetConverted` 用 fake OpenCC 證明簡體的快取值進得去、繁體出得來）。
 - **`ErrBudgetExceeded` 的回傳值一行沒改**：已寫進快取的批就是進度；錯誤訊息裡的 block 編號改成該批的**來源**位置（`batchAt[0]`），否則續跑時會報一個沒意義的 miss 序號。
 - **2,000,000 列一次性實測**（檔案型 SQLite，暫存目錄，不進 repo）：插入 2M 列 15.7 s、DB 762.9 MB；`SELECT ... IN (500 keys)` **223 ms（冷啟，第一次查）**、`SELECT ... IN (1910 keys)` **11.8 ms**。repo 內的門檻測試是 200k 列 / 2,000 keys < 100 ms（`TestSegmentStore_ReadStaysFastAgainst200kRows`，`-short` 時跳過）。
+- ✅ **Task 7 真機驗證（2026-09-19 18:10–18:26，NAS 隔離容器 `vido-xlate`：正式 image ＋ 交叉編譯二進位覆蓋；DB 副本、scratch symlink；正式 Vido 全程未動、跑完清理、正式片庫 0 個 srt）**。用 story B 那輪產出的 `.en.srt`（1,935 句）複本 ＋ row 設成 `untranslated`，所以走 translate-only：不抽音訊、不花語音辨識的錢。
+
+  | 回合 | 上限 | log | 結果 |
+  | --- | --- | --- | --- |
+  | 1 | $1.0 | `segment cache hits=0 total=1935 to_translate=1935` | 71 批後 `AI budget exhausted`、`translation stopped at block 710`、`spent_usd=1.002`。`cache_entries` 的 `subtitle_segment` 由 20,432 → **21,064（+632 列）** |
+  | 2 | $5.0 | **`segment cache hits=787 total=1935 to_translate=1148`** | `llm_calls=115`（＝1,148÷10 進位）、**`spent_usd=1.696`**、`transcription complete`、row 翻成 `found / zh-Hant`、`.zh-Hant.srt` 1,935 句 |
+
+  兩輪合計 **$2.70**，與一次跑完的 $2.71 幾乎相同——**續跑沒有額外成本**（AC #6 估的 ≈$1.7 剛好命中）。
+  ⚖️ 兩個真實世界的細節：
+  - **命中 787 > 第一輪付費的 710**：快取是**照句子內容**當 key，所以片子後半重複出現的短句（`Yes.`／`No.`／`Come on.`）也一起命中。同理第一輪 710 句只寫出 632 列（重複句共用一列）。
+  - **正式 DB 本來就有 20,432 列 `subtitle_segment`**（抽內嵌字幕那條線長期累積的），本張新增的列與它們同族、同 type、同 TTL——證明「一套定義」不是紙上談兵。
+  - 第二輪有 1 句保留英文（`english_kept_blocks=1`），既有的 partial 語意，未入快取（符合裁定）。
 - ⚠️ **兩條線共用 key 但存的語意不同**（SM 裁定 3 已知並接受）：pipeline 存 **post-OpenCC**、本條線存 **pre-OpenCC**（因為裁定 1 要求每批就寫，而 OpenCC 只在整份組好後才跑）。同一部片只會走其中一條線，所以實務上不會撞；但理論上同片同 `RunVersion` 下兩條線若各跑過一次，pipeline 可能讀到未轉換的值。已立 `disc-2026-09-segment-cache-cross-leg-semantics`。
 - Reference: `project-context.md` Rule 24
 
@@ -188,5 +200,6 @@ Claude Opus 5（Dev Amelia，2026-09-19）
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-19 | ✅ **真機驗證通過**（Task 7）：$1.0 跑到第 710 句被擋、632 列入庫；$5.0 續跑 `hits=787/1935`、`llm_calls=115`、`spent_usd=1.696`、row 翻 `found/zh-Hant`。兩輪合計 $2.70 ≈ 一次跑完的 $2.71，續跑不額外花錢。 |
 | 2026-09-19 | 🚧 **REVIEW**（dev-story, Amelia；branch `feat/generation-resume-translation-cache`）。Task 1–6 完成：key 搬到 `internal/segkey`（parity 測試釘住位元相同、`subtitle` 既有測試一行沒改）、`services.SegmentStore`＋無條件接線、`RunVersion` 與 `EffectiveModelID` 三條退路、開跑前一次 `GetMany`＋每批 `Set`、上下文取自 `result`、保留英文的不寫、快取失敗只 Warn。Mutation 八刀全殺。實測：200k 列 / 2,000 keys 門檻綠；2M 列一次性量測 11.8 ms（冷啟第一次 223 ms）。Task 7 真機驗證待跑。 |
 | 2026-09-18 | Story 建立（SM Bob, create-story；main `ef224134`）。`disc-2026-09-generation-resume-from-checkpoint` 拆三張的第一張。裁定：每批寫快取、開跑前一次查、只翻 miss、上下文從 `result` 取；key 與 pipeline 位元相同（搬到共用 leaf 套件）；`ModelID` 永不為空；存模型原始輸出；legacy 模式也接；快取失敗只 Warn。規模門檻：200k 列 `GetMany` < 100 ms。 |
