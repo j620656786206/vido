@@ -417,12 +417,23 @@ type fakeCacheRepo struct {
 	lastType  string
 	lastTTL   time.Duration
 	manyCalls int
+	// asr chunk store (disc-2026-09-generation-resume-b): failure injection
+	// and the write/delete ledger the resume tests assert on.
+	manyErr      error
+	setErr       error
+	lastManyKeys int
+	sets         []string
+	deleted      []string
 }
 
 func (r *fakeCacheRepo) Get(context.Context, string) (*repository.CacheEntry, error) { return nil, nil }
 
 func (r *fakeCacheRepo) GetMany(_ context.Context, keys []string) (map[string]*repository.CacheEntry, error) {
 	r.manyCalls++
+	r.lastManyKeys = len(keys)
+	if r.manyErr != nil {
+		return nil, r.manyErr
+	}
 	out := map[string]*repository.CacheEntry{}
 	for _, k := range keys {
 		if e, ok := r.entries[k]; ok {
@@ -433,6 +444,10 @@ func (r *fakeCacheRepo) GetMany(_ context.Context, keys []string) (map[string]*r
 }
 
 func (r *fakeCacheRepo) Set(_ context.Context, key, value, cacheType string, ttl time.Duration) error {
+	if r.setErr != nil {
+		return r.setErr
+	}
+	r.sets = append(r.sets, key)
 	if r.entries == nil {
 		r.entries = map[string]*repository.CacheEntry{}
 	}
@@ -441,7 +456,11 @@ func (r *fakeCacheRepo) Set(_ context.Context, key, value, cacheType string, ttl
 	return nil
 }
 
-func (r *fakeCacheRepo) Delete(context.Context, string) error               { return nil }
+func (r *fakeCacheRepo) Delete(_ context.Context, key string) error {
+	r.deleted = append(r.deleted, key)
+	delete(r.entries, key)
+	return nil
+}
 func (r *fakeCacheRepo) Clear(context.Context) error                        { return nil }
 func (r *fakeCacheRepo) ClearExpired(context.Context) (int64, error)        { return 0, nil }
 func (r *fakeCacheRepo) ClearByType(context.Context, string) (int64, error) { return 0, nil }

@@ -305,3 +305,26 @@ func TestASRProviderHolder_TranscribeDetailedPropagatesUnconfigured(t *testing.T
 	_, err := h.TranscribeDetailed(context.Background(), "irrelevant.wav", "en")
 	require.ErrorIs(t, err, ai.ErrWhisperNotConfigured)
 }
+
+// ─── disc-2026-09-generation-resume-b-asr-chunk-store AC #1 ─────────────────
+
+// The chunk cache keys on WHICH engine produced a transcript. That identity is
+// the endpoint and the model — never the api key, which the rebuild
+// fingerprint also carries (NFR-S1).
+func TestASRProviderHolder_EndpointFingerprintExcludesTheKey(t *testing.T) {
+	const key = "sk-VERY-SECRET-KEY-VALUE"
+	h := NewASRProviderHolder(
+		NewKeyResolver(&fakeSecrets{}, EnvKeys{OpenAI: key}, nil), "https://asr.example.test/v1", "whisper-large-v3", nil)
+
+	fp := h.EndpointFingerprint()
+
+	assert.Equal(t, "https://asr.example.test/v1|whisper-large-v3", fp)
+	assert.NotContains(t, fp, key)
+	assert.NotContains(t, fp, "SECRET")
+}
+
+func TestASRProviderHolder_EndpointFingerprintUsesTheHostedDefaults(t *testing.T) {
+	h := asrHolderWithKey(t, "sk-k")
+	assert.Equal(t, "|"+ai.WhisperModel, h.EndpointFingerprint(),
+		"an empty model means the ai package's default; the fingerprint must name it, not \"\"")
+}

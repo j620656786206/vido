@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"path/filepath"
 	"runtime/debug"
+	"sort"
 	"sync"
 
 	"github.com/google/uuid"
@@ -186,6 +187,11 @@ type GenerationBatchProcessor struct {
 	// nil degrades every series_title to "".
 	series CandidateSeriesTitleResolver
 
+	// resume answers "does this film hold paid-for progress?" so a batch
+	// finishes what an earlier batch started before spending on anything new
+	// (ruling 9). nil = the caller's order stands.
+	resume ResumeProgressFinder
+
 	mu           sync.Mutex
 	activeBatch  *GenerationBatchProgress
 	activeCancel context.CancelFunc
@@ -230,6 +236,47 @@ func NewGenerationBatchProcessor(
 // enumerates would be a data race.
 func (p *GenerationBatchProcessor) SetSeriesTitleResolver(r CandidateSeriesTitleResolver) {
 	p.series = r
+}
+
+// ResumeProgressFinder is the narrow port (Rule 11) behind the resumable-first
+// ordering; *TranscriptionService satisfies it. A plain bool: a lookup failure
+// is "no progress", so it can cost the ordering but never the batch.
+type ResumeProgressFinder interface {
+	HasResumeProgress(ctx context.Context, mediaType, mediaID, filePath string) bool
+}
+
+// SetResumeProgressFinder wires the resumable-first ordering
+// (disc-2026-09-generation-resume-b ruling 9). Wiring only, like
+// SetSeriesTitleResolver: call it during startup, before the server serves.
+func (p *GenerationBatchProcessor) SetResumeProgressFinder(f ResumeProgressFinder) {
+	p.resume = f
+}
+
+// resumableFirst moves the films that hold paid-for progress to the front,
+// keeping every other relative order (stable). One port call per film.
+//
+// Why: the money ceiling is ONE envelope per batch. A $1 batch over a $3.65
+// film stops at chunk 5 every time; with the order left to the caller, a user
+// who picks different films each time leaves a trail of half-done ones that
+// are never finished. Finishing them first bounds the half-done set to one.
+func (p *GenerationBatchProcessor) resumableFirst(ctx context.Context, items []GenerationBatchItem) []GenerationBatchItem {
+	if p.resume == nil || len(items) < 2 {
+		return items
+	}
+	resumable := make([]bool, len(items))
+	for i, item := range items {
+		resumable[i] = p.resume.HasResumeProgress(ctx, item.MediaType, item.MediaID, item.filePath)
+	}
+	order := make([]int, len(items))
+	for i := range order {
+		order[i] = i
+	}
+	sort.SliceStable(order, func(a, b int) bool { return resumable[order[a]] && !resumable[order[b]] })
+	sorted := make([]GenerationBatchItem, len(items))
+	for i, idx := range order {
+		sorted[i] = items[idx]
+	}
+	return sorted
 }
 
 // withLock runs fn under p.mu with a deferred unlock, so a panic inside can
@@ -412,6 +459,7 @@ func (p *GenerationBatchProcessor) Start(ctx context.Context, scope string, medi
 	if err != nil {
 		return "", nil, err
 	}
+	items = p.resumableFirst(ctx, items)
 
 	if len(items) == 0 {
 		return "", []GenerationBatchItem{}, nil

@@ -60,7 +60,7 @@ func TestTranscribeAudio_EmptyAfterFilteringFallsBackToUnfiltered(t *testing.T) 
 		SRT: "", Unfiltered: unfiltered, SegmentsIn: 1, SegmentsKept: 0, Filtered: true,
 	}}
 
-	got, err := newASRWiredService(asr).transcribeAudio(context.Background(), smallAudio(t), "en")
+	got, err := newASRWiredService(asr).transcribeAudio(context.Background(), smallAudio(t), "en", nil)
 	require.NoError(t, err)
 	assert.Equal(t, unfiltered, got, "an entirely emptied file must deliver the unfiltered text")
 	assert.Equal(t, 1, asr.calls, "the guard must not re-transcribe")
@@ -74,7 +74,7 @@ func TestTranscribeAudio_PartiallyFilteredKeepsTheFilteredText(t *testing.T) {
 		SRT: filtered, Unfiltered: unfiltered, SegmentsIn: 2, SegmentsKept: 1, Filtered: true,
 	}}
 
-	got, err := newASRWiredService(asr).transcribeAudio(context.Background(), smallAudio(t), "en")
+	got, err := newASRWiredService(asr).transcribeAudio(context.Background(), smallAudio(t), "en", nil)
 	require.NoError(t, err)
 	assert.Equal(t, filtered, got)
 	assert.NotContains(t, got, "subscribe")
@@ -85,7 +85,7 @@ func TestTranscribeAudio_PartiallyFilteredKeepsTheFilteredText(t *testing.T) {
 func TestTranscribeAudio_NothingToRecoverStaysEmpty(t *testing.T) {
 	asr := &detailedASR{detail: ai.TranscriptionDetail{SRT: "", Unfiltered: "", Filtered: true}}
 
-	got, err := newASRWiredService(asr).transcribeAudio(context.Background(), smallAudio(t), "en")
+	got, err := newASRWiredService(asr).transcribeAudio(context.Background(), smallAudio(t), "en", nil)
 	require.NoError(t, err)
 	assert.Equal(t, "", got)
 }
@@ -95,7 +95,7 @@ func TestTranscribeAudio_NothingToRecoverStaysEmpty(t *testing.T) {
 func TestTranscribeAudio_ProviderWithoutDetailedSeamIsUnaffected(t *testing.T) {
 	srt := "1\n00:00:01,000 --> 00:00:02,000\nPlain engine\n\n"
 
-	got, err := newASRWiredService(&plainASR{srt: srt}).transcribeAudio(context.Background(), smallAudio(t), "en")
+	got, err := newASRWiredService(&plainASR{srt: srt}).transcribeAudio(context.Background(), smallAudio(t), "en", nil)
 	require.NoError(t, err)
 	assert.Equal(t, srt, got)
 }
