@@ -1,6 +1,6 @@
 # Story disc-2026-09-generation-resume-a-translation-cache：翻譯到一半被預算擋下，下次只翻沒翻過的句子——語音辨識這條線接上既有的逐句快取
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -74,12 +74,12 @@ so that the $1.70 already spent on the first 1,200 is not spent again — and th
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — `segkey` 套件與 parity（AC: #1）**：先寫紅測試（parity、boundaries）→ 搬 key 函式 → `subtitle` 委派
-- [ ] **Task 2 — `services.SegmentStore`＋接線（AC: #2）**：先寫紅測試（adapter 的 type／TTL／miss-by-absence，抄 `route_cache_test.go:449-462`）→ 實作 → `main.go` 無條件接
-- [ ] **Task 3 — `RunVersion` 與 `effectiveModelID`（AC: #3）**：先寫紅測試（三條退路）→ 實作
-- [ ] **Task 4 — 分 hit／miss、逐批寫（AC: #4, #5）**：先寫紅測試（120 批被擋→再跑只呼叫 71 次；讀失敗；寫失敗；換模型；OpenCC；nil store 位元相同）→ 實作
-- [ ] **Task 5 — 規模門檻與註解（AC: #5）**：200k 列 `GetMany` < 100 ms；2M 列一次性實測記錄；改 `translation_service.go:84-106` 註解
-- [ ] **Task 6 — 收尾（AC: #7, #8, #9）**：全套閘門；mutation check；`backlog-translate-budget-partial-progress` 補記
+- [x] **Task 1 — `segkey` 套件與 parity（AC: #1）**：先寫紅測試（parity、boundaries）→ 搬 key 函式 → `subtitle` 委派
+- [x] **Task 2 — `services.SegmentStore`＋接線（AC: #2）**：先寫紅測試（adapter 的 type／TTL／miss-by-absence，抄 `route_cache_test.go:449-462`）→ 實作 → `main.go` 無條件接
+- [x] **Task 3 — `RunVersion` 與 `effectiveModelID`（AC: #3）**：先寫紅測試（三條退路）→ 實作
+- [x] **Task 4 — 分 hit／miss、逐批寫（AC: #4, #5）**：先寫紅測試（120 批被擋→再跑只呼叫 71 次；讀失敗；寫失敗；換模型；OpenCC；nil store 位元相同）→ 實作
+- [x] **Task 5 — 規模門檻與註解（AC: #5）**：200k 列 `GetMany` < 100 ms；2M 列一次性實測記錄；改 `translation_service.go:84-106` 註解
+- [x] **Task 6 — 收尾（AC: #7, #8, #9）**：全套閘門；mutation check；`backlog-translate-budget-partial-progress` 補記
 - [ ] **Task 7 — 真機驗證（AC: #6）**
 
 ## Dev Notes
@@ -136,7 +136,13 @@ apps/api/internal/boundaries_test.go                      ← Task 1（若加 le
 
 ### Agent Model Used
 
+Claude Opus 5（Dev Amelia，2026-09-19）
+
 ### Debug Log References
+
+- 紅→綠：`go test ./internal/services/ ./internal/subtitle/ ./internal/ -run 'TestEffectiveModelID|TestTranslate_|TestSegmentStore_|TestTranslationRunVersion_|TestTranslateSRT_|TestSegkeyParity|TestSegkeyDependsOnlyOnLeaves'`
+- Mutation check（八刀全部被殺）：不讀快取 → 2 紅；不寫快取 → 1 紅；連保留英文的句子也寫 → 1 紅；上下文取自來源而非 `result` → 1 紅；進度不計命中 → 1 紅；`ModelID` 可為空 → 2 紅；key 不含 model → 2 紅；`RunVersion` 丟掉詞彙表 → 1 紅。
+- 閘門：`pnpm nx test api` 綠、`pnpm nx test web` 270 files 綠、`pnpm run lint:all` 0 errors（129 warnings 既有浮動）、Prettier 綠、`pnpm run test:cleanup` 已跑。
 
 ### Completion Notes List
 
@@ -152,12 +158,35 @@ apps/api/internal/boundaries_test.go                      ← Task 1（若加 le
   - `disc-2026-09-generation-resume-c-estimate-deduction`（sprint 條目）— 估價扣掉已有的段與句。
   - `backlog-translate-budget-partial-progress`（既有）— pipeline 那條線的逐批寫，同一個做法。
   - `cache_cleanup_service.go:110-116` 整表 truncate 會清掉所有字幕快取 — 既有、記錄（不另立，等 C 一起看是否值得）。
+- **`segkey` 沒有列進 leaf 名單**（它 import `models` 與 `ai/prompts`，不是零內部相依），改在 Rule 19 新增「Shared key package」段落，並加一條 `TestSegkeyDependsOnlyOnLeaves` 釘住它只能相依這兩個套件——長胖就會有一條線編不過，而那時最誘人的「修法」正是再複製一份 hash。
+- **`splitCachedBlocks` 回傳「來源位置」而不是 block 複本**：批次迴圈用 `pending []int` 索引 `blocks`／`result`／`keys`，三者永遠對齊，不需要第二張對照表；無 store 時 `pending` 就是 0..n-1，所以舊路徑位元相同（`TestTranslate_NoStoreIsTheOldBehaviour` 直接比對兩次呼叫的回傳值）。
+- **上下文取自 `result`**：命中的譯文會成為第一個 miss 批的前文（`TestTranslate_ResumedBatchSeesCachedContext` 斷言 prompt 裡是「舊譯文10」而不是「Line 10」）。這是本張最容易做錯的一點（Dev Notes 有點名）。
+- **保留英文的句子不寫快取**：否則下一輪會把英文當成譯文送出去。
+- **存模型原始輸出（pre-OpenCC）**：OpenCC＋台灣詞彙表是對整份組好的 SRT 跑的，命中句照樣會經過同一道處理（`TestTranslateSRT_CachedCuesStillGetConverted` 用 fake OpenCC 證明簡體的快取值進得去、繁體出得來）。
+- **`ErrBudgetExceeded` 的回傳值一行沒改**：已寫進快取的批就是進度；錯誤訊息裡的 block 編號改成該批的**來源**位置（`batchAt[0]`），否則續跑時會報一個沒意義的 miss 序號。
+- **2,000,000 列一次性實測**（檔案型 SQLite，暫存目錄，不進 repo）：插入 2M 列 15.7 s、DB 762.9 MB；`SELECT ... IN (500 keys)` **223 ms（冷啟，第一次查）**、`SELECT ... IN (1910 keys)` **11.8 ms**。repo 內的門檻測試是 200k 列 / 2,000 keys < 100 ms（`TestSegmentStore_ReadStaysFastAgainst200kRows`，`-short` 時跳過）。
+- ⚠️ **兩條線共用 key 但存的語意不同**（SM 裁定 3 已知並接受）：pipeline 存 **post-OpenCC**、本條線存 **pre-OpenCC**（因為裁定 1 要求每批就寫，而 OpenCC 只在整份組好後才跑）。同一部片只會走其中一條線，所以實務上不會撞；但理論上同片同 `RunVersion` 下兩條線若各跑過一次，pipeline 可能讀到未轉換的值。已立 `disc-2026-09-segment-cache-cross-leg-semantics`。
 - Reference: `project-context.md` Rule 24
 
 ### File List
+
+- `apps/api/internal/segkey/segkey.go`（新）— `SegmentKey`／`MetadataHash`／`GlossaryVersionHash`／`Prefix`／`Type`／`TTL`
+- `apps/api/internal/subtitle/segment_cache.go` — 改為委派 `segkey`（常數與三個函式），刪掉搬走的 `fieldSep`／`payloadSep`／`sortedCopy`
+- `apps/api/internal/subtitle/segkey_parity_test.go`（新）— 位元相同的 parity 測試（AC #1）
+- `apps/api/internal/boundaries_test.go` — `TestSegkeyDependsOnlyOnLeaves`
+- `apps/api/internal/services/segment_store.go`（新）— `SegmentStore` port ＋ `cache_entries` adapter
+- `apps/api/internal/services/segment_store_test.go`（新）— type／TTL／共用資料列／200k 列規模門檻
+- `apps/api/internal/services/translation_service.go` — `WithSegmentCache`、`splitCachedBlocks`、批次迴圈改走 `pending`、每批 `Set`、`EffectiveModelID`、`modelNamer`、改掉過時註解
+- `apps/api/internal/services/translation_cache_test.go`（新）— AC #3／#4／#5 行為測試
+- `apps/api/internal/services/transcription_service.go` — `segmentStore` 欄位＋`SetSegmentStore`、`translationRunVersion`、`translateSRT` 接上
+- `apps/api/internal/services/transcription_translation_resume_test.go`（新）— 服務層縫合（OpenCC、RunVersion）
+- `apps/api/cmd/api/main.go` — `SetSegmentStore(NewSegmentStore(repos.Cache))`（legacy 與 pipeline 皆接）
+- `project-context.md` — Rule 19 新增 Shared key package 段落
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `backlog-translate-budget-partial-progress` 補記（AC #8）＋ 新 disc
 
 ## Change Log
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-19 | 🚧 **REVIEW**（dev-story, Amelia；branch `feat/generation-resume-translation-cache`）。Task 1–6 完成：key 搬到 `internal/segkey`（parity 測試釘住位元相同、`subtitle` 既有測試一行沒改）、`services.SegmentStore`＋無條件接線、`RunVersion` 與 `EffectiveModelID` 三條退路、開跑前一次 `GetMany`＋每批 `Set`、上下文取自 `result`、保留英文的不寫、快取失敗只 Warn。Mutation 八刀全殺。實測：200k 列 / 2,000 keys 門檻綠；2M 列一次性量測 11.8 ms（冷啟第一次 223 ms）。Task 7 真機驗證待跑。 |
 | 2026-09-18 | Story 建立（SM Bob, create-story；main `ef224134`）。`disc-2026-09-generation-resume-from-checkpoint` 拆三張的第一張。裁定：每批寫快取、開跑前一次查、只翻 miss、上下文從 `result` 取；key 與 pipeline 位元相同（搬到共用 leaf 套件）；`ModelID` 永不為空；存模型原始輸出；legacy 模式也接；快取失敗只 Warn。規模門檻：200k 列 `GetMany` < 100 ms。 |

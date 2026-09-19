@@ -565,6 +565,7 @@ Allowed (single-direction layering, extends Rule 4):
   Handler  → Service    → Repository → Database
   Handler  → Subtitle   → Service              (subtitle uses services.TerminologyCorrectionServiceInterface)
   *        → ai, models, sse, retry, cache, fsprobe  (leaf packages — see list below)
+  *        → segkey                                  (shared key package — see below)
 
   NOTE: Handler → Repository is FORBIDDEN by Rule 4. Rule 19 does not
   introduce an exception. Go through a service.
@@ -584,6 +585,22 @@ Known Cycle Points (verified 2026-04-13):
 
 Leaf packages (zero internal deps — always safe to import from anywhere):
   ai, models, sse, retry, cache, fsprobe
+
+Shared key package (one level above the leaves — importable from anywhere):
+  segkey  → may import ONLY models + ai/prompts
+
+  `internal/segkey` (added 2026-09-19, story
+  disc-2026-09-generation-resume-a-translation-cache) owns the ONE definition of
+  a subtitle segment-cache key: `SegmentKey`, `MetadataHash`,
+  `GlossaryVersionHash`, plus the family's `Prefix`/`Type`/`TTL`. BOTH
+  translation legs cache per-cue translations in `cache_entries` — `subtitle`
+  (embedded tracks) and `services` (speech recognition) — and `services ↛
+  subtitle` means the key function cannot live in `subtitle` any more. Two
+  copies of a hash drift silently: no error, no failing test, just a cache that
+  stops hitting and a bill that quietly doubles. `subtitle/segment_cache.go`
+  therefore DELEGATES (its own tests pin the result byte-for-byte). Enforced by
+  boundaries_test.go::TestSegkeyDependsOnlyOnLeaves — adding a heavier import
+  there breaks one of the two legs.
 
 Verified 2026-04-13 via `go list -deps ./internal/<pkg>` (`fsprobe` added 2026-09-04, story sub-6-1). The list is
 enforced by boundaries_test.go::TestLeafPackagesHaveNoInternalDeps so it
