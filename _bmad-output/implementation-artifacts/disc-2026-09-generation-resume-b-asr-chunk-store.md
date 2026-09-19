@@ -1,6 +1,6 @@
 # Story disc-2026-09-generation-resume-b-asr-chunk-store：語音辨識到一半被預算擋下，下次只辨識沒做過的段——每段辨識完就存文字，音訊不存
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -153,6 +153,12 @@ Claude Fable 5.1（Dev Amelia，2026-09-18）
 
   結論：AC #5 的三個數字（`hits=5/16`、`asr_calls=11`、成功後列數 0）全部命中；兩次意外中斷（沒額度、斷網）額外證明「失敗不清暫存」。
 - **AC #6 實測毫秒**（/ship 前補，暫時性測試、未入庫）：檔案型 SQLite、1,000 部片（每 10 部一份 manifest、每 25 部 `untranslated`＋SRT 在）→ `HasResumeProgress` 1,000 次 **39 ms（39 µs／部）**；202 回應前的排序成本可忽略。
+- ✅ **字幕品質抽查（2026-09-19，Alexyu 要求「留檔案給我看」後補跑第三輪：$0.30 → 5 段存起來 → $5 續跑，`hits=5/16`、`asr_calls=11`、$3.33、1,935 句）**。結構檢查（腳本，非人工）：
+  - en 1,935 句 ＝ zh 1,935 句，**每一句的時間戳兩份完全相同**；時間單調遞增；沒有重複或倒退。
+  - 16 段每段都有字幕（137／124／138／125／162 ｜ 168／105／142／123／116／148／151／99／162／34／1），**沒有整段消失**；第 15–16 段句數少是因為 2:23:02 之後就是片尾音樂。
+  - 唯一 > 90 秒的空白是 2:23:06 → 2:29:54（411 秒）＝ 片尾，合理。
+  - **接縫（第 5 段快取 → 第 6 段新辨識，50:00）對白連續**：`…Come on, Sed, leave him.` / `Right.` ｜ `It's not worth it.` / `Read the badges, Potter.`——跨段語意接得上，時間軸也接得上（第 6 段第一句剛好落在 50:00.00 ＝ 5 × 600 s）。
+  - 音訊對照檔（4 × 22 秒 mp3 ＋ 對照表）交付給 Alexyu 人工聽，未入庫：`~/Desktop/vido-字幕驗證/`。
 - 真機順帶看到（非本單）：2c 翻譯階段 Claude 有一批（20–30）逾時 3 次 → 31 句保留英文 → row 記 `untranslated`（既有的 partial 語意，`backlog-translate-budget-partial-progress`／story A 範圍）。
 
 ### Discovery Triage
@@ -161,6 +167,7 @@ Claude Fable 5.1（Dev Amelia，2026-09-18）
 - **① expand-scope-in-place**：`ASRProviderHolder` 沒有排除金鑰的端點 accessor → AC #1；manifest（為 story C 準備）→ AC #2。
 - **② spawn-blocking-story**：無。
 - **③ backlog-with-carry-forward-link**：`disc-2026-09-generation-resume-c-estimate-deduction`（sprint 條目）；`disc-2026-09-generation-resume-a-translation-cache`（同時建單）。
+- **③（字幕抽查時新增，2026-09-19）**：`disc-2026-09-asr-chunk-edge-coarse-timing`——每段開頭第一分鐘的字幕時間戳特別粗（30% 是「1 秒一句」的等距輸出，段內其他地方 10–15%，全片 249/1,934 ＝ 13%）；`disc-2026-09-whisper-credit-line-hallucination`——片尾音樂被幻覺成 `Subs by www.zeoranger.co.uk`，現有的 `no_speech_prob`／`avg_logprob` 門檻沒擋住。
 - **③（dev 真機驗證時新增）**：`disc-2026-09-asr-quota-429-treated-as-transient`——OpenAI 429 `insufficient_quota`（沒額度）被當成暫時性錯誤重試 3 次，還被 `DetailedTranscriber` 誤判成「引擎不支援 verbose_json」而關掉幻覺過濾；`disc-2026-09-asr-base-url-assumed-free`——`ASR_BASE_URL` 有設就記 $0，接 Groq（$0.04/hr，OpenAI 相容）這類**付費**相容端點時預算完全失效；順帶：Groq 換過去每部片辨識 $0.94 → $0.10。
 - Reference: `project-context.md` Rule 24
 
@@ -182,6 +189,7 @@ Claude Fable 5.1（Dev Amelia，2026-09-18）
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-19 | ✅ **DONE**（PR #477 已合併進 main，commit `e6c15c94`；CI **13 pass / 0 fail**，視覺檢查因無前端改動而 skip）。合併後第三輪真機跑（Alexyu 要求留檔）再次重現 `hits=5/16`／`asr_calls=11`／$3.33，並做了字幕結構抽查與音訊對照交付。 |
 | 2026-09-19 | 🚧 **REVIEW**（Dev Amelia）。Task 6 真機驗證通過：$0.30 回合存 5 段＋manifest；$5 回合 `hits=5/16`、`asr_calls=11`、$3.13、成功後列數 0；中途兩次外部中斷（OpenAI 沒額度、家裡斷網）暫存都沒掉。NAS 清理完畢、正式 Vido 未動。兩條新 disc 立案（429 沒額度被當暫時性錯誤；`ASR_BASE_URL` 一律記 $0）。 |
 | 2026-09-18 | Dev Amelia：Task 1–5 完成（紅測試→實作→mutation 六刀全殺→全套閘門綠）。Task 6 真機驗證待跑。 |
 | 2026-09-18 | ⚖️ Alexyu 追問「幾百幾千部卡在半路」：查證預算是每批一個信封、missing 順序是字母序、selected 照使用者順序——每次換選片就會累積半成品且永遠做不完。補裁定 9／AC #6：批次先跑有進度的片。 |
