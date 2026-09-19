@@ -1,6 +1,6 @@
 # Story disc-2026-09-generation-resume-a-translation-cache：翻譯到一半被預算擋下，下次只翻沒翻過的句子——語音辨識這條線接上既有的逐句快取
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -200,6 +200,7 @@ Claude Opus 5（Dev Amelia，2026-09-19）
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-19 | ✅ **DONE**（PR #479 已合併進 main；CI **13 pass / 0 fail**，視覺檢查因無前端改動 skip）。 |
 | 2026-09-19 | ✅ **真機驗證通過**（Task 7）：$1.0 跑到第 710 句被擋、632 列入庫；$5.0 續跑 `hits=787/1935`、`llm_calls=115`、`spent_usd=1.696`、row 翻 `found/zh-Hant`。兩輪合計 $2.70 ≈ 一次跑完的 $2.71，續跑不額外花錢。 |
 | 2026-09-19 | 🚧 **REVIEW**（dev-story, Amelia；branch `feat/generation-resume-translation-cache`）。Task 1–6 完成：key 搬到 `internal/segkey`（parity 測試釘住位元相同、`subtitle` 既有測試一行沒改）、`services.SegmentStore`＋無條件接線、`RunVersion` 與 `EffectiveModelID` 三條退路、開跑前一次 `GetMany`＋每批 `Set`、上下文取自 `result`、保留英文的不寫、快取失敗只 Warn。Mutation 八刀全殺。實測：200k 列 / 2,000 keys 門檻綠；2M 列一次性量測 11.8 ms（冷啟第一次 223 ms）。Task 7 真機驗證待跑。 |
 | 2026-09-18 | Story 建立（SM Bob, create-story；main `ef224134`）。`disc-2026-09-generation-resume-from-checkpoint` 拆三張的第一張。裁定：每批寫快取、開跑前一次查、只翻 miss、上下文從 `result` 取；key 與 pipeline 位元相同（搬到共用 leaf 套件）；`ModelID` 永不為空；存模型原始輸出；legacy 模式也接；快取失敗只 Warn。規模門檻：200k 列 `GetMany` < 100 ms。 |
