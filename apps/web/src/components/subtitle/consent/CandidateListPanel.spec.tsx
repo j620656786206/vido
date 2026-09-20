@@ -139,7 +139,7 @@ describe('CandidateListPanel (F15/F18)', () => {
     expect(screen.getByTestId('consent-footer-detail').textContent).toContain('$0.00');
   });
 
-  it('[P0 F18] over-budget: banner with feasible count, warning amounts, button relabels and stays ENABLED', () => {
+  it('[P0 F18] over-budget: banner with feasible count, button relabels and stays ENABLED', () => {
     renderPanel({ selectedIds: new Set([A, B, EP, U]), budgetText: '0.30', budgetUsd: 0.3 });
     const banner = screen.getByTestId('consent-over-budget-banner');
     expect(banner.textContent).toContain('已超過上限');
@@ -732,7 +732,7 @@ describe('CandidateListPanel — phone-width row (bugfix-f15-row-mobile-identity
     expect(subtitle).toHaveClass('@max-xl:whitespace-normal');
   });
 
-  it('below 36rem the kind badge is gone — the amount colour already says the route', () => {
+  it('below 36rem the kind badge is gone — the route stays readable in the subtitle sentence', () => {
     renderOne();
     const kind = screen.getByTestId(`consent-row-kind-${M}`);
     expect(kind).toHaveTextContent('語音辨識');
@@ -1304,5 +1304,218 @@ describe('CandidateListPanel — 扣誰的錢 (sub-6-12 AC #6)', () => {
   it('a library with no ASR rows drops the ASR half rather than raising a question', () => {
     renderPanel({ candidates: FOUR, claudeKeySource: 'secret' });
     expect(screen.getByTestId('consent-spend-source').textContent).toBe('使用：Claude（你的金鑰）');
+  });
+});
+
+// ─── dsr-6e-1 ───────────────────────────────────────────────────────────────
+
+const STATUS_COLOUR = /--(success|warning|accent)-(text|tint)/;
+
+describe('dsr-6e-1 AC #2 — a row without a quote (P1)', () => {
+  const NP = '5e98edc6-7eab-4d7c-9dcb-e5a6b7c8d905';
+  const RO2 = '6fa9fed7-8fbc-4e8d-8edc-f6b7c8d9e016';
+  const withGaps: GenerationCandidate[] = [
+    ...CANDIDATES,
+    {
+      mediaId: NP,
+      mediaType: 'movie',
+      title: '沒有報價的電影',
+      route: 'asr',
+      runtimeMinutes: 100,
+      runtimeKnown: true,
+      // The wire omitted estimated_usd.
+      estimatedUsd: undefined as unknown as number,
+    },
+    {
+      mediaId: RO2,
+      mediaType: 'movie',
+      title: '唯讀資料夾裡的電影',
+      route: 'asr',
+      runtimeMinutes: 100,
+      runtimeKnown: true,
+      estimatedUsd: 0.31,
+      writable: false,
+    },
+  ];
+
+  it('[P1] the panel RENDERS — it used to throw DecimalError for the whole dialog', () => {
+    expect(() => renderPanel({ candidates: withGaps })).not.toThrow();
+    const row = screen.getByTestId(`consent-row-${NP}`);
+    const unpricedBadge = screen.getByTestId(`consent-row-unpriced-${NP}`);
+    expect(unpricedBadge).toHaveTextContent('無法估價');
+    expect(unpricedBadge.className).toContain('bg-[var(--error-tint)]');
+    expect(unpricedBadge).toHaveAttribute('title', '後端沒有給這一部的估價，所以不能選。');
+    expect(row.querySelector('input[type="checkbox"]')).toBeDisabled();
+    expect(screen.queryByTestId(`consent-row-usd-${NP}`)).toBeNull();
+    expect(screen.getByTestId('consent-unpriced-count')).toHaveTextContent('1 部無法估價');
+    // Two different reasons, counted apart.
+    expect(screen.getByTestId('consent-unwritable-count')).toHaveTextContent('1 部資料夾無法寫入');
+  });
+
+  it('[CR M1] a per-model entry does not put an amount beside 無法估價', () => {
+    renderPanel({ candidates: withGaps, prices: { [A]: 0.02, [B]: 0.02, [NP]: 0.31 } });
+    expect(screen.getByTestId(`consent-row-unpriced-${NP}`)).toBeInTheDocument();
+    expect(screen.queryByTestId(`consent-row-usd-${NP}`)).toBeNull();
+  });
+
+  it('an unwritable row draws NO amount and no 無法估價 badge — only its own blocker', () => {
+    renderPanel({ candidates: withGaps });
+    expect(screen.queryByTestId(`consent-row-usd-${RO2}`)).toBeNull();
+    expect(screen.queryByTestId(`consent-row-unpriced-${RO2}`)).toBeNull();
+    expect(screen.getByTestId(`consent-row-unwritable-${RO2}`)).toBeInTheDocument();
+  });
+
+  it('a selected row with no price blocks the start and SAYS why — even when over budget', () => {
+    const selectedIds = new Set([A, B, EP, U, NP]);
+    renderPanel({ candidates: withGaps, selectedIds, budgetText: '0.30', budgetUsd: 0.3 });
+    expect(screen.getByTestId('consent-start-btn')).toBeDisabled();
+    expect(screen.getByTestId('consent-unpriced-hint')).toHaveTextContent(
+      '有 1 部沒有報價，請清除選取後重選'
+    );
+  });
+
+  it('cost sort puts priceless rows last in BOTH directions and never throws', () => {
+    for (const sort of ['cost-desc', 'cost-asc'] as const) {
+      cleanup();
+      renderPanel({ candidates: withGaps, sort });
+      const ids = [...screen.getByTestId('consent-candidate-list').querySelectorAll('li')].map(
+        (li) => li.getAttribute('data-testid')
+      );
+      expect(ids.slice(-2).sort()).toEqual([`consent-row-${NP}`, `consent-row-${RO2}`].sort());
+    }
+  });
+});
+
+describe('dsr-6e-1 AC #3 — money wears no status colour', () => {
+  it('row, summary and footer amounts are --text-primary, over budget included', () => {
+    renderPanel({ selectedIds: new Set([A, B, EP, U]), budgetText: '0.30', budgetUsd: 0.3 });
+    for (const id of [
+      `consent-row-usd-${A}`,
+      `consent-row-usd-${EP}`,
+      'consent-summary-usd',
+      'consent-footer-usd',
+    ]) {
+      const cls = screen.getByTestId(id).className;
+      expect(cls).toContain('text-[var(--text-primary)]');
+      expect(cls).not.toMatch(STATUS_COLOUR);
+    }
+  });
+
+  it('the row amount is Label on a phone-width list and Body from 36rem', () => {
+    renderPanel();
+    const cls = screen.getByTestId(`consent-row-usd-${A}`).className;
+    expect(cls).toContain('text-xs');
+    expect(cls).toContain('@xl:text-sm');
+    expect(cls).toContain('font-semibold');
+    expect(cls).not.toContain('text-[13px]');
+  });
+
+  it('the cut line keeps its ochre RULE but the sentence (and its amount) is neutral', () => {
+    renderPanel({ selectedIds: new Set([A, B, EP, U]), budgetText: '0.30', budgetUsd: 0.3 });
+    const cut = screen.getByTestId('consent-budget-cut');
+    const [ruleLeft, text] = [...cut.children] as HTMLElement[];
+    expect(ruleLeft.className).toContain('bg-[var(--warning)]');
+    expect(text.className).toContain('text-[var(--text-primary)]');
+    expect(text.className).not.toMatch(STATUS_COLOUR);
+  });
+});
+
+describe('dsr-6e-1 AC #4 — classification wears no status colour; badges are pills', () => {
+  it('row kind badge and chip markers are neutral pills', () => {
+    renderPanel();
+    const kind = screen.getByTestId(`consent-row-kind-${EP}`);
+    expect(kind.className).toContain('bg-[var(--bg-tertiary)]');
+    expect(kind.className).toContain('text-[var(--text-secondary)]');
+    expect(kind.className).toContain('rounded-full');
+    expect(kind.className).toContain('font-semibold');
+    expect(kind.className).not.toMatch(STATUS_COLOUR);
+    for (const chip of ['consent-chip-extract', 'consent-chip-asr']) {
+      const marker = screen.getByTestId(chip).querySelector('span:last-child') as HTMLElement;
+      expect(marker.className).toContain('bg-[var(--bg-secondary)]');
+      expect(marker.className).toContain('rounded-full');
+      expect(marker.className).not.toMatch(STATUS_COLOUR);
+    }
+  });
+
+  it('[CR M3] the group header route badges are neutral pills on --bg-secondary', () => {
+    renderPanel({ candidates: GROUPED, selectedIds: new Set() });
+    const badges = [...screen.getByTestId(`consent-group-${SRS}-routes`).children] as HTMLElement[];
+    expect(badges.length).toBeGreaterThan(0);
+    for (const badge of badges) {
+      expect(badge.className).toContain('bg-[var(--bg-secondary)]');
+      expect(badge.className).toContain('rounded-full');
+      expect(badge.className).not.toMatch(STATUS_COLOUR);
+    }
+  });
+
+  it('the selected chip is an --accent-tint pill at Label 500 (not --accent-subtle, not 13px)', () => {
+    renderPanel();
+    const cls = screen.getByTestId('consent-chip-all').className;
+    expect(cls).toContain('bg-[var(--accent-tint)]');
+    expect(cls).toContain('rounded-full');
+    expect(cls).toContain('text-xs');
+    expect(cls).toContain('font-medium');
+    expect(cls).not.toContain('font-semibold');
+    expect(cls).not.toContain('accent-subtle');
+  });
+
+  it('資料夾無法寫入 stays cinnabar — that one IS a state', () => {
+    const RO3 = '7fa9fed7-8fbc-4e8d-8edc-f6b7c8d9e026';
+    renderPanel({
+      candidates: [
+        ...CANDIDATES,
+        { ...CANDIDATES[0], mediaId: RO3, title: '唯讀', writable: false },
+      ],
+    });
+    const badge = screen.getByTestId(`consent-row-unwritable-${RO3}`);
+    expect(badge.className).toContain('bg-[var(--error-tint)]');
+    expect(badge.className).toContain('rounded-full');
+  });
+});
+
+describe('dsr-6e-1 AC #6 — layout and type scale', () => {
+  it('the title is 600, Body on a phone-width list and BodyLg from 36rem', () => {
+    renderPanel();
+    const title = screen.getByTestId(`consent-row-${A}`).querySelector('.truncate') as HTMLElement;
+    expect(title.className).toContain('font-semibold');
+    expect(title.className).toContain('text-sm');
+    expect(title.className).toContain('@xl:text-base');
+  });
+
+  it('no 13px arbitrary size is left in the panel', () => {
+    const { container } = renderPanel({
+      selectedIds: new Set([A, B, EP, U]),
+      budgetText: '0.30',
+      budgetUsd: 0.3,
+      startError: '無法開始',
+    });
+    expect(container.innerHTML).not.toContain('text-[13px]');
+  });
+
+  it('the row is a bordered radius-md box with NO fill of its own', () => {
+    renderPanel();
+    const cls = screen.getByTestId(`consent-row-${A}`).className;
+    expect(cls).toContain('rounded-[var(--radius-md)]');
+    expect(cls).toContain('border-[var(--border-subtle)]');
+    expect(cls).not.toContain('bg-[var(--bg-secondary)]');
+  });
+
+  it('the F18 banner is a full-bleed strip with the triangle icon', () => {
+    renderPanel({ selectedIds: new Set([A, B, EP, U]), budgetText: '0.30', budgetUsd: 0.3 });
+    const banner = screen.getByTestId('consent-over-budget-banner');
+    expect(banner.className).not.toContain('mx-6');
+    expect(banner.className).not.toContain('rounded-');
+    expect(banner.className).toContain('px-6');
+    expect(banner.querySelector('svg')?.getAttribute('class')).toContain('lucide-triangle-alert');
+  });
+
+  it('清除選取 is --text-secondary, 開始產生 is 14/600', () => {
+    renderPanel();
+    expect(screen.getByTestId('consent-clear-selection').className).toContain(
+      'text-[var(--text-secondary)]'
+    );
+    const start = screen.getByTestId('consent-start-btn').className;
+    expect(start).toContain('font-semibold');
+    expect(start).toContain('px-5');
   });
 });

@@ -49,7 +49,7 @@ export function listableCandidates(candidates: GenerationCandidate[]): Generatio
  * every extract-route candidate; paid ASR is NEVER pre-selected. */
 export function defaultSelection(candidates: GenerationCandidate[]): Set<string> {
   return new Set(
-    candidates.filter((c) => c.route === 'extract' && isWritable(c)).map((c) => c.mediaId)
+    candidates.filter((c) => c.route === 'extract' && isSelectable(c)).map((c) => c.mediaId)
   );
 }
 
@@ -61,6 +61,30 @@ export function defaultSelection(candidates: GenerationCandidate[]): Set<string>
  */
 export function isWritable(c: GenerationCandidate): boolean {
   return c.writable !== false;
+}
+
+/**
+ * Did the backend quote this row at all? (dsr-6e-1 AC #2)
+ *
+ * Today's server always sends `estimated_usd`, so this is a guard — but it is
+ * the guard on the one number this screen exists to show. Before it, a single
+ * row without the field took the whole dialog down: `new Decimal(undefined)`
+ * throws, and every row, subtotal and footer figure goes through that call.
+ * `$0.00` IS a price (a reading, DESIGN.md §金額的寫法); only an absent or
+ * non-finite value is "no price".
+ */
+export function isPriced(c: GenerationCandidate): boolean {
+  return typeof c.estimatedUsd === 'number' && Number.isFinite(c.estimatedUsd);
+}
+
+/**
+ * The rows a selection may contain: the folder can be written AND the row has
+ * a quote. Deliberately model-independent — switching model in F16 must never
+ * make an already-ticked row unselectable. (`modelChoices` guarantees the other
+ * half: a model is only offered when it quotes every selectable row.)
+ */
+export function isSelectable(c: GenerationCandidate): boolean {
+  return isWritable(c) && isPriced(c);
 }
 
 /**
@@ -83,10 +107,11 @@ export function isRuntimeApproximate(c: GenerationCandidate): boolean {
 
 /**
  * The ids a bulk action may touch. Callers pass an already-listable array
- * (this module never re-derives listability), so this is the writable subset.
+ * (this module never re-derives listability), so this is the selectable subset
+ * (writable AND priced).
  */
 export function selectableIds(candidates: GenerationCandidate[]): string[] {
-  return candidates.filter(isWritable).map((c) => c.mediaId);
+  return candidates.filter(isSelectable).map((c) => c.mediaId);
 }
 
 /**
@@ -107,7 +132,7 @@ export function visibleSelectableIds(
   visibleIds?: ReadonlySet<string>
 ): string[] {
   return candidates
-    .filter((c) => isWritable(c) && (visibleIds === undefined || visibleIds.has(c.mediaId)))
+    .filter((c) => isSelectable(c) && (visibleIds === undefined || visibleIds.has(c.mediaId)))
     .map((c) => c.mediaId);
 }
 
@@ -191,6 +216,20 @@ export interface ConsentTotals {
   selectableCount: number;
   /** Listable rows the backend's write probe refused. */
   unwritableCount: number;
+  /**
+   * Writable rows the backend sent WITHOUT a quote (dsr-6e-1). Counted apart
+   * from `unwritableCount`: 「資料夾無法寫入」 and 「無法估價」 are two different
+   * reasons a row cannot be ticked, and the toolbar names each one.
+   */
+  unpricedCount: number;
+  /**
+   * Defensive: SELECTED rows that have no price under the model in effect. By
+   * construction this is 0 (unpriced rows are never selectable, and a model is
+   * only offered when it quotes every selectable row). Such a row joins NO
+   * other figure — not the counts, not the money, not the feasibility walk —
+   * and the panel refuses to start while it is non-zero.
+   */
+  unpricedSelectedCount: number;
   selectedCount: number;
   selectedExtractCount: number;
   selectedAsrCount: number;
@@ -254,30 +293,48 @@ export interface ConsentTotals {
 
 /**
  * Per-media-id price under ONE chosen model (sub-6-8b AC #3) — the backend's
- * `estimates_by_model[<id>].per_candidate`. Undefined, or a row missing from
- * it, means "no per-model quote for this row": the row's own `estimatedUsd`
- * (the server's DEFAULT-model price) stands.
+ * `estimates_by_model[<id>].per_candidate`. Undefined means no model table is
+ * in effect and the row's own `estimatedUsd` (the server's DEFAULT-model
+ * price, which is also what an empty `model_id` is charged at) stands.
+ *
+ * A table that is PRESENT but missing a row means that row has NO price under
+ * this model — it must never read as "fall back to `estimatedUsd`" (dsr-6e-1):
+ * that showed Sonnet's figure on a row while the batch was priced as Haiku.
  */
 export type ModelPrices = Readonly<Record<string, number>>;
 
 /**
- * The price of ONE row under the chosen model. Every money figure on these
- * screens goes through here — the row, the group subtotal, the summary bar,
- * the footer, the confirm dialog and the F18 feasibility walk — so switching
- * model can never move four of them and leave the fifth behind.
+ * The price of ONE row under the chosen model, or `null` when there is no
+ * honest number to show. Every money figure on these screens goes through here
+ * — the row, the group subtotal, the summary bar, the footer, the confirm
+ * dialog and the F18 feasibility walk — so switching model can never move four
+ * of them and leave the fifth behind.
+ *
+ * Three rules, in this order (dsr-6e-1 AC #2):
+ *  1. A row that can never be selected has no price, ever — unwritable, OR sent
+ *     without its own quote (CR M1: a per-model entry must not resurrect a row
+ *     the panel is labelling 無法估價, or it reads「$0.31 無法估價」). The backend quotes writable rows
+ *     only (the pipeline would refuse the rest before spending), so any figure
+ *     there is another model's price or an assumption. This comes FIRST so the
+ *     row's place in a cost sort does not depend on whether the model catalogue
+ *     happens to have loaded yet.
+ *  2. A model table is in effect → that table's figure or nothing.
+ *  3. No table → the row's own default-model quote, if it has one.
+ *
+ * Never `0` for "unknown": `$0.00` is a reading on this screen.
  */
-export function candidateUsd(c: GenerationCandidate, prices?: ModelPrices): number {
-  const priced = prices?.[c.mediaId];
+export function candidateUsd(c: GenerationCandidate, prices?: ModelPrices): number | null {
+  if (!isSelectable(c)) return null;
   // Rounded to cents HERE, before it can enter any sum. Exact addition alone
   // is not enough: a row worth 0.005 renders as $0.01, and two of them render
   // a $0.01 total — the breakdown fails to add up even though the arithmetic
   // was perfect, because the rounding happened at DISPLAY time instead. Round
-  // the atoms and every level above is consistent by construction: the row,
-  // the group subtotal, the two route halves and the grand total.
-  //
-  // In practice this is a no-op — estimateUSD already rounds every wire value
-  // to whole cents — which is exactly what a guard should be.
-  return roundUsd(typeof priced === 'number' ? priced : c.estimatedUsd);
+  // the atoms and every level above is consistent by construction.
+  if (prices !== undefined) {
+    const priced = prices[c.mediaId];
+    return typeof priced === 'number' && Number.isFinite(priced) ? roundUsd(priced) : null;
+  }
+  return isPriced(c) ? roundUsd(c.estimatedUsd) : null;
 }
 
 export function computeTotals(
@@ -305,20 +362,33 @@ export function computeTotals(
   let visibleSelectedCount = 0;
   let visibleSelectedUsd = 0;
   let estimatedRowCount = 0;
+  let unpricedCount = 0;
+  let unpricedSelectedCount = 0;
+  let unwritableCount = 0;
   let cutMediaId: string | null = null;
   const pausedIds = new Set<string>();
 
   for (const c of candidates) {
     const visible = visibleIds === undefined || visibleIds.has(c.mediaId);
-    if (isWritable(c)) {
+    if (isSelectable(c)) {
       selectableCount++;
       if (visible) visibleSelectableCount++;
+    } else if (isWritable(c)) {
+      unpricedCount++;
+    } else {
+      unwritableCount++;
     }
     if (!selectedIds.has(c.mediaId)) continue;
+    const rowUsd = candidateUsd(c, prices);
+    if (rowUsd === null) {
+      // No price, no say in 「這批要花多少」: not the counts, not the money,
+      // not the ceiling walk. The panel blocks the start on this number.
+      unpricedSelectedCount++;
+      continue;
+    }
     selectedCount++;
     if (isRuntimeApproximate(c)) estimatedRowCount++;
-    const rowUsd = candidateUsd(c, prices);
-    if (visible && isWritable(c)) {
+    if (visible) {
       visibleSelectedCount++;
       visibleSelectedUsd = addUsd(visibleSelectedUsd, rowUsd);
     }
@@ -347,7 +417,9 @@ export function computeTotals(
   return {
     candidateCount: candidates.length,
     selectableCount,
-    unwritableCount: candidates.length - selectableCount,
+    unwritableCount,
+    unpricedCount,
+    unpricedSelectedCount,
     selectedCount,
     selectedExtractCount: extractCount,
     selectedAsrCount: asrCount,
@@ -606,7 +678,7 @@ export interface ModelChoiceInput {
  */
 const GRADE_ORDER = ['A', 'B', 'C', 'D', 'F'];
 
-/** Sum the SELECTED, writable rows at one model's prices. */
+/** Sum the SELECTED, selectable rows at one model's prices. */
 function sumSelected(
   candidates: GenerationCandidate[],
   selectedIds: ReadonlySet<string>,
@@ -614,8 +686,11 @@ function sumSelected(
 ): number {
   let total = 0;
   for (const c of candidates) {
-    if (!selectedIds.has(c.mediaId) || !isWritable(c)) continue;
-    total = addUsd(total, candidateUsd(c, prices));
+    if (!selectedIds.has(c.mediaId) || !isSelectable(c)) continue;
+    const rowUsd = candidateUsd(c, prices);
+    // Unreachable under modelChoices' coverage rule; skipped rather than NaN.
+    if (rowUsd === null) continue;
+    total = addUsd(total, rowUsd);
   }
   return roundUsd(total);
 }
@@ -655,13 +730,35 @@ export function modelChoices(
   // Pre-sub-6-8a server: only the default model has a price we can stand
   // behind (it is what `estimated_usd` already quotes). Offering the others
   // priced at the default's rate would be a lie in a money field.
+  //
+  // dsr-6e-1 AC #2: a quoted model is offered only when it prices EVERY
+  // selectable row. The backend guarantees that today; if it ever does not, a
+  // model whose total silently mixes in another model's prices is worse than
+  // no choice at all.
+  const selectable = candidates.filter(isSelectable);
+  const covers = (id: string) => {
+    const table = quoted(id)?.perCandidate;
+    return selectable.every((c) => candidateUsd(c, table ?? {}) !== null);
+  };
+  const isDefaultModel = (m: TranslationModelInfo) => m.id === defaultModelId || m.isDefault;
+  // …and if the hole is in the DEFAULT model's quote, offer nothing: the
+  // container would otherwise fall to choices[0] and re-price the whole list
+  // under a model nobody picked. [] ⇒ no `prices`, `model_id ''` — the rows
+  // show `estimatedUsd`, which is exactly what the server will charge.
+  // CR L1: a default that is not quoted AT ALL (while others are) is the same
+  // hole — it would drop out of `rows` and hand the list to choices[0].
+  if (anyQuote && models.some((m) => isDefaultModel(m) && (!quoted(m.id) || !covers(m.id)))) {
+    return [];
+  }
   const rows = anyQuote
-    ? models.filter((m) => quoted(m.id) !== undefined)
-    : models.filter((m) => m.id === defaultModelId || m.isDefault);
+    ? models.filter((m) => quoted(m.id) !== undefined && covers(m.id))
+    : models.filter(isDefaultModel);
   if (rows.length === 0) return [];
 
   // Denominator for the minutes rescale: the same set the backend summed —
-  // every writable listable candidate, selected or not.
+  // every WRITABLE listable candidate, selected or not. Deliberately isWritable
+  // and not isSelectable (dsr-6e-1): the backend's sum includes a writable row
+  // even if its quote went missing.
   let sweepRuntime = 0;
   let selectedRuntime = 0;
   for (const c of candidates) {

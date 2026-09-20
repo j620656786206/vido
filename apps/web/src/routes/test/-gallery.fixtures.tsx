@@ -561,6 +561,8 @@ function confirmTotals(parts: {
     candidateCount: 142,
     selectableCount: 142,
     unwritableCount: 0,
+    unpricedCount: 0,
+    unpricedSelectedCount: 0,
     visibleSelectableCount: 142,
     visibleSelectedCount: parts.selectedCount,
     visibleSelectedTotalUsd: addUsd(parts.selectedExtractUsd, parts.selectedAsrUsd),
@@ -4619,7 +4621,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       onSearchChange: noop,
       onSortChange: noop,
     },
-    width: 900,
+    width: 960,
     penNode: 'screen-section', // Screen F15-D-v2 (pwMzT) · F15-M-v2 (fdu4y)
     statesOnly: ['default'],
   },
@@ -4721,7 +4723,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       onSearchChange: noop,
       onSortChange: noop,
     },
-    width: 900,
+    width: 960,
     // Design ref: ux-design.pen — no current screen frame; the series/season
     // group headers postdate the 2026-08-10 F15 ratification (sub-5-3
     // function-first ruling; backlog-f15-f8-group-retry-pen-annotation).
@@ -4763,7 +4765,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       onSearchChange: noop,
       onSortChange: noop,
     },
-    width: 900,
+    width: 960,
     penNode: 'screen-section', // Screen F18-D-v2 (zBik1)
     statesOnly: ['default'],
   },
@@ -4772,7 +4774,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'subtitle/consent/CandidateListPanel (F15 可操作 — 影集預設收合、電影分已/未匹配)',
     component: CandidateListPanel,
     props: consentOperabilityProps({}),
-    width: 900,
+    width: 960,
     penNode: 'screen-section', // Screen F15-D-v2 (pwMzT)
     statesOnly: ['default'],
   },
@@ -4781,7 +4783,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'subtitle/consent/CandidateListPanel (F15 搜尋命中 — 命中的群組自動展開)',
     component: CandidateListPanel,
     props: consentOperabilityProps({ search: '怪奇', searchQuery: '怪奇' }),
-    width: 900,
+    width: 960,
     penNode: 'screen-section', // Screen F15-D-v2 (pwMzT)
     statesOnly: ['default'],
   },
@@ -4799,7 +4801,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         5
       ),
     }),
-    width: 900,
+    width: 960,
     penNode: 'screen-section', // Screen F15-D-v2 (pwMzT)
     statesOnly: ['default'],
   },

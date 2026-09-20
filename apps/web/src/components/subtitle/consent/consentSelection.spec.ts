@@ -12,6 +12,8 @@ import {
   parseBudgetInput,
   groupCandidates,
   groupOrder,
+  isPriced,
+  isSelectable,
   isWritable,
   isRuntimeApproximate,
   selectableIds,
@@ -324,9 +326,72 @@ describe('candidateUsd (the one row-price gate)', () => {
     expect(candidateUsd(row, { [A]: 0.02 })).toBe(0.02);
   });
 
-  it("falls back to the row's own estimate — a missing per-model price is never invented", () => {
-    expect(candidateUsd(row, { [B]: 0.02 })).toBe(0.05);
+  it('prices present but THIS row missing → null, never the default-model price (dsr-6e-1 AC #2)', () => {
+    // The old behaviour returned 0.05 here: pick Haiku, and a row Haiku never
+    // quoted silently kept Sonnet's price with nothing on screen saying so.
+    expect(candidateUsd(row, { [B]: 0.02 })).toBeNull();
     expect(candidateUsd(row, undefined)).toBe(0.05);
+  });
+
+  it('[P1] a missing estimated_usd is null, not a DecimalError', () => {
+    const bare = { ...row, estimatedUsd: undefined } as unknown as GenerationCandidate;
+    const nan = { ...row, estimatedUsd: Number.NaN };
+    expect(() => candidateUsd(bare)).not.toThrow();
+    expect(candidateUsd(bare)).toBeNull();
+    expect(candidateUsd(nan)).toBeNull();
+    // CR M1: a per-model entry does NOT resurrect it — the row is unselectable
+    // and labelled 無法估價, so a figure beside that label would contradict it.
+    expect(candidateUsd(bare, { [A]: 0.02 })).toBeNull();
+  });
+
+  it('an unwritable row has NO price, with or without a model table', () => {
+    const blocked = c(A, 'asr', 0.31, { writable: false });
+    expect(candidateUsd(blocked)).toBeNull();
+    expect(candidateUsd(blocked, { [A]: 0.12 })).toBeNull();
+  });
+});
+
+describe('isPriced / isSelectable (dsr-6e-1 AC #2)', () => {
+  const bare = { ...c(B, 'extract', 0), estimatedUsd: undefined } as unknown as GenerationCandidate;
+
+  it('selectable = writable AND priced; $0.00 is a price', () => {
+    expect(isPriced(c(A, 'extract', 0))).toBe(true);
+    expect(isPriced(bare)).toBe(false);
+    expect(isSelectable(c(A, 'extract', 0.05))).toBe(true);
+    expect(isSelectable(bare)).toBe(false);
+    expect(isSelectable(c(A, 'extract', 0.05, { writable: false }))).toBe(false);
+  });
+
+  it('no bulk path can pick up an unpriced row', () => {
+    const list = [c(A, 'extract', 0.05), bare];
+    expect([...defaultSelection(list)]).toEqual([A]);
+    expect(selectableIds(list)).toEqual([A]);
+    expect(visibleSelectableIds(list, new Set([A, B]))).toEqual([A]);
+  });
+
+  it('computeTotals counts unpriced and unwritable SEPARATELY', () => {
+    const list = [c(A, 'extract', 0.05), bare, c(C, 'asr', 0.3, { writable: false })];
+    const t = computeTotals(list, new Set([A]), 5);
+    expect(t.selectableCount).toBe(1);
+    expect(t.unpricedCount).toBe(1);
+    expect(t.unwritableCount).toBe(1);
+    expect(t.unpricedSelectedCount).toBe(0);
+  });
+
+  it('a selected row with no price joins NO figure — only unpricedSelectedCount', () => {
+    const guess = { ...bare, runtimeKnown: false };
+    const list = [c(A, 'extract', 0.05), guess];
+    const tight = computeTotals(list, new Set([A, B]), 0.01, undefined, new Set([A, B]));
+    expect(tight.estimatedRowCount).toBe(0);
+    expect(tight.visibleSelectedCount).toBe(1);
+    expect(tight.pausedIds.has(B)).toBe(false);
+    expect(tight.cutMediaId).toBeNull();
+    const t = computeTotals(list, new Set([A, B]), 5);
+    expect(t.unpricedSelectedCount).toBe(1);
+    expect(t.selectedCount).toBe(1);
+    expect(t.selectedExtractCount).toBe(1);
+    expect(t.selectedTotalUsd).toBe(0.05);
+    expect(t.feasibleCount).toBe(1);
   });
 });
 
@@ -477,6 +542,61 @@ describe('modelChoices', () => {
 
   it('an empty catalog is no question at all', () => {
     expect(modelChoices(list, new Set([A]), { models: [], defaultModelId: '' })).toEqual([]);
+  });
+
+  it('a NON-default model that does not quote every selectable row is not offered', () => {
+    const rows = modelChoices(list, new Set([A]), {
+      ...input,
+      estimatesByModel: {
+        ...input.estimatesByModel,
+        'claude-haiku-4-5': { totalUsd: 0.02, perCandidate: { [A]: 0.02 } },
+      },
+    });
+    expect(rows.map((r) => r.id)).toEqual(['claude-sonnet-5']);
+  });
+
+  it('a DEFAULT model with a hole in its quote offers NOTHING — never a silent switch to another model', () => {
+    const rows = modelChoices(list, new Set([A]), {
+      ...input,
+      estimatesByModel: {
+        ...input.estimatesByModel,
+        'claude-sonnet-5': { totalUsd: 0.05, perCandidate: { [A]: 0.05 } },
+      },
+    });
+    expect(rows).toEqual([]);
+  });
+
+  it('a default model with NO quote at all (others quoted) also offers nothing', () => {
+    const rows = modelChoices(list, new Set([A]), {
+      ...input,
+      estimatesByModel: { 'claude-haiku-4-5': input.estimatesByModel['claude-haiku-4-5'] },
+    });
+    expect(rows).toEqual([]);
+  });
+
+  it('coverage ignores rows that can never be selected (unwritable / unpriced)', () => {
+    const bare = {
+      ...c(C, 'extract', 0),
+      estimatedUsd: undefined,
+    } as unknown as GenerationCandidate;
+    const rows = modelChoices(
+      [...list, c(D, 'asr', 0.9, { writable: false }), bare],
+      new Set([A]),
+      input
+    );
+    expect(rows.map((r) => r.id)).toEqual(['claude-haiku-4-5', 'claude-sonnet-5']);
+  });
+
+  it('the minutes denominator stays every WRITABLE row — an unpriced one still counts', () => {
+    // The backend sums estimated_minutes_by_model over writable rows. Dropping
+    // the unpriced row (runtime 218) from the denominator would double the figure.
+    const bare = {
+      ...c(C, 'extract', 0, { runtimeMinutes: 218 }),
+      estimatedUsd: undefined,
+    } as unknown as GenerationCandidate;
+    const rows = modelChoices([...list, bare], new Set([A]), input);
+    // 166 of 436 → 37 * 0.3807 = 14.
+    expect(rows.find((r) => r.id === 'claude-sonnet-5')?.minutes).toBe(14);
   });
 
   it('excludes unwritable rows from every model total (they can never be spent)', () => {

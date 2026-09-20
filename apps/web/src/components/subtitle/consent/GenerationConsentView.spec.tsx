@@ -719,6 +719,10 @@ describe('GenerationConsentView — grouped order (sub-5-3 AC #2)', () => {
     mocked.getGenerationCandidates.mockResolvedValue(GROUPED_READY);
     renderView();
     expect(await screen.findByTestId(`consent-group-${SRS}`)).toHaveTextContent('怪奇物語');
+    // dsr-6e-1 AC #7 — exact, because toHaveTextContent above is a substring match.
+    expect(screen.getByTestId(`consent-group-${SRS}-disclosure`).textContent).toBe(
+      '怪奇物語 · 第 1 季'
+    );
   });
 });
 
@@ -941,5 +945,75 @@ describe('GenerationConsentView — 扣誰的錢 (sub-6-12 AC #6)', () => {
     expect(screen.getByTestId('consent-spend-source')).toHaveTextContent(
       '語音辨識：自架（不另計費）'
     );
+  });
+});
+
+describe('GenerationConsentView — a quote with a hole in it (dsr-6e-1 AC #2)', () => {
+  const NP = '9fa0fed7-8fbc-4e8d-8edc-f6b7c8d9e106';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h.models = MODELS;
+    h.modelsError = false;
+    h.analysisState.status = 'idle';
+    h.keySettings = undefined;
+  });
+
+  it('[P1] a candidate with no estimated_usd no longer takes the dialog down, is not pre-selected and is never submitted', async () => {
+    mocked.getGenerationCandidates.mockResolvedValue({
+      ...READY,
+      result: {
+        ...READY.result!,
+        candidates: [
+          ...READY.result!.candidates,
+          {
+            mediaId: NP,
+            mediaType: 'movie',
+            title: '沒有報價的電影',
+            route: 'extract',
+            runtimeMinutes: 100,
+            runtimeKnown: true,
+            estimatedUsd: undefined as unknown as number,
+          },
+        ],
+      },
+    });
+    const props = renderView({ preselectedIds: [A, NP] });
+
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+    expect(screen.getByTestId(`consent-row-unpriced-${NP}`)).toBeInTheDocument();
+    expect(screen.getByTestId('consent-summary-usd')).toHaveTextContent('$0.05');
+
+    fireEvent.click(screen.getByTestId('consent-start-btn'));
+    fireEvent.click(screen.getByTestId('consent-confirm-start'));
+    expect(props.onStartBatch).toHaveBeenCalledWith([A], 5, 'claude-sonnet-5');
+  });
+
+  it('a model that does not quote every selectable row is not offered in the confirm dialog', async () => {
+    mocked.getGenerationCandidates.mockResolvedValue({
+      ...READY_PRICED,
+      result: {
+        ...READY_PRICED.result!,
+        estimatesByModel: {
+          ...READY_PRICED.result!.estimatesByModel,
+          'claude-haiku-4-5': { totalUsd: 0.02, perCandidate: { [A]: 0.02 } },
+        },
+      },
+    });
+    renderView();
+
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('consent-start-btn'));
+    expect(screen.getByTestId('consent-model-option-claude-sonnet-5')).toBeInTheDocument();
+    expect(screen.queryByTestId('consent-model-option-claude-haiku-4-5')).toBeNull();
+  });
+
+  it('the dialog shell is 960 wide with a hairline — one width for every phase', async () => {
+    mocked.getGenerationCandidates.mockResolvedValue(READY);
+    renderView();
+    const shell = await screen.findByTestId('generation-consent-view');
+    expect(shell.className).toContain('sm:max-w-[960px]');
+    expect(shell.className).toContain('sm:border-[var(--border-subtle)]');
+    expect(shell.className).not.toContain('sm:max-w-3xl');
   });
 });

@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen F15-D-v2 (pwMzT) · F15-M-v2 (fdu4y) · F18-D-v2 (zBik1)
+// Design ref: ux-design.pen Screen F15-D-v2 (pwMzT) · F15-M-v2 (fdu4y) · F18-D-v2 (zBik1) · F18-spec-err (VPT7l)
 /**
  * F15 產生字幕．候選清單 (sub-4-3 AC #2/#3) — the core consent screen; F18 is
  * the same panel in its over-budget state; F15-M is the responsive variant
@@ -8,7 +8,10 @@
  *
  * Money honesty (§5-sexies 2026-08-11): every amount renders the backend's
  * `estimated_usd` VERBATIM through the shared usd() formatter — the extract
- * route shows its small translation fee (success green), never "免費". The
+ * route shows its small translation fee, never "免費". Amounts are ALWAYS
+ * --text-primary (DESIGN.md 金錢是事實: a price is a fact, not a state), and the
+ * route badges / chip markers are neutral for the same reason TechBadge is —
+ * they classify, they do not report (dsr-6e-1, Alexyu 2026-09-20). The
  * summary bar, footer segment and its detail line all render from ONE
  * ConsentTotals value (三處金額同源).
  *
@@ -18,7 +21,15 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { ArrowUpDown, ChevronRight, CircleAlert, Loader2, Search, X } from 'lucide-react';
+import {
+  ArrowUpDown,
+  ChevronRight,
+  CircleAlert,
+  Loader2,
+  Search,
+  TriangleAlert,
+  X,
+} from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { usd } from '../../../lib/currency';
 import { getImageUrl } from '../../../lib/image';
@@ -29,6 +40,7 @@ import {
   candidateUsd,
   computeTotals,
   displayTitleOf,
+  isPriced,
   isRuntimeApproximate,
   isWritable,
   spendSourceLabel,
@@ -251,6 +263,14 @@ function CandidateRow({
   // sub-6-10b AC #3. Strictly `=== false`: a pre-sub-6-10a server omits the
   // field, and "the server never told us" is not "TMDb found nothing".
   const unmatched = candidate.tmdbMatched === false;
+  // dsr-6e-1 AC #2: ONE rule decides whether the amount cell is drawn — there
+  // is a number to draw. `null` covers an unwritable row (the backend never
+  // quotes those, so any figure there would be another model's) and a row the
+  // wire sent without `estimated_usd`.
+  const rowUsd = candidateUsd(candidate, prices);
+  // Writable but unquoted: cannot be ticked, and says why. Distinct from
+  // 資料夾無法寫入 — two reasons, two badges, never both.
+  const unpriced = writable && !isPriced(candidate);
   return (
     <li
       ref={rowRef}
@@ -260,8 +280,8 @@ function CandidateRow({
       data-writable={writable ? 'true' : 'false'}
       data-paused={paused ? 'true' : undefined}
       className={cn(
-        'flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3.5 py-3',
-        !writable && 'opacity-70',
+        'flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-3 py-2.5',
+        (!writable || unpriced) && 'opacity-70',
         paused && 'opacity-60'
       )}
     >
@@ -269,7 +289,7 @@ function CandidateRow({
         type="checkbox"
         aria-label={`選取 ${displayTitleOf(candidate)}`}
         checked={checked}
-        disabled={!writable}
+        disabled={!writable || unpriced}
         onChange={() => onToggle(candidate.mediaId)}
         className="h-4 w-4 shrink-0 accent-[var(--accent-primary)] disabled:cursor-not-allowed"
       />
@@ -293,7 +313,9 @@ function CandidateRow({
           route too. Moving the cost up beside the title and letting the
           subtitle take both columns (and wrap) gives it the full 256px the
           drawing shows. The kind badge (抽取／語音辨識) goes below 36rem: the
-          amount's colour already says extract (green) vs ASR (amber).
+          subtitle sentence right under the title already spells the route out
+          (「內嵌英文字幕 → 翻譯」／「無文字字幕軌 → 語音辨識 + 翻譯」). It is NOT
+          the amount's colour — money wears none (dsr-6e-1).
 
           Why the grid is NESTED here rather than being the <li>: the outer flex
           row (checkbox · poster · identity) is untouched, so the desktop
@@ -313,7 +335,7 @@ function CandidateRow({
             not read as being ABOUT the title. */}
         <span className="col-start-1 row-start-1 flex min-w-0 items-center gap-2">
           <span
-            className="truncate text-sm text-[var(--text-primary)]"
+            className="truncate text-sm font-semibold text-[var(--text-primary)] @xl:text-base"
             // sub-6-10b AC #3: an unmatched row shows the parser's cleaned-up
             // guess, so hovering must still reveal what the file is really
             // called — that is the string the user will look for on disk.
@@ -325,7 +347,7 @@ function CandidateRow({
             <span
               data-testid={`consent-row-unmatched-${candidate.mediaId}`}
               title="TMDb 沒有比對到，片名由檔名解析"
-              className="shrink-0 rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-2 py-0.5 text-xs text-[var(--text-muted)]"
+              className="shrink-0 rounded-full bg-[var(--bg-tertiary)] px-2 py-0.5 text-xs text-[var(--text-muted)]"
             >
               未匹配
             </span>
@@ -349,33 +371,36 @@ function CandidateRow({
             <span
               data-testid={`consent-row-unwritable-${candidate.mediaId}`}
               title={blockerLabel(candidate)}
-              className="rounded-[var(--radius-sm)] bg-[var(--error-tint)] px-2 py-0.5 text-xs text-[var(--error-text)]"
+              className="rounded-full bg-[var(--error-tint)] px-2 py-0.5 text-xs text-[var(--error-text)]"
             >
               資料夾無法寫入
             </span>
           )}
+          {unpriced && (
+            <span
+              data-testid={`consent-row-unpriced-${candidate.mediaId}`}
+              title="後端沒有給這一部的估價，所以不能選。"
+              className="rounded-full bg-[var(--error-tint)] px-2 py-0.5 text-xs text-[var(--error-text)]"
+            >
+              無法估價
+            </span>
+          )}
+          {/* Neutral: 抽取／語音辨識 is which road this row takes — a property,
+              like H.265 on a TechBadge — not something that happened. */}
           <span
             data-testid={`consent-row-kind-${candidate.mediaId}`}
-            className={cn(
-              'hidden rounded-[var(--radius-sm)] px-2 py-0.5 text-xs @xl:inline',
-              isExtract
-                ? 'bg-[var(--success-tint)] text-[var(--success-text)]'
-                : 'bg-[var(--warning-tint)] text-[var(--warning-text)]'
-            )}
+            className="hidden rounded-full bg-[var(--bg-tertiary)] px-2.5 py-1 text-xs font-semibold text-[var(--text-secondary)] @xl:inline"
           >
             {isExtract ? '抽取' : '語音辨識'}
           </span>
-          <span
-            data-testid={`consent-row-usd-${candidate.mediaId}`}
-            className={cn(
-              'font-mono text-[13px] font-semibold tabular-nums',
-              isExtract ? 'text-[var(--success-text)]' : 'text-[var(--warning-text)]'
-            )}
-          >
-            {isRuntimeApproximate(candidate)
-              ? `≈ ${usd(candidateUsd(candidate, prices))}`
-              : usd(candidateUsd(candidate, prices))}
-          </span>
+          {rowUsd !== null && (
+            <span
+              data-testid={`consent-row-usd-${candidate.mediaId}`}
+              className="font-mono text-xs font-semibold tabular-nums text-[var(--text-primary)] @xl:text-sm"
+            >
+              {isRuntimeApproximate(candidate) ? `≈ ${usd(rowUsd)}` : usd(rowUsd)}
+            </span>
+          )}
         </span>
       </div>
     </li>
@@ -404,7 +429,9 @@ function BudgetCutRow({ budgetUsd, rowRef, index }: { budgetUsd: number } & Virt
       className="flex items-center gap-3 py-1"
     >
       <span className="h-px flex-1 bg-[var(--warning)]" />
-      <span className="shrink-0 text-xs text-[var(--warning-text)]">
+      {/* The ochre lives on the RULE; the sentence and its amount stay neutral
+          (DESIGN.md: 狀態押在標籤與圖示上，數字保持中性). */}
+      <span className="shrink-0 text-xs text-[var(--text-primary)]">
         到此為止約 <span className="font-mono tabular-nums">{usd(budgetUsd)}</span>
         ，之後的項目會暫停
       </span>
@@ -488,7 +515,7 @@ function GroupHeaderRow({
       data-testid={testid}
       data-expanded={expanded ? 'true' : 'false'}
       className={cn(
-        'flex items-center gap-3 rounded-[var(--radius-lg)] px-3.5',
+        'flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2',
         season
           ? 'ml-6 min-h-[40px] bg-[var(--bg-tertiary)]/60'
           : 'min-h-[44px] bg-[var(--bg-tertiary)]'
@@ -531,21 +558,24 @@ function GroupHeaderRow({
           className={cn(
             'min-w-0 truncate',
             season
-              ? 'text-[13px] text-[var(--text-secondary)]'
+              ? 'text-sm text-[var(--text-secondary)]'
               : 'text-sm font-semibold text-[var(--text-primary)]'
           )}
         >
           {label}
         </span>
       </button>
+      {/* Neutral pills on --bg-secondary: the header itself is --bg-tertiary, so a
+          tertiary badge would have no edge at all (same reason the chip markers
+          sit on --bg-secondary). */}
       <span data-testid={`${testid}-routes`} className="flex shrink-0 items-center gap-1.5 text-xs">
         {sectionTotals.selectedExtractCount > 0 && (
-          <span className="rounded-[var(--radius-sm)] bg-[var(--success-tint)] px-1.5 py-0.5 text-[var(--success-text)]">
+          <span className="rounded-full bg-[var(--bg-secondary)] px-1.5 py-0.5 text-[var(--text-secondary)]">
             抽取 {sectionTotals.selectedExtractCount}
           </span>
         )}
         {sectionTotals.selectedAsrCount > 0 && (
-          <span className="rounded-[var(--radius-sm)] bg-[var(--warning-tint)] px-1.5 py-0.5 text-[var(--warning-text)]">
+          <span className="rounded-full bg-[var(--bg-secondary)] px-1.5 py-0.5 text-[var(--text-secondary)]">
             語音辨識 {sectionTotals.selectedAsrCount}
           </span>
         )}
@@ -716,6 +746,7 @@ export function CandidateListPanel({
   const narrowed = totals.visibleSelectableCount < totals.selectableCount;
   const overBudget = totals.overBudget;
   const budgetInvalid = budgetUsd === null;
+  const unpricedSelected = totals.unpricedSelectedCount > 0;
 
   const chip = (
     key: ConsentRouteFilter,
@@ -729,21 +760,22 @@ export function CandidateListPanel({
       aria-pressed={filter === key}
       onClick={() => onFilterChange(key)}
       className={cn(
-        'flex h-11 items-center gap-1.5 rounded-[var(--radius-sm)] px-3 text-[13px] transition-colors',
+        // h-11 is the touch target; the drawn chip (FilterChip jD7gF) is a Label-500 pill.
+        'flex h-11 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors',
         filter === key
-          ? 'bg-[var(--accent-subtle)] font-semibold text-[var(--accent-text)]'
+          ? 'bg-[var(--accent-tint)] text-[var(--accent-text)]'
           : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
       )}
     >
       {label}
-      <span className="font-mono font-semibold tabular-nums">{count}</span>
+      <span className="font-mono tabular-nums">{count}</span>
       {marker === 'free' && (
-        <span className="rounded-[var(--radius-sm)] bg-[var(--success-tint)] px-1.5 py-0.5 text-xs font-semibold text-[var(--success-text)]">
+        <span className="rounded-full bg-[var(--bg-secondary)] px-1.5 py-0.5 text-xs font-medium text-[var(--text-secondary)]">
           僅翻譯費
         </span>
       )}
       {marker === 'paid' && (
-        <span className="rounded-[var(--radius-sm)] bg-[var(--warning-tint)] px-1.5 py-0.5 text-xs font-semibold text-[var(--warning-text)]">
+        <span className="rounded-full bg-[var(--bg-secondary)] px-1.5 py-0.5 text-xs font-medium text-[var(--text-secondary)]">
           付費
         </span>
       )}
@@ -762,15 +794,14 @@ export function CandidateListPanel({
         <div className="flex shrink-0 flex-col gap-3 px-6 pb-3 pt-6">
           {/* Summary bar */}
           <div className="flex flex-col gap-0.5">
-            <p className="flex flex-wrap items-center gap-[3px] text-[13px] text-[var(--text-secondary)]">
+            <p className="flex flex-wrap items-center gap-[3px] text-sm text-[var(--text-secondary)]">
               候選 <span className="font-mono tabular-nums">{totals.candidateCount}</span> 部 · 已選
               <span className="font-mono tabular-nums">{totals.selectedCount}</span> 部 · 預估
               <span
                 data-testid="consent-summary-usd"
-                className={cn(
-                  'font-mono font-semibold tabular-nums',
-                  overBudget ? 'text-[var(--warning-text)]' : 'text-[var(--text-primary)]'
-                )}
+                // Neutral over budget too: the banner, the budget field's border
+                // and the cut line carry the state; the number stays a number.
+                className="ml-1.5 font-mono font-semibold tabular-nums text-[var(--text-primary)]"
               >
                 {usdWithEstimate(totals.selectedTotalUsd, totals.hasEstimatedRows)}
               </span>
@@ -792,10 +823,10 @@ export function CandidateListPanel({
             sort control shrinks but stays beside the box, because stacking them
             would cost a whole line of an 85vh sheet. */}
           <div className="flex items-center gap-2">
-            <div className="relative flex h-11 min-w-0 flex-1 items-center rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-3">
+            <div className="relative flex h-11 min-w-0 flex-1 items-center rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-4">
               <Search
                 aria-hidden="true"
-                className="mr-2 h-4 w-4 shrink-0 text-[var(--text-muted)]"
+                className="mr-2.5 h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]"
               />
               <input
                 type="search"
@@ -804,7 +835,7 @@ export function CandidateListPanel({
                 placeholder="搜尋片名或影集"
                 aria-label="搜尋候選"
                 data-testid="consent-search-input"
-                className="min-w-0 flex-1 bg-transparent text-[13px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] [&::-webkit-search-cancel-button]:appearance-none"
+                className="min-w-0 flex-1 bg-transparent text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] [&::-webkit-search-cancel-button]:appearance-none"
               />
               {search !== '' && (
                 <button
@@ -821,17 +852,17 @@ export function CandidateListPanel({
             {/* One native <select> at both widths. On a phone the platform opens
               it as its own picker sheet, which is AC #5's sheet — and a better
               one than anything hand-rolled here would be. */}
-            <span className="flex h-11 shrink-0 items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] pl-2.5 pr-1">
+            <span className="flex h-11 shrink-0 items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] pl-3 pr-1">
               <ArrowUpDown
                 aria-hidden="true"
-                className="h-4 w-4 shrink-0 text-[var(--text-muted)]"
+                className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]"
               />
               <select
                 value={sort}
                 onChange={(e) => onSortChange(e.target.value as ConsentSort)}
                 aria-label="排序方式"
                 data-testid="consent-sort-select"
-                className="h-11 bg-transparent pr-1 text-[13px] text-[var(--text-primary)] outline-none"
+                className="h-11 bg-transparent pr-1 text-sm text-[var(--text-secondary)] outline-none"
               >
                 {CONSENT_SORTS.map((s) => (
                   <option key={s.value} value={s.value}>
@@ -850,8 +881,8 @@ export function CandidateListPanel({
           </div>
 
           {/* Selection toolbar */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <label className="flex min-h-[44px] items-center gap-2 text-[13px] text-[var(--text-secondary)]">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <label className="flex min-h-[44px] items-center gap-2 text-sm text-[var(--text-secondary)]">
               <input
                 type="checkbox"
                 data-testid="consent-select-all"
@@ -893,13 +924,21 @@ export function CandidateListPanel({
                   （{totals.unwritableCount} 部資料夾無法寫入）
                 </span>
               )}
+              {totals.unpricedCount > 0 && (
+                <span
+                  data-testid="consent-unpriced-count"
+                  className="text-xs text-[var(--error-text)]"
+                >
+                  （{totals.unpricedCount} 部無法估價）
+                </span>
+              )}
             </label>
             <span className="flex-1" />
             <button
               type="button"
               data-testid="consent-select-extract"
               onClick={onSelectAllExtract}
-              className="flex min-h-[44px] items-center text-[13px] text-[var(--accent-text)] transition-colors hover:opacity-80"
+              className="flex min-h-[44px] items-center text-sm font-medium text-[var(--accent-text)] transition-colors hover:opacity-80"
             >
               <span className="sm:hidden">全部可抽取</span>
               <span className="hidden sm:inline">選取全部可抽取（僅翻譯費）</span>
@@ -908,7 +947,7 @@ export function CandidateListPanel({
               type="button"
               data-testid="consent-clear-selection"
               onClick={onClearSelection}
-              className="flex min-h-[44px] items-center text-[13px] text-[var(--accent-text)] transition-colors hover:opacity-80"
+              className="flex min-h-[44px] items-center text-sm font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
             >
               <span className="sm:hidden">清除</span>
               <span className="hidden sm:inline">清除選取</span>
@@ -993,7 +1032,7 @@ export function CandidateListPanel({
                 type="button"
                 onClick={() => onSearchChange('')}
                 data-testid="consent-search-empty-clear"
-                className="flex min-h-[44px] items-center text-[13px] text-[var(--accent-text)] transition-colors hover:opacity-80"
+                className="flex min-h-[44px] items-center text-sm text-[var(--accent-text)] transition-colors hover:opacity-80"
               >
                 清除搜尋
               </button>
@@ -1010,10 +1049,17 @@ export function CandidateListPanel({
       {overBudget && budgetUsd !== null && (
         <div
           data-testid="consent-over-budget-banner"
-          className="mx-6 mb-2 flex items-center gap-2.5 rounded-[var(--radius-md)] bg-[var(--warning-tint)] p-3"
+          // Full-bleed strip (F18 RrCEy), not an inset card. Ochre is earned
+          // here: the user asked for N films and fewer will actually run.
+          className="flex shrink-0 items-center gap-2 bg-[var(--warning-tint)] px-6 py-2.5"
         >
-          <CircleAlert className="h-4 w-4 shrink-0 text-[var(--warning-text)]" aria-hidden="true" />
-          <p className="flex flex-wrap items-center gap-[3px] text-[13px] text-[var(--text-primary)]">
+          {/* --warning-text, not the drawn $warning: a base semantic colour is
+              not allowed as a foreground (local/no-base-semantic-as-text). */}
+          <TriangleAlert
+            className="h-4 w-4 shrink-0 text-[var(--warning-text)]"
+            aria-hidden="true"
+          />
+          <p className="flex flex-wrap items-center gap-[3px] text-sm text-[var(--text-primary)]">
             預估
             <span className="font-mono font-semibold tabular-nums">
               {usd(totals.selectedTotalUsd)}
@@ -1066,7 +1112,7 @@ export function CandidateListPanel({
         <p
           role="alert"
           data-testid="consent-start-error"
-          className="mx-6 mb-2 flex items-center gap-2.5 rounded-[var(--radius-md)] bg-[var(--error-tint)] p-3 text-sm text-[var(--error-text)]"
+          className="mx-6 my-2 flex shrink-0 items-center gap-2 rounded-[var(--radius-md)] bg-[var(--error-tint)] px-3 py-2.5 text-sm text-[var(--error-text)]"
         >
           <CircleAlert className="h-4 w-4 shrink-0" aria-hidden="true" />
           {startError}
@@ -1075,15 +1121,12 @@ export function CandidateListPanel({
 
       {/* Sticky footer: 已選/預估 · 預算上限 · 開始產生 */}
       <div className="flex shrink-0 flex-col gap-3 border-t border-[var(--border-subtle)] px-6 py-3.5 sm:flex-row sm:items-center">
-        <div className="flex flex-col">
-          <p className="flex items-center gap-[3px] text-[13px] text-[var(--text-primary)]">
+        <div className="flex flex-col gap-1">
+          <p className="flex items-center gap-[3px] text-sm font-semibold text-[var(--text-primary)]">
             已選 <span className="font-mono tabular-nums">{totals.selectedCount}</span> 部 · 預估
             <span
               data-testid="consent-footer-usd"
-              className={cn(
-                'font-mono font-semibold tabular-nums',
-                overBudget ? 'text-[var(--warning-text)]' : 'text-[var(--text-primary)]'
-              )}
+              className="ml-1.5 font-mono font-semibold tabular-nums text-[var(--text-primary)]"
             >
               {usdWithEstimate(totals.selectedTotalUsd, totals.hasEstimatedRows)}
             </span>
@@ -1101,10 +1144,10 @@ export function CandidateListPanel({
         </div>
         <span className="hidden flex-1 sm:block" />
         <label className="flex flex-col gap-1">
-          <span className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)]">
+          <span className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
             預算上限
             <span
-              className="flex items-center rounded-[var(--radius-sm)] border bg-[var(--bg-secondary)] px-2 py-1.5 font-mono text-[13px] tabular-nums text-[var(--text-primary)]"
+              className="flex h-9 w-24 items-center rounded-[var(--radius-md)] border bg-[var(--bg-primary)] px-3 font-mono text-sm tabular-nums text-[var(--text-primary)]"
               style={{
                 borderColor:
                   overBudget || budgetInvalid ? 'var(--warning)' : 'var(--border-subtle)',
@@ -1121,25 +1164,35 @@ export function CandidateListPanel({
                 aria-label="預算上限（美元）"
                 aria-invalid={budgetInvalid}
                 data-testid="consent-budget-input"
-                className="w-16 bg-transparent font-mono tabular-nums outline-none"
+                className="min-w-0 flex-1 bg-transparent font-mono tabular-nums outline-none"
               />
             </span>
           </span>
           {/* F18 third design round: in the over-budget state the banner already
               says it — the small hint would be a semantic duplicate (deleted
               from the drawn f18). It renders only in the normal state. */}
-          {(budgetInvalid || !overBudget) && (
-            <span className="text-xs text-[var(--text-muted)]">
-              {budgetInvalid ? '上限必須大於 0' : '達到上限會自動暫停，可稍後續跑'}
+          {/* dsr-6e-1 AC #2: a disabled 開始產生 must say WHY (DESIGN.md「沒有
+              金額，就沒有可按的按鈕」— 停用＋原因). This line outranks the other
+              two and is NOT gated on the over-budget state: the reason a paid
+              button is dead can never be the thing that gets hidden. */}
+          {unpricedSelected ? (
+            <span data-testid="consent-unpriced-hint" className="text-xs text-[var(--error-text)]">
+              有 {totals.unpricedSelectedCount} 部沒有報價，請清除選取後重選
             </span>
+          ) : (
+            (budgetInvalid || !overBudget) && (
+              <span className="text-xs text-[var(--text-muted)]">
+                {budgetInvalid ? '上限必須大於 0' : '達到上限會自動暫停，可稍後續跑'}
+              </span>
+            )
           )}
         </label>
         <button
           type="button"
           onClick={onStartClick}
-          disabled={starting || totals.selectedCount === 0 || budgetInvalid}
+          disabled={starting || totals.selectedCount === 0 || budgetInvalid || unpricedSelected}
           data-testid="consent-start-btn"
-          className="flex min-h-[44px] items-center justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-6 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex min-h-[44px] items-center justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-5 text-sm font-semibold text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {starting && (
             <Loader2
