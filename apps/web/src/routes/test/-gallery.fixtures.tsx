@@ -416,6 +416,19 @@ export interface GalleryFixture {
   /** Wrap the component in a fixed-width box so badges/inline elements don't collapse to 0-width. */
   width?: number;
   /**
+   * Browser VIEWPORT for this fixture (dsr-6f-1). `width` only boxes the
+   * component — the page stays 1280 wide, so viewport `sm:` variants never take
+   * their mobile branch, and a Portal dialog (which sizes against the window)
+   * can never be photographed as the bottom sheet it is on a phone. The visual
+   * spec reads this off the manifest and calls `page.setViewportSize` before the
+   * fixture's goto, restoring 1280×800 for the next one.
+   *
+   * Mutually exclusive with `width`: a fixture is either boxed or re-viewported
+   * (enforced by gallery-fixture-viewport.spec.ts). Phone fixtures use 390×844 — the
+   * canvas size of every `-M` screen in ux-design.pen.
+   */
+  viewport?: { width: number; height: number };
+  /**
    * CSS selector (relative to the component's render — searched inside the state div) for
    * the element that, when clicked, opens an interactive sub-UI (dropdown / menu / modal).
    * If set, the gallery emits a `<div data-gallery-state="open">` and the visual spec clicks
@@ -4176,6 +4189,31 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     width: 720,
   },
   {
+    // dsr-6f-1 — F3-M-v2 (k8sJl4 fS5is): the vertical phone stepper. The dialog
+    // around it cannot be a fixture (its progress view is internal state fed by a
+    // POST + SSE), so the stepper itself carries the phone baseline.
+    id: 'generation-progress-v2/轉錄中-mobile',
+    label: 'subtitle/GenerationProgressV2 (轉錄中 — 手機 viewport，直排、Body 14、無百分比)',
+    component: GenerationProgressV2,
+    props: { phase: 'transcribing', message: '正在轉錄音訊' },
+    penNode: 'XkGvG',
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+  },
+  {
+    id: 'generation-progress-v2/失敗-mobile',
+    label: 'subtitle/GenerationProgressV2 (翻譯失敗 — 手機 viewport)',
+    component: GenerationProgressV2,
+    props: {
+      phase: 'failed',
+      failedPhase: 'translating',
+      error: 'translate: context deadline exceeded',
+    },
+    penNode: 'XkGvG',
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+  },
+  {
     id: 'generation-progress-v2/翻譯中',
     label: 'subtitle/GenerationProgressV2 (翻譯中)',
     component: GenerationProgressV2,
@@ -4451,6 +4489,89 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       },
     ],
     penNode: 'screen-section', // Screen F1-D-v2 (r1EY9)
+    statesOnly: ['default'],
+  },
+  {
+    // dsr-6f-1 — F1-M-v2 (JkdfH): the same dialog at a phone viewport. Below 640px it
+    // is a bottom sheet: grabber, 44px title row with no rule, full-width 生成字幕,
+    // NO footer (搜尋線上字幕 moves into the body).
+    id: 'subtitle-manage-subtitle-dialog-v2-mobile',
+    label: 'subtitle/ManageSubtitleDialogV2 (F1-M — 手機 viewport 390×844，底部 sheet)',
+    component: ManageSubtitleDialogV2,
+    props: {
+      mediaId: 'movie-1',
+      mediaType: 'movie',
+      mediaTitle: '怪奇物語',
+      mediaFilePath: '/media/movies/Stranger.Things.S04E07.mkv',
+      mediaResolution: '1080p',
+      subtitleTracks: JSON.stringify([{ language: 'zh-CN' }, { language: 'en' }]),
+      subtitleStatus: 'found',
+      subtitleLanguage: 'zh-Hant',
+      open: true,
+      onOpenChange: noop,
+      onGenerationComplete: noop,
+      onDownloadSuccess: noop,
+    },
+    seedQueries: [
+      {
+        // dsr-6a AC #8 — the price on 生成字幕. Seeded so the frame never asks a
+        // backend (the visual CI has none): the button must read 「生成字幕 $0.42」.
+        queryKey: transcriptionEstimateKeys.item('movie', 'movie-1'),
+        data: {
+          mediaId: 'movie-1',
+          mediaType: 'movie',
+          plan: 'full',
+          asrAvailable: true,
+          selfHostedAsr: false,
+          translationConfigured: true,
+          modelId: 'claude-sonnet-5',
+          runtimeMinutes: 30,
+          runtimeKnown: true,
+          runtimeSource: 'ffprobe',
+          estimatedUsd: 0.42,
+        } satisfies TranscriptionEstimate,
+      },
+      {
+        queryKey: glossaryKeys.list('movie-1'),
+        data: [
+          {
+            id: 'fx-md-1',
+            mediaId: 'movie-1',
+            termSrc: 'Demogorgon',
+            termZh: '魔王獸',
+            language: 'zh-Hant',
+            source: 'subtitle',
+            confirmed: false,
+            createdAt: '2026-07-01T00:00:00Z',
+            updatedAt: '2026-07-01T00:00:00Z',
+          },
+          {
+            id: 'fx-md-2',
+            mediaId: 'movie-1',
+            termSrc: 'Hawkins',
+            termZh: '霍金斯鎮',
+            language: 'zh-Hant',
+            source: 'metadata',
+            confirmed: true,
+            createdAt: '2026-07-01T00:00:00Z',
+            updatedAt: '2026-07-01T00:00:00Z',
+          },
+          {
+            id: 'fx-md-3',
+            mediaId: 'movie-1',
+            termSrc: 'Vecna',
+            termZh: '維克那',
+            language: 'zh-Hant',
+            source: 'manual',
+            confirmed: false,
+            createdAt: '2026-07-01T00:00:00Z',
+            updatedAt: '2026-07-01T00:00:00Z',
+          },
+        ] satisfies GlossaryTerm[],
+      },
+    ],
+    viewport: { width: 390, height: 844 },
+    penNode: 'screen-section', // Screen F1-M-v2 (JkdfH)
     statesOnly: ['default'],
   },
   {
@@ -4893,6 +5014,27 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       onCancel: noop,
     },
     penNode: 'screen-section', // Screen F16-D-v2 (gmOt6)
+    statesOnly: ['default'],
+  },
+  {
+    // dsr-6f-1 — the FIRST phone-viewport Portal fixture: proves the harness can
+    // photograph a dialog as the bottom sheet it is below 640px (pinned to the
+    // bottom edge, grabber on top). Its mobile LAYOUT is dsr-6f-3's job.
+    id: 'generation-consent/confirm-mobile',
+    label: 'subtitle/consent/ConfirmGenerationDialog (F16-M — 手機 viewport 390×844，底部 sheet)',
+    component: ConfirmGenerationDialog,
+    props: {
+      open: true,
+      totals: CONSENT_CONFIRM_TOTALS,
+      budgetUsd: 5,
+      modelChoices: CONSENT_MODEL_CHOICES,
+      selectedModelId: 'claude-sonnet-5',
+      onModelChange: noop,
+      onConfirm: noop,
+      onCancel: noop,
+    },
+    viewport: { width: 390, height: 844 },
+    penNode: 'screen-section', // Screen F16-M-v2 (x45wBO)
     statesOnly: ['default'],
   },
   {

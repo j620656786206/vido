@@ -148,7 +148,7 @@ export function GenerationProgressV2({
   return (
     <div data-testid="generation-progress-v2" className="flex flex-col gap-4">
       {/* Stepper — mobile (<sm) = vertical full-width rows per F3-M-v2 (k8sJl4 `fS5is`,
-          Sally gate MUST-FIX 2026-07-05): [22px circle + 13px label + spacer + Mono pct].
+          Sally gate MUST-FIX 2026-07-05): [22px circle + Body 14 label + spacer + Mono pct].
           Desktop (sm+) keeps the original horizontal stepper — every sm: class computes
           IDENTICALLY to the pre-fix desktop DOM (zero darwin-baseline diff). */}
       <ol
@@ -176,13 +176,13 @@ export function GenerationProgressV2({
               <span
                 data-testid={`gen-stage-${stage}`}
                 data-state={state}
-                className="flex w-full flex-row items-center gap-2.5 sm:w-[72px] sm:flex-col sm:gap-1.5"
+                className="flex w-full flex-row items-center gap-2.5 max-sm:p-1 sm:w-[72px] sm:flex-col sm:gap-1.5"
               >
                 <StepMark state={state} />
                 <span
                   className={cn(
-                    // Mobile label stays 13px — the mobile sheet is dsr-6f. Desktop: Label 12 / 1.5.
-                    'text-[13px] sm:text-xs sm:leading-normal',
+                    // Phone: Body 14 (F3-M-v2 IdGB2). Desktop: Label 12 / 1.5.
+                    'text-sm sm:text-xs sm:leading-normal',
                     state === 'active' && 'font-semibold text-[var(--accent-text)]',
                     state === 'failed' && 'font-semibold text-[var(--error-text)]',
                     state === 'done' && 'text-[var(--text-secondary)]',

@@ -73,6 +73,17 @@ function renderDialog(
 }
 
 describe('ConfirmGenerationDialog (F16/F19)', () => {
+  it("[dsr-6f-1] phone sheet shell: slides up, and the 44px ✕ sits on this dialog's 56px title row", () => {
+    renderDialog();
+    const shell = screen.getByTestId('consent-confirm-dialog');
+    const t = (el: Element) => el.className.split(/\s+/);
+    expect(t(shell)).toContain('max-sm:data-[state=open]:animate-sheet-enter');
+    const close = screen.getByText('Close').closest('button')!;
+    // Grabber 16 + half of h-14 (28) − half of 44 (22) = 22. It moves with the
+    // header: change the title row's height and this token must change too.
+    expect(t(close)).toEqual(expect.arrayContaining(['max-sm:h-11', 'max-sm:top-[22px]']));
+  });
+
   it('[P0 F16] under budget: breakdown lines, neutral hint, 確認並開始', () => {
     const { onConfirm } = renderDialog();
     // dsr-6e-2: the testid wraps the AMOUNT only (「預估」 is its own muted node).

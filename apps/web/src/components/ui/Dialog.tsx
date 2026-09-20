@@ -35,9 +35,18 @@ function DialogOverlay({
 function DialogContent({
   className,
   overlayClassName,
+  closeClassName,
   children,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
+  /**
+   * Extra classes for the ✕ (dsr-6f-1). Optional, and `undefined` leaves the
+   * button byte-identical: the app-wide size of this control is an open ruling
+   * (disc-2026-09-dialog-close-target-44px), so a caller that needs a real touch
+   * target — the phone bottom sheets, via ui/mobileSheet — opts in for itself.
+   * Destructured HERE because `...props` is spread onto the DOM node below.
+   */
+  closeClassName?: string;
   /**
    * Extra classes for this dialog's own scrim. Needed because a dialog opened
    * from INSIDE another layer must lift the whole pair: raising only the content
@@ -63,7 +72,12 @@ function DialogContent({
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-[var(--radius-sm)] text-[var(--text-muted)] opacity-70 transition-opacity hover:opacity-100 focus:outline-none">
+        <DialogPrimitive.Close
+          className={cn(
+            'absolute right-4 top-4 rounded-[var(--radius-sm)] text-[var(--text-muted)] opacity-70 transition-opacity hover:opacity-100 focus:outline-none',
+            closeClassName
+          )}
+        >
           <X className="size-4" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>

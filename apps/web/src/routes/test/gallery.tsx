@@ -271,6 +271,9 @@ function ComponentGalleryPage() {
               key={fx.id}
               data-gallery-id={fx.id}
               data-gallery-clock-time={fx.clockTime ?? undefined}
+              data-gallery-viewport={
+                fx.viewport ? `${fx.viewport.width}x${fx.viewport.height}` : undefined
+              }
               className="font-mono text-xs"
             >
               {fx.id}
@@ -358,7 +361,14 @@ function ComponentGalleryPage() {
                         renderedFixture
                       );
                       return (
-                        <div key={state} className="space-y-1">
+                        <div
+                          key={state}
+                          // CR M1: this wrapper is a flex ITEM of a wrapping row, so it
+                          // shrink-wraps — and a `w-full` child of a shrink-to-fit box
+                          // resolves to its content width. A re-viewported fixture has to
+                          // widen the wrapper too, or the "phone" shot is 96px wide.
+                          className={fx.viewport ? 'w-full min-w-0 space-y-1' : 'space-y-1'}
+                        >
                           <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]/70">
                             {state}
                           </div>
@@ -379,7 +389,11 @@ function ComponentGalleryPage() {
                             data-gallery-open-trigger={
                               state === 'open' ? fx.openTrigger : undefined
                             }
-                            className="inline-block"
+                            // A re-viewported fixture fills the (phone-wide) page —
+                            // together with the widened wrapper above. `inline-block`
+                            // would shrink-wrap a `w-full` component to its content,
+                            // which is not what a 390px screen does.
+                            className={fx.viewport ? 'block w-full' : 'inline-block'}
                             style={fx.width ? { width: fx.width } : undefined}
                           >
                             {innerContent}

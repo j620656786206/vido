@@ -25,6 +25,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '../../ui/Dialog';
+import { MOBILE_SHEET_CLOSE, MOBILE_SHEET_CONTENT, SheetGrabber } from '../../ui/mobileSheet';
 import { cn } from '../../../lib/utils';
 import {
   subtitleService,
@@ -519,20 +520,19 @@ export function GenerationConsentView({
         <DialogContent
           data-testid="generation-consent-view"
           aria-describedby={undefined}
+          closeClassName={cn(MOBILE_SHEET_CLOSE, 'max-sm:top-[22px]')}
           className={cn(
             'flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0',
             // Mobile: bottom sheet (F15-M-v2 fdu4y). Desktop: centered dialog.
             // 960 for EVERY phase (Alexyu 2026-09-20): analysing, list and empty
             // share this one DialogContent, so following the drawn 560 → 960
             // would grow the dialog under the user the moment analysis ends.
-            'bottom-0 left-0 right-0 top-auto w-full max-w-none translate-x-0 translate-y-0 rounded-b-none rounded-t-[var(--radius-xl)]',
+            MOBILE_SHEET_CONTENT,
             'sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-[calc(100vw-4rem)] sm:max-w-[960px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[var(--radius-lg)] sm:border sm:border-[var(--border-subtle)]'
           )}
         >
           {/* Mobile bottom-sheet drag handle (F8 precedent, sm:hidden). */}
-          <div className="flex shrink-0 justify-center pb-1 pt-2 sm:hidden">
-            <span aria-hidden="true" className="h-1 w-9 rounded-full bg-[var(--bg-tertiary)]" />
-          </div>
+          <SheetGrabber />
 
           <div className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--border-subtle)] pl-6 pr-12">
             <DialogTitle className="truncate text-base font-semibold">產生字幕</DialogTitle>

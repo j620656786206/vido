@@ -396,6 +396,39 @@
   }
 }
 
+/* ② 解釋改變 — THE PHONE BOTTOM SHEET (dsr-6f-1).
+ *
+ * Below 640px the subtitle dialogs are pinned to the bottom edge, and a panel
+ * that is already AT the edge has nowhere to scale from — dialog-enter made it
+ * twitch in place. It slides up instead.
+ *
+ * `translate`, the individual property — the same one Tailwind's translate-*
+ * utilities set. The sheet rests at `translate-x-0 translate-y-0`, which is
+ * exactly where `both` leaves it. The utilities are applied ONLY under
+ * `max-sm:` (ui/mobileSheet.tsx): from `sm:` the dialog is centred with
+ * `translate: -50% -50%`, and this animation would overwrite that.
+ *
+ * No opacity: a sheet is a solid thing arriving; the scrim does the fading.
+ * The distance is a literal 100%, not --motion-rise, so reduced-motion does not
+ * zero it — the 1ms duration collapse is what makes it simply appear.
+ * Two names, for the same Radix Presence reason as above. */
+@keyframes sheet-enter {
+  from {
+    translate: 0 100%;
+  }
+  to {
+    translate: 0 0;
+  }
+}
+@keyframes sheet-exit {
+  from {
+    translate: 0 0;
+  }
+  to {
+    translate: 0 100%;
+  }
+}
+
 /* ② 解釋改變 — TRANSIENT SURFACES that arrive at an edge (toasts, floating
  * cards). They travel --motion-rise so the distance is the same one fadeIn
  * uses, and they animate `transform` rather than the individual `translate`
@@ -455,6 +488,8 @@
   --animate-overlay-exit: overlay-exit var(--motion-leave) var(--ease-leave) both;
   --animate-dialog-enter: dialog-enter var(--motion-move) var(--ease-settle) both;
   --animate-dialog-exit: dialog-exit var(--motion-leave) var(--ease-leave) both;
+  --animate-sheet-enter: sheet-enter var(--motion-move) var(--ease-settle) both;
+  --animate-sheet-exit: sheet-exit var(--motion-leave) var(--ease-leave) both;
   --animate-surface-rise: surface-rise var(--motion-move) var(--ease-settle) both;
   --animate-surface-slide-in-right: surface-slide-in-right var(--motion-move) var(--ease-settle)
     both;

@@ -69,6 +69,16 @@ import { withFixedClock } from './clock-mock';
 const FOCUSABLE =
   ':is(a[href], button, input, select, textarea, [tabindex]):not([tabindex="-1"]):not([disabled])';
 
+/** The `visual` project's pinned viewport (playwright.config.ts) — what every
+ *  fixture without its own `viewport` is photographed at. */
+const DEFAULT_VIEWPORT = { width: 1280, height: 800 };
+
+/** `"390x844"` (the manifest's data-gallery-viewport) → a Playwright viewport. */
+function parseViewport(raw: string | null): { width: number; height: number } | null {
+  const match = raw ? /^(\d+)x(\d+)$/.exec(raw) : null;
+  return match ? { width: Number(match[1]), height: Number(match[2]) } : null;
+}
+
 // See header § "CI parallelism". Anything unparsable / < 1 falls back to a single bucket.
 const VISUAL_BUCKETS = Math.max(1, Number.parseInt(process.env.VISUAL_BUCKETS ?? '1', 10) || 1);
 
@@ -166,9 +176,10 @@ test.describe('@visual @story-19-4 component visual baselines', () => {
           .map((el) => ({
             id: el.getAttribute('data-gallery-id'),
             clockTime: el.getAttribute('data-gallery-clock-time'),
+            viewport: el.getAttribute('data-gallery-viewport'),
           }))
           .filter(
-            (f): f is { id: string; clockTime: string | null } =>
+            (f): f is { id: string; clockTime: string | null; viewport: string | null } =>
               typeof f.id === 'string' && f.id.length > 0
           )
       );
@@ -182,8 +193,18 @@ test.describe('@visual @story-19-4 component visual baselines', () => {
         description: `bucket ${bucket + 1}/${VISUAL_BUCKETS}: ${fixtures.length} of ${allFixtures.length} fixtures`,
       });
 
-      for (const { id, clockTime } of fixtures) {
+      for (const { id, clockTime, viewport } of fixtures) {
         currentFixture = id;
+        // dsr-6f-1: per-fixture viewport. One test walks every fixture on one page,
+        // so a phone fixture MUST be undone for the next one — and the call is made
+        // only on an actual change, so the ~300 desktop fixtures never see a
+        // redundant device-metrics override. Before goto: layout happens after
+        // navigation, so the reset cannot disturb the next fixture's baseline.
+        const want = parseViewport(viewport) ?? DEFAULT_VIEWPORT;
+        const current = page.viewportSize();
+        if (!current || current.width !== want.width || current.height !== want.height) {
+          await page.setViewportSize(want);
+        }
         // 19-9 AC #4: Rule 23 clock-mock. Install BEFORE goto so `page.clock` init
         // scripts run before any time-dependent JS in the fixture page evaluates.
         if (clockTime) {
@@ -252,6 +273,16 @@ test.describe('@visual @story-19-4 component visual baselines', () => {
           // we capture a viewport screenshot so the overlay paint is still recorded.
           const bbox = await stateDiv.boundingBox();
           const isZeroSize = !bbox || bbox.width < 4 || bbox.height < 4;
+
+          // dsr-6f-1 CR M1: an in-flow fixture on a phone viewport must actually BE
+          // phone-wide. The gallery's wrappers shrink-wrap by default, and the first
+          // `-mobile` baselines were silently 96px wide — a "390px" shot that showed
+          // none of the full-width rows it was there to guard. 64 = the page's p-8.
+          if (viewport && !isZeroSize && bbox) {
+            expect
+              .soft(bbox.width, `${id}:${state} is not as wide as its ${want.width}px viewport`)
+              .toBeGreaterThanOrEqual(want.width - 64 - 1);
+          }
 
           if (!isZeroSize) {
             await stateDiv.scrollIntoViewIfNeeded();
