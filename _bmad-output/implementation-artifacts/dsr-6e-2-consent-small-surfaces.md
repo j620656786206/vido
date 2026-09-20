@@ -1,6 +1,6 @@
 # Story DSR.6e-2：產生字幕的分析中、金額確認、空狀態對齊設計稿——確認框只寫「約 $4.50」，總額不再變成橘色
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -146,17 +146,17 @@ so that 在我按下「確認並開始」之前，我讀到的每個數字都只
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — 設計稿（AC: #1）**
-  - [ ] F14 960＋內容欄 480、F19 提示字色、F17 對齊 E3-D、補註記
-  - [ ] `ctx.problems`；存檔並確認落盤；匯出後只 stage f14-d-v2／f17-d-v2／f19-d-v2（＋pen-tokens）
-- [ ] **Task 2 — F14（AC: #2, #7 第一項）**
-  - [ ] 先寫紅測試 `AnalysisProgressPanel.spec.tsx` → 頁尾、`aria-live`、`aria-disabled`、pill、字級
-- [ ] **Task 3 — F16／F19（AC: #3, #7）**
-  - [ ] 先寫紅測試（合計中性、明細金額、「約 $X」不含「這批」）→ `ConfirmGenerationDialog.tsx`、`ModelPicker.tsx`
-- [ ] **Task 4 — F20＋F17 追溯（AC: #4, #5）**
-- [ ] **Task 5 — 夾具與基準線（AC: #8）**
-- [ ] **Task 6 — 收尾（AC: #6, #9, #10）**
-  - [ ] 全套閘門、e2e；dev-story Step 9 截圖比對（`f14-d-v2`、`f16-d-v2`、`f19-d-v2`、`f20-d-v2`）
+- [x] **Task 1 — 設計稿（AC: #1）**
+  - [x] F14 960＋內容欄 480、F19 提示字色、F17 對齊 E3-D、補註記
+  - [x] `ctx.problems`；存檔並確認落盤；匯出後只 stage f14-d-v2／f17-d-v2／f19-d-v2（＋pen-tokens）
+- [x] **Task 2 — F14（AC: #2, #7 第一項）**
+  - [x] 先寫紅測試 `AnalysisProgressPanel.spec.tsx` → 頁尾、`aria-live`、`aria-disabled`、pill、字級
+- [x] **Task 3 — F16／F19（AC: #3, #7）**
+  - [x] 先寫紅測試（合計中性、明細金額、「約 $X」不含「這批」）→ `ConfirmGenerationDialog.tsx`、`ModelPicker.tsx`
+- [x] **Task 4 — F20＋F17 追溯（AC: #4, #5）**
+- [x] **Task 5 — 夾具與基準線（AC: #8）**
+- [x] **Task 6 — 收尾（AC: #6, #9, #10）**
+  - [x] 全套閘門、e2e；dev-story Step 9 截圖比對（`f14-d-v2`、`f16-d-v2`、`f19-d-v2`、`f20-d-v2`）
 
 ## Dev Notes
 
@@ -236,11 +236,71 @@ ux-design.pen、_bmad-output/pen-tokens.json、_bmad-output/screenshots/flow-f-s
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Fable 5.1 — dev-story (Amelia)
 
 ### Debug Log References
 
+- 同 dsr-6e-1：Nx 一律 `NX_DAEMON=false`；視覺測試只有一支 test，`--grep` 濾不到，只能整支跑（9.5 分鐘）再還原無關的；`test:cleanup` 會順手砍掉 `nx serve web`；e2e 用 `AI_PROVIDER=claude npx playwright test tests/e2e/batch-subtitle.spec.ts --project=chromium`。
+
 ### Completion Notes List
+
+**做了什麼（對使用者的差別）**
+
+1. **確認框只寫「約 $4.50」**（② Alexyu 2026-09-11 拿掉「這批」）。測試用**逐字**比對——「這批約 $0.53」本來就包含「約 $0.53」，子字串比對抓不到。
+2. **合計不再變橘色。** 超過上限時合計仍是一般字色（16／700），狀態由橘色提示框與「仍要開始」承載。明細的金額改成一般字色（「預估」兩個字維持灰），`data-testid` 移到只包金額的 span。
+3. **「品質 A」不再是綠色。** 所有等級都是中性藥丸（四處同類分類標記的第四處）；等級靠字與出處說明。
+4. **分析中的取消鍵搬到頁尾**，跟清單、空狀態同一個位置。計數那一行**不再是即時播報區**（以前每 250ms 被螢幕報讀念一次），進度由進度條的 `aria-valuenow` 承載。取消中改用 `aria-disabled`＋「取消中…」，變灰用 `aria-disabled:` variant（`disabled:` 在這裡不會生效）；再點一次不會重複送出。
+5. **確認框 480 寬＋髮絲框、`radius-lg`**；開頭那句 16／600；6 處 13px 全收；「確認並開始／仍要開始」14／600。
+6. **空狀態對稿**：96 的圓、36 的圖示（`CircleCheck`）、H4 標題、Body 說明。兩種空狀態（都有字幕了／沒有找到）同一套字級。
+7. `ScanProgressCard.tsx` 的 Rule 21 標頭補上 F17。
+
+**設計稿（Task 1）**
+
+- F14 `h60Flj` 560 → 960（`x: 240` 置中），body 置中、內容欄 480；F19 `NMVfO` → `$text-primary`；品質徽章 `xKKKz`／`VBvLY`／`zl86k`／`Msfhy` 改中性藥丸，B 級四顆（`yMPIc`／`t22xQ`／`jkiqe`／`HJQfb`）只改圓角；F17 統計文字與連結對齊 E3-D、刪 `q1QKm`、倒數條 `$text-muted`、圖示改赭色三角；新的中性註記 `bSlYR` 放在 6e-1 那顆下方 40px（無重疊）。
+- `ctx.problems`：六張畫面只剩既有的背景裁切（`sec-活動記錄`）。存檔後已 grep 磁碟檔確認新註記與 F17 文字落盤。匯出後只留 `f14-d-v2`／`f16-d-v2`／`f16-m-v2`／`f17-d-v2`／`f19-d-v2`／`f19-m-v2`＋`pen-tokens.json`，其餘重繪雜訊還原。
+
+**閘門結果**
+
+| 閘門 | 結果 |
+| --- | --- |
+| `pnpm run lint:all` | ✅ 0 errors／129 warnings（全部既有；consent 資料夾只有 1 個既有的 `react-hooks/incompatible-library`） |
+| `pnpm nx run web:typecheck --skip-nx-cache` | ✅ |
+| `python3 scripts/check-design-tokens.py` | ✅ |
+| `pnpm nx test web` | ✅ 3916/3916（271 檔；新增 1 支 spec；CR 後） |
+| `pnpm nx test api` | ✅（本張沒改後端） |
+| e2e `batch-subtitle.spec.ts`（chromium） | 5/7；紅的 2 條同 dsr-6d-b／6e-1：本機 `AI_PROVIDER=claude` 讓請求主體多一個 `model_id`，CI 是綠的 |
+| 視覺 | 7 張 darwin 重生＋1 張新增（`empty-all-covered`）；7 張過期 `-linux` 已 `git rm` |
+
+- 🔗 AC Drift: FOUND —— `sub-6-8b` AC #1 的列文案「這批約 $X」→「約 $X」（Alexyu 2026-09-11 指示）；`sub-6-8b` 的「只有 MEASURED grade 才有顏色」→ 一律中性（2026-09-20 裁定）；`sub-4-3` AC #4 的「超過上限合計轉橘」→ 中性（2026-09-10 裁定 B）。皆為刻意，由本張 AC 明文取代。
+- 📎 Contract Stamps: FOUND（上游 sub-4-1 AC #8、sub-6-8a AC #2 `[@contract-v1]`，ack 在 Dev Notes；本張只改呈現，不改消費）
+- 🎭 A11y Pre-Flight: PASS（4 個元件；0 個由本張引入的 jsx-a11y warning）。本張**修掉**兩個 a11y 問題：F14 的高頻 live region、取消中焦點掉到 `<body>`。確認框仍是 Radix Dialog（焦點管理不變）。
+- 🎨 UX Verification: PASS —— 對照 `f14-d-v2`／`f16-d-v2`／`f19-d-v2`／`f20-d-v2` 與新的基準線：
+
+| Area | Design Spec | Implementation | Match? |
+| --- | --- | --- | --- |
+| F14 內容欄／進度條／標籤 | 480 欄、pill、Body 600 置中 | 同 | ✅ |
+| F14 取消 | 頁尾靠右 Secondary h44 | 同 | ✅ |
+| F16／F19 外框 | 480、radius-lg、1px 框 | 同 | ✅ |
+| 開頭句／模型標題／金額 | BodyLg 600／Body 600／Body 700 mono「約 $X」 | 同 | ✅ |
+| 品質徽章 | 中性藥丸 | 同 | ✅ |
+| 明細／合計 | 金額 `$text-primary`；合計 BodyLg 700、中性 | 同 | ✅ |
+| F19 提示框 | `$warning-tint`＋`$text-primary` | 同 | ✅ |
+| F20 | 96 圓、36 圖示、H4、Body | 同（只比中間那一塊） | ✅ |
+| 關閉鈕 | 44×44 在標題列 | 共用 `ui/Dialog` 的 16px ✕ | ❌ 既有單 `disc-2026-09-dialog-close-target-44px` |
+
+**🔍 /ship 對抗式 CR（2026-09-20，fresh-context 代理，只讀）**——0 HIGH／2 MEDIUM／5 LOW，**修 5、交代 2、駁回 0**。
+
+| 等級 | 問題 | 處置 |
+| --- | --- | --- |
+| **M1** | `not.toContain('disabled:opacity-50 ')` 這條斷言靠 class 順序才會過：`aria-disabled:opacity-50` 本身就包含那個子字串。把 `disabled:` 加回最後面測試照樣綠；formatter 換個順序測試就無故變紅。 | 修：改成比對整個 class token，任何 `disabled:` 開頭的 class 都會讓它紅 |
+| **M2** | 容器沒有「取消送出中」的測試：把 `cancelling={cancelling}` 那個 prop 刪掉，整套仍然綠——而那正是本張要修的（雙擊送兩次、焦點掉到 body）。 | 修：deferred promise 測試——取消中…、`aria-disabled`、`document.activeElement` 仍是按鈕、第二次點擊不送、resolve 後關閉 |
+| L2 | 很矮的視窗（橫放的手機）下，F14 的內容塊不能縮，頁尾的取消會被 85vh 裁掉。不是回歸（舊版也溢出），但取消鍵現在在頁尾。 | 修：內容塊加 `min-h-0 overflow-y-auto`＋斷言 |
+| L3 | 幾個修正沒有會因為被還原而變紅的斷言（抽取那一列的金額色、空狀態的圖示與說明字級、F14 的說明字級與 480 欄）。 | 修：全部補上 |
+| L4 | 計數行不再是 live region 之後，`consent-phase-live`「正在分析字幕軌」是唯一的播報，卻沒有任何測試斷言它。 | 修：補斷言 |
+| L1 | AC #3 逐字規定的幾個 class 沒有 `sm:` 前綴，所以手機的確認 sheet（F16-M／F19-M）字級也跟著變了——與單子開頭「只改 `sm:` 以上」的說法矛盾，而且確認框沒有手機夾具守著。變動方向與手機稿一致（F16-M 的金額、合計也是同一套字階）。 | 交代 `dsr-6f`（已寫進它的 sprint 條目：接手時補 `confirm-mobile` 夾具） |
+| L5 | `setCancelling(false)` 在 `onClose()` 之後的 `finally` 才跑；若父層的關閉有動畫，按鈕會閃回「取消」一幀。既有行為，容器檔不在本張範圍。 | 交代 `dsr-6f`（同一條目） |
+
+**觀察（沒改）**：被選中的模型列底色是 `--bg-tertiary`，B 級徽章也是 `--bg-tertiary`，所以選中 B 級時徽章沒有邊——稿（F19 `t22xQ` 在 `w5L1S3` 上）就是這樣畫的，現在 A 級也一樣。要不要讓徽章在選中列上換一階，併入 `disc-2026-09-batch-consent-buttons-without-amount` 同一輪 Sally 裁定時一起看（已補記在該條目）。
 
 ### Discovery Triage
 
@@ -267,10 +327,38 @@ ux-design.pen、_bmad-output/pen-tokens.json、_bmad-output/screenshots/flow-f-s
 
 ### File List
 
+**新增**
+
+- `apps/web/src/components/subtitle/consent/AnalysisProgressPanel.spec.tsx`
+- `tests/visual/components.visual.spec.ts-snapshots/components/generation-consent/empty-all-covered/default-visual-darwin.png`
+
+**修改**
+
+- `apps/web/src/components/subtitle/consent/AnalysisProgressPanel.tsx`
+- `apps/web/src/components/subtitle/consent/ConfirmGenerationDialog.tsx`（+spec）
+- `apps/web/src/components/subtitle/consent/ModelPicker.tsx`（+spec）
+- `apps/web/src/components/subtitle/consent/ConsentEmptyState.tsx`（+spec）
+- `apps/web/src/components/subtitle/consent/GenerationConsentView.spec.tsx`
+- `apps/web/src/components/scanner/ScanProgressCard.tsx`（只改 Rule 21 標頭）
+- `apps/web/src/routes/test/-gallery.fixtures.tsx`
+- `ux-design.pen`、`_bmad-output/pen-tokens.json`、`_bmad-output/screenshots/flow-f-subtitle-v2/{f14-d-v2,f16-d-v2,f16-m-v2,f17-d-v2,f19-d-v2,f19-m-v2}.png`
+- `tests/visual/.../generation-consent/{analyzing,empty,confirm,confirm-over-budget,f16-model-default,f16-model-haiku,f19-over-budget-haiku}/default-visual-darwin.png`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+
+**刪除**
+
+- 上述 7 個夾具的 `default-visual-linux.png`（交給 CI bootstrap）
+
+**AC drift reference — see Completion Notes**：`sub-6-8b-per-run-model-selection-frontend.md`、`sub-4-3-cost-consent-frontend.md`
+
+⛔ **沒有碰**：`CandidateListPanel`／`consentRows`／`consentSelection`、`GenerationConsentView.tsx`、`ui/Dialog.tsx`、任何後端檔案。
+
 ## Change Log
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-20 | 🔍 **/ship 對抗式 CR**：0H／2M／5L，修 5、交代 2。最重要：一條靠 class 順序才會過的斷言改成比對整個 token；補上「取消送出中」的容器測試（焦點留在按鈕上、第二次點擊不送）；F14 內容塊可縮可捲，矮視窗下取消鍵不會被裁掉。 |
+| 2026-09-20 | 🚧 **REVIEW**（dev-story, Amelia）。Task 1–6 完成：F14 頁尾＋拿掉高頻 live region＋`aria-disabled`；F16／F19 480＋框、「約 $X」、合計中性、明細金額 `--text-primary`、品質徽章中性藥丸；F20 對稿；F17 改稿＋Rule 21 標頭。閘門：lint 0 errors、typecheck ✅、design-tokens ✅、web 3915/3915、api ✅；e2e 本機 5/7（同一個 `model_id` 環境副作用）。 |
 | 2026-09-20 | 🔍 **建單後對抗驗證**（fresh-context 驗證代理，只讀；逐節點比對 `.pen`、逐行比對程式碼）：本張的改動併入 4 項——① `aria-disabled` 換上去之後 `disabled:opacity-50` 完全失效，要改成 `aria-disabled:` variant；② `consent-analysis-panel` 這個 testid 有四條既有測試在用，不能跟著搬；③ F17 的綠勾與「無法匯入 42 · 錯誤 7」互相矛盾（E3-D 與程式碼都是赭色三角）；④ F16／F19 的「品質 A」青碧徽章就是 sprint 條目說的「4 處」的第四處，本張一起收。另修 `DESIGN.md` 字階行號與匯出清單（動到 F16-M／F19-M 的徽章）。 |
 | 2026-09-20 | ⚖️ **Alexyu 裁定（建單提問）**：對話框整段固定 960（F14 的稿改 960、內容欄 480）；分類徽章一律中性（本張的品質徽章）。 |
 | 2026-09-20 | Story 建立（SM Bob, create-story）。`dsr-6e` 的第二塊：F14／F16／F19／F20 的程式碼對齊，F17 只改稿。找到 19 項現況問題（其中兩項是給螢幕報讀的：計數行每 250ms 被念一次、取消中焦點掉到 body）；帶入 dsr-6 的 ②（「約 $4.50」）。新立 1 張 disc。依賴 `dsr-6e-1`。 |

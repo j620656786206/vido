@@ -47,16 +47,35 @@ describe('ModelPicker (F16/F19 翻譯模型)', () => {
   it('[P0 AC #1] every row states this batch price, the measured grade and the rough time', () => {
     renderPicker();
 
-    expect(screen.getByTestId('consent-model-usd-claude-sonnet-5')).toHaveTextContent(
-      '這批約 $0.53'
-    );
+    // dsr-6e-2 ②: exact text — 「這批約 $0.53」 CONTAINS 「約 $0.53」, so a
+    // substring match would let the old copy through.
+    expect(screen.getByTestId('consent-model-usd-claude-sonnet-5').textContent).toBe('約 $0.53');
     expect(screen.getByTestId('consent-model-grade-claude-sonnet-5')).toHaveTextContent('品質 A');
     expect(screen.getByTestId('consent-model-minutes-claude-sonnet-5')).toHaveTextContent(
       '約 11 分鐘'
     );
-    expect(screen.getByTestId('consent-model-usd-claude-haiku-4-5')).toHaveTextContent(
-      '這批約 $0.21'
+    expect(screen.getByTestId('consent-model-usd-claude-haiku-4-5').textContent).toBe('約 $0.21');
+  });
+
+  it('[dsr-6e-2] the grade badge is a NEUTRAL pill — a grade is a property, not a state', () => {
+    renderPicker();
+    for (const id of ['claude-sonnet-5', 'claude-haiku-4-5']) {
+      const cls = screen.getByTestId(`consent-model-grade-${id}`).className;
+      expect(cls).toContain('bg-[var(--bg-tertiary)]');
+      expect(cls).toContain('text-[var(--text-secondary)]');
+      expect(cls).toContain('rounded-full');
+      expect(cls).not.toMatch(/--success-(tint|text)/);
+    }
+  });
+
+  it('[dsr-6e-2] type scale: title Body 600, name Body, amount Body 700 — no 13px', () => {
+    renderPicker();
+    const container = screen.getByTestId('consent-model-picker');
+    expect(screen.getByText('選擇翻譯模型').className).toContain('text-sm font-semibold');
+    expect(screen.getByTestId('consent-model-usd-claude-sonnet-5').className).toContain(
+      'font-bold'
     );
+    expect(container.innerHTML).not.toContain('text-[13px]');
   });
 
   it('[P0 AC #1] an unevaluated model says 尚未評測 and offers the cheap try-out — never a blank where a grade goes', () => {

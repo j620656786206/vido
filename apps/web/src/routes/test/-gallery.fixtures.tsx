@@ -4584,7 +4584,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'subtitle/consent/AnalysisProgressPanel (F14 分析中)',
     component: AnalysisProgressPanel,
     props: { analyzed: 234, total: 1247, onCancel: noop },
-    width: 720,
+    width: 960,
     penNode: 'screen-section', // Screen F14-D-v2 (nBT3M)
     statesOnly: ['default'],
   },
@@ -4810,7 +4810,19 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'subtitle/consent/ConsentEmptyState (F20 空狀態)',
     component: ConsentEmptyState,
     props: {},
-    width: 720,
+    width: 960,
+    penNode: 'screen-section', // Screen F20-D-v2 (D7MOm)
+    statesOnly: ['default'],
+  },
+  {
+    // The drawn F20 is the 「都有字幕了」 variant; `empty` above is the honest
+    // 「沒有找到」 one the design never drew. Content block only — the title bar
+    // and the 關閉 footer live in GenerationConsentView.
+    id: 'generation-consent/empty-all-covered',
+    label: 'subtitle/consent/ConsentEmptyState (F20 空狀態 — 所有影片都有繁中字幕了)',
+    component: ConsentEmptyState,
+    props: { allCovered: true, analyzed: 1247 },
+    width: 960,
     penNode: 'screen-section', // Screen F20-D-v2 (D7MOm)
     statesOnly: ['default'],
   },

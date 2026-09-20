@@ -2,9 +2,10 @@
 /**
  * F16 金額確認 / F19 超出上限確認 (sub-4-3 AC #4) — the LAST gate before money
  * is spent. Breakdown figures come from the SAME ConsentTotals the list panel
- * renders (三處金額同源). Over-budget flips the tint to warning (one shade
- * deeper than F16's neutral — the third design round widened the contrast),
- * the total to warning orange and the primary button to 仍要開始.
+ * renders (三處金額同源). Over-budget flips the hint block's tint to warning
+ * (one shade deeper than F16's neutral — the third design round widened the
+ * contrast) and the primary button to 仍要開始. The TOTAL stays --text-primary
+ * (dsr-6e-2): a price is a fact, not a state — the block and the button say it.
  *
  * Soft-ceiling honesty: the copy says 自動暫停/預計/約 — never "絕不超過".
  *
@@ -86,7 +87,7 @@ export function ConfirmGenerationDialog({
           // Mobile: bottom sheet (F16-M-v2 / F19-M-v2) — same geometry the
           // consent list uses one step earlier in the same flow.
           'bottom-0 left-0 right-0 top-auto w-full max-w-none translate-x-0 translate-y-0 rounded-b-none rounded-t-[var(--radius-xl)]',
-          'sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[var(--radius-xl)]'
+          'sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-full sm:max-w-[480px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[var(--radius-lg)] sm:border sm:border-[var(--border-subtle)]'
         )}
       >
         {/* Mobile bottom-sheet drag handle (F15-M precedent, sm:hidden). */}
@@ -98,8 +99,8 @@ export function ConfirmGenerationDialog({
           <DialogTitle className="text-base font-semibold">確認產生字幕</DialogTitle>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 sm:p-6">
-          <p className="flex items-center gap-[3px] text-sm text-[var(--text-primary)]">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 sm:px-6 sm:py-5">
+          <p className="flex items-center gap-1 text-base font-semibold text-[var(--text-primary)]">
             即將為 <span className="font-mono tabular-nums">{totals.selectedCount}</span>
             部影片產生字幕
           </p>
@@ -116,39 +117,48 @@ export function ConfirmGenerationDialog({
           {modelChoices.length === 0 && modelsError && (
             <p
               data-testid="consent-model-catalog-error"
-              className="text-[13px] text-[var(--warning-text)]"
+              className="text-sm text-[var(--warning-text)]"
             >
               無法載入模型清單，這批會用這台機器的預設模型計費。
             </p>
           )}
 
-          <div className="flex flex-col gap-2 text-[13px] text-[var(--text-secondary)]">
+          <div className="flex flex-col gap-2.5 text-sm text-[var(--text-secondary)]">
             <p className="flex items-center justify-between">
-              <span className="flex items-center gap-[3px]">
+              <span className="flex items-center gap-1">
                 語音辨識 <span className="font-mono tabular-nums">{totals.selectedAsrCount}</span>{' '}
                 部
               </span>
-              <span data-testid="consent-confirm-asr-usd" className="font-mono tabular-nums">
-                預估 {usd(totals.selectedAsrUsd)}
+              <span className="flex items-center gap-1.5">
+                預估
+                <span
+                  data-testid="consent-confirm-asr-usd"
+                  className="font-mono tabular-nums text-[var(--text-primary)]"
+                >
+                  {usd(totals.selectedAsrUsd)}
+                </span>
               </span>
             </p>
             <p className="flex items-center justify-between">
-              <span className="flex items-center gap-[3px]">
+              <span className="flex items-center gap-1">
                 抽取 + 翻譯
                 <span className="font-mono tabular-nums">{totals.selectedExtractCount}</span> 部
               </span>
-              <span data-testid="consent-confirm-extract-usd" className="font-mono tabular-nums">
-                預估 {usd(totals.selectedExtractUsd)}
+              <span className="flex items-center gap-1.5">
+                預估
+                <span
+                  data-testid="consent-confirm-extract-usd"
+                  className="font-mono tabular-nums text-[var(--text-primary)]"
+                >
+                  {usd(totals.selectedExtractUsd)}
+                </span>
               </span>
             </p>
-            <p className="flex items-center justify-between border-t border-[var(--border-subtle)] pt-2 text-[var(--text-primary)]">
-              <span>合計預估</span>
+            <p className="flex items-center justify-between border-t border-[var(--border-subtle)] pt-2.5 text-[var(--text-primary)]">
+              <span className="font-bold">合計預估</span>
               <span
                 data-testid="consent-confirm-total-usd"
-                className={cn(
-                  'font-mono font-semibold tabular-nums',
-                  overBudget ? 'text-[var(--warning-text)]' : 'text-[var(--text-primary)]'
-                )}
+                className="font-mono text-base font-bold tabular-nums text-[var(--text-primary)]"
               >
                 {usdWithEstimate(totals.selectedTotalUsd, totals.hasEstimatedRows)}
               </span>
@@ -170,7 +180,7 @@ export function ConfirmGenerationDialog({
           <div
             data-testid="consent-confirm-hint"
             className={cn(
-              'rounded-[var(--radius-md)] p-3 text-[13px]',
+              'rounded-[var(--radius-md)] p-3 text-sm',
               overBudget
                 ? 'bg-[var(--warning-tint)] text-[var(--text-primary)]'
                 : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]'
@@ -208,7 +218,7 @@ export function ConfirmGenerationDialog({
             onClick={onConfirm}
             disabled={confirming}
             data-testid="consent-confirm-start"
-            className="flex min-h-[44px] items-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-6 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex min-h-[44px] items-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-5 text-sm font-semibold text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {confirming && (
               <Loader2

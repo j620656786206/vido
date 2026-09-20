@@ -21,12 +21,13 @@
  * covered. Three numbers, and the one sentence on screen matched none of them.
  *
  * PRODUCT.md calls this failure mode fatal —「無人值守＝沒人發現它在騙你」—
- * and the false claim wore GREEN, which 固定詞彙 reserves for 正在發生.
+ * and the false claim wore GREEN, which 固定詞彙 reserves for 「有答案了，而且是
+ * 好的那個」 — the one thing this state could not claim.
  *
  * So the green check is now EARNED, not default: it appears only for (a). Case
  * (b) reports what was actually measured and makes no claim about coverage.
  */
-import { SquareCheck, SearchX } from 'lucide-react';
+import { CircleCheck, SearchX } from 'lucide-react';
 
 export interface ConsentEmptyStateProps {
   /**
@@ -45,35 +46,33 @@ export function ConsentEmptyState({ allCovered = false, analyzed }: ConsentEmpty
     <div
       data-testid="consent-empty-state"
       data-empty-reason={allCovered ? 'all-covered' : 'no-candidates'}
-      className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-14 text-center"
+      className="flex flex-1 flex-col items-center justify-center gap-3 px-8 py-12 text-center"
     >
       <span
         aria-hidden="true"
-        className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--bg-tertiary)]"
+        className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--bg-tertiary)]"
       >
         {allCovered ? (
-          <SquareCheck className="h-8 w-8 text-[var(--success-text)]" />
+          <CircleCheck className="h-9 w-9 text-[var(--success-text)]" />
         ) : (
           // Muted, not green. Nothing was completed — nothing was found.
-          <SearchX className="h-8 w-8 text-[var(--text-muted)]" />
+          <SearchX className="h-9 w-9 text-[var(--text-muted)]" />
         )}
       </span>
 
       {allCovered ? (
         <>
-          <p className="text-base font-semibold text-[var(--text-primary)]">
-            所有影片都有繁中字幕了
-          </p>
-          <p className="text-[13px] text-[var(--text-secondary)]">
+          <p className="text-lg font-semibold text-[var(--text-primary)]">所有影片都有繁中字幕了</p>
+          <p className="text-sm text-[var(--text-secondary)]">
             掃描到新影片時，這裡會列出可產生字幕的項目。
           </p>
         </>
       ) : (
         <>
-          <p className="text-base font-semibold text-[var(--text-primary)]">
+          <p className="text-lg font-semibold text-[var(--text-primary)]">
             沒有找到可以產生字幕的項目
           </p>
-          <p className="max-w-sm text-[13px] text-[var(--text-secondary)]">
+          <p className="max-w-sm text-sm text-[var(--text-secondary)]">
             {analyzed !== undefined && analyzed > 0
               ? `分析了 ${analyzed.toLocaleString()} 部，沒有一部可以抽取內嵌字幕或用語音辨識產生。`
               : '這次分析沒有可以抽取內嵌字幕或用語音辨識產生的項目。'}

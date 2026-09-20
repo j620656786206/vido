@@ -75,8 +75,12 @@ function renderDialog(
 describe('ConfirmGenerationDialog (F16/F19)', () => {
   it('[P0 F16] under budget: breakdown lines, neutral hint, 確認並開始', () => {
     const { onConfirm } = renderDialog();
-    expect(screen.getByTestId('consent-confirm-asr-usd').textContent).toContain('$4.32');
-    expect(screen.getByTestId('consent-confirm-extract-usd').textContent).toContain('$0.18');
+    // dsr-6e-2: the testid wraps the AMOUNT only (「預估」 is its own muted node).
+    expect(screen.getByTestId('consent-confirm-asr-usd').textContent).toBe('$4.32');
+    expect(screen.getByTestId('consent-confirm-extract-usd').textContent).toBe('$0.18');
+    for (const id of ['consent-confirm-asr-usd', 'consent-confirm-extract-usd']) {
+      expect(screen.getByTestId(id).className).toContain('text-[var(--text-primary)]');
+    }
     expect(screen.getByTestId('consent-confirm-total-usd').textContent).toBe('$4.50');
     const hint = screen.getByTestId('consent-confirm-hint');
     expect(hint.textContent).toContain('自動暫停');
@@ -105,6 +109,28 @@ describe('ConfirmGenerationDialog (F16/F19)', () => {
     expect(hint.textContent).toContain('18');
     expect(screen.getByTestId('consent-confirm-start').textContent).toContain('仍要開始');
     expect(screen.getByTestId('consent-confirm-total-usd').textContent).toBe('$25.80');
+    // dsr-6e-2: money wears no status colour, over budget included — the ochre
+    // hint block and 仍要開始 carry the state.
+    const total = screen.getByTestId('consent-confirm-total-usd').className;
+    expect(total).toContain('text-[var(--text-primary)]');
+    expect(total).toContain('text-base');
+    expect(total).toContain('font-bold');
+    expect(total).not.toContain('warning');
+    expect(hint.className).toContain('bg-[var(--warning-tint)]');
+    expect(hint.className).toContain('text-[var(--text-primary)]');
+  });
+
+  it('[dsr-6e-2] shell 480 + hairline, lead is BodyLg 600, primary is 14/600, no 13px', () => {
+    renderDialog();
+    const shell = screen.getByTestId('consent-confirm-dialog');
+    expect(shell.className).toContain('sm:max-w-[480px]');
+    expect(shell.className).toContain('sm:rounded-[var(--radius-lg)]');
+    expect(shell.className).toContain('sm:border-[var(--border-subtle)]');
+    expect(screen.getByText(/即將為/).className).toContain('text-base font-semibold');
+    const start = screen.getByTestId('consent-confirm-start').className;
+    expect(start).toContain('font-semibold');
+    expect(start).toContain('px-5');
+    expect(shell.innerHTML).not.toContain('text-[13px]');
   });
 
   it('取消 dispatches onCancel', () => {
