@@ -204,8 +204,10 @@ describe('GlossaryPanelV2', () => {
       renderPanel();
 
       const panel = await screen.findByTestId('glossary-panel-v2');
+      // dsr-6f-2: the desktop width moved behind sm: when the panel became a
+      // bottom sheet on a phone — the geometry at >=640 is unchanged.
       expect(panel).toHaveClass(
-        'max-w-[880px]',
+        'sm:max-w-[880px]',
         'sm:rounded-[var(--radius-lg)]',
         'sm:border',
         'sm:border-[var(--border-subtle)]'
@@ -759,5 +761,121 @@ describe('GlossaryPanelV2', () => {
       fireEvent.click(screen.getByTestId('glossary-add-term'));
       expect(screen.getByTestId('glossary-add-src')).toHaveValue('');
     });
+  });
+});
+
+describe('GlossaryPanelV2 — phone sheet (dsr-6f-2, F6-M-v2 buepS)', () => {
+  const tokens = (el: Element) => el.className.split(/\s+/).filter(Boolean);
+
+  it('is a real sheet: grabber, slide-up animation, 44px ✕ on a 44px title row', async () => {
+    mocked.listTerms.mockResolvedValue([term()]);
+    renderPanel();
+
+    const panel = await screen.findByTestId('glossary-panel-v2');
+    // Only the max-sm: animation tokens are new — the rest of the shell string
+    // would pass today and would be a fake red.
+    expect(tokens(panel)).toContain('max-sm:data-[state=open]:animate-sheet-enter');
+    expect(tokens(panel)).toContain('max-sm:data-[state=closed]:animate-sheet-exit');
+
+    const grabber = screen.getByTestId('glossary-sheet-grabber');
+    expect(tokens(grabber)).toContain('sm:hidden');
+
+    const close = screen.getByText('Close').closest('button')!;
+    expect(tokens(close)).toEqual(
+      expect.arrayContaining(['max-sm:h-11', 'max-sm:w-11', 'max-sm:top-4'])
+    );
+    expect(tokens(screen.getByTestId('glossary-title-bar'))).toEqual(
+      expect.arrayContaining(['max-sm:h-11', 'max-sm:pl-4', 'max-sm:border-b-0'])
+    );
+  });
+
+  it('every desktop size/radius token is sm:-prefixed (or twMerge drops the sheet shell)', async () => {
+    mocked.listTerms.mockResolvedValue([term()]);
+    renderPanel();
+
+    const panel = await screen.findByTestId('glossary-panel-v2');
+    const t = tokens(panel);
+    expect(t).toContain('sm:max-w-[880px]');
+    expect(t).toContain('sm:w-[calc(100vw-2rem)]');
+    // Unprefixed width/max-width would fight MOBILE_SHEET_CONTENT's w-full/max-w-none.
+    expect(t).not.toContain('max-w-[880px]');
+    expect(t).not.toContain('w-[calc(100vw-2rem)]');
+    // overflow-hidden must not leak to the desktop dialog.
+    expect(t).not.toContain('overflow-hidden');
+    expect(t).toContain('max-sm:overflow-hidden');
+  });
+
+  it('全部確認 / 新增詞彙 drop below the list and go full-width on a phone', async () => {
+    mocked.listTerms.mockResolvedValue([term()]);
+    renderPanel();
+
+    await screen.findByTestId('glossary-list');
+    // The header row dissolves on a phone so its children become body items —
+    // without that, order-last on the wrapper has nothing to order against.
+    expect(tokens(screen.getByTestId('glossary-header-row'))).toContain('max-sm:contents');
+    expect(tokens(screen.getByTestId('glossary-actions'))).toEqual(
+      expect.arrayContaining(['max-sm:order-last', 'max-sm:w-full', 'max-sm:flex-col'])
+    );
+    for (const testId of ['glossary-confirm-all', 'glossary-add-term']) {
+      expect(tokens(screen.getByTestId(testId))).toContain('max-sm:w-full');
+    }
+    // The shared SECONDARY_BUTTON constant must stay unchanged: the empty-state
+    // button uses it too and is NOT full-width.
+    mocked.listTerms.mockResolvedValue([]);
+    renderPanel();
+    expect(tokens(await screen.findByTestId('glossary-empty-add'))).not.toContain('max-sm:w-full');
+  });
+
+  it('the add form stacks on a phone instead of squeezing four things on one line', async () => {
+    mocked.listTerms.mockResolvedValue([term()]);
+    renderPanel();
+
+    fireEvent.click(await screen.findByTestId('glossary-add-term'));
+    const form = await screen.findByTestId('glossary-add-form');
+    expect(tokens(form)).toEqual(
+      expect.arrayContaining(['max-sm:flex-col', 'max-sm:items-stretch', 'max-sm:gap-2'])
+    );
+    for (const testId of ['glossary-add-src', 'glossary-add-zh']) {
+      expect(tokens(screen.getByTestId(testId))).toContain('max-sm:w-full');
+    }
+    // 新增 / 取消 share a line of their own; sm:contents puts them straight back
+    // into the form row on a desktop.
+    const actions = screen.getByTestId('glossary-add-actions');
+    expect(tokens(actions)).toEqual(expect.arrayContaining(['sm:contents', 'max-sm:justify-end']));
+    expect(actions).toContainElement(screen.getByTestId('glossary-add-submit'));
+    expect(actions).toContainElement(screen.getByTestId('glossary-add-cancel'));
+  });
+
+  it('carries no empty action wrapper when neither button renders (CR M4)', async () => {
+    mocked.listTerms.mockResolvedValue([]);
+    renderPanel();
+
+    await screen.findByTestId('glossary-empty');
+    // An unconditional wrapper would be a 0-height flex child of the body and
+    // would still pay its max-sm:gap-3.5 — 14px of dead space under 尚無詞彙.
+    expect(screen.queryByTestId('glossary-actions')).toBeNull();
+  });
+
+  it('the add form opens next to 新增詞彙, not at the top of a scrolled list (CR M6)', async () => {
+    mocked.listTerms.mockResolvedValue([term()]);
+    renderPanel();
+
+    fireEvent.click(await screen.findByTestId('glossary-add-term'));
+    const form = await screen.findByTestId('glossary-add-form');
+    // 9998 sits directly above the action pair's order-last (9999).
+    expect(tokens(form.parentElement!)).toContain('max-sm:order-[9998]');
+  });
+
+  it('the body and the footer count take the 16px sheet gutter', async () => {
+    mocked.listTerms.mockResolvedValue([term()]);
+    renderPanel();
+
+    // The footer count only exists once the list has landed.
+    await screen.findByTestId('glossary-list');
+    const body = screen.getByTestId('glossary-body');
+    expect(tokens(body)).toEqual(
+      expect.arrayContaining(['max-sm:px-4', 'max-sm:pt-1.5', 'max-sm:gap-3.5'])
+    );
+    expect(tokens(screen.getByTestId('glossary-footer-count'))).toContain('max-sm:px-4');
   });
 });

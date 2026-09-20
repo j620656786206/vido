@@ -12072,6 +12072,36 @@
                         },
                         {
                           "type": "frame",
+                          "id": "ERXTn",
+                          "name": "cell-glossary-row-mobile",
+                          "width": 358,
+                          "layout": "vertical",
+                          "gap": "$Space/sm",
+                          "children": [
+                            {
+                              "id": "Zrq5Y",
+                              "type": "ref",
+                              "ref": "t28C2s",
+                              "name": "GlossaryRow-v2/Mobile sample",
+                              "width": 358
+                            },
+                            {
+                              "type": "text",
+                              "id": "n4h8E6",
+                              "name": "cell-glossary-mobile-cap",
+                              "fill": "$text-muted",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "GlossaryRow-v2/Mobile · 名詞對照表列（手機，390 寬）：第一行原文↔繁中，第二行來源徽章＋未確認靠左、確認/編輯/刪除靠右。所有列都保留「編輯」。桌機仍用 GlossaryRow-v2 單行版。",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
                           "id": "NMbta",
                           "name": "PosterCard-v2 · Hover cell",
                           "layout": "vertical",
@@ -20174,6 +20204,210 @@
                       "fontFamily": "$Type/Family/Primary",
                       "fontSize": "$Type/Label/Size",
                       "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "t28C2s",
+                  "x": 18540,
+                  "y": -6214,
+                  "name": "Component/GlossaryRow-v2/Mobile",
+                  "reusable": true,
+                  "width": 358,
+                  "fill": "$bg-secondary",
+                  "cornerRadius": "$radius-md",
+                  "stroke": "$border-subtle",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": "$Space/sm",
+                  "padding": [
+                    "$Space/sm",
+                    "$Space/md-plus"
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "yVJtE",
+                      "name": "gm-line1",
+                      "width": "fill_container",
+                      "gap": "$Space/md",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "CkEP5",
+                          "name": "gm-src",
+                          "fill": "$text-primary",
+                          "content": "Demogorgon",
+                          "lineHeight": "$Type/Body/Line",
+                          "fontFamily": "$Type/Family/Mono",
+                          "fontSize": "$Type/Body/Size",
+                          "fontWeight": "$Type/Body/Weight"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "xWeW1",
+                          "name": "gm-arrow",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "arrow-right",
+                          "library": "lucide",
+                          "fill": "$text-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "un8Th",
+                          "name": "gm-zh",
+                          "fill": "$text-primary",
+                          "content": "魔王獸",
+                          "lineHeight": "$Type/Body/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Body/Size",
+                          "fontWeight": "$Type/Body/Weight"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "h44zk",
+                      "name": "gm-line2",
+                      "width": "fill_container",
+                      "gap": "$Space/md",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "LNdg9",
+                          "name": "gm-badge",
+                          "fill": "$bg-tertiary",
+                          "cornerRadius": "$radius-pill",
+                          "padding": [
+                            "$Space/xs",
+                            "$Space/sm-plus"
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "aU7x1",
+                              "name": "gm-badge-lb",
+                              "fill": "$text-secondary",
+                              "content": "字幕",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "H0Nxq",
+                          "name": "gm-unconf",
+                          "fill": "$warning-tint",
+                          "cornerRadius": "$radius-pill",
+                          "padding": [
+                            "$Space/xs",
+                            "$Space/sm-plus"
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "kGTXi",
+                              "name": "gm-unconf-lb",
+                              "fill": "$warning-text",
+                              "content": "未確認",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "bWlnQ",
+                          "name": "gm-spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "type": "frame",
+                          "id": "pV4nI",
+                          "name": "gm-act-confirm",
+                          "height": 44,
+                          "padding": [
+                            "$Space/none",
+                            "$Space/sm-plus"
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "qahJB",
+                              "name": "gm-act-confirm-lb",
+                              "fill": "$accent-text",
+                              "content": "確認",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "I6r5j",
+                          "name": "gm-act-edit",
+                          "height": 44,
+                          "padding": [
+                            "$Space/none",
+                            "$Space/sm-plus"
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "gL7ZG",
+                              "name": "gm-act-edit-lb",
+                              "fill": "$text-secondary",
+                              "content": "編輯",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "hMoYD",
+                          "name": "gm-act-delete",
+                          "height": 44,
+                          "padding": [
+                            "$Space/none",
+                            "$Space/sm-plus"
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "s7afw",
+                              "name": "gm-act-delete-lb",
+                              "fill": "$error-text",
+                              "content": "刪除",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            }
+                          ]
+                        }
+                      ]
                     }
                   ]
                 }
@@ -147478,7 +147712,7 @@
                   "type": "frame",
                   "id": "Jm7RD",
                   "x": 0,
-                  "y": 359,
+                  "y": 193,
                   "name": "glossary-sheet",
                   "width": 390,
                   "fill": "$bg-secondary",
@@ -147522,15 +147756,25 @@
                       ]
                     },
                     {
-                      "type": "text",
-                      "id": "I3zyy",
-                      "name": "sheet-title",
-                      "fill": "$text-primary",
-                      "content": "名詞對照表 — 怪奇物語",
-                      "lineHeight": "$Type/BodyLg/Line",
-                      "fontFamily": "$Type/Family/Primary",
-                      "fontSize": "$Type/BodyLg/Size",
-                      "fontWeight": "600"
+                      "type": "frame",
+                      "id": "A9bh0",
+                      "name": "sheet-title-bar",
+                      "width": "fill_container",
+                      "height": 44,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "I3zyy",
+                          "name": "sheet-title",
+                          "fill": "$text-primary",
+                          "content": "名詞對照表 — 怪奇物語",
+                          "lineHeight": "$Type/BodyLg/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/BodyLg/Size",
+                          "fontWeight": "600"
+                        }
+                      ]
                     },
                     {
                       "type": "text",
@@ -147552,104 +147796,80 @@
                       "gap": "$Space/sm",
                       "children": [
                         {
-                          "id": "pwW3l",
+                          "id": "Z5okpJ",
                           "type": "ref",
-                          "ref": "nDSEd",
+                          "ref": "t28C2s",
                           "name": "m-row-Demogorgon",
                           "width": "fill_container",
-                          "height": 54,
                           "descendants": {
-                            "rCEl1": {
+                            "CkEP5": {
                               "content": "Demogorgon"
                             },
-                            "H6m5F2": {
+                            "un8Th": {
                               "content": "魔王獸"
                             },
-                            "R353jw": {
+                            "H0Nxq": {
                               "enabled": false
                             },
-                            "wDFKQ": {
-                              "enabled": false
-                            },
-                            "SIp0F": {
+                            "pV4nI": {
                               "enabled": false
                             }
                           }
                         },
                         {
-                          "id": "QkHtp",
+                          "id": "H4H0y",
                           "type": "ref",
-                          "ref": "nDSEd",
+                          "ref": "t28C2s",
                           "name": "m-row-Upside Down",
                           "width": "fill_container",
-                          "height": 54,
                           "descendants": {
-                            "rCEl1": {
+                            "CkEP5": {
                               "content": "Upside Down"
                             },
-                            "H6m5F2": {
+                            "un8Th": {
                               "content": "顛倒世界"
                             },
-                            "R353jw": {
+                            "H0Nxq": {
                               "enabled": false
                             },
-                            "wDFKQ": {
-                              "enabled": false
-                            },
-                            "SIp0F": {
+                            "pV4nI": {
                               "enabled": false
                             }
                           }
                         },
                         {
-                          "id": "ngusL",
+                          "id": "q6oWR0",
                           "type": "ref",
-                          "ref": "nDSEd",
+                          "ref": "t28C2s",
                           "name": "m-row-Hopper",
                           "width": "fill_container",
-                          "height": 54,
                           "descendants": {
-                            "rCEl1": {
+                            "CkEP5": {
                               "content": "Hopper"
                             },
-                            "H6m5F2": {
+                            "un8Th": {
                               "content": "霍普"
                             },
-                            "WyY3x": {
-                              "fill": "$bg-tertiary"
-                            },
-                            "z5Xrd": {
-                              "content": "中繼資料",
-                              "fill": "$text-secondary"
-                            },
-                            "SIp0F": {
-                              "enabled": false
+                            "aU7x1": {
+                              "content": "中繼資料"
                             }
                           }
                         },
                         {
-                          "id": "RVb6N",
+                          "id": "LCw4G",
                           "type": "ref",
-                          "ref": "nDSEd",
+                          "ref": "t28C2s",
                           "name": "m-row-Vecna",
                           "width": "fill_container",
-                          "height": 54,
                           "descendants": {
-                            "rCEl1": {
+                            "CkEP5": {
                               "content": "Vecna"
                             },
-                            "H6m5F2": {
+                            "un8Th": {
                               "content": "維克那"
                             },
-                            "WyY3x": {
-                              "fill": "$bg-tertiary"
-                            },
-                            "z5Xrd": {
-                              "content": "手動",
-                              "fill": "$text-secondary"
-                            },
-                            "SIp0F": {
-                              "enabled": false
+                            "aU7x1": {
+                              "content": "手動"
                             }
                           }
                         }
@@ -147682,6 +147902,30 @@
                           "fontFamily": "Noto Sans TC"
                         }
                       }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "HAhWJ",
+                      "layoutPosition": "absolute",
+                      "x": 342,
+                      "y": 28,
+                      "name": "close-hit",
+                      "width": 44,
+                      "height": 44,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "J4neyT",
+                          "name": "close-x",
+                          "width": 18,
+                          "height": 18,
+                          "icon": "x",
+                          "library": "lucide",
+                          "fill": "$text-secondary"
+                        }
+                      ]
                     }
                   ]
                 }
@@ -156878,6 +157122,21 @@
               "textGrowth": "fixed-width",
               "width": 300,
               "content": "Flow F 手機 sheet：由下往上滑入（reduced-motion 時直接出現），最高 85vh、內容內部捲動；關閉鈕 44×44。F1-M 沒有頁尾——關閉靠 ✕、點遮罩、Esc；「搜尋線上字幕」在內容最下面。失敗（F4）與生成中（F3）在手機保留底部的動作。F1-M 的檔名與「轉為繁中」同桌機，尚未接線。F3-M 的百分比只有翻譯階段有；單片對話框不顯示用量。F2／F4／F5／F10 沒有手機稿，手機沿用 F1-M／F3-M 的外殼。",
+              "lineHeight": "$Type/Label/Line",
+              "fontFamily": "$Type/Family/Primary",
+              "fontSize": "$Type/Label/Size",
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "x1MC3W",
+              "x": 17040,
+              "y": 35348,
+              "name": "spec-note-dsr-6f-2",
+              "fill": "$text-muted",
+              "textGrowth": "fixed-width",
+              "width": 300,
+              "content": "F6 名詞對照表（手機）：面板與刪除確認都是由下往上的 sheet，關閉鈕 44×44，沒有頁尾的「關閉」。每一列在手機換成兩行（第一行原文→譯名，第二行徽章靠左、動作靠右）——所有列都保留「編輯」（⚖️ 2026-09-17）。「全部確認」「新增詞彙」在列表下面、各自滿版；新增表單在手機直排（兩個輸入框各佔一行）。F6-SPEC-STATES 的七個狀態只畫桌機，手機沿用同一套元件、照本註記的版面規則直排。頁尾計數（共 N 條 · M 條未確認）桌機稿有（VbxVw），手機稿沒畫——程式碼在手機仍然顯示。列的母版是 Component/GlossaryRow-v2/Mobile；桌機仍用 Component/GlossaryRow-v2。",
               "lineHeight": "$Type/Label/Line",
               "fontFamily": "$Type/Family/Primary",
               "fontSize": "$Type/Label/Size",
