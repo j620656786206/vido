@@ -28,6 +28,7 @@
  */
 import { Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '../../ui/Dialog';
+import { MOBILE_SHEET_CLOSE, MOBILE_SHEET_CONTENT, SheetGrabber } from '../../ui/mobileSheet';
 import { cn } from '../../../lib/utils';
 import { usd } from '../../../lib/currency';
 import { ModelPicker } from './ModelPicker';
@@ -82,18 +83,17 @@ export function ConfirmGenerationDialog({
       <DialogContent
         data-testid="consent-confirm-dialog"
         aria-describedby={undefined}
+        closeClassName={cn(MOBILE_SHEET_CLOSE, 'max-sm:top-[22px]')}
         className={cn(
           'flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0',
           // Mobile: bottom sheet (F16-M-v2 / F19-M-v2) — same geometry the
           // consent list uses one step earlier in the same flow.
-          'bottom-0 left-0 right-0 top-auto w-full max-w-none translate-x-0 translate-y-0 rounded-b-none rounded-t-[var(--radius-xl)]',
+          MOBILE_SHEET_CONTENT,
           'sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-full sm:max-w-[480px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[var(--radius-lg)] sm:border sm:border-[var(--border-subtle)]'
         )}
       >
         {/* Mobile bottom-sheet drag handle (F15-M precedent, sm:hidden). */}
-        <div className="flex shrink-0 justify-center pb-1 pt-2 sm:hidden">
-          <span aria-hidden="true" className="h-1 w-9 rounded-full bg-[var(--bg-tertiary)]" />
-        </div>
+        <SheetGrabber />
 
         <div className="flex h-14 shrink-0 items-center border-b border-[var(--border-subtle)] pl-4 pr-12 sm:pl-6">
           <DialogTitle className="text-base font-semibold">確認產生字幕</DialogTitle>

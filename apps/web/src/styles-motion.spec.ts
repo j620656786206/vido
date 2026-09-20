@@ -242,6 +242,28 @@ describe('every animation named in source actually exists', () => {
       expect(REGISTERED, `--animate-${n} is missing from @theme`).toContain(n);
   });
 
+  it('the phone sheet slides with its OWN pair of animations (dsr-6f-1)', () => {
+    for (const n of ['sheet-enter', 'sheet-exit']) {
+      expect(REGISTERED, `--animate-${n} is missing from @theme`).toContain(n);
+      expect(KEYFRAMES, `@keyframes ${n} is missing`).toContain(n);
+    }
+    const body = (name: string) =>
+      new RegExp(`@keyframes\\s+${name}\\s*\\{([\\s\\S]*?)\\n\\}`).exec(CSS)?.[1] ?? '';
+    for (const n of ['sheet-enter', 'sheet-exit']) {
+      // The individual `translate` property, never `transform`: the sheet is
+      // positioned with Tailwind's translate-* (same property), and a
+      // `transform` animation would fight the desktop centring if it ever leaked.
+      expect(body(n)).toMatch(/translate:\s*0\s+100%/);
+      expect(body(n)).not.toMatch(/transform\s*:/);
+      // A sheet is a solid thing arriving; the scrim does the fading.
+      expect(body(n)).not.toMatch(/opacity/);
+    }
+    // Radix Presence unmounts on the spot when enter and exit share a name.
+    const name = (token: string) => new RegExp(`--animate-${token}:\\s*([a-z-]+)`).exec(CSS)?.[1];
+    expect(name('sheet-enter')).toBe('sheet-enter');
+    expect(name('sheet-exit')).toBe('sheet-exit');
+  });
+
   it('every `animate-<name>` utility in source is registered somewhere', () => {
     const unknown: string[] = [];
     for (const [file, src] of sources) {

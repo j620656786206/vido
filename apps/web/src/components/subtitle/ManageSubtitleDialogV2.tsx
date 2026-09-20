@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen F1-D-v2 (r1EY9) + Screen F2-D-v2 (S9Rbrq) + Screen F1-M-v2 (JkdfH) + Screen F3-D-v2 (JbXai) + Screen F4-D-v2 (U8rRtv) + Screen F5-D-v2 (f6ZxY)
+// Design ref: ux-design.pen Screen F1-D-v2 (r1EY9) + Screen F2-D-v2 (S9Rbrq) + Screen F1-M-v2 (JkdfH) + Screen F3-D-v2 (JbXai) + Screen F3-M-v2 (k8sJl4) + Screen F4-D-v2 (U8rRtv) + Screen F5-D-v2 (f6ZxY)
 /**
  * 管理字幕 dialog v2 (ux3-subtitle-v2 AC 1/2/5 — generation-centric per ADR
  * adr-subtitle-route-c-generation D1). Screens: F1-D-v2 r1EY9 / F1-M-v2 JkdfH
@@ -59,6 +59,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '../ui/Dialog';
+import { MOBILE_SHEET_CLOSE, MOBILE_SHEET_CONTENT, SheetGrabber } from '../ui/mobileSheet';
 import { cn } from '../../lib/utils';
 // Shared subtitle-language labels (the detail page uses the same function, dsr-6b).
 import { subtitleLangLabel, type SubtitleLangFamily } from '../../utils/libraryStatus';
@@ -385,7 +386,7 @@ export function ManageSubtitleDialogV2({
           <div key={track.key} className="flex flex-col gap-1">
             <div
               data-testid={`subtitle-track-${track.key}`}
-              className="flex items-center gap-3 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-3.5 py-3"
+              className="flex items-center gap-3 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-3.5 py-3 max-sm:gap-2.5 max-sm:px-3 max-sm:py-2.5"
             >
               <span
                 className={cn(
@@ -466,24 +467,38 @@ export function ManageSubtitleDialogV2({
       <DialogContent
         data-testid="manage-subtitle-dialog-v2"
         aria-describedby={undefined}
+        closeClassName={cn(MOBILE_SHEET_CLOSE, 'max-sm:top-4')}
         className={cn(
           'flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0',
           // Mobile: bottom sheet (F1-M-v2 JkdfH). Desktop: centered dialog (F1-D-v2 r1EY9).
-          'bottom-0 left-0 right-0 top-auto w-full max-w-none translate-x-0 translate-y-0 rounded-b-none rounded-t-[var(--radius-xl)]',
+          MOBILE_SHEET_CONTENT,
           // Desktop F1-D-v2 gD99f / F3-D-v2 wIihe: 880 wide, 1px hairline. The
-          // hairline is sm-only — the mobile bottom sheet is dsr-6f.
+          // hairline is sm-only — the phone sheet (F1-M FtarQ) is the shared shell above.
           'sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-[calc(100vw-4rem)] sm:max-w-[880px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[var(--radius-lg)] sm:border sm:border-[var(--border-subtle)]'
         )}
       >
-        {/* Header */}
-        <div className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--border-subtle)] pl-6 pr-12">
+        {/* Phone: the sheet's drag handle (F1-M-v2 j53Qt). The other three
+            subtitle sheets always had one; this dialog was the odd one out. */}
+        <SheetGrabber data-testid="manage-sheet-grabber" />
+
+        {/* Header. Phone (dsr-6f-1): 44 tall — the height of the ✕ — and 16px
+            in. F1-M (CGvIz) draws NO rule under it; F3-M (B9gEpS) does, so the
+            rule is dropped only outside the progress view. */}
+        <div
+          data-testid="manage-sheet-header"
+          className={cn(
+            'flex h-14 shrink-0 items-center justify-between border-b border-[var(--border-subtle)] pl-6 pr-12 max-sm:h-11 max-sm:pl-4',
+            !inProgressView && 'max-sm:border-b-0'
+          )}
+        >
           <div className="flex min-w-0 items-center gap-1.5">
             <DialogTitle className="truncate text-base font-semibold">{dialogTitle}</DialogTitle>
             {mediaCode && (
               <span
                 data-testid="dialog-title-code"
                 // tO72N / Dey4O: plain Mono BodyLg 16/600, not a chip.
-                className="shrink-0 font-mono text-base font-semibold text-[var(--text-primary)]"
+                // Phone: CvLdG is Body 14.
+                className="shrink-0 font-mono text-base font-semibold text-[var(--text-primary)] max-sm:text-sm"
               >
                 {mediaCode}
               </span>
@@ -491,7 +506,17 @@ export function ManageSubtitleDialogV2({
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-6 py-5">
+        {/* Phone (PPLQr / tRFbG): [6,16,16,16] gap 14. Outside the progress view
+            the phone sheet has NO footer, so this block is what meets the bottom
+            edge and carries the safe-area inset. (Inert today — index.html has no
+            viewport-fit=cover, so the inset is 0; see
+            disc-2026-09-viewport-fit-cover-missing.) */}
+        <div
+          className={cn(
+            'flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-6 py-5 max-sm:gap-3.5 max-sm:px-4 max-sm:pt-1.5',
+            inProgressView ? 'max-sm:pb-4' : 'max-sm:pb-[max(1rem,env(safe-area-inset-bottom))]'
+          )}
+        >
           {isLoading ? (
             /* F10-D-v2 (olDlj) 載入骨架 — animation respects prefers-reduced-motion. */
             <div
@@ -637,7 +662,11 @@ export function ManageSubtitleDialogV2({
                   data-testid="generation-section"
                   className={cn(
                     'flex items-center gap-4',
-                    tracks.length === 0 && 'flex-col justify-center gap-2.5'
+                    tracks.length === 0 && 'flex-col justify-center gap-2.5',
+                    // Phone (F1-M zLRkb): a full-width button with its helper
+                    // centred underneath. F2 (no tracks) has no phone drawing
+                    // and follows the same rule.
+                    'max-sm:flex-col max-sm:items-stretch max-sm:gap-1.5 max-sm:pt-1'
                   )}
                 >
                   {/* dsr-6a: the ONLY primary action carries its price (J9-D). */}
@@ -648,13 +677,14 @@ export function ManageSubtitleDialogV2({
                     onClick={startGeneration}
                     data-testid="action-generate-subtitle"
                     aria-describedby={helperId}
+                    className="max-sm:w-full max-sm:py-3"
                   />
                   <p
                     id={helperId}
                     data-testid="generation-helper"
                     data-tone={costView.helper.tone}
                     className={cn(
-                      'text-xs',
+                      'text-xs max-sm:text-center',
                       costView.helper.tone === 'secondary'
                         ? 'text-[var(--text-secondary)]'
                         : 'text-[var(--text-muted)]'
@@ -703,6 +733,21 @@ export function ManageSubtitleDialogV2({
                   aria-hidden="true"
                 />
               </button>
+
+              {/* Phone: the idle sheet has no footer (F1-M V5LMv), so its
+                  online-search toggle lives here — after the glossary row and
+                  BEFORE the panel, so the panel opens under its trigger. Same
+                  gate as the footer control (an episode would 400). */}
+              {!isLoading && !isEpisode && (
+                <button
+                  type="button"
+                  onClick={() => setFetchOpen((v) => !v)}
+                  data-testid="toggle-fetch-mobile"
+                  className="flex min-h-[44px] w-full items-center justify-center text-xs text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] sm:hidden"
+                >
+                  搜尋線上字幕（成功率低）
+                </button>
+              )}
 
               {/* Dormant fetch section — NO source chips, NO score rows, NO Zimuku (9R-14). */}
               {fetchOpen && (
@@ -780,7 +825,27 @@ export function ManageSubtitleDialogV2({
 
         {/* Footer — F1 idle: 搜尋線上字幕 + 關閉; F3 running (H2VIe): hint + 關閉;
             F4 failed (dg5rH): hint + 稍後再試 + 重試. */}
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-[var(--border-subtle)] px-6 py-3">
+        {/* Phone (dsr-6f-1), by state:
+            · outside the progress view — hidden. All it holds there is the
+              online-search toggle (now in the body) and 關閉 (the 44px ✕); the
+              paid 重試 of a TRIGGER error lives in the body, not here.
+            · generating / complete (F3-M) — no footer is drawn: 關閉 is a
+              full-width button with the hint under it, as a continuation of
+              the body (no rule, 16px in).
+            · failed — unchanged row. 重試 is a paid button with no phone
+              drawing; it must not vanish because nobody drew it. */}
+        <div
+          className={cn(
+            // max-sm:px-4: the phone body is 16px in; the footer lines up with it
+            // in every state that keeps one (CR L4 — the failed row sat 8px inside).
+            'flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-[var(--border-subtle)] px-6 py-3 max-sm:px-4',
+            !inProgressView && 'max-sm:hidden',
+            inProgressView &&
+              !runFailed &&
+              'max-sm:flex-col-reverse max-sm:items-stretch max-sm:border-t-0 max-sm:pt-0',
+            inProgressView && 'max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))]'
+          )}
+        >
           {/* Red line 2: the search endpoints bind `oneof=movie series`, so an
               episode would 400. Capability honor — don't draw a dead control. */}
           {!inProgressView && !isLoading && !isEpisode ? (
@@ -804,19 +869,33 @@ export function ManageSubtitleDialogV2({
             ) : (
               <span />
             )
-          ) : (
-            <span className="text-xs text-[var(--text-secondary)]">
-              {inProgressView && runIsLive ? '關閉後生成會在背景繼續' : ''}
+          ) : inProgressView && runIsLive ? (
+            <span className="text-xs text-[var(--text-secondary)] max-sm:text-center">
+              關閉後生成會在背景繼續
             </span>
+          ) : (
+            // Desktop needs SOMETHING on the left for justify-between; the phone
+            // column must not get an empty 12px row out of it.
+            <span className="max-sm:hidden" />
           )}
           {/* ml-auto: when the failed-run hint wraps to its own row on a phone,
               the buttons stay right-aligned on the row below. */}
-          <div className="ml-auto flex shrink-0 items-center gap-3">
+          <div
+            className={cn(
+              'ml-auto flex shrink-0 items-center gap-3',
+              // `ml-auto` cancels align-items:stretch; without this the button's
+              // w-full resolves against a shrink-wrapped wrapper.
+              !runFailed && 'max-sm:ml-0 max-sm:w-full'
+            )}
+          >
             <button
               type="button"
               onClick={() => handleOpenChange(false)}
               data-testid="dialog-close"
-              className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)]"
+              className={cn(
+                'flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)]',
+                !runFailed && 'max-sm:w-full max-sm:justify-center'
+              )}
             >
               {/* F4 RLbWb: after a failure the same close reads 稍後再試. */}
               {runFailed ? '稍後再試' : '關閉'}

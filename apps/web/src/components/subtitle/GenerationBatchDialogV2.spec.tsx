@@ -255,6 +255,17 @@ describe('GenerationBatchPanelV2', () => {
     expect(handle.className).toContain('sm:hidden');
   });
 
+  it("[dsr-6f-1] phone sheet shell: slides up, and the 44px ✕ sits on this dialog's 56px title row", () => {
+    renderPanel({ items: ITEMS });
+    const shell = screen.getByTestId('generation-batch-dialog-v2');
+    const t = (el: Element) => el.className.split(/\s+/);
+    expect(t(shell)).toContain('max-sm:data-[state=open]:animate-sheet-enter');
+    const close = screen.getByText('Close').closest('button')!;
+    // Grabber 16 + half of h-14 (28) − half of 44 (22) = 22. It moves with the
+    // header: change the title row's height and this token must change too.
+    expect(t(close)).toEqual(expect.arrayContaining(['max-sm:h-11', 'max-sm:top-[22px]']));
+  });
+
   it('running renders queue rows from items[], the counter, cost line and SSE chip', () => {
     renderPanel({
       status: 'running',

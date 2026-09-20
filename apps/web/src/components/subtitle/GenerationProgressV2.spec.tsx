@@ -144,7 +144,7 @@ describe('GenerationProgressV2', () => {
       expect(ol.className).toContain('sm:gap-0');
     });
 
-    it('each stage is a full-width row [circle + 13px label + spacer + Mono pct] at <sm, 72px column at sm+', () => {
+    it('each stage is a full-width row [circle + Body label + spacer + Mono pct] at <sm, 72px column at sm+', () => {
       render(<GenerationProgressV2 phase="translating" percentage={62.5} />);
 
       const stage = screen.getByTestId('gen-stage-翻譯中');
@@ -159,15 +159,21 @@ describe('GenerationProgressV2', () => {
       expect(stage.className.split(' ')).toContain('sm:gap-1.5');
       expect(stage.className.split(' ')).not.toContain('sm:gap-1');
 
-      // Label 13px on mobile (dsr-6f owns it), Label 12 / 1.5 on desktop.
+      // dsr-6f-1: Body 14 on a phone (F3-M IdGB2), Label 12 / 1.5 on desktop —
+      // the off-scale 13px is gone.
       const label = screen.getByText('翻譯中');
       expect(label.className.split(' ')).toEqual(
-        expect.arrayContaining(['text-[13px]', 'sm:text-xs', 'sm:leading-normal'])
+        expect.arrayContaining(['text-sm', 'sm:text-xs', 'sm:leading-normal'])
       );
+      expect(label.className.split(' ')).not.toContain('text-[13px]');
+      // F3-M rows carry 4px of padding; phone only.
+      expect(stage.className.split(' ')).toContain('max-sm:p-1');
 
       // Mono pct right-aligned via the ml-auto spacer on mobile only.
       const pct = screen.getByText('63%');
       expect(pct.className).toContain('ml-auto');
+      // [guard] 11px is FROZEN (disc-2026-09-11px-micro-label-not-on-type-scale).
+      expect(pct.className.split(' ')).toContain('text-[11px]');
       expect(pct.className).toContain('sm:ml-0');
     });
 

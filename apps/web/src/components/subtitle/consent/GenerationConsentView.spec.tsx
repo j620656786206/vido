@@ -1062,5 +1062,10 @@ describe('GenerationConsentView — a quote with a hole in it (dsr-6e-1 AC #2)',
     expect(shell.className).toContain('sm:max-w-[960px]');
     expect(shell.className).toContain('sm:border-[var(--border-subtle)]');
     expect(shell.className).not.toContain('sm:max-w-3xl');
+    // dsr-6f-1: the shared phone-sheet shell.
+    expect(shell.className.split(/\s+/)).toContain('max-sm:data-[state=open]:animate-sheet-enter');
+    expect(screen.getByText('Close').closest('button')!.className.split(/\s+/)).toEqual(
+      expect.arrayContaining(['max-sm:h-11', 'max-sm:top-[22px]'])
+    );
   });
 });

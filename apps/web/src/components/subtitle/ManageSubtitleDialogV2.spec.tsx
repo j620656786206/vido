@@ -1186,3 +1186,119 @@ describe('ManageSubtitleDialogV2 — cost on paid buttons (dsr-6a)', () => {
     expect(cta.querySelector('.animate-spin')).toBeNull();
   });
 });
+
+// ─── dsr-6f-1: the phone bottom sheet ───────────────────────────────────────
+// jsdom evaluates no media queries, so these pin the class TOKENS; what a phone
+// actually draws is guarded by the 390px visual fixtures and the e2e spec.
+describe('ManageSubtitleDialogV2 — phone sheet (dsr-6f-1)', () => {
+  const tokens = (el: Element) => el.className.split(/\s+/).filter(Boolean);
+  const footerOf = () => screen.getByTestId('dialog-close').parentElement!.parentElement!;
+
+  async function startRun(phase: 'transcribing' | 'complete' | 'failed') {
+    mockedTrigger.mockResolvedValue({ status: 'started', result: { jobId: 'j', message: 'ok' } });
+    renderDialog();
+    const cta = await findPricedGenerate();
+    h.genState.phase = phase;
+    if (phase === 'failed') h.genState.failedPhase = 'translating';
+    fireEvent.click(cta);
+    if (phase === 'failed') await screen.findByTestId('gen-failed-panel');
+    // The title flips with the progress view — the one signal every phase shares.
+    else await screen.findByText(/^生成字幕 — /);
+  }
+
+  it('is a real sheet: grabber, slide-up animation, 44px ✕ centred on a 44px title row', async () => {
+    renderDialog();
+    const shell = await screen.findByTestId('manage-subtitle-dialog-v2');
+    expect(tokens(shell)).toContain('max-sm:data-[state=open]:animate-sheet-enter');
+    expect(tokens(shell)).toContain('max-sm:data-[state=closed]:animate-sheet-exit');
+    expect(screen.getByTestId('manage-sheet-grabber')).toBeInTheDocument();
+    const close = screen.getByText('Close').closest('button')!;
+    expect(tokens(close)).toEqual(
+      expect.arrayContaining(['max-sm:h-11', 'max-sm:w-11', 'max-sm:top-4'])
+    );
+    const header = screen.getByTestId('manage-sheet-header');
+    expect(tokens(header)).toEqual(
+      expect.arrayContaining(['max-sm:h-11', 'max-sm:pl-4', 'max-sm:border-b-0'])
+    );
+  });
+
+  it('idle: NO footer on a phone; 搜尋線上字幕 moves into the body, above its panel', async () => {
+    renderDialog();
+    await findPricedGenerate();
+    expect(tokens(footerOf())).toContain('max-sm:hidden');
+
+    const mobile = screen.getByTestId('toggle-fetch-mobile');
+    expect(tokens(mobile)).toContain('sm:hidden');
+    expect(mobile).toHaveTextContent('搜尋線上字幕（成功率低）');
+    fireEvent.click(mobile);
+    const panel = await screen.findByTestId('fetch-section');
+    // DOCUMENT_POSITION_FOLLOWING: the panel opens BELOW its trigger.
+    expect(mobile.compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // The desktop control drives the same state.
+    fireEvent.click(screen.getByTestId('toggle-fetch'));
+    expect(screen.queryByTestId('fetch-section')).toBeNull();
+  });
+
+  it('an episode gets no online-search control on a phone either', async () => {
+    renderEpisodeDialog();
+    await screen.findByTestId('manage-subtitle-dialog-v2');
+    expect(screen.queryByTestId('toggle-fetch-mobile')).toBeNull();
+  });
+
+  it('the generate button is full width and its helper centred under it', async () => {
+    renderDialog();
+    const cta = await findPricedGenerate();
+    expect(tokens(cta)).toContain('max-sm:w-full');
+    expect(tokens(screen.getByTestId('generation-section'))).toEqual(
+      expect.arrayContaining(['max-sm:flex-col', 'max-sm:items-stretch'])
+    );
+    expect(tokens(screen.getByTestId('generation-helper'))).toContain('max-sm:text-center');
+  });
+
+  it('generating: 關閉 is a full-width button with the hint UNDER it; the title row keeps its rule', async () => {
+    await startRun('transcribing');
+    const footer = footerOf();
+    expect(tokens(footer)).not.toContain('max-sm:hidden');
+    expect(tokens(footer)).toEqual(
+      expect.arrayContaining([
+        'max-sm:flex-col-reverse',
+        'max-sm:items-stretch',
+        'max-sm:border-t-0',
+      ])
+    );
+    expect(footer.className).toContain('env(safe-area-inset-bottom)');
+    const close = screen.getByTestId('dialog-close');
+    expect(tokens(close)).toContain('max-sm:w-full');
+    // `ml-auto` cancels align-items:stretch — without max-sm:ml-0 the button
+    // resolves w-full against a shrink-wrapped wrapper and never fills the sheet.
+    expect(tokens(close.parentElement!)).toEqual(
+      expect.arrayContaining(['max-sm:ml-0', 'max-sm:w-full'])
+    );
+    expect(tokens(screen.getByText('關閉後生成會在背景繼續'))).toContain('max-sm:text-center');
+    expect(tokens(screen.getByTestId('manage-sheet-header'))).not.toContain('max-sm:border-b-0');
+  });
+
+  it('complete: no empty hint node is left to open a gap in the phone column', async () => {
+    await startRun('complete');
+    const footer = footerOf();
+    // The desktop row still needs a left-hand spacer for justify-between, so an
+    // empty span may exist — but every one of them must be gone on a phone.
+    const visibleEmpties = [...footer.querySelectorAll('span:empty')].filter(
+      (el) => !tokens(el).includes('max-sm:hidden')
+    );
+    expect(visibleEmpties).toEqual([]);
+    expect(screen.queryByText('關閉後生成會在背景繼續')).toBeNull();
+  });
+
+  it('FAILED keeps its footer row on a phone — 重試 is a paid button and has no mobile drawing', async () => {
+    await startRun('failed');
+    const footer = footerOf();
+    expect(tokens(footer)).not.toContain('max-sm:hidden');
+    expect(tokens(footer)).not.toContain('max-sm:flex-col-reverse');
+    expect(footer.className).toContain('env(safe-area-inset-bottom)');
+    expect(footer).toContainElement(screen.getByTestId('gen-retry'));
+    // Lines up with the 16px phone body.
+    expect(tokens(footer)).toContain('max-sm:px-4');
+    expect(tokens(screen.getByTestId('dialog-close'))).not.toContain('max-sm:w-full');
+  });
+});
