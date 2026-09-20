@@ -1,6 +1,6 @@
 # Story DSR.6e-1：產生字幕的候選清單對齊設計稿——金額不再穿狀態色，少一個金額也不會讓整個畫面壞掉
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -413,6 +413,7 @@ Claude Fable 5.1 — dev-story (Amelia)
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-20 | ✅ **DONE** —— PR #481 合併進 main（commit `5955a563`）。CI 全綠：Lint、Unit、Go、4 個 E2E shard、3 個 Build、Serve Smoke、4 個視覺 shard。8 張 `-linux` 基準由手動觸發的 Visual Regression workflow 開 bootstrap PR #482（只有 8 張 PNG＋一行稽核紀錄）合回分支後一次過。本機 e2e 紅的那 2 條（`model_id`）在 CI 是綠的。 |
 | 2026-09-20 | 🔍 **/ship 對抗式 CR**：0H／3M／8L，修 7、立案 4。最重要：沒報價的列在有模型價目表時會畫出「$0.31 無法估價」→ `candidateUsd` 第一條規則改成「選不到的列一律沒有金額」；文案不再承諾對話框裡做不到的「重新分析」；補上原本名不副實的群組徽章測試。web 3905/3905。 |
 | 2026-09-20 | 🚧 **REVIEW**（dev-story, Amelia）。Task 1–6 全數完成。P1：`candidateUsd` 回 `number \| null`、`isSelectable`、`modelChoices` 涵蓋規則（預設模型有洞 → `[]`）；金額與三種分類標記中性；對話框 960；14 處 13px 與整張清單對稿；單季標題。一處偏離單子：群組徽章底用 `$bg-secondary`（標題列本身是 `$bg-tertiary`，同色看不見）。閘門：lint 0 errors、typecheck ✅、design-tokens ✅、web 3901/3901、api ✅；e2e 本機 5/7（2 條紅是 `AI_PROVIDER` 的 `model_id`，已看 diff 確認）。 |
 | 2026-09-20 | 🔍 **建單後對抗驗證**（fresh-context 驗證代理，只讀；逐節點比對 `.pen`、逐行比對程式碼）：2 CRITICAL／14 SHOULD FIX／多項 NIT，**全部併入**。最重要：① `ConfirmGenerationDialog.spec.tsx:9` 的 `baseTotals` 是型別化的 `ConsentTotals`，加欄位不補它 typecheck 直接紅；② `consentSelection.spec.ts:326-329` 現有測試斷言的正是本張禁止的「靜默退回預設模型價」，要改寫而不是留著；③ `candidateUsd` 對不可寫入的列要**一律**回 null，否則同一列的排序位置會隨「模型清單載到了沒」改變；④ 預設模型沒通過涵蓋檢查時不能自動改用別的模型（會無聲換價）；⑤ `modelChoices` 的片長分母要維持 `isWritable`（後端就是這樣加總的）；⑥「開始產生停用的原因」那一行在超過上限時不會 render；⑦ 手機稿還有四組同類節點沒點名；⑧ 新註記不該塞進赭色的 `c4FIoB`；⑨ `consentRows.ts` 的行號與 `DESIGN.md` 的字階行號修正。 |
