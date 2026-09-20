@@ -45,7 +45,7 @@ import {
   computeTotals,
   defaultSelection,
   groupOrder,
-  isWritable,
+  isSelectable,
   listableCandidates,
   modelChoices,
   parseBudgetInput,
@@ -203,7 +203,7 @@ export function GenerationConsentView({
       }
       const preselected = new Set(
         (preselectedIds ?? []).filter((id) =>
-          listable.some((c) => c.mediaId === id && isWritable(c))
+          listable.some((c) => c.mediaId === id && isSelectable(c))
         )
       );
       setSelectedIds(preselected.size > 0 ? preselected : defaultSelection(listable));
@@ -412,11 +412,12 @@ export function GenerationConsentView({
   // sub-6-1: ids the bulk actions may touch — listable AND writable. A row the
   // backend's write probe refused is never selectable (its checkbox is
   // disabled in the panel), so 全選 / 整劇 must not sweep it in either.
-  const writableIdSet = useMemo(() => new Set(selectableIds(candidates)), [candidates]);
+  // dsr-6e-1: …and neither is a row the wire sent without a quote.
+  const selectableIdSet = useMemo(() => new Set(selectableIds(candidates)), [candidates]);
 
   const handleToggle = useCallback(
     (mediaId: string) => {
-      if (!writableIdSet.has(mediaId)) return; // sub-6-1: never selectable, whatever the DOM says
+      if (!selectableIdSet.has(mediaId)) return; // sub-6-1: never selectable, whatever the DOM says
       setSelectedIds((prev) => {
         const next = new Set(prev);
         if (next.has(mediaId)) next.delete(mediaId);
@@ -424,13 +425,13 @@ export function GenerationConsentView({
         return next;
       });
     },
-    [writableIdSet]
+    [selectableIdSet]
   );
 
   /** 整劇/整季 toggle (sub-5-3): set the group's ids to one target state. */
   const handleToggleGroup = useCallback(
     (mediaIds: string[], next: boolean) => {
-      mediaIds = mediaIds.filter((id) => writableIdSet.has(id));
+      mediaIds = mediaIds.filter((id) => selectableIdSet.has(id));
       setSelectedIds((prev) => {
         const nextSet = new Set(prev);
         for (const id of mediaIds) {
@@ -440,7 +441,7 @@ export function GenerationConsentView({
         return nextSet;
       });
     },
-    [writableIdSet]
+    [selectableIdSet]
   );
 
   /**
@@ -495,7 +496,7 @@ export function GenerationConsentView({
     // failure closes it via the startError effect below, surfacing the error
     // in the list panel.
     const ids = candidates
-      .filter((c) => selectedIds.has(c.mediaId) && isWritable(c))
+      .filter((c) => selectedIds.has(c.mediaId) && isSelectable(c))
       .map((c) => c.mediaId);
     // WYSIWYG consent extended to the model: send the id the priced rows were
     // computed under. Sending nothing here would let the server's default
@@ -521,8 +522,11 @@ export function GenerationConsentView({
           className={cn(
             'flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0',
             // Mobile: bottom sheet (F15-M-v2 fdu4y). Desktop: centered dialog.
+            // 960 for EVERY phase (Alexyu 2026-09-20): analysing, list and empty
+            // share this one DialogContent, so following the drawn 560 → 960
+            // would grow the dialog under the user the moment analysis ends.
             'bottom-0 left-0 right-0 top-auto w-full max-w-none translate-x-0 translate-y-0 rounded-b-none rounded-t-[var(--radius-xl)]',
-            'sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-[calc(100vw-4rem)] sm:max-w-3xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[var(--radius-lg)]'
+            'sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-[calc(100vw-4rem)] sm:max-w-[960px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[var(--radius-lg)] sm:border sm:border-[var(--border-subtle)]'
           )}
         >
           {/* Mobile bottom-sheet drag handle (F8 precedent, sm:hidden). */}

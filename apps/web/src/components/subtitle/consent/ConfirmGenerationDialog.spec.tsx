@@ -10,6 +10,8 @@ const baseTotals: ConsentTotals = {
   candidateCount: 142,
   selectableCount: 142,
   unwritableCount: 0,
+  unpricedCount: 0,
+  unpricedSelectedCount: 0,
   selectedCount: 18,
   selectedExtractCount: 6,
   selectedAsrCount: 12,

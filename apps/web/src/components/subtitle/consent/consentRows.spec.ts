@@ -300,6 +300,45 @@ describe('section accessible names (sub-6-11 CR)', () => {
   });
 });
 
+describe('cost sort with priceless rows (dsr-6e-1 AC #2)', () => {
+  it('rows with no price sink to the bottom in BOTH directions — even when they lead the input', () => {
+    const blocked = { ...movie('x1', '唯讀'), writable: false };
+    const bare = { ...movie('x2', '沒報價'), estimatedUsd: undefined as unknown as number };
+    const cheap = { ...movie('m1', '便宜'), estimatedUsd: 0.02 };
+    const dear = { ...movie('m2', '貴'), estimatedUsd: 0.4 };
+    const input = [blocked, bare, dear, cheap];
+    const order = new Map(input.map((c, i) => [c.mediaId, i]));
+    const ids = (sort: ConsentSort) => sortForDisplay(input, sort, order).map((c) => c.mediaId);
+    expect(ids('cost-desc')).toEqual(['m2', 'm1', 'x1', 'x2']);
+    expect(ids('cost-asc')).toEqual(['m1', 'm2', 'x1', 'x2']);
+  });
+});
+
+describe('series header label (dsr-6e-1 AC #7)', () => {
+  const sectionLabels = (cs: GenerationCandidate[]) =>
+    rowsOf(cs, { expandedOverride: { [sectionIds.series(SRS)]: true } })
+      .filter((r) => r.kind === 'section')
+      .map((r) => (r.kind === 'section' ? r.label : ''));
+
+  it('a single-season show names its season in the header — 「劇名 · 第 N 季」', () => {
+    expect(sectionLabels([episode('e1', 4, 1), episode('e2', 4, 2)])).toEqual([
+      '怪奇物語 · 第 4 季',
+    ]);
+  });
+
+  it('season 0 reads 特別篇', () => {
+    expect(sectionLabels([episode('e1', 0, 1)])).toEqual(['怪奇物語 · 特別篇']);
+  });
+
+  it('a multi-season show keeps the bare title — the season rows carry the numbers', () => {
+    expect(sectionLabels([episode('e1', 1, 1), episode('e2', 2, 1)])).toEqual([
+      '怪奇物語',
+      '第 1 季',
+      '第 2 季',
+    ]);
+  });
+});
+
 describe('the budget cut row (sub-6-12 AC #3)', () => {
   const films = [movie('m1', '甲片'), movie('m2', '乙片'), movie('m3', '丙片')];
 

@@ -59,6 +59,19 @@ function cmpUsd(a: number, b: number): number {
 }
 
 /**
+ * Cost comparator that keeps priceless rows OUT of decimal.js (dsr-6e-1).
+ *
+ * `candidateUsd` is `null` for an unwritable row and for a row the wire sent
+ * without a quote. Such a row has no place on a price axis, so it sinks to the
+ * bottom in BOTH directions — 金額低→高 must not open with the rows that have
+ * no amount at all.
+ */
+function cmpCost(a: number | null, b: number | null, direction: 1 | -1): number {
+  if (a === null || b === null) return a === b ? 0 : a === null ? 1 : -1;
+  return direction * cmpUsd(a, b);
+}
+
+/**
  * One flat, sorted view of the visible rows (every sort but `group`).
  *
  * Every comparator falls back to the row's index in the STATE array, so the
@@ -79,12 +92,12 @@ export function sortForDisplay(
   switch (sort) {
     case 'cost-desc':
       rows.sort(
-        (a, b) => cmpUsd(candidateUsd(b, prices), candidateUsd(a, prices)) || at(a) - at(b)
+        (a, b) => cmpCost(candidateUsd(a, prices), candidateUsd(b, prices), -1) || at(a) - at(b)
       );
       break;
     case 'cost-asc':
       rows.sort(
-        (a, b) => cmpUsd(candidateUsd(a, prices), candidateUsd(b, prices)) || at(a) - at(b)
+        (a, b) => cmpCost(candidateUsd(a, prices), candidateUsd(b, prices), 1) || at(a) - at(b)
       );
       break;
     case 'title-asc':
@@ -338,12 +351,19 @@ function pushSeriesRows(
   const seriesId = group.seriesId ?? '';
   const sectionId = sectionIds.series(seriesId);
   const expanded = isExpanded(input, sectionId);
+  const seriesName = group.seriesTitle || '未知影集';
+  // dsr-6e-1 AC #7 (F15 yQgKh「怪奇物語 · 第 4 季」): a single-season show has no
+  // season sub-headers, so its one header is the only place the season can be
+  // named. A multi-season show keeps the bare title — the indented season rows
+  // say the numbers.
+  const onlySeason =
+    !group.showSeasonHeaders && group.seasons?.length === 1 ? group.seasons[0] : undefined;
   rows.push({
     kind: 'section',
     key: sectionId,
     sectionId,
     testid: sectionTestids.series(seriesId),
-    label: group.seriesTitle || '未知影集',
+    label: onlySeason ? `${seriesName} · ${seasonLabel(onlySeason.seasonNumber)}` : seriesName,
     selectLabel: `選取整部 ${group.seriesTitle || '未知影集'}`,
     unit: '集',
     items: group.items,
