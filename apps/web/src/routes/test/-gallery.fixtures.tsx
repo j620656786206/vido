@@ -4671,6 +4671,64 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     statesOnly: ['default'],
   },
   {
+    // dsr-6f-2: the same panel as a phone bottom sheet (F6-M-v2 buepS). Radix
+    // portal ⇒ the visual spec photographs the WINDOW, so this one really is
+    // 390 wide and is the layout evidence the in-page row fixture cannot be.
+    // The seed keeps an unconfirmed `metadata` term so the widest line 2 shows.
+    id: 'glossary-panel-v2/seeded-mobile',
+    label: 'subtitle/GlossaryPanelV2 (手機 sheet — F6-M-v2)',
+    component: GlossaryPanelV2,
+    props: {
+      mediaId: 'movie-glossary-mobile',
+      mediaTitle: '怪奇物語',
+      open: true,
+      onOpenChange: noop,
+    },
+    seedQueries: [
+      {
+        queryKey: glossaryKeys.list('movie-glossary-mobile'),
+        data: [
+          {
+            id: 'fx-gpm-1',
+            mediaId: 'movie-glossary-mobile',
+            termSrc: 'Demogorgon',
+            termZh: '魔王獸',
+            language: 'zh-Hant',
+            source: 'subtitle',
+            confirmed: true,
+            createdAt: '2026-07-01T00:00:00Z',
+            updatedAt: '2026-07-01T00:00:00Z',
+          },
+          {
+            id: 'fx-gpm-2',
+            mediaId: 'movie-glossary-mobile',
+            termSrc: 'Hopper',
+            termZh: '霍普',
+            language: 'zh-Hant',
+            source: 'metadata',
+            confirmed: false,
+            createdAt: '2026-07-01T00:00:00Z',
+            updatedAt: '2026-07-01T00:00:00Z',
+          },
+          {
+            id: 'fx-gpm-3',
+            mediaId: 'movie-glossary-mobile',
+            termSrc: 'Vecna',
+            termZh: '維克那',
+            language: 'zh-Hant',
+            source: 'manual',
+            confirmed: false,
+            createdAt: '2026-07-01T00:00:00Z',
+            updatedAt: '2026-07-01T00:00:00Z',
+          },
+        ] satisfies GlossaryTerm[],
+      },
+    ],
+    penNode: 'screen-section', // Screen F6-M-v2 (buepS)
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+  },
+  {
     id: 'glossary-panel-v2/empty',
     label: 'subtitle/GlossaryPanelV2 (空狀態 尚無詞彙 — F7)',
     component: GlossaryPanelV2,

@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen F6-D-v2 (dlfMR) + Screen F7-D-v2 (A85GFD) + Screen F6-SPEC-STATES (n3vIR)
+// Design ref: ux-design.pen Screen F6-D-v2 (dlfMR) + Screen F7-D-v2 (A85GFD) + Screen F6-SPEC-STATES (n3vIR) + Screen F6-M-v2 (buepS)
 /**
  * Glossary management + review panel (ux3-subtitle-v2 AC 4, screens F6-D-v2
  * dlfMR / F6-M-v2 buepS / F7-D-v2 A85GFD 空狀態, states F6-SPEC-STATES n3vIR).
@@ -17,6 +17,8 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { BookOpen, CircleAlert } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../ui/Dialog';
+import { MOBILE_SHEET_CLOSE, MOBILE_SHEET_CONTENT, SheetGrabber } from '../ui/mobileSheet';
+import { cn } from '../../lib/utils';
 import { useGlossaryTerms, useGlossaryMutations } from '../../hooks/useGlossary';
 import { isImeComposing } from '../../utils/keyboard';
 import { GlossaryRowV2 } from './GlossaryRowV2';
@@ -162,11 +164,15 @@ export function GlossaryPanelV2({ mediaId, mediaTitle, open, onOpenChange }: Glo
   const duplicateTerm = duplicate && terms.data?.find((t) => t.id === duplicate.termId);
 
   const addForm = adding && (
-    <div className="flex flex-col gap-2">
+    // order-[9998] keeps the form directly ABOVE the action pair (order-last =
+    // 9999) on a phone, so it opens where 新增詞彙 was tapped rather than at the
+    // top of a scrolled list. Inert on a desktop, where the body is not the
+    // ordering context (the toolbar is max-sm:contents only).
+    <div className="flex flex-col gap-2 max-sm:order-[9998]">
       <div
         data-testid="glossary-add-form"
         data-glossary-inline-editor=""
-        className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3.5 py-2"
+        className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3.5 py-2 max-sm:flex-col max-sm:items-stretch max-sm:gap-2"
       >
         <input
           type="text"
@@ -184,7 +190,7 @@ export function GlossaryPanelV2({ mediaId, mediaTitle, open, onOpenChange }: Glo
           data-testid="glossary-add-src"
           /* eslint-disable-next-line jsx-a11y/no-autofocus -- the form opens on the user's own 新增詞彙 click; focus follows the action */
           autoFocus
-          className={`${TEXT_INPUT} font-mono`}
+          className={`${TEXT_INPUT} max-sm:w-full font-mono`}
         />
         <input
           type="text"
@@ -197,33 +203,40 @@ export function GlossaryPanelV2({ mediaId, mediaTitle, open, onOpenChange }: Glo
           placeholder="譯名（例：魔王獸）"
           aria-label="中文譯名"
           data-testid="glossary-add-zh"
-          className={TEXT_INPUT}
+          className={`${TEXT_INPUT} max-sm:w-full`}
         />
-        <span className="flex-1" />
-        <button
-          type="button"
-          onClick={submitAdd}
-          onKeyDown={onAddFormKeyDown}
-          disabled={!draftSrc.trim() || !draftZh.trim()}
-          // aria-disabled, not disabled, while a write runs: a button that turns
-          // disabled under focus drops focus to <body>, and an Esc from there
-          // would close the whole panel mid-save.
-          aria-disabled={busy}
-          data-testid="glossary-add-submit"
-          className="flex min-h-[44px] items-center px-2.5 text-sm font-semibold text-[var(--accent-text)] disabled:opacity-50 aria-disabled:opacity-50"
+        <span className="flex-1 max-sm:hidden" />
+        {/* sm:contents drops this wrapper on a desktop — both buttons stay direct
+            children of the form row. On a phone they share their own line. */}
+        <div
+          data-testid="glossary-add-actions"
+          className="flex items-center gap-2 max-sm:justify-end sm:contents"
         >
-          新增
-        </button>
-        <button
-          type="button"
-          onClick={cancelAddForm}
-          onKeyDown={onAddFormKeyDown}
-          aria-disabled={add.isPending}
-          data-testid="glossary-add-cancel"
-          className="flex min-h-[44px] items-center px-2.5 text-sm text-[var(--text-secondary)] aria-disabled:opacity-50"
-        >
-          取消
-        </button>
+          <button
+            type="button"
+            onClick={submitAdd}
+            onKeyDown={onAddFormKeyDown}
+            disabled={!draftSrc.trim() || !draftZh.trim()}
+            // aria-disabled, not disabled, while a write runs: a button that turns
+            // disabled under focus drops focus to <body>, and an Esc from there
+            // would close the whole panel mid-save.
+            aria-disabled={busy}
+            data-testid="glossary-add-submit"
+            className="flex min-h-[44px] items-center px-2.5 text-sm font-semibold text-[var(--accent-text)] disabled:opacity-50 aria-disabled:opacity-50"
+          >
+            新增
+          </button>
+          <button
+            type="button"
+            onClick={cancelAddForm}
+            onKeyDown={onAddFormKeyDown}
+            aria-disabled={add.isPending}
+            data-testid="glossary-add-cancel"
+            className="flex min-h-[44px] items-center px-2.5 text-sm text-[var(--text-secondary)] aria-disabled:opacity-50"
+          >
+            取消
+          </button>
+        </div>
       </div>
       {duplicate && duplicateTerm && (
         <p
@@ -314,43 +327,80 @@ export function GlossaryPanelV2({ mediaId, mediaTitle, open, onOpenChange }: Glo
           // editor handles it); only an Esc from anywhere else closes the panel.
           if (e.target instanceof Element && e.target.closest(INLINE_EDITOR)) e.preventDefault();
         }}
-        className="flex max-h-[85vh] w-[calc(100vw-2rem)] max-w-[880px] flex-col gap-0 p-0 sm:rounded-[var(--radius-lg)] sm:border sm:border-[var(--border-subtle)]"
+        closeClassName={cn(MOBILE_SHEET_CLOSE, 'max-sm:top-4')}
+        // A phone gets the shared bottom sheet (dsr-6f-1); every desktop size,
+        // position and radius is sm:-prefixed, or MOBILE_SHEET_CONTENT's own
+        // unprefixed w-full / max-w-none / translate-0 / rounded-b-none would
+        // fight it in twMerge and one of the two breakpoints would lose.
+        className={cn(
+          'flex max-h-[85vh] flex-col gap-0 p-0 max-sm:overflow-hidden',
+          MOBILE_SHEET_CONTENT,
+          'sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-[calc(100vw-2rem)] sm:max-w-[880px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[var(--radius-lg)] sm:border sm:border-[var(--border-subtle)]'
+        )}
       >
-        {/* Title bar */}
-        <div className="flex h-14 items-center justify-between border-b border-[var(--border-subtle)] pl-6 pr-12">
+        <SheetGrabber data-testid="glossary-sheet-grabber" />
+
+        {/* Title bar — 44 high and borderless on a phone (F6-M-v2 buepS). */}
+        <div
+          data-testid="glossary-title-bar"
+          className="flex h-14 items-center justify-between border-b border-[var(--border-subtle)] pl-6 pr-12 max-sm:h-11 max-sm:border-b-0 max-sm:pl-4"
+        >
           <DialogTitle className="text-base font-semibold">名詞對照表 — {mediaTitle}</DialogTitle>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div
+          data-testid="glossary-body"
+          className={cn(
+            'flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-5 max-sm:gap-3.5 max-sm:px-4 max-sm:pt-1.5',
+            // The bottom gutter is written once: the footer count carries the
+            // safe area when it is there, the body when it is not.
+            list.length > 0 ? 'max-sm:pb-4' : 'max-sm:pb-[max(1rem,env(safe-area-inset-bottom))]'
+          )}
+        >
+          {/* On a phone this row dissolves (max-sm:contents) so the explainer and
+              the action pair become body items — that is what lets the actions
+              carry order-last down below the list, per buepS. */}
+          <div
+            data-testid="glossary-header-row"
+            className="flex flex-col gap-3 max-sm:contents sm:flex-row sm:items-center"
+          >
             <DialogDescription className="text-sm">生成字幕時會依此表固定譯名</DialogDescription>
             <span className="hidden flex-1 sm:block" />
-            {list.length > 0 && (
-              <button
-                type="button"
-                onClick={() => {
-                  runWrite('全部確認失敗，請再試一次', () => confirmAll.mutateAsync()).catch(
-                    () => undefined
-                  );
-                }}
-                disabled={busy || unconfirmedCount === 0}
-                data-testid="glossary-confirm-all"
-                className={SECONDARY_BUTTON}
-              >
-                全部確認
-              </button>
-            )}
-            {/* On an empty list the empty state carries the only 新增詞彙. */}
+            {/* sm:contents dissolves this wrapper on a desktop, so both buttons
+                stay direct children of the toolbar row exactly as before. */}
             {(list.length > 0 || (terms.isError && !terms.data)) && (
-              <button
-                type="button"
-                onClick={() => setAdding(true)}
-                disabled={busy}
-                data-testid="glossary-add-term"
-                className={SECONDARY_BUTTON}
+              <div
+                data-testid="glossary-actions"
+                className="flex gap-3 max-sm:order-last max-sm:w-full max-sm:flex-col sm:contents"
               >
-                新增詞彙
-              </button>
+                {list.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      runWrite('全部確認失敗，請再試一次', () => confirmAll.mutateAsync()).catch(
+                        () => undefined
+                      );
+                    }}
+                    disabled={busy || unconfirmedCount === 0}
+                    data-testid="glossary-confirm-all"
+                    className={`${SECONDARY_BUTTON} max-sm:w-full`}
+                  >
+                    全部確認
+                  </button>
+                )}
+                {/* On an empty list the empty state carries the only 新增詞彙. */}
+                {(list.length > 0 || (terms.isError && !terms.data)) && (
+                  <button
+                    type="button"
+                    onClick={() => setAdding(true)}
+                    disabled={busy}
+                    data-testid="glossary-add-term"
+                    className={`${SECONDARY_BUTTON} max-sm:w-full`}
+                  >
+                    新增詞彙
+                  </button>
+                )}
+              </div>
             )}
           </div>
 
@@ -396,7 +446,7 @@ export function GlossaryPanelV2({ mediaId, mediaTitle, open, onOpenChange }: Glo
         {list.length > 0 && (
           <div
             data-testid="glossary-footer-count"
-            className="border-t border-[var(--border-subtle)] px-6 py-3.5 text-sm text-[var(--text-secondary)]"
+            className="border-t border-[var(--border-subtle)] px-6 py-3.5 text-sm text-[var(--text-secondary)] max-sm:px-4 max-sm:pb-[max(0.875rem,env(safe-area-inset-bottom))]"
           >
             共 <span className="font-mono tabular-nums">{list.length}</span> 條 ·{' '}
             <span className="font-mono tabular-nums">{unconfirmedCount}</span> 條未確認

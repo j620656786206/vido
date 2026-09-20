@@ -306,9 +306,11 @@ describe('GlossaryRowV2', () => {
     render(<GlossaryRowV2 term={term()} onConfirm={noop} onEdit={resolved} onDelete={noop} />);
 
     fireEvent.click(screen.getByTestId('glossary-delete-t1'));
+    // dsr-6f-2: the 480 width and the radius moved behind sm: when the confirm
+    // became a bottom sheet on a phone — the geometry at >=640 is unchanged.
     expect(screen.getByTestId('glossary-delete-dialog-t1')).toHaveClass(
-      'max-w-[480px]',
-      'rounded-[var(--radius-lg)]',
+      'sm:max-w-[480px]',
+      'sm:rounded-[var(--radius-lg)]',
       'flex',
       'flex-col',
       'gap-4'
@@ -324,5 +326,102 @@ describe('GlossaryRowV2', () => {
     expect(screen.getByTestId('glossary-confirm-t1')).toBeDisabled();
     expect(screen.getByTestId('glossary-edit-t1')).toBeDisabled();
     expect(screen.getByTestId('glossary-delete-t1')).toBeDisabled();
+  });
+});
+
+describe('GlossaryRowV2 — two-line row on a phone (dsr-6f-2, F6-M-v2 buepS)', () => {
+  const tokens = (el: Element) => el.className.split(/\s+/).filter(Boolean);
+
+  it('stacks into two lines on a phone and stays one line from sm: up', () => {
+    render(<GlossaryRowV2 term={term()} onConfirm={noop} onEdit={resolved} onDelete={noop} />);
+
+    expect(tokens(screen.getByTestId('glossary-row-t1'))).toEqual(
+      expect.arrayContaining(['max-sm:flex-col', 'max-sm:items-stretch', 'max-sm:gap-2'])
+    );
+    // sm:contents dissolves both wrappers on a desktop, so the single-line flex
+    // row is byte-identical to what shipped in dsr-6c.
+    const line1 = screen.getByTestId('glossary-row-line1-t1');
+    const line2 = screen.getByTestId('glossary-row-line2-t1');
+    expect(tokens(line1)).toContain('sm:contents');
+    expect(tokens(line2)).toContain('sm:contents');
+    // Only ~9px of slack at 390 — wrapping is the safety net, not clipping.
+    expect(tokens(line2)).toContain('flex-wrap');
+
+    // Line 1 needs the same net line 2 has: term_src is shrink-0 with no way to
+    // wrap or truncate, and a long one ran off a 328px phone line.
+    expect(tokens(line1)).toContain('flex-wrap');
+    const src = screen.getByText('Demogorgon');
+    expect(tokens(src)).toEqual(
+      expect.arrayContaining(['truncate', 'max-sm:min-w-0', 'max-sm:shrink'])
+    );
+
+    expect(line1).toContainElement(src);
+    expect(line1).toContainElement(screen.getByText('魔王獸'));
+    expect(line2).toContainElement(screen.getByTestId('glossary-source-t1'));
+    expect(line2).toContainElement(screen.getByTestId('glossary-delete-t1'));
+  });
+
+  it('has one spacer per breakpoint so line 2 reads badges-left / actions-right', () => {
+    render(<GlossaryRowV2 term={term()} onConfirm={noop} onEdit={resolved} onDelete={noop} />);
+
+    const line2 = screen.getByTestId('glossary-row-line2-t1');
+    const spacers = Array.from(line2.querySelectorAll('span')).filter((s) =>
+      tokens(s).includes('flex-1')
+    );
+    expect(spacers).toHaveLength(2);
+    // The desktop spacer sits before the source badge; the phone one sits
+    // between the badges and the first action.
+    const [desktopSpacer, phoneSpacer] = spacers;
+    expect(tokens(desktopSpacer)).toContain('max-sm:hidden');
+    expect(tokens(phoneSpacer)).toContain('sm:hidden');
+    const unconfirmed = screen.getByTestId('glossary-unconfirmed-t1');
+    expect(
+      unconfirmed.compareDocumentPosition(phoneSpacer) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
+      phoneSpacer.compareDocumentPosition(screen.getByTestId('glossary-confirm-t1')) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  // GUARD (green on main): the code always kept 編輯 on a confirmed row — it was
+  // the DESIGN that had switched it off. This pins the behaviour the .pen was
+  // changed to match, so a future width squeeze cannot quietly drop it.
+  it('[guard] 編輯 is on a confirmed row too (⚖️ 2026-09-17)', () => {
+    render(
+      <GlossaryRowV2
+        term={term({ confirmed: true })}
+        onConfirm={noop}
+        onEdit={resolved}
+        onDelete={noop}
+      />
+    );
+
+    expect(screen.queryByTestId('glossary-unconfirmed-t1')).toBeNull();
+    expect(screen.queryByTestId('glossary-confirm-t1')).toBeNull();
+    expect(screen.getByTestId('glossary-edit-t1')).toBeInTheDocument();
+    expect(screen.getByTestId('glossary-delete-t1')).toBeInTheDocument();
+  });
+
+  it('the delete confirm is a bottom sheet on a phone, centred dialog from sm: up', () => {
+    render(<GlossaryRowV2 term={term()} onConfirm={noop} onEdit={resolved} onDelete={noop} />);
+    fireEvent.click(screen.getByTestId('glossary-delete-t1'));
+
+    const dialog = screen.getByTestId('glossary-delete-dialog-t1');
+    const t = tokens(dialog);
+    expect(t).toContain('max-sm:data-[state=open]:animate-sheet-enter');
+    // Both the width AND the radius must be sm:-prefixed: unprefixed, twMerge
+    // drops MOBILE_SHEET_CONTENT's rounded-t/rounded-b and the sheet loses its
+    // top corners and its flush bottom edge.
+    expect(t).toContain('sm:max-w-[480px]');
+    expect(t).toContain('sm:rounded-[var(--radius-lg)]');
+    expect(t).not.toContain('max-w-[480px]');
+    expect(t).not.toContain('rounded-[var(--radius-lg)]');
+
+    expect(tokens(screen.getByTestId('glossary-delete-sheet-grabber'))).toContain('sm:hidden');
+    const close = screen.getByText('Close').closest('button')!;
+    expect(tokens(close)).toEqual(
+      expect.arrayContaining(['max-sm:h-11', 'max-sm:w-11', 'max-sm:top-4'])
+    );
   });
 });
