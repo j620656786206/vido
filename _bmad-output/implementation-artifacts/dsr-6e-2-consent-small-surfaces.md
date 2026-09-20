@@ -1,6 +1,6 @@
 # Story DSR.6e-2：產生字幕的分析中、金額確認、空狀態對齊設計稿——確認框只寫「約 $4.50」，總額不再變成橘色
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -357,6 +357,7 @@ Claude Fable 5.1 — dev-story (Amelia)
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-20 | ✅ **DONE** —— PR #484 合併進 main（commit `04d1be6d`）。CI 全綠（Lint、Unit、Go、E2E、Build、Serve Smoke、視覺）。7＋1 張 `-linux` 基準由手動觸發的 Visual Regression workflow 開 bootstrap PR #485 合回分支後一次過。 |
 | 2026-09-20 | 🔍 **/ship 對抗式 CR**：0H／2M／5L，修 5、交代 2。最重要：一條靠 class 順序才會過的斷言改成比對整個 token；補上「取消送出中」的容器測試（焦點留在按鈕上、第二次點擊不送）；F14 內容塊可縮可捲，矮視窗下取消鍵不會被裁掉。 |
 | 2026-09-20 | 🚧 **REVIEW**（dev-story, Amelia）。Task 1–6 完成：F14 頁尾＋拿掉高頻 live region＋`aria-disabled`；F16／F19 480＋框、「約 $X」、合計中性、明細金額 `--text-primary`、品質徽章中性藥丸；F20 對稿；F17 改稿＋Rule 21 標頭。閘門：lint 0 errors、typecheck ✅、design-tokens ✅、web 3915/3915、api ✅；e2e 本機 5/7（同一個 `model_id` 環境副作用）。 |
 | 2026-09-20 | 🔍 **建單後對抗驗證**（fresh-context 驗證代理，只讀；逐節點比對 `.pen`、逐行比對程式碼）：本張的改動併入 4 項——① `aria-disabled` 換上去之後 `disabled:opacity-50` 完全失效，要改成 `aria-disabled:` variant；② `consent-analysis-panel` 這個 testid 有四條既有測試在用，不能跟著搬；③ F17 的綠勾與「無法匯入 42 · 錯誤 7」互相矛盾（E3-D 與程式碼都是赭色三角）；④ F16／F19 的「品質 A」青碧徽章就是 sprint 條目說的「4 處」的第四處，本張一起收。另修 `DESIGN.md` 字階行號與匯出清單（動到 F16-M／F19-M 的徽章）。 |
