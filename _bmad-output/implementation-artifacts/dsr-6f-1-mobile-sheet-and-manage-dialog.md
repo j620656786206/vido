@@ -1,6 +1,6 @@
 # Story DSR.6f-1：手機上的字幕對話框從底部滑上來，「管理字幕」與生成進度在手機上對齊設計稿
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -388,6 +388,7 @@ Claude Fable 5.1 — dev-story (Amelia)
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-20 | ✅ **DONE** —— PR #488 合併進 main（commit `3058aafd`）。PR 上 Tests 兩輪都綠；Visual 第一輪紅是純粹缺 4 張 `-linux` 基準，手動觸發 workflow 開 bootstrap PR #489（4 張 PNG＋一行稽核紀錄）合回分支後轉綠。**合併後 `main` 那個 commit 的 Tests／Docker／Visual Regression 三條都確認是 success**（dsr-6e-2 的教訓：不能只看 PR）。 |
 | 2026-09-20 | 🔍 **/ship 對抗式 CR**：0H／2M／8L，修 8、記 2。最重要：兩張手機基準線其實只有 96px 寬（gallery 外層會縮起來）→ 修外層、重拍成 326 寬、spec 加寬度守門；e2e 的生成中測試補上「SSE 假資料真的被吃到」的證明。web 3935/3935、e2e burn-in 9/9、既有基準線零變動。 |
 | 2026-09-20 | 🚧 **REVIEW**（dev-story, Amelia）。Task 1–6 完成。手機 sheet 由下往上滑入（真瀏覽器量過：390 是 `sheet-enter`、640 是 `dialog-enter`）、44×44 的 ✕、管理字幕與生成進度對 F1-M／F3-M；視覺測試支援手機 viewport，既有基準線零變動。閘門：lint 0 errors、typecheck ✅、design-tokens ✅、web 3935/3935、api ✅、e2e 3/3（burn-in 9/9）。 |
 | 2026-09-20 | 🔍 **建單後對抗驗證**（fresh-context 代理，只讀；逐節點比對 `.pen`、逐行比對程式碼、用 repo 的 Tailwind 4.1.18 實際編譯候選 class）：4 CRITICAL／11 SHOULD FIX／6 NIT，**全部併入**。最重要：① 管理字幕的「生成中／失敗」根本做不出視覺夾具（狀態是元件內部的、來自 POST＋SSE）→ 改成內層元件的手機夾具＋一支 390／640 兩側都量的 e2e；② 一個固定的 `top` 置不了四個對話框的 ✕（標題列高度不同），`14px` 連管理字幕自己都不對 → `top` 由各對話框自己帶；③ 「關閉」外面那層 `ml-auto` 會讓滿版失效，而且稿上 F3-M 根本沒有頁尾 → 改寫成依狀態的 class；④ 「只有母版的把手不一樣」是錯的，整份稿有三種 → 不改母版、另立單子；⑤ `closeClassName` 不解構會漏成 DOM 屬性；⑥ 批次的把手有 testid 在被斷言，`SheetGrabber` 要能轉傳 props；⑦ safe-area 今天是 0（沒有 `viewport-fit=cover`）；⑧ `GenerationProgressV2` 是共用的，手機字級的改動會波及批次與工作區；⑨ Rule 21 標頭其實只缺 F3-M、文法是 ` + Screen`。Tailwind／twMerge 的疊加行為已實際編譯查證，會照單子寫的運作。 |
