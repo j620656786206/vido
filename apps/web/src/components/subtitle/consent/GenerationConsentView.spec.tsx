@@ -481,7 +481,13 @@ describe('GenerationConsentView (sub-4-3 container)', () => {
     expect(footer).toContainElement(screen.getByTestId('consent-analysis-cancel'));
     expect(panel).not.toContainElement(footer);
     // With the counter no longer a live region, this is the ONLY announcement.
-    expect(screen.getByTestId('consent-phase-live')).toHaveTextContent('正在分析字幕軌');
+    // waitFor, not a bare expect: the panel is already on screen during the
+    // `loading` phase (live region still ''), and the text only lands once the
+    // analyze POST resolves and the phase flips to `analyzing`. The bare expect
+    // passed locally and lost that race on CI.
+    await waitFor(() =>
+      expect(screen.getByTestId('consent-phase-live')).toHaveTextContent('正在分析字幕軌')
+    );
   });
 
   it('[dsr-6e-2 CR M2] while the cancel is in flight: 取消中…, focus stays, a second click sends nothing', async () => {
