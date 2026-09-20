@@ -131286,10 +131286,10 @@
                 {
                   "type": "frame",
                   "id": "h60Flj",
-                  "x": 440,
+                  "x": 240,
                   "y": 300,
                   "name": "gen-dialog",
-                  "width": 560,
+                  "width": 960,
                   "fill": "$bg-secondary",
                   "cornerRadius": "$radius-lg",
                   "stroke": "$border-subtle",
@@ -131373,12 +131373,13 @@
                         "$Space/4xl",
                         "$Space/3xl"
                       ],
+                      "alignItems": "center",
                       "children": [
                         {
                           "type": "frame",
                           "id": "ClRNE",
                           "name": "progress-group",
-                          "width": "fill_container",
+                          "width": 480,
                           "layout": "vertical",
                           "gap": "$Space/md",
                           "children": [
@@ -131428,7 +131429,7 @@
                           "name": "desc",
                           "fill": "$text-secondary",
                           "textGrowth": "fixed-width",
-                          "width": "fill_container",
+                          "width": 480,
                           "content": "正在檢查每個檔案是否有可直接抽取的內嵌字幕。這個步驟在本機執行，不會產生費用。",
                           "lineHeight": "$Type/Body/Line",
                           "textAlign": "center",
@@ -134200,8 +134201,8 @@
                                           "type": "frame",
                                           "id": "xKKKz",
                                           "name": "grade-badge",
-                                          "fill": "$success-tint",
-                                          "cornerRadius": "$radius-sm",
+                                          "fill": "$bg-tertiary",
+                                          "cornerRadius": "$radius-pill",
                                           "padding": [
                                             "$Space/2xs",
                                             "$Space/xs-plus"
@@ -134211,7 +134212,7 @@
                                               "type": "text",
                                               "id": "xcJIE",
                                               "name": "grade-text",
-                                              "fill": "$success-text",
+                                              "fill": "$text-secondary",
                                               "content": "品質 A",
                                               "lineHeight": "$Type/Label/Line",
                                               "fontFamily": "$Type/Family/Primary",
@@ -134346,7 +134347,7 @@
                                           "id": "yMPIc",
                                           "name": "grade-badge",
                                           "fill": "$bg-tertiary",
-                                          "cornerRadius": "$radius-sm",
+                                          "cornerRadius": "$radius-pill",
                                           "padding": [
                                             "$Space/2xs",
                                             "$Space/xs-plus"
@@ -135771,9 +135772,9 @@
                               "name": "toastIcon",
                               "width": 18,
                               "height": 18,
-                              "icon": "circle-check",
+                              "icon": "triangle-alert",
                               "library": "lucide",
-                              "fill": "$success"
+                              "fill": "$warning-text"
                             },
                             {
                               "type": "text",
@@ -135807,7 +135808,7 @@
                       "fill": "$text-secondary",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "找到 1,247 檔案 · 比對成功 1,198 · 未比對 42 · 錯誤 7",
+                      "content": "找到 1,247 檔案 · 新增 30 · 更新 1,168 · 無法匯入 42 · 錯誤 7",
                       "lineHeight": "$Type/Body/Line",
                       "fontFamily": "$Type/Family/Primary",
                       "fontSize": "$Type/Body/Size",
@@ -135838,18 +135839,7 @@
                           "id": "jCfH4",
                           "name": "actionUnmatched",
                           "fill": "$accent-text",
-                          "content": "查看未比對項目",
-                          "lineHeight": "$Type/Body/Line",
-                          "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Body/Size",
-                          "fontWeight": "500"
-                        },
-                        {
-                          "type": "text",
-                          "id": "q1QKm",
-                          "name": "actionErrors",
-                          "fill": "$accent-text",
-                          "content": "查看錯誤",
+                          "content": "查看無法匯入與錯誤",
                           "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Primary",
                           "fontSize": "$Type/Body/Size",
@@ -135874,7 +135864,7 @@
                       "id": "u6VL3",
                       "name": "dismiss-progress",
                       "opacity": 0.6,
-                      "fill": "$accent-primary",
+                      "fill": "$text-muted",
                       "width": "fill_container",
                       "height": 2
                     }
@@ -138405,8 +138395,8 @@
                                           "type": "frame",
                                           "id": "VBvLY",
                                           "name": "grade-badge",
-                                          "fill": "$success-tint",
-                                          "cornerRadius": "$radius-sm",
+                                          "fill": "$bg-tertiary",
+                                          "cornerRadius": "$radius-pill",
                                           "padding": [
                                             "$Space/2xs",
                                             "$Space/xs-plus"
@@ -138416,7 +138406,7 @@
                                               "type": "text",
                                               "id": "nUvTU",
                                               "name": "grade-text",
-                                              "fill": "$success-text",
+                                              "fill": "$text-secondary",
                                               "content": "品質 A",
                                               "lineHeight": "$Type/Label/Line",
                                               "fontFamily": "$Type/Family/Primary",
@@ -138536,7 +138526,7 @@
                                           "id": "t22xQ",
                                           "name": "grade-badge",
                                           "fill": "$bg-tertiary",
-                                          "cornerRadius": "$radius-sm",
+                                          "cornerRadius": "$radius-pill",
                                           "padding": [
                                             "$Space/2xs",
                                             "$Space/xs-plus"
@@ -138768,7 +138758,7 @@
                               "type": "text",
                               "id": "NMVfO",
                               "name": "hint-text",
-                              "fill": "$text-secondary",
+                              "fill": "$text-primary",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
                               "content": "預估金額已超過上限 $5.00。系統會依序處理，累計達到上限時自動暫停，預計可完成約 49 部；未完成的項目會保留，可提高上限後續跑。",
@@ -151323,8 +151313,8 @@
                                           "type": "frame",
                                           "id": "zl86k",
                                           "name": "grade-badge",
-                                          "fill": "$success-tint",
-                                          "cornerRadius": "$radius-sm",
+                                          "fill": "$bg-tertiary",
+                                          "cornerRadius": "$radius-pill",
                                           "padding": [
                                             "$Space/2xs",
                                             "$Space/xs-plus"
@@ -151334,7 +151324,7 @@
                                               "type": "text",
                                               "id": "ZwUz4",
                                               "name": "grade-text",
-                                              "fill": "$success-text",
+                                              "fill": "$text-secondary",
                                               "content": "品質 A",
                                               "lineHeight": "$Type/Label/Line",
                                               "fontFamily": "$Type/Family/Primary",
@@ -151469,7 +151459,7 @@
                                           "id": "jkiqe",
                                           "name": "grade-badge",
                                           "fill": "$bg-tertiary",
-                                          "cornerRadius": "$radius-sm",
+                                          "cornerRadius": "$radius-pill",
                                           "padding": [
                                             "$Space/2xs",
                                             "$Space/xs-plus"
@@ -152145,8 +152135,8 @@
                                           "type": "frame",
                                           "id": "Msfhy",
                                           "name": "grade-badge",
-                                          "fill": "$success-tint",
-                                          "cornerRadius": "$radius-sm",
+                                          "fill": "$bg-tertiary",
+                                          "cornerRadius": "$radius-pill",
                                           "padding": [
                                             "$Space/2xs",
                                             "$Space/xs-plus"
@@ -152156,7 +152146,7 @@
                                               "type": "text",
                                               "id": "QnlRg",
                                               "name": "grade-text",
-                                              "fill": "$success-text",
+                                              "fill": "$text-secondary",
                                               "content": "品質 A",
                                               "lineHeight": "$Type/Label/Line",
                                               "fontFamily": "$Type/Family/Primary",
@@ -152276,7 +152266,7 @@
                                           "id": "HJQfb",
                                           "name": "grade-badge",
                                           "fill": "$bg-tertiary",
-                                          "cornerRadius": "$radius-sm",
+                                          "cornerRadius": "$radius-pill",
                                           "padding": [
                                             "$Space/2xs",
                                             "$Space/xs-plus"
@@ -156838,6 +156828,21 @@
               "textGrowth": "fixed-width",
               "width": 300,
               "content": "F15 群組：checkbox 三態；影集預設收合，搜尋命中時自動展開。單季影集的標題寫「劇名 · 第 N 季」；多季影集是兩層（影集列＋縮排的季列）。路線徽章與 chip 的費用標記是分類，一律中性；金額一律 $text-primary。沒有報價的列（後端沒給 estimated_usd）選不到，右側寫「無法估價」；資料夾無法寫入的列不顯示金額（後端不替它們報價）。",
+              "lineHeight": "$Type/Label/Line",
+              "fontFamily": "$Type/Family/Primary",
+              "fontSize": "$Type/Label/Size",
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "bSlYR",
+              "x": 17040,
+              "y": 34959,
+              "name": "spec-note-dsr-6e-2",
+              "fill": "$text-muted",
+              "textGrowth": "fixed-width",
+              "width": 300,
+              "content": "F20 另有一種空狀態沒有畫出來：分析有結果但沒有任何一部能抽取或做語音辨識時（例如只有影集的片庫），標題是「沒有找到可以產生字幕的項目」、圖示是灰色的 search-x、說明寫分析了幾部——它不能說「都有字幕了」，因為那不是真的。F16／F19 的合計下方另有一行「其中 N 部片長未知，以 45 分鐘估算」（sub-6-12），稿上沒畫，只有在真的有估算列時才出現。F14 的「分析字幕軌 N / M」不是即時播報區，進度由進度條承載。F17 的缺字幕數字用等寬字，以程式碼為準。",
               "lineHeight": "$Type/Label/Line",
               "fontFamily": "$Type/Family/Primary",
               "fontSize": "$Type/Label/Size",

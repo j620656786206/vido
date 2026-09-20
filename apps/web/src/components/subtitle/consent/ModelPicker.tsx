@@ -26,11 +26,18 @@ export interface ModelPickerProps {
   disabled?: boolean;
 }
 
-/** Grade badge tint: only a MEASURED grade earns a colour. */
+/**
+ * Grade badge tone — NEUTRAL for every grade (dsr-6e-2, Alexyu 2026-09-20).
+ *
+ * 「品質 A」 used to wear jade. But a grade is a property of the model (with its
+ * provenance in the accessible name), not something that happened — the same
+ * line that made TechBadge neutral. The letter and the note carry the
+ * difference; an unmeasured model is only a step quieter, never blank.
+ */
 function gradeTint(grade?: string): string {
-  if (!grade) return 'bg-[var(--bg-tertiary)] text-[var(--text-muted)]';
-  if (grade === 'A') return 'bg-[var(--success-tint)] text-[var(--success-text)]';
-  return 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]';
+  return grade
+    ? 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]'
+    : 'bg-[var(--bg-tertiary)] text-[var(--text-muted)]';
 }
 
 /**
@@ -59,7 +66,7 @@ export function ModelPicker({ choices, selectedModelId, onSelect, disabled }: Mo
 
   return (
     <div className="flex flex-col gap-2" data-testid="consent-model-picker">
-      <p className="text-[13px] font-medium text-[var(--text-primary)]">選擇翻譯模型</p>
+      <p className="text-sm font-semibold text-[var(--text-primary)]">選擇翻譯模型</p>
       <div
         role="radiogroup"
         aria-label="翻譯模型"
@@ -89,7 +96,7 @@ export function ModelPicker({ choices, selectedModelId, onSelect, disabled }: Mo
                   onChange={() => onSelect(choice.id)}
                   className="h-4 w-4 shrink-0 accent-[var(--accent-primary)] disabled:cursor-not-allowed"
                 />
-                <span className="min-w-0 flex-1 truncate text-[13px] text-[var(--text-primary)]">
+                <span className="min-w-0 flex-1 truncate text-sm text-[var(--text-primary)]">
                   {choice.displayName}
                   {choice.isDefault && (
                     <span className="ml-1.5 text-xs text-[var(--text-muted)]">（預設）</span>
@@ -97,9 +104,9 @@ export function ModelPicker({ choices, selectedModelId, onSelect, disabled }: Mo
                 </span>
                 <span
                   data-testid={`consent-model-usd-${choice.id}`}
-                  className="shrink-0 font-mono text-[13px] font-semibold tabular-nums text-[var(--text-primary)]"
+                  className="shrink-0 font-mono text-sm font-bold tabular-nums text-[var(--text-primary)]"
                 >
-                  這批約 {usd(choice.totalUsd)}
+                  約 {usd(choice.totalUsd)}
                 </span>
               </span>
 
@@ -116,10 +123,7 @@ export function ModelPicker({ choices, selectedModelId, onSelect, disabled }: Mo
                       ? `品質 ${choice.qualityGrade}${choice.qualityNote ? `（${choice.qualityNote}）` : ''}`
                       : '尚未評測'
                   }
-                  className={cn(
-                    'rounded-[var(--radius-sm)] px-1.5 py-0.5',
-                    gradeTint(choice.qualityGrade)
-                  )}
+                  className={cn('rounded-full px-1.5 py-0.5', gradeTint(choice.qualityGrade))}
                 >
                   {choice.qualityGrade ? `品質 ${choice.qualityGrade}` : '尚未評測'}
                 </span>

@@ -472,6 +472,47 @@ describe('GenerationConsentView (sub-4-3 container)', () => {
     expect(mocked.getGenerationCandidates).toHaveBeenCalledTimes(2);
   });
 
+  it('[dsr-6e-2] F14 keeps 取消 in a footer; the content block keeps its testid', async () => {
+    mocked.getGenerationCandidates.mockResolvedValue({ status: 'idle', analyzed: 0, total: 0 });
+    mocked.startCandidateAnalysis.mockResolvedValue(undefined as never);
+    renderView();
+    const panel = await screen.findByTestId('consent-analysis-panel');
+    const footer = screen.getByTestId('consent-analysis-footer');
+    expect(footer).toContainElement(screen.getByTestId('consent-analysis-cancel'));
+    expect(panel).not.toContainElement(footer);
+    // With the counter no longer a live region, this is the ONLY announcement.
+    expect(screen.getByTestId('consent-phase-live')).toHaveTextContent('正在分析字幕軌');
+  });
+
+  it('[dsr-6e-2 CR M2] while the cancel is in flight: 取消中…, focus stays, a second click sends nothing', async () => {
+    mocked.getGenerationCandidates.mockResolvedValue({
+      status: 'analyzing',
+      analyzed: 10,
+      total: 100,
+    });
+    let resolveCancel: (v: { cancelled: boolean }) => void = () => undefined;
+    mocked.cancelCandidateAnalysis.mockReturnValue(
+      new Promise((resolve) => {
+        resolveCancel = resolve;
+      }) as never
+    );
+    const props = renderView();
+
+    const cancel = await screen.findByTestId('consent-analysis-cancel');
+    cancel.focus();
+    fireEvent.click(cancel);
+
+    await waitFor(() => expect(cancel).toHaveAttribute('aria-disabled', 'true'));
+    expect(cancel).toHaveTextContent('取消中…');
+    // `disabled` would have dropped focus to <body> here.
+    expect(document.activeElement).toBe(cancel);
+    fireEvent.click(cancel);
+    expect(mocked.cancelCandidateAnalysis).toHaveBeenCalledTimes(1);
+
+    resolveCancel({ cancelled: true });
+    await waitFor(() => expect(props.onClose).toHaveBeenCalled());
+  });
+
   it('F14 取消 cancels the analysis and closes', async () => {
     mocked.getGenerationCandidates.mockResolvedValue({
       status: 'analyzing',

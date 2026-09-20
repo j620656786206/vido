@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen E2-D (wyuhF) · E3-D (szzaW)
+// Design ref: ux-design.pen Screen E2-D (wyuhF) · E3-D (szzaW) · F17-D-v2 (I3Wb0p)
 /**
  * Desktop scan progress (Story 7.4, Tasks 1+3).
  * Running: floating card, 400px, bottom-right (E2-D).

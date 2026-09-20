@@ -32,6 +32,23 @@ describe('ConsentEmptyState', () => {
     expect(screen.getByText('所有影片都有繁中字幕了')).toBeInTheDocument();
   });
 
+  it('[dsr-6e-2] both variants use the F20 scale: H4 title, Body copy, 96px disc', () => {
+    for (const allCovered of [true, false]) {
+      const { container, unmount } = render(<ConsentEmptyState allCovered={allCovered} />);
+      const title = container.querySelector('p') as HTMLElement;
+      expect(title.className).toContain('text-lg');
+      expect(container.querySelector('[aria-hidden="true"]')?.className).toContain('h-24 w-24');
+      expect(container.innerHTML).not.toContain('text-[13px]');
+      expect(container.querySelectorAll('p')[1].className).toContain('text-sm');
+      const icon = container.querySelector('svg') as Element;
+      expect(icon.getAttribute('class')).toContain('h-9 w-9');
+      expect(icon.getAttribute('class')).toContain(
+        allCovered ? 'lucide-circle-check' : 'lucide-search-x'
+      );
+      unmount();
+    }
+  });
+
   it('[P1] reports what was actually analysed instead of asserting a conclusion', () => {
     render(<ConsentEmptyState analyzed={15} />);
     expect(screen.getByText(/分析了 15 部/)).toBeInTheDocument();
