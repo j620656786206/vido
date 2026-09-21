@@ -295,6 +295,7 @@ const routeApi = getRouteApi('/activity');
 export function ActivityHub() {
   const { data, isLoading, isError, refetch } = useActivity();
   const search = routeApi.useSearch();
+  const navigate = routeApi.useNavigate();
   // Story ux3-subtitle-v2-batch AC 4a — the hub's launch CTA opens the batch
   // dialog with scope=missing (the ONLY Activity-side entry; D4-1 boundary).
   const [generationBatchOpen, setGenerationBatchOpen] = useState(false);
@@ -309,7 +310,13 @@ export function ActivityHub() {
     return (
       <>
         <div data-testid="activity-root" className="h-full">
-          <GenerationWorkspace active onLaunch={() => setGenerationBatchOpen(true)} />
+          <GenerationWorkspace
+            active
+            onLaunch={() => setGenerationBatchOpen(true)}
+            // dsr-6f-4: the phone back button — drop ?view=generation (a push, so
+            // the browser's own Back returns to the workspace).
+            onBack={() => void navigate({ to: '/activity', search: {} })}
+          />
         </div>
         <GenerationBatchDialogV2 open={generationBatchOpen} onOpenChange={setGenerationBatchOpen} />
       </>

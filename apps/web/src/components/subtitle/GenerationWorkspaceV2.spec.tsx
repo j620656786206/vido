@@ -912,3 +912,204 @@ describe('GenerationWorkspaceV2 — the live log tells the truth (dsr-6d-c-2)', 
     expect(rows()[0].querySelector('.animate-spin')).toBeNull();
   });
 });
+
+// dsr-6f-4 — the phone page (F11-M-v2 `PXB0z`). jsdom evaluates no media queries,
+// so these pin STATE, ARIA and the presence of the `max-sm:` tokens; what a 390px
+// screen actually draws is measured in tests/e2e/generation-workspace-mobile.spec.ts.
+describe('GenerationWorkspaceV2 (dsr-6f-4 — phone page)', () => {
+  const many = (n: number): FeedRow[] =>
+    Array.from({ length: n }, (_, i) => ({
+      seq: i + 1,
+      kind: 'done' as const,
+      mediaId: `m${i}`,
+      title: `片${i}`,
+      seriesTitle: '',
+    }));
+  const list = () => screen.getByRole('list', { name: '生成事件日誌' });
+  const toggle = () => screen.getByTestId('workspace-log-toggle');
+
+  it('[P0] the back button exists only when there is somewhere to go back to', async () => {
+    const onBack = vi.fn();
+    const { rerender } = render(<GenerationWorkspaceV2 {...props({ onBack })} />);
+    const back = screen.getByRole('button', { name: '返回活動' });
+    expect(back).toBe(screen.getByTestId('workspace-back'));
+    expect(back.className).toContain('sm:hidden');
+    await userEvent.click(back);
+    expect(onBack).toHaveBeenCalledTimes(1);
+
+    rerender(<GenerationWorkspaceV2 {...props()} />);
+    expect(screen.queryByTestId('workspace-back')).not.toBeInTheDocument();
+  });
+
+  it('[P0] the title row leads on a phone and the breadcrumb keeps its DOM place (order-first, not an order on the nav)', () => {
+    render(<GenerationWorkspaceV2 {...props({ onBack: vi.fn() })} />);
+    const h1 = screen.getByRole('heading', { level: 1 });
+    expect(h1.className).toContain('max-sm:text-lg');
+    const titleRow = screen.getByTestId('workspace-title-row');
+    expect(titleRow.className).toContain('max-sm:order-first');
+    expect(titleRow.className).toContain('max-sm:justify-between');
+    const crumb = screen.getByRole('navigation', { name: '麵包屑' });
+    expect(crumb.className).not.toMatch(/order-/);
+    expect(crumb.className).toContain('max-sm:text-xs');
+  });
+
+  it('[P0] the overall strip re-flows in place: one strip, one progressbar, full-width bar, chip pushed right on phones only', () => {
+    render(<GenerationWorkspaceV2 {...props()} />);
+    expect(screen.getAllByTestId('workspace-overall')).toHaveLength(1);
+    const bar = screen.getByRole('progressbar', { name: '整批生成進度' });
+    expect(bar.className).toContain('max-sm:w-full');
+    expect(bar.className).toContain('w-[180px]');
+    const chip = within(screen.getByTestId('workspace-overall')).getByTestId('workspace-sse-chip');
+    expect(chip.className).toContain('max-sm:ml-auto');
+    // Unprefixed ml-auto would shove the chip to the far right on desktop.
+    expect(chip.className.split(/\s+/)).not.toContain('ml-auto');
+    // The log footer's chip must not inherit the strip's placement.
+    const logChip = within(screen.getByTestId('workspace-event-log')).getByTestId(
+      'workspace-sse-chip'
+    );
+    expect(logChip.className).not.toContain('max-sm:ml-auto');
+  });
+
+  it('[P0] the log starts collapsed; the toggle names the list it controls and flips aria-expanded', async () => {
+    render(<GenerationWorkspaceV2 {...props()} />);
+    expect(toggle()).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle()).toHaveAttribute('aria-controls', list().id);
+    expect(list().id).not.toBe('');
+    expect(toggle().className).toContain('sm:hidden');
+    // The stretched hit area hangs off the HEADER; a relative button would shrink it.
+    expect(toggle().className.split(/\s+/)).not.toContain('relative');
+    expect(list().className).toContain('max-sm:hidden');
+
+    await userEvent.click(toggle());
+    expect(toggle()).toHaveAttribute('aria-expanded', 'true');
+    expect(list().className).not.toContain('max-sm:hidden');
+    expect(list().className).toContain('max-sm:max-h-80');
+
+    await userEvent.click(toggle());
+    expect(toggle()).toHaveAttribute('aria-expanded', 'false');
+    expect(list().className).toContain('max-sm:hidden');
+  });
+
+  it('[P0] collapsing never unmounts the announcer: same node, still the only live region, still updated', async () => {
+    const { rerender } = render(<GenerationWorkspaceV2 {...props({ feed: [] })} />);
+    const region = screen.getByTestId('workspace-log-announcer');
+    // Collapsed: a result arrives and is announced anyway.
+    rerender(<GenerationWorkspaceV2 {...props({ feed: many(1) })} />);
+    expect(screen.getByTestId('workspace-log-announcer')).toBe(region);
+    expect(region.textContent).not.toBe('');
+    expect(document.querySelectorAll('[aria-live]')).toHaveLength(1);
+    await userEvent.click(toggle());
+    expect(screen.getByTestId('workspace-log-announcer')).toBe(region);
+    // Open is where a second region would most likely sneak in (e.g. on the list).
+    expect(document.querySelectorAll('[aria-live]')).toHaveLength(1);
+    await userEvent.click(toggle());
+    expect(screen.getByTestId('workspace-log-announcer')).toBe(region);
+    expect(document.querySelectorAll('[aria-live]')).toHaveLength(1);
+    // The list is hidden, not gone.
+    expect(list()).toBeInTheDocument();
+  });
+
+  it('[P1] collapsed shows the hint instead of the 僅狀態事件 note; the budget stop line survives both states', async () => {
+    render(
+      <GenerationWorkspaceV2
+        {...props({ mode: 'budget_ceiling', progress: progress({ status: 'budget_ceiling' }) })}
+      />
+    );
+    const hint = screen.getByTestId('workspace-log-hint');
+    const note = screen.getByTestId('workspace-log-note');
+    expect(hint).not.toHaveAttribute('hidden');
+    expect(hint).toHaveTextContent('展開查看即時事件（不含逐字內容、無時間戳）');
+    expect(note.className).toContain('max-sm:hidden');
+    expect(screen.getByTestId('workspace-event-log')).toHaveTextContent('已停止（達預算上限）');
+
+    await userEvent.click(toggle());
+    expect(hint).toHaveAttribute('hidden');
+    expect(note.className).not.toContain('max-sm:hidden');
+    expect(screen.getByTestId('workspace-event-log')).toHaveTextContent('已停止（達預算上限）');
+  });
+
+  it('[P1] collapsed with no stream: the footer row is empty, so it gives up its gap (CR M1)', async () => {
+    const { rerender } = render(<GenerationWorkspaceV2 {...props({ feedConnected: false })} />);
+    const row = () => screen.getByTestId('workspace-log-footer-row');
+    expect(row().className).toContain('max-sm:hidden');
+    await userEvent.click(toggle());
+    expect(row().className).not.toContain('max-sm:hidden');
+    await userEvent.click(toggle());
+    expect(row().className).toContain('max-sm:hidden');
+    // Connected: the chip lives in this row, collapsed or not.
+    rerender(<GenerationWorkspaceV2 {...props({ feedConnected: true })} />);
+    expect(row().className).not.toContain('max-sm:hidden');
+  });
+
+  it('[P1] the toggle is named by the header it sits in, and an empty list draws no box', () => {
+    render(<GenerationWorkspaceV2 {...props({ feed: [] })} />);
+    expect(screen.getByRole('button', { name: '即時活動' })).toBe(toggle());
+    expect(list().className).toContain('max-sm:empty:hidden');
+  });
+
+  it('[P1] opening lands on the newest row — even after the reader had scrolled up before collapsing', async () => {
+    render(<GenerationWorkspaceV2 {...props({ feed: many(40) })} />);
+    const el = list();
+    Object.defineProperty(el, 'scrollHeight', { configurable: true, value: 1000 });
+    Object.defineProperty(el, 'clientHeight', { configurable: true, value: 320 });
+    el.scrollTop = 0;
+    await userEvent.click(toggle());
+    expect(el.scrollTop).toBe(1000);
+
+    // Reader scrolls up, collapses, re-opens.
+    el.scrollTop = 100;
+    el.dispatchEvent(new Event('scroll'));
+    await userEvent.click(toggle());
+    el.scrollTop = 0;
+    await userEvent.click(toggle());
+    expect(el.scrollTop).toBe(1000);
+  });
+
+  it('[P1] cancel-confirm and the footer carry the phone tokens (sentence on its own line, equal buttons)', async () => {
+    const { rerender } = render(
+      <GenerationWorkspaceV2
+        {...props({ onConfirmCancelAll: vi.fn().mockRejectedValue(new Error('x')) })}
+      />
+    );
+    await userEvent.click(screen.getByTestId('workspace-cancel-all'));
+    const confirm = screen.getByTestId('workspace-cancel-confirm');
+    expect(confirm.className).toContain('max-sm:w-full');
+    expect(screen.getByText('確定要取消整個批次嗎？已完成的字幕會保留。').className).toContain(
+      'max-sm:w-full'
+    );
+    const confirmBtn = screen.getByTestId('workspace-cancel-confirm-btn');
+    expect(confirmBtn.className).toContain('max-sm:flex-1');
+    expect(screen.getByRole('button', { name: '繼續生成' }).className).toContain('max-sm:flex-1');
+    await userEvent.click(confirmBtn);
+    expect((await screen.findByTestId('workspace-cancel-error')).className).toContain(
+      'max-sm:w-full'
+    );
+
+    rerender(
+      <GenerationWorkspaceV2
+        {...props({
+          mode: 'budget_ceiling',
+          progress: progress({ status: 'budget_ceiling' }),
+          onDismiss: vi.fn().mockRejectedValue(new Error('x')),
+        })}
+      />
+    );
+    expect(screen.getByTestId('workspace-close').className).toContain('max-sm:flex-1');
+    expect(screen.getByTestId('workspace-resume').className).toContain('max-sm:flex-1');
+    await userEvent.click(screen.getByTestId('workspace-close'));
+    expect((await screen.findByTestId('workspace-dismiss-error')).className).toContain(
+      'max-sm:w-full'
+    );
+  });
+
+  it('[P2] guard: a row sub-status may wrap on a phone, the title span is untouched', () => {
+    render(<GenerationWorkspaceV2 {...props()} />);
+    const row = screen.getByTestId('workspace-queue-row-m0');
+    expect(row.querySelector('.font-semibold.text-base')!.className).toBe(
+      'truncate text-base font-semibold text-[var(--text-primary)]'
+    );
+    expect(within(row).getByText('已完成，字幕已寫入檔案').className).toContain(
+      'max-sm:whitespace-normal'
+    );
+  });
+});
