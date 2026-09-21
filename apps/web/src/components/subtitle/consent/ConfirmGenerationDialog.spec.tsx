@@ -73,15 +73,21 @@ function renderDialog(
 }
 
 describe('ConfirmGenerationDialog (F16/F19)', () => {
-  it("[dsr-6f-1] phone sheet shell: slides up, and the 44px ✕ sits on this dialog's 56px title row", () => {
+  it("[dsr-6f-1] phone sheet shell: slides up, and the 44px ✕ sits on this dialog's title row (44 on a phone)", () => {
     renderDialog();
     const shell = screen.getByTestId('consent-confirm-dialog');
     const t = (el: Element) => el.className.split(/\s+/);
     expect(t(shell)).toContain('max-sm:data-[state=open]:animate-sheet-enter');
     const close = screen.getByText('Close').closest('button')!;
-    // Grabber 16 + half of h-14 (28) − half of 44 (22) = 22. It moves with the
-    // header: change the title row's height and this token must change too.
-    expect(t(close)).toEqual(expect.arrayContaining(['max-sm:h-11', 'max-sm:top-[22px]']));
+    // dsr-6f-3: the phone title row is 44 high (F8-M/F15-M/F16-M sheet-header), so
+    // grabber 16 + half of 44 (22) − half of the 44px ✕ (22) = 16 = top-4. It
+    // moves with the header: change the row's height and this token changes too.
+    expect(t(close)).toEqual(expect.arrayContaining(['max-sm:h-11', 'max-sm:top-4']));
+    expect(t(close)).not.toContain('max-sm:top-[22px]');
+    expect(t(screen.getByTestId('consent-confirm-title-bar'))).toEqual(
+      expect.arrayContaining(['h-14', 'max-sm:h-11', 'border-b'])
+    );
+    expect(t(screen.getByTestId('consent-confirm-sheet-grabber'))).toContain('sm:hidden');
   });
 
   it('[P0 F16] under budget: breakdown lines, neutral hint, 確認並開始', () => {

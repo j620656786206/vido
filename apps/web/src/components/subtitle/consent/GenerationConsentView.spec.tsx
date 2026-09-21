@@ -536,6 +536,82 @@ describe('GenerationConsentView (sub-4-3 container)', () => {
     expect(props.onClose).toHaveBeenCalled();
   });
 
+  it.each([
+    ['resolves', () => mocked.cancelCandidateAnalysis.mockResolvedValue({ cancelled: true })],
+    ['rejects', () => mocked.cancelCandidateAnalysis.mockRejectedValue(new Error('500'))],
+  ])(
+    '[dsr-6f-3] 取消 stays 取消中… after onClose when the cancel %s (no flash back during an exit animation)',
+    async (_label, arm) => {
+      mocked.getGenerationCandidates.mockResolvedValue({
+        status: 'analyzing',
+        analyzed: 10,
+        total: 100,
+      });
+      arm();
+      const props = renderView();
+
+      fireEvent.click(await screen.findByTestId('consent-analysis-cancel'));
+      await waitFor(() => expect(props.onClose).toHaveBeenCalled());
+      // The parent decides when the dialog actually leaves. While it is still
+      // mounted (an exit animation), the button must not re-arm itself.
+      // Plain expects, not waitFor: the old `finally` reset ran in the same tick
+      // as onClose(), so "was it EVER 取消中…" would not have caught it.
+      await act(async () => undefined);
+      expect(screen.getByTestId('consent-analysis-cancel')).toHaveTextContent('取消中…');
+      expect(screen.getByTestId('consent-analysis-cancel')).toHaveAttribute(
+        'aria-disabled',
+        'true'
+      );
+    }
+  );
+
+  it('[dsr-6f-3] reopening re-arms 取消 — a parent that keeps the view mounted must not inherit a dead button', async () => {
+    mocked.getGenerationCandidates.mockResolvedValue({
+      status: 'analyzing',
+      analyzed: 10,
+      total: 100,
+    });
+    mocked.cancelCandidateAnalysis.mockResolvedValue({ cancelled: true });
+    const onClose = vi.fn();
+    const ui = (open: boolean) => (
+      <GenerationConsentView open={open} onStartBatch={vi.fn()} onClose={onClose} />
+    );
+    const { rerender } = render(ui(true));
+
+    fireEvent.click(await screen.findByTestId('consent-analysis-cancel'));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+
+    rerender(ui(false));
+    rerender(ui(true));
+    const cancel = await screen.findByTestId('consent-analysis-cancel');
+    expect(cancel).toHaveTextContent(/^取消$/);
+    expect(cancel).not.toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('[dsr-6f-3 CR L1] a bootstrap re-run mid-cancel (new selection prop) does NOT re-arm the button', async () => {
+    mocked.getGenerationCandidates.mockResolvedValue({
+      status: 'analyzing',
+      analyzed: 10,
+      total: 100,
+    });
+    // Never settles: the cancel is still on its way when the prop changes.
+    mocked.cancelCandidateAnalysis.mockReturnValue(new Promise(() => undefined));
+    const ui = (ids: string[]) => (
+      <GenerationConsentView open preselectedIds={ids} onStartBatch={vi.fn()} onClose={vi.fn()} />
+    );
+    const { rerender } = render(ui(['a']));
+
+    fireEvent.click(await screen.findByTestId('consent-analysis-cancel'));
+    await waitFor(() =>
+      expect(screen.getByTestId('consent-analysis-cancel')).toHaveTextContent('取消中…')
+    );
+    // A fresh array identity re-creates bootstrap and re-runs the open effect.
+    rerender(ui(['a']));
+    await act(async () => undefined);
+    const cancel = await screen.findByTestId('consent-analysis-cancel');
+    expect(cancel).toHaveTextContent('取消中…');
+  });
+
   it('[P0 CR H2] forceAnalyze ignores a ready snapshot and kicks a fresh analysis', async () => {
     mocked.getGenerationCandidates.mockResolvedValue(READY);
     mocked.startCandidateAnalysis.mockResolvedValue({ started: true });
@@ -1064,8 +1140,14 @@ describe('GenerationConsentView — a quote with a hole in it (dsr-6e-1 AC #2)',
     expect(shell.className).not.toContain('sm:max-w-3xl');
     // dsr-6f-1: the shared phone-sheet shell.
     expect(shell.className.split(/\s+/)).toContain('max-sm:data-[state=open]:animate-sheet-enter');
-    expect(screen.getByText('Close').closest('button')!.className.split(/\s+/)).toEqual(
-      expect.arrayContaining(['max-sm:h-11', 'max-sm:top-[22px]'])
+    // dsr-6f-3: 44px phone title row ⇒ the ✕ sits at top-4 (16 + 22 − 22).
+    const tokens = (el: Element) => el.className.split(/\s+/);
+    expect(tokens(screen.getByText('Close').closest('button')!)).toEqual(
+      expect.arrayContaining(['max-sm:h-11', 'max-sm:top-4'])
     );
+    expect(tokens(screen.getByTestId('consent-title-bar'))).toEqual(
+      expect.arrayContaining(['h-14', 'max-sm:h-11', 'max-sm:pl-4', 'border-b'])
+    );
+    expect(tokens(screen.getByTestId('consent-sheet-grabber'))).toContain('sm:hidden');
   });
 });

@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen F8-D-v2 (i9Nun1)
+// Design ref: ux-design.pen Screen F8-D-v2 (i9Nun1) + Screen F8-M-v2 (H717g)
 /**
  * 產生字幕 dialog (Story ux3-subtitle-v2-batch F8 execution shell; idle branch
  * REPLACED by the sub-4-3 consent flow). Screens: F8-D-v2 i9Nun1 / F8-M-v2
@@ -183,6 +183,54 @@ function RowStageLabel({
   );
 }
 
+/**
+ * 本次用量 + the live-SSE chip. Drawn twice (dsr-6f-3): in the body for the
+ * desktop (F8-D-v2), and — `phone` — at the top of the FIXED footer below sm:
+ * (F8-M-v2 GSnOg), where a long queue cannot scroll the money out of sight. The
+ * body is a scroll container and the footer is its sibling, so CSS `order`
+ * cannot carry one node across; each copy is display:none at the other
+ * breakpoint, which also keeps it out of the accessibility tree.
+ */
+function CostRow({
+  progress,
+  isRunning,
+  phone = false,
+}: {
+  progress: GenerationBatchProgressState;
+  isRunning: boolean;
+  phone?: boolean;
+}) {
+  const suffix = phone ? '-mobile' : '';
+  return (
+    <div className={cn('flex items-center gap-2', phone ? 'sm:hidden' : 'max-sm:hidden')}>
+      <p
+        data-testid={`gen-batch-cost-line${suffix}`}
+        className={cn(
+          'flex items-center gap-1 text-[var(--text-secondary)]',
+          phone ? 'text-xs' : 'text-sm'
+        )}
+      >
+        本次用量：
+        <span className="font-mono font-semibold tabular-nums text-[var(--text-primary)]">
+          {usd(progress.spentUsd)}
+        </span>
+        <span> / 上限 </span>
+        <span className="font-mono tabular-nums">{usd(progress.budgetUsd)}</span>
+      </p>
+      <span className="flex-1" />
+      {isRunning && (
+        <span
+          data-testid={`gen-batch-sse-chip${suffix}`}
+          className="flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--info-tint)] px-2 py-1 text-[11px] text-[var(--info-text)]"
+        >
+          <Radio className="h-3 w-3" aria-hidden="true" />
+          即時更新（SSE）
+        </span>
+      )}
+    </div>
+  );
+}
+
 function QueueRow({
   item,
   activeItemProgress,
@@ -199,7 +247,7 @@ function QueueRow({
       data-testid={`gen-batch-row-${item.mediaId}`}
       data-state={item.status}
       className={cn(
-        'flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-4 py-3.5'
+        'flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-4 py-3.5 max-sm:p-3'
       )}
     >
       <div className="flex items-center gap-3.5">
@@ -432,7 +480,7 @@ export function GenerationBatchPanelV2({
       <DialogContent
         data-testid="generation-batch-dialog-v2"
         aria-describedby={undefined}
-        closeClassName={cn(MOBILE_SHEET_CLOSE, 'max-sm:top-[22px]')}
+        closeClassName={cn(MOBILE_SHEET_CLOSE, 'max-sm:top-4')}
         onEscapeKeyDown={(e) => {
           // Escape gated while running (fetch-dialog precedent) — close via ✕/關閉.
           if (isRunning) e.preventDefault();
@@ -456,12 +504,18 @@ export function GenerationBatchPanelV2({
         <SheetGrabber data-testid="gen-batch-drag-handle" />
 
         {/* Title bar */}
-        <div className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--border-subtle)] pl-6 pr-12">
+        <div
+          data-testid="gen-batch-title-bar"
+          className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--border-subtle)] pl-6 pr-12 max-sm:h-11 max-sm:pl-4"
+        >
           <DialogTitle className="truncate text-base font-semibold">產生字幕</DialogTitle>
         </div>
 
         {/* Body */}
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-5">
+        <div
+          data-testid="gen-batch-body"
+          className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-5 max-sm:gap-3.5 max-sm:px-4 max-sm:pb-2 max-sm:pt-1.5"
+        >
           {/* Status transitions announced to AT (AC 7). */}
           <p aria-live="polite" className="sr-only" data-testid="gen-batch-status-live">
             {statusAnnouncement}
@@ -600,35 +654,17 @@ export function GenerationBatchPanelV2({
           )}
 
           {/* ---------- Cost row ---------- */}
-          {
-            <div className="flex items-center gap-2">
-              <p
-                data-testid="gen-batch-cost-line"
-                className="flex items-center gap-1 text-sm text-[var(--text-secondary)]"
-              >
-                本次用量：
-                <span className="font-mono font-semibold tabular-nums text-[var(--text-primary)]">
-                  {usd(progress.spentUsd)}
-                </span>
-                <span> / 上限 </span>
-                <span className="font-mono tabular-nums">{usd(progress.budgetUsd)}</span>
-              </p>
-              <span className="flex-1" />
-              {isRunning && (
-                <span
-                  data-testid="gen-batch-sse-chip"
-                  className="flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--info-tint)] px-2 py-1 text-[11px] text-[var(--info-text)]"
-                >
-                  <Radio className="h-3 w-3" aria-hidden="true" />
-                  即時更新（SSE）
-                </span>
-              )}
-            </div>
-          }
+          <CostRow progress={progress} isRunning={isRunning} />
         </div>
 
         {/* Footer */}
-        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-[var(--border-subtle)] px-6 py-3.5">
+        <div
+          data-testid="gen-batch-footer"
+          className="flex shrink-0 items-center justify-end gap-3 border-t border-[var(--border-subtle)] px-6 py-3.5 max-sm:flex-col max-sm:items-stretch max-sm:gap-2.5 max-sm:px-4 max-sm:py-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+        >
+          {/* F8-M pins the money to the FIXED footer: in the body it scrolls
+              away with a long queue. The body copy stays for the desktop. */}
+          <CostRow progress={progress} isRunning={isRunning} phone />
           {isRunning &&
             (!confirmingCancel ? (
               <button
@@ -639,7 +675,7 @@ export function GenerationBatchPanelV2({
                   pendingFocusRef.current = 'keepGoing';
                 }}
                 data-testid="gen-batch-cancel-all"
-                className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)]"
+                className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)] max-sm:justify-center"
               >
                 全部取消
               </button>
@@ -648,14 +684,14 @@ export function GenerationBatchPanelV2({
                 data-testid="gen-batch-cancel-confirm"
                 className="flex flex-wrap items-center gap-3"
               >
-                <span className="text-sm text-[var(--text-secondary)]">
+                <span className="text-sm text-[var(--text-secondary)] max-sm:w-full">
                   確定要取消整個批次嗎？已完成的字幕會保留。
                 </span>
                 {cancelFailed && (
                   <span
                     role="alert"
                     data-testid="gen-batch-cancel-error"
-                    className="text-sm text-[var(--error-text)]"
+                    className="text-sm text-[var(--error-text)] max-sm:w-full"
                   >
                     取消失敗，批次仍在進行。請再試一次。
                   </span>
@@ -670,7 +706,7 @@ export function GenerationBatchPanelV2({
                     setCancelFailed(false);
                     pendingFocusRef.current = 'cancelAll';
                   }}
-                  className="flex min-h-[44px] items-center rounded-[var(--radius-md)] px-4 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
+                  className="flex min-h-[44px] items-center rounded-[var(--radius-md)] px-4 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] max-sm:flex-1 max-sm:justify-center"
                 >
                   繼續生成
                 </button>
@@ -685,7 +721,7 @@ export function GenerationBatchPanelV2({
                   onClick={() => void handleConfirmCancel()}
                   data-testid="gen-batch-cancel-confirm-btn"
                   className={cn(
-                    'flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-4 text-sm text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)]',
+                    'flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-4 text-sm text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)] max-sm:flex-1 max-sm:justify-center',
                     cancelling && 'opacity-60'
                   )}
                 >
@@ -695,56 +731,64 @@ export function GenerationBatchPanelV2({
             ))}
 
           {(isTerminal || isBudgetCeiling) && (
-            <button
-              type="button"
-              ref={closeRef}
-              onClick={onClose}
-              data-testid="gen-batch-close-btn"
-              className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)]"
+            // sm:contents: on a desktop this wrapper has no box, so the buttons are
+            // direct flex children of the footer exactly as before. On a phone it
+            // is the row the pair splits evenly.
+            <div
+              data-testid="gen-batch-footer-actions"
+              className="flex gap-3 max-sm:w-full sm:contents"
             >
-              關閉
-            </button>
-          )}
+              <button
+                type="button"
+                ref={closeRef}
+                onClick={onClose}
+                data-testid="gen-batch-close-btn"
+                className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)] max-sm:flex-1 max-sm:justify-center"
+              >
+                關閉
+              </button>
 
-          {/* CR M1: NOT at budget_ceiling. There 下次繼續 already carries the
-              failed rows PLUS the paused ones, so a narrower 重試失敗項目 next
-              to it would silently drop selections the user already consented
-              to — the very loss AC #4 exists to stop. */}
-          {isTerminal && onRetryFailed && (
-            <button
-              type="button"
-              onClick={onRetryFailed}
-              data-testid="gen-batch-retry-failed-btn"
-              // Neutral, not 硃砂: retrying is RECOVERY, the opposite of the
-              // destructive act a red button claims (DESIGN.md:296/300).
-              className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)]"
-            >
-              重試失敗項目
-            </button>
-          )}
+              {/* CR M1: NOT at budget_ceiling. There 下次繼續 already carries the
+                failed rows PLUS the paused ones, so a narrower 重試失敗項目 next
+                to it would silently drop selections the user already consented
+                to — the very loss AC #4 exists to stop. */}
+              {isTerminal && onRetryFailed && (
+                <button
+                  type="button"
+                  onClick={onRetryFailed}
+                  data-testid="gen-batch-retry-failed-btn"
+                  // Neutral, not 硃砂: retrying is RECOVERY, the opposite of the
+                  // destructive act a red button claims (DESIGN.md:296/300).
+                  className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)] max-sm:flex-1 max-sm:justify-center"
+                >
+                  重試失敗項目
+                </button>
+              )}
 
-          {/* The way out of an attached `last` result with nothing to retry —
-              without it the dialog can never reach the consent flow again. */}
-          {isTerminal && !onRetryFailed && onRestart && (
-            <button
-              type="button"
-              onClick={onRestart}
-              data-testid="gen-batch-restart-btn"
-              className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)]"
-            >
-              再產生字幕
-            </button>
-          )}
+              {/* The way out of an attached `last` result with nothing to retry —
+                without it the dialog can never reach the consent flow again. */}
+              {isTerminal && !onRetryFailed && onRestart && (
+                <button
+                  type="button"
+                  onClick={onRestart}
+                  data-testid="gen-batch-restart-btn"
+                  className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)] max-sm:flex-1 max-sm:justify-center"
+                >
+                  再產生字幕
+                </button>
+              )}
 
-          {isBudgetCeiling && (
-            <button
-              type="button"
-              onClick={onResume}
-              data-testid="gen-batch-resume-btn"
-              className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-5 text-sm font-semibold text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)]"
-            >
-              下次繼續
-            </button>
+              {isBudgetCeiling && (
+                <button
+                  type="button"
+                  onClick={onResume}
+                  data-testid="gen-batch-resume-btn"
+                  className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-5 text-sm font-semibold text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)] max-sm:flex-1 max-sm:justify-center"
+                >
+                  下次繼續
+                </button>
+              )}
+            </div>
           )}
         </div>
       </DialogContent>

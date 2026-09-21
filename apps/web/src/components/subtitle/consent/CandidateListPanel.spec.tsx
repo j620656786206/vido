@@ -1519,3 +1519,42 @@ describe('dsr-6e-1 AC #6 — layout and type scale', () => {
     expect(start).toContain('px-5');
   });
 });
+
+describe('CandidateListPanel — phone gutters and footer (dsr-6f-3, F15-M-v2 fdu4y)', () => {
+  const t = (el: Element) => el.className.split(/\s+/).filter(Boolean);
+
+  it('the budget BOX (not the input inside it) fills the row on a phone', () => {
+    renderPanel();
+    const box = screen.getByTestId('consent-budget-box');
+    expect(box).toContainElement(screen.getByTestId('consent-budget-input'));
+    // flex: 1 1 0% beats the fixed w-24, which stays for the desktop.
+    expect(t(box)).toEqual(expect.arrayContaining(['w-24', 'max-sm:flex-1']));
+  });
+
+  it('controls, list and footer all take the 16px sheet gutter', () => {
+    renderPanel();
+    expect(t(screen.getByTestId('consent-controls'))).toEqual(
+      expect.arrayContaining(['px-6', 'max-sm:px-4', 'max-sm:pt-1.5'])
+    );
+    expect(t(screen.getByTestId('consent-list-scroll'))).toEqual(
+      expect.arrayContaining(['px-6', 'max-sm:px-4', 'min-h-[10rem]'])
+    );
+    expect(t(screen.getByTestId('consent-footer'))).toEqual(
+      expect.arrayContaining([
+        'max-sm:px-4',
+        'max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))]',
+      ])
+    );
+  });
+
+  it('[guard] 開始產生 needs no phone class — the stacked footer already stretches it', () => {
+    renderPanel();
+    // Green on main: no items-* below sm: ⇒ align-items: stretch.
+    expect(t(screen.getByTestId('consent-footer'))).toEqual(
+      expect.arrayContaining(['flex-col', 'sm:flex-row', 'sm:items-center'])
+    );
+    expect(t(screen.getByTestId('consent-start-btn'))).toEqual(
+      expect.arrayContaining(['justify-center', 'px-5'])
+    );
+  });
+});
