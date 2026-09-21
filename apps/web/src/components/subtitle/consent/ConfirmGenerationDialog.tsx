@@ -83,7 +83,7 @@ export function ConfirmGenerationDialog({
       <DialogContent
         data-testid="consent-confirm-dialog"
         aria-describedby={undefined}
-        closeClassName={cn(MOBILE_SHEET_CLOSE, 'max-sm:top-[22px]')}
+        closeClassName={cn(MOBILE_SHEET_CLOSE, 'max-sm:top-4')}
         className={cn(
           'flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0',
           // Mobile: bottom sheet (F16-M-v2 / F19-M-v2) — same geometry the
@@ -93,13 +93,16 @@ export function ConfirmGenerationDialog({
         )}
       >
         {/* Mobile bottom-sheet drag handle (F15-M precedent, sm:hidden). */}
-        <SheetGrabber />
+        <SheetGrabber data-testid="consent-confirm-sheet-grabber" />
 
-        <div className="flex h-14 shrink-0 items-center border-b border-[var(--border-subtle)] pl-4 pr-12 sm:pl-6">
+        <div
+          data-testid="consent-confirm-title-bar"
+          className="flex h-14 shrink-0 items-center border-b border-[var(--border-subtle)] pl-4 pr-12 max-sm:h-11 sm:pl-6"
+        >
           <DialogTitle className="text-base font-semibold">確認產生字幕</DialogTitle>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 sm:px-6 sm:py-5">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 max-sm:py-5 sm:px-6 sm:py-5">
           <p className="flex items-center gap-1 text-base font-semibold text-[var(--text-primary)]">
             即將為 <span className="font-mono tabular-nums">{totals.selectedCount}</span>
             部影片產生字幕

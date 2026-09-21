@@ -5053,6 +5053,33 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     penNode: 'screen-section', // Screen F19-D-v2 (KThbY)
     statesOnly: ['default'],
   },
+  {
+    // dsr-6f-3 (closes dsr-6e-2 CR L1): F19 on a phone. The footer pair stays
+    // right-aligned and NOT full-width — that is what F19-M Maz74 draws.
+    id: 'generation-consent/confirm-over-budget-mobile',
+    label: 'subtitle/consent/ConfirmGenerationDialog (F19 超出上限確認) — 手機 sheet',
+    component: ConfirmGenerationDialog,
+    props: {
+      open: true,
+      totals: {
+        candidateCount: 142,
+        selectedCount: 96,
+        selectedExtractCount: 0,
+        selectedAsrCount: 96,
+        selectedExtractUsd: 0,
+        selectedAsrUsd: 25.8,
+        selectedTotalUsd: 25.8,
+        overBudget: true,
+        feasibleCount: 18,
+      },
+      budgetUsd: 5,
+      onConfirm: noop,
+      onCancel: noop,
+    },
+    penNode: 'screen-section', // Screen F19-M-v2 (IMQO6)
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+  },
   // sub-6-8b — the 翻譯模型 picker. Three fixtures because the thing under
   // test is the DIFFERENCE the choice makes: the default row, the same batch
   // with the cheap model chosen (price, grade, time and the 省 $X line all
@@ -5201,6 +5228,56 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     statesOnly: ['default'],
   },
   {
+    // dsr-6f-3: the batch panel as a phone sheet. Radix portal ⇒ the visual spec
+    // photographs the WINDOW, so this really is 390 wide: 44px title row, 本次用量
+    // pinned to the footer, full-width 全部取消, vertical stepper in the running card.
+    id: 'generation-batch-dialog-v2/running-mobile',
+    label: 'subtitle/GenerationBatchPanelV2 (running — F8 queue + cost + SSE chip) — 手機 sheet',
+    component: GenerationBatchPanelV2,
+    props: {
+      open: true,
+      status: 'running',
+      progress: {
+        batchId: 'gb-fx-1',
+        totalItems: 5,
+        currentIndex: 3,
+        currentMediaId: BATCH_FX_IDS[2],
+        currentItem: '星際效應',
+        successCount: 2,
+        failCount: 0,
+        pausedCount: 0,
+        status: 'running',
+        spentUsd: 0.42,
+        budgetUsd: 5,
+        // dsr-6d-b: the row states come from the BACKEND queue, not a guess.
+        items: [
+          batchFxItem(0, 'done'),
+          batchFxItem(1, 'done'),
+          batchFxItem(2, 'running'),
+          batchFxItem(3, 'queued'),
+          batchFxItem(4, 'queued'),
+        ],
+      },
+      items: BATCH_FX_ITEMS,
+      activeItemProgress: {
+        phase: 'transcribing',
+        failedPhase: null,
+        percentage: null,
+        message: '正在轉錄音訊',
+        jobId: 'job-fx',
+        error: null,
+        srtPath: null,
+        zhSrtPath: null,
+      },
+      onConfirmCancelAll: noop,
+      onResume: noop,
+      onClose: noop,
+    },
+    penNode: 'screen-section', // Screen F8-M-v2 (H717g)
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+  },
+  {
     id: 'generation-batch-dialog-v2/budget_ceiling',
     label: 'subtitle/GenerationBatchPanelV2 (budget_ceiling — F9 banner + 下次繼續)',
     component: GenerationBatchPanelV2,
@@ -5234,6 +5311,44 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     },
     penNode: 'screen-section', // Screen F9-D-v2 (JMqPg)
     statesOnly: ['default'],
+  },
+  {
+    // dsr-6f-3: the two-button footer (關閉 + 下次繼續) has no phone design — the
+    // ruling is cost row on top, the pair splitting the row evenly.
+    id: 'generation-batch-dialog-v2/budget_ceiling-mobile',
+    label: 'subtitle/GenerationBatchPanelV2 (budget_ceiling — F9 banner + 下次繼續) — 手機 sheet',
+    component: GenerationBatchPanelV2,
+    props: {
+      open: true,
+      status: 'budget_ceiling',
+      progress: {
+        batchId: 'gb-fx-1',
+        totalItems: 5,
+        currentIndex: 4,
+        currentMediaId: BATCH_FX_IDS[3],
+        currentItem: '怪奇物語 S04E07 第七章',
+        successCount: 3,
+        failCount: 0,
+        pausedCount: 2,
+        status: 'budget_ceiling',
+        spentUsd: 5,
+        budgetUsd: 5,
+        items: [
+          batchFxItem(0, 'done'),
+          batchFxItem(1, 'done'),
+          batchFxItem(2, 'done'),
+          batchFxItem(3, 'paused'),
+          batchFxItem(4, 'paused'),
+        ],
+      },
+      items: BATCH_FX_ITEMS,
+      onConfirmCancelAll: noop,
+      onResume: noop,
+      onClose: noop,
+    },
+    penNode: 'screen-section', // Screen F8-M-v2 (H717g) — footer state with no phone design
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
   },
   {
     // dsr-6d-b: the ONLY state that draws failure rows, the failure reasons and

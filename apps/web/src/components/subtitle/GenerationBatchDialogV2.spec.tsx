@@ -255,15 +255,22 @@ describe('GenerationBatchPanelV2', () => {
     expect(handle.className).toContain('sm:hidden');
   });
 
-  it("[dsr-6f-1] phone sheet shell: slides up, and the 44px ✕ sits on this dialog's 56px title row", () => {
+  it("[dsr-6f-1] phone sheet shell: slides up, and the 44px ✕ sits on this dialog's title row (44 on a phone)", () => {
     renderPanel({ items: ITEMS });
     const shell = screen.getByTestId('generation-batch-dialog-v2');
     const t = (el: Element) => el.className.split(/\s+/);
     expect(t(shell)).toContain('max-sm:data-[state=open]:animate-sheet-enter');
     const close = screen.getByText('Close').closest('button')!;
-    // Grabber 16 + half of h-14 (28) − half of 44 (22) = 22. It moves with the
-    // header: change the title row's height and this token must change too.
-    expect(t(close)).toEqual(expect.arrayContaining(['max-sm:h-11', 'max-sm:top-[22px]']));
+    // dsr-6f-3: the phone title row is 44 high (F8-M/F15-M/F16-M sheet-header), so
+    // grabber 16 + half of 44 (22) − half of the 44px ✕ (22) = 16 = top-4. It
+    // moves with the header: change the row's height and this token changes too.
+    expect(t(close)).toEqual(expect.arrayContaining(['max-sm:h-11', 'max-sm:top-4']));
+    expect(t(close)).not.toContain('max-sm:top-[22px]');
+    expect(t(screen.getByTestId('gen-batch-title-bar'))).toEqual(
+      expect.arrayContaining(['h-14', 'max-sm:h-11', 'border-b'])
+    );
+    expect(t(screen.getByTestId('gen-batch-drag-handle'))).toContain('sm:hidden');
+    expect(t(screen.getByTestId('gen-batch-title-bar'))).toContain('max-sm:pl-4');
   });
 
   it('running renders queue rows from items[], the counter, cost line and SSE chip', () => {
@@ -1856,5 +1863,129 @@ describe('GenerationBatchDialogV2 — CR regressions (no dead ends)', () => {
 
     await waitFor(() => expect(mocked.getGenerationBatchStatus).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(h.batchAttachSnapshot).toHaveBeenCalled());
+  });
+});
+
+describe('GenerationBatchPanelV2 — phone layout (dsr-6f-3, F8-M-v2 H717g)', () => {
+  const t = (el: Element) => el.className.split(/\s+/).filter(Boolean);
+
+  it('pins 本次用量 to the footer on a phone: two copies, one per breakpoint', () => {
+    renderPanel({ items: ITEMS });
+
+    // The in-body copy keeps its testids (desktop, and everything already
+    // written against them); it just stops rendering below sm:.
+    const bodyCopy = screen.getByTestId('gen-batch-cost-line').parentElement!;
+    expect(t(bodyCopy)).toContain('max-sm:hidden');
+    expect(screen.getByTestId('gen-batch-body')).toContainElement(bodyCopy);
+
+    // The phone copy lives in the FIXED footer, so the money spent cannot be
+    // scrolled out of sight by a long queue.
+    const footer = screen.getByTestId('gen-batch-footer');
+    const phoneLine = screen.getByTestId('gen-batch-cost-line-mobile');
+    expect(footer).toContainElement(phoneLine);
+    expect(t(phoneLine.parentElement!)).toContain('sm:hidden');
+    // F8-M draws the footer cost row in Label 12, the desktop body one is Body 14.
+    expect(t(phoneLine)).toContain('text-xs');
+    expect(phoneLine).toHaveTextContent('本次用量');
+    expect(screen.getByTestId('gen-batch-sse-chip-mobile')).toBeInTheDocument();
+  });
+
+  it('the phone SSE chip follows the same isRunning gate as the desktop one', () => {
+    renderPanel({
+      status: 'complete',
+      progress: progressOf({ status: 'complete', successCount: 5 }),
+      items: ITEMS,
+    });
+    expect(screen.getByTestId('gen-batch-cost-line-mobile')).toBeInTheDocument();
+    expect(screen.queryByTestId('gen-batch-sse-chip')).toBeNull();
+    expect(screen.queryByTestId('gen-batch-sse-chip-mobile')).toBeNull();
+  });
+
+  it('the footer stacks on a phone and carries the sheet gutter + safe area', () => {
+    renderPanel({ items: ITEMS });
+    expect(t(screen.getByTestId('gen-batch-footer'))).toEqual(
+      expect.arrayContaining([
+        'max-sm:flex-col',
+        'max-sm:items-stretch',
+        'max-sm:px-4',
+        'max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))]',
+      ])
+    );
+    expect(t(screen.getByTestId('gen-batch-body'))).toEqual(
+      expect.arrayContaining(['max-sm:px-4', 'max-sm:pt-1.5', 'max-sm:gap-3.5'])
+    );
+    // Column + items-stretch already makes the lone button full-width; all it
+    // needs is its label centred.
+    expect(t(screen.getByTestId('gen-batch-cancel-all'))).toContain('max-sm:justify-center');
+  });
+
+  it('cancel-confirm: both sentences take a line each, the two buttons split the row', () => {
+    renderPanel({
+      items: ITEMS,
+      onConfirmCancelAll: vi.fn().mockRejectedValue(new Error('500')),
+    });
+    fireEvent.click(screen.getByTestId('gen-batch-cancel-all'));
+
+    const row = screen.getByTestId('gen-batch-cancel-confirm');
+    expect(t(row.querySelector('span')!)).toContain('max-sm:w-full');
+    expect(t(screen.getByRole('button', { name: '繼續生成' }))).toEqual(
+      expect.arrayContaining(['max-sm:flex-1', 'max-sm:justify-center'])
+    );
+    expect(t(screen.getByTestId('gen-batch-cancel-confirm-btn'))).toEqual(
+      expect.arrayContaining(['max-sm:flex-1', 'max-sm:justify-center'])
+    );
+  });
+
+  it('cancel-confirm: the FAILURE sentence gets its own line too (it is short enough to share one)', async () => {
+    renderPanel({
+      items: ITEMS,
+      onConfirmCancelAll: vi.fn().mockRejectedValue(new Error('500')),
+    });
+    fireEvent.click(screen.getByTestId('gen-batch-cancel-all'));
+    fireEvent.click(screen.getByTestId('gen-batch-cancel-confirm-btn'));
+    const alert = await screen.findByTestId('gen-batch-cancel-error');
+    expect(t(alert)).toContain('max-sm:w-full');
+  });
+
+  it('terminal / budget-ceiling: the two buttons share an sm:contents wrapper and split the row', () => {
+    renderPanel({
+      status: 'budget_ceiling',
+      progress: progressOf({ status: 'budget_ceiling', pausedCount: 3, spentUsd: 5 }),
+      items: ITEMS,
+    });
+    const group = screen.getByTestId('gen-batch-footer-actions');
+    // sm:contents ⇒ on a desktop the wrapper has no box and both buttons are
+    // direct flex children of the footer exactly as before.
+    expect(t(group)).toEqual(expect.arrayContaining(['sm:contents', 'max-sm:w-full']));
+    for (const id of ['gen-batch-close-btn', 'gen-batch-resume-btn']) {
+      expect(group).toContainElement(screen.getByTestId(id));
+      expect(t(screen.getByTestId(id))).toEqual(
+        expect.arrayContaining(['max-sm:flex-1', 'max-sm:justify-center'])
+      );
+    }
+  });
+
+  it.each([
+    ['gen-batch-retry-failed-btn', { onRetryFailed: vi.fn() }],
+    ['gen-batch-restart-btn', { onRestart: vi.fn() }],
+  ] as const)('terminal: 關閉 + %s split the row inside the same wrapper', (second, extra) => {
+    renderPanel({
+      status: 'complete',
+      progress: progressOf({ status: 'complete', successCount: 4, failCount: 1 }),
+      items: ITEMS,
+      ...extra,
+    });
+    const group = screen.getByTestId('gen-batch-footer-actions');
+    for (const id of ['gen-batch-close-btn', second]) {
+      expect(group).toContainElement(screen.getByTestId(id));
+      expect(t(screen.getByTestId(id))).toEqual(
+        expect.arrayContaining(['max-sm:flex-1', 'max-sm:justify-center'])
+      );
+    }
+  });
+
+  it('the running card uses the 12px phone padding of F8-M', () => {
+    renderPanel({ items: ITEMS });
+    expect(t(screen.getByTestId(`gen-batch-row-${M1}`))).toContain('max-sm:p-3');
   });
 });

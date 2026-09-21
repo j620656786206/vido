@@ -46,7 +46,7 @@ export function ConsentEmptyState({ allCovered = false, analyzed }: ConsentEmpty
     <div
       data-testid="consent-empty-state"
       data-empty-reason={allCovered ? 'all-covered' : 'no-candidates'}
-      className="flex flex-1 flex-col items-center justify-center gap-3 px-8 py-12 text-center"
+      className="flex flex-1 flex-col items-center justify-center gap-3 px-8 py-12 text-center max-sm:px-4"
     >
       <span
         aria-hidden="true"

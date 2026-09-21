@@ -74,4 +74,19 @@ describe('AnalysisProgressPanel (F14)', () => {
     expect(panel.className).toContain('overflow-y-auto');
     expect(panel.firstElementChild?.className).toContain('max-w-[480px]');
   });
+
+  it('[dsr-6f-3] takes the 16px sheet gutter on a phone; the button stays right-aligned', () => {
+    render(<AnalysisProgressPanel total={10} analyzed={2} onCancel={() => undefined} />);
+    const t = (el: Element) => el.className.split(/\s+/);
+    const footer = screen.getByTestId('consent-analysis-footer');
+    expect(t(footer)).toEqual(
+      expect.arrayContaining([
+        'max-sm:px-4',
+        'max-sm:pb-[max(0.875rem,env(safe-area-inset-bottom))]',
+        // No phone design for F14: same right-aligned footer as F16-M.
+        'justify-end',
+      ])
+    );
+    expect(t(screen.getByTestId('consent-analysis-panel'))).toContain('max-sm:px-4');
+  });
 });

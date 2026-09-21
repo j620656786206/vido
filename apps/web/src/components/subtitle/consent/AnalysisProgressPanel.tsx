@@ -34,7 +34,7 @@ export function AnalysisProgressPanel({
     <>
       <div
         data-testid="consent-analysis-panel"
-        className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-10 py-12"
+        className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-10 py-12 max-sm:px-4"
       >
         <div className="flex w-full max-w-[480px] flex-col gap-4">
           <div className="flex flex-col gap-3">
@@ -66,7 +66,7 @@ export function AnalysisProgressPanel({
       </div>
       <div
         data-testid="consent-analysis-footer"
-        className="flex shrink-0 items-center justify-end border-t border-[var(--border-subtle)] px-6 py-3.5"
+        className="flex shrink-0 items-center justify-end border-t border-[var(--border-subtle)] px-6 py-3.5 max-sm:px-4 max-sm:pb-[max(0.875rem,env(safe-area-inset-bottom))]"
       >
         {/* aria-disabled, never `disabled`: a focused button that becomes
             disabled drops focus to <body>, and Esc then stops closing the

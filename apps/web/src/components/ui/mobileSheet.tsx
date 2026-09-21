@@ -26,8 +26,10 @@ export const MOBILE_SHEET_CONTENT =
  * area with the drawn 18px icon. On the F1-M sheet there is no footer and no
  * 關閉 button, so ✕ is the only button-shaped way out — 16×16 will not do.
  *
- * Deliberately NO `top`: it depends on the header under it (grabber 16px + a
- * 44px or a 56px title row), so each dialog adds its own `max-sm:top-…`.
+ * Deliberately NO `top`: it depends on the header under it (grabber 16px + the
+ * title row), so each dialog adds its own `max-sm:top-…`. Since dsr-6f-3 every
+ * consumer has a 44px phone title row and passes `max-sm:top-4` (16 + 22 − 22);
+ * it stays per-dialog so a sheet with a different header is not silently wrong.
  * `max-sm:right-1` + 44 = 48 = the headers' `pr-12`, so the title never runs
  * under the button.
  */

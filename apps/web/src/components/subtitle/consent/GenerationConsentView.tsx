@@ -255,6 +255,13 @@ export function GenerationConsentView({
     [forceAnalyze, seedList, startAnalysisTracking]
   );
 
+  // Re-arm 取消 on OPEN only — not inside bootstrap(), which also re-runs when
+  // its identity changes (a fresh `preselectedIds` array, `forceAnalyze`): a
+  // re-run in the middle of a cancel would hand back a live 取消 button.
+  useEffect(() => {
+    if (open) setCancelling(false);
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
@@ -484,9 +491,13 @@ export function GenerationConsentView({
       onClose();
     } catch {
       onClose();
-    } finally {
-      setCancelling(false);
     }
+    // `cancelling` deliberately stays true: onClose() only ASKS the parent to
+    // close, and if that close is animated the button would flash back from
+    // 取消中… to 取消 on its way out (dsr-6e-2 CR L5). The open effect re-arms it
+    // the next time the view opens. AnalysisProgressPanel ignores clicks while
+    // cancelling, so a parent that never closes would leave it inert — today's
+    // only parent unmounts the whole tree on close.
   }, [onClose]);
 
   const handleConfirm = useCallback(() => {
@@ -520,7 +531,7 @@ export function GenerationConsentView({
         <DialogContent
           data-testid="generation-consent-view"
           aria-describedby={undefined}
-          closeClassName={cn(MOBILE_SHEET_CLOSE, 'max-sm:top-[22px]')}
+          closeClassName={cn(MOBILE_SHEET_CLOSE, 'max-sm:top-4')}
           className={cn(
             'flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0',
             // Mobile: bottom sheet (F15-M-v2 fdu4y). Desktop: centered dialog.
@@ -532,9 +543,12 @@ export function GenerationConsentView({
           )}
         >
           {/* Mobile bottom-sheet drag handle (F8 precedent, sm:hidden). */}
-          <SheetGrabber />
+          <SheetGrabber data-testid="consent-sheet-grabber" />
 
-          <div className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--border-subtle)] pl-6 pr-12">
+          <div
+            data-testid="consent-title-bar"
+            className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--border-subtle)] pl-6 pr-12 max-sm:h-11 max-sm:pl-4"
+          >
             <DialogTitle className="truncate text-base font-semibold">產生字幕</DialogTitle>
           </div>
 
@@ -594,7 +608,7 @@ export function GenerationConsentView({
           {phase === 'empty' && (
             <>
               <ConsentEmptyState allCovered={emptyAllCovered} analyzed={analyzedCount} />
-              <div className="flex shrink-0 items-center justify-end border-t border-[var(--border-subtle)] px-6 py-3.5">
+              <div className="flex shrink-0 items-center justify-end border-t border-[var(--border-subtle)] px-6 py-3.5 max-sm:px-4 max-sm:pb-[max(0.875rem,env(safe-area-inset-bottom))]">
                 <button
                   type="button"
                   onClick={onClose}
@@ -608,7 +622,7 @@ export function GenerationConsentView({
           )}
 
           {phase === 'error' && (
-            <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-12">
+            <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-12 max-sm:px-4">
               <p data-testid="consent-load-error" className="text-sm text-[var(--error-text)]">
                 {loadError}
               </p>
@@ -617,7 +631,10 @@ export function GenerationConsentView({
                 // Pre-existing fix (sub-5-3): bootstrap REQUIRES the isCancelled
                 // guard param (CR sub-4-3 M3 added it) — calling it bare threw
                 // TypeError inside the try, so 重試 just re-rendered the error.
-                onClick={() => void bootstrap(() => false)}
+                onClick={() => {
+                  setCancelling(false);
+                  void bootstrap(() => false);
+                }}
                 className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)]"
               >
                 重試

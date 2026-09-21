@@ -791,7 +791,10 @@ export function CandidateListPanel({
           block and ONLY the list scrolls — which is also what gives the
           virtualizer a scroll element it can measure. */}
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <div className="flex shrink-0 flex-col gap-3 px-6 pb-3 pt-6">
+        <div
+          data-testid="consent-controls"
+          className="flex shrink-0 flex-col gap-3 px-6 pb-3 pt-6 max-sm:gap-2.5 max-sm:px-4 max-sm:pb-2.5 max-sm:pt-1.5"
+        >
           {/* Summary bar */}
           <div className="flex flex-col gap-0.5">
             <p className="flex flex-wrap items-center gap-[3px] text-sm text-[var(--text-secondary)]">
@@ -967,7 +970,7 @@ export function CandidateListPanel({
           // window ~450px tall, a phone in landscape) the fixed control block
           // alone can exceed 85vh; without the floor the list clamped to 0 and
           // the clipped controls had no way to scroll into view.
-          className="min-h-[10rem] flex-1 overflow-y-auto px-6"
+          className="min-h-[10rem] flex-1 overflow-y-auto px-6 max-sm:px-4"
         >
           {/* @container: CandidateRow re-flows on THIS list's width (36rem),
               not the viewport — see the row for why. */}
@@ -1040,7 +1043,7 @@ export function CandidateListPanel({
           )}
         </div>
 
-        <div className="flex shrink-0 flex-col gap-1 px-6 pb-3 pt-3">
+        <div className="flex shrink-0 flex-col gap-1 px-6 pb-3 pt-3 max-sm:px-4">
           <p className="text-xs text-[var(--text-muted)]">金額為預估值，實際費用依內容長度而定。</p>
         </div>
       </div>
@@ -1051,7 +1054,7 @@ export function CandidateListPanel({
           data-testid="consent-over-budget-banner"
           // Full-bleed strip (F18 RrCEy), not an inset card. Ochre is earned
           // here: the user asked for N films and fewer will actually run.
-          className="flex shrink-0 items-center gap-2 bg-[var(--warning-tint)] px-6 py-2.5"
+          className="flex shrink-0 items-center gap-2 bg-[var(--warning-tint)] px-6 py-2.5 max-sm:px-4"
         >
           {/* --warning-text, not the drawn $warning: a base semantic colour is
               not allowed as a foreground (local/no-base-semantic-as-text). */}
@@ -1112,7 +1115,7 @@ export function CandidateListPanel({
         <p
           role="alert"
           data-testid="consent-start-error"
-          className="mx-6 my-2 flex shrink-0 items-center gap-2 rounded-[var(--radius-md)] bg-[var(--error-tint)] px-3 py-2.5 text-sm text-[var(--error-text)]"
+          className="mx-6 my-2 flex shrink-0 items-center gap-2 rounded-[var(--radius-md)] bg-[var(--error-tint)] px-3 py-2.5 text-sm text-[var(--error-text)] max-sm:mx-4"
         >
           <CircleAlert className="h-4 w-4 shrink-0" aria-hidden="true" />
           {startError}
@@ -1120,7 +1123,10 @@ export function CandidateListPanel({
       )}
 
       {/* Sticky footer: 已選/預估 · 預算上限 · 開始產生 */}
-      <div className="flex shrink-0 flex-col gap-3 border-t border-[var(--border-subtle)] px-6 py-3.5 sm:flex-row sm:items-center">
+      <div
+        data-testid="consent-footer"
+        className="flex shrink-0 flex-col gap-3 border-t border-[var(--border-subtle)] px-6 py-3.5 max-sm:gap-2.5 max-sm:px-4 max-sm:py-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:flex-row sm:items-center"
+      >
         <div className="flex flex-col gap-1">
           <p className="flex items-center gap-[3px] text-sm font-semibold text-[var(--text-primary)]">
             已選 <span className="font-mono tabular-nums">{totals.selectedCount}</span> 部 · 預估
@@ -1146,8 +1152,11 @@ export function CandidateListPanel({
         <label className="flex flex-col gap-1">
           <span className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
             預算上限
+            {/* F15-M LfwJL: the box fills the row on a phone. flex-1 goes on this
+                framed span — the <input> inside is already min-w-0 flex-1. */}
             <span
-              className="flex h-9 w-24 items-center rounded-[var(--radius-md)] border bg-[var(--bg-primary)] px-3 font-mono text-sm tabular-nums text-[var(--text-primary)]"
+              data-testid="consent-budget-box"
+              className="flex h-9 w-24 items-center rounded-[var(--radius-md)] border bg-[var(--bg-primary)] px-3 font-mono text-sm tabular-nums text-[var(--text-primary)] max-sm:flex-1"
               style={{
                 borderColor:
                   overBudget || budgetInvalid ? 'var(--warning)' : 'var(--border-subtle)',
