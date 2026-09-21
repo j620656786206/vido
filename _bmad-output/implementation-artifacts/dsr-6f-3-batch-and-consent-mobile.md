@@ -1,6 +1,6 @@
 # Story DSR.6f-3：手機上的「產生字幕」三個抽屜（挑片、確認金額、批次進度）對齊設計稿，用量永遠看得到
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -377,6 +377,7 @@ Claude Fable 5.1 — dev-story (Amelia)
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-21 | ✅ **DONE** —— PR #494 合併進 main（commit `3a9f64b8`）。PR 側 **17 pass／0 fail**；`-linux` 基準（3 張新夾具＋刻意重拍的 `confirm-mobile`）由手動觸發 `Visual Regression` 開出的 bootstrap PR #495 補齊（4 張 PNG＋1 行稽核紀錄，零原始碼改動）。**合併後 `main` 那個 commit 的 Visual Regression／Docker／Tests 三條都確認是 success。** |
 | 2026-09-21 | 🔍 **/ship 對抗式 CR**：0H／2M／7L，修 9、駁回 0。最實在的一條：取消鈕的歸零原本寫在 `bootstrap()` 裡，父層重傳選取陣列就會在取消途中把按鈕重新武裝（紅測試證實）→ 改到只看 `open` 的 effect。補齊重新打開、兩種結束狀態、640 批次側的測試；`.pen` problems 70→69；web 3963/3963、e2e burn-in 12/12。 |
 | 2026-09-21 | 🚧 **REVIEW**（dev-story, Amelia）。Task 1–6 完成。三個抽屜標題列手機 44 高（✕ `top-4`，三支 spec 改寫）；批次「本次用量」固定到頁尾（`CostRow` 畫兩次）＋四種頁尾狀態；挑片內距 16、預算框撐滿；確認框頁尾依稿維持靠右；取消分析不再於關閉途中歸零；F8-M 改稿（直排步驟條、2/5、兩張卡、655 高貼底）。閘門：lint 0 errors、typecheck ✅、tokens ✅、web 3959/3959、api ✅、新 e2e 4/4（burn-in 12/12）、視覺新增 3 張＋`confirm-mobile` 刻意重拍，其餘基準線零變動。 |
 | 2026-09-21 | 🔍 **建單後對抗驗證**（fresh-context 代理，只讀；逐節點比對 `.pen`、逐行比對程式碼與 spec）：1 CRITICAL／9 SHOULD FIX／7 NIT，**全部併入**。最重要：① F8-M 的清單其實有**四**張卡，初稿的高度預算漏算——換成直排步驟條後三張卡約 746 會爆 675，改成明確只留兩張（≈660）；② 「『開始產生』不滿版」是錯的，它今天就滿版，初稿為它寫的「紅測試」不會紅——改標成守；預算輸入框的目標其實是外面那個 `<span>`，打到 `<input>` 測試會綠但版面不變；③ L5 的閃回在 production **看不到**（父層關閉即卸載），順帶發現 6f-1 的退場動畫在這兩個抽屜永遠播不到 → 另立單；④ 補上漏掉的 Rule 21 標頭、dsr-6e-2 CR L1（F19-M 手機夾具）、用量列字級與卡片內距。代理同時確認：所有行號、三支 spec 的 `top-[22px]`、✕ 改 `top-4` 的算術（三個對話框同一個 offsetParent）、F16-M／F19-M 頁尾確實靠右不滿版、e2e 路徑在 390 寬可走且不必改 stub、挑片畫面確實沒有任何可種 state 的 seam。 |
