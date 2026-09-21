@@ -1,6 +1,6 @@
 # Story DSR.6f-2：手機上的名詞對照表從底部滑上來，每一列拆成兩行，「編輯」回來了
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -441,6 +441,7 @@ Claude Opus 5 (1M context) — dev-story (Amelia)
 
 | 日期 | 內容 |
 | --- | --- |
+| 2026-09-21 | ✅ **DONE** —— PR #491 合併進 main（commit `2657efff`）。PR 側 **17 pass／0 fail**；`-linux` 基準由 `Visual Regression` workflow 手動觸發後自動開 bootstrap PR #492（1 張 PNG＋1 行稽核紀錄，零原始碼改動），合進分支後 CI 轉綠。**合併後 `main` 那個 commit 的 Docker／Visual Regression／Tests 三條都確認是 success**（dsr-6e-2 的教訓：不能只看 PR 的）。 |
 | 2026-09-21 | 🔍 **/ship 對抗式 CR**：3H／4M／3L，**修 10、駁回 0**。最重要：① e2e 的「沒有橫向溢出」斷言不可能失敗（會換行的容器不會溢出），本張唯一的風險等於沒守門 → 改量列高上界＋第二行同一水平線；② **第一行完全沒有保險**，長 `term_src` 會撐破手機行並讓內容區長出橫向捲軸 → 加 `flex-wrap` ＋ `truncate`；③ AC #5 要求用瀏覽器看的刪除確認 ✕ **從沒被打開過**，補上 e2e **一跑就紅**——✕ 真的壓到「刪除詞彙」，標題補 `max-sm:pr-12`。另修：空清單多出的 14px 空隙、testid 與 AC 對不上、新增表單開在看不見的地方、把一張 326 寬的破版收成基準線、兩個空轉的 class 與一條假紅測試。web 3946/3946、e2e 12/12、既有基準線零變動。 |
 | 2026-09-20 | 🚧 **REVIEW**（dev-story, Amelia）。Task 1–6 完成。手機上的名詞對照表變成由下往上的 sheet（e2e 量過 390 是 `sheet-enter`、貼底 (0,390,844)；640 是 `dialog-enter`、置中），✕ 44×44，**每一列換成兩行且「編輯」全部回來**（列高 86、整列零橫向捲動），「全部確認／新增詞彙」搬到列表下面各自滿版 358，新增表單直排，刪除確認也是 sheet。桌機靠兩層 `sm:contents` 包裝做到**逐位元不變**，六張既有 1280 基準線零變動。閘門：format ✅、lint 0 errors（本張 6 個檔案 0 warning）、typecheck ✅、design-tokens ✅、web 3944/3944、api ✅、e2e 3/3（burn-in 9/9）、視覺新增 2 張 darwin。 |
 | 2026-09-20 | ✅ **Task 1（設計稿）完成**。新母版 `Component/GlossaryRow-v2/Mobile`（`t28C2s`，358×91，兩行：原文→譯名／徽章靠左＋確認·編輯·刪除靠右）建在 `04 · 列表與進度` 群組裡 `nDSEd` 右邊的空位（x=18540, y=-6214）。`buepS` 補上 44 高的標題列（`A9bh0`）與絕對定位的 44×44 ✕（`HAhWJ`，x=342 y=28，對齊程式碼 `MOBILE_SHEET_CLOSE` 的 `right-1`／`top-4` 幾何）；四列換成新母版的 instance，**「編輯」四列全開**（⚖️ dsr-6c 裁定 ②）；sheet 高度 485→651，y 359→**193** 重新貼底（651 ≤ 675 ＝ 螢幕 80%）。Component Library 補一格（`ERXTn`，`DESIGN.md:788`），規格註記 `x1MC3W` 放在 `PyB9P` 下方 40px（y=35348，與建單預測一致）。`ctx.problems` = **70**（＝現況基準，零新破版）。存檔以 stat 確認落盤（9642163→9654084 bytes），匯出 196/196 後只留 `f6-m-v2.png`、`component-library.png`、`pen-tokens.json`（masters 73→74），其餘 15 張重繪雜訊還原。 |
