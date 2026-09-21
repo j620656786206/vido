@@ -1,6 +1,6 @@
 # Story DSR.6f-4：手機上的「生成工作區」照手機稿排好——有返回鍵、總覽卡直排、即時活動預設收起來
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -344,3 +344,4 @@ Claude Fable 5.1（claude-fable-5-1）— dev-story, Amelia
 - 2026-09-21 — 建單後對抗驗證（fresh-context 唯讀代理）：5 CRITICAL＋7 SHOULD FIX＋6 NIT，**全部併入**。最重要的五條：① `ActivityHub.spec.tsx` 把工作區 mock 掉了，原本寫的返回鍵測試寫不出來 → 改成擴充 stub＋容器 spec 驗透傳；② 替麵包屑加 `order` 會把它丟到總覽卡後面 → 改成標題列 `order-first`；③ 640 寬時側欄會出現，`x=32` 是錯的 → 一律量相對於根節點；④ `boundingBox()` 量不到 `::after`，「命中區寬 358」不可能過 → 改用點擊文字驗；⑤ `scrollIntoViewIfNeeded` 會把底部列停在分頁列底下 → 改用 `window.scrollTo` 到頁尾。另外：進度條寬是 328 不是 330（邊框）；`SseChip` 不准包一層；重新展開要重設 `pinnedRef`；既有 e2e 第 5 條的 skip 改成看 viewport 寬度（不誤傷 firefox）；`ActivityHub` 今天沒有 `useNavigate`，給出確切寫法。
 - 2026-09-21 — dev-story（Amelia）：Task 1–6 全部完成。稿改 F11-M；程式碼全 `max-sm:`／`sm:hidden`＋`onBack`＋`open`；unit +11、e2e +5、mutation 14/14 紅；閘門全綠（web 3974/3974）。Status → review。
 - 2026-09-21 — /ship 對抗式 CR（fresh-context 唯讀代理）：**0 HIGH／2 MEDIUM／7 LOW，修 8、記 1**。M1「收合且沒連線時頁尾那一列讓出間距」沒有任何測試守（14 項 mutation 清單漏了它）→ 補 testid `workspace-log-footer-row`＋unit，mutation 確認會紅；M2 e2e 每次都往 `test-results/` 寫三張整頁截圖（CI 每次都會上傳，本機下次跑就被清掉）→ 改成 `DSR_SHOTS=1` 才拍、寫到 `testInfo.outputPath()`；L3 還沒有事件就展開會畫一個空框 → `max-sm:empty:hidden`；L4 收合鈕的名稱「即時活動事件清單」與它控制的清單「生成事件日誌」用詞不同 → 改成畫面上看得到的「即時活動」；L5 「恰好一個 aria-live」只在收合時量 → 展開時也量；L6 標題與麵包屑之間的 2px、頭區到身體的 14px 沒量 → e2e 補上（拿掉 `-mt-3` 會紅，已確認）；L7 沒有 SSE 膠囊時（終態）總覽卡沒量 → 達上限那條 e2e 補兩行；L8 `type Route` 從不匯出它的模組 import → 改從 `@playwright/test`。**不修（記錄）**：L9 平板在收合狀態下從 ≥640 轉到 <640 再轉回來會丟掉清單的捲動位置，要等下一列事件才回到底——批次已結束就不會回來；屬於 640 兩側來回的邊角，併入 `disc-2026-09-workspace-log-uncapped-640-1023` 一起看。CR 後：unit 56/56（該檔）、e2e 兩支 chromium ×2 20/20。⚠️ 承上，Completion Notes 寫的 `test-results/dsr-6f-4/` 三張截圖已改為 `DSR_SHOTS=1` 時才產生。
+- 2026-09-21 — **DONE**。PR #498 已合併進 main（commit `71d91c9b`）。PR 側 17 pass／0 fail，四個視覺 shard 全綠——證實本張沒有動到任何視覺基準線（本機沒跑的那一塊由 CI 補上），不需要 bootstrap PR。合併後 main 的 Docker／Tests／Visual Regression 三條都確認 success。`dsr-6f-flow-f-mobile` 傘狀條目一併結案。
