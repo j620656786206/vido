@@ -1,4 +1,12 @@
-import { test, expect, type Page, type Route } from '@playwright/test';
+import { test, expect, type Route } from '@playwright/test';
+import {
+  ROUTE_API,
+  ITEMS,
+  jsonOk,
+  snapshot,
+  sseFrame,
+  stubCommon,
+} from '../support/helpers/generation-workspace-stubs';
 
 /**
  * Generation WORKSPACE e2e (dsr-6d-c-1). The workspace had ZERO e2e coverage —
@@ -14,77 +22,6 @@ import { test, expect, type Page, type Route } from '@playwright/test';
  *  - (dsr-6d-c-2) the live log keeps one row per film per stage, names the film,
  *    and drops `subtitle_progress` that is not this batch's (search / download).
  */
-const ROUTE_API = '**/api/v1';
-
-const jsonOk = (data: unknown) => ({
-  status: 200,
-  contentType: 'application/json',
-  body: JSON.stringify({ success: true, data }),
-});
-
-const ITEMS = [
-  {
-    media_id: '5c2a9d3e-1f4b-4a8c-9d2e-3f5a7b9c1d63',
-    title: '駭客任務',
-    media_type: 'movie',
-    series_title: '',
-    status: 'done',
-    reason: '',
-  },
-  {
-    media_id: '8e4b2c6a-7d1f-4e3a-b5c9-2a6d8f0e4b57',
-    title: '星際效應',
-    media_type: 'movie',
-    series_title: '',
-    status: 'failed',
-    reason: 'busy_elsewhere',
-  },
-  {
-    media_id: '9ff0c000-dead-4bee-8f00-000000000999',
-    title: '正在處理的電影',
-    media_type: 'movie',
-    series_title: '',
-    status: 'running',
-    reason: '',
-  },
-];
-
-const snapshot = (over: Record<string, unknown> = {}) => ({
-  batch_id: 'gb-ws-1',
-  total_items: 3,
-  current_index: 3,
-  current_media_id: '9ff0c000-dead-4bee-8f00-000000000999',
-  current_item: '正在處理的電影',
-  success_count: 1,
-  fail_count: 1,
-  paused_count: 0,
-  status: 'running',
-  spent_usd: 0.42,
-  budget_usd: 5,
-  items: ITEMS,
-  ...over,
-});
-
-async function stubCommon(page: Page) {
-  await page.route(`${ROUTE_API}/activity`, (route: Route) =>
-    route.fulfill(
-      jsonOk({
-        activeJobs: { status: 'ok', jobs: [] },
-        pending: { status: 'ok', parseCount: 0 },
-        downloads: { status: 'ok', downloading: 0, queued: 0, errored: 0 },
-        recent: { status: 'ok', items: [] },
-      })
-    )
-  );
-  await page.route(`${ROUTE_API}/subtitles/generation-batch/preview*`, (route: Route) =>
-    route.fulfill(jsonOk({ total_items: 2, total_items_including_episodes: 7 }))
-  );
-}
-
-/** One SSE frame in the hub's wire shape: the whole Event struct as `data:`. */
-const sseFrame = (type: string, data: unknown) =>
-  `event: ${type}\ndata: ${JSON.stringify({ type, data })}\n\n`;
-
 test.describe('Generation Workspace @ui @generation-workspace', () => {
   test('[P0] a RUNNING batch draws the backend queue, and a refused item says WHY', async ({
     page,
@@ -218,6 +155,11 @@ test.describe('Generation Workspace @ui @generation-workspace', () => {
   test('[P1] a long log scrolls inside its pane and follows the newest row (CR H3)', async ({
     page,
   }) => {
+    // The pane cap is `lg:`-only, so below 1024 the LIST never scrolled (the page
+    // did) — and since dsr-6f-4 a phone starts with the log collapsed. The phone
+    // behaviour is measured in generation-workspace-mobile.spec.ts. Width, not
+    // project name: firefox (1280) is a valid gate for this test.
+    test.skip((page.viewportSize()?.width ?? 1280) < 1024, 'pane cap is lg-only');
     await stubCommon(page);
     await page.route(`${ROUTE_API}/subtitles/generation-batch/status`, (route: Route) =>
       route.fulfill(jsonOk({ running: true, progress: snapshot(), last: null }))

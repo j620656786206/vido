@@ -29,8 +29,11 @@ vi.mock('../subtitle/GenerationBatchDialogV2', () => ({
 // Stub the workspace (ux3-ai-2) — its own spec covers the container/state matrix;
 // here we only assert the `?view=generation` gating renders it in place of the hub.
 vi.mock('../subtitle/GenerationWorkspaceV2', () => ({
-  GenerationWorkspace: ({ active }: { active: boolean }) => (
-    <div data-testid="generation-workspace-stub" data-active={String(active)} />
+  GenerationWorkspace: ({ active, onBack }: { active: boolean; onBack?: () => void }) => (
+    <div data-testid="generation-workspace-stub" data-active={String(active)}>
+      {/* dsr-6f-4: just enough to press what the hub wired to the back button. */}
+      {onBack && <button type="button" data-testid="workspace-back-stub" onClick={onBack} />}
+    </div>
   ),
 }));
 
@@ -343,6 +346,15 @@ describe('ActivityHub (v2 Activity hub — four states + fail-soft)', () => {
 
     expect(await screen.findByTestId('activity-downloads-errored')).toHaveTextContent('7 個錯誤');
     expect(screen.queryByTestId('activity-downloads-paused')).toBeNull();
+  });
+
+  it('[dsr-6f-4] the workspace back button leaves ?view=generation for the hub', async () => {
+    mockUseActivity.mockReturnValue(result({ data: summary() }));
+    renderHub('/activity?view=generation');
+    fireEvent.click(await screen.findByTestId('workspace-back-stub'));
+    // The hub body is back (activity-root exists in BOTH branches — not evidence).
+    expect(await screen.findByTestId('activity-empty')).toBeInTheDocument();
+    expect(screen.queryByTestId('generation-workspace-stub')).not.toBeInTheDocument();
   });
 
   it('[ux3-ai-2] ?view=generation hosts the workspace (active) in place of the hub body', async () => {

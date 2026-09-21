@@ -1,5 +1,5 @@
 // Implements: Component/GenQueueRow-v2 (aw4Qr)
-// Design ref: ux-design.pen Screen F11-D-v2 (l8FsB) · F12-D-v2 (iH98f) · F13-D-v2 (F7ohe)
+// Design ref: ux-design.pen Screen F11-D-v2 (l8FsB) · F12-D-v2 (iH98f) · F13-D-v2 (F7ohe) · F11-M-v2 (PXB0z)
 // Source: ux-design.pen (Pencil app)
 /**
  * The AI generation WORKSPACE (Story ux3-ai-2, PH3-G1) — an immersive, 活動-hosted
@@ -23,11 +23,19 @@
  * about the same title. After a batch ends the queue comes from the status probe's
  * `last` (the dialog removes its own items[] cache on terminal), and 關閉 is the
  * only caller of dismiss — i.e. "I have seen this result, forget it".
+ *
+ * dsr-6f-4: the PHONE page (F11-M). This is a page, not a sheet — no grabber, no ✕;
+ * the way out is a back button. Everything phone-only is `max-sm:` / `sm:hidden`, so
+ * ≥640 is untouched. The overall strip re-flows IN PLACE (`max-sm:contents` + order —
+ * never drawn twice), and the live log starts collapsed: the LIST is hidden with
+ * `display:none`, never unmounted, because the page's only aria-live region lives in
+ * that pane and a region mounted together with its text is never read.
  */
 import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useId,
   useRef,
   useState,
   type ComponentRef,
@@ -37,6 +45,8 @@ import {
   Activity,
   Check,
   CircleAlert,
+  ChevronDown,
+  ChevronLeft,
   CircleDashed,
   CirclePause,
   Hourglass,
@@ -103,23 +113,28 @@ function OverallStrip({
   return (
     <div
       data-testid="workspace-overall"
-      className="flex flex-wrap items-center gap-x-8 gap-y-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-4 py-3"
+      // Phone (F11-M `QNVCS`): three rows — count + chip / full-width bar / cost on
+      // one line. Re-flowed in place: the first column dissolves (`contents`) so its
+      // children can be ordered around the chip. Never a second copy of the strip.
+      className="flex flex-wrap items-center gap-x-8 gap-y-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-4 py-3 max-sm:gap-x-2 max-sm:gap-y-2 max-sm:px-3.5"
     >
-      <div className="flex flex-col gap-1.5">
-        <span className="text-[11px] text-[var(--text-muted)]">整批進度</span>
-        <div className="flex items-baseline gap-1">
+      <div className="flex flex-col gap-1.5 max-sm:contents">
+        <span className="text-[11px] text-[var(--text-muted)] max-sm:hidden">整批進度</span>
+        <div className="flex items-baseline gap-1 max-sm:order-1">
           <span className="text-sm text-[var(--text-secondary)]">已完成</span>
-          <span className="font-mono text-xl font-semibold tabular-nums text-[var(--text-primary)]">
+          <span className="font-mono text-xl font-semibold tabular-nums text-[var(--text-primary)] max-sm:text-lg">
             {done}
           </span>
-          <span className="font-mono text-base tabular-nums text-[var(--text-muted)]">/</span>
-          <span className="font-mono text-base tabular-nums text-[var(--text-secondary)]">
+          <span className="font-mono text-base tabular-nums text-[var(--text-muted)] max-sm:text-sm">
+            /
+          </span>
+          <span className="font-mono text-base tabular-nums text-[var(--text-secondary)] max-sm:text-sm">
             {totalItems}
           </span>
-          <span className="text-xs text-[var(--text-secondary)]">部</span>
+          <span className="text-xs text-[var(--text-secondary)] max-sm:text-sm">部</span>
         </div>
         <div
-          className="h-1.5 w-[180px] overflow-hidden rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)]"
+          className="h-1.5 w-[180px] overflow-hidden rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] max-sm:order-3 max-sm:w-full"
           role="progressbar"
           aria-label="整批生成進度"
           aria-valuenow={pct}
@@ -132,28 +147,34 @@ function OverallStrip({
           />
         </div>
       </div>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1.5 max-sm:order-4 max-sm:w-full max-sm:flex-row max-sm:items-baseline max-sm:gap-1">
         <span className="text-[11px] text-[var(--text-muted)]">本次用量</span>
         <div className="flex items-baseline gap-1">
-          <span className="font-mono text-base font-semibold tabular-nums text-[var(--text-primary)]">
+          <span className="font-mono text-base font-semibold tabular-nums text-[var(--text-primary)] max-sm:text-sm">
             {usd(spentUsd)}
           </span>
           <span className="text-xs text-[var(--text-secondary)]">／上限</span>
-          <span className="font-mono text-base tabular-nums text-[var(--text-secondary)]">
+          <span className="font-mono text-base tabular-nums text-[var(--text-secondary)] max-sm:text-sm">
             {usd(budgetUsd)}
           </span>
         </div>
       </div>
-      {live && <SseChip />}
+      {/* `ml-auto` MUST stay max-sm-only: on desktop the chip is the row's last
+          item and an unprefixed one would throw it to the far right. No wrapper
+          either — a blockified box around it can change the desktop row height. */}
+      {live && <SseChip className="max-sm:order-2 max-sm:ml-auto" />}
     </div>
   );
 }
 
-function SseChip() {
+function SseChip({ className }: { className?: string }) {
   return (
     <span
       data-testid="workspace-sse-chip"
-      className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--info-tint)] px-2 py-1.5 text-[11px] text-[var(--info-text)]"
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--info-tint)] px-2 py-1.5 text-[11px] text-[var(--info-text)]',
+        className
+      )}
     >
       <Radio className="h-3 w-3" aria-hidden="true" />
       即時更新（SSE）
@@ -173,7 +194,10 @@ function StatusPill({ mode }: { mode: WorkspaceMode }) {
         data-testid="workspace-status-pill"
         className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-tint)] px-2.5 py-1 text-xs font-medium text-[var(--accent-text)]"
       >
-        <span aria-hidden="true" className="h-2 w-2 rounded-full bg-[var(--accent-text)]" />
+        <span
+          aria-hidden="true"
+          className="h-2 w-2 rounded-full bg-[var(--accent-text)] max-sm:h-1.5 max-sm:w-1.5"
+        />
         進行中
       </span>
     );
@@ -184,7 +208,10 @@ function StatusPill({ mode }: { mode: WorkspaceMode }) {
         data-testid="workspace-status-pill"
         className="inline-flex items-center gap-1.5 rounded-full bg-[var(--warning-tint)] px-2.5 py-1 text-xs font-medium text-[var(--warning-text)]"
       >
-        <span aria-hidden="true" className="h-2 w-2 rounded-full bg-[var(--warning-text)]" />
+        <span
+          aria-hidden="true"
+          className="h-2 w-2 rounded-full bg-[var(--warning-text)] max-sm:h-1.5 max-sm:w-1.5"
+        />
         已達上限
       </span>
     );
@@ -273,7 +300,7 @@ function QueueRow({
           </span>
           <span
             className={cn(
-              'truncate text-sm',
+              'truncate text-sm max-sm:whitespace-normal',
               isRunning ? label.className : 'text-[var(--text-secondary)]'
             )}
           >
@@ -383,6 +410,12 @@ function EventLogPane({
   const listRef = useRef<ComponentRef<'ol'> | null>(null);
   /** The reader was at the bottom before the last change — keep following. */
   const pinnedRef = useRef(true);
+  /**
+   * Phone only (F11-M `rMD73`): the log starts collapsed. This state acts through
+   * `max-sm:` classes alone, so ≥640 never sees it — no matchMedia needed.
+   */
+  const [open, setOpen] = useState(false);
+  const listId = useId();
 
   const announcement = (() => {
     for (let i = feed.length - 1; i >= 0; i -= 1) {
@@ -397,7 +430,9 @@ function EventLogPane({
   useLayoutEffect(() => {
     const el = listRef.current;
     if (el && pinnedRef.current) el.scrollTop = el.scrollHeight;
-  }, [lastSeq]);
+    // `open`: while collapsed the list is display:none (scrollHeight 0) — the
+    // moment it opens it must land on the newest row.
+  }, [lastSeq, open]);
 
   return (
     <aside
@@ -405,26 +440,68 @@ function EventLogPane({
       // Capped to the viewport (below the 56px sticky app header) so the LIST
       // scrolls and can follow the newest row; unbounded, the pane grew with its
       // rows and the whole page scrolled instead (CR H3).
-      className="flex w-full flex-col overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-primary)] lg:sticky lg:top-[4.5rem] lg:max-h-[calc(100vh-6rem)] lg:w-[400px]"
+      // Phone: no outer frame — the header is its own card and the open list
+      // carries its own border (F11-M `AfUUS`).
+      className="flex w-full flex-col overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-primary)] max-sm:gap-2 max-sm:overflow-visible max-sm:rounded-none max-sm:border-0 max-sm:bg-transparent lg:sticky lg:top-[4.5rem] lg:max-h-[calc(100vh-6rem)] lg:w-[400px]"
     >
-      <div className="flex h-11 shrink-0 items-center gap-2.5 border-b border-[var(--border-subtle)] px-3.5">
+      {/* `relative` lives HERE, not on the button: the toggle's ::after stretches
+          over the whole header so the entire bar is the hit area. */}
+      <div className="relative flex h-11 shrink-0 items-center gap-2.5 border-b border-[var(--border-subtle)] px-3.5 max-sm:h-auto max-sm:min-h-[47px] max-sm:gap-1.5 max-sm:rounded-[var(--radius-md)] max-sm:border-b-0 max-sm:bg-[var(--bg-secondary)]">
         <Activity
           data-testid="workspace-log-header-icon"
-          className="h-3.5 w-3.5 shrink-0 text-[var(--text-secondary)]"
+          className="h-3.5 w-3.5 shrink-0 text-[var(--text-secondary)] max-sm:h-4 max-sm:w-4"
           aria-hidden="true"
         />
         <span className="text-sm font-semibold text-[var(--text-primary)]">即時活動</span>
-        <span className="ml-auto text-xs text-[var(--text-muted)]">自開啟本頁起累積</span>
+        <span className="ml-auto text-xs text-[var(--text-muted)] max-sm:ml-0">
+          <span aria-hidden="true" className="sm:hidden">
+            ·{' '}
+          </span>
+          自開啟本頁起累積
+        </span>
+        <button
+          type="button"
+          data-testid="workspace-log-toggle"
+          // A fixed name + aria-expanded: a name that flips to 收合… would be read
+          // as "收合即時活動, expanded" (CollapsibleSection precedent). It is the
+          // header's own visible words, so voice control can say what it sees.
+          aria-label="即時活動"
+          aria-expanded={open}
+          aria-controls={listId}
+          onClick={() => {
+            // Re-pin on open: the reader may have scrolled up before collapsing,
+            // and display:none can zero scrollTop without a scroll event.
+            if (!open) pinnedRef.current = true;
+            setOpen((v) => !v);
+          }}
+          className="-mr-3 ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] after:absolute after:inset-0 after:content-[''] sm:hidden"
+        >
+          <ChevronDown
+            className={cn(
+              'h-5 w-5 transition-transform duration-[var(--motion-state)] motion-reduce:transition-none',
+              open && 'rotate-180'
+            )}
+            aria-hidden="true"
+          />
+        </button>
       </div>
       <ol
         ref={listRef}
+        id={listId}
         aria-label="生成事件日誌"
         onScroll={(e) => {
           const el = e.currentTarget;
           // Within one row (≈39px) of the bottom counts as "at the bottom".
           pinnedRef.current = el.scrollHeight - el.scrollTop - el.clientHeight <= 40;
         }}
-        className="min-h-0 flex-1 overflow-y-auto py-1.5"
+        // Collapsed = hidden, NEVER unmounted (the announcer below must survive).
+        // Open on a phone: capped, so the LIST scrolls and follows (CR H3 parity).
+        className={cn(
+          // `empty:hidden`: opened before any event arrived, the phone would draw an
+          // empty bordered box (the list holds nothing but <li>s, so :empty is exact).
+          'min-h-0 flex-1 overflow-y-auto py-1.5 max-sm:max-h-80 max-sm:flex-none max-sm:rounded-[var(--radius-md)] max-sm:border max-sm:border-[var(--border-subtle)] max-sm:empty:hidden',
+          !open && 'max-sm:hidden'
+        )}
       >
         {feed.map((row) => (
           <FeedRowItem key={row.seq} row={row} />
@@ -435,15 +512,37 @@ function EventLogPane({
             read again — replacing identical text would be silent (CR M7). */}
         {announcement && <span key={announcement.seq}>{announcement.text}</span>}
       </p>
-      <div className="flex flex-col gap-2 border-t border-[var(--border-subtle)] px-3.5 py-2.5">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-2 border-t border-[var(--border-subtle)] px-3.5 py-2.5 max-sm:border-t-0 max-sm:px-0 max-sm:py-0">
+        {/* `hidden` ATTRIBUTE, not a class: jsdom loads no stylesheet. */}
+        <p
+          data-testid="workspace-log-hint"
+          hidden={open}
+          className="text-xs text-[var(--text-muted)] sm:hidden"
+        >
+          展開查看即時事件（不含逐字內容、無時間戳）
+        </p>
+        <div
+          data-testid="workspace-log-footer-row"
+          className={cn(
+            'flex items-center gap-2',
+            // Collapsed with no stream: the row would be empty yet keep its gap.
+            !open && !connected && 'max-sm:hidden'
+          )}
+        >
           {connected && <SseChip />}
-          <span className="ml-auto text-[11px] text-[var(--text-muted)]">
+          <span
+            data-testid="workspace-log-note"
+            className={cn(
+              'ml-auto text-[11px] text-[var(--text-muted)]',
+              // The hint above already says it while collapsed.
+              !open && 'max-sm:hidden'
+            )}
+          >
             僅狀態事件，不含逐字內容
           </span>
         </div>
         {budgetStopped && (
-          <div className="flex items-center justify-end gap-1.5">
+          <div className="flex items-center justify-end gap-1.5 max-sm:justify-start">
             <CirclePause
               className="h-[13px] w-[13px] shrink-0 text-[var(--warning-text)]"
               aria-hidden="true"
@@ -549,6 +648,12 @@ export interface GenerationWorkspaceV2Props {
   onRetryData: () => void;
   /** F12 關閉 — forget the remembered terminal result (dismiss). */
   onDismiss?: () => Promise<void>;
+  /**
+   * Phone back button (F11-M `d86Ux`) — leave the workspace for 活動. A prop, not a
+   * router <Link>: this component renders bare in its spec and in the gallery.
+   * Without it no back button is drawn.
+   */
+  onBack?: () => void;
 }
 
 export function GenerationWorkspaceV2({
@@ -565,6 +670,7 @@ export function GenerationWorkspaceV2({
   onResume,
   onRetryData,
   onDismiss,
+  onBack,
 }: GenerationWorkspaceV2Props) {
   // A single job's result retires its entry and the page falls back to idle —
   // keep the log that recorded it on screen (CR M5).
@@ -588,25 +694,50 @@ export function GenerationWorkspaceV2({
   return (
     <div data-testid="generation-workspace" data-mode={mode} className="flex min-h-full flex-col">
       {/* Header */}
-      <div className="flex flex-col gap-3.5 px-6 pb-4 pt-6 sm:px-8">
+      <div className="flex flex-col gap-3.5 px-6 pb-4 pt-6 max-sm:px-4 max-sm:pb-3.5 max-sm:pt-3 sm:px-8">
+        {/* Phone (F11-M `e6nOTG`): the TITLE ROW leads (`order-first`) and the
+            breadcrumb keeps order 0 — an order on the nav would drop it below the
+            banner and the strip, which share this column. -mt-3 = 14 − 12 → 2px. */}
         <nav
           aria-label="麵包屑"
-          className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)]"
+          className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)] max-sm:-mt-3 max-sm:text-xs max-sm:text-[var(--text-muted)]"
         >
           <span>活動</span>
           <span className="text-[var(--text-muted)]" aria-hidden="true">
             ／
           </span>
-          <span className="text-[var(--text-primary)]">生成字幕</span>
+          <span className="text-[var(--text-primary)] max-sm:text-[var(--text-muted)]">
+            生成字幕
+          </span>
         </nav>
-        <div className="flex items-center gap-2">
-          <h1 className="text-xl font-bold text-[var(--text-primary)]">
-            {mode === 'idle' || mode === 'loading'
-              ? '生成工作區'
-              : mode === 'single'
-                ? '生成字幕'
-                : '批次生成字幕'}
-          </h1>
+        <div
+          data-testid="workspace-title-row"
+          className="flex items-center gap-2 max-sm:order-first max-sm:justify-between"
+        >
+          {/* Dissolves on desktop (`sm:contents`): h1 + pill stay siblings there. */}
+          <div className="flex min-w-0 items-center sm:contents">
+            {onBack && (
+              <button
+                type="button"
+                data-testid="workspace-back"
+                aria-label="返回活動"
+                onClick={onBack}
+                // 44×44 hit area; the negative margins give back the 10px it adds on
+                // every side, so the glyph sits on the 16px gutter and the row is not
+                // stretched to 44.
+                className="-my-2.5 -ml-2.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-secondary)] sm:hidden"
+              >
+                <ChevronLeft className="h-6 w-6" aria-hidden="true" />
+              </button>
+            )}
+            <h1 className="text-xl font-bold text-[var(--text-primary)] max-sm:truncate max-sm:text-lg">
+              {mode === 'idle' || mode === 'loading'
+                ? '生成工作區'
+                : mode === 'single'
+                  ? '生成字幕'
+                  : '批次生成字幕'}
+            </h1>
+          </div>
           <StatusPill mode={mode} />
         </div>
         {mode === 'budget_ceiling' && <BudgetBanner progress={progress} />}
@@ -617,7 +748,7 @@ export function GenerationWorkspaceV2({
       </div>
 
       {/* Body */}
-      <div className="flex min-h-0 flex-1 flex-col gap-4 px-6 pb-6 sm:px-8 lg:flex-row">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 px-6 pb-6 max-sm:gap-3.5 max-sm:px-4 sm:px-8 lg:flex-row">
         <div className="flex min-h-0 flex-1 flex-col gap-3">
           {dataError && (
             <div
@@ -716,7 +847,7 @@ export function GenerationWorkspaceV2({
               the queue — a cold attach at the ceiling used to get no verdict, and a
               running batch with no snapshot yet got no way to cancel. */}
           {(mode === 'running' || mode === 'budget_ceiling' || isTerminal) && (
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-3 max-sm:flex-wrap">
               <h2 className="text-base font-semibold text-[var(--text-primary)]">生成佇列</h2>
               {mode === 'running' && <CancelAll onConfirm={onConfirmCancelAll} />}
               {verdict && (
@@ -797,13 +928,13 @@ export function GenerationWorkspaceV2({
       {(mode === 'budget_ceiling' || isTerminal) && (
         <div
           data-testid="workspace-footer"
-          className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-6 py-3.5 sm:px-8"
+          className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-6 py-3.5 max-sm:px-4 sm:px-8"
         >
           {dismissFailed && (
             <span
               role="alert"
               data-testid="workspace-dismiss-error"
-              className="mr-auto text-sm text-[var(--error-text)]"
+              className="mr-auto text-sm text-[var(--error-text)] max-sm:w-full"
             >
               批次還在進行中，現在無法關閉。
             </span>
@@ -813,7 +944,7 @@ export function GenerationWorkspaceV2({
               type="button"
               data-testid="workspace-close"
               onClick={() => void handleDismiss()}
-              className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-medium text-[var(--text-primary)]"
+              className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-medium text-[var(--text-primary)] max-sm:flex-1 max-sm:justify-center"
             >
               關閉
             </button>
@@ -823,7 +954,7 @@ export function GenerationWorkspaceV2({
               type="button"
               data-testid="workspace-resume"
               onClick={onResume}
-              className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-5 text-sm font-semibold text-[var(--text-on-accent)]"
+              className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-5 text-sm font-semibold text-[var(--text-on-accent)] max-sm:flex-1 max-sm:justify-center"
             >
               下次繼續
             </button>
@@ -878,15 +1009,18 @@ function CancelAll({ onConfirm }: { onConfirm: () => Promise<void> }) {
   }
 
   return (
-    <div data-testid="workspace-cancel-confirm" className="flex flex-wrap items-center gap-3">
-      <span className="text-sm text-[var(--text-secondary)]">
+    <div
+      data-testid="workspace-cancel-confirm"
+      className="flex flex-wrap items-center gap-3 max-sm:w-full"
+    >
+      <span className="text-sm text-[var(--text-secondary)] max-sm:w-full">
         確定要取消整個批次嗎？已完成的字幕會保留。
       </span>
       {failed && (
         <span
           role="alert"
           data-testid="workspace-cancel-error"
-          className="text-sm text-[var(--error-text)]"
+          className="text-sm text-[var(--error-text)] max-sm:w-full"
         >
           取消失敗，批次仍在進行。請再試一次。
         </span>
@@ -899,7 +1033,7 @@ function CancelAll({ onConfirm }: { onConfirm: () => Promise<void> }) {
           setFailed(false);
           pendingFocusRef.current = 'cancelAll';
         }}
-        className="flex min-h-[44px] items-center rounded-[var(--radius-md)] px-4 text-sm text-[var(--text-secondary)]"
+        className="flex min-h-[44px] items-center rounded-[var(--radius-md)] px-4 text-sm text-[var(--text-secondary)] max-sm:flex-1 max-sm:justify-center"
       >
         繼續生成
       </button>
@@ -920,7 +1054,7 @@ function CancelAll({ onConfirm }: { onConfirm: () => Promise<void> }) {
             .then(() => undefined);
         }}
         className={cn(
-          'flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-4 text-sm text-[var(--text-primary)]',
+          'flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-4 text-sm text-[var(--text-primary)] max-sm:flex-1 max-sm:justify-center',
           busy && 'opacity-60'
         )}
       >
@@ -937,9 +1071,11 @@ export interface GenerationWorkspaceProps {
   active: boolean;
   /** Opens the F8 batch dialog (the launcher — the workspace never rebuilds scope). */
   onLaunch: () => void;
+  /** Phone back button → 活動 (dsr-6f-4). Passed straight through. */
+  onBack?: () => void;
 }
 
-export function GenerationWorkspace({ active, onLaunch }: GenerationWorkspaceProps) {
+export function GenerationWorkspace({ active, onLaunch, onBack }: GenerationWorkspaceProps) {
   const isVisible = usePageVisibility();
   const live = active && isVisible;
   const queryClient = useQueryClient();
@@ -1107,6 +1243,7 @@ export function GenerationWorkspace({ active, onLaunch }: GenerationWorkspacePro
       // dialog in its consent phase (F15 re-select → F16 confirm).
       onResume={onLaunch}
       onDismiss={handleDismiss}
+      onBack={onBack}
       onRetryData={() => {
         void statusQuery.refetch();
         void previewQuery.refetch();

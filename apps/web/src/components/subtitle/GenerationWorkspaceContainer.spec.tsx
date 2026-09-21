@@ -141,14 +141,14 @@ const LAST_SNAPSHOT = {
   items: [item('m1', '沙丘：第二部', 'done'), item('m2', '奧本海默', 'failed', 'busy_elsewhere')],
 };
 
-function renderWorkspace() {
+function renderWorkspace(extra: { onBack?: () => void } = {}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
   const makeUi = () => (
     <QueryClientProvider client={queryClient}>
-      <GenerationWorkspace active onLaunch={vi.fn()} />
+      <GenerationWorkspace active onLaunch={vi.fn()} {...extra} />
     </QueryClientProvider>
   );
   const view = render(makeUi());
@@ -586,5 +586,12 @@ describe('GenerationWorkspace — the live log wiring (dsr-6d-c-2 AC #4)', () =>
 
     await waitFor(() => expect(h.jobsSeed).toHaveBeenCalled());
     expect(h.jobsEnd).not.toHaveBeenCalled();
+  });
+
+  it('[dsr-6f-4] onBack is passed straight through to the phone back button', async () => {
+    const onBack = vi.fn();
+    renderWorkspace({ onBack });
+    fireEvent.click(await screen.findByTestId('workspace-back'));
+    expect(onBack).toHaveBeenCalledTimes(1);
   });
 });

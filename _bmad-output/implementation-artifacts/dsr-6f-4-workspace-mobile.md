@@ -1,6 +1,6 @@
 # Story DSR.6f-4：手機上的「生成工作區」照手機稿排好——有返回鍵、總覽卡直排、即時活動預設收起來
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -166,15 +166,15 @@ so that 我一打開就看到「跑到第幾部、花了多少錢、哪一部失
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — 設計稿：F11-M 的進行中列換成 F3-M 步驟條、三句文案、麵包屑、規格註記（AC: #1）**
-- [ ] **Task 2 — 手機頁首：`onBack`＋返回鍵、標題列／麵包屑順序、16 內距（AC: #2, #6, #8）**
-  - [ ] 先寫 `workspace-back` 與 `ActivityHub` 的紅測試 → 實作
-- [ ] **Task 3 — 總覽卡直排三行（AC: #3, #8）**
-- [ ] **Task 4 — 取消確認、底部列、副標換行（AC: #4, #8）**
-- [ ] **Task 5 — 即時活動收合（AC: #5, #8）**
-  - [ ] 先寫 announcer「同一個節點＋恰好一個 aria-live」在收合／展開下的紅測試 → 實作
-- [ ] **Task 6 — 手機 e2e、既有 e2e 第 5 條的 viewport<1024 skip、mutation check、收尾（AC: #7, #9, #10, #11）**
-  - [ ] dev-story Step 9：`f11-m-v2.png` 對 e2e 截圖與量測
+- [x] **Task 1 — 設計稿：F11-M 的進行中列換成 F3-M 步驟條、三句文案、麵包屑、規格註記（AC: #1）**
+- [x] **Task 2 — 手機頁首：`onBack`＋返回鍵、標題列／麵包屑順序、16 內距（AC: #2, #6, #8）**
+  - [x] 先寫 `workspace-back` 與 `ActivityHub` 的紅測試 → 實作
+- [x] **Task 3 — 總覽卡直排三行（AC: #3, #8）**
+- [x] **Task 4 — 取消確認、底部列、副標換行（AC: #4, #8）**
+- [x] **Task 5 — 即時活動收合（AC: #5, #8）**
+  - [x] 先寫 announcer「同一個節點＋恰好一個 aria-live」在收合／展開下的紅測試 → 實作
+- [x] **Task 6 — 手機 e2e、既有 e2e 第 5 條的 viewport<1024 skip、mutation check、收尾（AC: #7, #9, #10, #11）**
+  - [x] dev-story Step 9：`f11-m-v2.png` 對 e2e 截圖與量測
 
 ## Dev Notes
 
@@ -267,13 +267,48 @@ _bmad-output/implementation-artifacts/sprint-status.yaml                        
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Fable 5.1（claude-fable-5-1）— dev-story, Amelia
 
 ### Debug Log References
+
+- **e2e：`elementFromPoint` 吃的是視窗座標。** 佇列一長，即時活動的標題列落在摺線下、剛好在 fixed 的分頁列底下，量到的是 `nav-home`。先 `scrollIntoView({ block: 'center' })` 再量。
+- **e2e：`locator.click()` 點標題文字會失敗**——Playwright 正確地回報「按鈕的 `::after` 攔截了點擊」，而那正是設計。改用 `page.mouse.click(x, y)`。
+- **e2e：stub 的 SSE 串流送完 frame 就結束**，所以紀錄區誠實地顯示「未連線」、沒有 SSE 膠囊——原本寫的「收合時膠囊可見」斷言拿掉，改由 unit 覆蓋。
+- **Pencil**：`Replace("G5v4u", …)` 之後回報 `Node 'G5v4u' has 'fill_container' sizing but is not inside a flexbox layout`——那是被換掉的舊節點，誤報（已知類型）；新節點 `p8No2j` 326×216 正常。`execute` 現在有 `Print()`，不必再用 throw 讀值。
+- ESLint 在 e2e 檔不認 `getComputedStyle` 全域 → 寫 `window.getComputedStyle`；`async ({}, testInfo)` 觸發 `no-empty-pattern` → `{ page: _page }`。
 
 ### Completion Notes List
 
 - Ultimate context engine analysis completed - comprehensive developer guide created（SM Bob，2026-09-21）
+- 🔗 AC Drift: NONE (checked: 'workspace-event-log'、'lg:max-h'、'aria-live' across `_bmad-output/implementation-artifacts/*.md` — 命中都在 dsr-6d-c-1／-2；本張只加 `max-sm:`／`sm:hidden`，≥640 的行為與那兩張的 AC 完全相同＝REUSE。CR H3「清單自己捲」在 ≥1024 原樣保留，e2e 第 5 條 chromium 仍綠）
+- 📎 Contract Stamps: NONE (no [@contract-v*] stamps in this story or upstream refs — 純呈現層，不定義也不消費線上契約)
+- 🎭 A11y Pre-Flight: PASS (2 components checked — `GenerationWorkspaceV2.tsx`、`ActivityHub.tsx`；0 jsx-a11y warnings on touched files, 0 introduced by this story)。手動四類：圖片 N/A；對話框焦點 N/A（這是一頁）；**aria-live**：全頁仍恰好一個 live region（`workspace-log-announcer`），收合是 `display:none` 藏清單、announcer 不在被藏的容器裡，unit 釘住「收合／展開同一個 DOM 節點、收合時仍更新」；**自訂元件的鍵盤與 ARIA**：收合鈕是真的 `<button>`＋固定名稱「即時活動事件清單」＋`aria-expanded`＋`aria-controls`（指到 `role=list`），返回鍵 `aria-label="返回活動"`，兩顆都 44×44。
+- **Task 1（稿）**：`n79vZ` 的迷你步驟條 `G5v4u` 換成 F3-M 步驟條的副本（新節點 `p8No2j`，326×216，`mst-2-pct` 維持停用）；`OMD2y` 關掉；三句列文案改成程式碼的說法；`J79fp` →「活動 ／ 生成字幕」；新規格註記 `ooxDh`（`spec-note-dsr-6f-4`，x=17040、y=35847、300×256）。全檔 `problems` 69（不變）；`PXB0z` 仍 1500 高、tab-bar 貼底。存檔走選單 Save，磁碟檔 grep 得到 `spec-note-dsr-6f-4`；匯出 196 張只留 `f11-m-v2.png`，其餘還原。
+- **Task 2–5（程式碼）**：全部是 `max-sm:`／`sm:hidden`。新增 `onBack` prop（V2＋容器＋`ActivityHub` 用 `routeApi.useNavigate()` push 回 `/activity`）、`EventLogPane` 的 `open` state＋`useId`、`SseChip` 的 `className`。標題列 `order-first`、麵包屑不給 order；總覽卡第一欄 `max-sm:contents`＋`order` 原地重排；清單收合用 `max-sm:hidden`（不卸載）、展開 `max-sm:max-h-80`、展開時重設 `pinnedRef`、`useLayoutEffect` 依賴加 `open`；提示用 `hidden` 屬性。
+- **測試**：`GenerationWorkspaceV2.spec.tsx` +9（54）、`GenerationWorkspaceContainer.spec.tsx` +1（27）、`ActivityHub.spec.tsx` +1（只擴充 stub）。新 e2e `generation-workspace-mobile.spec.ts` 5 條（390×4＋640×1）；共用 stub 抽到 `tests/support/helpers/generation-workspace-stubs.ts`（舊 spec 只改 import＋第 5 條加 viewport<1024 skip，斷言零改動）。
+- **Mutation check 14 項 → 14 紅**（拿掉返回鍵／`order-first`／`max-sm:w-full`／`ml-auto` 去前綴／清單不藏／不重設 `pinnedRef`／依賴少 `open`／提示永遠顯示／`aria-expanded` 凍結／底部列不等寬／確認句不獨佔一行／容器不透傳／hub 不接線／副標不換行——每一項都恰有測試變紅，改完還原後 98/98 綠）。
+- **閘門**：`format:check` ✅、`lint:all` 0 errors（129 warnings 為既有批次）、`web:typecheck` ✅、`check-design-tokens.py` ✅、`nx test web` **3974/3974**（274 檔）、`nx test api` ✅；e2e `chromium` 兩支 spec `--repeat-each=3` **30/30**；`mobile-chrome` 4 passed／6 skipped。跑完已清 `apps/api/coverage/` 與測試行程。
+- ⚠️ **沒有在本機跑整支視覺套件**（約 9 分鐘、無法只濾工作區夾具）。桌機不變的證據是：所有新類別都是 `max-sm:`／`sm:hidden`；640 的 e2e 量到桌機版面（內距 32、進度條 180、標題 20px、藥丸貼著標題 8px、清單不必展開就可見）；CI 的 Visual Regression 是 required check——**若它紅了要當回歸查，不要 bootstrap**。
+- **Pre-existing（已確認）**：把程式碼 stash 回 main 的版本後，`generation-workspace.spec.ts` 第 5 條在 `mobile-chrome` 是紅的（`scrolls: false`）——不是本張造成；走 Rule 24 ①（本張加 viewport<1024 skip）。
+
+#### 🎨 UX Verification（Step 9）— 對 `f11-m-v2.png`／`PXB0z` 節點值
+
+| Area | Design Spec | Implementation（390 e2e 量測） | Match? | Fix Needed |
+| --- | --- | --- | --- | --- |
+| 左右內距 | 16 | 總覽卡 x−root＝16、寬 358 | ✅ | — |
+| 返回鍵 | chevron-left 24、貼齊 16、到標題 10 | 圖示左緣 16、到 `<h1>` 10、命中區 44×44 | ✅ | — |
+| 標題 | H4 18 | `18px` | ✅ | — |
+| 狀態藥丸 | 靠右、與標題同一行 | 右緣 374、中心差 <2px | ✅ | — |
+| 麵包屑 | 標題下方、Label 12、muted、「／」 | 在標題下、在總覽卡上、`12px` | ✅ | — |
+| 總覽卡 | 三行：計數＋膠囊／滿寬軌道／用量一行 | 軌道寬 328（358−2−28）、膠囊右緣對齊卡片內緣、用量在軌道下且同一基線 | ✅（稿 330 是因為稿的 stroke 不佔寬） | — |
+| 佇列標題列 | BodyLg 600＋Secondary h44 | 不變 | ✅ | — |
+| 進行中列步驟條 | 直排、圓點 22、Body 14（改稿後） | `GenerationProgressV2` 手機直排 | ✅ | — |
+| 即時活動（收合） | 標題卡＋提示＋膠囊、chevron 20 靠右 | 清單隱藏、提示可見、整條標題列可按 | ✅ | — |
+| 即時活動（展開） | 無稿（規格註記） | 清單 ≤320、自己捲、停在最新、無橫向溢出 | ✅（依裁定 3） | — |
+| 底部列（達上限） | 無稿（裁定 7） | 兩顆等寬 173、不被分頁列蓋住 | ✅ | — |
+| SSE 膠囊圓角 | `$radius-sm` | `radius-sm` | ✅（藥丸化另見 `disc-2026-09-sse-chip-pill-radius`） | — |
+
+🎨 UX Verification: PASS — implementation matches design screenshots。e2e 截圖三張在 `test-results/dsr-6f-4/`（`390-running`／`390-log-open`／`390-budget-ceiling`；📎 `fullPage` 截圖會把 fixed 的頂列與分頁列疊在頁面中段，那是截圖方式造成的，不是版面問題）。
 
 ### Discovery Triage
 
@@ -285,11 +320,27 @@ _bmad-output/implementation-artifacts/sprint-status.yaml                        
   - ③ 桌機稿 `KZmNG` 的列文案（「已生成繁中字幕，已寫入檔案」「轉錄音訊中…」「轉錄失敗，已略過並繼續（計入失敗數）」）與麵包屑分隔符（chevron vs「／」）與程式碼不一致 → `disc-2026-09-f11-pen-row-copy-and-breadcrumb-stale`
   - ③ F11-M 缺六種狀態的手機稿 → 補記 `disc-2026-09-flow-f-mobile-missing-state-screens`
   - ① 既有 e2e 第 5 條在本機手機 project **推定今天就是紅的**（<1024 沒有上限 → `scrolls:false`）→ AC #7／Task 6（加 viewport<1024 的 skip）。dev 先在 `mobile-chrome` 跑一次確認是既有的紅，再記成 ①
-- **dev-story 期間的發現：**（待填；沒有就寫 `N/A — no out-of-scope work discovered`）
+- **dev-story 期間的發現：** `N/A — no out-of-scope work discovered`（第 5 條 e2e 的既有紅已在建單時列為 ①，dev 確認屬實）。
 
 ### File List
+
+- `ux-design.pen`（F11-M `PXB0z`：`n79vZ`／`p8No2j`／`Qp7Cm`／`Ah8fN`／`J79fp`；新註記 `ooxDh`）
+- `_bmad-output/pen-tokens.json`
+- `_bmad-output/screenshots/flow-f-subtitle-v2/f11-m-v2.png`
+- `apps/web/src/components/subtitle/GenerationWorkspaceV2.tsx`
+- `apps/web/src/components/subtitle/GenerationWorkspaceV2.spec.tsx`
+- `apps/web/src/components/subtitle/GenerationWorkspaceContainer.spec.tsx`
+- `apps/web/src/components/activity/ActivityHub.tsx`
+- `apps/web/src/components/activity/ActivityHub.spec.tsx`
+- `tests/e2e/generation-workspace-mobile.spec.ts`（新）
+- `tests/support/helpers/generation-workspace-stubs.ts`（新）
+- `tests/e2e/generation-workspace.spec.ts`（只改 import＋第 5 條 viewport<1024 skip）
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/implementation-artifacts/dsr-6f-4-workspace-mobile.md`
 
 ## Change Log
 
 - 2026-09-21 — 建單（SM Bob，create-story；main `aee223d0`）。
 - 2026-09-21 — 建單後對抗驗證（fresh-context 唯讀代理）：5 CRITICAL＋7 SHOULD FIX＋6 NIT，**全部併入**。最重要的五條：① `ActivityHub.spec.tsx` 把工作區 mock 掉了，原本寫的返回鍵測試寫不出來 → 改成擴充 stub＋容器 spec 驗透傳；② 替麵包屑加 `order` 會把它丟到總覽卡後面 → 改成標題列 `order-first`；③ 640 寬時側欄會出現，`x=32` 是錯的 → 一律量相對於根節點；④ `boundingBox()` 量不到 `::after`，「命中區寬 358」不可能過 → 改用點擊文字驗；⑤ `scrollIntoViewIfNeeded` 會把底部列停在分頁列底下 → 改用 `window.scrollTo` 到頁尾。另外：進度條寬是 328 不是 330（邊框）；`SseChip` 不准包一層；重新展開要重設 `pinnedRef`；既有 e2e 第 5 條的 skip 改成看 viewport 寬度（不誤傷 firefox）；`ActivityHub` 今天沒有 `useNavigate`，給出確切寫法。
+- 2026-09-21 — dev-story（Amelia）：Task 1–6 全部完成。稿改 F11-M；程式碼全 `max-sm:`／`sm:hidden`＋`onBack`＋`open`；unit +11、e2e +5、mutation 14/14 紅；閘門全綠（web 3974/3974）。Status → review。
+- 2026-09-21 — /ship 對抗式 CR（fresh-context 唯讀代理）：**0 HIGH／2 MEDIUM／7 LOW，修 8、記 1**。M1「收合且沒連線時頁尾那一列讓出間距」沒有任何測試守（14 項 mutation 清單漏了它）→ 補 testid `workspace-log-footer-row`＋unit，mutation 確認會紅；M2 e2e 每次都往 `test-results/` 寫三張整頁截圖（CI 每次都會上傳，本機下次跑就被清掉）→ 改成 `DSR_SHOTS=1` 才拍、寫到 `testInfo.outputPath()`；L3 還沒有事件就展開會畫一個空框 → `max-sm:empty:hidden`；L4 收合鈕的名稱「即時活動事件清單」與它控制的清單「生成事件日誌」用詞不同 → 改成畫面上看得到的「即時活動」；L5 「恰好一個 aria-live」只在收合時量 → 展開時也量；L6 標題與麵包屑之間的 2px、頭區到身體的 14px 沒量 → e2e 補上（拿掉 `-mt-3` 會紅，已確認）；L7 沒有 SSE 膠囊時（終態）總覽卡沒量 → 達上限那條 e2e 補兩行；L8 `type Route` 從不匯出它的模組 import → 改從 `@playwright/test`。**不修（記錄）**：L9 平板在收合狀態下從 ≥640 轉到 <640 再轉回來會丟掉清單的捲動位置，要等下一列事件才回到底——批次已結束就不會回來；屬於 640 兩側來回的邊角，併入 `disc-2026-09-workspace-log-uncapped-640-1023` 一起看。CR 後：unit 56/56（該檔）、e2e 兩支 chromium ×2 20/20。⚠️ 承上，Completion Notes 寫的 `test-results/dsr-6f-4/` 三張截圖已改為 `DSR_SHOTS=1` 時才產生。
