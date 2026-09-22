@@ -1,6 +1,6 @@
 # Story DSR.4b-1：手機上的「下載」頁排序改成從底部滑上來的抽屜，膠囊列變成一行可以橫向捲
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -361,3 +361,4 @@ Claude Opus 5 (1M context) — `claude-opus-5[1m]`（dev-story, Amelia，2026-09
 - 2026-09-22 — Task 4：`DownloadsBrowseV2` 標題列排序鈕（`sm:hidden`、跟著 `showToolbar`）、抽屜走既有 `handleSortOption`、select 手機藏（留在 DOM）、膠囊列手機單行捲動。
 - 2026-09-22 — Task 5：夾具 `downloads-mobile-sheets/sort`＋darwin 基準線（連跑三次一致）、手機 e2e 3 條（`--repeat-each=3` 綠）、舊 e2e 表格那一條加 viewport skip（先在 main 版本確認 `mobile-chrome` 本來就紅）、mutation check unit 24／24＋e2e 5／5 全紅、Step 9 對照表；Status → review。
 - 2026-09-22 — /ship 對抗式 CR：吸收 14 項（轉橫向關抽屜＋焦點後備、`useIsPhone` 改 rem、`ui/Sheet` 加 `description`、排序鈕 `aria-expanded`、第一列補 tab 位、選中膠囊捲進列內、e2e 競態與五條弱斷言），另立 `disc-2026-09-sort-sheet-radiogroup-keyboard-apg`、`disc-2026-09-downloads-e2e-stub-duplication`，補記把手單。
+- 2026-09-22 — 合併：PR #502（squash `52444ef8`），`-linux` 基準線由 bootstrap PR #503 補上；PR 上 CI 全綠（Tests／E2E 4 片／Visual diff 4 片／Docker／Lint）。Status → done。
