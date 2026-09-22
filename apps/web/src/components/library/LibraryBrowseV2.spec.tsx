@@ -10,6 +10,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import type { LibraryItem } from '../../types/library';
+import { LIBRARY_GRID_COLS } from './libraryGridCols';
 
 const h = vi.hoisted(() => ({
   infinite: {} as Record<string, unknown>,
@@ -403,5 +404,45 @@ describe('LibraryBrowseV2 — phone sort/filter entry (dsr-1b-b)', () => {
   it("[P1] the page heading is a programmatic focus target (tabIndex -1) for the sheet's fallback", async () => {
     renderBrowse('/library');
     expect(await screen.findByTestId('library-page-title')).toHaveAttribute('tabindex', '-1');
+  });
+});
+
+// dsr-1b-c: grid ↔ skeleton parity is enforced by importing the same constant, and the
+// phone title steps down one size (DESIGN.md: Subtitle 20 → 18).
+describe('LibraryBrowseV2 — phone screens (dsr-1b-c)', () => {
+  const tokens = (el: Element) => (el.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
+  const colTokens = (cls: string) => cls.split(/\s+/).filter((t) => t.includes('grid-cols'));
+
+  beforeEach(() => {
+    h.infinite = infinite({ items: [movie('m1', 'A')], totalItems: 1 });
+  });
+
+  it('[P0] the grid carries exactly LIBRARY_GRID_COLS.railOpen (rail open) — same table as the skeleton', async () => {
+    renderBrowse();
+    const grid = await screen.findByTestId('library-grid-v2');
+    expect(tokens(grid).filter((t) => t.includes('grid-cols'))).toEqual(
+      colTokens(LIBRARY_GRID_COLS.railOpen)
+    );
+    expect(tokens(grid)).toEqual(expect.arrayContaining(LIBRARY_GRID_COLS.gap.split(/\s+/)));
+  });
+
+  it('[P0] while loading with the rail collapsed, the skeleton is told so', async () => {
+    h.infinite = infinite({ isLoading: true });
+    localStorage.setItem('vido:library:rail-collapsed', '1');
+    try {
+      renderBrowse();
+      const sk = await screen.findByTestId('library-grid-skeleton');
+      expect(tokens(sk).filter((t) => t.includes('grid-cols'))).toEqual(
+        colTokens(LIBRARY_GRID_COLS.railCollapsed)
+      );
+    } finally {
+      localStorage.removeItem('vido:library:rail-collapsed');
+    }
+  });
+
+  it('[P1] the page title steps down to text-lg below sm and keeps text-xl above', async () => {
+    renderBrowse();
+    const h1 = await screen.findByTestId('library-page-title');
+    expect(tokens(h1)).toEqual(expect.arrayContaining(['max-sm:text-lg', 'text-xl']));
   });
 });

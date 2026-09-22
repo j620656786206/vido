@@ -22,7 +22,7 @@ export function EmptyNoFolder() {
       <div className="flex items-center gap-3">
         <Link
           to="/settings/scanner"
-          className="rounded-lg bg-[var(--accent-primary)] px-5 py-2.5 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)]"
+          className="max-sm:inline-flex max-sm:min-h-11 max-sm:items-center rounded-lg bg-[var(--accent-primary)] px-5 py-2.5 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)]"
           data-testid="empty-no-folder-libraries-btn"
         >
           設定媒體資料夾
@@ -34,7 +34,7 @@ export function EmptyNoFolder() {
             first-run alternative. */}
         <Link
           to="/setup"
-          className="rounded-lg border border-[var(--border-subtle)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--text-muted)] hover:text-[var(--text-primary)]"
+          className="max-sm:inline-flex max-sm:min-h-11 max-sm:items-center rounded-lg border border-[var(--border-subtle)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--text-muted)] hover:text-[var(--text-primary)]"
           data-testid="empty-no-folder-wizard-btn"
         >
           開啟設定精靈

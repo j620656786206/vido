@@ -323,3 +323,125 @@ test.describe('媒體庫 — phone sort+filter sheet @e2e @library-mobile', () =
     await expect(rail.getByTestId('filter-subtitle-not_searched')).toHaveText('還沒搜尋');
   });
 });
+
+// dsr-1b-c — the four phone screens: skeleton ↔ grid parity, the empty-library copy, the
+// unmatched filter state (E4-M is A3p-M + one chip), and the title size on both sides of sm.
+test.describe('媒體庫 — phone screens @e2e @library-mobile', () => {
+  test.beforeEach(async ({ page: _page }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== 'chromium',
+      'pixel-exact geometry — desktop chromium project only'
+    );
+  });
+
+  test('[P0] 390 — the skeleton is the grid: first two rows land where the cards land, tiles as tall as cards', async ({
+    page,
+  }) => {
+    await page.setViewportSize(PHONE);
+    await stubLibraryBaseline(page);
+    // Hold the list for a moment so the skeleton is measurable before the grid replaces it.
+    // RegExp, not a glob: a glob `*` stops at `/` and `?` is literal, so `/library?*` would
+    // miss a bare `/library` — and a miss here means a real network call and a silent hang.
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((r) => (release = r));
+    await page.route(/\/api\/v1\/library(\?|$)/, async (route) => {
+      await gate;
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: {
+            items: [...ALL, ...ALL],
+            page: 1,
+            page_size: 36,
+            total_items: 6,
+            total_pages: 1,
+          },
+        }),
+      });
+    });
+    await page.goto('/library');
+    const skeleton = page.getByTestId('library-grid-skeleton');
+    await expect(skeleton).toBeVisible({ timeout: 15000 });
+    const tiles = skeleton.locator(':scope > div');
+    let t: Box[] = [];
+    let p0: Box = { x: 0, y: 0, width: 0, height: 0 };
+    try {
+      t = await Promise.all([0, 1, 2].map((i) => box(tiles.nth(i))));
+      p0 = await box(tiles.nth(0).locator(':scope > div').first());
+    } finally {
+      release();
+    }
+    const grid = page.getByTestId('library-grid-v2');
+    await expect(grid).toBeVisible();
+    const cards = grid.locator(':scope > *');
+    await expect(cards).toHaveCount(6);
+    const c = await Promise.all([0, 1, 2].map((i) => box(cards.nth(i))));
+    const poster0 = await box(cards.nth(0).locator('[class*="aspect-"]').first());
+
+    // Row 1: same x, same width, same top, same TILE height (the vertical promise).
+    for (const i of [0, 1]) {
+      expect(Math.abs(c[i].x - t[i].x)).toBeLessThanOrEqual(1);
+      expect(Math.abs(c[i].width - t[i].width)).toBeLessThanOrEqual(1);
+      expect(Math.abs(c[i].y - t[i].y)).toBeLessThanOrEqual(1);
+      expect(Math.abs(c[i].height - t[i].height)).toBeLessThanOrEqual(2);
+    }
+    // Row 2 starts where the skeleton's row 2 started — the accumulated offset is what jumps.
+    expect(Math.abs(c[2].y - t[2].y)).toBeLessThanOrEqual(2);
+    expect(Math.abs(poster0.height - p0.height)).toBeLessThanOrEqual(2);
+  });
+
+  test('[P0] 390 — empty library says what A1p-M says, CTAs are 44px tall', async ({ page }) => {
+    await page.setViewportSize(PHONE);
+    // No media library configured → the classifier's "no folder" state (EmptyNoFolder).
+    await stubLibraryBaseline(page, undefined, { libraries: 0 });
+    await stubLibraryList(page, () => ({ items: [], totalItems: 0 }));
+    await page.goto('/library');
+    const empty = page.getByTestId('empty-no-folder');
+    await expect(empty).toBeVisible({ timeout: 15000 });
+    // Verbatim from ux-design.pen A1p-M `gv7L2` / `IOLCg` / `XIYpj` / `QdRwp` (dsr-1b-c AC #1).
+    await expect(empty).toContainText('指定一個媒體資料夾即可開始');
+    await expect(empty).toContainText('Vido 會掃描資料夾中的影片並自動匹配 TMDb 資訊');
+    for (const id of ['empty-no-folder-libraries-btn', 'empty-no-folder-wizard-btn']) {
+      const b = await box(page.getByTestId(id));
+      expect(Math.round(b.height)).toBeGreaterThanOrEqual(44);
+    }
+    await expect(page.getByTestId('empty-no-folder-libraries-btn')).toHaveText('設定媒體資料夾');
+    await expect(page.getByTestId('empty-no-folder-wizard-btn')).toHaveText('開啟設定精靈');
+    // The empty screen has no active-filter chip row.
+    await expect(page.getByText('清除全部篩選')).toHaveCount(0);
+  });
+
+  test('[P0] 390 — E4: ?unmatched=true is the grid plus one chip — no 掃描結果 heading, count in the title row', async ({
+    page,
+  }) => {
+    await page.setViewportSize(PHONE);
+    await openLibrary(page, '/library?unmatched=true');
+    await expect(page.getByRole('button', { name: '移除未匹配篩選' })).toBeVisible();
+    await expect(page.getByText('掃描結果')).toHaveCount(0);
+    await expect(page.getByTestId('library-result-count')).toHaveText('3 部');
+    // The chip row sits directly under the title row, above the grid.
+    const [title, chip, grid] = await Promise.all([
+      box(page.getByTestId('library-page-title')),
+      box(page.getByRole('button', { name: '移除未匹配篩選' })),
+      box(page.getByTestId('library-grid-v2')),
+    ]);
+    expect(chip.y).toBeGreaterThan(bottom(title));
+    expect(grid.y).toBeGreaterThan(bottom(chip));
+  });
+
+  test('[P1] 390 vs 640 — the title steps down to 18px on a phone and is 20px from sm up', async ({
+    page,
+  }) => {
+    await page.setViewportSize(PHONE);
+    await openLibrary(page);
+    const size = () =>
+      page.getByTestId('library-page-title').evaluate((el) => window.getComputedStyle(el).fontSize);
+    expect(await size()).toBe('18px');
+    await page.setViewportSize(AT_BREAKPOINT);
+    await expect.poll(size).toBe('20px');
+    await page.setViewportSize(AT_RAIL);
+    await expect.poll(size).toBe('20px');
+  });
+});

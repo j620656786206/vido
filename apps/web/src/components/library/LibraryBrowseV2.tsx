@@ -2,7 +2,7 @@
 // FILENAME (vido-export-<type>-<date>.json) — user-facing file naming, never
 // rendered UI state, so no fixture can flake on it (Murat: test-architecture call,
 // same read the legacy LibraryPage ships).
-// Design ref: ux-design.pen Screen A3p-D (LcHBs) · A4p-D (b1H71g) · A6p-M (Bz0YN)
+// Design ref: ux-design.pen Screen A3p-D (LcHBs) · A4p-D (b1H71g) · A1p-M (BfGVZ) · A3p-M (h1v1U6) · A6p-M (Bz0YN) · E4-M (n7jVF)
 /**
  * v2 Browse experience (UX Redesign Phase 2 — UX2-2). Rendered by the /library
  * route (sole render since ux3-cutover-3). One component serves all three type views
@@ -38,6 +38,7 @@ import { LibraryListRowV2 } from './LibraryListRowV2';
 import { LibraryFilterSheetV2 } from './LibraryFilterSheetV2';
 import { LibraryFilterRail } from './LibraryFilterRail';
 import { LibraryGridSkeletonV2, LibraryNoResultV2, LibraryErrorV2 } from './LibraryStatesV2';
+import { LIBRARY_GRID_COLS } from './libraryGridCols';
 import { yearFilterLabel } from './FilterPanel';
 import {
   joinSubtitleStatusCsv,
@@ -515,9 +516,10 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isSelectionMode, exitSelectionMode, handleSelectAll]);
   // ux3-0-7: grid reflows when the desktop rail takes the left column (lg+).
+  // dsr-1b-c: one table shared with LibraryGridSkeletonV2 — see libraryGridCols.ts.
   const gridColsClass = railCollapsed
-    ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'
-    : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5';
+    ? LIBRARY_GRID_COLS.railCollapsed
+    : LIBRARY_GRID_COLS.railOpen;
 
   return (
     <div className="px-4 py-6 sm:px-6">
@@ -543,7 +545,8 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
             ref={headingRef}
             tabIndex={-1}
             data-testid="library-page-title"
-            className="text-xl font-semibold text-[var(--text-primary)] outline-none"
+            // A3p-M: the phone title is H4 18 (DESIGN.md — headings step down one size below sm).
+            className="text-xl font-semibold text-[var(--text-primary)] outline-none max-sm:text-lg"
           >
             {TYPE_TITLE[currentType]}
           </h1>
@@ -736,7 +739,7 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
           {isError ? (
             <LibraryErrorV2 code={(error as { code?: string })?.code} onRetry={() => refetch()} />
           ) : isLoading ? (
-            <LibraryGridSkeletonV2 />
+            <LibraryGridSkeletonV2 railCollapsed={railCollapsed} />
           ) : isEmpty ? (
             hasActiveFilters ? (
               <LibraryNoResultV2
@@ -752,14 +755,18 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
                   itemsCount: 0,
                   isLoading: qbtConfig.isLoading || mediaLibraries.isLoading,
                 });
-                if (state === 'loading') return <LibraryGridSkeletonV2 />;
+                if (state === 'loading')
+                  return <LibraryGridSkeletonV2 railCollapsed={railCollapsed} />;
                 if (state === 'no-qbt') return <EmptyNoQBT />;
                 if (state === 'no-folder') return <EmptyNoFolder />;
                 return <EmptyReadyForScan />;
               })()
             )
           ) : view === 'grid' ? (
-            <div data-testid="library-grid-v2" className={`grid gap-3 md:gap-4 ${gridColsClass}`}>
+            <div
+              data-testid="library-grid-v2"
+              className={`grid ${LIBRARY_GRID_COLS.gap} ${gridColsClass}`}
+            >
               {display.map((d) => (
                 <PosterCardV2
                   key={`${d.type}-${d.id}`}
