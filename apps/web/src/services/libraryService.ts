@@ -73,6 +73,7 @@ export const libraryService = {
     if (params.yearMin) searchParams.set('year_min', String(params.yearMin));
     if (params.yearMax) searchParams.set('year_max', String(params.yearMax));
     if (params.unmatched) searchParams.set('unmatched', 'true');
+    if (params.subtitleStatus) searchParams.set('subtitle_status', params.subtitleStatus);
 
     const qs = searchParams.toString();
     return fetchApi<LibraryListResponse>(`/library${qs ? `?${qs}` : ''}`);
@@ -94,7 +95,14 @@ export const libraryService = {
     if (params.type && params.type !== 'all') searchParams.set('type', params.type);
     if (params.sortBy) searchParams.set('sort_by', params.sortBy);
     if (params.sortOrder) searchParams.set('sort_order', params.sortOrder);
+    // Same filter set as listLibrary — confirmed against [@contract-v1] (Story dsr-1b-a2
+    // AC #1): /library/search applies genres / year / unmatched / subtitle_status too, so
+    // a lit filter pill stays true while you type (disc-2026-09-library-search-ignores-filters).
+    if (params.genres) searchParams.set('genres', params.genres);
+    if (params.yearMin) searchParams.set('year_min', String(params.yearMin));
+    if (params.yearMax) searchParams.set('year_max', String(params.yearMax));
     if (params.unmatched) searchParams.set('unmatched', 'true');
+    if (params.subtitleStatus) searchParams.set('subtitle_status', params.subtitleStatus);
 
     return fetchApi<LibrarySearchResponse>(`/library/search?${searchParams.toString()}`);
   },

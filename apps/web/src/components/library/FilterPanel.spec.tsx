@@ -534,4 +534,83 @@ describe('FilterPanel', () => {
       expect(refetch).toHaveBeenCalled();
     });
   });
+
+  // dsr-1b-b AC #2: the 字幕 section (subtitle_status) walks the same six sync points as
+  // genres — local state, effect sync, selected*, emitInstant, handleApply, handleClear.
+  describe('subtitle status (dsr-1b-b)', () => {
+    it('[P0] instant mode: clicking 缺字幕 emits subtitleStatus ["not_found"]', async () => {
+      const user = userEvent.setup();
+      renderWithProvider(
+        <FilterPanel
+          filters={emptyFilters}
+          mediaType="all"
+          onApply={onApply}
+          onClear={onClear}
+          onTypeChange={onTypeChange}
+          instant
+        />
+      );
+      expect(screen.getByRole('heading', { name: '字幕' })).toBeInTheDocument();
+      await user.click(screen.getByTestId('filter-subtitle-not_found'));
+      expect(onApply).toHaveBeenCalledWith(
+        expect.objectContaining({ subtitleStatus: ['not_found'] })
+      );
+    });
+
+    it('[P0] batch mode: 套用 carries the selection, 重置 clears it', async () => {
+      const user = userEvent.setup();
+      renderWithProvider(
+        <FilterPanel
+          filters={{ ...emptyFilters, subtitleStatus: ['found'] }}
+          mediaType="all"
+          onApply={onApply}
+          onClear={onClear}
+          onTypeChange={onTypeChange}
+        />
+      );
+      expect(screen.getByTestId('filter-subtitle-found')).toHaveAttribute('aria-pressed', 'true');
+      await user.click(screen.getByTestId('filter-subtitle-not_found'));
+      await user.click(screen.getByTestId('filter-apply'));
+      expect(onApply).toHaveBeenLastCalledWith(
+        expect.objectContaining({ subtitleStatus: ['found', 'not_found'] })
+      );
+      await user.click(screen.getByTestId('filter-reset'));
+      expect(onClear).toHaveBeenCalled();
+      await user.click(screen.getByTestId('filter-apply'));
+      expect(onApply.mock.calls.at(-1)?.[0].subtitleStatus).toBeUndefined();
+    });
+
+    it('[P1] the three chips read from the one options table, in order', () => {
+      renderWithProvider(
+        <FilterPanel
+          filters={emptyFilters}
+          mediaType="all"
+          onApply={onApply}
+          onClear={onClear}
+          onTypeChange={onTypeChange}
+        />
+      );
+      const labels = ['有字幕', '缺字幕', '還沒搜尋'];
+      const chips = ['found', 'not_found', 'not_searched'].map((v) =>
+        screen.getByTestId(`filter-subtitle-${v}`)
+      );
+      chips.forEach((c, i) => expect(c).toHaveTextContent(labels[i]));
+    });
+
+    it('[P1] hideTypeChips removes 全部/電影/影集 (phone sheet: the page IS the type)', () => {
+      renderWithProvider(
+        <FilterPanel
+          filters={emptyFilters}
+          mediaType="all"
+          onApply={onApply}
+          onClear={onClear}
+          onTypeChange={onTypeChange}
+          hideTypeChips
+        />
+      );
+      expect(screen.queryByTestId('filter-type-all')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('filter-type-movie')).not.toBeInTheDocument();
+      expect(screen.getByTestId('filter-subtitle-found')).toBeInTheDocument();
+    });
+  });
 });

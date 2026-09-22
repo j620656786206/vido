@@ -5,13 +5,17 @@ import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { SortField, SortOrder } from '../../types/library';
 
-interface SortOption {
+export interface SortOption {
   field: SortField;
   label: string;
   defaultOrder: SortOrder;
 }
 
-const SORT_OPTIONS: SortOption[] = [
+/**
+ * The one list of sort options. Exported (dsr-1b-b) so the phone sheet renders the
+ * SAME four, in the same words — it never keeps a copy of its own.
+ */
+export const SORT_OPTIONS: SortOption[] = [
   { field: 'created_at', label: '新增日期', defaultOrder: 'desc' },
   { field: 'title', label: '標題', defaultOrder: 'asc' },
   { field: 'release_date', label: '年份', defaultOrder: 'desc' },

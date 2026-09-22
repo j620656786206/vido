@@ -688,4 +688,51 @@ describe('libraryService', () => {
       expect(result.numberOfSeasons).toBe(3);
     });
   });
+
+  // dsr-1b-b AC #2 — confirmed against [@contract-v1] (Story dsr-1b-a AC #1) and
+  // [@contract-v1] (Story dsr-1b-a2 AC #1): list and search send the same filter set.
+  describe('subtitle_status filter param (dsr-1b-b)', () => {
+    const ok = () =>
+      mockSuccessResponse({ items: [], page: 1, pageSize: 20, totalItems: 0, totalPages: 0 });
+
+    it('[P0] listLibrary sends subtitleStatus as subtitle_status csv', async () => {
+      mockFetch.mockResolvedValue(ok());
+      await libraryService.listLibrary({ subtitleStatus: 'not_found,not_searched' });
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toContain('subtitle_status=not_found%2Cnot_searched');
+    });
+
+    it('[P0] listLibrary omits subtitle_status when empty', async () => {
+      mockFetch.mockResolvedValue(ok());
+      await libraryService.listLibrary({ subtitleStatus: '' });
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).not.toContain('subtitle_status');
+    });
+
+    it('[P0] searchLibrary sends the same filter set as listLibrary', async () => {
+      mockFetch.mockResolvedValue(
+        mockSuccessResponse({
+          results: [],
+          moviesPagination: null,
+          seriesPagination: null,
+          totalCount: 0,
+        })
+      );
+      await libraryService.searchLibrary('駭客', {
+        genres: '科幻',
+        yearMin: 1999,
+        yearMax: 2003,
+        unmatched: true,
+        subtitleStatus: 'not_found',
+      });
+      const url = new URL(mockFetch.mock.calls[0][0] as string, 'http://x');
+      expect(url.pathname).toMatch(/\/library\/search$/);
+      expect(url.searchParams.get('q')).toBe('駭客');
+      expect(url.searchParams.get('genres')).toBe('科幻');
+      expect(url.searchParams.get('year_min')).toBe('1999');
+      expect(url.searchParams.get('year_max')).toBe('2003');
+      expect(url.searchParams.get('unmatched')).toBe('true');
+      expect(url.searchParams.get('subtitle_status')).toBe('not_found');
+    });
+  });
 });

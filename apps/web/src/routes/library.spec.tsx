@@ -42,6 +42,8 @@ vi.mock('../hooks/useLibrary', () => ({
   useMovieStats: () => ({ data: { unmatchedCount: 0 } }),
   useSeriesStats: () => ({ data: { unmatchedCount: 0 } }),
   useLibraryGenres: () => ({ data: [] }),
+  // dsr-1b-b: the sort+filter sheet's 「套用篩選 · N 部」 preview query.
+  useLibraryList: () => ({ data: undefined, isPending: false, isError: false }),
   useBatchDelete: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useBatchReparse: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useBatchExport: () => ({ mutateAsync: vi.fn(), isPending: false }),

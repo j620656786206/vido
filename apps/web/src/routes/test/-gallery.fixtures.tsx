@@ -177,6 +177,10 @@ import { ExploreBlock } from '../../components/homepage/ExploreBlock';
 import { ExploreBlocksList } from '../../components/homepage/ExploreBlocksList';
 import { LearnedPatternsSettings } from '../../components/learning/LearnedPatternsSettings';
 import { FilterPanel } from '../../components/library/FilterPanel';
+import {
+  LibraryFilterSheetV2,
+  sheetCountParams,
+} from '../../components/library/LibraryFilterSheetV2';
 import { LibraryGrid } from '../../components/library/LibraryGrid';
 import { RecentlyAdded } from '../../components/library/RecentlyAdded';
 import { ManualSearchDialog } from '../../components/manual-search/ManualSearchDialog';
@@ -3076,6 +3080,49 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         // load → variable FilterPanel height → flaky focus baseline on the Linux bootstrap.
         queryKey: libraryKeys.genres(),
         data: ['動作', '劇情', '喜劇', '科幻', '驚悚'],
+      },
+    ],
+  },
+  {
+    // dsr-1b-b — A6p-M: the phone sort+filter sheet, a Base UI Portal photographed in a
+    // 390×844 viewport (same recipe as downloads-mobile-sheets/sort). Both queries the
+    // sheet fires are seeded: the genre chips and the footer's 「套用篩選 · N 部」 count —
+    // the count key is built by the SAME sheetCountParams the component uses, so it
+    // cannot drift into a cache miss that hits the backend and moves the footer text.
+    id: 'library-mobile-sheets/sort-filter',
+    label: 'library/LibraryFilterSheetV2 (A6p-M — 手機 viewport 390×844，排序＋篩選抽屜)',
+    component: LibraryFilterSheetV2,
+    props: {
+      open: true,
+      onOpenChange: noop,
+      sortBy: 'created_at',
+      sortOrder: 'desc',
+      onSortChange: noop,
+      filters: { genres: ['動畫'], subtitleStatus: ['not_found'] } satisfies FilterValues,
+      mediaType: 'movie' as LibraryMediaType,
+      unmatchedCount: 3,
+      onApply: noop,
+      onClear: noop,
+      onTypeChange: noop,
+    },
+    penNode: 'Bz0YN', // Screen A6p-M
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+    seedQueries: [
+      {
+        queryKey: libraryKeys.genres(),
+        data: ['動畫', '動作', '劇情', '科幻', '愛情', '懸疑', '紀錄片'],
+      },
+      {
+        queryKey: libraryKeys.list(
+          sheetCountParams(
+            { genres: ['動畫'], subtitleStatus: ['not_found'] },
+            'movie',
+            'created_at',
+            'desc'
+          )
+        ),
+        data: { items: [], page: 1, pageSize: 1, totalItems: 128, totalPages: 128 },
       },
     ],
   },

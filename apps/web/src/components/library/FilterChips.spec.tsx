@@ -209,4 +209,25 @@ describe('FilterChips', () => {
     await userEvent.click(clearButton);
     expect(onClearAll).toHaveBeenCalled();
   });
+
+  // dsr-1b-b AC #2: one chip per selected subtitle status, label from the shared table.
+  it('[P0] renders a 缺字幕 chip for subtitleStatus and removes that one value', async () => {
+    const user = userEvent.setup();
+    const onRemoveSubtitleStatus = vi.fn();
+    render(
+      <FilterChips
+        filters={{ genres: [], subtitleStatus: ['not_found', 'found'] }}
+        onRemoveGenre={onRemoveGenre}
+        onRemoveYearMin={onRemoveYearMin}
+        onRemoveYearMax={onRemoveYearMax}
+        onRemoveUnmatched={onRemoveUnmatched}
+        onRemoveSubtitleStatus={onRemoveSubtitleStatus}
+        onClearAll={onClearAll}
+      />
+    );
+    expect(screen.getByText('缺字幕')).toBeInTheDocument();
+    expect(screen.getByText('有字幕')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '移除缺字幕篩選' }));
+    expect(onRemoveSubtitleStatus).toHaveBeenCalledWith('not_found');
+  });
 });

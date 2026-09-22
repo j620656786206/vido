@@ -253,6 +253,11 @@ export interface LibraryListParams {
   yearMin?: number;
   yearMax?: number;
   unmatched?: boolean;
+  /**
+   * Comma-joined backend `subtitle_status` values (same csv convention as `genres`) —
+   * confirmed against [@contract-v1] (Story dsr-1b-a AC #1). Empty/undefined = no filter.
+   */
+  subtitleStatus?: string;
 }
 
 export interface MediaStats {

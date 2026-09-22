@@ -15,9 +15,10 @@ interface LibrarySearchParams {
   yearMax?: number;
   unmatched?: boolean;
   /**
-   * Forward-compatible deep-link target for the batch-subtitle "查看未找到項目"
-   * link (Story 8-11 AC #6). Preserved here so the URL is valid; backend list
-   * filtering by subtitle_status is a tracked follow-up (not yet wired).
+   * Comma-joined backend `subtitle_status` values. The batch-subtitle 「查看未找到項目」
+   * link (Story 8-11 AC #6) lands here as `?subtitleStatus=not_found`; since dsr-1b-a
+   * (backend [@contract-v1]) + dsr-1b-b (this wiring) it really filters. A string enum
+   * guard is Rule-26 safe: a status can never be all digits.
    */
   subtitleStatus?: string;
   /**
