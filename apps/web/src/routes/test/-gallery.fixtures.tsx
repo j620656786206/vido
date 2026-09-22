@@ -177,6 +177,7 @@ import { ExploreBlock } from '../../components/homepage/ExploreBlock';
 import { ExploreBlocksList } from '../../components/homepage/ExploreBlocksList';
 import { LearnedPatternsSettings } from '../../components/learning/LearnedPatternsSettings';
 import { FilterPanel } from '../../components/library/FilterPanel';
+import { LibraryGridSkeletonV2 } from '../../components/library/LibraryStatesV2';
 import {
   LibraryFilterSheetV2,
   sheetCountParams,
@@ -3125,6 +3126,41 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         data: { items: [], page: 1, pageSize: 1, totalItems: 128, totalPages: 128 },
       },
     ],
+  },
+  {
+    // dsr-1b-c — A2p-D: the desktop skeleton had no baseline; it now shares the grid's
+    // column table (libraryGridCols.ts), so this pins lg 3 / xl 4 instead of the old 4 / 6.
+    id: 'library-grid-skeleton',
+    label: 'library/LibraryGridSkeletonV2 (A2p-D — 桌機骨架，欄數＝網格)',
+    component: LibraryGridSkeletonV2,
+    props: { count: 8 },
+    penNode: 'EsoIv', // Screen A2p-D
+    statesOnly: ['default'],
+    // 1200 like the other desktop boxes: the column classes are viewport breakpoints, so the
+    // box width does not pick the column count — and 1280 would sit exactly on `xl` where a
+    // 15px scrollbar (Linux CI) vs an overlay one (macOS) would give different baselines.
+    width: 1200,
+  },
+  {
+    // dsr-1b-c — A2p-M: 2 columns, tiles the size of the card (poster 2:3 + two lines). A real
+    // 390 viewport, not a 390 box: the column classes are viewport breakpoints.
+    id: 'library-mobile-screens/skeleton',
+    label: 'library/LibraryGridSkeletonV2 (A2p-M — 手機 390 寬，2 欄骨架)',
+    component: LibraryGridSkeletonV2,
+    props: { count: 6 },
+    penNode: 'qBWQC', // Screen A2p-M
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+  },
+  {
+    // dsr-1b-c — A1p-M: the empty-library copy the phone screen now draws (EmptyNoFolder,
+    // the state a first-run user meets), CTAs at the 44px phone touch height.
+    id: 'library-mobile-screens/empty-no-folder',
+    label: 'library/EmptyNoFolder (A1p-M — 手機 390 寬，空片庫)',
+    component: EmptyNoFolder,
+    penNode: 'BfGVZ', // Screen A1p-M
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
   },
   {
     id: 'library-library-grid',

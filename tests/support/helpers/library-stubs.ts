@@ -49,10 +49,18 @@ export function paginated(items: unknown[], totalItems = items.length) {
 
 /**
  * Everything the /library page asks for besides the list: qBittorrent config (so the
- * empty-state classifier does not think qBT is missing), one media library, genres,
- * stats. Register per-test overrides BEFORE calling this — first match wins.
+ * empty-state classifier does not think qBT is missing), `opts.libraries` media
+ * libraries (default 1; 0 → the EmptyNoFolder state), genres, stats.
+ *
+ * Playwright tries routes newest-first (`page.route` unshifts), so to override one of
+ * these register your own route AFTER calling this helper.
  */
-export async function stubLibraryBaseline(page: Page, genres = ['動畫', '科幻', '劇情']) {
+export async function stubLibraryBaseline(
+  page: Page,
+  genres = ['動畫', '科幻', '劇情'],
+  opts: { libraries?: number } = {}
+) {
+  const libraryCount = opts.libraries ?? 1;
   await page.route(`${ROUTE_API}/settings/qbittorrent`, (route) =>
     route.fulfill(
       jsonOk({ host: 'http://localhost:8080', username: 'admin', basePath: '', configured: true })
@@ -61,19 +69,17 @@ export async function stubLibraryBaseline(page: Page, genres = ['動畫', '科�
   await page.route(`${ROUTE_API}/libraries`, (route) =>
     route.fulfill(
       jsonOk({
-        libraries: [
-          {
-            id: 'lib-1',
-            name: 'Movies',
-            contentType: 'movie',
-            autoDetect: false,
-            sortOrder: 0,
-            createdAt: '2026-05-01T00:00:00Z',
-            updatedAt: '2026-05-01T00:00:00Z',
-            paths: [],
-            mediaCount: 3,
-          },
-        ],
+        libraries: Array.from({ length: libraryCount }, (_, i) => ({
+          id: `lib-${i + 1}`,
+          name: 'Movies',
+          contentType: 'movie',
+          autoDetect: false,
+          sortOrder: 0,
+          createdAt: '2026-05-01T00:00:00Z',
+          updatedAt: '2026-05-01T00:00:00Z',
+          paths: [],
+          mediaCount: 3,
+        })),
       })
     )
   );
@@ -109,7 +115,8 @@ export async function stubLibraryBaseline(page: Page, genres = ['動畫', '科�
 /**
  * Serves the list. `pick` decides what each request gets from its URL (so a
  * `subtitle_status=not_found` request can return fewer rows than the unfiltered one).
- * Returns the recorded request URLs. Register AFTER the more specific /library/* stubs.
+ * Returns the recorded request URLs. Both `/library?…` and bare `/library` are covered:
+ * a glob `*` stops at `/`, so neither pattern can swallow `/library/genres` etc.
  */
 export async function stubLibraryList(
   page: Page,

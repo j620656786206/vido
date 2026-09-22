@@ -1,6 +1,6 @@
 # Story DSR.1b-c：手機媒體庫的四張畫面（空白／骨架／網格／未匹配）與設計稿雙向對齊——稿不再畫產品沒有的東西，骨架不再跟網格對不齊
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -101,11 +101,22 @@ so that 畫面不會在載完的那一刻跳一下，我也不會被稿上根本
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — 設計稿：A1p-M 文案＋刪 chip 列、A2p-M 骨架尺寸、A3p-M 兩層頂列＋生效膠囊＋改名、E4-M 重畫、規格註記（AC: #1）**
-- [ ] **Task 2 — 骨架與網格共用欄數常數、骨架格子形狀（AC: #2, #5）**
-- [ ] **Task 3 — 手機 h1 字級、CTA 觸控高、網格 gap 核對、Rule 21 檔頭（AC: #3, #5）**
-- [ ] **Task 4 — 三個視覺夾具、e2e 四條、mutation check、收尾（AC: #4, #5, #6, #7）**
-  - [ ] dev-story Step 9：`a1p-m`／`a2p-m`／`a3p-m`／`e4-m`
+- [x] **Task 1 — 設計稿：A1p-M 文案＋刪 chip 列、A2p-M 骨架尺寸、A3p-M 兩層頂列＋生效膠囊＋改名、E4-M 重畫、規格註記（AC: #1）**
+- [x] **Task 2 — 骨架與網格共用欄數常數、骨架格子形狀（AC: #2, #5）**
+- [x] **Task 3 — 手機 h1 字級、CTA 觸控高、網格 gap 核對、Rule 21 檔頭（AC: #3, #5）**
+- [x] **Task 4 — 三個視覺夾具、e2e 四條、mutation check、收尾（AC: #4, #5, #6, #7）**
+  - [x] dev-story Step 9：`a1p-m`／`a2p-m`／`a3p-m`／`e4-m`
+
+### Review Follow-ups (AI)
+
+<!-- /ship 對抗式 CR（2026-09-22，獨立 context，Opus）— 1 HIGH／3 MEDIUM／1 MEDIUM-LOW／4 LOW；Rule 24 ① 吸收的每一項都有測試。 -->
+
+- [x] [AI-Review][HIGH] 骨架格子比真卡矮約 23px（三條平級 bar vs 卡片的「海報＋文字區塊」盒模型），第二列以後仍會跳，而 e2e 只量海報高（恆真）→ 骨架改成與 `PosterCardV2` 同盒模型：海報＋一個文字區塊（`min-h-[2.75em] text-sm leading-snug` 的標題保留區＋`mt-0.5 font-mono text-[11px]` 行框裡的 60px inline-block）；e2e 改量**格子總高** ±2 與**第二列 y** ±2
+- [x] [AI-Review][MEDIUM] parity e2e 的 gate route 用 glob `/library?*`——`?` 在 Playwright glob 是字面字元、`*` 不跨 `/`，漏掉無 query 的 `/library` 就會直穿真後端 → 改 RegExp `/\/api\/v1\/library(\?|$)/`，量測包 `try/finally` 先 `release()`
+- [x] [AI-Review][MEDIUM] `stubLibraryBaseline` docstring 說「先註冊者贏」，Playwright 1.58 是 `unshift`＝**後註冊者先比對** → 三處註解改成事實
+- [x] [AI-Review][MEDIUM] `library-grid-skeleton` 夾具 `width: 1280` 壓在 viewport 寬與 `xl` 斷點上（Linux 15px 捲軸會退成 3 欄、darwin 4 欄）→ 改 1200（與其他桌機盒寬夾具一致），基準線重拍
+- [x] [AI-Review][LOW] `LibraryBrowseV2` 註解寫 `libraryGrid.ts` → 改 `libraryGridCols.ts`
+- [x] [AI-Review][LOW] 骨架形狀的 unit 測試釘的是舊 DOM（三個平級子元素）→ 改成釘「海報＋文字區塊（2.75em 標題保留＋11px 行框）」的盒模型
 
 ## Dev Notes
 
@@ -181,11 +192,60 @@ tests/visual/…/library-mobile-screens/{skeleton,empty-no-folder}、…/library
 
 ### Agent Model Used
 
+Claude Fable 5.1 — `claude-fable-5-1`（dev-story，Amelia，2026-09-22）
+
 ### Debug Log References
+
+- Pencil：`problems` 68 → **67**（E4-M 第二列不再露半列；A2p-M／A3p-M 第三列刻意的兩處維持）。存檔走選單 Save，磁碟檔 grep 到 `spec-note-dsr-1b-c`／`c-瀑布`／`chip-未比對`／`title-row`／「指定一個媒體資料夾即可開始」；「未看完」「掃描結果」仍在檔案裡是 **E2-M／E3-M／E4-D**（Flow E 其他稿），不在本張範圍。`pen-tokens.json` `penSha256` 與磁碟一致。
+- 匯出：Pencil 回報 chunk 失敗（176/196），但四張目標畫面都有出且逐張目視確認是改後的（A1p-M 新文案／A2p-M 294 高骨架／A3p-M 頂列計數＋生效膠囊／E4-M 一顆膠囊＋42 部）；只 stage 那四張＋`pen-tokens.json`，其餘 `git checkout --`。
+- 🚨 `libraryGrid.ts` 與既有 `LibraryGrid.tsx` 在 macOS 大小寫不敏感檔案系統上互相解析——`LibraryGrid.spec.tsx` 10 條紅、`import './libraryGrid'` 拿到元件 → 改名 **`libraryGridCols.ts`**。
+- 🚨 手機兩個夾具第一版用 `width: 390` 拍出來是 **4 欄**（欄數是 viewport 斷點，不看盒寬；story 🔴 #10 寫錯了）→ 改 `viewport: { width: 390, height: 844 }` 重拍，2 欄。
+- e2e 空片庫那條第一版紅：`stubLibraryBaseline` 給一個媒體庫 → 分類器走 ready-for-scan → 加 `{ libraries: 0 }` 選項。
+- 視覺：`--update-snapshots=missing` 產生 3 張新 darwin 基準（`library-grid-skeleton`、`library-mobile-screens/{skeleton,empty-no-folder}`）；整支只剩既有的 `retry-retry-notifications`。本機仍需 `AI_PROVIDER=claude`＋手動 `NX_DAEMON=false npx nx serve web`。
 
 ### Completion Notes List
 
 - Ultimate context engine analysis completed - comprehensive developer guide created（SM Bob，2026-09-22）
+- **做了什麼（dev-story，2026-09-22）**
+  - **稿（Task 1）**：A1p-M 文案逐字改成 `EmptyNoFolder`（同時把 A1p-D `EhXkr` 少掉的「Vido 」補上）、刪 chip 列、次要連結改「開啟設定精靈」；A2p-M 六張骨架卡 171×294（海報 240）、刪 chip 列；四張頂列都改成「標題＋計數」的 `title-row`（A1p「0 部」／A2p 載入中無計數／A3p「1,284 部」／E4「42 部」）、拿掉搜尋鈕（搜尋在 shell 頂列）、篩選鈕改 `$bg-tertiary`＋`$radius-md`；A3p-M chip 列改成兩顆生效膠囊「動畫 ×」「缺字幕 ×」＋「清除全部篩選」；`y2MDfn` 改名 `c-瀑布`；E4-M 刪「掃描結果」／「42 項未比對」／頁內排序＋篩選鈕，膠囊列改成「未比對 ×」＋「清除全部篩選」，網格 gap 16、卡 171×294，tabbar active 標籤改成與 Flow A 一致；`spec-note-dsr-1b-c`（`nRROg`）。
+  - **欄數（Task 2）**：新檔 `libraryGridCols.ts`（`LIBRARY_GRID_COLS.railOpen`／`.railCollapsed`／`.gap`），`LibraryBrowseV2` 網格與 `LibraryGridSkeletonV2` 都 import；骨架加 `railCollapsed` prop、格子改 2:3 海報＋`h-3 w-full`＋`h-2.5 w-[60px]`；gap 手機 16（`gap-4 sm:gap-3 md:gap-4`，≥640 不變）。
+  - **手機字級／觸控（Task 3）**：`h1` 加 `max-sm:text-lg`（20→18＝稿的 H4 18）；三個空狀態的 CTA `Link` 加 `max-sm:inline-flex max-sm:min-h-11 max-sm:items-center`；Rule 21：`LibraryStatesV2` 補 `A2p-M (qBWQC)`、`LibraryBrowseV2` 補 `A1p-M (BfGVZ) · A3p-M (h1v1U6) · E4-M (n7jVF)`。
+  - **驗證（Task 4）**：夾具 `library-grid-skeleton`（1280）、`library-mobile-screens/skeleton`、`library-mobile-screens/empty-no-folder`（390×844 viewport）；e2e 追加 4 條到 `library-mobile.spec.ts`；`library-stubs.ts` 加 `libraries` 選項。
+- **/ship 對抗式 CR（2026-09-22，獨立 context，Opus；1 HIGH／3 MEDIUM／1 MEDIUM-LOW／4 LOW）**：吸收 6 項（見 Review Follow-ups）；CR 後 `library/`＋`routes/` 407 條綠、e2e 11 條 ×2 ＝ 22／22（含新的格子總高與第二列 y）、visual 三張新基準重拍後整支只剩既有 `retry-retry-notifications`。**沒有照做的**：
+  - MEDIUM-LOW #5 骨架海報 `$bg-tertiary` 但真卡海報底是 `--bg-secondary`（沒封面時會閃一下）——稿（A2p-M `p` `$bg-tertiary`）與 AC #1／#2 這樣指定，屬 Sally 裁定 → ③ 併入 `disc-2026-09-library-empty-three-states-one-frame`？不對題——另立 `disc-2026-09-skeleton-poster-tint-vs-card-fallback`（P4）。
+  - LOW #8 gap 測試「常數比自己」——它釘的是首 token 是 `gap-4`（16，稿值），mutation M6 證明拿掉會紅；保留。
+  - LOW #6 是「沒事」的確認：3 張純缺 `-linux`、零 pixel-diff → bootstrap 路徑。
+- **與故事字面的差異**
+  - **頂列畫成一層不是兩層**：AC #1 說「照 `uMDjw` 畫 shell 頂列＋頁面標題列兩層」，但 D1-M-v2 `uMDjw` 本身就只有**一層**（`TopAppBar` 就是頁面標題列，shell 的搜尋列在 Flow D 也沒畫）。照先例畫一層：標題＋計數＋右側篩選鈕；搜尋鈕拿掉（它在 shell 頂列）。
+  - **常數檔叫 `libraryGridCols.ts` 不是 `libraryGrid.ts`**：與 `LibraryGrid.tsx` 在大小寫不敏感的檔案系統上撞名。
+  - **A1p-M 的三態註記沒有另加一則**：A1p-D 已有 `r8d9s` 那則，`spec-note-dsr-1b-c` 最後一句指向它。
+  - **手機 h1 是 18 不是 20**：AC #3 引 DESIGN.md「Title 24→20」，但程式碼的 h1 本來就是 `text-xl`＝20，降一階是 Subtitle 20→18，正好＝稿的 H4 18。
+  - **手機夾具用 `viewport` 不是 `width`**（story 🔴 #10 說非 Portal 可用 `width`——欄數斷點看 viewport，`width` 拍出 4 欄）。
+- **測試（Rule 16：紅／守）**
+  - 紅：`LibraryStatesV2.spec.tsx` 5 條（rail-open／collapsed 欄數＝常數、gap 首 token `gap-4`、格子形狀）、`LibraryBrowseV2.spec.tsx` 3 條（網格＝常數、載入中 rail collapsed 傳給骨架、h1 `max-sm:text-lg`）、`EmptyNoFolder.spec.tsx` 1 條——全部實作前紅（8 紅）。
+  - 守：`library/`＋`routes/` 406 條、`nx test web --skip-nx-cache` **4093／4093**；`routes/test/*` 夾具守門 4 條。
+  - e2e `library-mobile.spec.ts` 11 條（7 舊＋4 新）×2 全綠：骨架第一列與網格第一列 x／寬／y 差 ≤1、海報高差 ≤2；空片庫文案逐字＝A1p-M、兩顆 CTA ≥44、沒有膠囊列；E4 `?unmatched=true`＝網格＋一顆膠囊、沒有「掃描結果」、計數在標題列、膠囊列在標題下網格上；390 標題 18px、640／1024 回 20px。
+- **Mutation check（每一刀拿掉 → 必須紅）：6／6 紅**：M1 骨架自己寫一份欄數／M2 骨架不看 `railCollapsed`／M3 `LibraryBrowseV2` 不傳 rail 狀態／M4 h1 不降階／M5 CTA 沒 44／M6 手機 gap 退回 12。
+- 🔗 AC Drift: NONE (checked: `grid-cols\|LibraryGridSkeletonV2\|EmptyNoFolder\|library-page-title` across _bmad-output/implementation-artifacts/*.md — 命中 ux3-0-7（軌收合時網格欄數：既有兩串 class 逐字搬進常數、行為不變）、bugfix-10-5（三態分類器：未動）、dsr-1（頁首計數位置與單位：未動）——全部 REUSE)
+- 📎 Contract Stamps: NONE (no [@contract-v*] stamps in this story or upstream refs — 純版面對齊，不定義也不消費線上契約)
+- 🎭 A11y Pre-Flight: PASS (4 components checked — `LibraryStatesV2`、`LibraryBrowseV2`、`EmptyNoFolder`／`EmptyNoQBT`／`EmptyReadyForScan`；`lint:all` 0 errors、129 warnings＝既有批次，本張碰的檔案 0 新 warnings。四類：① 圖片 N/A；② modal N/A；③ aria-live——骨架維持 `aria-busy`＋`aria-label="載入中"`；④ 自訂元件 N/A；觸控目標：三個空狀態 CTA 在手機 ≥44（e2e 量）)
+- 🎨 UX Verification: PASS（對照表見下）
+- Pre-existing fix: N/A（本機 visual `retry-retry-notifications` 既有漂移已有追蹤條目）
+
+#### 🎨 UX 對照（dev-story Step 9；量測＝390×844 chromium 夜行，基準＝`.pen` 節點值）
+
+| 區域 | 稿（節點） | 實作（量測／基準線） | 相符？ | 要修？ |
+| --- | --- | --- | --- | --- |
+| 標題列 | `title-row`：「電影」H4 18／700＋計數 Body `$text-secondary`；右 44×44 篩選鈕 | `h1` `max-sm:text-lg`（e2e 18px）＋`library-result-count`；`-b` 的 44×44 鈕 | ✅ | — |
+| 網格 | 2 欄、gap 16、卡 171×294 | `grid-cols-2`、`gap-4`（16）；卡由 `PosterCardV2` 決定 | ✅ | — |
+| 骨架 | 2 欄、卡 171×294（海報 240＋兩條線） | 2 欄（viewport 夾具）、2:3 海報＋`h-3 w-full`＋`h-2.5 w-[60px]`；e2e 骨架第一列＝網格第一列（x／寬／y ≤1px，海報高 ≤2px） | ✅ | — |
+| 骨架顏色 | 海報 `$bg-tertiary`、線 `$bg-tertiary`／`$bg-secondary` | 同 token | ✅ | — |
+| 生效膠囊列 | 「動畫 ×」「缺字幕 ×」＋「清除全部篩選」，pill `$accent-subtle` | `FilterChips`（`-b` 已對齊） | ✅ | — |
+| 空片庫文案 | 「指定一個媒體資料夾即可開始」／「Vido 會掃描…」／「設定媒體資料夾」／「開啟設定精靈」 | `EmptyNoFolder` 逐字相同（e2e） | ✅ | — |
+| 空片庫圖示與按鈕形狀 | 72 圓 `$bg-secondary`＋`clapperboard` 32 `$accent-text`；主鈕帶 `folder-plus`；次要是文字連結 | `FolderOpen` 40 無圓；主鈕無圖示；次要是外框按鈕 | ❌（既有） | 不修：`Component/EmptyLibrary-NoFolder`（`U3SGxG`）母版對齊屬 `disc-2026-09-library-empty-three-states-one-frame` 的版面決定，本張只對文案與觸控高 |
+| CTA 高度 | 44 | `max-sm:min-h-11`（e2e ≥44） | ✅ | — |
+| E4 | 網格＋「未比對 ×」＋「42 部」；無「掃描結果」 | `?unmatched=true`：膠囊「未匹配 ×」＋計數＋網格（e2e） | ≈ | 「未比對／未匹配」二字待 `disc-2026-09-unmatched-two-words`（建單裁定 6） |
+| 頂列的搜尋鈕 | 稿已拿掉（搜尋在 shell 頂列） | `AppShellV2` 頂列有 `mobile-search-toggle` | ✅ | — |
 
 ### Discovery Triage
 
@@ -194,10 +254,32 @@ tests/visual/…/library-mobile-screens/{skeleton,empty-no-folder}、…/library
   - ③ A3p-M 的「4K／未看完」快速篩選列 → 由本張刪除，↪ 補記 `disc-2026-09-library-has-filters-the-product-lacks`。
   - ③ 「未比對／未匹配」→ 仍在 `disc-2026-09-unmatched-two-words`，本張不裁。
   - ③ 手機頂列要不要釘進 shell → 仍在 `disc-2026-09-library-header-not-in-shell-bar`（稿改成兩層後該單同時涵蓋桌機與手機）。
-- **dev-story 期間的發現：** （dev 填寫）
+- **dev-story 期間的發現：**
+  - ③ story 🔴 #10「非 Portal 的手機夾具可用 `width: 390`」是錯的——欄數斷點看 viewport，`width` 拍出 4 欄 → 已改 `viewport`；把這條寫進 `GalleryFixture.viewport` 的既有註解已足夠（該註解本來就講了），不立案。
+  - ③ 骨架海報 `$bg-tertiary` vs 真卡海報底 `--bg-secondary`（沒封面時載完閃一下底色）→ `disc-2026-09-skeleton-poster-tint-vs-card-fallback`。
+  - ③ `EmptyNoFolder` 的圖示／按鈕形狀與 `Component/EmptyLibrary-NoFolder` 母版不同（圓底 clapperboard、`folder-plus`、文字連結）→ 併入 `disc-2026-09-library-empty-three-states-one-frame` 的 ↪ 補記。
 
 ### File List
+
+- `ux-design.pen` — A1p-M／A2p-M／A3p-M／E4-M（見上）、A1p-D `EhXkr` 補「Vido 」、`spec-note-dsr-1b-c`（`nRROg`）
+- `_bmad-output/pen-tokens.json` — `penSha256`、clipping 68→67
+- `_bmad-output/screenshots/flow-a-browse-v2/{a1p-m,a2p-m,a3p-m}.png`、`flow-e-scanner/e4-m.png`
+- `apps/web/src/components/library/libraryGridCols.ts`（新）
+- `apps/web/src/components/library/LibraryStatesV2.tsx`（+spec）— 骨架共用欄數、`railCollapsed`、格子形狀、檔頭
+- `apps/web/src/components/library/LibraryBrowseV2.tsx`（+spec）— 常數、骨架傳 rail 狀態、h1 `max-sm:text-lg`、檔頭
+- `apps/web/src/components/library/EmptyNoFolder.tsx`（+spec）、`EmptyNoQBT.tsx`、`EmptyReadyForScan.tsx` — CTA 手機觸控高
+- `apps/web/src/routes/test/-gallery.fixtures.tsx` — 三個夾具
+- `tests/visual/components.visual.spec.ts-snapshots/components/library-grid-skeleton/default-visual-darwin.png`（新）
+- `tests/visual/components.visual.spec.ts-snapshots/components/library-mobile-screens/{skeleton,empty-no-folder}/default-visual-darwin.png`（新）
+- `tests/e2e/library-mobile.spec.ts` — 追加 4 條；`tests/support/helpers/library-stubs.ts` — `libraries` 選項
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — 狀態
+- `_bmad-output/implementation-artifacts/dsr-1b-c-library-mobile-screens-alignment.md` — 本檔
 
 ## Change Log
 
 - 2026-09-22 — 建單（SM Bob，create-story；main `49cc74a3`）。由 `dsr-1b-flow-a-mobile` 拆出的第三塊；排在 `-b` 之後。四張手機稿與 E4-M 以 Pencil MCP 逐節點讀出（含三處刻意的 partially clipped），`LibraryStatesV2`／`LibraryBrowseV2` 現況由唯讀稽核代理查證（骨架欄數 ≠ 網格欄數為建單時發現）。
+- 2026-09-22 — Task 1（dev-story，Amelia）：四張手機稿＋A1p-D 一處文案；`problems` 68→67；存檔驗證；只 stage 四張截圖＋tokens。
+- 2026-09-22 — Task 2：`libraryGridCols.ts` 共用欄數（改名避開 `LibraryGrid.tsx` 撞名）、骨架 `railCollapsed`＋格子形狀、手機 gap 16（紅 5 → 綠）。
+- 2026-09-22 — Task 3：h1 `max-sm:text-lg`、三個空狀態 CTA 44、Rule 21 檔頭（紅 3 → 綠）。
+- 2026-09-22 — Task 4：三個夾具（手機兩個改 `viewport` 重拍）＋darwin 基準、e2e 4 條 ×2、mutation 6／6 紅、`nx test web` 4093／4093、`lint:all` 0 errors、typecheck／tokens 綠；Step 9 對照表；Status → review。
+- 2026-09-22 — /ship 對抗式 CR：吸收 6 項（骨架盒模型＝卡片、e2e 量格子總高＋第二列、RegExp gate、docstring、夾具 1200、註解、unit 形狀測試）；另立 `disc-2026-09-skeleton-poster-tint-vs-card-fallback`。

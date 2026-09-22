@@ -47,4 +47,14 @@ describe('EmptyNoFolder (bugfix-10-5 Case B: qBT OK, no media folder)', () => {
     render(<EmptyNoFolder />);
     expect(screen.getByTestId('empty-no-folder')).toBeInTheDocument();
   });
+
+  // dsr-1b-c AC #3: on a phone the CTA is a 44px touch target (desktop size unchanged).
+  it('[P1] the primary CTA carries the phone touch-height token', () => {
+    render(<EmptyNoFolder />);
+    expect(
+      (screen.getByTestId('empty-no-folder-libraries-btn').getAttribute('class') ?? '').split(/\s+/)
+    ).toEqual(
+      expect.arrayContaining(['max-sm:min-h-11', 'max-sm:inline-flex', 'max-sm:items-center'])
+    );
+  });
 });

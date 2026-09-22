@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen A2p-D (EsoIv) · A7p-D (R3FqJc) · A8p-D (dVGIa)
+// Design ref: ux-design.pen Screen A2p-D (EsoIv) · A2p-M (qBWQC) · A7p-D (R3FqJc) · A8p-D (dVGIa)
 // Skeleton / no-result / error, one frame each. (Was still carrying the 19-8
 // `pending` placeholder, which Rule 21 says no components/ file should have.)
 /**
@@ -10,6 +10,7 @@
  */
 import { SearchX, AlertTriangle } from 'lucide-react';
 import type { LibraryMediaType } from '../../types/library';
+import { LIBRARY_GRID_COLS } from './libraryGridCols';
 
 /**
  * 沒有「電影」符合… — the subject of the no-result sentence.
@@ -26,20 +27,41 @@ const TYPE_NOUN: Record<LibraryMediaType, string> = {
   tv: '影集',
 };
 
-/** Skeleton matching the grid shape — poster blocks + two text bars. */
-export function LibraryGridSkeletonV2({ count = 12 }: { count?: number }) {
+/**
+ * Skeleton matching the grid shape — one tile per card, the SAME column table as the grid
+ * (dsr-1b-c: `LIBRARY_GRID_COLS`, so loading→loaded never reflows), each tile a 2:3 poster
+ * block, a full-width title line and a 60px meta line (A2p-M `qBWQC`: 171×294 = the card).
+ */
+export function LibraryGridSkeletonV2({
+  count = 12,
+  railCollapsed = false,
+}: {
+  count?: number;
+  /** Mirror of the page's rail state so the skeleton draws the columns the grid will. */
+  railCollapsed?: boolean;
+}) {
+  const cols = railCollapsed ? LIBRARY_GRID_COLS.railCollapsed : LIBRARY_GRID_COLS.railOpen;
   return (
     <div
       data-testid="library-grid-skeleton"
       aria-busy="true"
       aria-label="載入中"
-      className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-4 xl:grid-cols-6"
+      className={`grid ${LIBRARY_GRID_COLS.gap} ${cols}`}
     >
       {Array.from({ length: count }).map((_, i) => (
+        // Same skeleton as PosterCardV2's box model: poster, then ONE text block whose title
+        // area is the card's `min-h-[2.75em] text-sm` two-line reserve and whose meta line is
+        // an 11px mono line box — so a tile is exactly as tall as the card it stands in for.
         <div key={i} className="flex flex-col gap-2">
-          <div className="aspect-[2/3] animate-pulse rounded-[var(--radius-lg)] bg-[var(--bg-secondary)] motion-reduce:animate-none" />
-          <div className="h-3.5 w-4/5 animate-pulse rounded bg-[var(--bg-secondary)] motion-reduce:animate-none" />
-          <div className="h-2.5 w-2/5 animate-pulse rounded bg-[var(--bg-tertiary)] motion-reduce:animate-none" />
+          <div className="aspect-[2/3] animate-pulse rounded-[var(--radius-lg)] bg-[var(--bg-tertiary)] motion-reduce:animate-none" />
+          <div>
+            <div className="flex min-h-[2.75em] items-center text-sm leading-snug">
+              <div className="h-3 w-full animate-pulse rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] motion-reduce:animate-none" />
+            </div>
+            <div className="mt-0.5 font-mono text-[11px]">
+              <span className="inline-block h-2.5 w-[60px] animate-pulse rounded-[var(--radius-sm)] bg-[var(--bg-secondary)] align-middle motion-reduce:animate-none" />
+            </div>
+          </div>
         </div>
       ))}
     </div>

@@ -23,7 +23,7 @@ export function EmptyNoQBT() {
       <div className="flex items-center gap-3">
         <Link
           to="/settings/qbittorrent"
-          className="rounded-lg bg-[var(--accent-primary)] px-5 py-2.5 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)]"
+          className="max-sm:inline-flex max-sm:min-h-11 max-sm:items-center rounded-lg bg-[var(--accent-primary)] px-5 py-2.5 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)]"
           data-testid="empty-no-qbt-connect-btn"
         >
           連接 qBittorrent
@@ -31,7 +31,7 @@ export function EmptyNoQBT() {
         {/* The media-library manager lives on the 媒體庫掃描 settings page — see EmptyNoFolder. */}
         <Link
           to="/settings/scanner"
-          className="rounded-lg border border-[var(--border-subtle)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--text-muted)] hover:text-[var(--text-primary)]"
+          className="max-sm:inline-flex max-sm:min-h-11 max-sm:items-center rounded-lg border border-[var(--border-subtle)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--text-muted)] hover:text-[var(--text-primary)]"
           data-testid="empty-no-qbt-folder-btn"
         >
           已有檔案？設定資料夾

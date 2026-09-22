@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { LibraryGridSkeletonV2, LibraryNoResultV2, LibraryErrorV2 } from './LibraryStatesV2';
+import { LIBRARY_GRID_COLS } from './libraryGridCols';
 
 describe('LibraryStatesV2', () => {
   it('skeleton renders the requested number of placeholder cards and is busy', () => {
@@ -53,5 +54,62 @@ describe('LibraryStatesV2', () => {
     expect(err).toHaveTextContent('媒體庫資料查詢失敗，你的檔案沒有受影響。');
     fireEvent.click(screen.getByTestId('library-error-retry'));
     expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  // dsr-1b-c AC #2: the skeleton and the real grid share ONE column table, so the page
+  // cannot reflow between "loading" and "loaded" (it did: lg 4→3, xl 6→4).
+  describe('skeleton ↔ grid column parity (dsr-1b-c)', () => {
+    const tokens = (el: Element) => (el.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
+    const colTokens = (cls: string) => cls.split(/\s+/).filter((t) => t.includes('grid-cols'));
+
+    it("[P0] rail-open skeleton carries exactly the grid's rail-open column classes", () => {
+      render(<LibraryGridSkeletonV2 />);
+      const got = tokens(screen.getByTestId('library-grid-skeleton')).filter((t) =>
+        t.includes('grid-cols')
+      );
+      expect(got).toEqual(colTokens(LIBRARY_GRID_COLS.railOpen));
+    });
+
+    it("[P0] railCollapsed switches to the grid's rail-collapsed column classes", () => {
+      render(<LibraryGridSkeletonV2 railCollapsed />);
+      const got = tokens(screen.getByTestId('library-grid-skeleton')).filter((t) =>
+        t.includes('grid-cols')
+      );
+      expect(got).toEqual(colTokens(LIBRARY_GRID_COLS.railCollapsed));
+      expect(LIBRARY_GRID_COLS.railCollapsed).not.toBe(LIBRARY_GRID_COLS.railOpen);
+    });
+
+    it('[P0] the skeleton gap matches the grid gap (phone 16, sm 12, md+ 16)', () => {
+      render(<LibraryGridSkeletonV2 />);
+      expect(tokens(screen.getByTestId('library-grid-skeleton'))).toEqual(
+        expect.arrayContaining(LIBRARY_GRID_COLS.gap.split(/\s+/))
+      );
+    });
+
+    it('[P0] the phone gap is 16px (A3p-M `wW2oF` gap $Space/lg), sm keeps the old 12', () => {
+      const g = LIBRARY_GRID_COLS.gap.split(/\s+/);
+      expect(g[0]).toBe('gap-4');
+      expect(g).toContain('sm:gap-3');
+      expect(g).toContain('md:gap-4');
+    });
+
+    it('[P1] each tile mirrors PosterCardV2: poster, then a text block with the 2.75em title reserve and an 11px meta line', () => {
+      render(<LibraryGridSkeletonV2 count={2} />);
+      const tiles = screen.getByTestId('library-grid-skeleton').children;
+      expect(tiles).toHaveLength(2);
+      const tile = tiles[0];
+      // Same box model as the card: [poster, textBlock] — not three loose bars.
+      expect(tile.children).toHaveLength(2);
+      expect(tokens(tile.children[0])).toContain('aspect-[2/3]');
+      const text = tile.children[1];
+      expect(text.children).toHaveLength(2);
+      expect(tokens(text.children[0])).toEqual(
+        expect.arrayContaining(['min-h-[2.75em]', 'text-sm', 'leading-snug'])
+      );
+      expect(tokens(text.children[1])).toEqual(
+        expect.arrayContaining(['mt-0.5', 'font-mono', 'text-[11px]'])
+      );
+      expect(text.children[1].firstElementChild!.getAttribute('class')).toContain('w-[60px]');
+    });
   });
 });
