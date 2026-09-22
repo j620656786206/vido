@@ -12,7 +12,7 @@ so that 我不用在小螢幕上跟一個為滑鼠設計的下拉選單搏鬥，
 
 ## Context
 
-`dsr-1b`（Flow A 手機）拆出來的**第二塊：抽屜＋字幕篩選的前端接線**。**依賴 `dsr-1b-a` 先合併**（後端 `GET /library?subtitle_status=` `[@contract-v1]`）。第三塊 `dsr-1b-c`（四張手機畫面的版面）在本張之後做——兩張都會動 `LibraryBrowseV2` 的標題列，排好序免衝突。
+`dsr-1b`（Flow A 手機）拆出來的**第二塊：抽屜＋字幕篩選的前端接線**。**依賴 `dsr-1b-a`（已合併，PR #508）與 `dsr-1b-a2`（搜尋端點吃篩選）先合併**。第三塊 `dsr-1b-c`（四張手機畫面的版面）在本張之後做——兩張都會動 `LibraryBrowseV2` 的標題列，排好序免衝突。
 
 同時收掉 `disc-2026-06-library-subtitle-status-filter` 的**前端半**，並把 `disc-2026-09-library-has-filters-the-product-lacks` 裡 A6p-M 那兩整組「稿上有、產品沒有」的篩選收成一組（字幕：做；解析度：從稿上拿掉）。
 
@@ -97,7 +97,7 @@ so that 我不用在小螢幕上跟一個為滑鼠設計的下拉選單搏鬥，
 2. **字幕篩選前端接線（`confirmed against [@contract-v1] (Story dsr-1b-a AC #1)`）。**
    - `FilterValues` 加 `subtitleStatus?: string[]`（值＝後端狀態字串；本張 UI 只出 `found`／`not_found`／`not_searched` 三個，型別不限制——契約是 CSV 任意合法值）。
    - `types/library.ts` `LibraryListParams` 加 `subtitleStatus?: string[]`；`services/libraryService.ts` `listLibrary` 有值且非空時送 `subtitle_status=<逗號連接>`（Rule 18：URL 參數手動 snake，照 `year_min` 那幾行的寫法）。⛔ `searchLibrary`（`:88-99`）不動（它本來就不送 genres／year，另一件事）。
-   - ⚠️ **搜尋模式（dsr-1b-a /ship CR HIGH #1，2026-09-22）**：`useLibrary.ts:51` 有 `q` 就改走 `GET /library/search`，而該端點**忽略所有 `Filters`**（`FullTextSearch` 只有 `MATCH`＋`notRemoved`；今天 `unmatched=true` 就已經被靜默丟掉）→ `disc-2026-09-library-search-ignores-filters`。接上字幕篩選後，「搜尋框有字＋字幕 pill 亮著」會讓網址與 pill 說有篩、結果卻沒篩——正是 `-a` 要消滅的那種謊。⚖️ **開工前要裁定**：(a) 後端 `SearchLibrary` handler 也解析 `subtitle_status`（與其他篩選）並傳進 `FullTextSearch`（跨棧，可能要再拆一張小後端單）；或 (b) 本張前端在搜尋模式下**停用篩選 pill、從網址移除 `subtitleStatus`／`unmatched`**，並在無結果／結果列標示「搜尋不套用篩選」。SM 傾向 (b) 先行、(a) 立案——但這是產品行為，請 Alexyu 拍板。
+   - **搜尋模式（⚖️ Alexyu 2026-09-22 裁定 (a)，由 `dsr-1b-a2` 後端吸收）**：`useLibrary.ts:51` 有 `q` 就走 `GET /library/search`；`-a2` 讓該端點吃與 `/library` 同一組篩選（`confirmed against [@contract-v1] (Story dsr-1b-a2 AC #1)`）。本張的 `services/libraryService.ts` `searchLibrary()`（`:85-99`）要**補送** `genres`／`year_min`／`year_max`／`subtitle_status`（今天只送 `unmatched`），寫法照 `listLibrary`；`libraryService.spec.ts` 加一條「search 與 list 送的篩選參數集合相同」。**本張依賴 `-a` 與 `-a2` 都先合併。** 原本的「⛔ `searchLibrary` 不動」作廢。
    - `routes/library.tsx`：`subtitleStatus` 維持 **CSV 字串**（深連結 `?subtitleStatus=not_found` 不變、`BatchSubtitleDialog.tsx:361` 一個字不改）；**刪掉 `:17-22` 那段「not yet wired」註解**，改成一句指向本張與 `-a` 的契約。
    - `LibraryBrowseV2.tsx`：`filters` 組裝（`:166-174`）把 `search.subtitleStatus` 切成陣列放進 `subtitleStatus`；`useLibraryInfinite` 的參數（`:210-218`）帶上它；`hasActiveFilters`／`activeFilterCount`／`activeFilterLabels`（`:175-198`）都算它；套用／清除（`:260-279`）寫回 URL 時 `subtitleStatus` 用逗號連接、空陣列＝`undefined`（從網址消失）。
    - **一份標籤對照表**：新檔 `components/library/subtitleStatusFilter.ts`（或放 `FilterPanel.tsx` 內 export）：`SUBTITLE_STATUS_FILTER_OPTIONS = [{ value: 'found', label: '有字幕' }, { value: 'not_found', label: '缺字幕' }, { value: 'not_searched', label: '還沒搜尋' }]`——抽屜、`FilterChips`、無結果句子、桌機軌**全部 import 這一份**；⛔ 不要在四個地方各抄一份字串（`disc-2026-09-media-type-label-four-maps` 的教訓）。
@@ -193,7 +193,7 @@ so that 我不用在小螢幕上跟一個為滑鼠設計的下拉選單搏鬥，
 - 不要改 `ui/Sheet.tsx`、`ui/mobileSheet.tsx`、`ui/Dialog.tsx`、後端。
 - 不要跨資料夾 import `downloads/` 的元件（`DownloadSortSheet` 是範本不是零件；要共用 roving-tabindex helper 就抽到 `hooks/` 或 `utils/`）。
 - 不要在 `components/ui/` 以外 import `@base-ui/react`。
-- 不要動 `BatchSubtitleDialog.tsx`、`SortSelector` 的桌機長相、`searchLibrary`。
+- 不要動 `BatchSubtitleDialog.tsx`、`SortSelector` 的桌機長相。（`searchLibrary` 依 AC #2 補送篩選參數——是本張的事。）
 - 不要新增計數端點；不要把 `unmatchedCount` 的全域算法套到字幕。
 - 不要在元件測試裡 stub `matchMedia`。
 - 不要本機產 `-linux.png`；不要改舊 spec 的斷言。
@@ -274,3 +274,4 @@ tests/visual/…/library-mobile-sheets/sort-filter、…/library-filter-panel（
 ## Change Log
 
 - 2026-09-22 — 建單（SM Bob，create-story；main `49cc74a3`）。由 `dsr-1b-flow-a-mobile` 拆出的第二塊；依賴 `dsr-1b-a`。設計稿 A6p-M 以 Pencil MCP 逐節點讀出（含 `ctx.problems` 零 clipping）、`components/library/` 與接線路徑由唯讀稽核代理查證（23 條陷阱清單全數併入 🔴 與 AC）。
+- 2026-09-22 — ⚖️ Alexyu 裁定搜尋模式走 (a)：後端 `/library/search` 吃篩選（新單 `dsr-1b-a2`）；本張 AC #2 改成 `searchLibrary()` 補送篩選參數並 ack `-a2` 契約；依賴加上 `-a2`。
