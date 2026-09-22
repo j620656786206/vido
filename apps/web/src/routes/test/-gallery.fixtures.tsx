@@ -106,6 +106,8 @@ import { QuickSearchBar } from '../../components/dashboard/QuickSearchBar';
 import { StatusIcon } from '../../components/downloads/StatusIcon';
 import { DownloadCardV2 } from '../../components/downloads/DownloadCardV2';
 import { DownloadsTableV2 } from '../../components/downloads/DownloadsTableV2';
+import { DownloadSortSheet } from '../../components/downloads/DownloadSortSheet';
+import { SORT_OPTIONS as DOWNLOAD_SORT_OPTIONS } from '../../components/downloads/DownloadsBrowseV2';
 import {
   DownloadsEmptyV2,
   DownloadsQbtErrorV2,
@@ -1773,6 +1775,24 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     penNode: 'utility',
     statesOnly: ['default'],
     width: 120,
+  },
+  {
+    // dsr-4b-1 — the first baseline of a Base UI `ui/Sheet`. A Portal pinned to the
+    // window, so it is photographed in a 390×844 viewport, not a `width` box. The
+    // options ARE the page's SORT_OPTIONS, so a relabel shows up in this baseline.
+    id: 'downloads-mobile-sheets/sort',
+    label: 'downloads/DownloadSortSheet (D10-M — 手機 viewport 390×844，排序抽屜)',
+    component: DownloadSortSheet,
+    props: {
+      open: true,
+      onOpenChange: noop,
+      options: DOWNLOAD_SORT_OPTIONS,
+      value: 'added_on:desc',
+      onChange: noop,
+    },
+    penNode: 'JxMWL', // Screen D10-M-v2
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
   },
 
   // ----- library/ (P-bucket additions) -----

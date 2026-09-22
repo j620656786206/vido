@@ -100313,7 +100313,7 @@
                       "fill": "$text-secondary",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "點 ⋯ 開啟動作　·　左滑可快速暫停/繼續",
+                      "content": "點 ⋯ 開啟動作",
                       "lineHeight": "$Type/Label/Line",
                       "textAlign": "center",
                       "fontFamily": "$Type/Family/Primary",
@@ -102462,10 +102462,9 @@
                   "type": "frame",
                   "id": "t6GBBy",
                   "x": 0,
-                  "y": 504,
+                  "y": 284,
                   "name": "actionSheet",
                   "width": 390,
-                  "height": 340,
                   "fill": "$bg-secondary",
                   "cornerRadius": [
                     "$radius-xl",
@@ -102551,20 +102550,6 @@
                               "fontFamily": "$Type/Family/Primary",
                               "fontSize": "$Type/Body/Size",
                               "fontWeight": "$Type/Body/Weight"
-                            },
-                            {
-                              "type": "text",
-                              "id": "P77zR",
-                              "x": 48,
-                              "y": 1,
-                              "name": "pct",
-                              "enabled": false,
-                              "fill": "$accent-text",
-                              "content": "· 62.4%",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Mono",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "$Type/Body/Weight"
                             }
                           ]
                         }
@@ -102593,7 +102578,7 @@
                         {
                           "type": "frame",
                           "id": "H0hCBY",
-                          "name": "act-詳細資訊",
+                          "name": "opt-加入時間（新到舊）",
                           "width": "fill_container",
                           "height": 52,
                           "fill": "$accent-subtle",
@@ -102620,7 +102605,7 @@
                               "id": "V7BPH",
                               "name": "lb",
                               "fill": "$accent-text",
-                              "content": "加入時間（新→舊）",
+                              "content": "加入時間（新到舊）",
                               "lineHeight": "$Type/BodyLg/Line",
                               "fontFamily": "$Type/Family/Primary",
                               "fontSize": "$Type/BodyLg/Size",
@@ -102631,7 +102616,7 @@
                         {
                           "type": "frame",
                           "id": "m7YMye",
-                          "name": "act-暫停",
+                          "name": "opt-加入時間（舊到新）",
                           "width": "fill_container",
                           "height": 52,
                           "fill": "#00000000",
@@ -102646,22 +102631,19 @@
                             {
                               "type": "icon",
                               "id": "g8LFnc",
-                              "x": 12,
-                              "y": 16,
                               "name": "ic",
-                              "enabled": false,
                               "width": 20,
                               "height": 20,
-                              "icon": "pause",
+                              "icon": "check",
                               "library": "lucide",
-                              "fill": "$text-primary"
+                              "fill": "#00000000"
                             },
                             {
                               "type": "text",
                               "id": "WKD5G",
                               "name": "lb",
                               "fill": "$text-primary",
-                              "content": "下載進度",
+                              "content": "加入時間（舊到新）",
                               "lineHeight": "$Type/BodyLg/Line",
                               "fontFamily": "$Type/Family/Primary",
                               "fontSize": "$Type/BodyLg/Size",
@@ -102672,7 +102654,7 @@
                         {
                           "type": "frame",
                           "id": "htbks",
-                          "name": "act-移除（保留檔案）",
+                          "name": "opt-名稱（A–Z）",
                           "width": "fill_container",
                           "height": 52,
                           "fill": "#00000000",
@@ -102687,22 +102669,19 @@
                             {
                               "type": "icon",
                               "id": "m1uzgB",
-                              "x": 12,
-                              "y": 16,
                               "name": "ic",
-                              "enabled": false,
                               "width": 20,
                               "height": 20,
-                              "icon": "circle-minus",
+                              "icon": "check",
                               "library": "lucide",
-                              "fill": "$text-primary"
+                              "fill": "#00000000"
                             },
                             {
                               "type": "text",
                               "id": "h6PJbI",
                               "name": "lb",
                               "fill": "$text-primary",
-                              "content": "下載速度",
+                              "content": "名稱（A–Z）",
                               "lineHeight": "$Type/BodyLg/Line",
                               "fontFamily": "$Type/Family/Primary",
                               "fontSize": "$Type/BodyLg/Size",
@@ -102713,7 +102692,7 @@
                         {
                           "type": "frame",
                           "id": "UzwTN",
-                          "name": "act-移除（連同檔案刪除）",
+                          "name": "opt-名稱（Z–A）",
                           "width": "fill_container",
                           "height": 52,
                           "fill": "#00000000",
@@ -102728,22 +102707,171 @@
                             {
                               "type": "icon",
                               "id": "jya5R",
-                              "x": 12,
-                              "y": 16,
                               "name": "ic",
-                              "enabled": false,
                               "width": 20,
                               "height": 20,
-                              "icon": "trash-2",
+                              "icon": "check",
                               "library": "lucide",
-                              "fill": "$error-text"
+                              "fill": "#00000000"
                             },
                             {
                               "type": "text",
                               "id": "BiEpj",
                               "name": "lb",
                               "fill": "$text-primary",
-                              "content": "檔案大小",
+                              "content": "名稱（Z–A）",
+                              "lineHeight": "$Type/BodyLg/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/BodyLg/Size",
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "fhao0",
+                          "name": "opt-進度（多到少）",
+                          "width": "fill_container",
+                          "height": 52,
+                          "fill": "#00000000",
+                          "cornerRadius": "$radius-md",
+                          "gap": "$Space/md",
+                          "padding": [
+                            "$Space/none",
+                            "$Space/md"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "FIzKZ",
+                              "name": "ic",
+                              "width": 20,
+                              "height": 20,
+                              "icon": "check",
+                              "library": "lucide",
+                              "fill": "#00000000"
+                            },
+                            {
+                              "type": "text",
+                              "id": "nKFHN",
+                              "name": "lb",
+                              "fill": "$text-primary",
+                              "content": "進度（多到少）",
+                              "lineHeight": "$Type/BodyLg/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/BodyLg/Size",
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "RUgs8",
+                          "name": "opt-進度（少到多）",
+                          "width": "fill_container",
+                          "height": 52,
+                          "fill": "#00000000",
+                          "cornerRadius": "$radius-md",
+                          "gap": "$Space/md",
+                          "padding": [
+                            "$Space/none",
+                            "$Space/md"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "xOje8",
+                              "name": "ic",
+                              "width": 20,
+                              "height": 20,
+                              "icon": "check",
+                              "library": "lucide",
+                              "fill": "#00000000"
+                            },
+                            {
+                              "type": "text",
+                              "id": "roed4",
+                              "name": "lb",
+                              "fill": "$text-primary",
+                              "content": "進度（少到多）",
+                              "lineHeight": "$Type/BodyLg/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/BodyLg/Size",
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "gmfAM",
+                          "name": "opt-狀態",
+                          "width": "fill_container",
+                          "height": 52,
+                          "fill": "#00000000",
+                          "cornerRadius": "$radius-md",
+                          "gap": "$Space/md",
+                          "padding": [
+                            "$Space/none",
+                            "$Space/md"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "ijnaY",
+                              "name": "ic",
+                              "width": 20,
+                              "height": 20,
+                              "icon": "check",
+                              "library": "lucide",
+                              "fill": "#00000000"
+                            },
+                            {
+                              "type": "text",
+                              "id": "SvoCW",
+                              "name": "lb",
+                              "fill": "$text-primary",
+                              "content": "狀態",
+                              "lineHeight": "$Type/BodyLg/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/BodyLg/Size",
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "DFDFw",
+                          "name": "opt-狀態（反向）",
+                          "width": "fill_container",
+                          "height": 52,
+                          "fill": "#00000000",
+                          "cornerRadius": "$radius-md",
+                          "gap": "$Space/md",
+                          "padding": [
+                            "$Space/none",
+                            "$Space/md"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "kcPKt",
+                              "name": "ic",
+                              "width": 20,
+                              "height": 20,
+                              "icon": "check",
+                              "library": "lucide",
+                              "fill": "#00000000"
+                            },
+                            {
+                              "type": "text",
+                              "id": "sz5Hd",
+                              "name": "lb",
+                              "fill": "$text-primary",
+                              "content": "狀態（反向）",
                               "lineHeight": "$Type/BodyLg/Line",
                               "fontFamily": "$Type/Family/Primary",
                               "fontSize": "$Type/BodyLg/Size",
@@ -102758,6 +102886,21 @@
               ]
             }
           ]
+        },
+        {
+          "type": "text",
+          "id": "WRKrD",
+          "x": 17040,
+          "y": 25229,
+          "name": "spec-note-dsr-4b-1",
+          "fill": "$text-muted",
+          "textGrowth": "fixed-width",
+          "width": 300,
+          "content": "D10／D1（手機）：排序是只存在於手機的底部抽屜（<640），桌機維持排序下拉。入口是標題列右邊的 44×44 排序鈕；選取模式與 qBittorrent 連不上時沒有排序鈕。抽屜與桌機下拉是同一份八個選項、同一組文字，按了就套用並關閉；每一列都留圖示位，選了哪一列字都不會跳。抽屜蓋住底部分頁列（有遮罩，點遮罩或 Esc 關閉），關掉後焦點回到排序鈕。膠囊列在手機單行橫向捲動，膠囊維持 44 高（稿畫 40）。",
+          "lineHeight": "$Type/Label/Line",
+          "fontFamily": "$Type/Family/Primary",
+          "fontSize": "$Type/Label/Size",
+          "fontWeight": "normal"
         }
       ]
     },

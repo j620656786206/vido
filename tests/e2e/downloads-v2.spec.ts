@@ -304,6 +304,9 @@ test.describe('Downloads v2 actions + batch @downloads @ui @ux3-4-3', () => {
   test('[P2] Table view: 表格 toggle → dense sortable table + column sort + row action (ux3-4-4)', async ({
     page,
   }) => {
+    // The 表格 toggle is `hidden lg:flex` — below 1024 there is no table to switch to
+    // (dsr-4b-1; red on the mobile projects since ux3-4-4).
+    test.skip((page.viewportSize()?.width ?? 1280) < 1024, 'table toggle is lg-only');
     await stubQbtConfig(page, true);
 
     const listRequests: string[] = [];

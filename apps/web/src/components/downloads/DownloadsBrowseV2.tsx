@@ -1,8 +1,9 @@
-// Design ref: ux-design.pen Screen D1-D-v2 (cK1KF)
+// Design ref: ux-design.pen Screen D1-D-v2 (cK1KF) · D1-M-v2 (uMDjw)
 // (also renders D2-D-v2 batch select (tx6U1) + D7-D-v2 table view (w3ipb))
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { getRouteApi } from '@tanstack/react-router';
 import {
+  ArrowDownUp,
   CheckCheck,
   ChevronDown,
   ListChecks,
@@ -20,6 +21,7 @@ import { useDownloadActions } from '../../hooks/useDownloadActions';
 import { useDownloadProgress } from '../../hooks/useDownloadProgress';
 import { useDownloadsView, type DownloadsView } from '../../hooks/useDownloadsView';
 import { useQBittorrentConfig } from '../../hooks/useQBittorrent';
+import { useIsPhone } from '../../hooks/useIsPhone';
 import type { FilterStatus, SortField, SortOrder } from '../../services/downloadService';
 import { Button } from '../ui/Button';
 import { Pagination } from '../ui/Pagination';
@@ -34,6 +36,7 @@ import {
   DialogClose,
 } from '../ui/Dialog';
 import { DownloadCardV2 } from './DownloadCardV2';
+import { DownloadSortSheet } from './DownloadSortSheet';
 import { DownloadsTableV2 } from './DownloadsTableV2';
 import {
   DownloadsSkeletonV2,
@@ -59,7 +62,7 @@ const FILTERS: { value: FilterStatus; label: string }[] = [
 
 // One control for field + direction (D1-D-v2 sortDropdown). The table's column headers drive the
 // same state, so every field/order pair they can produce has an option here.
-const SORT_OPTIONS: { field: SortField; order: SortOrder; label: string }[] = [
+export const SORT_OPTIONS: { field: SortField; order: SortOrder; label: string }[] = [
   { field: 'added_on', order: 'desc', label: '加入時間（新到舊）' },
   { field: 'added_on', order: 'asc', label: '加入時間（舊到新）' },
   { field: 'name', order: 'asc', label: '名稱（A–Z）' },
@@ -84,6 +87,15 @@ const BATCH_NEUTRAL =
   'bg-[var(--bg-tertiary)] text-[var(--text-primary)] hover:bg-[var(--border-subtle)] [&_svg]:text-[var(--text-secondary)]';
 const BATCH_DANGER =
   'bg-[var(--error-tint)] text-[var(--error-text)] hover:bg-[var(--error-tint)]/70 [&_svg]:text-[var(--error-text)]';
+
+/** Rendered and laid out — `display:none` (e.g. `sm:hidden`) fails; jsdom has no layout, so it passes. */
+function isShown(el: HTMLElement | null): el is HTMLElement {
+  return (
+    el !== null &&
+    el.isConnected &&
+    (typeof el.checkVisibility !== 'function' || el.checkVisibility())
+  );
+}
 
 // Desktop breakpoint (Tailwind lg = 1024px). Table view is desktop-only (AC1) — mobile always renders
 // the card List even if a stale desktop preference says 'table'. Guarded so a missing matchMedia
@@ -118,6 +130,12 @@ export function DownloadsBrowseV2() {
 
   const [sortField, setSortField] = useState<SortField>('added_on');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [sortSheetOpen, setSortSheetOpen] = useState(false);
+  const isPhone = useIsPhone();
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const sortBtnRef = useRef<HTMLButtonElement>(null);
+  const sortSelectRef = useRef<HTMLSelectElement>(null);
+  const chipRowRef = useRef<HTMLDivElement>(null);
 
   const [view, setView] = useDownloadsView();
   const isDesktop = useIsDesktop();
@@ -139,6 +157,21 @@ export function DownloadsBrowseV2() {
     currentPageSize
   );
   const { data: counts } = useDownloadCounts();
+
+  // One chip row that scrolls on a phone can start with the active chip off-screen
+  // (`?filter=seeding` at 390px) — bring it inside the row's 16px gutters. On a wrapping
+  // (desktop) row nothing overflows, so scrollLeft stays 0.
+  useEffect(() => {
+    const row = chipRowRef.current;
+    const chip = row?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+    if (!row || !chip) return;
+    const r = row.getBoundingClientRect();
+    const c = chip.getBoundingClientRect();
+    const gutter = 16;
+    if (c.right > r.right - gutter) row.scrollLeft += c.right - (r.right - gutter);
+    else if (c.left < r.left + gutter) row.scrollLeft -= r.left + gutter - c.left;
+  }, [activeFilter, counts]);
+
   const actions = useDownloadActions();
 
   // AC4: lazy SSE — connect only while the page is visible (never a bare mount effect, §8).
@@ -249,6 +282,21 @@ export function DownloadsBrowseV2() {
   const showBatchBar = !qbtUnavailable && (showTable ? selectedHashes.length > 0 : selectMode);
   const showToolbar = !qbtUnavailable && !listSelecting;
 
+  // Phone sort sheet (D10-M-v2): the header's 排序 button opens it; the desktop select stays.
+  // The sheet only exists where its button does, so it closes — during render, before a frame
+  // with an open sheet and no button can paint — when the toolbar goes (select mode, qBT down)
+  // and when the window grows past `sm` (a phone rotated to landscape).
+  if (!showToolbar && sortSheetOpen) setSortSheetOpen(false);
+  const [sheetOnPhone, setSheetOnPhone] = useState(isPhone);
+  if (sheetOnPhone !== isPhone) {
+    setSheetOnPhone(isPhone);
+    if (!isPhone) setSortSheetOpen(false);
+  }
+  // Focus after closing: the 排序 button; if it is hidden now (rotated past `sm`) the select that
+  // replaced it; if both are gone (toolbar hidden) the page heading — never <body>.
+  const sortSheetFinalFocus = () =>
+    [sortBtnRef.current, sortSelectRef.current].find(isShown) ?? headingRef.current ?? true;
+
   const rangeStart = data ? (data.page - 1) * data.pageSize + 1 : 0;
   const rangeEnd = data ? Math.min(data.page * data.pageSize, data.totalItems) : 0;
 
@@ -259,7 +307,15 @@ export function DownloadsBrowseV2() {
     >
       <header className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">下載</h1>
+          {/* tabIndex -1: only ever focused by code — the landing spot when a sheet closes and
+              the control that opened it is gone. */}
+          <h1
+            ref={headingRef}
+            tabIndex={-1}
+            className="text-2xl font-bold text-[var(--text-primary)] outline-none"
+          >
+            下載
+          </h1>
           <p className="text-sm text-[var(--text-secondary)]">
             {listSelecting ? '批次選取模式' : '管理所有下載任務'}
           </p>
@@ -270,10 +326,41 @@ export function DownloadsBrowseV2() {
             取消
           </button>
         )}
+        {showToolbar && (
+          <button
+            type="button"
+            ref={sortBtnRef}
+            onClick={() => setSortSheetOpen(true)}
+            aria-label="排序"
+            aria-haspopup="dialog"
+            aria-expanded={sortSheetOpen}
+            data-testid="downloads-sort-btn"
+            className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)] sm:hidden"
+          >
+            <ArrowDownUp className="size-5" aria-hidden="true" />
+          </button>
+        )}
       </header>
 
-      {/* Status-filter chips — 6 live values, counts in Mono */}
-      <div className="flex flex-wrap gap-2" role="tablist" aria-label="下載狀態篩選">
+      <DownloadSortSheet
+        open={sortSheetOpen}
+        onOpenChange={setSortSheetOpen}
+        finalFocus={sortSheetFinalFocus}
+        options={SORT_OPTIONS}
+        value={`${sortField}:${sortOrder}`}
+        onChange={handleSortOption}
+      />
+
+      {/* Status-filter chips — 6 live values, counts in Mono. One row that scrolls sideways on a
+          phone (D1-M-v2), bled to the screen edges (-mx-4 px-4). -my-1 py-1 keeps the 4px focus
+          ring from being clipped top and bottom by the scroller; scroll-px-4 keeps a focused
+          chip off the edges; overscroll-x-contain stops a swipe at the end turning into "back". */}
+      <div
+        ref={chipRowRef}
+        className="flex flex-wrap gap-2 [scrollbar-width:none] max-sm:-mx-4 max-sm:-my-1 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:overscroll-x-contain max-sm:scroll-px-4 max-sm:px-4 max-sm:py-1 [&::-webkit-scrollbar]:hidden"
+        role="tablist"
+        aria-label="下載狀態篩選"
+      >
         {FILTERS.map((f) => {
           // No counts (not set up, or still loading) reads「—」, not a confident 0.
           const count = counts?.[f.value];
@@ -288,7 +375,7 @@ export function DownloadsBrowseV2() {
               aria-controls="downloads-list-v2"
               onClick={() => handleFilterChange(f.value)}
               className={cn(
-                'inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm transition-colors',
+                'inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm transition-colors max-sm:shrink-0',
                 isActive
                   ? 'bg-[var(--accent-subtle)] font-semibold text-[var(--accent-text)]'
                   : 'bg-[var(--bg-tertiary)] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -328,9 +415,10 @@ export function DownloadsBrowseV2() {
           )}
 
           <div className="flex items-center gap-2">
-            <label className="relative flex h-11 items-center rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] pl-3 text-sm text-[var(--text-secondary)] focus-within:border-[var(--accent-primary)]">
+            <label className="relative flex h-11 items-center rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] pl-3 text-sm text-[var(--text-secondary)] focus-within:border-[var(--accent-primary)] max-sm:hidden">
               <span aria-hidden="true">排序：</span>
               <select
+                ref={sortSelectRef}
                 value={`${sortField}:${sortOrder}`}
                 onChange={(e) => handleSortOption(e.target.value)}
                 aria-label="排序方式"
