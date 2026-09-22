@@ -1,6 +1,6 @@
 # Story DSR.1b-c：手機媒體庫的四張畫面（空白／骨架／網格／未匹配）與設計稿雙向對齊——稿不再畫產品沒有的東西，骨架不再跟網格對不齊
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -283,3 +283,4 @@ Claude Fable 5.1 — `claude-fable-5-1`（dev-story，Amelia，2026-09-22）
 - 2026-09-22 — Task 3：h1 `max-sm:text-lg`、三個空狀態 CTA 44、Rule 21 檔頭（紅 3 → 綠）。
 - 2026-09-22 — Task 4：三個夾具（手機兩個改 `viewport` 重拍）＋darwin 基準、e2e 4 條 ×2、mutation 6／6 紅、`nx test web` 4093／4093、`lint:all` 0 errors、typecheck／tokens 綠；Step 9 對照表；Status → review。
 - 2026-09-22 — /ship 對抗式 CR：吸收 6 項（骨架盒模型＝卡片、e2e 量格子總高＋第二列、RegExp gate、docstring、夾具 1200、註解、unit 形狀測試）；另立 `disc-2026-09-skeleton-poster-tint-vs-card-fallback`。
+- 2026-09-22 — 合併：PR #516（squash `89a901a4`）；`-linux` 基準走功能分支流程：`gh workflow run "Visual Regression" --ref` → bootstrap PR #517（3 張）先合進分支；PR 上 CI 17 pass／0 fail。Status → done。**整個 `dsr-1b`（Flow A 手機）四張子單全部合併，結案。**
