@@ -2,7 +2,7 @@
 // FILENAME (vido-export-<type>-<date>.json) — user-facing file naming, never
 // rendered UI state, so no fixture can flake on it (Murat: test-architecture call,
 // same read the legacy LibraryPage ships).
-// Implements: Component/Browse-Grid-v2 (LcHBs) + Component/Browse-List-v2 (b1H71g)
+// Design ref: ux-design.pen Screen A3p-D (LcHBs) · A4p-D (b1H71g) · A6p-M (Bz0YN)
 /**
  * v2 Browse experience (UX Redesign Phase 2 — UX2-2). Rendered by the /library
  * route (sole render since ux3-cutover-3). One component serves all three type views
@@ -39,6 +39,11 @@ import { LibraryFilterSheetV2 } from './LibraryFilterSheetV2';
 import { LibraryFilterRail } from './LibraryFilterRail';
 import { LibraryGridSkeletonV2, LibraryNoResultV2, LibraryErrorV2 } from './LibraryStatesV2';
 import { yearFilterLabel } from './FilterPanel';
+import {
+  joinSubtitleStatusCsv,
+  parseSubtitleStatusCsv,
+  subtitleStatusLabel,
+} from './subtitleStatusFilter';
 import { EmptyNoQBT } from './EmptyNoQBT';
 import { EmptyNoFolder } from './EmptyNoFolder';
 import { EmptyReadyForScan } from './EmptyReadyForScan';
@@ -152,6 +157,17 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
   const effectiveSortOrder = (search.sortOrder as SortOrder) || stored.sortOrder;
   const [view, setView] = useState<ViewMode>(() => (search.view as ViewMode) || getStoredView());
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  // dsr-1b-b: the sheet has two openers (phone header icon <640, toolbar 篩選 640–1024).
+  // Focus returns to whichever is still shown; if neither (rotated past lg) the heading.
+  const phoneFilterBtnRef = useRef<HTMLButtonElement>(null);
+  const toolbarFilterBtnRef = useRef<HTMLButtonElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const isShown = (el: HTMLElement | null): el is HTMLElement =>
+    !!el && el.getClientRects().length > 0;
+  const filterSheetFinalFocus = () =>
+    [phoneFilterBtnRef.current, toolbarFilterBtnRef.current].find(isShown) ??
+    headingRef.current ??
+    true;
   // ux3-0-7: desktop rail collapse state (persisted); only meaningful at lg+.
   const [railCollapsed, setRailCollapsedState] = useState<boolean>(() => getStoredRailCollapsed());
   const setRailCollapsed = useCallback((next: boolean) => {
@@ -169,20 +185,25 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
       yearMin: search.yearMin,
       yearMax: search.yearMax,
       unmatched: search.unmatched,
+      // dsr-1b-b: csv on the URL (the 8-11 deep link shape), array in the UI.
+      subtitleStatus: parseSubtitleStatusCsv(search.subtitleStatus),
     }),
-    [search.genres, search.yearMin, search.yearMax, search.unmatched]
+    [search.genres, search.yearMin, search.yearMax, search.unmatched, search.subtitleStatus]
   );
+  const subtitleStatuses = filters.subtitleStatus ?? [];
   const hasActiveFilters =
     filters.genres.length > 0 ||
     filters.yearMin !== undefined ||
     filters.yearMax !== undefined ||
-    filters.unmatched === true;
+    filters.unmatched === true ||
+    subtitleStatuses.length > 0;
   // Constraining-facet count for the rail badge / collapsed 篩選(n) button.
   // Decade range (yearMin/yearMax) counts as ONE facet; type=全部 is not a constraint.
   const activeFilterCount =
     filters.genres.length +
     (filters.yearMin !== undefined || filters.yearMax !== undefined ? 1 : 0) +
-    (filters.unmatched === true ? 1 : 0);
+    (filters.unmatched === true ? 1 : 0) +
+    subtitleStatuses.length;
 
   // Human labels for the same facets, in chip order — A7p-D names them in the
   // no-result line so you do not have to go looking for what excluded everything.
@@ -194,6 +215,7 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
     const year = yearFilterLabel(filters);
     if (year) labels.push(year);
     if (filters.unmatched === true) labels.push('未匹配');
+    for (const v of filters.subtitleStatus ?? []) labels.push(subtitleStatusLabel(v));
     return labels;
   }, [filters]);
 
@@ -215,6 +237,7 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
     yearMin: search.yearMin,
     yearMax: search.yearMax,
     unmatched: search.unmatched || undefined,
+    subtitleStatus: search.subtitleStatus || undefined,
   });
 
   // Empty-state classifier inputs (reuse the bugfix-10-5 3-state classifier).
@@ -264,6 +287,7 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
         yearMin: f.yearMin,
         yearMax: f.yearMax,
         unmatched: f.unmatched || undefined,
+        subtitleStatus: joinSubtitleStatusCsv(f.subtitleStatus),
       }),
     [patchSearch]
   );
@@ -274,6 +298,7 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
         yearMin: undefined,
         yearMax: undefined,
         unmatched: undefined,
+        subtitleStatus: undefined,
       }),
     [patchSearch]
   );
@@ -510,20 +535,54 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
             tracked as disc-2026-09-library-header-not-in-shell-bar.
             The count is hidden while loading/errored, matching A2p-D and A8p-D
             (which show the title with no number) and A1p-D (which shows 「電影 0 部」). */}
-      <div className="mb-4 flex items-baseline gap-3">
-        <h1
-          data-testid="library-page-title"
-          className="text-xl font-semibold text-[var(--text-primary)]"
-        >
-          {TYPE_TITLE[currentType]}
-        </h1>
-        {!isLoading && !isError && (
-          <span
-            data-testid="library-result-count"
-            className="font-mono text-xs tabular-nums text-[var(--text-secondary)]"
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-baseline gap-3">
+          {/* tabIndex -1: only ever focused by code — where the sort+filter sheet lands
+              when the button that opened it is no longer shown (dsr-1b-b). */}
+          <h1
+            ref={headingRef}
+            tabIndex={-1}
+            data-testid="library-page-title"
+            className="text-xl font-semibold text-[var(--text-primary)] outline-none"
           >
-            {totalItems.toLocaleString()} 部
-          </span>
+            {TYPE_TITLE[currentType]}
+          </h1>
+          {!isLoading && !isError && (
+            <span
+              data-testid="library-result-count"
+              className="font-mono text-xs tabular-nums text-[var(--text-secondary)]"
+            >
+              {totalItems.toLocaleString()} 部
+            </span>
+          )}
+        </div>
+        {/* A6p-M / A3p-M (dsr-1b-b): on a phone the sort+filter sheet opens from a 44×44
+            icon button on the title row — the toolbar's 篩選 button takes over at sm. */}
+        {!isSelectionMode && (
+          <button
+            type="button"
+            ref={phoneFilterBtnRef}
+            onClick={() => setFilterSheetOpen(true)}
+            aria-label="篩選"
+            aria-haspopup="dialog"
+            aria-expanded={filterSheetOpen}
+            data-testid="library-filter-open-phone"
+            className={`relative flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] sm:hidden ${
+              activeFilterCount > 0
+                ? 'bg-[var(--accent-subtle)] text-[var(--accent-text)]'
+                : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]'
+            }`}
+          >
+            <SlidersHorizontal className="size-5" aria-hidden="true" />
+            {activeFilterCount > 0 && (
+              <span
+                data-testid="library-filter-open-phone-count"
+                className="absolute -right-1 -top-1 min-w-[18px] rounded-full bg-[var(--accent-primary)] px-1 text-center font-mono text-[11px] leading-[18px] tabular-nums text-[var(--text-on-accent)]"
+              >
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
         )}
       </div>
 
@@ -589,12 +648,16 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
                 sortOrder={effectiveSortOrder}
                 onSortChange={handleSortChange}
               />
-              {/* Mobile (<lg): opens the bottom sheet */}
+              {/* Tablet (sm–lg): opens the bottom sheet. Below sm the header icon button
+                  is the entry (dsr-1b-b); this one stays in the DOM, CSS-hidden. */}
               <button
                 type="button"
+                ref={toolbarFilterBtnRef}
                 onClick={() => setFilterSheetOpen(true)}
+                aria-haspopup="dialog"
+                aria-expanded={filterSheetOpen}
                 data-testid="library-filter-open"
-                className={`flex min-h-[44px] items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm font-medium transition-colors lg:hidden ${
+                className={`hidden min-h-[44px] items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm font-medium transition-colors sm:flex lg:hidden ${
                   hasActiveFilters
                     ? 'bg-[var(--accent-subtle)] text-[var(--accent-text)]'
                     : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
@@ -628,6 +691,10 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
               {hasActiveFilters && (
                 <div className="order-last w-full sm:order-none sm:w-auto">
                   <FilterChips
+                    // Phone (dsr-1b-b, D1-M pattern): ONE row that scrolls sideways, bled to
+                    // the screen edges; -my-1 py-1 keeps the 4px focus ring from being
+                    // clipped by the scroller; scroll-px-4 keeps a focused chip off the edges.
+                    className="[scrollbar-width:none] max-sm:-mx-4 max-sm:-my-1 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:overscroll-x-contain max-sm:scroll-px-4 max-sm:px-4 max-sm:py-1 [&::-webkit-scrollbar]:hidden"
                     filters={filters}
                     onRemoveGenre={(g) =>
                       patchSearch({
@@ -638,6 +705,13 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
                     onRemoveYearMax={() => patchSearch({ yearMax: undefined })}
                     onRemoveYears={() => patchSearch({ yearMin: undefined, yearMax: undefined })}
                     onRemoveUnmatched={() => patchSearch({ unmatched: undefined })}
+                    onRemoveSubtitleStatus={(v) =>
+                      patchSearch({
+                        subtitleStatus: joinSubtitleStatusCsv(
+                          subtitleStatuses.filter((x) => x !== v)
+                        ),
+                      })
+                    }
                     onClearAll={clearFilters}
                   />
                 </div>
@@ -746,6 +820,7 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
         onApply={applyFilters}
         onClear={clearFilters}
         onTypeChange={handleTypeChange}
+        finalFocus={filterSheetFinalFocus}
       />
 
       {/* ux3-cutover-2: batch dialogs */}

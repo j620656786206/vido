@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
@@ -35,6 +35,8 @@ vi.mock('../../hooks/useLibrary', () => ({
   useMovieStats: () => ({ data: { unmatchedCount: 0 } }),
   useSeriesStats: () => ({ data: { unmatchedCount: 0 } }),
   useLibraryGenres: () => ({ data: [] }),
+  // dsr-1b-b: the sort+filter sheet's 「套用篩選 · N 部」 preview query.
+  useLibraryList: () => ({ data: undefined, isPending: false, isError: false }),
   // ux3-cutover-2: selection-mode batch mutations (spies live in `h` so tests
   // can assert the ids/type each batch call receives)
   useBatchDelete: () => ({ mutateAsync: h.batchDelete, isPending: false }),
@@ -307,5 +309,99 @@ describe('LibraryBrowseV2 — selection mode (ux3-cutover-2)', () => {
     await userEvent.click(screen.getByTestId('list-row-v2-b'));
     expect(screen.getByTestId('selected-count')).toHaveTextContent('已選取 1 項');
     expect(screen.getByTestId('list-row-v2-b')).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
+// dsr-1b-b AC #2: the 8-11 deep link `?subtitleStatus=not_found` finally filters —
+// the param reaches the list query and shows up as a removable chip.
+describe('LibraryBrowseV2 — subtitle status deep link (dsr-1b-b)', () => {
+  beforeEach(() => {
+    h.infinite = infinite({ items: [movie('m1', 'A')], totalItems: 1 });
+  });
+
+  it('[P0] ?subtitleStatus=not_found is passed to useLibraryInfinite and rendered as a chip', async () => {
+    renderBrowse('/library?subtitleStatus=not_found');
+    await screen.findByTestId('library-grid-v2');
+    expect(h.lastArgs?.subtitleStatus).toBe('not_found');
+    // The desktop rail (in the DOM, CSS-hidden) also says 缺字幕 — assert the chip by its
+    // removal button, which only the chip row renders.
+    expect(screen.getByRole('button', { name: '移除缺字幕篩選' })).toBeInTheDocument();
+  });
+
+  it('[P0] removing the chip drops subtitleStatus from the query', async () => {
+    const user = userEvent.setup();
+    renderBrowse('/library?subtitleStatus=not_found');
+    await user.click(await screen.findByRole('button', { name: '移除缺字幕篩選' }));
+    await waitFor(() => expect(h.lastArgs?.subtitleStatus).toBeUndefined());
+    expect(screen.queryByRole('button', { name: '移除缺字幕篩選' })).not.toBeInTheDocument();
+  });
+
+  it('[P1] a subtitle filter alone counts as an active filter (no-result names it)', async () => {
+    h.infinite = infinite({ items: [], totalItems: 0 });
+    renderBrowse('/library?subtitleStatus=not_found');
+    expect(await screen.findByTestId('library-no-result')).toHaveTextContent('缺字幕');
+  });
+});
+
+// dsr-1b-b AC #4: the phone entry (header icon button), the toolbar button's breakpoint
+// band, focus return, and the single-row chip scroller. jsdom cannot see breakpoints —
+// class assertions prove the tokens are there; the layout itself is measured in e2e.
+describe('LibraryBrowseV2 — phone sort/filter entry (dsr-1b-b)', () => {
+  const tokens = (el: Element) => (el.getAttribute('class') ?? '').split(/\s+/);
+
+  beforeEach(() => {
+    h.infinite = infinite({ items: [movie('m1', 'A')], totalItems: 1 });
+  });
+
+  it('[P0] the header has a 44×44 篩選 button that is phone-only and announces the dialog', async () => {
+    renderBrowse('/library');
+    const btn = await screen.findByTestId('library-filter-open-phone');
+    expect(btn).toHaveAttribute('aria-label', '篩選');
+    expect(btn).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(btn).toHaveAttribute('aria-expanded', 'false');
+    expect(tokens(btn)).toEqual(expect.arrayContaining(['size-11', 'sm:hidden']));
+  });
+
+  it('[P0] pressing it opens the sort+filter sheet and flips aria-expanded', async () => {
+    const user = userEvent.setup();
+    renderBrowse('/library');
+    const btn = await screen.findByTestId('library-filter-open-phone');
+    await user.click(btn);
+    expect(await screen.findByTestId('library-sort-filter-sheet')).toBeInTheDocument();
+    expect(btn).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('[P0] the badge counts constraining facets — genre + subtitle status = 2', async () => {
+    renderBrowse('/library?genres=%E5%8B%95%E7%95%AB&subtitleStatus=not_found');
+    const btn = await screen.findByTestId('library-filter-open-phone');
+    expect(within(btn).getByTestId('library-filter-open-phone-count')).toHaveTextContent('2');
+  });
+
+  it('[P0] the toolbar 篩選 button stays in the DOM for 640–1024 and announces the dialog too', async () => {
+    renderBrowse('/library');
+    const btn = await screen.findByTestId('library-filter-open');
+    expect(tokens(btn)).toEqual(expect.arrayContaining(['hidden', 'sm:flex', 'lg:hidden']));
+    expect(btn).toHaveAttribute('aria-haspopup', 'dialog');
+  });
+
+  it('[P0] the chip row is a single-row scroller on a phone', async () => {
+    renderBrowse('/library?subtitleStatus=not_found');
+    const remove = await screen.findByRole('button', { name: '移除缺字幕篩選' });
+    const chip = remove.closest('span')!;
+    expect(tokens(chip)).toContain('max-sm:shrink-0');
+    const row = chip.parentElement!;
+    expect(tokens(row)).toEqual(
+      expect.arrayContaining([
+        'max-sm:flex-nowrap',
+        'max-sm:overflow-x-auto',
+        'max-sm:-my-1',
+        'max-sm:py-1',
+      ])
+    );
+  });
+
+  it("[P1] the page heading is a programmatic focus target (tabIndex -1) for the sheet's fallback", async () => {
+    renderBrowse('/library');
+    expect(await screen.findByTestId('library-page-title')).toHaveAttribute('tabindex', '-1');
   });
 });

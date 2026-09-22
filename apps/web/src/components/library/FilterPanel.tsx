@@ -3,12 +3,15 @@ import { useState, useCallback, useEffect } from 'react';
 import { Check, RotateCcw, TriangleAlert } from 'lucide-react';
 import { useLibraryGenres } from '../../hooks/useLibrary';
 import type { LibraryMediaType } from '../../types/library';
+import { SUBTITLE_STATUS_FILTER_OPTIONS } from './subtitleStatusFilter';
 
 export interface FilterValues {
   genres: string[];
   yearMin?: number;
   yearMax?: number;
   unmatched?: boolean;
+  /** Backend `subtitle_status` values (dsr-1b-b) — see subtitleStatusFilter.ts. */
+  subtitleStatus?: string[];
 }
 
 /**
@@ -49,7 +52,14 @@ interface FilterPanelProps {
    * the batch behaviour the mobile bottom sheet relies on.
    */
   instant?: boolean;
+  /**
+   * dsr-1b-b: the phone sheet hides 全部/電影/影集 — on a phone the page title IS the
+   * media type, and switching it is the tab bar's job. The desktop rail keeps them.
+   */
+  hideTypeChips?: boolean;
 }
+
+const NO_SUBTITLE_STATUS: string[] = [];
 
 function getSelectedDecades(yearMin?: number, yearMax?: number): string[] {
   if (yearMin === undefined && yearMax === undefined) return [];
@@ -94,8 +104,12 @@ export function FilterPanel({
   onClear,
   onTypeChange,
   instant = false,
+  hideTypeChips = false,
 }: FilterPanelProps) {
   const [localGenres, setLocalGenres] = useState<string[]>(filters.genres);
+  const [localSubtitle, setLocalSubtitle] = useState<string[]>(
+    filters.subtitleStatus ?? NO_SUBTITLE_STATUS
+  );
   const [localDecades, setLocalDecades] = useState<string[]>(() =>
     getSelectedDecades(filters.yearMin, filters.yearMax)
   );
@@ -115,7 +129,15 @@ export function FilterPanel({
     setLocalGenres(filters.genres);
     setLocalDecades(getSelectedDecades(filters.yearMin, filters.yearMax));
     setLocalUnmatched(filters.unmatched ?? false);
-  }, [instant, filters.genres, filters.yearMin, filters.yearMax, filters.unmatched]);
+    setLocalSubtitle(filters.subtitleStatus ?? NO_SUBTITLE_STATUS);
+  }, [
+    instant,
+    filters.genres,
+    filters.yearMin,
+    filters.yearMax,
+    filters.unmatched,
+    filters.subtitleStatus,
+  ]);
 
   // Instant mode (desktop rail) is controlled off `filters`; batch mode off local state.
   const selectedGenres = instant ? filters.genres : localGenres;
@@ -123,15 +145,17 @@ export function FilterPanel({
     ? getSelectedDecades(filters.yearMin, filters.yearMax)
     : localDecades;
   const selectedUnmatched = instant ? (filters.unmatched ?? false) : localUnmatched;
+  const selectedSubtitle = instant ? (filters.subtitleStatus ?? NO_SUBTITLE_STATUS) : localSubtitle;
 
   const emitInstant = useCallback(
-    (next: { genres: string[]; decades: string[]; unmatched: boolean }) => {
+    (next: { genres: string[]; decades: string[]; unmatched: boolean; subtitle: string[] }) => {
       const yearRange = decadesToYearRange(next.decades);
       onApply({
         genres: next.genres,
         yearMin: yearRange.yearMin,
         yearMax: yearRange.yearMax,
         unmatched: next.unmatched || undefined,
+        subtitleStatus: next.subtitle.length ? next.subtitle : undefined,
       });
     },
     [onApply]
@@ -143,10 +167,15 @@ export function FilterPanel({
         ? selectedGenres.filter((g) => g !== genre)
         : [...selectedGenres, genre];
       if (instant)
-        emitInstant({ genres: next, decades: selectedDecades, unmatched: selectedUnmatched });
+        emitInstant({
+          genres: next,
+          decades: selectedDecades,
+          unmatched: selectedUnmatched,
+          subtitle: selectedSubtitle,
+        });
       else setLocalGenres(next);
     },
-    [instant, selectedGenres, selectedDecades, selectedUnmatched, emitInstant]
+    [instant, selectedGenres, selectedDecades, selectedUnmatched, selectedSubtitle, emitInstant]
   );
 
   const handleDecadeToggle = useCallback(
@@ -156,17 +185,45 @@ export function FilterPanel({
         : [...selectedDecades, decade];
       const next = normalizeDecadeSelection(toggled);
       if (instant)
-        emitInstant({ genres: selectedGenres, decades: next, unmatched: selectedUnmatched });
+        emitInstant({
+          genres: selectedGenres,
+          decades: next,
+          unmatched: selectedUnmatched,
+          subtitle: selectedSubtitle,
+        });
       else setLocalDecades(next);
     },
-    [instant, selectedGenres, selectedDecades, selectedUnmatched, emitInstant]
+    [instant, selectedGenres, selectedDecades, selectedUnmatched, selectedSubtitle, emitInstant]
   );
 
   const handleUnmatchedToggle = useCallback(() => {
     const next = !selectedUnmatched;
-    if (instant) emitInstant({ genres: selectedGenres, decades: selectedDecades, unmatched: next });
+    if (instant)
+      emitInstant({
+        genres: selectedGenres,
+        decades: selectedDecades,
+        unmatched: next,
+        subtitle: selectedSubtitle,
+      });
     else setLocalUnmatched(next);
-  }, [instant, selectedGenres, selectedDecades, selectedUnmatched, emitInstant]);
+  }, [instant, selectedGenres, selectedDecades, selectedUnmatched, selectedSubtitle, emitInstant]);
+
+  const handleSubtitleToggle = useCallback(
+    (value: string) => {
+      const next = selectedSubtitle.includes(value)
+        ? selectedSubtitle.filter((v) => v !== value)
+        : [...selectedSubtitle, value];
+      if (instant)
+        emitInstant({
+          genres: selectedGenres,
+          decades: selectedDecades,
+          unmatched: selectedUnmatched,
+          subtitle: next,
+        });
+      else setLocalSubtitle(next);
+    },
+    [instant, selectedGenres, selectedDecades, selectedUnmatched, selectedSubtitle, emitInstant]
+  );
 
   const handleApply = useCallback(() => {
     const yearRange = decadesToYearRange(localDecades);
@@ -175,13 +232,15 @@ export function FilterPanel({
       yearMin: yearRange.yearMin,
       yearMax: yearRange.yearMax,
       unmatched: localUnmatched || undefined,
+      subtitleStatus: localSubtitle.length ? localSubtitle : undefined,
     });
-  }, [localGenres, localDecades, localUnmatched, onApply]);
+  }, [localGenres, localDecades, localUnmatched, localSubtitle, onApply]);
 
   const handleClear = useCallback(() => {
     setLocalGenres([]);
     setLocalDecades([]);
     setLocalUnmatched(false);
+    setLocalSubtitle(NO_SUBTITLE_STATUS);
     onClear();
   }, [onClear]);
 
@@ -197,30 +256,32 @@ export function FilterPanel({
         <h3 className="mb-4 text-sm font-semibold text-[var(--text-primary)]">篩選條件</h3>
       )}
 
-      {/* Type Section */}
-      <div className="mb-4">
-        <SectionHeading className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
-          類型
-        </SectionHeading>
-        <div className="flex flex-wrap gap-1.5">
-          {(['all', 'movie', 'tv'] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => onTypeChange(t)}
-              data-testid={`filter-type-${t}`}
-              aria-pressed={mediaType === t}
-              className={`inline-flex min-h-[44px] items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-colors ${
-                mediaType === t
-                  ? 'border border-[var(--accent-primary)] bg-[var(--accent-primary)]/15 text-[var(--accent-text)]'
-                  : 'border border-transparent bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
-              }`}
-            >
-              {mediaType === t && <Check className="h-3.5 w-3.5" />}
-              {t === 'all' ? '全部' : t === 'movie' ? '電影' : '影集'}
-            </button>
-          ))}
+      {/* Type Section — hidden in the phone sheet (dsr-1b-b), see hideTypeChips */}
+      {!hideTypeChips && (
+        <div className="mb-4">
+          <SectionHeading className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
+            類型
+          </SectionHeading>
+          <div className="flex flex-wrap gap-1.5">
+            {(['all', 'movie', 'tv'] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => onTypeChange(t)}
+                data-testid={`filter-type-${t}`}
+                aria-pressed={mediaType === t}
+                className={`inline-flex min-h-[44px] items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-colors ${
+                  mediaType === t
+                    ? 'border border-[var(--accent-primary)] bg-[var(--accent-primary)]/15 text-[var(--accent-text)]'
+                    : 'border border-transparent bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
+                }`}
+              >
+                {mediaType === t && <Check className="h-3.5 w-3.5" />}
+                {t === 'all' ? '全部' : t === 'movie' ? '電影' : '影集'}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Genre Section — fail-soft: loading skeleton / error+retry / chips */}
       <div className="mb-4">
@@ -304,6 +365,31 @@ export function FilterPanel({
             {selectedUnmatched && <Check className="h-3.5 w-3.5" />}
             未匹配{unmatchedCount != null ? ` (${unmatchedCount})` : ''}
           </button>
+        </div>
+      </div>
+
+      {/* Subtitle Section (dsr-1b-b) — backend subtitle_status, labels from the one table */}
+      <div className="mb-4">
+        <SectionHeading className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
+          字幕
+        </SectionHeading>
+        <div className="flex flex-wrap gap-1.5">
+          {SUBTITLE_STATUS_FILTER_OPTIONS.map((o) => (
+            <button
+              key={o.value}
+              onClick={() => handleSubtitleToggle(o.value)}
+              data-testid={`filter-subtitle-${o.value}`}
+              aria-pressed={selectedSubtitle.includes(o.value)}
+              className={`inline-flex min-h-[44px] items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-colors ${
+                selectedSubtitle.includes(o.value)
+                  ? 'border border-[var(--accent-primary)] bg-[var(--accent-primary)]/15 text-[var(--accent-text)]'
+                  : 'border border-transparent bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
+              }`}
+            >
+              {selectedSubtitle.includes(o.value) && <Check className="h-3.5 w-3.5" />}
+              {o.label}
+            </button>
+          ))}
         </div>
       </div>
 

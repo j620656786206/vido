@@ -1,7 +1,9 @@
 // Implements: Component/FilterChip (jD7gF)
 // Source: ux-design.pen (Pencil app)
 import { X } from 'lucide-react';
+import { cn } from '../../lib/utils';
 import { yearFilterLabel, type FilterValues } from './FilterPanel';
+import { subtitleStatusLabel } from './subtitleStatusFilter';
 
 interface FilterChipsProps {
   filters: FilterValues;
@@ -15,7 +17,11 @@ interface FilterChipsProps {
    */
   onRemoveYears?: () => void;
   onRemoveUnmatched: () => void;
+  /** dsr-1b-b: remove ONE subtitle status value (the chip row shows one chip per value). */
+  onRemoveSubtitleStatus?: (value: string) => void;
   onClearAll: () => void;
+  /** Merged into the row — the page hands in its phone single-row scroller classes (dsr-1b-b). */
+  className?: string;
 }
 
 export function FilterChips({
@@ -25,8 +31,11 @@ export function FilterChips({
   onRemoveYearMax,
   onRemoveYears,
   onRemoveUnmatched,
+  onRemoveSubtitleStatus,
   onClearAll,
+  className,
 }: FilterChipsProps) {
+  const subtitleStatuses = filters.subtitleStatus ?? [];
   // A full decade range (both bounds) is ONE facet — render it as a single chip so the
   // chip row matches the rail's active-count badge (decade-as-one). Half-open ranges
   // (only one bound) keep their individual chip.
@@ -41,16 +50,17 @@ export function FilterChips({
     filters.genres.length > 0 ||
     filters.yearMin !== undefined ||
     filters.yearMax !== undefined ||
-    filters.unmatched === true;
+    filters.unmatched === true ||
+    subtitleStatuses.length > 0;
 
   if (!hasFilters) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className={cn('flex flex-wrap items-center gap-2', className)}>
       {filters.genres.map((genre) => (
         <span
           key={genre}
-          className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)]"
+          className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)] max-sm:shrink-0"
         >
           {genre}
           <button
@@ -64,7 +74,7 @@ export function FilterChips({
       ))}
 
       {hasYearRange ? (
-        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)]">
+        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)] max-sm:shrink-0">
           {yearFilterLabel(filters)}
           <button
             onClick={removeYearRange}
@@ -77,7 +87,7 @@ export function FilterChips({
       ) : (
         <>
           {filters.yearMin !== undefined && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)]">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)] max-sm:shrink-0">
               {yearFilterLabel({ yearMin: filters.yearMin })}
               <button
                 onClick={onRemoveYearMin}
@@ -90,7 +100,7 @@ export function FilterChips({
           )}
 
           {filters.yearMax !== undefined && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)]">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)] max-sm:shrink-0">
               {yearFilterLabel({ yearMax: filters.yearMax })}
               <button
                 onClick={onRemoveYearMax}
@@ -105,7 +115,7 @@ export function FilterChips({
       )}
 
       {filters.unmatched && (
-        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)]">
+        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)] max-sm:shrink-0">
           未匹配
           <button
             onClick={onRemoveUnmatched}
@@ -117,9 +127,25 @@ export function FilterChips({
         </span>
       )}
 
+      {subtitleStatuses.map((value) => (
+        <span
+          key={`subtitle-${value}`}
+          className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)] max-sm:shrink-0"
+        >
+          {subtitleStatusLabel(value)}
+          <button
+            onClick={() => onRemoveSubtitleStatus?.(value)}
+            className="ml-0.5 rounded-full p-0.5 hover:bg-[var(--accent-primary)]/30"
+            aria-label={`移除${subtitleStatusLabel(value)}篩選`}
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </span>
+      ))}
+
       <button
         onClick={onClearAll}
-        className="text-sm text-[var(--text-secondary)] underline-offset-2 hover:text-[var(--text-primary)] hover:underline"
+        className="text-sm text-[var(--text-secondary)] underline-offset-2 hover:text-[var(--text-primary)] hover:underline max-sm:shrink-0"
       >
         清除全部篩選
       </button>

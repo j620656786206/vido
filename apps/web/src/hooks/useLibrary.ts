@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { libraryService } from '../services/libraryService';
 import { detailKeys } from './useMediaDetails';
 import type { LibraryListParams, BatchResult } from '../types/library';
@@ -19,11 +19,18 @@ export const libraryKeys = {
     [...libraryKeys.all, type, id, 'videos'] as const,
 };
 
-export function useLibraryList(params: LibraryListParams) {
+export function useLibraryList(
+  params: LibraryListParams,
+  options: { enabled?: boolean; keepPrevious?: boolean } = {}
+) {
   return useQuery({
     queryKey: libraryKeys.list(params),
     queryFn: () => libraryService.listLibrary(params),
     staleTime: 30 * 1000, // NFR-P9: 30s freshness
+    // dsr-1b-b: the phone sheet's 「套用篩選 · N 部」 preview only queries while open, and
+    // keeps the last number on screen while the next one loads (no label flicker).
+    enabled: options.enabled ?? true,
+    placeholderData: options.keepPrevious ? keepPreviousData : undefined,
   });
 }
 

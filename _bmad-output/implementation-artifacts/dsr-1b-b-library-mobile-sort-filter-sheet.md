@@ -1,6 +1,6 @@
 # Story DSR.1b-b：手機媒體庫的「排序與篩選」抽屜對齊設計稿——有字幕篩選、看得到會篩出幾部、套用鈕固定在底部
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -155,13 +155,26 @@ so that 我不用在小螢幕上跟一個為滑鼠設計的下拉選單搏鬥，
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — 設計稿：A6p-M 分區重排（刪解析度、改字幕、加年份與狀態、片名→標題、重設觸控區）＋規格註記（AC: #1）**
-- [ ] **Task 2 — 字幕篩選接線：`FilterValues`／型別／service／route／`LibraryBrowseV2` 參數／對照表／`FilterPanel` 新分區／`FilterChips`（AC: #2, #6）**
-  - [ ] 先跑 `FilterPanel`／`FilterChips`／`LibraryFilterRail`／`LibraryBrowseV2` 既有 spec 確認綠 → 改 → 仍綠
-- [ ] **Task 3 — 抽屜重寫：三段式、排序 chips、instant `FilterPanel`＋`hideTypeChips`、重設、footer 計數（AC: #3, #6）**
-- [ ] **Task 4 — 入口鈕、`finalFocus`、膠囊列單行捲動、檔頭（AC: #4, #6）**
-- [ ] **Task 5 — 視覺夾具（新＋更新 `library-filter-panel`）、手機 e2e、mutation check、收尾（AC: #5, #7, #8, #9）**
-  - [ ] dev-story Step 9：`a6p-m`
+- [x] **Task 1 — 設計稿：A6p-M 分區重排（刪解析度、改字幕、加年份與狀態、片名→標題、重設觸控區）＋規格註記（AC: #1）**
+- [x] **Task 2 — 字幕篩選接線：`FilterValues`／型別／service／route／`LibraryBrowseV2` 參數／對照表／`FilterPanel` 新分區／`FilterChips`（AC: #2, #6）**
+  - [x] 先跑 `FilterPanel`／`FilterChips`／`LibraryFilterRail`／`LibraryBrowseV2` 既有 spec 確認綠 → 改 → 仍綠
+- [x] **Task 3 — 抽屜重寫：三段式、排序 chips、instant `FilterPanel`＋`hideTypeChips`、重設、footer 計數（AC: #3, #6）**
+- [x] **Task 4 — 入口鈕、`finalFocus`、膠囊列單行捲動、檔頭（AC: #4, #6）**
+- [x] **Task 5 — 視覺夾具（新＋更新 `library-filter-panel`）、手機 e2e、mutation check、收尾（AC: #5, #7, #8, #9）**
+  - [x] dev-story Step 9：`a6p-m`
+
+### Review Follow-ups (AI)
+
+<!-- /ship 對抗式 CR（2026-09-22，獨立 context，Opus）— 1 HIGH／3 MEDIUM／7 LOW；Rule 24 ① 吸收的每一項都有測試＋mutation。 -->
+
+- [x] [AI-Review][HIGH] 本 PR 同時有 1 張 missing（新夾具）與 3 張 pixel-diff（`library-filter-panel` 的 `-linux` 已 stale）→ `bootstrap-detection.mjs:157` 的 `bootstrapNeeded` 會是 false，main 的 Visual Regression 紅且**不會**自動開補圖 PR → `git rm` 三張 `library-filter-panel/*-visual-linux.png`（先例 `b4faf515`／`8cde34dc`），讓四張全部走 missing 路徑一次補齊
+- [x] [AI-Review][MEDIUM] footer「套用篩選 · N 部」每改一個條件就閃一次（新 key pending 時 `data` 是 undefined）→ `useLibraryList` 加 `keepPrevious` 選項（`placeholderData: keepPreviousData`），舊數字留著、`data-stale` 時降到 70% 不透明
+- [x] [AI-Review][MEDIUM] 計數查詢沒有去抖，連點五顆＝五個請求 → 200ms debounce（M19 紅）
+- [x] [AI-Review][MEDIUM-LOW] 深連結沒有白名單，`?subtitleStatus=bogus` 會讓清單 400、整頁進錯誤態 → `parseSubtitleStatusCsv` 對後端 10 個合法狀態做白名單（不是只對三顆 chip，`skipped` 這類合法深連結要活）並去重（M18 紅；新 `subtitleStatusFilter.spec.ts`）
+- [x] [AI-Review][LOW] 重複值 `found,found` → React duplicate key＋徽章算 2 → 同上去重
+- [x] [AI-Review][LOW] AC #3 要 `aria-label="排序方式"`＋roving tabindex＋方向鍵，做的是 `aria-labelledby`＋四顆各自可 Tab → 改成 `aria-label="排序方式"`、只有已選 chip `tabIndex=0`、←→↑↓ 循環（M20 紅）
+- [x] [AI-Review][LOW] `LibraryFilterSheetV2.spec` 的 `getBoundingClientRect).toBeDefined()` 是 tautology；`toEqual(sheetCountParams(...))` 只證明「丟給同一個 helper」→ 刪掉前者、後者補 `params.subtitleStatus === 'not_found'`
+- [x] [AI-Review][LOW] `FilterChips` 用字串相接不是 `cn()` → 改 `cn()`
 
 ## Dev Notes
 
@@ -253,11 +266,63 @@ tests/visual/…/library-mobile-sheets/sort-filter、…/library-filter-panel（
 
 ### Agent Model Used
 
+Claude Fable 5.1 — `claude-fable-5-1`（dev-story，Amelia，2026-09-22）
+
 ### Debug Log References
+
+- Pencil：`problems` 68 → **68**（刪解析度分區、加兩個分區、重設換成 44×44 frame，淨零）；`VebkY` 改 `fit_content` 後實高 **655**（≤675），`y = 844 − 655 = 189`；規格註記 `spec-note-dsr-1b-b`（`GMxQV`，`JUkwx` 下方、Flow B 群組在 13837 不重疊）。存檔走選單 Save，`git status` ` M ux-design.pen`，磁碟檔 grep 到 `spec-note-dsr-1b-b`／`還沒搜尋`／`fs-年份`／`fs-狀態`、`fs-解析度` 0 次；`pen-tokens.json` 的 `penSha256` ＝ 磁碟檔 `sha256`。
+- 匯出：第一輪 196/196；第二輪（改分區順序後）Pencil 回報 chunk 失敗，但 `a6p-m.png` 那一塊有出且經目視確認是改後的順序（狀態→字幕→年份），只 stage 它與 `pen-tokens.json`，其餘 `git checkout --`。
+- 視覺：本機第一次 `--update-snapshots=missing` 產生 `library-mobile-sheets/sort-filter/default-visual-darwin.png`（390×844）；`library-filter-panel` 三張 darwin 基準 320×460 → **320×544**（多「字幕」分區，預期），以 actual 覆寫；之後**整支再跑兩次**只剩 `retry-retry-notifications` 紅（既有本機漂移，`preexisting-fail-visual-darwin-three-stale-baselines`）。⚠️ Playwright 的 `webServer` 在本機需要 `AI_PROVIDER=claude`（api 沒有它會 exit 1），而 `npx nx serve web` 走 daemon 時偶爾 120s 起不來——手動 `NX_DAEMON=false npx nx serve web` 起好再跑（`reuseExistingServer`）。
+- e2e：`AI_PROVIDER=claude npx playwright test tests/e2e/library-mobile.spec.ts --project=chromium --repeat-each=3` → **21／21**。第一版有一條斷言「移除膠囊後會發新請求」是錯的——未篩選清單還在 30s 快取裡，不會再打；改成只斷言網址與計數。
+- `nx test web --skip-nx-cache` 4076 條：唯一紅的是 `routes/library.spec.tsx` 的 mock 表少了 `useLibraryList`（抽屜新用的 hook）→ 補一行 mock（沒改任何斷言）→ 全綠。
+- `lint:all` 第一輪 1 error：新檔 `subtitleStatusFilter.ts` 在 `components/` 下缺 Rule 21 檔頭 → 補 `<utility — no .pen counterpart>`。
 
 ### Completion Notes List
 
 - Ultimate context engine analysis completed - comprehensive developer guide created（SM Bob，2026-09-22）
+- **做了什麼（dev-story，2026-09-22）**
+  - **稿（Task 1）**：A6p-M `Bz0YN`——「片名」→「標題」；刪「解析度」分區；字幕三顆改「有字幕／缺字幕／還沒搜尋」（缺字幕畫成已選）；新增「年份」（`DECADE_OPTIONS` 五顆）與「狀態」（未匹配）分區；「類型」分區標題改「類別」（碼的字）；「重設」換成 44×44 透明 frame；分區順序改成**與 `FilterPanel` 相同**的 排序／類別／狀態／字幕／年份；抽屜 `fit_content` 貼底；規格註記。
+  - **接線（Task 2）**：新檔 `subtitleStatusFilter.ts`（唯一一份對照表＋csv helpers）；`FilterValues.subtitleStatus?: string[]`；`LibraryListParams.subtitleStatus?: string`（**CSV 字串**，與 `genres` 同一種 wire 慣例——與 story 字面的 `string[]` 不同，理由見下）；`libraryService.listLibrary` 送 `subtitle_status`，`searchLibrary` 補送 `genres`／`year_*`／`subtitle_status`（`-a2` 契約）；`routes/library.tsx` 刪「not yet wired」註解；`FilterPanel` 新「字幕」分區走完六個同步點＋`hideTypeChips`；`FilterChips` 每個狀態一顆膠囊＋`onRemoveSubtitleStatus`＋`className`；`LibraryBrowseV2` 讀／寫 URL 的 `subtitleStatus`、`hasActiveFilters`／`activeFilterCount`／`activeFilterLabels` 都算它。
+  - **抽屜（Task 3）**：`LibraryFilterSheetV2` 重寫成三段式（標題列＋44×44 重設／捲動區／固定 footer）；排序四顆方角 chip `radiogroup`（`SORT_OPTIONS` 加 `export` 後 import，點已選翻轉升降冪、箭頭跟著翻）；`FilterPanel` instant 模式＋`hideTypeChips` 掛在抽屜內、draft 由抽屜持有、`open` 變 true 時重設；footer 用 `useLibraryList(sheetCountParams(...), { enabled: open })`（新增第二個參數，預設 `true`）拿 `totalItems`；`sheetCountParams` export 給夾具種同一把 key。
+  - **入口（Task 4）**：標題列右側 44×44 `SlidersHorizontal` 鈕（`sm:hidden`、`aria-haspopup`／`aria-expanded`、計數徽章）；工具列「篩選」改 `hidden sm:flex lg:hidden`＋aria；`finalFocus` 函式版（手機鈕 → 工具列鈕 → `<h1 tabIndex=-1>`）；膠囊列手機單行捲動（class 由 `LibraryBrowseV2` 透過 `className` 傳進 `FilterChips`，膠囊 `max-sm:shrink-0`）；`LibraryBrowseV2.tsx:1` 檔頭改成 `Design ref: … A3p-D (LcHBs) · A4p-D (b1H71g) · A6p-M (Bz0YN)`（原本是 `Implements: Component/Browse-Grid-v2` 的錯誤形式，dsr-1 CR 第 2 項點名過）。
+  - **驗證（Task 5）**：夾具 `library-mobile-sheets/sort-filter`（390×844、`penNode: 'Bz0YN'`、種 genres＋count 兩把 key）；`library-filter-panel` 三張 darwin 基準更新；新 e2e `tests/e2e/library-mobile.spec.ts`（7 條）＋ `tests/support/helpers/library-stubs.ts`。
+- **/ship 對抗式 CR（2026-09-22，獨立 context，Opus；1 HIGH／3 MEDIUM／7 LOW）**：吸收 8 項（見 Review Follow-ups），mutation 再加 3 刀（M18 白名單／M19 去抖／M20 roving）全紅，合計 **20／20 紅**；CR 後 `library/`＋service＋routes 454 條全綠、typecheck／lint:all 綠、e2e 7 條 ×2 ＝ 14／14、visual 整支再跑一次只剩既有的 `retry-retry-notifications`（抽屜基準線因 footer 數字換成 `<span>` 重拍一次並目視確認只有 footer 文字位移）。**沒有照做的**：
+  - MEDIUM #2 **`searchLibrary` 補送篩選是死碼**：`useLibrarySearch`／`LibrarySearchBar` 在 `apps/web/src` 沒有任何產品呼叫點，`LibraryBrowseV2` 全部走 `useLibraryInfinite` → `GET /library`。所以 story 🔴 #7 與 `disc-2026-09-library-search-ignores-filters` 的前提（「有 `q` 就走 `/library/search`」）在瀏覽頁上**不成立**——`-a2` 修的端點今天沒有人打。契約 ack 與 spec 保留（便宜、對未來接線有用），但 PR 說明**不會**把它寫成使用者可見的修復 → ③ `disc-2026-09-library-search-bar-not-wired`。
+  - LOW #7 半開年份範圍（只有 `yearMin`）在抽屜 instant 模式下點任何 chip 會被正規化成整個年代——`FilterPanel` 既有行為、桌機軌相同 → ③ `disc-2026-09-instant-filterpanel-normalises-half-open-year`。
+  - LOW #11 標題列 DOM 結構改了但桌機沒有 `LibraryBrowseV2` 夾具守零像素——AC #5 靠推理（`sm:hidden` 不佔位）與 1024 e2e 成立；記錄，不新增夾具。
+- **與故事字面的差異（都有理由）**
+  - `LibraryListParams.subtitleStatus` 是 **`string`（CSV）而不是 `string[]`**：`genres` 在同一個型別裡就是 CSV 字串，`useLibraryInfinite` 把 route 的字串原樣往下傳、`libraryService` 原樣放進 URL——一致比字面重要。UI 層（`FilterValues`）維持 `string[]`。
+  - 抽屜的**分區順序**改成跟 `FilterPanel` 一樣（排序／類別／狀態／字幕／年份），而不是 story AC #1 寫的「排序／類別／年份／字幕／狀態」：`FilterPanel` 同一份元件也在桌機軌上，重排會連桌機軌一起動；碼→稿成本為零、反過來會多一組基準線變動。
+  - 膠囊列沒有「選中膠囊捲進列內」的 effect：`FilterChips` 每一顆都是**生效中**的篩選、沒有「選中／未選中」之分，那個 effect 在這裡沒有語意。
+  - 稿的「類型」分區標題改成「類別」：程式碼 `FilterPanel` 對 genres 一直叫「類別」（「類型」是媒體類型），稿跟碼。
+- **測試（Rule 16：紅／守）**
+  - 紅：`FilterPanel.spec.tsx` 4 條、`FilterChips.spec.tsx` 1 條、`libraryService.spec.ts` 3 條（含 search 送同一組參數）、`LibraryBrowseV2.spec.tsx` 9 條（深連結 3＋入口 6），全部實作前紅（第一輪 10 紅／後一輪 6 紅）。`LibraryFilterSheetV2.spec.tsx`（新檔，10 條）與重寫同一步完成——紅由下方 mutation M10–M14 補證。
+  - 守：`library/` 資料夾 23 檔 295 條、`libraryService.spec.ts` 43 條、`routes/library.spec.tsx`（補 mock 一行）、`routes/test/*`（夾具守門）全綠；`nx test web --skip-nx-cache` **4076／4076**。
+  - e2e `library-mobile.spec.ts` 7 條 × `--repeat-each=3` ＝ 21／21（390：入口鈕／抽屜貼底 ≤80%／重設 44／footer 固定／蓋住分頁列／Esc 回焦；缺字幕→2 部→套用→wire＋URL＋膠囊＋徽章＋計數／移除；深連結第一個請求就帶 `subtitle_status=not_found`；排序點兩次翻方向；膠囊列單行捲動＋焦點框；640 工具列鈕開同一個抽屜、膠囊 wrap；1024 沒有入口、軌上有三顆字幕 chip）。
+- **Mutation check（每一刀拿掉 → 必須紅）：17／17 紅**：M1 參數沒進 `useLibraryInfinite`／M2 字幕不算 active／M3 徽章不算字幕／M4 膠囊列不捲／M5 手機鈕沒 `sm:hidden`／M6 `emitInstant` 丟字幕／M7 `handleApply` 丟字幕／M8 `handleClear` 留字幕／M9 `hideTypeChips` 無效／M10 再點不翻方向／M11 套用忘了排序／M12 重開留舊 draft／M13 footer 永遠沒數字／M14 count 查詢不看 draft／M15 只有字幕時膠囊列不畫／M16 service list 不送／M17 search 不送同一組。
+- 🔗 AC Drift: NONE (checked: `subtitleStatus\|排序與篩選\|library-filter-open\|FilterChips\|SortSelector` across _bmad-output/implementation-artifacts/*.md — 命中 ux3-0-7（軌的 instant 模式、decade-as-one 計數）、ux3-cutover-2（選取模式）、dsr-1（頁首計數、無結果句子）、8-11 AC #6（深連結形狀）；本張沒有改任何一條的可觀察行為：instant 模式仍然「改了就套」、計數仍然 decade-as-one 只是多加字幕顆數、頁首計數位置不動、深連結網址形狀不動且終於生效——全部 REUSE)
+- 📎 Contract Stamps: FOUND (2 upstream stamps acked — `confirmed against [@contract-v1] (Story dsr-1b-a AC #1)`（`subtitle_status` CSV、小寫）與 `confirmed against [@contract-v1] (Story dsr-1b-a2 AC #1)`（search 同一組篩選）；兩張上游都 done、無 bump。本張不定義新契約)
+- 🎭 A11y Pre-Flight: PASS (5 components checked — `LibraryFilterSheetV2`、`FilterPanel`、`FilterChips`、`LibraryBrowseV2`、`SortSelector`(只加 export)；`lint:all` 0 errors、129 warnings＝既有批次，本張碰的檔案 0 新 warnings。四類：① 圖片 N/A；② modal 焦點——Base UI 鎖焦點、開啟時初始焦點落在第一個可 tab 元素（重設鈕），關閉回到觸發鈕（e2e Esc 那條）、觸發鈕都不在時落 `<h1 tabIndex=-1>`；③ aria-live N/A（footer 計數是按鈕文字，不是非同步狀態徽章）；④ 自訂元件——排序 `radiogroup`＋`aria-labelledby`＋`aria-checked`、兩顆入口 `aria-haspopup="dialog"`＋`aria-expanded`、Dialog.Title sr-only「排序與篩選」＋視覺標題 `aria-hidden`。已知缺口：抽屜沒有關閉鈕（`disc-2026-09-ui-sheet-no-close-button`）；排序 radiogroup 沒有 roving tabindex／方向鍵（chip 是四顆獨立 button，Tab 逐顆——與 `disc-2026-09-sort-sheet-radiogroup-keyboard-apg` 同一題，該單裁定時一起收））
+- 🎨 UX Verification: PASS（對照表見下；落差全部是建單裁定或已有單子）
+- Pre-existing fix: `routes/library.spec.tsx` 的 `useLibrary` mock 表補 `useLibraryList`（本張造成的紅，非既有；15 分內修）。本機 visual 的 `retry-retry-notifications` 紅是既有漂移（`preexisting-fail-visual-darwin-three-stale-baselines`）。
+
+#### 🎨 UX 對照（dev-story Step 9；量測＝390×844 chromium 夜行，基準＝`.pen` 節點值）
+
+| 區域 | 稿（節點） | 實作（量測／基準線） | 相符？ | 要修？ |
+| --- | --- | --- | --- | --- |
+| 抽屜位置 | `VebkY` x0、寬 390、貼底、高 655（≤675） | e2e：x 0、寬 390、底邊 844、高 ≤ 675 | ✅ | — |
+| 抽屜外觀 | `$bg-secondary`、頂角 `$radius-xl`、上框 `$border-subtle` | `ui/Sheet` 基底同 token | ✅ | — |
+| 把手 | 40×4 `$border-subtle` | `ui/Sheet` 40×4 `--border-subtle` | ✅ | —（Flow A 稿本來就是 (c) 那種） |
+| 標題列 | 「排序與篩選」H4 18／700；「重設」Body 600 `$accent-text`、44×44 | `text-lg font-bold`；重設 `size-11` `text-sm font-semibold` `--accent-text`（e2e ≥44×44） | ✅ | — |
+| 排序 chip | 4 顆方角 44 高 `$radius-md`、已選 `$accent-subtle`＋箭頭 14、文字＝`SORT_OPTIONS` | `min-h-11 rounded-[--radius-md]`、已選 `--accent-subtle`＋`size-3.5` 箭頭、`SORT_OPTIONS` import | ✅ | — |
+| 篩選 chip 形狀 | pill 38 高、已選 `$accent-subtle` 底無圖示 | `FilterPanel` 既有：pill `min-h-[44px]`、已選 accent 邊框＋`accent/15` 底＋勾 | ❌（既有） | 不修：`FilterPanel` 是桌機軌同一份元件，chip 樣式屬 `Component/FilterChip` 母版對齊，另案（`disc-2026-09-library-has-filters-the-product-lacks` 之外，若要立：`disc-2026-09-filterchip-master-vs-filterpanel`——本張不立，屬 dsr-3／設計系統範圍） |
+| 分區順序 | 排序／類別／狀態／字幕／年份（本張改稿對齊碼） | 同 | ✅ | — |
+| 分區標題 | Label 12／600 `$text-secondary` | `text-xs font-medium uppercase` `--text-secondary` | ≈ | 不修：600 vs 500＋uppercase 是 `FilterPanel` 全站既有寫法 |
+| 字幕三顆 | 有字幕／缺字幕／還沒搜尋（缺字幕已選） | 同一份對照表；夾具 `subtitleStatus:['not_found']` | ✅ | — |
+| 媒體類型 chips | 稿無 | `hideTypeChips` 隱藏 | ✅ | — |
+| footer | 貼底、上框、padding [12,16,24,16]、按鈕 358×48 `$accent-primary` `$radius-md`「套用篩選 · 128 部」BodyLg 600 | `shrink-0 border-t px-4 pt-3 pb-[max(1.5rem,safe-area)]`、`h-12 w-full`、`text-base font-semibold`；夾具「套用篩選 · 128 部」 | ✅ | — |
+| 入口鈕 | A3p-M 頂列 44×44 `sliders-horizontal` | 頁面標題列右側 44×44（e2e 右緣＝根 −16）；頂列本身屬 shell（`disc-2026-09-library-header-not-in-shell-bar`，`-c` 改稿成兩層） | ≈ | 不在本張 |
+| 夾具基準線上的焦點框 | 稿沒畫焦點 | 「重設」有黃色焦點框：夾具一掛載就是開的，Base UI 把初始焦點放到第一個可 tab 元素 | — | 不修（與 dsr-4b-1 同一種情況；真的點鈕打開時不出現） |
 
 ### Discovery Triage
 
@@ -267,11 +332,45 @@ tests/visual/…/library-mobile-sheets/sort-filter、…/library-filter-panel（
   - ① 桌機篩選軌因接線多出「字幕」分區 → AC #2 明寫、AC #5／#7 覆蓋基準線更新。
   - ③ 抽屜開著跨過 `lg` 不會關 → `disc-2026-09-library-sheet-stays-open-across-lg`。
   - ③ 「繁中／簡轉繁」在稿上代表語言、系統沒有可篩的語言欄位 → 併入 `disc-2026-09-library-has-filters-the-product-lacks` 的 ↪ 補記（若之後要做「依字幕語言篩」是新功能，另立）。
-- **dev-story 期間的發現：** （dev 填寫）
+- **dev-story 期間的發現：**
+  - ③ `FilterPanel` 的 chip 樣式（accent 邊框＋`accent/15`＋勾）與 `Component/FilterChip`／A6p-M 的 pill（`$accent-subtle` 底、無圖示）不同——全站既有、桌機軌同一份，屬設計系統對齊 → 併入 `disc-2026-09-library-has-filters-the-product-lacks` 的 ↪ 補記（建單後補），不另立。
+  - ③ 排序 `radiogroup` 沒有 roving tabindex／方向鍵 → 與 `disc-2026-09-sort-sheet-radiogroup-keyboard-apg` 同一題，該單 ↪ 補記「library 抽屜的排序 chips 一起裁」。
+  - ① `routes/library.spec.tsx` 的 mock 少 `useLibraryList` → 補一行（本張造成）。
+- **/ship CR 的發現（2026-09-22）：**
+  - ③ 媒體庫瀏覽頁沒有任何路徑會打 `/library/search`（`useLibrarySearch`／`LibrarySearchBar` 零產品呼叫點）→ `disc-2026-09-library-search-bar-not-wired`。
+  - ③ instant 模式的 `FilterPanel` 會把半開年份範圍正規化成整個年代 → `disc-2026-09-instant-filterpanel-normalises-half-open-year`。
 
 ### File List
+
+- `ux-design.pen` — A6p-M `Bz0YN`（片名→標題、刪解析度、字幕三顆改字、加年份／狀態分區、類型→類別、重設 44×44、分區順序、`fit_content` 貼底）、`spec-note-dsr-1b-b`（`GMxQV`）
+- `_bmad-output/pen-tokens.json` — `penSha256`
+- `_bmad-output/screenshots/flow-a-browse-v2/a6p-m.png`
+- `apps/web/src/components/library/subtitleStatusFilter.ts`（新）— 對照表＋csv helpers（白名單＝後端 10 個狀態、去重）＋ `subtitleStatusFilter.spec.ts`（新，5 條）
+- `apps/web/src/components/library/FilterPanel.tsx`（+spec）— `FilterValues.subtitleStatus`、字幕分區、六個同步點、`hideTypeChips`
+- `apps/web/src/components/library/FilterChips.tsx`（+spec）— 字幕膠囊、`onRemoveSubtitleStatus`、`className`、`max-sm:shrink-0`
+- `apps/web/src/components/library/LibraryFilterSheetV2.tsx`（重寫）＋ `LibraryFilterSheetV2.spec.tsx`（新）
+- `apps/web/src/components/library/SortSelector.tsx` — `SORT_OPTIONS`／`SortOption` 加 `export`
+- `apps/web/src/components/library/LibraryBrowseV2.tsx`（+spec）— 檔頭、字幕接線、手機入口鈕＋徽章、工具列鈕斷點、`finalFocus`、膠囊列 class
+- `apps/web/src/hooks/useLibrary.ts` — `useLibraryList(params, { enabled, keepPrevious })`
+- `apps/web/src/services/libraryService.ts`（+spec）— `subtitle_status`；`searchLibrary` 補送篩選
+- `apps/web/src/types/library.ts` — `LibraryListParams.subtitleStatus?: string`
+- `apps/web/src/routes/library.tsx` — 註解改成事實
+- `apps/web/src/routes/library.spec.tsx` — mock 表補 `useLibraryList`
+- `apps/web/src/routes/test/-gallery.fixtures.tsx` — 夾具 `library-mobile-sheets/sort-filter`
+- `tests/visual/components.visual.spec.ts-snapshots/components/library-mobile-sheets/sort-filter/default-visual-darwin.png`（新）
+- `tests/visual/components.visual.spec.ts-snapshots/components/library-filter-panel/{default,hover,focus}-visual-darwin.png` — 320×460 → 320×544
+- `tests/visual/components.visual.spec.ts-snapshots/components/library-filter-panel/{default,hover,focus}-visual-linux.png` — **刪除**（stale；讓 CI 的 bootstrap 走 missing 路徑一次補四張）
+- `tests/e2e/library-mobile.spec.ts`（新）、`tests/support/helpers/library-stubs.ts`（新）
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — 狀態
+- `_bmad-output/implementation-artifacts/dsr-1b-b-library-mobile-sort-filter-sheet.md` — 本檔
 
 ## Change Log
 
 - 2026-09-22 — 建單（SM Bob，create-story；main `49cc74a3`）。由 `dsr-1b-flow-a-mobile` 拆出的第二塊；依賴 `dsr-1b-a`。設計稿 A6p-M 以 Pencil MCP 逐節點讀出（含 `ctx.problems` 零 clipping）、`components/library/` 與接線路徑由唯讀稽核代理查證（23 條陷阱清單全數併入 🔴 與 AC）。
 - 2026-09-22 — ⚖️ Alexyu 裁定搜尋模式走 (a)：後端 `/library/search` 吃篩選（新單 `dsr-1b-a2`）；本張 AC #2 改成 `searchLibrary()` 補送篩選參數並 ack `-a2` 契約；依賴加上 `-a2`。
+- 2026-09-22 — Task 1（dev-story，Amelia）：A6p-M 改稿（`problems` 68→68、抽屜 655 貼底）、規格註記、存檔驗證、只 stage 一張截圖＋tokens。
+- 2026-09-22 — Task 2：字幕篩選接線（對照表、型別、service、route、`FilterPanel`、`FilterChips`、`LibraryBrowseV2`；紅 10 → 綠）。
+- 2026-09-22 — Task 3：抽屜重寫（三段式、排序 chips、instant `FilterPanel`＋`hideTypeChips`、footer 計數）＋新 spec 10 條。
+- 2026-09-22 — Task 4：手機入口鈕＋徽章、工具列鈕斷點、`finalFocus`、膠囊列單行捲動、檔頭（紅 6 → 綠）。
+- 2026-09-22 — Task 5：夾具＋darwin 基準（連跑三次穩定）、e2e 7 條 ×3、mutation 17／17 紅、`nx test web` 4076／4076、`lint:all` 0 errors、`typecheck`、`check-design-tokens` 全綠；Step 9 對照表；Status → review。
+- 2026-09-22 — /ship 對抗式 CR：吸收 8 項（刪 stale `-linux` 基準、`keepPreviousData`＋200ms 去抖、深連結白名單＋去重、`aria-label`＋roving tabindex＋方向鍵、測試贅語、`cn()`），mutation 合計 20／20 紅；另立 `disc-2026-09-library-search-bar-not-wired`、`disc-2026-09-instant-filterpanel-normalises-half-open-year`。
