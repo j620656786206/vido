@@ -1,6 +1,6 @@
 # Story DSR.1b-a：媒體庫清單 API 可以用「字幕狀態」篩選——「查看未找到項目」那條連結終於會真的篩
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -206,3 +206,4 @@ Claude Fable 5.1 — `claude-fable-5-1`（dev-story，Amelia，2026-09-22）
 - 2026-09-22 — Task 2：兩個 repo 的 `IN (...)` 條件（紅 5 → 綠）；軟刪除那列由測試釘住不出現。
 - 2026-09-22 — Task 3：service 合併路徑測試 3 條；mutation 6／6 紅；`nx test api`／`api:lint`／`format:check` 全綠；Status → review。
 - 2026-09-22 — /ship 對抗式 CR：吸收 8 項（CSV 去重、DEFAULT 列測試、page 2 over-fetch 測試、大小寫契約補述、400 訊息截斷、repo 註解、`movieIDs`、`AssertExpectations` 歸位），mutation 9／9 紅；另立 `disc-2026-09-library-search-ignores-filters`（HIGH，既有缺口，非本張範圍）。
+- 2026-09-22 — 合併：PR #508（squash `c3bbae2b`）；PR 上 CI 13 pass／0 fail（Lint、Unit、Go、4 個 E2E shard、3 個 Build、Serve Smoke、Visual Regression PR gate），純後端沒有基準線變動、沒有 bootstrap PR；合併後 `main` 的 Tests／Docker 綠（Visual Regression 見 sprint-status 註記）。Status → done。
