@@ -1,6 +1,6 @@
 # Story DSR.1b-a2：媒體庫「搜尋」也要吃篩選——搜尋框有字的時候，類型／年份／未匹配／字幕篩選不再被悄悄丟掉
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -52,11 +52,22 @@ so that 亮著的 pill 與網址上的參數說的是真話，而不是搜尋一
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — handler：抽 `parseLibraryMediaType`／`parseLibraryFilters`，`SearchLibrary` 接上（AC: #1, #3）**
-  - [ ] 先跑 `TestLibraryHandler_ListLibrary*`／`TestLibraryHandler_SearchLibrary` 既有全綠 → 抽函式 → 仍綠 → 新測試紅 → 綠
-- [ ] **Task 2 — 兩個 repo：抽條件梯函式（帶 alias），`List` 改用、`FullTextSearch` count＋list 接上（AC: #2, #3）**
-  - [ ] 先跑 `TestMovieList*`／`TestSeriesList*`／`*SubtitleStatusFilter`／`*FullTextSearch*` 既有全綠 → 抽函式 → 仍綠 → 新測試紅 → 綠
-- [ ] **Task 3 — service 搜尋測試、mutation check、註解與交接（AC: #3, #4, #5）**
+- [x] **Task 1 — handler：抽 `parseLibraryMediaType`／`parseLibraryFilters`，`SearchLibrary` 接上（AC: #1, #3）**
+  - [x] 先跑 `TestLibraryHandler_ListLibrary*`／`TestLibraryHandler_SearchLibrary` 既有全綠 → 抽函式 → 仍綠 → 新測試紅 → 綠
+- [x] **Task 2 — 兩個 repo：抽條件梯函式（帶 alias），`List` 改用、`FullTextSearch` count＋list 接上（AC: #2, #3）**
+  - [x] 先跑 `TestMovieList*`／`TestSeriesList*`／`*SubtitleStatusFilter`／`*FullTextSearch*` 既有全綠 → 抽函式 → 仍綠 → 新測試紅 → 綠
+- [x] **Task 3 — service 搜尋測試、mutation check、註解與交接（AC: #3, #4, #5）**
+
+### Review Follow-ups (AI)
+
+<!-- /ship 對抗式 CR（2026-09-22，獨立 context，Opus）— 0 HIGH／5 MEDIUM／5 LOW；先驗證了三個高風險點為正確（List 等價、FTS 別名、args aliasing）。 -->
+
+- [x] [AI-Review][MEDIUM] `SearchLibrary` 函式註解沒提五個篩選參數（AC #4 只做一半）→ 補一行「Supports the same filters as GET /library …」
+- [x] [AI-Review][MEDIUM] 兩個 goroutine 現在共讀同一張 `params.Filters` map，未來一次 repo 端寫入就是 concurrent map write → `library_service.go` fan-out 上方註解釘死「read-only from here on」
+- [x] [AI-Review][MEDIUM] FTS 測試沒碰 `year_max`、也沒有 page 2（`OFFSET` 綁在 filterArgs 之後是最容易錯的地方）→ 加 `year_max` 與「page 2＋篩選」兩條
+- [x] [AI-Review][LOW] `append(append(...))` 巢狀寫法脆弱 → 改成 `make`＋三次明確 `append`（兩個 repo）
+- [x] [AI-Review][LOW] 「byte-identical 400 body」測試宣稱證明 provenance，其實只證明 contract parity → 改名與訊息，註明 provenance 由 mutation M4 釘住
+- [x] [AI-Review][MEDIUM] `/library/search` 從「壞篩選值忽略回 200」變成「400」，與 `/library` 對齊——有意識地接受 → 記在 Completion Notes
 
 ## Dev Notes
 
@@ -124,21 +135,59 @@ apps/api/internal/services/library_service_test.go                              
 
 ### Agent Model Used
 
+Claude Fable 5.1 — `claude-fable-5-1`（dev-story，Amelia，2026-09-22）
+
 ### Debug Log References
+
+- RED：handler 新 4 條——第一條 `mock.On("SearchLibrary", …MatchedBy)` 不匹配即紅；repo 兩支各 4／3 條紅（篩選被忽略、回全部 3 列）；service 那支在 Task 2 之後寫、寫完即綠（合併路徑由 mutation M1／M6 證明會紅）。
+- 抽函式的順序照 Task 描述：先抽、`List` 改用、既有 `TestMovieList*`／`TestSeriesList*`／`*SubtitleStatusFilter`／`*FullTextSearch*` 全綠，再接 FTS。
+- `gofmt -l` 列出的 `repository.go`／`episode_repository_test.go`／`season_repository_test.go` 是**既有**未格式化檔案，本張未觸碰。
+- `NX_DAEMON=false pnpm nx test api --skip-nx-cache` 全綠，跑完已刪 `apps/api/coverage`；`api:lint` 綠；`format:check` 綠。
 
 ### Completion Notes List
 
 - Ultimate context engine analysis completed - comprehensive developer guide created（SM Bob，2026-09-22）
+- **做了什麼（dev-story，2026-09-22）**
+  - **handler（Task 1）**：抽出 `parseLibraryMediaType(c) (string, bool)` 與 `parseLibraryFilters(c, *ListParams) bool`（genres／year_min／year_max／unmatched／subtitle_status；壞值寫 400 回 false）；`ListLibrary` 與 `SearchLibrary` 都改用。`SearchLibrary` 的 `q` 檢查與回應形狀不變。`-a` 寫的「只有 `/library` 讀這個參數」註解改成事實。
+  - **repo（Task 2）**：`movieListFilterConditions(params, alias)`／`seriesListFilterConditions(params, alias)`——五個條件裡的四個（`search` 留在 `List` 呼叫端），`alias` 決定要不要加 `m.`／`s.` 前綴；`List` 改用（alias `""`），`FullTextSearch` 的 **count 與 list 兩段 SQL** 都在 `MATCH ? AND <notRemoved>` 之後接上，`args` 順序＝query → 條件 → LIMIT／OFFSET。`ORDER BY rank`、`query == ""` 走 `List` 的捷徑、`ftsPrefixQuery` 都沒動。
+  - **service（Task 3）**：不改程式碼；補真 DB 測試釘住「兩邊都篩、`TotalCount` 相加、DEFAULT 列可被 `not_searched` 撈到」。
+- **測試（Rule 16：紅／守）**
+  - 紅：`library_handler_test.go` `TestLibraryHandler_SearchLibrary` 新增 4 條（四個 Filters key 型別正確／`subtitle_status=bogus` 400 且 service 沒被叫／年份反轉 400／**結構測試：五組壞參數在 `/library` 與 `/library/search` 回逐位元相同的 400 body**）；`movie_repository_test.go` `TestMovieFullTextSearchAppliesFilters` 5 條（無篩選 3 列不變／`subtitle_status` 同時縮 rows 與 count／＋`unmatched`／`genres`／`year_min`；軟刪除列永不出現）；`series_repository_test.go` `TestSeriesFullTextSearchAppliesFilters` 4 條。
+  - 守：`library_service_test.go` `TestLibraryService_SearchLibrary_AppliesFilters` 3 條；既有 `TestLibraryHandler_*`、`TestMovieList*`／`TestSeriesList*`／`*SubtitleStatusFilter`／`*FullTextSearch*`／`TestListExcludesRemovedMovies`／`TestFullTextSearchExcludesRemovedMovies`／`TestLibraryService_*` 一條未改、全綠。
+- **Mutation check（每一刀拿掉 → 必須紅）：6／6 紅**：M1 FTS count 不接條件（count 與 rows 不一致）／M2 FTS list 不接條件／M3 `args` 順序錯（query 放最後）／M4 `SearchLibrary` 不呼叫 `parseLibraryFilters`／M5 helper 漏 `subtitle_status`（`-a` 的 `List` 測試紅）／M6 series count 沒綁 args。
+- 🔗 AC Drift: NONE (checked: `FullTextSearch\|SearchLibrary\|library/search` across _bmad-output/implementation-artifacts/*.md — 命中 `dsr-1b-a` CR HIGH #1 與 `disc-2026-09-library-search-ignores-filters`（本張就是它們的下游）、`ux3-*` 搜尋相關 story 提到 `/library/search` 的回應形狀（`LibrarySearchResults`）——形狀未變、`ORDER BY rank` 未變，屬 REUSE 不是 DRIFT)
+- 📎 Contract Stamps: FOUND (2 stamped ACs across 2 files — this story AC #1 `[@contract-v1]`（定義 `/library/search` 的篩選集合）；upstream `dsr-1b-a` AC #1 `[@contract-v1]` referenced, ack line present in Dev Notes（`confirmed against [@contract-v1] (Story dsr-1b-a AC #1)`——同一份解析碼、形狀未變、不 bump）。下游 `dsr-1b-b` 建單時已 ack 本張)
+- 🎭 A11y Pre-Flight: N/A (100% backend — no apps/web/ files touched)
+- 🎨 UX Verification: SKIPPED — no UI changes in this story
+- Pre-existing fix: N/A（`nx test api` 全綠）
+- **與故事字面的差異**：無。
+- **/ship 對抗式 CR（2026-09-22，獨立 context，Opus；0 HIGH／5 MEDIUM／5 LOW；`go vet`／`staticcheck`／`-race` 皆乾淨）**：吸收 6 項（見 Review Follow-ups）；CR 後 `nx test api --skip-nx-cache` 全綠。**有意識接受的行為變更**：`/library/search` 對壞的篩選值從「忽略、回 200」變成「400」，與 `/library` 一致——前端今天不會送這些值，`-b` 組深連結一律用常數。**沒有照做的**：
+  - MEDIUM #2「合併後搜尋模式仍只有 `unmatched` 是真的」——前端 `searchLibrary()` 補送 `genres`／`year_*`／`subtitle_status` 是 `-b` AC #2（已 ack 本張契約），PR 說明「沒做的事」明寫。
+  - LOW：三處 `AssertNotCalled` 近乎 tautology（無害、保留）；`q` 長度用 byte 數（既有、CJK 一個字就過——要改需 Alexyu 裁定，未立案）；兩個 repo helper 只差日期欄名（story 指定的形狀，之後要收再抽 `dateColumn` 參數）。
 
 ### Discovery Triage
 
 - **建單時的發現（SM Bob 2026-09-22）：**
   - ① `disc-2026-09-library-search-ignores-filters` → 本張 AC #1／#2 吸收（⚖️ Alexyu 裁定 (a)）。
   - ③ `movie_handler.go`／`series_handler.go` 各自一份篩選解析碼 → 未立案（既有；若之後要統一，用 `disc-2026-09-list-filter-parsing-three-copies`）。
-- **dev-story 期間的發現：** （dev 填寫）
+- **dev-story 期間的發現：** N/A — no out-of-scope work discovered。
 
 ### File List
+
+- `apps/api/internal/handlers/library_handler.go` — `parseLibraryMediaType`／`parseLibraryFilters` 抽出；`ListLibrary`／`SearchLibrary` 改用；imports `repository`
+- `apps/api/internal/handlers/library_handler_test.go` — `TestLibraryHandler_SearchLibrary` 新增 4 條
+- `apps/api/internal/repository/movie_repository.go` — `movieListFilterConditions(params, alias)`；`List` 改用；`FullTextSearch` count＋list 接上
+- `apps/api/internal/repository/movie_repository_test.go` — `TestMovieFullTextSearchAppliesFilters`（5 條）
+- `apps/api/internal/repository/series_repository.go` — `seriesListFilterConditions(params, alias)`；`List` 改用；`FullTextSearch` count＋list 接上
+- `apps/api/internal/repository/series_repository_test.go` — `TestSeriesFullTextSearchAppliesFilters`（4 條）
+- `apps/api/internal/services/library_service_test.go` — `TestLibraryService_SearchLibrary_AppliesFilters`（3 條）
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — 狀態 ready-for-dev → in-progress → review
+- `_bmad-output/implementation-artifacts/dsr-1b-a2-library-search-applies-filters.md` — 本檔
 
 ## Change Log
 
 - 2026-09-22 — 建單（SM Bob；main `e9ea9948`）。由 `dsr-1b-a` /ship CR HIGH #1 → `disc-2026-09-library-search-ignores-filters` → ⚖️ Alexyu 裁定 (a) 催生。純後端，排在 `dsr-1b-b` 之前。
+- 2026-09-22 — Task 1（dev-story，Amelia）：handler 抽兩個共用 parser，`SearchLibrary` 接上（紅 4 → 綠）。
+- 2026-09-22 — Task 2：兩個 repo 抽 alias-aware 條件梯，`List` 改用後既有測試全綠，再接 FTS count＋list（紅 9 → 綠）。
+- 2026-09-22 — Task 3：service 搜尋測試 3 條；mutation 6／6 紅；`nx test api`／`api:lint`／`format:check` 全綠；Status → review。
+- 2026-09-22 — /ship 對抗式 CR：吸收 6 項（`SearchLibrary` 註解、`Filters` read-only 註解、`year_max`＋page 2 FTS 測試、明確 `listArgs`、parity 測試改名、400 行為變更記錄）；0 HIGH。

@@ -12,6 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/services"
 )
 
@@ -40,20 +41,25 @@ func (h *LibraryHandler) SetItemEnricher(enricher services.ItemEnricherInterface
 	h.enricher = enricher
 }
 
-// ListLibrary handles GET /api/v1/library
-// Returns a paginated list of library items (movies + series combined)
-// Supports filters: genres, year_min, year_max, unmatched, subtitle_status via query params
-func (h *LibraryHandler) ListLibrary(c *gin.Context) {
-	params := parseListParams(c)
-
-	// Parse type filter: all (default), movie, tv
+// parseLibraryMediaType reads `type` (all | movie | tv). On a bad value it writes
+// the 400 and returns ok=false. Shared by ListLibrary and SearchLibrary so the two
+// endpoints cannot drift (dsr-1b-a2 AC #1).
+func parseLibraryMediaType(c *gin.Context) (string, bool) {
 	mediaType := c.DefaultQuery("type", "all")
 	if mediaType != "all" && mediaType != "movie" && mediaType != "tv" {
 		BadRequestError(c, "VALIDATION_INVALID_FORMAT", "type must be 'all', 'movie', or 'tv'")
-		return
+		return "", false
 	}
+	return mediaType, true
+}
 
-	// Parse filter params
+// parseLibraryFilters reads the library filter query params — genres, year_min,
+// year_max, unmatched, subtitle_status — into params.Filters. On a bad value it
+// writes the 400 and returns false. It is the ONE parser behind GET /library and
+// GET /library/search (dsr-1b-a2 AC #1 [@contract-v1]); the Filters keys and
+// value types here are what the repository List / FullTextSearch ladders assert
+// on, so a type change on either side silently disables the filter.
+func parseLibraryFilters(c *gin.Context, params *repository.ListParams) bool {
 	if genres := c.Query("genres"); genres != "" {
 		genreList := strings.Split(genres, ",")
 		cleaned := make([]string, 0, len(genreList))
@@ -72,7 +78,7 @@ func (h *LibraryHandler) ListLibrary(c *gin.Context) {
 		val, err := strconv.Atoi(yearMin)
 		if err != nil || val < 1888 || val > 2100 {
 			BadRequestError(c, "VALIDATION_INVALID_FORMAT", "year_min must be a year between 1888 and 2100")
-			return
+			return false
 		}
 		parsedYearMin = val
 		params.Filters["year_min"] = yearMin
@@ -81,14 +87,14 @@ func (h *LibraryHandler) ListLibrary(c *gin.Context) {
 		val, err := strconv.Atoi(yearMax)
 		if err != nil || val < 1888 || val > 2100 {
 			BadRequestError(c, "VALIDATION_INVALID_FORMAT", "year_max must be a year between 1888 and 2100")
-			return
+			return false
 		}
 		parsedYearMax = val
 		params.Filters["year_max"] = yearMax
 	}
 	if parsedYearMin > 0 && parsedYearMax > 0 && parsedYearMin > parsedYearMax {
 		BadRequestError(c, "VALIDATION_INVALID_FORMAT", "year_min must not be greater than year_max")
-		return
+		return false
 	}
 
 	if c.Query("unmatched") == "true" {
@@ -102,8 +108,7 @@ func (h *LibraryHandler) ListLibrary(c *gin.Context) {
 	// re-copy it here); duplicates collapse so the IN list is bounded by the number
 	// of statuses. Stored as []string so the repo-side `.([]string)` assertion
 	// matches; a different type would make the filter silently no-op (the year_min
-	// trap). Only GET /library reads this today — /library/search ignores every
-	// filter (disc-2026-09-library-search-ignores-filters).
+	// trap). Read by both /library and /library/search (dsr-1b-a2).
 	if raw := c.Query("subtitle_status"); raw != "" {
 		statuses := make([]string, 0, 2)
 		seen := make(map[string]struct{}, 2)
@@ -115,7 +120,7 @@ func (h *LibraryHandler) ListLibrary(c *gin.Context) {
 			if !models.SubtitleStatus(v).IsValid() {
 				BadRequestError(c, "VALIDATION_INVALID_FORMAT",
 					fmt.Sprintf("subtitle_status contains unknown value %q", truncateRunes(v, 64)))
-				return
+				return false
 			}
 			if _, dup := seen[v]; dup {
 				continue
@@ -126,6 +131,22 @@ func (h *LibraryHandler) ListLibrary(c *gin.Context) {
 		if len(statuses) > 0 {
 			params.Filters["subtitle_status"] = statuses
 		}
+	}
+	return true
+}
+
+// ListLibrary handles GET /api/v1/library
+// Returns a paginated list of library items (movies + series combined)
+// Supports filters: genres, year_min, year_max, unmatched, subtitle_status via query params
+func (h *LibraryHandler) ListLibrary(c *gin.Context) {
+	params := parseListParams(c)
+
+	mediaType, ok := parseLibraryMediaType(c)
+	if !ok {
+		return
+	}
+	if !parseLibraryFilters(c, &params) {
+		return
 	}
 
 	result, err := h.service.ListLibrary(c.Request.Context(), params, mediaType)
@@ -403,6 +424,8 @@ func (h *LibraryHandler) GetSeriesVideos(c *gin.Context) {
 
 // SearchLibrary handles GET /api/v1/library/search?q=X&page=1&page_size=20&type=all
 // Performs FTS5 full-text search across movies and series in the library.
+// Supports the same filters as GET /library — genres, year_min, year_max, unmatched,
+// subtitle_status — parsed by the same parseLibraryFilters (dsr-1b-a2 AC #1 [@contract-v1]).
 func (h *LibraryHandler) SearchLibrary(c *gin.Context) {
 	query := c.Query("q")
 	if len(query) < 2 {
@@ -410,14 +433,17 @@ func (h *LibraryHandler) SearchLibrary(c *gin.Context) {
 		return
 	}
 
-	// Parse type filter: all (default), movie, tv
-	mediaType := c.DefaultQuery("type", "all")
-	if mediaType != "all" && mediaType != "movie" && mediaType != "tv" {
-		BadRequestError(c, "VALIDATION_INVALID_FORMAT", "type must be 'all', 'movie', or 'tv'")
+	mediaType, ok := parseLibraryMediaType(c)
+	if !ok {
 		return
 	}
 
 	params := parseListParams(c)
+	// Same filter set and same parser as GET /library (dsr-1b-a2 AC #1
+	// [@contract-v1]); the repos apply them inside FullTextSearch.
+	if !parseLibraryFilters(c, &params) {
+		return
+	}
 
 	result, err := h.service.SearchLibrary(c.Request.Context(), query, params, mediaType)
 	if err != nil {

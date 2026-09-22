@@ -227,7 +227,11 @@ func (s *LibraryService) SearchLibrary(ctx context.Context, query string, params
 	var series []models.Series
 	var moviesPagination, seriesPagination *repository.PaginationResult
 
-	// Search movies and series in parallel for performance
+	// Search movies and series in parallel for performance.
+	// params.Filters is the SAME map in both goroutines (ListParams is copied by
+	// value, the map is not) and both FullTextSearch paths now READ it (dsr-1b-a2).
+	// It must stay read-only from here on — a repo-side write such as
+	// SearchByTitle's `params.Filters["search"] = …` would be a concurrent map write.
 	if searchMovies {
 		wg.Add(1)
 		go func() {

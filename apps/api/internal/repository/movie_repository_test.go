@@ -2389,3 +2389,120 @@ func movieIDs(movies []models.Movie) []string {
 	}
 	return out
 }
+
+// dsr-1b-a2 AC #2: FullTextSearch applies the same filter ladder as List, on
+// BOTH the count and the list query, after the MATCH + notRemoved guard.
+func TestMovieFullTextSearchAppliesFilters(t *testing.T) {
+	db := setupTestDBWithFTS(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	seed := []struct {
+		id      string
+		year    string
+		genre   string
+		tmdb    int64
+		status  models.SubtitleStatus
+		removed bool
+	}{
+		{"fts-found", "2014-11-07", "Sci-Fi", 157336, models.SubtitleStatusFound, false},
+		{"fts-nf-matched", "2019-01-01", "Drama", 1, models.SubtitleStatusNotFound, false},
+		{"fts-nf-unmatched", "2021-01-01", "Sci-Fi", 0, models.SubtitleStatusNotFound, false},
+		{"fts-nf-removed", "2021-01-01", "Sci-Fi", 0, models.SubtitleStatusNotFound, true},
+	}
+	for _, s := range seed {
+		m := &models.Movie{
+			ID: s.id, Title: "Interstellar " + s.id, ReleaseDate: s.year,
+			Genres: []string{s.genre}, TMDbID: models.NewNullInt64(s.tmdb), IsRemoved: s.removed,
+		}
+		if err := repo.Create(ctx, m); err != nil {
+			t.Fatalf("Create %s: %v", s.id, err)
+		}
+		if err := repo.UpdateSubtitleStatus(ctx, s.id, s.status, "", "", 0); err != nil {
+			t.Fatalf("UpdateSubtitleStatus %s: %v", s.id, err)
+		}
+	}
+
+	search := func(t *testing.T, filters map[string]interface{}) ([]models.Movie, *PaginationResult) {
+		params := NewListParams()
+		for k, v := range filters {
+			params.Filters[k] = v
+		}
+		movies, pagination, err := repo.FullTextSearch(ctx, "Interstellar", params)
+		if err != nil {
+			t.Fatalf("FullTextSearch: %v", err)
+		}
+		return movies, pagination
+	}
+
+	t.Run("no filters: 3 live rows (unchanged behaviour)", func(t *testing.T) {
+		movies, p := search(t, nil)
+		if len(movies) != 3 || p.TotalResults != 3 {
+			t.Fatalf("got %d rows / total %d: %v", len(movies), p.TotalResults, movieIDs(movies))
+		}
+	})
+
+	t.Run("subtitle_status narrows both rows and count", func(t *testing.T) {
+		movies, p := search(t, map[string]interface{}{"subtitle_status": []string{"not_found"}})
+		if len(movies) != 2 || p.TotalResults != 2 {
+			t.Fatalf("got %d rows / total %d: %v", len(movies), p.TotalResults, movieIDs(movies))
+		}
+		for _, m := range movies {
+			if m.ID == "fts-found" || m.ID == "fts-nf-removed" {
+				t.Errorf("unexpected %s", m.ID)
+			}
+		}
+	})
+
+	t.Run("subtitle_status + unmatched", func(t *testing.T) {
+		movies, p := search(t, map[string]interface{}{"subtitle_status": []string{"not_found"}, "unmatched": true})
+		if len(movies) != 1 || movies[0].ID != "fts-nf-unmatched" || p.TotalResults != 1 {
+			t.Fatalf("got %d rows / total %d: %v", len(movies), p.TotalResults, movieIDs(movies))
+		}
+	})
+
+	t.Run("genres", func(t *testing.T) {
+		movies, p := search(t, map[string]interface{}{"genres": []string{"Drama"}})
+		if len(movies) != 1 || movies[0].ID != "fts-nf-matched" || p.TotalResults != 1 {
+			t.Fatalf("got %d rows / total %d: %v", len(movies), p.TotalResults, movieIDs(movies))
+		}
+	})
+
+	t.Run("year_min", func(t *testing.T) {
+		movies, p := search(t, map[string]interface{}{"year_min": "2019"})
+		if len(movies) != 2 || p.TotalResults != 2 {
+			t.Fatalf("got %d rows / total %d: %v", len(movies), p.TotalResults, movieIDs(movies))
+		}
+	})
+
+	t.Run("year_max", func(t *testing.T) {
+		movies, p := search(t, map[string]interface{}{"year_max": "2019"})
+		if len(movies) != 2 || p.TotalResults != 2 {
+			t.Fatalf("got %d rows / total %d: %v", len(movies), p.TotalResults, movieIDs(movies))
+		}
+		for _, m := range movies {
+			if m.ID == "fts-nf-unmatched" {
+				t.Errorf("2021 row leaked through year_max=2019")
+			}
+		}
+	})
+
+	t.Run("page 2 with a filter: LIMIT/OFFSET bind AFTER the filter args", func(t *testing.T) {
+		params := NewListParams()
+		params.Filters["subtitle_status"] = []string{"not_found"}
+		params.Page = 2
+		params.PageSize = 1
+		movies, p, err := repo.FullTextSearch(ctx, "Interstellar", params)
+		if err != nil {
+			t.Fatalf("FullTextSearch: %v", err)
+		}
+		if len(movies) != 1 || p.TotalResults != 2 || p.TotalPages != 2 {
+			t.Fatalf("got %d rows / total %d / pages %d: %v", len(movies), p.TotalResults, p.TotalPages, movieIDs(movies))
+		}
+		if movies[0].SubtitleStatus != models.SubtitleStatusNotFound {
+			t.Errorf("page 2 row is not not_found: %s", movies[0].ID)
+		}
+	})
+}

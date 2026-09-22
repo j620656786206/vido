@@ -1011,3 +1011,73 @@ func TestLibraryService_SubtitleStatusFilter_AllTypes(t *testing.T) {
 		assert.Equal(t, "Movie 0", result.Items[0].Movie.Title)
 	})
 }
+
+// dsr-1b-a2 AC #3: SearchLibrary fans the same Filters to both repos' FullTextSearch;
+// Results only carry matching rows and TotalCount is the sum of both sides.
+func TestLibraryService_SearchLibrary_AppliesFilters(t *testing.T) {
+	db := setupTestDB(t)
+	movieRepo := repository.NewMovieRepository(db)
+	seriesRepo := repository.NewSeriesRepository(db)
+	service := NewLibraryService(movieRepo, seriesRepo, repository.NewEpisodeRepository(db))
+	ctx := context.Background()
+	posterPath := "/poster.jpg"
+
+	// All titles share the token "Nebula" so the FTS query hits every row.
+	movieStatuses := []models.SubtitleStatus{models.SubtitleStatusFound, models.SubtitleStatusNotFound, models.SubtitleStatusNotFound}
+	for i, st := range movieStatuses {
+		m, err := service.SaveMovieFromTMDb(ctx, &tmdb.MovieDetails{
+			Movie: tmdb.Movie{ID: 1200 + i, Title: fmt.Sprintf("Nebula Movie %d", i), ReleaseDate: "2023-01-01", PosterPath: &posterPath},
+		}, "")
+		require.NoError(t, err)
+		require.NoError(t, movieRepo.UpdateSubtitleStatus(ctx, m.ID, st, "", "", 0))
+	}
+	seriesStatuses := []models.SubtitleStatus{models.SubtitleStatusNotFound, models.SubtitleStatusNotSearched}
+	for i, st := range seriesStatuses {
+		s, err := service.SaveSeriesFromTMDb(ctx, &tmdb.TVShowDetails{
+			TVShow: tmdb.TVShow{ID: 1250 + i, Name: fmt.Sprintf("Nebula Series %d", i), FirstAirDate: "2023-01-01", PosterPath: &posterPath},
+		}, "")
+		require.NoError(t, err)
+		if st == models.SubtitleStatusNotSearched {
+			continue // column DEFAULT
+		}
+		require.NoError(t, seriesRepo.UpdateSubtitleStatus(ctx, s.ID, st, "", "", 0))
+	}
+
+	t.Run("no filter: all 5 rows", func(t *testing.T) {
+		result, err := service.SearchLibrary(ctx, "Nebula", repository.NewListParams(), "all")
+		require.NoError(t, err)
+		assert.Equal(t, 5, result.TotalCount)
+		assert.Len(t, result.Results, 5)
+	})
+
+	t.Run("all + not_found: 2 movies + 1 series, TotalCount is the sum", func(t *testing.T) {
+		params := repository.NewListParams()
+		params.Filters["subtitle_status"] = []string{"not_found"}
+		result, err := service.SearchLibrary(ctx, "Nebula", params, "all")
+		require.NoError(t, err)
+		assert.Equal(t, 3, result.TotalCount)
+		assert.Len(t, result.Results, 3)
+		types := map[string]int{}
+		for _, r := range result.Results {
+			types[r.Type]++
+			if r.Movie != nil {
+				assert.Equal(t, models.SubtitleStatusNotFound, r.Movie.SubtitleStatus)
+			}
+			if r.Series != nil {
+				assert.Equal(t, models.SubtitleStatusNotFound, r.Series.SubtitleStatus)
+			}
+		}
+		assert.Equal(t, 2, types["movie"])
+		assert.Equal(t, 1, types["series"])
+	})
+
+	t.Run("tv + not_searched: the DEFAULT-path series", func(t *testing.T) {
+		params := repository.NewListParams()
+		params.Filters["subtitle_status"] = []string{"not_searched"}
+		result, err := service.SearchLibrary(ctx, "Nebula", params, "tv")
+		require.NoError(t, err)
+		assert.Equal(t, 1, result.TotalCount)
+		require.Len(t, result.Results, 1)
+		assert.Equal(t, "Nebula Series 1", result.Results[0].Series.Title)
+	})
+}
