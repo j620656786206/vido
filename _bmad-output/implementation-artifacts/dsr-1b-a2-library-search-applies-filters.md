@@ -1,6 +1,6 @@
 # Story DSR.1b-a2：媒體庫「搜尋」也要吃篩選——搜尋框有字的時候，類型／年份／未匹配／字幕篩選不再被悄悄丟掉
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -191,3 +191,4 @@ Claude Fable 5.1 — `claude-fable-5-1`（dev-story，Amelia，2026-09-22）
 - 2026-09-22 — Task 2：兩個 repo 抽 alias-aware 條件梯，`List` 改用後既有測試全綠，再接 FTS count＋list（紅 9 → 綠）。
 - 2026-09-22 — Task 3：service 搜尋測試 3 條；mutation 6／6 紅；`nx test api`／`api:lint`／`format:check` 全綠；Status → review。
 - 2026-09-22 — /ship 對抗式 CR：吸收 6 項（`SearchLibrary` 註解、`Filters` read-only 註解、`year_max`＋page 2 FTS 測試、明確 `listArgs`、parity 測試改名、400 行為變更記錄）；0 HIGH。
+- 2026-09-22 — 合併：PR #511（squash `2c7a37df`）；PR 上 CI 13 pass／0 fail；純後端、無基準線變動、無 bootstrap PR。Status → done。
