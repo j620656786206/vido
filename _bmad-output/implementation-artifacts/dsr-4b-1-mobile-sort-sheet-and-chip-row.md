@@ -1,6 +1,6 @@
 # Story DSR.4b-1：手機上的「下載」頁排序改成從底部滑上來的抽屜，膠囊列變成一行可以橫向捲
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -144,13 +144,32 @@ so that 我不用去戳一個為滑鼠設計的下拉選單，膠囊列也不會
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — 設計稿：D10-M 八個選項＋圖示位＋刪殘留節點、D1-M 提示、規格註記（AC: #1）**
-- [ ] **Task 2 — 地基：`ui/Sheet` 五個 prop＋spec、`useIsPhone`＋spec（AC: #2, #6）**
-  - [ ] 先跑 `MobileMoreSheet`／`LibraryFilterSheetV2` 既有 spec 確認綠 → 改 `ui/Sheet` → 仍綠
-- [ ] **Task 3 — `DownloadSortSheet`（AC: #3, #6）**
-- [ ] **Task 4 — 排序鈕、select 在手機藏起來、膠囊列單行捲動（AC: #4, #6）**
-- [ ] **Task 5 — 視覺夾具、手機 e2e、舊 e2e 表格那一條的 viewport skip、mutation check、收尾（AC: #5, #7, #8, #9）**
-  - [ ] dev-story Step 9：`d10-m-v2`／`d1-m-v2`
+- [x] **Task 1 — 設計稿：D10-M 八個選項＋圖示位＋刪殘留節點、D1-M 提示、規格註記（AC: #1）**
+- [x] **Task 2 — 地基：`ui/Sheet` 五個 prop＋spec、`useIsPhone`＋spec（AC: #2, #6）**
+  - [x] 先跑 `MobileMoreSheet`／`LibraryFilterSheetV2` 既有 spec 確認綠 → 改 `ui/Sheet` → 仍綠
+- [x] **Task 3 — `DownloadSortSheet`（AC: #3, #6）**
+- [x] **Task 4 — 排序鈕、select 在手機藏起來、膠囊列單行捲動（AC: #4, #6）**
+- [x] **Task 5 — 視覺夾具、手機 e2e、舊 e2e 表格那一條的 viewport skip、mutation check、收尾（AC: #5, #7, #8, #9）**
+  - [x] dev-story Step 9：`d10-m-v2`／`d1-m-v2`
+
+### Review Follow-ups (AI)
+
+<!-- /ship 對抗式 CR（2026-09-22，獨立 context 的審查代理）— Rule 24 ① 吸收的項目，每項都有測試＋mutation。 -->
+
+- [x] [AI-Review][MEDIUM] 抽屜開著時轉橫向（跨過 `sm`）不會關，關掉後焦點落在隱藏的排序鈕＝`<body>` → render 階段偵測 `useIsPhone` 由 true 變 false 就關；`finalFocus` 改函式：排序鈕 → select → `<h1>`
+- [x] [AI-Review][MEDIUM] e2e 量抽屜位置有競態（`data-starting-style` 下一幀才拿掉）→ 先等屬性消失再等動畫
+- [x] [AI-Review][MEDIUM] `useIsPhone` 用 px，Tailwind `sm` 是 `40rem` → 改 `(width < 40rem)`（與 `max-sm:` 同一句）
+- [x] [AI-Review][MEDIUM] 膠囊列 e2e 擋不住 `overflow-hidden`／拿掉出血／下緣焦點空間 → 改量 `overflow-x: auto`＋`scrollLeft` 真的會動、出血 x、Tab 到第一顆後四邊 ≥4px
+- [x] [AI-Review][LOW] `Math.round` 不會消掉 -0 → `Math.abs(x) < 0.5`
+- [x] [AI-Review][LOW] `value` 不在選項裡時八列都是 `tabIndex=-1` → 第一列補位
+- [x] [AI-Review][LOW] qBT 斷線自動關抽屜時焦點可能落到舊元素 → 改在 render 階段關、後備到 `<h1 tabIndex={-1}>`
+- [x] [AI-Review][LOW] 副標不是 dialog 的描述、排序鈕沒有 `aria-expanded` → `ui/Sheet` 加 `description`／`descriptionClassName`（`Dialog.Description`）、排序鈕補 `aria-expanded`
+- [x] [AI-Review][LOW] 夾具自己抄一份選項 → `SORT_OPTIONS` 加 `export`（內容不變），夾具 import；另加「抽屜與 select 的選項逐字相同」的測試
+- [x] [AI-Review][LOW] stub 共用檔註解錯（兩個 route 其實不競爭）→ 改正、補回 `queued` 契約註解
+- [x] [AI-Review][LOW] 「高度 ≤ 85%」不可能紅 → 改 ≤ 80%（DESIGN.md）
+- [x] [AI-Review][LOW] e2e 分不出 `finalFocus` 有沒有接、點遮罩沒測 → 補「合成點擊（不移焦點，模擬 Safari）」與點遮罩兩條
+- [x] [AI-Review][LOW] 既有使用者「逐位元不變」只驗 4 個 token → 改成比對完整 class 字串
+- [x] [AI-Review][MEDIUM，推測→確認] 單行膠囊列讓 `?filter=seeding` 的選中膠囊一開始在畫面外（本張造成的退化）→ 選中膠囊捲進列內；另加 `scroll-px-4`、`overscroll-x-contain`
 
 ## Dev Notes
 
@@ -231,13 +250,71 @@ tests/visual/…/downloads-mobile-sheets/sort                                   
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 5 (1M context) — `claude-opus-5[1m]`（dev-story, Amelia，2026-09-22）
 
 ### Debug Log References
+
+- Pencil：`problems` 69 → **68**（`P77zR` 刪除）；`t6GBBy` 改 `fit_content` 後實高 **560**（≤675），`y = 844 − 560 = 284`；八列標籤 x 全部 = 44。存檔走選單 Save，`git status` ` M ux-design.pen`，磁碟檔 grep 到 `spec-note-dsr-4b-1`、`opt-進度（多到少）`、`點 ⋯ 開啟動作"`，`P77zR` 0 次；`pen-tokens.json` 的 `penSha256` = 磁碟檔 `shasum -a 256`。
+- 匯出 196/196；16 個 PNG 變動裡只留 `d1-m-v2.png`／`d10-m-v2.png`，其餘 `git checkout --`。
+- 本機 e2e 要 `AI_PROVIDER=claude`（`preexisting-fail-e2e-local-ai-provider`）。
 
 ### Completion Notes List
 
 - Ultimate context engine analysis completed - comprehensive developer guide created（SM Bob，2026-09-22）
+- **做了什麼（dev-story，2026-09-22）**
+  - **稿（Task 1）**：D10-M `Vs994` 八列（文字逐字取自 `SORT_OPTIONS`，節點名 `opt-*`；前三列沿用、後四列 `Copy` 後逐一 `Update`），未選列圖示 `enabled:true`／`check`／`#00000000`；刪 `P77zR`；抽屜 `fit_content` 後重新貼底。D1-M `lZZd6` →「點 ⋯ 開啟動作」。規格註記 `spec-note-dsr-4b-1`（`WRKrD`，Flow D 群組、`bblkD` 下方 60px、300×144，下一個 Flow 標題在 27169，不重疊）。
+  - **地基（Task 2）**：`ui/Sheet` 五個新 prop（CR 後再加 `description`／`descriptionClassName`，共七個；`testId` 預設 `bottom-sheet`、`className`／`titleClassName` 走 `cn()`、`finalFocus`（型別直接取 `Dialog.Popup` 的）、`onOpenChangeComplete`）。已查證 Base UI 1.5.0 `FloatingFocusManager` 以 `returnFocus = true` 解構預設，`finalFocus={undefined}` 等於沒傳——既有兩個使用者逐位元不變。`hooks/useIsPhone.ts`：`useSyncExternalStore`＋`(max-width: 639.98px)` 直接取 `matches`。
+  - **排序抽屜（Task 3）**：`DownloadSortSheet`——`radiogroup`＋八個 `role="radio"` 按鈕、roving tabindex、上下鍵循環、Enter／Space 是按鈕本身的 click；選了就 `onChange`＋關閉。⚠️ 與故事字面的一處差異：上下鍵處理掛在**每一列**而不是 `radiogroup` 容器上——掛在容器上 `jsx-a11y/interactive-supports-focus` 報 error（有互動 role 的容器必須可聚焦），行為完全相同。
+  - **頁面（Task 4）**：標題列右側 `downloads-sort-btn`（只在 `showToolbar` 時畫、`sm:hidden`）；`DownloadSortSheet` 用既有的 `handleSortOption`；`showToolbar` 變 false 時把抽屜關掉（CR 後改成 render 階段，並加上「轉橫向跨過 `sm` 也關」）；原生 select 的 `<label>` 加 `max-sm:hidden`（留在 DOM）；膠囊列加 `max-sm:` 單行捲動＋`-my-1 py-1`，膠囊 `max-sm:shrink-0`；檔頭補 ` · D1-M-v2 (uMDjw)`。
+  - **驗證（Task 5）**：夾具 `downloads-mobile-sheets/sort`（390×844、`penNode: 'JxMWL'`）；新 e2e `tests/e2e/downloads-mobile.spec.ts`（3 條）＋共用 stub `tests/support/helpers/downloads-stubs.ts`（只給新 spec 用，舊 spec 一行都沒搬）；舊 e2e 表格那一條加 viewport<1024 skip（寫在該條裡面）。
+- **測試（Rule 16：紅／守）**
+  - 紅：`ui/Sheet.spec.tsx` 5 條（新 prop 各一）；`useIsPhone.spec.ts` 7 條（新檔，實作前 import 失敗）；`DownloadSortSheet.spec.tsx` 9 條（新檔）；`DownloadsBrowseV2.spec.tsx` 新增 8 條——其中 4 條實作前真的紅，「選取模式沒有排序鈕」「qBT 錯誤沒有排序鈕」兩條實作前是**空轉綠**（按鈕還不存在），實作後由 mutation「拿掉 `showToolbar` 條件」證明會紅；另兩條（Safari 式點擊後焦點回排序鈕、qBT 斷線時抽屜跟著關）是寫完 mutation 清單時補的，由 mutation 證明。
+  - 守：`ui/Sheet.spec.tsx` 2 條（不給新 prop 時 testid／內距／標題不變、沒 title 時 sr-only「選單」）；`DownloadsBrowseV2.spec.tsx` 既有 12 條一字未改；`MobileTabBar.spec.tsx`（會打開「更多」抽屜）等四支 Sheet 使用者的 spec 改前改後都綠（46 → 46）。
+- **Mutation check（每一項拿掉 → 必須紅）：unit 24／24 紅、e2e 5／5 紅**
+  - `ui/Sheet`：testId 被忽略、className 不走 `cn()`、titleClassName 丟掉、finalFocus 沒轉傳、onOpenChangeComplete 沒轉傳、預設 testId 改掉 → 全紅。
+  - `useIsPhone`：寫成 `!(min-width: 640px)`（5 條紅）、拿掉沒有 `matchMedia` 的防護、不 `removeEventListener` → 全紅。
+  - `DownloadSortSheet`：未選列沒有佔位、每列都可 tab、上下鍵不循環、選了不關、已選列沒有強調色 → 全紅。
+  - `DownloadsBrowseV2`：排序鈕不帶 `sm:hidden`、不看 `showToolbar`（3 條紅）、select 不藏、抽屜的 onChange 沒接、拿掉 `finalFocus={sortBtnRef}`、拿掉「toolbar 消失就關抽屜」、膠囊列拿掉 `overflow-x-auto`／`-my-1`／`flex-nowrap`、膠囊拿掉 `shrink-0` → 全紅。
+  - e2e（真瀏覽器量版面）：拿掉 `-my-1 py-1`（焦點框空間）、拿掉 `flex-nowrap`、未選列沒佔位（標籤左緣跳動）、select 在手機可見、排序鈕在 640 可見 → 全紅。
+- **閘門**：`format:check` ✅；`lint:all` 0 errors／129 warnings（既有批次，與 dsr-6f-4 同數；本張碰的檔案 0 warnings）；`web:typecheck --skip-nx-cache` ✅；`check-design-tokens.py` ✅；`nx test web` **4007／4007**（277 檔）；`nx test api` ✅（跑完已刪 `apps/api/coverage/`）；e2e `chromium` `downloads-mobile`＋`downloads-v2` `--repeat-each=3` **33／33**；`mobile-chrome` 7 passed／4 skipped（新 spec 3 條是 chromium-only、表格那條被新 skip 擋下）；visual 整支跑三次：新基準線三次都一致，既有 `downloads-*` 基準線**零變動**，唯一紅的是本機固定會漂的 `retry-retry-notifications`（已立 `preexisting-fail-visual-darwin-three-stale-baselines`，CI 不受影響）。每次測試後 `test:cleanup` 皆無殘留。
+- 🔗 AC Drift: NONE (checked: `'排序方式\|bottom-sheet\|flex-wrap\|排序'` across _bmad-output/implementation-artifacts/*.md — 相關命中 3 處：`dsr-4` AC #6「排序一個下拉同時決定欄位與方向」、`ux3-4-4` AC #3「欄頭排序共用同一組 sortField/sortOrder」、`dsr-6f-1` 裁定 2「只存在於手機的面板用 `ui/Sheet`」；全部是 REUSE：`dsr-4` 的範圍明寫是桌機 D1–D7，桌機仍是那一個下拉；手機的抽屜也是一個選項同時決定欄位與方向、寫進同一組 state；本張正是照 6f-1 的分工用 `ui/Sheet`)
+- 📎 Contract Stamps: NONE (本張不定義也不消費任何 `[@contract-v*]`；上游 `GET /downloads?sort=&order=`（`dsr-4`／`bugfix-f`）未 stamp＝implicit v0)
+- 🎭 A11y Pre-Flight: PASS (3 components checked — `ui/Sheet`、`DownloadSortSheet`、`DownloadsBrowseV2`；0 jsx-a11y warnings on touched files, 0 introduced by this story；一個 jsx-a11y **error** 在開發中出現並修掉（見上：鍵盤處理移到列上）。四類：① 圖片 N/A；② modal 焦點——Base UI 鎖焦點、開啟時落在已選列、關閉回排序鈕（unit 以不移動焦點的 `fireEvent.click` 模擬 Safari、e2e 以真點擊＋Esc 各證一次）；③ aria-live N/A（沒有非同步出現的狀態）；④ 自訂元件——`radiogroup`／`radio`＋`aria-checked`、roving tabindex、上下鍵、抽屜 Esc 關閉＋開啟時取得焦點。已知缺口：抽屜沒有關閉鈕給觸控螢幕報讀 → 建單時已立 `disc-2026-09-ui-sheet-no-close-button`)
+- 🎨 UX Verification: PASS（對照表見下；落差全部是本張範圍外、已有單子，或是建單裁定）
+- Pre-existing fix: N/A（`nx test web`／`nx test api` 全綠；唯一的既有紅燈是本機 visual 漂移，已有追蹤條目）
+
+- **/ship 對抗式 CR（2026-09-22，獨立 context 的審查代理；0 HIGH／5 MEDIUM＋1 推測 MEDIUM／12 LOW）**：吸收 14 項（見上方 Review Follow-ups，Rule 24 ①），每項都補了測試並做 mutation：unit 8／8 紅、e2e 8／8 紅（其中一條第一次寫錯變成語法錯誤、全部紅，改成乾淨的 mutation 重跑，只紅該紅的那一條）。**沒有照做的**：
+  - #4 radiogroup 的鍵盤不符合 APG——AC #3 明文規定「上下鍵移焦點、Enter／Space 選取」，是建單裁定 6 → ③ `disc-2026-09-sort-sheet-radiogroup-keyboard-apg`（Sally 裁定）。
+  - #11 舊 spec 與共用 stub 兩份——本張禁止動舊 spec → ③ `disc-2026-09-downloads-e2e-stub-duplication`。
+  - #15 把手暗示可拖但拖不動——範圍外 → 併入 ③ `disc-2026-09-bottomsheet-grabber-three-variants`。
+  - #12 的 85vh 與 DESIGN.md 80% 落差——早已記在同一張把手單子裡。
+  - #18 基準線上的初始焦點框——已在 Step 9 表格說明（初始焦點落在已選列是 AC #3 要的）。
+  - 與故事字面的差異（CR 後）：`useIsPhone` 的查詢字串從 AC 寫的 `(max-width: 639.98px)` 改成 `(width < 40rem)`——AC 的 px 寫法會在瀏覽器預設字級不是 16px 時與 CSS 版面矛盾；🔴 #15 的原則（直接取 `matches`、不取反）不變。`ui/Sheet` 多了 AC 沒列的 `description`／`descriptionClassName`。`<h1>` 加了 `tabIndex={-1}`（4b-2 原本就要加，提前到本張，已寫進 4b-2 的交接）。
+  - CR 後重跑：`DownloadsBrowseV2` 等受影響 spec 206／206；手機 e2e 6 條；visual 整支：新基準線仍一致、既有零變動（`description` 換成 `Dialog.Description` 仍是同一個 `<p>`、同一組 class）。
+
+#### 🎨 UX 對照（dev-story Step 9；量測＝390×844 chromium 夜行，基準＝`.pen` 節點值）
+
+| 區域 | 稿（節點） | 實作（量測） | 相符？ | 要修？ |
+| --- | --- | --- | --- | --- |
+| 抽屜位置 | `t6GBBy` x0、寬 390、貼底 | x 0、寬 390、底邊 844（e2e 斷言） | ✅ | — |
+| 抽屜外觀 | `$bg-secondary`、頂角 `$radius-xl`＝16、上框 `$border-subtle`、padding 上 8／下 20 | bg-secondary、16px、1px border-subtle、pt 8／pb 20 | ✅ | — |
+| 抽屜高度 | 560（`fit_content`） | 544 | ≈ | 不修：差的 16px 全在標題以上——把手區（稿 24 高、把手置中；`ui/Sheet` 是 4px＋mb-3）與字的行高（稿 1.625、全站 `text-base`／`text-sm` 是 24／20）。把手已立 `disc-2026-09-bottomsheet-grabber-three-variants`；行高是全站慣例 |
+| 把手 | `fcaAf` 40×4 `$text-muted` | 40×4 `--border-subtle` | ❌ | 不在本張（同上單子，建單明文不動） |
+| 標題 | `lyZpl`「排序」BodyLg 16／600 `$text-primary`、左右 20 | 16px／600／text-primary、`px-5` | ✅ | — |
+| 副標 | `vh7za` Body 14 `$text-secondary`、標題與副標 gap 4、下距 12 | 14px／text-secondary、`mb-1`＝4、`pb-3`＝12 | ✅ | — |
+| 分隔線 | `hReu0` 1px `$border-subtle` 滿寬 | 1px border-subtle、寬 390 | ✅ | — |
+| 選項區 | `Vs994` padding [4,8]、列距 2 | `px-2 py-1`、`gap-0.5` | ✅ | — |
+| 列 | h52、padding [0,12]、gap 12、`$radius-md`＝8 | 52、pl 12、圖示 x 20→標籤 x 52、8px | ✅ | — |
+| 已選列 | `$accent-subtle` 底、`check` 20 `$accent-text`、BodyLg 600 `$accent-text` | accent-subtle、Check 20、600、accent-text | ✅ | — |
+| 未選列 | 透明、BodyLg 500 `$text-primary`、20px 圖示位（本張改稿） | 透明、500、text-primary、空的 20px 佔位 | ✅ | — |
+| 八列標籤左緣 | 全部 x=44（本張改稿） | e2e：八個左緣差 ≤1px | ✅ | — |
+| 選項文字 | 八個，逐字＝`SORT_OPTIONS`（本張改稿） | 同一份 `SORT_OPTIONS` 傳入 | ✅ | — |
+| 排序鈕 | `Q1EEk` 44×44 `$bg-tertiary` `$radius-md`、`arrow-down-up` 20 `$text-secondary` | 44×44、bg-tertiary、8px、ArrowDownUp 20、text-secondary、右緣＝根節點右緣 −16 | ✅ | — |
+| 排序鈕垂直位置 | 與 `TopAppBar` 的 H4「下載」置中 | 對齊頁面標題列頂端（`items-start`；標題 `text-2xl`＋副標） | ≈ | 不在本張：標題列本身與稿不同（`disc-2026-09-d1-m-downloads-page-not-aligned` ③） |
+| 膠囊列 | `eqXdV` 單行、左右 16、gap 8、上下 12 | 單行橫向捲動、pl 16、gap 8、上下 4（替焦點框留的 `py-1`，頁面 `gap-5` 管外距） | ≈ | 垂直間距屬頁面其餘對齊（同上單子）；單行／左右／gap 相符 |
+| 膠囊高 | 40 | 44 | ❌（刻意） | 建單裁定 3：維持 44（觸控目標） |
+| 提示文字 | `lZZd6`「點 ⋯ 開啟動作」（本張改稿） | 程式碼沒有這一行提示 | ❌ | 不在本張：D1-M 其餘對齊（同上單子） |
+| 開啟時的焦點框 | 稿沒有畫焦點狀態 | 夾具基準線上已選列有黃色焦點框：夾具一掛載就是開的，Base UI 把初始焦點放到已選列，Chromium 視為鍵盤焦點；**真的點排序鈕打開時不會出現**（e2e 截圖確認） | — | 不修：這是鍵盤使用者該看到的，初始焦點落在已選列是 AC #3 要的 |
 
 ### Discovery Triage
 
@@ -250,10 +327,37 @@ tests/visual/…/downloads-mobile-sheets/sort                                   
   - ③ Flow D 的新抽屜把手是第三種畫法 → 補記 `disc-2026-09-bottomsheet-grabber-three-variants`
   - ③ `ui/Sheet` 沒有 `<Dialog.Close>`（Base UI 對觸控螢幕報讀的建議）→ `disc-2026-09-ui-sheet-no-close-button`
   - ① 舊 e2e `downloads-v2.spec.ts:304`（表格）在手機 project 本來就紅 → AC #5／Task 5（加 viewport<1024 skip；dev 先確認）
-- **dev-story 期間的發現：**（待填；沒有就寫 `N/A — no out-of-scope work discovered`）
+- **dev-story 期間的發現：** N/A — no out-of-scope work discovered。（本機 visual 的 `retry-retry-notifications` 紅燈是既有的，早已立 `preexisting-fail-visual-darwin-three-stale-baselines`；建單時的 ① 已確認並吸收：舊 e2e 表格那一條在 main 版本以 `mobile-chrome` 跑確實紅——`表格檢視` 按鈕 15 秒內找不到——已加 skip。）
 
 ### File List
+
+- `ux-design.pen` — D10-M 八列＋圖示位＋刪 `P77zR`＋抽屜貼底、D1-M 提示、`spec-note-dsr-4b-1`
+- `_bmad-output/pen-tokens.json` — `clippingWarnings` 69→68、`penSha256`
+- `_bmad-output/screenshots/flow-d-downloads-v2/d1-m-v2.png`
+- `_bmad-output/screenshots/flow-d-downloads-v2/d10-m-v2.png`
+- `apps/web/src/components/ui/Sheet.tsx` — 五個新 prop
+- `apps/web/src/components/ui/Sheet.spec.tsx`（新）
+- `apps/web/src/hooks/useIsPhone.ts`（新）
+- `apps/web/src/hooks/useIsPhone.spec.ts`（新）
+- `apps/web/src/components/downloads/DownloadSortSheet.tsx`（新）
+- `apps/web/src/components/downloads/DownloadSortSheet.spec.tsx`（新）
+- `apps/web/src/components/downloads/DownloadsBrowseV2.tsx` — 排序鈕、抽屜、select 手機藏、膠囊列單行捲動、檔頭
+- `apps/web/src/components/downloads/DownloadsBrowseV2.spec.tsx` — 新增 10 條（既有 12 條未改；檔頭 mock `useIsPhone`，預設 false＝與全域 stub 相同）
+- `eslint.config.mjs` — DOM 型別白名單加 `HTMLHeadingElement`（`useRef<HTMLHeadingElement>`；與同一串 `HTMLSelectElement` 等並列）
+- `apps/web/src/routes/test/-gallery.fixtures.tsx` — 夾具 `downloads-mobile-sheets/sort`
+- `tests/visual/components.visual.spec.ts-snapshots/components/downloads-mobile-sheets/sort/default-visual-darwin.png`（新；`-linux` 由 CI bootstrap PR 補）
+- `tests/e2e/downloads-mobile.spec.ts`（新）
+- `tests/support/helpers/downloads-stubs.ts`（新）
+- `tests/e2e/downloads-v2.spec.ts` — 表格那一條加 viewport<1024 skip（只有這一處）
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — 狀態
+- `_bmad-output/implementation-artifacts/dsr-4b-1-mobile-sort-sheet-and-chip-row.md` — 本檔
 
 ## Change Log
 
 - 2026-09-22 — 建單（SM Bob，create-story；main `ae204761`）。原本是一張 `dsr-4b`，建單後對抗驗證（2 CRITICAL＋12 SHOULD FIX＋9 NIT）指出規模過大與兩個嚴重問題，**全部併入**並依版面拆成 `-1`（本張）與 `-2`。併入本張的重點：① `useIsPhone` 原本寫成 `(min-width:640px)` 取反——`test-setup.ts` 的全域 stub 回 false，那樣會把**每一支** jsdom 測試丟進手機路徑 → 改成直接問 `(max-width: 639.98px)`；② `ui/Sheet` 要五個 prop 不是三個（`titleClassName`、函式版 `finalFocus`、`onOpenChangeComplete`）；③ `p-0` 會連 safe-area 的 padding 一起丟掉 → className 明寫；④ 橫向捲動會裁掉焦點框 → `-my-1 py-1`；⑤ 夾具的 `penNode` 是必填；⑥ e2e 要自己設 viewport；⑦ 不寫死稿的抽屜高度。
+- 2026-09-22 — Task 1（dev-story, Amelia）：D10-M 八個真的排序選項＋每列圖示位＋刪 `P77zR`（`problems` 69→68）＋抽屜 560 高貼底；D1-M 提示拿掉「左滑」；規格註記 `spec-note-dsr-4b-1`；存檔驗證、只 stage 兩張截圖＋`pen-tokens.json`。
+- 2026-09-22 — Task 2：`ui/Sheet` 五個新 prop（預設值讓既有兩個使用者不變）＋`Sheet.spec.tsx`；`useIsPhone`＋spec。
+- 2026-09-22 — Task 3：`DownloadSortSheet`（radiogroup、roving tabindex、上下鍵循環、選了就關）＋spec。
+- 2026-09-22 — Task 4：`DownloadsBrowseV2` 標題列排序鈕（`sm:hidden`、跟著 `showToolbar`）、抽屜走既有 `handleSortOption`、select 手機藏（留在 DOM）、膠囊列手機單行捲動。
+- 2026-09-22 — Task 5：夾具 `downloads-mobile-sheets/sort`＋darwin 基準線（連跑三次一致）、手機 e2e 3 條（`--repeat-each=3` 綠）、舊 e2e 表格那一條加 viewport skip（先在 main 版本確認 `mobile-chrome` 本來就紅）、mutation check unit 24／24＋e2e 5／5 全紅、Step 9 對照表；Status → review。
+- 2026-09-22 — /ship 對抗式 CR：吸收 14 項（轉橫向關抽屜＋焦點後備、`useIsPhone` 改 rem、`ui/Sheet` 加 `description`、排序鈕 `aria-expanded`、第一列補 tab 位、選中膠囊捲進列內、e2e 競態與五條弱斷言），另立 `disc-2026-09-sort-sheet-radiogroup-keyboard-apg`、`disc-2026-09-downloads-e2e-stub-duplication`，補記把手單。

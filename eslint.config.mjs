@@ -108,6 +108,7 @@ export default [
         HTMLAnchorElement: 'readonly',
         HTMLTextAreaElement: 'readonly',
         HTMLSelectElement: 'readonly',
+        HTMLHeadingElement: 'readonly',
         KeyboardEvent: 'readonly',
         MouseEvent: 'readonly',
         Event: 'readonly',
