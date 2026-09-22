@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen D1-D-v2 (cK1KF) · D1-M-v2 (uMDjw)
+// Design ref: ux-design.pen Screen D1-D-v2 (cK1KF) · D1-M-v2 (uMDjw) · D8-M-v2 (jDgxJ) · D9-M-v2 (DrYXb)
 // (also renders D2-D-v2 batch select (tx6U1) + D7-D-v2 table view (w3ipb))
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { getRouteApi } from '@tanstack/react-router';
@@ -22,7 +22,7 @@ import { useDownloadProgress } from '../../hooks/useDownloadProgress';
 import { useDownloadsView, type DownloadsView } from '../../hooks/useDownloadsView';
 import { useQBittorrentConfig } from '../../hooks/useQBittorrent';
 import { useIsPhone } from '../../hooks/useIsPhone';
-import type { FilterStatus, SortField, SortOrder } from '../../services/downloadService';
+import type { Download, FilterStatus, SortField, SortOrder } from '../../services/downloadService';
 import { Button } from '../ui/Button';
 import { Pagination } from '../ui/Pagination';
 import {
@@ -35,7 +35,10 @@ import {
   DialogDescription,
   DialogClose,
 } from '../ui/Dialog';
+import { DeleteWithFilesDialog } from './DeleteWithFilesDialog';
+import { DownloadActionsSheet } from './DownloadActionsSheet';
 import { DownloadCardV2 } from './DownloadCardV2';
+import { DownloadDetailSheet } from './DownloadDetailSheet';
 import { DownloadSortSheet } from './DownloadSortSheet';
 import { DownloadsTableV2 } from './DownloadsTableV2';
 import {
@@ -246,6 +249,75 @@ export function DownloadsBrowseV2() {
   const onRemove = (hash: string, deleteFiles: boolean) =>
     actions.remove.mutate({ hashes: [hash], deleteFiles });
 
+  // --- phone card sheets (dsr-4b-2 D8-M / D9-M) — the page owns them; a card only reports ⋯ ---
+  // One union-typed slot: "one overlay at a time" is a matter of shape, not discipline.
+  const [sheet, setSheet] = useState<{
+    kind: 'actions' | 'detail';
+    hash: string;
+    /** What the sheet showed last — keeps it rendered through its exit once the item is gone. */
+    snapshot: Download;
+    /** false = closing. The slot empties only once the exit has finished (onOpenChangeComplete):
+     *  an abrupt unmount would run Base UI's return-focus while the card's ⋯ is still in the
+     *  DOM, focus a button that is removed a moment later, and leave focus on <body>. */
+    open: boolean;
+  } | null>(null);
+  // A snapshot, not a hash: removal is optimistic, so the row is gone before the dialog closes.
+  const [confirmTarget, setConfirmTarget] = useState<Download | null>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
+  // True while one overlay is closing so that another can open (actions → detail, detail →
+  // actions, actions → confirm). Read — and cleared — by the sheets' finalFocus below; also
+  // cleared once the next overlay has fully opened, so an aborted exit cannot leave it stuck.
+  const handoffRef = useRef(false);
+  // What opens once the current sheet's exit has FINISHED: 先關再開, never both at once. A
+  // sheet that opened in the same commit would cross-fade with the old one; a confirm dialog
+  // (z-50) would animate in UNDER the exiting popup (z-71) and its scrim.
+  const pendingRef = useRef<'actions' | 'detail' | 'confirm' | null>(null);
+  // Always the CURRENT list item: the sheet follows every refetch. When the item leaves the list
+  // (removed, paged, filtered) the sheet closes.
+  const liveDownload = sheet ? items.find((d) => d.hash === sheet.hash) : undefined;
+  const sheetDownload = liveDownload ?? sheet?.snapshot;
+  if (sheet?.open && !liveDownload) setSheet({ ...sheet, open: false });
+  const closeSheet = () => setSheet((s) => (s && s.open ? { ...s, open: false } : s));
+  /** Once a sheet's exit has finished: open what was waiting on it, or drop the slot — unless a
+   *  newer sheet has taken the slot in the meantime. */
+  const sheetExited = (kind: 'actions' | 'detail') => {
+    const next = pendingRef.current;
+    pendingRef.current = null;
+    if (next === 'confirm') setConfirmTarget(sheet?.snapshot ?? null);
+    setSheet((s) => {
+      if (!s || s.kind !== kind || s.open) return s;
+      return next === 'actions' || next === 'detail' ? { ...s, kind: next, open: true } : null;
+    });
+  };
+  /** Where focus lands after a card sheet or the confirm dialog: the ⋯ that opened it, or the
+   *  page heading once that card has been removed — never <body>. */
+  const cardFocusTarget = () => {
+    const t = triggerRef.current;
+    return t?.isConnected ? t : headingRef.current;
+  };
+  // Base UI reads this once, synchronously, as the popup unmounts. `false` = leave focus alone:
+  // the next overlay's own initial focus decides, so two focus managers never fight over a tick.
+  const cardSheetFinalFocus = () => {
+    const handoff = handoffRef.current;
+    handoffRef.current = false;
+    return handoff ? false : (cardFocusTarget() ?? true);
+  };
+  const openActionsFromCard = (hash: string, trigger: HTMLElement) => {
+    const snapshot = items.find((d) => d.hash === hash);
+    if (!snapshot) return;
+    triggerRef.current = trigger;
+    handoffRef.current = false;
+    pendingRef.current = null;
+    setSheet({ kind: 'actions', hash, snapshot, open: true });
+  };
+  /** Close the current sheet; `next` opens when its exit has finished. */
+  const handoffTo = (next: 'actions' | 'detail' | 'confirm') => {
+    handoffRef.current = true;
+    pendingRef.current = next;
+    // Refresh the snapshot first: the confirm shows the name/size the sheet showed.
+    setSheet((s) => (s && sheetDownload ? { ...s, snapshot: sheetDownload, open: false } : s));
+  };
+
   // --- selection + batch (AC5; shared by list select-mode + table persistent checkboxes) ---
   const toggleSelect = (hash: string, next: boolean) =>
     setSelected((prev) => {
@@ -290,7 +362,10 @@ export function DownloadsBrowseV2() {
   const [sheetOnPhone, setSheetOnPhone] = useState(isPhone);
   if (sheetOnPhone !== isPhone) {
     setSheetOnPhone(isPhone);
-    if (!isPhone) setSortSheetOpen(false);
+    if (!isPhone) {
+      setSortSheetOpen(false);
+      closeSheet();
+    }
   }
   // Focus after closing: the 排序 button; if it is hidden now (rotated past `sm`) the select that
   // replaced it; if both are gone (toolbar hidden) the page heading — never <body>.
@@ -349,6 +424,55 @@ export function DownloadsBrowseV2() {
         options={SORT_OPTIONS}
         value={`${sortField}:${sortOrder}`}
         onChange={handleSortOption}
+      />
+
+      {sheetDownload && (
+        <DownloadActionsSheet
+          download={sheetDownload}
+          open={sheet?.kind === 'actions' && sheet.open}
+          onOpenChange={(open) => {
+            if (!open) closeSheet();
+          }}
+          onOpenChangeComplete={(open) => {
+            if (open) handoffRef.current = false;
+            else sheetExited('actions');
+          }}
+          finalFocus={cardSheetFinalFocus}
+          onPause={onPause}
+          onResume={onResume}
+          onRemove={onRemove}
+          onShowDetails={() => handoffTo('detail')}
+          onRequestDeleteWithFiles={() => handoffTo('confirm')}
+        />
+      )}
+      {sheetDownload && (
+        <DownloadDetailSheet
+          download={sheetDownload}
+          open={sheet?.kind === 'detail' && sheet.open}
+          onOpenChange={(open) => {
+            if (!open) closeSheet();
+          }}
+          onOpenChangeComplete={(open) => {
+            if (open) handoffRef.current = false;
+            else sheetExited('detail');
+          }}
+          finalFocus={cardSheetFinalFocus}
+          onPause={onPause}
+          onResume={onResume}
+          onOpenActions={() => handoffTo('actions')}
+        />
+      )}
+      <DeleteWithFilesDialog
+        download={confirmTarget}
+        open={confirmTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmTarget(null);
+        }}
+        onConfirm={(hash) => onRemove(hash, true)}
+        onCloseAutoFocus={(e) => {
+          e.preventDefault();
+          cardFocusTarget()?.focus();
+        }}
       />
 
       {/* Status-filter chips — 6 live values, counts in Mono. One row that scrolls sideways on a
@@ -593,6 +717,7 @@ export function DownloadsBrowseV2() {
                   onPause={onPause}
                   onResume={onResume}
                   onRemove={onRemove}
+                  onOpenActions={openActionsFromCard}
                 />
               ))
             )}

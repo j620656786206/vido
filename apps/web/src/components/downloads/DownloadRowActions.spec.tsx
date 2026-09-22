@@ -1,8 +1,13 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DownloadRowActions } from './DownloadRowActions';
 import type { Download, TorrentStatus } from '../../services/downloadService';
+
+// The hook, not matchMedia: `false` is what the global test-setup stub yields, so every existing
+// test below runs exactly as before; the phone block flips it.
+const h = vi.hoisted(() => ({ isPhone: false }));
+vi.mock('../../hooks/useIsPhone', () => ({ useIsPhone: () => h.isPhone }));
 
 const NAME = 'Test.Movie.2024.mkv';
 
@@ -132,5 +137,54 @@ describe('DownloadRowActions — the ⋯ menu (dsr-4 D3-D-v2)', () => {
     await s.user.click(await screen.findByRole('button', { name: '取消' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(s.onRemove).not.toHaveBeenCalled();
+  });
+});
+
+describe('DownloadRowActions — phone ⋯ reports upward (dsr-4b-2 D8-M-v2)', () => {
+  beforeEach(() => {
+    h.isPhone = true;
+  });
+  afterEach(() => {
+    h.isPhone = false;
+  });
+
+  it('with onOpenActions the ⋯ is a plain button that reports (hash, itself) — no menu', async () => {
+    const onOpenActions = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <DownloadRowActions
+        download={make('downloading')}
+        onPause={vi.fn()}
+        onRemove={vi.fn()}
+        onOpenActions={onOpenActions}
+      />
+    );
+    const more = screen.getByRole('button', { name: `更多動作：${NAME}` });
+    expect(more).toHaveAttribute('aria-haspopup', 'dialog');
+    await user.click(more);
+    expect(onOpenActions).toHaveBeenCalledWith('h1', more);
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(screen.queryByRole('menuitem')).toBeNull();
+  });
+
+  it('without onOpenActions a phone still gets the dropdown — it works at any width', async () => {
+    const s = setup('downloading');
+    await openMenu(s.user);
+    expect(await screen.findByRole('menuitem', { name: '移除（保留檔案）' })).toBeInTheDocument();
+  });
+
+  it('the table keeps the dropdown even when onOpenActions is passed', async () => {
+    const user = userEvent.setup();
+    render(
+      <DownloadRowActions
+        download={make('downloading')}
+        variant="table"
+        onPause={vi.fn()}
+        onRemove={vi.fn()}
+        onOpenActions={vi.fn()}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: `更多動作：${NAME}` }));
+    expect(await screen.findByRole('menuitem', { name: '移除（保留檔案）' })).toBeInTheDocument();
   });
 });

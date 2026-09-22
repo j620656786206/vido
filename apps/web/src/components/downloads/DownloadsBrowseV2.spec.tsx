@@ -396,3 +396,128 @@ describe('DownloadsBrowseV2 — phone sort sheet + chip row (dsr-4b-1 D1-M-v2 / 
     }
   });
 });
+
+// h.remove is (hashes, deleteFiles) via `actions.remove.mutate({ hashes, deleteFiles })`.
+describe('DownloadsBrowseV2 — phone card sheets: one overlay at a time (dsr-4b-2 D8-M / D9-M)', () => {
+  const NAME_A = 'a.mkv';
+  beforeEach(() => {
+    h.isPhone = true;
+  });
+
+  async function openActions(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole('button', { name: `更多動作：${NAME_A}` }));
+    return screen.findByTestId('download-actions-sheet');
+  }
+
+  it('⋯ on a card opens the actions sheet, titled with that torrent; no menu anywhere', async () => {
+    const user = userEvent.setup();
+    render(<DownloadsBrowseV2 />);
+    const sheet = await openActions(user);
+    expect(screen.getByRole('dialog')).toHaveAccessibleName(NAME_A);
+    expect(within(sheet).getByText('下載中 · 50.0%')).toBeInTheDocument();
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('詳細資訊 → the actions sheet goes, the detail sheet comes; ⋯ there goes back', async () => {
+    const user = userEvent.setup();
+    render(<DownloadsBrowseV2 />);
+    const actions = await openActions(user);
+    await user.click(within(actions).getByRole('button', { name: '詳細資訊' }));
+    const detail = await screen.findByTestId('download-detail-sheet');
+    await waitFor(() => expect(screen.queryByTestId('download-actions-sheet')).toBeNull());
+    expect(within(detail).getByText('Hash')).toBeInTheDocument();
+
+    await user.click(within(detail).getByRole('button', { name: `更多動作：${NAME_A}` }));
+    await screen.findByTestId('download-actions-sheet');
+    await waitFor(() => expect(screen.queryByTestId('download-detail-sheet')).toBeNull());
+  });
+
+  it('連同檔案刪除 → the sheet closes first, the confirm shows THAT torrent; 刪除檔案 removes with files', async () => {
+    const user = userEvent.setup();
+    render(<DownloadsBrowseV2 />);
+    const actions = await openActions(user);
+    await user.click(within(actions).getByRole('button', { name: '移除（連同檔案刪除）' }));
+    const confirm = await screen.findByRole('dialog', { name: '移除並刪除檔案？' });
+    await waitFor(() => expect(screen.queryByTestId('download-actions-sheet')).toBeNull());
+    expect(within(confirm).getByText(/a\.mkv/)).toBeInTheDocument();
+    await user.click(within(confirm).getByRole('button', { name: '刪除檔案' }));
+    expect(h.remove).toHaveBeenCalledWith({ hashes: ['a'], deleteFiles: true });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('移除（保留檔案）removes at once, no confirm, sheet closes', async () => {
+    const user = userEvent.setup();
+    render(<DownloadsBrowseV2 />);
+    const actions = await openActions(user);
+    await user.click(within(actions).getByRole('button', { name: '移除（保留檔案）' }));
+    expect(h.remove).toHaveBeenCalledWith({ hashes: ['a'], deleteFiles: false });
+    expect(screen.queryByRole('dialog', { name: '移除並刪除檔案？' })).toBeNull();
+    await waitFor(() => expect(screen.queryByTestId('download-actions-sheet')).toBeNull());
+  });
+
+  it('the open sheet follows the list: a refetch that flips the status flips the pill', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<DownloadsBrowseV2 />);
+    const actions = await openActions(user);
+    await user.click(within(actions).getByRole('button', { name: '詳細資訊' }));
+    const detail = await screen.findByTestId('download-detail-sheet');
+    expect(within(detail).getByTestId('download-status-a')).toHaveTextContent('下載中');
+
+    h.useDownloads.mockReturnValue({
+      data: { ...PAGE, items: [dl('a', 'paused'), PAGE.items[1]] },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    rerender(<DownloadsBrowseV2 />);
+    expect(within(detail).getByTestId('download-status-a')).toHaveTextContent('已暫停');
+    expect(within(detail).getByRole('button', { name: `繼續 ${NAME_A}` })).toBeInTheDocument();
+  });
+
+  it('the item leaving the list closes its sheet; focus lands on the heading, not <body>', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<DownloadsBrowseV2 />);
+    await openActions(user);
+    h.useDownloads.mockReturnValue({
+      data: { ...PAGE, items: [PAGE.items[1]], totalItems: 1 },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    rerender(<DownloadsBrowseV2 />);
+    await waitFor(() => expect(screen.queryByTestId('download-actions-sheet')).toBeNull());
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { level: 1, name: '下載' })).toHaveFocus()
+    );
+  });
+
+  it('closing normally returns focus to the ⋯ that opened it', async () => {
+    render(<DownloadsBrowseV2 />);
+    const more = screen.getByRole('button', { name: `更多動作：${NAME_A}` });
+    fireEvent.click(more); // no focus moves — Safari-style
+    const sheet = await screen.findByTestId('download-actions-sheet');
+    await waitFor(() => expect(within(sheet).getAllByRole('button')[0]).toHaveFocus());
+    fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByTestId('download-actions-sheet')).toBeNull());
+    await waitFor(() => expect(more).toHaveFocus());
+  });
+
+  it('isPhone true → false closes any open card sheet', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<DownloadsBrowseV2 />);
+    await openActions(user);
+    h.isPhone = false;
+    rerender(<DownloadsBrowseV2 />);
+    await waitFor(() => expect(screen.queryByTestId('download-actions-sheet')).toBeNull());
+  });
+
+  it('desktop (isPhone false) still gets the dropdown with no 詳細資訊 in it', async () => {
+    h.isPhone = false;
+    const user = userEvent.setup();
+    render(<DownloadsBrowseV2 />);
+    await user.click(screen.getByRole('button', { name: `更多動作：${NAME_A}` }));
+    expect(await screen.findByRole('menu')).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: '詳細資訊' })).toBeNull();
+    expect(screen.queryByTestId('download-actions-sheet')).toBeNull();
+  });
+});

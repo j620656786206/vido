@@ -5,6 +5,7 @@ import {
   formatETA,
   formatProgress,
   formatDownloadMeta,
+  formatAddedOn,
 } from './formatters';
 
 describe('formatSpeed', () => {
@@ -160,5 +161,44 @@ describe('formatDownloadMeta (dsr-4 card footer + table cells)', () => {
   it('never reports more done than the total', () => {
     const m = formatDownloadMeta({ ...d, progress: 1.2 });
     expect(m.size).toBe(formatSize(4 * GiB));
+  });
+});
+
+describe('formatDownloadMeta — bare speeds for the detail sheet (dsr-4b-2)', () => {
+  const d = {
+    status: 'downloading' as const,
+    downloadSpeed: 1_048_576,
+    uploadSpeed: 1024,
+    eta: 600,
+    size: 4 * 1024 ** 3,
+    progress: 0.5,
+  };
+
+  it('downSpeed / upSpeed carry no arrow; down / up are the arrowed versions of the same', () => {
+    const m = formatDownloadMeta(d);
+    expect(m.downSpeed).toBe('1.0 MB/s');
+    expect(m.upSpeed).toBe('1.0 KB/s');
+    expect(m.down).toBe(`↓ ${m.downSpeed}`);
+    expect(m.up).toBe(`↑ ${m.upSpeed}`);
+  });
+
+  it('a paused torrent dashes the bare speeds too', () => {
+    const m = formatDownloadMeta({ ...d, status: 'paused' });
+    expect([m.downSpeed, m.upSpeed]).toEqual(['—', '—']);
+  });
+});
+
+describe('formatAddedOn (dsr-4b-2 D9-M 加入時間)', () => {
+  it('renders YYYY-MM-DD HH:mm in the given zone', () => {
+    expect(formatAddedOn('2026-06-30T13:14:00Z', 'Asia/Taipei')).toBe('2026-06-30 21:14');
+  });
+
+  it('midnight is 00, never 24 (hourCycle h23)', () => {
+    expect(formatAddedOn('2026-06-30T16:05:00Z', 'Asia/Taipei')).toBe('2026-07-01 00:05');
+  });
+
+  it('a string that is not a date is「—」', () => {
+    expect(formatAddedOn('not a date', 'Asia/Taipei')).toBe('—');
+    expect(formatAddedOn('', 'Asia/Taipei')).toBe('—');
   });
 });

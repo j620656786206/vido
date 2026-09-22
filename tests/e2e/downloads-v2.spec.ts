@@ -183,6 +183,12 @@ test.describe('Downloads v2 actions + batch @downloads @ui @ux3-4-3', () => {
   test('[P1] ⋯ menu → 連同檔案刪除 asks first, then DELETEs with deleteFiles=true (AC3)', async ({
     page,
   }) => {
+    // Below 640 the card's ⋯ opens the actions SHEET, not this menu (dsr-4b-2) — the phone
+    // flow is measured in downloads-mobile.spec.ts.
+    test.skip(
+      (page.viewportSize()?.width ?? 1280) < 640,
+      'phones use the actions sheet — see downloads-mobile.spec.ts'
+    );
     await stubQbtConfig(page, true);
 
     const deleteHits: string[] = [];
