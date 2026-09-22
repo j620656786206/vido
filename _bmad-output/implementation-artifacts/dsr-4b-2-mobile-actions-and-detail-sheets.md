@@ -1,6 +1,6 @@
 # Story DSR.4b-2：手機上按下載卡片的 ⋯ 會滑出大按鈕的動作抽屜，還能打開「詳細資訊」看 Hash 與儲存路徑
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -381,3 +381,4 @@ Claude Fable 5.1 — `claude-fable-5-1`（dev-story, Amelia，2026-09-22）
 - 2026-09-22 — Task 5：`DownloadRowActions.onOpenActions`（桌機 JSX 不變）、`DownloadCardV2` 透傳、`DownloadsBrowseV2` 狀態機（`sheet`＋`snapshot`＋`open`、`confirmTarget` 快照、函式版 `finalFocus`、換手）；三支 spec 的 hook mock。真瀏覽器抓到「卸載時回焦點打在游離按鈕」→ 改成先關再卸載（`onOpenChangeComplete` 才清 slot）。
 - 2026-09-22 — Task 6：兩個夾具＋darwin 基準線（三次一致）、手機 e2e 四條（`--repeat-each=3` 54/54）、舊 e2e ⋯ menu 那條 viewport skip、mutation unit 23/23＋e2e 7/7 紅（兩條 e2e 先修成真的會紅）、Step 9 對照表；Status → review。
 - 2026-09-22 — /ship 對抗式 CR：吸收 7 項（確認框與換手改成真的先關再開、桌機確認框跨斷點不殘留、e2e 拿掉兩個 `waitForTimeout`、完成項目的「更多動作」標籤、`handoffRef` 開啟時清除、`formatAddedOn` 快取、reduced-motion e2e＋註解），另立 `disc-2026-09-useisphone-cache-mql`、`disc-2026-09-visual-project-pin-timezone`、`disc-2026-09-download-optimistic-failure-silent`。
+- 2026-09-22 — 合併：PR #505（squash `b803fd89`），`-linux` 基準線由 bootstrap PR #506 補上；PR 上 CI 全綠。Status → done。整個 `dsr-4b`（Flow D 手機抽屜）兩張子單都合併，傘狀條目結案。
