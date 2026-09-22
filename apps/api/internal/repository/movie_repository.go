@@ -357,40 +357,9 @@ func (r *MovieRepository) List(ctx context.Context, params ListParams) ([]models
 		args = append(args, "%"+searchTerm+"%")
 	}
 
-	if genres, ok := params.Filters["genres"].([]string); ok {
-		for _, g := range genres {
-			conditions = append(conditions, `genres LIKE ?`)
-			args = append(args, `%"`+g+`"%`)
-		}
-	}
-
-	if yearMin, ok := params.Filters["year_min"].(string); ok && yearMin != "" {
-		conditions = append(conditions, "substr(release_date, 1, 4) >= ?")
-		args = append(args, yearMin)
-	}
-
-	if yearMax, ok := params.Filters["year_max"].(string); ok && yearMax != "" {
-		conditions = append(conditions, "substr(release_date, 1, 4) <= ?")
-		args = append(args, yearMax)
-	}
-
-	if unmatched, ok := params.Filters["unmatched"].(bool); ok && unmatched {
-		conditions = append(conditions, "(tmdb_id IS NULL OR tmdb_id = 0)")
-	}
-
-	// dsr-1b-a AC #2 [@contract-v1]: subtitle_status IN (...). Values are always
-	// bound as parameters — an unknown value simply matches nothing, it is not an
-	// injection surface. Validation lives in the handler (AC #1); the repo does not
-	// re-validate. Stays a []string so the type assertion matches what the handler
-	// stores.
-	if statuses, ok := params.Filters["subtitle_status"].([]string); ok && len(statuses) > 0 {
-		placeholders := make([]string, len(statuses))
-		for i, st := range statuses {
-			placeholders[i] = "?"
-			args = append(args, st)
-		}
-		conditions = append(conditions, "subtitle_status IN ("+strings.Join(placeholders, ", ")+")")
-	}
+	filterConds, filterArgs := movieListFilterConditions(params, "")
+	conditions = append(conditions, filterConds...)
+	args = append(args, filterArgs...)
 
 	whereClause := "WHERE " + conditions[0]
 	for _, c := range conditions[1:] {
@@ -463,15 +432,25 @@ func (r *MovieRepository) FullTextSearch(ctx context.Context, query string, para
 	// Prefix-ized + operator-quoted (CJK partial queries; FTS syntax safety).
 	query = ftsPrefixQuery(query)
 
+	// dsr-1b-a2 AC #2 [@contract-v1]: the same filter ladder as List, qualified
+	// with the table alias, applied to BOTH the count and the list query. Arg
+	// order everywhere: MATCH query → filter args → LIMIT/OFFSET.
+	filterConds, filterArgs := movieListFilterConditions(params, "m")
+	filterWhere := ""
+	for _, cnd := range filterConds {
+		filterWhere += " AND " + cnd
+	}
+
 	// Get total count for FTS results
 	countQuery := fmt.Sprintf(`
 		SELECT COUNT(*)
 		FROM movies m
 		JOIN movies_fts ON movies_fts.rowid = m.rowid
-		WHERE movies_fts MATCH ? AND %s
-	`, notRemovedQualified("m"))
+		WHERE movies_fts MATCH ? AND %s%s
+	`, notRemovedQualified("m"), filterWhere)
 	var totalResults int
-	err := r.db.QueryRowContext(ctx, countQuery, query).Scan(&totalResults)
+	countArgs := append([]interface{}{query}, filterArgs...)
+	err := r.db.QueryRowContext(ctx, countQuery, countArgs...).Scan(&totalResults)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to count FTS results: %w", err)
 	}
@@ -481,12 +460,16 @@ func (r *MovieRepository) FullTextSearch(ctx context.Context, query string, para
 		SELECT %s
 		FROM movies m
 		JOIN movies_fts ON movies_fts.rowid = m.rowid
-		WHERE movies_fts MATCH ? AND %s
+		WHERE movies_fts MATCH ? AND %s%s
 		ORDER BY rank
 		LIMIT ? OFFSET ?
-	`, movieSelectColumnsQualified("m"), notRemovedQualified("m"))
+	`, movieSelectColumnsQualified("m"), notRemovedQualified("m"), filterWhere)
 
-	rows, err := r.db.QueryContext(ctx, ftsQuery, query, params.Limit(), params.Offset())
+	listArgs := make([]interface{}, 0, len(filterArgs)+3)
+	listArgs = append(listArgs, query)
+	listArgs = append(listArgs, filterArgs...)
+	listArgs = append(listArgs, params.Limit(), params.Offset())
+	rows, err := r.db.QueryContext(ctx, ftsQuery, listArgs...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to execute FTS search: %w", err)
 	}
@@ -629,6 +612,60 @@ const notRemoved = "(is_removed = 0 OR is_removed IS NULL)"
 // notRemovedQualified is notRemoved for queries that need a table alias.
 func notRemovedQualified(alias string) string {
 	return fmt.Sprintf("(%s.is_removed = 0 OR %s.is_removed IS NULL)", alias, alias)
+}
+
+// movieListFilterConditions turns the library filter params (genres / year_min / year_max /
+// unmatched / subtitle_status) into SQL conditions and their bound args, in a
+// fixed order. `alias` qualifies column names ("" for the bare table in List,
+// "m" for the FTS join). Shared by List and FullTextSearch (dsr-1b-a2) so the
+// two read paths cannot drift. The `search` (title LIKE) term is deliberately
+// NOT here — FTS already is the search.
+func movieListFilterConditions(params ListParams, alias string) ([]string, []interface{}) {
+	col := func(name string) string {
+		if alias == "" {
+			return name
+		}
+		return alias + "." + name
+	}
+	conditions := []string{}
+	args := []interface{}{}
+
+	if genres, ok := params.Filters["genres"].([]string); ok {
+		for _, g := range genres {
+			conditions = append(conditions, col("genres")+" LIKE ?")
+			args = append(args, `%"`+g+`"%`)
+		}
+	}
+
+	if yearMin, ok := params.Filters["year_min"].(string); ok && yearMin != "" {
+		conditions = append(conditions, "substr("+col("release_date")+", 1, 4) >= ?")
+		args = append(args, yearMin)
+	}
+
+	if yearMax, ok := params.Filters["year_max"].(string); ok && yearMax != "" {
+		conditions = append(conditions, "substr("+col("release_date")+", 1, 4) <= ?")
+		args = append(args, yearMax)
+	}
+
+	if unmatched, ok := params.Filters["unmatched"].(bool); ok && unmatched {
+		conditions = append(conditions, "("+col("tmdb_id")+" IS NULL OR "+col("tmdb_id")+" = 0)")
+	}
+
+	// dsr-1b-a AC #2 [@contract-v1]: subtitle_status IN (...). Values are always
+	// bound as parameters — an unknown value simply matches nothing, it is not an
+	// injection surface. Validation lives in the handler (AC #1); the repo does not
+	// re-validate. Stays a []string so the type assertion matches what the handler
+	// stores.
+	if statuses, ok := params.Filters["subtitle_status"].([]string); ok && len(statuses) > 0 {
+		placeholders := make([]string, len(statuses))
+		for i, st := range statuses {
+			placeholders[i] = "?"
+			args = append(args, st)
+		}
+		conditions = append(conditions, col("subtitle_status")+" IN ("+strings.Join(placeholders, ", ")+")")
+	}
+
+	return conditions, args
 }
 
 // scanMovie scans a row into a Movie struct using the standard column order.

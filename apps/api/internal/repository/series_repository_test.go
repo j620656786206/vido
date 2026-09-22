@@ -1836,3 +1836,78 @@ func TestSeriesListSubtitleStatusFilter(t *testing.T) {
 		}
 	})
 }
+
+// dsr-1b-a2 AC #2: mirror of TestMovieFullTextSearchAppliesFilters for series.
+func TestSeriesFullTextSearchAppliesFilters(t *testing.T) {
+	db := setupSeriesTestDBWithFTS(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	seed := []struct {
+		id      string
+		year    string
+		genre   string
+		tmdb    int64
+		status  models.SubtitleStatus
+		removed bool
+	}{
+		{"sfts-found", "2016-07-15", "Sci-Fi", 66732, models.SubtitleStatusFound, false},
+		{"sfts-nf-matched", "2019-01-01", "Drama", 1, models.SubtitleStatusNotFound, false},
+		{"sfts-nf-unmatched", "2021-01-01", "Sci-Fi", 0, models.SubtitleStatusNotFound, false},
+		{"sfts-nf-removed", "2021-01-01", "Sci-Fi", 0, models.SubtitleStatusNotFound, true},
+	}
+	for _, s := range seed {
+		sr := &models.Series{
+			ID: s.id, Title: "Stranger " + s.id, FirstAirDate: s.year,
+			Genres: []string{s.genre}, TMDbID: models.NewNullInt64(s.tmdb), IsRemoved: s.removed,
+		}
+		if err := repo.Create(ctx, sr); err != nil {
+			t.Fatalf("Create %s: %v", s.id, err)
+		}
+		if err := repo.UpdateSubtitleStatus(ctx, s.id, s.status, "", "", 0); err != nil {
+			t.Fatalf("UpdateSubtitleStatus %s: %v", s.id, err)
+		}
+	}
+
+	search := func(t *testing.T, filters map[string]interface{}) ([]models.Series, *PaginationResult) {
+		params := NewListParams()
+		for k, v := range filters {
+			params.Filters[k] = v
+		}
+		series, pagination, err := repo.FullTextSearch(ctx, "Stranger", params)
+		if err != nil {
+			t.Fatalf("FullTextSearch: %v", err)
+		}
+		return series, pagination
+	}
+
+	t.Run("no filters: 3 live rows", func(t *testing.T) {
+		series, p := search(t, nil)
+		if len(series) != 3 || p.TotalResults != 3 {
+			t.Fatalf("got %d rows / total %d", len(series), p.TotalResults)
+		}
+	})
+
+	t.Run("subtitle_status narrows both rows and count", func(t *testing.T) {
+		series, p := search(t, map[string]interface{}{"subtitle_status": []string{"not_found"}})
+		if len(series) != 2 || p.TotalResults != 2 {
+			t.Fatalf("got %d rows / total %d", len(series), p.TotalResults)
+		}
+	})
+
+	t.Run("subtitle_status + unmatched + year_min", func(t *testing.T) {
+		series, p := search(t, map[string]interface{}{"subtitle_status": []string{"not_found"}, "unmatched": true, "year_min": "2020"})
+		if len(series) != 1 || series[0].ID != "sfts-nf-unmatched" || p.TotalResults != 1 {
+			t.Fatalf("got %d rows / total %d", len(series), p.TotalResults)
+		}
+	})
+
+	t.Run("genres", func(t *testing.T) {
+		series, p := search(t, map[string]interface{}{"genres": []string{"Drama"}})
+		if len(series) != 1 || series[0].ID != "sfts-nf-matched" || p.TotalResults != 1 {
+			t.Fatalf("got %d rows / total %d", len(series), p.TotalResults)
+		}
+	})
+}

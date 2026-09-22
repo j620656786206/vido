@@ -741,6 +741,76 @@ func TestLibraryHandler_SearchLibrary(t *testing.T) {
 	})
 
 	mockService.AssertExpectations(t)
+
+	// dsr-1b-a2 AC #1 [@contract-v1]: /library/search accepts the SAME filter set as
+	// /library, parsed by the SAME code (parseLibraryFilters).
+	searchOK := func() *services.LibrarySearchResults {
+		return &services.LibrarySearchResults{Results: []services.SearchResult{}, TotalCount: 0}
+	}
+
+	t.Run("filters are passed to the service with the /library types", func(t *testing.T) {
+		mockService.On("SearchLibrary", mock.Anything, "駭客", mock.MatchedBy(func(p repository.ListParams) bool {
+			statuses, ok1 := p.Filters["subtitle_status"].([]string)
+			unmatched, ok2 := p.Filters["unmatched"].(bool)
+			genres, ok3 := p.Filters["genres"].([]string)
+			yearMin, ok4 := p.Filters["year_min"].(string)
+			return ok1 && ok2 && ok3 && ok4 &&
+				len(statuses) == 1 && statuses[0] == "not_found" &&
+				unmatched &&
+				len(genres) == 1 && genres[0] == "科幻" &&
+				yearMin == "1999"
+		}), "all").Return(searchOK(), nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/search?q=%E9%A7%AD%E5%AE%A2&subtitle_status=not_found&unmatched=true&genres=%E7%A7%91%E5%B9%BB&year_min=1999", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		mockService.AssertExpectations(t)
+	})
+
+	t.Run("unknown subtitle_status returns 400 and never reaches the service", func(t *testing.T) {
+		fresh := new(MockLibraryService)
+		freshRouter := setupLibraryTestRouter(NewLibraryHandler(fresh))
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/search?q=xx&subtitle_status=bogus", nil)
+		freshRouter.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		fresh.AssertNotCalled(t, "SearchLibrary", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	})
+
+	t.Run("inverted year range returns 400", func(t *testing.T) {
+		fresh := new(MockLibraryService)
+		freshRouter := setupLibraryTestRouter(NewLibraryHandler(fresh))
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/search?q=xx&year_min=2020&year_max=2000", nil)
+		freshRouter.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		fresh.AssertNotCalled(t, "SearchLibrary", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	})
+
+	t.Run("contract parity: same bad filter → same 400 code+message on /library and /library/search", func(t *testing.T) {
+		fresh := new(MockLibraryService)
+		freshRouter := setupLibraryTestRouter(NewLibraryHandler(fresh))
+		for _, bad := range []string{"subtitle_status=NOT_FOUND", "year_min=abc", "year_max=99999", "year_min=2020&year_max=2000", "type=book"} {
+			wList := httptest.NewRecorder()
+			reqList, _ := http.NewRequest("GET", "/api/v1/library?"+bad, nil)
+			freshRouter.ServeHTTP(wList, reqList)
+
+			wSearch := httptest.NewRecorder()
+			reqSearch, _ := http.NewRequest("GET", "/api/v1/library/search?q=xx&"+bad, nil)
+			freshRouter.ServeHTTP(wSearch, reqSearch)
+
+			assert.Equal(t, http.StatusBadRequest, wList.Code, bad)
+			assert.Equal(t, wList.Body.String(), wSearch.Body.String(), "contract parity (provenance is pinned by mutation M4, not by this test): %s", bad)
+		}
+		fresh.AssertNotCalled(t, "SearchLibrary", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+		fresh.AssertNotCalled(t, "ListLibrary", mock.Anything, mock.Anything, mock.Anything)
+	})
 }
 
 func TestLibraryHandler_ListLibrary_WithFilters(t *testing.T) {
