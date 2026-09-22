@@ -1765,3 +1765,74 @@ func TestSeriesFindActiveByTMDbID(t *testing.T) {
 		t.Fatalf("expected (nil, nil) once every copy is removed, got %+v, %v", none, err)
 	}
 }
+
+// dsr-1b-a AC #2: mirror of TestMovieListSubtitleStatusFilter for series.
+func TestSeriesListSubtitleStatusFilter(t *testing.T) {
+	db := setupSeriesTestDB(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	seed := []struct {
+		id      string
+		status  models.SubtitleStatus
+		removed bool
+	}{
+		{"series-sub-found", models.SubtitleStatusFound, false},
+		{"series-sub-not-found", models.SubtitleStatusNotFound, false},
+		{"series-sub-not-searched", models.SubtitleStatusNotSearched, false},
+		{"series-sub-not-found-removed", models.SubtitleStatusNotFound, true},
+	}
+	for _, s := range seed {
+		sr := &models.Series{ID: s.id, Title: s.id, FirstAirDate: "2020-01-01", IsRemoved: s.removed}
+		if err := repo.Create(ctx, sr); err != nil {
+			t.Fatalf("Create %s: %v", s.id, err)
+		}
+		if s.status == models.SubtitleStatusNotSearched {
+			continue // stays on the column DEFAULT — the common real-world row
+		}
+		if err := repo.UpdateSubtitleStatus(ctx, s.id, s.status, "", "", 0); err != nil {
+			t.Fatalf("UpdateSubtitleStatus %s: %v", s.id, err)
+		}
+	}
+
+	t.Run("default-path row (never written) is found by not_searched", func(t *testing.T) {
+		params := NewListParams()
+		params.Filters["subtitle_status"] = []string{"not_searched"}
+		series, _, err := repo.List(ctx, params)
+		if err != nil {
+			t.Fatalf("List: %v", err)
+		}
+		if len(series) != 1 || series[0].ID != "series-sub-not-searched" {
+			t.Fatalf("expected the DEFAULT row, got %d rows", len(series))
+		}
+	})
+
+	t.Run("single status excludes the soft-deleted row", func(t *testing.T) {
+		params := NewListParams()
+		params.Filters["subtitle_status"] = []string{"not_found"}
+		series, pagination, err := repo.List(ctx, params)
+		if err != nil {
+			t.Fatalf("List: %v", err)
+		}
+		if len(series) != 1 || series[0].ID != "series-sub-not-found" {
+			t.Fatalf("expected only series-sub-not-found, got %d rows", len(series))
+		}
+		if pagination.TotalResults != 1 {
+			t.Errorf("TotalResults = %d, want 1", pagination.TotalResults)
+		}
+	})
+
+	t.Run("two statuses", func(t *testing.T) {
+		params := NewListParams()
+		params.Filters["subtitle_status"] = []string{"not_found", "not_searched"}
+		series, pagination, err := repo.List(ctx, params)
+		if err != nil {
+			t.Fatalf("List: %v", err)
+		}
+		if len(series) != 2 || pagination.TotalResults != 2 {
+			t.Fatalf("expected 2 / total 2, got %d / %d", len(series), pagination.TotalResults)
+		}
+	})
+}

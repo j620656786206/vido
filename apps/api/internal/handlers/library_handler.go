@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/services"
 )
 
@@ -40,7 +42,7 @@ func (h *LibraryHandler) SetItemEnricher(enricher services.ItemEnricherInterface
 
 // ListLibrary handles GET /api/v1/library
 // Returns a paginated list of library items (movies + series combined)
-// Supports filters: genre, year_min, year_max via query params
+// Supports filters: genres, year_min, year_max, unmatched, subtitle_status via query params
 func (h *LibraryHandler) ListLibrary(c *gin.Context) {
 	params := parseListParams(c)
 
@@ -91,6 +93,39 @@ func (h *LibraryHandler) ListLibrary(c *gin.Context) {
 
 	if c.Query("unmatched") == "true" {
 		params.Filters["unmatched"] = true
+	}
+
+	// subtitle_status (dsr-1b-a AC #1 [@contract-v1]): comma-separated list of
+	// models.SubtitleStatus values, lowercase and case-sensitive (deep links are
+	// built from constants, never typed). Split/trim like `genres`; every value
+	// must be a known status (the list lives in models.AllSubtitleStatuses — never
+	// re-copy it here); duplicates collapse so the IN list is bounded by the number
+	// of statuses. Stored as []string so the repo-side `.([]string)` assertion
+	// matches; a different type would make the filter silently no-op (the year_min
+	// trap). Only GET /library reads this today — /library/search ignores every
+	// filter (disc-2026-09-library-search-ignores-filters).
+	if raw := c.Query("subtitle_status"); raw != "" {
+		statuses := make([]string, 0, 2)
+		seen := make(map[string]struct{}, 2)
+		for _, v := range strings.Split(raw, ",") {
+			v = strings.TrimSpace(v)
+			if v == "" {
+				continue
+			}
+			if !models.SubtitleStatus(v).IsValid() {
+				BadRequestError(c, "VALIDATION_INVALID_FORMAT",
+					fmt.Sprintf("subtitle_status contains unknown value %q", truncateRunes(v, 64)))
+				return
+			}
+			if _, dup := seen[v]; dup {
+				continue
+			}
+			seen[v] = struct{}{}
+			statuses = append(statuses, v)
+		}
+		if len(statuses) > 0 {
+			params.Filters["subtitle_status"] = statuses
+		}
 	}
 
 	result, err := h.service.ListLibrary(c.Request.Context(), params, mediaType)
@@ -497,4 +532,14 @@ func (h *LibraryHandler) RegisterRoutes(rg *gin.RouterGroup) {
 			series.DELETE("/:id", h.DeleteSeries)
 		}
 	}
+}
+
+// truncateRunes caps user-supplied text echoed back in an error message so a
+// multi-kilobyte query value cannot bloat the response or the log line.
+func truncateRunes(s string, max int) string {
+	r := []rune(s)
+	if len(r) <= max {
+		return s
+	}
+	return string(r[:max]) + "…"
 }

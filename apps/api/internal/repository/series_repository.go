@@ -371,6 +371,20 @@ func (r *SeriesRepository) List(ctx context.Context, params ListParams) ([]model
 		conditions = append(conditions, "(tmdb_id IS NULL OR tmdb_id = 0)")
 	}
 
+	// dsr-1b-a AC #2 [@contract-v1]: subtitle_status IN (...). Values are always
+	// bound as parameters — an unknown value simply matches nothing, it is not an
+	// injection surface. Validation lives in the handler (AC #1); the repo does not
+	// re-validate. Stays a []string so the type assertion matches what the handler
+	// stores.
+	if statuses, ok := params.Filters["subtitle_status"].([]string); ok && len(statuses) > 0 {
+		placeholders := make([]string, len(statuses))
+		for i, st := range statuses {
+			placeholders[i] = "?"
+			args = append(args, st)
+		}
+		conditions = append(conditions, "subtitle_status IN ("+strings.Join(placeholders, ", ")+")")
+	}
+
 	whereClause := "WHERE " + conditions[0]
 	for _, c := range conditions[1:] {
 		whereClause += " AND " + c
