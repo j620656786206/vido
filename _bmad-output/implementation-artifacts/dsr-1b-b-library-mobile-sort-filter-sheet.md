@@ -1,6 +1,6 @@
 # Story DSR.1b-b：手機媒體庫的「排序與篩選」抽屜對齊設計稿——有字幕篩選、看得到會篩出幾部、套用鈕固定在底部
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -374,3 +374,4 @@ Claude Fable 5.1 — `claude-fable-5-1`（dev-story，Amelia，2026-09-22）
 - 2026-09-22 — Task 4：手機入口鈕＋徽章、工具列鈕斷點、`finalFocus`、膠囊列單行捲動、檔頭（紅 6 → 綠）。
 - 2026-09-22 — Task 5：夾具＋darwin 基準（連跑三次穩定）、e2e 7 條 ×3、mutation 17／17 紅、`nx test web` 4076／4076、`lint:all` 0 errors、`typecheck`、`check-design-tokens` 全綠；Step 9 對照表；Status → review。
 - 2026-09-22 — /ship 對抗式 CR：吸收 8 項（刪 stale `-linux` 基準、`keepPreviousData`＋200ms 去抖、深連結白名單＋去重、`aria-label`＋roving tabindex＋方向鍵、測試贅語、`cn()`），mutation 合計 20／20 紅；另立 `disc-2026-09-library-search-bar-not-wired`、`disc-2026-09-instant-filterpanel-normalises-half-open-year`。
+- 2026-09-22 — 合併：PR #513（squash `ab63b925`）；`-linux` 基準走功能分支流程：`gh workflow run "Visual Regression" --ref` → bootstrap PR #514（4 張：`library-filter-panel` ×3＋`library-mobile-sheets/sort-filter`）先合進分支；PR 上 CI 17 pass／0 fail（Lint、Unit、Go、4 個 E2E shard、3 個 Build、Serve Smoke、4 個視覺 shard、PR gate）。Status → done。
