@@ -17,6 +17,8 @@ interface DownloadCardV2Props {
   onPause?: (hash: string) => void;
   onResume?: (hash: string) => void;
   onRemove?: (hash: string, deleteFiles: boolean) => void;
+  /** Phone (dsr-4b-2): ⋯ reports upward so the page can open its actions sheet. */
+  onOpenActions?: (hash: string, trigger: HTMLElement) => void;
 }
 
 /** Status token pill with its dot — shared by the card and the table (D1-D-v2 / D7-D-v2). */
@@ -49,6 +51,7 @@ export function DownloadCardV2({
   onPause,
   onResume,
   onRemove,
+  onOpenActions,
 }: DownloadCardV2Props) {
   const pct = Math.round(download.progress * 100);
   const tone = getDownloadTone(download);
@@ -142,6 +145,7 @@ export function DownloadCardV2({
           onPause={onPause}
           onResume={onResume}
           onRemove={onRemove}
+          onOpenActions={onOpenActions}
         />
       </div>
     </article>

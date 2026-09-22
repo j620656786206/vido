@@ -1,6 +1,6 @@
 # Story DSR.4b-2：手機上按下載卡片的 ⋯ 會滑出大按鈕的動作抽屜，還能打開「詳細資訊」看 Hash 與儲存路徑
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -167,15 +167,27 @@ so that 我用拇指就能暫停、移除，也終於看得到 Hash 與檔案存
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — 確認 `dsr-4b-1` 已合併；`git pull`；重新對一次本張引用的符號位置**
-- [ ] **Task 1 — 設計稿：D8-M 圖示、D9-M 拿掉兩塊沒資料的、Flow 說明、規格註記（AC: #1）**
-- [ ] **Task 2 — 確認框抽成 `DeleteWithFilesDialog`；`stateActionFor` export（AC: #3, #8）**
-  - [ ] 先 16 條綠 → 抽出 → 仍 16 條綠
-- [ ] **Task 3 — `formatDownloadMeta` 加 `downSpeed`／`upSpeed`、`formatAddedOn`（AC: #5, #8）**
-- [ ] **Task 4 — `DownloadActionsSheet`、`DownloadDetailSheet`（純呈現，各自的 spec）（AC: #4, #5, #8）**
-- [ ] **Task 5 — `DownloadRowActions` 的 `onOpenActions`；`DownloadsBrowseV2` 的狀態機、焦點、確認框；三支 spec 的 hook mock（AC: #2, #3, #6, #8）**
-- [ ] **Task 6 — 兩個視覺夾具、手機 e2e、舊 e2e 那一條的 viewport skip、mutation check、收尾（AC: #7, #9, #11）**
-  - [ ] dev-story Step 9：`d8-m-v2`／`d9-m-v2`
+- [x] **Task 0 — 確認 `dsr-4b-1` 已合併；`git pull`；重新對一次本張引用的符號位置**
+- [x] **Task 1 — 設計稿：D8-M 圖示、D9-M 拿掉兩塊沒資料的、Flow 說明、規格註記（AC: #1）**
+- [x] **Task 2 — 確認框抽成 `DeleteWithFilesDialog`；`stateActionFor` export（AC: #3, #8）**
+  - [x] 先 16 條綠 → 抽出 → 仍 16 條綠
+- [x] **Task 3 — `formatDownloadMeta` 加 `downSpeed`／`upSpeed`、`formatAddedOn`（AC: #5, #8）**
+- [x] **Task 4 — `DownloadActionsSheet`、`DownloadDetailSheet`（純呈現，各自的 spec）（AC: #4, #5, #8）**
+- [x] **Task 5 — `DownloadRowActions` 的 `onOpenActions`；`DownloadsBrowseV2` 的狀態機、焦點、確認框；三支 spec 的 hook mock（AC: #2, #3, #6, #8）**
+- [x] **Task 6 — 兩個視覺夾具、手機 e2e、舊 e2e 那一條的 viewport skip、mutation check、收尾（AC: #7, #9, #11）**
+  - [x] dev-story Step 9：`d8-m-v2`／`d9-m-v2`
+
+### Review Follow-ups (AI)
+
+<!-- /ship 對抗式 CR（2026-09-22，獨立 context 的審查代理）— Rule 24 ① 吸收的項目，每項都有測試＋mutation。 -->
+
+- [x] [AI-Review][MEDIUM] 「連同檔案刪除」的確認框（z-50）跟正在退場的抽屜（z-71＋遮罩）同一個 commit 出現——320ms 內確認框在抽屜**下面**滑進來 → 改成真的「先關再開」：`pendingRef` 記住下一個要開的東西，抽屜 `onOpenChangeComplete(false)` 才開它（動作↔詳細的換手也一樣，不再交叉淡入）
+- [x] [AI-Review][MEDIUM] 桌機確認框開著時視窗縮到 640 以下，`confirmOpen` 留著、再放大會自己跳出「移除並刪除檔案？」→ `useSheet` 變 true 時重設；確認框改成手機也掛著（關著不畫東西）
+- [x] [AI-Review][MEDIUM] e2e 的「重抓後仍是已暫停」靠 `waitForTimeout(700)`、換手後的焦點檢查靠 `waitForTimeout(500)` → 改成數清單請求次數、等舊抽屜 `toHaveCount(0)`
+- [x] [AI-Review][LOW] 已完成項目的「更多動作」無障礙名稱跟其他狀態不一樣 → 統一 `更多動作：{name}`
+- [x] [AI-Review][LOW] `handoffRef` 只靠 `finalFocus` 被呼叫才清 → 下一個抽屜 `onOpenChangeComplete(true)` 也清（防中途取消退場時卡住；沒有可觀察的失敗情境，mutation 綠，誠實記錄）
+- [x] [AI-Review][LOW] `formatAddedOn` 每次 render 都 new 一個 `Intl.DateTimeFormat` → 依時區快取
+- [x] [AI-Review][LOW，推測] 先關再卸載的修法靠 `--motion-move` 不是 0 → `styles.css` 的 reduced-motion 區塊加註解，並補一條 `reducedMotion: 'reduce'` 的 e2e（保留檔案 → 焦點回 `<h1>`）
 
 ## Dev Notes
 
@@ -261,13 +273,72 @@ tests/visual/…/downloads-mobile-sheets/{actions,detail}                       
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Fable 5.1 — `claude-fable-5-1`（dev-story, Amelia，2026-09-22）
 
 ### Debug Log References
+
+- Task 0：main `e8da8955`（4b-1 已合併，#502／#504）。4b-1 出貨的 API 與本張所寫的差異：`useIsPhone` 問的是 `(width < 40rem)` 不是 `639.98px`；`ui/Sheet` 另有 `description`／`descriptionClassName`；`<h1 ref={headingRef} tabIndex={-1}>` 4b-1 已加好，本張直接用；`DownloadsBrowseV2.spec.tsx` 檔頭的 `useIsPhone` mock 4b-1 已加好（`h.isPhone`）。
+- Pencil：`problems` 68 → **68**（只減不增；`DrYXb` 唯一的 problem 是既有刻意的膠囊出血 `rZ3AX`）。`g4A3Qk` 改 `fit_content`（連 `bhoYP` 一起，否則 fill_container 循環）後實高 **606**，`y = 844 − 606 = 238`。存檔走選單 Save；磁碟檔 grep 到 `spec-note-dsr-4b-2`、`排序 sheet · 詳細資訊 sheet`；`KB5wY`／`dC4Cg` 0 次；`penSha256` 對得上。匯出 196/196，只留 `d8-m-v2.png`／`d9-m-v2.png`。
+- 🔴 **焦點的坑（兩個，都在真瀏覽器才看得到）**：
+  1. Base UI 的 return-focus 在 popup **卸載**那個 commit 的 layout-cleanup 同步解析目標、再用 microtask 去 focus。按「保留檔案」時 `onOpenChange(false)`＋樂觀移除是兩個 commit：抽屜先卸載（那一刻卡片還在 → 解析到 ⋯）、卡片再卸載 → microtask 打在游離的按鈕上 → 焦點掉到 `<body>`。unit（jsdom）看不出來，e2e 抓到。**解法**：抽屜永遠**先關再卸載**——`sheet` state 多一個 `open`，`onOpenChange(false)` 只把它翻 false，`onOpenChangeComplete(false)` 才清空 slot（有「換手時已被新的接管」的防護）；退場動畫跑完時卡片早已不在 → `isConnected` false → `<h1>`。兩個抽屜因此多一個 AC 沒列的 `onOpenChangeComplete` prop（純轉傳）。
+  2. 中途試過用 ref 在 render 期間記錄 `items`（`itemsRef.current = items`）——`react-hooks` lint 直接擋（Cannot access refs during render），改用上面的做法後不需要。
+- e2e 的「內容捲、動作列固定」一開始是**空轉綠**：390×844 下八格內容根本不到 85vh 的上限，什麼都不會捲。改成該條測試切到 390×667（iPhone SE 高度）＋長路徑，並斷言 `scrollHeight > clientHeight`、`scrollTop > 0`、抽屜貼底且 ≤ 85vh；mutation 才變紅。「Hash／路徑沒有橫向溢出」同理——40 字的 hash 在 350px 內本來就塞得下，改用長路徑才守得住 `break-all`。
+- 本機 e2e 要 `AI_PROVIDER=claude`（`preexisting-fail-e2e-local-ai-provider`）。
 
 ### Completion Notes List
 
 - Ultimate context engine analysis completed - comprehensive developer guide created（SM Bob，2026-09-22）
+- **做了什麼（dev-story，2026-09-22）**
+  - **稿（Task 1）**：D8-M `i6jEmH` → `folder-minus`；D9-M 刪 `dC4Cg`（技術徽章）與 `KB5wY`（檔名）、`Vvdar` 換成種子名稱樣式、`g4A3Qk` 改成包住內容並重新貼底；`ggTb3` 拿掉 design-ahead 那半句；規格註記 `spec-note-dsr-4b-2`（`i9Qn2`，4b-1 註記下方 40px，300×270）。
+  - **確認框抽出（Task 2）**：`DeleteWithFilesDialog.tsx`（文案、版面、按鈕逐字照搬；`download` 是快照物件）；`DownloadRowActions` 桌機路徑改用它，16 條原樣綠；`stateActionFor`／`StateAction` export。
+  - **formatters（Task 3）**：`formatDownloadMeta` 多 `downSpeed`／`upSpeed`（不帶箭頭；`down`／`up` 由它們組成，既有輸出逐字不變）；`formatAddedOn(iso, timeZone?)`（`en-CA`＋`hourCycle:'h23'`＋`formatToParts`，壞字串回 `—`）。
+  - **兩個抽屜（Task 4）**：`DownloadActionsSheet`（標題＝種子名稱兩行、`status.label · 百分比` 用 `getDownloadTone().text`、四／三列、分隔線；2、3 按了就關，1、5 是換手只呼叫 callback）；`DownloadDetailSheet`（`flex flex-col overflow-hidden`＋內層捲動區、固定動作列；`<dl>` 八格、Hash mono＋`break-all`；主要鈕按了不關；completed 只有滿版「更多動作」）。
+  - **接線（Task 5）**：`DownloadRowActions` 只多 `onOpenActions`——`isPhone && variant==='card' && !!onOpenActions` 時 ⋯ 是普通 button（`aria-haspopup="dialog"`），否則現有 JSX 原封不動；`DownloadCardV2` 透傳；`DownloadsBrowseV2` 擁有 `sheet`（聯集型別＋`snapshot`＋`open`）、`confirmTarget`（快照）、`triggerRef`、`handoffRef`；`finalFocus` 函式（換手回 `false`；否則 ⋯ 還在就 ⋯、不在就 `<h1>`；函式讀完就清 `handoffRef`——Base UI 在 popup 卸載時同步讀一次，用 effect 重設會太早）；`isPhone` 變 false 與項目消失都是「關閉」不是「卸載」。
+  - **驗證（Task 6）**：夾具 `downloads-mobile-sheets/actions`（`jDgxJ`）／`detail`（`DrYXb`），選項用 `downloadFixture`；e2e 四條加進 `downloads-mobile.spec.ts`（stub 以「收到 pause POST」切換清單，不用次數）；舊 e2e `downloads-v2.spec.ts` ⋯ menu 那條加 viewport<640 skip（本張造成的手機 project 紅）。
+- **測試（Rule 16：紅／守）**
+  - 紅：`formatters.spec.ts` 5 條（新函式與新欄位，實作前紅）；`DownloadActionsSheet.spec.tsx` 11 條、`DownloadDetailSheet.spec.tsx` 9 條（新檔，實作前 import 失敗）；`DownloadRowActions.spec.tsx` 新增 3 條（`isPhone` mock true）；`DownloadCardV2.spec.tsx` 新增 1 條；`DownloadsBrowseV2.spec.tsx` 新增 9 條（`isPhone` mock true、渲染真的卡片）——其中「項目消失 → 焦點回 `<h1>`」實作第一版真的紅（見 Debug Log 坑 1）。
+  - 守：`DownloadRowActions.spec.tsx` 16 條（抽出確認框前後皆綠、一字未改）、`DownloadsTableV2.spec.tsx` 8、`DownloadCardV2.spec.tsx` 13、`DownloadsBrowseV2.spec.tsx` 既有 22、`formatters.spec.ts` 既有 33——全部未改。三支 spec 只加了 hook mock（`DownloadsBrowseV2.spec.tsx` 的 4b-1 已加）。
+- **Mutation check（拿掉 → 必須紅）：unit 23／23 紅、e2e 7／7 紅**（兩條 e2e 第一次是空轉綠，改測試後才紅——見 Debug Log）
+  - formatters：`downSpeed` 帶箭頭、拿掉 NaN 防護 → 紅。**`hourCycle:'h23'` 換成 `hour12:false` → 綠**：Node 的 ICU 兩者午夜都給 `00`，「24:xx」是舊引擎的行為，jsdom 測不出來；照 AC 用 `h23`，誠實記錄。
+  - RowActions：手機路徑無視 `variant`、沒傳 `onOpenActions` 也走抽屜、拿掉 `aria-haspopup` → 紅。Card：不透傳 → 紅。
+  - ActionsSheet：狀態列不關、「連同檔案刪除」直接 `onRemove`、永遠畫「詳細資訊」、狀態行沒百分比 → 紅。
+  - DetailSheet：「進度」讀 `downloaded`、速度帶箭頭、主要鈕關抽屜、拿掉 `break-all`、completed 仍有主要鈕 → 紅。
+  - Browse：兩個抽屜同時開（detail 不看 kind）、刪除請求不先關抽屜、項目消失不關、`isPhone` false 不關、沒有 `<h1>` 後備、`finalFocus` 不用函式、抽屜讀快照不讀清單 → 紅。
+  - e2e：換手時 `finalFocus` 不回 `false`（焦點被拉回卡片的 ⋯）、詳細資訊沒有內層捲動（動作列跟著捲走）、Hash／路徑沒 `break-all`、刪除請求不先關抽屜、關閉時直接卸載（焦點落 `<body>`）、沒有 `<h1>` 後備、手機仍是下拉 → 紅。
+- **閘門**：`format:check` ✅；`lint:all` 0 errors／129 warnings（既有批次；本張碰的檔案 0 warnings）；`web:typecheck --skip-nx-cache` ✅；`check-design-tokens.py` ✅；`nx test web` **4049／4049**（279 檔）；`nx test api` ✅（已刪 `apps/api/coverage/`）；e2e `chromium` `downloads-mobile`（10 條）＋`downloads-v2`（8 條）`--repeat-each=3` **54／54**；`mobile-chrome` 6 passed／12 skipped（新 spec chromium-only、舊 spec 表格與 ⋯ menu 兩條被 viewport skip 擋下）；visual 整支跑三次：兩張新基準線第二、三次零差異，既有 `downloads-*` 零變動，唯一紅的是本機固定會漂的 `retry-retry-notifications`（`preexisting-fail-visual-darwin-three-stale-baselines`，CI 不受影響）。每次測試後 `test:cleanup` 無殘留。
+- **/ship 對抗式 CR（2026-09-22，獨立 context 的審查代理；0 HIGH／3 MEDIUM／9 LOW＋2 推測）**：吸收 7 項（見上方 Review Follow-ups，Rule 24 ①），mutation：先關再開（把確認框改回同 commit 開 → 紅）、完成項目的標籤（→ 紅）；`handoffRef` 在開啟時清除是防禦性的、沒有可觀察的失敗情境（mutation 綠）。**沒有照做的**：
+  - #6 `useIsPhone` 每次 render 都 `matchMedia()`、現在每張卡片都訂閱 → hook 是 4b-1 的，③ `disc-2026-09-useisphone-cache-mql`。
+  - #7 `detail` 視覺基準線隨機器時區 → ③ `disc-2026-09-visual-project-pin-timezone`（改 `playwright.config.ts` 的 visual project，不是元件；本張不寫死時區）。
+  - #10 class-token 斷言（`min-h-[52px]`、`break-all`）只守字串——它們是「守」，幾何由 e2e 量（`≥52`、`scrollWidth ≤ clientWidth`）；上方測試段落已如此標示。
+  - #12 舊引擎忽略 `hourCycle` → 不在支援矩陣，記錄不做。
+  - 範圍外：樂觀更新失敗沒有任何提示（卡片默默回來、焦點已在 `<h1>`）、對別的客戶端已刪掉的項目按「刪除檔案」→ 靜默 API 錯誤 → ③ `disc-2026-09-download-optimistic-failure-silent`（既有行為）。
+  - CR 後重跑：unit 168／168、e2e `chromium` ×3 **57／57**（新增 reduced-motion 一條）、`mobile-chrome` 6 passed／13 skipped、visual 兩次：兩張新基準線零差異、既有零變動；六個閘門全綠（web 4049／4049）。
+- 🔗 AC Drift: NONE (checked: `'menuitem\|連同檔案刪除\|onCloseAutoFocus\|移除（保留檔案）'` across _bmad-output/implementation-artifacts/*.md — 相關命中 3 處：`dsr-4` AC「一顆狀態鈕＋⋯ 選單、只有『連同檔案刪除』要確認」、`ux3-4-4` AC #5／#7「卡片與表格共用 `DownloadRowActions`」、`ux3-4-3b` AC3 卡片動作；全部 REUSE：桌機路徑的 JSX、`role="menuitem"`、確認框文案與 `onCloseAutoFocus` 逐字不變（16 條既有斷言原樣綠；確認框只是抽成獨立元件、DOM 相同）；手機多的是入口，不是改契約)
+- 📎 Contract Stamps: NONE (本張不定義也不消費任何 `[@contract-v*]`；上游 `GET /downloads`、`POST …/pause|resume`、`DELETE …?deleteFiles=` 皆未 stamp＝implicit v0；對 4b-1 的依賴是元件 API 不是線上契約，差異已記在 Debug Log)
+- 🎭 A11y Pre-Flight: PASS (5 components checked — `DownloadRowActions`、`DeleteWithFilesDialog`、`DownloadActionsSheet`、`DownloadDetailSheet`、`DownloadsBrowseV2`；0 jsx-a11y warnings on touched files, 0 introduced by this story。四類：① 圖片 N/A；② modal 焦點——兩個抽屜由 Base UI 鎖焦點、開啟時落在第一個可 tab 的列、關閉回卡片的 ⋯、卡片被移除就回 `<h1>`（unit 以 `fireEvent.click` 模擬 Safari、e2e 真點擊＋Esc＋刪除路徑各證一次）；換手時 `finalFocus` 回 `false`、下一個覆蓋層自己取焦點（e2e 斷言換手後焦點在新抽屜裡）；確認框走 Radix `onCloseAutoFocus` 同一套解析；③ aria-live N/A（狀態膠囊沿用卡片同一顆，本張沒有新的非同步揭露）；④ 自訂元件——⋯ 在手機帶 `aria-haspopup="dialog"`、進度條 `role="progressbar"`＋`aria-valuenow`、八格用 `<dl>`；已知缺口沿用 4b-1 已立的 `disc-2026-09-ui-sheet-no-close-button`)
+- 🎨 UX Verification: PASS（對照表見下；落差都是建單裁定或已立單）
+
+#### 🎨 UX 對照（dev-story Step 9；量測＝390×844 chromium 夜行，基準＝`.pen` 節點值）
+
+| 區域 | 稿（節點） | 實作（量測） | 相符？ | 要修？ |
+| --- | --- | --- | --- | --- |
+| D8-M 抽屜 | `aJFk0` x0、寬 390、貼底、340 高、`$bg-secondary`、頂角 16、padding 上 8 下 20 | x 0、寬 390、底邊 844、**339** 高、bg-secondary、16px、pt 8／pb 20 | ✅ | — |
+| D8-M 標題 | `pQtcH` BodyLg 16／600 `$text-primary`、左右 20 | 16px／600／text-primary、`px-5` | ✅ | — |
+| D8-M 狀態行 | `rqbiJ`「下載中」Body 14／500＋`W2oZXn`「· 62.4%」`$accent-text` | 「下載中 · 62.4%」14px／500、accent-text（`getDownloadTone().text`） | ✅ | — |
+| D8-M 分隔線／動作區 | `payIm` 1px；`C31QIb` padding [4,8]、列距 2 | 1px；`px-2 py-1`、`gap-0.5` | ✅ | — |
+| D8-M 列 | h52、padding [0,12]、gap 12、`$radius-md`、圖示 20、BodyLg 500 | 52、pl 12、圖示 x 20 w 20、8px、16px／500、寬 374 | ✅ | — |
+| D8-M 圖示 | `info`／`pause`／**`folder-minus`**（本張改稿）／`trash-2`；刪除列 `$error-text` | `Info`／`Pause`／`FolderMinus`／`Trash2`；刪除列 error-text | ✅ | — |
+| D9-M 抽屜 | `g4A3Qk` 606 高（改稿後）、貼底、padding-top 8 | **538.5** 高、貼底、pt 8 | ≈ | 不修：差在標題行高（稿 H4 line 1.625、程式 `text-lg` 28px）與格子字的行高；結構、間距、字級全對 |
+| D9-M 標題 | `Vvdar` H4 18／700 `$text-primary`、換行 | 18px／700／text-primary、`break-words` | ✅ | — |
+| D9-M 狀態膠囊 | `ensI9` `$accent-tint` 藥丸 | `DownloadStatusPill`（同一顆） | ✅ | — |
+| D9-M 進度列 | 軌道 h8 `$bg-tertiary`、填 `$accent-primary`、`pIPlp` BodyLg 600 mono `$accent-text` | 軌道 8、accent-primary、16px／600 mono、accent-text | ✅ | — |
+| D9-M 小標 | `HxVqo` Label 12／600 `$text-secondary` | 12px／600／text-secondary | ✅ | — |
+| D9-M 格子 | `Mpq5S` gap 12；標籤 Label `$text-secondary`、值 Body `$text-primary`；Hash／路徑整列 mono | gap 12；12px text-secondary；14px text-primary；Hash mono 12px 整列、路徑整列 | ≈ | 不修：路徑稿是 mono，實作用一般字＋`break-all`（AC #5 的規格就這樣寫；Hash 才 mono） |
+| D9-M 拿掉的 | `dC4Cg` 技術徽章、`KB5wY` 檔名（本張改稿） | 沒有 | ✅ | — |
+| D9-M 動作列 | `DrHEM` [12,20,24,20]、上框線 `$border-subtle`、固定在底；`Wydrn` h48 `$accent-primary` 滿版＋`xshlR` 48×48 `$bg-tertiary` | pt 12／pb 24／pl 20、1px border-subtle、固定（e2e 捲到底 y 不變）；主要鈕 48 高 290 寬 accent-primary＋⋯ 48×48 bg-tertiary | ✅ | — |
+| 加入時間 | 稿 `2026-06-30 21:14` | `YYYY-MM-DD HH:mm`（瀏覽器時區） | ✅ | — |
+| 把手 | `hmhlF`／`ZrhaS` 40×4 `$text-muted` | 40×4 `--border-subtle` | ❌ | 不在本張（`disc-2026-09-bottomsheet-grabber-three-variants`） |
+| 桌機 | 不變 | 既有 `downloads-*` 基準線零變動、`menuitem` 11 處斷言原樣 | ✅ | — |
 
 ### Discovery Triage
 
@@ -275,10 +346,38 @@ tests/visual/…/downloads-mobile-sheets/{actions,detail}                       
      sprint-status.yaml entry ID (② / ③) or absorbed AC # (①) BEFORE this story is marked done. -->
 
 - **建單時的發現（SM Bob 2026-09-22）：** 與 `dsr-4b-1` 共用（已立三張 disc＋一則補記，見該檔）。本張自己的：`downloads-v2.spec.ts:183` 在手機 project 會因本張而紅 → ①（AC #7，加 viewport<640 skip）。
-- **dev-story 期間的發現：**（待填；沒有就寫 `N/A — no out-of-scope work discovered`）
+- **dev-story 期間的發現：** N/A — no out-of-scope work discovered。（Base UI return-focus 在「卸載」與「關閉」兩條路的時序差異，本張自己吸收——見 Debug Log；把手、關閉鈕、radiogroup 鍵盤三張單 4b-1 已立。）
 
 ### File List
+
+- `ux-design.pen` — D8-M 圖示、D9-M 刪兩塊＋標題＋貼底、`ggTb3`、`spec-note-dsr-4b-2`
+- `_bmad-output/pen-tokens.json` — `penSha256`
+- `_bmad-output/screenshots/flow-d-downloads-v2/d8-m-v2.png`
+- `_bmad-output/screenshots/flow-d-downloads-v2/d9-m-v2.png`
+- `apps/web/src/components/downloads/DeleteWithFilesDialog.tsx`（新；自 `DownloadRowActions` 抽出）
+- `apps/web/src/components/downloads/DownloadRowActions.tsx` — 用抽出的確認框、`stateActionFor` export、`onOpenActions` 手機路徑、檔頭
+- `apps/web/src/components/downloads/DownloadRowActions.spec.tsx` — 檔頭 mock hook、新增 3 條
+- `apps/web/src/components/downloads/formatters.ts` — `downSpeed`／`upSpeed`、`formatAddedOn`
+- `apps/web/src/components/downloads/formatters.spec.ts` — 新增 5 條
+- `apps/web/src/components/downloads/DownloadActionsSheet.tsx`（新）＋ `.spec.tsx`（新）
+- `apps/web/src/components/downloads/DownloadDetailSheet.tsx`（新）＋ `.spec.tsx`（新）
+- `apps/web/src/components/downloads/DownloadCardV2.tsx` — `onOpenActions` 透傳
+- `apps/web/src/components/downloads/DownloadCardV2.spec.tsx` — 檔頭 mock hook、新增 1 條
+- `apps/web/src/components/downloads/DownloadsBrowseV2.tsx` — 兩個抽屜＋確認框的狀態機、焦點、檔頭
+- `apps/web/src/components/downloads/DownloadsBrowseV2.spec.tsx` — 新增 9 條
+- `apps/web/src/routes/test/-gallery.fixtures.tsx` — 夾具 `downloads-mobile-sheets/actions`、`/detail`
+- `tests/visual/components.visual.spec.ts-snapshots/components/downloads-mobile-sheets/{actions,detail}/default-visual-darwin.png`（新；`-linux` 由 CI bootstrap PR 補）
+- `tests/e2e/downloads-mobile.spec.ts` — 新增第二個 describe（4 條）
+- `tests/e2e/downloads-v2.spec.ts` — ⋯ menu 那一條加 viewport<640 skip（只有這一處）
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — 狀態
+- `_bmad-output/implementation-artifacts/dsr-4b-2-mobile-actions-and-detail-sheets.md` — 本檔
 
 ## Change Log
 
 - 2026-09-22 — 建單（SM Bob，create-story；main `ae204761`）。⚖️ Alexyu 當場裁定詳細資訊抽屜要做。原本與 `-1` 是同一張 `dsr-4b`；建單後對抗驗證（2 CRITICAL＋12 SHOULD FIX＋9 NIT）**全部併入**並拆單。併入本張的重點：① 原稿的 AC #3 與 AC #5 對「誰擁有抽屜」互相矛盾，照字面做會生出兩個抽屜、兩條確認路徑 → 改成頁面擁有一個聯集型別的 `sheet` state，`DownloadRowActions` 只多一個 `onOpenActions`；② 移除是樂觀更新，卡片當下就卸載 → `finalFocus` 用函式、後備到 `<h1>`、確認框存物件快照；換手時回 `false` 取代「等一個 frame」；③ `formatDownloadMeta` 的速度帶箭頭、`size` 是 `progress×size`（讀 `downloaded` 會跟卡片矛盾）→ 明確指名函式並加不帶箭頭的欄位；④ 狀態行的顏色要用 `getDownloadTone`，不是 descriptor 的膠囊 class；⑤ 暫停是樂觀更新不是「等下一次輪詢」→ e2e 的 stub 以「收到 POST」切換；⑥ 詳細資訊要 `flex flex-col overflow-hidden`＋內層捲動，動作列才固定；⑦ `hourCycle: 'h23'`；⑧ 夾具 `penNode` 必填。
+- 2026-09-22 — Task 0／1（dev-story, Amelia）：確認 4b-1 已合併（main `e8da8955`）；D8-M `folder-minus`、D9-M 刪檔名與技術徽章＋貼底、Flow 說明、`spec-note-dsr-4b-2`；只 stage 兩張圖＋`pen-tokens.json`。
+- 2026-09-22 — Task 2／3：確認框抽成 `DeleteWithFilesDialog`（16 條原樣綠）、`stateActionFor` export；`formatDownloadMeta` 加 `downSpeed`／`upSpeed`、新 `formatAddedOn`。
+- 2026-09-22 — Task 4：`DownloadActionsSheet`、`DownloadDetailSheet`＋各自 spec（20 條）。
+- 2026-09-22 — Task 5：`DownloadRowActions.onOpenActions`（桌機 JSX 不變）、`DownloadCardV2` 透傳、`DownloadsBrowseV2` 狀態機（`sheet`＋`snapshot`＋`open`、`confirmTarget` 快照、函式版 `finalFocus`、換手）；三支 spec 的 hook mock。真瀏覽器抓到「卸載時回焦點打在游離按鈕」→ 改成先關再卸載（`onOpenChangeComplete` 才清 slot）。
+- 2026-09-22 — Task 6：兩個夾具＋darwin 基準線（三次一致）、手機 e2e 四條（`--repeat-each=3` 54/54）、舊 e2e ⋯ menu 那條 viewport skip、mutation unit 23/23＋e2e 7/7 紅（兩條 e2e 先修成真的會紅）、Step 9 對照表；Status → review。
+- 2026-09-22 — /ship 對抗式 CR：吸收 7 項（確認框與換手改成真的先關再開、桌機確認框跨斷點不殘留、e2e 拿掉兩個 `waitForTimeout`、完成項目的「更多動作」標籤、`handoffRef` 開啟時清除、`formatAddedOn` 快取、reduced-motion e2e＋註解），另立 `disc-2026-09-useisphone-cache-mql`、`disc-2026-09-visual-project-pin-timezone`、`disc-2026-09-download-optimistic-failure-silent`。

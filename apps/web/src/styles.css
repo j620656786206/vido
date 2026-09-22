@@ -302,6 +302,8 @@
   [data-theme='light'] {
     --motion-touch: 1ms;
     --motion-state: 1ms;
+    /* 1ms, not 0: the phone sheets (ui/Sheet) close-then-unmount on `transitionend`, and
+       their return-focus relies on that one frame (dsr-4b-2 Debug Log). */
     --motion-move: 1ms;
     --motion-arrive: 1ms;
     --motion-leave: 1ms;

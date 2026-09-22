@@ -15,7 +15,13 @@
 import type { Locator, Page, TestInfo } from '@playwright/test';
 import { test, expect } from '../support/fixtures';
 import { presetDownloads } from '../support/fixtures/factories/download-factory';
-import { stubCounts, stubList, stubQbtConfig } from '../support/helpers/downloads-stubs';
+import {
+  ROUTE_API,
+  paginated,
+  stubCounts,
+  stubList,
+  stubQbtConfig,
+} from '../support/helpers/downloads-stubs';
 
 const PHONE = { width: 390, height: 844 };
 const AT_BREAKPOINT = { width: 640, height: 844 };
@@ -285,5 +291,264 @@ test.describe('下載 — phone sort sheet + chip row @e2e @downloads-mobile', (
 
     const row = page.getByRole('tablist', { name: '下載狀態篩選' });
     expect(await row.evaluate((el) => window.getComputedStyle(el).flexWrap)).toBe('wrap');
+  });
+});
+
+// dsr-4b-2 — the card's ⋯ on a phone: the actions sheet, the detail sheet, and the one confirm.
+test.describe('下載 — phone card sheets @e2e @downloads-mobile', () => {
+  test.beforeEach(async ({ page: _page }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== 'chromium',
+      'pixel-exact geometry — desktop chromium project only'
+    );
+  });
+
+  // A long, space-free path: without `break-all` it overflows the 350px cell sideways, and it
+  // pushes the content past the sheet's height so the scroll/pinned-bar checks have something
+  // to scroll (a real NAS path looks like this).
+  const A = {
+    ...presetDownloads.downloading,
+    name: 'Dune.Part.Two.2024.2160p.UHD.BluRay.Remux.HEVC.DV.HDR10Plus.TrueHD.Atmos.7.1-FraMeSToR.mkv',
+    savePath:
+      '/volume1/media/movies/Dune.Part.Two.2024.2160p.UHD.BluRay.Remux.HEVC.DV.HDR10Plus.TrueHD.Atmos.7.1-FraMeSToR/Extras/Featurettes/',
+  };
+  const moreBtn = (page: Page) => page.getByRole('button', { name: `更多動作：${A.name}` });
+
+  /** The list stub flips A to paused once a pause POST has landed — a refetch right after the
+   *  optimistic update must not bounce the pill back to 下載中 (removal likewise drops A). */
+  async function stubMutations(page: Page) {
+    const state = { paused: false, removed: false, deletes: [] as string[], pauses: 0, lists: 0 };
+    await page.route(`${ROUTE_API}/downloads*`, (route) => {
+      state.lists += 1;
+      const a = state.paused ? { ...A, status: 'paused', downloadSpeed: 0 } : A;
+      const items = state.removed ? [presetDownloads.seeding] : [a, presetDownloads.seeding];
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(paginated(items)),
+      });
+    });
+    await stubCounts(page, { all: 2, downloading: 1, seeding: 1 });
+    await page.route(/\/api\/v1\/downloads\/[^/?]+(\?.*)?$/, (route) => {
+      if (route.request().method() === 'DELETE') {
+        state.removed = true;
+        state.deletes.push(route.request().url());
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: true, data: null }),
+        });
+      }
+      return route.fallback();
+    });
+    await page.route(/\/api\/v1\/downloads\/[^/]+\/pause$/, (route) => {
+      state.paused = true;
+      state.pauses += 1;
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: null }),
+      });
+    });
+    return state;
+  }
+
+  async function openPhone(page: Page) {
+    await page.setViewportSize(PHONE);
+    await stubQbtConfig(page);
+    const state = await stubMutations(page);
+    await page.goto('/downloads');
+    await expect(page.getByTestId('downloads-browse-v2')).toBeVisible({ timeout: 15000 });
+    await expect(moreBtn(page)).toBeVisible();
+    return state;
+  }
+
+  async function openActionsSheet(page: Page) {
+    await moreBtn(page).click();
+    const sheet = page.getByTestId('download-actions-sheet');
+    await expect(sheet).toBeVisible();
+    await settleSheet(sheet);
+    return sheet;
+  }
+
+  const activeIsBody = (page: Page) =>
+    page.evaluate(() => document.activeElement === document.body);
+
+  test('[P0] 390 — ⋯ opens the actions sheet pinned to the bottom; 保留檔案 removes at once', async ({
+    page,
+  }, testInfo) => {
+    const state = await openPhone(page);
+    const sheet = await openActionsSheet(page);
+    expect(await page.getByRole('menu').count()).toBe(0);
+
+    const s = await box(sheet);
+    expect(Math.abs(s.x)).toBeLessThan(0.5);
+    expect(Math.round(s.width)).toBe(PHONE.width);
+    expect(Math.round(bottom(s))).toBe(PHONE.height);
+    await expect(page.getByRole('dialog')).toHaveAccessibleName(A.name);
+
+    const rows = sheet.getByRole('button');
+    await expect(rows).toHaveCount(4);
+    for (const r of await rows.all()) {
+      const b = await box(r);
+      expect(Math.round(b.height)).toBeGreaterThanOrEqual(52);
+      expect(Math.abs(b.width - (PHONE.width - 16))).toBeLessThanOrEqual(1);
+    }
+    await shot(page, testInfo, 'dsr-4b-2-390-actions.png');
+
+    await sheet.getByRole('button', { name: '移除（保留檔案）' }).click();
+    await expect(sheet).toHaveCount(0);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect.poll(() => state.deletes.length).toBe(1);
+    expect(state.deletes[0]).not.toContain('deleteFiles=true');
+    // The card is gone (optimistic) → focus lands on the heading, never <body>.
+    await expect(page.locator(`[data-testid="download-card-v2-${A.hash}"]`)).toHaveCount(0);
+    await expect.poll(() => activeIsBody(page)).toBe(false);
+    await expect(page.getByRole('heading', { level: 1, name: '下載' })).toBeFocused();
+  });
+
+  test('[P1] 390 · reduced motion — 保留檔案 still lands focus on the heading (the 1ms exit is enough)', async ({
+    browser,
+  }) => {
+    // The close-then-unmount fix rides on a transitionend; under reduced motion that transition
+    // is 1ms, never 0 — this is the test that notices if someone makes it 0.
+    const ctx = await browser.newContext({ reducedMotion: 'reduce', viewport: PHONE });
+    const page = await ctx.newPage();
+    try {
+      await stubQbtConfig(page);
+      const state = await stubMutations(page);
+      await page.goto('/downloads');
+      await expect(moreBtn(page)).toBeVisible({ timeout: 15000 });
+      const sheet = await openActionsSheet(page);
+      await sheet.getByRole('button', { name: '移除（保留檔案）' }).click();
+      await expect(sheet).toHaveCount(0);
+      await expect.poll(() => state.deletes.length).toBe(1);
+      await expect.poll(() => activeIsBody(page)).toBe(false);
+      await expect(page.getByRole('heading', { level: 1, name: '下載' })).toBeFocused();
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test('[P0] 390 — 連同檔案刪除: sheet first, then the confirm; 取消 → ⋯; 刪除檔案 → DELETE + heading', async ({
+    page,
+  }) => {
+    const state = await openPhone(page);
+    let sheet = await openActionsSheet(page);
+    await sheet.getByRole('button', { name: '移除（連同檔案刪除）' }).click();
+    const confirm = page.getByRole('dialog', { name: '移除並刪除檔案？' });
+    // 先關再開: right after the tap the sheet is still exiting (320ms) and the confirm must NOT
+    // exist yet — otherwise it animates in UNDER the exiting popup (z-71) and its scrim.
+    expect(await confirm.count()).toBe(0);
+    await expect(sheet).toHaveCount(0);
+    await expect(confirm).toBeVisible();
+    expect(await page.getByTestId('download-actions-sheet').count()).toBe(0);
+    // …and its buttons are actually on top: a hit test lands on the button itself.
+    const del = await box(confirm.getByRole('button', { name: '刪除檔案' }));
+    expect(
+      await page.evaluate(
+        ({ x, y }) => document.elementFromPoint(x, y)?.closest('button')?.textContent ?? '',
+        { x: del.x + del.width / 2, y: del.y + del.height / 2 }
+      )
+    ).toContain('刪除檔案');
+    expect(await confirm.evaluate((el) => el.contains(document.activeElement))).toBe(true);
+    await expect(confirm).toContainText(A.name);
+
+    await confirm.getByRole('button', { name: '取消' }).click();
+    await expect(confirm).toHaveCount(0);
+    await expect(moreBtn(page)).toBeFocused();
+    expect(state.deletes).toEqual([]);
+
+    sheet = await openActionsSheet(page);
+    await sheet.getByRole('button', { name: '移除（連同檔案刪除）' }).click();
+    await expect(confirm).toBeVisible();
+    await confirm.getByRole('button', { name: '刪除檔案' }).click();
+    await expect(confirm).toHaveCount(0);
+    await expect.poll(() => state.deletes.length).toBe(1);
+    expect(state.deletes[0]).toContain('deleteFiles=true');
+    await expect.poll(() => activeIsBody(page)).toBe(false);
+    await expect(page.getByRole('heading', { level: 1, name: '下載' })).toBeFocused();
+  });
+
+  test('[P0] 390 — 詳細資訊: one sheet at a time, hash/path do not overflow, bar stays put, 暫停 keeps it open', async ({
+    page,
+  }, testInfo) => {
+    const state = await openPhone(page);
+    // A short phone (iPhone SE height): the sheet hits its 85vh cap, so the content region has
+    // to scroll while the action bar stays pinned — the case the sheet's layout exists for.
+    const SHORT = { width: PHONE.width, height: 667 };
+    await page.setViewportSize(SHORT);
+    const actions = await openActionsSheet(page);
+    await actions.getByRole('button', { name: '詳細資訊' }).click();
+    const detail = page.getByTestId('download-detail-sheet');
+    await expect(detail).toBeVisible();
+    await settleSheet(detail);
+    await expect(page.locator('[data-testid$="-sheet"]:visible')).toHaveCount(1);
+    // 先關再開: the actions sheet is gone before the detail sheet opens, and the handoff leaves
+    // focus INSIDE the new sheet — the old one must not pull it back to ⋯.
+    await expect(actions).toHaveCount(0);
+    expect(await detail.evaluate((el) => el.contains(document.activeElement))).toBe(true);
+
+    const dds = detail.getByRole('definition');
+    await expect(dds.nth(6)).toHaveText(A.hash);
+    await expect(dds.nth(7)).toHaveText(A.savePath);
+    for (const i of [6, 7]) {
+      const m = await dds.nth(i).evaluate((el) => ({ sw: el.scrollWidth, cw: el.clientWidth }));
+      expect(m.sw).toBeLessThanOrEqual(m.cw);
+    }
+    // The sheet never grows wider than the screen.
+    expect(Math.round((await box(detail)).width)).toBe(PHONE.width);
+
+    // Content scrolls INSIDE the sheet (the sheet itself is capped, the inner region overflows),
+    // and the action bar is pinned: scroll to the bottom, the bar does not move.
+    const bar = detail.getByRole('button', { name: `暫停 ${A.name}` });
+    const before = await box(bar);
+    const scroller = detail.locator('.overflow-y-auto').first();
+    const sizes = await scroller.evaluate((el) => ({ sh: el.scrollHeight, ch: el.clientHeight }));
+    expect(sizes.sh).toBeGreaterThan(sizes.ch);
+    expect((await box(detail)).height).toBeLessThanOrEqual(SHORT.height * 0.85 + 1);
+    expect(Math.round(bottom(await box(detail)))).toBe(SHORT.height);
+    await scroller.evaluate((el) => {
+      el.scrollTop = el.scrollHeight;
+    });
+    expect(await scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    const after = await box(bar);
+    expect(Math.abs(after.y - before.y)).toBeLessThan(1);
+    await shot(page, testInfo, 'dsr-4b-2-390-detail.png');
+
+    // Primary button: pause → request goes, sheet STAYS, pill flips and stays flipped.
+    const listsBefore = state.lists;
+    await bar.click();
+    await expect.poll(() => state.pauses).toBe(1);
+    await expect(detail).toBeVisible();
+    await expect(detail.getByTestId(`download-status-${A.hash}`)).toHaveText('已暫停');
+    await expect(detail.getByRole('button', { name: `繼續 ${A.name}` })).toBeVisible();
+    // …and after the refetch that follows the optimistic update it is still paused.
+    await expect.poll(() => state.lists).toBeGreaterThan(listsBefore);
+    await expect(detail.getByTestId(`download-status-${A.hash}`)).toHaveText('已暫停');
+
+    // ⋯ hands back to the actions sheet; Esc from there returns focus to the card's ⋯.
+    await detail.getByRole('button', { name: `更多動作：${A.name}` }).click();
+    await expect(actions).toBeVisible();
+    await expect(detail).toHaveCount(0);
+    await settleSheet(actions);
+    await page.keyboard.press('Escape');
+    await expect(actions).toHaveCount(0);
+    await expect(moreBtn(page)).toBeFocused();
+  });
+
+  test('[P1] 640 — the other side: ⋯ is the dropdown menu, no sheet, no 詳細資訊', async ({
+    page,
+  }) => {
+    await page.setViewportSize(AT_BREAKPOINT);
+    await stubQbtConfig(page);
+    await stubMutations(page);
+    await page.goto('/downloads');
+    await expect(page.getByTestId('downloads-browse-v2')).toBeVisible({ timeout: 15000 });
+    await moreBtn(page).click();
+    await expect(page.getByRole('menu')).toBeVisible();
+    expect(await page.locator('[data-testid$="-sheet"]').count()).toBe(0);
+    expect(await page.getByRole('menuitem', { name: '詳細資訊' }).count()).toBe(0);
+    await expect(page.getByRole('menuitem', { name: '移除（保留檔案）' })).toBeVisible();
   });
 });

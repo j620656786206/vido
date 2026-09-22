@@ -90987,7 +90987,7 @@
           "y": 22467,
           "name": "D Flow Desc",
           "fill": "#666666",
-          "content": "桌面 + 手機並列｜v2 下載中心：卡片列表 → 批次選取 → 動作 sheet · 深層下載操作頁為 design-ahead 規格稿（後端尚未實作）。",
+          "content": "桌面 + 手機並列｜v2 下載中心：卡片列表 → 批次選取 → 動作 sheet · 排序 sheet · 詳細資訊 sheet。",
           "lineHeight": "$Type/Body/Line",
           "fontFamily": "$Type/Family/Primary",
           "fontSize": "$Type/Body/Size",
@@ -101041,7 +101041,7 @@
                               "name": "ic",
                               "width": 20,
                               "height": 20,
-                              "icon": "circle-minus",
+                              "icon": "folder-minus",
                               "library": "lucide",
                               "fill": "$text-primary"
                             },
@@ -101404,10 +101404,9 @@
                   "type": "frame",
                   "id": "g4A3Qk",
                   "x": 0,
-                  "y": 150,
+                  "y": 238,
                   "name": "detailSheet",
                   "width": 390,
-                  "height": 694,
                   "fill": "$bg-secondary",
                   "cornerRadius": [
                     "$radius-xl",
@@ -101455,7 +101454,6 @@
                       "name": "content",
                       "clip": true,
                       "width": "fill_container",
-                      "height": "fill_container",
                       "layout": "vertical",
                       "gap": "$Space/lg",
                       "padding": [
@@ -101480,67 +101478,11 @@
                               "fill": "$text-primary",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "沙丘：第二部 Dune: Part Two",
+                              "content": "沙丘：第二部 Dune: Part Two (2024) 2160p UHD BluRay",
                               "lineHeight": "$Type/H4/Line",
                               "fontFamily": "$Type/Family/Primary",
                               "fontSize": "$Type/H4/Size",
                               "fontWeight": "700"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "dC4Cg",
-                              "name": "techRow",
-                              "gap": "$Space/xs-plus",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "id": "M3RFhG",
-                                  "type": "ref",
-                                  "ref": "L9m19",
-                                  "name": "tb-2160p",
-                                  "descendants": {
-                                    "dhP6X": {
-                                      "content": "2160p"
-                                    }
-                                  }
-                                },
-                                {
-                                  "id": "IQp3L",
-                                  "type": "ref",
-                                  "ref": "cUjyv",
-                                  "name": "tb-HDR10",
-                                  "descendants": {
-                                    "aaYwr": {
-                                      "content": "HDR10"
-                                    }
-                                  }
-                                },
-                                {
-                                  "id": "Y8tjj",
-                                  "type": "ref",
-                                  "ref": "9iTW3",
-                                  "name": "tb-TrueHD",
-                                  "descendants": {
-                                    "Gz6PG": {
-                                      "content": "TrueHD"
-                                    }
-                                  }
-                                },
-                                {
-                                  "id": "j1tHqq",
-                                  "type": "ref",
-                                  "ref": "L9m19",
-                                  "name": "tb-BluRay",
-                                  "descendants": {
-                                    "BMzOc": {
-                                      "icon": "disc"
-                                    },
-                                    "dhP6X": {
-                                      "content": "BluRay"
-                                    }
-                                  }
-                                }
-                              ]
                             },
                             {
                               "type": "frame",
@@ -101624,44 +101566,6 @@
                               "fontFamily": "$Type/Family/Mono",
                               "fontSize": "$Type/BodyLg/Size",
                               "fontWeight": "600"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "KB5wY",
-                          "name": "fileChip",
-                          "width": "fill_container",
-                          "fill": "$bg-tertiary",
-                          "cornerRadius": "$radius-md",
-                          "gap": "$Space/sm",
-                          "padding": [
-                            "$Space/sm-plus",
-                            "$Space/md"
-                          ],
-                          "children": [
-                            {
-                              "type": "icon",
-                              "id": "z6EcaX",
-                              "name": "fi",
-                              "width": 16,
-                              "height": 16,
-                              "icon": "file-video",
-                              "library": "lucide",
-                              "fill": "$text-muted"
-                            },
-                            {
-                              "type": "text",
-                              "id": "e0YyJN",
-                              "name": "fn",
-                              "fill": "$text-secondary",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container",
-                              "content": "Dune.Part.Two.2024.2160p.UHD.BluRay.Remux.HEVC.TrueHD.Atmos.mkv",
-                              "lineHeight": "$Type/Label/Line",
-                              "fontFamily": "$Type/Family/Mono",
-                              "fontSize": "$Type/Label/Size",
-                              "fontWeight": "normal"
                             }
                           ]
                         },
@@ -102897,6 +102801,21 @@
           "textGrowth": "fixed-width",
           "width": 300,
           "content": "D10／D1（手機）：排序是只存在於手機的底部抽屜（<640），桌機維持排序下拉。入口是標題列右邊的 44×44 排序鈕；選取模式與 qBittorrent 連不上時沒有排序鈕。抽屜與桌機下拉是同一份八個選項、同一組文字，按了就套用並關閉；每一列都留圖示位，選了哪一列字都不會跳。抽屜蓋住底部分頁列（有遮罩，點遮罩或 Esc 關閉），關掉後焦點回到排序鈕。膠囊列在手機單行橫向捲動，膠囊維持 44 高（稿畫 40）。",
+          "lineHeight": "$Type/Label/Line",
+          "fontFamily": "$Type/Family/Primary",
+          "fontSize": "$Type/Label/Size",
+          "fontWeight": "normal"
+        },
+        {
+          "type": "text",
+          "id": "i9Qn2",
+          "x": 17040,
+          "y": 25413,
+          "name": "spec-note-dsr-4b-2",
+          "fill": "$text-muted",
+          "textGrowth": "fixed-width",
+          "width": 300,
+          "content": "D8／D9（手機）：兩個都是只存在於手機的底部抽屜（<640）；桌機維持下拉選單，桌機沒有詳細資訊。一次只開一個覆蓋層：動作 → 詳細、詳細 → 動作、動作 → 刪除確認，全部是先關再開。動作抽屜：標題是種子名稱（最多兩行）＋狀態・百分比；「連同檔案刪除」先關抽屜再跳確認框，其餘動作按了就做、抽屜關閉；已完成的項目沒有暫停／繼續那一列。詳細資訊抽屜：資料全部來自清單（不另外打 API），數字與卡片用同一套算法；開著的時候跟著清單更新；項目從清單消失就自動關閉。沒有檔名與技術徽章（系統沒有這兩樣資料）。內容可捲、底部動作列固定：主要鈕＝該項目的狀態動作（暫停／繼續／重試），按了不關抽屜；⋯ 換到動作抽屜；已完成的項目只有一顆「更多動作」。關掉後焦點回到那張卡片的 ⋯；卡片已經不在了（被移除）就回到頁面標題。",
           "lineHeight": "$Type/Label/Line",
           "fontFamily": "$Type/Family/Primary",
           "fontSize": "$Type/Label/Size",

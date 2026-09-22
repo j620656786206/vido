@@ -107,6 +107,8 @@ import { StatusIcon } from '../../components/downloads/StatusIcon';
 import { DownloadCardV2 } from '../../components/downloads/DownloadCardV2';
 import { DownloadsTableV2 } from '../../components/downloads/DownloadsTableV2';
 import { DownloadSortSheet } from '../../components/downloads/DownloadSortSheet';
+import { DownloadActionsSheet } from '../../components/downloads/DownloadActionsSheet';
+import { DownloadDetailSheet } from '../../components/downloads/DownloadDetailSheet';
 import { SORT_OPTIONS as DOWNLOAD_SORT_OPTIONS } from '../../components/downloads/DownloadsBrowseV2';
 import {
   DownloadsEmptyV2,
@@ -1791,6 +1793,54 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       onChange: noop,
     },
     penNode: 'JxMWL', // Screen D10-M-v2
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+  },
+  {
+    // dsr-4b-2 — D8-M-v2: the phone actions sheet for one download. Same Portal-on-a-phone
+    // recipe as `sort` above; the torrent is the card fixtures' downloading preset.
+    id: 'downloads-mobile-sheets/actions',
+    label: 'downloads/DownloadActionsSheet (D8-M — 手機 viewport 390×844，卡片動作抽屜)',
+    component: DownloadActionsSheet,
+    props: {
+      open: true,
+      onOpenChange: noop,
+      download: downloadFixture({
+        name: '沙丘：第二部 Dune: Part Two (2024) 2160p UHD BluRay',
+        progress: 0.624,
+      }),
+      onPause: noop,
+      onResume: noop,
+      onRemove: noop,
+      onShowDetails: noop,
+      onRequestDeleteWithFiles: noop,
+    },
+    penNode: 'jDgxJ', // Screen D8-M-v2
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+  },
+  {
+    // dsr-4b-2 — D9-M-v2: the detail sheet. 加入時間 goes through the browser's zone, so the
+    // darwin and linux baselines differ by design (they are separate files anyway).
+    id: 'downloads-mobile-sheets/detail',
+    label: 'downloads/DownloadDetailSheet (D9-M — 手機 viewport 390×844，詳細資訊抽屜)',
+    component: DownloadDetailSheet,
+    props: {
+      open: true,
+      onOpenChange: noop,
+      download: downloadFixture({
+        hash: '8f3ac2e1b4d59a7c6e0f21d8b93a45c7e1d6f0a2',
+        name: '沙丘：第二部 Dune: Part Two (2024) 2160p UHD BluRay',
+        size: 8_697_308_774,
+        progress: 0.624,
+        addedOn: '2026-06-30T13:14:00Z',
+        savePath: '/volume1/media/movies/Dune Part Two (2024)/',
+      }),
+      onPause: noop,
+      onResume: noop,
+      onOpenActions: noop,
+    },
+    penNode: 'DrYXb', // Screen D9-M-v2
     statesOnly: ['default'],
     viewport: { width: 390, height: 844 },
   },

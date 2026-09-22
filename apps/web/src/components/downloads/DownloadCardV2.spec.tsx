@@ -22,6 +22,9 @@ vi.mock('@tanstack/react-router', () => ({
 import { DownloadCardV2 } from './DownloadCardV2';
 import type { Download } from '../../services/downloadService';
 
+const h = vi.hoisted(() => ({ isPhone: false }));
+vi.mock('../../hooks/useIsPhone', () => ({ useIsPhone: () => h.isPhone }));
+
 const base: Download = {
   hash: 'abc123',
   name: '測試電影 Test.Movie.2024.1080p.BluRay',
@@ -166,5 +169,28 @@ describe('DownloadCardV2 — import status (dl-import-2)', () => {
   it('no import status, no chip — a torrent Sonarr/Radarr never saw is not guessed at', () => {
     render(<DownloadCardV2 download={{ ...base, status: 'completed', progress: 1 }} />);
     expect(screen.queryByTestId('download-import-status')).toBeNull();
+  });
+});
+
+describe('DownloadCardV2 — phone ⋯ passthrough (dsr-4b-2)', () => {
+  it('hands onOpenActions to the row actions: on a phone ⋯ reports the card hash and the button', async () => {
+    h.isPhone = true;
+    try {
+      const onOpenActions = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <DownloadCardV2
+          download={base}
+          onPause={vi.fn()}
+          onRemove={vi.fn()}
+          onOpenActions={onOpenActions}
+        />
+      );
+      const more = screen.getByRole('button', { name: `更多動作：${base.name}` });
+      await user.click(more);
+      expect(onOpenActions).toHaveBeenCalledWith(base.hash, more);
+    } finally {
+      h.isPhone = false;
+    }
   });
 });

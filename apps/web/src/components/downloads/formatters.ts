@@ -75,16 +75,29 @@ function compactSizePair(done: number, total: number): string {
  */
 export function formatDownloadMeta(
   d: Pick<Download, 'status' | 'downloadSpeed' | 'uploadSpeed' | 'eta' | 'size' | 'progress'>
-): { down: string; up: string; eta: string; size: string; sizeCompact: string } {
+): {
+  down: string;
+  up: string;
+  /** The speeds without their arrows — the detail sheet labels them instead (dsr-4b-2). */
+  downSpeed: string;
+  upSpeed: string;
+  eta: string;
+  size: string;
+  sizeCompact: string;
+} {
   const moving = d.status === 'downloading';
   const sharing = moving || d.status === 'seeding';
   const complete = d.progress >= 1;
   // Size 0 is qBittorrent still fetching a magnet's metadata — unknown, not empty.
   const known = d.size > 0;
   const done = Math.round(Math.min(d.progress, 1) * d.size);
+  const downSpeed = moving ? formatSpeed(d.downloadSpeed) : DASH;
+  const upSpeed = sharing ? formatSpeed(d.uploadSpeed) : DASH;
   return {
-    down: `↓ ${moving ? formatSpeed(d.downloadSpeed) : DASH}`,
-    up: `↑ ${sharing ? formatSpeed(d.uploadSpeed) : DASH}`,
+    down: `↓ ${downSpeed}`,
+    up: `↑ ${upSpeed}`,
+    downSpeed,
+    upSpeed,
     eta: moving ? formatETA(d.eta) : DASH,
     size: !known
       ? DASH
@@ -93,4 +106,35 @@ export function formatDownloadMeta(
         : `${formatSize(done)} / ${formatSize(d.size)}`,
     sizeCompact: !known ? DASH : complete ? formatSize(d.size) : compactSizePair(done, d.size),
   };
+}
+
+/**
+ * `YYYY-MM-DD HH:mm` for the detail sheet's 加入時間 (dsr-4b-2 D9-M). `addedOn` arrives as an
+ * RFC3339 UTC string; shown in `timeZone`, or the browser's zone when omitted. `hourCycle: 'h23'`
+ * rather than `hour12: false` — some engines print midnight as 24:xx under the latter. Anything
+ * unparsable is「—」.
+ */
+const addedOnFormatters = new Map<string | undefined, Intl.DateTimeFormat>();
+
+export function formatAddedOn(iso: string, timeZone?: string): string {
+  const date = new Date(iso);
+  if (!iso || Number.isNaN(date.getTime())) return DASH;
+  // The sheet re-renders on every poll; building a formatter each time is the one cost here.
+  let fmt = addedOnFormatters.get(timeZone);
+  if (!fmt) {
+    fmt = new Intl.DateTimeFormat('en-CA', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+      timeZone,
+    });
+    addedOnFormatters.set(timeZone, fmt);
+  }
+  const parts = fmt.formatToParts(date);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? '';
+  return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}`;
 }
