@@ -924,3 +924,90 @@ func TestLibraryService_BatchReparse_UsesNarrowParseStatusWriter(t *testing.T) {
 	seriesRepo.AssertCalled(t, "UpdateParseStatus", mock.Anything, "s1", models.ParseStatusPending)
 	seriesRepo.AssertNotCalled(t, "Update", mock.Anything, mock.Anything)
 }
+
+// dsr-1b-a AC #3: `type=all` fans the same Filters out to both repos (listAll
+// over-fetches page×pageSize from each and merges), so the subtitle_status
+// condition must bite on BOTH sides and TotalResults must be the sum.
+func TestLibraryService_SubtitleStatusFilter_AllTypes(t *testing.T) {
+	db := setupTestDB(t)
+	movieRepo := repository.NewMovieRepository(db)
+	seriesRepo := repository.NewSeriesRepository(db)
+	service := NewLibraryService(movieRepo, seriesRepo, repository.NewEpisodeRepository(db))
+	ctx := context.Background()
+	posterPath := "/poster.jpg"
+
+	// 3 movies: found / not_found / not_found ; 2 series: not_found / not_searched
+	movieStatuses := []models.SubtitleStatus{models.SubtitleStatusFound, models.SubtitleStatusNotFound, models.SubtitleStatusNotFound}
+	for i, st := range movieStatuses {
+		m, err := service.SaveMovieFromTMDb(ctx, &tmdb.MovieDetails{
+			Movie: tmdb.Movie{ID: 900 + i, Title: fmt.Sprintf("Movie %d", i), ReleaseDate: "2023-01-01", PosterPath: &posterPath},
+		}, "")
+		require.NoError(t, err)
+		require.NoError(t, movieRepo.UpdateSubtitleStatus(ctx, m.ID, st, "", "", 0))
+	}
+	seriesStatuses := []models.SubtitleStatus{models.SubtitleStatusNotFound, models.SubtitleStatusNotSearched}
+	for i, st := range seriesStatuses {
+		s, err := service.SaveSeriesFromTMDb(ctx, &tmdb.TVShowDetails{
+			TVShow: tmdb.TVShow{ID: 950 + i, Name: fmt.Sprintf("Series %d", i), FirstAirDate: "2023-01-01", PosterPath: &posterPath},
+		}, "")
+		require.NoError(t, err)
+		if st == models.SubtitleStatusNotSearched {
+			continue // column DEFAULT
+		}
+		require.NoError(t, seriesRepo.UpdateSubtitleStatus(ctx, s.ID, st, "", "", 0))
+	}
+
+	t.Run("all: not_found = 2 movies + 1 series, total is the sum", func(t *testing.T) {
+		params := repository.NewListParams()
+		params.Filters["subtitle_status"] = []string{"not_found"}
+		result, err := service.ListLibrary(ctx, params, "all")
+		require.NoError(t, err)
+		assert.Len(t, result.Items, 3)
+		assert.Equal(t, 3, result.Pagination.TotalResults)
+		types := map[string]int{}
+		for _, it := range result.Items {
+			types[it.Type]++
+		}
+		assert.Equal(t, 2, types["movie"], "movie repo must have applied the filter")
+		assert.Equal(t, 1, types["series"], "series repo must have applied the filter")
+	})
+
+	t.Run("all: csv widens the set", func(t *testing.T) {
+		params := repository.NewListParams()
+		params.Filters["subtitle_status"] = []string{"not_found", "not_searched"}
+		result, err := service.ListLibrary(ctx, params, "all")
+		require.NoError(t, err)
+		assert.Len(t, result.Items, 4)
+		assert.Equal(t, 4, result.Pagination.TotalResults)
+	})
+
+	t.Run("all: page 2 of 2 exercises listAll's page×pageSize over-fetch", func(t *testing.T) {
+		params := repository.NewListParams()
+		params.Filters["subtitle_status"] = []string{"not_found", "not_searched"}
+		params.Page = 2
+		params.PageSize = 2
+		result, err := service.ListLibrary(ctx, params, "all")
+		require.NoError(t, err)
+		assert.Len(t, result.Items, 2, "second page of 4 filtered rows")
+		assert.Equal(t, 4, result.Pagination.TotalResults)
+		assert.Equal(t, 2, result.Pagination.TotalPages)
+		for _, it := range result.Items {
+			st := ""
+			if it.Movie != nil {
+				st = string(it.Movie.SubtitleStatus)
+			} else if it.Series != nil {
+				st = string(it.Series.SubtitleStatus)
+			}
+			assert.Contains(t, []string{"not_found", "not_searched"}, st, "an unfiltered row leaked through the merge")
+		}
+	})
+
+	t.Run("movie only", func(t *testing.T) {
+		params := repository.NewListParams()
+		params.Filters["subtitle_status"] = []string{"found"}
+		result, err := service.ListLibrary(ctx, params, "movie")
+		require.NoError(t, err)
+		assert.Len(t, result.Items, 1)
+		assert.Equal(t, "Movie 0", result.Items[0].Movie.Title)
+	})
+}

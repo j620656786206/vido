@@ -2288,3 +2288,104 @@ func TestMovieFindWithFileByTMDbID(t *testing.T) {
 		t.Fatalf("expected (nil, nil) for an unknown tmdb id, got %+v, %v", none, err)
 	}
 }
+
+// dsr-1b-a AC #2: List filters by `subtitle_status IN (...)`, stacked on the
+// soft-delete guard. The removed not_found row is the whole point of the test —
+// FindBySubtitleStatus has no is_removed guard, so reusing it would resurrect it.
+func TestMovieListSubtitleStatusFilter(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	seed := []struct {
+		id      string
+		status  models.SubtitleStatus
+		removed bool
+	}{
+		{"movie-sub-found", models.SubtitleStatusFound, false},
+		{"movie-sub-not-found", models.SubtitleStatusNotFound, false},
+		{"movie-sub-not-searched", models.SubtitleStatusNotSearched, false},
+		{"movie-sub-not-found-removed", models.SubtitleStatusNotFound, true},
+	}
+	for _, s := range seed {
+		m := &models.Movie{ID: s.id, Title: s.id, ReleaseDate: "2020-01-01", IsRemoved: s.removed}
+		if err := repo.Create(ctx, m); err != nil {
+			t.Fatalf("Create %s: %v", s.id, err)
+		}
+		// The not_searched row is deliberately left on the column DEFAULT
+		// (Create does not write subtitle_status) — that is how most real rows
+		// look, so the filter must find rows that were never explicitly written.
+		if s.status == models.SubtitleStatusNotSearched {
+			continue
+		}
+		if err := repo.UpdateSubtitleStatus(ctx, s.id, s.status, "", "", 0); err != nil {
+			t.Fatalf("UpdateSubtitleStatus %s: %v", s.id, err)
+		}
+	}
+
+	t.Run("default-path row (never written) is found by not_searched", func(t *testing.T) {
+		params := NewListParams()
+		params.Filters["subtitle_status"] = []string{"not_searched"}
+		movies, _, err := repo.List(ctx, params)
+		if err != nil {
+			t.Fatalf("List: %v", err)
+		}
+		if len(movies) != 1 || movies[0].ID != "movie-sub-not-searched" {
+			t.Fatalf("expected the DEFAULT row, got %v", movieIDs(movies))
+		}
+	})
+
+	t.Run("single status", func(t *testing.T) {
+		params := NewListParams()
+		params.Filters["subtitle_status"] = []string{"not_found"}
+		movies, pagination, err := repo.List(ctx, params)
+		if err != nil {
+			t.Fatalf("List: %v", err)
+		}
+		if len(movies) != 1 || movies[0].ID != "movie-sub-not-found" {
+			t.Fatalf("expected only movie-sub-not-found, got %+v", movieIDs(movies))
+		}
+		if pagination.TotalResults != 1 {
+			t.Errorf("TotalResults = %d, want 1 (count and page disagree)", pagination.TotalResults)
+		}
+	})
+
+	t.Run("two statuses use IN, not two ANDs", func(t *testing.T) {
+		params := NewListParams()
+		params.Filters["subtitle_status"] = []string{"not_found", "not_searched"}
+		movies, pagination, err := repo.List(ctx, params)
+		if err != nil {
+			t.Fatalf("List: %v", err)
+		}
+		if len(movies) != 2 || pagination.TotalResults != 2 {
+			t.Fatalf("expected 2 rows / total 2, got %d rows / total %d: %v", len(movies), pagination.TotalResults, movieIDs(movies))
+		}
+		for _, m := range movies {
+			if m.ID == "movie-sub-found" || m.ID == "movie-sub-not-found-removed" {
+				t.Errorf("unexpected row %s", m.ID)
+			}
+		}
+	})
+
+	t.Run("wrong Filters type is ignored, not a crash", func(t *testing.T) {
+		params := NewListParams()
+		params.Filters["subtitle_status"] = "not_found" // the year_min trap — must not panic
+		movies, _, err := repo.List(ctx, params)
+		if err != nil {
+			t.Fatalf("List: %v", err)
+		}
+		if len(movies) != 3 {
+			t.Errorf("a non-[]string filter must be a no-op; got %d rows", len(movies))
+		}
+	})
+}
+
+func movieIDs(movies []models.Movie) []string {
+	out := make([]string, 0, len(movies))
+	for _, m := range movies {
+		out = append(out, m.ID)
+	}
+	return out
+}

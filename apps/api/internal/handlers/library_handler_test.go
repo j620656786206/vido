@@ -869,6 +869,147 @@ func TestLibraryHandler_ListLibrary_WithFilters(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 	})
 
+	// dsr-1b-a AC #1 [@contract-v1]: subtitle_status is a comma-separated status list,
+	// validated against models.SubtitleStatus.IsValid, stored as []string (same shape
+	// as genres — a type mismatch on the repo side would silently drop the filter).
+	okResult := func() *services.LibraryListResult {
+		return &services.LibraryListResult{
+			Items: []services.LibraryItem{},
+			Pagination: &repository.PaginationResult{
+				Page: 1, PageSize: 20, TotalResults: 0, TotalPages: 0,
+			},
+		}
+	}
+
+	t.Run("subtitle_status single value passed to service as []string", func(t *testing.T) {
+		mockService.On("ListLibrary", mock.Anything, mock.MatchedBy(func(p repository.ListParams) bool {
+			statuses, ok := p.Filters["subtitle_status"].([]string)
+			return ok && len(statuses) == 1 && statuses[0] == "not_found"
+		}), "all").Return(okResult(), nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library?subtitle_status=not_found", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		mockService.AssertExpectations(t)
+	})
+
+	t.Run("subtitle_status csv is split, trimmed and kept in order", func(t *testing.T) {
+		mockService.On("ListLibrary", mock.Anything, mock.MatchedBy(func(p repository.ListParams) bool {
+			statuses, ok := p.Filters["subtitle_status"].([]string)
+			return ok && len(statuses) == 2 && statuses[0] == "not_found" && statuses[1] == "not_searched"
+		}), "all").Return(okResult(), nil).Once()
+
+		w := httptest.NewRecorder()
+		// "%20" = the space a hand-typed deep link tends to carry after the comma.
+		req, _ := http.NewRequest("GET", "/api/v1/library?subtitle_status=not_found,%20not_searched", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		mockService.AssertExpectations(t)
+	})
+
+	t.Run("subtitle_status unknown value returns 400 and never reaches the service", func(t *testing.T) {
+		fresh := new(MockLibraryService)
+		freshRouter := setupLibraryTestRouter(NewLibraryHandler(fresh))
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library?subtitle_status=bogus", nil)
+		freshRouter.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Contains(t, w.Body.String(), "VALIDATION_INVALID_FORMAT")
+		assert.Contains(t, w.Body.String(), "bogus", "the 400 must name the offending value")
+		fresh.AssertNotCalled(t, "ListLibrary", mock.Anything, mock.Anything, mock.Anything)
+	})
+
+	t.Run("subtitle_status one bad value in a csv poisons the whole request", func(t *testing.T) {
+		fresh := new(MockLibraryService)
+		freshRouter := setupLibraryTestRouter(NewLibraryHandler(fresh))
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library?subtitle_status=not_found,bogus", nil)
+		freshRouter.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		fresh.AssertNotCalled(t, "ListLibrary", mock.Anything, mock.Anything, mock.Anything)
+	})
+
+	t.Run("subtitle_status empty string means no filter", func(t *testing.T) {
+		mockService.On("ListLibrary", mock.Anything, mock.MatchedBy(func(p repository.ListParams) bool {
+			_, present := p.Filters["subtitle_status"]
+			return !present
+		}), "all").Return(okResult(), nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library?subtitle_status=", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		mockService.AssertExpectations(t)
+	})
+
+	t.Run("subtitle_status stacks with unmatched and genres", func(t *testing.T) {
+		mockService.On("ListLibrary", mock.Anything, mock.MatchedBy(func(p repository.ListParams) bool {
+			statuses, ok1 := p.Filters["subtitle_status"].([]string)
+			unmatched, ok2 := p.Filters["unmatched"].(bool)
+			genres, ok3 := p.Filters["genres"].([]string)
+			return ok1 && ok2 && ok3 &&
+				len(statuses) == 1 && statuses[0] == "not_found" &&
+				unmatched &&
+				len(genres) == 1 && genres[0] == "動畫"
+		}), "movie").Return(okResult(), nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library?type=movie&subtitle_status=not_found&unmatched=true&genres=%E5%8B%95%E7%95%AB", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		mockService.AssertExpectations(t)
+	})
+
+	t.Run("subtitle_status duplicates collapse to one IN value", func(t *testing.T) {
+		mockService.On("ListLibrary", mock.Anything, mock.MatchedBy(func(p repository.ListParams) bool {
+			statuses, ok := p.Filters["subtitle_status"].([]string)
+			return ok && len(statuses) == 1 && statuses[0] == "not_found"
+		}), "all").Return(okResult(), nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library?subtitle_status=not_found,not_found,not_found", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("subtitle_status is case-sensitive: NOT_FOUND is rejected", func(t *testing.T) {
+		fresh := new(MockLibraryService)
+		freshRouter := setupLibraryTestRouter(NewLibraryHandler(fresh))
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library?subtitle_status=NOT_FOUND", nil)
+		freshRouter.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		fresh.AssertNotCalled(t, "ListLibrary", mock.Anything, mock.Anything, mock.Anything)
+	})
+
+	t.Run("subtitle_status oversized bad value is truncated in the 400 message", func(t *testing.T) {
+		fresh := new(MockLibraryService)
+		freshRouter := setupLibraryTestRouter(NewLibraryHandler(fresh))
+		huge := strings.Repeat("x", 5000)
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library?subtitle_status="+huge, nil)
+		freshRouter.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Less(t, w.Body.Len(), 600, "the echoed value must be capped, not reflected whole")
+		assert.Contains(t, w.Body.String(), strings.Repeat("x", 64)+"…")
+	})
+
+	// Kept at the very end on purpose: every .Once() expectation above is
+	// accounted for here, including the subtitle_status ones.
 	mockService.AssertExpectations(t)
 }
 
