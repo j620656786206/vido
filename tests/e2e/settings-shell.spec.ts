@@ -133,3 +133,100 @@ test.describe('Settings shell @settings @dsr-3a', () => {
     }
   });
 });
+
+// dsr-3b — 金鑰設定 (C7-D PWvEX / C7-M f8Fda). The key state is stubbed: one key
+// of each source, the way C7 draws them.
+test.describe('金鑰設定 layout @settings @dsr-3b', () => {
+  const KEYS = {
+    writable: true,
+    keys: [
+      { name: 'claude', configured: true, source: 'secret', masked: 'sk-ant…7f3a' },
+      { name: 'tmdb', configured: true, source: 'env' },
+      { name: 'openai', configured: false, source: 'none' },
+    ],
+  };
+  test.beforeEach(async ({ page }) => {
+    await page.route('**/api/v1/settings/keys', (route) =>
+      route.request().method() === 'GET'
+        ? route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ success: true, data: KEYS }),
+          })
+        : route.fallback()
+    );
+  });
+
+  test('[P1] phone: every key is its own card and 儲存金鑰 spans the column', async ({ page }) => {
+    await page.setViewportSize(PHONE);
+    await page.goto('/settings/keys');
+    const rows = ['claude', 'tmdb', 'openai'].map((k) => page.getByTestId(`key-row-${k}`));
+    await expect(rows[0]).toBeVisible({ timeout: 15000 });
+    for (const row of rows) {
+      const bg = await row.evaluate((el) => window.getComputedStyle(el).backgroundColor);
+      expect(bg, 'each row carries its own card surface').not.toBe('rgba(0, 0, 0, 0)');
+    }
+    const outer = await page
+      .getByTestId('api-keys-card')
+      .evaluate((el) => window.getComputedStyle(el).backgroundColor);
+    expect(outer, 'the shared card dissolves on a phone').toBe('rgba(0, 0, 0, 0)');
+    const save = await page.getByTestId('key-save').boundingBox();
+    const column = await page.getByTestId('key-rows').boundingBox();
+    expect(Math.abs((save?.width ?? 0) - (column?.width ?? 0))).toBeLessThanOrEqual(1);
+  });
+
+  test('[P1] 1440: one card holds every key', async ({ page }) => {
+    await page.setViewportSize(DESKTOP);
+    await page.goto('/settings/keys');
+    await expect(page.getByTestId('key-row-claude')).toBeVisible({ timeout: 15000 });
+    const outer = await page
+      .getByTestId('api-keys-card')
+      .evaluate((el) => window.getComputedStyle(el).backgroundColor);
+    expect(outer).not.toBe('rgba(0, 0, 0, 0)');
+    const row = await page
+      .getByTestId('key-row-tmdb')
+      .evaluate((el) => window.getComputedStyle(el).backgroundColor);
+    expect(row, 'rows sit on the shared card, not on their own').toBe('rgba(0, 0, 0, 0)');
+  });
+
+  test('[P1] a typed Claude key shows its 測試 inside the box, clear of the text', async ({
+    page,
+  }) => {
+    await page.setViewportSize(PHONE);
+    await page.route('**/api/v1/settings/keys', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: {
+            ...KEYS,
+            keys: [{ name: 'claude', configured: false, source: 'none' }, ...KEYS.keys.slice(1)],
+          },
+        }),
+      })
+    );
+    await page.goto('/settings/keys');
+    // Hold the probe open so the button is in its WIDEST state (spinner + label).
+    await page.route('**/api/v1/settings/keys/test', () => {
+      /* never fulfilled — the busy state is what gets measured */
+    });
+    const input = page.getByLabel('Claude（翻譯）');
+    await expect(input).toBeVisible({ timeout: 15000 });
+    await page.getByTestId('key-test-claude').click();
+    await expect(page.getByTestId('key-test-claude')).toBeDisabled();
+    const box = await input.boundingBox();
+    const btn = await page.getByTestId('key-test-claude').boundingBox();
+    expect(btn && box).toBeTruthy();
+    // Inside the input's box…
+    expect(btn!.x).toBeGreaterThanOrEqual(box!.x);
+    expect(btn!.x + btn!.width).toBeLessThanOrEqual(box!.x + box!.width);
+    // …and the text area (content box) ends before the button starts, so a long
+    // key never runs under it — measured with the button at its widest.
+    const textRight = await input.evaluate(
+      (el) =>
+        el.getBoundingClientRect().right - parseFloat(window.getComputedStyle(el).paddingRight)
+    );
+    expect(textRight).toBeLessThanOrEqual(btn!.x + 1);
+  });
+});

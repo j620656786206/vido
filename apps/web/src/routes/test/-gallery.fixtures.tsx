@@ -149,6 +149,8 @@ import { LogFilters } from '../../components/settings/LogFilters';
 import { RestoreConfirmDialog } from '../../components/settings/RestoreConfirmDialog';
 import { ServiceStatusCard } from '../../components/settings/ServiceStatusCard';
 import { SettingsPlaceholder } from '../../components/settings/SettingsPlaceholder';
+import { ApiKeysForm } from '../../components/settings/ApiKeysForm';
+import { keySettingsQueryKeys } from '../../hooks/useKeySettings';
 import { SettingsLayout } from '../../components/settings/SettingsLayout';
 import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
 import { SettingsErrorState } from '../../components/settings/SettingsErrorState';
@@ -279,6 +281,16 @@ import type { ServiceStatusResponse } from '../../services/serviceStatusService'
 import { LoginForm } from '../../components/auth/LoginForm';
 
 const noop = () => {};
+
+/** dsr-3b: one key of each source, the way C7-D (PWvEX) draws them. */
+const KEYS_MIXED = {
+  writable: true,
+  keys: [
+    { name: 'claude', configured: true, source: 'secret', masked: 'sk-ant…7f3a' },
+    { name: 'tmdb', configured: true, source: 'env' },
+    { name: 'openai', configured: false, source: 'none' },
+  ],
+};
 
 /**
  * dsr-3a: SettingsLayout is a page shell with `min-h-[calc(100vh-8rem)]`, so as a
@@ -2631,6 +2643,50 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     viewport: { width: 390, height: 844 },
     routePath: '/settings',
   },
+  // dsr-3b — 金鑰設定. Seeded with one key of each source, as C7-D draws them:
+  // Claude stored (mask + 編輯 / 清除 / 測試), TMDB from the environment, ASR unset.
+  // No HTTP-warning fixture: the gallery runs on localhost, which is a secure
+  // context, so C22's warning cannot render here — the unit spec covers it.
+  {
+    id: 'settings-api-keys-form',
+    label: 'settings/ApiKeysForm',
+    component: ApiKeysForm,
+    penNode: 'PWvEX', // Screen C7-D
+    statesOnly: ['default'],
+    width: 1200,
+    seedQueries: [{ queryKey: keySettingsQueryKeys.list(), data: KEYS_MIXED }],
+  },
+  {
+    id: 'settings-api-keys-form/mobile',
+    label: 'settings/ApiKeysForm (phone)',
+    component: ApiKeysForm,
+    penNode: 'f8Fda', // Screen C7-M
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+    seedQueries: [{ queryKey: keySettingsQueryKeys.list(), data: KEYS_MIXED }],
+  },
+  {
+    id: 'settings-api-keys-form/no-encryption-key',
+    label: 'settings/ApiKeysForm (no ENCRYPTION_KEY)',
+    component: ApiKeysForm,
+    penNode: 'AVUg2', // Screen C21-D
+    statesOnly: ['default'],
+    width: 1200,
+    seedQueries: [
+      {
+        queryKey: keySettingsQueryKeys.list(),
+        data: {
+          writable: false,
+          reason: 'encryption_key_missing',
+          keys: [
+            { name: 'claude', configured: true, source: 'env' },
+            { name: 'tmdb', configured: true, source: 'env' },
+            { name: 'openai', configured: false, source: 'none' },
+          ],
+        },
+      },
+    ],
+  },
   {
     id: 'settings-page-header',
     label: 'settings/SettingsPageHeader',
@@ -3960,7 +4016,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     id: 'settings-qbittorrent-form',
     label: 'settings/QBittorrentForm',
     component: QBittorrentForm,
-    penNode: 'screen-section',
+    penNode: '6UCtX', // Screen C4-D
     width: 640,
     seedQueries: [
       {
@@ -3979,7 +4035,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'settings/ArrConnectionForm (Sonarr, connected)',
     component: ArrConnectionForm,
     props: { plugin: 'sonarr' },
-    penNode: 'screen-section', // Screen C23-D (Qva0y)
+    penNode: 'Qva0y', // Screen C23-D
     statesOnly: ['default'],
     width: 768,
     seedQueries: [
@@ -4012,7 +4068,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'settings/ArrConnectionForm (Radarr, never set up)',
     component: ArrConnectionForm,
     props: { plugin: 'radarr' },
-    penNode: 'screen-section', // Screen C23-D (Qva0y)
+    penNode: 'Qva0y', // Screen C23-D
     statesOnly: ['default'],
     width: 768,
     seedQueries: [

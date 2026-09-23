@@ -13,10 +13,11 @@ const h = vi.hoisted(() => ({
   },
   saveMutate: vi.fn(),
   testMutate: vi.fn(),
+  refetch: vi.fn(),
 }));
 
 vi.mock('../../hooks/useKeySettings', () => ({
-  useKeySettings: () => h.query,
+  useKeySettings: () => ({ refetch: h.refetch, isFetching: false, ...h.query }),
   useSaveKeys: () => ({ mutate: h.saveMutate, isPending: false }),
   useTestClaudeKey: () => ({ mutate: h.testMutate, isPending: false }),
 }));
@@ -64,6 +65,7 @@ beforeEach(() => {
   // must be reset or a callback stub leaks into every later test.
   h.saveMutate.mockReset();
   h.testMutate.mockReset();
+  h.refetch.mockReset();
   h.query = { data: ALL_NONE, isLoading: false, isError: false, error: null };
   // Default to a secure context so only the NFR-S3 tests exercise the warning.
   setSecureContext(true);
@@ -230,11 +232,33 @@ describe('ApiKeysForm — writable:false degrades honestly (AC #2)', () => {
     h.query.data = READ_ONLY;
   });
 
-  it('states the reason and what to do about it', () => {
+  // dsr-3b — C21-D (AVUg2): a missing ENCRYPTION_KEY is a broken setup, not a
+  // request that didn't happen — 硃砂, not 赭 — and it says what happened
+  // and what to do in two lines.
+  it('states the reason and what to do about it, in 硃砂, as an alert', () => {
     renderForm();
-    expect(screen.getByTestId('keys-not-writable')).toHaveTextContent(
-      '未設定加密金鑰，無法安全儲存 API 金鑰 —— 請設定 ENCRYPTION_KEY 後重啟。'
+    const banner = screen.getByTestId('keys-not-writable');
+    expect(banner).toHaveAttribute('role', 'alert');
+    expect(banner.className).toContain('bg-[var(--error-tint)]');
+    expect(banner.className).not.toContain('warning');
+    expect(screen.getByText('未設定加密金鑰，無法安全儲存 API 金鑰')).toHaveClass(
+      'font-semibold',
+      'text-[var(--error-text)]'
     );
+    expect(
+      screen.getByText('請設定 ENCRYPTION_KEY 後重啟容器。在那之前，這一頁只能檢視，不能儲存。')
+    ).toHaveClass('text-xs', 'text-[var(--error-text)]');
+  });
+
+  it('greys the labels and draws disabled inputs in the disabled text token', () => {
+    renderForm();
+    expect(screen.getByText('Claude（翻譯）', { selector: 'label' })).toHaveClass(
+      'text-[var(--text-muted)]'
+    );
+    expect(screen.getByLabelText('TMDB').className).toContain(
+      'disabled:text-[var(--text-disabled)]'
+    );
+    expect(screen.getByLabelText('TMDB').className).not.toContain('disabled:opacity-50');
   });
 
   it('DISABLES inputs and 儲存 rather than hiding them (Rule 24 capability honor)', () => {
@@ -283,8 +307,21 @@ describe('ApiKeysForm — NFR-S3 HTTPS gate (AC #3)', () => {
     setSecureContext(false);
     renderForm();
 
-    expect(screen.getByTestId('insecure-context-warning')).toHaveTextContent(
-      '目前連線未加密（HTTP），API 金鑰會以明文傳送到 NAS。建議先設定 HTTPS 反向代理。'
+    // dsr-3b — C22-D: a title and a sentence, both in 赭's text token.
+    const warning = screen.getByTestId('insecure-context-warning');
+    expect(screen.getByText('目前連線未加密（HTTP）')).toHaveClass(
+      'font-semibold',
+      'text-[var(--warning-text)]'
+    );
+    expect(warning).toHaveTextContent('API 金鑰會以明文傳送到 NAS。建議先設定 HTTPS 反向代理。');
+    // 泥金 means 正在跑; this checkbox is an acknowledgement of a warning.
+    const ack = screen.getByTestId('insecure-context-ack');
+    expect(ack.className).toContain('accent-[var(--warning-text)]');
+    expect(ack.className).not.toContain('accent-primary');
+    expect(ack.closest('label')).toHaveClass(
+      'text-xs',
+      'font-semibold',
+      'text-[var(--warning-text)]'
     );
 
     fireEvent.change(screen.getByLabelText('Claude（翻譯）'), { target: { value: 'sk-ant-x' } });
@@ -487,12 +524,18 @@ describe('ApiKeysForm — 測試 (AC #1, AC #5.5)', () => {
     expect(screen.queryByTestId('key-test-result-claude')).toBeNull();
   });
 
-  it('draws 測試 DISABLED with a reason for the keys 2-1a exposes no probe for', () => {
+  // dsr-3b: only Claude has a probe (2-1a), so the other rows draw no 測試
+  // at all — a disabled button on every row plus a note on every row was the
+  // same fact said four times. It is said once, below the rows.
+  it('draws 測試 only for Claude and says so once, below the rows', () => {
     renderForm();
-
-    expect(screen.getByTestId('key-test-tmdb')).toBeDisabled();
-    expect(screen.getByTestId('key-test-openai')).toBeDisabled();
-    expect(screen.getByTestId('key-row-tmdb')).toHaveTextContent('目前僅支援 Claude 金鑰測試');
+    expect(screen.getByTestId('key-test-claude')).toBeInTheDocument();
+    expect(screen.queryByTestId('key-test-tmdb')).toBeNull();
+    expect(screen.queryByTestId('key-test-openai')).toBeNull();
+    expect(screen.getAllByText('僅 Claude 金鑰支援連線測試。')).toHaveLength(1);
+    expect(screen.getByTestId('key-row-tmdb')).not.toHaveTextContent('僅支援');
+    // No claim that the other keys are checked some other way — nothing says so.
+    expect(screen.queryByText(/自行驗證/)).toBeNull();
   });
 });
 
@@ -505,17 +548,24 @@ describe('ApiKeysForm — load states', () => {
     expect(screen.queryByTestId('api-keys-form')).toBeNull();
   });
 
-  it('fails soft when the key state cannot be read', () => {
+  it('fails soft when the key state cannot be read — in plain words, with 重試', () => {
     h.query = {
       data: undefined,
       isLoading: false,
       isError: true,
-      error: new Error('伺服器沒有回應'),
+      error: new Error('Failed to fetch'),
     };
     renderForm();
 
-    expect(screen.getByTestId('api-keys-load-error')).toHaveTextContent('無法讀取金鑰設定');
-    // The form still renders so the page is never a blank dead end.
+    const banner = screen.getByTestId('api-keys-load-error');
+    expect(banner).toHaveTextContent('無法讀取金鑰設定');
+    expect(banner).toHaveTextContent('與後端的連線中斷了。已存的金鑰不受影響。');
+    // dsr-3b: the backend's own words never reach the page.
+    expect(banner).not.toHaveTextContent('Failed to fetch');
+    fireEvent.click(screen.getByRole('button', { name: '重試' }));
+    expect(h.refetch).toHaveBeenCalledTimes(1);
+    // The form still renders so the page is never a blank dead end — and the
+    // TMDB attribution below must stay (sub-6-9, compliance is not conditional).
     expect(screen.getByTestId('api-keys-form')).toBeInTheDocument();
     // CR sub-2-1b L2: unknown ≠ not set — a server outage must not badge a
     // possibly-configured key as 尚未設定.
@@ -555,5 +605,71 @@ describe('ApiKeysForm — TMDB attribution (sub-6-9, TMDB terms §3)', () => {
     renderForm();
 
     expect(screen.getByTestId('tmdb-attribution')).toBeInTheDocument();
+  });
+});
+
+// dsr-3b — C7-D (PWvEX) / C7-M (f8Fda): each row is label + state → input (the
+// 測試 button sits INSIDE it, right) → hint; a phone gives every key its own card.
+describe('ApiKeysForm — C7 row layout', () => {
+  it('puts Claude’s 測試 inside the input box', () => {
+    renderForm();
+    const input = screen.getByLabelText('Claude（翻譯）');
+    const test = screen.getByTestId('key-test-claude');
+    expect(input.parentElement).toContainElement(test);
+    expect(test).toHaveClass('h-7', 'text-xs');
+    expect(input).toHaveClass('min-h-11', 'font-mono', 'bg-[var(--bg-tertiary)]');
+  });
+
+  it('keeps 測試 with 編輯 / 清除 when the key is stored (there is no input)', () => {
+    h.query.data = MIXED_SOURCES;
+    renderForm();
+    const test = screen.getByTestId('key-test-claude');
+    expect(test.parentElement).toContainElement(screen.getByTestId('key-edit-claude'));
+  });
+
+  it('puts the hint under the input, not above it', () => {
+    renderForm();
+    const input = screen.getByLabelText('Claude（翻譯）');
+    const hint = screen.getByText(/用於字幕翻譯與 AI 檔名解析/);
+    expect(input.compareDocumentPosition(hint) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('sets row labels at 14 / 600 in the primary text colour, and the state pill at 12', () => {
+    renderForm();
+    expect(screen.getByText('Claude（翻譯）', { selector: 'label' })).toHaveClass(
+      'text-sm',
+      'font-semibold',
+      'text-[var(--text-primary)]'
+    );
+    const pill = screen.getByTestId('key-state-claude');
+    expect(pill).toHaveClass('text-xs', 'font-semibold');
+    expect(pill.className).not.toContain('text-[11px]');
+  });
+
+  it('draws the card solid, separates rows by space not rules, and says 儲存金鑰', () => {
+    renderForm();
+    const card = screen.getByTestId('api-keys-card');
+    expect(card.className).toContain('bg-[var(--bg-secondary)]');
+    expect(card.className).not.toContain('/50');
+    expect(card.className).toContain('rounded-[var(--radius-lg)]');
+    expect(screen.getByTestId('key-rows').className).not.toContain('divide-y');
+    const save = screen.getByTestId('key-save');
+    expect(save).toHaveTextContent('儲存金鑰');
+    expect(save).toHaveClass('min-h-11', 'font-semibold', 'max-sm:w-full');
+  });
+
+  it('gives every key its own card on a phone', () => {
+    renderForm();
+    expect(screen.getByTestId('api-keys-card').className).toContain('max-sm:bg-transparent');
+    for (const name of ['claude', 'tmdb', 'openai']) {
+      const row = screen.getByTestId(`key-row-${name}`);
+      expect(row.className).toContain('max-sm:bg-[var(--bg-secondary)]');
+      expect(row.className).toContain('max-sm:p-4');
+    }
+  });
+
+  it('spells the brand TMDB in the placeholder too', () => {
+    renderForm();
+    expect(screen.getByLabelText('TMDB')).toHaveAttribute('placeholder', 'TMDB API Key');
   });
 });

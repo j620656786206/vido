@@ -151,11 +151,11 @@ export function QBittorrentForm() {
 
   return (
     <form onSubmit={handleSave} data-testid="qbittorrent-form">
-      <div className="space-y-5">
+      <div className="space-y-4">
         <div>
           <label
             htmlFor="qb-host"
-            className="mb-1.5 block text-sm font-medium text-[var(--text-secondary)]"
+            className="mb-2 block text-sm font-medium text-[var(--text-secondary)]"
           >
             主機位址
           </label>
@@ -173,7 +173,7 @@ export function QBittorrentForm() {
         <div>
           <label
             htmlFor="qb-username"
-            className="mb-1.5 block text-sm font-medium text-[var(--text-secondary)]"
+            className="mb-2 block text-sm font-medium text-[var(--text-secondary)]"
           >
             使用者名稱
           </label>
@@ -191,7 +191,7 @@ export function QBittorrentForm() {
         <div>
           <label
             htmlFor="qb-password"
-            className="mb-1.5 block text-sm font-medium text-[var(--text-secondary)]"
+            className="mb-2 block text-sm font-medium text-[var(--text-secondary)]"
           >
             密碼
           </label>
@@ -209,9 +209,9 @@ export function QBittorrentForm() {
         <div>
           <label
             htmlFor="qb-basepath"
-            className="mb-1.5 block text-sm font-medium text-[var(--text-secondary)]"
+            className="mb-2 block text-sm font-medium text-[var(--text-secondary)]"
           >
-            Base Path <span className="text-[var(--text-muted)]">（選填，反向代理用）</span>
+            Base Path <span className="text-xs text-[var(--text-muted)]">（選填，反向代理用）</span>
           </label>
           <input
             id="qb-basepath"
@@ -241,13 +241,15 @@ export function QBittorrentForm() {
         </p>
       )}
 
-      <div className="mt-6 flex flex-col gap-3 md:flex-row md:justify-end">
+      {/* Two columns on a phone (C4-M NO9va), right-aligned from md — the same
+          grid the Sonarr / Radarr cards use, so every card on 連線設定 agrees. */}
+      <div className="mt-6 grid grid-cols-2 gap-2 md:flex md:justify-end md:gap-3">
         <button
           type="button"
           onClick={handleTestConnection}
           disabled={isSubmitting || !host || !username || !password}
           className={cn(
-            'flex h-11 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium transition-colors',
+            'flex h-11 items-center justify-center gap-2 rounded-md px-5 text-sm font-semibold transition-colors',
             isSubmitting || !host || !username || !password
               ? 'cursor-not-allowed bg-[var(--bg-tertiary)] text-[var(--text-muted)]'
               : 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
@@ -265,7 +267,7 @@ export function QBittorrentForm() {
           type="submit"
           disabled={isSubmitting || !host || !username || !password}
           className={cn(
-            'flex h-11 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium transition-colors',
+            'flex h-11 items-center justify-center gap-2 rounded-md px-5 text-sm font-semibold transition-colors',
             isSubmitting || !host || !username || !password
               ? // Matches the sibling 測試連線 button's disabled treatment. The old
                 // bg-blue-800 + accent text measured 2.4:1 — the critique's worst
