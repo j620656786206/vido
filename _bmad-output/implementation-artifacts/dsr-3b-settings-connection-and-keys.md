@@ -1,6 +1,6 @@
 # Story DSR.3b：連線設定與金鑰設定對齊設計稿——金鑰的「測試」鈕放進輸入框裡、手機上每把金鑰一張卡、兩條警告講清楚「為什麼不能存」
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

@@ -1,6 +1,6 @@
 # Story DSR.3a：設定頁的共用外殼——分頁列、每一頁的標題、共用的「載入失敗」畫面，外觀與效能監控兩頁順手對齊
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
