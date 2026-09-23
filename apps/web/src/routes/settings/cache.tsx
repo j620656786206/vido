@@ -1,4 +1,6 @@
+// Design ref: ux-design.pen Screen C11-D (TrU8k) · C11-M (aYEWP) · C18-D (dfwSb)
 import { createFileRoute } from '@tanstack/react-router';
+import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
 import { CacheManagement } from '../../components/settings/CacheManagement';
 
 export const Route = createFileRoute('/settings/cache')({
@@ -8,10 +10,10 @@ export const Route = createFileRoute('/settings/cache')({
 function CacheSettingsPage() {
   return (
     <div>
-      <h1 className="mb-2 text-2xl font-bold text-[var(--text-primary)]">快取管理</h1>
-      <p className="mb-6 text-sm text-[var(--text-secondary)]">
-        檢視外部資料快取的佔用，並依類型或時間清除。
-      </p>
+      <SettingsPageHeader
+        title="快取管理"
+        description="檢視外部資料快取的佔用，並依類型或時間清除。"
+      />
       <CacheManagement />
     </div>
   );

@@ -15,6 +15,7 @@
 import { Moon, Sun } from 'lucide-react';
 import { useTheme, type Theme } from '../../hooks/useTheme';
 import { cn } from '../../lib/utils';
+import { SettingsPageHeader } from './SettingsPageHeader';
 
 const OPTIONS: { value: Theme; label: string; caption: string; Icon: typeof Sun }[] = [
   { value: 'dark', label: '夜行', caption: '墨綠底 · 宣紙白字', Icon: Moon },
@@ -30,17 +31,22 @@ export function AppearanceSettings() {
 
   return (
     <section data-testid="appearance-settings" aria-labelledby="appearance-title">
-      <h2 id="appearance-title" className="text-lg font-semibold text-[var(--text-primary)]">
-        外觀
-      </h2>
-      <p className="mt-1 text-sm text-[var(--text-secondary)]">
-        {hasChosen ? '已依你的選擇顯示。' : '目前跟隨系統設定；選了其中一個之後就不再跟隨。'}
-      </p>
+      {/* The page heading lives here, not in the route, because the description
+          is live: it has to flip the moment a theme is picked (dsr-3a). */}
+      <SettingsPageHeader
+        title="外觀"
+        titleId="appearance-title"
+        description={
+          hasChosen ? '已依你的選擇顯示。' : '目前跟隨系統設定；選了其中一個之後就不再跟隨。'
+        }
+      />
 
+      {/* Two cards at 768px together (C6-D qG91e) — the same measure as every
+          settings form, instead of stretching to the 1152px column. */}
       <div
         role="radiogroup"
         aria-labelledby="appearance-title"
-        className="mt-4 grid gap-3 sm:grid-cols-2"
+        className="grid max-w-3xl gap-3 sm:grid-cols-2"
       >
         {OPTIONS.map(({ value, label, caption, Icon }) => {
           const active = theme === value;

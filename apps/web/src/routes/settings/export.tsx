@@ -1,4 +1,6 @@
+// Design ref: ux-design.pen Screen C13-D (nwn6a) · C13-M (Ytjrj)
 import { createFileRoute } from '@tanstack/react-router';
+import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
 import { Upload } from 'lucide-react';
 import { MetadataExport } from '../../components/settings/MetadataExport';
 
@@ -13,10 +15,10 @@ export const Route = createFileRoute('/settings/export')({
 function ExportSettingsPage() {
   return (
     <div>
-      <h1 className="mb-2 text-2xl font-bold text-[var(--text-primary)]">匯出/匯入</h1>
-      <p className="mb-6 text-sm text-[var(--text-secondary)]">
-        將媒體庫元資料匯出為 JSON、YAML 或 NFO 檔案。
-      </p>
+      <SettingsPageHeader
+        title="匯出/匯入"
+        description="將媒體庫元資料匯出為 JSON、YAML 或 NFO 檔案。"
+      />
       <div className="space-y-6">
         <MetadataExport />
         <div

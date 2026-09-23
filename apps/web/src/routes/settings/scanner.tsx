@@ -1,4 +1,6 @@
+// Design ref: ux-design.pen Screen E1-D (KvZSc) · E1-M (uABWl)
 import { createFileRoute } from '@tanstack/react-router';
+import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
 import { ScannerSettings } from '../../components/settings/ScannerSettings';
 
 export const Route = createFileRoute('/settings/scanner')({
@@ -8,10 +10,10 @@ export const Route = createFileRoute('/settings/scanner')({
 function ScannerSettingsPage() {
   return (
     <div>
-      <h1 className="mb-2 text-2xl font-bold text-[var(--text-primary)]">媒體庫掃描</h1>
-      <p className="mb-6 text-sm text-[var(--text-secondary)]">
-        設定掃描資料夾、排程，以及手動觸發媒體庫掃描。
-      </p>
+      <SettingsPageHeader
+        title="媒體庫掃描"
+        description="設定掃描資料夾、排程，以及手動觸發媒體庫掃描。"
+      />
       <ScannerSettings />
     </div>
   );
