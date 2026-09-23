@@ -235,7 +235,10 @@ import { MetadataExport } from '../../components/settings/MetadataExport';
 import { QBittorrentForm } from '../../components/settings/QBittorrentForm';
 import { ArrConnectionForm } from '../../components/settings/ArrConnectionForm';
 import { ScannerSettings } from '../../components/settings/ScannerSettings';
-import { ServiceStatusDashboard } from '../../components/settings/ServiceStatusDashboard';
+import {
+  ServiceStatusDashboard,
+  ServiceStatusSkeleton,
+} from '../../components/settings/ServiceStatusDashboard';
 
 // Query-key builders (a few hooks export the same name — alias the
 // `useMediaLibrary` flavour as `mediaLibraryKeys` to disambiguate from
@@ -367,6 +370,37 @@ const agoIso = (seconds: number) => new Date(Date.now() - seconds * 1000).toISOS
 const JUST_NOW = () => agoIso(5); // 剛剛      — bucket 0-44s, ~40s of slack
 const MINUTES_AGO = () => agoIso(330); // 5 分鐘前  — bucket 300-359s, 30s either side
 const HOURS_AGO = () => agoIso(9000); // 2 小時前  — bucket 2h-2h59m, dead centre
+
+/** C8-D / C8-M: TMDB ok · 豆瓣 / 維基百科 not set up · AI rate-limited · qBittorrent broken. */
+function serviceStatusC8(): ServiceStatusResponse {
+  const svc = (
+    name: string,
+    displayName: string,
+    status: ServiceStatusResponse['services'][number]['status'],
+    extra: Partial<ServiceStatusResponse['services'][number]> = {}
+  ) => ({
+    name,
+    displayName,
+    status,
+    message: status,
+    lastSuccessAt: null,
+    lastCheckAt: '',
+    responseTimeMs: 0,
+    ...extra,
+  });
+  return {
+    services: [
+      svc('tmdb', 'TMDb API', 'connected', { lastCheckAt: JUST_NOW(), responseTimeMs: 142 }),
+      svc('douban', 'Douban Scraper', 'unconfigured'),
+      svc('wikipedia', 'Wikipedia API', 'unconfigured'),
+      svc('ai', 'AI Parser', 'rate_limited', { lastCheckAt: HOURS_AGO() }),
+      svc('qbittorrent', 'qBittorrent', 'error', {
+        lastCheckAt: MINUTES_AGO(),
+        errorMessage: 'dial tcp 192.168.50.52:8080: connect: connection refused',
+      }),
+    ],
+  };
+}
 
 // ----- Shared mock-data consts for 19-4b Task 2 (parse/* and scanner/* fixtures) -----
 const PARSE_STEPS_FAILED: ParseStep[] = [
@@ -2609,7 +2643,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       onTest: noop,
       isTesting: false,
     },
-    penNode: 'screen-section',
+    penNode: 'wqcqY', // Screen C8-D — svc-TMDb row (dsr-3c: TMDB, pill, 36px icon button)
     width: 520,
   },
   {
@@ -4142,48 +4176,46 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       },
     ],
   },
+  // dsr-3c — C8-D as drawn: one of each state, qBittorrent broken so the banner
+  // (advice + collapsed 技術細節 + 重新檢查) is in the baseline. Timestamps use the
+  // mid-bucket agoIso helpers above, so the relative labels never drift.
   {
     id: 'settings-service-status-dashboard',
-    label: 'settings/ServiceStatusDashboard',
+    label: 'settings/ServiceStatusDashboard (C8-D)',
     component: ServiceStatusDashboard,
-    penNode: 'screen-section',
-    width: 720,
+    penNode: 'wqcqY', // Screen C8-D
+    statesOnly: ['default'],
+    width: 1152,
+    seedQueries: [{ queryKey: serviceStatusKeys.list(), data: serviceStatusC8() }],
+  },
+  {
+    id: 'settings-service-status-dashboard/mobile',
+    label: 'settings/ServiceStatusDashboard (C8-M — 手機 390 寬)',
+    component: ServiceStatusDashboard,
+    penNode: 'qx8Ma', // Screen C8-M
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+    // One card, not five: the gallery header already pushes a phone fixture
+    // ~420px down, and anything taller than what is left of an 844 viewport ends
+    // up under the shell's fixed tab bar — the banner is what this baseline holds.
     seedQueries: [
       {
         queryKey: serviceStatusKeys.list(),
         data: {
-          services: [
-            {
-              name: 'tmdb',
-              displayName: 'TMDb API',
-              status: 'connected',
-              message: '已連線',
-              lastSuccessAt: '2026-03-22T14:30:00Z',
-              lastCheckAt: JUST_NOW(),
-              responseTimeMs: 45,
-            },
-            {
-              name: 'qbittorrent',
-              displayName: 'qBittorrent',
-              status: 'connected',
-              message: '已連線',
-              lastSuccessAt: '2026-03-22T14:29:00Z',
-              lastCheckAt: MINUTES_AGO(),
-              responseTimeMs: 12,
-            },
-            {
-              name: 'ai',
-              displayName: 'AI 服務',
-              status: 'unconfigured',
-              message: '未設定',
-              lastSuccessAt: null,
-              lastCheckAt: HOURS_AGO(),
-              responseTimeMs: 0,
-            },
-          ],
-        } satisfies ServiceStatusResponse,
+          services: serviceStatusC8().services.filter((svc) => svc.name === 'qbittorrent'),
+        },
       },
     ],
+  },
+  {
+    // The loading state is the dashboard's own skeleton, rendered directly: a
+    // seeded query cannot be pending, and an unseeded one would hit the network.
+    id: 'settings-service-status-dashboard/loading',
+    label: 'settings/ServiceStatusSkeleton (C15-D)',
+    component: ServiceStatusSkeleton,
+    penNode: 'XwdOH', // Screen C15-D
+    statesOnly: ['default'],
+    width: 1152,
   },
 
   // ----- subtitle/ (Task 3) -----

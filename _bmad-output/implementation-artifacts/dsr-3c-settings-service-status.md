@@ -1,6 +1,6 @@
 # Story DSR.3c：服務狀態頁對齊設計稿——服務名稱說中文、載入時有骨架、整頁失敗可以按重試、壞掉的服務告訴你該去哪裡修
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -82,13 +82,13 @@ so that 這一頁真的能幫我排除問題，而不是把後端的英文原樣
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — 設計稿：刪「· Claude」、手機補重新檢查鈕、修被切的橫幅、技術細節、規格註記（AC: #1）**
-- [ ] **Task 2 — `serviceLabels.ts`＋卡片／通知換中文名（AC: #2, #8）**
-- [ ] **Task 3 — 卡片重排：pill、回應時間、圖示重新檢查鈕（AC: #3, #8）**
-- [ ] **Task 4 — 錯誤橫幅＋技術細節＋一次重測（AC: #4, #8）**
-- [ ] **Task 5 — 載入骨架、整頁失敗換共用元件、Skeleton reduced-motion（AC: #5, #6, #8）**
-- [ ] **Task 6 — 夾具、e2e、mutation check、收尾（AC: #7, #8, #9）**
-  - [ ] dev-story Step 9：`c8-d`／`c8-m`／`c15-d`／`c15-m`／`c16-d`
+- [x] **Task 1 — 設計稿：刪「· Claude」、手機補重新檢查鈕、修被切的橫幅、技術細節、規格註記（AC: #1）**
+- [x] **Task 2 — `serviceLabels.ts`＋卡片／通知換中文名（AC: #2, #8）**
+- [x] **Task 3 — 卡片重排：pill、回應時間、圖示重新檢查鈕（AC: #3, #8）**
+- [x] **Task 4 — 錯誤橫幅＋技術細節＋一次重測（AC: #4, #8）**
+- [x] **Task 5 — 載入骨架、整頁失敗換共用元件、Skeleton reduced-motion（AC: #5, #6, #8）**
+- [x] **Task 6 — 夾具、e2e、mutation check、收尾（AC: #7, #8, #9）**
+  - [x] dev-story Step 9：`c8-d`／`c8-m`／`c15-d`／`c15-m`／`c16-d`
 
 ## Dev Notes
 
@@ -152,10 +152,94 @@ apps/web/src/routes/test/-gallery.fixtures.tsx；tests/e2e/settings-shell.spec.t
 
 ### Agent Model Used
 
+Claude Opus 5.5 (1M context)（Amelia / dev-story）
+
 ### Debug Log References
+
+- Pencil 裁切警告 67 → 66（少掉的是被切 28px 的手機橫幅 `yNVad`；剩下的 `CpTax` 是分頁列本來就該被切的捲動條）。存檔走 osascript 選單 Save，磁碟 grep 到 `spec-note-dsr-3c`。匯出 196/196，只 stage `c8-d`／`c8-m`／`c15-d`／`c15-m`＋`pen-tokens.json`。
+- 本機 e2e／visual 自己起後端與 `nx serve web`；`nx test web` 全套會把兩個程序一起收掉，visual 前要重起（同 `dsr-3b`）。
+- 手機視覺夾具被殼層固定的底部分頁列蓋住：gallery 的標題在手機把 fixture 推到 y≈420，5 張卡＋橫幅（708 高）一定壓到分頁列。`gallery-fixture-viewport.spec.ts` 規定手機夾具必須 390×844，所以不能加高視窗 → 手機夾具只放一張壞掉的 qBittorrent（卡＋橫幅＋技術細節＋重新檢查全部入鏡）。
 
 ### Completion Notes List
 
 - Ultimate context engine analysis completed - comprehensive developer guide created
+- **Task 1（稿）**：刪 `h7Pjj`「· Claude」；「TMDb」→「TMDB」（`xqzRF`，與 `dsr-3b` 品牌拼法一致）；桌機橫幅 `blwxn` 重畫成 `N28x1`（圖示｜一行「qBittorrent：目前無法連線。請確認…」＋收起的「技術細節」｜右側「重新檢查」）——原稿的「連線遭拒（ECONNREFUSED）」是後端分類過的原因，後端並不給，依「不要猜錯誤原因」拿掉；手機 5 張卡重建（每張補 44×44 重新檢查鈕，回應／最後檢查移到第二行），手機橫幅重建（同桌機內容），C8-M 高 844 → 1044，橫幅不再被切；`lLgMu`／`f8FZa` 查證是**畫面裡**的設計註記 → 刪掉，內容併入 `spec-note-dsr-3c`（`BrWLI`）。
+- **Task 2**：`serviceLabels.ts`（新）——`SERVICE_LABELS`（key＝`service.name`：`tmdb`／`douban`／`wikipedia`／`ai`／`qbittorrent`，從 `models/degradation.go:29-33` grep 出來）、`getServiceLabel`（未知 name → displayName、無說明無建議）、`STATUS_LABELS`（pill 與狀態變化通知共用）、`isBroken`。卡片、橫幅、通知三處都吃它。
+- **Task 3**：卡片重排——左名稱＋說明；中「回應 N ms／最後檢查 X」（等寬，手機 `order-last basis-full` 換到第二行）；pill 照狀態詞彙（`unconfigured` 改 `bg-tertiary`＋`text-muted`＋`CircleSlash`）；只有圖示的重新檢查鈕（`size-11 sm:size-9`、accessible name「重新檢查 {中文名}」、`test-btn-{name}` 保留、測試中 `motion-safe:animate-spin`）。每卡「顯示詳情」退役。
+- **Task 4**：列表下方 `aria-live="polite"` 容器常駐、內容條件渲染（不用 `role="alert"`：它會在每 30 秒輪詢重繪時重念）；每個 `error`／`disconnected` 一行「{中文名}：目前無法連線。{建議}」，建議只有 qBittorrent（→ `/settings/connection`）與 TMDB（→ `/settings/keys`）；原始錯誤收進預設收起的 `<details>`「技術細節」；「重新檢查」逐一呼叫既有 `handleTest`，不新增 API。
+- **Task 5**：載入 → `ServiceStatusSkeleton`（5 列、手機 64／桌機 72、右側 84×24＋桌機才有的 36×36、`aria-busy`＋`aria-label="載入中"`）；整頁失敗 → `SettingsErrorState`（C16 兩句逐字、`testId="status-error"`、不接 `error.message`），加 `retrying` 旗標讓「重試中…」真的看得到（TanStack 會把沒資料的失敗查詢退回 pending，同 `dsr-3b` CR #1）。**Skeleton 不改**：`styles.css:562-569` 的 reduced-motion 安全網已把所有動畫夾成 1ms×1 次，`animate-pulse` 停在不透明，AC 🔴 #6 的「沒有就加」不成立。
+- **Time-dependent visual coverage**：`formatRelativeTime` 讀 `Date.now()` → 夾具沿用既有的 `JUST_NOW`／`MINUTES_AGO`／`HOURS_AGO`（放在時間桶正中），基準不會每天漂；不需要 `clockTime`。
+- **既有 spec 改動（刻意退役／改字，逐條）**：
+  - `ServiceStatusCard.spec`：`renders disconnected service with detail toggle`、`[P1] renders error status with detail toggle`、`[P1] shows lastSuccessAt in detail panel`、`[P1] collapses detail panel on second click`、`[P1] shows rate limited service with detail panel content`、`[P2] does not show detail toggle for connected service`、`renders unconfigured service without detail toggle` → 顯示詳情退役，改成「卡上沒有顯示詳情、不印後端錯誤」；錯誤內容與最後成功時間的斷言搬到 dashboard 的技術細節測試。`檢查於` → `最後檢查`、`尚未檢查` → `—`、`45ms` → `回應 45 ms`、`TMDb API`／`AI 服務` → 中文名（稿的字）。
+  - `ServiceStatusDashboard.spec`：`[P2] shows error message text from API error` **反轉**成「不顯示」（C16 的目的）；`renders loading state` 改斷言 5 列＋aria；通知文字 `TMDb API：` → `TMDB：`。輪詢、狀態變化、測試連線、錯誤訊息等其餘行為斷言未改。
+- 🔗 **AC Drift: FOUND**
+  - `6-4-service-connection-status-dashboard` AC #2（點狀態看詳細錯誤＋最後成功時間）→ 錯誤與「最後成功」從每卡的顯示詳情搬到列表下方橫幅的「技術細節」；契約保留（加了一條測試釘住「最後成功」還在）。
+  - `bugfix-settings-honest-readouts` AC #4（每種狀態都顯示新鮮度、沒有時寫「尚未檢查」）→ 新鮮度仍無條件顯示、testid 照舊；缺值字改成稿上的「—」（「最後檢查 尚未檢查」讀起來重複）。
+- 📎 **Contract Stamps: NONE**（本張與上游皆無 `[@contract-v*]`；只讀既有服務狀態回應，implicit v0）。
+- 🎭 **A11y Pre-Flight: PASS**（3 個元件；觸碰檔案 jsx-a11y 警告 0 條；圖示鈕有 accessible name、橫幅 polite live region 常駐、`<details>` 原生鍵盤可操作、骨架 `aria-busy`；沒有 modal／combobox）。
+- **測試**：新 `serviceLabels.spec.ts` 9 條、`ServiceStatusDashboard.retry.spec.tsx`（真 QueryClient）1 條；`ServiceStatusCard.spec` 22 條、`ServiceStatusDashboard.spec` 26 條（CR 後見下）。`nx test web` **287 files／4203 tests 全綠**；`nx test api` 綠；`web:typecheck` 綠；touched 檔 eslint 0 error（35 條既有 `no-explicit-any`／1 條既有 `exhaustive-deps` 警告，main 上就有）；prettier 綠。e2e `settings-shell.spec.ts` 追加 3 條，chromium `--repeat-each=3` 整檔 **39／39**。
+- **Mutation：unit 10／10 紅、e2e 2／2 紅**（對照表失效→18 紅、拿掉 retrying 旗標、rate_limited 算壞掉、技術細節預設展開、骨架 3 列、未設定 pill 用舊底色、通知用 displayName、一次重測只測第一個、按鈕名用 displayName、拿掉建議；e2e：桌機鈕回 44、拿掉建議）。
+- **視覺基準**：`settings-service-status-card`（3 張 darwin）與 `settings-service-status-dashboard/default` 會變（penNode 改 `wqcqY`，dashboard 改成 C8-D 的五種狀態、寬 1152）；dashboard 的 hover／focus 基準刪除（`statesOnly: ['default']`，整頁夾具的 hover 沒意義）；新增 `/loading`（`XwdOH`）、`/mobile`（`qx8Ma`）。過期的 `-linux` 已 `git rm`，等 CI bootstrap（`project_visual_baseline_intentional_change`）。
+- ⚠️ **與 story 字面的偏離**：① **沒有 `settings-service-status-dashboard/error` 夾具**——dashboard 的錯誤狀態就是 `SettingsErrorState` 帶這兩句話，而 `dsr-3a` 的 `settings-error-state` 夾具已經以同樣兩句、`penNode: 'uYGBU'`、720 寬拍成基準；再拍一張一模一樣的只是重複（要讓 dashboard 真的進錯誤狀態還得讓查詢失敗，gallery 沒有這種 seed）。② 手機夾具只有一張卡（見 Debug Log）。③ 手機橫幅的「重新檢查」是 44 高（稿 32）——手機觸控高度，跟每張卡的 44 鈕一致。
+- 本機 visual 另有一張 `retry-retry-notifications/default-visual-darwin.png` 漂移（main 上就有、與本張無關、只影響 darwin；CI 用 linux）——未收進本張。
+
+- 🔍 **/ship 對抗式 CR（2026-09-23，獨立 context）0 HIGH／3 MEDIUM／3 LOW／7 NIT，全部吸收**：
+  ① 🟠 第一次載入失敗後，每 30 秒輪詢與回到視窗的自動重抓都會讓錯誤頁閃回骨架（TanStack 把沒資料的失敗查詢退回 pending），鍵盤焦點跟著掉；`retrying` 旗標只蓋住手動重試 → 拿掉旗標，改成「沒資料且還沒抓完過一次＝骨架；沒資料＝錯誤頁（`isRetrying={isFetching}`）」。
+  ② 🟠 有快取資料時一次背景輪詢失敗，整排卡片被換成整頁錯誤 → 只有沒資料才整頁錯誤。
+  ③ 🟠 速率限制的服務，原始錯誤與「最後成功」在畫面上消失了（本張早先的 Completion Notes 說「搬到技術細節」並不完整）→ 技術細節涵蓋舊「顯示詳情」的同一群（非已連線、非未設定）；沒有壞掉的服務時，技術細節獨立顯示在列表下方（不套紅色）。
+  ④ 一次重測時，後面成功會把前面的失敗訊息清掉 → 收集後一次報。
+  ⑤ 測試連線失敗時畫面印出後端／瀏覽器的英文 → 改「無法重新檢查 {中文名}，請稍後再試。」。
+  ⑥ 卡片鈕 `disabled` 會把鍵盤焦點丟到 `<body>` → `aria-disabled`＋防呆；重測修好全部後橫幅消失、焦點改交給卡片列表。
+  NIT：`HintText` 改 `indexOf`（找不到就純文字）；宣讀改成一句常駐的 sr-only「{名稱} 目前無法連線。」而不是整條橫幅（不再念到「技術細節 重新檢查」）；e2e 註解改成 `retry: 1`；測試數更正；補「重試又失敗會回到『重試』」測試。未採納：手機 meta 的 `order-last` 讓報讀順序與視覺不同（名稱→回應時間→狀態→按鈕，順序仍合理）。
+  CR 後：mutation 再 8／8 紅；`nx test web` **287 files／4211 tests** 綠；`lint:all`、typecheck 綠；e2e 整檔 `--repeat-each=3` 39／39；visual 本張基準無變化。
+  🔗 AC Drift 補記：`ServiceStatusDashboard.spec` 的 `[P1] shows error message when test connection fails`／`[P2] shows fallback error message for non-Error rejection` 改成斷言中文句、不出現原文（⑤）；`ServiceStatusCard.spec` 的 `disables test button when testing` 改斷言 `aria-disabled` 且點了不呼叫（⑥）。
 
 ### File List
+
+- `ux-design.pen`
+- `_bmad-output/pen-tokens.json`
+- `_bmad-output/screenshots/flow-c-search-settings/c8-d.png`
+- `_bmad-output/screenshots/flow-c-search-settings/c8-m.png`
+- `_bmad-output/screenshots/flow-c-search-settings/c15-d.png`
+- `_bmad-output/screenshots/flow-c-search-settings/c15-m.png`
+- `apps/web/src/components/settings/serviceLabels.ts`（新）
+- `apps/web/src/components/settings/serviceLabels.spec.ts`（新）
+- `apps/web/src/components/settings/ServiceStatusCard.tsx`
+- `apps/web/src/components/settings/ServiceStatusCard.spec.tsx`
+- `apps/web/src/components/settings/ServiceStatusDashboard.tsx`
+- `apps/web/src/components/settings/ServiceStatusDashboard.spec.tsx`
+- `apps/web/src/components/settings/ServiceStatusDashboard.retry.spec.tsx`（新）
+- `apps/web/src/routes/test/-gallery.fixtures.tsx`
+- `tests/e2e/settings-shell.spec.ts`
+- `tests/visual/components.visual.spec.ts-snapshots/components/settings-service-status-card/*-visual-darwin.png`（3 改）、`*-visual-linux.png`（3 刪）
+- `tests/visual/components.visual.spec.ts-snapshots/components/settings-service-status-dashboard/default-visual-darwin.png`（改）、`hover|focus-visual-darwin.png`（刪）、`*-visual-linux.png`（3 刪）
+- `tests/visual/components.visual.spec.ts-snapshots/components/settings-service-status-dashboard/loading/default-visual-darwin.png`（新）
+- `tests/visual/components.visual.spec.ts-snapshots/components/settings-service-status-dashboard/mobile/default-visual-darwin.png`（新）
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/implementation-artifacts/6-4-service-connection-status-dashboard.md`（AC drift reference — see Completion Notes）
+- `_bmad-output/implementation-artifacts/bugfix-settings-honest-readouts.md`（AC drift reference — see Completion Notes）
+
+### UX Verification（dev-story Step 9）
+
+| Area | Design Spec | Implementation | Match? | Fix Needed |
+|------|------------|----------------|--------|------------|
+| 卡片（C8-D） | 名稱 14/600＋說明 12 muted｜等寬 meta 右對齊｜pill｜36 圖示鈕 | 同 | ✅ | — |
+| pill 顏色 | 青碧／赭／硃砂／中性＋圖示 | 同（5 種狀態各有測試） | ✅ | — |
+| 錯誤橫幅（C8-D） | 列表下方、error-tint、一行建議＋技術細節＋右側重新檢查 | 同（「連線設定」加底線連結） | ✅ | — |
+| 手機卡（C8-M） | 44 鈕、meta 第二行 | 同 | ✅ | — |
+| 手機橫幅 | 圖示＋建議＋技術細節＋重新檢查 | 同，鈕高 44（稿 32，觸控高度） | ⚠️ 刻意 | 見偏離 ③ |
+| 骨架（C15-D／M） | 5 列、72／64、160×18＋240×14、84×24、36×36 只在桌機 | 同 | ✅ | — |
+| 整頁失敗（C16-D） | 圖示＋「無法載入服務狀態」＋說明＋重試 | `SettingsErrorState` 逐字 | ✅ | — |
+
+🎨 UX Verification: PASS — 截圖 `c8-d`／`c8-m`／`c15-d`／`c15-m`／`c16-d` 對照視覺基準逐項比對。
+
+## Change Log
+
+| Date | Change |
+| --- | --- |
+| 2026-09-23 | Task 1：設計稿——刪「· Claude」、TMDB、橫幅改保證為真的建議＋技術細節＋重新檢查、手機每卡 44 鈕、C8-M 加高、骨架註記移進 `spec-note-dsr-3c` |
+| 2026-09-23 | Task 2–3：`serviceLabels.ts`；卡片中文名、pill、meta、圖示鈕；顯示詳情退役 |
+| 2026-09-23 | Task 4：列表下方錯誤橫幅（建議、技術細節含最後成功、一次重測） |
+| 2026-09-23 | Task 5：五列骨架、整頁失敗換 `SettingsErrorState`＋重試中旗標；Skeleton 不改（styles.css 已處理 reduced-motion） |
+| 2026-09-23 | /ship CR：錯誤頁不再被輪詢閃成骨架、背景輪詢失敗保留列表、速率限制的原始錯誤回到技術細節、重測失敗一次報且改中文、焦點不掉 |
+| 2026-09-23 | Task 6：夾具（card／dashboard 改、loading／mobile 新）、e2e 3 條、mutation 12／12、全套 web 4203 綠 |

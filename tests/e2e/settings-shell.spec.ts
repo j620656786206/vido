@@ -230,3 +230,78 @@ test.describe('金鑰設定 layout @settings @dsr-3b', () => {
     expect(textRight).toBeLessThanOrEqual(btn!.x + 1);
   });
 });
+
+test.describe('服務狀態 @settings @dsr-3c', () => {
+  const svc = (name: string, display_name: string, status: string, extra = {}) => ({
+    name,
+    display_name,
+    status,
+    message: status,
+    last_success_at: null,
+    last_check_at: new Date().toISOString(),
+    response_time_ms: 0,
+    ...extra,
+  });
+  const SERVICES = {
+    services: [
+      svc('tmdb', 'TMDb API', 'connected', { response_time_ms: 142 }),
+      svc('douban', 'Douban Scraper', 'unconfigured'),
+      svc('qbittorrent', 'qBittorrent', 'error', {
+        error_message: 'dial tcp 127.0.0.1:8080: connect: connection refused',
+      }),
+    ],
+  };
+
+  async function stubServices(page: Page, status: number, body: unknown) {
+    await page.route('**/api/v1/settings/services', (route) =>
+      route.request().method() === 'GET'
+        ? route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
+        : route.fallback()
+    );
+  }
+
+  test('[P1] a broken qBittorrent gets Chinese advice whose link opens 連線設定', async ({
+    page,
+  }) => {
+    await stubServices(page, 200, { success: true, data: SERVICES });
+    await page.goto('/settings/status');
+    const banner = page.getByTestId('service-error-banner');
+    await expect(banner).toBeVisible({ timeout: 15000 });
+    await expect(banner).toContainText(
+      'qBittorrent：目前無法連線。請確認下載器已啟動，或到「連線設定」檢查位址。'
+    );
+    // The backend's English names are not on the page.
+    await expect(page.getByText('Douban Scraper')).toHaveCount(0);
+    await expect(page.getByText('豆瓣', { exact: true })).toBeVisible();
+
+    await banner.getByRole('link', { name: '連線設定' }).click();
+    await expect(page).toHaveURL(/\/settings\/connection$/);
+  });
+
+  test('[P1] phone keeps a 44px re-check button on every card; desktop is 36px', async ({
+    page,
+  }) => {
+    await stubServices(page, 200, { success: true, data: SERVICES });
+    await page.setViewportSize(PHONE);
+    await page.goto('/settings/status');
+    const btn = page.getByRole('button', { name: '重新檢查 豆瓣' });
+    await expect(btn).toBeVisible({ timeout: 15000 });
+    expect(await btn.boundingBox()).toMatchObject({ width: 44, height: 44 });
+    await page.setViewportSize(DESKTOP);
+    await expect.poll(async () => (await btn.boundingBox())?.width).toBe(36);
+  });
+
+  test('[P1] a failed load says so in plain words, offers 重試, and hides the backend error', async ({
+    page,
+  }) => {
+    await stubServices(page, 500, {
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'sql: database is locked' },
+    });
+    await page.goto('/settings/status');
+    // The app's QueryClient retries once (queryClient.ts `retry: 1`) before it gives up.
+    await expect(page.getByText('無法載入服務狀態')).toBeVisible({ timeout: 20000 });
+    await expect(page.getByRole('button', { name: '重試' })).toBeVisible();
+    await expect(page.getByText('sql: database is locked')).toHaveCount(0);
+  });
+});
