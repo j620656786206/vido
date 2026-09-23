@@ -149,6 +149,10 @@ import { LogFilters } from '../../components/settings/LogFilters';
 import { RestoreConfirmDialog } from '../../components/settings/RestoreConfirmDialog';
 import { ServiceStatusCard } from '../../components/settings/ServiceStatusCard';
 import { SettingsPlaceholder } from '../../components/settings/SettingsPlaceholder';
+import { SettingsLayout } from '../../components/settings/SettingsLayout';
+import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
+import { SettingsErrorState } from '../../components/settings/SettingsErrorState';
+import { AppearanceSettings } from '../../components/settings/AppearanceSettings';
 import { ApiKeysStep } from '../../components/setup/ApiKeysStep';
 import { CompleteStep } from '../../components/setup/CompleteStep';
 import { MediaLibrarySetupStep } from '../../components/setup/MediaLibrarySetupStep';
@@ -275,6 +279,21 @@ import type { ServiceStatusResponse } from '../../services/serviceStatusService'
 import { LoginForm } from '../../components/auth/LoginForm';
 
 const noop = () => {};
+
+/**
+ * dsr-3a: SettingsLayout is a page shell with `min-h-[calc(100vh-8rem)]`, so as a
+ * fixture it would be ~700px of empty page whose height follows the viewport —
+ * and the strip under test is ~60px of it. Pin the shell to its content.
+ */
+function SettingsLayoutStrip() {
+  return (
+    <div className="[&>[data-testid=settings-layout]]:min-h-0">
+      <SettingsLayout>
+        <div style={{ height: 24 }} />
+      </SettingsLayout>
+    </div>
+  );
+}
 const asyncNoop = () => Promise.resolve();
 
 // dsr-6d-c-1 workspace fixture queue — ONE source so the three workspace fixtures
@@ -2586,9 +2605,65 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'settings/SettingsPlaceholder',
     component: SettingsPlaceholder,
     props: { icon: Database, title: '快取管理', description: '管理快取資料,釋放儲存空間' },
-    penNode: 'utility',
+    penNode: 'aJSKl', // Screen C14-D
     statesOnly: ['default'],
     width: 480,
+  },
+  // dsr-3a — the shared settings chrome. The tab strip is only ever seen inside
+  // SettingsLayout, so the fixture is the layout with an empty page; pinned to
+  // the stub '/settings' route, so no tab is active (the strip itself is what
+  // is under test: labels, dividers, badge, and which edge fades).
+  {
+    id: 'settings-layout/tabs',
+    label: 'settings/SettingsLayout (tab strip, desktop)',
+    component: SettingsLayoutStrip,
+    penNode: 'f7u7F6', // Screen C4-D — Component/SettingsTabStrip instance
+    statesOnly: ['default'],
+    width: 1200,
+    routePath: '/settings',
+  },
+  {
+    id: 'settings-layout/tabs-mobile',
+    label: 'settings/SettingsLayout (tab strip, phone)',
+    component: SettingsLayoutStrip,
+    penNode: 'I58Afv', // Screen C4-M — Component/SettingsTabStrip instance
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+    routePath: '/settings',
+  },
+  {
+    id: 'settings-page-header',
+    label: 'settings/SettingsPageHeader',
+    component: SettingsPageHeader,
+    props: {
+      title: '連線設定',
+      description: '設定 Vido 連到 qBittorrent、Sonarr 與 Radarr 的方式。',
+    },
+    // Screen C4-M page-header — photographed at 390 so the 20px phone title is what is pinned.
+    penNode: 'L7yCT',
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+  },
+  {
+    id: 'settings-error-state',
+    label: 'settings/SettingsErrorState',
+    component: SettingsErrorState,
+    props: {
+      title: '無法載入服務狀態',
+      description: '與後端的連線中斷了。這不影響已在執行的背景工作。',
+      onRetry: noop,
+    },
+    penNode: 'uYGBU', // Screen C16-D
+    statesOnly: ['default', 'hover', 'focus'],
+    width: 720,
+  },
+  {
+    id: 'settings-appearance',
+    label: 'settings/AppearanceSettings',
+    component: AppearanceSettings,
+    penNode: 'B3qPq', // Screen C6-D
+    statesOnly: ['default'],
+    width: 1200,
   },
 
   // ----- setup/ (P-bucket additions) -----

@@ -58624,7 +58624,7 @@
               "y": 18436,
               "name": "cap C4-D",
               "fill": "#888888",
-              "content": "C4 · 設定頁（桌面）",
+              "content": "C4-D · 設定 — 連線設定（桌面）",
               "lineHeight": "$Type/Body/Line",
               "fontFamily": "$Type/Family/Primary",
               "fontSize": "$Type/Body/Size",
@@ -67869,11 +67869,11 @@
                               "name": "tabs-strip",
                               "descendants": {
                                 "wXZMy": {
-                                  "fill": "$accent-subtle"
+                                  "fill": "#00000000"
                                 },
                                 "d6HpA0": {
-                                  "fill": "$text-primary",
-                                  "fontWeight": "600"
+                                  "fill": "$text-muted",
+                                  "fontWeight": "500"
                                 }
                               }
                             },
@@ -77828,7 +77828,7 @@
               "type": "frame",
               "id": "2H4OM",
               "x": 18020,
-              "y": 19581,
+              "y": 19481,
               "name": "C4-M",
               "theme": {
                 "bp": "mobile"
@@ -77980,11 +77980,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -78008,11 +78008,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -78058,9 +78058,9 @@
                           "name": "page-title",
                           "fill": "$text-primary",
                           "content": "連線設定",
-                          "lineHeight": "$Type/H3/Line",
+                          "lineHeight": "$Type/H2/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/H3/Size",
+                          "fontSize": "$Type/H2/Size",
                           "fontWeight": "700"
                         },
                         {
@@ -78071,9 +78071,9 @@
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "設定 Vido 連到 qBittorrent、Sonarr 與 Radarr 的方式。",
-                          "lineHeight": "$Type/Label/Line",
+                          "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Label/Size",
+                          "fontSize": "$Type/Body/Size",
                           "fontWeight": "normal"
                         }
                       ]
@@ -78645,10 +78645,10 @@
               "type": "text",
               "id": "Zh7hx",
               "x": 18020,
-              "y": 19536,
+              "y": 19436,
               "name": "cap C4-M",
               "fill": "#888888",
-              "content": "C4 · 設定頁（手機）",
+              "content": "C4-M · 設定 — 連線設定（手機）",
               "lineHeight": "$Type/Body/Line",
               "fontFamily": "$Type/Family/Primary",
               "fontSize": "$Type/Body/Size",
@@ -78810,11 +78810,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -78838,11 +78838,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -78888,9 +78888,9 @@
                           "name": "page-title",
                           "fill": "$text-primary",
                           "content": "備份與還原",
-                          "lineHeight": "$Type/H3/Line",
+                          "lineHeight": "$Type/H2/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/H3/Size",
+                          "fontSize": "$Type/H2/Size",
                           "fontWeight": "700"
                         },
                         {
@@ -78901,9 +78901,9 @@
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "建立與管理 Vido 資料庫備份，確保資料安全。",
-                          "lineHeight": "$Type/Label/Line",
+                          "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Label/Size",
+                          "fontSize": "$Type/Body/Size",
                           "fontWeight": "normal"
                         }
                       ]
@@ -79928,11 +79928,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -79978,9 +79978,9 @@
                           "name": "page-title",
                           "fill": "$text-primary",
                           "content": "外觀",
-                          "lineHeight": "$Type/H3/Line",
+                          "lineHeight": "$Type/H2/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/H3/Size",
+                          "fontSize": "$Type/H2/Size",
                           "fontWeight": "700"
                         },
                         {
@@ -79991,9 +79991,9 @@
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "已依你的選擇顯示。",
-                          "lineHeight": "$Type/Label/Line",
+                          "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Label/Size",
+                          "fontSize": "$Type/Body/Size",
                           "fontWeight": "normal"
                         }
                       ]
@@ -80500,11 +80500,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -80528,11 +80528,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -80578,9 +80578,9 @@
                           "name": "page-title",
                           "fill": "$text-primary",
                           "content": "金鑰設定",
-                          "lineHeight": "$Type/H3/Line",
+                          "lineHeight": "$Type/H2/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/H3/Size",
+                          "fontSize": "$Type/H2/Size",
                           "fontWeight": "700"
                         },
                         {
@@ -80591,9 +80591,9 @@
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "設定 Vido 使用的第三方服務 API 金鑰。金鑰會加密後儲存於 NAS。",
-                          "lineHeight": "$Type/Label/Line",
+                          "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Label/Size",
+                          "fontSize": "$Type/Body/Size",
                           "fontWeight": "normal"
                         }
                       ]
@@ -81289,11 +81289,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -81317,11 +81317,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -81367,9 +81367,9 @@
                           "name": "page-title",
                           "fill": "$text-primary",
                           "content": "服務狀態",
-                          "lineHeight": "$Type/H3/Line",
+                          "lineHeight": "$Type/H2/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/H3/Size",
+                          "fontSize": "$Type/H2/Size",
                           "fontWeight": "700"
                         },
                         {
@@ -81380,9 +81380,9 @@
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "監控外部服務連線狀態。",
-                          "lineHeight": "$Type/Label/Line",
+                          "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Label/Size",
+                          "fontSize": "$Type/Body/Size",
                           "fontWeight": "normal"
                         }
                       ]
@@ -82270,11 +82270,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -82298,11 +82298,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -82348,9 +82348,9 @@
                           "name": "page-title",
                           "fill": "$text-primary",
                           "content": "字幕設定",
-                          "lineHeight": "$Type/H3/Line",
+                          "lineHeight": "$Type/H2/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/H3/Size",
+                          "fontSize": "$Type/H2/Size",
                           "fontWeight": "700"
                         },
                         {
@@ -82361,9 +82361,9 @@
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "AI 翻譯字幕的風格與口味。金鑰請到「金鑰設定」。",
-                          "lineHeight": "$Type/Label/Line",
+                          "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Label/Size",
+                          "fontSize": "$Type/Body/Size",
                           "fontWeight": "normal"
                         }
                       ]
@@ -82975,11 +82975,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -83003,11 +83003,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -83053,9 +83053,9 @@
                           "name": "page-title",
                           "fill": "$text-primary",
                           "content": "自訂首頁",
-                          "lineHeight": "$Type/H3/Line",
+                          "lineHeight": "$Type/H2/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/H3/Size",
+                          "fontSize": "$Type/H2/Size",
                           "fontWeight": "700"
                         },
                         {
@@ -83066,9 +83066,9 @@
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "管理首頁上的探索區塊。每個區塊會依條件從 TMDb 拉取推薦內容。",
-                          "lineHeight": "$Type/Label/Line",
+                          "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Label/Size",
+                          "fontSize": "$Type/Body/Size",
                           "fontWeight": "normal"
                         }
                       ]
@@ -83969,11 +83969,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -83997,11 +83997,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -84047,9 +84047,9 @@
                           "name": "page-title",
                           "fill": "$text-primary",
                           "content": "快取管理",
-                          "lineHeight": "$Type/H3/Line",
+                          "lineHeight": "$Type/H2/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/H3/Size",
+                          "fontSize": "$Type/H2/Size",
                           "fontWeight": "700"
                         },
                         {
@@ -84060,9 +84060,9 @@
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "檢視外部資料快取的佔用，並依類型或時間清除。",
-                          "lineHeight": "$Type/Label/Line",
+                          "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Label/Size",
+                          "fontSize": "$Type/Body/Size",
                           "fontWeight": "normal"
                         }
                       ]
@@ -84936,11 +84936,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -84964,11 +84964,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -85014,9 +85014,9 @@
                           "name": "page-title",
                           "fill": "$text-primary",
                           "content": "系統日誌",
-                          "lineHeight": "$Type/H3/Line",
+                          "lineHeight": "$Type/H2/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/H3/Size",
+                          "fontSize": "$Type/H2/Size",
                           "fontWeight": "700"
                         },
                         {
@@ -85027,9 +85027,9 @@
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "檢視 Vido 的執行記錄，依等級與關鍵字篩選。",
-                          "lineHeight": "$Type/Label/Line",
+                          "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Label/Size",
+                          "fontSize": "$Type/Body/Size",
                           "fontWeight": "normal"
                         }
                       ]
@@ -85933,11 +85933,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -85961,11 +85961,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -86011,9 +86011,9 @@
                           "name": "page-title",
                           "fill": "$text-primary",
                           "content": "匯出/匯入",
-                          "lineHeight": "$Type/H3/Line",
+                          "lineHeight": "$Type/H2/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/H3/Size",
+                          "fontSize": "$Type/H2/Size",
                           "fontWeight": "700"
                         },
                         {
@@ -86024,9 +86024,9 @@
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "將媒體庫元資料匯出為 JSON、YAML 或 NFO 檔案。",
-                          "lineHeight": "$Type/Label/Line",
+                          "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Label/Size",
+                          "fontSize": "$Type/Body/Size",
                           "fontWeight": "normal"
                         }
                       ]
@@ -86685,17 +86685,17 @@
                           "type": "ref",
                           "ref": "iiG1y",
                           "name": "tabs-strip",
-                          "x": -757,
+                          "x": 0,
                           "y": 0,
                           "width": 1099,
                           "height": 44,
                           "descendants": {
                             "wXZMy": {
-                              "fill": "$accent-subtle"
+                              "fill": "#00000000"
                             },
                             "d6HpA0": {
-                              "fill": "$text-primary",
-                              "fontWeight": "600"
+                              "fill": "$text-muted",
+                              "fontWeight": "500"
                             }
                           }
                         },
@@ -86715,11 +86715,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -86733,6 +86733,7 @@
                           "x": 0,
                           "y": 0,
                           "name": "fade-left",
+                          "enabled": false,
                           "fill": {
                             "type": "gradient",
                             "gradientType": "linear",
@@ -86743,11 +86744,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -87269,11 +87270,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -87297,11 +87298,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -87347,9 +87348,9 @@
                           "name": "page-title",
                           "fill": "$text-primary",
                           "content": "服務狀態",
-                          "lineHeight": "$Type/H3/Line",
+                          "lineHeight": "$Type/H2/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/H3/Size",
+                          "fontSize": "$Type/H2/Size",
                           "fontWeight": "700"
                         },
                         {
@@ -87360,9 +87361,9 @@
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "監控外部服務連線狀態。",
-                          "lineHeight": "$Type/Label/Line",
+                          "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Label/Size",
+                          "fontSize": "$Type/Body/Size",
                           "fontWeight": "normal"
                         }
                       ]
@@ -88017,11 +88018,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -88045,11 +88046,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -88095,9 +88096,9 @@
                           "name": "page-title",
                           "fill": "$text-primary",
                           "content": "系統日誌",
-                          "lineHeight": "$Type/H3/Line",
+                          "lineHeight": "$Type/H2/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/H3/Size",
+                          "fontSize": "$Type/H2/Size",
                           "fontWeight": "700"
                         },
                         {
@@ -88108,9 +88109,9 @@
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "檢視 Vido 的執行記錄，依等級與關鍵字篩選。",
-                          "lineHeight": "$Type/Label/Line",
+                          "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Label/Size",
+                          "fontSize": "$Type/Body/Size",
                           "fontWeight": "normal"
                         }
                       ]
@@ -88805,11 +88806,11 @@
                                 },
                                 "colors": [
                                   {
-                                    "color": "#0c151200",
+                                    "color": "#00000000",
                                     "position": 0
                                   },
                                   {
-                                    "color": "#0c1512",
+                                    "color": "$bg-primary",
                                     "position": 1
                                   }
                                 ]
@@ -88833,11 +88834,11 @@
                                 },
                                 "colors": [
                                   {
-                                    "color": "#0c151200",
+                                    "color": "#00000000",
                                     "position": 0
                                   },
                                   {
-                                    "color": "#0c1512",
+                                    "color": "$bg-primary",
                                     "position": 1
                                   }
                                 ]
@@ -88883,9 +88884,9 @@
                               "name": "page-title",
                               "fill": "$text-primary",
                               "content": "備份與還原",
-                              "lineHeight": "$Type/H3/Line",
+                              "lineHeight": "$Type/H2/Line",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/H3/Size",
+                              "fontSize": "$Type/H2/Size",
                               "fontWeight": "700"
                             },
                             {
@@ -88896,9 +88897,9 @@
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
                               "content": "建立與管理 Vido 資料庫備份，確保資料安全。",
-                              "lineHeight": "$Type/Label/Line",
+                              "lineHeight": "$Type/Body/Line",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Label/Size",
+                              "fontSize": "$Type/Body/Size",
                               "fontWeight": "normal"
                             }
                           ]
@@ -89584,11 +89585,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -89612,11 +89613,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -89662,9 +89663,9 @@
                           "name": "page-title",
                           "fill": "$text-primary",
                           "content": "連線設定",
-                          "lineHeight": "$Type/H3/Line",
+                          "lineHeight": "$Type/H2/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/H3/Size",
+                          "fontSize": "$Type/H2/Size",
                           "fontWeight": "700"
                         },
                         {
@@ -89675,9 +89676,9 @@
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "設定 Vido 連到 qBittorrent、Sonarr 與 Radarr 的方式。",
-                          "lineHeight": "$Type/Label/Line",
+                          "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Label/Size",
+                          "fontSize": "$Type/Body/Size",
                           "fontWeight": "normal"
                         }
                       ]
@@ -90760,6 +90761,21 @@
               "fontFamily": "$Type/Family/Canvas",
               "fontSize": "$Type/Body/Size",
               "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "FtOt1",
+              "x": 18020,
+              "y": 20380,
+              "name": "spec-note-dsr-3a",
+              "fill": "$text-muted",
+              "textGrowth": "fixed-width",
+              "width": 880,
+              "content": "設定（所有分頁）：頁面標題桌機 24／手機 20，說明兩邊都是 14。分頁列在手機可左右滑，兩側淡出只在那一側還有內容時出現；桌機 1440 整條放得下、不出現淡出（分隔線兩側各 4，與母版相同）。『效能監控』尚未開放：灰字＋徽章、按不下去（C14 不畫選中）。任一頁整頁載入失敗都用 C16 的樣子（圖示、一句人話、重試），不顯示後端的原始錯誤。",
+              "lineHeight": "$Type/Label/Line",
+              "fontFamily": "$Type/Family/Primary",
+              "fontSize": "$Type/Label/Size",
+              "fontWeight": "normal"
             }
           ]
         }

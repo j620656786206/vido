@@ -1,8 +1,6 @@
 // Design ref: ux-design.pen Screen C4-D (6UCtX) · C4-M (2H4OM)
 // 分頁列本體是 Component/SettingsTabStrip（12 分頁橫向列），任一設定分頁共用這個殼層
-// ⚠️ The .pen still shows the RETIRED vertical rail. feat-settings-tabs-ia reshapes
-// this surface in code; the design file is brought back into line in the same story.
-import { useEffect, useRef } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { cn } from '../../lib/utils';
 
@@ -146,20 +144,61 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
 
   const stripRef = useRef<HTMLDivElement>(null);
 
+  // Each fade says "there is more on THIS side". A fade that is always on is a
+  // false signal — at 1440 the whole strip fits and nothing is clipped — so
+  // each one renders only while its side really has hidden tabs (dsr-3a).
+  const [edges, setEdges] = useState({ left: false, right: false });
+  const measureEdges = useCallback(() => {
+    const strip = stripRef.current;
+    if (!strip) return;
+    const left = strip.scrollLeft > 0;
+    // 1px of slack: fractional widths can leave scrollLeft a hair short of the end.
+    const right = strip.scrollLeft + strip.clientWidth < strip.scrollWidth - 1;
+    setEdges((prev) => (prev.left === left && prev.right === right ? prev : { left, right }));
+  }, []);
+
+  // Layout effect, not a passive one: the first frame must already carry the
+  // right fades, or a phone paints a fade-less strip and then pops one in.
+  useLayoutEffect(() => {
+    const strip = stripRef.current;
+    if (!strip) return;
+    measureEdges();
+    strip.addEventListener('scroll', measureEdges, { passive: true });
+    // Two things change what fits without a scroll: the strip's own box
+    // (rotation, window resize) and its content (the active tab is semibold,
+    // so navigating can widen a group without touching the box). Observe both.
+    const RO = window.ResizeObserver;
+    const ro = typeof RO === 'function' ? new RO(measureEdges) : null;
+    if (ro) {
+      ro.observe(strip);
+      for (const group of Array.from(strip.children)) ro.observe(group);
+    }
+    return () => {
+      strip.removeEventListener('scroll', measureEdges);
+      ro?.disconnect();
+    };
+  }, [measureEdges]);
+
   // The retired mobile strip hid five of ten categories behind a swipe with no
   // fade, no arrow and no clipped tab — so it read as complete and half the
   // settings IA was unreachable in practice. Scrolling the active tab into view
   // means you at least always start from where you are, at any width.
-  useEffect(() => {
+  useLayoutEffect(() => {
     const strip = stripRef.current;
     if (!strip) return;
-    if (strip.scrollWidth <= strip.clientWidth) return;
-    // The router owns "active"; read its marker rather than keeping a second
-    // opinion in a ref.
-    strip
-      .querySelector('[data-status="active"]')
-      ?.scrollIntoView({ inline: 'center', block: 'nearest' });
-  }, [currentPath]);
+    if (strip.scrollWidth > strip.clientWidth) {
+      // The router owns "active"; read its marker rather than keeping a second
+      // opinion in a ref.
+      strip
+        .querySelector('[data-status="active"]')
+        ?.scrollIntoView({ inline: 'center', block: 'nearest' });
+    }
+    // Measure on EVERY navigation, overflowing or not — a programmatic scroll
+    // fires `scroll` only asynchronously, and a strip that just stopped
+    // overflowing fires nothing at all. Layout effect, so this lands before
+    // the first paint after navigation.
+    measureEdges();
+  }, [currentPath, measureEdges]);
 
   return (
     // The strip and the content share ONE centered container, so their left
@@ -170,9 +209,10 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
     // ROOT while a second rail existed — the rail is a tab strip now, so
     // centering the container cannot detach anything.)
     <div className="min-h-[calc(100vh-8rem)] p-6" data-testid="settings-layout">
-      {/* 1152px, not 1024: the ten-tab strip measures 1072px, and at 1440 the
-          content pane is exactly 1152 — so this width is invisible at 1440 and
-          only buys balance on ultra-wide screens. */}
+      {/* 1152px, not 1024: the twelve-tab strip measures ~1100px plus the 40px
+          end padding, and at 1440 the content pane is exactly 1152 — so the
+          whole strip fits at 1440 and this width only buys balance on
+          ultra-wide screens. */}
       <div className="mx-auto w-full max-w-6xl">
         {/* Visually tabs, semantically NAVIGATION. These change route, so there are
           no tabpanels in this document and role="tablist" would promise a widget
@@ -193,10 +233,13 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
                   {groupIndex > 0 && (
                     // Presentational only. The grouping reaches assistive tech
                     // through the accessible names below, never through a rule.
+                    // 4px each side (the row's gap), as in Component/SettingsTabStrip.
+                    // The old mx-2 pushed the strip ~64px past 1152 and clipped
+                    // 效能監控 at 1440 (dsr-3a).
                     <span
                       aria-hidden="true"
                       data-testid={`settings-tabs-divider-${group}`}
-                      className="mx-2 h-5 w-px shrink-0 bg-[var(--border-subtle)]"
+                      className="h-5 w-px shrink-0 bg-[var(--border-subtle)]"
                     />
                   )}
                   {items.map((cat) => {
@@ -217,7 +260,7 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
                           className="flex min-h-[44px] shrink-0 cursor-not-allowed items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm font-medium text-[var(--text-muted)]"
                         >
                           {cat.label}
-                          <span className="rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-1.5 py-0.5 text-[11px]">
+                          <span className="rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-1.5 py-0.5 text-xs">
                             {UNAVAILABLE_BADGE}
                           </span>
                         </span>
@@ -257,12 +300,22 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
 
           {/* The clipped tab has to LOOK clipped. Without this the strip ends flush
             at the container edge and reads as the whole list — which is exactly
-            how five categories went missing on mobile. */}
-          <span
-            aria-hidden="true"
-            data-testid="settings-tabs-fade"
-            className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-[var(--bg-primary)] to-transparent"
-          />
+            how five categories went missing on mobile. Once scrolled, the tabs
+            that went off the LEFT edge need the same signal. */}
+          {edges.left && (
+            <span
+              aria-hidden="true"
+              data-testid="settings-tabs-fade-left"
+              className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-[var(--bg-primary)] to-transparent"
+            />
+          )}
+          {edges.right && (
+            <span
+              aria-hidden="true"
+              data-testid="settings-tabs-fade"
+              className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-[var(--bg-primary)] to-transparent"
+            />
+          )}
         </nav>
 
         {/* The strip gets the full column; the CONTENT keeps its measure. Removing

@@ -1,6 +1,7 @@
-// Design ref: ux-design.pen Screen C4-D (6UCtX)
-// (also C23-D (Qva0y) — the Sonarr / Radarr cards further down the same page)
+// Design ref: ux-design.pen Screen C4-D (6UCtX) · C4-M (2H4OM) · C23-D (Qva0y) · C23-M (p37q9)
+// (C23 is the Sonarr / Radarr cards further down the same page)
 import { createFileRoute } from '@tanstack/react-router';
+import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
 import { QBittorrentForm } from '../../components/settings/QBittorrentForm';
 import { ArrConnectionForm } from '../../components/settings/ArrConnectionForm';
 
@@ -15,10 +16,10 @@ function ConnectionSettingsPage() {
           narrowed the h1 too, so the heading jumped 160px between settings tabs
           and a deliberate rule read as a bug. Header spans the layout's column;
           only the cards are held at 768px for scannability. */}
-      <h1 className="mb-2 text-2xl font-bold text-[var(--text-primary)]">連線設定</h1>
-      <p className="mb-6 text-sm text-[var(--text-secondary)]">
-        設定 Vido 連到 qBittorrent、Sonarr 與 Radarr 的方式。
-      </p>
+      <SettingsPageHeader
+        title="連線設定"
+        description="設定 Vido 連到 qBittorrent、Sonarr 與 Radarr 的方式。"
+      />
       <div className="flex flex-col gap-6">
         <section
           aria-labelledby="qbittorrent-card-title"

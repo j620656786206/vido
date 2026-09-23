@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect } from 'vitest';
 import {
@@ -196,18 +196,158 @@ describe('SettingsLayout', () => {
   });
 
   describe('overflow is signposted', () => {
-    it('renders an edge fade so a clipped tab looks clipped', async () => {
+    // jsdom has no layout: every box is 0×0, so the strip never overflows
+    // unless a test says it does. The real widths are measured in
+    // tests/e2e/settings-shell.spec.ts (390 and 1440).
+    function setStripMetrics(
+      strip: HTMLElement,
+      m: { scrollLeft: number; clientWidth: number; scrollWidth: number }
+    ) {
+      Object.defineProperty(strip, 'clientWidth', { configurable: true, value: m.clientWidth });
+      Object.defineProperty(strip, 'scrollWidth', { configurable: true, value: m.scrollWidth });
+      Object.defineProperty(strip, 'scrollLeft', {
+        configurable: true,
+        writable: true,
+        value: m.scrollLeft,
+      });
+      fireEvent.scroll(strip);
+    }
+
+    // dsr-3a: the right fade used to be on at every width — including 1440,
+    // where the whole strip fits and nothing is clipped. A fade that is always
+    // there says nothing.
+    it('shows no fade at all when the whole strip fits', async () => {
       renderWithRouter();
-      await screen.findByTestId('settings-tabs');
-      const fade = screen.getByTestId('settings-tabs-fade');
+      const strip = await screen.findByTestId('settings-tabs-strip');
+      setStripMetrics(strip, { scrollLeft: 0, clientWidth: 1152, scrollWidth: 1139 });
+      expect(screen.queryByTestId('settings-tabs-fade')).toBeNull();
+      expect(screen.queryByTestId('settings-tabs-fade-left')).toBeNull();
+    });
+
+    it('fades only the right edge at the start of an overflowing strip', async () => {
+      renderWithRouter();
+      const strip = await screen.findByTestId('settings-tabs-strip');
+      setStripMetrics(strip, { scrollLeft: 0, clientWidth: 342, scrollWidth: 1139 });
+      const fade = await screen.findByTestId('settings-tabs-fade');
       expect(fade).toHaveAttribute('aria-hidden', 'true');
       expect(fade.className).toContain('pointer-events-none');
+      expect(screen.queryByTestId('settings-tabs-fade-left')).toBeNull();
+    });
+
+    it('fades both edges in the middle of the strip', async () => {
+      renderWithRouter();
+      const strip = await screen.findByTestId('settings-tabs-strip');
+      setStripMetrics(strip, { scrollLeft: 300, clientWidth: 342, scrollWidth: 1139 });
+      expect(await screen.findByTestId('settings-tabs-fade-left')).toHaveAttribute(
+        'aria-hidden',
+        'true'
+      );
+      expect(screen.getByTestId('settings-tabs-fade-left').className).toContain(
+        'pointer-events-none'
+      );
+      expect(screen.getByTestId('settings-tabs-fade')).toBeInTheDocument();
+    });
+
+    it('fades only the left edge once scrolled to the end', async () => {
+      renderWithRouter();
+      const strip = await screen.findByTestId('settings-tabs-strip');
+      setStripMetrics(strip, { scrollLeft: 797, clientWidth: 342, scrollWidth: 1139 });
+      expect(await screen.findByTestId('settings-tabs-fade-left')).toBeInTheDocument();
+      expect(screen.queryByTestId('settings-tabs-fade')).toBeNull();
+    });
+
+    it('draws both fades from the page background token, never a hex', async () => {
+      renderWithRouter();
+      const strip = await screen.findByTestId('settings-tabs-strip');
+      setStripMetrics(strip, { scrollLeft: 300, clientWidth: 342, scrollWidth: 1139 });
+      for (const id of ['settings-tabs-fade', 'settings-tabs-fade-left']) {
+        const cls = (await screen.findByTestId(id)).className;
+        expect(cls).toContain('from-[var(--bg-primary)]');
+        expect(cls).not.toMatch(/#[0-9a-f]{3,8}/i);
+      }
+    });
+
+    // Rotation or a window resize changes what fits without any scroll event;
+    // only the ResizeObserver hears it.
+    it('re-measures when the strip is resized, not only when it scrolls', async () => {
+      type RO = typeof window.ResizeObserver;
+      type ROCallback = ConstructorParameters<RO>[0];
+      const callbacks: ROCallback[] = [];
+      const original = window.ResizeObserver;
+      window.ResizeObserver = class {
+        constructor(cb: ROCallback) {
+          callbacks.push(cb);
+        }
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      } as unknown as RO;
+      try {
+        renderWithRouter();
+        const strip = await screen.findByTestId('settings-tabs-strip');
+        setStripMetrics(strip, { scrollLeft: 0, clientWidth: 342, scrollWidth: 1139 });
+        expect(await screen.findByTestId('settings-tabs-fade')).toBeInTheDocument();
+
+        // Widen the window: the strip now fits. No scroll event fires.
+        Object.defineProperty(strip, 'clientWidth', { configurable: true, value: 1152 });
+        expect(callbacks.length).toBeGreaterThan(0);
+        act(() => callbacks.forEach((cb) => cb([], {} as InstanceType<RO>)));
+        expect(screen.queryByTestId('settings-tabs-fade')).toBeNull();
+      } finally {
+        window.ResizeObserver = original;
+      }
     });
 
     it('lets the strip scroll instead of clipping items away', async () => {
       renderWithRouter();
       const strip = await screen.findByTestId('settings-tabs-strip');
       expect(strip.className).toContain('overflow-x-auto');
+    });
+  });
+
+  // sprint-status dsr-3 asked whether labels get shortened anywhere. They do
+  // not; this pins every label verbatim so they cannot start to.
+  describe('labels', () => {
+    it('renders all twelve labels in full, in order', async () => {
+      renderWithRouter();
+      await screen.findByTestId('settings-tabs');
+      const labels = SETTINGS_CATEGORIES.map(
+        (c) => screen.getByTestId(`settings-tab-${c.key}`).firstChild?.textContent
+      );
+      expect(labels).toEqual([
+        '外觀',
+        '連線設定',
+        '金鑰設定',
+        '服務狀態',
+        '媒體庫掃描',
+        '字幕設定',
+        '自訂首頁',
+        '快取管理',
+        '系統日誌',
+        '備份與還原',
+        '匯出/匯入',
+        '效能監控',
+      ]);
+      const strip = screen.getByTestId('settings-tabs-strip');
+      expect(strip.innerHTML).not.toMatch(/\btruncate\b|line-clamp/);
+    });
+
+    // Component/SettingsTabStrip draws the badge at Label 12 (cmm2B); 11px is
+    // off the type scale (36/30/24/20/18/16/14/12).
+    it('sets the 尚未開放 badge at 12px', async () => {
+      renderWithRouter();
+      const badge = (await screen.findByTestId('settings-tab-performance')).querySelector('span');
+      expect(badge).toHaveTextContent('尚未開放');
+      expect(badge?.className).toContain('text-xs');
+      expect(badge?.className).not.toContain('text-[11px]');
+    });
+
+    // 4px either side of a divider, as in the master. mx-2 made the strip ~64px
+    // wider than 1152 and clipped 效能監控 at 1440.
+    it('spaces the dividers with the row gap only', async () => {
+      renderWithRouter();
+      const divider = await screen.findByTestId('settings-tabs-divider-library');
+      expect(divider.className).not.toMatch(/\b-?(m|p)[lrx]?-/);
     });
   });
 

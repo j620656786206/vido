@@ -203,4 +203,49 @@ describe('SettingsPlaceholder', () => {
     expect(wrapper).toHaveClass('rounded-full');
     expect(wrapper).toHaveClass('bg-[var(--bg-secondary)]');
   });
+
+  // dsr-3a — C14-D (aJSKl) / C14-M (JUEUD): 72 circle with a 32 icon (64 / 28 on
+  // a phone), a 20 / 700 title (18 on a phone), 16 between every item, and a
+  // 420px measure for the sentence.
+  describe('matches C14', () => {
+    function renderPerf() {
+      render(
+        React.createElement(SettingsPlaceholder, {
+          icon: Gauge,
+          title: '效能監控',
+          description: '查看系統效能指標與趨勢',
+        })
+      );
+    }
+
+    it('sizes the icon circle 72 / icon 32, stepping to 64 / 28 on a phone', () => {
+      renderPerf();
+      const icon = screen.getByTestId('placeholder-icon');
+      const circle = icon.parentElement!;
+      expect(circle.className).toContain('size-18');
+      expect(circle.className).toContain('max-sm:size-16');
+      expect(icon.getAttribute('class')).toContain('size-8');
+      expect(icon.getAttribute('class')).toContain('max-sm:size-7');
+    });
+
+    it('sets the title at 20 / bold, 18 on a phone', () => {
+      renderPerf();
+      const title = screen.getByTestId('placeholder-title');
+      expect(title.className).toContain('text-lg');
+      expect(title.className).toContain('sm:text-xl');
+      expect(title.className).toContain('font-bold');
+    });
+
+    it('spaces every item 16 apart instead of 16 / 8 / 16', () => {
+      renderPerf();
+      const root = screen.getByTestId('settings-placeholder');
+      expect(root.className).toContain('gap-4');
+      expect(screen.getByTestId('placeholder-title').className).not.toMatch(/\bmb-2\b/);
+    });
+
+    it('holds the sentence to 420px', () => {
+      renderPerf();
+      expect(screen.getByTestId('placeholder-description').className).toContain('max-w-[420px]');
+    });
+  });
 });
