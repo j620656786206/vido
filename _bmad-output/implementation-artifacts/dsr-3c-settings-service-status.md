@@ -1,6 +1,6 @@
 # Story DSR.3c：服務狀態頁對齊設計稿——服務名稱說中文、載入時有骨架、整頁失敗可以按重試、壞掉的服務告訴你該去哪裡修
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
