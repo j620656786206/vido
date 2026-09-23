@@ -20,15 +20,15 @@ function ConnectionSettingsPage() {
         title="連線設定"
         description="設定 Vido 連到 qBittorrent、Sonarr 與 Radarr 的方式。"
       />
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4">
         <section
           aria-labelledby="qbittorrent-card-title"
-          className="max-w-3xl rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4 md:p-8"
+          className="max-w-3xl rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4 md:p-6"
         >
           <header className="mb-6">
             <h2
               id="qbittorrent-card-title"
-              className="text-base font-semibold text-[var(--text-primary)] md:text-lg"
+              className="text-base font-semibold text-[var(--text-primary)]"
             >
               qBittorrent
             </h2>

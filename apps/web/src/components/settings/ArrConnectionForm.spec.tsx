@@ -319,3 +319,28 @@ describe('describeDvrError', () => {
     expect(msg).toBe('連線測試沒有通過，設定沒有儲存。按「測試連線」看看原因。');
   });
 });
+
+// dsr-3b — C23-D / C23-M: the card matches the qBittorrent card above it.
+describe('ArrConnectionForm — C23 card rhythm', () => {
+  it('pads the card 16 on a phone and 24 from md (was 32)', () => {
+    render(<ArrConnectionForm plugin="sonarr" />);
+    const card = screen.getByTestId('arr-card-sonarr');
+    expect(card).toHaveClass('p-4', 'md:p-6');
+    expect(card).not.toHaveClass('md:p-8');
+  });
+
+  it('keeps the card title at 16 at every width', () => {
+    render(<ArrConnectionForm plugin="sonarr" />);
+    const title = screen.getByRole('heading', { name: 'Sonarr' });
+    expect(title).toHaveClass('text-base');
+    expect(title.className).not.toMatch(/md:text-lg/);
+  });
+
+  it('spaces fields 16 apart and the two buttons 12 apart from md', () => {
+    render(<ArrConnectionForm plugin="sonarr" />);
+    expect(screen.getByLabelText('網址').closest('fieldset')).toHaveClass('space-y-4');
+    const row = screen.getByRole('button', { name: '測試連線' }).parentElement;
+    expect(row).toHaveClass('grid-cols-2', 'md:gap-3');
+    expect(row).not.toHaveClass('md:gap-4');
+  });
+});

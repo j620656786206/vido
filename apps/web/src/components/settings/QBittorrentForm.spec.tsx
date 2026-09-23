@@ -246,12 +246,39 @@ describe('QBittorrentForm', () => {
     expect(buttonContainer).toHaveClass('md:justify-end');
   });
 
-  it('button container uses flex-col on mobile and flex-row on desktop', () => {
+  // dsr-3b (C4-M NO9va): side by side at every width — two 151px buttons on a
+  // phone, the same grid the Sonarr / Radarr cards already use one card down.
+  // The old flex-col stacked them, so this card was the only one on the page
+  // whose buttons changed shape on a phone.
+  it('button container is two columns on a phone and a right-aligned row from md', () => {
     renderWithProviders(<QBittorrentForm />);
     const testBtn = screen.getByText('測試連線').closest('button');
     const buttonContainer = testBtn?.parentElement;
-    expect(buttonContainer).toHaveClass('flex-col');
-    expect(buttonContainer).toHaveClass('md:flex-row');
+    expect(buttonContainer).toHaveClass('grid', 'grid-cols-2', 'md:flex', 'md:gap-3');
+    expect(buttonContainer).not.toHaveClass('flex-col');
+  });
+
+  // dsr-3b — C4-D: fields 16 apart, label 8 above its input, buttons 600 / 20px
+  // padding (the same as the Sonarr / Radarr buttons), Base Path hint at 12.
+  it('spaces fields 16 apart with the label 8 above its input', () => {
+    renderWithProviders(<QBittorrentForm />);
+    const hostLabel = screen.getByText('主機位址', { selector: 'label' });
+    expect(hostLabel).toHaveClass('mb-2');
+    expect(hostLabel.parentElement?.parentElement).toHaveClass('space-y-4');
+  });
+
+  it('sets both buttons at 600 weight with 20px side padding', () => {
+    renderWithProviders(<QBittorrentForm />);
+    for (const label of ['測試連線', '儲存設定']) {
+      const btn = screen.getByText(label).closest('button');
+      expect(btn).toHaveClass('font-semibold', 'px-5');
+      expect(btn).not.toHaveClass('font-medium');
+    }
+  });
+
+  it('sets the Base Path hint at 12px', () => {
+    renderWithProviders(<QBittorrentForm />);
+    expect(screen.getByText('（選填，反向代理用）')).toHaveClass('text-xs');
   });
 
   // --- Base path field is optional ---

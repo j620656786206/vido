@@ -56387,7 +56387,7 @@
                                               "fill": "$text-primary",
                                               "content": "http://localhost:8080",
                                               "lineHeight": "$Type/Body/Line",
-                                              "fontFamily": "$Type/Family/Mono",
+                                              "fontFamily": "$Type/Family/Primary",
                                               "fontSize": "$Type/Body/Size",
                                               "fontWeight": "normal"
                                             }
@@ -56438,7 +56438,7 @@
                                               "fill": "$text-primary",
                                               "content": "admin",
                                               "lineHeight": "$Type/Body/Line",
-                                              "fontFamily": "$Type/Family/Mono",
+                                              "fontFamily": "$Type/Family/Primary",
                                               "fontSize": "$Type/Body/Size",
                                               "fontWeight": "normal"
                                             }
@@ -56489,7 +56489,7 @@
                                               "fill": "$text-primary",
                                               "content": "••••••••",
                                               "lineHeight": "$Type/Body/Line",
-                                              "fontFamily": "$Type/Family/Mono",
+                                              "fontFamily": "$Type/Family/Primary",
                                               "fontSize": "$Type/Body/Size",
                                               "fontWeight": "normal"
                                             }
@@ -56560,7 +56560,7 @@
                                               "fill": "$text-muted",
                                               "content": "/qbittorrent",
                                               "lineHeight": "$Type/Body/Line",
-                                              "fontFamily": "$Type/Family/Mono",
+                                              "fontFamily": "$Type/Family/Primary",
                                               "fontSize": "$Type/Body/Size",
                                               "fontWeight": "normal"
                                             }
@@ -56583,6 +56583,7 @@
                                           "height": 44,
                                           "fill": "$bg-tertiary",
                                           "cornerRadius": "$radius-md",
+                                          "gap": "$Space/sm",
                                           "padding": [
                                             "$Space/none",
                                             "$Space/lg-plus"
@@ -56590,6 +56591,16 @@
                                           "justifyContent": "center",
                                           "alignItems": "center",
                                           "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "LvxwP",
+                                              "name": "i",
+                                              "width": 16,
+                                              "height": 16,
+                                              "icon": "plug",
+                                              "library": "lucide",
+                                              "fill": "$text-primary"
+                                            },
                                             {
                                               "type": "text",
                                               "id": "Q7qWSM",
@@ -56610,6 +56621,7 @@
                                           "height": 44,
                                           "fill": "$accent-primary",
                                           "cornerRadius": "$radius-md",
+                                          "gap": "$Space/sm",
                                           "padding": [
                                             "$Space/none",
                                             "$Space/lg-plus"
@@ -56617,6 +56629,16 @@
                                           "justifyContent": "center",
                                           "alignItems": "center",
                                           "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "b9CQBE",
+                                              "name": "i",
+                                              "width": 16,
+                                              "height": 16,
+                                              "icon": "save",
+                                              "library": "lucide",
+                                              "fill": "$text-on-accent"
+                                            },
                                             {
                                               "type": "text",
                                               "id": "dUsu8",
@@ -60001,14 +60023,28 @@
                                                   "fontWeight": "600"
                                                 }
                                               ]
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "ZlmAE",
+                                              "name": "mask",
+                                              "fill": "$text-muted",
+                                              "content": "sk-ant…7f3a",
+                                              "lineHeight": "$Type/Label/Line",
+                                              "fontFamily": "$Type/Family/Mono",
+                                              "fontSize": "$Type/Label/Size",
+                                              "fontWeight": "normal"
                                             }
                                           ]
                                         },
                                         {
                                           "type": "frame",
                                           "id": "ri9FI",
+                                          "x": 0,
+                                          "y": 31,
                                           "name": "input",
-                                          "width": "fill_container",
+                                          "enabled": false,
+                                          "width": "fill_container(720)",
                                           "height": 44,
                                           "fill": "$bg-tertiary",
                                           "cornerRadius": "$radius-md",
@@ -60068,6 +60104,119 @@
                                           ]
                                         },
                                         {
+                                          "type": "frame",
+                                          "id": "G6iDg",
+                                          "name": "stored-actions",
+                                          "gap": "$Space/sm",
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "frame",
+                                              "id": "xbJ2J",
+                                              "name": "btn-編輯",
+                                              "height": 36,
+                                              "fill": "$bg-tertiary",
+                                              "cornerRadius": "$radius-md",
+                                              "gap": "$Space/xs-plus",
+                                              "padding": [
+                                                "$Space/none",
+                                                "$Space/lg"
+                                              ],
+                                              "justifyContent": "center",
+                                              "alignItems": "center",
+                                              "children": [
+                                                {
+                                                  "type": "text",
+                                                  "id": "Opq1o",
+                                                  "name": "l",
+                                                  "fill": "$text-primary",
+                                                  "content": "編輯",
+                                                  "lineHeight": "$Type/Body/Line",
+                                                  "fontFamily": "$Type/Family/Primary",
+                                                  "fontSize": "$Type/Body/Size",
+                                                  "fontWeight": "500"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "type": "frame",
+                                              "id": "ujA3q",
+                                              "name": "btn-清除",
+                                              "height": 36,
+                                              "fill": "$bg-tertiary",
+                                              "cornerRadius": "$radius-md",
+                                              "gap": "$Space/xs-plus",
+                                              "padding": [
+                                                "$Space/none",
+                                                "$Space/lg"
+                                              ],
+                                              "justifyContent": "center",
+                                              "alignItems": "center",
+                                              "children": [
+                                                {
+                                                  "type": "icon",
+                                                  "id": "R1a2S",
+                                                  "name": "i",
+                                                  "width": 14,
+                                                  "height": 14,
+                                                  "icon": "trash-2",
+                                                  "library": "lucide",
+                                                  "fill": "$text-primary"
+                                                },
+                                                {
+                                                  "type": "text",
+                                                  "id": "JEwth",
+                                                  "name": "l",
+                                                  "fill": "$text-primary",
+                                                  "content": "清除",
+                                                  "lineHeight": "$Type/Body/Line",
+                                                  "fontFamily": "$Type/Family/Primary",
+                                                  "fontSize": "$Type/Body/Size",
+                                                  "fontWeight": "500"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "type": "frame",
+                                              "id": "tIyId",
+                                              "name": "btn-測試",
+                                              "height": 36,
+                                              "fill": "$bg-tertiary",
+                                              "cornerRadius": "$radius-md",
+                                              "gap": "$Space/xs-plus",
+                                              "padding": [
+                                                "$Space/none",
+                                                "$Space/lg"
+                                              ],
+                                              "justifyContent": "center",
+                                              "alignItems": "center",
+                                              "children": [
+                                                {
+                                                  "type": "icon",
+                                                  "id": "Bmjn0",
+                                                  "name": "i",
+                                                  "width": 14,
+                                                  "height": 14,
+                                                  "icon": "plug",
+                                                  "library": "lucide",
+                                                  "fill": "$text-primary"
+                                                },
+                                                {
+                                                  "type": "text",
+                                                  "id": "yxrp3",
+                                                  "name": "l",
+                                                  "fill": "$text-primary",
+                                                  "content": "測試",
+                                                  "lineHeight": "$Type/Body/Line",
+                                                  "fontFamily": "$Type/Family/Primary",
+                                                  "fontSize": "$Type/Body/Size",
+                                                  "fontWeight": "500"
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
                                           "type": "text",
                                           "id": "GbIGm",
                                           "name": "t",
@@ -60103,7 +60252,7 @@
                                               "id": "pIa1g",
                                               "name": "t",
                                               "fill": "$text-primary",
-                                              "content": "TMDb",
+                                              "content": "TMDB",
                                               "lineHeight": "$Type/Body/Line",
                                               "fontFamily": "$Type/Family/Primary",
                                               "fontSize": "$Type/Body/Size",
@@ -60161,41 +60310,11 @@
                                               "fill": "$text-muted",
                                               "textGrowth": "fixed-width",
                                               "width": "fill_container",
-                                              "content": "TMDb API Key",
+                                              "content": "TMDB API Key",
                                               "lineHeight": "$Type/Body/Line",
                                               "fontFamily": "$Type/Family/Mono",
                                               "fontSize": "$Type/Body/Size",
                                               "fontWeight": "normal"
-                                            },
-                                            {
-                                              "type": "frame",
-                                              "id": "N4VKx",
-                                              "name": "test",
-                                              "height": 28,
-                                              "fill": "#00000000",
-                                              "cornerRadius": "$radius-sm",
-                                              "stroke": "$border-subtle",
-                                              "strokeWidth": 1,
-                                              "strokeAlignment": "inner",
-                                              "padding": [
-                                                "$Space/none",
-                                                "$Space/md"
-                                              ],
-                                              "justifyContent": "center",
-                                              "alignItems": "center",
-                                              "children": [
-                                                {
-                                                  "type": "text",
-                                                  "id": "nCuJk",
-                                                  "name": "l",
-                                                  "fill": "$text-disabled",
-                                                  "content": "測試",
-                                                  "lineHeight": "$Type/Label/Line",
-                                                  "fontFamily": "$Type/Family/Primary",
-                                                  "fontSize": "$Type/Label/Size",
-                                                  "fontWeight": "600"
-                                                }
-                                              ]
                                             }
                                           ]
                                         },
@@ -60211,6 +60330,30 @@
                                           "fontFamily": "$Type/Family/Primary",
                                           "fontSize": "$Type/Label/Size",
                                           "fontWeight": "$Type/Label/Weight"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "bvNts",
+                                          "name": "env-note",
+                                          "fill": "$info-text",
+                                          "content": "在此儲存的金鑰會覆蓋環境變數提供的設定。",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "m4PRSF",
+                                          "name": "tmdb-attribution",
+                                          "fill": "$text-muted",
+                                          "textGrowth": "fixed-width",
+                                          "width": 720,
+                                          "content": "TMDB 標誌＋「本應用程式使用 TMDB 與 TMDB API，但未經 TMDB 認可、認證或核准。」（TmdbAttribution，TMDB 條款 §3）",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "normal"
                                         }
                                       ]
                                     },
@@ -60298,36 +60441,6 @@
                                               "fontFamily": "$Type/Family/Mono",
                                               "fontSize": "$Type/Body/Size",
                                               "fontWeight": "normal"
-                                            },
-                                            {
-                                              "type": "frame",
-                                              "id": "BqFca",
-                                              "name": "test",
-                                              "height": 28,
-                                              "fill": "#00000000",
-                                              "cornerRadius": "$radius-sm",
-                                              "stroke": "$border-subtle",
-                                              "strokeWidth": 1,
-                                              "strokeAlignment": "inner",
-                                              "padding": [
-                                                "$Space/none",
-                                                "$Space/md"
-                                              ],
-                                              "justifyContent": "center",
-                                              "alignItems": "center",
-                                              "children": [
-                                                {
-                                                  "type": "text",
-                                                  "id": "C1fFgm",
-                                                  "name": "l",
-                                                  "fill": "$text-disabled",
-                                                  "content": "測試",
-                                                  "lineHeight": "$Type/Label/Line",
-                                                  "fontFamily": "$Type/Family/Primary",
-                                                  "fontSize": "$Type/Label/Size",
-                                                  "fontWeight": "600"
-                                                }
-                                              ]
                                             }
                                           ]
                                         },
@@ -60347,6 +60460,19 @@
                                       ]
                                     },
                                     {
+                                      "type": "text",
+                                      "id": "pegsz",
+                                      "name": "t",
+                                      "fill": "$text-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "僅 Claude 金鑰支援連線測試。",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "$Type/Label/Weight"
+                                    },
+                                    {
                                       "type": "frame",
                                       "id": "BiHdy",
                                       "name": "actions",
@@ -60358,7 +60484,7 @@
                                           "id": "s9ZAHI",
                                           "name": "btn-save",
                                           "height": 44,
-                                          "fill": "$accent-primary",
+                                          "fill": "$bg-tertiary",
                                           "cornerRadius": "$radius-md",
                                           "padding": [
                                             "$Space/none",
@@ -60371,7 +60497,7 @@
                                               "type": "text",
                                               "id": "O47Ju6",
                                               "name": "l",
-                                              "fill": "$text-on-accent",
+                                              "fill": "$text-muted",
                                               "content": "儲存金鑰",
                                               "lineHeight": "$Type/Body/Line",
                                               "fontFamily": "$Type/Family/Primary",
@@ -60383,19 +60509,6 @@
                                       ]
                                     }
                                   ]
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "pegsz",
-                                  "name": "t",
-                                  "fill": "$text-muted",
-                                  "textGrowth": "fixed-width",
-                                  "width": 768,
-                                  "content": "僅 Claude 金鑰支援連線測試；其餘欄位儲存後由服務自行驗證。",
-                                  "lineHeight": "$Type/Label/Line",
-                                  "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Label/Size",
-                                  "fontWeight": "$Type/Label/Weight"
                                 }
                               ]
                             }
@@ -74050,7 +74163,7 @@
                                               "id": "e9OjVD",
                                               "name": "v",
                                               "fill": "$text-disabled",
-                                              "content": "sk-ant-••••••••••••1f4a",
+                                              "content": "sk-ant-…",
                                               "lineHeight": "$Type/Body/Line",
                                               "fontFamily": "$Type/Family/Mono",
                                               "fontSize": "$Type/Body/Size",
@@ -74063,7 +74176,7 @@
                                     {
                                       "type": "frame",
                                       "id": "S6pm3f",
-                                      "name": "key-TMDb",
+                                      "name": "key-TMDB",
                                       "width": "fill_container",
                                       "layout": "vertical",
                                       "gap": "$Space/sm",
@@ -74073,7 +74186,7 @@
                                           "id": "pKINX",
                                           "name": "t",
                                           "fill": "$text-muted",
-                                          "content": "TMDb",
+                                          "content": "TMDB",
                                           "lineHeight": "$Type/Body/Line",
                                           "fontFamily": "$Type/Family/Primary",
                                           "fontSize": "$Type/Body/Size",
@@ -74101,7 +74214,7 @@
                                               "id": "nAPD6",
                                               "name": "v",
                                               "fill": "$text-disabled",
-                                              "content": "（由環境變數提供）",
+                                              "content": "TMDB API Key",
                                               "lineHeight": "$Type/Body/Line",
                                               "fontFamily": "$Type/Family/Mono",
                                               "fontSize": "$Type/Body/Size",
@@ -74199,19 +74312,6 @@
                                       ]
                                     }
                                   ]
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "u9e2Mf",
-                                  "name": "t",
-                                  "fill": "$text-muted",
-                                  "textGrowth": "fixed-width",
-                                  "width": 768,
-                                  "content": "儲存停用中：沒有加密金鑰就沒有安全的存放處，所以按鈕留在畫面上但不能按，原因寫在上面。",
-                                  "lineHeight": "$Type/Label/Line",
-                                  "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Label/Size",
-                                  "fontWeight": "$Type/Label/Weight"
                                 }
                               ]
                             }
@@ -74969,7 +75069,7 @@
                                     {
                                       "type": "frame",
                                       "id": "ZkPSA",
-                                      "name": "key-TMDb",
+                                      "name": "key-TMDB",
                                       "width": "fill_container",
                                       "layout": "vertical",
                                       "gap": "$Space/sm",
@@ -74979,7 +75079,7 @@
                                           "id": "AAJTN",
                                           "name": "t",
                                           "fill": "$text-primary",
-                                          "content": "TMDb",
+                                          "content": "TMDB",
                                           "lineHeight": "$Type/Body/Line",
                                           "fontFamily": "$Type/Family/Primary",
                                           "fontSize": "$Type/Body/Size",
@@ -75007,7 +75107,7 @@
                                               "id": "EUdBx",
                                               "name": "v",
                                               "fill": "$text-muted",
-                                              "content": "TMDb API Key",
+                                              "content": "TMDB API Key",
                                               "lineHeight": "$Type/Body/Line",
                                               "fontFamily": "$Type/Family/Mono",
                                               "fontSize": "$Type/Body/Size",
@@ -75137,7 +75237,7 @@
               "name": "C23-D",
               "clip": true,
               "width": 1440,
-              "height": 1533,
+              "height": 1553,
               "fill": "$bg-primary",
               "children": [
                 {
@@ -76073,6 +76173,7 @@
                                           "height": 44,
                                           "fill": "$bg-tertiary",
                                           "cornerRadius": "$radius-md",
+                                          "gap": "$Space/sm",
                                           "padding": [
                                             "$Space/none",
                                             "$Space/lg-plus"
@@ -76080,6 +76181,16 @@
                                           "justifyContent": "center",
                                           "alignItems": "center",
                                           "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "NdH4l",
+                                              "name": "i",
+                                              "width": 16,
+                                              "height": 16,
+                                              "icon": "plug",
+                                              "library": "lucide",
+                                              "fill": "$text-primary"
+                                            },
                                             {
                                               "type": "text",
                                               "id": "k4mWl1",
@@ -76100,6 +76211,7 @@
                                           "height": 44,
                                           "fill": "$accent-primary",
                                           "cornerRadius": "$radius-md",
+                                          "gap": "$Space/sm",
                                           "padding": [
                                             "$Space/none",
                                             "$Space/lg-plus"
@@ -76107,6 +76219,16 @@
                                           "justifyContent": "center",
                                           "alignItems": "center",
                                           "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "V12JRC",
+                                              "name": "i",
+                                              "width": 16,
+                                              "height": 16,
+                                              "icon": "save",
+                                              "library": "lucide",
+                                              "fill": "$text-on-accent"
+                                            },
                                             {
                                               "type": "text",
                                               "id": "bt8X6",
@@ -76500,6 +76622,19 @@
                                               "fill": "$text-disabled"
                                             }
                                           ]
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "oi4qz",
+                                          "name": "hint",
+                                          "fill": "$text-muted",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "送出電影請求時，Vido 用這兩個設定把它加進 Radarr。",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "normal"
                                         }
                                       ]
                                     },
@@ -76518,6 +76653,7 @@
                                           "height": 44,
                                           "fill": "$bg-tertiary",
                                           "cornerRadius": "$radius-md",
+                                          "gap": "$Space/sm",
                                           "padding": [
                                             "$Space/none",
                                             "$Space/lg-plus"
@@ -76525,6 +76661,16 @@
                                           "justifyContent": "center",
                                           "alignItems": "center",
                                           "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "D1JMCr",
+                                              "name": "i",
+                                              "width": 16,
+                                              "height": 16,
+                                              "icon": "plug",
+                                              "library": "lucide",
+                                              "fill": "$text-primary"
+                                            },
                                             {
                                               "type": "text",
                                               "id": "m2Waw",
@@ -76545,6 +76691,7 @@
                                           "height": 44,
                                           "fill": "$bg-tertiary",
                                           "cornerRadius": "$radius-md",
+                                          "gap": "$Space/sm",
                                           "padding": [
                                             "$Space/none",
                                             "$Space/lg-plus"
@@ -76552,6 +76699,16 @@
                                           "justifyContent": "center",
                                           "alignItems": "center",
                                           "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "ITARk",
+                                              "name": "i",
+                                              "width": 16,
+                                              "height": 16,
+                                              "icon": "save",
+                                              "library": "lucide",
+                                              "fill": "$text-on-accent"
+                                            },
                                             {
                                               "type": "text",
                                               "id": "T3tHor",
@@ -77835,7 +77992,7 @@
               },
               "clip": true,
               "width": 390,
-              "height": 844,
+              "height": 868,
               "fill": "$bg-primary",
               "layout": "vertical",
               "children": [
@@ -78130,9 +78287,9 @@
                                       "name": "title",
                                       "fill": "$text-primary",
                                       "content": "qBittorrent",
-                                      "lineHeight": "$Type/Body/Line",
+                                      "lineHeight": "$Type/BodyLg/Line",
                                       "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Body/Size",
+                                      "fontSize": "$Type/BodyLg/Size",
                                       "fontWeight": "600"
                                     },
                                     {
@@ -78164,9 +78321,9 @@
                                   "name": "t",
                                   "fill": "$text-secondary",
                                   "content": "主機位址",
-                                  "lineHeight": "$Type/Label/Line",
+                                  "lineHeight": "$Type/Body/Line",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Label/Size",
+                                  "fontSize": "$Type/Body/Size",
                                   "fontWeight": "500"
                                 },
                                 {
@@ -78192,9 +78349,9 @@
                                       "name": "v",
                                       "fill": "$text-primary",
                                       "content": "http://localhost:8080",
-                                      "lineHeight": "$Type/Label/Line",
-                                      "fontFamily": "$Type/Family/Mono",
-                                      "fontSize": "$Type/Label/Size",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
                                       "fontWeight": "normal"
                                     }
                                   ]
@@ -78215,9 +78372,9 @@
                                   "name": "t",
                                   "fill": "$text-secondary",
                                   "content": "使用者名稱",
-                                  "lineHeight": "$Type/Label/Line",
+                                  "lineHeight": "$Type/Body/Line",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Label/Size",
+                                  "fontSize": "$Type/Body/Size",
                                   "fontWeight": "500"
                                 },
                                 {
@@ -78243,9 +78400,9 @@
                                       "name": "v",
                                       "fill": "$text-primary",
                                       "content": "admin",
-                                      "lineHeight": "$Type/Label/Line",
-                                      "fontFamily": "$Type/Family/Mono",
-                                      "fontSize": "$Type/Label/Size",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
                                       "fontWeight": "normal"
                                     }
                                   ]
@@ -78266,9 +78423,9 @@
                                   "name": "t",
                                   "fill": "$text-secondary",
                                   "content": "密碼",
-                                  "lineHeight": "$Type/Label/Line",
+                                  "lineHeight": "$Type/Body/Line",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Label/Size",
+                                  "fontSize": "$Type/Body/Size",
                                   "fontWeight": "500"
                                 },
                                 {
@@ -78294,9 +78451,9 @@
                                       "name": "v",
                                       "fill": "$text-primary",
                                       "content": "••••••••",
-                                      "lineHeight": "$Type/Label/Line",
-                                      "fontFamily": "$Type/Family/Mono",
-                                      "fontSize": "$Type/Label/Size",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
                                       "fontWeight": "normal"
                                     }
                                   ]
@@ -78324,9 +78481,9 @@
                                       "name": "lb",
                                       "fill": "$text-secondary",
                                       "content": "Base Path",
-                                      "lineHeight": "$Type/Label/Line",
+                                      "lineHeight": "$Type/Body/Line",
                                       "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Label/Size",
+                                      "fontSize": "$Type/Body/Size",
                                       "fontWeight": "500"
                                     },
                                     {
@@ -78334,7 +78491,7 @@
                                       "id": "sCizF",
                                       "name": "hint",
                                       "fill": "$text-muted",
-                                      "content": "（選填）",
+                                      "content": "（選填，反向代理用）",
                                       "lineHeight": "$Type/Label/Line",
                                       "fontFamily": "$Type/Family/Primary",
                                       "fontSize": "$Type/Label/Size",
@@ -78365,9 +78522,9 @@
                                       "name": "v",
                                       "fill": "$text-muted",
                                       "content": "/qbittorrent",
-                                      "lineHeight": "$Type/Label/Line",
-                                      "fontFamily": "$Type/Family/Mono",
-                                      "fontSize": "$Type/Label/Size",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
                                       "fontWeight": "normal"
                                     }
                                   ]
@@ -78389,9 +78546,20 @@
                                   "height": 44,
                                   "fill": "$bg-tertiary",
                                   "cornerRadius": "$radius-md",
+                                  "gap": "$Space/sm",
                                   "justifyContent": "center",
                                   "alignItems": "center",
                                   "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "lDGbP",
+                                      "name": "i",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "plug",
+                                      "library": "lucide",
+                                      "fill": "$text-primary"
+                                    },
                                     {
                                       "type": "text",
                                       "id": "hdB55",
@@ -78413,9 +78581,20 @@
                                   "height": 44,
                                   "fill": "$accent-primary",
                                   "cornerRadius": "$radius-md",
+                                  "gap": "$Space/sm",
                                   "justifyContent": "center",
                                   "alignItems": "center",
                                   "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "oEHLK",
+                                      "name": "i",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "save",
+                                      "library": "lucide",
+                                      "fill": "$text-on-accent"
+                                    },
                                     {
                                       "type": "text",
                                       "id": "f0ScHR",
@@ -80355,7 +80534,7 @@
               },
               "clip": true,
               "width": 390,
-              "height": 844,
+              "height": 980,
               "fill": "$bg-primary",
               "layout": "vertical",
               "children": [
@@ -80590,7 +80769,7 @@
                           "fill": "$text-secondary",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "設定 Vido 使用的第三方服務 API 金鑰。金鑰會加密後儲存於 NAS。",
+                          "content": "設定 Vido 使用的第三方服務 API 金鑰。金鑰會加密後儲存於 NAS，並優先於環境變數。",
                           "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Primary",
                           "fontSize": "$Type/Body/Size",
@@ -80651,6 +80830,17 @@
                                       "fontFamily": "$Type/Family/Primary",
                                       "fontSize": "$Type/Body/Size",
                                       "fontWeight": "600"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "ocFvT",
+                                      "name": "mask",
+                                      "fill": "$text-muted",
+                                      "content": "sk-ant…7f3a",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Mono",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
                                     }
                                   ]
                                 },
@@ -80685,8 +80875,11 @@
                             {
                               "type": "frame",
                               "id": "IgWl7",
+                              "x": 16,
+                              "y": 47,
                               "name": "input",
-                              "width": "fill_container",
+                              "enabled": false,
+                              "width": "fill_container(310)",
                               "height": 44,
                               "fill": "$bg-tertiary",
                               "cornerRadius": "$radius-md",
@@ -80711,6 +80904,132 @@
                                   "fontWeight": "normal"
                                 }
                               ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ZfwoZ",
+                              "name": "stored-actions",
+                              "gap": "$Space/sm",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "rKzrr",
+                                  "name": "btn-編輯",
+                                  "height": 44,
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-md",
+                                  "gap": "$Space/xs-plus",
+                                  "padding": [
+                                    "$Space/none",
+                                    "$Space/md"
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "APZmK",
+                                      "name": "l",
+                                      "fill": "$text-primary",
+                                      "content": "編輯",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "500"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "k52GDh",
+                                  "name": "btn-清除",
+                                  "height": 44,
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-md",
+                                  "gap": "$Space/xs-plus",
+                                  "padding": [
+                                    "$Space/none",
+                                    "$Space/md"
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "VJbsY",
+                                      "name": "i",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "trash-2",
+                                      "library": "lucide",
+                                      "fill": "$text-primary"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "t7SQmq",
+                                      "name": "l",
+                                      "fill": "$text-primary",
+                                      "content": "清除",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "500"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "M9yVqe",
+                                  "name": "btn-測試",
+                                  "height": 44,
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-md",
+                                  "gap": "$Space/xs-plus",
+                                  "padding": [
+                                    "$Space/none",
+                                    "$Space/md"
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "ipvMZ",
+                                      "name": "i",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "plug",
+                                      "library": "lucide",
+                                      "fill": "$text-primary"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "fNpoi",
+                                      "name": "l",
+                                      "fill": "$text-primary",
+                                      "content": "測試",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "500"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "Qi9je",
+                              "name": "hint",
+                              "fill": "$text-muted",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "用於字幕翻譯與 AI 檔名解析。儲存後立即生效，無需重啟伺服器。",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
                             }
                           ]
                         },
@@ -80746,7 +81065,7 @@
                                       "id": "z6UcDf",
                                       "name": "t",
                                       "fill": "$text-primary",
-                                      "content": "TMDb",
+                                      "content": "TMDB",
                                       "lineHeight": "$Type/Body/Line",
                                       "fontFamily": "$Type/Family/Primary",
                                       "fontSize": "$Type/Body/Size",
@@ -80772,7 +81091,7 @@
                                       "id": "K2pzyD",
                                       "name": "l",
                                       "fill": "$info-text",
-                                      "content": "環境變數",
+                                      "content": "目前由環境變數提供",
                                       "lineHeight": "$Type/Label/Line",
                                       "fontFamily": "$Type/Family/Primary",
                                       "fontSize": "$Type/Label/Size",
@@ -80804,13 +81123,52 @@
                                   "id": "fuhLO",
                                   "name": "m",
                                   "fill": "$text-muted",
-                                  "content": "TMDb API Key",
+                                  "content": "TMDB API Key",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Mono",
                                   "fontSize": "$Type/Label/Size",
                                   "fontWeight": "normal"
                                 }
                               ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "oZooA",
+                              "name": "hint",
+                              "fill": "$text-muted",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "用於中繼資料與海報。儲存後需重啟伺服器才會生效。",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "CJsb9",
+                              "name": "env-note",
+                              "fill": "$info-text",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "在此儲存的金鑰會覆蓋環境變數提供的設定。",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "TR5vO",
+                              "name": "tmdb-attribution",
+                              "fill": "$text-muted",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "TMDB 標誌＋非背書聲明（TmdbAttribution，TMDB 條款 §3）",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
                             }
                           ]
                         },
@@ -80911,8 +81269,34 @@
                                   "fontWeight": "normal"
                                 }
                               ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "q7lD03",
+                              "name": "hint",
+                              "fill": "$text-muted",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "選配：雲端語音辨識。儲存後立即生效，無需重啟伺服器。未設定時仍可使用內建的字幕來源。",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
                             }
                           ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "q3Yz9",
+                          "name": "test-note",
+                          "fill": "$text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "僅 Claude 金鑰支援連線測試。",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "frame",
@@ -80920,7 +81304,7 @@
                           "name": "btn-save",
                           "width": "fill_container",
                           "height": 44,
-                          "fill": "$accent-primary",
+                          "fill": "$bg-tertiary",
                           "cornerRadius": "$radius-md",
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -80929,7 +81313,7 @@
                               "type": "text",
                               "id": "ZQxUk",
                               "name": "t",
-                              "fill": "$text-on-accent",
+                              "fill": "$text-muted",
                               "content": "儲存金鑰",
                               "lineHeight": "$Type/Body/Line",
                               "fontFamily": "$Type/Family/Primary",
@@ -89440,7 +89824,7 @@
               },
               "clip": true,
               "width": 390,
-              "height": 1540,
+              "height": 1604,
               "fill": "$bg-primary",
               "layout": "vertical",
               "children": [
@@ -89735,9 +90119,9 @@
                                       "name": "title",
                                       "fill": "$text-primary",
                                       "content": "Sonarr",
-                                      "lineHeight": "$Type/Body/Line",
+                                      "lineHeight": "$Type/BodyLg/Line",
                                       "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Body/Size",
+                                      "fontSize": "$Type/BodyLg/Size",
                                       "fontWeight": "600"
                                     },
                                     {
@@ -89788,9 +90172,9 @@
                                       "name": "t",
                                       "fill": "$text-secondary",
                                       "content": "啟用",
-                                      "lineHeight": "$Type/Label/Line",
+                                      "lineHeight": "$Type/Body/Line",
                                       "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Label/Size",
+                                      "fontSize": "$Type/Body/Size",
                                       "fontWeight": "500"
                                     },
                                     {
@@ -89828,9 +90212,9 @@
                                   "name": "t",
                                   "fill": "$text-secondary",
                                   "content": "網址",
-                                  "lineHeight": "$Type/Label/Line",
+                                  "lineHeight": "$Type/Body/Line",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Label/Size",
+                                  "fontSize": "$Type/Body/Size",
                                   "fontWeight": "500"
                                 },
                                 {
@@ -89857,9 +90241,9 @@
                                       "name": "v",
                                       "fill": "$text-primary",
                                       "content": "http://192.168.1.100:8989",
-                                      "lineHeight": "$Type/Label/Line",
+                                      "lineHeight": "$Type/Body/Line",
                                       "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Label/Size",
+                                      "fontSize": "$Type/Body/Size",
                                       "fontWeight": "normal"
                                     }
                                   ]
@@ -89880,9 +90264,9 @@
                                   "name": "t",
                                   "fill": "$text-secondary",
                                   "content": "API 金鑰",
-                                  "lineHeight": "$Type/Label/Line",
+                                  "lineHeight": "$Type/Body/Line",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Label/Size",
+                                  "fontSize": "$Type/Body/Size",
                                   "fontWeight": "500"
                                 },
                                 {
@@ -89909,9 +90293,9 @@
                                       "name": "v",
                                       "fill": "$text-primary",
                                       "content": "••••••••••••••••",
-                                      "lineHeight": "$Type/Label/Line",
+                                      "lineHeight": "$Type/Body/Line",
                                       "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Label/Size",
+                                      "fontSize": "$Type/Body/Size",
                                       "fontWeight": "normal"
                                     }
                                   ]
@@ -89945,9 +90329,9 @@
                                   "name": "t",
                                   "fill": "$text-secondary",
                                   "content": "品質設定檔",
-                                  "lineHeight": "$Type/Label/Line",
+                                  "lineHeight": "$Type/Body/Line",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Label/Size",
+                                  "fontSize": "$Type/Body/Size",
                                   "fontWeight": "500"
                                 },
                                 {
@@ -89974,9 +90358,9 @@
                                       "name": "v",
                                       "fill": "$text-primary",
                                       "content": "HD-1080p",
-                                      "lineHeight": "$Type/Label/Line",
+                                      "lineHeight": "$Type/Body/Line",
                                       "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Label/Size",
+                                      "fontSize": "$Type/Body/Size",
                                       "fontWeight": "normal"
                                     },
                                     {
@@ -90007,9 +90391,9 @@
                                   "name": "t",
                                   "fill": "$text-secondary",
                                   "content": "根資料夾",
-                                  "lineHeight": "$Type/Label/Line",
+                                  "lineHeight": "$Type/Body/Line",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Label/Size",
+                                  "fontSize": "$Type/Body/Size",
                                   "fontWeight": "500"
                                 },
                                 {
@@ -90036,9 +90420,9 @@
                                       "name": "v",
                                       "fill": "$text-primary",
                                       "content": "/data/media/tv",
-                                      "lineHeight": "$Type/Label/Line",
+                                      "lineHeight": "$Type/Body/Line",
                                       "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Label/Size",
+                                      "fontSize": "$Type/Body/Size",
                                       "fontWeight": "normal"
                                     },
                                     {
@@ -90083,9 +90467,20 @@
                                   "height": 44,
                                   "fill": "$bg-tertiary",
                                   "cornerRadius": "$radius-md",
+                                  "gap": "$Space/sm",
                                   "justifyContent": "center",
                                   "alignItems": "center",
                                   "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "bNBCy",
+                                      "name": "i",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "plug",
+                                      "library": "lucide",
+                                      "fill": "$text-primary"
+                                    },
                                     {
                                       "type": "text",
                                       "id": "pyIH9",
@@ -90107,9 +90502,20 @@
                                   "height": 44,
                                   "fill": "$accent-primary",
                                   "cornerRadius": "$radius-md",
+                                  "gap": "$Space/sm",
                                   "justifyContent": "center",
                                   "alignItems": "center",
                                   "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "dHPZT",
+                                      "name": "i",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "save",
+                                      "library": "lucide",
+                                      "fill": "$text-on-accent"
+                                    },
                                     {
                                       "type": "text",
                                       "id": "QQ7H7",
@@ -90163,9 +90569,9 @@
                                       "name": "title",
                                       "fill": "$text-primary",
                                       "content": "Radarr",
-                                      "lineHeight": "$Type/Body/Line",
+                                      "lineHeight": "$Type/BodyLg/Line",
                                       "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Body/Size",
+                                      "fontSize": "$Type/BodyLg/Size",
                                       "fontWeight": "600"
                                     },
                                     {
@@ -90241,9 +90647,9 @@
                                       "name": "t",
                                       "fill": "$text-secondary",
                                       "content": "啟用",
-                                      "lineHeight": "$Type/Label/Line",
+                                      "lineHeight": "$Type/Body/Line",
                                       "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Label/Size",
+                                      "fontSize": "$Type/Body/Size",
                                       "fontWeight": "500"
                                     },
                                     {
@@ -90281,9 +90687,9 @@
                                   "name": "t",
                                   "fill": "$text-secondary",
                                   "content": "網址",
-                                  "lineHeight": "$Type/Label/Line",
+                                  "lineHeight": "$Type/Body/Line",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Label/Size",
+                                  "fontSize": "$Type/Body/Size",
                                   "fontWeight": "500"
                                 },
                                 {
@@ -90310,9 +90716,9 @@
                                       "name": "v",
                                       "fill": "$text-muted",
                                       "content": "http://192.168.1.100:7878",
-                                      "lineHeight": "$Type/Label/Line",
+                                      "lineHeight": "$Type/Body/Line",
                                       "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Label/Size",
+                                      "fontSize": "$Type/Body/Size",
                                       "fontWeight": "normal"
                                     }
                                   ]
@@ -90333,9 +90739,9 @@
                                   "name": "t",
                                   "fill": "$text-secondary",
                                   "content": "API 金鑰",
-                                  "lineHeight": "$Type/Label/Line",
+                                  "lineHeight": "$Type/Body/Line",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Label/Size",
+                                  "fontSize": "$Type/Body/Size",
                                   "fontWeight": "500"
                                 },
                                 {
@@ -90362,9 +90768,9 @@
                                       "name": "v",
                                       "fill": "$text-muted",
                                       "content": "貼上 Radarr 的 API 金鑰",
-                                      "lineHeight": "$Type/Label/Line",
+                                      "lineHeight": "$Type/Body/Line",
                                       "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Label/Size",
+                                      "fontSize": "$Type/Body/Size",
                                       "fontWeight": "normal"
                                     }
                                   ]
@@ -90398,9 +90804,9 @@
                                   "name": "t",
                                   "fill": "$text-secondary",
                                   "content": "品質設定檔",
-                                  "lineHeight": "$Type/Label/Line",
+                                  "lineHeight": "$Type/Body/Line",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Label/Size",
+                                  "fontSize": "$Type/Body/Size",
                                   "fontWeight": "500"
                                 },
                                 {
@@ -90427,9 +90833,9 @@
                                       "name": "v",
                                       "fill": "$text-disabled",
                                       "content": "啟用並儲存連線後可以選擇",
-                                      "lineHeight": "$Type/Label/Line",
+                                      "lineHeight": "$Type/Body/Line",
                                       "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Label/Size",
+                                      "fontSize": "$Type/Body/Size",
                                       "fontWeight": "normal"
                                     },
                                     {
@@ -90460,9 +90866,9 @@
                                   "name": "t",
                                   "fill": "$text-secondary",
                                   "content": "根資料夾",
-                                  "lineHeight": "$Type/Label/Line",
+                                  "lineHeight": "$Type/Body/Line",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Label/Size",
+                                  "fontSize": "$Type/Body/Size",
                                   "fontWeight": "500"
                                 },
                                 {
@@ -90489,9 +90895,9 @@
                                       "name": "v",
                                       "fill": "$text-disabled",
                                       "content": "啟用並儲存連線後可以選擇",
-                                      "lineHeight": "$Type/Label/Line",
+                                      "lineHeight": "$Type/Body/Line",
                                       "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Label/Size",
+                                      "fontSize": "$Type/Body/Size",
                                       "fontWeight": "normal"
                                     },
                                     {
@@ -90505,6 +90911,19 @@
                                       "fill": "$text-disabled"
                                     }
                                   ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "O8T1fE",
+                                  "name": "hint",
+                                  "fill": "$text-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "送出電影請求時，Vido 用這兩個設定把它加進 Radarr。",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "normal"
                                 }
                               ]
                             },
@@ -90523,9 +90942,20 @@
                                   "height": 44,
                                   "fill": "$bg-tertiary",
                                   "cornerRadius": "$radius-md",
+                                  "gap": "$Space/sm",
                                   "justifyContent": "center",
                                   "alignItems": "center",
                                   "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "S33TX",
+                                      "name": "i",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "plug",
+                                      "library": "lucide",
+                                      "fill": "$text-primary"
+                                    },
                                     {
                                       "type": "text",
                                       "id": "QvUKO",
@@ -90547,9 +90977,20 @@
                                   "height": 44,
                                   "fill": "$bg-tertiary",
                                   "cornerRadius": "$radius-md",
+                                  "gap": "$Space/sm",
                                   "justifyContent": "center",
                                   "alignItems": "center",
                                   "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "x3Rit",
+                                      "name": "i",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "save",
+                                      "library": "lucide",
+                                      "fill": "$text-on-accent"
+                                    },
                                     {
                                       "type": "text",
                                       "id": "yus9J",
@@ -90772,6 +91213,21 @@
               "textGrowth": "fixed-width",
               "width": 880,
               "content": "設定（所有分頁）：頁面標題桌機 24／手機 20，說明兩邊都是 14。分頁列在手機可左右滑，兩側淡出只在那一側還有內容時出現；桌機 1440 整條放得下、不出現淡出（分隔線兩側各 4，與母版相同）。『效能監控』尚未開放：灰字＋徽章、按不下去（C14 不畫選中）。任一頁整頁載入失敗都用 C16 的樣子（圖示、一句人話、重試），不顯示後端的原始錯誤。",
+              "lineHeight": "$Type/Label/Line",
+              "fontFamily": "$Type/Family/Primary",
+              "fontSize": "$Type/Label/Size",
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "ZCZLf",
+              "x": 18020,
+              "y": 20510,
+              "name": "spec-note-dsr-3b",
+              "fill": "$text-muted",
+              "textGrowth": "fixed-width",
+              "width": 880,
+              "content": "連線／金鑰：卡片內距桌機 24／手機 16、欄位間距 16，卡片標題 16。金鑰每列：標籤＋狀態 → 輸入框（等寬，測試鈕嵌在框內右側，只有 Claude 有）→ 說明。已儲存的金鑰顯示遮罩值＋編輯／清除／測試，不顯示空輸入框。沒有加密金鑰＝硃砂（壞了、存不了）；連線沒加密＝赭（建議你處理）。手機每把金鑰一張卡，功能與文案和桌機相同；手機的欄位標籤與輸入框維持 14（手機不縮內文）。品牌拼法一律 TMDB。",
               "lineHeight": "$Type/Label/Line",
               "fontFamily": "$Type/Family/Primary",
               "fontSize": "$Type/Label/Size",

@@ -270,14 +270,11 @@ export function ArrConnectionForm({ plugin }: { plugin: DvrPlugin }) {
     <section
       aria-labelledby={titleId}
       data-testid={`arr-card-${plugin}`}
-      className="max-w-3xl rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4 md:p-8"
+      className="max-w-3xl rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4 md:p-6"
     >
       <header className="mb-6 flex items-center justify-between gap-4">
         <div>
-          <h2
-            id={titleId}
-            className="text-base font-semibold text-[var(--text-primary)] md:text-lg"
-          >
+          <h2 id={titleId} className="text-base font-semibold text-[var(--text-primary)]">
             {copy.name}
           </h2>
           <p className="text-xs text-[var(--text-muted)]">{copy.role}</p>
@@ -335,7 +332,7 @@ export function ArrConnectionForm({ plugin }: { plugin: DvrPlugin }) {
       ) : (
         <form onSubmit={handleSave} data-testid={`arr-form-${plugin}`}>
           {/* Locked while a test or save is in flight, so the form cannot change under the request. */}
-          <fieldset disabled={busy} className="m-0 min-w-0 space-y-6 border-0 p-0">
+          <fieldset disabled={busy} className="m-0 min-w-0 space-y-4 border-0 p-0">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <span
@@ -556,7 +553,7 @@ export function ArrConnectionForm({ plugin }: { plugin: DvrPlugin }) {
               </p>
             )}
 
-            <div className="grid grid-cols-2 gap-2 md:flex md:justify-end md:gap-4">
+            <div className="grid grid-cols-2 gap-2 md:flex md:justify-end md:gap-3">
               <button
                 type="button"
                 onClick={handleTest}

@@ -1,6 +1,6 @@
 # Story DSR.3b：連線設定與金鑰設定對齊設計稿——金鑰的「測試」鈕放進輸入框裡、手機上每把金鑰一張卡、兩條警告講清楚「為什麼不能存」
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -98,13 +98,13 @@ so that 我不用在同一個分頁裡看到兩種表單寫法，也不會被一
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — 設計稿：C4／C23／C7／C21／C22 的碼→稿項目、TMDB、規格註記（AC: #1）**
-- [ ] **Task 2 — 連線設定兩份表單的間距、標題、按鈕（AC: #2, #8）**
-- [ ] **Task 3 — 金鑰每列重排：框內測試鈕、說明下移、只剩一句不能測的說明、儲存金鑰（AC: #3, #8）**
-- [ ] **Task 4 — 金鑰手機卡片（AC: #4, #8）**
-- [ ] **Task 5 — C21 硃砂兩行、C22 赭色標題與勾選框、載入失敗換共用元件（AC: #5, #6, #8）**
-- [ ] **Task 6 — 夾具、e2e、mutation check、收尾（AC: #7, #8, #9）**
-  - [ ] dev-story Step 9：`c4-d`／`c4-m`／`c7-d`／`c7-m`／`c21-d`／`c22-d`／`c23-d`／`c23-m`
+- [x] **Task 1 — 設計稿：C4／C23／C7／C21／C22 的碼→稿項目、TMDB、規格註記（AC: #1）**
+- [x] **Task 2 — 連線設定兩份表單的間距、標題、按鈕（AC: #2, #8）**
+- [x] **Task 3 — 金鑰每列重排：框內測試鈕、說明下移、只剩一句不能測的說明、儲存金鑰（AC: #3, #8）**
+- [x] **Task 4 — 金鑰手機卡片（AC: #4, #8）**
+- [x] **Task 5 — C21 硃砂兩行、C22 赭色標題與勾選框、載入失敗換共用元件（AC: #5, #6, #8）**
+- [x] **Task 6 — 夾具、e2e、mutation check、收尾（AC: #7, #8, #9）**
+  - [x] dev-story Step 9：`c4-d`／`c4-m`／`c7-d`／`c7-m`／`c21-d`／`c22-d`／`c23-d`／`c23-m`
 
 ## Dev Notes
 
@@ -170,10 +170,56 @@ apps/web/src/routes/test/-gallery.fixtures.tsx；tests/e2e/settings-shell.spec.t
 
 ### Agent Model Used
 
+Claude Opus 5.5 — `claude-opus-5-5`（dev-story，Amelia，2026-09-23）
+
 ### Debug Log References
+
+- Pencil：`problems` 67 → **67**。中途一度到 74：C4-M／C7-M／C23-M／C23-D 的內容變長（手機字級 12→14、C7-M 補回說明與測試鈕）超出畫面高度 → 四張畫面各加高（C4-M 844→868、C7-M 844→980、C23-M 1540→1604、C23-D 1533→1553，比照 C23 本來就是長捲動稿）；C7-D `pegsz` 改 `fill_container` 後歸零。存檔走選單 Save、磁碟 grep 到 `spec-note-dsr-3b`（`ZCZLf`）。匯出 196/196，只保留 8 張：`c4-d`、`c4-m`、`c7-d`、`c7-m`、`c21-d`、`c22-d`、`c23-d`、`c23-m`。
+- 本機 e2e／visual 要自己起後端（`VIDO_DATA_DIR=./vido-data VIDO_PORT=8080 go run ./cmd/api`）與前端（`NX_DAEMON=false npx nx serve web`）；全套 unit 跑完會連帶收掉這兩個程序，visual 前要重起。
 
 ### Completion Notes List
 
 - Ultimate context engine analysis completed - comprehensive developer guide created
+- 🔗 AC Drift: **FOUND — see below**（checked: `僅支援 Claude|api-keys-load-error|無法讀取金鑰設定|compliance is not conditional|flex-col` across `_bmad-output/implementation-artifacts/*.md`）
+  - 🔗 AC Drift: `sub-2-1b-key-config-page`（其 spec 註解「The other rows still SHOW 測試, disabled with a reason」）— 非 Claude 列「停用的測試鈕＋每列一句說明」→「不畫測試鈕、卡片底下說一次」。本張 🔴 #11 的刻意變更；對應 spec 條目已改寫。
+  - 🔗 AC Drift: `sub-2-1b-key-config-page` CR（fail-soft：讀不到時表單照樣畫、狀態顯示「無法確認」）與 `sub-6-9-tmdb-attribution`（TMDB 標示不因讀取失敗而消失）→ **REUSE，所以本張 🔴 #19 沒有照字面做**（見偏離 1）。
+  - 🔗 AC Drift: `feat-settings-*`／QBittorrentForm 既有 spec「button container uses flex-col on mobile」→ 手機兩欄並排（🔴 #6 的刻意變更，與 Arr 卡片一致）。
+- 📎 Contract Stamps: NONE（no [@contract-v*] stamps in this story or upstream refs — 純前端外觀，讀的是既有 `/settings/keys`、`/settings/qbittorrent`、`/settings/{sonarr,radarr}` implicit v0）
+- 🎭 A11y Pre-Flight: PASS（3 components — ApiKeysForm／QBittorrentForm／ArrConnectionForm；0 jsx-a11y warnings on these files；0 introduced。框內「測試」鈕仍是 `<button>`、`data-testid` 與測試中／結果的 `role="status"` 回饋不變；輸入框 `aria-describedby` 仍指向說明（說明移到框下方不影響關聯）；C21 改 `role="alert"`；讀取失敗的重試用 `aria-disabled` 不丟焦點；手機所有按鈕 `max-sm:min-h-11`）
+- ⚠️ **偏離 1（載入失敗，🔴 #19／AC #6）**：story 說換成 `SettingsErrorState`（整頁）。但金鑰頁的讀取失敗有兩個先前刻意的決定：sub-2-1b CR「表單照樣畫，頁面不能是死路」、sub-6-9「TMDB 標示不因讀取失敗而消失（合規不是有條件的）」——整頁錯誤會同時違反兩者。所以**保留 fail-soft 的橫幅＋表單**，只改該改的：拿掉後端原文（`error.message`）、改成 SM 擬的「無法讀取金鑰設定／與後端的連線中斷了。已存的金鑰不受影響。」、加「重試」（`refetch`，`aria-disabled` 防焦點掉落）。
+- ⚠️ **偏離 2（C22 的視覺夾具）**：AC #8 列了 `settings-api-keys-form/http-warning`。gallery 跑在 localhost＝secure context，C22 的警告根本不會出現（這正是那段程式碼的設計：看 `window.isSecureContext`，不看 protocol），沒有注入點就拍不到 → 沒做；C22 由 unit spec 守（標題／說明／勾選框色票、泥金不得出現）。
+- ⚠️ **稿與碼的一致化順帶改了一處碼**：TMDB 列的 placeholder「TMDb API Key」→「TMDB API Key」（品牌拼法 🔴 #13 一律 TMDB；稿同步）。
+- **Task 1（稿）**：C4-D／C4-M／C23-D／C23-M 四張的 8 顆按鈕補 Plug／Save 圖示（碼→稿）；QB 輸入框 8 個等寬字改一般字；手機 C4-M／C23-M 29 個欄位標籤、輸入值改 Body 14、卡標題改 BodyLg 16；C4-M Base Path 提示改「（選填，反向代理用）」；C23-D／C23-M Radarr 根資料夾補「送出電影請求時…」提示；「未設定」小標 `o82CE` 已經是碼的 NEUTRAL 樣式（`$bg-tertiary`／`$text-secondary`／circle-dashed／600）→ 不用改。C7-D：Claude 列改成已儲存（遮罩＋編輯／清除／測試、原輸入框 `enabled:false`）、TMDB／ASR 刪框內測試鈕、TMDB 補環境變數覆蓋說明與 TMDB 標示、「僅 Claude 金鑰支援連線測試。」（拿掉「由服務自行驗證」）移進卡片、儲存鈕畫成停用；C7-M 同樣＋三列補回說明、完整頁面說明、pill「目前由環境變數提供」；C21-D 刪掉到不了的遮罩值、`nAPD6` 改 placeholder、刪畫面裡的設計註記 `u9e2Mf`；全部「TMDb」→「TMDB」（剩 0）。`spec-note-dsr-3b`。
+- **Task 2**：QB 欄位 `space-y-5`→`space-y-4`、標籤 `mb-1.5`→`mb-2`、按鈕 `px-4 font-medium`→`px-5 font-semibold`、按鈕列 `flex-col`→`grid grid-cols-2 … md:gap-3`、Base Path 提示 `text-xs`；Arr 卡 `md:p-8`→`md:p-6`、標題固定 `text-base`、欄位 `space-y-6`→`space-y-4`、按鈕間距 `md:gap-4`→`md:gap-3`；connection route 卡片間距 `gap-6`→`gap-4`、QB 卡同樣的內距與標題。
+- **Task 3–5**：`ApiKeysForm` 每列重排為「標籤＋狀態（＋遮罩）→ 輸入框（44 高、`bg-tertiary`、等寬，Claude 的測試鈕 `absolute` 嵌在框內右側、`pr-24` 留位）或已儲存時的『編輯／清除／測試』→ 說明 → 環境變數覆蓋說明 → 測試結果 → TMDB 標示」；非 Claude 列不渲染測試鈕，卡片底下一句；列標籤 600／`text-primary`（唯讀時 `text-muted`）、pill 12／600；列間 `gap-4`（無分隔線）、卡片實色 `radius-lg`；「儲存金鑰」44 高 600、手機滿寬；手機外層卡 `max-sm:bg-transparent`、每列自成一卡；C21 硃砂兩行＋`Lock`＋`role="alert"`、停用輸入框 `disabled:text-[var(--text-disabled)]`；C22 赭色標題＋說明、18px `ShieldAlert`、勾選框 `accent-[var(--warning-text)]`、標籤 12／600 赭。
+- **測試**：新／改 unit — ApiKeysForm 7 條新（C7 列版面）＋ C21 2 條、C22、非 Claude、讀取失敗改寫；QB 4 條、Arr 3 條。`nx test web` **284 files／4178 tests 全綠**；typecheck、lint 0 error。e2e `settings-shell.spec.ts` 追加 3 條（390 每把金鑰一張卡且外層卡透明、儲存鈕寬＝欄寬；1440 一張卡；框內測試鈕在框內且文字不壓到它）＋既有 `arr-settings.spec.ts`，chromium `--repeat-each=3` **36／36**。
+- **Mutation：unit 15／15 紅、e2e 2／2 紅**（QB 欄距／按鈕列／按鈕字重／提示字級、Arr 內距／欄距、pill 11px、拿掉框內測試鈕、C21 改回赭、C22 勾選框改回泥金、TMDB 列可測、重試不呼叫 refetch、「儲存」、手機外層卡不透明、錯誤原文回來；e2e：拿掉 `pr-24`、外層卡不透明）。
+- **視覺基準**：新 darwin 3 張（`settings-api-keys-form`、`/mobile`（viewport 390）、`/no-encryption-key`）；`settings-qbittorrent-form` default／hover／focus 與 `settings-arr-connection-form/{sonarr-connected,radarr-unconfigured}` 對稿**預期變動**，darwin 更新、5 張 stale `-linux` 刪除待 CI bootstrap。兩個連線夾具的 `penNode` 從 `'screen-section'` 改成 `'6UCtX'`／`'Qva0y'`。`retry-retry-notifications` 仍是本機環境差異（CI 綠，見 dsr-3a）。
+- 🔍 **/ship 對抗式 CR（2026-09-23，獨立 context）0 HIGH／1 MEDIUM／3 LOW／2 NIT，全部吸收**：① 🟠 按「重試」時，TanStack 會把沒有快取的失敗查詢退回 loading，整頁換成轉圈、表單與 TMDB 標示一起消失——正好違反偏離 1 的兩條理由 → 本地 `retrying` 狀態讓轉圈只在第一次載入出現、重試期間橫幅／表單／標示都留著；新增 `ApiKeysForm.retry.spec.tsx`（真的 QueryClient，mock 服務層不 mock hook），拿掉修法 → 紅。② 讀取失敗時標籤不再變灰（只有 `writable:false` 才灰）。③ 手機上編輯已存金鑰時，輸入框與「取消」改上下疊，不再只剩 ~140px 可見。④ e2e「文字不壓到測試鈕」改在測試鈕最寬（轉圈中）時量，拿掉沒作用的 `fill`。⑤ 清除確認不再依賴 `showInput`（來源翻轉時不會殘留）。⑥ 重試仍失敗時 alert 以 `errorUpdatedAt` 為 key 重新宣讀。之後 unit 285 files／4180 綠、e2e `--repeat-each=3` 36／36。
+- 🎨 UX Verification: PASS（`c4-d`／`c4-m`／`c7-d`／`c7-m`／`c21-d`／`c22-d`／`c23-d`／`c23-m`：稿已改成碼的樣子的部分逐項對過；碼改的部分——卡內距 24／16、欄距 16、標籤到框 8、QB 按鈕 600／20、手機並排、框內測試鈕 28 高 12px、說明在框下、儲存金鑰 44、手機一把一卡、C21 硃砂兩行、C22 赭——與稿一致）
 
 ### File List
+
+- `ux-design.pen`
+- `_bmad-output/pen-tokens.json`
+- `_bmad-output/screenshots/flow-c-search-settings/{c4-d,c4-m,c7-d,c7-m,c21-d,c22-d,c23-d,c23-m}.png`
+- `apps/web/src/components/settings/ApiKeysForm.tsx`、`ApiKeysForm.spec.tsx`
+- `apps/web/src/components/settings/QBittorrentForm.tsx`、`QBittorrentForm.spec.tsx`
+- `apps/web/src/components/settings/ArrConnectionForm.tsx`、`ArrConnectionForm.spec.tsx`
+- `apps/web/src/routes/settings/connection.tsx`
+- `apps/web/src/routes/test/-gallery.fixtures.tsx`
+- `tests/e2e/settings-shell.spec.ts`
+- `tests/visual/components.visual.spec.ts-snapshots/components/settings-api-keys-form/{default,mobile/default,no-encryption-key/default}-visual-darwin.png`（新）
+- `tests/visual/components.visual.spec.ts-snapshots/components/settings-qbittorrent-form/{default,hover,focus}-visual-darwin.png`（改）、`-linux.png`（刪）
+- `tests/visual/components.visual.spec.ts-snapshots/components/settings-arr-connection-form/{sonarr-connected,radarr-unconfigured}/default-visual-darwin.png`（改）、`-linux.png`（刪）
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/implementation-artifacts/dsr-3b-settings-connection-and-keys.md`
+
+### Change Log
+
+| Date | Change |
+| --- | --- |
+| 2026-09-23 | Task 1：設計稿——C4／C23 按鈕圖示、字級、提示；C7-D／C7-M 已儲存狀態、非 Claude 無測試、環境變數說明、TMDB 標示、停用儲存鈕；C21 刪遮罩與註記；TMDb→TMDB；四張加高；`spec-note-dsr-3b` |
+| 2026-09-23 | Task 2：連線設定兩份表單的間距、按鈕、卡片 |
+| 2026-09-23 | Task 3–5：金鑰每列重排、框內測試鈕、手機一把一卡、C21 硃砂、C22 赭、讀取失敗改人話＋重試（偏離 1） |
+| 2026-09-23 | Task 6：3 個新夾具、e2e 3 條、mutation 17／17、全套 web 4178 綠 |
