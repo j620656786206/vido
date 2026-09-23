@@ -50,7 +50,7 @@ describe('ServiceStatusDashboard — 重試 (real QueryClient)', () => {
 
     expect(screen.queryByTestId('status-loading')).toBeNull();
     expect(screen.getByTestId('status-error')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '重試中…' })).toHaveAttribute(
+    expect(await screen.findByRole('button', { name: '重試中…' })).toHaveAttribute(
       'aria-disabled',
       'true'
     );
@@ -71,5 +71,19 @@ describe('ServiceStatusDashboard — 重試 (real QueryClient)', () => {
     });
     await waitFor(() => expect(screen.getByTestId('service-card-tmdb')).toBeInTheDocument());
     expect(screen.queryByTestId('status-error')).toBeNull();
+  });
+
+  it('a retry that fails again goes back to 重試, not stuck on 重試中…', async () => {
+    getAllStatuses
+      .mockRejectedValueOnce(new Error('Failed to fetch'))
+      .mockRejectedValueOnce(new Error('Failed to fetch again'));
+    renderDashboard();
+    fireEvent.click(await screen.findByRole('button', { name: '重試' }));
+    await waitFor(() => expect(getAllStatuses).toHaveBeenCalledTimes(2));
+    expect(await screen.findByRole('button', { name: '重試' })).not.toHaveAttribute(
+      'aria-disabled'
+    );
+    expect(screen.queryByTestId('status-loading')).toBeNull();
+    expect(getAllStatuses).toHaveBeenCalledTimes(2);
   });
 });

@@ -77,10 +77,14 @@ export function ServiceStatusCard({ service, onTest, isTesting }: ServiceStatusC
 
       <button
         type="button"
-        onClick={() => onTest(service.name)}
-        disabled={isTesting}
+        onClick={() => {
+          if (!isTesting) onTest(service.name);
+        }}
+        // aria-disabled, not disabled: a disabled button drops keyboard focus to
+        // <body> the instant Enter is pressed (same as SettingsErrorState).
+        aria-disabled={isTesting || undefined}
         aria-label={`重新檢查 ${label.name}`}
-        className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:opacity-50 sm:size-9"
+        className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 sm:size-9"
         data-testid={`test-btn-${service.name}`}
       >
         <RefreshCw

@@ -229,7 +229,10 @@ describe('ServiceStatusCard', () => {
     );
 
     const btn = screen.getByTestId('test-btn-tmdb');
-    expect(btn).toBeDisabled();
+    // aria-disabled keeps keyboard focus on the button; a click is a no-op.
+    expect(btn).toHaveAttribute('aria-disabled', 'true');
+    btn.click();
+    expect(onTest).not.toHaveBeenCalled();
     expect(screen.getByTestId('test-spinner-tmdb').getAttribute('class')).toContain(
       'motion-safe:animate-spin'
     );

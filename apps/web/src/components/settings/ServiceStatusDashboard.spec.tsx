@@ -58,6 +58,7 @@ describe('ServiceStatusDashboard', () => {
       data: undefined,
       isLoading: false,
       isFetching: false,
+      isFetched: true,
       error: new Error('Network error'),
       refetch,
     } as any);
@@ -226,6 +227,7 @@ describe('ServiceStatusDashboard', () => {
     mockUseServiceStatuses.mockReturnValue({
       data: undefined,
       isLoading: false,
+      isFetched: true,
       error: new Error('Connection timeout'),
     } as any);
 
@@ -306,7 +308,9 @@ describe('ServiceStatusDashboard', () => {
     await user.click(screen.getByTestId('test-btn-tmdb'));
     expect(mockMutateAsync).toHaveBeenCalledWith('tmdb');
     expect(screen.getByTestId('test-error')).toBeInTheDocument();
-    expect(screen.getByText('Service unreachable')).toBeInTheDocument();
+    // The request's own message is English from the backend or the browser.
+    expect(screen.getByTestId('test-error')).toHaveTextContent('無法重新檢查 TMDB，請稍後再試。');
+    expect(screen.queryByText('Service unreachable')).toBeNull();
   });
 
   it('[P1] clears test error on next successful test', async () => {
@@ -695,7 +699,7 @@ describe('ServiceStatusDashboard', () => {
     renderWithQuery(React.createElement(ServiceStatusDashboard));
     await user.click(screen.getByTestId('test-btn-tmdb'));
     expect(screen.getByTestId('test-error')).toBeInTheDocument();
-    expect(screen.getByText('測試連線失敗')).toBeInTheDocument();
+    expect(screen.getByText('無法重新檢查 TMDB，請稍後再試。')).toBeInTheDocument();
   });
 
   describe('dsr-3c: broken-services banner', () => {
@@ -794,11 +798,8 @@ describe('ServiceStatusDashboard', () => {
       withServices([tmdbOk, aiLimited]);
       renderWithQuery(React.createElement(ServiceStatusDashboard));
       expect(screen.queryByTestId('service-error-banner')).toBeNull();
-      // The live region stays mounted so the first break is announced.
-      expect(screen.getByTestId('service-error-banner-region')).toHaveAttribute(
-        'aria-live',
-        'polite'
-      );
+      // The live sentence stays mounted (and empty) so the first break is announced.
+      expect(screen.getByTestId('service-error-announcement')).toBeEmptyDOMElement();
     });
 
     it('重新檢查 re-tests every broken service, one after another, through the existing test call', async () => {
@@ -853,5 +854,132 @@ describe('ServiceStatusDashboard', () => {
     const note = screen.getByTestId('status-change-notification');
     expect(note).toHaveTextContent('豆瓣：已連線 → 錯誤');
     expect(note).not.toHaveTextContent('Douban Scraper');
+  });
+
+  describe('dsr-3c CR', () => {
+    const svc = (name: string, status: string, extra = {}) => ({
+      name,
+      displayName: name.toUpperCase(),
+      status,
+      message: status,
+      lastSuccessAt: null,
+      lastCheckAt: '2026-02-10T14:30:00Z',
+      responseTimeMs: 0,
+      ...extra,
+    });
+
+    it('a failed background poll keeps the last good list instead of a full-page error', () => {
+      mockUseServiceStatuses.mockReturnValue({
+        data: { services: [svc('tmdb', 'connected')] },
+        isFetched: true,
+        isFetching: false,
+        error: new Error('poll failed'),
+      } as any);
+      renderWithQuery(React.createElement(ServiceStatusDashboard));
+      expect(screen.getByTestId('service-card-tmdb')).toBeInTheDocument();
+      expect(screen.queryByTestId('status-error')).toBeNull();
+    });
+
+    it('a refetch of a failed first load stays on the error page as 重試中…, not the skeleton', () => {
+      // What TanStack reports mid-refetch with nothing cached: pending, no error, fetching.
+      mockUseServiceStatuses.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+        isFetched: true,
+        isFetching: true,
+        error: null,
+      } as any);
+      renderWithQuery(React.createElement(ServiceStatusDashboard));
+      expect(screen.queryByTestId('status-loading')).toBeNull();
+      expect(screen.getByRole('button', { name: '重試中…' })).toHaveAttribute(
+        'aria-disabled',
+        'true'
+      );
+    });
+
+    it('shows a rate-limited service’s raw error in a standalone 技術細節 when nothing is broken', () => {
+      mockUseServiceStatuses.mockReturnValue({
+        data: {
+          services: [
+            svc('tmdb', 'rate_limited', {
+              errorMessage: 'TMDb API rate limit exceeded',
+              lastSuccessAt: '2026-02-10T14:29:00Z',
+            }),
+          ],
+        },
+        isFetched: true,
+      } as any);
+      renderWithQuery(React.createElement(ServiceStatusDashboard));
+      expect(screen.queryByTestId('service-error-banner')).toBeNull();
+      const details = screen.getByTestId('service-error-details');
+      expect(details).toHaveTextContent('TMDb API rate limit exceeded');
+      expect(details).toHaveTextContent('最後成功：');
+    });
+
+    it('includes the rate-limited service in the banner’s 技術細節 without calling it unreachable', () => {
+      mockUseServiceStatuses.mockReturnValue({
+        data: {
+          services: [
+            svc('qbittorrent', 'error', { errorMessage: 'refused' }),
+            svc('tmdb', 'rate_limited', { errorMessage: 'slow down' }),
+          ],
+        },
+        isFetched: true,
+      } as any);
+      renderWithQuery(React.createElement(ServiceStatusDashboard));
+      expect(screen.getByTestId('service-error-details')).toHaveTextContent('slow down');
+      expect(screen.queryByTestId('broken-line-tmdb')).toBeNull();
+    });
+
+    it('重新檢查 reports every failed test once, even when a later one succeeds', async () => {
+      const user = userEvent.setup();
+      const mutateAsync = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('Failed to fetch'))
+        .mockResolvedValueOnce({});
+      mockUseTestServiceConnection.mockReturnValue({ mutateAsync, isPending: false } as any);
+      mockUseServiceStatuses.mockReturnValue({
+        data: { services: [svc('qbittorrent', 'error'), svc('douban', 'error')] },
+        isFetched: true,
+      } as any);
+      renderWithQuery(React.createElement(ServiceStatusDashboard));
+      await user.click(screen.getByTestId('retest-broken'));
+      expect(screen.getByTestId('test-error')).toHaveTextContent(
+        '無法重新檢查 qBittorrent，請稍後再試。'
+      );
+    });
+
+    it('announces the broken services in one short sentence, not the whole banner', () => {
+      mockUseServiceStatuses.mockReturnValue({
+        data: { services: [svc('qbittorrent', 'error'), svc('douban', 'disconnected')] },
+        isFetched: true,
+      } as any);
+      renderWithQuery(React.createElement(ServiceStatusDashboard));
+      const live = screen.getByTestId('service-error-announcement');
+      expect(live).toHaveAttribute('aria-live', 'polite');
+      expect(live).toHaveTextContent(/^qBittorrent、豆瓣 目前無法連線。$/);
+      expect(screen.getByTestId('service-error-banner')).not.toHaveAttribute('aria-live');
+    });
+
+    it('moves focus to the list when a fix unmounts the banner under the focused button', () => {
+      mockUseServiceStatuses.mockReturnValue({
+        data: { services: [svc('qbittorrent', 'error')] },
+        isFetched: true,
+      } as any);
+      const { rerender } = renderWithQuery(React.createElement(ServiceStatusDashboard));
+      screen.getByTestId('retest-broken').focus();
+      mockUseServiceStatuses.mockReturnValue({
+        data: { services: [svc('qbittorrent', 'connected')] },
+        isFetched: true,
+      } as any);
+      rerender(
+        React.createElement(
+          QueryClientProvider,
+          { client: new QueryClient() },
+          React.createElement(ServiceStatusDashboard)
+        )
+      );
+      expect(screen.getByTestId('service-cards-list')).toHaveFocus();
+    });
   });
 });

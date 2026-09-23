@@ -299,7 +299,7 @@ test.describe('服務狀態 @settings @dsr-3c', () => {
       error: { code: 'INTERNAL_ERROR', message: 'sql: database is locked' },
     });
     await page.goto('/settings/status');
-    // useQuery retries 3× with backoff before it gives up.
+    // The app's QueryClient retries once (queryClient.ts `retry: 1`) before it gives up.
     await expect(page.getByText('無法載入服務狀態')).toBeVisible({ timeout: 20000 });
     await expect(page.getByRole('button', { name: '重試' })).toBeVisible();
     await expect(page.getByText('sql: database is locked')).toHaveCount(0);

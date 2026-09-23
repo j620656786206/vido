@@ -177,11 +177,22 @@ Claude Opus 5.5 (1M context)（Amelia / dev-story）
   - `bugfix-settings-honest-readouts` AC #4（每種狀態都顯示新鮮度、沒有時寫「尚未檢查」）→ 新鮮度仍無條件顯示、testid 照舊；缺值字改成稿上的「—」（「最後檢查 尚未檢查」讀起來重複）。
 - 📎 **Contract Stamps: NONE**（本張與上游皆無 `[@contract-v*]`；只讀既有服務狀態回應，implicit v0）。
 - 🎭 **A11y Pre-Flight: PASS**（3 個元件；觸碰檔案 jsx-a11y 警告 0 條；圖示鈕有 accessible name、橫幅 polite live region 常駐、`<details>` 原生鍵盤可操作、骨架 `aria-busy`；沒有 modal／combobox）。
-- **測試**：新 `serviceLabels.spec.ts` 9 條、`ServiceStatusDashboard.retry.spec.tsx`（真 QueryClient）1 條；`ServiceStatusCard.spec` 22 條、`ServiceStatusDashboard.spec` 27 條。`nx test web` **287 files／4203 tests 全綠**；`nx test api` 綠；`web:typecheck` 綠；touched 檔 eslint 0 error（35 條既有 `no-explicit-any`／1 條既有 `exhaustive-deps` 警告，main 上就有）；prettier 綠。e2e `settings-shell.spec.ts` 追加 3 條，chromium `--repeat-each=3` 整檔 **39／39**。
+- **測試**：新 `serviceLabels.spec.ts` 9 條、`ServiceStatusDashboard.retry.spec.tsx`（真 QueryClient）1 條；`ServiceStatusCard.spec` 22 條、`ServiceStatusDashboard.spec` 26 條（CR 後見下）。`nx test web` **287 files／4203 tests 全綠**；`nx test api` 綠；`web:typecheck` 綠；touched 檔 eslint 0 error（35 條既有 `no-explicit-any`／1 條既有 `exhaustive-deps` 警告，main 上就有）；prettier 綠。e2e `settings-shell.spec.ts` 追加 3 條，chromium `--repeat-each=3` 整檔 **39／39**。
 - **Mutation：unit 10／10 紅、e2e 2／2 紅**（對照表失效→18 紅、拿掉 retrying 旗標、rate_limited 算壞掉、技術細節預設展開、骨架 3 列、未設定 pill 用舊底色、通知用 displayName、一次重測只測第一個、按鈕名用 displayName、拿掉建議；e2e：桌機鈕回 44、拿掉建議）。
 - **視覺基準**：`settings-service-status-card`（3 張 darwin）與 `settings-service-status-dashboard/default` 會變（penNode 改 `wqcqY`，dashboard 改成 C8-D 的五種狀態、寬 1152）；dashboard 的 hover／focus 基準刪除（`statesOnly: ['default']`，整頁夾具的 hover 沒意義）；新增 `/loading`（`XwdOH`）、`/mobile`（`qx8Ma`）。過期的 `-linux` 已 `git rm`，等 CI bootstrap（`project_visual_baseline_intentional_change`）。
 - ⚠️ **與 story 字面的偏離**：① **沒有 `settings-service-status-dashboard/error` 夾具**——dashboard 的錯誤狀態就是 `SettingsErrorState` 帶這兩句話，而 `dsr-3a` 的 `settings-error-state` 夾具已經以同樣兩句、`penNode: 'uYGBU'`、720 寬拍成基準；再拍一張一模一樣的只是重複（要讓 dashboard 真的進錯誤狀態還得讓查詢失敗，gallery 沒有這種 seed）。② 手機夾具只有一張卡（見 Debug Log）。③ 手機橫幅的「重新檢查」是 44 高（稿 32）——手機觸控高度，跟每張卡的 44 鈕一致。
 - 本機 visual 另有一張 `retry-retry-notifications/default-visual-darwin.png` 漂移（main 上就有、與本張無關、只影響 darwin；CI 用 linux）——未收進本張。
+
+- 🔍 **/ship 對抗式 CR（2026-09-23，獨立 context）0 HIGH／3 MEDIUM／3 LOW／7 NIT，全部吸收**：
+  ① 🟠 第一次載入失敗後，每 30 秒輪詢與回到視窗的自動重抓都會讓錯誤頁閃回骨架（TanStack 把沒資料的失敗查詢退回 pending），鍵盤焦點跟著掉；`retrying` 旗標只蓋住手動重試 → 拿掉旗標，改成「沒資料且還沒抓完過一次＝骨架；沒資料＝錯誤頁（`isRetrying={isFetching}`）」。
+  ② 🟠 有快取資料時一次背景輪詢失敗，整排卡片被換成整頁錯誤 → 只有沒資料才整頁錯誤。
+  ③ 🟠 速率限制的服務，原始錯誤與「最後成功」在畫面上消失了（本張早先的 Completion Notes 說「搬到技術細節」並不完整）→ 技術細節涵蓋舊「顯示詳情」的同一群（非已連線、非未設定）；沒有壞掉的服務時，技術細節獨立顯示在列表下方（不套紅色）。
+  ④ 一次重測時，後面成功會把前面的失敗訊息清掉 → 收集後一次報。
+  ⑤ 測試連線失敗時畫面印出後端／瀏覽器的英文 → 改「無法重新檢查 {中文名}，請稍後再試。」。
+  ⑥ 卡片鈕 `disabled` 會把鍵盤焦點丟到 `<body>` → `aria-disabled`＋防呆；重測修好全部後橫幅消失、焦點改交給卡片列表。
+  NIT：`HintText` 改 `indexOf`（找不到就純文字）；宣讀改成一句常駐的 sr-only「{名稱} 目前無法連線。」而不是整條橫幅（不再念到「技術細節 重新檢查」）；e2e 註解改成 `retry: 1`；測試數更正；補「重試又失敗會回到『重試』」測試。未採納：手機 meta 的 `order-last` 讓報讀順序與視覺不同（名稱→回應時間→狀態→按鈕，順序仍合理）。
+  CR 後：mutation 再 8／8 紅；`nx test web` **287 files／4211 tests** 綠；`lint:all`、typecheck 綠；e2e 整檔 `--repeat-each=3` 39／39；visual 本張基準無變化。
+  🔗 AC Drift 補記：`ServiceStatusDashboard.spec` 的 `[P1] shows error message when test connection fails`／`[P2] shows fallback error message for non-Error rejection` 改成斷言中文句、不出現原文（⑤）；`ServiceStatusCard.spec` 的 `disables test button when testing` 改斷言 `aria-disabled` 且點了不呼叫（⑥）。
 
 ### File List
 
@@ -230,4 +241,5 @@ Claude Opus 5.5 (1M context)（Amelia / dev-story）
 | 2026-09-23 | Task 2–3：`serviceLabels.ts`；卡片中文名、pill、meta、圖示鈕；顯示詳情退役 |
 | 2026-09-23 | Task 4：列表下方錯誤橫幅（建議、技術細節含最後成功、一次重測） |
 | 2026-09-23 | Task 5：五列骨架、整頁失敗換 `SettingsErrorState`＋重試中旗標；Skeleton 不改（styles.css 已處理 reduced-motion） |
+| 2026-09-23 | /ship CR：錯誤頁不再被輪詢閃成骨架、背景輪詢失敗保留列表、速率限制的原始錯誤回到技術細節、重測失敗一次報且改中文、焦點不掉 |
 | 2026-09-23 | Task 6：夾具（card／dashboard 改、loading／mobile 新）、e2e 3 條、mutation 12／12、全套 web 4203 綠 |
