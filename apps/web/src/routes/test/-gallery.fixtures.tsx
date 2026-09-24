@@ -142,6 +142,7 @@ import { ScanProgressCard } from '../../components/scanner/ScanProgressCard';
 import { ScanProgressSheet } from '../../components/scanner/ScanProgressSheet';
 import { SearchResults } from '../../components/search/SearchResults';
 import { BackupTable } from '../../components/settings/BackupTable';
+import { CreateBackupFailed } from '../../components/settings/BackupManagement';
 import { CacheTypeCard } from '../../components/settings/CacheTypeCard';
 import { ConnectionTestResult } from '../../components/settings/ConnectionTestResult';
 import { LogEntry } from '../../components/settings/LogEntry';
@@ -275,7 +276,7 @@ import type {
 } from '../../services/exploreBlockService';
 import type { PatternListResponse } from '../../services/learning';
 import type { PendingRetriesResponse } from '../../services/retry';
-import type { BackupListResponse, BackupSchedule } from '../../services/backupService';
+import type { Backup, BackupListResponse, BackupSchedule } from '../../services/backupService';
 import type { CacheStats } from '../../services/cacheService';
 import type { LogsResponse } from '../../services/logService';
 import type { MediaLibraryWithPaths } from '../../services/mediaLibraryService';
@@ -401,6 +402,69 @@ function serviceStatusC8(): ServiceStatusResponse {
     ],
   };
 }
+
+/**
+ * dsr-3f — C5's backups. Offset-less ISO strings parse as LOCAL time, so the
+ * 「2026-09-11 03:00」stamps are the same on a darwin laptop and the linux CI
+ * runner whatever their zones (a `Z` stamp would shift by the runner's offset).
+ */
+const C5_BACKUPS: Backup[] = [
+  {
+    id: 'b1',
+    filename: 'vido-backup-2026-09-11-0300.db',
+    sizeBytes: 54_945_382,
+    schemaVersion: 17,
+    checksum: 'sha256:a1',
+    status: 'completed',
+    createdAt: '2026-09-11T03:00:00',
+  },
+  {
+    id: 'b2',
+    filename: 'vido-backup-2026-09-10-0300.db',
+    sizeBytes: 54_316_236,
+    schemaVersion: 17,
+    checksum: 'sha256:a2',
+    status: 'completed',
+    createdAt: '2026-09-10T03:00:00',
+  },
+  {
+    id: 'b3',
+    filename: 'vido-backup-2026-09-09-1412.db',
+    sizeBytes: 54_106_521,
+    schemaVersion: 17,
+    checksum: '',
+    status: 'running',
+    createdAt: '2026-09-09T14:12:00',
+  },
+];
+/** C5_BACKUPS plus a failed one, so the table baselines also hold the error pill. */
+const C5_BACKUPS_WITH_FAILED: Backup[] = [
+  ...C5_BACKUPS,
+  {
+    id: 'b4',
+    filename: 'vido-backup-2026-09-08-0300.db',
+    sizeBytes: 0,
+    schemaVersion: 17,
+    checksum: '',
+    status: 'failed',
+    createdAt: '2026-09-08T03:00:00',
+  },
+];
+const backupTableProps = {
+  backups: C5_BACKUPS_WITH_FAILED,
+  onDelete: noop,
+  onVerify: noop,
+  onRestore: noop,
+  isDeleting: false,
+  isVerifying: false,
+  isRestoring: false,
+};
+const restoreDialogProps = {
+  backup: C5_BACKUPS[1],
+  isRestoring: false,
+  onConfirm: noop,
+  onCancel: noop,
+};
 
 // ----- Shared mock-data consts for 19-4b Task 2 (parse/* and scanner/* fixtures) -----
 const PARSE_STEPS_FAILED: ParseStep[] = [
@@ -2511,50 +2575,23 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   // ----- settings/ (P-bucket additions) -----
   {
     id: 'settings-backup-table',
-    label: 'settings/BackupTable',
-    // Backup shape mirrors services/backupService — see BackupTable.spec.tsx.
+    label: 'settings/BackupTable (C5-D)',
     component: BackupTable,
-    props: {
-      backups: [
-        {
-          id: 'b1',
-          filename: 'vido-backup-20260320-140000-v17.tar.gz',
-          sizeBytes: 52428800,
-          schemaVersion: 17,
-          checksum: 'abc123',
-          status: 'completed',
-          createdAt: '2026-03-20T14:00:00Z',
-        },
-        {
-          id: 'b2',
-          filename: 'vido-backup-20260319-030000-v17.tar.gz',
-          sizeBytes: 0,
-          schemaVersion: 17,
-          checksum: '',
-          status: 'failed',
-          errorMessage: 'disk full',
-          createdAt: '2026-03-19T03:00:00Z',
-        },
-        {
-          id: 'b3',
-          filename: 'vido-backup-20260320-150000-v17.tar.gz',
-          sizeBytes: 0,
-          schemaVersion: 17,
-          checksum: '',
-          status: 'running',
-          createdAt: '2026-03-20T15:00:00Z',
-        },
-      ],
-      onDelete: noop,
-      onVerify: noop,
-      onRestore: noop,
-      isDeleting: false,
-      isVerifying: false,
-      isRestoring: false,
-    },
-    penNode: 'screen-section',
+    props: backupTableProps,
+    penNode: 'uhAKd', // Screen C5-D — backup-table uMQcZ
     statesOnly: ['default'],
-    width: 760,
+    width: 1152,
+  },
+  {
+    // dsr-3f — the phone card list (the old table cut restore/delete off at 390).
+    // A real 390 viewport: useIsPhone reads the viewport, not the box.
+    id: 'settings-backup-table/mobile',
+    label: 'settings/BackupTable (C5-M — 手機卡片)',
+    component: BackupTable,
+    props: backupTableProps,
+    penNode: 'gEQX4', // Screen C5-M — list nzgTk
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
   },
   {
     id: 'settings-cache-type-card',
@@ -2606,25 +2643,22 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   },
   {
     id: 'settings-restore-confirm-dialog',
-    label: 'settings/RestoreConfirmDialog',
-    // NOT Radix-portal — plain fixed-position overlay, always renders when mounted.
+    label: 'settings/RestoreConfirmDialog (C19-D)',
+    // dsr-3f: now ui/Dialog (Radix portal) — the harness photographs the viewport.
     component: RestoreConfirmDialog,
-    props: {
-      backup: {
-        id: 'b1',
-        filename: 'vido-backup-20260320-140000-v17.tar.gz',
-        sizeBytes: 52428800,
-        schemaVersion: 17,
-        checksum: 'abc123',
-        status: 'completed',
-        createdAt: '2026-03-20T14:00:00Z',
-      },
-      isRestoring: false,
-      onConfirm: noop,
-      onCancel: noop,
-    },
-    penNode: 'screen-section',
+    props: restoreDialogProps,
+    penNode: 'G8BYO', // Screen C19-D
     statesOnly: ['default'],
+  },
+  {
+    // Portal on a phone → a real viewport, not a box (dsr-4b-2 precedent).
+    id: 'settings-restore-confirm-dialog/mobile',
+    label: 'settings/RestoreConfirmDialog (C19-M — 底部抽屜)',
+    component: RestoreConfirmDialog,
+    props: restoreDialogProps,
+    penNode: 'gPZU6', // Screen C19-M
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
   },
   {
     id: 'settings-service-status-card',
@@ -3737,26 +3771,17 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   // ----- settings/ (Task 3) -----
   {
     id: 'settings-backup-management',
-    label: 'settings/BackupManagement',
+    label: 'settings/BackupManagement (C5-D)',
     component: BackupManagement,
-    penNode: 'screen-section',
-    width: 720,
+    penNode: 'uhAKd', // Screen C5-D
+    statesOnly: ['default'],
+    width: 1152,
     seedQueries: [
       {
         queryKey: backupKeys.list(),
         data: {
-          backups: [
-            {
-              id: 'bk-001',
-              filename: 'vido-backup-2026-03-22.tar.gz',
-              sizeBytes: 12_582_912,
-              schemaVersion: 4,
-              checksum: 'sha256:a1b2c3',
-              status: 'completed',
-              createdAt: '2026-03-22T03:00:00Z',
-            },
-          ],
-          totalSizeBytes: 12_582_912,
+          backups: C5_BACKUPS,
+          totalSizeBytes: 163_368_139,
         } satisfies BackupListResponse,
       },
       {
@@ -3768,17 +3793,31 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
           frequency: 'daily',
           hour: 3,
           dayOfWeek: 0,
-          nextBackupAt: '2026-03-23T03:00:00Z',
+          nextBackupAt: '2026-09-12T03:00:00',
         } satisfies BackupSchedule,
       },
     ],
   },
   {
+    // dsr-3f — C20-D's failure bar on its own: the page only shows it after a
+    // real create fails, which a gallery fixture cannot arrange.
+    id: 'settings-backup-management/create-failed',
+    label: 'settings/CreateBackupFailed (C20-D)',
+    component: CreateBackupFailed,
+    props: { onRetry: noop, isRetrying: false },
+    penNode: 'v2C4xr', // Screen C20-D — create-error Bdimi
+    statesOnly: ['default'],
+    width: 1152,
+  },
+  {
     id: 'settings-backup-schedule-config',
-    label: 'settings/BackupScheduleConfig',
+    label: 'settings/BackupScheduleConfig (C5-D — 每週)',
     component: BackupScheduleConfig,
-    penNode: 'screen-section',
-    width: 640,
+    penNode: 'Jt3DP', // Screen C5-D — schedule-card
+    // focus kept: it lands on the switch, the one custom control in the card
+    // besides the radiogroup; hover says nothing about a whole card.
+    statesOnly: ['default', 'focus'],
+    width: 1152,
     seedQueries: [
       {
         queryKey: [...backupKeys.all, 'schedule'] as const,
@@ -3786,8 +3825,8 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
           enabled: true,
           frequency: 'weekly',
           hour: 3,
-          dayOfWeek: 1,
-          nextBackupAt: '2026-03-23T03:00:00Z',
+          dayOfWeek: 0,
+          nextBackupAt: '2026-09-14T03:00:00',
         } satisfies BackupSchedule,
       },
     ],
@@ -4041,10 +4080,18 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   {
     id: 'settings-metadata-export',
     // P-bucket reclassification candidate (mutation-only). Pure form UI.
-    label: 'settings/MetadataExport',
+    label: 'settings/MetadataExport (C13-D)',
     component: MetadataExport,
-    penNode: 'screen-section',
-    width: 560,
+    penNode: 'nwn6a', // Screen C13-D — export-card sF26K
+    width: 768,
+  },
+  {
+    id: 'settings-metadata-export/mobile',
+    label: 'settings/MetadataExport (C13-M — 手機滿寬匯出鈕)',
+    component: MetadataExport,
+    penNode: 'Ytjrj', // Screen C13-M
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
   },
   {
     id: 'settings-qbittorrent-form',

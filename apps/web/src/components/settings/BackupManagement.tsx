@@ -1,6 +1,7 @@
 // Design ref: ux-design.pen Screen C5-D (uhAKd) · C5-M (gEQX4)；建立失敗見 C20-D (v2C4xr)
 import { useState } from 'react';
-import { AlertTriangle, Check, Loader2, Plus, XCircle } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
+import { AlertTriangle, Check, CircleAlert, HardDrive, Loader2, Plus, XCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import {
   useBackups,
@@ -12,6 +13,7 @@ import {
 import { BackupTable } from './BackupTable';
 import { RestoreConfirmDialog } from './RestoreConfirmDialog';
 import { BackupScheduleConfig } from './BackupScheduleConfig';
+import { SettingsErrorState } from './SettingsErrorState';
 import { formatBytes } from '../../utils/formatBytes';
 import type { Backup } from '../../services/backupService';
 
@@ -28,13 +30,20 @@ const TONE_ICONS = {
   error: <XCircle className="h-4 w-4 shrink-0" aria-hidden="true" />,
 } as const;
 
+/** The backend's restore error is a code (RESTORE_VERIFY_FAILED …); the log has the detail. */
+const RESTORE_FAILED = '還原失敗。若持續失敗，到「系統日誌」查看原因。';
+
 export function BackupManagement() {
-  const { data, isLoading, error } = useBackups();
+  const { data, isFetched, isFetching, error, refetch } = useBackups();
   const createBackup = useCreateBackup();
   const deleteBackup = useDeleteBackup();
   const verifyBackup = useVerifyBackup();
   const restoreBackup = useRestoreBackup();
-  const [createError, setCreateError] = useState<string | null>(null);
+  // Only whether it failed: the backend neither pre-checks disk space nor
+  // classifies the error, so its message (English) says nothing a user can act on.
+  // A count, not a flag: the banner stays up through 重試, so a second failure
+  // must CHANGE its text or nothing is announced (dsr-3f CR #3).
+  const [createFailures, setCreateFailures] = useState(0);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   // Feedback carries its OUTCOME so the banner can wear the vocabulary's colour:
   // ok → neutral (done-ness never wears green/gold), warn → --warning-*, error →
@@ -47,11 +56,13 @@ export function BackupManagement() {
 
   const handleCreate = async () => {
     if (createBackup.isPending) return;
-    setCreateError(null);
+    // The banner stays up while 重試 runs (its button keeps focus) and goes
+    // away only once a backup is actually made.
     try {
       await createBackup.mutateAsync();
-    } catch (err) {
-      setCreateError(err instanceof Error ? err.message : '建立備份失敗');
+      setCreateFailures(0);
+    } catch {
+      setCreateFailures((n) => n + 1);
     }
   };
 
@@ -59,8 +70,9 @@ export function BackupManagement() {
     setDeleteError(null);
     try {
       await deleteBackup.mutateAsync(id);
-    } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : '刪除備份失敗');
+    } catch {
+      // Like 建立失敗: the backend's text is English and unclassified (dsr-3f CR #2).
+      setDeleteError('刪除備份失敗，請稍後再試。');
     }
   };
 
@@ -73,8 +85,8 @@ export function BackupManagement() {
       } else {
         setVerifyMessage({ tone: 'warn', text: '備份校驗碼不符，檔案可能已損壞' });
       }
-    } catch (err) {
-      setVerifyMessage({ tone: 'error', text: err instanceof Error ? err.message : '驗證失敗' });
+    } catch {
+      setVerifyMessage({ tone: 'error', text: '驗證沒有完成，請稍後再試。' });
     }
   };
 
@@ -94,15 +106,18 @@ export function BackupManagement() {
       if (result.status === 'completed') {
         setRestoreMessage({ tone: 'ok', text: '還原完成，資料庫已恢復' });
       } else {
-        setRestoreMessage({ tone: 'error', text: `還原失敗：${result.error || '未知錯誤'}` });
+        setRestoreMessage({ tone: 'error', text: RESTORE_FAILED });
       }
-    } catch (err) {
+    } catch {
       setRestoreTarget(null);
-      setRestoreMessage({ tone: 'error', text: err instanceof Error ? err.message : '還原失敗' });
+      setRestoreMessage({ tone: 'error', text: RESTORE_FAILED });
     }
   };
 
-  if (isLoading) {
+  // Keyed on data, not isLoading: a failed read with nothing cached drops back
+  // to pending on every refetch (project_tanstack_refetch_no_data_resets_pending),
+  // which would swap the error page for the spinner the moment 重試 is pressed.
+  if (!data && !error && !isFetched) {
     return (
       <div className="flex items-center justify-center py-20" data-testid="backup-loading">
         <Loader2 className="h-8 w-8 animate-spin text-[var(--text-secondary)]" />
@@ -110,12 +125,15 @@ export function BackupManagement() {
     );
   }
 
-  if (error) {
+  if (!data) {
     return (
-      <div className="py-10 text-center" data-testid="backup-error">
-        <p className="text-[var(--error-text)]">無法載入備份資料</p>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">{error.message}</p>
-      </div>
+      <SettingsErrorState
+        testId="backup-error"
+        title="無法載入備份資訊"
+        description="與後端的連線中斷了。已存在的備份檔不受影響。"
+        isRetrying={isFetching}
+        onRetry={() => void refetch()}
+      />
     );
   }
 
@@ -124,17 +142,29 @@ export function BackupManagement() {
 
   return (
     <div className="space-y-6" data-testid="backup-management">
+      {/* C20-D: the failure sits ABOVE the summary — it is about the button the
+          user just pressed, and the list below is still worth showing. */}
+      {createFailures > 0 && (
+        <CreateBackupFailed
+          attempts={createFailures}
+          onRetry={handleCreate}
+          isRetrying={createBackup.isPending}
+        />
+      )}
+
       {/* Action bar */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <p className="text-sm text-[var(--text-secondary)]" data-testid="backup-summary">
-            已使用 {formatBytes(totalSize)}（{backups.length} 個備份）
-          </p>
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <p
+          className="flex min-w-0 items-center gap-2 text-sm text-[var(--text-secondary)]"
+          data-testid="backup-summary"
+        >
+          <HardDrive className="size-4 shrink-0" aria-hidden="true" />
+          {backups.length} 份備份 · 已使用 {formatBytes(totalSize)}
+        </p>
         <button
           onClick={handleCreate}
           disabled={createBackup.isPending}
-          className="flex items-center gap-2 rounded-lg bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-hover)] disabled:opacity-50"
+          className="flex h-11 shrink-0 items-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-4 text-sm font-semibold text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-hover)] disabled:opacity-50 sm:h-10"
           data-testid="create-backup-btn"
         >
           {createBackup.isPending ? (
@@ -145,17 +175,6 @@ export function BackupManagement() {
           建立備份
         </button>
       </div>
-
-      {/* Error display */}
-      {createError && (
-        <div
-          className="rounded-lg bg-[var(--error-tint)] px-4 py-3 text-sm text-[var(--error-text)]"
-          role="alert"
-          data-testid="create-error"
-        >
-          {createError}
-        </div>
-      )}
 
       {verifyMessage && (
         <div
@@ -227,6 +246,53 @@ export function BackupManagement() {
           onCancel={() => setRestoreTarget(null)}
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * C20-D. Only says that it failed and where to look: the backend neither
+ * pre-checks disk space nor classifies the error, so C20's「磁碟空間不足：需要
+ * 52 MB…」is not something this page can know (disc-2026-09-backup-disk-space-precheck).
+ */
+export function CreateBackupFailed({
+  attempts = 1,
+  onRetry,
+  isRetrying,
+}: {
+  /** How many tries have failed in a row; from the second on, the title says so. */
+  attempts?: number;
+  onRetry: () => void;
+  isRetrying: boolean;
+}) {
+  return (
+    <div
+      className="flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--error-tint)] p-4 text-[var(--error-text)]"
+      role="alert"
+      data-testid="create-error"
+    >
+      <CircleAlert className="size-[18px] shrink-0" aria-hidden="true" />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold">
+          建立備份失敗{attempts > 1 && `（已試 ${attempts} 次）`}
+        </p>
+        <p className="mt-0.5 text-xs">
+          備份沒有建立成功。請稍後再試；若持續失敗，到「
+          <Link to="/settings/logs" className="underline underline-offset-2">
+            系統日誌
+          </Link>
+          」查看原因。
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={onRetry}
+        aria-disabled={isRetrying || undefined}
+        className="h-9 shrink-0 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-3 text-xs font-semibold text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] aria-disabled:opacity-50 max-sm:h-11"
+        data-testid="create-retry-btn"
+      >
+        重試
+      </button>
     </div>
   );
 }

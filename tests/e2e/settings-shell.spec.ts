@@ -305,3 +305,115 @@ test.describe('服務狀態 @settings @dsr-3c', () => {
     await expect(page.getByText('sql: database is locked')).toHaveCount(0);
   });
 });
+
+test.describe('備份與還原 @settings @dsr-3f', () => {
+  const bk = (id: string, status: string, created: string) => ({
+    id,
+    filename: `vido-backup-${id}.db`,
+    size_bytes: 54_000_000,
+    schema_version: 17,
+    checksum: '',
+    status,
+    created_at: created,
+  });
+  const LIST = {
+    backups: [
+      bk('b1', 'completed', '2026-09-11T03:00:00'),
+      bk('b2', 'completed', '2026-09-10T03:00:00'),
+      bk('b3', 'running', '2026-09-09T14:12:00'),
+    ],
+    total_size_bytes: 162_000_000,
+  };
+
+  test.beforeEach(async ({ page }) => {
+    await page.route('**/api/v1/settings/backups', (route) =>
+      route.request().method() === 'GET'
+        ? route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ success: true, data: LIST }),
+          })
+        : route.fallback()
+    );
+    await page.route('**/api/v1/settings/backups/schedule', (route) =>
+      route.request().method() === 'GET'
+        ? route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              success: true,
+              data: { enabled: false, frequency: 'disabled', hour: 3, day_of_week: 0 },
+            }),
+          })
+        : route.fallback()
+    );
+  });
+
+  test('[P1] phone: every card’s restore and delete are on screen and tappable; running has no restore', async ({
+    page,
+  }) => {
+    await page.setViewportSize(PHONE);
+    await page.goto('/settings/backup');
+    await expect(page.getByTestId('backup-row-b1')).toBeVisible({ timeout: 15000 });
+    for (const id of ['b1', 'b2']) {
+      for (const btn of [`restore-btn-${id}`, `delete-btn-${id}`]) {
+        const el = page.getByTestId(btn);
+        await el.scrollIntoViewIfNeeded();
+        await expect(el).toBeInViewport({ ratio: 1 });
+        const box = await el.boundingBox();
+        expect(box!.height).toBeGreaterThanOrEqual(44);
+        expect(box!.x + box!.width).toBeLessThanOrEqual(PHONE.width);
+      }
+    }
+    await expect(page.getByTestId('restore-btn-b3')).toHaveCount(0);
+    await expect(page.getByTestId('delete-btn-b3')).toBeVisible();
+  });
+
+  test('[P1] 768 with the sidebar: the column is too narrow for the table, so it is cards and nothing is clipped', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.goto('/settings/backup');
+    await expect(page.getByTestId('backup-row-b1')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('backup-list')).toHaveAttribute('data-layout', 'cards');
+    const list = (await page.getByTestId('backup-table').boundingBox())!;
+    for (const btn of ['restore-btn-b1', 'delete-btn-b1', 'download-btn-b1']) {
+      const b = (await page.getByTestId(btn).boundingBox())!;
+      expect(b.x + b.width).toBeLessThanOrEqual(list.x + list.width);
+    }
+  });
+
+  for (const [label, vp] of [
+    ['phone', PHONE],
+    ['1440', DESKTOP],
+  ] as const) {
+    test(`[P1] ${label}: 還原 opens a real dialog; Esc closes it and focus returns to 還原`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(vp);
+      await page.goto('/settings/backup');
+      const restore = page.getByTestId('restore-btn-b2');
+      await expect(restore).toBeVisible({ timeout: 15000 });
+      await restore.click();
+      const dialog = page.getByRole('dialog', { name: '確認還原' });
+      await expect(dialog).toBeVisible();
+      await expect(page.getByTestId('restore-cancel-btn')).toBeFocused();
+      const box = (await dialog.boundingBox())!;
+      if (label === 'phone') {
+        // A bottom sheet: full width, pinned to the bottom edge.
+        expect(Math.round(box.width)).toBe(PHONE.width);
+        await expect
+          .poll(async () =>
+            Math.round((await dialog.boundingBox())!.y + (await dialog.boundingBox())!.height)
+          )
+          .toBe(PHONE.height);
+      } else {
+        // Centred.
+        expect(Math.abs(box.x + box.width / 2 - DESKTOP.width / 2)).toBeLessThan(2);
+      }
+      await page.keyboard.press('Escape');
+      await expect(dialog).toHaveCount(0);
+      await expect(restore).toBeFocused();
+    });
+  }
+});
