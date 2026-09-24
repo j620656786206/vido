@@ -152,12 +152,28 @@ describe('LocalizationLevelForm (sub-7-4 AC #4)', () => {
     });
   });
 
-  it('dsr-3d: while saving, the radios stay focusable and a second change is ignored', () => {
+  it('dsr-3d: while saving, the radios stay focusable and a change made meanwhile is sent once the save lands', () => {
     h.save.isPending = true;
-    renderForm();
+    const { rerender } = renderForm();
     const ott = screen.getByRole('radio', { name: /OTT 風格/ });
     expect(ott).not.toBeDisabled();
     fireEvent.click(ott);
     expect(h.save.mutate).not.toHaveBeenCalled();
+    h.save = { ...h.save, isPending: false };
+    rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <LocalizationLevelForm />
+      </QueryClientProvider>
+    );
+    expect(h.save.mutate).toHaveBeenCalledWith('ott');
+  });
+
+  it('dsr-3d: no wrapper around the options draws a card', () => {
+    const { container } = renderForm();
+    let el: HTMLElement | null = screen.getByRole('radiogroup');
+    while (el && el !== container) {
+      expect(el.className ?? '').not.toMatch(/bg-\[var\(--bg-secondary\)\]|\bborder\b/);
+      el = el.parentElement;
+    }
   });
 });

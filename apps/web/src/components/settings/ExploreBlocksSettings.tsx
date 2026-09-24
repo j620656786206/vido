@@ -23,8 +23,12 @@ import { sortLabel } from './exploreBlockSort';
 import { ExploreBlockEditModal } from './ExploreBlockEditModal';
 
 /** C10 rRMJl: 32 solid squares on desktop, 44 on a phone (touch). */
+// No hover colour in the base: Tailwind orders same-property utilities by its
+// own sort, not by class-string order, so a base `hover:text-primary` beat the
+// delete button's `hover:text-error` (dsr-3d CR M1). Each button adds its own.
 const ACTION_BTN =
-  'flex size-11 items-center justify-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:opacity-30 sm:size-8';
+  'flex size-11 items-center justify-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:opacity-30 sm:size-8';
+const NEUTRAL_HOVER = 'enabled:hover:text-[var(--text-primary)]';
 
 export function ExploreBlocksSettings() {
   const { data, isLoading, isError } = useExploreBlocks();
@@ -82,8 +86,10 @@ export function ExploreBlocksSettings() {
     <div className="space-y-4" data-testid="explore-blocks-settings">
       {/* Title/description live at the route level; this row is the count + the action. */}
       <div className="flex items-center justify-between gap-3">
+        {/* Nothing counted until there is something to count: 「0 個區塊」
+            beside「載入中...」would be a claim the page cannot make yet. */}
         <p className="text-sm text-[var(--text-secondary)]" data-testid="explore-blocks-count">
-          {blocks.length} 個區塊
+          {!isLoading && !isError && `${blocks.length} 個區塊`}
         </p>
         <button
           type="button"
@@ -130,7 +136,7 @@ export function ExploreBlocksSettings() {
           // 電影 · 熱門度（高→低） · 20 部 · zh-TW · 地區 TW · 類型 16
           const parts = [
             block.contentType === 'movie' ? '電影' : '影集',
-            sortLabel(block.sortBy),
+            sortLabel(block.sortBy, block.contentType),
             `${block.maxItems} 部`,
             block.language,
             block.region && `地區 ${block.region}`,
@@ -168,7 +174,7 @@ export function ExploreBlocksSettings() {
                   disabled={index === 0 || reorderBlocks.isPending}
                   aria-label={`上移 ${block.name}`}
                   data-testid={`explore-block-move-up-${block.id}`}
-                  className={ACTION_BTN}
+                  className={`${ACTION_BTN} ${NEUTRAL_HOVER}`}
                 >
                   <ArrowUp className="size-3.5" aria-hidden="true" />
                 </button>
@@ -178,7 +184,7 @@ export function ExploreBlocksSettings() {
                   disabled={index === blocks.length - 1 || reorderBlocks.isPending}
                   aria-label={`下移 ${block.name}`}
                   data-testid={`explore-block-move-down-${block.id}`}
-                  className={ACTION_BTN}
+                  className={`${ACTION_BTN} ${NEUTRAL_HOVER}`}
                 >
                   <ArrowDown className="size-3.5" aria-hidden="true" />
                 </button>
@@ -187,7 +193,7 @@ export function ExploreBlocksSettings() {
                   onClick={() => setModalMode({ type: 'edit', block })}
                   aria-label={`編輯 ${block.name}`}
                   data-testid={`explore-block-edit-${block.id}`}
-                  className={ACTION_BTN}
+                  className={`${ACTION_BTN} ${NEUTRAL_HOVER}`}
                 >
                   <Pencil className="size-3.5" aria-hidden="true" />
                 </button>

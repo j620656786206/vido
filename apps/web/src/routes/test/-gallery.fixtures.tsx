@@ -3978,8 +3978,10 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'settings/LocalizationLevelForm (C9-D)',
     component: LocalizationLevelForm,
     penNode: 'NR3zK', // Screen C9-D
-    statesOnly: ['default'],
-    width: 1152,
+    // focus kept: it lands on the first native radio, so the baseline holds
+    // RadioDot's peer-focus-visible ring (CR L2 — its offset must not be dark).
+    statesOnly: ['default', 'focus'],
+    width: 1200,
     seedQueries: [
       {
         queryKey: subtitleLocalizationQueryKeys.all,

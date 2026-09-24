@@ -11,6 +11,7 @@
  * Honest about precedence like ApiKeysForm: a level that came from the
  * SUBTITLE_LOCALIZATION_LEVEL env var says so, and saving here overrides it.
  */
+import { useEffect, useRef } from 'react';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { RadioDot } from '../ui/RadioDot';
 import { cn } from '../../lib/utils';
@@ -52,6 +53,20 @@ export const LEVEL_SPECS: LevelSpec[] = [
 export function LocalizationLevelForm() {
   const { data, isLoading, isError, error } = useSubtitleLocalization();
   const save = useSaveSubtitleLocalization();
+  // A choice made while a save is in flight is remembered, not dropped: arrow
+  // keys move focus (and the user's intent) immediately, and the last choice
+  // is the one that must win (dsr-3d CR L1).
+  const queued = useRef<LocalizationLevel | null>(null);
+  const choose = (level: LocalizationLevel) => {
+    if (save.isPending) queued.current = level;
+    else save.mutate(level);
+  };
+  useEffect(() => {
+    if (save.isPending || !queued.current) return;
+    const next = queued.current;
+    queued.current = null;
+    if (next !== data?.level) save.mutate(next);
+  }, [save, data?.level]);
 
   if (isLoading) {
     return (
@@ -92,7 +107,7 @@ export function LocalizationLevelForm() {
       <div data-testid="localization-form">
         {/* Not `disabled` while saving: that blurred the radio the user had
             just moved to with the arrow keys, dropping keyboard focus on
-            <body> (dsr-3d e2e). Changes are ignored until the save lands. */}
+            <body> (dsr-3d e2e). A change made meanwhile is queued (see `choose`). */}
         <fieldset aria-busy={save.isPending || undefined}>
           <legend className="mb-1 text-base font-semibold text-[var(--text-primary)]">
             AI 字幕的在地化程度
@@ -136,9 +151,7 @@ export function LocalizationLevelForm() {
                     name="subtitle-localization-level"
                     value={spec.id}
                     checked={checked}
-                    onChange={() => {
-                      if (!save.isPending) save.mutate(spec.id);
-                    }}
+                    onChange={() => choose(spec.id)}
                     className="peer sr-only"
                   />
                   <RadioDot className="col-start-1 row-start-1" />
@@ -175,7 +188,10 @@ export function LocalizationLevelForm() {
             </p>
           )}
           {save.isPending && (
-            <p className="mt-4 flex items-center gap-2 text-xs text-[var(--text-muted)]">
+            <p
+              role="status"
+              className="mt-4 flex items-center gap-2 text-xs text-[var(--text-muted)]"
+            >
               <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
               儲存中…
             </p>

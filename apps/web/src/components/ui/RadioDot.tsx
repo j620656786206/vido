@@ -22,7 +22,7 @@ export function RadioDot({ className, ...props }: React.ComponentProps<'span'>) 
       className={cn(
         'flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-[var(--border-subtle)] text-[var(--text-on-accent)] transition-colors',
         'peer-checked:border-[var(--accent-primary)] peer-checked:bg-[var(--accent-primary)]',
-        'peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--focus-ring)] peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-[var(--bg-secondary)]',
+        'peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--focus-ring)] peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-transparent',
         '[&>svg]:hidden peer-checked:[&>svg]:block',
         className
       )}

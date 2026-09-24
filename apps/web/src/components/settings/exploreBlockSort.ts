@@ -32,8 +32,11 @@ export function getSortOptions(ct: ExploreBlockContentType): SortOption[] {
   return ct === 'tv' ? TV_SORT_OPTIONS : MOVIE_SORT_OPTIONS;
 }
 
-/** The label for a stored sort_by; an unknown value is shown as-is rather than hidden. */
-export function sortLabel(value: string | undefined): string | undefined {
+/** The label for a stored sort_by, looked up in the block's own list; an unknown value is shown as-is. */
+export function sortLabel(
+  value: string | undefined,
+  ct: ExploreBlockContentType = 'movie'
+): string | undefined {
   if (!value) return undefined;
-  return [...MOVIE_SORT_OPTIONS, ...TV_SORT_OPTIONS].find((o) => o.value === value)?.label ?? value;
+  return getSortOptions(ct).find((o) => o.value === value)?.label ?? value;
 }

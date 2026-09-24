@@ -175,6 +175,15 @@ Claude Opus 5.5 (1M context)（Amelia / dev-story）
 - **視覺基準**：`settings-explore-blocks-settings` 改（`penNode` `wnmGh`，4 個區塊，hover／focus 刪除）、`settings-metadata-export`（3＋mobile）因 RadioDot 20px 改；新增 `settings-explore-blocks-settings/mobile`（390×844，2 個區塊）、`settings-localization-level-form`（`NR3zK`）。過期 `-linux` 全部 `git rm`，等 CI bootstrap。
 - ⚠️ **與 story 的偏離**：① 底部「只影響之後生成」不加、稿刪（引言已是同一承諾，見 Task 1）。② 儲存中不停用 fieldset（a11y 修正，e2e 抓到）。③ `RadioDot` 讓 `dsr-3f` 的匯出 radio 從 18 變 20（story 已預告「後做的統一成 20」）。④ `localization-load-error`／`save-error` 仍印後端 `error.message`——本張 AC 沒涵蓋，同 dsr-3f 的處理方式建議另開單。
 
+- 🔍 **/ship 對抗式 CR（2026-09-24，獨立 context）0 HIGH／1 MEDIUM／6 LOW／2 NIT，吸收 1M／5L／2N**：
+  ① 🟠 刪除鈕滑過時圖示不再變紅（回歸）：共用樣式的 `hover:text-primary` 與刪除鈕的 `hover:text-error` 同屬性，Tailwind 依自己的順序輸出、主色贏 → 共用樣式拿掉 hover 文字色，上移／下移／編輯各自加 `enabled:hover:text-primary`（停用時不再變亮，順帶解 N1）。
+  ② 儲存中按第二下會被丟掉、焦點與選中不一致 → 記住最後一次的選擇，儲存完成後若不同再送；「儲存中…」加 `role="status"`。
+  ③ 選中金卡上焦點環內圈露出深綠 → `RadioDot` 的 ring offset 改透明（夾具加 focus 狀態守住）。
+  ④ 載入中／失敗時標頭寫「0 個區塊」→ 這兩種狀態不顯示計數。
+  ⑤ 「沒有外框」測試是空測 → 改成從 radiogroup 一路往上檢查每一層都沒有卡片樣式。⑥ 補影集才有的排序（首播日期）案例；`sortLabel` 改依區塊的類型查表（N2）。⑦ 夾具寬度改回 AC 的 1200。
+  未改：L5 前半（用 mock 證明「同一份」——模組化本身已保證，另有編輯框下拉＝共用清單的測試）、L6 後半（hover 夾具只滑到整個元件，抓不到單顆鈕的 hover，改用單元測試守 ①）。
+  CR 後：mutation 再 4／4 紅；`nx test web` **288 files／4288 tests** 綠；`lint:all`、typecheck 綠；e2e 兩檔 `--repeat-each=3` 111／111。
+
 ### File List
 
 - `ux-design.pen`
@@ -213,4 +222,5 @@ Claude Opus 5.5 (1M context)（Amelia / dev-story）
 | 2026-09-24 | Task 2：設計稿——C9 小標引言／env／手機全文、C10 刪開關與拖曳、上移下移、碼的描述寫法、手機兩行、`spec-note-dsr-3d` |
 | 2026-09-24 | Task 3：字幕選項卡片、共用 `RadioDot`（原生 radio 保留）、儲存中焦點不掉 |
 | 2026-09-24 | Task 4：首頁計數、排序中文（共用 `exploreBlockSort`）、圖示、動作鈕、間距、新增鈕、底部句、檔頭 |
+| 2026-09-24 | /ship CR：刪除鈕 hover 紅色回來、儲存中的選擇不丟、焦點環透明 offset、載入中不寫 0 個區塊、測試加強 |
 | 2026-09-24 | Task 5：夾具 1 改 2 新、e2e 1 條＋既有 1 條改、mutation 14／14、全套 web 4284 綠 |

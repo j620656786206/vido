@@ -271,4 +271,40 @@ describe('ExploreBlocksSettings', () => {
       expect(sortLabel('weird.asc')).toBe('weird.asc');
     });
   });
+
+  describe('dsr-3d CR', () => {
+    it('only the delete button turns red on hover (no neutral hover competing with it)', () => {
+      listResult.data = { blocks: [makeBlock({ id: 'a', name: 'A' })] };
+      renderSettings();
+      const del = screen.getByTestId('explore-block-delete-a').className;
+      expect(del).toContain('hover:text-[var(--error-text)]');
+      expect(del).not.toContain('hover:text-[var(--text-primary)]');
+      expect(screen.getByTestId('explore-block-edit-a').className).toContain(
+        'enabled:hover:text-[var(--text-primary)]'
+      );
+    });
+
+    it('says nothing about the count while loading or after a failed load', () => {
+      listResult.isLoading = true;
+      const { unmount } = renderSettings();
+      expect(screen.getByTestId('explore-blocks-count')).toBeEmptyDOMElement();
+      unmount();
+      listResult.isLoading = false;
+      listResult.isError = true;
+      renderSettings();
+      expect(screen.getByTestId('explore-blocks-count')).toBeEmptyDOMElement();
+    });
+
+    it('a TV block names its TV-only sort', () => {
+      listResult.data = {
+        blocks: [
+          makeBlock({ id: 't', contentType: 'tv', sortBy: 'first_air_date.desc', maxItems: 12 }),
+        ],
+      };
+      renderSettings();
+      expect(screen.getByTestId('explore-block-desc-t')).toHaveTextContent(
+        /^影集 · 首播日期（新→舊） · 12 部$/
+      );
+    });
+  });
 });
