@@ -84,7 +84,9 @@ export function CacheManagement() {
             disabled={clearByAge.isPending}
             // The phone shows「清除 30 天前」(C11-M lOTqc); the name is always the full sentence.
             aria-label={confirmingClearOld ? '確認清除 30 天前的快取' : '清除 30 天前的快取'}
-            aria-describedby={confirmingClearOld ? 'clear-old-cache-warning' : undefined}
+            aria-describedby={
+              confirmingClearOld && !clearByAge.isPending ? 'clear-old-cache-warning' : undefined
+            }
             className={`flex min-h-10 items-center gap-2 rounded-[var(--radius-md)] px-4 text-sm font-medium transition-colors disabled:opacity-50 max-sm:min-h-11 ${
               confirmingClearOld
                 ? 'bg-[var(--error)] text-[var(--text-on-scrim)] hover:bg-[var(--error-pressed)]'
@@ -112,18 +114,28 @@ export function CacheManagement() {
           rows older than the cutoff from the four metadata/AI tables and poster
           image files older than it under data/posters — never media or subtitle
           files. role="status": an explanation of a two-step confirm, not an error. */}
-      {confirmingClearOld && !clearByAge.isPending && (
-        <p
-          id="clear-old-cache-warning"
-          role="status"
-          className="flex items-start gap-2 rounded-[var(--radius-md)] bg-[var(--error-tint)] px-4 py-3 text-xs text-[var(--error-text)]"
-          data-testid="clear-old-cache-warning"
-        >
-          <TriangleAlert className="mt-px size-4 shrink-0" aria-hidden="true" />
-          再按一次才會真的清除。這會刪掉 30
-          天前的所有快取，之後第一次瀏覽會比較慢，但不會影響影片與字幕檔案。
-        </p>
-      )}
+      {/* The live region is ALWAYS mounted and only its content changes: a
+          region that appears already filled is usually not announced (dsr-3e
+          CR A2), and focus stays on the same button, so a describedby that
+          appears later is not re-read either. */}
+      <div
+        id="clear-old-cache-warning"
+        role="status"
+        // Empty most of the time: take no space in the space-y stack then.
+        className="empty:mb-0"
+        data-testid="clear-old-cache-warning-region"
+      >
+        {confirmingClearOld && !clearByAge.isPending && (
+          <p
+            className="flex items-start gap-2 rounded-[var(--radius-md)] bg-[var(--error-tint)] px-4 py-3 text-xs text-[var(--error-text)]"
+            data-testid="clear-old-cache-warning"
+          >
+            <TriangleAlert className="mt-px size-4 shrink-0" aria-hidden="true" />
+            再按一次才會真的清除。這會刪掉 30
+            天前的所有快取，之後第一次瀏覽會比較慢，但不會影響影片與字幕檔案。
+          </p>
+        )}
+      </div>
 
       {/* Cache type cards */}
       <div className="space-y-3" data-testid="cache-types-list">

@@ -70,9 +70,9 @@ export function LogEntry({ log }: LogEntryProps) {
           dateTime={log.createdAt}
           className="shrink-0 font-mono text-xs text-[var(--text-muted)] sm:mt-1"
         >
-          <span className="sm:hidden" aria-hidden="true">
-            {timeOfDay}
-          </span>
+          {/* Not aria-hidden: on a phone this is the only copy on screen (the
+              full one is display:none there), so it is what gets read. */}
+          <span className="sm:hidden">{timeOfDay}</span>
           <span className="hidden sm:inline" data-testid="log-timestamp">
             {timestamp}
           </span>

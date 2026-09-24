@@ -267,4 +267,64 @@ describe('LogsViewer', () => {
       expect(list.className).not.toContain('/50');
     });
   });
+
+  describe('dsr-3e CR', () => {
+    const many = (n: number, total: number) => ({
+      logs: Array.from({ length: n }, (_, i) => ({
+        id: i + 1,
+        level: 'INFO',
+        message: `m${i}`,
+        createdAt: '2026-09-11T09:00:00',
+      })),
+      total,
+      page: 1,
+      perPage: 50,
+    });
+
+    it('while a new filter loads, the count does not claim「符合條件」for the old rows', async () => {
+      const user = userEvent.setup();
+      vi.mocked(logService.getLogs).mockResolvedValue(many(3, 3));
+      render(<LogsViewer />, { wrapper: createWrapper() });
+      await waitFor(() =>
+        expect(screen.getByTestId('logs-count')).toHaveTextContent('共 3 筆記錄')
+      );
+      vi.mocked(logService.getLogs).mockReturnValue(new Promise(() => {}));
+      await user.click(screen.getByTestId('log-filter-error'));
+      expect(screen.getByTestId('logs-count')).toHaveTextContent('載入中…');
+      expect(screen.getByTestId('logs-count')).not.toHaveTextContent('符合條件');
+    });
+
+    it('清除篩選 hands focus to the 全部 chip instead of dropping it', async () => {
+      const user = userEvent.setup();
+      vi.mocked(logService.getLogs).mockResolvedValue({ logs: [], total: 0, page: 1, perPage: 50 });
+      render(<LogsViewer />, { wrapper: createWrapper() });
+      await user.click(await screen.findByTestId('log-filter-error'));
+      await user.click(await screen.findByTestId('logs-clear-filters'));
+      await waitFor(() => expect(screen.getByTestId('log-filter-all')).toHaveFocus());
+    });
+
+    it('clearing old logs goes back to page 1 (the page we were on may be gone)', async () => {
+      const user = userEvent.setup();
+      vi.mocked(logService.getLogs).mockResolvedValue(many(50, 150));
+      vi.mocked(logService.clearLogs).mockResolvedValue({ entriesRemoved: 90, days: 30 });
+      render(<LogsViewer />, { wrapper: createWrapper() });
+      await user.click(await screen.findByTestId('logs-next-btn'));
+      await waitFor(() =>
+        expect(vi.mocked(logService.getLogs).mock.calls.at(-1)![0]).toMatchObject({ page: 2 })
+      );
+      await user.click(screen.getByTestId('clear-old-logs-btn'));
+      await user.click(screen.getByTestId('clear-old-logs-btn'));
+      await waitFor(() =>
+        expect(vi.mocked(logService.getLogs).mock.calls.at(-1)![0]).toMatchObject({ page: 1 })
+      );
+    });
+
+    it('a keyword of only spaces is not a filter', async () => {
+      const user = userEvent.setup();
+      vi.mocked(logService.getLogs).mockResolvedValue(many(3, 3));
+      render(<LogsViewer />, { wrapper: createWrapper() });
+      await user.type(await screen.findByTestId('log-keyword-input'), '   {Enter}');
+      expect(screen.getByTestId('logs-count')).toHaveTextContent('共 3 筆記錄');
+    });
+  });
 });

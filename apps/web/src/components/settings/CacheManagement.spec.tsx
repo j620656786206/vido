@@ -324,4 +324,39 @@ describe('CacheManagement', () => {
       expect(refetch).toHaveBeenCalled();
     });
   });
+
+  describe('dsr-3e CR', () => {
+    const stats = {
+      totalSizeBytes: 1,
+      cacheTypes: [{ type: 'image', label: '圖片快取', sizeBytes: 1, entryCount: 1 }],
+    };
+    it('the live region is there (empty) before the first press, so the warning is announced', async () => {
+      const user = userEvent.setup();
+      mockUseCacheStats.mockReturnValue({ data: stats, isLoading: false, error: null } as any);
+      renderWithQuery(React.createElement(CacheManagement));
+      const region = screen.getByTestId('clear-old-cache-warning-region');
+      expect(region).toHaveAttribute('role', 'status');
+      expect(region).toBeEmptyDOMElement();
+      await user.click(screen.getByTestId('clear-old-cache-btn'));
+      expect(screen.getByTestId('clear-old-cache-warning-region')).toBe(region);
+      expect(region).not.toBeEmptyDOMElement();
+    });
+
+    it('while clearing, the button no longer points at a warning that is gone', async () => {
+      const user = userEvent.setup();
+      mockUseCacheStats.mockReturnValue({ data: stats, isLoading: false, error: null } as any);
+      const { rerender } = renderWithQuery(React.createElement(CacheManagement));
+      await user.click(screen.getByTestId('clear-old-cache-btn'));
+      mockUseClearByAge.mockReturnValue({ mutateAsync: vi.fn(), isPending: true } as any);
+      rerender(
+        React.createElement(
+          QueryClientProvider,
+          { client: new QueryClient() },
+          React.createElement(CacheManagement)
+        )
+      );
+      expect(screen.getByTestId('clear-old-cache-btn')).not.toHaveAttribute('aria-describedby');
+      expect(screen.queryByTestId('clear-old-cache-warning')).toBeNull();
+    });
+  });
 });

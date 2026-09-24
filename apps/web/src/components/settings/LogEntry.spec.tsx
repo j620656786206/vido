@@ -130,6 +130,10 @@ describe('LogEntry', () => {
       expect(time).toHaveAttribute('dateTime', iso);
       // The phone copy is the time of day only.
       expect(time.textContent).toContain(full.textContent!.slice(11));
+      // …and it is readable: on a phone it is the only copy on screen.
+      const short = [...time.querySelectorAll('span')].find((s) => s !== full)!;
+      expect(short).not.toHaveAttribute('aria-hidden');
+      expect(short.className).toContain('sm:hidden');
     });
 
     it('the badge is a fixed 64 in mono', () => {

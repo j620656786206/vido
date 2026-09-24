@@ -195,6 +195,15 @@ Claude Opus 5.5 (1M context)（Amelia / dev-story）
 - **視覺基準**：`settings-cache-management`、`settings-cache-type-card`（3）、`settings-logs-viewer`、`settings-log-entry`（3）、`settings-log-filters`（3）的 darwin 基準改變、`penNode` 改真節點；cache-management／logs-viewer 的 hover／focus 刪除（改 `statesOnly: ['default']`）；新增 `settings-cache-management/confirm`（`open` 狀態點主鈕，拍 C18 的警告條）、`settings-logs-viewer/mobile`（390×844）、`settings-logs-viewer/filtered-empty`（`LogsEmpty` 單獨拍，篩選是元件內部 state、夾具無法預設）。過期 `-linux` 全部 `git rm`，等 CI bootstrap。
 - ⚠️ **與 story／稿的偏離**：① 載入失敗說明改「已記錄的日誌不受影響。」（story 擬的「仍在記錄中」不保證為真，見 Task 1）。② 手機沒有可展開內容的列仍保留隱形的 44px 箭頭位，第一行比稿多一格縮排（保持每列徽章對齊）。③ 手機篩選 chip 內距 8（稿），桌機 12。
 
+- 🔍 **/ship 對抗式 CR（2026-09-24，獨立 context）0 HIGH／4 MEDIUM／4 LOW／3 NIT，吸收 4M／4L／1N**：
+  ① 🟠 手機上報讀器聽不到日誌時間（短時間 `aria-hidden`、完整時間 `display:none`）→ 短時間不再 `aria-hidden`。
+  ② 🟠 快取警告條與文字同時掛上，報讀器多半不念 → 常駐、平時空的 `role="status"` 容器，確認時才塞文字（空時 `empty:mb-0` 不佔間距）。
+  ③ 🟠 換篩選的瞬間，`keepPreviousData` 的舊資料讓計數寫「符合條件 18,402 筆」、清除篩選後可能閃「還沒有日誌記錄」→ `isPlaceholderData` 期間計數寫「載入中…」、舊列變淡、舊空結果改顯示轉圈，不下結論。
+  ④ 🟠 在第 3 頁清掉舊日誌，會同時出現「共 60 筆記錄」「還沒有日誌記錄」「第 3 / 2 頁」→ 清除成功回第 1 頁，另加「頁碼超過總頁數就拉回」的防護。
+  ⑤ 清除進行中按鈕的 `aria-describedby` 指向不存在的 id → 條件加上非 pending。⑥ 按「清除篩選」後焦點掉到 body → 移到「全部」chip。⑦ 錯誤頁註解不準（換篩選後失敗也會整頁錯誤）→ 改註解。NIT：只有空白的關鍵字不算篩選（trim）。
+  未改：C1（清除篩選的測試從快取拿結果，沒驗「再次查詢」——同一個 query key 本來就不會重打）、C2（快取錯誤頁測試寫法）、C3（e2e 門檻已在 Completion Notes 說明）。
+  CR 後：mutation 再 7／7 紅；`nx test web` **288 files／4273 tests** 綠；`lint:all`、typecheck 綠；e2e 整檔 `--repeat-each=3` 57／57；視覺基準不變。
+
 ### File List
 
 - `ux-design.pen`
@@ -232,4 +241,5 @@ Claude Opus 5.5 (1M context)（Amelia / dev-story）
 | 2026-09-24 | Task 3：快取卡片、主鈕手機短字、C18 警告條、間距、載入失敗 |
 | 2026-09-24 | Task 4：日誌列重排、本地時間、徽章、手機兩行（真 bug） |
 | 2026-09-24 | Task 5：篩選 chip 與搜尋框、空狀態兩態、計數文字、清除篩選、載入失敗 |
+| 2026-09-24 | /ship CR：手機日誌時間可報讀、警告條常駐 live region、換篩選時不下錯的結論、清舊日誌回第 1 頁、焦點不掉 |
 | 2026-09-24 | Task 6：夾具 5 改 3 新、e2e 2 條、mutation 19／19、全套 web 4267 綠 |

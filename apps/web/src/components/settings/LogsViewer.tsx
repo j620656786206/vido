@@ -1,5 +1,5 @@
 // Design ref: ux-design.pen Screen C12-D (K28SdR) · C12-M (dOEbF)；篩到沒結果見 C17-D (Gw61P) · C17-M (J186P)
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   FileText,
   Trash2,
@@ -23,7 +23,7 @@ export function LogsViewer() {
   const [page, setPage] = useState(1);
   const [lastResult, setLastResult] = useState<LogClearResult | null>(null);
 
-  const { data, isFetched, isFetching, error, refetch } = useLogs({
+  const { data, isFetched, isFetching, isPlaceholderData, error, refetch } = useLogs({
     level: level || undefined,
     keyword: keyword || undefined,
     page,
@@ -38,18 +38,25 @@ export function LogsViewer() {
   }, []);
 
   const handleKeywordChange = useCallback((newKeyword: string) => {
-    setKeyword(newKeyword);
+    // A keyword of spaces is no filter: it would read「關鍵字「 」」.
+    setKeyword(newKeyword.trim());
     setPage(1);
   }, []);
 
   // LogFilters keeps the typed keyword in its own state; remounting it is the
   // one reset path that clears the box as well as the applied filter.
   const [filtersKey, setFiltersKey] = useState(0);
+  const filtersRef = useRef<HTMLDivElement>(null);
   const clearFilters = useCallback(() => {
     setLevel('');
     setKeyword('');
     setPage(1);
     setFiltersKey((k) => k + 1);
+    // 清除篩選 unmounts itself and LogFilters remounts: without this, focus
+    // falls to <body> and a keyboard user starts over from the top.
+    window.requestAnimationFrame(() =>
+      filtersRef.current?.querySelector<HTMLElement>('[data-testid="log-filter-all"]')?.focus()
+    );
   }, []);
   const filtered = level !== '' || keyword !== '';
 
@@ -64,12 +71,21 @@ export function LogsViewer() {
       return;
     }
     clearLogs.mutate(30, {
-      onSuccess: (result) => setLastResult(result),
+      onSuccess: (result) => {
+        setLastResult(result);
+        // The page we were on may no longer exist once old logs are gone.
+        setPage(1);
+      },
       onSettled: () => setConfirmingClearOld(false),
     });
   };
 
   const totalPages = data ? Math.ceil(data.total / PER_PAGE) : 0;
+  // Belt and braces: never sit past the last page (an empty page with a
+  // non-zero total would read as both「共 60 筆」and「還沒有日誌記錄」).
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   // Keyed on data (dsr-3c lesson): a failed read with nothing cached drops back
   // to pending on every refetch, which would swap the error page for the spinner.
@@ -81,9 +97,10 @@ export function LogsViewer() {
     );
   }
 
-  // A failed poll with logs already on screen keeps them; only an empty page
-  // becomes the error page. Logs are written by the backend itself, so the
-  // ones already recorded are safe whatever happened to this request.
+  // No data at all → the error page. (A failed refetch of the SAME query keeps
+  // its data; after a filter change the new query has none, so it lands here
+  // too.) Logs are written by the backend itself, so the ones already
+  // recorded are safe whatever happened to this request.
   if (!data) {
     return (
       <SettingsErrorState
@@ -107,9 +124,13 @@ export function LogsViewer() {
               count (disc-2026-09-logs-unfiltered-total). With a filter on,
               「共 0 筆記錄」read as "the log is empty" — so say what it is. */}
           <span data-testid="logs-count">
-            {filtered
-              ? `符合條件 ${data.total.toLocaleString()} 筆`
-              : `共 ${data.total.toLocaleString()} 筆記錄`}
+            {/* While a new filter loads, `data` is still the PREVIOUS query's
+                (keepPreviousData): its total is not「符合條件」of anything. */}
+            {isPlaceholderData
+              ? '載入中…'
+              : filtered
+                ? `符合條件 ${data.total.toLocaleString()} 筆`
+                : `共 ${data.total.toLocaleString()} 筆記錄`}
           </span>
         </div>
 
@@ -144,13 +165,15 @@ export function LogsViewer() {
       </div>
 
       {/* Filters */}
-      <LogFilters
-        key={filtersKey}
-        level={level}
-        keyword={keyword}
-        onLevelChange={handleLevelChange}
-        onKeywordChange={handleKeywordChange}
-      />
+      <div ref={filtersRef}>
+        <LogFilters
+          key={filtersKey}
+          level={level}
+          keyword={keyword}
+          onLevelChange={handleLevelChange}
+          onKeywordChange={handleKeywordChange}
+        />
+      </div>
 
       {/* Log entries */}
       <div
@@ -158,7 +181,19 @@ export function LogsViewer() {
         data-testid="logs-list"
       >
         {data.logs && data.logs.length > 0 ? (
-          data.logs.map((log) => <LogEntry key={log.id} log={log} />)
+          <div className={isPlaceholderData ? 'opacity-60' : undefined}>
+            {data.logs.map((log) => (
+              <LogEntry key={log.id} log={log} />
+            ))}
+          </div>
+        ) : isPlaceholderData ? (
+          // The previous query was empty; do not claim anything about this one yet.
+          <div className="flex justify-center py-14" data-testid="logs-refetching">
+            <Loader2
+              className="h-6 w-6 motion-safe:animate-spin text-[var(--text-muted)]"
+              aria-hidden="true"
+            />
+          </div>
         ) : (
           <LogsEmpty level={level} keyword={keyword} onClear={clearFilters} />
         )}
