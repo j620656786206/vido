@@ -4,16 +4,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 
 	"github.com/gin-gonic/gin"
+	"github.com/vido/api/internal/images"
 )
-
-// posterFileName is the ONLY shape a served file may have: what
-// images.ImageProcessor writes — <mediaID>.jpg and <mediaID>-thumb.jpg, where
-// the media ID is a UUID. Anything else (a "..", a sub-directory, another
-// extension, an encoded slash) is simply not a poster and gets a 404.
-var posterFileName = regexp.MustCompile(`^[A-Za-z0-9_-]+\.jpg$`) // "-thumb" is covered by the class
 
 // PosterFileHandler serves posters the user uploaded through the metadata
 // editor (Story 3.8 AC3). The upload stored `poster_path = "/posters/<id>.jpg"`
@@ -38,7 +32,7 @@ func (h *PosterFileHandler) RegisterRoutes(rg *gin.RouterGroup) {
 // Serve handles GET /api/v1/posters/:file.
 func (h *PosterFileHandler) Serve(c *gin.Context) {
 	name := c.Param("file")
-	if !posterFileName.MatchString(name) {
+	if !images.IsPosterFileName(name) {
 		c.Status(http.StatusNotFound)
 		return
 	}

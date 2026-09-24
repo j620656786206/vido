@@ -510,6 +510,11 @@ func main() {
 				return logRepo.DeleteOlderThan(ctx, retentionDays)
 			}))
 	}
+	// bugfix-poster-orphan-sweep: data/posters keeps only the uploads some movie
+	// or series row still points at. Not a cache (it never shows on the cache
+	// page) — this loop is simply the app's periodic-maintenance carrier.
+	cacheSweepExtra = append(cacheSweepExtra, services.SweepFunc("poster_orphans",
+		services.NewPosterOrphanSweeper(posterDir, repository.NewPosterReferenceRepository(db.Conn())).Sweep))
 	cacheSweepScheduler := services.NewCacheSweepScheduler(repos.Cache, repos.Settings, cacheSweepExtra...)
 	slog.Info("Cache sweep scheduler initialized")
 

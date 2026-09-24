@@ -397,6 +397,23 @@ func TestMetadataEditService_UploadPoster_DBFailureKeepsThePreviousPoster(t *tes
 	assert.ElementsMatch(t, []string{"movie-1.jpg", "movie-1-thumb.jpg"}, filesIn(t, dir))
 }
 
+// bugfix-poster-orphan-sweep /ship CR: a rename keeps the OLD mtime, so a
+// poster parked mid-upload would look "old" to the orphan sweep's 10-minute
+// guard and could be swept before the upload decides to restore it.
+func TestMetadataEditService_ParkedPosterLooksFreshToTheSweep(t *testing.T) {
+	svc, _, _, dir := newUploadFixture(t)
+	p := filepath.Join(dir, "movie-1.jpg")
+	require.NoError(t, os.WriteFile(p, []byte("old"), 0o644))
+	long := time.Now().Add(-48 * time.Hour)
+	require.NoError(t, os.Chtimes(p, long, long))
+
+	restore := svc.parkPoster("movie-1")
+	info, err := os.Stat(p + ".bak")
+	require.NoError(t, err)
+	assert.WithinDuration(t, time.Now(), info.ModTime(), time.Minute)
+	restore(true)
+}
+
 func TestMetadataEditService_UploadPoster_PathIsVersioned(t *testing.T) {
 	svc, movieRepo, _, _ := newUploadFixture(t)
 	first, err := svc.UploadPoster(context.Background(), uploadReq(t, "movie-1", "movie"))
