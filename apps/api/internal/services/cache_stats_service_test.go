@@ -3,8 +3,6 @@ package services
 import (
 	"context"
 	"database/sql"
-	"os"
-	"path/filepath"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -87,12 +85,12 @@ func setupCacheTestDB(t *testing.T) *sql.DB {
 
 func TestCacheStatsService_GetCacheStats_EmptyTables(t *testing.T) {
 	db := setupCacheTestDB(t)
-	svc := NewCacheStatsService(db, "")
+	svc := NewCacheStatsService(db)
 
 	stats, err := svc.GetCacheStats(context.Background())
 	require.NoError(t, err)
 	assert.NotNil(t, stats)
-	assert.Len(t, stats.CacheTypes, 5)
+	assert.Len(t, stats.CacheTypes, 4)
 	assert.Equal(t, int64(0), stats.TotalSizeBytes)
 
 	// Verify all types present
@@ -101,7 +99,7 @@ func TestCacheStatsService_GetCacheStats_EmptyTables(t *testing.T) {
 		types[ct.Type] = true
 		assert.Equal(t, int64(0), ct.EntryCount)
 	}
-	assert.True(t, types["image"])
+	assert.False(t, types["image"], "data/posters is uploaded artwork, not a cache")
 	assert.True(t, types["ai"])
 	assert.True(t, types["metadata"])
 	assert.True(t, types["douban"])
@@ -110,7 +108,7 @@ func TestCacheStatsService_GetCacheStats_EmptyTables(t *testing.T) {
 
 func TestCacheStatsService_GetCacheStats_WithData(t *testing.T) {
 	db := setupCacheTestDB(t)
-	svc := NewCacheStatsService(db, "")
+	svc := NewCacheStatsService(db)
 
 	// Insert test data
 	_, err := db.Exec(`INSERT INTO cache_entries (key, value, type, expires_at) VALUES ('k1', 'v1', 'tmdb', '2099-01-01')`)
@@ -140,13 +138,12 @@ func TestCacheStatsService_GetCacheStats_WithData(t *testing.T) {
 
 func TestCacheStatsService_GetCacheStats_Labels(t *testing.T) {
 	db := setupCacheTestDB(t)
-	svc := NewCacheStatsService(db, "")
+	svc := NewCacheStatsService(db)
 
 	stats, err := svc.GetCacheStats(context.Background())
 	require.NoError(t, err)
 
 	expectedLabels := map[string]string{
-		"image":     "圖片快取",
 		"ai":        "AI 解析快取",
 		"metadata":  "TMDb 中繼資料",
 		"douban":    "豆瓣快取",
@@ -158,45 +155,10 @@ func TestCacheStatsService_GetCacheStats_Labels(t *testing.T) {
 	}
 }
 
-func TestCacheStatsService_GetImageCacheSize_EmptyDir(t *testing.T) {
-	svc := NewCacheStatsService(nil, "")
-	size, err := svc.GetImageCacheSize(context.Background())
-	assert.NoError(t, err)
-	assert.Equal(t, int64(0), size)
-}
-
-func TestCacheStatsService_GetImageCacheSize_NonExistentDir(t *testing.T) {
-	svc := NewCacheStatsService(nil, "/nonexistent/path")
-	size, err := svc.GetImageCacheSize(context.Background())
-	assert.NoError(t, err)
-	assert.Equal(t, int64(0), size)
-}
-
-func TestCacheStatsService_GetImageCacheSize_WithFiles(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	// Create test image files
-	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "img1.jpg"), make([]byte, 1024), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "img2.png"), make([]byte, 2048), 0644))
-
-	// Create subdirectory with file
-	subDir := filepath.Join(tmpDir, "sub")
-	require.NoError(t, os.Mkdir(subDir, 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(subDir, "img3.jpg"), make([]byte, 512), 0644))
-
-	svc := NewCacheStatsService(nil, tmpDir)
-	size, err := svc.GetImageCacheSize(context.Background())
-	assert.NoError(t, err)
-	assert.Equal(t, int64(3584), size) // 1024 + 2048 + 512
-}
-
 func TestCacheStatsService_GetCacheStats_TotalSizeCalculation(t *testing.T) {
 	db := setupCacheTestDB(t)
 
-	tmpDir := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "img.jpg"), make([]byte, 100), 0644))
-
-	svc := NewCacheStatsService(db, tmpDir)
+	svc := NewCacheStatsService(db)
 
 	// Add some DB entries so DB caches have non-zero size
 	_, err := db.Exec(`INSERT INTO ai_cache (id, filename_hash, provider, request_prompt, response_json, expires_at) VALUES ('a1', 'h1', 'openai', 'prompt', '{}', '2099-01-01')`)
@@ -212,28 +174,6 @@ func TestCacheStatsService_GetCacheStats_TotalSizeCalculation(t *testing.T) {
 	}
 	assert.Equal(t, expectedTotal, stats.TotalSizeBytes)
 	assert.Greater(t, stats.TotalSizeBytes, int64(0))
-}
-
-func TestCacheStatsService_ImageCacheWithDBStats(t *testing.T) {
-	db := setupCacheTestDB(t)
-	tmpDir := t.TempDir()
-
-	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "a.jpg"), make([]byte, 10), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "b.jpg"), make([]byte, 10), 0644))
-
-	svc := NewCacheStatsService(db, tmpDir)
-	stats, err := svc.GetCacheStats(context.Background())
-	require.NoError(t, err)
-
-	// Find image cache type
-	for _, ct := range stats.CacheTypes {
-		if ct.Type == "image" {
-			assert.Equal(t, int64(2), ct.EntryCount)
-			assert.Equal(t, int64(20), ct.SizeBytes)
-			return
-		}
-	}
-	t.Fatal("image cache type not found")
 }
 
 func TestCacheStatsService_InterfaceCompliance(t *testing.T) {

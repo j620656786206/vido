@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"time"
 )
 
@@ -22,8 +20,14 @@ type CleanupResult struct {
 	Errors         []string `json:"errors,omitempty"`
 }
 
-// ValidCacheTypes lists all recognized cache type keys
-var ValidCacheTypes = []string{"image", "ai", "metadata", "douban", "wikipedia"}
+// ValidCacheTypes lists all recognized cache type keys.
+//
+// There is no "image" type: the directory it used to walk (data/posters) holds
+// only posters the user UPLOADED through the metadata editor — nothing in Vido
+// caches images (TMDb posters load straight from TMDb's CDN). Treating that
+// folder as a cache meant 清除 deleted people's own artwork
+// (bugfix-custom-posters-served-and-not-cache).
+var ValidCacheTypes = []string{"ai", "metadata", "douban", "wikipedia"}
 
 // CacheCleanupServiceInterface defines the contract for cache cleanup operations
 type CacheCleanupServiceInterface interface {
@@ -33,16 +37,12 @@ type CacheCleanupServiceInterface interface {
 
 // CacheCleanupService handles cache cleanup operations across all cache types
 type CacheCleanupService struct {
-	db       *sql.DB
-	imageDir string
+	db *sql.DB
 }
 
 // NewCacheCleanupService creates a new CacheCleanupService
-func NewCacheCleanupService(db *sql.DB, imageDir string) *CacheCleanupService {
-	return &CacheCleanupService{
-		db:       db,
-		imageDir: imageDir,
-	}
+func NewCacheCleanupService(db *sql.DB) *CacheCleanupService {
+	return &CacheCleanupService{db: db}
 }
 
 // ClearCacheByAge removes cache entries older than the specified number of days
@@ -56,8 +56,8 @@ func (s *CacheCleanupService) ClearCacheByAge(ctx context.Context, days int) (*C
 
 	// Clear old entries from each DB table
 	tables := []struct {
-		name      string
-		dateCol   string
+		name    string
+		dateCol string
 	}{
 		{"cache_entries", "created_at"},
 		{"ai_cache", "created_at"},
@@ -75,16 +75,6 @@ func (s *CacheCleanupService) ClearCacheByAge(ctx context.Context, days int) (*C
 		result.EntriesRemoved += removed
 	}
 
-	// Clear old image files
-	imageRemoved, imageBytes, err := s.clearOldImages(cutoff)
-	if err != nil {
-		slog.Warn("Failed to clear old images", "error", err)
-		result.Errors = append(result.Errors, fmt.Sprintf("images: %v", err))
-	} else {
-		result.EntriesRemoved += imageRemoved
-		result.BytesReclaimed += imageBytes
-	}
-
 	slog.Info("Cache cleared by age", "days", days, "entries_removed", result.EntriesRemoved, "bytes_reclaimed", result.BytesReclaimed)
 	return result, nil
 }
@@ -98,14 +88,6 @@ func (s *CacheCleanupService) ClearCacheByType(ctx context.Context, cacheType st
 	result := &CleanupResult{Type: cacheType}
 
 	switch cacheType {
-	case "image":
-		removed, bytes, err := s.clearAllImages()
-		if err != nil {
-			return nil, fmt.Errorf("clear image cache: %w", err)
-		}
-		result.EntriesRemoved = removed
-		result.BytesReclaimed = bytes
-
 	case "ai":
 		removed, err := s.clearTable(ctx, "ai_cache")
 		if err != nil {
@@ -156,62 +138,6 @@ func (s *CacheCleanupService) clearTable(ctx context.Context, table string) (int
 	}
 	rows, _ := result.RowsAffected()
 	return rows, nil
-}
-
-func (s *CacheCleanupService) clearOldImages(cutoff time.Time) (removed int64, bytes int64, err error) {
-	if s.imageDir == "" {
-		return 0, 0, nil
-	}
-
-	err = filepath.Walk(s.imageDir, func(path string, info os.FileInfo, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if info.IsDir() {
-			return nil
-		}
-		if info.ModTime().Before(cutoff) {
-			size := info.Size()
-			if rmErr := os.Remove(path); rmErr != nil {
-				slog.Warn("Failed to remove old image", "path", path, "error", rmErr)
-				return nil
-			}
-			removed++
-			bytes += size
-		}
-		return nil
-	})
-	if err != nil && os.IsNotExist(err) {
-		return 0, 0, nil
-	}
-	return removed, bytes, err
-}
-
-func (s *CacheCleanupService) clearAllImages() (removed int64, bytes int64, err error) {
-	if s.imageDir == "" {
-		return 0, 0, nil
-	}
-
-	err = filepath.Walk(s.imageDir, func(path string, info os.FileInfo, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if info.IsDir() {
-			return nil
-		}
-		size := info.Size()
-		if rmErr := os.Remove(path); rmErr != nil {
-			slog.Warn("Failed to remove image", "path", path, "error", rmErr)
-			return nil
-		}
-		removed++
-		bytes += size
-		return nil
-	})
-	if err != nil && os.IsNotExist(err) {
-		return 0, 0, nil
-	}
-	return removed, bytes, err
 }
 
 func isValidCacheType(t string) bool {

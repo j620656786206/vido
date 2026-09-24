@@ -469,16 +469,16 @@ const restoreDialogProps = {
   onCancel: noop,
 };
 
-/** dsr-3e — C11's five caches (labels are the backend's, cache_stats_service.go). */
+/** dsr-3e — C11's caches (labels are the backend's, cache_stats_service.go). No 圖片快取:
+ * data/posters holds uploaded posters, not a cache (bugfix-custom-posters-served-and-not-cache). */
 const C11_CACHE: CacheStats = {
   cacheTypes: [
-    { type: 'image', label: '圖片快取', sizeBytes: 1_932_735_283, entryCount: 12_480 },
     { type: 'ai', label: 'AI 解析快取', sizeBytes: 224_395_264, entryCount: 3_120 },
     { type: 'metadata', label: 'TMDb 中繼資料', sizeBytes: 341_835_776, entryCount: 8_940 },
     { type: 'douban', label: '豆瓣快取', sizeBytes: 42_991_616, entryCount: 612 },
     { type: 'wikipedia', label: '維基百科快取', sizeBytes: 18_874_368, entryCount: 204 },
   ],
-  totalSizeBytes: 2_560_834_307,
+  totalSizeBytes: 628_097_024,
 };
 // Must match LogsViewer's initial useLogs(filter): { level: undefined, keyword: undefined, page: 1, perPage: 50 }.
 const C12_LOGS_KEY = logKeys.list({ level: undefined, keyword: undefined, page: 1, perPage: 50 });

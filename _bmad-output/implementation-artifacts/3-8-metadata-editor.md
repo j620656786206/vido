@@ -511,3 +511,7 @@ Claude Opus 4.5 (claude-opus-4-5-20251101)
 | 2026-01-25 | Status updated to review | Claude Opus 4.5 |
 | 2026-02-04 | Code review fixes: Director/Cast fields now saved via Credits JSON, FetchPosterFromURL uses io.ReadAll, URL functions return .jpg extension, images package coverage increased to 81.9% | Claude Opus 4.5 |
 | 2026-02-04 | Status updated to done - all HIGH/MEDIUM issues resolved | Claude Opus 4.5 |
+
+## ↪ AC drift（2026-09-24，bugfix-custom-posters-served-and-not-cache）
+
+AC3 自訂海報：上傳契約不變（DB 存 `/posters/<id>.jpg`，不是本張原寫的 `.webp`），但原本沒有人服務這些檔案、前端也拼錯網址。現在 `GET /api/v1/posters/:file` 提供檔案，前端 `getImageUrl` 認得 `/posters/`。產品 UI 仍沒有上傳入口 → `disc-2026-09-poster-upload-no-ui-entry`。

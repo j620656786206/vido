@@ -28,11 +28,6 @@ func (m *MockCacheStatsService) GetCacheStats(ctx context.Context) (*services.Ca
 	return args.Get(0).(*services.CacheStats), args.Error(1)
 }
 
-func (m *MockCacheStatsService) GetImageCacheSize(ctx context.Context) (int64, error) {
-	args := m.Called(ctx)
-	return args.Get(0).(int64), args.Error(1)
-}
-
 // MockCacheCleanupService
 type MockCacheCleanupService struct {
 	mock.Mock
@@ -69,7 +64,7 @@ func TestCacheHandler_GetCacheStats_Success(t *testing.T) {
 
 	expected := &services.CacheStats{
 		CacheTypes: []services.CacheTypeInfo{
-			{Type: "image", Label: "圖片快取", SizeBytes: 1024, EntryCount: 10},
+			{Type: "douban", Label: "豆瓣快取", SizeBytes: 1024, EntryCount: 10},
 			{Type: "ai", Label: "AI 解析快取", SizeBytes: 512, EntryCount: 5},
 		},
 		TotalSizeBytes: 1536,
@@ -218,8 +213,8 @@ func TestCacheHandler_ClearAllCache_NoParam(t *testing.T) {
 	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
 	data := body["data"].(map[string]interface{})
 	assert.Equal(t, "all", data["type"])
-	assert.Equal(t, float64(5), data["entries_removed"])     // 5 types * 1
-	assert.Equal(t, float64(500), data["bytes_reclaimed"])    // 5 types * 100
+	assert.Equal(t, float64(4), data["entries_removed"])   // 4 types * 1 (no "image": data/posters is not a cache)
+	assert.Equal(t, float64(400), data["bytes_reclaimed"]) // 4 types * 100
 }
 
 func TestCacheHandler_ClearCacheByType_ServerError(t *testing.T) {
@@ -298,14 +293,11 @@ func TestCacheHandler_ClearAllCache_PartialTypeFailure(t *testing.T) {
 	mockCleanup := new(MockCacheCleanupService)
 
 	// Some types succeed, some fail
-	mockCleanup.On("ClearCacheByType", mock.Anything, "image").Return(
-		&services.CleanupResult{Type: "image", EntriesRemoved: 3, BytesReclaimed: 500}, nil,
-	)
 	mockCleanup.On("ClearCacheByType", mock.Anything, "ai").Return(
 		nil, errors.New("db locked"),
 	)
 	mockCleanup.On("ClearCacheByType", mock.Anything, "metadata").Return(
-		&services.CleanupResult{Type: "metadata", EntriesRemoved: 2, BytesReclaimed: 0}, nil,
+		&services.CleanupResult{Type: "metadata", EntriesRemoved: 5, BytesReclaimed: 500}, nil,
 	)
 	mockCleanup.On("ClearCacheByType", mock.Anything, "douban").Return(
 		nil, errors.New("table missing"),
@@ -326,7 +318,7 @@ func TestCacheHandler_ClearAllCache_PartialTypeFailure(t *testing.T) {
 	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
 	data := body["data"].(map[string]interface{})
 	assert.Equal(t, "all", data["type"])
-	// Only successful types: 3 + 2 + 1 = 6
+	// Only successful types: 5 + 1 = 6 (there is no "image" type any more)
 	assert.Equal(t, float64(6), data["entries_removed"])
 	assert.Equal(t, float64(500), data["bytes_reclaimed"])
 }
@@ -353,7 +345,7 @@ func TestCacheHandler_ResponseStructure(t *testing.T) {
 
 	mockStats.On("GetCacheStats", mock.Anything).Return(&services.CacheStats{
 		CacheTypes: []services.CacheTypeInfo{
-			{Type: "image", Label: "圖片快取", SizeBytes: 100, EntryCount: 1},
+			{Type: "douban", Label: "豆瓣快取", SizeBytes: 100, EntryCount: 1},
 		},
 		TotalSizeBytes: 100,
 	}, nil)

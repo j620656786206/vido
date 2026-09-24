@@ -111,9 +111,9 @@ export function CacheManagement() {
 
       {/* C18-D N0tZx: the armed state says what the second press will do.
           Checked against the backend (dsr-3e Task 1): ClearCacheByAge deletes
-          rows older than the cutoff from the four metadata/AI tables and poster
-          image files older than it under data/posters — never media or subtitle
-          files. role="status": an explanation of a two-step confirm, not an error. */}
+          rows older than the cutoff from the four metadata/AI tables — never
+          media or subtitle files, and (since bugfix-custom-posters-served-and-
+          not-cache) never the posters users uploaded under data/posters. role="status": an explanation of a two-step confirm, not an error. */}
       {/* The live region is ALWAYS mounted and only its content changes: a
           region that appears already filled is usually not announced (dsr-3e
           CR A2), and focus stays on the same button, so a describedby that

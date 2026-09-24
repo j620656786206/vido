@@ -112,4 +112,23 @@ describe('absolute-URL passthrough (bugfix-d D2)', () => {
       'https://image.tmdb.org/t/p/w1280/abc123.jpg 1280w'
     );
   });
+
+  // bugfix-custom-posters-served-and-not-cache: an uploaded poster is stored as
+  // "/posters/<id>.jpg" and served by the API — never glued onto the TMDb CDN.
+  describe('uploaded posters', () => {
+    it('resolves /posters/<file> to the API, at every size', () => {
+      expect(getImageUrl('/posters/0fe13b88.jpg')).toBe('/api/v1/posters/0fe13b88.jpg');
+      expect(getImageUrl('/posters/0fe13b88-thumb.jpg', 'w92')).toBe(
+        '/api/v1/posters/0fe13b88-thumb.jpg'
+      );
+    });
+
+    it('offers no srcset (one fixed rendition)', () => {
+      expect(getImageSrcSet('/posters/0fe13b88.jpg')).toBeNull();
+    });
+
+    it('leaves a TMDb path that merely contains "posters" alone', () => {
+      expect(getImageUrl('/postersabc.jpg')).toBe('https://image.tmdb.org/t/p/w342/postersabc.jpg');
+    });
+  });
 });

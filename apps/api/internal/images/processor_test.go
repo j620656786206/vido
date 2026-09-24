@@ -92,6 +92,13 @@ func TestImageProcessor_ProcessPoster_JPEG(t *testing.T) {
 	assert.FileExists(t, result.PosterPath)
 	assert.FileExists(t, result.ThumbnailPath)
 
+	// The files carry exactly the names GetPosterURL/GetThumbnailURL hand out
+	// (and the /api/v1/posters/:file whitelist accepts) — no .webp left behind.
+	assert.Equal(t, processor.GetPosterPath("test-movie-1"), result.PosterPath)
+	assert.Equal(t, processor.GetThumbnailPath("test-movie-1"), result.ThumbnailPath)
+	webps, _ := filepath.Glob(filepath.Join(tmpDir, "*.webp"))
+	assert.Empty(t, webps)
+
 	// Verify poster dimensions (300x450)
 	posterFile, err := os.Open(result.PosterPath)
 	require.NoError(t, err)

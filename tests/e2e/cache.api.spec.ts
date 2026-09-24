@@ -39,16 +39,17 @@ test.describe('Cache Stats API @api @cache @story-6-2', () => {
     expect(Array.isArray(body.data.cache_types)).toBe(true);
   });
 
-  test('[P1] GET /settings/cache should include all 5 cache types (AC1)', async ({ request }) => {
+  test('[P1] GET /settings/cache should include all 4 cache types (AC1)', async ({ request }) => {
     // GIVEN: Backend is running
 
     // WHEN: Requesting cache statistics
     const response = await request.get(`${API_BASE_URL}/settings/cache`);
 
-    // THEN: Should contain all 5 cache types
+    // THEN: Should contain all 4 cache types — and no "image": data/posters holds
+    // user-uploaded posters, not a cache (bugfix-custom-posters-served-and-not-cache)
     const body = await response.json();
     const types = body.data.cache_types.map((ct: { type: string }) => ct.type);
-    expect(types).toContain('image');
+    expect(types).not.toContain('image');
     expect(types).toContain('ai');
     expect(types).toContain('metadata');
     expect(types).toContain('douban');
@@ -105,7 +106,7 @@ test.describe('Cache Stats API @api @cache @story-6-2', () => {
     // THEN: Labels should be in Chinese
     const body = await response.json();
     const labels = body.data.cache_types.map((ct: { label: string }) => ct.label);
-    expect(labels).toContain('圖片快取');
+    expect(labels).not.toContain('圖片快取');
     expect(labels).toContain('AI 解析快取');
   });
 });
@@ -221,17 +222,13 @@ test.describe('Cache Clear by Type API @api @cache @story-6-2', () => {
     expect(body.data.type).toBe('ai');
   });
 
-  test('[P1] DELETE /settings/cache/image should clear image cache (AC3)', async ({ request }) => {
-    // GIVEN: Image cache exists
-
-    // WHEN: Clearing image cache
+  test('[P1] DELETE /settings/cache/image is no longer a cache type — uploaded posters are not a cache', async ({
+    request,
+  }) => {
+    // bugfix-custom-posters-served-and-not-cache: this used to delete every poster
+    // the user had uploaded. It must now be refused like any unknown type.
     const response = await request.delete(`${API_BASE_URL}/settings/cache/image`);
-
-    // THEN: Should return 200 with bytes_reclaimed
-    expect(response.status()).toBe(200);
-    const body = await response.json();
-    expect(body.data.type).toBe('image');
-    expect(body.data).toHaveProperty('bytes_reclaimed');
+    expect(response.status()).toBe(400);
   });
 
   test('[P1] DELETE /settings/cache/bogus should return 400 CACHE_TYPE_INVALID (AC3)', async ({

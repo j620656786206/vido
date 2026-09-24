@@ -202,8 +202,8 @@ func main() {
 
 	// Initialize cache management services (Story 6.2)
 	posterDir := filepath.Join(cfg.DataDir, "posters")
-	cacheStatsService := services.NewCacheStatsService(db.Conn(), posterDir)
-	cacheCleanupService := services.NewCacheCleanupService(db.Conn(), posterDir)
+	cacheStatsService := services.NewCacheStatsService(db.Conn())
+	cacheCleanupService := services.NewCacheCleanupService(db.Conn())
 	slog.Info("Cache management services initialized")
 
 	// Initialize TMDb service with cache integration (Story 2.1)
@@ -1190,6 +1190,7 @@ func main() {
 		searchHandler.RegisterRoutes(apiV1) // /api/v1/search — unified instant search (Story 11-3)
 		parserHandler.RegisterRoutes(apiV1)
 		metadataHandler.RegisterRoutes(apiV1)
+		handlers.NewPosterFileHandler(posterDir).RegisterRoutes(apiV1) // /api/v1/posters/:file — user-uploaded posters (bugfix-custom-posters-served-and-not-cache)
 		learningHandler.RegisterRoutes(apiV1)
 		parseProgressHandler.RegisterRoutes(apiV1)
 		handlers.RegisterRetryRoutes(apiV1, retryHandler)
