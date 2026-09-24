@@ -1,9 +1,15 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BackupManagement } from './BackupManagement';
+
+// 建立失敗 links to 系統日誌; stub Link so this stays a component test.
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ to, children, ...rest }: { to: string; children: React.ReactNode }) =>
+    React.createElement('a', { href: to, ...rest }, children),
+}));
 
 vi.mock('../../hooks/useBackups', () => ({
   useBackups: vi.fn(),
@@ -95,7 +101,8 @@ describe('BackupManagement', () => {
 
     renderWithQuery(React.createElement(BackupManagement));
     expect(screen.getByTestId('backup-error')).toBeInTheDocument();
-    expect(screen.getByText('無法載入備份資料')).toBeInTheDocument();
+    expect(screen.getByText('無法載入備份資訊')).toBeInTheDocument();
+    expect(screen.getByText('與後端的連線中斷了。已存在的備份檔不受影響。')).toBeInTheDocument();
   });
 
   it('renders empty state when no backups', () => {
@@ -134,7 +141,7 @@ describe('BackupManagement', () => {
     expect(screen.getByTestId('backup-management')).toBeInTheDocument();
     expect(screen.getByTestId('backup-table')).toBeInTheDocument();
     expect(screen.getByTestId('backup-summary')).toHaveTextContent('50.0 MB');
-    expect(screen.getByTestId('backup-summary')).toHaveTextContent('1 個備份');
+    expect(screen.getByTestId('backup-summary')).toHaveTextContent('1 份備份');
   });
 
   it('renders header text', () => {
@@ -184,7 +191,8 @@ describe('BackupManagement', () => {
     renderWithQuery(React.createElement(BackupManagement));
     await user.click(screen.getByTestId('create-backup-btn'));
     expect(screen.getByTestId('create-error')).toBeInTheDocument();
-    expect(screen.getByText('Disk full')).toBeInTheDocument();
+    // dsr-3f: the backend's (English, unclassified) message stays off the page.
+    expect(screen.queryByText('Disk full')).toBeNull();
   });
 
   it('[P1] disables create button when backup is in progress', () => {
@@ -219,7 +227,8 @@ describe('BackupManagement', () => {
     expect(screen.getByText('建立備份失敗')).toBeInTheDocument();
   });
 
-  it('[P2] shows error message text from API error', () => {
+  // dsr-3f: inverted — the load failure says so in plain words (C16 shape).
+  it('[P2] does not show the error message text from the API error', () => {
     mockUseBackups.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -227,7 +236,7 @@ describe('BackupManagement', () => {
     } as any);
 
     renderWithQuery(React.createElement(BackupManagement));
-    expect(screen.getByText('Connection refused')).toBeInTheDocument();
+    expect(screen.queryByText('Connection refused')).toBeNull();
   });
 
   it('[P1] renders correct summary for multiple backups', () => {
@@ -260,7 +269,7 @@ describe('BackupManagement', () => {
     } as any);
 
     renderWithQuery(React.createElement(BackupManagement));
-    expect(screen.getByTestId('backup-summary')).toHaveTextContent('2 個備份');
+    expect(screen.getByTestId('backup-summary')).toHaveTextContent('2 份備份');
   });
 
   describe('AC1-4: Data restore', () => {
@@ -320,6 +329,17 @@ describe('BackupManagement', () => {
 
       await user.click(screen.getByTestId('restore-cancel-btn'));
       expect(screen.queryByTestId('restore-confirm-dialog')).not.toBeInTheDocument();
+    });
+
+    it('dsr-3f: Esc closes the dialog and focus goes back to the restore button', async () => {
+      const user = userEvent.setup();
+      mockUseBackups.mockReturnValue({ data: backupData, isLoading: false, error: null } as any);
+      renderWithQuery(React.createElement(BackupManagement));
+      await user.click(screen.getByTestId('restore-btn-b1'));
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      await user.keyboard('{Escape}');
+      expect(screen.queryByRole('dialog')).toBeNull();
+      await waitFor(() => expect(screen.getByTestId('restore-btn-b1')).toHaveFocus());
     });
 
     it('[P1] shows success message after restore completes', async () => {
@@ -453,6 +473,106 @@ describe('BackupManagement', () => {
       await user.click(screen.getByTestId('verify-btn-b1'));
       expect(screen.getByTestId('verify-message')).toBeInTheDocument();
       expect(screen.getByText('File missing')).toBeInTheDocument();
+    });
+  });
+
+  describe('dsr-3f', () => {
+    const one = {
+      backups: [
+        {
+          id: 'b1',
+          filename: 'vido-backup.tar.gz',
+          sizeBytes: 52428800,
+          schemaVersion: 17,
+          checksum: 'x',
+          status: 'completed' as const,
+          createdAt: '2026-09-11T03:00:00',
+        },
+      ],
+      totalSizeBytes: 52428800,
+    };
+
+    it('summary reads「N 份備份 · 已使用 X」with a drive icon', () => {
+      mockUseBackups.mockReturnValue({ data: one, isLoading: false, error: null } as any);
+      renderWithQuery(React.createElement(BackupManagement));
+      const summary = screen.getByTestId('backup-summary');
+      expect(summary).toHaveTextContent(/^1 份備份 · 已使用 50\.0 MB$/);
+      expect(summary.querySelector('svg')).not.toBeNull();
+    });
+
+    it('建立失敗: above the summary, plain words, a link to 系統日誌, and 重試 runs create again', async () => {
+      const user = userEvent.setup();
+      const mutateAsync = vi.fn().mockRejectedValue(new Error('BACKUP_CREATE_FAILED'));
+      mockUseCreateBackup.mockReturnValue({ mutateAsync, isPending: false } as any);
+      mockUseBackups.mockReturnValue({ data: one, isLoading: false, error: null } as any);
+      renderWithQuery(React.createElement(BackupManagement));
+      await user.click(screen.getByTestId('create-backup-btn'));
+
+      const bar = screen.getByRole('alert');
+      expect(bar).toHaveAttribute('data-testid', 'create-error');
+      expect(bar).toHaveTextContent('建立備份失敗');
+      expect(bar).toHaveTextContent(
+        '備份沒有建立成功。請稍後再試；若持續失敗，到「系統日誌」查看原因。'
+      );
+      expect(bar).not.toHaveTextContent('BACKUP_CREATE_FAILED');
+      expect(screen.getByRole('link', { name: '系統日誌' })).toHaveAttribute(
+        'href',
+        '/settings/logs'
+      );
+      expect(
+        bar.compareDocumentPosition(screen.getByTestId('backup-summary')) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+      // The table still shows under the failure.
+      expect(screen.getByTestId('backup-table')).toBeInTheDocument();
+
+      await user.click(screen.getByTestId('create-retry-btn'));
+      expect(mutateAsync).toHaveBeenCalledTimes(2);
+    });
+
+    it('a successful retry clears the failure', async () => {
+      const user = userEvent.setup();
+      const mutateAsync = vi.fn().mockRejectedValueOnce(new Error('x')).mockResolvedValueOnce({});
+      mockUseCreateBackup.mockReturnValue({ mutateAsync, isPending: false } as any);
+      mockUseBackups.mockReturnValue({ data: one, isLoading: false, error: null } as any);
+      renderWithQuery(React.createElement(BackupManagement));
+      await user.click(screen.getByTestId('create-backup-btn'));
+      await user.click(screen.getByTestId('create-retry-btn'));
+      expect(screen.queryByTestId('create-error')).toBeNull();
+    });
+
+    it('load failure: 重試 refetches; mid-refetch stays on the error page as 重試中…', async () => {
+      const user = userEvent.setup();
+      const refetch = vi.fn();
+      mockUseBackups.mockReturnValue({
+        data: undefined,
+        isFetched: true,
+        isFetching: false,
+        error: new Error('boom'),
+        refetch,
+      } as any);
+      const { rerender } = renderWithQuery(React.createElement(BackupManagement));
+      await user.click(screen.getByRole('button', { name: '重試' }));
+      expect(refetch).toHaveBeenCalled();
+
+      // What TanStack reports while refetching with nothing cached.
+      mockUseBackups.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+        isFetched: true,
+        isFetching: true,
+        error: null,
+        refetch,
+      } as any);
+      rerender(
+        React.createElement(
+          QueryClientProvider,
+          { client: new QueryClient() },
+          React.createElement(BackupManagement)
+        )
+      );
+      expect(screen.queryByTestId('backup-loading')).toBeNull();
+      expect(screen.getByRole('button', { name: '重試中…' })).toBeInTheDocument();
     });
   });
 });

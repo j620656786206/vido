@@ -158,4 +158,58 @@ describe('BackupScheduleConfig', () => {
     renderWithQuery(React.createElement(BackupScheduleConfig));
     expect(screen.getByText(/下次備份/)).toBeInTheDocument();
   });
+
+  describe('dsr-3f', () => {
+    const enabled = (extra = {}) =>
+      mockUseBackupSchedule.mockReturnValue({
+        data: { enabled: true, frequency: 'daily', hour: 3, dayOfWeek: 0, ...extra },
+        isLoading: false,
+      } as any);
+
+    it('frequency is a labelled radiogroup; arrow keys switch it and move focus', async () => {
+      const user = userEvent.setup();
+      enabled();
+      renderWithQuery(React.createElement(BackupScheduleConfig));
+      const group = screen.getByRole('radiogroup', { name: '備份頻率' });
+      const daily = screen.getByRole('radio', { name: '每日' });
+      const weekly = screen.getByRole('radio', { name: '每週' });
+      expect(group).toContainElement(daily);
+      expect(daily).toHaveAttribute('aria-checked', 'true');
+      expect(weekly).toHaveAttribute('tabindex', '-1');
+
+      daily.focus();
+      await user.keyboard('{ArrowRight}');
+      expect(weekly).toHaveAttribute('aria-checked', 'true');
+      expect(weekly).toHaveFocus();
+      expect(screen.getByTestId('schedule-day')).toBeInTheDocument();
+      await user.keyboard('{ArrowLeft}');
+      expect(daily).toHaveAttribute('aria-checked', 'true');
+      expect(screen.queryByTestId('schedule-day')).toBeNull();
+    });
+
+    it('saves the frequency picked with the segmented control', async () => {
+      const user = userEvent.setup();
+      const mutateAsync = vi.fn().mockResolvedValue({});
+      mockUseUpdateSchedule.mockReturnValue({ mutateAsync, isPending: false } as any);
+      enabled();
+      renderWithQuery(React.createElement(BackupScheduleConfig));
+      await user.click(screen.getByRole('radio', { name: '每週' }));
+      await user.click(screen.getByTestId('schedule-save-btn'));
+      expect(mutateAsync).toHaveBeenCalledWith(expect.objectContaining({ frequency: 'weekly' }));
+    });
+
+    it('the switch knob uses the on-accent token', () => {
+      enabled();
+      renderWithQuery(React.createElement(BackupScheduleConfig));
+      expect(screen.getByTestId('schedule-toggle-knob').className).toContain(
+        'bg-[var(--text-on-accent)]'
+      );
+    });
+
+    it('prints the next backup as YYYY-MM-DD HH:mm', () => {
+      enabled({ nextBackupAt: '2026-09-14T03:00:00' });
+      renderWithQuery(React.createElement(BackupScheduleConfig));
+      expect(screen.getByTestId('schedule-next')).toHaveTextContent('下次備份：2026-09-14 03:00');
+    });
+  });
 });

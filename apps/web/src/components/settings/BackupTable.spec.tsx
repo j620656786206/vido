@@ -1,8 +1,11 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi } from 'vitest';
-import { BackupTable } from './BackupTable';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { BackupTable, BACKUP_GRID } from './BackupTable';
+
+const h = vi.hoisted(() => ({ isPhone: false }));
+vi.mock('../../hooks/useIsPhone', () => ({ useIsPhone: () => h.isPhone }));
 import type { Backup } from '../../services/backupService';
 
 const completedBackup: Backup = {
@@ -348,5 +351,73 @@ describe('BackupTable', () => {
       })
     );
     expect(screen.getByTestId('restore-btn-b1')).toBeDisabled();
+  });
+
+  describe('dsr-3f', () => {
+    const props = (backups: Backup[]) => ({
+      backups,
+      onDelete: vi.fn(),
+      onVerify: vi.fn(),
+      onRestore: vi.fn(),
+      isDeleting: false,
+      isVerifying: false,
+      isRestoring: false,
+    });
+    const local = { ...completedBackup, createdAt: '2026-09-11T03:00:00' }; // no offset = local time
+    afterEach(() => {
+      h.isPhone = false;
+    });
+
+    it('phone: one card per backup, restore and delete 44px tall, running only deletable', () => {
+      h.isPhone = true;
+      render(React.createElement(BackupTable, props([local, runningBackup])));
+      expect(screen.getByTestId('backup-table').tagName).toBe('UL');
+      expect(screen.queryByTestId('backup-table-head')).toBeNull();
+      expect(screen.getByTestId('restore-btn-b1').className).toContain('h-11');
+      expect(screen.getByTestId('delete-btn-b1').className).toContain('h-11');
+      expect(screen.getByTestId('backup-row-b1')).toHaveTextContent('2026-09-11 03:00');
+      expect(screen.queryByTestId('restore-btn-b3')).toBeNull();
+      expect(screen.getByTestId('delete-btn-b3')).toBeInTheDocument();
+    });
+
+    it('desktop: header and rows share one column template', () => {
+      render(React.createElement(BackupTable, props([local])));
+      const cols = BACKUP_GRID.split(' ').filter((c) => c.includes('grid-cols'));
+      for (const c of cols) {
+        expect(screen.getByTestId('backup-table-head').className).toContain(c);
+        expect(screen.getByTestId('backup-row-b1').className).toContain(c);
+      }
+      expect(screen.getByTestId('backup-table-head').className).toContain(
+        'bg-[var(--bg-tertiary)]'
+      );
+      expect(screen.getByTestId('backup-table-head').className).toContain(
+        'text-[var(--text-muted)]'
+      );
+    });
+
+    it('stamps the time as YYYY-MM-DD HH:mm in a <time>', () => {
+      render(React.createElement(BackupTable, props([local])));
+      const t = screen.getByText('2026-09-11 03:00');
+      expect(t.tagName).toBe('TIME');
+      expect(t).toHaveAttribute('dateTime', '2026-09-11T03:00:00');
+    });
+
+    it('the 完成 pill is 12px semibold with a check, never the old 11px', () => {
+      render(React.createElement(BackupTable, props([local])));
+      const pill = screen.getByText('完成');
+      expect(pill.className).toContain('text-xs');
+      expect(pill.className).toContain('font-semibold');
+      expect(pill.className).not.toContain('text-[11px]');
+      expect(pill.className).toContain('bg-[var(--bg-tertiary)]');
+      expect(pill.querySelector('svg')).not.toBeNull();
+    });
+
+    it('the delete button is error-coloured and every action has a name', () => {
+      render(React.createElement(BackupTable, props([local])));
+      expect(screen.getByTestId('delete-btn-b1').className).toContain('text-[var(--error-text)]');
+      for (const name of ['還原', '驗證完整性', '下載', '刪除']) {
+        expect(screen.getByRole(name === '下載' ? 'link' : 'button', { name })).toBeInTheDocument();
+      }
+    });
   });
 });

@@ -42,15 +42,15 @@ export function MetadataExport() {
 
   return (
     <div
-      className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4"
+      className="rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4 sm:p-6"
       data-testid="metadata-export"
     >
       <div className="flex items-center gap-2 mb-4">
-        <FileDown className="h-4 w-4 text-[var(--text-secondary)]" />
-        <span className="text-sm font-medium text-[var(--text-primary)]">匯出媒體資料</span>
+        <FileDown className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
+        <span className="text-sm font-semibold text-[var(--text-primary)]">匯出媒體資料</span>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {/* Format selector */}
         <div className="space-y-2">
           {FORMAT_OPTIONS.map((opt) => (
@@ -61,23 +61,35 @@ export function MetadataExport() {
               // Include the description so the radio's computed name keeps the
               // full visible copy (aria-label overrides subtree text in accname).
               aria-label={`${opt.label}：${opt.description}`}
-              className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${
+              className={`flex cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border p-3 transition-colors ${
                 format === opt.value
-                  ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10'
-                  : 'border-[var(--border-subtle)] hover:border-[var(--border-subtle)]'
+                  ? 'border-[var(--accent-primary)] bg-[var(--accent-subtle)]'
+                  : 'border-[var(--border-subtle)] hover:bg-[var(--bg-tertiary)]'
               }`}
               data-testid={`export-format-${opt.value}`}
             >
+              {/* The native radio stays (keyboard, arrow keys, form semantics) and
+                  is only visually hidden; the drawn 18px dot (C13 W36o90) follows
+                  it through `peer-*`. dsr-3d's C9 radio should reuse this shape. */}
               <input
                 type="radio"
                 name="exportFormat"
                 value={opt.value}
                 checked={format === opt.value}
                 onChange={() => setFormat(opt.value)}
-                className="accent-[var(--accent-primary)]"
+                className="peer sr-only"
               />
+              <span
+                aria-hidden="true"
+                className="flex size-[18px] shrink-0 items-center justify-center rounded-full border-2 border-[var(--border-subtle)] text-[var(--text-on-accent)] peer-checked:border-[var(--accent-primary)] peer-checked:bg-[var(--accent-primary)] peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--focus-ring)] peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-[var(--bg-secondary)] [&>svg]:hidden peer-checked:[&>svg]:block"
+                data-testid={`export-radio-dot-${opt.value}`}
+              >
+                <Check className="size-2.5" strokeWidth={3} />
+              </span>
               <div>
-                <span className="text-sm font-medium text-[var(--text-primary)]">{opt.label}</span>
+                <span className="text-sm font-semibold text-[var(--text-primary)]">
+                  {opt.label}
+                </span>
                 <p className="text-xs text-[var(--text-muted)]">{opt.description}</p>
               </div>
             </label>
@@ -88,7 +100,7 @@ export function MetadataExport() {
         <button
           onClick={handleExport}
           disabled={exportMutation.isPending}
-          className="flex items-center gap-2 rounded-lg bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-hover)] disabled:opacity-50"
+          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-5 text-sm font-semibold text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-hover)] disabled:opacity-50 sm:w-auto"
           data-testid="export-btn"
         >
           {exportMutation.isPending ? (

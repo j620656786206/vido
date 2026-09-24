@@ -19,10 +19,11 @@ function ExportSettingsPage() {
         title="匯出/匯入"
         description="將媒體庫元資料匯出為 JSON、YAML 或 NFO 檔案。"
       />
-      <div className="space-y-6">
+      {/* C13: the card and the import note are 768 wide (sF26K / JfvjU), not the full column. */}
+      <div className="max-w-3xl space-y-4">
         <MetadataExport />
         <div
-          className="flex items-center gap-2 rounded-lg border border-dashed border-[var(--border-subtle)] p-4 text-sm text-[var(--text-muted)]"
+          className="flex items-center gap-2 rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] p-4 text-sm text-[var(--text-muted)]"
           data-testid="import-pending"
         >
           <Upload className="h-4 w-4 shrink-0" aria-hidden="true" />

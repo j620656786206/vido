@@ -107,4 +107,45 @@ describe('MetadataExport', () => {
     expect(screen.getByText(/YAML 格式/)).toBeInTheDocument();
     expect(screen.getByText(/Kodi\/Plex\/Jellyfin/)).toBeInTheDocument();
   });
+
+  describe('dsr-3f', () => {
+    it('the chosen format wears --accent-subtle; the others do not', () => {
+      renderWithQuery(React.createElement(MetadataExport));
+      expect(screen.getByTestId('export-format-json').className).toContain(
+        'bg-[var(--accent-subtle)]'
+      );
+      expect(screen.getByTestId('export-format-yaml').className).not.toContain('accent-subtle');
+    });
+
+    it('keeps the native radios: arrow keys move the choice', async () => {
+      const user = userEvent.setup();
+      renderWithQuery(React.createElement(MetadataExport));
+      const json = screen.getByRole('radio', { name: /JSON/ });
+      expect(json).toBeChecked();
+      // Visually hidden, not display:none — it must stay in the accessibility tree.
+      expect(json.className).toContain('sr-only');
+      json.focus();
+      await user.keyboard('{ArrowDown}');
+      expect(screen.getByRole('radio', { name: /YAML/ })).toBeChecked();
+      expect(screen.getByTestId('export-format-yaml').className).toContain(
+        'bg-[var(--accent-subtle)]'
+      );
+    });
+
+    it('the drawn dot follows the native radio (peer-checked), hidden from assistive tech', () => {
+      renderWithQuery(React.createElement(MetadataExport));
+      const dot = screen.getByTestId('export-radio-dot-json');
+      expect(dot).toHaveAttribute('aria-hidden', 'true');
+      expect(dot.className).toContain('peer-checked:bg-[var(--accent-primary)]');
+      expect(dot.className).toContain('peer-focus-visible:ring-2');
+    });
+
+    it('匯出 is 44px tall and full width on a phone', () => {
+      renderWithQuery(React.createElement(MetadataExport));
+      const btn = screen.getByTestId('export-btn');
+      expect(btn.className).toContain('min-h-11');
+      expect(btn.className).toContain('w-full');
+      expect(btn.className).toContain('sm:w-auto');
+    });
+  });
 });

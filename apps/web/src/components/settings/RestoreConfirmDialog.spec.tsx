@@ -1,8 +1,11 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { RestoreConfirmDialog } from './RestoreConfirmDialog';
+
+const h = vi.hoisted(() => ({ isPhone: false }));
+vi.mock('../../hooks/useIsPhone', () => ({ useIsPhone: () => h.isPhone }));
 import type { Backup } from '../../services/backupService';
 
 const testBackup: Backup = {
@@ -96,5 +99,88 @@ describe('RestoreConfirmDialog', () => {
     );
     expect(screen.getByText(/取代目前所有的資料/)).toBeInTheDocument();
     expect(screen.getByText(/自動建立目前資料的快照/)).toBeInTheDocument();
+  });
+
+  describe('dsr-3f: a real dialog', () => {
+    const renderDialog = (over = {}) => {
+      const props = {
+        backup: { ...testBackup, createdAt: '2026-09-10T03:00:00' },
+        isRestoring: false,
+        onConfirm: vi.fn(),
+        onCancel: vi.fn(),
+        ...over,
+      };
+      render(React.createElement(RestoreConfirmDialog, props));
+      return props;
+    };
+    afterEach(() => {
+      h.isPhone = false;
+    });
+
+    it('is a named modal dialog that starts on 取消, not on the destructive button', () => {
+      renderDialog();
+      const dialog = screen.getByRole('dialog', { name: '確認還原' });
+      expect(dialog).toBeInTheDocument();
+      expect(screen.getByTestId('restore-cancel-btn')).toHaveFocus();
+    });
+
+    it('Esc cancels', async () => {
+      const user = userEvent.setup();
+      const p = renderDialog();
+      await user.keyboard('{Escape}');
+      expect(p.onCancel).toHaveBeenCalledTimes(1);
+      expect(p.onConfirm).not.toHaveBeenCalled();
+    });
+
+    it('Esc does nothing while a restore is running', async () => {
+      const user = userEvent.setup();
+      const p = renderDialog({ isRestoring: true });
+      await user.keyboard('{Escape}');
+      expect(p.onCancel).not.toHaveBeenCalled();
+    });
+
+    it('shows which backup: file name, then size · date, in mono', () => {
+      renderDialog();
+      expect(screen.getByTestId('restore-file').className).toContain('font-mono');
+      expect(screen.getByTestId('restore-file-meta')).toHaveTextContent(
+        '50.0 MB · 2026-09-10 03:00'
+      );
+    });
+
+    it('the snapshot note is an info callout and 取消 is a filled neutral button', () => {
+      renderDialog();
+      expect(screen.getByTestId('restore-snapshot-note').className).toContain(
+        'bg-[var(--info-tint)]'
+      );
+      expect(screen.getByTestId('restore-cancel-btn').className).toContain(
+        'bg-[var(--bg-tertiary)]'
+      );
+    });
+
+    it('keeps the consequence emphasised', () => {
+      renderDialog();
+      expect(screen.getByText('這將會取代目前所有的資料').tagName).toBe('STRONG');
+    });
+
+    it('desktop: 取消 then 確認還原; no grabber', () => {
+      renderDialog();
+      const buttons = screen.getByTestId('restore-actions').querySelectorAll('button');
+      expect([...buttons].map((b) => b.textContent)).toEqual(['取消', '確認還原']);
+      expect(screen.queryByTestId('restore-sheet-grabber')).toBeNull();
+    });
+
+    it('phone: a sheet with a grabber, stacked buttons, 確認還原 on top', () => {
+      h.isPhone = true;
+      renderDialog();
+      expect(screen.getByTestId('restore-sheet-grabber')).toBeInTheDocument();
+      // 確認還原 is first in the DOM here, yet focus still starts on 取消.
+      expect(screen.getByTestId('restore-cancel-btn')).toHaveFocus();
+      const actions = screen.getByTestId('restore-actions');
+      expect(actions.className).toContain('flex-col');
+      expect([...actions.querySelectorAll('button')].map((b) => b.textContent)).toEqual([
+        '確認還原',
+        '取消',
+      ]);
+    });
   });
 });
