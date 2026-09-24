@@ -185,3 +185,7 @@ Claude Opus 4.6 (1M context)
 - apps/web/src/routes/settings/cache.tsx (modified — replaced placeholder)
 - _bmad-output/implementation-artifacts/sprint-status.yaml (modified — status)
 - _bmad-output/implementation-artifacts/6-2-cache-management.md (modified — task tracking)
+
+## ↪ AC drift（2026-09-24，bugfix-custom-posters-served-and-not-cache）
+
+AC #1 的「Image cache」已移除：那個資料夾（`data/posters`）裡只有使用者上傳的海報，不是快取，清掉會刪使用者的檔案。快取類型現在是 ai／metadata／douban／wikipedia 四種，`DELETE /settings/cache/image` 回 400。

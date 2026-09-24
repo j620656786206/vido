@@ -30,7 +30,7 @@ func setupPosterRouter(t *testing.T) (*gin.Engine, string) {
 	return r, dir
 }
 
-func get(r *gin.Engine, path string) *httptest.ResponseRecorder {
+func getPoster(r *gin.Engine, path string) *httptest.ResponseRecorder {
 	req, _ := http.NewRequest(http.MethodGet, path, nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -40,16 +40,25 @@ func get(r *gin.Engine, path string) *httptest.ResponseRecorder {
 func TestPosterFileHandler_ServesUploadedPosterAndThumb(t *testing.T) {
 	r, _ := setupPosterRouter(t)
 
-	w := get(r, "/api/v1/posters/0fe13b88-a374-4039-9e8a-f80556eb7c78.jpg")
+	w := getPoster(r, "/api/v1/posters/0fe13b88-a374-4039-9e8a-f80556eb7c78.jpg")
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "JPEGDATA", w.Body.String())
 	assert.Equal(t, "image/jpeg", w.Header().Get("Content-Type"))
 	assert.Equal(t, "no-cache", w.Header().Get("Cache-Control"))
 	assert.NotEmpty(t, w.Header().Get("Last-Modified"))
 
-	w = get(r, "/api/v1/posters/0fe13b88-a374-4039-9e8a-f80556eb7c78-thumb.jpg")
+	w = getPoster(r, "/api/v1/posters/0fe13b88-a374-4039-9e8a-f80556eb7c78-thumb.jpg")
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "THUMB", w.Body.String())
+}
+
+func TestPosterFileHandler_HeadAnswersWithoutBody(t *testing.T) {
+	r, _ := setupPosterRouter(t)
+	req, _ := http.NewRequest(http.MethodHead, "/api/v1/posters/0fe13b88-a374-4039-9e8a-f80556eb7c78.jpg", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "image/jpeg", w.Header().Get("Content-Type"))
 }
 
 func TestPosterFileHandler_RejectsAnythingThatIsNotAPosterName(t *testing.T) {
@@ -65,7 +74,7 @@ func TestPosterFileHandler_RejectsAnythingThatIsNotAPosterName(t *testing.T) {
 		"/api/v1/posters/a.b.jpg",
 		"/api/v1/posters/notes.txt",
 	} {
-		w := get(r, p)
+		w := getPoster(r, p)
 		assert.NotEqual(t, http.StatusOK, w.Code, p)
 		assert.NotContains(t, w.Body.String(), "SECRET", p)
 	}
@@ -73,6 +82,6 @@ func TestPosterFileHandler_RejectsAnythingThatIsNotAPosterName(t *testing.T) {
 
 func TestPosterFileHandler_MissingFileIs404(t *testing.T) {
 	r, _ := setupPosterRouter(t)
-	w := get(r, "/api/v1/posters/does-not-exist.jpg")
+	w := getPoster(r, "/api/v1/posters/does-not-exist.jpg")
 	assert.Equal(t, http.StatusNotFound, w.Code)
 }

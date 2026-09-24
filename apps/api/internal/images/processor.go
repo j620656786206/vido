@@ -92,28 +92,20 @@ func (p *ImageProcessor) ProcessPoster(input io.Reader, mediaID string) (*Proces
 	// Create thumbnail
 	thumbnail := p.resizeAndCrop(img, ThumbnailWidth, ThumbnailHeight)
 
-	// Save poster
-	posterPath := filepath.Join(p.cacheDir, fmt.Sprintf("%s.webp", mediaID))
-	posterSize, err := p.saveAsJPEG(poster, posterPath, JpegQuality)
+	// Save poster straight to the name the API serves and the DB stores
+	// (GetPosterURL → /posters/<id>.jpg). It used to be written as .webp and
+	// renamed, and a failed rename silently left a .webp nobody could fetch
+	// (bugfix-custom-posters-served-and-not-cache CR).
+	actualPosterPath := filepath.Join(p.cacheDir, fmt.Sprintf("%s.jpg", mediaID))
+	posterSize, err := p.saveAsJPEG(poster, actualPosterPath, JpegQuality)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save poster: %w", err)
 	}
-	// Rename to actual format used
-	actualPosterPath := filepath.Join(p.cacheDir, fmt.Sprintf("%s.jpg", mediaID))
-	if err := os.Rename(posterPath, actualPosterPath); err != nil {
-		// If rename fails, keep the webp extension but it's actually JPEG
-		actualPosterPath = posterPath
-	}
 
 	// Save thumbnail
-	thumbPath := filepath.Join(p.cacheDir, fmt.Sprintf("%s-thumb.webp", mediaID))
-	_, err = p.saveAsJPEG(thumbnail, thumbPath, ThumbnailQuality)
-	if err != nil {
-		return nil, fmt.Errorf("failed to save thumbnail: %w", err)
-	}
 	actualThumbPath := filepath.Join(p.cacheDir, fmt.Sprintf("%s-thumb.jpg", mediaID))
-	if err := os.Rename(thumbPath, actualThumbPath); err != nil {
-		actualThumbPath = thumbPath
+	if _, err := p.saveAsJPEG(thumbnail, actualThumbPath, ThumbnailQuality); err != nil {
+		return nil, fmt.Errorf("failed to save thumbnail: %w", err)
 	}
 
 	p.logger.Info("Processed poster image",

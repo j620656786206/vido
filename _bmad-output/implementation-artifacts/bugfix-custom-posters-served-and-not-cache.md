@@ -29,7 +29,7 @@ so that fixing a poster by hand is a one-time job instead of something that sile
    - 上傳成功後 DB 存 `poster_path = "/posters/<id>.jpg"`（`processor.go:226-228` `GetPosterURL`，由 `metadata_edit_service.go:297-301` 寫入）。
    - 前端 `getImageUrl`（`lib/image.ts:19-23`）只認得「絕對網址」或「TMDb 相對路徑」，把 `/posters/<id>.jpg` 拼成 `https://image.tmdb.org/t/p/w342/posters/<id>.jpg` → 破圖；`getImageSrcSet` 同樣拼出三個錯的網址。
    - 後端**沒有任何路由**提供 `/posters/...`（`cmd/api/static.go` 只服務 `/assets` 與 favicon 類；`grep` 全專案無 `/posters` 路由）。dev 模式的 vite 只代理 `/api`（`apps/web/vite.config.mts:21-26`）。
-   - 上傳入口是 `LocalDetailV2` 裡的中繼資料編輯器 → `components/metadata-editor/PosterUploader.tsx`；它的預覽直接用原字串 `<img src={preview}>`（`:36, :197`），同樣是破圖。
+   - ~~上傳入口是 `LocalDetailV2` 裡的中繼資料編輯器~~ **（/ship CR 更正）產品裡目前沒有任何上傳入口**：`PosterUploader.tsx` 只出現在視覺 gallery；`useUploadPoster` 沒有呼叫者；`MetadataEditorDialog` 的海報欄位是「貼網址」並存絕對網址。所以上傳只能打 API（e2e 就是這樣測的）。`PosterUploader` 的預覽直接用原字串 `<img src={preview}>`（`:36, :197`），同樣是破圖——本張已修，等它被接上時就是對的。上傳入口另立 `disc-2026-09-poster-upload-no-ui-entry`。
 4. **Story 3.8 的原意**（`3-8-metadata-editor.md:31, 155-156`）是回傳 `/posters/<id>.webp` 並能顯示——「怎麼服務這些檔案」當時沒被做。
 5. **正式環境影響未查**：dev 查證時 NAS SSH 逾時（不在家中網路）。dev 開工時先唯讀查：`sqlite3 -readonly /mnt/user/appdata/vido/vido.db "select count(*) from movies where poster_path like '/posters/%'; select count(*) from series where poster_path like '/posters/%';"` 與 `ls /mnt/user/appdata/vido/posters | wc -l`，寫進 Completion Notes。
 
@@ -150,7 +150,7 @@ Claude Opus 5.5 (1M context)（Amelia / dev-story）
 - Ultimate context engine analysis completed - comprehensive developer guide created
 - **Task 1（正式環境）**：NAS 上 `movies`／`series` 的 `poster_path like '/posters/%'` 都是 **0**，`/mnt/user/appdata/vido/posters` 是**空的**（3 月建立後從沒放過檔案）→ **正式環境沒有任何上傳海報被刪過**；這張是預防，不是救資料。
 - **Task 2**：`ValidCacheTypes` 移除 `image`（加註解說明原因）；`CacheCleanupService`／`CacheStatsService` 不再持有 `imageDir`，建構子改成只收 `db`；刪 `clearAllImages`／`clearOldImages`／`getImageStats`／`GetImageCacheSize`（介面方法也刪——建單時確認除了自己沒有呼叫者）；`ClearCacheByType("image")` 走既有的 `ErrInvalidCacheType` → 400。`main.go` 不再把 `posterDir` 傳給快取服務。新增 Go 測試：60 天前的上傳海報在「清 30 天前」＋逐類全清之後仍在。
-- **Task 3**：新 `handlers/poster_file_handler.go`：`GET /api/v1/posters/:file`，檔名白名單 `^[A-Za-z0-9_-]+(-thumb)?\.jpg$`、不存在或不合規一律 404、`Content-Type: image/jpeg`、`Cache-Control: no-cache`（重新上傳會覆寫同名檔，靠 `Last-Modified` 重驗）。測試含路徑穿越（`..%2F`、`%2e%2e%2f`、`../`）、其他副檔名、帶點的名稱、**資料夾內但不是海報名的檔案**。
+- **Task 3**：新 `handlers/poster_file_handler.go`：`GET /api/v1/posters/:file`，檔名白名單 `^[A-Za-z0-9_-]+\.jpg$`（CR 簡化；`-thumb` 本來就在字元集內）＋ `HEAD`、不存在或不合規一律 404、`Content-Type: image/jpeg`、`Cache-Control: no-cache`（重新上傳會覆寫同名檔，靠 `Last-Modified` 重驗）。測試含路徑穿越（`..%2F`、`%2e%2e%2f`、`../`）、其他副檔名、帶點的名稱、**資料夾內但不是海報名的檔案**。
 - **Task 4**：`lib/image.ts` 新增 `isUploadedPoster`（`/posters/` 前綴）：`getImageUrl` → `${API_BASE_URL}${path}`（`VITE_API_BASE_URL || '/api/v1'`，與各 service 相同寫法）、`getImageSrcSet` → `null`；TMDb 相對路徑與絕對網址行為不變（既有測試全綠）。`PosterUploader` 初始預覽改用 `getImageUrl`（原本直接 `<img src="/posters/…">`，連 TMDb 路徑也是破的）。
 - **Task 5**：稿 C11-D／C11-M／C18-D 刪「圖片快取」卡、總計改 599 MB、`spec-note-dsr-3e` 補一句；`check-design-tokens.py` 通過。前端快取頁本來就依後端清單渲染，只改 spec／夾具的 `image` 範例與 `CacheManagement.tsx` 的註解。C18 的說明句**沒改字**（更真了）；要不要補「也不會刪你上傳的海報」→ 待 Sally 決定。
 - **Task 6**：新 e2e `tests/e2e/custom-poster.spec.ts`：建一部片 → 上傳 JPEG → API 回 200 `image/jpeg` → 詳情頁 `<img src$="/api/v1/posters/<id>.jpg">` 且 `naturalWidth > 0` → 清 30 天前＋全清＋`/settings/cache/image` 回 400 → 檔案仍 200、重新整理後仍顯示。`--repeat-each=3` 3／3。
@@ -162,9 +162,22 @@ Claude Opus 5.5 (1M context)（Amelia / dev-story）
 - **Mutation：unit／Go 5／5 紅、e2e 1／1 紅**（前端拿掉 `/posters/` 對應 → 2 條單元＋e2e 紅；拿掉 srcset 排除 → 紅；`ValidCacheTypes` 放回 `image` → Go 紅；白名單放寬成 `.*` → 第一輪**沒紅**（路徑穿越本來就被路由與 Join 擋住）→ 補「資料夾內的非海報檔」測試後紅；快取標頭改 immutable → 紅）。
 - **視覺基準**：`settings-cache-management`（default、`/confirm`）少一張卡，darwin 基準更新、過期 `-linux` 以 `git rm` 交給 CI bootstrap。
 
+- ⚠️ **Go 清快取測試不是 mutation 證據**（CR LOW-6）：`CacheCleanupService` 已不再知道海報資料夾，「上傳海報沒被清」這條 Go 測試在任何改法下都會綠。真正的保護是 `main.go` 不再把 `posterDir` 傳進快取服務，加上 e2e `custom-poster.spec.ts` 端到端打真的清快取 API。
+
+### 🔍 /ship Adversarial Review（2026-09-24）
+
+0 HIGH／2 MEDIUM／4 LOW／3 NIT。
+- **M1** Context 🔴 #3 說上傳入口在 `LocalDetailV2`——不對，產品沒有入口 → 已更正 Context；另立 `disc-2026-09-poster-upload-no-ui-entry`。
+- **M2** File List 列了 `6-2`／`3-8` 但沒真的寫 drift 註記 → 兩份都補上「↪ AC drift」段。
+- **L3** 重新上傳同名檔、`useUploadPoster` 失效的 query key 對不上詳情頁 → 併入 M1 的 disc（沒有入口就不會發生）。
+- **L4** 上傳前沒檢查片子存在就先寫檔（`metadata_edit_service.go` UploadPoster）、`DeletePoster` 沒人呼叫、e2e 留檔 → 另立 `disc-2026-09-poster-orphan-files`。
+- **L5** `ProcessPoster` 先試存 `.webp` 再改名，失敗時會留下服務不了的 `.webp` → 已改成直接寫 `.jpg`；測試斷言檔名＝`GetPosterPath` 且資料夾內沒有 `.webp`。
+- **L6** 見上一條 Completion Note。
+- **NIT** 白名單簡化、補 `HEAD`、測試 helper 改名 `getPoster` → 全做。
+
 ### Discovery Triage
 
-- N/A — no out-of-scope work discovered（C18 說明句要不要補一句屬本張待 UX 確認，不是新工作）。
+- `disc-2026-09-poster-upload-no-ui-entry`（CR M1＋L3）、`disc-2026-09-poster-orphan-files`（CR L4），都已寫進 sprint-status。C18 說明句要不要補一句屬本張待 UX 確認，不是新工作。
 
 ### File List
 
@@ -172,6 +185,7 @@ Claude Opus 5.5 (1M context)（Amelia / dev-story）
 - `apps/api/internal/services/cache_cleanup_service.go`（+test）
 - `apps/api/internal/services/cache_stats_service.go`（+test）
 - `apps/api/internal/handlers/poster_file_handler.go`（新，+test）
+- `apps/api/internal/images/processor.go`（+test，CR L5）
 - `apps/api/internal/handlers/cache_handler_test.go`
 - `apps/api/cmd/api/main.go`
 - `apps/web/src/lib/image.ts`（+spec）
@@ -181,11 +195,12 @@ Claude Opus 5.5 (1M context)（Amelia / dev-story）
 - `tests/e2e/custom-poster.spec.ts`（新）、`tests/e2e/cache.api.spec.ts`
 - `tests/visual/components.visual.spec.ts-snapshots/components/settings-cache-management/…`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
-- `_bmad-output/implementation-artifacts/6-2-cache-management.md`（AC drift reference — see Completion Notes）
-- `_bmad-output/implementation-artifacts/3-8-metadata-editor.md`（AC drift reference — see Completion Notes）
+- `_bmad-output/implementation-artifacts/6-2-cache-management.md`（↪ AC drift 註記）
+- `_bmad-output/implementation-artifacts/3-8-metadata-editor.md`（↪ AC drift 註記）
 
 ## Change Log
 
 | Date | Change |
 | --- | --- |
 | 2026-09-24 | 正式環境查證（0 張上傳海報）；後端移除 image 快取類型、新增 `/api/v1/posters/:file`；前端認得 `/posters/`；稿刪「圖片快取」卡；e2e 上傳→顯示→清快取後仍在 |
+| 2026-09-24 | /ship CR：0H／2M／4L／3N；更正 Context #3（產品沒有上傳入口）、補 drift 註記、`ProcessPoster` 直接寫 `.jpg`、白名單簡化＋`HEAD`；另立 2 張 disc |
