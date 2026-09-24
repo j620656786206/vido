@@ -127,6 +127,12 @@ describe('absolute-URL passthrough (bugfix-d D2)', () => {
       expect(getImageSrcSet('/posters/0fe13b88.jpg')).toBeNull();
     });
 
+    it('keeps the ?v= version an upload is stored with (poster-upload-b AC #2)', () => {
+      expect(getImageUrl('/posters/0fe13b88.jpg?v=1727170000000')).toBe(
+        '/api/v1/posters/0fe13b88.jpg?v=1727170000000'
+      );
+    });
+
     it('leaves a TMDb path that merely contains "posters" alone', () => {
       expect(getImageUrl('/postersabc.jpg')).toBe('https://image.tmdb.org/t/p/w342/postersabc.jpg');
     });

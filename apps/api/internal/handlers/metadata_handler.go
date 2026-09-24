@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -396,6 +397,9 @@ func (h *MetadataHandler) UpdateMetadata(c *gin.Context) {
 	SuccessResponse(c, result)
 }
 
+// maxPosterUploadBytes caps the upload request body (5 MB image + multipart overhead).
+const maxPosterUploadBytes = 6 * 1024 * 1024
+
 // UploadPoster handles POST /api/v1/media/{id}/poster (Story 3.8 - AC3)
 // Allows users to upload a custom poster image for a media item
 // @Summary Upload custom poster
@@ -420,11 +424,20 @@ func (h *MetadataHandler) UploadPoster(c *gin.Context) {
 		return
 	}
 
-	mediaType := c.DefaultQuery("mediaType", "movie")
+	// A little over the 5 MB the service allows, so the multipart envelope fits
+	// and anything bigger is refused before it is read into memory.
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxPosterUploadBytes)
 
 	// Get the uploaded file
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
+		var tooBig *http.MaxBytesError
+		if errors.As(err, &tooBig) {
+			ErrorResponse(c, http.StatusBadRequest, "POSTER_TOO_LARGE",
+				services.ErrPosterTooLarge.Error(),
+				"Please upload an image smaller than 5MB")
+			return
+		}
 		ErrorResponse(c, http.StatusBadRequest, "POSTER_UPLOAD_INVALID_REQUEST",
 			"File is required",
 			"Please upload an image file (jpg, png, or webp)")
@@ -432,9 +445,21 @@ func (h *MetadataHandler) UploadPoster(c *gin.Context) {
 	}
 	defer file.Close()
 
-	// Read file data
-	fileData := make([]byte, header.Size)
-	_, err = file.Read(fileData)
+	// poster-upload-b AC #1: the web client sends mediaType as a multipart
+	// field; the query is kept for API callers (the e2e helper uses it).
+	mediaType := c.PostForm("mediaType")
+	if mediaType == "" {
+		mediaType = c.DefaultQuery("mediaType", "movie")
+	}
+	if mediaType != "movie" && mediaType != "series" {
+		ErrorResponse(c, http.StatusBadRequest, "POSTER_UPLOAD_INVALID_REQUEST",
+			"mediaType must be movie or series",
+			"Please provide a valid mediaType")
+		return
+	}
+
+	// Read file data — all of it (a single Read may stop short).
+	fileData, err := io.ReadAll(file)
 	if err != nil {
 		ErrorResponse(c, http.StatusInternalServerError, "POSTER_UPLOAD_FAILED",
 			"Failed to read file",
@@ -451,7 +476,7 @@ func (h *MetadataHandler) UploadPoster(c *gin.Context) {
 		FileData:    fileData,
 		FileName:    header.Filename,
 		ContentType: contentType,
-		FileSize:    header.Size,
+		FileSize:    int64(len(fileData)),
 	}
 
 	result, err := h.service.UploadPoster(c.Request.Context(), serviceReq)

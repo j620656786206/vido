@@ -1638,6 +1638,72 @@ func TestMetadataHandler_UploadPoster_Success(t *testing.T) {
 	assert.Equal(t, "/posters/test-movie-id-thumb.webp", data["thumbnail_url"])
 }
 
+// poster-upload-b AC #1: the web client sends mediaType as a multipart FIELD
+// (services/metadata.ts); the handler used to read only the query and filed
+// every series upload as a movie.
+func uploadRequest(t *testing.T, query string, field map[string]string, fileBytes []byte) *http.Request {
+	t.Helper()
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	for k, v := range field {
+		require.NoError(t, writer.WriteField(k, v))
+	}
+	part, _ := writer.CreateFormFile("file", "poster.jpg")
+	part.Write(fileBytes)
+	writer.Close()
+	req := httptest.NewRequest("POST", "/api/v1/media/m1/poster"+query, body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	return req
+}
+
+func runUpload(t *testing.T, req *http.Request) (string, *httptest.ResponseRecorder, bool) {
+	t.Helper()
+	gin.SetMode(gin.TestMode)
+	var gotType string
+	called := false
+	service := &mockMetadataService{
+		uploadPosterFunc: func(ctx context.Context, r *services.UploadPosterRequest) (*services.UploadPosterResponse, error) {
+			called = true
+			gotType = r.MediaType
+			assert.Equal(t, r.FileSize, int64(len(r.FileData)), "the whole file must be read")
+			return &services.UploadPosterResponse{PosterURL: "/posters/m1.jpg?v=1"}, nil
+		},
+	}
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Params = gin.Params{{Key: "id", Value: "m1"}}
+	c.Request = req
+	NewMetadataHandler(service).UploadPoster(c)
+	return gotType, w, called
+}
+
+func TestMetadataHandler_UploadPoster_MediaTypeFromFormField(t *testing.T) {
+	jpeg := []byte{0xFF, 0xD8, 0xFF, 0xE0}
+	got, w, _ := runUpload(t, uploadRequest(t, "", map[string]string{"mediaType": "series"}, jpeg))
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "series", got)
+
+	got, _, _ = runUpload(t, uploadRequest(t, "?mediaType=series", nil, jpeg))
+	assert.Equal(t, "series", got, "the query form still works (e2e helper)")
+
+	got, _, _ = runUpload(t, uploadRequest(t, "", nil, jpeg))
+	assert.Equal(t, "movie", got, "no type at all stays a movie")
+}
+
+func TestMetadataHandler_UploadPoster_RejectsUnknownMediaType(t *testing.T) {
+	_, w, called := runUpload(t, uploadRequest(t, "", map[string]string{"mediaType": "episode"}, []byte{0xFF, 0xD8}))
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.False(t, called)
+}
+
+func TestMetadataHandler_UploadPoster_BodyOverLimitIsTooLarge(t *testing.T) {
+	big := make([]byte, 7*1024*1024)
+	_, w, called := runUpload(t, uploadRequest(t, "", nil, big))
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "POSTER_TOO_LARGE")
+	assert.False(t, called, "an oversized body must be refused before the service sees it")
+}
+
 // [P1] Tests upload poster missing file returns error
 func TestMetadataHandler_UploadPoster_MissingFile(t *testing.T) {
 	gin.SetMode(gin.TestMode)

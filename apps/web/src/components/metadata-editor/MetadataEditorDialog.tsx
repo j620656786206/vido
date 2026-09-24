@@ -13,15 +13,15 @@ import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ImageIcon, Loader2, X } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { getImageUrl } from '../../lib/image';
 import { genreNamesFor } from '../../lib/genres';
-import { useUpdateMetadata } from '../../hooks/useMetadataEditor';
+import { useUpdateMetadata, useUploadPoster } from '../../hooks/useMetadataEditor';
 import { Dialog, DialogClose, DialogContent, DialogTitle } from '../ui/Dialog';
 import { MOBILE_SHEET_CONTENT, SheetGrabber } from '../ui/mobileSheet';
 import { GenreSelector } from './GenreSelector';
 import { CastEditor } from './CastEditor';
+import { PosterField, type PosterChoice, type PosterPhase } from './PosterField';
 
 const metadataSchema = z.object({
   title: z.string().min(1, '片名為必填'),
@@ -172,19 +172,53 @@ function EditorBody({
 
   const genres = watch('genres');
   const cast = watch('cast');
-  const posterSrc = getImageUrl(initialData.posterUrl ?? null, 'w342');
-  // A poster that fails to load (TMDb down, a dead absolute URL) reads as "no
-  // poster", not as a broken-image glyph with alt text in a 184px box.
-  const [posterFailed, setPosterFailed] = useState(false);
-  const poster = posterFailed ? null : posterSrc;
+  const uploadMutation = useUploadPoster();
+  const [posterChoice, setPosterChoice] = useState<PosterChoice | null>(null);
+  const [posterPhase, setPosterPhase] = useState<PosterPhase>('idle');
+  // Set once the picked file is on the server, so a retry after a FIELD
+  // failure saves the fields without uploading the image again.
+  const posterUploaded = useRef(false);
+  // The poster went up but the fields did not: 取消 can no longer undo the
+  // poster, so the footer must stop promising that it will.
+  const [posterSavedFieldsFailed, setPosterSavedFieldsFailed] = useState(false);
 
+  const urlNotReady = posterChoice?.kind === 'url' && posterChoice.status !== 'ok';
+  const busy = posterPhase === 'uploading' || updateMutation.isPending;
+  const canSave = !busy && !urlNotReady && (isDirty || posterChoice !== null);
+
+  // B′14 rule 3: upload the poster first; only when it is on the server are the
+  // fields saved. A failed upload saves nothing and keeps the dialog open.
   const onSubmit = async (data: MetadataFormData) => {
+    if (posterChoice?.kind === 'file' && !posterUploaded.current) {
+      setPosterPhase('uploading');
+      try {
+        await uploadMutation.mutateAsync({ mediaId, mediaType, file: posterChoice.file });
+        posterUploaded.current = true;
+        setPosterPhase('idle');
+      } catch {
+        setPosterPhase('failed');
+        return;
+      }
+    }
+    // A poster-only change must not rewrite the fields: a metadata save also
+    // marks the item as hand-edited.
+    const fieldsToSave = isDirty || posterChoice?.kind === 'url';
     try {
-      await updateMutation.mutateAsync({ id: mediaId, mediaType, ...data });
+      if (fieldsToSave) {
+        await updateMutation.mutateAsync({
+          id: mediaId,
+          mediaType,
+          ...data,
+          // Only a pasted URL goes through the metadata write; an uploaded
+          // file already stored its own path and must not be overwritten.
+          ...(posterChoice?.kind === 'url' ? { posterUrl: posterChoice.url } : {}),
+        });
+      }
       onSuccess();
       onClose();
     } catch {
       // Shown in the footer from updateMutation.error.
+      if (posterUploaded.current) setPosterSavedFieldsFailed(true);
     }
   };
 
@@ -208,39 +242,25 @@ function EditorBody({
         onSubmit={handleSubmit(onSubmit)}
         className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 sm:flex-row sm:gap-6 sm:p-6"
       >
-        {/* Poster column (B′13 left). Read-only here; poster-upload-b adds the controls. */}
-        <section
-          aria-labelledby="metadata-poster-label"
-          data-testid="metadata-editor-poster-column"
-          className="flex shrink-0 gap-4 sm:w-[184px] sm:flex-col sm:gap-3"
-        >
-          <span
-            id="metadata-poster-label"
-            className="order-2 text-xs text-[var(--text-secondary)] sm:order-1"
-          >
-            海報
-          </span>
-          <div className="order-1 h-[156px] w-[104px] shrink-0 overflow-hidden rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] sm:order-2 sm:h-[276px] sm:w-[184px]">
-            {poster ? (
-              <img
-                src={poster}
-                alt="目前的海報"
-                onError={() => setPosterFailed(true)}
-                className="h-full w-full object-cover"
-                data-testid="metadata-editor-poster"
-              />
-            ) : (
-              <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-[var(--text-muted)]">
-                <ImageIcon className="h-6 w-6" aria-hidden="true" />
-                <span className="text-xs">還沒有海報</span>
-              </div>
-            )}
-          </div>
-        </section>
+        {/* Poster column (B′13 left, B′14 states). */}
+        <PosterField
+          currentPoster={initialData.posterUrl ?? null}
+          choice={posterChoice}
+          onChoiceChange={(next) => {
+            setPosterChoice(next);
+            setPosterPhase('idle');
+            posterUploaded.current = false;
+            setPosterSavedFieldsFailed(false);
+          }}
+          phase={posterPhase}
+        />
 
         {/* Fields (B′13 right). DOM order is the desktop order; the phone moves
             導演 up beside 年份 (B13p-M) with `order`. */}
-        <div className="grid min-w-0 flex-1 grid-cols-2 content-start gap-x-3 gap-y-4 sm:grid-cols-[1fr_120px]">
+        <fieldset
+          disabled={busy}
+          className="grid min-w-0 flex-1 grid-cols-2 content-start gap-x-3 gap-y-4 sm:grid-cols-[1fr_120px]"
+        >
           <div className="order-1 col-span-2 sm:col-span-1">
             <label htmlFor="metadata-title" className={LABEL}>
               片名 <span className="text-[var(--error-text)]">*</span>
@@ -345,14 +365,26 @@ function EditorBody({
               className="w-full resize-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-colors focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
             />
           </div>
-        </div>
+        </fieldset>
       </form>
 
       <div className="flex shrink-0 flex-col gap-3 border-t border-[var(--border-subtle)] px-4 pb-6 pt-4 sm:flex-row sm:items-center sm:px-6 sm:pb-4">
-        {updateMutation.error && (
+        {updateMutation.error ? (
           <p role="alert" className="text-sm text-[var(--error-text)] sm:flex-1">
             更新失敗：{updateMutation.error.message}
           </p>
+        ) : null}
+        {posterSavedFieldsFailed ? (
+          <p role="status" className="text-xs text-[var(--text-secondary)] sm:flex-1">
+            新海報已經換上了；其他欄位還沒存，請再按一次「儲存」。
+          </p>
+        ) : (
+          posterChoice &&
+          !updateMutation.error && (
+            <p className="hidden text-xs text-[var(--text-secondary)] sm:block sm:flex-1">
+              新海報會在按「儲存」後換上；按「取消」就不會動到目前的海報。
+            </p>
+          )
         )}
         <div className="flex gap-3 sm:ml-auto">
           <button
@@ -365,13 +397,13 @@ function EditorBody({
           <button
             type="submit"
             form={FORM_ID}
-            disabled={updateMutation.isPending || !isDirty}
+            disabled={!canSave}
             className="flex h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-5 text-sm font-semibold text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 sm:flex-none"
           >
             {updateMutation.isPending && (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
             )}
-            {updateMutation.isPending ? '儲存中…' : '儲存'}
+            {busy ? '儲存中…' : '儲存'}
           </button>
         </div>
       </div>

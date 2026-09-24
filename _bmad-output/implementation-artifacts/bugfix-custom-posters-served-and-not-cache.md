@@ -205,3 +205,7 @@ Claude Opus 5.5 (1M context)（Amelia / dev-story）
 | 2026-09-24 | 正式環境查證（0 張上傳海報）；後端移除 image 快取類型、新增 `/api/v1/posters/:file`；前端認得 `/posters/`；稿刪「圖片快取」卡；e2e 上傳→顯示→清快取後仍在 |
 | 2026-09-24 | /ship CR：0H／2M／4L／3N；更正 Context #3（產品沒有上傳入口）、補 drift 註記、`ProcessPoster` 直接寫 `.jpg`、白名單簡化＋`HEAD`；另立 2 張 disc |
 | 2026-09-24 | PR #536 合併（`59220ae9`），狀態改 done |
+
+## ↪ AC drift（2026-09-24，poster-upload-b-poster-field）
+
+AC #6「上傳 API 回應格式不變（`posterUrl` 仍回 `/posters/<id>.jpg`）」→ 欄位不變，值多了 `?v=<unix 毫秒>`，讓重新上傳換得掉；`GET /api/v1/posters/:file` 與前端 `getImageUrl` 照舊處理。

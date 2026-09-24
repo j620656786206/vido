@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/vido/api/internal/images"
@@ -274,18 +275,33 @@ func (s *MetadataEditService) updateSeriesMetadata(ctx context.Context, req *Upd
 	}, nil
 }
 
-// UploadPoster uploads and processes a poster image
+// UploadPoster uploads and processes a poster image.
+//
+// poster-upload-b AC #1/#2: the item is looked up in the table of ITS type
+// before anything is written, a failed DB write removes the files again, and
+// the stored path carries a version (`?v=<unix ms>`) so a re-upload — which
+// overwrites the same <id>.jpg — changes what the page renders. Before, a
+// series sent as a movie wrote the file, missed the movies table, logged a
+// Warn and answered 200 with nothing changed.
 func (s *MetadataEditService) UploadPoster(ctx context.Context, req *UploadPosterRequest) (*UploadPosterResponse, error) {
 	if s.imageProcessor == nil {
 		return nil, fmt.Errorf("image processor not configured")
 	}
 
-	// Process the image
+	if err := s.findByType(ctx, req.MediaID, req.MediaType); err != nil {
+		return nil, ErrUploadPosterNotFound
+	}
+
+	// A re-upload overwrites <id>.jpg. Park the current pair first so a failure
+	// below can put back the poster the database still points at.
+	restore := s.parkPoster(req.MediaID)
+
 	result, err := s.imageProcessor.ProcessPoster(
 		NewBytesReader(req.FileData),
 		req.MediaID,
 	)
 	if err != nil {
+		restore(true)
 		s.logger.Error("Failed to process poster image",
 			"media_id", req.MediaID,
 			"error", err,
@@ -293,18 +309,19 @@ func (s *MetadataEditService) UploadPoster(ctx context.Context, req *UploadPoste
 		return nil, fmt.Errorf("failed to process image: %w", err)
 	}
 
-	// Update the media item with the new poster path
-	posterURL := s.imageProcessor.GetPosterURL(req.MediaID)
-	thumbnailURL := s.imageProcessor.GetThumbnailURL(req.MediaID)
+	version := fmt.Sprintf("?v=%d", time.Now().UnixMilli())
+	posterURL := s.imageProcessor.GetPosterURL(req.MediaID) + version
+	thumbnailURL := s.imageProcessor.GetThumbnailURL(req.MediaID) + version
 
-	// Try to update the poster path
 	if err := s.updatePosterPath(ctx, req.MediaID, req.MediaType, posterURL); err != nil {
-		s.logger.Warn("Failed to update poster path in database",
+		s.logger.Error("Failed to save poster path; removing the uploaded files",
 			"media_id", req.MediaID,
 			"error", err,
 		)
-		// Don't fail - the image is still saved locally
+		restore(true)
+		return nil, fmt.Errorf("failed to save poster: %w", err)
 	}
+	restore(false)
 
 	s.logger.Info("Poster uploaded successfully",
 		"media_id", req.MediaID,
@@ -316,6 +333,47 @@ func (s *MetadataEditService) UploadPoster(ctx context.Context, req *UploadPoste
 		PosterURL:    posterURL,
 		ThumbnailURL: thumbnailURL,
 	}, nil
+}
+
+// parkPoster renames an existing poster pair to `<name>.bak` (a name the
+// /posters/:file whitelist never serves). The returned func either puts the
+// pair back (failed=true: the new files are removed first) or drops it.
+func (s *MetadataEditService) parkPoster(mediaID string) func(failed bool) {
+	paths := []string{s.imageProcessor.GetPosterPath(mediaID), s.imageProcessor.GetThumbnailPath(mediaID)}
+	var parked []string
+	for _, p := range paths {
+		if err := os.Rename(p, p+".bak"); err == nil {
+			parked = append(parked, p)
+		}
+	}
+	return func(failed bool) {
+		if failed {
+			if err := s.imageProcessor.DeletePoster(mediaID); err != nil {
+				s.logger.Warn("Failed to remove new poster files", "media_id", mediaID, "error", err)
+			}
+		}
+		for _, p := range parked {
+			var err error
+			if failed {
+				err = os.Rename(p+".bak", p)
+			} else {
+				err = os.Remove(p + ".bak")
+			}
+			if err != nil {
+				s.logger.Warn("Failed to settle parked poster", "path", p, "error", err)
+			}
+		}
+	}
+}
+
+// findByType reports whether id exists in the table mediaType writes to.
+func (s *MetadataEditService) findByType(ctx context.Context, id, mediaType string) error {
+	if mediaType == "series" {
+		_, err := s.seriesRepo.FindByID(ctx, id)
+		return err
+	}
+	_, err := s.movieRepo.FindByID(ctx, id)
+	return err
 }
 
 // updatePosterPath updates only the poster path in the database

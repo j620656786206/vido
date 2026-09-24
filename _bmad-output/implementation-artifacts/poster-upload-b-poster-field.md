@@ -1,6 +1,6 @@
 # Story poster-upload-b：在「修改資訊」裡換海報——選圖、拖曳、貼網址，按「儲存」才換上
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -68,12 +68,12 @@ so that fixing a poster is one obvious action instead of something only the API 
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — 後端：上傳 handler 修正（AC: #1）**：`mediaType` 來源、body 上限、`io.ReadAll`、`Validate()`、錯誤對應＋測試
-- [ ] **Task 2 — 後端：先查片子、失敗清檔（AC: #1）**＋測試
-- [ ] **Task 3 — 後端：版本化海報路徑（AC: #2）**＋測試；`custom-poster.spec.ts` 斷言調整
-- [ ] **Task 4 — 前端：`PosterField` 九個狀態、拖曳、網址模式（AC: #3）**；刪舊 `PosterUploader`
-- [ ] **Task 5 — 前端：儲存順序與查詢失效（AC: #4）**
-- [ ] **Task 6 — 清快取提醒句＋設計稿＋e2e＋基準＋收尾（AC: #5–#8）**
+- [x] **Task 1 — 後端：上傳 handler 修正（AC: #1）**：`mediaType` 來源、body 上限、`io.ReadAll`、`Validate()`、錯誤對應＋測試
+- [x] **Task 2 — 後端：先查片子、失敗清檔（AC: #1）**＋測試
+- [x] **Task 3 — 後端：版本化海報路徑（AC: #2）**＋測試；`custom-poster.spec.ts` 斷言調整
+- [x] **Task 4 — 前端：`PosterField` 九個狀態、拖曳、網址模式（AC: #3）**；刪舊 `PosterUploader`
+- [x] **Task 5 — 前端：儲存順序與查詢失效（AC: #4）**
+- [x] **Task 6 — 清快取提醒句＋設計稿＋e2e＋基準＋收尾（AC: #5–#8）**
 
 ## Dev Notes
 
@@ -141,13 +141,66 @@ tests/e2e/custom-poster.spec.ts、-gallery.fixtures.tsx、tests/visual/…      
 ### Completion Notes List
 
 - Ultimate context engine analysis completed - comprehensive developer guide created
+- ⚠️ **建單事實更正（dev 查證）**：Context 🔴 #2「`Validate()` 沒有任何呼叫者」**不對**——`MetadataService.UploadPoster`（`metadata_service.go:887-935`）會先 `Validate()`（格式、5 MB）、再用 `posterUploader.Exists` 查片子，所以 .gif 本來就回 400、不存在的 id 本來就回 404 且不寫檔。SM 建單時只 grep 了 handler 與 `MetadataEditService`。**真的壞的是**：`Exists` 不分類型（電影或影集任一存在就過）→ 影集以電影身分上傳會先寫檔、再在 movies 表找不到、只記 Warn 回 200（🔴 #1 成立）；以及 handler 在讀檔前沒有上限、`file.Read` 只讀一次。AC #1 照實際缺口做，沒有重做已存在的檢查。
+- **Task 1（handler）**：`mediaType` 先讀 multipart 欄位、沒有才讀 query、不是 movie／series → 400；`http.MaxBytesReader`（6 MB）超限 → 400 `POSTER_TOO_LARGE`，且 service 根本不會被呼叫；`io.ReadAll` 讀完整個檔，`FileSize` 改用實際讀到的長度。測試 +3。
+- **Task 2（service）**：`MetadataEditService.UploadPoster` 先用 **該類型** 的 repo 查片子（`findByType`），找不到 → `ErrUploadPosterNotFound`、不寫任何檔；寫檔前把既有的 `<id>.jpg`／`-thumb.jpg` 改名成 `.bak`（白名單不會服務這種檔名），DB 寫入失敗 → 刪新檔、放回舊檔、回錯誤（不再「Warn 然後回成功」）；成功 → 刪 `.bak`。**多做了一步**：原單子只寫「失敗就刪檔」，但重新上傳會覆寫同名檔，直接刪會把資料庫仍指著的舊海報一起刪掉——所以改成暫存再還原。測試 +5（含「失敗的重新上傳保留舊海報、資料夾只剩兩個檔」）。
+- **Task 3（版本化路徑）**：上傳寫進資料庫與回應的路徑帶 `?v=<unix 毫秒>`（縮圖同）；`GET /api/v1/posters/:file` 不受影響；`lib/image` 保留 query（+1 測試）；`custom-poster.spec.ts` 的路徑斷言改成比對 `?v=`（刻意變更）。
+- **Task 4（`PosterField`）**：新元件取代 `PosterUploader`（元件、spec、gallery 夾具、6 張基準刪除）。九個狀態照 B′14；錯誤文案逐字照稿（集中在 `POSTER_COPY`）；拖曳用 enter／leave 計數避免閃爍；blob 預覽在 effect 裡建立與釋放（StrictMode 會重跑 effect，memo 版會被第一次 cleanup 釋放掉）；新圖／失敗的金色／硃砂框畫在圖片**上層**（inset ring 畫在盒子本身會被圖片蓋住——看基準圖才發現）；網址打不開時顯示空框而不是破圖示。「換一張圖片」是真的按鈕、觸發隱藏的 file input；錯誤在 `aria-live` 區並以 `aria-describedby` 連到按鈕。gallery 夾具提供 `initialState`（拖曳中、格式錯、太大）以拍到只有互動才看得到的狀態。
+- **Task 5（儲存順序）**：選了新圖 → 先 `uploadPoster`（`mediaType` 在 multipart 欄位）→ 成功才存欄位；**只換海報時不呼叫欄位更新**（那個寫入會把片子標成「手動編輯」）；更新不帶 `posterUrl`；上傳成功後記住，欄位失敗再按儲存只重存欄位；上傳失敗 → ⑧、欄位不存、對話框不關；網址模式：載入成功才可儲存，經由欄位更新寫 `posterUrl`；上傳中整個欄位區 `fieldset disabled`、儲存鈕「儲存中…」。footer 在有待存新圖時顯示「新海報會在按「儲存」後換上；…」（僅桌面，照稿）。
+- **Task 6**：清快取提醒句改成「…但不會影響影片、字幕與你上傳的海報。」（程式、spec、設計稿 `aldeK`、`c18-d.png`）；`check-design-tokens.py` 綠；`settings-cache-management/confirm` 基準因差異低於門檻**不會自動重拍**——手動刪掉 darwin 重產、`-linux` `git rm`（否則基準圖會留著舊句子）。e2e：從介面「修改資訊」選圖→取消不變→儲存後詳情頁顯示 `?v=` 新圖且真的解碼→再換一次 `src` 改變不用重新整理；影集以 multipart 欄位上傳真的寫進 `series.poster_path`。`--repeat-each=3` 9／9。
+- 🔗 **AC Drift: FOUND** — `bugfix-custom-posters-served-and-not-cache` AC #6「上傳 API 的回應格式不變（`posterUrl` 仍回 `/posters/<id>.jpg`）」→ 值多了 `?v=`（欄位與前端處理不變）；`3-8-metadata-editor` AC3 → 上傳入口終於存在（B′13）。
+- 📎 **Contract Stamps: NONE**（相關 story 皆無 `[@contract-v*]`）。
+- 🎭 **A11y Pre-Flight: PASS**（`PosterField`、`MetadataEditorDialog`、`CacheManagement`；jsx-a11y 0 新增；隱藏的 file input `tabIndex=-1`＋`aria-hidden`，可見按鈕是唯一的鍵盤入口；錯誤 `aria-live="polite"`；網址欄有 sr-only label 與 `aria-invalid`）。
+- **測試**：`nx test web` **289 files／4300 tests**、`nx test api`、`lint:all`（0 error）、typecheck、prettier、`check-design-tokens.py` 全綠；e2e `custom-poster`＋`metadata-editor.api`＋`cache.api` 全綠。
+- **Mutation 8／8 紅**：拿掉版本參數、`mediaType` 只讀 query、拿掉類型存在檢查、拿掉失敗時的清檔／還原、拿掉 body 上限、拿掉前端 5 MB 檢查、更新時帶上 `posterUrl`、重試時重傳圖。
+
+### 🔍 /ship Adversarial Review（2026-09-24）
+
+0 HIGH／1 MEDIUM／2 LOW：
+- **M1（修）** 海報上傳成功、欄位儲存失敗時，footer 仍寫「按『取消』就不會動到目前的海報」——但海報已經換了，取消也收不回來 → 改成顯示「新海報已經換上了；其他欄位還沒存，請再按一次『儲存』。」（`role="status"`），並拿掉那句承諾。測試 +2 斷言。
+- **L1（不修，記錄）** 同一情境下海報格的標籤仍是「新海報・尚未儲存」；footer 的新句子已說清楚，標籤要改得動 `PosterField` 的 phase 語意，收益小。
+- **L2（不修，記錄）** 欄位儲存中（非上傳中）時，海報格的按鈕仍可點；上傳中已整格鎖住。欄位儲存通常 <1 秒。
+
+### 🎨 UX Verification（對 `b13p-d.png`／`b13p-m.png`／`b14-d.png`）
+
+| Area | Design Spec | Implementation | Match? | Fix Needed |
+| --- | --- | --- | --- | --- |
+| 左欄（桌面） | 海報標籤、（新圖時）標籤、184×276、換一張圖片、改用圖片網址、提示句 | 同 | ✅ | — |
+| 左欄（手機） | 104×156 在左，標籤／按鈕／連結在右，提示句在下 | 同 | ✅ | — |
+| ① 目前／② 沒有 | 目前海報；「還沒有海報」＋「上傳圖片」 | 同 | ✅ | — |
+| ③ 拖曳 | 金框＋scrim＋「放開就用這張」 | 同 | ✅ | — |
+| ④ 已選 | 新圖＋金框＋「新海報・尚未儲存」 | 同 | ✅ | 🎨 UX Fix：框原本被圖片蓋住，改畫在上層 |
+| ⑤ 上傳中 | scrim＋「上傳中…」、儲存中… | 同 | ✅ | — |
+| ⑥⑦ 錯誤 | 原海報＋按鈕下的錯誤句 | 同（逐字） | ✅ | — |
+| ⑧ 失敗 | 新圖＋硃砂框＋錯誤句 | 同 | ✅ | 🎨 UX Fix：同 ④ |
+| ⑨ 網址 | 網址欄＋改用上傳；打不開的錯誤句 | 同；打不開時顯示空框 | ✅ | 🎨 UX Fix：原本顯示破圖示＋alt 文字 |
+| footer | 左側「新海報會在按「儲存」後換上…」 | 有待存新圖時顯示（桌面） | ✅ | — |
+| C18 | 「…不會影響影片、字幕與你上傳的海報。」 | 同（程式＋稿） | ✅ | — |
 
 ### Discovery Triage
 
+- N/A — no out-of-scope work discovered（`disc-2026-09-poster-orphan-files` 的主因已由本張修掉，剩「刪片子不刪海報」與 e2e 留檔，維持原條目）。
+
 ### File List
+
+- `apps/api/internal/handlers/metadata_handler.go`（+test）
+- `apps/api/internal/services/metadata_edit_service.go`（+test）
+- `apps/web/src/components/metadata-editor/PosterField.tsx`（新，+spec）
+- `apps/web/src/components/metadata-editor/PosterUploader.tsx`、`PosterUploader.spec.tsx`（刪除）
+- `apps/web/src/components/metadata-editor/MetadataEditorDialog.tsx`（+spec）、`index.ts`
+- `apps/web/src/components/settings/CacheManagement.tsx`（+spec）
+- `apps/web/src/lib/image.spec.ts`
+- `apps/web/src/routes/test/-gallery.fixtures.tsx`
+- `tests/e2e/custom-poster.spec.ts`
+- `tests/visual/components.visual.spec.ts-snapshots/components/{metadata-editor-poster-field/**（新）,metadata-editor-poster-uploader（刪）,metadata-editor-metadata-editor-dialog/**,settings-cache-management/confirm}`
+- `ux-design.pen`、`_bmad-output/pen-tokens.json`、`_bmad-output/screenshots/flow-c-search-settings/c18-d.png`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/implementation-artifacts/bugfix-custom-posters-served-and-not-cache.md`（AC drift reference — see Completion Notes）
 
 ## Change Log
 
 | Date | Change |
 | --- | --- |
 | 2026-09-24 | 建單（SM）：由 `disc-2026-09-poster-upload-no-ui-entry` 升級並拆出；本張為海報格互動＋後端上傳修正＋清快取提醒句。依賴 poster-upload-a |
+| 2026-09-24 | 實作完成：上傳 handler／service 修正（類型、上限、失敗還原）、版本化路徑、`PosterField` 九狀態、按儲存才上傳、清快取提醒句；更正建單的 `Validate()` 事實；狀態 review |
+| 2026-09-24 | /ship CR：海報已上傳但欄位失敗時，footer 改說實話 |

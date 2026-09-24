@@ -3,9 +3,12 @@ package services
 import (
 	"bytes"
 	"context"
+	"errors"
 	"image"
 	"image/color"
 	"image/jpeg"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -25,6 +28,8 @@ type mockMovieMetadataRepository struct {
 	// (bugfix-wide-update-stale-copy-other-callers §audit #6).
 	updateCalls     int
 	posterPathCalls int
+	// posterPathErr makes UpdatePosterPath fail (poster-upload-b AC #1).
+	posterPathErr error
 }
 
 func newMockMovieRepo() *mockMovieMetadataRepository {
@@ -55,6 +60,9 @@ func (m *mockMovieMetadataRepository) Update(ctx context.Context, movie *models.
 
 // UpdatePosterPath mirrors the real narrow writer: only poster_path moves.
 func (m *mockMovieMetadataRepository) UpdatePosterPath(_ context.Context, id, posterPath string) error {
+	if m.posterPathErr != nil {
+		return m.posterPathErr
+	}
 	movie, ok := m.movies[id]
 	if !ok {
 		return ErrUpdateMetadataNotFound
@@ -313,6 +321,94 @@ func TestMetadataEditService_UploadPoster_Success(t *testing.T) {
 	assert.Equal(t, 1, movieRepo.posterPathCalls, "poster upload must use UpdatePosterPath")
 	assert.Equal(t, 0, movieRepo.updateCalls, "…and never the wide Update")
 	assert.Equal(t, result.PosterURL, movieRepo.movies["movie-1"].PosterPath.String)
+}
+
+// poster-upload-b AC #1/#2 ---------------------------------------------------
+
+func newUploadFixture(t *testing.T) (*MetadataEditService, *mockMovieMetadataRepository, *mockSeriesMetadataRepository, string) {
+	t.Helper()
+	movieRepo := newMockMovieRepo()
+	movieRepo.movies["movie-1"] = &models.Movie{ID: "movie-1", Title: "M"}
+	seriesRepo := newMockSeriesRepo()
+	seriesRepo.series["series-1"] = &models.Series{ID: "series-1", Title: "S"}
+	dir := t.TempDir()
+	processor, err := images.NewImageProcessor(dir)
+	require.NoError(t, err)
+	return NewMetadataEditService(movieRepo, seriesRepo, processor), movieRepo, seriesRepo, dir
+}
+
+func uploadReq(t *testing.T, id, mediaType string) *UploadPosterRequest {
+	data := createTestJPEGData(t, 400, 600)
+	return &UploadPosterRequest{MediaID: id, MediaType: mediaType, FileData: data,
+		FileName: "p.jpg", ContentType: "image/jpeg", FileSize: int64(len(data))}
+}
+
+func filesIn(t *testing.T, dir string) []string {
+	entries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	var names []string
+	for _, e := range entries {
+		names = append(names, e.Name())
+	}
+	return names
+}
+
+func TestMetadataEditService_UploadPoster_SeriesPosterIsSaved(t *testing.T) {
+	svc, _, seriesRepo, _ := newUploadFixture(t)
+	res, err := svc.UploadPoster(context.Background(), uploadReq(t, "series-1", "series"))
+	require.NoError(t, err)
+	assert.Equal(t, res.PosterURL, seriesRepo.series["series-1"].PosterPath.String)
+}
+
+func TestMetadataEditService_UploadPoster_UnknownIDWritesNoFile(t *testing.T) {
+	svc, _, _, dir := newUploadFixture(t)
+	// A series id sent as a movie is "not found" for the table it would be written to.
+	for _, tc := range []struct{ id, typ string }{{"nope", "movie"}, {"nope", "series"}, {"series-1", "movie"}} {
+		_, err := svc.UploadPoster(context.Background(), uploadReq(t, tc.id, tc.typ))
+		assert.ErrorIs(t, err, ErrUploadPosterNotFound, "%s as %s", tc.id, tc.typ)
+	}
+	assert.Empty(t, filesIn(t, dir), "nothing may be written before the item is known to exist")
+}
+
+func TestMetadataEditService_UploadPoster_DBFailureRemovesTheFiles(t *testing.T) {
+	svc, movieRepo, _, dir := newUploadFixture(t)
+	movieRepo.posterPathErr = errors.New("database is locked")
+	_, err := svc.UploadPoster(context.Background(), uploadReq(t, "movie-1", "movie"))
+	require.Error(t, err)
+	assert.Empty(t, filesIn(t, dir), "a poster nothing points at must not be left behind")
+}
+
+func TestMetadataEditService_UploadPoster_DBFailureKeepsThePreviousPoster(t *testing.T) {
+	svc, movieRepo, _, dir := newUploadFixture(t)
+	_, err := svc.UploadPoster(context.Background(), uploadReq(t, "movie-1", "movie"))
+	require.NoError(t, err)
+	before, err := os.ReadFile(filepath.Join(dir, "movie-1.jpg"))
+	require.NoError(t, err)
+
+	movieRepo.posterPathErr = errors.New("database is locked")
+	req := uploadReq(t, "movie-1", "movie")
+	req.FileData = createTestJPEGData(t, 300, 450)
+	_, err = svc.UploadPoster(context.Background(), req)
+	require.Error(t, err)
+
+	after, err := os.ReadFile(filepath.Join(dir, "movie-1.jpg"))
+	require.NoError(t, err, "the poster the DB still points at must survive a failed re-upload")
+	assert.Equal(t, before, after)
+	assert.ElementsMatch(t, []string{"movie-1.jpg", "movie-1-thumb.jpg"}, filesIn(t, dir))
+}
+
+func TestMetadataEditService_UploadPoster_PathIsVersioned(t *testing.T) {
+	svc, movieRepo, _, _ := newUploadFixture(t)
+	first, err := svc.UploadPoster(context.Background(), uploadReq(t, "movie-1", "movie"))
+	require.NoError(t, err)
+	assert.Regexp(t, `^/posters/movie-1\.jpg\?v=\d+$`, first.PosterURL)
+	assert.Regexp(t, `^/posters/movie-1-thumb\.jpg\?v=\d+$`, first.ThumbnailURL)
+	assert.Equal(t, first.PosterURL, movieRepo.movies["movie-1"].PosterPath.String)
+
+	time.Sleep(2 * time.Millisecond)
+	second, err := svc.UploadPoster(context.Background(), uploadReq(t, "movie-1", "movie"))
+	require.NoError(t, err)
+	assert.NotEqual(t, first.PosterURL, second.PosterURL, "a re-upload must change the stored path")
 }
 
 func TestMetadataEditService_UploadPoster_NoProcessor(t *testing.T) {

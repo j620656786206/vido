@@ -10,14 +10,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MetadataEditorDialog } from './MetadataEditorDialog';
 import type { MediaMetadata } from './MetadataEditorDialog';
 import { useUpdateMetadata } from '../../hooks/useMetadataEditor';
+import { POSTER_COPY } from './PosterField';
 
 const mockMutateAsync = vi.fn();
+const mockUploadAsync = vi.fn();
 vi.mock('../../hooks/useMetadataEditor', () => ({
   useUpdateMetadata: vi.fn(() => ({
     mutateAsync: mockMutateAsync,
     isPending: false,
     error: null,
   })),
+  useUploadPoster: vi.fn(() => ({ mutateAsync: mockUploadAsync })),
 }));
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -59,6 +62,9 @@ describe('MetadataEditorDialog', () => {
         }) as unknown as ReturnType<typeof useUpdateMetadata>
     );
     mockMutateAsync.mockResolvedValue({});
+    mockUploadAsync.mockResolvedValue({ posterUrl: '/posters/test-media-id.jpg?v=1' });
+    URL.createObjectURL = vi.fn(() => 'blob:preview');
+    URL.revokeObjectURL = vi.fn();
   });
 
   it('renders the 修改資訊 dialog only while open', () => {
@@ -83,7 +89,7 @@ describe('MetadataEditorDialog', () => {
     expect(screen.getByRole('group', { name: '演員' })).toBeInTheDocument();
   });
 
-  it('shows the current poster read-only, and no poster-URL text field', () => {
+  it('shows the current poster in the poster column, and no poster-URL text field', () => {
     renderWithProviders(<MetadataEditorDialog {...defaultProps} />);
     const column = screen.getByTestId('metadata-editor-poster-column');
     expect(within(column).getByRole('img', { name: '目前的海報' })).toHaveAttribute(
@@ -91,7 +97,6 @@ describe('MetadataEditorDialog', () => {
       'https://image.tmdb.org/t/p/w342/abc123.jpg'
     );
     expect(screen.queryByLabelText('海報圖片網址')).toBeNull();
-    expect(within(column).queryByRole('button')).toBeNull();
   });
 
   it('shows 還沒有海報 when there is no poster', () => {
@@ -282,6 +287,105 @@ describe('MetadataEditorDialog', () => {
     await waitFor(() => {
       expect(onSuccess).toHaveBeenCalled();
       expect(onClose).toHaveBeenCalled();
+    });
+  });
+
+  describe('changing the poster (poster-upload-b AC #4)', () => {
+    const jpeg = () => new File([new Uint8Array(10)], 'p.jpg', { type: 'image/jpeg' });
+    const pickFile = async (user: ReturnType<typeof userEvent.setup>) =>
+      user.upload(screen.getByTestId('poster-file-input') as HTMLInputElement, jpeg());
+
+    it('a picked image alone enables 儲存 and uploads — without rewriting the fields', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      renderWithProviders(<MetadataEditorDialog {...defaultProps} onClose={onClose} />);
+      await pickFile(user);
+      expect(
+        screen.getByText('新海報會在按「儲存」後換上；按「取消」就不會動到目前的海報。')
+      ).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: '儲存' }));
+      await waitFor(() => expect(onClose).toHaveBeenCalled());
+      expect(mockUploadAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ mediaId: 'test-media-id', mediaType: 'movie' })
+      );
+      expect(mockMutateAsync).not.toHaveBeenCalled();
+    });
+
+    it('uploads first, then saves the edited fields without a posterUrl', async () => {
+      const user = userEvent.setup();
+      const order: string[] = [];
+      mockUploadAsync.mockImplementation(async () => void order.push('upload'));
+      mockMutateAsync.mockImplementation(async () => void order.push('update'));
+      renderWithProviders(<MetadataEditorDialog {...defaultProps} />);
+      await pickFile(user);
+      await user.type(screen.getByLabelText('導演'), '！');
+      await user.click(screen.getByRole('button', { name: '儲存' }));
+      await waitFor(() => expect(order).toEqual(['upload', 'update']));
+      expect(mockMutateAsync.mock.calls[0][0]).not.toHaveProperty('posterUrl');
+    });
+
+    it('a failed upload saves nothing and stays open with the ⑧ message', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      mockUploadAsync.mockRejectedValue(new Error('500'));
+      renderWithProviders(<MetadataEditorDialog {...defaultProps} onClose={onClose} />);
+      await pickFile(user);
+      await user.type(screen.getByLabelText('導演'), '！');
+      await user.click(screen.getByRole('button', { name: '儲存' }));
+      expect(await screen.findByText(POSTER_COPY.uploadFailed)).toBeInTheDocument();
+      expect(mockMutateAsync).not.toHaveBeenCalled();
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it('after a field failure, retrying saves the fields without uploading again', async () => {
+      const user = userEvent.setup();
+      mockMutateAsync.mockRejectedValueOnce(new Error('locked')).mockResolvedValueOnce({});
+      renderWithProviders(<MetadataEditorDialog {...defaultProps} />);
+      await pickFile(user);
+      await user.type(screen.getByLabelText('導演'), '！');
+      await user.click(screen.getByRole('button', { name: '儲存' }));
+      await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledTimes(1));
+      // The poster IS already on the server — 取消 would not undo it, so say so.
+      expect(
+        await screen.findByText('新海報已經換上了；其他欄位還沒存，請再按一次「儲存」。')
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/按「取消」就不會動到目前的海報/)).toBeNull();
+      await user.click(screen.getByRole('button', { name: '儲存' }));
+      await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledTimes(2));
+      expect(mockUploadAsync).toHaveBeenCalledTimes(1);
+    });
+
+    it('取消 after picking an image uploads nothing', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      renderWithProviders(<MetadataEditorDialog {...defaultProps} onClose={onClose} />);
+      await pickFile(user);
+      await user.click(screen.getByRole('button', { name: '取消' }));
+      expect(onClose).toHaveBeenCalled();
+      expect(mockUploadAsync).not.toHaveBeenCalled();
+      expect(mockMutateAsync).not.toHaveBeenCalled();
+    });
+
+    it('a pasted URL is saved through the metadata write — but only once it has loaded', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<MetadataEditorDialog {...defaultProps} />);
+      await user.click(screen.getByRole('button', { name: '改用圖片網址' }));
+      await user.type(screen.getByLabelText('圖片網址'), 'https://x.test/p.jpg');
+      const save = screen.getByRole('button', { name: '儲存' });
+      expect(save).toBeDisabled(); // still loading
+      fireEvent.error(screen.getByRole('img', { name: '新的海報' }));
+      expect(save).toBeDisabled(); // ⑨ broken
+      await user.clear(screen.getByLabelText('圖片網址'));
+      await user.type(screen.getByLabelText('圖片網址'), 'https://x.test/ok.jpg');
+      fireEvent.load(screen.getByRole('img', { name: '新的海報' }));
+      expect(save).toBeEnabled();
+      await user.click(save);
+      await waitFor(() =>
+        expect(mockMutateAsync).toHaveBeenCalledWith(
+          expect.objectContaining({ posterUrl: 'https://x.test/ok.jpg' })
+        )
+      );
+      expect(mockUploadAsync).not.toHaveBeenCalled();
     });
   });
 

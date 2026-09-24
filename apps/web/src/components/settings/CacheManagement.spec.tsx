@@ -262,7 +262,7 @@ describe('CacheManagement', () => {
     const loaded = () =>
       mockUseCacheStats.mockReturnValue({ data: stats, isLoading: false, error: null } as any);
     const WARNING =
-      '再按一次才會真的清除。這會刪掉 30 天前的所有快取，之後第一次瀏覽會比較慢，但不會影響影片與字幕檔案。';
+      '再按一次才會真的清除。這會刪掉 30 天前的所有快取，之後第一次瀏覽會比較慢，但不會影響影片、字幕與你上傳的海報。';
 
     it('the first press arms it and explains what the second press does; no request yet', async () => {
       const user = userEvent.setup();
