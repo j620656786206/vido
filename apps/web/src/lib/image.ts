@@ -1,4 +1,17 @@
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+
+/**
+ * A poster the user uploaded through the metadata editor. The backend stores
+ * `poster_path = "/posters/<id>.jpg"` (images.ImageProcessor.GetPosterURL) and
+ * serves the file at `{API}/posters/<id>.jpg`. Telling it apart from a TMDb path
+ * by prefix is safe: TMDb paths are a single file name ("/kqjL17….jpg"), never
+ * a sub-directory. (bugfix-custom-posters-served-and-not-cache — before this,
+ * the value was glued onto the TMDb CDN and every custom poster was broken.)
+ */
+function isUploadedPoster(path: string): boolean {
+  return path.startsWith('/posters/');
+}
 
 export type ImageSize = 'w92' | 'w154' | 'w185' | 'w342' | 'w500' | 'w780' | 'original';
 
@@ -19,6 +32,7 @@ function isAbsoluteUrl(path: string): boolean {
 export function getImageUrl(path: string | null, size: ImageSize = 'w342'): string | null {
   if (!path) return null;
   if (isAbsoluteUrl(path)) return path;
+  if (isUploadedPoster(path)) return `${API_BASE_URL}${path}`;
   return `${TMDB_IMAGE_BASE}/${size}${path}`;
 }
 
@@ -27,6 +41,8 @@ export function getImageSrcSet(path: string | null): string | null {
   // An absolute URL is one fixed rendition — there is no size ladder to offer,
   // so let the caller's plain `src` serve it instead of emitting a bogus srcset.
   if (isAbsoluteUrl(path)) return null;
+  // An uploaded poster is also one fixed rendition (300×450).
+  if (isUploadedPoster(path)) return null;
   return [
     `${TMDB_IMAGE_BASE}/w185${path} 185w`,
     `${TMDB_IMAGE_BASE}/w342${path} 342w`,

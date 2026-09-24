@@ -159,8 +159,8 @@ describe('CacheTypeCard', () => {
 
   it('renders different cache types correctly', () => {
     const imageCacheType: CacheTypeInfo = {
-      type: 'image',
-      label: '圖片快取',
+      type: 'wikipedia',
+      label: '維基百科快取',
       sizeBytes: 1073741824,
       entryCount: 450,
     };
@@ -172,8 +172,8 @@ describe('CacheTypeCard', () => {
       })
     );
 
-    expect(screen.getByTestId('cache-type-image')).toBeInTheDocument();
-    expect(screen.getByTestId('cache-type-label')).toHaveTextContent('圖片快取');
+    expect(screen.getByTestId('cache-type-wikipedia')).toBeInTheDocument();
+    expect(screen.getByTestId('cache-type-label')).toHaveTextContent('維基百科快取');
     expect(screen.getByTestId('cache-type-size')).toHaveTextContent('1.0 GB');
   });
 });

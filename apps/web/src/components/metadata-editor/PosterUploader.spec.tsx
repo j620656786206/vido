@@ -170,4 +170,12 @@ describe('PosterUploader', () => {
     fireEvent.dragLeave(dropzone);
     expect(dropzone.className).not.toContain('border-[var(--accent-primary)]');
   });
+
+  it('bugfix-custom-posters: previews an earlier upload from the API, not the TMDb CDN', () => {
+    render(<PosterUploader {...defaultProps} currentPoster="/posters/0fe13b88.jpg" />);
+    expect(screen.getByAltText('Poster preview')).toHaveAttribute(
+      'src',
+      '/api/v1/posters/0fe13b88.jpg'
+    );
+  });
 });

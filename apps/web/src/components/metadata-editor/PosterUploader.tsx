@@ -10,6 +10,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { Upload, Link, Loader2, X, Image } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { getImageUrl } from '../../lib/image';
 
 export interface PosterUploaderProps {
   mediaId: string;
@@ -33,7 +34,9 @@ export function PosterUploader({
   isUploading = false,
   error,
 }: PosterUploaderProps) {
-  const [preview, setPreview] = useState<string | null>(currentPoster || null);
+  // The stored value is a path, not a URL: a TMDb path, or "/posters/<id>.jpg"
+  // for an earlier upload. Resolve it the same way every poster on the site is.
+  const [preview, setPreview] = useState<string | null>(getImageUrl(currentPoster ?? null));
   const [uploadMethod, setUploadMethod] = useState<UploadMethod>('file');
   const [urlInput, setUrlInput] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);

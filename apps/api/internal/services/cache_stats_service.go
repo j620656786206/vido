@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
 )
 
 // CacheTypeInfo represents size and count information for a single cache type
@@ -26,35 +24,22 @@ type CacheStats struct {
 // CacheStatsServiceInterface defines the contract for cache statistics operations
 type CacheStatsServiceInterface interface {
 	GetCacheStats(ctx context.Context) (*CacheStats, error)
-	GetImageCacheSize(ctx context.Context) (int64, error)
 }
 
-// CacheStatsService provides cache statistics by querying database tables and filesystem
+// CacheStatsService provides cache statistics by querying the cache tables.
+// (No filesystem "image cache": see ValidCacheTypes.)
 type CacheStatsService struct {
-	db       *sql.DB
-	imageDir string
+	db *sql.DB
 }
 
 // NewCacheStatsService creates a new CacheStatsService
-func NewCacheStatsService(db *sql.DB, imageDir string) *CacheStatsService {
-	return &CacheStatsService{
-		db:       db,
-		imageDir: imageDir,
-	}
+func NewCacheStatsService(db *sql.DB) *CacheStatsService {
+	return &CacheStatsService{db: db}
 }
 
 // GetCacheStats returns cache size and entry count for all cache types
 func (s *CacheStatsService) GetCacheStats(ctx context.Context) (*CacheStats, error) {
 	stats := &CacheStats{}
-
-	// Image cache (filesystem) — single walk for both size and count
-	imageSize, imageCount := s.getImageStats()
-	stats.CacheTypes = append(stats.CacheTypes, CacheTypeInfo{
-		Type:       "image",
-		Label:      "圖片快取",
-		SizeBytes:  imageSize,
-		EntryCount: imageCount,
-	})
 
 	// AI parsing cache
 	aiSize, aiCount, err := s.getTableStats(ctx, "ai_cache")
@@ -110,38 +95,6 @@ func (s *CacheStatsService) GetCacheStats(ctx context.Context) (*CacheStats, err
 	}
 
 	return stats, nil
-}
-
-// GetImageCacheSize calculates the total size of image cache directory.
-// Implements CacheStatsServiceInterface.
-func (s *CacheStatsService) GetImageCacheSize(_ context.Context) (int64, error) {
-	size, _ := s.getImageStats()
-	return size, nil
-}
-
-// getImageStats returns both total size and file count in a single walk.
-func (s *CacheStatsService) getImageStats() (sizeBytes int64, count int64) {
-	if s.imageDir == "" {
-		return 0, 0
-	}
-
-	err := filepath.Walk(s.imageDir, func(path string, info os.FileInfo, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if !info.IsDir() {
-			sizeBytes += info.Size()
-			count++
-		}
-		return nil
-	})
-	if err != nil {
-		if !os.IsNotExist(err) {
-			slog.Warn("Failed to walk image cache dir", "error", err)
-		}
-	}
-
-	return sizeBytes, count
 }
 
 // getTableStats returns the estimated size and row count for a given table.

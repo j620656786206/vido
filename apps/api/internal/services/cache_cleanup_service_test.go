@@ -14,7 +14,7 @@ import (
 
 func TestCacheCleanupService_ClearCacheByType_InvalidType(t *testing.T) {
 	db := setupCacheTestDB(t)
-	svc := NewCacheCleanupService(db, "")
+	svc := NewCacheCleanupService(db)
 
 	result, err := svc.ClearCacheByType(context.Background(), "bogus")
 	assert.ErrorIs(t, err, ErrInvalidCacheType)
@@ -23,7 +23,7 @@ func TestCacheCleanupService_ClearCacheByType_InvalidType(t *testing.T) {
 
 func TestCacheCleanupService_ClearCacheByType_Metadata(t *testing.T) {
 	db := setupCacheTestDB(t)
-	svc := NewCacheCleanupService(db, "")
+	svc := NewCacheCleanupService(db)
 
 	// Insert test data
 	_, err := db.Exec(`INSERT INTO cache_entries (key, value, type, expires_at) VALUES ('k1', 'v1', 'tmdb', '2099-01-01')`)
@@ -44,7 +44,7 @@ func TestCacheCleanupService_ClearCacheByType_Metadata(t *testing.T) {
 
 func TestCacheCleanupService_ClearCacheByType_AI(t *testing.T) {
 	db := setupCacheTestDB(t)
-	svc := NewCacheCleanupService(db, "")
+	svc := NewCacheCleanupService(db)
 
 	_, err := db.Exec(`INSERT INTO ai_cache (id, filename_hash, provider, request_prompt, response_json, expires_at) VALUES ('a1', 'h1', 'openai', 'prompt', '{}', '2099-01-01')`)
 	require.NoError(t, err)
@@ -56,7 +56,7 @@ func TestCacheCleanupService_ClearCacheByType_AI(t *testing.T) {
 
 func TestCacheCleanupService_ClearCacheByType_Douban(t *testing.T) {
 	db := setupCacheTestDB(t)
-	svc := NewCacheCleanupService(db, "")
+	svc := NewCacheCleanupService(db)
 
 	_, err := db.Exec(`INSERT INTO douban_cache (id, douban_id, title, expires_at) VALUES ('d1', '123', 'Test', '2099-01-01')`)
 	require.NoError(t, err)
@@ -68,7 +68,7 @@ func TestCacheCleanupService_ClearCacheByType_Douban(t *testing.T) {
 
 func TestCacheCleanupService_ClearCacheByType_Wikipedia(t *testing.T) {
 	db := setupCacheTestDB(t)
-	svc := NewCacheCleanupService(db, "")
+	svc := NewCacheCleanupService(db)
 
 	_, err := db.Exec(`INSERT INTO wikipedia_cache (id, query, page_title, title, expires_at) VALUES ('w1', 'q', 'p', 'Test', '2099-01-01')`)
 	require.NoError(t, err)
@@ -78,29 +78,18 @@ func TestCacheCleanupService_ClearCacheByType_Wikipedia(t *testing.T) {
 	assert.Equal(t, int64(1), result.EntriesRemoved)
 }
 
-func TestCacheCleanupService_ClearCacheByType_Image(t *testing.T) {
-	tmpDir := t.TempDir()
+func TestCacheCleanupService_ClearCacheByType_ImageIsNotACache(t *testing.T) {
 	db := setupCacheTestDB(t)
+	svc := NewCacheCleanupService(db)
 
-	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "img1.jpg"), make([]byte, 1024), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "img2.png"), make([]byte, 2048), 0644))
-
-	svc := NewCacheCleanupService(db, tmpDir)
-
-	result, err := svc.ClearCacheByType(context.Background(), "image")
-	require.NoError(t, err)
-	assert.Equal(t, "image", result.Type)
-	assert.Equal(t, int64(2), result.EntriesRemoved)
-	assert.Equal(t, int64(3072), result.BytesReclaimed)
-
-	// Verify files removed
-	entries, _ := os.ReadDir(tmpDir)
-	assert.Empty(t, entries)
+	// data/posters holds user-UPLOADED posters, not a cache: "image" is gone.
+	_, err := svc.ClearCacheByType(context.Background(), "image")
+	assert.ErrorIs(t, err, ErrInvalidCacheType)
 }
 
 func TestCacheCleanupService_ClearCacheByAge_InvalidDays(t *testing.T) {
 	db := setupCacheTestDB(t)
-	svc := NewCacheCleanupService(db, "")
+	svc := NewCacheCleanupService(db)
 
 	result, err := svc.ClearCacheByAge(context.Background(), 0)
 	assert.Error(t, err)
@@ -113,7 +102,7 @@ func TestCacheCleanupService_ClearCacheByAge_InvalidDays(t *testing.T) {
 
 func TestCacheCleanupService_ClearCacheByAge_RemovesOldEntries(t *testing.T) {
 	db := setupCacheTestDB(t)
-	svc := NewCacheCleanupService(db, "")
+	svc := NewCacheCleanupService(db)
 
 	oldTime := time.Now().AddDate(0, 0, -60).Format("2006-01-02 15:04:05")
 	newTime := time.Now().Format("2006-01-02 15:04:05")
@@ -135,43 +124,29 @@ func TestCacheCleanupService_ClearCacheByAge_RemovesOldEntries(t *testing.T) {
 	assert.Equal(t, 1, count)
 }
 
-func TestCacheCleanupService_ClearCacheByAge_OldImages(t *testing.T) {
-	tmpDir := t.TempDir()
+func TestCacheCleanupService_ClearCacheByAge_LeavesUploadedPostersAlone(t *testing.T) {
+	// A posters dir with a 60-day-old upload, like data/posters on a real install.
+	postersDir := t.TempDir()
 	db := setupCacheTestDB(t)
-
-	// Create file and set mod time to 60 days ago
-	imgPath := filepath.Join(tmpDir, "old.jpg")
-	require.NoError(t, os.WriteFile(imgPath, make([]byte, 500), 0644))
+	poster := filepath.Join(postersDir, "7f3a-uuid.jpg")
+	require.NoError(t, os.WriteFile(poster, make([]byte, 500), 0644))
 	oldTime := time.Now().AddDate(0, 0, -60)
-	require.NoError(t, os.Chtimes(imgPath, oldTime, oldTime))
+	require.NoError(t, os.Chtimes(poster, oldTime, oldTime))
 
-	// Create recent file
-	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "new.jpg"), make([]byte, 500), 0644))
-
-	svc := NewCacheCleanupService(db, tmpDir)
-
-	result, err := svc.ClearCacheByAge(context.Background(), 30)
+	svc := NewCacheCleanupService(db)
+	_, err := svc.ClearCacheByAge(context.Background(), 30)
 	require.NoError(t, err)
-	assert.Greater(t, result.EntriesRemoved, int64(0))
-	assert.Equal(t, int64(500), result.BytesReclaimed)
+	for _, ct := range ValidCacheTypes {
+		_, err := svc.ClearCacheByType(context.Background(), ct)
+		require.NoError(t, err)
+	}
 
-	// Verify only new file remains
-	entries, _ := os.ReadDir(tmpDir)
-	assert.Len(t, entries, 1)
-	assert.Equal(t, "new.jpg", entries[0].Name())
-}
-
-func TestCacheCleanupService_ClearCacheByType_EmptyImageDir(t *testing.T) {
-	db := setupCacheTestDB(t)
-	svc := NewCacheCleanupService(db, "")
-
-	result, err := svc.ClearCacheByType(context.Background(), "image")
-	require.NoError(t, err)
-	assert.Equal(t, int64(0), result.EntriesRemoved)
+	_, statErr := os.Stat(poster)
+	assert.NoError(t, statErr, "an uploaded poster must survive every cache clear")
 }
 
 func TestCacheCleanupService_ValidCacheTypes(t *testing.T) {
-	expected := []string{"image", "ai", "metadata", "douban", "wikipedia"}
+	expected := []string{"ai", "metadata", "douban", "wikipedia"}
 	assert.Equal(t, expected, ValidCacheTypes)
 }
 

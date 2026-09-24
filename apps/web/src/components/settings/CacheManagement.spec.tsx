@@ -125,7 +125,7 @@ describe('CacheManagement', () => {
     mockUseCacheStats.mockReturnValue({
       data: {
         cacheTypes: [
-          { type: 'image', label: '圖片快取', sizeBytes: 1024, entryCount: 10 },
+          { type: 'wikipedia', label: '維基百科快取', sizeBytes: 1024, entryCount: 10 },
           { type: 'ai', label: 'AI 解析快取', sizeBytes: 512, entryCount: 5 },
         ],
         totalSizeBytes: 1536,
@@ -137,7 +137,7 @@ describe('CacheManagement', () => {
     renderWithQuery(React.createElement(CacheManagement));
     expect(screen.getByTestId('cache-management')).toBeInTheDocument();
     expect(screen.getByTestId('cache-types-list')).toBeInTheDocument();
-    expect(screen.getByTestId('cache-type-image')).toBeInTheDocument();
+    expect(screen.getByTestId('cache-type-wikipedia')).toBeInTheDocument();
     expect(screen.getByTestId('cache-type-ai')).toBeInTheDocument();
   });
 
@@ -217,24 +217,24 @@ describe('CacheManagement', () => {
     expect(screen.queryByText('Connection refused')).toBeNull();
   });
 
-  it('renders all 5 cache type cards when data has 5 types', () => {
+  // No 圖片快取 since bugfix-custom-posters-served-and-not-cache: four types.
+  it('renders all 4 cache type cards when data has 4 types', () => {
     mockUseCacheStats.mockReturnValue({
       data: {
         cacheTypes: [
-          { type: 'image', label: '圖片快取', sizeBytes: 1024, entryCount: 10 },
           { type: 'ai', label: 'AI 解析快取', sizeBytes: 512, entryCount: 5 },
           { type: 'metadata', label: 'TMDb 中繼資料', sizeBytes: 256, entryCount: 3 },
           { type: 'douban', label: '豆瓣快取', sizeBytes: 128, entryCount: 2 },
           { type: 'wikipedia', label: '維基百科快取', sizeBytes: 64, entryCount: 1 },
         ],
-        totalSizeBytes: 1984,
+        totalSizeBytes: 960,
       },
       isLoading: false,
       error: null,
     } as any);
 
     renderWithQuery(React.createElement(CacheManagement));
-    expect(screen.getByTestId('cache-type-image')).toBeInTheDocument();
+    expect(screen.queryByTestId('cache-type-image')).toBeNull();
     expect(screen.getByTestId('cache-type-ai')).toBeInTheDocument();
     expect(screen.getByTestId('cache-type-metadata')).toBeInTheDocument();
     expect(screen.getByTestId('cache-type-douban')).toBeInTheDocument();
@@ -257,7 +257,7 @@ describe('CacheManagement', () => {
   describe('dsr-3e', () => {
     const stats = {
       totalSizeBytes: 1024,
-      cacheTypes: [{ type: 'image', label: '圖片快取', sizeBytes: 1024, entryCount: 3 }],
+      cacheTypes: [{ type: 'ai', label: 'AI 解析快取', sizeBytes: 1024, entryCount: 3 }],
     };
     const loaded = () =>
       mockUseCacheStats.mockReturnValue({ data: stats, isLoading: false, error: null } as any);
@@ -328,7 +328,7 @@ describe('CacheManagement', () => {
   describe('dsr-3e CR', () => {
     const stats = {
       totalSizeBytes: 1,
-      cacheTypes: [{ type: 'image', label: '圖片快取', sizeBytes: 1, entryCount: 1 }],
+      cacheTypes: [{ type: 'ai', label: 'AI 解析快取', sizeBytes: 1, entryCount: 1 }],
     };
     it('the live region is there (empty) before the first press, so the warning is announced', async () => {
       const user = userEvent.setup();
