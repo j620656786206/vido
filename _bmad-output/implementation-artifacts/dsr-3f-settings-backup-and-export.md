@@ -1,6 +1,6 @@
 # Story DSR.3f：備份與還原、匯出對齊設計稿——手機上看得到備份的操作鈕、還原前的確認框從底部滑上來、建立失敗說人話
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
