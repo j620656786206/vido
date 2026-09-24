@@ -1,6 +1,6 @@
 # Story poster-upload-a：「修改資訊」對話框照 B′13 重做，類型存對、手機變成底部面板
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -63,10 +63,10 @@ so that editing a film does not quietly turn「劇情」into「drama」or leave 
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — 外殼改 `ui/Dialog`＋手機面板（AC: #1, #7）**：焦點回開啟者、背景不關、固定 footer；刪手刻 keydown／overflow
-- [ ] **Task 2 — 版面照 B′13（AC: #2）**：左欄目前海報（唯讀、含無海報佔位）、右欄欄位順序、手機單欄；`LocalDetailV2` 的 `buildEditorMetadata` 帶上 `posterUrl: data.posterPath`；移除網址文字欄
-- [ ] **Task 3 — 類型與演員 chip（AC: #3, #4, #5）**：中文名稱當值、清單外類型保留、＋類型選單、＋演員輸入；舊元件去留
-- [ ] **Task 4 — 查詢失效、夾具、基準、比對（AC: #6, #8, #9）**
+- [x] **Task 1 — 外殼改 `ui/Dialog`＋手機面板（AC: #1, #7）**：焦點回開啟者、背景不關、固定 footer；刪手刻 keydown／overflow
+- [x] **Task 2 — 版面照 B′13（AC: #2）**：左欄目前海報（唯讀、含無海報佔位）、右欄欄位順序、手機單欄；`LocalDetailV2` 的 `buildEditorMetadata` 帶上 `posterUrl: data.posterPath`；移除網址文字欄
+- [x] **Task 3 — 類型與演員 chip（AC: #3, #4, #5）**：中文名稱當值、清單外類型保留、＋類型選單、＋演員輸入；舊元件去留
+- [x] **Task 4 — 查詢失效、夾具、基準、比對（AC: #6, #8, #9）**
 
 ## Dev Notes
 
@@ -129,13 +129,59 @@ apps/web/src/routes/test/-gallery.fixtures.tsx、tests/visual/…/metadata-edito
 ### Completion Notes List
 
 - Ultimate context engine analysis completed - comprehensive developer guide created
+- **Task 1（外殼）**：改 `ui/Dialog`＋`MOBILE_SHEET_CONTENT`＋`SheetGrabber`；桌面 760 寬、`--radius-lg`、有框線；手機底部面板、footer 固定（取消／儲存各半、高 44）。`onPointerDownOutside`／`onInteractOutside` 擋掉點背景；Esc、✕（自畫的 44×44「關閉」，`ui/Dialog` 內建的 16px「Close」以 `closeClassName="hidden"` 關掉）、取消都會關。關閉後焦點回到開啟者（`openerRef`，照 `ManualMatchDialogV2`）。**開啟時焦點放在「片名」**（Radix 預設會放在 ✕ 上，比對截圖時一眼看到金色框框在 ✕，像「要關了」）。手刻的 `keydown`／`body.style.overflow` 刪掉。表單加 `noValidate`：年份的 min／max 原本會被瀏覽器自己的泡泡攔下，看不到 zod 的中文訊息。
+- **Task 2（版面）**：左欄「海報」＋目前海報（桌面 184×276、手機 104×156，手機標籤在右），沒有海報或載入失敗都顯示「還沒有海報」佔位；右欄 grid：桌面「片名｜年份(120)」→英文片名→類型→導演→演員→簡介，手機用 `order` 把導演拉到年份旁。`LocalDetailV2.buildEditorMetadata` 帶上 `posterUrl: data.posterPath`。「海報圖片網址」文字欄移除——**b 張出貨前暫時無法在介面改海報網址**（原本那欄一直是空的、存了也看不到預覽，實際上本來就不能用）。
+- **Task 3（類型／演員）**：`lib/genres.ts` 新增 `genreNamesFor(movie|series)`，選單是資料庫存的中文名稱（電影 19 種、影集 16 種，來自 `GENRE_MAP`）。已選的是 `--accent-tint` chip＋`移除類型：X`；「＋ 類型」是 Radix DropdownMenu，只列還沒選的。**清單外的類型（例如豆瓣來的）照樣顯示、可移除、儲存時保留**。演員中性 chip＋「＋ 演員」→輸入框（Enter 加、Esc 取消、失焦收起、空白與重複忽略）；Esc 不會連帶關掉對話框（輸入框帶 `data-escape-local`，對話框的 `onEscapeKeyDown` 認得它——Radix 在 document 上先聽到 Esc，React 的 `stopPropagation` 擋不住）。**`GenreSelector`／`CastEditor` 改造後被對話框使用 → 保留**，舊的英文 key `GENRE_OPTIONS` 匯出刪除；兩個元件從 `disc-2026-09-unmounted-v1-components` 清單劃掉（sprint-status 已註記）。
+- **Task 4（查詢失效、夾具、基準）**：`useUpdateMetadata`／`useUploadPoster` 成功後失效 `detailKeys.localMovie|localSeries(id)`＋`libraryKeys.all`（`useLibrary` 的 `['library']`）。`LocalDetailV2` 的 `onSuccess` refetch **保留**（它是同一份資料，多一次 refetch 無害，拿掉反而要改它的測試與註解）。gallery：`metadata-editor-metadata-editor-dialog`（桌面，無海報）＋新 `/mobile`（390×844，同源 `placeholder-poster.svg` 當海報——視覺測試會擋掉 TMDb）；類型／演員夾具換成新 props、`penNode` 指向 B′13 的 `Dcf86`／`r7iTr`。darwin 基準更新，過期 `-linux` 7 張 `git rm`，交給 CI bootstrap。
+- **既有測試改動（刻意，逐條）**：`MetadataEditorDialog.spec` 整份重寫——標籤「標題（中文）／標題（英文）」→「片名／英文片名」（照稿）、「海報圖片網址」欄已刪、類型從 18 顆全攤的 toggle 改成 chip＋選單、類型值從英文 key 改中文、「年份」不再帶 *（稿只有片名帶 *；驗證照舊）、關閉鈕改用 `關閉` 名稱查；`GenreSelector.spec`／`CastEditor.spec` 因 props 改變重寫；`LocalDetailV2.spec` 的對話框 mock 改成記錄 props（新增一條「把海報交給修改資訊」）。
+- 🔗 **AC Drift: FOUND** — `3-8-metadata-editor` AC1（「edit form with all editable fields … Poster (upload or URL)」）→ 本張暫時拿掉網址欄（b 張以「改用圖片網址」補回）；AC1 的類型欄從「18 個 toggle、英文 key」改成「chip＋選單、中文名稱」。
+- 📎 **Contract Stamps: NONE**（本張與上游 3-8 皆無 `[@contract-v*]`；`PUT` 更新格式不變，`genres` 值改成資料庫本來的中文名稱）。
+- 🎭 **A11y Pre-Flight: PASS**（4 個元件；jsx-a11y 在觸及檔案 0 新增——`autoFocus` 那條已改成 ref＋effect；Dialog 有 `DialogTitle`「修改資訊」、焦點困住與回歸、chip × 有名稱、錯誤以 `aria-describedby`＋`aria-invalid` 連結、footer 錯誤 `role="alert"`）。
+- **測試**：`nx test web` **289 files／4297 tests** 綠；`nx test api` 綠；`lint:all`（0 error）、typecheck、prettier 綠。
+- **Mutation 6／6 紅**：類型選單改回英文 key → 2 紅；失效 key 改回 `['media',id]` → 3 紅；拿掉點背景防護 → 第一輪**沒紅**（`fireEvent.pointerDown(document.body)` 碰不到 Radix 的外部判斷）→ 改成真的點 scrim 後紅；拿掉 Esc 例外 → 紅；`LocalDetailV2` 不帶海報 → 紅；拿掉海報載入失敗的退路 → 紅。
+
+### 🔍 /ship Adversarial Review（2026-09-24）
+
+0 HIGH／2 MEDIUM／1 LOW，吸收 2M、1L 立案：
+- **M1** 演員框裡打了名字沒按 Enter 就按「儲存」→ 名字被失焦丟掉 → 改成**離開輸入框就加入**，只有 Esc 取消（`cancelledRef` 防止 Esc 後的失焦再加回去——jsdom 在元件卸載時不會觸發 blur，這個防護無法用 mutation 證明，屬防禦性寫法）。測試 +3。
+- **M2** 清空年份按儲存 → zod 預設英文「Expected number, received nan」→ 改成「請輸入年份」。測試 +1。
+- **L1（立案）** 沒有上映日期的片子，年份被預設成今年、儲存就寫進資料庫（舊碼同樣）→ `disc-2026-09-editor-unknown-year-saved-as-this-year`。
+
+### 🎨 UX Verification（對 `b13p-d.png`／`b13p-m.png`）
+
+| Area | Design Spec | Implementation | Match? | Fix Needed |
+| --- | --- | --- | --- | --- |
+| 外殼 | 760 寬、header 56＋下框線、footer 上框線、radius-lg | 同 | ✅ | — |
+| 標題 | 修改資訊 | 修改資訊（原「編輯媒體資訊」） | ✅ | — |
+| 左欄 | 海報標籤＋184×276 | 同；新圖標籤、換圖按鈕、提示句屬 b 張 | ✅（本張範圍） | — |
+| 右欄順序 | 片名＊｜年份 → 英文片名 → 類型 → 導演 → 演員 → 簡介 | 同 | ✅ | — |
+| 類型／演員 | accent-tint chip＋×、外框「＋ 類型」；中性 chip＋「＋ 演員」 | 同 | ✅ | — |
+| footer | 取消（Secondary）＋儲存（Primary）；左側提示句 | 按鈕同；提示句屬 b 張 | ✅（本張範圍） | — |
+| 手機 | 底部面板、海報 104×156 標籤在右、年份｜導演同列、footer 兩顆各半 | 同 | ✅ | — |
+| 焦點 | 稿是靜態、無焦點 | 開啟時「片名」有焦點框 | ⚠️ 刻意 | 🎨 UX Fix：原本焦點框落在 ✕，改到片名 |
 
 ### Discovery Triage
 
+- `disc-2026-09-editor-unknown-year-saved-as-this-year`（/ship CR L1，已寫進 sprint-status）。
+
 ### File List
+
+- `apps/web/src/components/metadata-editor/MetadataEditorDialog.tsx`（+spec）
+- `apps/web/src/components/metadata-editor/GenreSelector.tsx`（+spec）
+- `apps/web/src/components/metadata-editor/CastEditor.tsx`（+spec）
+- `apps/web/src/components/metadata-editor/index.ts`
+- `apps/web/src/components/media/LocalDetailV2.tsx`（+spec）
+- `apps/web/src/hooks/useMetadataEditor.ts`、`apps/web/src/hooks/useMetadataEditor.spec.tsx`（新）
+- `apps/web/src/lib/genres.ts`（+spec）
+- `apps/web/src/routes/test/-gallery.fixtures.tsx`
+- `tests/visual/components.visual.spec.ts-snapshots/components/metadata-editor-{metadata-editor-dialog,genre-selector,cast-editor}/…`（darwin 更新、`-linux` 刪除、新增 `metadata-editor-metadata-editor-dialog/mobile/`）
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/implementation-artifacts/3-8-metadata-editor.md`（AC drift reference — see Completion Notes）
 
 ## Change Log
 
 | Date | Change |
 | --- | --- |
 | 2026-09-24 | 建單（SM）：由 `disc-2026-09-poster-upload-no-ui-entry` 升級並拆成 a／b；本張為對話框外殼＋欄位 |
+| 2026-09-24 | 實作完成：`ui/Dialog`＋手機面板、B′13 版面、類型改存中文名稱（清單外保留）、演員 chip、失效 key 修正、夾具與基準；狀態 review |
+| 2026-09-24 | /ship CR：演員框失焦即加入、年份清空的中文訊息；另立年份預設成今年的 disc |

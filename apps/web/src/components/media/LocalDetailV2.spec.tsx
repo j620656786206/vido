@@ -18,6 +18,7 @@ const h = vi.hoisted(() => ({
   tvCredits: { data: undefined } as { data: unknown },
   douban: { data: null, isLoading: false } as { data: unknown; isLoading: boolean },
   reparse: {} as Record<string, unknown>,
+  editorProps: [] as Array<{ initialData: { posterUrl?: string } }>,
 }));
 
 // dsr-2b-b: the re-match mutation is the container's; stub it so the no-metadata
@@ -86,7 +87,12 @@ vi.mock('./CreditsSection', () => ({
   ),
 }));
 vi.mock('./DualRatingDisplay', () => ({ DualRatingDisplay: () => null }));
-vi.mock('../metadata-editor', () => ({ MetadataEditorDialog: () => null }));
+vi.mock('../metadata-editor', () => ({
+  MetadataEditorDialog: (props: { initialData: { posterUrl?: string } }) => {
+    h.editorProps.push(props);
+    return null;
+  },
+}));
 // v2 shell swap (ux3-subtitle-v2 Task 6): LocalDetailV2 renders the NEW
 // ManageSubtitleDialogV2 (the v1 SubtitleSearchDialog file stays for the legacy shell).
 vi.mock('../subtitle/ManageSubtitleDialogV2', () => ({
@@ -401,6 +407,16 @@ describe('LocalDetailV2', () => {
     expect(screen.getByTestId('action-edit-metadata')).toHaveTextContent('修改資訊');
     expect(screen.getByTestId('action-copy-path')).toBeInTheDocument();
     expect(screen.queryByText('播放')).not.toBeInTheDocument();
+  });
+
+  it('hands the stored poster to 修改資訊 (poster-upload-a AC #2)', async () => {
+    const m = movie();
+    (m.data as Record<string, unknown>).posterPath = '/posters/abc.jpg';
+    h.local = m;
+    h.editorProps.length = 0;
+    renderDetail();
+    await screen.findByTestId('local-detail-v2');
+    expect(h.editorProps.at(-1)?.initialData.posterUrl).toBe('/posters/abc.jpg');
   });
 
   it('opens the v2 manage-subtitle dialog from 管理字幕', async () => {

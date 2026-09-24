@@ -1,73 +1,80 @@
-// Implements: Component/GenreTag (L1NP6)
-// Source: ux-design.pen (Pencil app)
+// Design ref: ux-design.pen Screen B13p-D 修改資訊 · 類型 (Dcf86)
 /**
- * GenreSelector Component (Story 3.8 - AC1)
- * Multi-select genre picker with toggle buttons
+ * GenreSelector — the 類型 field of the 修改資訊 dialog (poster-upload-a AC #3).
+ *
+ * Picked genres are chips with a ×; 「＋ 類型」 opens a menu of the rest. Values
+ * are the zh-TW names the library stores (lib/genres `genreNamesFor`), and a
+ * picked genre that is NOT in the menu (a Douban import, say) still shows as a
+ * chip — a save must never drop a genre just because this list does not know it.
  */
 
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { Plus, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-export interface GenreOption {
-  value: string;
-  label: string;
-}
-
 export interface GenreSelectorProps {
-  selectedGenres: string[];
-  onToggle: (genre: string) => void;
-  options?: GenreOption[];
-  label?: string;
+  selected: string[];
+  /** The genres the 「＋ 類型」 menu offers. */
+  options: string[];
+  onChange: (next: string[]) => void;
+  /** id of the visible field label — the chip group is named by it. */
+  labelId: string;
 }
 
-// Default genre options following project conventions
-export const GENRE_OPTIONS: GenreOption[] = [
-  { value: 'action', label: '動作' },
-  { value: 'adventure', label: '冒險' },
-  { value: 'animation', label: '動畫' },
-  { value: 'comedy', label: '喜劇' },
-  { value: 'crime', label: '犯罪' },
-  { value: 'documentary', label: '紀錄片' },
-  { value: 'drama', label: '劇情' },
-  { value: 'family', label: '家庭' },
-  { value: 'fantasy', label: '奇幻' },
-  { value: 'history', label: '歷史' },
-  { value: 'horror', label: '恐怖' },
-  { value: 'music', label: '音樂' },
-  { value: 'mystery', label: '懸疑' },
-  { value: 'romance', label: '愛情' },
-  { value: 'sci-fi', label: '科幻' },
-  { value: 'thriller', label: '驚悚' },
-  { value: 'war', label: '戰爭' },
-  { value: 'western', label: '西部' },
-];
+const MENU_ITEM =
+  'flex min-h-11 cursor-default select-none items-center rounded-[var(--radius-sm)] px-3 text-sm text-[var(--text-primary)] outline-none data-[highlighted]:bg-[var(--accent-subtle)]';
 
-export function GenreSelector({
-  selectedGenres,
-  onToggle,
-  options = GENRE_OPTIONS,
-  label = '類型',
-}: GenreSelectorProps) {
+export function GenreSelector({ selected, options, onChange, labelId }: GenreSelectorProps) {
+  const remaining = options.filter((g) => !selected.includes(g));
+
   return (
-    <div>
-      <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">{label}</label>
-      <div className="flex flex-wrap gap-2" data-testid="genre-selector">
-        {options.map((genre) => (
+    <div role="group" aria-labelledby={labelId} className="flex flex-wrap items-center gap-2">
+      {selected.map((genre) => (
+        <span
+          key={genre}
+          className="inline-flex h-7 items-center gap-0.5 rounded-full bg-[var(--accent-tint)] pl-3 pr-0.5 text-xs text-[var(--accent-text)]"
+        >
+          {genre}
           <button
-            key={genre.value}
             type="button"
-            onClick={() => onToggle(genre.value)}
-            className={cn(
-              'px-3 py-1.5 rounded-full text-sm font-medium transition-colors',
-              selectedGenres.includes(genre.value)
-                ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
-                : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
-            )}
-            aria-pressed={selectedGenres.includes(genre.value)}
+            onClick={() => onChange(selected.filter((g) => g !== genre))}
+            aria-label={`移除類型：${genre}`}
+            className="flex h-6 w-6 items-center justify-center rounded-full transition-colors hover:bg-[var(--accent-subtle)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
           >
-            {genre.label}
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
-        ))}
-      </div>
+        </span>
+      ))}
+      {remaining.length > 0 && (
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger asChild>
+            <button
+              type="button"
+              className="inline-flex h-7 items-center gap-1 rounded-full border border-[var(--border-subtle)] px-3 text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              類型
+            </button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              align="start"
+              sideOffset={4}
+              className="z-50 max-h-72 min-w-40 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] p-1.5 shadow-[var(--shadow-lg)]"
+            >
+              {remaining.map((genre) => (
+                <DropdownMenu.Item
+                  key={genre}
+                  onSelect={() => onChange([...selected, genre])}
+                  className={cn(MENU_ITEM)}
+                >
+                  {genre}
+                </DropdownMenu.Item>
+              ))}
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
+      )}
     </div>
   );
 }
