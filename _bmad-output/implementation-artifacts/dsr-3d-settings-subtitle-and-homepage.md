@@ -1,6 +1,6 @@
 # Story DSR.3d：字幕設定與自訂首頁對齊設計稿——選項卡片看得出選了哪個，首頁區塊列表不再畫產品沒有的開關與拖曳
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
