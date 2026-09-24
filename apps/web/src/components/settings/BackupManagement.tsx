@@ -30,6 +30,9 @@ const TONE_ICONS = {
   error: <XCircle className="h-4 w-4 shrink-0" aria-hidden="true" />,
 } as const;
 
+/** The backend's restore error is a code (RESTORE_VERIFY_FAILED …); the log has the detail. */
+const RESTORE_FAILED = '還原失敗。若持續失敗，到「系統日誌」查看原因。';
+
 export function BackupManagement() {
   const { data, isFetched, isFetching, error, refetch } = useBackups();
   const createBackup = useCreateBackup();
@@ -38,7 +41,9 @@ export function BackupManagement() {
   const restoreBackup = useRestoreBackup();
   // Only whether it failed: the backend neither pre-checks disk space nor
   // classifies the error, so its message (English) says nothing a user can act on.
-  const [createFailed, setCreateFailed] = useState(false);
+  // A count, not a flag: the banner stays up through 重試, so a second failure
+  // must CHANGE its text or nothing is announced (dsr-3f CR #3).
+  const [createFailures, setCreateFailures] = useState(0);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   // Feedback carries its OUTCOME so the banner can wear the vocabulary's colour:
   // ok → neutral (done-ness never wears green/gold), warn → --warning-*, error →
@@ -55,9 +60,9 @@ export function BackupManagement() {
     // away only once a backup is actually made.
     try {
       await createBackup.mutateAsync();
-      setCreateFailed(false);
+      setCreateFailures(0);
     } catch {
-      setCreateFailed(true);
+      setCreateFailures((n) => n + 1);
     }
   };
 
@@ -65,8 +70,9 @@ export function BackupManagement() {
     setDeleteError(null);
     try {
       await deleteBackup.mutateAsync(id);
-    } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : '刪除備份失敗');
+    } catch {
+      // Like 建立失敗: the backend's text is English and unclassified (dsr-3f CR #2).
+      setDeleteError('刪除備份失敗，請稍後再試。');
     }
   };
 
@@ -79,8 +85,8 @@ export function BackupManagement() {
       } else {
         setVerifyMessage({ tone: 'warn', text: '備份校驗碼不符，檔案可能已損壞' });
       }
-    } catch (err) {
-      setVerifyMessage({ tone: 'error', text: err instanceof Error ? err.message : '驗證失敗' });
+    } catch {
+      setVerifyMessage({ tone: 'error', text: '驗證沒有完成，請稍後再試。' });
     }
   };
 
@@ -100,11 +106,11 @@ export function BackupManagement() {
       if (result.status === 'completed') {
         setRestoreMessage({ tone: 'ok', text: '還原完成，資料庫已恢復' });
       } else {
-        setRestoreMessage({ tone: 'error', text: `還原失敗：${result.error || '未知錯誤'}` });
+        setRestoreMessage({ tone: 'error', text: RESTORE_FAILED });
       }
-    } catch (err) {
+    } catch {
       setRestoreTarget(null);
-      setRestoreMessage({ tone: 'error', text: err instanceof Error ? err.message : '還原失敗' });
+      setRestoreMessage({ tone: 'error', text: RESTORE_FAILED });
     }
   };
 
@@ -138,8 +144,12 @@ export function BackupManagement() {
     <div className="space-y-6" data-testid="backup-management">
       {/* C20-D: the failure sits ABOVE the summary — it is about the button the
           user just pressed, and the list below is still worth showing. */}
-      {createFailed && (
-        <CreateBackupFailed onRetry={handleCreate} isRetrying={createBackup.isPending} />
+      {createFailures > 0 && (
+        <CreateBackupFailed
+          attempts={createFailures}
+          onRetry={handleCreate}
+          isRetrying={createBackup.isPending}
+        />
       )}
 
       {/* Action bar */}
@@ -246,9 +256,12 @@ export function BackupManagement() {
  * 52 MB…」is not something this page can know (disc-2026-09-backup-disk-space-precheck).
  */
 export function CreateBackupFailed({
+  attempts = 1,
   onRetry,
   isRetrying,
 }: {
+  /** How many tries have failed in a row; from the second on, the title says so. */
+  attempts?: number;
   onRetry: () => void;
   isRetrying: boolean;
 }) {
@@ -260,7 +273,9 @@ export function CreateBackupFailed({
     >
       <CircleAlert className="size-[18px] shrink-0" aria-hidden="true" />
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold">建立備份失敗</p>
+        <p className="text-sm font-semibold">
+          建立備份失敗{attempts > 1 && `（已試 ${attempts} 次）`}
+        </p>
         <p className="mt-0.5 text-xs">
           備份沒有建立成功。請稍後再試；若持續失敗，到「
           <Link to="/settings/logs" className="underline underline-offset-2">

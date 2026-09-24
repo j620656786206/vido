@@ -382,6 +382,7 @@ describe('BackupManagement', () => {
 
       expect(screen.getByTestId('restore-message')).toBeInTheDocument();
       expect(screen.getByText(/還原失敗/)).toBeInTheDocument();
+      expect(screen.queryByText(/RESTORE_VERIFY_FAILED/)).toBeNull();
     });
 
     it('[P2] shows error when restore API throws', async () => {
@@ -401,7 +402,10 @@ describe('BackupManagement', () => {
       await user.click(screen.getByTestId('restore-confirm-btn'));
 
       expect(screen.getByTestId('restore-message')).toBeInTheDocument();
-      expect(screen.getByText('Network error')).toBeInTheDocument();
+      expect(
+        screen.getByText('還原失敗。若持續失敗，到「系統日誌」查看原因。')
+      ).toBeInTheDocument();
+      expect(screen.queryByText('Network error')).toBeNull();
     });
   });
 
@@ -472,7 +476,9 @@ describe('BackupManagement', () => {
       renderWithQuery(React.createElement(BackupManagement));
       await user.click(screen.getByTestId('verify-btn-b1'));
       expect(screen.getByTestId('verify-message')).toBeInTheDocument();
-      expect(screen.getByText('File missing')).toBeInTheDocument();
+      // dsr-3f CR: fixed Chinese, not the backend's words.
+      expect(screen.getByText('驗證沒有完成，請稍後再試。')).toBeInTheDocument();
+      expect(screen.queryByText('File missing')).toBeNull();
     });
   });
 
@@ -573,6 +579,74 @@ describe('BackupManagement', () => {
       );
       expect(screen.queryByTestId('backup-loading')).toBeNull();
       expect(screen.getByRole('button', { name: '重試中…' })).toBeInTheDocument();
+    });
+  });
+
+  describe('dsr-3f CR: no backend English in any failure', () => {
+    const one = {
+      backups: [
+        {
+          id: 'b1',
+          filename: 'f.db',
+          sizeBytes: 1,
+          schemaVersion: 1,
+          checksum: '',
+          status: 'completed' as const,
+          createdAt: '2026-09-11T03:00:00',
+        },
+      ],
+      totalSizeBytes: 1,
+    };
+    it('delete failure', async () => {
+      const user = userEvent.setup();
+      mockUseDeleteBackup.mockReturnValue({
+        mutateAsync: vi.fn().mockRejectedValue(new Error('API request failed: 500')),
+        isPending: false,
+      } as any);
+      mockUseBackups.mockReturnValue({ data: one, isLoading: false, error: null } as any);
+      renderWithQuery(React.createElement(BackupManagement));
+      await user.click(screen.getByTestId('delete-btn-b1'));
+      expect(screen.getByTestId('delete-error')).toHaveTextContent('刪除備份失敗，請稍後再試。');
+      expect(screen.queryByText(/API request failed/)).toBeNull();
+    });
+  });
+
+  describe('dsr-3f CR: 重試', () => {
+    const one = {
+      backups: [],
+      totalSizeBytes: 0,
+    };
+    it('a second failure changes the alert text so it is announced again', async () => {
+      const user = userEvent.setup();
+      const mutateAsync = vi.fn().mockRejectedValue(new Error('x'));
+      mockUseCreateBackup.mockReturnValue({ mutateAsync, isPending: false } as any);
+      mockUseBackups.mockReturnValue({ data: one, isLoading: false, error: null } as any);
+      renderWithQuery(React.createElement(BackupManagement));
+      await user.click(screen.getByTestId('create-backup-btn'));
+      expect(screen.getByRole('alert')).toHaveTextContent(/^建立備份失敗備份沒有/);
+      await user.click(screen.getByTestId('create-retry-btn'));
+      expect(screen.getByRole('alert')).toHaveTextContent('建立備份失敗（已試 2 次）');
+    });
+
+    it('the bar stays up while 重試 runs, with the button marked busy but focusable', async () => {
+      const user = userEvent.setup();
+      const mutateAsync = vi.fn().mockRejectedValue(new Error('x'));
+      mockUseCreateBackup.mockReturnValue({ mutateAsync, isPending: false } as any);
+      mockUseBackups.mockReturnValue({ data: one, isLoading: false, error: null } as any);
+      const { rerender } = renderWithQuery(React.createElement(BackupManagement));
+      await user.click(screen.getByTestId('create-backup-btn'));
+      mockUseCreateBackup.mockReturnValue({ mutateAsync, isPending: true } as any);
+      rerender(
+        React.createElement(
+          QueryClientProvider,
+          { client: new QueryClient() },
+          React.createElement(BackupManagement)
+        )
+      );
+      const retry = screen.getByTestId('create-retry-btn');
+      expect(screen.getByTestId('create-error')).toBeInTheDocument();
+      expect(retry).toHaveAttribute('aria-disabled', 'true');
+      expect(retry).not.toBeDisabled();
     });
   });
 });

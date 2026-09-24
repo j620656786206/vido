@@ -412,11 +412,55 @@ describe('BackupTable', () => {
       expect(pill.querySelector('svg')).not.toBeNull();
     });
 
-    it('the delete button is error-coloured and every action has a name', () => {
+    it('the delete button is error-coloured and every action names its backup', () => {
       render(React.createElement(BackupTable, props([local])));
       expect(screen.getByTestId('delete-btn-b1').className).toContain('text-[var(--error-text)]');
-      for (const name of ['還原', '驗證完整性', '下載', '刪除']) {
-        expect(screen.getByRole(name === '下載' ? 'link' : 'button', { name })).toBeInTheDocument();
+      for (const verb of ['還原', '驗證完整性', '下載', '刪除']) {
+        expect(
+          screen.getByRole(verb === '下載' ? 'link' : 'button', {
+            name: `${verb} ${local.filename}`,
+          })
+        ).toBeInTheDocument();
+      }
+    });
+
+    it('a narrow column gets cards even when the viewport is not a phone (sidebar at 768)', () => {
+      const RO = window.ResizeObserver;
+      const rect = HTMLElement.prototype.getBoundingClientRect;
+      class FakeRO {
+        observe() {}
+        disconnect() {}
+      }
+      window.ResizeObserver = FakeRO as unknown as typeof window.ResizeObserver;
+      HTMLElement.prototype.getBoundingClientRect = function () {
+        return { width: 480 } as ReturnType<HTMLElement['getBoundingClientRect']>;
+      };
+      try {
+        render(React.createElement(BackupTable, props([local])));
+        expect(screen.getByTestId('backup-list')).toHaveAttribute('data-layout', 'cards');
+        expect(screen.getByTestId('restore-btn-b1').className).toContain('h-11');
+      } finally {
+        window.ResizeObserver = RO;
+        HTMLElement.prototype.getBoundingClientRect = rect;
+      }
+    });
+
+    it('a wide column keeps the table', () => {
+      const RO = window.ResizeObserver;
+      const rect = HTMLElement.prototype.getBoundingClientRect;
+      window.ResizeObserver = class {
+        observe() {}
+        disconnect() {}
+      } as unknown as typeof window.ResizeObserver;
+      HTMLElement.prototype.getBoundingClientRect = function () {
+        return { width: 900 } as ReturnType<HTMLElement['getBoundingClientRect']>;
+      };
+      try {
+        render(React.createElement(BackupTable, props([local])));
+        expect(screen.getByTestId('backup-list')).toHaveAttribute('data-layout', 'table');
+      } finally {
+        window.ResizeObserver = RO;
+        HTMLElement.prototype.getBoundingClientRect = rect;
       }
     });
   });

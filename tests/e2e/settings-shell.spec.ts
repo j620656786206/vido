@@ -369,6 +369,20 @@ test.describe('備份與還原 @settings @dsr-3f', () => {
     await expect(page.getByTestId('delete-btn-b3')).toBeVisible();
   });
 
+  test('[P1] 768 with the sidebar: the column is too narrow for the table, so it is cards and nothing is clipped', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.goto('/settings/backup');
+    await expect(page.getByTestId('backup-row-b1')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('backup-list')).toHaveAttribute('data-layout', 'cards');
+    const list = (await page.getByTestId('backup-table').boundingBox())!;
+    for (const btn of ['restore-btn-b1', 'delete-btn-b1', 'download-btn-b1']) {
+      const b = (await page.getByTestId(btn).boundingBox())!;
+      expect(b.x + b.width).toBeLessThanOrEqual(list.x + list.width);
+    }
+  });
+
   for (const [label, vp] of [
     ['phone', PHONE],
     ['1440', DESKTOP],

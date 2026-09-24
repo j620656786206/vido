@@ -14,7 +14,9 @@ import type { Backup, BackupStatus } from '../../services/backupService';
 import { backupService } from '../../services/backupService';
 import { formatBytes } from '../../utils/formatBytes';
 import { formatLocalDateTime } from '../../utils/formatLocalDateTime';
+import { useRef } from 'react';
 import { useIsPhone } from '../../hooks/useIsPhone';
+import { useElementWidth } from '../../hooks/useElementWidth';
 import { cn } from '../../lib/utils';
 
 const statusConfig: Record<
@@ -54,12 +56,16 @@ const statusConfig: Record<
 /**
  * One column template for the header AND every row, so they cannot drift.
  * C5-D draws 440 / 120 / 200 / 120 / 176 with 16 gaps across a 1152 column;
- * those fixed widths only fit from `xl`. Between 640 and 1280 the settings
- * column is ~600–1000px, so the fixed columns shrink and the file name (the
- * one column that can truncate) takes whatever is left.
+ * those fixed widths only fit from `xl` (viewport ≥1280 → column ≥992). Below
+ * that the fixed columns shrink to 80 / 128 / 80 / 152 (four 32px buttons),
+ * which with gaps, padding and border is 522px before the file name gets any
+ * room — so under TABLE_MIN_WIDTH the table is not used at all (see below).
  */
 export const BACKUP_GRID =
   'grid grid-cols-[minmax(0,1fr)_80px_128px_80px_auto] items-center gap-x-3 xl:grid-cols-[minmax(0,1fr)_120px_200px_120px_176px] xl:gap-x-4';
+
+/** Narrower than this and the table becomes cards: 522px of fixed columns + ~80px of file name. */
+export const TABLE_MIN_WIDTH = 600;
 
 interface BackupTableProps {
   backups: Backup[];
@@ -107,7 +113,7 @@ function BackupActions({
             disabled={isRestoring}
             className={btn}
             data-testid={`restore-btn-${backup.id}`}
-            aria-label="還原"
+            aria-label={`還原 ${backup.filename}`}
             title="還原"
           >
             <RotateCcw className="size-3.5" aria-hidden="true" />
@@ -118,7 +124,7 @@ function BackupActions({
             disabled={isVerifying}
             className={btn}
             data-testid={`verify-btn-${backup.id}`}
-            aria-label="驗證完整性"
+            aria-label={`驗證完整性 ${backup.filename}`}
             title="驗證完整性"
           >
             <ShieldCheck className="size-3.5" aria-hidden="true" />
@@ -127,7 +133,7 @@ function BackupActions({
             href={backupService.getDownloadUrl(backup.id)}
             className={btn}
             data-testid={`download-btn-${backup.id}`}
-            aria-label="下載"
+            aria-label={`下載 ${backup.filename}`}
             title="下載"
           >
             <Download className="size-3.5" aria-hidden="true" />
@@ -140,7 +146,7 @@ function BackupActions({
         disabled={isDeleting}
         className={cn(btn, 'text-[var(--error-text)] hover:text-[var(--error-text)]')}
         data-testid={`delete-btn-${backup.id}`}
-        aria-label="刪除"
+        aria-label={`刪除 ${backup.filename}`}
         title="刪除"
       >
         <Trash2 className="size-3.5" aria-hidden="true" />
@@ -159,7 +165,10 @@ function StatusPill({ status }: { status: BackupStatus }) {
         config.className
       )}
     >
-      <Icon className="size-3" aria-hidden="true" />
+      <Icon
+        className={cn('size-3', status === 'running' && 'motion-safe:animate-spin')}
+        aria-hidden="true"
+      />
       {config.label}
     </span>
   );
@@ -178,36 +187,59 @@ export function BackupTable({ backups, ...handlers }: BackupTableProps) {
   // plus the actions, and inside `overflow-hidden` the actions were simply cut
   // off at 390 — restore and delete could not be reached on a phone at all.
   // useIsPhone (not a CSS swap) so there is ONE copy of each button in the DOM.
+  //
+  // Not the viewport alone: from 640 up the sidebar takes 240px, so at 768 the
+  // table would get ~480px and — inside `overflow-hidden` — clip delete and
+  // download exactly as the phone did (dsr-3f CR #1). The measured width of
+  // this component decides; useIsPhone covers the first render and jsdom,
+  // where nothing can be measured.
   const isPhone = useIsPhone();
+  const boxRef = useRef<HTMLDivElement>(null);
+  const width = useElementWidth(boxRef);
+  const asCards = isPhone || (width !== null && width < TABLE_MIN_WIDTH);
 
-  if (isPhone) {
-    return (
-      <ul
-        className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)]"
-        data-testid="backup-table"
-      >
-        {backups.map((backup) => (
-          <li
-            key={backup.id}
-            className="flex flex-col gap-2 p-4"
-            data-testid={`backup-row-${backup.id}`}
-          >
-            <div className="flex items-center gap-3">
-              <div className="min-w-0 flex-1 font-mono text-xs">
-                <BackupTime iso={backup.createdAt} className="block text-[var(--text-primary)]" />
-                <p className="truncate text-[var(--text-muted)]" title={backup.filename}>
-                  {formatBytes(backup.sizeBytes)} · {backup.filename}
-                </p>
-              </div>
-              <StatusPill status={backup.status} />
+  return (
+    <div ref={boxRef} data-layout={asCards ? 'cards' : 'table'} data-testid="backup-list">
+      {asCards ? (
+        <BackupCards backups={backups} handlers={handlers} />
+      ) : (
+        <BackupGrid backups={backups} handlers={handlers} />
+      )}
+    </div>
+  );
+}
+
+type Handlers = Omit<BackupTableProps, 'backups'>;
+
+function BackupCards({ backups, handlers }: { backups: Backup[]; handlers: Handlers }) {
+  return (
+    <ul
+      className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)]"
+      data-testid="backup-table"
+    >
+      {backups.map((backup) => (
+        <li
+          key={backup.id}
+          className="flex flex-col gap-2 p-4"
+          data-testid={`backup-row-${backup.id}`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1 font-mono text-xs">
+              <BackupTime iso={backup.createdAt} className="block text-[var(--text-primary)]" />
+              <p className="truncate text-[var(--text-muted)]" title={backup.filename}>
+                {formatBytes(backup.sizeBytes)} · {backup.filename}
+              </p>
             </div>
-            <BackupActions backup={backup} variant="card" {...handlers} />
-          </li>
-        ))}
-      </ul>
-    );
-  }
+            <StatusPill status={backup.status} />
+          </div>
+          <BackupActions backup={backup} variant="card" {...handlers} />
+        </li>
+      ))}
+    </ul>
+  );
+}
 
+function BackupGrid({ backups, handlers }: { backups: Backup[]; handlers: Handlers }) {
   return (
     <div
       className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)]"

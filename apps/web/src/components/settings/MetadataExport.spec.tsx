@@ -99,6 +99,7 @@ describe('MetadataExport', () => {
     await user.click(screen.getByTestId('export-btn'));
     expect(screen.getByTestId('export-message')).toBeInTheDocument();
     expect(screen.getByText(/匯出失敗/)).toBeInTheDocument();
+    expect(screen.queryByText(/EXPORT_FAILED/)).toBeNull();
   });
 
   it('shows format descriptions', () => {

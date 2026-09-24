@@ -437,8 +437,21 @@ const C5_BACKUPS: Backup[] = [
     createdAt: '2026-09-09T14:12:00',
   },
 ];
+/** C5_BACKUPS plus a failed one, so the table baselines also hold the error pill. */
+const C5_BACKUPS_WITH_FAILED: Backup[] = [
+  ...C5_BACKUPS,
+  {
+    id: 'b4',
+    filename: 'vido-backup-2026-09-08-0300.db',
+    sizeBytes: 0,
+    schemaVersion: 17,
+    checksum: '',
+    status: 'failed',
+    createdAt: '2026-09-08T03:00:00',
+  },
+];
 const backupTableProps = {
-  backups: C5_BACKUPS,
+  backups: C5_BACKUPS_WITH_FAILED,
   onDelete: noop,
   onVerify: noop,
   onRestore: noop,
@@ -3801,7 +3814,9 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'settings/BackupScheduleConfig (C5-D — 每週)',
     component: BackupScheduleConfig,
     penNode: 'Jt3DP', // Screen C5-D — schedule-card
-    statesOnly: ['default'],
+    // focus kept: it lands on the switch, the one custom control in the card
+    // besides the radiogroup; hover says nothing about a whole card.
+    statesOnly: ['default', 'focus'],
     width: 1152,
     seedQueries: [
       {

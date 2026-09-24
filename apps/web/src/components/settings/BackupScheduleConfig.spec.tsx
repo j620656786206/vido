@@ -185,6 +185,10 @@ describe('BackupScheduleConfig', () => {
       await user.keyboard('{ArrowLeft}');
       expect(daily).toHaveAttribute('aria-checked', 'true');
       expect(screen.queryByTestId('schedule-day')).toBeNull();
+      await user.keyboard('{End}');
+      expect(weekly).toHaveAttribute('aria-checked', 'true');
+      await user.keyboard('{Home}');
+      expect(daily).toHaveAttribute('aria-checked', 'true');
     });
 
     it('saves the frequency picked with the segmented control', async () => {
@@ -211,5 +215,23 @@ describe('BackupScheduleConfig', () => {
       renderWithQuery(React.createElement(BackupScheduleConfig));
       expect(screen.getByTestId('schedule-next')).toHaveTextContent('下次備份：2026-09-14 03:00');
     });
+  });
+
+  it('dsr-3f CR: a failed save says so in Chinese, not the backend error', async () => {
+    const user = userEvent.setup();
+    mockUseUpdateSchedule.mockReturnValue({
+      mutateAsync: vi.fn().mockRejectedValue(new Error('API request failed: 500')),
+      isPending: false,
+    } as any);
+    mockUseBackupSchedule.mockReturnValue({
+      data: { enabled: true, frequency: 'daily', hour: 3, dayOfWeek: 0 },
+      isLoading: false,
+    } as any);
+    renderWithQuery(React.createElement(BackupScheduleConfig));
+    await user.click(screen.getByTestId('schedule-save-btn'));
+    expect(screen.getByTestId('schedule-message')).toHaveTextContent(
+      '排程沒有儲存成功，請稍後再試。'
+    );
+    expect(screen.queryByText(/API request failed/)).toBeNull();
   });
 });

@@ -33,10 +33,10 @@ export function MetadataExport() {
           setDownloadId(result.exportId);
         }
       } else {
-        setMessage({ tone: 'error', text: `匯出失敗：${result.error || '未知錯誤'}` });
+        setMessage({ tone: 'error', text: '匯出失敗，請稍後再試。' });
       }
-    } catch (err) {
-      setMessage({ tone: 'error', text: err instanceof Error ? err.message : '匯出失敗' });
+    } catch {
+      setMessage({ tone: 'error', text: '匯出失敗，請稍後再試。' });
     }
   };
 

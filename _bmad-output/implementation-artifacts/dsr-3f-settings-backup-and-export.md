@@ -207,7 +207,15 @@ Claude Opus 5.5 (1M context)（Amelia / dev-story）
 - **Mutation：unit 16／16 紅、e2e 2／2 紅**（拿掉手機卡片、手機鈕 32、舊表頭、舊日期格式、舊 pill 字級、垃圾桶中性、方向鍵失效、開關舊 token、還原中可 Esc、預設焦點、手機按鈕順序、快照中性色、錯誤條移到摘要下、重抓時轉圈、選中舊底色、原生 radio 被 `hidden`；e2e：拿掉手機卡片、拿掉還焦點）。第一輪「預設焦點」與「原生 radio」兩條沒紅 → 補了手機焦點與 `sr-only` 斷言後才紅。
 - **視覺基準**：`settings-backup-table`、`settings-backup-management`、`settings-backup-schedule-config`、`settings-restore-confirm-dialog`、`settings-metadata-export`（3 張）的 darwin 基準改變，`penNode` 改成真節點；management／schedule 的 hover／focus 基準刪除（改 `statesOnly: ['default']`）；新增 `settings-backup-table/mobile`、`settings-backup-management/create-failed`、`settings-restore-confirm-dialog/mobile`、`settings-metadata-export/mobile`。過期 `-linux` 全部 `git rm`，等 CI bootstrap。手機夾具一律 `viewport: 390×844`（不是 `width: 390`）：`useIsPhone` 看視窗、Portal 不吃框寬，而且 `gallery-fixture-viewport.spec` 只允許這個尺寸。
 - ⚠️ **與 story／稿的偏離**：① 還原框開啟時「取消」帶焦點環（程式聚焦＝`focus-visible`），稿沒畫；這是鍵盤使用者需要的，保留。② 手機還原說明句用 14（稿 12）：沿用 `dsr-3b` 的「手機不縮內文」，句子在 390 會折成兩行。③ 桌機排程欄位碼是「頻率＋時間（＋備份日）」各佔等寬，稿三欄等寬一致；但選「每日」時只有兩欄。④ 手機與桌機的列之間都沒有分隔線（照稿）。
-- **沒處理、另外記一筆**：驗證／刪除／還原失敗的訊息仍直接顯示後端的 `err.message`（英文）。本張 AC 只涵蓋建立失敗；這三處同類問題建議併入後續（見 sprint-status 本條目）。
+- ~~沒處理、另外記一筆：驗證／刪除／還原失敗仍顯示後端英文~~ → CR ② 已在本張修掉（連同排程與匯出）。
+
+- 🔍 **/ship 對抗式 CR（2026-09-24，獨立 context）1 HIGH／2 MEDIUM／4 LOW／4 NIT，吸收 1H／2M／4L／3N**：
+  ① 🔴 **640–~810 的平板仍然切掉還原與刪除**：側欄從 640 起佔 240px，768 時表格只拿到約 480px，而小於 `xl` 的固定欄就要 522px，`overflow-hidden` 又把右邊切掉——同一個 bug 換了斷點。→ 卡片／表格改由**元件自己量到的寬度**決定（新 `hooks/useElementWidth`，ResizeObserver；`< TABLE_MIN_WIDTH`＝600 就用卡片），`useIsPhone` 只管第一次 render 與 jsdom；補 unit（量到 480／900）與 e2e（768 是卡片、按鈕不超出列表）。
+  ② 🟠 驗證／刪除／還原／排程／匯出失敗仍印後端英文 → 全部改成固定中文（還原失敗附「系統日誌」指引），各補一條「不出現原文」測試。
+  ③ 🟠 重試又失敗時錯誤條內容不變、報讀器不會再念 → 失敗次數計數，第二次起標題「建立備份失敗（已試 N 次）」；補「重試中錯誤條不消失、按鈕 `aria-disabled` 仍可聚焦」測試。
+  ④ 還原中「取消」被 `disabled` 會把焦點丟到 body、✕ 看起來可按 → 兩顆鈕改 `aria-disabled`＋防呆，還原中隱藏 ✕。⑤ 手機 ✕ 比標題高約 18px → `max-sm:top-[38px]`。⑥ 開著對話框時轉手機（表格↔卡片）原本的還原鈕會消失 → 找同一份備份的還原鈕還焦點。⑦ 視覺夾具補一筆失敗的備份、排程卡保留 focus 基準。
+  NIT：操作鈕名稱帶檔名（「還原 vido-backup-…db」）、頻率加 Home／End、執行中圖示會轉。未改：`ui/Dialog` 的 ✕ 報讀名稱是英文「Close」（共用元件、全站既有）。
+  CR 後：mutation 再 7／7 紅；e2e 768 那條拿掉寬度判斷會紅；`nx test web` **288 files／4251 tests** 綠；`lint:all`、typecheck 綠；e2e 整檔 `--repeat-each=3` 51／51。
 
 ### File List
 
@@ -216,6 +224,7 @@ Claude Opus 5.5 (1M context)（Amelia / dev-story）
 - `_bmad-output/screenshots/flow-c-search-settings/{c5-d,c5-m,c13-m,c19-d,c19-m,c20-d}.png`
 - `apps/web/src/utils/formatLocalDateTime.ts`（新）
 - `apps/web/src/utils/formatLocalDateTime.spec.ts`（新）
+- `apps/web/src/hooks/useElementWidth.ts`（新，CR）
 - `apps/web/src/components/settings/BackupTable.tsx`（+spec）
 - `apps/web/src/components/settings/BackupManagement.tsx`（+spec）
 - `apps/web/src/components/settings/BackupScheduleConfig.tsx`（+spec）
@@ -251,4 +260,5 @@ Claude Opus 5.5 (1M context)（Amelia / dev-story）
 | 2026-09-24 | Task 4：還原確認換 `ui/Dialog`＋手機底部抽屜、焦點進出、還原中不能 Esc |
 | 2026-09-24 | Task 5：建立失敗錯誤條（摘要上方、通用句、系統日誌連結、重試）、整頁載入失敗換 `SettingsErrorState` |
 | 2026-09-24 | Task 6：匯出卡對稿（accent-subtle、自繪 radio、44 匯出鈕、768 寬） |
+| 2026-09-24 | /ship CR：平板寬度改卡片（量元件寬度）、所有失敗訊息改中文、重試失敗再宣讀、還原中焦點與 ✕、手機 ✕ 對齊、焦點回退 |
 | 2026-09-24 | Task 7：夾具 5 改 4 新、e2e 3 條、mutation 18／18、全套 web 4244 綠 |

@@ -57,10 +57,10 @@ export function BackupScheduleConfig() {
         dayOfWeek,
       });
       setMessage(newEnabled ? '自動備份已啟用' : '自動備份已停用');
-    } catch (err) {
+    } catch {
       setEnabled(!newEnabled);
       setFrequency(prevFrequency);
-      setMessage(err instanceof Error ? err.message : '更新失敗');
+      setMessage('排程沒有更新成功，請稍後再試。');
     }
   };
 
@@ -75,8 +75,8 @@ export function BackupScheduleConfig() {
         dayOfWeek,
       });
       setMessage('排程設定已儲存');
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : '更新失敗');
+    } catch {
+      setMessage('排程沒有儲存成功，請稍後再試。');
     }
   };
 
@@ -92,9 +92,17 @@ export function BackupScheduleConfig() {
   // Two options, so a segmented radiogroup (C5 qxfV5) rather than a <select>:
   // roving tabindex + arrow keys, the same keys a native radio group answers.
   const onFrequencyKey = (e: React.KeyboardEvent) => {
-    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+    const toggle = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key);
+    if (!toggle && e.key !== 'Home' && e.key !== 'End') return;
     e.preventDefault();
-    const next = frequency === 'weekly' ? 'daily' : 'weekly';
+    const next: 'daily' | 'weekly' =
+      e.key === 'Home'
+        ? 'daily'
+        : e.key === 'End'
+          ? 'weekly'
+          : frequency === 'weekly'
+            ? 'daily'
+            : 'weekly';
     setFrequency(next);
     (
       e.currentTarget.parentElement?.querySelector(`[data-value="${next}"]`) as HTMLElement | null

@@ -42,9 +42,13 @@ export function RestoreConfirmDialog({
     <button
       ref={cancelRef}
       type="button"
-      onClick={onCancel}
-      disabled={isRestoring}
-      className="h-11 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:opacity-50 max-sm:h-12 max-sm:w-full"
+      onClick={() => {
+        if (!isRestoring) onCancel();
+      }}
+      // aria-disabled, not disabled: disabling the focused 取消 would blur it
+      // and leave a keyboard user on <body> inside the modal (dsr-3f CR #4).
+      aria-disabled={isRestoring || undefined}
+      className="h-11 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 max-sm:h-12 max-sm:w-full"
       data-testid="restore-cancel-btn"
     >
       取消
@@ -53,9 +57,11 @@ export function RestoreConfirmDialog({
   const confirm = (
     <button
       type="button"
-      onClick={onConfirm}
-      disabled={isRestoring}
-      className="flex h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--error)] px-5 text-sm font-semibold text-[var(--text-on-scrim)] transition-colors hover:bg-[var(--error-pressed)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:opacity-50 max-sm:h-12 max-sm:w-full"
+      onClick={() => {
+        if (!isRestoring) onConfirm();
+      }}
+      aria-disabled={isRestoring || undefined}
+      className="flex h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--error)] px-5 text-sm font-semibold text-[var(--text-on-scrim)] transition-colors hover:bg-[var(--error-pressed)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 max-sm:h-12 max-sm:w-full"
       data-testid="restore-confirm-btn"
     >
       {isRestoring ? (
@@ -86,9 +92,17 @@ export function RestoreConfirmDialog({
         }}
         onCloseAutoFocus={(e) => {
           e.preventDefault();
-          if (returnFocusTo?.isConnected) returnFocusTo.focus();
+          // The saved button can be gone if the list switched between table
+          // and cards while the dialog was open (a phone rotated) — find the
+          // same backup's 還原 in whichever layout is showing now.
+          const target = returnFocusTo?.isConnected
+            ? returnFocusTo
+            : document.querySelector<HTMLElement>(`[data-testid="restore-btn-${backup.id}"]`);
+          target?.focus();
         }}
-        closeClassName={cn(MOBILE_SHEET_CLOSE, 'max-sm:top-5')}
+        // top-[38px]: centred on the 40px title row that sits under the grabber.
+        // Hidden while restoring — it could not close the dialog anyway.
+        closeClassName={cn(MOBILE_SHEET_CLOSE, 'max-sm:top-[38px]', isRestoring && 'hidden')}
         className={cn(
           'flex flex-col gap-4 border border-[var(--border-subtle)] p-6 max-sm:px-6 max-sm:pb-8 max-sm:pt-2',
           MOBILE_SHEET_CONTENT,

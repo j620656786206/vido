@@ -64,16 +64,26 @@ describe('RestoreConfirmDialog', () => {
   });
 
   it('disables buttons when isRestoring is true', () => {
+    const onConfirm = vi.fn();
+    const onCancel = vi.fn();
     render(
       React.createElement(RestoreConfirmDialog, {
         backup: testBackup,
         isRestoring: true,
-        onConfirm: vi.fn(),
-        onCancel: vi.fn(),
+        onConfirm,
+        onCancel,
       })
     );
-    expect(screen.getByTestId('restore-confirm-btn')).toBeDisabled();
-    expect(screen.getByTestId('restore-cancel-btn')).toBeDisabled();
+    // dsr-3f CR: aria-disabled (keeps focus) instead of disabled; clicks do nothing.
+    for (const id of ['restore-confirm-btn', 'restore-cancel-btn']) {
+      const b = screen.getByTestId(id);
+      expect(b).toHaveAttribute('aria-disabled', 'true');
+      b.click();
+    }
+    expect(onConfirm).not.toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
+    // ✕ could not close it anyway, so it is not offered.
+    expect(screen.getByRole('button', { name: 'Close' }).className).toContain('hidden');
   });
 
   it('shows loading state when restoring', () => {
@@ -182,5 +192,32 @@ describe('RestoreConfirmDialog', () => {
         '取消',
       ]);
     });
+  });
+
+  it('dsr-3f CR: returns focus to the same backup’s 還原 even if the list re-rendered', async () => {
+    const user = userEvent.setup();
+    const first = document.createElement('button');
+    first.dataset.testid = 'restore-btn-b1';
+    document.body.appendChild(first);
+    first.focus();
+    const onCancel = vi.fn();
+    const { unmount } = render(
+      React.createElement(RestoreConfirmDialog, {
+        backup: testBackup,
+        isRestoring: false,
+        onConfirm: vi.fn(),
+        onCancel,
+      })
+    );
+    // The layout flips: the original button goes, an equivalent one appears.
+    first.remove();
+    const second = document.createElement('button');
+    second.dataset.testid = 'restore-btn-b1';
+    document.body.appendChild(second);
+    await user.keyboard('{Escape}');
+    unmount();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(second).toHaveFocus();
+    second.remove();
   });
 });
