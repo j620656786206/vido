@@ -131,8 +131,9 @@ export function CacheManagement() {
             data-testid="clear-old-cache-warning"
           >
             <TriangleAlert className="mt-px size-4 shrink-0" aria-hidden="true" />
+            {/* poster-upload-b AC #5 (Sally × John): named once uploading exists. */}
             再按一次才會真的清除。這會刪掉 30
-            天前的所有快取，之後第一次瀏覽會比較慢，但不會影響影片與字幕檔案。
+            天前的所有快取，之後第一次瀏覽會比較慢，但不會影響影片、字幕與你上傳的海報。
           </p>
         )}
       </div>

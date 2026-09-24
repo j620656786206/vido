@@ -129,7 +129,7 @@ import { FallbackStatusDisplay } from '../../components/manual-search/FallbackSt
 import { SearchResultCard } from '../../components/manual-search/SearchResultCard';
 import { SearchResultsGrid } from '../../components/manual-search/SearchResultsGrid';
 import { CastEditor } from '../../components/metadata-editor/CastEditor';
-import { PosterUploader } from '../../components/metadata-editor/PosterUploader';
+import { PosterField } from '../../components/metadata-editor/PosterField';
 import { NewMediaNotifications } from '../../components/notifications/NewMediaNotifications';
 import { NewMediaToast } from '../../components/notifications/NewMediaToast';
 import { ParseCompleteToast } from '../../components/notifications/ParseCompleteToast';
@@ -288,6 +288,18 @@ import type { ServiceStatusResponse } from '../../services/serviceStatusService'
 import { LoginForm } from '../../components/auth/LoginForm';
 
 const noop = () => {};
+
+// poster-upload-b fixtures: a same-origin image (the visual run aborts TMDb) and a
+// picked "file" the field previews from a blob URL.
+const SAME_ORIGIN_POSTER =
+  typeof window === 'undefined' ? '' : `${window.location.origin}/images/placeholder-poster.svg`;
+const GALLERY_POSTER_FILE = new File(
+  [
+    '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="300"><rect width="200" height="300" fill="#3a5a8c"/><circle cx="100" cy="120" r="46" fill="#e8b04a"/></svg>',
+  ],
+  'poster.svg',
+  { type: 'image/svg+xml' }
+);
 
 /** dsr-3b: one key of each source, the way C7-D (PWvEX) draws them. */
 const KEYS_MIXED = {
@@ -2379,19 +2391,139 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     penNode: 'r7iTr', // B′13 修改資訊 · cast row
     width: 480,
   },
+  // ----- metadata-editor/PosterField — B′14 (AM0xm) nine states (poster-upload-b) -----
   {
-    id: 'metadata-editor-poster-uploader',
-    label: 'metadata-editor/PosterUploader',
-    component: PosterUploader,
+    id: 'metadata-editor-poster-field/current',
+    label: 'metadata-editor/PosterField (① 目前海報)',
+    component: PosterField,
+    props: { onChoiceChange: noop, currentPoster: SAME_ORIGIN_POSTER, choice: null, phase: 'idle' },
+    penNode: 'AM0xm', // B14-D
+    statesOnly: ['default'],
+    width: 240,
+  },
+  {
+    id: 'metadata-editor-poster-field/none',
+    label: 'metadata-editor/PosterField (② 還沒有海報)',
+    component: PosterField,
+    props: { onChoiceChange: noop, currentPoster: null, choice: null, phase: 'idle' },
+    penNode: 'AM0xm', // B14-D
+    statesOnly: ['default'],
+    width: 240,
+  },
+  {
+    id: 'metadata-editor-poster-field/dragging',
+    label: 'metadata-editor/PosterField (③ 拖曳到海報上)',
+    component: PosterField,
     props: {
-      mediaId: 'media-001',
-      onUpload: noop,
-      onUrlSubmit: noop,
-      isUploading: false,
-      error: null,
+      onChoiceChange: noop,
+      currentPoster: SAME_ORIGIN_POSTER,
+      choice: null,
+      phase: 'idle',
+      initialState: { dragging: true },
     },
-    penNode: 'screen-section',
-    width: 520,
+    penNode: 'AM0xm', // B14-D
+    statesOnly: ['default'],
+    width: 240,
+  },
+  {
+    id: 'metadata-editor-poster-field/picked',
+    label: 'metadata-editor/PosterField (④ 已選新圖・尚未儲存)',
+    component: PosterField,
+    props: {
+      onChoiceChange: noop,
+      currentPoster: SAME_ORIGIN_POSTER,
+      choice: { kind: 'file', file: GALLERY_POSTER_FILE },
+      phase: 'idle',
+    },
+    penNode: 'AM0xm', // B14-D
+    statesOnly: ['default'],
+    width: 240,
+  },
+  {
+    id: 'metadata-editor-poster-field/uploading',
+    label: 'metadata-editor/PosterField (⑤ 上傳中)',
+    component: PosterField,
+    props: {
+      onChoiceChange: noop,
+      currentPoster: SAME_ORIGIN_POSTER,
+      choice: { kind: 'file', file: GALLERY_POSTER_FILE },
+      phase: 'uploading',
+    },
+    penNode: 'AM0xm', // B14-D
+    statesOnly: ['default'],
+    width: 240,
+  },
+  {
+    id: 'metadata-editor-poster-field/bad-type',
+    label: 'metadata-editor/PosterField (⑥ 格式不對)',
+    component: PosterField,
+    props: {
+      onChoiceChange: noop,
+      currentPoster: SAME_ORIGIN_POSTER,
+      choice: null,
+      phase: 'idle',
+      initialState: { error: 'badType' },
+    },
+    penNode: 'AM0xm', // B14-D
+    statesOnly: ['default'],
+    width: 240,
+  },
+  {
+    id: 'metadata-editor-poster-field/too-big',
+    label: 'metadata-editor/PosterField (⑦ 太大)',
+    component: PosterField,
+    props: {
+      onChoiceChange: noop,
+      currentPoster: SAME_ORIGIN_POSTER,
+      choice: null,
+      phase: 'idle',
+      initialState: { error: 'tooBig' },
+    },
+    penNode: 'AM0xm', // B14-D
+    statesOnly: ['default'],
+    width: 240,
+  },
+  {
+    id: 'metadata-editor-poster-field/failed',
+    label: 'metadata-editor/PosterField (⑧ 上傳失敗)',
+    component: PosterField,
+    props: {
+      onChoiceChange: noop,
+      currentPoster: SAME_ORIGIN_POSTER,
+      choice: { kind: 'file', file: GALLERY_POSTER_FILE },
+      phase: 'failed',
+    },
+    penNode: 'AM0xm', // B14-D
+    statesOnly: ['default'],
+    width: 240,
+  },
+  {
+    id: 'metadata-editor-poster-field/url-broken',
+    label: 'metadata-editor/PosterField (⑨ 改用圖片網址（打不開）)',
+    component: PosterField,
+    props: {
+      onChoiceChange: noop,
+      currentPoster: SAME_ORIGIN_POSTER,
+      choice: { kind: 'url', url: 'https://invalid.test/p.jpg', status: 'broken' },
+      phase: 'idle',
+    },
+    penNode: 'AM0xm', // B14-D
+    statesOnly: ['default'],
+    width: 240,
+  },
+  {
+    id: 'metadata-editor-poster-field/picked-mobile',
+    label: 'metadata-editor/PosterField (④ 已選新圖・手機 B13p-M)',
+    component: PosterField,
+    props: {
+      onChoiceChange: noop,
+      currentPoster: SAME_ORIGIN_POSTER,
+      choice: { kind: 'file', file: GALLERY_POSTER_FILE },
+      phase: 'idle',
+    },
+    penNode: 'oktn2', // B13p-M
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
   },
 
   // ----- notifications/ (P-bucket additions) -----
@@ -3701,7 +3833,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         cast: ['瑞恩·葛斯林', '哈里遜·福特'],
         overview: '三十年後的反烏托邦世界。',
         // Same-origin image: the phone sheet is photographed WITH a poster (B13p-M).
-        posterUrl: `${window.location.origin}/images/placeholder-poster.svg`,
+        posterUrl: SAME_ORIGIN_POSTER,
       },
       onSuccess: noop,
     },

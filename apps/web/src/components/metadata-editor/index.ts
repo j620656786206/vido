@@ -15,5 +15,5 @@ export type { GenreSelectorProps } from './GenreSelector';
 export { CastEditor } from './CastEditor';
 export type { CastEditorProps } from './CastEditor';
 
-export { PosterUploader } from './PosterUploader';
-export type { PosterUploaderProps } from './PosterUploader';
+export { PosterField } from './PosterField';
+export type { PosterFieldProps, PosterChoice, PosterPhase } from './PosterField';
