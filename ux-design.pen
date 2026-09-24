@@ -62528,8 +62528,9 @@
                                       "name": "title",
                                       "fill": "$text-primary",
                                       "content": "AI 字幕的在地化程度",
+                                      "lineHeight": "$Type/BodyLg/Line",
                                       "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": 14,
+                                      "fontSize": "$Type/BodyLg/Size",
                                       "fontWeight": "600"
                                     },
                                     {
@@ -83741,8 +83742,9 @@
                               "name": "title",
                               "fill": "$text-primary",
                               "content": "AI 字幕的在地化程度",
+                              "lineHeight": "$Type/BodyLg/Line",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": 14,
+                              "fontSize": "$Type/BodyLg/Size",
                               "fontWeight": "600"
                             },
                             {
