@@ -343,6 +343,10 @@ func (s *MetadataEditService) parkPoster(mediaID string) func(failed bool) {
 	var parked []string
 	for _, p := range paths {
 		if err := os.Rename(p, p+".bak"); err == nil {
+			// A rename keeps the old mtime; stamp it now so the orphan sweep's
+			// grace window protects the parked pair for the whole upload.
+			now := time.Now()
+			_ = os.Chtimes(p+".bak", now, now)
 			parked = append(parked, p)
 		}
 	}
