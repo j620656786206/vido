@@ -1,6 +1,6 @@
 # Story DSR.3e：快取管理與系統日誌對齊設計稿——清除前先講清楚會發生什麼，日誌在手機上讀得到訊息，篩到沒東西時有「清除篩選」
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
