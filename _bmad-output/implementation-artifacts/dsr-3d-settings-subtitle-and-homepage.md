@@ -1,6 +1,6 @@
 # Story DSR.3d：字幕設定與自訂首頁對齊設計稿——選項卡片看得出選了哪個，首頁區塊列表不再畫產品沒有的開關與拖曳
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -83,12 +83,12 @@ so that 我改設定時知道自己改了什麼，也不會去找一個不存在
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — 查證「只影響之後生成的字幕」（讀 pipeline／segment_cache），結論寫進 Completion Notes（AC: #1, #2）**
-- [ ] **Task 2 — 設計稿：C9 小標引言／env／手機文案、C10 刪開關與拖曳、類型寫法、手機補鈕、規格註記（AC: #1）**
-- [ ] **Task 3 — 字幕設定：拿掉外框、選項卡片、自繪 radio（保留原生 input）、說明與範例（AC: #2, #5）**
-- [ ] **Task 4 — 自訂首頁：計數、描述（排序共用常數）、類型圖示、動作鈕、間距、新增鈕、底部說明、檔頭（AC: #3, #5）**
-- [ ] **Task 5 — 夾具、e2e、mutation check、收尾（AC: #4, #5, #6）**
-  - [ ] dev-story Step 9：`c9-d`／`c9-m`／`c10-d`／`c10-m`
+- [x] **Task 1 — 查證「只影響之後生成的字幕」（讀 pipeline／segment_cache），結論寫進 Completion Notes（AC: #1, #2）**
+- [x] **Task 2 — 設計稿：C9 小標引言／env／手機文案、C10 刪開關與拖曳、類型寫法、手機補鈕、規格註記（AC: #1）**
+- [x] **Task 3 — 字幕設定：拿掉外框、選項卡片、自繪 radio（保留原生 input）、說明與範例（AC: #2, #5）**
+- [x] **Task 4 — 自訂首頁：計數、描述（排序共用常數）、類型圖示、動作鈕、間距、新增鈕、底部說明、檔頭（AC: #3, #5）**
+- [x] **Task 5 — 夾具、e2e、mutation check、收尾（AC: #4, #5, #6）**
+  - [x] dev-story Step 9：`c9-d`／`c9-m`／`c10-d`／`c10-m`
 
 ## Dev Notes
 
@@ -150,10 +150,77 @@ apps/web/src/routes/test/-gallery.fixtures.tsx；tests/e2e/settings-shell.spec.t
 
 ### Agent Model Used
 
+Claude Opus 5.5 (1M context)（Amelia / dev-story）
+
 ### Debug Log References
+
+- Pencil：裁切警告 66 → 66；選單 Save 後磁碟 grep 到 `spec-note-dsr-3d`（`D5Nlu`）；匯出 196/196，只 stage `c9-d`／`c9-m`／`c10-d`／`c10-m`＋`pen-tokens.json`。`Y5XvRv` 用 `Get` 確認仍是「H9-SPEC · ExploreBlock 優化（bugfix-10-6）」。
+- e2e 第一輪抓到真問題：按方向鍵換選項後焦點掉到 `<body>`——`<fieldset disabled={save.isPending}>` 在儲存中把剛聚焦的 radio 停用了（見 Completion Notes）。
 
 ### Completion Notes List
 
 - Ultimate context engine analysis completed - comprehensive developer guide created
+- **Task 1（查證）**：「改了之後只影響之後生成的字幕；已經翻好的不會重跑」**為真**。程度在每一集開跑時讀一次（`subtitle/process_item.go:52-57` `feedLocalization`，並釘在 ctx 上讓 ASR 後段沿用），且進 `PromptVersion` → segment-cache key（同檔註解）；存設定（`services/localization_settings_service.go:84-96` `Set`）只寫 settings 表，不重排、不清快取。⚖️ **但底部那句沒加**：碼的引言早就寫「選了之後，下一部翻譯的片就會用新的風格；已經翻好的不會動。」——同一個承諾在同一頁講兩次沒有意義，稿的 `rUcFk` 刪掉（引言保留，稿也補畫了）。
+- **Task 2（稿）**：C9-D／C9-M 選項上方補小標「AI 字幕的在地化程度」＋引言；C9-D 補環境變數說明條（靛青）；刪 `rUcFk`；手機三段說明與範例改回與桌機同一套全文、圓鈕 18→20、勾 10→12，C9-M 高 844→864。C10-D：刪 6 個開關、6 個拖曳把手、灰掉的「本週新上架」恢復正常色；每列加上移／下移（第一列上移、最後一列下移畫成停用）；描述改成碼的寫法（「電影 · 熱門度（高→低） · 20 部 · zh-TW · 地區 TW」「… · 類型 16」）；標頭「6 個區塊」（刪「拖曳可調整順序」）；底部只留「已擁有的作品不會出現在首頁。」。C10-M：同上，每列改兩行（圖示＋名稱＋描述 / 四顆 44 鈕靠右），新增鈕 44，描述改一般字，畫面 844→1180。`spec-note-dsr-3d`。
+- **Task 3（字幕設定）**：拿掉外框（保留 fieldset／legend／引言）；三張選項卡 `radius-lg`、`p-4`、未選 `bg-secondary`＋`border-subtle`、選中 `accent-subtle`＋`accent-primary` 框＋標題 `accent-text`；**原生 radio 保留**（`peer sr-only`），外觀由新共用元件 `ui/RadioDot`（20px，`peer-checked`／`peer-focus-visible`）畫；說明 `text-xs`；範例 `font-mono`、可見文字不含「例：」但 `sr-only` 保留。原本另外那顆綠勾拿掉（圓裡的勾取代它）。**儲存中不再 `disabled` 整個 fieldset**（會把剛用方向鍵選到的 radio 停用、焦點掉到 body），改成 `aria-busy`＋儲存中忽略第二次變更。
+- **自繪 radio 統一**：`dsr-3f` 的匯出格式當時畫 18px、沒抽元件 → 本張抽出 `components/ui/RadioDot.tsx` 並讓 `MetadataExport` 改用，尺寸統一 20（匯出基準因此跟著變）。
+- **Task 4（自訂首頁）**：標頭「N 個區塊」；描述「電影／影集 · 排序中文 · N 部 · 語言 · 地區 · 類型」——排序文字來自新的共用模組 `settings/exploreBlockSort.ts`（`MOVIE_SORT_OPTIONS`／`TV_SORT_OPTIONS`／`getSortOptions`／`sortLabel`），`ExploreBlockEditModal` 的下拉改用同一份（不寫第二份）；類型仍印 TMDb ID（另案）；類型圖示提到描述外、18px；名稱 600；四顆動作鈕 32 實心 `bg-tertiary`（手機 44）、圖示 14；手機時四顆鈕換到第二行（碼→稿同步）；列距 12、區塊間距 16、列 `radius-lg`；新增鈕 40（手機 44）、`radius-md`、600；底部「已擁有的作品不會出現在首頁。」；檔頭改 `C10-D (wnmGh) · C10-M (ZjsVs) · H9-SPEC (Y5XvRv) · H3 (Paqlk)`。刪除確認框與編輯框依 story 不動。
+- **既有 spec／e2e 改動（刻意，逐條）**：`ExploreBlocksSettings.spec`「renders a row per configured block」— 圖示從描述行內搬出，改斷言描述行沒有 svg、另有 `explore-block-type-icon-*`；`e2e/explore-blocks.spec.ts`「block rows show lucide content-type icons」同樣改法。「N 個項目」→「N 部」沒有撞到既有斷言。
+- **Time-dependent visual coverage**：N/A（沒有讀時間的元件）。
+- 🔗 **AC Drift: NONE**（checked: `10-3-custom-explore-blocks` AC #2–#4（建立欄位、排序、編輯刪除即時更新）與 `sub-7-4` 的在地化設定——全部 REUSE：欄位與行為不變，只改呈現；儲存中不停用 fieldset 屬 a11y 修正，儲存行為不變）。
+- 📎 **Contract Stamps: NONE**。
+- 🎭 **A11y Pre-Flight: PASS**（4 個元件＋`RadioDot`；觸碰檔 jsx-a11y 警告 0；原生 radio 保留、`peer-focus-visible` 焦點環、儲存中焦點不掉、動作鈕 accessible name 帶區塊名）。
+- **測試**：`LocalizationLevelForm.spec` +5、`ExploreBlocksSettings.spec` +5、`ExploreBlockEditModal.spec` +1（下拉＝共用清單）。`nx test web` **288 files／4284 tests 全綠**；`lint:all`、typecheck 綠。e2e：`settings-shell.spec.ts` 追加 1 條（390 選項卡片等寬＝欄寬、方向鍵換選且焦點跟著），`explore-blocks.spec.ts` 全綠；兩檔 `--repeat-each=3` **111／111**。
+- **Mutation：unit 13／13 紅、e2e 1／1 紅**（外框回來、選中舊底色、原生 radio 被 `hidden`、「例：」可見、儲存中不擋第二次、說明字級、計數、拿掉排序字、「個項目」、列距、透明動作鈕、底部句子、編輯框自帶一份標籤；e2e：fieldset 改回 `disabled` → 焦點掉）。
+- **視覺基準**：`settings-explore-blocks-settings` 改（`penNode` `wnmGh`，4 個區塊，hover／focus 刪除）、`settings-metadata-export`（3＋mobile）因 RadioDot 20px 改；新增 `settings-explore-blocks-settings/mobile`（390×844，2 個區塊）、`settings-localization-level-form`（`NR3zK`）。過期 `-linux` 全部 `git rm`，等 CI bootstrap。
+- ⚠️ **與 story 的偏離**：① 底部「只影響之後生成」不加、稿刪（引言已是同一承諾，見 Task 1）。② 儲存中不停用 fieldset（a11y 修正，e2e 抓到）。③ `RadioDot` 讓 `dsr-3f` 的匯出 radio 從 18 變 20（story 已預告「後做的統一成 20」）。④ `localization-load-error`／`save-error` 仍印後端 `error.message`——本張 AC 沒涵蓋，同 dsr-3f 的處理方式建議另開單。
+
+- 🔍 **/ship 對抗式 CR（2026-09-24，獨立 context）0 HIGH／1 MEDIUM／6 LOW／2 NIT，吸收 1M／5L／2N**：
+  ① 🟠 刪除鈕滑過時圖示不再變紅（回歸）：共用樣式的 `hover:text-primary` 與刪除鈕的 `hover:text-error` 同屬性，Tailwind 依自己的順序輸出、主色贏 → 共用樣式拿掉 hover 文字色，上移／下移／編輯各自加 `enabled:hover:text-primary`（停用時不再變亮，順帶解 N1）。
+  ② 儲存中按第二下會被丟掉、焦點與選中不一致 → 記住最後一次的選擇，儲存完成後若不同再送；「儲存中…」加 `role="status"`。
+  ③ 選中金卡上焦點環內圈露出深綠 → `RadioDot` 的 ring offset 改透明（夾具加 focus 狀態守住）。
+  ④ 載入中／失敗時標頭寫「0 個區塊」→ 這兩種狀態不顯示計數。
+  ⑤ 「沒有外框」測試是空測 → 改成從 radiogroup 一路往上檢查每一層都沒有卡片樣式。⑥ 補影集才有的排序（首播日期）案例；`sortLabel` 改依區塊的類型查表（N2）。⑦ 夾具寬度改回 AC 的 1200。
+  未改：L5 前半（用 mock 證明「同一份」——模組化本身已保證，另有編輯框下拉＝共用清單的測試）、L6 後半（hover 夾具只滑到整個元件，抓不到單顆鈕的 hover，改用單元測試守 ①）。
+  CR 後：mutation 再 4／4 紅；`nx test web` **288 files／4288 tests** 綠；`lint:all`、typecheck 綠；e2e 兩檔 `--repeat-each=3` 111／111。
 
 ### File List
+
+- `ux-design.pen`
+- `_bmad-output/pen-tokens.json`
+- `_bmad-output/screenshots/flow-c-search-settings/{c9-d,c9-m,c10-d,c10-m}.png`
+- `apps/web/src/components/ui/RadioDot.tsx`（新）
+- `apps/web/src/components/settings/exploreBlockSort.ts`（新）
+- `apps/web/src/components/settings/LocalizationLevelForm.tsx`（+spec）
+- `apps/web/src/components/settings/ExploreBlocksSettings.tsx`（+spec）
+- `apps/web/src/components/settings/ExploreBlockEditModal.tsx`（+spec）
+- `apps/web/src/components/settings/MetadataExport.tsx`
+- `apps/web/src/routes/test/-gallery.fixtures.tsx`
+- `tests/e2e/settings-shell.spec.ts`
+- `tests/e2e/explore-blocks.spec.ts`
+- `tests/visual/components.visual.spec.ts-snapshots/components/settings-{explore-blocks-settings,metadata-export,localization-level-form}/…`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+
+### UX Verification（dev-story Step 9）
+
+| Area | Design Spec | Implementation | Match? | Fix Needed |
+|------|------------|----------------|--------|------------|
+| 字幕小標＋引言（C9） | 選項上方 16/600＋14 secondary | 同 | ✅ | — |
+| 選項卡（C9） | radius-lg、16 內距、選中金框淡金底、20 圓打勾、說明 12、範例等寬 | 同 | ✅ | — |
+| 首頁標頭（C10） | 「N 個區塊」＋新增 40 | 同（手機 44） | ✅ | — |
+| 首頁列（C10-D） | 18 圖示、600 名稱、描述、上移／下移／編輯／刪除 32 實心 | 同 | ✅ | — |
+| 首頁列（C10-M） | 兩行、四顆 44 | 同 | ✅ | — |
+| 底部說明 | 「已擁有的作品不會出現在首頁。」 | 同 | ✅ | — |
+
+🎨 UX Verification: PASS — `c9-d`／`c9-m`／`c10-d`／`c10-m` 對照視覺基準逐項比對。
+
+## Change Log
+
+| Date | Change |
+| --- | --- |
+| 2026-09-24 | Task 1：查證「只影響之後生成」為真；因引言已有同一承諾，底部句不加 |
+| 2026-09-24 | Task 2：設計稿——C9 小標引言／env／手機全文、C10 刪開關與拖曳、上移下移、碼的描述寫法、手機兩行、`spec-note-dsr-3d` |
+| 2026-09-24 | Task 3：字幕選項卡片、共用 `RadioDot`（原生 radio 保留）、儲存中焦點不掉 |
+| 2026-09-24 | Task 4：首頁計數、排序中文（共用 `exploreBlockSort`）、圖示、動作鈕、間距、新增鈕、底部句、檔頭 |
+| 2026-09-24 | /ship CR：刪除鈕 hover 紅色回來、儲存中的選擇不丟、焦點環透明 offset、載入中不寫 0 個區塊、測試加強 |
+| 2026-09-24 | Task 5：夾具 1 改 2 新、e2e 1 條＋既有 1 條改、mutation 14／14、全套 web 4284 綠 |

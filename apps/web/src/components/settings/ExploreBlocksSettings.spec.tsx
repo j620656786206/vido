@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { ExploreBlocksSettings } from './ExploreBlocksSettings';
+import { MOVIE_SORT_OPTIONS, sortLabel } from './exploreBlockSort';
 import type { ExploreBlock } from '../../services/exploreBlockService';
 
 const listResult = {
@@ -98,8 +99,11 @@ describe('ExploreBlocksSettings', () => {
     const tvMeta = screen.getByText(/^影集 ·/);
     expect(movieMeta).toBeInTheDocument();
     expect(tvMeta).toBeInTheDocument();
-    expect(movieMeta.querySelector('svg')).not.toBeNull(); // lucide <Film> renders as inline svg
-    expect(tvMeta.querySelector('svg')).not.toBeNull(); // lucide <Tv> renders as inline svg
+    // dsr-3d: the icon moved OUT of the description line to its own 18px
+    // column (C10 XmC7a); the words 電影／影集 stay in the line as plain text.
+    expect(movieMeta.querySelector('svg')).toBeNull();
+    expect(screen.getByTestId('explore-block-type-icon-a').tagName.toLowerCase()).toBe('svg');
+    expect(screen.getByTestId('explore-block-type-icon-b').tagName.toLowerCase()).toBe('svg');
     expect(screen.queryByText(/🎬|📺/)).toBeNull();
   });
 
@@ -198,5 +202,109 @@ describe('ExploreBlocksSettings', () => {
 
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByTestId('explore-block-delete-confirm')).toBeNull();
+  });
+
+  describe('dsr-3d', () => {
+    const blocks = [
+      makeBlock({
+        id: 'a',
+        name: '熱門電影',
+        sortBy: 'popularity.desc',
+        maxItems: 20,
+        language: 'zh-TW',
+        region: 'TW',
+      }),
+      makeBlock({
+        id: 'b',
+        name: '高分動畫',
+        sortBy: 'vote_average.desc',
+        maxItems: 15,
+        genreIds: '16',
+      }),
+    ];
+
+    it('the header counts the blocks', () => {
+      listResult.data = { blocks };
+      renderSettings();
+      expect(screen.getByTestId('explore-blocks-count')).toHaveTextContent('2 個區塊');
+    });
+
+    it('each row says 電影／影集 · the sort in words · N 部 · language · region · genre', () => {
+      listResult.data = { blocks };
+      renderSettings();
+      expect(screen.getByTestId('explore-block-desc-a')).toHaveTextContent(
+        `電影 · ${sortLabel('popularity.desc')} · 20 部 · zh-TW · 地區 TW`
+      );
+      expect(screen.getByTestId('explore-block-desc-b')).toHaveTextContent(
+        `電影 · ${sortLabel('vote_average.desc')} · 15 部 · 類型 16`
+      );
+      expect(screen.queryByText(/個項目/)).toBeNull();
+    });
+
+    it('rows are 12 apart, cards radius-lg, name semibold; buttons are solid squares', () => {
+      listResult.data = { blocks };
+      renderSettings();
+      const row = screen.getByTestId('explore-block-row-a');
+      expect(row.parentElement!.className).toContain('space-y-3');
+      expect(row.className).toContain('rounded-[var(--radius-lg)]');
+      expect(row.querySelector('h3')!.className).toContain('font-semibold');
+      for (const id of ['move-up', 'move-down', 'edit', 'delete']) {
+        const btn = screen.getByTestId(`explore-block-${id}-a`);
+        expect(btn.className).toContain('bg-[var(--bg-tertiary)]');
+        expect(btn.className).toContain('sm:size-8');
+        expect(btn.className).toContain('size-11');
+      }
+      expect(screen.getByTestId('explore-blocks-settings').className).toContain('space-y-4');
+    });
+
+    it('ends with the one true sentence about owned titles', () => {
+      listResult.data = { blocks };
+      renderSettings();
+      expect(screen.getByTestId('explore-blocks-owned-note')).toHaveTextContent(
+        /^已擁有的作品不會出現在首頁。$/
+      );
+    });
+
+    it('sort words come from the same list the edit modal offers', () => {
+      for (const opt of MOVIE_SORT_OPTIONS) expect(sortLabel(opt.value)).toBe(opt.label);
+      // An unknown stored value is shown as-is, not dropped.
+      expect(sortLabel('weird.asc')).toBe('weird.asc');
+    });
+  });
+
+  describe('dsr-3d CR', () => {
+    it('only the delete button turns red on hover (no neutral hover competing with it)', () => {
+      listResult.data = { blocks: [makeBlock({ id: 'a', name: 'A' })] };
+      renderSettings();
+      const del = screen.getByTestId('explore-block-delete-a').className;
+      expect(del).toContain('hover:text-[var(--error-text)]');
+      expect(del).not.toContain('hover:text-[var(--text-primary)]');
+      expect(screen.getByTestId('explore-block-edit-a').className).toContain(
+        'enabled:hover:text-[var(--text-primary)]'
+      );
+    });
+
+    it('says nothing about the count while loading or after a failed load', () => {
+      listResult.isLoading = true;
+      const { unmount } = renderSettings();
+      expect(screen.getByTestId('explore-blocks-count')).toBeEmptyDOMElement();
+      unmount();
+      listResult.isLoading = false;
+      listResult.isError = true;
+      renderSettings();
+      expect(screen.getByTestId('explore-blocks-count')).toBeEmptyDOMElement();
+    });
+
+    it('a TV block names its TV-only sort', () => {
+      listResult.data = {
+        blocks: [
+          makeBlock({ id: 't', contentType: 'tv', sortBy: 'first_air_date.desc', maxItems: 12 }),
+        ],
+      };
+      renderSettings();
+      expect(screen.getByTestId('explore-block-desc-t')).toHaveTextContent(
+        /^影集 · 首播日期（新→舊） · 12 部$/
+      );
+    });
   });
 });

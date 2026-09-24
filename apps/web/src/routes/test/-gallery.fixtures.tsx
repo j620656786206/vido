@@ -251,6 +251,9 @@ import type { DvrConfig } from '../../services/dvrSettings';
 import { mediaKeys } from '../../hooks/useDashboardData';
 import { healthKeys } from '../../hooks/useConnectionHealth';
 import { exploreBlockKeys } from '../../hooks/useExploreBlocks';
+import { subtitleLocalizationQueryKeys } from '../../hooks/useSubtitleLocalization';
+import { LocalizationLevelForm } from '../../components/settings/LocalizationLevelForm';
+import type { LocalizationSettings } from '../../services/subtitleLocalizationService';
 import { ownedMediaKeys } from '../../hooks/useOwnedMedia';
 import { learningKeys } from '../../hooks/useLearning';
 import { libraryKeys, RECENT_LIMIT } from '../../hooks/useLibrary';
@@ -516,6 +519,26 @@ const C12_LOGS: LogsResponse = {
   page: 1,
   perPage: 50,
 };
+
+/** dsr-3d — C10's blocks, as the product stores them (genres are TMDb IDs). */
+const C10_BLOCKS: ExploreBlockType[] = [
+  ['blk-1', '熱門電影', 'movie', 'popularity.desc', 20, 'zh-TW', 'TW', ''],
+  ['blk-2', '近期台灣院線', 'movie', 'primary_release_date.desc', 20, 'zh-TW', 'TW', ''],
+  ['blk-3', '高分動畫', 'movie', 'vote_average.desc', 15, '', '', '16'],
+  ['blk-4', '熱門影集', 'tv', 'popularity.desc', 20, 'zh-TW', 'TW', ''],
+].map(([id, name, contentType, sortBy, maxItems, language, region, genreIds], i) => ({
+  id: id as string,
+  name: name as string,
+  contentType: contentType as ExploreBlockType['contentType'],
+  sortBy: sortBy as string,
+  maxItems: maxItems as number,
+  language: language as string,
+  region: region as string,
+  genreIds: genreIds as string,
+  sortOrder: i,
+  createdAt: '2026-03-01T00:00:00Z',
+  updatedAt: '2026-03-01T00:00:00Z',
+}));
 
 // ----- Shared mock-data consts for 19-4b Task 2 (parse/* and scanner/* fixtures) -----
 const PARSE_STEPS_FAILED: ParseStep[] = [
@@ -3931,30 +3954,42 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   },
   {
     id: 'settings-explore-blocks-settings',
-    label: 'settings/ExploreBlocksSettings',
+    label: 'settings/ExploreBlocksSettings (C10-D)',
     component: ExploreBlocksSettings,
-    penNode: 'screen-section',
-    width: 720,
+    penNode: 'wnmGh', // Screen C10-D
+    statesOnly: ['default'],
+    width: 1152,
+    seedQueries: [{ queryKey: exploreBlockKeys.list(), data: { blocks: C10_BLOCKS } }],
+  },
+  {
+    // dsr-3d — C10-M: the four buttons move to their own line on a phone. A real
+    // 390 viewport: the wrap is `sm:` breakpoints, i.e. the viewport.
+    id: 'settings-explore-blocks-settings/mobile',
+    label: 'settings/ExploreBlocksSettings (C10-M — 手機)',
+    component: ExploreBlocksSettings,
+    penNode: 'ZjsVs', // Screen C10-M
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+    seedQueries: [{ queryKey: exploreBlockKeys.list(), data: { blocks: C10_BLOCKS.slice(0, 2) } }],
+  },
+  {
+    // dsr-3d — C9-D: three option cards, the chosen one gold; no outer card.
+    id: 'settings-localization-level-form',
+    label: 'settings/LocalizationLevelForm (C9-D)',
+    component: LocalizationLevelForm,
+    penNode: 'NR3zK', // Screen C9-D
+    // focus kept: it lands on the first native radio, so the baseline holds
+    // RadioDot's peer-focus-visible ring (CR L2 — its offset must not be dark).
+    statesOnly: ['default', 'focus'],
+    width: 1200,
     seedQueries: [
       {
-        queryKey: exploreBlockKeys.list(),
+        queryKey: subtitleLocalizationQueryKeys.all,
         data: {
-          blocks: [
-            {
-              id: 'blk-1',
-              name: '熱門電影',
-              contentType: 'movie',
-              genreIds: '',
-              language: 'zh-TW',
-              region: 'TW',
-              sortBy: 'popularity.desc',
-              maxItems: 20,
-              sortOrder: 0,
-              createdAt: '2026-03-01T00:00:00Z',
-              updatedAt: '2026-03-01T00:00:00Z',
-            },
-          ] satisfies ExploreBlockType[],
-        },
+          level: 'standard',
+          source: 'settings',
+          levels: ['literal', 'standard', 'ott'],
+        } satisfies LocalizationSettings,
       },
     ],
   },

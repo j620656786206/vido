@@ -1,9 +1,14 @@
-// Design ref: ux-design.pen Screen H5-D (Y5XvRv) · H3 (Paqlk)
+// Design ref: ux-design.pen Screen C10-D (wnmGh) · C10-M (ZjsVs) · H9-SPEC (Y5XvRv) · H3 (Paqlk)
 /**
  * Settings → 自訂首頁 — Story 10.3 management UI.
  *
- * Design ref: ux-design.pen Screen H5-D (Y5XvRv), section C PhBJ8 — bugfix-10-6
+ * H9-SPEC (Y5XvRv, renamed from H5-D by dsr-7), section C PhBJ8 — bugfix-10-6
  * polish (lucide content-type icons in place of 🎬/📺 emoji).
+ *
+ * dsr-3d: C10 used to draw a per-block on/off switch and drag handles; the
+ * product has neither (ExploreBlock has no enabled field; order is 上移／下移)
+ * — the design now draws what is here (disc-2026-09-explore-block-toggle-and-drag).
+ * Genres still print as TMDb IDs (disc-2026-09-explore-block-genre-ids-raw).
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -14,7 +19,16 @@ import {
   useReorderExploreBlocks,
 } from '../../hooks/useExploreBlocks';
 import type { ExploreBlock } from '../../services/exploreBlockService';
+import { sortLabel } from './exploreBlockSort';
 import { ExploreBlockEditModal } from './ExploreBlockEditModal';
+
+/** C10 rRMJl: 32 solid squares on desktop, 44 on a phone (touch). */
+// No hover colour in the base: Tailwind orders same-property utilities by its
+// own sort, not by class-string order, so a base `hover:text-primary` beat the
+// delete button's `hover:text-error` (dsr-3d CR M1). Each button adds its own.
+const ACTION_BTN =
+  'flex size-11 items-center justify-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:opacity-30 sm:size-8';
+const NEUTRAL_HOVER = 'enabled:hover:text-[var(--text-primary)]';
 
 export function ExploreBlocksSettings() {
   const { data, isLoading, isError } = useExploreBlocks();
@@ -69,14 +83,19 @@ export function ExploreBlocksSettings() {
   }, [confirmDeleteId, handleDeleteEscape]);
 
   return (
-    <div className="space-y-6" data-testid="explore-blocks-settings">
-      {/* Title/description live at the route level; this row keeps the action. */}
-      <div className="flex items-center justify-end">
+    <div className="space-y-4" data-testid="explore-blocks-settings">
+      {/* Title/description live at the route level; this row is the count + the action. */}
+      <div className="flex items-center justify-between gap-3">
+        {/* Nothing counted until there is something to count: 「0 個區塊」
+            beside「載入中...」would be a claim the page cannot make yet. */}
+        <p className="text-sm text-[var(--text-secondary)]" data-testid="explore-blocks-count">
+          {!isLoading && !isError && `${blocks.length} 個區塊`}
+        </p>
         <button
           type="button"
           onClick={() => setModalMode({ type: 'create' })}
           data-testid="explore-blocks-add-button"
-          className="flex items-center gap-2 rounded-md bg-[var(--accent-primary)] px-3 py-2 text-sm font-medium text-[var(--text-on-accent)] hover:bg-[var(--accent-pressed)]"
+          className="flex h-11 items-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-4 text-sm font-semibold text-[var(--text-on-accent)] hover:bg-[var(--accent-pressed)] sm:h-10"
         >
           <Plus className="h-4 w-4" />
           新增區塊
@@ -111,84 +130,93 @@ export function ExploreBlocksSettings() {
         </p>
       )}
 
-      <ul className="space-y-2">
-        {blocks.map((block, index) => (
-          <li
-            key={block.id}
-            data-testid={`explore-block-row-${block.id}`}
-            className="flex items-center justify-between rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4"
-          >
-            <div className="min-w-0 flex-1">
-              <h3 className="truncate text-sm font-medium text-[var(--text-primary)]">
-                {block.name}
-              </h3>
-              <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                {block.contentType === 'movie' ? (
-                  <>
-                    <Film
-                      className="inline h-3.5 w-3.5 text-[var(--text-muted)]"
-                      aria-hidden="true"
-                    />{' '}
-                    電影
-                  </>
-                ) : (
-                  <>
-                    <Tv
-                      className="inline h-3.5 w-3.5 text-[var(--text-muted)]"
-                      aria-hidden="true"
-                    />{' '}
-                    影集
-                  </>
-                )}{' '}
-                · {block.maxItems} 個項目
-                {block.genreIds && ` · 類型 ${block.genreIds}`}
-                {block.region && ` · 地區 ${block.region}`}
-              </p>
-            </div>
+      <ul className="space-y-3">
+        {blocks.map((block, index) => {
+          const TypeIcon = block.contentType === 'movie' ? Film : Tv;
+          // 電影 · 熱門度（高→低） · 20 部 · zh-TW · 地區 TW · 類型 16
+          const parts = [
+            block.contentType === 'movie' ? '電影' : '影集',
+            sortLabel(block.sortBy, block.contentType),
+            `${block.maxItems} 部`,
+            block.language,
+            block.region && `地區 ${block.region}`,
+            block.genreIds && `類型 ${block.genreIds}`,
+          ].filter(Boolean);
+          return (
+            <li
+              key={block.id}
+              data-testid={`explore-block-row-${block.id}`}
+              // Phone: the four 44px buttons take their own line (C10-M), so
+              // the name is not squeezed to ~100px beside them.
+              className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4 sm:flex-nowrap"
+            >
+              <TypeIcon
+                className="size-[18px] shrink-0 text-[var(--text-secondary)]"
+                aria-hidden="true"
+                data-testid={`explore-block-type-icon-${block.id}`}
+              />
+              <div className="min-w-0 flex-1">
+                <h3 className="truncate text-sm font-semibold text-[var(--text-primary)]">
+                  {block.name}
+                </h3>
+                <p
+                  className="mt-0.5 text-xs text-[var(--text-muted)]"
+                  data-testid={`explore-block-desc-${block.id}`}
+                >
+                  {parts.join(' · ')}
+                </p>
+              </div>
 
-            <div className="flex items-center gap-1 pl-3">
-              <button
-                type="button"
-                onClick={() => handleMove(index, 'up')}
-                disabled={index === 0 || reorderBlocks.isPending}
-                aria-label={`上移 ${block.name}`}
-                data-testid={`explore-block-move-up-${block.id}`}
-                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded p-1.5 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] sm:min-h-0 sm:min-w-0 disabled:opacity-30"
-              >
-                <ArrowUp className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => handleMove(index, 'down')}
-                disabled={index === blocks.length - 1 || reorderBlocks.isPending}
-                aria-label={`下移 ${block.name}`}
-                data-testid={`explore-block-move-down-${block.id}`}
-                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded p-1.5 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] sm:min-h-0 sm:min-w-0 disabled:opacity-30"
-              >
-                <ArrowDown className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setModalMode({ type: 'edit', block })}
-                aria-label={`編輯 ${block.name}`}
-                data-testid={`explore-block-edit-${block.id}`}
-                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded p-1.5 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] sm:min-h-0 sm:min-w-0"
-              >
-                <Pencil className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmDeleteId(block.id)}
-                aria-label={`刪除 ${block.name}`}
-                data-testid={`explore-block-delete-${block.id}`}
-                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded p-1.5 text-[var(--text-secondary)] hover:bg-[var(--error-tint)] hover:text-[var(--error-text)] sm:min-h-0 sm:min-w-0"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          </li>
-        ))}
+              <div className="flex basis-full items-center justify-end gap-1 sm:basis-auto sm:gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleMove(index, 'up')}
+                  disabled={index === 0 || reorderBlocks.isPending}
+                  aria-label={`上移 ${block.name}`}
+                  data-testid={`explore-block-move-up-${block.id}`}
+                  className={`${ACTION_BTN} ${NEUTRAL_HOVER}`}
+                >
+                  <ArrowUp className="size-3.5" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleMove(index, 'down')}
+                  disabled={index === blocks.length - 1 || reorderBlocks.isPending}
+                  aria-label={`下移 ${block.name}`}
+                  data-testid={`explore-block-move-down-${block.id}`}
+                  className={`${ACTION_BTN} ${NEUTRAL_HOVER}`}
+                >
+                  <ArrowDown className="size-3.5" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModalMode({ type: 'edit', block })}
+                  aria-label={`編輯 ${block.name}`}
+                  data-testid={`explore-block-edit-${block.id}`}
+                  className={`${ACTION_BTN} ${NEUTRAL_HOVER}`}
+                >
+                  <Pencil className="size-3.5" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeleteId(block.id)}
+                  aria-label={`刪除 ${block.name}`}
+                  data-testid={`explore-block-delete-${block.id}`}
+                  className={`${ACTION_BTN} hover:bg-[var(--error-tint)] hover:text-[var(--error-text)]`}
+                >
+                  <Trash2 className="size-3.5" aria-hidden="true" />
+                </button>
+              </div>
+            </li>
+          );
+        })}
       </ul>
+
+      {blocks.length > 0 && (
+        <p className="text-xs text-[var(--text-muted)]" data-testid="explore-blocks-owned-note">
+          已擁有的作品不會出現在首頁。
+        </p>
+      )}
 
       {modalMode.type !== 'closed' && (
         <ExploreBlockEditModal

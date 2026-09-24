@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { LocalizationSettings } from '../../services/subtitleLocalizationService';
 
@@ -108,5 +109,71 @@ describe('LocalizationLevelForm (sub-7-4 AC #4)', () => {
     h.query.isLoading = true;
     renderForm();
     expect(screen.getByTestId('localization-loading')).toBeInTheDocument();
+  });
+
+  describe('dsr-3d', () => {
+    it('has no outer card; each option is its own card, the chosen one gold', () => {
+      renderForm();
+      expect(screen.getByTestId('localization-form').className).not.toContain('bg-secondary');
+      const chosen = screen.getByTestId('localization-option-standard');
+      const other = screen.getByTestId('localization-option-literal');
+      expect(chosen.className).toContain('bg-[var(--accent-subtle)]');
+      expect(chosen.className).toContain('border-[var(--accent-primary)]');
+      expect(chosen.className).toContain('rounded-[var(--radius-lg)]');
+      expect(other.className).toContain('bg-[var(--bg-secondary)]');
+      expect(other.className).toContain('border-[var(--border-subtle)]');
+    });
+
+    it('keeps the native radios: arrow keys move the choice', async () => {
+      const user = userEvent.setup();
+      renderForm();
+      const standard = screen.getByRole('radio', { name: /台灣用語/ });
+      expect(standard.className).toContain('sr-only');
+      standard.focus();
+      await user.keyboard('{ArrowDown}');
+      expect(h.save.mutate).toHaveBeenCalledWith('ott');
+    });
+
+    it('description is 12px; the example is mono with「例：」only for screen readers', () => {
+      renderForm();
+      const option = screen.getByTestId('localization-option-literal');
+      const spans = option.querySelectorAll(':scope > span');
+      const description = [...spans].find((sp) => sp.textContent === LEVEL_SPECS[0].description)!;
+      expect(description.className).toContain('text-xs');
+      const example = [...spans].find((sp) => sp.textContent?.endsWith(LEVEL_SPECS[0].example))!;
+      expect(example.className).toContain('font-mono');
+      expect(example.querySelector('.sr-only')).toHaveTextContent('例：');
+    });
+
+    it('does not repeat the「only future subtitles」promise at the bottom (the intro already says it)', () => {
+      renderForm();
+      expect(screen.getByText(/已經翻好的不會動/)).toBeInTheDocument();
+      expect(screen.queryByText(/已經翻好的不會重跑/)).toBeNull();
+    });
+  });
+
+  it('dsr-3d: while saving, the radios stay focusable and a change made meanwhile is sent once the save lands', () => {
+    h.save.isPending = true;
+    const { rerender } = renderForm();
+    const ott = screen.getByRole('radio', { name: /OTT 風格/ });
+    expect(ott).not.toBeDisabled();
+    fireEvent.click(ott);
+    expect(h.save.mutate).not.toHaveBeenCalled();
+    h.save = { ...h.save, isPending: false };
+    rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <LocalizationLevelForm />
+      </QueryClientProvider>
+    );
+    expect(h.save.mutate).toHaveBeenCalledWith('ott');
+  });
+
+  it('dsr-3d: no wrapper around the options draws a card', () => {
+    const { container } = renderForm();
+    let el: HTMLElement | null = screen.getByRole('radiogroup');
+    while (el && el !== container) {
+      expect(el.className ?? '').not.toMatch(/bg-\[var\(--bg-secondary\)\]|\bborder\b/);
+      el = el.parentElement;
+    }
   });
 });

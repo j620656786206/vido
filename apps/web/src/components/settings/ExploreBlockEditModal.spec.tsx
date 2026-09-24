@@ -194,4 +194,13 @@ describe('ExploreBlockEditModal', () => {
       expect.objectContaining({ maxItems: 40 })
     );
   });
+
+  it('dsr-3d: the sort dropdown is built from the shared exploreBlockSort list', async () => {
+    const { MOVIE_SORT_OPTIONS } = await import('./exploreBlockSort');
+    renderModal();
+    const select = screen.getByLabelText(/排序/) as HTMLSelectElement;
+    expect([...select.options].map((o) => [o.value, o.textContent])).toEqual(
+      MOVIE_SORT_OPTIONS.map((o) => [o.value, o.label])
+    );
+  });
 });
