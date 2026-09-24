@@ -65019,7 +65019,7 @@
                                           "id": "nsbrA",
                                           "name": "t",
                                           "fill": "$text-secondary",
-                                          "content": "總計 2.4 GB",
+                                          "content": "總計 599 MB",
                                           "lineHeight": "$Type/Body/Line",
                                           "fontFamily": "$Type/Family/Primary",
                                           "fontSize": "$Type/Body/Size",
@@ -65074,91 +65074,6 @@
                                   "layout": "vertical",
                                   "gap": "$Space/md",
                                   "children": [
-                                    {
-                                      "type": "frame",
-                                      "id": "S6bKCe",
-                                      "name": "ct-圖片快取",
-                                      "width": "fill_container",
-                                      "fill": "$bg-secondary",
-                                      "cornerRadius": "$radius-lg",
-                                      "stroke": "$border-subtle",
-                                      "strokeWidth": 1,
-                                      "strokeAlignment": "inner",
-                                      "gap": "$Space/lg",
-                                      "padding": "$Space/lg",
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "frame",
-                                          "id": "qyksx",
-                                          "name": "col",
-                                          "width": "fill_container",
-                                          "layout": "vertical",
-                                          "gap": "$Space/2xs",
-                                          "children": [
-                                            {
-                                              "type": "text",
-                                              "id": "rolD2",
-                                              "name": "t",
-                                              "fill": "$text-primary",
-                                              "content": "圖片快取",
-                                              "lineHeight": "$Type/Body/Line",
-                                              "fontFamily": "$Type/Family/Primary",
-                                              "fontSize": "$Type/Body/Size",
-                                              "fontWeight": "500"
-                                            },
-                                            {
-                                              "type": "text",
-                                              "id": "Len0R",
-                                              "name": "m",
-                                              "fill": "$text-secondary",
-                                              "content": "1.8 GB · 12,480 筆",
-                                              "lineHeight": "$Type/Label/Line",
-                                              "fontFamily": "$Type/Family/Mono",
-                                              "fontSize": "$Type/Label/Size",
-                                              "fontWeight": "normal"
-                                            }
-                                          ]
-                                        },
-                                        {
-                                          "type": "frame",
-                                          "id": "l2YCNb",
-                                          "name": "clear",
-                                          "height": 32,
-                                          "fill": "$bg-tertiary",
-                                          "cornerRadius": "$radius-sm",
-                                          "gap": "$Space/xs",
-                                          "padding": [
-                                            "$Space/none",
-                                            "$Space/md"
-                                          ],
-                                          "alignItems": "center",
-                                          "children": [
-                                            {
-                                              "type": "icon",
-                                              "id": "APxb3",
-                                              "name": "i",
-                                              "width": 14,
-                                              "height": 14,
-                                              "icon": "trash-2",
-                                              "library": "lucide",
-                                              "fill": "$text-secondary"
-                                            },
-                                            {
-                                              "type": "text",
-                                              "id": "x8OUE",
-                                              "name": "t",
-                                              "fill": "$text-secondary",
-                                              "content": "清除",
-                                              "lineHeight": "$Type/Label/Line",
-                                              "fontFamily": "$Type/Family/Primary",
-                                              "fontSize": "$Type/Label/Size",
-                                              "fontWeight": "600"
-                                            }
-                                          ]
-                                        }
-                                      ]
-                                    },
                                     {
                                       "type": "frame",
                                       "id": "DZxM6",
@@ -71596,7 +71511,7 @@
                                           "id": "LpiBi",
                                           "name": "t",
                                           "fill": "$text-secondary",
-                                          "content": "總計 2.4 GB",
+                                          "content": "總計 599 MB",
                                           "lineHeight": "$Type/Body/Line",
                                           "fontFamily": "$Type/Family/Primary",
                                           "fontSize": "$Type/Body/Size",
@@ -71722,91 +71637,6 @@
                                   "layout": "vertical",
                                   "gap": "$Space/md",
                                   "children": [
-                                    {
-                                      "type": "frame",
-                                      "id": "ceRJp",
-                                      "name": "ct-圖片快取",
-                                      "width": "fill_container",
-                                      "fill": "$bg-secondary",
-                                      "cornerRadius": "$radius-lg",
-                                      "stroke": "$border-subtle",
-                                      "strokeWidth": 1,
-                                      "strokeAlignment": "inner",
-                                      "gap": "$Space/lg",
-                                      "padding": "$Space/lg",
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "frame",
-                                          "id": "zeYd0",
-                                          "name": "col",
-                                          "width": "fill_container",
-                                          "layout": "vertical",
-                                          "gap": "$Space/2xs",
-                                          "children": [
-                                            {
-                                              "type": "text",
-                                              "id": "byc2E",
-                                              "name": "t",
-                                              "fill": "$text-primary",
-                                              "content": "圖片快取",
-                                              "lineHeight": "$Type/Body/Line",
-                                              "fontFamily": "$Type/Family/Primary",
-                                              "fontSize": "$Type/Body/Size",
-                                              "fontWeight": "500"
-                                            },
-                                            {
-                                              "type": "text",
-                                              "id": "p7OvlA",
-                                              "name": "m",
-                                              "fill": "$text-secondary",
-                                              "content": "1.8 GB · 12,480 筆",
-                                              "lineHeight": "$Type/Label/Line",
-                                              "fontFamily": "$Type/Family/Mono",
-                                              "fontSize": "$Type/Label/Size",
-                                              "fontWeight": "normal"
-                                            }
-                                          ]
-                                        },
-                                        {
-                                          "type": "frame",
-                                          "id": "JR7Nz",
-                                          "name": "clear",
-                                          "height": 32,
-                                          "fill": "$bg-tertiary",
-                                          "cornerRadius": "$radius-sm",
-                                          "gap": "$Space/xs",
-                                          "padding": [
-                                            "$Space/none",
-                                            "$Space/md"
-                                          ],
-                                          "alignItems": "center",
-                                          "children": [
-                                            {
-                                              "type": "icon",
-                                              "id": "vb2Fr",
-                                              "name": "i",
-                                              "width": 14,
-                                              "height": 14,
-                                              "icon": "trash-2",
-                                              "library": "lucide",
-                                              "fill": "$text-secondary"
-                                            },
-                                            {
-                                              "type": "text",
-                                              "id": "i4twu",
-                                              "name": "t",
-                                              "fill": "$text-secondary",
-                                              "content": "清除",
-                                              "lineHeight": "$Type/Label/Line",
-                                              "fontFamily": "$Type/Family/Primary",
-                                              "fontSize": "$Type/Label/Size",
-                                              "fontWeight": "600"
-                                            }
-                                          ]
-                                        }
-                                      ]
-                                    },
                                     {
                                       "type": "frame",
                                       "id": "ycHMc",
@@ -85889,7 +85719,7 @@
                                   "id": "jDchz",
                                   "name": "t",
                                   "fill": "$text-secondary",
-                                  "content": "總計 2.4 GB",
+                                  "content": "總計 599 MB",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Primary",
                                   "fontSize": "$Type/Label/Size",
@@ -85927,91 +85757,6 @@
                                   "name": "t",
                                   "fill": "$text-primary",
                                   "content": "清除 30 天前",
-                                  "lineHeight": "$Type/Label/Line",
-                                  "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Label/Size",
-                                  "fontWeight": "600"
-                                }
-                              ]
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "urMDI",
-                          "name": "ct-圖片快取",
-                          "width": "fill_container",
-                          "fill": "$bg-secondary",
-                          "cornerRadius": "$radius-lg",
-                          "stroke": "$border-subtle",
-                          "strokeWidth": 1,
-                          "strokeAlignment": "inner",
-                          "gap": "$Space/md",
-                          "padding": "$Space/lg",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "frame",
-                              "id": "HYBuk",
-                              "name": "col",
-                              "width": "fill_container",
-                              "layout": "vertical",
-                              "gap": "$Space/2xs",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "YF9JU",
-                                  "name": "t",
-                                  "fill": "$text-primary",
-                                  "content": "圖片快取",
-                                  "lineHeight": "$Type/Body/Line",
-                                  "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Body/Size",
-                                  "fontWeight": "500"
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "nq0xJ",
-                                  "name": "m",
-                                  "fill": "$text-secondary",
-                                  "content": "1.8 GB · 12,480 筆",
-                                  "lineHeight": "$Type/Label/Line",
-                                  "fontFamily": "$Type/Family/Mono",
-                                  "fontSize": "$Type/Label/Size",
-                                  "fontWeight": "normal"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "QruOf",
-                              "name": "clear",
-                              "height": 44,
-                              "fill": "$bg-tertiary",
-                              "cornerRadius": "$radius-sm",
-                              "gap": "$Space/xs",
-                              "padding": [
-                                "$Space/none",
-                                "$Space/md"
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "icon",
-                                  "id": "rMV1Q",
-                                  "name": "i",
-                                  "width": 14,
-                                  "height": 14,
-                                  "icon": "trash-2",
-                                  "library": "lucide",
-                                  "fill": "$text-secondary"
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "g9s4mu",
-                                  "name": "t",
-                                  "fill": "$text-secondary",
-                                  "content": "清除",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Primary",
                                   "fontSize": "$Type/Label/Size",
@@ -92843,7 +92588,7 @@
               "fill": "$text-muted",
               "textGrowth": "fixed-width",
               "width": 880,
-              "content": "快取：『清除 30 天前』按第一次後出現一條硃砂說明，講清楚會刪什麼、不會刪什麼，再按一次才清。日誌：每列 箭頭→等級→時間→訊息→[來源]（手機兩行：等級＋時間＋來源 / 訊息）。有篩選時計數寫『符合條件 N 筆』（後端沒有未篩選的總數）。篩到沒東西＝圖示＋一句說明目前的篩選＋清除篩選；日誌本來就空＝『還沒有日誌記錄』、沒有按鈕。『清除 30 天前』跟篩選無關，篩到沒東西時也在。手機的清除鈕與搜尋框都是 44 高。",
+              "content": "快取：『清除 30 天前』按第一次後出現一條硃砂說明，講清楚會刪什麼、不會刪什麼，再按一次才清。日誌：每列 箭頭→等級→時間→訊息→[來源]（手機兩行：等級＋時間＋來源 / 訊息）。有篩選時計數寫『符合條件 N 筆』（後端沒有未篩選的總數）。篩到沒東西＝圖示＋一句說明目前的篩選＋清除篩選；日誌本來就空＝『還沒有日誌記錄』、沒有按鈕。『清除 30 天前』跟篩選無關，篩到沒東西時也在。手機的清除鈕與搜尋框都是 44 高。 快取只有四類（AI 解析、TMDb 中繼資料、豆瓣、維基百科）：原本的「圖片快取」其實是使用者上傳的海報、不是快取，已移除（bugfix-custom-posters-served-and-not-cache）。",
               "lineHeight": "$Type/Label/Line",
               "fontFamily": "$Type/Family/Primary",
               "fontSize": "$Type/Label/Size",
