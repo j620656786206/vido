@@ -72,7 +72,7 @@ For non-trivial features, work **architecture-first**: outline the design and va
 2. Screenshots are saved to `_bmad-output/screenshots/`, one folder per **user flow**. Each flow folder holds both desktop (`-d`) and mobile (`-m`) screens; filenames are the canvas frame codes (e.g. `b3p-d.png`, `b3p-m.png`):
    - `flow-a-browse-v2/` — Browse: empty / loading / grid / list / no-results / error (A′ pilot series)
    - `flow-b-detail-interaction/` — Hover / Context Menus / Detail menus / Image-load Fallback spec (B9)
-   - `flow-b-detail-v2/` — Detail v2: movie / TV / skeleton / not-found / 延伸區塊 / 比對失敗 (B10p) / 資料整理中 (B11p) / 手動選片 (B12p) (B′ series; B10p–B12p replaced the v1 drawer mocks B6-M / B7-M, dsr-2b-b)
+   - `flow-b-detail-v2/` — Detail v2: movie / TV / skeleton / not-found / 延伸區塊 / 比對失敗 (B10p) / 資料整理中 (B11p) / 手動選片 (B12p) / 修改資訊・換海報 (B13p) / 換海報狀態 spec (B14) (B′ series; B10p–B12p replaced the v1 drawer mocks B6-M / B7-M, dsr-2b-b)
    - `flow-c-search-settings/` — 媒體庫搜尋＋篩選 / 批次操作 / 檢視偏好，以及**設定的 12 個分頁**（c4–c14，c23 是連線設定往下捲的 Sonarr／Radarr 卡片；另有 c15–c22 的載入／空／錯誤／確認狀態稿：外觀・連線・金鑰・服務狀態・字幕・自訂首頁・快取・日誌・備份・匯出匯入・效能監控；媒體庫掃描在 `flow-e-scanner/e1-d`）。分頁列與分組順序以 `SettingsLayout.tsx` 的 `SETTINGS_CATEGORIES` 為準
    - `flow-d-downloads-v2/` — Download centre v2: list / batch select / card actions / skeleton / empty / fail-soft / table / not-configured (d11) / import status spec (d12) / mobile sheets
    - `flow-e-scanner/` — Scanner settings / Scan progress / Complete toast / Filtered-unmatched
