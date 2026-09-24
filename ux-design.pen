@@ -62516,6 +62516,66 @@
                               "children": [
                                 {
                                   "type": "frame",
+                                  "id": "Xah8F",
+                                  "name": "legend",
+                                  "width": 768,
+                                  "layout": "vertical",
+                                  "gap": "$Space/xs",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "zEsPw",
+                                      "name": "title",
+                                      "fill": "$text-primary",
+                                      "content": "AI 字幕的在地化程度",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": 14,
+                                      "fontWeight": "600"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "L6SJL",
+                                      "name": "intro",
+                                      "fill": "$text-secondary",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "這是口味，不是對錯。選了之後，下一部翻譯的片就會用新的風格；已經翻好的不會動。",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "$Type/Body/Weight"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "tr5oW",
+                                      "name": "env-note",
+                                      "width": "fill_container",
+                                      "fill": "$info-tint",
+                                      "cornerRadius": "$radius-md",
+                                      "padding": [
+                                        "$Space/sm",
+                                        "$Space/md"
+                                      ],
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "d1ZFGw",
+                                          "name": "t",
+                                          "fill": "$info-text",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "目前的程度來自環境變數 SUBTITLE_LOCALIZATION_LEVEL；在這裡儲存會蓋過它。",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "$Type/Label/Weight"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
                                   "id": "lqalr",
                                   "name": "level-group",
                                   "width": 768,
@@ -62763,19 +62823,6 @@
                                       ]
                                     }
                                   ]
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "rUcFk",
-                                  "name": "t",
-                                  "fill": "$text-muted",
-                                  "textGrowth": "fixed-width",
-                                  "width": 768,
-                                  "content": "改了之後只影響之後生成的字幕；已經翻好的不會重跑。",
-                                  "lineHeight": "$Type/Label/Line",
-                                  "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Label/Size",
-                                  "fontWeight": "$Type/Label/Weight"
                                 }
                               ]
                             }
@@ -63382,7 +63429,7 @@
                                           "id": "u5ByTQ",
                                           "name": "t",
                                           "fill": "$text-secondary",
-                                          "content": "6 個區塊 · 拖曳可調整順序",
+                                          "content": "6 個區塊",
                                           "lineHeight": "$Type/Body/Line",
                                           "fontFamily": "$Type/Family/Primary",
                                           "fontSize": "$Type/Body/Size",
@@ -63453,16 +63500,6 @@
                                       "children": [
                                         {
                                           "type": "icon",
-                                          "id": "kvoQ8",
-                                          "name": "grip",
-                                          "width": 16,
-                                          "height": 16,
-                                          "icon": "grip-vertical",
-                                          "library": "lucide",
-                                          "fill": "$text-muted"
-                                        },
-                                        {
-                                          "type": "icon",
                                           "id": "XmC7a",
                                           "name": "type",
                                           "width": 18,
@@ -63495,7 +63532,7 @@
                                               "id": "H5rMVk",
                                               "name": "t",
                                               "fill": "$text-muted",
-                                              "content": "人氣排序 · 20 部 · zh-TW 台灣",
+                                              "content": "電影 · 熱門度（高→低） · 20 部 · zh-TW · 地區 TW",
                                               "lineHeight": "$Type/Label/Line",
                                               "fontFamily": "$Type/Family/Primary",
                                               "fontSize": "$Type/Label/Size",
@@ -63505,26 +63542,48 @@
                                         },
                                         {
                                           "type": "frame",
-                                          "id": "b8XMg",
-                                          "name": "switch",
-                                          "width": 40,
-                                          "height": 22,
-                                          "fill": "$accent-primary",
-                                          "cornerRadius": "$radius-pill",
-                                          "padding": [
-                                            "$Space/none",
-                                            "$Space/2xs"
-                                          ],
-                                          "justifyContent": "end",
+                                          "id": "e9SXNL",
+                                          "name": "act-arrow-up",
+                                          "opacity": 0.3,
+                                          "width": 32,
+                                          "height": 32,
+                                          "fill": "$bg-tertiary",
+                                          "cornerRadius": "$radius-md",
+                                          "justifyContent": "center",
                                           "alignItems": "center",
                                           "children": [
                                             {
-                                              "type": "ellipse",
-                                              "id": "ZmpBX",
-                                              "name": "knob",
-                                              "fill": "$text-on-accent",
-                                              "width": 18,
-                                              "height": 18
+                                              "type": "icon",
+                                              "id": "ehVay",
+                                              "name": "i",
+                                              "width": 14,
+                                              "height": 14,
+                                              "icon": "arrow-up",
+                                              "library": "lucide",
+                                              "fill": "$text-secondary"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "yC7HI",
+                                          "name": "act-arrow-down",
+                                          "width": 32,
+                                          "height": 32,
+                                          "fill": "$bg-tertiary",
+                                          "cornerRadius": "$radius-md",
+                                          "justifyContent": "center",
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "O9a0d",
+                                              "name": "i",
+                                              "width": 14,
+                                              "height": 14,
+                                              "icon": "arrow-down",
+                                              "library": "lucide",
+                                              "fill": "$text-secondary"
                                             }
                                           ]
                                         },
@@ -63592,16 +63651,6 @@
                                       "children": [
                                         {
                                           "type": "icon",
-                                          "id": "K3gGz",
-                                          "name": "grip",
-                                          "width": 16,
-                                          "height": 16,
-                                          "icon": "grip-vertical",
-                                          "library": "lucide",
-                                          "fill": "$text-muted"
-                                        },
-                                        {
-                                          "type": "icon",
                                           "id": "DnVFC",
                                           "name": "type",
                                           "width": 18,
@@ -63634,7 +63683,7 @@
                                               "id": "eaXrM",
                                               "name": "t",
                                               "fill": "$text-muted",
-                                              "content": "上映日期 · 20 部 · zh-TW 台灣",
+                                              "content": "電影 · 發行日期（新→舊） · 20 部 · zh-TW · 地區 TW",
                                               "lineHeight": "$Type/Label/Line",
                                               "fontFamily": "$Type/Family/Primary",
                                               "fontSize": "$Type/Label/Size",
@@ -63644,26 +63693,47 @@
                                         },
                                         {
                                           "type": "frame",
-                                          "id": "K576Jb",
-                                          "name": "switch",
-                                          "width": 40,
-                                          "height": 22,
-                                          "fill": "$accent-primary",
-                                          "cornerRadius": "$radius-pill",
-                                          "padding": [
-                                            "$Space/none",
-                                            "$Space/2xs"
-                                          ],
-                                          "justifyContent": "end",
+                                          "id": "gDOl1",
+                                          "name": "act-arrow-up",
+                                          "width": 32,
+                                          "height": 32,
+                                          "fill": "$bg-tertiary",
+                                          "cornerRadius": "$radius-md",
+                                          "justifyContent": "center",
                                           "alignItems": "center",
                                           "children": [
                                             {
-                                              "type": "ellipse",
-                                              "id": "RlbGy",
-                                              "name": "knob",
-                                              "fill": "$text-on-accent",
-                                              "width": 18,
-                                              "height": 18
+                                              "type": "icon",
+                                              "id": "OP1K6",
+                                              "name": "i",
+                                              "width": 14,
+                                              "height": 14,
+                                              "icon": "arrow-up",
+                                              "library": "lucide",
+                                              "fill": "$text-secondary"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "klAQV",
+                                          "name": "act-arrow-down",
+                                          "width": 32,
+                                          "height": 32,
+                                          "fill": "$bg-tertiary",
+                                          "cornerRadius": "$radius-md",
+                                          "justifyContent": "center",
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "OSmIo",
+                                              "name": "i",
+                                              "width": 14,
+                                              "height": 14,
+                                              "icon": "arrow-down",
+                                              "library": "lucide",
+                                              "fill": "$text-secondary"
                                             }
                                           ]
                                         },
@@ -63731,16 +63801,6 @@
                                       "children": [
                                         {
                                           "type": "icon",
-                                          "id": "kZr1D",
-                                          "name": "grip",
-                                          "width": 16,
-                                          "height": 16,
-                                          "icon": "grip-vertical",
-                                          "library": "lucide",
-                                          "fill": "$text-muted"
-                                        },
-                                        {
-                                          "type": "icon",
                                           "id": "sL6sN",
                                           "name": "type",
                                           "width": 18,
@@ -63773,7 +63833,7 @@
                                               "id": "HKzWT",
                                               "name": "t",
                                               "fill": "$text-muted",
-                                              "content": "評分排序 · 15 部 · 類型：動畫",
+                                              "content": "電影 · 評分（高→低） · 15 部 · 類型 16",
                                               "lineHeight": "$Type/Label/Line",
                                               "fontFamily": "$Type/Family/Primary",
                                               "fontSize": "$Type/Label/Size",
@@ -63783,26 +63843,47 @@
                                         },
                                         {
                                           "type": "frame",
-                                          "id": "xjjo3",
-                                          "name": "switch",
-                                          "width": 40,
-                                          "height": 22,
-                                          "fill": "$accent-primary",
-                                          "cornerRadius": "$radius-pill",
-                                          "padding": [
-                                            "$Space/none",
-                                            "$Space/2xs"
-                                          ],
-                                          "justifyContent": "end",
+                                          "id": "QKHII",
+                                          "name": "act-arrow-up",
+                                          "width": 32,
+                                          "height": 32,
+                                          "fill": "$bg-tertiary",
+                                          "cornerRadius": "$radius-md",
+                                          "justifyContent": "center",
                                           "alignItems": "center",
                                           "children": [
                                             {
-                                              "type": "ellipse",
-                                              "id": "UO0zH",
-                                              "name": "knob",
-                                              "fill": "$text-on-accent",
-                                              "width": 18,
-                                              "height": 18
+                                              "type": "icon",
+                                              "id": "Ua5mR",
+                                              "name": "i",
+                                              "width": 14,
+                                              "height": 14,
+                                              "icon": "arrow-up",
+                                              "library": "lucide",
+                                              "fill": "$text-secondary"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "InCMJ",
+                                          "name": "act-arrow-down",
+                                          "width": 32,
+                                          "height": 32,
+                                          "fill": "$bg-tertiary",
+                                          "cornerRadius": "$radius-md",
+                                          "justifyContent": "center",
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "y6CF8",
+                                              "name": "i",
+                                              "width": 14,
+                                              "height": 14,
+                                              "icon": "arrow-down",
+                                              "library": "lucide",
+                                              "fill": "$text-secondary"
                                             }
                                           ]
                                         },
@@ -63870,16 +63951,6 @@
                                       "children": [
                                         {
                                           "type": "icon",
-                                          "id": "b2McZq",
-                                          "name": "grip",
-                                          "width": 16,
-                                          "height": 16,
-                                          "icon": "grip-vertical",
-                                          "library": "lucide",
-                                          "fill": "$text-muted"
-                                        },
-                                        {
-                                          "type": "icon",
                                           "id": "k7Ehb",
                                           "name": "type",
                                           "width": 18,
@@ -63912,7 +63983,7 @@
                                               "id": "A6TUmO",
                                               "name": "t",
                                               "fill": "$text-muted",
-                                              "content": "人氣排序 · 20 部 · zh-TW 台灣",
+                                              "content": "影集 · 熱門度（高→低） · 20 部 · zh-TW · 地區 TW",
                                               "lineHeight": "$Type/Label/Line",
                                               "fontFamily": "$Type/Family/Primary",
                                               "fontSize": "$Type/Label/Size",
@@ -63922,26 +63993,47 @@
                                         },
                                         {
                                           "type": "frame",
-                                          "id": "b3YVv",
-                                          "name": "switch",
-                                          "width": 40,
-                                          "height": 22,
-                                          "fill": "$accent-primary",
-                                          "cornerRadius": "$radius-pill",
-                                          "padding": [
-                                            "$Space/none",
-                                            "$Space/2xs"
-                                          ],
-                                          "justifyContent": "end",
+                                          "id": "sHKmR",
+                                          "name": "act-arrow-up",
+                                          "width": 32,
+                                          "height": 32,
+                                          "fill": "$bg-tertiary",
+                                          "cornerRadius": "$radius-md",
+                                          "justifyContent": "center",
                                           "alignItems": "center",
                                           "children": [
                                             {
-                                              "type": "ellipse",
-                                              "id": "dvCk3",
-                                              "name": "knob",
-                                              "fill": "$text-on-accent",
-                                              "width": 18,
-                                              "height": 18
+                                              "type": "icon",
+                                              "id": "kz3u2",
+                                              "name": "i",
+                                              "width": 14,
+                                              "height": 14,
+                                              "icon": "arrow-up",
+                                              "library": "lucide",
+                                              "fill": "$text-secondary"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "TZyza",
+                                          "name": "act-arrow-down",
+                                          "width": 32,
+                                          "height": 32,
+                                          "fill": "$bg-tertiary",
+                                          "cornerRadius": "$radius-md",
+                                          "justifyContent": "center",
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "jhB2v",
+                                              "name": "i",
+                                              "width": 14,
+                                              "height": 14,
+                                              "icon": "arrow-down",
+                                              "library": "lucide",
+                                              "fill": "$text-secondary"
                                             }
                                           ]
                                         },
@@ -64009,16 +64101,6 @@
                                       "children": [
                                         {
                                           "type": "icon",
-                                          "id": "A1jkjT",
-                                          "name": "grip",
-                                          "width": 16,
-                                          "height": 16,
-                                          "icon": "grip-vertical",
-                                          "library": "lucide",
-                                          "fill": "$text-muted"
-                                        },
-                                        {
-                                          "type": "icon",
                                           "id": "omejz",
                                           "name": "type",
                                           "width": 18,
@@ -64039,7 +64121,7 @@
                                               "type": "text",
                                               "id": "a6kOtj",
                                               "name": "t",
-                                              "fill": "$text-muted",
+                                              "fill": "$text-primary",
                                               "content": "本週新上架",
                                               "lineHeight": "$Type/Body/Line",
                                               "fontFamily": "$Type/Family/Primary",
@@ -64051,7 +64133,7 @@
                                               "id": "erhRV",
                                               "name": "t",
                                               "fill": "$text-muted",
-                                              "content": "首播日期 · 12 部",
+                                              "content": "影集 · 首播日期（新→舊） · 12 部",
                                               "lineHeight": "$Type/Label/Line",
                                               "fontFamily": "$Type/Family/Primary",
                                               "fontSize": "$Type/Label/Size",
@@ -64061,25 +64143,47 @@
                                         },
                                         {
                                           "type": "frame",
-                                          "id": "FDBLL",
-                                          "name": "switch",
-                                          "width": 40,
-                                          "height": 22,
+                                          "id": "Ej4Sv",
+                                          "name": "act-arrow-up",
+                                          "width": 32,
+                                          "height": 32,
                                           "fill": "$bg-tertiary",
-                                          "cornerRadius": "$radius-pill",
-                                          "padding": [
-                                            "$Space/none",
-                                            "$Space/2xs"
-                                          ],
+                                          "cornerRadius": "$radius-md",
+                                          "justifyContent": "center",
                                           "alignItems": "center",
                                           "children": [
                                             {
-                                              "type": "ellipse",
-                                              "id": "Kgl2w",
-                                              "name": "knob",
-                                              "fill": "$text-muted",
-                                              "width": 18,
-                                              "height": 18
+                                              "type": "icon",
+                                              "id": "dCvIT",
+                                              "name": "i",
+                                              "width": 14,
+                                              "height": 14,
+                                              "icon": "arrow-up",
+                                              "library": "lucide",
+                                              "fill": "$text-secondary"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "HUefu",
+                                          "name": "act-arrow-down",
+                                          "width": 32,
+                                          "height": 32,
+                                          "fill": "$bg-tertiary",
+                                          "cornerRadius": "$radius-md",
+                                          "justifyContent": "center",
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "z6bPZ",
+                                              "name": "i",
+                                              "width": 14,
+                                              "height": 14,
+                                              "icon": "arrow-down",
+                                              "library": "lucide",
+                                              "fill": "$text-secondary"
                                             }
                                           ]
                                         },
@@ -64147,16 +64251,6 @@
                                       "children": [
                                         {
                                           "type": "icon",
-                                          "id": "lTd35",
-                                          "name": "grip",
-                                          "width": 16,
-                                          "height": 16,
-                                          "icon": "grip-vertical",
-                                          "library": "lucide",
-                                          "fill": "$text-muted"
-                                        },
-                                        {
-                                          "type": "icon",
                                           "id": "g3O7Y",
                                           "name": "type",
                                           "width": 18,
@@ -64189,7 +64283,7 @@
                                               "id": "a1Zc8L",
                                               "name": "t",
                                               "fill": "$text-muted",
-                                              "content": "評分排序 · 20 部 · 類型：科幻",
+                                              "content": "電影 · 評分（高→低） · 20 部 · 類型 878",
                                               "lineHeight": "$Type/Label/Line",
                                               "fontFamily": "$Type/Family/Primary",
                                               "fontSize": "$Type/Label/Size",
@@ -64199,25 +64293,48 @@
                                         },
                                         {
                                           "type": "frame",
-                                          "id": "IIEHJ",
-                                          "name": "switch",
-                                          "width": 40,
-                                          "height": 22,
+                                          "id": "FVwHc",
+                                          "name": "act-arrow-up",
+                                          "width": 32,
+                                          "height": 32,
                                           "fill": "$bg-tertiary",
-                                          "cornerRadius": "$radius-pill",
-                                          "padding": [
-                                            "$Space/none",
-                                            "$Space/2xs"
-                                          ],
+                                          "cornerRadius": "$radius-md",
+                                          "justifyContent": "center",
                                           "alignItems": "center",
                                           "children": [
                                             {
-                                              "type": "ellipse",
-                                              "id": "dfFBi",
-                                              "name": "knob",
-                                              "fill": "$text-muted",
-                                              "width": 18,
-                                              "height": 18
+                                              "type": "icon",
+                                              "id": "uJwA7",
+                                              "name": "i",
+                                              "width": 14,
+                                              "height": 14,
+                                              "icon": "arrow-up",
+                                              "library": "lucide",
+                                              "fill": "$text-secondary"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "BEqG5",
+                                          "name": "act-arrow-down",
+                                          "opacity": 0.3,
+                                          "width": 32,
+                                          "height": 32,
+                                          "fill": "$bg-tertiary",
+                                          "cornerRadius": "$radius-md",
+                                          "justifyContent": "center",
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "X4rLx",
+                                              "name": "i",
+                                              "width": 14,
+                                              "height": 14,
+                                              "icon": "arrow-down",
+                                              "library": "lucide",
+                                              "fill": "$text-secondary"
                                             }
                                           ]
                                         },
@@ -64278,7 +64395,7 @@
                                   "fill": "$text-muted",
                                   "textGrowth": "fixed-width",
                                   "width": 1152,
-                                  "content": "關掉的區塊不會出現在首頁，但設定保留。已擁有的作品不會出現在探索區塊裡。",
+                                  "content": "已擁有的作品不會出現在首頁。",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Primary",
                                   "fontSize": "$Type/Label/Size",
@@ -83351,7 +83468,7 @@
               },
               "clip": true,
               "width": 390,
-              "height": 844,
+              "height": 864,
               "fill": "$bg-primary",
               "layout": "vertical",
               "children": [
@@ -83612,6 +83729,39 @@
                       "children": [
                         {
                           "type": "frame",
+                          "id": "w99PE",
+                          "name": "legend",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": "$Space/xs",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "C9iDfp",
+                              "name": "title",
+                              "fill": "$text-primary",
+                              "content": "AI 字幕的在地化程度",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "tBuGJ",
+                              "name": "intro",
+                              "fill": "$text-secondary",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "這是口味，不是對錯。選了之後，下一部翻譯的片就會用新的風格；已經翻好的不會動。",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
                           "id": "pXJ3i",
                           "name": "lvl-直譯",
                           "width": "fill_container",
@@ -83627,8 +83777,8 @@
                               "type": "frame",
                               "id": "XLm7g",
                               "name": "radio",
-                              "width": 18,
-                              "height": 18,
+                              "width": 20,
+                              "height": 20,
                               "fill": "#00000000",
                               "cornerRadius": "$radius-pill",
                               "stroke": "$border-subtle",
@@ -83662,8 +83812,8 @@
                                   "name": "t",
                                   "fill": "$text-secondary",
                                   "textGrowth": "fixed-width",
-                                  "width": 240,
-                                  "content": "照原文翻，不把故事世界搬到台灣。",
+                                  "width": "fill_container",
+                                  "content": "照原文翻，不把故事世界搬到台灣。超市就是超市，感恩節就是感恩節。",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Primary",
                                   "fontSize": "$Type/Label/Size",
@@ -83675,8 +83825,8 @@
                                   "name": "m",
                                   "fill": "$text-muted",
                                   "textGrowth": "fixed-width",
-                                  "width": 240,
-                                  "content": "「grocery store」→「超市」",
+                                  "width": "fill_container",
+                                  "content": "「I grabbed milk at the grocery store」→「我在超市買了牛奶」",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Mono",
                                   "fontSize": "$Type/Label/Size",
@@ -83703,8 +83853,8 @@
                               "type": "frame",
                               "id": "l1PSpA",
                               "name": "radio",
-                              "width": 18,
-                              "height": 18,
+                              "width": 20,
+                              "height": 20,
                               "fill": "$accent-primary",
                               "cornerRadius": "$radius-pill",
                               "stroke": "$accent-primary",
@@ -83717,8 +83867,8 @@
                                   "type": "icon",
                                   "id": "o72tK",
                                   "name": "i",
-                                  "width": 10,
-                                  "height": 10,
+                                  "width": 12,
+                                  "height": 12,
                                   "icon": "check",
                                   "library": "lucide",
                                   "fill": "$text-on-accent"
@@ -83750,8 +83900,8 @@
                                   "name": "t",
                                   "fill": "$text-secondary",
                                   "textGrowth": "fixed-width",
-                                  "width": 240,
-                                  "content": "用台灣的詞和語氣，但不拿本地品牌替換泛稱。",
+                                  "width": "fill_container",
+                                  "content": "用台灣的詞和語氣（影片、品質、超商），但不拿本地品牌或俚語替換泛稱。",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Primary",
                                   "fontSize": "$Type/Label/Size",
@@ -83763,8 +83913,8 @@
                                   "name": "m",
                                   "fill": "$text-muted",
                                   "textGrowth": "fixed-width",
-                                  "width": 240,
-                                  "content": "「grocery store」→「超市」",
+                                  "width": "fill_container",
+                                  "content": "「I grabbed milk at the grocery store」→「我去超市買了牛奶」",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Mono",
                                   "fontSize": "$Type/Label/Size",
@@ -83791,8 +83941,8 @@
                               "type": "frame",
                               "id": "E35FP",
                               "name": "radio",
-                              "width": 18,
-                              "height": 18,
+                              "width": 20,
+                              "height": 20,
                               "fill": "#00000000",
                               "cornerRadius": "$radius-pill",
                               "stroke": "$border-subtle",
@@ -83826,8 +83976,8 @@
                                   "name": "t",
                                   "fill": "$text-secondary",
                                   "textGrowth": "fixed-width",
-                                  "width": 240,
-                                  "content": "Netflix、Apple TV+ 台灣字幕的口吻。",
+                                  "width": "fill_container",
+                                  "content": "Netflix、Apple TV+ 台灣字幕的口吻：日常場景的泛稱可以換成台灣人會講的字，專有品牌名絕不亂換。",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Primary",
                                   "fontSize": "$Type/Label/Size",
@@ -83839,8 +83989,8 @@
                                   "name": "m",
                                   "fill": "$text-muted",
                                   "textGrowth": "fixed-width",
-                                  "width": 240,
-                                  "content": "「grocery store」→「全聯」",
+                                  "width": "fill_container",
+                                  "content": "「I grabbed milk at the grocery store」→「我去全聯買了牛奶」",
                                   "lineHeight": "$Type/Label/Line",
                                   "fontFamily": "$Type/Family/Mono",
                                   "fontSize": "$Type/Label/Size",
@@ -84056,7 +84206,7 @@
               },
               "clip": true,
               "width": 390,
-              "height": 844,
+              "height": 1176,
               "fill": "$bg-primary",
               "layout": "vertical",
               "children": [
@@ -84345,7 +84495,7 @@
                               "type": "frame",
                               "id": "JgwUJ",
                               "name": "add",
-                              "height": 36,
+                              "height": 44,
                               "fill": "$accent-primary",
                               "cornerRadius": "$radius-md",
                               "gap": "$Space/xs",
@@ -84390,84 +84540,164 @@
                           "stroke": "$border-subtle",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
+                          "layout": "vertical",
                           "gap": "$Space/md",
                           "padding": "$Space/lg",
-                          "alignItems": "center",
                           "children": [
                             {
-                              "type": "icon",
-                              "id": "d4rS3H",
-                              "name": "grip",
-                              "width": 14,
-                              "height": 14,
-                              "icon": "grip-vertical",
-                              "library": "lucide",
-                              "fill": "$text-muted"
-                            },
-                            {
-                              "type": "icon",
-                              "id": "M8ZILa",
-                              "name": "type",
-                              "width": 16,
-                              "height": 16,
-                              "icon": "film",
-                              "library": "lucide",
-                              "fill": "$text-secondary"
-                            },
-                            {
                               "type": "frame",
-                              "id": "KasRt",
-                              "name": "col",
+                              "id": "d0dlx",
+                              "name": "top",
                               "width": "fill_container",
-                              "layout": "vertical",
-                              "gap": "$Space/2xs",
+                              "gap": "$Space/md",
+                              "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "text",
-                                  "id": "OOXHh",
-                                  "name": "t",
-                                  "fill": "$text-primary",
-                                  "content": "熱門電影",
-                                  "lineHeight": "$Type/Body/Line",
-                                  "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Body/Size",
-                                  "fontWeight": "600"
+                                  "type": "icon",
+                                  "id": "M8ZILa",
+                                  "name": "type",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "film",
+                                  "library": "lucide",
+                                  "fill": "$text-secondary"
                                 },
                                 {
-                                  "type": "text",
-                                  "id": "CriHN",
-                                  "name": "m",
-                                  "fill": "$text-muted",
-                                  "content": "人氣排序 · 20 部",
-                                  "lineHeight": "$Type/Label/Line",
-                                  "fontFamily": "$Type/Family/Mono",
-                                  "fontSize": "$Type/Label/Size",
-                                  "fontWeight": "normal"
+                                  "type": "frame",
+                                  "id": "KasRt",
+                                  "name": "col",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": "$Space/2xs",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "OOXHh",
+                                      "name": "t",
+                                      "fill": "$text-primary",
+                                      "content": "熱門電影",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "600"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "CriHN",
+                                      "name": "m",
+                                      "fill": "$text-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "電影 · 熱門度（高→低） · 20 部 · zh-TW · 地區 TW",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
                                 }
                               ]
                             },
                             {
                               "type": "frame",
-                              "id": "w2ci6",
-                              "name": "switch",
-                              "width": 36,
-                              "height": 20,
-                              "fill": "$accent-primary",
-                              "cornerRadius": "$radius-pill",
-                              "padding": [
-                                "$Space/none",
-                                "$Space/2xs"
-                              ],
+                              "id": "PKWYv",
+                              "name": "ops",
+                              "width": "fill_container",
+                              "gap": "$Space/xs",
                               "justifyContent": "end",
-                              "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "ellipse",
-                                  "id": "fEfV7",
-                                  "name": "knob",
-                                  "fill": "$text-on-accent",
-                                  "width": 16,
-                                  "height": 16
+                                  "type": "frame",
+                                  "id": "TF1hO",
+                                  "name": "act-arrow-up",
+                                  "opacity": 0.3,
+                                  "width": 44,
+                                  "height": 44,
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-md",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "VbVe6",
+                                      "name": "i",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "arrow-up",
+                                      "library": "lucide",
+                                      "fill": "$text-secondary"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "Evfmz",
+                                  "name": "act-arrow-down",
+                                  "width": 44,
+                                  "height": 44,
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-md",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "o0YKX",
+                                      "name": "i",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "arrow-down",
+                                      "library": "lucide",
+                                      "fill": "$text-secondary"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "S6Pv1q",
+                                  "name": "act-pencil",
+                                  "width": 44,
+                                  "height": 44,
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-md",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "nnlWl",
+                                      "name": "i",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "pencil",
+                                      "library": "lucide",
+                                      "fill": "$text-secondary"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "J1Cmw",
+                                  "name": "act-trash-2",
+                                  "width": 44,
+                                  "height": 44,
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-md",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "wvvb5",
+                                      "name": "i",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "trash-2",
+                                      "library": "lucide",
+                                      "fill": "$text-secondary"
+                                    }
+                                  ]
                                 }
                               ]
                             }
@@ -84483,84 +84713,163 @@
                           "stroke": "$border-subtle",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
+                          "layout": "vertical",
                           "gap": "$Space/md",
                           "padding": "$Space/lg",
-                          "alignItems": "center",
                           "children": [
                             {
-                              "type": "icon",
-                              "id": "jHmEd",
-                              "name": "grip",
-                              "width": 14,
-                              "height": 14,
-                              "icon": "grip-vertical",
-                              "library": "lucide",
-                              "fill": "$text-muted"
-                            },
-                            {
-                              "type": "icon",
-                              "id": "G5s9Dw",
-                              "name": "type",
-                              "width": 16,
-                              "height": 16,
-                              "icon": "film",
-                              "library": "lucide",
-                              "fill": "$text-secondary"
-                            },
-                            {
                               "type": "frame",
-                              "id": "y4Wf9B",
-                              "name": "col",
+                              "id": "Yfm4W",
+                              "name": "top",
                               "width": "fill_container",
-                              "layout": "vertical",
-                              "gap": "$Space/2xs",
+                              "gap": "$Space/md",
+                              "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "text",
-                                  "id": "DTvgX",
-                                  "name": "t",
-                                  "fill": "$text-primary",
-                                  "content": "近期台灣院線",
-                                  "lineHeight": "$Type/Body/Line",
-                                  "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Body/Size",
-                                  "fontWeight": "600"
+                                  "type": "icon",
+                                  "id": "G5s9Dw",
+                                  "name": "type",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "film",
+                                  "library": "lucide",
+                                  "fill": "$text-secondary"
                                 },
                                 {
-                                  "type": "text",
-                                  "id": "HTqNP",
-                                  "name": "m",
-                                  "fill": "$text-muted",
-                                  "content": "上映日期 · 20 部",
-                                  "lineHeight": "$Type/Label/Line",
-                                  "fontFamily": "$Type/Family/Mono",
-                                  "fontSize": "$Type/Label/Size",
-                                  "fontWeight": "normal"
+                                  "type": "frame",
+                                  "id": "y4Wf9B",
+                                  "name": "col",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": "$Space/2xs",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "DTvgX",
+                                      "name": "t",
+                                      "fill": "$text-primary",
+                                      "content": "近期台灣院線",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "600"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "HTqNP",
+                                      "name": "m",
+                                      "fill": "$text-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "電影 · 發行日期（新→舊） · 20 部 · zh-TW · 地區 TW",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
                                 }
                               ]
                             },
                             {
                               "type": "frame",
-                              "id": "FGFXi",
-                              "name": "switch",
-                              "width": 36,
-                              "height": 20,
-                              "fill": "$accent-primary",
-                              "cornerRadius": "$radius-pill",
-                              "padding": [
-                                "$Space/none",
-                                "$Space/2xs"
-                              ],
+                              "id": "wTsh0",
+                              "name": "ops",
+                              "width": "fill_container",
+                              "gap": "$Space/xs",
                               "justifyContent": "end",
-                              "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "ellipse",
-                                  "id": "HYKfi",
-                                  "name": "knob",
-                                  "fill": "$text-on-accent",
-                                  "width": 16,
-                                  "height": 16
+                                  "type": "frame",
+                                  "id": "Dm6Hv",
+                                  "name": "act-arrow-up",
+                                  "width": 44,
+                                  "height": 44,
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-md",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "z5dZyf",
+                                      "name": "i",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "arrow-up",
+                                      "library": "lucide",
+                                      "fill": "$text-secondary"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "TnRsG",
+                                  "name": "act-arrow-down",
+                                  "width": 44,
+                                  "height": 44,
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-md",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "e1QzE",
+                                      "name": "i",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "arrow-down",
+                                      "library": "lucide",
+                                      "fill": "$text-secondary"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "EtNhV",
+                                  "name": "act-pencil",
+                                  "width": 44,
+                                  "height": 44,
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-md",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "wWcX8",
+                                      "name": "i",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "pencil",
+                                      "library": "lucide",
+                                      "fill": "$text-secondary"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "o6OP9B",
+                                  "name": "act-trash-2",
+                                  "width": 44,
+                                  "height": 44,
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-md",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "kyzlF",
+                                      "name": "i",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "trash-2",
+                                      "library": "lucide",
+                                      "fill": "$text-secondary"
+                                    }
+                                  ]
                                 }
                               ]
                             }
@@ -84576,84 +84885,163 @@
                           "stroke": "$border-subtle",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
+                          "layout": "vertical",
                           "gap": "$Space/md",
                           "padding": "$Space/lg",
-                          "alignItems": "center",
                           "children": [
                             {
-                              "type": "icon",
-                              "id": "kf0Gs",
-                              "name": "grip",
-                              "width": 14,
-                              "height": 14,
-                              "icon": "grip-vertical",
-                              "library": "lucide",
-                              "fill": "$text-muted"
-                            },
-                            {
-                              "type": "icon",
-                              "id": "QLVYI",
-                              "name": "type",
-                              "width": 16,
-                              "height": 16,
-                              "icon": "film",
-                              "library": "lucide",
-                              "fill": "$text-secondary"
-                            },
-                            {
                               "type": "frame",
-                              "id": "KFZIK",
-                              "name": "col",
+                              "id": "yCjGv",
+                              "name": "top",
                               "width": "fill_container",
-                              "layout": "vertical",
-                              "gap": "$Space/2xs",
+                              "gap": "$Space/md",
+                              "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "text",
-                                  "id": "P4hWw1",
-                                  "name": "t",
-                                  "fill": "$text-primary",
-                                  "content": "高分動畫",
-                                  "lineHeight": "$Type/Body/Line",
-                                  "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Body/Size",
-                                  "fontWeight": "600"
+                                  "type": "icon",
+                                  "id": "QLVYI",
+                                  "name": "type",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "film",
+                                  "library": "lucide",
+                                  "fill": "$text-secondary"
                                 },
                                 {
-                                  "type": "text",
-                                  "id": "cLjHN",
-                                  "name": "m",
-                                  "fill": "$text-muted",
-                                  "content": "評分排序 · 15 部",
-                                  "lineHeight": "$Type/Label/Line",
-                                  "fontFamily": "$Type/Family/Mono",
-                                  "fontSize": "$Type/Label/Size",
-                                  "fontWeight": "normal"
+                                  "type": "frame",
+                                  "id": "KFZIK",
+                                  "name": "col",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": "$Space/2xs",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "P4hWw1",
+                                      "name": "t",
+                                      "fill": "$text-primary",
+                                      "content": "高分動畫",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "600"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "cLjHN",
+                                      "name": "m",
+                                      "fill": "$text-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "電影 · 評分（高→低） · 15 部 · 類型 16",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
                                 }
                               ]
                             },
                             {
                               "type": "frame",
-                              "id": "b5MrQa",
-                              "name": "switch",
-                              "width": 36,
-                              "height": 20,
-                              "fill": "$accent-primary",
-                              "cornerRadius": "$radius-pill",
-                              "padding": [
-                                "$Space/none",
-                                "$Space/2xs"
-                              ],
+                              "id": "yhrXr",
+                              "name": "ops",
+                              "width": "fill_container",
+                              "gap": "$Space/xs",
                               "justifyContent": "end",
-                              "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "ellipse",
-                                  "id": "e6XXIE",
-                                  "name": "knob",
-                                  "fill": "$text-on-accent",
-                                  "width": 16,
-                                  "height": 16
+                                  "type": "frame",
+                                  "id": "QVl5s",
+                                  "name": "act-arrow-up",
+                                  "width": 44,
+                                  "height": 44,
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-md",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "G7EbAC",
+                                      "name": "i",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "arrow-up",
+                                      "library": "lucide",
+                                      "fill": "$text-secondary"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "z5XTu",
+                                  "name": "act-arrow-down",
+                                  "width": 44,
+                                  "height": 44,
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-md",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "eyeAW",
+                                      "name": "i",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "arrow-down",
+                                      "library": "lucide",
+                                      "fill": "$text-secondary"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "a6QoAf",
+                                  "name": "act-pencil",
+                                  "width": 44,
+                                  "height": 44,
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-md",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "Qcnrs",
+                                      "name": "i",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "pencil",
+                                      "library": "lucide",
+                                      "fill": "$text-secondary"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "g4jua",
+                                  "name": "act-trash-2",
+                                  "width": 44,
+                                  "height": 44,
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-md",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "XY23O",
+                                      "name": "i",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "trash-2",
+                                      "library": "lucide",
+                                      "fill": "$text-secondary"
+                                    }
+                                  ]
                                 }
                               ]
                             }
@@ -84669,84 +85057,163 @@
                           "stroke": "$border-subtle",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
+                          "layout": "vertical",
                           "gap": "$Space/md",
                           "padding": "$Space/lg",
-                          "alignItems": "center",
                           "children": [
                             {
-                              "type": "icon",
-                              "id": "PCro7",
-                              "name": "grip",
-                              "width": 14,
-                              "height": 14,
-                              "icon": "grip-vertical",
-                              "library": "lucide",
-                              "fill": "$text-muted"
-                            },
-                            {
-                              "type": "icon",
-                              "id": "ESLP1",
-                              "name": "type",
-                              "width": 16,
-                              "height": 16,
-                              "icon": "tv",
-                              "library": "lucide",
-                              "fill": "$text-secondary"
-                            },
-                            {
                               "type": "frame",
-                              "id": "NjWbW",
-                              "name": "col",
+                              "id": "P29Cv",
+                              "name": "top",
                               "width": "fill_container",
-                              "layout": "vertical",
-                              "gap": "$Space/2xs",
+                              "gap": "$Space/md",
+                              "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "text",
-                                  "id": "CfcD0",
-                                  "name": "t",
-                                  "fill": "$text-primary",
-                                  "content": "熱門影集",
-                                  "lineHeight": "$Type/Body/Line",
-                                  "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Body/Size",
-                                  "fontWeight": "600"
+                                  "type": "icon",
+                                  "id": "ESLP1",
+                                  "name": "type",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "tv",
+                                  "library": "lucide",
+                                  "fill": "$text-secondary"
                                 },
                                 {
-                                  "type": "text",
-                                  "id": "ZIRdw",
-                                  "name": "m",
-                                  "fill": "$text-muted",
-                                  "content": "人氣排序 · 20 部",
-                                  "lineHeight": "$Type/Label/Line",
-                                  "fontFamily": "$Type/Family/Mono",
-                                  "fontSize": "$Type/Label/Size",
-                                  "fontWeight": "normal"
+                                  "type": "frame",
+                                  "id": "NjWbW",
+                                  "name": "col",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": "$Space/2xs",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "CfcD0",
+                                      "name": "t",
+                                      "fill": "$text-primary",
+                                      "content": "熱門影集",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "600"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "ZIRdw",
+                                      "name": "m",
+                                      "fill": "$text-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "影集 · 熱門度（高→低） · 20 部 · zh-TW · 地區 TW",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
                                 }
                               ]
                             },
                             {
                               "type": "frame",
-                              "id": "L22sG2",
-                              "name": "switch",
-                              "width": 36,
-                              "height": 20,
-                              "fill": "$accent-primary",
-                              "cornerRadius": "$radius-pill",
-                              "padding": [
-                                "$Space/none",
-                                "$Space/2xs"
-                              ],
+                              "id": "DK8kB",
+                              "name": "ops",
+                              "width": "fill_container",
+                              "gap": "$Space/xs",
                               "justifyContent": "end",
-                              "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "ellipse",
-                                  "id": "A1RHc",
-                                  "name": "knob",
-                                  "fill": "$text-on-accent",
-                                  "width": 16,
-                                  "height": 16
+                                  "type": "frame",
+                                  "id": "xfiex",
+                                  "name": "act-arrow-up",
+                                  "width": 44,
+                                  "height": 44,
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-md",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "xZLtp",
+                                      "name": "i",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "arrow-up",
+                                      "library": "lucide",
+                                      "fill": "$text-secondary"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "AQoyu",
+                                  "name": "act-arrow-down",
+                                  "width": 44,
+                                  "height": 44,
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-md",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "wAFwF",
+                                      "name": "i",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "arrow-down",
+                                      "library": "lucide",
+                                      "fill": "$text-secondary"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "C0sgz",
+                                  "name": "act-pencil",
+                                  "width": 44,
+                                  "height": 44,
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-md",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "GQnzA",
+                                      "name": "i",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "pencil",
+                                      "library": "lucide",
+                                      "fill": "$text-secondary"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "YT24T",
+                                  "name": "act-trash-2",
+                                  "width": 44,
+                                  "height": 44,
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-md",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "S0R8m",
+                                      "name": "i",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "trash-2",
+                                      "library": "lucide",
+                                      "fill": "$text-secondary"
+                                    }
+                                  ]
                                 }
                               ]
                             }
@@ -84762,83 +85229,164 @@
                           "stroke": "$border-subtle",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
+                          "layout": "vertical",
                           "gap": "$Space/md",
                           "padding": "$Space/lg",
-                          "alignItems": "center",
                           "children": [
                             {
-                              "type": "icon",
-                              "id": "oFxjL",
-                              "name": "grip",
-                              "width": 14,
-                              "height": 14,
-                              "icon": "grip-vertical",
-                              "library": "lucide",
-                              "fill": "$text-muted"
-                            },
-                            {
-                              "type": "icon",
-                              "id": "ZRBph",
-                              "name": "type",
-                              "width": 16,
-                              "height": 16,
-                              "icon": "tv",
-                              "library": "lucide",
-                              "fill": "$text-secondary"
-                            },
-                            {
                               "type": "frame",
-                              "id": "F3irr",
-                              "name": "col",
+                              "id": "J3q1eF",
+                              "name": "top",
                               "width": "fill_container",
-                              "layout": "vertical",
-                              "gap": "$Space/2xs",
+                              "gap": "$Space/md",
+                              "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "text",
-                                  "id": "yZBli",
-                                  "name": "t",
-                                  "fill": "$text-muted",
-                                  "content": "本週新上架",
-                                  "lineHeight": "$Type/Body/Line",
-                                  "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Body/Size",
-                                  "fontWeight": "600"
+                                  "type": "icon",
+                                  "id": "ZRBph",
+                                  "name": "type",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "tv",
+                                  "library": "lucide",
+                                  "fill": "$text-secondary"
                                 },
                                 {
-                                  "type": "text",
-                                  "id": "q6Ggs",
-                                  "name": "m",
-                                  "fill": "$text-muted",
-                                  "content": "首播日期 · 12 部",
-                                  "lineHeight": "$Type/Label/Line",
-                                  "fontFamily": "$Type/Family/Mono",
-                                  "fontSize": "$Type/Label/Size",
-                                  "fontWeight": "normal"
+                                  "type": "frame",
+                                  "id": "F3irr",
+                                  "name": "col",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": "$Space/2xs",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "yZBli",
+                                      "name": "t",
+                                      "fill": "$text-primary",
+                                      "content": "本週新上架",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "600"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "q6Ggs",
+                                      "name": "m",
+                                      "fill": "$text-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "影集 · 首播日期（新→舊） · 12 部",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
                                 }
                               ]
                             },
                             {
                               "type": "frame",
-                              "id": "q9RRV6",
-                              "name": "switch",
-                              "width": 36,
-                              "height": 20,
-                              "fill": "$bg-tertiary",
-                              "cornerRadius": "$radius-pill",
-                              "padding": [
-                                "$Space/none",
-                                "$Space/2xs"
-                              ],
-                              "alignItems": "center",
+                              "id": "Qriqk",
+                              "name": "ops",
+                              "width": "fill_container",
+                              "gap": "$Space/xs",
+                              "justifyContent": "end",
                               "children": [
                                 {
-                                  "type": "ellipse",
-                                  "id": "m4Yea5",
-                                  "name": "knob",
-                                  "fill": "$text-muted",
-                                  "width": 16,
-                                  "height": 16
+                                  "type": "frame",
+                                  "id": "nTY58",
+                                  "name": "act-arrow-up",
+                                  "width": 44,
+                                  "height": 44,
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-md",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "emAxF",
+                                      "name": "i",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "arrow-up",
+                                      "library": "lucide",
+                                      "fill": "$text-secondary"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "AZmaZ",
+                                  "name": "act-arrow-down",
+                                  "opacity": 0.3,
+                                  "width": 44,
+                                  "height": 44,
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-md",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "h9CQ3",
+                                      "name": "i",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "arrow-down",
+                                      "library": "lucide",
+                                      "fill": "$text-secondary"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "LcQAW",
+                                  "name": "act-pencil",
+                                  "width": 44,
+                                  "height": 44,
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-md",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "sVwjb",
+                                      "name": "i",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "pencil",
+                                      "library": "lucide",
+                                      "fill": "$text-secondary"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "G0kJjG",
+                                  "name": "act-trash-2",
+                                  "width": 44,
+                                  "height": 44,
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-md",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "SAonv",
+                                      "name": "i",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "trash-2",
+                                      "library": "lucide",
+                                      "fill": "$text-secondary"
+                                    }
+                                  ]
                                 }
                               ]
                             }
@@ -92294,6 +92842,21 @@
               "textGrowth": "fixed-width",
               "width": 880,
               "content": "快取：『清除 30 天前』按第一次後出現一條硃砂說明，講清楚會刪什麼、不會刪什麼，再按一次才清。日誌：每列 箭頭→等級→時間→訊息→[來源]（手機兩行：等級＋時間＋來源 / 訊息）。有篩選時計數寫『符合條件 N 筆』（後端沒有未篩選的總數）。篩到沒東西＝圖示＋一句說明目前的篩選＋清除篩選；日誌本來就空＝『還沒有日誌記錄』、沒有按鈕。『清除 30 天前』跟篩選無關，篩到沒東西時也在。手機的清除鈕與搜尋框都是 44 高。",
+              "lineHeight": "$Type/Label/Line",
+              "fontFamily": "$Type/Family/Primary",
+              "fontSize": "$Type/Label/Size",
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "D5Nlu",
+              "x": 18020,
+              "y": 21050,
+              "name": "spec-note-dsr-3d",
+              "fill": "$text-muted",
+              "textGrowth": "fixed-width",
+              "width": 880,
+              "content": "字幕設定：三個選項各自一張卡，選中＝金框＋淡金底＋打勾的圓（20）；範例用等寬字；選項上方保留小標與『這是口味，不是對錯』引言，程度來自環境變數時多一條靛青說明。自訂首頁：區塊用上移／下移排序（沒有拖曳）、沒有個別開關（要隱藏就刪除）；每列顯示類型圖示、名稱、電影／影集 · 排序 · N 部 · 語言 · 地區 · 類型；手機四顆鈕 44 排在第二行。類型目前顯示 TMDb ID（對照表另案）。",
               "lineHeight": "$Type/Label/Line",
               "fontFamily": "$Type/Family/Primary",
               "fontSize": "$Type/Label/Size",
