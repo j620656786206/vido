@@ -487,3 +487,40 @@ test.describe('系統日誌 @settings @dsr-3e', () => {
     await expect(page.getByTestId('logs-empty')).toHaveCount(0);
   });
 });
+
+test.describe('字幕設定 @settings @dsr-3d', () => {
+  test('[P1] phone: each option card spans the column, and the arrow keys move the choice', async ({
+    page,
+  }) => {
+    let level = 'standard';
+    await page.route('**/api/v1/subtitles/localization', async (route) => {
+      if (route.request().method() === 'PUT') {
+        level = (JSON.parse(route.request().postData() ?? '{}') as { level: string }).level;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: { level, source: 'settings', levels: ['literal', 'standard', 'ott'] },
+        }),
+      });
+    });
+    await page.setViewportSize(PHONE);
+    await page.goto('/settings/subtitle');
+    const standard = page.getByTestId('localization-option-standard');
+    await expect(standard).toBeVisible({ timeout: 15000 });
+    const form = (await page.getByTestId('localization-form').boundingBox())!;
+    for (const id of ['literal', 'standard', 'ott']) {
+      const box = (await page.getByTestId(`localization-option-${id}`).boundingBox())!;
+      expect(Math.round(box.width)).toBe(Math.round(form.width));
+    }
+    await page.getByRole('radio', { name: /台灣用語/ }).focus();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.getByTestId('localization-option-ott')).toHaveAttribute(
+      'data-selected',
+      'true'
+    );
+    await expect(page.getByRole('radio', { name: /OTT 風格/ })).toBeFocused();
+  });
+});

@@ -1,6 +1,7 @@
 // Design ref: ux-design.pen Screen C13-D (nwn6a) · C13-M (Ytjrj)
 import { useState } from 'react';
 import { FileDown, Loader2, Download, Check, XCircle } from 'lucide-react';
+import { RadioDot } from '../ui/RadioDot';
 import { useExport } from '../../hooks/useBackups';
 import { backupService } from '../../services/backupService';
 
@@ -69,8 +70,8 @@ export function MetadataExport() {
               data-testid={`export-format-${opt.value}`}
             >
               {/* The native radio stays (keyboard, arrow keys, form semantics) and
-                  is only visually hidden; the drawn 18px dot (C13 W36o90) follows
-                  it through `peer-*`. dsr-3d's C9 radio should reuse this shape. */}
+                  is only visually hidden; RadioDot draws it and follows it
+                  through `peer-*` (shared with the subtitle levels, dsr-3d). */}
               <input
                 type="radio"
                 name="exportFormat"
@@ -79,13 +80,7 @@ export function MetadataExport() {
                 onChange={() => setFormat(opt.value)}
                 className="peer sr-only"
               />
-              <span
-                aria-hidden="true"
-                className="flex size-[18px] shrink-0 items-center justify-center rounded-full border-2 border-[var(--border-subtle)] text-[var(--text-on-accent)] peer-checked:border-[var(--accent-primary)] peer-checked:bg-[var(--accent-primary)] peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--focus-ring)] peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-[var(--bg-secondary)] [&>svg]:hidden peer-checked:[&>svg]:block"
-                data-testid={`export-radio-dot-${opt.value}`}
-              >
-                <Check className="size-2.5" strokeWidth={3} />
-              </span>
+              <RadioDot data-testid={`export-radio-dot-${opt.value}`} />
               <div>
                 <span className="text-sm font-semibold text-[var(--text-primary)]">
                   {opt.label}

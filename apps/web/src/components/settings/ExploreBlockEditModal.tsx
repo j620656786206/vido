@@ -7,30 +7,11 @@ import { cloneElement, useEffect, useId, useState } from 'react';
 import { X } from 'lucide-react';
 import { useCreateExploreBlock, useUpdateExploreBlock } from '../../hooks/useExploreBlocks';
 import type { ExploreBlock, ExploreBlockContentType } from '../../services/exploreBlockService';
+import { getSortOptions } from './exploreBlockSort';
 
 interface ExploreBlockEditModalProps {
   block?: ExploreBlock; // undefined = create mode
   onClose: () => void;
-}
-
-const SHARED_SORT_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: 'popularity.desc', label: '熱門度（高→低）' },
-  { value: 'vote_average.desc', label: '評分（高→低）' },
-];
-
-const MOVIE_SORT_OPTIONS: Array<{ value: string; label: string }> = [
-  ...SHARED_SORT_OPTIONS,
-  { value: 'primary_release_date.desc', label: '發行日期（新→舊）' },
-  { value: 'revenue.desc', label: '票房（高→低）' },
-];
-
-const TV_SORT_OPTIONS: Array<{ value: string; label: string }> = [
-  ...SHARED_SORT_OPTIONS,
-  { value: 'first_air_date.desc', label: '首播日期（新→舊）' },
-];
-
-function getSortOptions(ct: ExploreBlockContentType) {
-  return ct === 'tv' ? TV_SORT_OPTIONS : MOVIE_SORT_OPTIONS;
 }
 
 export function ExploreBlockEditModal({ block, onClose }: ExploreBlockEditModalProps) {

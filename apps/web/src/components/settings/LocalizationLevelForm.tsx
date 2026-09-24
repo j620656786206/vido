@@ -11,7 +11,8 @@
  * Honest about precedence like ApiKeysForm: a level that came from the
  * SUBTITLE_LOCALIZATION_LEVEL env var says so, and saving here overrides it.
  */
-import { AlertTriangle, Check, Loader2 } from 'lucide-react';
+import { AlertTriangle, Loader2 } from 'lucide-react';
+import { RadioDot } from '../ui/RadioDot';
 import { cn } from '../../lib/utils';
 import {
   useSaveSubtitleLocalization,
@@ -82,8 +83,17 @@ export function LocalizationLevelForm() {
         </div>
       )}
 
-      <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/50 p-6">
-        <fieldset disabled={save.isPending}>
+      {/* No outer card (C9): the three options are the cards. The legend and
+          the「這是口味，不是對錯」line stay — they are the only words on this
+          page saying there is no right answer (C9 now draws them too). The
+          promise「已經翻好的不會動」was checked against the pipeline (dsr-3d
+          Task 1): the level is read once per item when it starts and rides the
+          segment-cache key; saving only writes the setting. */}
+      <div data-testid="localization-form">
+        {/* Not `disabled` while saving: that blurred the radio the user had
+            just moved to with the arrow keys, dropping keyboard focus on
+            <body> (dsr-3d e2e). Changes are ignored until the save lands. */}
+        <fieldset aria-busy={save.isPending || undefined}>
           <legend className="mb-1 text-base font-semibold text-[var(--text-primary)]">
             AI 字幕的在地化程度
           </legend>
@@ -100,7 +110,7 @@ export function LocalizationLevelForm() {
             </p>
           )}
 
-          <div className="flex flex-col gap-2" role="radiogroup" aria-label="在地化程度">
+          <div className="flex flex-col gap-3" role="radiogroup" aria-label="在地化程度">
             {LEVEL_SPECS.map((spec) => {
               const checked = spec.id === current;
               return (
@@ -111,36 +121,43 @@ export function LocalizationLevelForm() {
                   className={cn(
                     // Grid, not nested flex: jsx-a11y only looks two levels
                     // deep for a label's text, so every text span is a DIRECT
-                    // child of the label and the radio sits in column one.
-                    'grid cursor-pointer grid-cols-[auto_1fr] gap-x-3 rounded-[var(--radius-sm)] border px-3 py-3 transition-colors',
+                    // child of the label and the drawn radio sits in column one.
+                    'grid cursor-pointer grid-cols-[auto_1fr] gap-x-3 rounded-[var(--radius-lg)] border p-4 transition-colors',
                     checked
-                      ? 'border-[var(--accent-primary)] bg-[var(--bg-tertiary)]'
-                      : 'border-transparent hover:bg-[var(--bg-tertiary)]',
+                      ? 'border-[var(--accent-primary)] bg-[var(--accent-subtle)]'
+                      : 'border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)]',
                     save.isPending && 'cursor-not-allowed opacity-60'
                   )}
                 >
+                  {/* The native radio does the work (arrow keys, the name group);
+                      RadioDot, right after it, draws it via peer-*. */}
                   <input
                     type="radio"
                     name="subtitle-localization-level"
                     value={spec.id}
                     checked={checked}
-                    onChange={() => save.mutate(spec.id)}
-                    className="col-start-1 row-start-1 mt-1 h-4 w-4 shrink-0 accent-[var(--accent-primary)] disabled:cursor-not-allowed"
+                    onChange={() => {
+                      if (!save.isPending) save.mutate(spec.id);
+                    }}
+                    className="peer sr-only"
                   />
-                  <span className="col-start-2 row-start-1 flex items-center gap-2 text-sm font-medium text-[var(--text-primary)]">
-                    {spec.label}
-                    {checked && data?.source === 'settings' && (
-                      <Check
-                        className="h-3.5 w-3.5 text-[var(--success-text)]"
-                        aria-hidden="true"
-                      />
+                  <RadioDot className="col-start-1 row-start-1" />
+                  <span
+                    className={cn(
+                      'col-start-2 row-start-1 text-sm font-semibold',
+                      checked ? 'text-[var(--accent-text)]' : 'text-[var(--text-primary)]'
                     )}
+                  >
+                    {spec.label}
                   </span>
-                  <span className="col-start-2 row-start-2 mt-0.5 text-sm text-[var(--text-secondary)]">
+                  <span className="col-start-2 row-start-2 mt-1 text-xs text-[var(--text-secondary)]">
                     {spec.description}
                   </span>
-                  <span className="col-start-2 row-start-3 mt-1 text-xs text-[var(--text-muted)]">
-                    例：{spec.example}
+                  <span className="col-start-2 row-start-3 mt-1 font-mono text-xs text-[var(--text-muted)]">
+                    {/* C9 shows the example bare; a screen reader still hears
+                        that it is one. */}
+                    <span className="sr-only">例：</span>
+                    {spec.example}
                   </span>
                 </label>
               );

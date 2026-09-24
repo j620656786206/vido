@@ -542,13 +542,17 @@ test.describe('Settings — Explore Blocks Management @ui @explore-blocks @story
     await expect(page.getByTestId('explore-blocks-settings')).toBeVisible();
     await expect(page.getByText(/🎬|📺/)).toHaveCount(0);
 
+    // dsr-3d: the icon sits in its own 18px column beside the name (C10
+    // XmC7a); the description line keeps 電影／影集 as plain text.
     const movieMeta = page.getByTestId('explore-block-row-b-movies').locator('p').first();
     await expect(movieMeta).toContainText('電影 ·');
-    await expect(movieMeta.locator('svg')).toHaveCount(1);
+    await expect(movieMeta.locator('svg')).toHaveCount(0);
+    await expect(page.getByTestId('explore-block-type-icon-b-movies')).toHaveCount(1);
 
     const tvMeta = page.getByTestId('explore-block-row-b-tv').locator('p').first();
     await expect(tvMeta).toContainText('影集 ·');
-    await expect(tvMeta.locator('svg')).toHaveCount(1);
+    await expect(tvMeta.locator('svg')).toHaveCount(0);
+    await expect(page.getByTestId('explore-block-type-icon-b-tv')).toHaveCount(1);
   });
 });
 
