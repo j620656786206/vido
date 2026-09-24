@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { GENRE_MAP, getGenreNames } from './genres';
+import { GENRE_MAP, genreNamesFor, getGenreNames } from './genres';
 
 describe('genres utilities', () => {
   describe('GENRE_MAP', () => {
@@ -67,6 +67,23 @@ describe('genres utilities', () => {
       const result = getGenreNames([99999, 28, 88888, 16, 77777, 14], 3);
       // Slices first 3 from [99999, 28, 88888], then filters
       expect(result).toEqual(['動作']);
+    });
+  });
+
+  describe('genreNamesFor', () => {
+    it('offers the stored zh-TW names, never English keys', () => {
+      const movie = genreNamesFor('movie');
+      expect(movie).toContain('劇情');
+      expect(movie).toContain('電視電影');
+      expect(movie).not.toContain('脫口秀');
+      expect(movie.every((g) => /^[\u4e00-\u9fff]+$/.test(g))).toBe(true);
+    });
+
+    it('offers TV genres for a series', () => {
+      const tv = genreNamesFor('series');
+      expect(tv).toContain('脫口秀');
+      expect(tv).toContain('劇情');
+      expect(tv).not.toContain('電視電影');
     });
   });
 });

@@ -1,91 +1,78 @@
 /**
- * CastEditor Tests (Story 3.8 - AC1)
+ * CastEditor — 修改資訊 演員 chips (poster-upload-a AC #4)
  */
-
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CastEditor } from './CastEditor';
 
+function setup(cast: string[]) {
+  const onChange = vi.fn();
+  render(
+    <>
+      <span id="lbl">演員</span>
+      <CastEditor labelId="lbl" cast={cast} onChange={onChange} />
+    </>
+  );
+  return onChange;
+}
+
 describe('CastEditor', () => {
-  const defaultProps = {
-    cast: [],
-    onAdd: vi.fn(),
-    onRemove: vi.fn(),
-  };
-
-  it('renders empty state', () => {
-    render(<CastEditor {...defaultProps} />);
-    expect(screen.getByTestId('cast-input')).toBeTruthy();
-    expect(screen.getByTestId('cast-list').children.length).toBe(0);
+  it('names the chip group by the field label', () => {
+    setup(['花江夏樹']);
+    expect(
+      within(screen.getByRole('group', { name: '演員' })).getByText('花江夏樹')
+    ).toBeInTheDocument();
   });
 
-  it('renders cast members', () => {
-    render(<CastEditor {...defaultProps} cast={['演員一', '演員二', '演員三']} />);
-
-    expect(screen.getByText('演員一')).toBeTruthy();
-    expect(screen.getByText('演員二')).toBeTruthy();
-    expect(screen.getByText('演員三')).toBeTruthy();
+  it('removes an actor with its ×', async () => {
+    const onChange = setup(['花江夏樹', '鬼頭明里']);
+    await userEvent.click(screen.getByRole('button', { name: '移除演員：花江夏樹' }));
+    expect(onChange).toHaveBeenCalledWith(['鬼頭明里']);
   });
 
-  it('renders custom label', () => {
-    render(<CastEditor {...defaultProps} label="卡司" />);
-    expect(screen.getByText('卡司')).toBeTruthy();
+  it('＋ 演員 opens a box; Enter adds a trimmed new name', async () => {
+    const user = userEvent.setup();
+    const onChange = setup(['花江夏樹']);
+    await user.click(screen.getByRole('button', { name: '演員' }));
+    const box = screen.getByRole('textbox', { name: '新增演員' });
+    expect(box).toHaveFocus();
+    await user.type(box, '  下野紘 {Enter}');
+    expect(onChange).toHaveBeenCalledWith(['花江夏樹', '下野紘']);
   });
 
-  it('adds cast member on Enter', async () => {
-    const onAdd = vi.fn();
-    render(<CastEditor {...defaultProps} onAdd={onAdd} />);
-
-    const input = screen.getByTestId('cast-input');
-    await userEvent.type(input, '新演員{enter}');
-
-    expect(onAdd).toHaveBeenCalledWith('新演員');
+  it('ignores blanks and repeats', async () => {
+    const user = userEvent.setup();
+    const onChange = setup(['花江夏樹']);
+    await user.click(screen.getByRole('button', { name: '演員' }));
+    await user.type(screen.getByRole('textbox', { name: '新增演員' }), '   {Enter}花江夏樹{Enter}');
+    expect(onChange).not.toHaveBeenCalled();
   });
 
-  it('clears input after adding', async () => {
-    const onAdd = vi.fn();
-    render(<CastEditor {...defaultProps} onAdd={onAdd} />);
-
-    const input = screen.getByTestId('cast-input') as HTMLInputElement;
-    await userEvent.type(input, '新演員{enter}');
-
-    expect(input.value).toBe('');
+  it('Esc closes the box without adding', async () => {
+    const user = userEvent.setup();
+    const onChange = setup([]);
+    await user.click(screen.getByRole('button', { name: '演員' }));
+    await user.type(screen.getByRole('textbox', { name: '新增演員' }), '下野紘{Escape}');
+    expect(screen.queryByRole('textbox', { name: '新增演員' })).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
   });
 
-  it('does not add empty name', async () => {
-    const onAdd = vi.fn();
-    render(<CastEditor {...defaultProps} onAdd={onAdd} />);
-
-    const input = screen.getByTestId('cast-input');
-    await userEvent.type(input, '   {enter}');
-
-    expect(onAdd).not.toHaveBeenCalled();
+  it('leaving the box keeps what was typed (a click elsewhere is not a cancel)', async () => {
+    const user = userEvent.setup();
+    const onChange = setup([]);
+    await user.click(screen.getByRole('button', { name: '演員' }));
+    await user.type(screen.getByRole('textbox', { name: '新增演員' }), '下野紘');
+    await user.tab();
+    expect(onChange).toHaveBeenCalledWith(['下野紘']);
   });
 
-  it('does not add duplicate', async () => {
-    const onAdd = vi.fn();
-    render(<CastEditor {...defaultProps} onAdd={onAdd} cast={['已存在']} />);
-
-    const input = screen.getByTestId('cast-input');
-    await userEvent.type(input, '已存在{enter}');
-
-    expect(onAdd).not.toHaveBeenCalled();
-  });
-
-  it('removes cast member on X click', async () => {
-    const onRemove = vi.fn();
-    render(<CastEditor {...defaultProps} onRemove={onRemove} cast={['演員一']} />);
-
-    const removeButton = screen.getByLabelText('移除 演員一');
-    await userEvent.click(removeButton);
-
-    expect(onRemove).toHaveBeenCalledWith('演員一');
-  });
-
-  it('renders custom placeholder', () => {
-    render(<CastEditor {...defaultProps} placeholder="輸入名字" />);
-
-    expect(screen.getByPlaceholderText('輸入名字')).toBeTruthy();
+  it('Esc really cancels — nothing is added when the box then loses focus', async () => {
+    const user = userEvent.setup();
+    const onChange = setup([]);
+    await user.click(screen.getByRole('button', { name: '演員' }));
+    await user.type(screen.getByRole('textbox', { name: '新增演員' }), '下野紘{Escape}');
+    await user.tab();
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

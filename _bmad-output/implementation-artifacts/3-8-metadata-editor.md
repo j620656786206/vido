@@ -515,3 +515,7 @@ Claude Opus 4.5 (claude-opus-4-5-20251101)
 ## ↪ AC drift（2026-09-24，bugfix-custom-posters-served-and-not-cache）
 
 AC3 自訂海報：上傳契約不變（DB 存 `/posters/<id>.jpg`，不是本張原寫的 `.webp`），但原本沒有人服務這些檔案、前端也拼錯網址。現在 `GET /api/v1/posters/:file` 提供檔案，前端 `getImageUrl` 認得 `/posters/`。產品 UI 仍沒有上傳入口 → `disc-2026-09-poster-upload-no-ui-entry`。
+
+## ↪ AC drift（2026-09-24，poster-upload-a-metadata-editor-dialog-v2）
+
+AC1 的編輯表單照 B′13 重做：「海報（上傳或網址）」欄暫時拿掉（由 `poster-upload-b-poster-field` 的「改用圖片網址」補回）；類型從 18 個英文 key 的 toggle 改成中文名稱的 chip＋選單——原本每存一次就把「劇情」寫成「drama」。

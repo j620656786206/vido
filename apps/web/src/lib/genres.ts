@@ -36,3 +36,20 @@ export function getGenreNames(genreIds: number[], limit = 3): string[] {
     .map((id) => GENRE_MAP[id])
     .filter(Boolean);
 }
+
+// TMDb's genre ids per media type (GET /genre/movie/list, /genre/tv/list).
+const MOVIE_GENRE_IDS = [
+  28, 12, 16, 35, 80, 99, 18, 10751, 14, 36, 27, 10402, 9648, 10749, 878, 10770, 53, 10752, 37,
+];
+const TV_GENRE_IDS = [
+  10759, 16, 35, 80, 99, 18, 10751, 10762, 9648, 10763, 10764, 10765, 10766, 10767, 10768, 37,
+];
+
+/**
+ * The genre names a hand edit can pick from. These are the SAME strings the
+ * library stores (enrichment writes TMDb's zh-TW `genre.name`), so an edit
+ * round-trips — the old editor offered English keys and saved 「drama」 over 「劇情」.
+ */
+export function genreNamesFor(mediaType: 'movie' | 'series'): string[] {
+  return (mediaType === 'movie' ? MOVIE_GENRE_IDS : TV_GENRE_IDS).map((id) => GENRE_MAP[id]);
+}

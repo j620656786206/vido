@@ -9,8 +9,8 @@ export type {
   MediaMetadata,
 } from './MetadataEditorDialog';
 
-export { GenreSelector, GENRE_OPTIONS } from './GenreSelector';
-export type { GenreSelectorProps, GenreOption } from './GenreSelector';
+export { GenreSelector } from './GenreSelector';
+export type { GenreSelectorProps } from './GenreSelector';
 
 export { CastEditor } from './CastEditor';
 export type { CastEditorProps } from './CastEditor';

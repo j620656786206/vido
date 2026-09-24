@@ -1,30 +1,41 @@
 // Time-bomb-exempt: new Date().getFullYear() is a fallback default for the year field; gallery fixture always passes initialData.year so the path is unreachable in baseline render (Sally)
-// Design ref: ux-design.pen — no current screen frame; the 修改資訊 dialog has never
-// been drawn (searched 「編輯媒體資訊」 2026-09-16). Its old reference pointed at the
-// deleted v1 detail panel (RgSxQ). Design gap: disc-2026-09-metadata-editor-no-design.
+// Design ref: ux-design.pen Screen B13p-D 修改資訊 (AFuPx)
+// Design ref: ux-design.pen Screen B13p-M 修改資訊 (oktn2)
 /**
- * MetadataEditorDialog Component (Story 3.8 - AC1, AC4)
- * Dialog for manually editing metadata of movies and series
+ * MetadataEditorDialog — 修改資訊 (Story 3.8 AC1/AC4; rebuilt by poster-upload-a).
+ *
+ * One component, two looks (ui/mobileSheet): a centred 760px dialog from `sm:`,
+ * a bottom sheet with a pinned footer below. The left column shows the current
+ * poster read-only; changing it is poster-upload-b.
  */
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { X, Loader2, Save } from 'lucide-react';
+import { ImageIcon, Loader2, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { getImageUrl } from '../../lib/image';
+import { genreNamesFor } from '../../lib/genres';
 import { useUpdateMetadata } from '../../hooks/useMetadataEditor';
+import { Dialog, DialogClose, DialogContent, DialogTitle } from '../ui/Dialog';
+import { MOBILE_SHEET_CONTENT, SheetGrabber } from '../ui/mobileSheet';
+import { GenreSelector } from './GenreSelector';
+import { CastEditor } from './CastEditor';
 
-// Validation schema following story requirements (AC4)
 const metadataSchema = z.object({
-  title: z.string().min(1, '標題為必填'),
+  title: z.string().min(1, '片名為必填'),
   titleEnglish: z.string().optional(),
-  year: z.number().min(1900, '年份必須大於 1900').max(2100, '年份必須小於 2100'),
+  // A cleared number input is NaN; without its own message zod says
+  // "Expected number, received nan".
+  year: z
+    .number({ invalid_type_error: '請輸入年份' })
+    .min(1900, '年份必須大於 1900')
+    .max(2100, '年份必須小於 2100'),
   genres: z.array(z.string()),
   director: z.string().optional(),
   cast: z.array(z.string()),
   overview: z.string().optional(),
-  posterUrl: z.string().optional(),
 });
 
 export type MetadataFormData = z.infer<typeof metadataSchema>;
@@ -39,6 +50,7 @@ export interface MediaMetadata {
   director?: string;
   cast?: string[];
   overview?: string;
+  /** The stored poster path (TMDb path, `/posters/…` upload, or an absolute URL). */
   posterUrl?: string;
 }
 
@@ -51,27 +63,23 @@ export interface MetadataEditorDialogProps {
   onSuccess: () => void;
 }
 
-// Genre options following project conventions
-const GENRE_OPTIONS = [
-  { value: 'action', label: '動作' },
-  { value: 'adventure', label: '冒險' },
-  { value: 'animation', label: '動畫' },
-  { value: 'comedy', label: '喜劇' },
-  { value: 'crime', label: '犯罪' },
-  { value: 'documentary', label: '紀錄片' },
-  { value: 'drama', label: '劇情' },
-  { value: 'family', label: '家庭' },
-  { value: 'fantasy', label: '奇幻' },
-  { value: 'history', label: '歷史' },
-  { value: 'horror', label: '恐怖' },
-  { value: 'music', label: '音樂' },
-  { value: 'mystery', label: '懸疑' },
-  { value: 'romance', label: '愛情' },
-  { value: 'sci-fi', label: '科幻' },
-  { value: 'thriller', label: '驚悚' },
-  { value: 'war', label: '戰爭' },
-  { value: 'western', label: '西部' },
-];
+const FORM_ID = 'metadata-editor-form';
+
+const INPUT =
+  'h-11 w-full rounded-[var(--radius-md)] border bg-[var(--bg-secondary)] px-3 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-colors focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] sm:h-9';
+const LABEL = 'mb-1 block text-xs text-[var(--text-secondary)]';
+
+function toFormValues(data: MediaMetadata): MetadataFormData {
+  return {
+    title: data.title || '',
+    titleEnglish: data.titleEnglish || '',
+    year: data.year || new Date().getFullYear(),
+    genres: data.genres || [],
+    director: data.director || '',
+    cast: data.cast || [],
+    overview: data.overview || '',
+  };
+}
 
 export function MetadataEditorDialog({
   isOpen,
@@ -81,437 +89,293 @@ export function MetadataEditorDialog({
   initialData,
   onSuccess,
 }: MetadataEditorDialogProps) {
-  const updateMutation = useUpdateMetadata();
+  // Radix returns focus to a DialogTrigger; 修改資訊 is a plain button on the
+  // detail page, so remember what had focus and go back to it.
+  const openerRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (isOpen && document.activeElement instanceof HTMLElement) {
+      openerRef.current = document.activeElement;
+    }
+  }, [isOpen]);
 
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        data-testid="metadata-editor-dialog"
+        aria-describedby={undefined}
+        // An edit form: a stray click on the scrim must not throw the edits away.
+        // Esc, ✕ and 取消 still close it.
+        onPointerDownOutside={(event) => event.preventDefault()}
+        onInteractOutside={(event) => event.preventDefault()}
+        // Esc in a field that uses it itself (CastEditor's add box) must not also
+        // close the dialog; Radix hears Esc on the document before React does.
+        onEscapeKeyDown={(event) => {
+          if (event.target instanceof HTMLElement && event.target.dataset.escapeLocal) {
+            event.preventDefault();
+          }
+        }}
+        // Radix would focus the first tabbable — the ✕. Start in 片名 instead: the
+        // dialog opens to be edited, and a ring on ✕ reads as "about to close".
+        onOpenAutoFocus={(event) => {
+          const title = document.getElementById('metadata-title');
+          if (title) {
+            event.preventDefault();
+            title.focus();
+          }
+        }}
+        onCloseAutoFocus={(event) => {
+          const opener = openerRef.current;
+          if (opener?.isConnected) {
+            event.preventDefault();
+            opener.focus();
+          }
+        }}
+        // ui/Dialog's own ✕ says "Close" and is 16px; the header draws a 44px 關閉.
+        closeClassName="hidden"
+        className={cn(
+          'flex max-h-[92vh] flex-col gap-0 overflow-hidden p-0',
+          MOBILE_SHEET_CONTENT,
+          'sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:max-h-[85vh] sm:w-[calc(100vw-4rem)] sm:max-w-[760px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[var(--radius-lg)] sm:border sm:border-[var(--border-subtle)]'
+        )}
+      >
+        {/* Mounted only while open, so every open starts from initialData. */}
+        <EditorBody
+          mediaId={mediaId}
+          mediaType={mediaType}
+          initialData={initialData}
+          onClose={onClose}
+          onSuccess={onSuccess}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditorBody({
+  mediaId,
+  mediaType,
+  initialData,
+  onClose,
+  onSuccess,
+}: Omit<MetadataEditorDialogProps, 'isOpen'>) {
+  const updateMutation = useUpdateMetadata();
   const {
     register,
     handleSubmit,
     formState: { errors, isDirty },
-    reset,
     watch,
     setValue,
   } = useForm<MetadataFormData>({
     resolver: zodResolver(metadataSchema),
-    defaultValues: {
-      title: initialData.title || '',
-      titleEnglish: initialData.titleEnglish || '',
-      year: initialData.year || new Date().getFullYear(),
-      genres: initialData.genres || [],
-      director: initialData.director || '',
-      cast: initialData.cast || [],
-      overview: initialData.overview || '',
-      posterUrl: initialData.posterUrl || '',
-    },
+    defaultValues: toFormValues(initialData),
   });
 
-  // Reset form when dialog opens with new data
-  useEffect(() => {
-    if (isOpen) {
-      reset({
-        title: initialData.title || '',
-        titleEnglish: initialData.titleEnglish || '',
-        year: initialData.year || new Date().getFullYear(),
-        genres: initialData.genres || [],
-        director: initialData.director || '',
-        cast: initialData.cast || [],
-        overview: initialData.overview || '',
-        posterUrl: initialData.posterUrl || '',
-      });
-    }
-  }, [isOpen, initialData, reset]);
-
-  const selectedGenres = watch('genres');
-  const castList = watch('cast');
+  const genres = watch('genres');
+  const cast = watch('cast');
+  const posterSrc = getImageUrl(initialData.posterUrl ?? null, 'w342');
+  // A poster that fails to load (TMDb down, a dead absolute URL) reads as "no
+  // poster", not as a broken-image glyph with alt text in a 184px box.
+  const [posterFailed, setPosterFailed] = useState(false);
+  const poster = posterFailed ? null : posterSrc;
 
   const onSubmit = async (data: MetadataFormData) => {
     try {
-      await updateMutation.mutateAsync({
-        id: mediaId,
-        mediaType,
-        title: data.title,
-        titleEnglish: data.titleEnglish,
-        year: data.year,
-        genres: data.genres,
-        director: data.director,
-        cast: data.cast,
-        overview: data.overview,
-        posterUrl: data.posterUrl,
-      });
-
+      await updateMutation.mutateAsync({ id: mediaId, mediaType, ...data });
       onSuccess();
       onClose();
-    } catch (err) {
-      console.error('Failed to update metadata:', err);
+    } catch {
+      // Shown in the footer from updateMutation.error.
     }
   };
-
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    },
-    [onClose]
-  );
-
-  useEffect(() => {
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'hidden';
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
-    };
-  }, [isOpen, handleKeyDown]);
-
-  const toggleGenre = (genre: string) => {
-    const current = selectedGenres || [];
-    if (current.includes(genre)) {
-      setValue(
-        'genres',
-        current.filter((g) => g !== genre),
-        { shouldDirty: true }
-      );
-    } else {
-      setValue('genres', [...current, genre], { shouldDirty: true });
-    }
-  };
-
-  const addCastMember = (name: string) => {
-    if (name.trim() && !castList?.includes(name.trim())) {
-      setValue('cast', [...(castList || []), name.trim()], { shouldDirty: true });
-    }
-  };
-
-  const removeCastMember = (name: string) => {
-    setValue(
-      'cast',
-      (castList || []).filter((c) => c !== name),
-      { shouldDirty: true }
-    );
-  };
-
-  if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="metadata-editor-title"
-    >
-      {/* Backdrop — deliberately NOT click-to-dismiss: this is an edit form
-          and an accidental backdrop click would discard unsaved changes.
-          Keyboard users close via Escape; mouse users via the 關閉 button. */}
-      {/* --overlay-scrim is the modal-backdrop token and stays DARK in both
-          themes: a paper modal on paper ground needs the same boundary a dark
-          one does. Was black/60; the token is 70%. */}
-      <div className="absolute inset-0 bg-[var(--overlay-scrim)] backdrop-blur-sm" />
-
-      {/* Dialog */}
-      <div
-        className={cn(
-          'fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2',
-          'w-[90vw] max-w-2xl max-h-[85vh]',
-          'bg-[var(--bg-primary)] rounded-xl shadow-[var(--shadow-xl)]',
-          'flex flex-col overflow-hidden'
-        )}
-        data-testid="metadata-editor-dialog"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-6 py-4">
-          <h2
-            id="metadata-editor-title"
-            className="text-xl font-semibold text-[var(--text-primary)]"
-          >
-            編輯媒體資訊
-          </h2>
-          <button
-            onClick={onClose}
-            className={cn(
-              'rounded-lg p-2 text-[var(--text-secondary)]',
-              'hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]',
-              'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]',
-              'transition-colors'
-            )}
-            aria-label="關閉"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Form */}
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="flex-1 overflow-y-auto px-6 py-4 space-y-4"
+    <>
+      <SheetGrabber />
+      <div className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--border-subtle)] pl-4 pr-2 sm:pl-6">
+        <DialogTitle className="text-base font-semibold">修改資訊</DialogTitle>
+        <DialogClose
+          aria-label="關閉"
+          className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
         >
-          {/* Title (Chinese) */}
-          <div>
-            <label
-              htmlFor="metadata-title"
-              className="block text-sm font-medium text-[var(--text-secondary)] mb-1"
-            >
-              標題（中文）<span className="text-[var(--error-text)]">*</span>
+          <X className="h-[18px] w-[18px]" aria-hidden="true" />
+        </DialogClose>
+      </div>
+
+      <form
+        id={FORM_ID}
+        // zod owns the messages (片名為必填…) — not the browser's own bubbles.
+        noValidate
+        onSubmit={handleSubmit(onSubmit)}
+        className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 sm:flex-row sm:gap-6 sm:p-6"
+      >
+        {/* Poster column (B′13 left). Read-only here; poster-upload-b adds the controls. */}
+        <section
+          aria-labelledby="metadata-poster-label"
+          data-testid="metadata-editor-poster-column"
+          className="flex shrink-0 gap-4 sm:w-[184px] sm:flex-col sm:gap-3"
+        >
+          <span
+            id="metadata-poster-label"
+            className="order-2 text-xs text-[var(--text-secondary)] sm:order-1"
+          >
+            海報
+          </span>
+          <div className="order-1 h-[156px] w-[104px] shrink-0 overflow-hidden rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] sm:order-2 sm:h-[276px] sm:w-[184px]">
+            {poster ? (
+              <img
+                src={poster}
+                alt="目前的海報"
+                onError={() => setPosterFailed(true)}
+                className="h-full w-full object-cover"
+                data-testid="metadata-editor-poster"
+              />
+            ) : (
+              <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-[var(--text-muted)]">
+                <ImageIcon className="h-6 w-6" aria-hidden="true" />
+                <span className="text-xs">還沒有海報</span>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Fields (B′13 right). DOM order is the desktop order; the phone moves
+            導演 up beside 年份 (B13p-M) with `order`. */}
+        <div className="grid min-w-0 flex-1 grid-cols-2 content-start gap-x-3 gap-y-4 sm:grid-cols-[1fr_120px]">
+          <div className="order-1 col-span-2 sm:col-span-1">
+            <label htmlFor="metadata-title" className={LABEL}>
+              片名 <span className="text-[var(--error-text)]">*</span>
             </label>
             <input
               id="metadata-title"
               type="text"
               {...register('title')}
+              aria-invalid={errors.title ? true : undefined}
+              aria-describedby={errors.title ? 'metadata-title-error' : undefined}
               className={cn(
-                'w-full px-4 py-2',
-                'bg-[var(--bg-secondary)] border rounded-lg',
-                'text-[var(--text-primary)] placeholder-[var(--text-muted)]',
-                'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
-                'transition-colors',
+                INPUT,
                 errors.title ? 'border-[var(--error)]' : 'border-[var(--border-subtle)]'
               )}
-              placeholder="輸入中文標題"
             />
             {errors.title && (
-              <p className="mt-1 text-sm text-[var(--error-text)]">{errors.title.message}</p>
+              <p id="metadata-title-error" className="mt-1 text-xs text-[var(--error-text)]">
+                {errors.title.message}
+              </p>
             )}
           </div>
 
-          {/* Title (English) */}
-          <div>
-            <label
-              htmlFor="metadata-title-english"
-              className="block text-sm font-medium text-[var(--text-secondary)] mb-1"
-            >
-              標題（英文）
-            </label>
-            <input
-              id="metadata-title-english"
-              type="text"
-              {...register('titleEnglish')}
-              className={cn(
-                'w-full px-4 py-2',
-                'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg',
-                'text-[var(--text-primary)] placeholder-[var(--text-muted)]',
-                'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
-                'transition-colors'
-              )}
-              placeholder="輸入英文標題"
-            />
-          </div>
-
-          {/* Year */}
-          <div>
-            <label
-              htmlFor="metadata-year"
-              className="block text-sm font-medium text-[var(--text-secondary)] mb-1"
-            >
-              年份 <span className="text-[var(--error-text)]">*</span>
+          <div className="order-2">
+            <label htmlFor="metadata-year" className={LABEL}>
+              年份
             </label>
             <input
               id="metadata-year"
               type="number"
               {...register('year', { valueAsNumber: true })}
-              className={cn(
-                'w-full px-4 py-2',
-                'bg-[var(--bg-secondary)] border rounded-lg',
-                'text-[var(--text-primary)] placeholder-[var(--text-muted)]',
-                'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
-                'transition-colors',
-                errors.year ? 'border-[var(--error)]' : 'border-[var(--border-subtle)]'
-              )}
-              placeholder="輸入年份"
+              aria-invalid={errors.year ? true : undefined}
+              aria-describedby={errors.year ? 'metadata-year-error' : undefined}
               min={1900}
               max={2100}
+              className={cn(
+                INPUT,
+                errors.year ? 'border-[var(--error)]' : 'border-[var(--border-subtle)]'
+              )}
             />
             {errors.year && (
-              <p className="mt-1 text-sm text-[var(--error-text)]">{errors.year.message}</p>
+              <p id="metadata-year-error" className="mt-1 text-xs text-[var(--error-text)]">
+                {errors.year.message}
+              </p>
             )}
           </div>
 
-          {/* Genres */}
-          <div>
-            <span
-              id="metadata-genres-label"
-              className="block text-sm font-medium text-[var(--text-secondary)] mb-2"
-            >
-              類型
-            </span>
-            <div
-              className="flex flex-wrap gap-2"
-              role="group"
-              aria-labelledby="metadata-genres-label"
-            >
-              {GENRE_OPTIONS.map((genre) => (
-                <button
-                  key={genre.value}
-                  type="button"
-                  onClick={() => toggleGenre(genre.value)}
-                  className={cn(
-                    'px-3 py-1.5 rounded-full text-sm font-medium transition-colors',
-                    selectedGenres?.includes(genre.value)
-                      ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
-                      : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
-                  )}
-                >
-                  {genre.label}
-                </button>
-              ))}
-            </div>
+          <div className="order-4 col-span-2 sm:order-3">
+            <label htmlFor="metadata-title-english" className={LABEL}>
+              英文片名
+            </label>
+            <input
+              id="metadata-title-english"
+              type="text"
+              {...register('titleEnglish')}
+              className={cn(INPUT, 'border-[var(--border-subtle)]')}
+            />
           </div>
 
-          {/* Director */}
-          <div>
-            <label
-              htmlFor="metadata-director"
-              className="block text-sm font-medium text-[var(--text-secondary)] mb-1"
-            >
+          <div className="order-5 col-span-2 sm:order-4">
+            <span id="metadata-genres-label" className={LABEL}>
+              類型
+            </span>
+            <GenreSelector
+              labelId="metadata-genres-label"
+              selected={genres}
+              options={genreNamesFor(mediaType)}
+              onChange={(next) => setValue('genres', next, { shouldDirty: true })}
+            />
+          </div>
+
+          <div className="order-3 sm:order-5 sm:col-span-2">
+            <label htmlFor="metadata-director" className={LABEL}>
               導演
             </label>
             <input
               id="metadata-director"
               type="text"
               {...register('director')}
-              className={cn(
-                'w-full px-4 py-2',
-                'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg',
-                'text-[var(--text-primary)] placeholder-[var(--text-muted)]',
-                'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
-                'transition-colors'
-              )}
-              placeholder="輸入導演名稱"
+              className={cn(INPUT, 'border-[var(--border-subtle)]')}
             />
           </div>
 
-          {/* Cast */}
-          <div>
-            <label
-              htmlFor="metadata-cast-input"
-              className="block text-sm font-medium text-[var(--text-secondary)] mb-1"
-            >
+          <div className="order-6 col-span-2">
+            <span id="metadata-cast-label" className={LABEL}>
               演員
-            </label>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {castList?.map((actor) => (
-                <span
-                  key={actor}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-[var(--bg-secondary)] text-[var(--text-primary)] rounded-lg text-sm"
-                >
-                  {actor}
-                  <button
-                    type="button"
-                    onClick={() => removeCastMember(actor)}
-                    aria-label={`移除 ${actor}`}
-                    className="text-[var(--text-secondary)] hover:text-[var(--error-text)] transition-colors"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-            <input
-              id="metadata-cast-input"
-              type="text"
-              placeholder="輸入演員名稱後按 Enter"
-              className={cn(
-                'w-full px-4 py-2',
-                'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg',
-                'text-[var(--text-primary)] placeholder-[var(--text-muted)]',
-                'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
-                'transition-colors'
-              )}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  const input = e.target as HTMLInputElement;
-                  addCastMember(input.value);
-                  input.value = '';
-                }
-              }}
+            </span>
+            <CastEditor
+              labelId="metadata-cast-label"
+              cast={cast}
+              onChange={(next) => setValue('cast', next, { shouldDirty: true })}
             />
           </div>
 
-          {/* Overview */}
-          <div>
-            <label
-              htmlFor="metadata-overview"
-              className="block text-sm font-medium text-[var(--text-secondary)] mb-1"
-            >
+          <div className="order-7 col-span-2">
+            <label htmlFor="metadata-overview" className={LABEL}>
               簡介
             </label>
             <textarea
               id="metadata-overview"
               {...register('overview')}
               rows={4}
-              className={cn(
-                'w-full px-4 py-2',
-                'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg',
-                'text-[var(--text-primary)] placeholder-[var(--text-muted)]',
-                'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
-                'transition-colors resize-none'
-              )}
-              placeholder="輸入媒體簡介"
+              className="w-full resize-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-colors focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
             />
-          </div>
-
-          {/* Poster URL */}
-          <div>
-            <label
-              htmlFor="metadata-poster-url"
-              className="block text-sm font-medium text-[var(--text-secondary)] mb-1"
-            >
-              海報圖片網址
-            </label>
-            <input
-              id="metadata-poster-url"
-              type="text"
-              {...register('posterUrl')}
-              className={cn(
-                'w-full px-4 py-2',
-                'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg',
-                'text-[var(--text-primary)] placeholder-[var(--text-muted)]',
-                'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
-                'transition-colors'
-              )}
-              placeholder="輸入海報圖片網址"
-            />
-          </div>
-        </form>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between border-t border-[var(--border-subtle)] px-6 py-4">
-          {updateMutation.error && (
-            <p className="text-sm text-[var(--error-text)]">
-              更新失敗：{updateMutation.error.message}
-            </p>
-          )}
-          <div className="flex gap-3 ml-auto">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] transition-colors"
-            >
-              取消
-            </button>
-            <button
-              type="submit"
-              onClick={handleSubmit(onSubmit)}
-              disabled={updateMutation.isPending || !isDirty}
-              className={cn(
-                'px-4 py-2 rounded-lg bg-[var(--accent-primary)] text-[var(--text-on-accent)]',
-                'hover:bg-[var(--accent-pressed)] transition-colors',
-                'disabled:opacity-50 disabled:cursor-not-allowed',
-                'flex items-center gap-2'
-              )}
-            >
-              {updateMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              儲存
-            </button>
           </div>
         </div>
+      </form>
+
+      <div className="flex shrink-0 flex-col gap-3 border-t border-[var(--border-subtle)] px-4 pb-6 pt-4 sm:flex-row sm:items-center sm:px-6 sm:pb-4">
+        {updateMutation.error && (
+          <p role="alert" className="text-sm text-[var(--error-text)] sm:flex-1">
+            更新失敗：{updateMutation.error.message}
+          </p>
+        )}
+        <div className="flex gap-3 sm:ml-auto">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-11 flex-1 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] sm:h-9 sm:flex-none"
+          >
+            取消
+          </button>
+          <button
+            type="submit"
+            form={FORM_ID}
+            disabled={updateMutation.isPending || !isDirty}
+            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-5 text-sm font-semibold text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 sm:flex-none"
+          >
+            {updateMutation.isPending && (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            )}
+            {updateMutation.isPending ? '儲存中…' : '儲存'}
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

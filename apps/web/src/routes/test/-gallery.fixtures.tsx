@@ -1304,8 +1304,13 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     id: 'metadata-editor-genre-selector',
     label: 'metadata-editor/GenreSelector',
     component: GenreSelector,
-    props: { selectedGenres: ['action', 'sci-fi'], onToggle: noop },
-    penNode: 'L1NP6', // Component/GenreTag
+    props: {
+      labelId: 'none',
+      selected: ['動作', '科幻'],
+      options: ['動作', '科幻', '劇情'],
+      onChange: noop,
+    },
+    penNode: 'Dcf86', // B′13 修改資訊 · genres row
     width: 560,
   },
 
@@ -2367,11 +2372,11 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'metadata-editor/CastEditor',
     component: CastEditor,
     props: {
+      labelId: 'none',
       cast: ['布萊德彼特', '愛德華諾頓', '海倫娜寶漢卡特'],
-      onAdd: noop,
-      onRemove: noop,
+      onChange: noop,
     },
-    penNode: 'screen-section',
+    penNode: 'r7iTr', // B′13 修改資訊 · cast row
     width: 480,
   },
   {
@@ -3647,8 +3652,11 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   // ----- metadata-editor/ (Task 3) -----
   {
     id: 'metadata-editor-metadata-editor-dialog',
-    label: 'metadata-editor/MetadataEditorDialog',
-    // Custom fixed-overlay dialog (NOT Radix). Mutation-only — no seedQueries.
+    label: 'metadata-editor/MetadataEditorDialog (B13p-D · 修改資訊)',
+    // Radix Dialog.Portal (ui-dialog / manual-match precedent): the state div is
+    // zero-size and the visual spec captures the viewport. Mutation-only — no
+    // seedQueries. No poster → the 還沒有海報 placeholder (TMDb is aborted in the
+    // visual run, so a TMDb path would only ever paint the fallback anyway).
     component: MetadataEditorDialog,
     props: {
       isOpen: true,
@@ -3661,7 +3669,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         title: '銀翼殺手 2049',
         titleEnglish: 'Blade Runner 2049',
         year: 2017,
-        genres: ['sci-fi', 'drama'],
+        genres: ['科幻', '劇情'],
         director: '丹尼·維勒納夫',
         cast: ['瑞恩·葛斯林', '哈里遜·福特'],
         overview: '三十年後的反烏托邦世界。',
@@ -3669,8 +3677,37 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       },
       onSuccess: noop,
     },
-    penNode: 'screen-section',
+    penNode: 'AFuPx', // B13p-D
     statesOnly: ['default'],
+  },
+  {
+    id: 'metadata-editor-metadata-editor-dialog/mobile',
+    label: 'metadata-editor/MetadataEditorDialog (B13p-M · 修改資訊，手機底部面板)',
+    // The same dialog at 390×844: MOBILE_SHEET_CONTENT pins it to the bottom edge.
+    component: MetadataEditorDialog,
+    props: {
+      isOpen: true,
+      onClose: noop,
+      mediaId: 'gallery-media-uuid-0002',
+      mediaType: 'movie',
+      initialData: {
+        id: 'gallery-media-uuid-0002',
+        mediaType: 'movie',
+        title: '銀翼殺手 2049',
+        titleEnglish: 'Blade Runner 2049',
+        year: 2017,
+        genres: ['科幻', '劇情'],
+        director: '丹尼·維勒納夫',
+        cast: ['瑞恩·葛斯林', '哈里遜·福特'],
+        overview: '三十年後的反烏托邦世界。',
+        // Same-origin image: the phone sheet is photographed WITH a poster (B13p-M).
+        posterUrl: `${window.location.origin}/images/placeholder-poster.svg`,
+      },
+      onSuccess: noop,
+    },
+    penNode: 'oktn2', // B13p-M
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
   },
 
   // ----- parse/ (Task 3) -----

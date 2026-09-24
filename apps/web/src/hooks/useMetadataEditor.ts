@@ -9,6 +9,20 @@ import {
   type UpdateMetadataResponse,
   type UploadPosterResponse,
 } from '../services/metadata';
+import { detailKeys } from './useMediaDetails';
+import { libraryKeys } from './useLibrary';
+
+/** What the detail page and the library lists read — refetch them after an edit. */
+function invalidateEdited(
+  queryClient: ReturnType<typeof useQueryClient>,
+  id: string,
+  mediaType: 'movie' | 'series'
+) {
+  queryClient.invalidateQueries({
+    queryKey: mediaType === 'movie' ? detailKeys.localMovie(id) : detailKeys.localSeries(id),
+  });
+  queryClient.invalidateQueries({ queryKey: libraryKeys.all });
+}
 
 /**
  * Hook for updating media metadata (AC2)
@@ -19,11 +33,8 @@ export function useUpdateMetadata() {
 
   return useMutation<UpdateMetadataResponse, Error, UpdateMetadataParams>({
     mutationFn: (params) => metadataService.updateMetadata(params),
-    onSuccess: (data, variables) => {
-      // Invalidate media queries to refresh UI
-      queryClient.invalidateQueries({ queryKey: ['media', variables.id] });
-      queryClient.invalidateQueries({ queryKey: ['library'] });
-    },
+    onSuccess: (_data, variables) =>
+      invalidateEdited(queryClient, variables.id, variables.mediaType),
   });
 }
 
@@ -43,10 +54,7 @@ export function useUploadPoster() {
   return useMutation<UploadPosterResponse, Error, UploadPosterParams>({
     mutationFn: ({ mediaId, mediaType, file }) =>
       metadataService.uploadPoster(mediaId, mediaType, file),
-    onSuccess: (data, variables) => {
-      // Invalidate media queries to refresh UI
-      queryClient.invalidateQueries({ queryKey: ['media', variables.mediaId] });
-      queryClient.invalidateQueries({ queryKey: ['library'] });
-    },
+    onSuccess: (_data, variables) =>
+      invalidateEdited(queryClient, variables.mediaId, variables.mediaType),
   });
 }

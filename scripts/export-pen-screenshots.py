@@ -281,6 +281,9 @@ SCREENS = {
     "idN42": ("flow-b-detail-v2", "b11p-m"),
     "GnBxR": ("flow-b-detail-v2", "b12p-d"),
     "xb6fV": ("flow-b-detail-v2", "b12p-m"),
+    "AFuPx": ("flow-b-detail-v2", "b13p-d"),
+    "oktn2": ("flow-b-detail-v2", "b13p-m"),
+    "AM0xm": ("flow-b-detail-v2", "b14-d"),
     # flow-h-homepage-v2 — RETIRED 2026-08-26. The five v2 homepage frames were
     # deleted from ux-design.pen once Home v3 shipped AND its own state frames
     # (H4/H5/H6-D-v3) existed; see flow-h-homepage-v3 below.

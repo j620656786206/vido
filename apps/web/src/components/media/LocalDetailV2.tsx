@@ -133,6 +133,7 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
         : undefined,
       cast: effectiveCredits?.cast?.slice(0, 10).map((c) => c.name) || [],
       overview: data.overview,
+      posterUrl: data.posterPath ?? undefined,
     };
   }, [data, isMovie, id, effectiveCredits, localMovie.data, localSeries.data]);
 
