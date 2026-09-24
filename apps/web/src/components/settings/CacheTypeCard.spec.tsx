@@ -214,4 +214,14 @@ describe('formatBytes', () => {
   it('formats large MB values', () => {
     expect(formatBytes(52428800)).toBe('50.0 MB');
   });
+
+  it('dsr-3e: solid card, mono size line, semibold 清除', () => {
+    render(React.createElement(CacheTypeCard, { cacheType: mockCacheType, onClear: vi.fn() }));
+    const card = screen.getByTestId('cache-type-ai');
+    expect(card.className).toContain('bg-[var(--bg-secondary)]');
+    expect(card.className).not.toContain('bg-[var(--bg-secondary)]/50');
+    expect(card.className).toContain('rounded-[var(--radius-lg)]');
+    expect(screen.getByTestId('cache-type-size').className).toContain('font-mono');
+    expect(screen.getByTestId('cache-clear-btn').className).toContain('font-semibold');
+  });
 });

@@ -116,7 +116,9 @@ describe('CacheManagement', () => {
 
     renderWithQuery(React.createElement(CacheManagement));
     expect(screen.getByTestId('cache-error')).toBeInTheDocument();
-    expect(screen.getByText('Network error')).toBeInTheDocument();
+    // dsr-3e: the backend's words stay off the page (C16 shape).
+    expect(screen.queryByText('Network error')).toBeNull();
+    expect(screen.getByText('與後端的連線中斷了。快取本身不受影響。')).toBeInTheDocument();
   });
 
   it('renders cache types when data is loaded', () => {
@@ -212,7 +214,7 @@ describe('CacheManagement', () => {
 
     renderWithQuery(React.createElement(CacheManagement));
     expect(screen.getByText('無法載入快取資訊')).toBeInTheDocument();
-    expect(screen.getByText('Connection refused')).toBeInTheDocument();
+    expect(screen.queryByText('Connection refused')).toBeNull();
   });
 
   it('renders all 5 cache type cards when data has 5 types', () => {
@@ -239,7 +241,9 @@ describe('CacheManagement', () => {
     expect(screen.getByTestId('cache-type-wikipedia')).toBeInTheDocument();
   });
 
-  it('shows dash when stats are not yet loaded', () => {
+  // dsr-3e: with no data and no finished attempt yet, this is the loading
+  // state (the old fallback「總計 —」rendered a page with nothing in it).
+  it('shows the loading state when stats are not yet loaded', () => {
     mockUseCacheStats.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -247,7 +251,112 @@ describe('CacheManagement', () => {
     } as any);
 
     renderWithQuery(React.createElement(CacheManagement));
-    // Component renders but stats is undefined, so totalSizeBytes fallback is '—'
-    expect(screen.getByText(/總計.*—/)).toBeInTheDocument();
+    expect(screen.getByTestId('cache-loading')).toBeInTheDocument();
+  });
+
+  describe('dsr-3e', () => {
+    const stats = {
+      totalSizeBytes: 1024,
+      cacheTypes: [{ type: 'image', label: '圖片快取', sizeBytes: 1024, entryCount: 3 }],
+    };
+    const loaded = () =>
+      mockUseCacheStats.mockReturnValue({ data: stats, isLoading: false, error: null } as any);
+    const WARNING =
+      '再按一次才會真的清除。這會刪掉 30 天前的所有快取，之後第一次瀏覽會比較慢，但不會影響影片與字幕檔案。';
+
+    it('the first press arms it and explains what the second press does; no request yet', async () => {
+      const user = userEvent.setup();
+      const mutateAsync = vi.fn();
+      mockUseClearByAge.mockReturnValue({ mutateAsync, isPending: false } as any);
+      loaded();
+      renderWithQuery(React.createElement(CacheManagement));
+      expect(screen.queryByTestId('clear-old-cache-warning')).toBeNull();
+      await user.click(screen.getByTestId('clear-old-cache-btn'));
+      const warning = screen.getByRole('status');
+      expect(warning).toHaveTextContent(WARNING);
+      expect(warning).toHaveAttribute('id', 'clear-old-cache-warning');
+      expect(screen.getByTestId('clear-old-cache-btn')).toHaveAttribute(
+        'aria-describedby',
+        'clear-old-cache-warning'
+      );
+      expect(mutateAsync).not.toHaveBeenCalled();
+      await user.click(screen.getByTestId('clear-old-cache-cancel-btn'));
+      expect(screen.queryByTestId('clear-old-cache-warning')).toBeNull();
+    });
+
+    it('the button’s name is the full sentence on every width (the phone shows a short label)', async () => {
+      const user = userEvent.setup();
+      loaded();
+      renderWithQuery(React.createElement(CacheManagement));
+      expect(screen.getByRole('button', { name: '清除 30 天前的快取' })).toBeInTheDocument();
+      await user.click(screen.getByTestId('clear-old-cache-btn'));
+      expect(screen.getByRole('button', { name: '確認清除 30 天前的快取' })).toBeInTheDocument();
+    });
+
+    it('sections are 16 apart', () => {
+      loaded();
+      renderWithQuery(React.createElement(CacheManagement));
+      expect(screen.getByTestId('cache-management').className).toContain('space-y-4');
+    });
+
+    it('load failure: 重試 refetches; mid-refetch stays on the error page as 重試中…', async () => {
+      const user = userEvent.setup();
+      const refetch = vi.fn();
+      mockUseCacheStats.mockReturnValue({
+        data: undefined,
+        isFetched: true,
+        isFetching: true,
+        error: null,
+        refetch,
+      } as any);
+      renderWithQuery(React.createElement(CacheManagement));
+      expect(screen.queryByTestId('cache-loading')).toBeNull();
+      expect(screen.getByRole('button', { name: '重試中…' })).toBeInTheDocument();
+      mockUseCacheStats.mockReturnValue({
+        data: undefined,
+        isFetched: true,
+        isFetching: false,
+        error: new Error('x'),
+        refetch,
+      } as any);
+      renderWithQuery(React.createElement(CacheManagement));
+      await user.click(screen.getAllByRole('button', { name: '重試' })[0]);
+      expect(refetch).toHaveBeenCalled();
+    });
+  });
+
+  describe('dsr-3e CR', () => {
+    const stats = {
+      totalSizeBytes: 1,
+      cacheTypes: [{ type: 'image', label: '圖片快取', sizeBytes: 1, entryCount: 1 }],
+    };
+    it('the live region is there (empty) before the first press, so the warning is announced', async () => {
+      const user = userEvent.setup();
+      mockUseCacheStats.mockReturnValue({ data: stats, isLoading: false, error: null } as any);
+      renderWithQuery(React.createElement(CacheManagement));
+      const region = screen.getByTestId('clear-old-cache-warning-region');
+      expect(region).toHaveAttribute('role', 'status');
+      expect(region).toBeEmptyDOMElement();
+      await user.click(screen.getByTestId('clear-old-cache-btn'));
+      expect(screen.getByTestId('clear-old-cache-warning-region')).toBe(region);
+      expect(region).not.toBeEmptyDOMElement();
+    });
+
+    it('while clearing, the button no longer points at a warning that is gone', async () => {
+      const user = userEvent.setup();
+      mockUseCacheStats.mockReturnValue({ data: stats, isLoading: false, error: null } as any);
+      const { rerender } = renderWithQuery(React.createElement(CacheManagement));
+      await user.click(screen.getByTestId('clear-old-cache-btn'));
+      mockUseClearByAge.mockReturnValue({ mutateAsync: vi.fn(), isPending: true } as any);
+      rerender(
+        React.createElement(
+          QueryClientProvider,
+          { client: new QueryClient() },
+          React.createElement(CacheManagement)
+        )
+      );
+      expect(screen.getByTestId('clear-old-cache-btn')).not.toHaveAttribute('aria-describedby');
+      expect(screen.queryByTestId('clear-old-cache-warning')).toBeNull();
+    });
   });
 });

@@ -86,4 +86,23 @@ describe('LogFilters', () => {
 
     expect(screen.getByPlaceholderText('搜尋關鍵字...')).toBeInTheDocument();
   });
+
+  describe('dsr-3e', () => {
+    it('an active level chip is outlined in its own text colour; chips are 28 tall, 8 apart', () => {
+      render(
+        <LogFilters level="ERROR" keyword="" onLevelChange={vi.fn()} onKeywordChange={vi.fn()} />
+      );
+      const chip = screen.getByTestId('log-filter-error');
+      expect(chip.className).toContain('border-[var(--error-text)]');
+      expect(chip.className).toContain('h-7');
+      expect(screen.getByTestId('log-level-filters').className).toContain('gap-2');
+    });
+
+    it('the search box is 12px mono', () => {
+      render(<LogFilters level="" keyword="" onLevelChange={vi.fn()} onKeywordChange={vi.fn()} />);
+      const input = screen.getByTestId('log-keyword-input');
+      expect(input.className).toContain('text-xs');
+      expect(input.className).toContain('font-mono');
+    });
+  });
 });

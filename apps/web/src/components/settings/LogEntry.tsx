@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ChevronDown, ChevronRight, Lightbulb } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { SystemLog } from '../../services/logService';
+import { formatLocalDateTime } from '../../utils/formatLocalDateTime';
 
 const LEVEL_STYLES: Record<string, string> = {
   ERROR: 'text-[var(--error-text)] bg-[var(--error-tint)]',
@@ -10,7 +11,7 @@ const LEVEL_STYLES: Record<string, string> = {
   // INFO wears --info-*, not gold: gold is 你在這裡, and thousands of log rows
   // wearing it would dilute the one colour that must stay rare.
   INFO: 'text-[var(--info-text)] bg-[var(--info-tint)]',
-  DEBUG: 'text-[var(--text-secondary)] bg-[var(--text-muted)]/10',
+  DEBUG: 'text-[var(--text-muted)] bg-[var(--bg-tertiary)]',
 };
 
 interface LogEntryProps {
@@ -22,21 +23,22 @@ export function LogEntry({ log }: LogEntryProps) {
   const hasContext = log.context && Object.keys(log.context).length > 0;
   const hasHint = !!log.hint;
 
-  const timestamp = new Date(log.createdAt).toLocaleString('zh-TW', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
+  // Local zone, fixed width (never toISOString — that is UTC). The phone row
+  // only has room for the time of day; the date is the same for a screenful.
+  const timestamp = formatLocalDateTime(log.createdAt, 'second');
+  const timeOfDay = timestamp.slice(11);
 
   return (
     <div
-      className="border-b border-[var(--border-subtle)]/50 px-4 py-2.5 transition-colors hover:bg-[var(--bg-secondary)]/50"
+      className="px-4 py-3 transition-colors hover:bg-[var(--bg-tertiary)]/40"
       data-testid="log-entry"
     >
-      <div className="flex items-start gap-3">
+      {/* C12-D: 箭頭 → 等級 → 時間 → 訊息 → [來源], one line.
+          C12-M: two lines — 箭頭・等級・時間・來源, then the message on its own
+          full-width line. On one line the phone gave the message ~80px after
+          the 44px toggle and a 130px timestamp. `order-last basis-full` moves
+          ONLY the message down; DOM order stays badge → time → message. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:flex-nowrap sm:items-start">
         {/* Expand toggle */}
         <button
           onClick={() => setExpanded(!expanded)}
@@ -53,10 +55,10 @@ export function LogEntry({ log }: LogEntryProps) {
           )}
         </button>
 
-        {/* Level badge */}
+        {/* Level badge — fixed 64 so every row's time starts at the same x. */}
         <span
           className={cn(
-            'mt-0.5 rounded px-1.5 py-0.5 text-xs font-semibold',
+            'inline-flex w-16 shrink-0 justify-center rounded py-0.5 font-mono text-xs font-semibold sm:mt-0.5',
             LEVEL_STYLES[log.level]
           )}
           data-testid="log-level"
@@ -64,24 +66,34 @@ export function LogEntry({ log }: LogEntryProps) {
           {log.level}
         </span>
 
-        {/* Main content */}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-baseline gap-2">
-            <span className="text-sm text-[var(--text-primary)]" data-testid="log-message">
-              {log.message}
-            </span>
-            {log.source && (
-              <span className="shrink-0 text-xs text-[var(--text-muted)]" data-testid="log-source">
-                [{log.source}]
-              </span>
-            )}
-          </div>
-        </div>
+        <time
+          dateTime={log.createdAt}
+          className="shrink-0 font-mono text-xs text-[var(--text-muted)] sm:mt-1"
+        >
+          {/* Not aria-hidden: on a phone this is the only copy on screen (the
+              full one is display:none there), so it is what gets read. */}
+          <span className="sm:hidden">{timeOfDay}</span>
+          <span className="hidden sm:inline" data-testid="log-timestamp">
+            {timestamp}
+          </span>
+        </time>
 
-        {/* Timestamp */}
-        <span className="shrink-0 text-xs text-[var(--text-muted)]" data-testid="log-timestamp">
-          {timestamp}
+        {/* 12px on the phone, per C12-M Sc3vW: a log message is a mono-ish data
+            row, not Body prose, so DESIGN.md's「內文不縮」does not apply. */}
+        <span
+          className="order-last min-w-0 basis-full break-words text-xs text-[var(--text-primary)] sm:order-none sm:flex-1 sm:basis-auto sm:text-sm"
+          data-testid="log-message"
+        >
+          {log.message}
         </span>
+        {log.source && (
+          <span
+            className="shrink-0 font-mono text-xs text-[var(--text-muted)] sm:mt-1"
+            data-testid="log-source"
+          >
+            [{log.source}]
+          </span>
+        )}
       </div>
 
       {/* Expanded details */}

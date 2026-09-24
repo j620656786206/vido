@@ -230,7 +230,7 @@ import { ExploreBlockEditModal } from '../../components/settings/ExploreBlockEdi
 import { ExploreBlocksSettings } from '../../components/settings/ExploreBlocksSettings';
 import { LibraryCard } from '../../components/settings/LibraryCard';
 import { LibraryEditModal } from '../../components/settings/LibraryEditModal';
-import { LogsViewer } from '../../components/settings/LogsViewer';
+import { LogsViewer, LogsEmpty } from '../../components/settings/LogsViewer';
 import { MediaLibraryManager } from '../../components/settings/MediaLibraryManager';
 import { MetadataExport } from '../../components/settings/MetadataExport';
 import { QBittorrentForm } from '../../components/settings/QBittorrentForm';
@@ -464,6 +464,57 @@ const restoreDialogProps = {
   isRestoring: false,
   onConfirm: noop,
   onCancel: noop,
+};
+
+/** dsr-3e — C11's five caches (labels are the backend's, cache_stats_service.go). */
+const C11_CACHE: CacheStats = {
+  cacheTypes: [
+    { type: 'image', label: '圖片快取', sizeBytes: 1_932_735_283, entryCount: 12_480 },
+    { type: 'ai', label: 'AI 解析快取', sizeBytes: 224_395_264, entryCount: 3_120 },
+    { type: 'metadata', label: 'TMDb 中繼資料', sizeBytes: 341_835_776, entryCount: 8_940 },
+    { type: 'douban', label: '豆瓣快取', sizeBytes: 42_991_616, entryCount: 612 },
+    { type: 'wikipedia', label: '維基百科快取', sizeBytes: 18_874_368, entryCount: 204 },
+  ],
+  totalSizeBytes: 2_560_834_307,
+};
+// Must match LogsViewer's initial useLogs(filter): { level: undefined, keyword: undefined, page: 1, perPage: 50 }.
+const C12_LOGS_KEY = logKeys.list({ level: undefined, keyword: undefined, page: 1, perPage: 50 });
+/** dsr-3e — C12's rows. Offset-less stamps = local time, identical on darwin and linux. */
+const C12_LOGS: LogsResponse = {
+  logs: [
+    {
+      id: 1,
+      level: 'ERROR',
+      message: 'qBittorrent 連線遭拒（ECONNREFUSED 127.0.0.1:8080）',
+      source: 'qbittorrent',
+      context: { error_code: 'QBT_CONNECTION_REFUSED' },
+      createdAt: '2026-09-11T09:42:18',
+    },
+    {
+      id: 2,
+      level: 'WARN',
+      message: 'OpenSubtitles 回應 429，已退避 60 秒後重試',
+      source: 'subtitle',
+      createdAt: '2026-09-11T09:41:55',
+    },
+    {
+      id: 3,
+      level: 'INFO',
+      message: '掃描完成：1,247 個檔案，比對成功 1,198',
+      source: 'scanner',
+      createdAt: '2026-09-11T09:40:02',
+    },
+    {
+      id: 4,
+      level: 'DEBUG',
+      message: 'TMDb 快取命中率 0.86（近 1,000 次查詢）',
+      source: 'tmdb',
+      createdAt: '2026-09-11T09:37:12',
+    },
+  ],
+  total: 4,
+  page: 1,
+  perPage: 50,
 };
 
 // ----- Shared mock-data consts for 19-4b Task 2 (parse/* and scanner/* fixtures) -----
@@ -2601,7 +2652,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       cacheType: { type: 'ai', label: 'AI 解析快取', sizeBytes: 52428800, entryCount: 120 },
       onClear: noop,
     },
-    penNode: 'screen-section',
+    penNode: 'TrU8k', // Screen C11-D — cache-type card ceRJp
     width: 480,
   },
   {
@@ -2625,21 +2676,22 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         level: 'ERROR',
         message: '無法連線至 TMDb API:請求逾時',
         source: 'tmdb',
-        createdAt: '2026-03-18T10:30:00Z',
+        // No offset = local time: the stamp reads the same on darwin and the linux runner.
+        createdAt: '2026-09-11T09:42:18',
         context: { error_code: 'TMDB_TIMEOUT', retries: 3 },
         hint: '檢查網路連線或 TMDb 服務狀態',
       },
     },
-    penNode: 'screen-section',
-    width: 720,
+    penNode: 'K28SdR', // Screen C12-D — log-row
+    width: 960,
   },
   {
     id: 'settings-log-filters',
     label: 'settings/LogFilters',
     component: LogFilters,
     props: { level: 'ERROR', keyword: '', onLevelChange: noop, onKeywordChange: noop },
-    penNode: 'screen-section',
-    width: 640,
+    penNode: 'K28SdR', // Screen C12-D — log-filters S8O6v
+    width: 960,
   },
   {
     id: 'settings-restore-confirm-dialog',
@@ -3833,23 +3885,24 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   },
   {
     id: 'settings-cache-management',
-    label: 'settings/CacheManagement',
+    label: 'settings/CacheManagement (C11-D)',
     component: CacheManagement,
-    penNode: 'screen-section',
-    width: 720,
-    seedQueries: [
-      {
-        queryKey: cacheKeys.stats(),
-        data: {
-          cacheTypes: [
-            { type: 'image', label: '圖片快取', sizeBytes: 52_428_800, entryCount: 1247 },
-            { type: 'ai', label: 'AI 解析快取', sizeBytes: 8_388_608, entryCount: 312 },
-            { type: 'metadata', label: '中介資料快取', sizeBytes: 4_194_304, entryCount: 856 },
-          ],
-          totalSizeBytes: 65_011_712,
-        } satisfies CacheStats,
-      },
-    ],
+    penNode: 'TrU8k', // Screen C11-D
+    statesOnly: ['default'],
+    width: 1152,
+    seedQueries: [{ queryKey: cacheKeys.stats(), data: C11_CACHE }],
+  },
+  {
+    // dsr-3e — C18-D: the armed state after the first press, with the warning.
+    // `open` clicks the button inside the fixture; that first press sends nothing.
+    id: 'settings-cache-management/confirm',
+    label: 'settings/CacheManagement (C18-D — 再按一次確認)',
+    component: CacheManagement,
+    penNode: 'dfwSb', // Screen C18-D
+    statesOnly: ['open'],
+    openTrigger: '[data-testid="clear-old-cache-btn"]',
+    width: 1152,
+    seedQueries: [{ queryKey: cacheKeys.stats(), data: C11_CACHE }],
   },
   {
     id: 'settings-explore-block-edit-modal',
@@ -4000,45 +4053,34 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   },
   {
     id: 'settings-logs-viewer',
-    label: 'settings/LogsViewer',
+    label: 'settings/LogsViewer (C12-D)',
     component: LogsViewer,
-    penNode: 'screen-section',
-    width: 960,
-    seedQueries: [
-      {
-        // Filter object must match LogsViewer's initial useLogs(filter) build:
-        // { level: undefined, keyword: undefined, page: 1, perPage: 50 }.
-        queryKey: logKeys.list({
-          level: undefined,
-          keyword: undefined,
-          page: 1,
-          perPage: 50,
-        }),
-        data: {
-          logs: [
-            {
-              id: 1,
-              level: 'ERROR',
-              message: 'Failed to fetch metadata from TMDb',
-              source: 'tmdb',
-              context: { error_code: 'TMDB_TIMEOUT', movie_id: '123' },
-              hint: '檢查網路連線，或稍後重試。',
-              createdAt: '2026-03-22T10:00:00Z',
-            },
-            {
-              id: 2,
-              level: 'WARN',
-              message: 'Cache miss for movie poster',
-              source: 'cache',
-              createdAt: '2026-03-22T09:55:00Z',
-            },
-          ],
-          total: 2,
-          page: 1,
-          perPage: 50,
-        } satisfies LogsResponse,
-      },
-    ],
+    penNode: 'K28SdR', // Screen C12-D
+    statesOnly: ['default'],
+    width: 1152,
+    seedQueries: [{ queryKey: C12_LOGS_KEY, data: C12_LOGS }],
+  },
+  {
+    // dsr-3e — C12-M: two lines per row (等級＋時間＋來源 / 訊息). A real 390
+    // viewport: the two-line layout is `sm:` breakpoints, i.e. the viewport.
+    id: 'settings-logs-viewer/mobile',
+    label: 'settings/LogsViewer (C12-M — 手機兩行)',
+    component: LogsViewer,
+    penNode: 'dOEbF', // Screen C12-M
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+    seedQueries: [{ queryKey: C12_LOGS_KEY, data: C12_LOGS }],
+  },
+  {
+    // dsr-3e — C17-D's filtered-to-nothing state on its own: the viewer's
+    // filters are component state a fixture cannot preset.
+    id: 'settings-logs-viewer/filtered-empty',
+    label: 'settings/LogsEmpty (C17-D — 篩到沒東西)',
+    component: LogsEmpty,
+    props: { level: 'ERROR', keyword: 'qbittorrent', onClear: noop },
+    penNode: 'Gw61P', // Screen C17-D — empty V6r6i9
+    statesOnly: ['default'],
+    width: 1152,
   },
   {
     id: 'settings-media-library-manager',

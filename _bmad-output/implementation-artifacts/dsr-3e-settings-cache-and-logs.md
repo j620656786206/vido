@@ -1,6 +1,6 @@
 # Story DSR.3e：快取管理與系統日誌對齊設計稿——清除前先講清楚會發生什麼，日誌在手機上讀得到訊息，篩到沒東西時有「清除篩選」
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -99,13 +99,13 @@ so that 我不會因為怕刪錯而不敢按，也不會以為日誌是空的。
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — 查證快取警告句（清什麼、不清什麼）與「日誌仍在記錄中」（AC: #2, #6）**
-- [ ] **Task 2 — 設計稿：手機清除 44、來源標籤、手機搜尋框、C17 全句與計數字與標題列、規格註記（AC: #1）**
-- [ ] **Task 3 — 快取：卡片、主鈕（手機短字）、C18 警告條、間距、載入失敗（AC: #2, #6, #8）**
-- [ ] **Task 4 — 日誌列：順序、時間格式、徽章、列樣式、手機兩行（AC: #3, #8）**
-- [ ] **Task 5 — 篩選列、空狀態兩態、計數文字、清除篩選、載入失敗（AC: #4, #5, #6, #8）**
-- [ ] **Task 6 — 夾具、e2e、mutation check、收尾（AC: #7, #8, #9）**
-  - [ ] dev-story Step 9：`c11-d`／`c11-m`／`c12-d`／`c12-m`／`c17-d`／`c17-m`／`c18-d`
+- [x] **Task 1 — 查證快取警告句（清什麼、不清什麼）與「日誌仍在記錄中」（AC: #2, #6）**
+- [x] **Task 2 — 設計稿：手機清除 44、來源標籤、手機搜尋框、C17 全句與計數字與標題列、規格註記（AC: #1）**
+- [x] **Task 3 — 快取：卡片、主鈕（手機短字）、C18 警告條、間距、載入失敗（AC: #2, #6, #8）**
+- [x] **Task 4 — 日誌列：順序、時間格式、徽章、列樣式、手機兩行（AC: #3, #8）**
+- [x] **Task 5 — 篩選列、空狀態兩態、計數文字、清除篩選、載入失敗（AC: #4, #5, #6, #8）**
+- [x] **Task 6 — 夾具、e2e、mutation check、收尾（AC: #7, #8, #9）**
+  - [x] dev-story Step 9：`c11-d`／`c11-m`／`c12-d`／`c12-m`／`c17-d`／`c17-m`／`c18-d`
 
 ## Dev Notes
 
@@ -168,10 +168,78 @@ apps/web/src/routes/test/-gallery.fixtures.tsx；tests/e2e/settings-shell.spec.t
 
 ### Agent Model Used
 
+Claude Opus 5.5 (1M context)（Amelia / dev-story）
+
 ### Debug Log References
+
+- Pencil：裁切警告 66 → 66；選單 Save 後磁碟 grep 到 `spec-note-dsr-3e`（`wxa4B`）；匯出 196/196，只 stage `c11-m`／`c12-d`／`c12-m`／`c17-d`／`c17-m`＋`pen-tokens.json`（`c11-d`、`c18-d` 稿沒動）。
+- 本機 8080 又有前次留下的 `api` 程序，直接沿用。
 
 ### Completion Notes List
 
 - Ultimate context engine analysis completed - comprehensive developer guide created
+- **Task 1（查證）**：
+  - 快取警告句**成立、照稿逐字**。(a) 前端 `CacheManagement` 呼叫 `clearByAge.mutateAsync(30)` → `DELETE /settings/cache?older_than_days=30`（`cache_handler.go:39-58`）→ `ClearCacheByAge`（`cache_cleanup_service.go:48-90`）：刪 `cache_entries`／`ai_cache`／`douban_cache`／`wikipedia_cache` 裡時間早於 cutoff 的列，以及 `imageDir` 裡 mtime 早於 cutoff 的檔案。(b) `imageDir` 是 `data/posters`（`cmd/api/main.go:204-206`），是海報快取，不是影片或字幕檔 →「不會影響影片與字幕檔案」為真。⚠️ 順帶發現：`posters` 目錄同時是中繼資料編輯器上傳海報的位置（`main.go:339`），**使用者上傳超過 30 天的自訂海報也會被這個鈕刪掉**——這是後端既有行為、不在本張範圍 → 已立 `disc-2026-09-cache-clear-deletes-uploaded-posters`（P1，待查證）。
+  - 「日誌仍在記錄中」**不成立**：日誌由後端自己的 `slog` DB handler 寫入（`internal/logger/db_handler.go`、`log_repository.go:98`），讀取 API 失敗通常代表後端本身連不上，那時也不會在記錄。→ 改成一定為真的「已記錄的日誌不受影響。」（story 標了 SM 擬、待 Sally）。
+- **Task 2（稿）**：C11-M 五顆「清除」與「清除 30 天前」36→44；C12-D 五列、C12-M 四列補來源標籤 `[source]`（等寬、muted），桌機訊息改 `fill_container`；C12-M 補 44 高搜尋框、清除鈕 44；C17-D 計數改「符合條件 0 筆」、標題列補「清除 30 天前」；C17-M 補標題列（計數＋清除）、說明句改全句；`spec-note-dsr-3e`。C18-D 不用改（警告句查證成立）。
+- **Task 3（快取）**：卡片實色 `bg-secondary`、`radius-lg`、`p-4`、容量行 `font-mono`、清除 600＋`radius-md`；主鈕 `min-h-10`（手機 44）、`Clock3`、手機短字「清除 30 天前」／桌機全句，`aria-label` 兩個寬度都是全句；區塊 `space-y-4`；**C18 警告條**：`role="status"`、`id` 由確認鈕 `aria-describedby` 指向、取消後消失、第一次按下仍 0 個請求；載入失敗 → `SettingsErrorState`「無法載入快取資訊／與後端的連線中斷了。快取本身不受影響。」（沿用 `dsr-3c` 的「沒資料才換錯誤頁、重抓不閃轉圈」）。
+- **Task 4（日誌列，真 bug）**：順序 箭頭→等級→時間→訊息→[來源]；時間**重用 `dsr-3f` 的 `utils/formatLocalDateTime`**（`precision: 'second'`，本地時區，`<time dateTime>`）；手機只顯示 `HH:mm:ss`；徽章 `w-16` 等寬、DEBUG `bg-tertiary`／`text-muted`；列 `px-4 py-3`、無分隔線；清單外框實色 `radius-lg`。**手機兩行**：`flex-wrap`＋訊息 `order-last basis-full`（DOM 順序不變），訊息 12px（照稿；註解寫明這是資料列不是 Body 內文）。
+- **Task 5（篩選、空狀態、計數）**：選中的等級 chip 用自己的 `-text` 描邊（ERROR／WARN／INFO；DEBUG 用 `text-muted`）、`gap-2`、`h-7`（手機內距 8 讓五顆一排放得下）；搜尋框 12px 等寬、圖示 14、`radius-md`、手機 44 高。空狀態兩態（`LogsEmpty`）：有篩選＝`search-x`＋「沒有符合條件的日誌記錄」＋依篩選組的說明句（三種組法）＋「清除篩選」；沒篩選＝`scroll-text`＋「還沒有日誌記錄」、沒有按鈕。「清除篩選」同時清等級、關鍵字、頁碼，並以 `key` 重新掛載 `LogFilters` 清掉輸入框。計數：有篩選「符合條件 N 筆」、沒篩選「共 N 筆記錄」。「清除 30 天前」在空狀態仍在。載入失敗 → `SettingsErrorState`「無法載入系統日誌／與後端的連線中斷了。已記錄的日誌不受影響。」；有舊資料時的背景重抓失敗保留畫面。
+- **Time-dependent visual coverage**：`LogEntry` 不讀「現在」；夾具用不帶時區的 ISO（當地時間），darwin 與 linux 都印同一個字串（`dsr-3f` 同一招），不需要等 `disc-2026-09-visual-project-pin-timezone`。`CacheTypeCard` 沒有相對時間，N/A。
+- **既有 spec 改動（刻意，逐條）**：`CacheManagement.spec` —「renders error state」「displays error message text」改斷言**不出現**英文錯誤並斷言中文說明；「shows dash when stats are not yet loaded」→ 改成「shows the loading state」（沒資料、沒抓完＝載入中，舊的「總計 —」是一頁空殼）。`LogEntry.spec` — DEBUG 徽章 `text-secondary` → `text-muted`＋`bg-tertiary`（稿）。`LogsViewer.spec` —「shows empty state when no logs」（沒篩選）改斷言「還沒有日誌記錄」且沒有清除篩選鈕；「shows error state」加斷言中文說明、不出現原文。
+- 🔗 **AC Drift: NONE**（checked: `6-2-cache-management` AC #1–#3（分類顯示、清 30 天前、單類清除要確認）與 `6-3-system-logs-viewer` AC #1–#4（時間／等級／訊息、色碼、分頁、篩選與搜尋、遮罩與提示）——全部 REUSE：欄位都還在、只換格式與排版）。
+- 📎 **Contract Stamps: NONE**（本張與上游皆無 `[@contract-v*]`）。
+- 🎭 **A11y Pre-Flight: PASS**（5 個元件；觸碰檔 jsx-a11y 警告 0；主鈕 accessible name 全句、警告條 `role="status"`＋`aria-describedby`、空狀態按鈕有字、錯誤頁共用元件）。
+- **測試**：`CacheManagement.spec` +4、`CacheTypeCard.spec` +1、`LogEntry.spec` +4、`LogFilters.spec` +2、`LogsViewer.spec` +5（含三種說明句、清除篩選清兩個條件）。`nx test web` **288 files／4267 tests 全綠**；`lint:all`、typecheck 綠。e2e `settings-shell.spec.ts` 追加 2 條（390 每筆訊息寬度 ≥ 視窗 − 96；篩到沒東西→說明→清除篩選兩個條件都清掉），`--repeat-each=3` **6／6**。
+- **Mutation：unit 17／17 紅、e2e 2／2 紅**（拿掉警告條、`aria-describedby`、全句名稱、間距、重抓閃轉圈、容量非等寬、UTC 時間、手機一行、舊 DEBUG、分隔線、chip 描邊、搜尋字型、誤導計數、單一空狀態、清除篩選漏關鍵字、說明句、拿掉載入態；e2e：手機一行、清除篩選不重掛輸入框）。
+- **視覺基準**：`settings-cache-management`、`settings-cache-type-card`（3）、`settings-logs-viewer`、`settings-log-entry`（3）、`settings-log-filters`（3）的 darwin 基準改變、`penNode` 改真節點；cache-management／logs-viewer 的 hover／focus 刪除（改 `statesOnly: ['default']`）；新增 `settings-cache-management/confirm`（`open` 狀態點主鈕，拍 C18 的警告條）、`settings-logs-viewer/mobile`（390×844）、`settings-logs-viewer/filtered-empty`（`LogsEmpty` 單獨拍，篩選是元件內部 state、夾具無法預設）。過期 `-linux` 全部 `git rm`，等 CI bootstrap。
+- ⚠️ **與 story／稿的偏離**：① 載入失敗說明改「已記錄的日誌不受影響。」（story 擬的「仍在記錄中」不保證為真，見 Task 1）。② 手機沒有可展開內容的列仍保留隱形的 44px 箭頭位，第一行比稿多一格縮排（保持每列徽章對齊）。③ 手機篩選 chip 內距 8（稿），桌機 12。
+
+- 🔍 **/ship 對抗式 CR（2026-09-24，獨立 context）0 HIGH／4 MEDIUM／4 LOW／3 NIT，吸收 4M／4L／1N**：
+  ① 🟠 手機上報讀器聽不到日誌時間（短時間 `aria-hidden`、完整時間 `display:none`）→ 短時間不再 `aria-hidden`。
+  ② 🟠 快取警告條與文字同時掛上，報讀器多半不念 → 常駐、平時空的 `role="status"` 容器，確認時才塞文字（空時 `empty:mb-0` 不佔間距）。
+  ③ 🟠 換篩選的瞬間，`keepPreviousData` 的舊資料讓計數寫「符合條件 18,402 筆」、清除篩選後可能閃「還沒有日誌記錄」→ `isPlaceholderData` 期間計數寫「載入中…」、舊列變淡、舊空結果改顯示轉圈，不下結論。
+  ④ 🟠 在第 3 頁清掉舊日誌，會同時出現「共 60 筆記錄」「還沒有日誌記錄」「第 3 / 2 頁」→ 清除成功回第 1 頁，另加「頁碼超過總頁數就拉回」的防護。
+  ⑤ 清除進行中按鈕的 `aria-describedby` 指向不存在的 id → 條件加上非 pending。⑥ 按「清除篩選」後焦點掉到 body → 移到「全部」chip。⑦ 錯誤頁註解不準（換篩選後失敗也會整頁錯誤）→ 改註解。NIT：只有空白的關鍵字不算篩選（trim）。
+  未改：C1（清除篩選的測試從快取拿結果，沒驗「再次查詢」——同一個 query key 本來就不會重打）、C2（快取錯誤頁測試寫法）、C3（e2e 門檻已在 Completion Notes 說明）。
+  CR 後：mutation 再 7／7 紅；`nx test web` **288 files／4273 tests** 綠；`lint:all`、typecheck 綠；e2e 整檔 `--repeat-each=3` 57／57；視覺基準不變。
 
 ### File List
+
+- `ux-design.pen`
+- `_bmad-output/pen-tokens.json`
+- `_bmad-output/screenshots/flow-c-search-settings/{c11-m,c12-d,c12-m,c17-d,c17-m}.png`
+- `apps/web/src/components/settings/CacheManagement.tsx`（+spec）
+- `apps/web/src/components/settings/CacheTypeCard.tsx`（+spec）
+- `apps/web/src/components/settings/LogEntry.tsx`（+spec）
+- `apps/web/src/components/settings/LogFilters.tsx`（+spec）
+- `apps/web/src/components/settings/LogsViewer.tsx`（+spec）
+- `apps/web/src/routes/test/-gallery.fixtures.tsx`
+- `tests/e2e/settings-shell.spec.ts`
+- `tests/visual/components.visual.spec.ts-snapshots/components/settings-{cache-management,cache-type-card,logs-viewer,log-entry,log-filters}/…`（darwin 改／新增、linux 刪除、hover／focus 刪除）
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+
+### UX Verification（dev-story Step 9）
+
+| Area | Design Spec | Implementation | Match? | Fix Needed |
+|------|------------|----------------|--------|------------|
+| 快取卡片（C11） | 實色、radius-lg、內距 16、等寬容量、600 清除 | 同 | ✅ | — |
+| 主鈕＋警告條（C11／C18） | 40 高、clock-3、手機短字；硃砂說明條逐字 | 同（名稱全句） | ✅ | — |
+| 日誌列（C12-D） | 箭頭→等級(64 等寬)→時間(等寬)→訊息，無分隔線 | 同＋[來源]（稿已補） | ✅ | — |
+| 日誌列（C12-M） | 兩行：等級＋時間 / 12px 訊息 | 同 | ✅ | 箭頭位見偏離 ② |
+| 篩選列 | 選中描邊、gap 8、28 高、12px 等寬搜尋 | 同 | ✅ | — |
+| 空狀態（C17） | 圖示＋標題＋說明句＋清除篩選；計數「符合條件 0 筆」；清除 30 天前仍在 | 同；另有「還沒有日誌記錄」態 | ✅ | — |
+
+🎨 UX Verification: PASS — `c11-d`／`c11-m`／`c12-d`／`c12-m`／`c17-d`／`c17-m`／`c18-d` 對照視覺基準逐項比對。
+
+## Change Log
+
+| Date | Change |
+| --- | --- |
+| 2026-09-24 | Task 1：查證快取警告句（成立）與「日誌仍在記錄中」（不成立→改句） |
+| 2026-09-24 | Task 2：設計稿——手機 44、來源標籤、手機搜尋框、C17 計數／標題列／全句、`spec-note-dsr-3e` |
+| 2026-09-24 | Task 3：快取卡片、主鈕手機短字、C18 警告條、間距、載入失敗 |
+| 2026-09-24 | Task 4：日誌列重排、本地時間、徽章、手機兩行（真 bug） |
+| 2026-09-24 | Task 5：篩選 chip 與搜尋框、空狀態兩態、計數文字、清除篩選、載入失敗 |
+| 2026-09-24 | /ship CR：手機日誌時間可報讀、警告條常駐 live region、換篩選時不下錯的結論、清舊日誌回第 1 頁、焦點不掉 |
+| 2026-09-24 | Task 6：夾具 5 改 3 新、e2e 2 條、mutation 19／19、全套 web 4267 綠 |
