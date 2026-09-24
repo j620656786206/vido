@@ -47,7 +47,9 @@ describe('LogEntry', () => {
   it('renders color-coded badge for DEBUG level', () => {
     render(<LogEntry log={makeLog({ level: 'DEBUG' })} />);
     const badge = screen.getByTestId('log-level');
-    expect(badge.className).toContain('text-[var(--text-secondary)]');
+    // dsr-3e: C12 draws DEBUG as text-muted on bg-tertiary (was secondary on muted/10).
+    expect(badge.className).toContain('text-[var(--text-muted)]');
+    expect(badge.className).toContain('bg-[var(--bg-tertiary)]');
   });
 
   it('disables expand button when no context or hint', () => {
@@ -106,5 +108,45 @@ describe('LogEntry', () => {
 
     expect(screen.queryByTestId('log-hint')).not.toBeInTheDocument();
     expect(screen.getByTestId('log-context')).toBeInTheDocument();
+  });
+
+  describe('dsr-3e', () => {
+    it('orders badge → time → message → source', () => {
+      const { container } = render(<LogEntry log={makeLog({ source: 'scanner' })} />);
+      const ids = [...container.querySelectorAll('[data-testid]')]
+        .map((el) => el.getAttribute('data-testid'))
+        .filter((id) => ['log-level', 'log-timestamp', 'log-message', 'log-source'].includes(id!));
+      expect(ids).toEqual(['log-level', 'log-timestamp', 'log-message', 'log-source']);
+    });
+
+    it('prints the time in the LOCAL zone as YYYY-MM-DD HH:mm:ss inside <time dateTime>', () => {
+      const iso = '2026-09-11T01:42:18Z';
+      render(<LogEntry log={makeLog({ createdAt: iso })} />);
+      const full = screen.getByTestId('log-timestamp');
+      expect(full.textContent).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
+      const d = new Date(iso);
+      expect(full.textContent!.slice(11, 13)).toBe(String(d.getHours()).padStart(2, '0'));
+      const time = full.closest('time')!;
+      expect(time).toHaveAttribute('dateTime', iso);
+      // The phone copy is the time of day only.
+      expect(time.textContent).toContain(full.textContent!.slice(11));
+    });
+
+    it('the badge is a fixed 64 in mono', () => {
+      render(<LogEntry log={makeLog()} />);
+      const badge = screen.getByTestId('log-level');
+      expect(badge.className).toContain('w-16');
+      expect(badge.className).toContain('font-mono');
+    });
+
+    it('rows have no divider, and on a phone the message takes its own full line', () => {
+      render(<LogEntry log={makeLog()} />);
+      expect(screen.getByTestId('log-entry').className).not.toContain('border-b');
+      const msg = screen.getByTestId('log-message').className;
+      expect(msg).toContain('basis-full');
+      expect(msg).toContain('order-last');
+      expect(msg).toContain('text-xs');
+      expect(msg).toContain('sm:text-sm');
+    });
   });
 });

@@ -41,7 +41,7 @@ export function CacheTypeCard({ cacheType, onClear }: CacheTypeCardProps) {
 
   return (
     <div
-      className="flex items-center justify-between rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/50 px-4 py-3"
+      className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4"
       data-testid={`cache-type-${cacheType.type}`}
     >
       <div className="min-w-0 flex-1">
@@ -51,7 +51,10 @@ export function CacheTypeCard({ cacheType, onClear }: CacheTypeCardProps) {
         >
           {cacheType.label}
         </p>
-        <p className="text-xs text-[var(--text-secondary)]" data-testid="cache-type-size">
+        <p
+          className="mt-0.5 font-mono text-xs text-[var(--text-secondary)]"
+          data-testid="cache-type-size"
+        >
           {formatBytes(cacheType.sizeBytes)} · {cacheType.entryCount.toLocaleString()} 筆
         </p>
       </div>
@@ -69,7 +72,7 @@ export function CacheTypeCard({ cacheType, onClear }: CacheTypeCardProps) {
         <button
           onClick={handleClear}
           disabled={clearing}
-          className={`flex min-h-[44px] items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium transition-colors sm:min-h-0 ${
+          className={`flex min-h-[44px] items-center gap-1.5 rounded-[var(--radius-md)] px-3 py-1.5 text-xs font-semibold transition-colors sm:min-h-0 ${
             confirming
               ? 'bg-[var(--error)] text-[var(--text-on-scrim)] hover:bg-[var(--error-pressed)]'
               : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'

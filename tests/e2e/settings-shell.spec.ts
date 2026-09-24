@@ -417,3 +417,73 @@ test.describe('備份與還原 @settings @dsr-3f', () => {
     });
   }
 });
+
+test.describe('系統日誌 @settings @dsr-3e', () => {
+  const LOGS = {
+    logs: [
+      {
+        id: 1,
+        level: 'ERROR',
+        message: 'qBittorrent 連線遭拒（ECONNREFUSED 127.0.0.1:8080）',
+        source: 'qbittorrent',
+        created_at: '2026-09-11T09:42:18',
+      },
+      {
+        id: 2,
+        level: 'INFO',
+        message: '掃描完成：1,247 個檔案，比對成功 1,198',
+        source: 'scanner',
+        created_at: '2026-09-11T09:40:02',
+      },
+    ],
+    total: 2,
+    page: 1,
+    per_page: 50,
+  };
+  const EMPTY = { logs: [], total: 0, page: 1, per_page: 50 };
+
+  async function stubLogs(page: Page) {
+    await page.route('**/api/v1/settings/logs**', (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      const url = new URL(route.request().url());
+      const filtered = url.searchParams.has('level') || url.searchParams.has('keyword');
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: filtered ? EMPTY : LOGS }),
+      });
+    });
+  }
+
+  test('[P1] phone: every message gets (nearly) the full width, not the ~80px left after the timestamp', async ({
+    page,
+  }) => {
+    await stubLogs(page);
+    await page.setViewportSize(PHONE);
+    await page.goto('/settings/logs');
+    const msgs = page.getByTestId('log-message');
+    await expect(msgs.first()).toBeVisible({ timeout: 15000 });
+    expect(await msgs.count()).toBe(2);
+    for (let i = 0; i < 2; i++) {
+      const box = (await msgs.nth(i).boundingBox())!;
+      expect(box.width).toBeGreaterThanOrEqual(PHONE.width - 64 - 32);
+    }
+  });
+
+  test('[P1] filtered to nothing: says so and 清除篩選 clears both the level and the keyword', async ({
+    page,
+  }) => {
+    await stubLogs(page);
+    await page.goto('/settings/logs');
+    await expect(page.getByTestId('logs-count')).toHaveText('共 2 筆記錄', { timeout: 15000 });
+    await page.getByTestId('log-filter-error').click();
+    await page.getByTestId('log-keyword-input').fill('qbittorrent');
+    await page.getByTestId('log-keyword-input').press('Enter');
+    await expect(page.getByText('沒有符合條件的日誌記錄')).toBeVisible();
+    await expect(page.getByTestId('logs-count')).toHaveText('符合條件 0 筆');
+    await page.getByTestId('logs-clear-filters').click();
+    await expect(page.getByTestId('logs-count')).toHaveText('共 2 筆記錄');
+    await expect(page.getByTestId('log-keyword-input')).toHaveValue('');
+    await expect(page.getByTestId('logs-empty')).toHaveCount(0);
+  });
+});
