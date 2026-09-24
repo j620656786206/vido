@@ -1,6 +1,6 @@
 # Story poster-upload-b：在「修改資訊」裡換海報——選圖、拖曳、貼網址，按「儲存」才換上
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -204,3 +204,4 @@ tests/e2e/custom-poster.spec.ts、-gallery.fixtures.tsx、tests/visual/…      
 | 2026-09-24 | 建單（SM）：由 `disc-2026-09-poster-upload-no-ui-entry` 升級並拆出；本張為海報格互動＋後端上傳修正＋清快取提醒句。依賴 poster-upload-a |
 | 2026-09-24 | 實作完成：上傳 handler／service 修正（類型、上限、失敗還原）、版本化路徑、`PosterField` 九狀態、按儲存才上傳、清快取提醒句；更正建單的 `Validate()` 事實；狀態 review |
 | 2026-09-24 | /ship CR：海報已上傳但欄位失敗時，footer 改說實話 |
+| 2026-09-25 | PR #542 合併（`66adf26b`），狀態改 done |
