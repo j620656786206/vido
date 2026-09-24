@@ -1,6 +1,6 @@
 # Story bugfix：沒有片子在用的海報檔，會被定期清掉
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -154,3 +154,4 @@ apps/api/cmd/api/main.go                                                        
 | 2026-09-25 | 建單（SM）：由 `disc-2026-09-poster-orphan-files` 升級；裁定用定期對帳而非逐條刪除路徑補刀；另立 `disc-2026-09-backup-excludes-uploaded-posters` |
 | 2026-09-25 | 實作完成：`PosterReferenceRepository`、共用檔名規則、`PosterOrphanSweeper`、掛進 `CacheSweepScheduler`；本機冒煙清掉 93 個 e2e 殘檔；狀態 review |
 | 2026-09-25 | /ship CR：`.bak` 改名後蓋新時間、認得貼上的本站海報網址 |
+| 2026-09-25 | PR #545 合併（`655ea42b`），狀態改 done |
