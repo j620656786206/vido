@@ -1,6 +1,6 @@
 # Story poster-upload-a：「修改資訊」對話框照 B′13 重做，類型存對、手機變成底部面板
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -185,3 +185,4 @@ apps/web/src/routes/test/-gallery.fixtures.tsx、tests/visual/…/metadata-edito
 | 2026-09-24 | 建單（SM）：由 `disc-2026-09-poster-upload-no-ui-entry` 升級並拆成 a／b；本張為對話框外殼＋欄位 |
 | 2026-09-24 | 實作完成：`ui/Dialog`＋手機面板、B′13 版面、類型改存中文名稱（清單外保留）、演員 chip、失效 key 修正、夾具與基準；狀態 review |
 | 2026-09-24 | /ship CR：演員框失焦即加入、年份清空的中文訊息；另立年份預設成今年的 disc |
+| 2026-09-24 | PR #539 合併（`315339ab`），狀態改 done |
