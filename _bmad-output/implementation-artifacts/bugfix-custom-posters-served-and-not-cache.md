@@ -1,6 +1,6 @@
 # Story bugfix：自己上傳的海報看得到了，也不會再被「清除快取」當成快取刪掉
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -204,3 +204,4 @@ Claude Opus 5.5 (1M context)（Amelia / dev-story）
 | --- | --- |
 | 2026-09-24 | 正式環境查證（0 張上傳海報）；後端移除 image 快取類型、新增 `/api/v1/posters/:file`；前端認得 `/posters/`；稿刪「圖片快取」卡；e2e 上傳→顯示→清快取後仍在 |
 | 2026-09-24 | /ship CR：0H／2M／4L／3N；更正 Context #3（產品沒有上傳入口）、補 drift 註記、`ProcessPoster` 直接寫 `.jpg`、白名單簡化＋`HEAD`；另立 2 張 disc |
+| 2026-09-24 | PR #536 合併（`59220ae9`），狀態改 done |
