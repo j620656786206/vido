@@ -1,6 +1,6 @@
 # Story bugfix：「還原備份」在真正的資料庫上也能成功，失敗時也退得回去
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -157,3 +157,4 @@ apps/api/cmd/api/main.go                                                        
 | 2026-09-25 | 建單（SM）：由 `disc-2026-09-restore-fails-on-real-database`（P0）升級；裁定改用 SQLite online backup API 整庫覆蓋＋覆蓋後跑 migration；schema 版本改成真的並讀備份資料庫本身 |
 | 2026-09-25 | 實作完成：online backup API 整庫覆蓋＋migration、真實 schema 版本、真實 schema 測試夾具；本機冒煙還原（含海報）成功；狀態 review |
 | 2026-09-25 | /ship CR：0H／0M／2L；補並行寫入測試 |
+| 2026-09-25 | PR #549 合併（`69ee7078`），狀態改 done |
