@@ -242,13 +242,52 @@ describe('MetadataEditorDialog', () => {
     expect(await screen.findByText('年份必須大於 1900')).toBeInTheDocument();
   });
 
-  it('says 請輸入年份 in Chinese when the year is cleared', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<MetadataEditorDialog {...defaultProps} />);
-    await user.clear(screen.getByDisplayValue('2019'));
-    await user.click(screen.getByRole('button', { name: '儲存' }));
-    expect(await screen.findByText('請輸入年份')).toBeInTheDocument();
-    expect(mockMutateAsync).not.toHaveBeenCalled();
+  describe('year (bugfix-editor-year-keeps-unknown-and-full-date)', () => {
+    const saveAfterTitleEdit = async (user: ReturnType<typeof userEvent.setup>) => {
+      await user.type(screen.getByLabelText(/片名/, { selector: '#metadata-title' }), '！');
+      await user.click(screen.getByRole('button', { name: '儲存' }));
+      await waitFor(() => expect(mockMutateAsync).toHaveBeenCalled());
+      return mockMutateAsync.mock.calls[0][0];
+    };
+
+    it('an unknown year opens empty (not this year) and is not sent', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <MetadataEditorDialog
+          {...defaultProps}
+          initialData={{ ...defaultInitialData, year: undefined }}
+        />
+      );
+      const year = screen.getByLabelText('年份');
+      expect(year).toHaveValue(null);
+      expect(year).toHaveAttribute('placeholder', '不知道');
+      expect(await saveAfterTitleEdit(user)).not.toHaveProperty('year');
+    });
+
+    it('an untouched known year is not sent (the stored date keeps its month and day)', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<MetadataEditorDialog {...defaultProps} />);
+      expect(await saveAfterTitleEdit(user)).not.toHaveProperty('year');
+    });
+
+    it('a changed year is sent', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<MetadataEditorDialog {...defaultProps} />);
+      const year = screen.getByDisplayValue('2019');
+      await user.clear(year);
+      await user.type(year, '2020');
+      await user.click(screen.getByRole('button', { name: '儲存' }));
+      await waitFor(() => expect(mockMutateAsync).toHaveBeenCalled());
+      expect(mockMutateAsync.mock.calls[0][0].year).toBe(2020);
+    });
+
+    it('clearing the year is not an error and sends no year', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<MetadataEditorDialog {...defaultProps} />);
+      await user.clear(screen.getByDisplayValue('2019'));
+      expect(await saveAfterTitleEdit(user)).not.toHaveProperty('year');
+      expect(screen.queryByText(/年份/, { selector: '[id$="-error"]' })).toBeNull();
+    });
   });
 
   it('keeps an actor that was typed but not yet Entered when 儲存 is pressed', async () => {

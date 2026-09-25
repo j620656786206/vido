@@ -1,4 +1,3 @@
-// Time-bomb-exempt: new Date().getFullYear() is a fallback default for the year field; gallery fixture always passes initialData.year so the path is unreachable in baseline render (Sally)
 // Design ref: ux-design.pen Screen B13p-D 修改資訊 (AFuPx)
 // Design ref: ux-design.pen Screen B13p-M 修改資訊 (oktn2)
 /**
@@ -26,12 +25,12 @@ import { PosterField, type PosterChoice, type PosterPhase } from './PosterField'
 const metadataSchema = z.object({
   title: z.string().min(1, '片名為必填'),
   titleEnglish: z.string().optional(),
-  // A cleared number input is NaN; without its own message zod says
-  // "Expected number, received nan".
-  year: z
-    .number({ invalid_type_error: '請輸入年份' })
-    .min(1900, '年份必須大於 1900')
-    .max(2100, '年份必須小於 2100'),
+  // Optional (bugfix-editor-year-keeps-unknown-and-full-date): an empty field
+  // means "unknown / leave it". A cleared number input is NaN → undefined.
+  year: z.preprocess(
+    (v) => (typeof v === 'number' && Number.isNaN(v) ? undefined : v),
+    z.number().int().min(1900, '年份必須大於 1900').max(2100, '年份必須小於 2100').optional()
+  ),
   genres: z.array(z.string()),
   director: z.string().optional(),
   cast: z.array(z.string()),
@@ -73,7 +72,8 @@ function toFormValues(data: MediaMetadata): MetadataFormData {
   return {
     title: data.title || '',
     titleEnglish: data.titleEnglish || '',
-    year: data.year || new Date().getFullYear(),
+    // Unknown stays empty — never "this year" (a save used to write it in).
+    year: data.year || undefined,
     genres: data.genres || [],
     director: data.director || '',
     cast: data.cast || [],
@@ -162,7 +162,7 @@ function EditorBody({
   const {
     register,
     handleSubmit,
-    formState: { errors, isDirty },
+    formState: { errors, isDirty, dirtyFields },
     watch,
     setValue,
   } = useForm<MetadataFormData>({
@@ -205,10 +205,14 @@ function EditorBody({
     const fieldsToSave = isDirty || posterChoice?.kind === 'url';
     try {
       if (fieldsToSave) {
+        // Send the year only when the user changed it: the server then keeps
+        // the stored date (and its month/day) whenever the year did not move.
+        const { year, ...fields } = data;
         await updateMutation.mutateAsync({
           id: mediaId,
           mediaType,
-          ...data,
+          ...fields,
+          ...(dirtyFields.year && year !== undefined ? { year } : {}),
           // Only a pasted URL goes through the metadata write; an uploaded
           // file already stored its own path and must not be overwritten.
           ...(posterChoice?.kind === 'url' ? { posterUrl: posterChoice.url } : {}),
@@ -295,6 +299,7 @@ function EditorBody({
               aria-describedby={errors.year ? 'metadata-year-error' : undefined}
               min={1900}
               max={2100}
+              placeholder="不知道"
               className={cn(
                 INPUT,
                 errors.year ? 'border-[var(--error)]' : 'border-[var(--border-subtle)]'

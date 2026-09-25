@@ -1350,13 +1350,14 @@ func TestMetadataHandler_UpdateMetadata_MissingTitle(t *testing.T) {
 	assert.Equal(t, "VALIDATION_REQUIRED_FIELD", errData["code"])
 }
 
-// [P1] Tests update metadata missing year returns error (AC4)
-func TestMetadataHandler_UpdateMetadata_MissingYear(t *testing.T) {
+// bugfix-editor-year-keeps-unknown-and-full-date: the year is optional now;
+// an out-of-range one is refused.
+func TestMetadataHandler_UpdateMetadata_YearOutOfRange(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	service := &mockMetadataService{
 		updateMetadataFunc: func(ctx context.Context, req *services.UpdateMetadataRequest) (*services.UpdateMetadataResponse, error) {
-			return nil, services.ErrUpdateMetadataYearRequired
+			return nil, services.ErrUpdateMetadataYearOutOfRange
 		},
 	}
 	handler := NewMetadataHandler(service)
@@ -1366,7 +1367,8 @@ func TestMetadataHandler_UpdateMetadata_MissingYear(t *testing.T) {
 	c.Params = gin.Params{{Key: "id", Value: "test-id"}}
 	body := `{
 		"media_type": "movie",
-		"title": "Test Movie"
+		"title": "Test Movie",
+		"year": 1800
 	}`
 	c.Request = httptest.NewRequest("PUT", "/api/v1/media/test-id/metadata", strings.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
@@ -1381,7 +1383,7 @@ func TestMetadataHandler_UpdateMetadata_MissingYear(t *testing.T) {
 
 	assert.False(t, response["success"].(bool))
 	errData := response["error"].(map[string]interface{})
-	assert.Equal(t, "VALIDATION_REQUIRED_FIELD", errData["code"])
+	assert.Equal(t, "VALIDATION_OUT_OF_RANGE", errData["code"])
 }
 
 // [P1] Tests update metadata invalid JSON returns error

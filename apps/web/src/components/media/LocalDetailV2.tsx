@@ -126,7 +126,8 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
       mediaType: isMovie ? 'movie' : 'series',
       title: data.title,
       titleEnglish: data.originalTitle,
-      year: parseInt(date?.slice(0, 4) || '0', 10),
+      // No date → unknown (undefined), not 0 — the editor must not invent one.
+      year: date ? parseInt(date.slice(0, 4), 10) || undefined : undefined,
       genres: data.genres || [],
       director: isMovie
         ? effectiveCredits?.crew?.find((c) => c.job === 'Director')?.name

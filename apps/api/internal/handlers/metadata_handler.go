@@ -376,10 +376,16 @@ func (h *MetadataHandler) UpdateMetadata(c *gin.Context) {
 
 	result, err := h.service.UpdateMetadata(c.Request.Context(), serviceReq)
 	if err != nil {
-		if err == services.ErrUpdateMetadataTitleRequired || err == services.ErrUpdateMetadataYearRequired {
+		if err == services.ErrUpdateMetadataTitleRequired {
 			ErrorResponse(c, http.StatusBadRequest, "VALIDATION_REQUIRED_FIELD",
 				err.Error(),
-				"Please provide all required fields (title, year)")
+				"Please provide all required fields (title)")
+			return
+		}
+		if err == services.ErrUpdateMetadataYearOutOfRange {
+			ErrorResponse(c, http.StatusBadRequest, "VALIDATION_OUT_OF_RANGE",
+				err.Error(),
+				"Leave the year out to keep it, or send a year between 1900 and 2100")
 			return
 		}
 		if err == services.ErrUpdateMetadataNotFound {

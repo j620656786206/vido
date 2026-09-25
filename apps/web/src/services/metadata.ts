@@ -65,7 +65,8 @@ export interface UpdateMetadataParams {
   mediaType: 'movie' | 'series';
   title: string;
   titleEnglish?: string;
-  year: number;
+  /** Only when changed; absent = keep the stored date (bugfix-editor-year-keeps-unknown-and-full-date). */
+  year?: number;
   genres?: string[];
   director?: string;
   cast?: string[];
