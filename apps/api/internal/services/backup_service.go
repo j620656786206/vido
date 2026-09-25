@@ -10,7 +10,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/vido/api/internal/images"
 	"io"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -57,6 +59,10 @@ type BackupService struct {
 	schemaVersion int64
 	mu            sync.Mutex
 	running       bool
+	// posterDir holds the user-uploaded posters (data/posters). They have no
+	// other copy, so backups carry them. Empty = not backed up.
+	posterDir string
+
 	restoreMu     sync.Mutex
 	restoring     bool
 	restoreResult *models.RestoreResult
@@ -73,6 +79,12 @@ func NewBackupService(db *sql.DB, repo repository.BackupRepositoryInterface, bac
 		backupDir:     backupDir,
 		schemaVersion: schemaVersion,
 	}
+}
+
+// SetPosterDir tells the service where the user-uploaded posters live so every
+// backup (and every pre-restore snapshot) carries them.
+func (s *BackupService) SetPosterDir(dir string) {
+	s.posterDir = dir
 }
 
 // CreateBackup creates an atomic database backup packaged as tar.gz
@@ -267,6 +279,9 @@ type backupManifest struct {
 	SchemaVersion int64  `json:"schema_version"`
 	CreatedAt     string `json:"created_at"`
 	AppVersion    string `json:"app_version"`
+	// Posters is how many uploaded posters the archive carries under posters/
+	// (0 — or absent — in archives made before posters were backed up).
+	Posters int `json:"posters,omitempty"`
 }
 
 func (s *BackupService) createManifest(now time.Time) backupManifest {
@@ -294,6 +309,27 @@ func (s *BackupService) createTarGz(outputPath, dbPath string, manifest backupMa
 	if err := addFileToTar(tarWriter, dbPath, "vido.db"); err != nil {
 		return "", 0, fmt.Errorf("add db to tar: %w", err)
 	}
+
+	// Add the user-uploaded posters (bugfix-backup-includes-uploaded-posters).
+	posters, err := s.posterFiles()
+	if err != nil {
+		return "", 0, err
+	}
+	if len(posters) > 0 {
+		if err := tarWriter.WriteHeader(&tar.Header{
+			Name: "posters/", Typeflag: tar.TypeDir, Mode: 0o755, ModTime: time.Now(),
+		}); err != nil {
+			return "", 0, fmt.Errorf("add posters dir to tar: %w", err)
+		}
+		for _, name := range posters {
+			// A poster that cannot be read fails the whole backup: a backup
+			// that says it is complete but silently lacks a file is worse.
+			if err := addFileToTar(tarWriter, filepath.Join(s.posterDir, name), "posters/"+name); err != nil {
+				return "", 0, fmt.Errorf("add poster %s to tar: %w", name, err)
+			}
+		}
+	}
+	manifest.Posters = len(posters)
 
 	// Add manifest
 	manifestJSON, err := json.MarshalIndent(manifest, "", "  ")
@@ -359,6 +395,93 @@ func addBytesToTar(tw *tar.Writer, data []byte, nameInTar string) error {
 	}
 	_, err := tw.Write(data)
 	return err
+}
+
+// posterFiles lists the uploaded posters to back up: top-level regular files
+// shaped like a poster (never a .bak mid-upload, a directory or a symlink).
+func (s *BackupService) posterFiles() ([]string, error) {
+	if s.posterDir == "" {
+		return nil, nil
+	}
+	entries, err := os.ReadDir(s.posterDir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read poster dir: %w", err)
+	}
+	var names []string
+	for _, e := range entries {
+		if e.Type().IsRegular() && images.IsPosterFileName(e.Name()) {
+			names = append(names, e.Name())
+		}
+	}
+	return names, nil
+}
+
+// restorePosters puts the archive's posters back into posterDir. It only ever
+// ADDS or overwrites — files the archive does not have are left for the orphan
+// sweep, so a rollback never has an emptied folder to undo. Each file lands
+// under a temporary name in the same folder and is renamed into place (never
+// half an image). The copy is a NEW file, so its mtime is "now" and the sweep's
+// grace window covers it — do not carry the archive's timestamps over.
+func (s *BackupService) restorePosters(srcDir string) (restored, failed int) {
+	if s.posterDir == "" {
+		return 0, 0
+	}
+	entries, err := os.ReadDir(srcDir)
+	if err != nil {
+		// No posters/ in the archive (made before posters were backed up).
+		return 0, 0
+	}
+	var names []string
+	for _, e := range entries {
+		if e.Type().IsRegular() && images.IsPosterFileName(e.Name()) {
+			names = append(names, e.Name())
+		}
+	}
+	if len(names) == 0 {
+		return 0, 0
+	}
+	if err := os.MkdirAll(s.posterDir, 0o755); err != nil {
+		slog.Error("Restore: cannot create poster dir", "dir", s.posterDir, "error", err)
+		return 0, len(names)
+	}
+	for _, name := range names {
+		if err := s.restorePoster(filepath.Join(srcDir, name), name); err != nil {
+			slog.Error("Restore: poster not put back", "file", name, "error", err)
+			failed++
+			continue
+		}
+		restored++
+	}
+	return restored, failed
+}
+
+func (s *BackupService) restorePoster(src, name string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	tmp, err := os.CreateTemp(s.posterDir, "."+name+".restoring-*")
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(tmp, in); err != nil {
+		tmp.Close()
+		os.Remove(tmp.Name())
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmp.Name())
+		return err
+	}
+	if err := os.Rename(tmp.Name(), filepath.Join(s.posterDir, name)); err != nil {
+		os.Remove(tmp.Name())
+		return err
+	}
+	return nil
 }
 
 func (s *BackupService) failBackup(ctx context.Context, backup *models.Backup, errMsg string) {
@@ -527,9 +650,20 @@ func (s *BackupService) RestoreBackup(ctx context.Context, id string) (*models.R
 		return result, nil
 	}
 
-	// Step 7: Success
+	// Step 7: Put the uploaded posters back. The database is already restored;
+	// a poster that fails is reported, never a reason to roll the database back.
+	result.PostersRestored, result.PostersFailed = s.restorePosters(filepath.Join(tmpDir, "posters"))
+
+	// Step 8: Success
 	result.Status = models.RestoreStatusCompleted
-	result.Message = "還原完成，資料庫已恢復"
+	switch {
+	case result.PostersFailed > 0:
+		result.Message = fmt.Sprintf("還原完成，資料庫已恢復；有 %d 張上傳的海報沒放回，原因見系統日誌", result.PostersFailed)
+	case result.PostersRestored > 0:
+		result.Message = fmt.Sprintf("還原完成，資料庫與 %d 張上傳的海報已恢復", result.PostersRestored)
+	default:
+		result.Message = "還原完成，資料庫已恢復"
+	}
 	s.setRestoreResult(result)
 
 	slog.Info("Restore completed successfully", "backup_id", id, "restore_id", result.RestoreID, "snapshot_id", snapshot.ID)
@@ -669,6 +803,11 @@ func (s *BackupService) extractTarGz(archivePath, destDir string) error {
 				return fmt.Errorf("create dir %s: %w", cleanName, err)
 			}
 		case tar.TypeReg:
+			// posters/<file> sits in a sub-folder; its TypeDir entry comes
+			// first, but do not depend on archive order.
+			if err := os.MkdirAll(filepath.Dir(targetPath), 0o755); err != nil {
+				return fmt.Errorf("create dir for %s: %w", cleanName, err)
+			}
 			outFile, err := os.Create(targetPath)
 			if err != nil {
 				return fmt.Errorf("create file %s: %w", cleanName, err)
