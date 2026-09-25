@@ -188,7 +188,7 @@ func main() {
 
 	// Initialize backup service (Story 6.5)
 	backupDir := filepath.Join(cfg.DataDir, "backups")
-	backupService := services.NewBackupService(db.Conn(), repos.Backups, backupDir, 17)
+	backupService := services.NewBackupService(db.Conn(), repos.Backups, backupDir)
 	slog.Info("Backup service initialized", "backup_dir", backupDir)
 
 	// Initialize backup scheduler (Story 6.8)
