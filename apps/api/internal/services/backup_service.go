@@ -10,10 +10,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/vido/api/internal/database/migrations"
 	"github.com/vido/api/internal/images"
 	"io"
 	"io/fs"
 	"log/slog"
+	"modernc.org/sqlite"
 	"os"
 	"path/filepath"
 	"sync"
@@ -53,12 +55,14 @@ type BackupServiceInterface interface {
 
 // BackupService manages database backup operations
 type BackupService struct {
-	db            *sql.DB
-	repo          repository.BackupRepositoryInterface
-	backupDir     string
-	schemaVersion int64
-	mu            sync.Mutex
-	running       bool
+	db        *sql.DB
+	repo      repository.BackupRepositoryInterface
+	backupDir string
+	// migrateUp brings a restored database up to the current schema; a seam
+	// so a test can make it fail and exercise the rollback.
+	migrateUp func(ctx context.Context, db *sql.DB) error
+	mu        sync.Mutex
+	running   bool
 	// posterDir holds the user-uploaded posters (data/posters). They have no
 	// other copy, so backups carry them. Empty = not backed up.
 	posterDir string
@@ -72,12 +76,12 @@ type BackupService struct {
 var _ BackupServiceInterface = (*BackupService)(nil)
 
 // NewBackupService creates a new BackupService
-func NewBackupService(db *sql.DB, repo repository.BackupRepositoryInterface, backupDir string, schemaVersion int64) *BackupService {
+func NewBackupService(db *sql.DB, repo repository.BackupRepositoryInterface, backupDir string) *BackupService {
 	return &BackupService{
-		db:            db,
-		repo:          repo,
-		backupDir:     backupDir,
-		schemaVersion: schemaVersion,
+		db:        db,
+		repo:      repo,
+		backupDir: backupDir,
+		migrateUp: runAllMigrations,
 	}
 }
 
@@ -104,12 +108,13 @@ func (s *BackupService) CreateBackup(ctx context.Context) (*models.Backup, error
 
 	now := time.Now()
 	backupID := uuid.New().String()
-	filename := fmt.Sprintf("vido-backup-%s-v%d.tar.gz", now.Format("20060102-150405"), s.schemaVersion)
+	version := schemaVersionOf(ctx, s.db)
+	filename := fmt.Sprintf("vido-backup-%s-v%d.tar.gz", now.Format("20060102-150405"), version)
 
 	backup := &models.Backup{
 		ID:            backupID,
 		Filename:      filename,
-		SchemaVersion: s.schemaVersion,
+		SchemaVersion: version,
 		Status:        models.BackupStatusRunning,
 		CreatedAt:     now,
 	}
@@ -140,7 +145,7 @@ func (s *BackupService) CreateBackup(ctx context.Context) (*models.Backup, error
 	}
 
 	// Step 2: Create manifest
-	manifest := s.createManifest(now)
+	manifest := s.createManifest(now, version)
 
 	// Step 3: Package into tar.gz
 	finalPath := filepath.Join(s.backupDir, filename)
@@ -284,9 +289,9 @@ type backupManifest struct {
 	Posters int `json:"posters,omitempty"`
 }
 
-func (s *BackupService) createManifest(now time.Time) backupManifest {
+func (s *BackupService) createManifest(now time.Time, version int64) backupManifest {
 	return backupManifest{
-		SchemaVersion: s.schemaVersion,
+		SchemaVersion: version,
 		CreatedAt:     now.Format(time.RFC3339),
 		AppVersion:    "1.0.0",
 	}
@@ -617,24 +622,9 @@ func (s *BackupService) RestoreBackup(ctx context.Context, id string) (*models.R
 		return result, nil
 	}
 
-	// Step 5: Read and check schema version compatibility
-	manifestPath := filepath.Join(tmpDir, "manifest.json")
-	manifest, err := s.readManifest(manifestPath)
-	if err != nil {
-		result.Status = models.RestoreStatusFailed
-		result.Error = fmt.Sprintf("RESTORE_EXTRACT_FAILED: cannot read manifest: %v", err)
-		s.rollbackFromSnapshot(ctx, snapshot.ID, result)
-		return result, nil
-	}
-
-	if manifest.SchemaVersion > s.schemaVersion {
-		result.Status = models.RestoreStatusFailed
-		result.Error = fmt.Sprintf("RESTORE_INCOMPATIBLE_VERSION: backup schema version %d is newer than current %d", manifest.SchemaVersion, s.schemaVersion)
-		s.setRestoreResult(result)
-		return result, nil
-	}
-
-	// Step 6: Replace current database with backup database
+	// Step 5: The archive must hold a database, and it must not be newer than
+	// this build. Read the version from the database ITSELF: manifests written
+	// before bugfix-restore-fails-on-real-database all said 17.
 	backupDBPath := filepath.Join(tmpDir, "vido.db")
 	if _, err := os.Stat(backupDBPath); os.IsNotExist(err) {
 		result.Status = models.RestoreStatusFailed
@@ -642,7 +632,21 @@ func (s *BackupService) RestoreBackup(ctx context.Context, id string) (*models.R
 		s.rollbackFromSnapshot(ctx, snapshot.ID, result)
 		return result, nil
 	}
+	backupVersion, err := backupSchemaVersion(ctx, backupDBPath)
+	if err != nil {
+		result.Status = models.RestoreStatusFailed
+		result.Error = fmt.Sprintf("RESTORE_EXTRACT_FAILED: not a Vido database: %v", err)
+		s.setRestoreResult(result)
+		return result, nil
+	}
+	if current := schemaVersionOf(ctx, s.db); backupVersion > current {
+		result.Status = models.RestoreStatusFailed
+		result.Error = fmt.Sprintf("RESTORE_INCOMPATIBLE_VERSION: backup schema version %d is newer than current %d", backupVersion, current)
+		s.setRestoreResult(result)
+		return result, nil
+	}
 
+	// Step 6: Replace current database with backup database
 	if err := s.replaceDatabase(ctx, backupDBPath); err != nil {
 		result.Status = models.RestoreStatusFailed
 		result.Error = fmt.Sprintf("RESTORE_DB_FAILED: %v", err)
@@ -695,11 +699,12 @@ func (s *BackupService) createAutoSnapshot(ctx context.Context) (*models.Backup,
 	now := time.Now()
 	snapshotID := uuid.New().String()
 	filename := fmt.Sprintf("vido-auto-snapshot-before-restore-%s.tar.gz", now.Format("20060102-150405"))
+	version := schemaVersionOf(ctx, s.db)
 
 	snapshot := &models.Backup{
 		ID:            snapshotID,
 		Filename:      filename,
-		SchemaVersion: s.schemaVersion,
+		SchemaVersion: version,
 		Status:        models.BackupStatusRunning,
 		CreatedAt:     now,
 	}
@@ -727,7 +732,7 @@ func (s *BackupService) createAutoSnapshot(ctx context.Context) (*models.Backup,
 		return nil, fmt.Errorf("sqlite snapshot: %w", err)
 	}
 
-	manifest := s.createManifest(now)
+	manifest := s.createManifest(now, version)
 	finalPath := filepath.Join(s.backupDir, filename)
 	tmpTarPath := finalPath + ".tmp"
 
@@ -856,85 +861,93 @@ func (s *BackupService) readManifest(path string) (*backupManifest, error) {
 
 // replaceDatabase replaces the current database with the backup database using SQLite backup API
 func (s *BackupService) replaceDatabase(ctx context.Context, backupDBPath string) error {
-	// Open the backup database
-	backupDB, err := sql.Open("sqlite", backupDBPath+"?mode=ro")
+	// bugfix-restore-fails-on-real-database: the whole database is swapped
+	// page by page with SQLite's online-backup API run in reverse, then the
+	// migrations bring an older backup up to this build's schema — the same
+	// thing startup does. The old table-by-table DELETE + INSERT broke on
+	// every real database: foreign keys (parent tables cleared first), older
+	// backups' column counts (SELECT *), and an ATTACH left behind on error
+	// that then broke the snapshot rollback too.
+	conn, err := s.db.Conn(ctx)
 	if err != nil {
-		return fmt.Errorf("open backup db: %w", err)
+		return fmt.Errorf("acquire connection: %w", err)
 	}
-	defer backupDB.Close()
-
-	// Verify backup database is valid
-	if err := backupDB.PingContext(ctx); err != nil {
-		return fmt.Errorf("validate backup db: %w", err)
+	err = conn.Raw(func(driverConn any) error {
+		restorer, ok := driverConn.(interface {
+			NewRestore(srcURI string) (*sqlite.Backup, error)
+		})
+		if !ok {
+			return fmt.Errorf("sqlite driver does not support online restore")
+		}
+		bk, err := restorer.NewRestore("file:" + backupDBPath + "?mode=ro")
+		if err != nil {
+			return fmt.Errorf("start restore: %w", err)
+		}
+		if _, err := bk.Step(-1); err != nil {
+			_ = bk.Finish()
+			return fmt.Errorf("copy pages: %w", err)
+		}
+		if err := bk.Finish(); err != nil {
+			return fmt.Errorf("finish restore: %w", err)
+		}
+		return nil
+	})
+	if closeErr := conn.Close(); err == nil && closeErr != nil {
+		err = closeErr
 	}
-
-	// Use SQLite's built-in mechanism: load backup data into current DB
-	// We do this by running VACUUM INTO to save current state, then
-	// restore by overwriting tables from the backup
-	// Using a transaction to replace all data atomically
-	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("begin restore transaction: %w", err)
-	}
-	defer tx.Rollback()
-
-	// Attach the backup database
-	_, err = tx.ExecContext(ctx, fmt.Sprintf("ATTACH DATABASE '%s' AS restore_db", backupDBPath))
-	if err != nil {
-		return fmt.Errorf("attach backup db: %w", err)
+		return err
 	}
 
-	// Get list of tables from the backup database
-	rows, err := tx.QueryContext(ctx, "SELECT name FROM restore_db.sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name != 'schema_migrations'")
-	if err != nil {
-		return fmt.Errorf("list backup tables: %w", err)
+	if err := s.migrateUp(ctx, s.db); err != nil {
+		return fmt.Errorf("migrate restored database: %w", err)
 	}
 
-	var tables []string
-	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
-			rows.Close()
-			return fmt.Errorf("scan table name: %w", err)
-		}
-		tables = append(tables, name)
-	}
-	if err := rows.Err(); err != nil {
-		rows.Close()
-		return fmt.Errorf("iterate backup tables: %w", err)
-	}
-	rows.Close()
-
-	// For each table in backup: delete current data, copy from backup
-	for _, table := range tables {
-		// Check if table exists in current database
-		var count int
-		err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?", table).Scan(&count)
-		if err != nil || count == 0 {
-			slog.Warn("Skipping restore table not in current schema", "table", table)
-			continue
-		}
-
-		if _, err := tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM main.%q", table)); err != nil {
-			return fmt.Errorf("clear table %s: %w", table, err)
-		}
-		if _, err := tx.ExecContext(ctx, fmt.Sprintf("INSERT INTO main.%q SELECT * FROM restore_db.%q", table, table)); err != nil {
-			return fmt.Errorf("restore table %s: %w", table, err)
-		}
+	// The data is as it was when the backup was taken; report anything odd
+	// rather than undo a restore the user asked for.
+	var fkProblems int
+	if err := s.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM pragma_foreign_key_check").Scan(&fkProblems); err == nil && fkProblems > 0 {
+		slog.Warn("Restored database has foreign-key inconsistencies", "rows", fkProblems)
 	}
 
-	// Commit first, then detach outside the transaction
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit restore: %w", err)
-	}
-
-	// Detach restore database outside the transaction
-	if _, err := s.db.ExecContext(ctx, "DETACH DATABASE restore_db"); err != nil {
-		slog.Warn("Failed to detach restore database", "error", err)
-	}
-
-	slog.Info("Database restored successfully", "tables_restored", len(tables))
+	slog.Info("Database restored successfully")
 	return nil
+}
+
+// runAllMigrations applies every registered migration, as startup does.
+func runAllMigrations(ctx context.Context, db *sql.DB) error {
+	runner, err := migrations.NewRunner(db)
+	if err != nil {
+		return err
+	}
+	if err := runner.RegisterAll(migrations.GetAll()); err != nil {
+		return err
+	}
+	return runner.Up(ctx)
+}
+
+// schemaVersionOf is the newest applied migration (0 when unknown).
+func schemaVersionOf(ctx context.Context, db *sql.DB) int64 {
+	var v sql.NullInt64
+	if err := db.QueryRowContext(ctx, "SELECT MAX(version) FROM schema_migrations").Scan(&v); err != nil {
+		return 0
+	}
+	return v.Int64
+}
+
+// backupSchemaVersion reads the newest migration recorded INSIDE a backup's
+// database. An error means it is not a Vido database.
+func backupSchemaVersion(ctx context.Context, path string) (int64, error) {
+	db, err := sql.Open("sqlite", "file:"+path+"?mode=ro")
+	if err != nil {
+		return 0, err
+	}
+	defer db.Close()
+	var v sql.NullInt64
+	if err := db.QueryRowContext(ctx, "SELECT MAX(version) FROM schema_migrations").Scan(&v); err != nil {
+		return 0, err
+	}
+	return v.Int64, nil
 }
 
 // rollbackFromSnapshot attempts to restore from the auto-snapshot when restore fails

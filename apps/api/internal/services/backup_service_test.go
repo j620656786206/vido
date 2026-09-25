@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/vido/api/internal/database/migrations"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
 )
@@ -64,15 +65,44 @@ func (m *MockBackupRepo) TotalSizeBytes(ctx context.Context) (int64, error) {
 	return args.Get(0).(int64), args.Error(1)
 }
 
-// createTestDB creates a real SQLite database for testing
+// openVidoTestDB opens a FILE database the way the app does (foreign keys on,
+// WAL) and applies every migration up to maxVersion (0 = all). The old fixture
+// was a single un-keyed test_data table, which is exactly why a restore that
+// broke on every real database stayed green (bugfix-restore-fails-on-real-database).
+func openVidoTestDB(t *testing.T, path string, maxVersion int64) *sql.DB {
+	t.Helper()
+	db, err := sql.Open("sqlite", "file:"+path+"?_pragma=foreign_keys(on)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)")
+	require.NoError(t, err)
+	runner, err := migrations.NewRunner(db)
+	require.NoError(t, err)
+	for _, m := range migrations.GetAll() {
+		if maxVersion == 0 || m.Version() <= maxVersion {
+			require.NoError(t, runner.Register(m))
+		}
+	}
+	require.NoError(t, runner.Up(context.Background()))
+	return db
+}
+
+// latestMigrationVersion is the newest registered migration.
+func latestMigrationVersion() int64 {
+	var v int64
+	for _, m := range migrations.GetAll() {
+		if m.Version() > v {
+			v = m.Version()
+		}
+	}
+	return v
+}
+
+// createTestDB creates a fully migrated Vido database (plus the legacy
+// test_data table the older tests assert on).
 func createTestDB(t *testing.T) (*sql.DB, string) {
 	t.Helper()
 	tmpDir := t.TempDir()
-	dbPath := filepath.Join(tmpDir, "test.db")
-	db, err := sql.Open("sqlite", dbPath)
-	require.NoError(t, err)
+	db := openVidoTestDB(t, filepath.Join(tmpDir, "test.db"), 0)
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS test_data (id TEXT PRIMARY KEY, name TEXT)`)
+	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS test_data (id TEXT PRIMARY KEY, name TEXT)`)
 	require.NoError(t, err)
 
 	_, err = db.Exec(`INSERT INTO test_data (id, name) VALUES ('1', 'test')`)
@@ -85,16 +115,31 @@ func createTestDB(t *testing.T) (*sql.DB, string) {
 func createTestBackupArchive(t *testing.T, dir string, schemaVersion int64, dbData string) (string, string) {
 	t.Helper()
 
-	// Create a test database file
-	tmpDBPath := filepath.Join(dir, "temp.db")
-	testDB, err := sql.Open("sqlite", tmpDBPath)
-	require.NoError(t, err)
-	_, err = testDB.Exec(`CREATE TABLE test_data (id TEXT PRIMARY KEY, name TEXT)`)
+	// A real Vido database at `schemaVersion`: migrated up to it when it is
+	// older than the code, or fully migrated plus a fake newer row when it is
+	// newer (a backup made by a newer Vido).
+	srcDir := t.TempDir()
+	srcPath := filepath.Join(srcDir, "src.db")
+	latest := latestMigrationVersion()
+	upTo := schemaVersion
+	if upTo >= latest {
+		upTo = 0
+	}
+	testDB := openVidoTestDB(t, srcPath, upTo)
+	if schemaVersion > latest {
+		_, err := testDB.Exec(`INSERT INTO schema_migrations (version, name) VALUES (?, 'from_the_future')`, schemaVersion)
+		require.NoError(t, err)
+	}
+	_, err := testDB.Exec(`CREATE TABLE test_data (id TEXT PRIMARY KEY, name TEXT)`)
 	require.NoError(t, err)
 	if dbData != "" {
 		_, err = testDB.Exec(`INSERT INTO test_data (id, name) VALUES ('restored', ?)`, dbData)
 		require.NoError(t, err)
 	}
+	// Pack a single self-contained file, as the app does (VACUUM INTO).
+	tmpDBPath := filepath.Join(dir, "temp.db")
+	_, err = testDB.Exec(fmt.Sprintf("VACUUM INTO '%s'", tmpDBPath))
+	require.NoError(t, err)
 	testDB.Close()
 
 	// Create manifest
@@ -151,7 +196,7 @@ func TestBackupService_RestoreBackup(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, repo, t.TempDir(), 17)
+		svc := NewBackupService(db, repo, t.TempDir())
 
 		repo.On("GetByID", ctx, "nonexistent").Return(nil, nil)
 
@@ -164,7 +209,7 @@ func TestBackupService_RestoreBackup(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, repo, t.TempDir(), 17)
+		svc := NewBackupService(db, repo, t.TempDir())
 
 		backup := &models.Backup{ID: "b1", Status: models.BackupStatusFailed}
 		repo.On("GetByID", ctx, "b1").Return(backup, nil)
@@ -180,7 +225,7 @@ func TestBackupService_RestoreBackup(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, repo, backupDir, 17)
+		svc := NewBackupService(db, repo, backupDir)
 
 		// Create an archive but with wrong checksum
 		filename, _ := createTestBackupArchive(t, backupDir, 17, "data")
@@ -208,7 +253,7 @@ func TestBackupService_RestoreBackup(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, repo, backupDir, 17)
+		svc := NewBackupService(db, repo, backupDir)
 
 		// Create archive with newer schema version (99)
 		filename, checksum := createTestBackupArchive(t, backupDir, 99, "data")
@@ -238,7 +283,7 @@ func TestBackupService_RestoreBackup(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, repo, backupDir, 17)
+		svc := NewBackupService(db, repo, backupDir)
 
 		filename, checksum := createTestBackupArchive(t, backupDir, 17, "restored-data")
 
@@ -272,7 +317,7 @@ func TestBackupService_RestoreBackup(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, repo, backupDir, 17)
+		svc := NewBackupService(db, repo, backupDir)
 		// Simulate a restore in progress
 		svc.restoreMu.Lock()
 		svc.restoring = true
@@ -295,7 +340,7 @@ func TestBackupService_GetRestoreStatus(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, repo, t.TempDir(), 17)
+		svc := NewBackupService(db, repo, t.TempDir())
 
 		result, err := svc.GetRestoreStatus(ctx)
 		assert.NoError(t, err)
@@ -307,7 +352,7 @@ func TestBackupService_GetRestoreStatus(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, repo, t.TempDir(), 17)
+		svc := NewBackupService(db, repo, t.TempDir())
 		svc.restoreResult = &models.RestoreResult{
 			RestoreID: "r1",
 			Status:    models.RestoreStatusInProgress,
@@ -330,7 +375,7 @@ func TestBackupService_CreateAutoSnapshot(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, repo, backupDir, 17)
+		svc := NewBackupService(db, repo, backupDir)
 
 		repo.On("Create", ctx, mock.AnythingOfType("*models.Backup")).Return(nil)
 		repo.On("Update", ctx, mock.AnythingOfType("*models.Backup")).Return(nil)
@@ -349,7 +394,7 @@ func TestBackupService_ExtractTarGz(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, nil, backupDir, 17)
+		svc := NewBackupService(db, nil, backupDir)
 
 		filename, _ := createTestBackupArchive(t, backupDir, 17, "test")
 
@@ -372,7 +417,7 @@ func TestBackupService_ReadManifest(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, nil, "", 17)
+		svc := NewBackupService(db, nil, "")
 
 		tmpFile, err := os.CreateTemp("", "manifest-*.json")
 		require.NoError(t, err)
@@ -393,7 +438,7 @@ func TestBackupService_ReadManifest(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, nil, "", 17)
+		svc := NewBackupService(db, nil, "")
 
 		_, err := svc.readManifest("/nonexistent/path")
 		assert.Error(t, err)
@@ -408,7 +453,7 @@ func TestBackupService_RestoreBackup_RepoError(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, repo, t.TempDir(), 17)
+		svc := NewBackupService(db, repo, t.TempDir())
 
 		repo.On("GetByID", ctx, "b1").Return((*models.Backup)(nil), assert.AnError)
 
@@ -428,7 +473,7 @@ func TestBackupService_RestoreBackup_OlderSchemaVersion(t *testing.T) {
 		defer db.Close()
 
 		// Current version 17, backup version 10 (older = compatible)
-		svc := NewBackupService(db, repo, backupDir, 17)
+		svc := NewBackupService(db, repo, backupDir)
 
 		filename, checksum := createTestBackupArchive(t, backupDir, 10, "old-data")
 
@@ -462,7 +507,7 @@ func TestBackupService_RestoreBackup_VerifyDBContent(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, repo, backupDir, 17)
+		svc := NewBackupService(db, repo, backupDir)
 
 		// Verify original data exists
 		var origName string
@@ -507,7 +552,7 @@ func TestBackupService_RestoreBackup_SnapshotFailure(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, repo, backupDir, 17)
+		svc := NewBackupService(db, repo, backupDir)
 
 		filename, checksum := createTestBackupArchive(t, backupDir, 17, "data")
 		backup := &models.Backup{
@@ -536,7 +581,7 @@ func TestBackupService_RestoreBackup_RunningStatus(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, repo, t.TempDir(), 17)
+		svc := NewBackupService(db, repo, t.TempDir())
 
 		backup := &models.Backup{ID: "b1", Status: models.BackupStatusRunning}
 		repo.On("GetByID", ctx, "b1").Return(backup, nil)
@@ -552,7 +597,7 @@ func TestBackupService_ReadManifest_InvalidJSON(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, nil, "", 17)
+		svc := NewBackupService(db, nil, "")
 
 		tmpFile, err := os.CreateTemp("", "manifest-*.json")
 		require.NoError(t, err)
@@ -573,7 +618,7 @@ func TestBackupService_ExtractTarGz_InvalidArchive(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, nil, "", 17)
+		svc := NewBackupService(db, nil, "")
 
 		// Create a non-gzip file
 		tmpFile, err := os.CreateTemp("", "invalid-*.tar.gz")
@@ -593,7 +638,7 @@ func TestBackupService_ExtractTarGz_InvalidArchive(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, nil, "", 17)
+		svc := NewBackupService(db, nil, "")
 
 		err := svc.extractTarGz("/nonexistent/file.tar.gz", t.TempDir())
 		assert.Error(t, err)
@@ -609,7 +654,7 @@ func TestBackupService_ListBackups(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, repo, t.TempDir(), 17)
+		svc := NewBackupService(db, repo, t.TempDir())
 
 		repo.On("List", ctx).Return(nil, fmt.Errorf("query backups: %w: no such table: backups", repository.ErrTableMissing))
 
@@ -623,7 +668,7 @@ func TestBackupService_ListBackups(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, repo, t.TempDir(), 17)
+		svc := NewBackupService(db, repo, t.TempDir())
 
 		repo.On("List", ctx).Return([]models.Backup{}, nil)
 		repo.On("TotalSizeBytes", ctx).Return(int64(0), fmt.Errorf("sum backup sizes: %w: no such table: backups", repository.ErrTableMissing))
@@ -638,7 +683,7 @@ func TestBackupService_ListBackups(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, repo, t.TempDir(), 17)
+		svc := NewBackupService(db, repo, t.TempDir())
 
 		repo.On("List", ctx).Return(nil, assert.AnError)
 
@@ -653,7 +698,7 @@ func TestBackupService_ListBackups(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, repo, t.TempDir(), 17)
+		svc := NewBackupService(db, repo, t.TempDir())
 
 		repo.On("List", ctx).Return([]models.Backup{}, nil)
 		repo.On("TotalSizeBytes", ctx).Return(int64(0), nil)
@@ -670,7 +715,7 @@ func TestBackupService_ListBackups(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, repo, t.TempDir(), 17)
+		svc := NewBackupService(db, repo, t.TempDir())
 
 		backups := []models.Backup{
 			{ID: "b1", Filename: "backup-1.tar.gz", SizeBytes: 1024, Status: models.BackupStatusCompleted},
@@ -691,7 +736,7 @@ func TestBackupService_ListBackups(t *testing.T) {
 		db, _ := createTestDB(t)
 		defer db.Close()
 
-		svc := NewBackupService(db, repo, t.TempDir(), 17)
+		svc := NewBackupService(db, repo, t.TempDir())
 
 		repo.On("List", ctx).Return(nil, nil)
 		repo.On("TotalSizeBytes", ctx).Return(int64(0), nil)

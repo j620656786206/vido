@@ -77,7 +77,7 @@ func TestBackupService_CreateBackup_IncludesOnlyUploadedPosters(t *testing.T) {
 	require.NoError(t, os.WriteFile(outside, []byte("OUT"), 0o644))
 	require.NoError(t, os.Symlink(outside, filepath.Join(posterDir, "link.jpg")))
 
-	svc := NewBackupService(db, backupRepoMock(), backupDir, 17)
+	svc := NewBackupService(db, backupRepoMock(), backupDir)
 	svc.SetPosterDir(posterDir)
 	b, err := svc.CreateBackup(context.Background())
 	require.NoError(t, err)
@@ -92,7 +92,7 @@ func TestBackupService_CreateBackup_NoPosterFolderStillBacksUp(t *testing.T) {
 	db, _ := createTestDB(t)
 	defer db.Close()
 	backupDir := t.TempDir()
-	svc := NewBackupService(db, backupRepoMock(), backupDir, 17)
+	svc := NewBackupService(db, backupRepoMock(), backupDir)
 	svc.SetPosterDir(filepath.Join(t.TempDir(), "posters")) // never created
 	b, err := svc.CreateBackup(context.Background())
 	require.NoError(t, err)
@@ -111,7 +111,7 @@ func restoreFixture(t *testing.T) (*BackupService, string, *models.Backup, *Mock
 	writePoster(t, posterDir, "m1.jpg", "ORIGINAL")
 	writePoster(t, posterDir, "m1-thumb.jpg", "ORIGINAL-THUMB")
 	repo := backupRepoMock()
-	svc := NewBackupService(db, repo, backupDir, 17)
+	svc := NewBackupService(db, repo, backupDir)
 	svc.SetPosterDir(posterDir)
 	b, err := svc.CreateBackup(context.Background())
 	require.NoError(t, err)
@@ -161,7 +161,7 @@ func TestBackupService_Restore_OldBackupLeavesPostersAlone(t *testing.T) {
 	repo := backupRepoMock()
 	b := &models.Backup{ID: "old", Filename: filename, Checksum: checksum, Status: models.BackupStatusCompleted}
 	repo.On("GetByID", mock.Anything, "old").Return(b, nil)
-	svc := NewBackupService(db, repo, backupDir, 17)
+	svc := NewBackupService(db, repo, backupDir)
 	svc.SetPosterDir(posterDir)
 
 	res, err := svc.RestoreBackup(context.Background(), "old")
@@ -202,7 +202,7 @@ func dirNames(t *testing.T, dir string) []string {
 func TestBackupService_ExtractTarGz_PosterEntries(t *testing.T) {
 	db, _ := createTestDB(t)
 	defer db.Close()
-	svc := NewBackupService(db, nil, t.TempDir(), 17)
+	svc := NewBackupService(db, nil, t.TempDir())
 
 	build := func(name, content string) string {
 		p := filepath.Join(t.TempDir(), "a.tar.gz")
