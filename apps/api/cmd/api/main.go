@@ -202,6 +202,9 @@ func main() {
 
 	// Initialize cache management services (Story 6.2)
 	posterDir := filepath.Join(cfg.DataDir, "posters")
+	// bugfix-backup-includes-uploaded-posters: uploads have no other copy, so
+	// every backup (and pre-restore snapshot) carries them.
+	backupService.SetPosterDir(posterDir)
 	cacheStatsService := services.NewCacheStatsService(db.Conn())
 	cacheCleanupService := services.NewCacheCleanupService(db.Conn())
 	slog.Info("Cache management services initialized")

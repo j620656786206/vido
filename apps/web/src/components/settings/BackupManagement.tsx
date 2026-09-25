@@ -104,7 +104,24 @@ export function BackupManagement() {
       const result = await restoreBackup.mutateAsync(restoreTarget.id);
       setRestoreTarget(null);
       if (result.status === 'completed') {
-        setRestoreMessage({ tone: 'ok', text: '還原完成，資料庫已恢復' });
+        // bugfix-backup-includes-uploaded-posters: the database is restored
+        // either way; say what happened to the uploaded posters too.
+        const failed = result.postersFailed ?? 0;
+        const restored = result.postersRestored ?? 0;
+        setRestoreMessage(
+          failed > 0
+            ? {
+                tone: 'warn',
+                text: `還原完成，資料庫已恢復；有 ${failed} 張上傳的海報沒放回，原因見系統日誌`,
+              }
+            : {
+                tone: 'ok',
+                text:
+                  restored > 0
+                    ? `還原完成，資料庫與 ${restored} 張上傳的海報已恢復`
+                    : '還原完成，資料庫已恢復',
+              }
+        );
       } else {
         setRestoreMessage({ tone: 'error', text: RESTORE_FAILED });
       }

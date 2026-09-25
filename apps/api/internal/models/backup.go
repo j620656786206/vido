@@ -56,6 +56,11 @@ type RestoreResult struct {
 	SnapshotID string        `json:"snapshot_id"`
 	Message    string        `json:"message"`
 	Error      string        `json:"error,omitempty"`
+	// PostersRestored / PostersFailed count the user-uploaded posters put back
+	// from the archive (bugfix-backup-includes-uploaded-posters). Both 0 for an
+	// archive made before posters were backed up.
+	PostersRestored int `json:"posters_restored"`
+	PostersFailed   int `json:"posters_failed,omitempty"`
 }
 
 // VerificationResult contains the outcome of a backup verification

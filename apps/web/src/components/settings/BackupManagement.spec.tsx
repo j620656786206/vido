@@ -362,6 +362,29 @@ describe('BackupManagement', () => {
       expect(screen.getByText(/還原完成/)).toBeInTheDocument();
     });
 
+    // bugfix-backup-includes-uploaded-posters AC #3
+    it.each([
+      [{ postersRestored: 0 }, '還原完成，資料庫已恢復'],
+      [{ postersRestored: 3 }, '還原完成，資料庫與 3 張上傳的海報已恢復'],
+      [
+        { postersRestored: 1, postersFailed: 2 },
+        '還原完成，資料庫已恢復；有 2 張上傳的海報沒放回，原因見系統日誌',
+      ],
+    ])('says how many uploaded posters came back (%o)', async (posters, text) => {
+      const user = userEvent.setup();
+      mockUseRestoreBackup.mockReturnValue({
+        mutateAsync: vi.fn().mockResolvedValue({ status: 'completed', ...posters }),
+        isPending: false,
+      } as any);
+      mockUseBackups.mockReturnValue({ data: backupData, isLoading: false, error: null } as any);
+
+      renderWithQuery(React.createElement(BackupManagement));
+      await user.click(screen.getByTestId('restore-btn-b1'));
+      await user.click(screen.getByTestId('restore-confirm-btn'));
+
+      expect(screen.getByTestId('restore-message')).toHaveTextContent(text);
+    });
+
     it('[P1] shows error message when restore fails', async () => {
       const user = userEvent.setup();
       mockUseRestoreBackup.mockReturnValue({

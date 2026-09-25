@@ -27,6 +27,10 @@ export interface RestoreResult {
   snapshotId: string;
   message: string;
   error?: string;
+  /** Uploaded posters put back from the archive (0 for a pre-poster backup). */
+  postersRestored?: number;
+  /** Uploaded posters that could not be put back (the database still restored). */
+  postersFailed?: number;
 }
 
 export interface BackupSchedule {
