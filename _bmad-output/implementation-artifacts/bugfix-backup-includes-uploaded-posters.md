@@ -1,6 +1,6 @@
 # Story bugfix：備份把你上傳的海報一起存起來，還原時放回去
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -157,3 +157,4 @@ apps/web/src/components/settings/BackupManagement.tsx（+spec）、services（�
 | 2026-09-25 | 建單（SM）：由 `disc-2026-09-backup-excludes-uploaded-posters` 升級；裁定備份收 `posters/`、還原採放回不清空、舊備份相容、放回失敗不回滾資料庫 |
 | 2026-09-25 | 實作完成：備份收海報、還原放回、成功提示；本機冒煙發現還原在真實資料庫上會失敗 → 立 P0 disc；狀態 review |
 | 2026-09-25 | /ship CR：0H／0M／2L（記錄不修） |
+| 2026-09-25 | PR #547 合併（`a98f6bac`），狀態改 done |
