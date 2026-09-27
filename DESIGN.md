@@ -805,7 +805,8 @@ App 是「固定左側軌 ＋ 流動內容欄」。左側軌展開 240px、收�
 - **不准寫死 hex。** 唯一例外是畫布註記（流程標題、色票標籤那些不會被實作的東西）。
 - **`accent-primary` 給人按，`accent-text` 給人讀。** 換過來會無聲地破壞對比度。
 - **徽章底用 `*-tint`，字用 `*-text`，永遠成對。** 語意基色本身（success／warning／error／info／accent-primary）**不可以當文字**。
-- **壓在圖片或深色遮罩上的字用 `text-on-scrim`**，不要用 `text-primary`——後者會隨主題翻轉，日巡下變成黑字壓黑底（追蹤於 `disc-2026-09-text-on-artwork-flips-with-theme`）。
+- **壓在圖片或深色遮罩上的字用 `text-on-scrim`**，不要用 `text-primary`——後者會隨主題翻轉，日巡下變成黑字壓黑底。
+- **壓字的漸層只能漸到 `$bg-*`**（例：`#00000000 → $bg-primary`，字維持 `text-primary`／`text-secondary`，兩個主題一起翻）。寫死 `#0c1512` 之類的顏色，夜行截圖看起來完全正確，日巡就讀不到——**CI 會擋**：`check-design-tokens.py` 讀匯出快照的 `artworkTextFlips`，只要有一個「會翻轉的字壓在寫死顏色的漸層或圖片上」就失敗（bugfix-text-on-artwork-flow-f-l-docs）。
 - **金額一律中性色**，狀態押在標籤與圖示上。會花錢的控制項要帶預估金額。
 
 ### 5. 字級選 `Type/*`，三個變數一起設

@@ -555,8 +555,38 @@ def main():
         js = """
 const v = GetVariables();
 let rawGap = 0, rawPad = 0, rawSize = 0, rawLine = 0, clipped = 0, masters = 0;
+// bugfix-text-on-artwork-flow-f-l-docs: text in a theme-FLIPPING token whose
+// nearest filled ancestor is artwork (an image) or a fill frozen in one theme
+// (a literal, non-transparent hex — solid or gradient stop) goes dark-on-dark in 日巡.
+const FLIPPING = /^\\$(text-primary|text-secondary|text-muted|text-disabled|accent-text|success-text|warning-text|error-text|info-text)$/;
+const frozen = (f) => {
+  for (const x of (Array.isArray(f) ? f : [f])) {
+    // A solid literal colour is frozen the same way a gradient stop is.
+    if (typeof x === "string") {
+      if (/^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(x) && !/^#[0-9a-fA-F]{6}00$/.test(x)) return true;
+      continue;
+    }
+    if (!x || typeof x !== "object") continue;
+    if (x.type === "image") return true;
+    for (const st of (x.colors || [])) {
+      const col = typeof st.color === "string" ? st.color : "";
+      if (/^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(col) && !/^#[0-9a-fA-F]{6}00$/.test(col)) return true;
+    }
+  }
+  return false;
+};
+const flips = [];
 Get((n, c) => {
   if (c.problems) clipped++;
+  if (n.type === "text" && typeof n.fill === "string" && FLIPPING.test(n.fill)) {
+    let p = c.parentCtx;
+    while (p && !p.node.fill) p = p.parentCtx;
+    if (p && frozen(p.node.fill)) {
+      let scr = c;
+      while (scr.parentCtx && scr.parentCtx.depth >= 2) scr = scr.parentCtx;
+      flips.push({ id: n.id, screen: scr.node.name, token: n.fill, over: p.node.id });
+    }
+  }
   if (n.reusable) masters++;
   if (typeof n.gap === "number") rawGap++;
   if (n.padding !== undefined) {
@@ -571,7 +601,8 @@ Get((n, c) => {
 });
 Print(JSON.stringify({ variables: v.variables, themes: v.themes,
   raw: { gap: rawGap, padding: rawPad, fontSize: rawSize, lineHeight: rawLine },
-  counts: { clippingWarnings: clipped, masters: masters } }));
+  counts: { clippingWarnings: clipped, masters: masters, artworkTextFlips: flips.length },
+  artworkTextFlipNodes: flips.slice(0, 50) }));
 """
         resp = mcp_call(proc, req_id + 500, "tools/call", {
             "name": "execute", "arguments": {"filePath": PEN_FILE, "input": js},

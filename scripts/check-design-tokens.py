@@ -310,6 +310,21 @@ def apply_to_design_md(dark: dict[str, str]) -> None:
     print("記得跑 npx prettier --write DESIGN.md")
 
 
+def check_pen_artwork_text(snap: dict) -> list[str]:
+    """Text that flips with the theme must not sit on a gradient frozen in one
+    theme (or straight on an image): in 日巡 it turns dark-on-dark
+    (bugfix-text-on-artwork-flow-f-l-docs). Counted by the export script."""
+    n = snap.get("counts", {}).get("artworkTextFlips", 0)
+    if not n:
+        return []
+    out = [f"  設計稿: {n} 個會隨主題翻轉的字壓在寫死顏色的漸層或圖片上"
+           "（日巡時會變成深字壓深底）——漸層改用 $bg-*，或把字改成 $text-on-scrim"]
+    for node in snap.get("artworkTextFlipNodes", [])[:20]:
+        out.append(f"    {node.get('screen')}: 文字 {node.get('id')}（{node.get('token')}）"
+                   f"壓在 {node.get('over')} 上")
+    return out
+
+
 def main() -> int:
     dark, light = styles_tokens()
 
@@ -340,6 +355,7 @@ def main() -> int:
         problems += check_pen_spacing(snap)
         problems += check_pen_type(snap)
         problems += check_pen_raw_usage(snap)
+        problems += check_pen_artwork_text(snap)
         counts = snap.get("counts", {})
         pen_summary = (f"，設計稿 {len(snap.get('variables', {}))} 個變數、"
                        f"{counts.get('exportedScreens', '?')} 張畫面、"
