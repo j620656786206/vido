@@ -24681,11 +24681,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c1512",
+                                "color": "$bg-primary",
                                 "position": 0
                               },
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 1
                               }
                             ]
@@ -117691,11 +117691,11 @@
                                 },
                                 "colors": [
                                   {
-                                    "color": "#0c151200",
+                                    "color": "#00000000",
                                     "position": 0
                                   },
                                   {
-                                    "color": "#0c1512F2",
+                                    "color": "$bg-primary",
                                     "position": 1
                                   }
                                 ]
@@ -119802,11 +119802,11 @@
                                 },
                                 "colors": [
                                   {
-                                    "color": "#0c151200",
+                                    "color": "#00000000",
                                     "position": 0
                                   },
                                   {
-                                    "color": "#0c1512F2",
+                                    "color": "$bg-primary",
                                     "position": 1
                                   }
                                 ]
@@ -121534,11 +121534,11 @@
                                 },
                                 "colors": [
                                   {
-                                    "color": "#0c151200",
+                                    "color": "#00000000",
                                     "position": 0
                                   },
                                   {
-                                    "color": "#0c1512F2",
+                                    "color": "$bg-primary",
                                     "position": 1
                                   }
                                 ]
@@ -123165,11 +123165,11 @@
                                 },
                                 "colors": [
                                   {
-                                    "color": "#0c151200",
+                                    "color": "#00000000",
                                     "position": 0
                                   },
                                   {
-                                    "color": "#0c1512F2",
+                                    "color": "$bg-primary",
                                     "position": 1
                                   }
                                 ]
@@ -124939,11 +124939,11 @@
                                 },
                                 "colors": [
                                   {
-                                    "color": "#0c151200",
+                                    "color": "#00000000",
                                     "position": 0
                                   },
                                   {
-                                    "color": "#0c1512F2",
+                                    "color": "$bg-primary",
                                     "position": 1
                                   }
                                 ]
@@ -126785,11 +126785,11 @@
                                 },
                                 "colors": [
                                   {
-                                    "color": "#0c151200",
+                                    "color": "#00000000",
                                     "position": 0
                                   },
                                   {
-                                    "color": "#0c1512F2",
+                                    "color": "$bg-primary",
                                     "position": 1
                                   }
                                 ]
@@ -128532,11 +128532,11 @@
                                 },
                                 "colors": [
                                   {
-                                    "color": "#0c151200",
+                                    "color": "#00000000",
                                     "position": 0
                                   },
                                   {
-                                    "color": "#0c1512F2",
+                                    "color": "$bg-primary",
                                     "position": 1
                                   }
                                 ]
@@ -132643,11 +132643,11 @@
                                 },
                                 "colors": [
                                   {
-                                    "color": "#0c151200",
+                                    "color": "#00000000",
                                     "position": 0
                                   },
                                   {
-                                    "color": "#0c1512F2",
+                                    "color": "$bg-primary",
                                     "position": 1
                                   }
                                 ]
@@ -150954,11 +150954,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512F2",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -152065,11 +152065,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512F2",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -153231,11 +153231,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512F2",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -197337,11 +197337,11 @@
                                 },
                                 "colors": [
                                   {
-                                    "color": "#0c151200",
+                                    "color": "#00000000",
                                     "position": 0
                                   },
                                   {
-                                    "color": "#0c1512F2",
+                                    "color": "$bg-primary",
                                     "position": 1
                                   }
                                 ]
@@ -197727,11 +197727,11 @@
                                     },
                                     "colors": [
                                       {
-                                        "color": "#0c151200",
+                                        "color": "#00000000",
                                         "position": 0
                                       },
                                       {
-                                        "color": "#0c1512F2",
+                                        "color": "$bg-primary",
                                         "position": 1
                                       }
                                     ]
@@ -198520,11 +198520,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512F2",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
@@ -200833,11 +200833,11 @@
                             },
                             "colors": [
                               {
-                                "color": "#0c151200",
+                                "color": "#00000000",
                                 "position": 0
                               },
                               {
-                                "color": "#0c1512F2",
+                                "color": "$bg-primary",
                                 "position": 1
                               }
                             ]
