@@ -1,6 +1,6 @@
 # Story bugfix：「修改資訊」不會再亂改年份——不知道的年份留空，已知的上映日期不會被砍成 1 月 1 日
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -143,3 +143,4 @@ tests/e2e/metadata-editor.api.spec.ts                                           
 | 2026-09-25 | 建單（SM）：由 `disc-2026-09-editor-unknown-year-saved-as-this-year` 升級；查證發現每次儲存都把上映日期砍成 1 月 1 日；裁定年份「沒改不送、沒改不動、改年保留月日」 |
 | 2026-09-25 | 實作完成：年份沒改不送、後端沒改不動、改年保留月日、未知留空；狀態 review |
 | 2026-09-25 | /ship CR：0H／0M／1L（記錄不修） |
+| 2026-09-27 | PR #551 合併（`ceaa107f`），狀態改 done |
