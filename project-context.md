@@ -1194,6 +1194,33 @@ API and would otherwise re-invent rate-limit / cache / degradation / key-mgmt fo
 times; codified once here per Epic 11 Retro Insight 1 (codified checks stick,
 passive docs rot).
 
+### Rule 28: Real-Shape Test for Persistence and External Contracts
+
+A test only proves something if the thing it runs against has the shape
+production has. Any AC that **writes/reads the database** or **consumes an
+external contract** (an HTTP API, a file format, a CLI) MUST have at least one
+test that runs against the real shape — not a hand-simplified stand-in:
+
+| Touches                 | Real shape means                                                                                                                                                                                                                      | Not enough on its own                                                                      |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| SQLite (Go)             | a database built by the **real migration chain** (`migrations.NewRunner` + `RegisterAll(GetAll())` + `Up`), file-backed when the code uses WAL / multiple connections / `ATTACH` / online backup, `foreign_keys(on)` like the app DSN | a hand-written `CREATE TABLE` with one un-keyed table; `:memory:` for file-level behaviour |
+| Our own HTTP API (web)  | an error produced by the **real handler path** (a Go handler test or an e2e hitting the API), or a fixture copied from a real response                                                                                                | a mocked `ApiError(404)` the backend never actually returns                                |
+| Third-party API         | a recorded real response (fixture file) including its error bodies                                                                                                                                                                    | a hand-typed happy-path object                                                             |
+| Browser layout / scroll | e2e or visual at the real viewport                                                                                                                                                                                                    | jsdom with a faked `scrollHeight`                                                          |
+
+Mocks remain fine for everything else in the same story; this is **one**
+real-shape test per contract, not a ban on mocks. When a real-shape test is
+impossible in CI, say why in the story's Completion Notes and add a local smoke
+step (run the API, hit the endpoint) with its output.
+
+📌 Precedent (epic-dsr retro, 2026-09-27 — 8+ cases): backup restore passed every
+test against a one-table `test_data` fixture and **failed on every real
+database** (foreign keys, older column counts) until a local smoke run
+(`bugfix-restore-fails-on-real-database`, P0); dsr-2 turned every real TMDb 404
+into a 500 while the web test mocked `ApiError(404)`; dsr-6d-c-2 autoscroll passed
+only with a faked `scrollHeight`; dsr-6f-2 e2e fed three short terms and a long
+one broke the row. Codified per retro-dsr-AI1.
+
 ---
 
 ## 🧪 Known dev-mode artifacts

@@ -1497,7 +1497,7 @@ development_status:
   #   DEV = /bmad:bmm:agents:dev + /bmad:bmm:workflows:dev-story
   #   QD  = /bmad:bmm:workflows:quick-dev
   #
-  retro-dsr-AI1-real-shape-fixture-rule: backlog  # **HIGH** · SM→QD — 碰到持久化或外部契約的 AC，至少一條測試跑在真實形狀上（跑 migration 的資料庫、真 handler 回的真錯誤）；寫進 project-context.md 與 dev-story checklist。證據：dsr-2、2b-a、6d-c-2、6f-2、bugfix-restore-fails-on-real-database（P0 藏在單表夾具後面）。
+  retro-dsr-AI1-real-shape-fixture-rule: done  # ✅ DONE 2026-09-27 — `project-context.md` Rule 28（真實形狀測試：跑 migration 的資料庫、真 handler 的錯誤、錄下來的真回應、真 viewport；每個契約至少一條）＋ dev-story checklist 新增一項。 | 原 **HIGH** · SM→QD — 碰到持久化或外部契約的 AC，至少一條測試跑在真實形狀上（跑 migration 的資料庫、真 handler 回的真錯誤）；寫進 project-context.md 與 dev-story checklist。證據：dsr-2、2b-a、6d-c-2、6f-2、bugfix-restore-fails-on-real-database（P0 藏在單表夾具後面）。
   retro-dsr-AI2-ship-gh-guard-and-retry: done  # ✅ DONE 2026-09-27 — `/ship` 硬規則改成每個指令釘 `GH_TOKEN`（不再靠 `gh auth switch`），新增「Network: retry, don't stop」段落（push／pull／PR 建立的重試迴圈、PR 可能已建立的檢查、背景監看＋合併）。 | 原 **HIGH** · QD — `.claude/skills/ship/SKILL.md` 寫入 `GH_TOKEN=$(gh auth token --user j620656786206)` 與 push／PR 的網路重試（本週 github.com DNS 斷線多次）。承接並關閉 retro-m2-AI2。
   retro-dsr-AI3-e2e-in-ac-drift-sweep: backlog  # **MED** · QD — dev-story instructions.xml 的 AC Drift Check 加上 `tests/e2e` 的 grep。承接並關閉 retro-m25-AI1（dsr-4 CI e2e 因舊文案紅）。
   retro-dsr-AI4-story-facts-cite-code: backlog  # **MED** · SM — create-story：每一條 🔴 事實都要附「親自讀過的 file:line」，不接受代理摘要。證據：dsr-2、7、10、11、4b、poster-upload-b（`Validate()` 其實有人呼叫）。
