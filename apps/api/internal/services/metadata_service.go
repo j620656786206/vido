@@ -251,7 +251,7 @@ type UpdateMetadataRequest struct {
 	MediaType    string   `json:"media_type"`    // "movie" or "series"
 	Title        string   `json:"title"`         // Required: Chinese title
 	TitleEnglish string   `json:"title_english"` // Optional: English title
-	Year         int      `json:"year"`         // Required
+	Year         int      `json:"year"`          // Optional: 0/absent = leave the date as it is
 	Genres       []string `json:"genres"`
 	Director     string   `json:"director"`
 	Cast         []string `json:"cast"`
@@ -267,8 +267,10 @@ func (r *UpdateMetadataRequest) Validate() error {
 	if r.Title == "" {
 		return ErrUpdateMetadataTitleRequired
 	}
-	if r.Year == 0 {
-		return ErrUpdateMetadataYearRequired
+	// bugfix-editor-year-keeps-unknown-and-full-date: the year is optional —
+	// the editor sends it only when the user changed it — but bounded when sent.
+	if r.Year != 0 && (r.Year < 1900 || r.Year > 2100) {
+		return ErrUpdateMetadataYearOutOfRange
 	}
 	// Default media type to movie
 	if r.MediaType == "" {
@@ -289,7 +291,7 @@ type UpdateMetadataResponse struct {
 var (
 	ErrUpdateMetadataIDRequired    = errors.New("id is required")
 	ErrUpdateMetadataTitleRequired = errors.New("title is required")
-	ErrUpdateMetadataYearRequired  = errors.New("year is required")
+	ErrUpdateMetadataYearOutOfRange = errors.New("year must be between 1900 and 2100")
 	ErrUpdateMetadataNotFound      = errors.New("media item not found")
 	ErrUpdateMetadataFailed        = errors.New("failed to update metadata")
 )

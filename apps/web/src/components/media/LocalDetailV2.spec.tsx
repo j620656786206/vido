@@ -18,7 +18,7 @@ const h = vi.hoisted(() => ({
   tvCredits: { data: undefined } as { data: unknown },
   douban: { data: null, isLoading: false } as { data: unknown; isLoading: boolean },
   reparse: {} as Record<string, unknown>,
-  editorProps: [] as Array<{ initialData: { posterUrl?: string } }>,
+  editorProps: [] as Array<{ initialData: { posterUrl?: string; year?: number } }>,
 }));
 
 // dsr-2b-b: the re-match mutation is the container's; stub it so the no-metadata
@@ -88,7 +88,7 @@ vi.mock('./CreditsSection', () => ({
 }));
 vi.mock('./DualRatingDisplay', () => ({ DualRatingDisplay: () => null }));
 vi.mock('../metadata-editor', () => ({
-  MetadataEditorDialog: (props: { initialData: { posterUrl?: string } }) => {
+  MetadataEditorDialog: (props: { initialData: { posterUrl?: string; year?: number } }) => {
     h.editorProps.push(props);
     return null;
   },
@@ -417,6 +417,16 @@ describe('LocalDetailV2', () => {
     renderDetail();
     await screen.findByTestId('local-detail-v2');
     expect(h.editorProps.at(-1)?.initialData.posterUrl).toBe('/posters/abc.jpg');
+  });
+
+  it('an unknown release date reaches 修改資訊 as an unknown year — not 0 (bugfix-editor-year)', async () => {
+    const m = movie();
+    (m.data as Record<string, unknown>).releaseDate = '';
+    h.local = m;
+    h.editorProps.length = 0;
+    renderDetail();
+    await screen.findByTestId('local-detail-v2');
+    expect(h.editorProps.at(-1)?.initialData.year).toBeUndefined();
   });
 
   it('opens the v2 manage-subtitle dialog from 管理字幕', async () => {

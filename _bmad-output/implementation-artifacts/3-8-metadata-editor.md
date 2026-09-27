@@ -519,3 +519,7 @@ AC3 自訂海報：上傳契約不變（DB 存 `/posters/<id>.jpg`，不是本�
 ## ↪ AC drift（2026-09-24，poster-upload-a-metadata-editor-dialog-v2）
 
 AC1 的編輯表單照 B′13 重做：「海報（上傳或網址）」欄暫時拿掉（由 `poster-upload-b-poster-field` 的「改用圖片網址」補回）；類型從 18 個英文 key 的 toggle 改成中文名稱的 chip＋選單——原本每存一次就把「劇情」寫成「drama」。
+
+## ↪ AC drift（2026-09-25，bugfix-editor-year-keeps-unknown-and-full-date）
+
+AC4「年份必填，缺年份回 400」→ 年份可選：沒送（或同一年）＝上映日期不動；改年保留月日；超出 1900–2100 回 400 `VALIDATION_OUT_OF_RANGE`。原因：每次儲存都把上映日期改成 `<年>-01-01`。

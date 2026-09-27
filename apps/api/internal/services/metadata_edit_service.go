@@ -105,10 +105,8 @@ func (s *MetadataEditService) updateMovieMetadata(ctx context.Context, req *Upda
 		movie.OriginalTitle = models.NewNullString(req.TitleEnglish)
 	}
 
-	// Update year in release date
-	if req.Year > 0 {
-		movie.ReleaseDate = fmt.Sprintf("%d-01-01", req.Year)
-	}
+	// Year → release date, only when the year really changed (withYear).
+	movie.ReleaseDate = withYear(movie.ReleaseDate, req.Year)
 
 	// Update genres
 	if len(req.Genres) > 0 {
@@ -200,10 +198,8 @@ func (s *MetadataEditService) updateSeriesMetadata(ctx context.Context, req *Upd
 		series.OriginalTitle = models.NewNullString(req.TitleEnglish)
 	}
 
-	// Update year in first air date
-	if req.Year > 0 {
-		series.FirstAirDate = fmt.Sprintf("%d-01-01", req.Year)
-	}
+	// Year → first air date, only when the year really changed (withYear).
+	series.FirstAirDate = withYear(series.FirstAirDate, req.Year)
 
 	// Update genres
 	if len(req.Genres) > 0 {
@@ -453,4 +449,28 @@ type BytesReader struct {
 // NewBytesReader creates a new BytesReader
 func NewBytesReader(data []byte) *BytesReader {
 	return &BytesReader{bytes.NewReader(data)}
+}
+
+// withYear applies an edited year to a stored YYYY-MM-DD date
+// (bugfix-editor-year-keeps-unknown-and-full-date). Every save used to write
+// "<year>-01-01", so fixing a title turned 2016-08-26 into 2016-01-01.
+//   - year 0 (not sent) or the same year → the date is returned unchanged;
+//   - a different year keeps month and day (Feb 29 into a common year → Feb 28);
+//   - no usable date to keep → "<year>-01-01".
+func withYear(date string, year int) string {
+	if year == 0 {
+		return date
+	}
+	t, err := time.Parse("2006-01-02", date)
+	if err != nil {
+		return fmt.Sprintf("%d-01-01", year)
+	}
+	if t.Year() == year {
+		return date
+	}
+	day := t.Day()
+	if last := time.Date(year, t.Month()+1, 0, 0, 0, 0, 0, time.UTC).Day(); day > last {
+		day = last
+	}
+	return time.Date(year, t.Month(), day, 0, 0, 0, 0, time.UTC).Format("2006-01-02")
 }

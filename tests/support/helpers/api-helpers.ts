@@ -260,7 +260,8 @@ export interface UpdateMetadataRequest {
   media_type?: 'movie' | 'series';
   title: string;
   title_english?: string;
-  year: number;
+  /** Optional since bugfix-editor-year-keeps-unknown-and-full-date. */
+  year?: number;
   genres?: string[];
   director?: string;
   cast?: string[];

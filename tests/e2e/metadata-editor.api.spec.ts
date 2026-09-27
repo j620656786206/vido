@@ -46,6 +46,12 @@ function createUpdateMetadataData() {
   };
 }
 
+/** The stored release date, whichever casing the API answers with. */
+function dateOf(res: { data?: unknown }): string {
+  const d = res.data as Record<string, string>;
+  return d.release_date ?? d.releaseDate;
+}
+
 // =============================================================================
 // Update Metadata API Tests (AC2, AC4)
 // =============================================================================
@@ -122,22 +128,44 @@ test.describe('Update Metadata API @api @metadata-editor', () => {
     expect(response.error!.code).toBe('VALIDATION_REQUIRED_FIELD');
   });
 
-  test('[P1] PUT /media/{id}/metadata - should return 400 for missing year (AC4)', async ({
+  // bugfix-editor-year-keeps-unknown-and-full-date: the year is optional now —
+  // leaving it out (or sending the same year) keeps the stored release date;
+  // a new year keeps month and day. Replaces "missing year → 400" (3-8 AC4).
+  test('[P1] PUT /media/{id}/metadata - no year keeps the release date as it is', async ({
     api,
   }) => {
-    // GIVEN: Update data without year
-    const updateData = {
-      title: '無年份測試',
-      year: 0,
-    };
+    await api.updateMetadata(testMovieId, { title: '只改片名', year: 2016 });
+    const before = dateOf(await api.getMovie(testMovieId));
 
-    // WHEN: Attempting to update without year
-    const response = await api.updateMetadata(testMovieId, updateData);
+    const response = await api.updateMetadata(testMovieId, { title: '又改一次片名' });
+    expect(response.success).toBe(true);
+    expect(dateOf(await api.getMovie(testMovieId))).toBe(before);
+  });
 
-    // THEN: Should return validation error
+  test('[P1] PUT /media/{id}/metadata - the same year never truncates the date to Jan 1', async ({
+    api,
+  }) => {
+    const date = dateOf(await api.getMovie(testMovieId));
+    const year = Number(date.slice(0, 4));
+    const response = await api.updateMetadata(testMovieId, { title: '同一年', year });
+    expect(response.success).toBe(true);
+    expect(dateOf(await api.getMovie(testMovieId))).toBe(date);
+  });
+
+  test('[P1] PUT /media/{id}/metadata - a new year keeps month and day', async ({ api }) => {
+    const date = dateOf(await api.getMovie(testMovieId));
+    const response = await api.updateMetadata(testMovieId, { title: '換年份', year: 2031 });
+    expect(response.success).toBe(true);
+    const after = dateOf(await api.getMovie(testMovieId));
+    expect(after.slice(0, 4)).toBe('2031');
+    // Feb 29 of the source year may land on Feb 28 in 2031.
+    expect(date.slice(5) === '02-29' ? '02-28' : date.slice(5)).toBe(after.slice(5));
+  });
+
+  test('[P2] PUT /media/{id}/metadata - an out-of-range year is refused', async ({ api }) => {
+    const response = await api.updateMetadata(testMovieId, { title: '怪年份', year: 1800 });
     expect(response.success).toBe(false);
-    expect(response.error).toBeDefined();
-    expect(response.error!.code).toBe('VALIDATION_REQUIRED_FIELD');
+    expect(response.error!.code).toBe('VALIDATION_OUT_OF_RANGE');
   });
 
   test('[P1] PUT /media/{id}/metadata - should return 404 for non-existent movie', async ({
