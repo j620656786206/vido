@@ -1,6 +1,6 @@
 # Story bugfix：日巡模式下，字幕與請求流程的稿上「壓在劇照上的字」讀得到，而且以後自動擋下
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -143,3 +143,4 @@ DESIGN.md（SOP 一句）、_bmad-output/implementation-artifacts/sprint-status.
 | 2026-09-27 | 建單（SM）：收尾 P0 `disc-2026-09-text-on-artwork-flips-with-theme`（剩 Flow F 11＋L 4＋Docs 1 個寫死 `#0c1512` 的漸層，程式碼已乾淨）＋併入守門 `disc-2026-09-pen-hardcoded-hex-unguarded` |
 | 2026-09-27 | 實作完成：守門（111→0）、16 個漸層改 `$bg-primary`、日巡截圖確認、只 stage 15 張截圖；狀態 review |
 | 2026-09-27 | /ship CR：守門規則補上寫死純色底 |
+| 2026-09-27 | PR #553 合併（`ab4c9677`），狀態改 done |
