@@ -303,6 +303,23 @@
     <template-output file="{default_output_file}">
     story_completion_status</template-output>
 
+    <!-- STORY FACT VERIFICATION (epic-dsr Retro AI4, 2026-09-27: ENFORCED) -->
+    <action critical="MANDATORY">FACT CITATION CHECK (BLOCKING):
+    Every factual claim about the CURRENT codebase or design that the story relies on — in Context
+    ("查到的事" / findings), Acceptance Criteria, and Dev Notes ("已知陷阱", "不要做的事") — MUST cite
+    the exact `path:line` (or `.pen` node id) that YOU read in THIS session with a file-reading tool.
+      - Not acceptable as evidence: a subagent's summary, a grep hit you did not open, a memory note,
+        a prior story's claim, or "the handler probably…". Those are leads — open the file and read it.
+      - Negative claims ("X is never called", "nothing serves Y", "no test covers Z") are the most
+        error-prone: grep the WHOLE repo (not one package) and name the grep in the citation.
+      - A claim you could not verify stays in the story only if it is marked "⚠️ 未查證（dev 開工時先確認）"
+        and is NOT used to justify an AC.
+    Re-read the finished Context section once, top to bottom, and check each claim against its citation.
+    Precedent (epic-dsr retro): dsr-2 (agent said the TMDb handler was correct — it was not), dsr-7 (3 AC
+    errors from a depth-3 scan), dsr-10 (3 of 4 AC #7 items wrong), dsr-11, dsr-4b, poster-upload-b
+    ("Validate() has no callers" — grep covered two files; MetadataService called it).
+    </action>
+
     <!-- CROSS-STACK SPLIT CHECK (Agreement 5, Epic 8 Retro + Epic 9c Retro AI-1: ENFORCED) -->
     <action critical="MANDATORY">STORY SIZE VALIDATION — Cross-Stack Split Check (BLOCKING):
     Count the number of tasks that are primarily BACKEND work (Go handlers, services, repos, middleware, DB).

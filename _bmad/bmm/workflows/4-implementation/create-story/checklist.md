@@ -166,6 +166,13 @@ You will systematically re-do the entire story creation process, but with a crit
 - **Scope creep:** Missing boundaries that could cause unnecessary work
 - **Quality failures:** Missing quality requirements that could deliver broken features
 
+#### **3.6 Unverified-Fact DISASTERS (epic-dsr Retro AI4)**
+
+- **Uncited facts:** any claim about the current code/design without a `path:line` (or `.pen` node id) the author read this session
+- **Negative claims from a narrow search:** "never called / not served / no test" backed by a grep of one package — re-grep the whole repo
+- **Second-hand evidence:** facts taken from a subagent summary, memory note or earlier story without opening the file
+- **Unverified claim driving an AC:** an AC justified by something marked 未查證
+
 ### **Step 4: LLM-Dev-Agent Optimization Analysis**
 
 **CRITICAL STEP: Optimize story context for LLM developer agent consumption**
