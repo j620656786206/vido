@@ -13,9 +13,18 @@ This skill is vido-specific: it bakes in vido's gh account, nx/pnpm tooling, con
 
 - **Never commit to `main`.** Always create a NEW feature branch first, based off `main` (not off another feature/skill branch).
 - **Never use git worktrees.** Use a direct `git checkout -b`.
-- **gh account must be `j620656786206`** for all PR/CI operations. Verify with `gh auth status`; if the active account is `alexyu-tvbs`, run `gh auth switch --user j620656786206` before any `gh` PR/CI call. Re-verify if a `gh` call fails with a permissions error.
+- **Every `gh` call runs as `j620656786206`, pinned per command — never by switching.** Start each shell that calls `gh` with `export GH_TOKEN=$(gh auth token --user j620656786206)`. Do **not** rely on `gh auth switch`: the active account is machine-global, another session (work repos use `alexyu-tvbs`) flips it mid-pipeline, and a `gh pr create` then fails as a non-collaborator. (retro-dsr-AI2, carries retro-m2-AI2.)
 - **`-linux` visual baselines CANNOT be generated locally** (this machine is darwin; CI runs ubuntu). Never run `test:visual:update` and commit the resulting `-*.png` to fix a visual-regression failure — those would be wrong-platform PNGs. See "CI self-heal → Visual Regression" below.
 - Stay autonomous. Only pause for a genuine product/architecture decision — not for routine lint fixes, baseline bootstraps, or gh account switches.
+
+## Network: retry, don't stop
+
+github.com is sometimes unreachable from this machine for minutes at a time (`ssh: Could not resolve hostname github.com`, `error connecting to api.github.com`) while the rest of the internet works. That is not a failure of the work — retry:
+
+- **push / fetch / pull**: loop up to ~20 times with a 20s pause, e.g. `for i in $(seq 1 20); do git push -q -u origin "$B" && break; sleep 20; done`. After a pull, check the expected commit actually arrived (`git log --oneline -1 | grep -q "#NNN"`) instead of trusting the exit code.
+- **`gh pr create`**: write the body to a file first (`--body-file`), then loop; on each miss also try `gh pr list --head "$B" --json url` — the create may have succeeded before the connection dropped. Never create the PR twice.
+- **Watching CI and merging** can run as one background command (create → `gh pr checks --watch` → merge only if every check is `pass`/`skipping`); you are notified when it ends.
+- Only report "blocked" if github.com stays unreachable for the whole retry window, and say which step (push, PR, checks, merge) is still pending.
 
 ## Pipeline
 
@@ -38,8 +47,8 @@ This skill is vido-specific: it bakes in vido's gh account, nx/pnpm tooling, con
 - Husky pre-commit hooks will run; let them. If they reject, fix and retry.
 
 ### 5. Push + open PR
-- `git push -u origin <branch>`.
-- `gh pr create` with a title mirroring the commit and a body containing: what changed, test evidence (which suites ran green), and any out-of-scope review findings. End the body with the Claude Code attribution.
+- `git push -u origin <branch>` (with the retry loop above).
+- `gh pr create --body-file …` (retry loop above; `GH_TOKEN` pinned) with a title mirroring the commit and a body containing: what changed, test evidence (which suites ran green), and any out-of-scope review findings. End the body with the Claude Code attribution.
 
 ### 6. CI self-heal loop
 Poll CI with `gh pr checks --watch`. Fix failures autonomously:
