@@ -9,37 +9,9 @@
 
 ---
 
-## 🚨 CRITICAL: Current Project State
+## Backend Location
 
-### Dual Backend Architecture Problem
-
-**The project currently has TWO separate Go backends with divided features:**
-
-1. **Root Backend** (`/cmd` + `/internal`)
-   - ✅ Has: Swagger, zerolog logging, TMDb client, advanced middleware
-   - ❌ Missing: NO database, NO data persistence
-
-2. **Apps Backend** (`/apps/api`)
-   - ✅ Has: SQLite database, migrations, repository pattern
-   - ❌ Missing: NO Swagger, NO structured logging, NO TMDb integration
-
-### ⚠️ ALL NEW CODE MUST GO TO: `/apps/api`
-
-**Consolidation Plan (5 Phases):**
-
-**Phase 1: Backend Consolidation** (⭐ CURRENT PRIORITY)
-
-- **Step 1.1:** Migrate TMDb client: `/internal/tmdb/` → `/apps/api/internal/tmdb/` (update to use slog)
-- **Step 1.2:** Migrate Swagger: `/cmd/api/main.go` → `/apps/api/main.go` + `/apps/api/docs/`
-- **Step 1.3:** Migrate middleware: `/internal/middleware/` → `/apps/api/internal/middleware/`
-
-**Phase 2-5:** Implement architectural decisions, frontend alignment, core features, and testing.
-See `_bmad-output/planning-artifacts/architecture/consolidation-refactoring-plan.md` for complete 5-phase roadmap.
-
-**Root backend** (`/cmd`, `/internal`) will be archived to `/archive/` after Phase 1 completion.
-**DO NOT add code to `/cmd` or root `/internal`** - these are deprecated.
-
----
+There is ONE Go backend: `/apps/api` (entry point `apps/api/cmd/api/main.go`). The original scaffold's root backend (`/cmd`, `/internal`, root `go.mod`) was removed on 2026-09-28 after its features had been migrated; do not recreate code at the repo root.
 
 ## 🎯 Core Architectural Decisions (MANDATORY)
 
@@ -1588,7 +1560,7 @@ pnpm run test:cleanup:all
 
 **What Gets Cleaned Up:**
 
-- Go backend (`go run ./cmd/api`)
+- Go backend (`go run ./cmd/api` in `apps/api`)
 - Vite dev server (`nx serve web`)
 - Vitest workers (`node (vitest N)`)
 - Playwright test runners

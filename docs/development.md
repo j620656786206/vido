@@ -141,7 +141,7 @@ All handlers use the shared helpers in `apps/api/internal/handlers/response.go`:
 
 Error codes are namespaced by source (e.g. `TMDB_`, `TRANSCRIPTION_`, `AI_`). `project-context.md` holds the registry — add new codes there when you introduce them.
 
-There is no swaggo/OpenAPI generation in `apps/api`; the `api/openapi.json` at the repo root is a leftover from the original scaffold and is not regenerated.
+There is no swaggo/OpenAPI generation in `apps/api`.
 
 ## Configuration
 
@@ -185,14 +185,6 @@ lsof -ti:8080 | xargs kill -9   # api
 ```
 
 **Formatting failures in CI** — run `pnpm run format` before committing; `format:check` is a hard gate.
-
-## Scaffold Leftovers
-
-A few paths date from the project's initial scaffold and are not part of the build. Don't edit them expecting an effect:
-
-- `cmd/api/main.go` at the repo root — the real entry point is `apps/api/cmd/api/main.go`
-- `api/openapi.json` — no longer generated
-- `.air.toml` at the repo root — targets the legacy root entry point; `pnpm nx serve api` is the supported way to run the API
 
 ## Contributing
 
