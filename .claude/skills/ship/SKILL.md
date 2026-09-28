@@ -55,11 +55,11 @@ Poll CI with `gh pr checks --watch`. Fix failures autonomously:
 
 - **Lint / format** → `pnpm run lint:fix && pnpm run format`, commit `chore: lint`, push.
 - **Unit / E2E regression** → diagnose, fix in-scope with a test, push. If a test is genuinely flaky, confirm via burn-in before touching it.
-- **Visual Regression (`-linux` baselines)** → This is the known vido quirk. When the `Visual Regression / PR` check fails **purely because `-linux.png` baselines are missing** (no real visual diff), the dedicated `Visual Regression` workflow auto-opens a separate `chore(visual): bootstrap N missing -linux baselines (incremental)` PR. Do NOT regenerate baselines locally. Instead:
-  1. Find that bootstrap PR (`gh pr list --search "bootstrap linux baselines"`).
-  2. Verify it only adds `-linux.png` files (no source changes), then merge it.
-  3. Rebase the feature branch on updated `main` and re-run CI.
-  - If the visual check shows a **real diff** (not just missing baselines), that's a genuine change → pause and show the diff artifact to the user.
+- **Visual Regression (`-linux` baselines)** → `-linux` PNGs are produced by CI only (retro-dsr-AI5, carries retro-m25-AI2). The flow that works, used on every PR from dsr-2 on:
+  1. **Before pushing**, for every fixture whose look changed: update the `-darwin` PNG locally and **`git rm` the stale `-linux` PNG**. A change below the snapshot threshold is **not** rewritten by `test:visual:update` — if the picture's content changed (e.g. a sentence), delete the `-darwin` file too and run `test:visual:update-missing` so the baseline shows the new content.
+  2. After the PR is open, dispatch the bootstrap on the **feature branch**: `gh workflow run "Visual Regression" --ref <branch>`. It opens a `chore(visual): bootstrap N missing -linux baselines (incremental)` PR **targeting your branch**.
+  3. Verify that PR only adds `-linux.png` files (plus the auto-updated `_bmad-output/audit/visual-baseline-19-4.md`), then `gh pr merge <N> --squash --delete-branch`. This lands the baselines on your branch; the PR's own checks then re-run green. No `--admin` and no rebase onto main needed.
+  - If `Visual Regression / PR` shows a **real diff** (not just missing baselines), that's a genuine change → pause and show the diff artifact to the user.
 - **Docker / other** → diagnose from logs; fix if in-scope.
 
 Repeat until all checks are green.
