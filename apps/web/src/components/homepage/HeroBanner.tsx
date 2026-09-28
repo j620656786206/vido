@@ -192,8 +192,12 @@ function HeroSlide({
             最新入庫
           </p>
 
+          {/* Display on desktop (H1-D-v3), H2 on a phone (H2-M-v3 binds
+              $Type/H2 → 20 under bp:mobile): the title sits ON the artwork,
+              and a bigger phone title only covers more of the picture.
+              ⚖️ Alexyu 2026-09-28 — the .pen wins over the table's 30. */}
           <p
-            className="mt-2 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl lg:text-4xl"
+            className="mt-2 text-xl font-bold text-[var(--text-primary)] sm:text-3xl lg:text-4xl"
             data-testid="hero-banner-title"
           >
             {item.title}

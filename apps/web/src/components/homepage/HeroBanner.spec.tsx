@@ -112,6 +112,15 @@ describe('HeroBanner (Home v3 own-library static hero — ux3-1-8)', () => {
     expect(slide.querySelector('[data-testid="hero-banner-year"]')).toHaveTextContent('2024');
   });
 
+  it('[P2] the title is H2 on a phone and Display from lg (H2-M-v3 / H1-D-v3, ⚖️ 2026-09-28)', () => {
+    mockUseRecentlyAdded.mockReturnValue(result({ data: [movie('m1')] }));
+    render(<HeroBanner />);
+    const title = activeSlide()!.querySelector('[data-testid="hero-banner-title"]');
+    // 20 on a phone (the title sits on the artwork), 30 from sm, 36 from lg.
+    expect(title).toHaveClass('text-xl', 'sm:text-3xl', 'lg:text-4xl');
+    expect(title).not.toHaveClass('text-2xl');
+  });
+
   it('[P1] the subtitle badge celebrates the zh-Hant steady state (繁中字幕 ✓ 已就緒, success tint)', () => {
     mockUseRecentlyAdded.mockReturnValue(result({ data: [movie('m1')] }));
     render(<HeroBanner />);
