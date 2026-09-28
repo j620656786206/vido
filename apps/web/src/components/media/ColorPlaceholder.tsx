@@ -60,7 +60,7 @@ export function ColorPlaceholder({
         // --text-on-scrim: the tile is hash-derived and clamped dark in BOTH
         // themes, so its letter must not invert with the theme. --text-primary
         // measured 1.45:1 here in 日巡. See PosterCardV2 for the full note.
-        className="select-none text-5xl font-bold text-[var(--text-on-scrim)] drop-shadow-lg"
+        className="select-none text-4xl font-bold text-[var(--text-on-scrim)] drop-shadow-lg"
         aria-hidden="true"
       >
         {displayChar}

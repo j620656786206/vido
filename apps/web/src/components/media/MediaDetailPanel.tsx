@@ -171,7 +171,10 @@ export function MediaDetailPanel({
               />
             ))}
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-bold text-[var(--text-primary)]" data-testid="detail-title">
+            <h1
+              className="text-lg sm:text-xl font-bold text-[var(--text-primary)]"
+              data-testid="detail-title"
+            >
               {title}
             </h1>
             {originalTitle && originalTitle !== title && (

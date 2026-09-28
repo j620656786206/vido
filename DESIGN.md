@@ -405,7 +405,7 @@ Headline(30) > Title(24) > Subtitle(20) > Heading(18) 是四個近義詞，沒�
 
 ⚠️ **`.pen` 的 `lineHeight` 是比例不是 px。** 填 20 代表 20 倍行高，不是 20px——實測會讓整份檔案的裁切警告從 150 暴增到 2164。
 
-**程式碼已跟上字級與行高**（2026-09-28）：奇數字級清零（`bugfix-type-scale-code-migration`，守門測試擋回流）；八階的行高與 Label 的字重 500 改在 `apps/web/src/styles.css` 的 `@theme` 一次設定（`--text-*--line-height`、`--text-xs--font-weight`，`bugfix-type-line-height-weight`），所以每個 `text-*` 自動帶這張表的行高，元素上明寫的 `leading-*`／`font-*` 仍然優先。`styles-type-scale.spec.ts` 直接讀這張表和 `styles.css` 比對，改其中一邊另一邊沒跟上就會紅。**還沒跟上的**：5 處 `text-3xl`(30)、1 處 `text-5xl`(48) 的用途對不上表；手機的標題降階（`sm:text-*`）在程式碼裡仍不存在——追蹤於 `disc-2026-09-type-scale-display-and-mobile-step`。
+**程式碼已跟上字級與行高**（2026-09-28）：奇數字級清零（`bugfix-type-scale-code-migration`，守門測試擋回流）；八階的行高與 Label 的字重 500 改在 `apps/web/src/styles.css` 的 `@theme` 一次設定（`--text-*--line-height`、`--text-xs--font-weight`，`bugfix-type-line-height-weight`），所以每個 `text-*` 自動帶這張表的行高，元素上明寫的 `leading-*`／`font-*` 仍然優先。`styles-type-scale.spec.ts` 直接讀這張表和 `styles.css` 比對，改其中一邊另一邊沒跟上就會紅。手機的標題降階也已跟上（`bugfix-type-heading-mobile-step`）：每個 `text-xl`～`text-4xl` 都要有 `sm:`／`max-sm:` 搭配的手機字級（寫法如 `text-lg sm:text-xl`），48px 已移除，守門測試擋回流。**豁免**：用 emoji 當圖示的字（是圖形不是字）、海報／頭像 placeholder 首字（跟著方塊大小，不跟視窗），以及 `routes/test/` 的開發用頁面。
 
 ### Named Rules
 

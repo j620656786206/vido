@@ -330,7 +330,7 @@ export function ActivityHub() {
     >
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">活動</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)]">活動</h1>
           <p className="text-sm text-[var(--text-secondary)]">
             媒體庫的所有背景工作 — 掃描、字幕、解析與下載
           </p>

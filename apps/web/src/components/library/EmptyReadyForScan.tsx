@@ -49,7 +49,7 @@ export function EmptyReadyForScan() {
         <ScanSearch className="h-10 w-10" />
       </div>
 
-      <h2 className="mb-3 text-xl font-semibold text-[var(--text-primary)]">
+      <h2 className="mb-3 text-lg sm:text-xl font-semibold text-[var(--text-primary)]">
         準備好了，等待第一筆媒體
       </h2>
       <p className="mb-8 max-w-sm text-sm text-[var(--text-secondary)]">

@@ -13,7 +13,7 @@ export function EmptyNoQBT() {
         <FolderOpen className="h-10 w-10" />
       </div>
 
-      <h2 className="mb-3 text-xl font-semibold text-[var(--text-primary)]">
+      <h2 className="mb-3 text-lg sm:text-xl font-semibold text-[var(--text-primary)]">
         連接 qBittorrent 開始下載
       </h2>
       <p className="mb-8 max-w-sm text-sm text-[var(--text-secondary)]">

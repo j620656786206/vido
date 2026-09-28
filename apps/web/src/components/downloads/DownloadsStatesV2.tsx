@@ -87,7 +87,7 @@ export function DownloadsEmptyV2({ filter }: { filter: FilterStatus }) {
       <span className="flex size-18 items-center justify-center rounded-[var(--radius-xl)] bg-[var(--bg-tertiary)]">
         <Inbox className="size-8 text-[var(--text-secondary)]" aria-hidden="true" />
       </span>
-      <p className="mt-4 text-xl font-semibold text-[var(--text-primary)]">
+      <p className="mt-4 text-lg sm:text-xl font-semibold text-[var(--text-primary)]">
         {EMPTY_MESSAGES[filter]}
       </p>
       {/* The one sentence that is true whether or not *arr is set up: anything added to

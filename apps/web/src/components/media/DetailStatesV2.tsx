@@ -62,7 +62,9 @@ export function DetailNotFoundV2({
         className="flex min-h-[60vh] flex-col items-center justify-center px-6 text-center"
       >
         <FilmIcon className="h-12 w-12 text-[var(--text-muted)]" aria-hidden="true" />
-        <h1 className="mt-4 text-xl font-semibold text-[var(--text-primary)]">找不到這部影片</h1>
+        <h1 className="mt-4 text-lg sm:text-xl font-semibold text-[var(--text-primary)]">
+          找不到這部影片
+        </h1>
         <p className="mt-1 text-sm text-[var(--text-secondary)]">
           {inLibrary ? '這個項目可能已從媒體庫移除，或連結已失效。' : '這個連結可能已失效。'}
         </p>
@@ -116,7 +118,9 @@ export function DetailLoadErrorV2({
         className="flex min-h-[60vh] flex-col items-center justify-center px-6 text-center"
       >
         <AlertTriangle className="h-12 w-12 text-[var(--error-text)]" aria-hidden="true" />
-        <h1 className="mt-4 text-xl font-semibold text-[var(--text-primary)]">無法載入這部影片</h1>
+        <h1 className="mt-4 text-lg sm:text-xl font-semibold text-[var(--text-primary)]">
+          無法載入這部影片
+        </h1>
         {/* Same shape and reasoning as LibraryErrorV2 (dsr-1): the reassurance is the
             point, so it is neutral --text-secondary — alarm red would fight it. */}
         <p className="mt-1 max-w-md text-sm text-[var(--text-secondary)]">
