@@ -37,12 +37,14 @@ Status: review
 - **已知副作用**：`--tw-font-weight` 是 `inherits: false` 的註冊屬性，所以「粗體父元素裡的 `text-xs` 子元素」現在會是 500 而不是繼承粗體。基準比對沒看到這類畫面變怪；日後若要子標籤跟著粗，就在子元素上明寫 `font-*`。
 - **守門測試**：`styles-type-scale.spec.ts` 新增 3 條。Mutation：把 `--text-sm--line-height` 改成 1.5 → 紅，訊息 `text-sm: table 1.625, css 1.5`；還原後綠。
 - **視覺**：354 張 darwin 基準中 347 張有變（全站行高本來就會動到幾乎每張）。人工抽看備份管理、下載表格、媒體庫表格、手機空狀態、按鈕：只有行距變鬆、元件高 1–12px，沒有裁切或重疊。347 張 `-linux` 刪除交 CI。
+- **CI 抓到一個真的跳動（E2E homepage-layout CLS）**：首頁讀數帶的「需要注意」格在手機上可能排兩行，格子的最低高度 84px 是照舊行高量的；新行高下兩行格是 90px，於是載入完成時整條帶子長高 6px。改成 `min-h-[90px] sm:min-h-[92px]`，數字在檔頭用規範行高算給你看。順便發現 640–1023 寬度**本來就**短 8px（舊測試只量 390），CLS 測試改成 390 與 768 各量一次。Mutation：拿掉 `sm:min-h-[92px]` → 768 紅（差 2px），390 綠。
 - 驗證：web 4311/4311、lint 0 errors、prettier 綠。
 
 ### File List
 
 - `apps/web/src/styles.css`
 - `apps/web/src/styles-type-scale.spec.ts`
+- `apps/web/src/components/homepage/HomeReadoutBand.tsx`、`tests/e2e/homepage-layout.spec.ts`
 - `tests/visual/**`：347 `-darwin.png` 更新、347 `-linux.png` 刪除
 - `DESIGN.md`、`_bmad-output/implementation-artifacts/sprint-status.yaml`
 
