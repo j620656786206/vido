@@ -50,6 +50,12 @@ type CreateMovieRequest struct {
 	PosterPath    string   `json:"poster_path,omitempty"`
 	TMDbID        int64    `json:"tmdb_id,omitempty"`
 	IMDbID        string   `json:"imdb_id,omitempty"`
+	// ParseStatus lets a caller create the row already in a match state
+	// (pending / failed / success). Empty keeps the pre-existing behaviour
+	// (no state, no 資料整理中 block). Added for the E2E seed of a PENDING row:
+	// since disc-2026-09-batch-reparse-never-runs a batch re-parse actually
+	// runs the match, so it can no longer be used to park a row in pending.
+	ParseStatus string `json:"parse_status,omitempty"`
 }
 
 // UpdateMovieRequest represents the request body for updating a movie
@@ -152,6 +158,14 @@ func (h *MovieHandler) Create(c *gin.Context) {
 	if req.IMDbID != "" {
 		movie.IMDbID.String = req.IMDbID
 		movie.IMDbID.Valid = true
+	}
+	switch models.ParseStatus(req.ParseStatus) {
+	case "":
+	case models.ParseStatusPending, models.ParseStatusFailed, models.ParseStatusSuccess:
+		movie.ParseStatus = models.ParseStatus(req.ParseStatus)
+	default:
+		ValidationError(c, "Invalid parse_status: must be pending, failed or success")
+		return
 	}
 
 	if err := h.service.Create(c.Request.Context(), movie); err != nil {
