@@ -254,7 +254,7 @@ export function GlossaryRowV2({
             {/* This sheet has no title ROW to centre the ✕ against — it sits
                 straight over the content — so the title keeps the same 48px
                 clearance the other sheets get from their header's pr-12. */}
-            <DialogTitle className="text-xl max-sm:pr-12">刪除詞彙</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl max-sm:pr-12">刪除詞彙</DialogTitle>
             <DialogDescription>
               確定要刪除「{term.termSrc} → {term.termZh}」嗎？此操作無法復原。
             </DialogDescription>

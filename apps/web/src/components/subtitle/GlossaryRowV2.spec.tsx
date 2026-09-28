@@ -315,7 +315,7 @@ describe('GlossaryRowV2', () => {
       'flex-col',
       'gap-4'
     );
-    expect(screen.getByText('刪除詞彙')).toHaveClass('text-xl');
+    expect(screen.getByText('刪除詞彙')).toHaveClass('text-lg', 'sm:text-xl'); // H3: 18 on phone, 20 from sm
     expect(screen.getByRole('button', { name: '取消' })).toHaveClass('px-5', 'font-medium');
     expect(screen.getByTestId('glossary-delete-confirm-t1')).toHaveClass('px-5', 'font-semibold');
   });

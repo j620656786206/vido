@@ -78,7 +78,7 @@ function SearchPage() {
     <div>
       <div className="container mx-auto px-4 py-8">
         {/* Page-ground heading — ink, not paper: it sits on --bg-primary. */}
-        <h1 className="mb-4 text-2xl font-bold text-[var(--text-primary)]">搜尋媒體</h1>
+        <h1 className="mb-4 text-xl sm:text-2xl font-bold text-[var(--text-primary)]">搜尋媒體</h1>
         <div className="mb-6">
           <SearchBar onSearch={handleSearch} initialQuery={query} />
         </div>

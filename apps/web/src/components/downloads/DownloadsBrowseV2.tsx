@@ -387,7 +387,7 @@ export function DownloadsBrowseV2() {
           <h1
             ref={headingRef}
             tabIndex={-1}
-            className="text-2xl font-bold text-[var(--text-primary)] outline-none"
+            className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] outline-none"
           >
             下載
           </h1>

@@ -75,3 +75,61 @@ describe('type scale line-heights (DESIGN.md §Hierarchy ↔ styles.css @theme)'
     expect(themeVar('xs--font-weight')).toBe('500');
   });
 });
+
+/**
+ * bugfix-type-heading-mobile-step — DESIGN.md §Hierarchy: 「手機只縮標題，不縮
+ * 內文」. Below `sm` every heading rung steps down one (36→30, 30→24, 24→20,
+ * 20→18). A bare `text-xl` with no `sm:`/`max-sm:` partner is a heading that
+ * keeps its desktop size on a phone. Nothing above 36 (text-4xl) exists.
+ */
+describe('type scale mobile step-down (DESIGN.md: 手機只縮標題)', () => {
+  const HEADING = /(?<![\w:-])text-(xl|2xl|3xl|4xl)\b/;
+  const RESPONSIVE = /(?:^|[\s"'`])(?:sm|max-sm):text-/;
+  // Not headings, so not viewport-sized. Matched by file + a snippet of the line
+  // so an edit elsewhere in the file does not silently widen the exemption.
+  const EXEMPT: Array<[string, string, string]> = [
+    // An emoji standing in for an icon — a glyph, not a line of type.
+    ['components/media/MediaGrid.tsx', 'text-4xl', 'glyph 🔍'],
+    ['components/manual-search/SearchResultCard.tsx', 'text-4xl', 'glyph 🎬'],
+    ['components/media/CreditsSection.tsx', 'text-2xl', 'glyph 👤'],
+    ['components/dashboard/RecentMediaPanel.tsx', 'text-2xl', 'glyph 🎬'],
+    ['components/dashboard/DownloadPanel.tsx', 'text-3xl', 'glyph ⚠'],
+    // A placeholder initial is sized to its tile, not to the viewport.
+    ['components/library/PosterCardV2.tsx', 'text-3xl font-bold', 'tile initial'],
+    ['components/media/DetailHeroV2.tsx', 'justify-center text-3xl', 'tile initial'],
+    ['components/media/ColorPlaceholder.tsx', 'text-4xl font-bold', 'tile initial'],
+    ['components/media/MediaDetailPanel.tsx', 'text-4xl font-bold leading-none', 'tile initial'],
+  ];
+
+  it('no source file goes above text-4xl (Display, 36)', () => {
+    const hits: string[] = [];
+    for (const file of sourceFiles(SRC)) {
+      readFileSync(file, 'utf8')
+        .split('\n')
+        .forEach((line, i) => {
+          const m = line.match(/(?<![\w-])text-([5-9]xl)\b/);
+          if (m) hits.push(`${relative(SRC, file)}:${i + 1} ${m[0]}`);
+        });
+    }
+    expect(hits).toEqual([]);
+  });
+
+  it('every heading rung steps down below sm', () => {
+    const hits: string[] = [];
+    for (const file of sourceFiles(SRC)) {
+      const rel = relative(SRC, file);
+      readFileSync(file, 'utf8')
+        .split('\n')
+        .forEach((line, i) => {
+          if (!HEADING.test(line) || RESPONSIVE.test(line)) return;
+          // Dev-only harness pages (visual gallery, manual-search sandbox). Their
+          // own h1 sits behind every mobile fixture; resizing it would churn
+          // baselines without changing anything a user sees.
+          if (rel.startsWith('routes/test/')) return;
+          if (EXEMPT.some(([f, snippet]) => f === rel && line.includes(snippet))) return;
+          hits.push(`${rel}:${i + 1} ${line.trim().slice(0, 80)}`);
+        });
+    }
+    expect(hits, 'write e.g. `text-lg sm:text-xl`').toEqual([]);
+  });
+});

@@ -580,7 +580,7 @@ export function GenerationBatchPanelV2({
                 <span className="text-sm text-[var(--text-secondary)]">已完成</span>
                 <span
                   data-testid="gen-batch-counter"
-                  className="font-mono text-xl font-semibold tabular-nums text-[var(--text-primary)]"
+                  className="font-mono text-lg sm:text-xl font-semibold tabular-nums text-[var(--text-primary)]"
                 >
                   {processed} / {progress.totalItems}
                 </span>

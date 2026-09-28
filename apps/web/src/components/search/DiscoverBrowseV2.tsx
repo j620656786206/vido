@@ -163,7 +163,7 @@ export function DiscoverBrowseV2() {
 
   return (
     <div className="px-4 py-6 sm:px-6">
-      <h1 className="mb-4 text-2xl font-bold text-[var(--text-primary)]">探索</h1>
+      <h1 className="mb-4 text-xl sm:text-2xl font-bold text-[var(--text-primary)]">探索</h1>
 
       <div className="lg:flex lg:gap-6">
         {/* Desktop filter rail (lg+); hidden when collapsed. <lg uses the sheet. */}

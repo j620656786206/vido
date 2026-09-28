@@ -188,7 +188,10 @@ export function ManualSearchDialog({
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-6 py-4">
-          <h2 id="manual-search-title" className="text-xl font-semibold text-[var(--text-primary)]">
+          <h2
+            id="manual-search-title"
+            className="text-lg sm:text-xl font-semibold text-[var(--text-primary)]"
+          >
             手動搜尋 Metadata
           </h2>
           <button
