@@ -44,6 +44,12 @@ vi.mock('../../hooks/useLibrary', () => ({
   useBatchReparse: () => ({ mutateAsync: h.batchReparse, isPending: false }),
   useBatchExport: () => ({ mutateAsync: h.batchExport, isPending: false }),
 }));
+// disc-2026-09-batch-reparse-never-runs: the post-reparse SSE refresh — record
+// whether the page asked for it (jsdom has no EventSource).
+const enrichmentRefresh = vi.fn();
+vi.mock('../../hooks/useEnrichmentRefresh', () => ({
+  useEnrichmentRefresh: (enabled: boolean) => enrichmentRefresh(enabled),
+}));
 // ux3-cutover-2: the generation-batch dialog pulls SSE plumbing — stub it out.
 vi.mock('../subtitle/GenerationBatchDialogV2', () => ({
   GenerationBatchDialogV2: ({ open }: { open: boolean }) =>
@@ -294,6 +300,41 @@ describe('LibraryBrowseV2 — selection mode (ux3-cutover-2)', () => {
     expect(screen.getByTestId('batch-confirm-dialog')).toBeInTheDocument();
     await userEvent.click(screen.getByTestId('confirm-action-btn'));
     expect(h.batchDelete).toHaveBeenCalledWith({ ids: ['a', 'b'], type: 'movie' });
+  });
+
+  // disc-2026-09-batch-reparse-never-runs: a batch 重新解析 used to say 已完成
+  // while nothing ran — the rows sat 整理中 until some later scan. Now the page
+  // tells the user the match is running in the background and starts
+  // listening for its completion so the list refreshes by itself.
+  it('batch 重新解析: says the match runs in the background and starts the SSE refresh', async () => {
+    enrichmentRefresh.mockClear();
+    renderBrowse();
+    await userEvent.click(await screen.findByTestId('enter-selection-btn'));
+    expect(enrichmentRefresh).toHaveBeenLastCalledWith(false); // lazy until asked
+    await userEvent.click(screen.getByTestId('poster-v2-a'));
+    await userEvent.click(screen.getByTestId('batch-reparse-btn'));
+    await userEvent.click(screen.getByTestId('confirm-action-btn'));
+    expect(h.batchReparse).toHaveBeenCalledWith({ ids: ['a'], type: 'movie' });
+    expect(await screen.findByTestId('progress-note')).toHaveTextContent(
+      '已排入比對 1 項，比對在背景進行，完成後清單會自動更新'
+    );
+    expect(enrichmentRefresh).toHaveBeenLastCalledWith(true);
+  });
+
+  it('batch 重新解析 that queued nothing shows no background note and no SSE watch', async () => {
+    enrichmentRefresh.mockClear();
+    h.batchReparse = vi.fn().mockResolvedValue({
+      successCount: 0,
+      errors: [{ id: 'a', message: 'not found' }],
+    });
+    renderBrowse();
+    await userEvent.click(await screen.findByTestId('enter-selection-btn'));
+    await userEvent.click(screen.getByTestId('poster-v2-a'));
+    await userEvent.click(screen.getByTestId('batch-reparse-btn'));
+    await userEvent.click(screen.getByTestId('confirm-action-btn'));
+    expect(await screen.findByTestId('progress-close-btn')).toBeInTheDocument();
+    expect(screen.queryByTestId('progress-note')).not.toBeInTheDocument();
+    expect(enrichmentRefresh).not.toHaveBeenCalledWith(true);
   });
 
   it('批次生成字幕 opens the generation-batch dialog with the movie selection', async () => {

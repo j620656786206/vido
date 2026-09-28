@@ -16,6 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getRouteApi } from '@tanstack/react-router';
 import { CheckSquare, SlidersHorizontal } from 'lucide-react';
 import { useLibraryInfinite } from '../../hooks/useLibraryInfinite';
+import { useEnrichmentRefresh } from '../../hooks/useEnrichmentRefresh';
 import { useQBittorrentConfig } from '../../hooks/useQBittorrent';
 import { useMediaLibraries } from '../../hooks/useMediaLibrary';
 import {
@@ -326,8 +327,14 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
     total: number;
     action: string;
     isComplete: boolean;
+    note?: string;
     errors?: { id: string; message: string }[];
   }>({ isOpen: false, current: 0, total: 0, action: '', isComplete: false });
+  // disc-2026-09-batch-reparse-never-runs: after a batch 重新解析 the match
+  // runs in the background; from then on this page refetches whenever a pass
+  // completes, so 整理中 flips to the real result without a reload.
+  const [watchEnrichment, setWatchEnrichment] = useState(false);
+  useEnrichmentRefresh(watchEnrichment);
   const [isBatchSubtitleOpen, setIsBatchSubtitleOpen] = useState(false);
   // Mixed movie+episode selection since sub-4-2 D1 — no client-side filtering.
   const [generationBatchSelection, setGenerationBatchSelection] = useState<string[]>([]);
@@ -438,10 +445,15 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
           }));
         } else if (action === 'reparse') {
           const result = await batchReparseMutation.mutateAsync({ ids, type: selectedType });
+          if (result.successCount > 0) setWatchEnrichment(true);
           setBatchProgress((prev) => ({
             ...prev,
             current: total,
             isComplete: true,
+            note:
+              result.successCount > 0
+                ? `已排入比對 ${result.successCount} 項，比對在背景進行，完成後清單會自動更新`
+                : undefined,
             errors: result.errors,
           }));
         } else {
@@ -845,6 +857,7 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
         action={batchProgress.action}
         errors={batchProgress.errors}
         isComplete={batchProgress.isComplete}
+        note={batchProgress.note}
         onClose={closeBatchProgress}
       />
       <GenerationBatchDialogV2

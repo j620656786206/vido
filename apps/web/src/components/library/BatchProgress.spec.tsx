@@ -32,6 +32,14 @@ describe('BatchProgress', () => {
     expect(screen.getByTestId('progress-text')).toHaveTextContent('已完成 20 / 20');
   });
 
+  it('shows the note only once complete (batch 重新解析 keeps working after the request)', () => {
+    const note = '已排入比對，比對完成後清單會自動更新';
+    const { rerender } = render(<BatchProgress {...defaultProps} note={note} />);
+    expect(screen.queryByTestId('progress-note')).not.toBeInTheDocument();
+    rerender(<BatchProgress {...defaultProps} current={20} isComplete={true} note={note} />);
+    expect(screen.getByTestId('progress-note')).toHaveTextContent(note);
+  });
+
   it('shows close button when complete', () => {
     render(<BatchProgress {...defaultProps} isComplete={true} />);
     expect(screen.getByTestId('progress-close-btn')).toBeInTheDocument();

@@ -9,6 +9,12 @@ interface BatchProgressProps {
   action: string;
   errors?: BatchError[];
   isComplete: boolean;
+  /**
+   * Shown under the count once complete, for an action whose real work goes on
+   * after this request returned (batch 重新解析: the match runs in the
+   * background, disc-2026-09-batch-reparse-never-runs).
+   */
+  note?: string;
   onClose: () => void;
   onCancel?: () => void;
 }
@@ -20,6 +26,7 @@ export function BatchProgress({
   action,
   errors,
   isComplete,
+  note,
   onClose,
   onCancel,
 }: BatchProgressProps) {
@@ -54,6 +61,12 @@ export function BatchProgress({
         <p className="mb-4 text-sm text-[var(--text-secondary)]" data-testid="progress-text">
           {isComplete ? `已完成 ${current} / ${total}` : `處理中 ${current} / ${total}...`}
         </p>
+
+        {isComplete && note && (
+          <p className="mb-4 text-sm text-[var(--text-secondary)]" data-testid="progress-note">
+            {note}
+          </p>
+        )}
 
         {/* Error list */}
         {hasErrors && (

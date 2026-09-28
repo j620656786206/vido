@@ -1456,3 +1456,66 @@ func TestLibraryHandler_BatchExport(t *testing.T) {
 
 	mockService.AssertExpectations(t)
 }
+
+// disc-2026-09-batch-reparse-never-runs: after the rows go pending, the
+// handler must kick the matching pass — and only when something was queued.
+type recordingRunRequester struct{ calls int }
+
+func (r *recordingRunRequester) RequestRun() bool { r.calls++; return true }
+
+func TestLibraryHandler_BatchReparse_KicksMatching(t *testing.T) {
+	t.Run("rows queued → one matching pass requested", func(t *testing.T) {
+		mockService := new(MockLibraryService)
+		handler := NewLibraryHandler(mockService)
+		runs := &recordingRunRequester{}
+		handler.SetEnrichmentRunRequester(runs)
+		router := setupLibraryTestRouter(handler)
+
+		mockService.On("BatchReparse", mock.Anything, []string{"m1", "m2"}, "movie").
+			Return(&services.BatchResult{SuccessCount: 2}, nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/api/v1/library/batch/reparse", strings.NewReader(`{"ids":["m1","m2"],"type":"movie"}`))
+		req.Header.Set("Content-Type", "application/json")
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, 1, runs.calls)
+		mockService.AssertExpectations(t)
+	})
+
+	t.Run("nothing queued (every id unknown) → no pass", func(t *testing.T) {
+		mockService := new(MockLibraryService)
+		handler := NewLibraryHandler(mockService)
+		runs := &recordingRunRequester{}
+		handler.SetEnrichmentRunRequester(runs)
+		router := setupLibraryTestRouter(handler)
+
+		mockService.On("BatchReparse", mock.Anything, []string{"ghost"}, "movie").
+			Return(&services.BatchResult{FailedCount: 1, Errors: []services.BatchError{{ID: "ghost", Message: "not found"}}}, nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/api/v1/library/batch/reparse", strings.NewReader(`{"ids":["ghost"],"type":"movie"}`))
+		req.Header.Set("Content-Type", "application/json")
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, 0, runs.calls)
+	})
+
+	t.Run("no requester wired → rows still queued, 200", func(t *testing.T) {
+		mockService := new(MockLibraryService)
+		handler := NewLibraryHandler(mockService)
+		router := setupLibraryTestRouter(handler)
+
+		mockService.On("BatchReparse", mock.Anything, []string{"m1"}, "movie").
+			Return(&services.BatchResult{SuccessCount: 1}, nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/api/v1/library/batch/reparse", strings.NewReader(`{"ids":["m1"],"type":"movie"}`))
+		req.Header.Set("Content-Type", "application/json")
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+}

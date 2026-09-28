@@ -1337,7 +1337,7 @@ development_status:
   disc-2026-09-wrong-nfo-short-circuits-rematch: backlog  # **P3・救不回來** · Rule 24 lane ③ — filed 2026-09-17 AT DISCOVERY TIME by **dsr-2b-a**（create-story 後端盤點）。`enrichMovie` 先套 NFO 然後直接 return（`enrichment_service.go:476-483`）。NFO 本身錯的話，重新比對永遠拿到同一個錯的結果。dsr-2b-a 的 manual 鎖在 NFO 之前生效，手動選過的片不受影響；沒手動選過的片只能靠「手動選片」救。
   disc-2026-09-learn-pattern-never-pins-id: backlog  # **P3・功能空殼** · Rule 24 lane ③ — filed 2026-09-17 AT DISCOVERY TIME by **dsr-2b-a**（create-story 後端盤點）。套用端的 `learn_pattern` 是 TODO（`metadata_service.go:760`），前端卻固定送 `true`（`ManualSearchDialog.tsx:111`）。parser 命中學過的樣式會回 `LearnedTmdbID`（`parser_service.go:540`），但 `enrichMovie` 完全不讀——學到的東西只改搜尋字串，不會釘住 id。相關：`bugfix-learned-patterns-ui-orphaned`。
   disc-2026-09-metadata-retry-queue-never-writes: backlog  # **P3・功能空殼** · Rule 24 lane ③ — filed 2026-09-17 AT DISCOVERY TIME by **dsr-2b-a**（create-story 後端盤點）。`SearchByTaskPayload`（`metadata_service.go:467-512`）在暫時性錯誤後重搜，**成功了也從不寫回資料列**——「重試成功」什麼都沒救到。
-  disc-2026-09-batch-reparse-never-runs: backlog  # **P2・按了沒反應** · Rule 24 lane ③ — filed 2026-09-17 AT DISCOVERY TIME by **dsr-2b-a**（create-story 後端盤點）。媒體庫批次「重新解析」（`LibraryBrowseV2.tsx:315, 414` → `library_service.go:780-816`）只把狀態設回 pending，比對要等下一次**有變動**的掃描（`main.go:470-486`）或沒有任何畫面呼叫的 `POST /scanner/enrich`。按下去之後片子會一直「整理中」。dsr-2b-a 只修單筆；批次要不要改成觸發比對需另外決定（批次可能很久、要進度回報）。
+  disc-2026-09-batch-reparse-never-runs: done  # ✅ DONE 2026-09-28 —— 批次「重新解析」把列設回 pending 之後，現在會立刻請比對服務跑一輪（`EnrichmentService.RequestRun`：沒在跑就背景開跑；正在跑就排在這輪之後再跑一輪，取消則一起丟掉）。前端：完成對話框寫「已排入比對 N 項，比對在背景進行，完成後清單會自動更新」，並從這時起監聽 `enrich_complete` SSE 自動重抓清單（`useEnrichmentRefresh`，按過之前不開連線）。沒做：批次比對的逐項進度沒顯示在對話框裡（`enrich_progress` 事件已在，需要再接）。 | 原 **P2・按了沒反應** · Rule 24 lane ③ — filed 2026-09-17 AT DISCOVERY TIME by **dsr-2b-a**（create-story 後端盤點）。媒體庫批次「重新解析」（`LibraryBrowseV2.tsx:315, 414` → `library_service.go:780-816`）只把狀態設回 pending，比對要等下一次**有變動**的掃描（`main.go:470-486`）或沒有任何畫面呼叫的 `POST /scanner/enrich`。按下去之後片子會一直「整理中」。dsr-2b-a 只修單筆；批次要不要改成觸發比對需另外決定（批次可能很久、要進度回報）。
   disc-2026-09-metadata-edit-type-mismatch-500: backlog  # **P3・錯誤碼** · Rule 24 lane ③ — filed 2026-09-17 AT DISCOVERY TIME by **dsr-2b-a**（create-story 後端盤點）。`MetadataEditService.Exists` 查兩張表、`UpdateMetadata` 依 `media_type` 分支（`metadata_edit_service.go:61-88`）：影集 id 配 `media_type=movie` 會變 500（`metadata_service.go:833`）而不是 404。
   disc-2026-09-swagger-docs-stale: backlog  # **P3・文件漂移** · Rule 24 lane ③ — filed 2026-09-17 AT DISCOVERY TIME by **dsr-2b-a** 的建單後對抗驗證。`docs/swagger.json` 只有 6 條舊路徑，程式碼裡有 70 個 `@Router` 註解；README 的產生指令寫在 `apps/api` 底下的相對路徑。照 Rule 15「改 API 就跑 `swag init`」會帶出巨大的無關 diff 或多出一個資料夾。dsr-2b-a 只補註解、不重生。要決定：重生一次並把產生指令寫進 CI 檢查，或承認 swagger 文件已退役、把 Rule 15 那條改掉。
   disc-2026-09-manual-lock-survives-file-replacement: backlog  # **P3・取捨** · Rule 24 lane ③ — filed 2026-09-17 AT DISCOVERY TIME by **dsr-2b-a** 的建單後對抗驗證。dsr-2b-a AC #4 讓 `metadata_source=manual` 的片不被自動比對覆寫。副作用：使用者把檔案換成**另一部電影**（同路徑）時，掃描器打回 pending，但比對會保留舊的手動資料，只更新技術資訊。解法是再手動選一次。要不要偵測「檔名變了很多」並提示，待決定。
@@ -1522,7 +1522,7 @@ development_status:
   #      - disc-2026-09-unmounted-v1-components
   #      - disc-2026-09-library-search-bar-not-wired
   #      - disc-2026-09-unmatched-filter-vs-parse-status
-  #      - disc-2026-09-batch-reparse-never-runs
+  #      - ✅ disc-2026-09-batch-reparse-never-runs（2026-09-28）
   #      - disc-2026-09-manual-search-hides-source-errors
   #      - disc-2026-09-request-button-requested-on-scrim-light-theme
   #      - disc-2026-09-flow-c-library-screens-c1-c3

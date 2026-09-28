@@ -64,6 +64,11 @@ type EnrichmentService struct {
 	isEnriching bool
 	cancelChan  chan struct{}
 	progress    EnrichmentProgress
+	// rerunRequested: rows were set pending while a pass was running (batch
+	// re-parse, disc-2026-09-batch-reparse-never-runs). That pass loaded its
+	// rows at its start, so it will not see them — one more pass runs when
+	// it finishes instead of leaving them 整理中 until the next changed scan.
+	rerunRequested bool
 }
 
 // NewEnrichmentService creates a new EnrichmentService.
@@ -120,29 +125,111 @@ func (s *EnrichmentService) CancelEnrichment() error {
 // StartEnrichment finds all unenriched movies and processes them.
 // Thread-safe: only one enrichment can run at a time.
 func (s *EnrichmentService) StartEnrichment(ctx context.Context) (*EnrichmentResult, error) {
+	if !s.acquire() {
+		return nil, fmt.Errorf("ENRICHMENT_ALREADY_RUNNING: an enrichment is already in progress")
+	}
+	return s.runUntilSettled(ctx)
+}
+
+// RequestRun makes sure every pending row gets matched: it starts a pass in
+// the background when none is running, or asks the running pass to go once
+// more when it finishes (disc-2026-09-batch-reparse-never-runs — before this,
+// a batch re-parse only set rows pending and nothing ran). Returns whether a
+// new pass was started right now (false = queued behind the running one).
+func (s *EnrichmentService) RequestRun() bool {
 	s.mu.Lock()
 	if s.isEnriching {
+		s.rerunRequested = true
 		s.mu.Unlock()
-		return nil, fmt.Errorf("ENRICHMENT_ALREADY_RUNNING: an enrichment is already in progress")
+		s.logger.Info("enrichment pass requested while one is running — queued")
+		return false
+	}
+	s.mu.Unlock()
+	if !s.acquire() {
+		// Lost the race to another starter: that pass acquires AFTER our rows
+		// went pending, so it loads them; nothing more to do.
+		return false
+	}
+	go func() {
+		result, err := s.runUntilSettled(context.Background())
+		if err != nil {
+			s.logger.Error("requested enrichment pass failed", "error", err)
+			return
+		}
+		s.logger.Info("requested enrichment pass completed",
+			"succeeded", result.Succeeded, "failed", result.Failed, "duration", result.Duration)
+	}()
+	return true
+}
+
+// acquire takes the single-flight flag; false when a pass already holds it.
+func (s *EnrichmentService) acquire() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.isEnriching {
+		return false
 	}
 	s.isEnriching = true
 	s.cancelChan = make(chan struct{})
 	s.progress = EnrichmentProgress{IsActive: true}
-	s.mu.Unlock()
+	s.rerunRequested = false
+	return true
+}
 
+// runUntilSettled runs passes until none is queued behind the current one,
+// then releases the flag. The caller must hold it (acquire).
+func (s *EnrichmentService) runUntilSettled(ctx context.Context) (*EnrichmentResult, error) {
 	defer func() {
 		s.mu.Lock()
 		s.isEnriching = false
 		s.progress.IsActive = false
+		s.rerunRequested = false
 		s.mu.Unlock()
 	}()
 
+	for {
+		result, cancelled, err := s.runPass(ctx)
+		if err != nil || cancelled || ctx.Err() != nil || s.cancelled() {
+			// A cancel means "stop", including whatever was queued. An empty
+			// pass never looks at the cancel signals, so check them here too.
+			return result, err
+		}
+		s.mu.Lock()
+		again := s.rerunRequested
+		s.rerunRequested = false
+		if again {
+			s.progress = EnrichmentProgress{IsActive: true}
+		}
+		s.mu.Unlock()
+		if !again {
+			return result, nil
+		}
+		s.logger.Info("rows were set pending during the pass — running one more")
+	}
+}
+
+// cancelled reports whether CancelEnrichment fired for the current run.
+func (s *EnrichmentService) cancelled() bool {
+	s.mu.Lock()
+	ch := s.cancelChan
+	s.mu.Unlock()
+	select {
+	case <-ch:
+		return true
+	default:
+		return false
+	}
+}
+
+// runPass is one sweep over every pending movie and series. cancelled reports
+// an early stop (cancel button or ctx), which also carries a partial result.
+func (s *EnrichmentService) runPass(ctx context.Context) (result *EnrichmentResult, cancelled bool, err error) {
 	startedAt := time.Now()
 
 	// Find all unenriched movies (parse_status="" or "pending")
 	movies, err := s.findUnenrichedMovies(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find unenriched movies: %w", err)
+		return nil, false, fmt.Errorf("failed to find unenriched movies: %w", err)
 	}
 
 	s.mu.Lock()
@@ -156,10 +243,10 @@ func (s *EnrichmentService) StartEnrichment(ctx context.Context) (*EnrichmentRes
 		select {
 		case <-s.cancelChan:
 			s.logger.Info("enrichment cancelled", "processed", i)
-			return s.buildResult(startedAt), nil
+			return s.buildResult(startedAt), true, nil
 		case <-ctx.Done():
 			s.logger.Info("enrichment context cancelled", "processed", i)
-			return s.buildResult(startedAt), nil
+			return s.buildResult(startedAt), true, nil
 		default:
 		}
 
@@ -221,9 +308,9 @@ func (s *EnrichmentService) StartEnrichment(ctx context.Context) (*EnrichmentRes
 				select {
 				case <-s.cancelChan:
 					s.logger.Info("enrichment cancelled during series pass", "processed", i)
-					return s.buildResult(startedAt), nil
+					return s.buildResult(startedAt), true, nil
 				case <-ctx.Done():
-					return s.buildResult(startedAt), nil
+					return s.buildResult(startedAt), true, nil
 				default:
 				}
 
@@ -261,7 +348,7 @@ func (s *EnrichmentService) StartEnrichment(ctx context.Context) (*EnrichmentRes
 		}
 	}
 
-	result := s.buildResult(startedAt)
+	result = s.buildResult(startedAt)
 	s.broadcastComplete(result)
 
 	s.logger.Info("enrichment completed",
@@ -271,7 +358,7 @@ func (s *EnrichmentService) StartEnrichment(ctx context.Context) (*EnrichmentRes
 		"duration", result.Duration,
 	)
 
-	return result, nil
+	return result, false, nil
 }
 
 // findUnenrichedSeries queries for series with empty or pending parse_status.
