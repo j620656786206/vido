@@ -1,6 +1,6 @@
 # Story bugfix：程式碼的字級跟上設計系統——不再有 10／11／13／15px
 
-Status: review
+Status: done
 
 ## Story
 
@@ -72,3 +72,4 @@ so that labels and error messages are never smaller than 12px and every size car
 | --- | --- |
 | 2026-09-28 | 建單＋開工（Alexyu 選 A）：由 P0／P1 兩張 disc 升級 |
 | 2026-09-28 | 開發完成：59 處改完、守門測試、impeccable 稽核（立 2 案）、DESIGN.md 更新 → review |
+| 2026-09-28 | PR #561 合併（3563f362），CI 全綠 → done |
