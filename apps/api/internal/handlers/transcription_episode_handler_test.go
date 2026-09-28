@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -248,4 +249,22 @@ func TestTranscribeEpisode_RouteAbsentWithoutGetter(t *testing.T) {
 	w := postEpisodeTranscribe(h, testEpisodeUUID)
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+// disc-2026-09-solo-run-unwritable-folder-pays-asr — the episode route answers
+// the same refusal the same way as the movie route.
+func TestTranscribeEpisode_TargetNotWritable(t *testing.T) {
+	ep := episodeWithFile(t)
+	mockSvc := &mockTranscriptionService{
+		available: true,
+		startErr:  fmt.Errorf("%w: read-only file system", services.ErrTranscriptionTargetNotWritable),
+	}
+	w := postEpisodeTranscribe(newEpisodeHandler(ep, nil, mockSvc), testEpisodeUUID)
+
+	assert.Equal(t, http.StatusConflict, w.Code)
+	var resp APIResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.NotNil(t, resp.Error)
+	assert.Equal(t, "SUBTITLE_TARGET_NOT_WRITABLE", resp.Error.Code)
+	assert.Contains(t, resp.Error.Message, "「"+filepath.Base(filepath.Dir(ep.FilePath.String))+"」")
 }

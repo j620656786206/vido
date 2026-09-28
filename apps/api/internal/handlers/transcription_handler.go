@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -101,7 +102,8 @@ func (h *TranscriptionHandler) RegisterRoutes(rg *gin.RouterGroup) {
 
 // TranscribeMovie triggers transcription for a movie.
 // POST /api/v1/movies/:id/transcribe
-// Returns 202 Accepted with job ID.
+// Returns 202 Accepted with job ID; 409 SUBTITLE_TARGET_NOT_WRITABLE when the
+// movie folder refuses a write probe (refused before any paid call).
 func (h *TranscriptionHandler) TranscribeMovie(c *gin.Context) {
 	// Validate movie ID — an opaque STRING (movie PKs are UUIDs, 9R-18);
 	// non-empty is the only format constraint. Parsed BEFORE the availability
@@ -157,6 +159,10 @@ func (h *TranscriptionHandler) TranscribeMovie(c *gin.Context) {
 				"Wait for the current transcription to complete.")
 			return
 		}
+		if errors.Is(err, services.ErrTranscriptionTargetNotWritable) {
+			targetNotWritableError(c, mediaDir)
+			return
+		}
 		slog.Error("Failed to start transcription", "movie_id", id, "error", err)
 		InternalServerError(c, "Failed to start transcription")
 		return
@@ -183,7 +189,7 @@ func (h *TranscriptionHandler) TranscribeMovie(c *gin.Context) {
 // @Success      202  {object}  APIResponse  "{job_id, message}"
 // @Failure      400  {object}  APIResponse  "VALIDATION_INVALID_FORMAT (empty id) / VALIDATION_REQUIRED_FIELD (no file path, or file missing on disk)"
 // @Failure      404  {object}  APIResponse  "episode not found"
-// @Failure      409  {object}  APIResponse  "TRANSCRIPTION_IN_PROGRESS — a run for this episode is already in flight"
+// @Failure      409  {object}  APIResponse  "TRANSCRIPTION_IN_PROGRESS — a run for this episode is already in flight / SUBTITLE_TARGET_NOT_WRITABLE — the episode folder refused a write probe; refused before any paid call"
 // @Failure      500  {object}  APIResponse  "failed to start"
 // @Failure      503  {object}  APIResponse  "TRANSCRIPTION_DISABLED — no ASR capability AND this episode cannot resume translate-only"
 // @Router       /api/v1/episodes/{id}/transcribe [post]
@@ -239,6 +245,10 @@ func (h *TranscriptionHandler) TranscribeEpisode(c *gin.Context) {
 				"請等待目前的生成完成。")
 			return
 		}
+		if errors.Is(err, services.ErrTranscriptionTargetNotWritable) {
+			targetNotWritableError(c, mediaDir)
+			return
+		}
 		slog.Error("Failed to start episode transcription", "episode_id", id, "error", err)
 		InternalServerError(c, "Failed to start transcription")
 		return
@@ -251,6 +261,18 @@ func (h *TranscriptionHandler) TranscribeEpisode(c *gin.Context) {
 			"message": "Transcription started. Listen to SSE events for progress.",
 		},
 	})
+}
+
+// targetNotWritableError answers a run refused because the subtitle could
+// not be written next to the video (disc-2026-09-solo-run-unwritable-folder-pays-asr).
+// Nothing was charged. The dialog shows only the message, after
+// 「無法開始生成：」, so the message carries the fix itself; it names the folder
+// by its base name only — never the absolute path — as the consent list's
+// 資料夾無法寫入 row does.
+func targetNotWritableError(c *gin.Context, mediaDir string) {
+	ErrorResponse(c, http.StatusConflict, "SUBTITLE_TARGET_NOT_WRITABLE",
+		fmt.Sprintf("影片所在的資料夾「%s」寫不進字幕，這次沒有花到錢。請到 NAS 確認 Vido 能寫入這個資料夾，再按重試", filepath.Base(mediaDir)),
+		"確認這個資料夾不是唯讀掛載，而且 Vido 容器的使用者有寫入權限。")
 }
 
 // lookupMovieFile resolves the movie and checks its file is on disk, writing the
