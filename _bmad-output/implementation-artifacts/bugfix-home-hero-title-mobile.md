@@ -1,6 +1,6 @@
 # Story: bugfix-home-hero-title-mobile — 首頁 hero 片名在手機上照稿 20px；字級表的 Display 用途更正
 
-Status: review
+Status: done
 
 ## Story
 
@@ -45,3 +45,4 @@ Status: review
 | Date | Change |
 | --- | --- |
 | 2026-09-28 | 建單＋開發完成（承接 `bugfix-type-heading-mobile-step` 的待查項）→ review |
+| 2026-09-28 | PR #570 合併（a14631de），CI 全綠 → done |
