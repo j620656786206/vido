@@ -2,6 +2,9 @@ package services
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -10,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/ai/prompts"
+	"github.com/vido/api/internal/fsprobe"
 	"github.com/vido/api/internal/models"
 )
 
@@ -399,4 +403,80 @@ func TestWithoutUntrustedIdentity_MirrorsMediaStoreRule(t *testing.T) {
 	// Clean titles pass through untouched, matched or not.
 	assert.Equal(t, md("Dune: Part Two"), withoutUntrustedIdentity(md("Dune: Part Two"), true, "m3", "movie", nil))
 	assert.Equal(t, md("Wake Up Dead Man"), withoutUntrustedIdentity(md("Wake Up Dead Man"), false, "m4", "movie", nil))
+}
+
+// --- disc-2026-09-solo-run-unwritable-folder-pays-asr: refuse before paying ---
+
+// fullyAvailableTranscription is a service that would pass every gate and go
+// on to extract audio and call (and pay for) speech recognition.
+func fullyAvailableTranscription() *TranscriptionService {
+	extractor := &AudioExtractorService{available: true, semaphore: make(chan struct{}, 1)}
+	return NewTranscriptionService(extractor, ai.NewWhisperClient("test-key"), nil, nil)
+}
+
+func refusingProbe(probed *string) func(context.Context, string) error {
+	return func(_ context.Context, dir string) error {
+		*probed = dir
+		return fmt.Errorf("%w: %s: permission denied", fsprobe.ErrNotWritable, dir)
+	}
+}
+
+func TestTranscriptionService_StartTranscription_UnwritableFolderRefusedBeforeAnyWork(t *testing.T) {
+	svc := fullyAvailableTranscription()
+	var probed string
+	svc.probeWritable = refusingProbe(&probed)
+
+	jobID, err := svc.StartTranscription(context.Background(), uuidA, "/media/Movie/Movie.mkv", "/media/Movie", WithTranslation())
+
+	require.ErrorIs(t, err, ErrTranscriptionTargetNotWritable)
+	assert.ErrorIs(t, err, fsprobe.ErrNotWritable, "callers classifying on the fsprobe sentinel must still match")
+	assert.Empty(t, jobID)
+	assert.Equal(t, "/media/Movie", probed, "the probe must check the folder the subtitle is written to")
+	// No job was started: nothing extracted, nothing sent to speech recognition,
+	// and a retry is not answered with TRANSCRIPTION_IN_PROGRESS.
+	assert.False(t, svc.IsInProgress(uuidA))
+}
+
+func TestTranscriptionService_RunTranscription_UnwritableFolderRefusedBeforeAnyWork(t *testing.T) {
+	svc := fullyAvailableTranscription()
+	var probed string
+	svc.probeWritable = refusingProbe(&probed)
+
+	err := svc.RunTranscription(context.Background(), uuidB, "/media/Show/S01E01.mkv", "/media/Show", WithTranslation())
+
+	require.ErrorIs(t, err, ErrTranscriptionTargetNotWritable)
+	assert.Equal(t, "/media/Show", probed)
+	assert.False(t, svc.IsInProgress(uuidB))
+}
+
+// The disabled gate still answers first: with no speech recognition set up the
+// user must be told to add a key, not to fix a folder.
+func TestTranscriptionService_StartTranscription_DisabledBeatsUnwritable(t *testing.T) {
+	svc := NewTranscriptionService(nil, nil, nil, nil)
+	var probed string
+	svc.probeWritable = refusingProbe(&probed)
+
+	_, err := svc.StartTranscription(context.Background(), uuidA, "/media/Movie/Movie.mkv", "/media/Movie")
+
+	assert.ErrorIs(t, err, ErrTranscriptionDisabled)
+	assert.Empty(t, probed)
+}
+
+// The real probe (what production wires) against a read-only folder — the
+// NAS case the story is about: mode bits aside, a create() fails.
+func TestTranscriptionService_StartTranscription_RealProbeReadOnlyFolder(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores directory permissions")
+	}
+	dir := t.TempDir()
+	require.NoError(t, os.Chmod(dir, 0o555))
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
+
+	svc := fullyAvailableTranscription()
+	svc.probeWritable = fsprobe.ProbeWritableContext
+
+	_, err := svc.StartTranscription(context.Background(), uuidC, filepath.Join(dir, "Movie.mkv"), dir)
+
+	require.ErrorIs(t, err, ErrTranscriptionTargetNotWritable)
+	assert.False(t, svc.IsInProgress(uuidC))
 }

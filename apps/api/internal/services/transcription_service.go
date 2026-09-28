@@ -19,6 +19,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/ai/prompts"
+	"github.com/vido/api/internal/fsprobe"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/segkey"
@@ -111,6 +112,11 @@ const (
 var (
 	ErrTranscriptionInProgress = errors.New("transcription already in progress for this media")
 	ErrTranscriptionDisabled   = errors.New("transcription disabled: OpenAI API key not configured")
+	// ErrTranscriptionTargetNotWritable: the folder the subtitle would be
+	// written to refused a real write probe, so the run was refused BEFORE any
+	// paid call (disc-2026-09-solo-run-unwritable-folder-pays-asr). Wraps
+	// fsprobe.ErrNotWritable; the handler answers SUBTITLE_TARGET_NOT_WRITABLE.
+	ErrTranscriptionTargetNotWritable = fmt.Errorf("transcription refused: %w", fsprobe.ErrNotWritable)
 )
 
 // TranscriptionResult holds the result of a transcription job.
@@ -178,6 +184,11 @@ type TranscriptionService struct {
 	// context, which is exactly the pre-9R-8 behaviour.
 	seriesReader SeriesMetadataReader
 
+	// probeWritable refuses a run whose target folder cannot take the
+	// subtitle, before extraction or any paid call. Defaults to the same probe
+	// the consent list uses (defaultWritableProbe); tests inject a failing one.
+	probeWritable func(ctx context.Context, dir string) error
+
 	mu         sync.Mutex
 	inProgress map[string]*soloTranscriptionJob // mediaID (UUID string, 9R-18) → job record
 }
@@ -199,6 +210,7 @@ func NewTranscriptionService(
 		logger:            logger.With("service", "transcription"),
 		runFloor:          defaultRunFloor,
 		runPerMediaMinute: defaultRunPerMediaMinute,
+		probeWritable:     defaultWritableProbe,
 		inProgress:        make(map[string]*soloTranscriptionJob),
 	}
 }
@@ -471,6 +483,10 @@ func (s *TranscriptionService) StartTranscription(ctx context.Context, mediaID s
 		return "", ErrTranscriptionDisabled
 	}
 
+	if err := s.checkTargetWritable(ctx, mediaID, mediaDir); err != nil {
+		return "", err
+	}
+
 	// disc-2026-07-transcription-active-jobs: resolve the Activity-row title
 	// BEFORE acquiring the lock — acquireJob must stay a fast, I/O-free
 	// map operation.
@@ -512,6 +528,12 @@ func (s *TranscriptionService) RunTranscription(ctx context.Context, mediaID str
 		return ErrTranscriptionDisabled
 	}
 
+	// The batch's consent list probed this folder when it was drawn up, but a
+	// mount can go read-only between consent and run.
+	if err := s.checkTargetWritable(ctx, mediaID, mediaDir); err != nil {
+		return err
+	}
+
 	// disc-2026-07-transcription-active-jobs: RunTranscription is shared by
 	// GenerationBatchProcessor and the pipeline-mode ASR fallback adapter —
 	// neither is a solo ad-hoc click, and a batch item already has its own
@@ -526,6 +548,26 @@ func (s *TranscriptionService) RunTranscription(ctx context.Context, mediaID str
 	pipelineCtx, pipelineCancel := context.WithCancel(ctx)
 	defer pipelineCancel()
 	return s.runPipeline(pipelineCtx, jobID, cfg.mediaType, mediaID, filePath, mediaDir, cfg.translate)
+}
+
+// checkTargetWritable runs the write probe on mediaDir — where the .en.srt
+// and .zh-Hant.srt land — before a run spends anything. Speech recognition is
+// billed before the first subtitle is written, so an unwritable folder found
+// at write time has already cost the whole ASR leg
+// (disc-2026-09-solo-run-unwritable-folder-pays-asr). A translate-only resume
+// is probed too: its translation is billed before the .zh-Hant.srt is placed.
+func (s *TranscriptionService) checkTargetWritable(ctx context.Context, mediaID, mediaDir string) error {
+	if s.probeWritable == nil {
+		return nil
+	}
+	probeCtx, cancel := context.WithTimeout(ctx, writableProbeTimeout)
+	defer cancel()
+	if err := s.probeWritable(probeCtx, mediaDir); err != nil {
+		s.logger.Warn("transcription refused: target directory is not writable",
+			"media_id", mediaID, "dir", mediaDir, "error", err)
+		return fmt.Errorf("%w: %v", ErrTranscriptionTargetNotWritable, err)
+	}
+	return nil
 }
 
 // resolveBudget returns the ctx-attached ai.Budget when one is present (9R-16

@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -344,4 +346,38 @@ func TestTranscribeMovie_InternalError(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// disc-2026-09-solo-run-unwritable-folder-pays-asr: the service refused the
+// run because the movie folder cannot take the subtitle. The dialog shows the
+// message after 「無法開始生成：」, so it must name the folder (base name only,
+// never the absolute NAS path) and say nothing was charged — not a bare 500.
+func TestTranscribeMovie_TargetNotWritable(t *testing.T) {
+	tmpPath := createTempMediaFile(t)
+	movie := &models.Movie{FilePath: models.NewNullString(tmpPath)}
+	movie.ID = "1"
+
+	h := NewTranscriptionHandler(
+		&mockTranscriptionMovieGetter{movie: movie},
+		nil,
+		&mockTranscriptionService{
+			available: true,
+			startErr:  fmt.Errorf("%w: permission denied", services.ErrTranscriptionTargetNotWritable),
+		},
+	)
+
+	r := setupTranscriptionRouter(h)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/movies/1/transcribe?translate=true", nil)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusConflict, w.Code)
+	var resp APIResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.NotNil(t, resp.Error)
+	assert.Equal(t, "SUBTITLE_TARGET_NOT_WRITABLE", resp.Error.Code)
+	dir := filepath.Dir(tmpPath)
+	assert.Contains(t, resp.Error.Message, "「"+filepath.Base(dir)+"」")
+	assert.NotContains(t, resp.Error.Message, dir, "the absolute path must not reach the UI")
+	assert.Contains(t, resp.Error.Message, "沒有花到錢")
 }
