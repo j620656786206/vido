@@ -233,13 +233,13 @@ export function PosterCard({
             // neutral scrim, never green (critique R3, same ruling as 已有).
             <span
               data-testid="new-badge"
-              className="rounded-full bg-[var(--overlay-scrim)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--text-on-scrim)]"
+              className="rounded-full bg-[var(--overlay-scrim)] px-1.5 py-0.5 text-xs font-medium text-[var(--text-on-scrim)]"
             >
               新增
             </span>
           )}
           {metadataSource && (
-            <span className="rounded-full bg-[var(--overlay-scrim)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--text-on-scrim)]">
+            <span className="rounded-full bg-[var(--overlay-scrim)] px-1.5 py-0.5 text-xs font-medium text-[var(--text-on-scrim)]">
               {metadataSource}
             </span>
           )}
@@ -349,7 +349,7 @@ export function PosterCard({
         >
           <HighlightText text={title} query={highlightQuery} />
         </h3>
-        <p className="truncate font-mono text-[11px] text-[var(--text-secondary)]">
+        <p className="truncate font-mono text-xs text-[var(--text-secondary)]">
           {metaLine || '\u00A0'}
         </p>
       </div>

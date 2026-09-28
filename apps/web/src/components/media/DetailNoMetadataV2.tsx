@@ -126,7 +126,7 @@ export function DetailNoMetadataV2({
           {errorCopy.code ? (
             <span
               data-testid="no-metadata-error-code"
-              className="rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-2 py-0.5 font-mono text-[11px] text-[var(--text-muted)]"
+              className="rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-2 py-0.5 font-mono text-xs text-[var(--text-muted)]"
             >
               {errorCopy.code}
             </span>

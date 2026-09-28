@@ -53,7 +53,7 @@ export function MobileTabBar() {
                   />
                 )}
               </span>
-              <span className="text-[11px] font-medium group-data-[status=active]/tab:font-bold">
+              <span className="text-xs font-medium group-data-[status=active]/tab:font-bold">
                 {d.label}
               </span>
             </Link>
@@ -67,7 +67,7 @@ export function MobileTabBar() {
           className="flex flex-1 flex-col items-center justify-center gap-1 pt-1 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
         >
           <MoreHorizontal className="h-6 w-6" aria-hidden="true" />
-          <span className="text-[11px] font-medium">更多</span>
+          <span className="text-xs font-medium">更多</span>
         </button>
       </nav>
       <MobileMoreSheet open={moreOpen} onOpenChange={setMoreOpen} />

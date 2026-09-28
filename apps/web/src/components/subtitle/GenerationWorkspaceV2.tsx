@@ -119,7 +119,7 @@ function OverallStrip({
       className="flex flex-wrap items-center gap-x-8 gap-y-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-4 py-3 max-sm:gap-x-2 max-sm:gap-y-2 max-sm:px-3.5"
     >
       <div className="flex flex-col gap-1.5 max-sm:contents">
-        <span className="text-[11px] text-[var(--text-muted)] max-sm:hidden">整批進度</span>
+        <span className="text-xs text-[var(--text-muted)] max-sm:hidden">整批進度</span>
         <div className="flex items-baseline gap-1 max-sm:order-1">
           <span className="text-sm text-[var(--text-secondary)]">已完成</span>
           <span className="font-mono text-xl font-semibold tabular-nums text-[var(--text-primary)] max-sm:text-lg">
@@ -148,7 +148,7 @@ function OverallStrip({
         </div>
       </div>
       <div className="flex flex-col gap-1.5 max-sm:order-4 max-sm:w-full max-sm:flex-row max-sm:items-baseline max-sm:gap-1">
-        <span className="text-[11px] text-[var(--text-muted)]">本次用量</span>
+        <span className="text-xs text-[var(--text-muted)]">本次用量</span>
         <div className="flex items-baseline gap-1">
           <span className="font-mono text-base font-semibold tabular-nums text-[var(--text-primary)] max-sm:text-sm">
             {usd(spentUsd)}
@@ -172,7 +172,7 @@ function SseChip({ className }: { className?: string }) {
     <span
       data-testid="workspace-sse-chip"
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--info-tint)] px-2 py-1.5 text-[11px] text-[var(--info-text)]',
+        'inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--info-tint)] px-2 py-1.5 text-xs text-[var(--info-text)]',
         className
       )}
     >
@@ -533,7 +533,7 @@ function EventLogPane({
           <span
             data-testid="workspace-log-note"
             className={cn(
-              'ml-auto text-[11px] text-[var(--text-muted)]',
+              'ml-auto text-xs text-[var(--text-muted)]',
               // The hint above already says it while collapsed.
               !open && 'max-sm:hidden'
             )}

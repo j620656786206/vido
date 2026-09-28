@@ -67,7 +67,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: AppSidebarProps) {
           ) : (
             <Link to="/" aria-label="vido 首頁" className="flex flex-col leading-tight">
               <span className="text-lg font-bold text-[var(--accent-text)]">vido</span>
-              <span className="text-[11px] text-[var(--text-secondary)]">NAS 媒體庫</span>
+              <span className="text-xs text-[var(--text-secondary)]">NAS 媒體庫</span>
             </Link>
           )}
           {!collapsed && (

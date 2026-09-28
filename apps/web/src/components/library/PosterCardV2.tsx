@@ -142,7 +142,7 @@ export function PosterCardV2({
             className="absolute right-1.5 top-1.5 rounded-full bg-[var(--bg-secondary)]"
           >
             <span
-              className={`block rounded-full px-2 py-0.5 text-[11px] font-medium ${badge.className}`}
+              className={`block rounded-full px-2 py-0.5 text-xs font-medium ${badge.className}`}
             >
               {badge.label}
             </span>
@@ -162,7 +162,7 @@ export function PosterCardV2({
           // 1.16), so either one just moves the P0 to the default theme. The
           // scrim does not invert, so its label must not invert either, and no
           // such token exists yet. Blocked on an always-paper --text-on-scrim.
-          <span className="absolute bottom-1.5 left-1.5 flex items-center gap-0.5 rounded-full bg-[var(--overlay-scrim)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--text-on-scrim)]">
+          <span className="absolute bottom-1.5 left-1.5 flex items-center gap-0.5 rounded-full bg-[var(--overlay-scrim)] px-1.5 py-0.5 font-mono text-xs text-[var(--text-on-scrim)]">
             <Star className="h-3 w-3 fill-current" />
             {voteAverage.toFixed(1)}
           </span>
@@ -178,7 +178,7 @@ export function PosterCardV2({
           {title}
         </h3>
         {metaLine && (
-          <p className="mt-0.5 truncate font-mono text-[11px] text-[var(--text-secondary)]">
+          <p className="mt-0.5 truncate font-mono text-xs text-[var(--text-secondary)]">
             {metaLine}
           </p>
         )}

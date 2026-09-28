@@ -259,7 +259,7 @@ export function EpisodeList({
                 onClick={() => onManageSubtitle(ep)}
                 data-testid="episode-manage-subtitle"
                 aria-label={`管理 ${episodeCode(seasonNumber, ep.episodeNumber)} 的字幕`}
-                className="flex min-h-[44px] shrink-0 items-center self-start rounded-[var(--radius-md)] px-3 text-[13px] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] sm:self-auto"
+                className="flex min-h-[44px] shrink-0 items-center self-start rounded-[var(--radius-md)] px-3 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] sm:self-auto"
               >
                 管理字幕
               </button>

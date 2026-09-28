@@ -51,7 +51,7 @@ export function AvailabilityBadge({ variant, className }: AvailabilityBadgeProps
         data-testid={variantTestIds[variant]}
         className={cn('rounded-full', variantClasses[variant], className)}
       >
-        <span className="block rounded-full bg-[var(--warning-tint)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--warning-text)]">
+        <span className="block rounded-full bg-[var(--warning-tint)] px-1.5 py-0.5 text-xs font-medium text-[var(--warning-text)]">
           {variantLabels[variant]}
         </span>
       </span>
@@ -61,7 +61,7 @@ export function AvailabilityBadge({ variant, className }: AvailabilityBadgeProps
     <span
       data-testid={variantTestIds[variant]}
       className={cn(
-        'rounded-full px-1.5 py-0.5 text-[11px] font-medium',
+        'rounded-full px-1.5 py-0.5 text-xs font-medium',
         variantClasses[variant],
         className
       )}

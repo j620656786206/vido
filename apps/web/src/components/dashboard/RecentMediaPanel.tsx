@@ -120,7 +120,7 @@ function MediaCard({ media }: { media: RecentMedia }) {
         {media.justAdded && (
           /* Sits on its own SOLID accent fill, not on the poster underneath, so
              this takes --text-on-accent rather than the scrim's --text-inverse. */
-          <span className="absolute right-1 top-1 rounded bg-[var(--accent-primary)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-on-accent)]">
+          <span className="absolute right-1 top-1 rounded bg-[var(--accent-primary)] px-1.5 py-0.5 text-xs font-medium text-[var(--text-on-accent)]">
             剛剛新增
           </span>
         )}

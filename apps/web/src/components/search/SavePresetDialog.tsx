@@ -107,7 +107,7 @@ export function SavePresetDialog({ filters, onClose }: SavePresetDialogProps) {
           </button>
         </div>
 
-        <p className="mb-4 text-[13px] text-[var(--text-secondary)]">
+        <p className="mb-4 text-sm text-[var(--text-secondary)]">
           將目前的篩選條件儲存為快速存取預設
         </p>
 
@@ -125,7 +125,7 @@ export function SavePresetDialog({ filters, onClose }: SavePresetDialogProps) {
         <div className="mb-4">
           <label
             htmlFor="preset-name-input"
-            className="mb-1.5 block text-[13px] font-medium text-[var(--text-secondary)]"
+            className="mb-1.5 block text-sm font-medium text-[var(--text-secondary)]"
           >
             預設名稱
           </label>
@@ -156,7 +156,7 @@ export function SavePresetDialog({ filters, onClose }: SavePresetDialogProps) {
                 <span
                   key={chip.key}
                   // Label on a SOLID accent fill, not on a page ground.
-                  className="rounded-full bg-[var(--accent-primary)] px-2 py-0.5 text-[11px] text-[var(--text-on-accent)]"
+                  className="rounded-full bg-[var(--accent-primary)] px-2 py-0.5 text-xs text-[var(--text-on-accent)]"
                 >
                   {chip.label}
                 </span>

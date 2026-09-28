@@ -122,7 +122,7 @@ export function SidebarNavItem({
       />
       <span className="truncate">{label}</span>
       {hasCount && (
-        <span className="ml-auto font-mono text-[11px] tabular-nums text-[var(--text-muted)]">
+        <span className="ml-auto font-mono text-xs tabular-nums text-[var(--text-muted)]">
           {count!.toLocaleString()}
         </span>
       )}

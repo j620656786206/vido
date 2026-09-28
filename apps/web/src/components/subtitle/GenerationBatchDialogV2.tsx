@@ -221,7 +221,7 @@ function CostRow({
       {isRunning && (
         <span
           data-testid={`gen-batch-sse-chip${suffix}`}
-          className="flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--info-tint)] px-2 py-1 text-[11px] text-[var(--info-text)]"
+          className="flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--info-tint)] px-2 py-1 text-xs text-[var(--info-text)]"
         >
           <Radio className="h-3 w-3" aria-hidden="true" />
           即時更新（SSE）

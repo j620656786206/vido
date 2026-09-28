@@ -27,7 +27,7 @@ import { cn } from '../../lib/utils';
 interface InFlightBadgeProps {
   /** Jobs running right now. The caller renders nothing when this is 0. */
   count: number;
-  /** 'rail' = the tight corner chip; 'row' = the end-of-row pill. Both 11px. */
+  /** 'rail' = the tight corner chip; 'row' = the end-of-row pill. Both 12px (Label). */
   variant: 'rail' | 'row';
   testId: string;
   className?: string;
@@ -48,10 +48,9 @@ export function InFlightBadge({ count, variant, testId, className }: InFlightBad
       data-testid={testId}
       className={cn(
         'grid rounded-full font-mono leading-none text-[var(--accent-text)]',
-        // 11px on both: the rail's 10px was the only instance of that step in
-        // the app and had no authority behind it (the type ramp documents 11px
-        // chrome, not 10px). One step down from body, everywhere.
-        'text-[11px]',
+        // Label (12) on both — the floor of the type scale. One step down from
+        // body, everywhere.
+        'text-xs',
         className
       )}
     >

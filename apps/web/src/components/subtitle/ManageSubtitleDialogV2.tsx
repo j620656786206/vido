@@ -390,8 +390,7 @@ export function ManageSubtitleDialogV2({
             >
               <span
                 className={cn(
-                  // 11px stays until disc-2026-09-11px-micro-label-not-on-type-scale is ruled.
-                  'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium',
+                  'shrink-0 rounded-full px-2.5 py-1 text-xs font-medium',
                   track.pillClass
                 )}
               >
@@ -545,7 +544,7 @@ export function ManageSubtitleDialogV2({
               {/* The stream is closed once a run ends — F4 draws no live chip. */}
               {runIsLive && (
                 <div className="flex justify-center">
-                  <span className="flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--info-tint)] px-2 py-1 text-[11px] text-[var(--info-text)]">
+                  <span className="flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--info-tint)] px-2 py-1 text-xs text-[var(--info-text)]">
                     <Radio className="h-3 w-3" aria-hidden="true" />
                     即時更新（SSE）
                   </span>
@@ -787,13 +786,11 @@ export function ManageSubtitleDialogV2({
                       <span className="min-w-0 flex-1 truncate font-mono text-xs text-[var(--text-primary)]">
                         {result.filename}
                       </span>
-                      <span className="shrink-0 text-[11px] text-[var(--text-secondary)]">
+                      <span className="shrink-0 text-xs text-[var(--text-secondary)]">
                         {result.language}
                       </span>
                       {onlineSearch.downloadErrorMap[result.id] && (
-                        <span className="shrink-0 text-[11px] text-[var(--error-text)]">
-                          下載失敗
-                        </span>
+                        <span className="shrink-0 text-xs text-[var(--error-text)]">下載失敗</span>
                       )}
                       <button
                         type="button"

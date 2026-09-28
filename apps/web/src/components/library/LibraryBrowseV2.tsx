@@ -580,7 +580,7 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
             {activeFilterCount > 0 && (
               <span
                 data-testid="library-filter-open-phone-count"
-                className="absolute -right-1 -top-1 min-w-[18px] rounded-full bg-[var(--accent-primary)] px-1 text-center font-mono text-[11px] leading-[18px] tabular-nums text-[var(--text-on-accent)]"
+                className="absolute -right-1 -top-1 min-w-[18px] rounded-full bg-[var(--accent-primary)] px-1 text-center font-mono text-xs leading-[18px] tabular-nums text-[var(--text-on-accent)]"
               >
                 {activeFilterCount}
               </span>
@@ -684,7 +684,7 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
                   <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
                   篩選
                   {activeFilterCount > 0 && (
-                    <span className="rounded-full bg-[var(--accent-primary)] px-1.5 font-mono text-[11px] tabular-nums text-[var(--text-on-accent)]">
+                    <span className="rounded-full bg-[var(--accent-primary)] px-1.5 font-mono text-xs tabular-nums text-[var(--text-on-accent)]">
                       {activeFilterCount}
                     </span>
                   )}

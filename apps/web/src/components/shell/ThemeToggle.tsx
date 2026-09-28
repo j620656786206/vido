@@ -96,7 +96,7 @@ export function ThemeToggle({ variant = 'rail', className }: ThemeToggleProps) {
         data-theme-next={next}
         aria-label={label}
         className={cn(
-          'flex min-h-[44px] w-full items-center gap-2 rounded-[var(--radius-md)] px-2 text-[11px] text-[var(--text-muted)] transition-colors duration-[var(--motion-touch)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
+          'flex min-h-[44px] w-full items-center gap-2 rounded-[var(--radius-md)] px-2 text-xs text-[var(--text-muted)] transition-colors duration-[var(--motion-touch)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
           className
         )}
       >

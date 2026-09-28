@@ -107,7 +107,7 @@ describe('LibraryStatesV2', () => {
         expect.arrayContaining(['min-h-[2.75em]', 'text-sm', 'leading-snug'])
       );
       expect(tokens(text.children[1])).toEqual(
-        expect.arrayContaining(['mt-0.5', 'font-mono', 'text-[11px]'])
+        expect.arrayContaining(['mt-0.5', 'font-mono', 'text-xs'])
       );
       expect(text.children[1].firstElementChild!.getAttribute('class')).toContain('w-[60px]');
     });

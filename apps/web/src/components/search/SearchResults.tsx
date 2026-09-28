@@ -25,7 +25,7 @@ interface SearchResultsProps {
 const retryClass =
   'min-h-[44px] rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-3 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-secondary)] disabled:cursor-wait disabled:opacity-70';
 const codePillClass =
-  'rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-2 py-0.5 font-mono text-[11px] text-[var(--text-muted)]';
+  'rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-2 py-0.5 font-mono text-xs text-[var(--text-muted)]';
 
 export function SearchResults({
   movies,

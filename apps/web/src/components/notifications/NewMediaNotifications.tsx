@@ -102,7 +102,7 @@ function NewMediaToastItem({ notification, onDismiss }: NewMediaToastItemProps) 
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-[var(--success-text)]">已新增至媒體庫</p>
         <p className="truncate text-xs text-[var(--text-secondary)]">{media.title}</p>
-        <span className="text-[10px] text-[var(--text-secondary)]">
+        <span className="text-xs text-[var(--text-secondary)]">
           {mediaTypeLabels[media.mediaType]}
         </span>
       </div>
