@@ -167,6 +167,13 @@
            Use semantic keywords from the AC wording: e.g., "single POST", "batch
            semantics", "aria-modal", "focus trap", "lazy-load". Start broad, narrow
            if too many hits.
+        2b. ALSO sweep the tests that pin the old behaviour — not just the stories
+           (epic-dsr Retro AI3, carries retro-m25-AI1):
+           grep -rn "{old copy / testid / endpoint / field}" tests/e2e tests/visual apps/web/src/routes/test
+           E2E specs and gallery fixtures are contracts too; a changed label, empty-state
+           copy or response field that only e2e asserts on goes red first in CI (dsr-4:
+           CI e2e red on the old empty-state copy; sub-4-3: batch-subtitle.spec.ts).
+           List every hit you update in Completion Notes as a deliberate change.
         3. For each hit, read the surrounding AC and decide: is my change a DRIFT
            (changes behavior the prior AC specified) or a REUSE (prior AC still holds).
 
