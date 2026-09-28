@@ -1,6 +1,6 @@
 # Story: bugfix-type-line-height-weight — 全站行高與標籤字重照 DESIGN.md 字級表
 
-Status: review
+Status: done
 
 ## Story
 
@@ -53,3 +53,4 @@ Status: review
 | Date | Change |
 | --- | --- |
 | 2026-09-28 | 建單＋開發完成（由 `disc-2026-09-type-line-height-weight-drift` 升級）→ review |
+| 2026-09-28 | PR #564 合併（5ea45595），CI 全綠 → done |
