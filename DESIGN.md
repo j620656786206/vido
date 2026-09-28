@@ -405,7 +405,7 @@ Headline(30) > Title(24) > Subtitle(20) > Heading(18) 是四個近義詞，沒�
 
 ⚠️ **`.pen` 的 `lineHeight` 是比例不是 px。** 填 20 代表 20 倍行高，不是 20px——實測會讓整份檔案的裁切警告從 150 暴增到 2164。
 
-**程式碼跟上了一半**（2026-09-28，`bugfix-type-scale-code-migration`）：`apps/web` 的奇數字級已清零——59 處 `text-[11px]`／`text-[10px]` 改 `text-xs`(12)、`text-[13px]` 改 `text-sm`(14)，`apps/web/src/styles-type-scale.spec.ts` 會擋住任何 `text-[10|11|13|15px]` 再進來。**還沒跟上的三件事**，追蹤於 `disc-2026-09-type-line-height-weight-drift` 與 `disc-2026-09-type-scale-display-and-mobile-step`：① **行高**：Tailwind 的 `text-xs` 自帶 16px（1.333）、`text-sm` 自帶 20px（1.429），這張表要的是 18（1.5）與 22.75（1.625）；全 app 673 處 `text-sm` 只有 5 處明寫 `leading-relaxed`。② **字重**：Label 規定 500，但這次改到的 54 處 `text-xs` 有 41 處沒寫 `font-medium`。③ 5 處 `text-3xl`(30)、1 處 `text-5xl`(48) 不在表上；手機的字級降階（`sm:text-*`）在程式碼裡仍完全不存在。
+**程式碼已跟上字級與行高**（2026-09-28）：奇數字級清零（`bugfix-type-scale-code-migration`，守門測試擋回流）；八階的行高與 Label 的字重 500 改在 `apps/web/src/styles.css` 的 `@theme` 一次設定（`--text-*--line-height`、`--text-xs--font-weight`，`bugfix-type-line-height-weight`），所以每個 `text-*` 自動帶這張表的行高，元素上明寫的 `leading-*`／`font-*` 仍然優先。`styles-type-scale.spec.ts` 直接讀這張表和 `styles.css` 比對，改其中一邊另一邊沒跟上就會紅。**還沒跟上的**：5 處 `text-3xl`(30)、1 處 `text-5xl`(48) 的用途對不上表；手機的標題降階（`sm:text-*`）在程式碼裡仍不存在——追蹤於 `disc-2026-09-type-scale-display-and-mobile-step`。
 
 ### Named Rules
 

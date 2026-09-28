@@ -528,36 +528,40 @@ test.describe('Home readout band — 需要注意 cell @ui @homepage @story-dsr-
     });
   }
 
-  test('[P0] the band does not change height when the readout arrives (CLS)', async ({ page }) => {
-    await stubHomepageBaseline(page);
-    let release: () => void = () => {};
-    const held = new Promise<void>((resolve) => {
-      release = resolve;
+  for (const width of [390, 768]) {
+    test(`[P0] the band does not change height when the readout arrives (CLS) @ ${width}`, async ({
+      page,
+    }) => {
+      await stubHomepageBaseline(page);
+      let release: () => void = () => {};
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      await page.route(`${ROUTE_API}/home-summary`, async (route: Route) => {
+        await held;
+        await route.fulfill(jsonOk(mockHomeSummaryWorstCase));
+      });
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/');
+
+      const skeleton = page.getByTestId('home-readout-skeleton');
+      await expect(skeleton).toBeVisible();
+      const before = await skeleton.evaluate((el) => el.getBoundingClientRect().height);
+
+      release();
+      const band = page.getByTestId('readout-attention-value');
+      await expect(band).toBeVisible();
+      const after = await page
+        .locator('[aria-label="媒體庫讀數"]')
+        .evaluate((el) => el.getBoundingClientRect().height);
+
+      // The skeleton exists ONLY to hold this height. A two-line 需要注意 cell is
+      // exactly the case that used to make it a line short (measured: 160 → 168,
+      // i.e. a whole line). Sub-pixel is not a jump — 11px labels round to .5 —
+      // so the bar is "less than a pixel", not bit-equality.
+      expect(Math.abs(after - before)).toBeLessThan(1);
     });
-    await page.route(`${ROUTE_API}/home-summary`, async (route: Route) => {
-      await held;
-      await route.fulfill(jsonOk(mockHomeSummaryWorstCase));
-    });
-    await page.setViewportSize({ width: 390, height: 900 });
-    await page.goto('/');
-
-    const skeleton = page.getByTestId('home-readout-skeleton');
-    await expect(skeleton).toBeVisible();
-    const before = await skeleton.evaluate((el) => el.getBoundingClientRect().height);
-
-    release();
-    const band = page.getByTestId('readout-attention-value');
-    await expect(band).toBeVisible();
-    const after = await page
-      .locator('[aria-label="媒體庫讀數"]')
-      .evaluate((el) => el.getBoundingClientRect().height);
-
-    // The skeleton exists ONLY to hold this height. A two-line 需要注意 cell is
-    // exactly the case that used to make it a line short (measured: 160 → 168,
-    // i.e. a whole line). Sub-pixel is not a jump — 11px labels round to .5 —
-    // so the bar is "less than a pixel", not bit-equality.
-    expect(Math.abs(after - before)).toBeLessThan(1);
-  });
+  }
 });
 
 test.describe('Homepage lazy-load @ui @homepage @story-10-5', () => {

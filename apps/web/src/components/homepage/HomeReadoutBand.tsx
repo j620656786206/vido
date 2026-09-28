@@ -59,11 +59,16 @@ const BAND_SHELL =
  * would be a line short and the band would grow on mount — the 54px / 0.0832
  * CLS jump the skeleton branch exists to prevent. Putting the floor here means
  * skeleton and band agree by construction, not by two hand-matched strings.
- * The exact value is measured, not guessed: 84px is what a two-line cell comes
- * out at, verified by the CLS test in homepage-layout.spec.ts.
+ * The exact value is arithmetic on DESIGN.md's line-heights, verified by the
+ * CLS test in homepage-layout.spec.ts at 390 and 768:
+ *   py-2 16 + label 12×1.5 = 18 + gap 4 + two value lines
+ *   → phone  text-base 16×1.625 = 26 ×2 → 90px
+ *   → sm–lg  text-lg   18×1.5   = 27 ×2 → 92px
+ * (It was 84 when Tailwind's Latin line-heights were in force; the sm–lg case
+ * was never measured and was already 8px short.)
  */
 const CELL_BOX =
-  'flex min-h-[84px] flex-1 flex-col items-center justify-center px-3 py-2 text-center lg:min-h-[44px]';
+  'flex min-h-[90px] flex-1 flex-col items-center justify-center px-3 py-2 text-center sm:min-h-[92px] lg:min-h-[44px]';
 
 /**
  * The attention cell's readout, as either ONE string or TWO halves.
