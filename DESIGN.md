@@ -405,7 +405,7 @@ Headline(30) > Title(24) > Subtitle(20) > Heading(18) 是四個近義詞，沒�
 
 ⚠️ **`.pen` 的 `lineHeight` 是比例不是 px。** 填 20 代表 20 倍行高，不是 20px——實測會讓整份檔案的裁切警告從 150 暴增到 2164。
 
-**程式碼尚未跟上**：`apps/web` 還有 125 處 `text-[13px]`／`text-[11px]`、6 處 `text-[10px]`、4 處 `text-[15px]`，另有 5 處 `text-3xl`(30) 與 1 處 `text-5xl`(48)。48px 不在這張表裡，要嘛補一階要嘛改掉。**行高也還沒跟上**：Tailwind 的 `text-sm` 自帶 1.429，要拿到這張表的 1.625 必須明寫 `leading-relaxed`；`text-lg` 自帶 1.556，要 1.5 必須明寫 `leading-normal`。而**手機的字級降階目前在程式碼裡完全不存在**——沒有任何 `sm:text-*` 的響應式字級。追蹤於 `disc-2026-09-type-scale-even-migration`。
+**程式碼跟上了一半**（2026-09-28，`bugfix-type-scale-code-migration`）：`apps/web` 的奇數字級已清零——59 處 `text-[11px]`／`text-[10px]` 改 `text-xs`(12)、`text-[13px]` 改 `text-sm`(14)，`apps/web/src/styles-type-scale.spec.ts` 會擋住任何 `text-[10|11|13|15px]` 再進來。**還沒跟上的三件事**，追蹤於 `disc-2026-09-type-line-height-weight-drift` 與 `disc-2026-09-type-scale-display-and-mobile-step`：① **行高**：Tailwind 的 `text-xs` 自帶 16px（1.333）、`text-sm` 自帶 20px（1.429），這張表要的是 18（1.5）與 22.75（1.625）；全 app 673 處 `text-sm` 只有 5 處明寫 `leading-relaxed`。② **字重**：Label 規定 500，但這次改到的 54 處 `text-xs` 有 41 處沒寫 `font-medium`。③ 5 處 `text-3xl`(30)、1 處 `text-5xl`(48) 不在表上；手機的字級降階（`sm:text-*`）在程式碼裡仍完全不存在。
 
 ### Named Rules
 

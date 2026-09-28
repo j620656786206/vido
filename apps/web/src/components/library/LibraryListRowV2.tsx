@@ -28,7 +28,7 @@ interface LibraryListRowV2Props {
 
 function TechPill({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-[var(--radius-sm)] bg-[var(--accent-tint)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--accent-text)]">
+    <span className="rounded-[var(--radius-sm)] bg-[var(--accent-tint)] px-1.5 py-0.5 font-mono text-xs text-[var(--accent-text)]">
       {children}
     </span>
   );
@@ -92,14 +92,12 @@ export function LibraryListRowV2({
         <div className="flex items-center gap-2">
           <h3 className="truncate text-sm font-medium text-[var(--text-primary)]">{title}</h3>
           {lifecycle && lifecycle.label !== '已入庫' && (
-            <span
-              className={`shrink-0 rounded-full px-1.5 py-0.5 text-[11px] ${lifecycle.className}`}
-            >
+            <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-xs ${lifecycle.className}`}>
               {lifecycle.label}
             </span>
           )}
         </div>
-        <p className="truncate font-mono text-[11px] text-[var(--text-secondary)]">{meta}</p>
+        <p className="truncate font-mono text-xs text-[var(--text-secondary)]">{meta}</p>
       </div>
 
       <div className="hidden shrink-0 items-center gap-1.5 sm:flex">
@@ -107,16 +105,14 @@ export function LibraryListRowV2({
           <TechPill key={t}>{t}</TechPill>
         ))}
         {subtitle && (
-          <span
-            className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${subtitle.className}`}
-          >
+          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${subtitle.className}`}>
             {subtitle.label}
           </span>
         )}
       </div>
 
       {typeof voteAverage === 'number' && voteAverage > 0 && (
-        <span className="hidden shrink-0 items-center gap-0.5 font-mono text-[11px] text-[var(--text-secondary)] sm:flex">
+        <span className="hidden shrink-0 items-center gap-0.5 font-mono text-xs text-[var(--text-secondary)] sm:flex">
           <Star className="h-3 w-3 fill-[var(--warning)] text-[var(--warning-text)]" />
           {voteAverage.toFixed(1)}
         </span>

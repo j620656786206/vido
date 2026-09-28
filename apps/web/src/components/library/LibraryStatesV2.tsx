@@ -51,14 +51,14 @@ export function LibraryGridSkeletonV2({
       {Array.from({ length: count }).map((_, i) => (
         // Same skeleton as PosterCardV2's box model: poster, then ONE text block whose title
         // area is the card's `min-h-[2.75em] text-sm` two-line reserve and whose meta line is
-        // an 11px mono line box — so a tile is exactly as tall as the card it stands in for.
+        // a 12px (text-xs) mono line box — so a tile is exactly as tall as the card it stands in for.
         <div key={i} className="flex flex-col gap-2">
           <div className="aspect-[2/3] animate-pulse rounded-[var(--radius-lg)] bg-[var(--bg-tertiary)] motion-reduce:animate-none" />
           <div>
             <div className="flex min-h-[2.75em] items-center text-sm leading-snug">
               <div className="h-3 w-full animate-pulse rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] motion-reduce:animate-none" />
             </div>
-            <div className="mt-0.5 font-mono text-[11px]">
+            <div className="mt-0.5 font-mono text-xs">
               <span className="inline-block h-2.5 w-[60px] animate-pulse rounded-[var(--radius-sm)] bg-[var(--bg-secondary)] align-middle motion-reduce:animate-none" />
             </div>
           </div>
@@ -138,7 +138,7 @@ export function LibraryErrorV2({ code, onRetry }: { code?: string; onRetry: () =
       {code ? (
         <span
           data-testid="library-error-code"
-          className="mt-2 rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-2 py-0.5 font-mono text-[11px] text-[var(--text-muted)]"
+          className="mt-2 rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-2 py-0.5 font-mono text-xs text-[var(--text-muted)]"
         >
           {code}
         </span>

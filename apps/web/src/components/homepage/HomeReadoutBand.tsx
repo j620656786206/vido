@@ -4,15 +4,12 @@
  *
  * The Operate answer to「我不在的時候你做了什麼？」— four dense cells, three
  * seconds, every cell a door. A BAND, not dashboard cards: one row on desktop,
- * 2×2 on mobile, 11px labels over mono digits.
+ * 2×2 on mobile, 12px (Label) labels over mono digits.
  *
- * ⚖️ The 11 is deliberate and ratified twice. dsr-7 first "corrected" it to the
- * .pen's $Type/Label/Size (12) and was overruled (Alexyu 2026-09-16): 11px is
- * what 44 other micro-labels across this app use, INCLUDING the poster badge
- * 40px below this band (PosterCardV2). Moving one of them makes the odd one
- * out, not a fix. Whether the design system should grow an 11px Micro rung is
- * tracked as disc-2026-09-11px-micro-label-not-on-type-scale — until it does,
- * do not "clean this up".
+ * ⚖️ These labels moved 11 → 12 together with every other micro-label in the
+ * app (bugfix-type-scale-code-migration, 2026-09-28), INCLUDING the poster
+ * badge 40px below this band (PosterCardV2) — one ruling, all at once, so none
+ * of them is the odd one out. styles-type-scale.spec.ts keeps 11 from coming back.
  *
  * Honesty rules (brief §2/§5, inherited from the site-wide 固定詞彙):
  *  - a cell whose backend source degraded shows its label with NO number
@@ -173,7 +170,7 @@ function ReadoutCell({
         'gap-1 rounded-[var(--radius-md)] transition-colors duration-[var(--motion-touch)] hover:bg-[var(--bg-tertiary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] active:bg-[var(--bg-tertiary)]'
       )}
     >
-      <span className="flex items-center gap-1 text-[11px] text-[var(--text-muted)]">
+      <span className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
         <Icon
           className={cn('h-3.5 w-3.5', live && 'motion-safe:animate-breathe')}
           aria-hidden="true"
@@ -298,7 +295,7 @@ export function HomeReadoutBand() {
                   line box is line-height tall, not font-size tall — the same
                   guess this branch was extracted to stop making. Borrowing the
                   type means the skeleton measures itself. */}
-              <span className="flex items-center gap-1 text-[11px]">
+              <span className="flex items-center gap-1 text-xs">
                 <span aria-hidden="true" className="h-3.5 w-3.5 rounded bg-[var(--bg-tertiary)]" />
                 <span
                   aria-hidden="true"

@@ -67,7 +67,7 @@ type Outcome =
   | { kind: 'disabled' }
   | { kind: 'error'; message: string };
 
-const pillBase = 'inline-flex h-10 items-center gap-2 rounded-full px-4 text-[13px] font-semibold';
+const pillBase = 'inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold';
 
 export function NfoLocalizeAction({
   mediaType,
@@ -280,7 +280,7 @@ function Note({
   return (
     <div
       className={cn(
-        'flex gap-2 rounded-[var(--radius-md)] p-3 text-[13px] font-medium',
+        'flex gap-2 rounded-[var(--radius-md)] p-3 text-sm font-medium',
         align === 'start' ? 'items-start' : 'items-center',
         tones[tone]
       )}

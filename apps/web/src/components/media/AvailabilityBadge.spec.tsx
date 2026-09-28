@@ -45,7 +45,7 @@ describe('AvailabilityBadge (Story 10-4 AC #3 · R3 remake)', () => {
     render(<AvailabilityBadge variant="owned" />);
     const el = screen.getByTestId('availability-badge-owned');
     expect(el.className).toContain('rounded-full');
-    expect(el.className).toContain('text-[11px]');
+    expect(el.className).toContain('text-xs');
     expect(el).not.toHaveAttribute('role');
     expect(el).not.toHaveAttribute('aria-live');
   });

@@ -173,7 +173,7 @@ describe('GenerationProgressV2', () => {
       const pct = screen.getByText('63%');
       expect(pct.className).toContain('ml-auto');
       // [guard] 11px is FROZEN (disc-2026-09-11px-micro-label-not-on-type-scale).
-      expect(pct.className.split(' ')).toContain('text-[11px]');
+      expect(pct.className.split(' ')).toContain('text-xs');
       expect(pct.className).toContain('sm:ml-0');
     });
 

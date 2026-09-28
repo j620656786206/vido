@@ -218,7 +218,7 @@ export function DiscoverBrowseV2() {
                 <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
                 篩選
                 {activeCount > 0 && (
-                  <span className="rounded-full bg-[var(--accent-primary)] px-1.5 font-mono text-[11px] tabular-nums text-[var(--text-on-accent)]">
+                  <span className="rounded-full bg-[var(--accent-primary)] px-1.5 font-mono text-xs tabular-nums text-[var(--text-on-accent)]">
                     {activeCount}
                   </span>
                 )}

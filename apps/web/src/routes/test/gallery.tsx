@@ -369,7 +369,7 @@ function ComponentGalleryPage() {
                           // widen the wrapper too, or the "phone" shot is 96px wide.
                           className={fx.viewport ? 'w-full min-w-0 space-y-1' : 'space-y-1'}
                         >
-                          <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]/70">
+                          <div className="text-xs uppercase tracking-wider text-[var(--text-muted)]/70">
                             {state}
                           </div>
                           {/* 19-4b Task 0 Fix A — sentinel before each state div.

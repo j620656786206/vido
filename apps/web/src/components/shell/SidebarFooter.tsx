@@ -145,7 +145,7 @@ export function SidebarFooter({ collapsed = false, showThemeToggle = true }: Sid
       {showThemeToggle && <ThemeToggle variant="row" className="-mx-0.5" />}
       {/* Disk headroom */}
       <div data-testid="status-disk">
-        <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
+        <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
           <span>儲存空間</span>
           <span className="font-mono tabular-nums">
             {diskOk ? `${formatTB(disk.usedBytes)} / ${formatTB(disk.totalBytes)} TB` : '—'}
@@ -163,7 +163,7 @@ export function SidebarFooter({ collapsed = false, showThemeToggle = true }: Sid
       </div>
 
       {/* Scan · queue · service dots */}
-      <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
+      <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
         {scanActive && (
           <span className="flex items-center gap-1" data-testid="status-scan">
             <span className="inline-block h-2 w-2 rounded-full bg-[var(--accent-primary)] motion-safe:animate-pulse" />

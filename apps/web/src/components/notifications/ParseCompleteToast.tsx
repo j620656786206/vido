@@ -55,11 +55,9 @@ export function ParseCompleteToast({
         </p>
         <p className="truncate text-xs text-[var(--text-secondary)]">{title}</p>
         {isFailed && errorMessage ? (
-          <p className="truncate text-[10px] text-[var(--error-text)]">{errorMessage}</p>
+          <p className="truncate text-xs text-[var(--error-text)]">{errorMessage}</p>
         ) : (
-          <span className="text-[10px] text-[var(--text-secondary)]">
-            {mediaTypeLabels[mediaType]}
-          </span>
+          <span className="text-xs text-[var(--text-secondary)]">{mediaTypeLabels[mediaType]}</span>
         )}
       </div>
 

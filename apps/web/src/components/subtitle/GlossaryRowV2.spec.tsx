@@ -68,7 +68,7 @@ describe('GlossaryRowV2', () => {
       );
       expectExactClasses(
         screen.getByTestId('glossary-source-t1'),
-        'shrink-0 rounded-full bg-[var(--bg-tertiary)] px-2.5 py-1 text-[11px] text-[var(--text-secondary)]'
+        'shrink-0 rounded-full bg-[var(--bg-tertiary)] px-2.5 py-1 text-xs text-[var(--text-secondary)]'
       );
     }
   );
@@ -81,7 +81,7 @@ describe('GlossaryRowV2', () => {
     // 未確認 keeps ochre: unconfirmed terms already feed translation (confirmedOnly=false).
     expectExactClasses(
       badge,
-      'shrink-0 rounded-full bg-[var(--warning-tint)] px-2.5 py-1 text-[11px] text-[var(--warning-text)]'
+      'shrink-0 rounded-full bg-[var(--warning-tint)] px-2.5 py-1 text-xs text-[var(--warning-text)]'
     );
     expect(screen.getByTestId('glossary-confirm-t1')).toBeInTheDocument();
   });

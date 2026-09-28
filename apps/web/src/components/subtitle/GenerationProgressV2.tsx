@@ -192,7 +192,7 @@ export function GenerationProgressV2({
                   {stage}
                 </span>
                 {state === 'active' && pctText && (
-                  <span className="ml-auto font-mono text-[11px] tabular-nums text-[var(--accent-text)] sm:ml-0">
+                  <span className="ml-auto font-mono text-xs tabular-nums text-[var(--accent-text)] sm:ml-0">
                     {pctText}
                   </span>
                 )}

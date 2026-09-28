@@ -127,7 +127,7 @@ export function DetailLoadErrorV2({
         {code ? (
           <span
             data-testid="detail-load-error-code"
-            className="mt-2 rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-2 py-0.5 font-mono text-[11px] text-[var(--text-muted)]"
+            className="mt-2 rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] px-2 py-0.5 font-mono text-xs text-[var(--text-muted)]"
           >
             {code}
           </span>

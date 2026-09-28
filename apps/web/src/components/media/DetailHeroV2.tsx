@@ -122,7 +122,7 @@ export function DetailHeroV2({
                   <span
                     key={b.label}
                     data-testid="detail-status-badge"
-                    className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${b.className}`}
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${b.className}`}
                   >
                     {b.label}
                   </span>

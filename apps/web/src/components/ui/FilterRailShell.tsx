@@ -63,7 +63,7 @@ export function FilterRailShell({
               // White on solid --accent-primary measured 3.68:1 at 11px. This is a
               // READOUT, not a control, so the rationed-accent rule wants the wash
               // here anyway — the fix and the rule point the same way.
-              className="inline-flex items-center justify-center rounded-full bg-[var(--accent-subtle)] px-1.5 py-0.5 font-mono text-[11px] font-medium tabular-nums text-[var(--accent-text)]"
+              className="inline-flex items-center justify-center rounded-full bg-[var(--accent-subtle)] px-1.5 py-0.5 font-mono text-xs font-medium tabular-nums text-[var(--accent-text)]"
             >
               {activeCount}
             </span>

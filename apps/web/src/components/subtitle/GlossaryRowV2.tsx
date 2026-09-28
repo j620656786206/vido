@@ -29,7 +29,7 @@ const SOURCE_LABEL: Record<GlossarySource, string> = {
   community: '社群',
 };
 
-const BADGE_SHAPE = 'shrink-0 rounded-full px-2.5 py-1 text-[11px]';
+const BADGE_SHAPE = 'shrink-0 rounded-full px-2.5 py-1 text-xs';
 
 export interface GlossaryRowV2Props {
   term: GlossaryTerm;
