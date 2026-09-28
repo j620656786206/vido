@@ -24,6 +24,16 @@ type LibraryHandler struct {
 	// earlier in main.go than this handler's service graph needs).
 	enricher       services.ItemEnricherInterface
 	reparseTimeout time.Duration
+
+	// disc-2026-09-batch-reparse-never-runs: what makes a batch re-parse's
+	// pending rows actually get matched. Setter-injected like enricher.
+	enrichmentRuns EnrichmentRunRequester
+}
+
+// EnrichmentRunRequester starts a matching pass over every pending row, or
+// queues one behind the pass already running (EnrichmentService.RequestRun).
+type EnrichmentRunRequester interface {
+	RequestRun() bool
 }
 
 // defaultReparseTimeout bounds a synchronous re-match. The common path (regex
@@ -39,6 +49,11 @@ func NewLibraryHandler(service services.LibraryServiceInterface) *LibraryHandler
 // SetItemEnricher wires single-item re-match (dsr-2b-a AC #2).
 func (h *LibraryHandler) SetItemEnricher(enricher services.ItemEnricherInterface) {
 	h.enricher = enricher
+}
+
+// SetEnrichmentRunRequester wires the pass a batch re-parse kicks off.
+func (h *LibraryHandler) SetEnrichmentRunRequester(r EnrichmentRunRequester) {
+	h.enrichmentRuns = r
 }
 
 // parseLibraryMediaType reads `type` (all | movie | tv). On a bad value it writes
@@ -486,6 +501,13 @@ func (h *LibraryHandler) BatchDelete(c *gin.Context) {
 }
 
 // BatchReparse handles POST /api/v1/library/batch/reparse
+//
+// Sets every id back to pending, then kicks off the matching pass over pending
+// rows (disc-2026-09-batch-reparse-never-runs). Before that kick the rows sat
+// 整理中 until the next scan that found a CHANGED file — a library nobody
+// touches never re-matched at all. The pass runs in the background and reports
+// on the enrich_progress / enrich_complete SSE events; this response only says
+// how many rows were queued.
 func (h *LibraryHandler) BatchReparse(c *gin.Context) {
 	var req BatchRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -498,6 +520,18 @@ func (h *LibraryHandler) BatchReparse(c *gin.Context) {
 		slog.Error("Failed to batch reparse", "error", err, "type", req.Type, "count", len(req.IDs))
 		InternalServerError(c, "Failed to perform batch reparse")
 		return
+	}
+
+	if result.SuccessCount > 0 {
+		if h.enrichmentRuns == nil {
+			// Rows are pending; only the next changed scan will pick them up.
+			slog.Warn("Batch reparse queued rows but no enrichment run requester is wired",
+				"type", req.Type, "count", result.SuccessCount)
+		} else {
+			started := h.enrichmentRuns.RequestRun()
+			slog.Info("Batch reparse kicked off matching",
+				"type", req.Type, "count", result.SuccessCount, "started_now", started)
+		}
 	}
 
 	SuccessResponse(c, result)

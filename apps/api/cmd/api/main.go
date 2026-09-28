@@ -926,6 +926,9 @@ func main() {
 	// dsr-2b-a AC #2/#5: single-item re-match (POST /library/{movies,series}/:id/reparse)
 	// actually runs enrichment for that item — it was a TODO stub.
 	libraryHandler.SetItemEnricher(enrichmentService)
+	// disc-2026-09-batch-reparse-never-runs: a batch re-parse must actually
+	// run the match, not wait for the next changed scan.
+	libraryHandler.SetEnrichmentRunRequester(enrichmentService)
 	// 補審 M4: the opt-in checkbox is only offered where the trigger that
 	// honours it is actually built — the `if cfg.SubtitlePipelineEnabled()`
 	// block above. The default mode is `legacy`, where it would be a promise
