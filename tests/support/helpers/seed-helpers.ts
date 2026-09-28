@@ -33,11 +33,17 @@ function uniqueTitle(prefix: string): string {
 export interface SeedMovieOptions {
   title?: string;
   releaseDate?: string;
-  /** Omit (or 0) for a movie with no TMDb id. Its parse_status is '' (no no-metadata block); use api.reparseMovie / api.batchReparse to reach failed / pending (dsr-2b-b). */
+  /** Omit (or 0) for a movie with no TMDb id. Its parse_status is '' (no no-metadata block); use api.reparseMovie to reach failed, or `parseStatus` below (dsr-2b-b). */
   tmdbId?: number;
   posterPath?: string;
   genres?: string[];
   overview?: string;
+  /**
+   * Create the row already in this match state. 'pending' = the 資料整理中
+   * block. (A batch re-parse no longer parks a row in pending — since
+   * disc-2026-09-batch-reparse-never-runs it actually runs the match.)
+   */
+  parseStatus?: 'pending' | 'failed' | 'success';
 }
 
 export interface SeedSeriesOptions {
@@ -65,6 +71,7 @@ export async function seedMovie(api: ApiHelpers, opts: SeedMovieOptions = {}): P
   if (opts.posterPath) body.poster_path = opts.posterPath;
   if (opts.genres) body.genres = opts.genres;
   if (opts.overview) body.overview = opts.overview;
+  if (opts.parseStatus) body.parse_status = opts.parseStatus;
 
   const res = await api.post<Movie>('/movies', body);
   expect(res.success, `seedMovie failed: ${JSON.stringify(res.error)}`).toBe(true);

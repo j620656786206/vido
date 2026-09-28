@@ -216,12 +216,15 @@ test.describe('Media Detail - no metadata @e2e @media-detail @dsr-2b-b', () => {
     page,
     api,
   }) => {
-    const movie = await seedMovie(api, { title: `[E2E] pending ${Date.now()}` });
+    // Seeded directly as pending: a batch re-parse used to be the way to park a
+    // row here, but since disc-2026-09-batch-reparse-never-runs it actually
+    // runs the match, and with no TMDb key the row is 'failed' within a second.
+    const movie = await seedMovie(api, {
+      title: `[E2E] pending ${Date.now()}`,
+      parseStatus: 'pending',
+    });
     movieIds.push(movie.id);
-    const batch = await api.batchReparse([movie.id], 'movie');
-    expect(batch.success, JSON.stringify(batch.error)).toBe(true);
-    // BatchReparse answers 200 even when an id failed; make sure this one was set.
-    expect(batch.data?.success_count).toBe(1);
+    expect(movie.parse_status).toBe('pending');
 
     await page.goto(`/media/movie/${movie.id}`);
 
