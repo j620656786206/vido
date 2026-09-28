@@ -1,6 +1,6 @@
 # Story: bugfix-type-heading-mobile-step — 手機上的標題降一階
 
-Status: review
+Status: done
 
 ## Story
 
@@ -51,3 +51,4 @@ Status: review
 | Date | Change |
 | --- | --- |
 | 2026-09-28 | 建單＋開發完成（由 `disc-2026-09-type-scale-display-and-mobile-step` 升級）→ review |
+| 2026-09-28 | PR #567 合併（1269d7d1），CI 全綠 → done |
