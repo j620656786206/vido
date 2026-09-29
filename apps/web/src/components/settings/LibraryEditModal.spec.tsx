@@ -3,7 +3,8 @@
  * Asserts the jsx-a11y htmlFor/id fixes: every visible form label resolves to
  * its control via getByLabelText, and icon-only buttons carry accessible names.
  */
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { LibraryEditModal } from './LibraryEditModal';
 import { useMediaLibraries } from '../../hooks/useMediaLibrary';
@@ -106,10 +107,11 @@ describe('LibraryEditModal', () => {
   });
 
   it('never implies that scanning itself generates subtitles (sub-4-3 AC #6)', () => {
-    const { container } = render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
+    render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
 
-    const block = container.querySelector('[data-testid="library-auto-subtitle-field"]');
-    expect(block?.textContent).not.toContain('掃描');
+    // The dialog renders in a portal, outside the render container.
+    const block = screen.getByTestId('library-auto-subtitle-field');
+    expect(block.textContent).not.toContain('掃描');
   });
 
   it('places the opt-in LAST, after the fields that describe the library itself', () => {
@@ -350,5 +352,94 @@ describe('LibraryEditModal', () => {
     expect(mutation.mutateAsync).toHaveBeenCalledWith(
       expect.not.objectContaining({ autoSubtitle: expect.anything() })
     );
+  });
+});
+
+// disc-2026-09-scanner-custom-modals-a11y: a real dialog — Esc closes, the
+// scrim does not (an edit form), focus starts in 名稱.
+describe('LibraryEditModal — dialog behaviour', () => {
+  beforeEach(() => {
+    vi.mocked(useMediaLibraries).mockReturnValue(
+      librariesQuery as ReturnType<typeof useMediaLibraries>
+    );
+  });
+
+  it('is a modal dialog named by its title', () => {
+    render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
+    const dialog = screen.getByRole('dialog', { name: '編輯媒體庫' });
+    expect(dialog).toHaveAttribute('data-testid', 'library-edit-modal');
+  });
+
+  it('opens with focus in 名稱', () => {
+    render(<LibraryEditModal onClose={vi.fn()} />);
+    expect(screen.getByLabelText('名稱')).toHaveFocus();
+  });
+
+  it('Esc closes it', () => {
+    const onClose = vi.fn();
+    render(<LibraryEditModal libraryId="lib-1" onClose={onClose} />);
+    fireEvent.keyDown(screen.getByLabelText('名稱'), { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['isComposing', { key: 'Escape', isComposing: true }],
+    ['keyCode 229 (Safari)', { key: 'Escape', keyCode: 229 }],
+  ])('an Esc that only drops an IME candidate (%s) does not close it', (_label, init) => {
+    const onClose = vi.fn();
+    render(<LibraryEditModal libraryId="lib-1" onClose={onClose} />);
+    fireEvent.keyDown(screen.getByLabelText('名稱'), init);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('a click outside does not close it (the edits would be lost)', async () => {
+    const onClose = vi.fn();
+    render(<LibraryEditModal libraryId="lib-1" onClose={onClose} />);
+    // Radix arms its outside-pointerdown listener on the next tick.
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    fireEvent.pointerDown(document.body);
+    fireEvent.mouseDown(document.body);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('has exactly one close button', () => {
+    render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
+    const dialog = screen.getByRole('dialog');
+    const closes = Array.from(dialog.querySelectorAll('button')).filter(
+      (b) => b.getAttribute('aria-label') === '關閉' || b.textContent === 'Close'
+    );
+    expect(
+      closes.filter((b) => b.offsetParent !== null || !b.className.includes('hidden'))
+    ).toHaveLength(1);
+  });
+
+  // CR HIGH-1: no Dialog.Trigger — focus must go back to what opened it, not <body>.
+  it.each([
+    ['create → 新增媒體庫', undefined, 'add-library-button'],
+    ['edit → that library’s ⋮', 'lib-1', 'library-menu-button'],
+  ])('closing returns focus to the opener (%s)', async (_label, libraryId, openerTestId) => {
+    function Harness() {
+      const [open, setOpen] = useState(true);
+      return (
+        <>
+          <div data-testid="library-card-lib-1">
+            <button type="button" data-testid="library-menu-button">
+              ⋮
+            </button>
+          </div>
+          <button type="button" data-testid="add-library-button">
+            新增媒體庫
+          </button>
+          {open && <LibraryEditModal libraryId={libraryId} onClose={() => setOpen(false)} />}
+        </>
+      );
+    }
+    render(<Harness />);
+    fireEvent.keyDown(screen.getByLabelText('名稱'), { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    // Radix hands focus back on the tick after unmount.
+    await waitFor(() => expect(screen.getByTestId(openerTestId)).toHaveFocus());
   });
 });

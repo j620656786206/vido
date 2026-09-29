@@ -3,8 +3,9 @@
  * Library Edit/Create Modal for Settings page (Story 7b-4)
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, Plus } from 'lucide-react';
+import { Dialog, DialogContent, DialogTitle } from '../ui/Dialog';
 import {
   useMediaLibraries,
   useCreateLibrary,
@@ -100,20 +101,56 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
   };
 
   const isSaving = createLibrary.isPending || updateLibrary.isPending;
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    /* --overlay-scrim is the modal-backdrop token and stays DARK in both themes:
-       a paper modal on paper ground needs the same boundary a dark one does.
-       Was black/60; the token is 70%. */
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-scrim)] p-5">
-      <div
-        className="w-full max-w-md rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4 shadow-[var(--shadow-xl)] sm:p-6"
+    /* disc-2026-09-scanner-custom-modals-a11y: ui/Dialog, not a hand-made
+       fixed overlay — role="dialog", focus kept inside, Esc closes. Its scrim is
+       the same --overlay-scrim this had. The parent mounts it only while open. */
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
         data-testid="library-edit-modal"
+        aria-describedby={undefined}
+        // An edit form: a stray click on the scrim must not throw the input away.
+        onPointerDownOutside={(event) => event.preventDefault()}
+        onInteractOutside={(event) => event.preventDefault()}
+        // An Esc that only drops a 注音 candidate in 名稱 or 路徑 is the input
+        // method's; Radix hears Esc on the document and would close the form.
+        onEscapeKeyDown={(event) => {
+          if (event.isComposing || event.keyCode === 229) event.preventDefault();
+        }}
+        // Start in 名稱: the dialog opens to be filled in, and Radix would pick ✕.
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          nameInputRef.current?.focus();
+        }}
+        // No Dialog.Trigger, so Radix has nowhere to return focus and it would land
+        // on <body>. Hand it back to what opened this: the library's ⋮ (編輯) or
+        // 新增媒體庫. By id, not a saved element — the ⋮ menu item that opened
+        // it is already gone (RestoreConfirmDialog precedent).
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          const opener = libraryId
+            ? document.querySelector<HTMLElement>(
+                `[data-testid="library-card-${libraryId}"] [data-testid="library-menu-button"]`
+              )
+            : document.querySelector<HTMLElement>('[data-testid="add-library-button"]');
+          opener?.focus();
+        }}
+        // The header keeps its own ✕ (E5-D); the built-in one would be a second.
+        closeClassName="hidden"
+        // Same card as before: E5-M keeps a 20px margin on a phone (was the
+        // overlay's p-5), so not the default w-full.
+        // Scrolls rather than clipping 儲存 off a short screen (many paths, the
+        // rebuild warning, a phone keyboard).
+        className="max-h-[calc(100dvh-2.5rem)] w-[calc(100%-2.5rem)] max-w-md overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border-subtle)] p-4 sm:p-6"
       >
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-[var(--text-primary)]">
-            {isEditMode ? '編輯媒體庫' : '新增媒體庫'}
-          </h3>
+          <DialogTitle asChild>
+            <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+              {isEditMode ? '編輯媒體庫' : '新增媒體庫'}
+            </h3>
+          </DialogTitle>
           <button
             type="button"
             onClick={onClose}
@@ -140,6 +177,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
             </label>
             <input
               id="library-name-input"
+              ref={nameInputRef}
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -361,7 +399,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
             {isSaving ? '儲存中...' : isEditMode ? '儲存變更' : '建立'}
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -4357,8 +4357,10 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   },
   {
     id: 'settings-library-edit-modal',
-    // Inline `fixed inset-0` overlay (NOT Radix portal). Reads
-    // useMediaLibraries() → mediaLibraryKeys.all (aliased from useMediaLibrary).
+    // disc-2026-09-scanner-custom-modals-a11y: now ui/Dialog (Radix portal) —
+    // the harness photographs the viewport, and a zero-size state div cannot be
+    // hovered or focused, so default only (same as settings-restore-confirm-dialog).
+    // Reads useMediaLibraries() → mediaLibraryKeys.all (aliased from useMediaLibrary).
     label: 'settings/LibraryEditModal',
     component: LibraryEditModal,
     props: {
@@ -4366,7 +4368,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       onClose: noop,
     },
     penNode: 'screen-section',
-    width: 480,
+    statesOnly: ['default'],
     seedQueries: [
       {
         queryKey: mediaLibraryKeys.all,

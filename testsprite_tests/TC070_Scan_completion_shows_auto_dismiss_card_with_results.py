@@ -87,7 +87,7 @@ async def run_test():
         
         # -> Click the '編輯' (Edit) button in the movie library action menu to open the library edit view.
         # 編輯 button
-        elem = page.get_by_role('button', name='編輯', exact=True)
+        elem = page.get_by_role('menuitem', name='編輯', exact=True)
         await elem.click(timeout=10000)
         
         # -> Close the '編輯媒體庫' dialog by clicking the '關閉' button so the Scanner page controls (包含「掃描媒體庫」按鈕) are accessible.

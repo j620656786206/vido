@@ -54,7 +54,7 @@ async def run_test():
         
         # -> Click the '編輯' button in the 影集庫 action menu to open the library edit dialog.
         # 編輯 button
-        elem = page.get_by_role('button', name='編輯', exact=True)
+        elem = page.get_by_role('menuitem', name='編輯', exact=True)
         await elem.click(timeout=10000)
         
         # -> Open the library '類型' (content type) dropdown in the edit dialog so the '電影' option can be selected.
@@ -64,7 +64,7 @@ async def run_test():
         
         # -> Change the library '類型' dropdown to '電影' in the edit dialog and wait for the UI to update.
         # 電影 影集 dropdown
-        elem = page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div/div/div/div/div[2]/div/div[2]/div[2]/select").nth(0)
+        elem = page.get_by_test_id('library-type-select')
         await elem.wait_for(state="visible", timeout=10000)
         await elem.select_option("")
         
