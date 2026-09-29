@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 import { LogFilters } from './LogFilters';
@@ -54,6 +54,21 @@ describe('LogFilters', () => {
     const input = screen.getByTestId('log-keyword-input');
     await user.type(input, 'test{Enter}');
     expect(onKeywordChange).toHaveBeenCalledWith('test');
+  });
+
+  // disc-2026-09-ime-enter-submits-mid-composition
+  it.each([
+    ['isComposing', { key: 'Enter', isComposing: true }],
+    ['keyCode 229 (Safari)', { key: 'Enter', keyCode: 229 }],
+  ])('an Enter that only picks an IME candidate (%s) does not filter', (_label, init) => {
+    const onKeywordChange = vi.fn();
+    render(
+      <LogFilters level="" keyword="" onLevelChange={vi.fn()} onKeywordChange={onKeywordChange} />
+    );
+    const input = screen.getByTestId('log-keyword-input');
+    fireEvent.change(input, { target: { value: 'ㄘㄨㄛˋ' } });
+    fireEvent.keyDown(input, init);
+    expect(onKeywordChange).not.toHaveBeenCalled();
   });
 
   it('clears keyword when X is clicked', async () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -127,5 +127,48 @@ describe('QuickSearchBar', () => {
 
     // THEN: navigate not called
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  // disc-2026-09-ime-enter-submits-mid-composition
+  describe('input method (注音) keys', () => {
+    beforeEach(() => {
+      sessionStorage.setItem('vido-recent-searches', JSON.stringify(['鬼滅之刃']));
+    });
+    afterEach(() => {
+      sessionStorage.clear();
+    });
+
+    async function openRecentAndHighlight() {
+      renderSearchBar();
+      const input = await screen.findByPlaceholderText('搜尋媒體庫...');
+      fireEvent.focus(input);
+      await screen.findByText('鬼滅之刃');
+      fireEvent.keyDown(input, { key: 'ArrowDown' });
+      return input;
+    }
+
+    it.each([
+      ['isComposing', { key: 'Enter', isComposing: true }],
+      ['keyCode 229 (Safari)', { key: 'Enter', keyCode: 229 }],
+    ])(
+      'an Enter that only picks an IME candidate (%s) does not open the highlighted recent search',
+      async (_label, init) => {
+        const input = await openRecentAndHighlight();
+        fireEvent.keyDown(input, init);
+        expect(mockNavigate).not.toHaveBeenCalled();
+      }
+    );
+
+    it('an Esc that only drops an IME candidate keeps the recent list open', async () => {
+      const input = await openRecentAndHighlight();
+      fireEvent.keyDown(input, { key: 'Escape', isComposing: true });
+      expect(screen.getByText('鬼滅之刃')).toBeInTheDocument();
+    });
+
+    it('a plain Enter still opens the highlighted recent search', async () => {
+      const input = await openRecentAndHighlight();
+      fireEvent.keyDown(input, { key: 'Enter' });
+      expect(mockNavigate).toHaveBeenCalledWith({ to: '/search', search: { q: '鬼滅之刃' } });
+    });
   });
 });

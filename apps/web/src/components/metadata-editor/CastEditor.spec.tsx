@@ -2,7 +2,7 @@
  * CastEditor — 修改資訊 演員 chips (poster-upload-a AC #4)
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CastEditor } from './CastEditor';
 
@@ -74,5 +74,34 @@ describe('CastEditor', () => {
     await user.type(screen.getByRole('textbox', { name: '新增演員' }), '下野紘{Escape}');
     await user.tab();
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  // disc-2026-09-ime-enter-submits-mid-composition
+  it.each([
+    ['isComposing', { key: 'Enter', isComposing: true }],
+    ['keyCode 229 (Safari)', { key: 'Enter', keyCode: 229 }],
+  ])(
+    'an Enter that only picks an IME candidate (%s) adds nothing and keeps the box',
+    async (_label, init) => {
+      const user = userEvent.setup();
+      const onChange = setup([]);
+      await user.click(screen.getByRole('button', { name: '演員' }));
+      const box = screen.getByRole('textbox', { name: '新增演員' });
+      fireEvent.change(box, { target: { value: '下野ㄏㄨㄥˊ' } });
+      // Not default-prevented: the input method keeps its Enter (AC #1).
+      expect(fireEvent.keyDown(box, init)).toBe(true);
+      expect(onChange).not.toHaveBeenCalled();
+      expect(screen.getByRole('textbox', { name: '新增演員' })).toHaveValue('下野ㄏㄨㄥˊ');
+    }
+  );
+
+  it('an Esc that only drops an IME candidate does not cancel the box', async () => {
+    const user = userEvent.setup();
+    setup([]);
+    await user.click(screen.getByRole('button', { name: '演員' }));
+    const box = screen.getByRole('textbox', { name: '新增演員' });
+    fireEvent.change(box, { target: { value: '下野ㄏㄨㄥˊ' } });
+    fireEvent.keyDown(box, { key: 'Escape', isComposing: true });
+    expect(screen.getByRole('textbox', { name: '新增演員' })).toHaveValue('下野ㄏㄨㄥˊ');
   });
 });

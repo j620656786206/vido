@@ -93,6 +93,20 @@ describe('LibrarySearchBar', () => {
     expect(onSearch).toHaveBeenCalledWith('');
   });
 
+  // disc-2026-09-ime-enter-submits-mid-composition (CR MED-1): an Esc that only
+  // drops a 注音 candidate must not wipe the box.
+  it('does not clear on an Esc that only drops an IME candidate', () => {
+    const onSearch = vi.fn();
+    render(<LibrarySearchBar onSearch={onSearch} initialQuery="你的ㄇㄧㄥˊ" />);
+
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    fireEvent.keyDown(input, { key: 'Escape', isComposing: true });
+    fireEvent.keyDown(input, { key: 'Escape', keyCode: 229 });
+
+    expect(input.value).toBe('你的ㄇㄧㄥˊ');
+    expect(onSearch).not.toHaveBeenCalled();
+  });
+
   it('should show result count when query ≥ 2 chars and resultCount provided', () => {
     render(<LibrarySearchBar onSearch={vi.fn()} initialQuery="test" resultCount={15} />);
     expect(screen.getByTestId('search-result-count')).toHaveTextContent('找到 15 個結果');

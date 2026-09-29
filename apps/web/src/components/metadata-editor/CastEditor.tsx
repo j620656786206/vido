@@ -8,6 +8,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Plus, X } from 'lucide-react';
+import { isImeComposing } from '../../utils/keyboard';
 
 export interface CastEditorProps {
   cast: string[];
@@ -66,6 +67,8 @@ export function CastEditor({ cast, onChange, labelId }: CastEditorProps) {
           placeholder="輸入演員名稱後按 Enter"
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
+            // Picking or dropping a 注音 candidate neither adds nor cancels.
+            if (isImeComposing(e)) return;
             if (e.key === 'Enter') {
               // Enter inside a form would submit it.
               e.preventDefault();

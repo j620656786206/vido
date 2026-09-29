@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 import { Search, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { isImeComposing } from '../../utils/keyboard';
 
 interface SearchBarProps {
   onSearch: (query: string) => void;
@@ -42,7 +43,8 @@ export function SearchBar({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Escape') {
+      // An Esc that only drops a 注音 candidate is the input method's, not a clear.
+      if (e.key === 'Escape' && !isImeComposing(e)) {
         handleClear();
       }
     },
