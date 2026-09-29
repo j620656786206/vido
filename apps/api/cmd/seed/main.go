@@ -224,7 +224,9 @@ func seedMovies(ctx context.Context, repos *repository.Repositories, libraryID, 
 		{id: "seed-mv-010", title: "媽的多重宇宙", originalTitle: "Everything Everywhere All at Once", releaseDate: "2022-03-24", genres: []string{"動作", "科幻", "喜劇"}, tmdbID: 545611, posterPath: "/w3LxiVYdWWRvEVdn5RYq6jIqkb1.jpg", voteAverage: 7.8, parseStatus: models.ParseStatusSuccess, fileName: "EEAAO.2022.1080p.mkv", fileSizeMB: 4300},
 		{id: "seed-mv-011", title: "奧本海默", originalTitle: "Oppenheimer", releaseDate: "2023-07-19", genres: []string{"劇情", "歷史"}, tmdbID: 872585, posterPath: "/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg", voteAverage: 8.1, parseStatus: models.ParseStatusSuccess, fileName: "Oppenheimer.2023.2160p.mkv", fileSizeMB: 11000},
 		{id: "seed-mv-012", title: "沙丘:第二部", originalTitle: "Dune: Part Two", releaseDate: "2024-02-27", genres: []string{"科幻", "冒險"}, tmdbID: 693134, posterPath: "/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg", voteAverage: 8.2, parseStatus: models.ParseStatusSuccess, fileName: "Dune.Part.Two.2024.2160p.mkv", fileSizeMB: 10400},
-		// Unmatched (parse pending / failed) — no tmdb id, no poster.
+		// No metadata yet — no tmdb id, no source, no poster. The two pending rows
+		// read 整理中; only the failed one is 未匹配 (failed AND no metadata source,
+		// disc-2026-09-unmatched-filter-vs-parse-status).
 		{id: "seed-mv-101", title: "Some.Obscure.Film.2023.1080p", parseStatus: models.ParseStatusPending, fileName: "Some.Obscure.Film.2023.1080p.mkv", fileSizeMB: 2100},
 		{id: "seed-mv-102", title: "[FanSub] 未知電影 (2021)", parseStatus: models.ParseStatusFailed, fileName: "[FanSub].Unknown.Movie.2021.mkv", fileSizeMB: 1800},
 		{id: "seed-mv-103", title: "Home.Video.Collection.Vol1", parseStatus: models.ParseStatusPending, fileName: "Home.Video.Collection.Vol1.mkv", fileSizeMB: 900},

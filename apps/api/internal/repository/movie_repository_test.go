@@ -1630,12 +1630,14 @@ func TestMovieGetStats(t *testing.T) {
 	repo := NewMovieRepository(db)
 	ctx := context.Background()
 
-	// Create matched and unmatched movies
+	// Create matched and unmatched movies. 未匹配 = failed with no metadata
+	// source (disc-2026-09-unmatched-filter-vs-parse-status AC #1).
+	tmdb := models.NewNullString("tmdb")
 	movies := []*models.Movie{
-		{ID: "m1", Title: "Matched 1", ReleaseDate: "2020-01-01", Genres: []string{}, TMDbID: models.NewNullInt64(100)},
-		{ID: "m2", Title: "Matched 2", ReleaseDate: "2020-01-01", Genres: []string{}, TMDbID: models.NewNullInt64(200)},
-		{ID: "m3", Title: "Unmatched Null", ReleaseDate: "2020-01-01", Genres: []string{}},
-		{ID: "m4", Title: "Unmatched Zero", ReleaseDate: "2020-01-01", Genres: []string{}, TMDbID: models.NewNullInt64(0)},
+		{ID: "m1", Title: "Matched 1", ReleaseDate: "2020-01-01", Genres: []string{}, TMDbID: models.NewNullInt64(100), ParseStatus: models.ParseStatusSuccess, MetadataSource: tmdb},
+		{ID: "m2", Title: "Matched 2", ReleaseDate: "2020-01-01", Genres: []string{}, TMDbID: models.NewNullInt64(200), ParseStatus: models.ParseStatusSuccess, MetadataSource: tmdb},
+		{ID: "m3", Title: "Unmatched Null", ReleaseDate: "2020-01-01", Genres: []string{}, ParseStatus: models.ParseStatusFailed},
+		{ID: "m4", Title: "Unmatched Zero", ReleaseDate: "2020-01-01", Genres: []string{}, TMDbID: models.NewNullInt64(0), ParseStatus: models.ParseStatusFailed},
 	}
 
 	for _, m := range movies {
@@ -1678,7 +1680,8 @@ func TestMovieGetStatsEmpty(t *testing.T) {
 	}
 }
 
-// TestMovieListUnmatchedFilter verifies unmatched filter returns only movies without TMDb ID
+// TestMovieListUnmatchedFilter verifies unmatched filter returns only movies the
+// enrichment gave up on with no metadata source (disc-2026-09-unmatched-filter-vs-parse-status)
 func TestMovieListUnmatchedFilter(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
@@ -1688,26 +1691,31 @@ func TestMovieListUnmatchedFilter(t *testing.T) {
 
 	// Create matched movies (have tmdb_id)
 	matched1 := &models.Movie{
-		ID:          "movie-matched-1",
-		Title:       "Matched Movie 1",
-		ReleaseDate: "2020-01-01",
-		Genres:      []string{"Action"},
-		TMDbID:      models.NewNullInt64(12345),
+		ID:             "movie-matched-1",
+		Title:          "Matched Movie 1",
+		ReleaseDate:    "2020-01-01",
+		Genres:         []string{"Action"},
+		TMDbID:         models.NewNullInt64(12345),
+		ParseStatus:    models.ParseStatusSuccess,
+		MetadataSource: models.NewNullString("tmdb"),
 	}
 	matched2 := &models.Movie{
-		ID:          "movie-matched-2",
-		Title:       "Matched Movie 2",
-		ReleaseDate: "2020-01-01",
-		Genres:      []string{"Drama"},
-		TMDbID:      models.NewNullInt64(67890),
+		ID:             "movie-matched-2",
+		Title:          "Matched Movie 2",
+		ReleaseDate:    "2020-01-01",
+		Genres:         []string{"Drama"},
+		TMDbID:         models.NewNullInt64(67890),
+		ParseStatus:    models.ParseStatusSuccess,
+		MetadataSource: models.NewNullString("tmdb"),
 	}
 
-	// Create unmatched movies (no tmdb_id or tmdb_id=0)
+	// Create unmatched movies (failed, no metadata source; no tmdb_id or tmdb_id=0)
 	unmatchedNull := &models.Movie{
 		ID:          "movie-unmatched-null",
 		Title:       "Unmatched Null",
 		ReleaseDate: "2020-01-01",
 		Genres:      []string{"Horror"},
+		ParseStatus: models.ParseStatusFailed,
 		// TMDbID not set (NULL)
 	}
 	unmatchedZero := &models.Movie{
@@ -1716,6 +1724,7 @@ func TestMovieListUnmatchedFilter(t *testing.T) {
 		ReleaseDate: "2020-01-01",
 		Genres:      []string{"Comedy"},
 		TMDbID:      models.NewNullInt64(0),
+		ParseStatus: models.ParseStatusFailed,
 	}
 
 	for _, m := range []*models.Movie{matched1, matched2, unmatchedNull, unmatchedZero} {
@@ -2416,6 +2425,11 @@ func TestMovieFullTextSearchAppliesFilters(t *testing.T) {
 		m := &models.Movie{
 			ID: s.id, Title: "Interstellar " + s.id, ReleaseDate: s.year,
 			Genres: []string{s.genre}, TMDbID: models.NewNullInt64(s.tmdb), IsRemoved: s.removed,
+			ParseStatus: models.ParseStatusFailed,
+		}
+		if s.tmdb > 0 {
+			m.ParseStatus = models.ParseStatusSuccess
+			m.MetadataSource = models.NewNullString("tmdb")
 		}
 		if err := repo.Create(ctx, m); err != nil {
 			t.Fatalf("Create %s: %v", s.id, err)

@@ -97,7 +97,7 @@ INSERT INTO movies (
   'h264', '1080p', 'eac3', 6, 'none'
 );
 
--- (2) PENDING-metadata movie — TC086 資料整理中 (detail-no-metadata) (tmdb_id NULL => unmatched)
+-- (2) PENDING-metadata movie — TC086 資料整理中 (detail-no-metadata) (pending => 整理中, NOT 未匹配)
 INSERT INTO movies (
   id, title, release_date, genres, parse_status, is_removed,
   file_path, file_size, subtitle_status, library_id
@@ -108,7 +108,7 @@ INSERT INTO movies (
   'not_searched', 'seed-lib-movies'
 );
 
--- (3) FAILED-metadata movie — TC086 比對失敗 (detail-no-metadata) (tmdb_id NULL => unmatched)
+-- (3) FAILED-metadata movie — TC086 比對失敗 (detail-no-metadata) (failed + no metadata_source => 未匹配)
 INSERT INTO movies (
   id, title, release_date, genres, parse_status, is_removed,
   file_path, file_size, subtitle_status, library_id

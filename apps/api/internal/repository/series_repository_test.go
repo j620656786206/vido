@@ -1177,8 +1177,9 @@ func TestSeriesGetStats(t *testing.T) {
 	ctx := context.Background()
 
 	series := []*models.Series{
-		{ID: "s1", Title: "Matched", FirstAirDate: "2020-01-01", Genres: []string{}, TMDbID: models.NewNullInt64(100)},
-		{ID: "s2", Title: "Unmatched", FirstAirDate: "2020-01-01", Genres: []string{}},
+		// 未匹配 = failed with no metadata source (disc-2026-09-unmatched-filter-vs-parse-status AC #1).
+		{ID: "s1", Title: "Matched", FirstAirDate: "2020-01-01", Genres: []string{}, TMDbID: models.NewNullInt64(100), ParseStatus: models.ParseStatusSuccess, MetadataSource: models.NewNullString("tmdb")},
+		{ID: "s2", Title: "Unmatched", FirstAirDate: "2020-01-01", Genres: []string{}, ParseStatus: models.ParseStatusFailed},
 	}
 
 	for _, s := range series {
@@ -1221,7 +1222,8 @@ func TestSeriesGetStatsEmpty(t *testing.T) {
 	}
 }
 
-// TestSeriesListUnmatchedFilter verifies unmatched filter returns only series without TMDb ID
+// TestSeriesListUnmatchedFilter verifies unmatched filter returns only series the
+// enrichment gave up on with no metadata source (disc-2026-09-unmatched-filter-vs-parse-status)
 func TestSeriesListUnmatchedFilter(t *testing.T) {
 	db := setupSeriesTestDB(t)
 	defer db.Close()
@@ -1231,19 +1233,22 @@ func TestSeriesListUnmatchedFilter(t *testing.T) {
 
 	// Create matched series (have tmdb_id)
 	matched := &models.Series{
-		ID:           "series-matched",
-		Title:        "Matched Series",
-		FirstAirDate: "2020-01-01",
-		Genres:       []string{"Drama"},
-		TMDbID:       models.NewNullInt64(55555),
+		ID:             "series-matched",
+		Title:          "Matched Series",
+		FirstAirDate:   "2020-01-01",
+		Genres:         []string{"Drama"},
+		TMDbID:         models.NewNullInt64(55555),
+		ParseStatus:    models.ParseStatusSuccess,
+		MetadataSource: models.NewNullString("tmdb"),
 	}
 
-	// Create unmatched series (no tmdb_id or tmdb_id=0)
+	// Create unmatched series (failed, no metadata source; no tmdb_id or tmdb_id=0)
 	unmatchedNull := &models.Series{
 		ID:           "series-unmatched-null",
 		Title:        "Unmatched Null",
 		FirstAirDate: "2020-01-01",
 		Genres:       []string{"Horror"},
+		ParseStatus:  models.ParseStatusFailed,
 	}
 	unmatchedZero := &models.Series{
 		ID:           "series-unmatched-zero",
@@ -1251,6 +1256,7 @@ func TestSeriesListUnmatchedFilter(t *testing.T) {
 		FirstAirDate: "2020-01-01",
 		Genres:       []string{"Comedy"},
 		TMDbID:       models.NewNullInt64(0),
+		ParseStatus:  models.ParseStatusFailed,
 	}
 
 	for _, s := range []*models.Series{matched, unmatchedNull, unmatchedZero} {
@@ -1862,6 +1868,11 @@ func TestSeriesFullTextSearchAppliesFilters(t *testing.T) {
 		sr := &models.Series{
 			ID: s.id, Title: "Stranger " + s.id, FirstAirDate: s.year,
 			Genres: []string{s.genre}, TMDbID: models.NewNullInt64(s.tmdb), IsRemoved: s.removed,
+			ParseStatus: models.ParseStatusFailed,
+		}
+		if s.tmdb > 0 {
+			sr.ParseStatus = models.ParseStatusSuccess
+			sr.MetadataSource = models.NewNullString("tmdb")
 		}
 		if err := repo.Create(ctx, sr); err != nil {
 			t.Fatalf("Create %s: %v", s.id, err)
