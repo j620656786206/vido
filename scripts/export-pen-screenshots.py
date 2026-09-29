@@ -307,6 +307,9 @@ SCREENS = {
     "YYEBd": ("flow-i-discover-v2", "i6-d"),
     "S3qke": ("flow-i-discover-v2", "i7-d-v2"),
     "KdnVw": ("flow-i-discover-v2", "i8-d"),
+    # TMDb-down instant search (2026-09-29): header suggestions when TMDb is unreachable
+    "wnolW": ("flow-i-discover-v2", "i9-d"),
+    "PcNux": ("flow-i-discover-v2", "i10-d"),
     # flow-d-downloads-v2 — Downloads deep-operation page (design-ahead spec: card actions,
     # batch select, pagination; six backend filter values; qBittorrent fail-soft; NZBGet inert
     # placeholder). Replaces the deprecated flow-d-downloads (d1-d/d1-m/d2-d/d3-m).

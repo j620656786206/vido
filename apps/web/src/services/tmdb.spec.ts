@@ -179,6 +179,29 @@ describe('tmdbService', () => {
       expect(result.localMovies[0].mediaType).toBe('movie');
     });
 
+    // disc-2026-09-instant-search-tmdb-outage-silent AC #1 [@contract-v1]
+    it('carries tmdb_unavailable through as tmdbUnavailable', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            success: true,
+            data: {
+              query: '星際效應',
+              page: 1,
+              local_movies: [],
+              local_tv: [],
+              movies: [],
+              tv_shows: [],
+              people: [],
+              tmdb_unavailable: true,
+            },
+          }),
+      });
+      const result = await tmdbService.unifiedSearch('星際效應');
+      expect(result.tmdbUnavailable).toBe(true);
+    });
+
     it('does not touch the legacy per-type search endpoints (backward compatibility — AC #6)', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,

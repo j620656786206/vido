@@ -42,7 +42,10 @@ export function useInstantSearch(query: string) {
     // Keep the prior result visible while the next debounced query loads so the
     // dropdown does not flicker back to the "搜尋中…" state on every new query.
     placeholderData: keepPreviousData,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    // A "TMDb is down" answer is never fresh: once TMDb is back, typing the
+    // same query must ask again instead of repeating the outage for 5 minutes
+    // (disc-2026-09-instant-search-tmdb-outage-silent).
+    staleTime: (q) => (q.state.data?.tmdbUnavailable ? 0 : 5 * 60 * 1000),
     gcTime: 30 * 60 * 1000, // 30 minutes
   });
 }
