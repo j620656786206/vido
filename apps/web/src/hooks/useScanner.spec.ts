@@ -14,16 +14,16 @@ import {
 vi.mock('../services/scannerService', () => ({
   scannerService: {
     getScanStatus: vi.fn().mockResolvedValue({
-      isScanning: false,
+      isActive: false,
       filesFound: 0,
-      filesProcessed: 0,
+      filesCreated: 0,
+      filesUpdated: 0,
+      filesSkipped: 0,
+      filesRemoved: 0,
+      errorCount: 0,
       currentFile: '',
       percentDone: 0,
-      errorCount: 0,
-      estimatedTime: '',
-      lastScanAt: '2026-03-22T14:30:00Z',
-      lastScanFiles: 1247,
-      lastScanDuration: '3m12s',
+      lastScan: { completedAt: '2026-03-22T14:30:00Z', filesFound: 1247, durationMs: 192000 },
     }),
     getSchedule: vi.fn().mockResolvedValue({ interval: 'hourly' }),
     triggerScan: vi
@@ -58,8 +58,8 @@ describe('useScanner hooks', () => {
       });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(result.current.data?.lastScanFiles).toBe(1247);
-      expect(result.current.data?.isScanning).toBe(false);
+      expect(result.current.data?.lastScan?.filesFound).toBe(1247);
+      expect(result.current.data?.isActive).toBe(false);
     });
   });
 

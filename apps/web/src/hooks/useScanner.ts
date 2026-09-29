@@ -23,7 +23,7 @@ export function useScanStatus() {
     queryFn: () => scannerService.getScanStatus(),
     refetchInterval: (query) => {
       // Poll every 3s while scanning, otherwise every 30s
-      return query.state.data?.isScanning ? 3000 : 30000;
+      return query.state.data?.isActive ? 3000 : 30000;
     },
   });
 }

@@ -8,19 +8,37 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 export type ScheduleInterval = 'hourly' | 'daily' | 'manual';
 
-export interface ScanStatus {
-  isScanning: boolean;
+/**
+ * The most recent COMPLETED scan (GET /scanner/status `last_scan`,
+ * bugfix-last-scan-never-shown AC #1 [@contract-v1]).
+ */
+export interface LastScan {
+  completedAt: string;
   filesFound: number;
-  filesProcessed: number;
-  currentFile: string;
-  percentDone: number;
-  errorCount: number;
+  durationMs: number;
+}
+
+/**
+ * GET /scanner/status — the backend's ScanProgress fields (flat) plus
+ * `last_scan`. Until bugfix-last-scan-never-shown this type named fields the
+ * backend never sent (isScanning, lastScanAt…), so the page always read
+ * 「尚未執行過掃描」 and never saw a scan running.
+ */
+export interface ScanStatus {
+  isActive: boolean;
+  filesFound: number;
+  filesCreated: number;
+  filesUpdated: number;
+  filesSkipped: number;
+  filesRemoved: number;
   /** 掃描器真實回報的未比對數(無法判斷集數等);舊後端沒有這個欄位 */
   filesUnmatched?: number;
-  estimatedTime: string;
-  lastScanAt: string;
-  lastScanFiles: number;
-  lastScanDuration: string;
+  errorCount: number;
+  currentFile: string;
+  percentDone: number;
+  startedAt?: string;
+  /** null until a scan has completed (older servers: absent). */
+  lastScan?: LastScan | null;
 }
 
 export interface ScanResult {

@@ -4569,17 +4569,18 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     seedQueries: [
       {
         queryKey: scannerKeys.status(),
+        // The real /scanner/status shape (bugfix-last-scan-never-shown).
         data: {
-          isScanning: false,
+          isActive: false,
           filesFound: 0,
-          filesProcessed: 0,
+          filesCreated: 0,
+          filesUpdated: 0,
+          filesSkipped: 0,
+          filesRemoved: 0,
+          errorCount: 0,
           currentFile: '',
           percentDone: 0,
-          errorCount: 0,
-          estimatedTime: '',
-          lastScanAt: '2026-03-22T14:30:00Z',
-          lastScanFiles: 1247,
-          lastScanDuration: '3 分 12 秒',
+          lastScan: { completedAt: '2026-03-22T14:30:00Z', filesFound: 1247, durationMs: 192_000 },
         } satisfies ScanStatus,
       },
       {

@@ -58,20 +58,22 @@ const jsonOk = <T>(body: T) => ({
   body: JSON.stringify({ success: true, data: body }),
 });
 
-// ScanStatus wire shape (snake_case) — the page's loading gate needs status +
-// schedule + libraries resolved before `scanner-settings` renders. is_scanning
+// ScanStatus wire shape (snake_case, the real scanStatusResponse since
+// bugfix-last-scan-never-shown) — the page's loading gate needs status +
+// schedule + libraries resolved before `scanner-settings` renders. is_active
 // stays false: the card's visibility is driven by SSE, never by this poll.
 const idleStatus = {
-  is_scanning: false,
   files_found: 0,
-  files_processed: 0,
+  files_created: 0,
+  files_updated: 0,
+  files_skipped: 0,
+  files_removed: 0,
+  files_unmatched: 0,
+  error_count: 0,
   current_file: '',
   percent_done: 0,
-  error_count: 0,
-  estimated_time: '',
-  last_scan_at: '2026-07-20T09:00:00Z',
-  last_scan_files: 128,
-  last_scan_duration: '2m 14s',
+  is_active: false,
+  last_scan: { completed_at: '2026-07-20T09:00:00Z', files_found: 128, duration_ms: 134000 },
 };
 
 const scanResult = { files_found: 0, files_new: 0, errors: 0, duration: '0s' };

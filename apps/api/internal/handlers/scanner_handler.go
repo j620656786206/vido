@@ -17,6 +17,15 @@ type ScannerServiceInterface interface {
 	StartScan(ctx context.Context) (*services.ScanResult, error)
 	CancelScan() error
 	GetProgress() services.ScanProgress
+	GetLastScan(ctx context.Context) *services.LastScanSummary
+}
+
+// scanStatusResponse is GET /scanner/status: the live progress fields (flat,
+// as before) plus the last completed scan — null until one finishes
+// (bugfix-last-scan-never-shown AC #1 [@contract-v1]).
+type scanStatusResponse struct {
+	services.ScanProgress
+	LastScan *services.LastScanSummary `json:"last_scan"`
 }
 
 // EnrichmentServiceInterface defines the contract for enrichment operations.
@@ -99,8 +108,10 @@ func (h *ScannerHandler) TriggerScan(c *gin.Context) {
 // GetStatus handles GET /api/v1/scanner/status
 // Returns the current scan progress.
 func (h *ScannerHandler) GetStatus(c *gin.Context) {
-	progress := h.scannerService.GetProgress()
-	SuccessResponse(c, progress)
+	SuccessResponse(c, scanStatusResponse{
+		ScanProgress: h.scannerService.GetProgress(),
+		LastScan:     h.scannerService.GetLastScan(c.Request.Context()),
+	})
 }
 
 // scheduleRequest represents the request body for setting scan schedule

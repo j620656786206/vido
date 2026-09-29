@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -61,6 +62,18 @@ type ScanResult struct {
 	CompletedAt    time.Time `json:"completed_at"`
 }
 
+// LastScanSummary is the most recent COMPLETED scan, as the settings page's
+// 「上次掃描」 line shows it (bugfix-last-scan-never-shown AC #1 [@contract-v1]).
+// A cancelled scan never replaces it.
+type LastScanSummary struct {
+	CompletedAt time.Time `json:"completed_at"`
+	FilesFound  int       `json:"files_found"`
+	DurationMs  int64     `json:"duration_ms"`
+}
+
+// settingsKeyScanLastResult persists LastScanSummary (JSON) across restarts.
+const settingsKeyScanLastResult = "scan_last_result"
+
 // ScannerService handles recursive folder scanning and video file discovery
 type ScannerService struct {
 	movieRepo     repository.MovieRepositoryInterface
@@ -78,6 +91,98 @@ type ScannerService struct {
 	cancelChan     chan struct{}
 	progress       ScanProgress
 	onScanComplete func()
+
+	// Last completed scan: loaded from settings on first read, then kept in
+	// memory and re-saved on every completion (bugfix-last-scan-never-shown).
+	settingsRepo   repository.SettingsRepositoryInterface
+	lastScan       *LastScanSummary
+	lastScanLoaded bool
+}
+
+// SetSettingsRepo wires where the last completed scan is persisted. Without
+// it the record lives in memory only (lost on restart).
+func (s *ScannerService) SetSettingsRepo(repo repository.SettingsRepositoryInterface) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.settingsRepo = repo
+	s.lastScanLoaded = false
+}
+
+// GetLastScan returns the most recent completed scan, or nil if none has ever
+// finished. Safe for concurrent use. The settings read happens OUTSIDE s.mu
+// (a busy SQLite must not stall progress updates or CancelScan), detached from
+// the request's cancellation, and a transient read error is retried on the
+// next call instead of being remembered as "never scanned".
+func (s *ScannerService) GetLastScan(ctx context.Context) *LastScanSummary {
+	s.mu.Lock()
+	loaded, repo := s.lastScanLoaded, s.settingsRepo
+	s.mu.Unlock()
+
+	if !loaded {
+		var stored *LastScanSummary
+		settled := repo == nil
+		if repo != nil {
+			raw, err := repo.GetString(context.WithoutCancel(ctx), settingsKeyScanLastResult)
+			switch {
+			case err == nil:
+				settled = true
+				var decoded LastScanSummary
+				if jerr := json.Unmarshal([]byte(raw), &decoded); jerr != nil || decoded.CompletedAt.IsZero() {
+					s.logger.Warn("ignoring unreadable last scan record", "value", raw)
+				} else {
+					stored = &decoded
+				}
+			case isSettingNotFound(err):
+				settled = true // never scanned
+			default:
+				s.logger.Warn("could not read last scan record; will retry", "error", err)
+			}
+		}
+		s.mu.Lock()
+		// A scan that completed while we were reading wins over the stored copy.
+		if !s.lastScanLoaded && settled {
+			s.lastScanLoaded = true
+			if s.lastScan == nil {
+				s.lastScan = stored
+			}
+		}
+		s.mu.Unlock()
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.lastScan == nil {
+		return nil
+	}
+	cp := *s.lastScan
+	return &cp
+}
+
+// recordLastScan remembers a completed scan and persists it. A failed save is
+// logged only — the scan itself succeeded.
+func (s *ScannerService) recordLastScan(result *ScanResult) {
+	summary := LastScanSummary{
+		CompletedAt: result.CompletedAt,
+		FilesFound:  result.FilesFound,
+		DurationMs:  result.CompletedAt.Sub(result.StartedAt).Milliseconds(),
+	}
+	s.mu.Lock()
+	s.lastScan = &summary
+	s.lastScanLoaded = true
+	repo := s.settingsRepo
+	s.mu.Unlock()
+
+	if repo == nil {
+		return
+	}
+	raw, err := json.Marshal(summary)
+	if err != nil {
+		s.logger.Error("failed to encode last scan record", "error", err)
+		return
+	}
+	if err := repo.SetString(context.Background(), settingsKeyScanLastResult, string(raw)); err != nil {
+		s.logger.Error("failed to persist last scan record", "error", err)
+	}
 }
 
 // SetOnScanComplete sets a callback to be invoked after a successful scan.
@@ -221,6 +326,7 @@ func (s *ScannerService) StartScan(ctx context.Context) (*ScanResult, error) {
 
 	// Track seen resolved paths to deduplicate across directories
 	seenPaths := make(map[string]bool)
+	walkedDirs := 0 // folders that existed and were walked (bugfix-last-scan-never-shown)
 	var pendingMovies []*models.Movie
 
 	for _, sd := range dirs {
@@ -264,6 +370,7 @@ func (s *ScannerService) StartScan(ctx context.Context) (*ScanResult, error) {
 			continue
 		}
 
+		walkedDirs++
 		err = s.walkDirectory(ctx, dir, sd.libraryID, sd.contentType, seenPaths, &pendingMovies)
 		if err != nil {
 			s.logger.Error("SCANNER_PARSE_FAILED: error walking directory", "path", dir, "error", err)
@@ -309,6 +416,12 @@ func (s *ScannerService) StartScan(ctx context.Context) (*ScanResult, error) {
 	if wasCancelled {
 		s.broadcastScanCancelled(result)
 	} else {
+		// Every configured folder unreachable (e.g. the NAS mount dropped) is
+		// not a finished scan of the library — keep the previous record rather
+		// than show 「0 檔案」 as if the library were empty.
+		if len(dirs) == 0 || walkedDirs > 0 {
+			s.recordLastScan(result)
+		}
 		s.broadcastScanComplete(result)
 		// Trigger post-scan enrichment if configured
 		if s.onScanComplete != nil && (result.FilesCreated > 0 || result.FilesUpdated > 0) {

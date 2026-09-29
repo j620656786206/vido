@@ -2,6 +2,32 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ScannerSettings } from './ScannerSettings';
+import { useScanStatus } from '../../hooks/useScanner';
+import type { LastScan, ScanStatus } from '../../services/scannerService';
+
+// Local wall-clock 14:30 whatever the runner's time zone — the page shows
+// local time, and this keeps the E1-D string assertable everywhere.
+const LAST_SCAN: LastScan = {
+  completedAt: new Date(2026, 2, 22, 14, 30).toISOString(),
+  filesFound: 1247,
+  durationMs: 192_000,
+};
+
+// The real /scanner/status shape after fetchApi's snake→camel transform.
+function statusWith(lastScan: LastScan | null): ScanStatus {
+  return {
+    isActive: false,
+    filesFound: 0,
+    filesCreated: 0,
+    filesUpdated: 0,
+    filesSkipped: 0,
+    filesRemoved: 0,
+    errorCount: 0,
+    currentFile: '',
+    percentDone: 0,
+    lastScan,
+  };
+}
 
 const mockTriggerScan = vi.fn();
 const mockUpdateSchedule = vi.fn();
@@ -40,21 +66,7 @@ vi.mock('../../hooks/useMediaLibrary', () => ({
 }));
 
 vi.mock('../../hooks/useScanner', () => ({
-  useScanStatus: vi.fn(() => ({
-    data: {
-      isScanning: false,
-      filesFound: 0,
-      filesProcessed: 0,
-      currentFile: '',
-      percentDone: 0,
-      errorCount: 0,
-      estimatedTime: '',
-      lastScanAt: '2026-03-22T14:30:00Z',
-      lastScanFiles: 1247,
-      lastScanDuration: '3 分 12 秒',
-    },
-    isLoading: false,
-  })),
+  useScanStatus: vi.fn(() => ({ data: statusWith(LAST_SCAN), isLoading: false })),
   useTriggerScan: vi.fn(() => ({
     mutateAsync: mockTriggerScan,
     isPending: false,
@@ -82,6 +94,10 @@ describe('ScannerSettings', () => {
   beforeEach(() => {
     mockTriggerScan.mockReset();
     mockUpdateSchedule.mockReset();
+    vi.mocked(useScanStatus).mockReturnValue({
+      data: statusWith(LAST_SCAN),
+      isLoading: false,
+    } as unknown as ReturnType<typeof useScanStatus>);
   });
 
   it('renders scanner settings section', () => {
@@ -101,11 +117,38 @@ describe('ScannerSettings', () => {
     expect(select.value).toBe('hourly');
   });
 
-  it('displays last scan info', () => {
+  // bugfix-last-scan-never-shown AC #3: E1-D「2026-03-22 14:30 · 1,247 檔案 · 耗時 3 分 12 秒」.
+  it('displays last scan info in the E1-D format', () => {
     renderWithProviders();
-    const lastScan = screen.getByTestId('last-scan-info');
-    expect(lastScan.textContent).toContain('1,247');
-    expect(lastScan.textContent).toContain('3 分 12 秒');
+    expect(screen.getByTestId('last-scan-info')).toHaveTextContent(
+      '2026-03-22 14:30 · 1,247 檔案 · 耗時 3 分 12 秒'
+    );
+  });
+
+  it.each([
+    [400, '不到 1 秒'],
+    [45_000, '45 秒'],
+    [120_000, '2 分'],
+    [192_000, '3 分 12 秒'],
+    [3_725_000, '1 小時 2 分'],
+  ])('duration %i ms reads 「%s」', async (durationMs, text) => {
+    const { useScanStatus } = await import('../../hooks/useScanner');
+    vi.mocked(useScanStatus).mockReturnValue({
+      data: statusWith({ ...LAST_SCAN, durationMs }),
+      isLoading: false,
+    } as unknown as ReturnType<typeof useScanStatus>);
+    renderWithProviders();
+    expect(screen.getByTestId('last-scan-info')).toHaveTextContent(`耗時 ${text}`);
+  });
+
+  it('never scanned → 尚未執行過掃描', async () => {
+    const { useScanStatus } = await import('../../hooks/useScanner');
+    vi.mocked(useScanStatus).mockReturnValue({
+      data: statusWith(null),
+      isLoading: false,
+    } as unknown as ReturnType<typeof useScanStatus>);
+    renderWithProviders();
+    expect(screen.getByTestId('last-scan-info')).toHaveTextContent('尚未執行過掃描');
   });
 
   it('renders scan trigger button', () => {
@@ -179,19 +222,9 @@ describe('ScannerSettings', () => {
 
   it('shows scanning state on button when scanning', async () => {
     const { useScanStatus } = await import('../../hooks/useScanner');
+    // The backend's live flag is `is_active` (never `isScanning`).
     (useScanStatus as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: {
-        isScanning: true,
-        filesFound: 500,
-        filesProcessed: 200,
-        currentFile: 'test.mkv',
-        percentDone: 40,
-        errorCount: 0,
-        estimatedTime: '2 分',
-        lastScanAt: '',
-        lastScanFiles: 0,
-        lastScanDuration: '',
-      },
+      data: { ...statusWith(null), isActive: true, filesFound: 500, percentDone: 40 },
       isLoading: false,
     });
 

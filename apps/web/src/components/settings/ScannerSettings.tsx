@@ -18,7 +18,7 @@ import {
 } from '../../hooks/useScanner';
 import { requestScanTracking } from '../../hooks/useScanProgress';
 import type { ScannerApiError } from '../../services/scannerService';
-import type { ScheduleInterval } from '../../services/scannerService';
+import type { LastScan, ScheduleInterval } from '../../services/scannerService';
 
 const SCHEDULE_OPTIONS: { value: ScheduleInterval; label: string }[] = [
   { value: 'hourly', label: '每小時' },
@@ -26,17 +26,28 @@ const SCHEDULE_OPTIONS: { value: ScheduleInterval; label: string }[] = [
   { value: 'manual', label: '僅手動' },
 ];
 
-function formatLastScan(lastAt: string, files: number, duration: string): string {
-  if (!lastAt) return '尚未執行過掃描';
-  const date = new Date(lastAt);
-  const formatted = date.toLocaleString('zh-TW', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-  return `${formatted} · ${files.toLocaleString()} 檔案 · 耗時 ${duration}`;
+function formatScanDuration(ms: number): string {
+  if (ms < 1000) return '不到 1 秒';
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes === 0) return `${seconds} 秒`;
+  if (minutes >= 60) {
+    const rest = minutes % 60;
+    return rest === 0
+      ? `${Math.floor(minutes / 60)} 小時`
+      : `${Math.floor(minutes / 60)} 小時 ${rest} 分`;
+  }
+  return seconds === 0 ? `${minutes} 分` : `${minutes} 分 ${seconds} 秒`;
+}
+
+/** E1-D: 「2026-03-22 14:30 · 1,247 檔案 · 耗時 3 分 12 秒」 (local time). */
+function formatLastScan(lastScan: LastScan | null | undefined): string {
+  if (!lastScan) return '尚未執行過掃描';
+  const d = new Date(lastScan.completedAt);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const when = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${when} · ${lastScan.filesFound.toLocaleString('zh-TW')} 檔案 · 耗時 ${formatScanDuration(lastScan.durationMs)}`;
 }
 
 export function ScannerSettings() {
@@ -63,7 +74,7 @@ export function ScannerSettings() {
     dismissTimerRef.current = setTimeout(() => setNotification(null), 5000);
   };
 
-  const isScanning = status?.isScanning ?? false;
+  const isScanning = status?.isActive ?? false;
 
   const handleScan = async () => {
     setNotification(null);
@@ -165,9 +176,7 @@ export function ScannerSettings() {
             className="font-mono text-xs text-[var(--text-muted)] sm:text-sm"
             data-testid="last-scan-info"
           >
-            {status
-              ? formatLastScan(status.lastScanAt, status.lastScanFiles, status.lastScanDuration)
-              : '載入中...'}
+            {status ? formatLastScan(status.lastScan) : '載入中...'}
           </p>
         </div>
 
