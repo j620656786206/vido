@@ -60,7 +60,7 @@ vi.mock('../../hooks/useScanner', () => ({
     isPending: false,
   })),
   useScanSchedule: vi.fn(() => ({
-    data: { frequency: 'hourly' },
+    data: { interval: 'hourly' },
     isLoading: false,
   })),
   useUpdateScanSchedule: vi.fn(() => ({
@@ -144,7 +144,7 @@ describe('ScannerSettings', () => {
   });
 
   it('calls updateSchedule on schedule change', async () => {
-    mockUpdateSchedule.mockResolvedValue({ frequency: 'daily' });
+    mockUpdateSchedule.mockResolvedValue({ interval: 'daily' });
     renderWithProviders();
 
     const select = screen.getByTestId('schedule-select');
@@ -153,6 +153,28 @@ describe('ScannerSettings', () => {
     await waitFor(() => {
       expect(mockUpdateSchedule).toHaveBeenCalledWith('daily');
     });
+  });
+
+  // bugfix-scan-schedule-field-mismatch
+  it('shows the saved schedule, read from the API interval field', () => {
+    renderWithProviders();
+    expect(screen.getByTestId('schedule-select')).toHaveValue('hourly');
+  });
+
+  it('a failed save says so in Chinese, not with the backend English message', async () => {
+    mockUpdateSchedule.mockRejectedValueOnce(
+      Object.assign(new Error("Request body must contain an 'interval' field"), {
+        code: 'SCANNER_SCHEDULE_INVALID',
+      })
+    );
+    renderWithProviders();
+    fireEvent.change(screen.getByTestId('schedule-select'), { target: { value: 'daily' } });
+    await waitFor(() => {
+      expect(screen.getByTestId('scanner-notification')).toHaveTextContent(
+        '排程沒有存成功，請再試一次。'
+      );
+    });
+    expect(screen.queryByText(/interval/)).not.toBeInTheDocument();
   });
 
   it('shows scanning state on button when scanning', async () => {

@@ -6,7 +6,7 @@ import { snakeToCamel } from '../utils/caseTransform';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
-export type ScheduleFrequency = 'hourly' | 'daily' | 'manual';
+export type ScheduleInterval = 'hourly' | 'daily' | 'manual';
 
 export interface ScanStatus {
   isScanning: boolean;
@@ -30,8 +30,11 @@ export interface ScanResult {
   duration: string;
 }
 
+// The backend's field is `interval` (scanner_handler.go scheduleRequest /
+// GetSchedule). It was `frequency` here from Story 7-3 on, so every save was a
+// 400 and the select always read 僅手動 (bugfix-scan-schedule-field-mismatch).
 export interface ScheduleConfig {
-  frequency: ScheduleFrequency;
+  interval: ScheduleInterval;
 }
 
 export interface ScanProgressEvent {
@@ -104,10 +107,10 @@ export const scannerService = {
     return fetchApi<ScheduleConfig>('/scanner/schedule');
   },
 
-  async updateSchedule(frequency: ScheduleFrequency): Promise<ScheduleConfig> {
+  async updateSchedule(interval: ScheduleInterval): Promise<ScheduleConfig> {
     return fetchApi<ScheduleConfig>('/scanner/schedule', {
       method: 'PUT',
-      body: JSON.stringify({ frequency }),
+      body: JSON.stringify({ interval }),
     });
   },
 

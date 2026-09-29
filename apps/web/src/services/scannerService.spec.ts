@@ -73,25 +73,28 @@ describe('scannerService', () => {
   });
 
   describe('getSchedule', () => {
+    // bugfix-scan-schedule-field-mismatch: the backend's field is `interval`
+    // (scanner_handler.go scheduleRequest / GetSchedule) — the mocks mirror the
+    // real response, not a name the frontend invented.
     it('fetches schedule config', async () => {
-      mockSuccess({ frequency: 'hourly' });
+      mockSuccess({ interval: 'hourly' });
 
       const data = await scannerService.getSchedule();
-      expect(data.frequency).toBe('hourly');
+      expect(data.interval).toBe('hourly');
     });
   });
 
   describe('updateSchedule', () => {
-    it('sends PUT with frequency', async () => {
-      mockSuccess({ frequency: 'daily' });
+    it('sends PUT with interval', async () => {
+      mockSuccess({ interval: 'daily' });
 
       const data = await scannerService.updateSchedule('daily');
-      expect(data.frequency).toBe('daily');
+      expect(data.interval).toBe('daily');
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('/scanner/schedule'),
         expect.objectContaining({
           method: 'PUT',
-          body: JSON.stringify({ frequency: 'daily' }),
+          body: JSON.stringify({ interval: 'daily' }),
         })
       );
     });
