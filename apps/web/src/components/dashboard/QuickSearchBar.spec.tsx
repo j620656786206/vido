@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -141,8 +141,13 @@ describe('QuickSearchBar', () => {
     async function openRecentAndHighlight() {
       renderSearchBar();
       const input = await screen.findByPlaceholderText('搜尋媒體庫...');
-      fireEvent.focus(input);
-      await screen.findByText('鬼滅之刃');
+      // The recent list loads from sessionStorage in a mount effect; a focus
+      // that lands before that commit opens nothing (CI flake, PR #587). Focus
+      // until the list is there.
+      await waitFor(() => {
+        fireEvent.focus(input);
+        expect(screen.getByText('鬼滅之刃')).toBeInTheDocument();
+      });
       fireEvent.keyDown(input, { key: 'ArrowDown' });
       return input;
     }
