@@ -329,7 +329,7 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
     isComplete: boolean;
     /** Which batch this dialog is about — only 重新解析 shows the matching states. */
     kind?: 'delete' | 'reparse' | 'export';
-    errors?: { id: string; message: string }[];
+    errors?: { id: string; message: string; title?: string }[];
   }>({ isOpen: false, current: 0, total: 0, action: '', isComplete: false });
   // disc-2026-09-batch-reparse-never-runs: after a batch 重新解析 the match
   // runs in the background; from then on this page refetches whenever a pass

@@ -112,11 +112,11 @@ type LibraryServiceInterface interface {
 
 // LibraryService handles media library storage and search operations
 type LibraryService struct {
-	movieRepo      repository.MovieRepositoryInterface
-	seriesRepo     repository.SeriesRepositoryInterface
-	episodeRepo    repository.EpisodeRepositoryInterface
-	tmdbVideos     TMDbVideosProvider
-	logger         *slog.Logger
+	movieRepo   repository.MovieRepositoryInterface
+	seriesRepo  repository.SeriesRepositoryInterface
+	episodeRepo repository.EpisodeRepositoryInterface
+	tmdbVideos  TMDbVideosProvider
+	logger      *slog.Logger
 }
 
 // NewLibraryService creates a new LibraryService
@@ -751,6 +751,24 @@ type BatchResult struct {
 type BatchError struct {
 	ID      string `json:"id"`
 	Message string `json:"message"`
+	// Title names the row for the user — a UUID in the failure list tells them
+	// nothing (disc-2026-09-batch-error-shows-id-not-title). Empty when the
+	// row could not be read (e.g. it no longer exists); the UI then shows ID.
+	Title string `json:"title,omitempty"`
+}
+
+// batchTitle reads the row's title for a failure entry; "" when unreadable.
+func (s *LibraryService) batchTitle(ctx context.Context, id, mediaType string) string {
+	if mediaType == "movie" {
+		if m, err := s.movieRepo.FindByID(ctx, id); err == nil && m != nil {
+			return m.Title
+		}
+		return ""
+	}
+	if sr, err := s.seriesRepo.FindByID(ctx, id); err == nil && sr != nil {
+		return sr.Title
+	}
+	return ""
 }
 
 // BatchDelete deletes multiple items by IDs and type
@@ -769,7 +787,7 @@ func (s *LibraryService) BatchDelete(ctx context.Context, ids []string, mediaTyp
 		}
 		if err != nil {
 			result.FailedCount++
-			result.Errors = append(result.Errors, BatchError{ID: id, Message: err.Error()})
+			result.Errors = append(result.Errors, BatchError{ID: id, Message: err.Error(), Title: s.batchTitle(ctx, id, mediaType)})
 			s.logger.Error("Batch delete failed for item", "id", id, "type", mediaType, "error", err)
 		} else {
 			result.SuccessCount++
@@ -789,11 +807,13 @@ func (s *LibraryService) BatchReparse(ctx context.Context, ids []string, mediaTy
 	result := &BatchResult{}
 	for _, id := range ids {
 		var err error
+		var title string
 		if mediaType == "movie" {
 			movie, findErr := s.movieRepo.FindByID(ctx, id)
 			if findErr != nil {
 				err = findErr
 			} else {
+				title = movie.Title
 				// Narrow write (bugfix-wide-update-stale-copy-other-callers
 				// §audit #4): one-column intent; FindByID above keeps the
 				// 404-per-id behaviour of the batch result.
@@ -804,12 +824,13 @@ func (s *LibraryService) BatchReparse(ctx context.Context, ids []string, mediaTy
 			if findErr != nil {
 				err = findErr
 			} else {
+				title = series.Title
 				err = s.seriesRepo.UpdateParseStatus(ctx, series.ID, models.ParseStatusPending)
 			}
 		}
 		if err != nil {
 			result.FailedCount++
-			result.Errors = append(result.Errors, BatchError{ID: id, Message: err.Error()})
+			result.Errors = append(result.Errors, BatchError{ID: id, Message: err.Error(), Title: title})
 			s.logger.Error("Batch reparse failed for item", "id", id, "type", mediaType, "error", err)
 		} else {
 			result.SuccessCount++

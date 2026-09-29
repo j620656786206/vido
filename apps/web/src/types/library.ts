@@ -293,4 +293,6 @@ export interface BatchResult {
 export interface BatchError {
   id: string;
   message: string;
+  /** The row's title, when the backend could still read it — shown instead of the id. */
+  title?: string;
 }
