@@ -1,6 +1,6 @@
 # Story: disc-2026-09-batch-reparse-progress-in-dialog — 批次重新解析的對話框顯示比對進度
 
-Status: review
+Status: done
 
 ## Story
 
