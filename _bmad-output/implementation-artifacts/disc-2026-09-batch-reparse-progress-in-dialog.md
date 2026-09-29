@@ -1,6 +1,6 @@
 # Story: disc-2026-09-batch-reparse-progress-in-dialog — 批次重新解析的對話框顯示比對進度
 
-Status: ready-for-dev（等設計稿 C24-D 畫好、Sally 審過才動工）
+Status: review
 
 ## Story
 
@@ -39,11 +39,11 @@ Status: ready-for-dev（等設計稿 C24-D 畫好、Sally 審過才動工）
 
 ## Tasks / Subtasks
 
-- [ ] Task 0 — 設計稿 C24-D（Alexyu 跑提示詞 → Sally MCP 唯讀 review → 截圖、`SCREENS`、commit）
-- [ ] Task 1 — `useEnrichmentRefresh` → 回傳 `{ phase: 'queued'|'running'|'done', progress, result }`，同時聽兩個事件（AC #1–#3）
-- [ ] Task 2 — `BatchProgress` 新增 `matching` prop 與三態畫面（AC #1, #2, #5, #7）
-- [ ] Task 3 — `LibraryBrowseV2` 接線（AC #1, #4）
-- [ ] Task 4 — 測試四層與夾具（AC #6）
+- [x] Task 0 — 設計稿 C24-D（Alexyu 跑提示詞 → Sally MCP 唯讀 review → 截圖、`SCREENS`、commit）— PR #578
+- [x] Task 1 — `useEnrichmentRefresh` → 回傳 `{ phase: 'queued'|'running'|'done', progress, result }`，同時聽兩個事件（AC #1–#3）
+- [x] Task 2 — `BatchProgress` 新增 `matching` prop 與三態畫面（AC #1, #2, #5, #7）
+- [x] Task 3 — `LibraryBrowseV2` 接線（AC #1, #4）
+- [x] Task 4 — 測試四層與夾具（AC #6）
 
 ## 設計交付（給 Pencil inline agent 的提示詞）
 
@@ -51,4 +51,11 @@ Status: ready-for-dev（等設計稿 C24-D 畫好、Sally 審過才動工）
 
 ## Dev Agent Record
 
-（待填）
+### Completion Notes List
+
+- **hook**：`useEnrichmentRefresh(enabled, runId)` 回傳 `EnrichmentMatching | null`（queued／running／done），同時聽 `enrich_progress` 與 `enrich_complete`；完成仍 `invalidateQueries(libraryKeys.all)`。壞掉的 payload 忽略不炸。`runId` 是自審抓到的 bug：第二次重新解析時 watch 已經是 on，`false→true` 被 React 合併成沒變，會一直顯示上一輪的「比對完成」——改成每次 +1 讓 effect 重連並回到「已排入」。
+- **對話框**：`BatchProgress` 新增 `matching` prop，三態照 C24-D：標題「重新解析中／比對中／比對完成」、副標「已排入比對 N 項，等待開始…／本輪整理 T 部（含你勾的 N 部）／成功 s・失敗 f — 清單已更新」、進度條 `processed/total`、「目前：片名｜p / T」、「成功 s・失敗 f・略過 k」。`isComplete` 之前（請求還在飛）忽略 `matching`。拿掉上一個 PR 暫時加的 `note` prop。
+- **媒體庫頁**：`batchProgress.kind` 記住這次是哪種批次，只有 `reparse` 且 `successCount > 0` 才把 `matching` 傳進去（批次刪除時就算背景有比對也不會顯示）；`current` 改記實際排到的數量。
+- **測試**：hook 4、對話框 13（含三態 4 條）、媒體庫頁 34（新增「刪除不顯示比對」）、路由 7，全綠；lint:all、typecheck 綠。
+- **視覺**：畫廊新增 3 個夾具（`library-batch-progress-matching-{queued,running,done}`），darwin 基準本機產出，逐張與 `c24-d.png` 對過：文案、進度條比例、失敗清單位置一致。`-linux` 走 CI bootstrap。
+- **沒做**：失敗清單顯示的是列 id 不是片名（後端 `BatchError` 只有 id，既有行為；設計稿畫的是片名）→ 另立 `disc-2026-09-batch-error-shows-id-not-title`。

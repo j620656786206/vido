@@ -327,14 +327,17 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
     total: number;
     action: string;
     isComplete: boolean;
-    note?: string;
+    /** Which batch this dialog is about — only 重新解析 shows the matching states. */
+    kind?: 'delete' | 'reparse' | 'export';
     errors?: { id: string; message: string }[];
   }>({ isOpen: false, current: 0, total: 0, action: '', isComplete: false });
   // disc-2026-09-batch-reparse-never-runs: after a batch 重新解析 the match
   // runs in the background; from then on this page refetches whenever a pass
-  // completes, so 整理中 flips to the real result without a reload.
+  // completes, so 整理中 flips to the real result without a reload — and the
+  // dialog shows the pass (C24-D, disc-2026-09-batch-reparse-progress-in-dialog).
   const [watchEnrichment, setWatchEnrichment] = useState(false);
-  useEnrichmentRefresh(watchEnrichment);
+  const [reparseRun, setReparseRun] = useState(0);
+  const matching = useEnrichmentRefresh(watchEnrichment, reparseRun);
   const [isBatchSubtitleOpen, setIsBatchSubtitleOpen] = useState(false);
   // Mixed movie+episode selection since sub-4-2 D1 — no client-side filtering.
   const [generationBatchSelection, setGenerationBatchSelection] = useState<string[]>([]);
@@ -430,6 +433,7 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
         isOpen: true,
         current: 0,
         total,
+        kind: action,
         action:
           action === 'delete' ? '刪除中...' : action === 'reparse' ? '重新解析中...' : '匯出中...',
         isComplete: false,
@@ -445,15 +449,16 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
           }));
         } else if (action === 'reparse') {
           const result = await batchReparseMutation.mutateAsync({ ids, type: selectedType });
-          if (result.successCount > 0) setWatchEnrichment(true);
+          if (result.successCount > 0) {
+            // A new run id restarts the watch from 已排入 even if it was already on.
+            setReparseRun((n) => n + 1);
+            setWatchEnrichment(true);
+          }
           setBatchProgress((prev) => ({
             ...prev,
-            current: total,
+            // current = what was actually queued: the dialog says 含你勾的 N 部.
+            current: result.successCount,
             isComplete: true,
-            note:
-              result.successCount > 0
-                ? `已排入比對 ${result.successCount} 項，比對在背景進行，完成後清單會自動更新`
-                : undefined,
             errors: result.errors,
           }));
         } else {
@@ -857,7 +862,7 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
         action={batchProgress.action}
         errors={batchProgress.errors}
         isComplete={batchProgress.isComplete}
-        note={batchProgress.note}
+        matching={batchProgress.kind === 'reparse' && batchProgress.current > 0 ? matching : null}
         onClose={closeBatchProgress}
       />
       <GenerationBatchDialogV2

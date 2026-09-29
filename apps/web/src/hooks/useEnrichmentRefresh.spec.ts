@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { useEnrichmentRefresh } from './useEnrichmentRefresh';
@@ -27,12 +27,12 @@ class MockEventSource {
   }
   emit(type: string, data: unknown) {
     this.listeners[type]?.forEach((cb) =>
-      cb(new MessageEvent(type, { data: JSON.stringify(data) }))
+      cb(new MessageEvent(type, { data: JSON.stringify({ type, data }) }))
     );
   }
 }
 
-describe('useEnrichmentRefresh (disc-2026-09-batch-reparse-never-runs)', () => {
+describe('useEnrichmentRefresh (batch 重新解析 → background matching)', () => {
   let queryClient: QueryClient;
   const wrapper = ({ children }: { children: React.ReactNode }) =>
     React.createElement(QueryClientProvider, { client: queryClient }, children);
@@ -46,27 +46,103 @@ describe('useEnrichmentRefresh (disc-2026-09-batch-reparse-never-runs)', () => {
     delete (globalThis as Record<string, unknown>).EventSource;
   });
 
-  it('opens no SSE connection until a re-parse asks for one', () => {
-    renderHook(() => useEnrichmentRefresh(false), { wrapper });
+  it('opens no SSE connection and reports nothing until a re-parse asks for one', () => {
+    const { result } = renderHook(() => useEnrichmentRefresh(false), { wrapper });
     expect(MockEventSource.instances).toHaveLength(0);
+    expect(result.current).toBeNull();
   });
 
-  it('refetches the library when a matching pass completes, and closes on unmount', () => {
+  it('queued → running (enrich_progress) → done (enrich_complete, refetch) → running again', () => {
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
-    const { unmount } = renderHook(() => useEnrichmentRefresh(true), { wrapper });
+    const { result, unmount } = renderHook(() => useEnrichmentRefresh(true), { wrapper });
 
     expect(MockEventSource.instances).toHaveLength(1);
     const es = MockEventSource.instances[0];
     expect(es.url).toBe('/api/v1/events');
+    // Nothing heard yet: the dialog says 等待開始.
+    expect(result.current?.phase).toBe('queued');
 
-    es.emit('enrich_complete', { total: 3, succeeded: 3 });
+    act(() => {
+      es.emit('enrich_progress', {
+        total: 20,
+        processed: 3,
+        succeeded: 2,
+        failed: 1,
+        skipped: 0,
+        current_title: '你的名字',
+        is_active: true,
+      });
+    });
+    expect(result.current).toEqual({
+      phase: 'running',
+      total: 20,
+      processed: 3,
+      succeeded: 2,
+      failed: 1,
+      skipped: 0,
+      currentTitle: '你的名字',
+    });
+    expect(invalidate).not.toHaveBeenCalled();
+
+    act(() => {
+      es.emit('enrich_complete', {
+        total: 20,
+        succeeded: 18,
+        failed: 2,
+        skipped: 0,
+        duration: '1m3s',
+      });
+    });
+    expect(result.current).toMatchObject({ phase: 'done', total: 20, succeeded: 18, failed: 2 });
+    expect(result.current?.currentTitle).toBe('');
     expect(invalidate).toHaveBeenCalledWith({ queryKey: libraryKeys.all });
 
-    // A second pass (rows queued behind a running one) refreshes again.
-    es.emit('enrich_complete', { total: 1, succeeded: 1 });
+    // The rows were queued behind that pass: a second pass starts — back to 比對中.
+    act(() => {
+      es.emit('enrich_progress', {
+        total: 5,
+        processed: 5,
+        succeeded: 5,
+        failed: 0,
+        skipped: 0,
+        current_title: '瀑布',
+      });
+    });
+    expect(result.current?.phase).toBe('running');
+    act(() => {
+      es.emit('enrich_complete', { total: 5, succeeded: 5, failed: 0, skipped: 0 });
+    });
     expect(invalidate).toHaveBeenCalledTimes(2);
 
     unmount();
     expect(es.closed).toBe(true);
+  });
+
+  it('a new runId starts over from queued on a fresh connection', () => {
+    const { result, rerender } = renderHook(({ run }) => useEnrichmentRefresh(true, run), {
+      wrapper,
+      initialProps: { run: 1 },
+    });
+    const first = MockEventSource.instances[0];
+    act(() => {
+      first.emit('enrich_complete', { total: 5, succeeded: 5, failed: 0, skipped: 0 });
+    });
+    expect(result.current?.phase).toBe('done');
+
+    rerender({ run: 2 });
+    expect(first.closed).toBe(true);
+    expect(MockEventSource.instances).toHaveLength(2);
+    expect(result.current?.phase).toBe('queued');
+  });
+
+  it('a malformed progress payload is ignored, not a crash', () => {
+    const { result } = renderHook(() => useEnrichmentRefresh(true), { wrapper });
+    const es = MockEventSource.instances[0];
+    act(() => {
+      es.listeners['enrich_progress']?.forEach((cb) =>
+        cb(new MessageEvent('enrich_progress', { data: 'not json' }))
+      );
+    });
+    expect(result.current?.phase).toBe('queued');
   });
 });
