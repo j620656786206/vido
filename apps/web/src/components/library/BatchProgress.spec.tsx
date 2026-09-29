@@ -132,6 +132,18 @@ describe('BatchProgress', () => {
     expect(screen.getByText('m2: permission denied')).toBeInTheDocument();
   });
 
+  // disc-2026-09-batch-error-shows-id-not-title
+  it('names a failed row by its title, falling back to the id when the row is gone', () => {
+    const errors = [
+      { id: '3f1c9a2e', title: '寄生上流', message: '找不到符合的作品' },
+      { id: 'ghost-id', message: 'movie not found' },
+    ];
+    render(<BatchProgress {...defaultProps} isComplete={true} errors={errors} />);
+    expect(screen.getByText('寄生上流: 找不到符合的作品')).toBeInTheDocument();
+    expect(screen.queryByText(/3f1c9a2e/)).not.toBeInTheDocument();
+    expect(screen.getByText('ghost-id: movie not found')).toBeInTheDocument();
+  });
+
   it('renders progress bar with correct width', () => {
     render(<BatchProgress {...defaultProps} current={10} total={20} />);
     const bar = screen.getByTestId('progress-bar');

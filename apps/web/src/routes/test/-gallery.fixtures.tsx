@@ -2171,8 +2171,8 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         currentTitle: '',
       },
       errors: [
-        { id: '寄生上流', message: '找不到符合的作品' },
-        { id: '瀑布', message: 'TMDb 沒有回應' },
+        { id: '3f1c9a2e', title: '寄生上流', message: '找不到符合的作品' },
+        { id: '8b02d7c4', title: '瀑布', message: 'TMDb 沒有回應' },
       ],
       onClose: noop,
     },

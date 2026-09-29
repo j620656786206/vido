@@ -121,7 +121,7 @@ export function BatchProgress({
             </p>
             {errors.map((err) => (
               <p key={err.id} className="text-xs text-[var(--text-secondary)]">
-                {err.id}: {err.message}
+                {err.title || err.id}: {err.message}
               </p>
             ))}
           </div>

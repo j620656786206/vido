@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -1079,5 +1080,55 @@ func TestLibraryService_SearchLibrary_AppliesFilters(t *testing.T) {
 		assert.Equal(t, 1, result.TotalCount)
 		require.Len(t, result.Results, 1)
 		assert.Equal(t, "Nebula Series 1", result.Results[0].Series.Title)
+	})
+}
+
+// disc-2026-09-batch-error-shows-id-not-title: a failure entry names the row.
+func TestLibraryService_BatchErrors_CarryTitle(t *testing.T) {
+	t.Run("reparse: the write failed → title from the row already read", func(t *testing.T) {
+		movieRepo := new(testutil.MockMovieRepository)
+		service := NewLibraryService(movieRepo, new(testutil.MockSeriesRepository), nil)
+		movieRepo.On("FindByID", mock.Anything, "m1").Return(&models.Movie{ID: "m1", Title: "寄生上流"}, nil)
+		movieRepo.On("UpdateParseStatus", mock.Anything, "m1", models.ParseStatusPending).Return(errors.New("database is locked"))
+
+		res, err := service.BatchReparse(context.Background(), []string{"m1"}, "movie")
+		require.NoError(t, err)
+		require.Len(t, res.Errors, 1)
+		assert.Equal(t, BatchError{ID: "m1", Message: "database is locked", Title: "寄生上流"}, res.Errors[0])
+	})
+
+	t.Run("reparse: the row is gone → no title, id stays", func(t *testing.T) {
+		seriesRepo := new(testutil.MockSeriesRepository)
+		service := NewLibraryService(new(testutil.MockMovieRepository), seriesRepo, nil)
+		seriesRepo.On("FindByID", mock.Anything, "ghost").Return(nil, errors.New("series not found"))
+
+		res, err := service.BatchReparse(context.Background(), []string{"ghost"}, "series")
+		require.NoError(t, err)
+		require.Len(t, res.Errors, 1)
+		assert.Equal(t, "", res.Errors[0].Title)
+		assert.Equal(t, "ghost", res.Errors[0].ID)
+	})
+
+	t.Run("delete: the delete failed → title looked up for the entry", func(t *testing.T) {
+		movieRepo := new(testutil.MockMovieRepository)
+		service := NewLibraryService(movieRepo, new(testutil.MockSeriesRepository), nil)
+		movieRepo.On("Delete", mock.Anything, "m1").Return(errors.New("database is locked"))
+		movieRepo.On("FindByID", mock.Anything, "m1").Return(&models.Movie{ID: "m1", Title: "瀑布"}, nil)
+
+		res, err := service.BatchDelete(context.Background(), []string{"m1"}, "movie")
+		require.NoError(t, err)
+		require.Len(t, res.Errors, 1)
+		assert.Equal(t, "瀑布", res.Errors[0].Title)
+	})
+
+	t.Run("delete: success does not read the row at all", func(t *testing.T) {
+		movieRepo := new(testutil.MockMovieRepository)
+		service := NewLibraryService(movieRepo, new(testutil.MockSeriesRepository), nil)
+		movieRepo.On("Delete", mock.Anything, "m1").Return(nil)
+
+		res, err := service.BatchDelete(context.Background(), []string{"m1"}, "movie")
+		require.NoError(t, err)
+		assert.Equal(t, 1, res.SuccessCount)
+		movieRepo.AssertNotCalled(t, "FindByID", mock.Anything, mock.Anything)
 	})
 }
