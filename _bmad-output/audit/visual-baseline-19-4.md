@@ -666,3 +666,5 @@ Linux baselines incrementally bootstrapped 2026-09-28 via runner ubuntu-24.04 (I
 Linux baselines incrementally bootstrapped 2026-09-29 via runner ubuntu-24.04 (ImageVersion: 20260920.314.1) — 3 fixtures: tests/visual/components.visual.spec.ts-snapshots/components/library-batch-progress-matching-running/default-visual-linux.png tests/visual/components.visual.spec.ts-snapshots/components/library-batch-progress-matching-done/default-visual-linux.png tests/visual/components.visual.spec.ts-snapshots/components/library-batch-progress-matching-queued/default-visual-linux.png
 
 Linux baselines incrementally bootstrapped 2026-09-29 via runner ubuntu-24.04 (ImageVersion: 20260920.314.1) — 2 fixtures: tests/visual/components.visual.spec.ts-snapshots/components/search-suggestions-tmdb-down/default-visual-linux.png tests/visual/components.visual.spec.ts-snapshots/components/search-suggestions-tmdb-down-empty/default-visual-linux.png
+
+Linux baselines incrementally bootstrapped 2026-09-29 via runner ubuntu-24.04 (ImageVersion: 20260920.314.1) — 1 fixtures: tests/visual/components.visual.spec.ts-snapshots/components/settings-library-edit-modal/default-visual-linux.png
