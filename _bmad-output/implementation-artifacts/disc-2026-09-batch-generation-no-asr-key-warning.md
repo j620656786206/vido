@@ -1,6 +1,6 @@
 # Story: disc-2026-09-batch-generation-no-asr-key-warning — 批次產生字幕，一打開就先說「金鑰還沒設定」
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-09-29。Alexyu：「做 disc-2026-09-batch-generation-no-asr-key-warning」。
      需要新畫面（批次對話框多一塊提示），依 .pen 協作模式：Sally 出提示詞 → Alexyu 跑 Inline AI Agent → Sally MCP 唯讀 review → Dev。
@@ -118,3 +118,4 @@ Claude Opus 5.5（Amelia）
 | ---------- | --------------------------------------------------------- |
 | 2026-09-29 | create-story（SM Bob）＋ Sally 的 Pencil 提示詞。          |
 | 2026-09-29 | 設計稿 F28-D-v2（Alexyu）；dev-story（Amelia）＋對抗式 review → review。 |
+| 2026-09-29 | PR #600 合併（`-linux` 基準 #601）→ done。 |
