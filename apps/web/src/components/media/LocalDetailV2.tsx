@@ -176,8 +176,18 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
   // dsr-2b-b AC #2 / #3: read from parseStatus, never from tmdbId — a Douban/NFO
   // match or a manual edit has no tmdb id and IS matched. '' (API-created rows,
   // usually already matched) is not "pending" either.
-  const noMetadata: NoMetadataVariant | null =
-    data.parseStatus === 'failed' ? 'failed' : data.parseStatus === 'pending' ? 'pending' : null;
+  // disc-2026-09-detail-failed-hides-kept-data: and only with no metadata source.
+  // A re-parse that failed (TMDb down) or is still running keeps the old data on
+  // the row; that is a normal page, and the hero badge tells the last run's state
+  // — the same test as the library's 未匹配 filter.
+  const hasMetadata = Boolean(data.metadataSource);
+  const noMetadata: NoMetadataVariant | null = hasMetadata
+    ? null
+    : data.parseStatus === 'failed'
+      ? 'failed'
+      : data.parseStatus === 'pending'
+        ? 'pending'
+        : null;
   const mediaKind = isMovie ? 'movie' : 'series';
   // Only a re-match for THIS item speaks here (the hook instance survives
   // navigation between detail pages).

@@ -36,12 +36,16 @@ vi.mock('./ManualMatchDialogV2', () => ({
     open: boolean;
     mediaType: string;
     initialQuery: string;
-  }) =>
-    open ? (
-      <div data-testid="stub-manual-match" data-media-type={mediaType}>
-        {initialQuery}
-      </div>
-    ) : null,
+  }) => (
+    // The mounted marker lets a test tell "not mounted" from "mounted but closed".
+    <span data-testid="stub-manual-match-mounted">
+      {open ? (
+        <div data-testid="stub-manual-match" data-media-type={mediaType}>
+          {initialQuery}
+        </div>
+      ) : null}
+    </span>
+  ),
 }));
 
 vi.mock('../../hooks/useMediaDetails', async (importOriginal) => ({
@@ -285,6 +289,42 @@ describe('LocalDetailV2', () => {
         /bg-\[var\(--accent-primary\)\]/.test(b.className)
       );
       expect(solid.map((b) => b.getAttribute('data-testid'))).toEqual(['no-metadata-manual-match']);
+    });
+
+    // disc-2026-09-detail-failed-hides-kept-data (⚖️ Alexyu 選 A): a re-parse
+    // that failed (TMDb down) or is still running leaves the old data on the
+    // row. With a metadata source the page is a normal page — no 「沒有找到資料」
+    // block — and only the badge tells the last run's state.
+    it.each([
+      ['failed, TMDb data kept', 'failed', { metadataSource: 'tmdb', tmdbId: 603 }, '失敗'],
+      ['failed, Douban data kept (no TMDb id)', 'failed', { metadataSource: 'douban' }, '失敗'],
+      [
+        'pending re-parse, TMDb data kept',
+        'pending',
+        { metadataSource: 'tmdb', tmdbId: 603 },
+        '整理中',
+      ],
+    ])('%s → a normal page, the badge still says so', async (_label, status, extra, badge) => {
+      h.local = withStatus(status, extra);
+      renderDetail();
+      await screen.findByTestId('local-detail-v2');
+      expect(screen.queryByTestId('detail-no-metadata')).not.toBeInTheDocument();
+      expect(screen.getByTestId('action-localize-nfo')).toBeInTheDocument();
+      expect(screen.getByTestId('action-manage-subtitle').className).toMatch(/--accent-primary/);
+      expect(screen.queryByTestId('stub-manual-match-mounted')).not.toBeInTheDocument();
+      expect(screen.getByText(badge)).toBeInTheDocument();
+    });
+
+    it.each([
+      ['null (what the API sends for no source)', null],
+      ['an empty string', ''],
+    ])('a %s source is no source — failed still shows the block', async (_label, source) => {
+      h.local = withStatus('failed', { metadataSource: source });
+      renderDetail();
+      expect(await screen.findByTestId('detail-no-metadata')).toHaveAttribute(
+        'data-variant',
+        'failed'
+      );
     });
 
     it('a matched item keeps 在地化資訊 and the primary 管理字幕', async () => {
