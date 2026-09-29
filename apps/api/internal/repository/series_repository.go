@@ -584,7 +584,7 @@ func (r *SeriesRepository) GetStats(ctx context.Context) (*MediaStats, error) {
 	var stats MediaStats
 	err := r.db.QueryRowContext(ctx,
 		`SELECT COUNT(*) as total,
-		        COUNT(CASE WHEN tmdb_id IS NULL OR tmdb_id = 0 THEN 1 END) as unmatched
+		        COUNT(CASE WHEN `+unmatchedCondition("")+` THEN 1 END) as unmatched
 		 FROM series
 		 WHERE is_removed = 0 OR is_removed IS NULL`,
 	).Scan(&stats.Total, &stats.UnmatchedCount)
@@ -665,7 +665,7 @@ func seriesListFilterConditions(params ListParams, alias string) ([]string, []in
 	}
 
 	if unmatched, ok := params.Filters["unmatched"].(bool); ok && unmatched {
-		conditions = append(conditions, "("+col("tmdb_id")+" IS NULL OR "+col("tmdb_id")+" = 0)")
+		conditions = append(conditions, unmatchedCondition(alias))
 	}
 
 	// dsr-1b-a AC #2 [@contract-v1]: subtitle_status IN (...). Values are always
