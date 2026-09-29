@@ -1,6 +1,7 @@
-// Design ref: ux-design.pen Screen 8 Batch Operations Desktop (dcf67)
+// Design ref: ux-design.pen Screen C24-D 批次重新解析 — 比對進度 spec (L7EVR)
 import { X } from 'lucide-react';
 import type { BatchError } from '../../types/library';
+import type { EnrichmentMatching } from '../../hooks/useEnrichmentRefresh';
 
 interface BatchProgressProps {
   isOpen: boolean;
@@ -10,13 +11,20 @@ interface BatchProgressProps {
   errors?: BatchError[];
   isComplete: boolean;
   /**
-   * Shown under the count once complete, for an action whose real work goes on
-   * after this request returned (batch 重新解析: the match runs in the
-   * background, disc-2026-09-batch-reparse-never-runs).
+   * Batch 重新解析 only (disc-2026-09-batch-reparse-progress-in-dialog): the
+   * request returned but the match keeps running in the background. The dialog
+   * then walks C24-D's three states — 重新解析中 (queued) → 比對中 (running) →
+   * 比對完成 (done) — with every number coming from the SSE events. `total` is
+   * the whole pass (every pending row), so the copy says 含你勾的 N 部 and never
+   * 你勾的 T 部. Absent for delete/export, and when nothing was queued.
    */
-  note?: string;
+  matching?: EnrichmentMatching | null;
   onClose: () => void;
   onCancel?: () => void;
+}
+
+function matchingTitle(m: EnrichmentMatching): string {
+  return m.phase === 'queued' ? '重新解析中' : m.phase === 'running' ? '比對中' : '比對完成';
 }
 
 export function BatchProgress({
@@ -26,13 +34,22 @@ export function BatchProgress({
   action,
   errors,
   isComplete,
-  note,
+  matching,
   onClose,
   onCancel,
 }: BatchProgressProps) {
   if (!isOpen) return null;
 
-  const progress = total > 0 ? (current / total) * 100 : 0;
+  const m = isComplete && matching ? matching : null;
+  const progress = m
+    ? m.phase === 'done'
+      ? 100
+      : m.total > 0
+        ? (m.processed / m.total) * 100
+        : 0
+    : total > 0
+      ? (current / total) * 100
+      : 0;
   const hasErrors = errors && errors.length > 0;
 
   return (
@@ -43,10 +60,11 @@ export function BatchProgress({
       className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-scrim)]"
       role="dialog"
       aria-modal="true"
+      data-matching-phase={m?.phase}
     >
       <div className="mx-4 w-full max-w-sm rounded-xl bg-[var(--bg-secondary)] p-6 shadow-[var(--shadow-xl)]">
         <h3 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
-          {isComplete ? '操作完成' : action}
+          {m ? matchingTitle(m) : isComplete ? '操作完成' : action}
         </h3>
 
         {/* Progress bar */}
@@ -58,13 +76,40 @@ export function BatchProgress({
           />
         </div>
 
-        <p className="mb-4 text-sm text-[var(--text-secondary)]" data-testid="progress-text">
-          {isComplete ? `已完成 ${current} / ${total}` : `處理中 ${current} / ${total}...`}
-        </p>
-
-        {isComplete && note && (
-          <p className="mb-4 text-sm text-[var(--text-secondary)]" data-testid="progress-note">
-            {note}
+        {m ? (
+          <div className="mb-4 flex flex-col gap-1 text-sm text-[var(--text-secondary)]">
+            <p data-testid="progress-text">
+              {m.phase === 'queued'
+                ? `已排入比對 ${current} 項，等待開始…`
+                : m.phase === 'running'
+                  ? `本輪整理 ${m.total} 部（含你勾的 ${current} 部）`
+                  : `成功 ${m.succeeded}・失敗 ${m.failed} — 清單已更新`}
+            </p>
+            {m.phase === 'queued' && (
+              <p data-testid="matching-note">本輪會整理所有待整理的片，不只你勾的 {current} 部。</p>
+            )}
+            {m.phase === 'running' && (
+              <>
+                <p className="flex items-baseline justify-between gap-3">
+                  <span className="min-w-0 truncate" data-testid="matching-current">
+                    目前：{m.currentTitle || '—'}
+                  </span>
+                  <span
+                    className="shrink-0 font-mono tabular-nums text-[var(--text-primary)]"
+                    data-testid="matching-count"
+                  >
+                    {m.processed} / {m.total}
+                  </span>
+                </p>
+                <p data-testid="matching-tally">
+                  成功 {m.succeeded}・失敗 {m.failed}・略過 {m.skipped}
+                </p>
+              </>
+            )}
+          </div>
+        ) : (
+          <p className="mb-4 text-sm text-[var(--text-secondary)]" data-testid="progress-text">
+            {isComplete ? `已完成 ${current} / ${total}` : `處理中 ${current} / ${total}...`}
           </p>
         )}
 

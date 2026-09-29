@@ -17,6 +17,16 @@ const h = vi.hoisted(() => ({
   lastArgs: undefined as Record<string, unknown> | undefined,
   batchDelete: undefined as unknown as ReturnType<typeof vi.fn>,
   batchReparse: undefined as unknown as ReturnType<typeof vi.fn>,
+  // disc-2026-09-batch-reparse-progress-in-dialog: what the SSE hook reports while enabled.
+  matching: null as null | {
+    phase: 'queued' | 'running' | 'done';
+    total: number;
+    processed: number;
+    succeeded: number;
+    failed: number;
+    skipped: number;
+    currentTitle: string;
+  },
   batchExport: undefined as unknown as ReturnType<typeof vi.fn>,
 }));
 
@@ -48,7 +58,10 @@ vi.mock('../../hooks/useLibrary', () => ({
 // whether the page asked for it (jsdom has no EventSource).
 const enrichmentRefresh = vi.fn();
 vi.mock('../../hooks/useEnrichmentRefresh', () => ({
-  useEnrichmentRefresh: (enabled: boolean) => enrichmentRefresh(enabled),
+  useEnrichmentRefresh: (enabled: boolean, runId: number) => {
+    enrichmentRefresh(enabled, runId);
+    return enabled ? h.matching : null;
+  },
 }));
 // ux3-cutover-2: the generation-batch dialog pulls SSE plumbing — stub it out.
 vi.mock('../subtitle/GenerationBatchDialogV2', () => ({
@@ -251,6 +264,7 @@ describe('LibraryBrowseV2 — selection mode (ux3-cutover-2)', () => {
     h.batchDelete = vi.fn().mockResolvedValue({ successCount: 2, errors: [] });
     h.batchReparse = vi.fn().mockResolvedValue({ successCount: 1, errors: [] });
     h.batchExport = vi.fn().mockResolvedValue({ items: [] });
+    h.matching = null;
   });
 
   it('選取 enters selection mode: toolbar swaps in, cards stop navigating and toggle', async () => {
@@ -306,19 +320,49 @@ describe('LibraryBrowseV2 — selection mode (ux3-cutover-2)', () => {
   // while nothing ran — the rows sat 整理中 until some later scan. Now the page
   // tells the user the match is running in the background and starts
   // listening for its completion so the list refreshes by itself.
-  it('batch 重新解析: says the match runs in the background and starts the SSE refresh', async () => {
+  it('batch 重新解析: starts the SSE watch and the dialog shows the pass (C24-D)', async () => {
     enrichmentRefresh.mockClear();
+    h.matching = {
+      phase: 'running',
+      total: 20,
+      processed: 3,
+      succeeded: 2,
+      failed: 1,
+      skipped: 0,
+      currentTitle: '你的名字',
+    };
     renderBrowse();
     await userEvent.click(await screen.findByTestId('enter-selection-btn'));
-    expect(enrichmentRefresh).toHaveBeenLastCalledWith(false); // lazy until asked
+    expect(enrichmentRefresh).toHaveBeenLastCalledWith(false, 0); // lazy until asked
     await userEvent.click(screen.getByTestId('poster-v2-a'));
     await userEvent.click(screen.getByTestId('batch-reparse-btn'));
     await userEvent.click(screen.getByTestId('confirm-action-btn'));
     expect(h.batchReparse).toHaveBeenCalledWith({ ids: ['a'], type: 'movie' });
-    expect(await screen.findByTestId('progress-note')).toHaveTextContent(
-      '已排入比對 1 項，比對在背景進行，完成後清單會自動更新'
+    expect(enrichmentRefresh).toHaveBeenLastCalledWith(true, 1);
+    expect(await screen.findByTestId('progress-text')).toHaveTextContent(
+      '本輪整理 20 部（含你勾的 1 部）'
     );
-    expect(enrichmentRefresh).toHaveBeenLastCalledWith(true);
+    expect(screen.getByTestId('matching-current')).toHaveTextContent('目前：你的名字');
+    expect(screen.getByTestId('matching-count')).toHaveTextContent('3 / 20');
+  });
+
+  it('batch 刪除 never shows the matching states even while a pass is running', async () => {
+    h.matching = {
+      phase: 'running',
+      total: 20,
+      processed: 3,
+      succeeded: 2,
+      failed: 1,
+      skipped: 0,
+      currentTitle: '你的名字',
+    };
+    renderBrowse();
+    await userEvent.click(await screen.findByTestId('enter-selection-btn'));
+    await userEvent.click(screen.getByTestId('poster-v2-a'));
+    await userEvent.click(screen.getByTestId('batch-delete-btn'));
+    await userEvent.click(screen.getByTestId('confirm-action-btn'));
+    expect(await screen.findByTestId('progress-close-btn')).toBeInTheDocument();
+    expect(screen.queryByTestId('matching-current')).not.toBeInTheDocument();
   });
 
   it('batch 重新解析 that queued nothing shows no background note and no SSE watch', async () => {
@@ -333,8 +377,9 @@ describe('LibraryBrowseV2 — selection mode (ux3-cutover-2)', () => {
     await userEvent.click(screen.getByTestId('batch-reparse-btn'));
     await userEvent.click(screen.getByTestId('confirm-action-btn'));
     expect(await screen.findByTestId('progress-close-btn')).toBeInTheDocument();
-    expect(screen.queryByTestId('progress-note')).not.toBeInTheDocument();
-    expect(enrichmentRefresh).not.toHaveBeenCalledWith(true);
+    expect(screen.getByTestId('progress-text')).toHaveTextContent('已完成 0 / 1');
+    expect(screen.queryByTestId('matching-note')).not.toBeInTheDocument();
+    expect(enrichmentRefresh).not.toHaveBeenCalledWith(true, expect.anything());
   });
 
   it('批次生成字幕 opens the generation-batch dialog with the movie selection', async () => {
