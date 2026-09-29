@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"strings"
 	"sync"
@@ -553,11 +554,18 @@ func (o *Orchestrator) ResetCircuitBreaker(providerName string) {
 	}
 }
 
+// ErrSourceUnavailable is returned by SearchSource when the requested source
+// is not registered or not available (e.g. no API key).
+var ErrSourceUnavailable = errors.New("metadata source unavailable")
+
 // SearchSource searches a specific metadata source directly (Story 3.7)
 // Unlike Search which uses the fallback chain, this method:
-// - Searches only the specified source
-// - Does not fall back to other sources
-// - Returns nil if source not found or unavailable
+//   - Searches only the specified source
+//   - Does not fall back to other sources
+//   - Returns ErrSourceUnavailable if the source is not registered or not
+//     available (e.g. no API key) — a caller must be able to tell "could not
+//     search" from "searched and found nothing"
+//     (disc-2026-09-manual-search-hides-source-errors)
 func (o *Orchestrator) SearchSource(ctx context.Context, req *SearchRequest, source models.MetadataSource) (*SearchResult, error) {
 	o.mu.RLock()
 	providers := make([]MetadataProvider, len(o.providers))
@@ -577,14 +585,14 @@ func (o *Orchestrator) SearchSource(ctx context.Context, req *SearchRequest, sou
 		slog.Debug("Source provider not registered",
 			"source", source,
 		)
-		return nil, nil
+		return nil, ErrSourceUnavailable
 	}
 
 	if !targetProvider.IsAvailable() {
 		slog.Debug("Source provider unavailable",
 			"source", source,
 		)
-		return nil, nil
+		return nil, ErrSourceUnavailable
 	}
 
 	// Check circuit breaker

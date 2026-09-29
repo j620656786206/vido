@@ -84,7 +84,10 @@ type ManualSearchRequest struct {
 
 // Validate validates the manual search request
 func (r *ManualSearchRequest) Validate() error {
-	if r.Query == "" {
+	// Whitespace-only is empty too: the provider trims and rejects it, which
+	// would otherwise surface as a source outage (503) and count against TMDb's
+	// circuit breaker.
+	if strings.TrimSpace(r.Query) == "" {
 		return ErrManualSearchQueryRequired
 	}
 	// Default media type to movie
@@ -128,6 +131,10 @@ type ManualSearchResponse struct {
 var (
 	ErrManualSearchQueryRequired = errors.New("query is required")
 	ErrManualSearchInvalidSource = errors.New("invalid source: must be 'tmdb', 'douban', 'wikipedia', or 'all'")
+	// ErrManualSearchSourcesUnavailable: not one of the requested sources could
+	// search (down, no API key, circuit open) — so "no results" would be a lie
+	// (disc-2026-09-manual-search-hides-source-errors).
+	ErrManualSearchSourcesUnavailable = errors.New("no metadata source could be searched")
 )
 
 // SelectedMetadataItem represents a user-selected metadata item for apply operation
@@ -673,18 +680,35 @@ func (s *MetadataService) ManualSearch(ctx context.Context, req *ManualSearchReq
 		)
 	}
 
-	// Search each selected source
+	// Search each selected source. A source that errors, is unavailable (no
+	// API key) or has its circuit open did NOT search; if none did, an empty
+	// list would tell the user their keyword found nothing
+	// (disc-2026-09-manual-search-hides-source-errors).
+	searched := 0
+	var lastErr error
 	for _, source := range sourcesToSearch {
 		response.SearchedSources = append(response.SearchedSources, string(source))
 
 		result, err := s.orchestrator.SearchSource(ctx, searchReq, source)
 		if err != nil {
-			slog.Debug("Manual search source failed",
-				"source", source,
-				"error", err,
-			)
+			// Douban and Wikipedia are off by default: an unavailable source
+			// is routine, a failed search is not. Report the real failure as
+			// the cause when there is one.
+			if errors.Is(err, metadata.ErrSourceUnavailable) {
+				slog.Debug("Manual search source unavailable", "source", source)
+				if lastErr == nil {
+					lastErr = err
+				}
+			} else {
+				slog.Warn("Manual search source failed",
+					"source", source,
+					"error", err,
+				)
+				lastErr = err
+			}
 			continue
 		}
+		searched++
 
 		if result != nil && result.HasResults() {
 			for _, item := range result.Items {
@@ -703,6 +727,10 @@ func (s *MetadataService) ManualSearch(ctx context.Context, req *ManualSearchReq
 				response.Results = append(response.Results, resultItem)
 			}
 		}
+	}
+
+	if searched == 0 {
+		return nil, fmt.Errorf("%w: %w", ErrManualSearchSourcesUnavailable, lastErr)
 	}
 
 	// Sort by relevance (rating * confidence) descending
