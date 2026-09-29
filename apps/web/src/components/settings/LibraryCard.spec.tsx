@@ -9,7 +9,8 @@
  * second one: a user must be able to tell, at a glance, which libraries will
  * process new files automatically.
  */
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 import { LibraryCard } from './LibraryCard';
 import type { MediaLibraryWithPaths } from '../../services/mediaLibraryService';
@@ -124,5 +125,50 @@ describe('LibraryCard auto-subtitle state', () => {
     );
 
     expect(screen.getByTestId('library-card-footer').textContent).not.toContain('掃描');
+  });
+});
+
+// disc-2026-09-scanner-custom-modals-a11y: the ⋮ menu is a real menu — Esc and
+// a click outside close it.
+describe('LibraryCard — ⋮ menu', () => {
+  async function openMenu() {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    render(<LibraryCard library={libraryWith(false)} autoSubtitleSupported onEdit={onEdit} />);
+    await user.click(screen.getByRole('button', { name: '我的電影 的操作' }));
+    return { user, onEdit };
+  }
+
+  it('opens as a menu with 編輯 and 刪除', async () => {
+    await openMenu();
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: '編輯' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: '刪除' })).toBeInTheDocument();
+  });
+
+  it('Esc closes it', async () => {
+    const { user } = await openMenu();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('a click outside closes it', async () => {
+    const { user } = await openMenu();
+    await user.click(document.body);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('編輯 calls onEdit', async () => {
+    const { user, onEdit } = await openMenu();
+    await user.click(screen.getByRole('menuitem', { name: '編輯' }));
+    expect(onEdit).toHaveBeenCalledTimes(1);
+  });
+
+  it('刪除 asks for confirmation', async () => {
+    const { user } = await openMenu();
+    await user.click(screen.getByRole('menuitem', { name: '刪除' }));
+    expect(screen.getByTestId('confirm-delete-button')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('取消'));
+    expect(screen.queryByTestId('confirm-delete-button')).not.toBeInTheDocument();
   });
 });

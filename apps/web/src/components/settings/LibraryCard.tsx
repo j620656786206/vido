@@ -3,7 +3,8 @@
  * Library Card component for displaying a media library in Settings (Story 7b-4)
  */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Film, Tv, MoreVertical, Trash2, Pencil, FolderOpen } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useDeleteLibrary } from '../../hooks/useMediaLibrary';
@@ -34,8 +35,10 @@ const STATUS_CONFIG = {
 } as const;
 
 export function LibraryCard({ library, autoSubtitleSupported, onEdit }: LibraryCardProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // 編輯 opens a dialog that takes focus itself; the menu handing focus back to
+  // ⋮ first would make the dialog's trap re-select 名稱's whole text.
+  const openingEditor = useRef(false);
   const [removeMedia, setRemoveMedia] = useState(false);
   const deleteLibrary = useDeleteLibrary();
 
@@ -64,41 +67,54 @@ export function LibraryCard({ library, autoSubtitleSupported, onEdit }: LibraryC
             {typeLabel}
           </span>
         </div>
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="-m-3.5 rounded-[var(--radius-sm)] p-3.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-secondary)] sm:m-0 sm:p-1"
-            aria-label={`${library.name} 的操作`}
-            aria-expanded={menuOpen}
-            data-testid="library-menu-button"
-          >
-            <MoreVertical className="h-4 w-4" />
-          </button>
-          {menuOpen && (
-            <div className="absolute right-0 z-10 mt-1 w-32 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-secondary)] py-1 shadow-[var(--shadow-lg)]">
+        {/* disc-2026-09-scanner-custom-modals-a11y: a real menu (Esc, a click
+            outside, arrow keys). modal={false}: a modal menu leaves
+            pointer-events:none on <body> for a frame while 編輯's dialog mounts,
+            which can swallow the first click inside it (DownloadRowActions). */}
+        {/* The block wrapper keeps the header row's height: an inline button in
+            a block box gets the line's strut (E1-D baseline, 2px). */}
+        <div>
+          <DropdownMenu.Root modal={false}>
+            <DropdownMenu.Trigger asChild>
               <button
                 type="button"
-                onClick={() => {
-                  setMenuOpen(false);
-                  onEdit();
-                }}
-                className="flex min-h-11 w-full items-center gap-2 px-3 py-1.5 sm:min-h-0 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
+                className="-m-3.5 rounded-[var(--radius-sm)] p-3.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-secondary)] sm:m-0 sm:p-1"
+                aria-label={`${library.name} 的操作`}
+                data-testid="library-menu-button"
               >
-                <Pencil className="h-3 w-3" /> 編輯
+                <MoreVertical className="h-4 w-4" />
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false);
-                  setConfirmDelete(true);
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content
+                align="end"
+                sideOffset={4}
+                onCloseAutoFocus={(event) => {
+                  if (openingEditor.current) {
+                    openingEditor.current = false;
+                    event.preventDefault();
+                  }
                 }}
-                className="flex min-h-11 w-full items-center gap-2 px-3 py-1.5 sm:min-h-0 text-sm text-[var(--error-text)] hover:bg-[var(--bg-tertiary)]"
+                className="z-50 w-32 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-secondary)] py-1 shadow-[var(--shadow-lg)]"
               >
-                <Trash2 className="h-3 w-3" /> 刪除
-              </button>
-            </div>
-          )}
+                <DropdownMenu.Item
+                  onSelect={() => {
+                    openingEditor.current = true;
+                    onEdit();
+                  }}
+                  className="flex min-h-11 w-full cursor-default items-center gap-2 px-3 py-1.5 text-sm text-[var(--text-secondary)] outline-none hover:bg-[var(--bg-tertiary)] data-[highlighted]:bg-[var(--bg-tertiary)] sm:min-h-0"
+                >
+                  <Pencil className="h-3 w-3" aria-hidden="true" /> 編輯
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  onSelect={() => setConfirmDelete(true)}
+                  className="flex min-h-11 w-full cursor-default items-center gap-2 px-3 py-1.5 text-sm text-[var(--error-text)] outline-none hover:bg-[var(--bg-tertiary)] data-[highlighted]:bg-[var(--bg-tertiary)] sm:min-h-0"
+                >
+                  <Trash2 className="h-3 w-3" aria-hidden="true" /> 刪除
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
         </div>
       </div>
 
