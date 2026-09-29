@@ -1,6 +1,6 @@
 # Story: disc-2026-09-unmatched-filter-vs-parse-status — 「未匹配」只算真的找不到資料的片
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-09-29。⚖️ Alexyu 裁定兩次（同日）：
      ①「完全未匹配的時候才顯示『未匹配』」——任何來源（TMDb／豆瓣／Wikipedia／NFO／手動）拿到資料就不算；
