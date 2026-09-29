@@ -40,44 +40,32 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Navigate to the '媒體庫' (Library) page by opening http://localhost:8090/library.
-        await page.goto("http://localhost:8090/library")
+        # -> Open the movie detail page for 教父 by navigating to /media/movie/seed-mv-001
+        await page.goto("http://localhost:8090/media/movie/seed-mv-001")
         try:
             await page.wait_for_load_state("domcontentloaded", timeout=5000)
         except Exception:
             pass
         
-        # -> Open the poster card context menu for 'Unknown.Show.S01' by clicking the first media poster card.
-        # U 失敗 Unknown.Show.S01 link
-        elem = page.get_by_test_id('poster-v2-seed-sr-101')
-        await elem.click(timeout=10000)
-        
-        # -> Click the '管理字幕' (Manage Subtitles) button to open the subtitle search dialog.
+        # -> Click the '管理字幕' button to open the 管理字幕 dialog.
         # 管理字幕 button
-        elem = page.get_by_test_id('action-manage-subtitle')
+        elem = page.get_by_test_id("action-manage-subtitle")
         await elem.click(timeout=10000)
         
-        # -> Click the '搜尋線上字幕（成功率低）' button to open the subtitle search dialog.
-        # 搜尋線上字幕（成功率低） button
-        elem = page.get_by_test_id('toggle-fetch')
-        await elem.click(timeout=10000)
-        
-        # -> Type 'zzzzz-no-subtitles-exist-99999' into the subtitle search field and click the '搜尋' button
-        # 搜尋 button
-        elem = page.get_by_test_id('fetch-search')
+        # -> Click the '前往設定' button next to the ASR key message to open the keys settings page
+        # 前往設定 button
+        elem = page.get_by_test_id("helper-goto-settings")
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> The Manage Subtitles dialog titled '管理字幕 — Unknown.Show.S01' is visible.
+        # --> 點擊「前往設定」後已導向金鑰設定頁面 /settings/keys，且頁面顯示「金鑰設定」
         # Assert-outcome: passed
-        # Assert: Dialog contains the title '管理字幕 — Unknown.Show.S01'.
-        await expect(page.locator("xpath=/html/body/div[3]").nth(0)).to_contain_text("\u7ba1\u7406\u5b57\u5e55 \u2014 Unknown.Show.S01", timeout=15000), "Dialog contains the title '\u7ba1\u7406\u5b57\u5e55 \u2014 Unknown.Show.S01'."
-        
-        # --> The subtitle search shows the empty-state message indicating no online results.
+        # Assert: The browser navigated to a URL containing /settings/keys.
+        await expect(page).to_have_url(re.compile("/settings/keys"), timeout=15000), "The browser navigated to a URL containing /settings/keys."
         # Assert-outcome: passed
-        # Assert: Dialog contains the empty-state message for no search results.
-        await expect(page.locator("xpath=/html/body/div[3]").nth(0)).to_contain_text("\u5c1a\u7121\u7d50\u679c \u2014 \u7dda\u4e0a\u4f86\u6e90\u6210\u529f\u7387\u4f4e\uff0c\u5efa\u8b70\u6539\u7528\u751f\u6210\u5b57\u5e55", timeout=15000), "Dialog contains the empty-state message for no search results."
+        # Assert: The settings page shows the '金鑰設定' heading/link.
+        await expect(page.get_by_test_id("settings-tab-keys").nth(0)).to_have_text("\u91d1\u9470\u8a2d\u5b9a", timeout=15000), "The settings page shows the '\u91d1\u9470\u8a2d\u5b9a' heading/link."
         await asyncio.sleep(5)
 
     finally:

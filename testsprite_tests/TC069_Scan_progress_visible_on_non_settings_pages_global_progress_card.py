@@ -40,27 +40,7 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Click the '設定' (Settings) link to open the Settings page.
-        # 設定 link
-        elem = page.get_by_test_id('nav-settings')
-        await elem.click(timeout=10000)
-        
-        # -> Click the '媒體庫掃描' link in the Settings sidebar to open the Scanner settings page.
-        # 媒體庫掃描 link
-        elem = page.get_by_test_id('settings-nav-scanner')
-        await elem.click(timeout=10000)
-        
-        # -> Click the '掃描媒體庫' button to start a manual scan.
-        # 掃描媒體庫 button
-        elem = page.get_by_test_id('scan-trigger-button')
-        await elem.click(timeout=10000)
-        
-        # -> Check that the scan progress card appears on the Settings > 媒體庫掃描 page (look for the scan progress UI).
-        # 媒體庫 link
-        elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
-        await elem.click(timeout=10000)
-        
-        # -> Open the Scanner settings page and click the '掃描媒體庫' (Scan library) button.
+        # -> Open the Settings → Scanner page (設定 → 掃描器) by navigating to /settings/scanner.
         await page.goto("http://localhost:8090/settings/scanner")
         try:
             await page.wait_for_load_state("domcontentloaded", timeout=5000)
@@ -69,61 +49,33 @@ async def run_test():
         
         # -> Click the '掃描媒體庫' button to start a manual scan.
         # 掃描媒體庫 button
-        elem = page.get_by_test_id('scan-trigger-button')
+        elem = page.get_by_test_id("scan-trigger-button")
         await elem.click(timeout=10000)
         
-        # -> Click the '掃描媒體庫' button to trigger a manual scan (立即掃描).
-        # 掃描媒體庫 button
-        elem = page.get_by_test_id('scan-trigger-button')
-        await elem.click(timeout=10000)
-        
-        # -> Click the '掃描媒體庫' (Scan library) button on the Scanner settings page to start a manual scan and then check for the scan progress card.
-        # 掃描媒體庫 button
-        elem = page.get_by_test_id('scan-trigger-button')
-        await elem.click(timeout=10000)
-        
-        # -> Search the Settings page for elements with data-testid 'scan-progress-card' or 'scan-progress-wrapper', then open the '媒體庫' (Library) page to check there.
-        # 媒體庫 link
-        elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
-        await elem.click(timeout=10000)
-        
-        # -> Open the Scanner settings page by clicking the '設定' → '媒體庫掃描' (or navigate to the Scanner settings page) so the '掃描媒體庫' (Scan library) button can be clicked.
-        await page.goto("http://localhost:8090/settings/scanner")
+        # -> Search the Scanner (媒體庫掃描) settings page for the visible text '掃描完成' to confirm the scan progress card is shown.
+        await page.goto("http://localhost:8090/library")
         try:
             await page.wait_for_load_state("domcontentloaded", timeout=5000)
         except Exception:
             pass
         
-        # -> Click the '掃描媒體庫' (Scan library) button after confirming presence/absence of scan-related data-testid elements on the current Settings page.
-        # 掃描媒體庫 button
-        elem = page.get_by_test_id('scan-trigger-button')
-        await elem.click(timeout=10000)
+        # -> Scroll the 媒體庫 (Library) page and check for the scan progress card (text '掃描完成') or the scan progress wrapper in the visible DOM.
+        await page.mouse.wheel(0, 300)
         
-        # -> Search the settings page for scan progress elements and then click the '掃描媒體庫' (Scan library) button to start a manual scan.
-        # 掃描媒體庫 button
-        elem = page.get_by_test_id('scan-trigger-button')
-        await elem.click(timeout=10000)
-        
-        # -> Click the '掃描媒體庫' (Scan library) button on the Scanner settings page to start a manual scan.
-        # 掃描媒體庫 button
-        elem = page.get_by_test_id('scan-trigger-button')
-        await elem.click(timeout=10000)
-        
-        # -> Click the '掃描媒體庫' button to trigger a manual scan.
-        # 掃描媒體庫 button
-        elem = page.get_by_test_id('scan-trigger-button')
-        await elem.click(timeout=10000)
+        # -> Scroll down the Library page and search the page for the text '掃描完成' to try to reveal the scan progress card.
+        await page.mouse.wheel(0, 300)
         
         # --> Assertions to verify final state
-        current_url = await page.evaluate("() => window.location.href")
-        # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
-        assert current_url, 'Page should have loaded with a URL'
-        current_url = await page.evaluate("() => window.location.href")
-        # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
-        assert current_url, 'Page should have loaded with a URL'
-        current_url = await page.evaluate("() => window.location.href")
-        # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
-        assert current_url, 'Page should have loaded with a URL'
+        
+        # --> Expected the Library page to display the scan progress wrapper (data-testid="scan-progress-wrapper").
+        # Assert-outcome: failed
+        # Assert: Expected the Library page to contain the text '掃描完成' indicating the scan progress wrapper is visible.
+        await expect(page.locator("#root").nth(0)).to_contain_text("\u6383\u63cf\u5b8c\u6210", timeout=15000), "Expected the Library page to contain the text '\u6383\u63cf\u5b8c\u6210' indicating the scan progress wrapper is visible."
+        
+        # --> Expected the Library page to display the scan progress card (data-testid="scan-progress-card").
+        # Assert-outcome: failed
+        # Assert: Expected the Library page to contain the scan progress card text '掃描完成' indicating the scan progress card is visible.
+        await expect(page.locator("#root").nth(0)).to_contain_text("\u6383\u63cf\u5b8c\u6210", timeout=15000), "Expected the Library page to contain the scan progress card text '\u6383\u63cf\u5b8c\u6210' indicating the scan progress card is visible."
         await asyncio.sleep(5)
 
     finally:

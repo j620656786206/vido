@@ -39,9 +39,9 @@
         "description": "Verify the item count display text is visible"
       }
     ],
-    "v4_status": "VALID",
-    "v4_reason": "Core library browsing (Epic 5) is complete. Epic 7 scanner and Epic 8 subtitle integration are done. Context menu now includes 'Search Subtitles' option.",
-    "v4_action": "KEEP as-is"
+    "v4_status": "ENV-LIMITED",
+    "v4_reason": "2026-09 run: the seed fits on one page, so no pagination control renders (same as TC014)",
+    "v4_action": "skip-small-seed"
   },
   {
     "id": "TC010",
@@ -83,9 +83,9 @@
         "description": "Verify text \"Deleted\" is visible"
       }
     ],
-    "v4_status": "VALID",
-    "v4_reason": "Core library browsing (Epic 5) is complete. Delete flow unchanged in v4.",
-    "v4_action": "KEEP as-is"
+    "v4_status": "RETIRE",
+    "v4_reason": "2026-09 run: the v2 library has no per-item action menu (that was the v1 PosterCardMenu/LibraryTable); deleting goes through selection mode, covered by TC098. PASS/FAIL flapped across runs.",
+    "v4_action": "retire-2026-09"
   },
   {
     "id": "TC011",
@@ -169,8 +169,8 @@
   },
   {
     "id": "TC013",
-    "title": "Export a media item from the action menu shows visible confirmation/feedback",
-    "description": "Verifies the Export action is reachable from an item menu and provides visible UI feedback after triggering export.",
+    "title": "Export metadata for one selected library item ends in a completed-operation dialog",
+    "description": "The v2 library has no per-item action menu; exporting metadata goes through selection mode and the 匯出中繼資料 toolbar action, which reports progress and completion in the batch progress dialog.",
     "category": "Media Library",
     "priority": "Low",
     "steps": [
@@ -179,29 +179,33 @@
         "description": "Navigate to /library"
       },
       {
-        "type": "assertion",
-        "description": "Verify a grid of media poster cards or a media items table is visible"
+        "type": "action",
+        "description": "Click the 選取 button in the library toolbar to enter selection mode"
       },
       {
         "type": "action",
-        "description": "Click the action menu for the first visible media item"
+        "description": "Select exactly one poster card"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selection toolbar shows one item selected and a 匯出中繼資料 action"
       },
       {
         "type": "action",
-        "description": "Click \"Export\""
+        "description": "Click 匯出中繼資料"
       },
       {
         "type": "assertion",
-        "description": "Verify text \"Export\" is visible"
+        "description": "Verify a progress dialog appears and within 20 seconds shows 操作完成"
       },
       {
         "type": "assertion",
-        "description": "Verify text \"Success\" is visible"
+        "description": "Verify the library grid still shows the exported item (export does not remove anything)"
       }
     ],
     "v4_status": "VALID",
-    "v4_reason": "Export from library context menu (Epic 5/6) is complete. Flow unchanged in v4.",
-    "v4_action": "KEEP as-is"
+    "v4_reason": "2026-09 run: v2 has no per-item action menu; export is a selection-toolbar action",
+    "v4_action": "fix-plan-2026-09"
   },
   {
     "id": "TC014",
@@ -239,9 +243,9 @@
         "description": "Verify the pagination control is visible"
       }
     ],
-    "v4_status": "VALID",
-    "v4_reason": "Pagination (Epic 5) is complete. Behavior unchanged in v4.",
-    "v4_action": "KEEP as-is"
+    "v4_status": "ENV-LIMITED",
+    "v4_reason": "2026-09 run: the seed fits on one page, so no pagination control renders",
+    "v4_action": "skip-small-seed"
   },
   {
     "id": "TC035",
@@ -374,7 +378,7 @@
   {
     "id": "TC038",
     "title": "Connection test failure shows inline error and guidance",
-    "description": "Verifies an invalid host causes the connection test to fail and shows an inline error with guidance.",
+    "description": "With every required field filled in (host, username, password), testing a connection to an unreachable qBittorrent host shows an inline failure result instead of a success message. The test button stays disabled until host, username and password all have values, so the case must fill all three.",
     "category": "qBittorrent Settings",
     "priority": "High",
     "steps": [
@@ -384,37 +388,37 @@
       },
       {
         "type": "action",
-        "description": "Type \"http://invalid-host\" into \"Host\" field"
+        "description": "Type http://invalid-host.invalid:8080 into the host field (labelled 主機位址)"
       },
       {
         "type": "action",
-        "description": "Click on \"Test Connection\""
+        "description": "Type admin into the username field and wrongpass into the password field"
       },
       {
         "type": "assertion",
-        "description": "Verify text \"Connection failed\" is visible"
+        "description": "Verify the 測試連線 (Test Connection) button is now enabled"
+      },
+      {
+        "type": "action",
+        "description": "Click 測試連線"
       },
       {
         "type": "assertion",
-        "description": "Verify text \"verify\" is visible"
+        "description": "Verify an inline connection result appears under the form within 20 seconds and it is a failure message, not 連線成功"
       },
       {
         "type": "assertion",
-        "description": "Verify text \"host\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"credentials\" is visible"
+        "description": "Verify the page stays on the qBittorrent settings form with the typed host still in the field"
       }
     ],
     "v4_status": "VALID",
-    "v4_reason": "QB error handling flow (Epic 4/6) is complete and unchanged.",
-    "v4_action": "KEEP as-is"
+    "v4_reason": "2026-09 run: button requires host+username+password; old plan filled host only and asserted English copy",
+    "v4_action": "fix-plan-2026-09"
   },
   {
     "id": "TC039",
-    "title": "Save is disabled (or blocked) until a successful test occurs",
-    "description": "Verifies the user cannot save qBittorrent settings when the last connection test failed or was not successful.",
+    "title": "qBittorrent 測試連線 and save stay disabled until host, username and password are all filled",
+    "description": "The qBittorrent form gates both 測試連線 and the save button on the three required fields; neither is gated on a prior successful test.",
     "category": "qBittorrent Settings",
     "priority": "High",
     "steps": [
@@ -424,32 +428,32 @@
       },
       {
         "type": "action",
-        "description": "Type \"http://invalid-host\" into \"Host\" field"
+        "description": "Clear the host, username and password fields if they contain values"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 測試連線 button and the save button are both disabled"
       },
       {
         "type": "action",
-        "description": "Click on \"Test Connection\""
+        "description": "Type http://invalid-host.invalid:8080 into the 主機位址 field and admin into the 使用者名稱 field, leaving the password empty"
       },
       {
         "type": "assertion",
-        "description": "Verify text \"Connection failed\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Save\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Test Connection\" is visible"
+        "description": "Verify both buttons are still disabled"
       },
       {
         "type": "action",
-        "description": "Click on \"Save\""
+        "description": "Type wrongpass into the password field"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify both buttons are now enabled, and do not click save"
       }
     ],
     "v4_status": "VALID",
-    "v4_reason": "QB save-guard flow (Epic 4/6) is complete and unchanged.",
-    "v4_action": "KEEP as-is"
+    "v4_reason": "2026-09 run: buttons are gated on the three fields, not on a prior successful test",
+    "v4_action": "fix-plan-2026-09"
   },
   {
     "id": "TC040",
@@ -1667,9 +1671,9 @@
         "description": "Verify element with data-testid \"subtitle-search-btn\" is visible"
       }
     ],
-    "v4_status": "VALID",
-    "v4_reason": "Subtitle search dialog (Epic 8, Story 8-8) is complete with multi-source provider integration.",
-    "v4_action": "NEW — Epic 8 coverage"
+    "v4_status": "RETIRE",
+    "v4_reason": "2026-09 run: the poster context menu with a subtitle entry is the v1 PosterCardMenu (mounted only by the unmounted LibraryGrid); v2 reaches subtitles through the detail page 管理字幕 (TC077). Flaky PASS/FAIL across runs.",
+    "v4_action": "retire-2026-09"
   },
   {
     "id": "TC072",
@@ -1717,8 +1721,8 @@
   },
   {
     "id": "TC073",
-    "title": "Subtitle search shows empty state when no results found",
-    "description": "Verifies searching for subtitles with a query that yields no results shows the empty state message.",
+    "title": "Online subtitle search in the Manage Subtitles dialog ends in an honest empty or error state",
+    "description": "The v2 Manage Subtitles dialog keeps online subtitle search as a dormant, secondary action with no query box (it searches for the item itself). In the test environment no subtitle source is configured, so the search must end in either the empty hint or an explicit failure message, never a spinner that never ends.",
     "category": "Subtitle Search",
     "priority": "High",
     "steps": [
@@ -1728,32 +1732,32 @@
       },
       {
         "type": "action",
-        "description": "Right-click the first media poster card to open context menu"
-      },
-      {
-        "type": "action",
-        "description": "Click \"Search Subtitles\" in the context menu"
+        "description": "Right-click the first media poster card to open its context menu and choose the subtitle option (管理字幕 or the subtitle search entry)"
       },
       {
         "type": "assertion",
-        "description": "Verify element with data-testid \"subtitle-search-dialog\" is visible"
+        "description": "Verify the Manage Subtitles dialog is visible"
       },
       {
         "type": "action",
-        "description": "Clear the search input and type \"zzzzz-no-subtitles-exist-99999\""
-      },
-      {
-        "type": "action",
-        "description": "Click element with data-testid \"subtitle-search-btn\""
+        "description": "Click the text button 搜尋線上字幕（成功率低） to open the online search section"
       },
       {
         "type": "assertion",
-        "description": "Verify element with data-testid \"subtitle-empty-state\" is visible"
+        "description": "Verify a section headed 線上字幕搜尋 with a 搜尋 button is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the 搜尋 button in that section and wait up to 30 seconds"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the section shows either the hint text starting with 尚無結果 or a message starting with 搜尋失敗, and the 搜尋 button is no longer showing 搜尋中"
       }
     ],
     "v4_status": "VALID",
-    "v4_reason": "Subtitle search empty state (Epic 8, Story 8-8) is complete.",
-    "v4_action": "NEW — Epic 8 coverage"
+    "v4_reason": "2026-09 run: v2 dialog has no query input; online search is a dormant section (9R-14)",
+    "v4_action": "fix-plan-2026-09"
   },
   {
     "id": "TC074",
@@ -1841,39 +1845,35 @@
   },
   {
     "id": "TC076",
-    "title": "Close subtitle search dialog with Escape key",
-    "description": "Verifies the subtitle search dialog can be dismissed by pressing the Escape key.",
+    "title": "Close the Manage Subtitles dialog with the Escape key",
+    "description": "The v2 Manage Subtitles dialog (opened from 管理字幕 on a detail page) closes on Escape and leaves the detail page in place.",
     "category": "Subtitle Search",
     "priority": "Medium",
     "steps": [
       {
         "type": "action",
-        "description": "Navigate to /library"
+        "description": "Navigate to /library and click the first poster card to open its detail page"
       },
       {
         "type": "action",
-        "description": "Right-click the first media poster card to open context menu"
-      },
-      {
-        "type": "action",
-        "description": "Click \"Search Subtitles\" in the context menu"
+        "description": "Click the 管理字幕 button on the detail page"
       },
       {
         "type": "assertion",
-        "description": "Verify element with data-testid \"subtitle-search-dialog\" is visible"
+        "description": "Verify a dialog is visible"
       },
       {
         "type": "action",
-        "description": "Press Escape key"
+        "description": "Press the Escape key"
       },
       {
         "type": "assertion",
-        "description": "Verify element with data-testid \"subtitle-search-dialog\" is not visible"
+        "description": "Verify the dialog is no longer visible and the detail page with the 管理字幕 button is still shown"
       }
     ],
     "v4_status": "VALID",
-    "v4_reason": "Subtitle dialog dismiss (Epic 8, Story 8-8) is complete.",
-    "v4_action": "NEW — Epic 8 coverage"
+    "v4_reason": "2026-09 run: the old subtitle-search-dialog testid belongs to the v1 dialog; v2 is ManageSubtitleDialogV2 from the detail page",
+    "v4_action": "fix-plan-2026-09"
   },
   {
     "id": "TC077",
@@ -1943,9 +1943,9 @@
         "description": "Verify text \"Delete\" is visible in the context menu"
       }
     ],
-    "v4_status": "VALID",
-    "v4_reason": "Context menu with subtitle search (Epic 8 integration into Epic 5 library) is complete.",
-    "v4_action": "NEW — Epic 8 coverage"
+    "v4_status": "RETIRE",
+    "v4_reason": "2026-09 run: the poster context menu with a subtitle entry is the v1 PosterCardMenu (mounted only by the unmounted LibraryGrid); v2 reaches subtitles through the detail page 管理字幕 (TC077). Flaky PASS/FAIL across runs.",
+    "v4_action": "retire-2026-09"
   },
   {
     "id": "TC079",
@@ -1971,9 +1971,9 @@
         "description": "Verify the per-page count display containing text \"筆\" is visible"
       }
     ],
-    "v4_status": "NEW",
-    "v4_reason": "Downloads Monitor (route /downloads, 256 LOC) is implemented but had zero TestSprite coverage. P0 journey #3.",
-    "v4_action": "ADD — Tier 1 P0 gap"
+    "v4_status": "ENV-LIMITED",
+    "v4_reason": "2026-09 run: needs a working qBittorrent for the list and per-page count; v2 status tabs are 全部/下載中/已暫停/已完成/做種 (no 錯誤) — rewrite when a qBT fixture exists",
+    "v4_action": "skip-without-qbittorrent"
   },
   {
     "id": "TC080",
@@ -2387,9 +2387,9 @@
         "description": "Verify the 繼續觀看 section/slot is present on the page"
       }
     ],
-    "v4_status": "NEW",
-    "v4_reason": "round3 candidate (2026-07-23) — high-priority coverage gap, env-safe (no TMDb/qBT/AI key)",
-    "v4_action": "generate+run in testsprite-v2-round3"
+    "v4_status": "RETIRE",
+    "v4_reason": "2026-09 run: the 繼續觀看 slot was intentionally unmounted by the Home v3 critique-R3 ruling (2026-08-26, ContinueWatchingSlot.tsx header); returns with Epic 17",
+    "v4_action": "retire-2026-09"
   },
   {
     "id": "TC096",
@@ -2821,6 +2821,1086 @@
       {
         "type": "assertion",
         "description": "Verify the sidebar series count decreased and the movie count increased compared to the noted values, showing the library items were reclassified as movies"
+      }
+    ]
+  },
+  {
+    "id": "TC111",
+    "title": "Header instant search says TMDb is unreachable and still lists the owned library match",
+    "description": "In the test env TMDb rejects every call. The header search dropdown must say so with a notice (TMDb 暫時無法連線，只顯示媒體庫結果) above the owned-library results instead of silently showing only library rows as if TMDb had nothing.",
+    "category": "Search Journey",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click the search input in the top header (placeholder 搜尋媒體庫) and type 駭客"
+      },
+      {
+        "type": "action",
+        "description": "Wait about 2 seconds for the dropdown to settle"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dropdown shows a notice containing the text TMDb 暫時無法連線 and 只顯示媒體庫結果"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dropdown lists a 媒體庫 section containing 駭客任務 below that notice"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dropdown does not show the text 找不到"
+      }
+    ]
+  },
+  {
+    "id": "TC112",
+    "title": "Header instant search with no library hit blames the library, not the query, when TMDb is down",
+    "description": "With TMDb unreachable and a query that matches nothing in the library, the dropdown must show the TMDb notice plus 媒體庫裡沒有「query」, never the generic 找不到「query」的結果 that would claim TMDb found nothing.",
+    "category": "Search Journey",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click the search input in the top header and type zzqxnomatch"
+      },
+      {
+        "type": "action",
+        "description": "Wait about 2 seconds for the dropdown to settle"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dropdown shows a notice containing the text 只顯示媒體庫結果"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dropdown shows the text 媒體庫裡沒有「zzqxnomatch」"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the text 找不到「zzqxnomatch」的結果 is not visible"
+      }
+    ]
+  },
+  {
+    "id": "TC113",
+    "title": "Manual match dialog says search is unavailable when TMDb is down, not that nothing matched",
+    "description": "On the detail page of the seeded failed movie [FanSub] 未知電影 (2021), the 手動選片 dialog searches TMDb. With TMDb unreachable the dialog must say 搜尋暫時無法使用，請稍後再試。 and must not tell the user to change keywords (找不到符合的作品).",
+    "category": "Manual Metadata Search",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /media/movie/seed-mv-102"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the page shows the heading 沒有找到這部電影的資料"
+      },
+      {
+        "type": "action",
+        "description": "Click the 手動選片 button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a dialog titled 手動選片 is open with a search input (placeholder 輸入電影名稱)"
+      },
+      {
+        "type": "action",
+        "description": "Clear the dialog search input, type Inception, and wait about 5 seconds"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dialog shows the text 搜尋暫時無法使用"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the text 找不到符合的作品 is not visible in the dialog"
+      },
+      {
+        "type": "action",
+        "description": "Press Escape to close the dialog without applying anything"
+      }
+    ]
+  },
+  {
+    "id": "TC114",
+    "title": "Library 未匹配 filter counts only failed items with no metadata, not items still being organized",
+    "description": "The seed has one failed movie with no metadata source ([FanSub] 未知電影 (2021)) and two pending ones (Some.Obscure.Film.2023.1080p, Home.Video.Collection.Vol1) that show 整理中. On a freshly seeded env the 未匹配 filter reads 未匹配 (1) and lists only the failed movie. The count on the filter must always equal the number of items it lists, and no listed item may carry the 整理中 badge.",
+    "category": "Media Library",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the grid shows Some.Obscure.Film.2023.1080p with the 整理中 badge"
+      },
+      {
+        "type": "action",
+        "description": "In the filter panel (open the 篩選 control first if the panel is not visible), click the 未匹配 status filter"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 未匹配 filter is active and its label shows a count in parentheses, 未匹配 (1) on a freshly seeded env"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the result count in the page header equals the number shown on the 未匹配 filter"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify [FanSub] 未知電影 (2021) is listed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify no listed item shows the 整理中 badge, and Some.Obscure.Film.2023.1080p and Home.Video.Collection.Vol1 are not listed while they still read 整理中"
+      }
+    ]
+  },
+  {
+    "id": "TC115",
+    "title": "Batch re-parse dialog follows the matching run instead of claiming the job is done",
+    "description": "Selecting library items and choosing 重新解析 must show the matching progress (重新解析中, then 比對中, then 比對完成 with 成功 and 失敗 counts) instead of the old generic 操作完成. Uses the two pending seed movies so no matched title is touched. With TMDb unreachable the run ends with failures. Note: this changes those two items from 整理中 to 失敗.",
+    "category": "Media Library",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "action",
+        "description": "Click the 選取 button to enter selection mode"
+      },
+      {
+        "type": "action",
+        "description": "Click the Some.Obscure.Film.2023.1080p card and the Home.Video.Collection.Vol1 card to select them"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selection toolbar shows 已選取 2 項"
+      },
+      {
+        "type": "action",
+        "description": "Click the 重新解析 button in the selection toolbar, then click the 重新解析 confirm button in the 確認重新解析 dialog"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a progress dialog appears whose title is 重新解析中, 比對中 or 比對完成, and not 操作完成"
+      },
+      {
+        "type": "action",
+        "description": "Wait up to 60 seconds for the dialog title to become 比對完成"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dialog shows a result line containing 成功 and 失敗 and the text 清單已更新"
+      },
+      {
+        "type": "action",
+        "description": "Click 關閉 in the dialog"
+      }
+    ]
+  },
+  {
+    "id": "TC116",
+    "title": "Media library card action menu closes on Escape and on an outside click",
+    "description": "In Settings, the media library page, each library card has an action menu (button labeled with the library name plus 的操作). The menu must close when Escape is pressed and when the user clicks elsewhere on the page.",
+    "category": "Media Library Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/scanner"
+      },
+      {
+        "type": "action",
+        "description": "Click the button labeled 電影庫 的操作 on the 電影庫 card"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a menu is open with the items 編輯 and 刪除"
+      },
+      {
+        "type": "action",
+        "description": "Press Escape"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the menu with 編輯 and 刪除 is no longer visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the button labeled 電影庫 的操作 again, then click on an empty area of the page outside the menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the menu with 編輯 and 刪除 is no longer visible and the page did not navigate away from /settings/scanner"
+      }
+    ]
+  },
+  {
+    "id": "TC117",
+    "title": "Edit media library dialog focuses the name field, ignores outside clicks and closes on Escape",
+    "description": "The 編輯媒體庫 dialog is a real modal: it opens with focus in the 名稱 field, a click outside it must NOT close it (so typed input is not lost), Escape closes it without saving, and focus returns to the card's action menu button.",
+    "category": "Media Library Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/scanner"
+      },
+      {
+        "type": "action",
+        "description": "Click the button labeled 電影庫 的操作 and choose 編輯"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a dialog titled 編輯媒體庫 is visible and the 名稱 input contains 電影庫"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 名稱 input has keyboard focus"
+      },
+      {
+        "type": "action",
+        "description": "Click on the dimmed backdrop outside the dialog, near the top-left corner of the page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 編輯媒體庫 dialog is still open"
+      },
+      {
+        "type": "action",
+        "description": "Press Escape"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 編輯媒體庫 dialog is closed and the 電影庫 card still shows the name 電影庫"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify keyboard focus is on the button labeled 電影庫 的操作"
+      }
+    ]
+  },
+  {
+    "id": "TC118",
+    "title": "Edit info keeps an unknown year empty and blocks an out-of-range year",
+    "description": "Opening 修改資訊 for a movie with no release date must leave the 年份 field empty (placeholder 不知道) instead of pre-filling the current year, and a year outside 1900 to 2100 must be rejected with a message. The dialog is cancelled so no data changes.",
+    "category": "Metadata Editor",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /media/movie/seed-mv-103"
+      },
+      {
+        "type": "action",
+        "description": "Click the 修改資訊 button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a dialog titled 修改資訊 is open"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 年份 input is empty, shows the placeholder 不知道, and does not contain 2026"
+      },
+      {
+        "type": "action",
+        "description": "Type 1800 into the 年份 input and click 儲存"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the error text 年份必須大於 1900 is visible and the 修改資訊 dialog is still open"
+      },
+      {
+        "type": "action",
+        "description": "Click 取消"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 修改資訊 dialog is closed"
+      }
+    ]
+  },
+  {
+    "id": "TC119",
+    "title": "Discover page with TMDb down shows a retryable outage banner instead of zero results",
+    "description": "The Discover page is powered only by TMDb. With TMDb unreachable it must show the fail-soft banner (TMDB 服務暫時無法連線) with a 重試 button, and must not claim 符合 0 部 or show the no-results state that blames the filters.",
+    "category": "Discover",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /discover"
+      },
+      {
+        "type": "action",
+        "description": "Wait about 5 seconds for loading to finish"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the page heading 探索 is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an alert banner containing the text TMDB 服務暫時無法連線 is visible with a 重試 button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the text 符合 0 部 is not visible anywhere on the page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the text 找不到相符的結果 is not visible"
+      },
+      {
+        "type": "assertion",
+        "description": "If the filter rail is visible, verify its result count reads 暫時無法計算"
+      }
+    ]
+  },
+  {
+    "id": "TC120",
+    "title": "Downloads page without qBittorrent configured says it is not set up, not unreachable",
+    "description": "The test env has no qBittorrent configured. The downloads page must show the not-configured state (還沒有設定 qBittorrent) with a 前往設定 link, not the connection-error message 無法連線到 qBittorrent.",
+    "category": "Downloads Monitor",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /downloads"
+      },
+      {
+        "type": "action",
+        "description": "Wait about 3 seconds for loading to finish"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the text 還沒有設定 qBittorrent is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the text 設定好之後，下載進度會顯示在這裡 is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the text 無法連線到 qBittorrent is not visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the 前往設定 link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the URL is /settings/connection (the qBittorrent settings live on the connection settings page)"
+      }
+    ]
+  },
+  {
+    "id": "TC121",
+    "title": "Connection settings show Sonarr and Radarr cards that explain an unreachable server",
+    "description": "Settings connection page has a Sonarr card and a Radarr card below qBittorrent. Unconfigured cards show 未設定, the 測試連線 and 儲存設定 buttons stay disabled until a URL and API key are entered, and a test against an address nothing listens on reports the reason in Chinese.",
+    "category": "Connection Settings",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/connection"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a card headed Sonarr with the subtitle 影集的搜尋與匯入 and a card headed Radarr with the subtitle 電影的搜尋與匯入 are visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify both the Sonarr and Radarr cards show the status badge 未設定"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 測試連線 and 儲存設定 buttons in the Sonarr card are disabled"
+      },
+      {
+        "type": "action",
+        "description": "In the Sonarr card, type http://127.0.0.1:1 into the 網址 field and type test-api-key into the API 金鑰 field"
+      },
+      {
+        "type": "action",
+        "description": "Click 測試連線 in the Sonarr card and wait about 5 seconds"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the Sonarr card shows a failure message mentioning Sonarr, such as one containing 連不到這個網址 and 確認 Sonarr 有在執行"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the text 連得到 Sonarr is not visible"
+      }
+    ]
+  },
+  {
+    "id": "TC122",
+    "title": "Service status page speaks Chinese and tells you where to fix a broken TMDB",
+    "description": "Settings service status lists each service with a Chinese name and role and a Chinese status pill. In the test env TMDb rejects the key, so TMDB is 錯誤 and a banner says TMDB 目前無法連線 with advice linking to 金鑰設定. Services never set up read 未設定. The backend's English service names must not appear.",
+    "category": "Settings",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/status"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the heading 服務狀態 is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify service cards named TMDB (中繼資料與海報), 豆瓣, 維基百科, AI 解析 and qBittorrent are visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the TMDB card status pill shows 錯誤 and the 豆瓣, 維基百科 and AI 解析 cards show 未設定"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the texts Douban Scraper, Wikipedia API and AI Parser are not visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a banner line containing TMDB and 目前無法連線 is visible with a link named 金鑰設定"
+      },
+      {
+        "type": "action",
+        "description": "Click the 金鑰設定 link in the banner"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the URL is /settings/keys"
+      }
+    ]
+  },
+  {
+    "id": "TC123",
+    "title": "Logs filtered to nothing say it is the filter and offer to clear it",
+    "description": "Settings system logs: a keyword that matches nothing must show 沒有符合條件的日誌記錄 with the active filter and advice, plus a 清除篩選 button, instead of implying there are no logs at all.",
+    "category": "Settings",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/logs"
+      },
+      {
+        "type": "action",
+        "description": "Type zzqxnolog987 into the 搜尋關鍵字 input and press Enter (the keyword is applied on Enter, not while typing), then wait about 2 seconds"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the text 沒有符合條件的日誌記錄 is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the text 關鍵字「zzqxnolog987」 and the advice 清除關鍵字再試一次 are visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the text 還沒有日誌記錄 is not visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the 清除篩選 button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 搜尋關鍵字 input is empty and the text 沒有符合條件的日誌記錄 is no longer visible"
+      }
+    ]
+  },
+  {
+    "id": "TC124",
+    "title": "Clearing old cache asks twice and says exactly what will be deleted",
+    "description": "Settings cache: the first press of 清除 30 天前的快取 only arms it. The button changes to 確認清除 and a warning explains the second press deletes cache older than 30 days and does not touch videos, subtitles or uploaded posters. Cancelling disarms it without deleting anything.",
+    "category": "Settings",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/cache"
+      },
+      {
+        "type": "action",
+        "description": "Click the button named 清除 30 天前的快取"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the button now reads 確認清除 30 天前的快取"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a warning is visible containing 再按一次才會真的清除 and 不會影響影片、字幕與你上傳的海報"
+      },
+      {
+        "type": "action",
+        "description": "Click the 取消 button next to it"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the warning is no longer visible and the button reads 清除 30 天前的快取 again"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify no message starting with 已清除 is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC125",
+    "title": "Backup restore asks in a real dialog that defaults to cancel",
+    "description": "Settings backup: pressing restore on a backup opens a real modal dialog titled 確認還原 that states it replaces all current data and that a snapshot is taken first. The safe 取消 button has focus, and Escape closes it without restoring.",
+    "category": "Settings",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/backup"
+      },
+      {
+        "type": "action",
+        "description": "Click 建立備份 and wait up to 20 seconds until a backup row with status 完成 is listed"
+      },
+      {
+        "type": "action",
+        "description": "Click the restore button of that backup (its accessible name starts with 還原)"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a dialog titled 確認還原 is visible containing 這將會取代目前所有的資料"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dialog shows the note 系統會在還原前自動建立目前資料的快照"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 取消 button in the dialog has keyboard focus"
+      },
+      {
+        "type": "action",
+        "description": "Press Escape"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 確認還原 dialog is closed, the backup is still listed, and no message starting with 還原完成 is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC126",
+    "title": "Appearance theme choice between 夜行 and 日巡 applies at once and survives a reload",
+    "description": "Settings appearance offers two named themes as a radio pair, 夜行 (dark) and 日巡 (light). Picking one applies it immediately, the page description changes to 已依你的選擇顯示。 and the choice persists across a reload (stored in this browser only). The case ends by switching back to 夜行. It does not change any server data.",
+    "category": "Settings",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/appearance"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the heading 外觀 is visible with two radio options named 夜行 and 日巡, and the note 海報與劇照在深色底上對比更好，因此夜行是預設。"
+      },
+      {
+        "type": "action",
+        "description": "Click the 日巡 option"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 日巡 radio is checked, the 夜行 radio is not checked, the page description reads 已依你的選擇顯示。 and the html element has the attribute data-theme=\"light\""
+      },
+      {
+        "type": "action",
+        "description": "Reload the page and wait for it to finish loading"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 日巡 radio is still checked, the description still reads 已依你的選擇顯示。 and the html element still has data-theme=\"light\""
+      },
+      {
+        "type": "action",
+        "description": "Click the 夜行 option"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 夜行 radio is checked and the html element no longer has a data-theme attribute"
+      }
+    ]
+  },
+  {
+    "id": "TC127",
+    "title": "Custom homepage settings list each explore block with a readable summary and edge-aware move buttons",
+    "description": "Settings 自訂首頁 lists the seeded explore blocks 熱門電影, 熱門影集 and 近期新片 in order. Each row shows its name and a one-line summary in words (content type, sort, item count), plus move up, move down, edit and delete buttons. The first block cannot move up and the last cannot move down. Read-only; nothing is changed.",
+    "category": "Settings",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/homepage and wait about 2 seconds for the list to load"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the heading 自訂首頁 and a button named 新增區塊 are visible, and a count text ending in 個區塊 is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify rows named 熱門電影, 熱門影集 and 近期新片 are visible in that order"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 熱門電影 row summary contains 電影, 熱門度 and 20 部, and the 熱門影集 row summary contains 影集, 熱門度 and 20 部"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 近期新片 row summary contains 電影 and 發行日期 and does not contain primary_release_date"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the button named 上移 熱門電影 is disabled and the button named 下移 熱門電影 is enabled"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the note 已擁有的作品不會出現在首頁。 is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC128",
+    "title": "Adding an explore block lists it, and deleting it asks for confirmation first",
+    "description": "MUTATES shared data (creates and then deletes one explore block named TestSprite 暫存區塊); schedule it after read-only homepage cases. The add dialog keeps 儲存區塊 disabled until a name is typed. After saving, the new TV block appears at the bottom with its summary. Deleting it opens a 確認刪除 dialog that says the action cannot be undone; confirming removes the row, leaving the list as it was.",
+    "category": "Settings",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/homepage and wait about 2 seconds for the list to load, then click the 新增區塊 button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a dialog titled 新增探索區塊 is visible and its 儲存區塊 button is disabled while the 區塊名稱 field is empty"
+      },
+      {
+        "type": "action",
+        "description": "Type TestSprite 暫存區塊 into the 區塊名稱 field, choose 影集 in the 內容類型 select, then click 儲存區塊"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dialog closes and a row named TestSprite 暫存區塊 is visible as the last row, with a summary containing 影集 and 20 部"
+      },
+      {
+        "type": "action",
+        "description": "Click the button named 刪除 TestSprite 暫存區塊"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a dialog titled 確認刪除 is visible containing 刪除後此區塊將從首頁移除。此動作無法復原。 with a 取消 button and a 確認刪除 button"
+      },
+      {
+        "type": "action",
+        "description": "Click the 確認刪除 button in that dialog"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dialog closes, no row named TestSprite 暫存區塊 is visible, and the rows 熱門電影, 熱門影集 and 近期新片 are still listed"
+      }
+    ]
+  },
+  {
+    "id": "TC129",
+    "title": "Export/import settings explain the three export formats, export completes, and import is honestly marked unavailable",
+    "description": "Settings 匯出/匯入 shows an export card with three formats (JSON, YAML, NFO), each with a one-line explanation, and a 匯出 button. Exporting JSON finishes with a 匯出完成 message and a download link. Below it a note states import is not implemented yet and points to 備份與還原. Exporting only writes an export file; it does not change library data. Nothing is imported.",
+    "category": "Settings",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/export"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the heading 匯出/匯入 and the description 將媒體庫元資料匯出為 JSON、YAML 或 NFO 檔案。 are visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a card titled 匯出媒體資料 shows three radio options JSON, YAML and NFO with the texts 適合程式處理, 適合設定備份 and Kodi/Plex/Jellyfin 相容的 .nfo 檔案, and JSON is selected by default"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a note containing 匯入功能尚未實作 and 備份與還原 is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the 匯出 button and wait up to 15 seconds"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a status message starting with 匯出完成 is visible and a link named 下載匯出檔案 is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the text 匯出失敗，請稍後再試。 is not visible"
+      }
+    ]
+  },
+  {
+    "id": "TC130",
+    "title": "Performance monitoring is marked not yet available in the tab strip and its page says so instead of showing fake metrics",
+    "description": "The 效能監控 settings tab is visibly disabled with the badge 尚未開放 and does not navigate. Opening /settings/performance directly shows an honest placeholder (效能監控, 查看系統效能指標與趨勢, 此功能將在後續版本中提供) rather than empty charts, zeros or an endless spinner. Read-only.",
+    "category": "Settings",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/appearance"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the settings tab 效能監控 is visible with the badge 尚未開放 and is marked disabled (aria-disabled=\"true\"), not a normal link"
+      },
+      {
+        "type": "action",
+        "description": "Click the 效能監控 tab"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the URL is still /settings/appearance and the heading 外觀 is still visible"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /settings/performance"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the heading 效能監控, the text 查看系統效能指標與趨勢 and the badge text 此功能將在後續版本中提供 are visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify no chart, no numeric metric value and no loading spinner is visible on the page"
+      }
+    ]
+  },
+  {
+    "id": "TC131",
+    "title": "Subtitle localization shows which of the three styles is selected and a new choice survives a reload",
+    "description": "MUTATES a shared setting (subtitle localization level), then restores it to the default 台灣用語（預設）; schedule it with other settings-writing cases. Settings 字幕設定 shows three option cards 直譯, 台灣用語（預設） and OTT 風格; exactly one is selected. Choosing 直譯 saves without an error and is still selected after a reload.",
+    "category": "Settings",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/subtitle"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the heading 字幕設定, the group title AI 字幕的在地化程度 and the line 這是口味，不是對錯。 are visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify three options 直譯, 台灣用語（預設） and OTT 風格 are visible, the 台灣用語（預設） radio is checked and the other two are not"
+      },
+      {
+        "type": "action",
+        "description": "Click the 直譯 option and wait about 2 seconds"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 直譯 radio is checked, the other two are not, and no text starting with 儲存失敗 is visible"
+      },
+      {
+        "type": "action",
+        "description": "Reload the page and wait for it to finish loading"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 直譯 radio is still the only checked option"
+      },
+      {
+        "type": "action",
+        "description": "Click the 台灣用語（預設） option and wait about 2 seconds to restore the default"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 台灣用語（預設） radio is checked and no text starting with 儲存失敗 is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC132",
+    "title": "API keys page without an encryption key explains why nothing can be saved and keeps the Claude 測試 button inside its input",
+    "description": "The test env has no ENCRYPTION_KEY, so Settings 金鑰設定 must be read-only with a reason: a red notice says keys cannot be stored safely and to set ENCRYPTION_KEY and restart. Every key shows 尚未設定, the inputs and 儲存金鑰 are disabled, but nothing is hidden. Only the Claude row has a 測試 button, placed inside its input field; a line says only the Claude key supports a connection test. Do not click 測試. Read-only.",
+    "category": "Settings",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/keys and wait about 2 seconds for loading to finish"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the heading 金鑰設定 is visible and an alert shows 未設定加密金鑰，無法安全儲存 API 金鑰 together with 請設定 ENCRYPTION_KEY 後重啟容器"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify three key rows are visible labelled Claude（翻譯）, TMDB and 雲端 ASR（選配）, and each row shows the status 尚未設定"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify all three key input fields are disabled and are password fields"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 儲存金鑰 button is visible and disabled"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the Claude（翻譯） row has a button named 測試 rendered inside the bounds of its input field, and the TMDB and 雲端 ASR（選配） rows have no 測試 button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the line 僅 Claude 金鑰支援連線測試。 is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC133",
+    "title": "Glossary panel from 管理字幕 shows an honest empty state and a manually added term appears in the list",
+    "description": "MUTATES shared data (adds the glossary term Neo to 駭客任務, then deletes it); schedule it after read-only subtitle cases. On the detail page of the seeded movie 駭客任務, 管理字幕 opens the subtitle dialog with a 名詞對照表 row. The glossary starts empty (尚無詞彙). Adding Neo with the translation 尼歐 lists it as a manual term; deleting it asks in a 刪除詞彙 dialog and brings back the empty state.",
+    "category": "Subtitle Glossary",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /media/movie/seed-mv-003 and wait for the detail page of 駭客任務 to load, then click the 管理字幕 button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a dialog whose title contains 管理字幕 and 駭客任務 is visible and it has a row 名詞對照表 showing a count of 0條"
+      },
+      {
+        "type": "action",
+        "description": "Click the 名詞對照表 row"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a panel titled with 名詞對照表 and 駭客任務 is visible showing 尚無詞彙, 生成字幕時自動累積 and a 新增詞彙 button"
+      },
+      {
+        "type": "action",
+        "description": "Click 新增詞彙, type Neo into the field labelled 原文詞彙 and 尼歐 into the field labelled 中文譯名, then click the 新增 button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a glossary row showing Neo and 尼歐 is visible with the source label 手動, and the footer reads 共 1 條"
+      },
+      {
+        "type": "action",
+        "description": "Click the button named 刪除 Neo, then click the 刪除 button in the 刪除詞彙 confirmation dialog"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the Neo row is gone and the empty state 尚無詞彙 is visible again"
+      }
+    ]
+  },
+  {
+    "id": "TC134",
+    "title": "Generating subtitles with no speech recognition key disables the button, says what is missing and links to key settings",
+    "description": "The test env has no ASR or AI key. In the 管理字幕 dialog of the seeded movie 教父, the 生成字幕 button must end up disabled (never a spinner that never ends, never a crash) with the reason 生成字幕需要雲端語音辨識（ASR）金鑰。請至金鑰設定儲存後即可使用。 and a 前往設定 link that opens /settings/keys. Read-only; the case never starts a generation.",
+    "category": "Subtitle Generation",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /media/movie/seed-mv-001 and wait for the detail page of 教父 to load"
+      },
+      {
+        "type": "action",
+        "description": "Click the 管理字幕 button and wait up to 10 seconds"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a dialog whose title contains 管理字幕 and 教父 is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a button named 生成字幕 is visible and disabled"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the text 生成字幕需要雲端語音辨識（ASR）金鑰。請至金鑰設定儲存後即可使用。 is visible next to it together with a button named 前往設定"
+      },
+      {
+        "type": "action",
+        "description": "Click the 前往設定 button next to that text"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the URL is /settings/keys and the heading 金鑰設定 is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC135",
+    "title": "Subtitle generation workspace with nothing running shows an idle state with the missing-subtitle count",
+    "description": "The generation workspace lives at /activity?view=generation. With no batch running in the test env it must settle on an idle state: heading 生成工作區, breadcrumb 活動 / 生成字幕, the text 目前沒有進行中的生成, a count of titles missing Traditional Chinese subtitles and a 批次生成字幕 button, with no error and no endless skeleton. Read-only; do not click 批次生成字幕.",
+    "category": "Subtitle Generation",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /activity?view=generation and wait up to 5 seconds"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the heading 生成工作區 is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a breadcrumb navigation containing 活動 and 生成字幕 is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the text 目前沒有進行中的生成 is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a line starting with 缺繁中字幕 followed by a number and 部 is visible, and a button named 批次生成字幕 is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the text 無法載入生成狀態 is not visible and no loading skeleton is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC136",
+    "title": "Scan schedule set to 每天 is still 每天 after a reload, with no error (known bug reproduction)",
+    "description": "EXPECTED TO FAIL until bugfix-scan-schedule-field-mismatch (sprint-status.yaml) is fixed: the frontend sends frequency while the backend requires interval, so the PUT returns 400 and the select snaps back to 僅手動. A failure here is that known bug, not a flaky test. Stricter than TC068: after choosing 每天 no error notice may appear, and after a reload the visible selected option must be 每天. MUTATES a shared setting (scan schedule) and restores 僅手動 at the end; schedule it last among scanner cases.",
+    "category": "Scanner",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/scanner and wait about 2 seconds for loading to finish"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the select labelled 掃描排程 is visible with the options 每小時, 每天 and 僅手動"
+      },
+      {
+        "type": "action",
+        "description": "Choose 每天 in the 掃描排程 select and wait about 2 seconds"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 掃描排程 select shows 每天 as the selected option and no alert or error notice (for example text containing 排程更新失敗 or an error message banner) is visible"
+      },
+      {
+        "type": "action",
+        "description": "Reload the page and wait about 2 seconds for loading to finish"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 掃描排程 select shows 每天 as the selected option, not 僅手動, and no error notice is visible"
+      },
+      {
+        "type": "action",
+        "description": "Cleanup: choose 僅手動 in the 掃描排程 select"
+      }
+    ]
+  },
+  {
+    "id": "TC137",
+    "title": "A detail link to a missing item says it cannot be found and leads back to the library",
+    "description": "Opening a detail URL whose local id does not exist shows the designed not-found state 找不到這部影片 with the explanation that the item may have been removed from the library, and a 返回媒體庫 button. A malformed media type in the URL shows the same state but only says the link may be invalid, because it was never a library item. Read-only.",
+    "category": "Media Detail Panel",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /media/movie/seed-mv-999 and wait up to 5 seconds"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the heading 找不到這部影片 and the text 這個項目可能已從媒體庫移除，或連結已失效。 are visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a button with the visible text 返回媒體庫 is visible and no endless loading skeleton is shown"
+      },
+      {
+        "type": "action",
+        "description": "Click the 返回媒體庫 button with visible text"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the URL is /library and library items are visible"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /media/podcast/abc"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the heading 找不到這部影片 and the text 這個連結可能已失效。 are visible, and the text 已從媒體庫移除 is not visible"
+      }
+    ]
+  },
+  {
+    "id": "TC138",
+    "title": "A TMDb-only detail page with TMDb down says it failed to load and offers a retry, not that the title does not exist",
+    "description": "/media/movie/238 is a TMDb id, not a library item, so its detail comes from TMDb. In the test env TMDb rejects the key, so the page must show the load-error state 無法載入這部影片 with 詳情資料暫時無法取得，請稍後再試。, the error code and a 重試 button. It must not claim the title does not exist (找不到這部影片), and it must not mention the library files. Read-only.",
+    "category": "Media Detail Panel",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /media/movie/238 and wait up to 10 seconds for loading to finish"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the heading 無法載入這部影片 and the text 詳情資料暫時無法取得，請稍後再試。 are visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an error code label containing TMDB_UNAUTHORIZED is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a 重試 button and a 返回媒體庫 button are visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the texts 找不到這部影片 and 你的檔案沒有受影響 are not visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the 重試 button and wait up to 10 seconds"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the page still shows 無法載入這部影片 (not a blank page and not an endless loading skeleton)"
       }
     ]
   }

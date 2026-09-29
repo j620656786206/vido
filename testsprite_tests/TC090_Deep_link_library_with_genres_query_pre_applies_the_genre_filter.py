@@ -40,7 +40,7 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Navigate to the Library page using the deep link URL /library?genres=科幻 so the genre filter and results can be verified.
+        # -> Navigate to the Library page using the URL path '/library?genres=科幻' so the genre filter '科幻' should be applied on load.
         await page.goto("http://localhost:8090/library?genres=\u79d1\u5e7b")
         try:
             await page.wait_for_load_state("domcontentloaded", timeout=5000)
@@ -49,19 +49,19 @@ async def run_test():
         
         # --> Assertions to verify final state
         
-        # --> The genre filter '科幻' is shown as active (a removable filter chip is present).
-        await page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div[2]/div[1]/div[2]/div/span/button").nth(0).scroll_into_view_if_needed()
+        # --> The genre filter '科幻' is applied and visible in the active filters area.
+        await page.get_by_role("button", name="移除 科幻 篩選").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: passed
-        # Assert: The '移除 科幻 篩選' remove-filter button is visible, indicating the 科幻 filter is active.
-        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div[2]/div[1]/div[2]/div/span/button").nth(0)).to_be_visible(timeout=15000), "The '\u79fb\u9664 \u79d1\u5e7b \u7be9\u9078' remove-filter button is visible, indicating the \u79d1\u5e7b filter is active."
+        # Assert: The '科幻' filter chip (remove button) is visible, indicating the genre is applied.
+        await expect(page.get_by_role("button", name="移除 科幻 篩選").nth(0)).to_be_visible(timeout=15000), "The '\u79d1\u5e7b' filter chip (remove button) is visible, indicating the genre is applied."
         
-        # --> The visible results include science-fiction titles such as '全面啟動' and '駭客任務'.
+        # --> Visible results include science-fiction titles such as '全面啟動' and '駭客任務'.
         # Assert-outcome: passed
-        # Assert: A visible result item contains the title '全面啟動'.
-        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div[2]/div[2]/a[5]").nth(0)).to_contain_text("\u5168\u9762\u555f\u52d5", timeout=15000), "A visible result item contains the title '\u5168\u9762\u555f\u52d5'."
+        # Assert: The page shows the '全面啟動' result tile.
+        await expect(page.get_by_test_id("poster-v2-seed-mv-006").nth(0)).to_contain_text("\u5168\u9762\u555f\u52d5", timeout=15000), "The page shows the '\u5168\u9762\u555f\u52d5' result tile."
         # Assert-outcome: passed
-        # Assert: A visible result item contains the title '駭客任務'.
-        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div[2]/div[2]/a[6]").nth(0)).to_contain_text("\u99ed\u5ba2\u4efb\u52d9", timeout=15000), "A visible result item contains the title '\u99ed\u5ba2\u4efb\u52d9'."
+        # Assert: The page shows the '駭客任務' result tile.
+        await expect(page.get_by_test_id("poster-v2-seed-mv-003").nth(0)).to_contain_text("\u99ed\u5ba2\u4efb\u52d9", timeout=15000), "The page shows the '\u99ed\u5ba2\u4efb\u52d9' result tile."
         await asyncio.sleep(5)
 
     finally:

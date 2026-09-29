@@ -40,20 +40,25 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Click the '媒體庫' link in the left sidebar to open the library page.
-        # 媒體庫 link
-        elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
+        # -> Navigate to the '媒體庫' (Library) page by opening /library so the item list can be inspected.
+        await page.goto("http://localhost:8090/library")
+        try:
+            await page.wait_for_load_state("domcontentloaded", timeout=5000)
+        except Exception:
+            pass
+        
+        # -> Open the detail panel for the item labeled '[FanSub] 未知電影 (2021)' (the card showing the '失敗' badge).
+        # F 失敗 [FanSub] 未知電影 (2021) link
+        elem = page.get_by_test_id("poster-v2-seed-mv-102")
         await elem.click(timeout=10000)
         
-        # -> Open the detail panel for the item 'Unknown.Show.S01' (the card displaying the '失敗' badge).
-        # U 失敗 Unknown.Show.S01 link
-        elem = page.get_by_test_id('poster-v2-seed-sr-101')
-        await elem.click(timeout=10000)
+        # --> Assertions to verify final state
         
-        # --> Test passed — verified by AI agent
-        frame = context.pages[-1]
-        current_url = await frame.evaluate("() => window.location.href")
-        assert current_url is not None, "Test completed successfully"
+        # --> A recovery action is available: the '手動選片' (manual select) button is visible.
+        await page.get_by_test_id("no-metadata-manual-match").nth(0).scroll_into_view_if_needed()
+        # Assert-outcome: passed
+        # Assert: The manual-select recovery button '手動選片' is visible.
+        await expect(page.get_by_test_id("no-metadata-manual-match").nth(0)).to_be_visible(timeout=15000), "The manual-select recovery button '\u624b\u52d5\u9078\u7247' is visible."
         await asyncio.sleep(5)
 
     finally:

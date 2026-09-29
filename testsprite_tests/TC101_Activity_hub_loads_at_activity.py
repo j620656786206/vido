@@ -33,7 +33,14 @@ async def run_test():
         page = await context.new_page()
 
         # Interact with the page elements to simulate user flow
-        # -> Open the Activity page at /activity and check whether the events feed or a defined empty/degraded state is rendered.
+        # -> navigate
+        await page.goto("http://localhost:8090")
+        try:
+            await page.wait_for_load_state("domcontentloaded", timeout=5000)
+        except Exception:
+            pass
+        
+        # -> Open the '活動' (Activity) page by navigating to /activity and verify the Activity page renders its events feed or a defined empty/error state.
         await page.goto("http://localhost:8090/activity")
         try:
             await page.wait_for_load_state("domcontentloaded", timeout=5000)
@@ -42,14 +49,15 @@ async def run_test():
         
         # --> Assertions to verify final state
         
-        # --> The Activity page rendered its main content region and shows a degraded-state error '無法載入，請稍後再試' with a visible '重試' button.
+        # --> The Activity page displays the '下載' section and an error banner with a '重試' button.
+        await page.get_by_role("heading", name="下載").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: passed
-        # Assert: The browser is on the /activity page.
-        await expect(page).to_have_url(re.compile("/activity"), timeout=15000), "The browser is on the /activity page."
-        await page.locator("xpath=/html/body/div/div/div/div[2]/main/div/section/div[2]/button").nth(0).scroll_into_view_if_needed()
+        # Assert: The '下載' section header is visible.
+        await expect(page.get_by_role("heading", name="下載").nth(0)).to_be_visible(timeout=15000), "The '\u4e0b\u8f09' section header is visible."
+        await page.get_by_test_id("activity-section-retry").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: passed
-        # Assert: The degraded-state Retry button labeled '重試' is visible.
-        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/section/div[2]/button").nth(0)).to_be_visible(timeout=15000), "The degraded-state Retry button labeled '\u91cd\u8a66' is visible."
+        # Assert: A '重試' (Retry) button is visible next to the error.
+        await expect(page.get_by_test_id("activity-section-retry").nth(0)).to_be_visible(timeout=15000), "A '\u91cd\u8a66' (Retry) button is visible next to the error."
         await asyncio.sleep(5)
 
     finally:

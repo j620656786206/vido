@@ -33,26 +33,41 @@ async def run_test():
         page = await context.new_page()
 
         # Interact with the page elements to simulate user flow
-        # -> Navigate to the Library page by opening the URL 'http://localhost:8090/library' and wait for the UI to load.
-        await page.goto("http://localhost:8090/library")
+        # -> navigate
+        await page.goto("http://localhost:8090")
         try:
             await page.wait_for_load_state("domcontentloaded", timeout=5000)
         except Exception:
             pass
         
-        # -> Right-click (open context menu) on the first media poster card labelled 'Unknown.Show.S01' to reveal the 'Search Subtitles' option.
-        # U 整理中 Unknown.Show.S01 link
-        elem = page.get_by_test_id('poster-v2-seed-sr-101')
+        # -> Click the '媒體庫' link in the left navigation to open the library page.
+        # 媒體庫 link
+        elem = page.get_by_test_id("app-sidebar").get_by_test_id("nav-library")
         await elem.click(timeout=10000)
         
-        # -> Click the '管理字幕' (Manage subtitles) button to open the subtitle search / subtitle management dialog.
-        # 管理字幕 button
-        elem = page.get_by_test_id('action-manage-subtitle')
+        # -> Click the '選取' button to enter selection mode.
+        # 選取 button
+        elem = page.get_by_test_id("enter-selection-btn")
         await elem.click(timeout=10000)
         
-        # -> Click the '搜尋線上字幕（成功率低）' (Search online subtitles) button in the Manage Subtitles dialog to open the subtitle-search UI.
-        # 搜尋線上字幕（成功率低） button
-        elem = page.get_by_test_id('toggle-fetch')
+        # -> Click the library cards titled 'Some.Obscure.Film.2023.1080p' and 'Home.Video.Collection.Vol1' to select both items and verify the toolbar shows '已選取 2 項'.
+        # S 整理中 Some.Obscure.Film.2023.1080p link
+        elem = page.get_by_test_id("poster-v2-seed-mv-101")
+        await elem.click(timeout=10000)
+        
+        # -> Click the library cards titled 'Some.Obscure.Film.2023.1080p' and 'Home.Video.Collection.Vol1' to select both items and verify the toolbar shows '已選取 2 項'.
+        # H 整理中 Home.Video.Collection.Vol1 link
+        elem = page.get_by_test_id("poster-v2-seed-mv-103")
+        await elem.click(timeout=10000)
+        
+        # -> Click the '重新解析' button in the selection toolbar to start re-parse for the two selected items.
+        # 重新解析 button
+        elem = page.get_by_test_id("batch-reparse-btn")
+        await elem.click(timeout=10000)
+        
+        # -> Click the '重新解析' button in the confirmation dialog to start the re-parse run.
+        # 重新解析 button
+        elem = page.get_by_test_id("confirm-action-btn")
         await elem.click(timeout=10000)
         
         # --> Test passed — verified by AI agent

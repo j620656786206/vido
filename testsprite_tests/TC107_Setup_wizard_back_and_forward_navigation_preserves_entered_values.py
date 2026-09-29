@@ -40,78 +40,38 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Click the '下一步' (Next) button on the welcome step to advance the wizard.
+        # -> Click the '下一步' button on the welcome step to proceed to the qBittorrent connection step.
         # 下一步 button
-        elem = page.get_by_test_id('next-button')
+        elem = page.get_by_test_id("next-button")
         await elem.click(timeout=10000)
         
-        # -> Click the '跳過' (Skip) control on the qBittorrent connection step to proceed to the media library step.
+        # -> Click the '跳過' button on the qBittorrent connection step to proceed to the next wizard step.
         # 跳過 button
-        elem = page.get_by_test_id('skip-button')
+        elem = page.get_by_test_id("skip-button")
         await elem.click(timeout=10000)
         
-        # -> Type '/tmp' into the media library folder path input field and then click the '上一步' (Back) button to go to the previous step.
+        # -> Enter '/tmp' into the media folder '資料夾路徑' input and click the '上一步' (Back) button.
         # /media/movies text field
-        elem = page.get_by_test_id('library-path-0')
+        elem = page.get_by_test_id("library-path-0")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("/tmp")
         
-        # -> Type '/tmp' into the media library folder path input field and then click the '上一步' (Back) button to go to the previous step.
+        # -> Enter '/tmp' into the media folder '資料夾路徑' input and click the '上一步' (Back) button.
         # 上一步 button
-        elem = page.get_by_test_id('back-button')
+        elem = page.get_by_test_id("back-button")
         await elem.click(timeout=10000)
         
-        # -> Click the '跳過' (Skip) button on the qBittorrent connection step to navigate to the media library step.
+        # -> Click the '跳過' (Skip) button on the qBittorrent step to navigate to the Media Library step so the media folder input can be verified.
         # 跳過 button
-        elem = page.get_by_test_id('skip-button')
-        await elem.click(timeout=10000)
-        
-        # -> Click the '上一步' (Back) button to return to the qBittorrent step.
-        # 上一步 button
-        elem = page.get_by_test_id('back-button')
-        await elem.click(timeout=10000)
-        
-        # -> Click the '跳過' (Skip) button on the qBittorrent step to return to the media library step.
-        # 跳過 button
-        elem = page.get_by_test_id('skip-button')
-        await elem.click(timeout=10000)
-        
-        # -> Click the '上一步' (Back) button to return to the qBittorrent connection step.
-        # 上一步 button
-        elem = page.get_by_test_id('back-button')
-        await elem.click(timeout=10000)
-        
-        # -> Click the '跳過' (Skip) button to return to the media library step.
-        # 跳過 button
-        elem = page.get_by_test_id('skip-button')
-        await elem.click(timeout=10000)
-        
-        # -> Click the '上一步' (Back) button to go to the qBittorrent step.
-        # 上一步 button
-        elem = page.get_by_test_id('back-button')
-        await elem.click(timeout=10000)
-        
-        # -> Click the '跳過' (Skip) button to return to the media library step.
-        # 跳過 button
-        elem = page.get_by_test_id('skip-button')
-        await elem.click(timeout=10000)
-        
-        # -> Click the '上一步' (Back) button to go to the qBittorrent connection step.
-        # 上一步 button
-        elem = page.get_by_test_id('back-button')
-        await elem.click(timeout=10000)
-        
-        # -> Click the '跳過' (Skip) button on the qBittorrent connection step to return to the media library step.
-        # 跳過 button
-        elem = page.get_by_test_id('skip-button')
+        elem = page.get_by_test_id("skip-button")
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> The media library folder path input still contains '/tmp' after navigating back and forth in the wizard.
+        # --> Media library folder path input retains the value '/tmp' after navigating back and forward.
         # Assert-outcome: passed
-        # Assert: Media library folder path input contains '/tmp'.
-        await expect(page.get_by_test_id("library-path-0")).to_have_value("/tmp", timeout=15000), "Media library folder path input contains '/tmp'."
+        # Assert: Media library folder path input value equals '/tmp'.
+        await expect(page.get_by_test_id("library-path-0").nth(0)).to_have_value("/tmp", timeout=15000), "Media library folder path input value equals '/tmp'."
         await asyncio.sleep(5)
 
     finally:

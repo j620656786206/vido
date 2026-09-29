@@ -40,26 +40,33 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Type '駭客' into the header search field labeled '搜尋媒體庫...' and wait for instant results to appear.
+        # -> Type '駭客' into the header search box labeled '搜尋媒體庫...' and wait for instant results to appear.
         # 搜尋 text field
-        elem = page.get_by_test_id('instant-search-input')
+        elem = page.get_by_test_id("instant-search-input")
+        await elem.click(timeout=10000)
+        
+        # -> Type '駭客' into the header search box labeled '搜尋媒體庫...' and wait for instant results to appear.
+        # 搜尋 text field
+        elem = page.get_by_test_id("instant-search-input")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("\u99ed\u5ba2")
         
-        # -> Click the '駭客任務' result in the search suggestions dropdown.
+        # -> Click the '駭客任務' result in the instant results dropdown.
         # 駭客任務 The Matrix (1999) 已擁有 button
-        elem = page.get_by_test_id('search-suggestion-item')
+        elem = page.get_by_test_id("search-suggestion-item")
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> Searching for '駭客' and selecting the suggestion opened the media detail page, which shows the title 駭客任務 and core metadata.
+        # --> The instant-search suggestion '駭客任務' was present and clicked, opening the media detail page.
         # Assert-outcome: passed
-        # Assert: Landed on the media detail page URL for the selected result.
-        await expect(page).to_have_url(re.compile("/media/movie/seed\\-mv\\-003"), timeout=15000), "Landed on the media detail page URL for the selected result."
+        # Assert: Browser navigated to the media detail URL after selecting the suggestion.
+        await expect(page).to_have_url(re.compile("media/movie/seed\\-mv\\-003"), timeout=15000), "Browser navigated to the media detail URL after selecting the suggestion."
+        
+        # --> The media detail page shows the media title '駭客任務' and core metadata including the year 1999.
         # Assert-outcome: passed
-        # Assert: The media detail page displays the Chinese title '駭客任務'.
-        await expect(page.locator("xpath=/html/body/div").nth(0)).to_contain_text("\u99ed\u5ba2\u4efb\u52d9", timeout=15000), "The media detail page displays the Chinese title '\u99ed\u5ba2\u4efb\u52d9'."
+        # Assert: The page contains the main title '駭客任務'.
+        await expect(page.locator("#root").nth(0)).to_contain_text("\u99ed\u5ba2\u4efb\u52d9", timeout=15000), "The page contains the main title '\u99ed\u5ba2\u4efb\u52d9'."
         await asyncio.sleep(5)
 
     finally:

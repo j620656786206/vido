@@ -40,20 +40,20 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Click the 'Unknown.Show.S01' poster card in the 最近新增 row to open its media detail page.
-        # U 整理中 Unknown.Show.S01 link
-        elem = page.get_by_test_id('poster-v2-seed-sr-101')
+        # -> Click the 'Unknown.Show.S01' poster in the 最近新增 row to open its media detail page.
+        # U 失敗 Unknown.Show.S01 link
+        elem = page.get_by_test_id("poster-v2-seed-sr-101")
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> The media detail page for the selected poster opened and shows the title and the file-path metadata label.
+        # --> The media detail page opened and shows the title 'Unknown.Show.S01' and the file path '/Users/alexyu/projects/personal/vido/.vido-test-env/media/tv/Unknown.Show.S01'.
         # Assert-outcome: passed
-        # Assert: The page displays the media title 'Unknown.Show.S01'.
-        await expect(page.locator("xpath=/html/body/div").nth(0)).to_contain_text("Unknown.Show.S01", timeout=15000), "The page displays the media title 'Unknown.Show.S01'."
+        # Assert: The page displays the title 'Unknown.Show.S01'.
+        await expect(page.locator("#root").nth(0)).to_contain_text("Unknown.Show.S01", timeout=15000), "The page displays the title 'Unknown.Show.S01'."
         # Assert-outcome: passed
-        # Assert: The page displays the file information label '路徑' indicating a file path is shown.
-        await expect(page.locator("xpath=/html/body/div").nth(0)).to_contain_text("\u8def\u5f91", timeout=15000), "The page displays the file information label '\u8def\u5f91' indicating a file path is shown."
+        # Assert: The file path for the media is visible under 檔案資訊.
+        await expect(page.locator("#root").nth(0)).to_contain_text("/Users/alexyu/projects/personal/vido/.vido-test-env/media/tv/Unknown.Show.S01", timeout=15000), "The file path for the media is visible under \u6a94\u6848\u8cc7\u8a0a."
         await asyncio.sleep(5)
 
     finally:

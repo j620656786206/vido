@@ -40,32 +40,34 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Click the '媒體庫' (Media Library) link in the left sidebar to open the library page.
-        # 媒體庫 link
-        elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
-        await elem.click(timeout=10000)
-        
-        # -> Scroll to the bottom of the Media Library page and locate the pagination controls, specifically the 'Previous' ('上一頁') and 'Next' ('下一頁') buttons.
-        await page.mouse.wheel(0, 300)
-        
-        # -> Locate the pagination controls and the '上一頁' (Previous) button on the Media Library page.
-        await page.mouse.wheel(0, 300)
-        
-        # -> Scroll to the top of the library page and look for the '上一頁' (Previous) pagination control and the '下一頁' (Next) control.
-        await page.mouse.wheel(0, 300)
-        
-        # -> Open the Library page ('媒體庫') by navigating to /library, then look for the pagination control and the '上一頁' (Previous) button.
+        # -> Navigate to the '媒體庫' (Library) page by opening /library
         await page.goto("http://localhost:8090/library")
         try:
             await page.wait_for_load_state("domcontentloaded", timeout=5000)
         except Exception:
             pass
         
+        # -> Scroll down the Library page and locate the pagination controls including the '上一頁' and '下一頁' buttons.
+        await page.mouse.wheel(0, 300)
+        
+        # -> Scroll down to reveal the pagination controls and find the '上一頁' and '下一頁' buttons.
+        await page.mouse.wheel(0, 300)
+        
         # --> Assertions to verify final state
-        current_url = await page.evaluate("() => window.location.href")
-        # Assert-outcome: passed
-        # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
-        assert current_url, 'Page should have loaded with a URL'
+        
+        # --> Pagination control is not visible on the Library page.
+        # Assert-outcome: failed
+        # Assert: Expected the page to contain a '下一頁' (Next) pagination button.
+        await expect(page.locator("#root").nth(0)).to_contain_text("\u4e0b\u4e00\u9801", timeout=15000), "Expected the page to contain a '\u4e0b\u4e00\u9801' (Next) pagination button."
+        
+        # --> The '上一頁' (Previous) pagination button is not visible on the Library page.
+        # Assert-outcome: failed
+        # Assert: Expected the page to contain an '上一頁' (Previous) pagination button.
+        await expect(page.locator("#root").nth(0)).to_contain_text("\u4e0a\u4e00\u9801", timeout=15000), "Expected the page to contain an '\u4e0a\u4e00\u9801' (Previous) pagination button."
+        
+        # --> Test blocked by environment/access constraints during agent run
+        # Reason: TEST BLOCKED The pagination controls required by the test were not present on the Library page, so the pagination-boundary behavior could not be verified. Observations: - No pagination buttons labelled '上一頁' or '下一頁' were found in the page's interactive elements or via text search. - Page metadata reports 0.0 pages below and the visible UI/screenshot shows the media grid ending without any pagi...
+        raise AssertionError("Test blocked during agent run: " + "TEST BLOCKED The pagination controls required by the test were not present on the Library page, so the pagination-boundary behavior could not be verified. Observations: - No pagination buttons labelled '\u4e0a\u4e00\u9801' or '\u4e0b\u4e00\u9801' were found in the page's interactive elements or via text search. - Page metadata reports 0.0 pages below and the visible UI/screenshot shows the media grid ending without any pagi..." + " — the exported script cannot reproduce a PASS in this environment.")
         await asyncio.sleep(5)
 
     finally:

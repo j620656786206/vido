@@ -40,39 +40,35 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Open the 'qBittorrent' settings page (Settings → qBittorrent) by navigating to /settings/qbittorrent.
+        # -> Navigate to the qBittorrent settings page (open /settings/qbittorrent) so the 'Learned Patterns' section can be found.
         await page.goto("http://localhost:8090/settings/qbittorrent")
         try:
             await page.wait_for_load_state("domcontentloaded", timeout=5000)
         except Exception:
             pass
         
-        # -> Scroll the settings page to reveal the 'Learned Patterns' section and any learned-pattern rows.
+        # -> Scroll down the qBittorrent settings page to reveal the 'Learned Patterns' section.
         await page.mouse.wheel(0, 300)
         
-        # -> Scroll to the bottom of the qBittorrent settings page and attempt to find the 'Learned Patterns' section (look for the Chinese label '已學習' or equivalent).
+        # -> Scroll down the settings page to reveal the "Learned Patterns" section so it can be inspected.
         await page.mouse.wheel(0, 300)
         
         # --> Assertions to verify final state
         
-        # --> The page does not show the heading 'Learned Patterns'.
+        # --> The "Learned Patterns" section is not present on the settings page.
         # Assert-outcome: failed
-        # Assert: Expected text 'Learned Patterns' to be visible.
-        await expect(page.locator("xpath=/html/body/div").nth(0)).to_contain_text("Learned Patterns", timeout=15000), "Expected text 'Learned Patterns' to be visible."
+        # Assert: Expected the page to contain the text 'Learned Patterns'.
+        await expect(page.locator("#root").nth(0)).to_contain_text("Learned Patterns", timeout=15000), "Expected the page to contain the text 'Learned Patterns'."
         
-        # --> No learned-pattern row is visible on the qBittorrent settings page.
+        # --> No learned pattern rows are visible on the settings page.
         # Assert-outcome: failed
-        # Assert: Expected the learned-pattern row or its Chinese label '已學習' to be visible.
-        await expect(page.locator("xpath=/html/body/div").nth(0)).to_contain_text("\u5df2\u5b78\u7fd2", timeout=15000), "Expected the learned-pattern row or its Chinese label '\u5df2\u5b78\u7fd2' to be visible."
+        # Assert: Expected the page to contain a learned pattern row (text '學習').
+        await expect(page.locator("#root").nth(0)).to_contain_text("\u5b78\u7fd2", timeout=15000), "Expected the page to contain a learned pattern row (text '\u5b78\u7fd2')."
         
-        # --> No usage-related label ('Uses' / 'Usage' / 'Matched') is visible within the patterns area.
+        # --> No usage-related label (e.g. 'Uses' / 'Usage' / 'Matched' or localized '使用次數') was found within the patterns area.
         # Assert-outcome: failed
-        # Assert: Expected text 'Uses' (or equivalent usage label) to be visible within the patterns area.
-        await expect(page.locator("xpath=/html/body/div").nth(0)).to_contain_text("Uses", timeout=15000), "Expected text 'Uses' (or equivalent usage label) to be visible within the patterns area."
-        
-        # --> Test blocked by environment/access constraints during agent run
-        # Reason: TEST BLOCKED The 'Learned Patterns' section could not be reached or found on the qBittorrent settings page. Observations: - The page displays '連線設定' with qBittorrent connection fields (主機位址, 使用者名稱, 密碼, Base Path) and the buttons '測試連線' and '儲存設定'. - Searches for 'Learned Patterns' and Chinese variants ('已學習', '學習', '樣式') returned no matches and scrolling to the bottom revealed no additional con...
-        raise AssertionError("Test blocked during agent run: " + "TEST BLOCKED The 'Learned Patterns' section could not be reached or found on the qBittorrent settings page. Observations: - The page displays '\u9023\u7dda\u8a2d\u5b9a' with qBittorrent connection fields (\u4e3b\u6a5f\u4f4d\u5740, \u4f7f\u7528\u8005\u540d\u7a31, \u5bc6\u78bc, Base Path) and the buttons '\u6e2c\u8a66\u9023\u7dda' and '\u5132\u5b58\u8a2d\u5b9a'. - Searches for 'Learned Patterns' and Chinese variants ('\u5df2\u5b78\u7fd2', '\u5b78\u7fd2', '\u6a23\u5f0f') returned no matches and scrolling to the bottom revealed no additional con..." + " — the exported script cannot reproduce a PASS in this environment.")
+        # Assert: Expected the page to contain a usage label such as '使用次數'.
+        await expect(page.locator("#root").nth(0)).to_contain_text("\u4f7f\u7528\u6b21\u6578", timeout=15000), "Expected the page to contain a usage label such as '\u4f7f\u7528\u6b21\u6578'."
         await asyncio.sleep(5)
 
     finally:

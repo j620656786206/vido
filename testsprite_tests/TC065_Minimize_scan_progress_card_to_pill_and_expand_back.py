@@ -40,54 +40,55 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Click the '設定' (Settings) link in the left sidebar to open the Settings page.
-        # 設定 link
-        elem = page.get_by_test_id('nav-settings')
-        await elem.click(timeout=10000)
+        # -> Open the Settings → Scanner page (navigate to the scanner settings) so the scan progress controls can be tested.
+        await page.goto("http://localhost:8090/settings/scanner")
+        try:
+            await page.wait_for_load_state("domcontentloaded", timeout=5000)
+        except Exception:
+            pass
         
-        # -> Click the '媒體庫掃描' (Media Library Scan) item in the Settings menu to open Scanner settings.
-        # 媒體庫掃描 link
-        elem = page.get_by_test_id('settings-nav-scanner')
-        await elem.click(timeout=10000)
-        
-        # -> Click the '掃描媒體庫' button to start a scan and show the scan progress card.
+        # -> Click the '掃描媒體庫' button to trigger the scan progress UI.
         # 掃描媒體庫 button
-        elem = page.get_by_test_id('scan-trigger-button')
+        elem = page.get_by_test_id("scan-trigger-button")
         await elem.click(timeout=10000)
         
-        # -> Click the '掃描媒體庫' button to start a scan and show the scan progress card.
+        # -> Click the '掃描媒體庫' button to trigger and reveal the scan progress UI.
         # 掃描媒體庫 button
-        elem = page.get_by_test_id('scan-trigger-button')
+        elem = page.get_by_test_id("scan-trigger-button")
         await elem.click(timeout=10000)
         
-        # -> Click the '掃描媒體庫' (Scan library) button to start a scan so the scan progress card can appear.
+        # -> Search the page for '掃描完成', '掃描中', '掃描進度', and '最小' to locate the scan progress card and any minimize control
         # 掃描媒體庫 button
-        elem = page.get_by_test_id('scan-trigger-button')
+        elem = page.get_by_test_id("scan-trigger-button")
         await elem.click(timeout=10000)
         
-        # -> Click the '掃描媒體庫' button to start a scan and cause the scan progress card to appear.
+        # -> Click the '掃描媒體庫' button to trigger the scan progress UI.
         # 掃描媒體庫 button
-        elem = page.get_by_test_id('scan-trigger-button')
+        elem = page.get_by_test_id("scan-trigger-button")
         await elem.click(timeout=10000)
         
-        # -> Click the '掃描媒體庫' button to start a scan and verify the scan progress card appears.
+        # -> Click the '關閉' button on the visible scan progress card to see if it minimizes to a compact pill indicator.
+        # 關閉 button
+        elem = page.get_by_test_id("scan-dismiss-btn")
+        await elem.click(timeout=10000)
+        
+        # -> Click the '掃描媒體庫' button to open the scan progress card.
         # 掃描媒體庫 button
-        elem = page.get_by_test_id('scan-trigger-button')
+        elem = page.get_by_test_id("scan-trigger-button")
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
-        current_url = await page.evaluate("() => window.location.href")
-        # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
-        assert current_url, 'Page should have loaded with a URL'
-        current_url = await page.evaluate("() => window.location.href")
-        # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
-        assert current_url, 'Page should have loaded with a URL'
-        current_url = await page.evaluate("() => window.location.href")
-        # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
-        assert current_url, 'Page should have loaded with a URL'
-        current_url = await page.evaluate("() => window.location.href")
-        # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
-        assert current_url, 'Page should have loaded with a URL'
+        
+        # --> The scan progress card is visible on the Scanner settings page.
+        await page.locator("xpath=/html/body/div[1]/div/div/div[3]/div/div[1]/button").nth(0).scroll_into_view_if_needed()
+        # Assert-outcome: failed
+        # Assert: Expected element with data-testid "scan-progress-card" to be visible.
+        await expect(page.locator("xpath=/html/body/div[1]/div/div/div[3]/div/div[1]/button").nth(0)).to_be_visible(timeout=15000), "Expected element with data-testid \"scan-progress-card\" to be visible."
+        
+        # --> Clicking the scan card's close button did not minimize it to a compact pill; the card remained visible and no pill control was found.
+        # Assert-outcome: failed
+        # Assert: Expected element with data-testid "scan-progress-card" to be not visible after minimizing.
+        await expect(page.locator("xpath=/html/body/div[1]/div/div/div[3]/div/div[1]/button").nth(0)).not_to_be_visible(timeout=15000), "Expected element with data-testid \"scan-progress-card\" to be not visible after minimizing."
         await asyncio.sleep(5)
 
     finally:

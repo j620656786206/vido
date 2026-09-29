@@ -40,36 +40,33 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Click the '媒體庫' (Media Library) link in the left sidebar to open the library page.
-        # 媒體庫 link
-        elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
+        # -> Click the '設定' (Settings) link in the left navigation to open the Settings page.
+        # 設定 link
+        elem = page.get_by_test_id("nav-settings")
         await elem.click(timeout=10000)
         
-        # -> Open the context menu for the first media poster card by clicking the card labeled 'Unknown.Show.S01' and verify the context menu contains 'Search Subtitles', 'Re-parse', and 'Delete'.
-        # U 失敗 Unknown.Show.S01 link
-        elem = page.get_by_test_id('poster-v2-seed-sr-101')
+        # -> Click the '備份與還原' (Backup and Restore) link in the Settings navigation to open the Backup page.
+        # 備份與還原 link
+        elem = page.get_by_test_id("settings-tab-backup")
         await elem.click(timeout=10000)
         
-        # -> Click the '返回媒體庫' (Back to Library) button to return to the library grid view.
-        # 返回媒體庫 button
-        elem = page.get_by_test_id('detail-back')
+        # -> Click the '建立備份' button and wait for a backup entry showing the status '完成' to appear on the page.
+        # 建立備份 button
+        elem = page.get_by_test_id("create-backup-btn")
         await elem.click(timeout=10000)
         
-        # -> Click the '選取' (Select) button at the top of the library page to enable per-card actions and reveal per-card overflow/menu controls.
-        # 選取 button
-        elem = page.get_by_test_id('enter-selection-btn')
+        # -> Click the '還原' (Restore) button for the completed backup to open the 確認還原 confirmation dialog.
+        # 還原 vido-backup-20260929-202450-v39.tar.gz button
+        elem = page.get_by_test_id("restore-btn-12dc8eb1-248b-4e1b-a795-e2d9539f377a")
         await elem.click(timeout=10000)
-        
-        # -> Scroll the library page to reveal more poster controls, then inspect the 'button' and 'a' elements to locate the per-card selection control or overflow menu for the 'Unknown.Show.S01' poster.
-        await page.mouse.wheel(0, 300)
         
         # --> Assertions to verify final state
         
-        # --> A media poster card for 'Unknown.Show.S01' is visible in the library grid.
-        await page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div[2]/div[2]/a[1]").nth(0).scroll_into_view_if_needed()
+        # --> The backup 'vido-backup-20260929-202450-v39.tar.gz' remains listed on the Backup page.
+        await page.get_by_test_id("restore-btn-12dc8eb1-248b-4e1b-a795-e2d9539f377a").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: passed
-        # Assert: Verifies the poster link for 'Unknown.Show.S01' is visible in the library grid.
-        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div[2]/div[2]/a[1]").nth(0)).to_be_visible(timeout=15000), "Verifies the poster link for 'Unknown.Show.S01' is visible in the library grid."
+        # Assert: The backup's restore button is visible, proving the backup entry is still listed.
+        await expect(page.get_by_test_id("restore-btn-12dc8eb1-248b-4e1b-a795-e2d9539f377a").nth(0)).to_be_visible(timeout=15000), "The backup's restore button is visible, proving the backup entry is still listed."
         await asyncio.sleep(5)
 
     finally:

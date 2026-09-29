@@ -42,38 +42,27 @@ async def run_test():
         
         # -> Click the '設定' (Settings) link in the left sidebar to open the Settings page.
         # 設定 link
-        elem = page.get_by_test_id('nav-settings')
+        elem = page.get_by_test_id("nav-settings")
         await elem.click(timeout=10000)
         
-        # -> Type 'secret-password' into the '密碼' (Password) field and verify the entered text is not visible anywhere on the page.
+        # -> Type 'secret-password' into the 密碼 (Password) field and verify the field is visible and the literal text 'secret-password' is not visible on the page.
         # •••••••• password field
-        elem = page.locator('[id="qb-password"]')
-        await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("secret-password")
-        
-        # -> Open the '連線設定' (qBittorrent Connection) settings page so the qBittorrent password field can be tested.
-        await page.goto("http://localhost:8090/settings/qbittorrent")
-        try:
-            await page.wait_for_load_state("domcontentloaded", timeout=5000)
-        except Exception:
-            pass
-        
-        # -> Type 'secret-password' into the 密碼 (Password) field and then search the page for the literal text 'secret-password' to confirm it is not visible.
-        # •••••••• password field
-        elem = page.locator('[id="qb-password"]')
+        elem = page.get_by_role("textbox", name="密碼")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("secret-password")
         
         # --> Assertions to verify final state
         
-        # --> The Password field is visible and configured as a masked password input so the entered text is not shown.
-        await page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div/div/form/div[1]/div[3]/input").nth(0).scroll_into_view_if_needed()
+        # --> The qBittorrent 密碼 (Password) input is visible on the connection settings page.
+        await page.get_by_role("textbox", name="密碼").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: passed
-        # Assert: The password input element is visible on the page.
-        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div/div/form/div[1]/div[3]/input").nth(0)).to_be_visible(timeout=15000), "The password input element is visible on the page."
+        # Assert: Password input is visible on the page.
+        await expect(page.get_by_role("textbox", name="密碼").nth(0)).to_be_visible(timeout=15000), "Password input is visible on the page."
+        
+        # --> The password input is rendered as a masked password field (type="password").
         # Assert-outcome: passed
-        # Assert: The password input has type="password", so its content is masked.
-        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div/div/form/div[1]/div[3]/input").nth(0)).to_have_attribute("type", "password", timeout=15000), "The password input has type=\"password\", so its content is masked."
+        # Assert: Password input has type attribute equal to "password".
+        await expect(page.get_by_role("textbox", name="密碼").nth(0)).to_have_attribute("type", "password", timeout=15000), "Password input has type attribute equal to \"password\"."
         await asyncio.sleep(5)
 
     finally:
