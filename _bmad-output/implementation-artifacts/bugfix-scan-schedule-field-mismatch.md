@@ -1,6 +1,6 @@
 # Story: bugfix-scan-schedule-field-mismatch — 媒體庫的「掃描排程」終於存得起來
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-09-29。Alexyu：「做掃描排程」。TestSprite 九月衝刺（PR #597）抓到、本機 Playwright 實測確認。
      行號為 main `5a42738c`；每條「查到的事」都是 SM 本次親自讀過的位置。 -->
