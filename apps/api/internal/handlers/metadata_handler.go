@@ -144,6 +144,7 @@ type ManualSearchRequest struct {
 // @Success 200 {object} APIResponse{data=services.ManualSearchResponse}
 // @Failure 400 {object} APIResponse{error=APIError}
 // @Failure 500 {object} APIResponse{error=APIError}
+// @Failure 503 {object} APIResponse{error=APIError} "No requested source could search (MANUAL_SEARCH_SOURCES_UNAVAILABLE)"
 // @Router /api/v1/metadata/manual-search [post]
 func (h *MetadataHandler) ManualSearch(c *gin.Context) {
 	var req ManualSearchRequest
@@ -180,6 +181,12 @@ func (h *MetadataHandler) ManualSearch(c *gin.Context) {
 	result, err := h.service.ManualSearch(c.Request.Context(), serviceReq)
 	if err != nil {
 		// Check for specific errors
+		if errors.Is(err, services.ErrManualSearchSourcesUnavailable) {
+			ErrorResponse(c, http.StatusServiceUnavailable, "MANUAL_SEARCH_SOURCES_UNAVAILABLE",
+				"No metadata source could be searched",
+				"Check the network and the metadata source settings (e.g. the TMDb API key), then try again")
+			return
+		}
 		if err == services.ErrManualSearchInvalidSource {
 			ErrorResponse(c, http.StatusBadRequest, "MANUAL_SEARCH_INVALID_SOURCE",
 				err.Error(),

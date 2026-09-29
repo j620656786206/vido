@@ -812,6 +812,38 @@ func TestMetadataHandler_ManualSearch_InvalidSource(t *testing.T) {
 	assert.Equal(t, "MANUAL_SEARCH_INVALID_SOURCE", errData["code"])
 }
 
+// disc-2026-09-manual-search-hides-source-errors: when no source could search,
+// the dialog must hear an outage (503), not an empty result or a bad request.
+func TestMetadataHandler_ManualSearch_NoSourceCouldSearch_Returns503(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	service := &mockMetadataService{
+		manualSearchFunc: func(ctx context.Context, req *services.ManualSearchRequest) (*services.ManualSearchResponse, error) {
+			return nil, fmt.Errorf("%w: tmdb: connection refused", services.ErrManualSearchSourcesUnavailable)
+		},
+	}
+
+	handler := NewMetadataHandler(service)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	body := `{"query":"Inception","media_type":"movie","source":"tmdb"}`
+	c.Request = httptest.NewRequest("POST", "/api/v1/metadata/manual-search", strings.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	handler.ManualSearch(c)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	assert.False(t, response["success"].(bool))
+	errData := response["error"].(map[string]interface{})
+	assert.Equal(t, "MANUAL_SEARCH_SOURCES_UNAVAILABLE", errData["code"])
+}
+
 // [P1] Tests manual search route registration
 func TestMetadataHandler_RegisterRoutes_IncludesManualSearch(t *testing.T) {
 	gin.SetMode(gin.TestMode)
