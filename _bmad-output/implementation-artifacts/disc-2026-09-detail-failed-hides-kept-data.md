@@ -1,6 +1,6 @@
 # Story: disc-2026-09-detail-failed-hides-kept-data — 有資料的片，詳情頁不再說「沒有找到資料」
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-09-29。⚖️ Alexyu 裁定選 A：已有資料、只是最近一次重新比對失敗（或正在整理）的片，
      詳情頁當一般的片顯示，不出現「沒有找到資料」／「資料還在整理」區塊；不加新 UI、不需新設計稿。
