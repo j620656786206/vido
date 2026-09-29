@@ -5597,6 +5597,8 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       onSortChange: noop,
       // disc-2026-09-batch-generation-no-asr-key-warning AC #2
       notConfigured: true,
+      // Pipeline mode (the NAS): only the Claude key gates generation.
+      notConfiguredKey: 'claude',
       onGoToKeySettings: noop,
     },
     width: 960,

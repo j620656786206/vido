@@ -48,6 +48,35 @@ type ModelValidator interface {
 type GenerationBatchHandler struct {
 	processor GenerationBatchProcessorInterface
 	models    ModelValidator
+	// gateKey names the one key this deployment's availability gate reads
+	// (GenerationGateKeyClaude in pipeline mode, GenerationGateKeyASR in
+	// legacy mode); empty = not wired, and status then names no key.
+	gateKey string
+}
+
+// The key a generation mode's availability gate reads — reported as the
+// status endpoint's `missing_key` while that gate is shut
+// (disc-2026-09-not-configured-copy-self-hosted-asr AC #1 [@contract-v1]).
+const (
+	GenerationGateKeyClaude = "claude"
+	GenerationGateKeyASR    = "asr"
+)
+
+// GenerationGateKeyFor maps the boot-time mode to the key its runner gates
+// on: pipeline → Claude (subtitleCapabilityGate); legacy Route C → ASR. The
+// legacy gate also needs FFmpeg, which ships in the Docker image — on a bare
+// dev machine without it the notice would still name the ASR key.
+func GenerationGateKeyFor(pipelineMode bool) string {
+	if pipelineMode {
+		return GenerationGateKeyClaude
+	}
+	return GenerationGateKeyASR
+}
+
+// SetGateKey records which key the wired runner's IsAvailable depends on. The
+// mode is fixed at boot, so main sets it once next to the runner choice.
+func (h *GenerationBatchHandler) SetGateKey(key string) {
+	h.gateKey = key
 }
 
 // NewGenerationBatchHandler creates a new GenerationBatchHandler. models may
@@ -213,11 +242,12 @@ func (h *GenerationBatchHandler) StartGenerationBatch(c *gin.Context) {
 // @Description Recovery probe: whether a generation batch is running and its progress (null when idle, queue with per-item status when running), plus last — the most recent terminal snapshot (null while running, after dismiss, or when none is kept; in memory only, lost on restart) — and available: whether a batch could start at all (same gate as the 503 TRANSCRIPTION_DISABLED on start).
 // @Tags subtitles
 // @Produce json
-// @Success 200 {object} APIResponse "{running, progress|null, last|null, available}"
+// @Success 200 {object} APIResponse "{running, progress|null, last|null, available, missing_key?: claude|asr}"
 // @Router /api/v1/subtitles/generation-batch/status [get]
 func (h *GenerationBatchHandler) GetGenerationBatchStatus(c *gin.Context) {
 	progress, last := h.processor.Snapshot()
-	SuccessResponse(c, map[string]interface{}{
+	available := h.processor.IsAvailable()
+	data := map[string]interface{}{
 		"running":  progress != nil,
 		"progress": progress,
 		"last":     last,
@@ -225,8 +255,14 @@ func (h *GenerationBatchHandler) GetGenerationBatchStatus(c *gin.Context) {
 		// saved) — the same gate as StartGenerationBatch's 503, so the dialog
 		// can say so on open instead of after the user has picked everything
 		// (disc-2026-09-batch-generation-no-asr-key-warning AC #1 [@contract-v1]).
-		"available": h.processor.IsAvailable(),
-	})
+		"available": available,
+	}
+	// Which key that gate is waiting for, so the notice names only that one
+	// (disc-2026-09-not-configured-copy-self-hosted-asr AC #1 [@contract-v1]).
+	if !available && h.gateKey != "" {
+		data["missing_key"] = h.gateKey
+	}
+	SuccessResponse(c, data)
 }
 
 // CancelGenerationBatch handles POST /api/v1/subtitles/generation-batch/cancel.

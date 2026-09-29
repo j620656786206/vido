@@ -31,6 +31,7 @@ import {
   subtitleService,
   type GenerationCandidate,
   type GenerationCandidateResult,
+  type GenerationMissingKey,
   type ModelEstimate,
 } from '../../../services/subtitleService';
 import { useGenerationCandidatesProgress } from '../../../hooks/useGenerationCandidatesProgress';
@@ -94,6 +95,7 @@ export interface GenerationConsentViewProps {
    * cannot generate (keys missing) — the list stays browsable, start is off.
    */
   notConfigured?: boolean;
+  notConfiguredKey?: GenerationMissingKey;
   onGoToKeySettings?: () => void;
   /**
    * sub-6-8b: `modelId` is the model whose price the user just read in the
@@ -112,6 +114,7 @@ export function GenerationConsentView({
   starting = false,
   startError = null,
   notConfigured = false,
+  notConfiguredKey,
   onGoToKeySettings,
   onStartBatch,
   onClose,
@@ -594,6 +597,7 @@ export function GenerationConsentView({
               starting={starting}
               startError={startError}
               notConfigured={notConfigured}
+              notConfiguredKey={notConfiguredKey}
               onGoToKeySettings={onGoToKeySettings}
               visibleIds={visibleIds}
               onToggle={handleToggle}

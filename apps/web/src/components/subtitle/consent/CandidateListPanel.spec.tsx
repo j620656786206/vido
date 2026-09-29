@@ -1562,6 +1562,20 @@ describe('CandidateListPanel — phone gutters and footer (dsr-6f-3, F15-M-v2 fd
 // disc-2026-09-batch-generation-no-asr-key-warning AC #2: the keys are missing —
 // say so first, before the user picks forty titles, and say why 開始 is dead.
 describe('CandidateListPanel — generation not configured', () => {
+  // disc-2026-09-not-configured-copy-self-hosted-asr AC #2: name only the key
+  // the server's gate is waiting for; no answer → the both-keys sentence.
+  it.each([
+    ['claude', '批次產生字幕需要翻譯（Claude）金鑰。到金鑰設定儲存後就能開始；清單可以先看。'],
+    ['asr', '批次產生字幕需要語音辨識（ASR）金鑰。到金鑰設定儲存後就能開始；清單可以先看。'],
+    [
+      undefined,
+      '批次產生字幕需要翻譯（Claude）與語音辨識（ASR）金鑰。到金鑰設定儲存後就能開始；清單可以先看。',
+    ],
+  ] as const)('missing key %s → the matching sentence', (missingKey, sentence) => {
+    renderPanel({ candidates: FOUR, notConfigured: true, notConfiguredKey: missingKey });
+    expect(screen.getByTestId('consent-not-configured-body')).toHaveTextContent(sentence);
+  });
+
   it('shows the notice at the top, disables 開始產生 and says why', () => {
     const onGoToKeySettings = vi.fn();
     renderPanel({

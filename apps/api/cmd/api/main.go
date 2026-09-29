@@ -1036,6 +1036,9 @@ func main() {
 	// earlier batch left half-done before spending on new ones.
 	generationBatchProcessor.SetResumeProgressFinder(transcriptionService)
 	generationBatchHandler := handlers.NewGenerationBatchHandler(generationBatchProcessor, modelCatalog)
+	// The runner chosen above gates on ONE key per mode (same condition as the
+	// runner choice); status names it while the gate is shut.
+	generationBatchHandler.SetGateKey(handlers.GenerationGateKeyFor(subtitlePipeline != nil))
 
 	// Cost preview (story sub-4-1): what would generating subtitles cost, per
 	// item and in total, WITHOUT spending anything. Registered in every mode —
