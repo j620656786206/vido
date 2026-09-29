@@ -180,7 +180,7 @@ async function stubScannerPage(page: Page): Promise<void> {
     route.fulfill(jsonOk(idleStatus))
   );
   await page.route(`${ROUTE_API}/scanner/schedule`, (route: Route) =>
-    route.fulfill(jsonOk({ frequency: 'manual' }))
+    route.fulfill(jsonOk({ interval: 'manual' }))
   );
   await page.route(`${ROUTE_API}/libraries`, (route: Route) =>
     route.fulfill(jsonOk({ libraries: [] }))

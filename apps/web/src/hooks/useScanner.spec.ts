@@ -25,12 +25,12 @@ vi.mock('../services/scannerService', () => ({
       lastScanFiles: 1247,
       lastScanDuration: '3m12s',
     }),
-    getSchedule: vi.fn().mockResolvedValue({ frequency: 'hourly' }),
+    getSchedule: vi.fn().mockResolvedValue({ interval: 'hourly' }),
     triggerScan: vi
       .fn()
       .mockResolvedValue({ filesFound: 10, filesNew: 5, errors: 0, duration: '10s' }),
     cancelScan: vi.fn().mockResolvedValue(undefined),
-    updateSchedule: vi.fn().mockResolvedValue({ frequency: 'daily' }),
+    updateSchedule: vi.fn().mockResolvedValue({ interval: 'daily' }),
   },
 }));
 
@@ -70,7 +70,7 @@ describe('useScanner hooks', () => {
       });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(result.current.data?.frequency).toBe('hourly');
+      expect(result.current.data?.interval).toBe('hourly');
     });
   });
 
@@ -105,7 +105,7 @@ describe('useScanner hooks', () => {
   });
 
   describe('useUpdateScanSchedule', () => {
-    it('calls scannerService.updateSchedule with frequency', async () => {
+    it('calls scannerService.updateSchedule with the interval', async () => {
       const { scannerService } = await import('../services/scannerService');
       const { result } = renderHook(() => useUpdateScanSchedule(), {
         wrapper: createWrapper(),

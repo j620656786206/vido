@@ -18,9 +18,9 @@ import {
 } from '../../hooks/useScanner';
 import { requestScanTracking } from '../../hooks/useScanProgress';
 import type { ScannerApiError } from '../../services/scannerService';
-import type { ScheduleFrequency } from '../../services/scannerService';
+import type { ScheduleInterval } from '../../services/scannerService';
 
-const SCHEDULE_OPTIONS: { value: ScheduleFrequency; label: string }[] = [
+const SCHEDULE_OPTIONS: { value: ScheduleInterval; label: string }[] = [
   { value: 'hourly', label: '每小時' },
   { value: 'daily', label: '每天' },
   { value: 'manual', label: '僅手動' },
@@ -82,12 +82,12 @@ export function ScannerSettings() {
     }
   };
 
-  const handleScheduleChange = async (frequency: ScheduleFrequency) => {
+  const handleScheduleChange = async (interval: ScheduleInterval) => {
     try {
-      await updateSchedule.mutateAsync(frequency);
-    } catch (err) {
-      const apiErr = err as ScannerApiError;
-      showNotification('error', apiErr.message || '排程更新失敗');
+      await updateSchedule.mutateAsync(interval);
+    } catch {
+      // The API's message is English for developers; the user gets Chinese.
+      showNotification('error', '排程沒有存成功，請再試一次。');
     }
   };
 
@@ -142,8 +142,8 @@ export function ScannerSettings() {
           </label>
           <select
             id="scan-schedule"
-            value={schedule?.frequency ?? 'manual'}
-            onChange={(e) => handleScheduleChange(e.target.value as ScheduleFrequency)}
+            value={schedule?.interval ?? 'manual'}
+            onChange={(e) => handleScheduleChange(e.target.value as ScheduleInterval)}
             disabled={updateSchedule.isPending}
             className="block w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:border-[var(--focus-ring)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] sm:w-50"
             data-testid="schedule-select"

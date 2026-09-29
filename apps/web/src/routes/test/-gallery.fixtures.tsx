@@ -4581,7 +4581,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       },
       {
         queryKey: scannerKeys.schedule(),
-        data: { frequency: 'hourly' } satisfies ScheduleConfig,
+        data: { interval: 'hourly' } satisfies ScheduleConfig,
       },
       // Nested MediaLibraryManager reads mediaLibraryKeys.all.
       {

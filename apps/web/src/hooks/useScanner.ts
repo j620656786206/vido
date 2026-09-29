@@ -8,7 +8,7 @@ import type {
   ScanStatus,
   ScanResult,
   ScheduleConfig,
-  ScheduleFrequency,
+  ScheduleInterval,
 } from '../services/scannerService';
 
 export const scannerKeys = {
@@ -60,8 +60,8 @@ export function useScanSchedule() {
 export function useUpdateScanSchedule() {
   const queryClient = useQueryClient();
 
-  return useMutation<ScheduleConfig, Error, ScheduleFrequency>({
-    mutationFn: (frequency) => scannerService.updateSchedule(frequency),
+  return useMutation<ScheduleConfig, Error, ScheduleInterval>({
+    mutationFn: (interval) => scannerService.updateSchedule(interval),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: scannerKeys.schedule() });
     },
