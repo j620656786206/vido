@@ -54,6 +54,10 @@ type UnifiedSearchResult struct {
 	Movies      []tmdb.Movie     `json:"movies"`
 	TVShows     []tmdb.TVShow    `json:"tv_shows"`
 	People      []tmdb.Person    `json:"people"`
+	// TmdbUnavailable is true when every TMDb call failed (down, no API key),
+	// so an empty TMDb section means "could not ask", not "nothing found"
+	// (disc-2026-09-instant-search-tmdb-outage-silent AC #1 [@contract-v1]).
+	TmdbUnavailable bool `json:"tmdb_unavailable"`
 }
 
 // SearchServiceInterface defines the contract for unified multi-category search.
@@ -152,6 +156,13 @@ func (s *SearchService) Search(ctx context.Context, query string, page int) (*Un
 	// Per-category degradation: log a warning for any failed call but keep going
 	// with whatever succeeded. Only bail out if literally everything failed.
 	errs := []error{zhMovieErr, enMovieErr, zhTVErr, enTVErr, peopleErr}
+	tmdbDown := true
+	for _, err := range errs {
+		if err == nil {
+			tmdbDown = false
+			break
+		}
+	}
 	if s.local != nil {
 		errs = append(errs, localErr)
 	}
@@ -186,6 +197,8 @@ func (s *SearchService) Search(ctx context.Context, query string, page int) (*Un
 		Movies:      mergeMovies(zhMovies, enMovies, query),
 		TVShows:     mergeTVShows(zhTV, enTV, query),
 		People:      collectPeople(people),
+
+		TmdbUnavailable: tmdbDown,
 	}
 
 	slog.Debug("Unified search completed",

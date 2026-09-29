@@ -1,6 +1,6 @@
-// Design ref: ux-design.pen Screen I3-D-v2 (m0Zew)
+// Design ref: ux-design.pen Screen I3-D-v2 (m0Zew); TMDb down: I9-D-v2 (wnolW), I10-D-v2 (PcNux)
 // Source: ux-design.pen (Pencil app)
-import { User } from 'lucide-react';
+import { AlertTriangle, User } from 'lucide-react';
 import type { Movie, Person, TVShow, UnifiedSearchResult } from '../../types/tmdb';
 import { getImageUrl } from '../../lib/image';
 import { cn } from '../../lib/utils';
@@ -94,6 +94,9 @@ export function SearchSuggestions({
   const people = result?.people ?? [];
   const hasResults =
     locals.length > 0 || movies.length > 0 || tvShows.length > 0 || people.length > 0;
+  // Every TMDb call failed: say so, instead of letting empty TMDb sections read
+  // as "nothing found" (disc-2026-09-instant-search-tmdb-outage-silent).
+  const tmdbDown = !isLoading && !isError && result?.tmdbUnavailable === true;
 
   return (
     <div
@@ -105,6 +108,25 @@ export function SearchSuggestions({
       )}
       data-testid="search-suggestions"
     >
+      {/* The live region is always mounted and only its text changes: many
+          screen readers (VoiceOver) skip a status that appears already filled. */}
+      <div
+        role="status"
+        className={
+          tmdbDown
+            ? 'flex items-center gap-2 border-b border-[var(--border-subtle)] bg-[var(--error-tint)] px-4 py-2 text-sm font-medium leading-relaxed text-[var(--error-text)]'
+            : 'sr-only'
+        }
+        data-testid={tmdbDown ? 'search-suggestions-tmdb-down' : undefined}
+      >
+        {tmdbDown && (
+          <>
+            <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+            TMDb 暫時無法連線，只顯示媒體庫結果
+          </>
+        )}
+      </div>
+
       {isLoading && (
         <div
           className="px-4 py-6 text-center text-sm text-[var(--text-muted)]"
@@ -126,10 +148,14 @@ export function SearchSuggestions({
 
       {!isLoading && !isError && !hasResults && (
         <div
-          className="px-4 py-6 text-center text-sm text-[var(--text-muted)]"
+          // I10-D-v2 (PcNux) pads the TMDb-down empty row $Space/lg all round.
+          className={cn(
+            'px-4 text-center text-sm text-[var(--text-muted)]',
+            tmdbDown ? 'py-4 leading-relaxed' : 'py-6'
+          )}
           data-testid="search-suggestions-empty"
         >
-          找不到「{query}」的結果
+          {tmdbDown ? `媒體庫裡沒有「${query}」` : `找不到「${query}」的結果`}
         </div>
       )}
 

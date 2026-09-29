@@ -1,13 +1,14 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useSearchMovies, useSearchTVShows, tmdbKeys } from './useSearchMedia';
+import { useSearchMovies, useSearchTVShows, useInstantSearch, tmdbKeys } from './useSearchMedia';
 import * as tmdbModule from '../services/tmdb';
 
 vi.mock('../services/tmdb', () => ({
   tmdbService: {
     searchMovies: vi.fn(),
     searchTVShows: vi.fn(),
+    unifiedSearch: vi.fn(),
   },
 }));
 
@@ -167,5 +168,42 @@ describe('tmdbKeys', () => {
     expect(tmdbKeys.searches()).toEqual(['tmdb', 'search']);
     expect(tmdbKeys.searchMovies('test', 1)).toEqual(['tmdb', 'search', 'movies', 'test', 1]);
     expect(tmdbKeys.searchTV('test', 2)).toEqual(['tmdb', 'search', 'tv', 'test', 2]);
+  });
+});
+
+// disc-2026-09-instant-search-tmdb-outage-silent (CR MED-1): a "TMDb is down"
+// answer must not be served from cache for 5 minutes after TMDb comes back.
+describe('useInstantSearch — TMDb-down answers are never fresh', () => {
+  const base = {
+    query: '星際效應',
+    page: 1,
+    localMovies: [],
+    localTv: [],
+    movies: [],
+    tvShows: [],
+    people: [],
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it.each([
+    ['a TMDb-down answer is asked again on the next mount', true, 2],
+    ['a normal answer is served from cache', false, 1],
+  ])('%s', async (_label, tmdbUnavailable, calls) => {
+    vi.mocked(tmdbModule.tmdbService.unifiedSearch).mockResolvedValue({ ...base, tmdbUnavailable });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+
+    const first = renderHook(() => useInstantSearch('星際效應'), { wrapper });
+    await waitFor(() => expect(first.result.current.isSuccess).toBe(true));
+    first.unmount();
+
+    const second = renderHook(() => useInstantSearch('星際效應'), { wrapper });
+    await waitFor(() => expect(second.result.current.isFetching).toBe(false));
+    expect(tmdbModule.tmdbService.unifiedSearch).toHaveBeenCalledTimes(calls);
   });
 });

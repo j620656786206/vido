@@ -2,7 +2,9 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/vido/api/internal/models"
@@ -310,5 +312,57 @@ func TestSearch_NilLocalSearcher_LocalSectionsEmptyNotNil(t *testing.T) {
 	}
 	if got.LocalMovies == nil || got.LocalTV == nil {
 		t.Fatal("local sections must be [] not null when the local leg is disabled")
+	}
+}
+
+// disc-2026-09-instant-search-tmdb-outage-silent AC #1 [@contract-v1]: the
+// dropdown must be able to say "TMDb is down" instead of "no results for X".
+// Only when EVERY TMDb call failed — a partial failure still returned real
+// TMDb results.
+func TestSearch_TmdbUnavailableFlag(t *testing.T) {
+	boom := errors.New("TMDB_UNAUTHORIZED")
+	allDown := func() *stubSearchClient {
+		return &stubSearchClient{
+			movies: func(string) (*tmdb.SearchResultMovies, error) { return nil, boom },
+			tv:     func(string) (*tmdb.SearchResultTVShows, error) { return nil, boom },
+			people: func() (*tmdb.SearchResultPeople, error) { return nil, boom },
+		}
+	}
+	partial := emptyStub()
+	partial.movies = func(string) (*tmdb.SearchResultMovies, error) { return nil, boom }
+
+	cases := []struct {
+		name   string
+		client *stubSearchClient
+		local  *stubLocalSearcher
+		want   bool
+	}{
+		{"TMDb all down, library has hits", allDown(), &stubLocalSearcher{res: localFixture()}, true},
+		{"TMDb all down, library has none", allDown(), &stubLocalSearcher{res: &LibrarySearchResults{}}, true},
+		{"TMDb partly down", partial, &stubLocalSearcher{res: localFixture()}, false},
+		{"TMDb up", emptyStub(), &stubLocalSearcher{res: localFixture()}, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := NewSearchService(tc.client, tc.local).Search(context.Background(), "駭客", 1)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got.TmdbUnavailable != tc.want {
+				t.Fatalf("TmdbUnavailable = %v, want %v", got.TmdbUnavailable, tc.want)
+			}
+		})
+	}
+}
+
+// The wire name is the [@contract-v1] (CR nit): the web layer reads
+// `tmdb_unavailable` and camelCases it.
+func TestUnifiedSearchResult_TmdbUnavailableWireName(t *testing.T) {
+	b, err := json.Marshal(&UnifiedSearchResult{TmdbUnavailable: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(b), `"tmdb_unavailable":true`) {
+		t.Fatalf("expected tmdb_unavailable in %s", b)
 	}
 }

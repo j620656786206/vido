@@ -69,6 +69,9 @@ export interface UnifiedSearchResult {
   movies: Movie[];
   tvShows: TVShow[];
   people: Person[];
+  /** Every TMDb call failed (down / no API key): empty TMDb sections mean
+   *  "could not ask", not "nothing found" (disc-2026-09-instant-search-tmdb-outage-silent). */
+  tmdbUnavailable?: boolean;
 }
 
 export interface ApiResponse<T> {

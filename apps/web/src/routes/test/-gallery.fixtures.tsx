@@ -63,6 +63,7 @@ import { EmptyReadyForScan } from '../../components/library/EmptyReadyForScan';
 import { EmptySearchResults } from '../../components/library/EmptySearchResults';
 import { GenreSelector } from '../../components/metadata-editor/GenreSelector';
 import { SearchBar } from '../../components/search/SearchBar';
+import { SearchSuggestions } from '../../components/search/SearchSuggestions';
 import { MediaTypeTabs } from '../../components/search/MediaTypeTabs';
 import {
   DiscoverSectionErrorV2,
@@ -326,6 +327,53 @@ function SettingsLayoutStrip() {
   );
 }
 const asyncNoop = () => Promise.resolve();
+
+// disc-2026-09-instant-search-tmdb-outage-silent: the dropdown floats (absolute,
+// top-full) under the search input. A 0-height relative anchor inside a fixed
+// box gives it the same place to hang without an input, and the box keeps the
+// state div from collapsing to nothing.
+function TmdbDownSuggestions({ withLocal }: { withLocal: boolean }) {
+  const query = withLocal ? '你的' : '星際效應';
+  return (
+    <div style={{ height: withLocal ? 300 : 150 }}>
+      <div className="relative">
+        <SearchSuggestions
+          result={{
+            query,
+            page: 1,
+            localMovies: withLocal
+              ? [
+                  {
+                    id: 'fx-local-1',
+                    mediaType: 'movie',
+                    title: '你的名字',
+                    releaseDate: '2016-08-26',
+                  },
+                  {
+                    id: 'fx-local-2',
+                    mediaType: 'movie',
+                    title: '你的婚禮',
+                    releaseDate: '2021-05-20',
+                  },
+                ]
+              : [],
+            localTv: [],
+            movies: [],
+            tvShows: [],
+            people: [],
+            tmdbUnavailable: true,
+          }}
+          isLoading={false}
+          query={query}
+          activeIndex={-1}
+          onSelect={noop}
+          onSubmitAll={noop}
+          onActiveIndexChange={noop}
+        />
+      </div>
+    </div>
+  );
+}
 
 // dsr-6d-c-1 workspace fixture queue — ONE source so the three workspace fixtures
 // cannot drift apart, and so the counts always agree with the rendered rows (the
@@ -1333,6 +1381,24 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     component: SearchBar,
     props: { onSearch: noop, initialQuery: '銀翼殺手' },
     penNode: '6MxLT', // Component/SearchInput
+    width: 480,
+  },
+  {
+    id: 'search-suggestions-tmdb-down',
+    label: 'search/SearchSuggestions (I9-D-v2 · TMDb 斷線，有媒體庫結果)',
+    component: TmdbDownSuggestions,
+    props: { withLocal: true },
+    penNode: 'wnolW',
+    statesOnly: ['default'],
+    width: 480,
+  },
+  {
+    id: 'search-suggestions-tmdb-down-empty',
+    label: 'search/SearchSuggestions (I10-D-v2 · TMDb 斷線，媒體庫無結果)',
+    component: TmdbDownSuggestions,
+    props: { withLocal: false },
+    penNode: 'PcNux',
+    statesOnly: ['default'],
     width: 480,
   },
   {

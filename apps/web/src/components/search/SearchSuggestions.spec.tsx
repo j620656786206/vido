@@ -213,3 +213,77 @@ describe('SearchSuggestions — owned 媒體庫 section', () => {
     ]);
   });
 });
+
+// disc-2026-09-instant-search-tmdb-outage-silent AC #2: when every TMDb call
+// failed the dropdown says so, instead of "找不到「X」的結果".
+describe('SearchSuggestions — TMDb unavailable', () => {
+  const empty: UnifiedSearchResult = {
+    query: '星際效應',
+    page: 1,
+    localMovies: [],
+    localTv: [],
+    movies: [],
+    tvShows: [],
+    people: [],
+  };
+  const withLocal: UnifiedSearchResult = {
+    ...empty,
+    query: '駭客',
+    localMovies: [{ id: 'seed-mv-003', mediaType: 'movie', title: '駭客任務' }],
+  };
+
+  it('library hits: the notice sits first, then the 媒體庫 section and 查看所有結果', () => {
+    renderSuggestions({ result: { ...withLocal, tmdbUnavailable: true }, query: '駭客' });
+    const notice = screen.getByTestId('search-suggestions-tmdb-down');
+    expect(notice).toHaveTextContent('TMDb 暫時無法連線，只顯示媒體庫結果');
+    expect(notice).toHaveAttribute('role', 'status');
+    expect(screen.getByTestId('search-suggestions').firstElementChild).toBe(notice);
+    expect(screen.getByText('駭客任務')).toBeInTheDocument();
+    expect(screen.getByTestId('search-suggestions-submit-all')).toBeInTheDocument();
+  });
+
+  it('no library hits: the notice plus 「媒體庫裡沒有」, never 「找不到…的結果」', () => {
+    renderSuggestions({ result: { ...empty, tmdbUnavailable: true }, query: '星際效應' });
+    expect(screen.getByTestId('search-suggestions-tmdb-down')).toBeInTheDocument();
+    expect(screen.getByTestId('search-suggestions-empty')).toHaveTextContent(
+      '媒體庫裡沒有「星際效應」'
+    );
+    expect(screen.queryByText(/找不到/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('search-suggestions-submit-all')).not.toBeInTheDocument();
+  });
+
+  it('TMDb up (flag false): no notice, the old empty copy', () => {
+    renderSuggestions({ result: { ...empty, tmdbUnavailable: false }, query: '星際效應' });
+    expect(screen.queryByTestId('search-suggestions-tmdb-down')).not.toBeInTheDocument();
+    expect(screen.getByTestId('search-suggestions-empty')).toHaveTextContent(
+      '找不到「星際效應」的結果'
+    );
+  });
+
+  it('the status region is mounted before TMDb goes down, so the notice is announced', () => {
+    const props = {
+      isLoading: false,
+      query: '星際效應',
+      activeIndex: -1,
+      onSelect: vi.fn(),
+      onSubmitAll: vi.fn(),
+      onActiveIndexChange: vi.fn(),
+    };
+    const { rerender } = render(<SearchSuggestions {...props} result={empty} />);
+    const region = screen.getByRole('status');
+    expect(region).toBeEmptyDOMElement();
+    rerender(<SearchSuggestions {...props} result={{ ...empty, tmdbUnavailable: true }} />);
+    expect(screen.getByRole('status')).toBe(region);
+    expect(region).toHaveTextContent('TMDb 暫時無法連線，只顯示媒體庫結果');
+  });
+
+  it('the phone overlay (not floating) shows the same notice', () => {
+    renderSuggestions({
+      result: { ...withLocal, tmdbUnavailable: true },
+      query: '駭客',
+      floating: false,
+    });
+    expect(screen.getByTestId('search-suggestions-tmdb-down')).toBeInTheDocument();
+    expect(screen.getByText('駭客任務')).toBeInTheDocument();
+  });
+});
