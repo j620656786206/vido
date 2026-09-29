@@ -453,6 +453,12 @@ export interface GenerationBatchStatusResponse {
   running: boolean;
   progress?: GenerationBatchProgress | null;
   last?: GenerationBatchProgress | null;
+  /**
+   * disc-2026-09-batch-generation-no-asr-key-warning AC #1 [@contract-v1]:
+   * false when the server lacks the keys generation needs (start would 503
+   * TRANSCRIPTION_DISABLED). Absent on older servers → treat as available.
+   */
+  available?: boolean;
 }
 
 /** POST /subtitles/generation-batch/dismiss (dsr-6d-a AC #6 [@contract-v1]). */

@@ -19,7 +19,7 @@
  * list-order prefix-sum estimate (consentSelection.feasibleCount) and the copy
  * never promises the ceiling cannot be exceeded.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   ArrowUpDown,
@@ -27,6 +27,7 @@ import {
   CircleAlert,
   Loader2,
   Search,
+  Settings,
   TriangleAlert,
   X,
 } from 'lucide-react';
@@ -149,6 +150,15 @@ export interface CandidateListPanelProps {
   claudeKeySource?: KeySource;
   openaiKeySource?: KeySource;
   selfHostedAsr?: boolean;
+  /**
+   * The server cannot start a batch (the keys the pipeline needs are not
+   * saved — GET …/generation-batch/status `available: false`). The list still
+   * shows and still ticks; 開始產生 is dead and says why
+   * (disc-2026-09-batch-generation-no-asr-key-warning, F28-D-v2).
+   */
+  notConfigured?: boolean;
+  /** 前往設定 → /settings/keys. A prop, not a router <Link>: this renders bare in its spec. */
+  onGoToKeySettings?: () => void;
 }
 
 /** The runtime half of the subtitle. Empty when there is nothing honest to say. */
@@ -631,6 +641,8 @@ export function CandidateListPanel({
   claudeKeySource,
   openaiKeySource,
   selfHostedAsr = false,
+  notConfigured = false,
+  onGoToKeySettings,
 }: CandidateListPanelProps) {
   /**
    * Which sections the user has opened or closed by hand. Anything absent
@@ -718,6 +730,9 @@ export function CandidateListPanel({
   }, [filter, searchQuery, sort]);
 
   const virtualItems = virtualized ? virtualizer.getVirtualItems() : [];
+  // The not-configured reason sits inside the budget <label>; tie it to the
+  // disabled start button too, so a screen reader hears WHY it is dead.
+  const notConfiguredHintId = useId();
   const padTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
   const padBottom =
     virtualItems.length > 0
@@ -795,6 +810,35 @@ export function CandidateListPanel({
           data-testid="consent-controls"
           className="flex shrink-0 flex-col gap-3 px-6 pb-3 pt-6 max-sm:gap-2.5 max-sm:px-4 max-sm:pb-2.5 max-sm:pt-1.5"
         >
+          {/* F28-D-v2: said on open, above everything — not after the user has
+              picked forty titles and pressed 開始產生 into a 503. Same panel as
+              管理字幕's 語音辨識尚未設定 (F5-D-v2 RrbLx), batch copy. */}
+          {notConfigured && (
+            <div
+              data-testid="consent-not-configured"
+              className="flex items-center gap-3.5 rounded-[var(--radius-md)] bg-[var(--warning-tint)] p-4"
+            >
+              <Settings
+                className="h-5 w-5 shrink-0 text-[var(--warning-text)]"
+                aria-hidden="true"
+              />
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">字幕生成尚未設定</p>
+                <p className="text-xs text-[var(--text-secondary)]">
+                  批次產生字幕需要翻譯（Claude）與語音辨識（ASR）金鑰。到金鑰設定儲存後就能開始；清單可以先看。
+                </p>
+              </div>
+              {onGoToKeySettings && (
+                <button
+                  type="button"
+                  onClick={onGoToKeySettings}
+                  className="flex min-h-[44px] shrink-0 items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-4 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)]"
+                >
+                  前往設定
+                </button>
+              )}
+            </div>
+          )}
           {/* Summary bar */}
           <div className="flex flex-col gap-0.5">
             <p className="flex flex-wrap items-center gap-[3px] text-sm text-[var(--text-secondary)]">
@@ -1181,10 +1225,18 @@ export function CandidateListPanel({
               says it — the small hint would be a semantic duplicate (deleted
               from the drawn f18). It renders only in the normal state. */}
           {/* dsr-6e-1 AC #2: a disabled 開始產生 must say WHY (DESIGN.md「沒有
-              金額，就沒有可按的按鈕」— 停用＋原因). This line outranks the other
-              two and is NOT gated on the over-budget state: the reason a paid
+              金額，就沒有可按的按鈕」— 停用＋原因). The not-configured and
+              unpriced reasons outrank the budget hint and are NOT gated on the over-budget state: the reason a paid
               button is dead can never be the thing that gets hidden. */}
-          {unpricedSelected ? (
+          {notConfigured ? (
+            <span
+              id={notConfiguredHintId}
+              data-testid="consent-not-configured-hint"
+              className="text-xs text-[var(--warning-text)]"
+            >
+              尚未設定金鑰，無法開始
+            </span>
+          ) : unpricedSelected ? (
             <span data-testid="consent-unpriced-hint" className="text-xs text-[var(--error-text)]">
               有 {totals.unpricedSelectedCount} 部沒有報價，請清除選取後重選
             </span>
@@ -1199,7 +1251,14 @@ export function CandidateListPanel({
         <button
           type="button"
           onClick={onStartClick}
-          disabled={starting || totals.selectedCount === 0 || budgetInvalid || unpricedSelected}
+          aria-describedby={notConfigured ? notConfiguredHintId : undefined}
+          disabled={
+            notConfigured ||
+            starting ||
+            totals.selectedCount === 0 ||
+            budgetInvalid ||
+            unpricedSelected
+          }
           data-testid="consent-start-btn"
           className="flex min-h-[44px] items-center justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-5 text-sm font-semibold text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)] disabled:cursor-not-allowed disabled:opacity-50"
         >

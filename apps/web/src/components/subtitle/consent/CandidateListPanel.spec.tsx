@@ -1558,3 +1558,49 @@ describe('CandidateListPanel — phone gutters and footer (dsr-6f-3, F15-M-v2 fd
     );
   });
 });
+
+// disc-2026-09-batch-generation-no-asr-key-warning AC #2: the keys are missing —
+// say so first, before the user picks forty titles, and say why 開始 is dead.
+describe('CandidateListPanel — generation not configured', () => {
+  it('shows the notice at the top, disables 開始產生 and says why', () => {
+    const onGoToKeySettings = vi.fn();
+    renderPanel({
+      candidates: FOUR,
+      selectedIds: new Set([M1]),
+      notConfigured: true,
+      onGoToKeySettings,
+    });
+    const notice = screen.getByTestId('consent-not-configured');
+    expect(notice).toHaveTextContent('字幕生成尚未設定');
+    expect(notice).toHaveTextContent(
+      '批次產生字幕需要翻譯（Claude）與語音辨識（ASR）金鑰。到金鑰設定儲存後就能開始；清單可以先看。'
+    );
+    expect(screen.getByTestId('consent-controls').firstElementChild).toBe(notice);
+    fireEvent.click(screen.getByRole('button', { name: '前往設定' }));
+    expect(onGoToKeySettings).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('consent-start-btn')).toBeDisabled();
+    expect(screen.getByTestId('consent-not-configured-hint')).toHaveTextContent(
+      '尚未設定金鑰，無法開始'
+    );
+    // The disabled button carries its reason for screen readers.
+    expect(screen.getByTestId('consent-start-btn')).toHaveAccessibleDescription(
+      '尚未設定金鑰，無法開始'
+    );
+  });
+
+  it('the list still renders and can be ticked', () => {
+    const { props } = renderPanel({ candidates: FOUR, notConfigured: true });
+    const rowBoxes = screen
+      .getAllByRole('checkbox')
+      .filter((b) => b.getAttribute('data-testid') !== 'consent-select-all');
+    fireEvent.click(rowBoxes[0]);
+    expect(props.onToggle).toHaveBeenCalled();
+  });
+
+  it('configured (the default): no notice, 開始產生 unchanged', () => {
+    renderPanel({ candidates: FOUR, selectedIds: new Set([M1]) });
+    expect(screen.queryByTestId('consent-not-configured')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('consent-not-configured-hint')).not.toBeInTheDocument();
+    expect(screen.getByTestId('consent-start-btn')).not.toBeDisabled();
+  });
+});

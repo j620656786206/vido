@@ -816,6 +816,12 @@ export interface GenerationBatchDialogV2Props {
    * deep link — the library just changed, a ready snapshot is stale).
    */
   forceAnalyze?: boolean;
+  /**
+   * disc-2026-09-batch-generation-no-asr-key-warning: 前往設定 on the
+   * "not configured" notice. A prop (not a router Link) so the dialog renders
+   * bare in specs — same precedent as GenerationWorkspaceV2's `onBack`.
+   */
+  onGoToKeySettings?: () => void;
 }
 
 export function GenerationBatchDialogV2({
@@ -823,6 +829,7 @@ export function GenerationBatchDialogV2({
   onOpenChange,
   selectedMediaIds,
   forceAnalyze = false,
+  onGoToKeySettings,
 }: GenerationBatchDialogV2Props) {
   const queryClient = useQueryClient();
 
@@ -841,6 +848,9 @@ export function GenerationBatchDialogV2({
   // CR M4: the consent flow must not bootstrap (and possibly kick a full
   // library probe sweep) before we know whether a batch is already running.
   const [probed, setProbed] = useState(false);
+  // AC #3: only a probe that positively says `available: false` blocks start —
+  // a failed probe or an older server (no field) leaves the button alone.
+  const [notConfigured, setNotConfigured] = useState(false);
   // CR H2: after a batch terminal the candidate snapshot is stale (completed
   // items still listed, quotes wrong) — the next consent render re-analyzes.
   const [postTerminal, setPostTerminal] = useState(false);
@@ -875,6 +885,9 @@ export function GenerationBatchDialogV2({
   useEffect(() => {
     if (!open) {
       setProbed(false);
+      // AC #3: a stale "not configured" must not outlive the dialog — keys may
+      // be saved before it reopens, and a failed probe then must not block.
+      setNotConfigured(false);
       return;
     }
     let cancelled = false;
@@ -882,6 +895,7 @@ export function GenerationBatchDialogV2({
       .getGenerationBatchStatus()
       .then((s) => {
         if (cancelled) return;
+        setNotConfigured(s.available === false);
         if (s.running && s.progress) {
           setStartError(null);
           startBatchTracking(s.progress);
@@ -1156,6 +1170,8 @@ export function GenerationBatchDialogV2({
         forceAnalyze={forceAnalyze || postTerminal}
         starting={starting}
         startError={startError}
+        notConfigured={notConfigured}
+        onGoToKeySettings={onGoToKeySettings}
         onStartBatch={(mediaIds, budgetUsd, modelId) =>
           void handleStartConsented(mediaIds, budgetUsd, modelId)
         }

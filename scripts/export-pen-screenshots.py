@@ -396,6 +396,8 @@ SCREENS = {
     "ePHJo": ("flow-f-subtitle-v2", "f26-d-v2"),
     # sub-6 policy screen — F27 掃描完成卡的政策變體（F17 的動作列改為政策優先）
     "U03low": ("flow-f-subtitle-v2", "f27-d-v2"),
+    # 批次生成對話框的「尚未設定金鑰」態：清單可看可勾，只有「開始產生」停用
+    "N6dxid": ("flow-f-subtitle-v2", "f28-d-v2"),
     # sub-6-12 — 開始失敗時訊息落點的規格畫面（超支橫幅 → 失敗訊息 → 頁尾，皆在捲動區外）
     "VPT7l": ("flow-f-subtitle-v2", "f18-spec-err"),
     # dsr-6c: glossary panel state spec (loading / load error / write error / add form + duplicate / editing / delete confirm / keyboard)

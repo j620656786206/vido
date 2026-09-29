@@ -318,10 +318,24 @@ func TestGetGenerationBatchStatus_Idle(t *testing.T) {
 	w, resp := doGenBatchJSON(t, r, "GET", "/api/v1/subtitles/generation-batch/status", "")
 	assert.Equal(t, http.StatusOK, w.Code)
 	data := resp["data"].(map[string]interface{})
-	assert.ElementsMatch(t, []string{"running", "progress", "last"}, keysOf(data), "dsr-6d-a AC #3 key set")
+	// + available (disc-2026-09-batch-generation-no-asr-key-warning AC #1 [@contract-v1]).
+	assert.ElementsMatch(t, []string{"running", "progress", "last", "available"}, keysOf(data), "dsr-6d-a AC #3 key set")
+	assert.Equal(t, true, data["available"])
 	assert.Equal(t, false, data["running"])
 	assert.Nil(t, data["progress"])
 	assert.Nil(t, data["last"])
+}
+
+// disc-2026-09-batch-generation-no-asr-key-warning AC #1: the dialog reads
+// this on open, so it can say the keys are missing before the user picks
+// forty titles and presses 開始產生 into a 503.
+func TestGetGenerationBatchStatus_ReportsUnavailable(t *testing.T) {
+	r := setupGenerationBatchRouter(&mockGenerationProcessor{available: false})
+	w, resp := doGenBatchJSON(t, r, "GET", "/api/v1/subtitles/generation-batch/status", "")
+	assert.Equal(t, http.StatusOK, w.Code)
+	data := resp["data"].(map[string]interface{})
+	assert.Equal(t, false, data["available"])
+	assert.Equal(t, false, data["running"])
 }
 
 // dsr-6d-a AC #3: after a terminal the probe still says what happened.

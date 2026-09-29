@@ -870,6 +870,10 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
         onOpenChange={setIsBatchSubtitleOpen}
         selectedMediaIds={generationBatchSelection}
         forceAnalyze={generationForceAnalyze}
+        onGoToKeySettings={() => {
+          setIsBatchSubtitleOpen(false);
+          void navigate({ to: '/settings/keys' });
+        }}
       />
     </div>
   );

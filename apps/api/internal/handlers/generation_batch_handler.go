@@ -210,10 +210,10 @@ func (h *GenerationBatchHandler) StartGenerationBatch(c *gin.Context) {
 
 // GetGenerationBatchStatus handles GET /api/v1/subtitles/generation-batch/status.
 // @Summary Get generation-batch status
-// @Description Recovery probe: whether a generation batch is running and its progress (null when idle, queue with per-item status when running), plus last — the most recent terminal snapshot (null while running, after dismiss, or when none is kept; in memory only, lost on restart).
+// @Description Recovery probe: whether a generation batch is running and its progress (null when idle, queue with per-item status when running), plus last — the most recent terminal snapshot (null while running, after dismiss, or when none is kept; in memory only, lost on restart) — and available: whether a batch could start at all (same gate as the 503 TRANSCRIPTION_DISABLED on start).
 // @Tags subtitles
 // @Produce json
-// @Success 200 {object} APIResponse "{running, progress|null, last|null}"
+// @Success 200 {object} APIResponse "{running, progress|null, last|null, available}"
 // @Router /api/v1/subtitles/generation-batch/status [get]
 func (h *GenerationBatchHandler) GetGenerationBatchStatus(c *gin.Context) {
 	progress, last := h.processor.Snapshot()
@@ -221,6 +221,11 @@ func (h *GenerationBatchHandler) GetGenerationBatchStatus(c *gin.Context) {
 		"running":  progress != nil,
 		"progress": progress,
 		"last":     last,
+		// Whether a batch could start at all (the keys the pipeline needs are
+		// saved) — the same gate as StartGenerationBatch's 503, so the dialog
+		// can say so on open instead of after the user has picked everything
+		// (disc-2026-09-batch-generation-no-asr-key-warning AC #1 [@contract-v1]).
+		"available": h.processor.IsAvailable(),
 	})
 }
 
