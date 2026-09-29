@@ -90,6 +90,12 @@ export interface GenerationConsentViewProps {
   starting?: boolean;
   startError?: string | null;
   /**
+   * disc-2026-09-batch-generation-no-asr-key-warning: the server said it
+   * cannot generate (keys missing) — the list stays browsable, start is off.
+   */
+  notConfigured?: boolean;
+  onGoToKeySettings?: () => void;
+  /**
    * sub-6-8b: `modelId` is the model whose price the user just read in the
    * confirm dialog — sent with the batch so the quote and the charge can never
    * come from different models. Empty string = the deployment default (no
@@ -105,6 +111,8 @@ export function GenerationConsentView({
   forceAnalyze = false,
   starting = false,
   startError = null,
+  notConfigured = false,
+  onGoToKeySettings,
   onStartBatch,
   onClose,
 }: GenerationConsentViewProps) {
@@ -585,6 +593,8 @@ export function GenerationConsentView({
               budgetUsd={budgetUsd}
               starting={starting}
               startError={startError}
+              notConfigured={notConfigured}
+              onGoToKeySettings={onGoToKeySettings}
               visibleIds={visibleIds}
               onToggle={handleToggle}
               onToggleGroup={handleToggleGroup}

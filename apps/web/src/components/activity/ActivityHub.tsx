@@ -299,6 +299,10 @@ export function ActivityHub() {
   // Story ux3-subtitle-v2-batch AC 4a — the hub's launch CTA opens the batch
   // dialog with scope=missing (the ONLY Activity-side entry; D4-1 boundary).
   const [generationBatchOpen, setGenerationBatchOpen] = useState(false);
+  const goToKeySettings = () => {
+    setGenerationBatchOpen(false);
+    void navigate({ to: '/settings/keys' });
+  };
   const retry = () => {
     void refetch();
   };
@@ -318,7 +322,11 @@ export function ActivityHub() {
             onBack={() => void navigate({ to: '/activity', search: {} })}
           />
         </div>
-        <GenerationBatchDialogV2 open={generationBatchOpen} onOpenChange={setGenerationBatchOpen} />
+        <GenerationBatchDialogV2
+          open={generationBatchOpen}
+          onOpenChange={setGenerationBatchOpen}
+          onGoToKeySettings={goToKeySettings}
+        />
       </>
     );
   }
@@ -362,7 +370,11 @@ export function ActivityHub() {
       )}
 
       {/* Batch dialog opens OVER the hub (F8/F9 backdrops render A1-D-v2). */}
-      <GenerationBatchDialogV2 open={generationBatchOpen} onOpenChange={setGenerationBatchOpen} />
+      <GenerationBatchDialogV2
+        open={generationBatchOpen}
+        onOpenChange={setGenerationBatchOpen}
+        onGoToKeySettings={goToKeySettings}
+      />
     </div>
   );
 }

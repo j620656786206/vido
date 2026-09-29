@@ -920,6 +920,9 @@ const CONSENT_FIXTURE_CANDIDATES: GenerationCandidate[] = [
   },
 ];
 
+// disc-2026-09-batch-generation-no-asr-key-warning: F28 fixture rows.
+const CONSENT_NOT_CONFIGURED_ROWS = CONSENT_FIXTURE_CANDIDATES.slice(0, 3);
+
 /** F18's rows. Four, not five — see the fixture for why. */
 const CONSENT_OVER_BUDGET_CANDIDATES = CONSENT_FIXTURE_CANDIDATES.slice(0, 4);
 
@@ -5556,6 +5559,48 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     },
     width: 960,
     penNode: 'screen-section', // Screen F15-D-v2 (pwMzT) · F15-M-v2 (fdu4y)
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-consent/not-configured',
+    label: 'subtitle/consent/CandidateListPanel (F28 尚未設定金鑰 — 提示＋開始產生停用)',
+    component: CandidateListPanel,
+    props: {
+      // Three rows: the notice adds ~90px, and five rows would push the fixture
+      // past the 1280x800 capture viewport (see the over-budget note below).
+      candidates: CONSENT_NOT_CONFIGURED_ROWS,
+      selectedIds: new Set([
+        '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51',
+        '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52',
+      ]),
+      filter: 'all',
+      visibleIds: consentVisibleIds(CONSENT_NOT_CONFIGURED_ROWS),
+      totals: computeTotals(
+        CONSENT_NOT_CONFIGURED_ROWS,
+        new Set(['4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51', '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52']),
+        5
+      ),
+      budgetText: '5.00',
+      budgetUsd: 5,
+      onToggle: noop,
+      onToggleGroup: noop,
+      onToggleAll: noop,
+      onSelectAllExtract: noop,
+      onClearSelection: noop,
+      onFilterChange: noop,
+      onBudgetTextChange: noop,
+      onStartClick: noop,
+      search: '',
+      searchQuery: '',
+      sort: 'group',
+      onSearchChange: noop,
+      onSortChange: noop,
+      // disc-2026-09-batch-generation-no-asr-key-warning AC #2
+      notConfigured: true,
+      onGoToKeySettings: noop,
+    },
+    width: 960,
+    penNode: 'screen-section', // Screen F28-D-v2 (node id: see SCREENS in export-pen-screenshots.py)
     statesOnly: ['default'],
   },
   {
