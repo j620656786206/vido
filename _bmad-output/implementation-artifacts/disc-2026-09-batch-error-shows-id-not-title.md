@@ -1,6 +1,6 @@
 # Story: disc-2026-09-batch-error-shows-id-not-title — 批次操作的失敗清單顯示片名，不是 id
 
-Status: review
+Status: done
 
 <!-- ⚠️ 補建：SM Bob 2026-09-29。實作先於 story（Dev 直接從 sprint-status 一行做起，PR #582 已開），
      Alexyu 攔下「應先請SM CS story?」→ 補這份，AC 依既有實作與設計稿反推，並做過事實查證。
