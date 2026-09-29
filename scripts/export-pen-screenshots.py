@@ -159,6 +159,7 @@ SCREENS = {
     "6UCtX": ("flow-c-search-settings", "c4-d"),
     "Qva0y": ("flow-c-search-settings", "c23-d"),  # 連線設定往下捲：Sonarr／Radarr（13-6）
     "p37q9": ("flow-c-search-settings", "c23-m"),
+    "L7EVR": ("flow-c-search-settings", "c24-d"),  # 批次重新解析：對話框三個狀態 spec
     "2H4OM": ("flow-c-search-settings", "c4-m"),
     "uhAKd": ("flow-c-search-settings", "c5-d"),
     "B3qPq": ("flow-c-search-settings", "c6-d"),

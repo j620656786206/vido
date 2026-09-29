@@ -81236,6 +81236,282 @@
               "fontFamily": "$Type/Family/Canvas",
               "fontSize": "$Type/Body/Size",
               "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "L7EVR",
+              "x": 52460,
+              "y": 18481,
+              "name": "C24-D",
+              "clip": true,
+              "width": 1440,
+              "height": 900,
+              "fill": "$bg-secondary",
+              "layout": "vertical",
+              "gap": "$Space/2xl",
+              "padding": "$Space/4xl",
+              "children": [
+                {
+                  "id": "Rwglu",
+                  "type": "ref",
+                  "ref": "ZXJVl",
+                  "name": "title",
+                  "content": "批次重新解析 — 對話框的三個狀態"
+                },
+                {
+                  "id": "e4hq8T",
+                  "type": "ref",
+                  "ref": "O6y7O",
+                  "name": "intro",
+                  "width": "fill_container",
+                  "textGrowth": "fixed-width",
+                  "fill": "$text-secondary",
+                  "content": "按下「重新解析」後，後端會在背景比對。對話框依序經過三個狀態；隨時可以按「關閉」，清單在比對完成後會自動更新。這一輪比對的是所有待整理的片，不只你勾的那幾部，所以總數可能大於你勾的數量。"
+                },
+                {
+                  "type": "frame",
+                  "id": "bY9XJ",
+                  "name": "states",
+                  "width": "fill_container",
+                  "gap": "$Space/2xl",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "oa9BI",
+                      "name": "state-1",
+                      "width": "fill_container",
+                      "fill": "$bg-primary",
+                      "cornerRadius": "$radius-lg",
+                      "layout": "vertical",
+                      "gap": "$Space/lg",
+                      "padding": "$Space/xl",
+                      "children": [
+                        {
+                          "id": "wbk8I",
+                          "type": "ref",
+                          "ref": "PMg7U",
+                          "name": "caption",
+                          "fill": "$text-secondary",
+                          "content": "① 已排入（第一筆進度來之前）"
+                        },
+                        {
+                          "id": "l8IRjN",
+                          "type": "ref",
+                          "ref": "m6KMPr",
+                          "name": "state-1 dialog",
+                          "width": "fill_container",
+                          "descendants": {
+                            "CsRIQ": {
+                              "content": "重新解析中"
+                            },
+                            "lFEZd": {
+                              "content": "已排入比對 5 項，等待開始…"
+                            },
+                            "UeqT2": {
+                              "content": "本輪會整理所有待整理的片，不只你勾的 5 部。"
+                            },
+                            "NiyZh/kgGEW": {
+                              "content": "關閉"
+                            },
+                            "A3pjr": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "dUv7F",
+                      "name": "state-2",
+                      "width": "fill_container",
+                      "fill": "$bg-primary",
+                      "cornerRadius": "$radius-lg",
+                      "layout": "vertical",
+                      "gap": "$Space/lg",
+                      "padding": "$Space/xl",
+                      "children": [
+                        {
+                          "id": "bbfRE",
+                          "type": "ref",
+                          "ref": "PMg7U",
+                          "name": "caption",
+                          "fill": "$text-secondary",
+                          "content": "② 比對中（收到 enrich_progress）"
+                        },
+                        {
+                          "id": "wowaw",
+                          "type": "ref",
+                          "ref": "m6KMPr",
+                          "name": "state-2 dialog",
+                          "width": "fill_container",
+                          "descendants": {
+                            "CsRIQ": {
+                              "content": "比對中"
+                            },
+                            "lFEZd": {
+                              "content": "本輪整理 20 部（含你勾的 5 部）"
+                            },
+                            "InAqu": {
+                              "children": [
+                                {
+                                  "id": "E7JAm",
+                                  "type": "ref",
+                                  "ref": "TzhFY",
+                                  "name": "progress",
+                                  "width": "fill_container",
+                                  "descendants": {
+                                    "ZFxvR": {
+                                      "width": 65
+                                    },
+                                    "hk8Jr": {
+                                      "content": "目前：你的名字"
+                                    },
+                                    "w4P4XP": {
+                                      "content": "3 / 20"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "BcBug",
+                                  "type": "ref",
+                                  "ref": "O6y7O",
+                                  "name": "tally",
+                                  "width": "fill_container",
+                                  "textGrowth": "fixed-width",
+                                  "fill": "$text-secondary",
+                                  "content": "成功 2・失敗 1・略過 0"
+                                }
+                              ]
+                            },
+                            "NiyZh/kgGEW": {
+                              "content": "關閉"
+                            },
+                            "A3pjr": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "D0MyE",
+                      "name": "state-3",
+                      "width": "fill_container",
+                      "fill": "$bg-primary",
+                      "cornerRadius": "$radius-lg",
+                      "layout": "vertical",
+                      "gap": "$Space/lg",
+                      "padding": "$Space/xl",
+                      "children": [
+                        {
+                          "id": "b1yq2c",
+                          "type": "ref",
+                          "ref": "PMg7U",
+                          "name": "caption",
+                          "fill": "$text-secondary",
+                          "content": "③ 比對完成（收到 enrich_complete）"
+                        },
+                        {
+                          "id": "M2nb48",
+                          "type": "ref",
+                          "ref": "m6KMPr",
+                          "name": "state-3 dialog",
+                          "width": "fill_container",
+                          "descendants": {
+                            "CsRIQ": {
+                              "content": "比對完成"
+                            },
+                            "lFEZd": {
+                              "content": "成功 18・失敗 2 — 清單已更新"
+                            },
+                            "InAqu": {
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "u5XqPO",
+                                  "name": "errors",
+                                  "width": "fill_container",
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-md",
+                                  "layout": "vertical",
+                                  "gap": "$Space/xs",
+                                  "padding": "$Space/md",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "WInUw",
+                                      "name": "errTitle",
+                                      "fill": "$error-text",
+                                      "content": "2 個項目失敗：",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "500"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "Q4F00m",
+                                      "name": "err1",
+                                      "fill": "$text-secondary",
+                                      "content": "寄生上流：找不到符合的作品",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "H1K7YD",
+                                      "name": "err2",
+                                      "fill": "$text-secondary",
+                                      "content": "瀑布：TMDb 沒有回應",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            "NiyZh/kgGEW": {
+                              "content": "關閉"
+                            },
+                            "A3pjr": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "z3akYH",
+                  "type": "ref",
+                  "ref": "O6y7O",
+                  "name": "rules",
+                  "width": "fill_container",
+                  "textGrowth": "fixed-width",
+                  "fill": "$text-secondary",
+                  "content": "規則：① 三個狀態同一個對話框，標題隨狀態換字（重新解析中 → 比對中 → 比對完成）。② 數字全部來自後端事件（每 5 部送一次），前端不自己算、不用時鐘。③ 完成後若又收到進度（排在別人後面的那一輪），回到「比對中」。④ 一項都沒排到就沒有這三態，維持原本的「操作完成」。⑤ 手機不另外畫：同一個對話框，左右各留 16。"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "PUsT2",
+              "x": 52460,
+              "y": 18436,
+              "name": "cap C24-D",
+              "fill": "#888888",
+              "content": "C24-D · 批次重新解析 — 比對進度 spec（桌面）",
+              "lineHeight": "$Type/Body/Line",
+              "fontFamily": "$Type/Family/Canvas",
+              "fontSize": "$Type/Body/Size",
+              "fontWeight": "600"
             }
           ]
         },
