@@ -1,6 +1,6 @@
 # Story: disc-2026-09-ime-enter-submits-mid-composition — 打注音按 Enter 選字，不會再被當成「送出」
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-09-29。Alexyu 從推薦清單選定（「做注音」）。
      行號為 main `d4cec789`，改動前；每條「查到的事」都是本次親自讀過的位置（retro-dsr-AI4）。 -->
