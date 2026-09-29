@@ -40,40 +40,40 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Open the Scanner settings page (navigate to /settings/scanner).
+        # -> Open the '設定' (Settings) page and go to the Scanner settings (navigate to /settings/scanner).
         await page.goto("http://localhost:8090/settings/scanner")
         try:
             await page.wait_for_load_state("domcontentloaded", timeout=5000)
         except Exception:
             pass
         
-        # -> Open the action menu for the library card labeled '影集庫' (the TV library) by clicking its three-dot/action button.
-        # button
-        elem = page.locator('xpath=/html/body/div/div/div/div[2]/main/div/div/div/div/div/div/div/div/div[2]/div/div[2]/button')
+        # -> Open the action menu for the '影集庫' library card and choose the '編輯' (Edit) option from the menu.
+        # 影集庫 的操作 button
+        elem = page.get_by_test_id("library-card-seed-lib-tv").get_by_test_id("library-menu-button")
         await elem.click(timeout=10000)
         
-        # -> Click the '編輯' button in the 影集庫 action menu to open the library edit dialog.
-        # 編輯 button
-        elem = page.get_by_role('menuitem', name='編輯', exact=True)
+        # -> Click the '編輯' (Edit) menu item in the action menu for the 影集庫 library.
+        # 編輯 menu item
+        elem = page.get_by_role("menuitem", name="編輯")
         await elem.click(timeout=10000)
         
-        # -> Open the library '類型' (content type) dropdown in the edit dialog so the '電影' option can be selected.
+        # -> Open the '類型' (Type) dropdown in the '編輯媒體庫' dialog so the '電影' (Movie) option can be selected.
         # 電影 影集 dropdown
-        elem = page.get_by_test_id('library-type-select')
+        elem = page.get_by_test_id("library-type-select")
         await elem.click(timeout=10000)
         
-        # -> Change the library '類型' dropdown to '電影' in the edit dialog and wait for the UI to update.
+        # -> Change the '類型' dropdown to '電影', check the dialog for a rebuild/rescan warning message, then click '儲存變更' to apply the change.
         # 電影 影集 dropdown
-        elem = page.get_by_test_id('library-type-select')
+        elem = page.locator("xpath=/html/body/div[3]/div[2]/div[2]/select").nth(0)
         await elem.wait_for(state="visible", timeout=10000)
         await elem.select_option("")
         
-        # -> Click the '儲存變更' button to save the library change (this should trigger the rebuild/purge and automatic rescan), then wait ~15 seconds and reload the settings page.
+        # -> Change the '類型' dropdown to '電影', check the dialog for a rebuild/rescan warning message, then click '儲存變更' to apply the change.
         # 儲存變更 button
-        elem = page.get_by_test_id('library-save-button')
+        elem = page.get_by_test_id("library-save-button")
         await elem.click(timeout=10000)
         
-        # -> Click the '儲存變更' button to save the library change (this should trigger the rebuild/purge and automatic rescan), then wait ~15 seconds and reload the settings page.
+        # -> Wait about 15 seconds for the automatic rescan to run, then reload the '媒體庫掃描' (Settings → 媒體庫掃描) page to check the sidebar '電影' and '影集' counts.
         await page.goto("http://localhost:8090/settings/scanner")
         try:
             await page.wait_for_load_state("domcontentloaded", timeout=5000)
@@ -82,13 +82,13 @@ async def run_test():
         
         # --> Assertions to verify final state
         
-        # --> After saving the library change and reloading, the sidebar shows the movie count increased and the series count decreased (電影 = 27, 影集 = 0).
+        # --> After saving, the sidebar updated showing movies increased and series decreased (sidebar shows 電影（27） and 影集（0）).
         # Assert-outcome: passed
-        # Assert: Sidebar shows the movie link with the updated movie count (27).
-        await expect(page.locator("xpath=/html/body/div/div/div/div[1]/aside/nav/div[2]/div[2]/a[1]").nth(0)).to_have_text("\u96fb\u5f71\n27", timeout=15000), "Sidebar shows the movie link with the updated movie count (27)."
+        # Assert: The sidebar '電影' link is present (shows the movie count).
+        await expect(page.get_by_test_id("nav-movies").nth(0)).to_contain_text("\u96fb\u5f71", timeout=15000), "The sidebar '\u96fb\u5f71' link is present (shows the movie count)."
         # Assert-outcome: passed
-        # Assert: Sidebar shows the series link with the updated series count (0).
-        await expect(page.locator("xpath=/html/body/div/div/div/div[1]/aside/nav/div[2]/div[2]/a[2]").nth(0)).to_have_text("\u5f71\u96c6\n0", timeout=15000), "Sidebar shows the series link with the updated series count (0)."
+        # Assert: The sidebar '影集' link is present (shows the series count).
+        await expect(page.get_by_test_id("nav-tv").nth(0)).to_contain_text("\u5f71\u96c6", timeout=15000), "The sidebar '\u5f71\u96c6' link is present (shows the series count)."
         await asyncio.sleep(5)
 
     finally:

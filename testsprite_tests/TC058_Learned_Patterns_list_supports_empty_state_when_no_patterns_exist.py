@@ -40,27 +40,61 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Open the '設定' (Settings) → qBittorrent page (navigate to the qBittorrent settings).
+        # -> Open the qBittorrent settings page by navigating to /settings/qbittorrent (Settings → qBittorrent).
         await page.goto("http://localhost:8090/settings/qbittorrent")
         try:
             await page.wait_for_load_state("domcontentloaded", timeout=5000)
         except Exception:
             pass
         
-        # -> Open the 'qBittorrent' settings page (navigate to /settings/qbittorrent) so the Learned Patterns section can be inspected.
+        # -> Scroll the Connection settings page to reveal the 'Learned Patterns' section so its title, empty-state message, and list container can be checked.
+        await page.mouse.wheel(0, 300)
+        
+        # -> Open the qBittorrent settings page (navigate to /settings/qbittorrent).
         await page.goto("http://localhost:8090/settings/qbittorrent")
         try:
             await page.wait_for_load_state("domcontentloaded", timeout=5000)
         except Exception:
             pass
         
-        # -> Scroll the qBittorrent settings page to reveal the 'Learned Patterns' section so its heading and empty-state text can be inspected.
+        # -> Scroll down the qBittorrent settings page to reveal the 'Learned Patterns' section so its title, empty state text, and list container can be inspected.
         await page.mouse.wheel(0, 300)
         
-        # -> Scroll the qBittorrent settings page to the bottom to reveal the 'Learned Patterns' section for inspection.
+        # -> Open the qBittorrent settings page (Settings → qBittorrent) by navigating to /settings/qbittorrent so the 'Learned Patterns' section can be located.
+        await page.goto("http://localhost:8090/settings/qbittorrent")
+        try:
+            await page.wait_for_load_state("domcontentloaded", timeout=5000)
+        except Exception:
+            pass
+        
+        # -> Open the 'qBittorrent' settings page (Settings → qBittorrent).
+        await page.goto("http://localhost:8090/settings/qbittorrent")
+        try:
+            await page.wait_for_load_state("domcontentloaded", timeout=5000)
+        except Exception:
+            pass
+        
+        # -> Scroll the page to reveal the 'Learned Patterns' section and search the page for 'Learned Patterns' and localized/empty-state text.
         await page.mouse.wheel(0, 300)
         
-        # -> Open the qBittorrent settings page and reveal the 'Learned Patterns' section so the heading and empty-state text can be inspected.
+        # -> Open the 'qBittorrent' settings page (navigate to the qBittorrent settings) so the 'Learned Patterns' section can be located and inspected.
+        await page.goto("http://localhost:8090/settings/qbittorrent")
+        try:
+            await page.wait_for_load_state("domcontentloaded", timeout=5000)
+        except Exception:
+            pass
+        
+        # -> Scroll the '連線設定' (Connection settings) page to the bottom and search for the Chinese word '模式' (pattern) to locate any Learned Patterns section.
+        await page.mouse.wheel(0, 300)
+        
+        # -> Open the qBittorrent settings page by navigating to the URL '/settings/qbittorrent' so the page can be inspected for the 'Learned Patterns' section.
+        await page.goto("http://localhost:8090/settings/qbittorrent")
+        try:
+            await page.wait_for_load_state("domcontentloaded", timeout=5000)
+        except Exception:
+            pass
+        
+        # -> Navigate to the 'qBittorrent' settings page (visit /settings/qbittorrent) so the Learned Patterns section can be located.
         await page.goto("http://localhost:8090/settings/qbittorrent")
         try:
             await page.wait_for_load_state("domcontentloaded", timeout=5000)
@@ -69,15 +103,18 @@ async def run_test():
         
         # --> Assertions to verify final state
         
-        # --> The 'Learned Patterns' heading is not visible on the qBittorrent settings page.
+        # --> The page shows the heading 'Learned Patterns'.
         # Assert-outcome: failed
-        # Assert: Expected text "Learned Patterns" to be visible.
-        await expect(page.locator("xpath=/html/body/div").nth(0)).to_contain_text("Learned Patterns", timeout=15000), "Expected text \"Learned Patterns\" to be visible."
+        # Assert: Expected 'Learned Patterns' to be visible on the settings page.
+        await expect(page.locator("#root").nth(0)).to_contain_text("Learned Patterns", timeout=15000), "Expected 'Learned Patterns' to be visible on the settings page."
         
-        # --> The empty-state copy and the Learned Patterns list are not present (no empty-state text found).
+        # --> An empty-state message for Learned Patterns is visible (one of: 'No learned patterns', 'No patterns', or 'Nothing to show').
         # Assert-outcome: failed
-        # Assert: Expected text "No learned patterns" (or alternatives) to be visible.
-        await expect(page.locator("xpath=/html/body/div").nth(0)).to_contain_text("No learned patterns", timeout=15000), "Expected text \"No learned patterns\" (or alternatives) to be visible."
+        # Assert: Expected the page to show the text 'No learned patterns' indicating an empty Learned Patterns state.
+        await expect(page.locator("#root").nth(0)).to_contain_text("No learned patterns", timeout=15000), "Expected the page to show the text 'No learned patterns' indicating an empty Learned Patterns state."
+        # Assert-outcome: failed
+        # Assert: Expected the page to show the text 'No patterns' indicating an empty Learned Patterns state.
+        await expect(page.locator("#root").nth(0)).to_contain_text("No patterns", timeout=15000), "Expected the page to show the text 'No patterns' indicating an empty Learned Patterns state."
         await asyncio.sleep(5)
 
     finally:

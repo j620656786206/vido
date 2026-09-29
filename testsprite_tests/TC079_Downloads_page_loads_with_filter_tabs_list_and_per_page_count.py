@@ -33,17 +33,34 @@ async def run_test():
         page = await context.new_page()
 
         # Interact with the page elements to simulate user flow
-        # -> Open the Downloads page by navigating to the URL path '/downloads' and then verify the status filter tabs, the downloads list panel, and the per-page count that contains the character '筆'.
-        await page.goto("http://localhost:8090/downloads")
+        # -> navigate
+        await page.goto("http://localhost:8090")
         try:
             await page.wait_for_load_state("domcontentloaded", timeout=5000)
         except Exception:
             pass
         
-        # --> Test passed — verified by AI agent
-        frame = context.pages[-1]
-        current_url = await frame.evaluate("() => window.location.href")
-        assert current_url is not None, "Test completed successfully"
+        # -> Click the '下載' link in the sidebar to open the Downloads page
+        # 下載 link
+        elem = page.get_by_test_id("app-sidebar").get_by_test_id("nav-downloads")
+        await elem.click(timeout=10000)
+        
+        # --> Assertions to verify final state
+        
+        # --> Expected the status filter to include an '錯誤' tab, but the page only shows the five tabs.
+        # Assert-outcome: failed
+        # Assert: Expected status tabs to include a '錯誤' tab.
+        await expect(page.locator("#root").nth(0)).to_contain_text("\u932f\u8aa4", timeout=15000), "Expected status tabs to include a '\u932f\u8aa4' tab."
+        
+        # --> Expected an element with id 'download-list' (role=tabpanel) to be visible, but it was not found.
+        # Assert-outcome: failed
+        # Assert: Expected element with id 'download-list' to be visible.
+        await expect(page.locator("#root").nth(0)).to_contain_text("\u9084\u6c92\u6709\u8a2d\u5b9a qBittorrent", timeout=15000), "Expected element with id 'download-list' to be visible."
+        
+        # --> Expected the per-page count display containing the character '筆' to be visible, but none was found on the page.
+        # Assert-outcome: failed
+        # Assert: Expected per-page count display to contain '筆'.
+        await expect(page.locator("#root").nth(0)).to_contain_text("\u7b46", timeout=15000), "Expected per-page count display to contain '\u7b46'."
         await asyncio.sleep(5)
 
     finally:

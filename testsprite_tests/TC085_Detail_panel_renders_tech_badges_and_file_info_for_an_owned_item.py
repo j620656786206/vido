@@ -40,34 +40,36 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Open the '媒體庫' page by navigating to /library (Library page) so the list of posters is visible.
-        await page.goto("http://localhost:8090/library")
-        try:
-            await page.wait_for_load_state("domcontentloaded", timeout=5000)
-        except Exception:
-            pass
-        
-        # -> Click the first poster card labeled 'Unknown.Show.S01' to open its media detail panel.
-        # U 整理中 Unknown.Show.S01 link
-        elem = page.get_by_test_id('poster-v2-seed-sr-101')
+        # -> Click the '媒體庫' (Library) link in the left navigation to open the library page.
+        # 媒體庫 link
+        elem = page.get_by_test_id("app-sidebar").get_by_test_id("nav-library")
         await elem.click(timeout=10000)
+        
+        # -> Click the first poster card (the card titled '怪奇物語') to open the media detail panel
+        # 缺字幕 怪奇物語 2016 link
+        elem = page.get_by_test_id("poster-v2-seed-sr-002")
+        await elem.click(timeout=10000)
+        
+        # -> Scroll the media detail panel and reveal the '檔案資訊' (File info) section, then look for technical badges (e.g., resolution or codec labels such as 1080, 720, HEVC, H.264) within the media detail panel.
+        await page.mouse.wheel(0, 300)
         
         # --> Assertions to verify final state
         
-        # --> The file information block ('檔案資訊') is visible on the media detail page.
+        # --> The media detail panel for the selected item is visible.
+        await page.get_by_test_id("detail-back").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: failed
-        # Assert: Expected the detail page to show the '檔案資訊' label.
-        await expect(page.locator("xpath=/html/body/div").nth(0)).to_contain_text("\u6a94\u6848\u8cc7\u8a0a", timeout=15000), "Expected the detail page to show the '\u6a94\u6848\u8cc7\u8a0a' label."
+        # Assert: Expected the media detail panel to be visible.
+        await expect(page.get_by_test_id("detail-back").nth(0)).to_be_visible(timeout=15000), "Expected the media detail panel to be visible."
         
-        # --> No technical badge (resolution or codec) is present in the media detail panel.
+        # --> The '檔案資訊' (File info) section is shown in the detail panel.
         # Assert-outcome: failed
-        # Assert: Expected a technical badge (e.g., a resolution like '1080') to be visible in the detail panel.
-        await expect(page.locator("xpath=/html/body/div").nth(0)).to_contain_text("1080", timeout=15000), "Expected a technical badge (e.g., a resolution like '1080') to be visible in the detail panel."
+        # Assert: Expected the page to contain the '檔案資訊' (File info) heading.
+        await expect(page.locator("#root").nth(0)).to_contain_text("\u6a94\u6848\u8cc7\u8a0a", timeout=15000), "Expected the page to contain the '\u6a94\u6848\u8cc7\u8a0a' (File info) heading."
         
-        # --> The automation test-hooks data-testid='media-detail-panel', 'file-info', and 'file-info-name' were not found on the page.
+        # --> Technical badges (resolution/codec) are not present in the media detail panel.
         # Assert-outcome: failed
-        # Assert: Expected an element with data-testid 'media-detail-panel' to be present on the page.
-        await expect(page.locator("xpath=/html/body/div").nth(0)).not_to_be_visible(timeout=15000), "Expected an element with data-testid 'media-detail-panel' to be present on the page."
+        # Assert: Expected a technical badge such as '1080' to be visible in the detail panel.
+        await expect(page.locator("#root").nth(0)).to_contain_text("1080", timeout=15000), "Expected a technical badge such as '1080' to be visible in the detail panel."
         await asyncio.sleep(5)
 
     finally:

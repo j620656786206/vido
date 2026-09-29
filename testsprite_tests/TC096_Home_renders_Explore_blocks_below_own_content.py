@@ -40,23 +40,22 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Search the Home page for the section heading '探索' (Explore) and, if not found, scroll down to reveal lower sections so an Explore block can be located.
-        await page.mouse.wheel(0, 300)
-        
         # --> Assertions to verify final state
         
-        # --> An Explore placeholder is visible on the Home page (link '前往連線設定' present).
+        # --> An Explore fail-soft banner is visible on the Home page with an actionable '前往連線設定' link.
         # Assert-outcome: passed
-        # Assert: The Explore placeholder's '前往連線設定' link is visible.
-        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div[2]/div/p/a").nth(0)).to_contain_text("\u524d\u5f80\u9023\u7dda\u8a2d\u5b9a", timeout=15000), "The Explore placeholder's '\u524d\u5f80\u9023\u7dda\u8a2d\u5b9a' link is visible."
+        # Assert: The Explore fail-soft banner includes the '前往連線設定' link.
+        await expect(page.get_by_test_id("explore-degraded-notice").get_by_role("link").nth(0)).to_have_text("\u524d\u5f80\u9023\u7dda\u8a2d\u5b9a", timeout=15000), "The Explore fail-soft banner includes the '\u524d\u5f80\u9023\u7dda\u8a2d\u5b9a' link."
         
-        # --> Explore placeholder appears after the own-content rows on the Home page.
+        # --> The Explore fail-soft banner is rendered after the own-content '最近新增' carousel on the Home page.
+        await page.get_by_test_id("poster-v2-seed-sr-101").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: passed
-        # Assert: An own-content media card is visible above the Explore area.
-        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/section/section/div[2]/div[3]/div[1]/a").nth(0)).to_contain_text("U\n\u6574\u7406\u4e2d\nUnknown.Show.S01", timeout=15000), "An own-content media card is visible above the Explore area."
+        # Assert: A '最近新增' carousel item is visible (own-content row present).
+        await expect(page.get_by_test_id("poster-v2-seed-sr-101").nth(0)).to_be_visible(timeout=15000), "A '\u6700\u8fd1\u65b0\u589e' carousel item is visible (own-content row present)."
+        await page.get_by_role("link", name="前往連線設定").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: passed
-        # Assert: The Explore placeholder link is visible below the own-content rows.
-        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div[2]/div/p/a").nth(0)).to_contain_text("\u524d\u5f80\u9023\u7dda\u8a2d\u5b9a", timeout=15000), "The Explore placeholder link is visible below the own-content rows."
+        # Assert: The Explore fail-soft '前往連線設定' link is visible below the carousel.
+        await expect(page.get_by_role("link", name="前往連線設定").nth(0)).to_be_visible(timeout=15000), "The Explore fail-soft '\u524d\u5f80\u9023\u7dda\u8a2d\u5b9a' link is visible below the carousel."
         await asyncio.sleep(5)
 
     finally:

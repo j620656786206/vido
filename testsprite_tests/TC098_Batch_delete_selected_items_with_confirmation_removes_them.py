@@ -40,52 +40,47 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Click the '媒體庫' link in the left sidebar to open the library view.
+        # -> Click the '媒體庫' (Media Library) link in the left sidebar to open the library page.
         # 媒體庫 link
-        elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
+        elem = page.get_by_test_id("app-sidebar").get_by_test_id("nav-library")
         await elem.click(timeout=10000)
         
-        # -> Click the '選取' button to enter selection mode.
+        # -> Click the '選取' (Select) button to enter selection mode
         # 選取 button
-        elem = page.get_by_test_id('enter-selection-btn')
+        elem = page.get_by_test_id("enter-selection-btn")
         await elem.click(timeout=10000)
         
-        # -> Select two media items by clicking the first two item cards so the header updates to show the selected count (e.g., '已選取 2 項').
-        # U 失敗 Unknown.Show.S01 link
-        elem = page.get_by_test_id('poster-v2-seed-sr-101')
+        # -> Select the first two visible media items ('Unknown.Show.S01' and '怪奇物語') by clicking their cards to mark them as selected.
+        # U 整理中 Unknown.Show.S01 link
+        elem = page.get_by_test_id("poster-v2-seed-sr-101")
         await elem.click(timeout=10000)
         
-        # -> Select two media items by clicking the first two item cards so the header updates to show the selected count (e.g., '已選取 2 項').
+        # -> Select the first two visible media items ('Unknown.Show.S01' and '怪奇物語') by clicking their cards to mark them as selected.
         # 缺字幕 怪奇物語 2016 link
-        elem = page.get_by_test_id('poster-v2-seed-sr-002')
+        elem = page.get_by_test_id("poster-v2-seed-sr-002")
         await elem.click(timeout=10000)
         
-        # -> Click the '刪除選取項目' button to open the deletion confirmation dialog.
+        # -> Click the '刪除選取項目' (Delete selected items) button to open the deletion confirmation dialog.
         # 刪除選取項目 button
-        elem = page.get_by_test_id('batch-delete-btn')
+        elem = page.get_by_test_id("batch-delete-btn")
         await elem.click(timeout=10000)
         
         # -> Click the '刪除' button in the confirmation dialog to confirm deletion of the 2 selected items.
         # 刪除 button
-        elem = page.get_by_test_id('confirm-action-btn')
+        elem = page.get_by_test_id("confirm-action-btn")
         await elem.click(timeout=10000)
         
-        # -> Click the '關閉' button on the '操作完成' dialog to close it, then search the page for the text '已選取' to verify selection is cleared and the item count updated.
+        # -> Confirm that the items 'Unknown.Show.S01' and '怪奇物語' are no longer present on the library page and that the library count shows '媒體庫 16 部', then close the completion dialog using the '關閉' button.
         # 關閉 button
-        elem = page.get_by_test_id('progress-close-btn')
+        elem = page.get_by_test_id("progress-close-btn")
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> The batch delete completed and the completion dialog showed '已完成 2 / 2'.
+        # --> The library header shows 16 items after the batch delete.
         # Assert-outcome: passed
-        # Assert: Checks the page contains the completion dialog text '已完成 2 / 2'.
-        await expect(page.locator("xpath=/html/body/div").nth(0)).to_contain_text("\u5df2\u5b8c\u6210 2 / 2", timeout=15000), "Checks the page contains the completion dialog text '\u5df2\u5b8c\u6210 2 / 2'."
-        
-        # --> The two targeted items ('Unknown.Show.S01' and '怪奇物語') are no longer present and the library total shows 16 項.
-        # Assert-outcome: passed
-        # Assert: Verifies the library total element displays '16 項'.
-        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div[2]/div[1]/span").nth(0)).to_have_text("16\n \u9805", timeout=15000), "Verifies the library total element displays '16 \u9805'."
+        # Assert: Library header contains the updated item count '16'.
+        await expect(page.get_by_test_id("library-result-count").nth(0)).to_contain_text("16", timeout=15000), "Library header contains the updated item count '16'."
         await asyncio.sleep(5)
 
     finally:

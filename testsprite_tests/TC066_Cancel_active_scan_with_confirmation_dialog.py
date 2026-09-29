@@ -40,61 +40,49 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Navigate to the Settings → Scanner page (open '/settings/scanner').
+        # -> Open the Settings → Scanner page (設定 > 掃描) by navigating to the Scanner settings URL.
         await page.goto("http://localhost:8090/settings/scanner")
         try:
             await page.wait_for_load_state("domcontentloaded", timeout=5000)
         except Exception:
             pass
         
-        # -> Click the '掃描媒體庫' button (Scan media library) to start an immediate scan.
+        # -> Click the '掃描媒體庫' button to start a scan.
         # 掃描媒體庫 button
-        elem = page.get_by_test_id('scan-trigger-button')
+        elem = page.get_by_test_id("scan-trigger-button")
         await elem.click(timeout=10000)
         
-        # -> Click the '掃描媒體庫' (Scan media library) button to start a scan and show the scan progress card.
+        # -> Click the '掃描媒體庫' button to start a scan and cause the scan progress UI to appear.
         # 掃描媒體庫 button
-        elem = page.get_by_test_id('scan-trigger-button')
+        elem = page.get_by_test_id("scan-trigger-button")
         await elem.click(timeout=10000)
         
-        # -> Scroll the Scanner settings page so the '掃描媒體庫' (Scan media library) button is fully in view and then click the '掃描媒體庫' button.
-        await page.mouse.wheel(0, 300)
-        
-        # -> Scroll the Scanner settings page so the '掃描媒體庫' (Scan media library) button is fully in view and then click the '掃描媒體庫' button.
+        # -> Click the '掃描媒體庫' button to start a scan and observe whether a cancellable scan progress card appears.
         # 掃描媒體庫 button
-        elem = page.get_by_test_id('scan-trigger-button')
+        elem = page.get_by_test_id("scan-trigger-button")
         await elem.click(timeout=10000)
         
-        # -> Open the movie library's menu by clicking the button next to the '電影庫' card to look for a per-library '掃描' option.
-        # button
-        elem = page.locator('xpath=/html/body/div/div/div/div[2]/main/div/div/div/div[2]/div/div/div/div/div[2]/button')
-        await elem.click(timeout=10000)
-        
-        # -> Open the movie library's menu (the '…' menu next to the 電影庫 card) to look for a per-library '掃描' (Scan) option.
-        # button
-        elem = page.locator('xpath=/html/body/div/div/div/div[2]/main/div/div/div/div[2]/div/div/div/div/div[2]/button')
-        await elem.click(timeout=10000)
-        
-        # -> Open the movie library menu (the '…' menu next to 電影庫) and look for a '掃描' option or any scan-related UI.
-        # button
-        elem = page.locator('xpath=/html/body/div/div/div/div[2]/main/div/div/div/div[2]/div/div/div/div/div[2]/button')
-        await elem.click(timeout=10000)
-        
-        # -> Click the '掃描媒體庫' button to start a scan and then check for the scan progress card and cancel controls.
+        # -> Click the '掃描媒體庫' button to start a scan and then look for a visible scan progress card or a '取消' (Cancel) control.
         # 掃描媒體庫 button
-        elem = page.get_by_test_id('scan-trigger-button')
+        elem = page.get_by_test_id("scan-trigger-button")
+        await elem.click(timeout=10000)
+        
+        # -> Click the '掃描媒體庫' button to attempt to start a scan and surface a cancellable scan progress card.
+        # 掃描媒體庫 button
+        elem = page.get_by_test_id("scan-trigger-button")
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
-        current_url = await page.evaluate("() => window.location.href")
-        # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
-        assert current_url, 'Page should have loaded with a URL'
-        current_url = await page.evaluate("() => window.location.href")
-        # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
-        assert current_url, 'Page should have loaded with a URL'
-        current_url = await page.evaluate("() => window.location.href")
-        # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
-        assert current_url, 'Page should have loaded with a URL'
+        
+        # --> A scan progress card did not appear after starting a scan, so the in-progress state could not be verified.
+        # Assert-outcome: failed
+        # Assert: Expected the page to display a scanning/in-progress indicator ('掃描中').
+        await expect(page.locator("#root").nth(0)).to_contain_text("\u6383\u63cf\u4e2d", timeout=15000), "Expected the page to display a scanning/in-progress indicator ('\u6383\u63cf\u4e2d')."
+        
+        # --> The cancel confirmation dialog did not appear when attempting to cancel a scan.
+        # Assert-outcome: failed
+        # Assert: Expected the page to show a '取消' control so the cancel dialog could be confirmed.
+        await expect(page.locator("#root").nth(0)).to_contain_text("\u53d6\u6d88", timeout=15000), "Expected the page to show a '\u53d6\u6d88' control so the cancel dialog could be confirmed."
         await asyncio.sleep(5)
 
     finally:

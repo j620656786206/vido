@@ -40,31 +40,49 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Click the '媒體庫' link in the sidebar to open the Library page.
+        # -> Search the homepage for the text 'degraded' (and then for the Chinese status '離線') to locate the connection health indicator.
         # 媒體庫 link
-        elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
+        elem = page.get_by_test_id("app-sidebar").get_by_test_id("nav-library")
         await elem.click(timeout=10000)
+        
+        # -> Click the '首頁' link to open the homepage and check for a degraded connection indicator (look for 'degraded' or the zh-TW equivalent such as '離線').
+        # 首頁 link
+        elem = page.get_by_test_id("app-sidebar").get_by_test_id("nav-home")
+        await elem.click(timeout=10000)
+        
+        # -> Click the '媒體庫' link to open the Media Library and verify the poster grid is visible
+        # 媒體庫 link
+        elem = page.get_by_test_id("app-sidebar").get_by_test_id("nav-library")
+        await elem.click(timeout=10000)
+        
+        # -> Click the '首頁' link to open the homepage and check for the degraded (離線) indicator.
+        # 首頁 link
+        elem = page.get_by_test_id("app-sidebar").get_by_test_id("nav-home")
+        await elem.click(timeout=10000)
+        
+        # -> Open the '媒體庫' (Media Library) page and verify the poster grid is visible.
+        await page.goto("http://localhost:8090/library")
+        try:
+            await page.wait_for_load_state("domcontentloaded", timeout=5000)
+        except Exception:
+            pass
         
         # --> Assertions to verify final state
         
-        # --> Verify element "degraded state indicator" is visible
-        await page.locator("xpath=/html/body/div/div/div/div[1]/aside/div[2]/div[2]/span/span[1]").nth(0).scroll_into_view_if_needed()
-        # Assert: Degraded TMDb API indicator (aria-label "TMDb API：離線") is visible in the sidebar footer.
-        await expect(page.locator("xpath=/html/body/div/div/div/div[1]/aside/div[2]/div[2]/span/span[1]").nth(0)).to_be_visible(timeout=15000), "Degraded TMDb API indicator (aria-label \"TMDb API\uff1a\u96e2\u7dda\") is visible in the sidebar footer."
+        # --> The degraded connection indicator is visible in the sidebar and shows '離線'.
+        await page.get_by_test_id("status-dot-tmdb").nth(0).scroll_into_view_if_needed()
+        # Assert-outcome: passed
+        # Assert: Degraded indicator element is visible in the sidebar.
+        await expect(page.get_by_test_id("status-dot-tmdb").nth(0)).to_be_visible(timeout=15000), "Degraded indicator element is visible in the sidebar."
+        # Assert-outcome: passed
+        # Assert: Degraded indicator's aria-label equals 'TMDb API：離線'.
+        await expect(page.get_by_test_id("status-dot-tmdb").nth(0)).to_have_attribute("aria-label", "TMDb API\uff1a\u96e2\u7dda", timeout=15000), "Degraded indicator's aria-label equals 'TMDb API\uff1a\u96e2\u7dda'."
         
-        # --> Verify a grid of media poster cards is still visible (core feature unaffected by degradation)
-        await page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div[2]/div[2]/a[16]").nth(0).scroll_into_view_if_needed()
-        # Assert: Media poster card 駭客任務 (1999) is visible in the library grid.
-        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div[2]/div[2]/a[16]").nth(0)).to_be_visible(timeout=15000), "Media poster card \u99ed\u5ba2\u4efb\u52d9 (1999) is visible in the library grid."
-        await page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div[2]/div[2]/a[18]").nth(0).scroll_into_view_if_needed()
-        # Assert: Media poster card 教父 (1972) is visible in the library grid.
-        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div[2]/div[2]/a[18]").nth(0)).to_be_visible(timeout=15000), "Media poster card \u6559\u7236 (1972) is visible in the library grid."
-        await page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div[2]/div[2]/a[1]").nth(0).scroll_into_view_if_needed()
-        # Assert: At least one poster card (Unknown.Show.S01) is visible in the library grid.
-        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div[2]/div[2]/a[1]").nth(0)).to_be_visible(timeout=15000), "At least one poster card (Unknown.Show.S01) is visible in the library grid."
-        current_url = await page.evaluate("() => window.location.href")
-        # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
-        assert current_url, 'Page should have loaded with a URL'
+        # --> The Media Library page displays poster cards (the media grid is visible).
+        await page.get_by_test_id("poster-v2-seed-sr-002").nth(0).scroll_into_view_if_needed()
+        # Assert-outcome: passed
+        # Assert: At least one poster card is visible in the media grid (media library).
+        await expect(page.get_by_test_id("poster-v2-seed-sr-002").nth(0)).to_be_visible(timeout=15000), "At least one poster card is visible in the media grid (media library)."
         await asyncio.sleep(5)
 
     finally:

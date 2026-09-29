@@ -1,6 +1,6 @@
 # Story: disc-2026-09-scanner-custom-modals-a11y — 媒體庫設定的編輯框按 Esc 關得掉、⋮ 選單點旁邊會收
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-09-29。Alexyu 從推薦清單選 B。不需要產品裁定、不需要新設計稿（外觀照 E5-D／E5-M、E1-D）。
      行號為 main `849eb8d8`，改動前；每條「查到的事」都是 SM 本次親自讀過的位置。 -->

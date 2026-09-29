@@ -40,21 +40,20 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Click the '活動' (Activity) navigation item in the sidebar.
+        # -> Click the '活動' navigation item in the sidebar to open the Activity page.
         # 活動 link
-        elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='活動', exact=True)
+        elem = page.get_by_test_id("app-sidebar").get_by_test_id("nav-activity")
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> The browser navigated to the Activity route and the Activity UI is visible.
+        # --> The Activity page opens: the browser navigates to /activity and the '批次生成字幕' button is visible.
         # Assert-outcome: passed
-        # Assert: URL contains '/activity'.
-        await expect(page).to_have_url(re.compile("/activity"), timeout=15000), "URL contains '/activity'."
-        await page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/header/button").nth(0).scroll_into_view_if_needed()
+        # Assert: The URL path contains /activity.
+        await expect(page).to_have_url(re.compile("/activity"), timeout=15000), "The URL path contains /activity."
         # Assert-outcome: passed
-        # Assert: The Activity header button '批次生成字幕' is visible.
-        await expect(page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/header/button").nth(0)).to_be_visible(timeout=15000), "The Activity header button '\u6279\u6b21\u751f\u6210\u5b57\u5e55' is visible."
+        # Assert: The Activity page shows the '批次生成字幕' button.
+        await expect(page.get_by_test_id("activity-generation-batch-cta").nth(0)).to_have_text("\u6279\u6b21\u751f\u6210\u5b57\u5e55", timeout=15000), "The Activity page shows the '\u6279\u6b21\u751f\u6210\u5b57\u5e55' button."
         await asyncio.sleep(5)
 
     finally:

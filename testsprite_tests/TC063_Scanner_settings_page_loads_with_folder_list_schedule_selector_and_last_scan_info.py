@@ -40,7 +40,7 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Open the Scanner settings page (Settings → Scanner) by navigating to /settings/scanner so the page can be inspected for the required sections.
+        # -> Open the Scanner Settings page by navigating to the URL /settings/scanner.
         await page.goto("http://localhost:8090/settings/scanner")
         try:
             await page.wait_for_load_state("domcontentloaded", timeout=5000)

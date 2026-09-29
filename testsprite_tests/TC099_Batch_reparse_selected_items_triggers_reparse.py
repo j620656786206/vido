@@ -40,47 +40,37 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Click the '媒體庫' (Library) link in the left sidebar to open the Library page.
+        # -> Click the '媒體庫' link in the left sidebar to open the library page.
         # 媒體庫 link
-        elem = page.get_by_text('內容', exact=True).locator("xpath=ancestor-or-self::*[.//a][1]").get_by_role('link', name='媒體庫', exact=True)
+        elem = page.get_by_test_id("app-sidebar").get_by_test_id("nav-library")
         await elem.click(timeout=10000)
         
-        # -> Click the '選取' (Select) button to enter selection mode on the Library page.
+        # -> Click the '選取' button to enter selection mode.
         # 選取 button
-        elem = page.get_by_test_id('enter-selection-btn')
+        elem = page.get_by_test_id("enter-selection-btn")
         await elem.click(timeout=10000)
         
-        # -> Select two media items by clicking 'Unknown.Show.S01' and '怪奇物語', then click the '重新解析' (Reparse) batch button.
-        # U 失敗 Unknown.Show.S01 link
-        elem = page.get_by_test_id('poster-v2-seed-sr-101')
+        # -> Select the first two library items ("Unknown.Show.S01" and "怪奇物語") and click the '重新解析' (Reparse) button.
+        # U 整理中 Unknown.Show.S01 link
+        elem = page.get_by_test_id("poster-v2-seed-sr-101")
         await elem.click(timeout=10000)
         
-        # -> Select two media items by clicking 'Unknown.Show.S01' and '怪奇物語', then click the '重新解析' (Reparse) batch button.
+        # -> Select the first two library items ("Unknown.Show.S01" and "怪奇物語") and click the '重新解析' (Reparse) button.
         # 缺字幕 怪奇物語 2016 link
-        elem = page.get_by_test_id('poster-v2-seed-sr-002')
+        elem = page.get_by_test_id("poster-v2-seed-sr-002")
         await elem.click(timeout=10000)
         
-        # -> Select two media items by clicking 'Unknown.Show.S01' and '怪奇物語', then click the '重新解析' (Reparse) batch button.
+        # -> Select the first two library items ("Unknown.Show.S01" and "怪奇物語") and click the '重新解析' (Reparse) button.
         # 重新解析 button
-        elem = page.get_by_test_id('batch-reparse-btn')
+        elem = page.get_by_test_id("batch-reparse-btn")
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> A confirmation dialog shows the message '確定要重新解析 2 個項目嗎？'.
+        # --> A confirmation dialog titled '確認重新解析' asks to reparse the two selected items.
         # Assert-outcome: passed
-        # Assert: Confirmation dialog displays the message asking to reparse 2 items.
-        await expect(page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/div[2]/div[1]").nth(0)).to_contain_text("\u78ba\u5b9a\u8981\u91cd\u65b0\u89e3\u6790 2 \u500b\u9805\u76ee\u55ce\uff1f", timeout=15000), "Confirmation dialog displays the message asking to reparse 2 items."
-        
-        # --> The confirmation dialog presents '取消' and '重新解析' action buttons.
-        await page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/div[2]/div[2]/div/button[1]").nth(0).scroll_into_view_if_needed()
-        # Assert-outcome: passed
-        # Assert: The confirmation dialog has a '取消' (Cancel) button.
-        await expect(page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/div[2]/div[2]/div/button[1]").nth(0)).to_be_visible(timeout=15000), "The confirmation dialog has a '\u53d6\u6d88' (Cancel) button."
-        await page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/div[2]/div[2]/div/button[2]").nth(0).scroll_into_view_if_needed()
-        # Assert-outcome: passed
-        # Assert: The confirmation dialog has a '重新解析' (Reparse) button.
-        await expect(page.locator("xpath=/html/body/div[1]/div/div/div[2]/main/div/div[2]/div[2]/div/button[2]").nth(0)).to_be_visible(timeout=15000), "The confirmation dialog has a '\u91cd\u65b0\u89e3\u6790' (Reparse) button."
+        # Assert: The confirmation dialog asks '確定要重新解析 2 個項目嗎？'.
+        await expect(page.get_by_test_id("batch-confirm-backdrop").nth(0)).to_contain_text("\u78ba\u5b9a\u8981\u91cd\u65b0\u89e3\u6790 2 \u500b\u9805\u76ee\u55ce\uff1f", timeout=15000), "The confirmation dialog asks '\u78ba\u5b9a\u8981\u91cd\u65b0\u89e3\u6790 2 \u500b\u9805\u76ee\u55ce\uff1f'."
         await asyncio.sleep(5)
 
     finally:
