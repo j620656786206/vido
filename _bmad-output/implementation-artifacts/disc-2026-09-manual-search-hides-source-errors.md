@@ -1,6 +1,6 @@
 # Story: disc-2026-09-manual-search-hides-source-errors — TMDb 斷線時，手動選片不再怪你打錯字
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-09-29。Alexyu 從推薦清單選定（「第二張」）；本張不需要產品裁定。
      行號為 main `994baac2`，改動前；每條「查到的事」都是 SM 本次親自讀過的位置。 -->
