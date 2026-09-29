@@ -93,13 +93,13 @@ describe('setupService', () => {
             success: false,
             error: {
               code: 'SETUP_ALREADY_COMPLETED',
-              message: 'Setup wizard has already been completed',
+              message: '設定已經完成過了，請重新整理頁面。',
             },
           }),
       });
 
       await expect(setupService.completeSetup({ language: 'en' })).rejects.toThrow(
-        'Setup wizard has already been completed'
+        '設定已經完成過了，請重新整理頁面。'
       );
     });
   });
@@ -130,13 +130,11 @@ describe('setupService', () => {
         json: () =>
           Promise.resolve({
             success: false,
-            error: { code: 'SETUP_VALIDATION_FAILED', message: 'language is required' },
+            error: { code: 'SETUP_VALIDATION_FAILED', message: '請選擇語言。' },
           }),
       });
 
-      await expect(setupService.validateStep('welcome', {})).rejects.toThrow(
-        'language is required'
-      );
+      await expect(setupService.validateStep('welcome', {})).rejects.toThrow('請選擇語言。');
     });
   });
 });

@@ -177,6 +177,7 @@ func main() {
 	settingsService := services.NewSettingsServiceWithSecrets(repos.Settings, secretsService)
 
 	setupService := services.NewSetupService(repos.Settings, secretsService)
+	setupService.SetMediaRoots(cfg.MediaDirs) // wizard: suggest folders the container can see
 	qbittorrentService := services.NewQBittorrentService(repos.Settings, secretsService)
 	downloadService := services.NewDownloadService(qbittorrentService, slog.Default())
 	mediaService := services.NewMediaService(cfg.MediaDirs)

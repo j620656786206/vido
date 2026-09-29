@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -505,7 +506,7 @@ func TestSetupService_ValidateStep_EdgeCases(t *testing.T) {
 				"language": "",
 			},
 			wantErr: true,
-			errMsg:  "language is required",
+			errMsg:  "請選擇語言",
 		},
 		{
 			name: "welcome - non-string language type",
@@ -514,7 +515,7 @@ func TestSetupService_ValidateStep_EdgeCases(t *testing.T) {
 				"language": 123,
 			},
 			wantErr: true,
-			errMsg:  "language is required",
+			errMsg:  "請選擇語言",
 		},
 		{
 			name: "media-folder - path is a file not directory",
@@ -532,7 +533,7 @@ func TestSetupService_ValidateStep_EdgeCases(t *testing.T) {
 				}
 			}(),
 			wantErr: true,
-			errMsg:  "not a directory",
+			errMsg:  "是檔案，不是資料夾",
 		},
 		{
 			name: "api-keys - TMDb key exactly 16 chars (valid)",
@@ -549,7 +550,7 @@ func TestSetupService_ValidateStep_EdgeCases(t *testing.T) {
 				"tmdb_api_key": "123456789012345",
 			},
 			wantErr: true,
-			errMsg:  "invalid TMDb API key format",
+			errMsg:  "TMDb 金鑰格式不對",
 		},
 		{
 			name: "qbittorrent - URL exactly 7 chars passes length check",
@@ -566,7 +567,7 @@ func TestSetupService_ValidateStep_EdgeCases(t *testing.T) {
 				"qbt_url": "ftp://",
 			},
 			wantErr: true,
-			errMsg:  "invalid qBittorrent URL",
+			errMsg:  "qBittorrent 網址看起來不對",
 		},
 	}
 
@@ -612,7 +613,7 @@ func TestSetupService_ValidateStep(t *testing.T) {
 			step:    "welcome",
 			data:    map[string]interface{}{},
 			wantErr: true,
-			errMsg:  "language is required",
+			errMsg:  "請選擇語言",
 		},
 		{
 			name: "qbittorrent - valid URL",
@@ -635,7 +636,7 @@ func TestSetupService_ValidateStep(t *testing.T) {
 				"qbt_url": "bad",
 			},
 			wantErr: true,
-			errMsg:  "invalid qBittorrent URL",
+			errMsg:  "qBittorrent 網址看起來不對",
 		},
 		{
 			name: "media-folder - valid path",
@@ -650,7 +651,7 @@ func TestSetupService_ValidateStep(t *testing.T) {
 			step:    "media-folder",
 			data:    map[string]interface{}{},
 			wantErr: true,
-			errMsg:  "media folder path is required",
+			errMsg:  "還有資料夾沒填路徑",
 		},
 		{
 			name: "media-folder - nonexistent path",
@@ -659,7 +660,7 @@ func TestSetupService_ValidateStep(t *testing.T) {
 				"media_folder_path": "/nonexistent/path/xyz",
 			},
 			wantErr: true,
-			errMsg:  "does not exist",
+			errMsg:  "找不到「/nonexistent/path/xyz」",
 		},
 		{
 			name: "api-keys - valid TMDb key",
@@ -682,7 +683,7 @@ func TestSetupService_ValidateStep(t *testing.T) {
 				"tmdb_api_key": "short",
 			},
 			wantErr: true,
-			errMsg:  "invalid TMDb API key format",
+			errMsg:  "TMDb 金鑰格式不對",
 		},
 		{
 			name:    "complete - always valid",
@@ -791,4 +792,126 @@ func TestSetupService_KeysNotWritable(t *testing.T) {
 		require.NoError(t, svc.CompleteSetup(context.Background(), SetupConfig{Language: "en", ClaudeApiKey: "   "}))
 		repo.AssertExpectations(t)
 	})
+}
+
+// disc-setup-wizard-container-path-hint AC #1: a path the container cannot see
+// is answered with the folders it CAN see — the media root, then its real
+// subfolders sorted, at most four, hidden/Synology system folders left out.
+func TestSetupService_MediaFolderNotFound_SuggestsContainerFolders(t *testing.T) {
+	root := t.TempDir()
+	for _, d := range []string{"tv", "movies", "anime", "docs", "kids", ".hidden", "@eaDir"} {
+		require.NoError(t, os.Mkdir(filepath.Join(root, d), 0o755))
+	}
+	require.NoError(t, os.WriteFile(filepath.Join(root, "readme.txt"), []byte("x"), 0o644))
+	svc := NewSetupService(nil, nil)
+	svc.SetMediaRoots([]string{root})
+
+	err := svc.ValidateStep(context.Background(), "media-folder", map[string]interface{}{
+		"libraries": []interface{}{map[string]interface{}{"path": "/video/Movies", "content_type": "movie"}},
+	})
+	require.Error(t, err)
+	want := "找不到「/video/Movies」。Vido 在 Docker 裡，只看得到掛進容器的資料夾——請填容器裡的路徑，例如 " +
+		root + "、" + filepath.Join(root, "anime") + "、" + filepath.Join(root, "docs") + "、" +
+		filepath.Join(root, "kids") + "。"
+	assert.Equal(t, want, err.Error())
+}
+
+func TestSetupService_MediaFolderNotFound_RootWithoutSubfolders(t *testing.T) {
+	root := t.TempDir()
+	svc := NewSetupService(nil, nil)
+	svc.SetMediaRoots([]string{root})
+
+	err := svc.ValidateStep(context.Background(), "media-folder", map[string]interface{}{
+		"libraries": []interface{}{map[string]interface{}{"path": "/video/Movies"}},
+	})
+	require.Error(t, err)
+	assert.Equal(t, "找不到「/video/Movies」。Vido 在 Docker 裡，只看得到掛進容器的資料夾——請填容器裡的路徑，例如 "+root+"。", err.Error())
+}
+
+// VIDO_MEDIA_DIRS can list the library folders themselves — those come first.
+func TestSetupService_MediaFolderNotFound_SeveralRootsComeFirst(t *testing.T) {
+	base := t.TempDir()
+	movies, tv := filepath.Join(base, "movies"), filepath.Join(base, "tv")
+	require.NoError(t, os.MkdirAll(filepath.Join(movies, "Dune (2021)"), 0o755))
+	require.NoError(t, os.MkdirAll(filepath.Join(tv, "Arcane"), 0o755))
+	svc := NewSetupService(nil, nil)
+	svc.SetMediaRoots([]string{movies, tv})
+
+	err := svc.ValidateStep(context.Background(), "media-folder", map[string]interface{}{
+		"libraries": []interface{}{map[string]interface{}{"path": "/video/Movies"}},
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "例如 "+movies+"、"+tv+"、")
+}
+
+// A root nested in another root is listed once, and trailing slashes don't
+// make a second spelling.
+func TestSetupService_MediaFolderNotFound_NoDuplicateSuggestions(t *testing.T) {
+	root := t.TempDir()
+	movies := filepath.Join(root, "movies")
+	require.NoError(t, os.Mkdir(movies, 0o755))
+	svc := NewSetupService(nil, nil)
+	svc.SetMediaRoots([]string{root + "/", movies, root})
+
+	err := svc.ValidateStep(context.Background(), "media-folder", map[string]interface{}{
+		"libraries": []interface{}{map[string]interface{}{"path": "/video/Movies"}},
+	})
+	require.Error(t, err)
+	assert.Equal(t, "找不到「/video/Movies」。Vido 在 Docker 裡，只看得到掛進容器的資料夾——請填容器裡的路徑，例如 "+
+		root+"、"+movies+"。", err.Error())
+}
+
+func TestSetupService_MediaFolderUnreadableIsAPermissionProblem(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root reads everything")
+	}
+	parent := filepath.Join(t.TempDir(), "locked")
+	require.NoError(t, os.Mkdir(parent, 0o755))
+	target := filepath.Join(parent, "movies")
+	require.NoError(t, os.Mkdir(target, 0o755))
+	require.NoError(t, os.Chmod(parent, 0o000))
+	t.Cleanup(func() { _ = os.Chmod(parent, 0o755) })
+
+	svc := NewSetupService(nil, nil)
+	err := svc.ValidateStep(context.Background(), "media-folder", map[string]interface{}{
+		"libraries": []interface{}{map[string]interface{}{"path": target}},
+	})
+	require.Error(t, err)
+	assert.Equal(t, "沒有權限讀取「"+target+"」：Vido 所在容器的使用者（PUID／PGID）讀不到這個資料夾。", err.Error())
+}
+
+func TestSetupService_MediaFolderNotFound_NothingMounted(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "media")
+	svc := NewSetupService(nil, nil)
+	svc.SetMediaRoots([]string{missing})
+
+	err := svc.ValidateStep(context.Background(), "media-folder", map[string]interface{}{
+		"libraries": []interface{}{map[string]interface{}{"path": "/video/Movies"}},
+	})
+	require.Error(t, err)
+	assert.Equal(t, "找不到「/video/Movies」。Vido 在 Docker 裡，只看得到掛進容器的資料夾，但目前容器裡沒有 "+missing+
+		"——請在 docker-compose 的 volumes 把媒體資料夾掛到 "+missing+"。", err.Error())
+}
+
+func TestSetupService_MediaFolderMessagesAreChinese(t *testing.T) {
+	root := t.TempDir()
+	file := filepath.Join(root, "a.mkv")
+	require.NoError(t, os.WriteFile(file, []byte("x"), 0o644))
+	svc := NewSetupService(nil, nil)
+	svc.SetMediaRoots([]string{root})
+	cases := []struct {
+		lib  map[string]interface{}
+		want string
+	}{
+		{map[string]interface{}{"path": ""}, "還有資料夾沒填路徑。"},
+		{map[string]interface{}{"path": file}, "「" + file + "」是檔案，不是資料夾。"},
+		{map[string]interface{}{"path": root, "content_type": "music"}, "資料夾的類型只能是電影或影集。"},
+	}
+	for _, tc := range cases {
+		err := svc.ValidateStep(context.Background(), "media-folder", map[string]interface{}{
+			"libraries": []interface{}{tc.lib},
+		})
+		require.Error(t, err)
+		assert.Equal(t, tc.want, err.Error())
+	}
 }

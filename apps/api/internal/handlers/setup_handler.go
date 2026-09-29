@@ -65,7 +65,8 @@ func (h *SetupHandler) Complete(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, services.ErrSetupAlreadyCompleted) {
-			BadRequestError(c, "SETUP_ALREADY_COMPLETED", "Setup wizard has already been completed")
+			// The wizard shows this text as is (disc-setup-wizard-container-path-hint).
+			BadRequestError(c, "SETUP_ALREADY_COMPLETED", "設定已經完成過了，請重新整理頁面。")
 			return
 		}
 		InternalServerError(c, "Failed to complete setup")
