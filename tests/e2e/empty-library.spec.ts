@@ -107,12 +107,14 @@ const emptyLibraryStats = {
   tv_count: 0,
   total_count: 0,
 };
+// The real /scanner/status shape (bugfix-last-scan-never-shown).
 const idleScanStatus = {
-  is_scanning: false,
-  files_scanned: 0,
-  files_total: 0,
-  current_path: '',
-  started_at: null,
+  files_found: 0,
+  error_count: 0,
+  current_file: '',
+  percent_done: 0,
+  is_active: false,
+  last_scan: null,
 };
 
 // =============================================================================

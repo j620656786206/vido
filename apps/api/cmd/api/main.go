@@ -422,6 +422,7 @@ func main() {
 	)
 	scannerService.SetLibraryRepo(repos.MediaLibraries) // Story 7b-5: DB-based library scanning
 	scannerService.SetEpisodeRepo(repos.Episodes)       // Story 9c-3: series file_size aggregation
+	scannerService.SetSettingsRepo(repos.Settings)      // bugfix-last-scan-never-shown: 「上次掃描」 survives restarts
 
 	// TV routing (bugfix-b): without this the scanner writes every scanned file to `movies`,
 	// which is what left series/seasons/episodes empty while the movie table filled up with

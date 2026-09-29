@@ -52,23 +52,39 @@ describe('scannerService', () => {
   });
 
   describe('getScanStatus', () => {
-    it('fetches scan status', async () => {
-      const status = {
-        isScanning: false,
-        filesFound: 0,
-        filesProcessed: 0,
-        currentFile: '',
-        percentDone: 0,
-        errorCount: 0,
-        estimatedTime: '',
-        lastScanAt: '2026-03-22T14:30:00Z',
-        lastScanFiles: 1247,
-        lastScanDuration: '3m12s',
-      };
-      mockSuccess(status);
+    // bugfix-last-scan-never-shown AC #4: the backend's REAL snake_case body
+    // (scanner_handler.go scanStatusResponse — ScanProgress flat + last_scan),
+    // run through fetchApi's snake→camel transform. The old mock used field
+    // names the backend never sent (isScanning, lastScanAt…).
+    it('reads the real status body, including last_scan', async () => {
+      mockSuccess({
+        files_found: 0,
+        files_created: 0,
+        files_updated: 0,
+        files_skipped: 0,
+        files_removed: 0,
+        files_unmatched: 0,
+        error_count: 0,
+        current_file: '',
+        percent_done: 0,
+        is_active: false,
+        started_at: '0001-01-01T00:00:00Z',
+        last_scan: { completed_at: '2026-03-22T14:30:00Z', files_found: 1247, duration_ms: 192000 },
+      });
 
       const data = await scannerService.getScanStatus();
-      expect(data.lastScanFiles).toBe(1247);
+      expect(data.isActive).toBe(false);
+      expect(data.lastScan).toEqual({
+        completedAt: '2026-03-22T14:30:00Z',
+        filesFound: 1247,
+        durationMs: 192000,
+      });
+    });
+
+    it('never scanned → lastScan is null', async () => {
+      mockSuccess({ is_active: false, files_found: 0, last_scan: null });
+      const data = await scannerService.getScanStatus();
+      expect(data.lastScan).toBeNull();
     });
   });
 

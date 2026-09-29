@@ -6,7 +6,7 @@
 
 import { useEffect, useReducer, useCallback, useRef } from 'react';
 import { scannerService } from '../services/scannerService';
-import type { ScanProgressEvent, ScanStatus } from '../services/scannerService';
+import type { ScanProgressEvent } from '../services/scannerService';
 import { snakeToCamel } from '../utils/caseTransform';
 
 export interface ScanProgressState {
@@ -36,7 +36,6 @@ export interface ScanProgressState {
 
 type ScanProgressAction =
   | { type: 'SSE_UPDATE'; payload: ScanProgressEvent }
-  | { type: 'STATUS_UPDATE'; payload: ScanStatus }
   | { type: 'SCAN_COMPLETE' }
   | { type: 'SCAN_CANCELLED' }
   | { type: 'SCAN_IDLE' }
@@ -88,46 +87,6 @@ function scanProgressReducer(
         isCancelled: false,
         isDismissed: false,
       };
-    }
-    case 'STATUS_UPDATE': {
-      const p = action.payload;
-      if (!p.isScanning && state.isScanning) {
-        // Scan just finished — mark complete
-        return {
-          ...state,
-          isScanning: false,
-          percentDone: 100,
-          filesFound: p.filesFound,
-          filesProcessed: p.filesProcessed,
-          filesUnmatched: p.filesUnmatched ?? state.filesUnmatched,
-          // The status endpoint does not report created/updated — unknown, not 0.
-          filesCreated: undefined,
-          filesUpdated: undefined,
-          errorCount: p.errorCount,
-          currentFile: '',
-          estimatedTime: '',
-          isComplete: true,
-          isDismissed: false,
-        };
-      }
-      if (p.isScanning) {
-        return {
-          ...state,
-          isScanning: true,
-          percentDone: p.percentDone,
-          currentFile: p.currentFile,
-          filesFound: p.filesFound,
-          filesProcessed: p.filesProcessed,
-          filesUnmatched: p.filesUnmatched ?? state.filesUnmatched,
-          errorCount: p.errorCount,
-          estimatedTime: p.estimatedTime,
-          isComplete: false,
-          isCancelled: false,
-          isDismissed: false,
-        };
-      }
-      // Not scanning and we weren't scanning — stay idle
-      return state;
     }
     case 'SCAN_COMPLETE':
       return {

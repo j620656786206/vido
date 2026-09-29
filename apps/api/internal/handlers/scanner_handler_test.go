@@ -44,6 +44,14 @@ func (m *MockScannerService) GetProgress() services.ScanProgress {
 	return args.Get(0).(services.ScanProgress)
 }
 
+func (m *MockScannerService) GetLastScan(ctx context.Context) *services.LastScanSummary {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil
+	}
+	return args.Get(0).(*services.LastScanSummary)
+}
+
 // MockScanScheduler implements ScanSchedulerInterface for testing
 type MockScanScheduler struct {
 	mock.Mock
@@ -120,6 +128,7 @@ func TestScannerHandler_GetStatus_NoScan(t *testing.T) {
 		IsActive:   false,
 		FilesFound: 0,
 	})
+	mockSvc.On("GetLastScan", mock.Anything).Return(nil)
 
 	router := setupScannerRouter(mockSvc)
 	req, _ := http.NewRequest(http.MethodGet, "/api/v1/scanner/status", nil)
@@ -134,6 +143,39 @@ func TestScannerHandler_GetStatus_NoScan(t *testing.T) {
 	dataMap, ok := body.Data.(map[string]interface{})
 	require.True(t, ok)
 	assert.Equal(t, false, dataMap["is_active"])
+	// bugfix-last-scan-never-shown AC #1: never scanned → explicit null.
+	lastScan, present := dataMap["last_scan"]
+	assert.True(t, present, "last_scan is always in the response")
+	assert.Nil(t, lastScan)
+}
+
+// bugfix-last-scan-never-shown AC #1/#4 [@contract-v1]: the exact keys the
+// settings page reads — the progress fields stay flat beside last_scan.
+func TestScannerHandler_GetStatus_LastScan(t *testing.T) {
+	mockSvc := new(MockScannerService)
+	mockSvc.On("GetProgress").Return(services.ScanProgress{IsActive: false})
+	mockSvc.On("GetLastScan", mock.Anything).Return(&services.LastScanSummary{
+		CompletedAt: time.Date(2026, 3, 22, 14, 30, 0, 0, time.UTC),
+		FilesFound:  1247,
+		DurationMs:  192000,
+	})
+
+	router := setupScannerRouter(mockSvc)
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/scanner/status", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	require.Equal(t, http.StatusOK, resp.Code)
+	var body APIResponse
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+	dataMap := body.Data.(map[string]interface{})
+	assert.Equal(t, false, dataMap["is_active"])
+	last, ok := dataMap["last_scan"].(map[string]interface{})
+	require.True(t, ok, "last_scan must be an object, got %v", dataMap["last_scan"])
+	assert.Equal(t, "2026-03-22T14:30:00Z", last["completed_at"])
+	assert.Equal(t, float64(1247), last["files_found"])
+	assert.Equal(t, float64(192000), last["duration_ms"])
+	assert.Len(t, last, 3)
 }
 
 func TestScannerHandler_GetStatus_ActiveScan(t *testing.T) {
@@ -145,6 +187,7 @@ func TestScannerHandler_GetStatus_ActiveScan(t *testing.T) {
 		PercentDone: 50,
 		ErrorCount:  1,
 	})
+	mockSvc.On("GetLastScan", mock.Anything).Return(nil)
 
 	router := setupScannerRouter(mockSvc)
 	req, _ := http.NewRequest(http.MethodGet, "/api/v1/scanner/status", nil)
