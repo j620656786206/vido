@@ -74,7 +74,6 @@ type Hub struct {
 	mu         sync.RWMutex
 	clients    map[string]*Client
 	broadcast  chan Event
-	register   chan *Client
 	unregister chan *Client
 	done       chan struct{}
 	closed     atomic.Bool
@@ -85,7 +84,6 @@ func NewHub() *Hub {
 	h := &Hub{
 		clients:    make(map[string]*Client),
 		broadcast:  make(chan Event, 256),
-		register:   make(chan *Client, 64),
 		unregister: make(chan *Client, 64),
 		done:       make(chan struct{}),
 	}
@@ -98,13 +96,6 @@ func NewHub() *Hub {
 func (h *Hub) Run() {
 	for {
 		select {
-		case client := <-h.register:
-			h.mu.Lock()
-			h.clients[client.ID] = client
-			count := len(h.clients)
-			h.mu.Unlock()
-			slog.Info("SSE client registered", "client_id", client.ID, "total_clients", count)
-
 		case client := <-h.unregister:
 			h.mu.Lock()
 			if _, ok := h.clients[client.ID]; ok {
@@ -143,14 +134,28 @@ func (h *Hub) Run() {
 	}
 }
 
-// Register creates a new client with a UUID ID and buffered channel,
-// registers it with the hub, and returns the client.
+// Register creates a new client with a UUID ID and buffered channel, adds it
+// to the fan-out set, and returns it. The add is synchronous: the SSE handler
+// tells the browser `connected` right after this returns, and the browser may
+// then start a scan whose events must reach this client. Queuing through the
+// Run loop let a racing broadcast be handled first and miss the client
+// (bugfix-scan-instant-completion-no-feedback). On a closed hub the client
+// comes back already closed, so its stream ends at once.
 func (h *Hub) Register() *Client {
 	client := &Client{
 		ID:     uuid.New().String(),
 		Events: make(chan Event, 100),
 	}
-	h.register <- client
+	h.mu.Lock()
+	if h.closed.Load() {
+		h.mu.Unlock()
+		close(client.Events)
+		return client
+	}
+	h.clients[client.ID] = client
+	count := len(h.clients)
+	h.mu.Unlock()
+	slog.Info("SSE client registered", "client_id", client.ID, "total_clients", count)
 	return client
 }
 

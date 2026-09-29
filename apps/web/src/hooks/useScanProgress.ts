@@ -124,21 +124,41 @@ function scanProgressReducer(
 
 const SSE_RECONNECT_MS = 10000;
 
+// How long a scan trigger waits for the progress stream before POSTing anyway
+// (bugfix-scan-instant-completion-no-feedback): a broken stream must never
+// stop a scan from starting.
+export const SCAN_TRACKING_CONNECT_TIMEOUT_MS = 3000;
+
 // Module-level signal bridging the scan TRIGGER (ScannerSettings — a separate
 // hook instance) to the shell-mounted ScanProgress card. The card cannot be
 // reached directly across instances, so the trigger broadcasts here and the
 // card's instance opens its SSE in response. Kept lazy on purpose: the
 // EventSource is never opened until a scan is actually requested, which
 // preserves the app's networkidle-based E2E stability.
-const scanTrackingListeners = new Set<() => void>();
+const scanTrackingListeners = new Set<() => Promise<void> | void>();
 
-/** Ask any mounted ScanProgress to begin tracking. Call on scan trigger success. */
-export function requestScanTracking(): void {
-  scanTrackingListeners.forEach((fn) => fn());
+/**
+ * Ask any mounted ScanProgress to begin tracking, and resolve once its stream
+ * is CONNECTED (or after SCAN_TRACKING_CONNECT_TIMEOUT_MS). Call — and await —
+ * BEFORE triggering the scan: the server registers the stream before it says
+ * `connected`, so every event after that reaches the card, even from a scan
+ * that finishes in milliseconds (bugfix-scan-instant-completion-no-feedback).
+ * Resolves at once when no ScanProgress is mounted.
+ */
+export function requestScanTracking(): Promise<void> {
+  const waits = [...scanTrackingListeners].map((fn) => fn());
+  if (waits.length === 0) return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    const timer = setTimeout(resolve, SCAN_TRACKING_CONNECT_TIMEOUT_MS);
+    void Promise.all(waits).then(() => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
 }
 
 /** Subscribe a startTracking callback to the signal; returns an unsubscribe fn. */
-export function subscribeScanTracking(onRequest: () => void): () => void {
+export function subscribeScanTracking(onRequest: () => Promise<void> | void): () => void {
   scanTrackingListeners.add(onRequest);
   return () => {
     scanTrackingListeners.delete(onRequest);
@@ -150,20 +170,51 @@ export function useScanProgress() {
   const eventSourceRef = useRef<EventSource | null>(null);
   const sseReconnectRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const mountedRef = useRef(true);
+  // Resolvers waiting for the current stream to connect (startTracking).
+  const connectedRef = useRef(false);
+  const connectWaitersRef = useRef<Array<() => void>>([]);
+
+  // Release everyone waiting on this stream — it connected, or it failed (a
+  // known failure must not hold the scan button for the full timeout).
+  const releaseWaiters = useCallback(() => {
+    const waiters = connectWaitersRef.current;
+    connectWaitersRef.current = [];
+    waiters.forEach((resolve) => resolve());
+  }, []);
+
+  const markConnected = useCallback(() => {
+    connectedRef.current = true;
+    releaseWaiters();
+  }, [releaseWaiters]);
 
   const connectSSE = useCallback(() => {
+    // A reconnect scheduled by an earlier error must not fire later and close
+    // the stream opened now (e.g. a scan clicked during the 10 s gap).
+    if (sseReconnectRef.current) {
+      clearTimeout(sseReconnectRef.current);
+      sseReconnectRef.current = undefined;
+    }
     // Close existing connection
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
     }
 
     const url = scannerService.getSSEUrl();
+    connectedRef.current = false;
     const es = new EventSource(url);
     eventSourceRef.current = es;
+
+    // The server registers the client before its first byte, so `open` and
+    // the `connected` event both mean "every later event reaches us".
+    es.onopen = () => {
+      if (!mountedRef.current) return;
+      markConnected();
+    };
 
     es.addEventListener('connected', () => {
       if (!mountedRef.current) return;
       dispatch({ type: 'SET_CONNECTION', payload: 'sse' });
+      markConnected();
     });
 
     es.addEventListener('scan_progress', (e: MessageEvent) => {
@@ -219,13 +270,15 @@ export function useScanProgress() {
       if (!mountedRef.current) return;
       // SSE connection lost — schedule reconnect (no polling fallback)
       es.close();
+      connectedRef.current = false;
+      releaseWaiters();
       dispatch({ type: 'SET_CONNECTION', payload: 'disconnected' });
       if (sseReconnectRef.current) clearTimeout(sseReconnectRef.current);
       sseReconnectRef.current = setTimeout(() => {
         if (mountedRef.current) connectSSE();
       }, SSE_RECONNECT_MS);
     };
-  }, []);
+  }, [markConnected, releaseWaiters]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -242,11 +295,17 @@ export function useScanProgress() {
     };
   }, []);
 
-  // Connect SSE on demand — called when a scan is triggered externally
-  const startTracking = useCallback(() => {
+  // Connect SSE on demand — called when a scan is triggered externally.
+  // Resolves once the stream is connected (requestScanTracking adds the
+  // timeout), so the trigger can POST without racing a fast scan.
+  const startTracking = useCallback((): Promise<void> => {
     if (!eventSourceRef.current || eventSourceRef.current.readyState === 2) {
       connectSSE();
     }
+    if (connectedRef.current) return Promise.resolve();
+    return new Promise<void>((resolve) => {
+      connectWaitersRef.current.push(resolve);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

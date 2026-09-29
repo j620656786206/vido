@@ -27,6 +27,11 @@ let mockTriggerScanReturn: Partial<TriggerScanResult> = {
   isPending: false,
 };
 
+const mockRequestScanTracking = vi.fn(() => Promise.resolve());
+vi.mock('../../hooks/useScanProgress', () => ({
+  requestScanTracking: () => mockRequestScanTracking(),
+}));
+
 vi.mock('../../hooks/useScanner', () => ({
   useTriggerScan: vi.fn(() => mockTriggerScanReturn),
 }));
@@ -43,6 +48,7 @@ function renderComponent() {
 describe('EmptyReadyForScan (bugfix-10-5 Case C: ready, library empty)', () => {
   beforeEach(() => {
     mockMutateAsync.mockReset();
+    mockRequestScanTracking.mockClear();
     mockTriggerScanReturn = { mutateAsync: mockMutateAsync, isPending: false };
   });
 
@@ -80,6 +86,25 @@ describe('EmptyReadyForScan (bugfix-10-5 Case C: ready, library empty)', () => {
     renderComponent();
     const btn = screen.getByTestId('empty-ready-for-scan-trigger-btn');
     fireEvent.click(btn);
+    await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledTimes(1));
+  });
+
+  // bugfix-scan-instant-completion-no-feedback AC #1: this entry never asked
+  // the shell card to track at all — now it connects first, then starts.
+  it('opens the progress stream and waits for it BEFORE starting the scan', async () => {
+    let connect!: () => void;
+    mockRequestScanTracking.mockImplementationOnce(
+      () => new Promise<void>((resolve) => (connect = resolve))
+    );
+    mockMutateAsync.mockResolvedValueOnce({});
+    renderComponent();
+
+    fireEvent.click(screen.getByTestId('empty-ready-for-scan-trigger-btn'));
+    await waitFor(() => expect(mockRequestScanTracking).toHaveBeenCalledTimes(1));
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+    expect(screen.getByTestId('empty-ready-for-scan-trigger-btn')).toBeDisabled();
+
+    connect();
     await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledTimes(1));
   });
 

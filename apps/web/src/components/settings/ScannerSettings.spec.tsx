@@ -65,6 +65,13 @@ vi.mock('../../hooks/useMediaLibrary', () => ({
   libraryKeys: { all: ['libraries'], detail: (id: string) => ['libraries', id] },
 }));
 
+// bugfix-scan-instant-completion-no-feedback: controls when "the progress
+// stream is connected" so the order (connect, THEN POST) is observable.
+const mockRequestScanTracking = vi.fn(() => Promise.resolve());
+vi.mock('../../hooks/useScanProgress', () => ({
+  requestScanTracking: () => mockRequestScanTracking(),
+}));
+
 vi.mock('../../hooks/useScanner', () => ({
   useScanStatus: vi.fn(() => ({ data: statusWith(LAST_SCAN), isLoading: false })),
   useTriggerScan: vi.fn(() => ({
@@ -93,6 +100,7 @@ function renderWithProviders() {
 describe('ScannerSettings', () => {
   beforeEach(() => {
     mockTriggerScan.mockReset();
+    mockRequestScanTracking.mockClear();
     mockUpdateSchedule.mockReset();
     vi.mocked(useScanStatus).mockReturnValue({
       data: statusWith(LAST_SCAN),
@@ -168,6 +176,23 @@ describe('ScannerSettings', () => {
     await waitFor(() => {
       expect(mockTriggerScan).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('opens the progress stream and waits for it BEFORE starting the scan', async () => {
+    let connect!: () => void;
+    mockRequestScanTracking.mockImplementationOnce(
+      () => new Promise<void>((resolve) => (connect = resolve))
+    );
+    mockTriggerScan.mockResolvedValue({});
+    renderWithProviders();
+
+    fireEvent.click(screen.getByTestId('scan-trigger-button'));
+    await waitFor(() => expect(mockRequestScanTracking).toHaveBeenCalledTimes(1));
+    expect(mockTriggerScan).not.toHaveBeenCalled();
+    expect(screen.getByTestId('scan-trigger-button')).toBeDisabled(); // no double start
+
+    connect();
+    await waitFor(() => expect(mockTriggerScan).toHaveBeenCalledTimes(1));
   });
 
   it('shows warning notification when scan already running', async () => {
