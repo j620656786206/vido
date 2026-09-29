@@ -1,6 +1,6 @@
 # Story: disc-2026-09-not-configured-copy-self-hosted-asr — 「尚未設定」提示只點名真正缺的那把金鑰
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-09-29。Alexyu 裁定 B：「分兩種說法」。
      行號為 main `dc9b0ec6`；.pen 節點 id 由 SM 本次用 Pencil MCP 唯讀讀取。 -->
@@ -104,3 +104,4 @@ Claude Opus 5.5（Amelia）
 | ---------- | ------------------------------------------------------------------ |
 | 2026-09-29 | create-story（SM Bob）＋ Sally 的 Pencil 提示詞；分界更正為「模式」。 |
 | 2026-09-29 | 設計稿（Alexyu）；dev-story（Amelia）＋對抗式 review → review。 |
+| 2026-09-29 | PR #603 合併（`-linux` 基準 #604）→ done。 |
