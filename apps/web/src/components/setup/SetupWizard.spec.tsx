@@ -186,9 +186,9 @@ describe('SetupWizard', () => {
     });
   });
 
-  it('shows error when validation fails', async () => {
+  it('shows the server’s (zh-TW) reason when validation fails', async () => {
     const { setupService } = await import('../../services/setupService');
-    vi.mocked(setupService.validateStep).mockRejectedValueOnce(new Error('language is required'));
+    vi.mocked(setupService.validateStep).mockRejectedValueOnce(new Error('請選擇語言。'));
 
     renderWithProviders();
     // Change language to empty and try to proceed
@@ -196,7 +196,61 @@ describe('SetupWizard', () => {
     fireEvent.change(select, { target: { value: '' } });
     fireEvent.click(screen.getByTestId('next-button'));
 
-    expect(await screen.findByTestId('setup-error')).toBeInTheDocument();
+    expect(await screen.findByTestId('setup-error')).toHaveTextContent('請選擇語言。');
+  });
+
+  // disc-setup-wizard-container-path-hint AC #4: no English fallbacks.
+  it('a validation failure without a message reads in zh-TW', async () => {
+    const { setupService } = await import('../../services/setupService');
+    vi.mocked(setupService.validateStep).mockRejectedValueOnce({});
+
+    renderWithProviders();
+    fireEvent.click(await screen.findByTestId('next-button'));
+
+    expect(await screen.findByTestId('setup-error')).toHaveTextContent(
+      '這一步沒有通過檢查，請再試一次。'
+    );
+  });
+
+  it('a failed 完成設定 reads in zh-TW, not the server’s English', async () => {
+    const { setupService } = await import('../../services/setupService');
+    vi.mocked(setupService.completeSetup).mockRejectedValueOnce(
+      new Error('Failed to complete setup')
+    );
+    renderWithProviders();
+
+    fireEvent.click(await screen.findByTestId('next-button'));
+    fireEvent.click(await screen.findByTestId('skip-button'));
+    const libraryPath = await screen.findByTestId('library-path-0');
+    fireEvent.change(libraryPath, { target: { value: '/media' } });
+    fireEvent.click(screen.getByTestId('next-button'));
+    fireEvent.click(await screen.findByTestId('skip-button'));
+    fireEvent.click(await screen.findByTestId('finish-button'));
+
+    expect(await screen.findByTestId('setup-error')).toHaveTextContent(
+      '設定沒有完成，請再試一次。'
+    );
+    expect(screen.getByTestId('setup-error')).not.toHaveTextContent('Failed');
+  });
+
+  it('a 完成設定 refusal the server wrote in zh-TW is shown as is', async () => {
+    const { setupService } = await import('../../services/setupService');
+    vi.mocked(setupService.completeSetup).mockRejectedValueOnce(
+      new Error('設定已經完成過了，請重新整理頁面。')
+    );
+    renderWithProviders();
+
+    fireEvent.click(await screen.findByTestId('next-button'));
+    fireEvent.click(await screen.findByTestId('skip-button'));
+    const libraryPath = await screen.findByTestId('library-path-0');
+    fireEvent.change(libraryPath, { target: { value: '/media' } });
+    fireEvent.click(screen.getByTestId('next-button'));
+    fireEvent.click(await screen.findByTestId('skip-button'));
+    fireEvent.click(await screen.findByTestId('finish-button'));
+
+    expect(await screen.findByTestId('setup-error')).toHaveTextContent(
+      '設定已經完成過了，請重新整理頁面。'
+    );
   });
 
   it('shows skip warning on API keys step when no keys entered', async () => {

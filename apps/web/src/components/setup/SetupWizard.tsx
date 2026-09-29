@@ -51,6 +51,9 @@ const WIZARD_STEPS: WizardStep[] = [
   { id: 'complete', title: '完成', component: CompleteStep },
 ];
 
+// A server message written for people (zh-TW) contains CJK characters.
+const HAS_CJK = /[\u3400-\u9fff]/;
+
 export function SetupWizard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -84,7 +87,11 @@ export function SetupWizard() {
 
       await setupService.validateStep(step.id, stepData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Validation failed');
+      // The server's step messages are zh-TW (setup_service.go); anything
+      // without one gets a zh-TW fallback, never English.
+      setError(
+        err instanceof Error && err.message ? err.message : '這一步沒有通過檢查，請再試一次。'
+      );
       return;
     }
 
@@ -133,7 +140,11 @@ export function SetupWizard() {
       // Navigate to dashboard
       navigate({ to: '/' });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to complete setup');
+      // Show the server's reason when it wrote one for people (zh-TW: keys not
+      // writable, already completed); its developer English ("Failed to
+      // complete setup") becomes a zh-TW retry line.
+      const message = err instanceof Error ? err.message : '';
+      setError(HAS_CJK.test(message) ? message : '設定沒有完成，請再試一次。');
     } finally {
       setIsSubmitting(false);
     }

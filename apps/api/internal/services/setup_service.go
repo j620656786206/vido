@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
+	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/vido/api/internal/models"
@@ -23,6 +26,8 @@ type SetupService struct {
 	secretsService secrets.SecretsServiceInterface
 	libraryService MediaLibraryServiceInterface
 	keyWriter      SetupKeyWriter
+	// mediaRoots are the folders mounted into the container (VIDO_MEDIA_DIRS).
+	mediaRoots []string
 }
 
 // SetupKeyWriter is the slice of KeySettingsService the wizard stores API keys
@@ -39,6 +44,13 @@ func NewSetupService(settingsRepo repository.SettingsRepositoryInterface, secret
 		settingsRepo:   settingsRepo,
 		secretsService: secretsSvc,
 	}
+}
+
+// SetMediaRoots records the folders mounted into the container
+// (VIDO_MEDIA_DIRS) so a wrong wizard path can be answered with the folders
+// Vido CAN see (disc-setup-wizard-container-path-hint).
+func (s *SetupService) SetMediaRoots(roots []string) {
+	s.mediaRoots = roots
 }
 
 // SetLibraryService sets the media library service for creating libraries during setup.
@@ -218,7 +230,7 @@ func (s *SetupService) ValidateStep(ctx context.Context, step string, data map[s
 func (s *SetupService) validateWelcomeStep(data map[string]interface{}) error {
 	lang, ok := data["language"].(string)
 	if !ok || lang == "" {
-		return fmt.Errorf("language is required")
+		return errors.New("請選擇語言。")
 	}
 	return nil
 }
@@ -231,7 +243,7 @@ func (s *SetupService) validateQBittorrentStep(ctx context.Context, data map[str
 	}
 	// Basic URL validation
 	if len(url) < 7 {
-		return fmt.Errorf("invalid qBittorrent URL")
+		return errors.New("qBittorrent 網址看起來不對，請填完整網址，例如 http://192.168.1.10:8080。")
 	}
 	return nil
 }
@@ -242,40 +254,109 @@ func (s *SetupService) validateMediaFolderStep(data map[string]interface{}) erro
 		for i, lib := range libraries {
 			libMap, ok := lib.(map[string]interface{})
 			if !ok {
-				return fmt.Errorf("library entry %d is invalid", i)
+				return fmt.Errorf("第 %d 個資料夾的資料不完整，請重新填寫。", i+1)
 			}
 			path, _ := libMap["path"].(string)
-			if path == "" {
-				return fmt.Errorf("library entry %d: path is required", i)
-			}
-			info, err := os.Stat(path)
-			if err != nil {
-				return fmt.Errorf("library entry %d: path does not exist: %s", i, path)
-			}
-			if !info.IsDir() {
-				return fmt.Errorf("library entry %d: path is not a directory: %s", i, path)
+			if err := s.checkWizardFolder(path); err != nil {
+				return err
 			}
 			contentType, _ := libMap["content_type"].(string)
 			if contentType != "" && contentType != "movie" && contentType != "series" {
-				return fmt.Errorf("library entry %d: content_type must be 'movie' or 'series'", i)
+				return errors.New("資料夾的類型只能是電影或影集。")
 			}
 		}
 		return nil
 	}
 
 	// Backward compatibility: single path
-	path, ok := data["media_folder_path"].(string)
-	if !ok || path == "" {
-		return fmt.Errorf("media folder path is required")
+	path, _ := data["media_folder_path"].(string)
+	return s.checkWizardFolder(path)
+}
+
+// maxFolderSuggestions caps the example paths in a not-found message.
+const maxFolderSuggestions = 4
+
+// checkWizardFolder validates one wizard folder path and answers in zh-TW.
+// A path the container cannot see is the common first-run mistake: the user
+// types the NAS's own path (/video/Movies) while Vido runs in Docker and sees
+// only what is mounted (VIDO_MEDIA_DIRS, /media by default) — so the message
+// names folders that DO exist in the container (disc-setup-wizard-container-path-hint).
+func (s *SetupService) checkWizardFolder(path string) error {
+	if strings.TrimSpace(path) == "" {
+		return errors.New("還有資料夾沒填路徑。")
 	}
 	info, err := os.Stat(path)
 	if err != nil {
-		return fmt.Errorf("media folder path does not exist: %s", path)
+		// Present but unreadable is a PUID/permission problem, not a mount
+		// problem — don't send the user off to edit volumes.
+		if errors.Is(err, fs.ErrPermission) {
+			return fmt.Errorf("沒有權限讀取「%s」：Vido 所在容器的使用者（PUID／PGID）讀不到這個資料夾。", path)
+		}
+		return s.folderNotFoundError(path)
 	}
 	if !info.IsDir() {
-		return fmt.Errorf("media folder path is not a directory: %s", path)
+		return fmt.Errorf("「%s」是檔案，不是資料夾。", path)
 	}
 	return nil
+}
+
+func (s *SetupService) folderNotFoundError(path string) error {
+	const lead = "找不到「%s」。Vido 在 Docker 裡，只看得到掛進容器的資料夾"
+	if examples := s.containerFolderExamples(); len(examples) > 0 {
+		return fmt.Errorf(lead+"——請填容器裡的路徑，例如 %s。", path, strings.Join(examples, "、"))
+	}
+	root := "/media"
+	if len(s.mediaRoots) > 0 {
+		root = s.mediaRoots[0]
+	}
+	return fmt.Errorf(lead+"，但目前容器裡沒有 %s——請在 docker-compose 的 volumes 把媒體資料夾掛到 %s。", path, root, root)
+}
+
+// containerFolderExamples lists folders that exist in the container: the
+// media roots first (in configured order — with VIDO_MEDIA_DIRS=/media/movies,
+// /media/tv the roots ARE the library folders), then their direct subfolders
+// (sorted; hidden and Synology system folders like @eaDir skipped; no
+// recursion — a NAS share can be huge), capped at maxFolderSuggestions.
+func (s *SetupService) containerFolderExamples() []string {
+	var subfolders, roots []string
+	seen := map[string]bool{}
+	for _, root := range s.mediaRoots {
+		root = filepath.Clean(root)
+		if seen[root] {
+			continue
+		}
+		info, err := os.Stat(root)
+		if err != nil || !info.IsDir() {
+			continue
+		}
+		seen[root] = true
+		roots = append(roots, root)
+		entries, err := os.ReadDir(root)
+		if err != nil {
+			continue
+		}
+		for _, e := range entries {
+			name := e.Name()
+			if !e.IsDir() || strings.HasPrefix(name, ".") || strings.HasPrefix(name, "@") || strings.HasPrefix(name, "#") {
+				continue
+			}
+			subfolders = append(subfolders, filepath.Join(root, name))
+		}
+	}
+	sort.Strings(subfolders)
+	examples := roots
+	for _, sub := range subfolders {
+		// A root nested in another root (VIDO_MEDIA_DIRS=/media,/media/movies)
+		// is already listed.
+		if !seen[sub] {
+			seen[sub] = true
+			examples = append(examples, sub)
+		}
+	}
+	if len(examples) > maxFolderSuggestions {
+		examples = examples[:maxFolderSuggestions]
+	}
+	return examples
 }
 
 func (s *SetupService) validateApiKeysStep(data map[string]interface{}) error {
@@ -284,7 +365,7 @@ func (s *SetupService) validateApiKeysStep(data map[string]interface{}) error {
 	if tmdbKey != "" {
 		// TMDb API keys are 32 character hex strings
 		if len(tmdbKey) < 16 {
-			return fmt.Errorf("invalid TMDb API key format")
+			return errors.New("TMDb 金鑰格式不對，請確認有完整貼上。")
 		}
 	}
 	// Say it on the step where the key was typed, not after 完成設定.
