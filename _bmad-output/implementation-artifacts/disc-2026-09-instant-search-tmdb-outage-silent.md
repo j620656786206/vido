@@ -1,6 +1,6 @@
 # Story: disc-2026-09-instant-search-tmdb-outage-silent — TMDb 斷線時，頂欄搜尋說實話
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-09-29。Alexyu 從推薦清單選 A。
      這張需要新畫面（下拉裡多一列），依 .pen 協作模式（memory: feedback_pen_inline_agent_workflow）：
