@@ -1,6 +1,6 @@
 # Story: bugfix-scan-instant-completion-no-feedback — 小片庫一下就掃完，也看得到「掃描完成」
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-09-30。Alexyu：「做下一張」。原單：TestSprite TC064＋本機 Playwright 重現（2026-08-31）。
      行號為 main `0a0901db`；每條「查到的事」都是 SM 本次親自讀過的位置。 -->
@@ -83,3 +83,4 @@ Claude Opus 5.5（Amelia）
 | ---------- | ----------------------- |
 | 2026-09-30 | create-story（SM Bob）。 |
 | 2026-09-30 | dev-story（Amelia）＋對抗式 review → review。 |
+| 2026-09-30 | PR #609 合併（CI 空片庫 E2E 讀計數太早，改成等請求被處理）→ done。 |
