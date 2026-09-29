@@ -151124,6 +151124,2101 @@
               "fontFamily": "$Type/Family/Primary",
               "fontSize": "$Type/Label/Size",
               "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "N6dxid",
+              "x": 56708,
+              "y": 31353,
+              "name": "F28-D-v2 · 批次生成 — 尚未設定金鑰",
+              "clip": true,
+              "width": 1440,
+              "height": 990,
+              "fill": "$bg-primary",
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Er3hV",
+                  "x": 0,
+                  "y": 0,
+                  "name": "backdrop",
+                  "clip": true,
+                  "width": 1440,
+                  "height": 990,
+                  "fill": "$bg-primary",
+                  "children": [
+                    {
+                      "id": "xzv2n",
+                      "type": "ref",
+                      "ref": "BDeUS",
+                      "name": "sidebar",
+                      "height": "fill_container",
+                      "descendants": {
+                        "wGp06": {
+                          "fill": "#00000000"
+                        },
+                        "wGp06/QyNdL": {
+                          "fill": "$text-secondary"
+                        },
+                        "wGp06/bsavg": {
+                          "fill": "$text-secondary",
+                          "fontWeight": "normal"
+                        },
+                        "bn9aO": {
+                          "fill": "$accent-tint"
+                        },
+                        "bn9aO/QyNdL": {
+                          "fill": "$accent-text"
+                        },
+                        "bn9aO/bsavg": {
+                          "fill": "$accent-text",
+                          "fontWeight": "600"
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "eC2lF",
+                      "name": "main",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$bg-primary",
+                      "layout": "vertical",
+                      "gap": "$Space/xl",
+                      "padding": [
+                        "$Space/2xl",
+                        "$Space/3xl"
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "OMoAe",
+                          "name": "header",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": "$Space/xs",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "tEbOz",
+                              "name": "pageTitle",
+                              "fill": "$text-primary",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "活動",
+                              "lineHeight": "$Type/H1/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/H1/Size",
+                              "fontWeight": "$Type/H1/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "VnphT",
+                              "name": "pageSub",
+                              "fill": "$text-secondary",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "媒體庫的所有背景工作 — 掃描、字幕、解析與下載",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "xq8iz",
+                          "name": "sec-進行中",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": "$Space/md",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "rZPAb",
+                              "name": "secHead",
+                              "width": "fill_container",
+                              "gap": "$Space/sm",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "iWdws",
+                                  "name": "secTitle",
+                                  "fill": "$text-primary",
+                                  "content": "進行中",
+                                  "lineHeight": "$Type/H4/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/H4/Size",
+                                  "fontWeight": "700"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "s38zXO",
+                                  "name": "countChip",
+                                  "fill": "$accent-tint",
+                                  "cornerRadius": "$radius-pill",
+                                  "padding": [
+                                    "$Space/2xs",
+                                    "$Space/sm-plus"
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "jW4ds",
+                                      "name": "chipNum",
+                                      "fill": "$accent-text",
+                                      "content": "3",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Mono",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "id": "CrnhG",
+                              "type": "ref",
+                              "ref": "fF8nX",
+                              "name": "row-掃描",
+                              "width": "fill_container",
+                              "descendants": {
+                                "B5edWI": {
+                                  "icon": "radar"
+                                },
+                                "xWxRJ": {
+                                  "content": "掃描媒體庫"
+                                },
+                                "ko2Lf": {
+                                  "content": "正在掃描 /media/movies — 已處理 1,234 / 5,000 個檔案"
+                                },
+                                "uCkPx": {
+                                  "content": "62%",
+                                  "fill": "$accent-text",
+                                  "fontFamily": "JetBrains Mono"
+                                },
+                                "t0lyx": {
+                                  "width": 670
+                                }
+                              }
+                            },
+                            {
+                              "id": "a0rXf",
+                              "type": "ref",
+                              "ref": "fF8nX",
+                              "name": "row-字幕",
+                              "width": "fill_container",
+                              "descendants": {
+                                "B5edWI": {
+                                  "icon": "captions"
+                                },
+                                "xWxRJ": {
+                                  "content": "批次字幕搜尋"
+                                },
+                                "ko2Lf": {
+                                  "content": "為 30 部影片尋找繁體中文字幕"
+                                },
+                                "uCkPx": {
+                                  "content": "12 / 30",
+                                  "fill": "$text-secondary",
+                                  "fontFamily": "JetBrains Mono"
+                                },
+                                "t0lyx": {
+                                  "width": 432
+                                }
+                              }
+                            },
+                            {
+                              "id": "giEgF",
+                              "type": "ref",
+                              "ref": "fF8nX",
+                              "name": "row-AI",
+                              "width": "fill_container",
+                              "descendants": {
+                                "B5edWI": {
+                                  "icon": "sparkles"
+                                },
+                                "xWxRJ": {
+                                  "content": "AI 字幕校正"
+                                },
+                                "ko2Lf": {
+                                  "content": "你的名字 · S1E3 — 簡轉繁 + 語意校正中"
+                                },
+                                "uCkPx": {
+                                  "content": "校正中",
+                                  "fill": "$accent-text",
+                                  "fontFamily": "Noto Sans TC"
+                                },
+                                "t0lyx": {
+                                  "width": 810
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "vmrKO",
+                          "name": "sec-待處理",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": "$Space/md",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "N8LQdw",
+                              "name": "secHead",
+                              "width": "fill_container",
+                              "gap": "$Space/sm",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "iC6iF",
+                                  "name": "secTitle",
+                                  "fill": "$text-primary",
+                                  "content": "待處理",
+                                  "lineHeight": "$Type/H4/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/H4/Size",
+                                  "fontWeight": "700"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "vycWP",
+                              "type": "ref",
+                              "ref": "fF8nX",
+                              "name": "row-待解析",
+                              "width": "fill_container",
+                              "descendants": {
+                                "B5edWI": {
+                                  "icon": "file-search"
+                                },
+                                "xWxRJ": {
+                                  "content": "待解析項目"
+                                },
+                                "ko2Lf": {
+                                  "content": "8 個檔案無法自動比對中繼資料"
+                                },
+                                "uCkPx": {
+                                  "content": "前往處理 →",
+                                  "fill": "$accent-primary",
+                                  "fontFamily": "Noto Sans TC"
+                                },
+                                "Yhrjo": {
+                                  "enabled": false
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "E0uot",
+                          "name": "sec-下載",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": "$Space/md",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "f3AAG",
+                              "name": "secHead",
+                              "width": "fill_container",
+                              "gap": "$Space/sm",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "Xzu1C",
+                                  "name": "secTitle",
+                                  "fill": "$text-primary",
+                                  "content": "下載",
+                                  "lineHeight": "$Type/H4/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/H4/Size",
+                                  "fontWeight": "700"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "eS3Ex",
+                              "type": "ref",
+                              "ref": "fF8nX",
+                              "name": "row-下載中",
+                              "width": "fill_container",
+                              "descendants": {
+                                "B5edWI": {
+                                  "icon": "download"
+                                },
+                                "xWxRJ": {
+                                  "content": "下載中"
+                                },
+                                "ko2Lf": {
+                                  "content": "3 個進行中 · 5 個排隊 · 12.4 MB/s"
+                                },
+                                "uCkPx": {
+                                  "content": "開啟下載頁 →",
+                                  "fill": "$accent-primary",
+                                  "fontFamily": "Noto Sans TC"
+                                },
+                                "Yhrjo": {
+                                  "enabled": false
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "K0oDM",
+                          "name": "sec-活動記錄",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": "$Space/md",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "c0Pjic",
+                              "name": "secHead",
+                              "width": "fill_container",
+                              "gap": "$Space/sm",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "Ovte1",
+                                  "name": "secTitle",
+                                  "fill": "$text-primary",
+                                  "content": "活動記錄",
+                                  "lineHeight": "$Type/H4/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/H4/Size",
+                                  "fontWeight": "700"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "R2Oews",
+                              "type": "ref",
+                              "ref": "fF8nX",
+                              "name": "row-字幕完成",
+                              "width": "fill_container",
+                              "descendants": {
+                                "EtPLt": {
+                                  "fill": "$success-tint"
+                                },
+                                "B5edWI": {
+                                  "icon": "circle-check",
+                                  "fill": "$success"
+                                },
+                                "xWxRJ": {
+                                  "content": "字幕已下載"
+                                },
+                                "ko2Lf": {
+                                  "content": "蒼鷺 · 繁體中文"
+                                },
+                                "uCkPx": {
+                                  "content": "2 分鐘前",
+                                  "fill": "$text-muted",
+                                  "fontFamily": "Noto Sans TC"
+                                },
+                                "Yhrjo": {
+                                  "enabled": false
+                                }
+                              }
+                            },
+                            {
+                              "id": "hTjly",
+                              "type": "ref",
+                              "ref": "fF8nX",
+                              "name": "row-掃描完成",
+                              "width": "fill_container",
+                              "descendants": {
+                                "EtPLt": {
+                                  "fill": "$success-tint"
+                                },
+                                "B5edWI": {
+                                  "icon": "circle-check",
+                                  "fill": "$success"
+                                },
+                                "xWxRJ": {
+                                  "content": "掃描完成"
+                                },
+                                "ko2Lf": {
+                                  "content": "新增 12 部影片到媒體庫"
+                                },
+                                "uCkPx": {
+                                  "content": "18 分鐘前",
+                                  "fill": "$text-muted",
+                                  "fontFamily": "Noto Sans TC"
+                                },
+                                "Yhrjo": {
+                                  "enabled": false
+                                }
+                              }
+                            },
+                            {
+                              "id": "DtZPk",
+                              "type": "ref",
+                              "ref": "fF8nX",
+                              "name": "row-解析失敗",
+                              "width": "fill_container",
+                              "descendants": {
+                                "EtPLt": {
+                                  "fill": "$error-tint"
+                                },
+                                "B5edWI": {
+                                  "icon": "triangle-alert",
+                                  "fill": "$error"
+                                },
+                                "xWxRJ": {
+                                  "content": "解析失敗"
+                                },
+                                "ko2Lf": {
+                                  "content": "The.Movie.2024.mkv — 找不到中繼資料"
+                                },
+                                "uCkPx": {
+                                  "content": "1 小時前",
+                                  "fill": "$text-muted",
+                                  "fontFamily": "Noto Sans TC"
+                                },
+                                "Yhrjo": {
+                                  "enabled": false
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "MqLt6",
+                  "x": 0,
+                  "y": 0,
+                  "name": "scrim",
+                  "fill": "$overlay-scrim",
+                  "width": 1440,
+                  "height": 990
+                },
+                {
+                  "type": "frame",
+                  "id": "pIZE8",
+                  "x": 240,
+                  "y": 13,
+                  "name": "gen-dialog",
+                  "width": 960,
+                  "fill": "$bg-secondary",
+                  "cornerRadius": "$radius-lg",
+                  "stroke": "$border-subtle",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#00000080",
+                    "offset": {
+                      "x": 0,
+                      "y": 16
+                    },
+                    "blur": 48
+                  },
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "JbK4q",
+                      "name": "title-bar",
+                      "width": "fill_container",
+                      "height": 56,
+                      "stroke": "$border-subtle",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
+                      "padding": [
+                        "$Space/none",
+                        "$Space/md",
+                        "$Space/none",
+                        "$Space/xl"
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "YLQmj",
+                          "name": "dialog-title",
+                          "fill": "$text-primary",
+                          "content": "產生字幕",
+                          "lineHeight": "$Type/BodyLg/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/BodyLg/Size",
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "G0R7Dr",
+                          "name": "close-hit",
+                          "width": 44,
+                          "height": 44,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "s39kTx",
+                              "name": "close-x",
+                              "width": 18,
+                              "height": 18,
+                              "icon": "x",
+                              "library": "lucide",
+                              "fill": "$text-secondary"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "mER51",
+                      "name": "body",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": "$Space/md",
+                      "padding": [
+                        "$Space/lg",
+                        "$Space/xl"
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "aOLpr",
+                          "name": "warning-panel",
+                          "width": "fill_container",
+                          "fill": "$warning-tint",
+                          "cornerRadius": "$radius-md",
+                          "gap": "$Space/md-plus",
+                          "padding": "$Space/lg",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "BDyOk",
+                              "name": "wp-ic",
+                              "width": 20,
+                              "height": 20,
+                              "icon": "settings",
+                              "library": "lucide",
+                              "fill": "$warning-text"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "MzW4o",
+                              "name": "wp-col",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": "$Space/xs",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "QYrV8",
+                                  "name": "wp-title",
+                                  "fill": "$text-primary",
+                                  "content": "字幕生成尚未設定",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "pMCK7",
+                                  "name": "wp-sub",
+                                  "fill": "$text-secondary",
+                                  "content": "批次產生字幕需要翻譯（Claude）與語音辨識（ASR）金鑰。到金鑰設定儲存後就能開始；清單可以先看。",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "xSa9m",
+                              "name": "btn-goto-settings",
+                              "fill": "$bg-tertiary",
+                              "cornerRadius": "$radius-md",
+                              "padding": [
+                                "$Space/sm-plus",
+                                "$Space/lg"
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "o5Lssp",
+                                  "name": "btn-label",
+                                  "fill": "$text-primary",
+                                  "content": "前往設定",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "W49bx",
+                          "name": "summary-block",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": "$Space/2xs",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "QiVHV",
+                              "name": "summary-bar",
+                              "gap": "$Space/xs-plus",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "tSlr8",
+                                  "name": "summary-text",
+                                  "fill": "$text-secondary",
+                                  "content": "候選 142 部 · 已選 46 部 · 預估",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "kmUCi",
+                                  "name": "summary-amount",
+                                  "fill": "$text-primary",
+                                  "content": "$1.84",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Mono",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "z7lIC6",
+                              "name": "spend-source",
+                              "fill": "$text-muted",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "使用：Claude（你的金鑰） · 語音辨識：OpenAI（你的金鑰）",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "WBVzE",
+                          "name": "search-sort-row",
+                          "width": "fill_container",
+                          "gap": "$Space/sm",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "KpvLH",
+                              "type": "ref",
+                              "ref": "6MxLT",
+                              "name": "search-input",
+                              "width": "fill_container",
+                              "height": 44,
+                              "descendants": {
+                                "iLI6G": {
+                                  "content": "搜尋片名或影集",
+                                  "fill": "$text-muted",
+                                  "fontFamily": "Noto Sans TC"
+                                }
+                              }
+                            },
+                            {
+                              "id": "p7mAa",
+                              "type": "ref",
+                              "ref": "955EZ",
+                              "name": "sort-select",
+                              "height": 44,
+                              "descendants": {
+                                "iEyRL": {
+                                  "type": "frame",
+                                  "id": "Hdmcj",
+                                  "name": "label-wrap",
+                                  "gap": 6,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "Ld5W8",
+                                      "name": "sort-icon",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "arrow-up-down",
+                                      "library": "lucide",
+                                      "fill": "$text-muted"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "XNKBs",
+                                      "name": "label",
+                                      "fill": "$text-secondary",
+                                      "content": "群組",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "Noto Sans TC",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "wUEQ4",
+                          "name": "route-chips",
+                          "gap": "$Space/sm",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "pWAMF",
+                              "type": "ref",
+                              "ref": "jD7gF",
+                              "name": "chip-all",
+                              "fill": "$accent-tint",
+                              "descendants": {
+                                "v1GYz": {
+                                  "content": "全部 142",
+                                  "fill": "$accent-text",
+                                  "fontFamily": "Noto Sans TC"
+                                },
+                                "OOhgD": {
+                                  "enabled": false
+                                }
+                              }
+                            },
+                            {
+                              "id": "dp5qJ",
+                              "type": "ref",
+                              "ref": "jD7gF",
+                              "name": "chip-extract",
+                              "descendants": {
+                                "v1GYz": {
+                                  "content": "可抽取內嵌 46",
+                                  "fontFamily": "Noto Sans TC"
+                                },
+                                "OOhgD": {
+                                  "type": "frame",
+                                  "id": "hP9o3",
+                                  "name": "badge-free",
+                                  "fill": "$bg-secondary",
+                                  "cornerRadius": "$radius-pill",
+                                  "padding": [
+                                    2,
+                                    6
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "DiDgm",
+                                      "name": "lbl",
+                                      "fill": "$text-secondary",
+                                      "content": "僅翻譯費",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "Noto Sans TC",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "500"
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            {
+                              "id": "qw8gA",
+                              "type": "ref",
+                              "ref": "jD7gF",
+                              "name": "chip-asr",
+                              "descendants": {
+                                "v1GYz": {
+                                  "content": "需語音辨識 96",
+                                  "fontFamily": "Noto Sans TC"
+                                },
+                                "OOhgD": {
+                                  "type": "frame",
+                                  "id": "f6xRT",
+                                  "name": "badge-paid",
+                                  "fill": "$bg-secondary",
+                                  "cornerRadius": "$radius-pill",
+                                  "padding": [
+                                    2,
+                                    6
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "OARJ4",
+                                      "name": "lbl",
+                                      "fill": "$text-secondary",
+                                      "content": "付費",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "Noto Sans TC",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "500"
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "qMj4n",
+                          "name": "toolbar",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "WKcQR",
+                              "name": "tb-left",
+                              "gap": "$Space/sm",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "t2m46V",
+                                  "type": "ref",
+                                  "ref": "NfHDL",
+                                  "name": "cb-all"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "rn8jc",
+                                  "name": "tb-count",
+                                  "fill": "$text-secondary",
+                                  "content": "已選 46 / 142",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "q2n4T",
+                              "name": "tb-right",
+                              "gap": "$Space/lg",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "b90i4",
+                                  "name": "tb-select-free",
+                                  "fill": "$accent-text",
+                                  "content": "選取全部可抽取（僅翻譯費）",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "mZ9vr",
+                                  "name": "tb-clear",
+                                  "fill": "$text-secondary",
+                                  "content": "清除選取",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "p2PQQ0",
+                          "name": "candidate-list",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": "$Space/sm",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "LWSV1",
+                              "name": "movies-matched-header",
+                              "width": "fill_container",
+                              "fill": "$bg-tertiary",
+                              "cornerRadius": "$radius-md",
+                              "gap": "$Space/sm-plus",
+                              "padding": [
+                                "$Space/sm",
+                                "$Space/md"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "d3bus",
+                                  "type": "ref",
+                                  "ref": "NfHDL",
+                                  "name": "cb-半選"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "QfkYM",
+                                  "name": "disclosure",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "$text-muted"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "L7ULR",
+                                  "name": "group-title",
+                                  "fill": "$text-primary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "已匹配",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "R5CdP",
+                                  "name": "right",
+                                  "gap": "$Space/sm",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "hNh2a",
+                                      "name": "route-badge-asr",
+                                      "fill": "$bg-secondary",
+                                      "cornerRadius": "$radius-pill",
+                                      "padding": [
+                                        "$Space/2xs",
+                                        "$Space/xs-plus"
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "s74EP5",
+                                          "name": "badge-lbl",
+                                          "fill": "$text-secondary",
+                                          "content": "抽取 2",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "fXABd",
+                                      "name": "group-selected",
+                                      "fill": "$text-muted",
+                                      "content": "已選 1/3 · $0.05",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Mono",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "K68IcN",
+                              "name": "row-沙丘：第二部",
+                              "width": "fill_container",
+                              "cornerRadius": "$radius-md",
+                              "stroke": "$border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": "$Space/md",
+                              "padding": [
+                                "$Space/sm-plus",
+                                "$Space/md"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "seteL",
+                                  "type": "ref",
+                                  "ref": "4EHFN",
+                                  "name": "cb"
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": "$radius-sm",
+                                  "id": "cnlKx",
+                                  "name": "poster",
+                                  "metadata": {
+                                    "type": "unsplash",
+                                    "username": "wolfgang_hasselmann",
+                                    "link": "https://unsplash.com/@wolfgang_hasselmann",
+                                    "author": "Wolfgang Hasselmann"
+                                  },
+                                  "fill": {
+                                    "type": "image",
+                                    "enabled": true,
+                                    "url": "https://images.unsplash.com/photo-1542401886-65d6c61db217?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3ODg2MjY2Njh8&ixlib=rb-4.1.0&q=80&w=1080",
+                                    "mode": "fill"
+                                  },
+                                  "width": 38,
+                                  "height": 54
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "pEfYu",
+                                  "name": "textcol",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": "$Space/xs",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "JwtL6",
+                                      "name": "title",
+                                      "fill": "$text-primary",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "沙丘：第二部",
+                                      "lineHeight": "$Type/BodyLg/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/BodyLg/Size",
+                                      "fontWeight": "600"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "fcexI",
+                                      "name": "sub",
+                                      "fill": "$text-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "內嵌英文字幕 → 翻譯 · 2 小時 46 分",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "gXDyh",
+                                  "name": "right",
+                                  "gap": "$Space/sm-plus",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "jOvun",
+                                      "name": "route-badge",
+                                      "fill": "$bg-tertiary",
+                                      "cornerRadius": "$radius-pill",
+                                      "padding": [
+                                        "$Space/xs",
+                                        "$Space/sm-plus"
+                                      ],
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "yzIwX",
+                                          "name": "badge-lbl",
+                                          "fill": "$text-secondary",
+                                          "content": "抽取",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "sOHJN",
+                                      "name": "amount",
+                                      "fill": "$text-primary",
+                                      "content": "$0.05",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Mono",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "P6q7Fz",
+                              "name": "row-奧本海默",
+                              "width": "fill_container",
+                              "cornerRadius": "$radius-md",
+                              "stroke": "$border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": "$Space/md",
+                              "padding": [
+                                "$Space/sm-plus",
+                                "$Space/md"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "W4h6TN",
+                                  "type": "ref",
+                                  "ref": "4EHFN",
+                                  "name": "cb"
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": "$radius-sm",
+                                  "id": "EJJew",
+                                  "name": "poster",
+                                  "metadata": {
+                                    "type": "unsplash",
+                                    "username": "tylersphotographyus",
+                                    "link": "https://unsplash.com/@tylersphotographyus",
+                                    "author": "Tyler Hardie"
+                                  },
+                                  "fill": {
+                                    "type": "image",
+                                    "enabled": true,
+                                    "url": "https://images.unsplash.com/photo-1776708248714-b71224bf566e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3ODg2MjY2Njl8&ixlib=rb-4.1.0&q=80&w=1080",
+                                    "mode": "fill"
+                                  },
+                                  "width": 38,
+                                  "height": 54
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "R4B3P",
+                                  "name": "textcol",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": "$Space/xs",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "b5HT2K",
+                                      "name": "title",
+                                      "fill": "$text-primary",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "奧本海默",
+                                      "lineHeight": "$Type/BodyLg/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/BodyLg/Size",
+                                      "fontWeight": "600"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "qVefj",
+                                      "name": "sub",
+                                      "fill": "$text-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "內嵌英文字幕 → 翻譯 · 3 小時 1 分",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "yfLGL",
+                                  "name": "right",
+                                  "gap": "$Space/sm-plus",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "pk2ed",
+                                      "name": "route-badge",
+                                      "fill": "$bg-tertiary",
+                                      "cornerRadius": "$radius-pill",
+                                      "padding": [
+                                        "$Space/xs",
+                                        "$Space/sm-plus"
+                                      ],
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "p7AV0",
+                                          "name": "badge-lbl",
+                                          "fill": "$text-secondary",
+                                          "content": "抽取",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "Lynhc",
+                                      "name": "amount",
+                                      "fill": "$text-primary",
+                                      "content": "$0.04",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Mono",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "xK6eY",
+                              "name": "row-全面啟動",
+                              "opacity": 0.7,
+                              "width": "fill_container",
+                              "cornerRadius": "$radius-md",
+                              "stroke": "$border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": "$Space/md",
+                              "padding": [
+                                "$Space/sm-plus",
+                                "$Space/md"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "Y3Nl4",
+                                  "type": "ref",
+                                  "ref": "VSXl5",
+                                  "name": "cb"
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": "$radius-sm",
+                                  "id": "vgvMm",
+                                  "name": "poster",
+                                  "metadata": {
+                                    "type": "unsplash",
+                                    "username": "gallocody",
+                                    "link": "https://unsplash.com/@gallocody",
+                                    "author": "cody gallo"
+                                  },
+                                  "fill": {
+                                    "type": "image",
+                                    "enabled": true,
+                                    "url": "https://images.unsplash.com/photo-1631897284699-38a80f40e715?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3ODg2MjY2NzB8&ixlib=rb-4.1.0&q=80&w=1080",
+                                    "mode": "fill"
+                                  },
+                                  "width": 38,
+                                  "height": 54
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "dcjQD",
+                                  "name": "textcol",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": "$Space/xs",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "n63Nvc",
+                                      "name": "title",
+                                      "fill": "$text-primary",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "全面啟動",
+                                      "lineHeight": "$Type/BodyLg/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/BodyLg/Size",
+                                      "fontWeight": "600"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "LTlWj",
+                                      "name": "sub",
+                                      "fill": "$text-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "無文字字幕軌 → 語音辨識 + 翻譯 · 2 小時 28 分",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "yf4yU",
+                                  "name": "right",
+                                  "gap": "$Space/sm-plus",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "K3veWx",
+                                      "name": "lbl-folder-readonly",
+                                      "fill": "$error-tint",
+                                      "cornerRadius": "$radius-pill",
+                                      "padding": [
+                                        "$Space/2xs",
+                                        "$Space/sm"
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "DKjKI",
+                                          "name": "lbl",
+                                          "fill": "$error-text",
+                                          "content": "資料夾無法寫入",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "I2fRK",
+                                      "name": "route-badge",
+                                      "fill": "$bg-tertiary",
+                                      "cornerRadius": "$radius-pill",
+                                      "padding": [
+                                        "$Space/xs",
+                                        "$Space/sm-plus"
+                                      ],
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "bunAt",
+                                          "name": "badge-lbl",
+                                          "fill": "$text-secondary",
+                                          "content": "語音辨識",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "x59emc",
+                                      "x": 190,
+                                      "y": 1.5,
+                                      "name": "amount",
+                                      "enabled": false,
+                                      "fill": "$text-primary",
+                                      "content": "$0.31",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Mono",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "eAhzS",
+                              "name": "movies-unmatched-header",
+                              "width": "fill_container",
+                              "fill": "$bg-tertiary",
+                              "cornerRadius": "$radius-md",
+                              "gap": "$Space/sm-plus",
+                              "padding": [
+                                "$Space/sm",
+                                "$Space/md"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "PxdB3",
+                                  "type": "ref",
+                                  "ref": "Wd9AL",
+                                  "name": "cb-未選"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "gob3S",
+                                  "name": "disclosure",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "$text-muted"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "R2cuP",
+                                  "name": "group-title",
+                                  "fill": "$text-primary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "未匹配",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "v2MKF",
+                                  "name": "right",
+                                  "gap": "$Space/sm",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "o9SH6",
+                                      "name": "route-badge-asr",
+                                      "fill": "$bg-secondary",
+                                      "cornerRadius": "$radius-pill",
+                                      "padding": [
+                                        "$Space/2xs",
+                                        "$Space/xs-plus"
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "ICPVt",
+                                          "name": "badge-lbl",
+                                          "fill": "$text-secondary",
+                                          "content": "語音辨識 1",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "Zay2Z",
+                                      "name": "group-selected",
+                                      "fill": "$text-muted",
+                                      "content": "已選 0/1 · $0.00",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Mono",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "yqjNp",
+                              "name": "row-星際效應",
+                              "width": "fill_container",
+                              "cornerRadius": "$radius-md",
+                              "stroke": "$border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": "$Space/md",
+                              "padding": [
+                                "$Space/sm-plus",
+                                "$Space/md"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "d2OWNg",
+                                  "type": "ref",
+                                  "ref": "Wd9AL",
+                                  "name": "cb"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "godPe",
+                                  "name": "poster-empty",
+                                  "width": 38,
+                                  "height": 54,
+                                  "fill": "$bg-tertiary",
+                                  "cornerRadius": "$radius-sm",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "HEqfF",
+                                      "name": "poster-initial",
+                                      "fill": "$text-secondary",
+                                      "content": "星",
+                                      "lineHeight": "$Type/H4/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/H4/Size",
+                                      "fontWeight": "$Type/H4/Weight"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "VxoQ7",
+                                  "name": "textcol",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": "$Space/xs",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "yTW7V",
+                                      "name": "titleRow",
+                                      "width": "fill_container",
+                                      "gap": "$Space/sm",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "fAsUw",
+                                          "name": "title",
+                                          "fill": "$text-primary",
+                                          "content": "星際效應",
+                                          "lineHeight": "$Type/BodyLg/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/BodyLg/Size",
+                                          "fontWeight": "600"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "CoCeX",
+                                          "name": "chip-unmatched",
+                                          "fill": "$bg-tertiary",
+                                          "cornerRadius": "$radius-pill",
+                                          "padding": [
+                                            "$Space/2xs",
+                                            "$Space/sm"
+                                          ],
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "iswej",
+                                              "name": "chip-lbl",
+                                              "fill": "$text-muted",
+                                              "content": "未匹配",
+                                              "lineHeight": "$Type/Label/Line",
+                                              "fontFamily": "$Type/Family/Primary",
+                                              "fontSize": "$Type/Label/Size",
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "g0bOp",
+                                      "name": "sub",
+                                      "fill": "$text-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "無文字字幕軌 → 語音辨識 + 翻譯 · 片長未知（估 45 分）",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "y4jy4",
+                                  "name": "right",
+                                  "gap": "$Space/sm-plus",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "uFL1w",
+                                      "name": "route-badge",
+                                      "fill": "$bg-tertiary",
+                                      "cornerRadius": "$radius-pill",
+                                      "padding": [
+                                        "$Space/xs",
+                                        "$Space/sm-plus"
+                                      ],
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "UxBE1",
+                                          "name": "badge-lbl",
+                                          "fill": "$text-secondary",
+                                          "content": "語音辨識",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "x6abfr",
+                                      "name": "amount",
+                                      "fill": "$text-primary",
+                                      "content": "≈ $0.24",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Mono",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "d3Ymc",
+                              "name": "group-header-怪奇物語S4",
+                              "width": "fill_container",
+                              "fill": "$bg-tertiary",
+                              "cornerRadius": "$radius-md",
+                              "gap": "$Space/sm-plus",
+                              "padding": [
+                                "$Space/sm",
+                                "$Space/md"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "XHsgp",
+                                  "type": "ref",
+                                  "ref": "NfHDL",
+                                  "name": "cb-半選"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "b90II",
+                                  "name": "disclosure",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "chevron-right",
+                                  "library": "lucide",
+                                  "fill": "$text-muted"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "j1RaR",
+                                  "name": "group-title",
+                                  "fill": "$text-primary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "怪奇物語 · 第 4 季",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "zk6YW",
+                                  "name": "right",
+                                  "gap": "$Space/sm",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "TUqDm",
+                                      "name": "route-badge-asr",
+                                      "fill": "$bg-secondary",
+                                      "cornerRadius": "$radius-pill",
+                                      "padding": [
+                                        "$Space/2xs",
+                                        "$Space/xs-plus"
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "ms2vz",
+                                          "name": "badge-lbl",
+                                          "fill": "$text-secondary",
+                                          "content": "語音辨識 9",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "jNAD3",
+                                      "name": "group-selected",
+                                      "fill": "$text-muted",
+                                      "content": "已選 3/9 · $0.78",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Mono",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "u76p2",
+                              "x": 0,
+                              "y": 208,
+                              "name": "row-怪奇物語 S4E7",
+                              "enabled": false,
+                              "width": "fill_container(912)",
+                              "cornerRadius": "$radius-md",
+                              "stroke": "$border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": "$Space/md",
+                              "padding": [
+                                "$Space/sm-plus",
+                                "$Space/md"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "haZ9R",
+                                  "type": "ref",
+                                  "ref": "4EHFN",
+                                  "name": "cb"
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": "$radius-sm",
+                                  "id": "lfvRd",
+                                  "name": "poster",
+                                  "metadata": {
+                                    "type": "unsplash",
+                                    "username": "jpvalery",
+                                    "link": "https://unsplash.com/@jpvalery",
+                                    "author": "Jp Valery"
+                                  },
+                                  "fill": {
+                                    "type": "image",
+                                    "enabled": true,
+                                    "url": "https://images.unsplash.com/photo-1531257114315-24a694751517?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3ODg2MjY2NzB8&ixlib=rb-4.1.0&q=80&w=1080",
+                                    "mode": "fill"
+                                  },
+                                  "width": 38,
+                                  "height": 54
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "Q5EIY",
+                                  "name": "textcol",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": "$Space/xs",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "sk8Q7",
+                                      "name": "title",
+                                      "fill": "$text-primary",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "怪奇物語 S4E7",
+                                      "lineHeight": "$Type/BodyLg/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/BodyLg/Size",
+                                      "fontWeight": "600"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "m5mRUn",
+                                      "name": "sub",
+                                      "fill": "$text-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "無文字字幕軌 → 語音辨識 + 翻譯 · 1 小時 38 分",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "ByP5r",
+                                  "name": "right",
+                                  "gap": "$Space/sm-plus",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "l7L6IX",
+                                      "name": "route-badge",
+                                      "fill": "$bg-tertiary",
+                                      "cornerRadius": "$radius-pill",
+                                      "padding": [
+                                        "$Space/xs",
+                                        "$Space/sm-plus"
+                                      ],
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "XdlD0",
+                                          "name": "badge-lbl",
+                                          "fill": "$text-secondary",
+                                          "content": "語音辨識",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "ed76v",
+                                      "name": "amount",
+                                      "fill": "$text-primary",
+                                      "content": "$0.26",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Mono",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "q0Oh8l",
+                          "name": "estimate-note",
+                          "fill": "$text-muted",
+                          "content": "金額為預估值，實際費用依內容長度而定。",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "UgEb6",
+                      "name": "footer",
+                      "width": "fill_container",
+                      "fill": "$bg-secondary",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": {
+                        "top": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
+                      "padding": [
+                        "$Space/md-plus",
+                        "$Space/xl"
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "ktNw9",
+                          "name": "ft-left",
+                          "layout": "vertical",
+                          "gap": "$Space/xs",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "BiIXy",
+                              "name": "ft-selected",
+                              "gap": "$Space/xs-plus",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "s9xZ5E",
+                                  "name": "ft-sel-text",
+                                  "fill": "$text-primary",
+                                  "content": "已選 46 部 · 預估",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Qw0JI",
+                                  "name": "ft-sel-amount",
+                                  "fill": "$text-primary",
+                                  "content": "$1.84",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Mono",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "k7bmU",
+                              "name": "ft-breakdown",
+                              "fill": "$text-muted",
+                              "content": "抽取 46 部 $1.84 · 語音辨識 0 部 $0.00",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "c3NBoH",
+                          "name": "ft-budget",
+                          "layout": "vertical",
+                          "gap": "$Space/xs",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "gSSDb",
+                              "name": "budget-row",
+                              "gap": "$Space/sm",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "u1hTb",
+                                  "name": "budget-label",
+                                  "fill": "$text-secondary",
+                                  "content": "預算上限",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "DRO0l",
+                                  "name": "budget-input",
+                                  "width": 96,
+                                  "height": 36,
+                                  "fill": "$bg-primary",
+                                  "cornerRadius": "$radius-md",
+                                  "stroke": "$border-subtle",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "padding": [
+                                    "$Space/none",
+                                    "$Space/md"
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "stsqn",
+                                      "name": "budget-value",
+                                      "fill": "$text-primary",
+                                      "content": "$5.00",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Mono",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "$Type/Body/Weight"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "B5JH91",
+                              "name": "budget-hint",
+                              "fill": "$warning-text",
+                              "content": "尚未設定金鑰，無法開始",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "id": "TAk8O",
+                          "type": "ref",
+                          "ref": "otvKh",
+                          "name": "btn-start",
+                          "height": 44,
+                          "opacity": 0.5,
+                          "descendants": {
+                            "DaLcd": {
+                              "content": "開始產生",
+                              "fontFamily": "Noto Sans TC"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "Uk8ZM",
+              "x": 56708,
+              "y": 31308,
+              "name": "cap-F28-D-v2",
+              "fill": "#888888",
+              "content": "F28 · 批次產生字幕 — 尚未設定金鑰（桌面）",
+              "lineHeight": "$Type/Body/Line",
+              "fontFamily": "$Type/Family/Primary",
+              "fontSize": "$Type/Body/Size",
+              "fontWeight": "600"
             }
           ]
         },
