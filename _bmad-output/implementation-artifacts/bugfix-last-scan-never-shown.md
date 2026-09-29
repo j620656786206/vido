@@ -1,6 +1,6 @@
 # Story: bugfix-last-scan-never-shown — 「上次掃描」終於會顯示上次掃了什麼
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-09-30。Alexyu：「做下一張」。原單：內測實測（2026-08-31）「掃描明明完成過，上次掃描永遠顯示尚未執行過掃描」。
      行號為 main `2bbb677d`；每條「查到的事」都是 SM 本次親自讀過的位置。 -->
@@ -102,3 +102,4 @@ Claude Opus 5.5（Amelia）
 | ---------- | ----------------------- |
 | 2026-09-30 | create-story（SM Bob）。 |
 | 2026-09-30 | dev-story（Amelia）→ review。 |
+| 2026-09-30 | PR #606 合併（`-linux` 基準 #607）→ done。 |
