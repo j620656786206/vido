@@ -86,14 +86,18 @@ describe('useScanProgress (SSE-only, no polling)', () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(MockEventSource.instances).toHaveLength(0);
 
-    act(() => result.current.startTracking());
+    act(() => {
+      void result.current.startTracking();
+    });
     expect(MockEventSource.instances).toHaveLength(1);
     expect(MockEventSource.instances[0].url).toBe('/api/v1/events');
   });
 
   it('[P0] updates state on SSE scan_progress event', async () => {
     const { result } = renderHook(() => useScanProgress());
-    act(() => result.current.startTracking());
+    act(() => {
+      void result.current.startTracking();
+    });
 
     const es = MockEventSource.instances[0];
     act(() => {
@@ -117,7 +121,9 @@ describe('useScanProgress (SSE-only, no polling)', () => {
 
   it('[P0] handles scan_complete SSE event', async () => {
     const { result } = renderHook(() => useScanProgress());
-    act(() => result.current.startTracking());
+    act(() => {
+      void result.current.startTracking();
+    });
 
     const es = MockEventSource.instances[0];
     act(() => {
@@ -155,7 +161,9 @@ describe('useScanProgress (SSE-only, no polling)', () => {
 
   it('[P1] handles scan_cancelled SSE event', async () => {
     const { result } = renderHook(() => useScanProgress());
-    act(() => result.current.startTracking());
+    act(() => {
+      void result.current.startTracking();
+    });
 
     const es = MockEventSource.instances[0];
     act(() => {
@@ -181,7 +189,9 @@ describe('useScanProgress (SSE-only, no polling)', () => {
 
   it('[P1] sets disconnected on SSE error (no polling fallback)', async () => {
     const { result } = renderHook(() => useScanProgress());
-    act(() => result.current.startTracking());
+    act(() => {
+      void result.current.startTracking();
+    });
 
     const es = MockEventSource.instances[0];
     act(() => {
@@ -202,7 +212,9 @@ describe('useScanProgress (SSE-only, no polling)', () => {
 
   it('[P1] dismiss hides the card', async () => {
     const { result } = renderHook(() => useScanProgress());
-    act(() => result.current.startTracking());
+    act(() => {
+      void result.current.startTracking();
+    });
 
     const es = MockEventSource.instances[0];
     act(() => {
@@ -216,7 +228,9 @@ describe('useScanProgress (SSE-only, no polling)', () => {
 
   it('[P1] closes EventSource on unmount', async () => {
     const { result, unmount } = renderHook(() => useScanProgress());
-    act(() => result.current.startTracking());
+    act(() => {
+      void result.current.startTracking();
+    });
 
     const es = MockEventSource.instances[0];
     unmount();
@@ -233,10 +247,128 @@ describe('useScanProgress (SSE-only, no polling)', () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(MockEventSource.instances).toHaveLength(0); // lazy — nothing yet
 
-    act(() => requestScanTracking()); // the trigger fires the signal
+    act(() => {
+      void requestScanTracking();
+    }); // the trigger fires the signal
     expect(MockEventSource.instances).toHaveLength(1); // SSE now open
 
     unsubscribe();
+  });
+
+  // bugfix-scan-instant-completion-no-feedback AC #1: the trigger waits for the
+  // stream to be CONNECTED before POSTing — a tiny library finishes in
+  // milliseconds, and events broadcast before the client registers are lost.
+  describe('requestScanTracking waits until the stream is connected', () => {
+    function settledFlag(p: Promise<void>) {
+      const flag = { done: false };
+      void p.then(() => {
+        flag.done = true;
+      });
+      return flag;
+    }
+
+    it('resolves on the server’s `connected` event, not before', async () => {
+      const { result } = renderHook(() => useScanProgress());
+      const unsubscribe = subscribeScanTracking(result.current.startTracking);
+      let flag = { done: false };
+      act(() => {
+        flag = settledFlag(requestScanTracking());
+      });
+      await vi.advanceTimersByTimeAsync(100);
+      expect(flag.done).toBe(false);
+
+      act(() => MockEventSource.instances[0].emit('connected', { clientId: 'c1' }));
+      await vi.advanceTimersByTimeAsync(0);
+      expect(flag.done).toBe(true);
+      unsubscribe();
+    });
+
+    it('also resolves when the connection opens', async () => {
+      const { result } = renderHook(() => useScanProgress());
+      const unsubscribe = subscribeScanTracking(result.current.startTracking);
+      let flag = { done: false };
+      act(() => {
+        flag = settledFlag(requestScanTracking());
+      });
+      const es = MockEventSource.instances[0] as unknown as { onopen: ((e: Event) => void) | null };
+      act(() => es.onopen?.(new Event('open')));
+      await vi.advanceTimersByTimeAsync(0);
+      expect(flag.done).toBe(true);
+      unsubscribe();
+    });
+
+    it('gives up waiting after 3 s so a broken stream never blocks scanning', async () => {
+      const { result } = renderHook(() => useScanProgress());
+      const unsubscribe = subscribeScanTracking(result.current.startTracking);
+      let flag = { done: false };
+      act(() => {
+        flag = settledFlag(requestScanTracking());
+      });
+      await vi.advanceTimersByTimeAsync(2900);
+      expect(flag.done).toBe(false);
+      await vi.advanceTimersByTimeAsync(200);
+      expect(flag.done).toBe(true);
+      unsubscribe();
+    });
+
+    it('an error before connecting releases the wait at once (no 3 s stall)', async () => {
+      const { result } = renderHook(() => useScanProgress());
+      const unsubscribe = subscribeScanTracking(result.current.startTracking);
+      let flag = { done: false };
+      act(() => {
+        flag = settledFlag(requestScanTracking());
+      });
+      act(() => MockEventSource.instances[0].triggerError());
+      await vi.advanceTimersByTimeAsync(0);
+      expect(flag.done).toBe(true);
+      unsubscribe();
+    });
+
+    it('a click during the reconnect gap keeps its new stream (old timer does not close it)', async () => {
+      const { result } = renderHook(() => useScanProgress());
+      const unsubscribe = subscribeScanTracking(result.current.startTracking);
+      act(() => {
+        void requestScanTracking();
+      });
+      act(() => MockEventSource.instances[0].emit('connected', { clientId: 'c1' }));
+      act(() => MockEventSource.instances[0].triggerError()); // stream drops; reconnect in 10 s
+
+      act(() => {
+        void requestScanTracking(); // user clicks during the gap
+      });
+      expect(MockEventSource.instances).toHaveLength(2);
+      const fresh = MockEventSource.instances[1];
+
+      await vi.advanceTimersByTimeAsync(15_000);
+      expect(fresh.readyState).not.toBe(2); // not closed by the stale timer
+      expect(MockEventSource.instances).toHaveLength(2);
+      unsubscribe();
+    });
+
+    it('resolves at once when nothing is listening', async () => {
+      const flag = settledFlag(requestScanTracking());
+      await vi.advanceTimersByTimeAsync(0);
+      expect(flag.done).toBe(true);
+    });
+
+    it('resolves at once when the stream is already connected', async () => {
+      const { result } = renderHook(() => useScanProgress());
+      const unsubscribe = subscribeScanTracking(result.current.startTracking);
+      act(() => {
+        void requestScanTracking();
+      });
+      act(() => MockEventSource.instances[0].emit('connected', { clientId: 'c1' }));
+      await vi.advanceTimersByTimeAsync(0);
+
+      let flag = { done: false };
+      act(() => {
+        flag = settledFlag(requestScanTracking());
+      });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(flag.done).toBe(true);
+      expect(MockEventSource.instances).toHaveLength(1); // no second stream
+      unsubscribe();
+    });
   });
 
   it('[P1] unsubscribe stops an instance from reacting to the signal', async () => {
@@ -244,7 +376,9 @@ describe('useScanProgress (SSE-only, no polling)', () => {
     const unsubscribe = subscribeScanTracking(result.current.startTracking);
     unsubscribe();
 
-    act(() => requestScanTracking());
+    act(() => {
+      void requestScanTracking();
+    });
     expect(MockEventSource.instances).toHaveLength(0);
   });
 });

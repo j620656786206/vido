@@ -55,6 +55,8 @@ export function ScannerSettings() {
   const { data: schedule, isLoading: scheduleLoading } = useScanSchedule();
   const triggerScan = useTriggerScan();
   const updateSchedule = useUpdateScanSchedule();
+  // True while waiting for the progress stream before the scan request.
+  const [connecting, setConnecting] = useState(false);
   const [notification, setNotification] = useState<{
     type: 'success' | 'warning' | 'error';
     message: string;
@@ -78,11 +80,18 @@ export function ScannerSettings() {
 
   const handleScan = async () => {
     setNotification(null);
+    // Open the shell card's progress stream and wait until it is connected
+    // BEFORE starting: a small library scans in milliseconds, and events sent
+    // before the stream registers are lost — no card, no 完成 toast
+    // (bugfix-scan-instant-completion-no-feedback). Never rejects; times out.
+    setConnecting(true);
+    try {
+      await requestScanTracking();
+    } finally {
+      setConnecting(false);
+    }
     try {
       await triggerScan.mutateAsync();
-      // Tell the shell-mounted ScanProgress to open the scan SSE so the
-      // progress card appears (the card lives in a separate hook instance).
-      requestScanTracking();
     } catch (err) {
       const apiErr = err as ScannerApiError;
       if (apiErr.code === 'SCANNER_ALREADY_RUNNING') {
@@ -186,18 +195,18 @@ export function ScannerSettings() {
         <button
           type="button"
           onClick={handleScan}
-          disabled={isScanning || triggerScan.isPending}
+          disabled={isScanning || connecting || triggerScan.isPending}
           className={cn(
             'flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-4 py-3.5 text-sm font-semibold text-[var(--text-on-accent)] transition-colors sm:text-base',
             // Was a gold label on a half-transparent gold fill while scanning,
             // and a hover that set the same colour it already had.
-            isScanning || triggerScan.isPending
+            isScanning || connecting || triggerScan.isPending
               ? 'cursor-not-allowed opacity-50'
               : 'hover:bg-[var(--accent-hover)] active:bg-[var(--accent-pressed)]'
           )}
           data-testid="scan-trigger-button"
         >
-          {isScanning || triggerScan.isPending ? (
+          {isScanning || connecting || triggerScan.isPending ? (
             <>
               <Loader className="h-4 w-4 animate-spin" />
               掃描進行中...

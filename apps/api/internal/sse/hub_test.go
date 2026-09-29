@@ -29,6 +29,43 @@ func TestHub_RegisterUnregister(t *testing.T) {
 	assert.Equal(t, 0, hub.ClientCount())
 }
 
+// bugfix-scan-instant-completion-no-feedback: the handler sends `connected`
+// right after Register returns, and the browser then starts the scan — so a
+// client must be live the moment Register returns. When registration went
+// through the Run loop's queue, a broadcast that raced it could be handled
+// first and never reach the new client.
+func TestHub_RegisterIsLiveOnReturn(t *testing.T) {
+	hub := NewHub()
+	defer hub.Close()
+
+	for i := 0; i < 200; i++ {
+		client := hub.Register()
+		require.Equal(t, 1, hub.ClientCount(), "round %d: the client must be in the fan-out set when Register returns", i)
+		hub.Broadcast(Event{Type: EventScanComplete})
+		select {
+		case received := <-client.Events:
+			assert.Equal(t, EventScanComplete, received.Type)
+		case <-time.After(500 * time.Millisecond):
+			t.Fatalf("round %d: an event broadcast right after Register never arrived", i)
+		}
+		hub.Unregister(client)
+		require.Eventually(t, func() bool { return hub.ClientCount() == 0 }, time.Second, time.Millisecond)
+	}
+}
+
+func TestHub_RegisterAfterCloseReturnsClosedClient(t *testing.T) {
+	hub := NewHub()
+	hub.Close()
+	time.Sleep(20 * time.Millisecond)
+	client := hub.Register()
+	select {
+	case _, ok := <-client.Events:
+		assert.False(t, ok, "a client registered on a closed hub is closed at once")
+	case <-time.After(200 * time.Millisecond):
+		t.Fatal("client on a closed hub was left open")
+	}
+}
+
 func TestHub_Broadcast(t *testing.T) {
 	hub := NewHub()
 	defer hub.Close()
@@ -224,7 +261,6 @@ func TestHub_DroppedBroadcastLogsTypeAndSizeNotThePayload(t *testing.T) {
 	h := &Hub{
 		clients:    make(map[string]*Client),
 		broadcast:  make(chan Event, 1),
-		register:   make(chan *Client, 1),
 		unregister: make(chan *Client, 1),
 		done:       make(chan struct{}),
 	}

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { AlertCircle, ScanSearch } from 'lucide-react';
 import { useTriggerScan } from '../../hooks/useScanner';
+import { requestScanTracking } from '../../hooks/useScanProgress';
 import type { ScannerApiError } from '../../services/scannerService';
 
 type NotificationKind = 'success' | 'error';
@@ -14,6 +15,8 @@ export function EmptyReadyForScan() {
     message: string;
   } | null>(null);
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // True while waiting for the shell card's progress stream (see handleScan).
+  const [connecting, setConnecting] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -29,6 +32,15 @@ export function EmptyReadyForScan() {
 
   const handleScan = async () => {
     setNotification(null);
+    // Connect the shell ScanProgress card FIRST, then start: without this the
+    // first scan from an empty library showed no progress and no 完成 toast
+    // (bugfix-scan-instant-completion-no-feedback). Never rejects; times out.
+    setConnecting(true);
+    try {
+      await requestScanTracking();
+    } finally {
+      setConnecting(false);
+    }
     try {
       await triggerScan.mutateAsync();
       showNotification('success', '掃描已啟動');
@@ -38,7 +50,7 @@ export function EmptyReadyForScan() {
     }
   };
 
-  const isPending = triggerScan.isPending;
+  const isPending = connecting || triggerScan.isPending;
 
   return (
     <div

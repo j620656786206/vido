@@ -289,7 +289,10 @@ test.describe('Empty Library 3-State Classifier @ui @library @bugfix-10-5', () =
       ),
       triggerBtn.click(),
     ]);
-    expect(scanPostCount).toBe(1);
+    // `request` fires before the route handler runs; the click now first opens
+    // the scan-progress stream (bugfix-scan-instant-completion-no-feedback), so
+    // poll for the handler instead of reading the counter the same tick.
+    await expect.poll(() => scanPostCount).toBe(1);
 
     // AND: success notification surfaces
     const notification = page.getByTestId('empty-ready-for-scan-notification');
