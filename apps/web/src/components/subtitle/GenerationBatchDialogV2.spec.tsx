@@ -79,6 +79,7 @@ vi.mock('./consent/GenerationConsentView', () => ({
     forceAnalyze,
     startError,
     notConfigured,
+    notConfiguredKey,
     onGoToKeySettings,
     onStartBatch,
     onClose,
@@ -87,6 +88,7 @@ vi.mock('./consent/GenerationConsentView', () => ({
     forceAnalyze?: boolean;
     startError?: string | null;
     notConfigured?: boolean;
+    notConfiguredKey?: string;
     onGoToKeySettings?: () => void;
     onStartBatch: (ids: string[], budgetUsd: number) => void;
     onClose: () => void;
@@ -96,6 +98,7 @@ vi.mock('./consent/GenerationConsentView', () => ({
       data-preselected={(preselectedIds ?? []).join(',')}
       data-force-analyze={forceAnalyze ? 'true' : 'false'}
       data-not-configured={notConfigured ? 'true' : 'false'}
+      data-not-configured-key={notConfiguredKey ?? ''}
     >
       {onGoToKeySettings && (
         <button type="button" data-testid="consent-stub-goto-keys" onClick={onGoToKeySettings}>
@@ -501,6 +504,32 @@ describe('GenerationBatchDialogV2 (container)', () => {
   });
 
   // disc-2026-09-batch-generation-no-asr-key-warning AC #2/#3
+  // disc-2026-09-not-configured-copy-self-hosted-asr AC #2
+  it('the probe’s missing_key reaches the consent view', async () => {
+    mocked.getGenerationBatchStatus.mockResolvedValue({
+      running: false,
+      progress: null,
+      available: false,
+      missingKey: 'claude',
+    });
+    renderDialog();
+    const stub = await screen.findByTestId('consent-view-stub');
+    expect(stub).toHaveAttribute('data-not-configured-key', 'claude');
+  });
+
+  it('a missing_key alongside available:true is ignored', async () => {
+    mocked.getGenerationBatchStatus.mockResolvedValue({
+      running: false,
+      progress: null,
+      available: true,
+      missingKey: 'claude',
+    });
+    renderDialog();
+    const stub = await screen.findByTestId('consent-view-stub');
+    expect(stub).toHaveAttribute('data-not-configured', 'false');
+    expect(stub).toHaveAttribute('data-not-configured-key', '');
+  });
+
   it('the status probe saying available:false tells the consent view, and 前往設定 is wired', async () => {
     mocked.getGenerationBatchStatus.mockResolvedValue({
       running: false,
@@ -532,6 +561,7 @@ describe('GenerationBatchDialogV2 (container)', () => {
       running: false,
       progress: null,
       available: false,
+      missingKey: 'asr',
     });
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -546,6 +576,10 @@ describe('GenerationBatchDialogV2 (container)', () => {
       'data-not-configured',
       'true'
     );
+    expect(screen.getByTestId('consent-view-stub')).toHaveAttribute(
+      'data-not-configured-key',
+      'asr'
+    );
     view.rerender(ui(false));
     mocked.getGenerationBatchStatus.mockRejectedValueOnce(new Error('network'));
     view.rerender(ui(true));
@@ -555,6 +589,7 @@ describe('GenerationBatchDialogV2 (container)', () => {
         'false'
       )
     );
+    expect(screen.getByTestId('consent-view-stub')).toHaveAttribute('data-not-configured-key', '');
   });
 
   it('[CR H2] forceAnalyze prop (F17 deep link) reaches the consent view', async () => {

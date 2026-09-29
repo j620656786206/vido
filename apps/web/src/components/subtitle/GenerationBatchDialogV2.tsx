@@ -40,6 +40,7 @@ import {
   subtitleService,
   type GenerationBatchItem,
   type GenerationBatchItemState,
+  type GenerationMissingKey,
 } from '../../services/subtitleService';
 import {
   useGenerationBatchProgress,
@@ -851,6 +852,7 @@ export function GenerationBatchDialogV2({
   // AC #3: only a probe that positively says `available: false` blocks start —
   // a failed probe or an older server (no field) leaves the button alone.
   const [notConfigured, setNotConfigured] = useState(false);
+  const [notConfiguredKey, setNotConfiguredKey] = useState<GenerationMissingKey | undefined>();
   // CR H2: after a batch terminal the candidate snapshot is stale (completed
   // items still listed, quotes wrong) — the next consent render re-analyzes.
   const [postTerminal, setPostTerminal] = useState(false);
@@ -888,6 +890,7 @@ export function GenerationBatchDialogV2({
       // AC #3: a stale "not configured" must not outlive the dialog — keys may
       // be saved before it reopens, and a failed probe then must not block.
       setNotConfigured(false);
+      setNotConfiguredKey(undefined);
       return;
     }
     let cancelled = false;
@@ -896,6 +899,7 @@ export function GenerationBatchDialogV2({
       .then((s) => {
         if (cancelled) return;
         setNotConfigured(s.available === false);
+        setNotConfiguredKey(s.available === false ? s.missingKey : undefined);
         if (s.running && s.progress) {
           setStartError(null);
           startBatchTracking(s.progress);
@@ -1171,6 +1175,7 @@ export function GenerationBatchDialogV2({
         starting={starting}
         startError={startError}
         notConfigured={notConfigured}
+        notConfiguredKey={notConfiguredKey}
         onGoToKeySettings={onGoToKeySettings}
         onStartBatch={(mediaIds, budgetUsd, modelId) =>
           void handleStartConsented(mediaIds, budgetUsd, modelId)

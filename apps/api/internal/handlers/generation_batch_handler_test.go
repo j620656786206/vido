@@ -338,6 +338,45 @@ func TestGetGenerationBatchStatus_ReportsUnavailable(t *testing.T) {
 	assert.Equal(t, false, data["running"])
 }
 
+func TestGenerationGateKeyFor(t *testing.T) {
+	assert.Equal(t, "claude", GenerationGateKeyFor(true), "pipeline mode gates on the Claude key")
+	assert.Equal(t, "asr", GenerationGateKeyFor(false), "legacy Route C gates on the ASR key")
+}
+
+// disc-2026-09-not-configured-copy-self-hosted-asr AC #1: the key the mode's
+// gate reads is named only when that gate is shut.
+func TestGetGenerationBatchStatus_MissingKey(t *testing.T) {
+	cases := []struct {
+		name      string
+		available bool
+		gateKey   string
+		want      interface{} // nil = field absent
+	}{
+		{"pipeline mode, no Claude key", false, GenerationGateKeyClaude, "claude"},
+		{"legacy mode, no ASR key", false, GenerationGateKeyASR, "asr"},
+		{"available: nothing is missing", true, GenerationGateKeyClaude, nil},
+		{"gate key never wired", false, "", nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			gin.SetMode(gin.TestMode)
+			r := gin.New()
+			h := NewGenerationBatchHandler(&mockGenerationProcessor{available: tc.available}, nil)
+			h.SetGateKey(tc.gateKey)
+			h.RegisterRoutes(r.Group("/api/v1"))
+			w, resp := doGenBatchJSON(t, r, "GET", "/api/v1/subtitles/generation-batch/status", "")
+			assert.Equal(t, http.StatusOK, w.Code)
+			data := resp["data"].(map[string]interface{})
+			got, present := data["missing_key"]
+			if tc.want == nil {
+				assert.False(t, present, "missing_key must be absent, got %v", got)
+				return
+			}
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
 // dsr-6d-a AC #3: after a terminal the probe still says what happened.
 func TestGetGenerationBatchStatus_IdleWithLastResult(t *testing.T) {
 	p := &mockGenerationProcessor{

@@ -35,7 +35,7 @@ import { cn } from '../../../lib/utils';
 import { usd } from '../../../lib/currency';
 import { getImageUrl } from '../../../lib/image';
 import { formatRuntime } from '../../../lib/formatMedia';
-import type { GenerationCandidate } from '../../../services/subtitleService';
+import type { GenerationCandidate, GenerationMissingKey } from '../../../services/subtitleService';
 import {
   blockerLabel,
   candidateUsd,
@@ -157,6 +157,12 @@ export interface CandidateListPanelProps {
    * (disc-2026-09-batch-generation-no-asr-key-warning, F28-D-v2).
    */
   notConfigured?: boolean;
+  /**
+   * The one key the server's gate is waiting for (status `missing_key`) — the
+   * notice names only that key. Undefined (older server) → names both
+   * (disc-2026-09-not-configured-copy-self-hosted-asr).
+   */
+  notConfiguredKey?: GenerationMissingKey;
   /** 前往設定 → /settings/keys. A prop, not a router <Link>: this renders bare in its spec. */
   onGoToKeySettings?: () => void;
 }
@@ -614,6 +620,18 @@ function GroupHeaderRow({
   );
 }
 
+/**
+ * F28 notice body: name only the key the server's gate is waiting for — in
+ * pipeline mode that is Claude alone, in legacy mode the ASR key alone
+ * (disc-2026-09-not-configured-copy-self-hosted-asr). Unknown → both.
+ */
+function notConfiguredBody(key: GenerationMissingKey | undefined): string {
+  const tail = '到金鑰設定儲存後就能開始；清單可以先看。';
+  if (key === 'claude') return `批次產生字幕需要翻譯（Claude）金鑰。${tail}`;
+  if (key === 'asr') return `批次產生字幕需要語音辨識（ASR）金鑰。${tail}`;
+  return `批次產生字幕需要翻譯（Claude）與語音辨識（ASR）金鑰。${tail}`;
+}
+
 export function CandidateListPanel({
   candidates,
   selectedIds,
@@ -642,6 +660,7 @@ export function CandidateListPanel({
   openaiKeySource,
   selfHostedAsr = false,
   notConfigured = false,
+  notConfiguredKey,
   onGoToKeySettings,
 }: CandidateListPanelProps) {
   /**
@@ -824,8 +843,11 @@ export function CandidateListPanel({
               />
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <p className="text-sm font-semibold text-[var(--text-primary)]">字幕生成尚未設定</p>
-                <p className="text-xs text-[var(--text-secondary)]">
-                  批次產生字幕需要翻譯（Claude）與語音辨識（ASR）金鑰。到金鑰設定儲存後就能開始；清單可以先看。
+                <p
+                  data-testid="consent-not-configured-body"
+                  className="text-xs text-[var(--text-secondary)]"
+                >
+                  {notConfiguredBody(notConfiguredKey)}
                 </p>
               </div>
               {onGoToKeySettings && (

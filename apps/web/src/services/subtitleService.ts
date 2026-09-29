@@ -449,6 +449,9 @@ export interface GenerationBatchProgress {
  * a lost terminal SSE event or a page left and reopened can still show how
  * the batch ended (e.g. budget_ceiling with its paused items).
  */
+/** Which key the generation gate is waiting for (status `missing_key`). */
+export type GenerationMissingKey = 'claude' | 'asr';
+
 export interface GenerationBatchStatusResponse {
   running: boolean;
   progress?: GenerationBatchProgress | null;
@@ -459,6 +462,12 @@ export interface GenerationBatchStatusResponse {
    * TRANSCRIPTION_DISABLED). Absent on older servers → treat as available.
    */
   available?: boolean;
+  /**
+   * disc-2026-09-not-configured-copy-self-hosted-asr AC #1 [@contract-v1]:
+   * present only while `available` is false — the ONE key this server's mode
+   * gates on (pipeline → claude, legacy → asr). Absent on older servers.
+   */
+  missingKey?: GenerationMissingKey;
 }
 
 /** POST /subtitles/generation-batch/dismiss (dsr-6d-a AC #6 [@contract-v1]). */
