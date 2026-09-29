@@ -98,6 +98,27 @@ describe('SavePresetDialog', () => {
     expect(mutateAsync).not.toHaveBeenCalled();
   });
 
+  // disc-2026-09-ime-enter-submits-mid-composition
+  it.each([
+    ['isComposing', { key: 'Enter', isComposing: true }],
+    ['keyCode 229 (Safari)', { key: 'Enter', keyCode: 229 }],
+  ])('an Enter that only picks an IME candidate (%s) does not save', (_label, init) => {
+    render(<SavePresetDialog filters={filters} onClose={vi.fn()} />);
+    const input = screen.getByTestId('preset-name-input');
+    fireEvent.change(input, { target: { value: '高評分ㄉㄨㄥˋ' } });
+    fireEvent.keyDown(input, init);
+    expect(mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('a plain Enter still saves', async () => {
+    mutateAsync.mockResolvedValue({ id: 'p1' });
+    render(<SavePresetDialog filters={filters} onClose={vi.fn()} />);
+    const input = screen.getByTestId('preset-name-input');
+    fireEvent.change(input, { target: { value: '高評分動畫' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+  });
+
   // dsr-8 AC #7: full-width ellipsis on the in-flight label.
   it('shows 儲存中… (not 儲存中...) while saving', () => {
     isPending = true;

@@ -211,6 +211,35 @@ describe('InstantSearchBar', () => {
     });
   });
 
+  // disc-2026-09-ime-enter-submits-mid-composition: the Enter that picks a 注音
+  // candidate belongs to the input method, not to the search box.
+  it.each([
+    ['isComposing', { key: 'Enter', isComposing: true }],
+    ['keyCode 229 (Safari)', { key: 'Enter', keyCode: 229 }],
+  ])('an Enter that only picks an IME candidate (%s) does not search', async (_label, init) => {
+    const router = setup();
+    const input = await screen.findByTestId('instant-search-input');
+
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '你的ㄇㄧㄥˊ' } });
+    // Not default-prevented: the input method keeps its Enter (AC #1).
+    expect(fireEvent.keyDown(input, init)).toBe(true);
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+    expect(router.state.location.pathname).toBe('/');
+  });
+
+  it('an Esc that only drops an IME candidate does not clear the box', async () => {
+    setup();
+    const input = (await screen.findByTestId('instant-search-input')) as HTMLInputElement;
+
+    fireEvent.change(input, { target: { value: '你的ㄇㄧㄥˊ' } });
+    fireEvent.keyDown(input, { key: 'Escape', isComposing: true });
+    expect(input.value).toBe('你的ㄇㄧㄥˊ');
+  });
+
   it('clears the input via the clear button', async () => {
     setup();
     const input = (await screen.findByTestId('instant-search-input')) as HTMLInputElement;

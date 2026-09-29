@@ -4,6 +4,7 @@ import { Search, X, ChevronDown, ChevronUp, Eye, Download, Check, Loader2 } from
 import { cn } from '../../lib/utils';
 import { useSubtitleSearch, type SortField } from '../../hooks/useSubtitleSearch';
 import type { SubtitleSearchResult } from '../../services/subtitleService';
+import { isImeComposing } from '../../utils/keyboard';
 
 function SortIcon({
   field,
@@ -206,7 +207,7 @@ export function SubtitleSearchDialog({
               placeholder="輸入搜尋關鍵字..."
               aria-label="搜尋關鍵字"
               className="flex-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none"
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              onKeyDown={(e) => e.key === 'Enter' && !isImeComposing(e) && handleSearch()}
               data-testid="subtitle-search-input"
             />
             <button

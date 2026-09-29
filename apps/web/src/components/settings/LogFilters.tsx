@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { isImeComposing } from '../../utils/keyboard';
 
 const LOG_LEVELS = ['ERROR', 'WARN', 'INFO', 'DEBUG'] as const;
 
@@ -39,7 +40,7 @@ export function LogFilters({ level, keyword, onLevelChange, onKeywordChange }: L
   const [inputValue, setInputValue] = useState(keyword);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !isImeComposing(e)) {
       onKeywordChange(inputValue);
     }
   };

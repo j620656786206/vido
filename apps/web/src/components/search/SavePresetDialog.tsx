@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { useCreateFilterPreset } from '../../hooks/useFilterPresets';
+import { isImeComposing } from '../../utils/keyboard';
 import {
   activeFilterChips,
   serializeFilters,
@@ -137,7 +138,7 @@ export function SavePresetDialog({ filters, onClose }: SavePresetDialogProps) {
             maxLength={PRESET_NAME_MAX_LENGTH}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') handleSave();
+              if (e.key === 'Enter' && !isImeComposing(e)) handleSave();
             }}
             placeholder="例：高評分韓劇"
             data-testid="preset-name-input"

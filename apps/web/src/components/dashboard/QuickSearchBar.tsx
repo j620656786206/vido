@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Clock, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { isImeComposing } from '../../utils/keyboard';
 
 const RECENT_SEARCHES_KEY = 'vido-recent-searches';
 const MAX_RECENT_SEARCHES = 10;
@@ -98,6 +99,7 @@ export function QuickSearchBar({ className }: QuickSearchBarProps) {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (isImeComposing(e)) return;
     if (!showDropdown || recentSearches.length === 0) return;
 
     if (e.key === 'ArrowDown') {

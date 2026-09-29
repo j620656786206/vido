@@ -7,6 +7,7 @@ import { useDebounce } from 'use-debounce';
 import { Search, X } from 'lucide-react';
 import { useInstantSearch } from '../../hooks/useSearchMedia';
 import { cn } from '../../lib/utils';
+import { isImeComposing } from '../../utils/keyboard';
 import {
   SearchSuggestions,
   buildNavigableItems,
@@ -86,6 +87,9 @@ export function InstantSearchBar({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
+      // An Enter or Esc that picks or drops a 注音 candidate is the input
+      // method's, not a search or a clear.
+      if (isImeComposing(e)) return;
       switch (e.key) {
         case 'ArrowDown':
           if (open && navigable.length > 0) {

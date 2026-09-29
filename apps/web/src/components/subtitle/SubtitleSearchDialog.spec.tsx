@@ -52,6 +52,10 @@ function renderDialog(props?: Partial<Parameters<typeof SubtitleSearchDialog>[0]
 }
 
 describe('SubtitleSearchDialog', () => {
+  afterEach(() => {
+    hookOverrides = {};
+  });
+
   it('renders when open', () => {
     renderDialog();
     expect(screen.getByTestId('subtitle-search-dialog')).toBeInTheDocument();
@@ -130,6 +134,26 @@ describe('SubtitleSearchDialog', () => {
     renderDialog();
     expect(screen.getByRole('switch', { name: '繁體轉換' })).toBeInTheDocument();
     expect(screen.getByLabelText('搜尋關鍵字')).toBe(screen.getByTestId('subtitle-search-input'));
+  });
+
+  // disc-2026-09-ime-enter-submits-mid-composition
+  it.each([
+    ['isComposing', { key: 'Enter', isComposing: true }],
+    ['keyCode 229 (Safari)', { key: 'Enter', keyCode: 229 }],
+  ])('an Enter that only picks an IME candidate (%s) does not search', (_label, init) => {
+    const search = vi.fn();
+    hookOverrides = { search };
+    renderDialog();
+    fireEvent.keyDown(screen.getByTestId('subtitle-search-input'), init);
+    expect(search).not.toHaveBeenCalled();
+  });
+
+  it('a plain Enter still searches', () => {
+    const search = vi.fn();
+    hookOverrides = { search };
+    renderDialog();
+    fireEvent.keyDown(screen.getByTestId('subtitle-search-input'), { key: 'Enter' });
+    expect(search).toHaveBeenCalledTimes(1);
   });
 
   it('clicking the 繁體轉換 text toggles the switch (label htmlFor forwarding preserved)', () => {
