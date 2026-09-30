@@ -128,6 +128,67 @@ describe('LibraryEditModal', () => {
     ).toBeTruthy();
   });
 
+  // disc-2026-09-library-edit-refetch-overwrites-draft: adding/removing a
+  // path refetches the library list — a NEW data object. The form used to
+  // re-seed from it and silently throw away the unsaved name/type/opt-in.
+  it('a refetch (new library data) keeps the unsaved name, type and opt-in', () => {
+    const { rerender } = render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
+    fireEvent.change(screen.getByTestId('library-name-input'), { target: { value: '改過的名字' } });
+    fireEvent.change(screen.getByTestId('library-type-select'), { target: { value: 'series' } });
+    fireEvent.click(screen.getByTestId('library-auto-subtitle-checkbox'));
+
+    // The refetch after 新增路徑: same library, fresh objects, one more path.
+    vi.mocked(useMediaLibraries).mockReturnValue({
+      data: {
+        libraries: [
+          {
+            ...librariesQuery.data.libraries[0],
+            paths: [
+              { id: 'path-1', path: '/media/movies' },
+              { id: 'path-2', path: '/media/more' },
+            ],
+          },
+        ],
+      },
+    } as unknown as ReturnType<typeof useMediaLibraries>);
+    rerender(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
+
+    expect(screen.getByTestId('library-name-input')).toHaveValue('改過的名字');
+    expect(screen.getByTestId('library-type-select')).toHaveValue('series');
+    expect(screen.getByTestId('library-auto-subtitle-checkbox')).toBeChecked();
+  });
+
+  it('still fills the form when the library data arrives after opening', () => {
+    vi.mocked(useMediaLibraries).mockReturnValue({ data: undefined } as unknown as ReturnType<
+      typeof useMediaLibraries
+    >);
+    const { rerender } = render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
+    expect(screen.getByTestId('library-name-input')).toHaveValue('');
+
+    vi.mocked(useMediaLibraries).mockReturnValue(
+      librariesQuery as ReturnType<typeof useMediaLibraries>
+    );
+    rerender(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
+    expect(screen.getByTestId('library-name-input')).toHaveValue('我的電影');
+  });
+
+  // Closing mid-save must not let the finished save close a dialog opened
+  // afterwards (the parent's onClose is shared).
+  it('a save that finishes after the dialog was closed does not call onClose', async () => {
+    let finish!: () => void;
+    mutation.mutateAsync.mockImplementationOnce(
+      () => new Promise((resolve) => (finish = () => resolve({})))
+    );
+    const onClose = vi.fn();
+    const { unmount } = render(<LibraryEditModal libraryId="lib-1" onClose={onClose} />);
+    fireEvent.click(screen.getByTestId('library-save-button'));
+    unmount(); // the user closed it while saving
+    await act(async () => {
+      finish();
+    });
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it('sends auto_subtitle in the update payload when toggled on', async () => {
     render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
 

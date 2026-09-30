@@ -73,6 +73,8 @@ export function MediaLibraryManager() {
 
       {editModal.open && (
         <LibraryEditModal
+          // One instance per library: the form seeds itself once.
+          key={editModal.libraryId ?? 'new'}
           libraryId={editModal.libraryId}
           onClose={() => setEditModal({ open: false })}
         />
