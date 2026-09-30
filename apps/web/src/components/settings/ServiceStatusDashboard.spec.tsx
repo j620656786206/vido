@@ -983,3 +983,56 @@ describe('ServiceStatusDashboard', () => {
     });
   });
 });
+
+describe('ServiceStatusDashboard — rate-limit hint under the TMDb card (sub-7-7b AC #5)', () => {
+  const svc = (name: string, status: string, extra = {}) => ({
+    name,
+    displayName: name.toUpperCase(),
+    status,
+    message: status,
+    lastSuccessAt: null,
+    lastCheckAt: '2026-02-10T14:30:00Z',
+    responseTimeMs: 0,
+    ...extra,
+  });
+
+  it('a rate-limited TMDb card gets one line naming the fix, linking to 金鑰設定', () => {
+    mockUseServiceStatuses.mockReturnValue({
+      data: { services: [svc('tmdb', 'rate_limited', { message: '速率限制中' })] },
+      isLoading: false,
+      isFetched: true,
+      error: null,
+    } as any);
+
+    renderWithQuery(React.createElement(ServiceStatusDashboard));
+
+    const hint = screen.getByTestId('rate-limit-hint-tmdb');
+    expect(hint).toHaveTextContent('內建金鑰被限流：到「金鑰設定」填入自己的金鑰可立即解除。');
+    expect(screen.getByRole('link', { name: '金鑰設定' })).toHaveAttribute(
+      'href',
+      '/settings/keys'
+    );
+    // Still not "broken": the error banner must not appear for a rate limit alone.
+    expect(screen.queryByTestId('service-error-banner')).toBeNull();
+  });
+
+  it('the hint is for rate_limited only — a connected or erroring TMDb card shows none', () => {
+    mockUseServiceStatuses.mockReturnValue({
+      data: {
+        services: [
+          svc('tmdb', 'connected', { message: '已連線' }),
+          svc('qbittorrent', 'rate_limited'),
+        ],
+      },
+      isLoading: false,
+      isFetched: true,
+      error: null,
+    } as any);
+
+    renderWithQuery(React.createElement(ServiceStatusDashboard));
+
+    expect(screen.queryByTestId('rate-limit-hint-tmdb')).toBeNull();
+    // qBittorrent has no rateLimitedHint: the state alone does not invent advice.
+    expect(screen.queryByTestId('rate-limit-hint-qbittorrent')).toBeNull();
+  });
+});

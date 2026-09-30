@@ -16,8 +16,12 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 /** Closed set — mirrors `services.KeyName`; doubles as the PUT body field names. */
 export type KeyName = 'claude' | 'tmdb' | 'openai';
 
-/** Where a key resolved from. `secret` (runtime, user-set) beats `env` (deploy-time). */
-export type KeySource = 'secret' | 'env' | 'none';
+/**
+ * Where a key resolved from. `secret` (runtime, user-set) beats `env`
+ * (deploy-time), which beats `bundled` — the TMDb key compiled into release
+ * images (sub-7-7a; only TMDb ever reports it). [@contract-v1→v2] additive.
+ */
+export type KeySource = 'secret' | 'env' | 'bundled' | 'none';
 
 export interface KeyState {
   name: KeyName;

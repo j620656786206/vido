@@ -1,6 +1,6 @@
 # Story sub-7-7b: 內建 TMDb 金鑰——設定頁與精靈的文字
 
-Status: ready-for-dev
+Status: review
 
 <!-- SM Bob create-story 2026-09-30，由 sub-7-7 拆出；依賴 sub-7-7a 先合併（後端已回 source="bundled"、429 會標 rate_limited）。
      行號為 main `3e6e354a`。 -->
@@ -31,15 +31,32 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 — 型別＋`ApiKeysForm` 標籤／hint／清除文案＋spec（AC #1–#3, #6）
-- [ ] Task 2 — 精靈 `ApiKeysStep` 依 source 切文案＋spec（AC #4, #6）
-- [ ] Task 3 — 服務狀態 rate_limited 提示＋spec（AC #5, #6）
-- [ ] Task 4 — Sally 對 C6 補「內建」狀態列（設計稿＋截圖）；全量驗證
+- [x] Task 1 — 型別＋`ApiKeysForm` 標籤／hint／清除文案＋spec（AC #1–#3, #6）
+- [x] Task 2 — 精靈 `ApiKeysStep` 依 source 切文案＋spec（AC #4, #6）
+- [x] Task 3 — 服務狀態 rate_limited 提示＋spec（AC #5, #6）
+- [ ] Task 4 — 設計稿 C7-D／C7-M／N4-D 文案對齊（**交 Alexyu 跑 Pencil Inline AI Agent**，依 `feedback_pen_inline_agent_workflow`；提示詞見下）→ ⌘S → `python3 scripts/export-pen-screenshots.py` → 只 stage `c7-d`／`c7-m`／`n4-d` 三張 → commit
+- [x] Task 5 — 全量驗證（web 4,400 綠、typecheck、lint、prettier；visual 本機比對綠）
+
+### Task 4 提示詞（Sally 2026-09-30，節點錨定；貼給 Pencil Inline AI Agent 原樣執行）
+
+> 請只改文字內容，不動任何版面、顏色、字級。
+>
+> 1. `o6JBg`（C7-D）與 `oZooA`（C7-M）：內容改成「用於中繼資料與海報。儲存後立即生效，無需重啟伺服器。」
+> 2. `vb4nH`（C7-D）與 `K2pzyD`（C7-M）：內容改成「使用內建金鑰」（狀態膠囊維持靛青 info 色調，不改樣式）。
+> 3. `bvNts`（C7-D）與 `CJsb9`（C7-M）：內容改成「目前使用 Vido 內建的金鑰；如遇速率限制，填入自己的金鑰會立即改用。」
+> 4. `gCE7n`（N4-D 精靈第 4 步 TMDb 欄位的 placeholder）：內容改成「可留空，使用內建金鑰」。
+>
+> 改完請確認 C7-D、C7-M、N4-D 三張沒有任何節點被裁切（`problems` 為空）。
+
+**設計裁定理由**：C7 原本示範「一把 secret、一把 env、一把 none」三種狀態；內建金鑰上線後，新裝機第一眼看到的 TMDb 狀態就是「使用內建金鑰」，比 env 更值得留在稿上；env 的覆蓋提示與 secret 的遮罩列在 Claude／OpenAI 列仍有代表。舊句「儲存後需重啟伺服器才會生效」從來不成立（存的金鑰連重啟都到不了 client），必須從稿上拿掉。
 
 ## Dev Notes
 
 - 純前端，不改 API；`GET /settings/keys` 已回 `source`。
 - `stateLabel` 的 default 分支保留給未知值。
+- 精靈的 `ApiKeysStep` 直接用 `useKeySettings()`（後端沒有 setup gate，`/settings/keys` 在精靈階段可打）；查詢失敗或還在載入＝「不是內建」，維持舊文案，不會對原始碼編譯的安裝亂承諾。
+- 服務狀態頁的提示放在卡片下方而不是 `BrokenServicesBanner`：`isBroken()` 刻意把 `rate_limited` 排除在「壞掉」之外，這條規則不動；`serviceLabels.ts` 新增 `rateLimitedHint`（只有 TMDb 有，其他服務被限流不會憑空冒出建議）。文字用中性 `text-secondary`，不再幫赭色膠囊多穿一層顏色。
+- 視覺基準：`settings-api-keys-form`（桌機／手機／no-encryption-key）三張因 TMDb hint 換句而重拍 darwin；桌機兩張差異低於門檻、`test:visual:update` 不會重寫，依 /ship 規則刪掉重拍（`update-missing`）。linux 三張已 `git rm`，由 CI bootstrap PR 補。`setup-api-keys-step` 未變（圖庫未種 `/settings/keys`，走非內建文案）。
 
 ### Time-dependent visual coverage
 
@@ -49,14 +66,31 @@ Status: ready-for-dev
 
 ### Agent Model Used
 
+Claude Fable 5.1（Amelia）
+
 ### Completion Notes List
+
+- 新測試 9 條：`ApiKeysForm.spec` 4（bundled 標籤與色調、輸入框保留＋內建說明列＋不回遮罩、說明列只在 TMDb、TMDb／其他列清除文案分流）＋改寫 1（TMDb 列改承諾立即生效）；`ApiKeysStep.spec` 3（內建文案、原始碼編譯文案、狀態未知不承諾）；`ServiceStatusDashboard.spec` 2（rate_limited 提示與連結、非 rate_limited／非 TMDb 不出現）。
+- 全量：`pnpm nx test web` 288 檔／4,400 條綠；`web:typecheck` 綠；eslint 改到的 8 檔 0 errors；prettier 綠；`pnpm run test:visual` 本機比對綠（3 張 darwin 重拍後）。
+- 🔗 AC Drift: NONE。📎 Contract Stamps: `KeySource` 加 `'bundled'`（[@contract-v1→v2] 加值，對應後端 7-7a）。🎭 A11y Pre-Flight: PASS（新增的是 `<p>` 文字與既有 `Link`，無新互動元件）。🎨 UX Verification: PARTIAL — 程式碼文案與 Task 4 提示詞一致；`.pen` 更新待 Alexyu 跑 inline agent 後由 Sally 唯讀 review。
 
 ### Discovery Triage
 
+- 無新單。
+
 ### File List
+
+- apps/web/src/services/keySettingsService.ts
+- apps/web/src/components/settings/ApiKeysForm.tsx、ApiKeysForm.spec.tsx
+- apps/web/src/components/settings/ServiceStatusDashboard.tsx、ServiceStatusDashboard.spec.tsx、serviceLabels.ts
+- apps/web/src/components/setup/ApiKeysStep.tsx、ApiKeysStep.spec.tsx
+- apps/web/src/routes/test/-gallery.fixtures.tsx（註解）
+- tests/visual/components.visual.spec.ts-snapshots/components/settings-api-keys-form/**（3 darwin 重拍、3 linux 刪除待 bootstrap）
+- _bmad-output/implementation-artifacts/sub-7-7b-bundled-tmdb-key-fe.md、sprint-status.yaml
 
 ## Change Log
 
 | Date       | Change                                   |
 | ---------- | ---------------------------------------- |
 | 2026-09-30 | create-story（SM Bob，自 sub-7-7 拆出）。 |
+| 2026-09-30 | dev-story（Amelia）→ review；Task 4（.pen）交 Alexyu 跑 inline agent。 |

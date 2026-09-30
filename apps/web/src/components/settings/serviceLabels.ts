@@ -17,6 +17,12 @@ export interface ServiceLabel {
    * do not belong here. No reliable advice → no hint at all.
    */
   fixHint?: ServiceFixHint;
+  /**
+   * Shown under the card while the service is `rate_limited`. Unlike fixHint
+   * this IS cause-specific — a 429 is the one error the backend does classify
+   * (models.isRateLimitError) — so it may name the fix (sub-7-7b AC #5).
+   */
+  rateLimitedHint?: ServiceFixHint;
 }
 
 /**
@@ -31,6 +37,13 @@ export const SERVICE_LABELS: Record<string, ServiceLabel> = {
     role: '中繼資料與海報',
     fixHint: {
       text: '到「金鑰設定」確認 TMDB 金鑰。',
+      link: { to: '/settings/keys', label: '金鑰設定' },
+    },
+    // sub-7-7a ships a TMDb key inside the release image, shared by every
+    // install of that release — so a 429 is the one thing that can go wrong
+    // with it, and the user's own key (used the moment it is saved) is the fix.
+    rateLimitedHint: {
+      text: '內建金鑰被限流：到「金鑰設定」填入自己的金鑰可立即解除。',
       link: { to: '/settings/keys', label: '金鑰設定' },
     },
   },

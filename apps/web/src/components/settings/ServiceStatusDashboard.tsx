@@ -181,14 +181,33 @@ export function ServiceStatusDashboard() {
         className="space-y-3 focus:outline-none"
         data-testid="service-cards-list"
       >
-        {services.map((service) => (
-          <ServiceStatusCard
-            key={service.name}
-            service={service}
-            onTest={handleTest}
-            isTesting={testingService === service.name}
-          />
-        ))}
+        {services.map((service) => {
+          const rateLimitedHint =
+            service.status === 'rate_limited'
+              ? getServiceLabel(service).rateLimitedHint
+              : undefined;
+          return (
+            <div key={service.name} className="space-y-1">
+              <ServiceStatusCard
+                service={service}
+                onTest={handleTest}
+                isTesting={testingService === service.name}
+              />
+              {/* sub-7-7b AC #5: a rate limit is not "broken" (isBroken), so the
+                  banner never mentions it — but with the bundled TMDb key it is
+                  the one state the user can end themselves. One line, under the
+                  card that shows it, linking to where the fix is typed. */}
+              {rateLimitedHint && (
+                <p
+                  data-testid={`rate-limit-hint-${service.name}`}
+                  className="px-4 text-xs text-[var(--text-secondary)]"
+                >
+                  <HintText hint={rateLimitedHint} />
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* The announcement is a short, always-mounted sentence, not the banner:

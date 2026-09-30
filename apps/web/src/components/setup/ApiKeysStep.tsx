@@ -1,11 +1,20 @@
 // Design ref: ux-design.pen Screen N4-D (D990CP)
 import { AlertTriangle } from 'lucide-react';
+import { useKeySettings } from '../../hooks/useKeySettings';
 import type { StepProps } from './SetupWizard';
 import { StepNav } from './StepNav';
 import { WizardTextField } from './WizardTextField';
 
 export function ApiKeysStep({ data, onUpdate, onNext, onBack, onSkip }: StepProps) {
   const nothingEntered = !data.tmdbApiKey && !data.claudeApiKey;
+  // sub-7-7b: release images carry a TMDb key (source "bundled"); a source
+  // build does not. The copy must not threaten「抓不到元資料」on an install
+  // where metadata already works — nor promise it on one where it does not.
+  // The request failing (offline, source build without the route) simply
+  // means "not bundled", which is the honest default.
+  const { data: keySettings } = useKeySettings();
+  const tmdbBundled =
+    keySettings?.keys.some((key) => key.name === 'tmdb' && key.source === 'bundled') ?? false;
 
   return (
     <div className="flex flex-col gap-4" data-testid="api-keys-step">
@@ -19,8 +28,12 @@ export function ApiKeysStep({ data, onUpdate, onNext, onBack, onSkip }: StepProp
         label="TMDb 金鑰"
         value={data.tmdbApiKey || ''}
         onChange={(tmdbApiKey) => onUpdate({ tmdbApiKey })}
-        placeholder="輸入 TMDb API 金鑰..."
-        hint="用於取得電影和影集的中文元資料"
+        placeholder={tmdbBundled ? '可留空，使用內建金鑰' : '輸入 TMDb API 金鑰...'}
+        hint={
+          tmdbBundled
+            ? '已內建預設金鑰，可留空；填入自己的金鑰會優先使用'
+            : '用於取得電影和影集的中文元資料'
+        }
         testId="tmdb-key-input"
       />
 
@@ -52,7 +65,9 @@ export function ApiKeysStep({ data, onUpdate, onNext, onBack, onSkip }: StepProp
             aria-hidden="true"
           />
           <p className="text-xs text-[var(--text-primary)]">
-            跳過 API 金鑰設定將會限制部分功能，例如自動取得元資料和 AI 檔名解析。
+            {tmdbBundled
+              ? '跳過 API 金鑰設定將會限制 AI 檔名解析與字幕翻譯；電影和影集的元資料會使用內建的 TMDb 金鑰。'
+              : '跳過 API 金鑰設定將會限制部分功能，例如自動取得元資料和 AI 檔名解析。'}
           </p>
         </div>
       )}

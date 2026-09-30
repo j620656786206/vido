@@ -3123,7 +3123,10 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
 
   // ----- setup/ (P-bucket additions) -----
   // All 7 setup steps receive StepProps (data/onUpdate/onNext/onBack/onSkip/isFirst/
-  // isLast/isSubmitting) — pure presentational, no data hooks.
+  // isLast/isSubmitting) — pure presentational, no data hooks. Exception since
+  // sub-7-7b: ApiKeysStep reads `useKeySettings` to learn whether a bundled TMDb
+  // key exists; here the query is unseeded (→ "not bundled"), so the snapshot
+  // shows the source-build copy, same as before.
   {
     id: 'setup-api-keys-step',
     label: 'setup/ApiKeysStep',
