@@ -28,6 +28,30 @@ Status: ready-for-dev
 5. **Rule 23**：月份文案「10 月」由 `now` prop 注入；gallery fixtures `month-start`／`month-end`。
 6. **測試**：三處元件 spec ＋ gallery fixtures ＋ e2e 一條（活動頁區塊）；`-linux` 由 CI bootstrap。
 
+## Task 0 提示詞（Sally 2026-10-01，節點錨定；貼給 Pencil Inline AI Agent 原樣執行，一段跑完 ⌘S 再跑下一段）
+
+> **A · K5 本月 AI 花費（桌機＋手機）**
+>
+> 1. 用 `FindEmptySpace` 在 `M6ra92`（K4-D）右側找空位，`Copy` `kMeWS`（K1-D-v2）到 document，命名「K5-D-v2 · 活動中心（本月 AI 花費）」，`placeholder:true`。
+> 2. 在複製稿的 `main` 裡、`sec-下載` 與 `sec-活動記錄` 之間，`Copy` `sec-下載`（原 `U2ymzn`）當骨架，改名「sec-本月AI花費」：`secTitle` 改「本月 AI 花費」，secHead 右側加一個 `Type/Body/Size`、`$text-muted` 的文字「10 月」。把 `row-下載中` 那張卡改成 `layout:vertical`、`gap:$Space/sm-plus`，內容換成三塊（都在同一張 `$bg-secondary` 卡內，內距沿用）：
+>    - 第一列 horizontal、gap `$Space/xl`：兩組「標籤＋數字」——「翻譯」`$text-secondary` Body ＋「12 次 · $3.48」`$text-primary` BodyLg 600；「語音辨識」＋「2 次 · $1.90」同樣式。
+>    - 第二列 horizontal、gap `$Space/xl`、`$text-secondary` Body：「略過 8 集，估算省下 $2.14」、「快取省下 $0.31」。
+>    - 第三塊「依模型」：小標「依模型」`$text-muted` Label；兩列 `Type/Body/Size`：「claude-sonnet-5」左、「9 次 · $4.20」右對齊 `$text-primary`；「claude-haiku-4-5」左、「5 次 · $1.18」右。列之間 `$Space/xs`，用 `justifyContent:space_between`。
+>    - 拿掉 `progressTrack`（這張卡沒有進度）。
+> 3. 手機：用 `FindEmptySpace` 在剛做好的 K5-D 右側找空位，`Copy` `QIwY1`（K1-M-v2）命名「K5-M-v2 · 活動中心（本月 AI 花費・手機）」，在 `scroll-content`（原 `KwHSK`）的 `sec-下載`（原 `J43oA`）與 `sec-活動記錄`（原 `aZeU5`）之間插入同一個區塊，第一、二列改成 vertical 疊放（gap `$Space/xs`），其餘同桌機；字級維持 14（手機不縮內文）。
+> 4. 兩張都 `placeholder:false`，確認 `problems` 為空、沒有文字溢出卡片。
+>
+> **B · F8c 批次完成收據（桌機＋手機）**
+>
+> 1. 用 `FindEmptySpace` 在 `i9Nun1`（F8-D-v2）右側找空位，`Copy` `i9Nun1` 命名「F8c-D-v2 · 批次生成（完成收據）」，`placeholder:true`。
+> 2. 對話框內：`overall-nums` 的「2 / 5」（原 `dP5Lo`）改「5 / 5」；`item-list` 裡的 `item-active`（原 `K3X0m`）`Replace` 成 `item-奧本海默`（原 `JSEQV`）的複製品並把片名改「怪奇物語 S01E03」、狀態文字與其他完成列一致。
+> 3. `cost-row`（原 `k89qkw`）的 `cost-line` 四個文字改成：`cost-prefix`「本次 」（`$text-secondary`）、`cost-used`「$0.53」（`$text-primary`、600，不變）、`cost-mid`「 · claude-sonnet-5 · 844 句 · 」（`$text-secondary`）、`cost-cap`「cache 命中 12%」（`$text-secondary`）。`sse-chip`（原 `Blkcw`）改成 `$success-tint` 底、`$success-text` 字「已完成」。
+> 4. footer 的按鈕文字「全部取消」（原 `hb4bs/L9cIf`）改「關閉」，按鈕改用 `Component/Button/Secondary`（`YDPhc`）。
+> 5. 手機：對 `H717g`（F8-M-v2）做同樣四步，命名「F8c-M-v2 · 批次生成（完成收據・手機）」，放在 F8c-D 右側；收據行若一行放不下，`cost-line` 改 vertical 兩行：第一行「本次 $0.53 · claude-sonnet-5」、第二行「844 句 · cache 命中 12%」。
+> 6. `placeholder:false`，確認 `problems` 為空。
+
+**設計裁定理由**：收據行沿用 F8 既有的 cost-line 樣式（金額 600、其餘 secondary），只是把「上限」換成模型／句數／快取——完成態不再需要上限，需要的是「這次到底買到什麼」。活動頁的花費區塊採卡片而非列（`ActivityRow-v2` 是「一件事一列」的語彙，花費是一張總覽），但內距、底色、標題字級與其他區塊一致，讓它讀起來仍是活動頁的一段。`—`／「估算」／`≈` 三種標示的規則寫在 AC #4，稿上示範的是「都有數字」的正常態。
+
 ## Tasks / Subtasks
 
 - [ ] Task 0 — Sally 出 K5／F8 收據行兩段提示詞 → Alexyu 跑 inline agent → 截圖
