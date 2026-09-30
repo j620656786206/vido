@@ -45,13 +45,29 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
   const [newPath, setNewPath] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  // Seed the form ONCE, when the library first arrives. Adding or removing a
+  // path refetches the list — a new object for the same library — and
+  // re-seeding then threw away the unsaved name/type/opt-in
+  // (disc-2026-09-library-edit-refetch-overwrites-draft).
+  const seededRef = useRef(false);
   useEffect(() => {
-    if (existingLibrary) {
+    if (existingLibrary && !seededRef.current) {
+      seededRef.current = true;
       setName(existingLibrary.name);
       setContentType(existingLibrary.contentType);
       setAutoSubtitle(existingLibrary.autoSubtitle ?? false);
     }
   }, [existingLibrary]);
+
+  // The parent's onClose is shared: a save that finishes after this dialog
+  // was closed must not close one opened afterwards.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const handleSave = async () => {
     setError(null);
@@ -74,8 +90,9 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
           paths: newPath.trim() ? [newPath.trim()] : undefined,
         });
       }
-      onClose();
+      if (mountedRef.current) onClose();
     } catch (err) {
+      if (!mountedRef.current) return;
       setError(err instanceof Error ? err.message : 'Operation failed');
     }
   };
