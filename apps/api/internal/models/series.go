@@ -161,6 +161,20 @@ func (s *Series) GetCredits() (*Credits, error) {
 	return &credits, nil
 }
 
+// CastLabels is Credits.CastLabels over this series' stored credits (see the
+// movie counterpart for why it falls back to the JSON blob).
+func (s *Series) CastLabels(limit int) []string {
+	credits := s.Credits
+	if credits == nil {
+		parsed, err := s.GetCredits()
+		if err != nil {
+			return nil
+		}
+		credits = parsed
+	}
+	return credits.CastLabels(limit)
+}
+
 // SetCredits serializes credits to JSON and stores in CreditsJSON
 func (s *Series) SetCredits(credits *Credits) error {
 	if credits == nil {

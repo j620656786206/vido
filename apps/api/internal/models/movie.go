@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 )
 
@@ -188,6 +189,51 @@ type CrewMember struct {
 type Credits struct {
 	Cast []CastMember `json:"cast,omitempty"`
 	Crew []CrewMember `json:"crew,omitempty"`
+}
+
+// CastLabels renders the cast the way the translation prompt wants it
+// (sub-7-2a): 「Name（Character）」 in billing order, the parenthesis only when
+// the character is known, at most `limit` entries (limit <= 0 = all). Both
+// translation legs call this so the two prompts — and therefore the two legs'
+// MetadataHash — agree byte for byte (Rule 19: services and subtitle cannot
+// share a helper, models is the one package both import).
+func (c *Credits) CastLabels(limit int) []string {
+	if c == nil || len(c.Cast) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(c.Cast))
+	for _, m := range c.Cast {
+		name := strings.TrimSpace(m.Name)
+		if name == "" {
+			continue
+		}
+		if character := strings.TrimSpace(m.Character); character != "" {
+			name = name + "（" + character + "）"
+		}
+		out = append(out, name)
+		if limit > 0 && len(out) == limit {
+			break
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+// CastLabels is Credits.CastLabels over this movie's stored credits. The
+// parsed Credits field is filled by the repository scan only when non-empty,
+// so fall back to the JSON blob rather than trusting the pointer alone.
+func (m *Movie) CastLabels(limit int) []string {
+	credits := m.Credits
+	if credits == nil {
+		parsed, err := m.GetCredits()
+		if err != nil {
+			return nil
+		}
+		credits = parsed
+	}
+	return credits.CastLabels(limit)
 }
 
 // ProductionCountry represents a production country

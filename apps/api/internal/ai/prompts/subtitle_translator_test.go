@@ -258,9 +258,33 @@ func TestSubtitleTranslatorPromptVersion_PinsPromptText(t *testing.T) {
 		sb.WriteString(BuildLocalizationSection(level))
 	}
 	sb.WriteString(BuildLexiconTermsSection([]GlossaryEntry{{Source: "Life360", Target: "Life360"}}))
+	// sub-7-2a surface: the per-episode line. Pinned so its wording cannot
+	// drift silently; adding it did NOT bump the version on purpose — it is
+	// additive context rendered after the cache breakpoint, and a bump would
+	// re-key both legs' cached libraries for zero gain (the 9R-8 precedent in
+	// services/translation_service.go composeSystemPrompt).
+	sb.WriteString(BuildEpisodeSection("S01E03 · Pin Episode"))
 	digest := fmt.Sprintf("%x", sha256.Sum256([]byte(sb.String())))
 
 	assert.Equal(t, "m1-v3", SubtitleTranslatorPromptVersion)
-	assert.Equal(t, "6b07a8b684f3e4b5fb5c6f64574168e0c393577db2ea334466d3ac09c92729a3", digest,
+	assert.Equal(t, "aced9e909c7a09313acaf4df9feef418be6827bea9c546717bcd337322d57780", digest,
 		"prompt text changed — bump SubtitleTranslatorPromptVersion and update this digest in the SAME edit (P11)")
+}
+
+// ─── sub-7-2a AC #3: the per-episode line ──────────────────────────────────
+
+func TestBuildEpisodeSection_RendersOneLineOutsideTheMetadataSection(t *testing.T) {
+	section := BuildEpisodeSection("S01E03 · Chapter Three:\nHolly, Jolly")
+
+	assert.True(t, strings.HasPrefix(section, "## Episode — background only, do NOT translate or output this section:\n"))
+	assert.Contains(t, section, "- Episode: S01E03 · Chapter Three: Holly, Jolly\n",
+		"a multi-line title is collapsed so it cannot read as dialogue")
+	assert.True(t, strings.HasSuffix(section, "\n\n"), "section ends with a blank separator line")
+	assert.NotContains(t, BuildMetadataSection(sampleMetadata()), "Episode",
+		"the show-level section never carries the episode — it is the cached prefix and the hash input")
+}
+
+func TestBuildEpisodeSection_BlankLabelRendersNothing(t *testing.T) {
+	assert.Equal(t, "", BuildEpisodeSection(""))
+	assert.Equal(t, "", BuildEpisodeSection("  \n\t"))
 }

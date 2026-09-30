@@ -108,7 +108,10 @@ func (s *repoMediaStore) loadMovie(ctx context.Context, id string) (*MediaItem, 
 			Year:          yearOf(movie.ReleaseDate),
 			Genres:        movie.Genres,
 			Overview:      movie.Overview.String,
-			Countries:     countryCodes(movie.ProductionCountries),
+			// sub-7-2a AC #1: the cast sub-7-3 started storing finally reaches
+			// the prompt (TranslateContext.Cast was never assigned before).
+			Cast:      movie.CastLabels(prompts.MetadataCastLimit),
+			Countries: countryCodes(movie.ProductionCountries),
 		}, movie.TMDbID.Valid, id, models.SubtitleRunMediaMovie),
 	}, nil
 }
@@ -192,7 +195,24 @@ func (s *repoMediaStore) loadEpisode(ctx context.Context, id string) (*MediaItem
 	if series, err := s.loadSeriesRow(ctx, episode.SeriesID); err == nil {
 		item.Context = seriesContext(series)
 	}
+	// sub-7-2a AC #3: the one per-episode fact rides OUTSIDE the show-level
+	// hash (see TranslateContext.EpisodeLabel) — so this does not undo the
+	// cache-sharing the comment above is about.
+	item.Context.EpisodeLabel = episodeLabel(episode)
 	return item, nil
+}
+
+// episodeLabel renders "S01E03 · Title" (or just "S01E03" when the episode has
+// no title, or "" when it has no numbers either) for the prompt's episode line.
+func episodeLabel(episode *models.Episode) string {
+	if episode == nil || (episode.SeasonNumber <= 0 && episode.EpisodeNumber <= 0) {
+		return ""
+	}
+	label := fmt.Sprintf("S%02dE%02d", episode.SeasonNumber, episode.EpisodeNumber)
+	if title := strings.TrimSpace(episode.Title.String); title != "" {
+		label += " · " + title
+	}
+	return label
 }
 
 func (s *repoMediaStore) loadSeriesRow(ctx context.Context, id string) (*models.Series, error) {
@@ -238,6 +258,9 @@ func seriesContext(series *models.Series) TranslateContext {
 		Year:          yearOf(series.FirstAirDate),
 		Genres:        series.Genres,
 		Overview:      series.Overview.String,
+		// sub-7-2a AC #1. Countries stay empty until sub-7-2b adds the column
+		// the series table never had.
+		Cast: series.CastLabels(prompts.MetadataCastLimit),
 	}, series.TMDbID.Valid, series.ID, models.SubtitleRunMediaSeries)
 }
 
