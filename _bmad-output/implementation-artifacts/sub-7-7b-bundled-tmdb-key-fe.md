@@ -34,7 +34,7 @@ Status: done
 - [x] Task 1 — 型別＋`ApiKeysForm` 標籤／hint／清除文案＋spec（AC #1–#3, #6）
 - [x] Task 2 — 精靈 `ApiKeysStep` 依 source 切文案＋spec（AC #4, #6）
 - [x] Task 3 — 服務狀態 rate_limited 提示＋spec（AC #5, #6）
-- [ ] Task 4 — 設計稿 C7-D／C7-M／N4-D 文案對齊（**交 Alexyu 跑 Pencil Inline AI Agent**，依 `feedback_pen_inline_agent_workflow`；提示詞見下）→ ⌘S → `python3 scripts/export-pen-screenshots.py` → 只 stage `c7-d`／`c7-m`／`n4-d` 三張 → commit
+- [x] Task 4 — 設計稿 C7-D／C7-M／N4-D 文案對齊（2026-09-30 Alexyu 跑完 inline agent；Sally MCP 唯讀 review：9 個文字節點逐字相符、三張 problems 為 0（C7-M 的 tabs-strip 橫向捲動裁切為既有設計）；N4-D 補了第二段提示詞的 `qTesB`／`lidJ4` 兩節點）（**交 Alexyu 跑 Pencil Inline AI Agent**，依 `feedback_pen_inline_agent_workflow`；提示詞見下）→ ⌘S → `python3 scripts/export-pen-screenshots.py` → 只 stage `c7-d`／`c7-m`／`n4-d` 三張 → commit
 - [x] Task 5 — 全量驗證（web 4,400 綠、typecheck、lint、prettier；visual 本機比對綠）
 
 ### Task 4 提示詞（Sally 2026-09-30，節點錨定；貼給 Pencil Inline AI Agent 原樣執行）
@@ -95,3 +95,4 @@ Claude Fable 5.1（Amelia）
 | 2026-09-30 | create-story（SM Bob，自 sub-7-7 拆出）。 |
 | 2026-09-30 | dev-story（Amelia）→ review；Task 4（.pen）交 Alexyu 跑 inline agent。 |
 | 2026-09-30 | PR #626 合併（linux 基準 #627）→ done；Task 4 `.pen` 文案待 Alexyu 跑 inline agent。 |
+| 2026-09-30 | Task 4 `.pen` 文案由 Alexyu 跑 inline agent 完成；Sally review 通過；截圖 c7-d／c7-m／n4-d 重出。 |
