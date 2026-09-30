@@ -279,6 +279,7 @@ _The capability contract. Phase tags: unmarked = M1 (MVP); [M1.5], [P2] = Growth
 - FR26: The system can supply media metadata (title, genre, overview, cast, country) as context to the translation provider.
 - FR27: The user can correct an incorrect TMDb match by searching for and selecting the correct entry.
 - FR28: The system can re-translate a subtitle using the corrected metadata after a match is fixed. [P2]
+- FR35: The system can learn a filename-pattern → title mapping from a manual match correction (FR27) and auto-apply it to later files sharing the same fansub-group + title pattern, pinning the corrected TMDb entry rather than re-searching; the user can review and delete learned rules. [P3] _(Restored 2026-09-30 — v3 FR24 / Story 3-9 was dropped in the v4 migration; the matching engine shipped, the save/apply wiring and management UI did not. Tracked as `feat-learning-rules-relaunch`.)_
 
 ### H. Source Fallback [P2]
 

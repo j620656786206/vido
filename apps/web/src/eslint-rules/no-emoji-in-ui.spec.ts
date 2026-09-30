@@ -57,7 +57,7 @@ describe('local/no-emoji-in-ui', () => {
 
   it.each([
     // Text-presentation glyphs are typography, not colour smuggling —
-    // LearnPatternPrompt's ✓, DoubanSection's ★☆, DownloadFilterTabs' ☰
+    // a「✓ 已套用」confirmation tick, DoubanSection's ★☆, DownloadFilterTabs' ☰
     // must all stay legal.
     ['dingbat check/cross', `const s = '✓ 已套用你之前的設定'; const f = '✗';`],
     ['star-rating glyphs', `const s = '★★★☆☆';`],

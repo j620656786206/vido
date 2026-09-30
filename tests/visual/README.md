@@ -187,7 +187,7 @@ and JSDoc is the `GalleryFixture` interface in `-gallery.fixtures.tsx` (search f
   to opt the fixture in. Reference fixture: `library-sort-selector` (4-state: default/hover/focus/
   open; `openTrigger: '[data-testid="sort-selector-button"]'`).
 
-- **`routePath?: '/library' | '/downloads' | '/pending' | '/settings'`** (Task 0b). Renders the
+- **`routePath?: '/library' | '/downloads' | '/settings'`** (Task 0b; `/pending` dropped 2026-09-30 with the page). Renders the
   fixture inside a nested memory `RouterProvider` (`createMemoryHistory({ initialEntries: [routePath] })`)
   so router-state consumers (`useRouterState()`, TanStack `<Link>` matching) paint the right
   state. Reference fixture: `dashboard-recent-media-panel` (`routePath: '/library'`).

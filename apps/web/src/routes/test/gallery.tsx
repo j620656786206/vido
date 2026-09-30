@@ -114,9 +114,10 @@ const ALL_STATES: GalleryState[] = ['default', 'hover', 'focus'];
 
 // 19-4b Task 0 Fix B: nested memory `RouterProvider` for fixtures whose components
 // read router state. We register a stub route per supported `routePath` value
-// (`/library`, `/downloads`, `/pending`, `/settings`) so `<Link>` resolution
-// inside the wrapped component stays happy regardless of which path the fixture pins.
-const STUB_TAB_PATHS = ['/library', '/downloads', '/pending', '/settings'] as const;
+// (`/library`, `/downloads`, `/settings`) so `<Link>` resolution inside the
+// wrapped component stays happy regardless of which path the fixture pins.
+// (`/pending` left the list 2026-09-30 when the hard-coded empty page was retired.)
+const STUB_TAB_PATHS = ['/library', '/downloads', '/settings'] as const;
 export type StubRoutePath = (typeof STUB_TAB_PATHS)[number];
 
 /**

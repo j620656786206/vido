@@ -243,7 +243,7 @@ test.describe('Selection and Confirmation @e2e @manual-search', () => {
   // - User can click "Select" button on a result
   // - Confirmation dialog appears with metadata preview
   // - Success toast shows after applying
-  // - Learning prompt appears (Story 3.9)
+  // - (Learning prompt — Story 3.9 — was never wired; see feat-learning-rules-relaunch)
 });
 
 // =============================================================================

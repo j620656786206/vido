@@ -280,8 +280,6 @@ reference fixtures are unchanged except the four notes above: `library-sort-sele
 
 | `data-gallery-id` | Component | `data-pen-node` | States | Notes |
 |---|---|---|---|---|
-| `learning-learn-pattern-prompt` | `learning/LearnPatternPrompt.tsx` | `screen-section` | default, hover, focus | |
-| `learning-learned-patterns-settings` | `learning/LearnedPatternsSettings.tsx` | `screen-section` | default, hover, focus | Q-bucket — seeded learned-patterns |
 
 #### `library/` (10 new — all screen-section)
 
@@ -516,7 +514,7 @@ Post-sweep tally across all 131 in-scope `components/` files:
 | minor drift | **2** | `homepage/HeroBanner` (image-fallback background), `homepage/TrailerModal` (close-button autofocus) — both carried from this doc's 19-4b Sally review "3 non-blocking observations"; log-only (< 3, no shared theme) |
 | exact-match | **97** | 12 Category-A (9 directly design-node-vs-baseline compared) + 85 Category-C |
 | N/A — utility-confirmed | **25** | Category-B; 0 re-classifications |
-| N/A — design-coverage gap | **7** | 6 `setup/*` wizard steps + `learning/LearnPatternPrompt` — no `.pen` screen frame |
+| N/A — design-coverage gap | **6** | 6 `setup/*` wizard steps — no `.pen` screen frame (`learning/LearnPatternPrompt` was the 7th until its fixture + baselines were retired 2026-09-30 by `bugfix-learned-patterns-ui-orphaned`) |
 
 **Conclusion:** the Sally baseline approvals recorded above (19-4 2026-05-12 + 19-4b 2026-05-14
 — "every component renders faithfully to the design intent") are confirmed by the formal Rule 22
