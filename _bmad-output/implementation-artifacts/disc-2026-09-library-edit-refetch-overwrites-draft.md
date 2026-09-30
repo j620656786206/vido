@@ -1,6 +1,6 @@
 # Story: disc-2026-09-library-edit-refetch-overwrites-draft — 編輯媒體庫時，加一條路徑不會把還沒存的名稱蓋掉
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-09-30。Alexyu：「做下一張」。原單：disc-2026-09-scanner-custom-modals-a11y 的 /ship 對抗式 CR（既有問題）。
      行號為 main `51e52308`；每條「查到的事」都是 SM 本次親自讀過的位置。 -->
@@ -64,3 +64,4 @@ Claude Opus 5.5（Amelia）
 | Date       | Change                                          |
 | ---------- | ----------------------------------------------- |
 | 2026-09-30 | create-story（SM Bob）；dev-story（Amelia）→ review。 |
+| 2026-09-30 | PR #621 合併 → done。 |
