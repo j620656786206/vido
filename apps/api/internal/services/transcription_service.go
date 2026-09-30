@@ -1599,17 +1599,14 @@ func (s *TranscriptionService) translationRunVersion(ctx context.Context, metada
 	}
 }
 
-// glossaryMediaKey resolves which glossary a run feeds from and harvests into
-// (CR sub-5-5 H1). The glossary is per-SHOW: an episode run must use its
-// PARENT SERIES id — the key the F6 review panel and the pipeline path already
-// use — or its harvest lands in invisible episode-id rows no other episode
-// ever benefits from. Movies (and series rows) key on themselves. Fail-soft:
-// an unwired reader or a failed lookup falls back to mediaID (the pre-fix
-// behavior — degraded consistency, never a failed run).
-func (s *TranscriptionService) glossaryMediaKey(ctx context.Context, mediaType, mediaID string) string {
-	return glossaryKeyFor(mediaID, s.episodeRowFor(ctx, mediaType, mediaID))
-}
-
+// episodeRowFor + glossaryKeyFor resolve which glossary a run feeds from and
+// harvests into (CR sub-5-5 H1). The glossary is per-SHOW: an episode run must
+// use its PARENT SERIES id — the key the F6 review panel and the pipeline path
+// already use — or its harvest lands in invisible episode-id rows no other
+// episode ever benefits from. Movies (and series rows) key on themselves.
+// Fail-soft: an unwired reader or a failed lookup falls back to mediaID (the
+// pre-fix behavior — degraded consistency, never a failed run).
+//
 // episodeRowFor reads the episode row ONCE for an episode run — the parent
 // series id (glossary + metadata key) and the per-episode prompt line
 // (sub-7-2a) both come from it. nil for movies, series runs, an unwired
@@ -1665,7 +1662,7 @@ func withoutUntrustedIdentity(md prompts.MediaMetadata, tmdbMatched bool, mediaI
 // system blocks since sub-1-5a (subtitle/media_store.go loadMovie /
 // seriesContext → pipeline.go metadataOf).
 //
-// glossaryKey is the value glossaryMediaKey ALREADY resolved for this run: for
+// glossaryKey is the value glossaryKeyFor ALREADY resolved for this run: for
 // an episode it IS the parent series id, so the episode row is never read a
 // second time here.
 //
@@ -1720,7 +1717,7 @@ func (s *TranscriptionService) mediaMetadataFor(ctx context.Context, mediaType, 
 				"media_id", mediaID, "media_type", mediaType)
 			return prompts.MediaMetadata{}
 		}
-		// CR M4: glossaryMediaKey FAILS SOFT to the episode's own id when the
+		// CR M4: glossaryKeyFor FAILS SOFT to the episode's own id when the
 		// parent lookup misses. Querying the series table with an episode id
 		// would then log `series_id=<an episode id>` and send an operator
 		// hunting for a series row that never existed — the 9R-10a CR M1 class
