@@ -187,3 +187,82 @@ func TestKeyResolver_NilSecretsServiceIsEnvOnly(t *testing.T) {
 	assert.Equal(t, "sk-from-env", value)
 	assert.Equal(t, KeySourceEnv, source)
 }
+
+// ─── sub-7-7a: the bundled tier ─────────────────────────────────────────────
+//
+// A key compiled into the release binary is the LAST resort: it exists so a
+// fresh install works with no TMDb account, and it must never shadow anything
+// the user set — in the UI or in the environment.
+
+func TestKeyResolver_BundledIsUsedWhenNothingElseIsSet(t *testing.T) {
+	r := NewKeyResolver(&fakeSecrets{}, EnvKeys{}, nil,
+		WithBundledKeys(BundledKeys{TMDb: "bundled-tmdb"}))
+
+	value, source, err := r.Get(context.Background(), KeyTMDb)
+
+	require.NoError(t, err)
+	assert.Equal(t, "bundled-tmdb", value)
+	assert.Equal(t, KeySourceBundled, source)
+	assert.True(t, r.Has(context.Background(), KeyTMDb))
+}
+
+func TestKeyResolver_EnvBeatsBundled(t *testing.T) {
+	r := NewKeyResolver(&fakeSecrets{}, EnvKeys{TMDb: "tmdb-from-env"}, nil,
+		WithBundledKeys(BundledKeys{TMDb: "bundled-tmdb"}))
+
+	value, source, err := r.Get(context.Background(), KeyTMDb)
+
+	require.NoError(t, err)
+	assert.Equal(t, "tmdb-from-env", value)
+	assert.Equal(t, KeySourceEnv, source)
+}
+
+func TestKeyResolver_SecretBeatsBundled(t *testing.T) {
+	secrets := &fakeSecrets{values: map[string]string{SecretNameTMDb: "tmdb-from-ui"}}
+	r := NewKeyResolver(secrets, EnvKeys{}, nil,
+		WithBundledKeys(BundledKeys{TMDb: "bundled-tmdb"}))
+
+	value, source, err := r.Get(context.Background(), KeyTMDb)
+
+	require.NoError(t, err)
+	assert.Equal(t, "tmdb-from-ui", value)
+	assert.Equal(t, KeySourceSecret, source)
+}
+
+// A source build has no bundled key: the answer must stay "none", exactly as
+// before sub-7-7a, so local development keeps asking for a key.
+func TestKeyResolver_NoBundledKeyIsStillNone(t *testing.T) {
+	r := NewKeyResolver(&fakeSecrets{}, EnvKeys{}, nil, WithBundledKeys(BundledKeys{}))
+
+	value, source, err := r.Get(context.Background(), KeyTMDb)
+
+	require.NoError(t, err)
+	assert.Equal(t, "", value)
+	assert.Equal(t, KeySourceNone, source)
+	assert.False(t, r.Has(context.Background(), KeyTMDb))
+}
+
+// Only TMDb is ever bundled. The paid keys (Claude, OpenAI) must not pick up a
+// fallback by accident even if someone widens BundledKeys later.
+func TestKeyResolver_BundledTierIsTMDbOnly(t *testing.T) {
+	r := NewKeyResolver(&fakeSecrets{}, EnvKeys{}, nil,
+		WithBundledKeys(BundledKeys{TMDb: "bundled-tmdb"}))
+
+	for _, name := range []KeyName{KeyClaude, KeyOpenAI} {
+		value, source, err := r.Get(context.Background(), name)
+		require.NoError(t, err)
+		assert.Equal(t, "", value, string(name))
+		assert.Equal(t, KeySourceNone, source, string(name))
+	}
+}
+
+// A whitespace-only bundled value (a mis-set CI secret) must not be handed to
+// TMDb as a blank key — it counts as absent, the same rule blank secrets follow.
+func TestKeyResolver_BlankBundledIsAbsent(t *testing.T) {
+	r := NewKeyResolver(&fakeSecrets{}, EnvKeys{}, nil, WithBundledKeys(BundledKeys{TMDb: "  \n"}))
+
+	_, source, err := r.Get(context.Background(), KeyTMDb)
+
+	require.NoError(t, err)
+	assert.Equal(t, KeySourceNone, source)
+}

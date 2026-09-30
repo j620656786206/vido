@@ -13,7 +13,12 @@ import (
 
 // TMDbConfig holds configuration for the TMDb service
 type TMDbConfig struct {
-	APIKey            string
+	// APIKey is the static key, used only when KeyProvider is nil (tests).
+	APIKey string
+	// KeyProvider resolves the key per request — settings → env → bundled via
+	// the KeyResolver — so a key saved in the UI works without a restart
+	// (sub-7-7a). Production always sets this.
+	KeyProvider       tmdb.KeyProvider
 	DefaultLanguage   string
 	FallbackLanguages []string
 	CacheTTLHours     int
@@ -64,6 +69,7 @@ type TMDbServiceInterface interface {
 type TMDbService struct {
 	cacheService  tmdb.CacheServiceInterface
 	client        tmdb.ClientInterface
+	rawClient     *tmdb.Client // the concrete HTTP client, for SetRequestObserver
 	contentFilter *ContentFilterService
 }
 
@@ -75,8 +81,9 @@ var _ TMDbServiceInterface = (*TMDbService)(nil)
 func NewTMDbService(cfg TMDbConfig, cacheRepo repository.CacheRepositoryInterface) *TMDbService {
 	// Build the client layer
 	client := tmdb.NewClient(tmdb.ClientConfig{
-		APIKey:   cfg.APIKey,
-		Language: cfg.DefaultLanguage,
+		APIKey:      cfg.APIKey,
+		KeyProvider: cfg.KeyProvider,
+		Language:    cfg.DefaultLanguage,
 	})
 
 	// Build the language fallback layer
@@ -111,7 +118,19 @@ func NewTMDbService(cfg TMDbConfig, cacheRepo repository.CacheRepositoryInterfac
 	return &TMDbService{
 		cacheService:  cacheService,
 		client:        client,
+		rawClient:     client,
 		contentFilter: NewContentFilterService(),
+	}
+}
+
+// SetRequestObserver forwards every request outcome to `o` (sub-7-7a AC #4).
+// main.go attaches the health monitor here, after both exist; every consumer
+// that took a raw client from this service (VideosProvider, SearchClient,
+// CreditsClient) shares the same underlying *tmdb.Client, so one hook sees
+// them all.
+func (s *TMDbService) SetRequestObserver(o tmdb.RequestObserver) {
+	if s.rawClient != nil {
+		s.rawClient.SetObserver(o)
 	}
 }
 

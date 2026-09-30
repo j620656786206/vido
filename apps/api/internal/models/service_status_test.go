@@ -156,3 +156,21 @@ func TestServiceHealth_ToServiceStatus_LastCheckAt(t *testing.T) {
 	// Should be within last second
 	assert.WithinDuration(t, time.Now(), status.LastCheckAt, time.Second)
 }
+
+// sub-7-7a: with the bundled TMDb key, 429s come from real requests and can
+// pass ErrorThresholdDown in seconds. Three rate-limits in a row is still
+// "rate limited" — telling the user to check the host would be wrong; the fix
+// is to bring their own key.
+func TestServiceHealth_ToServiceStatus_RateLimitedStaysRateLimitedWhenDown(t *testing.T) {
+	svc := NewServiceHealth("tmdb", "TMDb API")
+	for i := 0; i < ErrorThresholdDown+2; i++ {
+		svc.RecordError("TMDB_RATE_LIMIT: TMDb API rate limit exceeded")
+	}
+	require.True(t, svc.IsDown(), "precondition: the internal state did tip to down")
+
+	status := svc.ToServiceStatus()
+
+	assert.Equal(t, StatusRateLimited, status.Status)
+	assert.Equal(t, "速率限制中", status.Message)
+	assert.Equal(t, "TMDB_RATE_LIMIT: TMDb API rate limit exceeded", status.ErrorMessage)
+}

@@ -136,14 +136,38 @@ jobs:
             # removes GPL transitive dependencies and SBOM review is complete.
             org.opencontainers.image.licenses=NOASSERTION
 
+      # sub-7-7a：內建金鑰的「指紋」——sha256 前 16 碼，不是金鑰本身。BuildKit 的
+      # layer cache 不看 secret 內容，所以換了金鑰、舊 layer 照樣命中；把指紋當
+      # build-arg 塞進 cache key，金鑰一換 layer 就重編。沒有金鑰時是 "none"。
+      - name: Fingerprint the bundled TMDb key (never the key itself)
+        id: tmdb_key
+        env:
+          BUNDLED_KEY: ${{ secrets.TMDB_BUNDLED_KEY || secrets.TMDB_API_KEY }}
+        run: |
+          if [ -n "$BUNDLED_KEY" ]; then
+            fp=$(printf '%s' "$BUNDLED_KEY" | sha256sum | cut -c1-16)
+          else
+            fp=none
+          fi
+          echo "fingerprint=$fp" >> "$GITHUB_OUTPUT"
+          echo "bundled TMDb key: $([ "$fp" = none ] && echo absent || echo present)"
+
       - name: Build (and on non-PR events, push by digest)
         id: build
         uses: docker/build-push-action@v7
         with:
           context: .
+          build-args: |
+            TMDB_BUNDLED_KEY_FINGERPRINT=${{ steps.tmdb_key.outputs.fingerprint }}
           # 單一平台：這一行就是「不再有 QEMU」的保證
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
+          # sub-7-7a：內建 TMDb 金鑰。走 BuildKit secret（不是 build-arg），所以
+          # 不會進 image history／provenance／cache layer，只會在編好的 binary 裡。
+          # 專用的 TMDB_BUNDLED_KEY 沒設就退回測試用的 TMDB_API_KEY；fork 的 PR
+          # 兩個都拿不到 → 空字串 → binary 跟今天一樣要求使用者自填。
+          secrets: |
+            tmdb_bundled_key=${{ secrets.TMDB_BUNDLED_KEY || secrets.TMDB_API_KEY }}
           # 刻意「沒有」tags：image 名稱走 outputs 的 name= 屬性，這是官方
           # distributed-build 範例唯一記載的 push-by-digest 寫法。用 tags: 餵
           # 一個不帶 :tag 的名稱會被 docker 正規化成 :latest，雖然多半也能動，

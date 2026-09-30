@@ -3,11 +3,14 @@ package tmdb
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strings"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/time/rate"
@@ -22,12 +25,33 @@ const (
 	rateLimitInterval   = 10 * time.Second
 )
 
+// KeyProvider resolves the TMDb API key for ONE request. It is asked every
+// time, so a key saved from the settings page — or the bundled fallback — is
+// used by the very next call with no restart (sub-7-7a, closing
+// backlog-tmdb-runtime-key-resolution). Returning "" means "not configured";
+// the client then fails the request locally instead of sending a keyless call.
+type KeyProvider func(ctx context.Context) (string, error)
+
+// RequestObserver is told how each request ended: nil on 2xx, the *TMDbError
+// on an API error, the transport error otherwise. The health monitor uses it
+// to see a 429 the moment a real request gets one, instead of waiting for the
+// 5-minute ping (sub-7-7a AC #4).
+type RequestObserver func(endpoint string, err error)
+
 // ClientConfig holds configuration for the TMDb client
 type ClientConfig struct {
+	// APIKey is the static key. Ignored when KeyProvider is set; kept for
+	// tests and one-off tools that have no resolver.
 	APIKey   string
 	Language string
 	BaseURL  string        // Optional, defaults to DefaultBaseURL
 	Timeout  time.Duration // Optional, defaults to 30 seconds
+	// KeyProvider, when set, supplies the key per request (see KeyProvider).
+	KeyProvider KeyProvider
+	// Observer, when set, is notified after every request (see RequestObserver).
+	// It can also be attached later with SetObserver, because the health
+	// monitor that wants it is built after the client in main.go.
+	Observer RequestObserver
 }
 
 // ClientInterface defines the contract for TMDb API operations
@@ -97,11 +121,15 @@ type ClientInterface interface {
 
 // Client represents a TMDb API client
 type Client struct {
-	baseURL    string
-	apiKey     string
-	language   string
-	httpClient *http.Client
-	limiter    *rate.Limiter
+	baseURL     string
+	apiKey      string
+	keyProvider KeyProvider
+	language    string
+	httpClient  *http.Client
+	limiter     *rate.Limiter
+	// observer is swapped at most once, after boot, by SetObserver; atomic so
+	// a scan already in flight never races the write.
+	observer atomic.Pointer[RequestObserver]
 }
 
 // Compile-time interface verification
@@ -128,26 +156,92 @@ func NewClient(cfg ClientConfig) *Client {
 	// Using rate.Every to calculate the rate: 10s / 40 requests = 250ms per request
 	limiter := rate.NewLimiter(rate.Every(rateLimitInterval/requestsPerInterval), requestsPerInterval)
 
-	return &Client{
-		baseURL:  baseURL,
-		apiKey:   cfg.APIKey,
-		language: language,
+	c := &Client{
+		baseURL:     baseURL,
+		apiKey:      cfg.APIKey,
+		keyProvider: cfg.KeyProvider,
+		language:    language,
 		httpClient: &http.Client{
 			Timeout: timeout,
 		},
 		limiter: limiter,
 	}
+	if cfg.Observer != nil {
+		c.SetObserver(cfg.Observer)
+	}
+	return c
+}
+
+// SetObserver attaches (or replaces) the RequestObserver. Safe to call while
+// requests are in flight.
+func (c *Client) SetObserver(o RequestObserver) {
+	if o == nil {
+		c.observer.Store(nil)
+		return
+	}
+	c.observer.Store(&o)
+}
+
+func (c *Client) notify(endpoint string, err error) {
+	if o := c.observer.Load(); o != nil {
+		(*o)(endpoint, err)
+	}
+}
+
+// apiKeyFor returns the key to use for this request: the provider's answer
+// when one is configured, the static key otherwise.
+func (c *Client) apiKeyFor(ctx context.Context) (string, error) {
+	if c.keyProvider == nil {
+		return c.apiKey, nil
+	}
+	key, err := c.keyProvider(ctx)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(key), nil
+}
+
+// redactAPIKey scrubs the key out of a transport error. Go's *url.Error carries
+// the full request URL — `?api_key=…` included — and that text used to reach
+// the stdout log and the service-status page verbatim. With a bundled key that
+// would print the owner's key in every user's log (sub-7-7a). The error chain
+// is kept intact (errors.Is on context/net errors still works); only the URL
+// string inside it is rewritten.
+func redactAPIKey(err error, apiKey string) error {
+	if err == nil || apiKey == "" {
+		return err
+	}
+	var ue *url.Error
+	if errors.As(err, &ue) {
+		ue.URL = strings.ReplaceAll(ue.URL, url.QueryEscape(apiKey), "REDACTED")
+		ue.URL = strings.ReplaceAll(ue.URL, apiKey, "REDACTED")
+	}
+	return err
 }
 
 // doRequest performs an HTTP request with rate limiting and common error handling
 func (c *Client) doRequest(ctx context.Context, method, endpoint string, queryParams url.Values) ([]byte, error) {
+	// Resolve the key BEFORE spending a rate-limiter token: an unconfigured
+	// install must not burn quota on requests that cannot succeed.
+	apiKey, err := c.apiKeyFor(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve API key: %w", err)
+	}
+	if apiKey == "" {
+		// "not configured" is the wording models.isUnconfiguredError keys on,
+		// so the status page says 未設定 rather than treating this as an outage.
+		notConfigured := NewUnauthorizedError("TMDb API key not configured")
+		c.notify(endpoint, notConfigured)
+		return nil, notConfigured
+	}
+
 	// Wait for rate limiter
 	if err := c.limiter.Wait(ctx); err != nil {
 		return nil, fmt.Errorf("rate limiter error: %w", err)
 	}
 
 	// Build URL with query parameters
-	reqURL, err := c.buildURL(endpoint, queryParams)
+	reqURL, err := c.buildURL(endpoint, queryParams, apiKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build URL: %w", err)
 	}
@@ -171,11 +265,14 @@ func (c *Client) doRequest(ctx context.Context, method, endpoint string, queryPa
 	// Execute request
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
+		err = redactAPIKey(err, apiKey)
 		slog.Error("TMDb API request failed",
 			"error", err,
 			"endpoint", endpoint,
 		)
-		return nil, fmt.Errorf("HTTP request failed: %w", err)
+		wrapped := fmt.Errorf("HTTP request failed: %w", err)
+		c.notify(endpoint, wrapped)
+		return nil, wrapped
 	}
 	defer resp.Body.Close()
 
@@ -192,14 +289,17 @@ func (c *Client) doRequest(ctx context.Context, method, endpoint string, queryPa
 			"endpoint", endpoint,
 		)
 		// Parse TMDb error response and return appropriate TMDbError
-		return nil, ParseAPIError(resp.StatusCode, body)
+		apiErr := ParseAPIError(resp.StatusCode, body)
+		c.notify(endpoint, apiErr)
+		return nil, apiErr
 	}
 
+	c.notify(endpoint, nil)
 	return body, nil
 }
 
 // buildURL constructs the full URL with query parameters
-func (c *Client) buildURL(endpoint string, queryParams url.Values) (string, error) {
+func (c *Client) buildURL(endpoint string, queryParams url.Values, apiKey string) (string, error) {
 	// Parse base URL
 	u, err := url.Parse(c.baseURL + endpoint)
 	if err != nil {
@@ -210,7 +310,7 @@ func (c *Client) buildURL(endpoint string, queryParams url.Values) (string, erro
 	if queryParams == nil {
 		queryParams = url.Values{}
 	}
-	queryParams.Set("api_key", c.apiKey)
+	queryParams.Set("api_key", apiKey)
 
 	// Only set language if not already specified in queryParams
 	if queryParams.Get("language") == "" {

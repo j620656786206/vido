@@ -379,6 +379,8 @@ func (c *Config) LogConfigSources() {
 		"VIDO_CORS_ORIGINS_source", c.Sources["VIDO_CORS_ORIGINS"].String(),
 		"TMDB_API_KEY", maskSecret(c.TMDbAPIKey),
 		"TMDB_API_KEY_source", c.Sources["TMDB_API_KEY"].String(),
+		// sub-7-7a: presence only — the bundled key itself is never logged.
+		"TMDB_BUNDLED_KEY_present", HasBundledTMDbKey(),
 		"GEMINI_API_KEY", maskSecret(c.GeminiAPIKey),
 		"GEMINI_API_KEY_source", c.Sources["GEMINI_API_KEY"].String(),
 		"CLAUDE_API_KEY", maskSecret(c.ClaudeAPIKey),

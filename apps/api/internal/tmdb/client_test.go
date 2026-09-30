@@ -118,7 +118,7 @@ func TestClient_buildURL(t *testing.T) {
 				}
 			}
 
-			url, err := client.buildURL(tt.endpoint, params)
+			url, err := client.buildURL(tt.endpoint, params, client.apiKey)
 			require.NoError(t, err)
 
 			for _, want := range tt.wantContains {
