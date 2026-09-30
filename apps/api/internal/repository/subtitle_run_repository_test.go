@@ -541,3 +541,72 @@ func TestSubtitleRunRepository_RegisteredInBothConstructors(t *testing.T) {
 }
 
 func intPtr(n int) *int { return &n }
+
+// ─── sub-7-6b: the ledger reads behind the monthly spend page ───────────────
+
+func completedRunAt(id string, at time.Time, spent float64) *models.SubtitleRun {
+	t := at.UTC()
+	return &models.SubtitleRun{
+		ID: id, MediaID: "m-" + id, MediaType: models.SubtitleRunMediaMovie,
+		Status: models.SubtitleRunCompleted, Route: models.SubtitleRunRouteTranslate,
+		ModelID: "claude-haiku-4-5", StartedAt: t.Add(-time.Minute), CompletedAt: &t, SpentUSD: &spent,
+	}
+}
+
+func TestSubtitleRunRepository_CompletedRunsBetween_WindowIsHalfOpenAndUTC(t *testing.T) {
+	repo := NewSubtitleRunRepository(setupSubtitleRunDB(t))
+	ctx := context.Background()
+	// A local-zone window: the repository must normalize it, or a +08:00 wall
+	// clock would compare against UTC text and mis-order (the 032 lesson).
+	taipei := time.FixedZone("Asia/Taipei", 8*3600)
+	from := time.Date(2026, 9, 1, 0, 0, 0, 0, taipei)
+	to := from.AddDate(0, 1, 0)
+
+	require.NoError(t, repo.Create(ctx, completedRunAt("before", from.Add(-time.Second), 1)))
+	require.NoError(t, repo.Create(ctx, completedRunAt("first", from, 2)))
+	require.NoError(t, repo.Create(ctx, completedRunAt("mid", from.AddDate(0, 0, 15), 3)))
+	require.NoError(t, repo.Create(ctx, completedRunAt("last", to.Add(-time.Second), 4)))
+	require.NoError(t, repo.Create(ctx, completedRunAt("next", to, 5)))
+	failed := completedRunAt("failed", from.AddDate(0, 0, 3), 6)
+	failed.Status = models.SubtitleRunFailed
+	require.NoError(t, repo.Create(ctx, failed))
+
+	got, err := repo.CompletedRunsBetween(ctx, from, to)
+	require.NoError(t, err)
+	ids := make([]string, 0, len(got))
+	for _, r := range got {
+		ids = append(ids, r.ID)
+	}
+	assert.Equal(t, []string{"first", "mid", "last"}, ids,
+		"[from, to): the instant before is out, the instant at `to` is out, failed rows are out, oldest first")
+	require.NotNil(t, got[0].SpentUSD)
+	assert.Equal(t, 2.0, *got[0].SpentUSD, "every ledger column rides the same scan")
+}
+
+func TestSubtitleRunRepository_RunsByBatchID(t *testing.T) {
+	repo := NewSubtitleRunRepository(setupSubtitleRunDB(t))
+	ctx := context.Background()
+	now := time.Now()
+	a := completedRunAt("a", now, 1)
+	a.BatchID = "batch-1"
+	b := completedRunAt("b", now.Add(time.Minute), 2)
+	b.BatchID = "batch-1"
+	b.Status = models.SubtitleRunFailed // a receipt shows the failures too
+	c := completedRunAt("c", now, 3)
+	c.BatchID = "batch-2"
+	solo := completedRunAt("solo", now, 4)
+	for _, r := range []*models.SubtitleRun{a, b, c, solo} {
+		require.NoError(t, repo.Create(ctx, r))
+	}
+
+	got, err := repo.RunsByBatchID(ctx, "batch-1")
+	require.NoError(t, err)
+	require.Len(t, got, 2)
+	assert.Equal(t, "a", got[0].ID)
+	assert.Equal(t, "b", got[1].ID)
+	assert.Equal(t, models.SubtitleRunFailed, got[1].Status)
+
+	none, err := repo.RunsByBatchID(ctx, "")
+	require.NoError(t, err)
+	assert.Empty(t, none, "an empty id is not 'every unbatched run'")
+}

@@ -43,6 +43,12 @@ type SubtitleRunRepositoryInterface interface {
 	// a recorded spend, or (nil, nil) when none exists yet — absence is the
 	// normal pre-migration-032 state, not an error (ux3-1-6 spend readout).
 	LatestWithSpend(ctx context.Context) (*models.SubtitleRun, error)
+	// CompletedRunsBetween returns every `completed` run whose completed_at is
+	// in [from, to), oldest first — the monthly spend ledger (sub-7-6b).
+	CompletedRunsBetween(ctx context.Context, from, to time.Time) ([]models.SubtitleRun, error)
+	// RunsByBatchID returns every run (any status) stamped with this consent
+	// batch id, oldest first — the batch receipt (sub-7-6b).
+	RunsByBatchID(ctx context.Context, batchID string) ([]models.SubtitleRun, error)
 }
 
 // SubtitleRunMediaRef is one distinct media identity touched by a run —
@@ -329,4 +335,45 @@ func (r *SubtitleRunRepository) LatestWithSpend(ctx context.Context) (*models.Su
 		return nil, fmt.Errorf("failed to find latest subtitle run with spend: %w", err)
 	}
 	return &run, nil
+}
+
+// CompletedRunsBetween is the monthly ledger read. Same lexicographic-UTC
+// comparison as CompletedMediaRefsSince (the driver stores Go time text;
+// datetime() cannot parse it), so both bounds are UTC-normalized here.
+func (r *SubtitleRunRepository) CompletedRunsBetween(ctx context.Context, from, to time.Time) ([]models.SubtitleRun, error) {
+	query := `SELECT ` + subtitleRunColumns + ` FROM subtitle_runs
+		WHERE status = ? AND completed_at IS NOT NULL AND completed_at >= ? AND completed_at < ?
+		ORDER BY completed_at ASC`
+	return r.queryRuns(ctx, "completed subtitle runs between", query, models.SubtitleRunCompleted, from.UTC(), to.UTC())
+}
+
+// RunsByBatchID reads one consent batch's runs, every status — a receipt must
+// show the failed and skipped items too, not just the ones that shipped.
+func (r *SubtitleRunRepository) RunsByBatchID(ctx context.Context, batchID string) ([]models.SubtitleRun, error) {
+	if batchID == "" {
+		return nil, nil
+	}
+	query := `SELECT ` + subtitleRunColumns + ` FROM subtitle_runs WHERE batch_id = ? ORDER BY started_at ASC`
+	return r.queryRuns(ctx, "subtitle runs by batch", query, batchID)
+}
+
+func (r *SubtitleRunRepository) queryRuns(ctx context.Context, what, query string, args ...any) ([]models.SubtitleRun, error) {
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query %s: %w", what, err)
+	}
+	defer rows.Close()
+
+	var runs []models.SubtitleRun
+	for rows.Next() {
+		run, err := scanSubtitleRun(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan %s: %w", what, err)
+		}
+		runs = append(runs, run)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating %s: %w", what, err)
+	}
+	return runs, nil
 }
