@@ -80,7 +80,7 @@ cd vido
 # 設定媒體庫路徑與 API key
 cp .env.example .env
 #   MEDIA_PATH=/path/to/your/media
-#   TMDB_API_KEY=your_key        # 選填，但強烈建議
+#   TMDB_API_KEY=your_key        # 選填：正式映像檔已內建一把 TMDB 金鑰，想用自己的額度再填
 #   OPENAI_API_KEY=your_key      # 選填，啟用語音辨識生字幕（雲端 API，會計費）
 
 docker compose up -d
@@ -90,14 +90,14 @@ docker compose up -d
 
 **基本環境變數**
 
-| 變數                    | 預設      | 說明                             |
-| ----------------------- | --------- | -------------------------------- |
-| `MEDIA_PATH`            | `./media` | 媒體庫路徑（以唯讀方式掛載）     |
-| `TMDB_API_KEY`          | —         | TMDB API key，用於抓取 metadata  |
-| `TMDB_DEFAULT_LANGUAGE` | `zh-TW`   | metadata 語言偏好                |
-| `VIDO_PORT`             | `8080`    | 對外埠號                         |
-| `ENABLE_DOUBAN`         | `false`   | 開啟豆瓣 metadata fallback       |
-| `ENABLE_WIKIPEDIA`      | `false`   | 開啟 Wikipedia metadata fallback |
+| 變數                    | 預設      | 說明                                                                                                                                        |
+| ----------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MEDIA_PATH`            | `./media` | 媒體庫路徑（以唯讀方式掛載）                                                                                                                |
+| `TMDB_API_KEY`          | （內建）  | 自己的 TMDB API key。正式映像檔已內建一把（非商業授權、出處聲明已內建），設定頁填的或這裡填的都會優先於內建；從原始碼自行編譯則沒有內建金鑰 |
+| `TMDB_DEFAULT_LANGUAGE` | `zh-TW`   | metadata 語言偏好                                                                                                                           |
+| `VIDO_PORT`             | `8080`    | 對外埠號                                                                                                                                    |
+| `ENABLE_DOUBAN`         | `false`   | 開啟豆瓣 metadata fallback                                                                                                                  |
+| `ENABLE_WIKIPEDIA`      | `false`   | 開啟 Wikipedia metadata fallback                                                                                                            |
 
 **字幕 AI 功能（需自備 API key）**
 

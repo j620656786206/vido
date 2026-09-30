@@ -31,6 +31,11 @@ const (
 	KeySourceSecret KeySource = "secret"
 	// KeySourceEnv — a deploy-time environment variable.
 	KeySourceEnv KeySource = "env"
+	// KeySourceBundled — a build-time key compiled into the release binary
+	// (sub-7-7a; today only TMDb). Lowest priority: anything the user set, in
+	// the UI or the environment, wins over it. [@contract-v1→v2] additive enum
+	// value — the settings page shows it as「內建」.
+	KeySourceBundled KeySource = "bundled"
 	// KeySourceNone — not configured anywhere. A state, never an error.
 	KeySourceNone KeySource = "none"
 )
@@ -52,13 +57,31 @@ type EnvKeys struct {
 	OpenAI string
 }
 
+// BundledKeys carries the build-time values (config.BundledTMDbKey). Kept apart
+// from EnvKeys on purpose: the settings page must be able to say「內建」rather
+// than「目前由環境變數提供」, and a bundled key must never look like something
+// the operator configured.
+type BundledKeys struct {
+	TMDb string
+}
+
+// ResolverOption tunes NewKeyResolver without breaking its two-year-old
+// signature (every existing caller and test passes no options).
+type ResolverOption func(*keyResolver)
+
+// WithBundledKeys registers the build-time fallback tier (sub-7-7a).
+func WithBundledKeys(b BundledKeys) ResolverOption {
+	return func(r *keyResolver) { r.bundled = b }
+}
+
 // KeyResolver is the single reader every runtime consumer uses for a provider
 // key.
 //
 // [@contract-v1] — consumed by sub-2-1b (via the settings API), the subtitle
 // pipeline's capability gate (sub-1-6 AC #5 re-point), and the provider holder.
 // The resolution order is FIXED: an encrypted secret (runtime, user-set) wins
-// over an environment variable (deploy-time). Changing that order is a Rule 20
+// over an environment variable (deploy-time), which wins over a key bundled
+// into the binary (build-time, sub-7-7a). Changing that order is a Rule 20
 // bump — the whole point of this contract is that what the user typed in the UI
 // is what the pipeline actually uses.
 type KeyResolver interface {
@@ -73,21 +96,26 @@ type KeyResolver interface {
 type keyResolver struct {
 	secrets secrets.SecretsServiceInterface
 	env     EnvKeys
+	bundled BundledKeys
 	logger  *slog.Logger
 }
 
 // NewKeyResolver builds the resolver. `secretsService` may be nil (no
 // ENCRYPTION_KEY) — the resolver then degrades to env-only rather than
 // panicking, which keeps an env-configured deployment working. logger may be nil.
-func NewKeyResolver(secretsService secrets.SecretsServiceInterface, env EnvKeys, logger *slog.Logger) KeyResolver {
+func NewKeyResolver(secretsService secrets.SecretsServiceInterface, env EnvKeys, logger *slog.Logger, opts ...ResolverOption) KeyResolver {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &keyResolver{
+	r := &keyResolver{
 		secrets: secretsService,
 		env:     env,
 		logger:  logger.With("component", "key_resolver"),
 	}
+	for _, opt := range opts {
+		opt(r)
+	}
+	return r
 }
 
 // secretNameFor maps a KeyName onto its storage name, and doubles as the
@@ -116,6 +144,15 @@ func (r *keyResolver) envValueFor(name KeyName) string {
 	default:
 		return ""
 	}
+}
+
+// bundledValueFor returns the build-time fallback. Only TMDb has one; the
+// other providers are the user's own paid keys and are never bundled.
+func (r *keyResolver) bundledValueFor(name KeyName) string {
+	if name == KeyTMDb {
+		return r.bundled.TMDb
+	}
+	return ""
 }
 
 func (r *keyResolver) Get(ctx context.Context, name KeyName) (string, KeySource, error) {
@@ -149,6 +186,10 @@ func (r *keyResolver) Get(ctx context.Context, name KeyName) (string, KeySource,
 
 	if envValue := r.envValueFor(name); strings.TrimSpace(envValue) != "" {
 		return envValue, KeySourceEnv, nil
+	}
+
+	if bundled := strings.TrimSpace(r.bundledValueFor(name)); bundled != "" {
+		return bundled, KeySourceBundled, nil
 	}
 
 	return "", KeySourceNone, nil

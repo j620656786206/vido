@@ -53,11 +53,33 @@ cp .env.example .env
 
 #### Essential Variables
 
-| Variable       | Default | Description                                       |
-| -------------- | ------- | ------------------------------------------------- |
-| `VIDO_PORT`    | `8088`  | NAS host port mapped to the container's port 8080 |
-| `MEDIA_PATH`   | —       | Path to your media library (set in Compose)       |
-| `TMDB_API_KEY` | (none)  | TMDb API key for metadata                         |
+| Variable       | Default | Description                                                                                                                                |
+| -------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `VIDO_PORT`    | `8088`  | NAS host port mapped to the container's port 8080                                                                                          |
+| `MEDIA_PATH`   | —       | Path to your media library (set in Compose)                                                                                                |
+| `TMDB_API_KEY` | (none)  | Your own TMDb API key. **Optional since the release images ship with a bundled key** (see below) — set it only if you want your own quota. |
+
+##### The bundled TMDb key
+
+Official release images (`ghcr.io/…/vido`, Docker Hub) are built with a TMDb
+API key compiled into the binary, so metadata, posters and zh-TW titles work
+on a fresh install without applying for a TMDb developer account. Keys are
+resolved in this order: **a key saved in Settings → API Keys → `TMDB_API_KEY`
+→ the bundled key**; anything you set yourself is used instead of the bundled
+one, and the settings page tells you which one is active (「內建」= bundled).
+
+- **Licence.** The bundled key is registered to the Vido project under TMDb's
+  free, **non-commercial** terms. Vido is a personal, self-hosted tool; if you
+  run it in a commercial setting you must bring your own key. TMDb's required
+  attribution (logo + "This product uses the TMDB API but is not endorsed or
+  certified by TMDB") is already built into the UI.
+- **Rate limits.** TMDb counts requests per key **and** IP, so self-hosters on
+  different networks do not compete with each other. If you ever see the TMDb
+  status turn to 速率限制 (rate limited), paste your own key in
+  Settings → API Keys — it takes effect immediately, no restart.
+- **Source and local builds have no bundled key.** `go run`, `docker compose
+build` on your machine and CI test binaries all contain an empty key and
+  behave as before: the setup wizard asks for one.
 
 #### Database Variables
 
@@ -122,12 +144,12 @@ Notes:
   boundary and no "run" to attach a ceiling to; they are unmetered by design
   (tracked as `backlog-parse-path-ai-metering` should observability counters
   ever be wanted).
-- **API keys hot-reload (sub-5-2).** `CLAUDE_API_KEY` and `OPENAI_API_KEY` can
-  be set — or replaced — from Settings → API Keys while the server is running:
-  they are resolved per call (an encrypted stored key wins over the environment
-  variable), so saving one takes effect immediately and no restart is needed.
-  `TMDB_API_KEY` is the exception: it can be stored from that page, but the
-  running metadata clients keep their boot-time value until a restart.
+- **API keys hot-reload (sub-5-2, TMDb since sub-7-7a).** `CLAUDE_API_KEY`,
+  `OPENAI_API_KEY` and `TMDB_API_KEY` can be set — or replaced — from
+  Settings → API Keys while the server is running: they are resolved per call
+  (an encrypted stored key wins over the environment variable, which wins over
+  the bundled TMDb key), so saving one takes effect immediately and no restart
+  is needed.
 - **Self-hosted speech recognition needs no key (sub-5-2).** With `ASR_BASE_URL`
   pointed at an OpenAI-compatible engine (Speaches, WhisperLive, Subgen), leave
   `OPENAI_API_KEY` unset — the request carries no `Authorization` header at all,

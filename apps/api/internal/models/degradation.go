@@ -169,6 +169,14 @@ func (h *ServiceHealth) ToServiceStatus() ServiceStatus {
 		if isUnconfiguredError(h.Message) {
 			status.Status = StatusUnconfigured
 			status.Message = "未設定"
+		} else if isRateLimitError(h.Message) {
+			// sub-7-7a: with the bundled TMDb key, 429s arrive from real
+			// requests (not only the 5-minute ping) and can pile past
+			// ErrorThresholdDown fast. Three rate-limits in a row is still
+			// "rate limited", not "disconnected" — the fix the user needs
+			// (bring your own key) is different from the fix for a dead host.
+			status.Status = StatusRateLimited
+			status.Message = "速率限制中"
 		} else {
 			status.Status = StatusDisconnected
 			status.Message = h.Message

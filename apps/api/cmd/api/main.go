@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -23,6 +24,7 @@ import (
 	"github.com/vido/api/internal/health"
 	"github.com/vido/api/internal/images"
 	"github.com/vido/api/internal/logger"
+	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/plugins"
 	"github.com/vido/api/internal/plugins/radarr"
 	"github.com/vido/api/internal/plugins/sonarr"
@@ -33,6 +35,7 @@ import (
 	"github.com/vido/api/internal/sse"
 	"github.com/vido/api/internal/subtitle"
 	subtitleproviders "github.com/vido/api/internal/subtitle/providers"
+	"github.com/vido/api/internal/tmdb"
 	// Media config is loaded during service initialization
 	// and validates directories from VIDO_MEDIA_DIRS env var
 	//
@@ -210,9 +213,33 @@ func main() {
 	cacheCleanupService := services.NewCacheCleanupService(db.Conn())
 	slog.Info("Cache management services initialized")
 
+	// ── Provider keys: resolver (sub-2-1a AC #1/#2, extended to ASR by sub-5-2,
+	//    to TMDb + the bundled tier by sub-7-7a) ──────────────────────────────
+	//
+	// The key is resolved secret-first so a key typed into the settings page
+	// actually reaches the pipeline; it used to be env-only, which made the page
+	// a silent no-op (Break 1). Order: settings → env → bundled. The bundled
+	// tier is the build-time TMDb key (config.BundledTMDbKey — empty in source
+	// and local builds), so a fresh install gets metadata without a TMDb
+	// account while anyone who brings their own key never touches it.
+	//
+	// Declared HERE (moved up again by sub-7-7a) because the TMDb client below
+	// now asks the resolver on every request instead of freezing cfg.TMDbAPIKey
+	// at boot — that boot-frozen key was why saving a TMDb key in the settings
+	// page (or the setup wizard, dsr-13) changed nothing until a restart.
+	keyResolver := services.NewKeyResolver(secretsService, services.EnvKeys{
+		Claude: cfg.GetClaudeAPIKey(),
+		TMDb:   cfg.GetTMDbAPIKey(),
+		OpenAI: cfg.GetOpenAIAPIKey(),
+	}, slog.Default(), services.WithBundledKeys(services.BundledKeys{TMDb: config.BundledTMDbKey()}))
+	slog.Info("Key resolver initialized", "tmdb_bundled_key_present", config.HasBundledTMDbKey())
+
 	// Initialize TMDb service with cache integration (Story 2.1)
 	tmdbService := services.NewTMDbService(services.TMDbConfig{
-		APIKey:            cfg.TMDbAPIKey,
+		KeyProvider: func(ctx context.Context) (string, error) {
+			value, _, err := keyResolver.Get(ctx, services.KeyTMDb)
+			return value, err
+		},
 		DefaultLanguage:   cfg.TMDbDefaultLanguage,
 		FallbackLanguages: cfg.TMDbFallbackLanguages,
 		CacheTTLHours:     cfg.TMDbCacheTTLHours,
@@ -308,6 +335,19 @@ func main() {
 	healthChecker.SetQBittorrent(qbHealthPingable)
 	healthMonitor := health.NewHealthMonitor(healthChecker)
 	healthMonitor.SetHistoryRepo(repos.ConnectionHistory)
+	// sub-7-7a AC #4: a 429 on a REAL request marks TMDb rate-limited right
+	// away (sidebar dot → amber, status page → 速率限制中), and the next
+	// successful request clears it. Other failures are left to the periodic
+	// ping so a single flaky lookup does not flap the status.
+	tmdbService.SetRequestObserver(func(_ string, err error) {
+		var tmdbErr *tmdb.TMDbError
+		switch {
+		case err == nil:
+			healthMonitor.UpdateServiceHealth(models.ServiceNameTMDb, nil)
+		case errors.As(err, &tmdbErr) && tmdbErr.Code == tmdb.ErrCodeRateLimitExceeded:
+			healthMonitor.UpdateServiceHealth(models.ServiceNameTMDb, err)
+		}
+	})
 	degradationService := services.NewDegradationServiceWithCache(healthMonitor, offlineCache)
 	slog.Info("Health monitoring initialized with service health checks and offline cache")
 
@@ -595,21 +635,12 @@ func main() {
 		services.WithAudioExtractPerGB(subtitleExtractPerGB))
 	slog.Info("Audio extractor service initialized", "available", audioExtractorService.IsAvailable())
 
-	// ── Provider keys: resolver + hot-reloadable holders (sub-2-1a AC #1/#2,
-	//    extended to ASR by sub-5-2 AC #1/#2) ──────────────────────────────────
+	// ── Hot-reloadable provider holders (sub-2-1a AC #2, extended to ASR by
+	//    sub-5-2 AC #1/#2) ───────────────────────────────────────────────────
 	//
-	// The key is resolved secret-first so a key typed into the settings page
-	// actually reaches the pipeline; it used to be env-only, which made the page
-	// a silent no-op (Break 1). The holders rebuild their client when the resolved
-	// key changes, so a runtime edit takes effect without a restart (Break 2).
-	//
-	// Declared HERE (moved up by sub-5-2) because the transcription service below
-	// now takes the ASR holder instead of a boot-built client.
-	keyResolver := services.NewKeyResolver(secretsService, services.EnvKeys{
-		Claude: cfg.GetClaudeAPIKey(),
-		TMDb:   cfg.GetTMDbAPIKey(),
-		OpenAI: cfg.GetOpenAIAPIKey(),
-	}, slog.Default())
+	// `keyResolver` itself is declared next to the TMDb service (sub-7-7a). The
+	// holders rebuild their client when the resolved key changes, so a runtime
+	// edit takes effect without a restart (Break 2).
 	claudeHolder := services.NewClaudeProviderHolder(
 		keyResolver, cfg.GetClaudeModel(), slog.Default(), ai.WithClaudeGovernor(aiGovernor))
 	// sub-6-8a: which models this install can actually run, and which one an

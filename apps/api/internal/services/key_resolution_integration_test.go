@@ -3,6 +3,8 @@ package services
 import (
 	"context"
 	"database/sql"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,6 +13,7 @@ import (
 
 	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/secrets"
+	"github.com/vido/api/internal/tmdb"
 )
 
 // This is sub-2-1a AC #6.4 — the end-to-end proof that Break 1 is closed, run
@@ -152,4 +155,61 @@ func sourceOf(t *testing.T, r KeyResolver, name KeyName) KeySource {
 	_, source, err := r.Get(context.Background(), name)
 	require.NoError(t, err)
 	return source
+}
+
+// TestKeyResolution_TMDbClientUsesAStoredKeyWithoutRestart is sub-7-7a's
+// proof (and backlog-tmdb-runtime-key-resolution's close): the TMDb client used
+// to freeze cfg.TMDbAPIKey at boot, so a key saved in the settings page — or by
+// the setup wizard — changed nothing until a restart. Now the client asks the
+// resolver on every request, against REAL encrypted storage.
+func TestKeyResolution_TMDbClientUsesAStoredKeyWithoutRestart(t *testing.T) {
+	ctx := context.Background()
+	secretsSvc, cleanup := newRealSecretsService(t)
+	defer cleanup()
+
+	var seenKeys []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seenKeys = append(seenKeys, r.URL.Query().Get("api_key"))
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"page":1,"results":[],"total_pages":0,"total_results":0}`))
+	}))
+	defer server.Close()
+
+	resolver := NewKeyResolver(secretsSvc, EnvKeys{}, nil,
+		WithBundledKeys(BundledKeys{TMDb: "bundled-at-build"}))
+	settings := NewKeySettingsService(resolver, secretsSvc, true)
+	client := tmdb.NewClient(tmdb.ClientConfig{
+		BaseURL: server.URL,
+		KeyProvider: func(ctx context.Context) (string, error) {
+			value, _, err := resolver.Get(ctx, KeyTMDb)
+			return value, err
+		},
+	})
+
+	// Fresh install: nothing set anywhere → the bundled key carries the request.
+	var result tmdb.SearchResultMovies
+	require.NoError(t, client.Get(ctx, "/search/movie", nil, &result))
+	assert.Equal(t, KeySourceBundled, sourceOf(t, resolver, KeyTMDb))
+
+	// The user brings their own key from the settings page — the SAME client
+	// object sends it on the next call.
+	require.NoError(t, settings.Save(ctx, map[KeyName]string{KeyTMDb: "my-own-tmdb-key"}))
+	require.NoError(t, client.Get(ctx, "/search/movie", nil, &result))
+	assert.Equal(t, KeySourceSecret, sourceOf(t, resolver, KeyTMDb))
+
+	// …and clearing it falls back to the bundled key, still with no restart.
+	require.NoError(t, settings.Save(ctx, map[KeyName]string{KeyTMDb: ""}))
+	require.NoError(t, client.Get(ctx, "/search/movie", nil, &result))
+
+	assert.Equal(t, []string{"bundled-at-build", "my-own-tmdb-key", "bundled-at-build"}, seenKeys)
+
+	// The settings list must say "bundled" and never echo the bundled value.
+	state := settings.List(ctx)
+	for _, k := range state.Keys {
+		if k.Name == KeyTMDb {
+			assert.True(t, k.Configured)
+			assert.Equal(t, KeySourceBundled, k.Source)
+			assert.Empty(t, k.Masked, "a bundled key is not the user's to see, even masked")
+		}
+	}
 }

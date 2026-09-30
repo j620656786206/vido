@@ -74,8 +74,21 @@ COPY apps/api/ ./
 # - CGO_ENABLED=0: Pure Go SQLite (modernc.org/sqlite)
 # - -ldflags="-s -w": Strip debug info for smaller binary
 # - -trimpath: Remove file paths from binary
-RUN CGO_ENABLED=0 GOOS=linux go build \
-    -ldflags="-s -w" \
+# - -X …config.bundledTMDbKey: the bundled TMDb key (sub-7-7a). It arrives as a
+#   BuildKit SECRET mount, not a build-arg, so it never lands in `docker history`,
+#   the provenance attestation or a cached layer — only in the compiled binary.
+#   No secret provided (local build, fork PR) → the file is absent → empty key →
+#   the binary behaves exactly as before (asks the user for a TMDb key).
+#   BuildKit does NOT fold secret contents into the layer cache key, so without
+#   help a cached api-builder layer would keep serving an old (or missing) key
+#   after a rotation. The FINGERPRINT arg (a short sha256 of the key, never the
+#   key) is in the cache key — change the key, invalidate the layer.
+ARG TMDB_BUNDLED_KEY_FINGERPRINT=none
+RUN --mount=type=secret,id=tmdb_bundled_key \
+    echo "bundled TMDb key fingerprint: ${TMDB_BUNDLED_KEY_FINGERPRINT}" && \
+    TMDB_BUNDLED_KEY="$(cat /run/secrets/tmdb_bundled_key 2>/dev/null || true)" && \
+    CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags="-s -w -X github.com/vido/api/internal/config.bundledTMDbKey=${TMDB_BUNDLED_KEY}" \
     -trimpath \
     -o /api ./cmd/api
 
