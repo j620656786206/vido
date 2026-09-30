@@ -6,7 +6,10 @@ import { useTriggerScan } from '../../hooks/useScanner';
 import { requestScanTracking } from '../../hooks/useScanProgress';
 import type { ScannerApiError } from '../../services/scannerService';
 
-type NotificationKind = 'success' | 'error';
+type NotificationKind = 'success' | 'warning' | 'error';
+
+// A server message written for people (zh-TW) contains CJK characters.
+const HAS_CJK = /[\u3400-\u9fff]/;
 
 export function EmptyReadyForScan() {
   const triggerScan = useTriggerScan();
@@ -46,7 +49,15 @@ export function EmptyReadyForScan() {
       showNotification('success', '掃描已啟動');
     } catch (err) {
       const apiErr = err as ScannerApiError;
-      showNotification('error', apiErr?.message || '掃描觸發失敗');
+      if (apiErr?.code === 'SCANNER_ALREADY_RUNNING') {
+        showNotification('warning', '掃描已在進行中');
+      } else {
+        // disc-2026-09-scan-trigger-error-english: no developer English here.
+        showNotification(
+          'error',
+          HAS_CJK.test(apiErr?.message ?? '') ? apiErr.message : '掃描沒有開始，請再試一次。'
+        );
+      }
     }
   };
 
@@ -92,7 +103,9 @@ export function EmptyReadyForScan() {
           className={`mt-6 flex items-center gap-2 rounded-lg px-4 py-3 text-sm ${
             notification.type === 'success'
               ? 'bg-[var(--success-tint)] text-[var(--success-text)]'
-              : 'bg-[var(--error-tint)] text-[var(--error-text)]'
+              : notification.type === 'warning'
+                ? 'bg-[var(--warning-tint)] text-[var(--warning-text)]'
+                : 'bg-[var(--error-tint)] text-[var(--error-text)]'
           }`}
           data-testid="empty-ready-for-scan-notification"
           role="alert"

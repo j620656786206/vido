@@ -94,9 +94,33 @@ func setupScannerRouterWithScheduler(svc ScannerServiceInterface, scheduler serv
 	return router
 }
 
+// disc-2026-09-scan-trigger-error-english: a click while a scan runs used to
+// get 202 and then nothing (the goroutine's StartScan failed into a log line),
+// so 「掃描已在進行中」 could never appear. The pre-check is for FEEDBACK only —
+// StartScan's mutex stays the gate for two requests racing each other.
+func TestScannerHandler_TriggerScan_AlreadyRunningIs409(t *testing.T) {
+	mockSvc := new(MockScannerService)
+	mockSvc.On("IsScanActive").Return(true)
+
+	router := setupScannerRouter(mockSvc)
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/scanner/scan", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusConflict, resp.Code)
+	var body APIResponse
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+	assert.False(t, body.Success)
+	require.NotNil(t, body.Error)
+	assert.Equal(t, "SCANNER_ALREADY_RUNNING", body.Error.Code)
+	assert.Equal(t, "掃描已在進行中", body.Error.Message)
+	mockSvc.AssertNotCalled(t, "StartScan", mock.Anything)
+}
+
 func TestScannerHandler_TriggerScan_Success(t *testing.T) {
 	mockSvc := new(MockScannerService)
-	// Handler no longer calls IsScanActive — StartScan's mutex is the gate
+	// Pre-check for feedback only; StartScan's mutex is still the gate.
+	mockSvc.On("IsScanActive").Return(false)
 	mockSvc.On("StartScan", mock.Anything).Return(&services.ScanResult{
 		FilesFound:   10,
 		FilesCreated: 10,

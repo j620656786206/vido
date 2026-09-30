@@ -80,6 +80,14 @@ func (h *ScannerHandler) RegisterRoutes(rg *gin.RouterGroup) {
 // Uses context.Background() for the goroutine since the scan outlives the HTTP request.
 // The StartScan mutex is the single gate for concurrency — no pre-check race condition.
 func (h *ScannerHandler) TriggerScan(c *gin.Context) {
+	// Feedback only: a click while a scan runs gets 409 instead of a 202 whose
+	// goroutine then fails into a log line, so the UI can say 「掃描已在進行中」
+	// (disc-2026-09-scan-trigger-error-english). StartScan's mutex remains the
+	// gate — two requests racing past this check still start only one scan.
+	if h.scannerService.IsScanActive() {
+		ErrorResponse(c, http.StatusConflict, "SCANNER_ALREADY_RUNNING", "掃描已在進行中", "")
+		return
+	}
 	// Start scan in a goroutine with background context (not request context,
 	// which would be cancelled when the HTTP response is sent).
 	// StartScan's internal mutex handles concurrent request protection — if two
