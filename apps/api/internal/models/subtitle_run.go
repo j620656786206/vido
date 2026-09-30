@@ -141,6 +141,67 @@ type SubtitleRun struct {
 	// transcription service and is not measured here. Absent is not 0.
 	StubbornCount  *int `db:"stubborn_count" json:"stubborn_count,omitempty"`
 	TransientCount *int `db:"transient_count" json:"transient_count,omitempty"`
+
+	// Ledger columns (sub-7-6a, migration 041). Route is the lane the item
+	// took (SubtitleRunRoute*); "" = recorded before the column existed or
+	// failed before routing. CacheHitCues is how many cues the segment cache
+	// served instead of the model — measured on the translate lanes only,
+	// NULL elsewhere (absent is not 0). BatchID ties the run to the consent
+	// batch it ran in; "" for solo / pool runs.
+	Route        string `db:"route" json:"route,omitempty"`
+	CacheHitCues *int   `db:"cache_hit_cues" json:"cache_hit_cues,omitempty"`
+	BatchID      string `db:"batch_id" json:"batch_id,omitempty"`
+}
+
+// The route vocabulary the ledger stores. The first five mirror
+// subtitle.RouteKind byte for byte (the pipeline writes string(decision.Kind));
+// "asr" is the lane the pipeline's no-text-source fallback and the Route C
+// transcription engine share. Kept as strings, not a typed enum, so the two
+// packages that write them (subtitle, services) need no import of each other.
+const (
+	SubtitleRunRouteDeliverDirect      = "deliver_direct"
+	SubtitleRunRouteConvertThenDeliver = "convert_then_deliver"
+	SubtitleRunRouteTranslate          = "translate"
+	SubtitleRunRouteSkip               = "skip"
+	SubtitleRunRouteNoTextSource       = "no_text_source"
+	SubtitleRunRouteASR                = "asr"
+)
+
+// ReceiptPayload is the `subtitle_run_receipt` SSE body (sub-7-6a
+// [@contract-v1]): everything a "本次 $0.53 · claude-sonnet-5 · 844 句 ·
+// cache 命中 12%" line needs, emitted once per run at its terminal write by
+// BOTH legs (the pipeline and the Route C transcription engine) so the
+// frontend has one listener. Optional facts are omitted rather than zeroed:
+// spent_usd/budget_usd are absent when no Budget was on the ctx, cache_hit_cues
+// when the lane does not measure it, batch_id / route when unknown.
+func (r *SubtitleRun) ReceiptPayload() map[string]interface{} {
+	data := map[string]interface{}{
+		"run_id":     r.ID,
+		"media_id":   r.MediaID,
+		"media_type": r.MediaType,
+		"status":     string(r.Status),
+		"model_id":   r.ModelID,
+		"cue_count":  r.CueCount,
+	}
+	if r.Route != "" {
+		data["route"] = r.Route
+	}
+	if r.BatchID != "" {
+		data["batch_id"] = r.BatchID
+	}
+	if r.CacheHitCues != nil {
+		data["cache_hit_cues"] = *r.CacheHitCues
+	}
+	if r.SpentUSD != nil {
+		data["spent_usd"] = *r.SpentUSD
+	}
+	if r.BudgetUSD != nil {
+		data["budget_usd"] = *r.BudgetUSD
+	}
+	if r.CompletedAt != nil {
+		data["completed_at"] = r.CompletedAt.UTC()
+	}
+	return data
 }
 
 // Validate checks the caller-supplied fields of a run before it is persisted.

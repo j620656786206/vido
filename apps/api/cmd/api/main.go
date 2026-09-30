@@ -739,6 +739,11 @@ func main() {
 	// MOVIE half needs no wiring — SetSubtitleStateReader above already hands
 	// the service the complete movie row.
 	transcriptionService.SetSeriesMetadataReader(repos.Series)
+	// sub-7-6a: solo and legacy-batch runs get their own subtitle_runs row
+	// (route "asr"), so the monthly spend page sees ALL speech-recognition
+	// spend, not just the pipeline's fallbacks. The pipeline's own ASR
+	// fallback opts out (asr_adapter.go) — it already has a row.
+	transcriptionService.SetRunLedger(repos.SubtitleRuns)
 
 	// Initialize AI terminology correction (Story 9.1) + subtitle translation (Story 9.2b).
 	// Constructed UNCONDITIONALLY (sub-2-1a AC #2): they take the holder, which
@@ -820,6 +825,9 @@ func main() {
 			// AC #6: FR33/P8 progress. Same event type and payload shape the
 			// search path already broadcasts — sse/hub.go stays untouched.
 			subtitle.WithProgress(subtitle.NewSSEProgressHook(sseHub)),
+			// sub-7-6a: one `subtitle_run_receipt` per run, at its terminal
+			// write — the frontend's cost line for both legs.
+			subtitle.WithRunReceipt(subtitle.NewSSEReceiptHook(sseHub)),
 		)
 		subtitlePipelinePool = subtitle.NewWorkerPool(subtitlePipeline, slog.Default(),
 			subtitle.WithCandidateFinders(repos.Movies, repos.Episodes),

@@ -289,6 +289,11 @@ func (s *TranslationService) Translate(ctx context.Context, blocks []Translation
 type TranslationOutcome struct {
 	EnglishKeptBlocks int
 	TotalBlocks       int
+	// CachedBlocks is how many cues the segment cache answered instead of the
+	// model (sub-7-6a) — the ASR leg's counterpart of the pipeline's
+	// cache_hit_cues. 0 when no store is wired, which the caller records as
+	// "0 of N" only when a store WAS wired (see TranscriptionService ledger).
+	CachedBlocks int
 }
 
 // Partial reports whether any cue kept its English text — the DISCLOSURE
@@ -570,7 +575,7 @@ func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, b
 		slog.Warn("segment cache writes failed", "failed_cues", writeFailures, "translated_cues", len(pending))
 	}
 
-	outcome := TranslationOutcome{EnglishKeptBlocks: englishKept, TotalBlocks: totalBlocks}
+	outcome := TranslationOutcome{EnglishKeptBlocks: englishKept, TotalBlocks: totalBlocks, CachedBlocks: totalBlocks - len(pending)}
 	if outcome.Partial() {
 		slog.Warn("Translation completed with partial failures — some blocks retain English text",
 			"total_blocks", totalBlocks,

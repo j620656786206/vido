@@ -3,6 +3,7 @@ package subtitle
 import (
 	"fmt"
 
+	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/sse"
 )
 
@@ -121,5 +122,20 @@ func zhTWStageMessage(stage PipelineStage, message string) string {
 		return "字幕生成失敗：" + message
 	default:
 		return message
+	}
+}
+
+// NewSSEReceiptHook bridges the Pipeline's per-run terminal hook
+// (WithRunReceipt, sub-7-6a) onto the SSE hub as a `subtitle_run_receipt`
+// event. The payload is models.SubtitleRun.ReceiptPayload — the same builder
+// the transcription engine's ledger uses for its runs, so one FE listener
+// covers both legs. No zh-TW composition here: the receipt is numbers and
+// ids; the words are the frontend's.
+func NewSSEReceiptHook(hub ProgressBroadcaster) func(run *models.SubtitleRun) {
+	return func(run *models.SubtitleRun) {
+		if hub == nil || run == nil {
+			return
+		}
+		hub.Broadcast(sse.Event{Type: sse.EventSubtitleRunReceipt, Data: run.ReceiptPayload()})
 	}
 }

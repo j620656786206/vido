@@ -30,6 +30,10 @@ func (a pipelineASRAdapter) Available() bool { return a.ts.IsAvailable() }
 func (a pipelineASRAdapter) Transcribe(ctx context.Context, ref subtitle.MediaRef, filePath, mediaDir string) error {
 	// WithMediaType routes the service's writeback + resume-read to the right
 	// media table (sub-3-2) — movie stays the default for every other caller.
+	// WithRunRecordedByCaller (sub-7-6a): this item already has the
+	// pipeline's own subtitle_runs row; the engine must not open a second
+	// one for the same work.
 	return a.ts.RunTranscription(ctx, ref.ID, filePath, mediaDir,
-		services.WithTranslation(), services.WithMediaType(ref.MediaType))
+		services.WithTranslation(), services.WithMediaType(ref.MediaType),
+		services.WithRunRecordedByCaller())
 }

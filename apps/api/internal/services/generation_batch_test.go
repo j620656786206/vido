@@ -287,7 +287,7 @@ func TestGenerationBatch_SSEPayloadFields(t *testing.T) {
 	wantKeys := []string{
 		"batch_id", "total_items", "current_index", "current_media_id",
 		"current_item", "success_count", "fail_count", "paused_count",
-		"status", "spent_usd", "budget_usd", "items", "changed_item",
+		"status", "spent_usd", "budget_usd", "model_id", "items", "changed_item",
 	}
 	for _, ev := range events {
 		assert.Len(t, ev, len(wantKeys))
