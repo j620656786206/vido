@@ -67,10 +67,11 @@ const KEY_ROWS: KeyRowSpec[] = [
     name: 'tmdb',
     label: 'TMDB',
     placeholder: 'TMDB API Key',
-    // backlog-tmdb-runtime-key-resolution: the resolver EXPOSES the TMDb key so
-    // it can be stored here, but the running TMDb client keeps its env value
-    // until restart. Saying so is that backlog entry's explicit ask of 2-1b.
-    hint: '用於中繼資料與海報。儲存後需重啟伺服器才會生效。',
+    // sub-7-7a closed backlog-tmdb-runtime-key-resolution: the TMDb client now
+    // asks the resolver on every request, so this row joins the other two in
+    // taking effect on save. The old「需重啟」caveat was not just stale — the
+    // stored key never reached the client even after a restart.
+    hint: '用於中繼資料與海報。儲存後立即生效，無需重啟伺服器。',
     testable: false,
   },
   {
@@ -96,6 +97,11 @@ function stateLabel(state: KeyState | undefined): string {
       return '已設定';
     case 'env':
       return '目前由環境變數提供';
+    case 'bundled':
+      // sub-7-7b: the key compiled into the release image. Configured, but
+      // not by this operator — so neither 已設定 (they did not) nor 尚未設定
+      // (metadata works). Same info tone as env: "provided, not yours".
+      return '使用內建金鑰';
     default:
       return '尚未設定';
   }
@@ -106,10 +112,22 @@ function stateToneClass(state: KeyState | undefined): string {
     case 'secret':
       return 'bg-[var(--success-tint)] text-[var(--success-text)]';
     case 'env':
+    case 'bundled':
       return 'bg-[var(--info-tint)] text-[var(--info-text)]';
     default:
       return 'bg-[var(--bg-tertiary)] text-[var(--text-muted)]';
   }
+}
+
+/**
+ * The clear-confirm sentence names what the row falls back to. Only TMDb has a
+ * bundled tier, so only TMDb can promise the feature stays on after a clear.
+ */
+function clearConsequence(name: KeyName): string {
+  if (name === 'tmdb') {
+    return '清除後將改用環境變數或 Vido 內建的金鑰；中繼資料與海報不會中斷。';
+  }
+  return '清除後將改用環境變數的金鑰；若環境變數也未設定，相關功能會停用。';
 }
 
 // C7-D ri9FI: 44 high, tertiary ground, mono (keys are machine strings).
@@ -513,7 +531,7 @@ export function ApiKeysForm() {
                       className="flex flex-col gap-2 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] p-3 sm:flex-row sm:items-center"
                     >
                       <p className="flex-1 text-xs text-[var(--text-primary)]">
-                        清除後將改用環境變數的金鑰；若環境變數也未設定，相關功能會停用。
+                        {clearConsequence(row.name)}
                       </p>
                       <div className="flex shrink-0 gap-2">
                         <button
@@ -576,6 +594,19 @@ export function ApiKeysForm() {
                       className="text-xs text-[var(--info-text)]"
                     >
                       在此儲存的金鑰會覆蓋環境變數提供的設定。
+                    </p>
+                  )}
+
+                  {/* sub-7-7b: the bundled key is shared by every install of
+                      the same release, so a rate limit is the one thing that
+                      can go wrong with it — and one's own key is the fix.
+                      Say both here, where the fix is typed. */}
+                  {state?.source === 'bundled' && (
+                    <p
+                      data-testid={`key-bundled-note-${row.name}`}
+                      className="text-xs text-[var(--info-text)]"
+                    >
+                      目前使用 Vido 內建的金鑰；如遇速率限制，填入自己的金鑰會立即改用。
                     </p>
                   )}
 

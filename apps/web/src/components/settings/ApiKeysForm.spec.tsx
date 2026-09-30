@@ -133,22 +133,91 @@ describe('ApiKeysForm — the three source states (AC #1)', () => {
     expect(screen.getByLabelText('雲端 ASR（選配）')).toHaveAttribute('type', 'password');
   });
 
-  it('the TMDb row states the restart caveat (backlog-tmdb-runtime-key-resolution)', () => {
+  // sub-7-7a closed backlog-tmdb-runtime-key-resolution: the TMDb client asks
+  // the resolver per request, so the row no longer carries a restart caveat —
+  // and must not, because that caveat was never even true (the stored key did
+  // not reach the client after a restart either).
+  it('the TMDb row promises immediate effect — the restart caveat is gone (sub-7-7b)', () => {
     renderForm();
-    expect(screen.getByTestId('key-row-tmdb')).toHaveTextContent('儲存後需重啟伺服器才會生效');
+    const row = screen.getByTestId('key-row-tmdb');
+    expect(row).toHaveTextContent('儲存後立即生效，無需重啟伺服器');
+    expect(row).not.toHaveTextContent('需重啟伺服器才會生效');
   });
 
-  // sub-5-2 AC #5: the cloud-ASR key hot-reloads now, exactly like Claude. The
-  // TMDb row above is the deliberate contrast — it is the ONLY row that still
-  // needs a restart, so these two tests together pin that the copy distinguishes
-  // them instead of blanket-claiming either behaviour.
+  // sub-5-2 AC #5: the cloud-ASR key hot-reloads, exactly like Claude.
   it('the cloud-ASR row promises immediate effect, not a restart', () => {
     renderForm();
     const row = screen.getByTestId('key-row-openai');
     expect(row).toHaveTextContent('儲存後立即生效');
-    // Guard against the TMDb row's affirmative wording leaking over. Matching a
-    // bare 「需重啟」 would be wrong: this row legitimately says 「無需重啟伺服器」.
     expect(row).not.toHaveTextContent('儲存後需重啟伺服器才會生效');
+  });
+});
+
+describe('ApiKeysForm — the bundled TMDb key (sub-7-7b)', () => {
+  /** A fresh install of a release image: nothing set, TMDb served by the bundled key. */
+  const BUNDLED_TMDB: KeySettings = {
+    writable: true,
+    keys: [
+      { name: 'claude', configured: false, source: 'none' },
+      { name: 'tmdb', configured: true, source: 'bundled' },
+      { name: 'openai', configured: false, source: 'none' },
+    ],
+  };
+
+  it('source=bundled says 使用內建金鑰 — neither 已設定 nor 尚未設定', () => {
+    h.query.data = BUNDLED_TMDB;
+    renderForm();
+
+    const state = screen.getByTestId('key-state-tmdb');
+    expect(state).toHaveTextContent('使用內建金鑰');
+    expect(state).not.toHaveTextContent('尚未設定');
+    // Same "provided, not yours" tone as env — not the green of a key they set.
+    expect(state.className).toContain('--info-tint');
+  });
+
+  it('source=bundled keeps the input open and explains the rate-limit escape hatch', () => {
+    h.query.data = BUNDLED_TMDB;
+    renderForm();
+
+    expect(screen.getByLabelText('TMDB')).toHaveValue('');
+    expect(screen.getByTestId('key-bundled-note-tmdb')).toHaveTextContent(
+      '目前使用 Vido 內建的金鑰；如遇速率限制，填入自己的金鑰會立即改用。'
+    );
+    expect(screen.queryByTestId('key-env-override-note-tmdb')).toBeNull();
+    // The bundled key is not the operator's to see, even masked.
+    expect(screen.queryByTestId('key-masked-tmdb')).toBeNull();
+  });
+
+  it('the note is TMDb-only: no other row ever claims a bundled key', () => {
+    h.query.data = BUNDLED_TMDB;
+    renderForm();
+
+    expect(screen.queryByTestId('key-bundled-note-claude')).toBeNull();
+    expect(screen.queryByTestId('key-bundled-note-openai')).toBeNull();
+  });
+
+  it('clearing a stored TMDb key says it falls back to the bundled key, not that metadata stops', () => {
+    h.query.data = {
+      writable: true,
+      keys: [
+        { name: 'claude', configured: true, source: 'secret', masked: 'sk-ant…7f3a' },
+        { name: 'tmdb', configured: true, source: 'secret', masked: 'abcdef…1234' },
+        { name: 'openai', configured: false, source: 'none' },
+      ],
+    };
+    renderForm();
+
+    fireEvent.click(screen.getByTestId('key-clear-tmdb'));
+    expect(screen.getByTestId('key-clear-confirm-tmdb')).toHaveTextContent(
+      '清除後將改用環境變數或 Vido 內建的金鑰；中繼資料與海報不會中斷。'
+    );
+
+    // The other rows keep the honest "the feature turns off" sentence.
+    fireEvent.click(screen.getByTestId('key-clear-cancel-tmdb'));
+    fireEvent.click(screen.getByTestId('key-clear-claude'));
+    expect(screen.getByTestId('key-clear-confirm-claude')).toHaveTextContent(
+      '清除後將改用環境變數的金鑰；若環境變數也未設定，相關功能會停用。'
+    );
   });
 });
 
