@@ -326,6 +326,21 @@ func TestMovieHandler_GetByID(t *testing.T) {
 			expectedStatus: http.StatusNotFound,
 		},
 		{
+			// disc-2026-09-removed-item-detail-still-served (⚖️ A): a movie whose
+			// file is gone from disk is hidden everywhere else — an old link or
+			// bookmark gets the same 「找不到」 as a missing row. Its data stays;
+			// the next scan restores it if the file comes back.
+			name:    "removed (file gone) is a 404",
+			movieID: "movie-gone",
+			setupMock: func(m *MockMovieService) {
+				m.On("GetByID", mock.Anything, "movie-gone").Return(
+					&models.Movie{ID: "movie-gone", Title: "已刪除電影一", IsRemoved: true},
+					nil,
+				)
+			},
+			expectedStatus: http.StatusNotFound,
+		},
+		{
 			// dsr-2 AC #8: only a genuine missing row is a 404. A database failure used
 			// to come back as 404 too, so the detail page told the user the item had
 			// been removed when the server had merely failed to read it.

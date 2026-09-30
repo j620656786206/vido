@@ -119,6 +119,15 @@ func (h *MovieHandler) GetByID(c *gin.Context) {
 			"Failed to load movie", "Please try again later.")
 		return
 	}
+	// ⚖️ A (disc-2026-09-removed-item-detail-still-served): a movie whose file
+	// is gone from disk is hidden from the library, search and home — an old
+	// link or bookmark gets the same 404 (「找不到」) instead of a page that
+	// looks alive. The row is kept; the next scan restores it if the file
+	// comes back (bugfix-scan-mount-drop-hides-movies).
+	if movie.IsRemoved {
+		NotFoundError(c, "Movie")
+		return
+	}
 
 	SuccessResponse(c, movie)
 }
