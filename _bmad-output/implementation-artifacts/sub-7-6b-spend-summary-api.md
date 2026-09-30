@@ -1,6 +1,6 @@
 # Story sub-7-6b: 月報端點——這個月花了多少、依模型、略過與快取省了多少 — 後端
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-10-01，由 sub-7-6 拆出；依賴 sub-7-6a（ledger 欄位與收據）。行號為 main `34b59615`。 -->
 
@@ -69,3 +69,4 @@ Claude Fable 5.1（Amelia）
 | ---------- | ----------------------------------------- |
 | 2026-10-01 | create-story（SM Bob，自 sub-7-6 拆出）。 |
 | 2026-10-01 | dev-story（Amelia）→ review。 |
+| 2026-10-01 | PR #634 合併 → done。 |
