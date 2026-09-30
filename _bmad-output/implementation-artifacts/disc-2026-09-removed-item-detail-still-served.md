@@ -1,6 +1,6 @@
 # Story: disc-2026-09-removed-item-detail-still-served — 檔案已經不在的電影，舊連結點進去說「找不到」
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-09-30。Alexyu：「處理這張被移除的片的單子」→ ⚖️ 裁定 A。
      行號為 main `02af614e`；每條「查到的事」都是 SM 本次親自讀過的位置。 -->
@@ -67,3 +67,4 @@ Claude Opus 5.5（Amelia）
 | Date       | Change                                                        |
 | ---------- | ------------------------------------------------------------- |
 | 2026-09-30 | create-story（SM Bob）；⚖️ 裁定 A；dev-story（Amelia）→ review。 |
+| 2026-09-30 | PR #619 合併 → done。 |
