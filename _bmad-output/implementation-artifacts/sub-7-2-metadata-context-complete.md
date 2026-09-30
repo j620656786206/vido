@@ -1,6 +1,6 @@
 # Story 7.2: 翻譯 prompt 的 metadata 補齊 —— Cast 死碼、genres、countries（後端）
 
-Status: backlog
+Status: done
 
 > 🔀 **2026-09-30 已拆單（SM Bob）**：工作在子單上——`sub-7-2a-metadata-context-cast-episode.md`（提示側：Cast 接上兩腿、集數行在 hash／cache 前綴之外、docs、pin）→ `sub-7-2b-metadata-context-genres-countries.md`（資料側：genres 根因＝TMDb provider 從不填 genres、比對後補 details；series 加 `production_countries` 欄；兩腿讀影集國家）。切在「提示 vs 資料」這條縫，兩張互不依賴。本檔留作傘狀紀錄。
 > 原稿 Context 的「cast 已在 DB」前提在 sub-7-3 之後才成立（已成立）；AC #3「放 user prompt 首行」在 7-2a 改成 breakpoint 之後的第三個 system block（效果相同、不擴 port）。

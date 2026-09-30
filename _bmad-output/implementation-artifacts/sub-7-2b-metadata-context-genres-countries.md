@@ -1,6 +1,6 @@
 # Story sub-7-2b: 比對後真的存下類型與國家；影集補 production_countries 欄（資料側，後端）
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-09-30，由 sub-7-2 拆出；不依賴 7-2a（兩張都只加訊號）。行號為 main `9f79863d`。 -->
 
@@ -76,3 +76,4 @@ Claude Fable 5.1（Amelia）
 | ---------- | ----------------------------------------- |
 | 2026-09-30 | create-story（SM Bob，自 sub-7-2 拆出）。 |
 | 2026-09-30 | dev-story（Amelia）→ review。 |
+| 2026-09-30 | PR #631 合併 → done。 |
