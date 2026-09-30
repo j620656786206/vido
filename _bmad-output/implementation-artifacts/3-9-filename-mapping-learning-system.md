@@ -2,6 +2,10 @@
 
 Status: done
 
+> ⚠️ **2026-09-30 audit (Party Mode, Alexyu ruling「功能留下來」)** — of the four ACs only **AC4** (backend matching engine) actually shipped end-to-end.
+> AC1 never saved a rule (`metadata_service.go` `learn_pattern` is a TODO; the production picker `ManualMatchDialogV2` does not send it), AC2 only rewrote the search query and never pinned `LearnedTmdbID`, AC3's settings page was never routed and "edit" was never built.
+> The orphaned frontend (`components/learning/*`, `hooks/useLearning.ts`, `services/learning.ts`) was removed by `bugfix-learned-patterns-ui-orphaned`; the backend engine and `/api/v1/learning/*` stay. The feature is re-planned as `feat-learning-rules-relaunch` (PRD v4 FR35). This file stays `done` only because Epic 3 is archived.
+
 ## Story
 
 As a **power user**,

@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SetupRouteImport } from './routes/setup'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SearchRouteImport } from './routes/search'
-import { Route as PendingRouteImport } from './routes/pending'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LibraryRouteImport } from './routes/library'
 import { Route as DownloadsRouteImport } from './routes/downloads'
@@ -53,11 +52,6 @@ const SettingsRoute = SettingsRouteImport.update({
 const SearchRoute = SearchRouteImport.update({
   id: '/search',
   path: '/search',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PendingRoute = PendingRouteImport.update({
-  id: '/pending',
-  path: '/pending',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -198,7 +192,6 @@ export interface FileRoutesByFullPath {
   '/downloads': typeof DownloadsRoute
   '/library': typeof LibraryRouteWithChildren
   '/login': typeof LoginRoute
-  '/pending': typeof PendingRoute
   '/search': typeof SearchRoute
   '/settings': typeof SettingsRouteWithChildren
   '/setup': typeof SetupRoute
@@ -229,7 +222,6 @@ export interface FileRoutesByTo {
   '/discover': typeof DiscoverRoute
   '/downloads': typeof DownloadsRoute
   '/login': typeof LoginRoute
-  '/pending': typeof PendingRoute
   '/search': typeof SearchRoute
   '/setup': typeof SetupRoute
   '/library/movies': typeof LibraryMoviesRoute
@@ -261,7 +253,6 @@ export interface FileRoutesById {
   '/downloads': typeof DownloadsRoute
   '/library': typeof LibraryRouteWithChildren
   '/login': typeof LoginRoute
-  '/pending': typeof PendingRoute
   '/search': typeof SearchRoute
   '/settings': typeof SettingsRouteWithChildren
   '/setup': typeof SetupRoute
@@ -295,7 +286,6 @@ export interface FileRouteTypes {
     | '/downloads'
     | '/library'
     | '/login'
-    | '/pending'
     | '/search'
     | '/settings'
     | '/setup'
@@ -326,7 +316,6 @@ export interface FileRouteTypes {
     | '/discover'
     | '/downloads'
     | '/login'
-    | '/pending'
     | '/search'
     | '/setup'
     | '/library/movies'
@@ -357,7 +346,6 @@ export interface FileRouteTypes {
     | '/downloads'
     | '/library'
     | '/login'
-    | '/pending'
     | '/search'
     | '/settings'
     | '/setup'
@@ -390,7 +378,6 @@ export interface RootRouteChildren {
   DownloadsRoute: typeof DownloadsRoute
   LibraryRoute: typeof LibraryRouteWithChildren
   LoginRoute: typeof LoginRoute
-  PendingRoute: typeof PendingRoute
   SearchRoute: typeof SearchRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   SetupRoute: typeof SetupRoute
@@ -420,13 +407,6 @@ declare module '@tanstack/react-router' {
       path: '/search'
       fullPath: '/search'
       preLoaderRoute: typeof SearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pending': {
-      id: '/pending'
-      path: '/pending'
-      fullPath: '/pending'
-      preLoaderRoute: typeof PendingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -674,7 +654,6 @@ const rootRouteChildren: RootRouteChildren = {
   DownloadsRoute: DownloadsRoute,
   LibraryRoute: LibraryRouteWithChildren,
   LoginRoute: LoginRoute,
-  PendingRoute: PendingRoute,
   SearchRoute: SearchRoute,
   SettingsRoute: SettingsRouteWithChildren,
   SetupRoute: SetupRoute,

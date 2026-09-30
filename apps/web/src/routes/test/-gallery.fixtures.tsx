@@ -125,7 +125,6 @@ import { PosterCardMenu } from '../../components/library/PosterCardMenu';
 import { SelectionToolbar } from '../../components/library/SelectionToolbar';
 import { SettingsGearDropdown } from '../../components/library/SettingsGearDropdown';
 import { TrailerModal } from '../../components/homepage/TrailerModal';
-import { LearnPatternPrompt } from '../../components/learning/LearnPatternPrompt';
 import { FallbackStatusDisplay } from '../../components/manual-search/FallbackStatusDisplay';
 import { SearchResultCard } from '../../components/manual-search/SearchResultCard';
 import { SearchResultsGrid } from '../../components/manual-search/SearchResultsGrid';
@@ -183,7 +182,6 @@ import { QBStatusIndicator } from '../../components/health/QBStatusIndicator';
 import { HeroBanner } from '../../components/homepage/HeroBanner';
 import { ExploreBlock } from '../../components/homepage/ExploreBlock';
 import { ExploreBlocksList } from '../../components/homepage/ExploreBlocksList';
-import { LearnedPatternsSettings } from '../../components/learning/LearnedPatternsSettings';
 import { FilterPanel } from '../../components/library/FilterPanel';
 import { LibraryGridSkeletonV2 } from '../../components/library/LibraryStatesV2';
 import {
@@ -256,7 +254,6 @@ import { subtitleLocalizationQueryKeys } from '../../hooks/useSubtitleLocalizati
 import { LocalizationLevelForm } from '../../components/settings/LocalizationLevelForm';
 import type { LocalizationSettings } from '../../services/subtitleLocalizationService';
 import { ownedMediaKeys } from '../../hooks/useOwnedMedia';
-import { learningKeys } from '../../hooks/useLearning';
 import { libraryKeys, RECENT_LIMIT } from '../../hooks/useLibrary';
 import { libraryKeys as mediaLibraryKeys } from '../../hooks/useMediaLibrary';
 import { retryKeys } from '../../hooks/useRetry';
@@ -278,7 +275,6 @@ import type {
   ExploreBlock as ExploreBlockType,
   ExploreBlockContent,
 } from '../../services/exploreBlockService';
-import type { PatternListResponse } from '../../services/learning';
 import type { PendingRetriesResponse } from '../../services/retry';
 import type { Backup, BackupListResponse, BackupSchedule } from '../../services/backupService';
 import type { CacheStats } from '../../services/cacheService';
@@ -641,7 +637,7 @@ export type GalleryState = 'default' | 'hover' | 'focus' | 'open';
 /**
  * Memory-router pathnames a fixture can pin via `routePath` (19-4b Task 0 Fix B).
  */
-export type StubRoutePath = '/library' | '/downloads' | '/pending' | '/settings';
+export type StubRoutePath = '/library' | '/downloads' | '/settings';
 
 /** A downloading torrent for the v2 download fixtures; each fixture overrides what it needs. */
 function downloadFixture(over: Partial<Download>): Download {
@@ -2409,29 +2405,6 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     statesOnly: ['default'],
   },
 
-  // ----- learning/ (P-bucket additions) -----
-  {
-    id: 'learning-learn-pattern-prompt',
-    label: 'learning/LearnPatternPrompt',
-    component: LearnPatternPrompt,
-    props: {
-      filename: '[SubsPlease] Frieren - 01 (1080p) [A1B2C3D4].mkv',
-      extractedPattern: {
-        fansubGroup: 'SubsPlease',
-        titlePattern: 'Frieren',
-        patternType: 'fansub',
-      },
-      metadataId: 'meta-001',
-      metadataType: 'series',
-      tmdbId: 209867,
-      onConfirm: noop,
-      onSkip: noop,
-      onError: noop,
-    },
-    penNode: 'screen-section',
-    width: 560,
-  },
-
   // ----- manual-search/ (P-bucket additions) -----
   {
     id: 'manual-search-fallback-status-display',
@@ -3574,44 +3547,6 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       // Silence the inner ownership lookup network call: ExploreBlocksList
       // unions all TMDb ids across visible blocks → useOwnedMedia([201]).
       { queryKey: ownedMediaKeys.lookup([201]), data: [] as number[] },
-    ],
-  },
-
-  // ----- learning/ (Task 3) -----
-  {
-    id: 'learning-learned-patterns-settings',
-    label: 'learning/LearnedPatternsSettings',
-    component: LearnedPatternsSettings,
-    penNode: 'screen-section',
-    width: 720,
-    seedQueries: [
-      {
-        queryKey: learningKeys.patterns(),
-        data: {
-          patterns: [
-            {
-              id: 'pattern-1',
-              pattern: '[Leopard-Raws] Kimetsu no Yaiba',
-              patternType: 'fansub',
-              fansubGroup: 'Leopard-Raws',
-              titlePattern: 'Kimetsu no Yaiba',
-              metadataType: 'series',
-              metadataId: 'series-123',
-              tmdbId: 85937,
-              confidence: 1.0,
-              useCount: 12,
-              createdAt: '2026-01-20T10:00:00Z',
-            },
-          ],
-          totalCount: 1,
-          stats: {
-            totalPatterns: 1,
-            totalApplied: 12,
-            mostUsedPattern: '[Leopard-Raws] Kimetsu no Yaiba',
-            mostUsedCount: 12,
-          },
-        } satisfies PatternListResponse,
-      },
     ],
   },
 
