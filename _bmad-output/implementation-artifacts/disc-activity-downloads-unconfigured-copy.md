@@ -1,6 +1,6 @@
 # Story: disc-activity-downloads-unconfigured-copy — 沒設定 qBittorrent 時，活動中心不再說「無法載入」
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-09-30。Alexyu：「做下一個」→ 裁定 A（整區不顯示）。原單：TestSprite B4（TC103）＋本機重現（2026-08-31）。
      行號為 main `18a8af54`；每條「查到的事」都是 SM 本次親自讀過的位置。 -->
@@ -76,3 +76,4 @@ Claude Opus 5.5（Amelia）
 | ---------- | ---------------------------------------- |
 | 2026-09-30 | create-story（SM Bob）；Alexyu 裁定 A。 |
 | 2026-09-30 | dev-story（Amelia）＋對抗式 review → review。 |
+| 2026-09-30 | PR #613 合併 → done。 |
