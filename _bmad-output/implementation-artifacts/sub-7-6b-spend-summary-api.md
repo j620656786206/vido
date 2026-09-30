@@ -1,6 +1,6 @@
 # Story sub-7-6b: 月報端點——這個月花了多少、依模型、略過與快取省了多少 — 後端
 
-Status: ready-for-dev
+Status: review
 
 <!-- SM Bob create-story 2026-10-01，由 sub-7-6 拆出；依賴 sub-7-6a（ledger 欄位與收據）。行號為 main `34b59615`。 -->
 
@@ -29,9 +29,9 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 — repository 月彙總查詢（AC #1, #3, #4）
-- [ ] Task 2 — 略過省下估算（片長階梯、旗標）（AC #2）
-- [ ] Task 3 — handler ＋ 契約戳記 ＋ 測試（AC #5, #6）
+- [x] Task 1 — repository 月彙總查詢（AC #1, #3, #4）
+- [x] Task 2 — 略過省下估算（片長階梯、旗標）（AC #2）
+- [x] Task 3 — handler ＋ 契約戳記 ＋ 測試（AC #5, #6）
 
 ## Dev Notes
 
@@ -42,14 +42,30 @@ Status: ready-for-dev
 
 ### Agent Model Used
 
+Claude Fable 5.1（Amelia）
+
 ### Completion Notes List
+
+- 與 AC 的兩處收斂：① `cache_saved` 只對「有量到且模型真的翻了幾句」的列算每句均價（全部命中、$0 的列量到但省下算 0——沒有均價可推，誠實）；② `by_batch` 的 `usd` 含 failed／paused 列（錢已花），`cue_count`／cache 只算 completed。
+- 新測試 13 條：repository 2（半開區間＋本地時區正規化＋失敗列排除；batch 查詢）、services 9（分流與 by_model 排序、未定價／未標路線分開報、快取省下三種列、略過省下三階梯與旗標、當月邊界（台北 10/1 00:30 → UTC 9/30 16:00）、批次收據、多模型批次、ledger 錯誤上拋）、handler 3（200 shape 含 null、400、500）。
+- 🔗 AC Drift: NONE。📎 Contract Stamps: `SubtitleSpendSummary` [@contract-v1]（doc 註解＋swag 註解）。
+- 全量：`pnpm nx test api` 綠、go vet、staticcheck、lint:all、prettier。
 
 ### Discovery Triage
 
+- 無新單。
+
 ### File List
+
+- apps/api/internal/repository/subtitle_run_repository.go、subtitle_run_repository_test.go
+- apps/api/internal/services/subtitle_spend_service.go、subtitle_spend_service_test.go
+- apps/api/internal/handlers/subtitle_spend_handler.go、subtitle_spend_handler_test.go
+- apps/api/cmd/api/main.go
+- _bmad-output/implementation-artifacts/sub-7-6b-spend-summary-api.md、sprint-status.yaml
 
 ## Change Log
 
 | Date       | Change                                    |
 | ---------- | ----------------------------------------- |
 | 2026-10-01 | create-story（SM Bob，自 sub-7-6 拆出）。 |
+| 2026-10-01 | dev-story（Amelia）→ review。 |

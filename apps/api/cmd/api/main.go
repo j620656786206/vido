@@ -1136,6 +1136,11 @@ func main() {
 	subtitlePipelineHandler := handlers.NewSubtitlePipelineHandler(
 		subtitlePipelineQueue, subtitlePipelineMedia, subtitleCapabilityGate, modelCatalog)
 	modelSettingsHandler := handlers.NewModelSettingsHandler(modelCatalog)
+	// sub-7-6b: the monthly AI spend summary over the subtitle_runs ledger
+	// (sub-7-6a). Movies/episodes only feed the runtime ladder behind the
+	// "skipped saved" estimate.
+	subtitleSpendHandler := handlers.NewSubtitleSpendHandler(
+		services.NewSubtitleSpendService(repos.SubtitleRuns, repos.Movies, repos.Episodes, slog.Default()), slog.Default())
 	// Activity hub aggregate (UX Redesign D4-1 / ux3-2-1) — composes live scan +
 	// batch-subtitle + generation-batch + solo-transcription progress, pending-parse
 	// count, download counts, and recent parse events. Wired after the processors
@@ -1262,6 +1267,7 @@ func main() {
 		recentMediaHandler.RegisterRoutes(apiV1)
 		scannerHandler.RegisterRoutes(apiV1)
 		subtitleHandler.RegisterRoutes(apiV1)
+		subtitleSpendHandler.RegisterRoutes(apiV1)        // GET /api/v1/subtitles/spend (sub-7-6b)
 		generationBatchHandler.RegisterRoutes(apiV1)      // /api/v1/subtitles/generation-batch group (Story 9R-16)
 		generationCandidatesHandler.RegisterRoutes(apiV1) // /api/v1/subtitles/generation-candidates (story sub-4-1)
 		subtitlePipelineHandler.RegisterRoutes(apiV1)     // POST /api/v1/subtitles/pipeline/run (Story sub-1-6, FR12)
