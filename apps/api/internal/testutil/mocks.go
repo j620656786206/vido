@@ -88,6 +88,10 @@ func (m *MockMovieRepository) MarkRemoved(ctx context.Context, id string) error 
 	return m.Called(ctx, id).Error(0)
 }
 
+func (m *MockMovieRepository) RestoreRemoved(ctx context.Context, id string) error {
+	return m.Called(ctx, id).Error(0)
+}
+
 func (m *MockMovieRepository) UpdateParseStatus(ctx context.Context, id string, status models.ParseStatus) error {
 	return m.Called(ctx, id, status).Error(0)
 }

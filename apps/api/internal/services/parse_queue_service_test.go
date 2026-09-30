@@ -210,7 +210,8 @@ func (m *mockPQMovieRepo) UpdateEnrichedMetadata(_ context.Context, _ *models.Mo
 func (m *mockPQMovieRepo) UpdateScanFileInfo(context.Context, string, int64, models.ParseStatus) error {
 	return nil
 }
-func (m *mockPQMovieRepo) MarkRemoved(context.Context, string) error { return nil }
+func (m *mockPQMovieRepo) MarkRemoved(context.Context, string) error    { return nil }
+func (m *mockPQMovieRepo) RestoreRemoved(context.Context, string) error { return nil }
 func (m *mockPQMovieRepo) UpdateParseStatus(context.Context, string, models.ParseStatus) error {
 	return nil
 }

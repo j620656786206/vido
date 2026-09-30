@@ -85,6 +85,20 @@ func TestMovieMarkRemoved_WritesOnlyIsRemoved(t *testing.T) {
 	assert.Equal(t, models.ParseStatusSuccess, got.ParseStatus)
 }
 
+// bugfix-scan-mount-drop-hides-movies: the file is back — clear the flag and
+// nothing else.
+func TestMovieRestoreRemoved_ClearsOnlyIsRemoved(t *testing.T) {
+	repo, ctx := seedScanStateMovie(t)
+	require.NoError(t, repo.MarkRemoved(ctx, "mv-scan"))
+
+	require.NoError(t, repo.RestoreRemoved(ctx, "mv-scan"))
+
+	got := assertMovieSubtitleSurvived(t, repo, ctx)
+	assert.False(t, got.IsRemoved)
+	assert.Equal(t, int64(100), got.FileSize.Int64)
+	assert.Equal(t, models.ParseStatusSuccess, got.ParseStatus)
+}
+
 func TestMovieUpdateParseStatus_WritesOnlyParseStatus(t *testing.T) {
 	repo, ctx := seedScanStateMovie(t)
 
@@ -112,6 +126,7 @@ func TestMovieNarrowWriters_MissingRowIsErrNoRows(t *testing.T) {
 	for name, call := range map[string]func() error{
 		"UpdateScanFileInfo": func() error { return repo.UpdateScanFileInfo(ctx, "nope", 1, models.ParseStatusPending) },
 		"MarkRemoved":        func() error { return repo.MarkRemoved(ctx, "nope") },
+		"RestoreRemoved":     func() error { return repo.RestoreRemoved(ctx, "nope") },
 		"UpdateParseStatus":  func() error { return repo.UpdateParseStatus(ctx, "nope", models.ParseStatusPending) },
 		"UpdatePosterPath":   func() error { return repo.UpdatePosterPath(ctx, "nope", "/x.jpg") },
 	} {

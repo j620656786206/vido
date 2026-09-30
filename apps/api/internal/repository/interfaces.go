@@ -39,6 +39,7 @@ type MovieRepositoryInterface interface {
 	// pass holding a stale copy cannot revert a concurrent subtitle write.
 	UpdateScanFileInfo(ctx context.Context, id string, fileSize int64, parseStatus models.ParseStatus) error
 	MarkRemoved(ctx context.Context, id string) error
+	RestoreRemoved(ctx context.Context, id string) error
 	UpdateParseStatus(ctx context.Context, id string, status models.ParseStatus) error
 	UpdatePosterPath(ctx context.Context, id, posterPath string) error
 

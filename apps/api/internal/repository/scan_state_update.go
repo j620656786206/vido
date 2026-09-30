@@ -78,6 +78,16 @@ func (r *MovieRepository) MarkRemoved(ctx context.Context, id string) error {
 		time.Now(), id)
 }
 
+// RestoreRemoved clears the removed flag on a movie whose file is back on
+// disk. (scanner processVideoFile — bugfix-scan-mount-drop-hides-movies:
+// nothing cleared it before, so a briefly unreachable NAS folder hid its
+// movies for good.)
+func (r *MovieRepository) RestoreRemoved(ctx context.Context, id string) error {
+	return execNarrow(ctx, r.db, "movie", id,
+		`UPDATE movies SET is_removed = 0, updated_at = ? WHERE id = ?`,
+		time.Now(), id)
+}
+
 // UpdateParseStatus queues or settles a parse without touching anything
 // else. (BatchReparse)
 func (r *MovieRepository) UpdateParseStatus(ctx context.Context, id string, status models.ParseStatus) error {
