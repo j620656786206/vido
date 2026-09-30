@@ -201,3 +201,32 @@ func TestSubtitleRun_OptionalPointerFields(t *testing.T) {
 	assert.Equal(t, int64(550), *run.TMDbID)
 	require.NotNil(t, run.CompletedAt)
 }
+
+// sub-7-6a: the receipt is the one cost line both legs emit. Optional facts
+// are ABSENT, never zeroed — a reader must not mistake "not recorded" for $0.
+func TestSubtitleRun_ReceiptPayload(t *testing.T) {
+	bare := &SubtitleRun{ID: "r1", MediaID: "m1", MediaType: SubtitleRunMediaMovie, Status: SubtitleRunFailed, ModelID: "claude-haiku-4-5"}
+	got := bare.ReceiptPayload()
+	assert.Equal(t, "r1", got["run_id"])
+	assert.Equal(t, "failed", got["status"])
+	assert.Equal(t, 0, got["cue_count"])
+	for _, absent := range []string{"route", "batch_id", "cache_hit_cues", "spent_usd", "budget_usd", "completed_at"} {
+		assert.NotContains(t, got, absent, "%s must be absent when not recorded", absent)
+	}
+
+	spent, ceiling, hits := 0.53, 5.0, 101
+	done := time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC)
+	full := &SubtitleRun{
+		ID: "r2", MediaID: "m2", MediaType: SubtitleRunMediaEpisode, Status: SubtitleRunCompleted,
+		ModelID: "claude-sonnet-5", CueCount: 844, Route: SubtitleRunRouteTranslate, BatchID: "b9",
+		CacheHitCues: &hits, SpentUSD: &spent, BudgetUSD: &ceiling, CompletedAt: &done,
+	}
+	got = full.ReceiptPayload()
+	assert.Equal(t, "translate", got["route"])
+	assert.Equal(t, "b9", got["batch_id"])
+	assert.Equal(t, 101, got["cache_hit_cues"])
+	assert.Equal(t, 0.53, got["spent_usd"])
+	assert.Equal(t, 5.0, got["budget_usd"])
+	assert.Equal(t, 844, got["cue_count"])
+	assert.Equal(t, done, got["completed_at"])
+}

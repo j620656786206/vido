@@ -192,7 +192,7 @@ func TestGenerationBatchItems_SSEKeySet(t *testing.T) {
 	want := []string{
 		"batch_id", "total_items", "current_index", "current_media_id",
 		"current_item", "success_count", "fail_count", "paused_count",
-		"status", "spent_usd", "budget_usd", "items", "changed_item",
+		"status", "spent_usd", "budget_usd", "model_id", "items", "changed_item",
 	}
 	for _, ev := range eventsUntilTerminal(t, client) {
 		assert.Len(t, ev, len(want))

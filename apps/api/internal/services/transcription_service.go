@@ -184,6 +184,9 @@ type TranscriptionService struct {
 	// context, which is exactly the pre-9R-8 behaviour.
 	seriesReader SeriesMetadataReader
 
+	// runLedger records this engine's own runs (sub-7-6a). Optional / nil-safe.
+	runLedger SubtitleRunLedger
+
 	// probeWritable refuses a run whose target folder cannot take the
 	// subtitle, before extraction or any paid call. Defaults to the same probe
 	// the consent list uses (defaultWritableProbe); tests inject a failing one.
@@ -521,6 +524,7 @@ func (s *TranscriptionService) StartTranscription(ctx context.Context, mediaID s
 // inside runPipeline on top of it.
 func (s *TranscriptionService) RunTranscription(ctx context.Context, mediaID string, filePath string, mediaDir string, opts ...TranscriptionOption) error {
 	cfg := newTranscriptionConfig(opts)
+	ctx = withLedgerOwnership(ctx, cfg.recordedByCaller) // sub-7-6a
 
 	// CR sub-2-2a M2: same gate relaxation as StartTranscription — a
 	// translate-only resume needs no ASR.
@@ -703,6 +707,8 @@ type TranscriptionOption func(*transcriptionConfig)
 type transcriptionConfig struct {
 	translate bool
 	mediaType string
+	// recordedByCaller: the caller owns the subtitle_runs row (sub-7-6a).
+	recordedByCaller bool
 }
 
 // newTranscriptionConfig applies opts over the defaults. mediaType defaults to
@@ -752,7 +758,7 @@ func TranscriptionOptionsFor(opts []TranscriptionOption) (translate bool, mediaT
 // Extract audio → (optional chunk) → Whisper API → Merge SRT → Save → (optional) Translate
 // It reports failures via failJob SSE AND returns the error so the synchronous
 // entry (RunTranscription, 9R-16) can propagate it; the async entry discards it.
-func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, mediaType string, mediaID string, filePath string, mediaDir string, translate bool) error {
+func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, mediaType string, mediaID string, filePath string, mediaDir string, translate bool) (retErr error) {
 	defer func() {
 		s.mu.Lock()
 		delete(s.inProgress, mediaID)
@@ -772,6 +778,16 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 			"llm_input_tokens", snap.InputTokens, "llm_output_tokens", snap.OutputTokens,
 			"llm_calls", snap.LLMCalls, "asr_seconds", snap.ASRSeconds, "asr_calls", snap.ASRCalls,
 		)
+	}()
+
+	// sub-7-6a: this engine's own ledger row (solo click / legacy batch item).
+	// Opened here, closed by the deferred write below with whatever the run
+	// turned out to be — completed or failed — and its own Budget delta.
+	ledgerRun, ctx := s.openLedgerRun(ctx, mediaType, mediaID)
+	ledgerSpentAtStart := budget.Spent()
+	var ledgerOutput string
+	defer func() {
+		s.closeLedgerRun(ctx, ledgerRun, budget, ledgerSpentAtStart, ledgerOutput, retErr)
 	}()
 
 	// sub-2-2a AC #3 (A+續跑): a previous run already produced the English SRT
@@ -900,6 +916,13 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 		err = explain("translating", err)
 		s.failJob(jobID, mediaID, err.Error())
 		return err
+	}
+
+	// The ledger records the file this run delivered: the zh-Hant sidecar
+	// when translation ran, otherwise the English SRT.
+	ledgerOutput = zhSRTPath
+	if ledgerOutput == "" {
+		ledgerOutput = srtPath
 	}
 
 	duration := time.Since(startedAt).Round(time.Second).String()
@@ -1856,6 +1879,7 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 	// proper-noun drift complaint) to whether context was actually applied.
 	level := s.localizationLevel(ctx)
 	version := s.translationRunVersion(ctx, metadata, glossary, level)
+	stampLedgerVersion(ctx, version, len(blocks)) // sub-7-6a
 	metadataChars := len(prompts.BuildMetadataSection(metadata))
 	s.logger.Info("translating with media context",
 		"media_id", mediaID,
@@ -1874,6 +1898,7 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 	if err != nil {
 		return "", TranslationOutcome{}, fmt.Errorf("translate: %w", err)
 	}
+	stampLedgerCache(ctx, outcome.CachedBlocks, s.segmentStore != nil) // sub-7-6a
 
 	// Serialize back to SRT format.
 	zhSRT := serializeTranslationBlocksToSRT(translated)

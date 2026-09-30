@@ -43,6 +43,17 @@ const (
 	// current_media_id.
 	EventGenerationBatchProgress EventType = "generation_batch_progress"
 
+	// EventSubtitleRunReceipt is emitted ONCE per subtitle run at its terminal
+	// write, by both legs — the D2 pipeline (subtitle.WithRunReceipt) and the
+	// Route C transcription engine's ledger (sub-7-6a [@contract-v1]). Payload
+	// = models.SubtitleRun.ReceiptPayload(): run_id, media_id, media_type,
+	// status, model_id, cue_count, plus optional route, batch_id,
+	// cache_hit_cues, spent_usd, budget_usd, completed_at. Optional keys are
+	// ABSENT when not recorded — absent is never 0. It is its own event rather
+	// than extra keys on subtitle_progress / transcription_complete because
+	// those payloads are stamped contracts and this fact is the same on both.
+	EventSubtitleRunReceipt EventType = "subtitle_run_receipt"
+
 	// EventGenerationCandidatesProgress carries the cost-preview ANALYSIS
 	// sweep's progress (story sub-4-1 AC #8). Payload keys: status, analyzed,
 	// total, error; status ∈ analyzing|ready|cancelled|error.

@@ -345,6 +345,12 @@ type Pipeline struct {
 	// item, and sub-1-6's subtitle_progress payload needs {media_id, media_type}.
 	progress func(ref MediaRef, stage PipelineStage, message string)
 
+	// receipt is the sub-7-6a terminal hook: called exactly once per run,
+	// after its terminal row write (completed / failed / skipped / deferred),
+	// with the row as written. main.go bridges it to the
+	// `subtitle_run_receipt` SSE event; nil = no receipts (tests).
+	receipt func(run *models.SubtitleRun)
+
 	// gate is D10's per-show first-request latch, owned by the Pipeline because
 	// serialization is an orchestrator concern — sub-1-6's worker pool stays a
 	// generic executor with no show-awareness.
@@ -457,6 +463,12 @@ func WithProgress(fn func(ref MediaRef, stage PipelineStage, message string)) Pi
 	return func(p *Pipeline) { p.progress = fn }
 }
 
+// WithRunReceipt installs the per-run terminal hook (sub-7-6a); see
+// Pipeline.receipt. NewSSEReceiptHook is the production bridge.
+func WithRunReceipt(fn func(run *models.SubtitleRun)) PipelineOption {
+	return func(p *Pipeline) { p.receipt = fn }
+}
+
 // WithLocalizationLevelSource wires the sub-7-4 taste dial. Read per item
 // right before the run version is computed, so a setting saved from the
 // settings page applies to the next item without a restart. nil = default.
@@ -564,6 +576,13 @@ type processScope struct {
 	// INSERTED (deduped conflicts excluded) — the AC #6 completion-log figure.
 	harvestedTerms int
 
+	// cacheSplit / cacheHitCues record the segment-cache split of a translate
+	// lane (sub-7-6a): how many of the routed cues were served from the cache
+	// rather than the model. cacheSplit=false (no translate lane ran) leaves
+	// the run's cache_hit_cues NULL — "not measured", never 0.
+	cacheSplit   bool
+	cacheHitCues int
+
 	// spentUSDAtStart snapshots the ctx Budget's cumulative spend when THIS
 	// item began. A consent batch shares ONE Budget across items (sub-4-2), so
 	// the per-run spend stamped at the terminal write (ux3-1-6) must be the
@@ -640,6 +659,20 @@ func (p *Pipeline) emitProgress(ref MediaRef, stage PipelineStage, message strin
 		return
 	}
 	p.progress(ref, stage, message)
+}
+
+// recordTerminal is the ONE place a run row reaches a terminal state: it
+// writes the row and, when the write lands, hands it to the receipt hook. Every
+// terminal transition (completed, failed, skipped, deferred, budget-paused)
+// goes through here so no lane can finish silently (sub-7-6a).
+func (p *Pipeline) recordTerminal(ctx context.Context, run *models.SubtitleRun) error {
+	if err := p.runs.Update(ctx, run); err != nil {
+		return err
+	}
+	if p.receipt != nil && run != nil {
+		p.receipt(run)
+	}
+	return nil
 }
 
 // observeChunk is the per-chunk hook (P8's throttle grain): exactly one call per

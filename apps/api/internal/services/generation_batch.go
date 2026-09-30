@@ -99,18 +99,21 @@ const (
 // handed out by the processor always carry it; the SSE event sends it only on
 // the terminal broadcast and a single changed_item while running (AC #2).
 type GenerationBatchProgress struct {
-	BatchID        string                     `json:"batch_id"`
-	TotalItems     int                        `json:"total_items"`
-	CurrentIndex   int                        `json:"current_index"`
-	CurrentMediaID string                     `json:"current_media_id"`
-	CurrentItem    string                     `json:"current_item"`
-	SuccessCount   int                        `json:"success_count"`
-	FailCount      int                        `json:"fail_count"`
-	PausedCount    int                        `json:"paused_count"`
-	Status         string                     `json:"status"`
-	SpentUSD       float64                    `json:"spent_usd"`
-	BudgetUSD      float64                    `json:"budget_usd"`
-	Items          []GenerationBatchItemState `json:"items"`
+	BatchID        string  `json:"batch_id"`
+	TotalItems     int     `json:"total_items"`
+	CurrentIndex   int     `json:"current_index"`
+	CurrentMediaID string  `json:"current_media_id"`
+	CurrentItem    string  `json:"current_item"`
+	SuccessCount   int     `json:"success_count"`
+	FailCount      int     `json:"fail_count"`
+	PausedCount    int     `json:"paused_count"`
+	Status         string  `json:"status"`
+	SpentUSD       float64 `json:"spent_usd"`
+	BudgetUSD      float64 `json:"budget_usd"`
+	// ModelID is the model the batch was priced and run with (sub-7-6a,
+	// additive): "" = the deployment default (pre-sub-6-8a batches).
+	ModelID string                     `json:"model_id"`
+	Items   []GenerationBatchItemState `json:"items"`
 }
 
 // GenerationBatchItem is one enumerated queue entry. The exported fields are
@@ -481,6 +484,10 @@ func (p *GenerationBatchProcessor) Start(ctx context.Context, scope string, medi
 	// through the runner port. Empty leaves the ctx untouched = the
 	// deployment default.
 	processCtx = ai.WithModelID(processCtx, modelID)
+	// sub-7-6a: the batch id rides the same ctx, so every item's run row can
+	// name the batch it belonged to (subtitle_runs.batch_id) and a receipt
+	// for the whole batch can be summed from the ledger.
+	processCtx = WithGenerationBatchID(processCtx, batchID)
 
 	// Re-acquire and double-check (another Start may have raced).
 	conflict := false
@@ -497,6 +504,7 @@ func (p *GenerationBatchProcessor) Start(ctx context.Context, scope string, medi
 		// never carry an empty one (dsr-6d-a AC #1).
 		p.activeBatch = &GenerationBatchProgress{
 			BatchID:    batchID,
+			ModelID:    modelID,
 			TotalItems: len(items),
 			Status:     GenerationBatchStatusRunning,
 			BudgetUSD:  ceiling,
@@ -902,6 +910,7 @@ func batchEventData(b *GenerationBatchProgress, budget *ai.Budget, items []Gener
 		"status":           b.Status,
 		"spent_usd":        spent,
 		"budget_usd":       ceiling,
+		"model_id":         b.ModelID,
 		"items":            nil,
 		"changed_item":     nil,
 	}

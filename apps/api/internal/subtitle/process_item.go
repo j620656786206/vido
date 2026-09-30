@@ -120,6 +120,9 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 		ModelID:         version.ModelID,
 		Status:          models.SubtitleRunPending,
 		StartedAt:       p.now().UTC(),
+		// sub-7-6a: the consent batch this item runs in, if any — rides the
+		// ctx from GenerationBatchProcessor exactly like the shared Budget.
+		BatchID: services.GenerationBatchIDFromContext(ctx),
 	}
 	if err := p.runs.Create(ctx, run); err != nil {
 		return nil, fmt.Errorf("subtitle pipeline: create run for %s %s: %w", ref.MediaType, ref.ID, err)
@@ -172,6 +175,11 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 	if err != nil {
 		return p.failItem(ctx, ref, run, "route", err)
 	}
+	// sub-7-6a: the lane is ledger data now, not just a log line — it is what
+	// separates "translated for $X" from "delivered an existing track for free"
+	// on the monthly spend page. The ASR fallback overwrites it with "asr"
+	// when it actually runs.
+	run.Route = string(decision.Kind)
 
 	// 9R-10b AC #3: the FreeOnly brake. It sits HERE, after routing, because
 	// routing is the only place that can tell the free routes apart from the
@@ -279,8 +287,14 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 	transientCount := len(scope.transientIndexes)
 	run.StubbornCount = &stubbornCount
 	run.TransientCount = &transientCount
+	// sub-7-6a: cache hits are measured only when a translate lane split the
+	// track; the deliver/convert lanes leave NULL (not measured ≠ 0).
+	if scope.cacheSplit {
+		hits := scope.cacheHitCues
+		run.CacheHitCues = &hits
+	}
 	p.stampRunSpend(ctx, run)
-	if err := p.runs.Update(ctx, run); err != nil {
+	if err := p.recordTerminal(ctx, run); err != nil {
 		// The sidecar IS on disk. Reverting the media row to `not_searched`
 		// keeps the item retryable, and the next run's P5 pre-flight will see
 		// the acceptable sidecar and early-exit — so the inconsistency
@@ -405,6 +419,9 @@ func (p *Pipeline) translateWithCache(
 	scope := processScopeFrom(ctx)
 	if scope != nil {
 		scope.fullTrackCues = len(source)
+		// sub-7-6a: the split is the cache-hit figure the run row records.
+		scope.cacheSplit = true
+		scope.cacheHitCues = len(hits)
 	}
 
 	var translated []SubtitleBlock
@@ -550,6 +567,7 @@ func (p *Pipeline) transcribeFallback(
 
 	completedAt := p.now().UTC()
 	run.Status = models.SubtitleRunCompleted
+	run.Route = models.SubtitleRunRouteASR // sub-7-6a: the lane that actually ran
 	run.CompletedAt = &completedAt
 	outcome := &ProcessOutcome{Run: run, Kind: decision.Kind}
 	// The sync seam returns only an error, so the run row records what is
@@ -564,7 +582,7 @@ func (p *Pipeline) transcribeFallback(
 		outcome.SubtitlePath = zhPath
 	}
 	p.stampRunSpend(ctx, run)
-	if err := p.runs.Update(ctx, run); err != nil {
+	if err := p.recordTerminal(ctx, run); err != nil {
 		return p.failItem(ctx, ref, run, "record asr provenance", err)
 	}
 
@@ -586,10 +604,11 @@ func (p *Pipeline) pauseASRItem(ctx context.Context, ref MediaRef, run *models.S
 	cleanupCtx := context.WithoutCancel(ctx)
 	completedAt := p.now().UTC()
 	run.Status = models.SubtitleRunFailed
+	run.Route = models.SubtitleRunRouteASR
 	run.ErrorMessage = truncateErrorMessage(err.Error())
 	run.CompletedAt = &completedAt
 	p.stampRunSpend(ctx, run)
-	if uerr := p.runs.Update(cleanupCtx, run); uerr != nil {
+	if uerr := p.recordTerminal(cleanupCtx, run); uerr != nil {
 		p.logger.Error("failed to record the budget-paused subtitle run",
 			"media_id", ref.ID, "run_id", run.ID, "error", uerr)
 	}
@@ -721,7 +740,7 @@ func (p *Pipeline) deferPaidItem(
 	run.CompletedAt = &completedAt
 	p.stampRunSpend(ctx, run)
 
-	if err := p.runs.Update(ctx, run); err != nil {
+	if err := p.recordTerminal(ctx, run); err != nil {
 		return p.failItem(ctx, ref, run, "record deferral", err)
 	}
 	// The row's EXISTING path and language are written back unchanged — not
@@ -770,7 +789,7 @@ func (p *Pipeline) recordSkip(
 	run.CompletedAt = &completedAt
 	p.stampRunSpend(ctx, run)
 
-	if err := p.runs.Update(ctx, run); err != nil {
+	if err := p.recordTerminal(ctx, run); err != nil {
 		return p.failItem(ctx, ref, run, "record skip", err)
 	}
 	if err := p.setMediaStatus(ctx, ref, status, "", ""); err != nil {
@@ -825,7 +844,7 @@ func (p *Pipeline) failItem(ctx context.Context, ref MediaRef, run *models.Subti
 		run.ErrorMessage = truncateErrorMessage(msg)
 		run.CompletedAt = &completedAt
 		p.stampRunSpend(ctx, run)
-		if uerr := p.runs.Update(cleanupCtx, run); uerr != nil {
+		if uerr := p.recordTerminal(cleanupCtx, run); uerr != nil {
 			p.logger.Error("failed to record the failed subtitle run",
 				"media_id", ref.ID, "run_id", run.ID, "error", uerr)
 		}

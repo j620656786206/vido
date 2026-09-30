@@ -74,19 +74,21 @@ var _ SubtitleRunRepositoryInterface = (*SubtitleRunRepository)(nil)
 // hand-written lists.
 const subtitleRunColumns = `id, media_id, media_type, tmdb_id, metadata_hash, glossary_version, ` +
 	`prompt_version, model_id, status, source_language, output_path, cue_count, ` +
-	`cache_enabled, error_message, started_at, completed_at, spent_usd, budget_usd, stubborn_count, transient_count`
+	`cache_enabled, error_message, started_at, completed_at, spent_usd, budget_usd, stubborn_count, transient_count, ` +
+	`route, cache_hit_cues, batch_id`
 
-// subtitleRunInsertPlaceholders matches subtitleRunColumns 1:1 (20 values).
-const subtitleRunInsertPlaceholders = `?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?`
+// subtitleRunInsertPlaceholders matches subtitleRunColumns 1:1 (23 values).
+const subtitleRunInsertPlaceholders = `?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?`
 
 // subtitleRunUpdateAssignments covers every column except the id key, so an
 // Update can never leave a column stale.
 const subtitleRunUpdateAssignments = `media_id = ?, media_type = ?, tmdb_id = ?, metadata_hash = ?, ` +
 	`glossary_version = ?, prompt_version = ?, model_id = ?, status = ?, source_language = ?, ` +
 	`output_path = ?, cue_count = ?, cache_enabled = ?, error_message = ?, started_at = ?, completed_at = ?, ` +
-	`spent_usd = ?, budget_usd = ?, stubborn_count = ?, transient_count = ?`
+	`spent_usd = ?, budget_usd = ?, stubborn_count = ?, transient_count = ?, ` +
+	`route = ?, cache_hit_cues = ?, batch_id = ?`
 
-// subtitleRunValues returns the 20 column values in subtitleRunColumns order.
+// subtitleRunValues returns the 23 column values in subtitleRunColumns order.
 // Both time columns are normalized to UTC before storage: the driver stores a
 // time.Time as text, and FindCompletedRun / ListByStatus ORDER BY that text —
 // a local-time value ("… +0800 CST") would compare by wall-clock digits and
@@ -102,16 +104,26 @@ func subtitleRunValues(run *models.SubtitleRun) []any {
 		run.PromptVersion, run.ModelID, run.Status, run.SourceLanguage, run.OutputPath, run.CueCount,
 		run.CacheEnabled, run.ErrorMessage, run.StartedAt.UTC(), completedAt, run.SpentUSD, run.BudgetUSD,
 		run.StubbornCount, run.TransientCount,
+		nullIfEmpty(run.Route), run.CacheHitCues, nullIfEmpty(run.BatchID),
 	}
 }
 
-// scanSubtitleRun reads all 20 columns in subtitleRunColumns order. The four
+// nullIfEmpty stores an unset ledger string as NULL, so "not recorded" stays
+// distinguishable from "" when the table is read outside the repository.
+func nullIfEmpty(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
+}
+
+// scanSubtitleRun reads all 23 columns in subtitleRunColumns order. The four
 // nullable TEXT/INTEGER columns go through sql.Null* so a row written by any
 // other path (e.g. a bare INSERT) still scans; the nullable columns modelled
 // as pointers stay pointers so "unset" survives the round trip.
 func scanSubtitleRun(scanner interface{ Scan(dest ...any) error }) (models.SubtitleRun, error) {
 	var run models.SubtitleRun
-	var sourceLanguage, outputPath, errorMessage sql.NullString
+	var sourceLanguage, outputPath, errorMessage, route, batchID sql.NullString
 	var cueCount sql.NullInt64
 
 	err := scanner.Scan(
@@ -119,6 +131,7 @@ func scanSubtitleRun(scanner interface{ Scan(dest ...any) error }) (models.Subti
 		&run.PromptVersion, &run.ModelID, &run.Status, &sourceLanguage, &outputPath, &cueCount,
 		&run.CacheEnabled, &errorMessage, &run.StartedAt, &run.CompletedAt, &run.SpentUSD, &run.BudgetUSD,
 		&run.StubbornCount, &run.TransientCount,
+		&route, &run.CacheHitCues, &batchID,
 	)
 	if err != nil {
 		return run, err
@@ -128,6 +141,8 @@ func scanSubtitleRun(scanner interface{ Scan(dest ...any) error }) (models.Subti
 	run.OutputPath = outputPath.String
 	run.CueCount = int(cueCount.Int64)
 	run.ErrorMessage = errorMessage.String
+	run.Route = route.String
+	run.BatchID = batchID.String
 	return run, nil
 }
 

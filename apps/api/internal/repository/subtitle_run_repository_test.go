@@ -50,6 +50,9 @@ func fullyPopulatedRun() *models.SubtitleRun {
 		CacheEnabled:    true,
 		StubbornCount:   intPtr(7),
 		TransientCount:  intPtr(3),
+		Route:           models.SubtitleRunRouteTranslate,
+		CacheHitCues:    intPtr(120),
+		BatchID:         "batch-9",
 		ErrorMessage:    "",
 		StartedAt:       time.Now().Add(-2 * time.Minute).UTC().Truncate(time.Second),
 		CompletedAt:     &completed,
@@ -88,6 +91,10 @@ func TestSubtitleRunRepository_RoundTripsAllColumns(t *testing.T) {
 	assert.Equal(t, want.CueCount, got.CueCount)                               // 12
 	assert.True(t, got.CacheEnabled, "cache_enabled must survive as true")     // 13
 	assert.Equal(t, want.ErrorMessage, got.ErrorMessage)                       // 14
+	assert.Equal(t, want.Route, got.Route)                                     // 21 (041)
+	require.NotNil(t, got.CacheHitCues, "cache_hit_cues must survive")         // 22 (041)
+	assert.Equal(t, *want.CacheHitCues, *got.CacheHitCues)                     //
+	assert.Equal(t, want.BatchID, got.BatchID)                                 // 23 (041)
 	assert.WithinDuration(t, want.StartedAt, got.StartedAt, time.Second)       // 15
 	require.NotNil(t, got.CompletedAt, "completed_at must survive")            // 16
 	assert.WithinDuration(t, *want.CompletedAt, *got.CompletedAt, time.Second) //
@@ -125,6 +132,9 @@ func TestSubtitleRunRepository_NullableColumnsRoundTripAsUnset(t *testing.T) {
 	assert.Equal(t, "", got.ErrorMessage)
 	assert.Nil(t, got.StubbornCount, "an uncounted run reads NULL, never 0 (migration 034)")
 	assert.Nil(t, got.TransientCount, "an uncounted run reads NULL, never 0 (migration 034)")
+	assert.Equal(t, "", got.Route, "an unrouted run has no route (migration 041)")
+	assert.Nil(t, got.CacheHitCues, "unmeasured cache hits read NULL, never 0 (migration 041)")
+	assert.Equal(t, "", got.BatchID)
 }
 
 // TestSubtitleRunRepository_ScanToleratesRawNulls covers rows written outside
