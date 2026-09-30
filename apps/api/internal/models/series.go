@@ -60,6 +60,14 @@ type Series struct {
 	CreditsJSON  NullString `db:"credits" json:"-"`  // JSON stored in DB
 	SeasonsJSON  NullString `db:"seasons" json:"-"`  // JSON stored in DB
 	NetworksJSON NullString `db:"networks" json:"-"` // JSON stored in DB
+	// ProductionCountriesJSON is the raw JSON blob (migration 040, sub-7-2b) —
+	// the movie column's twin, so a show's countries can reach the translation
+	// prompt and sub-7-4's CN rule can finally apply to episodes.
+	ProductionCountriesJSON NullString `db:"production_countries" json:"-"`
+
+	// ProductionCountries is the parsed, wire-exposed form of
+	// ProductionCountriesJSON, populated on read (scanSeries). db:"-".
+	ProductionCountries []ProductionCountry `db:"-" json:"production_countries,omitempty"`
 
 	// Credits is the parsed, wire-exposed form of CreditsJSON, populated on read
 	// (scanSeries) via GetCredits() only when cast/crew is non-empty. Manual Metadata-Editor
@@ -159,6 +167,36 @@ func (s *Series) GetCredits() (*Credits, error) {
 	}
 
 	return &credits, nil
+}
+
+// GetProductionCountries parses the stored JSON (mirrors Movie).
+func (s *Series) GetProductionCountries() ([]ProductionCountry, error) {
+	if !s.ProductionCountriesJSON.Valid || s.ProductionCountriesJSON.String == "" {
+		return []ProductionCountry{}, nil
+	}
+	var countries []ProductionCountry
+	if err := json.Unmarshal([]byte(s.ProductionCountriesJSON.String), &countries); err != nil {
+		return nil, err
+	}
+	return countries, nil
+}
+
+// SetProductionCountries serializes production countries to JSON (mirrors
+// Movie). nil clears the column; the parsed field is kept in step so a row
+// written and read back in the same process agrees with itself.
+func (s *Series) SetProductionCountries(countries []ProductionCountry) error {
+	if countries == nil {
+		s.ProductionCountriesJSON = NullString{}
+		s.ProductionCountries = nil
+		return nil
+	}
+	bytes, err := json.Marshal(countries)
+	if err != nil {
+		return err
+	}
+	s.ProductionCountriesJSON = NewNullString(string(bytes))
+	s.ProductionCountries = countries
+	return nil
 }
 
 // CastLabels is Credits.CastLabels over this series' stored credits (see the

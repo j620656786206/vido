@@ -446,4 +446,8 @@ func applyTMDbSeriesDetails(series *models.Series, details *tmdb.TVShowDetails) 
 		}
 		series.Genres = genres
 	}
+	// sub-7-2b: the series table has a production_countries column now.
+	if countries := seriesCountriesFromDetails(details); len(countries) > 0 {
+		_ = series.SetProductionCountries(countries)
+	}
 }

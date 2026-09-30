@@ -426,6 +426,11 @@ func (s *EnrichmentService) enrichSeries(ctx context.Context, series *models.Ser
 
 	previousSource := currentMetadataSource(series.MetadataSource)
 	s.applyMetadataToSeries(series, searchResult.Items[0], searchResult.Source)
+	// sub-7-2b: same as the movie path — genres and production countries live
+	// on the details call, never on a search hit.
+	if searchResult.Source == models.MetadataSourceTMDb {
+		s.applyTMDbSeriesFacets(ctx, series)
+	}
 	series.ParseStatus = models.ParseStatusSuccess
 	series.UpdatedAt = time.Now()
 	// sub-7-3: cast from TMDb — persisted through its own writer right after
@@ -669,6 +674,13 @@ func (s *EnrichmentService) enrichMovieFrom(ctx context.Context, movie *models.M
 	best := searchResult.Items[0]
 	previousSource := currentMetadataSource(movie.MetadataSource)
 	s.applyMetadataToMovie(movie, best, searchResult.Source)
+	// Step 4a (sub-7-2b): a search hit carries no genres and no countries
+	// (TMDb search returns genre_ids only; the provider never mapped them),
+	// so the translation prompt's Genres/Countries were empty for every
+	// title matched this way. One details call fills them.
+	if searchResult.Source == models.MetadataSourceTMDb {
+		s.applyTMDbMovieFacets(ctx, movie)
+	}
 
 	// Step 4b (sub-7-3): cast from TMDb — written through its own writer after
 	// the row write; the glossary is seeded after that so the scope resolver
@@ -990,6 +1002,102 @@ func (s *EnrichmentService) applyTMDbMovieDetails(movie *models.Movie, details *
 		}
 		movie.Genres = genres
 	}
+	// sub-7-2b: countries used to be written only by the scan converter, so a
+	// movie matched through enrichment translated country-blind.
+	if countries := tmdbCountriesToModel(details.ProductionCountries); len(countries) > 0 {
+		_ = movie.SetProductionCountries(countries)
+	}
+}
+
+// applyTMDbMovieFacets fetches the details a search hit lacks — genres and
+// production countries — after a TMDb match (sub-7-2b AC #2). Only those two
+// fields: the search hit already chose the title/overview, and the details
+// call is context for the translation prompt, not a re-match. Fail-soft: a
+// failed call is logged and the match lands without them, exactly as before.
+func (s *EnrichmentService) applyTMDbMovieFacets(ctx context.Context, movie *models.Movie) {
+	if s.tmdbService == nil || !movie.TMDbID.Valid || movie.TMDbID.Int64 <= 0 {
+		return
+	}
+	details, err := s.tmdbService.GetMovieDetails(ctx, int(movie.TMDbID.Int64))
+	if err != nil || details == nil {
+		s.logger.Warn("TMDb details fetch failed; movie matched without genres/countries",
+			"id", movie.ID, "tmdb_id", movie.TMDbID.Int64, "error", err)
+		return
+	}
+	if len(details.Genres) > 0 {
+		genres := make([]string, len(details.Genres))
+		for i, g := range details.Genres {
+			genres[i] = g.Name
+		}
+		movie.Genres = genres
+	}
+	if countries := tmdbCountriesToModel(details.ProductionCountries); len(countries) > 0 {
+		_ = movie.SetProductionCountries(countries)
+	}
+}
+
+// applyTMDbSeriesFacets is applyTMDbMovieFacets' series counterpart. TMDb's
+// TV details often carry an empty production_countries while origin_country
+// is set, so the latter is the fallback (codes only — the prompt renders
+// codes anyway).
+func (s *EnrichmentService) applyTMDbSeriesFacets(ctx context.Context, series *models.Series) {
+	if s.tmdbService == nil || !series.TMDbID.Valid || series.TMDbID.Int64 <= 0 {
+		return
+	}
+	details, err := s.tmdbService.GetTVShowDetails(ctx, int(series.TMDbID.Int64))
+	if err != nil || details == nil {
+		s.logger.Warn("TMDb details fetch failed; series matched without genres/countries",
+			"id", series.ID, "tmdb_id", series.TMDbID.Int64, "error", err)
+		return
+	}
+	if len(details.Genres) > 0 {
+		genres := make([]string, len(details.Genres))
+		for i, g := range details.Genres {
+			genres[i] = g.Name
+		}
+		series.Genres = genres
+	}
+	if countries := seriesCountriesFromDetails(details); len(countries) > 0 {
+		_ = series.SetProductionCountries(countries)
+	}
+}
+
+// tmdbCountriesToModel maps TMDb's country objects onto the stored shape.
+func tmdbCountriesToModel(countries []tmdb.Country) []models.ProductionCountry {
+	if len(countries) == 0 {
+		return nil
+	}
+	out := make([]models.ProductionCountry, 0, len(countries))
+	for _, c := range countries {
+		if c.ISO31661 == "" {
+			continue
+		}
+		out = append(out, models.ProductionCountry{ISO3166_1: c.ISO31661, Name: c.Name})
+	}
+	return out
+}
+
+// seriesCountriesFromDetails prefers production_countries and falls back to
+// origin_country (codes without names). Shared by the enrichment, manual-match
+// and scan paths so all three store the same thing.
+func seriesCountriesFromDetails(details *tmdb.TVShowDetails) []models.ProductionCountry {
+	if details == nil {
+		return nil
+	}
+	if countries := tmdbCountriesToModel(details.ProductionCountries); len(countries) > 0 {
+		return countries
+	}
+	if len(details.OriginCountry) == 0 {
+		return nil
+	}
+	out := make([]models.ProductionCountry, 0, len(details.OriginCountry))
+	for _, code := range details.OriginCountry {
+		if code == "" {
+			continue
+		}
+		out = append(out, models.ProductionCountry{ISO3166_1: code})
+	}
+	return out
 }
 
 // enrichFromIMDbID uses IMDB ID to find the movie on TMDB via /find endpoint

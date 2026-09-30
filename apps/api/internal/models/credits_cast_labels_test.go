@@ -73,3 +73,22 @@ func TestSeries_CastLabels_FallsBackToTheStoredJSON(t *testing.T) {
 	assert.Equal(t, []string{"Bryan Cranston（Walter White）"}, s.CastLabels(10))
 	assert.Nil(t, (&Series{}).CastLabels(10))
 }
+
+// sub-7-2b: the series countries column (migration 040), mirroring Movie.
+func TestSeries_ProductionCountries_RoundTrip(t *testing.T) {
+	s := &Series{}
+	got, err := s.GetProductionCountries()
+	require.NoError(t, err)
+	assert.Empty(t, got)
+
+	require.NoError(t, s.SetProductionCountries([]ProductionCountry{{ISO3166_1: "CN", Name: "China"}}))
+	assert.True(t, s.ProductionCountriesJSON.Valid)
+	assert.Equal(t, []ProductionCountry{{ISO3166_1: "CN", Name: "China"}}, s.ProductionCountries, "the parsed field is kept in step")
+	got, err = s.GetProductionCountries()
+	require.NoError(t, err)
+	assert.Equal(t, []ProductionCountry{{ISO3166_1: "CN", Name: "China"}}, got)
+
+	require.NoError(t, s.SetProductionCountries(nil))
+	assert.False(t, s.ProductionCountriesJSON.Valid)
+	assert.Nil(t, s.ProductionCountries)
+}

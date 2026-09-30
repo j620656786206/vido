@@ -50,9 +50,9 @@ func (r *SeriesRepository) Create(ctx context.Context, series *models.Series) er
 			popularity,
 			is_removed,
 			video_codec, video_resolution, audio_codec, audio_channels,
-			subtitle_tracks, hdr_format, credits,
+			subtitle_tracks, hdr_format, credits, production_countries,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err = r.db.ExecContext(ctx, query,
@@ -89,6 +89,7 @@ func (r *SeriesRepository) Create(ctx context.Context, series *models.Series) er
 		series.SubtitleTracks,
 		series.HDRFormat,
 		series.CreditsJSON,
+		series.ProductionCountriesJSON,
 		series.CreatedAt,
 		series.UpdatedAt,
 	)
@@ -238,6 +239,7 @@ func (r *SeriesRepository) Update(ctx context.Context, series *models.Series) er
 			subtitle_tracks = ?,
 			hdr_format = ?,
 			credits = ?,
+			production_countries = ?,
 			library_id = ?,
 			updated_at = ?
 		WHERE id = ?
@@ -275,6 +277,7 @@ func (r *SeriesRepository) Update(ctx context.Context, series *models.Series) er
 		series.SubtitleTracks,
 		series.HDRFormat,
 		series.CreditsJSON,
+		series.ProductionCountriesJSON,
 		series.LibraryID,
 		series.UpdatedAt,
 		series.ID,
@@ -608,7 +611,7 @@ const seriesSelectColumns = `
 	subtitle_status, subtitle_path, subtitle_language, subtitle_last_searched, subtitle_search_score,
 	vote_average, vote_count, popularity, is_removed,
 	video_codec, video_resolution, audio_codec, audio_channels,
-	subtitle_tracks, hdr_format, credits,
+	subtitle_tracks, hdr_format, credits, production_countries,
 	douban_id, douban_rating, douban_vote_count,
 	created_at, updated_at
 `
@@ -731,6 +734,7 @@ func scanSeries(scanner interface {
 		&s.SubtitleTracks,
 		&s.HDRFormat,
 		&s.CreditsJSON,
+		&s.ProductionCountriesJSON,
 		&s.DoubanID,
 		&s.DoubanRating,
 		&s.DoubanVoteCount,
@@ -749,6 +753,12 @@ func scanSeries(scanner interface {
 	// drops it for never-edited series (manual Metadata-Editor edits are the only writer).
 	if credits, err := s.GetCredits(); err == nil && (len(credits.Cast) > 0 || len(credits.Crew) > 0) {
 		s.Credits = credits
+	}
+
+	// sub-7-2b: mirror the movie scan — malformed stored JSON degrades to an
+	// empty slice rather than failing the read.
+	if pcs, err := s.GetProductionCountries(); err == nil && len(pcs) > 0 {
+		s.ProductionCountries = pcs
 	}
 
 	return s, nil
@@ -799,9 +809,9 @@ func (r *SeriesRepository) BulkCreate(ctx context.Context, seriesList []*models.
 			popularity,
 			is_removed,
 			video_codec, video_resolution, audio_codec, audio_channels,
-			subtitle_tracks, hdr_format, credits,
+			subtitle_tracks, hdr_format, credits, production_countries,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	stmt, err := tx.PrepareContext(ctx, query)
@@ -858,6 +868,7 @@ func (r *SeriesRepository) BulkCreate(ctx context.Context, seriesList []*models.
 			series.SubtitleTracks,
 			series.HDRFormat,
 			series.CreditsJSON,
+			series.ProductionCountriesJSON,
 			series.CreatedAt,
 			series.UpdatedAt,
 		)
@@ -1112,6 +1123,11 @@ func (r *SeriesRepository) Upsert(ctx context.Context, series *models.Series) er
 	// would overwrite the persisted manual cast with NULL.
 	if !series.CreditsJSON.Valid {
 		series.CreditsJSON = existing.CreditsJSON
+	}
+	// sub-7-2b: same rule for production_countries — a re-scan that could not
+	// fetch details must not wipe the countries enrichment already stored.
+	if !series.ProductionCountriesJSON.Valid {
+		series.ProductionCountriesJSON = existing.ProductionCountriesJSON
 	}
 	return r.Update(ctx, series)
 }

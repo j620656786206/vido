@@ -182,6 +182,12 @@ func ConvertTMDbSeriesToModel(tmdbSeries *tmdb.TVShowDetails, filePath string) *
 		series.Genres = append(series.Genres, genre.Name)
 	}
 
+	// Convert production countries (sub-7-2b — migration 040 gave series the
+	// column; origin_country is the fallback TMDb usually fills for TV).
+	if countries := seriesCountriesFromDetails(tmdbSeries); len(countries) > 0 {
+		_ = series.SetProductionCountries(countries)
+	}
+
 	// Convert seasons to SeasonSummary
 	if len(tmdbSeries.Seasons) > 0 {
 		seasons := make([]models.SeasonSummary, 0, len(tmdbSeries.Seasons))
