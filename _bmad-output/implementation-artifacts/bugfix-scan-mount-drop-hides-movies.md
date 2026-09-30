@@ -1,6 +1,6 @@
 # Story: bugfix-scan-mount-drop-hides-movies — NAS 資料夾暫時連不到時，電影不會從媒體庫永久消失
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-09-30。Alexyu：「做下一張」。調查 disc-2026-09-removed-item-detail-still-served 時發現、本機 :8090 實測重現。
      行號為 main `9a6ce84f`；每條「查到的事」都是 SM 本次親自讀過的位置。 -->
@@ -86,3 +86,4 @@ Claude Opus 5.5（Amelia）
 | ---------- | ----------------------- |
 | 2026-09-30 | create-story（SM Bob）。 |
 | 2026-09-30 | dev-story（Amelia）＋對抗式 review → review。 |
+| 2026-09-30 | PR #617 合併 → done。 |
