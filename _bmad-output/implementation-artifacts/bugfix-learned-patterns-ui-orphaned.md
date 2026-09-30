@@ -1,6 +1,6 @@
 # Story: bugfix-learned-patterns-ui-orphaned — 刪掉點不到的「學習規則」前端，功能另立單重啟
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-09-30。Alexyu 兩輪 Party Mode 後裁定：「把這功能留下來，照上面 1 到 5 的步驟去做」——
      本張是步驟 2＋3（刪前端孤兒、把帳改正）；步驟 4 的功能單是 `feat-learning-rules-relaunch`（sprint-status backlog＋PRD FR35）。
@@ -81,3 +81,4 @@ Claude Fable 5.1（Amelia）
 | Date       | Change                                                            |
 | ---------- | ----------------------------------------------------------------- |
 | 2026-09-30 | create-story（SM Bob）；dev-story（Amelia）→ review。同 PR 與 `disc-2026-09-pending-page-hardcoded-empty` 一起出。 |
+| 2026-09-30 | PR #623 合併 → done。 |

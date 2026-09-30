@@ -1,6 +1,6 @@
 # Story: disc-2026-09-pending-page-hardcoded-empty — 刪掉永遠說「沒有東西」的待解析頁
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-09-30。Alexyu：「把這功能留下來，照上面 1 到 5 的步驟去做」（Party Mode 兩輪結論，步驟 1）。
      原單：TestSprite 九月額度衝刺第 3 輪建案時 curl 核實。行號為 main `3e6e354a`。 -->
@@ -71,3 +71,4 @@ Claude Fable 5.1（Amelia）
 | Date       | Change                                                            |
 | ---------- | ----------------------------------------------------------------- |
 | 2026-09-30 | create-story（SM Bob）；dev-story（Amelia）→ review。同 PR 與 `bugfix-learned-patterns-ui-orphaned` 一起出。 |
+| 2026-09-30 | PR #623 合併 → done。 |
