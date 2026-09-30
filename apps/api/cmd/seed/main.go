@@ -237,7 +237,15 @@ func seedMovies(ctx context.Context, repos *repository.Repositories, libraryID, 
 
 	for _, f := range fixtures {
 		filePath := filepath.Join(movieDir, f.fileName)
-		if err := writeDummyFile(filePath); err != nil {
+		// A removed movie's file is gone from disk — that is what "removed"
+		// means. Writing it would make the next scan restore the row
+		// (bugfix-scan-mount-drop-hides-movies).
+		if f.isRemoved {
+			// An older seed wrote it; take it away so re-seeding is enough.
+			if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
+				return 0, err
+			}
+		} else if err := writeDummyFile(filePath); err != nil {
 			return 0, err
 		}
 		m := &models.Movie{

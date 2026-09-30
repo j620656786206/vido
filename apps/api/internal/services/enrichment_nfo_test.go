@@ -141,7 +141,8 @@ func (m *mockMovieRepoForNFO) UpdateEnrichedMetadata(ctx context.Context, movie 
 func (m *mockMovieRepoForNFO) UpdateScanFileInfo(context.Context, string, int64, models.ParseStatus) error {
 	return nil
 }
-func (m *mockMovieRepoForNFO) MarkRemoved(context.Context, string) error { return nil }
+func (m *mockMovieRepoForNFO) MarkRemoved(context.Context, string) error    { return nil }
+func (m *mockMovieRepoForNFO) RestoreRemoved(context.Context, string) error { return nil }
 func (m *mockMovieRepoForNFO) UpdateParseStatus(context.Context, string, models.ParseStatus) error {
 	return nil
 }

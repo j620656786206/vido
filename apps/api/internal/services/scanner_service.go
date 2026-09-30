@@ -92,6 +92,12 @@ type ScannerService struct {
 	progress       ScanProgress
 	onScanComplete func()
 
+	// Per-folder walk evidence for the removed-file pass: videos seen
+	// (including ones an earlier folder already claimed) and access errors
+	// while walking the CURRENT folder (bugfix-scan-mount-drop-hides-movies).
+	rootWalkVideos int
+	rootWalkErrors int
+
 	// Last completed scan: loaded from settings on first read, then kept in
 	// memory and re-saved on every completion (bugfix-last-scan-never-shown).
 	settingsRepo   repository.SettingsRepositoryInterface
@@ -327,7 +333,19 @@ func (s *ScannerService) StartScan(ctx context.Context) (*ScanResult, error) {
 	// Track seen resolved paths to deduplicate across directories
 	seenPaths := make(map[string]bool)
 	walkedDirs := 0 // folders that existed and were walked (bugfix-last-scan-never-shown)
+	// Folders this scan cannot vouch for — unreachable, failed mid-walk, or
+	// reachable but with no video in them (Docker's view of an unmounted NAS
+	// share is an EMPTY folder). Nothing under them is marked removed
+	// (bugfix-scan-mount-drop-hides-movies).
+	var untrustedRoots []string
+	untrustedLibraries := map[string]bool{}
 	var pendingMovies []*models.Movie
+	distrust := func(sd scanDir) {
+		untrustedRoots = append(untrustedRoots, rootForms(sd.path)...)
+		if sd.libraryID != "" {
+			untrustedLibraries[sd.libraryID] = true
+		}
+	}
 
 	for _, sd := range dirs {
 		dir := sd.path
@@ -360,6 +378,7 @@ func (s *ScannerService) StartScan(ctx context.Context) (*ScanResult, error) {
 				s.progress.ErrorCount++
 				s.mu.Unlock()
 			}
+			distrust(sd)
 			continue
 		}
 		if !info.IsDir() {
@@ -367,16 +386,29 @@ func (s *ScannerService) StartScan(ctx context.Context) (*ScanResult, error) {
 			s.mu.Lock()
 			s.progress.ErrorCount++
 			s.mu.Unlock()
+			distrust(sd)
 			continue
 		}
 
 		walkedDirs++
+		s.mu.Lock()
+		s.rootWalkVideos, s.rootWalkErrors = 0, 0
+		s.mu.Unlock()
 		err = s.walkDirectory(ctx, dir, sd.libraryID, sd.contentType, seenPaths, &pendingMovies)
 		if err != nil {
 			s.logger.Error("SCANNER_PARSE_FAILED: error walking directory", "path", dir, "error", err)
 			s.mu.Lock()
 			s.progress.ErrorCount++
 			s.mu.Unlock()
+		}
+		s.mu.Lock()
+		videos, walkErrors := s.rootWalkVideos, s.rootWalkErrors
+		s.mu.Unlock()
+		// No video at all (Docker's empty mount point) or any part of the
+		// folder unreadable (a share dropping mid-walk, a dead symlink into
+		// the NAS) — this scan cannot say what is really gone from it.
+		if err != nil || videos == 0 || walkErrors > 0 {
+			distrust(sd)
 		}
 	}
 
@@ -386,7 +418,7 @@ func (s *ScannerService) StartScan(ctx context.Context) (*ScanResult, error) {
 	}
 
 	// Detect removed files (Story 7-2: incremental scan)
-	removedCount, err := s.detectRemovedFiles(ctx)
+	removedCount, err := s.detectRemovedFiles(ctx, untrustedRoots, untrustedLibraries)
 	if err != nil {
 		s.logger.Error("failed to detect removed files", "error", err)
 	} else if removedCount > 0 {
@@ -483,12 +515,14 @@ func (s *ScannerService) walkDirectory(ctx context.Context, root string, library
 				s.logger.Warn("SCANNER_PERMISSION_DENIED: cannot access path", "path", path, "error", err)
 				s.mu.Lock()
 				s.progress.ErrorCount++
+				s.rootWalkErrors++
 				s.mu.Unlock()
 				return nil // continue scanning other paths
 			}
 			s.logger.Error("error accessing path", "path", path, "error", err)
 			s.mu.Lock()
 			s.progress.ErrorCount++
+			s.rootWalkErrors++
 			s.mu.Unlock()
 			return nil
 		}
@@ -509,6 +543,7 @@ func (s *ScannerService) walkDirectory(ctx context.Context, root string, library
 			s.logger.Warn("failed to resolve symlink", "path", path, "error", err)
 			s.mu.Lock()
 			s.progress.ErrorCount++
+			s.rootWalkErrors++ // a dead link into an unreachable share
 			s.mu.Unlock()
 			return nil
 		}
@@ -527,12 +562,14 @@ func (s *ScannerService) walkDirectory(ctx context.Context, root string, library
 		if seenPaths[resolvedPath] {
 			s.mu.Lock()
 			s.progress.FilesSkipped++
+			s.rootWalkVideos++ // present — just claimed by an earlier folder
 			s.mu.Unlock()
 			return nil
 		}
 		seenPaths[resolvedPath] = true
 
 		s.mu.Lock()
+		s.rootWalkVideos++
 		s.progress.FilesFound++
 		s.progress.CurrentFile = resolvedPath
 		filesFound := s.progress.FilesFound
@@ -587,10 +624,29 @@ func (s *ScannerService) processVideoFile(ctx context.Context, resolvedPath, sca
 	}
 
 	if existing != nil {
+		// The file is here, so a "removed" flag from an earlier scan (e.g. the
+		// NAS folder was briefly unreachable) no longer holds. Nothing else
+		// ever cleared it, so without this the movie stayed hidden for good
+		// (bugfix-scan-mount-drop-hides-movies).
+		restored := false
+		if existing.IsRemoved {
+			if err := s.movieRepo.RestoreRemoved(ctx, existing.ID); err != nil {
+				return fmt.Errorf("failed to restore removed movie: %w", err)
+			}
+			restored = true
+			s.logger.Info("restored movie whose file is back", "id", existing.ID, "path", resolvedPath)
+		}
+
 		// File already in DB — check if file size changed or mtime is newer
 		sizeChanged := !existing.FileSize.Valid || existing.FileSize.Int64 != info.Size()
 		mtimeNewer := info.ModTime().After(existing.UpdatedAt)
 
+		if restored && !sizeChanged && !mtimeNewer {
+			s.mu.Lock()
+			s.progress.FilesUpdated++
+			s.mu.Unlock()
+			return nil
+		}
 		if !sizeChanged && !mtimeNewer {
 			// No change, skip
 			s.mu.Lock()
@@ -779,13 +835,14 @@ func (s *ScannerService) broadcastScanCancelled(result *ScanResult) {
 
 // detectRemovedFiles checks all movies with file paths and marks those
 // whose files no longer exist on disk as removed (IsRemoved=true).
-func (s *ScannerService) detectRemovedFiles(ctx context.Context) (int, error) {
+func (s *ScannerService) detectRemovedFiles(ctx context.Context, untrustedRoots []string, untrustedLibraries map[string]bool) (int, error) {
 	movies, err := s.movieRepo.FindAllWithFilePath(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to query movies with file paths: %w", err)
 	}
 
 	removedCount := 0
+	protected := 0
 	for i := range movies {
 		movie := &movies[i]
 		if !movie.FilePath.Valid || movie.FilePath.String == "" {
@@ -800,6 +857,16 @@ func (s *ScannerService) detectRemovedFiles(ctx context.Context) (int, error) {
 		if !os.IsNotExist(err) {
 			// Some other error (permissions, etc.) — log but don't mark as removed
 			s.logger.Warn("error checking file existence", "path", movie.FilePath.String, "error", err)
+			continue
+		}
+		// Its folder was unreachable or came back empty this scan — that is a
+		// mount problem, not a deleted film (bugfix-scan-mount-drop-hides-movies).
+		// Matched by path AND by library: a folder that is itself a symlink
+		// into the NAS stores its movies under the TARGET path, which a dead
+		// link can no longer tell us.
+		if underAnyRoot(movie.FilePath.String, untrustedRoots) ||
+			(movie.LibraryID.Valid && untrustedLibraries[movie.LibraryID.String]) {
+			protected++
 			continue
 		}
 
@@ -817,7 +884,50 @@ func (s *ScannerService) detectRemovedFiles(ctx context.Context) (int, error) {
 		s.logger.Info("marked movie as removed (file not found)", "id", movie.ID, "path", movie.FilePath.String)
 	}
 
+	if protected > 0 {
+		s.logger.Warn("SCANNER_ROOT_UNTRUSTED: kept movies whose folder was unreachable or empty this scan — not marking them removed",
+			"movies_kept", protected, "folders", untrustedRoots)
+	}
 	return removedCount, nil
+}
+
+// rootForms returns the spellings a movie's stored (symlink-resolved,
+// absolute) file_path may start with for this configured folder.
+func rootForms(dir string) []string {
+	forms := []string{filepath.Clean(dir)}
+	if abs, err := filepath.Abs(dir); err == nil && abs != forms[0] {
+		forms = append(forms, abs)
+	}
+	// An unreachable folder cannot be resolved itself; resolve its nearest
+	// existing parent and re-attach the rest, so a symlinked mount parent
+	// still matches the stored paths.
+	rest := ""
+	for cur := filepath.Clean(dir); ; {
+		if resolved, err := filepath.EvalSymlinks(cur); err == nil {
+			if abs, err := filepath.Abs(filepath.Join(resolved, rest)); err == nil && abs != forms[0] {
+				forms = append(forms, abs)
+			}
+			break
+		}
+		parent := filepath.Dir(cur)
+		if parent == cur {
+			break
+		}
+		rest = filepath.Join(filepath.Base(cur), rest)
+		cur = parent
+	}
+	return forms
+}
+
+// underAnyRoot reports whether path lies inside one of roots.
+func underAnyRoot(path string, roots []string) bool {
+	p := filepath.Clean(path)
+	for _, r := range roots {
+		if p == r || strings.HasPrefix(p, strings.TrimSuffix(r, string(filepath.Separator))+string(filepath.Separator)) {
+			return true
+		}
+	}
+	return false
 }
 
 // buildResult creates a ScanResult from the current progress
