@@ -1,6 +1,6 @@
 # Story sub-7-2b: 比對後真的存下類型與國家；影集補 production_countries 欄（資料側，後端）
 
-Status: ready-for-dev
+Status: review
 
 <!-- SM Bob create-story 2026-09-30，由 sub-7-2 拆出；不依賴 7-2a（兩張都只加訊號）。行號為 main `9f79863d`。 -->
 
@@ -29,10 +29,10 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 — migration 040 ＋ model ＋ repository ＋ 測試 schema 同步（AC #1）
-- [ ] Task 2 — enrichment 比對後補 details（AC #2, #3）
-- [ ] Task 3 — 兩腿讀影集 countries（AC #4）
-- [ ] Task 4 — 測試、全量（AC #5）
+- [x] Task 1 — migration 040 ＋ model ＋ repository ＋ 測試 schema 同步（AC #1）
+- [x] Task 2 — enrichment 比對後補 details（AC #2, #3）
+- [x] Task 3 — 兩腿讀影集 countries（AC #4）
+- [x] Task 4 — 測試、全量（AC #5）
 
 ## Dev Notes
 
@@ -48,14 +48,31 @@ Status: ready-for-dev
 
 ### Agent Model Used
 
+Claude Fable 5.1（Amelia）
+
 ### Completion Notes List
+
+- AC #4 的消費者確認是 `subtitle/pipeline.go:1223`／`process_item.go:368` 的 `lexiconFor(tctx.Countries)`——影集 `Countries` 一直是空的，所以 CN 影集從未跳過台灣詞庫；現在 `seriesContext` 與 `mediaMetadataFor` 都讀新欄位。
+- 測試 schema：只有 `series_repository_test.go` 手寫完整 series 表（其餘測試檔的 series 表是精簡版、不經 repository 讀），補一欄即可；`TestEverySeriesReadPathReturnsEveryColumn` 的 fixture／斷言加上 countries。
+- 新測試 14 條：migrations 2（up、冪等）、models 1（往返）、repository 1（Create→Find→Upsert 保留）、services 9（電影：details 補齊／失敗仍落盤／Douban 不打／無 tmdbService 不炸；影集：補齊／origin 退回／失敗仍落盤；`seriesCountriesFromDetails`；converter）、subtitle 1、transcription 1。
+- 🔗 AC Drift: NONE。📎 Contract Stamps: `Series` JSON 多 `production_countries`（additive，與 movie 同形）。🎭 A11y: N/A。🎨 UX: N/A。
 
 ### Discovery Triage
 
+- 無新單。
+
 ### File List
+
+- apps/api/internal/database/migrations/040_add_series_production_countries.go、_test.go
+- apps/api/internal/models/series.go、credits_cast_labels_test.go
+- apps/api/internal/repository/series_repository.go、series_repository_test.go
+- apps/api/internal/services/enrichment_service.go、enrichment_manual_match.go、converters.go、transcription_service.go、enrichment_context_facets_test.go、converters_test.go、transcription_translation_test.go
+- apps/api/internal/subtitle/media_store.go、media_store_test.go
+- _bmad-output/implementation-artifacts/sub-7-2b-metadata-context-genres-countries.md、sprint-status.yaml
 
 ## Change Log
 
 | Date       | Change                                    |
 | ---------- | ----------------------------------------- |
 | 2026-09-30 | create-story（SM Bob，自 sub-7-2 拆出）。 |
+| 2026-09-30 | dev-story（Amelia）→ review。 |

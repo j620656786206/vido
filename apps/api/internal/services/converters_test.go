@@ -445,3 +445,28 @@ func TestConvertTMDbTVShowSearchResultToModel(t *testing.T) {
 		})
 	}
 }
+
+// sub-7-2b: the scan converter stores series countries now (production
+// countries first, origin_country as the fallback TMDb usually fills for TV).
+func TestConvertTMDbSeriesToModel_ProductionCountries(t *testing.T) {
+	withBoth := ConvertTMDbSeriesToModel(&tmdb.TVShowDetails{
+		TVShow:              tmdb.TVShow{ID: 1, Name: "A", OriginCountry: []string{"KR"}},
+		ProductionCountries: []tmdb.Country{{ISO31661: "JP", Name: "Japan"}},
+	}, "/tv/a")
+	if len(withBoth.ProductionCountries) != 1 || withBoth.ProductionCountries[0].ISO3166_1 != "JP" {
+		t.Errorf("production_countries should win, got %+v", withBoth.ProductionCountries)
+	}
+	if !withBoth.ProductionCountriesJSON.Valid {
+		t.Errorf("the JSON column must be set for the repository write")
+	}
+
+	originOnly := ConvertTMDbSeriesToModel(&tmdb.TVShowDetails{TVShow: tmdb.TVShow{ID: 2, Name: "B", OriginCountry: []string{"CN"}}}, "/tv/b")
+	if len(originOnly.ProductionCountries) != 1 || originOnly.ProductionCountries[0].ISO3166_1 != "CN" {
+		t.Errorf("origin_country fallback, got %+v", originOnly.ProductionCountries)
+	}
+
+	none := ConvertTMDbSeriesToModel(&tmdb.TVShowDetails{TVShow: tmdb.TVShow{ID: 3, Name: "C"}}, "/tv/c")
+	if none.ProductionCountriesJSON.Valid {
+		t.Errorf("no countries → NULL, not an empty array")
+	}
+}

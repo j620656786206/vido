@@ -662,3 +662,22 @@ func TestTranslateSRT_EpisodeLineIsRenderedOutsideTheShowContext(t *testing.T) {
 		"episode line comes AFTER the show context — same order as the extract leg's third block")
 	assert.Equal(t, 1, episodes.callCount, "the label rides the row glossaryKey already read — no second episode read")
 }
+
+// sub-7-2b: the ASR leg reads the new series production_countries column
+// too, in the same shape as the extract leg (segment-cache keys must agree).
+func TestTranslateSRT_EpisodeCarriesTheShowCountries(t *testing.T) {
+	mockProvider := &translationIntegrationMock{response: "[1] 你好世界"}
+	svc := NewTranscriptionService(nil, nil, nil, nil)
+	svc.SetTranslationService(NewTranslationService(mockProvider, nil))
+	show := &models.Series{ID: uuidC, Title: "慶餘年", FirstAirDate: "2019-11-26", TMDbID: models.NewNullInt64(94605)}
+	require.NoError(t, show.SetProductionCountries([]models.ProductionCountry{{ISO3166_1: "CN", Name: "China"}}))
+	svc.SetEpisodeSubtitleStateReader(&metadataEpisodeReader{episode: &models.Episode{ID: uuidB, SeriesID: uuidC, SeasonNumber: 1, EpisodeNumber: 1}})
+	svc.SetSeriesMetadataReader(&metadataSeriesReader{series: show})
+
+	tmpDir := t.TempDir()
+	_, _, err := svc.translateSRT(context.Background(), "job-1", models.SubtitleRunMediaEpisode, uuidB,
+		"1\n00:00:01,000 --> 00:00:04,000\nHello world\n", filepath.Join(tmpDir, "s01e01.mkv"), tmpDir)
+	require.NoError(t, err)
+
+	assert.Contains(t, mockProvider.lastSystemPrompt, "- Production countries: CN\n")
+}

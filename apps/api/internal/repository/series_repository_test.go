@@ -58,6 +58,7 @@ func setupSeriesTestDB(t *testing.T) *sql.DB {
 			subtitle_tracks TEXT,
 			hdr_format TEXT,
 			credits TEXT,
+			production_countries TEXT,
 			douban_id TEXT,
 			douban_rating REAL,
 			douban_vote_count INTEGER,
@@ -1547,6 +1548,8 @@ func fullyPopulatedSeries(id string, tmdbID int64, filePath string) *models.Seri
 		SubtitleTracks:   models.NewNullString(`["zh-TW"]`),
 		HDRFormat:        models.NewNullString("HDR10"),
 		CreditsJSON:      models.NewNullString(`{"cast":[{"name":"Somebody"}],"crew":[]}`),
+		// sub-7-2b (migration 040)
+		ProductionCountriesJSON: models.NewNullString(`[{"iso_3166_1":"CN","name":"China"}]`),
 	}
 }
 
@@ -1573,6 +1576,9 @@ func assertSeriesFullyPopulated(t *testing.T, readPath string, s *models.Series)
 	}
 	if s.Credits == nil || len(s.Credits.Cast) == 0 {
 		t.Errorf("%s: credits is empty — the read path dropped the column", readPath)
+	}
+	if len(s.ProductionCountries) == 0 || s.ProductionCountries[0].ISO3166_1 != "CN" {
+		t.Errorf("%s: production_countries is empty — the read path dropped the column (sub-7-2b)", readPath)
 	}
 }
 
@@ -1921,4 +1927,43 @@ func TestSeriesFullTextSearchAppliesFilters(t *testing.T) {
 			t.Fatalf("got %d rows / total %d", len(series), p.TotalResults)
 		}
 	})
+}
+
+// TestSeriesUpsertPreservesProductionCountries (sub-7-2b): a re-scan whose
+// details call failed hands Upsert a model with no countries; that must not
+// wipe the countries enrichment already stored — same rule as credits.
+func TestSeriesUpsertPreservesProductionCountries(t *testing.T) {
+	db := setupSeriesTestDB(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	s := &models.Series{ID: "spc-1", Title: "慶餘年", TMDbID: models.NewNullInt64(94605)}
+	if err := s.SetProductionCountries([]models.ProductionCountry{{ISO3166_1: "CN", Name: "China"}}); err != nil {
+		t.Fatalf("SetProductionCountries: %v", err)
+	}
+	if err := repo.Create(ctx, s); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	found, err := repo.FindByID(ctx, "spc-1")
+	if err != nil {
+		t.Fatalf("FindByID: %v", err)
+	}
+	if len(found.ProductionCountries) != 1 || found.ProductionCountries[0].ISO3166_1 != "CN" {
+		t.Fatalf("countries must round-trip through Create/FindByID, got %+v", found.ProductionCountries)
+	}
+
+	fresh := &models.Series{Title: "慶餘年 (re-scan)", TMDbID: models.NewNullInt64(94605)}
+	if err := repo.Upsert(ctx, fresh); err != nil {
+		t.Fatalf("Upsert: %v", err)
+	}
+	found, err = repo.FindByID(ctx, "spc-1")
+	if err != nil {
+		t.Fatalf("FindByID after Upsert: %v", err)
+	}
+	if len(found.ProductionCountries) != 1 || found.ProductionCountries[0].ISO3166_1 != "CN" {
+		t.Errorf("stored countries must survive a re-scan without them, got %+v", found.ProductionCountries)
+	}
 }

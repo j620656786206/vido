@@ -258,9 +258,10 @@ func seriesContext(series *models.Series) TranslateContext {
 		Year:          yearOf(series.FirstAirDate),
 		Genres:        series.Genres,
 		Overview:      series.Overview.String,
-		// sub-7-2a AC #1. Countries stay empty until sub-7-2b adds the column
-		// the series table never had.
-		Cast: series.CastLabels(prompts.MetadataCastLimit),
+		Cast:          series.CastLabels(prompts.MetadataCastLimit), // sub-7-2a
+		// sub-7-2b: the column series never had (migration 040). This is what
+		// lets lexiconFor skip the Taiwan lexicon for CN shows, not just films.
+		Countries: countryCodes(series.ProductionCountries),
 	}, series.TMDbID.Valid, series.ID, models.SubtitleRunMediaSeries)
 }
 

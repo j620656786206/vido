@@ -1736,9 +1736,6 @@ func (s *TranscriptionService) mediaMetadataFor(ctx context.Context, mediaType, 
 				"media_id", mediaID, "media_type", mediaType, "series_id", glossaryKey, "error", err)
 			return prompts.MediaMetadata{}
 		}
-		// Countries stay empty: the series table carries no production_countries
-		// column, exactly as seriesContext leaves it on the extract leg
-		// (sub-7-2b adds it to both legs at once).
 		return withoutUntrustedIdentity(prompts.MediaMetadata{
 			Title:         series.Title,
 			OriginalTitle: series.OriginalTitle.String,
@@ -1746,6 +1743,8 @@ func (s *TranscriptionService) mediaMetadataFor(ctx context.Context, mediaType, 
 			Genres:        series.Genres,
 			Overview:      series.Overview.String,
 			Cast:          series.CastLabels(prompts.MetadataCastLimit), // sub-7-2a AC #1, mirrors seriesContext
+			// sub-7-2b: mirrors seriesContext — keep the two legs byte-identical.
+			Countries: productionCountryCodes(series.ProductionCountries),
 		}, series.TMDbID.Valid, mediaID, mediaType, s.logger)
 
 	default:

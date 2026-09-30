@@ -408,3 +408,21 @@ func TestMediaStore_EpisodeLabel(t *testing.T) {
 	assert.Equal(t, "S02E10", episodeLabel(&models.Episode{SeasonNumber: 2, EpisodeNumber: 10}))
 	assert.Equal(t, "S00E01 · Pilot", episodeLabel(&models.Episode{EpisodeNumber: 1, Title: models.NewNullString(" Pilot ")}))
 }
+
+// sub-7-2b: the column series never had. Countries are what lexiconFor keys
+// on, so until now a CN drama's episodes were run through the Taiwan lexicon.
+func TestMediaStore_LoadEpisodeCarriesTheShowCountries(t *testing.T) {
+	series := &models.Series{ID: "s-9", Title: "慶餘年", TMDbID: models.NewNullInt64(9)}
+	require.NoError(t, series.SetProductionCountries([]models.ProductionCountry{{ISO3166_1: "CN", Name: "China"}}))
+	episodes := &fakeEpisodeRepo{episode: &models.Episode{ID: "ep-1", SeriesID: "s-9", SeasonNumber: 1, EpisodeNumber: 1,
+		FilePath: models.NewNullString("/media/s01e01.mkv")}}
+	store := NewMediaStore(nil, &fakeSeriesRepo{series: series}, episodes)
+
+	item, err := store.Load(context.Background(), MediaRef{ID: "ep-1", MediaType: models.SubtitleRunMediaEpisode})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"CN"}, item.Context.Countries)
+
+	whole, err := store.Load(context.Background(), MediaRef{ID: "s-9", MediaType: models.SubtitleRunMediaSeries})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"CN"}, whole.Context.Countries, "a series-level run reads the same column")
+}
