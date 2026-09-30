@@ -1,6 +1,6 @@
 # Story: disc-2026-09-scan-trigger-error-english — 掃描開不了時說中文，而且真的會說「已在進行中」
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-09-30。Alexyu：「做下一張」。原單：bugfix-scan-schedule-field-mismatch 的 Discovery Triage。
      行號為 main `4aeb9293`；每條「查到的事」都是 SM 本次親自讀過的位置。 -->
@@ -70,3 +70,4 @@ Claude Opus 5.5（Amelia）
 | ---------- | ----------------------- |
 | 2026-09-30 | create-story（SM Bob）。 |
 | 2026-09-30 | dev-story（Amelia）＋對抗式 review → review。 |
+| 2026-09-30 | PR #615 合併 → done。 |
