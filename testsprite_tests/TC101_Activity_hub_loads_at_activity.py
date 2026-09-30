@@ -49,15 +49,13 @@ async def run_test():
         
         # --> Assertions to verify final state
         
-        # --> The Activity page displays the '下載' section and an error banner with a '重試' button.
-        await page.get_by_role("heading", name="下載").nth(0).scroll_into_view_if_needed()
-        # Assert-outcome: passed
-        # Assert: The '下載' section header is visible.
-        await expect(page.get_by_role("heading", name="下載").nth(0)).to_be_visible(timeout=15000), "The '\u4e0b\u8f09' section header is visible."
-        await page.get_by_test_id("activity-section-retry").nth(0).scroll_into_view_if_needed()
-        # Assert-outcome: passed
-        # Assert: A '重試' (Retry) button is visible next to the error.
-        await expect(page.get_by_test_id("activity-section-retry").nth(0)).to_be_visible(timeout=15000), "A '\u91cd\u8a66' (Retry) button is visible next to the error."
+        # --> The Activity page renders its main region. The test env has no
+        # qBittorrent, which is "not set up", not a failure: since
+        # disc-activity-downloads-unconfigured-copy (⚖️ 2026-09-30, A) the 下載
+        # section is hidden and no 無法載入／重試 appears.
+        await expect(page.get_by_test_id("activity-root").nth(0)).to_be_visible(timeout=15000), "The Activity page is shown."
+        await expect(page.get_by_test_id("activity-section-retry")).to_have_count(0, timeout=15000), "No section shows a load failure with a Retry button."
+        await expect(page.get_by_role("heading", name="\u4e0b\u8f09")).to_have_count(0, timeout=15000), "The downloads section is hidden while qBittorrent is not set up."
         await asyncio.sleep(5)
 
     finally:

@@ -71,8 +71,9 @@ function isEmpty(d: ActivitySummary): boolean {
     d.activeJobs.jobs.length === 0 &&
     d.pending.status === 'ok' &&
     d.pending.parseCount === 0 &&
-    d.downloads.status === 'ok' &&
-    d.downloads.total === 0 &&
+    // Not set up yet counts as "no downloads", not as a failure.
+    (d.downloads.status === 'not_configured' ||
+      (d.downloads.status === 'ok' && d.downloads.total === 0)) &&
     d.recent.status === 'ok' &&
     d.recent.events.length === 0
   );
@@ -208,7 +209,10 @@ function DownloadsSectionView({
       </SectionShell>
     );
   }
-  if (section.total === 0) return null;
+  // ⚖️ Alexyu 2026-09-30 (disc-activity-downloads-unconfigured-copy, A): no
+  // qBittorrent yet is not a load failure — hide the section like "no
+  // downloads"; the downloads page (d11) and 服務狀態 do the nudging.
+  if (section.status === 'not_configured' || section.total === 0) return null;
   return (
     <SectionShell title="下載">
       <ActivityRow

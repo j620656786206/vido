@@ -47,7 +47,13 @@ func NewQBittorrentService(
 // GetConfig retrieves the qBittorrent configuration.
 // The password is decrypted from the secrets store.
 func (s *QBittorrentService) GetConfig(ctx context.Context) (*qbittorrent.Config, error) {
-	host, _ := s.settingsRepo.GetString(ctx, SettingQBHost)
+	host, err := s.settingsRepo.GetString(ctx, SettingQBHost)
+	// A missing host is "not configured"; a failed READ is not — swallowing it
+	// turned a database error into "not set up" and hid a real outage
+	// (disc-activity-downloads-unconfigured-copy review).
+	if err != nil && !isSettingNotFound(err) {
+		return nil, fmt.Errorf("read qBittorrent host: %w", err)
+	}
 	username, _ := s.settingsRepo.GetString(ctx, SettingQBUsername)
 	basePath, _ := s.settingsRepo.GetString(ctx, SettingQBBasePath)
 

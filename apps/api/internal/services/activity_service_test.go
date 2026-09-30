@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -180,6 +181,32 @@ func TestActivity_DownloadsFailSoft(t *testing.T) {
 	a := svc.GetActivity(context.Background())
 	if a.Downloads.Status != sectionUnavailable || a.Downloads.Error == "" {
 		t.Errorf("downloads = %+v, want unavailable+error", a.Downloads)
+	}
+}
+
+// disc-activity-downloads-unconfigured-copy AC #1 [@contract-v1]: "not set
+// up yet" is not a load failure — the hub must not offer a retry for it.
+func TestActivity_DownloadsNotConfigured(t *testing.T) {
+	notConfigured := &qbittorrent.ConnectionError{Code: qbittorrent.ErrCodeNotConfigured, Message: "qBittorrent not configured"}
+	svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeBatch{}, fakeBatch{},
+		fakeDownloads{err: fmt.Errorf("counts: %w", notConfigured)}, fakeParse{})
+
+	d := svc.GetActivity(context.Background()).Downloads
+	if d.Status != sectionNotConfigured {
+		t.Errorf("status = %q, want %q", d.Status, sectionNotConfigured)
+	}
+	if d.Error != "" {
+		t.Errorf("error = %q, want none — nothing failed", d.Error)
+	}
+}
+
+func TestActivity_DownloadsConnectionFailureStaysUnavailable(t *testing.T) {
+	refused := &qbittorrent.ConnectionError{Code: qbittorrent.ErrCodeConnectionFailed, Message: "dial tcp: refused"}
+	svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeBatch{}, fakeBatch{}, fakeDownloads{err: refused}, fakeParse{})
+
+	d := svc.GetActivity(context.Background()).Downloads
+	if d.Status != sectionUnavailable || d.Error == "" {
+		t.Errorf("downloads = %+v, want unavailable+error", d)
 	}
 }
 

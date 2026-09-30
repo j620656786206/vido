@@ -2,10 +2,18 @@ package services
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/qbittorrent"
 )
+
+// sectionNotConfigured marks the downloads section when qBittorrent has not
+// been set up: nothing failed, so the hub hides the section instead of
+// offering a pointless retry (disc-activity-downloads-unconfigured-copy
+// AC #1 [@contract-v1], additive to ok/unavailable).
+const sectionNotConfigured = "not_configured"
 
 // ActivityService composes the background-job activity sections that feed the v2
 // Activity hub (GET /api/v1/activity — UX Redesign D4-1 / ux3-2-1). Like
@@ -196,6 +204,10 @@ func (s *ActivityService) downloadsSection(ctx context.Context) DownloadsSection
 		return DownloadsSection{Status: sectionUnavailable, Error: "service unavailable"}
 	}
 	c, err := s.downloads.GetDownloadCounts(ctx)
+	var connErr *qbittorrent.ConnectionError
+	if errors.As(err, &connErr) && connErr.Code == qbittorrent.ErrCodeNotConfigured {
+		return DownloadsSection{Status: sectionNotConfigured}
+	}
 	if err != nil || c == nil {
 		msg := "unavailable"
 		if err != nil {

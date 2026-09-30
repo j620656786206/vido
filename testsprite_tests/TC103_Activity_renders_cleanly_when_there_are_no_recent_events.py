@@ -47,13 +47,15 @@ async def run_test():
         
         # --> Assertions to verify final state
         
-        # --> The Activity page loaded and shows a per-section fail-soft message ('無法載入，請稍後再試') with a visible '重試' button.
+        # --> The Activity page loaded without an error state (the test env has no
+        # qBittorrent — "not set up" hides the 下載 section since
+        # disc-activity-downloads-unconfigured-copy; it is not a load failure).
         # Assert-outcome: passed
         # Assert: The page shows the Activity header '活動'.
         await expect(page.locator("#root").nth(0)).to_contain_text("\u6d3b\u52d5", timeout=15000), "The page shows the Activity header '\u6d3b\u52d5'."
         # Assert-outcome: passed
-        # Assert: The Downloads section shows a visible Retry button labeled '重試'.
-        await expect(page.get_by_test_id("activity-section-retry").nth(0)).to_have_text("\u91cd\u8a66", timeout=15000), "The Downloads section shows a visible Retry button labeled '\u91cd\u8a66'."
+        # Assert: No section shows 無法載入 with a Retry button.
+        await expect(page.get_by_test_id("activity-section-retry")).to_have_count(0, timeout=15000), "No section shows a load failure with a Retry button."
         await asyncio.sleep(5)
 
     finally:

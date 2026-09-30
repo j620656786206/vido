@@ -103,6 +103,55 @@ describe('ActivityHub (v2 Activity hub — four states + fail-soft)', () => {
     expect(refetch).toHaveBeenCalled();
   });
 
+  // disc-activity-downloads-unconfigured-copy (⚖️ Alexyu 2026-09-30, A): no
+  // qBittorrent yet is not a load failure — no 無法載入, no retry, no section.
+  describe('downloads — qBittorrent not configured', () => {
+    // total > 0 on purpose: the old "total 0 → hide" rule must not be what
+    // hides it — only not_configured may.
+    const notConfigured = {
+      status: 'not_configured' as const,
+      downloading: 2,
+      queued: 3,
+      errored: 0,
+      paused: 0,
+      total: 5,
+    };
+
+    it('hides the downloads section instead of 無法載入', async () => {
+      mockUseActivity.mockReturnValue(
+        result({
+          data: summary({
+            downloads: notConfigured,
+            pending: { status: 'ok', parseCount: 2 },
+          }),
+        })
+      );
+      renderHub();
+      await screen.findByTestId('activity-root');
+      expect(screen.queryByTestId('activity-downloads-error')).toBeNull();
+      expect(screen.queryByText('無法載入，請稍後再試')).toBeNull();
+      expect(screen.queryByRole('heading', { name: '下載' })).toBeNull();
+    });
+
+    it('counts as "no downloads" for the calm empty state', async () => {
+      mockUseActivity.mockReturnValue(result({ data: summary({ downloads: notConfigured }) }));
+      renderHub();
+      expect(await screen.findByTestId('activity-empty')).toBeInTheDocument();
+    });
+
+    it('a real failure (unavailable) still says 無法載入 with a retry', async () => {
+      mockUseActivity.mockReturnValue(
+        result({
+          data: summary({
+            downloads: { ...notConfigured, status: 'unavailable', error: 'dial tcp: refused' },
+          }),
+        })
+      );
+      renderHub();
+      expect(await screen.findByTestId('activity-downloads-error')).toBeInTheDocument();
+    });
+  });
+
   it('[P1] Empty — all sections ok with no content shows the calm empty state', async () => {
     mockUseActivity.mockReturnValue(result({ data: summary() }));
     renderHub();
