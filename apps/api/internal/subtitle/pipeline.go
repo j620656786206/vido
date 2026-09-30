@@ -92,6 +92,12 @@ type TranslateContext struct {
 	// pipeline from the settings-backed source right before the version is
 	// computed; it rides PromptVersion, never MetadataHash.
 	LocalizationLevel prompts.LocalizationLevel
+	// EpisodeLabel is the per-EPISODE line ("S01E03 · Chapter One"), ADDITIVE
+	// on v1 (sub-7-2a AC #3). Deliberately NOT part of MetadataHash or of the
+	// per-show system block: every episode of a show must keep sharing one
+	// prompt-cache prefix and one segment-cache key. buildSystemBlocks renders
+	// it after the cache breakpoint. Empty for movies and series-level runs.
+	EpisodeLabel string
 }
 
 // TranslateResult is the translate stage's output.
@@ -1298,6 +1304,14 @@ func buildSystemBlocks(tctx TranslateContext) []ai.SystemBlock {
 	}
 
 	blocks[len(blocks)-1].CacheTTL = ai.CacheTTL1h
+
+	// sub-7-2a AC #3: the per-episode line goes AFTER the breakpoint. Prompt
+	// caching is a prefix match up to the last cache_control block, so a block
+	// appended here is sent uncached every time while [0]+[1] keep hitting —
+	// the same reason it is excluded from MetadataHash (see TranslateContext).
+	if episode := prompts.BuildEpisodeSection(tctx.EpisodeLabel); episode != "" {
+		blocks = append(blocks, ai.SystemBlock{Text: episode, CacheTTL: ai.CacheTTLNone})
+	}
 	return blocks
 }
 

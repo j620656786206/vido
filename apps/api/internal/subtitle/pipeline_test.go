@@ -983,3 +983,23 @@ func TestTranslateTrack_WithoutAScopeIsUnchanged(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "早安", res.Blocks[0].Text)
 }
+
+// sub-7-2a AC #3: the per-episode line rides a THIRD block, after the
+// breakpoint. Prompt caching matches the prefix up to the last cache_control
+// block, so [0]+[1] keep hitting across a season while the episode line is
+// sent fresh each time — and MetadataHash never sees it.
+func TestBuildSystemBlocks_EpisodeLineSitsAfterTheBreakpoint(t *testing.T) {
+	tctx := richContext()
+	tctx.EpisodeLabel = "S01E03 · Chapter Three"
+
+	blocks := buildSystemBlocks(tctx)
+	require.Len(t, blocks, 3)
+	assert.Equal(t, ai.CacheTTL1h, blocks[1].CacheTTL, "the breakpoint stays on the per-show block")
+	assert.Equal(t, ai.CacheTTLNone, blocks[2].CacheTTL, "a breakpoint on the episode block would cache nothing reusable")
+	assert.Contains(t, blocks[2].Text, "- Episode: S01E03 · Chapter Three")
+	assert.NotContains(t, blocks[1].Text, "S01E03", "the cached per-show block must not carry the episode")
+
+	without := richContext()
+	assert.Equal(t, MetadataHash(without), MetadataHash(tctx), "the label is not part of the hash")
+	assert.Len(t, buildSystemBlocks(without), 2, "no label, no third block — byte-identical to before")
+}

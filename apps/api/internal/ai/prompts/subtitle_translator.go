@@ -163,6 +163,22 @@ func BuildMetadataSection(md MediaMetadata) string {
 	return sb.String()
 }
 
+// BuildEpisodeSection renders the one line of context that is per-EPISODE
+// rather than per-show (sub-7-2a AC #3): "S01E03 · Chapter One". It is kept
+// out of BuildMetadataSection on purpose — that section sits inside the
+// prompt-cache prefix every episode of a show shares, and its digest is the
+// segment cache's MetadataHash; an episode line in either would split both
+// per episode. Callers place this AFTER the cache breakpoint. Returns "" for a
+// blank label, so the no-episode path stays byte-identical.
+func BuildEpisodeSection(label string) string {
+	label = strings.TrimSpace(label)
+	if label == "" {
+		return ""
+	}
+	return "## Episode — background only, do NOT translate or output this section:\n" +
+		"- Episode: " + collapseLines(label) + "\n\n"
+}
+
 // joinNonEmpty renders a comma-separated list, dropping blank entries and
 // keeping at most limit of them (limit <= 0 means no cap).
 func joinNonEmpty(values []string, limit int) string {

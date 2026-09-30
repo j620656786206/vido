@@ -1607,13 +1607,30 @@ func (s *TranscriptionService) translationRunVersion(ctx context.Context, metada
 // an unwired reader or a failed lookup falls back to mediaID (the pre-fix
 // behavior — degraded consistency, never a failed run).
 func (s *TranscriptionService) glossaryMediaKey(ctx context.Context, mediaType, mediaID string) string {
+	return glossaryKeyFor(mediaID, s.episodeRowFor(ctx, mediaType, mediaID))
+}
+
+// episodeRowFor reads the episode row ONCE for an episode run — the parent
+// series id (glossary + metadata key) and the per-episode prompt line
+// (sub-7-2a) both come from it. nil for movies, series runs, an unwired
+// reader, or a failed read (each caller then falls soft on its own).
+func (s *TranscriptionService) episodeRowFor(ctx context.Context, mediaType, mediaID string) *models.Episode {
 	if mediaType != models.SubtitleRunMediaEpisode || s.episodeReader == nil {
-		return mediaID
+		return nil
 	}
 	episode, err := s.episodeReader.FindByID(ctx, mediaID)
 	if err != nil || episode == nil || episode.SeriesID == "" {
 		s.logger.Warn("glossary key resolve failed — falling back to the episode's own id",
 			"media_id", mediaID, "error", err)
+		return nil
+	}
+	return episode
+}
+
+// glossaryKeyFor is the SHOW-level key: the parent series for an episode, the
+// row itself otherwise.
+func glossaryKeyFor(mediaID string, episode *models.Episode) string {
+	if episode == nil {
 		return mediaID
 	}
 	return episode.SeriesID
@@ -1690,7 +1707,11 @@ func (s *TranscriptionService) mediaMetadataFor(ctx context.Context, mediaType, 
 			Year:          releaseYear(movie.ReleaseDate),
 			Genres:        movie.Genres,
 			Overview:      movie.Overview.String,
-			Countries:     productionCountryCodes(movie.ProductionCountries),
+			// sub-7-2a AC #1 — mirrors subtitle/media_store.go loadMovie, and
+			// MUST keep doing so: the two legs share segment-cache keys only
+			// while their MediaMetadata agree byte for byte.
+			Cast:      movie.CastLabels(prompts.MetadataCastLimit),
+			Countries: productionCountryCodes(movie.ProductionCountries),
 		}, movie.TMDbID.Valid, mediaID, mediaType, s.logger)
 
 	case models.SubtitleRunMediaEpisode, models.SubtitleRunMediaSeries:
@@ -1719,18 +1740,35 @@ func (s *TranscriptionService) mediaMetadataFor(ctx context.Context, mediaType, 
 			return prompts.MediaMetadata{}
 		}
 		// Countries stay empty: the series table carries no production_countries
-		// column, exactly as seriesContext leaves it on the extract leg.
+		// column, exactly as seriesContext leaves it on the extract leg
+		// (sub-7-2b adds it to both legs at once).
 		return withoutUntrustedIdentity(prompts.MediaMetadata{
 			Title:         series.Title,
 			OriginalTitle: series.OriginalTitle.String,
 			Year:          releaseYear(series.FirstAirDate),
 			Genres:        series.Genres,
 			Overview:      series.Overview.String,
+			Cast:          series.CastLabels(prompts.MetadataCastLimit), // sub-7-2a AC #1, mirrors seriesContext
 		}, series.TMDbID.Valid, mediaID, mediaType, s.logger)
 
 	default:
 		return prompts.MediaMetadata{}
 	}
+}
+
+// episodeLabelOf renders the per-episode prompt line ("S01E03 · Title",
+// sub-7-2a AC #3); "" for a nil row or one without numbers (the line is
+// optional context). Mirrors subtitle/media_store.go episodeLabel (Rule 19 —
+// see releaseYear).
+func episodeLabelOf(episode *models.Episode) string {
+	if episode == nil || (episode.SeasonNumber <= 0 && episode.EpisodeNumber <= 0) {
+		return ""
+	}
+	label := fmt.Sprintf("S%02dE%02d", episode.SeasonNumber, episode.EpisodeNumber)
+	if title := strings.TrimSpace(episode.Title.String); title != "" {
+		label += " · " + title
+	}
+	return label
 }
 
 // releaseYear extracts the year from an ISO date. An empty or unparseable date
@@ -1802,7 +1840,8 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 	// across the whole subtitle and across runs (keystone payoff).
 	// CR sub-5-5 H1: feed AND harvest key on the SHOW-level glossary — for an
 	// episode that is the parent series id, not the episode's own id.
-	glossaryKey := s.glossaryMediaKey(ctx, mediaType, mediaID)
+	episodeRow := s.episodeRowFor(ctx, mediaType, mediaID) // one read serves the key AND the sub-7-2a episode line
+	glossaryKey := glossaryKeyFor(mediaID, episodeRow)
 	glossary := s.loadGlossary(ctx, glossaryKey)
 	if len(glossary) > 0 {
 		s.logger.Info("translating with per-show glossary",
@@ -1834,6 +1873,7 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 	translated, harvestedTerms, outcome, err := s.translationService.TranslateWithGlossaryHarvest(
 		ctx, blocks, glossary, progressFn,
 		WithMediaMetadata(metadata), WithLocalizationLevel(level),
+		WithEpisodeLabel(episodeLabelOf(episodeRow)),
 		WithSegmentCache(s.segmentStore, version))
 	if err != nil {
 		return "", TranslationOutcome{}, fmt.Errorf("translate: %w", err)

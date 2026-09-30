@@ -339,3 +339,72 @@ func TestMediaStore_UnmatchedSeriesWithFilenameTitleSendsNoIdentity(t *testing.T
 	assert.Empty(t, item.Context.Title)
 	assert.Zero(t, item.Context.Year)
 }
+
+// ─── sub-7-2a: cast reaches the prompt, the episode line stays out of the hash ──
+
+func TestMediaStore_LoadMovieCarriesTheStoredCast(t *testing.T) {
+	movie := &models.Movie{
+		ID: "m1", Title: "駭客任務", TMDbID: models.NewNullInt64(603),
+		FilePath: models.NewNullString("/media/matrix.mkv"),
+	}
+	require.NoError(t, movie.SetCredits(&models.Credits{Cast: []models.CastMember{
+		{Name: "Keanu Reeves", Character: "Neo"},
+		{Name: "Carrie-Anne Moss", Character: "Trinity"},
+		{Name: "Hugo Weaving"},
+	}}))
+	store := NewMediaStore(&fakeMovieRepo{movie: movie}, nil, nil)
+
+	item, err := store.Load(context.Background(), MediaRef{ID: "m1", MediaType: models.SubtitleRunMediaMovie})
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"Keanu Reeves（Neo）", "Carrie-Anne Moss（Trinity）", "Hugo Weaving"}, item.Context.Cast,
+		"TranslateContext.Cast was never assigned before sub-7-2a — MetadataCastLimit was dead code")
+	assert.NotEqual(t, MetadataHash(TranslateContext{Title: "駭客任務"}), MetadataHash(item.Context),
+		"cast is part of the hash: a run made without it must not be served back as if it had it")
+}
+
+func TestMediaStore_LoadMovieWithoutCreditsHasNoCast(t *testing.T) {
+	store := NewMediaStore(&fakeMovieRepo{movie: &models.Movie{ID: "m1", Title: "無名", TMDbID: models.NewNullInt64(1)}}, nil, nil)
+	item, err := store.Load(context.Background(), MediaRef{ID: "m1", MediaType: models.SubtitleRunMediaMovie})
+	require.NoError(t, err)
+	assert.Nil(t, item.Context.Cast)
+}
+
+func TestMediaStore_LoadEpisodeCarriesTheShowCastAndItsOwnEpisodeLine(t *testing.T) {
+	series := &models.Series{ID: "s-42", Title: "怪奇物語", TMDbID: models.NewNullInt64(66732)}
+	require.NoError(t, series.SetCredits(&models.Credits{Cast: []models.CastMember{
+		{Name: "Winona Ryder", Character: "Joyce Byers"},
+		{Name: "David Harbour", Character: "Jim Hopper"},
+	}}))
+	episodes := &fakeEpisodeRepo{episode: &models.Episode{
+		ID: "ep-3", SeriesID: "s-42", SeasonNumber: 1, EpisodeNumber: 3,
+		Title:    models.NewNullString("Chapter Three: Holly, Jolly"),
+		FilePath: models.NewNullString("/media/s01e03.mkv"),
+	}}
+	store := NewMediaStore(nil, &fakeSeriesRepo{series: series}, episodes)
+
+	item, err := store.Load(context.Background(), MediaRef{ID: "ep-3", MediaType: models.SubtitleRunMediaEpisode})
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"Winona Ryder（Joyce Byers）", "David Harbour（Jim Hopper）"}, item.Context.Cast,
+		"the cast is SHOW-level: every episode shares it")
+	assert.Equal(t, "S01E03 · Chapter Three: Holly, Jolly", item.Context.EpisodeLabel)
+
+	// The episode line must not split the segment cache: another episode of the
+	// same show, with a different title, hashes identically.
+	episodes.episode = &models.Episode{ID: "ep-4", SeriesID: "s-42", SeasonNumber: 1, EpisodeNumber: 4,
+		Title: models.NewNullString("Chapter Four: The Body"), FilePath: models.NewNullString("/media/s01e04.mkv")}
+	other, err := store.Load(context.Background(), MediaRef{ID: "ep-4", MediaType: models.SubtitleRunMediaEpisode})
+	require.NoError(t, err)
+	assert.Equal(t, "S01E04 · Chapter Four: The Body", other.Context.EpisodeLabel)
+	assert.Equal(t, MetadataHash(item.Context), MetadataHash(other.Context),
+		"EpisodeLabel is outside MetadataHash — two episodes of one show still share one key")
+}
+
+func TestMediaStore_EpisodeLabel(t *testing.T) {
+	assert.Equal(t, "", episodeLabel(nil))
+	assert.Equal(t, "", episodeLabel(&models.Episode{Title: models.NewNullString("Untitled")}),
+		"no numbers, no label — a bare title is not an episode identity")
+	assert.Equal(t, "S02E10", episodeLabel(&models.Episode{SeasonNumber: 2, EpisodeNumber: 10}))
+	assert.Equal(t, "S00E01 · Pilot", episodeLabel(&models.Episode{EpisodeNumber: 1, Title: models.NewNullString(" Pilot ")}))
+}

@@ -605,3 +605,60 @@ func TestProductionCountryCodes(t *testing.T) {
 		{ISO3166_1: "", Name: "Empty"},
 	}))
 }
+
+// ─── sub-7-2a: cast reaches this leg too, and the episode line is per-episode ──
+
+func TestTranslateSRT_MovieCastReachesTheSystemPrompt(t *testing.T) {
+	mockProvider := &translationIntegrationMock{response: "[1] 你好世界"}
+	svc := NewTranscriptionService(nil, nil, nil, nil)
+	svc.SetTranslationService(NewTranslationService(mockProvider, nil))
+	movie := fixtureMovie()
+	movie.TMDbID = models.NewNullInt64(550)
+	require.NoError(t, movie.SetCredits(&models.Credits{Cast: []models.CastMember{
+		{Name: "Brad Pitt", Character: "Tyler Durden"},
+		{Name: "Edward Norton", Character: "The Narrator"},
+	}}))
+	svc.SetSubtitleStateReader(&metadataMovieReader{movie: movie})
+
+	tmpDir := t.TempDir()
+	_, _, err := svc.translateSRT(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidA,
+		"1\n00:00:01,000 --> 00:00:04,000\nHello world\n", filepath.Join(tmpDir, "movie.mkv"), tmpDir)
+	require.NoError(t, err)
+
+	assert.Contains(t, mockProvider.lastSystemPrompt, "- Cast: Brad Pitt（Tyler Durden）, Edward Norton（The Narrator）\n",
+		"TranslateContext.Cast was dead on both legs before sub-7-2a")
+}
+
+// The episode's own identity now reaches the prompt — but ONLY in the episode
+// section after the show-level block, never inside the Media context section
+// that both legs hash into MetadataHash. And it costs no extra row read: the
+// same episode row that resolved the glossary key supplies the label.
+func TestTranslateSRT_EpisodeLineIsRenderedOutsideTheShowContext(t *testing.T) {
+	mockProvider := &translationIntegrationMock{response: "[1] 你好世界"}
+	svc := NewTranscriptionService(nil, nil, nil, nil)
+	svc.SetTranslationService(NewTranslationService(mockProvider, nil))
+	episodes := &metadataEpisodeReader{episode: &models.Episode{
+		ID: uuidB, SeriesID: uuidC, SeasonNumber: 5, EpisodeNumber: 16,
+		Title: models.NewNullString("The Body"),
+	}}
+	series := &metadataSeriesReader{series: &models.Series{
+		ID: uuidC, Title: "Buffy the Vampire Slayer", FirstAirDate: "1997-03-10", TMDbID: models.NewNullInt64(95),
+	}}
+	svc.SetEpisodeSubtitleStateReader(episodes)
+	svc.SetSeriesMetadataReader(series)
+
+	tmpDir := t.TempDir()
+	_, _, err := svc.translateSRT(context.Background(), "job-1", models.SubtitleRunMediaEpisode, uuidB,
+		"1\n00:00:01,000 --> 00:00:04,000\nHello world\n", filepath.Join(tmpDir, "s05e16.mkv"), tmpDir)
+	require.NoError(t, err)
+
+	sys := mockProvider.lastSystemPrompt
+	showSection := prompts.BuildMetadataSection(svc.mediaMetadataFor(context.Background(),
+		models.SubtitleRunMediaEpisode, uuidB, uuidC))
+	assert.Contains(t, sys, showSection)
+	assert.NotContains(t, showSection, "The Body", "the show-level (hashed, cached) section never carries the episode")
+	assert.Contains(t, sys, "- Episode: S05E16 · The Body\n")
+	assert.Greater(t, strings.Index(sys, "- Episode:"), strings.Index(sys, "- Title: Buffy"),
+		"episode line comes AFTER the show context — same order as the extract leg's third block")
+	assert.Equal(t, 1, episodes.callCount, "the label rides the row glossaryKey already read — no second episode read")
+}

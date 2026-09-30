@@ -150,6 +150,16 @@ Notes:
   (an encrypted stored key wins over the environment variable, which wins over
   the bundled TMDb key), so saving one takes effect immediately and no restart
   is needed.
+- **Show context in the translation prompt now includes the cast (sub-7-2a).**
+  Since sub-7-3 Vido stores each matched title's TMDb cast; the translator
+  now sees it (up to ten「Name（Character）」entries) next to the title, year,
+  genres and countries, and an episode run also gets its own
+  「S01E03 · Title」line. The cast is part of the per-show cache key, so a
+  subtitle translated before this change is not served back as if it had
+  been made with the cast: a **forced** re-generation re-translates (and is
+  billed) with the fuller context. Nothing re-runs by itself — a finished
+  sidecar next to the media still satisfies the pre-flight check, exactly as
+  before.
 - **Self-hosted speech recognition needs no key (sub-5-2).** With `ASR_BASE_URL`
   pointed at an OpenAI-compatible engine (Speaches, WhisperLive, Subgen), leave
   `OPENAI_API_KEY` unset — the request carries no `Authorization` header at all,

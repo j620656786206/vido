@@ -62,6 +62,9 @@ type TranslateOption func(*translateConfig)
 type translateConfig struct {
 	metadata prompts.MediaMetadata
 	level    prompts.LocalizationLevel
+	// episode is the per-episode line (sub-7-2a AC #3); "" for movies. It is
+	// rendered after the per-show section and is NOT part of RunVersion.
+	episode string
 	// store + version are the resume seam
 	// (disc-2026-09-generation-resume-a-translation-cache). nil store = the
 	// pre-story behaviour, byte for byte.
@@ -81,6 +84,14 @@ func WithLocalizationLevel(level prompts.LocalizationLevel) TranslateOption {
 // renders nothing — see composeSystemPrompt.
 func WithMediaMetadata(md prompts.MediaMetadata) TranslateOption {
 	return func(cfg *translateConfig) { cfg.metadata = md }
+}
+
+// WithEpisodeLabel attaches the per-episode line ("S01E03 · Chapter One",
+// sub-7-2a AC #3). Kept apart from WithMediaMetadata because MediaMetadata is
+// what MetadataHash digests: an episode label in it would give every episode
+// of a show its own segment-cache key. The zero value renders nothing.
+func WithEpisodeLabel(label string) TranslateOption {
+	return func(cfg *translateConfig) { cfg.episode = label }
 }
 
 // WithSegmentCache makes this translation resumable: every cue already
@@ -132,16 +143,19 @@ func newTranslateConfig(opts []TranslateOption) *translateConfig {
 // reach the model, so this is a structural difference rather than a behavioural
 // one, but the two legs should converge when the ASR path is folded into the
 // gated TranslateTrack (sprint-status `backlog-asr-leg-unify-gated-pipeline`).
-func composeSystemPrompt(md prompts.MediaMetadata, level prompts.LocalizationLevel) string {
+func composeSystemPrompt(md prompts.MediaMetadata, level prompts.LocalizationLevel, episode string) string {
 	// sub-7-4: the invariant prefix (translator prompt + localization style +
 	// global lexicon terms) is the same text the extract leg puts in
-	// block[0]; the per-show media context follows it.
-	invariant := prompts.ComposeInvariantSystemPrompt(level)
-	section := prompts.BuildMetadataSection(md)
-	if section == "" {
-		return invariant
+	// block[0]; the per-show media context follows it; the per-episode line
+	// (sub-7-2a) comes last, the same order the extract leg's third block has.
+	prompt := prompts.ComposeInvariantSystemPrompt(level)
+	if section := prompts.BuildMetadataSection(md); section != "" {
+		prompt += "\n\n" + section
 	}
-	return invariant + "\n\n" + section
+	if section := prompts.BuildEpisodeSection(episode); section != "" {
+		prompt += "\n\n" + section
+	}
+	return prompt
 }
 
 // TranslationField is one arbitrary keyed piece of text to translate. Key is a
@@ -387,7 +401,7 @@ func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, b
 	promptGlossary := toPromptGlossary(glossary)
 	// 9R-8: composed ONCE — the media context is per-run, not per-batch.
 	cfg := newTranslateConfig(opts)
-	systemPrompt := composeSystemPrompt(cfg.metadata, cfg.level)
+	systemPrompt := composeSystemPrompt(cfg.metadata, cfg.level, cfg.episode)
 
 	batchSize := prompts.SubtitleTranslatorBatchSize
 	contextWindow := prompts.SubtitleTranslatorContextWindow
