@@ -33,7 +33,11 @@ export interface PendingSection {
   error?: string;
 }
 export interface DownloadsSection {
-  status: SectionStatus;
+  /**
+   * `not_configured`: qBittorrent has not been set up — nothing failed
+   * (disc-activity-downloads-unconfigured-copy [@contract-v1], downloads only).
+   */
+  status: SectionStatus | 'not_configured';
   downloading: number;
   queued: number;
   /** Count of errored torrents (bugfix-e). Distinct from `error`, the section failure MESSAGE. */

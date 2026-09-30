@@ -416,3 +416,29 @@ func TestQBittorrentService_IsConfigured(t *testing.T) {
 		})
 	}
 }
+
+// disc-activity-downloads-unconfigured-copy: only a MISSING host means "not
+// configured"; a failed read must surface as an error, not as an empty host.
+func TestQBittorrentService_GetConfig_HostReadFailureIsAnError(t *testing.T) {
+	repo := new(MockQBSettingsRepo)
+	repo.On("GetString", mock.Anything, SettingQBHost).Return("", errors.New("database is locked"))
+	svc := NewQBittorrentService(repo, new(MockQBSecretsService))
+
+	_, err := svc.GetConfig(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "database is locked")
+}
+
+func TestQBittorrentService_GetConfig_MissingHostIsNotAnError(t *testing.T) {
+	repo := new(MockQBSettingsRepo)
+	repo.On("GetString", mock.Anything, SettingQBHost).Return("", errors.New("setting with key qbittorrent.host not found"))
+	repo.On("GetString", mock.Anything, SettingQBUsername).Return("", nil)
+	repo.On("GetString", mock.Anything, SettingQBBasePath).Return("", nil)
+	secrets := new(MockQBSecretsService)
+	secrets.On("Exists", mock.Anything, SettingQBPassword).Return(false, nil)
+	svc := NewQBittorrentService(repo, secrets)
+
+	cfg, err := svc.GetConfig(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, "", cfg.Host)
+}
