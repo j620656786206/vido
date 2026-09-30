@@ -211,6 +211,24 @@ describe('ScannerSettings', () => {
     });
   });
 
+  // disc-2026-09-scan-trigger-error-english: no English from the server or the
+  // network reaches the notification.
+  it('any other failure reads in zh-TW', async () => {
+    mockTriggerScan.mockRejectedValue({ code: 'INTERNAL_ERROR', message: 'Failed to fetch' });
+    renderWithProviders();
+    fireEvent.click(screen.getByTestId('scan-trigger-button'));
+    const note = await screen.findByTestId('scanner-notification');
+    expect(note).toHaveTextContent('掃描沒有開始，請再試一次。');
+    expect(note).not.toHaveTextContent('Failed');
+  });
+
+  it('a zh-TW server reason is shown as is', async () => {
+    mockTriggerScan.mockRejectedValue({ code: 'SCANNER_BUSY', message: '掃描伺服器忙線中' });
+    renderWithProviders();
+    fireEvent.click(screen.getByTestId('scan-trigger-button'));
+    expect(await screen.findByTestId('scanner-notification')).toHaveTextContent('掃描伺服器忙線中');
+  });
+
   it('calls updateSchedule on schedule change', async () => {
     mockUpdateSchedule.mockResolvedValue({ interval: 'daily' });
     renderWithProviders();

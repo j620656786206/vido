@@ -137,4 +137,29 @@ describe('EmptyReadyForScan (bugfix-10-5 Case C: ready, library empty)', () => {
       );
     });
   });
+
+  // disc-2026-09-scan-trigger-error-english
+  it('a scan already running says so, not 掃描已啟動', async () => {
+    mockMutateAsync.mockRejectedValueOnce({
+      code: 'SCANNER_ALREADY_RUNNING',
+      message: '掃描已在進行中',
+    });
+    renderComponent();
+    fireEvent.click(screen.getByTestId('empty-ready-for-scan-trigger-btn'));
+    const note = await screen.findByTestId('empty-ready-for-scan-notification');
+    expect(note).toHaveTextContent('掃描已在進行中');
+    expect(note).not.toHaveTextContent('掃描已啟動');
+    // A warning, not an error — nothing failed, a scan is simply running.
+    expect(note.className).toContain('--warning-tint');
+    expect(note.className).not.toContain('--error-tint');
+  });
+
+  it('an English server or network message becomes a zh-TW retry line', async () => {
+    mockMutateAsync.mockRejectedValueOnce({ code: 'INTERNAL_ERROR', message: 'Failed to fetch' });
+    renderComponent();
+    fireEvent.click(screen.getByTestId('empty-ready-for-scan-trigger-btn'));
+    const note = await screen.findByTestId('empty-ready-for-scan-notification');
+    expect(note).toHaveTextContent('掃描沒有開始，請再試一次。');
+    expect(note).not.toHaveTextContent('Failed');
+  });
 });

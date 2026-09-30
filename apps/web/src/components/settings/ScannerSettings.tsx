@@ -50,6 +50,9 @@ function formatLastScan(lastScan: LastScan | null | undefined): string {
   return `${when} · ${lastScan.filesFound.toLocaleString('zh-TW')} 檔案 · 耗時 ${formatScanDuration(lastScan.durationMs)}`;
 }
 
+// A server message written for people (zh-TW) contains CJK characters.
+const HAS_CJK = /[\u3400-\u9fff]/;
+
 export function ScannerSettings() {
   const { data: status, isLoading: statusLoading } = useScanStatus();
   const { data: schedule, isLoading: scheduleLoading } = useScanSchedule();
@@ -97,7 +100,13 @@ export function ScannerSettings() {
       if (apiErr.code === 'SCANNER_ALREADY_RUNNING') {
         showNotification('warning', '掃描已在進行中');
       } else {
-        showNotification('error', apiErr.message || '掃描觸發失敗');
+        // Server/network messages are mostly developer English
+        // (disc-2026-09-scan-trigger-error-english): pass a zh-TW one through,
+        // otherwise say it plainly.
+        showNotification(
+          'error',
+          HAS_CJK.test(apiErr?.message ?? '') ? apiErr.message : '掃描沒有開始，請再試一次。'
+        );
       }
     }
   };
