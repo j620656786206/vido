@@ -1,6 +1,6 @@
 # Story sub-7-7b: 內建 TMDb 金鑰——設定頁與精靈的文字
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-09-30，由 sub-7-7 拆出；依賴 sub-7-7a 先合併（後端已回 source="bundled"、429 會標 rate_limited）。
      行號為 main `3e6e354a`。 -->
@@ -94,3 +94,4 @@ Claude Fable 5.1（Amelia）
 | ---------- | ---------------------------------------- |
 | 2026-09-30 | create-story（SM Bob，自 sub-7-7 拆出）。 |
 | 2026-09-30 | dev-story（Amelia）→ review；Task 4（.pen）交 Alexyu 跑 inline agent。 |
+| 2026-09-30 | PR #626 合併（linux 基準 #627）→ done；Task 4 `.pen` 文案待 Alexyu 跑 inline agent。 |
