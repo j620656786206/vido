@@ -87,6 +87,12 @@ func IsImageSubtitleCodec(codec string) bool {
 // isEnglishTag implements the P0 language gate: M1 accepts ONLY tracks tagged
 // eng/en. `und` is NEVER treated as English — an untagged track is exactly the
 // case where guessing mistranslates, so the pipeline fails closed.
+// IsEnglishLanguageTag is isEnglishTag for sibling packages (subtitle/mine).
+func IsEnglishLanguageTag(lang string) bool { return isEnglishTag(lang) }
+
+// IsChineseLanguageTag is isChineseTag for sibling packages (subtitle/mine).
+func IsChineseLanguageTag(lang string) bool { return isChineseTag(lang) }
+
 func isEnglishTag(lang string) bool {
 	switch strings.ToLower(strings.TrimSpace(lang)) {
 	case "eng", "en":
