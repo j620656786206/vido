@@ -161236,7 +161236,7 @@
                   "type": "frame",
                   "id": "pYy2o",
                   "x": 0,
-                  "y": 199,
+                  "y": 95,
                   "name": "sheet",
                   "clip": true,
                   "width": 390,
@@ -161666,6 +161666,161 @@
                                           "fontFamily": "$Type/Family/Mono",
                                           "fontSize": "$Type/Label/Size",
                                           "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "v1GkiD",
+                                  "name": "model-row-opus",
+                                  "width": "fill_container",
+                                  "cornerRadius": "$radius-sm",
+                                  "layout": "vertical",
+                                  "gap": "$Space/xs",
+                                  "padding": [
+                                    "$Space/sm",
+                                    "$Space/sm-plus"
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "lWOfX",
+                                      "name": "row-top",
+                                      "width": "fill_container",
+                                      "gap": "$Space/sm-plus",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "Jm7it",
+                                          "name": "radio",
+                                          "width": 16,
+                                          "height": 16,
+                                          "cornerRadius": "$radius-pill",
+                                          "stroke": "$border-subtle",
+                                          "strokeWidth": 2,
+                                          "strokeAlignment": "inner",
+                                          "justifyContent": "center",
+                                          "alignItems": "center"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "wYJ83",
+                                          "name": "model-name",
+                                          "fill": "$text-primary",
+                                          "content": "Claude Opus 4.8",
+                                          "lineHeight": "$Type/Body/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Body/Size",
+                                          "fontWeight": "$Type/Body/Weight"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "rtR8h",
+                                          "name": "push",
+                                          "width": "fill_container",
+                                          "height": 1
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "MFmIC",
+                                          "name": "model-usd",
+                                          "fill": "$text-primary",
+                                          "content": "約 $7.50",
+                                          "lineHeight": "$Type/Body/Line",
+                                          "fontFamily": "$Type/Family/Mono",
+                                          "fontSize": "$Type/Body/Size",
+                                          "fontWeight": "700"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "g3V3Fs",
+                                      "name": "row-meta",
+                                      "gap": "$Space/sm",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "ic5xT",
+                                          "name": "meta-indent",
+                                          "width": 26,
+                                          "height": 1
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "g2xaGV",
+                                          "name": "grade-badge",
+                                          "fill": "$bg-tertiary",
+                                          "cornerRadius": "$radius-pill",
+                                          "padding": [
+                                            "$Space/2xs",
+                                            "$Space/xs-plus"
+                                          ],
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "J1SnZ",
+                                              "name": "grade-text",
+                                              "fill": "$text-muted",
+                                              "content": "尚未評測",
+                                              "lineHeight": "$Type/Label/Line",
+                                              "fontFamily": "$Type/Family/Primary",
+                                              "fontSize": "$Type/Label/Size",
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "k3MUys",
+                                          "name": "model-minutes",
+                                          "fill": "$text-secondary",
+                                          "content": "約 12 分鐘",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Mono",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "XCtzW",
+                                      "name": "row-btn",
+                                      "gap": "$Space/sm",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "RDuZb",
+                                          "name": "btn-indent",
+                                          "width": 26,
+                                          "height": 1
+                                        },
+                                        {
+                                          "id": "HsOc0",
+                                          "type": "ref",
+                                          "ref": "qAERt",
+                                          "name": "btn-tryrun",
+                                          "height": 28,
+                                          "padding": [
+                                            0,
+                                            "$Space/sm"
+                                          ],
+                                          "descendants": {
+                                            "StNiU": {
+                                              "content": "試跑 20 句",
+                                              "fontSize": 12
+                                            },
+                                            "ASE9e": {
+                                              "content": "$0.06",
+                                              "fontSize": 12
+                                            }
+                                          }
                                         }
                                       ]
                                     }
