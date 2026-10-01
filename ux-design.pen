@@ -203034,6 +203034,750 @@
               ]
             }
           ]
+        },
+        {
+          "type": "frame",
+          "id": "ctRsy",
+          "x": 27520,
+          "y": 49561,
+          "name": "J10 · 模型列三態（試跑 20 句）",
+          "width": 1240,
+          "fill": "$bg-primary",
+          "layout": "vertical",
+          "gap": "$Space/xl-plus",
+          "padding": "$Space/2xl",
+          "children": [
+            {
+              "type": "frame",
+              "id": "pD69W",
+              "name": "sec-ruling",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": "$Space/md",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "t89MI",
+                  "name": "sh",
+                  "fill": "$text-secondary",
+                  "content": "A · 裁定（⚖️ Alexyu 2026-10-01）",
+                  "lineHeight": "$Type/Body/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Body/Size",
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "Ta0lO",
+                  "name": "note",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "沒評過的模型可以用考卷前 20 句、用你自己的 key 試跑；結果只留在這台機器，標「你的實測」，永遠不會變成 Vido 的官方等級。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "o2Ocn",
+                  "name": "note",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "試跑是會花錢的動作，按鈕照 J9 的規矩直接帶金額；金額由後端依模型費率算，不寫死。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "jXzUN",
+                  "name": "note",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "試跑不是媒體 run：不進 subtitle_runs、不進「本月 AI 花費」。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "HGaIW",
+              "name": "sec-states",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": "$Space/md",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "veih1",
+                  "name": "sh",
+                  "fill": "$text-secondary",
+                  "content": "B · 四個狀態（定稿文案）",
+                  "lineHeight": "$Type/Body/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Body/Size",
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "M4mTp0",
+                  "name": "state-list",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": "$Space/sm-plus",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "xO2Lf",
+                      "name": "row-① ",
+                      "width": "fill_container",
+                      "fill": "$bg-secondary",
+                      "cornerRadius": "$radius-md",
+                      "gap": "$Space/lg",
+                      "padding": "$Space/md",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Vwpsp",
+                          "name": "cap",
+                          "width": 240,
+                          "layout": "vertical",
+                          "gap": "$Space/xs",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "T9FWm",
+                              "name": "t",
+                              "fill": "$text-primary",
+                              "content": "① 尚未評測",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "TuHB9",
+                              "name": "c",
+                              "fill": "$text-muted",
+                              "content": "可點",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "nvC1a",
+                          "name": "slot",
+                          "width": 460,
+                          "gap": "$Space/sm",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "tSnGs",
+                              "name": "grade-badge",
+                              "fill": "$bg-tertiary",
+                              "cornerRadius": "$radius-pill",
+                              "padding": [
+                                "$Space/2xs",
+                                "$Space/xs-plus"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "snWfX",
+                                  "name": "grade-text",
+                                  "fill": "$text-muted",
+                                  "content": "尚未評測",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "TeBIY",
+                              "name": "model-minutes",
+                              "fill": "$text-secondary",
+                              "content": "約 12 分鐘",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Mono",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "lrQa8",
+                              "type": "ref",
+                              "ref": "qAERt",
+                              "name": "btn-tryrun",
+                              "height": 24,
+                              "padding": [
+                                0,
+                                "$Space/sm"
+                              ],
+                              "descendants": {
+                                "StNiU": {
+                                  "content": "試跑 20 句",
+                                  "fontSize": 12
+                                },
+                                "ASE9e": {
+                                  "content": "$0.06",
+                                  "fontSize": 12
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "tmbvA",
+                          "name": "desc",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "金額＝preview_estimate_usd；有官方等級的列不顯示這顆按鈕。",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "AlADq",
+                      "name": "row-② ",
+                      "width": "fill_container",
+                      "fill": "$bg-secondary",
+                      "cornerRadius": "$radius-md",
+                      "gap": "$Space/lg",
+                      "padding": "$Space/md",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "IfPxW",
+                          "name": "cap",
+                          "width": 240,
+                          "layout": "vertical",
+                          "gap": "$Space/xs",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "nCcwY",
+                              "name": "t",
+                              "fill": "$text-primary",
+                              "content": "② 試跑中",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "IlvJQ",
+                              "name": "c",
+                              "fill": "$text-muted",
+                              "content": "暫時不可點",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "d4g6yl",
+                          "name": "slot",
+                          "width": 460,
+                          "gap": "$Space/sm",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "sEJCS",
+                              "name": "grade-badge",
+                              "fill": "$bg-tertiary",
+                              "cornerRadius": "$radius-pill",
+                              "padding": [
+                                "$Space/2xs",
+                                "$Space/xs-plus"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "OHntc",
+                                  "name": "grade-text",
+                                  "fill": "$text-muted",
+                                  "content": "尚未評測",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "avL76",
+                              "name": "model-minutes",
+                              "fill": "$text-secondary",
+                              "content": "約 12 分鐘",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Mono",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "i2OfD6",
+                              "type": "ref",
+                              "ref": "zhIx7",
+                              "name": "btn-tryrun-loading",
+                              "height": 24,
+                              "padding": [
+                                0,
+                                "$Space/sm"
+                              ],
+                              "descendants": {
+                                "iYSI7": {
+                                  "content": "試跑 20 句",
+                                  "fontSize": 12
+                                }
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "daYjs",
+                              "name": "hint",
+                              "fill": "$text-secondary",
+                              "content": "約 1 分鐘，請勿關閉視窗",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "m1GiV8",
+                          "name": "desc",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "整個對話框的「確認產生字幕」主按鈕在試跑期間一樣停用，報價不能在試跑時改變。",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "P8F8X",
+                      "name": "row-③ ",
+                      "width": "fill_container",
+                      "fill": "$bg-secondary",
+                      "cornerRadius": "$radius-md",
+                      "gap": "$Space/lg",
+                      "padding": "$Space/md",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "HZmJb",
+                          "name": "cap",
+                          "width": 240,
+                          "layout": "vertical",
+                          "gap": "$Space/xs",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "sF6Zf",
+                              "name": "t",
+                              "fill": "$text-primary",
+                              "content": "③ 你的實測",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "QLkCp",
+                              "name": "c",
+                              "fill": "$text-muted",
+                              "content": "可點",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Q0v2Xl",
+                          "name": "slot",
+                          "width": 460,
+                          "gap": "$Space/sm",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "pqInP",
+                              "name": "grade-badge",
+                              "fill": "$bg-tertiary",
+                              "cornerRadius": "$radius-pill",
+                              "padding": [
+                                "$Space/2xs",
+                                "$Space/xs-plus"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "j4y6bo",
+                                  "name": "grade-text",
+                                  "fill": "$text-muted",
+                                  "content": "尚未評測",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "nch2k",
+                              "name": "model-minutes",
+                              "fill": "$text-secondary",
+                              "content": "約 12 分鐘",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Mono",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "igDMY",
+                              "name": "hint",
+                              "fill": "$text-secondary",
+                              "content": "你的實測：0 分 5%・2 分 70%・花 $0.05",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "bzlnm",
+                              "name": "hint",
+                              "fill": "$text-muted",
+                              "content": "再試一次",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "M19Wb",
+                          "name": "desc",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "不給 A／B／C 字母、不套官方徽章色——這是你這台機器的 20 句，不是 Vido 的 200 句。",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "pVv7l",
+                      "name": "row-④ ",
+                      "width": "fill_container",
+                      "fill": "$bg-secondary",
+                      "cornerRadius": "$radius-md",
+                      "gap": "$Space/lg",
+                      "padding": "$Space/md",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "bhZ2Z",
+                          "name": "cap",
+                          "width": 240,
+                          "layout": "vertical",
+                          "gap": "$Space/xs",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "B4G81P",
+                              "name": "t",
+                              "fill": "$text-primary",
+                              "content": "④ 試跑失敗",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "SzjGq",
+                              "name": "c",
+                              "fill": "$text-muted",
+                              "content": "可點，可重試",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "IkTAV",
+                          "name": "slot",
+                          "width": 460,
+                          "gap": "$Space/sm",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Z7z5o",
+                              "name": "grade-badge",
+                              "fill": "$bg-tertiary",
+                              "cornerRadius": "$radius-pill",
+                              "padding": [
+                                "$Space/2xs",
+                                "$Space/xs-plus"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "PWk14",
+                                  "name": "grade-text",
+                                  "fill": "$text-muted",
+                                  "content": "尚未評測",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "nY0yA",
+                              "name": "model-minutes",
+                              "fill": "$text-secondary",
+                              "content": "約 12 分鐘",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Mono",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "ZdG8T",
+                              "type": "ref",
+                              "ref": "qAERt",
+                              "name": "btn-tryrun",
+                              "height": 24,
+                              "padding": [
+                                0,
+                                "$Space/sm"
+                              ],
+                              "descendants": {
+                                "StNiU": {
+                                  "content": "試跑 20 句",
+                                  "fontSize": 12
+                                },
+                                "ASE9e": {
+                                  "content": "$0.06",
+                                  "fontSize": 12
+                                }
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "xmqCZ",
+                              "name": "hint",
+                              "fill": "$error-text",
+                              "content": "試跑失敗，沒有扣款",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "EBkB1",
+                          "name": "desc",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "按鈕回到 ①；若後端回了金額，則改寫「試跑失敗，已扣 $0.02」。",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "KfouK",
+              "name": "sec-edges",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": "$Space/md",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "ycoOm",
+                  "name": "sh",
+                  "fill": "$text-secondary",
+                  "content": "C · 邊界情況",
+                  "lineHeight": "$Type/Body/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Body/Size",
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "re8EA",
+                  "name": "note",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "60 秒內同一模型再按 → 按鈕停用（Component/ButtonCost/Disabled，dqE4G），說明列「剛剛試跑過，稍後再試」。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "vKCWl",
+                  "name": "note",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "預算打到上限（incomplete）→ 仍顯示 ③，但文字改「只跑了 n 句就到上限：0 分 x%・2 分 y%・花 $z」。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "vl0KX",
+                  "name": "note",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "金鑰未設定 → 按鈕停用，說明「先到 設定 → API 金鑰 存一組 Claude 金鑰」（同 J9 ⑥）。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "BHMib",
+                  "name": "note",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "preview_estimate_usd 缺或 0 → 按鈕停用，不得顯示 $0.00（同 J9 ⑤：算不出就不開放）。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "e436I",
+              "name": "sec-status",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": "$Space/md",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "g9rPcK",
+                  "name": "sh",
+                  "fill": "$text-secondary",
+                  "content": "D · 與月報的關係",
+                  "lineHeight": "$Type/Body/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Body/Size",
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "njS7C",
+                  "name": "note",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "試跑的花費不計入「本月 AI 花費」（K5），也不出現在活動記錄；只在這一列的「你的實測」看得到。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "VlyiU",
+          "x": 27520,
+          "y": 49531,
+          "name": "Caption J10-D",
+          "fill": "#888888",
+          "content": "J10 · 模型列三態（試跑 20 句）",
+          "lineHeight": "$Type/Body/Line",
+          "fontFamily": "$Type/Family/Primary",
+          "fontSize": "$Type/Body/Size",
+          "fontWeight": "600"
         }
       ]
     },
