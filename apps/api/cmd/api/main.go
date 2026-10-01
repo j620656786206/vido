@@ -35,6 +35,7 @@ import (
 	"github.com/vido/api/internal/services"
 	"github.com/vido/api/internal/sse"
 	"github.com/vido/api/internal/subtitle"
+	"github.com/vido/api/internal/subtitle/miner"
 	subtitleproviders "github.com/vido/api/internal/subtitle/providers"
 	"github.com/vido/api/internal/tmdb"
 	// Media config is loaded during service initialization
@@ -983,8 +984,17 @@ func main() {
 	filterPresetsHandler := handlers.NewFilterPresetsHandler(filterPresetService)                               // Story 11.4
 	requestHandler := handlers.NewRequestHandler(requestService)                                                // Story 13-1a
 	glossaryHandler := handlers.NewGlossaryHandler(services.NewGlossaryService(repos.Glossary, glossaryScopes)) // Story 9R-15 (+ sub-7-1 scope)
-	localizationHandler := handlers.NewLocalizationHandler(localizationSettings)                                // sub-7-4 GET/PUT /subtitles/localization
-	dvrSettingsHandler := handlers.NewDVRSettingsHandler(dvrSettingsService, "radarr", "sonarr")                // Story 13-4a + 13-4b
+	// sub-7-5b: learn a show's renderings from the official zh-Hant subtitles
+	// it already has. Its own Extractor (ffmpeg availability is probed once)
+	// because the pipeline's lives inside the pipeline-enabled block; $0 work,
+	// so it runs regardless of the pipeline mode. Post-scan it sweeps partial
+	// shows in the background; the settings button hits the handler.
+	officialMiner := miner.NewOfficialSubtitleMiner(repos.Episodes, repos.Series, glossaryScopes, repos.Glossary,
+		ffprobeService, subtitle.NewExtractor(subtitleExtractTimeout, slog.Default()), slog.Default())
+	scannerService.AppendOnScanComplete(officialMiner.ScanCallback())
+	glossaryMineHandler := handlers.NewGlossaryMineHandler(officialMiner)
+	localizationHandler := handlers.NewLocalizationHandler(localizationSettings)                 // sub-7-4 GET/PUT /subtitles/localization
+	dvrSettingsHandler := handlers.NewDVRSettingsHandler(dvrSettingsService, "radarr", "sonarr") // Story 13-4a + 13-4b
 	recentMediaHandler := handlers.NewRecentMediaHandler(movieService, seriesService)
 	logHandler := handlers.NewLogHandler(logService)
 	cacheHandler := handlers.NewCacheHandler(cacheStatsService, cacheCleanupService)
@@ -1266,6 +1276,7 @@ func main() {
 		filterPresetsHandler.RegisterRoutes(apiV1)  // /api/v1/filter-presets CRUD (Story 11.4)
 		requestHandler.RegisterRoutes(apiV1)        // /api/v1/requests create+list (Story 13-1a, Epic 13)
 		glossaryHandler.RegisterRoutes(apiV1)       // /api/v1/media/:id/glossary CRUD (Story 9R-15)
+		glossaryMineHandler.RegisterRoutes(apiV1)   // /api/v1/subtitles/glossary/mine (sub-7-5b)
 		localizationHandler.RegisterRoutes(apiV1)   // /api/v1/subtitles/localization (sub-7-4)
 		dvrSettingsHandler.RegisterRoutes(apiV1)    // /api/v1/settings/radarr triad + profiles/root-folders passthrough (Story 13-4a)
 		recentMediaHandler.RegisterRoutes(apiV1)

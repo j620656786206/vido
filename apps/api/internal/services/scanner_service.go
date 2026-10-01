@@ -191,6 +191,25 @@ func (s *ScannerService) recordLastScan(result *ScanResult) {
 	}
 }
 
+// AppendOnScanComplete chains fn AFTER whatever callback is already set, so
+// a late-wired consumer (sub-7-5b's official-subtitle miner) does not have to
+// know about — or replace — the enrichment and auto-generation hooks that
+// were composed earlier in main.go. Order: existing callback first, fn after.
+func (s *ScannerService) AppendOnScanComplete(fn func()) {
+	if fn == nil {
+		return
+	}
+	prev := s.onScanComplete
+	if prev == nil {
+		s.SetOnScanComplete(fn)
+		return
+	}
+	s.SetOnScanComplete(func() {
+		prev()
+		fn()
+	})
+}
+
 // SetOnScanComplete sets a callback to be invoked after a successful scan.
 func (s *ScannerService) SetOnScanComplete(fn func()) {
 	s.onScanComplete = fn
