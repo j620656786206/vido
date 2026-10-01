@@ -8,7 +8,8 @@
 // the version triple (prompt / lexicon / model) is stamped automatically. No
 // server, no library item, no TMDb match is needed: CI can run it with one key.
 //
-//	ANTHROPIC_API_KEY=… go run ./cmd/grade --model claude-haiku-4-5 --out haiku.json
+//	CLAUDE_API_KEY=… go run ./cmd/grade --model claude-haiku-4-5 --out haiku.json
+//	go run ./cmd/grade --merge haiku.json            # fold it into internal/ai/model_ratings.json
 //
 // One ai.Budget covers both the model under test and the judge; hitting it
 // stops the run and the report says "incomplete" instead of inventing a grade.
@@ -47,6 +48,9 @@ type config struct {
 	noJudge    bool
 	noOpenCC   bool
 	withTrace  bool
+	// merge mode: fold a report into model_ratings.json instead of grading.
+	mergePath   string
+	ratingsPath string
 }
 
 // deps are the seams the tests replace: how a provider is built and how the
@@ -65,14 +69,25 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(2)
 	}
+	if cfg.mergePath != "" {
+		row, err := mergeReport(cfg.mergePath, cfg.ratingsPath)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "grade --merge:", err)
+			os.Exit(1)
+		}
+		fmt.Fprintf(os.Stderr, "merged %s → %s into %s\n", row.ModelID, row.Grade, cfg.ratingsPath)
+		return
+	}
 	d := deps{
 		newCompleter: func(key, model string) ai.TextCompleter {
 			return ai.NewClaudeProvider(key, ai.WithClaudeModel(model))
 		},
 		newFinalizer: newFinalizer,
-		apiKey:       firstNonEmpty(os.Getenv("ANTHROPIC_API_KEY"), os.Getenv("CLAUDE_API_KEY")),
-		now:          time.Now,
-		stderr:       os.Stderr,
+		// Same variable the app reads (docs/development.md § Configuration), so
+		// one key serves the NAS, local runs and the Model Grade workflow.
+		apiKey: firstNonEmpty(os.Getenv("CLAUDE_API_KEY"), os.Getenv("ANTHROPIC_API_KEY")),
+		now:    time.Now,
+		stderr: os.Stderr,
 	}
 	rep, err := run(context.Background(), cfg, d)
 	if err != nil {
@@ -103,8 +118,13 @@ func parseFlags(args []string) (config, error) {
 	fs.BoolVar(&cfg.noJudge, "no-judge", false, "rules only, skip the AI judge (every clean cue scores 1)")
 	fs.BoolVar(&cfg.noOpenCC, "no-opencc", false, "do not run OpenCC s2twp before judging")
 	fs.BoolVar(&cfg.withTrace, "trace", false, "include per-cue raw/final/score in the report")
+	fs.StringVar(&cfg.mergePath, "merge", "", "merge this report JSON into the ratings table and exit (no grading)")
+	fs.StringVar(&cfg.ratingsPath, "ratings", defaultRatingsPath, "ratings table to update with --merge")
 	if err := fs.Parse(args); err != nil {
 		return cfg, err
+	}
+	if cfg.mergePath != "" {
+		return cfg, nil
 	}
 	if cfg.model == "" {
 		return cfg, errors.New("--model is required")
@@ -125,7 +145,7 @@ func parseFlags(args []string) (config, error) {
 
 func run(ctx context.Context, cfg config, d deps) (eval.Report, error) {
 	if d.apiKey == "" {
-		return eval.Report{}, errors.New("set ANTHROPIC_API_KEY (or CLAUDE_API_KEY)")
+		return eval.Report{}, errors.New("set CLAUDE_API_KEY (the same variable the app uses; ANTHROPIC_API_KEY also works)")
 	}
 	cues, err := loadSample(cfg.samplePath)
 	if err != nil {

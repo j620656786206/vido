@@ -1,0 +1,151 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Model quality grade (story sub-7-8b)
+#
+# 「加一個模型 = 按一次這個按鈕」。手動觸發、填模型 id，它用黃金樣本考那個模型
+# （cmd/grade：規則層＋固定裁判），把結果合進 internal/ai/model_ratings.json，
+# 然後開一個 PR。合併後下一版 App 的選模型畫面就會顯示那個等級。
+#
+# 它會花錢（預設上限 $0.50／次），所以：
+#   - 只在 workflow_dispatch 跑，不掛在 PR 或 push 上；
+#   - key 來自 repo secret CLAUDE_API_KEY——跟 App 本身用的環境變數同名、同一把
+#     （Alexyu 2026-10-01 裁定共用，不另開專用 key）；
+#   - 預算打到上限時 cmd/grade 回 exit 3，這裡就直接失敗、不開 PR。
+# ──────────────────────────────────────────────────────────────────────────────
+name: Model Grade
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_id:
+        description: '要評的模型 id（ai.Catalog() 裡的 Claude 模型，例：claude-opus-4-8）'
+        required: true
+        type: string
+      budget_usd:
+        description: '這次最多花多少（翻譯＋裁判合計）'
+        required: false
+        default: '0.50'
+        type: string
+      level:
+        description: '在地化檔位（literal | standard | ott）；等級表只收 standard'
+        required: false
+        default: 'standard'
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: model-grade-${{ inputs.model_id }}
+  cancel-in-progress: false
+
+env:
+  GO_VERSION: '1.25'
+
+jobs:
+  grade:
+    name: Grade ${{ inputs.model_id }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Refuse to run without the grading key
+        env:
+          GRADE_KEY: ${{ secrets.CLAUDE_API_KEY }}
+        run: |
+          if [ -z "$GRADE_KEY" ]; then
+            echo "::error::repo secret CLAUDE_API_KEY is not set — add it under Settings → Secrets (same key the app uses) before grading"
+            exit 1
+          fi
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: apps/api/go.sum
+
+      - name: Install OpenCC helper (so the judge sees delivered text)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq opencc >/dev/null
+
+      - name: Grade on the golden sample
+        id: grade
+        working-directory: apps/api
+        env:
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+        run: |
+          set -o pipefail
+          REPORT="$RUNNER_TEMP/report.json"
+          go run ./cmd/grade \
+            --model "${{ inputs.model_id }}" \
+            --budget-usd "${{ inputs.budget_usd }}" \
+            --level "${{ inputs.level }}" \
+            --out "$REPORT"
+          echo "report=$REPORT" >> "$GITHUB_OUTPUT"
+          {
+            echo "## ${{ inputs.model_id }} → $(jq -r .grade "$REPORT")"
+            echo
+            echo '| 0 分率 | 2 分率 | 規則失敗率 | 花費 | 分鐘 |'
+            echo '| --- | --- | --- | --- | --- |'
+            jq -r '"| \(.zero_rate*100|round)% | \(.natural_rate*100|round)% | \(.rule_fail_rate*100|round)% | $\(.cost_usd) | \(.minutes|round) |"' "$REPORT"
+            echo
+            echo '```json'
+            jq 'del(.results)' "$REPORT"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Merge into model_ratings.json
+        if: inputs.level == 'standard'
+        working-directory: apps/api
+        run: |
+          go run ./cmd/grade --merge "${{ steps.grade.outputs.report }}"
+          git diff --stat -- internal/ai/model_ratings.json
+
+      - name: Read the result for the PR body
+        if: inputs.level == 'standard'
+        id: result
+        run: |
+          R="${{ steps.grade.outputs.report }}"
+          {
+            echo "grade=$(jq -r .grade "$R")"
+            echo "zero=$(jq -r '(.zero_rate*1000|round)/10' "$R")"
+            echo "natural=$(jq -r '(.natural_rate*1000|round)/10' "$R")"
+            echo "cost=$(jq -r .cost_usd "$R")"
+            echo "judge=$(jq -r .judge_model "$R")"
+            echo "prompt=$(jq -r .prompt_version "$R")"
+          } >> "$GITHUB_OUTPUT"
+
+      # 同名 head 分支重跑會更新同一個 PR，不會開第二個（visual-regression.yml 同一招）。
+      - name: Open the ratings PR
+        if: inputs.level == 'standard'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: chore/model-grade-${{ inputs.model_id }}
+          base: main
+          commit-message: 'chore(model-grade): ${{ inputs.model_id }} 在黃金樣本評為 ${{ steps.result.outputs.grade }}'
+          title: 'chore(model-grade): ${{ inputs.model_id }} 評為 ${{ steps.result.outputs.grade }}'
+          labels: requires-manual-review
+          delete-branch: true
+          add-paths: apps/api/internal/ai/model_ratings.json
+          body: |
+            ## 這個 PR 在做什麼
+
+            `${{ inputs.model_id }}` 用黃金樣本（200 句，`golden-v1`）考過了：**${{ steps.result.outputs.grade }}**。
+            合併後，選模型的畫面會把「尚未評測」換成「品質 ${{ steps.result.outputs.grade }}」，旁邊註明是哪次實測、誰當裁判。
+
+            | 0 分率 | 2 分率 | 這次花費 | 裁判 | prompt 版本 |
+            | --- | --- | --- | --- | --- |
+            | ${{ steps.result.outputs.zero }}% | ${{ steps.result.outputs.natural }}% | $${{ steps.result.outputs.cost }} | `${{ steps.result.outputs.judge }}` | `${{ steps.result.outputs.prompt }}` |
+
+            門檻（eval-1 AC #4，不得回頭改）：0 分率 ≤5% 且 2 分率 ≥60% → A；只過其一 → B；否則 C。
+
+            ## 看什麼再合
+
+            - 裁判是 Claude（`${{ steps.result.outputs.judge }}`），評 Claude 模型有自評偏誤；分數宜打折看。
+            - 完整報告在這次 workflow run 的 Summary（含 `rule_fails_by_reason`）。
+            - 只動了 `apps/api/internal/ai/model_ratings.json`。
+
+            由 `.github/workflows/model-grade.yml`（sub-7-8b）自動產生，run #${{ github.run_id }}。

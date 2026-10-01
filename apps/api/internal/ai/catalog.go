@@ -45,38 +45,28 @@ const (
 	TierMax      = "max"
 )
 
-// evalNote is the provenance stamp on every grade below. A grade with no
-// provenance is a marketing claim; this one points at a specific run.
-const evalNote = "Vido 實測 2026-09（eval-1 盲測，10,304 句）"
-
-// modelMetadata is everything about a model that is NOT its price. It is keyed
-// by the same ids as defaultLLMPricing and maintained WITH it — a model priced
-// but not described here would be unsellable, and one described but not priced
-// would be quoted at the fallback tier. TestCatalog_EveryPricedModelIsDescribed
-// is the guard.
+// modelMetadata is everything about a model that is NOT its price and NOT
+// its measured grade. It is keyed by the same ids as defaultLLMPricing and
+// maintained WITH it — a model priced but not described here would be
+// unsellable, and one described but not priced would be quoted at the
+// fallback tier. TestCatalog_EveryPricedModelIsDescribed is the guard.
+//
+// Grades live in model_ratings.json (sub-7-8b): they are MEASUREMENTS with a
+// date, a sample and a judge, produced by cmd/grade, and a hand-typed letter
+// here would be exactly the ungrounded claim the picker promises never to show.
 //
 // `retired` keeps a model out of the catalog while leaving its pricing row in
 // place: a shut-down model must never be offered as a choice (it 404s), but a
 // deployment that still has runs recorded against it must keep metering them at
 // the rate they were billed.
 var modelMetadata = map[string]struct {
-	provider     string
-	displayName  string
-	tier         string
-	qualityGrade string
-	qualityNote  string
-	retired      bool
+	provider    string
+	displayName string
+	tier        string
+	retired     bool
 }{
-	"claude-sonnet-5": {
-		provider: ProviderNameClaude, displayName: "Claude Sonnet 5", tier: TierBalanced,
-		// eval-1: 0 分率 1.3%、2 分率 89.6% over the full 10,304-cue corpus.
-		qualityGrade: "A", qualityNote: evalNote,
-	},
-	"claude-haiku-4-5": {
-		provider: ProviderNameClaude, displayName: "Claude Haiku 4.5", tier: TierFast,
-		// eval-1: 0 分率 3.6%、2 分率 71.8% — usable, and 2.7× cheaper.
-		qualityGrade: "B", qualityNote: evalNote,
-	},
+	"claude-sonnet-5":   {provider: ProviderNameClaude, displayName: "Claude Sonnet 5", tier: TierBalanced},
+	"claude-haiku-4-5":  {provider: ProviderNameClaude, displayName: "Claude Haiku 4.5", tier: TierFast},
 	"claude-sonnet-4-6": {provider: ProviderNameClaude, displayName: "Claude Sonnet 4.6", tier: TierBalanced},
 	"claude-opus-4-8":   {provider: ProviderNameClaude, displayName: "Claude Opus 4.8", tier: TierMax},
 
@@ -98,6 +88,7 @@ var modelMetadata = map[string]struct {
 // model is that deployment's default — this package knows prices and grades,
 // not configuration.
 func Catalog() []ModelInfo {
+	ratings := Ratings()
 	out := make([]ModelInfo, 0, len(modelMetadata))
 	for id, meta := range modelMetadata {
 		if meta.retired {
@@ -109,7 +100,7 @@ func Catalog() []ModelInfo {
 			// it. Never offer a model whose cost we would misreport.
 			continue
 		}
-		out = append(out, ModelInfo{
+		info := ModelInfo{
 			ID:          id,
 			Provider:    meta.provider,
 			DisplayName: meta.displayName,
@@ -117,11 +108,14 @@ func Catalog() []ModelInfo {
 			// The wire carries dollars as JSON numbers; this is the one
 			// narrowing hop, and it is display-only (the picker prices a batch
 			// from estimates_by_model, never from these rates).
-			InputPer1M:   pricing.InputPer1M.InexactFloat64(),
-			OutputPer1M:  pricing.OutputPer1M.InexactFloat64(),
-			QualityGrade: meta.qualityGrade,
-			QualityNote:  meta.qualityNote,
-		})
+			InputPer1M:  pricing.InputPer1M.InexactFloat64(),
+			OutputPer1M: pricing.OutputPer1M.InexactFloat64(),
+		}
+		if r, rated := ratings[id]; rated {
+			info.QualityGrade = r.Grade
+			info.QualityNote = RatingNote(r)
+		}
+		out = append(out, info)
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Provider != out[j].Provider {

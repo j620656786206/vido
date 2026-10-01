@@ -22,13 +22,15 @@ func TestCatalog_EveryPricedModelIsDescribed(t *testing.T) {
 		assert.NotEmpty(t, meta.displayName, "%q needs a display name", id)
 		assert.Contains(t, []string{TierFast, TierBalanced, TierMax}, meta.tier, "%q has an unknown tier", id)
 	}
-	for id, meta := range modelMetadata {
+	for id := range modelMetadata {
 		_, priced := defaultLLMPricing[id]
 		assert.True(t, priced, "described model %q has no price — it would be metered at the fallback rate", id)
-		if meta.qualityGrade != "" {
-			assert.NotEmpty(t, meta.qualityNote,
-				"%q carries a grade with no provenance — an ungrounded grade is a marketing claim", id)
-		}
+	}
+	// sub-7-8b: grades come from model_ratings.json; every rated model must be
+	// one the catalog can actually sell, or the rating is dead weight.
+	for id := range Ratings() {
+		_, described := modelMetadata[id]
+		assert.True(t, described, "model_ratings.json rates %q, which the catalog does not describe", id)
 	}
 }
 
@@ -69,10 +71,19 @@ func TestCatalog_CarriesPricesAndMeasuredGrades(t *testing.T) {
 	assert.Equal(t, 3.0, sonnet.InputPer1M)
 	assert.Equal(t, 15.0, sonnet.OutputPer1M)
 	assert.Equal(t, "A", sonnet.QualityGrade)
-	assert.Contains(t, sonnet.QualityNote, "eval-1")
+	assert.Contains(t, sonnet.QualityNote, "eval-1", "until a golden run lands, the eval-1 provenance line is shown")
 
 	haiku := byID["claude-haiku-4-5"]
 	assert.Equal(t, "B", haiku.QualityGrade)
+	// Every grade on the wire traces back to a row in the ratings table.
+	for _, m := range Catalog() {
+		if m.QualityGrade != "" {
+			r, ok := Ratings()[m.ID]
+			require.True(t, ok, "%s shows a grade with no rating row", m.ID)
+			assert.Equal(t, r.Grade, m.QualityGrade)
+			assert.Equal(t, RatingNote(r), m.QualityNote)
+		}
+	}
 
 	// A model nobody has blind-scored carries NO grade — silence, not a guess.
 	assert.Empty(t, byID["claude-opus-4-8"].QualityGrade,

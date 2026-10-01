@@ -1,6 +1,6 @@
 # Story sub-7-8a: 黃金樣本 200 句 ＋ 評分器（規則＋AI 判，Go 子命令）— 後端／腳本
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-10-01，由 sub-7-8 拆出（原單 BE 4＋腳本 2＋FE 1 的門檻被「樣本授權」「CI 跑不到本機 API」「試跑要設計稿」三件事撐破 → 拆成 7-8a 樣本＋評分器／7-8b 等級表＋CI／7-8c 試跑 20 句）。
      ⚖️ Alexyu 2026-10-01 裁定：①樣本＝Tears of Steel 76 句＋Sita Sings the Blues 84 句對白＋自寫 40 句陷阱（TED 是 CC BY-NC-ND，翻譯＝改作，不得用）；②評分器做成 Go 子命令 `cmd/grade`，不做 Python 打本機 API；③等級表只做內建 JSON＋CI 開 PR，不做遠端 feed；④單模型成本上限由 ≤$0.05 改為 ≤$0.50（Sonnet 翻 200 句本身就約 $0.11，再加 AI 判分）。
@@ -88,3 +88,4 @@ Claude Fable 5.1（Amelia）
 | ---------- | --------------------------------------------- |
 | 2026-10-01 | create-story（SM Bob，自 sub-7-8 拆出）；四項裁定入檔。 |
 | 2026-10-01 | dev-story（Amelia）→ review。 |
+| 2026-10-01 | PR #640 合併（Alexyu）→ done。 |
