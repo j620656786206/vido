@@ -851,6 +851,35 @@ const CONSENT_MODEL_CHOICES = [
 ];
 
 /**
+ * sub-7-8c — the row the v2 mock never drew: a model with NO grade. The
+ * catalog really lists these (Opus 4.8, Sonnet 4.6), so F16 has a third row
+ * with the 「試跑 20 句」 button (F16-D-v2 / F16-M-v2 third row; J10 ①–③).
+ */
+const CONSENT_MODEL_CHOICES_WITH_OPUS = [
+  ...CONSENT_MODEL_CHOICES,
+  {
+    id: 'claude-opus-4-8',
+    displayName: 'Claude Opus 4.8',
+    isDefault: false,
+    isBestGrade: false,
+    totalUsd: 7.5,
+    minutes: 12,
+    deltaUsd: -3,
+    deltaPercent: 67,
+    previewEstimateUsd: 0.06,
+  },
+];
+const CONSENT_OPUS_LOCAL_GRADE = {
+  modelId: 'claude-opus-4-8',
+  cues: 20,
+  zeroRate: 0.05,
+  naturalRate: 0.7,
+  costUsd: 0.05,
+  judgeModel: 'claude-sonnet-5',
+  gradedAt: '2026-10-01T12:00:00Z',
+};
+
+/**
  * The chip ∘ search projection the CONTAINER hands the panel (sub-6-12).
  *
  * The panel used to derive this itself; now the visible set decides what 全選
@@ -5908,6 +5937,84 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     },
     viewport: { width: 390, height: 844 },
     penNode: 'screen-section', // Screen F16-M-v2 (x45wBO)
+    statesOnly: ['default'],
+  },
+  // sub-7-8c — 「試跑 20 句」 on the ungraded row, J10's states ① ② ③.
+  {
+    id: 'generation-consent/f16-model-preview-idle',
+    label: 'subtitle/consent/ConfirmGenerationDialog (F16 + 尚未評測列 — 試跑按鈕)',
+    component: ConfirmGenerationDialog,
+    props: {
+      open: true,
+      totals: CONSENT_CONFIRM_TOTALS,
+      budgetUsd: 5,
+      modelChoices: CONSENT_MODEL_CHOICES_WITH_OPUS,
+      selectedModelId: 'claude-sonnet-5',
+      onModelChange: noop,
+      previewStates: {},
+      onPreview: noop,
+      onConfirm: noop,
+      onCancel: noop,
+    },
+    penNode: 'screen-section', // Screen F16-D-v2 (gmOt6) third row · J10 ①
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-consent/f16-model-preview-running',
+    label: 'subtitle/consent/ConfirmGenerationDialog (F16 + 尚未評測列 — 試跑中)',
+    component: ConfirmGenerationDialog,
+    props: {
+      open: true,
+      totals: CONSENT_CONFIRM_TOTALS,
+      budgetUsd: 5,
+      modelChoices: CONSENT_MODEL_CHOICES_WITH_OPUS,
+      selectedModelId: 'claude-sonnet-5',
+      onModelChange: noop,
+      previewStates: { 'claude-opus-4-8': { status: 'running' } },
+      onPreview: noop,
+      onConfirm: noop,
+      onCancel: noop,
+    },
+    penNode: 'screen-section', // J10 ②
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-consent/f16-model-preview-done',
+    label: 'subtitle/consent/ConfirmGenerationDialog (F16 + 尚未評測列 — 你的實測)',
+    component: ConfirmGenerationDialog,
+    props: {
+      open: true,
+      totals: CONSENT_CONFIRM_TOTALS,
+      budgetUsd: 5,
+      modelChoices: CONSENT_MODEL_CHOICES_WITH_OPUS,
+      selectedModelId: 'claude-sonnet-5',
+      onModelChange: noop,
+      previewStates: { 'claude-opus-4-8': { status: 'done', result: CONSENT_OPUS_LOCAL_GRADE } },
+      onPreview: noop,
+      onConfirm: noop,
+      onCancel: noop,
+    },
+    penNode: 'screen-section', // J10 ③
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-consent/f16-model-preview-mobile',
+    label: 'subtitle/consent/ConfirmGenerationDialog (F16-M + 尚未評測列 — 手機，按鈕另起一行)',
+    component: ConfirmGenerationDialog,
+    props: {
+      open: true,
+      totals: CONSENT_CONFIRM_TOTALS,
+      budgetUsd: 5,
+      modelChoices: CONSENT_MODEL_CHOICES_WITH_OPUS,
+      selectedModelId: 'claude-sonnet-5',
+      onModelChange: noop,
+      previewStates: {},
+      onPreview: noop,
+      onConfirm: noop,
+      onCancel: noop,
+    },
+    viewport: { width: 390, height: 844 },
+    penNode: 'screen-section', // Screen F16-M-v2 (x45wBO) third row
     statesOnly: ['default'],
   },
   {

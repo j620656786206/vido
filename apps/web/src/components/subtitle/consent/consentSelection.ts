@@ -31,6 +31,7 @@ import type {
   GenerationCandidate,
   ModelEstimate,
   TranslationModelInfo,
+  ModelLocalGrade,
 } from '../../../services/subtitleService';
 
 /** F15 route filter chips. */
@@ -657,6 +658,10 @@ export interface ModelChoice {
   deltaUsd?: number;
   /** |deltaUsd| as a whole percent of the default's total; undefined when 0. */
   deltaPercent?: number;
+  /** sub-7-8c: this box's own 20-cue result, straight from the catalog row. */
+  localGrade?: ModelLocalGrade;
+  /** sub-7-8c: the 「試跑 20 句」 price; absent/0 → no button. */
+  previewEstimateUsd?: number;
 }
 
 export interface ModelChoiceInput {
@@ -808,6 +813,8 @@ export function modelChoices(
       minutes,
       deltaUsd,
       deltaPercent,
+      localGrade: m.localGrade,
+      previewEstimateUsd: m.previewEstimateUsd,
     };
   });
 }

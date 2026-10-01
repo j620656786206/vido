@@ -493,6 +493,26 @@ describe('modelChoices', () => {
     expect(rows.find((r) => r.id === 'claude-haiku-4-5')?.minutes).toBe(18);
   });
 
+  it("carries the row's own preview result and estimate through untouched (sub-7-8c)", () => {
+    const localGrade = {
+      modelId: 'claude-haiku-4-5',
+      cues: 20,
+      zeroRate: 0.05,
+      naturalRate: 0.7,
+      costUsd: 0.01,
+      judgeModel: 'claude-sonnet-5',
+      gradedAt: '2026-10-01T12:00:00Z',
+    };
+    const rows = modelChoices(list, new Set([A]), {
+      ...input,
+      models: [{ ...HAIKU, localGrade, previewEstimateUsd: 0.012 }, SONNET],
+    });
+    const haiku = rows.find((r) => r.id === 'claude-haiku-4-5');
+    expect(haiku?.localGrade).toEqual(localGrade);
+    expect(haiku?.previewEstimateUsd).toBe(0.012);
+    expect(rows.find((r) => r.id === 'claude-sonnet-5')?.localGrade).toBeUndefined();
+  });
+
   it('omits the time when the server sent no minutes — no duration is invented', () => {
     const rows = modelChoices(list, new Set([A]), {
       ...input,

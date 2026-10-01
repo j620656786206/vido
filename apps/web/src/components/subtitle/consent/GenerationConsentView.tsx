@@ -36,6 +36,7 @@ import {
 } from '../../../services/subtitleService';
 import { useGenerationCandidatesProgress } from '../../../hooks/useGenerationCandidatesProgress';
 import { useTranslationModels } from '../../../hooks/useTranslationModels';
+import { useModelPreview } from '../../../hooks/useModelPreview';
 import { useKeySettings } from '../../../hooks/useKeySettings';
 import { AnalysisProgressPanel } from './AnalysisProgressPanel';
 import { CandidateListPanel } from './CandidateListPanel';
@@ -346,6 +347,8 @@ export function GenerationConsentView({
   // Rule 5: the catalog is server state. Gated on `open` so a closed dialog
   // costs no request.
   const { data: models, isError: modelsError } = useTranslationModels({ enabled: open });
+  // sub-7-8c: 「試跑 20 句」 state per ungraded row; locks the quote while running.
+  const modelPreview = useModelPreview();
 
   // sub-6-12 AC #6: WHOSE key this batch spends. Same `enabled: open` gating,
   // and the same query the 金鑰設定 page reads — so the two screens can never
@@ -668,6 +671,8 @@ export function GenerationConsentView({
           selectedModelId={effectiveModelId}
           onModelChange={setModelId}
           modelsError={modelsError}
+          previewStates={modelPreview.states}
+          onPreview={modelPreview.preview}
           onConfirm={handleConfirm}
           onCancel={() => {
             // CR L8: no silent dismiss while a paid start is in flight.
