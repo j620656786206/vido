@@ -54,7 +54,7 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] Task 0 — Sally 出 K5／F8 收據行兩段提示詞 → Alexyu 跑 inline agent → 截圖
+- [x] Task 0 — Sally 出 K5／F8 收據行兩段提示詞 → Alexyu 跑 inline agent → 截圖（2026-10-01 完成：`xgYKA` K5-D／`ptNai` K5-M／`gWFcx` F8c-D／`LAeqW` F8c-M；Sally MCP review：文字逐一相符、桌機兩張 problems 0、K5-M 回到 390×844 且「本月 AI 花費」在摺線下（有 note `xQFZE`，同 K1-M 慣例）、F8c-D 唯一 clip 是原 F8 就有的背景活動記錄；⚖️ Alexyu 2026-10-01 裁定位置維持「下載」之下、「活動記錄」之上，閒置時自動上浮（AC #1 已含）。截圖 k5-d／k5-m／f8c-d-v2／f8c-m-v2 已進 `SCREENS`）
 - [ ] Task 1 — service／hook（`useSubtitleSpend`）＋ 型別
 - [ ] Task 2 — 活動頁區塊（AC #1, #4, #5）
 - [ ] Task 3 — F8 收據行（AC #2）
@@ -76,3 +76,4 @@ Status: ready-for-dev
 | Date       | Change                                    |
 | ---------- | ----------------------------------------- |
 | 2026-10-01 | create-story（SM Bob，自 sub-7-6 拆出）。 |
+| 2026-10-01 | Task 0 設計稿完成（Alexyu inline agent；Sally review 通過）；截圖與 SCREENS 入 repo。 |

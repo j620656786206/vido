@@ -295,6 +295,9 @@ SCREENS = {
     "suCiI": ("flow-k-activity-v2", "k2-d"),
     "DZnSv": ("flow-k-activity-v2", "k3-d"),
     "M6ra92": ("flow-k-activity-v2", "k4-d"),
+    # sub-7-6c — K5 本月 AI 花費（活動頁新區塊，桌機／手機）
+    "xgYKA": ("flow-k-activity-v2", "k5-d"),
+    "ptNai": ("flow-k-activity-v2", "k5-m"),
     # flow-i-discover-v2 — Phase-3 ux3-3-1 (Discover v2: active power-filter tool; Epic 11
     # chips/presets/instant-search → v2; D3 no-dashboard boundary; reserves Epic 13 Requests;
     # 地區/串流平台 reserved-disabled per Rule-24; four states)
@@ -355,6 +358,9 @@ SCREENS = {
     "A85GFD": ("flow-f-subtitle-v2", "f7-d-v2"),
     "i9Nun1": ("flow-f-subtitle-v2", "f8-d-v2"),
     "H717g": ("flow-f-subtitle-v2", "f8-m-v2"),
+    # sub-7-6c — F8c 批次完成收據（F8 的完成態：收據行＋關閉）
+    "gWFcx": ("flow-f-subtitle-v2", "f8c-d-v2"),
+    "LAeqW": ("flow-f-subtitle-v2", "f8c-m-v2"),
     "JMqPg": ("flow-f-subtitle-v2", "f9-d-v2"),
     "olDlj": ("flow-f-subtitle-v2", "f10-d-v2"),
     "l8FsB": ("flow-f-subtitle-v2", "f11-d-v2"),
