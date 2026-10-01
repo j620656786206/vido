@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "sample_version": "golden-v1",
+  "ratings": [
+    {
+      "model_id": "claude-haiku-4-5",
+      "grade": "B",
+      "zero_rate": 0.036,
+      "natural_rate": 0.718,
+      "cost_usd": 1.079,
+      "cues": 10304,
+      "prompt_version": "m1-v2",
+      "lexicon_version": "",
+      "judge_model": "human",
+      "judge_version": "eval-1",
+      "graded_at": "2026-09-03T00:00:00Z",
+      "source": "eval-1",
+      "note": "Vido 實測 2026-09（eval-1 盲測，10,304 句）"
+    },
+    {
+      "model_id": "claude-sonnet-5",
+      "grade": "A",
+      "zero_rate": 0.013,
+      "natural_rate": 0.896,
+      "cost_usd": 2.816,
+      "cues": 10304,
+      "prompt_version": "m1-v2",
+      "lexicon_version": "",
+      "judge_model": "human",
+      "judge_version": "eval-1",
+      "graded_at": "2026-09-03T00:00:00Z",
+      "source": "eval-1",
+      "note": "Vido 實測 2026-09（eval-1 盲測，10,304 句）"
+    }
+  ]
+}

@@ -143,6 +143,34 @@ Error codes are namespaced by source (e.g. `TMDB_`, `TRANSCRIPTION_`, `AI_`). `p
 
 There is no swaggo/OpenAPI generation in `apps/api`.
 
+### Model quality grades
+
+The model picker shows a measured grade (A/B/C) next to each translation model. Grades are never typed by hand: they come from `apps/api/internal/ai/model_ratings.json`, which `cmd/grade` writes after scoring a model on the golden sample (`apps/api/internal/eval/golden/`, 200 English cues with reference translations — see its README for sources and licences).
+
+How a grade is produced:
+
+1. The model translates all 200 cues through the real `TranslationService` (production prompt, localization level, zh-TW lexicon).
+2. A rule layer flags unusable cues in the quality gate's vocabulary (`missing`, `empty`, `echoed`, `simplified_leak`) plus `name_mismatch`, `time_shift` and `forbidden_term` (mainland/Cantonese renderings such as 軟件/視頻). Any flag scores 0.
+3. The remaining cues go to a fixed judge (`claude-sonnet-5`, rubric `judge-v1`) that scores 0/1/2.
+4. 0-rate ≤ 5% **and** 2-rate ≥ 60% → A; one of the two → B; neither → C. These thresholds were pre-registered in eval-1 and are not tuned afterwards.
+
+Translation and judging share one `ai.Budget` (default $0.50). Hitting it ends the run with `grade: incomplete`, exit code 3, and nothing is merged.
+
+Run it locally:
+
+```bash
+cd apps/api
+ANTHROPIC_API_KEY=… go run ./cmd/grade --model claude-haiku-4-5 --out /tmp/haiku.json   # ≈ $0.05–0.20 per model
+go run ./cmd/grade --merge /tmp/haiku.json                                               # updates internal/ai/model_ratings.json
+go run ./cmd/grade --model claude-haiku-4-5 --limit 20 --no-judge                        # free-ish smoke run
+```
+
+Or in CI: **Actions → Model Grade → Run workflow**, enter the model id. The workflow needs the repo secret `GRADE_ANTHROPIC_API_KEY` (a dedicated key, not a production one). It grades, merges, and opens a `chore(model-grade): …` PR touching only `model_ratings.json`; merging that PR is what publishes the grade. Adding a model therefore means: add its price and metadata to `ai/budget.go` + `ai/catalog.go`, ship that, then run the workflow once.
+
+Only Claude models can be graded today because the translation path only dispatches to Claude. The judge is itself a Claude model, so every rating carries a bias note; the two eval-1 rows (human blind test, 2026-09) stay in the table until a golden run replaces them.
+
+There is deliberately no remote ratings feed: a grade changes when the sample, prompt or model changes, and each of those ships as a release anyway.
+
 ## Configuration
 
 All environment variables are documented in [`.env.example`](../.env.example) at the repo root. The ones you are most likely to need locally:
