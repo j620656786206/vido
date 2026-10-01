@@ -217,6 +217,7 @@ import {
 import { addUsd } from '../../lib/currency';
 import type { GenerationCandidate } from '../../services/subtitleService';
 import { GenerationBatchPanelV2 } from '../../components/subtitle/GenerationBatchDialogV2';
+import { SpendCard } from '../../components/activity/SpendSection';
 import { GenerationWorkspaceV2 } from '../../components/subtitle/GenerationWorkspaceV2';
 import { glossaryKeys } from '../../hooks/useGlossary';
 import { transcriptionEstimateKeys } from '../../hooks/useTranscriptionEstimate';
@@ -774,6 +775,53 @@ const batchFxItem = (i: number, status: string, reason = '') => ({
   status,
   reason,
 });
+
+/**
+ * sub-7-6c 本月 AI 花費 (K5-D xgYKA / K5-M ptNai). The month label is read from
+ * `from` — the SERVER's month — so these fixtures never touch the wall clock
+ * (Rule 23): `month-end` is the full K5 ledger, `month-start` a fresh month with
+ * one lane, nothing measured yet (the 「—」 honesty rule, AC #4) and a runtime
+ * that had to be assumed (the ≈).
+ */
+const SPEND_FX_MONTH_END = {
+  period: 'month',
+  from: '2026-10-01T00:00:00+08:00',
+  to: '2026-11-01T00:00:00+08:00',
+  translatedRuns: 12,
+  translatedUsd: 3.48,
+  asrRuns: 2,
+  asrUsd: 1.9,
+  unpricedRuns: 0,
+  unroutedRuns: 0,
+  unroutedUsd: 0,
+  skippedDeliverCount: 8,
+  skippedSavedUsdEstimate: 2.14,
+  skippedSavedRuntimeAssumed: false,
+  cacheHitCues: 101,
+  cacheMeasuredRuns: 12,
+  cacheSavedUsdEstimate: 0.31,
+  byModel: [
+    { modelId: 'claude-sonnet-5', runs: 9, usd: 4.2 },
+    { modelId: 'claude-haiku-4-5', runs: 5, usd: 1.18 },
+  ],
+};
+const SPEND_FX_MONTH_START = {
+  ...SPEND_FX_MONTH_END,
+  from: '2026-11-01T00:00:00+08:00',
+  to: '2026-12-01T00:00:00+08:00',
+  translatedRuns: 1,
+  translatedUsd: 0.29,
+  asrRuns: 0,
+  asrUsd: 0,
+  unpricedRuns: 1,
+  skippedDeliverCount: 2,
+  skippedSavedUsdEstimate: 0.54,
+  skippedSavedRuntimeAssumed: true,
+  cacheHitCues: 0,
+  cacheMeasuredRuns: 0,
+  cacheSavedUsdEstimate: null,
+  byModel: [{ modelId: 'claude-sonnet-5', runs: 1, usd: 0.29 }],
+};
 
 // sub-6-8b model-picker fixture data. Grades are the MEASURED eval-1 ones —
 // a fixture must not invent a grade the product would never show.
@@ -6129,6 +6177,75 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     statesOnly: ['default'],
   },
   {
+    // sub-7-6c AC #2 — F8c-D-v2 (gWFcx): the completion RECEIPT replaces
+    // 本次用量／上限 and the SSE chip once the batch has ended. Three rows, not
+    // five: on the desktop the receipt sits at the END of the scrolling body
+    // (where the design draws cost-row), and five rows push it below the
+    // 800px visual viewport — the baseline would then show no receipt at all.
+    id: 'generation-batch-dialog-v2/complete-receipt',
+    label: 'subtitle/GenerationBatchPanelV2 (complete — F8c 收據行 + 已完成 chip)',
+    component: GenerationBatchPanelV2,
+    props: {
+      open: true,
+      status: 'complete',
+      progress: {
+        batchId: 'gb-fx-4',
+        totalItems: 3,
+        currentIndex: 3,
+        currentMediaId: '',
+        currentItem: '',
+        successCount: 3,
+        failCount: 0,
+        pausedCount: 0,
+        status: 'complete',
+        spentUsd: 0.53,
+        budgetUsd: 5,
+        items: [0, 1, 2].map((i) => batchFxItem(i, 'done')),
+      },
+      items: BATCH_FX_ITEMS.slice(0, 3),
+      receipt: { modelLabel: 'claude-sonnet-5', cueCount: 844, cacheHitPct: 12 },
+      onConfirmCancelAll: noop,
+      onResume: noop,
+      onRestart: noop,
+      onClose: noop,
+    },
+    penNode: 'screen-section', // Screen F8c-D-v2 (gWFcx)
+    statesOnly: ['default'],
+  },
+  {
+    // F8c-M-v2 (LAeqW): the receipt pinned to the sheet footer, two lines.
+    id: 'generation-batch-dialog-v2/complete-receipt-mobile',
+    label: 'subtitle/GenerationBatchPanelV2 (complete — F8c 收據行) — 手機 sheet',
+    component: GenerationBatchPanelV2,
+    props: {
+      open: true,
+      status: 'complete',
+      progress: {
+        batchId: 'gb-fx-4',
+        totalItems: 5,
+        currentIndex: 5,
+        currentMediaId: '',
+        currentItem: '',
+        successCount: 5,
+        failCount: 0,
+        pausedCount: 0,
+        status: 'complete',
+        spentUsd: 0.53,
+        budgetUsd: 5,
+        items: [0, 1, 2, 3, 4].map((i) => batchFxItem(i, 'done')),
+      },
+      items: BATCH_FX_ITEMS,
+      receipt: { modelLabel: 'claude-sonnet-5', cueCount: 844, cacheHitPct: 12 },
+      onConfirmCancelAll: noop,
+      onResume: noop,
+      onRestart: noop,
+      onClose: noop,
+    },
+    penNode: 'screen-section', // Screen F8c-M-v2 (LAeqW)
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+  },
+  {
     id: 'generation-batch-dialog-v2/error',
     label: 'subtitle/GenerationBatchPanelV2 (error — banner + 再產生字幕)',
     component: GenerationBatchPanelV2,
@@ -6167,6 +6284,36 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     },
     penNode: 'screen-section', // Screen F8-D-v2 (i9Nun1) — error variant
     statesOnly: ['default'],
+  },
+  // --- sub-7-6c 本月 AI 花費 (Screen K5-D-v2 xgYKA / K5-M-v2 ptNai) ---
+  {
+    id: 'activity-spend-card/month-end',
+    label: 'activity/SpendCard (本月 AI 花費 — 月底：兩條付費線、略過與快取估算、依模型)',
+    component: SpendCard,
+    props: { summary: SPEND_FX_MONTH_END },
+    penNode: 'screen-section', // Screen K5-D-v2 (xgYKA) — sec-本月AI花費
+    statesOnly: ['default'],
+    width: 896,
+  },
+  {
+    id: 'activity-spend-card/month-start',
+    label:
+      'activity/SpendCard (本月 AI 花費 — 月初：語音辨識「—」、快取「—」、≈ 片長假設、未記金額附註)',
+    component: SpendCard,
+    props: { summary: SPEND_FX_MONTH_START },
+    penNode: 'screen-section', // Screen K5-D-v2 (xgYKA) — honesty-rule variant (AC #4)
+    statesOnly: ['default'],
+    width: 896,
+  },
+  {
+    // K5-M: the lanes stack; a real 390 viewport so the sm: branches flip.
+    id: 'activity-spend-card/month-end-mobile',
+    label: 'activity/SpendCard (本月 AI 花費 — 手機 viewport 390×844)',
+    component: SpendCard,
+    props: { summary: SPEND_FX_MONTH_END },
+    penNode: 'screen-section', // Screen K5-M-v2 (ptNai) — sec-本月AI花費
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
   },
   // --- ux3-ai-2 generation workspace (Screen F11-D-v2 l8FsB / F12-D-v2 iH98f) ---
   {

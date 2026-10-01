@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useGenerationBatchProgress } from './useGenerationBatchProgress';
+import { EMPTY_RUN_TOTALS, useGenerationBatchProgress } from './useGenerationBatchProgress';
 
 // Mock EventSource (mirrors useGenerationProgress.spec pattern)
 class MockEventSource {
@@ -122,6 +122,9 @@ describe('useGenerationBatchProgress (lazy SSE, double-nested envelope)', () => 
       // dsr-6d-a: the queue rides the snapshot endpoints; a running SSE event
       // sends items:null and a single changed_item instead.
       items: null,
+      // sub-7-6a/c: no model_id on this frame, no receipts yet.
+      modelId: '',
+      runTotals: EMPTY_RUN_TOTALS,
     });
   });
 
@@ -463,5 +466,117 @@ describe('useGenerationBatchProgress — attachSnapshot + connectionEpoch (dsr-6
 
     expect(result.current.status).toBe('idle');
     expect(result.current.progress.items).toBeNull();
+  });
+});
+
+// ─── sub-7-6c AC #2: the F8c receipt's live sources ─────────────────────────────
+
+/** One `subtitle_run_receipt` frame (sub-7-6a [@contract-v1]), as the hub writes it. */
+const receiptEvent = (payload: Record<string, unknown>) => ({
+  id: 'uuid-r',
+  type: 'subtitle_run_receipt',
+  data: {
+    run_id: 'run-1',
+    media_id: MOVIE_UUID,
+    media_type: 'movie',
+    status: 'completed',
+    model_id: 'claude-sonnet-5',
+    cue_count: 400,
+    route: 'translate',
+    batch_id: 'gb-1',
+    spent_usd: 0.2,
+    ...payload,
+  },
+});
+
+describe('useGenerationBatchProgress — model_id and subtitle_run_receipt totals (sub-7-6c)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    MockEventSource.instances = [];
+    (global as Record<string, unknown>).EventSource = MockEventSource;
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('model_id on the batch event lands on progress.modelId', () => {
+    const { result } = renderHook(() => useGenerationBatchProgress());
+    act(() => result.current.startTracking({ batchId: 'gb-1' }));
+    act(() =>
+      MockEventSource.instances[0].emit(
+        'generation_batch_progress',
+        wireEvent({ model_id: 'claude-sonnet-5' })
+      )
+    );
+    expect(result.current.progress.modelId).toBe('claude-sonnet-5');
+  });
+
+  it("sums THIS batch's completed receipts: cues, measured cache hits, models in first-seen order", () => {
+    const { result } = renderHook(() => useGenerationBatchProgress());
+    act(() => result.current.startTracking({ batchId: 'gb-1' }));
+    const es = MockEventSource.instances[0];
+    act(() => {
+      es.emit('subtitle_run_receipt', receiptEvent({ cue_count: 400, cache_hit_cues: 40 }));
+      // No cache_hit_cues at all → counts its cues, but is NOT a measured run.
+      es.emit('subtitle_run_receipt', receiptEvent({ run_id: 'run-2', cue_count: 444 }));
+      es.emit(
+        'subtitle_run_receipt',
+        receiptEvent({
+          run_id: 'run-3',
+          cue_count: 100,
+          cache_hit_cues: 61,
+          model_id: 'claude-haiku-4-5',
+        })
+      );
+    });
+    expect(result.current.progress.runTotals).toEqual({
+      completedRuns: 3,
+      cueCount: 944,
+      cacheHitCues: 101,
+      cacheMeasuredRuns: 2,
+      modelIds: ['claude-sonnet-5', 'claude-haiku-4-5'],
+    });
+  });
+
+  it("ignores receipts that are not this batch's completed runs", () => {
+    const { result } = renderHook(() => useGenerationBatchProgress());
+    act(() => result.current.startTracking({ batchId: 'gb-1' }));
+    const es = MockEventSource.instances[0];
+    act(() => {
+      // Another batch, a solo 生成字幕 click (no batch_id), a failed run.
+      es.emit('subtitle_run_receipt', receiptEvent({ batch_id: 'gb-other' }));
+      es.emit('subtitle_run_receipt', receiptEvent({ batch_id: undefined }));
+      es.emit('subtitle_run_receipt', receiptEvent({ status: 'failed', cue_count: 0 }));
+    });
+    expect(result.current.progress.runTotals).toEqual(EMPTY_RUN_TOTALS);
+  });
+
+  it('a snapshot attach starts the totals over — a reopened batch gets its cues from the ledger', () => {
+    const { result } = renderHook(() => useGenerationBatchProgress());
+    act(() => result.current.startTracking({ batchId: 'gb-1' }));
+    act(() =>
+      MockEventSource.instances[0].emit('subtitle_run_receipt', receiptEvent({ cue_count: 400 }))
+    );
+    expect(result.current.progress.runTotals?.cueCount).toBe(400);
+    act(() =>
+      result.current.attachSnapshot({
+        batchId: 'gb-2',
+        totalItems: 1,
+        currentIndex: 1,
+        currentMediaId: '',
+        currentItem: '',
+        successCount: 1,
+        failCount: 0,
+        pausedCount: 0,
+        status: 'complete',
+        spentUsd: 0.1,
+        budgetUsd: 5,
+        items: null,
+        modelId: 'claude-sonnet-5',
+      })
+    );
+    expect(result.current.progress.runTotals).toEqual(EMPTY_RUN_TOTALS);
+    expect(result.current.progress.modelId).toBe('claude-sonnet-5');
   });
 });

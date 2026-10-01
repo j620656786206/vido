@@ -439,6 +439,11 @@ export interface GenerationBatchProgress {
   spentUsd: number;
   budgetUsd: number;
   items: GenerationBatchItemState[] | null;
+  /**
+   * The model the batch was priced and run with (sub-7-6a, additive
+   * [@contract-v1]) — the F8c receipt names it. Absent on older servers.
+   */
+  modelId?: string;
 }
 
 /**

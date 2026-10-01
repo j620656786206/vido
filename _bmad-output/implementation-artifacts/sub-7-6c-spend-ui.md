@@ -1,6 +1,6 @@
 # Story sub-7-6c: 活動頁「本月 AI 花費」、批次收據行、首頁 readout 改讀月報 — 前端
 
-Status: ready-for-dev
+Status: review
 
 <!-- SM Bob create-story 2026-10-01，由 sub-7-6 拆出；依賴 sub-7-6b 端點；**開工前要 Sally 兩張稿**（走 inline agent）。行號為 main `34b59615`。 -->
 
@@ -55,21 +55,46 @@ Status: ready-for-dev
 ## Tasks / Subtasks
 
 - [x] Task 0 — Sally 出 K5／F8 收據行兩段提示詞 → Alexyu 跑 inline agent → 截圖（2026-10-01 完成：`xgYKA` K5-D／`ptNai` K5-M／`gWFcx` F8c-D／`LAeqW` F8c-M；Sally MCP review：文字逐一相符、桌機兩張 problems 0、K5-M 回到 390×844 且「本月 AI 花費」在摺線下（有 note `xQFZE`，同 K1-M 慣例）、F8c-D 唯一 clip 是原 F8 就有的背景活動記錄；⚖️ Alexyu 2026-10-01 裁定位置維持「下載」之下、「活動記錄」之上，閒置時自動上浮（AC #1 已含）。截圖 k5-d／k5-m／f8c-d-v2／f8c-m-v2 已進 `SCREENS`）
-- [ ] Task 1 — service／hook（`useSubtitleSpend`）＋ 型別
-- [ ] Task 2 — 活動頁區塊（AC #1, #4, #5）
-- [ ] Task 3 — F8 收據行（AC #2）
-- [ ] Task 4 — 首頁 readout（AC #3）
-- [ ] Task 5 — 測試與 fixtures（AC #6）
+- [x] Task 1 — service／hook（`useSubtitleSpend`）＋ 型別
+- [x] Task 2 — 活動頁區塊（AC #1, #4, #5）
+- [x] Task 3 — F8 收據行（AC #2）
+- [x] Task 4 — 首頁 readout（AC #3）
+- [x] Task 5 — 測試與 fixtures（AC #6）
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
+Claude Fable 5.1（2026-10-01）
+
 ### Completion Notes List
+
+- **活動頁區塊**：`SpendSection.tsx`（`SpendCard` 純 props ＋ `SpendSectionView` 外殼）。位置在「下載」之下、「活動記錄」之上（⚖️ Alexyu 2026-10-01）；沒事在跑時前三區不渲染，區塊自然成為第一個，不需要另寫排序規則。自己一條 query（`useSubtitleSpend`），端點壞掉只有這一段 `ActivitySectionError`；`isEmpty` 判斷改成「四區空 ＋ 月份沒內容 ＋ 花費端點沒壞」才顯示空狀態；骨架等兩條 query 都落定（避免空狀態閃一下再長出卡片）。
+- **誠實規則落地**：0 次 → 「—」（不是 $0.00）；`cache_measured_runs=0` → 「快取估算省下 —」；所有省下都帶「估算」二字；`≈` 只在 `skipped_saved_runtime_assumed`；`unpriced_runs`／`unrouted_*` 進附註行，不進兩條付費線。
+- **F8c 收據行**：`buildReceiptView(progress, byBatch)` ——ledger `by_batch`（同 batch_id 才算）優先、SSE `subtitle_run_receipt` 累加（`useGenerationBatchProgress.runTotals`，只算這個 batch 的 completed）當即時備援、`generation_batch_progress.model_id` 補模型名。沒量到的段落直接省略（不畫 0%、不畫 0 句）。完成且無失敗才給綠色「已完成」chip（🔴 #10 既有規則）。手機版 footer 同一行拆兩行。
+- **首頁 readout**：`spendReadout` 三階：live batch 的 spent/ceiling → 本月 ledger 總額（翻譯＋語音＋舊紀錄，`sumUsd` 精確加）→ last_run 只在有失敗時。朗讀文字「本月已花費 $5.4」。
+- **月份文案不讀瀏覽器時鐘**：「10 月」從回應的 `from`（伺服器時區文字）切字取得——伺服器定義的月份才是資料的月份，瀏覽器時區可能差一天；Rule 23 因此不需要 `now` prop，fixtures 釘 `from` 即可（與 AC #5 寫法不同，見 Discovery Triage）。
+- `usePageVisibility` 抽成共用 hook（原本 useActivity／useHomeSummary 各一份），三條輪詢 hook 共用。
+- 終端事件時多 invalidate `subtitleSpendKeys.month()`，活動頁與首頁卡片立即更新，不等一分鐘。
 
 ### Discovery Triage
 
+- **AC #5 偏離**：月份文案改由 `from` 推導，不注入 `now`。理由：端點是伺服器當月的彙總，`from` 就是那個月；用 `now` 會讓台北 10/1 00:30 的瀏覽器在 UTC 伺服器上顯示錯月。Fixtures `month-start`／`month-end` 改為釘不同 `from` 與不同資料形狀（月初：一條線有數、語音「—」、快取「—」、≈；月底：K5 全數字）。
+- **AC #1 文案**：快取那行寫「快取估算省下 $0.31」而非稿上的「快取省下 $0.31」——AC #4 要求估算一律用字，`cache_saved_usd_estimate` 是反推的均價 × 命中，是估算。Sally 的設計說明也寫「三種標示規則以 AC #4 為準，稿示範的是正常態」。
+- **沒做**：首頁花費總額包含 `unrouted_usd`（舊紀錄）——AC #3 字面是 `translated_usd+asr_usd`，但舊紀錄是真的花掉的錢，首頁總額少算會跟活動頁附註對不上。若要嚴格照字面，改 `monthSpendUsd` 一行即可。
+
 ### File List
+
+- `apps/web/src/services/subtitleSpendService.ts`（新）＋ `.spec.ts`
+- `apps/web/src/hooks/useSubtitleSpend.ts`（新）、`apps/web/src/hooks/usePageVisibility.ts`（新；`useActivity.ts`／`useHomeSummary.ts` 改用）
+- `apps/web/src/components/activity/SpendSection.tsx`（新）＋ `.spec.tsx`、`ActivitySectionShell.tsx`（新，自 ActivityHub 抽出＋`trailing`）
+- `apps/web/src/components/activity/ActivityHub.tsx` ＋ `.spec.tsx`
+- `apps/web/src/hooks/useGenerationBatchProgress.ts` ＋ `.spec.ts`（`modelId`、`runTotals`、`subtitle_run_receipt` 監聽）
+- `apps/web/src/services/subtitleService.ts`（`GenerationBatchProgress.modelId?`）
+- `apps/web/src/components/subtitle/GenerationBatchDialogV2.tsx` ＋ `.spec.tsx`（`buildReceiptView`、`receipt` prop、CostRow 收據態、容器讀 `by_batch`）
+- `apps/web/src/components/homepage/HomeReadoutBand.tsx` ＋ `.spec.tsx`（`monthSpendUsd`、`spendReadout`）
+- `apps/web/src/routes/test/-gallery.fixtures.tsx`（`activity-spend-card/month-end`／`month-start`／`month-end-mobile`、`generation-batch-dialog-v2/complete-receipt`／`-mobile`）
+- `tests/e2e/activity-spend.spec.ts`（新）
 
 ## Change Log
 
@@ -77,3 +102,4 @@ Status: ready-for-dev
 | ---------- | ----------------------------------------- |
 | 2026-10-01 | create-story（SM Bob，自 sub-7-6 拆出）。 |
 | 2026-10-01 | Task 0 設計稿完成（Alexyu inline agent；Sally review 通過）；截圖與 SCREENS 入 repo。 |
+| 2026-10-01 | Task 1–5 實作完成（Fable 5.1）；232 條相關 vitest 綠；status → review。 |

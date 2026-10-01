@@ -5,7 +5,8 @@
  * Activity hub page (UX Redesign Phase 3 — ux3-2-3 / D4-1). The v2 destination that
  * unifies the previously-invisible background journeys: 進行中 (live scan / batch-subtitle
  * jobs) → 待處理 (pending parse) → 下載 (summary row that LINKS OUT to the deep page,
- * D4-1 HYBRID) → 活動記錄 (recent terminal events). Consumes the fail-soft aggregate
+ * D4-1 HYBRID) → 本月 AI 花費 (sub-7-6c, its own query — SpendSection) → 活動記錄 (recent
+ * terminal events). Consumes the fail-soft aggregate
  * GET /api/v1/activity (ux3-2-2): a section reporting `unavailable` degrades to an inline
  * banner while the rest of the page renders (F3); the whole page only shows a single
  * error when the request itself fails. Four states (N4): loading / empty / per-section
@@ -26,6 +27,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useActivity } from '../../hooks/useActivity';
+import { useSubtitleSpend } from '../../hooks/useSubtitleSpend';
 import { GenerationBatchDialogV2 } from '../subtitle/GenerationBatchDialogV2';
 import { GenerationWorkspace } from '../subtitle/GenerationWorkspaceV2';
 import type {
@@ -37,6 +39,8 @@ import type {
 } from '../../services/activityService';
 import { formatRelativeTime } from '../../utils/relativeTime';
 import { ActivityRow } from './ActivityRow';
+import { ActivitySectionShell } from './ActivitySectionShell';
+import { SpendSectionView, spendHasContent } from './SpendSection';
 import { ActivitySkeleton, ActivityEmpty, ActivitySectionError } from './ActivityStates';
 
 const ACTIVE_META: Record<string, { icon: LucideIcon; title: string }> = {
@@ -65,6 +69,12 @@ const COUNTED_KINDS = new Set(['subtitle_batch', 'generation_batch']);
  */
 const NO_PERCENT_KINDS = new Set(['transcription']);
 
+/**
+ * The four /activity sections say nothing. The spend card (sub-7-6c) is judged
+ * beside this in ActivityHub, from its own query: a month with money in it is
+ * content, and a spend endpoint that failed is a section to show, so neither
+ * may be swept into the calm empty state.
+ */
 function isEmpty(d: ActivitySummary): boolean {
   return (
     d.activeJobs.status === 'ok' &&
@@ -79,41 +89,17 @@ function isEmpty(d: ActivitySummary): boolean {
   );
 }
 
-function SectionShell({
-  title,
-  count,
-  children,
-}: {
-  title: string;
-  count?: number;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="flex flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <h2 className="text-base font-bold text-[var(--text-primary)]">{title}</h2>
-        {typeof count === 'number' && count > 0 && (
-          <span className="rounded-full bg-[var(--accent-tint)] px-2.5 py-0.5 font-mono text-xs text-[var(--accent-text)]">
-            {count}
-          </span>
-        )}
-      </div>
-      {children}
-    </section>
-  );
-}
-
 function ActiveSection({ section, onRetry }: { section: ActiveJobsSection; onRetry: () => void }) {
   if (section.status === 'unavailable') {
     return (
-      <SectionShell title="進行中">
+      <ActivitySectionShell title="進行中">
         <ActivitySectionError onRetry={onRetry} testId="activity-active-error" />
-      </SectionShell>
+      </ActivitySectionShell>
     );
   }
   if (section.jobs.length === 0) return null;
   return (
-    <SectionShell title="進行中" count={section.jobs.length}>
+    <ActivitySectionShell title="進行中" count={section.jobs.length}>
       {section.jobs.map((j, i) => {
         const meta = ACTIVE_META[j.kind] ?? { icon: Activity, title: j.kind };
         const right =
@@ -153,7 +139,7 @@ function ActiveSection({ section, onRetry }: { section: ActiveJobsSection; onRet
         }
         return <div key={`${j.kind}-${i}`}>{row}</div>;
       })}
-    </SectionShell>
+    </ActivitySectionShell>
   );
 }
 
@@ -166,14 +152,14 @@ function PendingSectionView({
 }) {
   if (section.status === 'unavailable') {
     return (
-      <SectionShell title="待處理">
+      <ActivitySectionShell title="待處理">
         <ActivitySectionError onRetry={onRetry} testId="activity-pending-error" />
-      </SectionShell>
+      </ActivitySectionShell>
     );
   }
   if (section.parseCount === 0) return null;
   return (
-    <SectionShell title="待處理">
+    <ActivitySectionShell title="待處理">
       <ActivityRow
         icon={FileSearch}
         title="待解析項目"
@@ -191,7 +177,7 @@ function PendingSectionView({
           </Link>
         }
       />
-    </SectionShell>
+    </ActivitySectionShell>
   );
 }
 
@@ -204,9 +190,9 @@ function DownloadsSectionView({
 }) {
   if (section.status === 'unavailable') {
     return (
-      <SectionShell title="下載">
+      <ActivitySectionShell title="下載">
         <ActivitySectionError onRetry={onRetry} testId="activity-downloads-error" />
-      </SectionShell>
+      </ActivitySectionShell>
     );
   }
   // ⚖️ Alexyu 2026-09-30 (disc-activity-downloads-unconfigured-copy, A): no
@@ -214,7 +200,7 @@ function DownloadsSectionView({
   // downloads"; the downloads page (d11) and 服務狀態 do the nudging.
   if (section.status === 'not_configured' || section.total === 0) return null;
   return (
-    <SectionShell title="下載">
+    <ActivitySectionShell title="下載">
       <ActivityRow
         icon={Download}
         title="下載中"
@@ -257,21 +243,21 @@ function DownloadsSectionView({
           </Link>
         }
       />
-    </SectionShell>
+    </ActivitySectionShell>
   );
 }
 
 function RecentSectionView({ section, onRetry }: { section: RecentSection; onRetry: () => void }) {
   if (section.status === 'unavailable') {
     return (
-      <SectionShell title="活動記錄">
+      <ActivitySectionShell title="活動記錄">
         <ActivitySectionError onRetry={onRetry} testId="activity-recent-error" />
-      </SectionShell>
+      </ActivitySectionShell>
     );
   }
   if (section.events.length === 0) return null;
   return (
-    <SectionShell title="活動記錄">
+    <ActivitySectionShell title="活動記錄">
       {section.events.map((ev, i) => {
         const failed = ev.result === 'failed';
         return (
@@ -290,7 +276,7 @@ function RecentSectionView({ section, onRetry }: { section: RecentSection; onRet
           />
         );
       })}
-    </SectionShell>
+    </ActivitySectionShell>
   );
 }
 
@@ -298,6 +284,9 @@ const routeApi = getRouteApi('/activity');
 
 export function ActivityHub() {
   const { data, isLoading, isError, refetch } = useActivity();
+  // 本月 AI 花費 rides its own endpoint (sub-7-6b), so it is its own query —
+  // a slow or broken ledger must not take the four live sections down with it.
+  const spend = useSubtitleSpend();
   const search = routeApi.useSearch();
   const navigate = routeApi.useNavigate();
   // Story ux3-subtitle-v2-batch AC 4a — the hub's launch CTA opens the batch
@@ -309,6 +298,10 @@ export function ActivityHub() {
   };
   const retry = () => {
     void refetch();
+    void spend.refetch();
+  };
+  const retrySpend = () => {
+    void spend.refetch();
   };
 
   // Story ux3-ai-2 — `?view=generation` hosts the F11 generation workspace in place
@@ -335,6 +328,13 @@ export function ActivityHub() {
     );
   }
 
+  const spendHasData = spend.data !== undefined && spendHasContent(spend.data);
+  // ⚖️ Alexyu 2026-10-01: the card sits BELOW 進行中／待處理／下載 (you come here
+  // to see what is running) and above 活動記錄. When nothing is running those
+  // sections do not render, so the card is first by itself — no reordering.
+  // Judged HERE, after the workspace branch: the hub body is the only reader.
+  const pageEmpty = data !== undefined && isEmpty(data) && !spendHasData && !spend.isError;
+
   return (
     <div
       data-testid="activity-root"
@@ -358,17 +358,18 @@ export function ActivityHub() {
         </button>
       </header>
 
-      {isLoading ? (
+      {isLoading || (spend.isLoading && !spend.isError) ? (
         <ActivitySkeleton />
       ) : isError || !data ? (
         <ActivitySectionError onRetry={retry} testId="activity-page-error" />
-      ) : isEmpty(data) ? (
+      ) : pageEmpty ? (
         <ActivityEmpty />
       ) : (
         <>
           <ActiveSection section={data.activeJobs} onRetry={retry} />
           <PendingSectionView section={data.pending} onRetry={retry} />
           <DownloadsSectionView section={data.downloads} onRetry={retry} />
+          <SpendSectionView summary={spend.data} failed={spend.isError} onRetry={retrySpend} />
           <RecentSectionView section={data.recent} onRetry={retry} />
         </>
       )}

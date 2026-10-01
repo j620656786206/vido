@@ -10,6 +10,9 @@ import {
 } from '@tanstack/react-router';
 
 vi.mock('../../hooks/useActivity', () => ({ useActivity: vi.fn() }));
+// sub-7-6c: 本月 AI 花費 rides its own query; stubbed idle by default so the
+// four-section tests above stay exactly what they were.
+vi.mock('../../hooks/useSubtitleSpend', () => ({ useSubtitleSpend: vi.fn() }));
 
 // Stub the batch dialog (ux3-subtitle-v2-batch AC 4a) — its own spec covers the
 // internals; here we only assert the CTA ↔ open wiring.
@@ -38,10 +41,47 @@ vi.mock('../subtitle/GenerationWorkspaceV2', () => ({
 }));
 
 import { useActivity } from '../../hooks/useActivity';
+import { useSubtitleSpend } from '../../hooks/useSubtitleSpend';
 import { ActivityHub } from './ActivityHub';
 import type { ActivitySummary } from '../../services/activityService';
+import type { SubtitleSpendSummary } from '../../services/subtitleSpendService';
 
 const mockUseActivity = vi.mocked(useActivity);
+const mockUseSpend = vi.mocked(useSubtitleSpend);
+
+function spendResult(over: Record<string, unknown> = {}) {
+  return {
+    data: undefined,
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+    ...over,
+  } as unknown as ReturnType<typeof useSubtitleSpend>;
+}
+
+/** A month with money in it (the K5-D numbers). */
+function spendMonth(over: Partial<SubtitleSpendSummary> = {}): SubtitleSpendSummary {
+  return {
+    period: 'month',
+    from: '2026-10-01T00:00:00+08:00',
+    to: '2026-11-01T00:00:00+08:00',
+    translatedRuns: 12,
+    translatedUsd: 3.48,
+    asrRuns: 2,
+    asrUsd: 1.9,
+    unpricedRuns: 0,
+    unroutedRuns: 0,
+    unroutedUsd: 0,
+    skippedDeliverCount: 8,
+    skippedSavedUsdEstimate: 2.14,
+    skippedSavedRuntimeAssumed: false,
+    cacheHitCues: 101,
+    cacheMeasuredRuns: 12,
+    cacheSavedUsdEstimate: 0.31,
+    byModel: [{ modelId: 'claude-sonnet-5', runs: 9, usd: 4.2 }],
+    ...over,
+  };
+}
 
 function summary(over: Partial<ActivitySummary> = {}): ActivitySummary {
   return {
@@ -86,7 +126,10 @@ function renderHub(initialPath = '/activity') {
 }
 
 describe('ActivityHub (v2 Activity hub — four states + fail-soft)', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseSpend.mockReturnValue(spendResult());
+  });
 
   it('[P1] Loading — renders the row-shaped skeleton', async () => {
     mockUseActivity.mockReturnValue(result({ isLoading: true }));
@@ -466,5 +509,103 @@ describe('ActivityHub (v2 Activity hub — four states + fail-soft)', () => {
       /text-\[\d+px\]/.test((el as HTMLElement).className)
     );
     expect(offScale.map((el) => (el as HTMLElement).className)).toEqual([]);
+  });
+});
+
+// ─── sub-7-6c: 本月 AI 花費 — its own query, fail-soft, part of "is there anything" ───
+
+describe('ActivityHub — 本月 AI 花費 section (sub-7-6c AC #1, K5-D xgYKA)', () => {
+  const recentOne = {
+    status: 'ok' as const,
+    events: [{ kind: 'parse', result: 'completed', detail: 'x.mkv', at: '2026-06-15T10:00:00Z' }],
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseSpend.mockReturnValue(spendResult());
+  });
+
+  // ⚖️ Alexyu 2026-10-01: below 下載, above 活動記錄 — you come here to see what
+  // is running; the month's bill waits its turn.
+  it('[P1] renders the card between 下載 and 活動記錄, with the month at the header', async () => {
+    mockUseActivity.mockReturnValue(
+      result({
+        data: summary({
+          downloads: { status: 'ok', downloading: 1, queued: 0, errored: 0, paused: 0, total: 1 },
+          recent: recentOne,
+        }),
+      })
+    );
+    mockUseSpend.mockReturnValue(spendResult({ data: spendMonth() }));
+    renderHub();
+
+    const card = await screen.findByTestId('activity-spend-card');
+    expect(card).toHaveTextContent('12 次 · $3.48');
+    expect(screen.getByTestId('activity-spend-month')).toHaveTextContent('10 月');
+    const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
+    expect(headings).toEqual(['下載', '本月 AI 花費', '活動記錄']);
+  });
+
+  it('[P1] a month with money in it is CONTENT — it defeats the calm empty state alone', async () => {
+    mockUseActivity.mockReturnValue(result({ data: summary() }));
+    mockUseSpend.mockReturnValue(spendResult({ data: spendMonth() }));
+    renderHub();
+    expect(await screen.findByTestId('activity-spend-card')).toBeInTheDocument();
+    expect(screen.queryByTestId('activity-empty')).toBeNull();
+    // Nothing is running, so the card is simply first — no reordering rule needed.
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
+      '本月 AI 花費',
+    ]);
+  });
+
+  it('[P2] an untouched month keeps the calm empty state', async () => {
+    mockUseActivity.mockReturnValue(result({ data: summary() }));
+    mockUseSpend.mockReturnValue(
+      spendResult({
+        data: spendMonth({
+          translatedRuns: 0,
+          asrRuns: 0,
+          skippedDeliverCount: 0,
+          cacheMeasuredRuns: 0,
+          byModel: [],
+        }),
+      })
+    );
+    renderHub();
+    expect(await screen.findByTestId('activity-empty')).toBeInTheDocument();
+    expect(screen.queryByTestId('activity-spend-card')).toBeNull();
+  });
+
+  it('[P1] fail-soft: a broken spend endpoint degrades its own section; the rest renders', async () => {
+    const refetchSpend = vi.fn();
+    mockUseActivity.mockReturnValue(
+      result({ data: summary({ pending: { status: 'ok', parseCount: 4 } }) })
+    );
+    mockUseSpend.mockReturnValue(spendResult({ isError: true, refetch: refetchSpend }));
+    renderHub();
+
+    expect(await screen.findByTestId('activity-spend-error')).toBeInTheDocument();
+    expect(screen.getByTestId('activity-pending-row')).toBeInTheDocument();
+    expect(screen.queryByTestId('activity-page-error')).toBeNull();
+    expect(screen.queryByTestId('activity-empty')).toBeNull();
+    // Its 重試 retries the spend query, not the whole page.
+    fireEvent.click(screen.getByTestId('activity-section-retry'));
+    expect(refetchSpend).toHaveBeenCalledOnce();
+  });
+
+  it('[P2] a failed spend endpoint on an otherwise idle page is still a page with a section', async () => {
+    mockUseActivity.mockReturnValue(result({ data: summary() }));
+    mockUseSpend.mockReturnValue(spendResult({ isError: true }));
+    renderHub();
+    expect(await screen.findByTestId('activity-spend-error')).toBeInTheDocument();
+    expect(screen.queryByTestId('activity-empty')).toBeNull();
+  });
+
+  it('[P2] the skeleton holds until the spend query settles too (no empty-state flash)', async () => {
+    mockUseActivity.mockReturnValue(result({ data: summary() }));
+    mockUseSpend.mockReturnValue(spendResult({ isLoading: true }));
+    renderHub();
+    expect(await screen.findByTestId('activity-skeleton')).toBeInTheDocument();
+    expect(screen.queryByTestId('activity-empty')).toBeNull();
   });
 });
