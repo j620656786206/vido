@@ -1,6 +1,6 @@
 # Story 7.6: 成本收據 —— 單次、本月、以及「省了多少」（全端，BE 3 / FE 3）
 
-Status: backlog
+Status: done
 
 > 🔀 **2026-10-01 已拆單（SM Bob；⚖️ Alexyu 裁定 AA：單獨語音辨識也要記帳、`≈` 守 Sally 單一語意）**：工作在子單上——`sub-7-6a-run-ledger.md`（後端記帳：route／cache_hit_cues／batch_id 三欄、`subtitle_run_receipt` 事件、語音辨識引擎自己寫列、批次 `model_id`）→ `sub-7-6b-spend-summary-api.md`（月報端點＋估算）→ `sub-7-6c-spend-ui.md`（活動頁區塊、F8 收據行、首頁 readout；要 Sally 兩張稿）。本檔留作傘狀紀錄。
 > 原稿與程式碼 9 處不符（`cost_usd` 不存在、runs 無路線欄、快取命中沒存、無 token 用量、估價是每分鐘、單獨語音辨識不寫列、無 run 詳情端點、F8 是批次對話框、`≈` 語意衝突）——見 7-6a Dev Notes。
@@ -59,3 +59,9 @@ party-mode Sally：「讓使用者親眼看到護城河在替他省錢，他才�
 - （dev 填）
 
 ### File List
+
+## Change Log
+
+| Date       | Change |
+| ---------- | ------ |
+| 2026-10-01 | 三張子單全部合併（#633／#634／#637）；傘狀單 → done。 |
