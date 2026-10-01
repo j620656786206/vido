@@ -6,24 +6,13 @@
  * page-level retry.
  */
 import { useQuery } from '@tanstack/react-query';
-import { useSyncExternalStore } from 'react';
+import { usePageVisibility } from './usePageVisibility';
 import { activityService } from '../services/activityService';
 import type { ActivitySummary } from '../services/activityService';
 
 export const activityKeys = {
   all: ['activity'] as const,
 };
-
-const subscribeVisibility = (callback: () => void) => {
-  document.addEventListener('visibilitychange', callback);
-  return () => document.removeEventListener('visibilitychange', callback);
-};
-const getVisibilitySnapshot = () => document.visibilityState === 'visible';
-const getServerSnapshot = () => true;
-
-function usePageVisibility() {
-  return useSyncExternalStore(subscribeVisibility, getVisibilitySnapshot, getServerSnapshot);
-}
 
 export function useActivity() {
   const isVisible = usePageVisibility();

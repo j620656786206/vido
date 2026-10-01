@@ -32,7 +32,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Check, CircleAlert, CirclePause, Radio } from 'lucide-react';
+import { Check, CircleAlert, CirclePause, Radio, CircleCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '../ui/Dialog';
 import { MOBILE_SHEET_CLOSE, MOBILE_SHEET_CONTENT, SheetGrabber } from '../ui/mobileSheet';
 import { cn } from '../../lib/utils';
@@ -46,6 +46,8 @@ import {
   useGenerationBatchProgress,
   type GenerationBatchProgressState,
 } from '../../hooks/useGenerationBatchProgress';
+import { subtitleSpendKeys, useSubtitleSpend } from '../../hooks/useSubtitleSpend';
+import type { SubtitleBatchReceipt } from '../../services/subtitleSpendService';
 import {
   useGenerationProgress,
   type GenerationProgressState,
@@ -185,39 +187,133 @@ function RowStageLabel({
 }
 
 /**
- * 本次用量 + the live-SSE chip. Drawn twice (dsr-6f-3): in the body for the
- * desktop (F8-D-v2), and — `phone` — at the top of the FIXED footer below sm:
- * (F8-M-v2 GSnOg), where a long queue cannot scroll the money out of sight. The
- * body is a scroll container and the footer is its sibling, so CSS `order`
- * cannot carry one node across; each copy is display:none at the other
- * breakpoint, which also keeps it out of the accessibility tree.
+ * The F8c completion receipt (sub-7-6c AC #2) — what one line says once the
+ * batch has ended:「本次 $0.53 · claude-sonnet-5 · 844 句 · cache 命中 12%」.
+ * Every segment after the amount is OPTIONAL and omitted when nothing measured
+ * it: a cache share nobody counted is not 0%, a batch with no completed run has
+ * no cue count. The ledger's `by_batch` wins over the live SSE sum when both
+ * exist — a dropped event under-counts, the ledger does not — and it is the
+ * only source for a batch attached from `last` after a reopen.
+ */
+export interface GenerationBatchReceiptView {
+  /** The model(s) the batch ran on;「 / 」-joined when it switched midway. */
+  modelLabel: string | null;
+  /** Cues produced by the COMPLETED runs; null when none completed. */
+  cueCount: number | null;
+  /** Prompt-cache hit share over those cues, a whole percent; null when unmeasured. */
+  cacheHitPct: number | null;
+}
+
+export function buildReceiptView(
+  progress: Pick<GenerationBatchProgressState, 'batchId' | 'modelId' | 'runTotals'>,
+  byBatch?: SubtitleBatchReceipt | null
+): GenerationBatchReceiptView {
+  const ledger = byBatch && byBatch.batchId === progress.batchId ? byBatch : null;
+  const live = progress.runTotals;
+  const completedRuns = ledger ? ledger.completedRuns : (live?.completedRuns ?? 0);
+  const cueCount = completedRuns > 0 ? (ledger ? ledger.cueCount : (live?.cueCount ?? 0)) : null;
+  const measuredRuns = ledger ? ledger.cacheMeasuredRuns : (live?.cacheMeasuredRuns ?? 0);
+  const hits = ledger ? ledger.cacheHitCues : (live?.cacheHitCues ?? 0);
+  const cacheHitPct =
+    measuredRuns > 0 && hits != null && cueCount != null && cueCount > 0
+      ? Math.round((hits * 100) / cueCount)
+      : null;
+  const models = ledger
+    ? ledger.modelIds && ledger.modelIds.length > 1
+      ? ledger.modelIds
+      : ledger.modelId
+        ? [ledger.modelId]
+        : []
+    : (live?.modelIds ?? []);
+  const modelLabel = models.length > 0 ? models.join(' / ') : progress.modelId || null;
+  return { modelLabel, cueCount, cacheHitPct };
+}
+
+/**
+ * 本次用量 + the live-SSE chip while running; the F8c receipt line + 已完成 chip
+ * once the batch has ended. Drawn twice (dsr-6f-3): in the body for the
+ * desktop (F8-D-v2 / F8c-D-v2), and — `phone` — at the top of the FIXED footer
+ * below sm: (F8-M-v2 GSnOg / F8c-M-v2), where a long queue cannot scroll the
+ * money out of sight. The body is a scroll container and the footer is its
+ * sibling, so CSS `order` cannot carry one node across; each copy is
+ * display:none at the other breakpoint, which also keeps it out of the
+ * accessibility tree.
  */
 function CostRow({
   progress,
-  isRunning,
+  status,
+  receipt,
   phone = false,
 }: {
   progress: GenerationBatchProgressState;
-  isRunning: boolean;
+  status: GenerationBatchProgressState['status'];
+  receipt?: GenerationBatchReceiptView | null;
   phone?: boolean;
 }) {
   const suffix = phone ? '-mobile' : '';
+  const isRunning = status === 'running';
+  // No receipt view (an older caller, or a fixture) → the running line stays
+  // honest at a terminal too: it still says what was spent against what cap.
+  const showReceipt = !isRunning && receipt != null;
+  // Green is "there is an answer and it is the good one" (🔴 #10) — a run with
+  // failures keeps the neutral verdict line and earns no chip.
+  const done = status === 'complete' && progress.failCount === 0;
+  const tail = showReceipt
+    ? [
+        receipt.cueCount != null ? `${receipt.cueCount} 句` : null,
+        receipt.cacheHitPct != null ? `cache 命中 ${receipt.cacheHitPct}%` : null,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : '';
   return (
     <div className={cn('flex items-center gap-2', phone ? 'sm:hidden' : 'max-sm:hidden')}>
-      <p
-        data-testid={`gen-batch-cost-line${suffix}`}
-        className={cn(
-          'flex items-center gap-1 text-[var(--text-secondary)]',
-          phone ? 'text-xs' : 'text-sm'
-        )}
-      >
-        本次用量：
-        <span className="font-mono font-semibold tabular-nums text-[var(--text-primary)]">
-          {usd(progress.spentUsd)}
-        </span>
-        <span> / 上限 </span>
-        <span className="font-mono tabular-nums">{usd(progress.budgetUsd)}</span>
-      </p>
+      {showReceipt ? (
+        <p
+          data-testid={`gen-batch-receipt-line${suffix}`}
+          className={cn(
+            'flex text-[var(--text-secondary)]',
+            // F8c-M: two lines —「本次 $0.53 · claude-sonnet-5」over「844 句 · cache 命中 12%」.
+            phone
+              ? 'flex-col items-start gap-0.5 text-xs'
+              : 'flex-wrap items-center gap-x-1 text-sm'
+          )}
+        >
+          <span className="whitespace-nowrap">
+            本次{' '}
+            <span className="font-mono font-semibold tabular-nums text-[var(--text-primary)]">
+              {usd(progress.spentUsd)}
+            </span>
+            {receipt.modelLabel && (
+              <>
+                {' · '}
+                <span className="font-mono">{receipt.modelLabel}</span>
+              </>
+            )}
+          </span>
+          {tail && (
+            <>
+              {!phone && <span aria-hidden="true">{' · '}</span>}
+              <span className="whitespace-nowrap">{tail}</span>
+            </>
+          )}
+        </p>
+      ) : (
+        <p
+          data-testid={`gen-batch-cost-line${suffix}`}
+          className={cn(
+            'flex items-center gap-1 text-[var(--text-secondary)]',
+            phone ? 'text-xs' : 'text-sm'
+          )}
+        >
+          本次用量：
+          <span className="font-mono font-semibold tabular-nums text-[var(--text-primary)]">
+            {usd(progress.spentUsd)}
+          </span>
+          <span> / 上限 </span>
+          <span className="font-mono tabular-nums">{usd(progress.budgetUsd)}</span>
+        </p>
+      )}
       <span className="flex-1" />
       {isRunning && (
         <span
@@ -226,6 +322,15 @@ function CostRow({
         >
           <Radio className="h-3 w-3" aria-hidden="true" />
           即時更新（SSE）
+        </span>
+      )}
+      {showReceipt && done && (
+        <span
+          data-testid={`gen-batch-done-chip${suffix}`}
+          className="flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--success-tint)] px-2 py-1 text-xs text-[var(--success-text)]"
+        >
+          <CircleCheck className="h-3 w-3" aria-hidden="true" />
+          已完成
         </span>
       )}
     </div>
@@ -302,6 +407,11 @@ export interface GenerationBatchPanelV2Props {
   /** Per-item stage detail for the active row (joined on current_media_id). */
   activeItemProgress?: GenerationProgressState | null;
   /**
+   * The F8c completion receipt (sub-7-6c AC #2) — replaces 本次用量／上限 once
+   * the batch has ended. Omitted → the running line stays (older callers).
+   */
+  receipt?: GenerationBatchReceiptView | null;
+  /**
    * Resolves when the cancel request succeeded; REJECTS when it failed — the
    * panel keeps the confirm row up and says so (dsr-6d-b 🔴 #5: a swallowed
    * error used to look exactly like a successful cancel).
@@ -335,6 +445,7 @@ export function GenerationBatchPanelV2({
   items,
   failedIds = EMPTY_FAILED,
   activeItemProgress = null,
+  receipt = null,
   onConfirmCancelAll,
   onResume,
   onRetryFailed,
@@ -654,8 +765,8 @@ export function GenerationBatchPanelV2({
             )
           )}
 
-          {/* ---------- Cost row ---------- */}
-          <CostRow progress={progress} isRunning={isRunning} />
+          {/* ---------- Cost row / F8c receipt ---------- */}
+          <CostRow progress={progress} status={status} receipt={receipt} />
         </div>
 
         {/* Footer */}
@@ -665,7 +776,7 @@ export function GenerationBatchPanelV2({
         >
           {/* F8-M pins the money to the FIXED footer: in the body it scrolls
               away with a long queue. The body copy stays for the desktop. */}
-          <CostRow progress={progress} isRunning={isRunning} phone />
+          <CostRow progress={progress} status={status} receipt={receipt} phone />
           {isRunning &&
             (!confirmingCancel ? (
               <button
@@ -881,6 +992,13 @@ export function GenerationBatchDialogV2({
 
   const isIdle = batch.status === 'idle';
 
+  // F8c receipt (sub-7-6c AC #2): once the batch has ended, read its ledger
+  // receipt — the source that survives a reopen (`last`) and a dropped SSE
+  // event. Until it answers, the live subtitle_run_receipt sum stands in.
+  const batchEnded = !isIdle && batch.status !== 'running' && batch.progress.batchId !== '';
+  const batchSpend = useSubtitleSpend({ batchId: batch.progress.batchId, enabled: batchEnded });
+  const receipt = batchEnded ? buildReceiptView(batch.progress, batchSpend.data?.byBatch) : null;
+
   // On open, recover an already-running batch (409-recover precedent): the
   // status probe lets us jump straight into the running view and attach SSE —
   // skipping the consent flow, because THAT batch was already consented.
@@ -987,6 +1105,10 @@ export function GenerationBatchDialogV2({
     void queryClient.invalidateQueries({ queryKey: detailKeys.all });
     void queryClient.invalidateQueries({ queryKey: activityKeys.all });
     void queryClient.invalidateQueries({ queryKey: transcriptionEstimateKeys.all });
+    // The month card (activity hub, home band) must show this batch at once,
+    // not on its next minute tick. The month key only — the batch's own
+    // receipt query is keyed by batch id and is being read right now.
+    void queryClient.invalidateQueries({ queryKey: subtitleSpendKeys.month() });
     // The header promise: the cached queue is cleared ON TERMINAL (not on
     // close — a closed dialog does not stop the batch, and the workspace is
     // still drawing that queue).
@@ -1193,6 +1315,7 @@ export function GenerationBatchDialogV2({
       items={items}
       failedIds={failedIds}
       activeItemProgress={perItem.progress}
+      receipt={receipt}
       onConfirmCancelAll={handleConfirmCancelAll}
       onResume={handleResume}
       onRetryFailed={failedRows.length > 0 ? handleRetryFailed : undefined}

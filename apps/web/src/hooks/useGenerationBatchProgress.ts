@@ -30,6 +30,29 @@ const SSE_RECONNECT_MS = 10000;
 /** Hook-side state machine: the wire statuses + the idle resting state. */
 export type GenerationBatchHookStatus = 'idle' | GenerationBatchStatus;
 
+/**
+ * Running totals of this batch's `subtitle_run_receipt` events (sub-7-6a
+ * [@contract-v1]; sub-7-6c AC #2). COMPLETED runs only — a failed run has no
+ * cues to count — and `cacheMeasuredRuns` tells how many of them reported a
+ * cache split at all, so an unmeasured cache is never read as 0 hits.
+ */
+export interface GenerationBatchRunTotals {
+  completedRuns: number;
+  cueCount: number;
+  cacheHitCues: number;
+  cacheMeasuredRuns: number;
+  /** In first-seen order; more than one means the batch changed model midway. */
+  modelIds: string[];
+}
+
+export const EMPTY_RUN_TOTALS: GenerationBatchRunTotals = {
+  completedRuns: 0,
+  cueCount: 0,
+  cacheHitCues: 0,
+  cacheMeasuredRuns: 0,
+  modelIds: [],
+};
+
 export interface GenerationBatchProgressState {
   batchId: string;
   totalItems: number;
@@ -50,6 +73,10 @@ export interface GenerationBatchProgressState {
    * the 202 / status probe (dsr-6d-b / dsr-6d-c).
    */
   items: GenerationBatchItemState[] | null;
+  /** The model the batch was priced and run with (sub-7-6a `model_id`); '' on older servers. */
+  modelId?: string;
+  /** Live receipt sum for the F8c completion line; reset with every batch. */
+  runTotals?: GenerationBatchRunTotals;
 }
 
 const initialState: GenerationBatchProgressState = {
@@ -65,6 +92,8 @@ const initialState: GenerationBatchProgressState = {
   spentUsd: 0,
   budgetUsd: 0,
   items: null,
+  modelId: '',
+  runTotals: EMPTY_RUN_TOTALS,
 };
 
 /**
@@ -77,10 +106,20 @@ interface GenerationBatchSsePayload extends GenerationBatchProgress {
   changedItem?: GenerationBatchItemState | null;
 }
 
+/** The `subtitle_run_receipt` payload keys this hook reads (camelCased). */
+interface SubtitleRunReceiptPayload {
+  batchId?: string;
+  status?: string;
+  modelId?: string;
+  cueCount?: number;
+  cacheHitCues?: number | null;
+}
+
 type Action =
   | { type: 'START'; payload: Partial<GenerationBatchProgressState> }
   | { type: 'ATTACH'; payload: GenerationBatchProgress }
   | { type: 'SSE_UPDATE'; payload: GenerationBatchSsePayload }
+  | { type: 'RUN_RECEIPT'; payload: SubtitleRunReceiptPayload }
   | { type: 'RESET' };
 
 /**
@@ -134,6 +173,10 @@ function reducer(
         spentUsd: p.spentUsd ?? 0,
         budgetUsd: p.budgetUsd ?? 0,
         items: p.items ?? null,
+        modelId: p.modelId ?? '',
+        // A snapshot carries no receipts; the ledger (`by_batch`) fills this
+        // line in for an attached batch.
+        runTotals: EMPTY_RUN_TOTALS,
       };
     }
     case 'SSE_UPDATE': {
@@ -152,6 +195,26 @@ function reducer(
         spentUsd: p.spentUsd ?? state.spentUsd,
         budgetUsd: p.budgetUsd ?? state.budgetUsd,
         items: mergeItems(state.items, p),
+        modelId: p.modelId ?? state.modelId,
+      };
+    }
+    case 'RUN_RECEIPT': {
+      const r = action.payload;
+      // Only THIS batch's completed runs: a solo 生成字幕 click elsewhere emits
+      // receipts too (sub-7-6a), with no batch_id or another one.
+      if (!r.batchId || r.batchId !== state.batchId || r.status !== 'completed') return state;
+      const t = state.runTotals ?? EMPTY_RUN_TOTALS;
+      const measured = typeof r.cacheHitCues === 'number';
+      return {
+        ...state,
+        runTotals: {
+          completedRuns: t.completedRuns + 1,
+          cueCount: t.cueCount + (r.cueCount ?? 0),
+          cacheHitCues: t.cacheHitCues + (measured ? (r.cacheHitCues as number) : 0),
+          cacheMeasuredRuns: t.cacheMeasuredRuns + (measured ? 1 : 0),
+          modelIds:
+            r.modelId && !t.modelIds.includes(r.modelId) ? [...t.modelIds, r.modelId] : t.modelIds,
+        },
       };
     }
     case 'RESET':
@@ -214,6 +277,20 @@ export function useGenerationBatchProgress() {
         const payload = snakeToCamel<GenerationBatchSsePayload>(parsed.data ?? parsed);
         dispatch({ type: 'SSE_UPDATE', payload });
         if (isTerminal(payload.status)) closeSSE();
+      } catch {
+        // Ignore malformed frames.
+      }
+    });
+
+    // sub-7-6c AC #2: each finished run's receipt (cues, cache split, model)
+    // rides its own event; summed here so the F8c line can draw the moment
+    // the terminal event lands, before the ledger answers.
+    es.addEventListener('subtitle_run_receipt', (e: MessageEvent) => {
+      if (!mountedRef.current) return;
+      try {
+        const parsed = JSON.parse(e.data);
+        const payload = snakeToCamel<SubtitleRunReceiptPayload>(parsed.data ?? parsed);
+        dispatch({ type: 'RUN_RECEIPT', payload });
       } catch {
         // Ignore malformed frames.
       }

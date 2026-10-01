@@ -6,6 +6,11 @@ import type { HomeSummary } from '../../services/homeSummaryService';
 vi.mock('../../hooks/useHomeSummary', () => ({
   useHomeSummary: vi.fn(),
 }));
+// sub-7-6c AC #3: the month total is its own query. Idle by default so every
+// test above keeps the trio rules it was written against.
+vi.mock('../../hooks/useSubtitleSpend', () => ({
+  useSubtitleSpend: vi.fn(),
+}));
 // The band's cells are router <Link>s; this spec has no router, so stub Link
 // as a plain anchor (the RecentlyAddedRowV2 spec precedent).
 vi.mock('@tanstack/react-router', async (importOriginal) => {
@@ -21,9 +26,40 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 });
 
 import { useHomeSummary } from '../../hooks/useHomeSummary';
-import { HomeReadoutBand } from './HomeReadoutBand';
+import { useSubtitleSpend } from '../../hooks/useSubtitleSpend';
+import type { SubtitleSpendSummary } from '../../services/subtitleSpendService';
+import { HomeReadoutBand, monthSpendUsd } from './HomeReadoutBand';
 
 const mockUseHomeSummary = vi.mocked(useHomeSummary);
+const mockUseSpend = vi.mocked(useSubtitleSpend);
+
+function spendMonth(over: Partial<SubtitleSpendSummary> = {}): SubtitleSpendSummary {
+  return {
+    period: 'month',
+    from: '2026-10-01T00:00:00+08:00',
+    to: '2026-11-01T00:00:00+08:00',
+    translatedRuns: 12,
+    translatedUsd: 3.48,
+    asrRuns: 2,
+    asrUsd: 1.9,
+    unpricedRuns: 0,
+    unroutedRuns: 0,
+    unroutedUsd: 0,
+    skippedDeliverCount: 0,
+    skippedSavedUsdEstimate: 0,
+    skippedSavedRuntimeAssumed: false,
+    cacheHitCues: 0,
+    cacheMeasuredRuns: 0,
+    cacheSavedUsdEstimate: null,
+    byModel: [],
+    ...over,
+  };
+}
+function spendResult(data?: SubtitleSpendSummary, over: Record<string, unknown> = {}) {
+  return { data, isLoading: false, isError: false, ...over } as unknown as ReturnType<
+    typeof useSubtitleSpend
+  >;
+}
 
 function summary(over: Partial<HomeSummary> = {}): HomeSummary {
   return {
@@ -53,6 +89,7 @@ function result(over: Record<string, unknown> = {}) {
 describe('HomeReadoutBand (Home v3 讀數帶 — ux3-1-7)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseSpend.mockReturnValue(spendResult());
   });
 
   it('[P1] renders all four cells with their values (H1-D-v3)', () => {
@@ -462,5 +499,106 @@ describe('HomeReadoutBand (Home v3 讀數帶 — ux3-1-7)', () => {
       'aria-label',
       '需要注意，2 部失敗待處理，前往活動中心'
     );
+  });
+});
+
+// ─── sub-7-6c AC #3: no live batch → the spend half reads this month's ledger ───
+
+describe('HomeReadoutBand — 需要注意 reads the month total when no batch is live', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseSpend.mockReturnValue(spendResult());
+  });
+
+  it('[P1] with 0 failures and a last_run trio, the month total shows instead of silence', () => {
+    mockUseHomeSummary.mockReturnValue(
+      result({
+        data: summary({
+          attention: {
+            status: 'ok',
+            failedCount: 0,
+            spentUsd: 0.42,
+            budgetUsd: 5,
+            spendSource: 'last_run',
+          },
+        }),
+      })
+    );
+    mockUseSpend.mockReturnValue(spendResult(spendMonth()));
+    render(<HomeReadoutBand />);
+    // 3.48 + 1.90 = 5.38 → H8-SPEC-v3 folding → $5.4
+    expect(screen.getByTestId('readout-attention-value')).toHaveTextContent('一切正常 · 本月 $5.4');
+    expect(screen.getByTestId('readout-attention')).toHaveAttribute(
+      'aria-label',
+      '需要注意，一切正常 · 本月 $5.4，前往活動中心'
+    );
+  });
+
+  it('[P1] a LIVE batch still wins — its spent/ceiling is the current, actionable number', () => {
+    mockUseHomeSummary.mockReturnValue(result({ data: summary() })); // live_batch 1.2/5, 2 failures
+    mockUseSpend.mockReturnValue(spendResult(spendMonth()));
+    render(<HomeReadoutBand />);
+    expect(screen.getByTestId('readout-attention-spend')).toHaveTextContent('$1.2/$5');
+    expect(screen.getByTestId('readout-attention-value')).not.toHaveTextContent('本月');
+  });
+
+  it('[P1] failures + month total → two halves, and the spoken form says 本月已花費', () => {
+    mockUseHomeSummary.mockReturnValue(
+      result({ data: summary({ attention: { status: 'ok', failedCount: 2 } }) })
+    );
+    mockUseSpend.mockReturnValue(spendResult(spendMonth()));
+    render(<HomeReadoutBand />);
+    expect(screen.getByTestId('readout-attention-failures')).toHaveTextContent('2 部失敗');
+    expect(screen.getByTestId('readout-attention-spend')).toHaveTextContent('本月 $5.4');
+    expect(screen.getByTestId('readout-attention')).toHaveAttribute(
+      'aria-label',
+      '需要注意，2 部失敗待處理，本月已花費 $5.4，前往活動中心'
+    );
+  });
+
+  it('[P2] an untouched month is ABSENT, not $0 — the cell stays 一切正常', () => {
+    mockUseHomeSummary.mockReturnValue(
+      result({ data: summary({ attention: { status: 'ok', failedCount: 0 } }) })
+    );
+    mockUseSpend.mockReturnValue(
+      spendResult(spendMonth({ translatedRuns: 0, translatedUsd: 0, asrRuns: 0, asrUsd: 0 }))
+    );
+    render(<HomeReadoutBand />);
+    expect(screen.getByTestId('readout-attention-value')).toHaveTextContent(/^一切正常$/);
+  });
+
+  it('[P2] a failed month query falls back to the trio rules (last_run stays quiet at 0 failures)', () => {
+    mockUseHomeSummary.mockReturnValue(
+      result({
+        data: summary({
+          attention: {
+            status: 'ok',
+            failedCount: 0,
+            spentUsd: 0.42,
+            budgetUsd: 5,
+            spendSource: 'last_run',
+          },
+        }),
+      })
+    );
+    mockUseSpend.mockReturnValue(spendResult(undefined, { isError: true }));
+    render(<HomeReadoutBand />);
+    expect(screen.getByTestId('readout-attention-value')).toHaveTextContent(/^一切正常$/);
+  });
+
+  it('monthSpendUsd sums the two paid lanes AND the pre-ledger rows exactly (no float drift)', () => {
+    expect(monthSpendUsd(undefined)).toBeNull();
+    expect(monthSpendUsd(spendMonth({ translatedRuns: 0, asrRuns: 0 }))).toBeNull();
+    // 0.1 + 0.2 + 0.3 is 0.6000000000000001 in doubles; the ledger sum is 0.6.
+    expect(
+      monthSpendUsd(
+        spendMonth({
+          translatedUsd: 0.1,
+          asrUsd: 0.2,
+          unroutedRuns: 1,
+          unroutedUsd: 0.3,
+        })
+      )
+    ).toBe(0.6);
   });
 });

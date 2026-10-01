@@ -19,8 +19,11 @@
  *  - the attention cell NEVER disappears: 0 failures renders 「一切正常」 —
  *    no bad news is itself the good news this product sells. Amber
  *    (--warning-text, 要求了但沒發生) is worn ONLY when failures > 0.
- *  - the spend trio is shown only when the backend sent one (absent ≠ $0);
- *    amounts fold per H8-SPEC-v3 (formatUsdShort) so no cell ever truncates.
+ *  - the spend figure is shown only when something was measured (absent ≠
+ *    $0): a LIVE batch's spent/ceiling first; otherwise this month's ledger
+ *    total (sub-7-6c AC #3,「本月 $5.4」); otherwise the last run's trio and
+ *    only beside a failure. Amounts fold per H8-SPEC-v3 (formatUsdShort) so no
+ *    cell ever truncates.
  *  - a whole-summary failure still renders one honest, actionable band. The
  *    endpoint cannot identify a trustworthy source or timestamp, so this state
  *    names neither; inventing either would break the contract it protects.
@@ -29,9 +32,12 @@ import { Link } from '@tanstack/react-router';
 import { Activity, AlertTriangle, Captions, CheckCheck } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useHomeSummary } from '../../hooks/useHomeSummary';
+import { useSubtitleSpend } from '../../hooks/useSubtitleSpend';
 import { formatUsdShort } from '../../utils/formatUsdShort';
+import { sumUsd } from '../../lib/currency';
 import { cn } from '../../lib/utils';
 import type { AttentionCell } from '../../services/homeSummaryService';
+import type { SubtitleSpendSummary } from '../../services/subtitleSpendService';
 
 /**
  * The band's shell and its cell box, shared by the skeleton and the real band
@@ -83,14 +89,53 @@ type AttentionReadout =
   /** One line: `value` is the whole reading. */
   | { exception: boolean; text: string; parts: null }
   /** Two halves: the renderer owns how they are joined, so there is no second
-   *  copy of the joined string to fall out of sync with the DOM. */
-  | { exception: true; text: null; parts: { failures: string; spend: string } };
+   *  copy of the joined string to fall out of sync with the DOM. `spendAria`
+   *  is the spoken form of the spend half (「已花費 $1.2/$5」／「本月已花費 $5.4」). */
+  | {
+      exception: true;
+      text: null;
+      parts: { failures: string; spend: string };
+      spendAria: string;
+    };
 
-function attentionText(cell: AttentionCell): AttentionReadout {
-  const spend =
+/**
+ * This month's total from the ledger (sub-7-6b): the two paid lanes plus the
+ * pre-ledger rows — all real money, summed exactly. null = nothing recorded
+ * this month (absent ≠ $0), or no summary yet.
+ */
+export function monthSpendUsd(summary: SubtitleSpendSummary | undefined): number | null {
+  if (!summary) return null;
+  if (summary.translatedRuns + summary.asrRuns + summary.unroutedRuns === 0) return null;
+  return sumUsd([summary.translatedUsd, summary.asrUsd, summary.unroutedUsd]);
+}
+
+/**
+ * The spend half of the attention cell, by source (sub-7-6c AC #3):
+ *  1. a LIVE batch — spent/ceiling, the consent flow's own numbers, current
+ *     and actionable even with 0 failures;
+ *  2. otherwise this month's ledger total;
+ *  3. otherwise the LAST run's spent/ceiling, and only beside a failure — a
+ *     historical amount next to 一切正常 is noise, not an exception.
+ */
+function spendReadout(
+  cell: AttentionCell,
+  monthUsd: number | null
+): { text: string; aria: string } | null {
+  const trio =
     cell.spentUsd !== undefined && cell.budgetUsd !== undefined
       ? `${formatUsdShort(cell.spentUsd)}/${formatUsdShort(cell.budgetUsd)}`
       : null;
+  if (trio && cell.spendSource === 'live_batch') return { text: trio, aria: `已花費 ${trio}` };
+  if (monthUsd !== null) {
+    const month = formatUsdShort(monthUsd);
+    return { text: `本月 ${month}`, aria: `本月已花費 ${month}` };
+  }
+  if (trio && cell.failedCount > 0) return { text: trio, aria: `已花費 ${trio}` };
+  return null;
+}
+
+function attentionText(cell: AttentionCell, monthUsd: number | null): AttentionReadout {
+  const spend = spendReadout(cell, monthUsd);
 
   if (cell.failedCount > 0) {
     const failures = `${cell.failedCount} 部失敗`;
@@ -98,14 +143,16 @@ function attentionText(cell: AttentionCell): AttentionReadout {
     // nothing above it (「若沒有失敗、只剩預算警示」) the amount rises to the
     // first line and the cell stays one line at every width.
     return spend
-      ? { exception: true, text: null, parts: { failures, spend } }
+      ? {
+          exception: true,
+          text: null,
+          parts: { failures, spend: spend.text },
+          spendAria: spend.aria,
+        }
       : { exception: true, text: failures, parts: null };
   }
-  // Live-batch spend is current, actionable information even with 0 failures;
-  // a LAST run's spend next to 一切正常 would just be noise (historical, not
-  // an exception) — so only live_batch surfaces here.
-  if (spend && cell.spendSource === 'live_batch') {
-    return { exception: false, text: `一切正常 · ${spend}`, parts: null };
+  if (spend) {
+    return { exception: false, text: `一切正常 · ${spend.text}`, parts: null };
   }
   return { exception: false, text: '一切正常', parts: null };
 }
@@ -223,6 +270,11 @@ function ReadoutCell({
 
 export function HomeReadoutBand() {
   const { data, isLoading, isError, isFetching, refetch } = useHomeSummary();
+  // sub-7-6c AC #3: the month total is its own query (sub-7-6b) and its own
+  // failure — the band never waits for it and never blanks over it; the
+  // attention cell simply falls back to the trio rules above.
+  const monthSpend = useSubtitleSpend();
+  const monthUsd = monthSpendUsd(monthSpend.data);
 
   // A whole-request failure means no value was measured, not that the readout
   // stopped mattering. Keep one compact band so the homepage remains a useful
@@ -351,7 +403,7 @@ export function HomeReadoutBand() {
   // reads like a guard is worse than no clause: it invites the next reader to
   // trust a check that was never doing anything.
   const hasUncovered = coverage.status === 'ok' && coverage.covered < coverage.total;
-  const attentionLine = attentionText(attention);
+  const attentionLine = attentionText(attention, monthUsd);
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
@@ -411,7 +463,7 @@ export function HomeReadoutBand() {
           ariaLabel={
             attention.status === 'ok'
               ? attentionLine.parts
-                ? `需要注意，${attentionLine.parts.failures}待處理，已花費 ${attentionLine.parts.spend}，前往活動中心`
+                ? `需要注意，${attentionLine.parts.failures}待處理，${attentionLine.spendAria}，前往活動中心`
                 : attention.failedCount > 0
                   ? `需要注意，${attention.failedCount} 部失敗待處理，前往活動中心`
                   : `需要注意，${attentionLine.text}，前往活動中心`

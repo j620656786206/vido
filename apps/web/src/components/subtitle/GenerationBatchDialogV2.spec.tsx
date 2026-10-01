@@ -24,6 +24,8 @@ const h = vi.hoisted(() => ({
   batchAttachSnapshot: vi.fn(),
   batchEpoch: 0,
   batchReset: vi.fn(),
+  // sub-7-6c: what GET /subtitles/spend?batch_id= answers once a batch ends.
+  spendData: undefined as unknown,
   itemState: {
     phase: 'idle' as string,
     failedPhase: null as string | null,
@@ -47,6 +49,11 @@ vi.mock('../../hooks/useGenerationBatchProgress', () => ({
     connectionEpoch: h.batchEpoch,
     reset: h.batchReset,
   }),
+}));
+
+vi.mock('../../hooks/useSubtitleSpend', () => ({
+  useSubtitleSpend: () => ({ data: h.spendData, isLoading: false, isError: false }),
+  subtitleSpendKeys: { all: ['subtitle-spend'], month: () => ['subtitle-spend', 'month', ''] },
 }));
 
 vi.mock('../../hooks/useGenerationProgress', () => ({
@@ -130,6 +137,7 @@ vi.mock('./consent/GenerationConsentView', () => ({
 import {
   GenerationBatchDialogV2,
   GenerationBatchPanelV2,
+  buildReceiptView,
   deriveRowStates,
   failedRowIds,
   remainingIds,
@@ -480,6 +488,7 @@ describe('GenerationBatchDialogV2 (container)', () => {
     h.batchState.items = null;
     h.batchEpoch = 0;
     h.itemState.phase = 'idle';
+    h.spendData = undefined;
     mocked.getGenerationBatchStatus.mockResolvedValue({ running: false, progress: null });
   });
 
@@ -785,6 +794,51 @@ describe('GenerationBatchDialogV2 (container)', () => {
     await waitFor(() => expect(mocked.getGenerationBatchStatus).toHaveBeenCalled());
   });
 
+  // sub-7-6c AC #2 — the F8c receipt reads the ledger once the batch has ended.
+  it('[sub-7-6c] a finished batch draws its ledger receipt (by_batch) under the queue', async () => {
+    h.batchState.status = 'complete';
+    h.batchState.batchId = 'gb-1';
+    h.batchState.successCount = 5;
+    h.batchState.spentUsd = 0.53;
+    h.spendData = {
+      byBatch: {
+        batchId: 'gb-1',
+        runs: 5,
+        completedRuns: 5,
+        usd: 0.53,
+        cueCount: 844,
+        cacheHitCues: 101,
+        cacheMeasuredRuns: 5,
+        modelId: 'claude-sonnet-5',
+      },
+    };
+    renderDialogRaw();
+    const line = await screen.findByTestId('gen-batch-receipt-line');
+    expect(line).toHaveTextContent('本次 $0.53 · claude-sonnet-5 · 844 句 · cache 命中 12%');
+    expect(screen.getByTestId('gen-batch-done-chip')).toHaveTextContent('已完成');
+    expect(screen.queryByTestId('gen-batch-cost-line')).toBeNull();
+  });
+
+  it('[sub-7-6c] a receipt for ANOTHER batch is ignored — the line falls back to what this batch streamed', async () => {
+    h.batchState.status = 'complete';
+    h.batchState.batchId = 'gb-1';
+    h.batchState.spentUsd = 0.53;
+    h.spendData = {
+      byBatch: {
+        batchId: 'gb-old',
+        completedRuns: 9,
+        cueCount: 9999,
+        cacheHitCues: 1,
+        cacheMeasuredRuns: 9,
+        modelId: 'x',
+      },
+    };
+    renderDialogRaw();
+    const line = await screen.findByTestId('gen-batch-receipt-line');
+    expect(line).toHaveTextContent(/^本次 \$0\.53$/);
+    expect(line).not.toHaveTextContent('9999');
+  });
+
   it('[CR H2] after a batch terminal the next consent render forces a re-analysis (stale snapshot ban)', async () => {
     // Reach a terminal state → the container marks the snapshot stale.
     h.batchState.status = 'complete';
@@ -803,6 +857,188 @@ describe('GenerationBatchDialogV2 (container)', () => {
 // ---------------------------------------------------------------------------
 // sub-5-3 — failed-retry + resume preselection
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// sub-7-6c AC #2 — the F8c completion receipt (F8c-D-v2 gWFcx / F8c-M-v2 LAeqW)
+// ---------------------------------------------------------------------------
+
+const RECEIPT = { modelLabel: 'claude-sonnet-5', cueCount: 844, cacheHitPct: 12 };
+
+describe('GenerationBatchPanelV2 — F8c receipt line', () => {
+  it('[P1] complete without failures: receipt line + 已完成 chip replace 本次用量 and the SSE chip', () => {
+    renderPanel({
+      status: 'complete',
+      progress: progressOf({ status: 'complete', successCount: 5, spentUsd: 0.53 }),
+      items: ITEMS,
+      receipt: RECEIPT,
+    });
+    expect(screen.getByTestId('gen-batch-receipt-line')).toHaveTextContent(
+      '本次 $0.53 · claude-sonnet-5 · 844 句 · cache 命中 12%'
+    );
+    expect(screen.getByTestId('gen-batch-done-chip')).toHaveTextContent('已完成');
+    expect(screen.getByTestId('gen-batch-done-chip').className).toContain('success-tint');
+    expect(screen.queryByTestId('gen-batch-cost-line')).toBeNull();
+    expect(screen.queryByTestId('gen-batch-sse-chip')).toBeNull();
+    // The phone copy is the same receipt, pinned to the footer.
+    expect(screen.getByTestId('gen-batch-receipt-line-mobile')).toHaveTextContent('844 句');
+    expect(screen.getByTestId('gen-batch-close-btn')).toHaveTextContent('關閉');
+  });
+
+  it('[P1] a run with failures keeps the receipt but earns no green chip (🔴 #10)', () => {
+    renderPanel({
+      status: 'complete',
+      progress: progressOf({ status: 'complete', successCount: 3, failCount: 2, spentUsd: 3.1 }),
+      items: ITEMS,
+      receipt: RECEIPT,
+    });
+    expect(screen.getByTestId('gen-batch-receipt-line')).toHaveTextContent('本次 $3.10');
+    expect(screen.queryByTestId('gen-batch-done-chip')).toBeNull();
+  });
+
+  it('[P1] segments nobody measured are OMITTED, never drawn as 0', () => {
+    renderPanel({
+      status: 'cancelled',
+      progress: progressOf({ status: 'cancelled', spentUsd: 0.2 }),
+      items: ITEMS,
+      receipt: { modelLabel: 'claude-sonnet-5', cueCount: 120, cacheHitPct: null },
+    });
+    const line = screen.getByTestId('gen-batch-receipt-line');
+    expect(line).toHaveTextContent('本次 $0.20 · claude-sonnet-5 · 120 句');
+    expect(line).not.toHaveTextContent('cache');
+    expect(line).not.toHaveTextContent('0%');
+  });
+
+  it('[P2] nothing completed and no model → just the amount', () => {
+    renderPanel({
+      status: 'error',
+      progress: progressOf({ status: 'error', spentUsd: 0.88 }),
+      items: ITEMS,
+      receipt: { modelLabel: null, cueCount: null, cacheHitPct: null },
+    });
+    expect(screen.getByTestId('gen-batch-receipt-line')).toHaveTextContent(/^本次 \$0\.88$/);
+  });
+
+  it('[P1] while RUNNING the receipt prop is ignored — 本次用量／上限 and the SSE chip stay', () => {
+    renderPanel({ status: 'running', progress: progressOf({}), items: ITEMS, receipt: RECEIPT });
+    expect(screen.getByTestId('gen-batch-cost-line')).toHaveTextContent(
+      '本次用量：$0.42 / 上限 $5.00'
+    );
+    expect(screen.getByTestId('gen-batch-sse-chip')).toBeInTheDocument();
+    expect(screen.queryByTestId('gen-batch-receipt-line')).toBeNull();
+  });
+
+  it('[P2] no receipt view at a terminal (older caller / fixture) keeps the honest running line', () => {
+    renderPanel({
+      status: 'complete',
+      progress: progressOf({ status: 'complete', successCount: 5, spentUsd: 3.1 }),
+      items: ITEMS,
+    });
+    expect(screen.getByTestId('gen-batch-cost-line')).toHaveTextContent(
+      '本次用量：$3.10 / 上限 $5.00'
+    );
+    expect(screen.queryByTestId('gen-batch-receipt-line')).toBeNull();
+  });
+});
+
+describe('buildReceiptView (ledger over live sum; omit what nobody measured)', () => {
+  const live = {
+    completedRuns: 3,
+    cueCount: 944,
+    cacheHitCues: 101,
+    cacheMeasuredRuns: 2,
+    modelIds: ['claude-sonnet-5'],
+  };
+
+  it('the ledger (by_batch) wins when it is THIS batch', () => {
+    expect(
+      buildReceiptView(
+        { batchId: 'gb-1', modelId: 'claude-sonnet-5', runTotals: live },
+        {
+          batchId: 'gb-1',
+          runs: 5,
+          completedRuns: 5,
+          usd: 0.53,
+          cueCount: 844,
+          cacheHitCues: 101,
+          cacheMeasuredRuns: 5,
+          modelId: 'claude-sonnet-5',
+        }
+      )
+    ).toEqual({ modelLabel: 'claude-sonnet-5', cueCount: 844, cacheHitPct: 12 });
+  });
+
+  it("another batch's ledger row is ignored; the live sum stands", () => {
+    expect(
+      buildReceiptView(
+        { batchId: 'gb-1', modelId: '', runTotals: live },
+        {
+          batchId: 'gb-2',
+          runs: 1,
+          completedRuns: 1,
+          usd: 1,
+          cueCount: 10,
+          cacheHitCues: 5,
+          cacheMeasuredRuns: 1,
+          modelId: 'x',
+        }
+      )
+    ).toEqual({ modelLabel: 'claude-sonnet-5', cueCount: 944, cacheHitPct: 11 });
+  });
+
+  it('live sum: an unmeasured cache is null, not 0%; no completed run → no cue count', () => {
+    expect(
+      buildReceiptView({
+        batchId: 'gb-1',
+        modelId: 'claude-sonnet-5',
+        runTotals: { ...live, cacheMeasuredRuns: 0, cacheHitCues: 0 },
+      })
+    ).toEqual({ modelLabel: 'claude-sonnet-5', cueCount: 944, cacheHitPct: null });
+    expect(
+      buildReceiptView({
+        batchId: 'gb-1',
+        modelId: 'claude-sonnet-5',
+        runTotals: {
+          completedRuns: 0,
+          cueCount: 0,
+          cacheHitCues: 0,
+          cacheMeasuredRuns: 0,
+          modelIds: [],
+        },
+      })
+    ).toEqual({ modelLabel: 'claude-sonnet-5', cueCount: null, cacheHitPct: null });
+  });
+
+  it("a batch that changed model midway names them all; the ledger's null cache is null", () => {
+    expect(
+      buildReceiptView(
+        { batchId: 'gb-1', modelId: 'claude-sonnet-5', runTotals: undefined },
+        {
+          batchId: 'gb-1',
+          runs: 2,
+          completedRuns: 2,
+          usd: 1,
+          cueCount: 200,
+          cacheHitCues: null,
+          cacheMeasuredRuns: 0,
+          modelId: 'claude-haiku-4-5',
+          modelIds: ['claude-sonnet-5', 'claude-haiku-4-5'],
+        }
+      )
+    ).toEqual({
+      modelLabel: 'claude-sonnet-5 / claude-haiku-4-5',
+      cueCount: 200,
+      cacheHitPct: null,
+    });
+  });
+
+  it("nothing streamed and no ledger: the batch event's model_id is still named", () => {
+    expect(buildReceiptView({ batchId: 'gb-1', modelId: 'claude-sonnet-5' })).toEqual({
+      modelLabel: 'claude-sonnet-5',
+      cueCount: null,
+      cacheHitPct: null,
+    });
+  });
+});
 
 describe('failedRowIds / remainingIds (sub-5-3 AC #3/#4)', () => {
   it('failedRowIds = rows RENDERED failed at complete (matches what the user sees)', () => {
@@ -888,6 +1124,7 @@ describe('GenerationBatchDialogV2 — retry/resume preselection (sub-5-3 AC #3/#
     h.batchState.items = null;
     h.batchEpoch = 0;
     h.itemState.phase = 'idle';
+    h.spendData = undefined;
     mocked.getGenerationBatchStatus.mockResolvedValue({ running: false, progress: null });
   });
 
@@ -1387,6 +1624,7 @@ describe('GenerationBatchDialogV2 — probe / last / reconnect (dsr-6d-b AC #5)'
     h.batchState.items = null;
     h.batchEpoch = 0;
     h.itemState.phase = 'idle';
+    h.spendData = undefined;
     mocked.getGenerationBatchStatus.mockResolvedValue({ running: false, progress: null });
   });
 
@@ -1571,6 +1809,7 @@ describe('GenerationBatchDialogV2 — terminal caches (dsr-6d-b AC #6)', () => {
     h.batchState.items = null;
     h.batchEpoch = 0;
     h.itemState.phase = 'idle';
+    h.spendData = undefined;
     mocked.getGenerationBatchStatus.mockResolvedValue({ running: false, progress: null });
   });
 
@@ -1672,6 +1911,7 @@ describe('GenerationBatchDialogV2 — items-first kills the two lies (dsr-6d-b �
     h.batchState.items = null;
     h.batchEpoch = 0;
     h.itemState.phase = 'idle';
+    h.spendData = undefined;
     mocked.getGenerationBatchStatus.mockResolvedValue({ running: false, progress: null });
   });
 
@@ -1800,6 +2040,7 @@ describe('GenerationBatchDialogV2 — CR regressions (no dead ends)', () => {
     h.batchState.items = null;
     h.batchEpoch = 0;
     h.itemState.phase = 'idle';
+    h.spendData = undefined;
     mocked.getGenerationBatchStatus.mockResolvedValue({ running: false, progress: null });
   });
 
