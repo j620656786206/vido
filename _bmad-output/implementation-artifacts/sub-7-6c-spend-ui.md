@@ -1,6 +1,6 @@
 # Story sub-7-6c: 活動頁「本月 AI 花費」、批次收據行、首頁 readout 改讀月報 — 前端
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-10-01，由 sub-7-6 拆出；依賴 sub-7-6b 端點；**開工前要 Sally 兩張稿**（走 inline agent）。行號為 main `34b59615`。 -->
 
@@ -103,3 +103,4 @@ Claude Fable 5.1（2026-10-01）
 | 2026-10-01 | create-story（SM Bob，自 sub-7-6 拆出）。 |
 | 2026-10-01 | Task 0 設計稿完成（Alexyu inline agent；Sally review 通過）；截圖與 SCREENS 入 repo。 |
 | 2026-10-01 | Task 1–5 實作完成（Fable 5.1）；232 條相關 vitest 綠；status → review。 |
+| 2026-10-01 | PR #637 合併（CI 全綠；-linux 基準由 #638 補）；status → done。 |
