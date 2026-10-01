@@ -76,13 +76,13 @@ For non-trivial features, work **architecture-first**: outline the design and va
    - `flow-c-search-settings/` — 媒體庫搜尋＋篩選 / 批次操作 / 檢視偏好，以及**設定的 12 個分頁**（c4–c14，c23 是連線設定往下捲的 Sonarr／Radarr 卡片；另有 c15–c22 的載入／空／錯誤／確認狀態稿：外觀・連線・金鑰・服務狀態・字幕・自訂首頁・快取・日誌・備份・匯出匯入・效能監控；媒體庫掃描在 `flow-e-scanner/e1-d`）。分頁列與分組順序以 `SettingsLayout.tsx` 的 `SETTINGS_CATEGORIES` 為準
    - `flow-d-downloads-v2/` — Download centre v2: list / batch select / card actions / skeleton / empty / fail-soft / table / not-configured (d11) / import status spec (d12) / mobile sheets
    - `flow-e-scanner/` — Scanner settings / Scan progress / Complete toast / Filtered-unmatched
-   - `flow-f-subtitle-v2/` — Manage subtitles / generation progress / glossary / batch / 生成工作區
+   - `flow-f-subtitle-v2/` — Manage subtitles / generation progress / glossary / batch / 生成工作區 / F8c 批次完成收據（sub-7-6c；f8c-d-v2／f8c-m-v2）
    - `flow-h-homepage/` — Block CRUD modal (H3) / ExploreBlock 優化規格 (H9-SPEC，2026-09-16 由 dsr-7 從 `H5-D` 更名，避免與 `H5-D-v3 空片庫` 撞號) — the two screens v3 did not replace
    - `flow-h-homepage-v3/` — Home v3 identity rework: full desktop / TMDb-degraded / mobile / 金額顯示規則 spec / loading-skeleton / empty-library-first-run / own-content-failed
    - `flow-i-advanced-search/` — Filter rail persistent (I5) / rail states spec (I7)
    - `flow-i-discover-v2/` — Discover v2: desktop / mobile / live suggestions / rail / save filter / skeleton / no-results / fail-soft
    - `flow-j-specs/` — Design-decision spec screens (PosterCard density, subtitle badges, cost-bearing buttons…)
-   - `flow-k-activity-v2/` — Activity hub v2 (net-new D4-1 destination)
+   - `flow-k-activity-v2/` — Activity hub v2 (net-new D4-1 destination) + K5「本月 AI 花費」區塊（sub-7-6c；k5-d／k5-m，手機稿該區塊在摺線下、有 note）
    - `flow-l-requests-v2/` — Request System (Epic 13): 想要 button 3-state / season-episode tree / 5-status request list
    - `flow-m-auth-gate/` — Login and password gate
    - `flow-n-setup-wizard/` — 首次啟動精靈五步（歡迎・qBittorrent・媒體庫・API 金鑰・完成）；路由 `/setup`，實作在 `apps/web/src/components/setup/`
