@@ -1,6 +1,6 @@
 # Story sub-7-8c: 還沒評測的模型可以「試跑 20 句」、結果標「你的實測」— 後端＋前端
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-10-01，由 sub-7-8 拆出；依賴 sub-7-8a（考卷 embed）與 7-8b（等級表讀法）。行號為 main `4004c7af`。
      ⚠️ Task 0 設計稿：ModelPicker 列的三態（尚未評測＋按鈕／試跑中／你的實測）目前**沒有任何 .pen 稿**；要先請 Sally 補 F16／F19 的該列狀態與 J 系列成本按鈕規格，Alexyu 跑 inline agent，再開工 FE。 -->
@@ -118,3 +118,4 @@ Claude Fable 5.1（Amelia）；設計稿 Alexyu 跑 Pencil Inline AI Agent，Sal
 | 2026-10-01 | create-story（SM Bob，自 sub-7-8 拆出）。 |
 | 2026-10-01 | dev-story Task 1–2（Amelia，後端，commit a0d71601）；Task 0 提示詞出稿（Sally），等 Alexyu 跑 inline agent。 |
 | 2026-10-01 | Task 0 完成（Alexyu inline agent；Sally 截圖複審通過）；Task 3 前端完成 → review。 |
+| 2026-10-01 | CI token 檢查抓到 9 個裸值 → 補綁變數、重出快照；-linux 基準 #643 合進分支；PR #642 合併（Alexyu）→ done。 |

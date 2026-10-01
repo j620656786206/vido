@@ -1003,7 +1003,13 @@ func (p *Pipeline) TranslateTrack(ctx context.Context, track *ExtractedTrack, tc
 				p.observeChunk(ctx, chunkNumber, totalChunks, chunkUsage)
 			}
 
-			verdict = checkChunk(pending, got, p.logger)
+			// sub-7-9: anchors cover the WHOLE chunk (a retried cue is compared
+			// against neighbours that already passed), and `final` supplies
+			// those neighbours' accepted text. The harvest so far — this
+			// chunk's trailer included — tells the gate which Chinese
+			// rendering to look for in place of an English name.
+			chunkAnchors := AnchorsFor(chunk, tctx.Glossary, mergeChunkTerms(harvested, chunkTerms))
+			verdict = checkChunkAnchored(pending, got, chunkAnchors, final, p.logger)
 			for _, b := range pending {
 				if !verdict.Failed(b.Index) {
 					final[b.Index] = got[b.Index]

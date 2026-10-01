@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 	"unicode"
+
+	"github.com/vido/api/internal/ai/prompts"
 )
 
 // Quality-gate failure classes. These are the per-cue verdict reasons the
@@ -15,6 +17,12 @@ const (
 	GateReasonEmpty          = "empty"
 	GateReasonEchoed         = "echoed"
 	GateReasonSimplifiedLeak = "simplified_leak"
+	// GateReasonMisaligned (sub-7-9): the model moved this cue's content onto
+	// a neighbouring cue — an anchor token the source carries is missing from
+	// this translation and shows up in the previous or next cue's translation,
+	// whose own source never had it. eval-1 counted 120 of 484 zero-score cues
+	// as exactly this. ADDITIVE on the reason vocabulary (0 bump).
+	GateReasonMisaligned = "misaligned"
 )
 
 // GateVerdict is one chunk's inspection result.
@@ -51,10 +59,25 @@ func CheckChunk(source []SubtitleBlock, got map[int]string) GateVerdict {
 	return checkChunk(source, got, slog.Default())
 }
 
+// CheckChunkAnchored is CheckChunk plus the sub-7-9 alignment check.
+//
+// anchors maps a cue Index to the tokens its translation must carry (see
+// AnchorsFor); neighbours supplies already-accepted translations for cues
+// OUTSIDE got (the previous attempt's survivors, the previous chunk's tail) so
+// a cue retried alone can still be compared against the line it drifted
+// into. Both may be nil, which reduces this to CheckChunk.
+func CheckChunkAnchored(source []SubtitleBlock, got map[int]string, anchors map[int][]string, neighbours map[int]string) GateVerdict {
+	return checkChunkAnchored(source, got, anchors, neighbours, slog.Default())
+}
+
 // checkChunk is CheckChunk with an injected logger, so the pipeline's
 // component-tagged logger carries the unexpected-index warnings into the pilot
 // logs. The exported wrapper keeps the AC #1 contract signature intact.
 func checkChunk(source []SubtitleBlock, got map[int]string, logger *slog.Logger) GateVerdict {
+	return checkChunkAnchored(source, got, nil, nil, logger)
+}
+
+func checkChunkAnchored(source []SubtitleBlock, got map[int]string, anchors map[int][]string, neighbours map[int]string, logger *slog.Logger) GateVerdict {
 	verdict := GateVerdict{Reasons: make(map[int]string)}
 
 	expected := make(map[int]struct{}, len(source))
@@ -77,11 +100,143 @@ func checkChunk(source []SubtitleBlock, got map[int]string, logger *slog.Logger)
 			// they are not a leak detector, and one 这 in a delivered cue is
 			// exactly the defect FR16 exists to catch.
 			verdict.fail(b.Index, GateReasonSimplifiedLeak)
+		case isMisaligned(b.Index, text, anchors, got, neighbours):
+			verdict.fail(b.Index, GateReasonMisaligned)
 		}
 	}
 
 	logUnexpectedIndexes(expected, got, logger)
 	return verdict
+}
+
+// isMisaligned reports whether one of this cue's anchors is missing from its
+// own translation yet present in an ADJACENT cue's translation that had no
+// business carrying it. Adjacency is by cue Index (±1), not by position: SDH
+// filtering leaves gaps, and a cue two indexes away is not where a sentence
+// break drifts to.
+//
+// It is deliberately conservative: a translation that merely drops a number
+// (「四個老婆」 for "4 wives") never trips it — the anchor also has to turn up
+// next door, unexplained. That is the shape of a shifted line, and nothing
+// else the gate has seen produces it.
+func isMisaligned(index int, text string, anchors map[int][]string, got map[int]string, neighbours map[int]string) bool {
+	own := anchors[index]
+	if len(own) == 0 {
+		return false
+	}
+	textOf := func(i int) (string, bool) {
+		if t, ok := got[i]; ok {
+			return t, true
+		}
+		t, ok := neighbours[i]
+		return t, ok
+	}
+	for _, a := range own {
+		if strings.Contains(text, a) {
+			continue
+		}
+		for _, n := range []int{index - 1, index + 1} {
+			nt, ok := textOf(n)
+			if !ok || !strings.Contains(nt, a) {
+				continue
+			}
+			if containsAnchor(anchors[n], a) {
+				// The neighbour legitimately carries it too ("Line 7" / "7 of
+				// them"): not evidence of a shift.
+				continue
+			}
+			return true
+		}
+	}
+	return false
+}
+
+func containsAnchor(list []string, a string) bool {
+	for _, x := range list {
+		if x == a {
+			return true
+		}
+	}
+	return false
+}
+
+// anchorDigits matches the numeric tokens a translation is expected to keep as
+// digits (Taiwan subtitles write 14 and 2002, not 十四 and 二〇〇二). Lone
+// digits are too common to anchor on: "4 wives" → 「四個老婆」 is good
+// translation, and a false misaligned verdict costs a paid retry.
+var anchorDigits = regexp.MustCompile(`\d{2,}`)
+
+// AnchorsFor derives, per cue, the tokens its translation must carry:
+//   - multi-digit numbers from the source text;
+//   - the fixed rendering of every glossary term the source mentions;
+//   - the rendering of every harvested term (the model's own ===TERMS===) the
+//     source mentions.
+//
+// Proper nouns are NOT anchored by their English spelling: the m1-v4 prompt
+// renders names in Chinese, so the English token is expected to vanish.
+// Glossary and harvest give the rendering to look for instead.
+func AnchorsFor(source []SubtitleBlock, glossary []prompts.GlossaryEntry, harvested map[string]string) map[int][]string {
+	out := make(map[int][]string, len(source))
+	for _, b := range source {
+		var list []string
+		seen := map[string]struct{}{}
+		add := func(a string) {
+			a = strings.TrimSpace(a)
+			if a == "" {
+				return
+			}
+			if _, dup := seen[a]; dup {
+				return
+			}
+			seen[a] = struct{}{}
+			list = append(list, a)
+		}
+		for _, d := range anchorDigits.FindAllString(b.Text, -1) {
+			add(d)
+		}
+		for _, g := range glossary {
+			if mentions(b.Text, g.Source) {
+				add(g.Target)
+			}
+		}
+		for src, rendering := range harvested {
+			if mentions(b.Text, src) {
+				add(rendering)
+			}
+		}
+		if len(list) > 0 {
+			sort.Strings(list)
+			out[b.Index] = list
+		}
+	}
+	return out
+}
+
+// mentions is a whole-word, case-insensitive match of term inside text.
+func mentions(text, term string) bool {
+	term = strings.TrimSpace(term)
+	if term == "" {
+		return false
+	}
+	lt, lterm := strings.ToLower(text), strings.ToLower(term)
+	for start := 0; ; {
+		i := strings.Index(lt[start:], lterm)
+		if i < 0 {
+			return false
+		}
+		i += start
+		end := i + len(lterm)
+		before := i == 0 || !isWordByte(lt[i-1])
+		after := end == len(lt) || !isWordByte(lt[end])
+		if before && after {
+			return true
+		}
+		start = i + 1
+	}
+}
+
+func isWordByte(c byte) bool {
+	return c == '_' || (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
 }
 
 // fail records one cue's failure class, keeping FailedIndexes ordered.

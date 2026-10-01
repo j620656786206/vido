@@ -23,7 +23,11 @@ import (
 // lexicon.go), and the per-run version is now PromptVersionFor(level) — this
 // base, the lexicon version and the level joined — so any of the three
 // changing re-keys the cache.
-const SubtitleTranslatorPromptVersion = "m1-v3"
+// m1-v3 → m1-v4 (sub-7-9): per-cue alignment is now a rule with examples
+// (eval-1: 120 of 484 zero-score cues were content shifted onto a neighbouring
+// cue), and rule 3 no longer contradicts the ===TERMS=== trailer — names
+// follow the glossary, otherwise get a Chinese rendering that is reported.
+const SubtitleTranslatorPromptVersion = "m1-v4"
 
 // SubtitleTranslatorContextWindow is the number of previous blocks sent as
 // read-only context for each translation batch to maintain consistency (AC #2).
@@ -49,11 +53,23 @@ Translate English subtitle dialogue into natural, fluent Traditional Chinese as 
 1. Use Taiwan Traditional Chinese vocabulary and expressions (台灣用語), NOT mainland China terms
    - 例：software → 軟體 (not 軟件), video → 影片 (not 視頻), information → 資訊 (not 信息)
 2. Preserve the speaker's tone, emotion, and register (formal/casual/slang)
-3. Keep proper nouns (person names, place names, brand names) in their original English form
+3. Person and place names: if the Glossary section gives a rendering, use it exactly. Otherwise, render the name in Traditional Chinese the way Taiwan subtitles would (transliterate; use the established rendering when one exists), use the SAME rendering every time it appears, and report it in the ===TERMS=== trailer. Brand and product names stay in English.
 4. Keep technical terms, acronyms, and abbreviations in English when commonly used as-is in Taiwan
 5. Maintain natural spoken Chinese rhythm — subtitles should sound like real dialogue, not written prose
 6. Do NOT add honorifics or politeness markers not present in the original
 7. Keep translations concise — subtitles have limited screen time
+
+## Per-cue alignment — this is NOT optional:
+Each [N] you output translates ONLY the text of input [N]. Subtitles are timed: a line shown on the wrong cue is wrong even when the words are right.
+- Where a sentence breaks across cues in the source, break the translation at the SAME place. Do not move the end of one cue's sentence onto the next cue, and do not pull the next cue's words forward to make a nicer sentence.
+- Never merge two cues into one line or split one cue into two.
+- Output exactly as many [N] blocks as the input has, with the same indices.
+Correct:
+[1] I was a boxer, you know.    → [1] 我以前是拳擊手，你知道吧。
+[2] Killed a man in the ring.   → [2] 在擂台上打死過一個人。
+WRONG (content shifted — [1] took [2]'s words, [2] is left with a fragment):
+[1] 我以前是拳擊手，在擂台上打死過人。
+[2] 你知道吧。
 
 ## Output format:
 Return ONLY the translated text for each block, prefixed with the block index in square brackets.
