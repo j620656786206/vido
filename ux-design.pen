@@ -140979,7 +140979,7 @@
                                           "name": "btn-tryrun",
                                           "height": 24,
                                           "padding": [
-                                            0,
+                                            "$Space/none",
                                             "$Space/sm"
                                           ],
                                           "descendants": {
@@ -161808,7 +161808,7 @@
                                           "name": "btn-tryrun",
                                           "height": 28,
                                           "padding": [
-                                            0,
+                                            "$Space/none",
                                             "$Space/sm"
                                           ],
                                           "descendants": {
@@ -203228,7 +203228,7 @@
                               "name": "btn-tryrun",
                               "height": 24,
                               "padding": [
-                                0,
+                                "$Space/none",
                                 "$Space/sm"
                               ],
                               "descendants": {
@@ -203353,7 +203353,7 @@
                               "name": "btn-tryrun-loading",
                               "height": 24,
                               "padding": [
-                                0,
+                                "$Space/none",
                                 "$Space/sm"
                               ],
                               "descendants": {
@@ -203371,7 +203371,7 @@
                               "content": "約 1 分鐘，請勿關閉視窗",
                               "lineHeight": "$Type/Label/Line",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": 12,
+                              "fontSize": "$Type/Label/Size",
                               "fontWeight": "normal"
                             }
                           ]
@@ -203486,7 +203486,7 @@
                               "content": "你的實測：0 分 5%・2 分 70%・花 $0.05",
                               "lineHeight": "$Type/Label/Line",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": 12,
+                              "fontSize": "$Type/Label/Size",
                               "fontWeight": "normal"
                             },
                             {
@@ -203497,7 +203497,7 @@
                               "content": "再試一次",
                               "lineHeight": "$Type/Label/Line",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": 12,
+                              "fontSize": "$Type/Label/Size",
                               "fontWeight": "normal"
                             }
                           ]
@@ -203611,7 +203611,7 @@
                               "name": "btn-tryrun",
                               "height": 24,
                               "padding": [
-                                0,
+                                "$Space/none",
                                 "$Space/sm"
                               ],
                               "descendants": {
@@ -203633,7 +203633,7 @@
                               "content": "試跑失敗，沒有扣款",
                               "lineHeight": "$Type/Label/Line",
                               "fontFamily": "$Type/Family/Primary",
-                              "fontSize": 12,
+                              "fontSize": "$Type/Label/Size",
                               "fontWeight": "normal"
                             }
                           ]
