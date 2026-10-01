@@ -28,6 +28,7 @@ import (
 	"github.com/vido/api/internal/plugins"
 	"github.com/vido/api/internal/plugins/radarr"
 	"github.com/vido/api/internal/plugins/sonarr"
+	"github.com/vido/api/internal/preview"
 	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/retry"
 	"github.com/vido/api/internal/secrets"
@@ -1135,7 +1136,10 @@ func main() {
 	keySettingsHandler := handlers.NewKeySettingsHandler(keySettingsService, claudeHolder)
 	subtitlePipelineHandler := handlers.NewSubtitlePipelineHandler(
 		subtitlePipelineQueue, subtitlePipelineMedia, subtitleCapabilityGate, modelCatalog)
-	modelSettingsHandler := handlers.NewModelSettingsHandler(modelCatalog)
+	// sub-7-8c: 「試跑 20 句」 — an ungraded model tried on the golden sample
+	// with this box's own key; result kept in the settings table only.
+	modelPreview := preview.NewService(claudeHolder, modelCatalog, localizationSettings, repos.Settings, slog.Default())
+	modelSettingsHandler := handlers.NewModelSettingsHandler(modelCatalog).WithPreview(modelPreview)
 	// sub-7-6b: the monthly AI spend summary over the subtitle_runs ledger
 	// (sub-7-6a). Movies/episodes only feed the runtime ladder behind the
 	// "skipped saved" estimate.
