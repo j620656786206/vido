@@ -1,6 +1,6 @@
 # Story 7.9: 鎖「逐 cue 對應、不得合併拆分」—— 時間位移歸零（prompt + gate，後端）
 
-Status: review
+Status: done（AC #4 真跑對照待回填）
 
 <!-- dev-story 2026-10-01（Amelia）。行號為 main `c4913371`。原稿兩處與現實不符：① `SubtitleTranslatorPromptVersion` 已是 `m1-v3`（sub-7-4 先用掉了）→ 本單 bump 到 **`m1-v4`**；② sub-7-8 已落地，AC #4 的回歸評測改用 `cmd/grade`，但本機無 key，真跑交 Alexyu（指令在 Completion Notes）。 -->
 
@@ -74,3 +74,4 @@ Claude Fable 5.1（Amelia）
 | ---------- | ---------------------------------------- |
 | 2026-09-04 | create-story。 |
 | 2026-10-01 | dev-story（Amelia）→ review；AC #4 真跑待 Alexyu。 |
+| 2026-10-01 | PR #644 合併（Alexyu）→ done；AC #4 對照結果待回填。 |
