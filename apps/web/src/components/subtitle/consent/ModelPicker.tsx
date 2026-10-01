@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen F16-D-v2 (gmOt6) · F19-D-v2 (KThbY)
+// Design ref: ux-design.pen Screen F16-D-v2 (gmOt6) · F16-M-v2 (x45wBO) · F19-D-v2 (KThbY) · J10 (ctRsy)
 /**
  * 「選擇翻譯模型」 radio list inside the F16/F19 confirm dialog (sub-6-8b
  * AC #1/#4/#5).
@@ -14,8 +14,12 @@
  * Figures come from `modelChoices()` — the ONE selector that owns the money
  * math for these screens. Nothing is computed here.
  */
+import type * as React from 'react';
 import { usd } from '../../../lib/currency';
 import { cn } from '../../../lib/utils';
+import { ButtonCost } from '../../ui/ButtonCost';
+import type { ModelPreviewRowState } from '../../../hooks/useModelPreview';
+import type { ModelLocalGrade } from '../../../services/subtitleService';
 import type { ModelChoice } from './consentSelection';
 
 export interface ModelPickerProps {
@@ -24,6 +28,19 @@ export interface ModelPickerProps {
   onSelect: (modelId: string) => void;
   /** Locked while a paid start is in flight — the quote must not move under it. */
   disabled?: boolean;
+  /**
+   * sub-7-8c: 「試跑 20 句」 per ungraded row (J10). Absent → the rows just
+   * say 尚未評測 and the button is not rendered at all.
+   */
+  previewStates?: Record<string, ModelPreviewRowState>;
+  onPreview?: (modelId: string) => void;
+}
+
+/** 「你的實測：0 分 5%・2 分 70%・花 $0.05」 (J10 ③), with the incomplete variant. */
+export function localGradeLine(g: ModelLocalGrade): string {
+  const pct = (v: number) => `${Math.round(v * 100)}%`;
+  const body = `0 分 ${pct(g.zeroRate)}・2 分 ${pct(g.naturalRate)}・花 ${usd(g.costUsd)}`;
+  return g.incomplete ? `到預算上限才停：${body}` : `你的實測：${body}`;
 }
 
 /**
@@ -59,7 +76,14 @@ function selectionNote(choice: ModelChoice, defaultName?: string): string {
   return '';
 }
 
-export function ModelPicker({ choices, selectedModelId, onSelect, disabled }: ModelPickerProps) {
+export function ModelPicker({
+  choices,
+  selectedModelId,
+  onSelect,
+  disabled,
+  previewStates,
+  onPreview,
+}: ModelPickerProps) {
   if (choices.length === 0) return null;
 
   const defaultName = choices.find((c) => c.isDefault)?.displayName;
@@ -110,7 +134,7 @@ export function ModelPicker({ choices, selectedModelId, onSelect, disabled }: Mo
                 </span>
               </span>
 
-              <span className="flex items-center gap-2 pl-[26px] text-xs text-[var(--text-secondary)]">
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-1.5 pl-[26px] text-xs text-[var(--text-secondary)]">
                 <span
                   data-testid={`consent-model-grade-${choice.id}`}
                   title={choice.qualityNote}
@@ -135,9 +159,14 @@ export function ModelPicker({ choices, selectedModelId, onSelect, disabled }: Mo
                     約 {choice.minutes} 分鐘
                   </span>
                 )}
-                {/* P1-8 (sub-7-8) will make this actionable; today it is the
-                    honest answer to「為什麼這格是空的」. */}
-                {!choice.qualityGrade && <span>· 可花約 $0.01 試跑 20 句</span>}
+                {!choice.qualityGrade && onPreview && (
+                  <PreviewControl
+                    choice={choice}
+                    state={previewStates?.[choice.id] ?? { status: 'idle' }}
+                    disabled={!!disabled}
+                    onPreview={onPreview}
+                  />
+                )}
               </span>
 
               {note !== '' && (
@@ -153,5 +182,103 @@ export function ModelPicker({ choices, selectedModelId, onSelect, disabled }: Mo
         })}
       </div>
     </div>
+  );
+}
+
+/**
+ * The 「試跑 20 句」 control on an ungraded row — J10's four states:
+ * ① idle: a small ButtonCost carrying the estimate (J9: the $ is the mark);
+ * ② running: the same button busy with a skeleton amount, plus 「約 1 分鐘」;
+ * ③ done: one 「你的實測」 line (no letter, no badge colour) and 「再試一次」;
+ * ④ failed: back to ① with the reason beside it.
+ *
+ * `preventDefault` on the button matters: it sits inside the row's <label>,
+ * and a button click would otherwise activate the label and tick the radio.
+ */
+function PreviewControl({
+  choice,
+  state,
+  disabled,
+  onPreview,
+}: {
+  choice: ModelChoice;
+  state: ModelPreviewRowState;
+  disabled: boolean;
+  onPreview: (modelId: string) => void;
+}) {
+  const estimate = choice.previewEstimateUsd ?? 0;
+  // A result stored on the server (catalog refetch) and one just returned
+  // this session are the same fact; the session one is fresher.
+  const result = state.status === 'done' ? state.result : choice.localGrade;
+  const running = state.status === 'running';
+
+  const tryOut = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!disabled && !running) onPreview(choice.id);
+  };
+
+  if (result && !running) {
+    return (
+      <span className="flex items-center gap-2 max-sm:basis-full">
+        <span
+          data-testid={`consent-model-local-grade-${choice.id}`}
+          className="text-[var(--text-secondary)]"
+        >
+          {localGradeLine(result)}
+        </span>
+        <button
+          type="button"
+          data-testid={`consent-model-preview-again-${choice.id}`}
+          disabled={disabled || estimate <= 0}
+          onClick={tryOut}
+          className="text-[var(--text-muted)] underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:no-underline"
+        >
+          再試一次
+        </button>
+        {state.status === 'failed' && (
+          <span
+            data-testid={`consent-model-preview-error-${choice.id}`}
+            className="text-[var(--danger-text)]"
+          >
+            {state.message}
+          </span>
+        )}
+      </span>
+    );
+  }
+
+  return (
+    <span className="flex items-center gap-2 max-sm:basis-full">
+      <ButtonCost
+        data-testid={`consent-model-preview-${choice.id}`}
+        label="試跑 20 句"
+        cost={
+          running
+            ? { status: 'loading' }
+            : estimate > 0
+              ? { status: 'ready', usd: estimate, approximate: false }
+              : { status: 'unavailable' }
+        }
+        busy={running}
+        aria-disabled={disabled ? true : undefined}
+        onClick={tryOut}
+        // Row-sized variant of the J9 button: 24px tall, 12px type, same tints.
+        className="min-h-0 h-6 gap-1.5 rounded-[var(--radius-sm)] px-2 text-xs font-semibold max-sm:h-7"
+      />
+      {running && (
+        <span data-testid={`consent-model-preview-running-${choice.id}`}>
+          約 1 分鐘，請勿關閉視窗
+        </span>
+      )}
+      {state.status === 'failed' && (
+        <span
+          data-testid={`consent-model-preview-error-${choice.id}`}
+          className="text-[var(--danger-text)]"
+        >
+          {state.message}
+        </span>
+      )}
+    </span>
   );
 }

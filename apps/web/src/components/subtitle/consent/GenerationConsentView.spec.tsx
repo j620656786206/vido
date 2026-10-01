@@ -41,6 +41,12 @@ vi.mock('../../../hooks/useTranslationModels', () => ({
   useTranslationModels: () => ({ data: h.models, isError: h.modelsError }),
 }));
 
+// sub-7-8c: the 「試跑 20 句」 controller needs a QueryClient to invalidate the
+// catalog; its own coverage lives in useModelPreview.spec.ts and ModelPicker.spec.tsx.
+vi.mock('../../../hooks/useModelPreview', () => ({
+  useModelPreview: () => ({ states: {}, busy: false, preview: vi.fn() }),
+}));
+
 // Same reason (sub-6-12 AC #6): key state is server state behind TanStack
 // Query, and the hook has its own coverage.
 vi.mock('../../../hooks/useKeySettings', () => ({

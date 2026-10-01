@@ -1,6 +1,6 @@
 # Story sub-7-8c: 還沒評測的模型可以「試跑 20 句」、結果標「你的實測」— 後端＋前端
 
-Status: in-progress
+Status: review
 
 <!-- SM Bob create-story 2026-10-01，由 sub-7-8 拆出；依賴 sub-7-8a（考卷 embed）與 7-8b（等級表讀法）。行號為 main `4004c7af`。
      ⚠️ Task 0 設計稿：ModelPicker 列的三態（尚未評測＋按鈕／試跑中／你的實測）目前**沒有任何 .pen 稿**；要先請 Sally 補 F16／F19 的該列狀態與 J 系列成本按鈕規格，Alexyu 跑 inline agent，再開工 FE。 -->
@@ -78,11 +78,29 @@ Status: in-progress
 
 ### Agent Model Used
 
+Claude Fable 5.1（Amelia）；設計稿 Alexyu 跑 Pencil Inline AI Agent，Sally 複審。
+
 ### Completion Notes List
+
+- 4 task 全數交付。
+- **後端**（commit a0d71601）：`internal/preview` 新套件——放 `services` 會與 `eval → subtitle → services` 成環。`POST /settings/models/:id/preview`（400 不支援模型／429 `AI_PREVIEW_TOO_SOON`／409 `AI_NOT_CONFIGURED`／`AI_UNAUTHORIZED`／500）；預算＝估價×3、夾在 [$0.05, $0.20]；估價用 token 粗估（每句 60 in／45 out＋系統提示字數／3＋裁判），Opus 約 $0.06、Haiku 約 $0.01；結果存 settings `models.local_grade.<id>`（json）；`GET /settings/models` 列型改 `ModelEntry{ai.ModelInfo; local_grade?; preview_estimate_usd?}`——embedding 讓 sub-6-8a 的 wire 一個鍵都不變（0 bump），preview 關閉時兩鍵不出現。試跑不寫 `subtitle_runs`、不進月報。
+- **前端**：`useModelPreview`（每列狀態機 idle→running→done|failed；成功後 invalidate `['settings','models']`，但列上先顯示剛回來的結果不等 refetch）；`ModelPicker` 無等級列改渲染 `PreviewControl`——J10 四態：① 小尺寸 `ButtonCost`（h-6／12px，J9 同色，金額＝`preview_estimate_usd`，缺或 0 → unavailable 不顯示 $0.00）② busy＋骨架金額＋「約 1 分鐘，請勿關閉視窗」③「你的實測：0 分 x%・2 分 y%・花 $z」＋「再試一次」（incomplete →「到預算上限才停：…」）④ 按鈕回來＋`$danger-text` 原因。按鈕在 `<label>` 內，`preventDefault` 才不會順手勾到 radio（有測）。手機：第二行 `flex-wrap`，按鈕 `max-sm:basis-full` 另起一行（F16-M-v2）。試跑中整個 picker 與「確認並開始」都鎖（J10 ②）。死文字「· 可花約 $0.01 試跑 20 句」拿掉。
+- **錯誤文案**：429 →「剛剛試跑過，稍後再試」；409 →「先到 設定 → API 金鑰 存一組 Claude 金鑰」；其他 4xx →「試跑失敗，沒有扣款」（後端在第一次付費呼叫前拒絕才敢這樣講）；5xx →「試跑失敗」不承諾沒扣款。
+- **測試**：BE 8 條（preview 5／handler 3）；FE：`ModelPicker.spec` +7（四態、不勾 radio、無估價不給 $0.00、鎖定）、`consentSelection.spec` +1（passthrough）、`useModelPreview.spec` +1（錯誤碼對應）、`GenerationConsentView.spec` 補 mock。web 全量 4,453 綠、api 全綠、tsc／eslint／prettier 綠。
+- **視覺**：gallery 4 張 fixtures（idle／running／done／mobile），本機 `update-missing` 產出 4 張 `-darwin` 基準並逐張對照 F16-D-v2／F16-M-v2／J10：第三列、按鈕、試跑中鎖定、你的實測、手機按鈕另起一行均相符；`-linux` 待 CI bootstrap PR。
+- 🔗 AC Drift：AC #1 的「同一 model 60 秒內 429」實作為 60 秒冷卻＋單飛（同時第二個請求也 429）；AC #4 失敗態的「已扣 $0.02」後端回錯時不帶金額，前端改以 4xx／5xx 區分「沒有扣款」能不能說。
 
 ### Discovery Triage
 
+- 無新單。
+
 ### File List
+
+- apps/api/internal/preview/service.go、service_test.go；apps/api/internal/handlers/model_settings_handler.go、model_settings_handler_test.go；apps/api/cmd/api/main.go
+- apps/web/src/services/subtitleService.ts；hooks/useModelPreview.ts、useModelPreview.spec.ts；components/subtitle/consent/ModelPicker.tsx、ModelPicker.spec.tsx、ConfirmGenerationDialog.tsx、GenerationConsentView.tsx、GenerationConsentView.spec.tsx、consentSelection.ts、consentSelection.spec.ts；routes/test/-gallery.fixtures.tsx
+- tests/visual/components.visual.spec.ts-snapshots/components/generation-consent/f16-model-preview-{idle,running,done,mobile}/default-visual-darwin.png
+- ux-design.pen、_bmad-output/screenshots/flow-f-subtitle-v2/f16-d-v2.png、f16-m-v2.png、flow-j-specs/j10-d.png、scripts/export-pen-screenshots.py（Alexyu 三個 commit）
+- _bmad-output/implementation-artifacts/sub-7-8c-local-preview-run.md、sprint-status.yaml
 
 ## Change Log
 
@@ -90,3 +108,4 @@ Status: in-progress
 | ---------- | ---------------------------------------- |
 | 2026-10-01 | create-story（SM Bob，自 sub-7-8 拆出）。 |
 | 2026-10-01 | dev-story Task 1–2（Amelia，後端，commit a0d71601）；Task 0 提示詞出稿（Sally），等 Alexyu 跑 inline agent。 |
+| 2026-10-01 | Task 0 完成（Alexyu inline agent；Sally 截圖複審通過）；Task 3 前端完成 → review。 |

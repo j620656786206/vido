@@ -235,6 +235,53 @@ export interface TranslationModelInfo {
   qualityGrade?: string;
   /** Provenance for the grade (which eval, which corpus). */
   qualityNote?: string;
+  /**
+   * sub-7-8c: THIS box's own 「試跑 20 句」 result, if it ever ran one. Shown
+   * as 「你的實測」 next to (never instead of) the measured grade.
+   */
+  localGrade?: ModelLocalGrade;
+  /**
+   * sub-7-8c: what the 「試跑 20 句」 button costs, from the backend's rate
+   * table. Absent/0 → the button is unavailable (J9 ⑤: no number, no button).
+   */
+  previewEstimateUsd?: number;
+}
+
+/**
+ * One box's own preview result (sub-7-8c `[@contract-v1]`, additive on the
+ * sub-6-8a entry). `incomplete` is set when the preview budget stopped the
+ * run early; the rates then cover fewer than `cues` lines.
+ */
+export interface ModelLocalGrade {
+  modelId: string;
+  cues: number;
+  zeroRate: number;
+  naturalRate: number;
+  costUsd: number;
+  judgeModel: string;
+  gradedAt: string;
+  incomplete?: string;
+}
+
+/**
+ * Why a preview did not happen. `code` is the backend's error code when it
+ * sent one (AI_PREVIEW_TOO_SOON, AI_NOT_CONFIGURED, VALIDATION_INVALID_FORMAT);
+ * `status` tells the row whether money could have moved — a 4xx is refused
+ * BEFORE the first paid call, a 5xx is not.
+ */
+export class ModelPreviewError extends Error {
+  readonly status: number;
+  readonly code: string;
+  constructor(message: string, status: number, code: string) {
+    super(message);
+    this.name = 'ModelPreviewError';
+    this.status = status;
+    this.code = code;
+  }
+  /** True when the backend refused before spending anything. */
+  get unpaid(): boolean {
+    return this.status >= 400 && this.status < 500;
+  }
 }
 
 /**
@@ -643,6 +690,32 @@ export const subtitleService = {
    */
   async getModels(): Promise<TranslationModelList> {
     return fetchApi<TranslationModelList>('/settings/models');
+  },
+
+  /**
+   * POST /settings/models/:id/preview — 「試跑 20 句」 (sub-7-8c AC #1).
+   *
+   * Not routed through fetchApi because the row needs the error CODE and
+   * STATUS, not just a message: 429 means「剛剛試跑過」, 409 means「沒金鑰」,
+   * and only a 4xx lets the UI promise「沒有扣款」.
+   */
+  async previewModel(modelId: string): Promise<ModelLocalGrade> {
+    const response = await fetch(
+      `${API_BASE_URL}/settings/models/${encodeURIComponent(modelId)}/preview`,
+      { method: 'POST' }
+    );
+    const body: ApiResponse<ModelLocalGrade> = await response.json().catch(() => ({
+      success: false,
+      error: { code: 'NETWORK_ERROR', message: `API request failed: ${response.status}` },
+    }));
+    if (!response.ok || !body.success) {
+      throw new ModelPreviewError(
+        body.error?.message || `API request failed: ${response.status}`,
+        response.status,
+        body.error?.code || 'UNKNOWN'
+      );
+    }
+    return snakeToCamel<ModelLocalGrade>(body.data);
   },
 
   /** GET /subtitles/generation-batch/status — on-open recovery probe. */

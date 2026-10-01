@@ -32,6 +32,7 @@ import { MOBILE_SHEET_CLOSE, MOBILE_SHEET_CONTENT, SheetGrabber } from '../../ui
 import { cn } from '../../../lib/utils';
 import { usd } from '../../../lib/currency';
 import { ModelPicker } from './ModelPicker';
+import type { ModelPreviewRowState } from '../../../hooks/useModelPreview';
 import { usdWithEstimate, type ConsentTotals, type ModelChoice } from './consentSelection';
 
 export interface ConfirmGenerationDialogProps {
@@ -56,6 +57,13 @@ export interface ConfirmGenerationDialogProps {
    * both hides a real backend error behind a plausible-looking screen.
    */
   modelsError?: boolean;
+  /**
+   * sub-7-8c: 「試跑 20 句」 on ungraded rows. While one runs, the picker AND
+   * the confirm button lock (J10 ②) — the quote must not change under a
+   * preview, and a start must not race one.
+   */
+  previewStates?: Record<string, ModelPreviewRowState>;
+  onPreview?: (modelId: string) => void;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -69,10 +77,13 @@ export function ConfirmGenerationDialog({
   selectedModelId = '',
   onModelChange,
   modelsError = false,
+  previewStates,
+  onPreview,
   onConfirm,
   onCancel,
 }: ConfirmGenerationDialogProps) {
   const overBudget = totals.overBudget;
+  const previewBusy = Object.values(previewStates ?? {}).some((s) => s.status === 'running');
   return (
     <Dialog
       open={open}
@@ -113,7 +124,9 @@ export function ConfirmGenerationDialog({
               choices={modelChoices}
               selectedModelId={selectedModelId}
               onSelect={onModelChange}
-              disabled={confirming}
+              disabled={confirming || previewBusy}
+              previewStates={previewStates}
+              onPreview={onPreview}
             />
           )}
 
@@ -219,7 +232,7 @@ export function ConfirmGenerationDialog({
           <button
             type="button"
             onClick={onConfirm}
-            disabled={confirming}
+            disabled={confirming || previewBusy}
             data-testid="consent-confirm-start"
             className="flex min-h-[44px] items-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-5 text-sm font-semibold text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)] disabled:cursor-not-allowed disabled:opacity-50"
           >
