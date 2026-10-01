@@ -99,7 +99,7 @@ func TestParseASS_DialogueOnly(t *testing.T) {
 	assert.Equal(t, Cue{StartMS: 1200, EndMS: 3450, Text: "我是華特 歐布萊恩"}, cues[0])
 	assert.Equal(t, Cue{StartMS: 4000, EndMS: 5000, Text: "托比"}, cues[1])
 
-	srt, err := ParseSRTCues("1\n00:00:01,000 --> 00:00:02,500\n<i>Hello</i> there\n\n2\n00:00:03,000 --> 00:00:04,000\n‎Second\n")
+	srt, err := ParseSRTCues("1\n00:00:01,000 --> 00:00:02,500\n<i>Hello</i> there\n\n2\n00:00:03,000 --> 00:00:04,000\n\u200eSecond\n")
 	require.NoError(t, err)
 	assert.Equal(t, []Cue{{1000, 2500, "Hello there"}, {3000, 4000, "Second"}}, srt)
 }
@@ -142,7 +142,7 @@ func TestMine_LearnsRenderingsByCooccurrence(t *testing.T) {
 	}
 	require.Contains(t, byName, "Walter")
 	assert.Equal(t, "華特", byName["Walter"].Zh)
-	assert.Equal(t, 5, byName["Walter"].Support)
+	assert.Equal(t, 6, byName["Walter"].Support, "the sentence-initial 「Walter is here.」 counts once Walter is a known candidate")
 	assert.Equal(t, "cooccurrence", byName["Walter"].How)
 	require.Contains(t, byName, "Toby")
 	assert.Equal(t, "托比", byName["Toby"].Zh)
@@ -179,4 +179,59 @@ func TestMine_RejectsRenderingSharedWithOtherLines(t *testing.T) {
 		segs = append(segs, Segment{En: "We go.", Zh: "我們走吧"})
 	}
 	assert.Empty(t, Mine(segs, Options{}), "a rendering that is not specific to the term is refused")
+}
+
+func TestMine_RealWorldGuards(t *testing.T) {
+	// "Tell" is capitalised after a dialogue dash in one line and lower-cased
+	// elsewhere → a word, never a name. "Pekka's" is the name Pekka.
+	segs := []Segment{
+		{En: "-Tell him now.", Zh: "告訴他"},
+		{En: "-Tell her too.", Zh: "也告訴她"},
+		{En: "-Tell them all.", Zh: "告訴大家"},
+		{En: "I will tell you later.", Zh: "我晚點告訴你"},
+		{En: "That is Pekka's club.", Zh: "那是佩卡的賭場"},
+		{En: "Pekka's men are here.", Zh: "佩卡的人來了"},
+		{En: "Go and find Pekka's ledger.", Zh: "去找佩卡的帳本"},
+	}
+	terms := Mine(segs, Options{})
+	byName := map[string]Term{}
+	for _, tm := range terms {
+		byName[tm.Src] = tm
+	}
+	assert.NotContains(t, byName, "Tell")
+	assert.NotContains(t, byName, "Pekka's")
+	require.Contains(t, byName, "Pekka")
+	assert.Equal(t, "佩卡", byName["Pekka"].Zh, "the possessive 的 is not part of the name")
+}
+
+func TestHanSubstrings_UpToEightRunesWithoutParticles(t *testing.T) {
+	subs := hanSubstrings("艾利娜史塔科夫來了嗎")
+	_, has7 := subs["艾利娜史塔科夫"]
+	_, has9 := subs["艾利娜史塔科夫來了"]
+	_, endsWithLe := subs["科夫來了"]
+	_, startsWithPronoun := hanSubstrings("我是華特")["我是"]
+	_, tai := hanSubstrings("太陽召喚者")["太陽召喚者"]
+	assert.True(t, has7)
+	assert.False(t, has9)
+	assert.False(t, endsWithLe, "a run ending in 了 is a phrase, not a name")
+	assert.False(t, startsWithPronoun)
+	assert.True(t, tai, "太 as in 太陽 must stay allowed")
+}
+
+func TestMine_SubTermsAndDashes(t *testing.T) {
+	segs := []Segment{
+		{En: "That was Pekka Rollins.", Zh: "那是佩卡羅林斯"},
+		{En: "You work for Pekka Rollins now.", Zh: "你現在替佩卡羅林斯做事"},
+		{En: "Tell Pekka Rollins no.", Zh: "跟佩卡羅林斯說不"},
+		{En: "-Shut up. -Make me.", Zh: "閉嘴 你來啊"},
+		{En: "-Shut it, Jesper. -Fine.", Zh: "閉嘴，傑斯柏 好"},
+		{En: "-Shut the door.", Zh: "把門關上"},
+	}
+	byName := map[string]Term{}
+	for _, tm := range Mine(segs, Options{}) {
+		byName[tm.Src] = tm
+	}
+	assert.Contains(t, byName, "Pekka Rollins")
+	assert.NotContains(t, byName, "Rollins", "the surname alone only ever appeared inside the full name")
+	assert.NotContains(t, byName, "Shut", "a word after a dialogue dash is sentence-initial")
 }

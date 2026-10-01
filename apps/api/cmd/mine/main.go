@@ -46,6 +46,7 @@ type report struct {
 	Episodes []episodeReport `json:"episodes"`
 	Usable   int             `json:"usable_episodes"`
 	Terms    []mine.Term     `json:"terms"`
+	segments []mine.Segment
 }
 
 func main() {
@@ -54,6 +55,7 @@ func main() {
 	asJSON := flag.Bool("json", false, "print the full report as JSON instead of a table")
 	minSeg := flag.Int("min-segments", 0, "override Options.MinSegments (default 3)")
 	timeout := flag.Duration("extract-timeout", 10*time.Minute, "ffmpeg timeout per episode")
+	dump := flag.String("dump-segments", "", "also write every aligned segment to this JSON file (for tuning the miner offline)")
 	flag.Parse()
 	if *dir == "" {
 		fmt.Fprintln(os.Stderr, "--dir is required")
@@ -76,6 +78,13 @@ func main() {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "mine:", err)
 		os.Exit(1)
+	}
+	if *dump != "" {
+		b, _ := json.MarshalIndent(rep.segments, "", " ")
+		if err := os.WriteFile(*dump, b, 0o644); err != nil {
+			fmt.Fprintln(os.Stderr, "dump:", err)
+			os.Exit(1)
+		}
 	}
 	if *asJSON {
 		enc := json.NewEncoder(os.Stdout)
@@ -159,6 +168,7 @@ func run(ctx context.Context, dir string, known map[string]string, opts mine.Opt
 	}
 	opts.Known = known
 	rep.Terms = mine.Mine(all, opts)
+	rep.segments = all
 	return rep, nil
 }
 

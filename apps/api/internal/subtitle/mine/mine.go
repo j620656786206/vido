@@ -8,6 +8,12 @@ import (
 	"unicode/utf8"
 )
 
+// maxHanRunes caps a rendering's length. Full names run long (凱利根將軍,
+// 艾利娜史塔科夫) and a 4-character cap truncated them in the Shadow and
+// Bone run (「凱利根將」, 「利娜史塔科夫」); 8 keeps those whole without
+// letting phrases through.
+const maxHanRunes = 8
+
 // Term is one learned rendering.
 type Term struct {
 	Src string `json:"src"`
@@ -59,10 +65,47 @@ func (o Options) withDefaults() Options {
 // keeps appearing in exactly the segments the English term appears in.
 func Mine(segments []Segment, opts Options) []Term {
 	opts = opts.withDefaults()
-	occurrences := map[string][]int{} // candidate → segment indexes
-	for i, seg := range segments {
+	// Candidate DISCOVERY uses the capitalisation rules (mid-sentence runs);
+	// the segment set a candidate is then scored on comes from a plain
+	// whole-word search over every segment — including the lines where the
+	// name starts the sentence. Without that second pass a vocative name
+	// ("Walter, we need you.") is invisible to the scorer but still counted
+	// against the rendering's specificity, and nothing ever clears the bar
+	// (Scorpion S01: 華特 in 23 of 86 lines, 0 terms learned).
+	discovered := map[string]struct{}{}
+	for _, seg := range segments {
 		for _, c := range candidates(seg.En) {
-			occurrences[c] = appendUnique(occurrences[c], i)
+			discovered[c] = struct{}{}
+		}
+	}
+	// Common-word guard: a NAME is never written in lower case. A single-word
+	// candidate that also shows up lower-cased in the dialogue ("Tell",
+	// "Ready", "Welcome", "Focus" after a dash or a mis-split sentence) is a
+	// word, not a name, and is dropped before scoring.
+	lowerCounts := map[string]int{}
+	for _, seg := range segments {
+		for _, tok := range tokenRe.FindAllString(seg.En, -1) {
+			if r, _ := utf8.DecodeRuneInString(tok); unicode.IsLower(r) {
+				lowerCounts[strings.ToLower(strings.Trim(tok, "'’-"))]++
+			}
+		}
+	}
+	occurrences := make(map[string][]int, len(discovered)) // candidate → segment indexes
+	for c := range discovered {
+		c = strings.TrimSuffix(strings.TrimSuffix(c, "'s"), "’s")
+		if c == "" {
+			continue
+		}
+		if !strings.Contains(c, " ") && lowerCounts[strings.ToLower(c)] > 0 {
+			continue
+		}
+		if _, done := occurrences[c]; done {
+			continue
+		}
+		for i, seg := range segments {
+			if mentionsWord(seg.En, c) {
+				occurrences[c] = append(occurrences[c], i)
+			}
 		}
 	}
 	// Han substring frequency over ALL segments, so a rendering must be
@@ -143,12 +186,36 @@ func Mine(segments []Segment, opts Options) []Term {
 		}
 		out = append(out, Term{Src: src, Zh: best, Support: bestCount, Segments: len(idxs), How: "cooccurrence"})
 	}
+	out = dropSubTerms(out)
 	sort.SliceStable(out, func(i, j int) bool {
 		if out[i].Support != out[j].Support {
 			return out[i].Support > out[j].Support
 		}
 		return out[i].Src < out[j].Src
 	})
+	return out
+}
+
+// dropSubTerms removes a single-word term whose rendering is exactly a
+// multi-word term's rendering that contains the word ("Rollins → 佩卡羅林斯"
+// next to "Pekka Rollins → 佩卡羅林斯"): the surname alone did not earn the
+// full name, it only ever appeared inside it.
+func dropSubTerms(terms []Term) []Term {
+	multi := map[string]string{} // rendering → multi-word src
+	for _, t := range terms {
+		if strings.Contains(t.Src, " ") {
+			multi[t.Zh] = t.Src
+		}
+	}
+	out := terms[:0]
+	for _, t := range terms {
+		if !strings.Contains(t.Src, " ") {
+			if full, ok := multi[t.Zh]; ok && mentionsWord(full, t.Src) {
+				continue
+			}
+		}
+		out = append(out, t)
+	}
 	return out
 }
 
@@ -213,9 +280,15 @@ func candidates(en string) []string {
 	return out
 }
 
-var sentenceSplit = regexp.MustCompile(`[.!?…]+\s+|\s+-\s+|\s*[—–]\s*`)
+// A dialogue dash glued to the next word ("-Shut up.") starts a sentence
+// too; the word after it is capitalised for that reason alone.
+var (
+	sentenceSplit = regexp.MustCompile(`[.!?…]+\s+|\s+-\s+|\s*[—–]\s*`)
+	dashGlued     = regexp.MustCompile(`(^|\s)-(\S)`)
+)
 
 func splitSentences(s string) []string {
+	s = dashGlued.ReplaceAllString(s, "$1 - $2")
 	parts := sentenceSplit.Split(s, -1)
 	out := parts[:0]
 	for _, p := range parts {
@@ -273,19 +346,29 @@ func mentionsWord(text, term string) bool {
 }
 
 func isWordByte(c byte) bool {
-	return c == '_' || c == '\'' || (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
-}
-
-func appendUnique(list []int, v int) []int {
-	if len(list) > 0 && list[len(list)-1] == v {
-		return list
-	}
-	return append(list, v)
+	return c == '_' || (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
 }
 
 // ─── Chinese side ───────────────────────────────────────────────────────────
 
-// hanSubstrings yields every 2–4 character run of Han characters in zh, each
+// A rendering never starts with a pronoun, preposition or verb particle, and
+// never ends with a sentence particle or the possessive 的 — those are the
+// characters that sit NEXT to a name in a sentence (「跟佩卡」「佩卡的」) and
+// would otherwise ride along into the learned term.
+var (
+	particleStart = runeSet("我你他她它您們的了是在和跟把被給讓叫去找對從向與及或也都就還很")
+	particleEnd   = runeSet("的了嗎呢啊吧呀喔哦啦嘛欸耶哇喂")
+)
+
+func runeSet(s string) map[rune]bool {
+	out := map[rune]bool{}
+	for _, r := range s {
+		out[r] = true
+	}
+	return out
+}
+
+// hanSubstrings yields every 2–6 character run of Han characters in zh, each
 // counted once per segment. Punctuation and Latin letters break runs, so a
 // substring never spans two words that happen to sit next to each other
 // across a comma.
@@ -305,7 +388,10 @@ func hanSubstringsWithBoundary(zh string) map[string]bool {
 	var run []rune
 	flush := func() {
 		for i := 0; i < len(run); i++ {
-			for n := 2; n <= 4 && i+n <= len(run); n++ {
+			for n := 2; n <= maxHanRunes && i+n <= len(run); n++ {
+				if particleStart[run[i]] || particleEnd[run[i+n-1]] {
+					continue
+				}
 				sub := string(run[i : i+n])
 				whole := i == 0 && i+n == len(run)
 				out[sub] = out[sub] || whole

@@ -139,8 +139,8 @@ func assToMS(ts string) (int, bool) {
 
 func cleanText(s string) string {
 	s = htmlTag.ReplaceAllString(s, "")
-	s = strings.ReplaceAll(s, "‎", "")
-	s = strings.ReplaceAll(s, "‏", "")
+	s = strings.ReplaceAll(s, "\u200e", "")
+	s = strings.ReplaceAll(s, "\u200f", "")
 	return strings.Join(strings.Fields(s), " ")
 }
 
@@ -154,6 +154,17 @@ func cleanText(s string) string {
 func Align(en, zh []Cue) []Segment {
 	en = sortedCopy(en)
 	zh = sortedCopy(zh)
+	// A sidecar made for another release of the same episode is often a
+	// constant few seconds off (Scorpion S01E02's fansub: −4 s). Estimate that
+	// shift from cue-start coincidences and remove it before pairing; a drift
+	// that is not constant (different cut, frame-rate) is beyond this miner
+	// and simply pairs fewer lines.
+	if shift := EstimateShift(en, zh); shift != 0 {
+		for i := range zh {
+			zh[i].StartMS += shift
+			zh[i].EndMS += shift
+		}
+	}
 	// group id per cue, -1 = unassigned
 	enGroup := make([]int, len(en))
 	zhGroup := make([]int, len(zh))
@@ -245,6 +256,58 @@ func Align(en, zh []Cue) []Segment {
 		return firsts[out[i].En+"\x00"+out[i].Zh] < firsts[out[j].En+"\x00"+out[j].Zh]
 	})
 	return out
+}
+
+// EstimateShift returns the constant offset (ms) to ADD to the Chinese cues
+// so their start times line up best with the English ones, searched over
+// ±shiftSearchMS in shiftStepMS steps; 0 when the aligned-as-is count is
+// already the best or the data is too thin to tell.
+func EstimateShift(en, zh []Cue) int {
+	if len(en) < 20 || len(zh) < 20 {
+		return 0
+	}
+	enStarts := make(map[int]struct{}, len(en))
+	for _, c := range en {
+		enStarts[c.StartMS/shiftBucketMS] = struct{}{}
+	}
+	score := func(shift int) int {
+		hits := 0
+		for _, c := range zh {
+			if _, ok := enStarts[(c.StartMS+shift)/shiftBucketMS]; ok {
+				hits++
+			}
+		}
+		return hits
+	}
+	base := score(0)
+	best, bestHits := 0, base
+	for shift := -shiftSearchMS; shift <= shiftSearchMS; shift += shiftStepMS {
+		if shift == 0 {
+			continue
+		}
+		if h := score(shift); h > bestHits || (h == bestHits && abs(shift) < abs(best)) {
+			best, bestHits = shift, h
+		}
+	}
+	// Only move when it clearly helps: a shift must beat "as is" by a margin,
+	// or random coincidences would nudge a perfectly aligned pair.
+	if bestHits < base+base/5+5 {
+		return 0
+	}
+	return best
+}
+
+const (
+	shiftSearchMS = 30000
+	shiftStepMS   = 250
+	shiftBucketMS = 500
+)
+
+func abs(v int) int {
+	if v < 0 {
+		return -v
+	}
+	return v
 }
 
 func sortedCopy(c []Cue) []Cue {

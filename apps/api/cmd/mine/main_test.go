@@ -33,13 +33,20 @@ func TestRun_SidecarShowLearnsNames(t *testing.T) {
 	for ep := 1; ep <= 3; ep++ {
 		base := fmt.Sprintf("Scorpion.S01E%02d", ep)
 		write(base+".mkv", "") // an empty "video": ffprobe (if present) fails on it and that is fine
+		// Real subtitles never repeat a line verbatim across episodes; vary
+		// the context so the miner has something to tell a name from.
+		enLines := [][2]string{
+			{"Hey, Walter, we need you.", "嘿，華特，我們需要你"},
+			{"Is Walter coming or not?", "華特到底來不來"},
+			{"Ask Walter, he knows.", "去問華特，他知道"},
+		}
 		write(base+".en.srt", srt(
-			[3]string{"00:00:01,000", "00:00:03,000", "Hey, Walter, we need you."},
+			[3]string{"00:00:01,000", "00:00:03,000", enLines[ep-1][0]},
 			[3]string{"00:00:04,000", "00:00:06,000", "Tell Toby to hurry."},
 			[3]string{"00:00:07,000", "00:00:09,000", "Fine."},
 		))
 		write(base+".zh-TW.srt", srt(
-			[3]string{"00:00:01,100", "00:00:03,100", "嘿，華特，我們需要你"},
+			[3]string{"00:00:01,100", "00:00:03,100", enLines[ep-1][1]},
 			[3]string{"00:00:04,000", "00:00:06,200", fmt.Sprintf("叫托比快一點（%d）", ep)},
 			[3]string{"00:00:07,000", "00:00:09,000", "好"},
 		))

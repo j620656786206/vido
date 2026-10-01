@@ -17,7 +17,8 @@ Status: ready-for-dev
 - 排除 Vido 自產：7-5a 以檔名規則排除 `.zh-Hant.srt`；`subtitle_runs.output_path` 可再對照一次。
 - SSE：`sse.EventNotification`（`hub.Broadcast`）。
 - 設定頁：`apps/web/src/routes/settings/subtitle.tsx` 目前只有 `LocalizationLevelForm`；按鈕要 Sally 補 C9-D／C9-M 的一列（成本 $0 的按鈕，不走 ButtonCost）。
-- 可選 LLM 精煉（原單 AC #4，`SUBTITLE_MINE_WITH_LLM=false`）：等 7-5a 的 NAS 實測結果再決定要不要做——共現規則若已達 ≥15 詞／≥90%，就不做。
+- ~~可選 LLM 精煉~~：7-5a 實測 Shadow and Bone 68 詞、抽查 19/20，**不做**。
+- ⚠️ 7-5a 實測兩個前提：(a) `.zh-TW.hi` 檔名不保證官方——Scorpion S01 六集全是人人影視／ZiMuZu 字幕組檔，人名不一致、時間軸對不上；**學到的詞要帶來源檔名進 GlossaryPanel**，偵測到字幕組署名（檔頭「字幕組」「人人影視」「ZiMuZu」「翻譯：」）的檔跳過；(b) partial 判定用 ffprobe 實探（Supernatural 的 .mp4 沒有任何字幕串流，eval CSV 算錯）。
 
 ## Acceptance Criteria
 
