@@ -58,6 +58,15 @@ Status: review
 > 5. **D · 與月報的關係** 一句：「試跑的花費不計入『本月 AI 花費』（K5），也不出現在活動記錄；只在這一列的『你的實測』看得到。」
 > 6. `placeholder:false`，確認 `problems` 為空、每張卡片沒有文字溢出。
 
+> **D · 補丁：9 個沒吃變數的值（CI `check-design-tokens.py` 抓到，2026-10-01）**
+>
+> 以下節點請改成吃變數，其餘不動，改完 ⌘S：
+>
+> 1. 四個 `hint` 文字（都在 J10 `sec-states` 裡）：`daYjs`「約 1 分鐘，請勿關閉視窗」、`igDMY`「你的實測：…」、`bzlnm`「再試一次」、`xmqCZ`「試跑失敗，沒有扣款」——`fontSize` 從數字 `12` 改成 `$Type/Label/Size`。
+> 2. 五顆試跑按鈕的 `padding`：`uIYiJ`（F16-D-v2 `row-meta` 的 `btn-tryrun`）、`HsOc0`（F16-M-v2 `row-btn` 的 `btn-tryrun`）、`lrQa8`／`ZdG8T`（J10 `btn-tryrun`）、`i2OfD6`（J10 `btn-tryrun-loading`）——`padding` 從 `[0, "$Space/sm"]` 改成 `["$Space/none", "$Space/sm"]`（那個 `0` 要用變數 `$Space/none`）。
+>
+> 跑完：`python3 scripts/export-pen-screenshots.py` → 這次**連 `_bmad-output/pen-tokens.json` 一起 commit**（它帶著 .pen 的 sha256，沒更新 CI 的 token 檢查會說快照過期）；PNG 只 stage 真變更的（這次應該沒有）。
+
 **設計裁定理由**：試跑按鈕是「會花錢的按鈕」，所以不另造語彙，直接用 J9 的 ButtonCost 三個母版縮小一號（高 24／字 12）放在列內——使用者在同一個對話框裡已經學會「有金額的按鈕＝會扣款」。「你的實測」刻意不用徽章、不用字母，因為徽章＝Vido 背書的等級；這裡是使用者自己花錢在自己機器上量到的 20 句，用一句話呈現、`$text-secondary`，比官方等級低一階。失敗態用文字不用 toast：對話框裡的 toast 會被 sheet 蓋住，而且使用者要看到「有沒有扣錢」就在那一列。
 
 跑完之後：⌘S → `python3 scripts/export-pen-screenshots.py` → `SCREENS` 補 J10 的 node ID（`("flow-j-specs", "j10-d")`）→ 只 stage `f16-d-v2`、`f16-m-v2`、`j10-d` 三張真變更的 PNG → commit。Sally 用 MCP 複審後才開工 Task 3。
