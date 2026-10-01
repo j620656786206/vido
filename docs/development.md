@@ -160,12 +160,12 @@ Run it locally:
 
 ```bash
 cd apps/api
-ANTHROPIC_API_KEY=… go run ./cmd/grade --model claude-haiku-4-5 --out /tmp/haiku.json   # ≈ $0.05–0.20 per model
+CLAUDE_API_KEY=… go run ./cmd/grade --model claude-haiku-4-5 --out /tmp/haiku.json      # ≈ $0.05–0.20 per model
 go run ./cmd/grade --merge /tmp/haiku.json                                               # updates internal/ai/model_ratings.json
 go run ./cmd/grade --model claude-haiku-4-5 --limit 20 --no-judge                        # free-ish smoke run
 ```
 
-Or in CI: **Actions → Model Grade → Run workflow**, enter the model id. The workflow needs the repo secret `GRADE_ANTHROPIC_API_KEY` (a dedicated key, not a production one). It grades, merges, and opens a `chore(model-grade): …` PR touching only `model_ratings.json`; merging that PR is what publishes the grade. Adding a model therefore means: add its price and metadata to `ai/budget.go` + `ai/catalog.go`, ship that, then run the workflow once.
+Or in CI: **Actions → Model Grade → Run workflow**, enter the model id. The workflow needs the repo secret `CLAUDE_API_KEY` — the same variable name (and the same key) the app itself uses, so one key serves the NAS, local runs and CI. It grades, merges, and opens a `chore(model-grade): …` PR touching only `model_ratings.json`; merging that PR is what publishes the grade. Adding a model therefore means: add its price and metadata to `ai/budget.go` + `ai/catalog.go`, ship that, then run the workflow once.
 
 Only Claude models can be graded today because the translation path only dispatches to Claude. The judge is itself a Claude model, so every rating carries a bias note; the two eval-1 rows (human blind test, 2026-09) stay in the table until a golden run replaces them.
 

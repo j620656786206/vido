@@ -8,7 +8,7 @@
 // the version triple (prompt / lexicon / model) is stamped automatically. No
 // server, no library item, no TMDb match is needed: CI can run it with one key.
 //
-//	ANTHROPIC_API_KEY=… go run ./cmd/grade --model claude-haiku-4-5 --out haiku.json
+//	CLAUDE_API_KEY=… go run ./cmd/grade --model claude-haiku-4-5 --out haiku.json
 //	go run ./cmd/grade --merge haiku.json            # fold it into internal/ai/model_ratings.json
 //
 // One ai.Budget covers both the model under test and the judge; hitting it
@@ -83,9 +83,11 @@ func main() {
 			return ai.NewClaudeProvider(key, ai.WithClaudeModel(model))
 		},
 		newFinalizer: newFinalizer,
-		apiKey:       firstNonEmpty(os.Getenv("ANTHROPIC_API_KEY"), os.Getenv("CLAUDE_API_KEY")),
-		now:          time.Now,
-		stderr:       os.Stderr,
+		// Same variable the app reads (docs/development.md § Configuration), so
+		// one key serves the NAS, local runs and the Model Grade workflow.
+		apiKey: firstNonEmpty(os.Getenv("CLAUDE_API_KEY"), os.Getenv("ANTHROPIC_API_KEY")),
+		now:    time.Now,
+		stderr: os.Stderr,
 	}
 	rep, err := run(context.Background(), cfg, d)
 	if err != nil {
@@ -143,7 +145,7 @@ func parseFlags(args []string) (config, error) {
 
 func run(ctx context.Context, cfg config, d deps) (eval.Report, error) {
 	if d.apiKey == "" {
-		return eval.Report{}, errors.New("set ANTHROPIC_API_KEY (or CLAUDE_API_KEY)")
+		return eval.Report{}, errors.New("set CLAUDE_API_KEY (the same variable the app uses; ANTHROPIC_API_KEY also works)")
 	}
 	cues, err := loadSample(cfg.samplePath)
 	if err != nil {

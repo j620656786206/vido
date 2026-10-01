@@ -7,8 +7,8 @@
 #
 # 它會花錢（預設上限 $0.50／次），所以：
 #   - 只在 workflow_dispatch 跑，不掛在 PR 或 push 上；
-#   - key 來自 repo secret GRADE_ANTHROPIC_API_KEY（Alexyu 在 Settings 新增），
-#     不是任何正式環境的 key；
+#   - key 來自 repo secret CLAUDE_API_KEY——跟 App 本身用的環境變數同名、同一把
+#     （Alexyu 2026-10-01 裁定共用，不另開專用 key）；
 #   - 預算打到上限時 cmd/grade 回 exit 3，這裡就直接失敗、不開 PR。
 # ──────────────────────────────────────────────────────────────────────────────
 name: Model Grade
@@ -53,10 +53,10 @@ jobs:
 
       - name: Refuse to run without the grading key
         env:
-          GRADE_KEY: ${{ secrets.GRADE_ANTHROPIC_API_KEY }}
+          GRADE_KEY: ${{ secrets.CLAUDE_API_KEY }}
         run: |
           if [ -z "$GRADE_KEY" ]; then
-            echo "::error::repo secret GRADE_ANTHROPIC_API_KEY is not set — add it under Settings → Secrets before grading"
+            echo "::error::repo secret CLAUDE_API_KEY is not set — add it under Settings → Secrets (same key the app uses) before grading"
             exit 1
           fi
 
@@ -75,7 +75,7 @@ jobs:
         id: grade
         working-directory: apps/api
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.GRADE_ANTHROPIC_API_KEY }}
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
         run: |
           set -o pipefail
           REPORT="$RUNNER_TEMP/report.json"
