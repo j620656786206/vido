@@ -266,8 +266,8 @@ func TestSubtitleTranslatorPromptVersion_PinsPromptText(t *testing.T) {
 	sb.WriteString(BuildEpisodeSection("S01E03 · Pin Episode"))
 	digest := fmt.Sprintf("%x", sha256.Sum256([]byte(sb.String())))
 
-	assert.Equal(t, "m1-v3", SubtitleTranslatorPromptVersion)
-	assert.Equal(t, "aced9e909c7a09313acaf4df9feef418be6827bea9c546717bcd337322d57780", digest,
+	assert.Equal(t, "m1-v4", SubtitleTranslatorPromptVersion)
+	assert.Equal(t, "896ab9fb9bbe010168254814a7c21b90448a539de4e107855ae645155490ff78", digest,
 		"prompt text changed — bump SubtitleTranslatorPromptVersion and update this digest in the SAME edit (P11)")
 }
 

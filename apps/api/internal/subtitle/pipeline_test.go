@@ -1003,3 +1003,36 @@ func TestBuildSystemBlocks_EpisodeLineSitsAfterTheBreakpoint(t *testing.T) {
 	assert.Equal(t, MetadataHash(without), MetadataHash(tctx), "the label is not part of the hash")
 	assert.Len(t, buildSystemBlocks(without), 2, "no label, no third block — byte-identical to before")
 }
+
+// ─── sub-7-9 AC #2: a shifted cue is a semantic failure the gate retries ────
+
+func TestTranslateTrack_MisalignedCueIsRetriedWithGlossaryAnchors(t *testing.T) {
+	source := cues("I was a boxer, you know.", "Killed a man in the ring.", "Line 3.")
+	calls := 0
+	tr := &fakeTranslator{fn: func(_ int, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+		calls++
+		out := map[int]string{}
+		for _, b := range blocks {
+			switch {
+			case b.Index == 1:
+				out[1] = "我以前是拳擊手，在擂台上打死過人。"
+			case b.Index == 2 && calls == 1:
+				out[2] = "你知道吧。" // the shifted first attempt
+			case b.Index == 2:
+				out[2] = "在擂台上打死過一個人。" // the retry lands it back
+			default:
+				out[b.Index] = fmt.Sprintf("第%d句", b.Index)
+			}
+		}
+		return out, ai.CompletionUsage{}, nil
+	}}
+	res, err := NewPipeline(tr, &recordingConverter{}, nil).
+		TranslateTrack(context.Background(), trackOf(source), TranslateContext{
+			Glossary: []prompts.GlossaryEntry{{Source: "ring", Target: "擂台"}},
+		})
+	require.NoError(t, err)
+	require.Len(t, tr.calls, 2, "one chunk + one quality retry for the misaligned cue")
+	assert.Equal(t, []int{2}, tr.calls[1].indexes(), "only the drifted cue is resent")
+	assert.Equal(t, "在擂台上打死過一個人。", res.Blocks[1].Text)
+	assert.Equal(t, 0, res.StubbornCues)
+}

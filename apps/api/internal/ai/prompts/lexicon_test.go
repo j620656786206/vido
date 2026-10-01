@@ -180,9 +180,9 @@ func TestParseLocalizationLevel(t *testing.T) {
 }
 
 func TestPromptVersionFor_CarriesBaseLexiconAndLevel(t *testing.T) {
-	assert.Equal(t, "m1-v3+zh-tw-lex-1+standard", PromptVersionFor(LocalizationStandard))
-	assert.Equal(t, "m1-v3+zh-tw-lex-1+ott", PromptVersionFor(LocalizationOTT))
-	assert.Equal(t, "m1-v3+zh-tw-lex-1+literal", PromptVersionFor(LocalizationLiteral))
+	assert.Equal(t, "m1-v4+zh-tw-lex-1+standard", PromptVersionFor(LocalizationStandard))
+	assert.Equal(t, "m1-v4+zh-tw-lex-1+ott", PromptVersionFor(LocalizationOTT))
+	assert.Equal(t, "m1-v4+zh-tw-lex-1+literal", PromptVersionFor(LocalizationLiteral))
 	assert.Equal(t, PromptVersionFor(LocalizationStandard), PromptVersionFor(""), "zero value is the default level")
 }
 

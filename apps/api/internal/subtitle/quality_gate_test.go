@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vido/api/internal/ai/prompts"
 )
 
 // oneCue builds a single-cue chunk carrying the given English source text.
@@ -214,4 +215,99 @@ func TestCheckChunk_EmptyChunkPasses(t *testing.T) {
 
 	assert.True(t, verdict.Passed())
 	assert.Empty(t, verdict.Reasons)
+}
+
+// ─── sub-7-9 AC #2: misaligned ──────────────────────────────────────────────
+
+func TestCheckChunkAnchored_Misaligned(t *testing.T) {
+	src := []SubtitleBlock{
+		{Index: 1, Text: "I was a boxer, you know."},
+		{Index: 2, Text: "Killed a man in the ring."},
+		{Index: 3, Text: "The train leaves at 14:30."},
+		{Index: 4, Text: "The bus doesn't come till 2002."},
+	}
+	glossary := []prompts.GlossaryEntry{{Source: "boxer", Target: "拳擊手"}, {Source: "ring", Target: "擂台"}}
+	anchors := AnchorsFor(src, glossary, nil)
+	assert.Equal(t, map[int][]string{1: {"拳擊手"}, 2: {"擂台"}, 3: {"14", "30"}, 4: {"2002"}}, anchors)
+
+	tests := []struct {
+		name string
+		got  map[int]string
+		want map[int]string // index → reason; absent = passes
+	}{
+		{
+			name: "aligned: every anchor on its own cue",
+			got:  map[int]string{1: "我以前是拳擊手，你知道吧。", 2: "在擂台上打死過一個人。", 3: "火車 14:30 開。", 4: "公車要到 2002 才來。"},
+		},
+		{
+			name: "shifted: cue 2's content moved onto cue 1, cue 2 left with a fragment",
+			got:  map[int]string{1: "我以前是拳擊手，在擂台上打死過人。", 2: "你知道吧。", 3: "火車 14:30 開。", 4: "公車要到 2002 才來。"},
+			want: map[int]string{2: GateReasonMisaligned},
+		},
+		{
+			name: "shifted forward: cue 3's time landed on cue 4",
+			got:  map[int]string{1: "我以前是拳擊手，你知道吧。", 2: "在擂台上打死過一個人。", 3: "火車開了。", 4: "14:30，公車要到 2002 才來。"},
+			want: map[int]string{3: GateReasonMisaligned},
+		},
+		{
+			name: "dropped but NOT next door: a translator may paraphrase a number away",
+			got:  map[int]string{1: "我以前是拳擊手，你知道吧。", 2: "在擂台上打死過一個人。", 3: "火車下午兩點半開。", 4: "公車要到 2002 才來。"},
+		},
+		{
+			name: "anchor shared by neighbours' sources is not a shift",
+			got:  map[int]string{1: "我以前是拳擊手，你知道吧。", 2: "擂台上那個拳擊手死了。", 3: "火車 14:30 開。", 4: "公車要到 2002 才來。"},
+		},
+		{
+			name: "no anchors on the cue → never triggers, whatever the neighbour says",
+			got:  map[int]string{1: "我以前是拳擊手，你知道吧。", 2: "在擂台上打死過一個人，2002 年。", 3: "火車 14:30 開。", 4: "公車要到 2002 才來。"},
+		},
+		{
+			name: "earlier classes win: an echoed cue is echoed, not misaligned",
+			got:  map[int]string{1: "I was a boxer, you know.", 2: "在擂台上打死過一個拳擊手。", 3: "火車 14:30 開。", 4: "公車要到 2002 才來。"},
+			want: map[int]string{1: GateReasonEchoed},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			v := CheckChunkAnchored(src, tc.got, anchors, nil)
+			got := map[int]string{}
+			for i, r := range v.Reasons {
+				got[i] = r
+			}
+			if tc.want == nil {
+				tc.want = map[int]string{}
+			}
+			assert.Equal(t, tc.want, got)
+			assert.Len(t, v.FailedIndexes, len(tc.want))
+		})
+	}
+}
+
+func TestCheckChunkAnchored_RetriedCueSeesAcceptedNeighbours(t *testing.T) {
+	// On a quality retry only cue 2 is pending; its drifted anchor sits in
+	// cue 1's ALREADY-ACCEPTED translation, which comes in via neighbours.
+	src := []SubtitleBlock{{Index: 2, Text: "Killed a man in the ring."}}
+	anchors := map[int][]string{1: {"拳擊手"}, 2: {"擂台"}}
+	accepted := map[int]string{1: "我以前是拳擊手，在擂台上打死過人。"}
+	v := CheckChunkAnchored(src, map[int]string{2: "你知道吧。"}, anchors, accepted)
+	assert.Equal(t, GateReasonMisaligned, v.Reasons[2])
+
+	// Same text, no neighbour knowledge: the gate has no evidence and passes it.
+	v = CheckChunkAnchored(src, map[int]string{2: "你知道吧。"}, anchors, nil)
+	assert.True(t, v.Passed())
+
+	// Plain CheckChunk never sees anchors: byte-for-byte the pre-7-9 verdict.
+	assert.True(t, CheckChunk(src, map[int]string{2: "你知道吧。"}).Passed())
+}
+
+func TestAnchorsFor_RulesOfThumb(t *testing.T) {
+	src := []SubtitleBlock{
+		{Index: 1, Text: "Rick wants to hire me! 4 wives, 14 years, room 1999."},
+		{Index: 2, Text: "Nothing to anchor here."},
+		{Index: 3, Text: "ricky and Rick's hat"},
+	}
+	got := AnchorsFor(src, []prompts.GlossaryEntry{{Source: "Rick", Target: "瑞克"}}, map[string]string{"hat": "帽子", "wives": ""})
+	assert.Equal(t, []string{"14", "1999", "瑞克"}, got[1], "multi-digit numbers and the glossary rendering; a lone 4 is not an anchor")
+	assert.Nil(t, got[2], "a cue with nothing to anchor has no entry")
+	assert.Equal(t, []string{"帽子", "瑞克"}, got[3], "whole-word match: ricky does not count, Rick's does; an empty rendering is ignored")
 }

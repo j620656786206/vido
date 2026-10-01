@@ -453,7 +453,7 @@ func TestTranslateSRT_NoReaderWiredKeepsThePromptByteIdentical(t *testing.T) {
 func TestSubtitleTranslatorPromptVersion_NotBumpedBy9R8(t *testing.T) {
 	// sub-7-4 bumped it to m1-v3 for its OWN prompt-surface change (style +
 	// lexicon sections); the 9R-8 non-bump decision stands unchanged.
-	assert.Equal(t, "m1-v3", prompts.SubtitleTranslatorPromptVersion)
+	assert.Equal(t, "m1-v4", prompts.SubtitleTranslatorPromptVersion)
 }
 
 // metadataSeriesReader is a SeriesMetadataReader serving one series row.
