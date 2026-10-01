@@ -1,6 +1,6 @@
 # Story 7.8: 模型品質等級由 Vido 集中評測、隨 App 發（黃金樣本 + ratings feed + CI）
 
-Status: ready-for-dev
+Status: split (2026-10-01 → sub-7-8a / sub-7-8b / sub-7-8c；傘狀留檔)
 
 ## Story
 
