@@ -140857,6 +140857,145 @@
                                       ]
                                     }
                                   ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "gpdxh",
+                                  "name": "model-row-opus",
+                                  "width": "fill_container",
+                                  "cornerRadius": "$radius-sm",
+                                  "layout": "vertical",
+                                  "gap": "$Space/xs",
+                                  "padding": [
+                                    "$Space/sm",
+                                    "$Space/sm-plus"
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "CxhFQ",
+                                      "name": "row-top",
+                                      "width": "fill_container",
+                                      "gap": "$Space/sm-plus",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "d5uN3",
+                                          "name": "radio",
+                                          "width": 16,
+                                          "height": 16,
+                                          "cornerRadius": "$radius-pill",
+                                          "stroke": "$border-subtle",
+                                          "strokeWidth": 2,
+                                          "strokeAlignment": "inner",
+                                          "justifyContent": "center",
+                                          "alignItems": "center"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "o9RYWJ",
+                                          "name": "model-name",
+                                          "fill": "$text-primary",
+                                          "content": "Claude Opus 4.8",
+                                          "lineHeight": "$Type/Body/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Body/Size",
+                                          "fontWeight": "$Type/Body/Weight"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "lf9ez",
+                                          "name": "push",
+                                          "width": "fill_container",
+                                          "height": 1
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "uQ58P",
+                                          "name": "model-usd",
+                                          "fill": "$text-primary",
+                                          "content": "約 $7.50",
+                                          "lineHeight": "$Type/Body/Line",
+                                          "fontFamily": "$Type/Family/Mono",
+                                          "fontSize": "$Type/Body/Size",
+                                          "fontWeight": "700"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "e68sdf",
+                                      "name": "row-meta",
+                                      "gap": "$Space/sm",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "s3wHPz",
+                                          "name": "meta-indent",
+                                          "width": 26,
+                                          "height": 1
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "TqGp9",
+                                          "name": "grade-badge",
+                                          "fill": "$bg-tertiary",
+                                          "cornerRadius": "$radius-pill",
+                                          "padding": [
+                                            "$Space/2xs",
+                                            "$Space/xs-plus"
+                                          ],
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "wau6H",
+                                              "name": "grade-text",
+                                              "fill": "$text-muted",
+                                              "content": "尚未評測",
+                                              "lineHeight": "$Type/Label/Line",
+                                              "fontFamily": "$Type/Family/Primary",
+                                              "fontSize": "$Type/Label/Size",
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "yEIQJ",
+                                          "name": "model-minutes",
+                                          "fill": "$text-secondary",
+                                          "content": "約 12 分鐘",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Mono",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "id": "uIYiJ",
+                                          "type": "ref",
+                                          "ref": "qAERt",
+                                          "name": "btn-tryrun",
+                                          "height": 24,
+                                          "padding": [
+                                            0,
+                                            "$Space/sm"
+                                          ],
+                                          "descendants": {
+                                            "StNiU": {
+                                              "content": "試跑 20 句",
+                                              "fontSize": 12
+                                            },
+                                            "ASE9e": {
+                                              "content": "$0.06",
+                                              "fontSize": 12
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  ]
                                 }
                               ]
                             }
