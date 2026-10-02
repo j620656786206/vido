@@ -46,7 +46,7 @@ func New(cfg *config.DatabaseConfig) (*DB, error) {
 func (db *DB) connect() error {
 	connStr := db.config.GetConnectionString()
 
-	conn, err := sql.Open("sqlite", connStr)
+	conn, err := sql.Open(DriverName, connStr)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}

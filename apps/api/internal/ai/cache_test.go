@@ -9,11 +9,17 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	_ "modernc.org/sqlite"
+
+	"github.com/vido/api/internal/database"
 )
 
 func setupTestDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite", ":memory:")
+	// The app's driver, so timestamps are stored the way production stores
+	// them (UTC text — bugfix-h). One connection: each :memory: connection is
+	// its own database.
+	db, err := sql.Open(database.DriverName, ":memory:")
 	require.NoError(t, err)
+	db.SetMaxOpenConns(1)
 
 	// Create ai_cache table
 	_, err = db.Exec(`
@@ -230,7 +236,7 @@ func TestCache_ClearExpired(t *testing.T) {
 	// Insert entries with manual expired timestamp directly in DB
 	for i := 0; i < 5; i++ {
 		// Use past time directly for expires_at
-		pastTime := time.Now().Add(-1 * time.Hour).Format(time.RFC3339)
+		pastTime := time.Now().Add(-1 * time.Hour)
 		_, err := db.ExecContext(ctx,
 			`INSERT INTO ai_cache (id, filename_hash, provider, request_prompt, response_json, created_at, expires_at)
 			 VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -317,4 +323,27 @@ func TestCache_Stats(t *testing.T) {
 func TestDefaultCacheTTL(t *testing.T) {
 	// Verify default TTL is 30 days per NFR-I10
 	assert.Equal(t, 30*24*time.Hour, DefaultCacheTTL)
+}
+
+// bugfix-h: on the app connection (UTC timestamp text) an entry that expires
+// later today must survive ClearExpired and count as valid — comparing it with
+// a local RFC3339 string argument deleted it up to a day early.
+func TestCache_UnexpiredEntrySurvivesOnAppConnection(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	cache := NewCache(db, WithCacheTTL(time.Hour))
+	ctx := context.Background()
+	require.NoError(t, cache.Set(ctx, "movie.mkv", ProviderClaude, "p", &ParseResponse{Title: "Movie"}))
+
+	removed, err := cache.ClearExpired(ctx)
+	require.NoError(t, err)
+	assert.Zero(t, removed)
+	stats, err := cache.Stats(ctx)
+	require.NoError(t, err)
+	assert.EqualValues(t, 1, stats.ValidEntries)
+	assert.EqualValues(t, 0, stats.ExpiredEntries)
+	got, err := cache.Get(ctx, "movie.mkv")
+	require.NoError(t, err)
+	require.NotNil(t, got)
 }

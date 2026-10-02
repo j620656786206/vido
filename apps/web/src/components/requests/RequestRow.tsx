@@ -52,9 +52,22 @@ export interface RequestRowProps {
   request: MediaRequest & { progress?: number };
 }
 
+/**
+ * The request's calendar day on the viewer's clock. The API now stores every
+ * timestamp in UTC (bugfix-h), so slicing the ISO text would show yesterday
+ * for anything requested before 08:00 in Taipei.
+ */
+function localDay(iso?: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso.slice(0, 10);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 export function RequestRow({ request }: RequestRowProps) {
   const token = STATUS_TOKENS[request.status] ?? STATUS_TOKENS.pending;
-  const date = request.requestedAt?.slice(0, 10) ?? '';
+  const date = localDay(request.requestedAt);
   const pctNum =
     request.status === 'downloading' && typeof request.progress === 'number'
       ? Math.round(request.progress * 100)
