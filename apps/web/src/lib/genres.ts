@@ -53,3 +53,28 @@ const TV_GENRE_IDS = [
 export function genreNamesFor(mediaType: 'movie' | 'series'): string[] {
   return (mediaType === 'movie' ? MOVIE_GENRE_IDS : TV_GENRE_IDS).map((id) => GENRE_MAP[id]);
 }
+
+/** TMDb genre ids for one content type, in TMDb's own list order (explore blocks). */
+export function genreIdsFor(contentType: 'movie' | 'tv'): number[] {
+  return contentType === 'movie' ? [...MOVIE_GENRE_IDS] : [...TV_GENRE_IDS];
+}
+
+/** A genre id's zh-TW name; an id this table does not know reads 「ID 123」. */
+export function genreLabel(id: number): string {
+  return GENRE_MAP[id] ?? `ID ${id}`;
+}
+
+/**
+ * The explore-block wire format — a comma-separated id string ("28,12") —
+ * parsed into ids. Blank / non-numeric parts are ignored (hand-typed data
+ * from before the chip picker).
+ */
+export function parseGenreIdList(value: string | null | undefined): number[] {
+  if (!value) return [];
+  const ids: number[] = [];
+  for (const part of value.split(',')) {
+    const n = Number(part.trim());
+    if (part.trim() !== '' && Number.isInteger(n) && n > 0 && !ids.includes(n)) ids.push(n);
+  }
+  return ids;
+}

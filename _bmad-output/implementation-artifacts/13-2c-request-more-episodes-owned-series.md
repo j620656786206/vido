@@ -1,6 +1,6 @@
 # Story 13.2c: 已入庫影集也能「想要更多集數」—— 媒體庫影集詳情頁的季／集樹入口
 
-Status: review
+Status: done
 
 **Depends on:** `13-2b-partial-request`（季／集樹 `SeasonEpisodeTreeDialog`，PR #656 已合）。**Source:** `disc-2026-10-partial-request-entry-for-owned-series`（P2，13-2b dev 時立案）。
 

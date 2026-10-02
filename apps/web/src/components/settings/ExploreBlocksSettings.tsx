@@ -8,7 +8,8 @@
  * dsr-3d: C10 used to draw a per-block on/off switch and drag handles; the
  * product has neither (ExploreBlock has no enabled field; order is 上移／下移)
  * — the design now draws what is here (disc-2026-09-explore-block-toggle-and-drag).
- * Genres still print as TMDb IDs (disc-2026-09-explore-block-genre-ids-raw).
+ * Genres print by name (類型 動作、科幻); an id the genre table does not know
+ * reads 「ID 123」 (disc-2026-09-explore-block-genre-ids-raw).
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -21,6 +22,7 @@ import {
 import type { ExploreBlock } from '../../services/exploreBlockService';
 import { sortLabel } from './exploreBlockSort';
 import { ExploreBlockEditModal } from './ExploreBlockEditModal';
+import { genreLabel, parseGenreIdList } from '../../lib/genres';
 
 /** C10 rRMJl: 32 solid squares on desktop, 44 on a phone (touch). */
 // No hover colour in the base: Tailwind orders same-property utilities by its
@@ -133,14 +135,14 @@ export function ExploreBlocksSettings() {
       <ul className="space-y-3">
         {blocks.map((block, index) => {
           const TypeIcon = block.contentType === 'movie' ? Film : Tv;
-          // 電影 · 熱門度（高→低） · 20 部 · zh-TW · 地區 TW · 類型 16
+          // 電影 · 熱門度（高→低） · 20 部 · zh-TW · 地區 TW · 類型 動畫
           const parts = [
             block.contentType === 'movie' ? '電影' : '影集',
             sortLabel(block.sortBy, block.contentType),
             `${block.maxItems} 部`,
             block.language,
             block.region && `地區 ${block.region}`,
-            block.genreIds && `類型 ${block.genreIds}`,
+            genreText(block.genreIds),
           ].filter(Boolean);
           return (
             <li
@@ -269,4 +271,10 @@ export function ExploreBlocksSettings() {
       )}
     </div>
   );
+}
+
+/** 「類型 動作、科幻」 from the stored "28,878"; empty when no genre filter. */
+function genreText(genreIds: string): string | false {
+  const ids = parseGenreIdList(genreIds);
+  return ids.length > 0 && `類型 ${ids.map(genreLabel).join('、')}`;
 }
