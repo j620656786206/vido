@@ -168,6 +168,22 @@ export interface Season {
   airDate: string | null;
 }
 
+/** GET /tmdb/tv/:id/season/:n — one TMDb season with its episodes (13-2a route; 13-2b tree). */
+export interface TMDbSeasonEpisode {
+  id: number;
+  episodeNumber: number;
+  seasonNumber: number;
+  name: string;
+  airDate: string | null;
+}
+
+export interface TMDbSeasonDetails {
+  id: number;
+  name: string;
+  seasonNumber: number;
+  episodes: TMDbSeasonEpisode[];
+}
+
 export interface TVShowDetails {
   id: number;
   name: string;

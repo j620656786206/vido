@@ -27,6 +27,15 @@ export interface MediaRequest {
   updatedAt: string;
 }
 
+/** GET /requests/tv/:tmdb_id/coverage — confirmed against [@contract-v1] (13-2a AC #5). */
+export interface RequestCoverage {
+  owned: Record<string, number[]>;
+  requestedSeasons: number[];
+  requestedEpisodes: Record<string, number[]>;
+  wholeSeriesRequested: boolean;
+  activeRequest: boolean;
+}
+
 /** Statuses that count as "an open request exists" for the 想要 button. */
 export const ACTIVE_REQUEST_STATUSES: readonly RequestStatus[] = [
   'pending',
@@ -75,16 +84,33 @@ export const requestService = {
     return res.requests ?? [];
   },
 
-  /** POST /api/v1/requests — records a pending request (one-click 想要). */
+  /**
+   * POST /api/v1/requests — records a pending request. Without `seasons` /
+   * `episodes` it is the one-click whole-title 想要; with them it is a 13-2b
+   * partial request — confirmed against [@contract-v1] (13-2a AC #1): tv only,
+   * `episodes` keyed by season number as a string.
+   */
   async createRequest(input: {
     tmdbId: number;
     mediaType: RequestMediaType;
+    seasons?: number[];
+    episodes?: Record<string, number[]>;
   }): Promise<MediaRequest> {
     return fetchApi<MediaRequest>('/requests', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(camelToSnake(input)),
     });
+  },
+
+  /**
+   * GET /api/v1/requests/tv/{tmdb_id}/coverage — what the 13-2b tree must
+   * show as 已入庫 / 已請求 (confirmed against [@contract-v1], 13-2a AC #5).
+   * Episode maps are keyed by season number as a string; snakeToCamel only
+   * touches keys that contain "_", so "1"/"2" pass through untouched.
+   */
+  async getCoverage(tmdbId: number): Promise<RequestCoverage> {
+    return fetchApi<RequestCoverage>(`/requests/tv/${tmdbId}/coverage`);
   },
 
   /**

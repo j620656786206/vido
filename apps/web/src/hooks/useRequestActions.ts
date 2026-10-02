@@ -36,6 +36,9 @@ export interface CreateRequestVars {
   mediaType: RequestMediaType;
   /** Display title for the optimistic row (the server re-resolves its own). */
   title: string;
+  /** 13-2b partial selection (tv only); both absent = whole title. */
+  seasons?: number[];
+  episodes?: Record<string, number[]>;
 }
 
 /**
@@ -51,7 +54,12 @@ export function useRequestActions() {
 
   const create = useMutation({
     mutationFn: (vars: CreateRequestVars) =>
-      requestService.createRequest({ tmdbId: vars.tmdbId, mediaType: vars.mediaType }),
+      requestService.createRequest({
+        tmdbId: vars.tmdbId,
+        mediaType: vars.mediaType,
+        ...(vars.seasons?.length ? { seasons: vars.seasons } : {}),
+        ...(vars.episodes && Object.keys(vars.episodes).length ? { episodes: vars.episodes } : {}),
+      }),
     onMutate: async (vars) => {
       await queryClient.cancelQueries({ queryKey: requestKeys.all });
       const key = requestKeys.list();
@@ -65,8 +73,10 @@ export function useRequestActions() {
         status: 'pending',
         fulfilmentSource: null,
         externalId: null,
-        seasons: null,
-        episodes: null,
+        // Same JSON text the API stores, so the row's range label shows at once.
+        seasons: vars.seasons?.length ? JSON.stringify(vars.seasons) : null,
+        episodes:
+          vars.episodes && Object.keys(vars.episodes).length ? JSON.stringify(vars.episodes) : null,
         errorMessage: null,
         requestedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

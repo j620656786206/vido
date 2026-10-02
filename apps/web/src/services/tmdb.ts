@@ -4,6 +4,7 @@ import type {
   ApiResponse,
   MovieDetails,
   TVShowDetails,
+  TMDbSeasonDetails,
   Credits,
   VideosResponse,
   UnifiedSearchResult,
@@ -100,6 +101,11 @@ export const tmdbService = {
 
   async getMovieCredits(movieId: number): Promise<Credits> {
     return fetchApi<Credits>(`/tmdb/movies/${movieId}/credits`);
+  },
+
+  /** One season with its episodes — the 13-2b tree loads these lazily per season. */
+  async getSeasonDetails(tvId: number, seasonNumber: number): Promise<TMDbSeasonDetails> {
+    return fetchApi<TMDbSeasonDetails>(`/tmdb/tv/${tvId}/season/${seasonNumber}`);
   },
 
   async getTVShowCredits(tvId: number): Promise<Credits> {

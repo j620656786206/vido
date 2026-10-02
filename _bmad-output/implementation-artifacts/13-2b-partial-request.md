@@ -1,6 +1,6 @@
 # Story 13.2b: 部分請求（選季/選集）—— 前端：L3 季/集樹選取器與 TV 請求流接線
 
-Status: ready-for-dev
+Status: review
 
 **Depends on:** `13-2a-partial-request`（backend API must be ready — selection wire 形狀、coverage 端點、season 路由）
 
@@ -64,17 +64,17 @@ so that I only ask Vido to acquire what I'm missing — with what I already own 
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — SeasonEpisodeTreeDialog 元件（AC: #1）** 🎨 FE
-  - [ ] MCP 讀 `He04g` 精確 spec → dialog＋樹＋checkbox 三態級聯＋footer；N4 四態；a11y（Escape/initial focus/trap）
-  - [ ] lazy per-season episodes（TanStack Query＋新 season 端點 service 方法）
-- [ ] **Task 2 — coverage 反映（AC: #2）** 🎨 FE
-  - [ ] `requestService.getCoverage`＋hook；owned/requested badge＋disabled；active → 擋樹視圖；fail-soft
-- [ ] **Task 3 — TV 請求流接線（AC: #3）** 🎨 FE
-  - [ ] TMDbDetailV2 TV 按鈕 → 開樹；`createRequest` selection 參數（camelToSnake）；error-code 分流＋toast
-- [ ] **Task 4 — RequestRow 範圍摘要（AC: #4）** 🎨 FE
-  - [ ] MCP 讀 L5/L6/L7 確認設計 → 摘要顯示；設計缺口時最小實作＋記錄
-- [ ] **Task 5 — 測試＋a11y＋全回歸＋UX verification（AC: #5）** 🎨 FE
-  - [ ] 元件 spec 全套（含 whole=無 selection 紅線）；jsx-a11y；全回歸；Step 9 對照 flow-l
+- [x] **Task 1 — SeasonEpisodeTreeDialog 元件（AC: #1）** 🎨 FE
+  - [x] MCP 讀 `He04g` 精確 spec → dialog＋樹＋checkbox 三態級聯＋footer；N4 四態；a11y（Escape/initial focus/trap）
+  - [x] lazy per-season episodes（TanStack Query＋新 season 端點 service 方法）
+- [x] **Task 2 — coverage 反映（AC: #2）** 🎨 FE
+  - [x] `requestService.getCoverage`＋hook；owned/requested badge＋disabled；active → 擋樹視圖；fail-soft
+- [x] **Task 3 — TV 請求流接線（AC: #3）** 🎨 FE
+  - [x] TMDbDetailV2 TV 按鈕 → 開樹；`createRequest` selection 參數（camelToSnake）；error-code 分流＋toast
+- [x] **Task 4 — RequestRow 範圍摘要（AC: #4）** 🎨 FE
+  - [x] MCP 讀 L5/L6/L7 確認設計 → 摘要顯示；設計缺口時最小實作＋記錄
+- [x] **Task 5 — 測試＋a11y＋全回歸＋UX verification（AC: #5）** 🎨 FE
+  - [x] 元件 spec 全套（含 whole=無 selection 紅線）；jsx-a11y；全回歸；Step 9 對照 flow-l
 
 （前端 task 5 個、後端 0 個 —— a 半見 `13-2a-partial-request`。）
 
@@ -131,16 +131,50 @@ so that I only ask Vido to acquire what I'm missing — with what I already own 
 
 ### Agent Model Used
 
+Claude Opus 5.5（2026-10-02）
+
 ### Debug Log References
 
 ### Completion Notes List
 
+- **Contract acks**：confirmed against [@contract-v1]（13-2a AC #1 selection 形狀：`seasons` int 陣列、`episodes` 以季號字串為鍵）；confirmed against [@contract-v1]（13-2a AC #5 coverage 形狀）；confirmed against [@contract-v1]（13-1a AC #2/#3 resource——`seasons`/`episodes` 為 JSON 文字）。
+- **設計對照**：Pencil MCP 讀 `He04g`（modal 560 寬、header padding [20,16,12,24]、樹 padding [8,12] gap 2、列 44px、集列左縮 48、「顯示其餘 N 集」左縮 80、footer padding [16,24]）與五個 Checkbox 元件（`4EHFN`/`Wd9AL`/`NfHDL`/`Fn5MZ`/`VSXl5`）。新增 `ui/CheckboxBox.tsx` 畫這五態，語意由同列的原生 `<input type="checkbox">`（sr-only，indeterminate 以 effect 設定）承擔——RadioDot 先例。
+- **選取模型** 抽到 `utils/requestSelection.ts`（純函式、單元測試）：季分「整季」與「部分集」兩種；整季不需要知道集號（可能從沒展開過），只有「整季但內含已入庫／已請求集」送出前才補抓該季集號，改送逐集。**紅線**：沒有任何鎖定且全部整季 → 不帶 selection（與一鍵想要同一個 wire）。season 0（特別篇）與 0 集的季不列。
+- **lazy 載入**：展開才打 `GET /tmdb/tv/:id/season/:n`（key `['tmdb','tv',id,'season',n]`，10 分鐘）。coverage key 掛在 `requestKeys.all` 底下（`['requests','coverage',id]`，30 秒），任何建立／取消／重試 invalidate 都會順帶刷新；SSE 合併只動 `['requests','list']`，不受影響。
+- **⚖️ A**：coverage 顯示有進行中的請求 → 不開樹，顯示「這部影集已有進行中的請求」＋查看清單；此時不顯示 footer。coverage 失敗 → 照開、無徽章、`console.warn`（fail-soft）。
+- **AC #3**：`RequestButton` 新增 `pickEpisodes`，只有詳情頁（`TMDbDetailV2`）的影集帶；卡片與電影維持一鍵。樹的「確認請求」→ 關閉對話框 → 走原本的 `create`（toast、`REQUEST_DUPLICATE` 靜默、其他錯誤顯示後端中文訊息）。optimistic 列直接帶同樣的 JSON 文字，範圍標籤立即出現。
+- **AC #4**：L1／L5–L7 沒畫範圍 → 最小實作：meta 列加「第 2 季 · 第 1 季 3 集」（數字 Mono），已立案 `disc-2026-10-request-row-range-undrawn`。
+- **手機**：沒有 L3-M 稿，沿用置中對話框（寬 = 螢幕減 2rem、最高 85vh、樹區可捲），390px 截圖基準有收；已立案 `disc-2026-10-season-tree-mobile-undrawn`。
+- **瀏覽器實測**（`scripts/serve-test-env.sh`＋Playwright 攔截 TMDb／coverage／POST）：詳情頁按想要 → 樹開、焦點落在對話框內 → 展開 S1、勾 E03–E05、勾整季 S2 → 摘要「已選 1 季 · 3 集」→ 確認送出 `{"tmdb_id":1429,"media_type":"tv","seasons":[2],"episodes":{"1":[3,4,5]}}` → 對話框關閉、toast「已加入想要清單」；390px 打開、Esc 關閉。
+- **⚠️ 重大範圍限制（已立案，需 Alexyu 裁定）**：樹只從「想要」按鈕打開，而**只要本機有這部影集的任何一集**，詳情頁就顯示「已入庫」膠囊、沒有按鈕；媒體庫詳情頁（LocalDetailV2）也沒有請求入口。所以「有第 1 季、想補第 2 季」這個最主要的用途目前**打不開樹**，樹只對完全沒有的影集有用。後端早就支援。依故事範圍（不改 13-1b 三態）沒做，立案 `disc-2026-10-partial-request-entry-for-owned-series`（P2）。gallery 的「已入庫集鎖定」基準就是為那張單先收的狀態。
+- **Adversarial CR（2026-10-02，獨立 agent，含暫時 probe spec）**：
+  - ✅ 修：部分選取在「該季列出的集全部已鎖定」時會變成空 selection，而空 selection 在 wire 上等於整部 → 現在對話框直接擋下並提示「選到的集數都已入庫或已請求」。
+  - ✅ 修：送出時正在補抓集號，使用者按取消／Esc，請求仍會在背景送出 → 卸載後不再送。
+  - ✅ 修：`{open && …}` 讓關閉動畫期間對話框是空的 → 拿掉，交給 Radix 在動畫結束後卸載。
+  - ✅ 修（加固）：範圍標籤加 `min-w-0` 才能真的截斷；`episodes` 為 JSON `null` 時不再讓清單崩潰；背景 refetch 失敗但有快取時不再顯示錯誤畫面；樹的捲動區加 `relative`。
+  - 📝 不修：確認後焦點回到 body（觸發按鈕變成膠囊，沒地方回）；建立失敗時對話框已關，要重選；鎖定數算進 TMDb 沒列出的集號（絕對集數動畫）會讓季誤顯示為已入庫——三者都只在上面那個入口缺口解決後才常見，併入 `disc-2026-10-partial-request-entry-for-owned-series` 一起處理。
+
 ### Discovery Triage
 
 - **Did this story discover any work outside its current scope?**
-  - 見 13-2a（⚖️ A 裁定 → `disc-2026-07-arr-already-exists-loop` 擴充）。本 story authoring 另記一筆候選：AC #4 若 L5-L7 無範圍摘要設計 → 實作時按 Rule 24 就地分類（預期 ③ 補圖 backlog，交 Sally）。
+  - 見 13-2a（⚖️ A 裁定 → `disc-2026-07-arr-already-exists-loop` 擴充）。
+  - **③ `disc-2026-10-partial-request-entry-for-owned-series`**（P2，dev 時發現）：已入庫影集打不開樹。
+  - **③ `disc-2026-10-request-row-range-undrawn`**（P3）：範圍標籤的最小實作待 Sally 定稿。
+  - **③ `disc-2026-10-season-tree-mobile-undrawn`**（P3）：手機版樹沒有稿。
 
 ### File List
+
+- apps/web/src/components/requests/SeasonEpisodeTreeDialog.tsx（新）、SeasonEpisodeTreeDialog.spec.tsx（新）
+- apps/web/src/components/ui/CheckboxBox.tsx（新）
+- apps/web/src/utils/requestSelection.ts（新）、requestSelection.spec.ts（新）
+- apps/web/src/components/requests/RequestButton.tsx、RequestButton.spec.tsx
+- apps/web/src/components/requests/RequestRow.tsx、RequestRow.spec.tsx
+- apps/web/src/components/media/TMDbDetailV2.tsx
+- apps/web/src/hooks/useRequestActions.ts
+- apps/web/src/services/requestService.ts、requestService.spec.ts
+- apps/web/src/services/tmdb.ts、apps/web/src/types/tmdb.ts
+- apps/web/src/routes/test/-gallery.fixtures.tsx（4 個新 fixture）
+- tests/visual/…/request-season-tree/{content,content-mobile,active}/、request-row/partial/ 的 darwin 基準（linux 待 CI bootstrap）
 
 ---
 
@@ -148,4 +182,5 @@ so that I only ask Vido to acquire what I'm missing — with what I already own 
 
 | Date | Change |
 | --- | --- |
+| 2026-10-02 | dev 完成（Opus 5.5）→ review；adversarial CR 修 4 項＋加固 4 項；立案 3 筆設計／入口缺口。 |
 | 2026-08-19 | create-story：Epic 13 artery #4 之 b 半（FE）。GATE A 已過（L3-D-v2 已繪＋Sally review PASS）；authoring 時 Pencil 未開啟——實作時 MUST MCP 讀 He04g。⚖️ A 裁定納入（active 擋樹視圖、requested 反映防 race）。「全勾=whole 不帶 selection」wire 等價裁定。依賴 13-2a（selection/coverage/season 路由三契約）。 |

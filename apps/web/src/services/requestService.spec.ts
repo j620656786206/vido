@@ -164,4 +164,39 @@ describe('requestService', () => {
       expect(err.code).toBe('REQUEST_RETRY_CLEANUP_FAILED');
     });
   });
+
+  describe('13-2b partial request ([@contract-v1] 13-2a AC #1/#5)', () => {
+    it('createRequest sends the selection snake_cased, episodes keyed by season', async () => {
+      fetchMock.mockResolvedValue(okEnvelope({ id: 'r9', seasons: '[2]' }));
+      await requestService.createRequest({
+        tmdbId: 1429,
+        mediaType: 'tv',
+        seasons: [2],
+        episodes: { '1': [3, 4] },
+      });
+      const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(body).toEqual({
+        tmdb_id: 1429,
+        media_type: 'tv',
+        seasons: [2],
+        episodes: { '1': [3, 4] },
+      });
+    });
+
+    it('getCoverage keeps the numeric season keys', async () => {
+      fetchMock.mockResolvedValue(
+        okEnvelope({
+          owned: { '1': [1, 2] },
+          requested_seasons: [],
+          requested_episodes: {},
+          whole_series_requested: false,
+          active_request: false,
+        })
+      );
+      const cov = await requestService.getCoverage(1429);
+      expect(fetchMock).toHaveBeenCalledWith('/api/v1/requests/tv/1429/coverage', undefined);
+      expect(cov.owned['1']).toEqual([1, 2]);
+      expect(cov.activeRequest).toBe(false);
+    });
+  });
 });

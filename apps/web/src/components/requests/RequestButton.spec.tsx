@@ -146,3 +146,70 @@ describe('RequestButton', () => {
     });
   });
 });
+
+// --- Story 13-2b: the detail page's tv 想要 opens the season/episode tree ---
+vi.mock('./SeasonEpisodeTreeDialog', () => ({
+  SeasonEpisodeTreeDialog: ({
+    open,
+    onConfirm,
+  }: {
+    open: boolean;
+    onConfirm: (p: unknown) => void;
+  }) =>
+    open ? (
+      <div data-testid="tree-stub">
+        <button
+          onClick={() => onConfirm({ whole: false, seasons: [2], episodes: { '1': [3, 4] } })}
+        >
+          pick
+        </button>
+        <button onClick={() => onConfirm({ whole: true })}>pick-all</button>
+      </div>
+    ) : null,
+}));
+
+describe('RequestButton pickEpisodes (13-2b)', () => {
+  beforeEach(() => {
+    vi.mocked(requestService.createRequest).mockReset();
+  });
+
+  it('tv + pickEpisodes: 想要 opens the tree instead of requesting at once', async () => {
+    renderButton({ mediaType: 'tv', pickEpisodes: true });
+    await userEvent.click(screen.getByTestId('request-button'));
+    expect(screen.getByTestId('tree-stub')).toBeInTheDocument();
+    expect(requestService.createRequest).not.toHaveBeenCalled();
+  });
+
+  it('the tree’s selection rides into createRequest', async () => {
+    vi.mocked(requestService.createRequest).mockResolvedValue({} as never);
+    renderButton({ mediaType: 'tv', pickEpisodes: true });
+    await userEvent.click(screen.getByTestId('request-button'));
+    await userEvent.click(screen.getByText('pick'));
+    await waitFor(() =>
+      expect(requestService.createRequest).toHaveBeenCalledWith({
+        tmdbId: 550,
+        mediaType: 'tv',
+        seasons: [2],
+        episodes: { '1': [3, 4] },
+      })
+    );
+  });
+
+  it('全選 (whole) sends NO selection — the same wire as one click', async () => {
+    vi.mocked(requestService.createRequest).mockResolvedValue({} as never);
+    renderButton({ mediaType: 'tv', pickEpisodes: true });
+    await userEvent.click(screen.getByTestId('request-button'));
+    await userEvent.click(screen.getByText('pick-all'));
+    await waitFor(() =>
+      expect(requestService.createRequest).toHaveBeenCalledWith({ tmdbId: 550, mediaType: 'tv' })
+    );
+  });
+
+  it('movies and card contexts stay one-click', async () => {
+    vi.mocked(requestService.createRequest).mockResolvedValue({} as never);
+    renderButton({ mediaType: 'movie', pickEpisodes: true });
+    await userEvent.click(screen.getByTestId('request-button'));
+    expect(screen.queryByTestId('tree-stub')).toBeNull();
+    await waitFor(() => expect(requestService.createRequest).toHaveBeenCalledOnce());
+  });
+});

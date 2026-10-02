@@ -162,4 +162,20 @@ describe('RequestRow', () => {
       expect(captions.find((c) => c.tagName === 'P')).toHaveClass('md:hidden');
     });
   });
+
+  describe('13-2b range label', () => {
+    it('a partial request shows its seasons / episodes in the meta row', () => {
+      render(
+        <RequestRow
+          request={row({ mediaType: 'tv', seasons: '[1,2]', episodes: '{"3":[1,2,3]}' })}
+        />
+      );
+      expect(screen.getByTestId('request-range')).toHaveTextContent('第 1、2 季 · 第 3 季 3 集');
+    });
+
+    it('a whole-title request shows no range', () => {
+      render(<RequestRow request={row({ mediaType: 'tv' })} />);
+      expect(screen.queryByTestId('request-range')).toBeNull();
+    });
+  });
 });

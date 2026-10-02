@@ -109,6 +109,7 @@ export function TMDbDetailV2({ type, tmdbId }: { type: 'movie' | 'tv'; tmdbId: n
               title={title}
               owned={owned}
               requested={requestedState.isRequested(tmdbId, type)}
+              pickEpisodes
             />
           ) : undefined
         }
