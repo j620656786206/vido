@@ -45,6 +45,7 @@ var (
 	_ plugins.DVRPlugin           = (*Client)(nil)
 	_ plugins.ProfileLister       = (*Client)(nil)
 	_ plugins.ImportHistoryReader = (*Client)(nil)
+	_ plugins.QueueRemover        = (*Client)(nil)
 )
 
 // NewClient creates a new Radarr API client for the given config.
@@ -163,6 +164,7 @@ type queuePage struct {
 // queueRecord is a Radarr movie queue item. size/sizeleft arrive as JSON
 // decimals, hence float64 before the int64 normalization.
 type queueRecord struct {
+	ID         int64   `json:"id"`
 	MovieID    int64   `json:"movieId"`
 	Title      string  `json:"title"`
 	Status     string  `json:"status"`
@@ -174,7 +176,28 @@ type queueRecord struct {
 // GetQueue returns the download queue normalized to []plugins.QueueItem,
 // following the pagination envelope until all records are collected.
 func (c *Client) GetQueue(ctx context.Context) ([]plugins.QueueItem, error) {
-	items := []plugins.QueueItem{}
+	records, err := c.listQueue(ctx)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]plugins.QueueItem, 0, len(records))
+	for _, rec := range records {
+		items = append(items, plugins.QueueItem{
+			ExternalID: rec.MovieID,
+			Title:      rec.Title,
+			Status:     rec.Status,
+			Size:       int64(rec.Size),
+			SizeLeft:   int64(rec.SizeLeft),
+			DownloadID: rec.DownloadID,
+		})
+	}
+	return items, nil
+}
+
+// listQueue collects the raw queue records, following the pagination
+// envelope until all records are collected.
+func (c *Client) listQueue(ctx context.Context) ([]queueRecord, error) {
+	records := []queueRecord{}
 	totalRecords := 0
 	for page := 1; page <= maxQueuePages; page++ {
 		body, err := c.doRequest(ctx, http.MethodGet,
@@ -192,28 +215,52 @@ func (c *Client) GetQueue(ctx context.Context) ([]plugins.QueueItem, error) {
 			}
 		}
 
-		for _, rec := range envelope.Records {
-			items = append(items, plugins.QueueItem{
-				ExternalID: rec.MovieID,
-				Title:      rec.Title,
-				Status:     rec.Status,
-				Size:       int64(rec.Size),
-				SizeLeft:   int64(rec.SizeLeft),
-				DownloadID: rec.DownloadID,
-			})
-		}
+		records = append(records, envelope.Records...)
 
 		totalRecords = envelope.TotalRecords
-		if len(envelope.Records) == 0 || len(items) >= totalRecords {
-			return items, nil
+		if len(envelope.Records) == 0 || len(records) >= totalRecords {
+			return records, nil
 		}
 	}
 
 	// No silent caps (13-4a CR L1): a queue larger than maxQueuePages×100 is
 	// pathological, but the truncation must be visible, not implied complete.
 	slog.Warn("Radarr queue truncated at page cap",
-		"collected", len(items), "total_records", totalRecords, "max_pages", maxQueuePages)
-	return items, nil
+		"collected", len(records), "total_records", totalRecords, "max_pages", maxQueuePages)
+	return records, nil
+}
+
+// RemoveQueueItems implements plugins.QueueRemover (13-7a AC #3).
+// Query-param names verified against Radarr's v3 OpenAPI spec (2026-10-02):
+// removeFromClient / blocklist / skipRedownload / changeCategory.
+func (c *Client) RemoveQueueItems(ctx context.Context, externalID int64, downloadIDs []string) (int, error) {
+	if len(downloadIDs) == 0 {
+		return 0, nil
+	}
+	wanted := make(map[string]bool, len(downloadIDs))
+	for _, id := range downloadIDs {
+		wanted[strings.ToLower(id)] = true
+	}
+	records, err := c.listQueue(ctx)
+	if err != nil {
+		return 0, err
+	}
+	removed := 0
+	var firstErr error
+	for _, rec := range records {
+		if rec.MovieID != externalID || !wanted[strings.ToLower(rec.DownloadID)] {
+			continue
+		}
+		path := fmt.Sprintf("/queue/%d?removeFromClient=true&blocklist=true&skipRedownload=false", rec.ID)
+		if _, err := c.doRequest(ctx, http.MethodDelete, c.buildURL(path), c.config.APIKey, nil); err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
+		}
+		removed++
+	}
+	return removed, firstErr
 }
 
 // GetQualityProfiles lists the configured quality profiles (client-level

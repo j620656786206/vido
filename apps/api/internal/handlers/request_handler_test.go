@@ -29,6 +29,21 @@ type mockRequestService struct {
 	coverageResp *services.RequestCoverage
 	coverageErr  error
 	lastCoverage int64
+	cancelErr    error
+	lastCancel   string
+	retryResp    *models.Request
+	retryErr     error
+	lastRetry    string
+}
+
+func (m *mockRequestService) CancelRequest(ctx context.Context, id string) error {
+	m.lastCancel = id
+	return m.cancelErr
+}
+
+func (m *mockRequestService) RetryRequest(ctx context.Context, id string) (*models.Request, error) {
+	m.lastRetry = id
+	return m.retryResp, m.retryErr
 }
 
 func (m *mockRequestService) TVCoverage(ctx context.Context, tmdbID int64) (*services.RequestCoverage, error) {
@@ -256,4 +271,86 @@ func TestRequestHandler_TVCoverage(t *testing.T) {
 		r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/requests/tv/1399/coverage", nil))
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 	})
+}
+
+// --- Story 13-7a: cancel / retry ---
+
+func doRequestCall(r *gin.Engine, method, path string) (*httptest.ResponseRecorder, APIResponse) {
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(method, path, nil)
+	r.ServeHTTP(w, req)
+	var resp APIResponse
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	return w, resp
+}
+
+func TestRequestHandler_CancelRequest(t *testing.T) {
+	cases := []struct {
+		name   string
+		err    error
+		status int
+		code   string
+	}{
+		{"pending → 204", nil, http.StatusNoContent, ""},
+		{"unknown → 404", fmt.Errorf("x: %w", repository.ErrRequestNotFound), http.StatusNotFound, "DB_NOT_FOUND"},
+		{"not pending → 409", fmt.Errorf("x: %w", services.ErrRequestNotCancellable), http.StatusConflict, "REQUEST_NOT_CANCELLABLE"},
+		{"unexpected → 500", errors.New("disk"), http.StatusInternalServerError, "INTERNAL_ERROR"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			svc := &mockRequestService{cancelErr: tc.err}
+			w, resp := doRequestCall(setupRequestRouter(svc), http.MethodDelete, "/api/v1/requests/req-1")
+			assert.Equal(t, tc.status, w.Code)
+			assert.Equal(t, "req-1", svc.lastCancel)
+			if tc.code == "" {
+				assert.Empty(t, w.Body.String(), "204 has no body")
+				return
+			}
+			require.NotNil(t, resp.Error)
+			assert.Equal(t, tc.code, resp.Error.Code)
+			assert.NotEmpty(t, resp.Error.Message)
+		})
+	}
+}
+
+func TestRequestHandler_RetryRequest(t *testing.T) {
+	t.Run("failed → 200 with the updated resource", func(t *testing.T) {
+		svc := &mockRequestService{retryResp: &models.Request{ID: "req-1", Status: models.RequestStatusSearching, Title: "片"}}
+		w, _ := doRequestCall(setupRequestRouter(svc), http.MethodPost, "/api/v1/requests/req-1/retry")
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, "req-1", svc.lastRetry)
+		var body struct {
+			Success bool `json:"success"`
+			Data    struct {
+				ID     string `json:"id"`
+				Status string `json:"status"`
+			} `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		assert.True(t, body.Success)
+		assert.Equal(t, "req-1", body.Data.ID)
+		assert.Equal(t, "searching", body.Data.Status)
+	})
+
+	cases := []struct {
+		name   string
+		err    error
+		status int
+		code   string
+	}{
+		{"unknown → 404", fmt.Errorf("x: %w", repository.ErrRequestNotFound), http.StatusNotFound, "DB_NOT_FOUND"},
+		{"not failed → 409", fmt.Errorf("x: %w", services.ErrRequestNotRetryable), http.StatusConflict, "REQUEST_NOT_RETRYABLE"},
+		{"re-requested since → 409", fmt.Errorf("x: %w", repository.ErrRequestDuplicate), http.StatusConflict, "REQUEST_DUPLICATE"},
+		{"*arr cleanup failed → 502", fmt.Errorf("x: %w", services.ErrRetryCleanupFailed), http.StatusBadGateway, "REQUEST_RETRY_CLEANUP_FAILED"},
+		{"unexpected → 500", errors.New("disk"), http.StatusInternalServerError, "INTERNAL_ERROR"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			svc := &mockRequestService{retryErr: tc.err}
+			w, resp := doRequestCall(setupRequestRouter(svc), http.MethodPost, "/api/v1/requests/req-1/retry")
+			assert.Equal(t, tc.status, w.Code)
+			require.NotNil(t, resp.Error)
+			assert.Equal(t, tc.code, resp.Error.Code)
+		})
+	}
 }

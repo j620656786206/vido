@@ -1,6 +1,6 @@
 # Bugfix H: 資料庫裡的時間 SQLite 自己讀得懂（全部 UTC、一種格式）
 
-Status: review
+Status: done
 
 **Merges:** `bugfix-h-nanosecond-timestamps-break-sqlite-dates`（P2）＋ `backlog-sqlite-timestamps-carry-go-monotonic-suffix`（Rule 24 ③，sub-7-1 立案）。兩張講的是同一個病。
 

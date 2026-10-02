@@ -228,3 +228,107 @@ func TestRequestRepository_UpdateStatus(t *testing.T) {
 		assert.ErrorIs(t, err, ErrRequestNotFound)
 	})
 }
+
+// --- Story 13-7a: cancel / retry writers ---
+
+func seedRequest(t *testing.T, repo *RequestRepository, tmdbID int64, status string, external string) *models.Request {
+	t.Helper()
+	ctx := context.Background()
+	req := &models.Request{TMDbID: tmdbID, MediaType: models.RequestMediaTypeMovie, Title: "片"}
+	require.NoError(t, repo.Create(ctx, req))
+	if status != models.RequestStatusPending || external != "" {
+		var src, ext models.NullString
+		if external != "" {
+			src = models.NewNullString(models.RequestFulfilmentSourceArr)
+			ext = models.NewNullString(external)
+		}
+		msg := models.NullString{}
+		if status == models.RequestStatusFailed {
+			msg = models.NewNullString("下載發生錯誤，請重試或檢查下載器")
+		}
+		_, err := repo.UpdateFulfilment(ctx, req.ID, status, src, ext, msg)
+		require.NoError(t, err)
+	}
+	got, err := repo.FindByID(ctx, req.ID)
+	require.NoError(t, err)
+	return got
+}
+
+func TestRequestRepository_FindByID(t *testing.T) {
+	repo := NewRequestRepository(setupRequestsDB(t))
+	req := seedRequest(t, repo, 550, models.RequestStatusPending, "")
+	assert.Equal(t, int64(550), req.TMDbID)
+
+	_, err := repo.FindByID(context.Background(), "nope")
+	assert.ErrorIs(t, err, ErrRequestNotFound)
+}
+
+func TestRequestRepository_DeleteIfPending(t *testing.T) {
+	repo := NewRequestRepository(setupRequestsDB(t))
+	ctx := context.Background()
+
+	pending := seedRequest(t, repo, 1, models.RequestStatusPending, "")
+	n, err := repo.DeleteIfPending(ctx, pending.ID)
+	require.NoError(t, err)
+	assert.EqualValues(t, 1, n)
+	_, err = repo.FindByID(ctx, pending.ID)
+	assert.ErrorIs(t, err, ErrRequestNotFound, "cancel is a hard delete")
+
+	// Deleting frees the active-unique index: the same title is re-requestable.
+	require.NoError(t, repo.Create(ctx, &models.Request{TMDbID: 1, MediaType: models.RequestMediaTypeMovie, Title: "片"}))
+
+	for i, status := range []string{models.RequestStatusSearching, models.RequestStatusDownloading, models.RequestStatusCompleted, models.RequestStatusFailed} {
+		row := seedRequest(t, repo, 100+int64(i), status, "9")
+		n, err := repo.DeleteIfPending(ctx, row.ID)
+		require.NoError(t, err)
+		assert.Zero(t, n, "a %s row is not deleted", status)
+		_, err = repo.FindByID(ctx, row.ID)
+		assert.NoError(t, err, "the %s row is still there", status)
+	}
+
+	n, err = repo.DeleteIfPending(ctx, "unknown")
+	require.NoError(t, err)
+	assert.Zero(t, n)
+}
+
+func TestRequestRepository_ResetForRetry(t *testing.T) {
+	repo := NewRequestRepository(setupRequestsDB(t))
+	ctx := context.Background()
+
+	t.Run("failed with external id → searching, keeps the *arr link", func(t *testing.T) {
+		row := seedRequest(t, repo, 10, models.RequestStatusFailed, "77")
+		got, err := repo.ResetForRetry(ctx, row.ID, models.RequestStatusSearching)
+		require.NoError(t, err)
+		assert.Equal(t, models.RequestStatusSearching, got.Status)
+		assert.False(t, got.ErrorMessage.Valid, "error cleared")
+		assert.Equal(t, "77", got.ExternalID.String)
+		assert.Equal(t, models.RequestFulfilmentSourceArr, got.FulfilmentSource.String)
+		assert.True(t, !got.UpdatedAt.Before(row.UpdatedAt))
+	})
+
+	t.Run("terminal failed → pending", func(t *testing.T) {
+		row := seedRequest(t, repo, 11, models.RequestStatusFailed, "")
+		got, err := repo.ResetForRetry(ctx, row.ID, models.RequestStatusPending)
+		require.NoError(t, err)
+		assert.Equal(t, models.RequestStatusPending, got.Status)
+		assert.False(t, got.ExternalID.Valid)
+	})
+
+	t.Run("only failed rows move", func(t *testing.T) {
+		row := seedRequest(t, repo, 12, models.RequestStatusDownloading, "5")
+		_, err := repo.ResetForRetry(ctx, row.ID, models.RequestStatusSearching)
+		assert.ErrorIs(t, err, ErrRequestNotFound)
+		again, _ := repo.FindByID(ctx, row.ID)
+		assert.Equal(t, models.RequestStatusDownloading, again.Status)
+
+		_, err = repo.ResetForRetry(ctx, "unknown", models.RequestStatusPending)
+		assert.ErrorIs(t, err, ErrRequestNotFound)
+	})
+
+	t.Run("a newer active request for the same title blocks the reset", func(t *testing.T) {
+		row := seedRequest(t, repo, 13, models.RequestStatusFailed, "")
+		require.NoError(t, repo.Create(ctx, &models.Request{TMDbID: 13, MediaType: models.RequestMediaTypeMovie, Title: "片"}))
+		_, err := repo.ResetForRetry(ctx, row.ID, models.RequestStatusPending)
+		assert.ErrorIs(t, err, ErrRequestDuplicate)
+	})
+}

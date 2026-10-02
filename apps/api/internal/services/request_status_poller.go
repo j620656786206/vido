@@ -384,6 +384,32 @@ func (p *RequestStatusPoller) reconcileExternal(
 	return requestProgressItem{Request: *row}
 }
 
+// deriveQueueState is the one definition of what a live queue record means
+// for a request: *arr's own "failed", escalated by the joined qBT torrent
+// (monotonic: downloading < import-window < failed — 13-3a CR L1). Shared
+// with the 13-7a retry so "the download that made this row fail" and "the
+// download retry throws away" are the same thing.
+func deriveQueueState(item plugins.QueueItem, torrents map[string]qbittorrent.Torrent) (queueDerivedState, float64) {
+	progress := queueProgress(item)
+	state := queueStateDownloading
+
+	// *arr-reported terminal failure.
+	if strings.EqualFold(item.Status, "failed") {
+		state = queueStateFailed
+	}
+
+	// qBT refinement by torrent hash (case-normalized).
+	if torrents != nil && item.DownloadID != "" {
+		if torrent, ok := torrents[strings.ToLower(item.DownloadID)]; ok {
+			progress = torrent.Progress
+			if mapped := mapTorrentToQueueState(torrent.Status); mapped > state {
+				state = mapped
+			}
+		}
+	}
+	return state, progress
+}
+
 // reconcileQueued runs rule 2 for a row with a live queue record: derive
 // downloading/failed/import-window + the ephemeral progress, refined by the
 // joined qBT torrent when the hash matches.
@@ -393,24 +419,7 @@ func (p *RequestStatusPoller) reconcileQueued(
 	item plugins.QueueItem,
 	torrents map[string]qbittorrent.Torrent,
 ) requestProgressItem {
-	progress := queueProgress(item)
-	state := queueStateDownloading
-
-	// *arr-reported terminal failure.
-	if strings.EqualFold(item.Status, "failed") {
-		state = queueStateFailed
-	}
-
-	// qBT refinement by torrent hash (case-normalized). The escalation is
-	// monotonic: downloading < import-window < failed (13-3a CR L1).
-	if torrents != nil && item.DownloadID != "" {
-		if torrent, ok := torrents[strings.ToLower(item.DownloadID)]; ok {
-			progress = torrent.Progress
-			if mapped := mapTorrentToQueueState(torrent.Status); mapped > state {
-				state = mapped
-			}
-		}
-	}
+	state, progress := deriveQueueState(item, torrents)
 
 	switch state {
 	case queueStateFailed:

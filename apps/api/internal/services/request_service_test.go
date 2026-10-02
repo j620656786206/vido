@@ -61,6 +61,20 @@ func (m *mockRequestRepo) UpdateStatus(ctx context.Context, id string, status st
 	return time.Now(), nil
 }
 
+// 13-7a cancel/retry writers — not exercised by these tests (cancel/retry
+// tests run against the real repository).
+func (m *mockRequestRepo) FindByID(ctx context.Context, id string) (*models.Request, error) {
+	return nil, repository.ErrRequestNotFound
+}
+
+func (m *mockRequestRepo) DeleteIfPending(ctx context.Context, id string) (int64, error) {
+	return 0, nil
+}
+
+func (m *mockRequestRepo) ResetForRetry(ctx context.Context, id string, status string) (*models.Request, error) {
+	return nil, repository.ErrRequestNotFound
+}
+
 // mockTMDbForRequests embeds the shared explore mock (same package) and
 // overrides only the two detail lookups the request service uses.
 type mockTMDbForRequests struct {

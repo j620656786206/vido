@@ -42,6 +42,21 @@ type RequestRepositoryInterface interface {
 	// message; "" clears it) and bumps updated_at, returning the written
 	// timestamp (ParseJobRepository.UpdateStatus template — Story 13-3a AC #2).
 	UpdateStatus(ctx context.Context, id string, status string, errMsg string) (time.Time, error)
+	// FindByID returns one request row; ErrRequestNotFound when absent
+	// (Story 13-7a AC #4).
+	FindByID(ctx context.Context, id string) (*models.Request, error)
+	// DeleteIfPending hard-deletes the row only while it is still pending —
+	// the atomic half of a cancel (13-7a AC #1). Returns rows affected: 0
+	// means "gone or no longer pending"; the caller tells them apart.
+	DeleteIfPending(ctx context.Context, id string) (int64, error)
+	// ResetForRetry moves a FAILED row to status (pending or searching),
+	// clears error_message and bumps updated_at, keeping fulfilment_source /
+	// external_id as they are (13-7a AC #2). Conditional on status='failed'
+	// so two retries, or a retry racing the poller, cannot both win: 0 rows
+	// → ErrRequestNotFound (the caller re-reads to say why). Moving back to an
+	// active status can collide with a newer active request for the same
+	// title → ErrRequestDuplicate.
+	ResetForRetry(ctx context.Context, id string, status string) (*models.Request, error)
 }
 
 // RequestRepository provides SQLite data access for media requests.
@@ -202,4 +217,49 @@ func (r *RequestRepository) FindActiveByTMDbID(ctx context.Context, tmdbID int64
 		return nil, fmt.Errorf("failed to find active request: %w", err)
 	}
 	return &req, nil
+}
+
+func (r *RequestRepository) FindByID(ctx context.Context, id string) (*models.Request, error) {
+	row := r.db.QueryRowContext(ctx, `SELECT `+requestColumns+` FROM requests WHERE id = ?`, id)
+	req, err := scanRequest(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("request %s: %w", id, ErrRequestNotFound)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to find request: %w", err)
+	}
+	return &req, nil
+}
+
+func (r *RequestRepository) DeleteIfPending(ctx context.Context, id string) (int64, error) {
+	result, err := r.db.ExecContext(ctx, `DELETE FROM requests WHERE id = ? AND status = ?`, id, models.RequestStatusPending)
+	if err != nil {
+		return 0, fmt.Errorf("failed to delete pending request: %w", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("failed to read delete result: %w", err)
+	}
+	return affected, nil
+}
+
+func (r *RequestRepository) ResetForRetry(ctx context.Context, id string, status string) (*models.Request, error) {
+	now := time.Now()
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE requests SET status = ?, error_message = NULL, updated_at = ? WHERE id = ? AND status = ?`,
+		status, now, id, models.RequestStatusFailed)
+	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			return nil, fmt.Errorf("request %s: %w", id, ErrRequestDuplicate)
+		}
+		return nil, fmt.Errorf("failed to reset request for retry: %w", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("failed to read retry reset result: %w", err)
+	}
+	if affected == 0 {
+		return nil, fmt.Errorf("failed request %s: %w", id, ErrRequestNotFound)
+	}
+	return r.FindByID(ctx, id)
 }

@@ -533,3 +533,46 @@ func TestClient_GetImportHistory_AuthFailure(t *testing.T) {
 	require.ErrorAs(t, err, &pluginErr)
 	assert.Equal(t, plugins.ErrCodeAuthFailed, pluginErr.Code)
 }
+
+// 13-7a AC #3: only the named downloads of the requested title are removed —
+// a stalled-but-healthy entry (*arr "warning") is left alone — each with
+// blocklist + re-search (param names per the v3 OpenAPI spec).
+func TestClient_RemoveQueueItems(t *testing.T) {
+	var deleted []string
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v3/queue", requireAPIKey(t, func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"page": 1, "pageSize": 100, "totalRecords": 5, "records": [
+			{"id": 1, "seriesId": 42, "status": "warning", "downloadId": "AAAA"},
+			{"id": 2, "seriesId": 42, "status": "warning", "downloadId": "BBBB"},
+			{"id": 3, "seriesId": 7, "status": "failed", "downloadId": "CCCC"},
+			{"id": 4, "seriesId": 42, "status": "failed", "downloadId": "DDDD"},
+			{"id": 5, "seriesId": 7, "status": "warning", "downloadId": "AAAA"}
+		]}`)
+	}))
+	mux.HandleFunc("DELETE /api/v3/queue/{id}", requireAPIKey(t, func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		assert.Equal(t, "true", q.Get("removeFromClient"))
+		assert.Equal(t, "true", q.Get("blocklist"))
+		assert.Equal(t, "false", q.Get("skipRedownload"), "retry wants *arr to search again")
+		deleted = append(deleted, r.PathValue("id"))
+		if r.PathValue("id") == "4" {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	client := NewClient(testConfig(server.URL), staticResolver(0, nil))
+	removed, err := client.RemoveQueueItems(context.Background(), 42, []string{"aaaa", "DDDD"})
+
+	assert.Equal(t, []string{"1", "4"}, deleted, "other downloads and other titles are left alone")
+	assert.Equal(t, 1, removed)
+	var pluginErr *plugins.PluginError
+	require.True(t, errors.As(err, &pluginErr), "a failed delete is reported, after trying the rest")
+
+	none, err := client.RemoveQueueItems(context.Background(), 42, nil)
+	require.NoError(t, err)
+	assert.Zero(t, none)
+}
