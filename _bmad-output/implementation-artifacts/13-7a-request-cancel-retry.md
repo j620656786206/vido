@@ -1,6 +1,6 @@
 # Story 13-7a: Request cancel + retry — backend (DELETE + retry endpoints, *arr queue-remove capability)
 
-Status: review
+Status: done
 
 > **Split note (SM Bob, 2026-07-05):** 13-7 counted 5 backend + 5 frontend tasks → MANDATORY a/b split (Epic 8 Retro Agreement 5). This is the **backend** half; `13-7b-request-cancel-retry` (FE) depends on this story's endpoints.
 >

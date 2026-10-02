@@ -105,4 +105,63 @@ describe('requestService', () => {
     expect(err).toBeInstanceOf(RequestApiError);
     expect(err.code).toBe('INTERNAL_ERROR');
   });
+
+  describe('13-7b cancel / retry ([@contract-v1] 13-7a AC #1/#2)', () => {
+    it('cancelRequest sends DELETE and resolves on a 204 with no body', async () => {
+      fetchMock.mockResolvedValue({
+        ok: true,
+        status: 204,
+        json: () => Promise.reject(new SyntaxError('Unexpected end of JSON input')),
+      });
+
+      await expect(requestService.cancelRequest('r 1')).resolves.toBeUndefined();
+      expect(fetchMock).toHaveBeenCalledWith('/api/v1/requests/r%201', { method: 'DELETE' });
+    });
+
+    it('cancelRequest surfaces the Rule-7 code on a 409', async () => {
+      fetchMock.mockResolvedValue({
+        ok: false,
+        status: 409,
+        json: () =>
+          Promise.resolve({
+            success: false,
+            error: { code: 'REQUEST_NOT_CANCELLABLE', message: '此請求已在處理中，無法取消' },
+          }),
+      });
+
+      const err = await requestService.cancelRequest('r1').catch((e) => e);
+      expect(err).toBeInstanceOf(RequestApiError);
+      expect(err.code).toBe('REQUEST_NOT_CANCELLABLE');
+      expect(err.message).toBe('此請求已在處理中，無法取消');
+    });
+
+    it('retryRequest POSTs and returns the camelCased row', async () => {
+      fetchMock.mockResolvedValue(
+        okEnvelope({ id: 'r1', status: 'searching', error_message: null, external_id: '42' })
+      );
+
+      const row = await requestService.retryRequest('r1');
+      expect(fetchMock).toHaveBeenCalledWith('/api/v1/requests/r1/retry', { method: 'POST' });
+      expect(row.status).toBe('searching');
+      expect(row.externalId).toBe('42');
+    });
+
+    it('retryRequest surfaces REQUEST_RETRY_CLEANUP_FAILED (502)', async () => {
+      fetchMock.mockResolvedValue({
+        ok: false,
+        status: 502,
+        json: () =>
+          Promise.resolve({
+            success: false,
+            error: {
+              code: 'REQUEST_RETRY_CLEANUP_FAILED',
+              message: '沒能清掉壞掉的下載，這次重試沒有生效',
+            },
+          }),
+      });
+
+      const err = await requestService.retryRequest('r1').catch((e) => e);
+      expect(err.code).toBe('REQUEST_RETRY_CLEANUP_FAILED');
+    });
+  });
 });

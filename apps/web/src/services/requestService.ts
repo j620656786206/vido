@@ -87,6 +87,37 @@ export const requestService = {
     });
   },
 
+  /**
+   * DELETE /api/v1/requests/{id} — cancel a PENDING request (13-7a AC #1
+   * [@contract-v1]). 204 has no body, so this cannot go through fetchApi
+   * (response.json() rejects on an empty body → a spurious error despite
+   * response.ok). 404 DB_NOT_FOUND / 409 REQUEST_NOT_CANCELLABLE surface as
+   * RequestApiError with the Rule-7 code.
+   */
+  async cancelRequest(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/requests/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+    if (response.status === 204) return;
+    const data = (await response.json().catch(() => null)) as ApiResponse<unknown> | null;
+    throw new RequestApiError(
+      data?.error?.message || `API request failed: ${response.status}`,
+      data?.error?.code || 'INTERNAL_ERROR'
+    );
+  },
+
+  /**
+   * POST /api/v1/requests/{id}/retry — retry a FAILED request (13-7a AC #2
+   * [@contract-v1]). Returns the updated row: pending (re-sent to *arr) or
+   * searching (*arr hunting a new release). 409 REQUEST_NOT_RETRYABLE /
+   * REQUEST_DUPLICATE, 502 REQUEST_RETRY_CLEANUP_FAILED (nothing changed).
+   */
+  async retryRequest(id: string): Promise<MediaRequest> {
+    return fetchApi<MediaRequest>(`/requests/${encodeURIComponent(id)}/retry`, {
+      method: 'POST',
+    });
+  },
+
   /** Shared SSE endpoint — 13-3b's useRequestProgress consumes it; unused here. */
   getSSEUrl(): string {
     return `${API_BASE_URL}/events`;

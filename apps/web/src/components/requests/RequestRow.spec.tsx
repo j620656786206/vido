@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { RequestRow } from './RequestRow';
 import type { MediaRequest, RequestStatus } from '../../services/requestService';
 
@@ -62,7 +63,9 @@ describe('RequestRow', () => {
 
   it('failed rows surface error_message', () => {
     render(<RequestRow request={row({ status: 'failed', errorMessage: '找不到種子' })} />);
-    expect(screen.getByText('找不到種子')).toBeInTheDocument();
+    // Rendered for both layouts (13-7b): under the title below md, in the
+    // action cluster from md up — CSS shows exactly one.
+    expect(screen.getAllByText('找不到種子').length).toBeGreaterThan(0);
   });
 
   it('Mono progress % renders only when downloading AND progress exists (13-3b slot)', () => {
@@ -106,5 +109,57 @@ describe('RequestRow', () => {
     const pill = screen.getByTestId('request-status-searching');
     expect(pill.className).toContain('--accent-tint');
     expect(pill.className).not.toContain('--warning');
+  });
+
+  describe('13-7b action-area (design matrix: 取消 on pending, 重試 on failed)', () => {
+    const statuses: RequestStatus[] = [
+      'pending',
+      'searching',
+      'downloading',
+      'completed',
+      'failed',
+    ];
+
+    it.each(statuses)('%s shows exactly its drawn action', (status) => {
+      render(<RequestRow request={row({ status })} onCancel={vi.fn()} onRetry={vi.fn()} />);
+      expect(!!screen.queryByTestId('request-cancel-btn')).toBe(status === 'pending');
+      expect(!!screen.queryByTestId('request-retry-btn')).toBe(status === 'failed');
+    });
+
+    it('no handler → no button (static/gallery uses stay inert)', () => {
+      render(<RequestRow request={row({ status: 'pending' })} />);
+      expect(screen.queryByTestId('request-cancel-btn')).toBeNull();
+    });
+
+    it('clicks fire the handlers', async () => {
+      const onCancel = vi.fn();
+      const onRetry = vi.fn();
+      const { unmount } = render(<RequestRow request={row()} onCancel={onCancel} />);
+      await userEvent.click(screen.getByRole('button', { name: /取消請求/ }));
+      expect(onCancel).toHaveBeenCalledOnce();
+      unmount();
+
+      render(<RequestRow request={row({ status: 'failed' })} onRetry={onRetry} />);
+      await userEvent.click(screen.getByRole('button', { name: /重試請求/ }));
+      expect(onRetry).toHaveBeenCalledOnce();
+    });
+
+    it('busy disables the button (no double-fire)', () => {
+      render(<RequestRow request={row()} onCancel={vi.fn()} busy />);
+      expect(screen.getByTestId('request-cancel-btn')).toBeDisabled();
+    });
+
+    it('the failed caption sits beside 重試 on md+ and under the title below md', () => {
+      render(
+        <RequestRow
+          request={row({ status: 'failed', errorMessage: '找不到可用來源' })}
+          onRetry={vi.fn()}
+        />
+      );
+      const captions = screen.getAllByText('找不到可用來源');
+      expect(captions).toHaveLength(2);
+      expect(screen.getByTestId('request-fail-caption')).toHaveClass('hidden', 'md:inline');
+      expect(captions.find((c) => c.tagName === 'P')).toHaveClass('md:hidden');
+    });
   });
 });

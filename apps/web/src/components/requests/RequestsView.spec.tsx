@@ -8,11 +8,16 @@ vi.mock('../../services/requestService', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../services/requestService')>();
   return {
     ...actual,
-    requestService: { ...actual.requestService, listRequests: vi.fn() },
+    requestService: {
+      ...actual.requestService,
+      listRequests: vi.fn(),
+      cancelRequest: vi.fn(),
+      retryRequest: vi.fn(),
+    },
   };
 });
 
-import { requestService, type MediaRequest } from '../../services/requestService';
+import { requestService, RequestApiError, type MediaRequest } from '../../services/requestService';
 import { RequestsView } from './RequestsView';
 
 const row = (over: Partial<MediaRequest> = {}): MediaRequest => ({
@@ -99,5 +104,85 @@ describe('RequestsView (N4 states — design L1/L5/L6/L7)', () => {
 
     await user.click(screen.getByTestId('requests-retry'));
     await waitFor(() => expect(screen.getAllByTestId('request-row')).toHaveLength(1));
+  });
+});
+
+describe('RequestsView row actions (13-7b)', () => {
+  beforeEach(() => {
+    vi.mocked(requestService.listRequests).mockReset();
+    vi.mocked(requestService.cancelRequest).mockReset();
+    vi.mocked(requestService.retryRequest).mockReset();
+  });
+
+  it('取消 hides the row at once (before the server answers) and confirms with a polite toast', async () => {
+    // The server keeps returning the row: only the optimistic path can hide it.
+    vi.mocked(requestService.listRequests).mockResolvedValue([
+      row({ id: 'p1', title: '熊家餐館 S3' }),
+      row({ id: 'p2', title: '沙丘：第二部', tmdbId: 2 }),
+    ]);
+    let resolve!: () => void;
+    vi.mocked(requestService.cancelRequest).mockReturnValue(
+      new Promise<void>((res) => {
+        resolve = res;
+      })
+    );
+    renderView();
+
+    await userEvent.click(await screen.findByRole('button', { name: '取消請求：熊家餐館 S3' }));
+    expect(requestService.cancelRequest).toHaveBeenCalledWith('p1');
+    await waitFor(() => expect(screen.queryByText('熊家餐館 S3')).toBeNull());
+
+    resolve();
+    const toast = await screen.findByTestId('request-action-toast');
+    expect(toast).toHaveAttribute('role', 'status');
+    expect(toast).toHaveTextContent('已取消請求');
+  });
+
+  it('an earlier overlapping action that fails still shows its error (CR)', async () => {
+    vi.mocked(requestService.listRequests).mockResolvedValue([
+      row({ id: 'p1', title: '熊家餐館 S3' }),
+      row({ id: 'p2', title: '沙丘：第二部', tmdbId: 2 }),
+    ]);
+    let rejectFirst!: (e: Error) => void;
+    vi.mocked(requestService.cancelRequest).mockImplementation((id: string) =>
+      id === 'p1'
+        ? new Promise<void>((_res, rej) => {
+            rejectFirst = rej;
+          })
+        : new Promise<void>(() => {})
+    );
+    renderView();
+
+    await userEvent.click(await screen.findByRole('button', { name: '取消請求：熊家餐館 S3' }));
+    await userEvent.click(await screen.findByRole('button', { name: '取消請求：沙丘：第二部' }));
+    rejectFirst(new RequestApiError('此請求已在處理中，無法取消', 'REQUEST_NOT_CANCELLABLE'));
+
+    const toast = await screen.findByTestId('request-action-toast');
+    expect(toast).toHaveAttribute('role', 'alert');
+    expect(toast).toHaveTextContent('此請求已在處理中，無法取消');
+  });
+
+  it('重試 disables its button while in flight; a failure keeps the row failed and alerts', async () => {
+    const failed = row({ id: 'f1', status: 'failed', errorMessage: '下載發生錯誤' });
+    vi.mocked(requestService.listRequests).mockResolvedValue([failed]);
+    let rejectRetry!: (e: Error) => void;
+    vi.mocked(requestService.retryRequest).mockReturnValue(
+      new Promise((_res, rej) => {
+        rejectRetry = rej;
+      })
+    );
+    renderView();
+
+    await userEvent.click(await screen.findByTestId('request-retry-btn'));
+    await waitFor(() => expect(screen.getByTestId('request-retry-btn')).toBeDisabled());
+    expect(screen.getByTestId('request-status-failed')).toBeInTheDocument();
+
+    rejectRetry(
+      new RequestApiError('沒能清掉壞掉的下載，這次重試沒有生效', 'REQUEST_RETRY_CLEANUP_FAILED')
+    );
+    const toast = await screen.findByTestId('request-action-toast');
+    expect(toast).toHaveAttribute('role', 'alert');
+    expect(toast).toHaveTextContent('沒能清掉壞掉的下載，這次重試沒有生效');
+    await waitFor(() => expect(screen.getByTestId('request-retry-btn')).toBeEnabled());
   });
 });
