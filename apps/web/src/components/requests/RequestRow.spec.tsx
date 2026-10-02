@@ -42,6 +42,19 @@ describe('RequestRow', () => {
     expect(screen.getByTestId(`request-status-${status}`)).toHaveTextContent(label);
   });
 
+  it('[bugfix-h] shows the local calendar day, not the UTC one', () => {
+    // Pin the zone so this fails on a UTC CI runner too: 23:30Z is already
+    // the 29th in Taipei, while slicing the text would show the 28th.
+    const prevTZ = process.env.TZ;
+    process.env.TZ = 'Asia/Taipei';
+    try {
+      render(<RequestRow request={row({ requestedAt: '2026-06-28T23:30:00Z' })} />);
+      expect(screen.getByText('2026-06-29')).toBeInTheDocument();
+    } finally {
+      process.env.TZ = prevTZ;
+    }
+  });
+
   it('tv rows read 影集', () => {
     render(<RequestRow request={row({ mediaType: 'tv', title: '熊家餐館 S3' })} />);
     expect(screen.getByText('影集')).toBeInTheDocument();

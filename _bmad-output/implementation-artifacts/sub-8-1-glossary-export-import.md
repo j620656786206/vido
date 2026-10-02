@@ -1,6 +1,6 @@
 # Story 8.1: 詞彙表匯出／匯入（檔案）—— 驗證「共享」有沒有人要（全端，小）
 
-Status: review
+Status: done
 
 **Depends on:** sub-7-1（scope 綁 TMDb ID；沒有共同 ID 匯入對不上）。B 路線第一步；party-mode 裁定「先做最笨的：匯出一個檔，貼給朋友匯入」。
 

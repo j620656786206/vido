@@ -138,8 +138,12 @@ func (c *Cache) Set(ctx context.Context, filename string, provider ProviderName,
 		return fmt.Errorf("failed to marshal response: %w", err)
 	}
 
-	expiresAt := time.Now().Add(c.ttl).Format(time.RFC3339)
-	createdAt := time.Now().Format(time.RFC3339)
+	// Bound as time.Time so the app connection stores them like every other
+	// timestamp (UTC, SQLite-readable — bugfix-h); a hand-formatted local
+	// RFC3339 string would not compare correctly against the time arguments
+	// the cleanup and stats queries bind.
+	createdAt := time.Now()
+	expiresAt := createdAt.Add(c.ttl)
 
 	query := `
 		INSERT INTO ai_cache (id, filename_hash, provider, request_prompt, response_json, created_at, expires_at)
@@ -187,7 +191,7 @@ func (c *Cache) deleteExpired(ctx context.Context, hash string) error {
 
 // ClearExpired removes all expired cache entries.
 func (c *Cache) ClearExpired(ctx context.Context) (int64, error) {
-	now := time.Now().Format(time.RFC3339)
+	now := time.Now() // bound as time.Time: stored expiries are UTC text (bugfix-h)
 	query := `DELETE FROM ai_cache WHERE expires_at < ?`
 
 	result, err := c.db.ExecContext(ctx, query, now)
@@ -232,7 +236,7 @@ func (c *Cache) ClearAll(ctx context.Context) (int64, error) {
 
 // Stats returns cache statistics.
 func (c *Cache) Stats(ctx context.Context) (*CacheStats, error) {
-	now := time.Now().Format(time.RFC3339)
+	now := time.Now() // bound as time.Time: stored expiries are UTC text (bugfix-h)
 	query := `
 		SELECT
 			COUNT(*) as total,
