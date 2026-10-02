@@ -30,6 +30,13 @@ type RequestServiceInterface interface {
 	// TVCoverage answers the 13-2b tree's owned/requested reflection for one
 	// TV show (13-2a AC #5 [@contract-v1]).
 	TVCoverage(ctx context.Context, tmdbID int64) (*RequestCoverage, error)
+	// CancelRequest hard-deletes a pending request (13-7a AC #1
+	// [@contract-v1]): ErrRequestNotFound / ErrRequestNotCancellable.
+	CancelRequest(ctx context.Context, id string) error
+	// RetryRequest moves a failed request back into the pipeline (13-7a
+	// AC #2 [@contract-v1]): ErrRequestNotFound / ErrRequestNotRetryable /
+	// repository.ErrRequestDuplicate.
+	RetryRequest(ctx context.Context, id string) (*models.Request, error)
 }
 
 // EpisodeOwnershipReader is the narrow port behind the episode-level owned
@@ -65,6 +72,8 @@ type RequestService struct {
 	// when absent/unconfigured the 13-1a create behavior is preserved
 	// exactly (rows born pending, no transition).
 	fulfilment FulfilmentServiceInterface
+	// queueCleaner is the optional 13-7a retry dependency (nil-safe).
+	queueCleaner RequestQueueCleaner
 }
 
 // Compile-time verification.

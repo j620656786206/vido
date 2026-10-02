@@ -1,6 +1,6 @@
 # Story 13-7a: Request cancel + retry — backend (DELETE + retry endpoints, *arr queue-remove capability)
 
-Status: ready-for-dev
+Status: review
 
 > **Split note (SM Bob, 2026-07-05):** 13-7 counted 5 backend + 5 frontend tasks → MANDATORY a/b split (Epic 8 Retro Agreement 5). This is the **backend** half; `13-7b-request-cancel-retry` (FE) depends on this story's endpoints.
 >
@@ -27,20 +27,20 @@ so that the 想要清單 rows drawn in the design (取消 on pending, 重試 on 
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Repository extensions (AC: 1, 2, 4)
+- [x] Task 1: Repository extensions (AC: 1, 2, 4)
   - [ ] `FindByID`, `DeleteIfPending`, `ResetForRetry` in `request_repository.go` + interface; sentinels reused
   - [ ] Real-sqlite tests (matrices per AC 7)
-- [ ] Task 2: `QueueRemover` capability (AC: 3)
+- [x] Task 2: `QueueRemover` capability (AC: 3)
   - [ ] Verify Radarr/Sonarr v3 `DELETE /queue/{id}` param names (web/API docs) — record findings in Dev Agent Record
   - [ ] Optional interface in `plugins/plugin.go` (ProfileLister pattern) + radarr + sonarr impls + httptest
-- [ ] Task 3: Service methods (AC: 2, 4, 5)
+- [x] Task 3: Service methods (AC: 2, 4, 5)
   - [ ] `CancelRequest` (conditional delete → 0-rows → FindByID → not-found vs not-cancellable)
   - [ ] `RetryRequest` (flavor split on `external_id`; queue lookup + best-effort remove; reset writers; re-fulfil for flavor (a))
   - [ ] Service tests incl. race + degradation paths
-- [ ] Task 4: Handler + routes (AC: 1, 2, 6)
+- [x] Task 4: Handler + routes (AC: 1, 2, 6)
   - [ ] `DELETE /:id` + `POST /:id/retry` in `request_handler.go` `RegisterRoutes`; new 409 codes; Swagger annotations (+ `swag init` if needed)
   - [ ] httptest coverage per AC 7
-- [ ] Task 5: Gates (AC: 7)
+- [x] Task 5: Gates (AC: 7)
   - [ ] Full `go test ./...`, `go vet`, staticcheck, `pnpm lint:all`, prettier on touched md/yaml
 
 ## Dev Notes
@@ -89,11 +89,30 @@ so that the 想要清單 rows drawn in the design (取消 on pending, 重試 on 
 
 ### Agent Model Used
 
-(fill at dev time)
+Claude Opus 5.5（2026-10-02）
 
 ### Debug Log References
 
 ### Completion Notes List
+
+- **Contract ack [@contract-v2] (13-4b AC #2, selection-aware `AddSeries`)**：取消只作用在 pending（`external_id` NULL、不碰 *arr）；重試 (a) 重跑 `FulfilRequest`，它本來就把列上存的季／集選取帶進 `AddOptions`——v2 對本單語意零影響。其餘 ack 同 AC #8。
+- **AC #3 偏離（有理由，CR 後定案）**：能力介面是 `RemoveQueueItems(ctx, externalID, downloadIDs []string) (removed int, err error)`——呼叫端指名「哪幾個下載（種子 hash）」要刪，client 只負責找到對應的佇列紀錄 `id` 去 DELETE。原因：`plugins.QueueItem`（[@contract-v1] `GetQueue` 的回傳型別）沒有佇列紀錄自己的 `id`；而「哪一筆算壞掉」**必須和 poller 判 failed 的規則一模一樣**，所以抽出 `deriveQueueState(item, torrents)`（poller 的 `reconcileQueued` 與重試共用）：*arr 自己說 `failed`，或 qBittorrent 種子是 error。`services.DVRQueueCleaner` 用 poller 同一組來源（plugin manager＋`downloadService`）算出要刪的 hash。
+- **Task 2 參數查證**：2026-10-02 抓 Radarr `develop` 與 Sonarr `v5-develop` 的 v3 OpenAPI，`DELETE /api/v3/queue/{id}` 的 query 參數為 `removeFromClient`（預設 true）、`blocklist`（預設 false）、`skipRedownload`（預設 false）、`changeCategory`。重試送 `removeFromClient=true&blocklist=true&skipRedownload=false`。
+- **重試 (b) 的順序**：先查重複、再清 *arr 佇列、最後把列改回 searching。先查重複是為了不要在回 409 之前就已經叫 *arr blocklist／重搜；清佇列在 reset 之前，是因為反過來的話 poller 會看到還是壞的那筆、又把列翻回 failed。服務測試在清佇列的當下斷言列仍是 failed。
+- **AC #2(b) 改成誠實失敗（CR）**：清佇列失敗時**不再**「照樣 reset」——那樣 15 秒後 poller 會把列翻回 failed，使用者完全不知道重試沒生效。現在列維持 failed，回 **502 `REQUEST_RETRY_CLEANUP_FAILED`**（「沒能清掉壞掉的下載，這次重試沒有生效」）。新碼在既有 `REQUEST_` 前綴下，Rule 7 碼表已更新。佇列裡已經沒有壞掉的那筆（被 *arr 自己清掉）不算失敗，照常 reset。
+- **Rule 24 範圍內補洞**：重試把 failed 改回 active 狀態，可能撞上「使用者在失敗後又按了一次想要」產生的新 active 列（partial unique index）→ repo 映射成 `ErrRequestDuplicate` → 409 `REQUEST_DUPLICATE`（沿用既有碼與文案）。`ResetForRetry` 以 `status='failed'` 為條件，兩次重試或與 poller 競速只有一個會贏，輸的回 409 `REQUEST_NOT_RETRYABLE`。
+- `ResetForRetry` 簽名比故事寫的少了 `clearExternal`：兩種 flavor 都不需要清（(a) 本來就是 NULL、(b) 要保留）。
+- 404 沿用 `DB_NOT_FOUND`，但訊息改成中文（`NotFoundError` 只有英文）。
+- Swagger：只補註解、不跑 `swag init`（`disc-2026-09-swagger-docs-stale` 的既定做法）。
+- 主程式：`requestService.SetQueueCleaner(services.NewDVRQueueCleaner(pluginManager, downloadService))`。
+- **Adversarial CR（2026-10-02，獨立 agent，含 router 實建 probe）**：
+  - ✅ 修：初版用 *arr 的 `warning` 判壞——但 Radarr／Sonarr 的 qBittorrent client 把 `stalledDL`、`metaDL`、`missingFiles`、`error` 全映射成 warning，影集重試會連「只是暫時沒種子」的健康集數一起刪檔＋blocklist。改成上面「與 poller 同一條規則、指名 hash」。
+  - ✅ 修：初版在 poller 因 qBT 判 failed、但 *arr 狀態還沒跟上（*arr 約每分鐘才刷新）時，重試什麼都沒刪就 reset，下一輪又翻回 failed。指名 hash 後這個時間差消失。
+  - ✅ 修：清佇列失敗改回 502、列維持 failed（見上）；重複檢查移到清佇列之前。
+  - 📝 不修（既有）：重試 (a) 與 poller 同時 `FulfilRequest` 的雙重新增競速，`stayPending` 用舊快照覆寫可能抹掉 `external_id`——create 路徑早就有同一個競速，且 (a) 今天只在 Sonarr「TVDB 查無」會發生，歸 `disc-2026-07-arr-already-exists-loop`。
+  - 📝 不修：Sonarr 3.0.6／Radarr 4.0 以前的參數叫 `blacklist`；舊版只會刪不會 blocklist。
+  - ✅ 驗證無誤：取消的條件式刪除不會被任何後續 UPDATE 復活；兩次重試只有一次贏；Gin 三條路由（GET coverage／DELETE :id／POST :id/retry）實建無衝突；Radarr `QueueController` 的 DELETE 是同步的、下一輪 poller 看到「不在佇列」會維持 searching。
+- staticcheck：本機舊的 `~/go/bin/staticcheck`（go1.25 編）分析不完整，改用 `~/go/bin/staticcheck-2026.1 ./...`，零輸出。
 
 ### Discovery Triage
 
@@ -107,3 +126,16 @@ Authoring-time discoveries (SM Bob, 2026-07-05, filed in sprint-status.yaml):
 (Dev: add further in-flight discoveries per Rule 24 before marking done.)
 
 ### File List
+
+- apps/api/internal/plugins/plugin.go（`QueueRemover`）
+- apps/api/internal/plugins/radarr/client.go、client_test.go
+- apps/api/internal/plugins/sonarr/client.go、client_test.go
+- apps/api/internal/repository/request_repository.go、request_repository_test.go
+- apps/api/internal/services/request_service.go
+- apps/api/internal/services/request_status_poller.go（抽出 `deriveQueueState`）
+- apps/api/internal/services/request_cancel_retry.go（新）
+- apps/api/internal/services/request_cancel_retry_test.go（新）
+- apps/api/internal/services/request_service_test.go、fulfilment_service_test.go、request_status_poller_test.go（fake 補方法）
+- apps/api/internal/handlers/request_handler.go、request_handler_test.go
+- apps/api/cmd/api/main.go
+- project-context.md（Rule 7 碼表）

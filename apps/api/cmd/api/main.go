@@ -290,6 +290,7 @@ func main() {
 	})
 	fulfilmentService := services.NewFulfilmentService(pluginManager, repos.Settings, repos.Requests)
 	requestService.SetFulfilmentService(fulfilmentService)
+	requestService.SetQueueCleaner(services.NewDVRQueueCleaner(pluginManager, downloadService)) // Story 13-7a retry
 	dvrSettingsService := services.NewDVRSettingsService(pluginManager, repos.Settings, secretsService)
 
 	// Shared AI throttle (Story 9R-11): one Governor caps concurrency + QPS

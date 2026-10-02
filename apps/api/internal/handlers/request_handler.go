@@ -22,6 +22,13 @@ const (
 	// selection (code-list extension under the existing REQUEST_ prefix —
 	// prefix count stays 16, no CR-workflow sync needed).
 	errCodeRequestInvalidSelection = "REQUEST_INVALID_SELECTION"
+	// 13-7a AC #6: cancel / retry on a row in the wrong state (code-list
+	// extension under REQUEST_ — no new prefix, no CR-workflow sync).
+	errCodeRequestNotCancellable = "REQUEST_NOT_CANCELLABLE"
+	errCodeRequestNotRetryable   = "REQUEST_NOT_RETRYABLE"
+	// The broken download could not be removed from Radarr/Sonarr, so the
+	// retry did nothing and the row stays failed (13-7a CR).
+	errCodeRequestRetryCleanupFailed = "REQUEST_RETRY_CLEANUP_FAILED"
 )
 
 // RequestHandler handles HTTP requests for the media request system.
@@ -42,7 +49,91 @@ func (h *RequestHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		requests.GET("", h.ListRequests)
 		requests.POST("", h.CreateRequest)
 		requests.GET("/tv/:tmdb_id/coverage", h.TVCoverage)
+		requests.DELETE("/:id", h.CancelRequest)
+		requests.POST("/:id/retry", h.RetryRequest)
 	}
+}
+
+// CancelRequest handles DELETE /api/v1/requests/:id (13-7a AC #1
+// [@contract-v1]) — only a pending request can be cancelled; it is deleted.
+// @Summary Cancel a pending media request
+// @Tags requests
+// @Param id path string true "Request id"
+// @Success 204 "Cancelled (row deleted)"
+// @Failure 404 {object} APIResponse "DB_NOT_FOUND"
+// @Failure 409 {object} APIResponse "REQUEST_NOT_CANCELLABLE — already being processed"
+// @Failure 500 {object} APIResponse "INTERNAL_ERROR"
+// @Router /api/v1/requests/{id} [delete]
+func (h *RequestHandler) CancelRequest(c *gin.Context) {
+	id := c.Param("id")
+	if err := h.service.CancelRequest(c.Request.Context(), id); err != nil {
+		switch {
+		case errors.Is(err, repository.ErrRequestNotFound):
+			requestNotFound(c)
+		case errors.Is(err, services.ErrRequestNotCancellable):
+			slog.Debug("Cancel rejected: request not pending", "request_id", id, "error", err)
+			ErrorResponse(c, http.StatusConflict, errCodeRequestNotCancellable,
+				"此請求已在處理中，無法取消",
+				"重新整理想要清單查看最新狀態。")
+		default:
+			slog.Error("Failed to cancel request", "request_id", id, "error", err)
+			InternalServerError(c, "取消請求失敗，請稍後再試")
+		}
+		return
+	}
+	NoContentResponse(c)
+}
+
+// RetryRequest handles POST /api/v1/requests/:id/retry (13-7a AC #2
+// [@contract-v1]) — only a failed request can be retried; the response is
+// the updated request resource (13-1a shape).
+// @Summary Retry a failed media request
+// @Tags requests
+// @Produce json
+// @Param id path string true "Request id"
+// @Success 200 {object} APIResponse{data=models.Request}
+// @Failure 404 {object} APIResponse "DB_NOT_FOUND"
+// @Failure 409 {object} APIResponse "REQUEST_NOT_RETRYABLE | REQUEST_DUPLICATE"
+// @Failure 502 {object} APIResponse "REQUEST_RETRY_CLEANUP_FAILED — the broken download could not be removed; nothing changed"
+// @Failure 500 {object} APIResponse "INTERNAL_ERROR"
+// @Router /api/v1/requests/{id}/retry [post]
+func (h *RequestHandler) RetryRequest(c *gin.Context) {
+	id := c.Param("id")
+	request, err := h.service.RetryRequest(c.Request.Context(), id)
+	if err != nil {
+		switch {
+		case errors.Is(err, repository.ErrRequestNotFound):
+			requestNotFound(c)
+		case errors.Is(err, services.ErrRequestNotRetryable):
+			slog.Debug("Retry rejected: request not failed", "request_id", id, "error", err)
+			ErrorResponse(c, http.StatusConflict, errCodeRequestNotRetryable,
+				"這個請求沒有失敗，不需要重試",
+				"重新整理想要清單查看最新狀態。")
+		case errors.Is(err, repository.ErrRequestDuplicate):
+			slog.Debug("Retry rejected: newer active request for the title", "request_id", id, "error", err)
+			ErrorResponse(c, http.StatusConflict, errCodeRequestDuplicate,
+				"這部片已有進行中的請求",
+				"請至想要清單查看該請求的進度。")
+		case errors.Is(err, services.ErrRetryCleanupFailed):
+			slog.Warn("Retry rejected: failed download could not be removed", "request_id", id, "error", err)
+			ErrorResponse(c, http.StatusBadGateway, errCodeRequestRetryCleanupFailed,
+				"沒能清掉壞掉的下載，這次重試沒有生效",
+				"確認 Radarr／Sonarr 連線正常後再按一次重試。")
+		default:
+			slog.Error("Failed to retry request", "request_id", id, "error", err)
+			InternalServerError(c, "重試請求失敗，請稍後再試")
+		}
+		return
+	}
+	SuccessResponse(c, request)
+}
+
+// requestNotFound is the 404 for an unknown request id (DB_NOT_FOUND, the
+// glossary/movie precedent) with a zh-TW message.
+func requestNotFound(c *gin.Context) {
+	ErrorResponse(c, http.StatusNotFound, "DB_NOT_FOUND",
+		"找不到這筆請求",
+		"它可能已被取消；重新整理想要清單。")
 }
 
 // TVCoverage handles GET /api/v1/requests/tv/:tmdb_id/coverage (13-2a AC #5

@@ -11,6 +11,7 @@ import (
 
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/plugins"
+	"github.com/vido/api/internal/repository"
 )
 
 // fakeFulfilmentRequestRepo captures UpdateFulfilment writes.
@@ -43,6 +44,20 @@ func (f *fakeFulfilmentRequestRepo) ListActive(ctx context.Context) ([]models.Re
 
 func (f *fakeFulfilmentRequestRepo) UpdateStatus(ctx context.Context, id string, status string, errMsg string) (time.Time, error) {
 	return fixedFulfilmentTime, nil
+}
+
+// 13-7a cancel/retry writers — not exercised by these tests (cancel/retry
+// tests run against the real repository).
+func (m *fakeFulfilmentRequestRepo) FindByID(ctx context.Context, id string) (*models.Request, error) {
+	return nil, repository.ErrRequestNotFound
+}
+
+func (m *fakeFulfilmentRequestRepo) DeleteIfPending(ctx context.Context, id string) (int64, error) {
+	return 0, nil
+}
+
+func (m *fakeFulfilmentRequestRepo) ResetForRetry(ctx context.Context, id string, status string) (*models.Request, error) {
+	return nil, repository.ErrRequestNotFound
 }
 
 func (f *fakeFulfilmentRequestRepo) UpdateFulfilment(ctx context.Context, id string, status string, fulfilmentSource, externalID, errorMessage models.NullString) (time.Time, error) {

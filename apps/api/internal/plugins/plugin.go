@@ -111,3 +111,22 @@ type ImportHistoryRecord struct {
 type ImportHistoryReader interface {
 	GetImportHistory(ctx context.Context) ([]ImportHistoryRecord, error)
 }
+
+// QueueRemover is the client-level extra behind a request retry (Story 13-7a
+// AC #3): throw away specific broken downloads of one movie/series so *arr
+// grabs a different release. Not on DVRPlugin — the ProfileLister precedent
+// keeps the [@contract-v1] interface byte-identical.
+//
+// The caller names the downloads (torrent hashes) to remove — the ones the
+// request status derivation judged failed — so a retry on one broken episode
+// never touches the season's other downloads, stalled or not. *arr's own
+// "warning" covers merely stalled torrents too, so the client must not guess.
+type QueueRemover interface {
+	// RemoveQueueItems deletes the queue entries of the given *arr
+	// movie/series id whose downloadId is in downloadIDs (case-insensitive),
+	// with DELETE /api/v3/queue/{id}?removeFromClient=true&blocklist=true&
+	// skipRedownload=false — the release is blocklisted and *arr searches
+	// for another one. It returns how many entries were removed; on a
+	// partial failure it keeps going and returns the first error.
+	RemoveQueueItems(ctx context.Context, externalID int64, downloadIDs []string) (removed int, err error)
+}
