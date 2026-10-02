@@ -4981,6 +4981,25 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     width: 200,
   },
   {
+    // 13-2c — B4p-D 季與劇集 header: Secondary「＋ 想要更多集數」(btn-request-more).
+    id: 'request-button/more-episodes',
+    label: 'requests/RequestButton (secondary · 想要更多集數)',
+    component: RequestButton,
+    props: {
+      tmdbId: 1429,
+      mediaType: 'tv',
+      title: '進擊的巨人',
+      owned: false,
+      requested: false,
+      pickEpisodes: true,
+      variant: 'secondary',
+      label: '想要更多集數',
+    },
+    penNode: 'N2fmG6',
+    statesOnly: ['default', 'hover', 'focus'],
+    width: 220,
+  },
+  {
     id: 'request-row/pending',
     label: 'requests/RequestRow (pending)',
     component: RequestRow,

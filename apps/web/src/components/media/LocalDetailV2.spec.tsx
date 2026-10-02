@@ -83,7 +83,16 @@ vi.mock('./StreamingAvailability', () => ({
   StreamingAvailability: () => <div data-testid="stub-streaming" />,
 }));
 vi.mock('./RelatedContent', () => ({ RelatedContent: () => <div data-testid="stub-related" /> }));
-vi.mock('./SeasonAccordion', () => ({ SeasonAccordion: () => <div data-testid="stub-seasons" /> }));
+vi.mock('./SeasonAccordion', () => ({
+  SeasonAccordion: ({ headerAction }: { headerAction?: React.ReactNode }) => (
+    <div data-testid="stub-seasons">{headerAction}</div>
+  ),
+}));
+vi.mock('../requests/RequestButton', () => ({
+  RequestButton: (p: Record<string, unknown>) => (
+    <div data-testid="stub-request-button" data-props={JSON.stringify(p)} />
+  ),
+}));
 vi.mock('./DoubanSection', () => ({ DoubanSection: () => <div data-testid="stub-douban" /> }));
 vi.mock('./CreditsSection', () => ({
   CreditsSection: ({ cast }: { cast?: Array<{ name: string }> }) => (
@@ -680,6 +689,32 @@ describe('LocalDetailV2', () => {
       renderSeriesDetail();
       await screen.findByTestId('local-detail-v2');
       order(['detail-overview', 'stub-seasons', 'detail-tech-info', 'stub-credits-cast']);
+    });
+  });
+
+  describe('13-2c 想要更多集數 (B4p-D xn9Tr)', () => {
+    it('a TMDb-linked series offers the season/episode tree from the 季與劇集 header', async () => {
+      h.localSeries = series({ data: { ...series().data, tmdbId: 1429 } });
+      renderSeriesDetail();
+      const btn = await screen.findByTestId('stub-request-button');
+      expect(screen.getByTestId('stub-seasons')).toContainElement(btn);
+      const props = JSON.parse(btn.getAttribute('data-props')!);
+      expect(props).toMatchObject({
+        tmdbId: 1429,
+        mediaType: 'tv',
+        owned: false,
+        pickEpisodes: true,
+        treeRequiresCoverage: true,
+        variant: 'secondary',
+        label: '想要更多集數',
+      });
+    });
+
+    it('a movie has no such entry', async () => {
+      h.local = movie({ data: { ...movie().data, tmdbId: 27205 } });
+      renderDetail();
+      await screen.findByTestId('local-detail-v2');
+      expect(screen.queryByTestId('stub-request-button')).toBeNull();
     });
   });
 });

@@ -32,6 +32,8 @@ import { useDoubanRating } from '../../hooks/useDoubanRating';
 import { useDoubanReviewSummary } from '../../hooks/useDoubanReviewSummary';
 import { CreditsSection } from './CreditsSection';
 import { SeasonAccordion } from './SeasonAccordion';
+import { RequestButton } from '../requests/RequestButton';
+import { useRequestedMedia } from '../../hooks/useRequestedMedia';
 import { RelatedContent } from './RelatedContent';
 import { StreamingAvailability } from './StreamingAvailability';
 import { TrailerSection } from './TrailerSection';
@@ -84,6 +86,8 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
     localMovie.data?.productionCountries?.map((c) => c.iso31661).join(',') ?? '';
 
   const tmdbId = data?.tmdbId ?? 0;
+  // 13-2c: an owned series can still ask for the episodes it is missing.
+  const requestedState = useRequestedMedia(!isMovie && tmdbId > 0);
   const movieCredits = useMovieCredits(isMovie && tmdbId > 0 ? tmdbId : 0);
   const tvCredits = useTVShowCredits(!isMovie && tmdbId > 0 ? tmdbId : 0);
   const credits = isMovie ? movieCredits : tvCredits;
@@ -346,6 +350,22 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
             isLoading={seasons.isLoading}
             isError={seasons.isError}
             onRetry={() => seasons.refetch()}
+            headerAction={
+              // B4p-D btn-request-more (xn9Tr): Secondary, not the page's one
+              // solid accent (管理字幕). owned={false} on purpose — here the
+              // question is "can I ask for more?", not "is the title local?".
+              <RequestButton
+                tmdbId={tmdbId}
+                mediaType="tv"
+                title={data.title}
+                owned={false}
+                requested={requestedState.isRequested(tmdbId, 'tv')}
+                pickEpisodes
+                treeRequiresCoverage
+                variant="secondary"
+                label="想要更多集數"
+              />
+            }
           />
         )}
 

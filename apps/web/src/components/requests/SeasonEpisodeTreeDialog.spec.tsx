@@ -72,7 +72,7 @@ function seasonOne() {
   };
 }
 
-function renderTree() {
+function renderTree(extra: Partial<React.ComponentProps<typeof SeasonEpisodeTreeDialog>> = {}) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const onConfirm = vi.fn();
   render(
@@ -83,6 +83,7 @@ function renderTree() {
         tmdbId={1429}
         title="進擊的巨人"
         onConfirm={onConfirm}
+        {...extra}
       />
     </QueryClientProvider>
   );
@@ -220,5 +221,23 @@ describe('SeasonEpisodeTreeDialog (L3-D-v2 He04g)', () => {
     await userEvent.click(screen.getByTestId('season-tree-confirm'));
     expect(await screen.findByRole('alert')).toHaveTextContent('選到的集數都已入庫或已請求');
     expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it('13-2c requireCoverage: no coverage → an error with 重試, never a tree that could send the whole title', async () => {
+    vi.mocked(requestService.getCoverage).mockRejectedValue(new Error('down'));
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    renderTree({ requireCoverage: true });
+    const err = await screen.findByTestId('season-tree-coverage-error');
+    expect(err).toHaveTextContent('無法確認哪些集數已經有了');
+    expect(screen.queryByTestId('season-tree')).toBeNull();
+    expect(screen.queryByTestId('season-tree-confirm')).toBeNull();
+  });
+
+  it('the caller’s submit state disables 確認請求 and its error shows in the footer', async () => {
+    renderTree({ submitting: true, submitError: '第 1 季第 2 集已在媒體庫中' });
+    await screen.findByTestId('season-tree');
+    await userEvent.click(within(screen.getByTestId('season-tree-master')).getByRole('checkbox'));
+    expect(screen.getByTestId('season-tree-confirm')).toBeDisabled();
+    expect(screen.getByRole('alert')).toHaveTextContent('第 1 季第 2 集已在媒體庫中');
   });
 });

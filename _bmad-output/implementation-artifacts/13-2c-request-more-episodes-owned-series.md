@@ -1,6 +1,6 @@
 # Story 13.2c: 已入庫影集也能「想要更多集數」—— 媒體庫影集詳情頁的季／集樹入口
 
-Status: in-progress（Task 0 設計稿待 Alexyu 跑 inline agent）
+Status: review
 
 **Depends on:** `13-2b-partial-request`（季／集樹 `SeasonEpisodeTreeDialog`，PR #656 已合）。**Source:** `disc-2026-10-partial-request-entry-for-owned-series`（P2，13-2b dev 時立案）。
 
@@ -37,11 +37,11 @@ so that partial requests work for the case they exist for — "I have S1, get me
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — 設計稿（Alexyu 跑 inline agent）**（AC: #1）——提示詞見下
-- [ ] Task 1 — `SeasonAccordion` 標題列插槽＋`LocalDetailV2` 接 `RequestButton`（AC: #2, #3）
-- [ ] Task 2 — `RequestButton` variant／label（AC: #4）
-- [ ] Task 3 — 13-2b 遺留三項（AC: #5）
-- [ ] Task 4 — 測試、fixture、基準、瀏覽器實測（AC: #6）
+- [x] **Task 0 — 設計稿（Alexyu 跑 inline agent）**（AC: #1）——提示詞見下
+- [x] Task 1 — `SeasonAccordion` 標題列插槽＋`LocalDetailV2` 接 `RequestButton`（AC: #2, #3）
+- [x] Task 2 — `RequestButton` variant／label（AC: #4）
+- [x] Task 3 — 13-2b 遺留三項（AC: #5）
+- [x] Task 4 — 測試、fixture、基準、瀏覽器實測（AC: #6）
 
 ## Task 0 提示詞（Sally 2026-10-02；貼給 Pencil Inline AI Agent，跑完 ⌘S）
 
@@ -67,10 +67,32 @@ so that partial requests work for the case they exist for — "I have S1, get me
 
 ### Agent Model Used
 
+Claude Opus 5.5（2026-10-02）
+
 ### Completion Notes List
 
+- **Task 0 設計稿**：Alexyu 跑 inline agent。第一版把圖示＋文字直接當 instance 的 `children`（`V1SVnp`/`FG9K0`），整份檔案走訪會在那顆按鈕丟 `TypeError`，截圖腳本的 token 快照寫不出來（CI 會紅）；給了修正提示詞，inline agent 改用 `descendants` 覆寫 master 的 `L9cIf`（比照 `btn-匯出檔案` `Oqqvu`），新 id **`xn9Tr`**。MCP 複審：結構正確、整檔 17,787 節點走訪無誤；`check-design-tokens.py` 一致。inline agent 回報「body partially clipped 12px」——**⚖️ 採 A（不動）**：1440×900 的稿本來就是捲到一半的截面，同組 `F0lQd` 亦然。只 stage `b4p-d.png`＋`pen-tokens.json`，其餘 12 張 re-render 雜訊還原。
+- **入口**：`SeasonAccordion` 抽 `SectionHeader`（三種狀態共用）＋`headerAction` 插槽；`LocalDetailV2` 影集放 `RequestButton`（`pickEpisodes`、`treeRequiresCoverage`、`variant="secondary"`、`label="想要更多集數"`、`owned={false}`、`requested` 取自 `useRequestedMedia`）。
+- **樹的行為**：`requireCoverage` 時 coverage 拿不到 → 「無法確認哪些集數已經有了」＋重試，不開樹、不顯示確認鈕。送出改由 `RequestButton` 控制開關：送出中樹保持開啟、確認鈕停用；成功才關＋toast；`REQUEST_DUPLICATE` 視同成功；其他錯誤在樹的 footer 顯示後端訊息，勾選保留。
+- **瀏覽器實測**（serve-test-env，種子影集「進擊的巨人」本機有 S1/S2 各 3 集；coverage 走真後端，TMDb 以 Playwright 攔截）：媒體庫影集頁「季與劇集」右側出現按鈕 → 打開樹，S1 E01 鎖定「已入庫」→ 勾整部影集 → 送出 `{"seasons":[3],"episodes":{"1":[4..25],"2":[4..12]}}`（沒有送整部）→ 攔截回 400 → 樹保持開啟、顯示錯誤。
+- **Adversarial CR（2026-10-02，獨立 agent，實跑 probe）**：
+  - ✅ 修（紅線）：只有特別篇（第 0 季）入庫、或 owned 集號落在 TMDb 列表外時，全選仍會送「整部」→ 後端 409。現在只要 coverage 有任何 owned、或入口已知整部在庫（`titleOwned`），一律逐季／逐集。
+  - ✅ 修：上一輪為了「顯示」把鎖定數限制在 1..episodeCount，連帶讓「要不要逐集送」也忽略絕對集數 → 整季送出被後端重疊檢查 400。拆開：顯示用過濾後的計數，wire 判斷用不過濾的「該季鍵下有沒有任何 owned／requested」。
+  - ✅ 修：送出失敗後關掉樹，焦點掉到 body（Radix 記得的觸發按鈕在 pending 期間已卸載）→ 焦點改送回膠囊或重新掛上的按鈕。
+  - ✅ 驗證無誤：pill／button 兩個分支下樹不會重新掛載（同一位置），勾選與錯誤都保留；hooks 順序正確；空季列表時入口仍顯示。
+  - 📝 不修：成功後關閉動畫期間 coverage 重抓可能閃一下「已有進行中的請求」（純外觀）；「已選 3 季 · 0 集」在含已入庫集的季上語意不精確（Sally 文案裁量，併 `disc-2026-10-request-row-range-undrawn` 一起看）。
+
 ### File List
+
+- ux-design.pen（B4p-D `hMcD2` 加 `btn-request-more` `xn9Tr`）、_bmad-output/screenshots/flow-b-detail-v2/b4p-d.png、_bmad-output/pen-tokens.json
+- apps/web/src/components/media/SeasonAccordion.tsx、SeasonAccordion.spec.tsx
+- apps/web/src/components/media/LocalDetailV2.tsx、LocalDetailV2.spec.tsx
+- apps/web/src/components/requests/RequestButton.tsx、RequestButton.spec.tsx
+- apps/web/src/components/requests/SeasonEpisodeTreeDialog.tsx、SeasonEpisodeTreeDialog.spec.tsx
+- apps/web/src/utils/requestSelection.ts、requestSelection.spec.ts
+- apps/web/src/routes/test/-gallery.fixtures.tsx（`request-button/more-episodes`）；對應 darwin 基準 3 張（linux 待 CI bootstrap）
 
 ## Change Log
 
 - 2026-10-02 建立（Bob＋Sally；合併 `disc-2026-10-partial-request-entry-for-owned-series` 與 13-2b CR 遺留三項）。
+- 2026-10-02 設計稿完成（Alexyu inline agent，一次結構修正）；dev 完成 → review；CR 修 3 項。

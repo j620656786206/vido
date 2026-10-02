@@ -55,9 +55,12 @@ function lockedCount(coverage: RequestCoverage | undefined, season: TreeSeason):
   if (!coverage) return 0;
   if (coverage.requestedSeasons.includes(season.seasonNumber)) return season.episodeCount;
   const key = String(season.seasonNumber);
+  // Only numbers TMDb lists for the season count: a library with absolute
+  // numbering (anime "S1E26") must not make the season read 已入庫 (13-2b CR).
+  const listed = (e: number) => e >= 1 && e <= season.episodeCount;
   const locked = new Set([
-    ...(coverage.owned[key] ?? []),
-    ...(coverage.requestedEpisodes[key] ?? []),
+    ...(coverage.owned[key] ?? []).filter(listed),
+    ...(coverage.requestedEpisodes[key] ?? []).filter(listed),
   ]);
   return locked.size;
 }
@@ -72,11 +75,28 @@ export function seasonFullyOwned(
   coverage: RequestCoverage | undefined,
   season: TreeSeason
 ): boolean {
-  return (coverage?.owned[String(season.seasonNumber)]?.length ?? 0) >= season.episodeCount;
+  const owned = coverage?.owned[String(season.seasonNumber)] ?? [];
+  return owned.filter((e) => e >= 1 && e <= season.episodeCount).length >= season.episodeCount;
 }
 
+/**
+ * Whether the WIRE must avoid "whole season" for this season. Deliberately
+ * unfiltered (unlike lockedCount, which drives what the row SHOWS): the
+ * backend's overlap check (13-2a checkSelectionOwnership) rejects a whole
+ * season if ANY owned number sits under that season key — even E26 on a
+ * season TMDb lists as E1–E25 (13-2c CR).
+ */
 function seasonHasLocks(coverage: RequestCoverage | undefined, season: TreeSeason): boolean {
-  return lockedCount(coverage, season) > 0;
+  if (!coverage) return false;
+  if (coverage.requestedSeasons.includes(season.seasonNumber)) return true;
+  const key = String(season.seasonNumber);
+  return (
+    (coverage.owned[key]?.length ?? 0) > 0 || (coverage.requestedEpisodes[key]?.length ?? 0) > 0
+  );
+}
+
+function anyOwned(coverage: RequestCoverage | undefined): boolean {
+  return !!coverage && Object.values(coverage.owned).some((eps) => eps.length > 0);
 }
 
 export function seasonState(sel: TreeSelection, season: number): CheckState {
@@ -188,9 +208,15 @@ export function buildRequestPayload(
   sel: TreeSelection,
   seasons: readonly TreeSeason[],
   coverage: RequestCoverage | undefined,
-  episodeLists: ReadonlyMap<number, readonly number[]>
+  episodeLists: ReadonlyMap<number, readonly number[]>,
+  /** The title is known to be in the library (13-2c entry): never send WHOLE. */
+  titleOwned = false
 ): RequestPayload {
-  const anyLock = seasons.some((s) => seasonHasLocks(coverage, s));
+  // The backend refuses a whole-title request for ANY locally present series
+  // (409 REQUEST_ALREADY_IN_LIBRARY) — owned specials or episodes outside the
+  // tree's seasons count too (13-2c CR).
+  const anyLock =
+    titleOwned || anyOwned(coverage) || seasons.some((s) => seasonHasLocks(coverage, s));
   const allFull = seasons.length > 0 && seasons.every((s) => sel.full.has(s.seasonNumber));
   if (!anyLock && allFull) return { whole: true };
 
