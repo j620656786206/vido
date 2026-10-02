@@ -2,7 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GlossaryPanelV2 } from './GlossaryPanelV2';
-import { glossaryService, type GlossaryTerm } from '../../services/glossaryService';
+import {
+  glossaryService,
+  GlossaryExchangeError,
+  type GlossaryTerm,
+} from '../../services/glossaryService';
 
 vi.mock('../../services/glossaryService', async (importOriginal) => {
   const mod = await importOriginal<typeof import('../../services/glossaryService')>();
@@ -15,6 +19,8 @@ vi.mock('../../services/glossaryService', async (importOriginal) => {
       confirmTerm: vi.fn(),
       confirmAll: vi.fn(),
       deleteTerm: vi.fn(),
+      exportFile: vi.fn(),
+      importFile: vi.fn(),
     },
   };
 });
@@ -846,14 +852,20 @@ describe('GlossaryPanelV2 — phone sheet (dsr-6f-2, F6-M-v2 buepS)', () => {
     expect(actions).toContainElement(screen.getByTestId('glossary-add-cancel'));
   });
 
-  it('carries no empty action wrapper when neither button renders (CR M4)', async () => {
+  it('on an empty list the action wrapper carries only the exchange row (CR M4 → sub-8-1)', async () => {
     mocked.listTerms.mockResolvedValue([]);
     renderPanel();
 
     await screen.findByTestId('glossary-empty');
-    // An unconditional wrapper would be a 0-height flex child of the body and
-    // would still pay its max-sm:gap-3.5 — 14px of dead space under 尚無詞彙.
-    expect(screen.queryByTestId('glossary-actions')).toBeNull();
+    // CR M4 forbade an EMPTY wrapper (14px of dead gap under 尚無詞彙). Since
+    // sub-8-1 it is never empty: 匯入 a friend's file is how an empty table can
+    // be seeded on a phone, so the wrapper holds exactly that row — no
+    // 全部確認, no second 新增詞彙 (the empty state carries that one).
+    const actions = screen.getByTestId('glossary-actions');
+    expect(actions.children).toHaveLength(1);
+    expect(actions.firstElementChild).toBe(screen.getByTestId('glossary-exchange-m'));
+    expect(screen.getByTestId('glossary-export-m')).toBeDisabled();
+    expect(screen.getByTestId('glossary-import-m')).toBeEnabled();
   });
 
   it('the add form opens next to 新增詞彙, not at the top of a scrolled list (CR M6)', async () => {
@@ -876,6 +888,172 @@ describe('GlossaryPanelV2 — phone sheet (dsr-6f-2, F6-M-v2 buepS)', () => {
     expect(tokens(body)).toEqual(
       expect.arrayContaining(['max-sm:px-4', 'max-sm:pt-1.5', 'max-sm:gap-3.5'])
     );
-    expect(tokens(screen.getByTestId('glossary-footer-count'))).toContain('max-sm:px-4');
+    expect(tokens(screen.getByTestId('glossary-footer'))).toContain('max-sm:px-4');
+  });
+});
+
+// ─── sub-8-1: export / import (F6-D-v2 footer, F6c-D-v2 result) ─────────────
+
+describe('GlossaryPanelV2 — 匯出／匯入 (sub-8-1)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const IMPORT = {
+    imported: 12,
+    skipped: 3,
+    title: '怪奇物語',
+    conflicts: [
+      {
+        id: 'c1',
+        termSrc: 'Darkling',
+        mine: '闇之手',
+        theirs: '黑暗之主',
+        mineSource: 'manual',
+        mineConfirmed: true,
+      },
+      {
+        id: 'c2',
+        termSrc: 'Kirigan',
+        mine: '凱利根',
+        theirs: '基里根',
+        mineSource: 'subtitle',
+        mineConfirmed: false,
+      },
+    ],
+  };
+
+  function pickFile(testId = 'glossary-import-file') {
+    const file = new File(['{}'], 'vido-glossary-tmdb-tv-66732.json', { type: 'application/json' });
+    fireEvent.change(screen.getByTestId(testId), { target: { files: [file] } });
+    return file;
+  }
+
+  it('the footer carries 匯出檔案 / 匯入檔案 as Ghost buttons beside the count', async () => {
+    mocked.listTerms.mockResolvedValue([term()]);
+    renderPanel();
+    await screen.findByTestId('glossary-list');
+    const footer = screen.getByTestId('glossary-footer');
+    expect(footer).toContainElement(screen.getByTestId('glossary-footer-count'));
+    expect(screen.getByTestId('glossary-export')).toHaveTextContent('匯出檔案');
+    expect(screen.getByTestId('glossary-import')).toHaveTextContent('匯入檔案');
+    expect(screen.getByTestId('glossary-exchange').className).toContain('max-sm:hidden');
+    expect(screen.getByTestId('glossary-exchange-m').className).toContain('sm:hidden');
+  });
+
+  it('匯出 downloads the server file under the server filename', async () => {
+    mocked.listTerms.mockResolvedValue([term()]);
+    mocked.exportFile.mockResolvedValue({
+      blob: new Blob(['{}']),
+      filename: 'vido-glossary-tmdb-tv-66732.json',
+    });
+    const create = vi.fn(() => 'blob:x');
+    const revoke = vi.fn();
+    Object.assign(URL, { createObjectURL: create, revokeObjectURL: revoke });
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => undefined);
+    renderPanel();
+    fireEvent.click(await screen.findByTestId('glossary-export'));
+    await waitFor(() => expect(click).toHaveBeenCalledTimes(1));
+    expect(mocked.exportFile).toHaveBeenCalledWith('42');
+    expect(revoke).toHaveBeenCalledWith('blob:x');
+    click.mockRestore();
+  });
+
+  it('匯入 shows the summary and the conflicts; nothing is overwritten until the user picks', async () => {
+    mocked.listTerms.mockResolvedValue([term()]);
+    mocked.importFile.mockResolvedValue(IMPORT);
+    renderPanel();
+    await screen.findByTestId('glossary-list');
+    const file = pickFile();
+    await screen.findByTestId('glossary-import-result');
+    expect(mocked.importFile).toHaveBeenCalledWith('42', file);
+    expect(screen.getByTestId('glossary-import-result')).toHaveTextContent(
+      '已匯入「怪奇物語」的詞彙表'
+    );
+    expect(screen.getByTestId('glossary-import-summary').textContent).toBe(
+      '新增 12 個詞（待你確認） · 3 個跟你的一樣，略過 · 2 個跟你的不一樣：'
+    );
+    expect(screen.getByTestId('glossary-conflict-c1')).toHaveTextContent(
+      '你的 闇之手 · 他的 黑暗之主'
+    );
+    expect(mocked.editTerm).not.toHaveBeenCalled();
+  });
+
+  it('保留我的 drops the row; 改用他的 is an edit that confirms', async () => {
+    mocked.listTerms.mockResolvedValue([term()]);
+    mocked.importFile.mockResolvedValue(IMPORT);
+    mocked.editTerm.mockResolvedValue(undefined);
+    renderPanel();
+    await screen.findByTestId('glossary-list');
+    pickFile();
+    fireEvent.click(await screen.findByTestId('glossary-conflict-keep-c1'));
+    expect(screen.queryByTestId('glossary-conflict-c1')).toBeNull();
+    fireEvent.click(screen.getByTestId('glossary-conflict-theirs-c2'));
+    await waitFor(() =>
+      expect(mocked.editTerm).toHaveBeenCalledWith('42', 'c2', {
+        termZh: '基里根',
+        confirmed: true,
+      })
+    );
+    await waitFor(() => expect(screen.queryByTestId('glossary-conflict-c2')).toBeNull());
+    expect(screen.getByTestId('glossary-import-summary')).toHaveTextContent(
+      '2 個不一樣的都處理好了'
+    );
+  });
+
+  it('全部改用他的 edits each in turn and stops at the first failure', async () => {
+    mocked.listTerms.mockResolvedValue([term()]);
+    mocked.importFile.mockResolvedValue(IMPORT);
+    mocked.editTerm.mockRejectedValueOnce(new Error('boom'));
+    renderPanel();
+    await screen.findByTestId('glossary-list');
+    pickFile();
+    fireEvent.click(await screen.findByTestId('glossary-conflict-theirs-all'));
+    await screen.findByTestId('glossary-write-error');
+    expect(mocked.editTerm).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('glossary-conflict-c1')).toBeInTheDocument();
+    expect(screen.getByTestId('glossary-conflict-c2')).toBeInTheDocument();
+  });
+
+  it('a refused file shows the server reason in the result slot, not a toast (note ①–④)', async () => {
+    mocked.listTerms.mockResolvedValue([term()]);
+    mocked.importFile.mockRejectedValue(
+      new GlossaryExchangeError(
+        '這個檔案是別部片的詞彙表。請到那部片的詞彙表匯入。',
+        'GLOSSARY_SCOPE_MISMATCH'
+      )
+    );
+    renderPanel();
+    await screen.findByTestId('glossary-list');
+    pickFile();
+    expect(await screen.findByTestId('glossary-exchange-error')).toHaveTextContent(
+      '這個檔案是別部片的詞彙表。'
+    );
+    fireEvent.click(screen.getByTestId('glossary-exchange-dismiss'));
+    expect(screen.queryByTestId('glossary-exchange-error')).toBeNull();
+  });
+
+  it('an empty table can still be seeded: 匯入 works, 匯出 is disabled', async () => {
+    mocked.listTerms.mockResolvedValue([]);
+    renderPanel();
+    await screen.findByTestId('glossary-empty');
+    expect(screen.getByTestId('glossary-export')).toBeDisabled();
+    expect(screen.getByTestId('glossary-import')).toBeEnabled();
+    expect(screen.getByTestId('glossary-footer').className).toContain('max-sm:hidden');
+  });
+
+  it('reopening the panel starts clean', async () => {
+    mocked.listTerms.mockResolvedValue([term()]);
+    mocked.importFile.mockResolvedValue(IMPORT);
+    const { setOpen } = renderPanel();
+    await screen.findByTestId('glossary-list');
+    pickFile();
+    await screen.findByTestId('glossary-import-result');
+    setOpen(false);
+    setOpen(true);
+    await screen.findByTestId('glossary-list');
+    expect(screen.queryByTestId('glossary-import-result')).toBeNull();
   });
 });

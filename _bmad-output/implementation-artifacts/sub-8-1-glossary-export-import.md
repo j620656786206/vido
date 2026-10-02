@@ -1,6 +1,6 @@
 # Story 8.1: 詞彙表匯出／匯入（檔案）—— 驗證「共享」有沒有人要（全端，小）
 
-Status: in-progress
+Status: review
 
 **Depends on:** sub-7-1（scope 綁 TMDb ID；沒有共同 ID 匯入對不上）。B 路線第一步；party-mode 裁定「先做最笨的：匯出一個檔，貼給朋友匯入」。
 
@@ -55,8 +55,9 @@ so that we stop translating the same characters two different ways — before an
 ## Tasks / Subtasks
 
 - [x] **Task 1 — 格式 + 端點 + 錯誤碼（AC: #1, #2）**
-- [ ] **Task 2 — UI（AC: #3）**
-- [ ] **Task 3 — 測試（AC: #4）**
+- [x] **Task 0 — 設計稿**（2026-10-02 Alexyu inline agent；Sally MCP 逐節點複審：F6-D／F6-M Ghost（`StCnR`）匯出／匯入、F6c-D `zv4hT`／F6c-M `x1uKHq` 結果區塊與兩列衝突、字型與色票、note 四行；`problems` 全空、token 檢查綠 210 張。Alexyu 這次沒 commit，由 Claude 代為 commit `e5a65c37`。）
+- [x] **Task 2 — UI（AC: #3）**
+- [x] **Task 3 — 測試（AC: #4）**
 
 ## Dev Notes
 
@@ -86,7 +87,9 @@ Claude Opus 5.5（Amelia）
 - 匯出／匯入次數記 log（無遙測）。
 - 測試 7 條（服務 4：匯出形狀與排序、local 拒絕、匯入新增／略過／衝突、各種拒收不寫入；handler 3：匯出是檔案下載、JSON 與 multipart 匯入、錯誤碼對應含 2MB 上限）。
 - 🔗 AC Drift：AC #2「confirmed=1／manual → 跳過不覆寫；其餘 insert-if-absent」→ 實作為「已有的詞一律不覆寫，譯法不同就回 conflict」——insert-if-absent 本來就不會蓋掉任何已存在的列，原文的「其餘」實際上也不會被覆寫；把兩種都列為 conflict，使用者才看得到差異。
-- ⏳ Task 2（UI）等 Task 0 設計稿。
+- **前端（Task 2）**：`glossaryService.exportFile`（拿檔案本體＋伺服器檔名）／`importFile`（multipart）、`GlossaryExchangeError`（訊息已含後端的「怎麼辦」建議）；`useGlossaryMutations` 加 `exportFile`／`importFile`（匯入後 invalidate 清單）。`GlossaryPanelV2`：桌機 footer 右側 Ghost「匯出檔案／匯入檔案」、手機在「新增詞彙」下方兩顆半寬「匯出／匯入」；空表也能匯入（匯出停用）——朋友的檔是空表最快的起點。新元件 `GlossaryImportResultCard`：清單上方一塊結果（標題、摘要、衝突列「保留我的／改用他的」、兩顆以上衝突才出「全部」），錯誤放在同一個位置（note ④，不用 toast）；「改用他的」走一般編輯（伺服器自動確認），「全部改用他的」逐筆、第一筆失敗就停；重開面板清空。
+- 測試：panel spec +8（footer 按鈕、下載、摘要與衝突、保留／改用、全部改用遇錯停、拒收訊息、空表可匯入、重開清空）、既有 2 條依新結構改寫（手機空表的動作區只剩匯出入列；footer gutter 改看外層）；web 全量 4,469 綠。
+- 視覺：新增 3 張（結果卡桌機／手機／錯誤）；既有 3 張（seeded／seeded-mobile／empty）因 footer 變了重拍 darwin、刪掉舊 linux 讓 CI bootstrap 重出。逐張對過 F6-D／F6-M／F6c-D。
 
 ### Discovery Triage
 
@@ -97,6 +100,9 @@ Claude Opus 5.5（Amelia）
 - apps/api/internal/services/glossary_exchange.go、glossary_exchange_test.go
 - apps/api/internal/handlers/glossary_handler.go、glossary_handler_test.go
 - apps/api/cmd/api/main.go
+- apps/web/src/services/glossaryService.ts；hooks/useGlossary.ts；components/subtitle/GlossaryPanelV2.tsx、GlossaryPanelV2.spec.tsx、GlossaryImportResult.tsx；routes/test/-gallery.fixtures.tsx
+- tests/visual/…/glossary-panel-v2/{seeded,seeded-mobile,empty}、glossary-import-result/{conflicts,conflicts-mobile,error}
+- ux-design.pen、scripts/export-pen-screenshots.py、_bmad-output/pen-tokens.json、_bmad-output/screenshots/flow-f-subtitle-v2/f6-d-v2.png、f6-m-v2.png、f6c-d-v2.png、f6c-m-v2.png
 - project-context.md、_bmad/bmm/workflows/4-implementation/code-review/instructions.xml
 - _bmad-output/implementation-artifacts/sub-8-1-glossary-export-import.md、sprint-status.yaml
 
@@ -107,3 +113,4 @@ Claude Opus 5.5（Amelia）
 | ---------- | ------ |
 | 2026-09-04 | create-story。 |
 | 2026-10-02 | dev-story Task 1 後端（Amelia）；Task 0 提示詞（Sally）。 |
+| 2026-10-02 | Task 0 設計稿完成（Alexyu）；Task 2–3 前端（Amelia）→ review。 |
