@@ -1,6 +1,6 @@
 # Story 13-7b: Request cancel + retry — frontend (RequestRow action-area wiring)
 
-Status: review
+Status: done
 
 > **Depends on: 13-7a (backend API must be ready)** — `DELETE /api/v1/requests/{id}` + `POST /api/v1/requests/{id}/retry` [@contract-v1].
 > Split note: 13-7 counted 5 BE + 5 FE tasks → mandatory a/b split (Epic 8 Retro Agreement 5). This is the **frontend** half.

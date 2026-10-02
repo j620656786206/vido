@@ -15,6 +15,8 @@ import { Check, Loader2, Plus } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useRequestActions } from '../../hooks/useRequestActions';
 import type { RequestMediaType } from '../../services/requestService';
+import { SeasonEpisodeTreeDialog } from './SeasonEpisodeTreeDialog';
+import type { RequestPayload } from '../../utils/requestSelection';
 
 export interface RequestButtonProps {
   tmdbId: number;
@@ -25,6 +27,12 @@ export interface RequestButtonProps {
   requested: boolean;
   fullWidth?: boolean;
   className?: string;
+  /**
+   * 13-2b: for a tv show, 想要 opens the L3 season/episode tree instead of
+   * requesting the whole title at once (the detail page sets this; card
+   * contexts keep the one-click whole-title request).
+   */
+  pickEpisodes?: boolean;
 }
 
 type ToastState = { kind: 'success' } | { kind: 'error'; message: string } | null;
@@ -37,10 +45,12 @@ export function RequestButton({
   requested,
   fullWidth,
   className,
+  pickEpisodes = false,
 }: RequestButtonProps) {
   const navigate = useNavigate();
   const { create } = useRequestActions();
   const [toast, setToast] = useState<ToastState>(null);
+  const [treeOpen, setTreeOpen] = useState(false);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -62,11 +72,12 @@ export function RequestButton({
     e.stopPropagation();
   };
 
-  const handleRequest = (e: React.MouseEvent) => {
-    guard(e);
+  const opensTree = pickEpisodes && mediaType === 'tv';
+
+  const submit = (selection?: { seasons?: number[]; episodes?: Record<string, number[]> }) => {
     if (create.isPending) return;
     create.mutate(
-      { tmdbId, mediaType, title },
+      { tmdbId, mediaType, title, ...selection },
       {
         onSuccess: () => showToast({ kind: 'success' }),
         onError: (error) => {
@@ -81,6 +92,32 @@ export function RequestButton({
       }
     );
   };
+
+  const handleRequest = (e: React.MouseEvent) => {
+    guard(e);
+    if (opensTree) {
+      setTreeOpen(true);
+      return;
+    }
+    submit();
+  };
+
+  // The tree's 確認請求: everything checked on a show with nothing owned is the
+  // same whole-title request as one click (no selection on the wire, 13-2b).
+  const handleTreeConfirm = (payload: RequestPayload) => {
+    setTreeOpen(false);
+    submit(payload.whole ? undefined : { seasons: payload.seasons, episodes: payload.episodes });
+  };
+
+  const tree = opensTree ? (
+    <SeasonEpisodeTreeDialog
+      open={treeOpen}
+      onOpenChange={setTreeOpen}
+      tmdbId={tmdbId}
+      title={title}
+      onConfirm={handleTreeConfirm}
+    />
+  ) : null;
 
   // 已入庫 — $success-tint pill, no action (design L2 states-strip).
   if (owned) {
@@ -129,6 +166,7 @@ export function RequestButton({
           已請求 · 處理中
         </span>
         {toast && <RequestToast toast={toast} onView={navigate} guard={guard} />}
+        {tree}
       </>
     );
   }
@@ -150,6 +188,7 @@ export function RequestButton({
         想要
       </button>
       {toast && <RequestToast toast={toast} onView={navigate} guard={guard} />}
+      {tree}
     </>
   );
 }

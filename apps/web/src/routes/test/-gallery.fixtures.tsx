@@ -205,6 +205,7 @@ import { GlossaryRowV2 } from '../../components/subtitle/GlossaryRowV2';
 import { GlossaryPanelV2 } from '../../components/subtitle/GlossaryPanelV2';
 import { GlossaryImportResultCard } from '../../components/subtitle/GlossaryImportResult';
 import { ManageSubtitleDialogV2 } from '../../components/subtitle/ManageSubtitleDialogV2';
+import { SeasonEpisodeTreeDialog } from '../../components/requests/SeasonEpisodeTreeDialog';
 import { AnalysisProgressPanel } from '../../components/subtitle/consent/AnalysisProgressPanel';
 import { CandidateListPanel } from '../../components/subtitle/consent/CandidateListPanel';
 import { ConsentEmptyState } from '../../components/subtitle/consent/ConsentEmptyState';
@@ -748,6 +749,84 @@ export interface GalleryFixture {
    * for forward compatibility. Added 19-4b Task 3.
    */
   seedStore?: () => void;
+}
+
+// 13-2b season-tree fixtures: the show, its season 1, and a coverage answer —
+// keys mirror useTVShowDetails / SeasonEpisodeTreeDialog exactly.
+const SEASON_TREE_EPISODES = [
+  '致兩千年後的你',
+  '那一天',
+  '絕望中的微光',
+  '初陣',
+  '首戰之後',
+  '少女看見的世界',
+  '小小的刀刃',
+  '心臟的跳動聲',
+];
+function SEASON_TREE_SEED(coverage: unknown) {
+  return [
+    {
+      queryKey: ['details', 'tv', 1429],
+      data: {
+        id: 1429,
+        name: '進擊的巨人',
+        seasons: [
+          {
+            id: 1,
+            name: '第 1 季',
+            seasonNumber: 1,
+            episodeCount: 25,
+            overview: '',
+            posterPath: null,
+            airDate: null,
+          },
+          {
+            id: 2,
+            name: '第 2 季',
+            seasonNumber: 2,
+            episodeCount: 12,
+            overview: '',
+            posterPath: null,
+            airDate: null,
+          },
+          {
+            id: 3,
+            name: '第 3 季',
+            seasonNumber: 3,
+            episodeCount: 22,
+            overview: '',
+            posterPath: null,
+            airDate: null,
+          },
+          {
+            id: 4,
+            name: '最終季',
+            seasonNumber: 4,
+            episodeCount: 28,
+            overview: '',
+            posterPath: null,
+            airDate: null,
+          },
+        ],
+      },
+    },
+    {
+      queryKey: ['tmdb', 'tv', 1429, 'season', 1],
+      data: {
+        id: 1,
+        name: '第 1 季',
+        seasonNumber: 1,
+        episodes: Array.from({ length: 25 }, (_, i) => ({
+          id: 1000 + i,
+          episodeNumber: i + 1,
+          seasonNumber: 1,
+          name: SEASON_TREE_EPISODES[i] ?? `第 ${i + 1} 集`,
+          airDate: null,
+        })),
+      },
+    },
+    { queryKey: ['requests', 'coverage', 1429], data: coverage },
+  ] as const;
 }
 
 // dsr-6d-b batch-dialog fixture queue. ONE source for every batch state so the
@@ -5023,6 +5102,100 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     penNode: 'LkjRd', // Component/RequestRow-v2
     statesOnly: ['default'],
     width: 720,
+  },
+  {
+    // 13-2b AC #4 — a partial request's range in the meta row.
+    id: 'request-row/partial',
+    label: 'requests/RequestRow (partial tv request)',
+    component: RequestRow,
+    props: {
+      request: {
+        id: 'fx-partial',
+        tmdbId: 1429,
+        mediaType: 'tv',
+        title: '進擊的巨人',
+        status: 'pending',
+        fulfilmentSource: null,
+        externalId: null,
+        seasons: '[2]',
+        episodes: '{"1":[4,5,6]}',
+        errorMessage: null,
+        requestedAt: '2026-06-28T10:00:00Z',
+        updatedAt: '2026-06-28T10:00:00Z',
+      },
+      onCancel: noop,
+    },
+    penNode: 'LkjRd', // Component/RequestRow-v2
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    // 13-2b — L3-D-v2 (He04g): season 1 open, E01/E02 already in the library.
+    id: 'request-season-tree/content',
+    label: 'requests/SeasonEpisodeTreeDialog (owned episodes locked)',
+    component: SeasonEpisodeTreeDialog,
+    props: {
+      open: true,
+      onOpenChange: noop,
+      tmdbId: 1429,
+      title: '進擊的巨人',
+      onConfirm: noop,
+      defaultExpanded: [1],
+    },
+    seedQueries: SEASON_TREE_SEED({
+      owned: { '1': [1, 2] },
+      requestedSeasons: [],
+      requestedEpisodes: {},
+      wholeSeriesRequested: false,
+      activeRequest: false,
+    }),
+    penNode: 'He04g',
+    statesOnly: ['default'],
+  },
+  {
+    id: 'request-season-tree/content-mobile',
+    label: 'requests/SeasonEpisodeTreeDialog (phone)',
+    component: SeasonEpisodeTreeDialog,
+    props: {
+      open: true,
+      onOpenChange: noop,
+      tmdbId: 1429,
+      title: '進擊的巨人',
+      onConfirm: noop,
+      defaultExpanded: [1],
+    },
+    seedQueries: SEASON_TREE_SEED({
+      owned: { '1': [1, 2] },
+      requestedSeasons: [],
+      requestedEpisodes: {},
+      wholeSeriesRequested: false,
+      activeRequest: false,
+    }),
+    penNode: 'He04g',
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+  },
+  {
+    // ⚖️ A — an open request for the show blocks the tree.
+    id: 'request-season-tree/active',
+    label: 'requests/SeasonEpisodeTreeDialog (open request blocks the tree)',
+    component: SeasonEpisodeTreeDialog,
+    props: {
+      open: true,
+      onOpenChange: noop,
+      tmdbId: 1429,
+      title: '進擊的巨人',
+      onConfirm: noop,
+    },
+    seedQueries: SEASON_TREE_SEED({
+      owned: {},
+      requestedSeasons: [],
+      requestedEpisodes: {},
+      wholeSeriesRequested: true,
+      activeRequest: true,
+    }),
+    penNode: 'He04g',
+    statesOnly: ['default'],
   },
   {
     id: 'subtitle-batch-subtitle-panel-complete',

@@ -13,6 +13,7 @@
  */
 import { Film } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { storedSelectionParts } from '../../utils/requestSelection';
 import type { MediaRequest, RequestStatus } from '../../services/requestService';
 
 /** DL-v2 §2.5 status→token map — one state machine, no bespoke palette. */
@@ -73,10 +74,51 @@ function localDay(iso?: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+/**
+ * 13-2b AC #4 — a partial request's range, e.g. 「第 1、2 季」 or 「第 3 季 3
+ * 集」 (numbers in Mono, TY-3). Whole-title requests show nothing. L1–L7 draw
+ * no range on the row (design gap → disc-2026-10-request-row-range-undrawn),
+ * so this is the minimal one-line text the story allows, in the meta row.
+ */
+function rangeLabel(seasons: string | null, episodes: string | null): React.ReactNode {
+  const parts = storedSelectionParts(seasons, episodes);
+  if (!parts) return null;
+  const nodes: React.ReactNode[] = [];
+  if (parts.seasons.length > 0) {
+    nodes.push(
+      <span key="s">
+        第{' '}
+        {parts.seasons.map((n, i) => (
+          <span key={n}>
+            {i > 0 && '、'}
+            <span className="font-mono tabular-nums">{n}</span>
+          </span>
+        ))}{' '}
+        季
+      </span>
+    );
+  }
+  for (const [season, count] of parts.episodes) {
+    nodes.push(
+      <span key={`e${season}`}>
+        第 <span className="font-mono tabular-nums">{season}</span> 季{' '}
+        <span className="font-mono tabular-nums">{count}</span> 集
+      </span>
+    );
+  }
+  return nodes.map((node, i) => (
+    <span key={i}>
+      {i > 0 && ' · '}
+      {node}
+    </span>
+  ));
+}
+
 export function RequestRow({ request, onCancel, onRetry, busy = false }: RequestRowProps) {
   const token = STATUS_TOKENS[request.status] ?? STATUS_TOKENS.pending;
   const date = localDay(request.requestedAt);
   const caption = request.status === 'failed' ? request.errorMessage : null;
+  const range = rangeLabel(request.seasons, request.episodes);
   const showCancel = request.status === 'pending' && !!onCancel;
   const showRetry = request.status === 'failed' && !!onRetry;
   const pctNum =
@@ -105,6 +147,16 @@ export function RequestRow({ request, onCancel, onRetry, busy = false }: Request
         <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{request.title}</p>
         <div className="mt-1 flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap text-xs text-[var(--text-secondary)]">
           <span>{request.mediaType === 'movie' ? '電影' : '影集'}</span>
+          {range && (
+            <>
+              <span className="text-[var(--text-muted)]" aria-hidden="true">
+                ·
+              </span>
+              <span data-testid="request-range" className="min-w-0 truncate">
+                {range}
+              </span>
+            </>
+          )}
           <span className="text-[var(--text-muted)]" aria-hidden="true">
             ·
           </span>
