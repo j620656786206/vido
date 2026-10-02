@@ -1,6 +1,6 @@
 # Story 13-7b: Request cancel + retry — frontend (RequestRow action-area wiring)
 
-Status: ready-for-dev
+Status: review
 
 > **Depends on: 13-7a (backend API must be ready)** — `DELETE /api/v1/requests/{id}` + `POST /api/v1/requests/{id}/retry` [@contract-v1].
 > Split note: 13-7 counted 5 BE + 5 FE tasks → mandatory a/b split (Epic 8 Retro Agreement 5). This is the **frontend** half.
@@ -24,15 +24,15 @@ so that I can act on my requests without leaving the list, and a failed request 
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Service methods (AC: 2)
+- [x] Task 1: Service methods (AC: 2)
   - [ ] `cancelRequest` / `retryRequest` + spec (204 empty-body path, error-code surfacing)
-- [ ] Task 2: Mutations (AC: 3)
+- [x] Task 2: Mutations (AC: 3)
   - [ ] `cancel` + `retry` in `useRequestActions.ts` + spec (optimistic/rollback/invalidate/409 resync)
-- [ ] Task 3: RequestRow action-area (AC: 1, 5)
+- [x] Task 3: RequestRow action-area (AC: 1, 5)
   - [ ] Per-status matrix + drawn styling + testids + in-flight disable + spec
-- [ ] Task 4: Toast feedback (AC: 4)
+- [x] Task 4: Toast feedback (AC: 4)
   - [ ] Success/error toasts per RequestToast portal pattern + spec
-- [ ] Task 5: Verification (AC: 7)
+- [x] Task 5: Verification (AC: 7)
   - [ ] Gallery fixtures (pending/failed action states); lint:all; affected tests; build; browser-verify vs `l1-d-v2.png` @390/768/1440
 
 **Cross-stack split check:** backend tasks = 0 (13-7a owns them), frontend tasks = 5 → single story. ✓
@@ -91,15 +91,40 @@ so that I can act on my requests without leaving the list, and a failed request 
 
 ### Agent Model Used
 
-(fill at dev time)
+Claude Opus 5.5（2026-10-02）
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- **Contract acks**：confirmed against [@contract-v1]（13-7a AC #1/#2，實際合併版本：重試另有 409 `REQUEST_DUPLICATE` 與 502 `REQUEST_RETRY_CLEANUP_FAILED`，前端一律顯示 API 的中文訊息）；confirmed against [@contract-v1]（13-1a AC #3 list shape 不變）；[@contract-v2]（13-4b selection-aware AddSeries）對前端零影響。
+- **設計稿對照（Pencil MCP 讀 `pbeYJ`／`yTntT`／`iyYqV`／`qDo2F`／`YDPhc`）**：取消＝純文字鈕 `$text-secondary`、14px（`$Type/Body/Size` 實為 14，故事寫的 13px 以稿為準）、44px 高、`px-3.5`（`$Space/md-plus`=14）；重試＝`Button variant="secondary"` 拉到 44px、`px-5`（`$Space/lg-plus`=20）；失敗原因＋重試間距 10（`gap-2.5`）。
+- **AC #3 偏離（CR 後定案）**：
+  - 取消仍是 optimistic 移除，但 rollback **只放回自己那一列**（原位置），不再整份快照覆蓋——整份還原會把另一列後來發生的操作一起洗掉。
+  - 重試**不做** optimistic 改成 searching：13-3b 的 `applyRequestSnapshot` 把「快照裡沒有、但快取是進行中狀態」的列當成已刪除丟掉；伺服器還沒寫入前，那一列在 DB 仍是 failed，不在快照裡，所以一推送就會從畫面消失。改成：列維持「失敗」、重試鈕停用，伺服器回應後直接換成回傳的列。
+  - 正在取消的列在 view 層也濾掉（`usePendingRequestActions` 讀所有進行中的 mutation），SSE 快照在 DELETE 落地前把它加回來也不會閃現。
+- **Toast**：放在 `RequestsView`（取消會移除列，放在列裡會跟著消失）；四種狀態都渲染（取消最後一筆會切到空狀態，toast 要留著）。改用 `mutateAsync` 逐次接結果——`mutate(id, { onError })` 的單次 callback 只會對「最後一次」呼叫觸發，連按兩列時第一個失敗會完全沒有提示（CR 抓到）。錯誤 toast `role="alert"` + `aria-live="assertive"`。
+- **手機**：L4-M-v2 沒畫按鈕與失敗原因（已立案 `disc-2026-10-request-row-mobile-actions-undrawn` 給 Sally）。實作：按鈕照樣放在狀態膠囊右邊；失敗原因在 md 以下留在片名下、md 起移進按鈕旁；片名的 7rem 下限只在 md 起生效。
+- **瀏覽器實測**（`scripts/serve-test-env.sh` + 寫入 6 筆請求、Playwright）：1440／768／390／360／320 都沒有橫向溢出、按鈕沒超出卡片、meta 不壓到膠囊；實按取消→列消失＋「已取消請求」；對有 *arr 連結的失敗列按重試（Radarr 未設定）→ 列維持失敗＋「沒能清掉壞掉的下載，這次重試沒有生效」；對無連結的失敗列按重試→「已重新嘗試，開始搜尋來源」，列變「想要」。
+- **Adversarial CR（2026-10-02，獨立 agent，實跑重現 spec 與 Playwright 量測）**：
+  - ✅ 修：重疊操作時先發的失敗沒有 toast（改 `mutateAsync`）。
+  - ✅ 修：整份快照 rollback 洗掉別列的進行中狀態（改逐列還原）。
+  - ✅ 修：320／360px 重試鈕超出卡片 33／9px（片名下限改成只在 md 起）；修完再實測又發現 320px meta 行壓到膠囊，加 `overflow-hidden`＋日期 `truncate`。
+  - ✅ 修：SSE 推送時重試中的列被丟掉、取消中的列被加回（見上）。
+  - ✅ 修：原本的 view 測試是空洞通過（refetch 本來就回空清單），改成伺服器持續回傳該列，只有 optimistic 路徑能讓它消失；補重疊操作與停用狀態的測試。
+  - 📝 不修（13-1b 既有）：手機 toast 疊在底部 tab bar 上方、toast 插入時部分讀屏不唸、操作後焦點回到 body。
+- **Visual**：pending／failed 兩個 gallery fixture 改帶 handler（產品裡就是這樣出現），重產 darwin 基準、刪掉舊 linux 基準等 CI 自動開 bootstrap PR。
+
 ### Discovery Triage
 
 - Authoring-time discoveries are recorded on 13-7a (shared split): `disc-2026-07-cancel-active-requests` (③) + the seed-vs-design narrowing. Nothing FE-specific filed.
-- (Dev: add further in-flight discoveries per Rule 24 before marking done.)
+- **③ `disc-2026-10-request-row-mobile-actions-undrawn`**（2026-10-02，dev 時發現，雙向）：手機稿 L4-M-v2 沒畫取消／重試與失敗原因；實作的手機排法待 Sally 補稿或改裁。
 
 ### File List
+
+- apps/web/src/services/requestService.ts、requestService.spec.ts
+- apps/web/src/hooks/useRequestActions.ts、useRequestActions.spec.tsx
+- apps/web/src/components/requests/RequestRow.tsx、RequestRow.spec.tsx
+- apps/web/src/components/requests/RequestsView.tsx、RequestsView.spec.tsx
+- apps/web/src/routes/test/-gallery.fixtures.tsx
+- tests/visual/components.visual.spec.ts-snapshots/components/request-row/{pending,failed}/default-visual-darwin.png（重產）；同層 -linux.png（刪除，待 CI bootstrap）

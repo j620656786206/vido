@@ -4920,6 +4920,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         requestedAt: '2026-06-28T10:00:00Z',
         updatedAt: '2026-06-28T10:00:00Z',
       },
+      onCancel: noop,
     },
     penNode: 'LkjRd', // Component/RequestRow-v2
     statesOnly: ['default'],
@@ -4993,6 +4994,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         requestedAt: '2026-06-28T10:00:00Z',
         updatedAt: '2026-06-28T10:00:00Z',
       },
+      onRetry: noop,
     },
     penNode: 'LkjRd', // Component/RequestRow-v2
     statesOnly: ['default'],

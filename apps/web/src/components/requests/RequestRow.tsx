@@ -6,11 +6,13 @@
  * §2.5 shared token map — all five enum statuses wired (capability-honor: only
  * `pending` occurs until 13-3/13-4 land; no bespoke palette). The Mono
  * progress-% slot renders only when a progress value exists (13-3b's SSE
- * supplies it live). The design's cancel/retry action-area is deliberately NOT
- * built — no backend endpoint exists yet (Rule 24 lane ③: 13-7 in
- * sprint-status.yaml).
+ * supplies it live). The trailing action-area (13-7b, `pbeYJ`) follows the
+ * design matrix: 取消 only on pending, fail-caption + 重試 only on failed,
+ * nothing interactive on searching/downloading/completed. Actions render only
+ * when the parent passes the handler (gallery/static uses stay inert).
  */
 import { Film } from 'lucide-react';
+import { Button } from '../ui/Button';
 import type { MediaRequest, RequestStatus } from '../../services/requestService';
 
 /** DL-v2 §2.5 status→token map — one state machine, no bespoke palette. */
@@ -50,6 +52,12 @@ const DOT_BG: Record<RequestStatus, string> = {
 
 export interface RequestRowProps {
   request: MediaRequest & { progress?: number };
+  /** Cancel a pending request (13-7b). Absent → no 取消 button. */
+  onCancel?: () => void;
+  /** Retry a failed request (13-7b). Absent → no 重試 button. */
+  onRetry?: () => void;
+  /** This row's cancel/retry is in flight — the button disables (no double-fire). */
+  busy?: boolean;
 }
 
 /**
@@ -65,9 +73,12 @@ function localDay(iso?: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-export function RequestRow({ request }: RequestRowProps) {
+export function RequestRow({ request, onCancel, onRetry, busy = false }: RequestRowProps) {
   const token = STATUS_TOKENS[request.status] ?? STATUS_TOKENS.pending;
   const date = localDay(request.requestedAt);
+  const caption = request.status === 'failed' ? request.errorMessage : null;
+  const showCancel = request.status === 'pending' && !!onCancel;
+  const showRetry = request.status === 'failed' && !!onRetry;
   const pctNum =
     request.status === 'downloading' && typeof request.progress === 'number'
       ? Math.round(request.progress * 100)
@@ -86,18 +97,23 @@ export function RequestRow({ request }: RequestRowProps) {
         <Film className="h-[18px] w-[18px] text-[var(--text-muted)]" />
       </div>
 
-      {/* Title + meta */}
-      <div className="min-w-0 flex-1">
+      {/* Title + meta. From md the 7rem floor makes a long fail-caption
+          truncate instead of squeezing the title to nothing (768px, 13-7b);
+          below md there is no caption beside the buttons, and a floor would
+          push 重試 out of the card on a 320–360px phone. */}
+      <div className="min-w-0 flex-1 md:min-w-[7rem]">
         <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{request.title}</p>
-        <div className="mt-1 flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
+        <div className="mt-1 flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap text-xs text-[var(--text-secondary)]">
           <span>{request.mediaType === 'movie' ? '電影' : '影集'}</span>
           <span className="text-[var(--text-muted)]" aria-hidden="true">
             ·
           </span>
-          <span className="font-mono tabular-nums">{date}</span>
+          <span className="truncate font-mono tabular-nums">{date}</span>
         </div>
-        {request.status === 'failed' && request.errorMessage && (
-          <p className="mt-1 truncate text-xs text-[var(--error-text)]">{request.errorMessage}</p>
+        {/* Below md the trailing cluster has no room for the caption (L4-M-v2
+            draws none) — it stays under the title there. */}
+        {caption && (
+          <p className="mt-1 truncate text-xs text-[var(--error-text)] md:hidden">{caption}</p>
         )}
       </div>
 
@@ -130,6 +146,48 @@ export function RequestRow({ request }: RequestRowProps) {
         >
           {pctNum}%
         </span>
+      )}
+
+      {/* Action-area (pbeYJ). Failed override iyYqV: fail-caption XJ1hS + 重試
+          qDo2F (ButtonSecondary YDPhc at 44px), gap 10. Pending: 取消 yTntT — a
+          plain text button, $text-secondary, 44px, padding [0, md-plus]. */}
+      {(caption || showRetry) && (
+        <div className="flex min-w-0 shrink items-center gap-2.5">
+          {caption && (
+            <span
+              data-testid="request-fail-caption"
+              title={caption}
+              className="hidden max-w-[16rem] truncate text-xs text-[var(--error-text)] md:inline"
+            >
+              {caption}
+            </span>
+          )}
+          {showRetry && (
+            <Button
+              type="button"
+              variant="secondary"
+              data-testid="request-retry-btn"
+              onClick={onRetry}
+              disabled={busy}
+              aria-label={`重試請求：${request.title}`}
+              className="h-11 shrink-0 px-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+            >
+              重試
+            </Button>
+          )}
+        </div>
+      )}
+      {showCancel && (
+        <button
+          type="button"
+          data-testid="request-cancel-btn"
+          onClick={onCancel}
+          disabled={busy}
+          aria-label={`取消請求：${request.title}`}
+          className="flex h-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] px-3.5 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:pointer-events-none disabled:opacity-50"
+        >
+          取消
+        </button>
       )}
     </div>
   );
