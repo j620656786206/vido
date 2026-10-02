@@ -189,30 +189,50 @@ func (m *OfficialSubtitleMiner) MineSeries(ctx context.Context, seriesID string)
 // not). Pure local work, $0; failures are logged, never surfaced.
 func (m *OfficialSubtitleMiner) ScanCallback() func() {
 	return func() {
-		go func() {
-			if _, err := m.MinePartial(context.Background()); err != nil && !errors.Is(err, ErrMinerBusy) {
-				m.logger.Warn("post-scan official-subtitle mining failed", "error", err)
-			}
-		}()
+		if err := m.StartPartial(context.Background()); err != nil && !errors.Is(err, ErrMinerBusy) {
+			m.logger.Warn("post-scan official-subtitle mining failed to start", "error", err)
+		}
 	}
 }
 
-// MinePartial sweeps the library for partial shows and mines each. The
-// partial test is CHEAP on purpose — sidecar file names only, no ffprobe —
-// so a scan of a thousand episodes does not probe a thousand files; a show
-// whose only Chinese is an embedded track is reached through the manual
-// endpoint instead.
+// StartPartial claims the miner SYNCHRONOUSLY and runs the library sweep in
+// the background. Claiming before returning is the point: a client that
+// POSTs and immediately GETs the status must see running=true, not a stale
+// idle state that makes the button flash back to clickable.
+func (m *OfficialSubtitleMiner) StartPartial(ctx context.Context) error {
+	if !m.begin("partial") {
+		return ErrMinerBusy
+	}
+	go func() {
+		results, err := m.runPartial(ctx)
+		if err != nil {
+			m.logger.Warn("official-subtitle sweep stopped", "error", err)
+		}
+		m.finish(results)
+	}()
+	return nil
+}
+
+// MinePartial sweeps the library for partial shows and mines each,
+// synchronously. The partial test is CHEAP on purpose — sidecar file names
+// only, no ffprobe — so a scan of a thousand episodes does not probe a
+// thousand files; a show whose only Chinese is an embedded track is reached
+// through the single-show endpoint instead.
 func (m *OfficialSubtitleMiner) MinePartial(ctx context.Context) ([]MineResult, error) {
 	if !m.begin("partial") {
 		return nil, ErrMinerBusy
 	}
-	var results []MineResult
-	defer func() { m.finish(results) }()
+	results, err := m.runPartial(ctx)
+	m.finish(results)
+	return results, err
+}
 
+func (m *OfficialSubtitleMiner) runPartial(ctx context.Context) ([]MineResult, error) {
 	ids, err := m.partialSeries(ctx)
 	if err != nil {
 		return nil, err
 	}
+	var results []MineResult
 	for _, id := range ids {
 		if ctx.Err() != nil {
 			return results, ctx.Err()

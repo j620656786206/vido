@@ -1,6 +1,6 @@
 # Story sub-7-5b: 掃描完自動從官方字幕學譯名、寫進詞彙表、設定頁一顆按鈕 — 後端＋前端
 
-Status: in-progress
+Status: review
 
 <!-- SM Bob create-story 2026-10-01，由 sub-7-5 拆出；依賴 sub-7-5a（`mine` 套件與 NAS 實測結果）。行號為 main `12a4f507`。 -->
 
@@ -53,11 +53,11 @@ Status: in-progress
 
 ## Tasks / Subtasks
 
-- [ ] Task 0 — 設計稿（AC #5）
+- [x] Task 0 — 設計稿（AC #5）（2026-10-02 Alexyu inline agent 三個 commit 787821de／00d205ee／315e3f0f；Sally 以 MCP `Print` 逐字複審：C9-D 區塊小標 `LbCPg`、按鈕 `s1W8Wc`＝`YDPhc` Secondary、上次結果 `l4tJo` `$text-secondary`；C9-M 按鈕 `VkeFO`＝`JK9so` Touch 全寬、結果另起一行；Note `JTw7U` 四行 ①–④ 逐字相符；`problems` 全空；token 檢查綠。）
 - [x] Task 1 — `OfficialSubtitleMiner` 服務＋寫入（AC #1）
 - [x] Task 2 — 掃描後自動觸發（AC #2；SSE 改成狀態端點輪詢，見 Dev Agent Record）
-- [~] Task 3 — 端點（done）＋設定頁按鈕（等 Task 0 設計稿）（AC #3）
-- [~] Task 4 — 測試（BE 9 條 done；FE spec 等 Task 3）（AC #4）
+- [x] Task 3 — 端點＋設定頁區塊（AC #3）
+- [x] Task 4 — 測試（AC #4）
 
 ## Dev Notes
 
@@ -77,7 +77,9 @@ Claude Fable 5.1（Amelia）
 - 🔗 AC Drift：AC #2 的「`notification` SSE 一則」**不做**——前端沒有任何 `notification` 事件的消費者、後端也從未發過；改成狀態端點＋前端輪詢，結果留在設定頁那一行（也更符合「回來看上次學到幾個」）。AC #1 的「每劇最多 N 分鐘」未加硬上限：ffmpeg 已有 ExtractGate 與每集逾時。
 - 📎 來源檔名進 GlossaryPanel（7-5a 建議）：`show_glossary` 沒有欄位放，本單只在 `MineResult.episodes[].zh_source` 回報；立案 `backlog-glossary-term-provenance-file`。
 - 測試：miner 4 條（端到端含 Vido 自產排除與 known 不重寫、字幕組跳過、partial 只挑部分集有的劇、busy 與錯誤）、handler 3 條、scanner 串接 1 條；`go test ./...` 全綠、vet、staticcheck 乾淨。
-- ⏳ **前端（Task 3 按鈕＋Task 4 FE spec）等 Task 0 設計稿**。
+- **前端**：`OfficialSubtitleMiningCard` 放在字幕設定頁在地化程度下方（C9-D／C9-M）；桌機 Secondary、手機全寬金色 Touch（`max-sm:` 換色）；結果一行：「上次 YYYY-MM-DD HH:mm · 劇名 學到 N 個詞（M 集）、劇名 跳過 K 個字幕組檔」，沒跑過「還沒跑過」，沒有 partial 劇「片庫裡沒有『部分集有官方字幕』的影集」；跑中按鈕「學習中…」停用、每 3 秒輪詢（`refetchInterval` 只在 running 時開）。`glossaryMineService`／`useGlossaryMine`。
+- **後端補一處**：POST 背景掃描改成 `StartPartial`——在回 202 **之前**就把 miner 標成 running，前端緊接著的 GET 才不會看到舊的閒置狀態讓按鈕閃回可按（有測）。
+- FE 測試 8 條（文案規則 ①③④＋混合句＋失敗句、本地時間格式、閒置可按、跑中停用、409 顯示訊息）；web 全量 4,461 綠；gallery 4 張（上次結果／還沒跑過／學習中／手機）`-darwin` 基準本機拍、逐張對過 C9-D／C9-M；`-linux` 待 CI bootstrap。時間以執行者本地時區顯示，兩平台基準各自在自己的 runner 拍。
 
 ### Discovery Triage
 
@@ -89,6 +91,9 @@ Claude Fable 5.1（Amelia）
 - apps/api/internal/handlers/glossary_mine_handler.go、glossary_mine_handler_test.go
 - apps/api/internal/services/scanner_service.go、scanner_callback_chain_test.go
 - apps/api/cmd/api/main.go
+- apps/web/src/services/glossaryMineService.ts；hooks/useGlossaryMine.ts；components/settings/OfficialSubtitleMiningCard.tsx、OfficialSubtitleMiningCard.spec.tsx；routes/settings/subtitle.tsx；routes/test/-gallery.fixtures.tsx
+- tests/visual/components.visual.spec.ts-snapshots/components/settings-official-subtitle-mining/**/default-visual-darwin.png
+- ux-design.pen、_bmad-output/screenshots/flow-c-search-settings/c9-d.png、c9-m.png、_bmad-output/pen-tokens.json（Alexyu 三個 commit）
 - _bmad-output/implementation-artifacts/sub-7-5b-mine-official-subs-wiring.md、sub-7-5a-mine-official-subs-algorithm.md、sprint-status.yaml
 
 ## Change Log
@@ -97,3 +102,4 @@ Claude Fable 5.1（Amelia）
 | ---------- | ---------------------------------------- |
 | 2026-10-01 | create-story（SM Bob，自 sub-7-5 拆出）。 |
 | 2026-10-01 | dev-story Task 1–3 後端（Amelia）；Task 0 提示詞出稿（Sally），等 Alexyu 跑 inline agent。 |
+| 2026-10-02 | Task 0 完成（Alexyu inline agent；Sally MCP 複審通過）；前端區塊＋`StartPartial` → review。 |

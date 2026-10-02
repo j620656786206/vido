@@ -15,7 +15,7 @@ import (
 // *miner.OfficialSubtitleMiner satisfies it.
 type OfficialSubtitleMiner interface {
 	MineSeries(ctx context.Context, seriesID string) (miner.MineResult, error)
-	MinePartial(ctx context.Context) ([]miner.MineResult, error)
+	StartPartial(ctx context.Context) error
 	Status() miner.MineStatus
 }
 
@@ -95,14 +95,17 @@ func (h *GlossaryMineHandler) Start(c *gin.Context) {
 		return
 	}
 
-	if h.miner.Status().Running {
-		ErrorResponse(c, http.StatusConflict, "GLOSSARY_MINE_RUNNING",
-			"正在從官方字幕學習中。", "等這一輪跑完再按。")
+	// Detached from the request: the sweep outlives the HTTP call. The miner
+	// claims itself before StartPartial returns, so the very next GET already
+	// says running=true.
+	if err := h.miner.StartPartial(context.Background()); err != nil {
+		if errors.Is(err, miner.ErrMinerBusy) {
+			ErrorResponse(c, http.StatusConflict, "GLOSSARY_MINE_RUNNING",
+				"正在從官方字幕學習中。", "等這一輪跑完再按。")
+			return
+		}
+		ErrorResponse(c, http.StatusInternalServerError, "GLOSSARY_MINE_FAILED", "無法開始："+err.Error(), "稍後再試。")
 		return
 	}
-	go func() {
-		// Detached from the request: the sweep outlives the HTTP call.
-		_, _ = h.miner.MinePartial(context.Background())
-	}()
 	c.JSON(http.StatusAccepted, APIResponse{Success: true, Data: map[string]interface{}{"started": true}})
 }

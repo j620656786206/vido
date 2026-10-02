@@ -228,3 +228,27 @@ func TestMiner_BusyGuardAndErrors(t *testing.T) {
 	assert.Contains(t, res.Error, "not found")
 	assert.False(t, m.Status().Running)
 }
+
+func TestStartPartial_ClaimsBeforeReturning(t *testing.T) {
+	g := &fakeGlossary{}
+	m := newMiner(fakeEpisodes{bySeries: map[string][]models.Episode{}}, fakeSeries{}, g)
+	release := make(chan struct{})
+	m.series = blockingSeries{release: release}
+	require.NoError(t, m.StartPartial(context.Background()))
+	assert.True(t, m.Status().Running, "running is visible the moment StartPartial returns")
+	assert.Equal(t, "partial", m.Status().RunningFor)
+	assert.ErrorIs(t, m.StartPartial(context.Background()), ErrMinerBusy)
+	close(release)
+	assert.Eventually(t, func() bool { return !m.Status().Running }, time.Second, 5*time.Millisecond)
+	assert.NotNil(t, m.Status().LastRunAt)
+}
+
+type blockingSeries struct{ release chan struct{} }
+
+func (b blockingSeries) FindByID(context.Context, string) (*models.Series, error) {
+	return nil, errors.New("none")
+}
+func (b blockingSeries) List(context.Context, repository.ListParams) ([]models.Series, *repository.PaginationResult, error) {
+	<-b.release
+	return nil, &repository.PaginationResult{TotalPages: 1}, nil
+}

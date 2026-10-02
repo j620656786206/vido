@@ -253,6 +253,9 @@ import { healthKeys } from '../../hooks/useConnectionHealth';
 import { exploreBlockKeys } from '../../hooks/useExploreBlocks';
 import { subtitleLocalizationQueryKeys } from '../../hooks/useSubtitleLocalization';
 import { LocalizationLevelForm } from '../../components/settings/LocalizationLevelForm';
+import { OfficialSubtitleMiningCard } from '../../components/settings/OfficialSubtitleMiningCard';
+import { glossaryMineQueryKeys } from '../../hooks/useGlossaryMine';
+import type { MineStatus } from '../../services/glossaryMineService';
 import type { LocalizationSettings } from '../../services/subtitleLocalizationService';
 import { ownedMediaKeys } from '../../hooks/useOwnedMedia';
 import { libraryKeys, RECENT_LIMIT } from '../../hooks/useLibrary';
@@ -4320,6 +4323,112 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
           source: 'settings',
           levels: ['literal', 'standard', 'ott'],
         } satisfies LocalizationSettings,
+      },
+    ],
+  },
+  // sub-7-5b — 從官方字幕學譯名 (C9-D / C9-M new section; C9-D note ①–③).
+  // lastRunAt is a FIXED instant; the line renders it in the runner's local
+  // time, and each platform's baseline is shot in its own runner, so the
+  // darwin and linux baselines may differ by the zone and that is expected.
+  {
+    id: 'settings-official-subtitle-mining',
+    label: 'settings/OfficialSubtitleMiningCard (C9-D — 上次結果)',
+    component: OfficialSubtitleMiningCard,
+    penNode: 'NR3zK', // Screen C9-D, section 從官方字幕學譯名
+    statesOnly: ['default'],
+    width: 1200,
+    seedQueries: [
+      {
+        queryKey: glossaryMineQueryKeys.status,
+        data: {
+          running: false,
+          lastRunAt: '2026-10-01T06:30:00Z',
+          results: [
+            {
+              seriesId: 's1',
+              title: 'Shadow and Bone',
+              scope: 'tmdb:tv:75006',
+              episodesTotal: 8,
+              episodesUsed: 8,
+              fansubSkipped: 0,
+              termsFound: 68,
+              termsInserted: 68,
+              startedAt: '2026-10-01T06:29:00Z',
+              finishedAt: '2026-10-01T06:30:00Z',
+            },
+            {
+              seriesId: 's2',
+              title: 'Scorpion',
+              scope: 'tmdb:tv:60797',
+              episodesTotal: 22,
+              episodesUsed: 0,
+              fansubSkipped: 6,
+              termsFound: 0,
+              termsInserted: 0,
+              startedAt: '2026-10-01T06:29:00Z',
+              finishedAt: '2026-10-01T06:30:00Z',
+            },
+          ],
+        } satisfies MineStatus,
+      },
+    ],
+  },
+  {
+    id: 'settings-official-subtitle-mining/never-run',
+    label: 'settings/OfficialSubtitleMiningCard (C9-D note ① — 還沒跑過)',
+    component: OfficialSubtitleMiningCard,
+    penNode: 'JTw7U', // C9-D Note ①
+    statesOnly: ['default'],
+    width: 1200,
+    seedQueries: [
+      {
+        queryKey: glossaryMineQueryKeys.status,
+        data: { running: false, results: [] } satisfies MineStatus,
+      },
+    ],
+  },
+  {
+    id: 'settings-official-subtitle-mining/running',
+    label: 'settings/OfficialSubtitleMiningCard (C9-D note ② — 學習中)',
+    component: OfficialSubtitleMiningCard,
+    penNode: 'JTw7U', // C9-D Note ②
+    statesOnly: ['default'],
+    width: 1200,
+    seedQueries: [
+      {
+        queryKey: glossaryMineQueryKeys.status,
+        data: { running: true, runningFor: 'partial', results: [] } satisfies MineStatus,
+      },
+    ],
+  },
+  {
+    id: 'settings-official-subtitle-mining/mobile',
+    label: 'settings/OfficialSubtitleMiningCard (C9-M — 手機，全寬按鈕)',
+    component: OfficialSubtitleMiningCard,
+    penNode: 'AWYm0', // Screen C9-M
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+    seedQueries: [
+      {
+        queryKey: glossaryMineQueryKeys.status,
+        data: {
+          running: false,
+          lastRunAt: '2026-10-01T06:30:00Z',
+          results: [
+            {
+              seriesId: 's1',
+              title: 'Shadow and Bone',
+              scope: 'tmdb:tv:75006',
+              episodesTotal: 8,
+              episodesUsed: 8,
+              fansubSkipped: 0,
+              termsFound: 68,
+              termsInserted: 68,
+              startedAt: '2026-10-01T06:29:00Z',
+              finishedAt: '2026-10-01T06:30:00Z',
+            },
+          ],
+        } satisfies MineStatus,
       },
     ],
   },

@@ -9,7 +9,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -35,11 +34,14 @@ func (s *stubMiner) MineSeries(_ context.Context, id string) (miner.MineResult, 
 	}
 	return miner.MineResult{SeriesID: id, Title: "Show", TermsFound: 3, TermsInserted: 2}, nil
 }
-func (s *stubMiner) MinePartial(context.Context) ([]miner.MineResult, error) {
+func (s *stubMiner) StartPartial(context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.running {
+		return miner.ErrMinerBusy
+	}
 	s.sweeps++
-	return nil, nil
+	return nil
 }
 func (s *stubMiner) Status() miner.MineStatus {
 	s.mu.Lock()
@@ -80,7 +82,7 @@ func TestGlossaryMine_SweepIsAcceptedAndRefusedWhileRunning(t *testing.T) {
 	w := httptest.NewRecorder()
 	mineRouter(m).ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/glossary/mine", nil))
 	require.Equal(t, http.StatusAccepted, w.Code)
-	assert.Eventually(t, func() bool { m.mu.Lock(); defer m.mu.Unlock(); return m.sweeps == 1 }, time.Second, 10*time.Millisecond)
+	assert.Equal(t, 1, m.sweeps, "claimed before the 202 goes out")
 
 	m.running = true
 	w = httptest.NewRecorder()
