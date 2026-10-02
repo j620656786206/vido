@@ -1,6 +1,6 @@
 # Bugfix: 自訂首頁的「類型」改成點中文名稱，不再手打 TMDb 代碼
 
-Status: in-progress（Task 0 設計稿待 Alexyu 跑 inline agent）
+Status: review
 
 **Source:** `disc-2026-09-explore-block-genre-ids-raw`（P2，dsr-3 立案）。
 
@@ -36,11 +36,11 @@ so that I don't have to look up that 16 means 動畫.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — 設計稿（Alexyu 跑 inline agent）**（AC: #1）
-- [ ] Task 1 — `lib/genres.ts` 加「依內容類型列 ID」與「ID → 顯示名」（AC: #2–#4）
-- [ ] Task 2 — 編輯框 chip 組＋切換規則（AC: #2, #3）
-- [ ] Task 3 — 列表描述（AC: #4）
-- [ ] Task 4 — 測試＋基準（AC: #5）
+- [x] **Task 0 — 設計稿（Alexyu 跑 inline agent）**（AC: #1）
+- [x] Task 1 — `lib/genres.ts` 加「依內容類型列 ID」與「ID → 顯示名」（AC: #2–#4）
+- [x] Task 2 — 編輯框 chip 組＋切換規則（AC: #2, #3）
+- [x] Task 3 — 列表描述（AC: #4）
+- [x] Task 4 — 測試＋基準（AC: #5）
 
 ## Task 0 提示詞（Sally 2026-10-03；貼給 Pencil Inline AI Agent，跑完 ⌘S）
 
@@ -57,9 +57,23 @@ so that I don't have to look up that 16 means 動畫.
 
 ### Agent Model Used
 
+Claude Opus 5.5（2026-10-03）
+
 ### Completion Notes List
 
+- **Task 0**：Alexyu 跑 inline agent 並自行 commit（`1debd01b`：`ux-design.pen`、`c10-d.png`、`c10-m.png`、`pen-tokens.json`）。MCP 複審：三段文字逐字相符、整檔 17,787 節點走訪無誤；`check-design-tokens.py` 一致；重出截圖其餘 12 張為 re-render 雜訊，已還原。
+- **名稱來源**沿用 `lib/genres.ts`（`GENRE_MAP`，修改資訊的類型選單同一張表）；新增 `genreIdsFor`、`genreLabel`、`parseGenreIdList`。
+- **chip**：`aria-pressed` 按鈕、`role="group"` 以「類型篩選」命名；高 36px（與同框輸入框一致，非 44——這個編輯框整體尚未換成 v2 Dialog，觸控尺寸隨它一起處理）。
+- **基準**：編輯框 3 張、列表桌機 1 張重產 darwin、刪 linux 待 CI bootstrap；列表手機版那張畫面沒有類型，位元相同，linux 已放回。
+- 未另跑 adversarial CR：範圍小（純前端、儲存格式不變），以單元測試覆蓋選取／取消、內容類型切換、未知 ID、存檔字串與列表文字。
+
 ### File List
+
+- apps/web/src/lib/genres.ts
+- apps/web/src/components/settings/ExploreBlockEditModal.tsx、ExploreBlockEditModal.spec.tsx
+- apps/web/src/components/settings/ExploreBlocksSettings.tsx、ExploreBlocksSettings.spec.tsx
+- tests/visual/…/settings-explore-block-edit-modal/*、settings-explore-blocks-settings/default（darwin 重產）
+- ux-design.pen、_bmad-output/screenshots/flow-c-search-settings/c10-d.png、c10-m.png、_bmad-output/pen-tokens.json（Alexyu commit）
 
 ## Change Log
 
