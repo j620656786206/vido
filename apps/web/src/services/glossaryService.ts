@@ -109,7 +109,10 @@ export const glossaryService = {
     );
   },
 
-  /** PUT /media/{mediaId}/glossary/{termId} → 204. Body is `{term_zh, confirmed}` only. */
+  /**
+   * PUT /media/{mediaId}/glossary/{termId} → 204. Body is `{term_zh, confirmed}`
+   * only; the server confirms every edit regardless (⚖️ 2026-10-02).
+   */
   async editTerm(mediaId: string, termId: string, params: GlossaryEditParams): Promise<void> {
     return fetchNoContent(
       `/media/${encodeURIComponent(mediaId)}/glossary/${encodeURIComponent(termId)}`,

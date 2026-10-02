@@ -16,7 +16,9 @@ const (
 	GlossarySourceSubtitle = "subtitle"
 	// GlossarySourceMetadata — mined from show metadata (cast/character table).
 	GlossarySourceMetadata = "metadata"
-	// GlossarySourceManual — entered/edited by the user.
+	// GlossarySourceManual — added by the user. An EDIT keeps the term's
+	// original source and confirms it instead (disc-2026-09-glossary-edit-
+	// keeps-machine-source).
 	GlossarySourceManual = "manual"
 	// GlossarySourceOfficialSubtitle — aligned out of an official zh-Hant
 	// subtitle of the same show (sub-7-5); the most trusted machine source.

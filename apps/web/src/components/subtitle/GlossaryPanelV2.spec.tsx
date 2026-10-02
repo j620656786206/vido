@@ -179,8 +179,8 @@ describe('GlossaryPanelV2', () => {
     await waitFor(() => expect(mocked.deleteTerm).toHaveBeenCalledWith('42', 't1'));
   });
 
-  it('per-row edit PUTs {termZh, confirmed} preserving the row confirmed flag', async () => {
-    mocked.listTerms.mockResolvedValue([term({ confirmed: true })]);
+  it('per-row edit always confirms — an unconfirmed machine term is confirmed by the edit (⚖️ 2026-10-02)', async () => {
+    mocked.listTerms.mockResolvedValue([term({ confirmed: false, source: 'subtitle' })]);
     mocked.editTerm.mockResolvedValue(undefined);
 
     renderPanel();
