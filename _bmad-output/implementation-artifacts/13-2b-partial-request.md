@@ -1,6 +1,6 @@
 # Story 13.2b: 部分請求（選季/選集）—— 前端：L3 季/集樹選取器與 TV 請求流接線
 
-Status: review
+Status: done
 
 **Depends on:** `13-2a-partial-request`（backend API must be ready — selection wire 形狀、coverage 端點、season 路由）
 

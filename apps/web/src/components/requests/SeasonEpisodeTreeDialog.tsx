@@ -61,6 +61,17 @@ export interface SeasonEpisodeTreeDialogProps {
   onConfirm: (payload: RequestPayload) => void;
   /** Seasons to open expanded (gallery baselines; nothing in the product sets it). */
   defaultExpanded?: number[];
+  /** The caller's create is in flight — 確認請求 stays disabled, the tree stays open. */
+  submitting?: boolean;
+  /** The caller's create failed — shown in the footer, picks kept (13-2b CR). */
+  submitError?: string | null;
+  /**
+   * 13-2c (owned series): no coverage means "unknown", not "nothing owned" —
+   * show an error with 重試 instead of a tree that could send the whole title.
+   */
+  requireCoverage?: boolean;
+  /** Forwarded to the dialog: where focus goes when it closes. */
+  onCloseAutoFocus?: (event: Event) => void;
 }
 
 export function SeasonEpisodeTreeDialog({
@@ -70,6 +81,10 @@ export function SeasonEpisodeTreeDialog({
   title,
   onConfirm,
   defaultExpanded,
+  submitting = false,
+  submitError = null,
+  requireCoverage = false,
+  onCloseAutoFocus,
 }: SeasonEpisodeTreeDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -79,6 +94,7 @@ export function SeasonEpisodeTreeDialog({
         // the header carries its own 44px ✕, so the primitive's is hidden.
         className="flex max-h-[85vh] w-[calc(100vw-2rem)] max-w-[560px] flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] p-0"
         closeClassName="hidden"
+        onCloseAutoFocus={onCloseAutoFocus}
       >
         {/* No {open && …} gate: Radix unmounts the content itself once its exit
             animation ends, which also resets the tree's state — gating here
@@ -89,6 +105,9 @@ export function SeasonEpisodeTreeDialog({
           onConfirm={onConfirm}
           onClose={() => onOpenChange(false)}
           defaultExpanded={defaultExpanded}
+          parentSubmitting={submitting}
+          parentError={submitError}
+          requireCoverage={requireCoverage}
         />
       </DialogContent>
     </Dialog>
@@ -101,12 +120,18 @@ function TreeBody({
   onConfirm,
   onClose,
   defaultExpanded,
+  parentSubmitting,
+  parentError,
+  requireCoverage,
 }: {
   tmdbId: number;
   title: string;
   onConfirm: (payload: RequestPayload) => void;
   onClose: () => void;
   defaultExpanded?: number[];
+  parentSubmitting: boolean;
+  parentError: string | null;
+  requireCoverage: boolean;
 }) {
   const queryClient = useQueryClient();
   const details = useTVShowDetails(tmdbId);
@@ -157,8 +182,15 @@ function TreeBody({
   const summary = selectionSummary(selection);
   const loading = details.isLoading || coverageQuery.isLoading;
   const blocked = !!(coverage?.activeRequest || coverage?.wholeSeriesRequested);
+  const coverageMissing = requireCoverage && coverageQuery.isError && !coverage;
+  const busy = submitting || parentSubmitting;
+  const error = submitError ?? parentError;
   const showTree =
-    !loading && !(details.isError && !details.data) && !blocked && seasons.length > 0;
+    !loading &&
+    !(details.isError && !details.data) &&
+    !coverageMissing &&
+    !blocked &&
+    seasons.length > 0;
 
   const submit = async () => {
     setSubmitting(true);
@@ -180,7 +212,7 @@ function TreeBody({
         })
       );
       if (!aliveRef.current) return;
-      const payload = buildRequestPayload(selection, seasons, coverage, lists);
+      const payload = buildRequestPayload(selection, seasons, coverage, lists, requireCoverage);
       // A partial selection that resolves to nothing (every picked episode is
       // already owned/requested) must never go out empty — on the wire that
       // means the WHOLE title (13-2b CR).
@@ -230,6 +262,14 @@ function TreeBody({
         ) : details.isError && !details.data ? (
           <TreeMessage testId="season-tree-error" text="無法載入季資料">
             <Button variant="secondary" className="h-11" onClick={() => details.refetch()}>
+              重試
+            </Button>
+          </TreeMessage>
+        ) : coverageMissing ? (
+          // 13-2c: on an owned series "no coverage" would read as "nothing
+          // owned" and could send the whole title — refuse to guess.
+          <TreeMessage testId="season-tree-coverage-error" text="無法確認哪些集數已經有了">
+            <Button variant="secondary" className="h-11" onClick={() => coverageQuery.refetch()}>
               重試
             </Button>
           </TreeMessage>
@@ -322,9 +362,9 @@ function TreeBody({
               集
             </p>
             <div className="flex items-center gap-3">
-              {submitError && (
+              {error && (
                 <span role="alert" className="text-xs text-[var(--error-text)]">
-                  {submitError}
+                  {error}
                 </span>
               )}
               <Button variant="secondary" className="h-11 px-5" onClick={onClose}>
@@ -333,7 +373,7 @@ function TreeBody({
               <Button
                 className="h-11 px-5"
                 data-testid="season-tree-confirm"
-                disabled={isEmptySelection(selection) || submitting}
+                disabled={isEmptySelection(selection) || busy}
                 onClick={submit}
               >
                 確認請求

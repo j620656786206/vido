@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen L2-D-v2 (VH3Tq) · L8-D-v2 (G0xib)
+// Design ref: ux-design.pen Screen L2-D-v2 (VH3Tq) · L8-D-v2 (G0xib) · B4p-D (N2fmG6)
 // L2 是三態按鈕本身，L8 是它送出後那顆「已加入想要清單」toast 所在的詳情頁。（dsr-11）
 // Source: ux-design.pen (Pencil app)
 /**
@@ -33,6 +33,15 @@ export interface RequestButtonProps {
    * contexts keep the one-click whole-title request).
    */
   pickEpisodes?: boolean;
+  /**
+   * 13-2c: the tree may NOT fall back to "no coverage = nothing owned" — on an
+   * owned series that would send a whole-title request the backend refuses.
+   */
+  treeRequiresCoverage?: boolean;
+  /** 13-2c: Secondary (YDPhc) for places where the page already has its one solid accent. */
+  variant?: 'primary' | 'secondary';
+  /** Button text; defaults to 想要. */
+  label?: string;
 }
 
 type ToastState = { kind: 'success' } | { kind: 'error'; message: string } | null;
@@ -46,11 +55,21 @@ export function RequestButton({
   fullWidth,
   className,
   pickEpisodes = false,
+  treeRequiresCoverage = false,
+  variant = 'primary',
+  label = '想要',
 }: RequestButtonProps) {
   const navigate = useNavigate();
   const { create } = useRequestActions();
   const [toast, setToast] = useState<ToastState>(null);
   const [treeOpen, setTreeOpen] = useState(false);
+  const [treeError, setTreeError] = useState<string | null>(null);
+  // After the tree closes the trigger has turned into the 已請求 pill — focus
+  // goes there instead of falling to <body> (13-2b CR).
+  const pillRef = useRef<HTMLElement | null>(null);
+  // …or back to the 想要 button when a failed submit brought it back: the node
+  // Radix remembered unmounted during the pending pill (13-2c CR).
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -74,17 +93,30 @@ export function RequestButton({
 
   const opensTree = pickEpisodes && mediaType === 'tv';
 
-  const submit = (selection?: { seasons?: number[]; episodes?: Record<string, number[]> }) => {
+  const submit = (
+    selection?: { seasons?: number[]; episodes?: Record<string, number[]> },
+    fromTree = false
+  ) => {
     if (create.isPending) return;
     create.mutate(
       { tmdbId, mediaType, title, ...selection },
       {
-        onSuccess: () => showToast({ kind: 'success' }),
+        onSuccess: () => {
+          if (fromTree) setTreeOpen(false);
+          showToast({ kind: 'success' });
+        },
         onError: (error) => {
           // REQUEST_DUPLICATE settles into the requested state upstream — the
           // optimistic row stands, so no error surface here (AC #4).
           if ((error as { code?: string }).code === 'REQUEST_DUPLICATE') {
+            if (fromTree) setTreeOpen(false);
             showToast({ kind: 'success' });
+            return;
+          }
+          // From the tree: keep it open with the picks intact and say why in
+          // place, instead of closing and losing the selection (13-2b CR).
+          if (fromTree) {
+            setTreeError(error.message);
             return;
           }
           showToast({ kind: 'error', message: error.message });
@@ -105,17 +137,33 @@ export function RequestButton({
   // The tree's 確認請求: everything checked on a show with nothing owned is the
   // same whole-title request as one click (no selection on the wire, 13-2b).
   const handleTreeConfirm = (payload: RequestPayload) => {
-    setTreeOpen(false);
-    submit(payload.whole ? undefined : { seasons: payload.seasons, episodes: payload.episodes });
+    setTreeError(null);
+    submit(
+      payload.whole ? undefined : { seasons: payload.seasons, episodes: payload.episodes },
+      true
+    );
   };
 
   const tree = opensTree ? (
     <SeasonEpisodeTreeDialog
       open={treeOpen}
-      onOpenChange={setTreeOpen}
+      onOpenChange={(open) => {
+        setTreeOpen(open);
+        if (!open) setTreeError(null);
+      }}
       tmdbId={tmdbId}
       title={title}
       onConfirm={handleTreeConfirm}
+      submitting={create.isPending}
+      submitError={treeError}
+      requireCoverage={treeRequiresCoverage}
+      onCloseAutoFocus={(e) => {
+        const target = pillRef.current ?? buttonRef.current;
+        if (target) {
+          e.preventDefault();
+          target.focus();
+        }
+      }}
     />
   ) : null;
 
@@ -146,6 +194,8 @@ export function RequestButton({
     return (
       <>
         <span
+          ref={pillRef}
+          tabIndex={-1}
           data-testid="request-pill-requested"
           role="status"
           aria-live="polite"
@@ -175,17 +225,25 @@ export function RequestButton({
   return (
     <>
       <button
+        ref={buttonRef}
         type="button"
         data-testid="request-button"
         onClick={handleRequest}
         className={cn(
-          'inline-flex h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-4 text-sm font-semibold text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-hover)] active:bg-[var(--accent-pressed)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
+          'inline-flex h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
+          variant === 'secondary'
+            ? // ButtonSecondary YDPhc at 44px, padding [0, lg-plus=20], plus icon 18 (B4p-D xn9Tr)
+              'bg-[var(--bg-tertiary)] px-5 text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]/80'
+            : 'bg-[var(--accent-primary)] px-4 text-[var(--text-on-accent)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-pressed)]',
           fullWidth && 'w-full',
           className
         )}
       >
-        <Plus className="h-4 w-4" aria-hidden="true" />
-        想要
+        <Plus
+          className={variant === 'secondary' ? 'h-[18px] w-[18px]' : 'h-4 w-4'}
+          aria-hidden="true"
+        />
+        {label}
       </button>
       {toast && <RequestToast toast={toast} onView={navigate} guard={guard} />}
       {tree}

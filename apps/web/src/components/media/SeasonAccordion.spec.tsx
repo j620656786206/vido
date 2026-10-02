@@ -205,4 +205,30 @@ describe('SeasonAccordion', () => {
     fireEvent.click(header);
     expect(header).toHaveAttribute('aria-expanded', 'true');
   });
+
+  it('13-2c: the header action shows next to 季與劇集 in the loading, error and content states', () => {
+    const action = <button>想要更多集數</button>;
+    const { rerender } = render(
+      <SeasonAccordion
+        seasons={[]}
+        seriesId="s"
+        seriesTitle="t"
+        tmdbId={1}
+        isLoading
+        headerAction={action}
+      />
+    );
+    expect(screen.getByRole('button', { name: '想要更多集數' })).toBeInTheDocument();
+    rerender(
+      <SeasonAccordion
+        seasons={[]}
+        seriesId="s"
+        seriesTitle="t"
+        tmdbId={1}
+        isError
+        headerAction={action}
+      />
+    );
+    expect(screen.getByRole('button', { name: '想要更多集數' })).toBeInTheDocument();
+  });
 });

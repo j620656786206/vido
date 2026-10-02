@@ -72,6 +72,47 @@ describe('locks from coverage', () => {
   });
 });
 
+describe('absolute numbering (CR)', () => {
+  it('owned numbers beyond the season’s TMDb count do not lock it', () => {
+    // A library stores anime S2 as E26–E37; TMDb lists S2 as E1–E12.
+    const cov: RequestCoverage = { ...none, owned: { '2': [26, 27, 28] } };
+    expect(seasonLocked(cov, seasons[1])).toBe(false);
+    expect(seasonFullyOwned(cov, seasons[1])).toBe(false);
+  });
+});
+
+describe('owned series never go WHOLE (13-2c CR)', () => {
+  it('owned specials only (season 0, not in the tree) → per-season, not whole', () => {
+    const cov: RequestCoverage = { ...none, owned: { '0': [1] } };
+    const all = toggleMaster(EMPTY_SELECTION, [1, 2]);
+    expect(buildRequestPayload(all, seasons, cov, new Map())).toEqual({
+      whole: false,
+      seasons: [1, 2],
+      episodes: {},
+    });
+  });
+
+  it('a known-owned title with empty coverage → per-season, not whole', () => {
+    const all = toggleMaster(EMPTY_SELECTION, [1, 2]);
+    expect(buildRequestPayload(all, seasons, none, new Map(), true)).toEqual({
+      whole: false,
+      seasons: [1, 2],
+      episodes: {},
+    });
+  });
+
+  it('absolute-numbered owned episodes still make the season go per-episode (backend overlap check)', () => {
+    const cov: RequestCoverage = { ...none, owned: { '1': [26, 27] } };
+    const sel = toggleSeason(EMPTY_SELECTION, 1);
+    expect(seasonsNeedingEpisodeList(sel, seasons, cov)).toEqual([1]);
+    expect(buildRequestPayload(sel, seasons, cov, new Map([[1, [1, 2, 3, 4]]]))).toEqual({
+      whole: false,
+      seasons: [],
+      episodes: { '1': [1, 2, 3, 4] },
+    });
+  });
+});
+
 describe('cascade', () => {
   it('season toggle: empty → full → empty', () => {
     const a = toggleSeason(EMPTY_SELECTION, 1);

@@ -11,7 +11,7 @@
  * Multiple seasons may be open at once (Task 6.4 — default multi-open).
  */
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { getImageUrl } from '../../lib/image';
@@ -21,6 +21,11 @@ import { ManageSubtitleDialogV2 } from '../subtitle/ManageSubtitleDialogV2';
 import { EpisodeList, canManageEpisodeSubtitle, episodeCode } from './EpisodeList';
 
 interface SeasonAccordionProps {
+  /**
+   * Right side of the 季與劇集 header (B4p-D `hMcD2` · 13-2c): the 想要更多集數
+   * entry into the season/episode tree. Shown in every state of the section.
+   */
+  headerAction?: ReactNode;
   seasons: SeasonSummary[];
   seriesId: string;
   /** Show name. The per-episode subtitle dialog titles itself with the SHOW and
@@ -163,6 +168,7 @@ export function SeasonAccordion({
   isLoading,
   isError,
   onRetry,
+  headerAction,
 }: SeasonAccordionProps) {
   // AC #1: the accordion is only shown for TMDb-linked series — episode data
   // is resolved from TMDb, so without a tmdb_id there is nothing to expand.
@@ -174,7 +180,7 @@ export function SeasonAccordion({
   if (isLoading) {
     return (
       <section aria-label="季與劇集" className="flex flex-col gap-3" data-testid="season-accordion">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">季與劇集</h2>
+        <SectionHeader action={headerAction} />
         <ul className="flex flex-col gap-3" data-testid="season-accordion-skeleton">
           {[0, 1, 2].map((i) => (
             <li
@@ -191,7 +197,7 @@ export function SeasonAccordion({
   if (isError) {
     return (
       <section aria-label="季與劇集" className="flex flex-col gap-3" data-testid="season-accordion">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">季與劇集</h2>
+        <SectionHeader action={headerAction} />
         <div
           role="alert"
           className="flex flex-col items-center gap-3 rounded-lg border border-[var(--border-subtle)] px-4 py-6 text-center"
@@ -216,7 +222,7 @@ export function SeasonAccordion({
 
   return (
     <section aria-label="季與劇集" className="flex flex-col gap-3" data-testid="season-accordion">
-      <h2 className="text-lg font-semibold text-[var(--text-primary)]">季與劇集</h2>
+      <SectionHeader action={headerAction} />
       {seasons.map((season) => (
         <SeasonAccordionItem
           key={season.seasonNumber}
@@ -226,5 +232,15 @@ export function SeasonAccordion({
         />
       ))}
     </section>
+  );
+}
+
+/** The 季與劇集 title row (B4p-D `eph` hMcD2): title left, optional action right. */
+function SectionHeader({ action }: { action?: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <h2 className="text-lg font-semibold text-[var(--text-primary)]">季與劇集</h2>
+      {action}
+    </div>
   );
 }

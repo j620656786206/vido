@@ -43355,6 +43355,45 @@
                                   "fontFamily": "$Type/Family/Primary",
                                   "fontSize": "$Type/H3/Size",
                                   "fontWeight": "700"
+                                },
+                                {
+                                  "id": "xn9Tr",
+                                  "type": "ref",
+                                  "ref": "YDPhc",
+                                  "name": "btn-request-more",
+                                  "height": 44,
+                                  "descendants": {
+                                    "L9cIf": {
+                                      "type": "frame",
+                                      "id": "FvOAR",
+                                      "name": "label-row",
+                                      "gap": "$Space/sm",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "c9Wbl1",
+                                          "name": "icon",
+                                          "width": 18,
+                                          "height": 18,
+                                          "icon": "plus",
+                                          "library": "lucide",
+                                          "fill": "$text-primary"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "ZYchr",
+                                          "name": "label",
+                                          "fill": "$text-primary",
+                                          "content": "想要更多集數",
+                                          "lineHeight": "$Type/Body/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Body/Size",
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    }
+                                  }
                                 }
                               ]
                             },

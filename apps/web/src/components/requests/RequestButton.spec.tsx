@@ -152,12 +152,15 @@ vi.mock('./SeasonEpisodeTreeDialog', () => ({
   SeasonEpisodeTreeDialog: ({
     open,
     onConfirm,
+    submitError,
   }: {
     open: boolean;
     onConfirm: (p: unknown) => void;
+    submitError?: string | null;
   }) =>
     open ? (
       <div data-testid="tree-stub">
+        {submitError && <p data-testid="tree-error">{submitError}</p>}
         <button
           onClick={() => onConfirm({ whole: false, seasons: [2], episodes: { '1': [3, 4] } })}
         >
@@ -211,5 +214,45 @@ describe('RequestButton pickEpisodes (13-2b)', () => {
     await userEvent.click(screen.getByTestId('request-button'));
     expect(screen.queryByTestId('tree-stub')).toBeNull();
     await waitFor(() => expect(requestService.createRequest).toHaveBeenCalledOnce());
+  });
+});
+
+describe('RequestButton 13-2c', () => {
+  beforeEach(() => {
+    vi.mocked(requestService.createRequest).mockReset();
+  });
+
+  it('secondary variant with a custom label (B4p-D 想要更多集數)', () => {
+    renderButton({
+      mediaType: 'tv',
+      pickEpisodes: true,
+      variant: 'secondary',
+      label: '想要更多集數',
+    });
+    const btn = screen.getByTestId('request-button');
+    expect(btn).toHaveTextContent('想要更多集數');
+    expect(btn.className).toContain('bg-[var(--bg-tertiary)]');
+    expect(btn.className).not.toContain('bg-[var(--accent-primary)]');
+  });
+
+  it('a failed create keeps the tree open with the reason, instead of closing and losing the picks', async () => {
+    vi.mocked(requestService.createRequest).mockRejectedValue(
+      new RequestApiError('第 1 季第 2 集已在媒體庫中', 'REQUEST_INVALID_SELECTION')
+    );
+    renderButton({ mediaType: 'tv', pickEpisodes: true });
+    await userEvent.click(screen.getByTestId('request-button'));
+    await userEvent.click(screen.getByText('pick'));
+    expect(await screen.findByTestId('tree-error')).toHaveTextContent('第 1 季第 2 集已在媒體庫中');
+    expect(screen.getByTestId('tree-stub')).toBeInTheDocument();
+    expect(screen.queryByTestId('request-toast')).toBeNull();
+  });
+
+  it('a successful create closes the tree and shows the toast', async () => {
+    vi.mocked(requestService.createRequest).mockResolvedValue({} as never);
+    renderButton({ mediaType: 'tv', pickEpisodes: true });
+    await userEvent.click(screen.getByTestId('request-button'));
+    await userEvent.click(screen.getByText('pick'));
+    await waitFor(() => expect(screen.queryByTestId('tree-stub')).toBeNull());
+    expect(await screen.findByTestId('request-toast')).toBeInTheDocument();
   });
 });
