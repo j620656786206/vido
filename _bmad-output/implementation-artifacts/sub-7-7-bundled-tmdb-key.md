@@ -1,6 +1,6 @@
 # Story 7.7: 內嵌預設 TMDb key，設定頁保留自填（後端為主）
 
-Status: backlog
+Status: done (2026-10-02 對帳；sub-7-7a #625 / sub-7-7b #626 皆合併；傘狀留檔)
 
 > 🔀 **2026-09-30 已拆單（SM Bob；⚖️ Alexyu 對設計裁定 A）**：工作在子單上——`sub-7-7a-bundled-tmdb-key-be.md`（後端＋CI 打包＋文件，含 429 降級與 log 不漏金鑰）→ `sub-7-7b-bundled-tmdb-key-fe.md`（設定頁／精靈／狀態頁文案，依賴 7-7a）。本檔留作傘狀紀錄。
 > 與原稿不同的三處：不抄 holder（client 每請求問金鑰）、BuildKit secret 不用 build-arg、多堵一個網路錯誤把金鑰印進 log 的洞。原稿行號有誤（`key_resolver.go:99`、`ApiKeysForm.tsx:55-60`、`sanitizeAttr`），以子單為準。

@@ -1,6 +1,6 @@
 # Story sub-7-5b: 掃描完自動從官方字幕學譯名、寫進詞彙表、設定頁一顆按鈕 — 後端＋前端
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-10-01，由 sub-7-5 拆出；依賴 sub-7-5a（`mine` 套件與 NAS 實測結果）。行號為 main `12a4f507`。 -->
 
@@ -103,3 +103,4 @@ Claude Fable 5.1（Amelia）
 | 2026-10-01 | create-story（SM Bob，自 sub-7-5 拆出）。 |
 | 2026-10-01 | dev-story Task 1–3 後端（Amelia）；Task 0 提示詞出稿（Sally），等 Alexyu 跑 inline agent。 |
 | 2026-10-02 | Task 0 完成（Alexyu inline agent；Sally MCP 複審通過）；前端區塊＋`StartPartial` → review。 |
+| 2026-10-02 | -linux 基準 #647 合進分支；PR #646 合併（Alexyu）→ done。 |
