@@ -77,11 +77,20 @@ func (s *GlossaryService) Add(ctx context.Context, term *models.GlossaryTerm) er
 	return s.repo.Upsert(ctx, term)
 }
 
-func (s *GlossaryService) Edit(ctx context.Context, mediaID, id, termZh string, confirmed bool) error {
+// Edit changes a term's rendering. An edit ALWAYS confirms the term and
+// never touches its source (⚖️ Alexyu 2026-10-02,
+// disc-2026-09-glossary-edit-keeps-machine-source): a user who rewrote a
+// rendering has reviewed it, so asking them to press 確認 afterwards is busy
+// work; where the term first came from (subtitle, TMDb, official subtitle) is
+// a fact the edit does not change. The confirmed argument is accepted for the
+// PUT contract's shape and deliberately ignored — the rule lives here so every
+// client gets it, and sub-8-1's import ("confirmed or manual → keep mine")
+// protects edited terms because of it.
+func (s *GlossaryService) Edit(ctx context.Context, mediaID, id, termZh string, _ bool) error {
 	if strings.TrimSpace(id) == "" {
 		return &models.ValidationError{Field: "id", Message: "id is required"}
 	}
-	_, err := s.repo.Update(ctx, id, termZh, confirmed)
+	_, err := s.repo.Update(ctx, id, termZh, true)
 	return err
 }
 

@@ -13,8 +13,9 @@ import (
 
 // scopeRecordingRepo captures which SCOPE each repository call was made with.
 type scopeRecordingRepo struct {
-	listed, confirmed []string
-	upserted          []models.GlossaryTerm
+	lastUpdateConfirmed *bool
+	listed, confirmed   []string
+	upserted            []models.GlossaryTerm
 }
 
 func (r *scopeRecordingRepo) Upsert(_ context.Context, t *models.GlossaryTerm) error {
@@ -31,7 +32,8 @@ func (r *scopeRecordingRepo) ListByScope(_ context.Context, scope string) ([]mod
 func (r *scopeRecordingRepo) LookupByScope(context.Context, string, bool) (map[string]string, error) {
 	return nil, nil
 }
-func (r *scopeRecordingRepo) Update(context.Context, string, string, bool) (time.Time, error) {
+func (r *scopeRecordingRepo) Update(_ context.Context, _ string, _ string, confirmed bool) (time.Time, error) {
+	r.lastUpdateConfirmed = &confirmed
 	return time.Time{}, nil
 }
 func (r *scopeRecordingRepo) Confirm(context.Context, string) (time.Time, error) {
@@ -91,4 +93,13 @@ func TestGlossaryService_ResolverErrorStopsTheCall(t *testing.T) {
 	_, err := svc.List(context.Background(), "series-42")
 	require.Error(t, err)
 	assert.Empty(t, repo.listed, "no repository call on a resolve failure — the UI gets the error, not an empty drawer")
+}
+
+// ⚖️ Alexyu 2026-10-02: an edit always confirms, whatever the body says.
+func TestGlossaryService_EditAlwaysConfirms(t *testing.T) {
+	repo := &scopeRecordingRepo{}
+	svc := NewGlossaryService(repo, fixedScopeResolver{scope: "tmdb:tv:1"})
+	require.NoError(t, svc.Edit(context.Background(), "42", "g1", "魔神獸", false))
+	require.NotNil(t, repo.lastUpdateConfirmed)
+	assert.True(t, *repo.lastUpdateConfirmed, "a reviewed-and-rewritten term is confirmed")
 }

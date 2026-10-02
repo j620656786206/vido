@@ -301,11 +301,9 @@ export function GlossaryPanelV2({ mediaId, mediaTitle, open, onOpenChange }: Glo
             }}
             onEdit={(termId, termZh) =>
               runWrite(`「${termSrcOf(termId)}」的新譯名沒有存到，請再試一次`, () =>
-                edit.mutateAsync({
-                  termId,
-                  termZh,
-                  confirmed: list.find((t) => t.id === termId)?.confirmed ?? false,
-                })
+                // ⚖️ 2026-10-02: an edit is a review — it always confirms
+                // (the server enforces the same; source is never touched).
+                edit.mutateAsync({ termId, termZh, confirmed: true })
               )
             }
             onDelete={(termId) => {
