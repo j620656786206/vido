@@ -55,6 +55,56 @@ export interface GlossaryConfirmAllResult {
   confirmed: number;
 }
 
+// --- sub-8-1: export / import (`[@contract-v1]`) ---
+
+/** A term both sides have with different renderings; `id` is MY row. */
+export interface GlossaryImportConflict {
+  id: string;
+  termSrc: string;
+  mine: string;
+  theirs: string;
+  mineSource: string;
+  mineConfirmed: boolean;
+}
+
+/** POST /media/{mediaId}/glossary/import result. */
+export interface GlossaryImportResult {
+  imported: number;
+  skipped: number;
+  conflicts: GlossaryImportConflict[];
+  title: string;
+}
+
+/**
+ * A refused export/import. `code` is the backend's GLOSSARY_* code; the
+ * message already carries the backend's 「怎麼辦」 suggestion when it sent one,
+ * so the panel can show it as-is (F6c-D note ①–③).
+ */
+export class GlossaryExchangeError extends Error {
+  readonly code: string;
+  constructor(message: string, code: string) {
+    super(message);
+    this.name = 'GlossaryExchangeError';
+    this.code = code;
+  }
+}
+
+async function exchangeError(response: Response): Promise<GlossaryExchangeError> {
+  const body = await response.json().catch(() => ({}));
+  const message: string = body.error?.message || `API request failed: ${response.status}`;
+  const suggestion: string = body.error?.suggestion || '';
+  return new GlossaryExchangeError(
+    suggestion ? `${message}${suggestion}` : message,
+    body.error?.code || 'UNKNOWN'
+  );
+}
+
+/** Pull the filename out of `attachment; filename="…"`. */
+function filenameFrom(disposition: string | null, fallback: string): string {
+  const m = disposition?.match(/filename="?([^";]+)"?/i);
+  return m?.[1] ?? fallback;
+}
+
 // --- Fetch helpers ---
 
 async function parseError(response: Response): Promise<Error> {
@@ -122,6 +172,41 @@ export const glossaryService = {
         body: JSON.stringify(camelToSnake(params)),
       }
     );
+  },
+
+  /**
+   * GET /media/{mediaId}/glossary/export — the vido-glossary FILE (not an
+   * envelope). Returns the bytes and the server's filename for a download.
+   */
+  async exportFile(mediaId: string): Promise<{ blob: Blob; filename: string }> {
+    const response = await fetch(
+      `${API_BASE_URL}/media/${encodeURIComponent(mediaId)}/glossary/export`
+    );
+    if (!response.ok) throw await exchangeError(response);
+    const blob = await response.blob();
+    return {
+      blob,
+      filename: filenameFrom(response.headers.get('Content-Disposition'), 'vido-glossary.json'),
+    };
+  },
+
+  /** POST /media/{mediaId}/glossary/import (multipart `file`). */
+  async importFile(mediaId: string, file: File): Promise<GlossaryImportResult> {
+    const form = new FormData();
+    form.append('file', file);
+    const response = await fetch(
+      `${API_BASE_URL}/media/${encodeURIComponent(mediaId)}/glossary/import`,
+      { method: 'POST', body: form }
+    );
+    if (!response.ok) throw await exchangeError(response);
+    const data: ApiResponse<GlossaryImportResult> = await response.json();
+    if (!data.success)
+      throw new GlossaryExchangeError(
+        data.error?.message || '匯入失敗',
+        data.error?.code || 'UNKNOWN'
+      );
+    const result = snakeToCamel<GlossaryImportResult>(data.data);
+    return { ...result, conflicts: result.conflicts ?? [] };
   },
 
   /** POST /media/{mediaId}/glossary/{termId}/confirm → 204. */

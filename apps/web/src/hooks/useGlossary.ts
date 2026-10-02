@@ -23,7 +23,7 @@ export function useGlossaryTerms(mediaId: string, enabled = true) {
   });
 }
 
-/** All five write mutations, each invalidating the media's glossary list. */
+/** The write mutations (each list-changing one invalidates the media's glossary list) plus sub-8-1 export / import. */
 export function useGlossaryMutations(mediaId: string) {
   const queryClient = useQueryClient();
   const invalidate = () => queryClient.invalidateQueries({ queryKey: glossaryKeys.list(mediaId) });
@@ -54,5 +54,16 @@ export function useGlossaryMutations(mediaId: string) {
     onSuccess: invalidate,
   });
 
-  return { add, edit, confirm, confirmAll, remove };
+  /** sub-8-1: merge a friend's vido-glossary file; the list refetches. */
+  const importFile = useMutation({
+    mutationFn: (file: File) => glossaryService.importFile(mediaId, file),
+    onSuccess: invalidate,
+  });
+
+  /** sub-8-1: download this title's glossary as a file (no cache to touch). */
+  const exportFile = useMutation({
+    mutationFn: () => glossaryService.exportFile(mediaId),
+  });
+
+  return { add, edit, confirm, confirmAll, remove, importFile, exportFile };
 }

@@ -980,10 +980,20 @@ func main() {
 		mediaLibraryService,
 		handlers.WithAutoSubtitleSupport(cfg.SubtitlePipelineEnabled),
 	)
-	exploreBlocksHandler := handlers.NewExploreBlocksHandler(exploreBlockService)                               // Story 10.3
-	filterPresetsHandler := handlers.NewFilterPresetsHandler(filterPresetService)                               // Story 11.4
-	requestHandler := handlers.NewRequestHandler(requestService)                                                // Story 13-1a
-	glossaryHandler := handlers.NewGlossaryHandler(services.NewGlossaryService(repos.Glossary, glossaryScopes)) // Story 9R-15 (+ sub-7-1 scope)
+	exploreBlocksHandler := handlers.NewExploreBlocksHandler(exploreBlockService)                                // Story 10.3
+	filterPresetsHandler := handlers.NewFilterPresetsHandler(filterPresetService)                                // Story 11.4
+	requestHandler := handlers.NewRequestHandler(requestService)                                                 // Story 13-1a
+	glossaryHandler := handlers.NewGlossaryHandler(services.NewGlossaryService(repos.Glossary, glossaryScopes)). // Story 9R-15 (+ sub-7-1 scope)
+		// sub-8-1: export / import a title's glossary as a file.
+		WithExchange(services.NewGlossaryExchangeService(repos.Glossary, glossaryScopes, func(ctx context.Context, id string) string {
+			if s, err := repos.Series.FindByID(ctx, id); err == nil && s != nil {
+				return s.Title
+			}
+			if m, err := repos.Movies.FindByID(ctx, id); err == nil && m != nil {
+				return m.Title
+			}
+			return ""
+		}, slog.Default()))
 	// sub-7-5b: learn a show's renderings from the official zh-Hant subtitles
 	// it already has. Its own Extractor (ffmpeg availability is probed once)
 	// because the pipeline's lives inside the pipeline-enabled block; $0 work,

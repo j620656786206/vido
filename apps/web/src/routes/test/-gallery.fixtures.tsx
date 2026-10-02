@@ -203,6 +203,7 @@ import { BatchSubtitlePanel } from '../../components/subtitle/BatchSubtitleDialo
 import { GenerationProgressV2 } from '../../components/subtitle/GenerationProgressV2';
 import { GlossaryRowV2 } from '../../components/subtitle/GlossaryRowV2';
 import { GlossaryPanelV2 } from '../../components/subtitle/GlossaryPanelV2';
+import { GlossaryImportResultCard } from '../../components/subtitle/GlossaryImportResult';
 import { ManageSubtitleDialogV2 } from '../../components/subtitle/ManageSubtitleDialogV2';
 import { AnalysisProgressPanel } from '../../components/subtitle/consent/AnalysisProgressPanel';
 import { CandidateListPanel } from '../../components/subtitle/consent/CandidateListPanel';
@@ -5498,6 +5499,133 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     ],
     penNode: 'screen-section', // Screen F1-D-v2 (r1EY9)
     statesOnly: ['default'],
+  },
+  // sub-8-1 — the import result card (F6c-D-v2 zv4hT / F6c-M-v2 x1uKHq).
+  // Rendered on its own: inside the panel it only appears after a file is
+  // picked, which a static fixture cannot do.
+  {
+    id: 'glossary-import-result/conflicts',
+    label: 'subtitle/GlossaryImportResultCard (F6c-D — 匯入結果＋兩個衝突)',
+    component: GlossaryImportResultCard,
+    props: {
+      result: {
+        imported: 12,
+        skipped: 3,
+        title: '怪奇物語',
+        conflicts: [
+          {
+            id: 'c1',
+            termSrc: 'Darkling',
+            mine: '闇之手',
+            theirs: '黑暗之主',
+            mineSource: 'manual',
+            mineConfirmed: true,
+          },
+          {
+            id: 'c2',
+            termSrc: 'Kirigan',
+            mine: '凱利根',
+            theirs: '基里根',
+            mineSource: 'subtitle',
+            mineConfirmed: false,
+          },
+        ],
+      },
+      conflicts: [
+        {
+          id: 'c1',
+          termSrc: 'Darkling',
+          mine: '闇之手',
+          theirs: '黑暗之主',
+          mineSource: 'manual',
+          mineConfirmed: true,
+        },
+        {
+          id: 'c2',
+          termSrc: 'Kirigan',
+          mine: '凱利根',
+          theirs: '基里根',
+          mineSource: 'subtitle',
+          mineConfirmed: false,
+        },
+      ],
+      onKeep: noop,
+      onUseTheirs: noop,
+      onKeepAll: noop,
+      onUseAllTheirs: noop,
+      onDismiss: noop,
+    },
+    penNode: 'zv4hT', // Screen F6c-D-v2, import-result block
+    statesOnly: ['default'],
+    width: 832,
+  },
+  {
+    id: 'glossary-import-result/conflicts-mobile',
+    label: 'subtitle/GlossaryImportResultCard (F6c-M — 手機，衝突列直排)',
+    component: GlossaryImportResultCard,
+    props: {
+      result: {
+        imported: 12,
+        skipped: 3,
+        title: '怪奇物語',
+        conflicts: [
+          {
+            id: 'c1',
+            termSrc: 'Darkling',
+            mine: '闇之手',
+            theirs: '黑暗之主',
+            mineSource: 'manual',
+            mineConfirmed: true,
+          },
+          {
+            id: 'c2',
+            termSrc: 'Kirigan',
+            mine: '凱利根',
+            theirs: '基里根',
+            mineSource: 'subtitle',
+            mineConfirmed: false,
+          },
+        ],
+      },
+      conflicts: [
+        {
+          id: 'c1',
+          termSrc: 'Darkling',
+          mine: '闇之手',
+          theirs: '黑暗之主',
+          mineSource: 'manual',
+          mineConfirmed: true,
+        },
+        {
+          id: 'c2',
+          termSrc: 'Kirigan',
+          mine: '凱利根',
+          theirs: '基里根',
+          mineSource: 'subtitle',
+          mineConfirmed: false,
+        },
+      ],
+      onKeep: noop,
+      onUseTheirs: noop,
+      onKeepAll: noop,
+      onUseAllTheirs: noop,
+      onDismiss: noop,
+    },
+    penNode: 'x1uKHq', // Screen F6c-M-v2
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+  },
+  {
+    id: 'glossary-import-result/error',
+    label: 'subtitle/GlossaryImportResultCard (F6c-D note ② — 別部片的檔)',
+    component: GlossaryImportResultCard,
+    props: {
+      error: '這個檔案是別部片的詞彙表。請到那部片的詞彙表匯入，或請對方匯出這一部。',
+      onDismiss: noop,
+    },
+    penNode: 'zv4hT', // F6c-D Note ②／④
+    statesOnly: ['default'],
+    width: 832,
   },
   {
     id: 'glossary-panel-v2/seeded',

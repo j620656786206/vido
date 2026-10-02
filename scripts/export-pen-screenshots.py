@@ -357,6 +357,9 @@ SCREENS = {
     "f6ZxY": ("flow-f-subtitle-v2", "f5-d-v2"),
     "dlfMR": ("flow-f-subtitle-v2", "f6-d-v2"),
     "buepS": ("flow-f-subtitle-v2", "f6-m-v2"),
+    # sub-8-1 — 詞彙表匯出／匯入結果（衝突處理：保留我的／改用他的）
+    "zv4hT": ("flow-f-subtitle-v2", "f6c-d-v2"),
+    "x1uKHq": ("flow-f-subtitle-v2", "f6c-m-v2"),
     "A85GFD": ("flow-f-subtitle-v2", "f7-d-v2"),
     "i9Nun1": ("flow-f-subtitle-v2", "f8-d-v2"),
     "H717g": ("flow-f-subtitle-v2", "f8-m-v2"),

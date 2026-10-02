@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen F6-D-v2 (dlfMR) + Screen F7-D-v2 (A85GFD) + Screen F6-SPEC-STATES (n3vIR) + Screen F6-M-v2 (buepS)
+// Design ref: ux-design.pen Screen F6-D-v2 (dlfMR) + Screen F7-D-v2 (A85GFD) + Screen F6-SPEC-STATES (n3vIR) + Screen F6-M-v2 (buepS) + Screen F6c-D-v2 (zv4hT) + Screen F6c-M-v2 (x1uKHq)
 /**
  * Glossary management + review panel (ux3-subtitle-v2 AC 4, screens F6-D-v2
  * dlfMR / F6-M-v2 buepS / F7-D-v2 A85GFD 空狀態, states F6-SPEC-STATES n3vIR).
@@ -13,15 +13,22 @@
  * that is already in the table is stopped before the backend's upsert would
  * silently overwrite it.
  * Rule 5: list = query, writes = mutations (useGlossary.ts).
+ *
+ * sub-8-1: 匯出檔案／匯入檔案 sit in the footer on a desktop and under 新增詞彙
+ * on a phone (Ghost — occasional actions must not dilute the daily pair).
+ * An import's result and its conflicts render above the list
+ * (GlossaryImportResultCard); a refused export/import shows in the same slot.
  */
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { BookOpen, CircleAlert } from 'lucide-react';
+import { BookOpen, CircleAlert, Download, Upload } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../ui/Dialog';
 import { MOBILE_SHEET_CLOSE, MOBILE_SHEET_CONTENT, SheetGrabber } from '../ui/mobileSheet';
 import { cn } from '../../lib/utils';
 import { useGlossaryTerms, useGlossaryMutations } from '../../hooks/useGlossary';
 import { isImeComposing } from '../../utils/keyboard';
 import { GlossaryRowV2 } from './GlossaryRowV2';
+import { GlossaryImportResultCard } from './GlossaryImportResult';
+import type { GlossaryImportConflict, GlossaryImportResult } from '../../services/glossaryService';
 
 export interface GlossaryPanelV2Props {
   /** STRING local media id (9R-15 route contract). */
@@ -47,6 +54,22 @@ const INLINE_EDITOR = '[data-glossary-inline-editor]';
 const SECONDARY_BUTTON =
   'flex min-h-[44px] items-center justify-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)] disabled:opacity-50';
 
+/** F6-D-v2 footer / F6-M-v2 exchange row: Component/Button/Ghost (StCnR). */
+const GHOST_BUTTON =
+  'flex min-h-[36px] items-center justify-center gap-2 rounded-[var(--radius-md)] px-3 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-tertiary)] disabled:opacity-50 max-sm:min-h-[44px]';
+
+/** Hand a Blob to the browser as a download. */
+function saveBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 const TEXT_INPUT =
   'w-40 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none';
 
@@ -65,7 +88,14 @@ function SkeletonRows() {
 
 export function GlossaryPanelV2({ mediaId, mediaTitle, open, onOpenChange }: GlossaryPanelV2Props) {
   const terms = useGlossaryTerms(mediaId, open);
-  const { add, edit, confirm, confirmAll, remove } = useGlossaryMutations(mediaId);
+  const { add, edit, confirm, confirmAll, remove, importFile, exportFile } =
+    useGlossaryMutations(mediaId);
+  const fileInput = useRef<HTMLInputElement>(null);
+  // sub-8-1: the last import's result, the conflicts still awaiting a
+  // decision, and a refused export/import — all one session's worth.
+  const [importResult, setImportResult] = useState<GlossaryImportResult | null>(null);
+  const [pendingConflicts, setPendingConflicts] = useState<GlossaryImportConflict[]>([]);
+  const [exchangeError, setExchangeError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [draftSrc, setDraftSrc] = useState('');
   const [draftZh, setDraftZh] = useState('');
@@ -90,6 +120,9 @@ export function GlossaryPanelV2({ mediaId, mediaTitle, open, onOpenChange }: Glo
       setDraftZh('');
       setWriteError(null);
       setDuplicate(null);
+      setImportResult(null);
+      setPendingConflicts([]);
+      setExchangeError(null);
       setSession((n) => n + 1);
     }
   }
@@ -105,7 +138,8 @@ export function GlossaryPanelV2({ mediaId, mediaTitle, open, onOpenChange }: Glo
     edit.isPending ||
     confirm.isPending ||
     confirmAll.isPending ||
-    remove.isPending;
+    remove.isPending ||
+    importFile.isPending;
 
   /** Clears the last failure when a write starts; reports this one if it fails. */
   const runWrite = async <T,>(failureText: string, write: () => Promise<T>): Promise<T> => {
@@ -119,6 +153,80 @@ export function GlossaryPanelV2({ mediaId, mediaTitle, open, onOpenChange }: Glo
     }
   };
   const termSrcOf = (termId: string) => list.find((t) => t.id === termId)?.termSrc ?? '';
+
+  const errorText = (err: unknown, fallback: string) =>
+    err instanceof Error && err.message ? err.message : fallback;
+
+  const runExport = () => {
+    setExchangeError(null);
+    exportFile
+      .mutateAsync()
+      .then(({ blob, filename }) => saveBlob(blob, filename))
+      .catch((err) => setExchangeError(errorText(err, '匯出失敗，請再試一次')));
+  };
+
+  const runImport = (file: File) => {
+    const startedIn = sessionRef.current;
+    setExchangeError(null);
+    importFile
+      .mutateAsync(file)
+      .then((result) => {
+        if (sessionRef.current !== startedIn) return;
+        setImportResult(result);
+        setPendingConflicts(result.conflicts);
+      })
+      .catch((err) => {
+        if (sessionRef.current === startedIn)
+          setExchangeError(errorText(err, '匯入失敗，請再試一次'));
+      });
+  };
+
+  const dropConflict = (id: string) => setPendingConflicts((cs) => cs.filter((c) => c.id !== id));
+  // 改用他的 = an ordinary edit, which the server confirms (⚖️ 2026-10-02).
+  const takeTheirs = (c: GlossaryImportConflict) =>
+    runWrite(`「${c.termSrc}」沒有改成「${c.theirs}」，請再試一次`, () =>
+      edit.mutateAsync({ termId: c.id, termZh: c.theirs, confirmed: true })
+    ).then(
+      () => dropConflict(c.id),
+      () => undefined
+    );
+  const takeAllTheirs = async () => {
+    for (const c of pendingConflicts) {
+      try {
+        await runWrite(`「${c.termSrc}」沒有改成「${c.theirs}」，請再試一次`, () =>
+          edit.mutateAsync({ termId: c.id, termZh: c.theirs, confirmed: true })
+        );
+        dropConflict(c.id);
+      } catch {
+        return; // stop at the first failure; the rest stay for the user
+      }
+    }
+  };
+
+  const exchangeButtons = (labels: { exp: string; imp: string }) => (
+    <>
+      <button
+        type="button"
+        onClick={runExport}
+        disabled={list.length === 0 || exportFile.isPending}
+        data-testid={`glossary-export${labels.exp === '匯出' ? '-m' : ''}`}
+        className={GHOST_BUTTON}
+      >
+        <Download className="h-3.5 w-3.5 text-[var(--text-secondary)]" aria-hidden="true" />
+        {labels.exp}
+      </button>
+      <button
+        type="button"
+        onClick={() => fileInput.current?.click()}
+        disabled={busy}
+        data-testid={`glossary-import${labels.imp === '匯入' ? '-m' : ''}`}
+        className={GHOST_BUTTON}
+      >
+        <Upload className="h-3.5 w-3.5 text-[var(--text-secondary)]" aria-hidden="true" />
+        {labels.imp}
+      </button>
+    </>
+  );
 
   const closeAddForm = () => {
     setAdding(false);
@@ -366,7 +474,7 @@ export function GlossaryPanelV2({ mediaId, mediaTitle, open, onOpenChange }: Glo
             <span className="hidden flex-1 sm:block" />
             {/* sm:contents dissolves this wrapper on a desktop, so both buttons
                 stay direct children of the toolbar row exactly as before. */}
-            {(list.length > 0 || (terms.isError && !terms.data)) && (
+            {!terms.isLoading && (
               <div
                 data-testid="glossary-actions"
                 className="flex gap-3 max-sm:order-last max-sm:w-full max-sm:flex-col sm:contents"
@@ -398,9 +506,49 @@ export function GlossaryPanelV2({ mediaId, mediaTitle, open, onOpenChange }: Glo
                     新增詞彙
                   </button>
                 )}
+                {/* F6-M-v2: the exchange pair sits under 新增詞彙 on a phone; a
+                    desktop carries it in the footer instead. */}
+                <div data-testid="glossary-exchange-m" className="grid grid-cols-2 gap-2 sm:hidden">
+                  {exchangeButtons({ exp: '匯出', imp: '匯入' })}
+                </div>
               </div>
             )}
           </div>
+
+          <input
+            ref={fileInput}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            data-testid="glossary-import-file"
+            aria-hidden="true"
+            tabIndex={-1}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = ''; // the same file can be picked again
+              if (file) runImport(file);
+            }}
+          />
+
+          {(exchangeError || importResult) && (
+            <GlossaryImportResultCard
+              result={importResult ?? undefined}
+              conflicts={pendingConflicts}
+              error={exchangeError ?? undefined}
+              busy={busy}
+              onKeep={dropConflict}
+              onUseTheirs={takeTheirs}
+              onKeepAll={() => setPendingConflicts([])}
+              onUseAllTheirs={() => {
+                void takeAllTheirs();
+              }}
+              onDismiss={() => {
+                setExchangeError(null);
+                setImportResult(null);
+                setPendingConflicts([]);
+              }}
+            />
+          )}
 
           {/* Sticky, so a failure on a row far down the scrolling list is still
               in view — without scrolling that row (and its focused input) away.
@@ -440,14 +588,28 @@ export function GlossaryPanelV2({ mediaId, mediaTitle, open, onOpenChange }: Glo
           )}
         </div>
 
-        {/* Footer count — numbers Mono, zh Noto (DL-v2 font split). */}
-        {list.length > 0 && (
+        {/* Footer: count left (numbers Mono, zh Noto — DL-v2 font split),
+            匯出檔案／匯入檔案 right on a desktop (F6-D-v2). Shown on an empty
+            list too, on a desktop, so a friend's file can seed an empty table. */}
+        {!terms.isLoading && (list.length > 0 || !terms.isError) && (
           <div
-            data-testid="glossary-footer-count"
-            className="border-t border-[var(--border-subtle)] px-6 py-3.5 text-sm text-[var(--text-secondary)] max-sm:px-4 max-sm:pb-[max(0.875rem,env(safe-area-inset-bottom))]"
+            data-testid="glossary-footer"
+            className={cn(
+              'flex items-center justify-between gap-3 border-t border-[var(--border-subtle)] px-6 py-2.5 text-sm text-[var(--text-secondary)] max-sm:px-4 max-sm:py-3.5 max-sm:pb-[max(0.875rem,env(safe-area-inset-bottom))]',
+              list.length === 0 && 'max-sm:hidden'
+            )}
           >
-            共 <span className="font-mono tabular-nums">{list.length}</span> 條 ·{' '}
-            <span className="font-mono tabular-nums">{unconfirmedCount}</span> 條未確認
+            {list.length > 0 ? (
+              <p data-testid="glossary-footer-count">
+                共 <span className="font-mono tabular-nums">{list.length}</span> 條 ·{' '}
+                <span className="font-mono tabular-nums">{unconfirmedCount}</span> 條未確認
+              </p>
+            ) : (
+              <span />
+            )}
+            <div data-testid="glossary-exchange" className="flex gap-1 max-sm:hidden">
+              {exchangeButtons({ exp: '匯出檔案', imp: '匯入檔案' })}
+            </div>
           </div>
         )}
       </DialogContent>

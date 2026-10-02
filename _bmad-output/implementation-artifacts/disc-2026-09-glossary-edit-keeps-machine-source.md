@@ -1,6 +1,6 @@
 # Story disc-2026-09-glossary-edit-keeps-machine-source: 在詞彙表改過的譯名自動算「已確認」，來源不變 — 後端＋前端
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-10-02（自 sprint-status 同名條目轉成單；⚖️ Alexyu 2026-10-02 裁定選項 1）。行號為 main `9d264d6c`。sub-8-1 匯入規則的前置。 -->
 
@@ -61,3 +61,4 @@ Claude Opus 5.5（Amelia）
 | Date       | Change                                                          |
 | ---------- | --------------------------------------------------------------- |
 | 2026-10-02 | create-story（SM Bob）＋裁定入檔＋dev-story（Amelia）→ review。 |
+| 2026-10-02 | PR #649 合併（Alexyu）→ done。 |
