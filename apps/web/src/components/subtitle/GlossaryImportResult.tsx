@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen F6c-D-v2 (zv4hT) · F6c-M-v2 (x1uKHq) · F6c-D Note
+// Design ref: ux-design.pen Screen F6c-D-v2 (zv4hT) · F6c-M-v2 (x1uKHq)
 /**
  * 匯入結果 — sub-8-1 AC #3. Sits above the glossary list after an import:
  * one summary line (new / same / different) and, for every term both sides
