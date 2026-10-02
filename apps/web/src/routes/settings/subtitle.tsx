@@ -1,7 +1,8 @@
-// Design ref: ux-design.pen Screen C9-D (NR3zK) · C9-M (AWYm0)
+// Design ref: ux-design.pen Screen C9-D (NR3zK) · C9-M (AWYm0) — 在地化程度＋從官方字幕學譯名 (sub-7-5b)
 import { createFileRoute } from '@tanstack/react-router';
 import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
 import { LocalizationLevelForm } from '../../components/settings/LocalizationLevelForm';
+import { OfficialSubtitleMiningCard } from '../../components/settings/OfficialSubtitleMiningCard';
 
 export const Route = createFileRoute('/settings/subtitle')({
   component: SubtitleSettingsPage,
@@ -16,6 +17,7 @@ function SubtitleSettingsPage() {
         description="AI 翻譯字幕的風格與口味。金鑰請到「金鑰設定」，媒體庫的自動字幕請到「媒體庫掃描」。"
       />
       <LocalizationLevelForm />
+      <OfficialSubtitleMiningCard />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 # Story sub-7-5a: 從官方繁中字幕學譯名——對齊＋抽詞演算法＋驗收用指令 — 後端
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-10-01，由 sub-7-5 拆出（原單 BE 5 task 含觸發／SSE／設定頁按鈕／可選 LLM，超過上一張同類單子的規模 → 拆成 7-5a 演算法＋CLI／7-5b 接線）。行號為 main `12a4f507`。 -->
 

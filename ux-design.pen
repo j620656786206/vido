@@ -67168,6 +67168,162 @@
                                       ]
                                     }
                                   ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "yMjTQ",
+                                  "name": "section-row",
+                                  "width": "fill_container",
+                                  "gap": "$Space/xl",
+                                  "padding": [
+                                    "$Space/lg",
+                                    "$Space/none",
+                                    "$Space/none",
+                                    "$Space/none"
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "bz8lF",
+                                      "name": "section-官方字幕學譯名",
+                                      "width": 768,
+                                      "layout": "vertical",
+                                      "gap": "$Space/md",
+                                      "padding": "$Space/none",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "laza7",
+                                          "name": "head",
+                                          "width": "fill_container",
+                                          "layout": "vertical",
+                                          "gap": "$Space/xs",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "LbCPg",
+                                              "name": "title",
+                                              "fill": "$text-primary",
+                                              "content": "從官方字幕學譯名",
+                                              "lineHeight": "$Type/BodyLg/Line",
+                                              "fontFamily": "$Type/Family/Primary",
+                                              "fontSize": "$Type/BodyLg/Size",
+                                              "fontWeight": "600"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "r3zVJh",
+                                              "name": "desc",
+                                              "fill": "$text-secondary",
+                                              "textGrowth": "fixed-width",
+                                              "width": "fill_container",
+                                              "content": "同一部劇有些集已經有官方繁中字幕、有些集沒有時，Vido 會讀那幾集學會這部劇的人名怎麼翻，再用同樣的譯名翻其他集。掃描完會自動做；這裡可以手動再跑一次。",
+                                              "lineHeight": "$Type/Body/Line",
+                                              "fontFamily": "$Type/Family/Primary",
+                                              "fontSize": "$Type/Body/Size",
+                                              "fontWeight": "$Type/Body/Weight"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "rUhEe",
+                                          "name": "action-row",
+                                          "width": "fill_container",
+                                          "gap": "$Space/md",
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "id": "s1W8Wc",
+                                              "type": "ref",
+                                              "ref": "YDPhc",
+                                              "name": "btn-重新從官方字幕學習",
+                                              "descendants": {
+                                                "L9cIf": {
+                                                  "content": "重新從官方字幕學習"
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "l4tJo",
+                                              "name": "last-run",
+                                              "fill": "$text-secondary",
+                                              "textGrowth": "fixed-width",
+                                              "width": "fill_container",
+                                              "content": "上次 2026-10-01 14:30 · Shadow and Bone 學到 68 個詞（8 集）、Scorpion 跳過 6 個字幕組檔",
+                                              "lineHeight": "$Type/Body/Line",
+                                              "fontFamily": "$Type/Family/Primary",
+                                              "fontSize": "$Type/Body/Size",
+                                              "fontWeight": "$Type/Body/Weight"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "JTw7U",
+                                      "name": "C9-D Note",
+                                      "width": 360,
+                                      "layout": "vertical",
+                                      "gap": "$Space/sm",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "D8eiAS",
+                                          "name": "n1",
+                                          "fill": "#888888",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "① 閒置：按鈕可按＋上次結果一行（第一次是「還沒跑過」）",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "Z8T6P4",
+                                          "name": "n2",
+                                          "fill": "#888888",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "② 學習中：按鈕停用、文字改「學習中…」，每 3 秒輪詢；主要是讀檔與 ffmpeg 抽軌，$0",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "bi1GF",
+                                          "name": "n3",
+                                          "fill": "#888888",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "③ 跑完：一行結果，每部劇一句，用頓號接；跳過的字幕組檔要說",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "cVwKB",
+                                          "name": "n4",
+                                          "fill": "#888888",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "④ 沒有可學的劇：「片庫裡沒有「部分集有官方字幕」的影集」",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
                                 }
                               ]
                             }
@@ -87919,7 +88075,7 @@
               },
               "clip": true,
               "width": 390,
-              "height": 864,
+              "height": 1131,
               "fill": "$bg-primary",
               "layout": "vertical",
               "children": [
@@ -88449,6 +88605,81 @@
                                   "fontWeight": "normal"
                                 }
                               ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "JTPzS",
+                          "name": "section-官方字幕學譯名",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": "$Space/md",
+                          "padding": [
+                            "$Space/lg-plus",
+                            "$Space/none",
+                            "$Space/none",
+                            "$Space/none"
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "HOYsW",
+                              "name": "head",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": "$Space/xs",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "J4yho",
+                                  "name": "title",
+                                  "fill": "$text-primary",
+                                  "content": "從官方字幕學譯名",
+                                  "lineHeight": "$Type/BodyLg/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/BodyLg/Size",
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "gcPdH",
+                                  "name": "desc",
+                                  "fill": "$text-secondary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "同一部劇有些集已經有官方繁中字幕、有些集沒有時，Vido 會讀那幾集學會這部劇的人名怎麼翻，再用同樣的譯名翻其他集。掃描完會自動做；這裡可以手動再跑一次。",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "VkeFO",
+                              "type": "ref",
+                              "ref": "JK9so",
+                              "name": "btn-重新從官方字幕學習",
+                              "width": "fill_container",
+                              "descendants": {
+                                "nWedm": {
+                                  "content": "重新從官方字幕學習"
+                                }
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "aStXa",
+                              "name": "last-run",
+                              "fill": "$text-secondary",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "上次 2026-10-01 14:30 · Shadow and Bone 學到 68 個詞（8 集）、Scorpion 跳過 6 個字幕組檔",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
                             }
                           ]
                         }
