@@ -1,6 +1,6 @@
 # Story sub-7-8b: 等級表內建進 App ＋ CI 一鍵評新模型開 PR — 後端／CI／文件
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-10-01，由 sub-7-8 拆出；依賴 sub-7-8a（`cmd/grade` 輸出格式）。⚖️ Alexyu 2026-10-01 裁定：不做遠端 feed，只做內建 JSON＋CI 開 PR。行號為 main `4004c7af`。 -->
 
