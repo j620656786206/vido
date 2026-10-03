@@ -112,8 +112,9 @@ describe('ExploreBlockEditModal', () => {
     renderModal();
     expect(screen.getByLabelText('區塊名稱')).toBe(screen.getByTestId('explore-block-name-input'));
     expect(screen.getByLabelText('內容類型')).toBe(screen.getByTestId('explore-block-type-select'));
-    expect(screen.getByLabelText('類型 ID（逗號分隔 TMDb genre IDs，可留空）')).toBe(
-      screen.getByTestId('explore-block-genre-input')
+    // The genre chips are a labelled group, not a single control.
+    expect(screen.getByRole('group', { name: '類型篩選' })).toBe(
+      screen.getByTestId('explore-block-genre-chips')
     );
     expect(screen.getByLabelText('語言')).toBe(screen.getByTestId('explore-block-language-input'));
     expect(screen.getByLabelText('排序')).toBeInTheDocument();
@@ -202,5 +203,53 @@ describe('ExploreBlockEditModal', () => {
     expect([...select.options].map((o) => [o.value, o.textContent])).toEqual(
       MOVIE_SORT_OPTIONS.map((o) => [o.value, o.label])
     );
+  });
+
+  describe('genre chips (disc-2026-09-explore-block-genre-ids-raw)', () => {
+    const block: ExploreBlock = {
+      id: 'b1',
+      name: '高分動畫',
+      contentType: 'movie',
+      genreIds: '16,999',
+      language: '',
+      region: '',
+      sortBy: 'vote_average.desc',
+      maxItems: 15,
+      sortOrder: 0,
+      createdAt: '',
+      updatedAt: '',
+    };
+
+    it('shows the content type’s genres by name; stored ids are pressed; an unknown id stays visible', () => {
+      renderModal({ block });
+      expect(screen.getByTestId('explore-block-genre-16')).toHaveTextContent('動畫');
+      expect(screen.getByTestId('explore-block-genre-16')).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByTestId('explore-block-genre-28')).toHaveAttribute('aria-pressed', 'false');
+      expect(screen.getByTestId('explore-block-genre-999')).toHaveTextContent('ID 999');
+      expect(screen.getAllByRole('button', { pressed: true })).toHaveLength(2);
+    });
+
+    it('toggling chips saves the same comma-separated id string as before', async () => {
+      renderModal({ block });
+      fireEvent.click(screen.getByTestId('explore-block-genre-878')); // + 科幻
+      fireEvent.click(screen.getByTestId('explore-block-genre-999')); // − unknown
+      fireEvent.click(screen.getByTestId('explore-block-save-button'));
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(updateMutation.mutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ genreIds: '16,878' })
+      );
+    });
+
+    it('switching to 影集 keeps shared genres, drops movie-only ones, keeps unknown ids', () => {
+      renderModal({ block: { ...block, genreIds: '16,28,999' } });
+      fireEvent.change(screen.getByTestId('explore-block-type-select'), {
+        target: { value: 'tv' },
+      });
+      expect(screen.getByTestId('explore-block-genre-16')).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.queryByTestId('explore-block-genre-28')).toBeNull(); // 動作 is movie-only
+      expect(screen.getByTestId('explore-block-genre-10759')).toHaveTextContent('動作冒險');
+      expect(screen.getByTestId('explore-block-genre-999')).toHaveAttribute('aria-pressed', 'true');
+    });
   });
 });

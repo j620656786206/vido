@@ -4,7 +4,9 @@
  */
 
 import { cloneElement, useEffect, useId, useState } from 'react';
-import { X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
+import { cn } from '../../lib/utils';
+import { genreIdsFor, genreLabel, parseGenreIdList } from '../../lib/genres';
 import { useCreateExploreBlock, useUpdateExploreBlock } from '../../hooks/useExploreBlocks';
 import type { ExploreBlock, ExploreBlockContentType } from '../../services/exploreBlockService';
 import { getSortOptions } from './exploreBlockSort';
@@ -23,18 +25,26 @@ export function ExploreBlockEditModal({ block, onClose }: ExploreBlockEditModalP
   const [contentType, setContentType] = useState<ExploreBlockContentType>(
     block?.contentType ?? 'movie'
   );
-  const [genreIds, setGenreIds] = useState(block?.genreIds ?? '');
+  const [genreIds, setGenreIds] = useState<number[]>(() => parseGenreIdList(block?.genreIds));
   const [language, setLanguage] = useState(block?.language ?? '');
   const [region, setRegion] = useState(block?.region ?? '');
   const [sortBy, setSortBy] = useState(block?.sortBy ?? 'popularity.desc');
   const [maxItems, setMaxItems] = useState(block?.maxItems ?? 20);
   const [error, setError] = useState<string | null>(null);
+  const genreLabelId = useId();
+  // The content type's TMDb genres, plus any already-picked id they do not
+  // contain (hand-typed before the chip picker) — shown so it is never
+  // dropped silently; un-picking it removes it.
+  const genreChoices = [
+    ...genreIdsFor(contentType),
+    ...genreIds.filter((id) => !genreIdsFor(contentType).includes(id)),
+  ];
 
   useEffect(() => {
     if (block) {
       setName(block.name);
       setContentType(block.contentType);
-      setGenreIds(block.genreIds);
+      setGenreIds(parseGenreIdList(block.genreIds));
       setLanguage(block.language);
       setRegion(block.region);
       setSortBy(block.sortBy || 'popularity.desc');
@@ -54,6 +64,12 @@ export function ExploreBlockEditModal({ block, onClose }: ExploreBlockEditModalP
   // H1 fix: reset sort when content type changes to avoid invalid TMDb sort_by
   const handleContentTypeChange = (newType: ExploreBlockContentType) => {
     setContentType(newType);
+    // Keep genres both types have (動畫, 劇情…); drop the other type's own
+    // (TV has no 28 動作 — TMDb ignores it). An id neither list knows was
+    // typed by hand before the chip picker: keep it, never drop it silently.
+    const known = new Set([...genreIdsFor('movie'), ...genreIdsFor('tv')]);
+    const nextList = genreIdsFor(newType);
+    setGenreIds((prev) => prev.filter((id) => nextList.includes(id) || !known.has(id)));
     const validOptions = getSortOptions(newType);
     if (!validOptions.some((opt) => opt.value === sortBy)) {
       setSortBy('popularity.desc');
@@ -69,7 +85,7 @@ export function ExploreBlockEditModal({ block, onClose }: ExploreBlockEditModalP
       const payload = {
         name,
         contentType,
-        genreIds,
+        genreIds: genreIds.join(','),
         language,
         region,
         sortBy,
@@ -152,16 +168,50 @@ export function ExploreBlockEditModal({ block, onClose }: ExploreBlockEditModalP
             </select>
           </Field>
 
-          <Field label="類型 ID（逗號分隔 TMDb genre IDs，可留空）">
-            <input
-              type="text"
-              value={genreIds}
-              onChange={(e) => setGenreIds(e.target.value)}
-              placeholder="例如：28,12"
-              data-testid="explore-block-genre-input"
-              className="w-full rounded-md border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/60 px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
-            />
-          </Field>
+          {/* H3 genreField (JtzjF): the content type's genres as toggle chips —
+              the v2 FilterChip language of I1-D-v2 (FilterPanel), not H3's pre-v2
+              palette. Saved as the same comma-separated id string as before. */}
+          <div>
+            <span
+              id={genreLabelId}
+              className="mb-1 block text-sm font-medium text-[var(--text-secondary)]"
+            >
+              類型篩選
+            </span>
+            <div
+              role="group"
+              aria-labelledby={genreLabelId}
+              className="flex flex-wrap gap-1.5"
+              data-testid="explore-block-genre-chips"
+            >
+              {genreChoices.map((id) => {
+                const active = genreIds.includes(id);
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-pressed={active}
+                    data-testid={`explore-block-genre-${id}`}
+                    onClick={() =>
+                      setGenreIds((prev) =>
+                        prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]
+                      )
+                    }
+                    className={cn(
+                      'inline-flex h-9 items-center gap-1 rounded-full border px-3 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
+                      active
+                        ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/15 text-[var(--accent-text)]'
+                        : 'border-transparent bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                    )}
+                  >
+                    {active && <Check className="h-3.5 w-3.5" aria-hidden="true" />}
+                    {genreLabel(id)}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">不選＝不限類型</p>
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="語言">

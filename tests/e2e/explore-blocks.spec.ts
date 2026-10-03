@@ -374,7 +374,9 @@ test.describe('Settings — Explore Blocks Management @ui @explore-blocks @story
     await expect(modal).toBeVisible();
     await expect(modal.getByTestId('explore-block-name-input')).toBeVisible();
     await expect(modal.getByTestId('explore-block-type-select')).toBeVisible();
-    await expect(modal.getByTestId('explore-block-genre-input')).toBeVisible();
+    // disc-2026-09-explore-block-genre-ids-raw: genres are toggle chips by name now.
+    await expect(modal.getByTestId('explore-block-genre-chips')).toBeVisible();
+    await expect(modal.getByTestId('explore-block-genre-16')).toHaveText('動畫');
     await expect(modal.getByTestId('explore-block-language-input')).toBeVisible();
     await expect(modal.getByTestId('explore-block-region-input')).toBeVisible();
     await expect(modal.getByTestId('explore-block-sort-select')).toBeVisible();

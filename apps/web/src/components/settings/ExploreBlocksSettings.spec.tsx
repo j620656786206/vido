@@ -236,7 +236,7 @@ describe('ExploreBlocksSettings', () => {
         `電影 · ${sortLabel('popularity.desc')} · 20 部 · zh-TW · 地區 TW`
       );
       expect(screen.getByTestId('explore-block-desc-b')).toHaveTextContent(
-        `電影 · ${sortLabel('vote_average.desc')} · 15 部 · 類型 16`
+        `電影 · ${sortLabel('vote_average.desc')} · 15 部 · 類型 動畫`
       );
       expect(screen.queryByText(/個項目/)).toBeNull();
     });
