@@ -152,6 +152,14 @@ Claude Opus 5.5（2026-10-04，dev-story）
 - **Gate**：`go test ./...` 全綠、`go vet ./...` 0、`staticcheck-2026.1 ./...` 0、`pnpm nx test web` 全綠、`test:cleanup` 無殘留。觸碰的 Go 檔 gofmt 乾淨。
 - 🔗 AC Drift: FOUND（範圍界定，非破壞）— `sub-7-6a-run-ledger.md` AC #3 [@contract-v1]「每個 run 終態發一次 `subtitle_run_receipt`」：該契約的範圍是**管線的 lane**（`recordTerminal`）；本單新增的線上引擎 ledger 列**不發收據**（它不是管線 item，前端也沒有對應的收據畫面），收據 payload 欄位一個不動。
 - 📎 Contract Stamps: FOUND（upstream `sub-7-6a` v1 ×1——`ReceiptPayload` 未改，confirmed against [@contract-v1]；`ProcessOutcome`／`RouteKind` [@contract-v1] 未改，ledger 新字彙是字串、不是 `RouteKind` 成員）。
+- **Adversarial review（2026-10-04，獨立 agent／不同模型，/ship 第 1 步）**：0 HIGH、2 MED、5 LOW，範圍內全修：
+  - ✅ MED-1＋MED-2（一起改，**AC #4 實作方式變更**）：原本用 `-ldflags -X` 把版本號編進 Go 執行檔——版本號每個 commit 都不同，會讓 Docker 的 Go 編譯層**每次都吃不到快取**（連只改前端的 PR 也是）；而且 `:latest` 是從 main 建的，版本號會一律是 `main`，分不出哪一版。改成：`config.Version()` 讀環境變數 `VIDO_VERSION`；Dockerfile 在**最後一個 stage 的最後**用 `ARG`＋`ENV` 設定（重建成本近乎零，Go 編譯層不受影響）；CI 新增「Resolve app version」步驟：tag 建置 = semver（`0.1.2`），其他 = `<ref>-<sha 前 7 碼>`（例 `main-81a4e5c`、`pr-664-xxxxxxx`）。
+  - ✅ LOW-1：線上入帳寫入改用 `context.WithoutCancel`（字幕已落地，帳一定要記；與 transcription ledger／process_item 清理同規則）；spy 測試證明 ledger 收到的是已脫離取消的 ctx。
+  - ✅ LOW-2：`Engine` 以 struct literal 建構時沒有 `now` → 新增 `clock()` 防 nil panic，附測試。
+  - ✅ LOW-3：新的視窗測試（repository `AutoProducedBetween`、engine ledger）改用 app 自己的 driver `database.DriverName`（`sqlite-utc`，#652），驗的是正式環境的時間文字格式（Rule 28）。既有測試的舊 driver 不在本單範圍。
+  - ✅ LOW-4：`cmd/seed` 的 fixture run 補 `TriggeredBy: manual`。
+  - 📝 LOW-5：`config.Version()` 目前無呼叫者，a2 才用——預期內。
+  - 📝 SPEC-1（推測、未修）：同一部片「下載完線上找字幕」與「掃描後自動抽內嵌軌」若**同時**跑，可能各寫一筆 auto 完成列；依序執行時會被各自的閘門擋下。實際上也真的產出兩個字幕檔，記錄在 PR 說明。
 - 🎭 A11y Pre-Flight: N/A (100% backend — no apps/web/ files touched)
 - 🎨 UX Verification: SKIPPED — no UI changes in this story
 - Pre-existing：無新增失敗。
@@ -181,6 +189,7 @@ Claude Opus 5.5（2026-10-04，dev-story）
 - apps/api/internal/config/version.go（新）
 - apps/api/internal/config/version_test.go（新）
 - apps/api/cmd/api/main.go
+- apps/api/cmd/seed/main.go
 - Dockerfile
 - .github/workflows/docker.yml
 - _bmad-output/implementation-artifacts/sprint-status.yaml
@@ -190,4 +199,5 @@ Claude Opus 5.5（2026-10-04，dev-story）
 
 | Date | Change |
 | --- | --- |
+| 2026-10-04 | adversarial review 修正：版本號改為 runtime ENV（不再 -ldflags，避免 Go 編譯層快取失效、`:latest` 版本號帶 sha）、入帳 WithoutCancel、Engine clock nil 防護、視窗測試改用 app driver、seed 補 TriggeredBy |
 | 2026-10-04 | dev-story：migration 043 `triggered_by`、自動入口標 auto、線上引擎成功入帳（route=online）、build-time 版本號、`AutoProducedBetween` 分組計數；Status → review |

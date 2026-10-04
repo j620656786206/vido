@@ -169,7 +169,7 @@ func (e *Engine) Process(ctx context.Context, mediaID, mediaType, mediaFilePath 
 		processOpts = &opts[0]
 	}
 	conversionPolicy := deriveConversionPolicy(processOpts)
-	startedAt := e.now().UTC()
+	startedAt := e.clock()
 	// Stage 1: Search
 	e.broadcastStatus(mediaID, mediaType, StageSearching, "Searching subtitle providers...")
 	e.updateStatus(ctx, mediaID, mediaType, models.SubtitleStatusSearching)
@@ -383,7 +383,7 @@ func (e *Engine) recordDelivered(ctx context.Context, mediaID, mediaType, path s
 	if e.runLedger == nil {
 		return
 	}
-	completedAt := e.now().UTC()
+	completedAt := e.clock()
 	trigger := models.SubtitleRunTriggeredManual
 	if automatic {
 		trigger = models.SubtitleRunTriggeredAuto
@@ -398,10 +398,22 @@ func (e *Engine) recordDelivered(ctx context.Context, mediaID, mediaType, path s
 		CompletedAt: &completedAt,
 		TriggeredBy: trigger,
 	}
-	if err := e.runLedger.Create(ctx, run); err != nil {
+	// WithoutCancel: the subtitle is already on disk, so the row must land even
+	// if the caller was cancelled in between (same rule as the transcription
+	// ledger's terminal write and process_item's cleanup writes).
+	if err := e.runLedger.Create(context.WithoutCancel(ctx), run); err != nil {
 		slog.Warn("subtitle run ledger: online delivery not recorded",
 			"media_id", mediaID, "media_type", mediaType, "error", err)
 	}
+}
+
+// clock is the engine's UTC now. An Engine built as a bare struct literal
+// (several package tests do) has no now func; fall back rather than panic.
+func (e *Engine) clock() time.Time {
+	if e.now == nil {
+		return time.Now().UTC()
+	}
+	return e.now().UTC()
 }
 
 // updateStatus updates the subtitle status in the database.

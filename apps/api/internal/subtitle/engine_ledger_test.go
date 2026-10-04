@@ -9,8 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	_ "modernc.org/sqlite"
 
+	"github.com/vido/api/internal/database"
 	"github.com/vido/api/internal/database/migrations"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
@@ -22,7 +22,9 @@ import (
 
 func engineLedgerDB(t *testing.T) *sql.DB {
 	t.Helper()
-	db, err := sql.Open("sqlite", ":memory:")
+	// The app's own driver (sqlite-utc, #652) — the time text it writes is what
+	// the window query compares in production.
+	db, err := sql.Open(database.DriverName, ":memory:")
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
 	runner, err := migrations.NewRunner(db)
@@ -128,4 +130,38 @@ func TestEngine_Process_NoLedgerWiredRecordsNothing(t *testing.T) {
 		providers.SubtitleQuery{Title: "Test"}, "1080p", ProcessOptions{Automatic: true})
 
 	assert.True(t, result.Success, "an engine without SetRunLedger behaves exactly as before")
+}
+
+// A caller cancelled after placement must not lose the row — the file exists.
+// The engine detaches the write with context.WithoutCancel, whose Done()
+// channel is nil; a spy proves the ledger never sees the caller's cancellation.
+func TestEngine_Process_LedgerWriteIsDetachedFromCallerCancellation(t *testing.T) {
+	spy := &ctxSpyLedger{}
+	engine, mediaPath := newTestEngine(t, []providers.SubtitleProvider{foundProvider()}, nil)
+	engine.SetRunLedger(spy)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	result := engine.Process(ctx, "movie-1", "movie", mediaPath,
+		providers.SubtitleQuery{Title: "Test"}, "1080p", ProcessOptions{Automatic: true})
+	require.True(t, result.Success)
+
+	require.Equal(t, 1, spy.calls)
+	assert.True(t, spy.detached, "the ledger write must not inherit the caller's cancellation")
+}
+
+type ctxSpyLedger struct {
+	calls    int
+	detached bool
+}
+
+func (s *ctxSpyLedger) Create(ctx context.Context, _ *models.SubtitleRun) error {
+	s.calls++
+	s.detached = ctx.Done() == nil
+	return nil
+}
+
+func TestEngine_BareStructClockDoesNotPanic(t *testing.T) {
+	e := &Engine{}
+	assert.NotPanics(t, func() { _ = e.clock() })
 }

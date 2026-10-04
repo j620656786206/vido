@@ -1,21 +1,24 @@
 package config
 
-import "strings"
+import (
+	"os"
+	"strings"
+)
 
-// buildVersion is the release version baked in at build time
-// (infra-optin-usage-report-a1). The Docker build injects it with
+// Version returns the version this Vido build reports
+// (infra-optin-usage-report-a1), or "dev" when none was set (source
+// checkout, `go run`, CI test builds).
 //
-//	-ldflags "-X github.com/vido/api/internal/config.buildVersion=$VIDO_VERSION"
-//
-// where $VIDO_VERSION is docker/metadata-action's version output: the semver
-// of a `v*.*.*` tag without the leading v (e.g. "0.1.2"), or the branch name
-// for a branch build. EMPTY in source and every local build.
-var buildVersion string
-
-// Version returns the version this binary was built as, or "dev" when it was
-// built without one (source checkout, `go run`, CI test builds).
+// It is read from the VIDO_VERSION environment variable, which the runtime
+// stage of the Docker image sets from a build-arg: the semver of a `v*.*.*`
+// tag ("0.1.2"), or "<branch>-<short sha>" for a branch build ("main-81a4e5c")
+// — `latest` is built from main, so a bare "main" would tell every NAS apart
+// from nothing. An env var rather than an -ldflags -X value on purpose: a
+// value baked into the Go binary changes on every commit and would make the
+// Go build layer miss the BuildKit cache on every build, frontend-only PRs
+// included; an ENV line in the final stage costs nothing to rebuild.
 func Version() string {
-	if v := strings.TrimSpace(buildVersion); v != "" {
+	if v := strings.TrimSpace(os.Getenv("VIDO_VERSION")); v != "" {
 		return v
 	}
 	return "dev"

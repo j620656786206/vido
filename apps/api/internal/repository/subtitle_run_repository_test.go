@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vido/api/internal/database"
 	"github.com/vido/api/internal/database/migrations"
 	"github.com/vido/api/internal/models"
 	_ "modernc.org/sqlite"
@@ -616,8 +617,24 @@ func TestSubtitleRunRepository_RunsByBatchID(t *testing.T) {
 
 // infra-optin-usage-report-a1 AC #5 — the usage report's count: completed runs
 // Vido started on its own, inside a half-open window, grouped by source.
+// setupSubtitleRunAppDriverDB is setupSubtitleRunDB on the app's own driver
+// (sqlite-utc, #652): the time text it writes is what the window query compares
+// in production, so the window tests run against that shape (Rule 28).
+func setupSubtitleRunAppDriverDB(t *testing.T) *sql.DB {
+	t.Helper()
+	db, err := sql.Open(database.DriverName, ":memory:")
+	require.NoError(t, err)
+	t.Cleanup(func() { db.Close() })
+
+	runner, err := migrations.NewRunner(db)
+	require.NoError(t, err)
+	require.NoError(t, runner.RegisterAll(migrations.GetAll()))
+	require.NoError(t, runner.Up(context.Background()))
+	return db
+}
+
 func TestSubtitleRunRepository_AutoProducedBetween_GroupsAutoRunsBySource(t *testing.T) {
-	repo := NewSubtitleRunRepository(setupSubtitleRunDB(t))
+	repo := NewSubtitleRunRepository(setupSubtitleRunAppDriverDB(t))
 	ctx := context.Background()
 	now := time.Date(2026, 10, 4, 12, 0, 0, 0, time.UTC)
 	from := now.Add(-7 * 24 * time.Hour)
@@ -661,7 +678,7 @@ func TestSubtitleRunRepository_AutoProducedBetween_GroupsAutoRunsBySource(t *tes
 }
 
 func TestSubtitleRunRepository_AutoProducedBetween_EmptyIsZeroNotError(t *testing.T) {
-	repo := NewSubtitleRunRepository(setupSubtitleRunDB(t))
+	repo := NewSubtitleRunRepository(setupSubtitleRunAppDriverDB(t))
 	now := time.Now().UTC()
 
 	got, err := repo.AutoProducedBetween(context.Background(), now.Add(-7*24*time.Hour), now)
