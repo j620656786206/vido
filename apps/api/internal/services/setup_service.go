@@ -28,6 +28,14 @@ type SetupService struct {
 	keyWriter      SetupKeyWriter
 	// mediaRoots are the folders mounted into the container (VIDO_MEDIA_DIRS).
 	mediaRoots []string
+	// usageReport applies the wizard's opt-in answer (a2). Optional.
+	usageReport UsageReportServiceInterface
+}
+
+// SetUsageReport wires the opt-in anonymous usage report, so the wizard's
+// answer is stored through the same path as the settings page.
+func (s *SetupService) SetUsageReport(svc UsageReportServiceInterface) {
+	s.usageReport = svc
 }
 
 // SetupKeyWriter is the slice of KeySettingsService the wizard stores API keys
@@ -194,6 +202,16 @@ func (s *SetupService) CompleteSetup(ctx context.Context, config models.SetupCon
 		}
 	}
 
+	// Opt-in anonymous usage report (P1-040-2). Only a YES is written: "no"
+	// is the default and needs no row. A failure here leaves the report OFF —
+	// the privacy-safe direction — rather than failing a setup whose libraries
+	// are already created (a retry would create them twice).
+	if config.UsageReportEnabled && s.usageReport != nil {
+		if _, err := s.usageReport.SetEnabled(ctx, true); err != nil {
+			slog.Warn("Setup wizard: usage report opt-in not saved — left off", "error", err)
+		}
+	}
+
 	// Mark setup as completed
 	if err := s.settingsRepo.SetBool(ctx, "setup_completed", true); err != nil {
 		return fmt.Errorf("mark setup completed: %w", err)
@@ -204,6 +222,7 @@ func (s *SetupService) CompleteSetup(ctx context.Context, config models.SetupCon
 		"has_qbt", config.QBTUrl != "",
 		"has_tmdb_key", config.TMDbApiKey != "",
 		"has_claude_key", config.ClaudeApiKey != "",
+		"usage_report_opt_in", config.UsageReportEnabled,
 	)
 
 	return nil
@@ -220,6 +239,9 @@ func (s *SetupService) ValidateStep(ctx context.Context, step string, data map[s
 		return s.validateMediaFolderStep(data)
 	case "api-keys":
 		return s.validateApiKeysStep(data)
+	case "usage-report":
+		// A yes/no question with a safe default — any answer is valid.
+		return nil
 	case "complete":
 		return nil
 	default:
