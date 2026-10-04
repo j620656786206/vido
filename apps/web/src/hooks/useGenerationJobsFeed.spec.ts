@@ -229,6 +229,30 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
     });
   });
 
+  it('9R-17: a single job carries its live spend; an event without cost keeps the last figure', () => {
+    const { result, es } = connected();
+    act(() =>
+      es.emit('translation_progress', {
+        media_id: 'm1',
+        phase: 'translating',
+        title: '奧本海默',
+        percentage: 30,
+        spent_usd: 0.2,
+        budget_usd: 2,
+      })
+    );
+    expect(result.current.singleJobs['m1']).toMatchObject({ spentUsd: 0.2, budgetUsd: 2 });
+    act(() =>
+      es.emit('translation_progress', {
+        media_id: 'm1',
+        phase: 'translating',
+        title: '奧本海默',
+        percentage: 50,
+      })
+    );
+    expect(result.current.singleJobs['m1']).toMatchObject({ spentUsd: 0.2, budgetUsd: 2 });
+  });
+
   it('a single failure keeps the raw error for the view to translate (reason null = not a batch item)', () => {
     const { result, es } = connected();
     act(() => {

@@ -578,12 +578,68 @@ func (s *TranscriptionService) checkTargetWritable(ctx context.Context, mediaID,
 // AC 6b — a generation batch attaches ONE shared Budget so the whole batch
 // spends from one envelope), else creates the per-run budget as before (9R-11)
 // and attaches it.
-func (s *TranscriptionService) resolveBudget(ctx context.Context) (*ai.Budget, context.Context) {
+func (s *TranscriptionService) resolveBudget(ctx context.Context) (*ai.Budget, context.Context, bool) {
 	if b := ai.BudgetFromContext(ctx); b != nil {
-		return b, ctx
+		return b, ctx, false
 	}
 	b := ai.NewBudget(s.runBudgetUSD)
-	return b, ai.WithBudget(ctx, b)
+	return b, ai.WithBudget(ctx, b), true
+}
+
+// trackRunBudget records a run-owned Budget on the media's in-flight job so
+// the SSE cost keys and GET /ai/usage can read it (9R-17). A batch's shared
+// envelope is NOT recorded here: the batch dialog already shows batch spend,
+// and an item stepper reading the whole batch's figure would mislead.
+func (s *TranscriptionService) trackRunBudget(mediaID string, budget *ai.Budget) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if job, ok := s.inProgress[mediaID]; ok {
+		job.budget = budget
+	}
+}
+
+// costFields adds the 9R-17 cost keys to a transcription_* payload for a run
+// that owns its budget: spent_usd always, budget_usd only when a ceiling is
+// set. A run without its own budget (batch item, or nothing in flight) gets
+// NEITHER key — absent means "not this view's figure", never 0.
+func (s *TranscriptionService) costFields(data map[string]interface{}) {
+	mediaID, _ := data["media_id"].(string)
+	if mediaID == "" {
+		return
+	}
+	s.mu.Lock()
+	job, ok := s.inProgress[mediaID]
+	var budget *ai.Budget
+	if ok {
+		budget = job.budget
+	}
+	s.mu.Unlock()
+	if budget == nil {
+		return
+	}
+	snap := budget.Snapshot()
+	data["spent_usd"] = snap.SpentUSD
+	if snap.BudgetUSD > 0 {
+		data["budget_usd"] = snap.BudgetUSD
+	}
+}
+
+// ActiveManualUsage reports the run-owned budgets of every solo transcription
+// in flight (9R-17 AC #3), summed: solo runs are single-flight per media but
+// several media can run at once. ok=false when none is running.
+func (s *TranscriptionService) ActiveManualUsage() (spentUSD, budgetUSD float64, ok bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, job := range s.inProgress {
+		if job.budget == nil {
+			continue
+		}
+		snap := job.budget.Snapshot()
+		spentUSD += snap.SpentUSD
+		budgetUSD += snap.BudgetUSD
+		ok = true
+	}
+	return spentUSD, budgetUSD, ok
 }
 
 // soloTranscriptionJob is the Activity-visibility record for one in-flight
@@ -603,6 +659,11 @@ type soloTranscriptionJob struct {
 	JobID string
 	Title string
 	Solo  bool
+	// budget is the run's OWN ai.Budget (9R-17) — set only when this run
+	// created it (a solo click), never when it spends from a batch's shared
+	// envelope. Read by costFields (the transcription_* SSE cost keys) and
+	// ActiveManualUsage (GET /ai/usage). Guarded by s.mu.
+	budget *ai.Budget
 }
 
 // acquireJob registers a media ID in the single-flight map shared by the async
@@ -769,7 +830,10 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 
 	// 9R-11: one per-run budget spans BOTH transcription and translation of
 	// this media so ASR + LLM share the ceiling; logged at the end.
-	budget, ctx := s.resolveBudget(ctx)
+	budget, ctx, ownBudget := s.resolveBudget(ctx)
+	if ownBudget {
+		s.trackRunBudget(mediaID, budget)
+	}
 	defer func() {
 		snap := budget.Snapshot()
 		s.logger.Info("transcription run AI usage",
@@ -2112,9 +2176,27 @@ func (s *TranscriptionService) failJob(jobID string, mediaID string, errMsg stri
 	})
 }
 
+// carriesRunCost lists the stepper's progress events — the ones the 9R-17
+// cost keys ride.
+func carriesRunCost(eventType sse.EventType) bool {
+	switch eventType {
+	case EventTranscriptionExtracting, EventTranscriptionProgress, EventTranscriptionTranslating,
+		EventTranscriptionComplete, EventTranscriptionFailed:
+		return true
+	}
+	return false
+}
+
 func (s *TranscriptionService) broadcastEvent(eventType sse.EventType, data interface{}) {
 	if s.sseHub == nil {
 		return
+	}
+	// 9R-17 AC #1: every transcription_* payload of a solo run carries the
+	// live spend (additive keys; existing keys untouched). ONLY those events —
+	// subtitle_run_receipt also goes out through here and carries its own
+	// "spent since this run started" figure, which must never be overwritten.
+	if m, ok := data.(map[string]interface{}); ok && carriesRunCost(eventType) {
+		s.costFields(m)
 	}
 	s.sseHub.Broadcast(sse.Event{
 		ID:   uuid.New().String(),

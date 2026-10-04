@@ -113,6 +113,9 @@ export interface SingleJobState {
   title: string;
   message: string;
   percentage: number | null;
+  /** 9R-17: the solo run's live spend / ceiling (null = not reported). */
+  spentUsd: number | null;
+  budgetUsd: number | null;
 }
 
 interface MemberInfo {
@@ -155,6 +158,9 @@ interface TranscriptionPayload {
   percentage?: number;
   message?: string;
   error?: string;
+  /** 9R-17: solo runs only. */
+  spentUsd?: number;
+  budgetUsd?: number;
 }
 /** Camelized D6 subtitle_progress payload. */
 interface PipelinePayload {
@@ -329,6 +335,18 @@ function reducer(state: GenerationJobsFeedState, action: Action): GenerationJobs
               title,
               message: payload.message ?? state.singleJobs[mediaId]?.message ?? '',
               percentage: percentage ?? state.singleJobs[mediaId]?.percentage ?? null,
+              spentUsd:
+                ('spentUsd' in payload && typeof payload.spentUsd === 'number'
+                  ? payload.spentUsd
+                  : null) ??
+                state.singleJobs[mediaId]?.spentUsd ??
+                null,
+              budgetUsd:
+                ('budgetUsd' in payload && typeof payload.budgetUsd === 'number'
+                  ? payload.budgetUsd
+                  : null) ??
+                state.singleJobs[mediaId]?.budgetUsd ??
+                null,
             },
           };
 

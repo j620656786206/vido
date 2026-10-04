@@ -58,6 +58,10 @@ interface GenerationEventPayload {
   mediaType?: string;
   percentage?: number;
   message?: string;
+  /** 9R-17: a SOLO run's live spend; absent on batch items and unwired runs. */
+  spentUsd?: number;
+  /** 9R-17: the solo run's ceiling; absent when no ceiling is set. */
+  budgetUsd?: number;
   error?: string;
   srtPath?: string;
   zhSrtPath?: string;
@@ -89,6 +93,10 @@ export interface GenerationProgressState {
   partial: boolean;
   /** Cue count kept in English; null when not partial (absent ≠ 0). */
   englishKeptBlocks: number | null;
+  /** 9R-17: live spend of a solo run (null = not reported, never 0). */
+  spentUsd: number | null;
+  /** 9R-17: the solo run's ceiling (null = none reported). */
+  budgetUsd: number | null;
 }
 
 const initialState: GenerationProgressState = {
@@ -102,6 +110,8 @@ const initialState: GenerationProgressState = {
   zhSrtPath: null,
   partial: false,
   englishKeptBlocks: null,
+  spentUsd: null,
+  budgetUsd: null,
 };
 
 type ActivePhase = 'extracting' | 'transcribing' | 'translating';
@@ -115,6 +125,14 @@ type Action =
 
 function lastActivePhase(phase: GenerationPhase): ActivePhase {
   return phase === 'transcribing' || phase === 'translating' ? phase : 'extracting';
+}
+
+/** 9R-17: an event's cost keys win; an event without them keeps the last known. */
+function cost(state: GenerationProgressState, payload: GenerationEventPayload) {
+  return {
+    spentUsd: typeof payload.spentUsd === 'number' ? payload.spentUsd : state.spentUsd,
+    budgetUsd: typeof payload.budgetUsd === 'number' ? payload.budgetUsd : state.budgetUsd,
+  };
 }
 
 function reducer(state: GenerationProgressState, action: Action): GenerationProgressState {
@@ -132,6 +150,7 @@ function reducer(state: GenerationProgressState, action: Action): GenerationProg
           action.phase === 'translating' ? (action.payload.percentage ?? state.percentage) : null,
         message: action.payload.message ?? state.message,
         jobId: action.payload.jobId ?? state.jobId,
+        ...cost(state, action.payload),
       };
     case 'COMPLETE':
       return {
@@ -146,6 +165,7 @@ function reducer(state: GenerationProgressState, action: Action): GenerationProg
         zhSrtPath: action.payload.zhSrtPath ?? null,
         partial: action.payload.partial ?? false,
         englishKeptBlocks: action.payload.englishKeptBlocks ?? null,
+        ...cost(state, action.payload),
       };
     case 'FAILED':
       return {
@@ -158,6 +178,7 @@ function reducer(state: GenerationProgressState, action: Action): GenerationProg
         message: action.payload.message ?? state.message,
         jobId: action.payload.jobId ?? state.jobId,
         error: action.payload.error ?? action.payload.message ?? GENERATION_FAILED_FALLBACK,
+        ...cost(state, action.payload),
       };
     case 'RESET':
       return initialState;
