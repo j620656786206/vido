@@ -1,6 +1,6 @@
 # Story infra-optin-usage-report-a1: 字幕紀錄分得出「自動／手動」、線上字幕也入帳，程式知道自己的版本號
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -94,12 +94,12 @@ so that the weekly usage report (a2) can count "subtitles automatically produced
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Migration 043 + model/repo 欄位同步（AC #1）
-- [ ] Task 2: `ProcessItemOptions`／線上引擎 `ProcessOptions` 加觸發來源；AutoGenerator 與 request trigger 標 auto（AC #2）
-- [ ] Task 3: 線上引擎成功時寫 `subtitle_runs`（新 route）；字彙表與註解更新（AC #3）
-- [ ] Task 4: 版本字串 ldflags 注入 + Dockerfile build arg + CI 傳值（AC #4）
-- [ ] Task 5: 依來源分組的 7 天計數讀取（AC #5）
-- [ ] Task 6: 測試矩陣（AC #6）
+- [x] Task 1: Migration 043 + model/repo 欄位同步（AC #1）
+- [x] Task 2: `ProcessItemOptions`／線上引擎 `ProcessOptions` 加觸發來源；AutoGenerator 與 request trigger 標 auto（AC #2）
+- [x] Task 3: 線上引擎成功時寫 `subtitle_runs`（新 route）；字彙表與註解更新（AC #3）
+- [x] Task 4: 版本字串 ldflags 注入 + Dockerfile build arg + CI 傳值（AC #4）
+- [x] Task 5: 依來源分組的 7 天計數讀取（AC #5）
+- [x] Task 6: 測試矩陣（AC #6）
 
 Cross-stack split check：後端 6、前端 0 → 不需拆。
 
@@ -134,14 +134,60 @@ N/A — no wall-clock-reading components touched（後端 only）。
 
 ### Agent Model Used
 
+Claude Opus 5.5（2026-10-04，dev-story）
+
 ### Debug Log References
 
 ### Completion Notes List
 
 - Ultimate context engine analysis completed - comprehensive developer guide created（SM Bob，2026-10-04）
+- **dev 開工前重新核對（2026-10-04，main = d012d3ec）**：story 引用的行號在 main 上仍成立；`WorkerPool` 的 enqueue 來源不必再追——觸發來源改成「只有明確說 Automatic 才是 auto」，任何沒標的呼叫一律 manual，所以 worker pool、consent batch、線上批次都自動是 manual。
+- **AC #1**：migration 043 加 `subtitle_runs.triggered_by TEXT`（可為 NULL、`columnExists` 冪等、不回填）。**欄名用 `triggered_by` 不用 `trigger`：TRIGGER 是 SQLite 關鍵字。** model 加 `TriggeredBy` 與 `SubtitleRunTriggeredAuto`／`Manual` 常數；repository 欄位常數、INSERT 佔位、UPDATE、values、scan 全部同步到 24 欄（順手修正已過時的「All 20 columns」註解）。
+- **AC #2**：`ProcessItemOptions.Automatic`（走 options 不走 ctx，worker pool 是排隊後處理）；`process_item.go` 建 run 時以 `runTrigger(opts.Automatic)` 寫入；AutoGenerator 傳 `Automatic: true`。線上引擎 `ProcessOptions.Automatic`，request trigger 電影與影集兩條都傳 true。Route C 轉錄的 ledger 列明確寫 manual（只有人會啟動它）。
+- **AC #3**：`Engine.SetRunLedger` + `recordDelivered`：放置成功才寫一筆 `completed`／`route=online`／`output_path`／`started_at`（Process 開頭取）／`completed_at`／`triggered_by`。找不到或失敗**什麼都不寫**；寫帳失敗只 Warn、字幕照樣算成功。新增字彙 `SubtitleRunRouteOnline = "online"`，route 註解同步。`main.go` 接 `subtitleEngine.SetRunLedger(repos.SubtitleRuns)`。
+- **AC #4**：`config.Version()`（未注入或空白 → `dev`）；Dockerfile `ARG VIDO_VERSION=dev` 併入同一個 `-ldflags` 的 `-X …config.buildVersion`；`docker.yml` build-args 傳 `steps.meta.outputs.version`（tag 建置 = `0.1.2` 這種 semver，分支建置 = 分支名，PR = `pr-NN`）。ldflags 實測：`go test -ldflags "-X …buildVersion=9.9.9"` 讀出 `9.9.9`。⚠️ 本機沒有跑 docker build（api-builder stage 要拉完整 go mod）；Dockerfile 只動了 ARG 與 `-X` 一段，CI 的 Docker job 會實建。
+- **AC #5**：`SubtitleRunRepository.AutoProducedBetween(from, to)` → `AutoProducedCounts{Embedded, Online, ASR}` + `Total()`。SQL：`completed` + `triggered_by='auto'` + 半開區間 `[from, to)` + `GROUP BY route`；`deliver_direct`／`convert_then_deliver`／`translate` → Embedded，`online` → Online，`asr` → ASR，其餘（含空 route）不算。
+- **AC #5b 迴歸**：每月花費——加入 online run 前後 `MonthSummary` 完全相等（測試釘住）；首頁「需要注意」——線上找不到時 failed 數為 0（測試釘住）；首頁「今天處理了」——線上找到字幕的影片會開始被算進去（Alexyu 2026-10-04 已同意的預期變化）。
+- **測試**：migration 043 欄位存在＋舊列 NULL＋重跑冪等；repository round-trip 第 24 欄、未標記讀回空字串、`AutoProducedBetween` 分組／邊界（`from` 算、`to` 不算）／manual 與 pre-043 與 failed 與 skip 與無 route 皆不算、空結果為 0；pipeline 預設 manual、Automatic → auto；AutoGenerator 與 request trigger（電影＋影集）都帶 Automatic；engine 用**真 repository＋真 migration chain**驗證 online 列（Rule 28）、預設 manual、找不到不寫任何列、寫帳失敗仍成功、沒接 ledger 時行為不變；`config.Version` 兩態。
+- **Gate**：`go test ./...` 全綠、`go vet ./...` 0、`staticcheck-2026.1 ./...` 0、`pnpm nx test web` 全綠、`test:cleanup` 無殘留。觸碰的 Go 檔 gofmt 乾淨。
+- 🔗 AC Drift: FOUND（範圍界定，非破壞）— `sub-7-6a-run-ledger.md` AC #3 [@contract-v1]「每個 run 終態發一次 `subtitle_run_receipt`」：該契約的範圍是**管線的 lane**（`recordTerminal`）；本單新增的線上引擎 ledger 列**不發收據**（它不是管線 item，前端也沒有對應的收據畫面），收據 payload 欄位一個不動。
+- 📎 Contract Stamps: FOUND（upstream `sub-7-6a` v1 ×1——`ReceiptPayload` 未改，confirmed against [@contract-v1]；`ProcessOutcome`／`RouteKind` [@contract-v1] 未改，ledger 新字彙是字串、不是 `RouteKind` 成員）。
+- 🎭 A11y Pre-Flight: N/A (100% backend — no apps/web/ files touched)
+- 🎨 UX Verification: SKIPPED — no UI changes in this story
+- Pre-existing：無新增失敗。
 
 ### Discovery Triage
 
 - ③ `disc-backup-appversion-hardcoded`（backlog，2026-10-04 SM 建檔）：`backup_service.go:296` 寫死 `AppVersion: "1.0.0"`，AC #4 有了真版本號後應改用；不阻擋本單。
 
 ### File List
+
+- apps/api/internal/database/migrations/043_add_subtitle_run_triggered_by.go（新）
+- apps/api/internal/database/migrations/043_add_subtitle_run_triggered_by_test.go（新）
+- apps/api/internal/models/subtitle_run.go
+- apps/api/internal/repository/subtitle_run_repository.go
+- apps/api/internal/repository/subtitle_run_repository_test.go
+- apps/api/internal/subtitle/pipeline.go
+- apps/api/internal/subtitle/process_item.go
+- apps/api/internal/subtitle/process_item_ledger_test.go
+- apps/api/internal/subtitle/auto_generation.go
+- apps/api/internal/subtitle/auto_generation_test.go
+- apps/api/internal/subtitle/engine.go
+- apps/api/internal/subtitle/engine_ledger_test.go（新）
+- apps/api/internal/subtitle/request_trigger.go
+- apps/api/internal/subtitle/request_trigger_test.go
+- apps/api/internal/services/transcription_ledger.go
+- apps/api/internal/services/subtitle_spend_service_test.go
+- apps/api/internal/config/version.go（新）
+- apps/api/internal/config/version_test.go（新）
+- apps/api/cmd/api/main.go
+- Dockerfile
+- .github/workflows/docker.yml
+- _bmad-output/implementation-artifacts/sprint-status.yaml
+- _bmad-output/implementation-artifacts/sub-7-6a-run-ledger.md（AC drift reference — see Completion Notes；未修改）
+
+### Change Log
+
+| Date | Change |
+| --- | --- |
+| 2026-10-04 | dev-story：migration 043 `triggered_by`、自動入口標 auto、線上引擎成功入帳（route=online）、build-time 版本號、`AutoProducedBetween` 分組計數；Status → review |

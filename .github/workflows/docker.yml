@@ -159,6 +159,7 @@ jobs:
           context: .
           build-args: |
             TMDB_BUNDLED_KEY_FINGERPRINT=${{ steps.tmdb_key.outputs.fingerprint }}
+            VIDO_VERSION=${{ steps.meta.outputs.version }}
           # 單一平台：這一行就是「不再有 QEMU」的保證
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}

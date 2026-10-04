@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 
@@ -80,6 +81,14 @@ type Engine struct {
 	sseHub             *sse.Hub
 	movieRepo          SubtitleStatusUpdater
 	seriesRepo         SubtitleStatusUpdater
+	runLedger          RunRecorder
+	now                func() time.Time
+}
+
+// RunRecorder is the one ledger method the engine needs: record a delivered
+// online subtitle as a completed subtitle_runs row (infra-optin-usage-report-a1).
+type RunRecorder interface {
+	Create(ctx context.Context, run *models.SubtitleRun) error
 }
 
 // NewEngine creates a subtitle pipeline engine with all dependencies injected.
@@ -100,7 +109,14 @@ func NewEngine(
 		sseHub:     sseHub,
 		movieRepo:  movieRepo,
 		seriesRepo: seriesRepo,
+		now:        time.Now,
 	}
+}
+
+// SetRunLedger wires the subtitle_runs ledger. Optional: without it the engine
+// behaves exactly as before and records nothing.
+func (e *Engine) SetRunLedger(ledger RunRecorder) {
+	e.runLedger = ledger
 }
 
 // SetTerminologyService sets the optional AI terminology correction service.
@@ -129,6 +145,10 @@ type ProcessOptions struct {
 	// ConversionOverride allows the caller to override the derived policy.
 	// nil = use default based on ProductionCountry.
 	ConversionOverride *ConversionPolicy
+	// Automatic marks an unattended caller (the request-completion trigger
+	// after a download). The ledger row records triggered_by=auto; anything
+	// else is manual (infra-optin-usage-report-a1).
+	Automatic bool
 }
 
 // deriveConversionPolicy returns the effective ConversionPolicy based on options.
@@ -149,6 +169,7 @@ func (e *Engine) Process(ctx context.Context, mediaID, mediaType, mediaFilePath 
 		processOpts = &opts[0]
 	}
 	conversionPolicy := deriveConversionPolicy(processOpts)
+	startedAt := e.now().UTC()
 	// Stage 1: Search
 	e.broadcastStatus(mediaID, mediaType, StageSearching, "Searching subtitle providers...")
 	e.updateStatus(ctx, mediaID, mediaType, models.SubtitleStatusSearching)
@@ -217,6 +238,7 @@ func (e *Engine) Process(ctx context.Context, mediaID, mediaType, mediaFilePath 
 
 	// Stage 6: Update DB
 	e.updateSubtitleFound(ctx, mediaID, mediaType, placeResult.SubtitlePath, placeResult.Language, match.Score)
+	e.recordDelivered(ctx, mediaID, mediaType, placeResult.SubtitlePath, startedAt, processOpts != nil && processOpts.Automatic)
 	e.broadcastStatus(mediaID, mediaType, StageComplete, "Subtitle found and placed!")
 
 	return EngineResult{
@@ -349,6 +371,36 @@ func (e *Engine) handleFailure(ctx context.Context, mediaID, mediaType string, e
 	return EngineResult{
 		Success: false,
 		Error:   err,
+	}
+}
+
+// recordDelivered writes the completed ledger row for a placed online subtitle.
+// Only success is recorded: a "not found" is the common outcome of an online
+// search, and a failed row would inflate the home page's needs-attention cell,
+// which counts failed runs. A ledger write failure is a Warn — the subtitle is
+// already in place and must not be reported as failed over bookkeeping.
+func (e *Engine) recordDelivered(ctx context.Context, mediaID, mediaType, path string, startedAt time.Time, automatic bool) {
+	if e.runLedger == nil {
+		return
+	}
+	completedAt := e.now().UTC()
+	trigger := models.SubtitleRunTriggeredManual
+	if automatic {
+		trigger = models.SubtitleRunTriggeredAuto
+	}
+	run := &models.SubtitleRun{
+		MediaID:     mediaID,
+		MediaType:   mediaType,
+		Status:      models.SubtitleRunCompleted,
+		Route:       models.SubtitleRunRouteOnline,
+		OutputPath:  path,
+		StartedAt:   startedAt,
+		CompletedAt: &completedAt,
+		TriggeredBy: trigger,
+	}
+	if err := e.runLedger.Create(ctx, run); err != nil {
+		slog.Warn("subtitle run ledger: online delivery not recorded",
+			"media_id", mediaID, "media_type", mediaType, "error", err)
 	}
 }
 

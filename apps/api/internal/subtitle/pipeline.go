@@ -167,6 +167,14 @@ type ProcessItemOptions struct {
 	// record the model that actually did the work — a Haiku translation must
 	// never be served later to a Sonnet run, sub-6-8a AC #6).
 	ModelID string
+
+	// Automatic marks an unattended entry point — the free-lane AutoGenerator
+	// after a scan. The run row records it as triggered_by=auto; everything
+	// else is manual by default, so a caller that forgets this field can never
+	// inflate the opt-in usage report's "produced on its own" count
+	// (infra-optin-usage-report-a1). It travels in the options, not the ctx,
+	// because WorkerPool items are queued and processed on the pool's own ctx.
+	Automatic bool
 }
 
 // ProcessOutcome is what one item flow produced.

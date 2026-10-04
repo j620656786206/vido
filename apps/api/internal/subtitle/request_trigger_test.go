@@ -95,6 +95,7 @@ func TestRequestTrigger_MovieNeedingSearchFiresEngineWithCNPolicy(t *testing.T) 
 	assert.Equal(t, "無間道", call.query.Title)
 	require.Len(t, call.opts, 1)
 	assert.Equal(t, "CN,HK", call.opts[0].ProductionCountry, "CN policy must ride in like the batch path")
+	assert.True(t, call.opts[0].Automatic, "a download-completion search is unattended → ledgered as auto (infra-optin-usage-report-a1)")
 }
 
 func TestRequestTrigger_NotFoundStatusIsRetried(t *testing.T) {
@@ -154,6 +155,8 @@ func TestRequestTrigger_TVRequestSearchesSeries(t *testing.T) {
 	assert.Equal(t, "series-1", call.mediaID)
 	assert.Equal(t, "series", call.mediaType)
 	assert.Equal(t, "如懿傳", call.query.Title)
+	require.Len(t, call.opts, 1)
+	assert.True(t, call.opts[0].Automatic, "the series path is unattended too")
 }
 
 func TestRequestTrigger_OnRequestCompletedIsAsyncAndSerialized(t *testing.T) {

@@ -122,7 +122,8 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 		StartedAt:       p.now().UTC(),
 		// sub-7-6a: the consent batch this item runs in, if any — rides the
 		// ctx from GenerationBatchProcessor exactly like the shared Budget.
-		BatchID: services.GenerationBatchIDFromContext(ctx),
+		BatchID:     services.GenerationBatchIDFromContext(ctx),
+		TriggeredBy: runTrigger(opts.Automatic),
 	}
 	if err := p.runs.Create(ctx, run); err != nil {
 		return nil, fmt.Errorf("subtitle pipeline: create run for %s %s: %w", ref.MediaType, ref.ID, err)
@@ -1055,4 +1056,13 @@ func (p *Pipeline) requireItemPorts() error {
 		return nil
 	}
 	return fmt.Errorf("subtitle pipeline: ProcessItem is not wired — missing %s", strings.Join(missing, ", "))
+}
+
+// runTrigger is the triggered_by value for a run: auto only when the caller
+// explicitly said so (infra-optin-usage-report-a1).
+func runTrigger(automatic bool) string {
+	if automatic {
+		return models.SubtitleRunTriggeredAuto
+	}
+	return models.SubtitleRunTriggeredManual
 }

@@ -83,12 +83,17 @@ COPY apps/api/ ./
 #   help a cached api-builder layer would keep serving an old (or missing) key
 #   after a rotation. The FINGERPRINT arg (a short sha256 of the key, never the
 #   key) is in the cache key — change the key, invalidate the layer.
+# - -X …config.buildVersion: the release version (infra-optin-usage-report-a1),
+#   from docker/metadata-action's version output via the VIDO_VERSION build-arg
+#   ("0.1.2" for a v0.1.2 tag, the branch name for a branch build). Not a
+#   secret, so a plain build-arg. Unset (local build) → "dev".
 ARG TMDB_BUNDLED_KEY_FINGERPRINT=none
+ARG VIDO_VERSION=dev
 RUN --mount=type=secret,id=tmdb_bundled_key \
     echo "bundled TMDb key fingerprint: ${TMDB_BUNDLED_KEY_FINGERPRINT}" && \
     TMDB_BUNDLED_KEY="$(cat /run/secrets/tmdb_bundled_key 2>/dev/null || true)" && \
     CGO_ENABLED=0 GOOS=linux go build \
-    -ldflags="-s -w -X github.com/vido/api/internal/config.bundledTMDbKey=${TMDB_BUNDLED_KEY}" \
+    -ldflags="-s -w -X github.com/vido/api/internal/config.bundledTMDbKey=${TMDB_BUNDLED_KEY} -X github.com/vido/api/internal/config.buildVersion=${VIDO_VERSION}" \
     -trimpath \
     -o /api ./cmd/api
 

@@ -618,6 +618,9 @@ func main() {
 		subtitleProviders, subtitleScorer, subtitleConverter, subtitlePlacer,
 		sseHub, repos.Movies, repos.Series,
 	)
+	// infra-optin-usage-report-a1: a placed online subtitle becomes a completed
+	// subtitle_runs row (route=online), so the usage report can count it.
+	subtitleEngine.SetRunLedger(repos.SubtitleRuns)
 	// Story 13-5 (artery #5): request completed → automatic subtitle search for
 	// the media that just landed, via the poller's OnRequestCompleted seam.
 	// Fires once per transition edge; the trigger itself skips media that

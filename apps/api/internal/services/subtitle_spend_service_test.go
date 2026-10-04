@@ -242,3 +242,23 @@ func TestSpendSummary_LedgerErrorSurfaces(t *testing.T) {
 	_, err := NewSubtitleSpendService(src, nil, nil, nil).MonthSummary(context.Background(), "")
 	require.Error(t, err)
 }
+
+// infra-optin-usage-report-a1 AC #5b — online deliveries now land in the ledger
+// (route=online). They cost nothing and saved nothing, so the monthly spend
+// page must read exactly as it did before they existed.
+func TestSpendSummary_OnlineDeliveriesChangeNothing(t *testing.T) {
+	base := []models.SubtitleRun{
+		run(models.SubtitleRunRouteTranslate, "claude-sonnet-5", f64(0.50), 800, iptr(100)),
+		run(models.SubtitleRunRouteASR, "claude-sonnet-5", f64(1.25), 900, nil),
+	}
+	online := run(models.SubtitleRunRouteOnline, "", nil, 0, nil)
+	online.TriggeredBy = models.SubtitleRunTriggeredAuto
+
+	without, err := NewSubtitleSpendService(&fakeSpendRuns{runs: base}, nil, nil, nil).MonthSummary(context.Background(), "")
+	require.NoError(t, err)
+	with, err := NewSubtitleSpendService(&fakeSpendRuns{runs: append(append([]models.SubtitleRun{}, base...), online, online)}, nil, nil, nil).
+		MonthSummary(context.Background(), "")
+	require.NoError(t, err)
+
+	assert.Equal(t, without, with)
+}
