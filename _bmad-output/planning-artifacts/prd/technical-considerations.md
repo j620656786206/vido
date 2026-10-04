@@ -27,6 +27,7 @@
 - **Sensitive Content Privacy**:
   - Media library may contain adult content or other sensitive materials
   - No automatic sharing or external reporting of user's media collection
+    - Sole exception: the opt-in anonymous usage report (P1-040) — off by default, counts only, never media-identifying ([telemetry amendment](./prd-telemetry-amendment.md))
   - Privacy-first approach: user data stays on their NAS
 
 **Network Security:**

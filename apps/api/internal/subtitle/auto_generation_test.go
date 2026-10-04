@@ -444,6 +444,8 @@ func TestAutoGenerator_AlwaysProcessesFreeOnly(t *testing.T) {
 			"the auto-trigger must NEVER call ProcessItem without FreeOnly — that is the 2026-08-19 ruling in one field")
 		assert.False(t, c.opts.Force,
 			"Force bypasses the pre-flight and would re-run completed items on every scan")
+		assert.True(t, c.opts.Automatic,
+			"an unattended scan-triggered run is ledgered as triggered_by=auto (infra-optin-usage-report-a1)")
 	}
 	assert.Equal(t, models.SubtitleRunMediaMovie, h.item.calls[0].ref.MediaType)
 }

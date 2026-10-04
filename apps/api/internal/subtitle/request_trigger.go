@@ -136,7 +136,7 @@ func (t *RequestCompletionTrigger) triggerMovie(ctx context.Context, req models.
 		"request_id", req.ID, "media_id", movie.ID, "title", movie.Title)
 	result := t.engine.Process(ctx, movie.ID, "movie", filePath,
 		providers.SubtitleQuery{Title: movie.Title}, "",
-		ProcessOptions{ProductionCountry: country})
+		ProcessOptions{ProductionCountry: country, Automatic: true})
 	t.logResult(req.ID, movie.ID, movie.Title, result)
 }
 
@@ -164,7 +164,7 @@ func (t *RequestCompletionTrigger) triggerSeries(ctx context.Context, req models
 	// the Series model → empty string = ConvertAuto (recorded batch limitation).
 	result := t.engine.Process(ctx, series.ID, "series", filePath,
 		providers.SubtitleQuery{Title: series.Title}, "",
-		ProcessOptions{})
+		ProcessOptions{Automatic: true})
 	t.logResult(req.ID, series.ID, series.Title, result)
 }
 

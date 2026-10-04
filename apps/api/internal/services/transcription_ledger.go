@@ -81,6 +81,9 @@ func (s *TranscriptionService) openLedgerRun(ctx context.Context, mediaType, med
 		Route:     models.SubtitleRunRouteASR,
 		BatchID:   GenerationBatchIDFromContext(ctx),
 		StartedAt: time.Now().UTC(),
+		// Route C transcription is only ever started by a person (a dialog or
+		// a consent batch); the unattended lanes never reach paid ASR.
+		TriggeredBy: models.SubtitleRunTriggeredManual,
 	}
 	if s.translationService != nil {
 		run.ModelID = s.translationService.EffectiveModelID(ctx)

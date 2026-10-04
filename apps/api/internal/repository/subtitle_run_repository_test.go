@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vido/api/internal/database"
 	"github.com/vido/api/internal/database/migrations"
 	"github.com/vido/api/internal/models"
 	_ "modernc.org/sqlite"
@@ -53,6 +54,7 @@ func fullyPopulatedRun() *models.SubtitleRun {
 		Route:           models.SubtitleRunRouteTranslate,
 		CacheHitCues:    intPtr(120),
 		BatchID:         "batch-9",
+		TriggeredBy:     models.SubtitleRunTriggeredAuto,
 		ErrorMessage:    "",
 		StartedAt:       time.Now().Add(-2 * time.Minute).UTC().Truncate(time.Second),
 		CompletedAt:     &completed,
@@ -95,6 +97,7 @@ func TestSubtitleRunRepository_RoundTripsAllColumns(t *testing.T) {
 	require.NotNil(t, got.CacheHitCues, "cache_hit_cues must survive")         // 22 (041)
 	assert.Equal(t, *want.CacheHitCues, *got.CacheHitCues)                     //
 	assert.Equal(t, want.BatchID, got.BatchID)                                 // 23 (041)
+	assert.Equal(t, want.TriggeredBy, got.TriggeredBy)                         // 24 (043)
 	assert.WithinDuration(t, want.StartedAt, got.StartedAt, time.Second)       // 15
 	require.NotNil(t, got.CompletedAt, "completed_at must survive")            // 16
 	assert.WithinDuration(t, *want.CompletedAt, *got.CompletedAt, time.Second) //
@@ -135,6 +138,7 @@ func TestSubtitleRunRepository_NullableColumnsRoundTripAsUnset(t *testing.T) {
 	assert.Equal(t, "", got.Route, "an unrouted run has no route (migration 041)")
 	assert.Nil(t, got.CacheHitCues, "unmeasured cache hits read NULL, never 0 (migration 041)")
 	assert.Equal(t, "", got.BatchID)
+	assert.Equal(t, "", got.TriggeredBy, "an unstamped run has no trigger (migration 043)")
 }
 
 // TestSubtitleRunRepository_ScanToleratesRawNulls covers rows written outside
@@ -609,4 +613,76 @@ func TestSubtitleRunRepository_RunsByBatchID(t *testing.T) {
 	none, err := repo.RunsByBatchID(ctx, "")
 	require.NoError(t, err)
 	assert.Empty(t, none, "an empty id is not 'every unbatched run'")
+}
+
+// infra-optin-usage-report-a1 AC #5 — the usage report's count: completed runs
+// Vido started on its own, inside a half-open window, grouped by source.
+// setupSubtitleRunAppDriverDB is setupSubtitleRunDB on the app's own driver
+// (sqlite-utc, #652): the time text it writes is what the window query compares
+// in production, so the window tests run against that shape (Rule 28).
+func setupSubtitleRunAppDriverDB(t *testing.T) *sql.DB {
+	t.Helper()
+	db, err := sql.Open(database.DriverName, ":memory:")
+	require.NoError(t, err)
+	t.Cleanup(func() { db.Close() })
+
+	runner, err := migrations.NewRunner(db)
+	require.NoError(t, err)
+	require.NoError(t, runner.RegisterAll(migrations.GetAll()))
+	require.NoError(t, runner.Up(context.Background()))
+	return db
+}
+
+func TestSubtitleRunRepository_AutoProducedBetween_GroupsAutoRunsBySource(t *testing.T) {
+	repo := NewSubtitleRunRepository(setupSubtitleRunAppDriverDB(t))
+	ctx := context.Background()
+	now := time.Date(2026, 10, 4, 12, 0, 0, 0, time.UTC)
+	from := now.Add(-7 * 24 * time.Hour)
+
+	seed := func(id, route, trigger string, status models.SubtitleRunStatus, completedAt time.Time) {
+		t.Helper()
+		run := &models.SubtitleRun{
+			ID: id, MediaID: "m-" + id, MediaType: models.SubtitleRunMediaMovie,
+			Status: status, Route: route, TriggeredBy: trigger,
+			StartedAt: completedAt.Add(-time.Minute), CompletedAt: &completedAt,
+		}
+		require.NoError(t, repo.Create(ctx, run))
+	}
+	inside := now.Add(-time.Hour)
+	auto, manual := models.SubtitleRunTriggeredAuto, models.SubtitleRunTriggeredManual
+	completed := models.SubtitleRunCompleted
+
+	// Counted: auto + completed + inside the window.
+	seed("a1", models.SubtitleRunRouteDeliverDirect, auto, completed, inside)
+	seed("a2", models.SubtitleRunRouteConvertThenDeliver, auto, completed, inside)
+	seed("a3", models.SubtitleRunRouteTranslate, auto, completed, inside)
+	seed("a4", models.SubtitleRunRouteOnline, auto, completed, inside)
+	seed("a5", models.SubtitleRunRouteOnline, auto, completed, from) // the window's own start is IN
+	seed("a6", models.SubtitleRunRouteASR, auto, completed, inside)
+
+	// Not counted.
+	seed("n1", models.SubtitleRunRouteOnline, manual, completed, inside)                     // a person did it
+	seed("n2", models.SubtitleRunRouteOnline, "", completed, inside)                         // pre-043, unknown
+	seed("n3", models.SubtitleRunRouteDeliverDirect, auto, models.SubtitleRunFailed, inside) // not produced
+	seed("n4", models.SubtitleRunRouteSkip, auto, models.SubtitleRunSkipped, inside)         // nothing produced
+	seed("n5", models.SubtitleRunRouteOnline, auto, completed, from.Add(-time.Second))       // before the window
+	seed("n6", models.SubtitleRunRouteOnline, auto, completed, now)                          // `to` is OUT (half-open)
+	seed("n7", "", auto, completed, inside)                                                  // no lane recorded
+
+	got, err := repo.AutoProducedBetween(ctx, from, now)
+	require.NoError(t, err)
+	assert.Equal(t, 3, got.Embedded, "deliver_direct + convert_then_deliver + translate")
+	assert.Equal(t, 2, got.Online)
+	assert.Equal(t, 1, got.ASR)
+	assert.Equal(t, 6, got.Total())
+}
+
+func TestSubtitleRunRepository_AutoProducedBetween_EmptyIsZeroNotError(t *testing.T) {
+	repo := NewSubtitleRunRepository(setupSubtitleRunAppDriverDB(t))
+	now := time.Now().UTC()
+
+	got, err := repo.AutoProducedBetween(context.Background(), now.Add(-7*24*time.Hour), now)
+	require.NoError(t, err)
+	assert.Equal(t, AutoProducedCounts{}, got)
+	assert.Equal(t, 0, got.Total())
 }

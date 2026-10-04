@@ -1,5 +1,20 @@
 # Success Criteria
 
+## North-Star Metric
+
+> Added 2026-10-02 ([telemetry amendment](./prd-telemetry-amendment.md)). Vido's goal is to be **needed**: a background tool that does the work every week, not an app that gets opened.
+
+| Metric | Target |
+|--------|--------|
+| Weekly installs that automatically produced ≥1 Traditional Chinese subtitle (from opt-in reports P1-040; a lower bound of real usage) | Baseline set after the first 4 weeks of received reports |
+
+**External tester validation (before reporting ships):** of 10 external testers, installs still automatically producing subtitles 1 week after setup (asked directly by Alex):
+- ≥5 → continue to testers 11–30
+- ≤2 → pause new feature development; re-identify where Vido wins
+- 3–4 → inconclusive; recruit 10 more and re-measure
+
+GitHub Stars and Docker pulls in the tables below are **secondary (reference) metrics**: they measure attention, not use.
+
 ## Phase 1 Validation Metrics
 
 These metrics must be met before Phase 1 (Subtitle Core MVP) can be considered complete.

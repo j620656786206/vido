@@ -146,4 +146,12 @@ ENV PORT=8080 \
     VIDO_OPENCC_BIN=/usr/local/bin/opencc \
     VIDO_OPENCC_CONFIG=/usr/share/opencc/s2twp.json
 
+# The version this build reports (infra-optin-usage-report-a1; read by
+# config.Version). Set from CI: "0.1.2" for a v0.1.2 tag, "<branch>-<sha>"
+# otherwise. Deliberately an ENV here, last, and NOT an -ldflags value in the
+# api-builder stage: it changes every commit, and in the Go build layer it
+# would bust that layer's cache on every build. Unset (local build) → "dev".
+ARG VIDO_VERSION=dev
+ENV VIDO_VERSION=${VIDO_VERSION}
+
 CMD ["api"]

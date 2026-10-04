@@ -4,6 +4,7 @@
 
 - [Product Requirements Document - Vido v4.0](#table-of-contents)
   - [Success Criteria](./success-criteria.md)
+    - [North-Star Metric](./success-criteria.md#north-star-metric)
     - [Phase 1 Validation Metrics](./success-criteria.md#phase-1-validation-metrics)
     - [Post-Release Success Metrics](./success-criteria.md#post-release-success-metrics)
     - [Technical Success Metrics](./success-criteria.md#technical-success-metrics)
@@ -66,3 +67,6 @@
     - [Maintainability](./non-functional-requirements.md#maintainability)
     - [Usability](./non-functional-requirements.md#usability)
   - [PRD v4 Source Reference](./prd-v4-source.md)
+  - Amendments
+    - [Multi-Library Media Management (2026-03-29)](./prd-multi-library-amendment.md)
+    - [Opt-in Anonymous Usage Report (2026-10-02)](./prd-telemetry-amendment.md)

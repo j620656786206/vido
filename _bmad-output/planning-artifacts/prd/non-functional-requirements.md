@@ -53,8 +53,8 @@
 **User Data Privacy:**
 
 - **NFR-S6**: Users must be able to completely delete all personal data (media library, download history, AI cache, learned mappings, preferences)
-- **NFR-S7**: Media library data must remain local on user's NAS with no automatic external reporting
-- **NFR-S8**: System must implement privacy-first approach with no telemetry or analytics by default
+- **NFR-S7**: Media library content (titles, filenames, folder paths, metadata, viewing activity) must never leave the user's NAS. The only permitted outbound reporting is the opt-in anonymous usage report defined in P1-040 ([telemetry amendment](./prd-telemetry-amendment.md), 2026-10-02)
+- **NFR-S8**: No telemetry or analytics is sent unless the user explicitly opts in; the default state is off. An opted-in report contains only the fields listed in P1-040-4 ([telemetry amendment](./prd-telemetry-amendment.md))
 
 **Network Security (v4 — Single User, No Auth):**
 

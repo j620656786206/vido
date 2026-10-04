@@ -49,6 +49,26 @@ type SubtitleRunRepositoryInterface interface {
 	// RunsByBatchID returns every run (any status) stamped with this consent
 	// batch id, oldest first — the batch receipt (sub-7-6b).
 	RunsByBatchID(ctx context.Context, batchID string) ([]models.SubtitleRun, error)
+	// AutoProducedBetween counts the subtitles Vido produced on its own —
+	// completed runs with triggered_by=auto whose completed_at is in
+	// [from, to) — grouped by source (infra-optin-usage-report-a1).
+	AutoProducedBetween(ctx context.Context, from, to time.Time) (AutoProducedCounts, error)
+}
+
+// AutoProducedCounts is the opt-in usage report's figure, by source (PRD
+// P1-040-4b): Embedded = a track already inside the file, delivered,
+// converted or translated; Online = an online provider's subtitle; ASR =
+// speech recognition. skip / no_text_source produce nothing and are not
+// counted, nor is a run whose lane was never recorded.
+type AutoProducedCounts struct {
+	Embedded int
+	Online   int
+	ASR      int
+}
+
+// Total is every subtitle produced on Vido's own in the window.
+func (c AutoProducedCounts) Total() int {
+	return c.Embedded + c.Online + c.ASR
 }
 
 // SubtitleRunMediaRef is one distinct media identity touched by a run —
@@ -72,19 +92,19 @@ func NewSubtitleRunRepository(db *sql.DB) *SubtitleRunRepository {
 var _ SubtitleRunRepositoryInterface = (*SubtitleRunRepository)(nil)
 
 // subtitleRunColumns keeps INSERT/UPDATE/SELECT/scan in sync (Rule 15 DB Column
-// Sync). All 20 columns — the 16 of migration 030 in table order, the two
-// spend columns of migration 032, and the two English-cue counts of
-// migration 034. The bugfix-20-1 precedent — series.seasons
+// Sync). All 24 columns — the 16 of migration 030 in table order, the two
+// spend columns of migration 032, the two English-cue counts of migration
+// 034, the three ledger columns of migration 041, and triggered_by of 043. The bugfix-20-1 precedent — series.seasons
 // was never added to the select list, so GetSeasons silently returned [] for
 // every series — is why this is one constant used everywhere rather than four
 // hand-written lists.
 const subtitleRunColumns = `id, media_id, media_type, tmdb_id, metadata_hash, glossary_version, ` +
 	`prompt_version, model_id, status, source_language, output_path, cue_count, ` +
 	`cache_enabled, error_message, started_at, completed_at, spent_usd, budget_usd, stubborn_count, transient_count, ` +
-	`route, cache_hit_cues, batch_id`
+	`route, cache_hit_cues, batch_id, triggered_by`
 
-// subtitleRunInsertPlaceholders matches subtitleRunColumns 1:1 (23 values).
-const subtitleRunInsertPlaceholders = `?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?`
+// subtitleRunInsertPlaceholders matches subtitleRunColumns 1:1 (24 values).
+const subtitleRunInsertPlaceholders = `?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?`
 
 // subtitleRunUpdateAssignments covers every column except the id key, so an
 // Update can never leave a column stale.
@@ -92,9 +112,9 @@ const subtitleRunUpdateAssignments = `media_id = ?, media_type = ?, tmdb_id = ?,
 	`glossary_version = ?, prompt_version = ?, model_id = ?, status = ?, source_language = ?, ` +
 	`output_path = ?, cue_count = ?, cache_enabled = ?, error_message = ?, started_at = ?, completed_at = ?, ` +
 	`spent_usd = ?, budget_usd = ?, stubborn_count = ?, transient_count = ?, ` +
-	`route = ?, cache_hit_cues = ?, batch_id = ?`
+	`route = ?, cache_hit_cues = ?, batch_id = ?, triggered_by = ?`
 
-// subtitleRunValues returns the 23 column values in subtitleRunColumns order.
+// subtitleRunValues returns the 24 column values in subtitleRunColumns order.
 // Both time columns are normalized to UTC before storage: the driver stores a
 // time.Time as text, and FindCompletedRun / ListByStatus ORDER BY that text —
 // a local-time value ("… +0800 CST") would compare by wall-clock digits and
@@ -110,7 +130,7 @@ func subtitleRunValues(run *models.SubtitleRun) []any {
 		run.PromptVersion, run.ModelID, run.Status, run.SourceLanguage, run.OutputPath, run.CueCount,
 		run.CacheEnabled, run.ErrorMessage, run.StartedAt.UTC(), completedAt, run.SpentUSD, run.BudgetUSD,
 		run.StubbornCount, run.TransientCount,
-		nullIfEmpty(run.Route), run.CacheHitCues, nullIfEmpty(run.BatchID),
+		nullIfEmpty(run.Route), run.CacheHitCues, nullIfEmpty(run.BatchID), nullIfEmpty(run.TriggeredBy),
 	}
 }
 
@@ -123,13 +143,13 @@ func nullIfEmpty(s string) any {
 	return s
 }
 
-// scanSubtitleRun reads all 23 columns in subtitleRunColumns order. The four
+// scanSubtitleRun reads all 24 columns in subtitleRunColumns order. The four
 // nullable TEXT/INTEGER columns go through sql.Null* so a row written by any
 // other path (e.g. a bare INSERT) still scans; the nullable columns modelled
 // as pointers stay pointers so "unset" survives the round trip.
 func scanSubtitleRun(scanner interface{ Scan(dest ...any) error }) (models.SubtitleRun, error) {
 	var run models.SubtitleRun
-	var sourceLanguage, outputPath, errorMessage, route, batchID sql.NullString
+	var sourceLanguage, outputPath, errorMessage, route, batchID, triggeredBy sql.NullString
 	var cueCount sql.NullInt64
 
 	err := scanner.Scan(
@@ -137,7 +157,7 @@ func scanSubtitleRun(scanner interface{ Scan(dest ...any) error }) (models.Subti
 		&run.PromptVersion, &run.ModelID, &run.Status, &sourceLanguage, &outputPath, &cueCount,
 		&run.CacheEnabled, &errorMessage, &run.StartedAt, &run.CompletedAt, &run.SpentUSD, &run.BudgetUSD,
 		&run.StubbornCount, &run.TransientCount,
-		&route, &run.CacheHitCues, &batchID,
+		&route, &run.CacheHitCues, &batchID, &triggeredBy,
 	)
 	if err != nil {
 		return run, err
@@ -149,6 +169,7 @@ func scanSubtitleRun(scanner interface{ Scan(dest ...any) error }) (models.Subti
 	run.ErrorMessage = errorMessage.String
 	run.Route = route.String
 	run.BatchID = batchID.String
+	run.TriggeredBy = triggeredBy.String
 	return run, nil
 }
 
@@ -190,7 +211,7 @@ func (r *SubtitleRunRepository) Update(ctx context.Context, run *models.Subtitle
 	if run.Status == "" {
 		return &models.ValidationError{Field: "status", Message: "status is required to update a subtitle run"}
 	}
-	// Update overwrites all 19 non-id columns, so a sparsely-populated struct
+	// Update overwrites every non-id column, so a sparsely-populated struct
 	// would silently zero started_at and corrupt the ORDER BY started_at
 	// resume/listing semantics.
 	if run.StartedAt.IsZero() {
@@ -376,4 +397,41 @@ func (r *SubtitleRunRepository) queryRuns(ctx context.Context, what, query strin
 		return nil, fmt.Errorf("error iterating %s: %w", what, err)
 	}
 	return runs, nil
+}
+
+// AutoProducedBetween uses the same lexicographic-UTC window as
+// CompletedRunsBetween: both bounds are UTC-normalized and every stored time
+// is written UTC by subtitleRunValues.
+func (r *SubtitleRunRepository) AutoProducedBetween(ctx context.Context, from, to time.Time) (AutoProducedCounts, error) {
+	query := `SELECT route, COUNT(*) FROM subtitle_runs
+		WHERE status = ? AND triggered_by = ?
+		AND completed_at IS NOT NULL AND completed_at >= ? AND completed_at < ?
+		GROUP BY route`
+	rows, err := r.db.QueryContext(ctx, query,
+		models.SubtitleRunCompleted, models.SubtitleRunTriggeredAuto, from.UTC(), to.UTC())
+	if err != nil {
+		return AutoProducedCounts{}, fmt.Errorf("failed to count auto-produced subtitle runs: %w", err)
+	}
+	defer rows.Close()
+
+	var counts AutoProducedCounts
+	for rows.Next() {
+		var route sql.NullString
+		var n int
+		if err := rows.Scan(&route, &n); err != nil {
+			return AutoProducedCounts{}, fmt.Errorf("failed to scan auto-produced subtitle run count: %w", err)
+		}
+		switch route.String {
+		case models.SubtitleRunRouteDeliverDirect, models.SubtitleRunRouteConvertThenDeliver, models.SubtitleRunRouteTranslate:
+			counts.Embedded += n
+		case models.SubtitleRunRouteOnline:
+			counts.Online += n
+		case models.SubtitleRunRouteASR:
+			counts.ASR += n
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return AutoProducedCounts{}, fmt.Errorf("error iterating auto-produced subtitle run counts: %w", err)
+	}
+	return counts, nil
 }

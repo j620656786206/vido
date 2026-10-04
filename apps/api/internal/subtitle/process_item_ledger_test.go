@@ -94,3 +94,30 @@ func TestProcessItem_LedgerFailedRunGetsAReceiptToo(t *testing.T) {
 	assert.Equal(t, models.SubtitleRunFailed, receipts[0].Status)
 	assert.Equal(t, models.SubtitleRunRouteTranslate, receipts[0].Route)
 }
+
+// infra-optin-usage-report-a1 — the ledger records who started the run.
+
+func TestProcessItem_LedgerDefaultsToManualTrigger(t *testing.T) {
+	h := newItemHarness(t, translateDecision("Good morning."))
+
+	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+	require.NoError(t, err)
+
+	final := h.runs.lastUpdate(t)
+	assert.Equal(t, models.SubtitleRunTriggeredManual, final.TriggeredBy,
+		"a caller that does not say Automatic is a person — it must never count as 'produced on its own'")
+}
+
+func TestProcessItem_LedgerRecordsAutomaticTrigger(t *testing.T) {
+	h := newItemHarness(t, RouteDecision{
+		Kind:  RouteDeliverDirect,
+		Track: &ExtractedTrack{StreamIndex: 3, Language: "chi", Blocks: cues("早安。")},
+	})
+
+	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{FreeOnly: true, Automatic: true})
+	require.NoError(t, err)
+
+	final := h.runs.lastUpdate(t)
+	assert.Equal(t, models.SubtitleRunCompleted, final.Status)
+	assert.Equal(t, models.SubtitleRunTriggeredAuto, final.TriggeredBy)
+}

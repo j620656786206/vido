@@ -502,7 +502,7 @@ func (g *AutoGenerator) Run(ctx context.Context) {
 		// (not deferred — a deferred cancel inside the loop would hold up to
 		// maxPerRun timers until the round ends). Size-aware since sub-6-3.
 		itemCtx, cancelItem := context.WithTimeout(ctx, g.itemDeadlineFor(it.path))
-		outcome, err := g.item.ProcessItem(itemCtx, ref, ProcessItemOptions{FreeOnly: true})
+		outcome, err := g.item.ProcessItem(itemCtx, ref, ProcessItemOptions{FreeOnly: true, Automatic: true})
 		cancelItem()
 		switch {
 		case err != nil && ctx.Err() != nil:

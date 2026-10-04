@@ -151,12 +151,25 @@ type SubtitleRun struct {
 	Route        string `db:"route" json:"route,omitempty"`
 	CacheHitCues *int   `db:"cache_hit_cues" json:"cache_hit_cues,omitempty"`
 	BatchID      string `db:"batch_id" json:"batch_id,omitempty"`
+
+	// TriggeredBy (infra-optin-usage-report-a1, migration 043) is who started
+	// the run: SubtitleRunTriggeredAuto (AutoGenerator after a scan, or the
+	// request-completion trigger after a download) or SubtitleRunTriggeredManual
+	// (a user action). "" = recorded before the column existed — not guessed.
+	TriggeredBy string `db:"triggered_by" json:"triggered_by,omitempty"`
 }
+
+// Who started a run (SubtitleRun.TriggeredBy). The opt-in usage report counts
+// only "auto" — subtitles Vido produced without anyone asking.
+const (
+	SubtitleRunTriggeredAuto   = "auto"
+	SubtitleRunTriggeredManual = "manual"
+)
 
 // The route vocabulary the ledger stores. The first five mirror
 // subtitle.RouteKind byte for byte (the pipeline writes string(decision.Kind));
 // "asr" is the lane the pipeline's no-text-source fallback and the Route C
-// transcription engine share. Kept as strings, not a typed enum, so the two
+// transcription engine share; "online" is the online-provider engine. Kept as strings, not a typed enum, so the two
 // packages that write them (subtitle, services) need no import of each other.
 const (
 	SubtitleRunRouteDeliverDirect      = "deliver_direct"
@@ -165,6 +178,11 @@ const (
 	SubtitleRunRouteSkip               = "skip"
 	SubtitleRunRouteNoTextSource       = "no_text_source"
 	SubtitleRunRouteASR                = "asr"
+	// SubtitleRunRouteOnline is the online-provider lane (Assrt / Zimuku /
+	// OpenSubtitles via subtitle.Engine): an existing Traditional Chinese
+	// subtitle was found, downloaded and placed. It does not mirror a
+	// RouteKind — the engine is not the pipeline (infra-optin-usage-report-a1).
+	SubtitleRunRouteOnline = "online"
 )
 
 // ReceiptPayload is the `subtitle_run_receipt` SSE body (sub-7-6a

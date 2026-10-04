@@ -153,7 +153,7 @@ func seedFailureFixtures(ctx context.Context, repos *repository.Repositories, me
 	if err := repos.SubtitleRuns.Create(ctx, &models.SubtitleRun{
 		ID: "seed-failure-run-001", MediaID: "seed-mv-001", MediaType: models.SubtitleRunMediaMovie,
 		Status: models.SubtitleRunFailed, ErrorMessage: "fixture: subtitle provider unavailable",
-		StartedAt: time.Now().UTC(),
+		StartedAt: time.Now().UTC(), TriggeredBy: models.SubtitleRunTriggeredManual,
 	}); err != nil {
 		return err
 	}
