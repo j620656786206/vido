@@ -21,7 +21,7 @@ import (
 // Before this existed the scanner wrote EVERY scanned file into `movies` — the
 // media-type decision was computed and thrown away (scanDir.contentType was never
 // threaded past StartScan) — while the only correct TV-ingest code in the tree lived
-// in ParseQueueService, which main.go never constructs. The result on a real library
+// in ParseQueueService, which main.go never constructed (deleted 2026-10-04, bugfix-g). The result on a real library
 // was one `movies` row per episode, all wearing the same series' TMDb metadata, and
 // series/seasons/episodes permanently empty. Both callers now share this service so
 // the logic cannot drift apart again.

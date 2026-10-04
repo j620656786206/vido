@@ -1248,15 +1248,6 @@ func tmdbIDFromMatch(item metadata.MetadataItem, source models.MetadataSource, w
 	return parseProviderIDFromString(item.ID)
 }
 
-// nullTMDbID wraps tmdbIDFromMatch's answer: 0 is "no TMDb id", never a
-// valid zero.
-func nullTMDbID(id int64) models.NullInt64 {
-	if id <= 0 {
-		return models.NullInt64{}
-	}
-	return models.NewNullInt64(id)
-}
-
 func parseProviderIDFromString(id string) int64 {
 	var n int64
 	fmt.Sscanf(strings.TrimSpace(id), "%d", &n)

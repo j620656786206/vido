@@ -1,6 +1,6 @@
 # Story 9R-17: AI 用量可見性 —— 單項轉錄成本 SSE＋統一 /ai/usage 讀端點
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
