@@ -73,6 +73,7 @@ import {
 } from '../../hooks/useTranscriptionEstimate';
 import { useSubtitleSearch } from '../../hooks/useSubtitleSearch';
 import { ButtonCost } from '../ui/ButtonCost';
+import { usd } from '../../lib/currency';
 import { GenerationProgressV2 } from './GenerationProgressV2';
 import { GlossaryPanelV2 } from './GlossaryPanelV2';
 import { deriveGenerateCostView, type RetryNote } from './generateCostView';
@@ -540,6 +541,8 @@ export function ManageSubtitleDialogV2({
                 percentage={generation.progress.percentage}
                 message={generation.progress.message}
                 error={generation.progress.error}
+                // 9R-17: a solo run's live spend / ceiling; both absent → no line.
+                {...costTexts(generation.progress)}
               />
               {/* The stream is closed once a run ends — F4 draws no live chip. */}
               {runIsLive && (
@@ -920,4 +923,11 @@ export function ManageSubtitleDialogV2({
       </DialogContent>
     </Dialog>
   );
+}
+
+/** 9R-17: the stepper's 本次用量 line needs both figures; otherwise none. */
+function costTexts(p: { spentUsd: number | null; budgetUsd: number | null }) {
+  return typeof p.spentUsd === 'number' && typeof p.budgetUsd === 'number'
+    ? { costUsedText: usd(p.spentUsd), costLimitText: usd(p.budgetUsd) }
+    : {};
 }

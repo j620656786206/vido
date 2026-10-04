@@ -472,4 +472,61 @@ describe('useGenerationProgress D6 subtitle_progress family (sub-4-3 AC #8)', ()
     );
     expect(rendered.result.current.progress.phase).toBe('translating');
   });
+
+  describe('9R-17 solo-run cost', () => {
+    it('picks up spent_usd / budget_usd, keeps the last figure when an event omits them', () => {
+      const { result } = renderHook(() => useGenerationProgress());
+      act(() => result.current.startTracking(MOVIE_UUID));
+      const es = MockEventSource.instances[0];
+      expect(result.current.progress.spentUsd).toBeNull();
+
+      act(() =>
+        es.emit(
+          'translation_progress',
+          wireEvent('translation_progress', {
+            phase: 'translating',
+            percentage: 40,
+            spent_usd: 0.31,
+            budget_usd: 2.5,
+          })
+        )
+      );
+      expect(result.current.progress.spentUsd).toBe(0.31);
+      expect(result.current.progress.budgetUsd).toBe(2.5);
+
+      act(() =>
+        es.emit(
+          'translation_progress',
+          wireEvent('translation_progress', { phase: 'translating', percentage: 60 })
+        )
+      );
+      expect(result.current.progress.spentUsd).toBe(0.31);
+
+      act(() =>
+        es.emit(
+          'transcription_complete',
+          wireEvent('transcription_complete', {
+            phase: 'complete',
+            srt_path: '/x.srt',
+            spent_usd: 0.42,
+            budget_usd: 2.5,
+          })
+        )
+      );
+      expect(result.current.progress.spentUsd).toBe(0.42);
+    });
+
+    it('a batch item (no cost keys) stays null — never 0', () => {
+      const { result } = renderHook(() => useGenerationProgress());
+      act(() => result.current.startTracking(MOVIE_UUID));
+      act(() =>
+        MockEventSource.instances[0].emit(
+          'transcription_progress',
+          wireEvent('transcription_progress', { phase: 'transcribing' })
+        )
+      );
+      expect(result.current.progress.spentUsd).toBeNull();
+      expect(result.current.progress.budgetUsd).toBeNull();
+    });
+  });
 });

@@ -334,6 +334,14 @@ function QueueRow({
             percentage={activeItemProgress?.percentage}
             message={activeItemProgress?.message}
             error={activeItemProgress?.error}
+            // 9R-17: only a solo run reports spend; batch items carry none.
+            {...(typeof activeItemProgress?.spentUsd === 'number' &&
+            typeof activeItemProgress?.budgetUsd === 'number'
+              ? {
+                  costUsedText: usd(activeItemProgress.spentUsd),
+                  costLimitText: usd(activeItemProgress.budgetUsd),
+                }
+              : {})}
           />
         </div>
       )}
@@ -907,6 +915,8 @@ export function GenerationWorkspaceV2({
                       zhSrtPath: null,
                       partial: false,
                       englishKeptBlocks: null,
+                      spentUsd: job.spentUsd ?? null,
+                      budgetUsd: job.budgetUsd ?? null,
                     }}
                   />
                 ))}

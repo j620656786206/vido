@@ -1293,8 +1293,11 @@ func main() {
 		recentMediaHandler.RegisterRoutes(apiV1)
 		scannerHandler.RegisterRoutes(apiV1)
 		subtitleHandler.RegisterRoutes(apiV1)
-		subtitleSpendHandler.RegisterRoutes(apiV1)        // GET /api/v1/subtitles/spend (sub-7-6b)
-		generationBatchHandler.RegisterRoutes(apiV1)      // /api/v1/subtitles/generation-batch group (Story 9R-16)
+		subtitleSpendHandler.RegisterRoutes(apiV1)   // GET /api/v1/subtitles/spend (sub-7-6b)
+		generationBatchHandler.RegisterRoutes(apiV1) // /api/v1/subtitles/generation-batch group (Story 9R-16)
+		// Story 9R-17: GET /api/v1/ai/usage — live spend of the paid run in
+		// progress (generation batch or solo transcription).
+		handlers.NewAIUsageHandler(generationBatchProcessor, transcriptionService).RegisterRoutes(apiV1)
 		generationCandidatesHandler.RegisterRoutes(apiV1) // /api/v1/subtitles/generation-candidates (story sub-4-1)
 		subtitlePipelineHandler.RegisterRoutes(apiV1)     // POST /api/v1/subtitles/pipeline/run (Story sub-1-6, FR12)
 		keySettingsHandler.RegisterRoutes(apiV1)          // GET/PUT /api/v1/settings/keys + POST /test (Story sub-2-1a, FR25)

@@ -859,3 +859,19 @@ func TestGenerationBatch_NoModelChoiceLeavesTheContextAlone(t *testing.T) {
 
 	assert.Empty(t, <-seen, "an unset choice must not pin a model — the deployment default then applies")
 }
+
+// 9R-17 AC #3: the batch side of GET /ai/usage.
+func TestGenerationBatchProcessor_ActiveSnapshot(t *testing.T) {
+	p := &GenerationBatchProcessor{}
+	_, ok := p.ActiveSnapshot()
+	assert.False(t, ok, "idle")
+
+	b := ai.NewBudget(3)
+	b.RecordASRWithRate(60, 0.5)
+	p.activeBatch = &GenerationBatchProgress{}
+	p.activeBudget = b
+	snap, ok := p.ActiveSnapshot()
+	require.True(t, ok)
+	assert.InDelta(t, 0.5, snap.SpentUSD, 1e-9)
+	assert.Equal(t, 3.0, snap.BudgetUSD)
+}

@@ -1,6 +1,6 @@
 # Bugfix: 自訂首頁的「類型」改成點中文名稱，不再手打 TMDb 代碼
 
-Status: review
+Status: done
 
 **Source:** `disc-2026-09-explore-block-genre-ids-raw`（P2，dsr-3 立案）。
 

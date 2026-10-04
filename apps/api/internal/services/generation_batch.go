@@ -317,6 +317,17 @@ func (p *GenerationBatchProcessor) snapshotLocked(src *GenerationBatchProgress, 
 	return &out
 }
 
+// ActiveSnapshot reads the running batch's shared budget (9R-17 AC #3, the
+// GET /ai/usage batch side). ok=false when no batch is running.
+func (p *GenerationBatchProcessor) ActiveSnapshot() (ai.BudgetSnapshot, bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.activeBatch == nil || p.activeBudget == nil {
+		return ai.BudgetSnapshot{}, false
+	}
+	return p.activeBudget.Snapshot(), true
+}
+
 // IsAvailable reports whether the underlying generation pipeline can run
 // (FFmpeg + ASR configured) — the handler's 503 TRANSCRIPTION_DISABLED gate.
 func (p *GenerationBatchProcessor) IsAvailable() bool {

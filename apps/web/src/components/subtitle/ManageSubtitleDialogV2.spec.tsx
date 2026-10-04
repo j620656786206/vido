@@ -230,6 +230,8 @@ beforeEach(() => {
     zhSrtPath: null,
     partial: false,
     englishKeptBlocks: null,
+    spentUsd: null,
+    budgetUsd: null,
   };
   h.glossaryTerms = [{ id: 't1' }, { id: 't2' }, { id: 't3' }];
   h.fetchHook.results = [];
@@ -522,6 +524,28 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
 
   // sub-2-2b AC #3: the completion note must not claim 完成 when translation
   // did not run — an en-only result (zhSrtPath null) says exactly what it is.
+  // 9R-17 AC #2: a solo run's live spend shows on the stepper; none → no line.
+  it('the progress view shows 本次用量 when the run reports spend and a ceiling', async () => {
+    mockedTrigger.mockResolvedValue({ status: 'started', result: { jobId: 'j', message: 'ok' } });
+    h.genState.phase = 'translating';
+    (h.genState as Record<string, unknown>).spentUsd = 0.42;
+    (h.genState as Record<string, unknown>).budgetUsd = 2.5;
+    renderDialog();
+    fireEvent.click(await findPricedGenerate());
+    const line = await screen.findByTestId('gen-cost-line');
+    expect(line).toHaveTextContent('$0.42');
+    expect(line).toHaveTextContent('$2.50');
+  });
+
+  it('no reported spend → no 本次用量 line (never a fake $0)', async () => {
+    mockedTrigger.mockResolvedValue({ status: 'started', result: { jobId: 'j', message: 'ok' } });
+    h.genState.phase = 'translating';
+    renderDialog();
+    fireEvent.click(await findPricedGenerate());
+    await screen.findByTestId('generation-progress-v2'); // the stepper is on screen
+    expect(screen.queryByTestId('gen-cost-line')).toBeNull();
+  });
+
   it('complete WITH a zh path → 字幕已生成完成', async () => {
     mockedTrigger.mockResolvedValue({ status: 'started', result: { jobId: 'j', message: 'ok' } });
     h.genState.phase = 'complete';

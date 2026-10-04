@@ -17,6 +17,7 @@ import (
 	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/ai/prompts"
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/sse"
 )
 
 // ─── Story 9R-16 additions: sync entry, budget threading, AC 12 writeback ───
@@ -128,8 +129,9 @@ func TestResolveBudget_ReusesCtxAttachedBudget(t *testing.T) {
 	shared := ai.NewBudget(5.0)
 	ctx := ai.WithBudget(context.Background(), shared)
 
-	got, outCtx := svc.resolveBudget(ctx)
+	got, outCtx, own := svc.resolveBudget(ctx)
 	assert.Same(t, shared, got, "a ctx-attached (batch) budget must be reused, not replaced")
+	assert.False(t, own, "a batch envelope is not this run's own budget (9R-17)")
 	assert.Same(t, shared, ai.BudgetFromContext(outCtx))
 }
 
@@ -137,10 +139,110 @@ func TestResolveBudget_CreatesPerRunBudgetWhenAbsent(t *testing.T) {
 	svc := NewTranscriptionService(nil, nil, nil, nil)
 	svc.SetRunBudgetUSD(2.5)
 
-	got, outCtx := svc.resolveBudget(context.Background())
+	got, outCtx, own := svc.resolveBudget(context.Background())
 	require.NotNil(t, got)
+	assert.True(t, own)
 	assert.Same(t, got, ai.BudgetFromContext(outCtx), "fresh budget must ride the returned ctx")
 	assert.Equal(t, 2.5, got.Snapshot().BudgetUSD)
+}
+
+// ─── 9R-17: solo-run cost on the transcription_* SSE + ActiveManualUsage ─────
+
+func TestCostFields_OnlyARunOwnedBudgetAddsKeys(t *testing.T) {
+	svc := NewTranscriptionService(nil, nil, nil, nil)
+	_, err := svc.acquireJob("solo-media", "片", true)
+	require.NoError(t, err)
+	_, err = svc.acquireJob("batch-item", "", false)
+	require.NoError(t, err)
+
+	own := ai.NewBudget(2.5)
+	own.RecordASRWithRate(60, 0.42) // one minute at $0.42/min
+	svc.trackRunBudget("solo-media", own)
+
+	solo := map[string]interface{}{"media_id": "solo-media", "phase": "translating"}
+	svc.costFields(solo)
+	assert.InDelta(t, 0.42, solo["spent_usd"], 1e-9)
+	assert.Equal(t, 2.5, solo["budget_usd"])
+	assert.Equal(t, "translating", solo["phase"], "existing keys untouched")
+
+	// A batch item spends from the batch's envelope — not this view's figure.
+	item := map[string]interface{}{"media_id": "batch-item"}
+	svc.costFields(item)
+	assert.NotContains(t, item, "spent_usd")
+	assert.NotContains(t, item, "budget_usd")
+
+	// Nothing in flight / no media_id → no keys, never 0.
+	gone := map[string]interface{}{"media_id": "nope"}
+	svc.costFields(gone)
+	assert.NotContains(t, gone, "spent_usd")
+}
+
+func TestCostFields_NoCeilingOmitsBudget(t *testing.T) {
+	svc := NewTranscriptionService(nil, nil, nil, nil)
+	_, err := svc.acquireJob("m", "片", true)
+	require.NoError(t, err)
+	svc.trackRunBudget("m", ai.NewBudget(0))
+	data := map[string]interface{}{"media_id": "m"}
+	svc.costFields(data)
+	assert.Contains(t, data, "spent_usd")
+	assert.NotContains(t, data, "budget_usd", "no ceiling → no budget key (absent, not 0)")
+}
+
+// AC #4 wire shape: the keys ride the transcription_* events as snake_case,
+// and the run receipt keeps its own figure untouched.
+func TestBroadcast_CostKeysRideOnlyTheStepperEvents(t *testing.T) {
+	hub := sse.NewHub()
+	t.Cleanup(func() { hub.Close() })
+	client := hub.Register()
+	require.Eventually(t, func() bool { return hub.ClientCount() == 1 }, 2*time.Second, time.Millisecond)
+
+	svc := NewTranscriptionService(nil, nil, hub, nil)
+	_, err := svc.acquireJob("m", "片", true)
+	require.NoError(t, err)
+	b := ai.NewBudget(2.5)
+	b.RecordASRWithRate(60, 0.42)
+	svc.trackRunBudget("m", b)
+
+	next := func() map[string]interface{} {
+		select {
+		case ev := <-client.Events:
+			return ev.Data.(map[string]interface{})
+		case <-time.After(2 * time.Second):
+			t.Fatal("no event")
+			return nil
+		}
+	}
+
+	for _, et := range []sse.EventType{EventTranscriptionExtracting, EventTranscriptionProgress,
+		EventTranscriptionTranslating, EventTranscriptionComplete, EventTranscriptionFailed} {
+		svc.broadcastEvent(et, map[string]interface{}{"media_id": "m", "phase": "x"})
+		got := next()
+		assert.InDelta(t, 0.42, got["spent_usd"], 1e-9, string(et))
+		assert.Equal(t, 2.5, got["budget_usd"], string(et))
+	}
+
+	svc.broadcastEvent(sse.EventSubtitleRunReceipt, map[string]interface{}{"media_id": "m", "spent_usd": 0.1})
+	receipt := next()
+	assert.Equal(t, 0.1, receipt["spent_usd"], "the receipt's own figure is never overwritten")
+	assert.NotContains(t, receipt, "budget_usd")
+}
+
+func TestActiveManualUsage(t *testing.T) {
+	svc := NewTranscriptionService(nil, nil, nil, nil)
+	_, ok := func() (float64, bool) { s, _, ok := svc.ActiveManualUsage(); return s, ok }()
+	assert.False(t, ok, "idle")
+
+	for _, id := range []string{"a", "b"} {
+		_, err := svc.acquireJob(id, "片", true)
+		require.NoError(t, err)
+		b := ai.NewBudget(2)
+		b.RecordASRWithRate(60, 0.5)
+		svc.trackRunBudget(id, b)
+	}
+	spent, budget, ok := svc.ActiveManualUsage()
+	require.True(t, ok)
+	assert.InDelta(t, 1.0, spent, 1e-9)
+	assert.InDelta(t, 4.0, budget, 1e-9)
 }
 
 // ─── translateAndPersist (AC 6c + AC 12) ─────────────────────────────────────
