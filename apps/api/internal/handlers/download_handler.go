@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/qbittorrent"
 	"github.com/vido/api/internal/services"
 )
@@ -39,34 +38,21 @@ func qbtErrorToHTTPStatus(code string) int {
 // DownloadItem extends Torrent with parse status information.
 type DownloadItem struct {
 	qbittorrent.Torrent
-	ParseStatus *DownloadParseStatus `json:"parse_status,omitempty"`
 	// ImportStatus says whether Sonarr/Radarr imported a finished download and
 	// whether Vido has it (dl-import-1 [@contract-v1]). Absent when neither
 	// plugin knows the torrent or neither is configured.
 	ImportStatus *services.DownloadImportStatus `json:"import_status,omitempty"`
 }
 
-// DownloadParseStatus represents the parse status for a download.
-type DownloadParseStatus struct {
-	Status       models.ParseJobStatus `json:"status"`
-	ErrorMessage *string               `json:"error_message,omitempty"`
-	MediaID      *string               `json:"media_id,omitempty"`
-}
-
 // DownloadHandler handles HTTP requests for download monitoring.
 type DownloadHandler struct {
 	service         services.DownloadServiceInterface
-	parseQueueSvc   services.ParseQueueServiceInterface
 	importStatusSvc services.ImportStatusServiceInterface
 }
 
 // NewDownloadHandler creates a new DownloadHandler.
-func NewDownloadHandler(service services.DownloadServiceInterface, parseQueueSvc ...services.ParseQueueServiceInterface) *DownloadHandler {
-	h := &DownloadHandler{service: service}
-	if len(parseQueueSvc) > 0 && parseQueueSvc[0] != nil {
-		h.parseQueueSvc = parseQueueSvc[0]
-	}
-	return h
+func NewDownloadHandler(service services.DownloadServiceInterface) *DownloadHandler {
+	return &DownloadHandler{service: service}
 }
 
 // SetImportStatusService enables the per-page import status (dl-import-1).
@@ -150,18 +136,6 @@ func (h *DownloadHandler) ListDownloads(c *gin.Context) {
 	pageItems := make([]DownloadItem, len(pageTorrents))
 	for i, t := range pageTorrents {
 		pageItems[i] = DownloadItem{Torrent: t}
-		if h.parseQueueSvc == nil {
-			continue
-		}
-		if t.Status == qbittorrent.StatusCompleted || t.Status == qbittorrent.StatusSeeding {
-			if job, err := h.parseQueueSvc.GetJobStatus(c.Request.Context(), t.Hash); err == nil && job != nil {
-				pageItems[i].ParseStatus = &DownloadParseStatus{
-					Status:       job.Status,
-					ErrorMessage: job.ErrorMessage,
-					MediaID:      job.MediaID,
-				}
-			}
-		}
 	}
 
 	// Import status: one call for the whole page, fully downloaded torrents
