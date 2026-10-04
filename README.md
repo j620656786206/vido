@@ -88,6 +88,8 @@ docker compose up -d
 
 開啟 `http://localhost:8080`，依照 setup wizard 完成初始設定。
 
+Vido 有一個預設關閉的「匿名使用回報」（開關於下一版提供）：送什麼、不送什麼見 [匿名使用回報](docs/usage-report.zh-TW.md)（[English](docs/usage-report.md)）。
+
 **基本環境變數**
 
 | 變數                    | 預設      | 說明                                                                                                                                        |

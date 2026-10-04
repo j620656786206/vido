@@ -38,6 +38,7 @@ import (
 	"github.com/vido/api/internal/subtitle/miner"
 	subtitleproviders "github.com/vido/api/internal/subtitle/providers"
 	"github.com/vido/api/internal/tmdb"
+	"github.com/vido/api/internal/usagereport"
 	// Media config is loaded during service initialization
 	// and validates directories from VIDO_MEDIA_DIRS env var
 	//
@@ -1158,6 +1159,24 @@ func main() {
 	// service, so both obey one set of secret names and one ENCRYPTION_KEY gate.
 	setupService.SetKeyWriter(keySettingsService)
 	keySettingsHandler := handlers.NewKeySettingsHandler(keySettingsService, claudeHolder)
+	// infra-optin-usage-report-a2: the opt-in anonymous weekly usage report.
+	// No receiver configured in this build (local / fork) → no sender → the
+	// feature reports itself unavailable and the scheduler never sends.
+	var usageReportSender services.ReportSender
+	switch endpoint := config.UsageReportEndpoint(); {
+	case endpoint == "" || config.UsageReportWebsiteID() == "":
+		// Not configured in this build — the normal local / fork case.
+	case !usagereport.ValidEndpoint(endpoint):
+		slog.Error("Usage report receiver URL is not an http(s) URL — report unavailable", "url", endpoint)
+	default:
+		usageReportSender = usagereport.NewSender(endpoint, config.Version())
+	}
+	usageReportService := services.NewUsageReportService(repos.Settings, repos.SubtitleRuns, usageReportSender,
+		services.UsageReportConfig{Version: config.Version(), WebsiteID: config.UsageReportWebsiteID()}, slog.Default())
+	usageReportScheduler := services.NewUsageReportScheduler(usageReportService)
+	usageReportHandler := handlers.NewUsageReportHandler(usageReportService)
+	setupService.SetUsageReport(usageReportService)
+	slog.Info("Usage report configured", "available", usageReportService.Available(), "version", config.Version())
 	subtitlePipelineHandler := handlers.NewSubtitlePipelineHandler(
 		subtitlePipelineQueue, subtitlePipelineMedia, subtitleCapabilityGate, modelCatalog)
 	// sub-7-8c: 「試跑 20 句」 — an ungraded model tried on the golden sample
@@ -1270,6 +1289,7 @@ func main() {
 		backupHandler.RegisterRoutes(apiV1)        // Must be before settingsHandler to avoid /settings/:key conflict
 		exportHandler.RegisterRoutes(apiV1)        // Must be before settingsHandler to avoid /settings/:key conflict
 		modelSettingsHandler.RegisterRoutes(apiV1) // Must be before settingsHandler to avoid /settings/:key conflict (sub-6-8a)
+		usageReportHandler.RegisterRoutes(apiV1)   // Must be before settingsHandler to avoid /settings/:key conflict (usage-report-a2)
 		settingsHandler.RegisterRoutes(apiV1)
 		setupHandler.RegisterRoutes(apiV1)
 		mediaHandler.RegisterRoutes(apiV1)
@@ -1338,6 +1358,11 @@ func main() {
 	schedulerCtx, schedulerCancel := context.WithCancel(context.Background())
 	go backupScheduler.Start(schedulerCtx)
 	slog.Info("Backup scheduler started")
+
+	// Start usage report scheduler (infra-optin-usage-report-a2). Off by
+	// default: its hourly check returns at once unless the user opted in.
+	usageReportCtx, usageReportCancel := context.WithCancel(context.Background())
+	go usageReportScheduler.Start(usageReportCtx)
 
 	// Start scan scheduler (Story 7.2)
 	scanSchedulerCtx, scanSchedulerCancel := context.WithCancel(context.Background())
@@ -1461,6 +1486,12 @@ func main() {
 	slog.Info("Stopping backup scheduler...")
 	schedulerCancel()
 	backupScheduler.Stop()
+
+	// Stop usage report scheduler — Stop waits for the loop, and this runs
+	// before db.Close() below (Rule 14).
+	slog.Info("Stopping usage report scheduler...")
+	usageReportCancel()
+	usageReportScheduler.Stop()
 
 	// Stop retry scheduler
 	slog.Info("Stopping retry scheduler...")

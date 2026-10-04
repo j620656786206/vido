@@ -154,4 +154,14 @@ ENV PORT=8080 \
 ARG VIDO_VERSION=dev
 ENV VIDO_VERSION=${VIDO_VERSION}
 
+# Receiver of the opt-in anonymous usage report (infra-optin-usage-report-a2;
+# read by config.UsageReportEndpoint / UsageReportWebsiteID). Set from CI
+# repository variables for release images; empty in local builds and forks,
+# which makes the feature unavailable instead of pointing anywhere. Not
+# secrets: every report carries the website id, and it only routes.
+ARG VIDO_USAGE_REPORT_URL=
+ARG VIDO_USAGE_REPORT_WEBSITE_ID=
+ENV VIDO_USAGE_REPORT_URL=${VIDO_USAGE_REPORT_URL} \
+    VIDO_USAGE_REPORT_WEBSITE_ID=${VIDO_USAGE_REPORT_WEBSITE_ID}
+
 CMD ["api"]

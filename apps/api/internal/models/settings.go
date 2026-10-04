@@ -43,4 +43,8 @@ type SetupConfig struct {
 	// ClaudeApiKey is the only AI key the wizard collects — the only text-AI key
 	// KeyResolver can read back from the secret store (Gemini is env-only).
 	ClaudeApiKey string `json:"claude_api_key,omitempty"`
+	// UsageReportEnabled is the wizard's opt-in answer for the anonymous
+	// weekly usage report (infra-optin-usage-report-a2, P1-040-2). Absent or
+	// false = off — the default.
+	UsageReportEnabled bool `json:"usage_report_enabled,omitempty"`
 }
