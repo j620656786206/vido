@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -107,4 +108,38 @@ func TestSender_UserAgentIsNotOneUmamiFlagsAsABot(t *testing.T) {
 	assert.Equal(t, "Mozilla/5.0 (X11; Linux x86_64) Vido/0.1.2", userAgent("0.1.2"))
 	assert.NotContains(t, userAgent("0.1.2"), "compatible")
 	assert.NotContains(t, userAgent("0.1.2"), "bot")
+}
+
+func TestValidEndpoint(t *testing.T) {
+	assert.True(t, ValidEndpoint("https://analytics.example.com"))
+	assert.True(t, ValidEndpoint("http://192.168.50.52:3000"))
+	assert.False(t, ValidEndpoint("analytics.example.com"), "no scheme — every send would fail quietly")
+	assert.False(t, ValidEndpoint("ftp://analytics.example.com"))
+	assert.False(t, ValidEndpoint("https://"))
+	assert.False(t, ValidEndpoint(""))
+}
+
+func TestSender_RedirectIsAFailureNotARepost(t *testing.T) {
+	var reposted bool
+	elsewhere := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { reposted = true }))
+	t.Cleanup(elsewhere.Close)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, elsewhere.URL+"/api/send", http.StatusTemporaryRedirect)
+	}))
+	t.Cleanup(srv.Close)
+
+	err := NewSender(srv.URL, "dev").Send(context.Background(), []byte(`{}`))
+
+	require.Error(t, err)
+	assert.False(t, reposted, "the body must not be re-posted to the redirect target")
+}
+
+func TestSender_FailedReplyIsTruncatedInTheError(t *testing.T) {
+	var got captured
+	srv := umami(t, http.StatusBadGateway, []byte(strings.Repeat("x", 10_000)), &got)
+
+	err := NewSender(srv.URL, "dev").Send(context.Background(), []byte(`{}`))
+
+	require.Error(t, err)
+	assert.Less(t, len(err.Error()), 400, "a 10 KB error page must not land in the DB log")
 }

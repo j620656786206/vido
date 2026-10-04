@@ -25,8 +25,10 @@ const (
 	usageReportKeyEnabled       = "usage_report.enabled"
 	usageReportKeyInstallID     = "usage_report.install_id"
 	usageReportKeyLastAttemptAt = "usage_report.last_attempt_at"
-	usageReportKeyLastSentAt    = "usage_report.last_sent_at"
-	usageReportKeyLastPayload   = "usage_report.last_payload"
+	// usageReportKeyLastSent holds the last SUCCESSFUL send as one JSON value
+	// {sent_at, payload}: one write, so the settings page can never show a
+	// payload with the wrong (or no) time.
+	usageReportKeyLastSent = "usage_report.last_sent"
 )
 
 // usageReportInterval is the cadence (P1-040-5). It also limits attempts: a
@@ -112,17 +114,13 @@ func (s *UsageReportService) Status(ctx context.Context) (UsageReportStatus, err
 	}
 	st := UsageReportStatus{Available: s.Available(), Enabled: enabled}
 
-	sentAt, err := s.readTime(ctx, usageReportKeyLastSentAt)
+	last, err := s.lastSent(ctx)
 	if err != nil {
 		return UsageReportStatus{}, err
 	}
-	st.LastSentAt = sentAt
-	payload, err := s.settings.GetString(ctx, usageReportKeyLastPayload)
-	switch {
-	case err == nil:
-		st.LastPayload = &payload
-	case !isSettingNotFound(err):
-		return UsageReportStatus{}, fmt.Errorf("read last usage report: %w", err)
+	if last != nil {
+		sentAt, payload := last.SentAt.UTC(), last.Payload
+		st.LastSentAt, st.LastPayload = &sentAt, &payload
 	}
 	return st, nil
 }
@@ -158,11 +156,7 @@ func (s *UsageReportService) Tick(ctx context.Context) {
 		return
 	}
 	now := s.now().UTC()
-	last, err := s.readTime(ctx, usageReportKeyLastAttemptAt)
-	if err != nil {
-		s.logger.Warn("usage report: read last attempt failed", "error", err)
-		return
-	}
+	last := s.lastAttempt(ctx)
 	if last != nil && now.Sub(*last) < usageReportInterval {
 		return
 	}
@@ -181,12 +175,12 @@ func (s *UsageReportService) Tick(ctx context.Context) {
 		s.logger.Warn("usage report: send failed — next attempt in 7 days", "error", err)
 		return
 	}
-	if err := s.settings.SetString(ctx, usageReportKeyLastPayload, string(body)); err != nil {
-		s.logger.Warn("usage report: sent, but saving the shown copy failed", "error", err)
-		return
+	record, err := json.Marshal(usageReportLastSent{SentAt: now, Payload: string(body)})
+	if err == nil {
+		err = s.settings.SetString(ctx, usageReportKeyLastSent, string(record))
 	}
-	if err := s.settings.SetString(ctx, usageReportKeyLastSentAt, now.Format(time.RFC3339Nano)); err != nil {
-		s.logger.Warn("usage report: sent, but saving the send time failed", "error", err)
+	if err != nil {
+		s.logger.Warn("usage report: sent, but saving the shown copy failed", "error", err)
 		return
 	}
 	s.logger.Info("usage report sent")
@@ -219,6 +213,12 @@ type usageReportData struct {
 }
 
 func (s *UsageReportService) buildBody(ctx context.Context, now time.Time) ([]byte, error) {
+	// The id is created on enable; if it went missing since (the generic
+	// settings API can delete any key) a new one is made rather than every
+	// weekly attempt failing until the user toggles the switch.
+	if err := s.ensureInstallID(ctx); err != nil {
+		return nil, err
+	}
 	installID, err := s.settings.GetString(ctx, usageReportKeyInstallID)
 	if err != nil {
 		return nil, fmt.Errorf("read install id: %w", err)
@@ -248,13 +248,16 @@ func (s *UsageReportService) buildBody(ctx context.Context, now time.Time) ([]by
 	})
 }
 
+// enabled reads the switch. A missing key is the default (off). A value of
+// the wrong type — only possible through the generic settings API — also
+// reads as off: when in doubt, do not send.
 func (s *UsageReportService) enabled(ctx context.Context) (bool, error) {
 	on, err := s.settings.GetBool(ctx, usageReportKeyEnabled)
 	if err != nil {
-		if isSettingNotFound(err) {
-			return false, nil
+		if !isSettingNotFound(err) {
+			s.logger.Warn("usage report: unreadable switch — treated as off", "error", err)
 		}
-		return false, fmt.Errorf("read usage report setting: %w", err)
+		return false, nil
 	}
 	return on, nil
 }
@@ -275,20 +278,48 @@ func (s *UsageReportService) ensureInstallID(ctx context.Context) error {
 	return nil
 }
 
-func (s *UsageReportService) readTime(ctx context.Context, key string) (*time.Time, error) {
-	raw, err := s.settings.GetString(ctx, key)
+// lastAttempt is the time of the last attempt, or nil when there was none —
+// or when the stored value cannot be parsed (only the generic settings API
+// can write one): an unreadable value must not block the report forever.
+func (s *UsageReportService) lastAttempt(ctx context.Context) *time.Time {
+	raw, err := s.settings.GetString(ctx, usageReportKeyLastAttemptAt)
+	if err != nil {
+		if !isSettingNotFound(err) {
+			s.logger.Warn("usage report: unreadable last attempt — treated as none", "error", err)
+		}
+		return nil
+	}
+	t, err := time.Parse(time.RFC3339Nano, raw)
+	if err != nil {
+		s.logger.Warn("usage report: unparseable last attempt — treated as none", "error", err)
+		return nil
+	}
+	t = t.UTC()
+	return &t
+}
+
+// usageReportLastSent is the stored record of the last successful send.
+type usageReportLastSent struct {
+	SentAt  time.Time `json:"sent_at"`
+	Payload string    `json:"payload"`
+}
+
+func (s *UsageReportService) lastSent(ctx context.Context) (*usageReportLastSent, error) {
+	raw, err := s.settings.GetString(ctx, usageReportKeyLastSent)
 	if err != nil {
 		if isSettingNotFound(err) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("read %s: %w", key, err)
+		return nil, fmt.Errorf("read last usage report: %w", err)
 	}
-	t, err := time.Parse(time.RFC3339Nano, raw)
-	if err != nil {
-		return nil, fmt.Errorf("parse %s: %w", key, err)
+	var rec usageReportLastSent
+	if err := json.Unmarshal([]byte(raw), &rec); err != nil || rec.Payload == "" {
+		// Not something this service wrote: show "never sent" rather than fail
+		// the settings page.
+		s.logger.Warn("usage report: unreadable last-sent record — shown as never sent", "error", err)
+		return nil, nil
 	}
-	t = t.UTC()
-	return &t, nil
+	return &rec, nil
 }
 
 // UsageReportServiceInterface is what the settings handler and the setup

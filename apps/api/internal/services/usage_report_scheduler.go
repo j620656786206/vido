@@ -27,6 +27,7 @@ type UsageReportScheduler struct {
 	mu      sync.Mutex
 	stopCh  chan struct{}
 	done    chan struct{}
+	started bool
 	stopped bool
 }
 
@@ -43,6 +44,9 @@ func NewUsageReportScheduler(svc usageReportTicker) *UsageReportScheduler {
 // Start checks once right away, then every interval, until ctx is cancelled
 // or Stop is called. Run it in its own goroutine.
 func (s *UsageReportScheduler) Start(ctx context.Context) {
+	s.mu.Lock()
+	s.started = true
+	s.mu.Unlock()
 	defer close(s.done)
 	slog.Info("Usage report scheduler started")
 	ticker := time.NewTicker(s.interval)
@@ -71,7 +75,11 @@ func (s *UsageReportScheduler) Stop() {
 		s.stopped = true
 		close(s.stopCh)
 	}
+	started := s.started
 	s.mu.Unlock()
+	if !started {
+		return
+	}
 	select {
 	case <-s.done:
 	case <-time.After(5 * time.Second):

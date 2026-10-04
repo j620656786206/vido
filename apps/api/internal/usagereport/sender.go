@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -33,14 +34,35 @@ type Sender struct {
 }
 
 // NewSender builds a Sender for the receiver at endpoint (base URL, no
-// trailing slash) reporting as the given Vido version.
+// trailing slash) reporting as the given Vido version. Check the endpoint with
+// ValidEndpoint first.
 func NewSender(endpoint, version string) *Sender {
 	return &Sender{
 		endpoint:  endpoint,
 		userAgent: userAgent(version),
-		client:    &http.Client{Timeout: sendTimeout},
+		client: &http.Client{
+			Timeout: sendTimeout,
+			// A redirect is a mis-configured receiver, not somewhere to re-post
+			// the body to: stop and report the 3xx as a failure.
+			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+		},
 	}
 }
+
+// ValidEndpoint reports whether raw is a usable receiver base URL: http or
+// https with a host. A value without a scheme would otherwise make every
+// weekly send fail quietly while the feature reports itself available.
+func ValidEndpoint(raw string) bool {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return false
+	}
+	return (u.Scheme == "https" || u.Scheme == "http") && u.Host != ""
+}
+
+// replyExcerptMax bounds how much of a failed reply goes into the error (and
+// from there into the DB log).
+const replyExcerptMax = 256
 
 // userAgent is a browser-shaped UA. Umami runs every request through isbot
 // and drops the matches; Go's default "Go-http-client/1.1", a bare
@@ -70,7 +92,11 @@ func (s *Sender) Send(ctx context.Context, body []byte) error {
 		return fmt.Errorf("usage report: read reply: %w", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("usage report: receiver answered %d: %s", resp.StatusCode, bytes.TrimSpace(reply))
+		excerpt := bytes.TrimSpace(reply)
+		if len(excerpt) > replyExcerptMax {
+			excerpt = excerpt[:replyExcerptMax]
+		}
+		return fmt.Errorf("usage report: receiver answered %d: %s", resp.StatusCode, excerpt)
 	}
 	var accepted struct {
 		SessionID string `json:"sessionId"`

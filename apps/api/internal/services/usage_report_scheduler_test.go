@@ -53,3 +53,10 @@ func TestUsageReportScheduler_HonorsContextCancellation(t *testing.T) {
 		t.Fatal("Start did not return after ctx cancel")
 	}
 }
+
+func TestUsageReportScheduler_StopWithoutStartReturnsAtOnce(t *testing.T) {
+	s := NewUsageReportScheduler(&countingTicker{})
+	begin := time.Now()
+	s.Stop()
+	assert.Less(t, time.Since(begin), time.Second)
+}

@@ -1163,8 +1163,13 @@ func main() {
 	// No receiver configured in this build (local / fork) → no sender → the
 	// feature reports itself unavailable and the scheduler never sends.
 	var usageReportSender services.ReportSender
-	if config.UsageReportEndpoint() != "" && config.UsageReportWebsiteID() != "" {
-		usageReportSender = usagereport.NewSender(config.UsageReportEndpoint(), config.Version())
+	switch endpoint := config.UsageReportEndpoint(); {
+	case endpoint == "" || config.UsageReportWebsiteID() == "":
+		// Not configured in this build — the normal local / fork case.
+	case !usagereport.ValidEndpoint(endpoint):
+		slog.Error("Usage report receiver URL is not an http(s) URL — report unavailable", "url", endpoint)
+	default:
+		usageReportSender = usagereport.NewSender(endpoint, config.Version())
 	}
 	usageReportService := services.NewUsageReportService(repos.Settings, repos.SubtitleRuns, usageReportSender,
 		services.UsageReportConfig{Version: config.Version(), WebsiteID: config.UsageReportWebsiteID()}, slog.Default())

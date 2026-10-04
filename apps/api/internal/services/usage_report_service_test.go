@@ -329,3 +329,52 @@ func TestUsageReport_DocsExampleMatchesTheRealBody(t *testing.T) {
 		assert.Equal(t, example, string(h.sender.bodies[0]), doc)
 	}
 }
+
+// Review LOW-4 — the generic settings API can write any key. Values this
+// service did not write must fail safe, not break the page or block forever.
+
+func TestUsageReport_WrongTypeSwitchReadsAsOff(t *testing.T) {
+	h := newUsageHarness(t, true)
+	ctx := context.Background()
+	require.NoError(t, repository.NewSettingsRepository(h.db).SetString(ctx, usageReportKeyEnabled, "true"))
+
+	st, err := h.svc.Status(ctx)
+	require.NoError(t, err, "the settings page must still load")
+	assert.False(t, st.Enabled)
+	h.svc.Tick(ctx)
+	assert.Empty(t, h.sender.bodies, "when in doubt, do not send")
+}
+
+func TestUsageReport_UnparseableLastAttemptDoesNotBlockForever(t *testing.T) {
+	h := newUsageHarness(t, true)
+	ctx := context.Background()
+	_, err := h.svc.SetEnabled(ctx, true)
+	require.NoError(t, err)
+	require.NoError(t, repository.NewSettingsRepository(h.db).SetString(ctx, usageReportKeyLastAttemptAt, "yesterday"))
+
+	h.svc.Tick(ctx)
+	assert.Len(t, h.sender.bodies, 1)
+}
+
+func TestUsageReport_DeletedInstallIDIsRecreatedNotStuck(t *testing.T) {
+	h := newUsageHarness(t, true)
+	ctx := context.Background()
+	_, err := h.svc.SetEnabled(ctx, true)
+	require.NoError(t, err)
+	require.NoError(t, repository.NewSettingsRepository(h.db).Delete(ctx, usageReportKeyInstallID))
+
+	h.svc.Tick(ctx)
+	require.Len(t, h.sender.bodies, 1)
+	assert.Contains(t, string(h.sender.bodies[0]), `"id":"`)
+}
+
+func TestUsageReport_ForeignLastSentRecordShowsAsNeverSent(t *testing.T) {
+	h := newUsageHarness(t, true)
+	ctx := context.Background()
+	require.NoError(t, repository.NewSettingsRepository(h.db).SetString(ctx, usageReportKeyLastSent, "not json"))
+
+	st, err := h.svc.Status(ctx)
+	require.NoError(t, err)
+	assert.Nil(t, st.LastPayload)
+	assert.Nil(t, st.LastSentAt)
+}

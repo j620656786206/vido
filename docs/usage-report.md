@@ -17,7 +17,7 @@ Once every 7 days, at most, while the report is on:
 | `subtitles_online_7d`   | `2`                                    | …of which came from an online subtitle source.                                                                                                                                                |
 | `subtitles_asr_7d`      | `1`                                    | …of which came from speech recognition.                                                                                                                                                       |
 
-The other fields are fixed values the receiver needs and are the same for every Vido: `website`, `hostname` (`vido`), `url` (`/usage-report`), `name` (`weekly_usage`), and `ip` set to `127.0.0.1` so the receiver does not look up your country.
+The other fields are fixed values the receiver needs and are the same for every Vido: `website`, `hostname` (`vido`), `url` (`/usage-report`), `name` (`weekly_usage`), and `ip` set to `127.0.0.1`, which asks the receiver not to look up your country (current Umami versions skip the lookup for it; the maintainer checks this on the receiver before turning reports on).
 
 A complete report looks exactly like this:
 
@@ -35,6 +35,8 @@ The settings page shows the last report that was actually sent, byte for byte, a
 - Anything that identifies you, your NAS or your network
 
 ## Turning it on or off
+
+> The switches below arrive with the next release. Until then the report cannot be turned on from the interface, and builds without a configured receiver report it as unavailable.
 
 - **First-run setup** asks once. The pre-selected answer is "off".
 - **Settings** has a switch you can change at any time. After you turn it off, nothing more is sent. Turning it back on reuses the same random ID.
