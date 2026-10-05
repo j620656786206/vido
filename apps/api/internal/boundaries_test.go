@@ -259,3 +259,41 @@ func assertNoImport(t *testing.T, dirRel, forbidden, why string) {
 		t.Errorf("%s imports %s — violates %s. See project-context.md Rule 19.", v, forbidden, why)
 	}
 }
+
+// TestZhtwDependsOnlyOnPrompts pins internal/zhtw the same way segkey is
+// pinned: both translation legs AND the online-subtitle paths share its one
+// definition of "finish a Chinese subtitle for Taiwan" (OpenCC, then the
+// lexicon, mainland exempt). `services` cannot import `subtitle`, so the
+// moment zhtw grows a heavier import one leg stops compiling and the tempting
+// fix is a private copy — which is exactly how three paths shipped without
+// the lexicon (backlog-lexicon-on-non-llm-convert-paths).
+func TestZhtwDependsOnlyOnPrompts(t *testing.T) {
+	allowed := map[string]bool{
+		importPathPrefix + "zhtw":       true,
+		importPathPrefix + "ai/prompts": true,
+	}
+
+	cmd := exec.Command("go", "list", "-deps", "-f", "{{if not .Standard}}{{.ImportPath}}{{end}}", "./zhtw")
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("go list -deps ./zhtw failed: %v\nstderr: %s", err, stderr.String())
+	}
+
+	var bad []string
+	for _, line := range strings.Split(string(out), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || !strings.HasPrefix(line, importPathPrefix) || allowed[line] {
+			continue
+		}
+		bad = append(bad, line)
+	}
+	if len(bad) > 0 {
+		t.Errorf(
+			"internal/zhtw must stay importable from BOTH services and subtitle, "+
+				"so it may only depend on ai/prompts — it now also imports %v.",
+			bad,
+		)
+	}
+}

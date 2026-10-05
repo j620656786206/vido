@@ -24,6 +24,7 @@ import (
 	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/segkey"
 	"github.com/vido/api/internal/sse"
+	"github.com/vido/api/internal/zhtw"
 )
 
 // SubtitleStatusWriter persists generation success to the movie row (Story
@@ -1870,6 +1871,15 @@ func releaseYear(date string) int {
 	return year
 }
 
+// availableOpenCC is the script step for zhtw.Finalize: nil (skip the step)
+// when no converter is wired or the OpenCC helper is not installed.
+func (s *TranscriptionService) availableOpenCC() zhtw.Converter {
+	if s.opencc == nil || !s.opencc.IsAvailable() {
+		return nil
+	}
+	return s.opencc
+}
+
 // productionCountryCodes projects TMDb's country objects onto the ISO codes the
 // prompt renders. Mirrors subtitle/media_store.go countryCodes (Rule 19 — see
 // releaseYear).
@@ -1970,20 +1980,14 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 	// 9R-10: OpenCC s2twp safety net — guarantee Traditional output even if the
 	// LLM slips a Simplified character through. Fail-soft: on converter error,
 	// keep the LLM output rather than losing the subtitle.
-	if s.opencc != nil && s.opencc.IsAvailable() {
-		if converted, cerr := s.opencc.ConvertS2TWP([]byte(zhSRT)); cerr == nil {
-			zhSRT = string(converted)
-		} else {
-			s.logger.Warn("OpenCC safety-net conversion failed — keeping LLM output",
-				"media_id", mediaID, "error", cerr)
-		}
-	}
 	// sub-7-4 AC #2: the Taiwan lexicon after OpenCC (script first, then
-	// vocabulary). Every table entry is Chinese, so SRT indices and
-	// timestamps are untouchable by construction. Mainland-produced content
-	// keeps its own vocabulary (PRD rule).
-	if !prompts.IsMainlandContent(metadata.Countries) {
-		zhSRT = prompts.ZhTWLexicon().Apply(zhSRT)
+	// vocabulary) — zhtw.Finalize. Every table entry is Chinese, so SRT
+	// indices and timestamps are untouchable by construction. Mainland-
+	// produced content keeps its own vocabulary (PRD rule).
+	zhSRT, cerr := zhtw.Finalize(s.availableOpenCC(), zhSRT, metadata.Countries)
+	if cerr != nil {
+		s.logger.Warn("OpenCC safety-net conversion failed — keeping LLM output",
+			"media_id", mediaID, "error", cerr)
 	}
 
 	// 9R-10: place the subtitle. Prefer the injected Placer (atomic write +
@@ -2037,17 +2041,10 @@ func (s *TranscriptionService) harvestGlossaryTerms(ctx context.Context, mediaID
 		// CR sub-5-5 H2: s2twp the rendering before it becomes a MANDATORY
 		// glossary feed — a raw Simplified rendering would poison every future
 		// prompt for the show. Fail-soft: keep the raw value on converter error.
-		if s.opencc != nil && s.opencc.IsAvailable() {
-			if converted, cerr := s.opencc.ConvertS2TWP([]byte(zh)); cerr == nil {
-				zh = string(converted)
-			}
-		}
 		// sub-7-4: the Taiwan lexicon after OpenCC, same as the subtitle
 		// itself — see Pipeline.harvestTerms for why a harvested mainland
 		// rendering must not become a mandatory per-show entry.
-		if !prompts.IsMainlandContent(countries) {
-			zh = prompts.ZhTWLexicon().Apply(zh)
-		}
+		zh, _ = zhtw.Finalize(s.availableOpenCC(), zh, countries)
 		ok, err := s.glossaryRepo.InsertIfAbsent(ctx, &models.GlossaryTerm{
 			MediaID: mediaID,
 			Scope:   scope,

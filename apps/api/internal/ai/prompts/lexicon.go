@@ -213,21 +213,6 @@ func BuildLexiconTermsSection(terms []GlossaryEntry) string {
 	return sb.String()
 }
 
-// IsMainlandContent is the lexicon's half of the PRD mainland rule: content
-// produced in mainland China keeps its own VOCABULARY, so the replacements
-// table is skipped. (Whether the SCRIPT is converted is the conversion
-// policy's call — engine.go ConvertNever for the search path; the two LLM
-// legs still run s2twp as a leak safety net. Three predicates today; see the
-// story's Discovery Triage.)
-func IsMainlandContent(countries []string) bool {
-	for _, c := range countries {
-		if strings.EqualFold(strings.TrimSpace(c), "CN") {
-			return true
-		}
-	}
-	return false
-}
-
 func containsHanRune(s string) bool {
 	for _, r := range s {
 		if unicode.Is(unicode.Han, r) {

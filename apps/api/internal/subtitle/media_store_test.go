@@ -409,7 +409,7 @@ func TestMediaStore_EpisodeLabel(t *testing.T) {
 	assert.Equal(t, "S00E01 · Pilot", episodeLabel(&models.Episode{EpisodeNumber: 1, Title: models.NewNullString(" Pilot ")}))
 }
 
-// sub-7-2b: the column series never had. Countries are what lexiconFor keys
+// sub-7-2b: the column series never had. Countries are what zhtw.Finalize keys
 // on, so until now a CN drama's episodes were run through the Taiwan lexicon.
 func TestMediaStore_LoadEpisodeCarriesTheShowCountries(t *testing.T) {
 	series := &models.Series{ID: "s-9", Title: "慶餘年", TMDbID: models.NewNullInt64(9)}

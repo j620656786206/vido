@@ -1077,6 +1077,8 @@ func main() {
 	}
 	batchProcessor := subtitle.NewBatchProcessor(subtitleEngine, sseHub, batchCollector, subtitle.DefaultBatchConfig(), batchOpts...)
 	subtitleHandler.SetBatchProcessor(batchProcessor)
+	// backlog-lexicon-on-non-llm-convert-paths: the manual paths' mainland rule.
+	subtitleHandler.SetCountryResolver(handlers.NewRepoCountryResolver(repos.Movies, repos.Series))
 	// Consented generation batch (9R-16 orchestrator, sub-4-2 engine selection):
 	// sequential single-flight over ONE shared AI budget, independent from the
 	// fetch batchProcessor above (they share no state). Engine per mode:

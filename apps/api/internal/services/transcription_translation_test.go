@@ -410,6 +410,35 @@ func TestTranslateSRT_MovieMetadataReachesTheSystemPrompt(t *testing.T) {
 		"the invariant system prompt must stay the stable prefix")
 }
 
+// backlog-lexicon-on-non-llm-convert-paths: this leg finishes through
+// zhtw.Finalize like every other — Taiwan vocabulary, mainland exempt.
+func TestTranslateSRT_TaiwanVocabularyWithMainlandExemption(t *testing.T) {
+	cases := []struct {
+		country string
+		want    string
+	}{
+		{"DE", "這個軟體的品質很好"},
+		{"CN", "這個軟件的質量很好"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.country, func(t *testing.T) {
+			movie := fixtureMovie()
+			movie.ProductionCountries = []models.ProductionCountry{{ISO3166_1: tc.country}}
+			svc := NewTranscriptionService(nil, nil, nil, nil)
+			svc.SetTranslationService(NewTranslationService(&translationIntegrationMock{response: "[1] 這個軟件的質量很好"}, nil))
+			svc.SetSubtitleStateReader(&metadataMovieReader{movie: movie})
+
+			tmpDir := t.TempDir()
+			zhPath, _, err := svc.translateSRT(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidA,
+				"1\n00:00:01,000 --> 00:00:04,000\nThis software is great\n", filepath.Join(tmpDir, "movie.mkv"), tmpDir)
+			require.NoError(t, err)
+			got, err := os.ReadFile(zhPath)
+			require.NoError(t, err)
+			assert.Contains(t, string(got), tc.want)
+		})
+	}
+}
+
 func TestTranslateSRT_MetadataLookupFailureKeepsThePromptByteIdentical(t *testing.T) {
 	mockProvider := &translationIntegrationMock{response: "[1] 你好世界"}
 	svc := NewTranscriptionService(nil, nil, nil, nil)

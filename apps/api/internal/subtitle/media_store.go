@@ -260,7 +260,7 @@ func seriesContext(series *models.Series) TranslateContext {
 		Overview:      series.Overview.String,
 		Cast:          series.CastLabels(prompts.MetadataCastLimit), // sub-7-2a
 		// sub-7-2b: the column series never had (migration 040). This is what
-		// lets lexiconFor skip the Taiwan lexicon for CN shows, not just films.
+		// lets zhtw.Finalize skip the Taiwan lexicon for CN shows, not just films.
 		Countries: countryCodes(series.ProductionCountries),
 	}, series.TMDbID.Valid, series.ID, models.SubtitleRunMediaSeries)
 }
