@@ -200,6 +200,9 @@ Claude Opus 5.5（2026-10-04，SM Bob 建檔＋UX Sally 裁定與提示詞）
 - **提示詞 3 review（Sally，2026-10-05）**：N6-D `GQae8`。文案 14 段與定稿逐字相同；步驟點 dot-0～4／bar-0～3 為 `$accent-primary`、bar-4／dot-5 為 `$bg-tertiary`；開關 `Qia26`；0 個裁切警告；C25-D／C25-M／C26-D／N6-D 的畫布標題皆已是 `$Type/Family/Canvas`。✅ 追認。
 - ⚖️ **兩個對照方塊的底色**：inline agent 回報 `$bg-primary` 與 wizard-card 同色、方塊消失。裁定 **A＋描邊**：方塊改 `$bg-secondary`，並加 `$border-subtle` 1px 描邊——與同一個精靈 N5 摘要框 `xuXAV` 的做法完全一致（`$bg-secondary`＋`$border-subtle`），不另創組合。這是我寫提示詞時沒對照 N5 的疏漏。
 
+- ✅ 方塊底色＋描邊已改（commit bfc4e539）。
+- ⚖️ **兩個方塊等高**：左方塊第一行會折成兩行，高 131、右方塊 113。裁定 **B，但用「跟著較高的那個撐開」而不是寫死 131**：文案一改高度就會跟著變，寫死的數字會再次對不齊；前端用 CSS grid 兩欄時本來就會等高，設計稿應該表達同一個規則。
+
 ### Discovery Triage
 
 - ① DESIGN.md SOP §2 寫的畫布標題字體（Noto Sans TC）與檔案實況（`$Type/Family/Canvas` = DM Sans）不符——已在本單就地更正 DESIGN.md 那一行（2026-10-05）。
