@@ -232283,6 +232283,7 @@
                               "id": "GcFUi",
                               "name": "box-絕不送",
                               "width": "fill_container",
+                              "height": "fill_container",
                               "fill": "$bg-secondary",
                               "cornerRadius": "$radius-md",
                               "stroke": "$border-subtle",
