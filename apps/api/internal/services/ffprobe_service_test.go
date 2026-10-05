@@ -498,3 +498,21 @@ func TestParseFfprobeJSON_UnknownDurationStaysZero(t *testing.T) {
 		})
 	}
 }
+
+// bugfix-subtitle-dialog-real-inventory: the title tag is the only place an
+// embedded `chi` track says which script it is ("繁體", "Chinese (Simplified)").
+func TestParseFfprobeJSON_SubtitleTitle(t *testing.T) {
+	input := []byte(`{
+		"streams": [
+			{"index":6,"codec_type":"subtitle","codec_name":"subrip","tags":{"language":"chi","title":" 繁體中文 "}},
+			{"index":7,"codec_type":"subtitle","codec_name":"subrip","tags":{"language":"chi"}}
+		],
+		"format": {"filename":"see.mkv"}
+	}`)
+
+	info, err := parseFfprobeJSON(input)
+	require.NoError(t, err)
+	require.Len(t, info.SubtitleTracks, 2)
+	assert.Equal(t, "繁體中文", info.SubtitleTracks[0].Title)
+	assert.Equal(t, "", info.SubtitleTracks[1].Title)
+}

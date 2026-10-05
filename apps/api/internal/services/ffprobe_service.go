@@ -38,6 +38,9 @@ type SubtitleTrack struct {
 	Language string `json:"language"`
 	Format   string `json:"format"`
 	External bool   `json:"external"`
+	// Title is the track's title tag ("繁體中文", "English [SDH]") — the only
+	// place an embedded `chi` track says which script it is.
+	Title string `json:"title,omitempty"`
 	// StreamIndex is the absolute ffmpeg stream index of the track, i.e. the {n}
 	// in `-map 0:{n}`. Meaningful ONLY when External == false; external sidecar
 	// tracks are separate files and leave it at 0. No omitempty — index 0 is a
@@ -152,13 +155,13 @@ type ffprobeOutput struct {
 
 // ffprobeStream represents a single stream in ffprobe output
 type ffprobeStream struct {
-	Index         int            `json:"index"`
-	CodecType     string         `json:"codec_type"`
-	CodecName     string         `json:"codec_name"`
-	Width         int            `json:"width,omitempty"`
-	Height        int            `json:"height,omitempty"`
-	Channels      int            `json:"channels,omitempty"`
-	ColorTransfer string         `json:"color_transfer,omitempty"`
+	Index         int               `json:"index"`
+	CodecType     string            `json:"codec_type"`
+	CodecName     string            `json:"codec_name"`
+	Width         int               `json:"width,omitempty"`
+	Height        int               `json:"height,omitempty"`
+	Channels      int               `json:"channels,omitempty"`
+	ColorTransfer string            `json:"color_transfer,omitempty"`
 	SideDataList  []ffprobeSideData `json:"side_data_list,omitempty"`
 	Tags          map[string]string `json:"tags,omitempty"`
 }
@@ -212,6 +215,7 @@ func parseFfprobeJSON(output []byte) (*MediaTechInfo, error) {
 				Language:    lang,
 				Format:      stream.CodecName,
 				External:    false,
+				Title:       strings.TrimSpace(stream.Tags["title"]),
 				StreamIndex: stream.Index,
 			})
 		}
@@ -301,29 +305,29 @@ func MergeSubtitleTracks(embedded, external []SubtitleTrack) []SubtitleTrack {
 // ─── Codec normalization ───────────────────────────────────────────────────
 
 var videoCodecMap = map[string]string{
-	"hevc":    "H.265",
-	"h265":    "H.265",
-	"h264":    "H.264",
-	"avc":     "H.264",
-	"av1":     "AV1",
-	"vp9":     "VP9",
-	"mpeg4":   "MPEG-4",
+	"hevc":       "H.265",
+	"h265":       "H.265",
+	"h264":       "H.264",
+	"avc":        "H.264",
+	"av1":        "AV1",
+	"vp9":        "VP9",
+	"mpeg4":      "MPEG-4",
 	"mpeg2video": "MPEG-2",
 }
 
 var audioCodecMap = map[string]string{
-	"dts":     "DTS",
-	"dca":     "DTS",
-	"aac":     "AAC",
-	"ac3":     "AC-3",
-	"eac3":    "E-AC-3",
-	"truehd":  "TrueHD",
-	"flac":    "FLAC",
+	"dts":       "DTS",
+	"dca":       "DTS",
+	"aac":       "AAC",
+	"ac3":       "AC-3",
+	"eac3":      "E-AC-3",
+	"truehd":    "TrueHD",
+	"flac":      "FLAC",
 	"pcm_s16le": "PCM",
 	"pcm_s24le": "PCM",
-	"opus":    "Opus",
-	"vorbis":  "Vorbis",
-	"mp3":     "MP3",
+	"opus":      "Opus",
+	"vorbis":    "Vorbis",
+	"mp3":       "MP3",
 }
 
 func normalizeVideoCodec(codec string) string {

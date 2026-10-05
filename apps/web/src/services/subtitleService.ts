@@ -559,9 +559,51 @@ export type StartGenerationBatchOutcome =
    */
   | { conflict: true; progress: GenerationBatchProgress | null };
 
+// --- Subtitle inventory (bugfix-subtitle-dialog-real-inventory) ---
+
+/** Each half of the inventory reports its own status: one failing never hides the other. */
+export type SubtitleInventoryStatus = 'ok' | 'unavailable' | 'failed';
+
+/** A subtitle file beside the media file. Chinese `language` is decided by CONTENT. */
+export interface SubtitleSidecarFile {
+  fileName: string;
+  /** zh-Hant / zh-Hans / zh-unknown, else the filename tag (e.g. "en") or "und". */
+  language: string;
+  format: string;
+  /** The subtitle Vido itself placed for this title (shown once, as the engine row). */
+  isVidoOutput: boolean;
+}
+
+/** A subtitle stream inside the media file. */
+export interface SubtitleEmbeddedTrack {
+  streamIndex: number;
+  /** zh-Hant / zh-Hans / yue / zh-unknown / en / the raw tag / und. */
+  language: string;
+  title?: string;
+  format: string;
+  /** false for image tracks (PGS, VobSub). */
+  text: boolean;
+}
+
+export interface SubtitleInventory {
+  sidecars: { status: SubtitleInventoryStatus; files: SubtitleSidecarFile[] };
+  embedded: { status: SubtitleInventoryStatus; tracks: SubtitleEmbeddedTrack[] };
+}
+
 // --- Service ---
 
 export const subtitleService = {
+  /**
+   * GET /{movies|episodes}/:id/subtitles/inventory — what subtitles this ONE
+   * title actually has, read on demand (never per episode on a season expand).
+   */
+  async getInventory(mediaType: 'movie' | 'episode', id: string): Promise<SubtitleInventory> {
+    const collection = mediaType === 'movie' ? 'movies' : 'episodes';
+    return fetchApi<SubtitleInventory>(
+      `/${collection}/${encodeURIComponent(id)}/subtitles/inventory`
+    );
+  },
+
   async searchSubtitles(params: SubtitleSearchParams): Promise<SubtitleSearchResult[]> {
     return fetchApi<SubtitleSearchResult[]>('/subtitles/search', {
       method: 'POST',
