@@ -87,7 +87,7 @@ so that turning the report on is an informed choice and never a surprise.
 ## Tasks / Subtasks
 
 - [x] Task 0: Sally 查證現況、作設計裁定、寫提示詞（本檔）
-- [ ] Task 1: Alexyu 執行提示詞 1（設定頁 C25-D／C25-M）
+- [x] Task 1: Alexyu 執行提示詞 1（設定頁 C25-D／C25-M）——commit 37abbc89；Sally review 通過（見 Completion Notes）
 - [ ] Task 2: Alexyu 執行提示詞 2（規格稿 C26-D）
 - [ ] Task 3: Alexyu 執行提示詞 3（精靈 N6-D）
 - [ ] Task 4: Alexyu 執行提示詞 4（N1–N5、N3-M 步驟點＋N5 摘要列）
@@ -104,7 +104,7 @@ so that turning the report on is an informed choice and never a surprise.
 在 ux-design.pen 做兩件事，全部只用設計系統變數（顏色 $…、間距 $Space/…、字級 $Type/<角色>/Size + /Line + /Weight 三個一起設），不准寫死 hex 或數字間距。
 
 A. 桌面：Copy 畫面 Qva0y（C23-D）到群組 szz7O 裡，放在 C24-D（L7EVR）右邊一欄（x = C24-D 的 x + 1540，y 與 C24-D 相同），圖框名稱改為 "C25-D"。
-   在它上方 45px 放一個畫布標題 text：「C25-D · 設定 — 連線設定（往下捲）· 匿名使用回報（桌面）」，Noto Sans TC 14／600／#888888（畫布註記，可寫死）。
+   在它上方 45px 放一個畫布標題 text：「C25-D · 設定 — 連線設定（往下捲）· 匿名使用回報（桌面）」，字體與樣式完全比照隔壁 C24-D 的畫布標題（字體變數 $Type/Family/Canvas）。
    在這個副本裡：
    1. 刪除 Sonarr 卡（原 d9AmRx 的副本），保留 Radarr 卡，讓畫面看起來是捲到頁面最底。
    2. 在 Radarr 卡後面新增一張卡，名稱 "usage-report-card"，外觀完全比照 Radarr 卡（寬 768、同樣的底色／圓角／邊框／內距／間距）：
@@ -124,7 +124,7 @@ B. 手機：Copy 畫面 p37q9（C23-M）到群組 v21FYb，放在它右邊（x =
 ### 提示詞 2 — 規格稿 C26-D（三種狀態）
 
 ```
-在 ux-design.pen 的群組 szz7O 裡，於 C25-D 右邊一欄（x = C25-D 的 x + 1540，與 C25-D 同 y）新增一個 1440 寬的畫面，圖框名稱 "C26-D"，fill $bg-secondary，內距 $Space/3xl，垂直排列。上方 45px 畫布標題「C26 · 匿名使用回報・三種狀態（規格）」，Noto Sans TC 14／600／#888888。
+在 ux-design.pen 的群組 szz7O 裡，於 C25-D 右邊一欄（x = C25-D 的 x + 1540，與 C25-D 同 y）新增一個 1440 寬的畫面，圖框名稱 "C26-D"，fill $bg-secondary，內距 $Space/3xl，垂直排列。上方 45px 畫布標題「C26 · 匿名使用回報・三種狀態（規格）」，字體與樣式完全比照同群組其他畫布標題（字體變數 $Type/Family/Canvas）。
 內容：
 - 頁首 text「匿名使用回報卡的三種狀態」（Type/H3 三件組、$text-primary），下一行「主稿 C25 是『已開啟、已送過』。下面三種狀態的卡片外觀與 C25 完全相同，只差在開關、提示與讀數。」（Type/Body、$text-secondary）。
 - 一列三欄（gap $Space/xl），每欄上方一行小標（Type/Label、$text-muted），下面是一張 Copy 自 C25-D 裡 usage-report-card 的卡（寬度 fill_container）：
@@ -139,7 +139,7 @@ B. 手機：Copy 畫面 p37q9（C23-M）到群組 v21FYb，放在它右邊（x =
 ### 提示詞 3 — 精靈 N6-D
 
 ```
-在 ux-design.pen 的群組 XBRn1 裡，Copy 畫面 D990CP（N4-D）到 N5-D（CWh3E）右邊一欄（x = N5-D 的 x + 1540，同 y），圖框名稱 "N6-D"。上方 45px 畫布標題「N6 · 匿名使用回報（步驟 5／6，在 N5 完成之前）（桌面）」，Noto Sans TC 14／600／#888888。
+在 ux-design.pen 的群組 XBRn1 裡，Copy 畫面 D990CP（N4-D）到 N5-D（CWh3E）右邊一欄（x = N5-D 的 x + 1540，同 y），圖框名稱 "N6-D"。上方 45px 畫布標題「N6 · 匿名使用回報（步驟 5／6，在 N5 完成之前）（桌面）」，字體與樣式完全比照同群組其他畫布標題（字體變數 $Type/Family/Canvas）。
 只改副本裡 wizard-card 的 step-body（原 d5t5D 的副本）與 step-progress：
 1. step-body 內容全部換掉（保留 step-body 本身的排版與間距），依序：
    - 標題 text「匿名使用回報」（同 N4 標題「API 金鑰」的樣式）。
@@ -194,8 +194,13 @@ Claude Opus 5.5（2026-10-04，SM Bob 建檔＋UX Sally 裁定與提示詞）
 
 ### Completion Notes List
 
+- **提示詞 1 review（Sally，2026-10-05，MCP 唯讀）**：C25-D `SHogC`（1440×1346）、C25-M `bG3l3`（390×1468）。卡內 10 段文字與定稿**逐字相同**（含 JSON 原文）；開關為 `jqRCX` instance；讀數與原文用 `$Type/Family/Mono`；桌面 0 個裁切警告；手機唯一一個是分頁列刻意的橫向捲動（既有基準）；`szz7O` 同層重疊 0；`v21FYb` 的 3 組重疊（C5-M 與 dsr-3 規格註記）是既有的，與本單無關。✅ 追認。
+- ⚖️ **畫布標題字體**：inline agent 回報我指定的 Noto Sans TC 與隔壁 24 個 caption（`$Type/Family/Canvas`）不一致——DESIGN.md SOP 的文字已經落後於檔案實況。裁定 **B：改成 `$Type/Family/Canvas`**，C25-D／C25-M 的 caption 一併改；提示詞 2–4 已同步改寫。
+
 ### Discovery Triage
 
-- N/A — no out-of-scope work discovered
+- ① DESIGN.md SOP §2 寫的畫布標題字體（Noto Sans TC）與檔案實況（`$Type/Family/Canvas` = DM Sans）不符——已在本單就地更正 DESIGN.md 那一行（2026-10-05）。
 
 ### File List
+
+- DESIGN.md（SOP §2 畫布標題字體更正）

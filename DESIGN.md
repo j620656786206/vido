@@ -767,7 +767,7 @@ App 是「固定左側軌 ＋ 流動內容欄」。左側軌展開 240px、收�
 
 - **Flow group**：A 瀏覽／B 詳情與互動／C 搜尋・篩選・設定／D 下載管理／E 媒體庫掃描／F 字幕搜尋與批次／H 首頁／I 進階搜尋與探索／J 設計決策 Spec／K 活動中心／L 想要與請求系統／M 登入與密碼閘。**沒有 Flow G**——它的六張稿在 2026-09-10 隨 v1 清理刪除（早已被 flow-f-subtitle-v2 取代），空群組一併移除。找不到歸屬就是這張稿的定位有問題，先想清楚再畫。
 - **圖框名稱**用短碼：`B3-D`（桌機）、`B3-M`（手機）、v2 改版加後綴 `B3-D-v2`。
-- **畫布可見標題**另開一個 text node：`B3 · 詳情面板・電影（桌面）`，Noto Sans TC 14／600／`#888888`，放在 frame **上方 45px**——貼太近會撞到 Pencil 自己的圖框名 chrome。
+- **畫布可見標題**另開一個 text node：`B3 · 詳情面板・電影（桌面）`，字體 `$Type/Family/Canvas`（DM Sans）、`$Type/Body/Size`＋`$Type/Body/Line`、600、`#888888`，放在 frame **上方 45px**——貼太近會撞到 Pencil 自己的圖框名 chrome。（2026-10-05 更正：原本寫 Noto Sans TC，與檔案裡所有 caption 實際用的 `$Type/Family/Canvas` 不符。）
 - **位置**用 `FindEmptySpace({nodeId: 同流程最後一張})` 錨定，不要自己挑座標。
 - **群組內部再分三層**：`X · 桌面 Desktop`／`X · 手機 Mobile`／`X · 規格 Spec`。流程標題與描述留在最外層，不進子群組。
 
