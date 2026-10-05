@@ -89,7 +89,7 @@ so that turning the report on is an informed choice and never a surprise.
 - [x] Task 0: Sally 查證現況、作設計裁定、寫提示詞（本檔）
 - [x] Task 1: Alexyu 執行提示詞 1（設定頁 C25-D／C25-M）——commit 37abbc89；Sally review 通過（見 Completion Notes）
 - [ ] Task 2: Alexyu 執行提示詞 2（規格稿 C26-D）
-- [ ] Task 3: Alexyu 執行提示詞 3（精靈 N6-D）
+- [x] Task 3: Alexyu 執行提示詞 3（精靈 N6-D）——commit da43f527；Sally review 通過
 - [ ] Task 4: Alexyu 執行提示詞 4（N1–N5、N3-M 步驟點＋N5 摘要列）
 - [ ] Task 5: Sally MCP review（逐字比對文案、`ctx.problems`、重疊、日巡）
 - [ ] Task 6: 存檔驗證 → 匯出截圖 → `SCREENS` → 只 stage 真改動 → commit
@@ -196,6 +196,9 @@ Claude Opus 5.5（2026-10-04，SM Bob 建檔＋UX Sally 裁定與提示詞）
 
 - **提示詞 1 review（Sally，2026-10-05，MCP 唯讀）**：C25-D `SHogC`（1440×1346）、C25-M `bG3l3`（390×1468）。卡內 10 段文字與定稿**逐字相同**（含 JSON 原文）；開關為 `jqRCX` instance；讀數與原文用 `$Type/Family/Mono`；桌面 0 個裁切警告；手機唯一一個是分頁列刻意的橫向捲動（既有基準）；`szz7O` 同層重疊 0；`v21FYb` 的 3 組重疊（C5-M 與 dsr-3 規格註記）是既有的，與本單無關。✅ 追認。
 - ⚖️ **畫布標題字體**：inline agent 回報我指定的 Noto Sans TC 與隔壁 24 個 caption（`$Type/Family/Canvas`）不一致——DESIGN.md SOP 的文字已經落後於檔案實況。裁定 **B：改成 `$Type/Family/Canvas`**，C25-D／C25-M 的 caption 一併改；提示詞 2–4 已同步改寫。
+
+- **提示詞 3 review（Sally，2026-10-05）**：N6-D `GQae8`。文案 14 段與定稿逐字相同；步驟點 dot-0～4／bar-0～3 為 `$accent-primary`、bar-4／dot-5 為 `$bg-tertiary`；開關 `Qia26`；0 個裁切警告；C25-D／C25-M／C26-D／N6-D 的畫布標題皆已是 `$Type/Family/Canvas`。✅ 追認。
+- ⚖️ **兩個對照方塊的底色**：inline agent 回報 `$bg-primary` 與 wizard-card 同色、方塊消失。裁定 **A＋描邊**：方塊改 `$bg-secondary`，並加 `$border-subtle` 1px 描邊——與同一個精靈 N5 摘要框 `xuXAV` 的做法完全一致（`$bg-secondary`＋`$border-subtle`），不另創組合。這是我寫提示詞時沒對照 N5 的疏漏。
 
 ### Discovery Triage
 
