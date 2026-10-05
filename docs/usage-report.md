@@ -36,7 +36,7 @@ The settings page shows the last report that was actually sent, byte for byte, a
 
 ## Turning it on or off
 
-> The switches below arrive with the next release. Until then the report cannot be turned on from the interface, and builds without a configured receiver report it as unavailable.
+> The Settings switch is available now; the first-run setup question arrives with the next release. Builds without a configured receiver show the report as unavailable.
 
 - **First-run setup** asks once. The pre-selected answer is "off".
 - **Settings** has a switch you can change at any time. After you turn it off, nothing more is sent. Turning it back on reuses the same random ID.
