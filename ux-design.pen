@@ -229803,6 +229803,22 @@
                           "fill": "$bg-tertiary",
                           "width": 10,
                           "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "PpE4i",
+                          "name": "bar-4",
+                          "fill": "$bg-tertiary",
+                          "width": 24,
+                          "height": 2
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "oODv2",
+                          "name": "dot-5",
+                          "fill": "$bg-tertiary",
+                          "width": 10,
+                          "height": 10
                         }
                       ]
                     },
@@ -230088,6 +230104,22 @@
                           "type": "ellipse",
                           "id": "NYBkc",
                           "name": "dot-4",
+                          "fill": "$bg-tertiary",
+                          "width": 10,
+                          "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "f5k1h",
+                          "name": "bar-4",
+                          "fill": "$bg-tertiary",
+                          "width": 24,
+                          "height": 2
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "I4F1m",
+                          "name": "dot-5",
                           "fill": "$bg-tertiary",
                           "width": 10,
                           "height": 10
@@ -230523,6 +230555,22 @@
                           "type": "ellipse",
                           "id": "L8axR4",
                           "name": "dot-4",
+                          "fill": "$bg-tertiary",
+                          "width": 10,
+                          "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "Te8sj",
+                          "name": "bar-4",
+                          "fill": "$bg-tertiary",
+                          "width": 24,
+                          "height": 2
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "mYaAV",
+                          "name": "dot-5",
                           "fill": "$bg-tertiary",
                           "width": 10,
                           "height": 10
@@ -231077,6 +231125,22 @@
                           "fill": "$bg-tertiary",
                           "width": 10,
                           "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "ivNpZ",
+                          "name": "bar-4",
+                          "fill": "$bg-tertiary",
+                          "width": 24,
+                          "height": 2
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "CzLea",
+                          "name": "dot-5",
+                          "fill": "$bg-tertiary",
+                          "width": 10,
+                          "height": 10
                         }
                       ]
                     },
@@ -231523,6 +231587,22 @@
                           "fill": "$accent-primary",
                           "width": 10,
                           "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "K0vVtV",
+                          "name": "bar-4",
+                          "fill": "$accent-primary",
+                          "width": 24,
+                          "height": 2
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "Gga39",
+                          "name": "dot-5",
+                          "fill": "$accent-primary",
+                          "width": 10,
+                          "height": 10
                         }
                       ]
                     },
@@ -231854,6 +231934,58 @@
                                       "name": "t",
                                       "fill": "$text-muted",
                                       "content": "未設定",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "500"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "L2r14Q",
+                              "name": "row-匿名使用回報",
+                              "width": "fill_container",
+                              "gap": "$Space/md",
+                              "padding": [
+                                "$Space/md",
+                                "$Space/lg"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "Hnw9b",
+                                  "name": "k",
+                                  "width": 160,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "CmtoD",
+                                      "name": "t",
+                                      "fill": "$text-secondary",
+                                      "content": "匿名使用回報",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "$Type/Body/Weight"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "j6WyC",
+                                  "name": "v",
+                                  "width": "fill_container",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "GzlC5",
+                                      "name": "t",
+                                      "fill": "$text-muted",
+                                      "content": "關閉",
                                       "lineHeight": "$Type/Body/Line",
                                       "fontFamily": "$Type/Family/Primary",
                                       "fontSize": "$Type/Body/Size",
@@ -232587,6 +232719,22 @@
                           "type": "ellipse",
                           "id": "fQd2X",
                           "name": "dot-4",
+                          "fill": "$bg-tertiary",
+                          "width": 10,
+                          "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "JABw8",
+                          "name": "bar-4",
+                          "fill": "$bg-tertiary",
+                          "width": 24,
+                          "height": 2
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "W1leo",
+                          "name": "dot-5",
                           "fill": "$bg-tertiary",
                           "width": 10,
                           "height": 10
