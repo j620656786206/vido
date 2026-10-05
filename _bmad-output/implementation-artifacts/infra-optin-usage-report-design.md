@@ -1,6 +1,6 @@
 # Story infra-optin-usage-report-design: 匿名使用回報的設計稿——精靈多一步、設定頁多一張卡
 
-Status: in-progress
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -88,11 +88,11 @@ so that turning the report on is an informed choice and never a surprise.
 
 - [x] Task 0: Sally 查證現況、作設計裁定、寫提示詞（本檔）
 - [x] Task 1: Alexyu 執行提示詞 1（設定頁 C25-D／C25-M）——commit 37abbc89；Sally review 通過（見 Completion Notes）
-- [ ] Task 2: Alexyu 執行提示詞 2（規格稿 C26-D）
+- [x] Task 2: Alexyu 執行提示詞 2（規格稿 C26-D）——commit cf62dcea
 - [x] Task 3: Alexyu 執行提示詞 3（精靈 N6-D）——commit da43f527；Sally review 通過
-- [ ] Task 4: Alexyu 執行提示詞 4（N1–N5、N3-M 步驟點＋N5 摘要列）
-- [ ] Task 5: Sally MCP review（逐字比對文案、`ctx.problems`、重疊、日巡）
-- [ ] Task 6: 存檔驗證 → 匯出截圖 → `SCREENS` → 只 stage 真改動 → commit
+- [x] Task 4: Alexyu 執行提示詞 4（N1–N5、N3-M 步驟點＋N5 摘要列）——commit a009246c
+- [x] Task 5: Sally MCP review（逐字比對文案、`ctx.problems`、重疊、日巡）
+- [x] Task 6: 存檔驗證 → 匯出截圖 → `SCREENS` → 只 stage 真改動 → commit（Alexyu 逐段完成）
 
 ---
 
@@ -203,10 +203,25 @@ Claude Opus 5.5（2026-10-04，SM Bob 建檔＋UX Sally 裁定與提示詞）
 - ✅ 方塊底色＋描邊已改（commit bfc4e539）。
 - ⚖️ **兩個方塊等高**：左方塊第一行會折成兩行，高 131、右方塊 113。裁定 **B，但用「跟著較高的那個撐開」而不是寫死 131**：文案一改高度就會跟著變，寫死的數字會再次對不齊；前端用 CSS grid 兩欄時本來就會等高，設計稿應該表達同一個規則。
 
+- **最終 review（Sally，2026-10-05）**：
+  - 等高：`box-絕不送` 設 `height: fill_container`、跟著 `box-會送` 撐到 131——自動等高，非寫死。✅
+  - 步驟點：N1-D／N2-D／N3-D／N3-M／N4-D 都是 6 點 5 線，已完成的亮、目前這一步亮、後面暗；N5-D 全亮；N6-D 亮到第 5 點。✅
+  - N5-D 摘要多一列「匿名使用回報｜關閉」（`$text-muted`）。✅
+  - C26-D 三種狀態文案與定稿逐字相同；不可用狀態的開關為 `Qia26` instance＋`opacity 0.4`。✅
+  - 裁切警告：本單新增的畫面只有 C25-M 的分頁列（刻意橫向捲動，與其他 12 張手機設定稿同一類）；全檔共 76（SOP 記載的基準 74，另 1 個不在本單畫面內，未追）。
+  - 重疊：最外層 0、`XBRn1` 0、`szz7O` 0。
+  - 日巡：C25-D／C25-M／C26-D／N6-D／N5-D 加 `mode: light` 截圖，無黑字壓黑底或濁色；檢查後把 theme 還原（記憶體中變成空物件 `{}`，**磁碟檔未受影響**：`git hash-object ux-design.pen` ＝ HEAD、四個節點在磁碟上沒有 theme 欄位）。
+  - 截圖：`n1-d`～`n6-d`、`n3-m`、`c25-d`、`c25-m`、`c26-d` 全部在 repo；`SCREENS` 已含四張新稿（重複 key 檢查只命中非 node id 的 `name`，屬誤判）。
+  - ✅ 全部追認，本單 done。
+
 ### Discovery Triage
 
 - ① DESIGN.md SOP §2 寫的畫布標題字體（Noto Sans TC）與檔案實況（`$Type/Family/Canvas` = DM Sans）不符——已在本單就地更正 DESIGN.md 那一行（2026-10-05）。
 
 ### File List
+
+- ux-design.pen、_bmad-output/pen-tokens.json、scripts/export-pen-screenshots.py
+- _bmad-output/screenshots/flow-c-search-settings/c25-d.png、c25-m.png、c26-d.png（新）
+- _bmad-output/screenshots/flow-n-setup-wizard/n6-d.png（新）、n1-d.png、n2-d.png、n3-d.png、n3-m.png、n4-d.png、n5-d.png
 
 - DESIGN.md（SOP §2 畫布標題字體更正）
