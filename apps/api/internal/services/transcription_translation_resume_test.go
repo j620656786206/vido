@@ -43,6 +43,12 @@ func (f *fakeTranslationOpenCC) ConvertS2TWP(content []byte) ([]byte, error) {
 	return []byte(strings.NewReplacer("软件", "軟體", "华", "華").Replace(string(content))), nil
 }
 
+// ConvertS2TW converts characters only — 软件 becomes 軟件, never 軟體.
+func (f *fakeTranslationOpenCC) ConvertS2TW(content []byte) ([]byte, error) {
+	f.seen = append(f.seen, string(content))
+	return []byte(strings.NewReplacer("软", "軟", "华", "華").Replace(string(content))), nil
+}
+
 func resumeWiredService(t *testing.T, completer ai.TextCompleter, store SegmentStore) (*TranscriptionService, *fakeTranslationOpenCC) {
 	t.Helper()
 	svc := newWriterWiredService(t, completer, &fakeSubtitleWriter{})

@@ -586,7 +586,7 @@ func (rc *RepoCollector) CollectSeriesNeedingSubtitles(ctx context.Context) ([]B
 				MediaType:     "series",
 				MediaFilePath: filePath,
 				Title:         s.Title,
-				// Mainland shows keep their own wording (zhtw.IsMainland).
+				// Mainland / HK / MO shows keep their own wording (zhtw.KeepsOwnWording).
 				ProductionCountry: joinCountryCodes(s.ProductionCountries),
 			})
 		}

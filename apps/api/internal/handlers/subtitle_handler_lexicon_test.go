@@ -74,7 +74,8 @@ func TestSubtitleHandler_Download_ConvertedSubtitleGetsTaiwanVocabulary(t *testi
 		want     string
 	}{
 		{"non-mainland → script + vocabulary", fixedCountries([]string{"US"}, nil), "這個軟體的品質很好"},
-		{"mainland → script only", fixedCountries([]string{"CN"}, nil), "這個軟體的質量很好"},
+		{"mainland → characters only", fixedCountries([]string{"CN"}, nil), "這個軟件的質量很好"},
+		{"Macau → characters only", fixedCountries([]string{"MO"}, nil), "這個軟件的質量很好"},
 		{"lookup fails → treated as non-mainland, download still succeeds", fixedCountries(nil, errors.New("db down")), "這個軟體的品質很好"},
 		{"no resolver wired → non-mainland", nil, "這個軟體的品質很好"},
 	}
@@ -108,7 +109,8 @@ func TestSubtitleHandler_Convert_ConvertedSubtitleGetsTaiwanVocabulary(t *testin
 		want    string
 	}{
 		{"non-mainland → script + vocabulary", "US", "這個軟體的品質很好"},
-		{"mainland → script only (an explicit convert is still honoured)", "CN", "這個軟體的質量很好"},
+		{"mainland → characters only (an explicit convert is still honoured)", "CN", "這個軟件的質量很好"},
+		{"Hong Kong → characters only", "HK", "這個軟件的質量很好"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

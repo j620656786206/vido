@@ -70,6 +70,7 @@ type ChunkTranslator interface {
 // for the whole track (Rule 14 — never constructed per call).
 type VariantConverter interface {
 	ConvertS2TWP(content []byte) ([]byte, error)
+	ConvertS2TW(content []byte) ([]byte, error)
 }
 
 // TranslateContext carries the FR26 show metadata injected into the translation

@@ -411,22 +411,26 @@ func TestTranslateSRT_MovieMetadataReachesTheSystemPrompt(t *testing.T) {
 }
 
 // backlog-lexicon-on-non-llm-convert-paths: this leg finishes through
-// zhtw.Finalize like every other — Taiwan vocabulary, mainland exempt.
-func TestTranslateSRT_TaiwanVocabularyWithMainlandExemption(t *testing.T) {
+// zhtw.Finalize like every other — Taiwan phrases and vocabulary, except for
+// mainland / Hong Kong / Macau titles, which get characters only (the model's
+// stray 软 becomes 軟, 软件 never becomes 軟體).
+func TestTranslateSRT_TaiwanVocabularyWithOwnWordingExemption(t *testing.T) {
 	cases := []struct {
 		country string
 		want    string
 	}{
 		{"DE", "這個軟體的品質很好"},
 		{"CN", "這個軟件的質量很好"},
+		{"HK", "這個軟件的質量很好"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.country, func(t *testing.T) {
 			movie := fixtureMovie()
 			movie.ProductionCountries = []models.ProductionCountry{{ISO3166_1: tc.country}}
 			svc := NewTranscriptionService(nil, nil, nil, nil)
-			svc.SetTranslationService(NewTranslationService(&translationIntegrationMock{response: "[1] 這個軟件的質量很好"}, nil))
+			svc.SetTranslationService(NewTranslationService(&translationIntegrationMock{response: "[1] 這個软件的質量很好"}, nil))
 			svc.SetSubtitleStateReader(&metadataMovieReader{movie: movie})
+			svc.SetOpenCCConverter(&fakeTranslationOpenCC{})
 
 			tmpDir := t.TempDir()
 			zhPath, _, err := svc.translateSRT(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidA,

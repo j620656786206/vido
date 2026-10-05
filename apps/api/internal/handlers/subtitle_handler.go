@@ -263,7 +263,7 @@ func (h *SubtitleHandler) DownloadSubtitle(c *gin.Context) {
 	if shouldConvert && h.converter != nil && h.converter.IsAvailable() {
 		h.broadcastStatus(req.MediaID, req.MediaType, "converting",
 			"Converting simplified → traditional...")
-		// Script, then the Taiwan vocabulary (mainland titles keep theirs) —
+		// Script, then the Taiwan vocabulary (mainland / HK / MO titles keep theirs) —
 		// the same finishing step as every automatic path.
 		countries := h.countriesFor(c.Request.Context(), req.MediaType, req.MediaID)
 		converted, convErr := zhtw.Finalize(h.converter, string(data), countries)
@@ -355,7 +355,7 @@ func (h *SubtitleHandler) PreviewSubtitle(c *gin.Context) {
 // Movie.zh-Hant.srt next to the media file. Synchronous; the source file is left
 // in place (non-destructive). An explicit convert request IS the user's intent,
 // so the §9b CN skip policy is deliberately NOT applied to the script here;
-// only the Taiwan vocabulary step keeps the mainland exemption (zhtw.Finalize).
+// only the Taiwan vocabulary step keeps the own-wording exemption (zhtw.Finalize).
 func (h *SubtitleHandler) ConvertSubtitle(c *gin.Context) {
 	var req SubtitleConvertRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

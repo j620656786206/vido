@@ -14,6 +14,7 @@ import (
 // Supported OpenCC conversion profiles.
 const (
 	ProfileS2TWP = "s2twp" // Simplified → Traditional (Taiwan standard + Taiwan phrases)
+	ProfileS2TW  = "s2tw"  // Simplified → Traditional (Taiwan standard characters only, no phrases)
 )
 
 // Converter wraps the official C++ OpenCC CLI for Chinese variant conversion.
@@ -128,6 +129,13 @@ func (h *openCCHelper) convert(input, profile string) (string, error) {
 // mainland phrases, leaving traditional text unchanged.
 func (c *Converter) ConvertS2TWP(content []byte) ([]byte, error) {
 	return c.Convert(content, ProfileS2TWP)
+}
+
+// ConvertS2TW converts characters only — Taiwan-standard Traditional glyphs,
+// no phrase rewriting (视频 stays 視頻). Used for titles that keep their own
+// wording (zhtw.KeepsOwnWording).
+func (c *Converter) ConvertS2TW(content []byte) ([]byte, error) {
+	return c.Convert(content, ProfileS2TW)
 }
 
 // NeedsConversion returns true only for Simplified Chinese ("zh-Hans").
