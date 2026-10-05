@@ -207,3 +207,37 @@ describe('transcriptionService.startEpisodeTranscription', () => {
     );
   });
 });
+
+// bugfix-dialog-reopen-shows-idle-during-run — the dialog asks on open whether
+// this one is already generating. The body below is the exact shape the Go
+// handler writes (transcription_status_handler_test.go / the API e2e).
+describe('transcriptionService.getTranscriptionStatus', () => {
+  it.each([
+    ['movie', 'movies'],
+    ['episode', 'episodes'],
+  ] as const)('GETs /%s… status and camelCases in_progress', async (mediaType, collection) => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ success: true, data: { in_progress: true } }),
+    });
+
+    const status = await transcriptionService.getTranscriptionStatus(mediaType, MOVIE_UUID);
+
+    expect(status).toEqual({ inProgress: true });
+    const [url] = mockFetch.mock.calls[0];
+    expect(url).toMatch(new RegExp(`/${collection}/${MOVIE_UUID}/transcribe/status$`));
+  });
+
+  it('throws on a non-2xx so the caller can fall back to the idle view', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 502,
+      json: () => Promise.reject(new Error('not json')),
+    });
+
+    await expect(transcriptionService.getTranscriptionStatus('movie', MOVIE_UUID)).rejects.toThrow(
+      'API request failed: 502'
+    );
+  });
+});

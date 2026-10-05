@@ -225,6 +225,7 @@ import { SpendCard } from '../../components/activity/SpendSection';
 import { GenerationWorkspaceV2 } from '../../components/subtitle/GenerationWorkspaceV2';
 import { glossaryKeys } from '../../hooks/useGlossary';
 import { transcriptionEstimateKeys } from '../../hooks/useTranscriptionEstimate';
+import { transcriptionStatusKeys } from '../../hooks/useTranscriptionStatus';
 import type { TranscriptionEstimate } from '../../services/transcriptionService';
 import type { GlossaryTerm } from '../../services/glossaryService';
 import { BackupManagement } from '../../components/settings/BackupManagement';
@@ -5664,6 +5665,12 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         } satisfies SubtitleInventory,
       },
       {
+        // bugfix-dialog-reopen: "already generating?" — answered "no" so the frame
+        // shows the idle view with a clickable price, never asking a backend.
+        queryKey: transcriptionStatusKeys.item('movie', 'movie-1'),
+        data: { inProgress: false },
+      },
+      {
         // dsr-6a AC #8 — the price on 生成字幕. Seeded so the frame never asks a
         // backend (the visual CI has none): the button must read 「生成字幕 $0.42」.
         queryKey: transcriptionEstimateKeys.item('movie', 'movie-1'),
@@ -5776,6 +5783,12 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         } satisfies SubtitleInventory,
       },
       {
+        // bugfix-dialog-reopen: "already generating?" — answered "no" so the frame
+        // shows the idle view with a clickable price, never asking a backend.
+        queryKey: transcriptionStatusKeys.item('movie', 'movie-1'),
+        data: { inProgress: false },
+      },
+      {
         // dsr-6a AC #8 — the price on 生成字幕. Seeded so the frame never asks a
         // backend (the visual CI has none): the button must read 「生成字幕 $0.42」.
         queryKey: transcriptionEstimateKeys.item('movie', 'movie-1'),
@@ -5874,6 +5887,12 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
           },
           embedded: { status: 'ok', tracks: [] },
         } satisfies SubtitleInventory,
+      },
+      {
+        // bugfix-dialog-reopen: "already generating?" — answered "no" so the frame
+        // shows the idle view with a clickable price, never asking a backend.
+        queryKey: transcriptionStatusKeys.item('movie', 'movie-untranslated-1'),
+        data: { inProgress: false },
       },
       {
         queryKey: transcriptionEstimateKeys.item('movie', 'movie-untranslated-1'),

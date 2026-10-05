@@ -78,6 +78,8 @@ vi.mock('../../services/transcriptionService', () => ({
     startEpisodeTranscription: vi.fn(),
     // dsr-6a: the price on the paid buttons (GET …/transcribe/estimate).
     getTranscriptionEstimate: vi.fn(),
+    // bugfix-dialog-reopen-shows-idle-during-run: "already generating?" on open.
+    getTranscriptionStatus: vi.fn(),
   },
 }));
 
@@ -145,6 +147,7 @@ let inventoryOverride: (() => Promise<SubtitleInventory>) | null = null;
 const mockedTrigger = vi.mocked(transcriptionService.startTranscription);
 const mockedEpisodeTrigger = vi.mocked(transcriptionService.startEpisodeTranscription);
 const mockedEstimate = vi.mocked(transcriptionService.getTranscriptionEstimate);
+const mockedStatus = vi.mocked(transcriptionService.getTranscriptionStatus);
 
 function readyEstimate(overrides: Partial<TranscriptionEstimate> = {}): TranscriptionEstimate {
   return {
@@ -287,6 +290,8 @@ beforeEach(() => {
   h.fetchHook.isSearching = false;
   // Default: a measured-runtime movie, translation configured → ① $0.42.
   mockedEstimate.mockResolvedValue(readyEstimate());
+  // Default: nothing is generating for this media when the dialog opens.
+  mockedStatus.mockResolvedValue({ inProgress: false });
 });
 
 describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
@@ -1522,5 +1527,130 @@ describe('ManageSubtitleDialogV2 — real subtitle inventory', () => {
     renderDialog({ mediaType: 'series', subtitleTracks: JSON.stringify([{ language: 'en' }]) });
     expect(await screen.findByTestId('subtitle-track-track-0')).toHaveTextContent('英文');
     expect(mockedInventory).not.toHaveBeenCalled();
+  });
+});
+
+// ─── bugfix-dialog-reopen-shows-idle-during-run ─────────────────────────────
+// F1 helper line (9R-UX-episode-row-cta-design.md:255): 「本集正在生成字幕——
+// 開啟即接續顯示進度，不會重複啟動」. Reopening the dialog during a run showed the
+// idle view with a paid 生成字幕 button (NAS, 末日光明 S01E02, 2026-10-05).
+describe('ManageSubtitleDialogV2 — opened while a run is going (bugfix-dialog-reopen)', () => {
+  beforeEach(() => {
+    mockedTrigger.mockReset();
+    mockedEpisodeTrigger.mockReset();
+  });
+
+  /** The progress view, attached to THIS media's stream, with no way to start another run. */
+  async function expectAttachedProgress(mediaId: string, title: string) {
+    expect(await screen.findByTestId('generation-progress-v2')).toBeInTheDocument();
+    expect(screen.getByText(`生成字幕 — ${title}`)).toBeInTheDocument();
+    expect(h.startTracking).toHaveBeenCalledTimes(1);
+    expect(h.startTracking).toHaveBeenCalledWith(mediaId);
+    expect(screen.queryByTestId('action-generate-subtitle')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('generation-section')).not.toBeInTheDocument();
+    expect(screen.getByText('關閉後生成會在背景繼續')).toBeInTheDocument();
+    expect(mockedTrigger).not.toHaveBeenCalled();
+    expect(mockedEpisodeTrigger).not.toHaveBeenCalled();
+  }
+
+  it('movie — running when opened → shows the progress and attaches to its stream', async () => {
+    mockedStatus.mockResolvedValue({ inProgress: true });
+    renderDialog();
+
+    await expectAttachedProgress(MOVIE_UUID, '怪奇物語');
+    expect(mockedStatus).toHaveBeenCalledWith('movie', MOVIE_UUID, expect.any(AbortSignal));
+  });
+
+  it('episode — running when opened → shows the progress and attaches to the EPISODE stream', async () => {
+    mockedStatus.mockResolvedValue({ inProgress: true });
+    renderEpisodeDialog();
+
+    await expectAttachedProgress(EPISODE_UUID, '第七集');
+    expect(mockedStatus).toHaveBeenCalledWith('episode', EPISODE_UUID, expect.any(AbortSignal));
+    expect(mockedStatus).not.toHaveBeenCalledWith('episode', SERIES_UUID, expect.anything());
+  });
+
+  it('movie — not running → the idle view as before, and 生成字幕 starts a run', async () => {
+    mockedTrigger.mockResolvedValue({ status: 'started', result: { jobId: 'j1', message: '' } });
+    renderDialog();
+
+    const cta = await findPricedGenerate();
+    expect(screen.queryByTestId('generation-progress-v2')).not.toBeInTheDocument();
+    expect(h.startTracking).not.toHaveBeenCalled();
+    fireEvent.click(cta);
+    await waitFor(() => expect(mockedTrigger).toHaveBeenCalledWith(MOVIE_UUID));
+    await waitFor(() => expect(h.startTracking).toHaveBeenCalledWith(MOVIE_UUID));
+  });
+
+  it('episode — not running → the idle view as before, and 生成字幕 starts a run', async () => {
+    mockedEpisodeTrigger.mockResolvedValue({
+      status: 'started',
+      result: { jobId: 'j1', message: '' },
+    });
+    renderEpisodeDialog();
+
+    const cta = await findPricedGenerate();
+    expect(screen.queryByTestId('generation-progress-v2')).not.toBeInTheDocument();
+    expect(h.startTracking).not.toHaveBeenCalled();
+    fireEvent.click(cta);
+    await waitFor(() => expect(mockedEpisodeTrigger).toHaveBeenCalledWith(EPISODE_UUID));
+  });
+
+  it('until the answer arrives 生成字幕 cannot be pressed, even with the price known', async () => {
+    mockedStatus.mockReturnValue(new Promise(() => {}));
+    renderDialog();
+
+    // The estimate has landed (it is awaited here) — the status has not.
+    await waitFor(() => expect(mockedEstimate).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 0));
+    const cta = screen.getByTestId('action-generate-subtitle');
+    expect(cta).toHaveAttribute('data-cost-status', 'loading');
+    expect(cta).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(cta);
+    expect(mockedTrigger).not.toHaveBeenCalled();
+  });
+
+  it('a failed status check does not block: idle view, 生成字幕 clickable (the 409 still guards)', async () => {
+    mockedStatus.mockRejectedValue(new Error('API request failed: 502'));
+    mockedTrigger.mockResolvedValue({ status: 'inProgress' });
+    renderDialog();
+
+    const cta = await findPricedGenerate();
+    expect(screen.queryByTestId('generation-progress-v2')).not.toBeInTheDocument();
+    fireEvent.click(cta);
+    // The server answers 409 → the dialog attaches, exactly as before this fix.
+    await waitFor(() => expect(h.startTracking).toHaveBeenCalledWith(MOVIE_UUID));
+    expect(screen.getByTestId('generation-progress-v2')).toBeInTheDocument();
+  });
+
+  // The reported sequence: start, close, reopen — the reopen must ask again
+  // (a cached "not running" from the first open would bring the bug back).
+  it('start → close → reopen asks again and lands on the progress, not 生成字幕', async () => {
+    mockedTrigger.mockResolvedValue({ status: 'started', result: { jobId: 'j1', message: '' } });
+    renderDialog({}, { controlled: true });
+    fireEvent.click(await findPricedGenerate());
+    await waitFor(() => expect(h.startTracking).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByTestId('dialog-close'));
+    await waitFor(() => expect(screen.queryByTestId('manage-subtitle-dialog-v2')).toBeNull());
+    expect(h.reset).toHaveBeenCalled();
+
+    mockedStatus.mockResolvedValue({ inProgress: true });
+    fireEvent.click(screen.getByTestId('reopen'));
+
+    expect(await screen.findByTestId('generation-progress-v2')).toBeInTheDocument();
+    expect(mockedStatus).toHaveBeenCalledTimes(2);
+    expect(h.startTracking).toHaveBeenCalledTimes(2);
+    expect(h.startTracking).toHaveBeenLastCalledWith(MOVIE_UUID);
+    expect(screen.queryByTestId('action-generate-subtitle')).not.toBeInTheDocument();
+    expect(mockedTrigger).toHaveBeenCalledTimes(1);
+  });
+
+  it('a series never asks (it has no generate route)', async () => {
+    renderDialog({ mediaType: 'series' });
+    await screen.findByTestId('manage-subtitle-dialog-v2');
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mockedStatus).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('generation-progress-v2')).not.toBeInTheDocument();
   });
 });

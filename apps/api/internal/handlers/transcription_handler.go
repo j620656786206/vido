@@ -89,8 +89,10 @@ func (h *TranscriptionHandler) SetEstimator(e TranscriptionEstimator) {
 // 503 that would blame the ASR configuration for a wiring mistake.
 func (h *TranscriptionHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	rg.POST("/movies/:id/transcribe", h.TranscribeMovie)
+	rg.GET("/movies/:id/transcribe/status", h.TranscriptionStatus)
 	if h.episodeService != nil {
 		rg.POST("/episodes/:id/transcribe", h.TranscribeEpisode)
+		rg.GET("/episodes/:id/transcribe/status", h.TranscriptionStatus)
 	}
 	if h.estimator != nil {
 		rg.GET("/movies/:id/transcribe/estimate", h.EstimateMovie)
@@ -332,6 +334,33 @@ func (h *TranscriptionHandler) lookupEpisodeFile(c *gin.Context, id string) (*mo
 		return nil, false
 	}
 	return episode, true
+}
+
+// TranscriptionStatusResponse is the GET …/transcribe/status payload.
+type TranscriptionStatusResponse struct {
+	InProgress bool `json:"in_progress"`
+}
+
+// TranscriptionStatus answers whether a subtitle generation is running for one
+// movie or episode right now (story bugfix-dialog-reopen-shows-idle-during-run).
+// The 管理字幕 dialog asks on open, so a reopen during a run shows the progress
+// instead of a paid 生成字幕 button. It reads the same single-flight table the
+// two POST routes answer 409 from — solo and batch runs alike — and touches no
+// database: an unknown id is simply "not running".
+//
+// @Summary      Is subtitle generation running for this movie or episode?
+// @Description  Reads the in-memory single-flight table behind the 409 TRANSCRIPTION_IN_PROGRESS of POST /movies/{id}/transcribe and POST /episodes/{id}/transcribe. Spends nothing, starts nothing, does not look the media up.
+// @Tags         subtitles
+// @Produce      json
+// @Param        id path string true "Movie or episode ID (UUID)"
+// @Success      200 {object} APIResponse "data: {in_progress: bool}"
+// @Router       /api/v1/movies/{id}/transcribe/status [get]
+// @Router       /api/v1/episodes/{id}/transcribe/status [get]
+func (h *TranscriptionHandler) TranscriptionStatus(c *gin.Context) {
+	c.JSON(http.StatusOK, APIResponse{
+		Success: true,
+		Data:    TranscriptionStatusResponse{InProgress: h.transcriptionService.IsInProgress(c.Param("id"))},
+	})
 }
 
 // EstimateMovie prices a click on 生成字幕 for one movie.
