@@ -1,6 +1,6 @@
 # Story infra-optin-usage-report-b2: 首次設定精靈多一步「匿名使用回報」，完成頁列出選擇
 
-Status: review
+Status: done
 
 **Epic:** standalone（`infra-optin-usage-report` 家族）· **Priority:** P1 · **Size:** S（前端 only）
 **Source:** 設計 N6-D `GQae8`、N1–N5／N3-M 六個進度點、N5 摘要列（PR #666）；後端 `SetupConfig.usage_report_enabled`、`ValidateStep("usage-report")`（PR #665）。

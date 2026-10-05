@@ -1,6 +1,6 @@
 # Story infra-optin-usage-report-b1: 設定頁「連線設定」最底下多一張「匿名使用回報」卡
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
