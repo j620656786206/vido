@@ -44,6 +44,11 @@
  *   (disc-2026-09-dialog-track-convert-not-wired).
  * - No cancel control for a running job: the backend exposes no cancel route;
  *   closing the dialog only stops watching (job continues server-side).
+ * - Opening the dialog while a run is going lands on the progress (F1 helper
+ *   「開啟即接續顯示進度，不會重複啟動」, bugfix-dialog-reopen-shows-idle-during-run):
+ *   every open asks GET …/transcribe/status, and 生成字幕 is not clickable until
+ *   the answer is in. A failed check falls back to idle — the trigger's 409
+ *   still attaches instead of starting a second run.
  */
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -72,6 +77,10 @@ import {
   useTranscriptionEstimate,
 } from '../../hooks/useTranscriptionEstimate';
 import { useSubtitleSearch } from '../../hooks/useSubtitleSearch';
+import {
+  transcriptionStatusKeys,
+  useTranscriptionStatus,
+} from '../../hooks/useTranscriptionStatus';
 import { ButtonCost } from '../ui/ButtonCost';
 import { usd } from '../../lib/currency';
 import { GenerationProgressV2 } from './GenerationProgressV2';
@@ -226,6 +235,15 @@ export function ManageSubtitleDialogV2({
     subtitleStatus,
     estimate: { data: estimate.data, isError: estimate.isError, error: estimate.error },
   });
+
+  // Is a run already going for this one? Asked on every open (the entry is
+  // dropped on close, like the price). Until the answer is in, 生成字幕 shows
+  // the loading look — never a clickable price for a run that may be live.
+  const runStatus = useTranscriptionStatus(estimateMediaType, mediaId, {
+    enabled: open && canGenerate,
+  });
+  const runStatusPending = canGenerate && runStatus.isPending;
+  const generateCost = runStatusPending ? ({ status: 'loading' } as const) : costView.cost;
   const helperId = useId();
   const triggerRetryNoteId = useId();
   const retryNoteId = useId();
@@ -301,6 +319,17 @@ export function ManageSubtitleDialogV2({
     trigger.mutate();
   }, [trigger]);
 
+  // Opened while a run is going → straight to its progress, attached to its
+  // stream — the same attach the trigger's 409 does. Only from idle: an
+  // answer must not pull the user out of a failure or the 尚未設定 panel.
+  const alreadyRunning = runStatus.data?.inProgress === true;
+  const { startTracking } = generation;
+  useEffect(() => {
+    if (!open || !alreadyRunning || genView !== 'idle') return;
+    setGenView('progress');
+    startTracking(mediaId);
+  }, [open, alreadyRunning, genView, startTracking, mediaId]);
+
   const handleOpenChange = useCallback(
     (next: boolean) => {
       if (!next) {
@@ -315,6 +344,11 @@ export function ManageSubtitleDialogV2({
         if (estimateMediaType) {
           queryClient.removeQueries({
             queryKey: transcriptionEstimateKeys.item(estimateMediaType, mediaId),
+          });
+          // …and asks again whether a run is going: a stale "not running"
+          // from the last open is exactly how the idle view came back.
+          queryClient.removeQueries({
+            queryKey: transcriptionStatusKeys.item(estimateMediaType, mediaId),
           });
         }
       }
@@ -660,7 +694,7 @@ export function ManageSubtitleDialogV2({
                   {/* dsr-6a: the ONLY primary action carries its price (J9-D). */}
                   <ButtonCost
                     label="生成字幕"
-                    cost={costView.cost}
+                    cost={generateCost}
                     busy={trigger.isPending}
                     onClick={startGeneration}
                     data-testid="action-generate-subtitle"

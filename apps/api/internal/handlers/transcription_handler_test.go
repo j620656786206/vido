@@ -41,10 +41,13 @@ type mockTranscriptionService struct {
 	// opposite values and prove the episode route consults the right one.
 	canResumeEpisode bool
 	inProgress       bool
-	jobID            string
-	startErr         error
-	receivedOpts     []services.TranscriptionOption
-	receivedMediaID  string
+	// inProgressAsked records the id IsInProgress was asked about, so the
+	// status route can be proven to ask about the id in its path.
+	inProgressAsked string
+	jobID           string
+	startErr        error
+	receivedOpts    []services.TranscriptionOption
+	receivedMediaID string
 }
 
 func (m *mockTranscriptionService) IsAvailable() bool {
@@ -59,7 +62,8 @@ func (m *mockTranscriptionService) CanResumeEpisodeTranslateOnly(_ context.Conte
 	return m.canResumeEpisode
 }
 
-func (m *mockTranscriptionService) IsInProgress(_ string) bool {
+func (m *mockTranscriptionService) IsInProgress(mediaID string) bool {
+	m.inProgressAsked = mediaID
 	return m.inProgress
 }
 

@@ -77,6 +77,11 @@ async function stubApis(page: Page, movieId: string) {
     // content-length on a body that just grew.
     await route.fulfill({ status: response.status(), json: body });
   });
+  // bugfix-dialog-reopen: the dialog asks "already generating?" on open; "no"
+  // keeps the idle frame these tests measure.
+  await page.route(`**/api/v1/movies/${movieId}/transcribe/status`, (route) =>
+    route.fulfill({ json: { success: true, data: { in_progress: false } } })
+  );
   await page.route(`**/api/v1/movies/${movieId}/transcribe/estimate`, (route) =>
     route.fulfill({
       json: {
