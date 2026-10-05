@@ -1,9 +1,11 @@
-// Design ref: ux-design.pen Screen C4-D (6UCtX) · C4-M (2H4OM) · C23-D (Qva0y) · C23-M (p37q9)
-// (C23 is the Sonarr / Radarr cards further down the same page)
+// Design ref: ux-design.pen Screen C4-D (6UCtX) · C4-M (2H4OM) · C23-D (Qva0y) · C23-M (p37q9) · C25-D (SHogC) · C25-M (bG3l3)
+// (C23 is the Sonarr / Radarr cards further down the same page; C25 is the
+// anonymous usage report card at the very bottom)
 import { createFileRoute } from '@tanstack/react-router';
 import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
 import { QBittorrentForm } from '../../components/settings/QBittorrentForm';
 import { ArrConnectionForm } from '../../components/settings/ArrConnectionForm';
+import { UsageReportCard } from '../../components/settings/UsageReportCard';
 
 export const Route = createFileRoute('/settings/connection')({
   component: ConnectionSettingsPage,
@@ -38,6 +40,8 @@ function ConnectionSettingsPage() {
         </section>
         <ArrConnectionForm plugin="sonarr" />
         <ArrConnectionForm plugin="radarr" />
+        {/* The one connection Vido makes on its own accord — last, opt-in. */}
+        <UsageReportCard />
       </div>
     </div>
   );

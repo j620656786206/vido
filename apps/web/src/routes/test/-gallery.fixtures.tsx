@@ -158,6 +158,7 @@ import { SettingsErrorState } from '../../components/settings/SettingsErrorState
 import { AppearanceSettings } from '../../components/settings/AppearanceSettings';
 import { ApiKeysStep } from '../../components/setup/ApiKeysStep';
 import { CompleteStep } from '../../components/setup/CompleteStep';
+import { UsageReportStep } from '../../components/setup/UsageReportStep';
 import { MediaLibrarySetupStep } from '../../components/setup/MediaLibrarySetupStep';
 import { QBittorrentStep } from '../../components/setup/QBittorrentStep';
 import { StepProgress } from '../../components/setup/StepProgress';
@@ -258,6 +259,13 @@ import { LocalizationLevelForm } from '../../components/settings/LocalizationLev
 import { OfficialSubtitleMiningCard } from '../../components/settings/OfficialSubtitleMiningCard';
 import { glossaryMineQueryKeys } from '../../hooks/useGlossaryMine';
 import type { MineStatus } from '../../services/glossaryMineService';
+import { UsageReportCard } from '../../components/settings/UsageReportCard';
+import { usageReportQueryKeys } from '../../hooks/useUsageReport';
+import type { UsageReportStatus } from '../../services/usageReportService';
+
+// The docs' example report, verbatim (docs/usage-report.md) — the card shows it as-is.
+const USAGE_REPORT_PAYLOAD =
+  '{"type":"event","payload":{"website":"11111111-2222-3333-4444-555555555555","hostname":"vido","url":"/usage-report","name":"weekly_usage","id":"3f2a6c1e-8f0b-4d5e-9a7c-1b2c3d4e5f60","ip":"127.0.0.1","data":{"version":"0.1.2","subtitles_auto_7d":7,"subtitles_embedded_7d":4,"subtitles_online_7d":2,"subtitles_asr_7d":1}}}';
 import type { LocalizationSettings } from '../../services/subtitleLocalizationService';
 import { ownedMediaKeys } from '../../hooks/useOwnedMedia';
 import { libraryKeys, RECENT_LIMIT } from '../../hooks/useLibrary';
@@ -3304,6 +3312,23 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     penNode: 'screen-section',
   },
   {
+    id: 'setup-usage-report-step',
+    label: 'setup/UsageReportStep (N6-D — 預設關閉)',
+    component: UsageReportStep,
+    props: {
+      data: { language: 'zh-TW' },
+      onUpdate: noop,
+      onNext: noop,
+      onBack: noop,
+      isFirst: false,
+      isLast: false,
+      isSubmitting: false,
+    },
+    penNode: 'GQae8', // Screen N6-D
+    statesOnly: ['default'],
+    width: 448,
+  },
+  {
     id: 'setup-complete-step',
     label: 'setup/CompleteStep',
     component: CompleteStep,
@@ -3376,6 +3401,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         { id: 'qbittorrent', title: 'qBittorrent' },
         { id: 'media-folder', title: '媒體庫' },
         { id: 'api-keys', title: 'API 金鑰' },
+        { id: 'usage-report', title: '匿名回報' },
         { id: 'complete', title: '完成' },
       ],
       currentStep: 2,
@@ -4509,6 +4535,105 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
             },
           ],
         } satisfies MineStatus,
+      },
+    ],
+  },
+  // infra-optin-usage-report-b1 — the 匿名使用回報 card (C25 sent, C26 the
+  // other three states). lastSentAt is a FIXED instant rendered in the
+  // runner's local time, like the mining card above: darwin and linux
+  // baselines may differ by the zone, which is expected.
+  {
+    id: 'settings-usage-report',
+    label: 'settings/UsageReportCard (C25-D — 已送過)',
+    component: UsageReportCard,
+    penNode: 'SHogC',
+    statesOnly: ['default'],
+    width: 1200,
+    seedQueries: [
+      {
+        queryKey: usageReportQueryKeys.all,
+        data: {
+          available: true,
+          enabled: true,
+          lastSentAt: '2026-10-04T04:00:00Z',
+          lastPayload: USAGE_REPORT_PAYLOAD,
+        } satisfies UsageReportStatus,
+      },
+    ],
+  },
+  {
+    id: 'settings-usage-report/unavailable',
+    label: 'settings/UsageReportCard (C26-D — 不可用)',
+    component: UsageReportCard,
+    penNode: 'FeCfY',
+    statesOnly: ['default'],
+    width: 1200,
+    seedQueries: [
+      {
+        queryKey: usageReportQueryKeys.all,
+        data: {
+          available: false,
+          enabled: false,
+          lastSentAt: null,
+          lastPayload: null,
+        } satisfies UsageReportStatus,
+      },
+    ],
+  },
+  {
+    id: 'settings-usage-report/off',
+    label: 'settings/UsageReportCard (C26-D — 關閉，預設)',
+    component: UsageReportCard,
+    penNode: 'FeCfY',
+    statesOnly: ['default'],
+    width: 1200,
+    seedQueries: [
+      {
+        queryKey: usageReportQueryKeys.all,
+        data: {
+          available: true,
+          enabled: false,
+          lastSentAt: null,
+          lastPayload: null,
+        } satisfies UsageReportStatus,
+      },
+    ],
+  },
+  {
+    id: 'settings-usage-report/never-sent',
+    label: 'settings/UsageReportCard (C26-D — 已開啟、還沒送過)',
+    component: UsageReportCard,
+    penNode: 'FeCfY',
+    statesOnly: ['default'],
+    width: 1200,
+    seedQueries: [
+      {
+        queryKey: usageReportQueryKeys.all,
+        data: {
+          available: true,
+          enabled: true,
+          lastSentAt: null,
+          lastPayload: null,
+        } satisfies UsageReportStatus,
+      },
+    ],
+  },
+  {
+    id: 'settings-usage-report/mobile',
+    label: 'settings/UsageReportCard (C25-M — 手機，原文換行)',
+    component: UsageReportCard,
+    penNode: 'bG3l3',
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+    seedQueries: [
+      {
+        queryKey: usageReportQueryKeys.all,
+        data: {
+          available: true,
+          enabled: true,
+          lastSentAt: '2026-10-04T04:00:00Z',
+          lastPayload: USAGE_REPORT_PAYLOAD,
+        } satisfies UsageReportStatus,
       },
     ],
   },

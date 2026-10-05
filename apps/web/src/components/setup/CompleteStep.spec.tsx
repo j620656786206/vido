@@ -105,6 +105,19 @@ describe('CompleteStep', () => {
     expect(screen.getByText('已設定')).toBeInTheDocument();
   });
 
+  it('lists the usage-report choice: 關閉 by default, in the not-set tone', () => {
+    render(<CompleteStep {...makeProps({ data: { language: 'en' } })} />);
+    expect(screen.getByText('匿名使用回報')).toBeInTheDocument();
+    const value = screen.getByText('關閉');
+    expect(value).toHaveClass('text-[var(--text-muted)]');
+  });
+
+  it('lists the usage-report choice as 開啟 when the switch was turned on', () => {
+    render(<CompleteStep {...makeProps({ data: { language: 'en', usageReportEnabled: true } })} />);
+    expect(screen.getByText('開啟')).toBeInTheDocument();
+    expect(screen.queryByText('關閉')).not.toBeInTheDocument();
+  });
+
   it('tells the user unset items can be filled in later', () => {
     render(<CompleteStep {...makeProps()} />);
     expect(screen.getByText('未設定的項目之後都可以在「設定」裡補上。')).toBeInTheDocument();
