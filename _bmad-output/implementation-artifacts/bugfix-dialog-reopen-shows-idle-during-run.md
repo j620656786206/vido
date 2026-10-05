@@ -1,6 +1,6 @@
 # Story bugfix：生成字幕跑到一半關掉「管理字幕」再打開，會直接看到進度，不會再看到「生成字幕 $0.80」
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -107,6 +107,8 @@ Claude（Claude Code，雲端環境）
 - 本機真瀏覽器冒煙（暫時 spec，跑完刪除）：狀態 stub 成 `in_progress:true`、SSE stub 一個 `translation_progress 42%` → 打開視窗直接是「生成字幕 — …」進度、步驟停在「翻譯中 42%」、畫面沒有「生成字幕」鍵、觸發 POST 次數 0。
 
 ### Completion Notes List
+
+- ✅ **DONE 2026-10-05 — PR #673**：CI 全綠（Go Tests、Unit Tests、E2E 4 shard、Visual diff 4 shard、Lint & Format、Build、Docker amd64／arm64）；視覺無差異、不需要新基準。合併前與 main（#672 新增三張 backlog）在 sprint-status 有文字衝突，兩邊條目都保留。
 
 - **先紅後綠**：後端 4 條 handler 測試先 404 紅；前端 4 條（電影／單集「打開時在跑」、「答案回來前不可按」、「開始→關→重開」）先紅，「沒在跑照舊」與 series 兩條是防回歸、本來就綠。
 - **突變檢查（Rule 16）**：①拿掉關視窗時清狀態快取 → 「開始→關→重開」紅；②生成鍵改回只看估價 → 「答案回來前不可按」紅；③拿掉打開時接手的 effect → 四條「在跑」測試紅（即首輪紅燈）。
