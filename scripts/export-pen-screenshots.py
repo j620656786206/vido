@@ -160,6 +160,9 @@ SCREENS = {
     "Qva0y": ("flow-c-search-settings", "c23-d"),  # 連線設定往下捲：Sonarr／Radarr（13-6）
     "p37q9": ("flow-c-search-settings", "c23-m"),
     "L7EVR": ("flow-c-search-settings", "c24-d"),  # 批次重新解析：對話框三個狀態 spec
+    "SHogC": ("flow-c-search-settings", "c25-d"),  # 連線設定往下捲：匿名使用回報卡（usage-report）
+    "bG3l3": ("flow-c-search-settings", "c25-m"),
+    "FeCfY": ("flow-c-search-settings", "c26-d"),  # 匿名使用回報卡三種狀態 spec（不可用／關閉／已開啟未送過）
     "2H4OM": ("flow-c-search-settings", "c4-m"),
     "uhAKd": ("flow-c-search-settings", "c5-d"),
     "B3qPq": ("flow-c-search-settings", "c6-d"),
@@ -197,6 +200,7 @@ SCREENS = {
     "TyjL0": ("flow-n-setup-wizard", "n3-d"),
     "D990CP": ("flow-n-setup-wizard", "n4-d"),
     "CWh3E": ("flow-n-setup-wizard", "n5-d"),
+    "GQae8": ("flow-n-setup-wizard", "n6-d"),  # 匿名使用回報（精靈步驟 5／6，在完成之前）
     "YyaqL": ("flow-n-setup-wizard", "n3-m"),
     # Flow D — 下載管理 (downloads)
     # Flow E — 媒體庫掃描 (scanner settings / progress / complete toast / filtered-unmatched)
