@@ -351,8 +351,12 @@ test.describe('Apply Metadata Complete Flow @e2e @manual-search @story-3-7', () 
     await firstCard.getByTestId('manual-search-button').click();
     await expect(page.getByTestId('manual-search-dialog')).toBeVisible();
 
-    // WHEN: User clicks TV button
-    const tvButton = page.getByRole('button', { name: '影集' });
+    // WHEN: User clicks TV button. Scoped to the dialog and exact: once results
+    // load, every TV result card's accessible name also contains 「影集」, and a
+    // substring match resolved to 14 buttons (CI, PR #678).
+    const tvButton = page
+      .getByTestId('manual-search-dialog')
+      .getByRole('button', { name: '影集', exact: true });
     await tvButton.click();
 
     // THEN: TV button should be active
