@@ -31,6 +31,7 @@ import (
 	"github.com/vido/api/internal/eval"
 	"github.com/vido/api/internal/services"
 	"github.com/vido/api/internal/subtitle"
+	"github.com/vido/api/internal/zhtw"
 )
 
 // translateChunk is how many cues go to the translator per call (2 batches of 10).
@@ -238,24 +239,18 @@ func loadSample(path string) ([]eval.Cue, error) {
 	return cues, nil
 }
 
-// newFinalizer mirrors delivery: OpenCC s2twp (when the helper is installed),
-// then the zh-TW lexicon replacements — the order subtitle/process_item.go uses.
+// newFinalizer is delivery's finishing step: zhtw.Finalize — OpenCC s2twp
+// (when the helper is installed), then the zh-TW lexicon replacements.
 func newFinalizer(noOpenCC bool) eval.Finalizer {
-	lexicon := prompts.ZhTWLexicon()
-	var conv *subtitle.Converter
+	var conv zhtw.Converter
 	if !noOpenCC {
 		if c, err := subtitle.NewConverter(); err == nil && c.IsAvailable() {
 			conv = c
 		}
 	}
 	return func(raw string) string {
-		s := raw
-		if conv != nil {
-			if out, err := conv.ConvertS2TWP([]byte(s)); err == nil {
-				s = string(out)
-			}
-		}
-		return lexicon.Apply(s)
+		out, _ := zhtw.Finalize(conv, raw, nil)
+		return out
 	}
 }
 

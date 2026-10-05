@@ -19,6 +19,7 @@ import (
 	"github.com/vido/api/internal/sse"
 	"github.com/vido/api/internal/subtitle"
 	"github.com/vido/api/internal/subtitle/providers"
+	"github.com/vido/api/internal/zhtw"
 )
 
 // SubtitleHandler handles HTTP requests for manual subtitle search and download.
@@ -31,6 +32,7 @@ type SubtitleHandler struct {
 	movieRepo      subtitle.SubtitleStatusUpdater
 	seriesRepo     subtitle.SubtitleStatusUpdater
 	batchProcessor *subtitle.BatchProcessor
+	countries      MediaCountryResolver
 }
 
 // NewSubtitleHandler creates a new SubtitleHandler.
@@ -261,12 +263,15 @@ func (h *SubtitleHandler) DownloadSubtitle(c *gin.Context) {
 	if shouldConvert && h.converter != nil && h.converter.IsAvailable() {
 		h.broadcastStatus(req.MediaID, req.MediaType, "converting",
 			"Converting simplified → traditional...")
-		converted, convErr := h.converter.ConvertS2TWP(data)
+		// Script, then the Taiwan vocabulary (mainland titles keep theirs) —
+		// the same finishing step as every automatic path.
+		countries := h.countriesFor(c.Request.Context(), req.MediaType, req.MediaID)
+		converted, convErr := zhtw.Finalize(h.converter, string(data), countries)
 		if convErr != nil {
 			slog.Warn("Conversion failed in manual download, using original",
 				"error", convErr)
 		} else {
-			finalData = converted
+			finalData = []byte(converted)
 			finalLang = subtitle.LangTraditional
 		}
 	}
@@ -349,7 +354,8 @@ func (h *SubtitleHandler) PreviewSubtitle(c *gin.Context) {
 // Movie.zh-Hans.srt) to Traditional Chinese via OpenCC s2twp, writing a new
 // Movie.zh-Hant.srt next to the media file. Synchronous; the source file is left
 // in place (non-destructive). An explicit convert request IS the user's intent,
-// so the §9b CN skip policy is deliberately NOT applied here.
+// so the §9b CN skip policy is deliberately NOT applied to the script here;
+// only the Taiwan vocabulary step keeps the mainland exemption (zhtw.Finalize).
 func (h *SubtitleHandler) ConvertSubtitle(c *gin.Context) {
 	var req SubtitleConvertRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -422,8 +428,9 @@ func (h *SubtitleHandler) ConvertSubtitle(c *gin.Context) {
 		return
 	}
 
-	// Convert simplified → traditional (OpenCC s2twp).
-	converted, err := h.converter.ConvertS2TWP(data)
+	// Convert simplified → traditional (OpenCC s2twp), then the Taiwan vocabulary.
+	countries := h.countriesFor(c.Request.Context(), req.MediaType, req.MediaID)
+	convertedText, err := zhtw.Finalize(h.converter, string(data), countries)
 	if err != nil {
 		slog.Error("OpenCC conversion failed", "path", sourcePath, "error", err)
 		ErrorResponse(c, 500, "SUBTITLE_CONVERT_FAILED",
@@ -435,7 +442,7 @@ func (h *SubtitleHandler) ConvertSubtitle(c *gin.Context) {
 	// zh-Hans file stays; the placer backs up any pre-existing zh-Hant sidecar).
 	placeResult, err := h.placer.Place(subtitle.PlaceRequest{
 		MediaFilePath: cleanMediaPath,
-		SubtitleData:  converted,
+		SubtitleData:  []byte(convertedText),
 		Language:      subtitle.LangTraditional,
 		Format:        sourceExt,
 	})

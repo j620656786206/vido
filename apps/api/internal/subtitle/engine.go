@@ -15,6 +15,7 @@ import (
 	"github.com/vido/api/internal/services"
 	"github.com/vido/api/internal/sse"
 	"github.com/vido/api/internal/subtitle/providers"
+	"github.com/vido/api/internal/zhtw"
 )
 
 // SubtitleStatusUpdater is the minimal interface the engine needs for DB updates.
@@ -139,8 +140,9 @@ const (
 
 // ProcessOptions contains optional parameters for the subtitle pipeline.
 type ProcessOptions struct {
-	// ProductionCountry is the media's production country code (e.g., "CN").
-	// When "CN", the default ConversionPolicy becomes ConvertNever.
+	// ProductionCountry is the media's production country codes, comma-joined
+	// (e.g., "US,CN"). Mainland content (zhtw.IsMainland) defaults to
+	// ConvertNever and never gets the Taiwan vocabulary pass.
 	ProductionCountry string
 	// ConversionOverride allows the caller to override the derived policy.
 	// nil = use default based on ProductionCountry.
@@ -156,10 +158,18 @@ func deriveConversionPolicy(opts *ProcessOptions) ConversionPolicy {
 	if opts != nil && opts.ConversionOverride != nil {
 		return *opts.ConversionOverride
 	}
-	if opts != nil && strings.Contains(opts.ProductionCountry, "CN") {
+	if zhtw.IsMainland(productionCountries(opts)) {
 		return ConvertNever
 	}
 	return ConvertAuto
+}
+
+// productionCountries splits ProcessOptions.ProductionCountry back into codes.
+func productionCountries(opts *ProcessOptions) []string {
+	if opts == nil || opts.ProductionCountry == "" {
+		return nil
+	}
+	return strings.Split(opts.ProductionCountry, ",")
 }
 
 // Process runs the full subtitle pipeline for a single media item.
@@ -199,7 +209,7 @@ func (e *Engine) Process(ctx context.Context, mediaID, mediaType, mediaFilePath 
 
 	// Stage 4: Convert if needed (respects CN conversion policy)
 	e.broadcastStatus(mediaID, mediaType, StageConverting, "Checking language...")
-	convertedData, finalLang, err := e.convertIfNeeded(data, conversionPolicy)
+	convertedData, finalLang, err := e.convertIfNeeded(data, conversionPolicy, productionCountries(processOpts))
 	if err != nil {
 		slog.Warn("Conversion failed, using original", "error", err, "mediaID", mediaID)
 		// convertIfNeeded already returns original data on failure;
@@ -321,8 +331,10 @@ func (e *Engine) downloadBestMatch(ctx context.Context, scored []ScoredResult) (
 
 // convertIfNeeded detects language and converts simplified → traditional if needed.
 // Respects ConversionPolicy: ConvertNever skips conversion (CN content),
-// ConvertAlways forces it, ConvertAuto uses detection-based logic.
-func (e *Engine) convertIfNeeded(data []byte, policy ConversionPolicy) ([]byte, string, error) {
+// ConvertAlways forces it, ConvertAuto uses detection-based logic. A converted
+// subtitle is finished by zhtw.Finalize (script, then the Taiwan vocabulary),
+// the same step every other delivery path uses.
+func (e *Engine) convertIfNeeded(data []byte, policy ConversionPolicy, countries []string) ([]byte, string, error) {
 	detection := Detect(data)
 
 	// ConvertNever: skip conversion entirely (CN mainland content)
@@ -339,12 +351,12 @@ func (e *Engine) convertIfNeeded(data []byte, policy ConversionPolicy) ([]byte, 
 		return data, LangTraditional, nil
 	case LangSimplified, LangAmbiguous:
 		if e.converter != nil && e.converter.IsAvailable() {
-			converted, err := e.converter.ConvertS2TWP(data)
+			converted, err := zhtw.Finalize(e.converter, string(data), countries)
 			if err != nil {
 				// Graceful degradation: return original with warning
 				return data, detection.Language, fmt.Errorf("conversion failed: %w", err)
 			}
-			return converted, LangTraditional, nil
+			return []byte(converted), LangTraditional, nil
 		}
 		return data, detection.Language, nil
 	default:

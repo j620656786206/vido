@@ -14,6 +14,7 @@ import (
 	"github.com/vido/api/internal/ai/prompts"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/services"
+	"github.com/vido/api/internal/zhtw"
 )
 
 // ProcessItem runs one media item end to end: pre-flight, route, translate (or
@@ -373,14 +374,15 @@ func (p *Pipeline) deliverable(
 		// Simplified leak and OpenCC is polish), conversion IS the deliverable
 		// here: shipping unconverted text under a .zh-Hant.srt name would be a
 		// lie, so a converter failure fails the item.
-		converted, err := p.converter.ConvertS2TWP([]byte(SerializeSRT(source)))
+		// sub-7-4: a converted mainland track is where mainland VOCABULARY
+		// shows up most (s2twp has no 质量→品質); zhtw.Finalize applies the
+		// same Taiwan lexicon the translate route ships with, under the same
+		// CN skip.
+		converted, err := zhtw.Finalize(p.converter, SerializeSRT(source), item.Context.Countries)
 		if err != nil {
 			return nil, 0, fmt.Errorf("opencc s2twp on the routed track: %w", err)
 		}
-		// sub-7-4: a converted mainland track is where mainland VOCABULARY
-		// shows up most (s2twp has no 质量→品質); the same Taiwan lexicon the
-		// translate route ships with applies here, under the same CN skip.
-		return []byte(lexiconFor(item.Context.Countries).Apply(string(converted))), len(source), nil
+		return []byte(converted), len(source), nil
 
 	case RouteTranslate:
 		blocks, err := p.translateWithCache(ctx, ref, decision.Track, item.Context, version, opts)
@@ -1006,13 +1008,9 @@ func (p *Pipeline) harvestTerms(ctx context.Context, ref MediaRef, scope *proces
 	// says beats the global lexicon) that the post-processor then rewrites on
 	// every later episode: the glossary the user sees and the subtitles they
 	// read would disagree forever.
-	lexicon := lexiconFor(countries)
 	converted := make(map[string]string, len(terms))
 	for src, zh := range terms {
-		if out, err := p.converter.ConvertS2TWP([]byte(zh)); err == nil {
-			zh = string(out)
-		}
-		converted[src] = lexicon.Apply(zh)
+		converted[src], _ = zhtw.Finalize(p.converter, zh, countries)
 	}
 
 	inserted, err := p.glossary.InsertNew(ctx, key, converted)

@@ -24,6 +24,7 @@ import (
 	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/services"
 	"github.com/vido/api/internal/subtitle"
+	"github.com/vido/api/internal/zhtw"
 )
 
 // Preview runs are not media runs: they do not touch subtitle_runs and are
@@ -306,19 +307,15 @@ func (s *Service) realRun(ctx context.Context, model string, cues []eval.Cue) (e
 		return got, err
 	}
 
-	lexicon := prompts.ZhTWLexicon()
-	var conv *subtitle.Converter
+	// Delivery's finishing step (zhtw.Finalize); no title context, so the
+	// mainland exemption never applies here.
+	var conv zhtw.Converter
 	if c, cerr := subtitle.NewConverter(); cerr == nil && c.IsAvailable() {
 		conv = c
 	}
 	finalize := func(raw string) string {
-		out := raw
-		if conv != nil {
-			if b, err := conv.ConvertS2TWP([]byte(out)); err == nil {
-				out = string(b)
-			}
-		}
-		return lexicon.Apply(out)
+		out, _ := zhtw.Finalize(conv, raw, nil)
+		return out
 	}
 
 	return eval.Run(ctx, eval.Options{

@@ -139,12 +139,6 @@ func TestLexicon_Apply_NilIsANoop(t *testing.T) {
 	assert.Equal(t, "視頻", lex.Apply("視頻"))
 }
 
-func TestIsMainlandContent(t *testing.T) {
-	assert.True(t, IsMainlandContent([]string{"US", "cn"}))
-	assert.False(t, IsMainlandContent([]string{"TW", "HK"}))
-	assert.False(t, IsMainlandContent(nil))
-}
-
 // ─── AC #3 / #6: the three style sections and the version composition ────
 
 func TestBuildLocalizationSection_ThreeLevels(t *testing.T) {

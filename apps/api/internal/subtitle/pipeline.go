@@ -13,6 +13,7 @@ import (
 	"github.com/vido/api/internal/ai/prompts"
 	"github.com/vido/api/internal/fsprobe"
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/zhtw"
 )
 
 const (
@@ -1267,11 +1268,8 @@ func (p *Pipeline) convertAndStitch(source []SubtitleBlock, final map[int]string
 	// model is invisible to s2twp and visible to this. Mainland-produced
 	// content keeps its own vocabulary (PRD rule); s2twp still runs on it
 	// here as the leak safety net it has always been.
-	lexicon := lexiconFor(tctx.Countries)
-
 	for i := range out {
-		text := textOf(source[i], final)
-		converted, err := p.converter.ConvertS2TWP([]byte(text))
+		text, err := zhtw.Finalize(p.converter, textOf(source[i], final), tctx.Countries)
 		if err != nil {
 			// Deliberate non-fatal discard (Rule 13 case 3): the gate has
 			// already guaranteed this cue carries no simplified-only
@@ -1284,10 +1282,8 @@ func (p *Pipeline) convertAndStitch(source []SubtitleBlock, final map[int]string
 			if firstErr == nil {
 				firstErr = err
 			}
-		} else {
-			text = string(converted)
 		}
-		out[i].Text = lexicon.Apply(text)
+		out[i].Text = text
 	}
 
 	if failures > 0 {
@@ -1406,13 +1402,4 @@ func checkTimestampInvariant(source, translated []SubtitleBlock) error {
 		}
 	}
 	return nil
-}
-
-// lexiconFor is the one place the pipeline decides whether the Taiwan
-// lexicon applies to a title: nil for mainland-produced content.
-func lexiconFor(countries []string) *prompts.Lexicon {
-	if prompts.IsMainlandContent(countries) {
-		return nil
-	}
-	return prompts.ZhTWLexicon()
 }
