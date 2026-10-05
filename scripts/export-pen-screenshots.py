@@ -200,6 +200,7 @@ SCREENS = {
     "TyjL0": ("flow-n-setup-wizard", "n3-d"),
     "D990CP": ("flow-n-setup-wizard", "n4-d"),
     "CWh3E": ("flow-n-setup-wizard", "n5-d"),
+    "GQae8": ("flow-n-setup-wizard", "n6-d"),  # 匿名使用回報（精靈步驟 5／6，在完成之前）
     "YyaqL": ("flow-n-setup-wizard", "n3-m"),
     # Flow D — 下載管理 (downloads)
     # Flow E — 媒體庫掃描 (scanner settings / progress / complete toast / filtered-unmatched)
