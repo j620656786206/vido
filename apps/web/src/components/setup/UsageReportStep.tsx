@@ -12,7 +12,7 @@ import { useId } from 'react';
 import { cn } from '../../lib/utils';
 import type { StepProps } from './SetupWizard';
 import { StepNav } from './StepNav';
-import { USAGE_REPORT_DOCS_URL } from '../settings/UsageReportCard';
+import { USAGE_REPORT_DOCS_URL } from '../../services/usageReportService';
 
 const SENT = [
   '一個隨機編號（不是從你的機器算出來的）',

@@ -12,6 +12,10 @@ import { snakeToCamel } from '../utils/caseTransform';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
+/** The page that lists what the report sends and what it never sends. */
+export const USAGE_REPORT_DOCS_URL =
+  'https://github.com/j620656786206/vido/blob/main/docs/usage-report.zh-TW.md';
+
 export interface UsageReportStatus {
   /** false = this build has no receiver configured; the switch cannot turn on. */
   available: boolean;

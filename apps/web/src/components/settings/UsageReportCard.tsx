@@ -10,16 +10,16 @@
  * server stored: never parsed, never pretty-printed.
  *
  * Four states (C26-D): unavailable (no receiver in this build), off,
- * on-but-never-sent, sent.
+ * on-but-never-sent, sent. One more the design does not draw: unavailable but
+ * still on (the wizard said yes on a build without a receiver). Nothing is
+ * sent then, and the switch stays usable so it can be turned off.
  */
 import { useId } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useSetUsageReport, useUsageReport } from '../../hooks/useUsageReport';
-import { formatRunTime } from './OfficialSubtitleMiningCard';
-
-export const USAGE_REPORT_DOCS_URL =
-  'https://github.com/j620656786206/vido/blob/main/docs/usage-report.zh-TW.md';
+import { USAGE_REPORT_DOCS_URL } from '../../services/usageReportService';
+import { formatLocalDateTime } from '../../utils/formatLocalDateTime';
 
 const CARD =
   'max-w-3xl rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4 md:p-6';
@@ -53,7 +53,9 @@ export function UsageReportCard() {
     );
   }
 
-  if (status.isError || !status.data) {
+  // Only a read that never succeeded hides the card: a failed background
+  // refetch keeps showing the last good state.
+  if (!status.data) {
     return (
       <section aria-labelledby={titleId} className={CARD} data-testid="usage-report-card">
         {header}
@@ -75,7 +77,14 @@ export function UsageReportCard() {
   const { available, enabled, lastSentAt, lastPayload } = status.data;
   // While the PUT is in flight the switch shows where it is going.
   const shownEnabled = save.isPending && save.variables !== undefined ? save.variables : enabled;
-  const disabled = !available || save.isPending;
+  // Unavailable blocks turning it on, never turning it off.
+  const canToggle = available || enabled;
+  const disabled = !canToggle || save.isPending;
+  const hint = available
+    ? '預設關閉。關掉之後就不會再送。'
+    : enabled
+      ? '這個版本沒有設定接收端，不會送出。可以關掉。'
+      : '這個版本沒有設定接收端，無法開啟。';
 
   return (
     <section aria-labelledby={titleId} className={CARD} data-testid="usage-report-card">
@@ -89,9 +98,7 @@ export function UsageReportCard() {
             >
               每週送一次匿名計數
             </span>
-            <span className="text-xs text-[var(--text-muted)]">
-              {available ? '預設關閉。關掉之後就不會再送。' : '這個版本沒有設定接收端，無法開啟。'}
-            </span>
+            <span className="text-xs text-[var(--text-muted)]">{hint}</span>
           </div>
           <button
             type="button"
@@ -102,7 +109,7 @@ export function UsageReportCard() {
             onClick={() => save.mutate(!enabled)}
             className={cn(
               'flex size-11 shrink-0 items-center justify-center disabled:cursor-not-allowed',
-              !available && 'opacity-40'
+              !canToggle && 'opacity-40'
             )}
             data-testid="usage-report-switch"
           >
@@ -135,7 +142,7 @@ export function UsageReportCard() {
             <span className="text-sm text-[var(--text-secondary)]">上次送出</span>
             {lastSentAt ? (
               <span className="font-mono text-sm text-[var(--text-primary)]">
-                {formatRunTime(lastSentAt)}
+                {formatLocalDateTime(lastSentAt)}
               </span>
             ) : (
               <span className="text-right text-sm text-[var(--text-muted)]">
@@ -146,12 +153,11 @@ export function UsageReportCard() {
         )}
 
         {lastPayload && (
-          <div className="space-y-2">
+          <div role="group" aria-labelledby={payloadLabelId} className="space-y-2">
             <span id={payloadLabelId} className="block text-sm text-[var(--text-secondary)]">
               送出的內容（原文）
             </span>
             <pre
-              aria-labelledby={payloadLabelId}
               className="m-0 rounded-[var(--radius-md)] bg-[var(--bg-primary)] p-3 font-mono text-xs break-all whitespace-pre-wrap text-[var(--text-secondary)]"
               data-testid="usage-report-payload"
             >

@@ -218,6 +218,27 @@ describe('SetupWizard', () => {
     });
   });
 
+  it('going back from the summary keeps the switch where it was left', async () => {
+    renderWithProviders();
+
+    fireEvent.click(await screen.findByTestId('next-button'));
+    fireEvent.click(await screen.findByTestId('skip-button'));
+    const libraryPath = await screen.findByTestId('library-path-0');
+    fireEvent.change(libraryPath, { target: { value: '/media' } });
+    fireEvent.click(screen.getByTestId('next-button'));
+    fireEvent.click(await screen.findByTestId('skip-button'));
+    fireEvent.click(await screen.findByRole('switch', { name: '每週送一次匿名計數' }));
+    fireEvent.click(screen.getByTestId('next-button'));
+    await screen.findByText('開啟');
+
+    fireEvent.click(screen.getByTestId('back-button'));
+
+    expect(await screen.findByRole('switch', { name: '每週送一次匿名計數' })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    );
+  });
+
   it('shows the server’s (zh-TW) reason when validation fails', async () => {
     const { setupService } = await import('../../services/setupService');
     vi.mocked(setupService.validateStep).mockRejectedValueOnce(new Error('請選擇語言。'));

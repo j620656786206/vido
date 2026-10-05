@@ -23,6 +23,9 @@ export function useSetUsageReport() {
   const queryClient = useQueryClient();
   return useMutation<UsageReportStatus, Error, boolean>({
     mutationFn: (enabled) => usageReportService.setEnabled(enabled),
+    // A GET still in flight would land after the save and put the old switch
+    // position back on screen.
+    onMutate: () => queryClient.cancelQueries({ queryKey: usageReportQueryKeys.all }),
     onSuccess: (fresh) => {
       queryClient.setQueryData(usageReportQueryKeys.all, fresh);
     },

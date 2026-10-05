@@ -3,7 +3,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { UsageReportCard, USAGE_REPORT_DOCS_URL } from './UsageReportCard';
+import { UsageReportCard } from './UsageReportCard';
+import { USAGE_REPORT_DOCS_URL } from '../../services/usageReportService';
 
 // Real QueryClient + a fetch mock: the card's loading / error / retry states
 // come from TanStack itself (a mocked hook would hide the refetch-resets-
@@ -38,11 +39,18 @@ function renderCard() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
+  render(
     <QueryClientProvider client={client}>
       <UsageReportCard />
     </QueryClientProvider>
   );
+  return client;
+}
+
+function deferred<T>() {
+  let resolve!: (v: T) => void;
+  const promise = new Promise<T>((r) => (resolve = r));
+  return { promise, resolve };
 }
 
 beforeEach(() => {
@@ -106,7 +114,7 @@ describe('UsageReportCard (infra-optin-usage-report-b1)', () => {
 
     const payload = await screen.findByTestId('usage-report-payload');
     expect(payload.textContent).toBe(PAYLOAD);
-    expect(payload).toHaveAccessibleName('送出的內容（原文）');
+    expect(screen.getByRole('group', { name: '送出的內容（原文）' })).toContainElement(payload);
     expect(screen.getByText('上次送出')).toBeInTheDocument();
   });
 
@@ -156,5 +164,79 @@ describe('UsageReportCard (infra-optin-usage-report-b1)', () => {
     await user.click(screen.getByRole('button', { name: '重試' }));
 
     expect(await screen.findByRole('switch')).toBeInTheDocument();
+  });
+
+  it('unavailable but still on: nothing is sent, and the switch can still turn it off', async () => {
+    fetchMock
+      .mockResolvedValueOnce(ok(wire(false, true, false)))
+      .mockResolvedValueOnce(ok(wire(false, false, false)));
+    renderCard();
+    const user = userEvent.setup();
+
+    const sw = await screen.findByRole('switch');
+    expect(sw).toBeEnabled();
+    expect(sw).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByText('這個版本沒有設定接收端，不會送出。可以關掉。')).toBeInTheDocument();
+    // No "first one goes within the hour" promise on a build that cannot send.
+    expect(screen.queryByText('上次送出')).not.toBeInTheDocument();
+
+    await user.click(sw);
+
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ enabled: false });
+    await waitFor(() => expect(screen.getByRole('switch')).toBeDisabled());
+    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByText('這個版本沒有設定接收端，無法開啟。')).toBeInTheDocument();
+  });
+
+  it('while saving: the switch shows where it is going and cannot be pressed again', async () => {
+    const put = deferred<ReturnType<typeof ok>>();
+    fetchMock.mockResolvedValueOnce(ok(wire(true, false, false))).mockReturnValueOnce(put.promise);
+    renderCard();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('switch'));
+
+    const sw = screen.getByRole('switch');
+    expect(sw).toHaveAttribute('aria-checked', 'true');
+    expect(sw).toBeDisabled();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    put.resolve(ok(wire(true, true, false)));
+    await waitFor(() => expect(screen.getByRole('switch')).toBeEnabled());
+    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('a failed background refresh keeps showing the last good state', async () => {
+    fetchMock.mockResolvedValueOnce(ok(wire(true, true, true))).mockResolvedValueOnce(fail(500));
+    const client = renderCard();
+
+    expect(await screen.findByTestId('usage-report-payload')).toBeInTheDocument();
+    await client.refetchQueries();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId('usage-report-payload')).toBeInTheDocument();
+    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true');
+    expect(screen.queryByText('讀不到匿名使用回報的狀態。')).not.toBeInTheDocument();
+  });
+
+  it('a slow refresh that ends after a save does not put the old position back', async () => {
+    const slowGet = deferred<ReturnType<typeof ok>>();
+    fetchMock
+      .mockResolvedValueOnce(ok(wire(true, false, false)))
+      .mockReturnValueOnce(slowGet.promise)
+      .mockResolvedValueOnce(ok(wire(true, true, false)));
+    const client = renderCard();
+    const user = userEvent.setup();
+
+    await screen.findByRole('switch');
+    void client.refetchQueries();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await user.click(screen.getByRole('switch'));
+    await waitFor(() => expect(screen.getByRole('switch')).toBeEnabled());
+
+    slowGet.resolve(ok(wire(true, false, false)));
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true');
   });
 });
