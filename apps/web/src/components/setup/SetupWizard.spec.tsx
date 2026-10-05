@@ -63,9 +63,9 @@ describe('SetupWizard', () => {
     expect(await screen.findByTestId('setup-wizard')).toBeInTheDocument();
   });
 
-  it('shows step 1 of 5 on initial render', async () => {
+  it('shows step 1 of 6 on initial render', async () => {
     renderWithProviders();
-    expect(await screen.findByText('步驟 1 / 5')).toBeInTheDocument();
+    expect(await screen.findByText('步驟 1 / 6')).toBeInTheDocument();
   });
 
   it('shows the welcome step first', async () => {
@@ -111,13 +111,14 @@ describe('SetupWizard', () => {
     expect(await screen.findByTestId('media-library-step')).toBeInTheDocument();
   });
 
-  it('shows all 5 step dots', async () => {
+  it('shows all 6 step dots', async () => {
     renderWithProviders();
     await screen.findByTestId('step-progress');
     expect(screen.getByTestId('step-dot-welcome')).toBeInTheDocument();
     expect(screen.getByTestId('step-dot-qbittorrent')).toBeInTheDocument();
     expect(screen.getByTestId('step-dot-media-folder')).toBeInTheDocument();
     expect(screen.getByTestId('step-dot-api-keys')).toBeInTheDocument();
+    expect(screen.getByTestId('step-dot-usage-report')).toBeInTheDocument();
     expect(screen.getByTestId('step-dot-complete')).toBeInTheDocument();
   });
 
@@ -139,7 +140,12 @@ describe('SetupWizard', () => {
     expect(await screen.findByTestId('api-keys-step')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('skip-button'));
 
-    // Step 5: Complete
+    // Step 5: Usage report → Next (no 跳過 on this step)
+    expect(await screen.findByTestId('usage-report-step')).toBeInTheDocument();
+    expect(screen.queryByTestId('skip-button')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('next-button'));
+
+    // Step 6: Complete
     expect(await screen.findByTestId('complete-step')).toBeInTheDocument();
     expect(screen.getByTestId('finish-button')).toBeInTheDocument();
   });
@@ -153,7 +159,8 @@ describe('SetupWizard', () => {
     const libraryPath = await screen.findByTestId('library-path-0');
     fireEvent.change(libraryPath, { target: { value: '/media' } });
     fireEvent.click(screen.getByTestId('next-button')); // → api-keys
-    fireEvent.click(await screen.findByTestId('skip-button')); // → complete
+    fireEvent.click(await screen.findByTestId('skip-button')); // → usage-report
+    fireEvent.click(await screen.findByTestId('next-button')); // → complete
 
     expect(await screen.findByText('設定完成！')).toBeInTheDocument();
     expect(screen.getByText('繁體中文')).toBeInTheDocument();
@@ -170,6 +177,8 @@ describe('SetupWizard', () => {
     fireEvent.change(libraryPath, { target: { value: '/media' } });
     fireEvent.click(screen.getByTestId('next-button'));
     fireEvent.click(await screen.findByTestId('skip-button'));
+    await screen.findByTestId('usage-report-step');
+    fireEvent.click(screen.getByTestId('next-button'));
 
     // Click finish
     fireEvent.click(await screen.findByTestId('finish-button'));
@@ -181,7 +190,30 @@ describe('SetupWizard', () => {
           libraries: expect.arrayContaining([
             expect.objectContaining({ path: '/media', contentType: 'movie' }),
           ]),
+          usageReportEnabled: false,
         })
+      );
+    });
+  });
+
+  it('sends the usage-report opt-in when the switch was turned on', async () => {
+    const { setupService } = await import('../../services/setupService');
+    renderWithProviders();
+
+    fireEvent.click(await screen.findByTestId('next-button'));
+    fireEvent.click(await screen.findByTestId('skip-button'));
+    const libraryPath = await screen.findByTestId('library-path-0');
+    fireEvent.change(libraryPath, { target: { value: '/media' } });
+    fireEvent.click(screen.getByTestId('next-button'));
+    fireEvent.click(await screen.findByTestId('skip-button'));
+    fireEvent.click(await screen.findByRole('switch', { name: '每週送一次匿名計數' }));
+    fireEvent.click(screen.getByTestId('next-button'));
+
+    expect(await screen.findByText('開啟')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('finish-button'));
+    await waitFor(() => {
+      expect(setupService.completeSetup).toHaveBeenCalledWith(
+        expect.objectContaining({ usageReportEnabled: true })
       );
     });
   });
@@ -225,6 +257,8 @@ describe('SetupWizard', () => {
     fireEvent.change(libraryPath, { target: { value: '/media' } });
     fireEvent.click(screen.getByTestId('next-button'));
     fireEvent.click(await screen.findByTestId('skip-button'));
+    await screen.findByTestId('usage-report-step');
+    fireEvent.click(screen.getByTestId('next-button')); // usage-report → complete
     fireEvent.click(await screen.findByTestId('finish-button'));
 
     expect(await screen.findByTestId('setup-error')).toHaveTextContent(
@@ -246,6 +280,8 @@ describe('SetupWizard', () => {
     fireEvent.change(libraryPath, { target: { value: '/media' } });
     fireEvent.click(screen.getByTestId('next-button'));
     fireEvent.click(await screen.findByTestId('skip-button'));
+    await screen.findByTestId('usage-report-step');
+    fireEvent.click(screen.getByTestId('next-button')); // usage-report → complete
     fireEvent.click(await screen.findByTestId('finish-button'));
 
     expect(await screen.findByTestId('setup-error')).toHaveTextContent(
@@ -276,7 +312,9 @@ describe('SetupWizard', () => {
     fireEvent.change(await screen.findByTestId('claude-key-input'), {
       target: { value: 'sk-ant-test' },
     });
-    fireEvent.click(screen.getByTestId('next-button')); // → complete
+    fireEvent.click(screen.getByTestId('next-button')); // → usage-report
+    await screen.findByTestId('usage-report-step');
+    fireEvent.click(screen.getByTestId('next-button')); // usage-report → complete
     fireEvent.click(await screen.findByTestId('finish-button'));
 
     // The api-keys step sends the Claude key for validation too, so a server
@@ -303,7 +341,9 @@ describe('SetupWizard', () => {
     fireEvent.change(await screen.findByTestId('tmdb-key-input'), {
       target: { value: 'too-short' },
     });
-    fireEvent.click(screen.getByTestId('skip-button')); // → complete
+    fireEvent.click(screen.getByTestId('skip-button')); // → usage-report
+    await screen.findByTestId('usage-report-step');
+    fireEvent.click(screen.getByTestId('next-button')); // usage-report → complete
 
     expect(await screen.findByTestId('complete-step')).toBeInTheDocument();
     expect(screen.getAllByText('未設定')).toHaveLength(3); // qBittorrent · TMDb · Claude
@@ -317,6 +357,6 @@ describe('SetupWizard', () => {
 
   it('keeps the step count for screen readers now that the visible line is gone', async () => {
     renderWithProviders();
-    expect(await screen.findByText('步驟 1 / 5')).toHaveClass('sr-only');
+    expect(await screen.findByText('步驟 1 / 6')).toHaveClass('sr-only');
   });
 });

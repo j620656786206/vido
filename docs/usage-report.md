@@ -36,13 +36,11 @@ The settings page shows the last report that was actually sent, byte for byte, a
 
 ## Turning it on or off
 
-> The Settings switch is available now; the first-run setup question arrives with the next release. Builds without a configured receiver show the report as unavailable.
-
 - **First-run setup** asks once. The pre-selected answer is "off".
-- **Settings** has a switch you can change at any time. After you turn it off, nothing more is sent. Turning it back on reuses the same random ID.
+- **Settings → Connection** has a switch at the very bottom you can change at any time. After you turn it off, nothing more is sent. Turning it back on reuses the same random ID.
 
 ## Where it goes and how often
 
 - To the maintainer's self-hosted [Umami](https://umami.is) analytics instance. Umami does not store IP addresses.
 - At most once every 7 days. If a send fails, Vido waits the full 7 days before trying again. A failure is never shown as an error and never affects anything else.
-- Builds made from source (and forks) have no receiver configured, so the report is unavailable there.
+- Builds made from source (and forks) have no receiver configured, so the report shows as unavailable there.

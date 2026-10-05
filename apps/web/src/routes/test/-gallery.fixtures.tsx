@@ -158,6 +158,7 @@ import { SettingsErrorState } from '../../components/settings/SettingsErrorState
 import { AppearanceSettings } from '../../components/settings/AppearanceSettings';
 import { ApiKeysStep } from '../../components/setup/ApiKeysStep';
 import { CompleteStep } from '../../components/setup/CompleteStep';
+import { UsageReportStep } from '../../components/setup/UsageReportStep';
 import { MediaLibrarySetupStep } from '../../components/setup/MediaLibrarySetupStep';
 import { QBittorrentStep } from '../../components/setup/QBittorrentStep';
 import { StepProgress } from '../../components/setup/StepProgress';
@@ -3311,6 +3312,23 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     penNode: 'screen-section',
   },
   {
+    id: 'setup-usage-report-step',
+    label: 'setup/UsageReportStep (N6-D — 預設關閉)',
+    component: UsageReportStep,
+    props: {
+      data: { language: 'zh-TW' },
+      onUpdate: noop,
+      onNext: noop,
+      onBack: noop,
+      isFirst: false,
+      isLast: false,
+      isSubmitting: false,
+    },
+    penNode: 'GQae8', // Screen N6-D
+    statesOnly: ['default'],
+    width: 448,
+  },
+  {
     id: 'setup-complete-step',
     label: 'setup/CompleteStep',
     component: CompleteStep,
@@ -3383,6 +3401,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         { id: 'qbittorrent', title: 'qBittorrent' },
         { id: 'media-folder', title: '媒體庫' },
         { id: 'api-keys', title: 'API 金鑰' },
+        { id: 'usage-report', title: '匿名回報' },
         { id: 'complete', title: '完成' },
       ],
       currentStep: 2,

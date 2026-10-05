@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen N1-D (dzgq9) · N2-D (CP7AX) · N3-D (TyjL0) · N4-D (D990CP) · N5-D (CWh3E) · N3-M (YyaqL)
+// Design ref: ux-design.pen Screen N1-D (dzgq9) · N2-D (CP7AX) · N3-D (TyjL0) · N4-D (D990CP) · N6-D (GQae8) · N5-D (CWh3E) · N3-M (YyaqL)
 import { useState, useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -9,6 +9,7 @@ import { WelcomeStep } from './WelcomeStep';
 import { QBittorrentStep } from './QBittorrentStep';
 import { MediaLibrarySetupStep } from './MediaLibrarySetupStep';
 import { ApiKeysStep } from './ApiKeysStep';
+import { UsageReportStep } from './UsageReportStep';
 import { CompleteStep } from './CompleteStep';
 
 export interface StepProps {
@@ -48,6 +49,8 @@ const WIZARD_STEPS: WizardStep[] = [
     optional: true,
     clearOnSkip: ['tmdbApiKey', 'claudeApiKey'],
   },
+  // infra-optin-usage-report-b2: asked before the summary, off by default.
+  { id: 'usage-report', title: '匿名回報', component: UsageReportStep },
   { id: 'complete', title: '完成', component: CompleteStep },
 ];
 
@@ -84,6 +87,8 @@ export function SetupWizard() {
         // here, on this step, instead of after 完成設定.
         stepData.claudeApiKey = formData.claudeApiKey || '';
       }
+      if (step.id === 'usage-report')
+        stepData.usageReportEnabled = formData.usageReportEnabled === true;
 
       await setupService.validateStep(step.id, stepData);
     } catch (err) {
@@ -132,6 +137,7 @@ export function SetupWizard() {
         libraries: formData.libraries as SetupConfig['libraries'],
         tmdbApiKey: formData.tmdbApiKey,
         claudeApiKey: formData.claudeApiKey,
+        usageReportEnabled: formData.usageReportEnabled === true,
       });
 
       // Invalidate setup status query so root route knows setup is done
