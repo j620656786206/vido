@@ -101,8 +101,6 @@ export function MediaDetailPanel({
 
   const hasContextMenu = onReparse && onExport && onDelete;
 
-  const productionCountryStr = details.productionCountries?.map((c) => c.iso31661).join(',') ?? '';
-
   return (
     <div className="flex flex-col" data-testid="media-detail-panel">
       {/* Backdrop header */}
@@ -303,7 +301,6 @@ export function MediaDetailPanel({
           mediaType={type === 'movie' ? 'movie' : 'series'}
           mediaTitle={title}
           mediaFilePath={filePath ?? ''}
-          productionCountry={productionCountryStr}
           open={subtitleDialogOpen}
           onOpenChange={setSubtitleDialogOpen}
           onDownloadSuccess={handleSubtitleDownloadSuccess}

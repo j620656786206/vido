@@ -79,12 +79,6 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
   const isError = isMovie ? localMovie.isError : localSeries.isError;
   const loadError = isMovie ? localMovie.error : localSeries.error;
 
-  // §9b CN-subtitle policy source (movies only; series has no production_countries).
-  // Flatten to the comma-joined ISO string ManageSubtitleDialogV2 expects, mirroring
-  // MediaDetailPanel's TMDb path. disc-2026-07-production-countries-detail-api.
-  const productionCountryStr =
-    localMovie.data?.productionCountries?.map((c) => c.iso31661).join(',') ?? '';
-
   const tmdbId = data?.tmdbId ?? 0;
   // 13-2c: an owned series can still ask for the episodes it is missing.
   const requestedState = useRequestedMedia(!isMovie && tmdbId > 0);
@@ -452,7 +446,6 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
           mediaTitle={data.title}
           mediaFilePath={filePath}
           mediaResolution={data.videoResolution}
-          productionCountry={productionCountryStr}
           subtitleTracks={data.subtitleTracks}
           subtitleStatus={data.subtitleStatus}
           subtitleLanguage={data.subtitleLanguage}

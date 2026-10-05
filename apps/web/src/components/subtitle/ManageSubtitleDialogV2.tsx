@@ -35,9 +35,10 @@
  *   function (generateCostView) shared by all three buttons.
  * - Fetch is demoted to a dormant secondary 搜尋線上字幕（成功率低） — NO source
  *   chips, NO score-breakdown rows, NO Zimuku (9R-14 removed it).
- * - CN policy (§9b, note v16pVI): a 簡中 track on CN content shows the policy
- *   line 陸劇保留簡體字幕（對白一致） — policy-correct, NOT a defect. The design's
- *   轉為繁中/仍要轉換 actions are NOT rendered: POST /api/v1/subtitles/convert
+ * - Mainland titles (note v16pVI, Alexyu ruling 2026-10-05): a 簡中 track on
+ *   CN content is treated like any other — Vido converts it to Traditional
+ *   script and keeps its wording, so there is no policy line. The design's
+ *   轉為繁中 action is NOT rendered: POST /api/v1/subtitles/convert
  *   exists but only converts a sidecar {name}.{lang}.srt|ass for movie/series —
  *   not embedded tracks, not episodes — and no client wires it yet
  *   (disc-2026-09-dialog-track-convert-not-wired).
@@ -53,7 +54,6 @@ import {
   ChevronRight,
   CircleAlert,
   Download,
-  Info,
   Loader2,
   Radio,
   Settings,
@@ -160,9 +160,6 @@ export interface ManageSubtitleDialogV2Props {
   subtitleTracks?: string;
   subtitleStatus?: string;
   subtitleLanguage?: string;
-  /** ISO 3166-1 codes; contains "CN" → §9b policy display. Movies pass it
-   *  (LocalDetailV2); series/episodes have no production_countries. */
-  productionCountry?: string;
   /** True while the parent detail query loads — renders the F10 skeleton. */
   isLoading?: boolean;
   open: boolean;
@@ -188,7 +185,6 @@ export function ManageSubtitleDialogV2({
   subtitleTracks,
   subtitleStatus,
   subtitleLanguage,
-  productionCountry,
   isLoading = false,
   open,
   onOpenChange,
@@ -202,7 +198,6 @@ export function ManageSubtitleDialogV2({
   // Positive intent, not a pile of negations (sub-2-2b CR L1 fixed the same
   // smell): a SERIES is the only mediaType with no generate route of its own.
   const canGenerate = isMovie || isEpisode;
-  const isCNContent = productionCountry?.includes('CN') ?? false;
 
   const [genView, setGenView] = useState<GenView>('idle');
   const [triggerError, setTriggerError] = useState<string | null>(null);
@@ -399,16 +394,6 @@ export function ManageSubtitleDialogV2({
               </span>
               <span className="text-xs text-[var(--text-secondary)]">{track.source}</span>
             </div>
-            {/* §9b CN policy: 簡中 on CN content is policy-correct, NOT a defect. */}
-            {track.isHans && isCNContent && (
-              <div
-                data-testid={`cn-policy-note-${track.key}`}
-                className="flex items-center gap-2 px-3.5 text-xs text-[var(--text-muted)]"
-              >
-                <Info className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                陸劇保留簡體字幕（對白一致）
-              </div>
-            )}
           </div>
         ))}
       </section>
@@ -437,7 +422,9 @@ export function ManageSubtitleDialogV2({
           subtitleId: result.id,
           provider: result.source,
           resolution: mediaResolution,
-          convertToTraditional: !isCNContent, // §9b default: CN content keeps simplified
+          // Every title is converted to Traditional script; mainland titles
+          // keep their wording (server-side, zhtw.Finalize).
+          convertToTraditional: true,
           score: result.score,
         },
         {
@@ -456,7 +443,6 @@ export function ManageSubtitleDialogV2({
       mediaType,
       mediaFilePath,
       mediaResolution,
-      isCNContent,
       onDownloadSuccess,
       refreshEstimate,
     ]

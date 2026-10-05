@@ -5003,7 +5003,6 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       mediaTitle: '星際效應',
       mediaFilePath: '/media/movies/Interstellar.2014.1080p.mkv',
       mediaResolution: '1080p',
-      productionCountry: 'US',
       open: true,
       onOpenChange: noop,
       onDownloadSuccess: noop,

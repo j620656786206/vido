@@ -508,7 +508,15 @@ func (m *mockMovieSubtitleFinder) FindBySubtitleStatus(_ context.Context, status
 
 type mockSeriesSubtitleFinder struct {
 	series map[models.SubtitleStatus][]models.Series
+	byID   map[string]*models.Series
 	err    error
+}
+
+func (m *mockSeriesSubtitleFinder) FindByID(_ context.Context, id string) (*models.Series, error) {
+	if s, ok := m.byID[id]; ok {
+		return s, nil
+	}
+	return nil, fmt.Errorf("series %s not found", id)
 }
 
 func (m *mockSeriesSubtitleFinder) FindBySubtitleStatus(_ context.Context, status models.SubtitleStatus) ([]models.Series, error) {
@@ -878,6 +886,36 @@ func TestRepoCollector_CollectEpisodesBySeasonID(t *testing.T) {
 	// Episode without title — uses season/episode code only
 	assert.Equal(t, "ep-3", items[2].MediaID)
 	assert.Equal(t, "S01E03", items[2].Title)
+}
+
+// backlog-mainland-rule-three-predicates AC #10: a series and its episodes
+// carry the show's production countries into the batch, so a mainland drama
+// keeps its own wording (no Taiwan lexicon, no AI terminology correction).
+func TestRepoCollector_SeriesAndEpisodesCarryTheShowCountries(t *testing.T) {
+	cnShow := models.Series{
+		ID: "series-cn", Title: "陸劇",
+		ProductionCountries: []models.ProductionCountry{{ISO3166_1: "CN"}, {ISO3166_1: "HK"}},
+	}
+	seriesRepo := &mockSeriesSubtitleFinder{
+		series: map[models.SubtitleStatus][]models.Series{models.SubtitleStatusNotSearched: {cnShow}},
+		byID:   map[string]*models.Series{"series-cn": &cnShow},
+	}
+	episodeRepo := &mockEpisodeSeasonFinder{episodes: []models.Episode{
+		{ID: "ep-1", SeriesID: "series-cn", SeasonNumber: 1, EpisodeNumber: 1, FilePath: models.NewNullString("/m/1.mkv")},
+		{ID: "ep-2", SeriesID: "series-gone", SeasonNumber: 1, EpisodeNumber: 2, FilePath: models.NewNullString("/m/2.mkv")},
+	}}
+	rc := NewRepoCollector(&mockMovieSubtitleFinder{}, seriesRepo, episodeRepo)
+
+	series, err := rc.CollectSeriesNeedingSubtitles(context.Background())
+	require.NoError(t, err)
+	require.Len(t, series, 1)
+	assert.Equal(t, "CN,HK", series[0].ProductionCountry)
+
+	episodes, err := rc.CollectEpisodesBySeasonID(context.Background(), "season-1")
+	require.NoError(t, err)
+	require.Len(t, episodes, 2)
+	assert.Equal(t, "CN,HK", episodes[0].ProductionCountry)
+	assert.Empty(t, episodes[1].ProductionCountry, "a show lookup failure must not fail the batch")
 }
 
 // RepoCollector returns empty when season has no episodes with files

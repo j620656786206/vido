@@ -29,7 +29,6 @@ interface SubtitleSearchDialogProps {
   mediaTitle: string;
   mediaFilePath: string;
   mediaResolution?: string;
-  productionCountry?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDownloadSuccess?: () => void;
@@ -46,7 +45,6 @@ export function SubtitleSearchDialog({
   mediaTitle,
   mediaFilePath,
   mediaResolution,
-  productionCountry,
   open,
   onOpenChange,
   onDownloadSuccess,
@@ -57,19 +55,19 @@ export function SubtitleSearchDialog({
   const [toast, setToast] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  // CN Conversion Policy (AC #9, #10, #11)
-  const isCNContent = productionCountry?.includes('CN') ?? false;
-  const [convertToTraditional, setConvertToTraditional] = useState(!isCNContent);
+  // Conversion toggle (AC #10, #11): ON for every title — mainland titles are
+  // converted too, keeping their wording (Alexyu ruling 2026-10-05).
+  const [convertToTraditional, setConvertToTraditional] = useState(true);
 
   // Reset state when dialog opens for different media (M7 fix)
   useEffect(() => {
     if (open) {
       setQuery(mediaTitle);
-      setConvertToTraditional(!isCNContent);
+      setConvertToTraditional(true);
       setPreviewOpen(null);
       setToast(null);
     }
-  }, [open, mediaTitle, isCNContent]);
+  }, [open, mediaTitle]);
 
   // Escape key to close
   useEffect(() => {

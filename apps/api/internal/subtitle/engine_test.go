@@ -221,7 +221,7 @@ func TestEngine_ConvertIfNeeded_SimplifiedConverted(t *testing.T) {
 
 	// Simplified Chinese content
 	data := []byte("这是简体中文测试内容")
-	result, lang, err := engine.convertIfNeeded(data, ConvertAuto, nil)
+	result, lang, err := engine.convertIfNeeded(data, nil)
 	require.NoError(t, err)
 	assert.Equal(t, LangTraditional, lang)
 	assert.NotEqual(t, string(data), string(result), "simplified should be converted")
@@ -233,7 +233,7 @@ func TestEngine_ConvertIfNeeded_TraditionalPassthrough(t *testing.T) {
 	engine := &Engine{converter: converter}
 
 	data := []byte("這是繁體中文測試內容")
-	result, lang, err := engine.convertIfNeeded(data, ConvertAuto, nil)
+	result, lang, err := engine.convertIfNeeded(data, nil)
 	require.NoError(t, err)
 	assert.Equal(t, LangTraditional, lang)
 	assert.Equal(t, string(data), string(result), "traditional should pass through")
@@ -249,7 +249,7 @@ func TestEngine_Process_ConvertedSubtitleGetsTaiwanVocabulary(t *testing.T) {
 		want    string
 	}{
 		{"non-mainland simplified → script + vocabulary", "US", "这个软件的质量很好", "這個軟體的品質很好"},
-		{"mainland simplified stays simplified", "TW,CN", "这个软件的质量很好", "这个软件的质量很好"},
+		{"mainland simplified → script only, original wording kept", "TW,CN", "这个软件的质量很好", "這個軟體的質量很好"},
 		{"already Traditional is delivered as-is", "US", "這個軟件的質量很好", "這個軟件的質量很好"},
 	}
 	for _, tc := range cases {
@@ -273,12 +273,6 @@ func TestEngine_Process_ConvertedSubtitleGetsTaiwanVocabulary(t *testing.T) {
 			assert.Contains(t, string(got), tc.want)
 		})
 	}
-}
-
-func TestDeriveConversionPolicy_UsesTheSharedMainlandRule(t *testing.T) {
-	assert.Equal(t, ConvertNever, deriveConversionPolicy(&ProcessOptions{ProductionCountry: "US, cn"}))
-	assert.Equal(t, ConvertAuto, deriveConversionPolicy(&ProcessOptions{ProductionCountry: "TW,HK"}))
-	assert.Equal(t, ConvertAuto, deriveConversionPolicy(nil))
 }
 
 // No results
@@ -426,7 +420,8 @@ func TestEngine_Process_AICorrection_FallbackOnError(t *testing.T) {
 	assert.Equal(t, 1, mockTermSvc.callCount, "AI correction should have been attempted")
 }
 
-// Story 9.1: AI correction is skipped for CN content (ConvertNever policy)
+// Story 9.1: AI correction is skipped for CN content — it rewrites vocabulary,
+// and mainland titles keep theirs (2026-10-05 ruling: script only).
 func TestEngine_Process_AICorrection_SkippedForCNContent(t *testing.T) {
 	subContent := []byte("1\n00:00:01,000 --> 00:00:03,000\n这是简体中文\n")
 
@@ -442,7 +437,7 @@ func TestEngine_Process_AICorrection_SkippedForCNContent(t *testing.T) {
 	engine, mediaPath := newTestEngine(t, []providers.SubtitleProvider{prov}, nil)
 	engine.SetTerminologyService(mockTermSvc)
 
-	// CN production country → ConvertNever
+	// CN production country → zhtw.IsMainland
 	result := engine.Process(context.Background(), "movie-1", "movie", mediaPath,
 		providers.SubtitleQuery{Title: "Test"}, "1080p",
 		ProcessOptions{ProductionCountry: "CN"})

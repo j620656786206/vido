@@ -444,22 +444,42 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
     await waitFor(() => expect(mockedTrigger).toHaveBeenCalledTimes(2));
   });
 
-  it('§9b CN policy: 簡中 track on CN content shows the policy line (policy-correct, not a defect)', async () => {
-    renderDialog({
-      subtitleTracks: JSON.stringify([{ language: 'zh-CN' }]),
-      productionCountry: 'CN',
-    });
-
-    expect(await screen.findByTestId('cn-policy-note-track-0')).toHaveTextContent(
-      '陸劇保留簡體字幕（對白一致）'
-    );
-  });
-
-  it('no CN policy line for 簡中 tracks on non-CN content', async () => {
+  // backlog-mainland-rule-three-predicates (Alexyu 2026-10-05): mainland titles
+  // are converted to Traditional too (script only, wording kept), so a 簡中
+  // track carries no "keeps Simplified" policy line any more.
+  it('a 簡中 track carries no CN policy line', async () => {
     renderDialog({ subtitleTracks: JSON.stringify([{ language: 'zh-CN' }]) });
 
     await screen.findByTestId('subtitle-tracks-section');
     expect(screen.queryByTestId('cn-policy-note-track-0')).not.toBeInTheDocument();
+    expect(screen.queryByText(/保留簡體/)).not.toBeInTheDocument();
+  });
+
+  it('an online download always asks for Traditional script', async () => {
+    h.fetchHook.results = [
+      {
+        id: 's1',
+        source: 'assrt',
+        filename: 'a.zh.srt',
+        language: 'zh-CN',
+        downloadUrl: '',
+        downloads: 1,
+        group: '',
+        resolution: '1080p',
+        format: 'srt',
+        score: 0.5,
+        scoreBreakdown: { language: 1, resolution: 1, sourceTrust: 1, group: 1, downloads: 1 },
+      },
+    ];
+    renderDialog();
+    await findPricedGenerate();
+
+    fireEvent.click(screen.getByTestId('toggle-fetch'));
+    fireEvent.click(screen.getByTestId('fetch-download-s1'));
+    expect(h.fetchHook.download).toHaveBeenCalledWith(
+      expect.objectContaining({ convertToTraditional: true }),
+      expect.anything()
+    );
   });
 
   it('renders the F10 loading skeleton while the parent detail is loading', async () => {
