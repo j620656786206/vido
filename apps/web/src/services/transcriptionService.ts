@@ -86,6 +86,15 @@ export interface TranscriptionEstimate {
   estimatedUsd: number;
 }
 
+/**
+ * Whether a generation is running for one movie or episode right now
+ * (bugfix-dialog-reopen-shows-idle-during-run). Read from the same in-memory
+ * table the 409 TRANSCRIPTION_IN_PROGRESS comes from — solo and batch runs.
+ */
+export interface TranscriptionStatus {
+  inProgress: boolean;
+}
+
 export const transcriptionService = {
   async startTranscription(movieId: string): Promise<TranscribeOutcome> {
     const response = await fetch(`${API_BASE_URL}/movies/${movieId}/transcribe?translate=true`, {
@@ -105,6 +114,29 @@ export const transcriptionService = {
       method: 'POST',
     });
     return parseTranscribeResponse(response);
+  },
+
+  /**
+   * GET /{movies|episodes}/{id}/transcribe/status — the 管理字幕 dialog asks on
+   * open, so a reopen during a run shows the progress instead of 生成字幕.
+   * Throws on failure; the dialog then falls back to its idle view (the 409 on
+   * the trigger still prevents a second run).
+   */
+  async getTranscriptionStatus(
+    mediaType: 'movie' | 'episode',
+    id: string,
+    signal?: AbortSignal
+  ): Promise<TranscriptionStatus> {
+    const collection = mediaType === 'episode' ? 'episodes' : 'movies';
+    const response = await fetch(`${API_BASE_URL}/${collection}/${id}/transcribe/status`, {
+      signal,
+    });
+    const json = await response.json().catch(() => ({}) as Record<string, unknown>);
+    const envelope = json as ApiResponse<unknown>;
+    if (!response.ok || !envelope.success) {
+      throw new Error(envelope.error?.message || `API request failed: ${response.status}`);
+    }
+    return snakeToCamel<TranscriptionStatus>(envelope.data);
   },
 
   /**
