@@ -82,6 +82,19 @@ async function stubApis(page: Page, movieId: string) {
   await page.route(`**/api/v1/movies/${movieId}/transcribe/status`, (route) =>
     route.fulfill({ json: { success: true, data: { in_progress: false } } })
   );
+  // bugfix-subtitle-dialog-real-inventory: the dialog reads the movie's real
+  // subtitles on open; the stubbed file path does not exist, so answer "none".
+  await page.route(`**/api/v1/movies/${movieId}/subtitles/inventory`, (route) =>
+    route.fulfill({
+      json: {
+        success: true,
+        data: {
+          sidecars: { status: 'ok', files: [] },
+          embedded: { status: 'ok', tracks: [] },
+        },
+      },
+    })
+  );
   await page.route(`**/api/v1/movies/${movieId}/transcribe/estimate`, (route) =>
     route.fulfill({
       json: {

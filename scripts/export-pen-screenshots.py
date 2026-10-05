@@ -419,6 +419,8 @@ SCREENS = {
     "n3vIR": ("flow-f-subtitle-v2", "f6-spec-states"),
     # dsr-6d-c-2: the workspace event log's ten row kinds + where each comes from (F11 right pane)
     "tT3JX": ("flow-f-subtitle-v2", "f11-spec-log"),
+    # bugfix-subtitle-dialog-real-inventory: 現有字幕 real list — rows (engine / 本地檔案 / 片內字幕 + 另有 N 種), loading, read error, partial, empty, rules
+    "VJTsJ": ("flow-f-subtitle-v2", "f1-spec-inventory"),
     # flow-h-homepage-v3 — home identity rework (home-v3-identity-brief.md: 讀數帶 4 格 +
     # 自家片庫靜態 hero + TMDb 尾巴濾已擁有; H7 = TMDb 降級態; H8 = 讀數帶金額顯示規則 spec).
     # Superseded flow-h-homepage-v2, whose five frames were deleted 2026-08-26.

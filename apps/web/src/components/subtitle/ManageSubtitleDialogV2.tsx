@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen F1-D-v2 (r1EY9) + Screen F2-D-v2 (S9Rbrq) + Screen F1-M-v2 (JkdfH) + Screen F3-D-v2 (JbXai) + Screen F3-M-v2 (k8sJl4) + Screen F4-D-v2 (U8rRtv) + Screen F5-D-v2 (f6ZxY)
+// Design ref: ux-design.pen Screen F1-D-v2 (r1EY9) + Screen F2-D-v2 (S9Rbrq) + Screen F1-M-v2 (JkdfH) + Screen F3-D-v2 (JbXai) + Screen F3-M-v2 (k8sJl4) + Screen F4-D-v2 (U8rRtv) + Screen F5-D-v2 (f6ZxY) + Spec F1-SPEC-INVENTORY (VJTsJ)
 /**
  * 管理字幕 dialog v2 (ux3-subtitle-v2 AC 1/2/5 — generation-centric per ADR
  * adr-subtitle-route-c-generation D1). Screens: F1-D-v2 r1EY9 / F1-M-v2 JkdfH
@@ -7,6 +7,12 @@
  * S9Rbrq 缺字幕, F3-D-v2 JbXai 生成進度, F4-D-v2 U8rRtv 生成失敗 (per-item state),
  * F5-D-v2 f6ZxY 尚未設定 fail-soft, F10-D-v2 olDlj 載入骨架.
  *
+ * - 現有字幕 for a movie or an episode is read ON OPEN from
+ *   GET /{movies|episodes}/{id}/subtitles/inventory (bugfix-subtitle-dialog-
+ *   real-inventory): files beside the video (本地檔案 + file name, Chinese by
+ *   content) and Chinese / English tracks inside it (片內字幕; other languages
+ *   collapse into one 「另有 N 種」 line). Loading and read failures are said
+ *   as such — 尚無字幕 only when both halves were read and nothing was found.
  * - 生成字幕 is the ONLY primary action; movies call
  *   POST /movies/{id}/transcribe?translate=true (UUID-string id passed through
  *   as-is, 9R-18 — the old `Number(uuid)` produced NaN);
@@ -69,7 +75,7 @@ import { cn } from '../../lib/utils';
 // Shared subtitle-language labels (the detail page uses the same function, dsr-6b).
 import { subtitleLangLabel, type SubtitleLangFamily } from '../../utils/libraryStatus';
 import { transcriptionService } from '../../services/transcriptionService';
-import type { SubtitleSearchResult } from '../../services/subtitleService';
+import type { SubtitleInventory, SubtitleSearchResult } from '../../services/subtitleService';
 import { useGenerationProgress } from '../../hooks/useGenerationProgress';
 import { useGlossaryTerms } from '../../hooks/useGlossary';
 import {
@@ -77,6 +83,7 @@ import {
   useTranscriptionEstimate,
 } from '../../hooks/useTranscriptionEstimate';
 import { useSubtitleSearch } from '../../hooks/useSubtitleSearch';
+import { subtitleInventoryKeys, useSubtitleInventory } from '../../hooks/useSubtitleInventory';
 import {
   transcriptionStatusKeys,
   useTranscriptionStatus,
@@ -93,6 +100,8 @@ interface TrackRow {
   pillClass: string;
   source: string;
   isHans: boolean;
+  /** Second line: the file name, or an embedded track's title / stream number. */
+  detail?: string;
 }
 
 const PILL_CLASS: Record<SubtitleLangFamily, string> = {
@@ -107,6 +116,71 @@ const PILL_CLASS: Record<SubtitleLangFamily, string> = {
 function languageDescriptor(lang: string): { label: string; pillClass: string; isHans: boolean } {
   const { label, family } = subtitleLangLabel(lang);
   return { label, pillClass: PILL_CLASS[family], isHans: family === 'hans' };
+}
+
+/** Pill for one INVENTORY language. The inventory has two values the shared
+ *  label does not: `zh-unknown` (Chinese, script untold — never "繁中") and
+ *  `yue` (Cantonese). */
+function inventoryLangDescriptor(lang: string): {
+  label: string;
+  pillClass: string;
+  isHans: boolean;
+} {
+  if (lang === 'zh-unknown') return { label: '中文', pillClass: PILL_CLASS.other, isHans: false };
+  if (lang === 'yue') return { label: '粵語', pillClass: PILL_CLASS.other, isHans: false };
+  return languageDescriptor(lang);
+}
+
+const INVENTORY_CHINESE = new Set(['zh-hant', 'zh-hans', 'zh-unknown', 'yue']);
+
+/** An embedded track worth its own row: Chinese or English. A 30-language
+ *  Apple TV+ file would otherwise bury the two that matter (story decision). */
+function isListedEmbeddedLanguage(lang: string): boolean {
+  const l = lang.toLowerCase();
+  return INVENTORY_CHINESE.has(l) || l === 'en';
+}
+
+/**
+ * Rows from the on-demand inventory (bugfix-subtitle-dialog-real-inventory):
+ * the engine's row first, then the files beside the video, then the Chinese and
+ * English tracks inside it. Vido's own placed file is NOT listed twice — it
+ * lends its file name to the engine row.
+ */
+function buildInventoryRows(
+  engineRows: TrackRow[],
+  inventory: SubtitleInventory
+): { rows: TrackRow[]; otherEmbeddedCount: number } {
+  const rows = engineRows.map((r) => ({ ...r }));
+  const engineRow = rows.find((r) => r.key === 'engine');
+
+  for (const file of inventory.sidecars.files) {
+    if (file.isVidoOutput && engineRow) {
+      engineRow.detail = file.fileName;
+      continue;
+    }
+    rows.push({
+      key: `file-${file.fileName}`,
+      source: file.isVidoOutput ? '已生成' : '本地檔案',
+      detail: file.fileName,
+      ...inventoryLangDescriptor(file.language),
+    });
+  }
+
+  let otherEmbeddedCount = 0;
+  for (const track of inventory.embedded.tracks) {
+    if (!isListedEmbeddedLanguage(track.language)) {
+      otherEmbeddedCount++;
+      continue;
+    }
+    const name = track.title || `第 ${track.streamIndex} 軌`;
+    rows.push({
+      key: `embedded-${track.streamIndex}`,
+      source: '片內字幕',
+      detail: track.text ? name : `${name}（圖片字幕）`,
+      ...inventoryLangDescriptor(track.language),
+    });
+  }
+  return { rows, otherEmbeddedCount };
 }
 
 /** Rows from the embedded-tracks JSON + the authoritative engine result (ux3-0-2 semantics). */
@@ -248,10 +322,22 @@ export function ManageSubtitleDialogV2({
   const triggerRetryNoteId = useId();
   const retryNoteId = useId();
 
+  // bugfix-subtitle-dialog-real-inventory: a movie or an episode reads what it
+  // ACTUALLY has, once, when the dialog opens (a series has no single file).
+  const inventory = useSubtitleInventory(
+    estimateMediaType ?? 'movie',
+    mediaId,
+    open && estimateMediaType !== null && !isLoading
+  );
+
   const refreshEstimate = useCallback(() => {
     if (!estimateMediaType) return;
     void queryClient.invalidateQueries({
       queryKey: transcriptionEstimateKeys.item(estimateMediaType, mediaId),
+    });
+    // A run or a download that ended may have placed a file — list it.
+    void queryClient.invalidateQueries({
+      queryKey: subtitleInventoryKeys.item(estimateMediaType, mediaId),
     });
   }, [queryClient, estimateMediaType, mediaId]);
 
@@ -379,7 +465,27 @@ export function ManageSubtitleDialogV2({
       </>
     ) : null;
 
-  const tracks = buildTrackRows(subtitleTracks, subtitleStatus, subtitleLanguage);
+  const usesInventory = estimateMediaType !== null;
+  const inventoryView =
+    usesInventory && inventory.data
+      ? buildInventoryRows(
+          buildTrackRows(undefined, subtitleStatus, subtitleLanguage),
+          inventory.data
+        )
+      : null;
+  const tracks = usesInventory
+    ? (inventoryView?.rows ?? [])
+    : buildTrackRows(subtitleTracks, subtitleStatus, subtitleLanguage);
+  // Partial reads: one half failing never hides the other, but it is said.
+  const inventoryNotes: string[] = [];
+  if (inventoryView && inventory.data) {
+    if (inventoryView.otherEmbeddedCount > 0)
+      inventoryNotes.push(`另有 ${inventoryView.otherEmbeddedCount} 種其他語言的片內字幕`);
+    if (inventory.data.sidecars.status !== 'ok') inventoryNotes.push('影片旁邊的字幕檔讀不到');
+    if (inventory.data.embedded.status === 'failed') inventoryNotes.push('片內字幕讀不到');
+    if (inventory.data.embedded.status === 'unavailable')
+      inventoryNotes.push('伺服器沒有 ffprobe，讀不到片內字幕');
+  }
   const inProgressView = genView === 'progress';
   const runIsLive = runPhase !== 'complete' && runPhase !== 'failed';
   const runFailed = inProgressView && runPhase === 'failed';
@@ -397,7 +503,39 @@ export function ManageSubtitleDialogV2({
   /** 現有字幕. On the idle view an empty list is the F2 缺字幕 state; under a
    *  failed run an empty list renders nothing at all. */
   const renderTracksSection = (showEmptyState: boolean) => {
-    if (tracks.length === 0) {
+    if (usesInventory && inventory.isPending) {
+      return showEmptyState ? (
+        <section
+          data-testid="subtitle-inventory-loading"
+          aria-live="polite"
+          className="flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-3.5 py-3 text-xs text-[var(--text-secondary)]"
+        >
+          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+          正在讀取這部片的字幕…
+        </section>
+      ) : null;
+    }
+    if (usesInventory && inventory.isError) {
+      return (
+        <section
+          data-testid="subtitle-inventory-error"
+          role="alert"
+          className="flex items-center gap-3 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-3.5 py-3"
+        >
+          <CircleAlert className="h-4 w-4 shrink-0 text-[var(--warning-text)]" aria-hidden="true" />
+          <p className="flex-1 text-xs text-[var(--text-secondary)]">讀不到這部片的字幕資訊</p>
+          <button
+            type="button"
+            data-testid="subtitle-inventory-retry"
+            onClick={() => void inventory.refetch()}
+            className="min-h-11 shrink-0 rounded-[var(--radius-sm)] px-3 text-xs font-medium text-[var(--accent-text)] hover:bg-[var(--bg-primary)]"
+          >
+            重試
+          </button>
+        </section>
+      );
+    }
+    if (tracks.length === 0 && inventoryNotes.length === 0) {
       return showEmptyState ? (
         <section
           data-testid="subtitle-empty-state"
@@ -405,7 +543,9 @@ export function ManageSubtitleDialogV2({
         >
           <CaptionsOff className="h-9 w-9 text-[var(--text-muted)]" aria-hidden="true" />
           <p className="text-base font-semibold text-[var(--text-primary)]">尚無字幕</p>
-          <p className="text-xs text-[var(--text-muted)]">此影片目前沒有任何字幕軌</p>
+          <p className="text-xs text-[var(--text-muted)]">
+            {usesInventory ? '這部片目前沒有任何字幕' : '此影片目前沒有任何字幕軌'}
+          </p>
         </section>
       ) : null;
     }
@@ -426,9 +566,28 @@ export function ManageSubtitleDialogV2({
               >
                 {track.label}
               </span>
-              <span className="text-xs text-[var(--text-secondary)]">{track.source}</span>
+              <span className="shrink-0 text-xs text-[var(--text-secondary)]">{track.source}</span>
+              {/* F1-D-v2 file line (VXof3): Mono, muted, beside the source. */}
+              {track.detail && (
+                <span
+                  data-testid={`subtitle-track-detail-${track.key}`}
+                  className="min-w-0 truncate font-mono text-xs text-[var(--text-muted)]"
+                  title={track.detail}
+                >
+                  {track.detail}
+                </span>
+              )}
             </div>
           </div>
+        ))}
+        {inventoryNotes.map((note) => (
+          <p
+            key={note}
+            data-testid="subtitle-inventory-note"
+            className="px-1 text-xs text-[var(--text-muted)]"
+          >
+            {note}
+          </p>
         ))}
       </section>
     );

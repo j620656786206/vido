@@ -134,9 +134,10 @@ function SeasonAccordionItem({ season, seriesId, seriesTitle }: SeasonAccordionI
 
       {/* 9R-10c: mediaId is the EPISODE row id (the transcribe target);
           glossaryMediaId is the SERIES id (the glossary is per-show).
-          subtitleTracks is deliberately NOT passed — episodes carry no embedded
-          track data and probing each one would turn a season expand into a disk
-          storm (red line 3); the authoritative subtitleStatus wins anyway.
+          subtitleTracks is deliberately NOT passed — probing every episode on a
+          season expand would be a disk storm (red line 3). The dialog instead
+          reads THIS episode's real subtitles once, when it opens
+          (bugfix-subtitle-dialog-real-inventory).
           onGenerationComplete uses THIS query's own refetch — narrower than
           invalidating by key, and it needs no QueryClient of its own. A failed
           run refetches too (dsr-6b), so a kept English SRT shows in the dialog. */}

@@ -174859,6 +174859,703 @@
               "fontFamily": "$Type/Family/Primary",
               "fontSize": "$Type/Label/Size",
               "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "G45ZG",
+              "x": 23760,
+              "y": 34348,
+              "name": "cap-F1-SPEC-INVENTORY",
+              "fill": "#888888",
+              "content": "F1 · 現有字幕・真實清單規格（桌面；手機同版面，檔名截斷）",
+              "lineHeight": "$Type/Body/Line",
+              "fontFamily": "$Type/Family/Primary",
+              "fontSize": "$Type/Body/Size",
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "VJTsJ",
+              "x": 23760,
+              "y": 34393,
+              "name": "F1-SPEC-INVENTORY",
+              "width": 880,
+              "fill": "$bg-secondary",
+              "cornerRadius": "$radius-lg",
+              "layout": "vertical",
+              "gap": "$Space/xl",
+              "padding": [
+                "$Space/lg-plus",
+                "$Space/xl"
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "RppPe",
+                  "name": "state-full",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": "$Space/sm",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "ujJUf",
+                      "name": "state-full-label",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "① 有讀到：Vido 做的那份（字幕引擎，借用它的檔名，不另列）→ 旁邊的字幕檔（本地檔案＋檔名；中文看內容判斷，不看檔名）→ 片內的中文與英文軌（片內字幕＋軌道名稱，沒名稱寫「第 N 軌」；圖片字幕加註）。其他語言收成一行。",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "wZ5CF",
+                      "name": "list-full",
+                      "width": "fill_container",
+                      "fill": "$bg-primary",
+                      "cornerRadius": "$radius-md",
+                      "layout": "vertical",
+                      "gap": "$Space/sm-plus",
+                      "padding": "$Space/lg",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "UAwsx",
+                          "name": "list-full-h",
+                          "fill": "$text-secondary",
+                          "content": "現有字幕",
+                          "lineHeight": "$Type/Body/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Body/Size",
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Nadqj",
+                          "name": "r-engine",
+                          "width": "fill_container",
+                          "fill": "$bg-tertiary",
+                          "cornerRadius": "$radius-md",
+                          "gap": "$Space/md",
+                          "padding": [
+                            "$Space/md",
+                            "$Space/md-plus"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "F0HvvB",
+                              "name": "r-engine-pill",
+                              "fill": "$success-tint",
+                              "cornerRadius": "$radius-pill",
+                              "padding": [
+                                "$Space/xs",
+                                "$Space/sm-plus"
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "w39Bw",
+                                  "name": "r-engine-pill-lb",
+                                  "fill": "$success-text",
+                                  "content": "繁中",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "$Type/Label/Weight"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "cQhAf",
+                              "name": "r-engine-src",
+                              "fill": "$text-secondary",
+                              "content": "字幕引擎",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "j89Bu",
+                              "name": "r-engine-file",
+                              "fill": "$text-muted",
+                              "content": "See.S01E02…zh-Hant.srt",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Mono",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "K8zRNC",
+                          "name": "r-file",
+                          "width": "fill_container",
+                          "fill": "$bg-tertiary",
+                          "cornerRadius": "$radius-md",
+                          "gap": "$Space/md",
+                          "padding": [
+                            "$Space/md",
+                            "$Space/md-plus"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "ScRei",
+                              "name": "r-file-pill",
+                              "fill": "$success-tint",
+                              "cornerRadius": "$radius-pill",
+                              "padding": [
+                                "$Space/xs",
+                                "$Space/sm-plus"
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "lkmAP",
+                                  "name": "r-file-pill-lb",
+                                  "fill": "$success-text",
+                                  "content": "繁中",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "$Type/Label/Weight"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "cYpH2",
+                              "name": "r-file-src",
+                              "fill": "$text-secondary",
+                              "content": "本地檔案",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "DqIHn",
+                              "name": "r-file-file",
+                              "fill": "$text-muted",
+                              "content": "See.S01E02…zh-TW.srt",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Mono",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "gejQB",
+                          "name": "r-emb-en",
+                          "width": "fill_container",
+                          "fill": "$bg-tertiary",
+                          "cornerRadius": "$radius-md",
+                          "gap": "$Space/md",
+                          "padding": [
+                            "$Space/md",
+                            "$Space/md-plus"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "JoFHU",
+                              "name": "r-emb-en-pill",
+                              "fill": "$bg-primary",
+                              "cornerRadius": "$radius-pill",
+                              "padding": [
+                                "$Space/xs",
+                                "$Space/sm-plus"
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "JzPaQ",
+                                  "name": "r-emb-en-pill-lb",
+                                  "fill": "$text-secondary",
+                                  "content": "英文",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "$Type/Label/Weight"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "L0TgN",
+                              "name": "r-emb-en-src",
+                              "fill": "$text-secondary",
+                              "content": "片內字幕",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "RRhDU",
+                              "name": "r-emb-en-file",
+                              "fill": "$text-muted",
+                              "content": "English",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Mono",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "b0mWKW",
+                          "name": "r-emb-zh",
+                          "width": "fill_container",
+                          "fill": "$bg-tertiary",
+                          "cornerRadius": "$radius-md",
+                          "gap": "$Space/md",
+                          "padding": [
+                            "$Space/md",
+                            "$Space/md-plus"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "g8Eq9",
+                              "name": "r-emb-zh-pill",
+                              "fill": "$bg-primary",
+                              "cornerRadius": "$radius-pill",
+                              "padding": [
+                                "$Space/xs",
+                                "$Space/sm-plus"
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "WJUvL",
+                                  "name": "r-emb-zh-pill-lb",
+                                  "fill": "$text-secondary",
+                                  "content": "中文",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "$Type/Label/Weight"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "X5zYj9",
+                              "name": "r-emb-zh-src",
+                              "fill": "$text-secondary",
+                              "content": "片內字幕",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "tb0nK",
+                              "name": "r-emb-zh-file",
+                              "fill": "$text-muted",
+                              "content": "第 6 軌（圖片字幕）",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Mono",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "S9GQ06",
+                          "name": "n-others",
+                          "fill": "$text-muted",
+                          "content": "另有 28 種其他語言的片內字幕",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "at1eA",
+                  "name": "state-loading",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": "$Space/sm",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "S5RISs",
+                      "name": "state-loading-label",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "② 讀取中——打開對話框時才讀這一部（一個檔），展開整季不讀。",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "m9GXy",
+                      "name": "list-loading",
+                      "width": "fill_container",
+                      "fill": "$bg-primary",
+                      "cornerRadius": "$radius-md",
+                      "layout": "vertical",
+                      "gap": "$Space/sm-plus",
+                      "padding": "$Space/lg",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "x4MZX",
+                          "name": "list-loading-h",
+                          "fill": "$text-secondary",
+                          "content": "現有字幕",
+                          "lineHeight": "$Type/Body/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Body/Size",
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "dRjTq",
+                          "name": "loading-row",
+                          "width": "fill_container",
+                          "fill": "$bg-tertiary",
+                          "cornerRadius": "$radius-md",
+                          "gap": "$Space/sm",
+                          "padding": [
+                            "$Space/md",
+                            "$Space/md-plus"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "NRGG6",
+                              "name": "loading-ic",
+                              "width": 14,
+                              "height": 14,
+                              "icon": "loader-circle",
+                              "library": "lucide",
+                              "fill": "$text-secondary"
+                            },
+                            {
+                              "type": "text",
+                              "id": "lPvjt",
+                              "name": "loading-lb",
+                              "fill": "$text-secondary",
+                              "content": "正在讀取這部片的字幕…",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Y2mlen",
+                  "name": "state-error",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": "$Space/sm",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "OcBOD",
+                      "name": "state-error-label",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "③ 整個讀不到——說讀不到，給重試；絕不說「沒有字幕」。",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Nf32V",
+                      "name": "list-error",
+                      "width": "fill_container",
+                      "fill": "$bg-primary",
+                      "cornerRadius": "$radius-md",
+                      "layout": "vertical",
+                      "gap": "$Space/sm-plus",
+                      "padding": "$Space/lg",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Is2V5",
+                          "name": "list-error-h",
+                          "fill": "$text-secondary",
+                          "content": "現有字幕",
+                          "lineHeight": "$Type/Body/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Body/Size",
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "c48FSW",
+                          "name": "error-row",
+                          "width": "fill_container",
+                          "fill": "$bg-tertiary",
+                          "cornerRadius": "$radius-md",
+                          "gap": "$Space/md",
+                          "padding": [
+                            "$Space/md",
+                            "$Space/md-plus"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "igpMF",
+                              "name": "error-ic",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "circle-alert",
+                              "library": "lucide",
+                              "fill": "$warning-text"
+                            },
+                            {
+                              "type": "text",
+                              "id": "b81ffQ",
+                              "name": "error-lb",
+                              "fill": "$text-secondary",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "讀不到這部片的字幕資訊",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "eFgRU",
+                              "name": "error-retry",
+                              "fill": "$accent-text",
+                              "content": "重試",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "$Type/Label/Weight"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "NDKGG",
+                  "name": "state-partial",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": "$Space/sm",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "fgFiV",
+                      "name": "state-partial-label",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "④ 一半讀不到——讀到的照列，讀不到的那一半用一行說明（片內字幕讀不到／影片旁邊的字幕檔讀不到／伺服器沒有 ffprobe，讀不到片內字幕）。",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "y8K7ao",
+                      "name": "list-partial",
+                      "width": "fill_container",
+                      "fill": "$bg-primary",
+                      "cornerRadius": "$radius-md",
+                      "layout": "vertical",
+                      "gap": "$Space/sm-plus",
+                      "padding": "$Space/lg",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "yJKpK",
+                          "name": "list-partial-h",
+                          "fill": "$text-secondary",
+                          "content": "現有字幕",
+                          "lineHeight": "$Type/Body/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Body/Size",
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "UQsOX",
+                          "name": "p-file",
+                          "width": "fill_container",
+                          "fill": "$bg-tertiary",
+                          "cornerRadius": "$radius-md",
+                          "gap": "$Space/md",
+                          "padding": [
+                            "$Space/md",
+                            "$Space/md-plus"
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Ycat2",
+                              "name": "p-file-pill",
+                              "fill": "$bg-primary",
+                              "cornerRadius": "$radius-pill",
+                              "padding": [
+                                "$Space/xs",
+                                "$Space/sm-plus"
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "FEE8P",
+                                  "name": "p-file-pill-lb",
+                                  "fill": "$text-secondary",
+                                  "content": "英文",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "$Type/Label/Weight"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "OnlS6",
+                              "name": "p-file-src",
+                              "fill": "$text-secondary",
+                              "content": "本地檔案",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "yFi5d",
+                              "name": "p-file-file",
+                              "fill": "$text-muted",
+                              "content": "Movie.en.srt",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Mono",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "u1tQXy",
+                          "name": "p-note",
+                          "fill": "$text-muted",
+                          "content": "片內字幕讀不到",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "REBdS",
+                  "name": "state-empty",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": "$Space/sm",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "crCFk",
+                      "name": "state-empty-label",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "⑤ 兩半都讀到、真的什麼都沒有——才是 F2 缺字幕：「尚無字幕／這部片目前沒有任何字幕」。",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "erAUK",
+                  "name": "state-rules",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": "$Space/sm",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "pblYh",
+                      "name": "state-rules-label",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "⑥ 規則",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "qYTiA",
+                      "name": "rules",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "語言：中文一律看檔案內容（.zh-TW.srt 內容是簡體就顯示簡中）；片內 chi 軌靠軌道名稱判斷繁／簡／粵，猜不到就寫「中文」，不假裝是繁中。只列中文與英文的片內軌（Apple TV+ 一集常有 30 種語言）。影集層級（非單集）的對話框不讀清單。",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
             }
           ]
         }

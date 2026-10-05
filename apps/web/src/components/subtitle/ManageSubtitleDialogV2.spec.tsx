@@ -83,6 +83,13 @@ vi.mock('../../services/transcriptionService', () => ({
   },
 }));
 
+// bugfix-subtitle-dialog-real-inventory: a movie / episode reads its real
+// subtitles on open. The rest of subtitleService stays real.
+vi.mock('../../services/subtitleService', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../services/subtitleService')>();
+  return { ...actual, subtitleService: { ...actual.subtitleService, getInventory: vi.fn() } };
+});
+
 vi.mock('./GlossaryPanelV2', () => ({
   GlossaryPanelV2: ({ open, mediaId }: { open: boolean; mediaId: string }) =>
     // Record the id only once the panel is actually OPEN, so a test that never
@@ -98,6 +105,44 @@ import {
   type TranscriptionEstimate,
 } from '../../services/transcriptionService';
 import { ApiError } from '../../lib/apiError';
+import { subtitleService, type SubtitleInventory } from '../../services/subtitleService';
+
+const mockedInventory = vi.mocked(subtitleService.getInventory);
+
+function inventoryOf(partial: {
+  files?: SubtitleInventory['sidecars']['files'];
+  tracks?: SubtitleInventory['embedded']['tracks'];
+  sidecarStatus?: SubtitleInventory['sidecars']['status'];
+  embeddedStatus?: SubtitleInventory['embedded']['status'];
+}): SubtitleInventory {
+  return {
+    sidecars: { status: partial.sidecarStatus ?? 'ok', files: partial.files ?? [] },
+    embedded: { status: partial.embeddedStatus ?? 'ok', tracks: partial.tracks ?? [] },
+  };
+}
+
+/** The pre-inventory tests describe tracks as the old `subtitleTracks` JSON;
+ *  serve the same languages as files beside the video, so they keep testing
+ *  what they always tested (labels, sources, empty state). */
+function inventoryFromTracks(tracks?: string): SubtitleInventory {
+  if (!tracks) return inventoryOf({});
+  const map: Record<string, string> = { 'zh-cn': 'zh-Hans', eng: 'en', '': 'und' };
+  const parsed = JSON.parse(tracks) as { language?: string }[];
+  return inventoryOf({
+    files: parsed.map((t, i) => {
+      const lang = t.language ?? '';
+      return {
+        fileName: `st.track-${i}.srt`,
+        language: map[lang.toLowerCase()] ?? lang,
+        format: 'srt',
+        isVidoOutput: false,
+      };
+    }),
+  });
+}
+
+/** Set by a test to serve a specific inventory instead of the props-derived one. */
+let inventoryOverride: (() => Promise<SubtitleInventory>) | null = null;
 
 const mockedTrigger = vi.mocked(transcriptionService.startTranscription);
 const mockedEpisodeTrigger = vi.mocked(transcriptionService.startEpisodeTranscription);
@@ -186,6 +231,8 @@ function renderDialog(
     onOpenChange: vi.fn(),
     ...props,
   };
+  if (inventoryOverride) mockedInventory.mockImplementation(inventoryOverride);
+  else mockedInventory.mockResolvedValue(inventoryFromTracks(merged.subtitleTracks));
   const rootRoute = createRootRoute({
     component: () => (
       <QueryClientProvider client={queryClient}>
@@ -222,6 +269,7 @@ function renderDialog(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  inventoryOverride = null;
   h.genState = {
     phase: 'idle',
     failedPhase: null,
@@ -283,7 +331,7 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
 
     expect(await screen.findByTestId('subtitle-empty-state')).toBeInTheDocument();
     expect(screen.getByText('尚無字幕')).toBeInTheDocument();
-    expect(screen.getByText('此影片目前沒有任何字幕軌')).toBeInTheDocument();
+    expect(screen.getByText('這部片目前沒有任何字幕')).toBeInTheDocument();
     expect(screen.queryByTestId('generation-trigger-error')).not.toBeInTheDocument();
   });
 
@@ -786,9 +834,11 @@ describe('ManageSubtitleDialogV2 — tracks and glossary entry (dsr-6b)', () => 
     renderDialog({
       subtitleTracks: JSON.stringify([{ language: 'eng' }, { language: 'und' }, { language: '' }]),
     });
-    expect(await screen.findByTestId('subtitle-track-track-0')).toHaveTextContent('英文');
-    expect(screen.getByTestId('subtitle-track-track-1')).toHaveTextContent('未標示');
-    expect(screen.getByTestId('subtitle-track-track-2')).toHaveTextContent('未標示');
+    expect(await screen.findByTestId('subtitle-track-file-st.track-0.srt')).toHaveTextContent(
+      '英文'
+    );
+    expect(screen.getByTestId('subtitle-track-file-st.track-1.srt')).toHaveTextContent('未標示');
+    expect(screen.getByTestId('subtitle-track-file-st.track-2.srt')).toHaveTextContent('未標示');
     expect(screen.queryByText('未知')).toBeNull();
   });
 
@@ -1349,6 +1399,134 @@ describe('ManageSubtitleDialogV2 — phone sheet (dsr-6f-1)', () => {
     // Lines up with the 16px phone body.
     expect(tokens(footer)).toContain('max-sm:px-4');
     expect(tokens(screen.getByTestId('dialog-close'))).not.toContain('max-sm:w-full');
+  });
+});
+
+// ── bugfix-subtitle-dialog-real-inventory ────────────────────────────────────
+// The NAS case that started it: See S01E02 has English tracks inside and a
+// .zh-TW.srt beside it, and the dialog said 「此影片目前沒有任何字幕軌」.
+
+describe('ManageSubtitleDialogV2 — real subtitle inventory', () => {
+  const seeS01E02 = inventoryOf({
+    files: [
+      {
+        fileName: 'See.S01E02.zh-TW.srt',
+        language: 'zh-Hant',
+        format: 'srt',
+        isVidoOutput: false,
+      },
+      {
+        fileName: 'See.S01E02.zh-Hant.srt',
+        language: 'zh-Hant',
+        format: 'srt',
+        isVidoOutput: true,
+      },
+    ],
+    tracks: [
+      { streamIndex: 8, language: 'en', title: 'English', format: 'subrip', text: true },
+      { streamIndex: 9, language: 'en', format: 'subrip', text: true },
+      { streamIndex: 6, language: 'zh-unknown', format: 'hdmv_pgs_subtitle', text: false },
+      { streamIndex: 2, language: 'ara', title: 'العربية', format: 'subrip', text: true },
+      { streamIndex: 3, language: 'jpn', title: '日本語', format: 'subrip', text: true },
+    ],
+  });
+
+  it('an episode lists the file beside it and the tracks inside it, read for THAT episode', async () => {
+    inventoryOverride = () => Promise.resolve(seeS01E02);
+    renderDialog({
+      mediaId: 'ep-2',
+      mediaType: 'episode',
+      glossaryMediaId: 'series-1',
+      subtitleTracks: undefined,
+      subtitleStatus: 'found',
+      subtitleLanguage: 'zh-Hant',
+    });
+
+    const file = await screen.findByTestId('subtitle-track-file-See.S01E02.zh-TW.srt');
+    expect(file).toHaveTextContent('繁中');
+    expect(file).toHaveTextContent('本地檔案');
+    expect(file).toHaveTextContent('See.S01E02.zh-TW.srt');
+    expect(mockedInventory).toHaveBeenCalledWith('episode', 'ep-2');
+
+    // Vido's own file is not listed twice — it names the engine row instead.
+    expect(screen.queryByTestId('subtitle-track-file-See.S01E02.zh-Hant.srt')).toBeNull();
+    expect(screen.getByTestId('subtitle-track-detail-engine')).toHaveTextContent(
+      'See.S01E02.zh-Hant.srt'
+    );
+
+    const english = screen.getByTestId('subtitle-track-embedded-8');
+    expect(english).toHaveTextContent('英文');
+    expect(english).toHaveTextContent('片內字幕');
+    expect(english).toHaveTextContent('English');
+    expect(screen.getByTestId('subtitle-track-detail-embedded-9')).toHaveTextContent('第 9 軌');
+
+    // Chinese whose script is untold is 中文 — never claimed as 繁中.
+    const chinese = screen.getByTestId('subtitle-track-embedded-6');
+    expect(chinese).toHaveTextContent('中文');
+    expect(chinese).toHaveTextContent('（圖片字幕）');
+
+    // The other 2 languages collapse into one line.
+    expect(screen.queryByTestId('subtitle-track-embedded-2')).toBeNull();
+    expect(screen.getByText('另有 2 種其他語言的片內字幕')).toBeInTheDocument();
+    expect(screen.queryByTestId('subtitle-empty-state')).toBeNull();
+  });
+
+  it('says it is reading while the inventory loads — never 尚無字幕', async () => {
+    inventoryOverride = () => new Promise<SubtitleInventory>(() => {});
+    renderDialog({ subtitleTracks: undefined });
+
+    expect(await screen.findByTestId('subtitle-inventory-loading')).toHaveTextContent(
+      '正在讀取這部片的字幕…'
+    );
+    expect(screen.queryByTestId('subtitle-empty-state')).toBeNull();
+  });
+
+  it('a failed read says so and retries — never 尚無字幕', async () => {
+    let calls = 0;
+    inventoryOverride = () => {
+      calls++;
+      return calls === 1 ? Promise.reject(new Error('boom')) : Promise.resolve(seeS01E02);
+    };
+    renderDialog({ subtitleTracks: undefined });
+
+    expect(await screen.findByTestId('subtitle-inventory-error')).toHaveTextContent(
+      '讀不到這部片的字幕資訊'
+    );
+    expect(screen.queryByTestId('subtitle-empty-state')).toBeNull();
+
+    fireEvent.click(screen.getByTestId('subtitle-inventory-retry'));
+    expect(
+      await screen.findByTestId('subtitle-track-file-See.S01E02.zh-TW.srt')
+    ).toBeInTheDocument();
+  });
+
+  it('a half that could not be read is said, and the other half still shows', async () => {
+    inventoryOverride = () =>
+      Promise.resolve(
+        inventoryOf({
+          files: [{ fileName: 'st.en.srt', language: 'en', format: 'srt', isVidoOutput: false }],
+          embeddedStatus: 'failed',
+        })
+      );
+    renderDialog({ subtitleTracks: undefined });
+
+    expect(await screen.findByTestId('subtitle-track-file-st.en.srt')).toBeInTheDocument();
+    expect(screen.getByText('片內字幕讀不到')).toBeInTheDocument();
+  });
+
+  it('nothing read and nothing found is the only 尚無字幕', async () => {
+    inventoryOverride = () => Promise.resolve(inventoryOf({ embeddedStatus: 'unavailable' }));
+    renderDialog({ subtitleTracks: undefined });
+
+    // Unreadable embedded half → said, not claimed empty.
+    expect(await screen.findByText('伺服器沒有 ffprobe，讀不到片內字幕')).toBeInTheDocument();
+    expect(screen.queryByTestId('subtitle-empty-state')).toBeNull();
+  });
+
+  it('a series-level dialog does not read an inventory (it has no single file)', async () => {
+    renderDialog({ mediaType: 'series', subtitleTracks: JSON.stringify([{ language: 'en' }]) });
+    expect(await screen.findByTestId('subtitle-track-track-0')).toHaveTextContent('英文');
+    expect(mockedInventory).not.toHaveBeenCalled();
   });
 });
 

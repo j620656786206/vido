@@ -25,6 +25,54 @@ describe('subtitleService', () => {
     mockFetch.mockReset();
   });
 
+  describe('getInventory (bugfix-subtitle-dialog-real-inventory)', () => {
+    it('reads one episode and camelCases the answer', async () => {
+      mockFetch.mockResolvedValueOnce(
+        mockSuccessResponse({
+          sidecars: {
+            status: 'ok',
+            files: [
+              {
+                file_name: 'See.S01E02.zh-TW.srt',
+                language: 'zh-Hant',
+                format: 'srt',
+                is_vido_output: false,
+              },
+            ],
+          },
+          embedded: {
+            status: 'ok',
+            tracks: [
+              { stream_index: 8, language: 'en', title: 'English', format: 'subrip', text: true },
+            ],
+          },
+        })
+      );
+
+      const inv = await subtitleService.getInventory('episode', 'ep 2');
+
+      expect(mockFetch.mock.calls[0][0]).toContain('/episodes/ep%202/subtitles/inventory');
+      expect(inv.sidecars.files[0]).toEqual({
+        fileName: 'See.S01E02.zh-TW.srt',
+        language: 'zh-Hant',
+        format: 'srt',
+        isVidoOutput: false,
+      });
+      expect(inv.embedded.tracks[0].streamIndex).toBe(8);
+    });
+
+    it('reads a movie from the movies collection', async () => {
+      mockFetch.mockResolvedValueOnce(
+        mockSuccessResponse({
+          sidecars: { status: 'ok', files: [] },
+          embedded: { status: 'unavailable', tracks: [] },
+        })
+      );
+      await subtitleService.getInventory('movie', 'm1');
+      expect(mockFetch.mock.calls[0][0]).toContain('/movies/m1/subtitles/inventory');
+    });
+  });
+
   describe('searchSubtitles', () => {
     it('sends POST request with correct params', async () => {
       const mockResults = [{ id: '1', source: 'assrt', score: 0.85 }];

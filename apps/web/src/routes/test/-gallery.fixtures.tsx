@@ -206,6 +206,7 @@ import { GlossaryRowV2 } from '../../components/subtitle/GlossaryRowV2';
 import { GlossaryPanelV2 } from '../../components/subtitle/GlossaryPanelV2';
 import { GlossaryImportResultCard } from '../../components/subtitle/GlossaryImportResult';
 import { ManageSubtitleDialogV2 } from '../../components/subtitle/ManageSubtitleDialogV2';
+import { subtitleInventoryKeys } from '../../hooks/useSubtitleInventory';
 import { SeasonEpisodeTreeDialog } from '../../components/requests/SeasonEpisodeTreeDialog';
 import { AnalysisProgressPanel } from '../../components/subtitle/consent/AnalysisProgressPanel';
 import { CandidateListPanel } from '../../components/subtitle/consent/CandidateListPanel';
@@ -218,7 +219,7 @@ import {
   type ConsentRouteFilter,
 } from '../../components/subtitle/consent/consentSelection';
 import { addUsd } from '../../lib/currency';
-import type { GenerationCandidate } from '../../services/subtitleService';
+import type { GenerationCandidate, SubtitleInventory } from '../../services/subtitleService';
 import { GenerationBatchPanelV2 } from '../../components/subtitle/GenerationBatchDialogV2';
 import { SpendCard } from '../../components/activity/SpendSection';
 import { GenerationWorkspaceV2 } from '../../components/subtitle/GenerationWorkspaceV2';
@@ -5634,6 +5635,36 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     },
     seedQueries: [
       {
+        // bugfix-subtitle-dialog-real-inventory: the dialog reads the title's real
+        // subtitles on open — seeded so the frame never asks a backend.
+        queryKey: subtitleInventoryKeys.item('movie', 'movie-1'),
+        data: {
+          sidecars: {
+            status: 'ok',
+            files: [
+              {
+                fileName: 'Stranger.Things.S04E07.zh-Hant.srt',
+                language: 'zh-Hant',
+                format: 'srt',
+                isVidoOutput: true,
+              },
+              {
+                fileName: 'Stranger.Things.S04E07.zh-CN.srt',
+                language: 'zh-Hans',
+                format: 'srt',
+                isVidoOutput: false,
+              },
+            ],
+          },
+          embedded: {
+            status: 'ok',
+            tracks: [
+              { streamIndex: 2, language: 'en', title: 'English', format: 'subrip', text: true },
+            ],
+          },
+        } satisfies SubtitleInventory,
+      },
+      {
         // bugfix-dialog-reopen: "already generating?" — answered "no" so the frame
         // shows the idle view with a clickable price, never asking a backend.
         queryKey: transcriptionStatusKeys.item('movie', 'movie-1'),
@@ -5721,6 +5752,36 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       onDownloadSuccess: noop,
     },
     seedQueries: [
+      {
+        // bugfix-subtitle-dialog-real-inventory: the dialog reads the title's real
+        // subtitles on open — seeded so the frame never asks a backend.
+        queryKey: subtitleInventoryKeys.item('movie', 'movie-1'),
+        data: {
+          sidecars: {
+            status: 'ok',
+            files: [
+              {
+                fileName: 'Stranger.Things.S04E07.zh-Hant.srt',
+                language: 'zh-Hant',
+                format: 'srt',
+                isVidoOutput: true,
+              },
+              {
+                fileName: 'Stranger.Things.S04E07.zh-CN.srt',
+                language: 'zh-Hans',
+                format: 'srt',
+                isVidoOutput: false,
+              },
+            ],
+          },
+          embedded: {
+            status: 'ok',
+            tracks: [
+              { streamIndex: 2, language: 'en', title: 'English', format: 'subrip', text: true },
+            ],
+          },
+        } satisfies SubtitleInventory,
+      },
       {
         // bugfix-dialog-reopen: "already generating?" — answered "no" so the frame
         // shows the idle view with a clickable price, never asking a backend.
@@ -5810,6 +5871,23 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       onDownloadSuccess: noop,
     },
     seedQueries: [
+      {
+        queryKey: subtitleInventoryKeys.item('movie', 'movie-untranslated-1'),
+        data: {
+          sidecars: {
+            status: 'ok',
+            files: [
+              {
+                fileName: 'Stranger.Things.S04E07.en.srt',
+                language: 'en',
+                format: 'srt',
+                isVidoOutput: true,
+              },
+            ],
+          },
+          embedded: { status: 'ok', tracks: [] },
+        } satisfies SubtitleInventory,
+      },
       {
         // bugfix-dialog-reopen: "already generating?" — answered "no" so the frame
         // shows the idle view with a clickable price, never asking a backend.

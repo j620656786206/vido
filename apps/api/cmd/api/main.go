@@ -1327,6 +1327,9 @@ func main() {
 		subtitlePipelineHandler.RegisterRoutes(apiV1)     // POST /api/v1/subtitles/pipeline/run (Story sub-1-6, FR12)
 		keySettingsHandler.RegisterRoutes(apiV1)          // GET/PUT /api/v1/settings/keys + POST /test (Story sub-2-1a, FR25)
 		transcriptionHandler.RegisterRoutes(apiV1)
+		// bugfix-subtitle-dialog-real-inventory: GET /{movies,episodes}/:id/subtitles/inventory —
+		// the 管理字幕 dialog's real subtitle list, read on demand for one title.
+		handlers.NewSubtitleInventoryHandler(repos.Movies, repos.Episodes, ffprobeService).RegisterRoutes(apiV1)
 		if nfoLocalizer != nil {
 			nfoLocalizerHandler.RegisterRoutes(apiV1) // POST /{movies,series,episodes}/:id/localize-nfo (9R-13 + 9R-13a)
 		}
