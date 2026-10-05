@@ -211238,6 +211238,1151 @@
           "fontFamily": "$Type/Family/Primary",
           "fontSize": "$Type/Body/Size",
           "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "pA0PQ",
+          "x": 28860,
+          "y": 48223,
+          "name": "Caption J11-D",
+          "fill": "#888888",
+          "content": "J11 · 季清單的分集字幕標示",
+          "lineHeight": "$Type/Body/Line",
+          "fontFamily": "$Type/Family/Canvas",
+          "fontSize": "$Type/Body/Size",
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "w2Opax",
+          "x": 28860,
+          "y": 48253,
+          "name": "J11-D",
+          "width": 1240,
+          "fill": "$bg-primary",
+          "layout": "vertical",
+          "gap": "$Space/xl-plus",
+          "padding": "$Space/2xl",
+          "children": [
+            {
+              "type": "frame",
+              "id": "h0mIv",
+              "name": "head",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": "$Space/sm",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "efhE8",
+                  "name": "title",
+                  "fill": "$text-primary",
+                  "content": "季清單：每一集一眼看出有沒有中文字幕",
+                  "lineHeight": "$Type/H2/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/H2/Size",
+                  "fontWeight": "$Type/H2/Weight"
+                },
+                {
+                  "type": "text",
+                  "id": "Dz8ef",
+                  "name": "sub",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "入口：詳情頁「季與劇集」（B4p-D）。⚖️ Alexyu 2026-10-05：片內字幕也要算；只放圖示可以，但每個圖示都要有提示——滑鼠移過去、鍵盤切到、手機點一下都會出現。圖示語法沿用 J2（實心圈＝有結論、無圈＝還沒結論；顏色＝要不要你處理）。",
+                  "lineHeight": "$Type/Body/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Body/Size",
+                  "fontWeight": "$Type/Body/Weight"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "XevKZ",
+              "name": "states",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": "$Space/md",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "nTvix",
+                  "name": "state-row",
+                  "width": "fill_container",
+                  "gap": "$Space/xl",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "zjbrw",
+                      "name": "episode-row",
+                      "width": 720,
+                      "fill": "$bg-secondary",
+                      "cornerRadius": "$radius-md",
+                      "gap": "$Space/lg",
+                      "padding": [
+                        "$Space/sm",
+                        "$Space/lg"
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "LG5Nj",
+                          "name": "title-line",
+                          "width": "fill_container",
+                          "gap": "$Space/sm",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "W7F6zn",
+                              "name": "code",
+                              "fill": "$text-muted",
+                              "content": "S01E02",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Mono",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "WUdBU",
+                              "name": "title",
+                              "fill": "$text-primary",
+                              "content": "瓶中信",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "i9iv8C",
+                              "name": "subtitle-status",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "circle-check",
+                              "library": "lucide",
+                              "fill": "$success-text"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ZpZQK",
+                          "name": "btn-subtitle",
+                          "height": 44,
+                          "cornerRadius": "$radius-md",
+                          "padding": [
+                            "$Space/none",
+                            "$Space/md"
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "mdNAf",
+                              "name": "subtitle-label",
+                              "fill": "$text-secondary",
+                              "content": "管理字幕",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "t4Zn5Q",
+                          "name": "episode-meta",
+                          "gap": "$Space/md",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "EQRTP",
+                              "name": "date",
+                              "fill": "$text-secondary",
+                              "content": "2019-11-01",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "E0zKV",
+                              "name": "runtime",
+                              "fill": "$text-secondary",
+                              "content": "56 分",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "wEEUg",
+                      "name": "tooltip",
+                      "fill": "$text-primary",
+                      "cornerRadius": "$radius-md",
+                      "layout": "vertical",
+                      "gap": "$Space/2xs",
+                      "padding": [
+                        "$Space/xs-plus",
+                        "$Space/sm-plus"
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "vnFJB",
+                          "name": "tip-verdict",
+                          "fill": "$text-inverse",
+                          "content": "有繁中字幕",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "FzFw6",
+                          "name": "tip-detail",
+                          "fill": "$text-inverse",
+                          "content": "片內字幕 · 旁邊的 zh-TW 檔 · Vido 生成",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "$Type/Label/Weight"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "gDr5s",
+                  "name": "state-row",
+                  "width": "fill_container",
+                  "gap": "$Space/xl",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "tBMT8",
+                      "name": "episode-row",
+                      "width": 720,
+                      "fill": "$bg-secondary",
+                      "cornerRadius": "$radius-md",
+                      "gap": "$Space/lg",
+                      "padding": [
+                        "$Space/sm",
+                        "$Space/lg"
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "dfeVr",
+                          "name": "title-line",
+                          "width": "fill_container",
+                          "gap": "$Space/sm",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "KLeBj",
+                              "name": "code",
+                              "fill": "$text-muted",
+                              "content": "S02E01",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Mono",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "AEMlu",
+                              "name": "title",
+                              "fill": "$text-primary",
+                              "content": "兄弟姊妹",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "b9Wnqz",
+                              "name": "subtitle-status",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "circle-check",
+                              "library": "lucide",
+                              "fill": "$success-text"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "AObFD",
+                          "name": "btn-subtitle",
+                          "height": 44,
+                          "cornerRadius": "$radius-md",
+                          "padding": [
+                            "$Space/none",
+                            "$Space/md"
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "FEkby",
+                              "name": "subtitle-label",
+                              "fill": "$text-secondary",
+                              "content": "管理字幕",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "gReEa",
+                          "name": "episode-meta",
+                          "gap": "$Space/md",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "H4wpfA",
+                              "name": "date",
+                              "fill": "$text-secondary",
+                              "content": "2019-11-01",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "s1i4tV",
+                              "name": "runtime",
+                              "fill": "$text-secondary",
+                              "content": "56 分",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ud44s",
+                      "name": "tooltip",
+                      "fill": "$text-primary",
+                      "cornerRadius": "$radius-md",
+                      "layout": "vertical",
+                      "gap": "$Space/2xs",
+                      "padding": [
+                        "$Space/xs-plus",
+                        "$Space/sm-plus"
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "pYbzK",
+                          "name": "tip-verdict",
+                          "fill": "$text-inverse",
+                          "content": "有繁中字幕",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "REbPl",
+                          "name": "tip-detail",
+                          "fill": "$text-inverse",
+                          "content": "片內字幕",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "$Type/Label/Weight"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "OI928",
+                  "name": "state-row",
+                  "width": "fill_container",
+                  "gap": "$Space/xl",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Ocf14",
+                      "name": "episode-row",
+                      "width": 720,
+                      "fill": "$bg-secondary",
+                      "cornerRadius": "$radius-md",
+                      "gap": "$Space/lg",
+                      "padding": [
+                        "$Space/sm",
+                        "$Space/lg"
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "TdjFj",
+                          "name": "title-line",
+                          "width": "fill_container",
+                          "gap": "$Space/sm",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "SE772",
+                              "name": "code",
+                              "fill": "$text-muted",
+                              "content": "S01E05",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Mono",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "w3Y2vT",
+                              "name": "title",
+                              "fill": "$text-primary",
+                              "content": "真實身分",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "nYJoP",
+                              "name": "subtitle-status",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "circle-alert",
+                              "library": "lucide",
+                              "fill": "$error-text"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "hqwA1",
+                          "name": "btn-subtitle",
+                          "height": 44,
+                          "cornerRadius": "$radius-md",
+                          "padding": [
+                            "$Space/none",
+                            "$Space/md"
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "VjeAX",
+                              "name": "subtitle-label",
+                              "fill": "$text-secondary",
+                              "content": "管理字幕",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "aRu9D",
+                          "name": "episode-meta",
+                          "gap": "$Space/md",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "WeG0j",
+                              "name": "date",
+                              "fill": "$text-secondary",
+                              "content": "2019-11-01",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "XY4Zn",
+                              "name": "runtime",
+                              "fill": "$text-secondary",
+                              "content": "56 分",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "koMlO",
+                      "name": "tooltip",
+                      "fill": "$text-primary",
+                      "cornerRadius": "$radius-md",
+                      "layout": "vertical",
+                      "gap": "$Space/2xs",
+                      "padding": [
+                        "$Space/xs-plus",
+                        "$Space/sm-plus"
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Z5RLrY",
+                          "name": "tip-verdict",
+                          "fill": "$text-inverse",
+                          "content": "只有簡中字幕",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Ml7iP",
+                          "name": "tip-detail",
+                          "fill": "$text-inverse",
+                          "content": "可以在「管理字幕」轉成繁中",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "$Type/Label/Weight"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "w2bjQ",
+                  "name": "state-row",
+                  "width": "fill_container",
+                  "gap": "$Space/xl",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "WqRvI",
+                      "name": "episode-row",
+                      "width": 720,
+                      "fill": "$bg-secondary",
+                      "cornerRadius": "$radius-md",
+                      "gap": "$Space/lg",
+                      "padding": [
+                        "$Space/sm",
+                        "$Space/lg"
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "jins9",
+                          "name": "title-line",
+                          "width": "fill_container",
+                          "gap": "$Space/sm",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "auxcJ",
+                              "name": "code",
+                              "fill": "$text-muted",
+                              "content": "S01E01",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Mono",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "miaTG",
+                              "name": "title",
+                              "fill": "$text-primary",
+                              "content": "神之火",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "PJFm7",
+                              "name": "subtitle-status",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "circle-x",
+                              "library": "lucide",
+                              "fill": "$error-text"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "lF6Vk",
+                          "name": "btn-subtitle",
+                          "height": 44,
+                          "cornerRadius": "$radius-md",
+                          "padding": [
+                            "$Space/none",
+                            "$Space/md"
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "EavJx",
+                              "name": "subtitle-label",
+                              "fill": "$text-secondary",
+                              "content": "管理字幕",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ucmJY",
+                          "name": "episode-meta",
+                          "gap": "$Space/md",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "X58ms",
+                              "name": "date",
+                              "fill": "$text-secondary",
+                              "content": "2019-11-01",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "eXVY1",
+                              "name": "runtime",
+                              "fill": "$text-secondary",
+                              "content": "56 分",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "phkKi",
+                      "name": "tooltip",
+                      "fill": "$text-primary",
+                      "cornerRadius": "$radius-md",
+                      "layout": "vertical",
+                      "gap": "$Space/2xs",
+                      "padding": [
+                        "$Space/xs-plus",
+                        "$Space/sm-plus"
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "FbxgZ",
+                          "name": "tip-verdict",
+                          "fill": "$text-inverse",
+                          "content": "缺中文字幕",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Yui1j",
+                          "name": "tip-detail",
+                          "fill": "$text-inverse",
+                          "content": "只有英文等其他語言——可以生成",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "$Type/Label/Weight"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "pqdad",
+                  "name": "state-row",
+                  "width": "fill_container",
+                  "gap": "$Space/xl",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "t9lue",
+                      "name": "episode-row",
+                      "width": 720,
+                      "fill": "$bg-secondary",
+                      "cornerRadius": "$radius-md",
+                      "gap": "$Space/lg",
+                      "padding": [
+                        "$Space/sm",
+                        "$Space/lg"
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "yvGP4",
+                          "name": "title-line",
+                          "width": "fill_container",
+                          "gap": "$Space/sm",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "C9ElA9",
+                              "name": "code",
+                              "fill": "$text-muted",
+                              "content": "S01E08",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Mono",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "zJ9Pt",
+                              "name": "title",
+                              "fill": "$text-primary",
+                              "content": "啟明之家",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "uzZiz",
+                              "name": "subtitle-status",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "minus",
+                              "library": "lucide",
+                              "fill": "$text-muted"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Jm3RQ",
+                          "name": "btn-subtitle",
+                          "height": 44,
+                          "cornerRadius": "$radius-md",
+                          "padding": [
+                            "$Space/none",
+                            "$Space/md"
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "wevtF",
+                              "name": "subtitle-label",
+                              "fill": "$text-secondary",
+                              "content": "管理字幕",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "CJ104",
+                          "name": "episode-meta",
+                          "gap": "$Space/md",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "pqlGG",
+                              "name": "date",
+                              "fill": "$text-secondary",
+                              "content": "2019-11-01",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "WDPY1",
+                              "name": "runtime",
+                              "fill": "$text-secondary",
+                              "content": "56 分",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "pmZUS",
+                      "name": "tooltip",
+                      "fill": "$text-primary",
+                      "cornerRadius": "$radius-md",
+                      "layout": "vertical",
+                      "gap": "$Space/2xs",
+                      "padding": [
+                        "$Space/xs-plus",
+                        "$Space/sm-plus"
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "saFiC",
+                          "name": "tip-verdict",
+                          "fill": "$text-inverse",
+                          "content": "還沒檢查這一集的字幕",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "o7CLcn",
+                          "name": "tip-detail",
+                          "fill": "$text-inverse",
+                          "content": "下次掃描媒體庫時會讀",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "$Type/Label/Weight"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "JBCcE",
+                  "name": "state-row",
+                  "width": "fill_container",
+                  "gap": "$Space/xl",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "hCBiV",
+                      "name": "episode-row",
+                      "width": 720,
+                      "fill": "$bg-secondary",
+                      "cornerRadius": "$radius-md",
+                      "gap": "$Space/lg",
+                      "padding": [
+                        "$Space/sm",
+                        "$Space/lg"
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "wO03F",
+                          "name": "title-line",
+                          "width": "fill_container",
+                          "gap": "$Space/sm",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "EvpjL",
+                              "name": "code",
+                              "fill": "$text-muted",
+                              "content": "S01E03",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Mono",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "wbWmG",
+                              "name": "title",
+                              "fill": "$text-primary",
+                              "content": "新的血脈",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "NBlth",
+                              "name": "subtitle-status",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "loader",
+                              "library": "lucide",
+                              "fill": "$accent-text"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "v7vy16",
+                          "name": "btn-subtitle",
+                          "height": 44,
+                          "cornerRadius": "$radius-md",
+                          "padding": [
+                            "$Space/none",
+                            "$Space/md"
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "xBSs2",
+                              "name": "subtitle-label",
+                              "fill": "$text-secondary",
+                              "content": "管理字幕",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "S7fZ6",
+                          "name": "episode-meta",
+                          "gap": "$Space/md",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "w0sJLf",
+                              "name": "date",
+                              "fill": "$text-secondary",
+                              "content": "2019-11-01",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "grPlL",
+                              "name": "runtime",
+                              "fill": "$text-secondary",
+                              "content": "56 分",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "KFYLz",
+                      "name": "tooltip",
+                      "fill": "$text-primary",
+                      "cornerRadius": "$radius-md",
+                      "layout": "vertical",
+                      "gap": "$Space/2xs",
+                      "padding": [
+                        "$Space/xs-plus",
+                        "$Space/sm-plus"
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "xFUNM",
+                          "name": "tip-verdict",
+                          "fill": "$text-inverse",
+                          "content": "字幕生成中",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "T3Kmz5",
+                          "name": "tip-detail",
+                          "fill": "$text-inverse",
+                          "content": "打開「管理字幕」看進度",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "$Type/Label/Weight"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "vuykk",
+              "name": "rules",
+              "width": "fill_container",
+              "fill": "$bg-secondary",
+              "cornerRadius": "$radius-md",
+              "layout": "vertical",
+              "gap": "$Space/md",
+              "padding": "$Space/xl",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "tHLmh",
+                  "name": "rules-title",
+                  "fill": "$text-primary",
+                  "content": "規則",
+                  "lineHeight": "$Type/H4/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/H4/Size",
+                  "fontWeight": "$Type/H4/Weight"
+                },
+                {
+                  "type": "text",
+                  "id": "kGlj0",
+                  "name": "rule",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "1. 有沒有繁中，看三個來源：片子裡的字幕、影片旁邊的字幕檔（中文看內容，不看檔名）、Vido 生成的。任一個有繁中，就標「有繁中字幕」。",
+                  "lineHeight": "$Type/Body/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Body/Size",
+                  "fontWeight": "$Type/Body/Weight"
+                },
+                {
+                  "type": "text",
+                  "id": "ILImm",
+                  "name": "rule",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "2. 片內字幕在掃描媒體庫時讀一次存起來；旁邊的字幕檔在打開這一季時讀一次資料夾。展開一季不逐集開檔。",
+                  "lineHeight": "$Type/Body/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Body/Size",
+                  "fontWeight": "$Type/Body/Weight"
+                },
+                {
+                  "type": "text",
+                  "id": "sO2rf",
+                  "name": "rule",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "3. 提示框的第一行是結論，第二行說是哪個來源、或下一步能做什麼。螢幕閱讀器讀到的是同一句話。",
+                  "lineHeight": "$Type/Body/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Body/Size",
+                  "fontWeight": "$Type/Body/Weight"
+                },
+                {
+                  "type": "text",
+                  "id": "o94bk8",
+                  "name": "rule",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "4. 滑鼠移到圖示上立刻出現（不等瀏覽器內建的一秒）；鍵盤 Tab 到圖示會出現、Esc 收起；手機點圖示出現、點別處收起。點圖示不會打開「管理字幕」。",
+                  "lineHeight": "$Type/Body/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Body/Size",
+                  "fontWeight": "$Type/Body/Weight"
+                },
+                {
+                  "type": "text",
+                  "id": "KYBJ5",
+                  "name": "rule",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "5. 沒有本地檔的集數不顯示圖示（照舊）。",
+                  "lineHeight": "$Type/Body/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Body/Size",
+                  "fontWeight": "$Type/Body/Weight"
+                },
+                {
+                  "type": "text",
+                  "id": "FiD2R",
+                  "name": "rule",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "6. 全站規則：只有圖示、沒有文字的狀態，一律用這個提示框，不可以只靠瀏覽器的 title。",
+                  "lineHeight": "$Type/Body/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Body/Size",
+                  "fontWeight": "$Type/Body/Weight"
+                }
+              ]
+            }
+          ]
         }
       ]
     },
