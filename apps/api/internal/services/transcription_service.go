@@ -79,6 +79,7 @@ type SeriesMetadataReader interface {
 // subtitle package (Rule 19); *subtitle.Converter satisfies it structurally.
 type OpenCCConverter interface {
 	ConvertS2TWP(content []byte) ([]byte, error)
+	ConvertS2TW(content []byte) ([]byte, error) // characters only (zhtw.KeepsOwnWording)
 	IsAvailable() bool
 }
 

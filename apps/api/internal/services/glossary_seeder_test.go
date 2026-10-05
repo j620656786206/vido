@@ -72,6 +72,9 @@ func (f *fakeSeedOpenCC) ConvertS2TWP(content []byte) ([]byte, error) {
 	return []byte(fakeSeedOpenCCReplacer.Replace(string(content))), nil
 }
 
+// ConvertS2TW exists for the interface; the seeder never calls it.
+func (f *fakeSeedOpenCC) ConvertS2TW(content []byte) ([]byte, error) { return f.ConvertS2TWP(content) }
+
 type fakeSeedInserter struct {
 	terms   []*models.GlossaryTerm
 	err     error          // returned by every method

@@ -249,7 +249,8 @@ func TestEngine_Process_ConvertedSubtitleGetsTaiwanVocabulary(t *testing.T) {
 		want    string
 	}{
 		{"non-mainland simplified → script + vocabulary", "US", "这个软件的质量很好", "這個軟體的品質很好"},
-		{"mainland simplified → script only, original wording kept", "TW,CN", "这个软件的质量很好", "這個軟體的質量很好"},
+		{"mainland simplified → characters only, original wording kept", "TW,CN", "这个软件的质量很好", "這個軟件的質量很好"},
+		{"Hong Kong simplified → characters only, original wording kept", "HK", "这个软件的质量很好", "這個軟件的質量很好"},
 		{"already Traditional is delivered as-is", "US", "這個軟件的質量很好", "這個軟件的質量很好"},
 	}
 	for _, tc := range cases {
@@ -437,7 +438,7 @@ func TestEngine_Process_AICorrection_SkippedForCNContent(t *testing.T) {
 	engine, mediaPath := newTestEngine(t, []providers.SubtitleProvider{prov}, nil)
 	engine.SetTerminologyService(mockTermSvc)
 
-	// CN production country → zhtw.IsMainland
+	// CN production country → zhtw.KeepsOwnWording
 	result := engine.Process(context.Background(), "movie-1", "movie", mediaPath,
 		providers.SubtitleQuery{Title: "Test"}, "1080p",
 		ProcessOptions{ProductionCountry: "CN"})

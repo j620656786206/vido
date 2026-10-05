@@ -9,8 +9,8 @@ import (
 )
 
 // MediaCountryResolver returns a title's production country codes. The manual
-// subtitle paths need them for the mainland rule (zhtw.IsMainland): a
-// converted mainland subtitle keeps its own vocabulary.
+// subtitle paths need them for the own-wording rule (zhtw.KeepsOwnWording): a
+// converted mainland / Hong Kong / Macau subtitle keeps its own wording.
 type MediaCountryResolver func(ctx context.Context, mediaType, mediaID string) ([]string, error)
 
 // countryMovieFinder / countrySeriesFinder are the one repository method the
@@ -63,20 +63,20 @@ func NewRepoCountryResolver(movies countryMovieFinder, series countrySeriesFinde
 }
 
 // SetCountryResolver wires the production-country lookup for the manual
-// download and convert paths. Unset, every title counts as non-mainland.
+// download and convert paths. Unset, no title keeps its own wording.
 func (h *SubtitleHandler) SetCountryResolver(r MediaCountryResolver) {
 	h.countries = r
 }
 
 // countriesFor never fails the request: a lookup error only costs the
-// mainland exemption, so the title is treated as non-mainland and logged.
+// own-wording exemption, so the title gets the Taiwan wording and is logged.
 func (h *SubtitleHandler) countriesFor(ctx context.Context, mediaType, mediaID string) []string {
 	if h.countries == nil {
 		return nil
 	}
 	codes, err := h.countries(ctx, mediaType, mediaID)
 	if err != nil {
-		slog.Warn("Production-country lookup failed — converting as non-mainland content",
+		slog.Warn("Production-country lookup failed — converting with Taiwan wording",
 			"media_id", mediaID, "media_type", mediaType, "error", err)
 		return nil
 	}

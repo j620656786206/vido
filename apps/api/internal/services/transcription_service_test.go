@@ -148,6 +148,9 @@ func (f *fakeOpenCC) ConvertS2TWP(content []byte) ([]byte, error) {
 	return []byte(strings.ReplaceAll(string(content), "软", "軟")), nil
 }
 
+// ConvertS2TW (characters only) is what own-wording titles get.
+func (f *fakeOpenCC) ConvertS2TW(content []byte) ([]byte, error) { return f.ConvertS2TWP(content) }
+
 type fakePlacer struct {
 	mediaPath string
 	data      []byte

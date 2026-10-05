@@ -172281,7 +172281,7 @@
                   "fill": "$text-secondary",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "變體 — 陸劇（production_countries 含 CN）：簡中軌跟一般片一樣，沒有政策行。Vido 轉成繁體字、保留原用語（不套台灣詞庫、不跑 AI 術語校正），像 Netflix／Disney+ 的陸劇。⚖️ 2026-10-05 Alexyu 裁定，取代舊的「保留簡體，可覆寫」。",
+                  "content": "變體 — 陸劇與港澳片（production_countries 含 CN／HK／MO）：簡中軌跟一般片一樣，沒有政策行。Vido 只轉字（OpenCC s2tw）、保留原本的說法（不帶台灣片語、不套台灣詞庫、不跑 AI 術語校正），像 Netflix／Disney+ 的陸劇。⚖️ 2026-10-05 Alexyu 裁定，取代舊的「保留簡體，可覆寫」。",
                   "lineHeight": "$Type/Label/Line",
                   "fontFamily": "$Type/Family/Primary",
                   "fontSize": "$Type/Label/Size",

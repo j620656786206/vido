@@ -129,9 +129,10 @@ func (e *Engine) SetTerminologyService(svc services.TerminologyCorrectionService
 // ProcessOptions contains optional parameters for the subtitle pipeline.
 type ProcessOptions struct {
 	// ProductionCountry is the media's production country codes, comma-joined
-	// (e.g., "US,CN"). Mainland content (zhtw.IsMainland) is converted to
-	// Traditional script but keeps its own wording: no Taiwan lexicon, no AI
-	// terminology correction (Alexyu ruling 2026-10-05).
+	// (e.g., "US,CN"). Mainland, Hong Kong and Macau titles
+	// (zhtw.KeepsOwnWording) get Traditional characters but keep their own
+	// wording: no Taiwan phrases or lexicon, no AI terminology correction
+	// (Alexyu rulings 2026-10-05).
 	ProductionCountry string
 	// Automatic marks an unattended caller (the request-completion trigger
 	// after a download). The ledger row records triggered_by=auto; anything
@@ -192,11 +193,11 @@ func (e *Engine) Process(ctx context.Context, mediaID, mediaType, mediaFilePath 
 	}
 
 	// Stage 4.5: AI terminology correction (optional, post-OpenCC)
-	// Only applies when: service is configured, the title is not mainland content
-	// (the correction rewrites vocabulary, which mainland titles keep), and we
+	// Only applies when: service is configured, the title does not keep its own
+	// wording (the correction rewrites vocabulary into Taiwan terms), and we
 	// have Chinese content that was converted or is already Traditional.
 	if e.terminologyService != nil && e.terminologyService.IsConfigured() &&
-		!zhtw.IsMainland(countries) &&
+		!zhtw.KeepsOwnWording(countries) &&
 		(finalLang == LangTraditional || finalLang == LangSimplified || finalLang == LangAmbiguous) {
 		e.broadcastStatus(mediaID, mediaType, StageCorrecting, "Applying AI terminology correction...")
 		corrected, corrErr := e.terminologyService.Correct(ctx, string(convertedData))

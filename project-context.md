@@ -175,10 +175,10 @@ Any persistent connection (SSE, WebSocket) in a globally-mounted or root-level c
 **Rules:**
 
 - Language detection MUST analyze subtitle file content (not filename) — this fixes Bazarr's core zh-TW bug
-- OpenCC conversion direction: s2twp (Simplified → Traditional with Taiwan phrases)
-- CN content policy (Alexyu ruling 2026-10-05, replaces "keep Simplified"): mainland content (`production_countries` contains `CN`, `zhtw.IsMainland`) IS converted to Traditional script but keeps its own wording — no Taiwan lexicon, no AI terminology correction (like Netflix/Disney+ mainland dramas). Every path finishes through `internal/zhtw.Finalize`.
+- OpenCC conversion direction: s2twp (Simplified → Traditional with Taiwan phrases); s2tw (characters only) for own-wording titles
+- Own-wording policy (Alexyu rulings 2026-10-05, replace "CN keeps Simplified"): mainland, Hong Kong and Macau titles (`production_countries` contains `CN`/`HK`/`MO`, `zhtw.KeepsOwnWording`) ARE converted to Traditional characters with OpenCC `s2tw` (characters only) and keep their own wording — no `s2twp` Taiwan phrases, no Taiwan lexicon, no AI terminology correction (like Netflix/Disney+ mainland dramas). Every other title gets `s2twp` + the Taiwan lexicon. Every path finishes through `internal/zhtw.Finalize`.
 - Conversion is user-overridable: per-search toggle in subtitle dialog, global preference in settings
-- Edge cases: a co-production whose countries include `CN` counts as mainland (any `CN` in the list — open question in `disc-2026-10-hk-mo-mainland-rule`); already-traditional subtitles pass through unchanged (idempotent)
+- Edge cases: a co-production whose countries include `CN`/`HK`/`MO` keeps its own wording (any match counts — open question in `disc-2026-10-coproduction-wording-rule`); already-traditional subtitles pass through unchanged (idempotent)
 - Subtitle files use `.zh-Hant.srt` or `.zh-Hans.srt` extension based on final language for Plex/Jellyfin compatibility
 
 ---

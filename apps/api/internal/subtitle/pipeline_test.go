@@ -85,6 +85,12 @@ func (c *recordingConverter) ConvertS2TWP(content []byte) ([]byte, error) {
 	return []byte(s2twpFake.Replace(string(content))), nil
 }
 
+// ConvertS2TW records like ConvertS2TWP; the fake's table is characters only,
+// so both profiles produce the same text here.
+func (c *recordingConverter) ConvertS2TW(content []byte) ([]byte, error) {
+	return c.ConvertS2TWP(content)
+}
+
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 // cues builds a source track, one cue per text, numbered from 1 with
