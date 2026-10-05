@@ -82972,6 +82972,559 @@
               "fontFamily": "$Type/Family/Canvas",
               "fontSize": "$Type/Body/Size",
               "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "FeCfY",
+              "x": 55540,
+              "y": 18481,
+              "name": "C26-D",
+              "width": 1440,
+              "fill": "$bg-secondary",
+              "layout": "vertical",
+              "gap": "$Space/2xl",
+              "padding": "$Space/3xl",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "qGenf",
+                  "name": "page-header",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": "$Space/sm",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "VFauH",
+                      "name": "title",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "匿名使用回報卡的三種狀態",
+                      "lineHeight": "$Type/H3/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/H3/Size",
+                      "fontWeight": "$Type/H3/Weight"
+                    },
+                    {
+                      "type": "text",
+                      "id": "fiOAR",
+                      "name": "sub",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "主稿 C25 是『已開啟、已送過』。下面三種狀態的卡片外觀與 C25 完全相同，只差在開關、提示與讀數。",
+                      "lineHeight": "$Type/Body/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Body/Size",
+                      "fontWeight": "$Type/Body/Weight"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "yzZBD",
+                  "name": "state-columns",
+                  "width": "fill_container",
+                  "gap": "$Space/xl",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "P0j8k6",
+                      "name": "col-unavailable",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": "$Space/md",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "th2O6",
+                          "name": "col-label",
+                          "fill": "$text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "不可用（這個版本沒有設定接收端）",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "$Type/Label/Weight"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "jQXcg",
+                          "name": "usage-report-card-unavailable",
+                          "width": "fill_container",
+                          "fill": "$bg-secondary",
+                          "cornerRadius": "$radius-lg",
+                          "stroke": "$border-subtle",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": "$Space/lg",
+                          "padding": "$Space/xl",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "EXuyB",
+                              "name": "card-head",
+                              "width": "fill_container",
+                              "gap": "$Space/md",
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "w2IY0x",
+                                  "name": "title-wrap",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": "$Space/2xs",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "e6ausq",
+                                      "name": "title",
+                                      "fill": "$text-primary",
+                                      "content": "匿名使用回報",
+                                      "lineHeight": "$Type/BodyLg/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/BodyLg/Size",
+                                      "fontWeight": "600"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "f9dxE",
+                                      "name": "sub",
+                                      "fill": "$text-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "每週最多一次，把幾個匿名數字送給 Vido 維護者。",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "JsuoF",
+                              "name": "row-enable",
+                              "width": "fill_container",
+                              "gap": "$Space/md",
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "IgcHo",
+                                  "name": "enable-text",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": "$Space/2xs",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "WRN7C",
+                                      "name": "lb",
+                                      "fill": "$text-secondary",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "每週送一次匿名計數",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "500"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "HV3Yi",
+                                      "name": "hint",
+                                      "fill": "$text-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "這個版本沒有設定接收端，無法開啟。",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "YsIG9",
+                                  "type": "ref",
+                                  "ref": "Qia26",
+                                  "name": "switch",
+                                  "opacity": 0.4
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "TxiNW",
+                              "name": "link-learn-more",
+                              "fill": "$accent-text",
+                              "content": "送什麼、不送什麼 →",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "qYMO5",
+                      "name": "col-off",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": "$Space/md",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "A0sTyl",
+                          "name": "col-label",
+                          "fill": "$text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "關閉（預設）",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "$Type/Label/Weight"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "pRcib",
+                          "name": "usage-report-card-off",
+                          "width": "fill_container",
+                          "fill": "$bg-secondary",
+                          "cornerRadius": "$radius-lg",
+                          "stroke": "$border-subtle",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": "$Space/lg",
+                          "padding": "$Space/xl",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "wdr8S",
+                              "name": "card-head",
+                              "width": "fill_container",
+                              "gap": "$Space/md",
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "a5xnr",
+                                  "name": "title-wrap",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": "$Space/2xs",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "HGh4c",
+                                      "name": "title",
+                                      "fill": "$text-primary",
+                                      "content": "匿名使用回報",
+                                      "lineHeight": "$Type/BodyLg/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/BodyLg/Size",
+                                      "fontWeight": "600"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "XRSd6",
+                                      "name": "sub",
+                                      "fill": "$text-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "每週最多一次，把幾個匿名數字送給 Vido 維護者。",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "m4fwS",
+                              "name": "row-enable",
+                              "width": "fill_container",
+                              "gap": "$Space/md",
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "S1p72",
+                                  "name": "enable-text",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": "$Space/2xs",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "ctrk6",
+                                      "name": "lb",
+                                      "fill": "$text-secondary",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "每週送一次匿名計數",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "500"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "dLalN",
+                                      "name": "hint",
+                                      "fill": "$text-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "預設關閉。關掉之後就不會再送。",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "IMhMI",
+                                  "type": "ref",
+                                  "ref": "Qia26",
+                                  "name": "switch"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "m42bU",
+                              "name": "link-learn-more",
+                              "fill": "$accent-text",
+                              "content": "送什麼、不送什麼 →",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "mxw6Y",
+                      "name": "col-on-never",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": "$Space/md",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "oby1K",
+                          "name": "col-label",
+                          "fill": "$text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "已開啟、還沒送過",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "$Type/Label/Weight"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "YAr2N",
+                          "name": "usage-report-card-on-never",
+                          "width": "fill_container",
+                          "fill": "$bg-secondary",
+                          "cornerRadius": "$radius-lg",
+                          "stroke": "$border-subtle",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": "$Space/lg",
+                          "padding": "$Space/xl",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "WdQuC",
+                              "name": "card-head",
+                              "width": "fill_container",
+                              "gap": "$Space/md",
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "uvioX",
+                                  "name": "title-wrap",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": "$Space/2xs",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "t8exFS",
+                                      "name": "title",
+                                      "fill": "$text-primary",
+                                      "content": "匿名使用回報",
+                                      "lineHeight": "$Type/BodyLg/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/BodyLg/Size",
+                                      "fontWeight": "600"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "POVT2",
+                                      "name": "sub",
+                                      "fill": "$text-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "每週最多一次，把幾個匿名數字送給 Vido 維護者。",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "nKC24",
+                              "name": "row-enable",
+                              "width": "fill_container",
+                              "gap": "$Space/md",
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "shWVF",
+                                  "name": "enable-text",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": "$Space/2xs",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "I09p1",
+                                      "name": "lb",
+                                      "fill": "$text-secondary",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "每週送一次匿名計數",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "500"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "HyI1a",
+                                      "name": "hint",
+                                      "fill": "$text-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "預設關閉。關掉之後就不會再送。",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "rEEkA",
+                                  "type": "ref",
+                                  "ref": "jqRCX",
+                                  "name": "switch"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "M34gX",
+                              "name": "row-last-sent",
+                              "width": "fill_container",
+                              "gap": "$Space/md",
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "jmFEb",
+                                  "name": "lb",
+                                  "fill": "$text-secondary",
+                                  "content": "上次送出",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "yADs9",
+                                  "name": "val",
+                                  "fill": "$text-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "還沒送過——打開後一小時內會送出第一份",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "textAlign": "right",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "z2GHV",
+                              "name": "link-learn-more",
+                              "fill": "$accent-text",
+                              "content": "送什麼、不送什麼 →",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "Dd3Vu",
+              "x": 55540,
+              "y": 18436,
+              "name": "cap C26-D",
+              "fill": "#888888",
+              "content": "C26 · 匿名使用回報・三種狀態（規格）",
+              "lineHeight": "$Type/Body/Line",
+              "fontFamily": "$Type/Family/Canvas",
+              "fontSize": "$Type/Body/Size",
+              "fontWeight": "600"
             }
           ]
         },

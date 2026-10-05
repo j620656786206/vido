@@ -162,6 +162,7 @@ SCREENS = {
     "L7EVR": ("flow-c-search-settings", "c24-d"),  # 批次重新解析：對話框三個狀態 spec
     "SHogC": ("flow-c-search-settings", "c25-d"),  # 連線設定往下捲：匿名使用回報卡（usage-report）
     "bG3l3": ("flow-c-search-settings", "c25-m"),
+    "FeCfY": ("flow-c-search-settings", "c26-d"),  # 匿名使用回報卡三種狀態 spec（不可用／關閉／已開啟未送過）
     "2H4OM": ("flow-c-search-settings", "c4-m"),
     "uhAKd": ("flow-c-search-settings", "c5-d"),
     "B3qPq": ("flow-c-search-settings", "c6-d"),
