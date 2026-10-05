@@ -2,11 +2,11 @@
   "artworkTextFlipNodes": [],
   "counts": {
     "artworkTextFlips": 0,
-    "clippingWarnings": 76,
-    "exportedScreens": 215,
+    "clippingWarnings": 104,
+    "exportedScreens": 216,
     "masters": 74
   },
-  "penSha256": "b04261e1e5890cf13dcf4e1a2526a5944fa4d63488e9f4821438e3792af55bb2",
+  "penSha256": "f59a4a3bf495e9139e66e6918c8a379ebdae09f29ae38df3a5658f583a9e5271",
   "raw": {
     "fontSize": 0,
     "gap": 0,
