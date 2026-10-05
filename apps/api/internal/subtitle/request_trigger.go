@@ -118,7 +118,8 @@ func (t *RequestCompletionTrigger) triggerMovie(ctx context.Context, req models.
 	}
 
 	// CN policy rides in exactly as the batch path passes it: production
-	// countries decide whether 簡體 stays unconverted (Epic 8 ConversionPolicy).
+	// countries decide whether the Taiwan wording is applied (mainland titles
+	// keep theirs — Alexyu ruling 2026-10-05).
 	country := ""
 	if countries, err := movie.GetProductionCountries(); err == nil {
 		codes := make([]string, 0, len(countries))

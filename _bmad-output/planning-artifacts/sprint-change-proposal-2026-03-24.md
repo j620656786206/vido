@@ -1,5 +1,7 @@
 # Sprint Change Proposal — CN Content Subtitle Conversion Policy
 
+> ⚖️ **2026-10-05 已被取代。** Alexyu 改裁：大陸片字幕**一律轉成繁體字、但保留原用語**（不套台灣詞庫、不跑 AI 術語校正），像 Netflix／Disney+ 的陸劇。本文件「CN 內容保留簡體」的規則不再適用。見 `_bmad-output/implementation-artifacts/backlog-mainland-rule-three-predicates.md`。
+
 **Date:** 2026-03-24
 **Epic:** Epic 8 — Subtitle Engine
 **Scope:** Minor (Direct Adjustment)

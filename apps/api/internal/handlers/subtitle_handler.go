@@ -253,7 +253,7 @@ func (h *SubtitleHandler) DownloadSubtitle(c *gin.Context) {
 		return
 	}
 
-	// Detect language and apply conversion policy (AC #9, #10, #11)
+	// Detect language and apply the conversion toggle (AC #10, #11)
 	detection := subtitle.Detect(data)
 	finalData := data
 	finalLang := detection.Language
@@ -468,13 +468,13 @@ func (h *SubtitleHandler) ConvertSubtitle(c *gin.Context) {
 	})
 }
 
-// --- CN Conversion Policy (AC #9, #10, #11) ---
+// --- Conversion toggle (AC #10, #11) ---
 
 // shouldConvert determines whether to apply S→T conversion.
 // If the user explicitly set convert_to_traditional, that takes priority (AC #11).
-// Otherwise, simplified Chinese is always converted (AC #10).
-// The frontend is responsible for defaulting the toggle based on
-// production_countries (AC #9 — OFF for CN, ON for non-CN).
+// Otherwise, simplified Chinese is always converted (AC #10). Mainland titles
+// are converted too — script only, their wording is kept (zhtw.Finalize;
+// Alexyu ruling 2026-10-05, replacing the old "CN keeps Simplified" AC #9).
 func (h *SubtitleHandler) shouldConvert(detectedLang string, userOverride *bool) bool {
 	if !subtitle.NeedsConversion(detectedLang) {
 		return false

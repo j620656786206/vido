@@ -176,9 +176,9 @@ Any persistent connection (SSE, WebSocket) in a globally-mounted or root-level c
 
 - Language detection MUST analyze subtitle file content (not filename) — this fixes Bazarr's core zh-TW bug
 - OpenCC conversion direction: s2twp (Simplified → Traditional with Taiwan phrases)
-- CN content policy: Skip conversion when `production_countries` contains `CN` (mainland content keeps simplified subtitles — dialogue expressions match audio)
+- CN content policy (Alexyu ruling 2026-10-05, replaces "keep Simplified"): mainland content (`production_countries` contains `CN`, `zhtw.IsMainland`) IS converted to Traditional script but keeps its own wording — no Taiwan lexicon, no AI terminology correction (like Netflix/Disney+ mainland dramas). Every path finishes through `internal/zhtw.Finalize`.
 - Conversion is user-overridable: per-search toggle in subtitle dialog, global preference in settings
-- Edge cases: Co-productions (multiple countries) default to convert (conservative); already-traditional subtitles pass through unchanged (idempotent)
+- Edge cases: a co-production whose countries include `CN` counts as mainland (any `CN` in the list — open question in `disc-2026-10-hk-mo-mainland-rule`); already-traditional subtitles pass through unchanged (idempotent)
 - Subtitle files use `.zh-Hant.srt` or `.zh-Hans.srt` extension based on final language for Plex/Jellyfin compatibility
 
 ---

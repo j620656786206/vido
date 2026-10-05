@@ -94,16 +94,12 @@ describe('SubtitleSearchDialog', () => {
     expect(screen.getByTestId('subtitle-empty-state')).toBeInTheDocument();
   });
 
-  it('shows 繁體轉換 toggle ON by default for non-CN content', () => {
-    renderDialog({ productionCountry: 'US' });
+  // Alexyu 2026-10-05: every title — mainland included — defaults to
+  // Traditional script (mainland wording is kept server-side).
+  it('shows 繁體轉換 toggle ON by default', () => {
+    renderDialog();
     const toggle = screen.getByRole('switch');
     expect(toggle.getAttribute('aria-checked')).toBe('true');
-  });
-
-  it('shows 繁體轉換 toggle OFF for CN content', () => {
-    renderDialog({ productionCountry: 'CN' });
-    const toggle = screen.getByRole('switch');
-    expect(toggle.getAttribute('aria-checked')).toBe('false');
   });
 
   it('calls onOpenChange when close button clicked', () => {
@@ -123,7 +119,7 @@ describe('SubtitleSearchDialog', () => {
   });
 
   it('toggles 繁體轉換 switch on click', () => {
-    renderDialog({ productionCountry: 'US' });
+    renderDialog();
     const toggle = screen.getByRole('switch');
     expect(toggle.getAttribute('aria-checked')).toBe('true');
     fireEvent.click(toggle);
@@ -157,7 +153,7 @@ describe('SubtitleSearchDialog', () => {
   });
 
   it('clicking the 繁體轉換 text toggles the switch (label htmlFor forwarding preserved)', () => {
-    renderDialog({ productionCountry: 'US' });
+    renderDialog();
     const toggle = screen.getByRole('switch');
     expect(toggle.getAttribute('aria-checked')).toBe('true');
     fireEvent.click(screen.getByText('繁體轉換'));

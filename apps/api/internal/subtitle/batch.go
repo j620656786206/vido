@@ -517,8 +517,10 @@ type MovieSubtitleFinder interface {
 }
 
 // SeriesSubtitleFinder is the interface for finding series needing subtitles.
+// FindByID gives a season's episodes their show's production countries.
 type SeriesSubtitleFinder interface {
 	FindBySubtitleStatus(ctx context.Context, status models.SubtitleStatus) ([]models.Series, error)
+	FindByID(ctx context.Context, id string) (*models.Series, error)
 }
 
 // EpisodeSeasonFinder is the interface for finding episodes by season ID.
@@ -543,11 +545,7 @@ func (rc *RepoCollector) CollectMoviesNeedingSubtitles(ctx context.Context) ([]B
 		for _, m := range movies {
 			country := ""
 			if countries, err := m.GetProductionCountries(); err == nil {
-				codes := make([]string, 0, len(countries))
-				for _, c := range countries {
-					codes = append(codes, c.ISO3166_1)
-				}
-				country = strings.Join(codes, ",")
+				country = joinCountryCodes(countries)
 			}
 
 			filePath := ""
@@ -569,7 +567,6 @@ func (rc *RepoCollector) CollectMoviesNeedingSubtitles(ctx context.Context) ([]B
 }
 
 // CollectSeriesNeedingSubtitles returns series with not_searched or not_found status.
-// Note: Series model does not have production_countries — CN policy defaults to ConvertAuto.
 func (rc *RepoCollector) CollectSeriesNeedingSubtitles(ctx context.Context) ([]BatchItem, error) {
 	var items []BatchItem
 
@@ -589,8 +586,8 @@ func (rc *RepoCollector) CollectSeriesNeedingSubtitles(ctx context.Context) ([]B
 				MediaType:     "series",
 				MediaFilePath: filePath,
 				Title:         s.Title,
-				// Series model doesn't have production_countries — empty string = ConvertAuto
-				ProductionCountry: "",
+				// Mainland shows keep their own wording (zhtw.IsMainland).
+				ProductionCountry: joinCountryCodes(s.ProductionCountries),
 			})
 		}
 	}
@@ -609,10 +606,16 @@ func (rc *RepoCollector) CollectEpisodesBySeasonID(ctx context.Context, seasonID
 	}
 
 	var items []BatchItem
+	showCountries := map[string]string{}
 	for _, ep := range episodes {
 		// Only include episodes that have a media file
 		if !ep.FilePath.Valid || ep.FilePath.String == "" {
 			continue
+		}
+		country, seen := showCountries[ep.SeriesID]
+		if !seen {
+			country = rc.seriesCountries(ctx, ep.SeriesID)
+			showCountries[ep.SeriesID] = country
 		}
 
 		title := ep.GetSeasonEpisodeCode()
@@ -625,10 +628,30 @@ func (rc *RepoCollector) CollectEpisodesBySeasonID(ctx context.Context, seasonID
 			MediaType:     "episode",
 			MediaFilePath: ep.FilePath.String,
 			Title:         title,
-			// Episodes don't have production_countries — empty string = ConvertAuto
-			ProductionCountry: "",
+			// Episodes inherit their show's countries (mainland: own wording).
+			ProductionCountry: country,
 		})
 	}
 
 	return items, nil
+}
+
+// seriesCountries returns a show's comma-joined production countries. A failed
+// lookup only costs the mainland exemption — logged, never a failed batch.
+func (rc *RepoCollector) seriesCountries(ctx context.Context, seriesID string) string {
+	if seriesID == "" {
+		return ""
+	}
+	series, err := rc.seriesRepo.FindByID(ctx, seriesID)
+	if err != nil || series == nil {
+		slog.Warn("Batch subtitle: show lookup failed — episodes treated as non-mainland",
+			"series_id", seriesID, "error", err)
+		return ""
+	}
+	return joinCountryCodes(series.ProductionCountries)
+}
+
+// joinCountryCodes is the ProcessOptions.ProductionCountry wire shape.
+func joinCountryCodes(countries []models.ProductionCountry) string {
+	return strings.Join(countryCodes(countries), ",")
 }

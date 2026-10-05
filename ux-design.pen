@@ -172281,73 +172281,11 @@
                   "fill": "$text-secondary",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "變體 — 陸劇（production_countries 含 CN）：簡中軌的「轉為繁中」鈕換成政策行（政策=保留簡體，可覆寫）",
+                  "content": "變體 — 陸劇（production_countries 含 CN）：簡中軌跟一般片一樣，沒有政策行。Vido 轉成繁體字、保留原用語（不套台灣詞庫、不跑 AI 術語校正），像 Netflix／Disney+ 的陸劇。⚖️ 2026-10-05 Alexyu 裁定，取代舊的「保留簡體，可覆寫」。",
                   "lineHeight": "$Type/Label/Line",
                   "fontFamily": "$Type/Family/Primary",
                   "fontSize": "$Type/Label/Size",
                   "fontWeight": "600"
-                },
-                {
-                  "type": "frame",
-                  "id": "YE3SJ",
-                  "name": "cnv-demo",
-                  "width": "fill_container",
-                  "fill": "$bg-tertiary",
-                  "cornerRadius": "$radius-sm",
-                  "gap": "$Space/sm",
-                  "padding": [
-                    "$Space/xs-plus",
-                    "$Space/sm"
-                  ],
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "icon",
-                      "id": "Z2K8B",
-                      "name": "cnv-ic",
-                      "width": 14,
-                      "height": 14,
-                      "icon": "info",
-                      "library": "lucide",
-                      "fill": "$text-muted"
-                    },
-                    {
-                      "type": "text",
-                      "id": "MmOkR",
-                      "name": "cnv-lb",
-                      "fill": "$text-muted",
-                      "content": "陸劇保留簡體字幕（對白一致）",
-                      "lineHeight": "$Type/Label/Line",
-                      "fontFamily": "$Type/Family/Primary",
-                      "fontSize": "$Type/Label/Size",
-                      "fontWeight": "normal"
-                    },
-                    {
-                      "type": "frame",
-                      "id": "J9tHk",
-                      "name": "cnv-override",
-                      "height": 44,
-                      "padding": [
-                        "$Space/none",
-                        "$Space/sm"
-                      ],
-                      "justifyContent": "center",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "bd6EV",
-                          "name": "cnv-override-lb",
-                          "fill": "$accent-text",
-                          "content": "仍要轉換",
-                          "lineHeight": "$Type/Label/Line",
-                          "fontFamily": "$Type/Family/Primary",
-                          "fontSize": "$Type/Label/Size",
-                          "fontWeight": "600"
-                        }
-                      ]
-                    }
-                  ]
                 },
                 {
                   "type": "text",

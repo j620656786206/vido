@@ -126,42 +126,17 @@ func (e *Engine) SetTerminologyService(svc services.TerminologyCorrectionService
 	e.terminologyService = svc
 }
 
-// ConversionPolicy controls how the engine handles simplified→traditional conversion.
-type ConversionPolicy int
-
-const (
-	// ConvertAuto is the default: convert simplified Chinese to traditional.
-	ConvertAuto ConversionPolicy = iota
-	// ConvertAlways forces conversion regardless of detection result.
-	ConvertAlways
-	// ConvertNever skips conversion (for CN mainland content).
-	ConvertNever
-)
-
 // ProcessOptions contains optional parameters for the subtitle pipeline.
 type ProcessOptions struct {
 	// ProductionCountry is the media's production country codes, comma-joined
-	// (e.g., "US,CN"). Mainland content (zhtw.IsMainland) defaults to
-	// ConvertNever and never gets the Taiwan vocabulary pass.
+	// (e.g., "US,CN"). Mainland content (zhtw.IsMainland) is converted to
+	// Traditional script but keeps its own wording: no Taiwan lexicon, no AI
+	// terminology correction (Alexyu ruling 2026-10-05).
 	ProductionCountry string
-	// ConversionOverride allows the caller to override the derived policy.
-	// nil = use default based on ProductionCountry.
-	ConversionOverride *ConversionPolicy
 	// Automatic marks an unattended caller (the request-completion trigger
 	// after a download). The ledger row records triggered_by=auto; anything
 	// else is manual (infra-optin-usage-report-a1).
 	Automatic bool
-}
-
-// deriveConversionPolicy returns the effective ConversionPolicy based on options.
-func deriveConversionPolicy(opts *ProcessOptions) ConversionPolicy {
-	if opts != nil && opts.ConversionOverride != nil {
-		return *opts.ConversionOverride
-	}
-	if zhtw.IsMainland(productionCountries(opts)) {
-		return ConvertNever
-	}
-	return ConvertAuto
 }
 
 // productionCountries splits ProcessOptions.ProductionCountry back into codes.
@@ -178,7 +153,7 @@ func (e *Engine) Process(ctx context.Context, mediaID, mediaType, mediaFilePath 
 	if len(opts) > 0 {
 		processOpts = &opts[0]
 	}
-	conversionPolicy := deriveConversionPolicy(processOpts)
+	countries := productionCountries(processOpts)
 	startedAt := e.clock()
 	// Stage 1: Search
 	e.broadcastStatus(mediaID, mediaType, StageSearching, "Searching subtitle providers...")
@@ -207,9 +182,9 @@ func (e *Engine) Process(ctx context.Context, mediaID, mediaType, mediaFilePath 
 
 	slog.Info("Subtitle downloaded", "provider", match.Source, "score", match.Score, "mediaID", mediaID)
 
-	// Stage 4: Convert if needed (respects CN conversion policy)
+	// Stage 4: Convert if needed (mainland content: script only)
 	e.broadcastStatus(mediaID, mediaType, StageConverting, "Checking language...")
-	convertedData, finalLang, err := e.convertIfNeeded(data, conversionPolicy, productionCountries(processOpts))
+	convertedData, finalLang, err := e.convertIfNeeded(data, countries)
 	if err != nil {
 		slog.Warn("Conversion failed, using original", "error", err, "mediaID", mediaID)
 		// convertIfNeeded already returns original data on failure;
@@ -217,10 +192,11 @@ func (e *Engine) Process(ctx context.Context, mediaID, mediaType, mediaFilePath 
 	}
 
 	// Stage 4.5: AI terminology correction (optional, post-OpenCC)
-	// Only applies when: service is configured, conversion policy allows it (not CN content),
-	// and we have Chinese content that was converted or is already Traditional.
+	// Only applies when: service is configured, the title is not mainland content
+	// (the correction rewrites vocabulary, which mainland titles keep), and we
+	// have Chinese content that was converted or is already Traditional.
 	if e.terminologyService != nil && e.terminologyService.IsConfigured() &&
-		conversionPolicy != ConvertNever &&
+		!zhtw.IsMainland(countries) &&
 		(finalLang == LangTraditional || finalLang == LangSimplified || finalLang == LangAmbiguous) {
 		e.broadcastStatus(mediaID, mediaType, StageCorrecting, "Applying AI terminology correction...")
 		corrected, corrErr := e.terminologyService.Correct(ctx, string(convertedData))
@@ -329,25 +305,15 @@ func (e *Engine) downloadBestMatch(ctx context.Context, scored []ScoredResult) (
 	return nil, nil, ErrAllDownloadsFailed
 }
 
-// convertIfNeeded detects language and converts simplified → traditional if needed.
-// Respects ConversionPolicy: ConvertNever skips conversion (CN content),
-// ConvertAlways forces it, ConvertAuto uses detection-based logic. A converted
-// subtitle is finished by zhtw.Finalize (script, then the Taiwan vocabulary),
-// the same step every other delivery path uses.
-func (e *Engine) convertIfNeeded(data []byte, policy ConversionPolicy, countries []string) ([]byte, string, error) {
+// convertIfNeeded detects language and converts simplified → traditional if
+// needed. A converted subtitle is finished by zhtw.Finalize (script, then the
+// Taiwan vocabulary — skipped for mainland content), the same step every
+// other delivery path uses.
+func (e *Engine) convertIfNeeded(data []byte, countries []string) ([]byte, string, error) {
 	detection := Detect(data)
-
-	// ConvertNever: skip conversion entirely (CN mainland content)
-	if policy == ConvertNever {
-		return data, detection.Language, nil
-	}
 
 	switch detection.Language {
 	case LangTraditional:
-		if policy == ConvertAlways {
-			// Already traditional — no conversion needed even if forced
-			return data, LangTraditional, nil
-		}
 		return data, LangTraditional, nil
 	case LangSimplified, LangAmbiguous:
 		if e.converter != nil && e.converter.IsAvailable() {
