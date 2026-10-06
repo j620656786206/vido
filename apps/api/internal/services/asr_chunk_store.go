@@ -14,7 +14,8 @@ import (
 
 // ─── ASR chunk store (disc-2026-09-generation-resume-b-asr-chunk-store) ────
 //
-// A long film is transcribed in 600-second chunks, each a separate paid ASR
+// A long film is transcribed in WhisperChunkDuration-second chunks (120 s,
+// cut at silences), each a separate paid ASR
 // call. Until this story, a run that died at chunk 9 of 16 — the batch money
 // ceiling, a deadline, a restart — threw the eight transcripts it had already
 // paid for away, and the next run paid for them again. Each chunk's TEXT is now
@@ -75,6 +76,14 @@ func asrManifestKey(mediaID string, size, mtime int64, endpoint string) string {
 type asrChunkValue struct {
 	Filtered   string `json:"filtered"`
 	Unfiltered string `json:"unfiltered"`
+	// StartMS is where this chunk was cut in the original audio
+	// (disc-2026-10-asr-chunk-at-silence); a run whose cut differs must not
+	// reuse the chunk-relative cues. Older rows decode as 0.
+	StartMS int `json:"start_ms,omitempty"`
+	// DurationMS pins the chunk's END as well (CR 2): chunk 0 always starts
+	// at 0, so without it a moved first cut would reuse a chunk that no
+	// longer covers the same audio.
+	DurationMS int `json:"duration_ms,omitempty"`
 }
 
 // decodeASRChunkValue treats anything unreadable as a miss, never an error.

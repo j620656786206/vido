@@ -1427,19 +1427,20 @@ func (s *TranscriptionService) transcribeAudio(ctx context.Context, audioPath, l
 		return "", fmt.Errorf("check chunking: %w", err)
 	}
 
-	chunks := []string{audioPath}
+	chunks := []ai.AudioChunk{{Path: audioPath}}
 	chunkSeconds := 0
 	if needsChunk {
-		s.logger.Info("audio exceeds 25MB, splitting into chunks")
 		chunks, chunkSeconds, err = ai.SplitAudioChunks(ctx, audioPath)
 		if err != nil {
 			return "", fmt.Errorf("split chunks: %w", err)
 		}
+		s.logger.Info("audio split into chunks at silences",
+			"chunks", len(chunks), "grid_seconds", chunkSeconds)
 		// Cleanup chunk files (skip first if it's the original)
 		defer func() {
 			for _, chunk := range chunks {
-				if chunk != audioPath {
-					os.Remove(chunk)
+				if chunk.Path != audioPath {
+					os.Remove(chunk.Path)
 				}
 			}
 		}()
@@ -1453,11 +1454,19 @@ func (s *TranscriptionService) transcribeAudio(ctx context.Context, audioPath, l
 	// filtering is automatically per-chunk and automatically happens before the
 	// merge — no change to SplitAudioChunks/MergeSRTChunks was needed.
 	unfilteredChunks := make([]string, 0, len(chunks))
-	for i, chunkPath := range chunks {
-		if v, ok := stored[i]; ok {
+	for i, chunk := range chunks {
+		chunkPath := chunk.Path
+		// A stored chunk is only reusable if it was cut where this run cuts:
+		// its cues are chunk-relative, and the silence snap can move a cut
+		// (disc-2026-10-asr-chunk-at-silence). A mismatch is a miss.
+		if v, ok := stored[i]; ok && v.StartMS == chunk.StartMS && v.DurationMS == chunk.DurationMS {
 			srtChunks = append(srtChunks, v.Filtered)
 			unfilteredChunks = append(unfilteredChunks, v.Unfiltered)
 			continue
+		} else if ok {
+			s.logger.Info("asr chunk cache: stored chunk cut elsewhere — transcribing again",
+				"chunk", i+1, "stored_start_ms", v.StartMS, "start_ms", chunk.StartMS,
+				"stored_duration_ms", v.DurationMS, "duration_ms", chunk.DurationMS)
 		}
 		if needsChunk {
 			s.logger.Info("transcribing chunk",
@@ -1465,7 +1474,13 @@ func (s *TranscriptionService) transcribeAudio(ctx context.Context, audioPath, l
 				"total", len(chunks),
 			)
 		}
-		filtered, unfiltered, err := s.transcribeOne(ctx, chunkPath, lang)
+		// Only the last upload is the end of the film: the others must not
+		// run the end-of-film tail rule (disc-2026-10-asr-chunk-at-silence).
+		chunkCtx := ctx
+		if i < len(chunks)-1 {
+			chunkCtx = ai.WithMidFileChunk(ctx)
+		}
+		filtered, unfiltered, err := s.transcribeOne(chunkCtx, chunkPath, lang)
 		if err != nil {
 			if needsChunk {
 				return "", fmt.Errorf("transcribe chunk %d/%d: %w", i+1, len(chunks), err)
@@ -1474,15 +1489,16 @@ func (s *TranscriptionService) transcribeAudio(ctx context.Context, audioPath, l
 		}
 		srtChunks = append(srtChunks, filtered)
 		unfilteredChunks = append(unfilteredChunks, unfiltered)
-		s.storeChunk(ctx, scope, i, chunkSeconds, asrChunkValue{Filtered: filtered, Unfiltered: unfiltered})
+		s.storeChunk(ctx, scope, i, chunkSeconds, asrChunkValue{Filtered: filtered, Unfiltered: unfiltered, StartMS: chunk.StartMS, DurationMS: chunk.DurationMS})
 	}
 
 	if !needsChunk {
 		return s.guardAgainstEmptyTranscript(srtChunks[0], unfilteredChunks[0]), nil
 	}
+	starts := ai.ChunkStarts(chunks)
 	return s.guardAgainstEmptyTranscript(
-		ai.MergeSRTChunks(srtChunks, chunkSeconds),
-		ai.MergeSRTChunks(unfilteredChunks, chunkSeconds),
+		ai.MergeSRTChunks(srtChunks, starts),
+		ai.MergeSRTChunks(unfilteredChunks, starts),
 	), nil
 }
 

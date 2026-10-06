@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -30,8 +31,13 @@ const (
 	// headroom under the API limit so file bytes + multipart overhead never
 	// push the POST body past 25MiB (the POC's 413).
 	WhisperChunkTargetBytes = 24 * 1024 * 1024
-	// WhisperChunkDuration is the duration of each audio chunk in seconds (10 minutes).
-	WhisperChunkDuration = 600
+	// WhisperChunkDuration is the nominal chunk grid in seconds. Was 600
+	// (disc-2026-10-asr-chunk-at-silence): on See S01E02 one ten-minute
+	// upload that opens with 3½ minutes of score sent the hosted engine into
+	// "♪♪ only" mode for the WHOLE upload on 3 of 4 runs. A two-minute grid
+	// caps what one bad window can take with it; the grid only sets cache
+	// identity — the actual cuts snap to the nearest silence (see planCuts).
+	WhisperChunkDuration = 120
 	// WhisperMaxResponseSize is the maximum Whisper API response body we'll read (10MB).
 	WhisperMaxResponseSize = 10 * 1024 * 1024
 )
@@ -359,7 +365,7 @@ func (c *WhisperClient) transcribeVerbose(ctx context.Context, audio []byte, fil
 	// CR M2: a prompted decoder may "hear" the prompt over silence — strip
 	// those slices before the score-based rules, which are blind to them.
 	echoKept, echoDropped := filterPromptEcho(vt.Segments, ASRPromptFromContext(ctx))
-	kept, dropped := filterHallucinations(echoKept)
+	kept, dropped := filterHallucinationsWith(echoKept, !IsMidFileChunk(ctx))
 	dropped = append(echoDropped, dropped...)
 	detail := TranscriptionDetail{
 		SRT:          segmentsToSRT(kept),
@@ -578,13 +584,176 @@ func NeedsChunking(audioPath string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("stat audio file: %w", err)
 	}
-	return info.Size() > WhisperChunkTargetBytes, nil
+	if info.Size() > WhisperChunkTargetBytes {
+		return true, nil
+	}
+	// disc-2026-10-asr-chunk-at-silence: length splits too, not just size —
+	// a file under the byte budget can still be long enough for one scored
+	// window to poison the rest of the upload.
+	duration, _, err := parseWAVInfo(audioPath)
+	if err != nil {
+		// Unreadable header: the size rule above already said "fits", and
+		// SplitAudioChunks would report the header problem itself if asked.
+		return false, nil
+	}
+	return duration > float64(WhisperChunkDuration), nil
+}
+
+// AudioChunk is one upload-sized piece of the extracted audio with where it
+// sits in the original (ms) — the merge offsets its cues by StartMS.
+type AudioChunk struct {
+	Path       string
+	StartMS    int
+	DurationMS int
+}
+
+// Silence snapping (disc-2026-10-asr-chunk-at-silence): a cut lands in the
+// middle of the nearest silence within ±silenceSnapWindowMS of the nominal
+// grid line, so no word is sliced in half. ffmpeg's silencedetect at
+// silenceNoiseDB / silenceMinDurMS finds the gaps; a longest chunk is
+// grid+2×window, well under the byte budget at 16 kHz mono.
+const (
+	silenceSnapWindowMS = 20_000
+	silenceNoiseDB      = -35
+	silenceMinDurMS     = 400
+	minTailMS           = 30_000
+)
+
+// silenceSpan is one silent stretch of the audio in ms.
+type silenceSpan struct{ StartMS, EndMS int }
+
+// detectSilences runs ffmpeg silencedetect once over the whole file and parses
+// its stderr. Fail-soft: any error means "no silences known" and the caller
+// cuts on the bare grid — exactly the pre-story behaviour, never a failed run.
+func detectSilences(ctx context.Context, audioPath string) []silenceSpan {
+	//nolint:gosec // audioPath comes from our own temp extraction
+	cmd := execCommandContext(ctx, "ffmpeg",
+		"-hide_banner", "-nostats",
+		"-i", audioPath,
+		"-af", fmt.Sprintf("silencedetect=noise=%ddB:d=%.3f", silenceNoiseDB, float64(silenceMinDurMS)/1000),
+		"-f", "null", "-",
+	)
+	output, err := cmd.CombinedOutput()
+	if err != nil && len(output) == 0 {
+		return nil
+	}
+	return parseSilenceDetect(string(output))
+}
+
+// parseSilenceDetect reads "[silencedetect @ …] silence_start: 12.345" /
+// "silence_end: 13.9 | silence_duration: 1.555" pairs. PURE.
+func parseSilenceDetect(stderr string) []silenceSpan {
+	var spans []silenceSpan
+	start, open := 0, false
+	for _, line := range strings.Split(stderr, "\n") {
+		if i := strings.Index(line, "silence_start:"); i >= 0 {
+			if v, ok := parseSecondsField(line[i+len("silence_start:"):]); ok {
+				// ffmpeg prints a hair of negative time at the very start
+				// ("-0.0001"); that is 0.
+				start, open = max(v, 0), true
+			}
+			continue
+		}
+		if i := strings.Index(line, "silence_end:"); i >= 0 && open {
+			if v, ok := parseSecondsField(line[i+len("silence_end:"):]); ok && v > start {
+				spans = append(spans, silenceSpan{StartMS: start, EndMS: v})
+			}
+			open = false
+		}
+	}
+	return spans
+}
+
+// parseSecondsField reads the leading float of " 12.345 | silence_duration…"
+// as ms.
+func parseSecondsField(s string) (int, bool) {
+	s = strings.TrimSpace(s)
+	end := 0
+	for end < len(s) && (s[end] == '.' || s[end] == '-' || s[end] == '+' || s[end] == 'e' || s[end] == 'E' || (s[end] >= '0' && s[end] <= '9')) {
+		end++
+	}
+	if end == 0 {
+		return 0, false
+	}
+	var sec float64
+	if _, err := fmt.Sscanf(s[:end], "%g", &sec); err != nil {
+		return 0, false
+	}
+	return int(math.Round(sec * 1000)), true
+}
+
+// planCuts returns the chunk start offsets (ms) for a file of durationMS cut
+// on a gridSec grid, each interior cut moved to the middle of the nearest
+// silence within the snap window. Always len == ceil(duration/grid), cuts[0]
+// == 0, strictly increasing — so chunk i keeps the cache identity of grid
+// line i whatever the exact cut. PURE.
+func planCuts(durationMS, gridSec int, silences []silenceSpan) []int {
+	gridMS := gridSec * 1000
+	if gridMS <= 0 || durationMS <= 0 {
+		return []int{0}
+	}
+	// The snap window never exceeds a third of the grid, so two snapped cuts
+	// cannot cross even on a byte-rate-shrunk grid (CR 4).
+	window := silenceSnapWindowMS
+	if gridMS/3 < window {
+		window = gridMS / 3
+	}
+	n := (durationMS + gridMS - 1) / gridMS
+	// A tail shorter than minTailMS is not worth its own upload (and its own
+	// 30 s decoder window): it rides with the previous chunk.
+	if n > 1 && durationMS-(n-1)*gridMS < minTailMS {
+		n--
+	}
+	cuts := make([]int, 0, n)
+	cuts = append(cuts, 0)
+	for i := 1; i < n; i++ {
+		nominal := i * gridMS
+		cut := nominal
+		best := window + 1
+		for _, sp := range silences {
+			lo, hi := nominal-window, nominal+window
+			if sp.EndMS < lo || sp.StartMS > hi {
+				continue
+			}
+			mid := (sp.StartMS + sp.EndMS) / 2
+			if mid < lo {
+				mid = lo
+			} else if mid > hi {
+				mid = hi
+			}
+			if d := abs(mid - nominal); d < best {
+				best, cut = d, mid
+			}
+		}
+		// Never let a cut land on or before the previous one, and never past
+		// the end of the audio — strictly increasing, whatever the silences.
+		if prev := cuts[len(cuts)-1]; cut <= prev+silenceMinDurMS {
+			cut = nominal
+			if cut <= prev+silenceMinDurMS {
+				cut = prev + silenceMinDurMS
+			}
+		}
+		if cut >= durationMS {
+			break
+		}
+		cuts = append(cuts, cut)
+	}
+	return cuts
+}
+
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
 }
 
 // SplitAudioChunks splits a WAV file into chunks that each fit the per-chunk
-// size budget. It returns the chunk paths AND the chunk duration in seconds
-// actually used (callers MUST pass that value to MergeSRTChunks so merged
-// timestamps stay contiguous — 9R-3). Caller is responsible for cleanup.
+// size budget and the WhisperChunkDuration grid, cutting at silences
+// (disc-2026-10-asr-chunk-at-silence). It returns the chunks — each with its
+// true start offset, which MergeSRTChunks needs — AND the nominal grid in
+// seconds that names them in the chunk cache (9R-3 / sub-6-x resume). Caller
+// is responsible for cleanup of every Path that is not audioPath itself.
 //
 // 9R-3: the split decision is SIZE-consistent with NeedsChunking — the chunk
 // duration is derived from the WAV byte rate so that duration*byteRate stays
@@ -592,7 +761,7 @@ func NeedsChunking(audioPath string) (bool, error) {
 // chunk-walking WAV parser that tolerates ffmpeg's extra header chunks (the
 // old fixed-offset read misparsed those headers, skipped splitting, and sent
 // the whole oversized file -> HTTP 413).
-func SplitAudioChunks(ctx context.Context, audioPath string) ([]string, int, error) {
+func SplitAudioChunks(ctx context.Context, audioPath string) ([]AudioChunk, int, error) {
 	info, err := os.Stat(audioPath)
 	if err != nil {
 		return nil, 0, fmt.Errorf("stat audio file: %w", err)
@@ -615,28 +784,41 @@ func SplitAudioChunks(ctx context.Context, audioPath string) ([]string, int, err
 		chunkSeconds = 1
 	}
 
+	durationMS := int(math.Round(duration * 1000))
 	if info.Size() <= WhisperChunkTargetBytes && duration <= float64(chunkSeconds) {
-		return []string{audioPath}, chunkSeconds, nil
+		return []AudioChunk{{Path: audioPath, StartMS: 0, DurationMS: durationMS}}, chunkSeconds, nil
 	}
 
-	var chunks []string
-	for start := 0; start < int(duration); start += chunkSeconds {
-		chunkFile, err := os.CreateTemp("", fmt.Sprintf("vido-chunk-%d-*.wav", start))
+	cuts := planCuts(durationMS, chunkSeconds, detectSilences(ctx, audioPath))
+	cleanup := func(chunks []AudioChunk) {
+		for _, c := range chunks {
+			os.Remove(c.Path)
+		}
+	}
+
+	var chunks []AudioChunk
+	for i, startMS := range cuts {
+		endMS := durationMS
+		if i+1 < len(cuts) {
+			endMS = cuts[i+1]
+		}
+		chunkFile, err := os.CreateTemp("", fmt.Sprintf("vido-chunk-%d-*.wav", startMS/1000))
 		if err != nil {
-			// Cleanup already created chunks
-			for _, c := range chunks {
-				os.Remove(c)
-			}
+			cleanup(chunks)
 			return nil, 0, fmt.Errorf("create chunk temp file: %w", err)
 		}
 		chunkPath := chunkFile.Name()
 		chunkFile.Close()
+		start := startMS / 1000 // for error text only
 
 		//nolint:gosec // audioPath comes from our own temp extraction
+		// -ss BEFORE -i: input seeking. On PCM it is sample-exact, and it
+		// stops ffmpeg decoding everything before the cut on each of the
+		// ~80 calls a film now takes (CR 3 — output seeking was O(n²)).
 		cmd := execCommandContext(ctx, "ffmpeg",
+			"-ss", fmt.Sprintf("%.3f", float64(startMS)/1000),
 			"-i", audioPath,
-			"-ss", fmt.Sprintf("%d", start),
-			"-t", fmt.Sprintf("%d", chunkSeconds),
+			"-t", fmt.Sprintf("%.3f", float64(endMS-startMS)/1000),
 			"-acodec", "pcm_s16le",
 			"-ar", "16000",
 			"-ac", "1",
@@ -645,9 +827,7 @@ func SplitAudioChunks(ctx context.Context, audioPath string) ([]string, int, err
 		)
 
 		if output, err := cmd.CombinedOutput(); err != nil {
-			for _, c := range chunks {
-				os.Remove(c)
-			}
+			cleanup(chunks)
 			os.Remove(chunkPath)
 			// A deadline kills ffmpeg with SIGKILL: "signal: killed" is the
 			// symptom, the run deadline is the cause — say so, and carry the
@@ -660,14 +840,12 @@ func SplitAudioChunks(ctx context.Context, audioPath string) ([]string, int, err
 
 		// Defensive: never hand an oversized chunk to the API (the 413 class).
 		if ci, err := os.Stat(chunkPath); err == nil && ci.Size() > WhisperMaxFileSize {
-			for _, c := range chunks {
-				os.Remove(c)
-			}
+			cleanup(chunks)
 			os.Remove(chunkPath)
 			return nil, 0, fmt.Errorf("chunk at %ds is %d bytes, exceeds Whisper %d-byte limit", start, ci.Size(), int64(WhisperMaxFileSize))
 		}
 
-		chunks = append(chunks, chunkPath)
+		chunks = append(chunks, AudioChunk{Path: chunkPath, StartMS: startMS, DurationMS: endMS - startMS})
 	}
 
 	return chunks, chunkSeconds, nil
@@ -721,8 +899,10 @@ type execCmd struct {
 	*exec.Cmd
 }
 
-// MergeSRTChunks merges multiple SRT strings from chunked transcription, adjusting timestamps.
-func MergeSRTChunks(chunks []string, chunkDuration int) string {
+// MergeSRTChunks merges the per-chunk SRTs of a chunked transcription,
+// shifting chunk i's cues by startsMS[i] (its true offset in the original,
+// from SplitAudioChunks) and renumbering. A missing offset counts as 0.
+func MergeSRTChunks(chunks []string, startsMS []int) string {
 	if len(chunks) == 0 {
 		return ""
 	}
@@ -734,12 +914,24 @@ func MergeSRTChunks(chunks []string, chunkDuration int) string {
 	seqNum := 1
 
 	for i, chunk := range chunks {
-		offsetSeconds := i * chunkDuration
-		adjusted := adjustSRTTimestamps(chunk, offsetSeconds, &seqNum)
+		offsetMS := 0
+		if i < len(startsMS) {
+			offsetMS = startsMS[i]
+		}
+		adjusted := adjustSRTTimestamps(chunk, offsetMS, &seqNum)
 		merged.WriteString(adjusted)
 	}
 
 	return merged.String()
+}
+
+// ChunkStarts is the []StartMS of a chunk list, in MergeSRTChunks' shape.
+func ChunkStarts(chunks []AudioChunk) []int {
+	out := make([]int, len(chunks))
+	for i, c := range chunks {
+		out[i] = c.StartMS
+	}
+	return out
 }
 
 // getWAVDuration calculates the audio duration of a WAV file.
@@ -814,9 +1006,9 @@ func parseWAVInfo(path string) (duration float64, byteRate uint32, err error) {
 	return float64(dataSize) / float64(byteRate), byteRate, nil
 }
 
-// adjustSRTTimestamps adjusts SRT timestamp lines by an offset and renumbers sequences.
-func adjustSRTTimestamps(srt string, offsetSeconds int, seqNum *int) string {
-	if offsetSeconds == 0 && *seqNum == 1 {
+// adjustSRTTimestamps adjusts SRT timestamp lines by an offset (ms) and renumbers sequences.
+func adjustSRTTimestamps(srt string, offsetMS int, seqNum *int) string {
+	if offsetMS == 0 && *seqNum == 1 {
 		// First chunk, no adjustment needed; just count sequences
 		result := &bytes.Buffer{}
 		lines := splitLines(srt)
@@ -844,7 +1036,7 @@ func adjustSRTTimestamps(srt string, offsetSeconds int, seqNum *int) string {
 			continue
 		}
 		if isTimestampLine(line) {
-			adjusted := offsetTimestampLine(line, offsetSeconds)
+			adjusted := offsetTimestampLine(line, offsetMS)
 			result.WriteString(adjusted)
 			result.WriteByte('\n')
 			continue
@@ -891,7 +1083,7 @@ func isTimestampLine(line string) bool {
 	return len(line) >= 29 && line[2] == ':' && line[5] == ':' && line[8] == ','
 }
 
-func offsetTimestampLine(line string, offsetSeconds int) string {
+func offsetTimestampLine(line string, offsetMS int) string {
 	// Parse: 00:00:00,000 --> 00:00:00,000
 	if len(line) < 29 {
 		return line
@@ -900,8 +1092,8 @@ func offsetTimestampLine(line string, offsetSeconds int) string {
 	start := parseSRTTimestamp(line[0:12])
 	end := parseSRTTimestamp(line[17:29])
 
-	start += offsetSeconds * 1000
-	end += offsetSeconds * 1000
+	start += offsetMS
+	end += offsetMS
 
 	return fmt.Sprintf("%s --> %s", formatSRTTimestamp(start), formatSRTTimestamp(end))
 }

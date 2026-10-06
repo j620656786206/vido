@@ -67,9 +67,12 @@ func installFakeChunkFFmpeg(t *testing.T) {
 	tiny := filepath.Join(t.TempDir(), "tiny.wav")
 	writeHeaderOnlyWAV(t, tiny, 600)
 	bin := t.TempDir()
+	// The silencedetect pass ends in "-" (no output file): answer it with
+	// nothing, so the cuts fall on the bare grid.
 	script := fmt.Sprintf(`#!/bin/sh
 out=""
 for a in "$@"; do out="$a"; done
+[ "$out" = "-" ] && exit 0
 cp %q "$out"
 `, tiny)
 	require.NoError(t, os.WriteFile(filepath.Join(bin, "ffmpeg"), []byte(script), 0o755))
@@ -111,7 +114,7 @@ func chunkScopeFor(id ASRChunkIdentity) *asrChunkScope {
 func TestTranscribeAudio_ResumesFromStoredChunks(t *testing.T) {
 	installFakeChunkFFmpeg(t)
 	wav := filepath.Join(t.TempDir(), "film.wav")
-	writePayloadWAV(t, wav, 16*600) // 16 chunks of 600 s
+	writePayloadWAV(t, wav, 16*120) // 16 chunks on the 120 s grid
 	repo := &fakeCacheRepo{}
 
 	// First run: the ceiling trips at chunk 9.
@@ -137,7 +140,7 @@ func TestTranscribeAudio_ResumesFromStoredChunks(t *testing.T) {
 		}
 	}
 	assert.Equal(t, 8, chunkRows, "the eight paid-for chunks are remembered")
-	assert.Equal(t, asrManifest{Track: 1, Lang: "en", ChunkSeconds: 600, Done: []int{0, 600, 1200, 1800, 2400, 3000, 3600, 4200}}, manifest)
+	assert.Equal(t, asrManifest{Track: 1, Lang: "en", ChunkSeconds: 120, Done: []int{0, 120, 240, 360, 480, 600, 720, 840}}, manifest)
 
 	// Second run: only the eight missing chunks reach the engine.
 	second := &countingASR{base: 8}
@@ -156,7 +159,7 @@ func TestTranscribeAudio_ResumesFromStoredChunks(t *testing.T) {
 	assert.Equal(t, 16, third.count())
 	assert.Equal(t, want, got)
 	assert.Equal(t, 16, countSRTCues(got))
-	assert.Contains(t, got, "02:20:01,000 --> 02:20:02,000\ncall 15\n", "chunk 15 (offset 8400 s) keeps its merged timestamp")
+	assert.Contains(t, got, "00:28:01,000 --> 00:28:02,000\ncall 15\n", "chunk 15 (offset 14x120 s) keeps its merged timestamp")
 
 	// Success clears the film's rows.
 	svc2.clearChunkCache(context.Background(), chunkScopeFor(id))
@@ -166,7 +169,7 @@ func TestTranscribeAudio_ResumesFromStoredChunks(t *testing.T) {
 func TestTranscribeAudio_IdentityChangeMeansMiss(t *testing.T) {
 	installFakeChunkFFmpeg(t)
 	wav := filepath.Join(t.TempDir(), "film.wav")
-	writePayloadWAV(t, wav, 2*600)
+	writePayloadWAV(t, wav, 2*120)
 	repo := &fakeCacheRepo{}
 	id := baseIdentity()
 
@@ -203,7 +206,7 @@ func TestTranscribeAudio_IdentityChangeMeansMiss(t *testing.T) {
 func TestTranscribeAudio_CacheFailuresNeverFailThePaidRun(t *testing.T) {
 	installFakeChunkFFmpeg(t)
 	wav := filepath.Join(t.TempDir(), "film.wav")
-	writePayloadWAV(t, wav, 2*600)
+	writePayloadWAV(t, wav, 2*120)
 	id := baseIdentity()
 
 	t.Run("GetMany fails → everything is transcribed", func(t *testing.T) {
@@ -229,7 +232,7 @@ func TestTranscribeAudio_CacheFailuresNeverFailThePaidRun(t *testing.T) {
 	t.Run("a corrupt entry is a miss", func(t *testing.T) {
 		repo := &fakeCacheRepo{}
 		k := asrChunkKey(ASRChunkIdentity{MediaID: id.MediaID, FileSize: id.FileSize, FileMTime: id.FileMTime,
-			TrackIndex: id.TrackIndex, Lang: id.Lang, Start: 0, ChunkSeconds: 600, Endpoint: id.Endpoint})
+			TrackIndex: id.TrackIndex, Lang: id.Lang, Start: 0, ChunkSeconds: 120, Endpoint: id.Endpoint})
 		require.NoError(t, repo.Set(context.Background(), k, "not json", asrChunkType, time.Hour))
 		asr := &countingASR{}
 		svc := NewTranscriptionService(nil, asr, nil, nil)
@@ -253,13 +256,13 @@ func TestTranscribeAudio_CacheFailuresNeverFailThePaidRun(t *testing.T) {
 func TestTranscribeAudio_StoredUnfilteredFeedsTheGuard(t *testing.T) {
 	installFakeChunkFFmpeg(t)
 	wav := filepath.Join(t.TempDir(), "film.wav")
-	writePayloadWAV(t, wav, 2*600)
+	writePayloadWAV(t, wav, 2*120)
 	id := baseIdentity()
 	repo := &fakeCacheRepo{}
-	for _, start := range []int{0, 600} {
+	for _, start := range []int{0, 120} {
 		k := asrChunkKey(ASRChunkIdentity{MediaID: id.MediaID, FileSize: id.FileSize, FileMTime: id.FileMTime,
-			TrackIndex: id.TrackIndex, Lang: id.Lang, Start: start, ChunkSeconds: 600, Endpoint: id.Endpoint})
-		raw, _ := json.Marshal(asrChunkValue{Filtered: "", Unfiltered: fmt.Sprintf("1\n00:00:01,000 --> 00:00:02,000\nkept %d\n", start)})
+			TrackIndex: id.TrackIndex, Lang: id.Lang, Start: start, ChunkSeconds: 120, Endpoint: id.Endpoint})
+		raw, _ := json.Marshal(asrChunkValue{Filtered: "", Unfiltered: fmt.Sprintf("1\n00:00:01,000 --> 00:00:02,000\nkept %d\n", start), StartMS: start * 1000, DurationMS: 120_000})
 		require.NoError(t, repo.Set(context.Background(), k, string(raw), asrChunkType, time.Hour))
 	}
 	asr := &countingASR{}
@@ -271,7 +274,7 @@ func TestTranscribeAudio_StoredUnfilteredFeedsTheGuard(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 0, asr.count())
 	assert.Contains(t, got, "kept 0")
-	assert.Contains(t, got, "kept 600")
+	assert.Contains(t, got, "kept 120")
 }
 
 // A short file (no chunking) goes through the same store as ONE chunk.
@@ -300,7 +303,7 @@ func TestTranscribeAudio_ShortFileIsOneChunk(t *testing.T) {
 func TestTranscribeAudio_LookupIsBoundedByTheFilmNotTheTable(t *testing.T) {
 	installFakeChunkFFmpeg(t)
 	wav := filepath.Join(t.TempDir(), "film.wav")
-	writePayloadWAV(t, wav, 2*600)
+	writePayloadWAV(t, wav, 2*120)
 	repo := &fakeCacheRepo{}
 	for i := 0; i < 10_000; i++ {
 		require.NoError(t, repo.Set(context.Background(), fmt.Sprintf("%sfiller-%d", asrChunkKeyPrefix, i), "{}", asrChunkType, time.Hour))
@@ -345,7 +348,7 @@ func TestHasResumeProgress(t *testing.T) {
 		svc.SetASRChunkStore(NewASRChunkStore(repo))
 		assert.False(t, svc.HasResumeProgress(context.Background(), models.SubtitleRunMediaMovie, uuidA, media))
 		k := asrManifestKey(uuidA, size, mtime, "|"+ai.WhisperModel)
-		require.NoError(t, repo.Set(context.Background(), k, `{"track":1,"lang":"en","chunk_seconds":600,"done":[0]}`, asrChunkType, time.Hour))
+		require.NoError(t, repo.Set(context.Background(), k, `{"track":1,"lang":"en","chunk_seconds":120,"done":[0]}`, asrChunkType, time.Hour))
 		assert.True(t, svc.HasResumeProgress(context.Background(), models.SubtitleRunMediaMovie, uuidA, media))
 	})
 

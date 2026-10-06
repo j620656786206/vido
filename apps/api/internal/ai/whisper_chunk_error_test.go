@@ -32,7 +32,7 @@ func chunkFixture(t *testing.T) string {
 	t.Helper()
 	f, err := os.CreateTemp(t.TempDir(), "*.wav")
 	require.NoError(t, err)
-	writeWAVWithChunks(t, f, 32000, 26*1024*1024, false) // 2 chunks of 600 s
+	writeWAVWithChunks(t, f, 32000, 26*1024*1024, false) // 7 chunks on the 120 s grid
 	return f.Name()
 }
 
