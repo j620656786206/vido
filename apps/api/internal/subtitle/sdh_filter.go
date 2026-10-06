@@ -4,7 +4,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"unicode"
+
+	"github.com/vido/api/internal/ai"
 )
 
 // maxSpeakerLabelLen caps how long an ALL-CAPS leading label may be before it
@@ -25,8 +26,10 @@ var speakerLabelPattern = regexp.MustCompile(
 	`^(?:\[` + speakerLabelName + `\]|` + speakerLabelName + `):[ \t]*`)
 
 // musicMarks wrap a whole line of lyric/score annotation in SDH tracks. ♫ and
-// ♬ (U+266B/U+266C) are as common as ♪ in real tracks (sub-6-4 CR M4).
-var musicMarks = []rune{'♪', '♫', '♬', '#'}
+// ♬ (U+266B/U+266C) are as common as ♪ in real tracks (sub-6-4 CR M4). The
+// set itself is ai.MusicMarks — shared with the speech-recognition leg's
+// hallucination filter (disc-2026-10-asr-music-only-cues).
+var musicMarks = []rune(ai.MusicMarks)
 
 // FilterSDH strips SDH (subtitles for the deaf and hard-of-hearing) annotations
 // from parsed cues, returning the survivors and the number of cues DROPPED
@@ -109,20 +112,7 @@ func isWholeLineAnnotation(s string) bool {
 // tracks smuggle in (ZWSP / ZWNJ / BOM) — the same family filterSDHLine's
 // TrimSpace treats as nothing. A line with any other character is left alone,
 // so the sub-1-4 AC #4 under-strip posture for `♪ lyrics` is unchanged.
-func isMusicOnly(s string) bool {
-	seenMark := false
-	for _, r := range s {
-		switch {
-		case unicode.IsSpace(r) || r == '\u200b' || r == '\u200c' || r == '\ufeff':
-			continue
-		case strings.ContainsRune(string(musicMarks), r):
-			seenMark = true
-		default:
-			return false
-		}
-	}
-	return seenMark
-}
+func isMusicOnly(s string) bool { return ai.IsMusicOnlyText(s) }
 
 // isWrappedInBrackets reports whether s opens with `open`, closes with `close`,
 // and the opening bracket's match is the FINAL character. The depth walk is

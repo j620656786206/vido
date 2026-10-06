@@ -152,6 +152,14 @@ const (
 	dropReasonRepetition = "repetition"
 	dropReasonRepeatRun  = "repeat_run"
 	dropReasonTail       = "tail"
+	// dropReasonMusicOnly: the segment's text is only music marks (♪♪) —
+	// whisper's way of saying "score, no words". Not a hallucination in the
+	// strict sense, but not a subtitle either: it would be paid for in
+	// translation and shown as a floating ♪♪ (See S01E02: 22 of them,
+	// disc-2026-10-asr-music-only-cues). The embedded-track leg already drops
+	// these in subtitle.FilterSDH (sub-6-4); this is the same rule for the
+	// speech-recognition leg.
+	dropReasonMusicOnly = "music_only"
 )
 
 // droppedSegment is one filtered-out segment plus why it went.
@@ -176,9 +184,11 @@ func filterHallucinations(segs []whisperSegment) (kept []whisperSegment, dropped
 
 	reasons := make([]string, len(segs))
 
-	// R1 silence + R2 per-segment repetition.
+	// R0 music-only, R1 silence, R2 per-segment repetition.
 	for i, seg := range segs {
 		switch {
+		case IsMusicOnlyText(seg.Text):
+			reasons[i] = dropReasonMusicOnly
 		case seg.NoSpeechProb > hallucinationNoSpeechThreshold && seg.AvgLogprob < hallucinationLogprobThreshold:
 			reasons[i] = dropReasonSilence
 		case seg.CompressionRatio > hallucinationCompressionThreshold:
