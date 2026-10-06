@@ -371,8 +371,36 @@ func (s *EnrichmentService) refreshManualMovie(ctx context.Context, movie *model
 	// Glossary terms carry their own provenance and never overwrite, so the
 	// scope is still resolved (sub-7-3) even though no match was made.
 	s.touchGlossaryScope(ctx, movie.ID)
+	// disc-2026-10-series-credits-empty: a user-owned row matched before cast
+	// was stored never gets re-matched, so this is its one chance — fill only
+	// when there is nothing to overwrite.
+	s.fillMissingCredits(ctx, "movie", movie.ID, movie.TMDbID, movie.Credits, s.movieRepo.UpdateCredits)
 	s.logger.Info("manual movie kept; local analysis refreshed", "id", movie.ID)
 	return nil
+}
+
+// fillMissingCredits fetches and stores the cast for a row that has none.
+// Never overwrites: a row with any cast (TMDb's or the Metadata Editor's)
+// returns at once. Fail-soft like matchedCredits.
+func (s *EnrichmentService) fillMissingCredits(ctx context.Context, mediaType, rowID string, tmdbID models.NullInt64, have *models.Credits, write func(context.Context, string, *models.Credits) error) {
+	// Any stored credits — a cast, or only a director typed into the
+	// Metadata Editor — are the user's word (CR 1): nothing to fill.
+	if have != nil && (len(have.Cast) > 0 || len(have.Crew) > 0) {
+		return
+	}
+	if s.glossaryCredits == nil || !tmdbID.Valid || tmdbID.Int64 <= 0 {
+		return
+	}
+	credits, _, err := s.glossaryCredits.FetchCredits(ctx, mediaType, tmdbID.Int64)
+	if err != nil && credits == nil {
+		s.logger.Warn("credits fill failed; row kept without cast",
+			"id", rowID, "media_type", mediaType, "tmdb_id", tmdbID.Int64, "error", err)
+		return
+	}
+	if credits == nil || len(credits.Cast) == 0 {
+		return
+	}
+	s.persistCredits(ctx, write, rowID, credits)
 }
 
 // refreshManualSeries: a series row carries no file tech info, so only the
@@ -384,6 +412,7 @@ func (s *EnrichmentService) refreshManualSeries(ctx context.Context, series *mod
 		return fmt.Errorf("%w: refresh manual series: %w", ErrEnrichPersist, err)
 	}
 	s.touchGlossaryScope(ctx, series.ID)
+	s.fillMissingCredits(ctx, "tv", series.ID, series.TMDbID, series.Credits, s.seriesRepo.UpdateCredits)
 	s.logger.Info("manual series kept", "id", series.ID)
 	return nil
 }

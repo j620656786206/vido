@@ -118,3 +118,42 @@ func TestUpdateEnrichedMetadata_RejectsNilAndEmptyID(t *testing.T) {
 	assert.Error(t, repo.UpdateEnrichedMetadata(ctx, nil))
 	assert.Error(t, repo.UpdateEnrichedMetadata(ctx, &models.Movie{}))
 }
+
+// disc-2026-10-series-credits-empty: the backfill's query lists matched rows
+// with no cast and nothing else — not unmatched rows, not rows that already
+// have a cast (TMDb's or the user's), not removed rows.
+func TestFindMissingCredits_ListsOnlyMatchedRowsWithoutCast(t *testing.T) {
+	db := setupTestDB(t) // movies table
+	t.Cleanup(func() { _ = db.Close() })
+	sdb := setupSeriesTestDB(t) // series table lives in its own fixture
+	t.Cleanup(func() { _ = sdb.Close() })
+	ctx := context.Background()
+	movies := NewMovieRepository(db)
+	series := NewSeriesRepository(sdb)
+
+	require.NoError(t, movies.Create(ctx, &models.Movie{ID: "mv-matched", Title: "A", TMDbID: models.NewNullInt64(1)}))
+	require.NoError(t, movies.Create(ctx, &models.Movie{ID: "mv-unmatched", Title: "B"}))
+	require.NoError(t, movies.Create(ctx, &models.Movie{ID: "mv-has-cast", Title: "C", TMDbID: models.NewNullInt64(3)}))
+	require.NoError(t, movies.UpdateCredits(ctx, "mv-has-cast", &models.Credits{Cast: []models.CastMember{{Name: "Tom"}}}))
+	require.NoError(t, movies.Create(ctx, &models.Movie{ID: "mv-removed", Title: "D", TMDbID: models.NewNullInt64(4), IsRemoved: true}))
+
+	require.NoError(t, series.Create(ctx, &models.Series{ID: "see", Title: "末日光明", TMDbID: models.NewNullInt64(80752)}))
+	require.NoError(t, series.Create(ctx, &models.Series{ID: "sr-has-cast", Title: "E", TMDbID: models.NewNullInt64(5)}))
+	require.NoError(t, series.UpdateCredits(ctx, "sr-has-cast", &models.Credits{Cast: []models.CastMember{{Name: "Ann"}}}))
+
+	gotMovies, err := movies.FindMissingCredits(ctx, 50)
+	require.NoError(t, err)
+	require.Len(t, gotMovies, 1)
+	assert.Equal(t, "mv-matched", gotMovies[0].ID)
+
+	gotSeries, err := series.FindMissingCredits(ctx, 50)
+	require.NoError(t, err)
+	require.Len(t, gotSeries, 1)
+	assert.Equal(t, "see", gotSeries[0].ID)
+
+	// Once filled, the row leaves the list.
+	require.NoError(t, series.UpdateCredits(ctx, "see", &models.Credits{Cast: []models.CastMember{{Name: "Jason Momoa", Character: "Baba Voss"}}}))
+	gotSeries, err = series.FindMissingCredits(ctx, 50)
+	require.NoError(t, err)
+	assert.Empty(t, gotSeries)
+}

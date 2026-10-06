@@ -366,3 +366,57 @@ func TestEnrichMovie_WithoutSeederIsUnchanged(t *testing.T) {
 func (*recordingSeriesRepo) FindActiveByTMDbID(ctx context.Context, tmdbID int64) (*models.Series, error) {
 	return nil, nil
 }
+
+// disc-2026-10-series-credits-empty: a user-owned (manual) row is never
+// re-matched, so its refresh is the one place its missing cast can be filled —
+// and only when there is nothing there to overwrite.
+func TestRefreshManualMovie_FillsMissingCreditsOnly(t *testing.T) {
+	t.Run("no cast stored → fetched and written", func(t *testing.T) {
+		seeder := &fakeGlossarySeeder{credits: seedTestCredits, pairs: seedTestPairs}
+		var events []string
+		repo := &recordingMovieRepo{events: &events}
+		svc := NewEnrichmentService(repo, nil, nil, nil, nil, nil, nil, nil)
+		svc.SetGlossarySeeder(seeder, nil)
+
+		movie := &models.Movie{ID: "movie-1", Title: "功夫", TMDbID: models.NewNullInt64(10196)}
+		require.NoError(t, svc.refreshManualMovie(context.Background(), movie))
+
+		assert.Equal(t, []string{"movie/10196"}, seeder.fetchArgs)
+		assert.Equal(t, []string{"movie-1"}, repo.creditsWrites)
+	})
+	t.Run("cast already stored → nothing fetched, nothing written", func(t *testing.T) {
+		seeder := &fakeGlossarySeeder{credits: seedTestCredits, pairs: seedTestPairs}
+		var events []string
+		repo := &recordingMovieRepo{events: &events}
+		svc := NewEnrichmentService(repo, nil, nil, nil, nil, nil, nil, nil)
+		svc.SetGlossarySeeder(seeder, nil)
+
+		movie := &models.Movie{ID: "movie-1", TMDbID: models.NewNullInt64(10196),
+			Credits: &models.Credits{Cast: []models.CastMember{{Name: "使用者打的名字"}}}}
+		require.NoError(t, svc.refreshManualMovie(context.Background(), movie))
+
+		assert.Empty(t, seeder.fetchArgs, "the Metadata Editor's cast is the user's word")
+		assert.Empty(t, repo.creditsWrites)
+	})
+	t.Run("only a director typed by the user → nothing fetched, nothing overwritten", func(t *testing.T) {
+		seeder := &fakeGlossarySeeder{credits: seedTestCredits}
+		var events []string
+		repo := &recordingMovieRepo{events: &events}
+		svc := NewEnrichmentService(repo, nil, nil, nil, nil, nil, nil, nil)
+		svc.SetGlossarySeeder(seeder, nil)
+		movie := &models.Movie{ID: "movie-1", TMDbID: models.NewNullInt64(10196),
+			Credits: &models.Credits{Crew: []models.CrewMember{{Name: "周星馳", Job: "Director"}}}}
+		require.NoError(t, svc.refreshManualMovie(context.Background(), movie))
+		assert.Empty(t, seeder.fetchArgs)
+		assert.Empty(t, repo.creditsWrites)
+	})
+	t.Run("no tmdb id → nothing fetched", func(t *testing.T) {
+		seeder := &fakeGlossarySeeder{credits: seedTestCredits}
+		var events []string
+		repo := &recordingMovieRepo{events: &events}
+		svc := NewEnrichmentService(repo, nil, nil, nil, nil, nil, nil, nil)
+		svc.SetGlossarySeeder(seeder, nil)
+		require.NoError(t, svc.refreshManualMovie(context.Background(), &models.Movie{ID: "movie-1"}))
+		assert.Empty(t, seeder.fetchArgs)
+	})
+}
