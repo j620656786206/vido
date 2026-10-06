@@ -122,9 +122,12 @@ type Config struct {
 	ASRBaseURL string
 	ASRModel   string
 	// ASRWordTimestamps asks the engine for per-word times so cues open when
-	// the word is spoken (disc-2026-10-asr-coarse-timestamps). Off by default:
-	// the hosted engine collapsed to "♪♪ only" on score-heavy audio when it was
-	// set (disc-2026-10-asr-word-timestamps-default-off).
+	// the word is spoken (disc-2026-10-asr-coarse-timestamps). Was off by
+	// default while one ten-minute upload could collapse to "♪♪ only"
+	// (disc-2026-10-asr-word-timestamps-default-off); with uploads cut to
+	// two minutes at silences (disc-2026-10-asr-chunk-at-silence) the same
+	// clip ran clean 2/2 with it on and timed best, so it is on by default
+	// (disc-2026-10-asr-word-timestamps-default-on). VIDO_ASR_WORD_TIMESTAMPS=false turns it off.
 	ASRWordTimestamps bool
 
 	// TMDb configuration
@@ -186,7 +189,7 @@ func Load() (*Config, error) {
 	// ASR engine (9R-9): empty base URL = OpenAI Whisper default.
 	cfg.ASRBaseURL = cfg.loadString("ASR_BASE_URL", "")
 	cfg.ASRModel = cfg.loadString("ASR_MODEL", "")
-	cfg.ASRWordTimestamps = cfg.loadBool("VIDO_ASR_WORD_TIMESTAMPS", false)
+	cfg.ASRWordTimestamps = cfg.loadBool("VIDO_ASR_WORD_TIMESTAMPS", true)
 	cfg.OpenAIAPIKey = cfg.loadString("OPENAI_API_KEY", "")
 	cfg.EncryptionKey = cfg.loadString("ENCRYPTION_KEY", "")
 	// Auth password gate (V0.1.1). Empty = auth disabled (LAN-only posture).

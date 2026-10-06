@@ -1,6 +1,6 @@
 # Disc：聽聲音的音檔改成兩分鐘一段、在靜音處切——一段被配樂帶崩不會拖垮整集
 
-Status: review
+Status: done
 
 **Source:** 2026-10-06／07 第三次實測（`eval-see-s01e02-asr-vs-official.md` 第三節）：10 分鐘片段整個一次送，前 3 分半的配樂把 Whisper 帶進「只聽到音樂」模式，整段 0 句對白（字級時間開著 4 次崩 3 次；舊版也有 9 秒漂移）。Alexyu 2026-10-07 選 A 的第 2 步。
 
@@ -40,7 +40,7 @@ Status: review
 - [x] T1 常數、NeedsChunking、AudioChunk、silencedetect 解析、planCuts（AC #1、#3）
 - [x] T2 MergeSRTChunks 毫秒位移、service 接線、快取 start_ms（AC #2、#4）
 - [x] T3 測試：parse／planCuts 邊界／切點跟著靜音／毫秒合併／長度觸發切分／續跑夾具改 120 格／預算測試改 79 段（AC #5）
-- [ ] T4 NAS 實測（AC #6）
+- [x] T4 NAS 實測（AC #6）
 
 ## Dev Notes
 
@@ -61,6 +61,7 @@ Claude Fable 5.1（claude-fable-5-1）
 
 ### Completion Notes List
 
+- **AC #6 實測（2026-10-07，eval 第四節）：** 切點 121／240／359／477 秒都貼到靜音；4 次都沒崩（字級時間關 82／82 句，開 75／68 句）；字級時間開著 p90 0.65～0.74 秒、沒人說話處 6～13%。→ 預設翻 true（`disc-2026-10-asr-word-timestamps-default-on`）。
 - **Adversarial CR（2026-10-07，fresh agent）1 MH／1 M／2 L＋nits，全部修掉：**
   - MH 片尾規則（R3）原本每一段都當「片尾」跑，120 秒格＋切在停頓處＝每段最後幾句都是「停頓前的輕聲對白」，會被吃掉 → 加 ctx 旗標 `ai.WithMidFileChunk`，只有最後一段跑 R3；`filterHallucinationsWith(segs, applyTail)`＋測試。
   - M 快取只比起點：第 0 段永遠從 0 開始，第一刀位置變了也會拿舊字幕 → 快取值多存 `duration_ms`，起訖都一樣才重用。
@@ -87,5 +88,6 @@ Claude Fable 5.1（claude-fable-5-1）
 
 | 日期 | 內容 |
 |---|---|
+| 2026-10-07 | 實測通過（4/4 沒崩）→ done；字級時間預設翻 true 另立單。 |
 | 2026-10-07 | CR 1MH/1M/2L 修掉：R3 只在最後一段、快取比起訖、input seeking、窗口守門。 |
 | 2026-10-07 | create-story＋dev 同日：120 秒格＋靜音切點＋毫秒合併＋快取 start_ms；全綠，狀態 review，待 NAS 實測。 |

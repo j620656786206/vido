@@ -63,14 +63,13 @@ type WhisperClient struct {
 	// governor is the shared AI throttle (Story 9R-11; nil = unthrottled).
 	governor *Governor
 	// wordTimestamps asks the engine for per-word times and tightens each cue
-	// to them (disc-2026-10-asr-coarse-timestamps). OFF by default
-	// (disc-2026-10-asr-word-timestamps-default-off): on See S01E02's first
-	// ten minutes — 3½ minutes of score before the first line — the hosted
-	// engine with this field set collapsed into "♪♪ only" on 3 of 4 runs and
-	// heard nothing, while the plain request heard 66–84 lines on every run.
-	// When it does not collapse the timing is the best we have measured, so
-	// the switch stays (VIDO_ASR_WORD_TIMESTAMPS=true) for engines and
-	// libraries where it holds up.
+	// to them (disc-2026-10-asr-coarse-timestamps). The CLIENT default is off;
+	// the app turns it on from VIDO_ASR_WORD_TIMESTAMPS (default true since
+	// disc-2026-10-asr-word-timestamps-default-on). History: on one
+	// ten-minute upload of See S01E02 (3½ minutes of score first) the hosted
+	// engine with this field collapsed into "♪♪ only" on 3 of 4 runs; once
+	// uploads were cut to two minutes at silences it ran clean 2/2 and timed
+	// best (p90 0.65–0.74 s vs 0.90–0.97 s without).
 	wordTimestamps bool
 	// wordTimestampsUnsupported latches when the engine rejects
 	// timestamp_granularities[] (disc-2026-10-asr-coarse-timestamps): one 4xx
