@@ -62,8 +62,8 @@ func TestTranscriptionEstimate_FullRunPaysSpeechRecognitionAndTranslation(t *tes
 	want := estimateUSD(RouteASR, 60, ai.EstimatedASRPerMinute(false), "claude-sonnet-5")
 	assert.Equal(t, TranscriptionPlanFull, est.Plan)
 	assert.True(t, usdOf(t, est).Equal(want), "got %v want %v", est.EstimatedUSD, want)
-	// 60 × (0.006 + 0.00804) = 0.8424 → $0.84
-	assert.Equal(t, 0.84, est.EstimatedUSD)
+	// 60 × (0.006 + 0.0216) = 1.656 → $1.66 (ASR-leg translation rate)
+	assert.Equal(t, 1.66, est.EstimatedUSD)
 	assert.Equal(t, "claude-sonnet-5", est.ModelID)
 	assert.True(t, est.TranslationConfigured)
 	assert.True(t, est.ASRAvailable)
@@ -86,10 +86,14 @@ func TestTranscriptionEstimate_ResumableRowOnlyPaysTranslation(t *testing.T) {
 	plan := &stubPlanSource{available: true, translate: true, resumable: true}
 	est := newTestEstimator(plan, false).Estimate(context.Background(), sixtyMinuteMovie())
 
-	want := estimateUSD(RouteExtract, 60, ai.EstimatedASRPerMinute(false), "claude-sonnet-5")
+	// A resume still translates through the ASR leg's translateSRT, so it pays
+	// exactly the ASR route's translation half — never the cheaper extract rate.
+	want := estimateUSD(RouteASR, 60, decimal.Zero, "claude-sonnet-5")
 	assert.Equal(t, TranscriptionPlanTranslateOnly, est.Plan)
-	assert.True(t, usdOf(t, est).Equal(want))
-	assert.Equal(t, 0.48, est.EstimatedUSD) // 60 × 0.00804 = 0.4824
+	assert.True(t, usdOf(t, est).Equal(want), "got %v want %v", est.EstimatedUSD, want)
+	assert.True(t, usdOf(t, est).GreaterThan(estimateUSD(RouteExtract, 60, decimal.Zero, "claude-sonnet-5")),
+		"pricing a resume at the extract rate is the under-quote bugfix-generation-estimate-under-quotes removed")
+	assert.Equal(t, 1.3, est.EstimatedUSD) // 60 × 0.0216 = 1.296
 	assert.Equal(t, []string{"movie:movie-1"}, plan.resumeAsk,
 		"the resume check must be asked for THIS media type — the movie variant on an episode id is always false")
 }
@@ -106,7 +110,7 @@ func TestTranscriptionEstimate_ResumableRowWithoutTranslationKeyCostsNothing(t *
 func TestTranscriptionEstimate_SelfHostedSpeechRecognitionIsNotBilled(t *testing.T) {
 	withTranslation := newTestEstimator(&stubPlanSource{available: true, translate: true}, true).
 		Estimate(context.Background(), sixtyMinuteMovie())
-	assert.Equal(t, 0.48, withTranslation.EstimatedUSD, "self-hosted ASR still pays the translation half")
+	assert.Equal(t, 1.3, withTranslation.EstimatedUSD, "self-hosted ASR still pays the translation half") // 60 × 0.0216
 	assert.True(t, withTranslation.SelfHostedASR)
 
 	withoutTranslation := newTestEstimator(&stubPlanSource{available: true, translate: false}, true).
@@ -128,7 +132,8 @@ func TestTranscriptionEstimate_FullRunMatchesTheCandidateListASRPrice(t *testing
 }
 
 func TestTranscriptionEstimate_UsesTheModelTheRunWillBill(t *testing.T) {
-	// Haiku's measured rate (0.00301) differs from Sonnet's (0.00804). An id
+	// Haiku's ASR-leg rate (0.0072, Sonnet's 0.0216 scaled by price) differs
+	// from Sonnet's. An id
 	// outside the catalog would NOT tell the two apart — it is priced at the
 	// Sonnet anchor too.
 	est := NewTranscriptionEstimateService(
@@ -137,8 +142,8 @@ func TestTranscriptionEstimate_UsesTheModelTheRunWillBill(t *testing.T) {
 	).Estimate(context.Background(), sixtyMinuteMovie())
 
 	assert.Equal(t, "claude-haiku-4-5", est.ModelID)
-	// 60 × (0.006 + 0.00301) = 0.5406 → $0.54
-	assert.Equal(t, 0.54, est.EstimatedUSD)
+	// 60 × (0.006 + 0.0072) = 0.792 → $0.79
+	assert.Equal(t, 0.79, est.EstimatedUSD)
 }
 
 func TestTranscriptionEstimate_DurationLadder(t *testing.T) {
@@ -223,7 +228,7 @@ func TestTranscriptionEstimate_ReportsAvailabilityWithoutBlockingThePrice(t *tes
 	est := newTestEstimator(&stubPlanSource{available: false, translate: true}, false).
 		Estimate(context.Background(), sixtyMinuteMovie())
 	assert.False(t, est.ASRAvailable)
-	assert.Equal(t, 0.84, est.EstimatedUSD, "the frontend disables the button; the number stays honest")
+	assert.Equal(t, 1.66, est.EstimatedUSD, "the frontend disables the button; the number stays honest")
 	assert.Equal(t, "movie-1", est.MediaID)
 	assert.Equal(t, models.SubtitleRunMediaMovie, est.MediaType)
 }
@@ -292,7 +297,7 @@ func TestTranscriptionEstimate_RealServiceResumesAnUntranslatedEpisodeTranslateO
 		})
 
 	assert.Equal(t, TranscriptionPlanTranslateOnly, est.Plan)
-	assert.Equal(t, 0.39, est.EstimatedUSD) // 48 × 0.00804 = 0.38592
+	assert.Equal(t, 1.04, est.EstimatedUSD) // 48 × 0.0216 = 1.0368
 	assert.False(t, est.ASRAvailable, "no extractor/ASR wired — a resume still prices, the ASR gate does not apply")
 
 	require.NoError(t, os.Remove(srt))

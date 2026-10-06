@@ -766,8 +766,8 @@ func TestAnalyze_OnlyTheTranslationHalfMovesWithTheModel(t *testing.T) {
 	haiku := res.EstimatesByModel["claude-haiku-4-5"].TotalUSD
 
 	assert.Greater(t, sonnet, haiku)
-	rateGap := translationRatePerMinute("claude-sonnet-5").
-		Sub(translationRatePerMinute("claude-haiku-4-5")).
+	rateGap := asrLegTranslationRatePerMinute("claude-sonnet-5").
+		Sub(asrLegTranslationRatePerMinute("claude-haiku-4-5")).
 		Mul(decimal.NewFromInt(100)).InexactFloat64()
 	assert.InDelta(t, sonnet-haiku, rateGap, 0.01,
 		"speech recognition is billed by a different provider per audio minute — switching translation model must not move it")
@@ -819,4 +819,36 @@ func TestTranslationRate_IsMeasuredForEvaluatedModelsAndScaledOtherwise(t *testi
 	unknown := translationRatePerMinute("some-future-model").InexactFloat64()
 	assert.Equal(t, sonnet, unknown, "an unknown model quotes at the anchor rather than under-promising")
 	assert.Equal(t, 0.17, translationTimeShare("some-future-model"))
+}
+
+// bugfix-generation-estimate-under-quotes: the ASR route's translation runs
+// through translateSRT (no prompt caching, context re-sent every batch), so it
+// is priced from its own measurement, not eval-1's extract-route table.
+func TestASRLegTranslationRate_IsMeasuredSeparatelyFromTheExtractRoute(t *testing.T) {
+	sonnet := asrLegTranslationRatePerMinute("claude-sonnet-5").InexactFloat64()
+	haiku := asrLegTranslationRatePerMinute("claude-haiku-4-5").InexactFloat64()
+
+	// See S01E02: $1.022 for 659 cues = $0.001551/cue, × eval-1's 10,304 cues
+	// over 740 minutes.
+	assert.InDelta(t, 1.022/659*10304/740, sonnet, 0.0001)
+	// Haiku is unmeasured on this route — scaled from the Sonnet anchor by price.
+	assert.InDelta(t, sonnet*(1.0+5.0)/(3.0+15.0), haiku, 0.0001)
+
+	for _, m := range []string{"claude-sonnet-5", "claude-haiku-4-5", "claude-opus-4-8", "some-future-model"} {
+		assert.True(t, asrLegTranslationRatePerMinute(m).GreaterThan(translationRatePerMinute(m)),
+			"%s: the uncached ASR leg must never quote below the cached extract leg", m)
+	}
+	assert.Equal(t, sonnet, asrLegTranslationRatePerMinute("some-future-model").InexactFloat64(),
+		"an unknown model quotes at the anchor rather than under-promising")
+}
+
+// The bill that filed the bug: See S01E02, 56.95 min, Sonnet 5, hosted ASR,
+// quoted $0.80 and billed $1.36 (subtitle_runs.spent_usd 1.36365). The quote
+// must not fall below the bill again, nor overshoot it wildly.
+func TestEstimateUSD_ASRRouteCoversTheMeasuredSeeS01E02Bill(t *testing.T) {
+	const billed = 1.36
+	quote := estimateUSD(RouteASR, 56.95, ai.EstimatedASRPerMinute(false), "claude-sonnet-5").InexactFloat64()
+
+	assert.GreaterOrEqual(t, quote, billed, "the quote under-promised the real invoice")
+	assert.LessOrEqual(t, quote, billed*1.25, "the quote overshoots the real invoice by more than a quarter")
 }

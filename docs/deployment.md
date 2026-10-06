@@ -169,7 +169,11 @@ Notes:
   `claude-sonnet-5`, chosen on measurement rather than taste: blind-scoring
   10,304 real cues from this library gave Sonnet 5 a 1.3% unusable rate and
   89.6% good, against Haiku 4.5's 3.6% and 71.8%. Sonnet costs about $0.48 per
-  hour of runtime, Haiku about $0.18 — so the cheaper model is offered as a
+  hour of runtime, Haiku about $0.18, when the file has an embedded text track
+  to translate. When Vido has to listen to the audio instead, translation costs
+  more — about $1.30 per hour on Sonnet and $0.43 on Haiku, plus speech
+  recognition — because that path re-sends the title's context with every
+  batch. Either way the cheaper model is offered as a
   visible, per-run choice instead of a config flip nobody sees. The consent
   screen prices every model your keys can reach and shows the estimated
   processing time (Sonnet takes roughly 17% of a title's runtime, Haiku 11%).
