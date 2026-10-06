@@ -56,6 +56,16 @@ type WhisperClient struct {
 	language string
 	// governor is the shared AI throttle (Story 9R-11; nil = unthrottled).
 	governor *Governor
+	// wordTimestamps asks the engine for per-word times and tightens each cue
+	// to them (disc-2026-10-asr-coarse-timestamps). OFF by default
+	// (disc-2026-10-asr-word-timestamps-default-off): on See S01E02's first
+	// ten minutes — 3½ minutes of score before the first line — the hosted
+	// engine with this field set collapsed into "♪♪ only" on 3 of 4 runs and
+	// heard nothing, while the plain request heard 66–84 lines on every run.
+	// When it does not collapse the timing is the best we have measured, so
+	// the switch stays (VIDO_ASR_WORD_TIMESTAMPS=true) for engines and
+	// libraries where it holds up.
+	wordTimestamps bool
 	// wordTimestampsUnsupported latches when the engine rejects
 	// timestamp_granularities[] (disc-2026-10-asr-coarse-timestamps): one 4xx
 	// and every later request on this client goes segment-only, no retry.
@@ -108,6 +118,14 @@ func WithWhisperTimeout(timeout time.Duration) WhisperOption {
 func WithWhisperLanguage(lang string) WhisperOption {
 	return func(c *WhisperClient) {
 		c.language = lang
+	}
+}
+
+// WithWhisperWordTimestamps turns the per-word timing request on (see the
+// wordTimestamps field for why it is off by default).
+func WithWhisperWordTimestamps(on bool) WhisperOption {
+	return func(c *WhisperClient) {
+		c.wordTimestamps = on
 	}
 }
 
@@ -290,7 +308,7 @@ func (c *WhisperClient) transcribeVerbose(ctx context.Context, audio []byte, fil
 	// A 4xx that complains about verbose_json itself ("unsupported
 	// response_format") is NOT a word-timestamp rejection — that one keeps
 	// going to the srt latch below, same as before this story.
-	wordTimestamps := !c.wordTimestampsUnsupported.Load()
+	wordTimestamps := c.wordTimestamps && !c.wordTimestampsUnsupported.Load()
 	body, status, err := c.postTranscriptionWith(ctx, audio, filename, lang, transcribeFormatVerboseJSON, wordTimestamps)
 	if err != nil && wordTimestamps && status >= 400 && status < 500 && rejectsWordTimestamps(err) {
 		c.wordTimestampsUnsupported.Store(true)

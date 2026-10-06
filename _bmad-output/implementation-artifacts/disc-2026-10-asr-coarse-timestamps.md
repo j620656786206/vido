@@ -1,6 +1,6 @@
 # Disc：聽聲音生成的字幕時間改用「逐字時間」，不再比演員開口早好幾秒
 
-Status: review
+Status: done
 
 **Source:** See S01E02 10/5 聽聲音實測：659 句裡 93% 長度是整秒、420 句一句緊接一句，637 句對白有 **138 句出現在沒人說話時**（對官方英文軌），8:15 就出字幕、8:21 才開口。10/6 走片內字幕後是 0 句；只能聽聲音的片仍會這樣。
 
@@ -57,6 +57,7 @@ Claude Fable 5.1（claude-fable-5-1）
 
 ### Completion Notes List
 
+- **AC #6 實測（2026-10-06／07，10 分鐘片段 A/B，eval 第三節）：** 正常時時間最準（沒人說話處 7%、p90 0.59 秒、8:17 對到 0.5 秒內），但 4 次崩 3 次（整段只剩「♪♪」）。Alexyu 裁定選 A：預設關、留開關（`disc-2026-10-asr-word-timestamps-default-off`），切短音檔後再重測。
 - **Adversarial CR（2026-10-06，fresh agent）1M/2L＋nits，全部修掉：**
   - M1 上一句最後一個字常常拖過整秒邊界（「name.」10.4–15.9 對上 15 秒結尾），它會被當成下一句的第一個字，下一句的起點就被釘在粗略的整秒——正是本單要修的症狀。改成起點取「第一個在這段內開口的字」，沒有才退回用拖尾字；加兩個 fixture。
   - L1 ASR 分段快取 key 沒有版本：10/5 跑過的 See 每段都在快取裡，重跑會 $0 拿回**粗略時間**的舊字幕，看起來像修沒效。快取前綴 `asrchunk:v1:` → `v2:`（含 manifest），舊的 30 天後自然過期。
@@ -80,5 +81,6 @@ N/A — no out-of-scope work discovered
 
 | 日期 | 內容 |
 |---|---|
+| 2026-10-07 | 實測：準但會崩（4 次崩 3 次）→ 預設關、留開關；後續 `disc-2026-10-asr-chunk-at-silence`／`asr-vad-pretrim`。 |
 | 2026-10-06 | CR 1M/2L 修掉：起點取段內第一個字、快取前綴 v2、片語比對；全綠。 |
 | 2026-10-06 | create-story＋dev 同日：word timestamps 請求＋退回、`tightenSegmentsWithWords`；全綠，狀態 review。 |

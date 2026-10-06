@@ -118,7 +118,7 @@ func TestWhisperClient_RequestsWordTimestampsAndFallsBackOnce(t *testing.T) {
 	defer server.Close()
 
 	audio := writeTempAudio(t)
-	c := NewWhisperClient("test-key", WithWhisperBaseURL(server.URL))
+	c := NewWhisperClient("test-key", WithWhisperBaseURL(server.URL), WithWhisperWordTimestamps(true))
 
 	detail, err := c.TranscribeDetailed(context.Background(), audio, "en")
 	require.NoError(t, err)
@@ -144,7 +144,7 @@ func TestWhisperClient_WordTimestampsTightenTheSRT(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := NewWhisperClient("test-key", WithWhisperBaseURL(server.URL))
+	c := NewWhisperClient("test-key", WithWhisperBaseURL(server.URL), WithWhisperWordTimestamps(true))
 	detail, err := c.TranscribeDetailed(context.Background(), writeTempAudio(t), "en")
 	require.NoError(t, err)
 	assert.Contains(t, detail.SRT, "00:00:06,100 --> 00:00:07,500", "the cue follows the words, not the 0–9 s segment")
@@ -166,9 +166,29 @@ func TestWhisperClient_ServerErrorDoesNotLatchWordTimestamps(t *testing.T) {
 		w.Write([]byte(`{"error":"word timestamps backend down"}`))
 	}))
 	defer server.Close()
-	client := NewWhisperClient("test-key", WithWhisperBaseURL(server.URL))
+	client := NewWhisperClient("test-key", WithWhisperBaseURL(server.URL), WithWhisperWordTimestamps(true))
 	_, err := client.TranscribeDetailed(context.Background(), writeTempAudio(t), "en")
 	require.Error(t, err)
 	assert.False(t, client.wordTimestampsUnsupported.Load())
 	assert.False(t, client.verboseUnsupported.Load())
+}
+
+// disc-2026-10-asr-word-timestamps-default-off: the default request carries no
+// timestamp_granularities[] at all — byte-for-byte the pre-#698 body — so a
+// deployment that never set VIDO_ASR_WORD_TIMESTAMPS keeps the behaviour that
+// heard every line of See S01E02's opening.
+func TestWhisperClient_WordTimestampsOffByDefault(t *testing.T) {
+	var granularities [][]string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.NoError(t, r.ParseMultipartForm(32<<20))
+		granularities = append(granularities, r.MultipartForm.Value["timestamp_granularities[]"])
+		w.Write([]byte(`{"language":"english","duration":2.0,"text":"hello","segments":[{"id":0,"start":0,"end":2,"text":"hello","avg_logprob":-0.2,"compression_ratio":1.0,"no_speech_prob":0.01}]}`))
+	}))
+	defer server.Close()
+
+	c := NewWhisperClient("test-key", WithWhisperBaseURL(server.URL))
+	_, err := c.TranscribeDetailed(context.Background(), writeTempAudio(t), "en")
+	require.NoError(t, err)
+	require.Len(t, granularities, 1)
+	assert.Empty(t, granularities[0], "no field unless the operator opted in")
 }

@@ -1,6 +1,6 @@
 # Disc：聽聲音時先把角色名交給語音辨識，人名不再一集七種寫法（聽的那一半）
 
-Status: review
+Status: done
 
 **Source:** See S01E02 10/5 實測：Jerlamarel 6～7 種寫法（傑拉·莫瑞爾、杜拉·莫瑞爾、丘拉·莫瑞爾…）、Paris／Maghra 各兩種、Baba Voss → 「沃斯爸爸」。10/6 party mode 裁定分兩半修：**聽**（本單：把名字交給語音辨識）與**翻**（名詞表；走片內字幕時已一致，污染問題另立 `disc-2026-10-asr-harvest-pollutes-glossary`）。
 
@@ -58,6 +58,7 @@ Claude Fable 5.1（claude-fable-5-1）
 
 ### Completion Notes List
 
+- **實測（2026-10-06／07，10 分鐘片段）：沒測到。** See 的 `series.credits` 在 DB 是空的，只送了 3 個演員名、0 個角色名（`asr prompt built names=3 runes=42`）；Jerlamarel 仍聽成 Trilla Morel。程式路徑有跑、有 log；效果要等 `disc-2026-10-series-credits-empty` 把演員表存進來再量。
 - **Adversarial CR（2026-10-06，fresh agent）2M/3L＋nits，全部修掉：**
   - M1 影集整季跑（`series`）時原本的守門 `glossaryKey != mediaID` 會把它自己擋掉、拿不到演員表 → 改成只擋「找不到母劇的單集」（跟 `mediaMetadataFor` 一樣），加 `TestASRPromptFor_ReadsCreditsPerMediaType` 五個案例。
   - M2 whisper 收到 prompt 後，在無聲／配樂處可能把名單原文「聽」出來 → 新規則 `prompt_echo`（`filterPromptEcho`：段落文字正規化後是名單的子字串且 ≥12 字元就丟；單一人名、提到人名的對白保留），加 `TestFilterPromptEcho`。
@@ -86,5 +87,6 @@ N/A — no out-of-scope work discovered
 
 | 日期 | 內容 |
 |---|---|
+| 2026-10-07 | 實測：See 演員表為空，提示只有 3 個演員名，效果未驗；立 `disc-2026-10-series-credits-empty`。 |
 | 2026-10-06 | CR 2M/3L 修掉：series 守門、`prompt_echo` 規則、lookup 失敗 log、角色名清理；全綠。 |
 | 2026-10-06 | create-story＋dev 同日（聽的那一半）：ctx prompt、whisper `prompt` 欄位、角色／演員／可信名詞表組名單；全綠，狀態 review。翻的那一半（名詞表污染）在 `disc-2026-10-asr-harvest-pollutes-glossary`。 |

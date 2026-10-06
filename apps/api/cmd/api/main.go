@@ -667,7 +667,8 @@ func main() {
 	// placer) even after the key arrived. Availability is now a per-call question
 	// the service asks the holder (TranscriptionService.IsAvailable).
 	asrHolder := services.NewASRProviderHolder(
-		keyResolver, cfg.ASRBaseURL, cfg.ASRModel, slog.Default(), ai.WithWhisperGovernor(aiGovernor))
+		keyResolver, cfg.ASRBaseURL, cfg.ASRModel, slog.Default(),
+		ai.WithWhisperGovernor(aiGovernor), ai.WithWhisperWordTimestamps(cfg.ASRWordTimestamps))
 	transcriptionService := services.NewTranscriptionService(audioExtractorService, asrHolder, sseHub, slog.Default())
 	transcriptionService.SetRunBudgetUSD(cfg.AIRunBudgetUSD)
 	// disc-2026-09-generation-resume-b: paid-for ASR chunk transcripts survive
