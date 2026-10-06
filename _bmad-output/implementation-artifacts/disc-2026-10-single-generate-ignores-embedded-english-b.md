@@ -1,6 +1,6 @@
 # Disc（前端）：「生成字幕」對話框跟上後端——依路線顯示說明、價錢、進度與結果
 
-Status: review
+Status: done
 
 **Depends on:** `disc-2026-10-single-generate-ignores-embedded-english-a`（後端 API 必須先合併：估價多了 `route`／`plan=extract`、status 多了 `job_id`、solo 終點事件帶 `job_id`）。
 
@@ -256,3 +256,4 @@ Claude Fable 5.1（claude-fable-5-1）；T0 由 Sally（ux-designer persona）�
 | 2026-10-06 | Alexyu 跑完 Inline Agent；Sally MCP 複審追認（`CZrmG` 五格元件、`jYNkJ` J12-D）；`SCREENS` 加 J12-D。T0 完成。 |
 | 2026-10-06 | T1–T7：型別 v2、extract 文案與封鎖規則、job_id 終點判定、五格變體＋略過、對話框接線、feed spec、e2e stub、gallery fixture＋darwin 基準。tsc／vitest／lint:all／e2e 全綠，狀態改成 review。 |
 | 2026-10-06 | CR 修正：H1 估價 route 當五格的初始來源、M1 409 重問 status 拿 job_id、M2 工作區單一任務認 job_id＋吃 D6 stage、M3 終點遺失的 5 秒兜底探測、L1 NOTE 不碰 message、L2 transcribing 強制六格。全部檢查重跑全綠。 |
+| 2026-10-06 | 隨 -a 在 NAS 新容器（rev 7f228bc8）實測：估價回 `route=extract`，對話框該走五格；status／estimate 皆為新形狀。 狀態改成 done。 |

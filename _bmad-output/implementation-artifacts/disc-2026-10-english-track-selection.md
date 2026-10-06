@@ -1,6 +1,6 @@
 # Disc: 片內有好幾條英文字幕時，挑「一般版」當主字幕，並把「強制字幕」（畫面上的字）合併進去
 
-Status: review
+Status: done
 
 **Source:** Alexyu 2026-10-06 party mode（See S01E02 實測後的討論，清單第 6 項）。Alexyu 問：「要拿影片裡的哪個英文字幕？一個影片可能有很多英文字幕。」實測紀錄：`eval-see-s01e02-asr-vs-official.md`「討論會」一節。
 
@@ -197,3 +197,4 @@ Claude Opus 5.5（claude-opus-5-5）
 | 2026-10-06 | [@contract-v1→v2] AC #1（sub-1-4）：`RouteTranslate` 時 `ExtractedTrack.Blocks` 可能多出強制軌的句子，Index 從主字幕最大值往上編、照時間排序。下游受影響的是「假設 Blocks 只來自 `Path` 那一條、或 Index 都在原檔裡」的程式——目前沒有（全 repo 沒有地方讀 `Track.Path`），已 ack 的 sub-1-5a、sub-1-5b、sub-1-6 都是 done。 |
 | 2026-10-06 | T4：全部檢查通過，狀態改成 review。 |
 | 2026-10-06 | CR 修正：M1 不合併「被標成強制的完整軌」、M2 強制軌之間也去重、L3 中文層繁體優先、L4 軌道名稱判斷補齊、L5 退回原挑法時也合併、L6 Warn 寫原因。go test／vet／staticcheck／format 全綠。 |
+| 2026-10-06 | AC #10 NAS 實測通過：See S01E02 選第 8 軌（一般版）；強制軌唯一一句 *We are not alone* 在片內英文軌 18:53 也是台詞，去重後 `forced_merged=0 forced_duplicates_dropped=1`，行為正確。狀態改成 done。 |
