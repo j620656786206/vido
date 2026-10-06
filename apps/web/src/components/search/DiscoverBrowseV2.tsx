@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen I1-D-v2 (fxCVk) + Screen I4-D-v2 (m4fY7c) + Screen I2-M-v2 (hi6WD)
+// Design ref: ux-design.pen Screen I1-D-v2 (fxCVk) + Screen I4-D-v2 (m4fY7c) + Screen I2-M-v2 (hi6WD) + Screen I11-D (Qaz1x)
 /**
  * ux3-3-2: the v2 Discover experience — rendered by the /discover route (sole
  * render since ux3-cutover-3). Restyle + refine of the already-instant discover: a persistent
@@ -198,27 +198,10 @@ export function DiscoverBrowseV2() {
         )}
 
         <div className="min-w-0 lg:flex-1">
-          {/* Toolbar: type tabs + filter triggers + the 想要清單 entry (live since 13-1b) */}
+          {/* Toolbar, in DOM = visual = Tab order: desktop 篩選 (only while the rail is
+              collapsed — leftmost per I11-D 適用範圍 and I4-D-v2) → type tabs → phone 篩選
+              (<lg) → 想要清單 (live since 13-1b), pinned right. */}
           <div className="mb-4 flex flex-wrap items-center gap-2">
-            <MediaTypeTabs
-              activeType={currentType}
-              onTypeChange={handleTypeChange}
-              // No counts at all while a section is down: 全部 would sum only the half that
-              // answered (dsr-8 AC #4).
-              movieCount={countUnavailable ? undefined : moviesQuery.data?.totalResults}
-              tvCount={countUnavailable ? undefined : tvQuery.data?.totalResults}
-            />
-            {/* Mobile (<lg): open the bottom sheet */}
-            <button
-              type="button"
-              onClick={() => setSheetOpen(true)}
-              data-testid="open-filter-sheet"
-              aria-label="開啟篩選"
-              className={`${triggerClass(activeCount > 0)} lg:hidden`}
-            >
-              <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
-              篩選
-            </button>
             {/* Desktop (lg+): re-open the rail when collapsed (grid reclaims width).
                 aria-expanded is about the RAIL (false — the button only exists collapsed);
                 data-rail-vt="trigger" pairs it with the rail's 「篩選 N」 for the I11-D morph. */}
@@ -241,6 +224,25 @@ export function DiscoverBrowseV2() {
                 )}
               </button>
             )}
+            <MediaTypeTabs
+              activeType={currentType}
+              onTypeChange={handleTypeChange}
+              // No counts at all while a section is down: 全部 would sum only the half that
+              // answered (dsr-8 AC #4).
+              movieCount={countUnavailable ? undefined : moviesQuery.data?.totalResults}
+              tvCount={countUnavailable ? undefined : tvQuery.data?.totalResults}
+            />
+            {/* Mobile (<lg): open the bottom sheet */}
+            <button
+              type="button"
+              onClick={() => setSheetOpen(true)}
+              data-testid="open-filter-sheet"
+              aria-label="開啟篩選"
+              className={`${triggerClass(activeCount > 0)} lg:hidden`}
+            >
+              <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+              篩選
+            </button>
             {/* Epic-13 Requests entry — the PH3-R2 reserved slot, LIVE since
                 Story 13-1b: toggles the Discover-hosted 想要清單 (?view=requests). */}
             <button

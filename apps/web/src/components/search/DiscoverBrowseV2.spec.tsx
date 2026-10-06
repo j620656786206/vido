@@ -218,6 +218,25 @@ describe('DiscoverBrowseV2', () => {
       expect(sheetBtn).not.toHaveAttribute('aria-expanded');
       expect(sheetBtn).not.toHaveAttribute('data-rail-vt');
     });
+
+    // disc-2026-10-discover-filter-button-leftmost: I11-D 適用範圍 + I4-D-v2 put the
+    // desktop 篩選 FIRST in the toolbar; DOM order = visual order = Tab order.
+    it('[P1] collapsed, the desktop 篩選 button leads the toolbar, before the type tabs', async () => {
+      renderBrowse();
+      await userEvent.click(await screen.findByTestId('discover-rail-collapse'));
+      const expandBtn = screen.getByTestId('discover-rail-expand');
+      const tabs = screen.getByRole('tablist');
+
+      expect(expandBtn.parentElement?.firstElementChild).toBe(expandBtn);
+      expect(
+        expandBtn.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+      // the phone sheet trigger keeps its place after the tabs
+      expect(
+        tabs.compareDocumentPosition(screen.getByTestId('open-filter-sheet')) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+    });
   });
 
   it('renders the chip bar as a lighter read/remove summary (AC #7)', async () => {
