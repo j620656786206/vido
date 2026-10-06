@@ -94,11 +94,14 @@ func checkChunkAnchored(source []SubtitleBlock, got map[int]string, anchors map[
 			verdict.fail(b.Index, GateReasonEmpty)
 		case isEchoed(b.Text, text):
 			verdict.fail(b.Index, GateReasonEchoed)
-		case Detect([]byte(text)).SimplifiedCount > 0:
+		case Detect([]byte(text)).SimplifiedCount > 0 || containsSimplifiedWord(text):
 			// STRICT by design: any simplified-only character fails the cue.
 			// The detector's ratio thresholds classify a document's variant;
 			// they are not a leak detector, and one 这 in a delivered cue is
-			// exactly the defect FR16 exists to catch.
+			// exactly the defect FR16 exists to catch. Characters that are
+			// ALSO legitimate Traditional (里、几、准…) left the detector's set
+			// (disc-2026-10-simplified-leak-false-positive-li); their common
+			// SIMPLIFIED words are caught here as words instead.
 			verdict.fail(b.Index, GateReasonSimplifiedLeak)
 		case isMisaligned(b.Index, text, anchors, got, neighbours):
 			verdict.fail(b.Index, GateReasonMisaligned)
@@ -301,4 +304,30 @@ func logUnexpectedIndexes(expected map[int]struct{}, got map[int]string, logger 
 		"unexpected_indexes", extra,
 		"chunk_size", len(expected),
 	)
+}
+
+// simplifiedWords are the everyday Simplified words built from characters the
+// detector no longer counts as Simplified-only because each is ALSO a
+// legitimate Traditional character on its own (里 公里／帕里斯, 几 茶几, 余 余光中,
+// 丰 丰采, 准 不准, 么 老么). As WORDS these are unambiguously Simplified — their
+// Traditional spellings are 哪裡／家裡／心裡／那裡／幾乎／幾個／多餘／其餘／豐富／
+// 什麼／怎麼／這麼／那麼／準備／標準 — so a cue containing one is still a leak.
+var simplifiedWords = []string{
+	"哪里", "家里", "心里", "那里", "这里", "里面", "里边",
+	"几乎", "几个", "几天", "几次", "几年", "几点",
+	"多余", "其余", "剩余",
+	"丰富", "丰收",
+	"什么", "怎么", "这么", "那么", "为什么", "多么",
+	"准备", "标准", "准确", "准时",
+	"佣人", "雇佣",
+}
+
+// containsSimplifiedWord reports whether text carries one of simplifiedWords.
+func containsSimplifiedWord(text string) bool {
+	for _, w := range simplifiedWords {
+		if strings.Contains(text, w) {
+			return true
+		}
+	}
+	return false
 }

@@ -174,10 +174,13 @@ var simplifiedOnlySet = func() map[rune]struct{} {
 		// that are the SIMPLIFIED form of one Traditional character but ALSO a
 		// legitimate Traditional character in their own right — 里 (公里、鄰里、
 		// 帕里斯 ≠ 裡), 几 (茶几 ≠ 幾), 云 (人云亦云 ≠ 雲), 丰 (丰采 ≠ 豐), 余 (余光中、
-		// 余 ≠ 餘), 占 (占卜 ≠ 佔), 划 (划船 ≠ 劃). The quality gate fails a cue on ANY
-		// member of this set, and See S01E02 shipped 15 cues in English because
-		// 帕里斯 and 英里 were read as leaks. The classifier loses nothing: a
-		// Simplified document still trips dozens of the others.
+		// 余 ≠ 餘), 占 (占卜 ≠ 佔), 划 (划船 ≠ 劃), 准 (不准、批准 ≠ 準), 么 (老么 ≠ 麼),
+		// 佣 (佣金 ≠ 傭). The quality gate fails a cue on ANY member of this set, and
+		// See S01E02 shipped 15 cues in English because 帕里斯 and 英里 were read
+		// as leaks; 不准動！ would have been next. The classifier loses nothing: a
+		// Simplified document still trips dozens of the others. The gate's recall
+		// on the SIMPLIFIED uses of these characters (家里、几乎、多余、丰富…) is
+		// recovered by quality_gate.go's simplifiedWords list, not by this set.
 		'个', '这', '对', '来', '进', '过', '还', '与', '从', '为',
 		'们', '会', '没', '给', '让', '动', '关', '开', '长', '问',
 		'时', '应', '点', '经', '机', '头', '现', '实', '说', '种',
@@ -188,9 +191,9 @@ var simplifiedOnlySet = func() map[rune]struct{} {
 		'阴', '队', '际', '陆', '险', '难', '雾', '韩', '页', '顺',
 		'须', '领', '题', '额', '饭', '饮', '验', '鸡', '鲜', '黄',
 		// Additional common simplified characters
-		'么', '义', '习', '乡', '亲', '仅', '众', '优', '伤',
-		'传', '体', '佣', '侠', '俩', '债', '储', '兰', '农',
-		'冲', '决', '况', '准', '凭', '击', '创', '则', '刚',
+		'义', '习', '乡', '亲', '仅', '众', '优', '伤',
+		'传', '体', '侠', '俩', '债', '储', '兰', '农',
+		'冲', '决', '况', '凭', '击', '创', '则', '刚',
 		'办', '劝', '势', '勋', '华', '协', '单', '卫', '历',
 		'厅', '压', '厌', '县', '参', '双', '变', '叙', '叹', '吨',
 		'启', '员', '响', '哟', '唤', '团', '园', '围', '图', '圆',

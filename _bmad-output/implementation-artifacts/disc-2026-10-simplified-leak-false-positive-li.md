@@ -19,12 +19,12 @@ Status: review
 
 ## 設計
 
-從 `simplifiedOnlySet` 拿掉 `里 几 云 丰 余 占 划`，註解寫明原因與例子。不動閘門規則、不動 OpenCC、不動 traditionalOnlySet。
+從 `simplifiedOnlySet` 拿掉 `里 几 云 丰 余 占 划 准 么 佣`（後三個是 CR 補的：不准／老么／佣金），註解寫明原因與例子。閘門多一張**簡體「詞」**名單（`quality_gate.go` `simplifiedWords`：哪里／家里／心里／几乎／几个／多余／其余／丰富／什么／怎么／准备／标准／佣人…），把這些字「當簡體用」時的漏洞補回來。不動 OpenCC、不動 traditionalOnlySet。
 
 ## Acceptance Criteria
 
-1. `Detect` 對「帕里斯」「數千英里」「公里」「茶几」「人云亦云」「丰采」「余光中」「占卜」「划船」的 `SimplifiedCount` 都是 0；「这里」「几个」仍 > 0。
-2. 品質閘門：`去找帕里斯談。`、`能跨越數千英里說話的機器` 通過；`在这里`（有 这）仍是 `simplified_leak`；既有的 `说点什麼`／`这个软件很好用` 案例不變。
+1. `Detect` 對「帕里斯」「數千英里」「公里」「茶几」「人云亦云」「丰采」「余光中」「占卜」「划船」「不准動」「老么」「佣金」的 `SimplifiedCount` 都是 0；「这里」「几个」仍 > 0。
+2. 品質閘門：`去找帕里斯談。`、`能跨越數千英里說話的機器`、`不准動！老么拿走了佣金。` 通過；`在这里`（有 这）、`家里沒人`、`几乎什么都不剩，准备多余的丰富晚餐`（簡體詞）仍是 `simplified_leak`；既有的 `说点什麼`／`这个软件很好用` 案例不變。
 3. 既有 detector 測試（繁／簡／混合／門檻）全部不改期望值照常通過。
 4. `go test ./...`、`go vet`、`staticcheck`、`lint:all` 全綠。
 5. **NAS 實測（部署後補）：** 對 See S01E02 再 Regenerate 一次，`stubborn_cues` 15 → 0，且 Paris 有一致的中文寫法。
@@ -53,6 +53,10 @@ Claude Fable 5.1（claude-fable-5-1）
 
 ### Completion Notes List
 
+- **對抗式 CR（另開 agent，2026-10-06）：1 Medium＋1 High 建議，都採納**
+  - **Medium** 拿掉 里／几／云／丰／余 之後，「家里」「几乎」「多余」「丰富」這種把它們當簡體用的常見漏字，閘門抓不到了（實測 `家里沒人` simp=0）→ 閘門加 `simplifiedWords` 詞表（`containsSimplifiedWord`），這些詞照樣退回；加兩個測試。
+  - **High** 集合裡還有 `准`（不准、批准）、`么`（老么）、`佣`（佣金）同樣會誤殺——「不准動！」是對白最常見句型之一 → 一併拿掉，加測試。
+  - 其餘仍在集合的疑似字（坏、复、够、冲、与、无、体）在 zh-TW 字幕幾乎不出現，保留。
 - **測試夾具調整（刻意）：** `TestDetect_BoundaryExact30` 原本用 70 個簡體字湊 30%，其中含 几、云；拿掉後只剩 68 個、比例變 30.6% → 判成 zh。把夾具的 几／云 換成 难／雾（仍是簡體專用字），**期望值不變**。
 - 🔗 AC Drift: FOUND — sub-1-4 AC #4／sub-1-5a FR16「任何簡體專用字就退回」的規則不變；變的是「哪些字算簡體專用」（detector 字表），`detector_test.go` 既有期望值未動。
 - 📎 Contract Stamps: NONE（本單不定義也不消費 wire contract）。
@@ -67,6 +71,7 @@ N/A — no out-of-scope work discovered
 
 - `apps/api/internal/subtitle/detector.go`（改）
 - `apps/api/internal/subtitle/detector_test.go`（改）
+- `apps/api/internal/subtitle/quality_gate.go`（改：`simplifiedWords`／`containsSimplifiedWord`）
 - `apps/api/internal/subtitle/quality_gate_test.go`（改）
 - `_bmad-output/implementation-artifacts/disc-2026-10-simplified-leak-false-positive-li.md`（新）
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`（改）
@@ -76,3 +81,4 @@ N/A — no out-of-scope work discovered
 | 日期 | 內容 |
 |---|---|
 | 2026-10-06 | create-story＋dev 同日：拿掉 里／几／云／丰／余／占／划；detector 與 gate 各加測試；全綠，狀態 review。 |
+| 2026-10-06 | CR：再拿掉 准／么／佣；閘門加簡體詞表補回召回率；測試補齊，全綠。 |
