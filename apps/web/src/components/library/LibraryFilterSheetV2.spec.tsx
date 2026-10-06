@@ -71,7 +71,7 @@ describe('LibraryFilterSheetV2 (dsr-1b-b A6p-M)', () => {
 
   it('[P0] the 字幕 chips are there, 全部/電影/影集 are not', () => {
     renderSheet();
-    expect(screen.getByTestId('filter-subtitle-not_found')).toHaveTextContent('缺字幕');
+    expect(screen.getByTestId('filter-chinese-missing')).toHaveTextContent('缺中文字幕');
     expect(screen.queryByTestId('filter-type-all')).not.toBeInTheDocument();
   });
 
@@ -79,20 +79,20 @@ describe('LibraryFilterSheetV2 (dsr-1b-b A6p-M)', () => {
     const user = userEvent.setup();
     g.list = { data: { totalItems: 12 }, isPending: false, isError: false };
     renderSheet();
-    await user.click(screen.getByTestId('filter-subtitle-not_found'));
+    await user.click(screen.getByTestId('filter-chinese-missing'));
     // The count query is debounced 200ms behind the draft.
     await waitFor(() =>
-      expect((g.listArgs.at(-1) as [Record<string, unknown>])[0].subtitleStatus).toBe('not_found')
+      expect((g.listArgs.at(-1) as [Record<string, unknown>])[0].chineseSubtitle).toBe('missing')
     );
     const [params, options] = g.listArgs.at(-1) as [
       Record<string, unknown>,
       { enabled: boolean; keepPrevious?: boolean },
     ];
     expect(params).toEqual(
-      sheetCountParams({ genres: [], subtitleStatus: ['not_found'] }, 'movie', 'created_at', 'desc')
+      sheetCountParams({ genres: [], chineseSubtitle: ['missing'] }, 'movie', 'created_at', 'desc')
     );
     expect(params.pageSize).toBe(1);
-    expect(params.subtitleStatus).toBe('not_found');
+    expect(params.chineseSubtitle).toBe('missing');
     expect(options.enabled).toBe(true);
     expect(options.keepPrevious).toBe(true);
     expect(screen.getByTestId('library-filter-apply')).toHaveTextContent('套用篩選 · 12 部');
@@ -106,13 +106,13 @@ describe('LibraryFilterSheetV2 (dsr-1b-b A6p-M)', () => {
   it('[P0] 重設 empties the draft and resets sort without closing', async () => {
     const user = userEvent.setup();
     const { onOpenChange } = renderSheet({
-      filters: { genres: ['動畫'], subtitleStatus: ['found'] },
+      filters: { genres: ['動畫'], chineseSubtitle: ['has'] },
       sortBy: 'title',
       sortOrder: 'asc',
     });
-    expect(screen.getByTestId('filter-subtitle-found')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('filter-chinese-has')).toHaveAttribute('aria-pressed', 'true');
     await user.click(screen.getByTestId('library-filter-reset'));
-    expect(screen.getByTestId('filter-subtitle-found')).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByTestId('filter-chinese-has')).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByTestId('library-sort-created_at')).toHaveAttribute('aria-checked', 'true');
     expect(onOpenChange).not.toHaveBeenCalled();
     expect(screen.getByTestId('library-filter-reset').className).toContain('size-11');
@@ -122,12 +122,10 @@ describe('LibraryFilterSheetV2 (dsr-1b-b A6p-M)', () => {
     const user = userEvent.setup();
     const { onApply, onSortChange, onOpenChange } = renderSheet();
     await user.click(screen.getByTestId('library-sort-title'));
-    await user.click(screen.getByTestId('filter-subtitle-not_found'));
+    await user.click(screen.getByTestId('filter-chinese-missing'));
     await user.click(screen.getByTestId('library-filter-apply'));
     expect(onSortChange).toHaveBeenCalledWith('title', 'asc');
-    expect(onApply).toHaveBeenCalledWith(
-      expect.objectContaining({ subtitleStatus: ['not_found'] })
-    );
+    expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ chineseSubtitle: ['missing'] }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
@@ -142,8 +140,8 @@ describe('LibraryFilterSheetV2 (dsr-1b-b A6p-M)', () => {
   it('[P1] reopening re-seeds the draft from the page (a discarded draft does not linger)', async () => {
     const user = userEvent.setup();
     const { view } = renderSheet();
-    await user.click(screen.getByTestId('filter-subtitle-not_found'));
-    expect(screen.getByTestId('filter-subtitle-not_found')).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByTestId('filter-chinese-missing'));
+    expect(screen.getByTestId('filter-chinese-missing')).toHaveAttribute('aria-pressed', 'true');
     view.rerender(
       <LibraryFilterSheetV2
         open={false}
@@ -170,10 +168,7 @@ describe('LibraryFilterSheetV2 (dsr-1b-b A6p-M)', () => {
         onClear={vi.fn()}
       />
     );
-    expect(screen.getByTestId('filter-subtitle-not_found')).toHaveAttribute(
-      'aria-pressed',
-      'false'
-    );
+    expect(screen.getByTestId('filter-chinese-missing')).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('[P1] the footer sits outside the scrolling band', () => {
@@ -208,24 +203,24 @@ describe('LibraryFilterSheetV2 — CR follow-ups (dsr-1b-b)', () => {
   it('[P0] the count query is debounced: three quick taps → one new draft reaches the hook, never the intermediate ones', async () => {
     const user = userEvent.setup();
     renderSheet();
-    await user.click(screen.getByTestId('filter-subtitle-found'));
-    await user.click(screen.getByTestId('filter-subtitle-not_found'));
-    await user.click(screen.getByTestId('filter-subtitle-not_searched'));
+    await user.click(screen.getByTestId('filter-chinese-has'));
+    await user.click(screen.getByTestId('filter-chinese-missing'));
+    await user.click(screen.getByTestId('filter-chinese-unknown'));
     await waitFor(() =>
-      expect((g.listArgs.at(-1) as [Record<string, unknown>])[0].subtitleStatus).toBe(
-        'found,not_found,not_searched'
+      expect((g.listArgs.at(-1) as [Record<string, unknown>])[0].chineseSubtitle).toBe(
+        'has,missing,unknown'
       )
     );
-    const seen = g.listArgs.map((a) => (a as [Record<string, unknown>])[0].subtitleStatus);
-    expect(seen).not.toContain('found');
-    expect(seen).not.toContain('found,not_found');
+    const seen = g.listArgs.map((a) => (a as [Record<string, unknown>])[0].chineseSubtitle);
+    expect(seen).not.toContain('has');
+    expect(seen).not.toContain('has,missing');
   });
 
   it('[P1] while the debounced params lag the draft, the number is kept and marked stale', async () => {
     const user = userEvent.setup();
     renderSheet();
     expect(screen.getByTestId('library-filter-apply-count')).not.toHaveAttribute('data-stale');
-    await user.click(screen.getByTestId('filter-subtitle-found'));
+    await user.click(screen.getByTestId('filter-chinese-has'));
     expect(screen.getByTestId('library-filter-apply-count')).toHaveAttribute('data-stale', 'true');
     expect(screen.getByTestId('library-filter-apply')).toHaveTextContent('套用篩選 · 7 部');
     await waitFor(() =>

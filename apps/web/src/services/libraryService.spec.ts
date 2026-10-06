@@ -689,24 +689,27 @@ describe('libraryService', () => {
     });
   });
 
-  // dsr-1b-b AC #2 — confirmed against [@contract-v1] (Story dsr-1b-a AC #1) and
-  // [@contract-v1] (Story dsr-1b-a2 AC #1): list and search send the same filter set.
-  describe('subtitle_status filter param (dsr-1b-b)', () => {
+  // disc-2026-10-subtitle-filter-disagrees-with-badges AC #8 — confirmed against
+  // [@contract-v1] (Story disc-2026-10-subtitle-filter-disagrees-with-badges AC #2) and
+  // [@contract-v1] (Story dsr-1b-a2 AC #1): list and search send the same filter set,
+  // and the frontend no longer sends subtitle_status.
+  describe('chinese_subtitle filter param', () => {
     const ok = () =>
       mockSuccessResponse({ items: [], page: 1, pageSize: 20, totalItems: 0, totalPages: 0 });
 
-    it('[P0] listLibrary sends subtitleStatus as subtitle_status csv', async () => {
+    it('[P0] listLibrary sends chineseSubtitle as chinese_subtitle csv, never subtitle_status', async () => {
       mockFetch.mockResolvedValue(ok());
-      await libraryService.listLibrary({ subtitleStatus: 'not_found,not_searched' });
+      await libraryService.listLibrary({ chineseSubtitle: 'missing,unknown' });
       const url = mockFetch.mock.calls[0][0] as string;
-      expect(url).toContain('subtitle_status=not_found%2Cnot_searched');
+      expect(url).toContain('chinese_subtitle=missing%2Cunknown');
+      expect(url).not.toContain('subtitle_status');
     });
 
-    it('[P0] listLibrary omits subtitle_status when empty', async () => {
+    it('[P0] listLibrary omits chinese_subtitle when empty', async () => {
       mockFetch.mockResolvedValue(ok());
-      await libraryService.listLibrary({ subtitleStatus: '' });
+      await libraryService.listLibrary({ chineseSubtitle: '' });
       const url = mockFetch.mock.calls[0][0] as string;
-      expect(url).not.toContain('subtitle_status');
+      expect(url).not.toContain('chinese_subtitle');
     });
 
     it('[P0] searchLibrary sends the same filter set as listLibrary', async () => {
@@ -723,7 +726,7 @@ describe('libraryService', () => {
         yearMin: 1999,
         yearMax: 2003,
         unmatched: true,
-        subtitleStatus: 'not_found',
+        chineseSubtitle: 'missing',
       });
       const url = new URL(mockFetch.mock.calls[0][0] as string, 'http://x');
       expect(url.pathname).toMatch(/\/library\/search$/);
@@ -732,7 +735,8 @@ describe('libraryService', () => {
       expect(url.searchParams.get('year_min')).toBe('1999');
       expect(url.searchParams.get('year_max')).toBe('2003');
       expect(url.searchParams.get('unmatched')).toBe('true');
-      expect(url.searchParams.get('subtitle_status')).toBe('not_found');
+      expect(url.searchParams.get('chinese_subtitle')).toBe('missing');
+      expect(url.searchParams.has('subtitle_status')).toBe(false);
     });
   });
 });

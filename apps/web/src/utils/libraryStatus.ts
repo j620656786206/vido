@@ -5,8 +5,10 @@
  * carries. As of ux3-0-1 the list exposes the AUTHORITATIVE subtitle-engine result
  * (`subtitleStatus` + `subtitleLanguage`) alongside `parseStatus` and the embedded
  * `subtitleTracks`. We derive the durable states truthfully: in-library lifecycle
- * (整理中 / 已入庫 / 失敗) + subtitle availability (繁中 / 簡中 / 有字幕 / 缺字幕 /
- * 無字幕源 / 已略過 / 未翻譯).
+ * (整理中 / 已入庫 / 失敗) + Chinese-subtitle availability (繁中 / 簡中 / 中文 /
+ * 缺中文 / 無字幕源 / 已略過 / 未翻譯). Since disc-2026-10-subtitle-filter-disagrees-
+ * with-badges the "has Chinese?" half is the backend's `chineseSubtitle` verdict —
+ * the same rule the library filter matches on — and is never re-derived here.
  *
  * The transient process states (簡轉繁 / AI 校正中 / probing / extracting /
  * translating) are surfaced by the Activity hub, NOT this badge. NOTE the reason
@@ -48,7 +50,7 @@ const TINT = {
 
 type Media = Pick<
   LibraryMovie | LibrarySeries,
-  'parseStatus' | 'subtitleTracks' | 'subtitleStatus' | 'subtitleLanguage'
+  'parseStatus' | 'subtitleTracks' | 'subtitleStatus' | 'subtitleLanguage' | 'chineseSubtitle'
 >;
 
 /** Lifecycle badge from `parseStatus`. An in-library item with a clean parse is 已入庫 (steady). */
@@ -124,80 +126,53 @@ export function trackLangs(media: Pick<Media, 'subtitleTracks'>): string[] | nul
   return tracks.map((t) => (t.language || t.lang || '').toLowerCase());
 }
 
-/** Subtitle badge from embedded file tracks (`subtitleTracks` JSON). */
-function deriveFromTracks(media: Media): StatusDescriptor | null {
-  const langs = trackLangs(media);
-  if (langs === null) return null;
-
-  if (langs.some((l) => HANT.has(l)))
-    return { label: '繁中', className: TINT.success, steadyState: true };
-  // 簡中 = static informational state → info tint (F1-D-v2 pill C8lUe + DL-v2 §2.5:
-  // accent is reserved for in-progress states — Sally gate ruling 2026-07-05).
-  if (langs.some((l) => HANS.has(l))) return { label: '簡中', className: TINT.info };
-  if (langs.length > 0) return { label: '有字幕', className: TINT.neutral };
-  return { label: '缺字幕', className: TINT.neutral };
-}
-
 /**
- * Subtitle badge. Prefers the AUTHORITATIVE subtitle-engine result
- * (`subtitleStatus` + `subtitleLanguage`, exposed to the list by ux3-0-1): a
- * downloaded zh-Hant subtitle is 繁中 (the happy steady state), a confirmed
- * not_found is 缺字幕. Falls back to embedded-track inference when the engine has
- * no terminal result (not_searched / searching / absent). Returns null when
- * genuinely unknown (badge absent, never errors — F3).
+ * Subtitle badge (disc-2026-10-subtitle-filter-disagrees-with-badges AC #7).
+ *
+ * Reads the backend's `chineseSubtitle` verdict — the SAME function the library's
+ * 有中文字幕／缺中文字幕／不知道 filter matches on — so every title the 有 chip lists
+ * wears 繁中 / 簡中 / 中文 and every title the 缺 chip lists wears 缺中文 (or the
+ * pipeline's reason: 無字幕源 / 已略過 / 未翻譯). Do NOT infer "has Chinese" from
+ * `subtitleTracks` here (AC #3): an absent verdict (old fixture, older API) is
+ * unknown → no badge. Returns null when genuinely unknown (badge absent — F3).
  */
 export function deriveSubtitleStatus(media: Media | undefined): StatusDescriptor | null {
   if (!media) return null;
 
-  // 1. Authoritative downloaded-subtitle result.
-  if (media.subtitleStatus === 'found') {
-    const lang = (media.subtitleLanguage || '').toLowerCase();
-    if (HANT.has(lang)) return { label: '繁中', className: TINT.success, steadyState: true };
-    if (HANS.has(lang)) return { label: '簡中', className: TINT.info };
-    // found but language unknown/non-zh → embedded tracks may REFINE the
-    // verdict (a zh track upgrades the label), but may never CONTRADICT it: an
-    // empty/absent track list must not read 缺字幕 over an authoritative
-    // `found` — external SRTs are never in `subtitleTracks` (the sub-2-2b
-    // ladder hole). Refinement is expressed positively (zh classification
-    // only), not by filtering deriveFromTracks' output by label (CR L1).
-    const langs = trackLangs(media) ?? [];
-    if (langs.some((l) => HANT.has(l)))
+  // 1. Has Chinese — the verdict wins over every pipeline state: a title that
+  // already has Chinese is never a "missing" badge, and it is in the 有 chip.
+  switch (media.chineseSubtitle) {
+    case 'zh_hant':
       return { label: '繁中', className: TINT.success, steadyState: true };
-    if (langs.some((l) => HANS.has(l))) return { label: '簡中', className: TINT.info };
-    return { label: '有字幕', className: TINT.neutral };
+    case 'zh_hans':
+      // 簡中 = static informational state → info tint (F1-D-v2 pill C8lUe + DL-v2
+      // §2.5: accent is reserved for in-progress states — Sally gate 2026-07-05).
+      return { label: '簡中', className: TINT.info };
+    case 'zh':
+      // ⚖️ D2 (Alexyu 2026-10-06): Chinese whose script the file does not say (an
+      // embedded `chi` track). It IS "has" — steady like 繁中, so the poster stays
+      // quiet; the list row and detail header name it.
+      return { label: '中文', className: TINT.success, steadyState: true };
   }
 
-  // 2. Subtitle-pipeline verdicts (sub-1-2's 9-value enum; spec: flow-j-specs/j2-d).
+  // 2. Not "has": the subtitle-pipeline verdicts say WHY it is missing and what
+  // the next step is (sub-1-2's enum; spec: flow-j-specs/j2-d). They outrank the
+  // plain 缺中文 because they name the recovery path.
   //
-  // These sit ABOVE track inference ON PURPOSE — do not "simplify" them to the
-  // bottom of the ladder. Both terminal values describe a file that HAS tracks
-  // the pipeline cannot use: `no_text_source` typically carries image-only
-  // (PGS/VobSub) tracks, and `skipped` carries a real text track with an `und` or
-  // non-English tag. Step 3 returns on ANY track, so from below it these items
-  // would infer 有字幕 and the engine's authoritative verdict would lose to a
-  // naive track count — the user would see "has subtitles" on a file that will
-  // never get one.
-  //
-  // The three in-flight values return null for the same reason: falling through
-  // to track inference would badge a mid-run item with a stale track guess. They
-  // are normal progress, not an exception, so the grid stays quiet and the
-  // Activity hub + `subtitle_progress` SSE (sub-1-6) own them.
+  // The three in-flight values return null: normal progress is not an
+  // exception, so the grid stays quiet and the Activity hub + `subtitle_progress`
+  // SSE (sub-1-6) own them.
   switch (media.subtitleStatus) {
     case 'no_text_source':
-      // Distinct from 缺字幕 by recovery, not by meaning: 缺字幕 was searched for
-      // online and may be found later; this file has no text to extract at all,
-      // so only P2 ASR can change it (sub-1-7a AC #4).
+      // Distinct from 缺中文 by recovery, not by meaning: this file has no text to
+      // extract at all, so only P2 ASR can change it (sub-1-7a AC #4).
       return { label: '無字幕源', className: TINT.neutral };
     case 'skipped':
       return { label: '已略過', className: TINT.neutral };
     case 'untranslated':
-      // sub-2-2b AC #2 (10th value, sub-1-2 [@contract-v2]): a generated
-      // subtitle exists but the EXPECTED translation step did not run. Names
-      // the MISSING STEP — the user's next action (set the key, re-run; the
-      // sub-2-2a resume makes that translate-only) — mirroring the
-      // distinct-by-recovery ruling above. Written ONLY by the generation
-      // pipeline; an embedded English track alone must never derive it (the
-      // fence test). Neutral: not an error, and accent stays reserved for
+      // sub-2-2b AC #2: a generated subtitle exists but the EXPECTED translation
+      // step did not run. Names the MISSING STEP — the user's next action (set
+      // the key, re-run). Neutral: not an error, and accent stays reserved for
       // in-progress (Sally gate 2026-07-05).
       return { label: '未翻譯', className: TINT.neutral };
     case 'probing':
@@ -206,22 +181,20 @@ export function deriveSubtitleStatus(media: Media | undefined): StatusDescriptor
       return null;
   }
 
-  // 3. Embedded tracks (covers not_searched / searching / absent subtitleStatus).
-  const fromTracks = deriveFromTracks(media);
-  if (fromTracks) return fromTracks;
+  // 3. Known to have no Chinese (English only, nothing, Cantonese only, or
+  // searched online and not found) — ⚖️ D2 wording: say 中文 out loud.
+  if (media.chineseSubtitle === 'none') return { label: '缺中文', className: TINT.neutral };
 
-  // 4. Engine searched and found nothing, no embedded tracks → known-missing.
-  if (media.subtitleStatus === 'not_found') return { label: '缺字幕', className: TINT.neutral };
-
-  // 5. Genuinely unknown.
+  // 4. Genuinely unknown.
   return null;
 }
 
 /**
  * The single poster badge (ux3-0-2, N1 §2.5). The badge is an EXCEPTION signal:
  * a lifecycle exception (整理中 / 失敗) wins; otherwise a subtitle exception
- * (缺字幕 / 簡中 / 有字幕). The happy steady state (已入庫 + 繁中) and unknown
- * states render NO badge — avoiding always-on info-noise on the grid.
+ * (缺中文 / 簡中 / 無字幕源 / 已略過 / 未翻譯). The happy steady states (已入庫 +
+ * 繁中 or 中文) and unknown states render NO badge — avoiding always-on
+ * info-noise on the grid.
  */
 export function pickPosterBadge(media: Media | undefined): StatusDescriptor | null {
   const lifecycle = deriveLifecycleStatus(media);

@@ -753,9 +753,15 @@ func (s *EnrichmentService) applyFFprobeTechInfo(ctx context.Context, movie *mod
 	// ffprobe nor any API key, so it must never be starved by either (the
 	// first Synology install had a .srt beside the movie and still showed
 	// 尚無字幕 because this lived after the probe).
-	writeSubs := func(embedded []SubtitleTrack) {
+	//
+	// probed=true means ffprobe read the file successfully, so an empty result
+	// is a FACT ("no subtitles at all") and is written as `[]` — the library's
+	// Chinese-subtitle verdict reads that as 缺中文. Without a successful probe
+	// an empty result only means "we don't know" and stays NULL (story
+	// disc-2026-10-subtitle-filter-disagrees-with-badges AC #6).
+	writeSubs := func(embedded []SubtitleTrack, probed bool) {
 		allSubs := MergeSubtitleTracks(embedded, DetectExternalSubtitles(movie.FilePath.String))
-		if len(allSubs) == 0 {
+		if len(allSubs) == 0 && !probed {
 			return
 		}
 		if subsJSON, err := json.Marshal(allSubs); err == nil {
@@ -766,7 +772,7 @@ func (s *EnrichmentService) applyFFprobeTechInfo(ctx context.Context, movie *mod
 	}
 
 	if s.ffprobeService == nil || !s.ffprobeService.IsAvailable() {
-		writeSubs(nil)
+		writeSubs(nil, false)
 		return
 	}
 	// AC #7: Skip if tech info already set (from NFO)
@@ -780,7 +786,7 @@ func (s *EnrichmentService) applyFFprobeTechInfo(ctx context.Context, movie *mod
 	if err != nil {
 		s.logger.Warn("ffprobe failed, skipping tech info",
 			"id", movie.ID, "file", movie.FilePath.String, "error", err)
-		writeSubs(nil) // sidecar detection still runs — it does not need the probe
+		writeSubs(nil, false) // sidecar detection still runs — it does not need the probe
 		return
 	}
 
@@ -816,8 +822,9 @@ func (s *EnrichmentService) applyFFprobeTechInfo(ctx context.Context, movie *mod
 		movie.DurationSeconds = models.NewNullInt64(int64(info.DurationSeconds))
 	}
 
-	// Merge embedded + external subtitles (AC #9)
-	writeSubs(info.SubtitleTracks)
+	// Merge embedded + external subtitles (AC #9). The probe succeeded, so
+	// "no tracks" is recorded as `[]`, not left NULL.
+	writeSubs(info.SubtitleTracks, true)
 }
 
 // tryFFprobeEnrichment is a convenience wrapper that applies FFprobe tech info

@@ -224,6 +224,7 @@ SCREENS = {
     # Desktop filter rail redesign (v2 Design System) — replaces mobile bottom-sheet misuse on lg+
     "vpDLh": ("flow-i-advanced-search", "i5-d"),  # rail persistent (hero) — re-merged onto feat/ux3-2-1 (#89 .pen frames reconstructed post main-merge)
     "SgncH": ("flow-i-advanced-search", "i7-d"),  # rail states spec (genre loading / load-failed) — re-merged
+    "Qaz1x": ("flow-i-advanced-search", "i11-d"),  # rail collapse/expand motion storyboard spec (2026-10-06; I8 taken by i8-d discover)
     # Flow J — 設計決策 spec (PosterCard info-density & polish)
     "XlFIq": ("flow-j-specs", "j1-d"),
     # Subtitle-status badge spec (story sub-1-7a) — the 5 new subtitle_status values'

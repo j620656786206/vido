@@ -5,12 +5,14 @@ import {
   pickPosterBadge,
   subtitleLangLabel,
 } from './libraryStatus';
+import type { ChineseSubtitle } from '../types/library';
 
 type Media = {
   parseStatus: string;
   subtitleTracks?: string;
   subtitleStatus?: string;
   subtitleLanguage?: string;
+  chineseSubtitle?: ChineseSubtitle;
 };
 const m = (parseStatus: string, over: Partial<Media> = {}): Media => ({ parseStatus, ...over });
 
@@ -37,274 +39,327 @@ describe('deriveLifecycleStatus', () => {
   });
 });
 
-describe('deriveSubtitleStatus — embedded tracks (fallback)', () => {
-  it('flags 繁中 (steady) when a zh-Hant track is present', () => {
-    const s = deriveSubtitleStatus(
-      m('success', { subtitleTracks: JSON.stringify([{ language: 'zh-Hant' }]) })
-    );
-    expect(s?.label).toBe('繁中');
-    expect(s?.className).toContain('--success-tint');
-    expect(s?.steadyState).toBe(true);
+// disc-2026-10-subtitle-filter-disagrees-with-badges AC #7: the badge reads the
+// backend's `chineseSubtitle` verdict — the same rule the library filter uses.
+// Each row is an AC #4 scenario as the frontend receives it (the backend verdict
+// for that shape + the raw subtitleStatus). `group` is the filter chip the
+// backend puts it in; the badge must agree with that chip.
+describe('deriveSubtitleStatus — AC #4 scenarios as the frontend receives them', () => {
+  const tracks = (...langs: string[]) => JSON.stringify(langs.map((language) => ({ language })));
+  it.each<[string, Partial<Media>, string | null, 'has' | 'missing' | 'unknown']>([
+    [
+      'chi + eng',
+      {
+        chineseSubtitle: 'zh',
+        subtitleStatus: 'not_searched',
+        subtitleTracks: tracks('chi', 'eng'),
+      },
+      '中文',
+      'has',
+    ],
+    [
+      'only eng',
+      { chineseSubtitle: 'none', subtitleStatus: 'not_searched', subtitleTracks: tracks('eng') },
+      '缺中文',
+      'missing',
+    ],
+    [
+      '[]',
+      { chineseSubtitle: 'none', subtitleStatus: 'not_searched', subtitleTracks: '[]' },
+      '缺中文',
+      'missing',
+    ],
+    [
+      'NULL + not_searched',
+      { chineseSubtitle: 'unknown', subtitleStatus: 'not_searched' },
+      null,
+      'unknown',
+    ],
+    [
+      'NULL + not_found',
+      { chineseSubtitle: 'none', subtitleStatus: 'not_found' },
+      '缺中文',
+      'missing',
+    ],
+    [
+      'NULL + untranslated + en',
+      { chineseSubtitle: 'none', subtitleStatus: 'untranslated', subtitleLanguage: 'en' },
+      '未翻譯',
+      'missing',
+    ],
+    [
+      'found + zh-Hant',
+      { chineseSubtitle: 'zh_hant', subtitleStatus: 'found', subtitleLanguage: 'zh-Hant' },
+      '繁中',
+      'has',
+    ],
+    [
+      'found + zh',
+      { chineseSubtitle: 'zh', subtitleStatus: 'found', subtitleLanguage: 'zh' },
+      '中文',
+      'has',
+    ],
+    [
+      'NFO chi,eng',
+      { chineseSubtitle: 'zh', subtitleStatus: 'not_searched', subtitleTracks: 'chi,eng' },
+      '中文',
+      'has',
+    ],
+    [
+      'sidecar zh-TW',
+      {
+        chineseSubtitle: 'zh_hant',
+        subtitleStatus: 'not_searched',
+        subtitleTracks: tracks('zh-TW'),
+      },
+      '繁中',
+      'has',
+    ],
+    [
+      'sidecar chi.forced',
+      {
+        chineseSubtitle: 'zh',
+        subtitleStatus: 'not_searched',
+        subtitleTracks: tracks('chi.forced'),
+      },
+      '中文',
+      'has',
+    ],
+    [
+      'only und',
+      { chineseSubtitle: 'unknown', subtitleStatus: 'not_searched', subtitleTracks: tracks('und') },
+      null,
+      'unknown',
+    ],
+    [
+      'eng + und',
+      {
+        chineseSubtitle: 'unknown',
+        subtitleStatus: 'not_searched',
+        subtitleTracks: tracks('eng', 'und'),
+      },
+      null,
+      'unknown',
+    ],
+    [
+      'chi 繁體中文',
+      { chineseSubtitle: 'zh_hant', subtitleStatus: 'not_searched', subtitleTracks: tracks('chi') },
+      '繁中',
+      'has',
+    ],
+    [
+      'chi 简体',
+      { chineseSubtitle: 'zh_hans', subtitleStatus: 'not_searched', subtitleTracks: tracks('chi') },
+      '簡中',
+      'has',
+    ],
+    [
+      'only chi 粵語',
+      { chineseSubtitle: 'none', subtitleStatus: 'not_searched', subtitleTracks: tracks('chi') },
+      '缺中文',
+      'missing',
+    ],
+    [
+      'only yue',
+      { chineseSubtitle: 'none', subtitleStatus: 'not_searched', subtitleTracks: tracks('yue') },
+      '缺中文',
+      'missing',
+    ],
+    [
+      'yue + chi',
+      {
+        chineseSubtitle: 'zh',
+        subtitleStatus: 'not_searched',
+        subtitleTracks: tracks('yue', 'chi'),
+      },
+      '中文',
+      'has',
+    ],
+    [
+      'PGS chi + no_text_source',
+      { chineseSubtitle: 'zh', subtitleStatus: 'no_text_source', subtitleTracks: tracks('chi') },
+      '中文',
+      'has',
+    ],
+    [
+      'found + en + NULL',
+      { chineseSubtitle: 'unknown', subtitleStatus: 'found', subtitleLanguage: 'en' },
+      null,
+      'unknown',
+    ],
+    [
+      'garbage tracks',
+      { chineseSubtitle: 'unknown', subtitleStatus: 'not_searched', subtitleTracks: '{oops' },
+      null,
+      'unknown',
+    ],
+  ])('%s → %s', (_name, over, label, group) => {
+    const s = deriveSubtitleStatus(m('success', over));
+    expect(s?.label ?? null).toBe(label);
+    // The chip and the badge say the same thing (AC #7 / D1).
+    if (group === 'has') expect(['繁中', '簡中', '中文']).toContain(s?.label);
+    if (group === 'missing') expect(['缺中文', '無字幕源', '已略過', '未翻譯']).toContain(s?.label);
   });
-  it('flags 簡中 (info tint — Sally gate 2026-07-05, accent reserved for in-progress) when only zh-Hans is present', () => {
-    const s = deriveSubtitleStatus(
-      m('success', { subtitleTracks: JSON.stringify([{ lang: 'zh-Hans' }]) })
-    );
-    expect(s?.label).toBe('簡中');
-    expect(s?.className).toContain('--info-tint');
-    expect(s?.className).not.toContain('--accent-tint');
+
+  it('繁中 and 中文 are steady (poster stays quiet); 簡中 is info, 缺中文 neutral', () => {
+    const hant = deriveSubtitleStatus(m('success', { chineseSubtitle: 'zh_hant' }));
+    expect(hant?.className).toContain('--success-tint');
+    expect(hant?.steadyState).toBe(true);
+    const zh = deriveSubtitleStatus(m('success', { chineseSubtitle: 'zh' }));
+    expect(zh?.label).toBe('中文');
+    expect(zh?.steadyState).toBe(true);
+    const hans = deriveSubtitleStatus(m('success', { chineseSubtitle: 'zh_hans' }));
+    expect(hans?.className).toContain('--info-tint');
+    expect(hans?.className).not.toContain('--accent-tint');
+    const none = deriveSubtitleStatus(m('success', { chineseSubtitle: 'none' }));
+    expect(none?.label).toBe('缺中文');
+    expect(none?.className).toContain('--bg-tertiary');
+    expect(none?.steadyState).toBeFalsy();
   });
-  it('flags 缺字幕 for an empty track list', () => {
-    expect(deriveSubtitleStatus(m('success', { subtitleTracks: JSON.stringify([]) }))?.label).toBe(
-      '缺字幕'
-    );
-  });
-  it('flags 有字幕 for non-zh tracks only', () => {
+
+  it('never re-derives "has Chinese" from tracks: no verdict → no badge (AC #3)', () => {
+    expect(deriveSubtitleStatus(m('success', { subtitleTracks: tracks('zh-Hant') }))).toBeNull();
     expect(
-      deriveSubtitleStatus(m('success', { subtitleTracks: JSON.stringify([{ language: 'en' }]) }))
-        ?.label
-    ).toBe('有字幕');
-  });
-  it('returns null when no subtitle info at all (unknown, not known-missing)', () => {
+      deriveSubtitleStatus(m('success', { subtitleStatus: 'found', subtitleLanguage: 'zh-Hant' }))
+    ).toBeNull();
+    expect(deriveSubtitleStatus(m('success', { subtitleTracks: tracks('eng') }))).toBeNull();
     expect(deriveSubtitleStatus(m('success'))).toBeNull();
-  });
-  it('returns null on non-JSON legacy values (never throws)', () => {
-    expect(deriveSubtitleStatus(m('success', { subtitleTracks: 'srt' }))).toBeNull();
+    expect(deriveSubtitleStatus(undefined)).toBeNull();
   });
 });
 
-describe('deriveSubtitleStatus — authoritative engine result (ux3-0-1)', () => {
-  it('prefers subtitleStatus=found + zh-Hant → 繁中 (steady), no tracks needed', () => {
-    const s = deriveSubtitleStatus(
-      m('success', { subtitleStatus: 'found', subtitleLanguage: 'zh-Hant' })
-    );
-    expect(s?.label).toBe('繁中');
-    expect(s?.steadyState).toBe(true);
+describe('deriveSubtitleStatus — pipeline states (sub-1-7b, kept under the new verdict)', () => {
+  it.each(['probing', 'extracting', 'translating'])(
+    'returns null for the transient state %s when the title has no Chinese yet',
+    (subtitleStatus) => {
+      expect(
+        deriveSubtitleStatus(m('success', { subtitleStatus, chineseSubtitle: 'none' }))
+      ).toBeNull();
+      expect(
+        deriveSubtitleStatus(m('success', { subtitleStatus, chineseSubtitle: 'unknown' }))
+      ).toBeNull();
+    }
+  );
+
+  it('a title that already has Chinese keeps its 有 badge while the pipeline runs', () => {
+    expect(
+      deriveSubtitleStatus(m('success', { subtitleStatus: 'extracting', chineseSubtitle: 'zh' }))
+        ?.label
+    ).toBe('中文');
   });
-  it('subtitleStatus=found + zh-Hans → 簡中 (info tint per F1-D-v2 pill C8lUe)', () => {
-    const s = deriveSubtitleStatus(
-      m('success', { subtitleStatus: 'found', subtitleLanguage: 'zh-Hans' })
-    );
-    expect(s?.label).toBe('簡中');
-    expect(s?.className).toContain('--info-tint');
-    expect(s?.className).not.toContain('--accent-tint');
+
+  it.each([
+    ['no_text_source', '無字幕源'],
+    ['skipped', '已略過'],
+    ['untranslated', '未翻譯'],
+  ])('%s → %s (neutral, non-steady) outranks the plain 缺中文', (subtitleStatus, label) => {
+    for (const chineseSubtitle of ['none', 'unknown'] as const) {
+      const s = deriveSubtitleStatus(m('success', { subtitleStatus, chineseSubtitle }));
+      expect(s?.label).toBe(label);
+      expect(s?.className).toContain('--bg-tertiary');
+      expect(s?.className).not.toContain('--error');
+      expect(s?.className).not.toContain('--accent');
+      expect(s?.steadyState).toBeFalsy();
+    }
   });
-  it('subtitleStatus=not_found (no tracks) → 缺字幕', () => {
-    expect(deriveSubtitleStatus(m('success', { subtitleStatus: 'not_found' }))?.label).toBe(
-      '缺字幕'
-    );
+
+  it('keeps 無字幕源 distinct from 缺中文 — different recoveries (sub-1-7a AC #4)', () => {
+    expect(
+      deriveSubtitleStatus(m('success', { subtitleStatus: 'not_found', chineseSubtitle: 'none' }))
+        ?.label
+    ).toBe('缺中文');
+    expect(
+      deriveSubtitleStatus(
+        m('success', { subtitleStatus: 'no_text_source', chineseSubtitle: 'none' })
+      )?.label
+    ).toBe('無字幕源');
   });
-  it('falls back to embedded tracks when subtitleStatus is not_searched', () => {
-    const s = deriveSubtitleStatus(
-      m('success', {
-        subtitleStatus: 'not_searched',
-        subtitleTracks: JSON.stringify([{ language: 'zh-Hant' }]),
-      })
-    );
-    expect(s?.label).toBe('繁中');
+
+  it('SCOPE FENCE: an English-only title without the pipeline verdict never badges 未翻譯', () => {
+    for (const subtitleStatus of [undefined, 'not_searched']) {
+      expect(
+        deriveSubtitleStatus(m('success', { subtitleStatus, chineseSubtitle: 'none' }))?.label
+      ).toBe('缺中文');
+    }
   });
 });
 
 describe('pickPosterBadge — exception signal (ux3-0-2)', () => {
-  it('suppresses the happy steady state (已入庫 + 繁中) → no badge', () => {
-    expect(
-      pickPosterBadge(m('success', { subtitleStatus: 'found', subtitleLanguage: 'zh-Hant' }))
-    ).toBeNull();
-    expect(
-      pickPosterBadge(m('success', { subtitleTracks: JSON.stringify([{ language: 'zh-Hant' }]) }))
-    ).toBeNull();
+  it('suppresses the happy steady states (已入庫 + 繁中 / 中文) → no badge', () => {
+    expect(pickPosterBadge(m('success', { chineseSubtitle: 'zh_hant' }))).toBeNull();
+    expect(pickPosterBadge(m('success', { chineseSubtitle: 'zh' }))).toBeNull();
   });
-  it('shows a subtitle exception for an in-library item (缺字幕 / 簡中)', () => {
-    expect(pickPosterBadge(m('success', { subtitleStatus: 'not_found' }))?.label).toBe('缺字幕');
+  it('shows a subtitle exception for an in-library item (缺中文 / 簡中 / pipeline verdicts)', () => {
+    expect(pickPosterBadge(m('success', { chineseSubtitle: 'none' }))?.label).toBe('缺中文');
+    expect(pickPosterBadge(m('success', { chineseSubtitle: 'zh_hans' }))?.label).toBe('簡中');
     expect(
-      pickPosterBadge(m('success', { subtitleTracks: JSON.stringify([{ lang: 'zh-Hans' }]) }))
+      pickPosterBadge(m('success', { subtitleStatus: 'no_text_source', chineseSubtitle: 'none' }))
         ?.label
-    ).toBe('簡中');
+    ).toBe('無字幕源');
+    expect(pickPosterBadge(m('success', { subtitleStatus: 'skipped' }))?.label).toBe('已略過');
+    expect(pickPosterBadge(m('success', { subtitleStatus: 'untranslated' }))?.label).toBe('未翻譯');
+  });
+  it('renders NO badge for the three transient states (normal progress is not an exception)', () => {
+    for (const subtitleStatus of ['probing', 'extracting', 'translating']) {
+      expect(pickPosterBadge(m('success', { subtitleStatus, chineseSubtitle: 'none' }))).toBeNull();
+    }
   });
   it('a lifecycle exception (整理中 / 失敗) wins over subtitle', () => {
-    expect(
-      pickPosterBadge(m('pending', { subtitleStatus: 'found', subtitleLanguage: 'zh-Hant' }))?.label
-    ).toBe('整理中');
+    expect(pickPosterBadge(m('pending', { chineseSubtitle: 'zh_hant' }))?.label).toBe('整理中');
+    expect(pickPosterBadge(m('pending', { subtitleStatus: 'skipped' }))?.label).toBe('整理中');
     expect(pickPosterBadge(m('failed'))?.label).toBe('失敗');
   });
   it('shows no badge for unknown state (F3)', () => {
+    expect(pickPosterBadge(m('success', { chineseSubtitle: 'unknown' }))).toBeNull();
     expect(pickPosterBadge(m('success'))).toBeNull();
     expect(pickPosterBadge(undefined)).toBeNull();
   });
 });
 
-// ─── Story sub-1-7b — the 5 pipeline states (sub-1-2 [@contract-v1] 9-value set) ───
-
-describe('deriveSubtitleStatus — subtitle-pipeline states (sub-1-7b)', () => {
-  it.each([
-    ['probing', 'transient — the Activity hub + SSE own in-flight progress'],
-    ['extracting', 'transient'],
-    ['translating', 'transient'],
-  ])('returns null for the transient state %s (%s)', (subtitleStatus) => {
-    expect(deriveSubtitleStatus(m('success', { subtitleStatus }))).toBeNull();
-  });
-
-  it('maps no_text_source → 無字幕源 (neutral, non-steady)', () => {
-    const s = deriveSubtitleStatus(m('success', { subtitleStatus: 'no_text_source' }));
-    expect(s).toEqual({ label: '無字幕源', className: expect.stringContaining('--bg-tertiary') });
-    expect(s?.steadyState).toBeFalsy();
-  });
-
-  it('maps skipped → 已略過 (neutral, non-steady)', () => {
-    const s = deriveSubtitleStatus(m('success', { subtitleStatus: 'skipped' }));
-    expect(s).toEqual({ label: '已略過', className: expect.stringContaining('--bg-tertiary') });
-    expect(s?.steadyState).toBeFalsy();
-  });
-
-  it('keeps 無字幕源 distinct from 缺字幕 — different recoveries (sub-1-7a AC #4)', () => {
-    // 缺字幕 = searched online, found nothing → re-search may help.
-    // 無字幕源 = no text track to extract → only P2 ASR can help.
-    expect(deriveSubtitleStatus(m('success', { subtitleStatus: 'not_found' }))?.label).toBe(
-      '缺字幕'
-    );
-    expect(deriveSubtitleStatus(m('success', { subtitleStatus: 'no_text_source' }))?.label).toBe(
-      '無字幕源'
-    );
-  });
-});
-
-// THE ordering regression tests. These fail against the natural "append the new
-// cases at the bottom" implementation: step 2 infers a badge from subtitleTracks
-// and returns on ANY track, so a terminal engine verdict placed below it loses to
-// a naive track count and the user sees 有字幕 on a file that will never get one.
-describe('deriveSubtitleStatus — terminal verdicts outrank track inference (sub-1-7b)', () => {
-  // PGS is an IMAGE track: the pipeline cannot extract text from it, which is
-  // exactly why the item is no_text_source — yet it IS a track in subtitleTracks.
-  const imageOnlyTracks = JSON.stringify([{ language: 'eng', codec: 'hdmv_pgs_subtitle' }]);
-  // An `und`-tagged text track is what P0 refuses to treat as English → skipped.
-  const undTracks = JSON.stringify([{ language: 'und' }]);
-
-  it('no_text_source wins over an image-only embedded track', () => {
-    expect(
-      deriveSubtitleStatus(
-        m('success', { subtitleStatus: 'no_text_source', subtitleTracks: imageOnlyTracks })
-      )?.label
-    ).toBe('無字幕源');
-  });
-
-  it('skipped wins over an und-tagged embedded track', () => {
-    expect(
-      deriveSubtitleStatus(m('success', { subtitleStatus: 'skipped', subtitleTracks: undTracks }))
-        ?.label
-    ).toBe('已略過');
-  });
-
-  it('the transient states reach null without falling into track inference', () => {
-    for (const subtitleStatus of ['probing', 'extracting', 'translating']) {
-      expect(
-        deriveSubtitleStatus(m('success', { subtitleStatus, subtitleTracks: undTracks }))
-      ).toBeNull();
-    }
-  });
-});
-
-describe('pickPosterBadge — the new pipeline states (sub-1-7b AC #2)', () => {
-  it('surfaces the terminal verdicts on the grid (they are exceptions)', () => {
-    expect(pickPosterBadge(m('success', { subtitleStatus: 'no_text_source' }))?.label).toBe(
-      '無字幕源'
-    );
-    expect(pickPosterBadge(m('success', { subtitleStatus: 'skipped' }))?.label).toBe('已略過');
-  });
-
-  it('renders NO badge for the three transient states (normal progress is not an exception)', () => {
-    for (const subtitleStatus of ['probing', 'extracting', 'translating']) {
-      expect(pickPosterBadge(m('success', { subtitleStatus }))).toBeNull();
-    }
-  });
-
-  it('a lifecycle exception still wins over a terminal subtitle verdict', () => {
-    expect(pickPosterBadge(m('pending', { subtitleStatus: 'skipped' }))?.label).toBe('整理中');
-  });
-});
-
-// sub-2-2b: the untranslated badge + the found-fallback ladder hole.
-// Murat's mandate — the "authoritative verdict vs EMPTY track list" class had
-// ZERO coverage; step 1's `deriveFromTracks(media) ?? 有字幕` fallback let
-// deriveFromTracks' 缺字幕-on-empty-array override an engine verdict.
-describe('deriveSubtitleStatus — authoritative verdicts vs an EMPTY track list (sub-2-2b)', () => {
-  const emptyTracks = JSON.stringify([]);
-
-  it('found + en + empty tracks → 有字幕, never 缺字幕 (the ladder hole)', () => {
-    const s = deriveSubtitleStatus(
-      m('success', { subtitleStatus: 'found', subtitleLanguage: 'en', subtitleTracks: emptyTracks })
-    );
-    expect(s?.label).toBe('有字幕');
-  });
-
-  it('untranslated + empty tracks → 未翻譯', () => {
-    expect(
-      deriveSubtitleStatus(
-        m('success', { subtitleStatus: 'untranslated', subtitleTracks: emptyTracks })
-      )?.label
-    ).toBe('未翻譯');
-  });
-
-  it('no_text_source + empty tracks → 無字幕源', () => {
-    expect(
-      deriveSubtitleStatus(
-        m('success', { subtitleStatus: 'no_text_source', subtitleTracks: emptyTracks })
-      )?.label
-    ).toBe('無字幕源');
-  });
-
-  it('skipped + empty tracks → 已略過', () => {
-    expect(
-      deriveSubtitleStatus(m('success', { subtitleStatus: 'skipped', subtitleTracks: emptyTracks }))
-        ?.label
-    ).toBe('已略過');
-  });
-
-  it('found + zh track present still refines to 繁中 (track refinement survives the fix)', () => {
-    const s = deriveSubtitleStatus(
+// AC #9 (frontend): the NAS distribution as the API returns it — 37 movies with
+// embedded chi+eng, 3 English-only, 12 never-read, 3 found zh-Hant, 2 series.
+// In list-row mode (deriveSubtitleStatus) the 40 "has" titles read 繁中/中文 and
+// the 3 "missing" titles read 缺中文; the 14 unknown ones carry no badge.
+describe('NAS-shaped library (AC #9)', () => {
+  const chiEng = JSON.stringify([{ language: 'chi' }, { language: 'eng' }]);
+  const eng = JSON.stringify([{ language: 'eng' }]);
+  const rows: Media[] = [
+    ...Array.from({ length: 37 }, () =>
       m('success', {
-        subtitleStatus: 'found',
-        subtitleLanguage: 'en',
-        subtitleTracks: JSON.stringify([{ language: 'zh-Hant' }]),
+        chineseSubtitle: 'zh',
+        subtitleStatus: 'not_searched',
+        subtitleTracks: chiEng,
       })
-    );
-    expect(s?.label).toBe('繁中');
-  });
-});
+    ),
+    ...Array.from({ length: 3 }, () =>
+      m('success', { chineseSubtitle: 'none', subtitleStatus: 'not_searched', subtitleTracks: eng })
+    ),
+    ...Array.from({ length: 12 }, () =>
+      m('failed', { chineseSubtitle: 'unknown', subtitleStatus: 'not_searched' })
+    ),
+    ...Array.from({ length: 3 }, () =>
+      m('success', {
+        chineseSubtitle: 'zh_hant',
+        subtitleStatus: 'found',
+        subtitleLanguage: 'zh-Hant',
+      })
+    ),
+    ...Array.from({ length: 2 }, () =>
+      m('success', { chineseSubtitle: 'unknown', subtitleStatus: 'not_searched' })
+    ),
+  ];
 
-describe('deriveSubtitleStatus — 未翻譯 (sub-2-2b AC #2)', () => {
-  it('renders neutral tint — not an error, and accent stays reserved for in-progress', () => {
-    const s = deriveSubtitleStatus(m('success', { subtitleStatus: 'untranslated' }));
-    expect(s?.label).toBe('未翻譯');
-    expect(s?.className).toContain('--bg-tertiary');
-    expect(s?.className).not.toContain('--error');
-    expect(s?.className).not.toContain('--accent');
-  });
-
-  it('wins over an embedded English track (the verdict already accounts for it)', () => {
-    expect(
-      deriveSubtitleStatus(
-        m('success', {
-          subtitleStatus: 'untranslated',
-          subtitleTracks: JSON.stringify([{ language: 'en' }]),
-        })
-      )?.label
-    ).toBe('未翻譯');
-  });
-
-  it('SCOPE FENCE: an embedded English track WITHOUT the pipeline verdict never badges 未翻譯', () => {
-    // A foreign film with an embedded en track was never owed a translation —
-    // untranslated derives from subtitleStatus exclusively (Sally fence).
-    for (const subtitleStatus of [undefined, 'not_searched']) {
-      const s = deriveSubtitleStatus(
-        m('success', { subtitleStatus, subtitleTracks: JSON.stringify([{ language: 'en' }]) })
-      );
-      expect(s?.label).toBe('有字幕');
-    }
-  });
-
-  it('is an exception (non-steady): pickPosterBadge surfaces it on the grid', () => {
-    const badge = pickPosterBadge(m('success', { subtitleStatus: 'untranslated' }));
-    expect(badge?.label).toBe('未翻譯');
+  it('has 40 / missing 3 / unknown 14, and every badge matches its chip', () => {
+    const labels = rows.map((r) => deriveSubtitleStatus(r)?.label ?? null);
+    const has = labels.filter((l) => l === '繁中' || l === '中文');
+    const missing = labels.filter((l) => l === '缺中文');
+    const none = labels.filter((l) => l === null);
+    expect(has).toHaveLength(40);
+    expect(missing).toHaveLength(3);
+    expect(none).toHaveLength(14);
+    // Nothing reads the retired 有字幕 / 缺字幕.
+    expect(labels).not.toContain('有字幕');
+    expect(labels).not.toContain('缺字幕');
   });
 });
 

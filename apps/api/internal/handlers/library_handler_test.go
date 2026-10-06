@@ -796,7 +796,7 @@ func TestLibraryHandler_SearchLibrary(t *testing.T) {
 	t.Run("contract parity: same bad filter → same 400 code+message on /library and /library/search", func(t *testing.T) {
 		fresh := new(MockLibraryService)
 		freshRouter := setupLibraryTestRouter(NewLibraryHandler(fresh))
-		for _, bad := range []string{"subtitle_status=NOT_FOUND", "year_min=abc", "year_max=99999", "year_min=2020&year_max=2000", "type=book"} {
+		for _, bad := range []string{"subtitle_status=NOT_FOUND", "chinese_subtitle=bogus", "year_min=abc", "year_max=99999", "year_min=2020&year_max=2000", "type=book"} {
 			wList := httptest.NewRecorder()
 			reqList, _ := http.NewRequest("GET", "/api/v1/library?"+bad, nil)
 			freshRouter.ServeHTTP(wList, reqList)
@@ -1077,6 +1077,69 @@ func TestLibraryHandler_ListLibrary_WithFilters(t *testing.T) {
 		assert.Less(t, w.Body.Len(), 600, "the echoed value must be capped, not reflected whole")
 		assert.Contains(t, w.Body.String(), strings.Repeat("x", 64)+"…")
 	})
+
+	// disc-2026-10-subtitle-filter-disagrees-with-badges AC #2 [@contract-v1]:
+	// chinese_subtitle groups, parsed like subtitle_status.
+	t.Run("chinese_subtitle csv is split, trimmed, deduped and stored as []string", func(t *testing.T) {
+		mockService.On("ListLibrary", mock.Anything, mock.MatchedBy(func(p repository.ListParams) bool {
+			groups, ok := p.Filters["chinese_subtitle"].([]string)
+			return ok && len(groups) == 2 && groups[0] == "missing" && groups[1] == "unknown"
+		}), "all").Return(okResult(), nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library?chinese_subtitle=missing,%20unknown,missing", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		mockService.AssertExpectations(t)
+	})
+
+	t.Run("chinese_subtitle stacks with subtitle_status and unmatched", func(t *testing.T) {
+		mockService.On("ListLibrary", mock.Anything, mock.MatchedBy(func(p repository.ListParams) bool {
+			groups, ok1 := p.Filters["chinese_subtitle"].([]string)
+			statuses, ok2 := p.Filters["subtitle_status"].([]string)
+			unmatched, ok3 := p.Filters["unmatched"].(bool)
+			return ok1 && ok2 && ok3 && unmatched &&
+				len(groups) == 1 && groups[0] == "has" &&
+				len(statuses) == 1 && statuses[0] == "found"
+		}), "movie").Return(okResult(), nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library?type=movie&chinese_subtitle=has&subtitle_status=found&unmatched=true", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		mockService.AssertExpectations(t)
+	})
+
+	t.Run("chinese_subtitle empty string means no filter", func(t *testing.T) {
+		mockService.On("ListLibrary", mock.Anything, mock.MatchedBy(func(p repository.ListParams) bool {
+			_, present := p.Filters["chinese_subtitle"]
+			return !present
+		}), "all").Return(okResult(), nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library?chinese_subtitle=", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	for _, bad := range []string{"bogus", "HAS", "none", "has,bogus", "zh_hant"} {
+		t.Run("chinese_subtitle "+bad+" returns 400 naming the value", func(t *testing.T) {
+			fresh := new(MockLibraryService)
+			freshRouter := setupLibraryTestRouter(NewLibraryHandler(fresh))
+
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("GET", "/api/v1/library?chinese_subtitle="+bad, nil)
+			freshRouter.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusBadRequest, w.Code)
+			assert.Contains(t, w.Body.String(), "VALIDATION_INVALID_FORMAT")
+			assert.Contains(t, w.Body.String(), "chinese_subtitle contains unknown value")
+			fresh.AssertNotCalled(t, "ListLibrary", mock.Anything, mock.Anything, mock.Anything)
+		})
+	}
 
 	// Kept at the very end on purpose: every .Once() expectation above is
 	// accounted for here, including the subtitle_status ones.

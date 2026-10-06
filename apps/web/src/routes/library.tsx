@@ -15,12 +15,14 @@ interface LibrarySearchParams {
   yearMax?: number;
   unmatched?: boolean;
   /**
-   * Comma-joined backend `subtitle_status` values. The batch-subtitle 「查看未找到項目」
-   * link (Story 8-11 AC #6) lands here as `?subtitleStatus=not_found`; since dsr-1b-a
-   * (backend [@contract-v1]) + dsr-1b-b (this wiring) it really filters. A string enum
-   * guard is Rule-26 safe: a status can never be all digits.
+   * Comma-joined backend `chinese_subtitle` groups (has / missing / unknown) —
+   * confirmed against [@contract-v1] (Story disc-2026-10-subtitle-filter-disagrees-
+   * with-badges AC #2). The batch-subtitle 「查看未找到項目」 link (Story 8-11 AC #6)
+   * lands here as `?chineseSubtitle=missing`. The old `?subtitleStatus=` param is no
+   * longer read (an old bookmark simply loses its filter). A string guard is Rule-26
+   * safe: a group can never be all digits.
    */
-  subtitleStatus?: string;
+  chineseSubtitle?: string;
   /**
    * sub-4-3 F17 deep link: the scan-complete toast's 產生字幕 → link opens the
    * consent flow. Rule 26: the search parser JSON-parses values, so accept the
@@ -47,7 +49,8 @@ export const Route = createFileRoute('/library')({
     yearMin: typeof search.yearMin === 'number' ? search.yearMin : undefined,
     yearMax: typeof search.yearMax === 'number' ? search.yearMax : undefined,
     unmatched: search.unmatched === true ? true : undefined,
-    subtitleStatus: typeof search.subtitleStatus === 'string' ? search.subtitleStatus : undefined,
+    chineseSubtitle:
+      typeof search.chineseSubtitle === 'string' ? search.chineseSubtitle : undefined,
     generate:
       search.generate === true ||
       search.generate === 1 ||

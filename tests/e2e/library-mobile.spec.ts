@@ -7,8 +7,8 @@
  * jsdom evaluates no media queries, so the unit specs only prove the CSS tokens exist;
  * THIS spec is what sees a 390px screen: the header 篩選 icon button, the sheet pinned
  * to the bottom with a footer that stays put while the middle scrolls, the chip row
- * that scrolls sideways — and the 8-11 deep link `?subtitleStatus=not_found` finally
- * putting `subtitle_status=not_found` on the wire. It measures both sides of the 640px
+ * that scrolls sideways — and the 8-11 deep link `?chineseSubtitle=missing` putting
+ * `chinese_subtitle=missing` on the wire (disc-2026-10-subtitle-filter-disagrees-with-badges). It measures both sides of the 640px
  * breakpoint and the 1024 rail (feedback_measure_the_breakpoint_you_return_to).
  */
 import type { Locator, Page, TestInfo } from '@playwright/test';
@@ -21,16 +21,24 @@ const AT_RAIL = { width: 1024, height: 844 };
 const GUTTER = 16;
 
 const ALL = [
-  movieItem('m1', '你的名字', 'found'),
-  movieItem('m2', '寄生上流', 'not_found'),
-  movieItem('m3', '天氣之子', 'not_found'),
+  movieItem('m1', '你的名字', 'zh_hant'),
+  movieItem('m2', '寄生上流', 'none'),
+  movieItem('m3', '天氣之子', 'none'),
 ];
+// The chinese_subtitle groups, as the backend maps verdicts (models.ChineseSubtitleFilterVerdicts).
+const GROUP: Record<string, string[]> = {
+  has: ['zh_hant', 'zh_hans', 'zh'],
+  missing: ['none'],
+  unknown: ['unknown'],
+};
 // What the stub returns depends on the filter on the wire — so a green test PROVES the
 // param reached the backend; an unfiltered request always gets all three.
 const pick = (url: URL) => {
-  const status = url.searchParams.get('subtitle_status');
-  const items = status
-    ? ALL.filter((i) => status.split(',').includes(i.movie.subtitle_status))
+  const groups = url.searchParams.get('chinese_subtitle');
+  const items = groups
+    ? ALL.filter((i) =>
+        groups.split(',').some((g) => (GROUP[g] ?? []).includes(i.movie.chinese_subtitle))
+      )
     : ALL;
   // The sheet's footer preview asks with page_size=1 — same filter, same total.
   return url.searchParams.get('page_size') === '1'
@@ -151,7 +159,7 @@ test.describe('媒體庫 — phone sort+filter sheet @e2e @library-mobile', () =
     await expect(opener).toHaveAttribute('aria-expanded', 'false');
   });
 
-  test('[P0] 390 — pick 缺字幕, read the count, apply: the wire, the URL, the chip and the badge all say so', async ({
+  test('[P0] 390 — pick 缺中文字幕, read the count, apply: the wire, the URL, the chip and the badge all say so', async ({
     page,
   }) => {
     await page.setViewportSize(PHONE);
@@ -159,8 +167,8 @@ test.describe('媒體庫 — phone sort+filter sheet @e2e @library-mobile', () =
     const opener = page.getByTestId('library-filter-open-phone');
     const sheet = await openSheet(page, opener);
 
-    await sheet.getByTestId('filter-subtitle-not_found').click();
-    // The footer preview is a real (stubbed) query: 2 of 3 are not_found.
+    await sheet.getByTestId('filter-chinese-missing').click();
+    // The footer preview is a real (stubbed) query: 2 of 3 have no Chinese.
     await expect(sheet.getByTestId('library-filter-apply')).toHaveText('套用篩選 · 2 部');
     await sheet.getByTestId('library-filter-apply').click();
     await expect(sheet).toHaveCount(0);
@@ -168,32 +176,38 @@ test.describe('媒體庫 — phone sort+filter sheet @e2e @library-mobile', () =
     await expect
       .poll(() =>
         requests.some(
-          (u) => hasParam(u, 'subtitle_status', 'not_found') && !hasParam(u, 'page_size', '1')
+          (u) => hasParam(u, 'chinese_subtitle', 'missing') && !hasParam(u, 'page_size', '1')
         )
       )
       .toBe(true);
-    await expect(page).toHaveURL(/subtitleStatus=not_found/);
-    await expect(page.getByRole('button', { name: '移除缺字幕篩選' })).toBeVisible();
+    // The frontend never sends the old param.
+    expect(requests.some((u) => new URL(u).searchParams.has('subtitle_status'))).toBe(false);
+    await expect(page).toHaveURL(/chineseSubtitle=missing/);
+    await expect(page.getByRole('button', { name: '移除缺中文字幕篩選' })).toBeVisible();
+    // The badge on every listed poster says the same thing as the chip.
+    const badges = page.getByTestId('poster-status-badge');
+    await expect(badges).toHaveCount(2);
+    for (const b of await badges.all()) await expect(b).toHaveText('缺中文');
     await expect(page.getByTestId('library-filter-open-phone-count')).toHaveText('1');
     await expect(page.getByTestId('library-result-count')).toHaveText('2 部');
     await expect(opener).toBeFocused();
 
     // Remove the chip: the param leaves the URL and the unfiltered list (already in the
     // 30s query cache, so no new request) comes back — 3 部 again.
-    await page.getByRole('button', { name: '移除缺字幕篩選' }).click();
-    await expect(page).not.toHaveURL(/subtitleStatus/);
+    await page.getByRole('button', { name: '移除缺中文字幕篩選' }).click();
+    await expect(page).not.toHaveURL(/chineseSubtitle/);
     await expect(page.getByTestId('library-result-count')).toHaveText('3 部');
   });
 
-  test('[P0] 390 — the 8-11 deep link ?subtitleStatus=not_found filters from the very first request', async ({
+  test('[P0] 390 — the 8-11 deep link ?chineseSubtitle=missing filters from the very first request', async ({
     page,
   }) => {
     await page.setViewportSize(PHONE);
-    const requests = await openLibrary(page, '/library?subtitleStatus=not_found');
+    const requests = await openLibrary(page, '/library?chineseSubtitle=missing');
     const listRequests = requests.filter((u) => !hasParam(u, 'page_size', '1'));
     expect(listRequests.length).toBeGreaterThan(0);
-    expect(listRequests.every((u) => hasParam(u, 'subtitle_status', 'not_found'))).toBe(true);
-    await expect(page.getByRole('button', { name: '移除缺字幕篩選' })).toBeVisible();
+    expect(listRequests.every((u) => hasParam(u, 'chinese_subtitle', 'missing'))).toBe(true);
+    await expect(page.getByRole('button', { name: '移除缺中文字幕篩選' })).toBeVisible();
     await expect(page.getByTestId('library-result-count')).toHaveText('2 部');
   });
 
@@ -245,9 +259,9 @@ test.describe('媒體庫 — phone sort+filter sheet @e2e @library-mobile', () =
     // Five facets → wider than 358px.
     await openLibrary(
       page,
-      '/library?genres=%E5%8B%95%E7%95%AB%2C%E7%A7%91%E5%B9%BB&yearMin=2010&yearMax=2019&subtitleStatus=not_found%2Cfound&unmatched=true'
+      '/library?genres=%E5%8B%95%E7%95%AB%2C%E7%A7%91%E5%B9%BB&yearMin=2010&yearMax=2019&chineseSubtitle=missing%2Chas&unmatched=true'
     );
-    const remove = page.getByRole('button', { name: '移除缺字幕篩選' });
+    const remove = page.getByRole('button', { name: '移除缺中文字幕篩選' });
     await expect(remove).toBeVisible();
     const row = remove.locator('xpath=ancestor::span[1]/..');
     const chips = row.locator(':scope > span');
@@ -290,12 +304,12 @@ test.describe('媒體庫 — phone sort+filter sheet @e2e @library-mobile', () =
     page,
   }) => {
     await page.setViewportSize(AT_BREAKPOINT);
-    await openLibrary(page, '/library?subtitleStatus=not_found');
+    await openLibrary(page, '/library?chineseSubtitle=missing');
     await expect(page.getByTestId('library-filter-open-phone')).toBeHidden();
     const toolbarBtn = page.getByTestId('library-filter-open');
     await expect(toolbarBtn).toBeVisible();
     const sheet = await openSheet(page, toolbarBtn);
-    await expect(sheet.getByTestId('filter-subtitle-not_found')).toHaveAttribute(
+    await expect(sheet.getByTestId('filter-chinese-missing')).toHaveAttribute(
       'aria-pressed',
       'true'
     );
@@ -304,7 +318,7 @@ test.describe('媒體庫 — phone sort+filter sheet @e2e @library-mobile', () =
     await expect(toolbarBtn).toBeFocused();
 
     const row = page
-      .getByRole('button', { name: '移除缺字幕篩選' })
+      .getByRole('button', { name: '移除缺中文字幕篩選' })
       .locator('xpath=ancestor::span[1]/..');
     expect(await row.evaluate((el) => window.getComputedStyle(el).flexWrap)).toBe('wrap');
   });
@@ -318,9 +332,10 @@ test.describe('媒體庫 — phone sort+filter sheet @e2e @library-mobile', () =
     await expect(page.getByTestId('library-filter-open')).toBeHidden();
     const rail = page.getByTestId('filter-panel');
     await expect(rail).toBeVisible();
-    await expect(rail.getByTestId('filter-subtitle-found')).toHaveText('有字幕');
-    await expect(rail.getByTestId('filter-subtitle-not_found')).toHaveText('缺字幕');
-    await expect(rail.getByTestId('filter-subtitle-not_searched')).toHaveText('還沒搜尋');
+    // ⚖️ D1 (Alexyu 2026-10-06): three chips that add up to the whole library.
+    await expect(rail.getByTestId('filter-chinese-has')).toHaveText('有中文字幕');
+    await expect(rail.getByTestId('filter-chinese-missing')).toHaveText('缺中文字幕');
+    await expect(rail.getByTestId('filter-chinese-unknown')).toHaveText('不知道');
   });
 });
 

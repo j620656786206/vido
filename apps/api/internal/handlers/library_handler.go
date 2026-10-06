@@ -69,7 +69,7 @@ func parseLibraryMediaType(c *gin.Context) (string, bool) {
 }
 
 // parseLibraryFilters reads the library filter query params — genres, year_min,
-// year_max, unmatched, subtitle_status — into params.Filters. On a bad value it
+// year_max, unmatched, subtitle_status, chinese_subtitle — into params.Filters. On a bad value it
 // writes the 400 and returns false. It is the ONE parser behind GET /library and
 // GET /library/search (dsr-1b-a2 AC #1 [@contract-v1]); the Filters keys and
 // value types here are what the repository List / FullTextSearch ladders assert
@@ -147,12 +147,43 @@ func parseLibraryFilters(c *gin.Context, params *repository.ListParams) bool {
 			params.Filters["subtitle_status"] = statuses
 		}
 	}
+
+	// chinese_subtitle (disc-2026-10-subtitle-filter-disagrees-with-badges AC #2
+	// [@contract-v1]): comma-separated filter groups has / missing / unknown,
+	// lowercase and case-sensitive, parsed exactly like subtitle_status (split,
+	// trim, dedupe, 400 on an unknown value). The groups map onto the SAME
+	// verdict the badge shows (models.ChineseSubtitleVerdict), so "missing"
+	// lists exactly the titles badged 缺中文. Stored as []string for the repo's
+	// `.([]string)` assertion. ANDs with every other filter.
+	if raw := c.Query("chinese_subtitle"); raw != "" {
+		groups := make([]string, 0, 3)
+		seen := make(map[string]struct{}, 3)
+		for _, v := range strings.Split(raw, ",") {
+			v = strings.TrimSpace(v)
+			if v == "" {
+				continue
+			}
+			if models.ChineseSubtitleFilterVerdicts(v) == nil {
+				BadRequestError(c, "VALIDATION_INVALID_FORMAT",
+					fmt.Sprintf("chinese_subtitle contains unknown value %q", truncateRunes(v, 64)))
+				return false
+			}
+			if _, dup := seen[v]; dup {
+				continue
+			}
+			seen[v] = struct{}{}
+			groups = append(groups, v)
+		}
+		if len(groups) > 0 {
+			params.Filters["chinese_subtitle"] = groups
+		}
+	}
 	return true
 }
 
 // ListLibrary handles GET /api/v1/library
 // Returns a paginated list of library items (movies + series combined)
-// Supports filters: genres, year_min, year_max, unmatched, subtitle_status via query params
+// Supports filters: genres, year_min, year_max, unmatched, subtitle_status, chinese_subtitle via query params
 func (h *LibraryHandler) ListLibrary(c *gin.Context) {
 	params := parseListParams(c)
 

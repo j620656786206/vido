@@ -535,10 +535,11 @@ describe('FilterPanel', () => {
     });
   });
 
-  // dsr-1b-b AC #2: the 字幕 section (subtitle_status) walks the same six sync points as
-  // genres — local state, effect sync, selected*, emitInstant, handleApply, handleClear.
-  describe('subtitle status (dsr-1b-b)', () => {
-    it('[P0] instant mode: clicking 缺字幕 emits subtitleStatus ["not_found"]', async () => {
+  // dsr-1b-b AC #2, re-cut by disc-2026-10-subtitle-filter-disagrees-with-badges AC #8:
+  // the 字幕 section (chinese_subtitle) walks the same six sync points as genres —
+  // local state, effect sync, selected*, emitInstant, handleApply, handleClear.
+  describe('Chinese subtitle (disc-2026-10-subtitle-filter-disagrees-with-badges)', () => {
+    it('[P0] instant mode: clicking 缺中文字幕 emits chineseSubtitle ["missing"]', async () => {
       const user = userEvent.setup();
       renderWithProvider(
         <FilterPanel
@@ -551,9 +552,9 @@ describe('FilterPanel', () => {
         />
       );
       expect(screen.getByRole('heading', { name: '字幕' })).toBeInTheDocument();
-      await user.click(screen.getByTestId('filter-subtitle-not_found'));
+      await user.click(screen.getByTestId('filter-chinese-missing'));
       expect(onApply).toHaveBeenCalledWith(
-        expect.objectContaining({ subtitleStatus: ['not_found'] })
+        expect.objectContaining({ chineseSubtitle: ['missing'] })
       );
     });
 
@@ -561,26 +562,26 @@ describe('FilterPanel', () => {
       const user = userEvent.setup();
       renderWithProvider(
         <FilterPanel
-          filters={{ ...emptyFilters, subtitleStatus: ['found'] }}
+          filters={{ ...emptyFilters, chineseSubtitle: ['has'] }}
           mediaType="all"
           onApply={onApply}
           onClear={onClear}
           onTypeChange={onTypeChange}
         />
       );
-      expect(screen.getByTestId('filter-subtitle-found')).toHaveAttribute('aria-pressed', 'true');
-      await user.click(screen.getByTestId('filter-subtitle-not_found'));
+      expect(screen.getByTestId('filter-chinese-has')).toHaveAttribute('aria-pressed', 'true');
+      await user.click(screen.getByTestId('filter-chinese-missing'));
       await user.click(screen.getByTestId('filter-apply'));
       expect(onApply).toHaveBeenLastCalledWith(
-        expect.objectContaining({ subtitleStatus: ['found', 'not_found'] })
+        expect.objectContaining({ chineseSubtitle: ['has', 'missing'] })
       );
       await user.click(screen.getByTestId('filter-reset'));
       expect(onClear).toHaveBeenCalled();
       await user.click(screen.getByTestId('filter-apply'));
-      expect(onApply.mock.calls.at(-1)?.[0].subtitleStatus).toBeUndefined();
+      expect(onApply.mock.calls.at(-1)?.[0].chineseSubtitle).toBeUndefined();
     });
 
-    it('[P1] the three chips read from the one options table, in order', () => {
+    it('[P1] D1: the three chips read from the one options table, in order', () => {
       renderWithProvider(
         <FilterPanel
           filters={emptyFilters}
@@ -590,9 +591,9 @@ describe('FilterPanel', () => {
           onTypeChange={onTypeChange}
         />
       );
-      const labels = ['有字幕', '缺字幕', '還沒搜尋'];
-      const chips = ['found', 'not_found', 'not_searched'].map((v) =>
-        screen.getByTestId(`filter-subtitle-${v}`)
+      const labels = ['有中文字幕', '缺中文字幕', '不知道'];
+      const chips = ['has', 'missing', 'unknown'].map((v) =>
+        screen.getByTestId(`filter-chinese-${v}`)
       );
       chips.forEach((c, i) => expect(c).toHaveTextContent(labels[i]));
     });
@@ -610,7 +611,7 @@ describe('FilterPanel', () => {
       );
       expect(screen.queryByTestId('filter-type-all')).not.toBeInTheDocument();
       expect(screen.queryByTestId('filter-type-movie')).not.toBeInTheDocument();
-      expect(screen.getByTestId('filter-subtitle-found')).toBeInTheDocument();
+      expect(screen.getByTestId('filter-chinese-has')).toBeInTheDocument();
     });
   });
 });

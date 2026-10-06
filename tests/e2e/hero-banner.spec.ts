@@ -73,6 +73,8 @@ const movieA = {
     // spells out as 繁中字幕 ✓ 已就緒.
     subtitle_status: 'found',
     subtitle_language: 'zh-Hant',
+    // The backend verdict the badge reads (disc-2026-10-subtitle-filter-disagrees-with-badges).
+    chinese_subtitle: 'zh_hant',
     parse_status: 'success',
     created_at: '2026-08-20T00:00:00Z',
     updated_at: '2026-08-20T00:00:00Z',

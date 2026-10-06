@@ -186,7 +186,7 @@ describe('BatchSubtitleDialog (container wiring)', () => {
     await waitFor(() => expect(mockStartTracking).toHaveBeenCalledWith(inProgress));
   });
 
-  it('view-not-found navigates to /library with the subtitleStatus param', () => {
+  it('view-not-found navigates to /library with the 缺中文字幕 filter (chineseSubtitle=missing)', () => {
     hookState = { progress: { ...baseProgress, status: 'complete' }, status: 'complete' };
     render(<BatchSubtitleDialog open onOpenChange={vi.fn()} />);
 
@@ -194,7 +194,7 @@ describe('BatchSubtitleDialog (container wiring)', () => {
     expect(mockNavigate).toHaveBeenCalledTimes(1);
     const arg = mockNavigate.mock.calls[0][0];
     expect(arg.to).toBe('/library');
-    expect(arg.search({})).toEqual({ subtitleStatus: 'not_found' });
+    expect(arg.search({})).toEqual({ chineseSubtitle: 'missing' });
   });
 
   it('confirming cancel calls cancelBatch', async () => {

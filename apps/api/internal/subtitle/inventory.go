@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/services"
 )
 
@@ -199,30 +200,25 @@ func readHead(path string) ([]byte, error) {
 
 // embeddedLanguage normalises an embedded track's language. ffprobe only says
 // "chi"; the title tag usually tells the script ("繁體", "Chinese
-// (Simplified)", "Cantonese"). Untold Chinese stays zh-unknown.
+// (Simplified)", "Cantonese"). Untold Chinese stays zh-unknown. The title
+// keywords are models.ChineseTitleScript — the same list the library's
+// "has Chinese subtitles" verdict reads (disc-2026-10-subtitle-filter-
+// disagrees-with-badges), so this dialog and the library badge agree.
 func embeddedLanguage(lang, title string) string {
 	l := strings.ToLower(strings.TrimSpace(lang))
-	t := strings.ToLower(title)
-	has := func(words ...string) bool {
-		for _, w := range words {
-			if strings.Contains(t, strings.ToLower(w)) {
-				return true
-			}
-		}
-		return false
-	}
+	script := models.ChineseTitleScript(title)
 	switch {
-	case l == "yue" || ((isChineseTag(l) || l == "") && has("粵", "粤", "cantonese", "yue")):
+	case l == "yue" || ((isChineseTag(l) || l == "") && script == models.TitleScriptCantonese):
 		return "yue"
 	case l == "zh-hant" || l == "zh-tw" || l == "zh-hk" || l == "cht":
 		return LangTraditional
 	case l == "zh-hans" || l == "zh-cn" || l == "chs":
 		return LangSimplified
 	case isChineseTag(l):
-		switch {
-		case has("繁", "traditional", "hant", "zh-tw", "taiwan", "hong kong", "zh-hk"):
+		switch script {
+		case models.TitleScriptTraditional:
 			return LangTraditional
-		case has("简", "簡", "simplified", "hans", "zh-cn"):
+		case models.TitleScriptSimplified:
 			return LangSimplified
 		}
 		return LangChineseUnknown

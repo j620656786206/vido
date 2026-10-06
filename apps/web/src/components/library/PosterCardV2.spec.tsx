@@ -15,10 +15,11 @@ const media = (
   over: Partial<LibraryMovie> = {}
 ): Pick<
   LibraryMovie,
-  'parseStatus' | 'subtitleTracks' | 'subtitleStatus' | 'subtitleLanguage'
+  'parseStatus' | 'subtitleTracks' | 'subtitleStatus' | 'subtitleLanguage' | 'chineseSubtitle'
 > => ({
   parseStatus: 'success',
   subtitleTracks: JSON.stringify([{ language: 'zh-Hant' }]),
+  chineseSubtitle: 'zh_hant',
   ...over,
 });
 
@@ -64,13 +65,23 @@ describe('PosterCardV2', () => {
     expect(screen.queryByTestId('poster-status-badge')).not.toBeInTheDocument();
   });
 
-  it('shows a subtitle exception (缺字幕) for an in-library item missing subtitles', async () => {
+  it('suppresses the badge for untold-script Chinese too (D2: 中文 is a steady 有)', async () => {
+    renderCard({ ...base, media: media({ chineseSubtitle: 'zh' }) });
+    await screen.findByTestId('poster-v2-abc');
+    expect(screen.queryByTestId('poster-status-badge')).not.toBeInTheDocument();
+  });
+
+  it('shows a subtitle exception (缺中文) for an in-library item without Chinese subtitles', async () => {
     renderCard({
       ...base,
-      media: media({ subtitleTracks: undefined, subtitleStatus: 'not_found' }),
+      media: media({
+        subtitleTracks: undefined,
+        subtitleStatus: 'not_found',
+        chineseSubtitle: 'none',
+      }),
     });
     await screen.findByTestId('poster-v2-abc');
-    expect(screen.getByTestId('poster-status-badge')).toHaveTextContent('缺字幕');
+    expect(screen.getByTestId('poster-status-badge')).toHaveTextContent('缺中文');
   });
 
   it('surfaces a lifecycle exception (失敗) over the subtitle badge', async () => {

@@ -3606,6 +3606,9 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
               parseStatus: 'complete',
               subtitleStatus: 'found',
               subtitleLanguage: 'zh-Hant',
+              // The backend verdict the badge reads (disc-2026-10-subtitle-filter-
+              // disagrees-with-badges) — found + zh-Hant → zh_hant.
+              chineseSubtitle: 'zh_hant',
               metadataSource: 'tmdb',
               genres: ['劇情'],
               createdAt: '2026-05-12T08:00:00Z',
@@ -3782,7 +3785,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       sortBy: 'created_at',
       sortOrder: 'desc',
       onSortChange: noop,
-      filters: { genres: ['動畫'], subtitleStatus: ['not_found'] } satisfies FilterValues,
+      filters: { genres: ['動畫'], chineseSubtitle: ['missing'] } satisfies FilterValues,
       mediaType: 'movie' as LibraryMediaType,
       unmatchedCount: 3,
       onApply: noop,
@@ -3800,7 +3803,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       {
         queryKey: libraryKeys.list(
           sheetCountParams(
-            { genres: ['動畫'], subtitleStatus: ['not_found'] },
+            { genres: ['動畫'], chineseSubtitle: ['missing'] },
             'movie',
             'created_at',
             'desc'

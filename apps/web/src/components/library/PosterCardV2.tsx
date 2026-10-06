@@ -6,10 +6,11 @@
  * truncates with ellipsis, never clips mid-glyph — R2 fix), JetBrains Mono
  * year·meta in `text-secondary`, and ONE lifecycle/subtitle status badge on the
  * poster (§2.5). The badge is an EXCEPTION signal (ux3-0-2): a lifecycle exception
- * (整理中/失敗) wins, else a subtitle exception (缺字幕/簡中/有字幕); the happy steady
- * state (已入庫 + 繁中) and unknown states show NO badge (never errors — F3). The
- * subtitle source prefers the authoritative engine result (subtitleStatus/
- * subtitleLanguage, ux3-0-1) over embedded tracks. Links to the detail route.
+ * (整理中/失敗) wins, else a subtitle exception (缺中文/簡中/無字幕源/已略過/未翻譯);
+ * the happy steady states (已入庫 + 繁中 or 中文) and unknown states show NO badge
+ * (never errors — F3). The subtitle source is the backend's `chineseSubtitle`
+ * verdict — the same rule as the library's 有／缺中文字幕 filter
+ * (disc-2026-10-subtitle-filter-disagrees-with-badges). Links to the detail route.
  */
 import { Link } from '@tanstack/react-router';
 import { Check, Star } from 'lucide-react';
@@ -32,7 +33,7 @@ interface PosterCardV2Props {
   voteAverage?: number;
   media: Pick<
     LibraryMovie | LibrarySeries,
-    'parseStatus' | 'subtitleTracks' | 'subtitleStatus' | 'subtitleLanguage'
+    'parseStatus' | 'subtitleTracks' | 'subtitleStatus' | 'subtitleLanguage' | 'chineseSubtitle'
   >;
   /** ux3-cutover-2: selection mode — card toggles instead of navigating. */
   selectable?: boolean;
