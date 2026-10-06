@@ -710,6 +710,14 @@ func main() {
 		glossarySeeder := services.NewGlossarySeeder(creditsClient, repos.Glossary, subtitleConverter, slog.Default())
 		glossaryScopes.SetSeeder(glossarySeeder)
 		enrichmentService.SetGlossarySeeder(glossarySeeder, glossaryScopes)
+		// disc-2026-10-series-credits-empty: rows matched before sub-7-3
+		// began storing cast (2026-09-07) never get re-matched, so one pass
+		// after boot fills them through the same fetcher. Idempotent and
+		// cheap — only rows with no cast at all are listed.
+		movieBackfill, _ := repos.Movies.(services.MovieCreditsBackfillRepo)
+		seriesBackfill, _ := repos.Series.(services.SeriesCreditsBackfillRepo)
+		services.NewCreditsBackfillService(movieBackfill, seriesBackfill, glossarySeeder, slog.Default()).
+			RunAfter(ctx, 45*time.Second)
 	} else {
 		slog.Warn("glossary seeding from TMDb credits disabled: TMDb service exposes no credits client")
 	}

@@ -209,3 +209,58 @@ func updateCreditsColumn(ctx context.Context, db *sql.DB, table, id string, cred
 	}
 	return requireOneRow(result, table, id)
 }
+
+// FindMissingCredits lists matched movies whose cast was never stored
+// (disc-2026-10-series-credits-empty): rows matched before sub-7-3 began
+// writing TMDb cast (2026-09-07) never got one, and nothing re-queued them.
+// NULL and ” are both "missing" (UpdateCredits writes NULL for an empty cast).
+func (r *MovieRepository) FindMissingCredits(ctx context.Context, limit int) ([]models.Movie, error) {
+	query := fmt.Sprintf(`SELECT %s FROM movies
+		WHERE tmdb_id IS NOT NULL AND tmdb_id > 0
+		  AND (credits IS NULL OR credits = '')
+		  AND is_removed = 0
+		ORDER BY updated_at ASC LIMIT ?`, movieSelectColumns)
+	rows, err := r.db.QueryContext(ctx, query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query movies missing credits: %w", err)
+	}
+	defer rows.Close()
+	var movies []models.Movie
+	for rows.Next() {
+		movie, err := scanMovie(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan movie: %w", err)
+		}
+		movies = append(movies, movie)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating movies missing credits: %w", err)
+	}
+	return movies, nil
+}
+
+// FindMissingCredits is the series counterpart of MovieRepository.FindMissingCredits.
+func (r *SeriesRepository) FindMissingCredits(ctx context.Context, limit int) ([]models.Series, error) {
+	query := fmt.Sprintf(`SELECT %s FROM series
+		WHERE tmdb_id IS NOT NULL AND tmdb_id > 0
+		  AND (credits IS NULL OR credits = '')
+		  AND (is_removed = 0 OR is_removed IS NULL)
+		ORDER BY updated_at ASC LIMIT ?`, seriesSelectColumns)
+	rows, err := r.db.QueryContext(ctx, query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query series missing credits: %w", err)
+	}
+	defer rows.Close()
+	var list []models.Series
+	for rows.Next() {
+		s, err := scanSeries(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan series: %w", err)
+		}
+		list = append(list, s)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating series missing credits: %w", err)
+	}
+	return list, nil
+}
