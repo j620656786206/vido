@@ -177,6 +177,23 @@ type ProcessItemOptions struct {
 	// (infra-optin-usage-report-a1). It travels in the options, not the ctx,
 	// because WorkerPool items are queued and processed on the pool's own ctx.
 	Automatic bool
+
+	// Regenerate is the detail-page 生成字幕 click's "do it (again)" switch
+	// (disc-2026-10-single-generate-ignores-embedded-english-a): it bypasses
+	// the P5 pre-flight ONLY. Unlike Force it keeps segment-cache READS — a
+	// person redoing a subtitle has no reason to pay a second time for cues
+	// that were already translated under the same version. Additive on v1
+	// (the FreeOnly precedent): zero value = shipped behaviour.
+	Regenerate bool
+
+	// TranscribeWhenSkipped sends a RouteSkip verdict (text tracks exist but
+	// none is tagged Chinese or eng/en — typically `und`) down the ASR leg
+	// instead of recording `skipped`. The batch and the auto lane keep the
+	// deliberate skip (worker_pool.go terminalPipelineVerdict); the detail-page
+	// click sets it, because a person who asked for a subtitle was always
+	// served by speech recognition on such a file and must not now get
+	// 已略過. Additive on v1.
+	TranscribeWhenSkipped bool
 }
 
 // ProcessOutcome is what one item flow produced.
@@ -771,6 +788,9 @@ func acceptableSidecar(path string) (bool, string) {
 func (p *Pipeline) preflightSkip(ctx context.Context, ref MediaRef, mediaPath string, version models.RunVersion, opts ProcessItemOptions) (bool, string) {
 	if opts.Force {
 		return false, "force: pre-flight and segment-cache reads bypassed"
+	}
+	if opts.Regenerate {
+		return false, "regenerate: pre-flight bypassed, segment-cache reads kept"
 	}
 
 	ok, reason := acceptableSidecar(ExpectedSidecarPath(mediaPath))

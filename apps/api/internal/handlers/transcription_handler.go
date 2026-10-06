@@ -13,6 +13,7 @@ import (
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/services"
+	"github.com/vido/api/internal/subtitle"
 )
 
 // TranscriptionMovieGetter defines the movie lookup needed by the transcription handler.
@@ -53,6 +54,21 @@ type TranscriptionHandler struct {
 	// estimator prices the single-item run (story dsr-6a). nil = the estimate
 	// routes are not mounted.
 	estimator TranscriptionEstimator
+	// solo routes the click through the subtitle pipeline
+	// (disc-2026-10-single-generate-ignores-embedded-english-a). nil = legacy
+	// mode: the click goes to TranscriptionService exactly as before.
+	solo SoloGenerator
+}
+
+// SoloGenerator is the pipeline-mode entry for one click on 生成字幕: route
+// first (Chinese track → deliver, English track → translate), speech
+// recognition only when the file has no usable text track. *subtitle.SoloRunner
+// satisfies it. Errors come back as the services sentinels this handler
+// already maps (in-progress → 409, disabled → 503) plus the pipeline's
+// not-writable sentinel (409).
+type SoloGenerator interface {
+	Start(ctx context.Context, ref subtitle.MediaRef, modelID string) (jobID string, err error)
+	Status(ref subtitle.MediaRef) (inProgress bool, jobID string)
 }
 
 // TranscriptionEstimator prices what a click on 生成字幕 would start (story
@@ -81,6 +97,15 @@ func (h *TranscriptionHandler) SetEstimator(e TranscriptionEstimator) {
 	h.estimator = e
 }
 
+// SetSoloGenerator switches the transcribe and status routes onto the subtitle
+// pipeline (pipeline mode). A setter for the same reason SetEstimator is one:
+// the constructor's many call sites and fakes stay valid, and an unwired
+// handler keeps the legacy behaviour byte-for-byte. Call it BEFORE
+// RegisterRoutes.
+func (h *TranscriptionHandler) SetSoloGenerator(g SoloGenerator) {
+	h.solo = g
+}
+
 // RegisterRoutes registers transcription routes on the given router group.
 //
 // The per-episode route (story 9R-10a) is mounted ONLY when an episode getter
@@ -89,10 +114,10 @@ func (h *TranscriptionHandler) SetEstimator(e TranscriptionEstimator) {
 // 503 that would blame the ASR configuration for a wiring mistake.
 func (h *TranscriptionHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	rg.POST("/movies/:id/transcribe", h.TranscribeMovie)
-	rg.GET("/movies/:id/transcribe/status", h.TranscriptionStatus)
+	rg.GET("/movies/:id/transcribe/status", h.transcriptionStatusFor(models.SubtitleRunMediaMovie))
 	if h.episodeService != nil {
 		rg.POST("/episodes/:id/transcribe", h.TranscribeEpisode)
-		rg.GET("/episodes/:id/transcribe/status", h.TranscriptionStatus)
+		rg.GET("/episodes/:id/transcribe/status", h.transcriptionStatusFor(models.SubtitleRunMediaEpisode))
 	}
 	if h.estimator != nil {
 		rg.GET("/movies/:id/transcribe/estimate", h.EstimateMovie)
@@ -118,8 +143,10 @@ func (h *TranscriptionHandler) TranscribeMovie(c *gin.Context) {
 
 	// Availability gate, resume-aware (CR sub-2-2a M2): a translate-only
 	// resume needs no ASR, so an `untranslated` row with its English SRT on
-	// disk proceeds even when FFmpeg/ASR are gone.
-	if !h.transcriptionService.IsAvailable() &&
+	// disk proceeds even when FFmpeg/ASR are gone. In pipeline mode the
+	// SoloRunner judges this itself — a file with a Chinese or English track
+	// needs no ASR at all — so the legacy gate is skipped.
+	if h.solo == nil && !h.transcriptionService.IsAvailable() &&
 		!h.transcriptionService.CanResumeTranslateOnly(c.Request.Context(), id) {
 		// sub-2-2d AC #3: the γ-ratified zh-TW envelope (this body was English —
 		// a Rule 3 gap). sub-5-2 AC #4 retired the restart clause: the ASR client
@@ -134,6 +161,14 @@ func (h *TranscriptionHandler) TranscribeMovie(c *gin.Context) {
 
 	movie, ok := h.lookupMovieFile(c, id)
 	if !ok {
+		return
+	}
+
+	// Pipeline mode: the click routes like the batch does. `?translate=true`
+	// is ignored on purpose — the pipeline always ends in a zh-Hant sidecar,
+	// and the dialog has always sent translate=true anyway.
+	if h.solo != nil {
+		h.startSolo(c, subtitle.MediaRef{ID: id, MediaType: models.SubtitleRunMediaMovie}, "movie")
 		return
 	}
 
@@ -209,7 +244,7 @@ func (h *TranscriptionHandler) TranscribeEpisode(c *gin.Context) {
 	// CanResumeTranslateOnly hard-codes the MOVIE table, so using it here would
 	// return false for every episode and 503 an `untranslated` episode whose
 	// English SRT is already on disk — a run that needs no ASR at all.
-	if !h.transcriptionService.IsAvailable() &&
+	if h.solo == nil && !h.transcriptionService.IsAvailable() &&
 		!h.transcriptionService.CanResumeEpisodeTranslateOnly(c.Request.Context(), id) {
 		ErrorResponse(c, http.StatusServiceUnavailable, "TRANSCRIPTION_DISABLED",
 			"語音辨識尚未設定",
@@ -219,6 +254,11 @@ func (h *TranscriptionHandler) TranscribeEpisode(c *gin.Context) {
 
 	episode, ok := h.lookupEpisodeFile(c, id)
 	if !ok {
+		return
+	}
+
+	if h.solo != nil {
+		h.startSolo(c, subtitle.MediaRef{ID: id, MediaType: models.SubtitleRunMediaEpisode}, "episode")
 		return
 	}
 
@@ -256,6 +296,49 @@ func (h *TranscriptionHandler) TranscribeEpisode(c *gin.Context) {
 		return
 	}
 
+	c.JSON(http.StatusAccepted, APIResponse{
+		Success: true,
+		Data: map[string]string{
+			"job_id":  jobID,
+			"message": "Transcription started. Listen to SSE events for progress.",
+		},
+	})
+}
+
+// startSolo is the pipeline-mode body shared by both transcribe routes. The
+// media row was already resolved and its file checked on disk by the caller;
+// the runner loads it again itself (it needs the path and the title). Wire
+// codes are the legacy ones so the dialog's outcome parsing
+// (transcriptionService.ts parseTranscribeResponse) needs no change.
+func (h *TranscriptionHandler) startSolo(c *gin.Context, ref subtitle.MediaRef, noun string) {
+	jobID, err := h.solo.Start(c.Request.Context(), ref, "")
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrTranscriptionInProgress):
+			subject := "這部影片"
+			if ref.MediaType == models.SubtitleRunMediaEpisode {
+				subject = "這一集"
+			}
+			ErrorResponse(c, http.StatusConflict, "TRANSCRIPTION_IN_PROGRESS",
+				subject+"的字幕生成已在執行中",
+				"請等待目前的生成完成。")
+		case errors.Is(err, services.ErrTranscriptionDisabled):
+			ErrorResponse(c, http.StatusServiceUnavailable, "TRANSCRIPTION_DISABLED",
+				"語音辨識尚未設定",
+				"這部影片沒有可用的片內字幕，要生成字幕需要雲端語音辨識（ASR）金鑰。請至金鑰設定（/settings/keys）儲存雲端 ASR 金鑰，儲存後立即生效。")
+		case errors.Is(err, services.ErrTranscriptionTargetNotWritable), errors.Is(err, subtitle.ErrSubtitleTargetNotWritable):
+			// The runner does not know the folder; name it from the error's
+			// own detail would leak the absolute path, so the generic line is
+			// composed without a base name here.
+			ErrorResponse(c, http.StatusConflict, "SUBTITLE_TARGET_NOT_WRITABLE",
+				"影片所在的資料夾寫不進字幕，這次沒有花到錢。請到 NAS 確認 Vido 能寫入這個資料夾，再按重試",
+				"確認這個資料夾不是唯讀掛載，而且 Vido 容器的使用者有寫入權限。")
+		default:
+			slog.Error("Failed to start subtitle generation", noun+"_id", ref.ID, "error", err)
+			InternalServerError(c, "Failed to start transcription")
+		}
+		return
+	}
 	c.JSON(http.StatusAccepted, APIResponse{
 		Success: true,
 		Data: map[string]string{
@@ -339,6 +422,11 @@ func (h *TranscriptionHandler) lookupEpisodeFile(c *gin.Context, id string) (*mo
 // TranscriptionStatusResponse is the GET …/transcribe/status payload.
 type TranscriptionStatusResponse struct {
 	InProgress bool `json:"in_progress"`
+	// JobID is the running solo job's id when the run was started by a click
+	// in pipeline mode — the dialog attaches to THAT job's terminal event.
+	// Absent for a batch / pool run and in legacy mode (additive,
+	// disc-2026-10-single-generate-ignores-embedded-english-a).
+	JobID string `json:"job_id,omitempty"`
 }
 
 // TranscriptionStatus answers whether a subtitle generation is running for one
@@ -353,14 +441,35 @@ type TranscriptionStatusResponse struct {
 // @Tags         subtitles
 // @Produce      json
 // @Param        id path string true "Movie or episode ID (UUID)"
-// @Success      200 {object} APIResponse "data: {in_progress: bool}"
+// @Success      200 {object} APIResponse "data: {in_progress: bool, job_id?: string} — job_id only for a running solo click in pipeline mode"
 // @Router       /api/v1/movies/{id}/transcribe/status [get]
 // @Router       /api/v1/episodes/{id}/transcribe/status [get]
 func (h *TranscriptionHandler) TranscriptionStatus(c *gin.Context) {
-	c.JSON(http.StatusOK, APIResponse{
-		Success: true,
-		Data:    TranscriptionStatusResponse{InProgress: h.transcriptionService.IsInProgress(c.Param("id"))},
-	})
+	h.transcriptionStatusFor(models.SubtitleRunMediaMovie)(c)
+}
+
+// transcriptionStatusFor binds the status route to its media type: in pipeline
+// mode the in-flight set is keyed by (type, id), so the movie and episode
+// routes must ask about different refs even when the ids collide.
+func (h *TranscriptionHandler) transcriptionStatusFor(mediaType string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id := c.Param("id")
+		if h.solo != nil {
+			// Pipeline mode: the pool's in-flight set is the truth (solo click,
+			// batch and workers all reserve there); the legacy table only sees
+			// the ASR leg and would read idle while a track is being translated.
+			inProgress, jobID := h.solo.Status(subtitle.MediaRef{ID: id, MediaType: mediaType})
+			c.JSON(http.StatusOK, APIResponse{
+				Success: true,
+				Data:    TranscriptionStatusResponse{InProgress: inProgress, JobID: jobID},
+			})
+			return
+		}
+		c.JSON(http.StatusOK, APIResponse{
+			Success: true,
+			Data:    TranscriptionStatusResponse{InProgress: h.transcriptionService.IsInProgress(id)},
+		})
+	}
 }
 
 // EstimateMovie prices a click on 生成字幕 for one movie.
@@ -370,7 +479,7 @@ func (h *TranscriptionHandler) TranscriptionStatus(c *gin.Context) {
 // @Tags         subtitles
 // @Produce      json
 // @Param        id path string true "Movie ID (UUID)"
-// @Success      200 {object} APIResponse "data: {media_id, media_type, plan: full|translate_only, asr_available, self_hosted_asr, translation_configured, model_id, runtime_minutes, runtime_known, runtime_source: ffprobe|tmdb|fallback, estimated_usd}"
+// @Success      200 {object} APIResponse "data: {media_id, media_type, plan: full|translate_only|extract, route?: extract|asr|skip (pipeline mode only), asr_available, self_hosted_asr, translation_configured, model_id, runtime_minutes, runtime_known, runtime_source: ffprobe|tmdb|fallback, estimated_usd}"
 // @Failure      400 {object} APIResponse "VALIDATION_REQUIRED_FIELD — the movie has no file path, or the file is not on disk"
 // @Failure      404 {object} APIResponse "DB_NOT_FOUND — no such movie"
 // @Router       /api/v1/movies/{id}/transcribe/estimate [get]
@@ -387,11 +496,12 @@ func (h *TranscriptionHandler) EstimateMovie(c *gin.Context) {
 	c.JSON(http.StatusOK, APIResponse{
 		Success: true,
 		Data: h.estimator.Estimate(c.Request.Context(), services.TranscriptionEstimateTarget{
-			MediaID:         id,
-			MediaType:       models.SubtitleRunMediaMovie,
-			FilePath:        movie.FilePath.String,
-			DurationSeconds: movie.DurationSeconds,
-			Runtime:         movie.Runtime,
+			MediaID:            id,
+			MediaType:          models.SubtitleRunMediaMovie,
+			FilePath:           movie.FilePath.String,
+			DurationSeconds:    movie.DurationSeconds,
+			Runtime:            movie.Runtime,
+			SubtitleTracksJSON: movie.SubtitleTracks.String,
 		}),
 	})
 }

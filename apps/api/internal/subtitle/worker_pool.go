@@ -307,6 +307,18 @@ func (p *WorkerPool) Release(ref MediaRef) {
 	delete(p.inFlight, ref)
 }
 
+// IsInFlight reports whether ref is queued, on a worker, or reserved by an
+// external caller (the consented batch, the detail-page SoloRunner). It is
+// the one answer to "is anything generating this item right now?" in pipeline
+// mode, which the solo click's 409 and GET …/transcribe/status read
+// (disc-2026-10-single-generate-ignores-embedded-english-a).
+func (p *WorkerPool) IsInFlight(ref MediaRef) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	_, ok := p.inFlight[ref]
+	return ok
+}
+
 // terminalPipelineVerdict reports whether the pipeline has already issued a
 // PERMANENT verdict for this item (CR H1, amended by sub-3-1 [@contract-v2→v3]).
 // Since sub-3-1 only `skipped` qualifies: it records a DELIBERATE routing
