@@ -327,6 +327,7 @@ export function PosterCard({
               owned={false}
               requested={!!isRequested}
               fullWidth
+              onScrim
             />
           </div>
         )}

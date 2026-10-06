@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PosterCard } from './PosterCard';
 import { useMovieDetails, useTVShowDetails } from '../../hooks/useMediaDetails';
@@ -28,7 +28,9 @@ vi.mock('@tanstack/react-router', () => ({
 // Story 13-1b: the hover 想要 scrim mounts RequestButton (which needs a
 // QueryClient); stub it so PosterCard tests stay presentation-focused.
 vi.mock('../requests/RequestButton', () => ({
-  RequestButton: () => <button type="button" data-testid="request-button-stub" />,
+  RequestButton: ({ onScrim }: { onScrim?: boolean }) => (
+    <button type="button" data-testid="request-button-stub" data-on-scrim={String(!!onScrim)} />
+  ),
 }));
 
 vi.mock('../../hooks/useMediaDetails', () => ({
@@ -289,6 +291,15 @@ describe('PosterCard', () => {
       // Unwired surface (legacy Search/Library): no isRequested prop → no scrim (CR M1).
       rerender(<PosterCard {...defaultProps} id="550" />);
       expect(screen.queryByTestId('poster-request-overlay')).not.toBeInTheDocument();
+    });
+
+    it('the 想要 scrim tells RequestButton it sits on a scrim (日巡 contrast, disc-2026-09-request-button-requested-on-scrim-light-theme)', () => {
+      render(<PosterCard {...defaultProps} id="550" isRequested={true} />);
+      const overlay = screen.getByTestId('poster-request-overlay');
+      expect(within(overlay).getByTestId('request-button-stub')).toHaveAttribute(
+        'data-on-scrim',
+        'true'
+      );
     });
 
     it('13-1b: no 想要 scrim for owned or non-TMDb cards', () => {
