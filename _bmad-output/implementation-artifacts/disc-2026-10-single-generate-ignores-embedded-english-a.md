@@ -1,6 +1,6 @@
 # Disc（後端）：單集／電影的「生成字幕」按鈕改走字幕管線——先看片內字幕，沒有才聽聲音
 
-Status: review
+Status: done
 
 **Source:** Alexyu 2026-10-06 party mode（See S01E02 實測，清單第 1 項，8 張裡排第一）。同日 Alexyu 裁定**選項 1（長解）**：按鈕改走批次用的 `Pipeline.ProcessItem`，不在舊路上補一步判斷；**電影一起修**。本單是後端半張，前端半張見 `-b`（依賴本單）。實測紀錄：`eval-see-s01e02-asr-vs-official.md`「討論會」一節。
 
@@ -268,3 +268,4 @@ Claude Fable 5.1（claude-fable-5-1）
 | 2026-10-06 | [@contract-v1→v2] AC #2（dsr-6a）：`plan` 多 `extract`、新增 `route`（pipeline 模式才有）、`GET …/transcribe/status` 多 `job_id`。下游受影響：前端 `transcriptionService.ts` 的 `plan` union 與 `TranscriptionStatus` 型別（-b 處理並 ack v2）；legacy 模式 wire 完全不變。 |
 | 2026-10-06 | T4：估價分路線；T5：main.go 接線＋docs；T6／T7：測試與檢查全綠，狀態改成 review。 |
 | 2026-10-06 | CR 修正：M1 Activity／ai-usage 看得到單擊的工作、M2 收尾順序（刪自己的 job → 終點事件 → Release）、L1 只探一次、L2 估價不重探、L3 單集 409 文案。全部檢查重跑全綠。 |
+| 2026-10-06 | AC #14 NAS 實測 2026-10-06 晚通過：估價 `plan=extract, route=extract, $0.46`；實跑 `route=translate`、第 8 軌、568 句、$0.34、6 分 12 秒；對官方英文軌 0 句落在沒人說話時；Jerlamarel 1 種寫法；sun→太陽；開頭重複台詞都在。順帶發現 15 句因「里」被當簡體字留成英文（另立 `disc-2026-10-simplified-leak-false-positive-li`）與名詞表被 ASR 錯字污染（`disc-2026-10-asr-harvest-pollutes-glossary`）。 狀態改成 done。 |
