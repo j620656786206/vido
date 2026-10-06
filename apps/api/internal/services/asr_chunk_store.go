@@ -27,10 +27,14 @@ import (
 // can never fail a paid run (Rule 13).
 
 const (
-	asrChunkType         = "asr_chunk"
-	asrChunkTTL          = 30 * 24 * time.Hour
-	asrChunkKeyPrefix    = "asrchunk:v1:"
-	asrManifestKeyPrefix = "asrchunk:v1:manifest:"
+	asrChunkType = "asr_chunk"
+	asrChunkTTL  = 30 * 24 * time.Hour
+	// v2 (disc-2026-10-asr-coarse-timestamps, CR L1): v1 chunks hold the
+	// engine's whole-second cue times and were transcribed without the name
+	// prompt (#697); handing them back on a re-run would make both fixes
+	// look like they did nothing. v1 rows age out on asrChunkTTL.
+	asrChunkKeyPrefix    = "asrchunk:v2:"
+	asrManifestKeyPrefix = "asrchunk:v2:manifest:"
 )
 
 // ASRChunkIdentity is everything that decides what the engine would say for

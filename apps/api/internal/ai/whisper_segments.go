@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strings"
 	"unicode"
 )
@@ -34,12 +35,23 @@ type whisperSegment struct {
 	CompressionRatio float64 `json:"compression_ratio"`
 }
 
+// whisperWord is one word with its own timing — present only when the request
+// asked for `timestamp_granularities[]=word` and the engine honours it.
+type whisperWord struct {
+	Word  string  `json:"word"`
+	Start float64 `json:"start"`
+	End   float64 `json:"end"`
+}
+
 // verboseTranscription is the verbose_json response envelope.
 type verboseTranscription struct {
 	Language string           `json:"language"`
 	Duration float64          `json:"duration"`
 	Text     string           `json:"text"`
 	Segments []whisperSegment `json:"segments"`
+	// Words is the flat word list (not nested per segment) OpenAI returns
+	// alongside Segments when word granularity was requested; nil otherwise.
+	Words []whisperWord `json:"words,omitempty"`
 }
 
 // errWrongJSONShape reports a 200 that parsed as JSON but is not verbose_json:
@@ -77,6 +89,73 @@ func parseVerboseTranscription(body string) (*verboseTranscription, error) {
 	vt.Segments = renderable
 	return &vt, nil
 }
+
+// tightenSegmentsWithWords moves each segment's cue boundaries in to the first
+// and last word spoken inside it (disc-2026-10-asr-coarse-timestamps).
+//
+// whisper's SEGMENT times are coarse — whole seconds, back to back, the next
+// cue starting the instant the previous one ends — so on See S01E02 138 of 637
+// cues appeared while nobody was speaking, some six seconds early. Its WORD
+// times are not. The cue count and order are untouched (ONE SEGMENT = ONE CUE
+// still holds for segmentsToSRT); only Start/End move, and only INWARD: a
+// boundary is never pushed outside the segment the engine gave, and a segment
+// with no word inside it, or whose words would leave it shorter than
+// minTightenedCueSeconds, keeps its original timing. Returns how many segments
+// changed, for the log line.
+func tightenSegmentsWithWords(segs []whisperSegment, words []whisperWord) int {
+	if len(words) == 0 {
+		return 0
+	}
+	tightened := 0
+	wi := 0
+	for i := range segs {
+		seg := &segs[i]
+		// Words are time-ordered; skip the ones that ended before this segment.
+		for wi < len(words) && words[wi].End <= seg.Start {
+			wi++
+		}
+		// CR M1: the previous line's last word usually runs a little PAST the
+		// whole-second boundary ("name." 10.4–15.9 against a segment ending at
+		// 15). Letting that straggler be this segment's first word would pin
+		// the cue to the coarse seg.Start — the exact symptom this exists to
+		// fix. So the start comes from the first word that BEGINS inside the
+		// segment; a straggler only counts when no word begins inside.
+		first, last, firstInside := -1, -1, -1
+		for j := wi; j < len(words) && words[j].Start < seg.End; j++ {
+			if strings.TrimSpace(words[j].Word) == "" {
+				continue
+			}
+			if first < 0 {
+				first = j
+			}
+			if firstInside < 0 && words[j].Start >= seg.Start {
+				firstInside = j
+			}
+			last = j
+		}
+		if first < 0 {
+			continue
+		}
+		if firstInside >= 0 {
+			first = firstInside
+		}
+		start := math.Max(seg.Start, words[first].Start)
+		end := math.Min(seg.End, words[last].End)
+		if end-start < minTightenedCueSeconds {
+			continue
+		}
+		if start != seg.Start || end != seg.End {
+			seg.Start, seg.End = start, end
+			tightened++
+		}
+	}
+	return tightened
+}
+
+// minTightenedCueSeconds is the shortest cue word timing may produce; below
+// it the segment keeps the engine's own boundaries (a one-word "No!" still
+// needs to stay on screen long enough to read).
+const minTightenedCueSeconds = 0.6
 
 // segmentsToSRT renders segments as SRT.
 //
