@@ -184,7 +184,7 @@ type ProcessItemOptions struct {
 // Run is nil in exactly one case — the P5 pre-flight early-exited before any
 // row was written — and Kind is then the zero RouteKind while SubtitlePath
 // points at the acceptable sidecar that already existed. RouteKind deliberately
-// gains no "already done" member: it is sub-1-4's `[@contract-v1]` enum and
+// gains no "already done" member: it is sub-1-4's `[@contract-v2]` enum and
 // extending it would be a Rule 20 bump on a shipped contract.
 //
 // [@contract-v1] — see MediaRef.

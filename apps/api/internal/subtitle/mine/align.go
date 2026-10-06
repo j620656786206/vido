@@ -1,7 +1,6 @@
 package mine
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -59,8 +58,8 @@ func ParseSRTCues(content string) ([]Cue, error) {
 	}
 	out := make([]Cue, 0, len(blocks))
 	for _, b := range blocks {
-		start, ok1 := srtToMS(b.Start)
-		end, ok2 := srtToMS(b.End)
+		start, ok1 := subtitle.SRTTimestampMS(b.Start)
+		end, ok2 := subtitle.SRTTimestampMS(b.End)
 		if !ok1 || !ok2 || end < start {
 			continue
 		}
@@ -94,16 +93,6 @@ func ParseASS(content string) []Cue {
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].StartMS < out[j].StartMS })
 	return out
-}
-
-// srtToMS parses "00:01:02,345" (or with a dot).
-func srtToMS(ts string) (int, bool) {
-	ts = strings.TrimSpace(strings.ReplaceAll(ts, ".", ","))
-	var h, m, s, ms int
-	if _, err := fmt.Sscanf(ts, "%d:%d:%d,%d", &h, &m, &s, &ms); err != nil {
-		return 0, false
-	}
-	return ((h*60+m)*60+s)*1000 + ms, true
 }
 
 // assToMS parses "0:01:02.34" (centiseconds).
