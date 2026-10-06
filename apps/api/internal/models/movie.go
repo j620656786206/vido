@@ -320,6 +320,14 @@ type Movie struct {
 	SubtitleLastSearched NullTime       `db:"subtitle_last_searched" json:"subtitle_last_searched,omitempty"`
 	SubtitleSearchScore  NullFloat64    `db:"subtitle_search_score" json:"subtitle_search_score,omitempty"`
 
+	// ChineseSubtitle is the computed "has Chinese subtitles" verdict
+	// (models.ChineseSubtitleVerdict over subtitle_status / subtitle_language /
+	// subtitle_tracks), filled on read by scanMovie — the ONLY place it is set, so
+	// the badge and the library chinese_subtitle filter agree. No omitempty:
+	// always present (story disc-2026-10-subtitle-filter-disagrees-with-badges
+	// AC #1 [@contract-v1]). db:"-" — computed, never a scan/write target.
+	ChineseSubtitle ChineseSubtitle `db:"-" json:"chinese_subtitle"`
+
 	// Technical info fields (Story 9c-1)
 	VideoCodec      NullString `db:"video_codec" json:"video_codec,omitempty"`
 	VideoResolution NullString `db:"video_resolution" json:"video_resolution,omitempty"`

@@ -399,34 +399,51 @@ describe('LibraryBrowseV2 — selection mode (ux3-cutover-2)', () => {
   });
 });
 
-// dsr-1b-b AC #2: the 8-11 deep link `?subtitleStatus=not_found` finally filters —
-// the param reaches the list query and shows up as a removable chip.
-describe('LibraryBrowseV2 — subtitle status deep link (dsr-1b-b)', () => {
+// disc-2026-10-subtitle-filter-disagrees-with-badges AC #8: the batch-subtitle deep link
+// `?chineseSubtitle=missing` reaches the list query (as chinese_subtitle on the wire) and
+// shows up as a removable chip; the old `?subtitleStatus=` is no longer read.
+describe('LibraryBrowseV2 — Chinese subtitle deep link', () => {
   beforeEach(() => {
     h.infinite = infinite({ items: [movie('m1', 'A')], totalItems: 1 });
   });
 
-  it('[P0] ?subtitleStatus=not_found is passed to useLibraryInfinite and rendered as a chip', async () => {
-    renderBrowse('/library?subtitleStatus=not_found');
+  it('[P0] ?chineseSubtitle=missing is passed to useLibraryInfinite and rendered as a chip', async () => {
+    renderBrowse('/library?chineseSubtitle=missing');
     await screen.findByTestId('library-grid-v2');
-    expect(h.lastArgs?.subtitleStatus).toBe('not_found');
-    // The desktop rail (in the DOM, CSS-hidden) also says 缺字幕 — assert the chip by its
-    // removal button, which only the chip row renders.
-    expect(screen.getByRole('button', { name: '移除缺字幕篩選' })).toBeInTheDocument();
+    expect(h.lastArgs?.chineseSubtitle).toBe('missing');
+    expect(h.lastArgs).not.toHaveProperty('subtitleStatus');
+    // The desktop rail (in the DOM, CSS-hidden) also says 缺中文字幕 — assert the chip by
+    // its removal button, which only the chip row renders.
+    expect(screen.getByRole('button', { name: '移除缺中文字幕篩選' })).toBeInTheDocument();
   });
 
-  it('[P0] removing the chip drops subtitleStatus from the query', async () => {
-    const user = userEvent.setup();
+  it('[P0] an unknown value never reaches the wire (the handler would 400 the page)', async () => {
+    renderBrowse('/library?chineseSubtitle=missing,bogus');
+    await screen.findByTestId('library-grid-v2');
+    expect(h.lastArgs?.chineseSubtitle).toBe('missing');
+  });
+
+  it('[P0] an old ?subtitleStatus= bookmark is ignored, not sent', async () => {
     renderBrowse('/library?subtitleStatus=not_found');
-    await user.click(await screen.findByRole('button', { name: '移除缺字幕篩選' }));
-    await waitFor(() => expect(h.lastArgs?.subtitleStatus).toBeUndefined());
-    expect(screen.queryByRole('button', { name: '移除缺字幕篩選' })).not.toBeInTheDocument();
+    await screen.findByTestId('library-grid-v2');
+    expect(h.lastArgs?.chineseSubtitle).toBeUndefined();
+    expect(h.lastArgs).not.toHaveProperty('subtitleStatus');
+  });
+
+  it('[P0] removing the chip drops chineseSubtitle from the query', async () => {
+    const user = userEvent.setup();
+    renderBrowse('/library?chineseSubtitle=missing');
+    await user.click(await screen.findByRole('button', { name: '移除缺中文字幕篩選' }));
+    await waitFor(() => expect(h.lastArgs?.chineseSubtitle).toBeUndefined());
+    expect(screen.queryByRole('button', { name: '移除缺中文字幕篩選' })).not.toBeInTheDocument();
   });
 
   it('[P1] a subtitle filter alone counts as an active filter (no-result names it)', async () => {
     h.infinite = infinite({ items: [], totalItems: 0 });
-    renderBrowse('/library?subtitleStatus=not_found');
-    expect(await screen.findByTestId('library-no-result')).toHaveTextContent('缺字幕');
+    renderBrowse('/library?chineseSubtitle=unknown');
+    expect(await screen.findByTestId('library-no-result')).toHaveTextContent(
+      '不知道有沒有中文字幕'
+    );
   });
 });
 
@@ -458,8 +475,8 @@ describe('LibraryBrowseV2 — phone sort/filter entry (dsr-1b-b)', () => {
     expect(btn).toHaveAttribute('aria-expanded', 'true');
   });
 
-  it('[P0] the badge counts constraining facets — genre + subtitle status = 2', async () => {
-    renderBrowse('/library?genres=%E5%8B%95%E7%95%AB&subtitleStatus=not_found');
+  it('[P0] the badge counts constraining facets — genre + Chinese subtitle = 2', async () => {
+    renderBrowse('/library?genres=%E5%8B%95%E7%95%AB&chineseSubtitle=missing');
     const btn = await screen.findByTestId('library-filter-open-phone');
     expect(within(btn).getByTestId('library-filter-open-phone-count')).toHaveTextContent('2');
   });
@@ -472,8 +489,8 @@ describe('LibraryBrowseV2 — phone sort/filter entry (dsr-1b-b)', () => {
   });
 
   it('[P0] the chip row is a single-row scroller on a phone', async () => {
-    renderBrowse('/library?subtitleStatus=not_found');
-    const remove = await screen.findByRole('button', { name: '移除缺字幕篩選' });
+    renderBrowse('/library?chineseSubtitle=missing');
+    const remove = await screen.findByRole('button', { name: '移除缺中文字幕篩選' });
     const chip = remove.closest('span')!;
     expect(tokens(chip)).toContain('max-sm:shrink-0');
     const row = chip.parentElement!;

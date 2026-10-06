@@ -4,7 +4,7 @@ import type { Page } from '@playwright/test';
  * Stubs for the phone library e2e (dsr-1b-b library-mobile.spec.ts), in the same
  * wire shapes empty-library.spec.ts stubs (snake_case, ApiResponse-wrapped). The list
  * stub records every request URL so a test can assert the filter that went over the
- * wire — `subtitle_status=not_found` is the whole point of the deep-link test.
+ * wire — `chinese_subtitle=missing` is the whole point of the deep-link test.
  */
 export const ROUTE_API = '**/api/v1';
 
@@ -14,8 +14,23 @@ const jsonOk = <T>(body: T) => ({
   body: JSON.stringify({ success: true, data: body }),
 });
 
-/** A library movie item as GET /library returns it (snake_case, wrapped in `{type, movie}`). */
-export function movieItem(id: string, title: string, subtitleStatus = 'not_found') {
+/**
+ * A library movie item as GET /library returns it (snake_case, wrapped in `{type, movie}`).
+ * `chineseSubtitle` is the backend verdict (`chinese_subtitle`, disc-2026-10-subtitle-filter-
+ * disagrees-with-badges AC #1) — the badge reads it and the filter selects on it; the raw
+ * tracks are shaped to match (`[]` = read the file, no subtitles → none).
+ */
+export function movieItem(
+  id: string,
+  title: string,
+  chineseSubtitle: 'zh_hant' | 'zh_hans' | 'zh' | 'none' | 'unknown' = 'none'
+) {
+  const tracks =
+    chineseSubtitle === 'none'
+      ? '[]'
+      : chineseSubtitle === 'unknown'
+        ? null
+        : JSON.stringify([{ language: 'zh-TW', format: 'srt', external: true, stream_index: 0 }]);
   return {
     type: 'movie',
     movie: {
@@ -26,8 +41,9 @@ export function movieItem(id: string, title: string, subtitleStatus = 'not_found
       runtime: 120,
       genres: ['動畫'],
       parse_status: 'success',
-      subtitle_status: subtitleStatus,
-      subtitle_tracks: '[]',
+      subtitle_status: 'not_searched',
+      subtitle_tracks: tracks,
+      chinese_subtitle: chineseSubtitle,
       vote_average: 7.5,
       poster_path: null,
       tmdb_id: 1,
@@ -114,7 +130,7 @@ export async function stubLibraryBaseline(
 
 /**
  * Serves the list. `pick` decides what each request gets from its URL (so a
- * `subtitle_status=not_found` request can return fewer rows than the unfiltered one).
+ * `chinese_subtitle=missing` request can return fewer rows than the unfiltered one).
  * Returns the recorded request URLs. Both `/library?…` and bare `/library` are covered:
  * a glob `*` stops at `/`, so neither pattern can swallow `/library/genres` etc.
  */

@@ -107,7 +107,7 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
   // detail + library lists so poster badges (deriveSubtitleStatus) refresh without
   // reload. NOTE (annotated 2026-07-05): the transcription path does not yet write
   // movies.subtitle_status/subtitle_language — until 9R-16 AC 12 lands this refetches
-  // unchanged data and the badge stays 缺字幕 (a rescan fixes it). Correct FE
+  // unchanged data and the badge stays 缺字幕/缺中文 (a rescan fixes it). Correct FE
   // behavior as specced; NO client-side badge override.
   const onGenerationComplete = useCallback(() => {
     queryClient.invalidateQueries({

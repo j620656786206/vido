@@ -12,6 +12,14 @@ export const VALID_SORT_FIELDS: readonly SortField[] = [
 
 export type LibraryMediaType = 'all' | 'movie' | 'tv';
 
+/**
+ * The backend's ONE "has Chinese subtitles" verdict (models.ChineseSubtitleVerdict) —
+ * confirmed against [@contract-v1] (Story disc-2026-10-subtitle-filter-disagrees-with-badges
+ * AC #1). The library's `chinese_subtitle` filter matches on the same verdict, so the
+ * badge and the filter cannot disagree. The frontend never re-derives it from tracks.
+ */
+export type ChineseSubtitle = 'zh_hant' | 'zh_hans' | 'zh' | 'none' | 'unknown';
+
 export interface LibraryMovie {
   id: string;
   title: string;
@@ -46,6 +54,9 @@ export interface LibraryMovie {
   audioChannels?: number;
   subtitleTracks?: string;
   hdrFormat?: string;
+  // Computed Chinese-subtitle verdict (badge + filter source). Absent on old
+  // fixtures → treated as unknown (no badge), never re-derived from tracks.
+  chineseSubtitle?: ChineseSubtitle;
   // Production countries (§9b CN-subtitle policy source) — exposed by
   // disc-2026-07-production-countries-detail-api. NULL until re-scanned.
   productionCountries?: ProductionCountry[];
@@ -111,6 +122,9 @@ export interface LibrarySeries {
   audioChannels?: number;
   subtitleTracks?: string;
   hdrFormat?: string;
+  // Computed Chinese-subtitle verdict (badge + filter source). Absent on old
+  // fixtures → treated as unknown (no badge), never re-derived from tracks.
+  chineseSubtitle?: ChineseSubtitle;
   // Persisted credits (disc-2026-07-credits-spoken-languages-persist). Present only for
   // manually-edited series; the detail page prefers it over live TMDb when
   // metadataSource === 'manual'. NULL until re-edited. Series has no spoken_languages.
@@ -254,10 +268,13 @@ export interface LibraryListParams {
   yearMax?: number;
   unmatched?: boolean;
   /**
-   * Comma-joined backend `subtitle_status` values (same csv convention as `genres`) —
-   * confirmed against [@contract-v1] (Story dsr-1b-a AC #1). Empty/undefined = no filter.
+   * Comma-joined backend `chinese_subtitle` groups — has / missing / unknown (same csv
+   * convention as `genres`) — confirmed against [@contract-v1] (Story
+   * disc-2026-10-subtitle-filter-disagrees-with-badges AC #2). Empty/undefined = no
+   * filter. The backend's `subtitle_status` param still exists for API users; the
+   * frontend no longer sends it.
    */
-  subtitleStatus?: string;
+  chineseSubtitle?: string;
 }
 
 export interface MediaStats {

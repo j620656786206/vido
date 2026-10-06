@@ -355,10 +355,10 @@ export function BatchSubtitleDialog({ open, onOpenChange, seasonId }: BatchSubti
 
   const handleViewNotFound = useCallback(() => {
     handleClose();
-    // Forward-compatible deep-link. NOTE: backend list filtering by
-    // subtitle_status is NOT yet supported (tracked backlog); the param is
-    // preserved by the route's validateSearch for when it lands.
-    navigate({ to: '/library', search: (prev) => ({ ...prev, subtitleStatus: 'not_found' }) });
+    // 線上找不到 = no Chinese subtitle → the 缺中文字幕 chip (the backend verdict
+    // counts subtitle_status=not_found as `none`; disc-2026-10-subtitle-filter-
+    // disagrees-with-badges AC #8).
+    navigate({ to: '/library', search: (prev) => ({ ...prev, chineseSubtitle: 'missing' }) });
   }, [navigate, handleClose]);
 
   if (!open) return null;

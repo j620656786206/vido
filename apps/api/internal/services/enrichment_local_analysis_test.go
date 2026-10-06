@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -63,4 +64,54 @@ func TestPersistFailedWithLocalAnalysis_KeepsLocalFindings(t *testing.T) {
 	assert.True(t, repo.updatedMovie.SubtitleTracks.Valid,
 		"metadata failure must not starve subtitle-track detection")
 	assert.Contains(t, repo.updatedMovie.SubtitleTracks.String, `"format":"srt"`)
+}
+
+// disc-2026-10-subtitle-filter-disagrees-with-badges AC #6: a successful probe
+// that finds no subtitle (embedded or sidecar) is a fact, recorded as `[]`
+// (→ 缺中文), not left NULL (→ 不知道). Previously an empty result was never
+// written, so "read the file, nothing there" and "never read it" looked alike.
+func newBareMovie(t *testing.T) *models.Movie {
+	t.Helper()
+	dir := filepath.Join(t.TempDir(), "Bare (2010)")
+	require.NoError(t, os.MkdirAll(dir, 0o755))
+	mkv := filepath.Join(dir, "Bare.2010.mkv")
+	require.NoError(t, os.WriteFile(mkv, []byte("not a real mkv"), 0o644))
+	return &models.Movie{ID: "m-bare", Title: "Bare.2010.mkv", FilePath: models.NewNullString(mkv)}
+}
+
+func TestApplyFFprobeTechInfo_ProbedWithNoSubtitlesWritesEmptyArray(t *testing.T) {
+	s := &EnrichmentService{logger: slog.Default(), ffprobeService: fakeFFprobeOnPath(t, "hevc")}
+	movie := newBareMovie(t)
+
+	s.applyFFprobeTechInfo(context.Background(), movie)
+
+	assert.True(t, movie.VideoCodec.Valid, "the probe really ran")
+	require.True(t, movie.SubtitleTracks.Valid, "a successful probe with no subtitles must record []")
+	assert.Equal(t, "[]", movie.SubtitleTracks.String)
+	assert.Equal(t, models.ChineseSubtitleNone,
+		models.ChineseSubtitleVerdict(string(models.SubtitleStatusNotSearched), "", movie.SubtitleTracks.String))
+}
+
+func TestApplyFFprobeTechInfo_NoProbeAndNoSidecarStaysNull(t *testing.T) {
+	s := &EnrichmentService{logger: slog.Default()} // ffprobe absent
+	movie := newBareMovie(t)
+
+	s.applyFFprobeTechInfo(context.Background(), movie)
+
+	assert.False(t, movie.SubtitleTracks.Valid, "without a probe, no tracks means unknown — keep NULL")
+}
+
+func TestApplyFFprobeTechInfo_FailedProbeAndNoSidecarStaysNull(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "ffprobe"), []byte("#!/bin/sh\nexit 1\n"), 0o755))
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	probe := NewFFprobeService(1, 5*time.Second, nil)
+	require.True(t, probe.IsAvailable())
+	s := &EnrichmentService{logger: slog.Default(), ffprobeService: probe}
+	movie := newBareMovie(t)
+
+	s.applyFFprobeTechInfo(context.Background(), movie)
+
+	assert.False(t, movie.VideoCodec.Valid, "the probe failed")
+	assert.False(t, movie.SubtitleTracks.Valid, "a failed probe proves nothing — keep NULL")
 }

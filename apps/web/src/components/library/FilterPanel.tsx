@@ -3,15 +3,18 @@ import { useState, useCallback, useEffect } from 'react';
 import { Check, RotateCcw, TriangleAlert } from 'lucide-react';
 import { useLibraryGenres } from '../../hooks/useLibrary';
 import type { LibraryMediaType } from '../../types/library';
-import { SUBTITLE_STATUS_FILTER_OPTIONS } from './subtitleStatusFilter';
+import { CHINESE_SUBTITLE_FILTER_OPTIONS } from './chineseSubtitleFilter';
 
 export interface FilterValues {
   genres: string[];
   yearMin?: number;
   yearMax?: number;
   unmatched?: boolean;
-  /** Backend `subtitle_status` values (dsr-1b-b) — see subtitleStatusFilter.ts. */
-  subtitleStatus?: string[];
+  /**
+   * Backend `chinese_subtitle` groups (has / missing / unknown) — see
+   * chineseSubtitleFilter.ts (disc-2026-10-subtitle-filter-disagrees-with-badges).
+   */
+  chineseSubtitle?: string[];
 }
 
 /**
@@ -108,7 +111,7 @@ export function FilterPanel({
 }: FilterPanelProps) {
   const [localGenres, setLocalGenres] = useState<string[]>(filters.genres);
   const [localSubtitle, setLocalSubtitle] = useState<string[]>(
-    filters.subtitleStatus ?? NO_SUBTITLE_STATUS
+    filters.chineseSubtitle ?? NO_SUBTITLE_STATUS
   );
   const [localDecades, setLocalDecades] = useState<string[]>(() =>
     getSelectedDecades(filters.yearMin, filters.yearMax)
@@ -129,14 +132,14 @@ export function FilterPanel({
     setLocalGenres(filters.genres);
     setLocalDecades(getSelectedDecades(filters.yearMin, filters.yearMax));
     setLocalUnmatched(filters.unmatched ?? false);
-    setLocalSubtitle(filters.subtitleStatus ?? NO_SUBTITLE_STATUS);
+    setLocalSubtitle(filters.chineseSubtitle ?? NO_SUBTITLE_STATUS);
   }, [
     instant,
     filters.genres,
     filters.yearMin,
     filters.yearMax,
     filters.unmatched,
-    filters.subtitleStatus,
+    filters.chineseSubtitle,
   ]);
 
   // Instant mode (desktop rail) is controlled off `filters`; batch mode off local state.
@@ -145,7 +148,9 @@ export function FilterPanel({
     ? getSelectedDecades(filters.yearMin, filters.yearMax)
     : localDecades;
   const selectedUnmatched = instant ? (filters.unmatched ?? false) : localUnmatched;
-  const selectedSubtitle = instant ? (filters.subtitleStatus ?? NO_SUBTITLE_STATUS) : localSubtitle;
+  const selectedSubtitle = instant
+    ? (filters.chineseSubtitle ?? NO_SUBTITLE_STATUS)
+    : localSubtitle;
 
   const emitInstant = useCallback(
     (next: { genres: string[]; decades: string[]; unmatched: boolean; subtitle: string[] }) => {
@@ -155,7 +160,7 @@ export function FilterPanel({
         yearMin: yearRange.yearMin,
         yearMax: yearRange.yearMax,
         unmatched: next.unmatched || undefined,
-        subtitleStatus: next.subtitle.length ? next.subtitle : undefined,
+        chineseSubtitle: next.subtitle.length ? next.subtitle : undefined,
       });
     },
     [onApply]
@@ -232,7 +237,7 @@ export function FilterPanel({
       yearMin: yearRange.yearMin,
       yearMax: yearRange.yearMax,
       unmatched: localUnmatched || undefined,
-      subtitleStatus: localSubtitle.length ? localSubtitle : undefined,
+      chineseSubtitle: localSubtitle.length ? localSubtitle : undefined,
     });
   }, [localGenres, localDecades, localUnmatched, localSubtitle, onApply]);
 
@@ -368,17 +373,17 @@ export function FilterPanel({
         </div>
       </div>
 
-      {/* Subtitle Section (dsr-1b-b) — backend subtitle_status, labels from the one table */}
+      {/* Subtitle Section — backend chinese_subtitle groups (D1: 有／缺中文字幕／不知道), labels from the one table */}
       <div className="mb-4">
         <SectionHeading className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
           字幕
         </SectionHeading>
         <div className="flex flex-wrap gap-1.5">
-          {SUBTITLE_STATUS_FILTER_OPTIONS.map((o) => (
+          {CHINESE_SUBTITLE_FILTER_OPTIONS.map((o) => (
             <button
               key={o.value}
               onClick={() => handleSubtitleToggle(o.value)}
-              data-testid={`filter-subtitle-${o.value}`}
+              data-testid={`filter-chinese-${o.value}`}
               aria-pressed={selectedSubtitle.includes(o.value)}
               className={`inline-flex min-h-[44px] items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-colors ${
                 selectedSubtitle.includes(o.value)

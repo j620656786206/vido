@@ -3,7 +3,7 @@
 import { X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { yearFilterLabel, type FilterValues } from './FilterPanel';
-import { subtitleStatusLabel } from './subtitleStatusFilter';
+import { chineseSubtitleChipLabel } from './chineseSubtitleFilter';
 
 interface FilterChipsProps {
   filters: FilterValues;
@@ -17,8 +17,8 @@ interface FilterChipsProps {
    */
   onRemoveYears?: () => void;
   onRemoveUnmatched: () => void;
-  /** dsr-1b-b: remove ONE subtitle status value (the chip row shows one chip per value). */
-  onRemoveSubtitleStatus?: (value: string) => void;
+  /** Remove ONE chinese_subtitle group (the chip row shows one chip per value). */
+  onRemoveChineseSubtitle?: (value: string) => void;
   onClearAll: () => void;
   /** Merged into the row — the page hands in its phone single-row scroller classes (dsr-1b-b). */
   className?: string;
@@ -31,11 +31,11 @@ export function FilterChips({
   onRemoveYearMax,
   onRemoveYears,
   onRemoveUnmatched,
-  onRemoveSubtitleStatus,
+  onRemoveChineseSubtitle,
   onClearAll,
   className,
 }: FilterChipsProps) {
-  const subtitleStatuses = filters.subtitleStatus ?? [];
+  const chineseSubtitles = filters.chineseSubtitle ?? [];
   // A full decade range (both bounds) is ONE facet — render it as a single chip so the
   // chip row matches the rail's active-count badge (decade-as-one). Half-open ranges
   // (only one bound) keep their individual chip.
@@ -51,7 +51,7 @@ export function FilterChips({
     filters.yearMin !== undefined ||
     filters.yearMax !== undefined ||
     filters.unmatched === true ||
-    subtitleStatuses.length > 0;
+    chineseSubtitles.length > 0;
 
   if (!hasFilters) return null;
 
@@ -127,16 +127,16 @@ export function FilterChips({
         </span>
       )}
 
-      {subtitleStatuses.map((value) => (
+      {chineseSubtitles.map((value) => (
         <span
           key={`subtitle-${value}`}
           className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)] max-sm:shrink-0"
         >
-          {subtitleStatusLabel(value)}
+          {chineseSubtitleChipLabel(value)}
           <button
-            onClick={() => onRemoveSubtitleStatus?.(value)}
+            onClick={() => onRemoveChineseSubtitle?.(value)}
             className="ml-0.5 rounded-full p-0.5 hover:bg-[var(--accent-primary)]/30"
-            aria-label={`移除${subtitleStatusLabel(value)}篩選`}
+            aria-label={`移除${chineseSubtitleChipLabel(value)}篩選`}
           >
             <X className="h-3 w-3" />
           </button>

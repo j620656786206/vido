@@ -635,7 +635,7 @@ func seriesSelectColumnsQualified(alias string) string {
 }
 
 // seriesListFilterConditions turns the library filter params (genres / year_min / year_max /
-// unmatched / subtitle_status) into SQL conditions and their bound args, in a
+// unmatched / subtitle_status / chinese_subtitle) into SQL conditions and their bound args, in a
 // fixed order. `alias` qualifies column names ("" for the bare table in List,
 // "s" for the FTS join). Shared by List and FullTextSearch (dsr-1b-a2) so the
 // two read paths cannot drift. The `search` (title LIKE) term is deliberately
@@ -683,6 +683,16 @@ func seriesListFilterConditions(params ListParams, alias string) ([]string, []in
 			args = append(args, st)
 		}
 		conditions = append(conditions, col("subtitle_status")+" IN ("+strings.Join(placeholders, ", ")+")")
+	}
+
+	// disc-2026-10-subtitle-filter-disagrees-with-badges AC #2 [@contract-v1]:
+	// chinese_subtitle groups (has / missing / unknown), matched through the
+	// SAME verdict function the badge uses (AC #3). ANDs with everything above.
+	if groups, ok := params.Filters["chinese_subtitle"].([]string); ok && len(groups) > 0 {
+		if cond, cargs := chineseSubtitleFilterCondition(groups, col); cond != "" {
+			conditions = append(conditions, cond)
+			args = append(args, cargs...)
+		}
 	}
 
 	return conditions, args
@@ -748,6 +758,11 @@ func scanSeries(scanner interface {
 	if err := s.ScanGenres(genresJSON); err != nil {
 		return s, fmt.Errorf("failed to parse genres: %w", err)
 	}
+
+	// disc-2026-10-subtitle-filter-disagrees-with-badges AC #1/#3: the badge's
+	// "has Chinese subtitles" verdict. Computed HERE and nowhere else; the
+	// library filter runs the same function in SQL (vido_chinese_subtitle).
+	s.ChineseSubtitle = models.ChineseSubtitleVerdict(string(s.SubtitleStatus), s.SubtitleLanguage.String, s.SubtitleTracks.String)
 
 	// Populate the wire-exposed Credits only when cast/crew is non-empty, so omitempty
 	// drops it for never-edited series (manual Metadata-Editor edits are the only writer).

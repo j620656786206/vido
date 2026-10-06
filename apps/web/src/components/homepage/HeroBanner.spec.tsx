@@ -51,6 +51,7 @@ function movie(id: string, over: Record<string, unknown> = {}): LibraryItem {
       parseStatus: 'success',
       subtitleStatus: 'found',
       subtitleLanguage: 'zh-Hant',
+      chineseSubtitle: 'zh_hant',
       createdAt: '2026-08-01T00:00:00Z',
       ...over,
     },
@@ -69,6 +70,7 @@ function series(id: string, over: Record<string, unknown> = {}): LibraryItem {
       voteAverage: 9.0,
       parseStatus: 'success',
       subtitleStatus: 'not_found',
+      chineseSubtitle: 'none',
       createdAt: '2026-08-02T00:00:00Z',
       ...over,
     },
@@ -129,11 +131,22 @@ describe('HeroBanner (Home v3 own-library static hero — ux3-1-8)', () => {
     expect(badge.className).toContain('success');
   });
 
-  it('[P1] a missing-subtitle item wears the grid vocabulary (缺字幕) AND is a door (brief §3「缺字幕→門」)', () => {
+  it('[P1] an untold-script Chinese item also reads ready (D2: 中文字幕 ✓ 已就緒)', () => {
+    mockUseRecentlyAdded.mockReturnValue(
+      result({ data: [movie('m1', { subtitleStatus: 'not_searched', chineseSubtitle: 'zh' })] })
+    );
+    render(<HeroBanner />);
+    const badge = screen.getByTestId('hero-banner-subtitle-badge');
+    expect(badge).toHaveTextContent('中文字幕 ✓ 已就緒');
+    expect(badge.className).toContain('success');
+    expect(badge.tagName).toBe('SPAN');
+  });
+
+  it('[P1] a missing-subtitle item wears the grid vocabulary (缺中文) AND is a door (brief §3「缺字幕→門」)', () => {
     mockUseRecentlyAdded.mockReturnValue(result({ data: [series('s1')] }));
     render(<HeroBanner />);
     const badge = screen.getByTestId('hero-banner-subtitle-badge');
-    expect(badge).toHaveTextContent('缺字幕');
+    expect(badge).toHaveTextContent('缺中文');
     expect(badge.className).not.toContain('success');
     // A named problem with no way to act on it is the dead end this redesign
     // keeps deleting.

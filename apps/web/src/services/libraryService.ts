@@ -73,7 +73,7 @@ export const libraryService = {
     if (params.yearMin) searchParams.set('year_min', String(params.yearMin));
     if (params.yearMax) searchParams.set('year_max', String(params.yearMax));
     if (params.unmatched) searchParams.set('unmatched', 'true');
-    if (params.subtitleStatus) searchParams.set('subtitle_status', params.subtitleStatus);
+    if (params.chineseSubtitle) searchParams.set('chinese_subtitle', params.chineseSubtitle);
 
     const qs = searchParams.toString();
     return fetchApi<LibraryListResponse>(`/library${qs ? `?${qs}` : ''}`);
@@ -96,13 +96,15 @@ export const libraryService = {
     if (params.sortBy) searchParams.set('sort_by', params.sortBy);
     if (params.sortOrder) searchParams.set('sort_order', params.sortOrder);
     // Same filter set as listLibrary — confirmed against [@contract-v1] (Story dsr-1b-a2
-    // AC #1): /library/search applies genres / year / unmatched / subtitle_status too, so
+    // AC #1): /library/search applies genres / year / unmatched / chinese_subtitle too, so
     // a lit filter pill stays true while you type (disc-2026-09-library-search-ignores-filters).
+    // chinese_subtitle — confirmed against [@contract-v1] (Story disc-2026-10-subtitle-filter-
+    // disagrees-with-badges AC #2); the frontend no longer sends subtitle_status.
     if (params.genres) searchParams.set('genres', params.genres);
     if (params.yearMin) searchParams.set('year_min', String(params.yearMin));
     if (params.yearMax) searchParams.set('year_max', String(params.yearMax));
     if (params.unmatched) searchParams.set('unmatched', 'true');
-    if (params.subtitleStatus) searchParams.set('subtitle_status', params.subtitleStatus);
+    if (params.chineseSubtitle) searchParams.set('chinese_subtitle', params.chineseSubtitle);
 
     return fetchApi<LibrarySearchResponse>(`/library/search?${searchParams.toString()}`);
   },

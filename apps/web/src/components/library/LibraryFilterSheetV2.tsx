@@ -26,7 +26,7 @@ import type {
 import { Sheet } from '../ui/Sheet';
 import { FilterPanel, type FilterValues } from './FilterPanel';
 import { SORT_OPTIONS } from './SortSelector';
-import { joinSubtitleStatusCsv } from './subtitleStatusFilter';
+import { joinChineseSubtitleCsv } from './chineseSubtitleFilter';
 
 const DEFAULT_SORT: { sortBy: SortField; sortOrder: SortOrder } = {
   sortBy: 'created_at',
@@ -56,7 +56,7 @@ export function sheetCountParams(
     yearMin: draft.yearMin,
     yearMax: draft.yearMax,
     unmatched: draft.unmatched || undefined,
-    subtitleStatus: joinSubtitleStatusCsv(draft.subtitleStatus),
+    chineseSubtitle: joinChineseSubtitleCsv(draft.chineseSubtitle),
   };
 }
 

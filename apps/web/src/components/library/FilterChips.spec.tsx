@@ -210,24 +210,26 @@ describe('FilterChips', () => {
     expect(onClearAll).toHaveBeenCalled();
   });
 
-  // dsr-1b-b AC #2: one chip per selected subtitle status, label from the shared table.
-  it('[P0] renders a 缺字幕 chip for subtitleStatus and removes that one value', async () => {
+  // disc-2026-10-subtitle-filter-disagrees-with-badges AC #8: one chip per selected
+  // chinese_subtitle group, stand-alone label from the shared table.
+  it('[P0] renders a 缺中文字幕 chip for chineseSubtitle and removes that one value', async () => {
     const user = userEvent.setup();
-    const onRemoveSubtitleStatus = vi.fn();
+    const onRemoveChineseSubtitle = vi.fn();
     render(
       <FilterChips
-        filters={{ genres: [], subtitleStatus: ['not_found', 'found'] }}
+        filters={{ genres: [], chineseSubtitle: ['missing', 'unknown'] }}
         onRemoveGenre={onRemoveGenre}
         onRemoveYearMin={onRemoveYearMin}
         onRemoveYearMax={onRemoveYearMax}
         onRemoveUnmatched={onRemoveUnmatched}
-        onRemoveSubtitleStatus={onRemoveSubtitleStatus}
+        onRemoveChineseSubtitle={onRemoveChineseSubtitle}
         onClearAll={onClearAll}
       />
     );
-    expect(screen.getByText('缺字幕')).toBeInTheDocument();
-    expect(screen.getByText('有字幕')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: '移除缺字幕篩選' }));
-    expect(onRemoveSubtitleStatus).toHaveBeenCalledWith('not_found');
+    expect(screen.getByText('缺中文字幕')).toBeInTheDocument();
+    // A bare 不知道 would not say what is unknown — the chip carries the subject.
+    expect(screen.getByText('不知道有沒有中文字幕')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '移除缺中文字幕篩選' }));
+    expect(onRemoveChineseSubtitle).toHaveBeenCalledWith('missing');
   });
 });

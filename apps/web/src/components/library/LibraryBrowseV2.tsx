@@ -42,10 +42,10 @@ import { LibraryGridSkeletonV2, LibraryNoResultV2, LibraryErrorV2 } from './Libr
 import { LIBRARY_GRID_COLS } from './libraryGridCols';
 import { yearFilterLabel } from './FilterPanel';
 import {
-  joinSubtitleStatusCsv,
-  parseSubtitleStatusCsv,
-  subtitleStatusLabel,
-} from './subtitleStatusFilter';
+  chineseSubtitleChipLabel,
+  joinChineseSubtitleCsv,
+  parseChineseSubtitleCsv,
+} from './chineseSubtitleFilter';
 import { EmptyNoQBT } from './EmptyNoQBT';
 import { EmptyNoFolder } from './EmptyNoFolder';
 import { EmptyReadyForScan } from './EmptyReadyForScan';
@@ -187,25 +187,26 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
       yearMin: search.yearMin,
       yearMax: search.yearMax,
       unmatched: search.unmatched,
-      // dsr-1b-b: csv on the URL (the 8-11 deep link shape), array in the UI.
-      subtitleStatus: parseSubtitleStatusCsv(search.subtitleStatus),
+      // csv on the URL, array in the UI; unknown values dropped here, so they
+      // never reach the wire (disc-2026-10-subtitle-filter-disagrees-with-badges).
+      chineseSubtitle: parseChineseSubtitleCsv(search.chineseSubtitle),
     }),
-    [search.genres, search.yearMin, search.yearMax, search.unmatched, search.subtitleStatus]
+    [search.genres, search.yearMin, search.yearMax, search.unmatched, search.chineseSubtitle]
   );
-  const subtitleStatuses = filters.subtitleStatus ?? [];
+  const chineseSubtitles = filters.chineseSubtitle ?? [];
   const hasActiveFilters =
     filters.genres.length > 0 ||
     filters.yearMin !== undefined ||
     filters.yearMax !== undefined ||
     filters.unmatched === true ||
-    subtitleStatuses.length > 0;
+    chineseSubtitles.length > 0;
   // Constraining-facet count for the rail badge / collapsed 篩選(n) button.
   // Decade range (yearMin/yearMax) counts as ONE facet; type=全部 is not a constraint.
   const activeFilterCount =
     filters.genres.length +
     (filters.yearMin !== undefined || filters.yearMax !== undefined ? 1 : 0) +
     (filters.unmatched === true ? 1 : 0) +
-    subtitleStatuses.length;
+    chineseSubtitles.length;
 
   // Human labels for the same facets, in chip order — A7p-D names them in the
   // no-result line so you do not have to go looking for what excluded everything.
@@ -217,7 +218,7 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
     const year = yearFilterLabel(filters);
     if (year) labels.push(year);
     if (filters.unmatched === true) labels.push('未匹配');
-    for (const v of filters.subtitleStatus ?? []) labels.push(subtitleStatusLabel(v));
+    for (const v of filters.chineseSubtitle ?? []) labels.push(chineseSubtitleChipLabel(v));
     return labels;
   }, [filters]);
 
@@ -239,7 +240,7 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
     yearMin: search.yearMin,
     yearMax: search.yearMax,
     unmatched: search.unmatched || undefined,
-    subtitleStatus: search.subtitleStatus || undefined,
+    chineseSubtitle: joinChineseSubtitleCsv(chineseSubtitles),
   });
 
   // Empty-state classifier inputs (reuse the bugfix-10-5 3-state classifier).
@@ -289,7 +290,7 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
         yearMin: f.yearMin,
         yearMax: f.yearMax,
         unmatched: f.unmatched || undefined,
-        subtitleStatus: joinSubtitleStatusCsv(f.subtitleStatus),
+        chineseSubtitle: joinChineseSubtitleCsv(f.chineseSubtitle),
       }),
     [patchSearch]
   );
@@ -300,7 +301,7 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
         yearMin: undefined,
         yearMax: undefined,
         unmatched: undefined,
-        subtitleStatus: undefined,
+        chineseSubtitle: undefined,
       }),
     [patchSearch]
   );
@@ -725,10 +726,10 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
                     onRemoveYearMax={() => patchSearch({ yearMax: undefined })}
                     onRemoveYears={() => patchSearch({ yearMin: undefined, yearMax: undefined })}
                     onRemoveUnmatched={() => patchSearch({ unmatched: undefined })}
-                    onRemoveSubtitleStatus={(v) =>
+                    onRemoveChineseSubtitle={(v) =>
                       patchSearch({
-                        subtitleStatus: joinSubtitleStatusCsv(
-                          subtitleStatuses.filter((x) => x !== v)
+                        chineseSubtitle: joinChineseSubtitleCsv(
+                          chineseSubtitles.filter((x) => x !== v)
                         ),
                       })
                     }

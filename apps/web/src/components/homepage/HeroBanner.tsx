@@ -92,7 +92,9 @@ function heroStatusBadge(media: LibraryMovie | LibrarySeries) {
   }
   const subtitle = deriveSubtitleStatus(media);
   if (!subtitle) return null;
-  const label = subtitle.label === '繁中' ? '繁中字幕 ✓ 已就緒' : subtitle.label;
+  // The two "has Chinese" steady states spell out readiness (D2, disc-2026-10-
+  // subtitle-filter-disagrees-with-badges: 中文 = Chinese, script untold).
+  const label = READY_SUBTITLE_LABELS[subtitle.label] ?? subtitle.label;
   // brief §3: 「繁中✓已就緒／缺字幕→門」. A named problem with no way to act on
   // it is the dead-end pattern this redesign keeps deleting, so the states the
   // user CAN resolve (on the item's own page) become links; the happy state and
@@ -102,7 +104,13 @@ function heroStatusBadge(media: LibraryMovie | LibrarySeries) {
 }
 
 /** Subtitle verdicts the user can act on from the item's detail page. */
-const ACTIONABLE_SUBTITLE_LABELS = new Set(['缺字幕', '未翻譯', '簡中']);
+const ACTIONABLE_SUBTITLE_LABELS = new Set(['缺中文', '未翻譯', '簡中']);
+
+/** Steady "has Chinese" verdicts → the hero's spelled-out ready line. */
+const READY_SUBTITLE_LABELS: Record<string, string> = {
+  繁中: '繁中字幕 ✓ 已就緒',
+  中文: '中文字幕 ✓ 已就緒',
+};
 
 function HeroSlide({
   item,

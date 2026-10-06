@@ -65,6 +65,11 @@ Status: ready-for-dev
 - 補齊既有單集時，NAS 的影片在 Unraid FUSE 路徑上，ffprobe 對 4K 檔要數秒；補齊要限流（沿用 FFprobeService 的併發上限），並能在重啟後從上次的位置續跑。
 - 中文繁簡一律看內容（project-context.md「Language detection MUST analyze subtitle file content」）。
 
+### 下游依賴（2026-10-06 Bob 加註）
+
+- `disc-2026-10-subtitle-filter-disagrees-with-badges`（媒體庫「有／缺中文字幕」篩選）的影集部分＝`disc-2026-10-subtitle-filter-series-phase-2`，要等本單的每集摘要。**那邊的需求：** 媒體庫篩選要在 SQL 裡跨所有影集篩，所以每集的結論（含「旁邊的字幕檔」那一半）必須**存進資料庫**，不能只在打開季清單時現讀（本單 AC #2 的做法）。設計本單的資料欄位時請一起考慮，例如掃描時把 `ListSidecars` 的中文結論也存起來。
+- 每集的「有沒有中文」請用同一個判斷函式 `models.ChineseSubtitleVerdict`（由上面那張單新增；若本單先做，就由本單照那張 story「判斷規則」建立它），不要另寫一份。
+
 ### Time-dependent visual coverage
 
 N/A — 不碰讀時鐘的元件。
