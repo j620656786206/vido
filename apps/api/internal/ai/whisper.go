@@ -298,7 +298,11 @@ func (c *WhisperClient) transcribeVerbose(ctx context.Context, audio []byte, fil
 		return TranscriptionDetail{Filtered: true}, true, nil
 	}
 
-	kept, dropped := filterHallucinations(vt.Segments)
+	// CR M2: a prompted decoder may "hear" the prompt over silence — strip
+	// those slices before the score-based rules, which are blind to them.
+	echoKept, echoDropped := filterPromptEcho(vt.Segments, ASRPromptFromContext(ctx))
+	kept, dropped := filterHallucinations(echoKept)
+	dropped = append(echoDropped, dropped...)
 	detail := TranscriptionDetail{
 		SRT:          segmentsToSRT(kept),
 		Unfiltered:   segmentsToSRT(vt.Segments),

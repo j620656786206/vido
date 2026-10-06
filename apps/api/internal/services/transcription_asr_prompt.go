@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"strings"
 
 	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/models"
@@ -25,8 +26,8 @@ func asrPromptNames(credits *models.Credits, terms []models.GlossaryTerm) []stri
 	var names []string
 	if credits != nil {
 		for _, c := range credits.Cast {
-			if c.Character != "" {
-				names = append(names, c.Character)
+			if n := promptCharacterName(c.Character); n != "" {
+				names = append(names, n)
 			}
 		}
 		for _, c := range credits.Cast {
@@ -46,21 +47,51 @@ func asrPromptNames(credits *models.Credits, terms []models.GlossaryTerm) []stri
 	return names
 }
 
+// promptCharacterName cleans a TMDb character credit for the prompt: the
+// parenthetical tail goes ("Baba Voss (voice)" → "Baba Voss") and the
+// non-names TMDb uses for people playing themselves ("Self", "Himself",
+// "Herself", "Narrator") are skipped — they are not words anyone says.
+func promptCharacterName(character string) string {
+	n := strings.TrimSpace(character)
+	if i := strings.Index(n, "("); i > 0 {
+		n = strings.TrimSpace(n[:i])
+	}
+	switch strings.ToLower(n) {
+	case "", "self", "himself", "herself", "themselves", "narrator":
+		return ""
+	}
+	return n
+}
+
 // asrPromptFor composes the conditioning text for one run. Fail-soft: any
 // lookup that misses contributes nothing — a prompt-less run is exactly the
-// pre-story behaviour, never a failed run.
+// pre-story behaviour, never a failed run — but never silently (the
+// mediaMetadataFor CR M1 posture): a miss is logged with what it cost.
 func (s *TranscriptionService) asrPromptFor(ctx context.Context, mediaType, mediaID, glossaryKey string) string {
 	var credits *models.Credits
 	switch mediaType {
 	case models.SubtitleRunMediaMovie:
 		if s.stateReader != nil {
-			if movie, err := s.stateReader.FindByID(ctx, mediaID); err == nil && movie != nil {
+			movie, err := s.stateReader.FindByID(ctx, mediaID)
+			if err != nil || movie == nil {
+				s.logger.Warn("asr prompt: movie lookup failed — prompting without credits",
+					"media_id", mediaID, "error", err)
+			} else {
 				credits = movie.Credits
 			}
 		}
 	case models.SubtitleRunMediaEpisode, models.SubtitleRunMediaSeries:
-		if s.seriesReader != nil && glossaryKey != "" && glossaryKey != mediaID {
-			if series, err := s.seriesReader.FindByID(ctx, glossaryKey); err == nil && series != nil {
+		// glossaryKey is the SHOW: the parent series for an episode, the row
+		// itself for a series run. The only unusable case is an episode whose
+		// parent could not be resolved (glossaryKeyFor fell back to the
+		// episode's own id) — querying the series table with it would miss.
+		parentUnresolved := mediaType == models.SubtitleRunMediaEpisode && glossaryKey == mediaID
+		if s.seriesReader != nil && glossaryKey != "" && !parentUnresolved {
+			series, err := s.seriesReader.FindByID(ctx, glossaryKey)
+			if err != nil || series == nil {
+				s.logger.Warn("asr prompt: series lookup failed — prompting without credits",
+					"media_id", mediaID, "media_type", mediaType, "series_id", glossaryKey, "error", err)
+			} else {
 				credits = series.Credits
 			}
 		}

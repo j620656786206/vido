@@ -1,6 +1,8 @@
 package services
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -40,4 +42,49 @@ func TestASRPromptNames(t *testing.T) {
 func TestASRPromptNames_NothingKnownIsEmpty(t *testing.T) {
 	assert.Empty(t, asrPromptNames(nil, nil))
 	assert.Empty(t, asrPromptNames(&models.Credits{}, []models.GlossaryTerm{{TermSrc: "X", Source: models.GlossarySourceSubtitle}}))
+}
+
+func TestPromptCharacterName(t *testing.T) {
+	assert.Equal(t, "Baba Voss", promptCharacterName("Baba Voss (voice)"))
+	assert.Equal(t, "Jerlamarel", promptCharacterName("  Jerlamarel "))
+	for _, skip := range []string{"Self", "Himself", "Herself", "Narrator (voice)", ""} {
+		assert.Empty(t, promptCharacterName(skip), "%q is not a name anyone says", skip)
+	}
+}
+
+// asrPromptFor's lookup glue (CR M1: the series case used to be unreachable).
+func TestASRPromptFor_ReadsCreditsPerMediaType(t *testing.T) {
+	show := &models.Series{Credits: &models.Credits{Cast: []models.CastMember{{Name: "Jason Momoa", Character: "Baba Voss"}}}}
+	movie := &models.Movie{Credits: &models.Credits{Cast: []models.CastMember{{Name: "Tom Hanks", Character: "Chuck Noland"}}}}
+
+	t.Run("movie: its own credits", func(t *testing.T) {
+		svc := NewTranscriptionService(nil, nil, nil, nil)
+		svc.SetSubtitleStateReader(&fakeStateReader{movie: movie})
+		assert.Equal(t, "Chuck Noland, Tom Hanks", svc.asrPromptFor(context.Background(), models.SubtitleRunMediaMovie, "mv-1", "mv-1"))
+	})
+	t.Run("episode: the parent series' credits", func(t *testing.T) {
+		svc := NewTranscriptionService(nil, nil, nil, nil)
+		reader := &metadataSeriesReader{series: show}
+		svc.SetSeriesMetadataReader(reader)
+		assert.Equal(t, "Baba Voss, Jason Momoa", svc.asrPromptFor(context.Background(), models.SubtitleRunMediaEpisode, "ep-1", "series-1"))
+		assert.Equal(t, "series-1", reader.lastID)
+	})
+	t.Run("series run: its own credits (glossaryKey == mediaID is NOT a miss here)", func(t *testing.T) {
+		svc := NewTranscriptionService(nil, nil, nil, nil)
+		reader := &metadataSeriesReader{series: show}
+		svc.SetSeriesMetadataReader(reader)
+		assert.Equal(t, "Baba Voss, Jason Momoa", svc.asrPromptFor(context.Background(), models.SubtitleRunMediaSeries, "series-1", "series-1"))
+	})
+	t.Run("episode whose parent is unresolved: no series query, no prompt", func(t *testing.T) {
+		svc := NewTranscriptionService(nil, nil, nil, nil)
+		reader := &metadataSeriesReader{series: show}
+		svc.SetSeriesMetadataReader(reader)
+		assert.Empty(t, svc.asrPromptFor(context.Background(), models.SubtitleRunMediaEpisode, "ep-1", "ep-1"))
+		assert.Zero(t, reader.callCount)
+	})
+	t.Run("lookup failure: no prompt, no panic", func(t *testing.T) {
+		svc := NewTranscriptionService(nil, nil, nil, nil)
+		svc.SetSeriesMetadataReader(&metadataSeriesReader{err: errors.New("db down")})
+		assert.Empty(t, svc.asrPromptFor(context.Background(), models.SubtitleRunMediaEpisode, "ep-1", "series-1"))
+	})
 }

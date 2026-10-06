@@ -58,6 +58,12 @@ Claude Fable 5.1（claude-fable-5-1）
 
 ### Completion Notes List
 
+- **Adversarial CR（2026-10-06，fresh agent）2M/3L＋nits，全部修掉：**
+  - M1 影集整季跑（`series`）時原本的守門 `glossaryKey != mediaID` 會把它自己擋掉、拿不到演員表 → 改成只擋「找不到母劇的單集」（跟 `mediaMetadataFor` 一樣），加 `TestASRPromptFor_ReadsCreditsPerMediaType` 五個案例。
+  - M2 whisper 收到 prompt 後，在無聲／配樂處可能把名單原文「聽」出來 → 新規則 `prompt_echo`（`filterPromptEcho`：段落文字正規化後是名單的子字串且 ≥12 字元就丟；單一人名、提到人名的對白保留），加 `TestFilterPromptEcho`。
+  - L2 查電影／影集失敗原本無聲 → 加 Warn log（`asr prompt: … lookup failed`）。
+  - L1 chunk 快取 key 沒含 prompt：接受（有 prompt 的新跑才會重聽；舊快取段落本來就沒有 prompt），在 story 記下。
+  - nits：角色名去掉括號尾巴（`Baba Voss (voice)`）、跳過 Self／Himself／Herself／Narrator（`promptCharacterName`）。
 - 🔗 AC Drift: FOUND — 9R-2 AC #3「multipart 帶 language」不變；多一個可選的 `prompt` 欄位（沒有 ctx prompt 時 body 位元相同，既有 `TranscribeWithLanguage_MultipartCarriesLanguage` 不改）。
 - 📎 Contract Stamps: NONE（`ASRProvider` 介面未動）。
 - 🎭 A11y Pre-Flight: N/A (100% backend)
@@ -70,7 +76,7 @@ N/A — no out-of-scope work discovered
 ### File List
 
 - `apps/api/internal/ai/asr_prompt.go`（新）、`asr_prompt_test.go`（新）
-- `apps/api/internal/ai/whisper.go`（改）、`whisper_test.go`（改）
+- `apps/api/internal/ai/whisper.go`（改）、`whisper_segments.go`（改：`prompt_echo`）、`whisper_test.go`（改）
 - `apps/api/internal/services/transcription_asr_prompt.go`（新）、`transcription_asr_prompt_test.go`（新）
 - `apps/api/internal/services/transcription_service.go`（改：ASR 前掛 prompt）
 - `_bmad-output/implementation-artifacts/disc-2026-10-asr-proper-names-inconsistent.md`（新）
@@ -80,4 +86,5 @@ N/A — no out-of-scope work discovered
 
 | 日期 | 內容 |
 |---|---|
+| 2026-10-06 | CR 2M/3L 修掉：series 守門、`prompt_echo` 規則、lookup 失敗 log、角色名清理；全綠。 |
 | 2026-10-06 | create-story＋dev 同日（聽的那一半）：ctx prompt、whisper `prompt` 欄位、角色／演員／可信名詞表組名單；全綠，狀態 review。翻的那一半（名詞表污染）在 `disc-2026-10-asr-harvest-pollutes-glossary`。 |
