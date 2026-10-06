@@ -229,6 +229,136 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
     });
   });
 
+  // disc-2026-10-single-generate-ignores-embedded-english-b: a detail-page click in
+  // pipeline mode — the solo runner's titled start event, the pipeline's untitled
+  // D6 stages in between, the solo runner's titled terminal — is ONE single job.
+  it('a solo pipeline run (titled start, D6 middle, titled terminal) is one single job with one done row', () => {
+    const { result, es } = connected();
+    act(() => {
+      es.emit('transcription_extracting', {
+        job_id: 'solo-1',
+        media_id: 'm7',
+        media_type: 'movie',
+        phase: 'extracting',
+        title: '末日光明 S01E02',
+        message: '正在檢查片內字幕…',
+        predicted_route: 'extract',
+        spent_usd: 0,
+        budget_usd: 5,
+      });
+    });
+    expect(result.current.singleJobs['m7']).toMatchObject({
+      phase: 'extracting',
+      title: '末日光明 S01E02',
+      spentUsd: 0,
+      budgetUsd: 5,
+    });
+    act(() => {
+      es.emit('subtitle_progress', {
+        media_id: 'm7',
+        media_type: 'movie',
+        stage: 'extracting',
+        message: '',
+      });
+      es.emit('subtitle_progress', {
+        media_id: 'm7',
+        media_type: 'movie',
+        stage: 'translating',
+        message: '翻譯中（第 1/7 段）',
+      });
+      es.emit('subtitle_progress', {
+        media_id: 'm7',
+        media_type: 'movie',
+        stage: 'complete',
+        message: '',
+      });
+    });
+    // Not a batch member: the D6 frames update THIS job's stage and never end it.
+    expect(result.current.singleJobs['m7']).toMatchObject({
+      phase: 'translating',
+      title: '末日光明 S01E02',
+      jobId: 'solo-1',
+      route: 'extract',
+      message: '翻譯中（第 1/7 段）',
+    });
+    act(() => {
+      es.emit('transcription_complete', {
+        job_id: 'solo-1',
+        media_id: 'm7',
+        media_type: 'movie',
+        phase: 'complete',
+        title: '末日光明 S01E02',
+        route: 'translate',
+        zh_srt_path: '/tv/See.S01E02.zh-Hant.srt',
+        message: '翻譯完成（翻譯片內英文字幕）',
+        spent_usd: 0.41,
+        budget_usd: 5,
+      });
+    });
+    expect(result.current.singleJobs['m7']).toBeUndefined();
+    const kinds = rowsFor(result.current.feed, 'm7').map((r) => r.kind);
+    expect(kinds.filter((k) => k === 'done')).toHaveLength(1);
+    expect(rowsFor(result.current.feed, 'm7').at(-1)).toMatchObject({
+      kind: 'done',
+      title: '末日光明 S01E02',
+    });
+  });
+
+  it("a solo pipeline run on the ASR lane: the ASR leg's own untitled terminal (other job id) does not end the job", () => {
+    const { result, es } = connected();
+    act(() => {
+      es.emit('transcription_extracting', {
+        job_id: 'solo-2',
+        media_id: 'm8',
+        media_type: 'movie',
+        phase: 'extracting',
+        title: '奧本海默',
+        predicted_route: 'asr',
+      });
+      // The ASR leg (TranscriptionService, Solo=false): no title, its own job id.
+      es.emit('transcription_progress', {
+        job_id: 'asr-9',
+        media_id: 'm8',
+        phase: 'transcribing',
+        title: '',
+      });
+      es.emit('transcription_complete', {
+        job_id: 'asr-9',
+        media_id: 'm8',
+        phase: 'complete',
+        title: '',
+        message: '轉錄完成',
+      });
+      es.emit('subtitle_progress', {
+        media_id: 'm8',
+        media_type: 'movie',
+        stage: 'complete',
+        message: '',
+      });
+    });
+    expect(result.current.singleJobs['m8']).toMatchObject({
+      phase: 'transcribing',
+      title: '奧本海默',
+      jobId: 'solo-2',
+    });
+    expect(rowsFor(result.current.feed, 'm8').filter((r) => r.kind === 'done')).toHaveLength(0);
+    act(() => {
+      es.emit('transcription_complete', {
+        job_id: 'solo-2',
+        media_id: 'm8',
+        media_type: 'movie',
+        phase: 'complete',
+        title: '奧本海默',
+        route: 'asr',
+        message: '轉錄完成',
+        spent_usd: 1.36,
+        budget_usd: 5,
+      });
+    });
+    expect(result.current.singleJobs['m8']).toBeUndefined();
+    expect(rowsFor(result.current.feed, 'm8').filter((r) => r.kind === 'done')).toHaveLength(1);
+  });
+
   it('9R-17: a single job carries its live spend; an event without cost keeps the last figure', () => {
     const { result, es } = connected();
     act(() =>

@@ -380,6 +380,7 @@ function QueueRow({
             }
             percentage={activeItemProgress?.percentage}
             message={activeItemProgress?.message}
+            route={activeItemProgress?.route}
           />
         </div>
       )}

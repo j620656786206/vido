@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useGenerationProgress } from './useGenerationProgress';
+import { useGenerationProgress, TERMINAL_LOST_MESSAGE } from './useGenerationProgress';
 
 // Mock EventSource (mirrors useSubtitleBatchProgress.spec pattern)
 class MockEventSource {
@@ -527,6 +527,335 @@ describe('useGenerationProgress D6 subtitle_progress family (sub-4-3 AC #8)', ()
       );
       expect(result.current.progress.spentUsd).toBeNull();
       expect(result.current.progress.budgetUsd).toBeNull();
+    });
+  });
+
+  // disc-2026-10-single-generate-ignores-embedded-english-b — the solo job id
+  // decides which terminal is ours (-a §1b: the ASR leg's own complete and the
+  // pipeline's D6 complete fire BEFORE the job's terminal).
+  describe('solo job id (pipeline mode)', () => {
+    function tracked(jobId?: string) {
+      const onComplete = vi.fn();
+      const { result } = renderHook(() => useGenerationProgress({ onComplete }));
+      act(() => result.current.startTracking(MOVIE_UUID, jobId));
+      const es = MockEventSource.instances[0];
+      return { result, es, onComplete };
+    }
+
+    it('[P0] with a job id, only the complete carrying THAT id ends tracking; earlier completes are notes', () => {
+      const { result, es, onComplete } = tracked('solo-1');
+
+      act(() =>
+        es.emit(
+          'transcription_extracting',
+          wireEvent('transcription_extracting', {
+            job_id: 'solo-1',
+            phase: 'extracting',
+            message: '正在檢查片內字幕…',
+            predicted_route: 'asr',
+          })
+        )
+      );
+      expect(result.current.progress.route).toBe('asr');
+
+      // ① the ASR leg's own complete — a different job id, no cost, no route
+      act(() =>
+        es.emit(
+          'transcription_complete',
+          wireEvent('transcription_complete', {
+            job_id: 'asr-leg-9',
+            phase: 'complete',
+            zh_srt_path: '/m/x.zh-Hant.srt',
+            message: '轉錄完成',
+          })
+        )
+      );
+      expect(result.current.progress.phase).not.toBe('complete');
+      expect(onComplete).not.toHaveBeenCalled();
+      expect(es.readyState).not.toBe(2);
+
+      // ② the pipeline's D6 terminal — item-level news
+      act(() =>
+        es.emit(
+          'subtitle_progress',
+          wireEvent('subtitle_progress', { stage: 'extracting', media_type: 'movie', message: '' })
+        )
+      );
+      act(() =>
+        es.emit(
+          'subtitle_progress',
+          wireEvent('subtitle_progress', { stage: 'complete', media_type: 'movie', message: '' })
+        )
+      );
+      expect(result.current.progress.phase).not.toBe('complete');
+      expect(onComplete).not.toHaveBeenCalled();
+
+      // ③ ours
+      act(() =>
+        es.emit(
+          'transcription_complete',
+          wireEvent('transcription_complete', {
+            job_id: 'solo-1',
+            phase: 'complete',
+            route: 'asr',
+            zh_srt_path: '/m/x.zh-Hant.srt',
+            message: '轉錄完成',
+            spent_usd: 1.36,
+            budget_usd: 5,
+          })
+        )
+      );
+      expect(result.current.progress.phase).toBe('complete');
+      expect(result.current.progress.route).toBe('asr');
+      expect(result.current.progress.zhSrtPath).toBe('/m/x.zh-Hant.srt');
+      expect(result.current.progress.spentUsd).toBe(1.36);
+      expect(result.current.progress.budgetUsd).toBe(5);
+      expect(onComplete).toHaveBeenCalledTimes(1);
+      expect(es.readyState).toBe(2);
+    });
+
+    it('a failed carrying another job id is a note; ours ends tracking as failed', () => {
+      const { result, es } = tracked('solo-2');
+      act(() =>
+        es.emit(
+          'transcription_failed',
+          wireEvent('transcription_failed', { job_id: 'other', phase: 'failed', error: 'x' })
+        )
+      );
+      expect(result.current.progress.phase).toBe('extracting');
+      act(() =>
+        es.emit(
+          'transcription_failed',
+          wireEvent('transcription_failed', {
+            job_id: 'solo-2',
+            phase: 'failed',
+            message: '這部影片沒有可用的字幕來源，也沒有設定語音辨識',
+            error: 'skipped',
+          })
+        )
+      );
+      expect(result.current.progress.phase).toBe('failed');
+      expect(result.current.progress.message).toBe(
+        '這部影片沒有可用的字幕來源，也沒有設定語音辨識'
+      );
+      expect(es.readyState).toBe(2);
+    });
+
+    it("the terminal's route overrides the start event's prediction", () => {
+      const { result, es } = tracked('solo-3');
+      act(() =>
+        es.emit(
+          'transcription_extracting',
+          wireEvent('transcription_extracting', {
+            job_id: 'solo-3',
+            phase: 'extracting',
+            predicted_route: 'extract',
+          })
+        )
+      );
+      expect(result.current.progress.route).toBe('extract');
+      act(() =>
+        es.emit(
+          'subtitle_progress',
+          wireEvent('subtitle_progress', {
+            stage: 'translating',
+            media_type: 'movie',
+            message: '翻譯中（第 2/7 段）',
+          })
+        )
+      );
+      expect(result.current.progress.phase).toBe('translating');
+      act(() =>
+        es.emit(
+          'transcription_complete',
+          wireEvent('transcription_complete', {
+            job_id: 'solo-3',
+            phase: 'complete',
+            route: 'deliver_direct',
+            zh_srt_path: '/m/y.zh-Hant.srt',
+            message: '字幕已生成（直接使用片內中文字幕，沒有花錢）',
+            spent_usd: 0,
+            budget_usd: 2,
+          })
+        )
+      );
+      expect(result.current.progress.route).toBe('deliver_direct');
+      expect(result.current.progress.spentUsd).toBe(0);
+    });
+
+    it('WITHOUT a job id (legacy / attach) the first complete is terminal, as before', () => {
+      const { result, es, onComplete } = tracked();
+      act(() =>
+        es.emit(
+          'transcription_complete',
+          wireEvent('transcription_complete', { job_id: 'whatever', phase: 'complete' })
+        )
+      );
+      expect(result.current.progress.phase).toBe('complete');
+      expect(onComplete).toHaveBeenCalledTimes(1);
+      expect(result.current.progress.route).toBeNull();
+    });
+
+    it('a NOTE never overwrites the stage message (D6 terminals are English log lines)', () => {
+      const { result, es } = tracked('solo-5');
+      act(() =>
+        es.emit(
+          'subtitle_progress',
+          wireEvent('subtitle_progress', {
+            stage: 'translating',
+            media_type: 'movie',
+            message: '翻譯中（第 3/7 段）',
+          })
+        )
+      );
+      act(() =>
+        es.emit(
+          'subtitle_progress',
+          wireEvent('subtitle_progress', {
+            stage: 'complete',
+            media_type: 'movie',
+            message: 'subtitle generated',
+          })
+        )
+      );
+      act(() =>
+        es.emit(
+          'transcription_complete',
+          wireEvent('transcription_complete', {
+            job_id: 'asr-leg',
+            phase: 'complete',
+            message: '轉錄完成',
+          })
+        )
+      );
+      expect(result.current.progress.phase).toBe('translating');
+      expect(result.current.progress.message).toBe('翻譯中（第 3/7 段）');
+    });
+
+    describe('lost solo terminal (CR M3)', () => {
+      function trackedWithProbe(inProgress: boolean | Error) {
+        const probe = vi.fn(() =>
+          inProgress instanceof Error ? Promise.reject(inProgress) : Promise.resolve(inProgress)
+        );
+        const onComplete = vi.fn();
+        const { result } = renderHook(() =>
+          useGenerationProgress({ onComplete, probeInProgress: probe })
+        );
+        act(() => result.current.startTracking(MOVIE_UUID, 'solo-6'));
+        const es = MockEventSource.instances[MockEventSource.instances.length - 1];
+        act(() =>
+          es.emit(
+            'subtitle_progress',
+            wireEvent('subtitle_progress', {
+              stage: 'extracting',
+              media_type: 'movie',
+              message: '',
+            })
+          )
+        );
+        return { result, es, probe, onComplete };
+      }
+
+      it('D6 complete + no solo terminal → after the wait the server says idle → ends as complete with the lost-result sentence', async () => {
+        const { result, es, probe, onComplete } = trackedWithProbe(false);
+        act(() =>
+          es.emit(
+            'subtitle_progress',
+            wireEvent('subtitle_progress', {
+              stage: 'complete',
+              media_type: 'movie',
+              message: 'subtitle generated',
+            })
+          )
+        );
+        expect(result.current.progress.phase).toBe('extracting');
+        expect(probe).not.toHaveBeenCalled();
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(5000);
+        });
+
+        expect(probe).toHaveBeenCalledTimes(1);
+        expect(result.current.progress.phase).toBe('complete');
+        expect(result.current.progress.message).toBe(TERMINAL_LOST_MESSAGE);
+        expect(onComplete).toHaveBeenCalledTimes(1);
+        expect(es.readyState).toBe(2);
+      });
+
+      it('the real solo terminal arriving first cancels the probe', async () => {
+        const { result, es, probe } = trackedWithProbe(false);
+        act(() =>
+          es.emit(
+            'subtitle_progress',
+            wireEvent('subtitle_progress', { stage: 'complete', media_type: 'movie', message: '' })
+          )
+        );
+        act(() =>
+          es.emit(
+            'transcription_complete',
+            wireEvent('transcription_complete', {
+              job_id: 'solo-6',
+              phase: 'complete',
+              route: 'translate',
+              message: '翻譯完成（翻譯片內英文字幕）',
+            })
+          )
+        );
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(6000);
+        });
+        expect(probe).not.toHaveBeenCalled();
+        expect(result.current.progress.message).toBe('翻譯完成（翻譯片內英文字幕）');
+      });
+
+      it('the server still says running → keep waiting, nothing ends', async () => {
+        const { result, es, probe } = trackedWithProbe(true);
+        act(() =>
+          es.emit(
+            'subtitle_progress',
+            wireEvent('subtitle_progress', { stage: 'complete', media_type: 'movie', message: '' })
+          )
+        );
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(5000);
+        });
+        expect(probe).toHaveBeenCalledTimes(1);
+        expect(result.current.progress.phase).toBe('extracting');
+        expect(es.readyState).not.toBe(2);
+      });
+
+      it('D6 failed + idle server → ends as failed with the lost-result sentence', async () => {
+        const { result, es } = trackedWithProbe(false);
+        act(() =>
+          es.emit(
+            'subtitle_progress',
+            wireEvent('subtitle_progress', {
+              stage: 'failed',
+              media_type: 'movie',
+              message: 'boom',
+            })
+          )
+        );
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(5000);
+        });
+        expect(result.current.progress.phase).toBe('failed');
+        expect(result.current.progress.error).toBe(TERMINAL_LOST_MESSAGE);
+      });
+    });
+
+    it('reset forgets the job id', () => {
+      const { result, es } = tracked('solo-4');
+      act(() => result.current.reset());
+      act(() => result.current.startTracking(MOVIE_UUID));
+      const es2 = MockEventSource.instances[MockEventSource.instances.length - 1] ?? es;
+      act(() =>
+        es2.emit(
+          'transcription_complete',
+          wireEvent('transcription_complete', { job_id: 'anything', phase: 'complete' })
+        )
+      );
+      expect(result.current.progress.phase).toBe('complete');
     });
   });
 });

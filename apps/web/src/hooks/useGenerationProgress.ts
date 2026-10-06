@@ -37,6 +37,15 @@ import { snakeToCamel } from '../utils/caseTransform';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 const SSE_RECONNECT_MS = 10000;
+/**
+ * How long after the pipeline's D6 terminal we wait for the solo job's own
+ * terminal before asking the server whether the job is really over (the hub
+ * drops frames when a client's buffer is full — sse/hub.go — and there is no
+ * replay). Not a display clock (Rule 23): nothing on screen reads it.
+ */
+const STALE_TERMINAL_PROBE_MS = 5000;
+/** The sentence shown when the job ended but its result event never arrived. */
+export const TERMINAL_LOST_MESSAGE = '字幕生成已結束，但結果通知沒有送到；請關閉後重新開啟查看結果';
 
 /** Wire phases (transcription_service.go) + the hook's idle resting state. */
 export type GenerationPhase =
@@ -69,6 +78,11 @@ interface GenerationEventPayload {
   /** bugfix-j: present ONLY on partial terminals (absent = full success). */
   partial?: boolean;
   englishKeptBlocks?: number;
+  /** Solo-runner events (disc-2026-10-single-generate-…-a): the lane the run
+   *  took (ledger vocabulary: deliver_direct|convert_then_deliver|translate|asr)
+   *  on the terminal, and the probe-only prediction (extract|asr|skip) on start. */
+  route?: string;
+  predictedRoute?: string;
 }
 
 /** The `error` a failed event gets when it carries neither error nor message.
@@ -97,6 +111,10 @@ export interface GenerationProgressState {
   spentUsd: number | null;
   /** 9R-17: the solo run's ceiling (null = none reported). */
   budgetUsd: number | null;
+  /** The lane this run takes — predicted at start, authoritative on the solo
+   *  terminal; null until an event says. Drives the stepper's five-stage
+   *  variant (disc-2026-10-single-generate-ignores-embedded-english-b). */
+  route: string | null;
 }
 
 const initialState: GenerationProgressState = {
@@ -112,6 +130,7 @@ const initialState: GenerationProgressState = {
   englishKeptBlocks: null,
   spentUsd: null,
   budgetUsd: null,
+  route: null,
 };
 
 type ActivePhase = 'extracting' | 'transcribing' | 'translating';
@@ -121,6 +140,10 @@ type Action =
   | { type: 'PHASE'; phase: ActivePhase; payload: GenerationEventPayload }
   | { type: 'COMPLETE'; payload: GenerationEventPayload }
   | { type: 'FAILED'; payload: GenerationEventPayload }
+  /** A terminal-shaped event that is NOT this job's terminal (the ASR leg's own
+   *  complete, a D6 terminal while a solo job id is tracked): merge message,
+   *  cost and route, keep the phase. */
+  | { type: 'NOTE'; payload: GenerationEventPayload }
   | { type: 'RESET' };
 
 function lastActivePhase(phase: GenerationPhase): ActivePhase {
@@ -133,6 +156,11 @@ function cost(state: GenerationProgressState, payload: GenerationEventPayload) {
     spentUsd: typeof payload.spentUsd === 'number' ? payload.spentUsd : state.spentUsd,
     budgetUsd: typeof payload.budgetUsd === 'number' ? payload.budgetUsd : state.budgetUsd,
   };
+}
+
+/** The terminal's `route` wins over the start event's prediction; neither → keep. */
+function route(state: GenerationProgressState, payload: GenerationEventPayload) {
+  return { route: payload.route ?? payload.predictedRoute ?? state.route };
 }
 
 function reducer(state: GenerationProgressState, action: Action): GenerationProgressState {
@@ -151,6 +179,16 @@ function reducer(state: GenerationProgressState, action: Action): GenerationProg
         message: action.payload.message ?? state.message,
         jobId: action.payload.jobId ?? state.jobId,
         ...cost(state, action.payload),
+        ...route(state, action.payload),
+      };
+    case 'NOTE':
+      // Cost and route only — a D6 terminal's message is an English log line
+      // ("subtitle generated via ASR fallback") and the ASR leg's complete says
+      // 轉錄完成 while the stepper is still translating (CR L1).
+      return {
+        ...state,
+        ...cost(state, action.payload),
+        ...route(state, action.payload),
       };
     case 'COMPLETE':
       return {
@@ -166,6 +204,7 @@ function reducer(state: GenerationProgressState, action: Action): GenerationProg
         partial: action.payload.partial ?? false,
         englishKeptBlocks: action.payload.englishKeptBlocks ?? null,
         ...cost(state, action.payload),
+        ...route(state, action.payload),
       };
     case 'FAILED':
       return {
@@ -179,6 +218,7 @@ function reducer(state: GenerationProgressState, action: Action): GenerationProg
         jobId: action.payload.jobId ?? state.jobId,
         error: action.payload.error ?? action.payload.message ?? GENERATION_FAILED_FALLBACK,
         ...cost(state, action.payload),
+        ...route(state, action.payload),
       };
     case 'RESET':
       return initialState;
@@ -208,6 +248,13 @@ const D6_STAGE_TO_PHASE: Readonly<Record<string, ActivePhase>> = {
 export interface UseGenerationProgressOptions {
   /** Fired once per `transcription_complete` for the tracked media (AC 6 invalidation hook). */
   onComplete?: (payload: { srtPath: string | null; zhSrtPath: string | null }) => void;
+  /**
+   * "Is this media still generating?" — asked ONCE, STALE_TERMINAL_PROBE_MS
+   * after a D6 terminal arrived while a solo job id was tracked and the job's
+   * own terminal did not follow (CR M3: a dropped frame would otherwise spin
+   * the dialog forever). Resolves to in_progress. Absent = no fallback.
+   */
+  probeInProgress?: () => Promise<boolean>;
 }
 
 export function useGenerationProgress(options?: UseGenerationProgressOptions) {
@@ -218,6 +265,18 @@ export function useGenerationProgress(options?: UseGenerationProgressOptions) {
   const connectRef = useRef<() => void>(() => {});
   /** UUID-string movie id currently tracked; null = drop everything. */
   const mediaIdRef = useRef<string | null>(null);
+  /**
+   * The solo job id this tracking session belongs to (POST's job_id, or the
+   * status endpoint's). When known, ONLY the transcription_complete / _failed
+   * carrying it is the terminal: the ASR leg's own complete (another job id)
+   * and the pipeline's D6 complete fire BEFORE it and carry no path or cost
+   * (disc-2026-10-single-generate-ignores-embedded-english-a §1b). null =
+   * legacy / attach without an id → the first terminal wins, as before.
+   */
+  const trackedJobIdRef = useRef<string | null>(null);
+  /** CR M3 fallback: the one-shot probe timer after a D6 terminal. */
+  const staleTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const probeRef = useRef(options?.probeInProgress);
   // CR sub-4-3 M7: the SEARCH engine is a second producer of `subtitle_progress`
   // for the same media_id, sharing the D6 terminal stages. A search completing
   // mid-generation must not terminalize generation tracking — D6 terminals are
@@ -229,6 +288,9 @@ export function useGenerationProgress(options?: UseGenerationProgressOptions) {
   useEffect(() => {
     onCompleteRef.current = options?.onComplete;
   }, [options?.onComplete]);
+  useEffect(() => {
+    probeRef.current = options?.probeInProgress;
+  }, [options?.probeInProgress]);
 
   const closeSSE = useCallback(() => {
     if (esRef.current) {
@@ -239,7 +301,47 @@ export function useGenerationProgress(options?: UseGenerationProgressOptions) {
       clearTimeout(reconnectRef.current);
       reconnectRef.current = undefined;
     }
+    if (staleTimerRef.current) {
+      clearTimeout(staleTimerRef.current);
+      staleTimerRef.current = undefined;
+    }
   }, []);
+
+  /**
+   * CR M3: the pipeline said the item ended but our job's terminal has not
+   * come. Wait once; if the server then says nothing is running for this
+   * media, end tracking with an honest "the result event was lost" verdict.
+   * The job's real terminal arriving first clears the timer (closeSSE).
+   */
+  const scheduleStaleTerminalProbe = useCallback(
+    (d6Stage: string) => {
+      if (staleTimerRef.current || !probeRef.current) return;
+      staleTimerRef.current = setTimeout(() => {
+        staleTimerRef.current = undefined;
+        const probe = probeRef.current;
+        if (!probe || !mountedRef.current || mediaIdRef.current === null) return;
+        probe()
+          .then((inProgress) => {
+            if (!mountedRef.current || inProgress || esRef.current === null) return;
+            const payload: GenerationEventPayload = {
+              mediaId: mediaIdRef.current ?? undefined,
+              message: TERMINAL_LOST_MESSAGE,
+            };
+            if (d6Stage === 'complete') {
+              dispatch({ type: 'COMPLETE', payload });
+              onCompleteRef.current?.({ srtPath: null, zhSrtPath: null });
+            } else {
+              dispatch({ type: 'FAILED', payload: { ...payload, error: TERMINAL_LOST_MESSAGE } });
+            }
+            closeSSE();
+          })
+          .catch(() => {
+            // The probe itself failed: nothing honest to say — keep waiting.
+          });
+      }, STALE_TERMINAL_PROBE_MS);
+    },
+    [closeSSE]
+  );
 
   /** Unwrap the double-nested envelope and filter by tracked media_id. */
   const parsePayload = useCallback((e: MessageEvent): GenerationEventPayload | null => {
@@ -274,10 +376,18 @@ export function useGenerationProgress(options?: UseGenerationProgressOptions) {
       });
     }
 
+    // Is this terminal-shaped event OUR job's terminal?
+    const isOurTerminal = (payload: GenerationEventPayload) =>
+      trackedJobIdRef.current === null || payload.jobId === trackedJobIdRef.current;
+
     es.addEventListener('transcription_complete', (e: MessageEvent) => {
       if (!mountedRef.current) return;
       const payload = parsePayload(e);
       if (!payload) return;
+      if (!isOurTerminal(payload)) {
+        dispatch({ type: 'NOTE', payload }); // the ASR leg finished; the job has not
+        return;
+      }
       dispatch({ type: 'COMPLETE', payload });
       onCompleteRef.current?.({
         srtPath: payload.srtPath ?? null,
@@ -290,6 +400,10 @@ export function useGenerationProgress(options?: UseGenerationProgressOptions) {
       if (!mountedRef.current) return;
       const payload = parsePayload(e);
       if (!payload) return;
+      if (!isOurTerminal(payload)) {
+        dispatch({ type: 'NOTE', payload });
+        return;
+      }
       dispatch({ type: 'FAILED', payload });
       closeSSE(); // terminal
     });
@@ -309,6 +423,19 @@ export function useGenerationProgress(options?: UseGenerationProgressOptions) {
       // generation pipeline (CR M7 — search-flow completions are ignored; an
       // attach-degraded join that missed the stages defers to the batch event).
       if (!d6PipelineSeenRef.current) return;
+      // With a solo job id in hand the D6 terminal is item-level news, not the
+      // job's end: the solo terminal follows with path, route and cost.
+      if (trackedJobIdRef.current !== null) {
+        if (
+          payload.stage === 'complete' ||
+          payload.stage === 'failed' ||
+          payload.stage === 'skipped'
+        ) {
+          dispatch({ type: 'NOTE', payload });
+          scheduleStaleTerminalProbe(payload.stage);
+        }
+        return;
+      }
       if (payload.stage === 'complete') {
         dispatch({ type: 'COMPLETE', payload });
         onCompleteRef.current?.({
@@ -335,7 +462,7 @@ export function useGenerationProgress(options?: UseGenerationProgressOptions) {
         if (mountedRef.current) connectRef.current();
       }, SSE_RECONNECT_MS);
     };
-  }, [closeSSE, parsePayload]);
+  }, [closeSSE, parsePayload, scheduleStaleTerminalProbe]);
 
   useEffect(() => {
     connectRef.current = connect;
@@ -356,11 +483,12 @@ export function useGenerationProgress(options?: UseGenerationProgressOptions) {
    * path — safe to call when the job was already running server-side.
    */
   const startTracking = useCallback(
-    (mediaId: string) => {
+    (mediaId: string, jobId?: string | null) => {
       // A retry's POST can resolve after 稍後再試 unmounted the dialog (dsr-6b CR
       // L7): opening a stream then would leak an EventSource nobody closes.
       if (!mountedRef.current) return;
       mediaIdRef.current = mediaId;
+      trackedJobIdRef.current = jobId || null;
       d6PipelineSeenRef.current = false;
       dispatch({ type: 'START' });
       if (!esRef.current || esRef.current.readyState === 2) connect();
@@ -371,6 +499,7 @@ export function useGenerationProgress(options?: UseGenerationProgressOptions) {
   /** Tear down the stream and return to idle (e.g. when the dialog closes). */
   const reset = useCallback(() => {
     mediaIdRef.current = null;
+    trackedJobIdRef.current = null;
     d6PipelineSeenRef.current = false;
     closeSSE();
     dispatch({ type: 'RESET' });

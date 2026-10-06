@@ -5420,6 +5420,38 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     viewport: { width: 390, height: 844 },
   },
   {
+    // disc-2026-10-single-generate-ignores-embedded-english-b — J12-D row ②: the
+    // embedded-track lane is five stages (CZrmG), translating.
+    id: 'generation-progress-v2/抽字幕-翻譯中',
+    label: 'subtitle/GenerationProgressV2 (抽字幕路線 五格 — 翻譯中)',
+    component: GenerationProgressV2,
+    props: {
+      phase: 'translating',
+      percentage: 62,
+      route: 'extract',
+      message: '翻譯中（第 4/7 段）',
+    },
+    penNode: 'CZrmG', // Component/GenerationProgress-v2/Extract
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    // J12-D row ③: a Chinese track used as-is — 翻譯中 is SKIPPED (minus), rest done.
+    id: 'generation-progress-v2/抽字幕-翻譯略過',
+    label: 'subtitle/GenerationProgressV2 (抽字幕路線 五格 — 直接套用，翻譯略過)',
+    component: GenerationProgressV2,
+    props: {
+      phase: 'complete',
+      route: 'deliver_direct',
+      message: '字幕已生成（直接使用片內中文字幕，沒有花錢）',
+      costUsedText: '$0.00',
+      costLimitText: '$2.00',
+    },
+    penNode: 'jYNkJ', // J12-D
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
     id: 'generation-progress-v2/翻譯中',
     label: 'subtitle/GenerationProgressV2 (翻譯中)',
     component: GenerationProgressV2,

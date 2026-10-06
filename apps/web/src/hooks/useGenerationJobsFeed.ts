@@ -116,6 +116,15 @@ export interface SingleJobState {
   /** 9R-17: the solo run's live spend / ceiling (null = not reported). */
   spentUsd: number | null;
   budgetUsd: number | null;
+  /**
+   * The solo job's id (disc-2026-10-single-generate-ignores-embedded-english-b):
+   * in pipeline mode the ASR leg emits its own transcription_* events under
+   * ANOTHER job id and no title — a terminal with a different id is not this
+   * job's end. null = legacy run (every event is the job's).
+   */
+  jobId: string | null;
+  /** The lane (predicted at start, authoritative on the terminal); null = unknown. */
+  route: string | null;
 }
 
 interface MemberInfo {
@@ -153,6 +162,7 @@ const initialState: GenerationJobsFeedState = {
 /** Camelized transcription_* payload (envelope-unwrapped). */
 interface TranscriptionPayload {
   mediaId?: string;
+  jobId?: string;
   title?: string;
   phase?: string;
   percentage?: number;
@@ -161,11 +171,15 @@ interface TranscriptionPayload {
   /** 9R-17: solo runs only. */
   spentUsd?: number;
   budgetUsd?: number;
+  /** Solo-runner events: the lane. */
+  route?: string;
+  predictedRoute?: string;
 }
 /** Camelized D6 subtitle_progress payload. */
 interface PipelinePayload {
   mediaId?: string;
   stage?: string;
+  message?: string;
 }
 interface ChangedItem {
   mediaId: string;
@@ -317,8 +331,12 @@ function reducer(state: GenerationJobsFeedState, action: Action): GenerationJobs
       // the batch's, even for a film the batch also lists.
       const soloTitle = pipeline ? '' : honestTitle(payload.title, mediaId);
       const member = soloTitle ? undefined : state.members[mediaId];
-      if (pipeline && !member) return state; // not generation, or not ours
-      const title = member ? member.title : soloTitle || state.singleJobs[mediaId]?.title || '';
+      const existingSingle = state.singleJobs[mediaId];
+      // A D6 frame is ours when the film is a batch member OR a single job we
+      // already know (a detail-page click in pipeline mode: titled start event,
+      // untitled D6 stages in between). Anything else is the search engine.
+      if (pipeline && !member && !existingSingle) return state;
+      const title = member ? member.title : soloTitle || existingSingle?.title || '';
       const seriesTitle = member ? member.seriesTitle : '';
       const percentage =
         stage === 'translating' && !pipeline && typeof payload.percentage === 'number'
@@ -346,6 +364,15 @@ function reducer(state: GenerationJobsFeedState, action: Action): GenerationJobs
                   ? payload.budgetUsd
                   : null) ??
                 state.singleJobs[mediaId]?.budgetUsd ??
+                null,
+              // Only a TITLED event may name the job: the ASR leg's untitled
+              // events carry their own id and must not overwrite it.
+              jobId:
+                (soloTitle && 'jobId' in payload && payload.jobId) || existingSingle?.jobId || null,
+              route:
+                ('route' in payload ? payload.route : undefined) ??
+                ('predictedRoute' in payload ? payload.predictedRoute : undefined) ??
+                existingSingle?.route ??
                 null,
             },
           };
@@ -378,6 +405,12 @@ function reducer(state: GenerationJobsFeedState, action: Action): GenerationJobs
       if (!mediaId) return state;
       const ok = action.type === 'SINGLE_DONE';
       const soloTitle = honestTitle(action.payload.title, mediaId);
+      // Pipeline-mode single job: the ASR leg's own terminal (another job id,
+      // no title) is not this job's end — the solo runner's terminal follows.
+      const single = state.singleJobs[mediaId];
+      if (single?.jobId && action.payload.jobId && action.payload.jobId !== single.jobId) {
+        return state;
+      }
       const feed = settle(state.feed, ofFilm(mediaId), ok ? 'passed' : 'stopped');
       if (!soloTitle && state.members[mediaId]) {
         // A batch member: its result comes from changed_item. Remember why it
@@ -594,7 +627,13 @@ export function useGenerationJobsFeed() {
       if (!payload.mediaId || !payload.stage) return;
       const stage = D6_STAGE[payload.stage];
       if (stage) {
-        dispatch({ type: 'STAGE', stage, mediaId: payload.mediaId, payload: {}, pipeline: true });
+        dispatch({
+          type: 'STAGE',
+          stage,
+          mediaId: payload.mediaId,
+          payload: { message: payload.message },
+          pipeline: true,
+        });
       } else if (['complete', 'failed', 'skipped'].includes(payload.stage)) {
         dispatch({
           type: 'PIPELINE_END',

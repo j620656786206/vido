@@ -234,4 +234,77 @@ describe('deriveGenerateCostView', () => {
     });
     expect(view.cost).toEqual({ status: 'ready', usd: 0.67, approximate: false });
   });
+
+  // disc-2026-10-single-generate-ignores-embedded-english-b (⚖️ Sally 2026-10-06):
+  // the embedded-track lane (pipeline mode, plan: 'extract').
+  describe('extract lane', () => {
+    it('is priced and explained with the 使用片內字幕 line', () => {
+      const view = deriveGenerateCostView({
+        mediaType: 'movie',
+        estimate: ready({ plan: 'extract', route: 'extract', estimatedUsd: 0.12 }),
+      });
+      expect(view.cost).toEqual({ status: 'ready', usd: 0.12, approximate: false });
+      expect(view.helper).toEqual({
+        text: '使用片內字幕：中文直接套用，英文由 AI 翻譯',
+        tone: 'muted',
+        settingsLink: false,
+      });
+      expect(view.retryNote).toBeNull();
+    });
+
+    it('is NOT blocked by missing speech recognition — the track needs none', () => {
+      const view = deriveGenerateCostView({
+        mediaType: 'episode',
+        estimate: ready({
+          plan: 'extract',
+          route: 'extract',
+          asrAvailable: false,
+          estimatedUsd: 0.12,
+        }),
+      });
+      expect(view.cost.status).toBe('ready');
+      expect(view.helper.text).toBe('使用片內字幕：中文直接套用，英文由 AI 翻譯');
+    });
+
+    it('without a translation key: the degraded extract line + 前往設定, still clickable', () => {
+      const view = deriveGenerateCostView({
+        mediaType: 'movie',
+        estimate: ready({
+          plan: 'extract',
+          route: 'extract',
+          translationConfigured: false,
+          estimatedUsd: 0,
+        }),
+      });
+      expect(view.cost).toEqual({ status: 'ready', usd: 0, approximate: false });
+      expect(view.helper).toEqual({
+        text: '尚未設定翻譯金鑰：片內中文字幕可直接套用，英文字幕需金鑰才能翻譯',
+        tone: 'muted',
+        settingsLink: true,
+      });
+      expect(view.retryNote).toEqual({
+        text: '尚未設定翻譯金鑰：片內中文字幕可直接套用，英文字幕需金鑰才能翻譯',
+        settingsLink: true,
+      });
+    });
+
+    it('an assumed runtime still wins the helper line (one ≈ meaning)', () => {
+      const view = deriveGenerateCostView({
+        mediaType: 'movie',
+        estimate: ready({ plan: 'extract', route: 'extract', runtimeSource: 'fallback' }),
+      });
+      expect(view.cost).toMatchObject({ approximate: true });
+      expect(view.helper.text).toBe(FALLBACK_RUNTIME_LINE);
+    });
+
+    it('asr / skip routes keep every legacy rule — including the ASR block', () => {
+      const skip = deriveGenerateCostView({
+        mediaType: 'movie',
+        estimate: ready({ route: 'skip', asrAvailable: false }),
+      });
+      expect(skip.cost).toEqual({ status: 'unavailable' });
+      const asr = deriveGenerateCostView({ mediaType: 'movie', estimate: ready({ route: 'asr' }) });
+      expect(asr.helper.text).toBe('語音辨識＋AI 翻譯，約需數分鐘');
+    });
+  });
 });

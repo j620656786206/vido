@@ -1,6 +1,6 @@
 # Disc（前端）：「生成字幕」對話框跟上後端——依路線顯示說明、價錢、進度與結果
 
-Status: backlog
+Status: review
 
 **Depends on:** `disc-2026-10-single-generate-ignores-embedded-english-a`（後端 API 必須先合併：估價多了 `route`／`plan=extract`、status 多了 `job_id`、solo 終點事件帶 `job_id`）。
 
@@ -146,13 +146,13 @@ Status: backlog
 ## Tasks / Subtasks
 
 - [x] T0 Sally：核定 §2 文案、§4 進度條五格變體（含 .pen 變體＋截圖）、§5「沒有花錢」文案（AC #8、#4）—— ✅ 2026-10-06 完成：Alexyu 跑完兩段提示詞、Sally MCP 複審追認、截圖重出
-- [ ] T1 型別與 service（AC #1）
-- [ ] T2 `generateCostView` 路線規則（AC #2）
-- [ ] T3 `useGenerationProgress` job_id 終點判定＋`route`（AC #3、#6）
-- [ ] T4 `GenerationProgressV2` 五格變體＋gallery fixture＋視覺基準（AC #4）
-- [ ] T5 對話框結果文字／費用／startTracking 帶 jobId／註解更新（AC #5、#6）
-- [ ] T6 工作區 spec（AC #7）
-- [ ] T7 E2E stub＋全綠（AC #9、#10）
+- [x] T1 型別與 service（AC #1）
+- [x] T2 `generateCostView` 路線規則（AC #2）
+- [x] T3 `useGenerationProgress` job_id 終點判定＋`route`（AC #3、#6）
+- [x] T4 `GenerationProgressV2` 五格變體＋gallery fixture＋視覺基準（AC #4）
+- [x] T5 對話框結果文字／費用／startTracking 帶 jobId／註解更新（AC #5、#6）
+- [x] T6 工作區 spec（AC #7）
+- [x] T7 E2E stub＋全綠（AC #9、#10）
 
 前端 7 項、後端 0 項。
 
@@ -184,13 +184,68 @@ N/A — no wall-clock-reading components touched（進度條與對話框不讀 `
 
 ### Agent Model Used
 
+Claude Fable 5.1（claude-fable-5-1）；T0 由 Sally（ux-designer persona）裁定，.pen 由 Alexyu 跑 Inline Agent。
+
 ### Debug Log References
+
+- `npx tsc --noEmit -p apps/web/tsconfig.app.json` 乾淨（spec tsconfig 的 jest-dom 型別錯誤是既有、與本單無關的檔案）。
+- 六支直接相關 spec（generateCostView／GenerationProgressV2／useGenerationProgress／ManageSubtitleDialogV2／useGenerationJobsFeed／transcriptionService）240 測試全綠；`pnpm nx test web` 299 檔 4647 測試全綠；`test:cleanup` 無殘留。
+- `pnpm run lint:all` 0 errors（Rule 21 header 第一版用「·」分隔被 `local/implements-pen-node-id` 擋下，改成 `+` 形式後過）。
+- E2E：`playwright test tests/e2e/manage-subtitle-mobile.spec.ts tests/e2e/glossary-mobile.spec.ts --project=mobile-chrome` 7 passed。
+- 視覺：`test:visual:update-missing` 產出兩張新的 `-darwin` 基準（`generation-progress-v2/抽字幕-翻譯中`、`抽字幕-翻譯略過`），其他基準零變動；`-linux` 由 CI bootstrap PR 產生。
 
 ### Completion Notes List
 
+- **T1：** `plan: 'full' | 'translate_only' | 'extract'`、`route?`、`TranscriptionStatus.jobId?`；註解改 `confirmed against [@contract-v2] (Story dsr-6a AC #2)`。
+- **T2：** `EXTRACT_LINE`／`EXTRACT_NO_KEY_LINE`（Sally 定稿字串）；封鎖規則改 `!translateOnly && !extract && !asrAvailable`；優先序：translateOnly → extract 無金鑰（可按＋前往設定）→ 英文-only → ≈ 片長 → extract 一般 → DEFAULT。`route` 缺席時舊規則一字不變（既有 spec 全過）。
+- **T3：** `startTracking(mediaId, jobId?)`、`trackedJobIdRef`；`isOurTerminal`：有 jobId 時只認帶同 job_id 的 `transcription_complete/failed`，其他終點形狀的事件（ASR 腿自己的 complete、D6 complete/failed/skipped）改成 `NOTE`（只合併 message／cost／route，不關流、不觸發 `onComplete`）；沒 jobId 時完全照舊。state 加 `route`（起點事件 `predicted_route` → 終點 `route` 覆蓋）。
+- **T4：** `GENERATION_STAGES_EXTRACT` 五格、`isExtractRoute`、`stepperShape`；`skipped` 狀態（`Minus`，圓底 `$bg-tertiary`、字 `$text-muted`，連接線視同完成）只在 `deliver_direct`／`convert_then_deliver` 跑完時給「翻譯中」；失敗文案 `抽取字幕失敗`。六格那條（含 `GENERATION_STAGES`、所有 testid）一字不動，既有 spec 與 e2e（`gen-stage-提取音訊`／`轉錄中`）照常。
+- **T5：** 觸發成功後 `startTracking(mediaId, outcome.result.jobId)`、409／重開附掛帶 `runStatus.data?.jobId`；`route` 傳給進度條；結果句：partial → 舊句；有 `route`＋`message` → 後端那句；否則舊邏輯。費用列維持 `$0.00 / $X`（Sally 裁定 B）。`startTracking` 既有 7 處斷言從一參數改成兩參數（`'job-9'`／`'j1'`／`undefined`）——這是本單刻意的契約變更，逐條列於 spec diff。
+- **T6：** `useGenerationJobsFeed` **不用改碼**：起點事件帶 `title` → 建單一任務；中間的 D6 事件因不是批次成員而被略過；終點帶 `title`＋`job_id` → 一列 done。新增 spec 證明。
+- **T7：** 兩支 e2e 的 estimate stub 加 `route: 'asr'`；gallery 新增兩個 fixture（`抽字幕-翻譯中` penNode `CZrmG`、`抽字幕-翻譯略過` penNode `jYNkJ`）＋ darwin 基準。
+- **GenerationWorkspaceV2.tsx：** `activeItemProgress` 字面值補 `route: null`（型別需要，行為不變）。
+- 🔗 AC Drift: FOUND — (1) `bugfix-dialog-reopen-shows-idle-during-run` 的「`startTracking(mediaId)`」→ 本單 `startTracking(mediaId, jobId?)`（舊呼叫仍合法）。(2) sub-4-3 AC #8「D6 終點關閉追蹤」→ 有 solo job id 時 D6 終點改為 NOTE；無 job id 時不變（CR M7 的 `d6PipelineSeenRef` 保留）。(3) ux3-subtitle-v2 AC 3「凍結六格」→ 六格仍凍結，另加五格變體（J12-D，Sally 核定）。(4) sub-2-2c／2-2d 的 F1 helper 文案裁定 → 「語音辨識」動詞只縮小到 asr／skip 路線（Sally 2026-10-06）。grep：`startTracking(` across `_bmad-output/implementation-artifacts/*.md` → bugfix-dialog-reopen、dsr-6b、ux3-subtitle-v2 命中，皆為上述情況。
+- 📎 Contract Stamps: FOUND — 本單 ack `[@contract-v2] (Story dsr-6a AC #2)`（`transcriptionService.ts` 註解）；上游 -a 的 Change Log 有 `[@contract-v1→v2]` 列。本單不定義新 stamp。
+- **對抗式 CR（另開一個全新的 agent，2026-10-06）：1H／3M／3L，H 與 M 全修、L1／L2 修、L3 記錄**
+  - **H1** 抽字幕路線整段看到六格、最後一刻才變五格：`route` 只來自 SSE，但後端的起點事件在 POST 回應**之前**就發了，前端開流時已錯過 → 對話框改 `route={progress.route ?? (estimate.data?.route === 'extract' ? 'extract' : null)}`（Sally 裁定 C.4 本來就寫「或估價的 route」）。新增 spec「extract 估價從第一格就是五格」。
+  - **M1** 409 路徑帶的 `runStatus.data?.jobId` 一定是開啟時的舊值（能 409 代表當時說沒在跑）→ 409 時先 `queryClient.fetchQuery` 重問一次 status 拿 `jobId` 再 `startTracking`；重問失敗退回無 id 附掛。新增 spec。
+  - **M2** 工作區：語音辨識路線會有兩列「完成」且提早消失；抽字幕路線整段卡「提取音訊」→ `SingleJobState` 加 `jobId`／`route`（只有帶 title 的事件能命名 job）；`SINGLE_DONE/FAILED` 碰到不同 job_id 就忽略；D6 stage 對已知的單一任務也更新 phase／message；`GenerationBatchDialogV2` 的 QueueRow 與 `GenerationWorkspaceV2` 把 `route` 傳進進度條。新增兩個 spec（asr 路線、D6 更新 phase）。
+  - **M3** solo 終點被 hub 丟掉時對話框永遠轉圈（以前三發任一都能收尾，現在只剩一發）→ hook 新選項 `probeInProgress`；D6 終點變成 NOTE 後排一次 5 秒的兜底：問 status，不在跑就以 `TERMINAL_LOST_MESSAGE`「字幕生成已結束，但結果通知沒有送到；請關閉後重新開啟查看結果」收尾；真正的終點先到就取消。四個 spec（複製／取消／仍在跑／失敗）。
+  - **L1** NOTE 不再合併 `message`（D6 終點是英文 log、ASR 腿的 complete 說「轉錄完成」而步驟還在翻譯）。spec。
+  - **L2** 預測 extract 但真的進入 `transcribing` → 強制六格。spec。
+  - **L3** 「略過」只有視覺差異（`aria-hidden` 圖示）——與既有 done／pending 做法一致，照 AC #10 記錄不改。
+  - 修完：tsc、八支相關 spec 427 案、`pnpm nx test web`、lint:all、兩支手機 e2e 全綠。
+- 🎭 A11y Pre-Flight: PASS（3 components checked — `GenerationProgressV2`、`ManageSubtitleDialogV2`、`generateCostView` 字串；jsx-a11y 在這些檔 0 warning、0 introduced）。手動四類：圖片 N/A；modal 焦點管理未動；`skipped` 格的圖示 `aria-hidden`、文字標籤仍可見可讀，`<ol aria-label="字幕生成進度">` 不變；lazy-load N/A。
+- 🎨 UX Verification: PASS — `_bmad-output/screenshots/flow-j-specs/j12-d.png` 第 ②、③ 列 vs 新的兩張 darwin 基準：五格順序、進行中金色＋62%、略過的橫線＋灰字、連接線綠色、結果句與費用列位置一致。六格那條與既有基準零差異（`test:visual:update-missing` 沒改到任何舊 PNG）。
+
 ### Discovery Triage
 
+| 發現 | 分道 | 追蹤 |
+|---|---|---|
+| `apps/web/tsconfig.spec.json` 的 `tsc --noEmit` 在多個既有 spec（如 `ActivityHub.spec.tsx`）報 jest-dom matcher 型別不存在；vitest 跑得過，是型別設定問題不是測試問題，CI 也沒跑這條 | ③ | 沿用既有狀態；若要補 `vitest/jest-dom` 型別宣告再開單 |
+
 ### File List
+
+- `apps/web/src/services/transcriptionService.ts`（改）
+- `apps/web/src/services/transcriptionService.spec.ts`（改）
+- `apps/web/src/components/subtitle/generateCostView.ts`（改）
+- `apps/web/src/components/subtitle/generateCostView.spec.ts`（改）
+- `apps/web/src/hooks/useGenerationProgress.ts`（改）
+- `apps/web/src/hooks/useGenerationProgress.spec.ts`（改）
+- `apps/web/src/components/subtitle/GenerationProgressV2.tsx`（改）
+- `apps/web/src/components/subtitle/GenerationProgressV2.spec.tsx`（改）
+- `apps/web/src/components/subtitle/ManageSubtitleDialogV2.tsx`（改）
+- `apps/web/src/components/subtitle/ManageSubtitleDialogV2.spec.tsx`（改）
+- `apps/web/src/components/subtitle/GenerationWorkspaceV2.tsx`（改：`route: job.route`）
+- `apps/web/src/components/subtitle/GenerationBatchDialogV2.tsx`（改：QueueRow 進度條帶 `route`）
+- `apps/web/src/hooks/useGenerationJobsFeed.ts`（改：`SingleJobState.jobId/route`、終點 job_id 判定、D6 更新單一任務）
+- `apps/web/src/hooks/useGenerationJobsFeed.spec.ts`（改：新 spec）
+- `apps/web/src/routes/test/-gallery.fixtures.tsx`（改）
+- `tests/e2e/manage-subtitle-mobile.spec.ts`、`tests/e2e/glossary-mobile.spec.ts`（改：stub 加 `route`）
+- `tests/visual/components.visual.spec.ts-snapshots/components/generation-progress-v2/抽字幕-翻譯中/default-visual-darwin.png`（新）
+- `tests/visual/components.visual.spec.ts-snapshots/components/generation-progress-v2/抽字幕-翻譯略過/default-visual-darwin.png`（新）
+- `ux-design.pen`、`_bmad-output/screenshots/flow-j-specs/j12-d.png`、`scripts/export-pen-screenshots.py`（T0，已另 commit）
+- `_bmad-output/implementation-artifacts/disc-2026-10-single-generate-ignores-embedded-english-b.md`、`sprint-status.yaml`
 
 ## Change Log
 
@@ -199,3 +254,5 @@ N/A — no wall-clock-reading components touched（進度條與對話框不讀 `
 | 2026-10-06 | Bob create-story（-b 前端半張，依賴 -a）。 |
 | 2026-10-06 | Sally T0 裁定：§2 兩個新字串定稿、`DEFAULT_LINE` 不改字只縮範圍；§5 不另造字串（`$0.00` 就是誠實數字）；§4 新元件 `GenerationProgress-v2/Extract` 五格＋「略過」用 `minus`＋J12-D spec 畫面；兩段 Inline Agent 提示詞寫在 story 裡，等 Alexyu 執行。 |
 | 2026-10-06 | Alexyu 跑完 Inline Agent；Sally MCP 複審追認（`CZrmG` 五格元件、`jYNkJ` J12-D）；`SCREENS` 加 J12-D。T0 完成。 |
+| 2026-10-06 | T1–T7：型別 v2、extract 文案與封鎖規則、job_id 終點判定、五格變體＋略過、對話框接線、feed spec、e2e stub、gallery fixture＋darwin 基準。tsc／vitest／lint:all／e2e 全綠，狀態改成 review。 |
+| 2026-10-06 | CR 修正：H1 估價 route 當五格的初始來源、M1 409 重問 status 拿 job_id、M2 工作區單一任務認 job_id＋吃 D6 stage、M3 終點遺失的 5 秒兜底探測、L1 NOTE 不碰 message、L2 transcribing 強制六格。全部檢查重跑全綠。 |

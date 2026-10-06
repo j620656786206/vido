@@ -225,8 +225,24 @@ describe('transcriptionService.getTranscriptionStatus', () => {
     const status = await transcriptionService.getTranscriptionStatus(mediaType, MOVIE_UUID);
 
     expect(status).toEqual({ inProgress: true });
+    expect(status.jobId).toBeUndefined();
     const [url] = mockFetch.mock.calls[0];
     expect(url).toMatch(new RegExp(`/${collection}/${MOVIE_UUID}/transcribe/status$`));
+  });
+
+  it('camelCases the running solo job id (pipeline mode, dsr-6a AC #2 v2)', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ success: true, data: { in_progress: true, job_id: 'solo-7' } }),
+    });
+
+    await expect(transcriptionService.getTranscriptionStatus('movie', MOVIE_UUID)).resolves.toEqual(
+      {
+        inProgress: true,
+        jobId: 'solo-7',
+      }
+    );
   });
 
   it('throws on a non-2xx so the caller can fall back to the idle view', async () => {
@@ -239,5 +255,66 @@ describe('transcriptionService.getTranscriptionStatus', () => {
     await expect(transcriptionService.getTranscriptionStatus('movie', MOVIE_UUID)).rejects.toThrow(
       'API request failed: 502'
     );
+  });
+});
+
+describe('transcriptionService.getTranscriptionEstimate — v2 fields', () => {
+  it('camelCases plan: extract and route (pipeline mode)', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          success: true,
+          data: {
+            media_id: MOVIE_UUID,
+            media_type: 'movie',
+            plan: 'extract',
+            route: 'extract',
+            asr_available: false,
+            self_hosted_asr: false,
+            translation_configured: true,
+            model_id: 'claude-sonnet-5',
+            runtime_minutes: 57,
+            runtime_known: true,
+            runtime_source: 'ffprobe',
+            estimated_usd: 0.46,
+          },
+        }),
+    });
+
+    const est = await transcriptionService.getTranscriptionEstimate('movie', MOVIE_UUID);
+
+    expect(est.plan).toBe('extract');
+    expect(est.route).toBe('extract');
+    expect(est.asrAvailable).toBe(false);
+  });
+
+  it('leaves route undefined when the server omits it (legacy mode)', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          success: true,
+          data: {
+            media_id: MOVIE_UUID,
+            media_type: 'movie',
+            plan: 'full',
+            asr_available: true,
+            self_hosted_asr: false,
+            translation_configured: true,
+            model_id: 'claude-sonnet-5',
+            runtime_minutes: 57,
+            runtime_known: true,
+            runtime_source: 'ffprobe',
+            estimated_usd: 1.57,
+          },
+        }),
+    });
+
+    const est = await transcriptionService.getTranscriptionEstimate('movie', MOVIE_UUID);
+    expect(est.route).toBeUndefined();
+    expect(est.plan).toBe('full');
   });
 });
